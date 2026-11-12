@@ -275,6 +275,15 @@ def execute_notebook(nb_path, timeout=600, kernel=None, cuda_devices=None,
             from runtime_env import CPU_ONLY_ENV
             env.update(CPU_ONLY_ENV)
 
+    # A real execution replaces any outputs materialized from the store, so
+    # drop that marker first (tools/locks.py); nbconvert keeps notebook
+    # metadata otherwise.
+    try:
+        import locks
+        locks.clear_materialized(nb_path)
+    except Exception:
+        pass
+
     if kernel is None:
         kernel = _SELF_KERNEL_NAME
         self_dir = ensure_self_kernelspec()

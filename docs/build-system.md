@@ -753,10 +753,13 @@ the style of the `<!-- split: -->` and `<!-- slides -->` markers:
   (`openrouter`, `a100`, `8xa100`, `multinode`, ...) used for reporting; it is
   optional (shown as `-`). `frameworks:` locks only some of the frameworks the
   file has; the default is all of them.
-- Whitespace-tolerant; one directive per file. Anything that starts like the
-  directive but does not parse (a typo, an unknown field or framework, a second
-  directive, a missing `-->`) is an error in `tools/lint_source.py`, in the
-  MANIFEST.mk scan, in the scheduler and in the audit.
+- Whitespace-tolerant; one directive per file. A comment that starts as the
+  directive (`<!-- execution:`, any case) but does not parse (an unknown field
+  or framework, a second directive, a missing `-->`) is an error in
+  `tools/lint_source.py`, in the MANIFEST.mk scan, in the scheduler and in the
+  audit. A comment that only resembles it (`<!-- executon: locked -->`,
+  `<!-- execution locked -->`) is a lint **warning**, never a build failure;
+  unrelated comments such as `<!-- executive summary: ... -->` are ignored.
 - `tools/locks.py` is the only parser. The scheduler, `run_one_notebook.py`,
   `audit_outputs.py`, `capture_outputs.py`, `scan_notebook_manifests.py`
   (`LOCKED_<fw>` in `_notebooks/<fw>/MANIFEST.mk`, read by
@@ -775,26 +778,52 @@ the style of the `<!-- split: -->` and `<!-- slides -->` markers:
 | `refresh-stale`, `render-fresh` | re-executed if the audit says stale | never on the audit's `--stale` / `--stale-stamps` list; `--stale` names a locked notebook with code drift on stderr |
 | `make rerun-locked FILES=<chapter/file.md> [FRAMEWORKS=pytorch]` | refused ("not locked") | **executed** through the scheduler (exactly the named notebooks) |
 | `make capture-outputs` (all) | captured | skipped with a note; store untouched |
-| `make capture-outputs FILES=<locked file>` | captured | **refused** (exit 2, nothing written) |
-| `make capture-outputs FILES=... UNLOCK=1` | captured | captured only if its execution sidecar proves a re-run under the current source and lib; a materialized copy (no sidecar) is skipped |
+| `make capture-outputs FILES=...` | captured | skipped with a note, the file's unlocked frameworks and the other files are captured; exit 2 (nothing written) only when **every** requested pair is skipped |
+| `make capture-outputs FILES=... UNLOCK=1` | captured | captured only if its execution sidecar covers **exactly** the current code cells (a real re-run); lib/version drift since the run warns, and the manifest keeps the run's own lib/version provenance; a re-run that misses a changed or appended cell is refused (exit 2) |
+| any capture of a notebook **materialized** from the store | skipped (it was locked when materialized; the scheduler re-executes it) | skipped: nothing to capture |
+| the lock is removed | — | the next scheduler run re-executes every notebook that was materialized while locked |
 | prose, figure, reference, exercise or slide edits | fine (no code fingerprint changes) | fine |
 | d2l lib fingerprint or framework version drift | stale (re-run) | **WARNING** only: "locked, outputs from older lib/version" |
-| a code cell changed, added or removed | stale (re-run) | **ERROR**: `--verify-fresh` fails on any host |
+| a code cell changed, added or removed | stale (re-run) | **ERROR**: `--verify-fresh` fails on any host; the notebook is not materialized and not stamped |
+| `tools/run_hosted_full.py` (hosted sweep) | executed | skipped; `--include-locked` runs it |
 | locked but never captured (no manifest) | stale ("no manifest") | **ERROR**: `--verify-fresh` fails; materialization fails with a re-run hint |
 
-**Materialization** (`locks.materialize`) injects the stored outputs into the
-freshly generated `.ipynb` by cell id (the same reconstruction
-`notebook-zips` uses, `inject_outputs.index_store_by_id`), numbers the code
-cells 1..N like a top-to-bottom run, and touches the `.executed` stamp. So
-slides, the notebook zips, the Colab publish and the HTML/PDF render work
-unchanged. It removes a stale `<stem>.provenance.json` sidecar, so the
-store's own outputs can never be re-blessed through `UNLOCK=1`. One exception:
-when the sidecar proves an *uncaptured* re-run under the current source and lib
-(`rerun-locked` done, capture not yet), the notebook is kept as it is, so a
-regeneration in between does not discard paid outputs. In the scheduler path
-it is cheap and needs no GPU or framework venv (the scheduler does it
-in-process before dispatch); a direct `make <stamp>` still has the
-`EXEC_RULE`'s order-only venv prerequisites.
+**Materialization** (`locks.materialize`) has three outcomes:
+
+1. **Keep an uncaptured re-run.** When the `<stem>.provenance.json` sidecar
+   covers exactly the notebook's current code cells with matching
+   fingerprints, every code cell ran, and the notebook is not marked (below),
+   the notebook is a real execution of the current code (`rerun-locked` done,
+   capture not yet). It is kept as it is and stamped, **even if the d2l lib or
+   framework version moved since**: lib drift is a warning for a locked
+   notebook, so a lib change between the paid re-run and the capture does not
+   discard it.
+2. **Materialize.** Otherwise, if the stored cells match the current code,
+   the stored outputs are injected by cell id (the same reconstruction
+   `notebook-zips` uses, `inject_outputs.index_store_by_id`), the code cells
+   are numbered 1..N like a top-to-bottom run, the notebook is **marked**
+   (`metadata.d2l.materialized_from_store = true`, indexed by an empty
+   `<stem>.materialized` file next to it for a cheap scheduler check), any
+   sidecar is removed, and the `.executed` stamp is touched. Slides, the
+   notebook zips (which strip the mark), the Colab publish (which rewrites
+   `metadata.d2l`) and the HTML/PDF render work unchanged.
+3. **Refuse.** If the store's cells do not match the current code (a code
+   cell changed, appeared or disappeared since capture) or there is no
+   manifest, nothing is injected and nothing is stamped (an old stamp is
+   removed); the notebook is only marked. The scheduler reports it as
+   `FAILED: … (LOCKED: not materialized)` and the gate reports the drift.
+
+The mark means "this notebook's outputs did not come from executing this
+code". Capture never blesses a marked notebook. `gen_notebooks.py` carries the
+mark through a regeneration (it carries the outputs forward too), and
+`run_notebooks.execute_notebook` clears it (and the `.materialized` file)
+before a real execution. When the lock is removed, the scheduler queues every
+notebook that still has a `.materialized` file, removes its stamp and
+executes it, so unlocking can never turn store outputs into a "clean" capture
+of different code. In the scheduler path materialization is cheap and needs no
+GPU or framework venv (the scheduler does it in-process before dispatch); a
+direct `make <stamp>` still has the `EXEC_RULE`'s order-only venv
+prerequisites.
 
 **Re-run and unlock workflow.**
 
@@ -810,10 +839,15 @@ git add outputs/pytorch/chapter_lm-pretrained/ && git commit ...
 removes the named notebooks' stamps and provenance sidecars, and sets
 `D2L_RERUN_LOCKED=1` so that `run_one_notebook.py` executes instead of
 materializing. The re-run writes a fresh sidecar, which is the scheduler
-provenance capture requires. Capture right after the re-run: until then the
-outputs live only in `_notebooks/` (gitignored, wiped by `make clean`). A
-failed re-run leaves no stamp and no sidecar, so the next build restores the
-stored outputs. For a locked notebook, capture also copies the sidecar's
+provenance capture requires. A locked re-run's per-notebook time limit is
+`LOCKED_TIMEOUT` (default 21600 s, 6 h), unless `NOTEBOOK_TIMEOUTS`
+(`tools/runtime_env.py`) has an entry for it. Capture right after the re-run:
+until then the outputs live only in `_notebooks/` (gitignored, wiped by `make
+clean`). A failed re-run leaves no stamp and no sidecar, so the next build
+restores the stored outputs. If a code cell is edited or appended between the
+re-run and the capture, the sidecar no longer covers the code: capture
+refuses and the re-run must be repeated. For a locked notebook, capture also
+copies the sidecar's
 `execution` record (`finished` UTC time and `runtime_s`) into
 `provenance.execution`. This is the store's one wall-clock field, written only
 on an explicit re-run, so it never churns. `make locks` reports it as the
@@ -836,14 +870,18 @@ carries `locked_status`:
   id'd code cell was added, or a captured one disappeared. ERROR on every host:
   the page would show code beside outputs of other code;
 - `no-manifest`: locked but never captured. ERROR;
-- `unchecked`: no generated notebook to compare against (like every other
+- `unchecked`: no generated notebook to compare against. Like every other
   notebook, the code check needs `make notebooks`; `make all`/`all-quick`
-  generate them first).
+  generate them first, but a standalone `make html` on a fresh clone does
+  not, so it cannot see a code edit in a locked file. (Computing the
+  fingerprints from the source alone would need the full `gen_notebooks` +
+  `quarto convert` path per file, so it is not done.)
 
 Prose edits never trigger anything because only code cells enter a
 fingerprint (§3.1). `make locks` lists every locked (file, framework) with its
 `requires`, capture date, runtime and status, and exits non-zero when any is
-an ERROR. Tests: `tools/test_notebook_locks.py` (run by `make test-trap`).
+an ERROR. `refresh-stale` (and so `render-fresh`) now fails when its capture
+step fails. Tests: `tools/test_notebook_locks.py` (run by `make test-trap`).
 
 ---
 

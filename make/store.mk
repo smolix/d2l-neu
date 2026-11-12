@@ -62,10 +62,14 @@ ifeq ($(strip $(FILES)),)
 $(error rerun-locked needs FILES=<chapter/file.md> [FRAMEWORKS=pytorch])
 endif
 endif
+# Locked re-runs default to a 6 h per-notebook limit (a NOTEBOOK_TIMEOUTS entry
+# in tools/runtime_env.py wins); LOCKED_TIMEOUT=<seconds> overrides it.
+LOCKED_TIMEOUT ?= 21600
 rerun-locked: notebooks
 	@mkdir -p $(LOGDIR)
 	@python3 tools/detect_resources.py --report || true
-	@$(SCHED_ENV) python3 tools/notebook_scheduler.py --rerun-locked \
+	@$(SCHED_ENV) D2L_LOCKED_TIMEOUT=$(LOCKED_TIMEOUT) \
+		python3 tools/notebook_scheduler.py --rerun-locked \
 		--files "$(FILES)" \
 		--frameworks "$(subst $(_space),$(_comma),$(strip $(FRAMEWORKS)))" \
 		2>&1 | tee -a $(LOGDIR)/rerun-locked-$(TS).log; rc=$${PIPESTATUS[0]}; \
@@ -103,7 +107,8 @@ refresh-stale: notebooks
 	rm -f $$stamps; \
 	$(SCHED_ENV) python3 tools/notebook_scheduler.py --files "$$stale" \
 		2>&1 | tee -a $(LOGDIR)/scheduler-$(TS).log; rc=$$?; \
-	$(MAKE) capture-outputs FILES="$$(echo $$stale)"; \
+	crc=0; $(MAKE) capture-outputs FILES="$$(echo $$stale)" || crc=$$?; \
+	if [ $$rc -eq 0 ]; then rc=$$crc; fi; \
 	exit $$rc
 
 # Fast recovery render: refresh stale outputs, then rebuild the artifacts with

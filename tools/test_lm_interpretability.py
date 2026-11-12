@@ -132,11 +132,36 @@ class TestIntervene(unittest.TestCase):
                 with torch.no_grad(), d2l.intervene(
                         self.model, {(kind, l): lambda x: x}):
                     out = self.model(self.X)
-                if kind in ('head_z', 'attn_out', 'mlp_out'):
-                    self.assertTrue(torch.equal(out, self.ref), (kind, l))
-                else:  # the hook subtracts and the block adds the stream
-                    torch.testing.assert_close(out, self.ref, rtol=0,
-                                               atol=1e-6)
+                self.assertTrue(torch.equal(out, self.ref), (kind, l))
+
+    def test_resid_writes_bitwise_in_bf16(self):
+        """Review 18.6 F1: a resid site returned fn(r) - stream and the
+        block added the stream back, which is not r in bf16. An identity
+        fn, and positions a splice leaves alone, must come back bitwise."""
+        model = tiny()
+        with torch.no_grad():  # large stream norms, as in real models
+            for blk in model.blks:
+                blk.attention.W_o.weight.mul_(30)
+                blk.ffn.W_2.weight.mul_(30)
+        model, X = model.to(torch.bfloat16), tokens(B=4, T=64)
+        with torch.no_grad():
+            ref = model(X)
+            for kind in ('resid_mid', 'resid_post'):
+                for l in range(L):
+                    with d2l.intervene(model, {(kind, l): lambda x: x}):
+                        self.assertTrue(torch.equal(model(X), ref), (kind, l))
+            keep = torch.zeros(4, 64, 1, dtype=torch.bool)
+            keep[:, 5:9] = True  # splice a few positions only
+            later = ('resid_post', 2)
+            with d2l.intervene(model, record=[later]) as clean:
+                model(X)
+            with d2l.intervene(model, {('resid_post', 1): lambda x:
+                                       torch.where(keep, 2 * x, x)},
+                               record=[later]) as spliced:
+                model(X)
+        a, b = clean.cache[later][0], spliced.cache[later][0]
+        self.assertTrue(torch.equal(a[:, :5], b[:, :5]))  # causal: before
+        self.assertFalse(torch.equal(a[:, 5:9], b[:, 5:9]))
 
     def test_equals_collect_hiddens(self):  # spec test 2
         points = ('attn_out', 'resid_mid', 'mlp_out', 'resid_post')
@@ -230,6 +255,26 @@ class TestIntervene(unittest.TestCase):
                     swapped = self.model(self.X)
             torch.testing.assert_close(nested, once, rtol=0, atol=1e-5)
             self.assertGreater((nested - swapped).abs().max(), 1e-3)
+
+    def test_nested_contexts_read_their_own_hooks(self):
+        """Review 18.6 F2, the documented semantics: an outer context's
+        resid_post record precedes an inner context's mlp_out edit in the
+        same block; the inner record is the stream the model carries."""
+        site, edit = ('resid_post', 1), ('mlp_out', 1)
+        with torch.no_grad():
+            with d2l.intervene(self.model, record=[site]) as outer:
+                with d2l.intervene(self.model, {edit: torch.zeros_like},
+                                   record=[site]) as inner:
+                    self.model(self.X)
+            with d2l.intervene(self.model, record=[site]) as clean:
+                self.model(self.X)
+            with d2l.intervene(self.model, {edit: torch.zeros_like},
+                               record=[site]) as edited:
+                self.model(self.X)
+        self.assertTrue(torch.equal(outer.cache[site][0],
+                                    clean.cache[site][0]))
+        self.assertTrue(torch.equal(inner.cache[site][0],
+                                    edited.cache[site][0]))
 
     def test_model_checks(self):
         with self.assertRaises(AssertionError):
@@ -405,6 +450,23 @@ class TestLenses(unittest.TestCase):
             self.assertEqual(out.dtype, torch.float32)
             torch.testing.assert_close(out, ref, rtol=0, atol=1e-5)
 
+    def test_norms_without_affine_or_bias(self):
+        """Review 18.6 F6: a LayerNorm without bias or affine weights, and
+        an RMSNorm without weights, as the model's final norm."""
+        torch.manual_seed(0)
+        gpt = d2l.GPT(V, num_hiddens=D, num_heads=4, num_blks=1,
+                      norm='layer').eval()
+        h = torch.randn(2, 3, D)
+        for norm in (nn.LayerNorm(D, bias=False),
+                     nn.LayerNorm(D, elementwise_affine=False),
+                     nn.RMSNorm(D, elementwise_affine=False)):
+            gpt.norm = norm
+            with torch.no_grad():
+                torch.testing.assert_close(
+                    d2l.logit_lens(gpt, h),
+                    F.linear(norm(h), gpt.token_emb.weight), rtol=0,
+                    atol=1e-5)
+
     def test_bf16_model_lens_in_fp32(self):
         model = tiny().to(torch.bfloat16)
         h = torch.randn(2, 3, D, dtype=torch.bfloat16)
@@ -501,6 +563,16 @@ class TestTunedLens(unittest.TestCase):
             lens.fit(self.model, self.batches(2), steps=3)
         with self.assertRaisesRegex(AssertionError, 'freeze'):
             lens.fit(tiny().requires_grad_(True), self.batches(1), steps=1)
+
+    def test_layer_count_must_match(self):
+        """Review 18.6 F3: a lens with fewer layers than the model would
+        train toward an intermediate block's logit lens."""
+        for n in (L - 1, L + 1):
+            lens = d2l.TunedLens(D, n)
+            with self.assertRaisesRegex(ValueError, 'blocks'):
+                lens.fit(self.model, self.batches(2), steps=1)
+            with self.assertRaisesRegex(ValueError, 'blocks'):
+                lens.logits(self.model, self.H[0], 0)
 
     def test_per_layer_backward_is_summed_gradient(self):  # spec test 10
         lens = d2l.TunedLens(D, L)
@@ -698,6 +770,25 @@ class TestTopKSAE(unittest.TestCase):
         self.assertLess(float(fvu), 0.1)
         cos = (atoms.T @ sae.W_dec.detach()).max(-1).values
         self.assertGreaterEqual(float((cos > 0.9).float().mean()), 0.9)
+
+    def test_seed_determines_trained_sae(self):
+        """Review 18.6 F4: TopKSAE(seed=...) and train_sae(seed=...) fix
+        the result whatever the global RNG state."""
+        acts = torch.randn(4000, 16, generator=torch.Generator()
+                           .manual_seed(0)).half()
+        runs = []
+        for g in (0, 1):
+            torch.manual_seed(g)  # whatever a notebook consumed before
+            sae = d2l.TopKSAE(16, 32, 4, seed=0)
+            runs.append((d2l.train_sae(sae, acts, steps=20, batch_size=256,
+                                       seed=0), sae.state_dict()))
+        self.assertEqual(runs[0][0], runs[1][0])
+        for name, p in runs[0][1].items():
+            self.assertTrue(torch.equal(p, runs[1][1][name]), name)
+        torch.manual_seed(5)
+        a = d2l.TopKSAE(16, 32, 4).W_dec
+        torch.manual_seed(5)
+        self.assertTrue(torch.equal(a, d2l.TopKSAE(16, 32, 4).W_dec))
 
     def test_train_sae_initialization(self):
         acts = torch.randn(1000, 8) + 3
@@ -959,6 +1050,35 @@ class TestSAEMetrics(unittest.TestCase):
         self.assertEqual(m['per_doc']['n'].tolist(), [8, 9, 9, 9, 9, 8])
         with self.assertRaisesRegex(ValueError, 'width'):
             d2l.sae_metrics(d2l.TopKSAE(D + 1, 8, 2), model, batches, 1)
+
+    def test_per_doc_ce_counts(self):
+        """Review 18.6 F5: n_ce counts the kept positions that have a next
+        token, so n_ce-weighted per-row CE is the pooled CE (an outlier at
+        the last position counts in n but not in n_ce); a row with no such
+        position has CE NaN, not 0."""
+        model = tiny()
+        with torch.no_grad():
+            model.token_emb.weight[5] *= 1000
+        batches = [b.clone() for b in self.batches]
+        batches[0][0, 4] = batches[0][1, 9] = 5  # 9: the last position
+        batches[1][2, 1:] = 5  # every position >= 1 an outlier
+        batches[1][2, 1] = 6  # ... but the first
+        sae = d2l.TopKSAE(D, D, D)
+        m = d2l.sae_metrics(sae, model, batches, self.layer)
+        pd = m['per_doc']
+        self.assertEqual(pd['n'].tolist(), [8, 8, 9, 9, 9, 1])
+        self.assertEqual(pd['n_ce'].tolist(), [7, 8, 8, 8, 8, 1])
+        for key in ('ce_orig', 'ce_splice'):
+            w = pd['n_ce']
+            weighted = float((pd[key] * w).sum() / w.sum())
+            self.assertLess(abs(weighted / m[key] - 1), 1e-6, key)
+            n_weighted = float((pd[key] * pd['n']).sum() / pd['n'].sum())
+            self.assertGreater(abs(n_weighted / m[key] - 1), 1e-4, key)
+        batches[1][2, 1] = 5  # now no position of row 6 is kept
+        pd = d2l.sae_metrics(sae, model, batches, self.layer)['per_doc']
+        self.assertEqual(pd['n_ce'][5], 0)
+        self.assertTrue(np.isnan(pd['ce_orig'][5]))
+        self.assertTrue(np.isnan(pd['ce_splice'][5]))
 
 
 if __name__ == '__main__':

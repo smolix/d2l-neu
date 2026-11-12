@@ -6536,7 +6536,7 @@ class _Intervention:
     def _write_hook(self, inner, outer, base):
         """Forward hook on a module whose output a block adds to its stream
         (W_o, the FFN): site inner sees that output, site outer the stream
-        after the add, base[0] + output."""
+        after the add, r = base[0] + output."""
         def hook(module, args, out):
             new = out
             if inner in self.wanted:
@@ -6544,9 +6544,10 @@ class _Intervention:
                 new = new if y is None else y
                 new = new if zero is None else new + zero
             if outer in self.wanted:
-                y, zero = self._site(outer, base[0] + new)  # as the block adds
-                if y is not None:  # the block's own add then yields about y
-                    new = y - base[0]
+                r = base[0] + new  # the stream, as the block's add makes it
+                y, zero = self._site(outer, r)
+                if y is not None:  # the block's own add then yields about y,
+                    new = new + (y - r)  # exactly r wherever y equals r
                 new = new if zero is None else new + zero
             return None if new is out else new
         return hook
@@ -6611,12 +6612,17 @@ def intervene(model, sites=None, *, record=(), record_grad=False,
     site is (kind, layer), kind one of 'resid_post', 'resid_mid',
     'attn_out', 'mlp_out', 'head_z' (the per-head input of W_o, (B, T,
     heads * head_dim)). sites maps a site to fn(x) -> x_new (same shape and
-    dtype), applied in every call; nested contexts apply the outer fn
-    first. ctx.cache[site] lists, for each recorded site, one tensor per
-    call (after fn). With record_grad=True, ctx.grad_cache[site] lists
-    their gradients after the caller's backward. stop_after=site ends the
-    forward right after that site (recorded) without an error. On a normal
-    exit, a site that never fired raises.
+    dtype), applied in every call; at a resid site the block's own add
+    then carries x_new (rounded), and exactly x wherever x_new equals x.
+    Nested contexts apply the outer fn first, and each context reads a
+    block at its own hooks: an outer context's resid_mid or resid_post is
+    the stream before an inner context's edit of attn_out or mlp_out in
+    that block, so record and edit in one context. ctx.cache[site]
+    lists, for each recorded site, one tensor per call (after fn). With
+    record_grad=True, ctx.grad_cache[site] lists their gradients after
+    the caller's backward. stop_after=site ends the forward right after
+    that site (recorded) without an error. On a normal exit, a site that
+    never fired raises.
 
     Defined in :numref:`sec_lm_interpretability`"""
     return _Intervention(model, sites, record, record_grad, stop_after)
@@ -6627,11 +6633,12 @@ def logit_lens(model, hidden):
 
     Defined in :numref:`sec_lm_interpretability`"""
     norm, h = model.norm, hidden.float()
+    f32 = lambda p: None if p is None else p.float()  # no affine, no bias
     if isinstance(norm, nn.RMSNorm):
-        h = F.rms_norm(h, norm.normalized_shape, norm.weight.float(), norm.eps)
+        h = F.rms_norm(h, norm.normalized_shape, f32(norm.weight), norm.eps)
     else:  # nn.LayerNorm
-        h = F.layer_norm(h, norm.normalized_shape, norm.weight.float(),
-                         norm.bias.float(), norm.eps)
+        h = F.layer_norm(h, norm.normalized_shape, f32(norm.weight),
+                         f32(norm.bias), norm.eps)
     head = model.lm_head if hasattr(model, 'lm_head') else model.token_emb
     return F.linear(h, head.weight.float())
 
@@ -6659,7 +6666,13 @@ class TunedLens(nn.Module):
         h = hidden.to(t.weight.dtype)
         return h + t(h)
 
+    def _check(self, model):
+        if len(model.blks) != self.num_layers:
+            raise ValueError(f'a lens of {self.num_layers} layers for a '
+                             f'model of {len(model.blks)} blocks')
+
     def logits(self, model, hidden, layer):
+        self._check(model)
         return d2l.logit_lens(model, self(hidden, layer))
 
     def fit(self, model, batches, *, steps, lr=1e-3, frac=0.25, seed=0,
@@ -6671,6 +6684,7 @@ class TunedLens(nn.Module):
         holds one chunk of logits. Returns the loss of each step."""
         assert not any(p.requires_grad for p in model.parameters()), (
             'freeze the model first: model.requires_grad_(False)')
+        self._check(model)
         L, dev = self.num_layers, self.translators[0].weight.device
         sites = [('resid_post', l) for l in range(L)]
         optimizer = torch.optim.Adam(self.parameters(), lr=lr)
@@ -6712,13 +6726,15 @@ class TopKSAE(nn.Module):
     """Top-k sparse autoencoder with Qwen-Scope's parameter names and
     shapes: W_enc (d_sae, d_model), b_enc, W_dec (d_model, d_sae), b_dec.
     With center=True the encoder subtracts b_dec from its input first.
+    seed fixes the random initial dictionary (default: the global RNG).
 
     Defined in :numref:`sec_lm_interpretability`"""
-    def __init__(self, d_model, d_sae, k, *, center=False):
+    def __init__(self, d_model, d_sae, k, *, center=False, seed=None):
         super().__init__()
         self.d_model, self.d_sae, self.k = d_model, d_sae, k
         self.center = center  # a plain attribute: the encoder's convention
-        W = torch.randn(d_model, d_sae)
+        gen = None if seed is None else torch.Generator().manual_seed(seed)
+        W = torch.randn(d_model, d_sae, generator=gen)
         W = W / W.norm(dim=0, keepdim=True)  # unit decoder columns
         self.W_dec = nn.Parameter(W)
         self.W_enc = nn.Parameter(W.T.clone())
@@ -6792,8 +6808,9 @@ def train_sae(sae, activations, *, steps, batch_size=4096, lr=2e-4,
               aux_coef=1/32, dead_after=200, seed=0):
     """Train a TopKSAE with Adam on random rows of activations, an (N, d)
     CPU tensor (fp16 allowed), with unit decoder columns and the auxiliary
-    loss of the features that have not fired for dead_after steps.
-    Returns the loss of each step.
+    loss of the features that have not fired for dead_after steps. seed
+    fixes the batches; the initial dictionary is the SAE's own (see
+    TopKSAE's seed). Returns the loss of each step.
 
     Defined in :numref:`sec_lm_interpretability`"""
     dev, dtype = sae.W_dec.device, sae.W_dec.dtype
@@ -6860,7 +6877,11 @@ def sae_metrics(sae, model, token_batches, layer):
     whose stream norm is at most 10 times the batch median: L0, pooled FVU,
     the next-token cross-entropy of the model, with x_hat spliced in, and
     with the mean activation, loss recovered, the fraction of features
-    that never fire, each feature's firing rate, and per-row values.
+    that never fire, each feature's firing rate, and per-row values:
+    sse and sst over the n kept positions, mean ce_orig and ce_splice
+    over the n_ce kept positions that have a next token (NaN if none).
+    The cross-entropy goes one row at a time, so the fp32 buffers hold
+    one row of logits.
 
     Defined in :numref:`sec_lm_interpretability`"""
     if sae.W_dec.shape[0] != model.num_hiddens:
@@ -6870,8 +6891,9 @@ def sae_metrics(sae, model, token_batches, layer):
     token_batches = list(token_batches)  # read twice
 
     def ce(logits, X, keep):  # per row: summed loss and count, kept t
-        loss = F.cross_entropy(logits[:, :-1].float().transpose(1, 2),
-                               X[:, 1:], reduction='none')
+        loss = torch.stack([F.cross_entropy(row[:-1].float(), x[1:],
+                                            reduction='none')
+                            for row, x in zip(logits, X)])
         m = keep[:, :-1]
         return (loss * m).sum(1), m.sum(1)
 
@@ -6886,6 +6908,7 @@ def sae_metrics(sae, model, token_batches, layer):
         keep[:, 0] = False
         keeps.append(keep)
         ce_orig.append(ce(logits, X, keep))
+        del logits  # not alive during the next forward
         total = total + x[keep].double().sum(0)
         n += int(keep.sum())
     mean = (total / n).float()
@@ -6912,7 +6935,7 @@ def sae_metrics(sae, model, token_batches, layer):
                 k, mean.to(x.dtype), x)}):
             ce_mean.append(ce(model(X), X, keep))
     cat = lambda xs: torch.cat(xs).double().cpu().numpy()
-    per_row = lambda pairs: cat([s / c.clamp_min(1) for s, c in pairs])
+    per_row = lambda pairs: cat([s / c for s, c in pairs])  # 0/0: NaN
     pooled = lambda pairs: (sum(float(s.sum()) for s, _ in pairs)
                             / sum(int(c.sum()) for _, c in pairs))
     ce_o, ce_s, ce_m = pooled(ce_orig), pooled(ce_splice), pooled(ce_mean)
@@ -6925,6 +6948,7 @@ def sae_metrics(sae, model, token_batches, layer):
             'n_tokens': n,
             'per_doc': {'sse': sse, 'sst': sst,
                         'n': cat([keep.sum(1) for keep in keeps]),
+                        'n_ce': cat([c for _, c in ce_orig]),
                         'ce_orig': per_row(ce_orig),
                         'ce_splice': per_row(ce_splice)}}
 

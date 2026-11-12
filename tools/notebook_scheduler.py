@@ -87,10 +87,13 @@ def _intlist(s):
 
 
 class Item:
-    __slots__ = ("fw", "rel", "nb", "stamp", "req")
+    __slots__ = ("fw", "rel", "nb", "stamp", "req", "unstamp")
 
-    def __init__(self, fw, rel, nb, stamp, req):
+    def __init__(self, fw, rel, nb, stamp, req, unstamp=False):
         self.fw, self.rel, self.nb, self.stamp, self.req = fw, rel, nb, stamp, req
+        # True for a notebook materialized from the store while it was locked
+        # and no longer locked now: its stamp must go before dispatch.
+        self.unstamp = unstamp
 
     @property
     def label(self):
@@ -175,10 +178,13 @@ def build_worklist(frameworks, force_all=False, files=None, locked=None,
                     locked.append((Item(fw, rel, nb, stamp, None),
                                    force_all or _stale(nb, stamp), lock))
                 continue
-            elif not force_all and not _stale(nb, stamp):
+            # Materialized from the store while it was locked, unlocked now:
+            # its outputs were never produced by this code's execution.
+            unstamp = locks.materialized_flag(nb).exists()
+            if not unstamp and not force_all and not _stale(nb, stamp):
                 continue
             req = notebook_resource(fw, rel, file_uses_gpu(nb, NOTEBOOKS_DIR))
-            items.append(Item(fw, rel, nb, stamp, req))
+            items.append(Item(fw, rel, nb, stamp, req, unstamp))
     return items
 
 
@@ -611,6 +617,12 @@ def main():
             return 1 if locked_failed else 0
         print("scheduler: nothing to run (all stamps fresh)", flush=True)
         return 0
+    for it in items:
+        if it.unstamp:
+            print(f"{it.label}: was materialized from outputs/ while locked; "
+                  f"no longer locked, so it is executed", flush=True)
+            if not args.dry_run:
+                it.stamp.unlink(missing_ok=True)
     sched = Scheduler(args)
     sched.locked_skipped, sched.locked_failed = len(locked), locked_failed
     return sched.run(items)

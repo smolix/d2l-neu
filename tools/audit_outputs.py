@@ -175,16 +175,9 @@ def audit_manifest(repo_root, nb_root, manifest_path, fw, lock=None):
         # "stale". Code drift (a changed, added or removed code cell) means
         # the page would show code beside outputs of other code: an error.
         # Lib/version drift only warns. Prose never enters a fingerprint.
-        changed = [cid for cid, entry in cells.items()
-                   if cid in cur_fps
-                   and entry.get('code_fingerprint') != cur_fps[cid]]
         why = rec['locked_reasons']
-        if changed:
-            why.append(f'{len(changed)} code cell(s) changed since capture')
-        if rec['missing']:
-            why.append(f'{len(rec["missing"])} new code cell(s) never captured')
-        if rec['orphaned']:
-            why.append(f'{len(rec["orphaned"])} captured cell(s) gone')
+        reasons, drifted = locks.code_drift(cells, cur_fps)
+        why.extend(reasons)
         drift = []
         if old_prov.get('d2l_lib_fingerprint') != cur_prov.get(
                 'd2l_lib_fingerprint'):
@@ -200,7 +193,7 @@ def audit_manifest(repo_root, nb_root, manifest_path, fw, lock=None):
             why.extend(drift)
         else:
             rec['locked_status'] = 'clean'
-        rec['locked_cells'] = changed + rec['missing'] + rec['orphaned']
+        rec['locked_cells'] = drifted
         # Reported through locked_status, not as integrity findings.
         rec['orphaned'], rec['missing'] = [], []
         return rec

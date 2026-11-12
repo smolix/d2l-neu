@@ -19,8 +19,9 @@ What a lock does (docs/build-system.md, "Locked notebooks"):
 
   * Builds never execute a locked notebook. Its `.executed` stamp is satisfied
     by MATERIALIZING the executed notebook: the stored outputs are injected
-    into the freshly generated `.ipynb` (`materialize`). The scheduler reports
-    it as `LOCKED (skipped)`; a direct `make <stamp>` materializes too
+    into the freshly generated `.ipynb` (`materialize`), which is marked so
+    that capture never blesses it and an unlock re-executes it. The scheduler
+    reports it as `LOCKED (skipped)`; a direct `make <stamp>` materializes too
     (tools/run_one_notebook.py).
   * Only `make rerun-locked FILES=...` executes it (D2L_RERUN_LOCKED=1), and
     only `make capture-outputs FILES=... UNLOCK=1` may overwrite its manifest.
@@ -48,9 +49,11 @@ FRAMEWORKS = ('pytorch', 'tensorflow', 'jax', 'mxnet')
 
 # A well-formed directive line. The body is parsed by `_parse_body`.
 _DIRECTIVE_RE = re.compile(r'^\s*<!--\s*execution\s*:(?P<body>.*?)-->\s*$')
-# Anything that looks like an attempt at the directive (to reject typos such
-# as a missing `-->` or `executon` instead of silently ignoring them).
-_NEAR_RE = re.compile(r'^\s*<!--\s*exec\w*\s*:', re.IGNORECASE)
+# A comment that starts as the directive (`<!-- execution:`, any case) but
+# does not parse: a hard error. Mere look-alikes (`<!-- executon: ...`) are
+# only a lint warning (`looks_like_directive`), never a build failure.
+_NEAR_RE = re.compile(r'^\s*<!--\s*execution\s*:', re.IGNORECASE)
+_FIRST_WORD_RE = re.compile(r'^\s*<!--\s*([A-Za-z]+)')
 _FENCE_RE = re.compile(r'^\s*(```|~~~)')
 _TOKEN_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.+-]*$')
 _KEYS = ('requires', 'frameworks')
@@ -152,6 +155,22 @@ def parse_file(md_path):
     return parse_text(Path(md_path).read_text(encoding='utf-8'), md_path)
 
 
+def looks_like_directive(text):
+    """Line numbers of comments whose first word resembles `execution` but
+    that are not the directive (`<!-- executon: locked -->`, `<!-- execution
+    locked -->`): tools/lint_source.py warns about them."""
+    import difflib
+    hits = []
+    for i, line in _directive_lines(text):
+        if _DIRECTIVE_RE.match(line) or _NEAR_RE.match(line):
+            continue
+        m = _FIRST_WORD_RE.match(line)
+        if m and difflib.SequenceMatcher(
+                None, m.group(1).lower(), 'execution').ratio() >= 0.8:
+            hits.append(i)
+    return hits
+
+
 def strip_directive(text):
     """Drop the directive line from *text* (preprocessors call this, so the
     line never reaches HTML, PDF, notebooks or slides). Text without a
@@ -196,23 +215,129 @@ def iter_locks(repo_root):
 
 # ── materialization (the .executed stamp of a locked notebook) ─────────
 
+# Notebook-level marker on every notebook whose state came from the lock path
+# (store outputs injected, or refused for code drift) rather than from an
+# execution. Capture never blesses a marked notebook; once the source is no
+# longer locked for that framework, the scheduler re-executes it. gen_notebooks
+# carries the marker across a regeneration; run_notebooks clears it when the
+# notebook is really executed.
+MARKER_KEY = 'd2l'
+MARKER = 'materialized_from_store'
+
+
+def is_materialized(nb):
+    """True if notebook dict (or path) *nb* carries the materialization mark."""
+    if not isinstance(nb, dict):
+        try:
+            nb = json.loads(Path(nb).read_bytes())
+        except (OSError, ValueError):
+            return False
+    return bool((nb.get('metadata', {}).get(MARKER_KEY) or {}).get(MARKER))
+
+
+def mark_materialized(nb):
+    nb.setdefault('metadata', {}).setdefault(MARKER_KEY, {})[MARKER] = True
+
+
+def materialized_flag(nb_path):
+    """`<stem>.materialized` next to the notebook: a cheap index of the
+    marker (a stat, not a JSON parse), for the scheduler's per-run scan."""
+    return Path(nb_path).with_suffix('.materialized')
+
+
+def clear_materialized(nb_path):
+    """Drop the mark from the notebook file (before a real execution).
+    Returns True when the file changed."""
+    nb_path = Path(nb_path)
+    materialized_flag(nb_path).unlink(missing_ok=True)
+    try:
+        nb = json.loads(nb_path.read_bytes())
+    except (OSError, ValueError):
+        return False
+    meta = nb.get('metadata', {}).get(MARKER_KEY)
+    if not meta or MARKER not in meta:
+        return False
+    del meta[MARKER]
+    if not meta:
+        del nb['metadata'][MARKER_KEY]
+    _write_nb(nb_path, nb)
+    return True
+
+
+def _write_nb(nb_path, nb):
+    # Same serialization as tools/gen_notebooks.py.
+    Path(nb_path).write_text(json.dumps(nb, indent=1, ensure_ascii=False),
+                             encoding='utf-8')
+
+
+def code_fingerprints(nb):
+    import capture_outputs as cap
+    return cap.prefix_fingerprints(cap.code_cells_of(nb))[0]
+
+
+def code_drift(cells, cur_fps):
+    """Why the stored *cells* (manifest `cells`) do not belong to the code
+    whose fingerprints are *cur_fps*: changed, new or removed code cells.
+    Empty when the code matches. The audit uses the same rule."""
+    changed = [cid for cid, entry in cells.items()
+               if cid in cur_fps and entry.get('code_fingerprint') != cur_fps[cid]]
+    new = sorted(set(cur_fps) - set(cells))
+    gone = sorted(set(cells) - set(cur_fps))
+    why = []
+    if changed:
+        why.append(f'{len(changed)} code cell(s) changed since capture')
+    if new:
+        why.append(f'{len(new)} new code cell(s) never captured')
+    if gone:
+        why.append(f'{len(gone)} captured cell(s) gone')
+    return why, changed + new + gone
+
+
+def sidecar_status(nb_path, nb=None):
+    """Compare the execution sidecar of *nb_path* with the notebook's code.
+
+    Returns (status, sidecar) with status
+      'none'   no (readable) sidecar: the notebook was not executed;
+      'exact'  the sidecar covers exactly the current code cells, with the
+               same fingerprints, and every code cell ran: this notebook is a
+               real execution of the current code (lib/version may differ);
+      'drift'  anything else (a cell added, removed or edited since the run).
+    """
+    sc_path = Path(nb_path).with_suffix('.provenance.json')
+    try:
+        sc = json.loads(sc_path.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return 'none', None
+    if nb is None:
+        try:
+            nb = json.loads(Path(nb_path).read_bytes())
+        except (OSError, ValueError):
+            return 'drift', sc
+    ran = all(c.get('execution_count') is not None
+              for c in nb.get('cells', []) if c.get('cell_type') == 'code'
+              and ''.join(c.get('source') or '').strip())
+    exact = sc.get('code_fingerprints') == code_fingerprints(nb)
+    return ('exact' if exact and ran else 'drift'), sc
+
+
 def materialize(repo_root, fw, nb_path, store_dir=None, touch_stamp=True):
     """Fill the generated notebook *nb_path* with its stored outputs instead
-    of executing it. Returns (ok, message).
+    of executing it. Returns (ok, message); the stamp is touched only on ok.
 
-    The notebook's code cells get the outputs the store holds for their cell
-    id (none for an id the store lacks), numbered 1..N like a top-to-bottom
-    run, so everything that reads `_notebooks/<fw>/` sees an executed
-    notebook. A `<stem>.provenance.json` sidecar from an earlier real run is
-    removed: the notebook no longer holds those outputs, and without a sidecar
-    `capture_outputs.py --unlock` cannot re-bless the store's own outputs.
-
-    Exception: when the sidecar proves an UNCAPTURED re-run under the current
-    source and lib (`make rerun-locked` without the capture yet), the notebook
-    is kept as it is, so a regeneration between the re-run and the capture
-    does not throw paid outputs away.
+    1. A real, uncaptured re-run of the current code (`make rerun-locked`
+       done, capture not yet: `sidecar_status` 'exact', not marked) is kept
+       as it is, even when the lib moved since (lib drift is a warning for a
+       locked notebook), so a regeneration does not throw paid outputs away.
+    2. Otherwise the stored outputs are injected by cell id, the code cells
+       are numbered 1..N like a top-to-bottom run, the notebook is marked
+       `metadata.d2l.materialized_from_store` and stamped: everything that
+       reads `_notebooks/<fw>/` sees an executed notebook, and capture will
+       never bless it.
+    3. If the store's cells do not match the current code (a code cell
+       changed, appeared or disappeared) or there is no manifest, nothing is
+       injected and nothing is stamped: the notebook is only marked, and the
+       freshness gate reports the code drift.
     """
-    import capture_outputs as cap
     from build_notebook_zips import inject_notebook
     from inject_outputs import index_store_by_id
 
@@ -222,33 +347,48 @@ def materialize(repo_root, fw, nb_path, store_dir=None, touch_stamp=True):
     chapter, stem = nb_path.parent.name, nb_path.stem
     stamp = nb_path.with_suffix('.executed')
     manifest = store_dir / fw / chapter / f'{stem}.json'
-    if not nb_path.exists():
+    rerun = (f'make rerun-locked FILES={chapter}/{stem}.md, then make '
+             f'capture-outputs FILES={chapter}/{stem}.md UNLOCK=1')
+    try:
+        nb = json.loads(nb_path.read_bytes())
+    except OSError:
         return False, f'{nb_path} not generated (run `make notebooks-{fw}`)'
+    cur_fps = code_fingerprints(nb)
 
-    sidecar = nb_path.with_suffix('.provenance.json')
-    if sidecar.exists():
-        status, _ = cap.execution_freshness(repo_root, nb_path, fw, store_dir)
-        if status == 'fresh':
-            if touch_stamp:
-                stamp.touch()
-            return True, ('kept an uncaptured re-run (capture it: make '
-                          f'capture-outputs FILES={chapter}/{stem}.md UNLOCK=1)')
-        sidecar.unlink()
+    status, _ = sidecar_status(nb_path, nb)
+    if status == 'exact' and not is_materialized(nb):
+        if touch_stamp:
+            stamp.touch()
+        return True, ('kept an uncaptured re-run (capture it: make '
+                      f'capture-outputs FILES={chapter}/{stem}.md UNLOCK=1)')
+
+    def refuse(msg):
+        stamp.unlink(missing_ok=True)
+        materialized_flag(nb_path).touch()
+        if not is_materialized(nb):
+            mark_materialized(nb)
+            _write_nb(nb_path, nb)
+        return False, msg
 
     if not manifest.exists():
-        return False, (f'no stored outputs ({manifest.relative_to(repo_root)} '
-                       'missing). A locked notebook is never executed by a '
-                       f'build: make rerun-locked FILES={chapter}/{stem}.md, '
-                       'then make capture-outputs ... UNLOCK=1')
+        return refuse(f'no stored outputs ({manifest.relative_to(repo_root)} '
+                      f'missing); a build never executes a locked notebook: '
+                      f'{rerun}')
     try:
+        man = json.loads(manifest.read_text(encoding='utf-8'))
+        why, _ = code_drift(man.get('cells', {}), cur_fps)
+        if why:
+            return refuse(f'code drift ({"; ".join(why)}): not materialized; '
+                          f'revert the code edit, or {rerun}')
         ids, _ = index_store_by_id(store_dir, fw, chapter, stem)
-        nb = json.loads(nb_path.read_bytes())
         inject_notebook(nb, ids)
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError, KeyError) as e:
         return False, f'cannot materialize from {manifest}: {e}'
-    # Same serialization as tools/gen_notebooks.py.
-    nb_path.write_text(json.dumps(nb, indent=1, ensure_ascii=False),
-                       encoding='utf-8')
+    mark_materialized(nb)
+    _write_nb(nb_path, nb)
+    materialized_flag(nb_path).touch()
+    # The notebook no longer holds the outputs a sidecar would describe.
+    nb_path.with_suffix('.provenance.json').unlink(missing_ok=True)
     if touch_stamp:
         stamp.touch()
     return True, f'materialized from {manifest.relative_to(repo_root)}'

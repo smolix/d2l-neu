@@ -362,6 +362,10 @@ summary adds `, N LOCKED (skipped)` (only when N > 0, so unlocked runs print
 exactly what they did before). A locked notebook that cannot be materialized
 (no manifest) is listed as `FAILED: … (LOCKED: not materialized)`.
 `run_one_notebook.py` applies the same rule to a direct `make <stamp>`.
+A notebook that was materialized while locked keeps a `<stem>.materialized`
+file; once its source is no longer locked, the scheduler queues it, removes its
+stamp before dispatch and executes it (printing `was materialized from
+outputs/ while locked; no longer locked, so it is executed`).
 `--rerun-locked --files …` (`make rerun-locked`) inverts the filter: it queues
 only the named locked notebooks, removes their stamps and provenance sidecars,
 and sets `D2L_RERUN_LOCKED=1` so the inner `run_one_notebook.py` executes them.

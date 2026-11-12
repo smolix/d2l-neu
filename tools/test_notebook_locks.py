@@ -397,6 +397,258 @@ def test_gate():
     check('other.md' not in out, '... but is not on the refresh-stale list')
 
 
+# ── review findings (2026-11-12): one small fixture per scenario ─────
+
+LOCK = '<!-- execution: locked; requires: a100 -->'
+
+
+class Mini:
+    """A one-file fixture: chapter `ch`, stem `foo`, frameworks as given."""
+
+    def __init__(self, ch, fws=(FW,)):
+        self.ch, self.fws = ch, fws
+        (FIX / ch).mkdir(parents=True, exist_ok=True)
+        for fw in fws:
+            d = FIX / '_notebooks' / fw / ch
+            d.mkdir(parents=True, exist_ok=True)
+            for stem in ('foo', 'plain'):
+                (d / f'{stem}.d').write_text(
+                    f'_notebooks/{fw}/{ch}/{stem}.executed: \\\n    '
+                    f'd2l/_blocks/{fw}/Foo.py\n', encoding='utf-8')
+            shard = FIX / 'd2l' / '_blocks' / fw / 'Foo.py'
+            shard.parent.mkdir(parents=True, exist_ok=True)
+            if not shard.exists():
+                shard.write_text('class Foo:\n    answer = 42\n')
+
+    def md(self, cells, lock=LOCK, stem='foo'):
+        body = ''.join(f'```{{.python .input #{cid}}}\n{src}\n```\n\n'
+                       for cid, src in cells.items())
+        (FIX / self.ch / f'{stem}.md').write_text(
+            f'# T\n\n{lock}\n\nProse.\n\n{body}', encoding='utf-8')
+        locks._CACHE.clear()
+
+    def nb(self, cells, executed, fw=FW, stem='foo'):
+        p = self.path(fw, stem)
+        nb = notebook(executed, cells)
+        nb['cells'] = [c for c in nb['cells'] if c['cell_type'] == 'code']
+        for c in nb['cells']:
+            if executed:
+                c['outputs'] = [{'output_type': 'stream', 'name': 'stdout',
+                                 'text': [f'{c["id"]} {fw}\n']}]
+        p.write_text(json.dumps(nb, indent=1), encoding='utf-8')
+        return p
+
+    def path(self, fw=FW, stem='foo'):
+        return FIX / '_notebooks' / fw / self.ch / f'{stem}.ipynb'
+
+    def run(self, fw=FW, stem='foo'):
+        """A real (scheduler) execution: outputs + provenance sidecar."""
+        saved = run_notebooks.NOTEBOOKS_DIR
+        try:
+            run_notebooks.NOTEBOOKS_DIR = FIX / '_notebooks'
+            run_notebooks.write_execution_provenance(self.path(fw, stem),
+                                                     elapsed=5)
+        finally:
+            run_notebooks.NOTEBOOKS_DIR = saved
+
+    def manifest(self, fw=FW, stem='foo'):
+        return FIX / 'outputs' / fw / self.ch / f'{stem}.json'
+
+    def stored(self, fw=FW, stem='foo'):
+        m = json.loads(self.manifest(fw, stem).read_text())
+        return {k: [o.get('text') for o in v['outputs']]
+                for k, v in m['cells'].items()}
+
+    def remove(self):
+        shutil.rmtree(FIX / self.ch, ignore_errors=True)
+        for fw in self.fws:
+            shutil.rmtree(FIX / '_notebooks' / fw / self.ch, ignore_errors=True)
+            shutil.rmtree(FIX / 'outputs' / fw / self.ch, ignore_errors=True)
+        locks._CACHE.clear()
+
+
+def test_finding1_unlock_does_not_launder():
+    print('review 1: unlocking never launders store outputs')
+    m = Mini('chapter_r1')
+    m.md({'r1-1': 'print(1)'})
+    m.nb({'r1-1': 'print(1)'}, executed=True)
+    m.run()
+    rc, _, _ = capture('--unlock', f'FILES={m.ch}/foo.md')
+    check(rc == 0, 'locked notebook captured after its re-run')
+
+    # Clean materialization is marked (metadata + flag file) and stamped.
+    m.nb({'r1-1': 'print(1)'}, executed=False)
+    m.path().with_suffix('.provenance.json').unlink()
+    ok, _ = locks.materialize(FIX, FW, m.path())
+    check(ok and locks.is_materialized(m.path())
+          and locks.materialized_flag(m.path()).exists()
+          and m.path().with_suffix('.executed').exists(),
+          'a materialized notebook is marked and stamped')
+    rc, out, err = capture('--unlock')
+    check(rc == 0 and 'materialized from the store' in err,
+          'capture never blesses a materialized notebook, even with UNLOCK')
+
+    # gen_notebooks carries the marker through a regeneration.
+    import gen_notebooks
+    prev = json.loads(m.path().read_text())
+    m.nb({'r1-1': 'print(1)'}, executed=False)
+    gen_notebooks._merge_outputs_from_prev(m.path(), prev)
+    check(locks.is_materialized(m.path()),
+          'a regeneration (gen_notebooks merge) keeps the marker')
+
+    # Unlocked now: the stamped, materialized notebook must be re-executed.
+    m.md({'r1-1': 'print(1)'}, lock='')
+    with fixture_root():
+        items = ns.build_worklist([FW], files=ns.parse_files(f'{m.ch}/foo.md'))
+    check(len(items) == 1 and items[0].unstamp,
+          'after unlocking, the scheduler queues it and drops its stamp')
+    before = m.manifest().read_text()
+    rc, out, err = capture()
+    check(rc == 0 and m.manifest().read_text() == before,
+          'capture-all after unlocking leaves the store untouched')
+    check(locks.clear_materialized(m.path())
+          and not locks.is_materialized(m.path())
+          and not locks.materialized_flag(m.path()).exists(),
+          'a real execution clears the marker (run_notebooks.execute_notebook)')
+
+    # Code drift: nothing injected, nothing stamped, gate fails.
+    m.md({'r1-1': 'print(2)'})
+    m.nb({'r1-1': 'print(2)'}, executed=False)
+    m.path().with_suffix('.executed').touch()
+    ok, msg = locks.materialize(FIX, FW, m.path())
+    nb = json.loads(m.path().read_text())
+    check(not ok and 'code drift' in msg
+          and not m.path().with_suffix('.executed').exists()
+          and not nb['cells'][0]['outputs'] and locks.is_materialized(nb),
+          'code drift: no outputs injected, stamp removed, notebook marked')
+    rc, out, err = gate()
+    check(rc != 0 and 'chapter_r1/foo.md' in err, '... and the gate fails')
+    m.md({'r1-1': 'print(2)'}, lock='')
+    rc, out, err = capture('FILES=%s/foo.md' % m.ch)
+    check(rc == 2 and m.manifest().read_text() == before,
+          'unlocked after the drift: capture still refuses the marked notebook')
+    m.remove()
+
+
+def test_finding2_partial_lock_capture():
+    print('review 2: a partial lock does not block the other frameworks')
+    m = Mini('chapter_r2', fws=(FW, 'jax'))
+    (FIX / m.ch / 'foo.md').write_text(
+        '# T\n\n<!-- execution: locked; requires: a100; frameworks: pytorch -->'
+        '\n\n```{.python .input #r2-1}\n%%tab pytorch\nx = 1\n```\n\n'
+        '```{.python .input #r2-1}\n%%tab jax\nx = 1\n```\n', encoding='utf-8')
+    (FIX / m.ch / 'plain.md').write_text(
+        '# P\n\n```{.python .input #r2p-1}\nx = 1\n```\n', encoding='utf-8')
+    locks._CACHE.clear()
+    for fw in (FW, 'jax'):
+        m.nb({'r2-1': 'x = 1'}, executed=True, fw=fw)
+        m.run(fw)
+    m.nb({'r2p-1': 'x = 1'}, executed=True, stem='plain')
+    rc, out, err = run_tool('capture_outputs.py', '--frameworks', 'pytorch,jax',
+                            f'FILES={m.ch}/foo.md')
+    check(rc == 0 and m.manifest('jax').exists()
+          and not m.manifest(FW).exists() and 'LOCKED' in err,
+          'FILES on a partly locked file captures jax, skips pytorch, exit 0')
+    rc, out, err = run_tool('capture_outputs.py', '--frameworks', 'pytorch',
+                            f'FILES={m.ch}/foo.md {m.ch}/plain.md')
+    check(rc == 0 and m.manifest(FW, 'plain').exists()
+          and not m.manifest(FW).exists(),
+          'a FILES list mixing locked and unlocked files captures the unlocked')
+    rc, out, err = run_tool('capture_outputs.py', '--frameworks', 'pytorch',
+                            f'FILES={m.ch}/foo.md')
+    check(rc == 2, '... and refuses only when every requested pair is locked')
+    mk = (TOOLS.parent / 'make' / 'store.mk').read_text()
+    recipe = mk[mk.index('refresh-stale: notebooks'):mk.index('render-fresh:')]
+    check('|| crc=$$?' in recipe and 'rc=$$crc' in recipe,
+          'refresh-stale propagates the capture exit code')
+    m.remove()
+
+
+def test_finding3_and_4_rerun_vs_code_and_lib():
+    print('review 3+4: a re-run must cover the current code; lib drift keeps it')
+    m = Mini('chapter_r3')
+    m.md({'r3-1': 'print(1)'})
+    m.nb({'r3-1': 'print(1)'}, executed=True)
+    m.run()
+    capture('--unlock', f'FILES={m.ch}/foo.md')
+    stored = m.stored()
+    p = m.path()
+    # 3: a cell appended after the re-run, before the capture; the
+    # regeneration carried the first cell's outputs forward.
+    m.md({'r3-1': 'print(1)', 'r3-2': 'print(expensive())'})
+    m.nb({'r3-1': 'print(1)', 'r3-2': 'print(expensive())'}, executed=False)
+    nb = json.loads(p.read_text())
+    nb['cells'][0]['outputs'] = [{'output_type': 'stream', 'name': 'stdout',
+                                  'text': ['r3-1 rerun\n']}]
+    nb['cells'][0]['execution_count'] = 1
+    p.write_text(json.dumps(nb, indent=1))
+    check(locks.sidecar_status(p)[0] == 'drift',
+          'a sidecar that lacks a current code cell is code drift')
+    rc, out, err = capture('--unlock', f'FILES={m.ch}/foo.md')
+    check(rc == 2 and 'CODE DRIFT' in err and m.stored() == stored,
+          'capture UNLOCK refuses a re-run that misses an appended cell')
+    ok, msg = locks.materialize(FIX, FW, p)
+    check(not ok and not p.with_suffix('.executed').exists()
+          and 'kept' not in msg,
+          'materialize neither keeps nor stamps such a re-run')
+
+    # 4: the lib moved between the re-run and the capture.
+    m.md({'r3-1': 'print(1)'})
+    m.nb({'r3-1': 'print(1)'}, executed=True)
+    m.run()
+    old_fp = json.loads(p.with_suffix('.provenance.json').read_text())[
+        'provenance']['d2l_lib_fingerprint']
+    shard = FIX / 'd2l' / '_blocks' / FW / 'Foo.py'
+    saved = shard.read_text()
+    shard.write_text('class Foo:\n    answer = 44  # r4\n')
+    nb_before = p.read_text()
+    ok, msg = locks.materialize(FIX, FW, p)
+    check(ok and 'kept' in msg and p.read_text() == nb_before
+          and p.with_suffix('.provenance.json').exists(),
+          'lib drift after a re-run: materialize keeps the paid outputs')
+    rc, out, err = capture('--unlock', f'FILES={m.ch}/foo.md')
+    man = json.loads(m.manifest().read_text())
+    check(rc == 0 and 'predates the current d2l lib' in err
+          and man['provenance']['d2l_lib_fingerprint'] == old_fp,
+          "capture UNLOCK accepts it with a warning, under the run's own lib")
+    rc, out, err = run_tool('audit_outputs.py', '--json')
+    check(json.loads(out).get('locked', {}).get(f'{FW}:{m.ch}/foo.md')
+          == 'lib-drift', '... so the audit still reports lib-drift')
+    shard.write_text(saved)
+    m.remove()
+
+
+def test_small_issues():
+    print('review: timeout, hosted sweep, parser near-misses')
+    import run_one_notebook as r1
+    from runtime_env import NOTEBOOK_TIMEOUTS
+    check(r1.default_timeout('chapter_x/foo.ipynb', False, {}) == 3600
+          and r1.default_timeout('chapter_x/foo.ipynb', True, {}) == 21600
+          and r1.default_timeout('chapter_x/foo.ipynb', True,
+                                 {'D2L_LOCKED_TIMEOUT': '99'}) == 99,
+          'locked re-runs default to 6 h, LOCKED_TIMEOUT overrides')
+    if NOTEBOOK_TIMEOUTS:
+        rel, t = next(iter(NOTEBOOK_TIMEOUTS.items()))
+        check(r1.default_timeout(rel, True, {'D2L_LOCKED_TIMEOUT': '99'}) == t,
+              'a NOTEBOOK_TIMEOUTS entry still wins')
+    import run_hosted_full as hosted
+    run, skipped = hosted.drop_locked(FIX, FW, [f'{CH}/locked.ipynb',
+                                                f'{CH}/plain.ipynb'])
+    check(run == [f'{CH}/plain.ipynb'] and skipped == [f'{CH}/locked.ipynb'],
+          'the hosted sweep skips locked notebooks (unless --include-locked)')
+    check(locks.parse_text('<!-- executive summary: costs -->\n') is None,
+          '`<!-- executive summary: ... -->` is not a directive and no error')
+    try:
+        locks.parse_text('<!-- Execution: lockd -->\n')
+        check(False, 'a malformed `<!-- execution:` comment is a hard error')
+    except locks.LockError:
+        check(True, 'a malformed `<!-- execution:` comment is a hard error')
+    text = '<!-- executon: locked -->\n<!-- executive summary: x -->\n'
+    check(locks.parse_text(text) is None
+          and locks.looks_like_directive(text) == [1],
+          'a typo (`executon:`) is only a lint warning')
+
+
 def main():
     global FIX
     FIX = Path(tempfile.mkdtemp(prefix='d2l-locks-test-'))
@@ -408,6 +660,10 @@ def main():
         test_scheduler_skips_and_materializes()
         test_rerun_selects_named()
         test_gate()
+        test_finding1_unlock_does_not_launder()
+        test_finding2_partial_lock_capture()
+        test_finding3_and_4_rerun_vs_code_and_lib()
+        test_small_issues()
     finally:
         shutil.rmtree(FIX, ignore_errors=True)
     print(f'\n{_passed} passed, {_failed} failed')

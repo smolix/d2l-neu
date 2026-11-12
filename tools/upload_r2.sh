@@ -185,6 +185,33 @@ if [[ ! -f "$BOOK_DIR/notebooks/d2l-pytorch.zip" ]]; then
     fi
 fi
 
+# The PDFs have the same problem: the pdf-<fw> and pdf-parts rules copy them
+# into _book/pdf/, and a later standalone `make html` wipes that directory. An
+# upload with --delete then removed every PDF from the bucket, and the CDN
+# cached the 404s for 8 h (2026-11-12). Restage whatever is built in _pdf/;
+# if a PDF is still missing, refuse --delete rather than remove it remotely.
+for f in _pdf/*/_pdf/Dive-into-Deep-Learning-*.pdf; do
+    [[ -f "$f" && ! -f "$BOOK_DIR/pdf/$(basename "$f")" ]] || continue
+    mkdir -p "$BOOK_DIR/pdf"; cp -f "$f" "$BOOK_DIR/pdf/"
+    echo "Restaged $(basename "$f") into $BOOK_DIR/pdf/ (render had wiped it)"
+done
+for f in _pdf/parts/Dive-into-Deep-Learning-*.pdf; do
+    [[ -f "$f" && ! -f "$BOOK_DIR/pdf/parts/$(basename "$f")" ]] || continue
+    mkdir -p "$BOOK_DIR/pdf/parts"; cp -f "$f" "$BOOK_DIR/pdf/parts/"
+    echo "Restaged parts/$(basename "$f") into $BOOK_DIR/pdf/parts/"
+done
+if [[ "$DELETE" == true ]]; then
+    missing=0
+    for fw in pytorch jax tensorflow mxnet; do
+        [[ -f "$BOOK_DIR/pdf/Dive-into-Deep-Learning-$fw.pdf" ]] || missing=$((missing + 1))
+    done
+    if (( missing > 0 )); then
+        echo "ERROR: --delete with $missing framework PDF(s) missing from $BOOK_DIR/pdf/ and not built in _pdf/;" >&2
+        echo "       that would delete the published PDFs. Run 'make pdfs pdf-parts' or upload without --delete." >&2
+        exit 1
+    fi
+fi
+
 # ── Hash the local tree ─────────────────────────────────────
 # sha256sum format: `<64-hex>  <path>` — 64 + 2 + path.
 echo "Hashing $BOOK_DIR/ ..."

@@ -12,10 +12,12 @@ section asks how to find such a bound, and what the multipliers of the KKT
 conditions measure.
 
 The clipping problem of :numref:`subsec_mdl-kkt-conditions` shows the
-difficulty. It
-minimized the squared distance $\tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$ to
-$\mathbf{x}_0 = (3, 4)$ over all $\mathbf{x}$ with $\|\mathbf{x}\| \le 1$ and
-found $\mathbf{x}^\star = (0.6, 0.8)$ with value $8$. Suppose instead that an
+difficulty. It minimized the squared distance
+$\tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$ to the point $(3, 4)$ over all
+$\mathbf{x}$ with $\|\mathbf{x}\| \le 1$ and found
+$\mathbf{x}^\star = (0.6, 0.8)$ with value $8$. (That section called the
+point $\mathbf{y}$. Here it is $\mathbf{x}_0$, because $\mathbf{y}$ will be
+needed for labels and for the argument of a conjugate.) Suppose instead that an
 iterative solver stops at $\mathbf{x} = (0.55, 0.835)$. This point is
 feasible ($\|\mathbf{x}\|^2 = 0.9997$) and has value $8.01$. Is that good
 enough, or is there a feasible point with value $7$? The gradient at the
@@ -40,9 +42,9 @@ vector machine, and a power allocation problem, and show a problem whose
 best bound stays strictly below its optimum. Three results carry the
 section: weak duality, which costs two lines; strong duality for convex
 problems, whose proof holds the one hard step; and the reading of the
-multipliers as prices. The conjugate is a tool for computing duals and can
-wait for a second reading. All computations are small enough for NumPy, and
-`d2l` supplies the plots.
+multipliers as prices. The conjugate, a tool for computing duals, comes
+after the prices and can wait for a second reading. All computations are
+small enough for NumPy, and `d2l` supplies the plots.
 
 ```{.python .input #mdl-lagrangian-duality-duality}
 #@tab mxnet
@@ -164,8 +166,8 @@ circle, the added term vanishes, and the bound is the value of a feasible
 point.
 
 The cell evaluates $f + \lambda g$ at $\mathbf{x}(\lambda)$ on a grid of
-$\lambda$ and plots the bounds against $p^\star$. The numbers will be the
-ones above; the shape of the curve is what to look at.
+$\lambda$ and plots the bounds against $p^\star$; the shape of the curve is
+what to look at.
 
 ```{.python .input #mdl-lagrangian-duality-a-lower-bound-from-one-multiplier}
 x0 = np.array([3.0, 4.0])                             # the point to clip
@@ -174,12 +176,8 @@ g = lambda x: 0.5 * (np.sum(x ** 2) - 1.0)            # constraint g(x) <= 0
 x_of = lambda lam: x0 / (1 + lam)                     # minimizer of L(., lam)
 q = lambda lam: f(x_of(lam)) + lam * g(x_of(lam))     # dual function
 p_star = f(x0 / np.linalg.norm(x0))                   # value at the clipped point
-print('p* =', p_star)
-print('q(0), ..., q(5) =', np.round([q(l) for l in range(6)], 4))
 lams = np.linspace(0.0, 12.0, 1201)
 qs = np.array([q(l) for l in lams])
-print(f'max q = {qs.max():.4f} at lambda = {lams[qs.argmax()]:.2f}')
-print('q <= p* everywhere:', bool((qs <= p_star + 1e-12).all()))
 d2l.plot(lams, [qs, np.full_like(lams, p_star)], 'lambda', 'value',
          legend=['dual function q(lambda)', 'p* = 8'])
 ```
@@ -282,253 +280,14 @@ problem is not convex. Its optimal value $d^\star$ is a lower bound on
 $p^\star$, and every dual feasible point gives one. The difference
 $p^\star - d^\star \ge 0$ is the **duality gap**. It was zero for the
 clipping problem, and the last worked example of this section shows a
-problem where it is not. When it must be zero is answered in
-:numref:`subsec_mdl-strong-duality`; the conjugate, which comes first, is
-not needed for it.
-
-## The Convex Conjugate
-:label:`subsec_mdl-convex-conjugate`
-
-Computing $q$ needs an unconstrained minimization for every value of the
-multipliers. For linear constraints this minimization has a structure that
-lets us do it once and for all. With constraints
-$\mathbf{A}\mathbf{x} \preceq \mathbf{b}$ the Lagrangian is
-$f(\mathbf{x}) + \boldsymbol{\lambda}^\top(\mathbf{A}\mathbf{x} - \mathbf{b})$, so
-
-$$
-q(\boldsymbol{\lambda}) = \inf_{\mathbf{x}} \bigl[ f(\mathbf{x}) + (\mathbf{A}^\top\boldsymbol{\lambda})^\top \mathbf{x} \bigr] - \mathbf{b}^\top \boldsymbol{\lambda}.
-$$
-
-The infimum depends on $f$ and on one vector, $\mathbf{A}^\top\boldsymbol{\lambda}$,
-and not otherwise on $\mathbf{A}$ or $\mathbf{b}$. If we tabulate, once for
-each $f$, the value of $\inf_{\mathbf{x}} [f(\mathbf{x}) - \mathbf{y}^\top\mathbf{x}]$
-as a function of $\mathbf{y}$, then every linearly constrained dual with
-objective $f$ can be read off the table. That table is the convex conjugate.
-
-### Supporting Lines
-
-Start in one dimension with $f(x) = \tfrac12 x^2$ and the slope $y = 2$. Which
-lines $t = 2x + c$ of slope $2$ stay below the graph? We need
-$2x + c \le \tfrac12 x^2$ for every $x$, that is,
-$c \le \min_x (\tfrac12 x^2 - 2x) = -2$, attained at $x = 2$. The highest such
-line, $t = 2x - 2$, touches the parabola at $(2, 2)$, where its slope matches
-$f'(2) = 2$. Lowering a line of slope $2$ until it touches the graph thus
-puts its intercept at $-2$, and the number
-$\max_x (2x - \tfrac12 x^2) = 2$ is minus that intercept.
-:numref:`fig_mdl-opt-conjugate-intercept`(a) draws this.
-
-![The convex conjugate as a supporting line. (a) For $f(x)=\tfrac12x^2$ and slope $2$, the dashed line of slope $2$ is lowered until it touches the graph, at $x=2$; its intercept is $-2$, so $f^*(2)=2$. (b) For $f(x)=|x|$ a line of slope $\tfrac12$ touches at the origin with intercept $0$, while a line of slope $2$ eventually runs above the graph for every intercept: $f^*(\tfrac12)=0$ and $f^*(2)=+\infty$. The conjugate is finite exactly for the slopes that admit a line below the graph.](../img/mdl-opt-conjugate-intercept.svg)
-:label:`fig_mdl-opt-conjugate-intercept`
-
-The **convex conjugate** (or Fenchel--Legendre transform) of a function
-$f : \mathbb{R}^n \to \mathbb{R} \cup \{+\infty\}$ records this number for
-every slope (an asterisk $*$ marks a conjugate, a star $\star$ an optimum):
-
-$$
-f^*(\mathbf{y}) \;=\; \sup_{\mathbf{x}} \;\left( \mathbf{y}^\top \mathbf{x} - f(\mathbf{x}) \right).
-$$
-:eqlabel:`eq_mdl-opt-conjugate`
-
-That is, $f^*(\mathbf{y})$ is minus the intercept of the highest affine function
-with slope $\mathbf{y}$ that lies below the graph of $f$. The conjugate
-describes $f$ by its supporting lines instead of its values. For
-$f(x) = \tfrac12 x^2$ and any $y$ the supremum is attained at $x = y$, so
-$f^*(y) = \tfrac12 y^2$.
-
-We allow $f$ to take the value $+\infty$, which encodes a domain. Points where
-$f = +\infty$ never attain the supremum, and convexity of such a function means
-convexity of its epigraph.
-
-The supremum can be $+\infty$. For $f(x) = |x|$ and slope $2$,
-$2x - |x| = x$ for $x > 0$, which grows without bound: no line of slope $2$
-stays below the V, whatever its intercept. For $|y| \le 1$ instead,
-$yx - |x| \le 0$ with equality at $x = 0$, so the line of slope $y$ through
-the origin is a supporting line. Hence $f^*(y) = 0$ for $|y| \le 1$ and
-$f^*(y) = +\infty$ otherwise
-(:numref:`fig_mdl-opt-conjugate-intercept`(b)). The conjugate of the
-absolute value is the *indicator* of the interval $[-1, 1]$, the function
-that is $0$ on the set and $+\infty$ off it.
-
-Two properties follow directly from the definition. First, $f^*$ is convex
-for every $f$, convex or not. For fixed $\mathbf{x}$ the expression
-$\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$ is affine in $\mathbf{y}$, and a
-pointwise supremum of affine functions is convex, because its epigraph is the
-intersection of the half-spaces above them. The same argument with an
-infimum made $q$ concave.
-
-Second, the definition gives $f^*(\mathbf{y}) \ge \mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$
-for every $\mathbf{x}$, which rearranges into the **Fenchel--Young
-inequality**,
-
-$$
-\mathbf{y}^\top \mathbf{x} \;\le\; f(\mathbf{x}) + f^*(\mathbf{y})
-\qquad \textrm{for all } \mathbf{x}, \mathbf{y}.
-$$
-:eqlabel:`eq_mdl-opt-fenchel-young`
-
-Equality holds exactly when $\mathbf{x}$ attains the supremum in
-:eqref:`eq_mdl-opt-conjugate`. For a differentiable *convex* $f$ this happens
-exactly when $\mathbf{y} = \nabla f(\mathbf{x})$, since
-$\mathbf{x} \mapsto \mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$ is then concave and
-maximized where its gradient vanishes. Convexity is needed. The double well
-$\phi_0(x) = (x^2 - 1)^2$ has $\phi_0'(0) = 0$, but
-$\phi_0^*(0) = -\min\phi_0 = 0$ and $\phi_0(0) + \phi_0^*(0) = 1 > 0$,
-because $x = 0$ is a local maximum of $\phi_0$,
-not a point where the line of slope $0$ touches from below. For the
-self-conjugate pair $\tfrac12\|\mathbf{x}\|^2$, Fenchel--Young becomes the
-familiar
-$\mathbf{y}^\top\mathbf{x} \le \tfrac12\|\mathbf{x}\|^2 + \tfrac12\|\mathbf{y}\|^2$.
-
-Does the conjugate lose information? For a convex $f$ that is *proper* (never
-$-\infty$ and not $+\infty$ everywhere) and *closed* (its epigraph is a closed
-set), the supporting lines determine the graph, and applying the conjugate
-twice recovers it: $f^{**} = f$ :cite:`Rockafellar.1970`. For a nonconvex
-$f$ that has at least one affine function below it, $f^{**}$ is the
-largest closed convex function below $f$, its convex envelope
-(Exercise :exref:`ex_mdl-convexity-conjugate-pairs`d).
-
-The pairs used in this section and its exercises are:
-
-- $\tfrac12\|\mathbf{x}\|^2$ and $\tfrac12\|\mathbf{y}\|^2$, the self-conjugate
-  pair;
-- $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ and
-  $\tfrac12\mathbf{y}^\top\mathbf{A}^{-1}\mathbf{y}$ for $\mathbf{A} \succ 0$
-  (the maximizer is $\mathbf{x} = \mathbf{A}^{-1}\mathbf{y}$);
-- $e^x$ and $y \log y - y$ for $y > 0$, with value $0$ at $y = 0$ and
-  $+\infty$ for $y < 0$ (the maximizer is $x = \log y$; for instance
-  $f^*(1) = -1$ and $f^*(e) = 0$);
-- $\lambda\|\mathbf{x}\|_1$ and the indicator of the box
-  $\{\mathbf{y} : \|\mathbf{y}\|_\infty \le \lambda\}$, the vector version of
-  the absolute value above.
-
-### Duals of Linearly Constrained Problems
-
-We now return to the problem that motivated the conjugate,
-$\min f(\mathbf{x})$ subject to $\mathbf{A}\mathbf{x} \preceq \mathbf{b}$.
-The one step that is not routine is pulling a minus sign out of the
-infimum, which turns it into the supremum of the conjugate's definition:
-
-$$
-\begin{aligned}
-q(\boldsymbol{\lambda})
-&= \inf_{\mathbf{x}} \left[ f(\mathbf{x}) + (\mathbf{A}^\top\boldsymbol{\lambda})^\top\mathbf{x} \right] - \mathbf{b}^\top\boldsymbol{\lambda} \\
-&= -\sup_{\mathbf{x}} \left[ (-\mathbf{A}^\top\boldsymbol{\lambda})^\top\mathbf{x} - f(\mathbf{x}) \right] - \mathbf{b}^\top\boldsymbol{\lambda} \\
-&= -f^*(-\mathbf{A}^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda}.
-\end{aligned}
-$$
-:eqlabel:`eq_mdl-opt-dual-conjugate`
-
-For equality constraints $\mathbf{A}\mathbf{x} = \mathbf{b}$ the same three
-lines give $q(\boldsymbol{\nu}) = -f^*(-\mathbf{A}^\top\boldsymbol{\nu}) - \mathbf{b}^\top\boldsymbol{\nu}$,
-with $\boldsymbol{\nu}$ of either sign. The dual function is concave for a
-second reason now: $f^*$ is convex and its argument is linear in
-$\boldsymbol{\lambda}$.
-
-The smallest case is the closest point of a half-plane to the origin:
-minimize $\tfrac12\|\mathbf{x}\|^2$ subject to $\mathbf{a}^\top\mathbf{x} \le b$
-with $\mathbf{a} = (1, 2)$ and $b = -1$. The origin violates the constraint
-($\mathbf{a}^\top\mathbf{0} = 0 > -1$), so the constraint will be active. With
-$f^*(\mathbf{y}) = \tfrac12\|\mathbf{y}\|^2$ and $\|\mathbf{a}\|^2 = 5$,
-:eqref:`eq_mdl-opt-dual-conjugate` gives at once
-
-$$
-q(\lambda) = -\tfrac12 \lambda^2 \|\mathbf{a}\|^2 - b\lambda = \lambda - \tfrac52 \lambda^2 .
-$$
-
-Setting $q'(\lambda) = 1 - 5\lambda$ to zero gives $\lambda^\star = \tfrac15$
-and $d^\star = \tfrac15 - \tfrac1{10} = \tfrac1{10}$. The minimizer of the
-Lagrangian at $\lambda^\star$ is the maximizer in the conjugate,
-$\mathbf{x} = -\lambda^\star\mathbf{a} = (-0.2, -0.4)$. It satisfies
-$\mathbf{a}^\top\mathbf{x} = -1 = b$ and has value
-$\tfrac12(0.04 + 0.16) = \tfrac1{10}$, so it is feasible with value $d^\star$,
-and weak duality makes it optimal. It is the projection
-$(b / \|\mathbf{a}\|^2)\,\mathbf{a}$ of :numref:`subsec_mdl-closest-point`,
-here for a different line. The dual had one variable where the primal had two,
-and solving it took one line.
-
-### Log-Sum-Exp and Entropy
-
-The softmax turns scores into probabilities by exponentiating and
-normalizing. Why exponentials? The conjugate of log-sum-exp,
-$\mathrm{lse}(\mathbf{x}) = \log \sum_i e^{x_i}$, answers this. Let
-$\Delta = \{\mathbf{p} : \mathbf{p} \succeq 0,\ \mathbf{1}^\top\mathbf{p} = 1\}$
-be the probability simplex and $H(\mathbf{p}) = -\sum_i p_i \log p_i$ the
-entropy.
-
-We compute
-$\mathrm{lse}^*(\mathbf{p}) = \sup_{\mathbf{x}} \mathbf{p}^\top\mathbf{x} - \mathrm{lse}(\mathbf{x})$.
-If $\mathbf{p}$ has a negative coordinate, sending that $x_i \to -\infty$
-makes the objective unbounded. If $\mathbf{1}^\top\mathbf{p} \neq 1$, moving
-$\mathbf{x} = c\mathbf{1}$ toward $\pm\infty$ does the same, because
-$\mathrm{lse}(c\mathbf{1}) = c + \log n$. So the supremum is finite only on
-the simplex. There, stationarity demands
-$\mathrm{softmax}(\mathbf{x}) = \mathbf{p}$, solved by $\mathbf{x} = \log\mathbf{p}$,
-and the value is $\sum_i p_i \log p_i$.
-
-The stationarity argument covers $\mathbf{p}$ with all coordinates positive,
-since softmax outputs are strictly positive. For $\mathbf{p}$ on the boundary
-of the simplex, with some $p_i = 0$, no maximizer exists. Sending those
-$x_i \to -\infty$ still approaches the same value, so the formula holds on
-the whole simplex with the convention $0 \log 0 = 0$. Because $\mathrm{lse}$
-is convex and finite, $\mathrm{lse}^{**} = \mathrm{lse}$, and
-
-$$
-\begin{aligned}
-\mathrm{lse}^*(\mathbf{p}) &=
-\begin{cases}
-\sum_i p_i \log p_i = -H(\mathbf{p}), & \mathbf{p} \in \Delta, \\
-+\infty, & \textrm{otherwise,}
-\end{cases} \\
-\textrm{and dually} \qquad
-\mathrm{lse}(\mathbf{x}) &= \max_{\mathbf{p} \in \Delta} \left( \mathbf{p}^\top \mathbf{x} + H(\mathbf{p}) \right).
-\end{aligned}
-$$
-:eqlabel:`eq_mdl-opt-lse-entropy`
-
-Log-sum-exp is the largest value of a linear score plus an entropy bonus over
-all distributions on $n$ outcomes. The maximizer is the softmax. By the
-equality case of Fenchel--Young it is the $\mathbf{p}$ with
-$\mathbf{p} = \nabla\mathrm{lse}(\mathbf{x})$, and differentiating gives
-$\partial\,\mathrm{lse}/\partial x_i = e^{x_i} / \sum_j e^{x_j}$, the softmax
-(the Hessian is computed in :numref:`sec_mdl-convexity`). Equivalently, among
-all distributions with the same expected score $\mathbf{p}^\top\mathbf{x}$, it
-has the largest entropy, the maximum-entropy property proved in
-:numref:`subsec_mdl-max-entropy-derivation`. Exercise
-:exref:`ex_mdl-lagrangian-duality-max-entropy` derives the softmax from this
-constraint side. Without the entropy term the maximizer of
-$\mathbf{p}^\top\mathbf{x}$ is a one-hot vector at $\arg\max_i x_i$. The
-entropy replaces this hard selection by a distribution.
-
-For five random logits, here is the objective
-$\mathbf{p}^\top\mathbf{x} + H(\mathbf{p})$ at the softmax and at the best of a
-thousand random distributions.
-
-```{.python .input #mdl-lagrangian-duality-log-sum-exp-and-entropy}
-rng = np.random.default_rng()
-x = rng.normal(size=5)                                # five logits
-lse = np.log(np.exp(x).sum())
-p = np.exp(x - lse)                                   # softmax(x)
-H = lambda p: -(p * np.log(p)).sum(axis=-1)           # entropy
-print(f'lse(x) = {lse:.6f},  p^T x + H(p) at the softmax = {p @ x + H(p):.6f}')
-others = rng.dirichlet(np.ones(5), size=1000)         # random distributions
-vals = others @ x + H(others)
-print(f'best of 1000 other distributions: {vals.max():.6f}, '
-      f'below lse(x) by {lse - vals.max():.4f}')
-```
-
-As Fenchel--Young for the pair $\mathrm{lse}$ and $-H$ requires, the softmax
-attains $\mathrm{lse}(\mathbf{x})$ and the best of the others falls short, by
-a margin that changes with the draw. The same
-construction, applied to the convex function that defines an $f$-divergence,
-gives the variational representations of divergences used to train
-adversarial models (:numref:`sec_mdl-f-gan-dual`).
+problem where it is not. When must it be zero? That is the next question.
 
 ## Strong Duality
 :label:`subsec_mdl-strong-duality`
 
-For the clipping problem and the half-plane, the best bound equalled the
-optimum. For a nonconvex problem it can fall short, and then the dual
-certifies only part of the answer. Convexity and one strictly feasible point
+For the clipping problem the best bound equalled the optimum. For a
+nonconvex problem it can fall short, and then the dual certifies only part
+of the answer. Convexity and one strictly feasible point
 guarantee equality, and a picture of the attainable pairs of constraint and
 objective values shows why.
 
@@ -818,9 +577,8 @@ equality case. There the minimum of $\tfrac12\|\mathbf{x}\|^2$ over the hyperpla
 $\mathbf{a}^\top\mathbf{x} = b$ is $p^\star(b) = b^2 / (2\|\mathbf{a}\|^2)$, and
 $\partial p^\star / \partial b = -\nu^\star$ is the proposition for the
 perturbation $h(\mathbf{x}) = \mathbf{a}^\top\mathbf{x} - b = v$, which moves the
-hyperplane to $b + v$. With $\mathbf{a} = (3, 4)$ and $b = 5$ the multiplier
-is $\nu^\star = -0.2$, and moving $b$ to $5.1$ raises the optimal value by
-about $0.02$.
+hyperplane to $b + v$. This is the rise of $0.02 = 0.2 \cdot 0.1$ that we
+observed there without explaining it.
 
 ### Weight Decay and Norm Constraints
 :label:`subsec_mdl-weight-decay-duality`
@@ -920,6 +678,222 @@ precision, and the multiplier recovered from the constrained solution
 reproduces $\lambda$ to the six printed decimals; the budgets $r$ change with
 the random data. Penalty and constraint are two parameterizations of the
 same family of solutions, and the multiplier converts one into the other.
+
+## The Convex Conjugate
+:label:`subsec_mdl-convex-conjugate`
+
+Computing $q$ needs an unconstrained minimization for every value of the
+multipliers. For linear constraints this minimization has a structure that
+lets us do it once and for all. With constraints
+$\mathbf{A}\mathbf{x} \preceq \mathbf{b}$ the Lagrangian is
+$f(\mathbf{x}) + \boldsymbol{\lambda}^\top(\mathbf{A}\mathbf{x} - \mathbf{b})$, so
+
+$$
+q(\boldsymbol{\lambda}) = \inf_{\mathbf{x}} \bigl[ f(\mathbf{x}) + (\mathbf{A}^\top\boldsymbol{\lambda})^\top \mathbf{x} \bigr] - \mathbf{b}^\top \boldsymbol{\lambda}.
+$$
+
+The infimum depends on $f$ and on one vector, $\mathbf{A}^\top\boldsymbol{\lambda}$,
+and not otherwise on $\mathbf{A}$ or $\mathbf{b}$. If we tabulate, once for
+each $f$, the value of $\inf_{\mathbf{x}} [f(\mathbf{x}) - \mathbf{y}^\top\mathbf{x}]$
+as a function of $\mathbf{y}$, then every linearly constrained dual with
+objective $f$ can be read off the table. That table is the convex conjugate.
+
+### Supporting Lines
+
+Start in one dimension with $f(x) = \tfrac12 x^2$ and the slope $y = 2$. Which
+lines $t = 2x + c$ of slope $2$ stay below the graph? We need
+$2x + c \le \tfrac12 x^2$ for every $x$, that is,
+$c \le \min_x (\tfrac12 x^2 - 2x) = -2$, attained at $x = 2$. The highest such
+line, $t = 2x - 2$, touches the parabola at $(2, 2)$, where its slope matches
+$f'(2) = 2$. Lowering a line of slope $2$ until it touches the graph thus
+puts its intercept at $-2$, and the number
+$\max_x (2x - \tfrac12 x^2) = 2$ is minus that intercept.
+:numref:`fig_mdl-opt-conjugate-intercept`(a) draws this.
+
+![The convex conjugate as a supporting line. (a) For $f(x)=\tfrac12x^2$ and slope $2$, the dashed line of slope $2$ is lowered until it touches the graph, at $x=2$; its intercept is $-2$, so $f^*(2)=2$. (b) For $f(x)=|x|$ a line of slope $\tfrac12$ touches at the origin with intercept $0$, while a line of slope $2$ eventually runs above the graph for every intercept: $f^*(\tfrac12)=0$ and $f^*(2)=+\infty$. The conjugate is finite exactly for the slopes that admit a line below the graph.](../img/mdl-opt-conjugate-intercept.svg)
+:label:`fig_mdl-opt-conjugate-intercept`
+
+The **convex conjugate** (or Fenchel--Legendre transform) of a function
+$f : \mathbb{R}^n \to \mathbb{R} \cup \{+\infty\}$ records this number for
+every slope (an asterisk $*$ marks a conjugate, a star $\star$ an optimum):
+
+$$
+f^*(\mathbf{y}) \;=\; \sup_{\mathbf{x}} \;\left( \mathbf{y}^\top \mathbf{x} - f(\mathbf{x}) \right).
+$$
+:eqlabel:`eq_mdl-opt-conjugate`
+
+That is, $f^*(\mathbf{y})$ is minus the intercept of the highest affine function
+with slope $\mathbf{y}$ that lies below the graph of $f$. The conjugate
+describes $f$ by its supporting lines instead of its values. For
+$f(x) = \tfrac12 x^2$ and any $y$ the supremum is attained at $x = y$, so
+$f^*(y) = \tfrac12 y^2$.
+
+We allow $f$ to take the value $+\infty$, which encodes a domain. Points where
+$f = +\infty$ never attain the supremum, and convexity of such a function means
+convexity of its epigraph.
+
+The supremum can be $+\infty$. For $f(x) = |x|$ and slope $2$,
+$2x - |x| = x$ for $x > 0$, which grows without bound: no line of slope $2$
+stays below the V, whatever its intercept. For $|y| \le 1$ instead,
+$yx - |x| \le 0$ with equality at $x = 0$, so the line of slope $y$ through
+the origin is a supporting line. Hence $f^*(y) = 0$ for $|y| \le 1$ and
+$f^*(y) = +\infty$ otherwise
+(:numref:`fig_mdl-opt-conjugate-intercept`(b)). The conjugate of the
+absolute value is the *indicator* of the interval $[-1, 1]$, the function
+that is $0$ on the set and $+\infty$ off it.
+
+Two properties follow directly from the definition. First, $f^*$ is convex
+for every $f$, convex or not. For fixed $\mathbf{x}$ the expression
+$\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$ is affine in $\mathbf{y}$, and a
+pointwise supremum of affine functions is convex, because its epigraph is the
+intersection of the half-spaces above them. The same argument with an
+infimum made $q$ concave.
+
+Second, the definition gives $f^*(\mathbf{y}) \ge \mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$
+for every $\mathbf{x}$, which rearranges into the **Fenchel--Young
+inequality**,
+
+$$
+\mathbf{y}^\top \mathbf{x} \;\le\; f(\mathbf{x}) + f^*(\mathbf{y})
+\qquad \textrm{for all } \mathbf{x}, \mathbf{y}.
+$$
+:eqlabel:`eq_mdl-opt-fenchel-young`
+
+Equality holds exactly when $\mathbf{x}$ attains the supremum in
+:eqref:`eq_mdl-opt-conjugate`. For a differentiable *convex* $f$ this happens
+exactly when $\mathbf{y} = \nabla f(\mathbf{x})$, since
+$\mathbf{x} \mapsto \mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$ is then concave and
+maximized where its gradient vanishes. Convexity is needed. The double well
+$\phi_0(x) = (x^2 - 1)^2$ has $\phi_0'(0) = 0$, but
+$\phi_0^*(0) = -\min\phi_0 = 0$ and $\phi_0(0) + \phi_0^*(0) = 1 > 0$,
+because $x = 0$ is a local maximum of $\phi_0$,
+not a point where the line of slope $0$ touches from below. For the
+self-conjugate pair $\tfrac12\|\mathbf{x}\|^2$, Fenchel--Young becomes the
+familiar
+$\mathbf{y}^\top\mathbf{x} \le \tfrac12\|\mathbf{x}\|^2 + \tfrac12\|\mathbf{y}\|^2$.
+
+Does the conjugate lose information? For a convex $f$ that is *proper* (never
+$-\infty$ and not $+\infty$ everywhere) and *closed* (its epigraph is a closed
+set), the supporting lines determine the graph, and applying the conjugate
+twice recovers it: $f^{**} = f$ :cite:`Rockafellar.1970`. For a nonconvex
+$f$ that has at least one affine function below it, $f^{**}$ is the
+largest closed convex function below $f$, its convex envelope
+(Exercise :exref:`ex_mdl-convexity-conjugate-pairs`d).
+
+The pairs used in this section and its exercises are:
+
+- $\tfrac12\|\mathbf{x}\|^2$ and $\tfrac12\|\mathbf{y}\|^2$, the self-conjugate
+  pair;
+- $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ and
+  $\tfrac12\mathbf{y}^\top\mathbf{A}^{-1}\mathbf{y}$ for $\mathbf{A} \succ 0$
+  (the maximizer is $\mathbf{x} = \mathbf{A}^{-1}\mathbf{y}$);
+- $e^x$ and $y \log y - y$ for $y > 0$, with value $0$ at $y = 0$ and
+  $+\infty$ for $y < 0$ (the maximizer is $x = \log y$; for instance
+  $f^*(1) = -1$ and $f^*(e) = 0$);
+- $\lambda\|\mathbf{x}\|_1$ and the indicator of the box
+  $\{\mathbf{y} : \|\mathbf{y}\|_\infty \le \lambda\}$, the vector version of
+  the absolute value above.
+
+### Duals of Linearly Constrained Problems
+
+We now return to the problem that motivated the conjugate,
+$\min f(\mathbf{x})$ subject to $\mathbf{A}\mathbf{x} \preceq \mathbf{b}$.
+The one step that is not routine is pulling a minus sign out of the
+infimum, which turns it into the supremum of the conjugate's definition:
+
+$$
+\begin{aligned}
+q(\boldsymbol{\lambda})
+&= \inf_{\mathbf{x}} \left[ f(\mathbf{x}) + (\mathbf{A}^\top\boldsymbol{\lambda})^\top\mathbf{x} \right] - \mathbf{b}^\top\boldsymbol{\lambda} \\
+&= -\sup_{\mathbf{x}} \left[ (-\mathbf{A}^\top\boldsymbol{\lambda})^\top\mathbf{x} - f(\mathbf{x}) \right] - \mathbf{b}^\top\boldsymbol{\lambda} \\
+&= -f^*(-\mathbf{A}^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda}.
+\end{aligned}
+$$
+:eqlabel:`eq_mdl-opt-dual-conjugate`
+
+For equality constraints $\mathbf{A}\mathbf{x} = \mathbf{b}$ the same three
+lines give $q(\boldsymbol{\nu}) = -f^*(-\mathbf{A}^\top\boldsymbol{\nu}) - \mathbf{b}^\top\boldsymbol{\nu}$,
+with $\boldsymbol{\nu}$ of either sign. The dual function is concave for a
+second reason now: $f^*$ is convex and its argument is linear in
+$\boldsymbol{\lambda}$.
+
+The smallest case is the closest point of a half-plane to the origin:
+minimize $\tfrac12\|\mathbf{x}\|^2$ subject to $\mathbf{a}^\top\mathbf{x} \le b$
+with $\mathbf{a} = (1, 2)$ and $b = -1$. The origin violates the constraint
+($\mathbf{a}^\top\mathbf{0} = 0 > -1$), so the constraint will be active. With
+$f^*(\mathbf{y}) = \tfrac12\|\mathbf{y}\|^2$ and $\|\mathbf{a}\|^2 = 5$,
+:eqref:`eq_mdl-opt-dual-conjugate` gives at once
+
+$$
+q(\lambda) = -\tfrac12 \lambda^2 \|\mathbf{a}\|^2 - b\lambda = \lambda - \tfrac52 \lambda^2 .
+$$
+
+Setting $q'(\lambda) = 1 - 5\lambda$ to zero gives $\lambda^\star = \tfrac15$
+and $d^\star = \tfrac15 - \tfrac1{10} = \tfrac1{10}$. The minimizer of the
+Lagrangian at $\lambda^\star$ is the maximizer in the conjugate,
+$\mathbf{x} = -\lambda^\star\mathbf{a} = (-0.2, -0.4)$. It satisfies
+$\mathbf{a}^\top\mathbf{x} = -1 = b$ and has value
+$\tfrac12(0.04 + 0.16) = \tfrac1{10}$, so it is feasible with value $d^\star$,
+and weak duality makes it optimal. It is the projection
+$(b / \|\mathbf{a}\|^2)\,\mathbf{a}$ of :numref:`subsec_mdl-closest-point`,
+here for a different line. The dual had one variable where the primal had two,
+and solving it took one line.
+
+### Log-Sum-Exp and Entropy
+
+The softmax turns scores into probabilities by exponentiating and
+normalizing. Why exponentials? The conjugate of log-sum-exp,
+$\mathrm{lse}(\mathbf{x}) = \log \sum_i e^{x_i}$, answers this. Let
+$\Delta = \{\mathbf{p} : \mathbf{p} \succeq 0,\ \mathbf{1}^\top\mathbf{p} = 1\}$
+be the probability simplex and $H(\mathbf{p}) = -\sum_i p_i \log p_i$ the
+entropy.
+
+We compute
+$\mathrm{lse}^*(\mathbf{p}) = \sup_{\mathbf{x}} \mathbf{p}^\top\mathbf{x} - \mathrm{lse}(\mathbf{x})$.
+If $\mathbf{p}$ has a negative coordinate, sending that $x_i \to -\infty$
+makes the objective unbounded. If $\mathbf{1}^\top\mathbf{p} \neq 1$, moving
+$\mathbf{x} = c\mathbf{1}$ toward $\pm\infty$ does the same, because
+$\mathrm{lse}(c\mathbf{1}) = c + \log n$. So the supremum is finite only on
+the simplex. There, stationarity demands
+$\mathrm{softmax}(\mathbf{x}) = \mathbf{p}$, solved by $\mathbf{x} = \log\mathbf{p}$,
+and the value is $\sum_i p_i \log p_i$.
+
+The stationarity argument covers $\mathbf{p}$ with all coordinates positive,
+since softmax outputs are strictly positive. For $\mathbf{p}$ on the boundary
+of the simplex, with some $p_i = 0$, no maximizer exists. Sending those
+$x_i \to -\infty$ still approaches the same value, so the formula holds on
+the whole simplex with the convention $0 \log 0 = 0$. Because $\mathrm{lse}$
+is convex and finite, $\mathrm{lse}^{**} = \mathrm{lse}$, and
+
+$$
+\begin{aligned}
+\mathrm{lse}^*(\mathbf{p}) &=
+\begin{cases}
+\sum_i p_i \log p_i = -H(\mathbf{p}), & \mathbf{p} \in \Delta, \\
++\infty, & \textrm{otherwise,}
+\end{cases} \\
+\textrm{and dually} \qquad
+\mathrm{lse}(\mathbf{x}) &= \max_{\mathbf{p} \in \Delta} \left( \mathbf{p}^\top \mathbf{x} + H(\mathbf{p}) \right).
+\end{aligned}
+$$
+:eqlabel:`eq_mdl-opt-lse-entropy`
+
+Log-sum-exp is the largest value of a linear score plus an entropy bonus over
+all distributions on $n$ outcomes. The maximizer is the softmax. By the
+equality case of Fenchel--Young it is the $\mathbf{p}$ with
+$\mathbf{p} = \nabla\mathrm{lse}(\mathbf{x})$, and differentiating gives
+$\partial\,\mathrm{lse}/\partial x_i = e^{x_i} / \sum_j e^{x_j}$, the softmax
+(the Hessian is computed in :numref:`sec_mdl-convexity`). Equivalently, among
+all distributions with the same expected score $\mathbf{p}^\top\mathbf{x}$, it
+has the largest entropy, the maximum-entropy property proved in
+:numref:`subsec_mdl-max-entropy-derivation`. Exercise
+:exref:`ex_mdl-lagrangian-duality-max-entropy` derives the softmax from this
+constraint side. Without the entropy term the maximizer of
+$\mathbf{p}^\top\mathbf{x}$ is a one-hot vector at $\arg\max_i x_i$. The
+entropy replaces this hard selection by a distribution. The same
+construction, applied to the convex function that defines an
+$f$-divergence, gives the variational representations of divergences used to
+train adversarial models (:numref:`sec_mdl-f-gan-dual`).
 
 ## Worked Examples
 :label:`subsec_mdl-worked-duals`
@@ -1209,8 +1183,6 @@ q = np.array([(fx + lam * gx).min() for lam in lams])  # dual function on D
 d_star, lam_star = q.max(), lams[q.argmax()]
 print(f'p* = {p_star:.4f},  d* = {d_star:.4f} at lambda = {lam_star:.2f},'
       f'  gap = {p_star - d_star:.4f}')
-print('weak duality q(lambda) <= p* everywhere:',
-      bool((q <= p_star + 1e-12).all()))
 d2l.plot(lams, [q, np.full_like(lams, p_star)], 'lambda', 'value',
          legend=['dual function q(lambda)', 'primal optimum p*'])
 ```
@@ -1592,7 +1564,8 @@ $\lambda$ gives a lower bound, and the best one is the optimum.
 ::: {.col}
 | section | adds |
 |---|---|
-| Gradient Descent and Curvature | safe steps, $\kappa$, momentum, Newton |
+| Gradient Descent and Curvature | safe steps, $\kappa$, momentum |
+| Curvature Methods | Newton, BFGS, trust regions |
 | Convexity | local = global, rates, Jensen |
 | Stochastic Gradient Methods | noise floors, step decay |
 | Adaptive Methods | per-coordinate steps |
@@ -1676,6 +1649,96 @@ $8.01 - 7.875 = 0.135$; $\lambda = 4$ tightens this to $0.01$.
 ::: {.divider}
 [02]{.dnum}
 
+[Strong duality and prices]{.dtitle}
+
+[when the bound is exact, and what it is worth]{.dsub}
+:::
+:::
+
+::: {.slide title="Convexity Plus One Strictly Feasible Point Closes the Gap"}
+[Strong duality]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+$\mathcal{A}$: all $(u, t)$ above and right of some $(g(\mathbf{x}), f(\mathbf{x}))$.
+$q(\lambda)$ is the height at $u = 0$ of the lowest line of slope $-\lambda$ below
+$\mathcal{A}$. Left: clipping, $d^\star = p^\star = 8$. Right: concave objective, gap.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-primal-dual-gap
+:::
+:::
+
+[Slater: $f, g_i$ convex, $h_j$ affine, and some feasible $\bar{\mathbf{x}}$ with $g_i(\bar{\mathbf{x}}) < 0$ for every $g_i$ that is not affine.]{.small}
+:::
+
+::: {.slide title="Strong Duality Is a Saddle Point of the Lagrangian"}
+[Strong duality]{.kicker}
+
+- $p^\star = \inf_{\mathbf{x}} \sup_{\boldsymbol{\lambda} \succeq 0} \mathcal{L}$
+  (a violated constraint makes the sup $+\infty$);
+  $d^\star = \sup_{\boldsymbol{\lambda} \succeq 0} \inf_{\mathbf{x}} \mathcal{L}$.
+- Strong duality with attained optima:
+  $\mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}) \le \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star) \le \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star)$.
+- $\mathbf{x}^\star$ is among the minimizers of $\mathcal{L}(\cdot, \boldsymbol{\lambda}^\star)$;
+  unique for strictly convex $f$: $\mathbf{x}(4) = \mathbf{x}_0/5 = (0.6, 0.8)$.
+
+::: {.d2l-note}
+GAN objectives have this min--max form. Simultaneous descent--ascent on
+$xy$ spirals away from the saddle at the origin for every step size.
+:::
+:::
+
+::: {.slide title="The Multiplier Is the Price of the Constraint"}
+[Prices]{.kicker}
+
+- Relax: $p^\star(\mathbf{u}, \mathbf{v}) = \inf\{f : g_i \le u_i,\ h_j = v_j\}$.
+- $p^\star(\mathbf{u}, \mathbf{v}) \ge p^\star(\mathbf{0}, \mathbf{0}) - \boldsymbol{\lambda}^{\star\top}\mathbf{u} - \boldsymbol{\nu}^{\star\top}\mathbf{v}$;
+  if differentiable, $\lambda_i^\star = -\partial p^\star / \partial u_i$.
+- Clipping relaxed to $\tfrac12(\|\mathbf{x}\|^2 - 1) \le u$, a disk of radius $r = \sqrt{1 + 2u}$:
+  $p^\star(u) = \tfrac12(5 - \sqrt{1 + 2u})^2$, slope $-4$ at $u = 0$.
+- $\lambda^\star = 4$ prices $u$, half the squared radius, not $r$; slack constraints cost $0$.
+
+[Hypotheses: strong duality; for the derivative, $p^\star$ differentiable.]{.small}
+:::
+
+::: {.slide title="Weight Decay Is the Price of a Norm Budget"}
+[Prices]{.kicker}
+
+$\min \ell + \tfrac\lambda2\|\mathbf{w}\|^2$ and $\min \ell$ s.t.
+$\tfrac12\|\mathbf{w}\|^2 \le \tfrac12 r^2$ share
+$\nabla\ell + \lambda\mathbf{w} = \mathbf{0}$; for convex $\ell$ they have
+the same solutions. Ridge, $r = \|\mathbf{w}_\lambda\|$, PGD on the ball:
+
+@!constrained-weight-decay
+
+::: {.d2l-note}
+One $\lambda$, three readings: decay rate, multiplier, $\sigma^2/\tau^2$ of a
+Gaussian prior.
+:::
+:::
+
+::: {.slide title="Check: What Is a Disk of Radius √2 Worth?"}
+[Check]{.kicker}
+
+Clipping $(3, 4)$ to the unit disk has $p^\star = 8$ and $\lambda^\star = 4$.
+Enlarge the disk to radius $\sqrt2$, that is, $u = \tfrac12$. What does the
+price guarantee, and what is the new optimum?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The price guarantees $p^\star(\tfrac12) \ge 8 - 4 \cdot \tfrac12 = 6$.
+The new optimum is $\tfrac12(5 - \sqrt2)^2 = 6.43$: relaxing helps by less
+than the price times the amount, because the price falls as the disk grows.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
 [The conjugate]{.dtitle}
 
 [duals read off a table]{.dsub}
@@ -1727,103 +1790,8 @@ One dual variable instead of two primal ones; the answer in one line.
 - $\mathrm{lse}(\mathbf{x}) = \max_{\mathbf{p} \in \Delta}\, \mathbf{p}^\top\mathbf{x} + H(\mathbf{p})$,
   maximizer $\mathrm{softmax}(\mathbf{x})$.
 
-Five random logits against a thousand random distributions:
-
-@!mdl-lagrangian-duality-log-sum-exp-and-entropy
-
 ::: {.d2l-note .rule}
 Softmax is the entropy-regularized argmax.
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Strong duality and prices]{.dtitle}
-
-[when the bound is exact, and what it is worth]{.dsub}
-:::
-:::
-
-::: {.slide title="Convexity Plus One Strictly Feasible Point Closes the Gap"}
-[Strong duality]{.kicker}
-
-::: {.cols .vc}
-::: {.col .narrow}
-$\mathcal{A}$: all $(u, t)$ above and right of some $(g(\mathbf{x}), f(\mathbf{x}))$.
-$q(\lambda)$ is the height at $u = 0$ of the lowest line of slope $-\lambda$ below
-$\mathcal{A}$. Left: clipping, $d^\star = p^\star = 8$. Right: concave objective, gap.
-:::
-
-::: {.col .fig .big}
-@fig:mdl-opt-primal-dual-gap
-:::
-:::
-
-[Slater: $f, g_i$ convex, $h_j$ affine, some $\bar{\mathbf{x}}$ with $g_i(\bar{\mathbf{x}}) < 0$, $h_j(\bar{\mathbf{x}}) = 0$.]{.small}
-:::
-
-::: {.slide title="Strong Duality Is a Saddle Point of the Lagrangian"}
-[Strong duality]{.kicker}
-
-- $p^\star = \inf_{\mathbf{x}} \sup_{\boldsymbol{\lambda} \succeq 0} \mathcal{L}$
-  (a violated constraint makes the sup $+\infty$);
-  $d^\star = \sup_{\boldsymbol{\lambda} \succeq 0} \inf_{\mathbf{x}} \mathcal{L}$.
-- Strong duality with attained optima:
-  $\mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}) \le \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star) \le \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star)$.
-- $\mathbf{x}^\star$ is among the minimizers of $\mathcal{L}(\cdot, \boldsymbol{\lambda}^\star)$;
-  unique for strictly convex $f$: $\mathbf{x}(4) = \mathbf{x}_0/5 = (0.6, 0.8)$.
-
-::: {.d2l-note}
-GAN objectives have this min--max form. Simultaneous descent--ascent on
-$xy$ spirals away from the saddle at the origin for every step size.
-:::
-:::
-
-::: {.slide title="The Multiplier Is the Price of the Constraint"}
-[Prices]{.kicker}
-
-- Relax: $p^\star(\mathbf{u}, \mathbf{v}) = \inf\{f : g_i \le u_i,\ h_j = v_j\}$.
-- $p^\star(\mathbf{u}, \mathbf{v}) \ge p^\star(\mathbf{0}, \mathbf{0}) - \boldsymbol{\lambda}^{\star\top}\mathbf{u} - \boldsymbol{\nu}^{\star\top}\mathbf{v}$;
-  if differentiable, $\lambda_i^\star = -\partial p^\star / \partial u_i$.
-- Clipping with budget $\tfrac12\|\mathbf{x}\|^2 \le s$:
-  $p^\star(s) = \tfrac12(5 - \sqrt{2s})^2$, slope $-4$ at $s = \tfrac12$.
-- $\lambda^\star = 4$ prices $s = \tfrac12 r^2$, not $r$; slack constraints cost $0$.
-
-[Hypotheses: strong duality; for the derivative, $p^\star$ differentiable.]{.small}
-:::
-
-::: {.slide title="Weight Decay Is the Price of a Norm Budget"}
-[Prices]{.kicker}
-
-$\min \ell + \tfrac\lambda2\|\mathbf{w}\|^2$ and $\min \ell$ s.t.
-$\tfrac12\|\mathbf{w}\|^2 \le \tfrac12 r^2$ share
-$\nabla\ell + \lambda\mathbf{w} = \mathbf{0}$; for convex $\ell$ they have
-the same solutions. Ridge, $r = \|\mathbf{w}_\lambda\|$, PGD on the ball:
-
-@!constrained-weight-decay
-
-::: {.d2l-note}
-One $\lambda$, three readings: decay rate, multiplier, $\sigma^2/\tau^2$ of a
-Gaussian prior.
-:::
-:::
-
-::: {.slide title="Check: A Concave Objective on [0, 1]"}
-[Check]{.kicker}
-
-Minimize $-x^2$ over $x \in [0, 1]$ subject to $x \le \tfrac12$, dualizing
-only $x \le \tfrac12$. What are $p^\star$ and $d^\star$? Is there a strictly
-feasible point?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $p^\star = -\tfrac14$. The Lagrangian is concave, minimized at an
-endpoint: $q(\lambda) = \min(-\tfrac\lambda2, \tfrac\lambda2 - 1)$, so
-$d^\star = -\tfrac12$. Yes, $x = \tfrac14$: the gap comes from the missing
-convexity.
-:::
 :::
 :::
 

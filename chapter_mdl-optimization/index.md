@@ -22,18 +22,20 @@ uses, this chapter proves. Small results, such as the ceiling $2/L$ or the
 Adam update, appear in both. Long derivations live only here, and the main
 text can be read without them.
 
-The sections on gradient descent and on convexity assume exact gradients,
-and they are the ones to read. :numref:`sec_mdl-gradient-based-optimization` proves the ceiling and
-the step count, and shows that momentum replaces the curvature ratio by its
+The first three sections assume exact gradients.
+:numref:`sec_mdl-gradient-based-optimization` proves the ceiling and the
+step count, and shows that momentum replaces the curvature ratio by its
 square root; :numref:`sec_mdl-convexity` says when the point reached is the
-best one. Newton's method and its relatives, which model the curvature
-itself, are used less often in deep learning and can wait for a second
-reading. The two
-sections after them add noise. :numref:`sec_mdl-stochastic-gradient-methods` shows that
-a fixed step stalls at a noise floor proportional to the step, the third
-result to remember, and :numref:`sec_mdl-adaptive-stochastic-methods` shows what
-Adam's per-coordinate steps buy and where they fail. The remaining sections
-are best read on demand. Constraints and multipliers
+best one. These two are the ones to read. Between them,
+:numref:`sec_mdl-curvature-methods` treats Newton's method and its
+relatives, which model the curvature where gradient descent only respects
+it. Deep learning uses them less, and the section can wait for a second
+reading. The next two sections add noise.
+:numref:`sec_mdl-stochastic-gradient-methods` shows that a fixed step stalls
+at a noise floor proportional to the step, the third result to remember,
+and :numref:`sec_mdl-adaptive-stochastic-methods` sets Adam against a tuned
+heavy ball, to see what its per-coordinate steps gain and where they fail.
+The remaining sections are best read on demand. Constraints and multipliers
 (:numref:`sec_mdl-constrained-optimization-duality`,
 :numref:`sec_mdl-lagrangian-duality`) are what :numref:`sec_weight_decay`
 uses to read weight decay as a norm budget, and
@@ -50,6 +52,7 @@ Interior-point and operator-splitting methods are left out.
 :maxdepth: 2
 
 mdl-gradient-based-optimization
+mdl-curvature-methods
 mdl-convexity
 mdl-stochastic-gradient-methods
 mdl-adaptive-stochastic-methods
@@ -102,7 +105,7 @@ operator splitting, and probabilistic rounding-error analysis, are collected in
 **Books**
 
 - [Convex Optimization — Boyd & Vandenberghe](https://web.stanford.edu/~boyd/cvxbook/) — convex sets and functions, duality, and interior-point methods, with a free [PDF](https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf); the reference for :numref:`sec_mdl-convexity`, :numref:`sec_mdl-constrained-optimization-duality`, and :numref:`sec_mdl-lagrangian-duality`.
-- [Numerical Optimization — Nocedal & Wright (2nd ed., Springer)](https://doi.org/10.1007/978-0-387-40065-5) — line search, trust regions, quasi-Newton and conjugate-gradient methods, and constrained optimization, in more depth than :numref:`sec_mdl-gradient-based-optimization` and :numref:`sec_mdl-constrained-optimization-duality`.
+- [Numerical Optimization — Nocedal & Wright (2nd ed., Springer)](https://doi.org/10.1007/978-0-387-40065-5) — line search, trust regions, quasi-Newton and conjugate-gradient methods, and constrained optimization, in more depth than :numref:`sec_mdl-gradient-based-optimization`, :numref:`sec_mdl-curvature-methods`, and :numref:`sec_mdl-constrained-optimization-duality`.
 - [Lectures on Convex Optimization — Nesterov (2nd ed., Springer)](https://doi.org/10.1007/978-3-319-91578-4) — complexity bounds and accelerated first-order methods, with the general proofs that :numref:`sec_mdl-gradient-based-optimization` and :numref:`sec_mdl-convexity` cite.
 - [Optimization for Data Analysis — Wright & Recht (Cambridge, 2022)](https://www.cambridge.org/core/books/optimization-for-data-analysis/C02C3708905D236AA354D1CE1739A6A2) — gradient, accelerated, stochastic, and coordinate methods for data analysis, a companion to :numref:`sec_mdl-gradient-based-optimization` through :numref:`sec_mdl-adaptive-stochastic-methods`.
 - [Accuracy and Stability of Numerical Algorithms — Higham (2nd ed., SIAM)](https://doi.org/10.1137/1.9780898718027) — rounding-error analysis, summation, and the conditioning of linear systems and least squares, the material of :numref:`sec_mdl-numerical-stability-conditioning`.

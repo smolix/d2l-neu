@@ -395,6 +395,7 @@ book:
         - chapter_mdl-calculus/further-reading.qmd
         - chapter_mdl-optimization/index.qmd
         - chapter_mdl-optimization/mdl-gradient-based-optimization.qmd
+        - chapter_mdl-optimization/mdl-curvature-methods.qmd
         - chapter_mdl-optimization/mdl-convexity.qmd
         - chapter_mdl-optimization/mdl-stochastic-gradient-methods.qmd
         - chapter_mdl-optimization/mdl-adaptive-stochastic-methods.qmd

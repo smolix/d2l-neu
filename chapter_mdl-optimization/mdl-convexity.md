@@ -2,11 +2,13 @@
 :label:`sec_mdl-convexity`
 
 When a training run ends, we know one thing about the point where it
-stopped: the loss no longer decreases there. The previous section showed
-that gradient descent with a safe step reaches such a point, where the
-gradient is close to zero. It did not say whether a better point exists
-elsewhere. This section asks when the end of a run is the best point there
-is, and how fast gradient descent gets there.
+stopped: the loss no longer decreases there. Gradient descent with a safe
+step reaches such a point, where the gradient is close to zero
+(:numref:`sec_mdl-gradient-based-optimization`), and Newton's method reaches
+one faster, even when it is a saddle (:numref:`sec_mdl-curvature-methods`).
+Neither result says whether a better point exists elsewhere. This section
+asks when the end of a run is the best point there is, and how fast gradient
+descent gets there.
 
 A one-dimensional experiment shows that the question is real. Run the same
 gradient-descent loop from $500$ random starting points, once on the bowl
@@ -14,16 +16,15 @@ $f(x) = (x - \tfrac12)^2$ and once on the tilted double well
 $\phi(x) = (x^2 - 1)^2 + x/2$. On the bowl every run ends at the same point.
 On the double well about half of the runs stop in a well whose value is
 almost one unit above the best. Those runs have a zero gradient, which is
-all that the stationarity guarantee of
-:numref:`sec_mdl-gradient-based-optimization` promises, and nothing in a
-stranded run tells us that a better point exists.
+all that a stationarity guarantee promises, and nothing in a stranded run
+tells us that a better point exists.
 
 The two functions differ in one property. Every chord of the bowl lies above
 its graph, while the double well has chords that dip below it. Functions
 whose chords all lie on or above the graph are called *convex*, and for them
 the question has the best answer we could hope for: every local minimum is a
 global minimum. The proof takes three lines
-(:numref:`subsec_mdl-why-convexity-matters`). Behind it is a stronger fact:
+(:numref:`subsec_mdl-local-global`). Behind it is a stronger fact:
 a tangent line of a convex function bounds it from below on its whole
 domain, so information at one point constrains the function everywhere.
 Summed along the steps of gradient descent, this bound gives a rate that
@@ -39,8 +40,9 @@ as convex by a short calculus. Deep-network losses are not convex, and the
 last part says which conclusions survive. A reader in a hurry can take the
 chord and tangent conditions from :numref:`subsec_mdl-three-lenses` and go
 straight to :numref:`subsec_mdl-why-convexity-matters`. Two examples recur:
-the chapter's quadratic $\tfrac12(x_1^2 + 1000\,x_2^2)$ for the rates and
-the double well $\phi$ as the nonconvex contrast.
+the chapter's quadratic $\tfrac12(x_1^2 + 1000\,x_2^2)$ for the rates, and
+the double well $\phi$, which fails every test of convexity that we apply to
+it.
 
 ```{.python .input #convexity-imports}
 #@tab mxnet
@@ -219,6 +221,84 @@ $\{|x| \le c^2\}$ as sublevel sets, yet with $x = 0$, $y = 1$, and
 $\theta = \tfrac12$ the graph gives $\sqrt{1/2} \approx 0.71$ and the chord
 gives $0.5$, so the chord condition fails.
 
+### Local Minima Are Global
+:label:`subsec_mdl-local-global`
+
+The chord condition already answers the question of the opening.
+:numref:`fig_mdl-opt-local-equals-global` draws the two situations: one
+basin on a convex objective, two on the double well.
+
+![(a) On a convex objective, gradient descent with a small fixed step reaches the global minimizer from either start. (b) On a double well, the same update from different starts reaches different minima; the basins meet at the local maximum.](../img/mdl-opt-local-equals-global.svg)
+:label:`fig_mdl-opt-local-equals-global`
+
+**Proposition (local minima are global).** *If $f$ is convex on a convex set
+$C$, every local minimizer of $f$ on $C$ is a global minimizer.*
+
+**Proof.** Let $\mathbf{x}^\star$ be a local minimizer and take any
+$\mathbf{y} \in C$. For small $\theta > 0$ the point
+$\mathbf{z}_\theta = (1-\theta)\mathbf{x}^\star + \theta\mathbf{y}$ on the
+chord toward $\mathbf{y}$ lies in the neighborhood where $\mathbf{x}^\star$
+is minimal, so local minimality and the chord inequality give
+
+$$
+f(\mathbf{x}^\star) \;\le\; f(\mathbf{z}_\theta)
+\;\le\; (1-\theta)f(\mathbf{x}^\star) + \theta f(\mathbf{y}).
+$$
+
+Subtract $(1-\theta)f(\mathbf{x}^\star)$ and divide by $\theta$:
+$f(\mathbf{x}^\star) \le f(\mathbf{y})$. $\blacksquare$
+
+In words: if a better point $\mathbf{y}$ existed anywhere, the chord from
+$\mathbf{x}^\star$ toward it would run below the level $f(\mathbf{x}^\star)$
+arbitrarily close to $\mathbf{x}^\star$, and $\mathbf{x}^\star$ would not be
+a local minimizer.
+
+We now run the experiment of the opening, and with the proposition in hand
+we can say in advance what the bowl will do, and compute what the double
+well will do. The cell applies the same loop, with step $0.05$ and $600$ steps, to the bowl
+$(x - \tfrac12)^2$ and to the double well $\phi$, from the same $500$ starts
+drawn uniformly on $[-1.5, 1.5]$. With a step this small a run moves
+downhill without jumping over the hump, so it ends in the well on its own
+side of the local maximum of $\phi$. The cell finds that maximum as a root
+of $\phi'(x) = 4x^3 - 4x + \tfrac12$ and compares the share of starts on its
+right with the share of runs that end in the right well.
+
+```{.python .input #convexity-basins}
+def gd(grad_fn, x, eta=0.05, steps=600):
+    for _ in range(steps):
+        x = x - eta * grad_fn(x)
+    return x
+
+phi = lambda x: (x**2 - 1)**2 + 0.5 * x        # tilted double well
+dphi = lambda x: 4 * x * (x**2 - 1) + 0.5      # its derivative
+rng = np.random.default_rng()
+inits = rng.uniform(-1.5, 1.5, size=500)       # 500 random starting points
+bowl = gd(lambda x: 2 * (x - 0.5), inits)      # convex: (x - 1/2)^2
+well = gd(dphi, inits)
+left, right = well[well < 0], well[well > 0]
+print(f'bowl: all {bowl.size} runs end at x = {bowl.mean():.6f}'
+      f' (spread {np.ptp(bowl):.0e})')
+for name, w in (('left ', left), ('right', right)):
+    print(f'well, {name}: {w.size} runs, x = {w.mean():.4f}, phi = {phi(w.mean()):.4f}')
+x_max = np.sort(np.roots([4, 0, -4, 0.5]).real)[1]   # local max of phi
+print(f'local max at {x_max:.4f}: predicted share right {(1.5 - x_max) / 3:.3f},'
+      f' observed {right.size / inits.size:.3f}')
+```
+
+In every run the bowl's $500$ endpoints agree to rounding. The double well
+splits the runs into two groups, at $x \approx -1.0575$ with
+$\phi \approx -0.515$ and at $x \approx 0.9304$ with $\phi \approx 0.483$, a
+gap of almost one unit. The local maximum that separates them is at
+$x \approx 0.127$, so a fraction $(1.5 - 0.127)/3 \approx 0.458$ of uniform
+starts goes right: a little under half. From draw to draw the observed share
+scatters around this prediction by a few percentage points, the sampling
+error of $500$ starts.
+
+The two runs use the same loop and differ only in the objective. Convexity
+rules out the second basin. It does not by itself carry the loop to the
+minimizer: that still takes smoothness and a safe step, as in
+:numref:`subsec_mdl-gd-smoothness`.
+
 ### The First-Order Condition
 
 The chord condition needs no derivatives, but optimization proofs work with
@@ -337,6 +417,52 @@ so for small enough $t > 0$ the left side drops strictly below the tangent
 value $f(\mathbf{x}) + t \nabla f(\mathbf{x})^\top\mathbf{v}$, contradicting
 :eqref:`eq_mdl-opt-first-order`. $\blacksquare$
 
+### A Numerical Check of the Three Tests
+
+We run the three tests on two losses: the least-squares loss
+$f(\mathbf{w}) = \tfrac12\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ with
+$n = 20$ random examples and $d = 2$ weights, and the double well $\phi$ of
+the opening. For least squares the outcome is known in advance, and more than
+its sign: expanding the squares as we did for $x^2$ gives the chord gap, graph
+minus chord, as
+$-\tfrac12\theta(1-\theta)\|\mathbf{X}(\mathbf{u} - \mathbf{v})\|^2$, and
+the tangent gap, tangent minus graph, as
+$-\tfrac12\|\mathbf{X}(\mathbf{v} - \mathbf{u})\|^2$. For each loss the
+cell samples a thousand chords and a thousand tangents between random points
+of $[-1.5, 1.5]^d$, prints the largest gap of each kind, and evaluates the
+Hessian at the sampled points.
+
+```{.python .input #convexity-three-lenses}
+X, y = rng.normal(size=(20, 2)), rng.normal(size=20)  # least squares, d = 2
+losses = {'least squares': (2, lambda w: 0.5 * ((X @ w - y) ** 2).sum(),
+                            lambda w: X.T @ (X @ w - y), lambda w: X.T @ X),
+          'double well': (1, lambda w: phi(w[0]), dphi,  # phi'' = 12 x^2 - 4
+                          lambda w: np.diag(12 * w**2 - 4))}
+print('               worst chord gap  worst tangent gap  smallest Hessian eig')
+for name, (d, f, grad, hess) in losses.items():
+    U, V = rng.uniform(-1.5, 1.5, size=(2, 1000, d))  # 1000 random pairs
+    T = rng.uniform(size=1000)
+    chord = [f(t * u + (1 - t) * v) - (t * f(u) + (1 - t) * f(v))
+             for u, v, t in zip(U, V, T)]             # graph minus chord
+    tangent = [f(u) + grad(u) @ (v - u) - f(v)        # tangent minus graph
+               for u, v in zip(U, V)]
+    eig = min(np.linalg.eigvalsh(hess(u))[0] for u in U)
+    print(f'{name:15s}{max(chord):15.3f}{max(tangent):19.3f}{eig:22.3f}')
+i = int(np.argmax(chord))                             # the double well's worst
+print(f'worst chord of the double well: from {U[i, 0]:.2f} to {V[i, 0]:.2f}')
+```
+
+For least squares no sampled chord runs below the graph and no tangent above
+it, and the Hessian has positive eigenvalues, as the formulas require. The
+double well fails all three tests. Its worst chord runs below the graph by
+almost one unit, between points in the two wells, its tangents cut the graph,
+and its second derivative falls to nearly $-4$ near the hump, where
+$\phi''(0) = -4$. The three computations do not carry the same weight,
+though. Sampling can refute convexity, as it did for $\phi$ with one bad
+chord, but it cannot prove it: for least squares it only failed to find a
+counterexample. The Hessian check proves it there, since
+$\mathbf{X}^\top \mathbf{X}$ is the same PSD matrix at every $\mathbf{w}$.
+
 ### Strict and Strong Convexity
 
 Convexity alone allows flat stretches, and on a flat stretch gradient descent
@@ -378,8 +504,9 @@ returns the convex loss. This is one more effect of weight decay.
 ![(a) Convex, strictly convex, strongly convex: $x$ has chords on its graph, $x^4$ is flat at the origin, $x^2$ curves everywhere. (b) A $\mu$-strongly convex, $L$-smooth function, here $f(x)=\tfrac12x^2+3\log\cosh x$, lies between two parabolas tangent at $x_0=1$, with curvatures $\mu=1$ and $L=4$; their ratio is $\kappa$.](../img/mdl-opt-convexity-hierarchy.svg)
 :label:`fig_mdl-opt-convexity-hierarchy`
 
-Strong convexity pairs with smoothness. The previous section called $f$
-**$L$-smooth** when its gradient is $L$-Lipschitz,
+Strong convexity pairs with smoothness.
+:numref:`subsec_mdl-gd-smoothness` called $f$ **$L$-smooth** when its
+gradient is $L$-Lipschitz,
 $\|\nabla f(\mathbf{x}) - \nabla f(\mathbf{y})\| \le L\|\mathbf{x} - \mathbf{y}\|$;
 for a convex twice-differentiable $f$ this means
 $\nabla^2 f \preceq L\mathbf{I}$. Smoothness gives the quadratic ceiling
@@ -391,41 +518,11 @@ $L$, as in :numref:`fig_mdl-opt-convexity-hierarchy`(b). The function in
 that panel, $f(x) = \tfrac12 x^2 + 3\log\cosh x$, has
 $f''(x) = 1 + 3/\cosh^2 x \in [1, 4]$, so $\mu = 1$ and $L = 4$.
 
-The ratio $\kappa = L/\mu$ is the **condition number**, which the previous
-section met as the ratio of the extreme eigenvalues of a quadratic. On the
+The ratio $\kappa = L/\mu$ is the **condition number**, which
+:numref:`subsec_mdl-quadratic-model` met as the ratio of the extreme
+eigenvalues of a quadratic. On the
 chapter's running example $\tfrac12(x_1^2 + 1000\,x_2^2)$, $\mu = 1$,
 $L = 1000$, and $\kappa = 10^3$.
-
-What does gradient descent lose when a function is strictly but not strongly
-convex? We run the same loop, with step $\eta = \tfrac18$ from $x_0 = 1$, on
-$x^2$ and on $x^4$, for $10^4$ steps.
-
-```{.python .input #mdl-convexity-strict-and-strong-convexity}
-eta, steps = 1 / 8, 10_000
-x2, x4 = np.ones(steps + 1), np.ones(steps + 1)  # iterates from x_0 = 1
-for j in range(steps):                         # same start, same step
-    x2[j + 1] = x2[j] - eta * 2 * x2[j]        # f(x) = x^2
-    x4[j + 1] = x4[j] - eta * 4 * x4[j]**3     # f(x) = x^4
-k = np.arange(1, steps + 1)
-print('x^2: first k with x_k < 1e-6:', k[x2[1:] < 1e-6][0])
-print('x^4: x_k * sqrt(k) at k = 1e2, 1e3, 1e4:',
-      (x4[1:] * np.sqrt(k))[[99, 999, 9999]].round(3))
-d2l.plot(k, [x4[1:]**4, x2[1:]**2], 'k', 'f(x_k)', xscale='log',
-         yscale='log', ylim=(1e-12, 1), legend=['x^4', 'x^2'])
-```
-
-On $x^2$ each step multiplies the iterate by $1 - 2\eta = 0.75$, so it falls
-below $10^{-6}$ at step $49$ and the gap leaves the plot within fifty steps.
-On $x^4$ each step multiplies the iterate by $1 - 4\eta x_k^2$, a factor that
-approaches $1$ as the iterate approaches the minimizer. The printed products
-$x_k\sqrt{k}$ approach $1$, so the iterate behaves like $1/\sqrt{k}$ and is
-still $0.01$ after $10^4$ steps. On the log–log plot the gap $x_k^4$ is
-therefore a straight line of slope $-2$. Strict convexity allows at most one
-minimizer but promises no speed; a geometric rate needs $\mu > 0$. The rates
-of :numref:`subsec_mdl-convergence-rates` prove that every strongly convex
-function behaves like the square, and that without $\mu$ only a $1/k$
-guarantee survives. Exercise :exref:`ex_mdl-convexity-quartic-sublinear`
-proves the $1/\sqrt{k}$ law for the quartic.
 
 ### Subgradients
 
@@ -488,54 +585,15 @@ subgradient $\tfrac12$ moves $x = 0$ to $-\eta/2$), and the subgradient
 method needs diminishing steps, with an error that falls only like
 $1/\sqrt{k}$.
 
-### A Numerical Check of the Three Tests
-
-We run the three tests on the least-squares loss
-$f(\mathbf{w}) = \tfrac12\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ with
-$n = 20$ random examples and $d = 2$ weights. The outcome is known in
-advance, and more than its sign: expanding the squares as we did for $x^2$
-gives the chord gap, graph minus chord, as
-$-\tfrac12\theta(1-\theta)\|\mathbf{X}(\mathbf{u} - \mathbf{v})\|^2$, and
-the tangent gap, tangent minus graph, as
-$-\tfrac12\|\mathbf{X}(\mathbf{v} - \mathbf{u})\|^2$. The cell samples a
-thousand chords and a thousand tangents, prints the largest gap of each
-kind, and computes the eigenvalues of the Hessian.
-
-```{.python .input #convexity-three-lenses}
-rng = np.random.default_rng()
-X = rng.normal(size=(20, 2))                   # design matrix: n = 20, d = 2
-y = rng.normal(size=20)
-f = lambda w: 0.5 * ((X @ w - y) ** 2).sum()
-grad = lambda w: X.T @ (X @ w - y)
-worst_chord, worst_tangent = -np.inf, -np.inf
-for _ in range(1000):
-    u, v = rng.normal(size=(2, 2)) * 3.0       # random pair of weight vectors
-    t = rng.uniform()
-    worst_chord = max(worst_chord,             # f(chord point) - chord height
-                      f(t * u + (1 - t) * v) - (t * f(u) + (1 - t) * f(v)))
-    worst_tangent = max(worst_tangent,         # tangent value - f
-                        f(u) + grad(u) @ (v - u) - f(v))
-print(f'worst chord gap:   {worst_chord:.2e}')
-print(f'worst tangent gap: {worst_tangent:.2e}')
-print('both <= 0:', bool(worst_chord <= 0 and worst_tangent <= 0))
-print('Hessian eigenvalues:', np.linalg.eigvalsh(X.T @ X).round(4))
-```
-
-In every run both worst gaps are negative and both Hessian eigenvalues are
-positive, as the formulas require. The three computations do not carry the
-same weight, though. Sampling can refute convexity, by turning up one chord
-that runs below the graph, but it cannot prove it. The Hessian check proves
-it, since $\mathbf{X}^\top \mathbf{X}$ is the same PSD matrix at every
-$\mathbf{w}$.
-
 ## Consequences of Convexity
 :label:`subsec_mdl-why-convexity-matters`
 
 Convexity has three consequences that the rest of the book uses, and all
 come from one source, a line or plane that bounds the function from below
 everywhere. Averaged over a random variable, the bound gives Jensen's
-inequality. At a stationary point it makes a local minimum global, which
-answers the question of the opening. Summed along the steps of gradient
+inequality. At a stationary point it certifies the global minimum, which
+sharpens the answer that :numref:`subsec_mdl-local-global` drew from the
+chord condition alone. Summed along the steps of gradient
 descent, it gives rates. Jensen's inequality is independent of the other
 two, and a reader interested only in optimization can skip it.
 
@@ -656,23 +714,16 @@ can check by hand: for $Z \sim \mathcal{N}(0, 1)$ and $f(x) = e^x$ the two
 sides are $\mathbb{E}[e^Z] = \sqrt{e} \approx 1.649$ and
 $e^{\mathbb{E}[Z]} = 1$. The second concerns equality in the KL bound: as
 $q$ moves toward $p$ along the mixture $(1 - \varepsilon)p + \varepsilon q$,
-does the divergence fall in proportion to $\varepsilon$, or faster? (The
-two middle lines of the output test AM–GM and $D_{\textrm{KL}} \ge 0$ on
-random inputs and can only print `True`.)
+does the divergence fall in proportion to $\varepsilon$, or faster?
 
 ```{.python .input #convexity-jensen-mc}
 rng = np.random.default_rng()
 z = rng.normal(size=1_000_000)                 # Z ~ N(0, 1)
 print(f'E[exp(Z)] = {np.exp(z).mean():.2f} vs exp(E[Z]) = {np.exp(z.mean()):.2f}'
       f'  (population: {np.exp(0.5):.4f} vs 1)')
-u = rng.uniform(0.1, 10.0, size=(100_000, 5))  # AM-GM from concavity of log
-am, gm = u.mean(axis=1), np.exp(np.log(u).mean(axis=1))
-print('AM >= GM in every draw:', bool((am >= gm).all()))
 kl = lambda p, q: (p * np.log(p / q)).sum(axis=1)
 p = rng.dirichlet(np.ones(10), size=1000)      # 1000 random pairs, 10 symbols
 q = rng.dirichlet(np.ones(10), size=1000)
-print(f'KL >= 0 for every pair: {bool(kl(p, q).min() >= 0)},'
-      f' smallest {kl(p, q).min():.3f}')
 print('median KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4:',
       *[f'{np.median(kl(p, (1 - e) * p + e * q)):.1e}' for e in (1e-2, 1e-3, 1e-4)])
 ```
@@ -689,47 +740,20 @@ quadratically, and it is reached only in the limit $q \to p$.
 
 ### Local and Global Minima
 
-:numref:`fig_mdl-opt-local-equals-global` draws the two situations of the
-opening: one basin on a convex objective, two on the double well.
-
-![(a) On a convex objective, gradient descent with a small fixed step reaches the global minimizer from either start. (b) On a double well, the same update from different starts reaches different minima; the basins meet at the local maximum.](../img/mdl-opt-local-equals-global.svg)
-:label:`fig_mdl-opt-local-equals-global`
-
-**Proposition (local minima are global).** *If $f$ is convex on a convex set
-$C$, every local minimizer of $f$ on $C$ is a global minimizer.*
-
-**Proof.** Let $\mathbf{x}^\star$ be a local minimizer and take any
-$\mathbf{y} \in C$. For small $\theta > 0$ the point
-$\mathbf{z}_\theta = (1-\theta)\mathbf{x}^\star + \theta\mathbf{y}$ on the
-chord toward $\mathbf{y}$ lies in the neighborhood where $\mathbf{x}^\star$
-is minimal, so local minimality and the chord inequality give
-
-$$
-f(\mathbf{x}^\star) \;\le\; f(\mathbf{z}_\theta)
-\;\le\; (1-\theta)f(\mathbf{x}^\star) + \theta f(\mathbf{y}).
-$$
-
-Subtract $(1-\theta)f(\mathbf{x}^\star)$ and divide by $\theta$:
-$f(\mathbf{x}^\star) \le f(\mathbf{y})$. $\blacksquare$
-
-In words: if a better point $\mathbf{y}$ existed anywhere, the chord from
-$\mathbf{x}^\star$ toward it would run below the level $f(\mathbf{x}^\star)$
-arbitrarily close to $\mathbf{x}^\star$, and $\mathbf{x}^\star$ would not be
-a local minimizer.
-
-Three more facts of the same kind have one-line proofs. The set of
-minimizers is convex: if $\mathbf{x}$ and $\mathbf{y}$ both attain the
-minimum value $f^\star$, the chord inequality puts every point between them
-at or below $f^\star$. For differentiable $f$ on an open set,
+Local minima are global (:numref:`subsec_mdl-local-global`). Three more
+facts of the same kind have one-line proofs. The set of minimizers is
+convex: if $\mathbf{x}$ and $\mathbf{y}$ both attain the minimum value
+$f^\star$, the chord inequality puts every point between them at or below
+$f^\star$. For differentiable $f$ on an open set,
 $\nabla f(\mathbf{x}) = \mathbf{0}$ implies $f(\mathbf{x}) = f^\star$,
 because the first-order condition with a zero gradient reads
 $f(\mathbf{y}) \ge f(\mathbf{x})$ for all $\mathbf{y}$. And a small
 gradient means a small gap: the first-order condition aimed at a minimizer
 gives
 $f(\mathbf{x}) - f^\star \le \nabla f(\mathbf{x})^\top(\mathbf{x} - \mathbf{x}^\star) \le \|\nabla f(\mathbf{x})\|\,\|\mathbf{x} - \mathbf{x}^\star\|$.
-So the guarantee of the previous section, that gradient descent with
-$\eta = 1/L$ drives the smallest gradient norm among its iterates to zero,
-becomes for convex $f$ a guarantee about the value, provided that the
+So the guarantee of :numref:`subsec_mdl-gd-smoothness`, that gradient
+descent with $\eta = 1/L$ drives the smallest gradient norm among its
+iterates to zero, becomes for convex $f$ a guarantee about the value, provided that the
 iterates stay within a bounded distance of $\mathbf{x}^\star$.
 :numref:`subsec_mdl-convergence-rates` proves that they do, and makes the
 guarantee quantitative.
@@ -766,57 +790,44 @@ minimizer of $e^x$ matters more in practice; Exercise
 :exref:`ex_mdl-convexity-minimizer-existence` finds it in logistic
 regression on separable data.
 
-### A Bowl and a Double Well
-
-The experiment of the opening can now be run with a prediction attached. The
-cell applies the same loop, with step $0.05$ and $600$ steps, to the bowl
-$(x - \tfrac12)^2$ and to the double well $\phi$, from the same $500$ starts
-drawn uniformly on $[-1.5, 1.5]$. With a step this small a run moves
-downhill without jumping over the hump, so it ends in the well on its own
-side of the local maximum of $\phi$. The cell finds that maximum as a root
-of $\phi'(x) = 4x^3 - 4x + \tfrac12$ and compares the share of starts on its
-right with the share of runs that end in the right well.
-
-```{.python .input #convexity-basins}
-def gd(grad_fn, x, eta=0.05, steps=600):
-    for _ in range(steps):
-        x = x - eta * grad_fn(x)
-    return x
-
-phi = lambda x: (x**2 - 1)**2 + 0.5 * x        # tilted double well
-rng = np.random.default_rng()
-inits = rng.uniform(-1.5, 1.5, size=500)       # 500 random starting points
-bowl = gd(lambda x: 2 * (x - 0.5), inits)      # convex: (x - 1/2)^2
-well = gd(lambda x: 4 * x * (x**2 - 1) + 0.5, inits)
-left, right = well[well < 0], well[well > 0]
-print(f'bowl: all {bowl.size} runs end at x = {bowl.mean():.6f}'
-      f' (spread {np.ptp(bowl):.0e})')
-for name, w in (('left ', left), ('right', right)):
-    print(f'well, {name}: {w.size} runs, x = {w.mean():.4f}, phi = {phi(w.mean()):.4f}')
-x_max = np.sort(np.roots([4, 0, -4, 0.5]).real)[1]   # local max of phi
-print(f'local max at {x_max:.4f}: predicted share right {(1.5 - x_max) / 3:.3f},'
-      f' observed {right.size / inits.size:.3f}')
-```
-
-In every run the bowl's $500$ endpoints agree to rounding. The double well
-splits the runs into two groups, at $x \approx -1.0575$ with
-$\phi \approx -0.515$ and at $x \approx 0.9304$ with $\phi \approx 0.483$, a
-gap of almost one unit. The local maximum that separates them is at
-$x \approx 0.127$, so a fraction $(1.5 - 0.127)/3 \approx 0.458$ of uniform
-starts goes right: a little under half. From draw to draw the observed share
-scatters around this prediction by a few percentage points, the sampling
-error of $500$ starts.
-
-The two runs use the same loop and differ only in the objective. Convexity
-rules out the second basin, but whether the loop reaches the minimizer
-still depends on smoothness and the step size, as in the previous section.
-
 ### Convergence Rates
 :label:`subsec_mdl-convergence-rates`
 
-It remains to say how fast. We prove two rates for gradient descent, one for
-smooth convex and one for smooth strongly convex functions. Both proofs
-start from the **descent lemma** of :numref:`subsec_mdl-gd-smoothness`. For
+Convexity says where a run ends. It remains to say how fast the run gets
+there, and on this convexity alone promises surprisingly little. Two
+functions show the range. Both $x^2$ and $x^4$ are strictly convex with
+minimizer $0$, but only the square is strongly convex. We run the same
+loop on both, with step $\eta = \tfrac18$ from $x_0 = 1$, for $10^4$ steps.
+
+```{.python .input #mdl-convexity-strict-and-strong-convexity}
+eta, steps = 1 / 8, 10_000
+x2, x4 = np.ones(steps + 1), np.ones(steps + 1)  # iterates from x_0 = 1
+for j in range(steps):                         # same start, same step
+    x2[j + 1] = x2[j] - eta * 2 * x2[j]        # f(x) = x^2
+    x4[j + 1] = x4[j] - eta * 4 * x4[j]**3     # f(x) = x^4
+k = np.arange(1, steps + 1)
+print('x^2: first k with x_k < 1e-6:', k[x2[1:] < 1e-6][0])
+print('x^4: x_k * sqrt(k) at k = 1e2, 1e3, 1e4:',
+      (x4[1:] * np.sqrt(k))[[99, 999, 9999]].round(3))
+d2l.plot(k, [x4[1:]**4, x2[1:]**2], 'k', 'f(x_k)', xscale='log',
+         yscale='log', ylim=(1e-12, 1), legend=['x^4', 'x^2'])
+```
+
+On $x^2$ each step multiplies the iterate by $1 - 2\eta = 0.75$, so it falls
+below $10^{-6}$ at step $49$ and the gap leaves the plot within fifty steps.
+On $x^4$ each step multiplies the iterate by $1 - 4\eta x_k^2$, a factor that
+approaches $1$ as the iterate approaches the minimizer. The printed products
+$x_k\sqrt{k}$ approach $1$, so the iterate behaves like $1/\sqrt{k}$ and is
+still $0.01$ after $10^4$ steps. On the log–log plot the gap $x_k^4$ is
+therefore a straight line of slope $-2$. Strict convexity allows at most one
+minimizer but promises no speed; a geometric rate needs $\mu > 0$. Exercise
+:exref:`ex_mdl-convexity-quartic-sublinear` proves the $1/\sqrt{k}$ law for
+the quartic.
+
+The two propositions below make the contrast general. Every smooth strongly
+convex function behaves like the square, and without $\mu$ only a guarantee
+of order $1/k$ survives. Both proofs start from the **descent lemma** of
+:numref:`subsec_mdl-gd-smoothness`. For
 an $L$-smooth $f$ and the step
 $\mathbf{x}_{k+1} = \mathbf{x}_k - \tfrac1L\nabla f(\mathbf{x}_k)$, with $k$
 counting iterations,
@@ -952,7 +963,6 @@ r = np.array(gaps[1:]) / np.array(gaps[:-1])   # per-step contraction of f - f*
 print(f'mu = {mu:.4f}, L = {L:.4f}: bound 1 - mu/L = {1 - mu / L:.4f},'
       f' its square {(1 - mu / L)**2:.4f}')
 print('first three ratios:', r[:3].round(4), ' largest ratio:', r.max().round(4))
-print('bound holds at every step:', bool(r.max() <= 1 - mu / L))
 ```
 
 The bound promises a factor $0.9$ per step. The measured ratio is $0.81$
@@ -1089,9 +1099,9 @@ $$
 The curvature of log-sum-exp in a direction $\mathbf{v}$ is the variance of
 the entry $v_Y$ picked out by a random class.
 
-This reading has three consequences. The cross-entropy loss in the logits, $\ell(\mathbf{z}) = \mathrm{lse}(\mathbf{z}) - z_y$
-for the true class $y$, is log-sum-exp plus an affine function, hence
-convex. Softmax regression (:numref:`sec_softmax`) composes it with the
+This reading has three consequences. The cross-entropy loss in the logits,
+$\ell(\mathbf{z}) = \mathrm{lse}(\mathbf{z}) - z_y$ for the true class $y$,
+is log-sum-exp plus an affine function, hence convex. Softmax regression (:numref:`sec_softmax`) composes it with the
 affine map $\mathbf{z} = \mathbf{W}\mathbf{x} + \mathbf{b}$, so its loss is
 convex in the weights by rule 2: for fixed features, training only the
 linear classifier is a convex problem. And the formula predicts a *zero*
@@ -1103,27 +1113,36 @@ $\mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$ appears in the
 backward pass of every attention head, whose weights are a softmax of
 query–key scores (:numref:`sec_attention-scoring-functions`).
 
-The cell confirms the three facts at six random logits: the eigenvalues of
-the analytic Hessian, its agreement with the empirical covariance of
-$200{,}000$ one-hot draws, and the flat direction.
+How large can this curvature be? No eigenvalue of the Hessian exceeds
+$\tfrac12$, whatever the logits (Exercise
+:exref:`ex_mdl-convexity-smoothing-maximum` proves the bound), so
+$\tfrac12$ is a smoothness constant of log-sum-exp. Where is it approached,
+and how large is the curvature at typical logits? The cell draws $10{,}000$
+vectors of six logits, scales each by a temperature factor $c$, and prints
+the largest Hessian eigenvalue over the draws and its median.
 
 ```{.python .input #convexity-lse-hessian}
-lse = lambda x: x.max() + np.log(np.exp(x - x.max()).sum())
-rng = np.random.default_rng()
-x = rng.normal(size=6)                         # six logits
-s = np.exp(x - lse(x))                         # softmax(x)
-hess = np.diag(s) - np.outer(s, s)             # Hessian of lse at x
-print('eigenvalues:', np.linalg.eigvalsh(hess).round(6))
-draws = rng.choice(len(x), size=200_000, p=s)  # classes Y ~ Categorical(s)
-onehot = np.eye(len(x))[draws]                 # their one-hot vectors e_Y
-print(f'max |hess - Cov(e_Y)| = {np.abs(hess - np.cov(onehot.T)).max():.4f}')
-print(f'max |hess @ 1| = {np.abs(hess @ np.ones(len(x))).max():.1e}')
+z = rng.normal(size=(10_000, 6))               # 10,000 draws of six logits
+print('  c   largest eigenvalue   median')
+for c in (0.1, 1.0, 3.0, 10.0, 30.0):
+    s = np.exp(c * z - (c * z).max(axis=1, keepdims=True))
+    s /= s.sum(axis=1, keepdims=True)          # softmax of each row
+    hess = s[:, :, None] * np.eye(6) - s[:, :, None] * s[:, None, :]
+    top = np.linalg.eigvalsh(hess)[:, -1]      # largest eigenvalue per draw
+    print(f'{c:5.1f}  {top.max():14.4f}  {np.median(top):12.4f}')
 ```
 
-The eigenvalues are nonnegative with the smallest a numerical zero (it may
-print as `-0.`), the empirical covariance agrees with the Hessian to about
-$10^{-3}$, the Monte Carlo error of $200{,}000$ draws, and
-$\nabla^2\mathrm{lse}\,\mathbf{1}$ vanishes to rounding.
+The largest eigenvalue never exceeds $\tfrac12$, so softmax cross-entropy is
+$\tfrac12$-smooth in the logits at every temperature. Small logits
+($c = 0.1$) give a nearly uniform softmax, and the curvature stays a little
+above $\tfrac16$, its value when six classes share the mass equally. At
+moderate temperatures the typical curvature is highest, with a median near
+$0.3$. As $c$ grows further the typical draw becomes confident, its softmax
+nearly one-hot, and its curvature collapses: the median falls toward zero,
+so the loss is nearly flat around a confident prediction. The maximum over
+the draws moves the other way, toward $\tfrac12$. It belongs to the rare
+draws whose two largest logits nearly tie, where the softmax splits its
+mass between two classes.
 
 ## Beyond Convexity
 :label:`subsec_mdl-beyond-convexity`
@@ -1192,9 +1211,9 @@ $f(\mathbf{x}) = f^\star$), *and* $f - f^\star$ must grow at least
 quadratically with the distance to the set of minimizers. The quartic $x^4$
 has only one stationary point, its global minimizer, yet it fails PL:
 $\tfrac12 f'(x)^2 = 8x^6$, and $8x^6 \ge \mu x^4$ breaks down as $x \to 0$
-for every $\mu > 0$. That failure is the
-slow descent on $x^4$ measured earlier. Strong convexity implies PL (the
-first half of the earlier proof); the converse fails.
+for every $\mu > 0$. That failure is the slow descent on $x^4$ measured in
+:numref:`subsec_mdl-convergence-rates`. Strong convexity implies PL (the
+first half of the proof there); the converse fails.
 
 The standard example of a nonconvex PL function is
 $f(x) = x^2 + 3\sin^2 x$, whose second derivative $2 + 6\cos 2x$ dips to
@@ -1639,7 +1658,7 @@ Convexity<br>**convex sets · chords, tangents, Hessians · Jensen · rates · b
 Gradient descent, step $0.05$, 600 steps, 500 starts uniform on $[-1.5, 1.5]$:
 
 - bowl $(x-\tfrac12)^2$: every run ends at $x = 0.5$;
-- double well $\phi(x) = (x^2-1)^2 + x/2$: roughly half (46% expected) end at $x \approx 0.93$,
+- double well $\phi(x) = (x^2-1)^2 + x/2$: a little under half (about 46%) end at $x \approx 0.93$,
   where $\phi \approx 0.48$;
 - the best value is $\phi \approx -0.51$ at $x \approx -1.06$.
 
@@ -1663,14 +1682,15 @@ stop give the global answer?
 **The idea:** for convex $f$, one gradient bounds $f$ everywhere.
 :::
 
-::: {.slide title="Convexity Turns the Previous Section's Steps into Guarantees"}
+::: {.slide title="Convexity Turns Gradient Steps into Global Guarantees"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 | section | adds |
 |---|---|
-| Gradient Descent and Curvature | safe steps, $\kappa$, momentum, Newton |
+| Gradient Descent and Curvature | safe steps, $\kappa$, momentum |
+| Curvature Methods | Newton, BFGS, trust regions |
 | **Convexity** | **local = global, rates, Jensen** |
 | Stochastic Gradient Methods | noise floors, step decay |
 | Adaptive Methods | per-coordinate steps |
@@ -1709,6 +1729,32 @@ One gradient gives a lower bound on $f$ at every point, so $\nabla f = \mathbf{0
 :::
 :::
 
+::: {.slide title="Every Local Minimum of a Convex Function Is Global"}
+[Convex functions]{.kicker}
+
+![](../img/mdl-opt-local-equals-global.svg){width=58%}
+
+- If $f(\mathbf{y}) < f(\mathbf{x}^\star)$, the chord toward $\mathbf{y}$ dips below $f(\mathbf{x}^\star)$ arbitrarily close to $\mathbf{x}^\star$.
+- Minimizer set convex; strictly convex: at most one minimizer.
+- Reaching it still needs smoothness and a safe step.
+:::
+
+::: {.slide title="Check: What Fraction Ends in the Right Well?"}
+[Check]{.kicker}
+
+Starts uniform on $[-1.5, 1.5]$, small step, $\phi(x) = (x^2-1)^2 + x/2$.
+Where do the basins meet, and what fraction goes right?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** At the local maximum $x \approx 0.127$ (root of
+$4x^3 - 4x + \tfrac12$), so $(1.5 - 0.127)/3 \approx 46\%$.
+:::
+
+@!convexity-basins
+:::
+:::
+
 ::: {.slide title="Three Tests Agree: Chord, Tangent, PSD Hessian"}
 [Convex functions]{.kicker}
 
@@ -1725,6 +1771,17 @@ $$\begin{aligned}
 - sublevel sets $\{f \le c\}$ of convex $f$ are convex.
 :::
 
+::: {.slide title="Sampling Refutes the Double Well and Only Fails to Refute Least Squares"}
+[Convex functions]{.kicker}
+
+A thousand random chords and tangents on $[-1.5, 1.5]^d$, and the Hessian at the sampled points. Gaps: graph minus chord, tangent minus graph; a positive gap violates convexity.
+
+@!convexity-three-lenses
+
+- $\phi$ fails all three: a chord between the two wells runs almost one unit below the graph, and $\phi''(0) = -4$.
+- One bad chord disproves convexity. No number of good ones proves it; the constant PSD Hessian $\mathbf{X}^\top\mathbf{X}$ does.
+:::
+
 ::: {.slide title="Strong Convexity Puts a Parabola Between Tangent and Graph"}
 [Convex functions]{.kicker}
 
@@ -1732,16 +1789,6 @@ $$\begin{aligned}
 
 $\mu$-strongly convex: $f - \tfrac\mu2\|\cdot\|^2$ convex $\iff$ tangent $+\tfrac\mu2\|\mathbf{y}-\mathbf{x}\|^2 \le f$ $\iff$ $\nabla^2 f \succeq \mu\mathbf{I}$.
 With $L$-smoothness, $\kappa = L/\mu$; the running example has $\mu = 1$, $L = 1000$, $\kappa = 10^3$.
-:::
-
-::: {.slide title="Without Strong Convexity, Descent Slows to $1/\sqrt{k}$"}
-[Convex functions]{.kicker}
-
-Same loop, $\eta = \tfrac18$, $x_0 = 1$, on $x^2$ and on $x^4$:
-
-@!mdl-convexity-strict-and-strong-convexity
-
-$x^2$: below $10^{-6}$ at step 49. $x^4$: still $0.01$ after $10^4$ steps; the gap falls like $k^{-2}$.
 :::
 
 ::: {.slide title="Check: Is $x \log x$ Strongly Convex?"}
@@ -1801,30 +1848,14 @@ $D_{\textrm{KL}}(p\|q) = \mathbb{E}_p[-\log R] \ge -\log\mathbb{E}_p[R] \ge 0$, 
 - mixing $q$ into $p$, $(1-\varepsilon)p + \varepsilon q$: the median KL falls $100\times$ per $10\times$ smaller $\varepsilon$.
 :::
 
-::: {.slide title="Every Local Minimum of a Convex Function Is Global"}
-[Consequences]{.kicker}
+::: {.slide title="Without Strong Convexity, Descent Slows to $1/\sqrt{k}$"}
+[Rates]{.kicker}
 
-![](../img/mdl-opt-local-equals-global.svg){width=58%}
+Same loop, $\eta = \tfrac18$, $x_0 = 1$, on $x^2$ and on $x^4$:
 
-- If $f(\mathbf{y}) < f(\mathbf{x}^\star)$, the chord toward $\mathbf{y}$ dips below $f(\mathbf{x}^\star)$ arbitrarily close to $\mathbf{x}^\star$.
-- Minimizer set convex; strictly convex: at most one minimizer.
-- Reaching it still needs smoothness and a safe step.
-:::
+@!mdl-convexity-strict-and-strong-convexity
 
-::: {.slide title="Check: What Fraction Ends in the Right Well?"}
-[Check]{.kicker}
-
-Starts uniform on $[-1.5, 1.5]$, small step, $\phi(x) = (x^2-1)^2 + x/2$.
-Where do the basins meet, and what fraction goes right?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** At the local maximum $x \approx 0.127$ (root of
-$4x^3 - 4x + \tfrac12$), so $(1.5 - 0.127)/3 \approx 46\%$.
-:::
-
-@!convexity-basins
-:::
+$x^2$: below $10^{-6}$ at step 49. $x^4$: still $0.01$ after $10^4$ steps; the gap falls like $k^{-2}$.
 :::
 
 ::: {.slide title="Derivation I: Each Gap Is Bounded by a Drop in Distance"}
@@ -1887,14 +1918,14 @@ Least squares with $\mathbf{X}^\top\mathbf{X}$ eigenvalues $1$ and $10$ ($\kappa
 ::: {.slide title="Check: How Many Steps on the $\kappa = 10^3$ Quadratic?"}
 [Check]{.kicker}
 
-$\tfrac12(x_1^2 + 1000\,x_2^2)$, $\eta = 1/L$. How many steps reduce
-$f - f^\star$ a thousandfold?
+$\tfrac12(x_1^2 + 1000\,x_2^2)$, $\eta = 1/L$. How many steps gain six
+digits of $f - f^\star$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** The bound $(1 - 10^{-3})^k \le 10^{-3}$ gives $k \approx 6{,}900$.
-The quadratic itself contracts by the square, $(1 - 10^{-3})^2$ per step,
-and needs about $3{,}450$.
+**Answer.** The bound $(1 - 10^{-3})^k \le 10^{-6}$ gives $k \approx 13{,}800$.
+The quadratic contracts by the square, $(1 - 10^{-3})^2$ per step: about
+$6{,}900$. The best fixed step $2/(\mu+L)$ halves it again: $3{,}454$.
 :::
 :::
 :::
@@ -1922,7 +1953,9 @@ $$\nabla^2\mathrm{lse} = \mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top =
 
 @!convexity-lse-hessian
 
-One zero eigenvalue, along $\mathbf{1}$: the shift invariance of softmax.
+- Largest eigenvalue $\le\tfrac12$ at every temperature $c$: near $\tfrac12$ only when two classes tie.
+- A confident softmax (large $c$) is nearly flat: the median curvature falls toward $0$.
+- One zero eigenvalue, along $\mathbf{1}$: the shift invariance of softmax.
 :::
 
 ::: {.slide title="Two Weights Already Break Convexity"}
@@ -1958,8 +1991,8 @@ With many minimizers the update picks one: min-norm from $\mathbf{0}$, max-margi
 [Wrap-up]{.kicker}
 
 - Chords above, tangents below, PSD Hessian: one property, three tests.
-- Local = global: all 500 runs agree on the bowl; the double well strands roughly half (46% expected).
-- Rates: $50/k$ for $L = 1$ at distance $10$; $\approx 6{,}900$ steps at $\kappa = 10^3$, and $0.81 = (1 - \mu/L)^2$ measured at $\kappa = 10$.
+- Local = global: all 500 runs agree on the bowl; the double well strands a little under half (about 46%).
+- Rates: $50/k$ for $L = 1$ at distance $10$; six digits at $\kappa = 10^3$ take $13{,}800$ steps by the bound and $6{,}900$ on the quadratic; $0.81 = (1 - \mu/L)^2$ measured at $\kappa = 10$.
 - Jensen: $\sqrt{e}$ against $1$; $D_{\textrm{KL}} \ge 0$.
 - Four rules and a covariance certify the losses of linear models.
 - Networks: nonconvex, but PL keeps linear rates.

@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-curvature-methods.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:6742a7c162cb4e77336abd402a9c943eaeb8d122025212688611bb5ae6bc1bb3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-curvature-methods-curvature-methods-newton-quasi-newton-and-trust-regions": {
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-gradient-based-optimization-newton-s-method-and-its-computational-cost-1": {
+      "code_fingerprint": "sha256:89f5054b9856150aebfce0ed3d7159b3e5e1805a36e62422fcc31750c1b3e4bc",
+      "kind": "text",
+      "outputs": []
+    },
+    "gradient-based-optimization-newton": {
+      "code_fingerprint": "sha256:9e5134337a920afc7f8dafe8009ee141d18eb7d8cdc0fa6c323d21453bd7db08",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD at the optimal step contracts by 0.9980; it needs 6908 steps for |x_k| <= 1e-6 |x_0|\nNewton iteration 1:  |grad| = 3.7e-01\nNewton iteration 2:  |grad| = 4.6e-02\nNewton iteration 3:  |grad| = 2.2e-03\nNewton iteration 4:  |grad| = 5.5e-06\nNewton iteration 5:  |grad| = 3.5e-11\nNewton iteration 6:  |grad| = 2.0e-17\nmax |w - w_star| = 4.4e-16\n"
+        }
+      ]
+    },
+    "mdl-gradient-based-optimization-newton-s-method-1": {
+      "code_fingerprint": "sha256:8db22b2c962e6aa3b9258ccbae4f38e681d3bd0b5b109240928b5144cde08b73",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Newton y: [-9.33624961e-03  2.71275924e-07 -6.61744490e-21]   f = 1.0000\nGD     y: [0.5955 1.1565 2.0718 2.9489 3.1404 3.1416]   f = -1.0000\n"
+        }
+      ]
+    },
+    "mdl-gradient-based-optimization-bfgs-1": {
+      "code_fingerprint": "sha256:1247844cab47aeb7885010f3af75b9cca59f9beba96507867ddd2fd1932cd592",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 1: x = [ 0.8991 -0.009 ],  M = [[1.009, -0.0001], [-0.0001, 0.1]]\nstep 2: x = [0. 0.],  M = [[1.0, -0.0], [-0.0, 0.1]]\nA^-1 = [[1.0, 0.0], [0.0, 0.1]],  max |M_2 - A^-1| = 1e-16\n"
+        }
+      ]
+    },
+    "mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-1": {
+      "code_fingerprint": "sha256:4de33335cf8b881c7ba871b08db34d74818a693216379338e9239d56a5bbf6d9",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-2": {
+      "code_fingerprint": "sha256:c6c736ddb382cb6bed473bd476a2b1d8add025898d4b068e0ef4b0d3d2f6279b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " k        x            f      |p|    tau      r  Delta\n 0 ( 0.500, 0.300)  1.0803  0.500  1.596   0.98  0.50\n 1 ( 0.307, 0.761)  0.7711  1.000  1.419   0.87  1.00\n 2 ( 0.180, 1.753) -0.1652  2.000  0.311   0.41  2.00\n 3 ( 0.043, 3.749) -0.8205  0.696  0.000   0.88  2.00\n 4 ( 0.000, 3.054) -0.9962  0.088  0.000   1.00  2.00\n 5 ( 0.000, 3.142) -1.0000  0.000  0.000   1.00  2.00\nfinal x = (0.0000, 3.1416),  f = -1.0000\n"
+        }
+      ]
+    }
+  }
+}

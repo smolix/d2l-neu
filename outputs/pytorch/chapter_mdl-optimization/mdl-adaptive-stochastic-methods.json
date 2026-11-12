@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,50 +19,60 @@
       "outputs": []
     },
     "mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-1": {
-      "code_fingerprint": "sha256:2f9bb3ba963ca3f98b68d1412239df20cba5c77da1d02511eb0299557f6b55b8",
+      "code_fingerprint": "sha256:1db40c59e7872c19e16fd7b28b1e59ee15d4739d3e2c15dfa5bb04f8a696993c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "steps to f < 1e-8                aligned  rotated 45\nGD, eta = 2/(mu + L)                6160        6160\nheavy ball, tuned                    296         296\n"
+          "text": "steps to f < 1e-8             aligned  rotated 45\nGD, eta = 2/(mu + L)             6160        6160\nheavy ball, tuned                 296         296\n\nAdam, eta =                   0.002 0.0063   0.02  0.063    0.2   0.63      2\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Adam, beta1 = 0, eta = 0.1            48       never\nAdam, beta1 = 0.9, eta = 0.01        344        7908\n"
+          "text": "beta1 = 0.0, aligned           2122    760    249     78     22  never  never\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta1 = 0.0, rotated 45       never  never  never  never  never  never  never\nbeta1 = 0.9, aligned           2033    648    195    165    205    170    196\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta1 = 0.9, rotated 45       12862   9292   5898   3171   1581    799    559\n"
         }
       ]
     },
     "mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-2": {
-      "code_fingerprint": "sha256:7c3b87bc3105b0f612b7d2b1cce6d5ef213b942dae9ca528ea3278ff9abc864a",
+      "code_fingerprint": "sha256:b3a0cf82f904fc107d0542d4059270b3d634508f33e2cde856ef590f224635a8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =  1: x = 0.9, 0.9;  eta/sqrt(v_hat) = 0.1, 0.0001\nt = 10: x = 0.262, 0.262;  eta/sqrt(v_hat) = 0.152, 0.000152\nt = 48: x = 3.91e-06, 3.91e-06;  eta/sqrt(v_hat) = 0.329, 0.000329\nlargest |x_1 - x_2| over the run: 5.6e-17\n"
+          "text": "t =  1: x = 0.9, 0.9;  eta/sqrt(v_hat) = 0.1, 0.0001\nt = 10: x = 0.262, 0.262;  eta/sqrt(v_hat) = 0.152, 0.000152\nt = 48: x = 3.91e-06, 3.91e-06;  eta/sqrt(v_hat) = 0.329, 0.000329\nlargest |x_1 - x_2| over the run: 5.6e-17\nsteps to f < 1e-8 at curvature ratios 1, 1e3, 1e5: 40 48 54\nsteps from (100, 100) at ratio 1e3: 4145\n"
         }
       ]
     },
     "adaptive-stochastic-methods-reddi": {
-      "code_fingerprint": "sha256:05e5b4cf03acd9a3bb50b637db97e04eebb74c18bb31139d42b18883180787ef",
+      "code_fingerprint": "sha256:d30f23820b6c3e7ad39e8f50bf1fd5cca2d1b79d13e1d30496a18b67d57992e1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x_t at t =        30      300     3000    15000   (x* = -1)\n"
+          "text": "x_t at t =        30      300     3000    15000   (x* = -1)\nadam         0.745    1.000    1.000    1.000\namsgrad     -0.953   -0.985   -0.995   -0.998\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "adam         0.745    1.000    1.000    1.000\namsgrad     -0.953   -0.985   -0.995   -0.998\nsgd         -0.954   -0.986   -0.995   -0.998\n"
+          "text": "sgd         -0.954   -0.986   -0.995   -0.998\n"
         }
       ]
     },
     "adaptive-stochastic-methods-adamw": {
-      "code_fingerprint": "sha256:55f0a9ab953e15cc8b8c8923559d1e312010a53c7f22cf4586debb479463449b",
+      "code_fingerprint": "sha256:2f9fee2b6b6ac0472be80725146218143964bb42e42d2735b8f8c8e81d302c5e",
       "kind": "text",
       "outputs": [
         {
@@ -73,41 +83,41 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, coupled: [0.961 0.028]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
+          "text": "mean w, coupled: [0.961 0.027]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, AdamW:   [0.671 0.671]   prediction (1 - eta lam)^T: 0.67\n"
+          "text": "mean w, AdamW:   [0.669 0.671]   prediction (1 - eta lam)^T: 0.67\n"
         }
       ]
     },
     "mdl-adaptive-stochastic-methods-warmup": {
-      "code_fingerprint": "sha256:bec44d7afdf95ecfa5adf70fdce22e62f46aa1c2ac1a062dfc59fe5960a9d66b",
+      "code_fingerprint": "sha256:b745fbb15b2f5696cb66b3fadc62460fe01d2227673e0c00d6057ee197bd2bfd",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t:                    1     2     3    10    30   100  1000  3000\nestimated v:       1.00  0.71  0.58  0.33  0.24  0.23  0.23  0.23\nexact variance:    1.00  0.70  0.58  0.33  0.24  0.23  0.23  0.23\n"
+          "text": "t:                           1     2     3    10    20    30   100  1000  3000\nAdam:                     1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nexact variance:           1.01  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nno bias correction:       3.16  3.00  2.86  2.15  1.60  1.33  0.74  0.29  0.23\nwarmup over 20 steps:     0.05  0.07  0.09  0.16  0.26  0.24  0.23  0.23  0.23\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-stochastic-methods-warmup-1.svg",
-          "bytes": 78133,
-          "sha256": "sha256:fe500eb2493d9a37aed66d001384ee4806d2f0bb7368631f13f93312d03cc24f"
+          "bytes": 78486,
+          "sha256": "sha256:b817e1e637d00dea1b4078ae153b5cf8eaec0f430dce8daadf9e9ad17a3d08f9"
         }
       ]
     },
     "mdl-adaptive-stochastic-methods-kronecker-factors": {
-      "code_fingerprint": "sha256:99c9ec930334a5b595da179f606470e365594704a12d4ee24f4fb79504827ca4",
+      "code_fingerprint": "sha256:a340b7467780c4ffba977d85cfa5b2a40acd34676ee10d4f803b6a70fdd4a590",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max difference: 2.8e-17\nstored entries: full 2.8e+14, two factors 3.4e+07\nflops to invert: full 4.7e+21, two factors 1.4e+11\n"
+          "text": "stored entries: full 2.8e+14, two factors 3.4e+07\nflops to invert: full 4.7e+21, two factors 1.4e+11\n"
         }
       ]
     }

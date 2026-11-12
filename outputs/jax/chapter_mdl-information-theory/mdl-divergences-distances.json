@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:30dae93352146ce2527faddbdf3ae8c0c81412fa01cc6cd97c1e0a6530ed01d6",
+    "d2l_lib_fingerprint": "sha256:08a062f5bcd57189f129eef44ffd2a12a9e2470e500777f761c1a9819e3011e8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37856,
-          "sha256": "sha256:b8c83ecdac35db8c02fb6ceb7605ee00916e97a3d4ce54452fa56e4f39acdb00"
+          "sha256": "sha256:bf12bc6e1d70d63a86f33fb0763701be452736c4b52c1c546124fa1e9842eca2"
         }
       ]
     },
@@ -83,7 +83,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-f-gan-bound-1.svg",
           "bytes": 29121,
-          "sha256": "sha256:e9a0eaedaa42afed87651ea02b6031a5377ee34527128c2c2c61a51ac1e1af99"
+          "sha256": "sha256:560d3c79907dfa25b86e600d4f8aceb4128dc152b76a7258df47c48da51284f4"
         }
       ]
     },
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9874\ncoins 1/2 vs 1/2 +   0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2 +  0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2 + 0.001: TV / sqrt(KL/2) = 0.999999\n"
+          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9885\ncoins 1/2 vs 1/2 +   0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2 +  0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2 + 0.001: TV / sqrt(KL/2) = 0.999999\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-pinsker-1.svg",
-          "bytes": 242261,
-          "sha256": "sha256:eac0d5d49253b50d4b9900049661491228314e24d812988e3d919d65dcf15854"
+          "bytes": 242258,
+          "sha256": "sha256:2d801f7481ebe20acc7701e818ecad6ac5be2a895ae56c3d28a0ded16d432a38"
         }
       ]
     },
@@ -112,12 +112,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = +0.0003  (population 0.0000)\n"
+          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0044  (population 0.0000)\nquadratic, N(0,1) vs N(0,4)    MMD^2 = +9.5547  (population 9.0000)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "quadratic, N(0,1) vs N(0,4)    MMD^2 = +9.6136  (population 9.0000)\nRBF,       N(0,1) vs N(0,4)    MMD^2 = +0.0960  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = -0.0004  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0569  (population 0.0471)\n"
+          "text": "RBF,       N(0,1) vs N(0,4)    MMD^2 = +0.0992  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = -0.0008  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0427  (population 0.0471)\n"
         }
       ]
     },
@@ -128,14 +128,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "witness changes sign at x = 0.18\nE_P g - E_Q g = 0.0577\n"
+          "text": "witness changes sign at x = 0.15\nE_P g - E_Q g = 0.0435\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/mdl-divergences-distances-integral-probability-metrics-and-mmd-1-1.svg",
-          "bytes": 27234,
-          "sha256": "sha256:6d001f10da34d964d0933c327d5a9e4f730d44d1211b00366dd9afa2c70155b7"
+          "bytes": 27213,
+          "sha256": "sha256:9098f83b0eafc21da69c11fc4d91cbb17c23463569db89bbbc8e49ef8f35a3ea"
         }
       ]
     },
@@ -164,7 +164,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
           "bytes": 32779,
-          "sha256": "sha256:e55e393ac75867ecb68f1390b4d0615442e1814d8cc99fea576641b30f7844d0"
+          "sha256": "sha256:c8b10cc9ecf08cc806d37c1979d9c6fd92ca0efeb0e92d1013a1b642a7ce0e63"
         }
       ]
     },
@@ -197,7 +197,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "g(x) = x^3  : mean of g'(Z) - Z g(Z) = -0.0009, standard error 0.0065\ng(x) = sin x: mean of g'(Z) - Z g(Z) = +0.0000, standard error 0.0010\n"
+          "text": "g(x) = x^3  : mean of g'(Z) - Z g(Z) = -0.0071, standard error 0.0065\ng(x) = sin x: mean of g'(Z) - Z g(Z) = -0.0003, standard error 0.0010\n"
         }
       ]
     },
@@ -208,7 +208,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "KSD^2 vs the true model  N(0,1): -0.0001  (population 0.0000)\nKSD^2 vs the wrong model N(1,1): +0.6034  (population 0.5774)\n"
+          "text": "KSD^2 vs the true model  N(0,1): -0.0010  (population 0.0000)\nKSD^2 vs the wrong model N(1,1): +0.5442  (population 0.5774)\n"
         }
       ]
     }

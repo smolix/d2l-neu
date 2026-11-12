@@ -31,7 +31,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Bernoulli A' = 0.6923 (mean 0.6923)  A'' = 0.2130 (variance 0.2130)\nPoisson   A' = 4.0000 (mean 4.0000)  A'' = 4.0000 (variance 4.0000)\n"
+          "text": "Bernoulli A' = 0.6923 (mean 0.6923)  A'' = 0.2130 (variance 0.2130)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Poisson   A' = 4.0000 (mean 4.0000)  A'' = 4.0000 (variance 4.0000)\n"
         }
       ]
     },
@@ -42,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 1: argmax frequencies [0.638 0.234 0.096 0.032]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\nT = 2: argmax frequencies [0.449 0.272 0.176 0.103]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
+          "text": "T = 1: argmax frequencies [0.639 0.236 0.094 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\nT = 2: argmax frequencies [0.451 0.275 0.174 0.099]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
         }
       ]
     },

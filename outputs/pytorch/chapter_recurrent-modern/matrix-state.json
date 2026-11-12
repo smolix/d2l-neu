@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:98b5b810b60bec33f72d255d441574ffa65f89df2c4334e1b0580994bc51ed7d",
+    "d2l_lib_fingerprint": "sha256:4b61dc4b3a42b1813793a6ace6cd86a4163519c5cf53f2dbaede30603f5ae363",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:59c3666fabb4f990e12e40c65f6ab00842c85ac9b6bcefcedddecd3a9fac2440"
+          "sha256": "sha256:88563d65f0532a70068d358dd0f3a33bb3507e7a8ebb9eb31ca6b2e712da80ba"
         }
       ]
     },
@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence       270.26 ms\ndual               1.34 ms\nchunks of 16       1.27 ms\nchunks of 64       1.23 ms\nchunks of 256      0.92 ms\n"
+          "text": "recurrence       258.73 ms\ndual               2.09 ms\nchunks of 16       1.26 ms\nchunks of 64       1.29 ms\nchunks of 256      1.13 ms\n"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "without convolution, SiLU, and gate: 3.18\n"
+          "text": "without convolution, SiLU, and gate: 3.19\n"
         }
       ]
     }

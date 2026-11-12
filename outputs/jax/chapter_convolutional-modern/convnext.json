@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:fff08ebe6fbac69d0c895ca4a8deb024f813c6decd258d4eaf6f53f3d1f3b55a",
+    "d2l_lib_fingerprint": "sha256:b80c8825fd7621d0cc34d2b2f388027924fa9e3b24720fa07df093ffd9d6b850",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "compact ResNet-18                  3,346,675 parameters, validation accuracy 0.936\nConvNeXt blocks and stages, BN     3,377,770 parameters, validation accuracy 0.938\n+ BN -> LN                         3,377,770 parameters, validation accuracy 0.938\n+ patchify stem = ConvNeXt         3,376,450 parameters, validation accuracy 0.917\n"
+          "text": "compact ResNet-18                  3,346,675 parameters, validation accuracy 0.939\nConvNeXt blocks and stages, BN     3,377,770 parameters, validation accuracy 0.937\n+ BN -> LN                         3,377,770 parameters, validation accuracy 0.939\n+ patchify stem = ConvNeXt         3,376,450 parameters, validation accuracy 0.917\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:a3bc859ac482abcf0c9c48135f7d3809912f92f6988fbba8c87b607b8d40ced0",
+    "d2l_lib_fingerprint": "sha256:1e38941d7a7aad1756ea856857cd231e717d4d1347fba04d99fe7329c59202bc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-reuse-against-environment-steps-2-1.svg",
           "bytes": 38439,
-          "sha256": "sha256:9f91f6ab5995cc06ecd673906a5536af08fe23f307036b1e3b795508841d4c0f"
+          "sha256": "sha256:188304a82dbb023d0bc9d5c15c1fc33da6f204dbd2c9c4b5646f6d9bf4f3a0b6"
         }
       ]
     },
@@ -78,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped (PPO): 8 of 8 seeds hold the task, 0 end dead\n      no clip: 2 of 8 seeds hold the task, 3 end dead\n"
+          "text": "clipped (PPO): 8 of 8 seeds hold the task, 0 end dead\n      no clip: 1 of 8 seeds hold the task, 1 end dead\n"
         }
       ]
     },
@@ -90,8 +90,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-the-ablation-4-1.svg",
-          "bytes": 35139,
-          "sha256": "sha256:c73ae4058542778660ba67951df9995d9e573d1f7ca257d36618ff3aecc48794"
+          "bytes": 35123,
+          "sha256": "sha256:f80a85c8678a922e5d15ab4dd3a0d40f48206e31ba08de11643bbc2c08510905"
         }
       ]
     },
@@ -102,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped (PPO): ratio checks outside the band: 4.9% across all epochs\n               4.9% at the last epoch of each batch\n      no clip: ratio checks outside the band: 23.9% across all epochs\n               35.6% at the last epoch of each batch\n"
+          "text": "clipped (PPO): ratio checks outside the band: 4.9% across all epochs\n               4.9% at the last epoch of each batch\n      no clip: ratio checks outside the band: 24.9% across all epochs\n               37.6% at the last epoch of each batch\n"
         }
       ]
     },
@@ -113,14 +113,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "approximate KL: peak 0.0073 at epoch 5, 0.0055 at epoch 20\nclipped (PPO): approximate KL at the last epoch, median 0.004\n      no clip: approximate KL at the last epoch, median 0.357\n"
+          "text": "approximate KL: peak 0.0071 at epoch 6, 0.0056 at epoch 20\nclipped (PPO): approximate KL at the last epoch, median 0.004\n      no clip: approximate KL at the last epoch, median 0.386\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
-          "bytes": 29017,
-          "sha256": "sha256:1309840db16eddad659dc908f84fefcb481de105bfaf80a4d2ba4aa044979fc2"
+          "bytes": 29018,
+          "sha256": "sha256:2243ec6ba3b6bbefdbc6eefe76dafcc23b60bbec802dc72e7c7fe9fdd589ef10"
         }
       ]
     },
@@ -137,8 +137,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-training-diagnostics-1-1.svg",
-          "bytes": 35611,
-          "sha256": "sha256:d51a804bf5475868bf2f684eb11a05063063a22931f705b2a9ff66d291d75e7b"
+          "bytes": 35615,
+          "sha256": "sha256:31d887b2cae729706d7d2139d60ab82c96324fa84ad13f1d8f15d85edab48f59"
         }
       ]
     },
@@ -156,7 +156,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
           "bytes": 53746,
-          "sha256": "sha256:78b64aacf04a499a4e3834880607585a9c489b72b02094893946a0f4733c2948"
+          "sha256": "sha256:d4288f0ba4625669783b63f667da99314a50ea2e36395fa27c399e2b53d5385e"
         }
       ]
     },
@@ -174,7 +174,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
           "bytes": 30987,
-          "sha256": "sha256:82e808d07fc748ae7b07ef0dcd087531a13afffe92a17b097ed3b1a887b3e9fb"
+          "sha256": "sha256:01dcb7d04ecf414bd6475c08a5d9e244fe6f91f2d45ff0a4ffbc9e39403dda22"
         }
       ]
     },

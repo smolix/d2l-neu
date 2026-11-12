@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'largest channel mean': 9.944244538928615e-08,\n 'average channel variance': 0.9999989867210388,\n 'largest difference': 4.76837158203125e-07,\n 'running means': array([0.20027272, 0.20185676, 0.19976851, 0.20078214, 0.20065565,\n        0.19947404], dtype=float32)}"
+          "text": "{'largest channel mean': 5.0253404992872674e-08,\n 'average channel variance': 0.9999990463256836,\n 'largest difference': 7.152557373046875e-07,\n 'running means': array([0.1984434 , 0.19894908, 0.20101595, 0.20097433, 0.20160496,\n        0.20010102], dtype=float32)}"
         }
       ]
     },
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24482,
-          "sha256": "sha256:b0a3647a653feab64f78f4cca96a57e0fe9af49e2581d8364ba341827369950d"
+          "bytes": 24487,
+          "sha256": "sha256:d058e5026d1c4a1537402efada10696ebe5499ed7b18a5c419a4355afa7fe5a0"
         }
       ]
     },
@@ -67,7 +67,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.555, 'BNLeNet': 0.883}"
+          "text": "{'CosineLeNet': 0.585, 'BNLeNet': 0.883}"
         }
       ]
     },
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-7-1.svg",
-          "bytes": 29414,
-          "sha256": "sha256:da09ce9af15fe932ca0d988e6c1c6ee99721e9a210177bfb418b5a44dce09f48"
+          "bytes": 29410,
+          "sha256": "sha256:e74858b18efe04028edb7afe28bc3ed3e126b58274c4c489feba7ab02f13ecb0"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=3.3527612686157227e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999898672103882>,\n <tf.Tensor: shape=(), dtype=float32, numpy=4.76837158203125e-07>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.60770320892334e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999897480010986>,\n <tf.Tensor: shape=(), dtype=float32, numpy=2.384185791015625e-07>)"
         }
       ]
     }

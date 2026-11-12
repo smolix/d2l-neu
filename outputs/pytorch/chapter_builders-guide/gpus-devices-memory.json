@@ -65,7 +65,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.0544],\n        [-0.0544]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[-1.3715],\n        [-1.3715]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -92,12 +92,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "product on the CPU, fp32: 958.57 ms/call\nproduct on the GPU, tf32: 1.68 ms/call\nproduct on the GPU, bf16: 0.92 ms/call\n"
+          "text": "product on the CPU, fp32: 935.38 ms/call\nproduct on the GPU, tf32: 1.67 ms/call\nproduct on the GPU, bf16: 0.91 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "copy from CPU to the GPU: 4.81 ms/call\n"
+          "text": "copy from CPU to the GPU: 4.82 ms/call\n"
         }
       ]
     },
@@ -151,12 +151,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  step memory  1096 MiB,  25.4 ms per step\n"
+          "text": "checkpointing=False  step memory  1096 MiB,  25.2 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   step memory   452 MiB,  32.6 ms per step\n"
+          "text": "checkpointing=True   step memory   452 MiB,  32.5 ms per step\n"
         }
       ]
     },
@@ -177,12 +177,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "num_gpus=0: 2.6 sec per epoch\n"
+          "text": "num_gpus=0: 2.2 sec per epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "num_gpus=1: 2.0 sec per epoch\n"
+          "text": "num_gpus=1: 1.9 sec per epoch\n"
         }
       ]
     }

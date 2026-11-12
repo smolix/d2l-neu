@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,12 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fresh data sample vs held-out: -0.0001\n"
+          "text": "fresh data sample vs held-out: +0.0005\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "point mass at the data mean vs held-out: 0.925\n"
+          "text": "point mass at the data mean vs held-out: 0.905\n"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1: 0.734  2: 0.174  4: 0.039  8: 0.010  16: 0.004  32: 0.002  64: 0.002\n"
+          "text": "1: 0.712  2: 0.158  4: 0.034  8: 0.008  16: 0.003  32: 0.002  64: 0.002\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 26531,
-          "sha256": "sha256:2d2905c2bcb99fb5cf7a2e1364d6834dbfc87f5402f2393d14bcb2601c84e4d9"
+          "bytes": 26538,
+          "sha256": "sha256:1d97d5d7b82a7778cda0bc145cfa9aca6a57102a7a75eb29f1c78894ed292fbd"
         }
       ]
     },
@@ -98,8 +98,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 900407,
-          "sha256": "sha256:2b15b5fade29457322a0d45685384ba464e01e4ea722ccd8507cfc3b3340e574"
+          "bytes": 900266,
+          "sha256": "sha256:5e1a8489f113d4965d85edd7ce62039829f2ad99318e5f53c20623abce525add"
         }
       ]
     },
@@ -121,17 +121,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 Euler step(s): energy distance  original 0.734  reflowed 0.003\n"
+          "text": " 1 Euler step(s): energy distance  original 0.712  reflowed 0.002\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 2 Euler step(s): energy distance  original 0.174  reflowed 0.002\n"
+          "text": " 2 Euler step(s): energy distance  original 0.158  reflowed 0.002\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 Euler step(s): energy distance  original 0.002  reflowed 0.003\nmean squared pair length: independent 3.97, reflowed 0.28\n"
+          "text": "32 Euler step(s): energy distance  original 0.002  reflowed 0.002\nmean squared pair length: independent 4.01, reflowed 0.28\n"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean distance from the chord: original 0.248, reflowed 0.012\n"
+          "text": "mean distance from the chord: original 0.246, reflowed 0.013\n"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "data N(0,4), noise N(0,1): independent pairing 5.01, sorted pairing 1.017\nsorted, straight       kinetic energy 1.000\nindependent, straight  kinetic energy 1.858\ncosine path            kinetic energy 1.234\n"
+          "text": "data N(0,4), noise N(0,1): independent pairing 5.00, sorted pairing 0.996\nsorted, straight       kinetic energy 1.000\nindependent, straight  kinetic energy 1.858\ncosine path            kinetic energy 1.234\n"
         }
       ]
     },
@@ -171,7 +171,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-euler-vs-heun-1.svg",
           "bytes": 30574,
-          "sha256": "sha256:daeabc4da3289cc3cba37db64b646e66683a96fa36c51f49ba944c3475916bb6"
+          "sha256": "sha256:43341c5819e8b3fa8845e0a98f2bffaeef5d1b0fe202d912614894856752a04e"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:9b3cdf76114394de444eeda322cdbb54cd8b611f44043c17f3847eb6a244a06a",
+    "d2l_lib_fingerprint": "sha256:f222e41cdcf0b2f21b13b4c8b5f4264ff55c9544c705829c22ffa7a6054234e8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -70,14 +70,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.926, valid loss 0.975\n350.3 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.903, valid loss 1.036\n237.9 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 23047,
-          "sha256": "sha256:86de0e7286b18a8575bf10f44bfb438ca503b8459e2f5866ef28e24a1dddc027"
+          "bytes": 23057,
+          "sha256": "sha256:709ab4eb6fc9aba878d406e4c2d59f53b3eb624e9d77d742e5f92315e48abae5"
         }
       ]
     },
@@ -88,14 +88,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.846\n358.6 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.832\n251.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 20788,
-          "sha256": "sha256:9815a6c47af816b984761e9004c6d9222d9a919f9142175b7b585e812d0d82d0"
+          "bytes": 20790,
+          "sha256": "sha256:03a9f2dbb374f4cfcb2cf15d1ac966c5fe322b266a611bb1340f2aee9b5fbeb7"
         }
       ]
     }

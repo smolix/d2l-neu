@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:539a87904dbba43ea141e6eff27a976dc1cb291ed0621455b5138269fb344e81",
+    "d2l_lib_fingerprint": "sha256:6bbc4e6b7d022b14a9fb9fb2aa2a32cdf380790f8469b1a9a9981f0dde5e1ab7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 86732,
-          "sha256": "sha256:c553c66fd727c9dce9fe5e0f56ddbafeedf5cb48d24cecb26f592382624c7f31"
+          "sha256": "sha256:b39d51d1555e18a794da6b5ece177c39ee5a6f1343e2f5c60282bc79bfb0bac7"
         }
       ]
     },
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87281,
-          "sha256": "sha256:77f902110b1534efe70ba488f20c63fcd45fc846c96417b2a4d885f9572fef5b"
+          "sha256": "sha256:98b168f76e3fafc1d26fe06a0eaf3eab47aeb8a8a84e2dd0361c2c5bc2b068be"
         }
       ]
     }

@@ -1238,7 +1238,7 @@ in any dimension. For a 1-Lipschitz $g$ and a coupling $\gamma$,
 $g(x) - g(y) \leq \|x - y\|$ at every pair, and taking the expectation under
 $\gamma$ gives
 $\mathbb{E}_P[g] - \mathbb{E}_Q[g] \leq \mathbb{E}_\gamma\|x - y\|$ (compare
-the weak duality of :numref:`subsec_mdl-lagrangian-duality`).
+the weak duality of :numref:`subsec_mdl-dual-problem`).
 
 *Step 4: one test function attains the area.* It suffices to consider
 $g(x) = g(0) + \int_0^x g'(t)\, dt$ with $|g'| \leq 1$: every such $g$ is
@@ -1320,7 +1320,7 @@ usable as a loss in deep learning: Sinkhorn divergences are trained on directly
 this kind on every batch. The subsection can be skipped on a first reading.
 
 The regularized problem can be solved almost in closed form. Its Lagrangian, as
-in :numref:`subsec_mdl-lagrangian-duality`, adds a multiplier $\xi_i$ for each
+in :numref:`subsec_mdl-dual-problem`, adds a multiplier $\xi_i$ for each
 row-sum constraint $\sum_j \gamma_{ij} = p_i$ and $\zeta_j$ for each column-sum
 constraint $\sum_i \gamma_{ij} = q_j$. Setting its derivative in $\gamma_{ij}$
 to zero gives $C_{ij} + \varepsilon \log \gamma_{ij} - \xi_i - \zeta_j = 0$, so

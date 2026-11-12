@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:32fe7886b03ede14eb8c8a97ca490460a8b9edbb2ff040e7cb9ac791e816eab3",
+    "d2l_lib_fingerprint": "sha256:cb35121e7f312760deb809356e2b50ee030fc8b646508564315db41d1acb7063",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -113,18 +113,7 @@
     "discrete-diffusion-images-as-binary-tokens-2": {
       "code_fingerprint": "sha256:1761c12f893aa9171380a9e9e0c6bca7af4f44eb852ab6507e20e4e9ef5ba2cb",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "UserWarning: Online softmax is disabled on the fly since Inductor decides to\nsplit the reduction. Cut an issue to PyTorch if this is an important use case\nand you want to speed it up with online softmax.\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "UserWarning: Online softmax is disabled on the fly since Inductor decides to\nsplit the reduction. Cut an issue to PyTorch if this is an important use case\nand you want to speed it up with online softmax.\n"
-        }
-      ]
+      "outputs": []
     },
     "discrete-diffusion-images-as-binary-tokens-3": {
       "code_fingerprint": "sha256:6845ae30bf5d5fb23522b1657ba07d506f2047a25347317973e259014d7cb7c4",
@@ -145,8 +134,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
-          "bytes": 80455,
-          "sha256": "sha256:18829d1228edf59048f75713a94cb241f12b8832abe459ac0bd3553f13917843"
+          "bytes": 74882,
+          "sha256": "sha256:e2d2968888f000922b72d0007ac96f8bca48ff06e8833984d7af43e1d92e5ed9"
         }
       ]
     },
@@ -158,8 +147,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-5-1.png",
-          "bytes": 166297,
-          "sha256": "sha256:bb9990927371e2b552655dd37ce2b21b6695f755ca3decb10933091684e2fcad"
+          "bytes": 165612,
+          "sha256": "sha256:85d206aa439dffce214f1c2f513c5d59a355538edc4a042c55038c8ac5108226"
         }
       ]
     },
@@ -171,8 +160,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
-          "bytes": 196040,
-          "sha256": "sha256:80c58f671b0928e0fd489edb31468cb656d8aad2f478a90f430a42291fca21ab"
+          "bytes": 196050,
+          "sha256": "sha256:16fc27191ad43a6e2f1747d75362d752736d2d8fb1344cbb6aa713875bc4f84a"
         }
       ]
     },
@@ -183,7 +172,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: data 0.0037, 100 steps 0.0072, 4 steps 0.0354\n"
+          "text": "speckles: data 0.0037, 100 steps 0.0059, 4 steps 0.0351\n"
         }
       ]
     }

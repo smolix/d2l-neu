@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "norm ratio after 200 steps = 2.9005913236\nlargest |eigenvalue|       = 2.9005913236\n|lambda_2| / |lambda_1|    = 0.256\n"
+          "text": "norm ratio after 200 steps = 2.5650940439\nlargest |eigenvalue|       = 2.5650940439\n|lambda_2| / |lambda_1|    = 0.127\n"
         }
       ]
     },
@@ -42,12 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform entries, gap ratio |lambda_2| / |lambda_1|, 5% and 95% quantiles: [0.14 0.36]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Gaussian entries, fraction with a complex dominant pair: 0.43\n"
+          "text": "uniform entries, gap ratio |lambda_2| / |lambda_1|, 5% and 95% quantiles: [0.14 0.37]\nGaussian entries, fraction with a complex dominant pair: 0.43\n"
         }
       ]
     },
@@ -80,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho(A) / sqrt(n)       = 1.014\nsigma_max(A) / sqrt(n) = 1.998\n"
+          "text": "rho(A) / sqrt(n)       = 1.021\nsigma_max(A) / sqrt(n) = 1.998\n"
         }
       ]
     }

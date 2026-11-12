@@ -83,7 +83,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, coupled: [0.961 0.027]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
+          "text": "mean w, coupled: [0.961 0.028]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
         },
         {
           "type": "stream",
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t:                           1     2     3    10    20    30   100  1000  3000\nAdam:                     1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nexact variance:           1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nno bias correction:       3.16  3.02  2.87  2.16  1.62  1.32  0.74  0.29  0.24\nwarmup over 20 steps:     0.05  0.07  0.09  0.17  0.26  0.24  0.23  0.23  0.23\n"
+          "text": "t:                           1     2     3    10    20    30   100  1000  3000\nAdam:                     1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nexact variance:           1.01  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nno bias correction:       3.16  3.00  2.86  2.17  1.62  1.34  0.74  0.29  0.24\nwarmup over 20 steps:     0.05  0.07  0.09  0.17  0.26  0.24  0.23  0.23  0.23\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-stochastic-methods-warmup-1.svg",
-          "bytes": 82382,
-          "sha256": "sha256:b540710beba2a931c040275d4a796899cdc2bb3970cf797aa9cecd14ee80a83a"
+          "bytes": 76529,
+          "sha256": "sha256:1a82c8bc05e6e41d94ee95b6a2e41f1a5fb1102b60f4abea9e159b5b86e96943"
         }
       ]
     },

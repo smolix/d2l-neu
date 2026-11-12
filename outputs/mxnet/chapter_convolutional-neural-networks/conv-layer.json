@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 12.199\nstep 3, loss 0.840\nstep 6, loss 0.058\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 12.063\nstep 3, loss 0.830\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.9870814 , -0.98967844]])"
+          "text": "array([[ 0.98739475, -0.9894919 ]])"
         }
       ]
     },

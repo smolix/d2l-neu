@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:82ab831724683eaae4d65dfaddf9612732f9b119d233b6d8e1f0d8e7a5230708",
+    "d2l_lib_fingerprint": "sha256:ab3a3ca7a088cd506891fcf08d7c5de19781d118e93b75c87db050f90fab9381",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:5ceccaad533cf8fe95132040a280c98c617274b8672d4521caa868941cf87ba8"
+          "sha256": "sha256:2e6263396adc125fd64ac26e904d20131dc1dea822313ae6eea5e6e07a951f15"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence        59.95 ms\n"
+          "text": "recurrence        59.79 ms\n"
         },
         {
           "type": "stream",
@@ -120,17 +120,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 16       0.49 ms\n"
+          "text": "chunks of 16       0.15 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 64       0.10 ms\n"
+          "text": "chunks of 64       0.14 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 256      0.14 ms\n"
+          "text": "chunks of 256      0.16 ms\n"
         }
       ]
     },
@@ -161,7 +161,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention perplexity: 3.09\n"
+          "text": "gated linear attention perplexity: 3.11\n"
         }
       ]
     },
@@ -177,7 +177,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "without convolution, SiLU, and gate: 3.21\n"
+          "text": "without convolution, SiLU, and gate: 3.23\n"
         }
       ]
     }

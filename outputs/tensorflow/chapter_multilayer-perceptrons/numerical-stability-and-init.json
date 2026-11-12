@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 1.0e-17\nReLU, N(0, 1): gradient mean square at layer 1: 1.1e+19\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.9e-12\n"
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 7.8e-18\nReLU, N(0, 1): gradient mean square at layer 1: 7.3e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 5.1e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
-          "bytes": 34713,
-          "sha256": "sha256:b6d95c9914f58d84b9a0f2f7c1955463038a651efd52be271c27647c5f452baf"
+          "bytes": 34684,
+          "sha256": "sha256:aa69a2c4dfbcaf2fa1c5ec2dc75b741b6d7cbdcdc9afd27a129d47ed6bf6fcf0"
         }
       ]
     },
@@ -43,14 +43,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0, 0.01²): activations at layer 10: 1.7e-19, gradient at layer 1: 9.3e-18\nXavier: activations at layer 10: 7.5e-04, gradient at layer 1: 1.6e-03\nHe: activations at layer 10: 1.4e+00, gradient at layer 1: 1.2e+00\n"
+          "text": "N(0, 0.01²): activations at layer 10: 1.1e-19, gradient at layer 1: 8.8e-18\nXavier: activations at layer 10: 7.1e-04, gradient at layer 1: 1.8e-03\nHe: activations at layer 10: 1.2e+00, gradient at layer 1: 1.0e+00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31930,
-          "sha256": "sha256:ae0f5e18cba1cc377e826a2462fd2bceb00cd8972b665225ef79be3e8a73524a"
+          "bytes": 31929,
+          "sha256": "sha256:2186e908187aa3b8cd8b5028fc67dbced091b37d965e39f0854e6a9eb6736af2"
         }
       ]
     },
@@ -71,19 +71,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Xavier: validation accuracy 0.82\n"
+          "text": "Xavier: validation accuracy 0.85\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "He: validation accuracy 0.84\n"
+          "text": "He: validation accuracy 0.85\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-training-a-deep-network-2-1.svg",
-          "bytes": 25347,
-          "sha256": "sha256:2fb9daafc180ffec34be8cbd964d379eb0d5b62159af81cccb5c821e6c06bfb6"
+          "bytes": 25344,
+          "sha256": "sha256:bff479e9a7a012d5e210edcf8b2a44a9ca0f0519b0d1b9e6059bd82fe6ef28f6"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.10\n"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.21\n"
         }
       ]
     }

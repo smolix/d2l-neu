@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-plain-and-residual-networks-compared-4-1.svg",
-          "bytes": 28988,
-          "sha256": "sha256:9f40fed6adfeed71df585a339aa7e485292f458e98be746d920a7aa042980f87"
+          "bytes": 28987,
+          "sha256": "sha256:4544ca81285b936a1402c1c3c65f372e574de6e55e49c182ae7f5e8bd7356f00"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'plain, 20 layers': (0.205, 0.907),\n 'plain, 56 layers': (0.279, 0.886),\n 'residual, 20 layers': (0.189, 0.909),\n 'residual, 56 layers': (0.155, 0.909)}"
+          "text": "{'plain, 20 layers': (0.208, 0.909),\n 'plain, 56 layers': (0.278, 0.885),\n 'residual, 20 layers': (0.197, 0.904),\n 'residual, 56 layers': (0.149, 0.915)}"
         }
       ]
     },
@@ -120,8 +120,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 31226,
-          "sha256": "sha256:4d545120301a8e779b52de48cfa7a3ace189450d78cead6fbad1872f540b48cd"
+          "bytes": 32937,
+          "sha256": "sha256:c1f7daf9269ad401fcecb75ab2c3b95e10ba64be166091edb06371a9a168f2eb"
         }
       ]
     },
@@ -131,7 +131,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.931"
+          "text": "0.929"
         }
       ]
     },

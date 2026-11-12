@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:22f5d158ce078920b3708e6e61220a475a529b2125d5320c9cab032115f0dba1",
+    "d2l_lib_fingerprint": "sha256:86a1e01a989e8dc3e5870c04ee93a277978ed613d4856acebef8cccd32153e98",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,12 +40,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1: final loss 1.615\n"
+          "text": "clipped at 1: final loss 1.612\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped 13 of 2000 steps, the last at step 13; median gradient norm 0.26\n"
+          "text": "clipped 17 of 2000 steps, the last at step 20; median gradient norm 0.25\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 36457,
-          "sha256": "sha256:cfdb27352b22bfbcf4bc666eeffba9ed82cb0db4816d7d374f3ee539a7805f41"
+          "bytes": 24677,
+          "sha256": "sha256:846a07a8f149fe2a2d69f431d5d876c348b5343f4b6179de93f44ad271e1c211"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.897, last five epochs 0.813 to 0.897\nEMA: final test accuracy 0.911, last five epochs 0.902 to 0.911\n"
+          "text": "live: final test accuracy 0.882, last five epochs 0.880 to 0.892\nEMA: final test accuracy 0.910, last five epochs 0.901 to 0.910\n"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24003,
-          "sha256": "sha256:e0dc01d0adfc12d8006065bb2fe1a03b9bd6abd3896200e55bcf40ab9d99c187"
+          "bytes": 24007,
+          "sha256": "sha256:9851651edb389db61924c09b58f9f179a706bb8e64402424ee08948c35daa4f6"
         }
       ]
     }

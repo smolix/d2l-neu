@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4f18e9efe9cfd02eace4d7d2385ee9bae030e200e4b223363e0bc215f10c9a40",
+    "d2l_lib_fingerprint": "sha256:3580d2b36f54fc2357f2860a2955c043c9bcb3e96f64a860a737608fb4867d96",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-garments-from-noise-4-1.svg",
           "bytes": 25699,
-          "sha256": "sha256:0af5a71b7314ba534375e531dd51c50c4a8fde0dd067ba6efde129f76d367451"
+          "sha256": "sha256:823e2eb9273f1d1286481aafff47b11e04202d662badd4db9509d87f973c543e"
         }
       ]
     },
@@ -105,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-3-1.svg",
           "bytes": 65634,
-          "sha256": "sha256:1d1899d571bdbf44bf51b1b4f47328b21597d6c76cc3ee3429bb961f292e8df4"
+          "sha256": "sha256:19d05198216d017d94b5edeb583a07536cd47a261a20c9dac05f20feeb929cfb"
         }
       ]
     },
@@ -145,7 +145,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-the-learned-density-ratio-1-1.svg",
           "bytes": 73597,
-          "sha256": "sha256:bb214cb721bfd6a59299b3a664d7a8fad39ac1c836304a56b445e636ac0cab76"
+          "sha256": "sha256:b99fcf33dea5b0b896dcca0ed09803f27ca739766f23b0a4780ca3509e2c636f"
         }
       ]
     },
@@ -179,7 +179,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-saturating-and-non-saturating-losses-compared-1-1.svg",
           "bytes": 170145,
-          "sha256": "sha256:9e51c3b8c25e132c0d0ba34783bef9c3762f0beb4fd718c942162e5627bf02f0"
+          "sha256": "sha256:b606dff9fa46fac9927d3d4055f8c43c636c26706206aecc4e6e6e92a08b9c11"
         }
       ]
     }

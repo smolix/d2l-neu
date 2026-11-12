@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:338a6bbadda51dc3a3a5f8694a522b2d3a8666af962b4bd0f043968b0d1e2ded",
+    "d2l_lib_fingerprint": "sha256:43a80b1c9b71e7a68b7c8ab0d2074a69fb5e35fb6e008d851cbea2808c32aba0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-score-variance-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25277,
-          "sha256": "sha256:0e75bfdb7ef5a105d5843bb3db61ce0a807f0d520ea4c11185fe3acc0ff94b7b"
+          "bytes": 25278,
+          "sha256": "sha256:8c6bc70c2136f11d95cb0e3be2db36104250e846256af9c6745051e676f76239"
         }
       ]
     },
@@ -38,12 +38,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   4: Jacobian norm 0.260 (unscaled), 0.178 (scaled)\nd =  64: Jacobian norm 0.208 (unscaled), 0.185 (scaled)\n"
+          "text": "d =   4: Jacobian norm 0.259 (unscaled), 0.183 (scaled)\nd =  64: Jacobian norm 0.204 (unscaled), 0.185 (scaled)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 512: Jacobian norm 0.080 (unscaled), 0.185 (scaled)\n"
+          "text": "d = 512: Jacobian norm 0.082 (unscaled), 0.183 (scaled)\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[[0.37177074, 0.62822926, 0.        , 0.        ],\n        [0.40503418, 0.5949659 , 0.        , 0.        ]],\n\n       [[0.28684446, 0.4422511 , 0.2709044 , 0.        ],\n        [0.27692246, 0.44913664, 0.27394086, 0.        ]]], dtype=float32)"
+          "text": "Array([[[0.46763945, 0.5323605 , 0.        , 0.        ],\n        [0.43893057, 0.56106937, 0.        , 0.        ]],\n\n       [[0.37112162, 0.26410234, 0.36477605, 0.        ],\n        [0.31708688, 0.4310225 , 0.2518907 , 0.        ]]], dtype=float32)"
         }
       ]
     },
@@ -73,7 +73,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.30230495, 0.2665044 , 0.4311906 , 0.        ]],\n\n       [[0.29402873, 0.7059713 , 0.        , 0.        ],\n        [0.19537717, 0.34795403, 0.2966255 , 0.16004331]]], dtype=float32)"
+          "text": "Array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.3548884 , 0.33282673, 0.31228483, 0.        ]],\n\n       [[0.57846254, 0.42153746, 0.        , 0.        ],\n        [0.15027994, 0.16707063, 0.33834356, 0.34430587]]], dtype=float32)"
         }
       ]
     },
@@ -90,8 +90,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1-1.svg",
-          "bytes": 16431,
-          "sha256": "sha256:fca57153abe20eded915059bf534545557f2ff11d99a80d63029daf5a1a7145c"
+          "bytes": 16435,
+          "sha256": "sha256:eee403b2cca645e4d7acf9c5f8c7b0d305c2d2258c448ab9defe17c13f11b572"
         }
       ]
     },
@@ -103,8 +103,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
-          "bytes": 27725,
-          "sha256": "sha256:310eb590a6f84b641e5548b132bc8037f61a0506c0dd4fde1c2c7ded62c829ab"
+          "bytes": 27721,
+          "sha256": "sha256:22953ec65f6f1918ac3eddc9318a75bbed72f06bdadd890be8cf98bbc00aa5ee"
         }
       ]
     },
@@ -117,7 +117,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1-1.svg",
           "bytes": 13718,
-          "sha256": "sha256:1cbae4f82427cd72d1f9980dd0cc37a90db940cc6713dce57f35320e7368fed8"
+          "sha256": "sha256:80ad936f78747d6624e20c28e0268ed6c58c631957a6dee404efff7d7d810190"
         }
       ]
     },
@@ -144,8 +144,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
-          "bytes": 16824,
-          "sha256": "sha256:f933537259f03f6b49f6cd0ddfbcf83ee945134d2656f2b088a086bb16d24093"
+          "bytes": 16813,
+          "sha256": "sha256:8c849ec72ba20c1ec021317b1eafcef3a9cba330d2bd63da4db338ccaf916fe8"
         }
       ]
     },
@@ -155,7 +155,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.14167936, 0.07305679, 0.2799482 , 0.3999459 , 0.07087495,\n        0.03449478],\n       [0.16418885, 0.0719193 , 0.26701316, 0.27518898, 0.12798357,\n        0.09370609],\n       [0.1139617 , 0.04906651, 0.37904423, 0.27640674, 0.09070827,\n        0.09081253]], dtype=float32)"
+          "text": "Array([[0.17704712, 0.18999238, 0.17612648, 0.11905242, 0.18520835,\n        0.15257333],\n       [0.17629585, 0.18616012, 0.17560926, 0.12032591, 0.1832071 ,\n        0.15840174],\n       [0.17482753, 0.16637975, 0.17948768, 0.08136927, 0.2502158 ,\n        0.14771992]], dtype=float32)"
         }
       ]
     }

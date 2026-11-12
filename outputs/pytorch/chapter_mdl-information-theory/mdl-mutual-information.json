@@ -42,12 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho = 0.00: binned 0.003, closed form 0.000 nats\nrho = 0.30: binned 0.050, closed form 0.047 nats\nrho = 0.60: binned 0.223, closed form 0.223 nats\n"
+          "text": "rho = 0.00: binned 0.003, closed form 0.000 nats\nrho = 0.30: binned 0.050, closed form 0.047 nats\nrho = 0.60: binned 0.218, closed form 0.223 nats\nrho = 0.90: binned 0.810, closed form 0.830 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho = 0.90: binned 0.815, closed form 0.830 nats\nrho = 0.99: binned 1.799, closed form 1.959 nats\n"
+          "text": "rho = 0.99: binned 1.780, closed form 1.959 nats\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample correlation +0.004, binned MI 0.979 nats\n"
+          "text": "sample correlation +0.009, binned MI 0.989 nats\n"
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x   : correlation 0.899, binned MI 0.811, rank-binned MI 0.8100 nats\nx**3: correlation 0.697, binned MI 0.458, rank-binned MI 0.8100 nats\n"
+          "text": "x   : correlation 0.900, binned MI 0.812, rank-binned MI 0.8156 nats\nx**3: correlation 0.696, binned MI 0.336, rank-binned MI 0.8156 nats\n"
         }
       ]
     },
@@ -157,7 +157,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma^2 = 0.1: MSE 0.0913, D = 0.0909; I(X;Z) = 1.1989 = R(D) = 1.1989\nsigma^2 = 1.0: MSE 0.4999, D = 0.5000; I(X;Z) = 0.3466 = R(D) = 0.3466\nsigma^2 = 3.0: MSE 0.7522, D = 0.7500; I(X;Z) = 0.1438 = R(D) = 0.1438\n"
+          "text": "sigma^2 = 0.1: MSE 0.0910, D = 0.0909; I(X;Z) = 1.1989 = R(D) = 1.1989\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma^2 = 1.0: MSE 0.5000, D = 0.5000; I(X;Z) = 0.3466 = R(D) = 0.3466\nsigma^2 = 3.0: MSE 0.7474, D = 0.7500; I(X;Z) = 0.1438 = R(D) = 0.1438\n"
         }
       ]
     },

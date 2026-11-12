@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: Monte-Carlo R_S = 0.126, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
+          "text": "d =    2: Monte-Carlo R_S = 0.123, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean ||w|| = 1.06 (predicted 1.01), largest 1.73\ntypical fit: mean ||w|| * mean row norm / sqrt(n) = 1.51\nr = 11.9, B r / sqrt(n) with B = largest ||w||: 2.9\n"
+          "text": "mean ||w|| = 0.99 (predicted 1.01), largest 1.31\ntypical fit: mean ||w|| * mean row norm / sqrt(n) = 1.40\nr = 12.4, B r / sqrt(n) with B = largest ||w||: 2.3\n"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
-          "bytes": 38268,
-          "sha256": "sha256:3cc284c68fe1d9fa11cd6805294abf058eee796acf6c7666a89360886d06529d"
+          "bytes": 38272,
+          "sha256": "sha256:5e277b13492390a3b1db4d3f0b921894ab2ff9bb7a85656881ec558fda8646fa"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   p     test    train     norm    s_min capacity    clean    noise  ratio_q    ratio\n  15     0.69     0.27        2     0.97      1.5      0.7   0.0065      4.6      1.7\n  38      2.6   0.0058      5.3    0.098      5.4      2.5     0.21    4e+02       22\n  40      5.1  4.2e-29      7.7    0.027      8.6      4.3      1.8  5.8e+03  1.8e+02\n  42      2.4  1.9e-29      4.9    0.096      5.4        2     0.22  4.2e+02       22\n  50     0.77  1.3e-29      2.6     0.24      3.1     0.64     0.06       61        6\n  80     0.22  1.2e-29      1.3     0.72      1.9     0.19    0.021        9      2.1\n 400    0.055  8.6e-30     0.39      2.9      1.2     0.05   0.0093      1.7     0.93\nleast squares on the 15 raw inputs: test MSE 0.0062\n"
+          "text": "   p     test    train     norm    s_min capacity    clean    noise  ratio_q    ratio\n  15     0.65     0.28      1.9        1      1.3     0.67   0.0066      3.7      1.8\n  38      3.3   0.0081      5.5     0.08        6      2.9     0.31  6.8e+02       32\n  40       71  2.3e-28       29    0.016       34       58      4.2  1.5e+04  4.2e+02\n  42      3.4  1.3e-29        6    0.076      6.5      2.9     0.26  5.8e+02       26\n  50     0.74  6.6e-30      2.7     0.25      3.1     0.64    0.063       62      6.3\n  80     0.22    7e-30      1.3     0.71      1.8     0.19    0.021       10      2.1\n 400    0.049  5.3e-30      0.4      2.6      1.3     0.04   0.0095      2.3     0.95\nleast squares on the 15 raw inputs: test MSE 0.0066\n"
         }
       ]
     }

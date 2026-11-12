@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 3 words): the time i and thither surprise of his\n    slender in movements some pillowed length and damned of is family the\n    even in glass path so the left\n2-gram (longest copied run: 3 words): the time machine for this one a little\n    doses i suppose a peculiar change what if wild extravagant theories of a\n    cube that my side of this\n3-gram (longest copied run: 9 words): the time machine and showed that the\n    hail stones the rebounding dancing hail hung in my exploring expeditions\n    going to press the lever and off the morlocks\n"
+          "text": "1-gram (longest copied run: 2 words): the time said of took as i argument\n    this there i flagstones and with and to staying of of they river the\n    life watch not the to\n2-gram (longest copied run: 4 words): the time traveller it retreated again\n    patience said why should call to its treasures here and things darkness\n    with only a temperate climate the remote future now\n3-gram (longest copied run: 8 words): the time i ran at my own troubles and\n    all the activity all the evening of my time machine something i knew not\n    what had once been\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:795f242b377c24a595f4bde1602425eb02b418df44478f1f72ca741dd6777d45"
+          "sha256": "sha256:6bb4b38ee874a1a8bad1196a4370a5b5ddac8b0ac8304449ad08d0610fe66821"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:6c8841eb745426f714f7fed1f045676fd5b123b6080e08cded31a0b5ebc94d6c"
+          "sha256": "sha256:be181a505909d157454c02836b4f55b1cedb497a571b86b30f70531281c6a1d1"
         }
       ]
     },
@@ -166,12 +166,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n"
+          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3-gram held-out perplexity, Kneser-Ney:   300.1\n"
+          "text": "2-gram held-out perplexity, Kneser-Ney:   312.3\n3-gram held-out perplexity, Kneser-Ney:   300.1\n"
         }
       ]
     },
@@ -208,7 +208,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[285 344 662 296 260  32  95 104 297  95]\n [260 295 114 100 426 256 281 107 284  10]] \nY: [[344 662 296 260  32  95 104 297  95 273]\n [295 114 100 426 256 281 107 284  10 341]]\nX[0]: ' to assume the _how_'\nY[0]: ' assume the _how_ of'\n"
+          "text": "X: [[519  44 754 275 494 344 316  10 100 320]\n [104 336 277 561 373 262  46 505 260 630]] \nY: [[ 44 754 275 494 344 316  10 100 320 799]\n [336 277 561 373 262  46 505 260 630 298]]\nX[0]: ' hand, going out as it\\ndro'\nY[0]: ', going out as it\\ndropped'\n"
         }
       ]
     }

@@ -71,22 +71,22 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 33793,
-          "sha256": "sha256:6bded5048a1136c0caf4805da8ce1cfa0c908546dc336f113505d3c936720e2b"
+          "bytes": 34587,
+          "sha256": "sha256:88afd884e8231286efc792350a93d865247f2436f82d1446b3a527ec1740c83b"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 31930,
-          "sha256": "sha256:7de1f8d886e58eaceaa50e306c28a06664c4f90ffe971e4309de8349eb76ceb4"
+          "bytes": 33129,
+          "sha256": "sha256:c8e9ebad4133a1167bc9a8ede478bf9322e5014ed6bbeb2e0a3c8d3043526e9e"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-3.svg",
-          "bytes": 34369,
-          "sha256": "sha256:c2eab5db202f6d5573b6f5d8048fb701a7be0acb4edda8c2c3589feee94a9bf8"
+          "bytes": 33796,
+          "sha256": "sha256:256bd6f37f08283e45bd2f5638bda8b6b0c736e7b0b476024d2b50d3c6fcd6fc"
         }
       ]
     },
@@ -97,12 +97,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.918, 3.6 ms/batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.917, 2.1 ms/batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.938, 10.2 ms/batch\nVGG-style, narrow: 75,854 parameters, 49.1M multiply-adds, accuracy 0.931, 2.8 ms/batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.941, 5.9 ms/batch\nVGG-style, narrow: 75,854 parameters, 49.1M multiply-adds, accuracy 0.934, 1.5 ms/batch\n"
         }
       ]
     },

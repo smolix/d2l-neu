@@ -92,8 +92,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 33679,
-          "sha256": "sha256:3fd1de742713b331943e9bb3f16ba824e3335e44b372505af79819fb8d9ccd32"
+          "bytes": 33687,
+          "sha256": "sha256:0cd24f6f2b1f579c56c33147d1db938d493739df7d30f6c08ff9defa309eae72"
         }
       ]
     },
@@ -104,14 +104,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean size of the change: 0.045 of the mean size of the initial weights\n"
+          "text": "mean size of the change: 0.049 of the mean size of the initial weights\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-what-the-first-layer-learned-1-1.svg",
-          "bytes": 178679,
-          "sha256": "sha256:18842e21e417b1286a7d60b9aa1c61514c7dbf3108fa78057c432f2b1d03a184"
+          "bytes": 179071,
+          "sha256": "sha256:5a7a3cd8eb7888f4802b5c5cde90afa9d9f35ea0be27bcfcd8edf5f4559f0e69"
         }
       ]
     }

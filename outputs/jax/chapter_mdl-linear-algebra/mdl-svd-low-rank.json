@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "singular values: [3.0e+00 6.1e-01 1.4e-16 6.5e-17]\ntolerance 2.7e-15;  exact zeros: 0;  numerical rank: 2\n"
+          "text": "singular values: [2.4e+00 1.4e+00 2.7e-16 6.3e-17]\ntolerance 2.1e-15;  exact zeros: 0;  numerical rank: 2\n"
         }
       ]
     },
@@ -53,17 +53,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "400 x 500 = 200000 numbers;  slope of log sigma_i on log i: -1.11\nenergy kept at rank 1: 0.886, at rank 4: 0.955\nk= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\n"
+          "text": "400 x 500 = 200000 numbers;  slope of log sigma_i on log i: -1.11\nenergy kept at rank 1: 0.886, at rank 4: 0.955\nk= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\nk= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\nk=50: ||A-A_k||_2=   342  sigma_51=   342  rel. err 0.045  stores 22.5%\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "projection onto the 20 largest columns: rel. err 0.310\n"
+          "text": "k=50: ||A-A_k||_2=   342  sigma_51=   342  rel. err 0.045  stores 22.5%\nprojection onto the 20 largest columns: rel. err 0.310\n"
         }
       ]
     },
@@ -74,7 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "explained-variance ratio: [0.947 0.053]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.3 degrees\nmean squared rank-1 error: 0.5736   sigma_2^2 / n: 0.5736\n"
+          "text": "explained-variance ratio: [0.932 0.068]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.1 degrees\nmean squared rank-1 error: 0.6082   sigma_2^2 / n: 0.6082\n"
         }
       ]
     },
@@ -107,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "smallest scaled sigma 0.205;  predicted steps 7.9\nsteps until max|sigma_i - 1| < 1e-6: 8;  distance to U V^T: 7.8e-10\n"
+          "text": "smallest scaled sigma 0.190;  predicted steps 8.1\nsteps until max|sigma_i - 1| < 1e-6: 8;  distance to U V^T: 9.6e-09\n"
         }
       ]
     },
@@ -118,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gaussian  : sigma from 41.9 to 2.4;  95% energy at rank 270;  adapter 121.5% of W\nphotograph: sigma from 2.65e+04 to 2.4;  95% energy at rank   8;  adapter 3.6% of W\n"
+          "text": "Gaussian  : sigma from 42.6 to 2.5;  95% energy at rank 269;  adapter 121.0% of W\nphotograph: sigma from 2.65e+04 to 2.4;  95% energy at rank   8;  adapter 3.6% of W\n"
         }
       ]
     }

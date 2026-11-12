@@ -86,7 +86,7 @@ from d2l import jax as d2l
 ```
 
 ## The Dual Problem
-:label:`subsec_mdl-lagrangian-duality`
+:label:`subsec_mdl-dual-problem`
 
 We want to prove that no feasible point of the clipping problem has a value
 below $8$, without visiting feasible points. Every bound in this section

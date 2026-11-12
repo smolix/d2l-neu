@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:0ff3ccb2529b2f4ba7758c9ece6103060234535e994d680b28498e86b90a45e1",
+    "d2l_lib_fingerprint": "sha256:18e56e1e872f767a8ce4f1f6ca3a260a2d6ab2fcbdd65507054c44497da3566e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -122,7 +122,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 1.33 10.12  8.58]\na new pass starts with labels [-1.33  0.54  3.44]\n"
+          "text": "32 minibatches, the last of size 8\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "second pass: 32 minibatches\na new pass starts with labels [ 5.47  4.47 -3.26]\na new pass starts with labels [7.17 4.34 9.65]\n"
         }
       ]
     },
@@ -174,8 +179,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-training-linear-regression-again-1-1.svg",
-          "bytes": 34352,
-          "sha256": "sha256:b27325103dbb47d2f5d3802ea76bf784429464dfb2296a6844aaa699edb0f8c9"
+          "bytes": 34361,
+          "sha256": "sha256:3a8174ab0813b631a30858e788b1fe51060d96b718e39fd933fe591b9c24d879"
         }
       ]
     },
@@ -186,7 +191,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 4.6e-05\nerror in w: 3.4e-04, 2.4e-04\nerror in b: 5.8e-05\n"
+          "text": "validation loss: 5.0e-05\nerror in w: -4.0e-05, -2.4e-04\nerror in b: -3.5e-04\n"
         }
       ]
     }

@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned h(x) = 1.91 x1 +0.02 x2 -1.86   (true log-ratio: 2 x1 - 2)\nlargest weight: 53; effective sample size: 67 of 1000, 232 if clipped at 5\n"
+          "text": "learned h(x) = 1.96 x1 -0.13 x2 -1.89   (true log-ratio: 2 x1 - 2)\nlargest weight: 60; effective sample size: 60 of 1000, 215 if clipped at 5\n"
         }
       ]
     },
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted  target accuracy 0.533   source accuracy 0.872\nweighted    target accuracy 0.956   source accuracy 0.824\nclipped     target accuracy 0.954   source accuracy 0.831\nalways predicting the most common target class: 0.699\n"
+          "text": "unweighted  target accuracy 0.568   source accuracy 0.861\nweighted    target accuracy 0.941   source accuracy 0.812\nclipped     target accuracy 0.931   source accuracy 0.824\nalways predicting the most common target class: 0.707\n"
         }
       ]
     },
@@ -53,8 +53,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "environment-and-distribution-shift/environment-and-distribution-shift-a-two-dimensional-example-3-1.svg",
-          "bytes": 792430,
-          "sha256": "sha256:cd60f8c5292a8b2bff851117436c5f81753f0b2f840df19ff7105c40b83bfa30"
+          "bytes": 792210,
+          "sha256": "sha256:1a00de4018c1072b5b5a1270b532f201fbf1ee796bef3ee2804d3fa06a24ccd4"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T-shirt    true 0.06, predicted 0.149, estimated 0.063\ntrouser    true 0.06, predicted 0.053, estimated 0.053\npullover   true 0.06, predicted 0.123, estimated 0.056\ndress      true 0.06, predicted 0.060, estimated 0.048\ncoat       true 0.06, predicted 0.094, estimated 0.045\nsandal     true 0.06, predicted 0.053, estimated 0.056\nshirt      true 0.50, predicted 0.283, estimated 0.511\nsneaker    true 0.06, predicted 0.063, estimated 0.062\nbag        true 0.06, predicted 0.067, estimated 0.054\nankle boot true 0.06, predicted 0.053, estimated 0.052\n"
+          "text": "T-shirt    true 0.06, predicted 0.124, estimated 0.044\ntrouser    true 0.06, predicted 0.053, estimated 0.054\npullover   true 0.06, predicted 0.104, estimated 0.041\ndress      true 0.06, predicted 0.091, estimated 0.078\ncoat       true 0.06, predicted 0.140, estimated 0.044\nsandal     true 0.06, predicted 0.050, estimated 0.050\nshirt      true 0.50, predicted 0.246, estimated 0.512\nsneaker    true 0.06, predicted 0.067, estimated 0.068\nbag        true 0.06, predicted 0.075, estimated 0.062\nankle boot true 0.06, predicted 0.050, estimated 0.047\n"
         }
       ]
     },
@@ -81,7 +81,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target accuracy: 0.730 as trained, 0.835 adapted to the estimated proportions\n"
+          "text": "target accuracy: 0.660 as trained, 0.791 adapted to the estimated proportions\n"
         }
       ]
     }

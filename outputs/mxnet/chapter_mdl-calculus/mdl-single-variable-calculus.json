@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25088,
-          "sha256": "sha256:78c67c2f34a7576064a685ea4d75e6fb538abc9d2b5d3fb08dff28392e540853"
+          "sha256": "sha256:d64825b217fccbf263372b7ad91830e2834b81322db87620bce0a538d55726c3"
         }
       ]
     },
@@ -67,7 +67,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-error-rate-1.svg",
           "bytes": 33582,
-          "sha256": "sha256:c2b1798ca61695463da6b1fc2e2e861e246210ac3c457e46c69e58c80d11a902"
+          "sha256": "sha256:99a1885cedcae9830b3a4c437d87fe008581be4fe21a498a940fc27cb2dbe3af"
         }
       ]
     },

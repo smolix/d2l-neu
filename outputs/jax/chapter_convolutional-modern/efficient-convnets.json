@@ -71,22 +71,22 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 33327,
-          "sha256": "sha256:26ebe10fa34fde5b6ada03db31988b052df5648aa2bc923ccc5ddc4bb6f3972e"
+          "bytes": 33990,
+          "sha256": "sha256:e51676e7b69c311a08ef2d161d6b99d45f52595d67da56c30d6d95dfb5448583"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 31936,
-          "sha256": "sha256:288a39c57d85e44cde643a3704749b47216e148b5661ea0d153419175ace56d1"
+          "bytes": 31327,
+          "sha256": "sha256:a62a2bc592fa26721de3c4f7bfc0636d1f710ba8ffcb112b33c5184ac1062818"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-3.svg",
-          "bytes": 35058,
-          "sha256": "sha256:e5834534d9dfd3dd41ad945814ea3d4e44fbfc212aafdc34f08a5c0d01fec885"
+          "bytes": 33203,
+          "sha256": "sha256:cc79f50fb39181835af1c38ba5e7251d72be58384cd8aafd84f3e87447e2c4e4"
         }
       ]
     },
@@ -97,17 +97,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.914, 1.5 ms/batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.916, 2.9 ms/batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.940, 3.6 ms/batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.937, 7.2 ms/batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style, narrow: 75,854 parameters, 49.1M multiply-adds, accuracy 0.930, 0.9 ms/batch\n"
+          "text": "VGG-style, narrow: 75,854 parameters, 49.1M multiply-adds, accuracy 0.929, 1.8 ms/batch\n"
         }
       ]
     },
@@ -137,7 +137,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4.76837158203125e-06"
+          "text": "5.7220458984375e-06"
         }
       ]
     }

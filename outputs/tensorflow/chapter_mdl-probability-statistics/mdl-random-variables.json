@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.10032  ratio 1.003\nwidth 0.01   probability 0.01001  ratio 1.001\nwidth 0.001  probability 0.00102  ratio 1.017\n"
+          "text": "width 0.1    probability 0.09992  ratio 0.999\nwidth 0.01   probability 0.00994  ratio 0.994\nwidth 0.001  probability 0.00098  ratio 0.983\n"
         }
       ]
     },
@@ -42,14 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.48\n"
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.51\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 45643,
-          "sha256": "sha256:6ea27c6e3eb955cd82871f62a3061768d159ece7d7fb60cbb339f05f37531419"
+          "bytes": 47237,
+          "sha256": "sha256:2bc2cd23e229258a8e97ad3b42b96c740bb6ef535836252b53fc8e079b624474"
         }
       ]
     }

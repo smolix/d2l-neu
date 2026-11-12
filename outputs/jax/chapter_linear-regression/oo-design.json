@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:886f58591d4b6578681ac3b14f74eca0695cb7e8be1ca02238b16893621b16f6",
+    "d2l_lib_fingerprint": "sha256:73d6a4f596a7505292eb35c79afc30c76108cfe98967bf131a59637807fedb2a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [0.27 7.93 1.85]\na new pass starts with labels [ 4.52 -2.03  7.16]\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [7.74 8.56 6.1 ]\na new pass starts with labels [1.82 7.01 4.4 ]\n"
         }
       ]
     },
@@ -179,8 +179,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-training-linear-regression-again-1-1.svg",
-          "bytes": 34360,
-          "sha256": "sha256:fc64b6d39b90303049904bccb99da3b02fae259a2d9f1602d3eff84cf22d57e6"
+          "bytes": 34350,
+          "sha256": "sha256:4eb3abe9604d195511e5191710836fe5533a343df67df7a0d0bf498e881d5913"
         }
       ]
     },
@@ -191,7 +191,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 4.9e-05\nerror in w: -1.6e-04, 5.1e-04\nerror in b: -4.9e-04\n"
+          "text": "validation loss: 4.9e-05\nerror in w: -1.8e-04, 1.6e-04\nerror in b: -3.7e-04\n"
         }
       ]
     }

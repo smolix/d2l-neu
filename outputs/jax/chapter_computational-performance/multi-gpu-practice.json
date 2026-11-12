@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3bf10c6c7341c24e9c433e4b67db022c8ef44b0c4ec6180e72b3fac172de9fe9",
+    "d2l_lib_fingerprint": "sha256:5d93080d7e60d10310003a83c6b069d48332a4c945d5473cce1429467404032b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 3.9e-02\nlargest difference between one and two GPUs: 8.6e-05\n"
+          "text": "largest update 2.4e-02\nlargest difference between one and two GPUs: 1.9e-05\n"
         }
       ]
     },
@@ -83,7 +83,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2557 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4304 examples/s, speedup 1.68, efficiency 84%\n4 GPU(s):  7881 examples/s, speedup 3.08, efficiency 77%\n"
+          "text": "1 GPU(s):  2551 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4298 examples/s, speedup 1.68, efficiency 84%\n4 GPU(s):  7868 examples/s, speedup 3.08, efficiency 77%\n"
         }
       ]
     },
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.71, efficiency 86%\n4 GPU(s), 128 examples each: speedup 2.49, efficiency 62%\n"
+          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.71, efficiency 85%\n4 GPU(s), 128 examples each: speedup 2.48, efficiency 62%\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
           "bytes": 25898,
-          "sha256": "sha256:8d60e37c1b597b7fb9b9a0113751e1671cf498e47e61ce095523edc47330f8b7"
+          "sha256": "sha256:dab71a95427df1fb3cf51a0e940b6a1cd5f84310e4569d19f2190ef0986783ce"
         }
       ]
     },
@@ -128,7 +128,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 4.9 GB/s by default, 21.9 GB/s with the copy engines (4.5x)\n"
+          "text": "beta = 4.9 GB/s by default, 21.8 GB/s with the copy engines (4.5x)\n"
         }
       ]
     }

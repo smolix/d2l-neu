@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3bff95c94268a8deb781138975c1b7e9af9a70c65d7bca5470a3f64280ce2706",
+    "d2l_lib_fingerprint": "sha256:46a265fbd3a7be7f76ff16dea305199ef721584f6364c4ede72d367ce321f90f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
           "bytes": 52137,
-          "sha256": "sha256:18661ea497b7daa39b779122930f6f0b6f1a87bd8dc7a0ef7917530d3d664b9b"
+          "sha256": "sha256:9f8bf1a1954dada8dcd3fcf3fdb5e29771a5dcb2d4ff988a6cd08088c6995944"
         }
       ]
     }

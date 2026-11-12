@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.03592176960338425),\n np.float64(0.03571428571428571),\n np.float64(63.792311205863044))"
+          "text": "(np.float64(0.0355854614613905),\n np.float64(0.03571428571428571),\n np.float64(64.6268729188249))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.591834460579314),\n np.float64(0.17768328072875372),\n np.float64(-0.005466024527057732),\n np.float64(0.3439908798586526))"
+          "text": "(np.float64(0.5922613828635285),\n np.float64(0.1811030008009743),\n np.float64(0.00941396698447776),\n np.float64(0.33995555537225597))"
         }
       ]
     },
@@ -112,7 +112,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 32080,
-          "sha256": "sha256:e6d89a3083bb722eb072a41dfae00bef16df5cad570585cb712f1a757e12a9f0"
+          "sha256": "sha256:9188546dbf34a1032ed43d8515b8e13ff13402101323fffab68a781fce6cbf8b"
         }
       ]
     },

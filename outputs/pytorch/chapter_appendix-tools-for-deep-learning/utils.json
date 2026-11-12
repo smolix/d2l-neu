@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:91f07786fb47ae86039a7751fca7e45367c5cd45a29be7fbd44aa4cd75cbc482",
+    "d2l_lib_fingerprint": "sha256:ae3f12c090d9f058b19f220d612dd99dea32dd7cd84193cdff9ca6a41d9a8a9f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,87 +14,97 @@
       "outputs": []
     },
     "utils-utility-functions-and-classes-4": {
-      "code_fingerprint": "sha256:6bd2039218635cacc6b813ba2c5a8543a0bd8ef5b3405e76a1a8edf2649d1320",
+      "code_fingerprint": "sha256:4524e6477568a1055cdab8c4080dd59307edf4c1575c04e4a22f7e7de64d706e",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-2": {
-      "code_fingerprint": "sha256:aa267006ef2a138d431f33fa3486751b8e7ad11d077e39988e8907951a176573",
+      "code_fingerprint": "sha256:8af2d390863a04a8fe24d5e4fe744680cfda5f808378160ed70dbdbc8d6ce081",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-1": {
+      "code_fingerprint": "sha256:0a2447b3416b37fe80f9941c09015ac6b05028be707b8344ad07bc956f037f8b",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-4": {
+      "code_fingerprint": "sha256:ed589bdcea5a31515813ee1ac42d10b364a841688ebf0673efa3755543e7a005",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:8c54b6a8a76aac74bf874f6d41edcb3aa252ee703e44d69e7a679b197a785105",
+      "code_fingerprint": "sha256:500adf12e7e0a016079c7f2a2d0684fa2fcf3cfeefa3e7c76cacdf9a179aea06",
       "kind": "text",
       "outputs": []
     },
     "utils-progress-and-plotting-1": {
-      "code_fingerprint": "sha256:83f414a95c7d01af0203e04b923d19464416c299cac956f1f8a7c3d0057a8d22",
+      "code_fingerprint": "sha256:f75cf4ef166353a719af38b05ed378fed1513ca6ab45c842bf1e6d7735188278",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-18": {
-      "code_fingerprint": "sha256:498975b00ee8a5772353b946a8e8e2800c9666163c4dd2f173553fac5fa95263",
+      "code_fingerprint": "sha256:ed7a1d4c01935c1b9e3078e49c700a7072018e9f34f688c17bbbc4b34ef6ddcd",
       "kind": "text",
       "outputs": []
     },
     "utils-reinforcement-learning-utilities-1": {
-      "code_fingerprint": "sha256:830695aabc03a793555c4b4b0192ac82746f2457e938f3514612e0b9e835b015",
+      "code_fingerprint": "sha256:e78650e7ffdbf41f226f1337ea4d28484a1d506d22968665cc648833bc26f538",
       "kind": "text",
       "outputs": []
     },
     "utils-feature-networks-for-image-scores": {
-      "code_fingerprint": "sha256:4b89d5dcbb7f03d5a54a9e470b127542e3e00b1de289d8136f8b00747b78aaa9",
+      "code_fingerprint": "sha256:4f1e8401a6d3c081fb46c17eb096c8f9c5dd18fff61ff1ee4391ebc76a308375",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:604735a689a77baaac0713e50387f489c8a30bafaeee5121beac5b567b5c8264",
+      "code_fingerprint": "sha256:2bb81152f174eda8473b551e9507248491b09ebf00390e8721e678d4ebcc73de",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:9ec8f22be10649e6daf79691fd062e69ef24798a18f4833d3918752fa444e712",
+      "code_fingerprint": "sha256:ee7067d4dd955f63a527e657fbad19236d9c211301b55ab2d4a24856ccbd0764",
       "kind": "text",
       "outputs": []
     },
     "utils-training-utilities-1": {
-      "code_fingerprint": "sha256:80c6c0c1210ed24a185b2ff9b2727bdeb37f999a9b7bbaf0a8e1fd8a0c60eb15",
+      "code_fingerprint": "sha256:87c6728057a2db28f8c5a66e9fc37da4045d2dc7284f95eec9be550595fa45bb",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-11": {
-      "code_fingerprint": "sha256:7f77617bfa26f113afbb777cea86403199b0f55edb374568b441d13782d9052a",
+      "code_fingerprint": "sha256:50fb7c4051a968760431cbe9eaeacc03be50b2e18d49da47e4a4207db2bcd651",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:9779e3449736495f65f559deafb09941efa6edcf29f50bd5af1705f9ec4123f8",
+      "code_fingerprint": "sha256:0ddcd4057b1fe9b23bdadac4b6e7ec3eae8e0616b7495a12664aabcb060c7cb7",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-13": {
-      "code_fingerprint": "sha256:22fe8acf98b5c4401af48af91452c4a8c3197787a3a7d60f0daf374ae170e77b",
+      "code_fingerprint": "sha256:0bbc79c8e06970ff1be15f0c02e8499729b5c60cffc725acbe675745809daea3",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-14": {
-      "code_fingerprint": "sha256:3b58c9a82960c4decf898f729e3e4009245bf528a804ce54c53fa7bb484d3ea1",
+      "code_fingerprint": "sha256:f8c35158d56babfdb4b03a9f46538851b97585d7e829cab08e045aa49f79a4ef",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-15": {
-      "code_fingerprint": "sha256:883df3fc7ecd5a4489c8a88169f5b284093005ba8ac3614c659d241681e9a9bb",
+      "code_fingerprint": "sha256:775b74b2dad6e870beea203f5a1233fd5d2eeb597e13e8cb983458fabbac26c1",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-16": {
-      "code_fingerprint": "sha256:b42ae9e7e4f29f0181f69e8d62fcf2e786cc021285716c4e689f5acf396929e9",
+      "code_fingerprint": "sha256:edf036c8a39caf4b77606c0d30aa830ee4cef19eb9e572d1b834689fbe6dea3c",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-17": {
-      "code_fingerprint": "sha256:16490e700e8d281c47c69f0ccd145c672b32c342cbc7222cc9caf4b6d8559850",
+      "code_fingerprint": "sha256:4c4c80af22b38f7104aebc79dc85947a6a11304f136ab77e2568a1ece58f7f78",
       "kind": "text",
       "outputs": []
     }

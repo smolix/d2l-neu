@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0.6718), tensor(0.2341))"
+          "text": "(tensor(0.6681), tensor(0.2284))"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:2a677e7180009453e5980ba4d1cbb9a04046823a4f1b53031c17ea397d9d5863",
+    "d2l_lib_fingerprint": "sha256:e2286264e798b2a489064a77bf65404bad2a13bfddf1b1adb92e65e53635e396",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[3 5 0 0 0 0 0 0 6 0 0 8 1 1 1 1]\n [6 0 0 8 0 0 0 0 3 0 5 0 1 1 1 1]]\n[[3 5 6 8]\n [6 8 3 5]]\n"
+          "text": "[[0 0 6 6 4 0 0 0 6 0 0 0 1 1 1 1]\n [0 0 2 0 0 0 0 0 6 7 9 0 1 1 1 1]]\n[[6 6 4 6]\n [2 6 7 9]]\n"
         }
       ]
     },
@@ -41,12 +41,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.18\n"
+          "text": "S4D      accuracy 0.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.96\n"
+          "text": "minGRU   accuracy 0.93\n"
         }
       ]
     },
@@ -114,14 +114,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.73\n"
+          "text": "S4D    share from the symbols: 0.13\nMamba  share from the symbols: 0.45\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 36711,
-          "sha256": "sha256:90efa508d83bdcf22979628c019df2caf834c5e08d9e78229f6bc3b525f8fd5a"
+          "bytes": 36632,
+          "sha256": "sha256:656a94849531bbb3a58fede5bb4d7b056742c671285c5447f971226573e83a2c"
         }
       ]
     },

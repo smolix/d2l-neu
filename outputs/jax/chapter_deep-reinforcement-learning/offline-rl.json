@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:21b383741c52685a6d800595a76690fda28a867186d395876dfe4f831a125262",
+    "d2l_lib_fingerprint": "sha256:54e340625332b6e3d5affe1dfaf9a7254af6a28b5ddde3c6104bc3cf8a2499c0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -106,7 +106,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 41682,
-          "sha256": "sha256:85aa1297acc7d48ecdc84f518cbd8fc391fa9b686cb6085432c19de329c365c0"
+          "sha256": "sha256:12d189390c60231e8764b7b53dd1d753798ee20e330c6c96920d71a0ec3aaf90"
         }
       ]
     },
@@ -144,12 +144,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform kappa 0.3: predicts 0.00, earns 0.02; against naive better on 0, worse on 40\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " narrow kappa 0.3: predicts 0.00, earns 0.05; against naive better on 4, worse on 36\n"
+          "text": "uniform kappa 0.3: predicts 0.00, earns 0.02; against naive better on 0, worse on 40\n narrow kappa 0.3: predicts 0.00, earns 0.05; against naive better on 4, worse on 36\n"
         }
       ]
     }

@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "norm ratio after 200 steps = 3.1490223498\nlargest |eigenvalue|       = 3.1490223498\n|lambda_2| / |lambda_1|    = 0.121\n"
+          "text": "norm ratio after 200 steps = 1.9587653322\nlargest |eigenvalue|       = 1.9587653322\n|lambda_2| / |lambda_1|    = 0.370\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gaussian entries, fraction with a complex dominant pair: 0.44\n"
+          "text": "Gaussian entries, fraction with a complex dominant pair: 0.43\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho(A) / sqrt(n)       = 1.042\nsigma_max(A) / sqrt(n) = 2.004\n"
+          "text": "rho(A) / sqrt(n)       = 1.021\nsigma_max(A) / sqrt(n) = 1.975\n"
         }
       ]
     }

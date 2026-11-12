@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -54,7 +54,7 @@
           "mime": "image/svg+xml",
           "asset": "relativistic/relativistic-verifying-the-closed-form-2-1.svg",
           "bytes": 41255,
-          "sha256": "sha256:44d193a32892eee5b71b795b4141ca1400ecc26501a4f01a09a8fdd1290eaf54"
+          "sha256": "sha256:aefa37a4c23c151bbb76feccd80b82ac6862b132b07f8c1c07edf58ab404e7fa"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:6e2aea306ae68fde3ce74dd4bfe005805c02da088dcb541600336e1f69682cc7",
+    "d2l_lib_fingerprint": "sha256:5faae6dd6320f32b8c1006168c55d3ec13f17ec95cf20e570ac997a85e2f9796",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 86732,
-          "sha256": "sha256:1c5a0ba99534a9963c72ca5640b43e206d65eec41858bff7941672faad645325"
+          "sha256": "sha256:e3454dd9182ccc8f19f92a4195071dc6d4c66518754b2af19c62efb0a8d2bb02"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87281,
-          "sha256": "sha256:eceef18d02ab4fe18823a561c8a0ae63d45507aa0f1ec96a9573b7c4dc9fb005"
+          "sha256": "sha256:763c3626ce8a40a949fecc40e530d0b0c1724488e5c3b2ef1502e7126dc4c4aa"
         }
       ]
     }

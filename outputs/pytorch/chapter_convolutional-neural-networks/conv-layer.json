@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 11.983\nstep 3, loss 0.824\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 12.216\nstep 3, loss 0.840\nstep 6, loss 0.058\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 0.9888, -0.9882]])"
+          "text": "tensor([[ 0.9891, -0.9876]])"
         }
       ]
     },

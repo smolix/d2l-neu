@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:407372c7eb646cbac3e86938b7346d57b8ba6790cceed3d4dac2c8cd71d5001c",
+    "d2l_lib_fingerprint": "sha256:bca8200ddcbfa350c704b6f0994afbe05a19c86d9cbc0bfedd0b2440cd2174ac",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -79,17 +79,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 22.02 ms/call\n"
+          "text": "fp32: 21.76 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 14.02 ms/call\n"
+          "text": "tf32: 14.41 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 8.14 ms/call\n"
+          "text": "bf16: 8.37 ms/call\n"
         }
       ]
     },
@@ -100,12 +100,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False: stores  936 KiB per token, peak 0.78 GiB, 45 ms per step\n"
+          "text": "checkpointing=False: stores  936 KiB per token, peak 0.78 GiB, 46 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True : stores   40 KiB per token, peak 0.45 GiB, 57 ms per step\n"
+          "text": "checkpointing=True : stores   40 KiB per token, peak 0.45 GiB, 58 ms per step\n"
         }
       ]
     },

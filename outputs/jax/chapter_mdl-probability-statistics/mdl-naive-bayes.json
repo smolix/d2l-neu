@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
           "bytes": 49236,
-          "sha256": "sha256:84338cfc100bc32ce552775dda7617dd9f53321a8326bdf3cf41a575a0812764"
+          "sha256": "sha256:cc20dfd12abc7eee171b69dd8b6d0f781bd6e29a7917ba4dc405663d24686956"
         }
       ]
     },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/mdl-naive-bayes-templates-and-samples-1-1.svg",
-          "bytes": 35452,
-          "sha256": "sha256:61bf916d54e82ce6b3b1c5cff4d0ab323b0f402e2d519f29d06645ed92e77c51"
+          "bytes": 35460,
+          "sha256": "sha256:ad535965df11ec6ef40abdbdff004ee3d3c9d52989b27bddba431bdbeb54b0c7"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "data : P(i)=0.55  P(j)=0.55  P(i)P(j)=0.30  P(i,j)=0.54\nmodel: P(i)=0.54  P(j)=0.55  P(i)P(j)=0.29  P(i,j)=0.29\n"
+          "text": "data : P(i)=0.55  P(j)=0.55  P(i)P(j)=0.30  P(i,j)=0.54\nmodel: P(i)=0.55  P(j)=0.52  P(i)P(j)=0.29  P(i,j)=0.29\n"
         }
       ]
     },
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "accuracy 0.7059, bootstrap 95% interval (0.696, 0.715)\nbinomial half-width 1.96 se = 0.0089\n"
+          "text": "accuracy 0.7059, bootstrap 95% interval (0.697, 0.714)\nbinomial half-width 1.96 se = 0.0089\n"
         }
       ]
     },
@@ -150,7 +150,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "accuracy: softmax regression 0.832, naive Bayes 0.706\npullover<->coat errors: softmax regression 313 naive Bayes 614\n"
+          "text": "accuracy: softmax regression 0.828, naive Bayes 0.706\npullover<->coat errors: softmax regression 289 naive Bayes 614\n"
         }
       ]
     },
@@ -168,7 +168,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/mdl-naive-bayes-confusions-and-weights-3-1.svg",
           "bytes": 21441,
-          "sha256": "sha256:be240bb0507cd90c6002c4e86be5f0f5b4c5f7fe69a8c0cd22024c83dc47dd7f"
+          "sha256": "sha256:3d7f1fcff8f475c3c48f56aebb77b8bf56286207326b117c6782e8c5a110eb03"
         }
       ]
     },

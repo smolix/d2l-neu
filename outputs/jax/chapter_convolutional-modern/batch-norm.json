@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'largest channel mean': 9.001517753404187e-08,\n 'average channel variance': 0.9999989867210388,\n 'largest difference': 0.0,\n 'running means': Array([0.20089395, 0.19936806, 0.19904284, 0.19928937, 0.19971056,\n        0.1992227 ], dtype=float32)}"
+          "text": "{'largest channel mean': 9.396854494525542e-08,\n 'average channel variance': 0.9999990463256836,\n 'largest difference': 4.76837158203125e-07,\n 'running means': Array([0.20013797, 0.20052281, 0.1993001 , 0.20045717, 0.1992819 ,\n        0.19969386], dtype=float32)}"
         }
       ]
     },
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24490,
-          "sha256": "sha256:103fcd30ec4b5d991821e8dd4b4d84b67141de02cad20fd06397421edeba08c3"
+          "bytes": 24486,
+          "sha256": "sha256:78c589c8017242c5cde5c7cb2bd98d903798317b4cdc851efc9307a8002a71d4"
         }
       ]
     },
@@ -67,7 +67,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.569, 'BNLeNet': 0.888}"
+          "text": "{'CosineLeNet': 0.637, 'BNLeNet': 0.883}"
         }
       ]
     },
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-7-1.svg",
-          "bytes": 29412,
-          "sha256": "sha256:e2f7d1de948111a467706d157de1d3b2f00c9aa5000996ab2289810ed9c9fb7b"
+          "bytes": 29408,
+          "sha256": "sha256:a3b14bd9b5f4064cac095f46d62b9246cedda69262276f18379f7d23745bbf0b"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(2.2351742e-08, dtype=float32),\n Array(0.99998975, dtype=float32),\n Array(4.7683716e-07, dtype=float32))"
+          "text": "(Array(2.6077032e-08, dtype=float32),\n Array(0.9999897, dtype=float32),\n Array(4.7683716e-07, dtype=float32))"
         }
       ]
     }

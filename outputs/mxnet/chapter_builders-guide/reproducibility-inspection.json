@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:cc4777e2f9f485a786a12bde97d99f94935b761ba5144beb39b5f7ece5609cf8",
+    "d2l_lib_fingerprint": "sha256:1e651af2a9a9fbc6cc38a739b11362065cda90c49a4b9297a8e0e527b63f014e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[0.593, 0.039, 0.081, 0.812], [0.593, 0.039, 0.081, 0.812]]\n"
+          "text": "[[0.051, 0.044, 0.262, 0.054], [0.051, 0.044, 0.262, 0.054]]\n"
         },
         {
           "type": "stream",
@@ -96,7 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "index_add       bitwise equal: False, largest difference 0.002\none-hot matmul  bitwise equal: True, largest difference 0\n"
+          "text": "index_add       bitwise equal: False, largest difference 0.0038\none-hot matmul  bitwise equal: True, largest difference 0\n"
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.71\nResidualBlock   std 0.86\nResidualBlock   std 1.05\nResidualBlock   std 1.26\nResidualBlock   std 1.52\nResidualBlock   std 1.82\nResidualBlock   std 2.28\nResidualBlock   std 2.80\nResidualBlock   std 3.39\nDense           std 4.38\n"
+          "text": "Dense           std 0.68\nResidualBlock   std 0.86\nResidualBlock   std 1.08\nResidualBlock   std 1.35\nResidualBlock   std 1.69\nResidualBlock   std 2.06\nResidualBlock   std 2.62\nResidualBlock   std 2.97\nResidualBlock   std 3.58\nDense           std 3.94\n"
         }
       ]
     },
@@ -134,7 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block output gradients: 1.28 0.98 0.759 0.597 0.472 0.383 0.293 0.215\nweight 18.2, bias 3.67\n"
+          "text": "block output gradients: 1.18 0.929 0.725 0.58 0.458 0.346 0.288 0.225\nweight 16, bias 2.9\n"
         }
       ]
     }

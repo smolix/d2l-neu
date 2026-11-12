@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(-2.1600499e-10)"
+          "text": "array(-2.2239988e-10)"
         }
       ]
     },
@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([0.9961404 , 0.99898094, 1.0006866 , 0.9990555 , 0.99898493,\n        0.99414873, 0.99823   , 0.9992251 ]),\n True)"
+          "text": "(array([0.99991006, 0.99842036, 1.0034281 , 0.9870582 , 0.996367  ,\n        0.9980115 , 0.9891705 , 0.99926645]),\n True)"
         }
       ]
     },
@@ -80,14 +80,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error 0.0005\n"
+          "text": "mean squared error 0.00098\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "custom-layers/custom-layers-layers-with-fixed-state-1-1.svg",
-          "bytes": 22315,
-          "sha256": "sha256:a07f7003421f54ef35b327fd1bf6043c0c4fd1cbd2521e882c80fb5db06a65e0"
+          "bytes": 22311,
+          "sha256": "sha256:d67457cf7135650346bbbc720bfb2030b5d53205fcf98c67c018c53646071c29"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear layer only: mean squared error 0.77\nfull state:        mean squared error 0.0005\n"
+          "text": "linear layer only: mean squared error 0.52\nfull state:        mean squared error 0.00098\n"
         }
       ]
     },
@@ -134,7 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start 114, rounding 114, straight-through 1.65, rounded target 0.784\n"
+          "text": "start 162, rounding 162, straight-through 1.3, rounded target 1.01\n"
         }
       ]
     },

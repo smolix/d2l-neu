@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-plain-and-residual-networks-compared-4-1.svg",
-          "bytes": 28986,
-          "sha256": "sha256:073b48df695d27b1e32c290c7e1dff33a52609412e7462dfb37e2805ab3213e6"
+          "bytes": 28984,
+          "sha256": "sha256:a5058fbcf504ac9c62c0596b3dcb62b2fb994c04ceeb69e6de0553e22ffb92e1"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'plain, 20 layers': (0.195, 0.915),\n 'plain, 56 layers': (0.252, 0.902),\n 'residual, 20 layers': (0.196, 0.905),\n 'residual, 56 layers': (0.146, 0.915)}"
+          "text": "{'plain, 20 layers': (0.196, 0.909),\n 'plain, 56 layers': (0.282, 0.883),\n 'residual, 20 layers': (0.197, 0.903),\n 'residual, 56 layers': (0.161, 0.912)}"
         }
       ]
     },
@@ -108,12 +108,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 24, 24, 64)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential             (1, 12, 12, 128)\n"
+          "text": "Sequential             (1, 24, 24, 64)\nSequential             (1, 12, 12, 128)\n"
         },
         {
           "type": "stream",
@@ -140,8 +135,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 30630,
-          "sha256": "sha256:702263ff65c43a5c3fe7e47d926d58c23ff7277c25973404ea31d0d537de9a67"
+          "bytes": 31834,
+          "sha256": "sha256:0b301ae68c04b421740446a012f71357af19f2a5f68d6ac314e9398e832b962e"
         }
       ]
     },

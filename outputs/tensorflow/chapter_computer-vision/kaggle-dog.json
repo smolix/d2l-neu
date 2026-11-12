@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b57e5e3820f7660ae0c588b0d7483e600f66a2695b57a12ab5c2e717d8305c6b",
+    "d2l_lib_fingerprint": "sha256:619e4a49326db020f138e5be2f26dcb22f82bab25e2a97a67455939d8b81fdcd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,14 +91,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.341, valid loss 1.390\n87.0 examples/sec\n"
+          "text": "train loss 0.295, valid loss 1.494\n102.1 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 21824,
-          "sha256": "sha256:e57f3d08628d0365e5d7f9c8e19b54324a49f2a219f011a9cb6389a3f725ab1f"
+          "bytes": 22012,
+          "sha256": "sha256:c41d1e1d3805c560983425bef8c87d1c64ae6e65786804d58f0fb7920818345f"
         }
       ]
     },
@@ -109,14 +109,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.339\n93.6 examples/sec\n"
+          "text": "train loss 0.279\n100.4 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 18995,
-          "sha256": "sha256:3d82ecff079745135cf76b6ad36c8b7b8c73fc5dd9472296db9ce03d22cda1de"
+          "bytes": 18993,
+          "sha256": "sha256:a45623bd13942d3250d938e028801e02d8eb3aa1bc51208a8c304b4630debfa4"
         }
       ]
     }

@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x* = [0. 0. 1. 0. 0. 0.]  zeros: 5  tau = 0.631\ntau =  0.631: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  0.931: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.700\ncertificate max_i (y - x*)^T(e_i - x*) = 0e+00  (<= 0 up to rounding: True)\n"
+          "text": "x* = [0.666 0.334 0.    0.    0.    0.   ]  zeros: 4  tau = 1.662\ntau =  1.662: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  1.962: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.400\ncertificate max_i (y - x*)^T(e_i - x*) = -3e-16  (<= 0 up to rounding: True)\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L = lambda_max(A^T A) = 159.5;  |a_j|^2 range from 73 to 125\n"
+          "text": "L = lambda_max(A^T A) = 145.6;  |a_j|^2 range from 85 to 109\n"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 95 of 95\nlargest null coordinate: 0.024;  eta * lam = 0.019\n"
+          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 95 of 95\nlargest null coordinate: 0.033;  eta * lam = 0.021\n"
         }
       ]
     },
@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.053\n"
+          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.029\n"
         }
       ]
     },
@@ -86,14 +86,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "passes to gap < 1e-8: ISTA 21, coordinate descent 4\n"
+          "text": "passes to gap < 1e-8: ISTA 12, coordinate descent 5\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 28120,
-          "sha256": "sha256:74fa61f3eaf0594d9419fadf78db5072eb232a6ad674e0673d7cb49a365274c5"
+          "bytes": 28133,
+          "sha256": "sha256:ccf55e27ad19518c6d6aecfe9da308df60f026a8e8f699ac9dacf5e3e8a23bec"
         }
       ]
     }

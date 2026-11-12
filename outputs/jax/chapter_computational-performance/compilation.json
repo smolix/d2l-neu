@@ -31,7 +31,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tracing g for shape (8,)\ntracing g for shape (16,)\n"
+          "text": "tracing g for shape (8,)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tracing g for shape (16,)\n"
         },
         {
           "type": "stream",
@@ -47,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.65 ms/call, 698 GB/s\ncompiled: 0.16 ms/call, 807 GB/s\n"
+          "text": "eager: 1.80 ms/call, 638 GB/s\ncompiled: 0.16 ms/call, 798 GB/s\n"
         }
       ]
     },
@@ -63,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 5.5 s\neager: 25.20 ms, compiled: 0.26 ms\nbreak-even: 219 steps\n"
+          "text": "first call: 3.8 s\neager: 26.20 ms, compiled: 0.26 ms\nbreak-even: 145 steps\n"
         }
       ]
     },
@@ -74,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 7.17 ms/call\njit: 0.27 ms/call\n"
+          "text": "eager: 9.15 ms/call\njit: 0.28 ms/call\n"
         }
       ]
     }

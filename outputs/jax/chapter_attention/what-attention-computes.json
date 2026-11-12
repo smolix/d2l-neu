@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:55e554135096f58967f0e5fc6d4fe23f75e9ffa738c3f83294f032533f172af4",
+    "d2l_lib_fingerprint": "sha256:183ee4eb5f87c2fc2501e5c924e43fcf131b7d7216c81531beed0347e3b0772a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pattern lengths: [7, 5]\n[[9 1 2 9 3 6 1 9 1 2 9 3 6 1 9 1]\n [9 1 8 6 2 9 1 8 6 2 9 1 8 6 2 9]]\n"
+          "text": "pattern lengths: [5, 5]\n[[2 1 6 1 4 2 1 6 1 4 2 1 6 1 4 2]\n [7 2 3 9 9 7 2 3 9 9 7 2 3 9 9 7]]\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first copy 4.39 nats, second copy 0.08 nats, second-copy accuracy 1.00\n"
+          "text": "first copy 4.40 nats, second copy 0.08 nats, second-copy accuracy 1.00\n"
         }
       ]
     },
@@ -58,12 +58,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "patterns of length 24: second-copy accuracy 0.02\n"
+          "text": "patterns of length 24: second-copy accuracy 0.01\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mass at offset 31, per head: 0.92 1.00 0.93 1.00\n"
+          "text": "mass at offset 31, per head: 1.00 0.95 1.00 0.91\n"
         },
         {
           "type": "stream",
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 blocks: first copy 4.35, later copies 0.28, accuracy 0.93\n1 block: first copy 4.32, later copies 3.50, accuracy 0.11\n"
+          "text": "2 blocks: first copy 4.32, later copies 0.22, accuracy 0.95\n1 block: first copy 4.30, later copies 3.56, accuracy 0.12\n"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-two-blocks-learn-to-look-things-up-2-1.svg",
-          "bytes": 39481,
-          "sha256": "sha256:5b9cf804c3e58d53a26c4d6aa16a611cd11313faadf5eab0b6cece1dd5af9b71"
+          "bytes": 39342,
+          "sha256": "sha256:74eac749f20534359669e44dada311fb4df9fc440856e0b54a59cb6b3bc4b8bc"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-heads-caught-in-the-act-1-1.svg",
-          "bytes": 174994,
-          "sha256": "sha256:eebef97cf6f64a2e5c28018cb738ed3c26fdae120edcbefe046bf6fffe99ac54"
+          "bytes": 177018,
+          "sha256": "sha256:367998dc830ab990eb26414d2669309d2a9a5714d927b5660cb8b66d374cb9ef"
         }
       ]
     },
@@ -116,7 +116,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block 1, previous : 0.97 0.02 0.03 0.01\nblock 1, induction: 0.00 0.00 0.00 0.00\nblock 2, previous : 0.05 0.05 0.06 0.07\nblock 2, induction: 0.63 0.57 0.42 0.21\n"
+          "text": "block 1, previous : 0.00 0.99 0.00 0.01\nblock 1, induction: 0.00 0.00 0.00 0.00\nblock 2, previous : 0.08 0.06 0.06 0.07\nblock 2, induction: 0.19 0.42 0.54 0.26\n"
         }
       ]
     },
@@ -127,14 +127,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 blocks, block 2: rows whose largest entry is the diagonal 1.00 (chance 1/64)\n1 block: rows whose largest entry is the diagonal 0.97 (chance 1/64)\n"
+          "text": "2 blocks, block 2: rows whose largest entry is the diagonal 1.00 (chance 1/64)\n1 block: rows whose largest entry is the diagonal 0.94 (chance 1/64)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-circuit-is-in-the-weights-1.svg",
-          "bytes": 40619,
-          "sha256": "sha256:8ab40cecba0579e758b210da3b0f418ca300201009b3f49eaeac38e4f7933753"
+          "bytes": 40798,
+          "sha256": "sha256:85ab5d8e8cfb191e519bd93aa7a7f4c0b8ba7ae31eb55d8ba590b3d2b9dd0799"
         }
       ]
     },
@@ -150,12 +150,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block 1, previous-token heads: [0], others: [1, 2, 3]\nheads removed                  later-copy loss  accuracy\nnone                                      0.28      0.94\nblock 1, previous-token heads             3.73      0.09\nblock 1, all other heads                  4.08      0.02\nblock 2, top 1 induction                  0.71      0.88\nblock 2, top 2 induction                  3.91      0.30\nblock 2, top 3 induction                  4.75      0.14\nblock 2, top 4 induction                  4.18      0.02\n"
+          "text": "block 1, previous-token heads: [1], others: [0, 2, 3]\nheads removed                  later-copy loss  accuracy\nnone                                      0.22      0.95\nblock 1, previous-token heads             3.55      0.13\nblock 1, all other heads                  4.11      0.05\nblock 2, top 1 induction                  3.16      0.42\nblock 2, top 2 induction                  4.81      0.25\nblock 2, top 3 induction                  5.79      0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one-block model                           3.51      0.12\n"
+          "text": "block 2, top 4 induction                  4.18      0.02\none-block model                           3.55      0.12\n"
         }
       ]
     },
@@ -167,8 +167,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-completing-patterns-it-has-never-seen-1.svg",
-          "bytes": 22110,
-          "sha256": "sha256:15c48a04b40302cd00d266db2ff420479b7ce618bf7ac8bd6680dc5ea3f5c265"
+          "bytes": 22111,
+          "sha256": "sha256:df54a2ba4689da2f29c8b9a8e589d58bd20bdf437aab855bd8930fe7e76f5891"
         }
       ]
     },
@@ -179,7 +179,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one gradient step: 11.5873, attention head: 11.5873\n"
+          "text": "one gradient step: -4.2743, attention head: -4.2743\n"
         }
       ]
     },
@@ -190,12 +190,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  10 examples in context: relative squared error 0.679\n"
+          "text": "  10 examples in context: relative squared error 1.036\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 100 examples in context: relative squared error 0.094\n"
+          "text": " 100 examples in context: relative squared error 0.092\n"
         },
         {
           "type": "stream",

@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "((1, 112), (3, 256)) 111 million multiply-adds\n((3, 144), (6, 48)) 124 million multiply-adds\n"
+          "text": "((2, 96), (8, 112)) 95 million multiply-adds\n((5, 80), (8, 64)) 98 million multiply-adds\n"
         }
       ]
     },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "increasing widths: mean error 0.118, minimum 0.112\ndecreasing widths: mean error 0.123, minimum 0.112\n"
+          "text": "increasing widths: mean error 0.115, minimum 0.111\ndecreasing widths: mean error 0.125, minimum 0.109\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-comparing-design-spaces-5-1.svg",
-          "bytes": 30336,
-          "sha256": "sha256:92a088785c625e340a1e11caadd8e67a5b58f0b935b50ed23138eb688ebdc95b"
+          "bytes": 29562,
+          "sha256": "sha256:b094a84235ce8e5e56c9e3df7583eec37cc4e73cdd843a5bb4159023074c426d"
         }
       ]
     },
@@ -111,8 +111,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 33156,
-          "sha256": "sha256:1cf2fc6e2ab40be843e30656947433c481cd1ba0845fd759359d049f03a3888c"
+          "bytes": 30885,
+          "sha256": "sha256:f358fe87115ac8e87b01dbccfb18dd8092e59c6a73bfe52c9abb4440d321fac9"
         }
       ]
     },
@@ -140,8 +140,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
-          "bytes": 35118,
-          "sha256": "sha256:e7452248cbae3f7a9936ec8384ab09594e5db80c9a1d3de0e70be8bf95025cb1"
+          "bytes": 35123,
+          "sha256": "sha256:5ef88673f666a41d3cc134c30e59c88cd419686c280f32ccb28233bf12fc6574"
         }
       ]
     },

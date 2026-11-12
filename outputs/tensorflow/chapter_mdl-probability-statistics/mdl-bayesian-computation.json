@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2-1.svg",
           "bytes": 38307,
-          "sha256": "sha256:40d3e153a3a663926e6706bbc81d4849d1e7b2880724a163a2093e3666a46f8f"
+          "sha256": "sha256:a8ca078a52b301ad7dc0a63f4a9623643cd4663270933b24e92c9a56430f0c96"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "acceptance 0.305, mean 0.666, sd 0.118\n"
+          "text": "acceptance 0.305, mean 0.667, sd 0.118\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ESS fraction 0.421, mean 0.666, sd 0.118\n"
+          "text": "ESS fraction 0.421, mean 0.667, sd 0.118\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prior   : ESS 4.4% of 20000, largest weight 0.0024, error in sds [0.001 0.02 ]\nLaplace : ESS 73.8% of 5000, largest weight 0.0065, error in sds [0.022 0.006]\n"
+          "text": "prior   : ESS 4.4% of 20000, largest weight 0.0024, error in sds [0.03  0.039]\nLaplace : ESS 86.5% of 5000, largest weight 0.0020, error in sds [0.018 0.027]\n"
         }
       ]
     },
@@ -120,7 +120,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "acceptance rates: [0.524 0.532 0.533 0.53 ]\n"
+          "text": "acceptance rates:"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " [0.529 0.531 0.533 0.527]\n"
         }
       ]
     },
@@ -136,7 +141,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "split R-hat       : [1. 1.]\nESS               : [4241 4015] of 40000\n(MCMC - grid)/MCSE: [-0.5  0.6]\nslope: rho_1 0.81, AR(1) kappa 9.8, measured kappa 10.0\n"
+          "text": "split R-hat       : [1.001 1.001]\nESS               : [4086 3920] of 40000\n(MCMC - grid)/MCSE: [-1.   0.8]\nslope: rho_1 0.82, AR(1) kappa 10.0, measured kappa 10.2\n"
         }
       ]
     },
@@ -148,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-2-1.svg",
-          "bytes": 61299,
-          "sha256": "sha256:f7d940d3a6f420a5043dd60efc3215f2a2242af4ae1d4360606cec635281033a"
+          "bytes": 62833,
+          "sha256": "sha256:0af5780733b5318619d3305e61bc0efb8b928e2d950718b2c8e0107aacb5e889"
         }
       ]
     },
@@ -160,12 +165,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale  0.05: acceptance 0.976, max R-hat 1.18, min ESS 35\n"
+          "text": "scale  0.05: acceptance 0.974, max R-hat 1.17, min ESS 48\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale    10: acceptance 0.021, max R-hat 1.01, min ESS 589\n"
+          "text": "scale    10: acceptance 0.022, max R-hat 1.00, min ESS 668\n"
         }
       ]
     },
@@ -176,7 +181,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             mean             sd\ngrid       [-2.347  1.237] [1.042 0.48 ]\nLaplace    [-2.138  1.117] [1.004 0.457]\nmean-field [-2.275  1.219] [0.532 0.243]\npredicted sd, grid sd * sqrt(1 - rho^2): [0.536 0.247]\n"
+          "text": "             mean             sd\ngrid       [-2.347  1.237] [1.042 0.48 ]\nLaplace    [-2.138  1.117] [1.004 0.457]\nmean-field [-2.275  1.219] [0.531 0.243]\npredicted sd, grid sd * sqrt(1 - rho^2): [0.536 0.247]\n"
         }
       ]
     },
@@ -188,8 +193,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
-          "bytes": 37886,
-          "sha256": "sha256:fad5e3a3df51e64c860b7cebec500aaedeed4a39e3325b70e896287fc9ddf4c3"
+          "bytes": 37861,
+          "sha256": "sha256:04cea3faec09a79cdf3e772a9082dbe2542fdb605183a2eae827077a461e616f"
         }
       ]
     }

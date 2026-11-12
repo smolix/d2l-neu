@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:37fddbe104bdfefc7475499b3810731b33ab8b60751c099dc6005c6c5ff1ef37",
+    "d2l_lib_fingerprint": "sha256:22b31bc8c832abde028907e6330e9ae7213956ea8e515cb1813cf1e7224b4bf2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -101,14 +101,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.324, train acc 0.910, valid acc 0.438\n198.1 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.308, train acc 0.905, valid acc 0.475\n908.8 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-training-and-validating-the-model-1.svg",
-          "bytes": 27601,
-          "sha256": "sha256:4f1155af444ce452d194cbe1cb4d4f181ceb7242835ff389d6a0936478bd17be"
+          "bytes": 26104,
+          "sha256": "sha256:4b4e429eca7a527e05ba4ca148a1d333d51012249fe13f3f536198c680f75462"
         }
       ]
     },
@@ -119,14 +119,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.294, train acc 0.912\n167.3 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.311, train acc 0.901\n926.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 24547,
-          "sha256": "sha256:61e82e422549a846382a25bada25b62e03b2f989233ba0f6242086beb46b167a"
+          "bytes": 25264,
+          "sha256": "sha256:34b9630b8ccb15a672269d28db8d5885056d004abf02034042c9c041d59dacda"
         }
       ]
     }

@@ -25,17 +25,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter   0  loss 1.3e+00\n"
+          "text": "iter   0  loss 1.4e+00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter 200  loss 7.4e-06\n"
+          "text": "iter 200  loss 5.5e-06\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter 400  loss 1.8e-06\n"
+          "text": "iter 400  loss 1.2e-06\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   10: endpoint error 1.7e-03, forward-backward round trip 5.6e-02\nN =  100: endpoint error 1.7e-02, forward-backward round trip 5.7e-03\nN = 1000: endpoint error 1.9e-02, forward-backward round trip 5.7e-04\n"
+          "text": "N =   10: endpoint error 1.4e-03, forward-backward round trip 5.5e-02\nN =  100: endpoint error 1.7e-02, forward-backward round trip 5.6e-03\nN = 1000: endpoint error 1.9e-02, forward-backward round trip 5.6e-04\n"
         }
       ]
     },
@@ -68,12 +68,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =   100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\n"
+          "text": "n =   100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =  1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn = 10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "n = 10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula : [-1.084947 -1.49279  -1.513498 -2.22854 ]\nlog p_0(x_0) - t tr(A)          : [-1.084947 -1.49279  -1.513498 -2.22854 ]\n"
+          "text": "log p_t(x(t)), Gaussian formula : [-0.366901 -1.895157 -1.329256 -0.498344]\nlog p_0(x_0) - t tr(A)          : [-0.366901 -1.895157 -1.329256 -0.498344]\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr J at x(0) +0.527, at x(1) +0.415\ntrace integral +0.518212  log|det D Phi| +0.518212  gap 9.1e-11\n"
+          "text": "tr J at x(0) +0.640, at x(1) +0.378\ntrace integral +0.513576  log|det D Phi| +0.513576  gap 6.6e-11\n"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact trace -0.0900\n"
+          "text": "exact trace -1.1227\n"
         }
       ]
     },
@@ -117,7 +117,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Hutchinson -0.1117 +- 0.0153 (100000 probes, one VJP each)\n"
+          "text": "Hutchinson -1.1443 +- 0.0142 (100000 probes, one VJP each)"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n"
         }
       ]
     }

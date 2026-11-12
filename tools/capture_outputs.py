@@ -24,6 +24,15 @@ produced under a DIFFERENT source/lib than the current tree — the capture-side
 half of the freshness-disagreement trap fix (docs/build-system.md §3.3). A genuine
 re-execution (which rewrites the sidecar) always passes; use --force to override.
 
+**Locked notebooks** (`<!-- execution: locked; ... -->`, tools/locks.py) keep
+their manifest until an explicit re-run: without --unlock (Make: UNLOCK=1) a
+locked (notebook, framework) is skipped when capturing everything and REFUSED
+when named in FILES. With --unlock it is blessed only if its execution sidecar
+proves a re-run under the current source and lib (`make rerun-locked`); a
+notebook materialized from the store has no sidecar and is left alone. The
+re-run's finish time and runtime go into the manifest's `provenance.execution`
+(for `make locks`), the one wall-clock field, and only for locked notebooks.
+
 Usage:
     python tools/capture_outputs.py                       # all notebooks, all fw
     python tools/capture_outputs.py --frameworks pytorch  # one framework
@@ -357,7 +366,7 @@ def execution_freshness(repo_root, nb_path, fw, store_dir):
 # ── per-notebook capture ─────────────────────────────────────────
 
 def capture_notebook(repo_root, store_dir, nb_path, fw, chapter, stem,
-                     max_inline):
+                     max_inline, execution=None):
     nb = json.loads(nb_path.read_bytes())
     code_cells = code_cells_of(nb)
     fps, _ = prefix_fingerprints(code_cells)
@@ -397,6 +406,8 @@ def capture_notebook(repo_root, store_dir, nb_path, fw, chapter, stem,
             repo_root, fw, nb_path.with_suffix('.d'), max_inline),
         'cells': cells,
     }
+    if execution:   # locked notebooks only: when the paid re-run happened
+        manifest['provenance']['execution'] = execution
     store_chapter.mkdir(parents=True, exist_ok=True)
     out_path = store_chapter / f'{stem}.json'
     # indent=2, no sort_keys: dicts are built in a fixed (notebook) order, so the
@@ -446,6 +457,10 @@ def main():
                     help='Comma-separated subset of frameworks')
     ap.add_argument('--max-inline-bytes', type=int, default=0,
                     help='Safety cap on inline text (0 = unlimited; preserves parity)')
+    ap.add_argument('--unlock', action='store_true',
+                    help='allow overwriting the manifest of a LOCKED notebook '
+                         '(Make: UNLOCK=1); it must have been re-executed '
+                         'under the current source/lib (make rerun-locked)')
     ap.add_argument('--force', action='store_true',
                     help='bless even when the freshness guard reports a (notebook, '
                          'framework) whose executed outputs are lib/source-stale vs '
@@ -469,6 +484,65 @@ def main():
             chapter, stem = nb_path.parent.name, nb_path.stem
             if matches(pairs, chapter, stem):
                 selected.append((fw, nb_path, chapter, stem))
+
+    # ── locked notebooks (pre-pass, before ANY write) ──
+    # A locked notebook's manifest is replaced only on an explicit re-run
+    # (--unlock) proven by its execution sidecar. Implicit (capture-all) runs
+    # skip it; naming it in FILES without --unlock is refused.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import locks
+    keep, refused, skipped, execution = [], [], [], {}
+    for item in selected:
+        fw, nb_path, chapter, stem = item
+        try:
+            lk = locks.lock_for_notebook(repo_root, fw, chapter, stem)
+        except locks.LockError as e:
+            print(f'ERROR: {e}', file=sys.stderr)
+            return 2
+        if lk is None:
+            keep.append(item)
+            continue
+        sidecar = nb_path.with_suffix('.provenance.json')
+        if not args.unlock:
+            (skipped if pairs is None else refused).append(
+                (fw, chapter, stem, lk, 'locked; pass UNLOCK=1 after '
+                 '`make rerun-locked` to replace its outputs'))
+        elif not sidecar.exists():
+            skipped.append((fw, chapter, stem, lk, 'not re-executed (no '
+                            'execution provenance, e.g. materialized from the '
+                            'store) — store left unchanged'))
+        else:
+            keep.append(item)
+            try:
+                run = json.loads(sidecar.read_text(encoding='utf-8'))
+                execution[(fw, chapter, stem)] = run.get('execution')
+            except ValueError:
+                pass
+    for fw, chapter, stem, lk, why in skipped:
+        print(f'  🔒 {fw:11} {chapter}/{stem}: LOCKED (requires: '
+              f'{lk.requires_label}), skipped — {why}', file=sys.stderr)
+    if refused:
+        print(f'\nREFUSING to capture: {len(refused)} LOCKED (notebook, '
+              f'framework) pair(s). Their stored outputs are reused by every '
+              f'build and are replaced only after an explicit re-run:',
+              file=sys.stderr)
+        for fw, chapter, stem, lk, _ in refused:
+            print(f'      [LOCKED] {fw:11} {chapter}/{stem}.md  (requires: '
+                  f'{lk.requires_label}; {lk.source}:{lk.line})',
+                  file=sys.stderr)
+        print('    make rerun-locked FILES=<chapter/file.md> [FRAMEWORKS=<fw>]\n'
+              '    make capture-outputs FILES=<chapter/file.md> UNLOCK=1\n'
+              'Nothing was written.', file=sys.stderr)
+        return 2
+    if args.unlock and pairs is not None and skipped and not any(
+            k in execution for k in
+            [(fw, ch, st) for fw, _, ch, st in keep]):
+        print('\nREFUSING to capture: --unlock named locked notebook(s), but '
+              'none was re-executed (no execution provenance). Run `make '
+              'rerun-locked FILES=...` first. Nothing was written.',
+              file=sys.stderr)
+        return 2
+    selected = keep
 
     # ── capture-side freshness guard (pre-pass, before ANY write) ──
     # Refuse to bless outputs produced under a different source/lib than the
@@ -507,7 +581,8 @@ def main():
     per_fw = {}
     for fw, nb_path, chapter, stem in selected:
         c, a = capture_notebook(repo_root, store_dir, nb_path, fw,
-                                chapter, stem, args.max_inline_bytes)
+                                chapter, stem, args.max_inline_bytes,
+                                execution=execution.get((fw, chapter, stem)))
         total_nb += 1
         per_fw[fw] = per_fw.get(fw, 0) + 1
         total_cells += c

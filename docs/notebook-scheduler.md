@@ -351,6 +351,21 @@ for CPU items), plus the JAX fraction when applicable.
   pre-set in the child env (computed once at scheduler start) so it doesn't shell
   `detect_resources` / `nvidia-smi` on every dispatch.
 
+### Locked notebooks
+
+A notebook whose source carries `<!-- execution: locked; … -->`
+(`docs/build-system.md` §3.7, `tools/locks.py`) never goes on the queue. Before
+dispatch the scheduler materializes each stale locked notebook from the
+committed `outputs/` store in-process (no slot, no GPU), touches its stamp and
+prints `[fw] chapter/x.ipynb: LOCKED (skipped) — materialized from …`; the
+summary adds `, N LOCKED (skipped)` (only when N > 0, so unlocked runs print
+exactly what they did before). A locked notebook that cannot be materialized
+(no manifest) is listed as `FAILED: … (LOCKED: not materialized)`.
+`run_one_notebook.py` applies the same rule to a direct `make <stamp>`.
+`--rerun-locked --files …` (`make rerun-locked`) inverts the filter: it queues
+only the named locked notebooks, removes their stamps and provenance sidecars,
+and sets `D2L_RERUN_LOCKED=1` so the inner `run_one_notebook.py` executes them.
+
 ### Standalone fallback
 
 A direct `make _notebooks/<fw>/<rel>.executed` (no scheduler — used for rebuilding
@@ -372,6 +387,7 @@ shared-dataset notebooks. This path is unchanged and self-contained.
 | `--files "a.md b.md"` | all | restrict to a subset of source notebooks (whitespace/comma-separated `chapter_x/foo.md`); `make refresh-stale` passes the audit-stale set here for a parallel re-run |
 | `--force-all` | off | ignore stamp freshness when *selecting* notebooks. The inner `make <stamp>` still sees an up-to-date stamp as done and executes nothing, so a notebook whose `.executed` stamp `make notebooks` kept fresh is reported `OK` without running. That happens when cells were only **moved or deleted**: `gen_notebooks.py` (`_merge_outputs_from_prev`) counts a code change only when a cell's id+source changed, and then re-touches the stamp. After reordering or cutting cells, delete the stamps first (`rm _notebooks/*/<chapter>/<file>.executed`) and run the scheduler without `--force-all` (2026-11-10, ch. 1 pass) |
 | `--dry-run` | off | simulate dispatch (no execution); checks per-GPU invariants |
+| `--rerun-locked` | off | with `--files`: execute exactly the named LOCKED notebooks (`make rerun-locked`); refuses unlocked files |
 | `D2L_GPU_LIVE_GATE=1` | off | shared hosts: admit a GPU job to a card only when `nvidia-smi` shows enough free memory (see below) |
 | `NOTEBOOK_TIMEOUTS` (`tools/runtime_env.py`) | 3600 s | per-notebook wall-clock limit for notebooks that legitimately run longer (e.g. 17.6's DiT scaling curve, 7200 s); `run_one_notebook.py --timeout N` overrides it |
 | `D2L_GPU_LIVE_HEADROOM_MIB` | 2048 | extra free MiB required beyond `slots × GPU_MIB_PER_SLOT`; a reservation that fills the card (whole-box, or 3 slots on 24 GB) instead needs free ≥ VRAM − headroom, i.e. an idle card |

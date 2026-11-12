@@ -643,6 +643,25 @@ def main():
         print(f"Not found: {args.notebook}", file=sys.stderr)
         sys.exit(2)
 
+    # Locked notebooks (tools/locks.py) are never executed by a build: every
+    # path to a stamp (scheduler dispatch, direct `make <stamp>`, the legacy
+    # per-resource aggregate targets) ends here, so this is the one place
+    # that materializes them from the store instead. `make rerun-locked`
+    # sets D2L_RERUN_LOCKED=1 to execute them for real.
+    if os.environ.get("D2L_RERUN_LOCKED") != "1":
+        import locks
+        nb = args.notebook
+        lock = locks.lock_for_notebook(NOTEBOOKS_DIR.parent, args.framework,
+                                       nb.parent.name, nb.stem)
+        if lock is not None:
+            ok, what = locks.materialize(NOTEBOOKS_DIR.parent, args.framework,
+                                         nb, touch_stamp=False)
+            print(f"[{args.framework}] {nb.parent.name}/{nb.name}: LOCKED "
+                  f"(skipped){'' if ok else ' FAIL'} — {what} "
+                  f"[requires: {lock.requires_label}]",
+                  file=sys.stdout if ok else sys.stderr, flush=True)
+            sys.exit(0 if ok else 1)
+
     setup_framework_env(args.framework)
 
     rel = args.notebook.resolve().relative_to(

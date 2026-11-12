@@ -28,6 +28,20 @@ Integrity (store ↔ current notebook):
   - id'd notebook cell with no manifest entry               → MISSING  (warning:
     needs capture)
 
+Locked notebooks (`<!-- execution: locked; ... -->`, tools/locks.py) are never
+stale: they are re-executed only on request (`make rerun-locked`). Their record
+carries `locked_status` instead:
+  - clean       outputs match the current code, lib and framework version;
+  - lib-drift   the d2l lib fingerprint or framework version moved: WARNING
+                only ("locked, outputs from older lib/version");
+  - code-drift  a code cell changed, appeared or disappeared since capture:
+                `--verify-fresh` FAILS (any host; ALLOW_STALE=1 in make html
+                is the staging override);
+  - no-manifest locked but never captured: `--verify-fresh` FAILS;
+  - unchecked   no generated notebook to compare against.
+`--stale` / `--stale-stamps` never list them, so `refresh-stale` never runs
+them. Prose edits do not change any code fingerprint and are always fine.
+
 Modes:
   (default)        human report; exit non-zero on integrity errors.
   --verify-fresh   render gate: exit non-zero on any HARD-stale (inline) cell or
@@ -57,6 +71,7 @@ import sys
 from pathlib import Path
 
 import capture_outputs as cap
+import locks
 from scan_notebook_manifests import source_execution_class
 
 
@@ -95,8 +110,11 @@ def host_gpu_count():
         return 0
 
 
-def audit_manifest(repo_root, nb_root, manifest_path, fw):
-    """Return a dict describing one notebook's freshness + integrity."""
+def audit_manifest(repo_root, nb_root, manifest_path, fw, lock=None):
+    """Return a dict describing one notebook's freshness + integrity.
+
+    *lock* is the source file's tools/locks.Lock (None: unlocked). A lock that
+    covers *fw* turns staleness into `locked_status` (see the module doc)."""
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     chapter = manifest_path.parent.name
     stem = manifest_path.stem
@@ -108,11 +126,17 @@ def audit_manifest(repo_root, nb_root, manifest_path, fw):
         'stale': False, 'hard_stale': False, 'reasons': [],
         'orphaned': [], 'missing': [], 'notebook_present': True,
     }
+    locked = lock is not None and lock.covers(fw)
+    if locked:
+        rec.update(locked=True, requires=lock.requires_label,
+                   locked_status='unchecked', locked_reasons=[])
 
     nb_path = nb_root / fw / chapter / f'{stem}.ipynb'
     if not nb_path.exists():
         rec['notebook_present'] = False
         rec['reasons'].append('generated notebook absent (run `make notebooks`)')
+        if locked:
+            rec['locked_reasons'].append('generated notebook absent')
         return rec
 
     nb = json.loads(nb_path.read_bytes())
@@ -145,6 +169,41 @@ def audit_manifest(repo_root, nb_root, manifest_path, fw):
 
     def has_inline(entry):
         return any('asset' not in o for o in entry.get('outputs', []))
+
+    if locked:
+        # A locked notebook is never re-executed by a build, so it is never
+        # "stale". Code drift (a changed, added or removed code cell) means
+        # the page would show code beside outputs of other code: an error.
+        # Lib/version drift only warns. Prose never enters a fingerprint.
+        changed = [cid for cid, entry in cells.items()
+                   if cid in cur_fps
+                   and entry.get('code_fingerprint') != cur_fps[cid]]
+        why = rec['locked_reasons']
+        if changed:
+            why.append(f'{len(changed)} code cell(s) changed since capture')
+        if rec['missing']:
+            why.append(f'{len(rec["missing"])} new code cell(s) never captured')
+        if rec['orphaned']:
+            why.append(f'{len(rec["orphaned"])} captured cell(s) gone')
+        drift = []
+        if old_prov.get('d2l_lib_fingerprint') != cur_prov.get(
+                'd2l_lib_fingerprint'):
+            drift.append('outputs from an older d2l lib')
+        if cap._versions_conflict(old_prov.get('framework_version'),
+                                  cur_prov.get('framework_version')):
+            drift.append(f'outputs from {old_prov.get("framework_version")}, '
+                         f'now {cur_prov.get("framework_version")}')
+        if why:
+            rec['locked_status'] = 'code-drift'
+        elif drift:
+            rec['locked_status'] = 'lib-drift'
+            why.extend(drift)
+        else:
+            rec['locked_status'] = 'clean'
+        rec['locked_cells'] = changed + rec['missing'] + rec['orphaned']
+        # Reported through locked_status, not as integrity findings.
+        rec['orphaned'], rec['missing'] = [], []
+        return rec
 
     stale_cells = []
     for cid, entry in cells.items():
@@ -224,13 +283,22 @@ def unmanifested_notebooks(repo_root, store_dir, nb_root, fw):
         n = source_code_cells(md, fw)
         if not n:
             continue
-        records.append({
+        rec = {
             'framework': fw, 'source': source, 'manifest': None,
             'stale': True, 'hard_stale': True, 'no_manifest': True,
             'reasons': [f'no manifest: {n} code cell(s) never captured'],
             'orphaned': [], 'missing': [], 'notebook_present':
                 (nb_root / fw / Path(source).with_suffix('.ipynb')).exists(),
-        })
+        }
+        if locks.lock_for_notebook(repo_root, fw, md.parent.name, md.stem):
+            # Locked but never captured: no build may execute it, so it is
+            # not stale (refresh-stale must not run it) but an error.
+            lk = locks.lock_for_source(repo_root, source)
+            rec.update(stale=False, hard_stale=False, no_manifest=False,
+                       locked=True, requires=lk.requires_label,
+                       locked_status='no-manifest',
+                       locked_reasons=rec['reasons'])
+        records.append(rec)
     return records
 
 
@@ -240,8 +308,11 @@ def collect(repo_root, store_dir, nb_root, frameworks):
         fw_dir = store_dir / fw
         if fw_dir.exists():
             for manifest_path in sorted(fw_dir.glob('chapter_*/*.json')):
+                lock = locks.lock_for_source(
+                    repo_root, f'{manifest_path.parent.name}/'
+                               f'{manifest_path.stem}.md')
                 records.append(
-                    audit_manifest(repo_root, nb_root, manifest_path, fw))
+                    audit_manifest(repo_root, nb_root, manifest_path, fw, lock))
         records.extend(unmanifested_notebooks(repo_root, store_dir, nb_root, fw))
     return records
 
@@ -463,10 +534,18 @@ def main():
         print('  ✓ store images materialized (no Git-LFS pointers).')
         return 0
 
-    records = collect(repo_root, store_dir, nb_root, frameworks)
+    try:
+        records = collect(repo_root, store_dir, nb_root, frameworks)
+    except locks.LockError as e:
+        print(f'FAIL: {e}', file=sys.stderr)
+        return 1
 
     stale = [r for r in records if r['stale']]
     hard = [r for r in records if r['hard_stale']]
+    locked = [r for r in records if r.get('locked')]
+    locked_err = [r for r in locked
+                  if r['locked_status'] in ('code-drift', 'no-manifest')]
+    locked_warn = [r for r in locked if r['locked_status'] == 'lib-drift']
     unmanifested = [r for r in records if r.get('no_manifest')]
     orphaned = [r for r in records if r['orphaned']]
     missing = [r for r in records if r['missing']]
@@ -489,6 +568,9 @@ def main():
                         for r in missing},
             'no_manifest': [r['source'] + f" [{r['framework']}]"
                             for r in unmanifested],
+            **({'locked': {f"{r['framework']}:{r['source']}":
+                           r['locked_status'] for r in locked}}
+               if locked else {}),
         }, indent=2))
         return 1 if integrity_err else 0
 
@@ -496,6 +578,12 @@ def main():
         # minimal re-execution set — unique source paths, one per line
         for src in sorted({r['source'] for r in stale}):
             print(src)
+        # Locked notebooks are never in it (refresh-stale must not pay for
+        # them); name the ones whose code changed, on stderr.
+        for r in locked_err:
+            print(f'  note: LOCKED {r["framework"]} {r["source"]} is not '
+                  f're-run here ({r["locked_status"]}); use `make rerun-locked '
+                  f'FILES={r["source"]}`', file=sys.stderr)
         return 0
 
     if args.stale_stamps:
@@ -550,13 +638,27 @@ def main():
     else:
         print('  ✓ no stale notebooks.')
 
+    if locked:
+        print(f'\n  🔒 {len(locked)} locked notebook(s) (never executed by a '
+              f'build; `make locks`): {len(locked_err)} error, '
+              f'{len(locked_warn)} warning')
+        for r in locked:
+            st = r['locked_status']
+            tag = {'code-drift': 'ERROR', 'no-manifest': 'ERROR',
+                   'lib-drift': 'warn'}.get(st, st)
+            print(f'      [{tag}] {r["framework"]:11} {r["source"]}'
+                  f'  (requires: {r["requires"]})'
+                  + (f' — {"; ".join(r["locked_reasons"])}'
+                     if r['locked_reasons'] else ''))
+
     # Terminal noise is reported in every mode, but only `--check-noise` makes
     # it fatal: `make html` must keep rendering a store that still has it, so
     # the gate warns loudly here and blocks only where it is asked to.
     noise = scan_output_noise(store_dir, frameworks, args.max_line_width)
     report_output_noise(noise, args.max_line_width, strict=False, limit=10)
 
-    if not (stale or integrity_err or missing or noise):
+    if not (stale or integrity_err or missing or noise or locked_err
+            or locked_warn):
         print('\n  ✓ store is clean and fresh.')
 
     if args.verify_fresh:
@@ -590,10 +692,34 @@ def main():
             for r, cls in deferred:
                 print(f'      [{cls}] {r["framework"]:11} {r["source"]}',
                       file=sys.stderr)
+        if locked_warn:
+            print(f'\n  ⚠ {len(locked_warn)} locked notebook(s): locked, outputs '
+                  f'from older lib/version — rendering from the committed '
+                  f'store (not stale; re-run only on request):',
+                  file=sys.stderr)
+            for r in locked_warn:
+                print(f'      {r["framework"]:11} {r["source"]}  '
+                      f'(requires: {r["requires"]}) — '
+                      f'{"; ".join(r["locked_reasons"])}', file=sys.stderr)
+        if locked_err:
+            print(f'\nFAIL (verify-fresh): {len(locked_err)} LOCKED notebook(s) '
+                  f'would show code beside outputs of other code (or have no '
+                  f'outputs at all). Revert the code edit, or re-run them '
+                  f'explicitly:', file=sys.stderr)
+            for r in locked_err:
+                print(f'      {r["framework"]:11} {r["source"]}  '
+                      f'(requires: {r["requires"]}) — '
+                      f'{"; ".join(r["locked_reasons"])}', file=sys.stderr)
+            print('    make rerun-locked FILES=<chapter/file.md> '
+                  '[FRAMEWORKS=<fw>]\n'
+                  '    make capture-outputs FILES=<chapter/file.md> UNLOCK=1',
+                  file=sys.stderr)
         if blocked:
             print(f'\nFAIL (verify-fresh): {len(blocked)} notebook(s) have stale '
                   f'INLINE outputs you can re-run on this host. Re-run + capture '
                   f'them, or use `make render-fresh`.', file=sys.stderr)
+            return 1
+        if locked_err:
             return 1
         if integrity_err:
             print('\nFAIL (verify-fresh): integrity errors above.', file=sys.stderr)

@@ -866,6 +866,7 @@ require matching a longer prefix, through more block-1 heads at fixed
 offsets or through more layers.
 
 ### Induction Heads in Larger Models
+:label:`subsec_induction-larger-models`
 
 The same circuit appears far beyond this 64-token model.
 :citet:`Olsson.Elhage.Nanda.ea.2022` found induction heads in transformer
@@ -887,6 +888,7 @@ remains a small, explicit model of how earlier context shapes later
 predictions.
 
 ### In-Context Regression
+:label:`subsec_in-context-regression`
 
 Induction heads learn from the context by copying. Large models also learn
 from the context when nothing is copied, for instance by inferring a rule
@@ -1078,7 +1080,9 @@ chapter adds feed-forward layers and normalization to every block
 models also represent more features than the stream has dimensions, so
 features share directions (*superposition*) and a head rarely reads one
 clean feature. Analyzing them takes the same three kinds of evidence, from
-behavior, from weights, and from interventions, at a much larger scale.
+behavior, from weights, and from interventions, at a much larger scale;
+:numref:`sec_lm_interpretability` gathers it for a released language
+model.
 
 ## Summary
 

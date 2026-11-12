@@ -505,7 +505,15 @@ git add outputs/ && git commit
 ```
 
 Capture right after the re-run: until then the paid outputs exist only in
-`_notebooks/`, which `make clean` deletes.
+`_notebooks/`, which `make clean` deletes. A library or framework-version
+change between the re-run and the capture only warns; a code edit in between
+makes capture refuse, and the re-run must be repeated. A locked re-run may take
+6 hours per notebook (`LOCKED_TIMEOUT=<seconds>` changes it).
+
+To unlock, delete the directive line. The next scheduler run then executes
+every notebook that was materialized while locked; capture it as in 4.3.
+`make capture-outputs` never captures a materialized notebook, so store
+outputs cannot be re-blessed as if they came from a run.
 
 ### 4.9 Build PDFs and part PDFs
 

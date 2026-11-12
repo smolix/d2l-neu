@@ -610,7 +610,8 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   `capture_outputs.py` selects each `_notebooks/<fw>/chapter_*/*.ipynb` that
   matches `FILES` (all of them without `FILES`) and does not look at
   `.executed` stamps. A notebook that was generated but never executed in this
-  tree has no sidecar, so the guard cannot object, and its manifest is
+  tree has no sidecar, so the guard cannot object (only notebooks
+  materialized from the store for a lock are excluded, §3.7), and its manifest is
   overwritten with whatever the `.ipynb` holds (outputs carried over by
   `gen_notebooks.py` for unchanged cells, nothing for changed or new ones).
   So capture all only after a complete green run, and when you re-ran only
@@ -1058,7 +1059,7 @@ HTML and only its own framework's PDF and slides.
 | `capture-outputs [FILES=…] [UNLOCK=1]` | Distill `_notebooks/` → `outputs/`; extract assets; recompute fingerprints. The bless step. Captures every generated notebook matching `FILES` (§3.5). |
 | `audit-outputs` | Report stale notebooks/cells, locks and integrity (orphaned/missing ids). Non-zero exit on integrity failure. |
 | `verify-outputs-fresh` | The gate `make html` runs, as a standalone target. |
-| `refresh-stale` | `make notebooks`, then delete the audit's stale stamps, execute exactly that set **in parallel** (`notebook_scheduler.py --files`), then one `capture-outputs FILES=<stale set>`, also after failures. Needs framework venvs and GPUs. |
+| `refresh-stale` | `make notebooks`, then delete the audit's stale stamps, execute exactly that set **in parallel** (`notebook_scheduler.py --files`), then one `capture-outputs FILES=<stale set>`, also after failures; exits non-zero if the run or the capture failed. Needs framework venvs and GPUs. |
 | `render-fresh` | `refresh-stale`, then slides and PDFs at `-j$(RENDER_JOBS)` under `RENDER_V8_ENV`, `html`, `pdf-parts`. |
 | `test-trap` | CPU-only regression tests: `test_refresh_stale_trap.py`, `test_freshness_deps.py`, `test_notebook_locks.py`. |
 | `locks` | List locked notebooks (§3.7). |

@@ -5411,6 +5411,416 @@ def calibrate_labels(logprobs, content_free_logprobs):
     return torch.log_softmax(logprobs - cf.reshape(-1, cf.shape[-1]).mean(0),
                              dim=-1)
 
+# Files of the same name: download each into its own folder
+d2l.DATA_HUB['arc-challenge-test'] = (
+    'https://huggingface.co/datasets/allenai/ai2_arc/resolve/'
+    '210d026faf9955653af8916fad021475a3f00453/ARC-Challenge/'
+    'test-00000-of-00001.parquet',
+    '029435570dd5b680c95603f2f51a93218fa30cb2')
+d2l.DATA_HUB['arc-challenge-train'] = (
+    'https://huggingface.co/datasets/allenai/ai2_arc/resolve/'
+    '210d026faf9955653af8916fad021475a3f00453/ARC-Challenge/'
+    'train-00000-of-00001.parquet',
+    '43a863338c7852a03fc5ab79f7c80b88e01a192d')
+d2l.DATA_HUB['gsm8k-train'] = (
+    'https://huggingface.co/datasets/openai/gsm8k/resolve/'
+    '740312add88f781978c0658806c59bc2815b9866/main/'
+    'train-00000-of-00001.parquet',
+    '2328586d74d5426d030f29ac85a485f58514efbd')
+d2l.DATA_HUB['gsm8k-test'] = (
+    'https://huggingface.co/datasets/openai/gsm8k/resolve/'
+    '740312add88f781978c0658806c59bc2815b9866/main/'
+    'test-00000-of-00001.parquet',
+    'b0c27c2f1cb845ba83b135c7e2575070b33ca967')
+d2l.DATA_HUB['wikitext-2-raw-test'] = (
+    'https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+    'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-2-raw-v1/'
+    'test-00000-of-00001.parquet',
+    'ab23bd60c20d2e169a8dc2d139ab6e7bf8b74e91')
+
+def format_mc(question, options, fmt='cloze', *, shots=()):
+    """A multiple-choice item as (prompt, choices). 'cloze': the prompt
+    'Question: {question}\\nAnswer:' and each option after a space;
+    'letter': the question, a line 'A. {option}' per option and 'Answer:',
+    with the letters ' A', ' B', ... as choices. Each shot, a tuple
+    (question, options, answer_index), is rendered the same way with its
+    answer and put before the item, separated by a blank line. Callers that
+    want a header (such as MMLU's subject line) prepend it themselves.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if fmt not in ('cloze', 'letter'):
+        raise ValueError(f'unknown fmt: {fmt!r}')
+
+    def render(q, opts):
+        if not opts:
+            raise ValueError(f'no options for {q!r}')
+        if fmt == 'cloze':
+            return f'Question: {q}\nAnswer:', [' ' + o for o in opts]
+        if len(opts) > 26:
+            raise ValueError(f'{len(opts)} options, but 26 letters')
+        letters = [chr(ord('A') + i) for i in range(len(opts))]
+        lines = [f'Question: {q}'] + [f'{a}. {o}'
+                                      for a, o in zip(letters, opts)]
+        return '\n'.join(lines + ['Answer:']), [' ' + a for a in letters]
+    blocks = []
+    for q, opts, a in shots:
+        prompt, choices = render(q, opts)
+        if not 0 <= a < len(choices):
+            raise ValueError(f'answer index {a} for {len(choices)} options')
+        blocks.append(prompt + choices[a])
+    prompt, choices = render(question, options)
+    return '\n\n'.join(blocks + [prompt]), choices
+
+ScoreComponents = collections.namedtuple(  # each (N, C_max), padded with
+    'ScoreComponents', 'll n_tokens n_chars n_bytes')  # -inf (ll) and 0
+
+def _lm_encode(tokenizer, texts):
+    """Token ids of each text without special tokens: a Transformers
+    tokenizer is called with add_special_tokens=False, any other one (such
+    as tiktoken's) through its plain encode.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    hf = sys.modules.get('transformers')
+    if not texts:
+        return []
+    if hf is not None and isinstance(tokenizer, hf.PreTrainedTokenizerBase):
+        return tokenizer(list(texts), add_special_tokens=False)['input_ids']
+    return [list(tokenizer.encode(t)) for t in texts]
+
+def _lm_boundary_id(tokenizer):
+    """The token that separates documents in pretraining: <|endoftext|> if
+    the tokenizer has it, else its EOS, else None. Qwen3: 151643, Qwen3.5:
+    248044, for base and post-trained checkpoints alike.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    conv = getattr(tokenizer, 'convert_tokens_to_ids', None)
+    if conv is not None:
+        i = conv('<|endoftext|>')
+        if i is not None and i != getattr(tokenizer, 'unk_token_id', None):
+            return int(i)
+    elif '<|endoftext|>' in getattr(tokenizer, 'special_tokens_set', ()):
+        return tokenizer.encode_single_token('<|endoftext|>')  # tiktoken
+    return getattr(tokenizer, 'eos_token_id', None)
+
+def _lm_max_len(model):
+    """The longest input the model takes, or None if it does not say.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    model = d2l._lm_unwrap(model)
+    cfg = getattr(model, 'config', None)
+    if cfg is not None and hasattr(cfg, 'get_text_config'):
+        cfg = cfg.get_text_config()
+    return (getattr(cfg, 'max_position_embeddings', None) or
+            getattr(model, 'max_len', None))
+
+def score_choices(model, tokenizer, prompts, choices, norm='token', *,
+                  batch_size=8, return_components=False):
+    """Log-likelihood scores (N, C_max) of each choice after its prompt,
+    -inf in padded columns; the prediction is argmax(-1). choices holds N
+    lists (ragged) or one list shared by all prompts. norm divides the
+    summed log-probability ll: 'sum' by 1, 'token' by the continuation's
+    tokens, 'char' and 'byte' by the length and UTF-8 length of the choice
+    without one leading whitespace character (lm-evaluation-harness's
+    acc_norm and acc_bytes). Trailing whitespace of a prompt moves to the
+    front of its choices; the continuation is the suffix of
+    encode(prompt + choice) beyond encode(prompt), with no BOS; an empty
+    prompt is preceded by the document-boundary token. With
+    return_components=True, returns ScoreComponents, from which every norm
+    follows. Log-softmax is taken in fp32 over the continuation positions
+    only. In bf16 an item's score depends on which items share its batch,
+    so a different call over the same items (another batch size or item
+    set) agrees only up to that batch drift, not bit for bit.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    import warnings
+    if norm not in ('sum', 'token', 'char', 'byte'):
+        raise ValueError(f'unknown norm: {norm!r}')
+    if len(choices) and isinstance(choices[0], str):  # one shared list
+        choices = [list(choices)] * len(prompts)
+    if len(choices) != len(prompts):
+        raise ValueError(f'{len(prompts)} prompts, {len(choices)} choices')
+    heads = [p.rstrip() for p in prompts]
+    rows = [(i, j) for i, cs in enumerate(choices) for j in range(len(cs))]
+    conts = [prompts[i][len(heads[i]):] + choices[i][j] for i, j in rows]
+    texts = [c[1:] if c[:1].isspace() else c for c in conts]
+    ctx_ids = _lm_encode(tokenizer, heads)
+    full = _lm_encode(tokenizer, [heads[i] + c
+                                  for (i, _), c in zip(rows, conts)])
+    max_len, cut_items, inputs, cont_ids = _lm_max_len(model), set(), [], []
+    for (i, j), f in zip(rows, full):
+        ctx, cont = ctx_ids[i], f[len(ctx_ids[i]):]
+        if not cont:
+            raise ValueError(f'item {i}, choice {j}: empty continuation')
+        if not ctx:
+            b = _lm_boundary_id(tokenizer)
+            if b is None:
+                raise ValueError(f'item {i}: empty prompt and no boundary '
+                                 'token to put before it')
+            ctx = [b]
+        cut = len(ctx) + len(cont) - 1 - (max_len or float('inf'))
+        if cut > 0:  # cut the prompt from the left
+            if cut >= len(ctx):
+                raise ValueError(f'item {i}, choice {j}: the continuation '
+                                 f'does not fit the context of {max_len}')
+            if i not in cut_items:
+                warnings.warn(f'score_choices: prompt of item {i} cut by '
+                              f'{cut} tokens to fit the context of {max_len}')
+                cut_items.add(i)
+            ctx = ctx[cut:]
+        inputs.append((ctx + cont)[:-1])  # the last token predicts nothing
+        cont_ids.append(cont)
+    hf = sys.modules.get('transformers')
+    hf = hf is not None and isinstance(d2l._lm_unwrap(model),
+                                       hf.PreTrainedModel)
+    qwen3 = isinstance(d2l._lm_unwrap(model), d2l.Qwen3GPT)
+    pad = (getattr(tokenizer, 'pad_token_id', None) or 0) if hf else 0
+    device = next(model.parameters()).device
+    order = sorted(range(len(rows)), key=lambda r: (-len(inputs[r]), r))
+    ll = torch.empty(len(rows), dtype=torch.float64)
+    for s in range(0, len(order), batch_size):
+        b = order[s:s + batch_size]
+        T = max(len(inputs[r]) for r in b)
+        m = [len(cont_ids[r]) for r in b]
+        with torch.inference_mode():
+            if hf:  # left padding: the continuations end every row
+                X = torch.tensor([[pad] * (T - len(inputs[r])) + inputs[r]
+                                  for r in b], device=device)
+                mask = (torch.arange(T, device=device) >= torch.tensor(
+                    [T - len(inputs[r]) for r in b], device=device)[:, None]
+                        ).long()
+                pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+                z = model(input_ids=X, attention_mask=mask, position_ids=pos,
+                          use_cache=False, logits_to_keep=max(m)).logits
+                Z = torch.cat([z[k, z.shape[1] - mk:]
+                               for k, mk in enumerate(m)])
+            else:  # right padding, exact under the causal mask
+                X = torch.tensor([inputs[r] + [pad] * (T - len(inputs[r]))
+                                  for r in b], device=device)
+                starts = [len(inputs[r]) - mk for r, mk in zip(b, m)]
+                off = min(starts) if qwen3 else 0
+                out = model(X, logits_to_keep=T - off) if qwen3 else model(X)
+                z = getattr(out, 'logits', out)
+                Z = torch.cat([z[k, st - off:st - off + mk]
+                               for k, (st, mk) in enumerate(zip(starts, m))])
+            y = torch.tensor([t for r in b for t in cont_ids[r]],
+                             device=Z.device)
+            lp = torch.cat([  # fp32 log-softmax, at most 4,096 rows at once
+                Z[i:i + 4096].float().log_softmax(-1).gather(
+                    -1, y[i:i + 4096, None])[:, 0]
+                for i in range(0, len(y), 4096)])
+            sums = torch.stack([v.double().sum() for v in lp.split(m)])
+        ll[b] = sums.cpu()
+    C = max(map(len, choices), default=0)
+    comps = [torch.zeros(len(prompts), C, dtype=dt)
+             for dt in (torch.float32, torch.long, torch.long, torch.long)]
+    comps[0].fill_(-math.inf)
+    for r, (i, j) in enumerate(rows):
+        for t, v in zip(comps, (ll[r].item(), len(cont_ids[r]),
+                                len(texts[r]),
+                                len(texts[r].encode('utf-8')))):
+            t[i, j] = v
+    comps = ScoreComponents(*comps)
+    if return_components:
+        return comps
+    return comps.ll / {'sum': 1, 'token': comps.n_tokens,
+                       'char': comps.n_chars, 'byte': comps.n_bytes}[norm]
+
+def bits_per_byte(model, tokenizer, texts, ctx_len=2048, stride=None,
+                  batch_size=4):
+    """Bits per UTF-8 byte of texts: total negative log-likelihood in nats
+    over ln 2 times the total bytes. Each text is tokenized whole (no BOS)
+    and preceded by one unscored document-boundary token (Qwen3: 151643,
+    Qwen3.5: 248044; see _lm_boundary_id); without one, its first token is
+    unscored and its bytes leave the denominator. Windows of ctx_len input
+    tokens advance by stride (default ctx_len // 2) and score every token
+    once, the first window ctx_len tokens and each later one stride tokens,
+    each with at least ctx_len - stride + 1 tokens of context; texts are
+    scored independently. A Transformers model with a linear output layer
+    runs its decoder on batch_size windows and projects 1,024 positions at
+    a time; any other model runs one window at a time.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if isinstance(texts, str):
+        texts = [texts]
+    stride = ctx_len // 2 if stride is None else stride
+    if ctx_len < 1 or not 1 <= stride <= ctx_len:
+        raise ValueError(f'need 1 <= stride <= ctx_len, got {stride}, '
+                         f'{ctx_len}')
+    b, windows, n_bytes = _lm_boundary_id(tokenizer), [], 0
+    for text, ids in zip(texts, _lm_encode(tokenizer, texts)):
+        if not ids:
+            continue
+        n_bytes += len(text.encode('utf-8'))
+        if b is None:  # the first token has no context
+            n_bytes -= len(tokenizer.decode(ids[:1]).encode('utf-8'))
+        seq = ids if b is None else [b] + ids
+        done = 0  # targets seq[1:done + 1] are scored
+        while done < len(seq) - 1:  # inputs seq[start:end] predict
+            end = min(done + (stride if done else ctx_len), len(seq) - 1)
+            start = max(end - ctx_len, 0)  # seq[start + 1:end + 1]
+            windows.append((seq[start:end], seq[done + 1:end + 1]))
+            done = end
+    if not n_bytes:
+        raise ValueError('no text to score')
+    inner = d2l._lm_unwrap(model)
+    hf = sys.modules.get('transformers')
+    hf = hf is not None and isinstance(inner, hf.PreTrainedModel)
+    head = inner.get_output_embeddings() if hf else None
+    cfg = inner.config.get_text_config() if hf else None
+    split = (hf and isinstance(head, nn.Linear) and
+             getattr(cfg, 'final_logit_softcapping', None) is None)
+    device, nll = next(model.parameters()).device, 0.0
+
+    def add_nll(H, y, project):  # H: (positions, d) or logits; y: targets
+        total = 0.0
+        for i in range(0, len(y), 1024):
+            z = project(H[i:i + 1024]).float()
+            total += F.cross_entropy(z, y[i:i + 1024], reduction='sum').item()
+        return total
+    with torch.inference_mode():
+        for s in range(0, len(windows), batch_size if split else 1):
+            w = windows[s:s + (batch_size if split else 1)]
+            T = max(len(x) for x, _ in w)
+            X = torch.tensor([x + [0] * (T - len(x)) for x, _ in w],
+                             device=device)
+            y = torch.tensor([t for _, ys in w for t in ys], device=device)
+            if split:  # decoder states, then the head in chunks
+                mask = (torch.arange(T, device=device) < torch.tensor(
+                    [len(x) for x, _ in w], device=device)[:, None]).long()
+                dec = (inner.get_decoder() if hasattr(inner, 'get_decoder')
+                       else inner.model)
+                H = dec(input_ids=X, attention_mask=mask,
+                        use_cache=False).last_hidden_state
+                H = torch.cat([H[k, len(x) - len(ys):len(x)]
+                               for k, (x, ys) in enumerate(w)])
+                nll += add_nll(H, y, head)
+            else:  # one window: logits for its scored positions
+                n = len(y)
+                if hf:
+                    z = model(input_ids=X, use_cache=False,
+                              logits_to_keep=n).logits[0]
+                elif isinstance(inner, d2l.Qwen3GPT):
+                    z = model(X, logits_to_keep=n)[0]
+                else:
+                    out = model(X)
+                    z = getattr(out, 'logits', out)[0, -n:]
+                nll += add_nll(z, y, lambda v: v)
+    return nll / (math.log(2) * n_bytes)
+
+def extract_answer(text, kind='gsm8k', strict=False):
+    """The answer a generated text commits to, as a string, or None.
+    'gsm8k': the first number after the last '####', else after the last
+    'the answer is' (any case), else, unless strict, the last number in the
+    text; commas and '$' are removed and the number is normalized ('1,000'
+    and '1000.00' give '1000', '-0.50' gives '-0.5'). 'boxed': the content
+    of the last \\boxed{...} whose braces match, stripped.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if kind == 'boxed':
+        found, i = None, text.find('\\boxed{')
+        while i != -1:
+            depth = 0
+            for j in range(i + 6, len(text)):  # from the opening brace
+                depth += {'{': 1, '}': -1}.get(text[j], 0)
+                if depth == 0:
+                    found = text[i + 7:j].strip()
+                    break
+            i = text.find('\\boxed{', i + 1)
+        return found or None
+    if kind != 'gsm8k':
+        raise ValueError(f'unknown kind: {kind!r}')
+    from decimal import Decimal
+    number = r'-?\$?(?:\d[\d,]*(?:\.\d+)?|\.\d+)'
+
+    def normalize(s):
+        d = Decimal(s.replace(',', '').replace('$', ''))
+        if d == d.to_integral_value():
+            return str(int(d))
+        return format(d.normalize(), 'f')
+    for marker in ('####', 'the answer is'):
+        k = text.lower().rfind(marker)
+        m = re.search(number, text[k + len(marker):]) if k >= 0 else None
+        if m:
+            return normalize(m.group())
+    found = None if strict else re.findall(number, text)
+    return normalize(found[-1]) if found else None
+
+def pass_at_k(n, c, k):
+    """Unbiased pass@k from n samples of which c are correct: the
+    probability that k of them, drawn without replacement, include a
+    correct one, 1 - C(n - c, k) / C(n, k), in the product form
+    1 - prod_{i = n - c + 1}^{n} (1 - k / i). Integer arrays broadcast.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    n, c, k = np.broadcast_arrays(*(np.asarray(v) for v in (n, c, k)))
+    if not all(np.issubdtype(v.dtype, np.integer) for v in (n, c, k)):
+        raise TypeError('n, c and k must be integers')
+    for bad, msg in ((c < 0, 'c < 0'), (c > n, 'c > n'), (k < 1, 'k < 1'),
+                     (k > n, 'k > n')):
+        if np.any(bad):
+            raise ValueError(f'pass_at_k needs 0 <= c <= n, 1 <= k <= n: '
+                             f'{msg}')
+    out = np.empty(n.shape)
+    for idx in np.ndindex(n.shape):
+        ni, ci, ki = int(n[idx]), int(c[idx]), int(k[idx])
+        out[idx] = 1.0 if ni - ci < ki else 1.0 - np.prod(
+            1.0 - ki / np.arange(ni - ci + 1, ni + 1))
+    return float(out) if out.ndim == 0 else out
+
+def pass_at_k_variance(n, p, k):
+    """Variance of pass_at_k(n, c, k) when c ~ Binomial(n, p): the sum over
+    c of Binomial(c; n, p) (U(n, c, k) - (1 - (1 - p)^k))^2.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if not 0 <= p <= 1 or not 1 <= k <= n:
+        raise ValueError(f'need 0 <= p <= 1 and 1 <= k <= n: {n}, {p}, {k}')
+    if p in (0, 1):
+        return 0.0
+    c = np.arange(n + 1)
+    log_pmf = (math.lgamma(n + 1) - np.array([math.lgamma(i + 1) + math.lgamma(
+        n - i + 1) for i in c]) + c * math.log(p) + (n - c) * math.log1p(-p))
+    U = pass_at_k(np.full(n + 1, n), c, np.full(n + 1, k))
+    return float(np.sum(np.exp(log_pmf) * (U - (1 - (1 - p) ** k)) ** 2))
+
+def run_python_tests(program, test_code, timeout=5.0):
+    """True iff program followed by test_code runs to exit code 0 in a
+    fresh `python -I` process, in an empty temporary directory, with stdin
+    closed, within timeout seconds of wall-clock time and, on POSIX, within
+    limits on CPU time and address space (1 GiB). This is not a sandbox:
+    the code runs as the caller, can read and write the caller's files and
+    reach the network. Run code you did not write in a container.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    import signal
+    import subprocess
+    import tempfile
+    limits = ''
+    if os.name == 'posix':  # set in the child, before the program runs
+        cpu = math.ceil(timeout) + 1
+        limits = (
+            'import resource\n'
+            'for r, v in ((resource.RLIMIT_CPU, %d), '
+            '(resource.RLIMIT_AS, 1 << 30)):\n'
+            '    try:\n        resource.setrlimit(r, (v, v))\n'
+            '    except (ValueError, OSError):\n        pass\n' % cpu)
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, 'main.py'), 'w') as f:
+            f.write(program + '\n' + test_code + '\n')
+        proc = subprocess.Popen(
+            [sys.executable, '-I', '-c', limits + 'import runpy\n'
+             "runpy.run_path('main.py', run_name='__main__')"],
+            cwd=tmp, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=os.name == 'posix')
+        try:
+            return proc.wait(timeout=timeout) == 0
+        except subprocess.TimeoutExpired:
+            if os.name == 'posix':  # the process and any it started
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
+            proc.wait()
+            return False
+
 d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
     'ce1a79d9c5163932d65c417380e53230e1086370')
 

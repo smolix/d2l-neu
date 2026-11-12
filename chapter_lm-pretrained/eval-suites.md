@@ -209,12 +209,12 @@ def min_detectable_effect(sd=None, n=None, *, se=None, deff=1.0,
     if se is not None:
         if sd is not None or n is not None:
             raise ValueError('pass sd and n, or se alone')
-        mde = z * np.asarray(se, dtype=float) * math.sqrt(deff)
+        mde = z * np.asarray(se, dtype=float) * np.sqrt(deff)
     elif sd is None or n is None:
         raise ValueError('pass sd and n, or se alone')
     else:
         mde = z * np.asarray(sd, dtype=float) * np.sqrt(
-            deff / np.asarray(n, dtype=float))
+            np.asarray(deff, dtype=float) / np.asarray(n, dtype=float))
     return float(mde) if mde.ndim == 0 else mde
 ```
 
@@ -266,12 +266,10 @@ class EvalSuite:
             if isinstance(t, str):
                 t = d2l.EVAL_TASKS[t]
             t = EvalTask(**(t if isinstance(t, dict) else t._asdict()))
-            new = {'files': tuple(t.files), 'stop': tuple(t.stop)}
-            if n is not None:
-                new['n'] = n
-            if seed is not None:
-                new['subset_seed'] = seed
-            t = t._replace(**new)
+            t = t._replace(**{k: v for k, v in (('n', n), ('subset_seed',
+                                                           seed))
+                              if v is not None})
+            t = d2l._eval_canonical(t)  # JSON values, files and stop tuples
             if t.id in self._items:
                 raise ValueError(f'task {t.id!r} appears twice')
             rows = d2l._eval_load_rows(t)
@@ -283,12 +281,15 @@ class EvalSuite:
     @property
     def hash(self):
         """sha256 of the canonical JSON of every task's fields, followed by
-        the sha256 of each task's sorted item ids."""
+        the sha256 of each task's items (ids, rendered prompts, choices and
+        references) in id order: a new dataset revision, subset or prompt
+        rendering gives a new hash."""
         h = hashlib.sha256(json.dumps([t._asdict() for t in self.tasks],
                                       sort_keys=True).encode())
         for t in self.tasks:
-            ids = sorted(item['id'] for item in self._items[t.id])
-            h.update(hashlib.sha256(json.dumps(ids).encode()).digest())
+            items = sorted(self._items[t.id], key=lambda item: item['id'])
+            h.update(hashlib.sha256(json.dumps(
+                items, sort_keys=True, default=str).encode()).digest())
         return h.hexdigest()
 
     def items(self, task_id):
@@ -316,7 +317,7 @@ def _score(self, task, items, model, tokenizer, seed):
         S = d2l.score_choices(
             model, tokenizer, [p for it in items for p in it['prompts']],
             [[it['continuation']] for it in items for _ in it['prompts']],
-            'sum', batch_size=self.batch_size)[:, 0]
+            task.norm, batch_size=self.batch_size)[:, 0]
         preds = [int(s.argmax()) for s in S.split(
             [len(it['prompts']) for it in items])]
         scores = [float(p == it['gold']) for p, it in zip(preds, items)]
@@ -340,7 +341,7 @@ def _score(self, task, items, model, tokenizer, seed):
             scores = [float(d2l.run_python_tests(it['prompt'] + g.text,
                                                  it['test']))
                       for g, it in zip(gens, items)]
-    elif task.kind == 'ppl':  # bits per byte of each text: lower is better
+    elif task.kind == 'ppl':  # bits per byte per text (mean: not per byte)
         scores = [d2l.bits_per_byte(model, tokenizer, [it['text']])
                   for it in items]
     else:
@@ -372,8 +373,9 @@ def run(self, model, tokenizer, *, seed=0, cache_dir=None, rerun=False,
                 'transformers': getattr(hf, '__version__', None)}
     run_key = hashlib.sha256(json.dumps(settings, sort_keys=True).encode()
                              ).hexdigest()[:16]
+    suite_hash = self.hash  # covers the rendered prompts
     path = None if cache_dir is None else d2l._eval_cache_path(
-        cache_dir, model_id, revision, self.hash, run_key)
+        cache_dir, model_id, revision, suite_hash, run_key)
     rows = [] if path is None or rerun else d2l._eval_cache_read(path)
     done, start = {(r['task'], r['item_id']) for r in rows}, time.time()
     for task in self.tasks:
@@ -385,7 +387,7 @@ def run(self, model, tokenizer, *, seed=0, cache_dir=None, rerun=False,
             if path is not None:
                 d2l._eval_cache_write(path, rows)
     meta = {'model': model_id, 'revision': revision, 'suite': self.name,
-            'suite_hash': self.hash, 'run_key': run_key, **settings,
+            'suite_hash': suite_hash, 'run_key': run_key, **settings,
             'tasks': [t._asdict() for t in self.tasks],
             'wall_clock': time.time() - start}
     return EvalResult(pd.DataFrame(rows), meta)
@@ -406,30 +408,30 @@ class EvalResult:
         self.meta = meta
 
     def scores(self, task=None):
-        """One task's scores ordered by item id, or a dict over tasks."""
+        """One task's scores ordered by item id, or a dict over tasks. Ids
+        are strings ('10' sorts before '2'): align other data by id."""
         if task is None:
             return {t: self.scores(t) for t in self.per_item.task.unique()}
         return self.per_item.score[self.per_item.task == task].to_numpy()
 
     @staticmethod
-    def _clusters(cluster):
+    def _clusters(task, cluster):
         """The cluster labels if the items share clusters, else None (one
-        cluster per item); fewer than 30 clusters fall back to items."""
-        import warnings
+        cluster per item); fewer than 30 shared clusters raise."""
         k = cluster.nunique()
         if k == len(cluster):
             return None
         if k < 30:
-            warnings.warn(f'{k} clusters are too few to resample; items are '
-                          'resampled instead and the interval is too narrow')
-            return None
+            raise ValueError(f'task {task}: {k} clusters; the cluster '
+                             'bootstrap needs at least 30')
         return cluster.to_numpy()
 
     def summary(self, n_boot=2000):
         """Per task: n, mean and its 95% interval (clusters resampled)."""
         rows = []
         for task, df in self.per_item.groupby('task'):
-            r = bootstrap_ci(df.score, n_boot, self._clusters(df.cluster))
+            r = bootstrap_ci(df.score, n_boot,
+                             self._clusters(task, df.cluster))
             rows.append({'task': task, 'n': r.n, 'mean': r.mean,
                          'lo': r.ci[0], 'hi': r.ci[1],
                          'clusters': r.n_clusters})
@@ -439,8 +441,9 @@ class EvalResult:
         """The mean of the task means, with a bootstrap that resamples
         items (or clusters) within each task."""
         reps = [_bootstrap_replicates(df.score, n_boot,
-                                      self._clusters(df.cluster), [seed, k])
-                for k, (_, df) in enumerate(self.per_item.groupby('task'))]
+                                      self._clusters(t, df.cluster),
+                                      [seed, k])
+                for k, (t, df) in enumerate(self.per_item.groupby('task'))]
         means = np.mean([m for _, m, _ in reps], axis=0)
         lo, hi = np.quantile(means, [alpha / 2, 1 - alpha / 2])
         return BootstrapResult(
@@ -466,8 +469,19 @@ class EvalResult:
             raise ValueError(f'item sets differ in {len(bad)} items; first '
                              f'(task, item_id, only in): {first}')
         return {task: paired_bootstrap(df.score, df.score_b, n_boot,
-                                       self._clusters(df.cluster), seed=seed)
+                                       self._clusters(task, df.cluster),
+                                       seed=seed)
                 for task, df in m.groupby('task')}
+```
+
+<!-- Placeholder (stage 2): manifests and saving come from the library. -->
+
+```{.python .input #eval-suites-attach}
+%%tab pytorch
+for name in ('from_manifest', 'to_manifest'):  # library code, not shown
+    setattr(EvalSuite, name, vars(d2l.EvalSuite)[name])
+for name in ('save', 'load'):
+    setattr(EvalResult, name, vars(d2l.EvalResult)[name])
 ```
 
 <!-- Placeholder (stage 2): the judge's rubric, the padding of the length arm, and its verdict. -->
@@ -509,7 +523,9 @@ def judge_pairwise(judge, tokenizer, question, answer_a, answer_b, *,
     (l1 + l2) / 2. Strings give one JudgeResult, lists one per item.
     Prompts are sorted by length and batched (at most max_batch_tokens
     tokens including padding, if given); answers are cut at 1,500 tokens.
-    With return_mass=True, also returns P(A) + P(B) per item and order."""
+    The logits of A and B are recomputed in fp32 from the input of the
+    judge's output head, since bf16 logits are rounded. With
+    return_mass=True, also returns P(A) + P(B) per item and order."""
     import warnings
     single = isinstance(question, str)
     if single:
@@ -553,30 +569,58 @@ def judge_pairwise(judge, tokenizer, question, answer_a, answer_b, *,
     pad = tokenizer.pad_token_id
     pad = tokenizer.eos_token_id if pad is None else pad
     device = next(judge.parameters()).device
-    lp = torch.empty(len(ids), 2, dtype=torch.float64)  # log P(A), log P(B)
-    for b in batches:
-        T = len(ids[b[0]])
-        X = torch.tensor([[pad] * (T - len(ids[r])) + ids[r] for r in b],
-                         device=device)  # padded on the left
-        mask = torch.tensor([[0] * (T - len(ids[r])) + [1] * len(ids[r])
-                             for r in b], device=device)
-        pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
-        with torch.inference_mode():
-            z = judge(input_ids=X, attention_mask=mask, position_ids=pos,
-                      use_cache=False, logits_to_keep=1).logits[:, -1]
-        lp[b] = z.float().log_softmax(-1)[:, [letters[0][0], letters[1][0]]
-                                          ].double().cpu()
+    AB = [letters[0][0], letters[1][0]]
+    # bf16 logits are rounded (steps of 0.125 near 20): the A and B logits
+    # are redone in fp32 from the output head's input, if it has one
+    head = getattr(judge, 'get_output_embeddings', lambda: None)()
+    seen, warned = [], False
+    hook = (head.register_forward_hook(lambda m, x, y: seen.append(x[0]))
+            if isinstance(head, nn.Linear) else None)
+    # per prompt: log P(A), log P(B) and the log-odds of A over B
+    lp = torch.empty(len(ids), 3, dtype=torch.float64)
+    try:
+        for b in batches:
+            T = len(ids[b[0]])
+            X = torch.tensor([[pad] * (T - len(ids[r])) + ids[r] for r in b],
+                             device=device)  # padded on the left
+            mask = torch.tensor([[0] * (T - len(ids[r])) + [1] * len(ids[r])
+                                 for r in b], device=device)
+            pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+            seen.clear()
+            with torch.inference_mode():
+                z = judge(input_ids=X, attention_mask=mask, position_ids=pos,
+                          use_cache=False, logits_to_keep=1).logits[:, -1]
+                zab = z[:, AB].float()
+                if len(seen) == 1:
+                    h = seen[0][:, -1].float()
+                    w = head.weight[AB].to(h.device, torch.float32)
+                    exact = h @ w.T if head.bias is None else (
+                        h @ w.T + head.bias[AB].to(h.device, torch.float32))
+                    exact = exact.to(zab.device)
+                    if torch.allclose(exact, zab, rtol=2**-7, atol=1e-3):
+                        zab = exact
+                    elif not warned:  # a head that is not the last step
+                        warned = True
+                        warnings.warn('judge_pairwise: the output head does '
+                                      'not give the logits; the log-odds '
+                                      'use the logits as returned')
+            lp[b, :2] = z.float().log_softmax(-1)[:, AB].double().cpu()
+            lp[b, 2] = (zab[:, 0] - zab[:, 1]).double().cpu()
+    finally:
+        if hook is not None:
+            hook.remove()
     row = {t: k for k, t in enumerate(unique)}
     l1, l2 = (torch.stack([lp[row[t]] for t in texts[j::2]])
               for j in (0, 1))
     results = []
-    for (x1, y1), (x2, y2) in zip(l1.tolist(), l2.tolist()):
-        o1, o2 = x1 - y1, x2 - y2  # log-odds that the first slot wins
+    for o1, o2 in zip(l1[:, 2].tolist(), l2[:, 2].tolist()):
+        # o1, o2: log-odds that the first slot wins, in either order
         delta, bias = (o1 - o2) / 2, (o1 + o2) / 2
         verdict = 'a' if o1 > 0 > o2 else 'b' if o1 < 0 < o2 else 'tie'
         results.append(JudgeResult(0.5 * (1 + math.tanh(delta / 2)), delta,
                                    bias, verdict != 'tie', verdict, (o1, o2)))
-    mass = torch.stack([l1.exp().sum(-1), l2.exp().sum(-1)], 1).numpy()
+    mass = torch.stack([l1[:, :2].exp().sum(-1), l2[:, :2].exp().sum(-1)],
+                       1).numpy()
     out = results[0] if single else results
     return (out, mass[0] if single else mass) if return_mass else out
 ```

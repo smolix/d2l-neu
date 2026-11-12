@@ -760,10 +760,13 @@ class TestResult(unittest.TestCase):
         self.assertEqual(r.n_clusters, 30)
         self.assertEqual(r, d2l.paired_bootstrap(self.a, self.b, 10000,
                                                  cl.astype(str)))
+        # fewer than 30 shared clusters raise, as bootstrap_ci does
+        # (lib-18.5-fix F6: they used to fall back to items with a warning)
         few = result({'t': self.a}, clusters=np.arange(300) // 20)
-        with self.assertWarnsRegex(UserWarning, '15 clusters'):
-            r = few.summary()
-        self.assertEqual(r.clusters[0], 300)
+        few_b = result({'t': self.b}, clusters=np.arange(300) // 20)
+        for call in (few.summary, few.macro, lambda: few.compare(few_b)):
+            with self.assertRaisesRegex(ValueError, 'task t: 15 clusters'):
+                call()
 
     def test_summary_macro_scores(self):
         s = self.ra.summary()
@@ -1162,6 +1165,260 @@ class TestRegistrySmoke(unittest.TestCase):
                          [rows[i]['id'] for i in d2l.subset_ids(1172, 500)])
         self.assertEqual(len(dev.items('gsm8k')), 100)
         print(f"\ndev_v1 hash {dev.hash}")
+
+
+
+# ------------------------------------- review fixes (stage 2a, lib-18.5-fix)
+class TestReviewFixes(Fixture):
+    """Regression tests for the review of the 18.5 library (F1-F9)."""
+    def stub_scores(self):
+        return mock.patch.object(
+            d2l, 'score_choices',
+            lambda m, t, p, c, *a, **k: fake_scores(p, c))
+
+    def test_f1_stop_and_files_as_strings(self):
+        gsm = self.gsm._replace(stop='\n\nQ:')
+        suite = d2l.EvalSuite([gsm], n=3)
+        self.assertEqual(suite.tasks[0].stop, ('\n\nQ:',))
+        self.assertEqual(suite.hash, d2l.EvalSuite([self.gsm], n=3).hash)
+        seen = {}
+
+        def generate(model, tok, prompts, *a, **kw):
+            seen.update(kw)
+            return [d2l.Generation('#### 2', [], None, 'eos')] * len(prompts)
+        with mock.patch.object(d2l, 'generate', generate):
+            suite.run(TinyLM(), None)
+        self.assertEqual(seen['stop'], ['\n\nQ:'])
+        arc = self.arc._replace(files='test-0.parquet')
+        s = d2l.EvalSuite([arc], n=5)
+        self.assertEqual(s.tasks[0].files, ('test-0.parquet',))
+        self.assertEqual(len(s.items('arc_fx')), 5)
+        self.assertEqual(d2l.EvalSuite([self.arc._replace(stop=None)],
+                                       n=5).tasks[0].stop, ())
+
+    def test_f2_hash_and_cache_cover_rendered_prompts(self):
+        cache = os.path.join(self.tmp.name, 'cache')
+        orig = d2l.format_mc
+
+        def changed(q, opts, fmt='cloze', *, shots=()):
+            p, c = orig(q, opts, fmt, shots=shots)
+            return 'Q: ' + p, c
+        with self.stub_scores():
+            s1 = d2l.EvalSuite([self.arc], n=40)
+            r1 = s1.run(TinyLM(), None, cache_dir=cache)
+            with mock.patch.object(d2l, 'format_mc', changed):
+                s2 = d2l.EvalSuite([self.arc], n=40)
+                r2 = s2.run(TinyLM(), None, cache_dir=cache)
+                fresh = s2.run(TinyLM(), None)
+        self.assertEqual(s1.tasks, s2.tasks)  # same manifest
+        self.assertNotEqual(s1.hash, s2.hash)  # other prompts
+        self.assertNotEqual(r1.meta['suite_hash'], r2.meta['suite_hash'])
+        np.testing.assert_array_equal(r2.scores('arc_fx'),
+                                      fresh.scores('arc_fx'))
+        self.assertFalse(np.array_equal(r1.scores('arc_fx'),
+                                        r2.scores('arc_fx')))
+        # an item's reference (not only its prompt) enters the hash
+        s3 = d2l.EvalSuite([self.gsm], n=4)
+        h = s3.hash
+        s3._items['gsm_fx'][0]['reference'] = '-1'
+        self.assertNotEqual(s3.hash, h)
+
+    def test_f3_notebook_classes_have_library_methods(self):
+        with open(os.path.join(REPO, 'chapter_lm-pretrained',
+                               'eval-suites.md'), encoding='utf-8') as f:
+            src = f.read()
+        cells = re.findall(r'```\{\.python \.input #([\w-]+)\}\n'
+                           r'%%tab pytorch\n(.*?)```', src, re.S)
+        self.assertIn('eval-suites-attach', [c for c, _ in cells])
+        ns = {}
+        with mock.patch('sys.stdout'):
+            for _, code in cells:
+                exec(code, ns)
+        EvalSuite, EvalResult = ns['EvalSuite'], ns['EvalResult']
+        self.assertIsNot(EvalSuite, d2l.EvalSuite)
+        path = os.path.join(self.tmp.name, 'fx.json')
+        EvalSuite([self.arc], 'fx', n=12).to_manifest(path)
+        suite = EvalSuite.from_manifest(path)
+        self.assertIs(type(suite), EvalSuite)
+        with self.stub_scores():
+            res = suite.run(TinyLM(), None)
+        self.assertIs(type(res), EvalResult)
+        out = os.path.join(self.tmp.name, 'r.parquet')
+        res.save(out)
+        back = EvalResult.load(out)
+        self.assertIs(type(back), EvalResult)
+        pd.testing.assert_frame_equal(back.per_item, res.per_item)
+        self.assertIs(type(d2l.EvalResult.load(out)), d2l.EvalResult)
+
+    def test_f5_hellaswag_continuation_format(self):
+        def rows(n):
+            return [{'activity_label': 'Cooking', 'ctx_a': f'A man {i}',
+                     'ctx_b': 'stirs the pot', 'endings': [
+                         f'tastes it {k}.' for k in range(4)],
+                     'label': str(i % 4)} for i in range(n)]
+        d = write_dataset(os.path.join(self.tmp.name, 'hs'), {
+            'validation-0.parquet': rows(5), 'train-0.parquet': rows(2)})
+        t = d2l.EVAL_TASKS['hellaswag']._replace(
+            dataset=d, files=('validation-0.parquet', 'train-0.parquet'))
+        self.assertEqual(t.fmt, 'continuation')
+        it = d2l.EvalSuite([t], n=None, seed=None).items('hellaswag')[3]
+        # lm-evaluation-harness: the context, then ' ' + each ending
+        self.assertEqual(it['prompt'], 'Cooking: A man 3 Stirs the pot')
+        self.assertEqual(it['choices'], [f' tastes it {k}.'
+                                         for k in range(4)])
+        shot = t._replace(shots=1, shots_from={'split': 'train', 'ids': [1]})
+        it = d2l.EvalSuite([shot], n=None, seed=None).items('hellaswag')[3]
+        self.assertEqual(it['prompt'], 'Cooking: A man 1 Stirs the pot '
+                         'tastes it 1.\n\nCooking: A man 3 Stirs the pot')
+
+    def test_f7_numpy_values(self):
+        s = d2l.EvalSuite([self.arc], n=np.int64(20), seed=np.int64(0))
+        self.assertEqual(s.hash, d2l.EvalSuite([self.arc], n=20).hash)
+        self.assertIs(type(s.tasks[0].n), int)
+        g = self.gsm._replace(
+            sampling={'temperature': np.float32(0.5)},
+            shots_from={'split': 'train', 'ids': np.array([0, 1])})
+        s = d2l.EvalSuite([g], n=3)
+        self.assertEqual(s.tasks[0].shots_from['ids'], [0, 1])
+        self.assertIs(type(s.tasks[0].sampling['temperature']), float)
+        json.dumps(s.to_manifest())
+        with self.assertRaisesRegex(TypeError, 'is not JSON'):
+            d2l.EvalSuite([self.arc._replace(since=object())])
+
+    def test_f8_sampling_keys_that_run_sets(self):
+        for key in ('seed', 'stop', 'max_new_tokens', 'batch_size'):
+            g = self.gsm._replace(sampling={'temperature': 0.7, key: 1})
+            with self.assertRaisesRegex(ValueError, f"sampling sets.*{key}"):
+                d2l.EvalSuite([g], n=3)
+
+    def test_f9_mde_se_with_deff_array(self):
+        m = d2l.min_detectable_effect(se=0.01, deff=np.array([1., 4.]))
+        np.testing.assert_allclose(m, [0.0280, 0.0560], atol=1e-4)
+        np.testing.assert_allclose(
+            d2l.min_detectable_effect(0.5, 500, deff=np.array([1., 4.])),
+            d2l.min_detectable_effect(0.5, np.array([500, 125])))
+
+    def test_f9_mc_partial_uses_task_norm(self):
+        rows = [{'sentence': 'Ann met Bo so _ left.', 'option1': 'Ann',
+                 'option2': 'Bo', 'answer': '1'}] * 2
+        d = write_dataset(os.path.join(self.tmp.name, 'w'),
+                          {'validation-0.parquet': rows})
+        t = d2l.EVAL_TASKS['winogrande']._replace(
+            dataset=d, files=('validation-0.parquet',), norm='token')
+        norms = []
+
+        def stub(model, tok, prompts, choices, norm='sum', **kw):
+            norms.append(norm)
+            return torch.zeros(len(prompts), 1)
+        with mock.patch.object(d2l, 'score_choices', stub):
+            d2l.EvalSuite([t], n=None, seed=None).run(TinyLM(), None)
+        self.assertEqual(norms, ['token'])
+
+
+class BF16Judge(nn.Module):
+    """A bf16 judge with an output head: the last hidden state is (1, 1, 0)
+    when the question's answer a sits in the first slot, else (1, 1, 1).
+    The head gives A 24.3125 and B 24.25 for the first, A 24.3125 and B
+    24.375 for the second: log-odds +0.0625 and -0.0625, which bf16 logits
+    round to 0 and -0.125 (steps of 0.125 between 16 and 32). With
+    softcap, the logits are 30 tanh(z / 30), which the head does not
+    give."""
+    def __init__(self, answer_a, softcap=False):
+        super().__init__()
+        self.answer_a, self.softcap = answer_a, softcap
+        self.lm_head = nn.Linear(3, 256, bias=False, dtype=torch.bfloat16)
+        with torch.no_grad():
+            self.lm_head.weight.zero_()
+            self.lm_head.weight[ord('A')] = torch.tensor([16, 8.3125, 0])
+            self.lm_head.weight[ord('B')] = torch.tensor([16, 8.25, 0.125])
+
+    def get_output_embeddings(self):
+        return self.lm_head
+
+    def forward(self, input_ids, attention_mask, position_ids, use_cache,
+                logits_to_keep):
+        h = []
+        for c, m in zip(input_ids.numpy().astype(np.uint8),
+                        attention_mask.numpy().astype(bool)):
+            first = QUESTION.search(c[m].tobytes().decode('latin-1'))[2]
+            h.append([1., 1., 0. if first == self.answer_a else 1.])
+        h = torch.tensor(h, dtype=torch.bfloat16)[:, None]
+        z = self.lm_head(h[:, -logits_to_keep:])
+        if self.softcap:
+            z = 30 * torch.tanh(z / 30)
+        return type('Out', (), {'logits': z})
+
+
+class TestJudgeFP32LogOdds(unittest.TestCase):
+    """F4: the restricted log-odds come from fp32, not from bf16 logits."""
+    def test_bf16_rounding(self):
+        tok = StubJudgeTok()
+        judge = BF16Judge('aaa')
+        z = judge.lm_head(torch.tensor([[1., 1., 0.], [1., 1., 1.]],
+                                       dtype=torch.bfloat16))
+        self.assertEqual(z[:, [65, 66]].float().tolist(),
+                         [[24.25, 24.25], [24.25, 24.375]])  # rounded
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            r, mass = d2l.judge_pairwise(judge, tok, 'q', 'aaa', 'bb',
+                                         return_mass=True)
+        self.assertEqual(r.logits, (0.0625, -0.0625))
+        self.assertEqual((r.delta, r.position_bias, r.verdict),
+                         (0.0625, 0.0, 'a'))
+        self.assertGreater(mass.min(), 0.99)
+        self.assertEqual(judge.lm_head._forward_hooks, {})  # removed
+        # swapping the answers negates the log-odds
+        s = d2l.judge_pairwise(judge, tok, 'q', 'bb', 'aaa')
+        self.assertEqual((s.delta, s.verdict), (-0.0625, 'b'))
+
+    def test_head_that_does_not_give_the_logits(self):
+        tok = StubJudgeTok()
+        with self.assertWarnsRegex(UserWarning, 'output head does not'):
+            r = d2l.judge_pairwise(BF16Judge('aaa', softcap=True), tok, 'q',
+                                   'aaa', 'bb')
+        z = 30 * torch.tanh(torch.tensor([24.25, 24.25, 24.25, 24.375],
+                                         dtype=torch.bfloat16) / 30)
+        self.assertEqual(r.logits, (float(z[0]) - float(z[1]),
+                                    float(z[2]) - float(z[3])))
+
+    def test_tiny_qwen3_bf16(self):
+        import transformers
+        tok = TestJudgeTokenizers.tokenizer('Qwen/Qwen3-0.6B')
+        torch.manual_seed(0)
+        model = transformers.Qwen3ForCausalLM(transformers.Qwen3Config(
+            vocab_size=151936, hidden_size=64, intermediate_size=128,
+            num_attention_heads=4, num_key_value_heads=2, head_dim=16,
+            num_hidden_layers=2, tie_word_embeddings=True,
+            attn_implementation='sdpa')).eval()
+        with torch.no_grad():
+            for p in model.parameters():
+                p.normal_(0, 0.5)
+            model.model.norm.weight.fill_(5.0)  # logits of order 10 to 30
+        model = model.to(torch.bfloat16)
+        q, a, b = 'What is 2 + 2?', '4', 'Five.'
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            r = d2l.judge_pairwise(model, tok, q, a, b)
+        AB = [tok.encode(c, add_special_tokens=False)[0] for c in 'AB']
+        expect, rounded = [], []
+        for first, second in ((a, b), (b, a)):
+            text = tok.apply_chat_template(
+                [{'role': 'user', 'content': d2l.JUDGE_RUBRIC_V1.format(
+                    question=q, first=first, second=second)}],
+                tokenize=False, add_generation_prompt=True,
+                enable_thinking=False)
+            X = torch.tensor([tok(text, add_special_tokens=False)
+                              ['input_ids']])
+            with torch.no_grad():
+                h = model.model(input_ids=X).last_hidden_state[0, -1]
+                zab = h.float() @ model.lm_head.weight[AB].float().T
+                bf = model(input_ids=X).logits[0, -1, AB].float()
+            expect.append(float(zab[0] - zab[1]))
+            rounded.append(float(bf[0] - bf[1]))
+            self.assertGreater(float(bf.abs().min()), 8)
+        np.testing.assert_allclose(r.logits, expect, rtol=1e-5, atol=1e-5)
+        # the bf16 logits would have given other log-odds
+        self.assertGreater(np.abs(np.subtract(expect, rounded)).max(), 1e-3)
 
 
 if __name__ == '__main__':

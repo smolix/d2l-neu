@@ -9,7 +9,8 @@ uses these symbols at import time). It holds the library code that
 :numref:`sec_lm_eval_suites` explains in one sentence and does not show:
 the dataset adapters `d2l.EVAL_ADAPTERS`, the task registry
 `d2l.EVAL_TASKS`, the frozen suite manifests `d2l.EVAL_SUITES`, the row
-loader `_eval_load_rows`, the item renderer `_eval_items`, the run-cache
+loader `_eval_load_rows`, the task normalizer `_eval_canonical`, the item
+renderer `_eval_items`, the run-cache
 helpers `_eval_model_id` and `_eval_cache_*`, and the manifest and
 save/load methods of `d2l.EvalSuite` and `d2l.EvalResult`. Every block is
 tagged `%%tab pytorch` and imports third-party modules inside its
@@ -70,7 +71,9 @@ def _eval_arc(row, i):
 #@save
 def _eval_hellaswag(row, i):
     """HellaSwag, cleaned as lm-evaluation-harness does: 'label: context'
-    as the question, the four endings as options."""
+    as the question, the four endings as options. With fmt='continuation'
+    the context is the prompt and each ending continues it, as in the
+    harness."""
     def clean(text):
         text = text.strip().replace(' [title]', '. ')
         return re.sub(r'\[.*?\]', '', text).replace('  ', ' ')
@@ -159,11 +162,34 @@ EVAL_ADAPTERS = {  # dataset row and its index -> an item
 ```{.python .input #eval-suites-lib-items}
 %%tab pytorch
 #@save
+def _eval_canonical(task):
+    """task with canonical JSON values (numpy numbers and arrays become
+    Python ones; files and stop become tuples, a string being one entry).
+    Refuses sampling keys that run() sets itself."""
+    def plain(x):
+        if hasattr(x, 'tolist'):
+            return x.tolist()
+        raise TypeError(f'task {task.id}: {x!r} is not JSON')
+    d = json.loads(json.dumps(task._asdict(), default=plain))
+    for key in ('files', 'stop'):
+        d[key] = (d[key],) if isinstance(d[key], str) else tuple(d[key] or ())
+    clash = sorted(set(d['sampling'] or ()) & {
+        'seed', 'stop', 'chat', 'enable_thinking', 'batch_size',
+        'max_new_tokens'})
+    if clash:
+        raise ValueError(f'task {task.id}: sampling sets {clash}, which '
+                         'run() derives from the task and its seed')
+    return task._replace(**d)
+
+#@save
 def _eval_items(task, rows, ids):
     """The items rows[ids] of task, adapted by EVAL_ADAPTERS[task.adapter]
     and rendered: 'mc' items get a prompt and choices from format_mc in
-    task.fmt with task.shots demonstrations (after the item's header);
-    'gen' items get a prompt from fewshot_prompt in task.template. The
+    task.fmt with task.shots demonstrations (after the item's header), or,
+    with fmt='continuation', the question as the prompt and each option
+    after a space as a choice (demonstrations: question and answer, blank
+    lines between); 'gen' items get a prompt from fewshot_prompt in
+    task.template. The
     demonstrations come from task.shots_from: {'split', 'ids'} (rows of
     that split) or '<split>:same_subject' (the first rows of that split
     with the item's subject)."""
@@ -199,7 +225,13 @@ def _eval_items(task, rows, ids):
         if k and len(shots) < k:
             raise ValueError(f"task {task.id}: {len(shots)} of {k} shots "
                              f"for item {item['id']}")
-        if task.kind == 'mc':
+        if task.kind == 'mc' and task.fmt == 'continuation':
+            demos = [s['question'] + ' ' + s['options'][s['gold']]
+                     for s in shots]
+            prompt = '\n\n'.join(demos + [item['question']])
+            item['prompt'] = item.get('header', '') + prompt
+            item['choices'] = [' ' + o for o in item['options']]
+        elif task.kind == 'mc':
             prompt, item['choices'] = d2l.format_mc(
                 item['question'], item['options'], task.fmt,
                 shots=[(s['question'], s['options'], s['gold'])
@@ -228,7 +260,7 @@ EVAL_TASKS = {t.id: t for t in (  # pinned revisions and explicit files
     EvalTask('hellaswag', 'Rowan/hellaswag',
              '218ec52e09a7e7462a5400043bb9a69a41d06b76',
              ('data/validation-00000-of-00001.parquet',), 'mc', 'hellaswag',
-             split='validation', norm='char'),
+             split='validation', fmt='continuation', norm='char'),
     EvalTask('mmlu', 'cais/mmlu', 'c30699e8356da336a370243923dbaf21066bb9fe',
              ('all/test-00000-of-00001.parquet',
               'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu', config='all',
@@ -390,10 +422,10 @@ def save(self, path):
         f.write('\n')
 
 @d2l.add_to_class(d2l.EvalResult)  #@save
-@staticmethod
-def load(path):
+@classmethod
+def load(cls, path):
     """An EvalResult written by save."""
     with open(os.path.splitext(path)[0] + '.json', encoding='utf-8') as f:
         meta = json.load(f)
-    return d2l.EvalResult(pd.read_parquet(path), meta)
+    return cls(pd.read_parquet(path), meta)
 ```

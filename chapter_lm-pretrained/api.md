@@ -43,3 +43,307 @@ when the section is written.
 - Code and documentation: Hugging Face, [Inference Providers](https://huggingface.co/docs/inference-providers/index) (the router, provider policies and the `model:provider` suffix), its [chat-completion specification](https://huggingface.co/docs/inference-providers/tasks/chat-completion) and [pricing and billing](https://huggingface.co/docs/inference-providers/pricing); [openai-python](https://github.com/openai/openai-python) (clients, `usage` types, default retries); Transformers, [Serving](https://huggingface.co/docs/transformers/main/en/serving) (`transformers serve`, its endpoints and limits); vLLM, [OpenAI-compatible server](https://docs.vllm.ai/en/latest/serving/online_serving/) (the local fallback); [DeepSeek-V4.1-Flash-1017 model card](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017) (the flagship: licence, recommended sampling, the prompt encoder); [Qwen3.8 README](https://github.com/QwenLM/Qwen3.8) (the second arm's controls); OpenRouter, [provider selection](https://openrouter.ai/docs/guides/routing/provider-selection) (pinning a provider with fallbacks off) and [reasoning tokens](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens) (the `reasoning` field; reasoning tokens count against the output limit); [RFC 6585](https://www.rfc-editor.org/rfc/rfc6585) (HTTP 429).
 - Courses, tutorials and blogs: AWS Architecture Blog, [Exponential Backoff and Jitter](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/) (the schedules behind `backoff_delay`); Thinking Machines, [Defeating Nondeterminism in LLM Inference](https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/) (why temperature 0 is not deterministic); [lm-evaluation-harness API guide](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/API_guide.md) (evaluating through chat completions).
 -->
+
+```{.python .input #api-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #api-imports-extra}
+%%tab pytorch
+import asyncio
+import collections
+import hashlib
+import heapq
+import json
+import os
+import random
+import time
+import pandas as pd
+from scipy import stats
+```
+
+<!-- Placeholder (stage 2): the request hash keys a replay cache on everything that can change the output and nothing secret. -->
+
+```{.python .input #api-request-hash}
+%%tab pytorch
+#@save
+def request_hash(base_url, model, messages, params, replica=0):
+    """sha256 of the canonical JSON (sorted keys, no whitespace, UTF-8) of
+    what can change a response: the endpoint's hostname, the model, the
+    messages, the merged parameters (None values dropped) without the
+    transport fields stream, stream_options, timeout and extra_headers, and
+    the client-side replica number."""
+    from urllib.parse import urlsplit  # not in the d2l library preamble
+    transport = ('stream', 'stream_options', 'timeout', 'extra_headers')
+    params = {k: v for k, v in d2l._chat_merge(params, {}).items()
+              if k not in transport}
+    key = {'host': urlsplit(base_url).hostname, 'model': model,
+           'messages': messages, 'params': params, 'replica': replica}
+    blob = json.dumps(key, sort_keys=True, separators=(',', ':'),
+                      ensure_ascii=False)
+    return hashlib.sha256(blob.encode('utf-8')).hexdigest()
+```
+
+<!-- Placeholder (stage 2): what changes the hash and what does not. -->
+
+```{.python .input #api-hash-demo}
+%%tab pytorch
+url = 'https://openrouter.ai/api/v1'
+model = 'deepseek/deepseek-v4.1-flash-1017'
+messages = [{'role': 'user', 'content': 'What is 17 * 23?'}]
+pin = {'only': ['novita'], 'allow_fallbacks': False,
+       'require_parameters': True}
+params = {'temperature': 0, 'seed': 0, 'max_tokens': 64,
+          'extra_body': {'provider': pin}}
+variants = {
+    'request': (url, params, 0),
+    'stream=True': (url, {**params, 'stream': True}, 0),
+    'another API key': (url, {**params, 'extra_headers': {
+        'Authorization': 'Bearer another-key'}}, 0),
+    'replica=1': (url, params, 1),
+    'seed=1': (url, {**params, 'seed': 1}, 0),
+    'provider parasail': (url, {**params, 'extra_body': {
+        'provider': {**pin, 'only': ['parasail']}}}, 0)}
+for name, (u, p, replica) in variants.items():
+    print(f'{name:18s}', request_hash(u, model, messages, p, replica)[:12])
+```
+
+<!-- Placeholder (stage 2): cost is arithmetic on usage and a dated price. -->
+
+```{.python .input #api-price}
+%%tab pytorch
+#@save
+PricePoint = collections.namedtuple(  # USD per `per` tokens
+    'PricePoint', ['input', 'output', 'cached_input', 'per'],
+    defaults=(None, 1_000_000))
+
+#@save
+def api_cost(usage, price):
+    """Cost in USD of one response, ((p - c) input + c cached_input +
+    o output) / per, with p prompt, c cached and o completion tokens from
+    usage (reasoning tokens are inside o). cached_input None means no
+    discount; missing cached tokens count as 0; missing prompt or
+    completion tokens raise ValueError."""
+    p, o = usage.get('prompt_tokens'), usage.get('completion_tokens')
+    if p is None or o is None:
+        raise ValueError(f'usage lacks prompt or completion tokens: {usage}')
+    c = usage.get('cached_tokens') or 0
+    cached = price.input if price.cached_input is None else price.cached_input
+    return ((p - c) * price.input + c * cached + o * price.output) / price.per
+```
+
+<!-- Placeholder (stage 2): full-jitter backoff, the formula of the derivation. -->
+
+```{.python .input #api-backoff}
+%%tab pytorch
+#@save
+def backoff_delay(attempt, base=1.0, cap=60.0, rng=None, retry_after=None):
+    """Full-jitter sleep after failed attempt `attempt` (0, 1, ...): uniform
+    on [0, min(cap, base 2^attempt)], and at least the server's
+    Retry-After."""
+    rng = rng or random
+    return max(retry_after or 0, rng.uniform(0, min(cap, base * 2**attempt)))
+```
+
+<!-- Placeholder (stage 2): one call: cache by mode, cost reservation, the retry loop, settling and recording. -->
+
+```{.python .input #api-achat}
+%%tab pytorch
+@d2l.add_to_class(d2l.ChatAPI)  #@save
+async def achat(self, messages, *, replica=0, stream=False, **params):
+    """One chat completion as a d2l.ChatResult. The cache answers first when
+    the mode allows; a live call reserves its worst-case cost, retries
+    connection errors, timeouts and 408, 429 and 5xx responses with
+    full-jitter backoff (Retry-After as a floor), and raises at once on any
+    other status."""
+    import asyncio  # not in the d2l library preamble
+    params = d2l._chat_merge(self.default_params, params)
+    h = d2l.request_hash(self.base_url, self.model, messages, params, replica)
+    self._stats['calls'] += 1
+    hit = self._lookup(h, messages)  # raises ReplayMiss in replay mode
+    if hit is not None:
+        return hit
+    reserved = self._reserve(messages, params)  # raises CostCapExceeded
+    t_send, n_retries, n_429 = time.monotonic(), 0, 0
+    created = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    try:
+        for attempt in range(self.max_retries + 1):
+            try:
+                out = await self._send(messages, params, stream, h, replica,
+                                       attempt)
+                break
+            except Exception as e:
+                retry, status, retry_after = self._retry_info(e)
+                n_429 += status == 429
+                if not retry or attempt == self.max_retries:
+                    e.n_retries, e.n_429 = n_retries, n_429
+                    raise
+                n_retries += 1
+                await asyncio.sleep(d2l.backoff_delay(
+                    attempt, self.backoff_base, self.backoff_cap, self.rng,
+                    retry_after))
+    except BaseException:
+        self._settle(reserved, 0.0)
+        raise
+    return self._record(h, messages, params, replica, out, t_send, created,
+                        n_retries, n_429, reserved)
+```
+
+<!-- Placeholder (stage 2): many requests with bounded concurrency, in input order. -->
+
+```{.python .input #api-chat-batch}
+%%tab pytorch
+#@save
+async def chat_batch(api, requests, *, concurrency=8):
+    """Send requests (dicts with 'messages', optionally 'replica' and request
+    parameters) through api with at most `concurrency` in flight; results
+    come in input order, a failed request as its exception."""
+    import asyncio  # not in the d2l library preamble
+    semaphore = asyncio.Semaphore(concurrency)
+    async def one(request):
+        request = dict(request)
+        messages = request.pop('messages')
+        async with semaphore:
+            try:
+                return await api.achat(messages, **request)
+            except Exception as e:
+                return e
+    return await asyncio.gather(*(one(r) for r in requests))
+```
+
+<!-- Placeholder (stage 2): the SDK's own retries are off, so the client counts every 429. -->
+
+```{.python .input #api-retry-mock}
+%%tab pytorch
+hello = [{'role': 'user', 'content': 'Hello'}]
+fake = d2l.FakeChatServer(0.01, 1, script=[429, 429, 200])
+api = d2l.ChatAPI('http://fake.local/v1', 'fake-model', mode='live',
+                  http_client=fake.transport())
+r = api.chat(hello, max_tokens=8)
+print(f'attempts {fake.n_requests}, 429s {r.n_429}, retries {r.n_retries}')
+fake = d2l.FakeChatServer(0.01, 1, script=[401])
+api = d2l.ChatAPI('http://fake.local/v1', 'fake-model', mode='live',
+                  http_client=fake.transport())
+try:
+    api.chat(hello, max_tokens=8)
+except Exception as e:
+    print(f'{type(e).__name__} after {fake.n_requests} attempt')
+```
+
+<!-- Placeholder (stage 2): the derivation's mean sleep, and 64 clients that failed together. -->
+
+```{.python .input #api-backoff-check}
+%%tab pytorch
+p, K, rng = 0.3, 6, random.Random(0)
+def total_sleep():
+    sleep = 0.0
+    for a in range(K):
+        if rng.random() >= p:
+            break
+        sleep += d2l.backoff_delay(a, 1.0, 60.0, rng)
+    return sleep
+draws = np.array([total_sleep() for _ in range(200_000)])
+formula = sum(p**(a + 1) * min(60, 2**a) / 2 for a in range(K))
+print(f'E[S] = {formula:.4f} s; simulated {draws.mean():.4f} '
+      f'+- {3 * draws.std() / np.sqrt(len(draws)):.4f} s (3 sigma)')
+
+def retry_storm(n=64, rate=10, jitter=True, seed=0):
+    """Simulated time: n clients send at t = 0 to a server that admits at
+    most `rate` requests in any one-second window and rejects the rest; a
+    rejected client sleeps and retries. Returns attempts and finish time."""
+    rng, admitted = random.Random(seed), collections.deque()
+    events, attempts, t_done = [(0.0, i, 0) for i in range(n)], 0, 0.0
+    while events:
+        t, i, a = heapq.heappop(events)
+        attempts += 1
+        while admitted and admitted[0] <= t - 1:
+            admitted.popleft()
+        if len(admitted) < rate:
+            admitted.append(t)
+            t_done = max(t_done, t)
+        else:
+            d = d2l.backoff_delay(a, rng=rng) if jitter else min(60, 2**a)
+            heapq.heappush(events, (t + d, i, a + 1))
+    return attempts, t_done
+for jitter in (False, True):
+    attempts, t_done = retry_storm(jitter=jitter)
+    print(f'jitter {jitter!s:5}: {attempts} attempts, all done at '
+          f'{t_done:.1f} s')
+```
+
+<!-- Placeholder (stage 2): Little's law on the client's own timestamps, measured on the steady window. -->
+
+```{.python .input #api-closed-loop}
+%%tab pytorch
+#@save
+def closed_loop_stats(results, c):
+    """Throughput and latency of a closed loop that kept c requests in
+    flight. Exceptions count as n_failed and are excluded. For the N
+    remaining results let s_i = t_send, f_i = s_i + t_total and f_(1) <= ...
+    <= f_(N) the sorted completion times; N <= 2c raises ValueError. The
+    steady window runs from t_a = f_(c) to t_b = f_(N-c). X counts the
+    completions with t_a < f_i <= t_b per second of the window and X_tokens
+    their completion tokens; W is the mean of f_i - s_i over requests with
+    s_i >= t_a and f_i <= t_b; Lbar = sum_i max(0, min(f_i, t_b) -
+    max(s_i, t_a)) / (t_b - t_a) is the mean number in flight. little =
+    X W / c checks the client's bookkeeping, sustained = Lbar / c that it
+    kept c in flight. ttft_p50 and ttft_p90 (from t_first) are over all N."""
+    ok = [r for r in results if not isinstance(r, BaseException)]
+    N = len(ok)
+    if N <= 2 * c:
+        raise ValueError(f'{N} results at c = {c}; need more than 2c')
+    s = np.array([r.t_send for r in ok])
+    f = s + np.array([r.t_total for r in ok])
+    t_a, t_b = np.sort(f)[[c - 1, N - c - 1]]
+    window = t_b - t_a
+    if window <= 0:
+        raise ValueError('the steady window is empty')
+    done = (f > t_a) & (f <= t_b)  # completions inside the window
+    inside = (s >= t_a) & (f <= t_b)  # requests wholly inside it
+    tokens = np.array([r.usage.get('completion_tokens') or 0 for r in ok])
+    X = done.sum() / window
+    W = (f - s)[inside].mean() if inside.any() else float('nan')
+    Lbar = np.clip(np.minimum(f, t_b) - np.maximum(s, t_a), 0, None).sum()
+    ttft = [r.t_first - r.t_send for r in ok if r.t_first is not None]
+    p50, p90 = (map(float, np.percentile(ttft, [50, 90])) if ttft
+                else (None, None))
+    return {'X': float(X), 'X_tokens': float(tokens[done].sum() / window),
+            'W': float(W), 'Lbar': float(Lbar / window),
+            'little': float(X * W / c), 'sustained': float(Lbar / window / c),
+            'ttft_p50': p50, 'ttft_p90': p90,
+            'n_429': sum(getattr(r, 'n_429', 0) or 0 for r in results),
+            'n_retries': sum(getattr(r, 'n_retries', 0) or 0 for r in results),
+            'n_failed': len(results) - N, 'window': float(window),
+            'n_window': int(done.sum())}
+```
+
+<!-- Placeholder (stage 2): the fake server has a known W_0 and X_max, so the measured curve can be checked against the formula. -->
+
+```{.python .input #api-littles-fake}
+%%tab pytorch
+service_time, capacity = 0.1, 8  # X_max = 80 requests per second
+api = d2l.ChatAPI('http://fake.local/v1', 'fake-model', mode='live',
+                  http_client=d2l.FakeChatServer(service_time,
+                                                 capacity).transport())
+rows = []
+for c in (1, 2, 4, 8, 16, 32):
+    requests = [{'messages': [{'role': 'user', 'content': f'question {i}'}],
+                 'max_tokens': 16} for i in range(8 * c)]
+    stats_c = closed_loop_stats(await chat_batch(api, requests,
+                                                 concurrency=c), c)
+    rows.append({'c': c, 'X': stats_c['X'], 'W': stats_c['W'],
+                 'little': stats_c['little'],
+                 'sustained': stats_c['sustained']})
+table = pd.DataFrame(rows)
+W_0 = table['W'][0]  # as the client sees it: service time plus its own work
+table['formula X'] = np.minimum(table['c'] / W_0, capacity / service_time)
+assert (abs(table['X'] / table['formula X'] - 1) < 0.05).all()
+assert (abs(table[['little', 'sustained']] - 1) < 0.02).all().all()
+table.round(3)
+```

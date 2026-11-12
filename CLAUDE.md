@@ -1,150 +1,71 @@
 # D2L-Neu Project Context
 
 Rebuild of "Dive into Deep Learning" (d2l.ai) using Quarto.
-See **docs/architecture.md** for the component inventory and the build flow, and
-**docs/build-system.md** for the *decoupled* build model (committed notebook-
-output store, capture/bless workflow, CPU-only rendering, host-capability-aware
-freshness gate) — the design, now landed, that lets site/slide rendering run
-without re-executing notebooks.
 
-## Getting started (orientation — read before building)
+**Building anything? Read `docs/build-guide.md` first**: mental model,
+glossary and step-by-step recipes (render, refresh a notebook, library
+changes, new sections, full rebuild, locks, PDFs, publishing, a failing
+freshness gate). Reference: `docs/build-system.md` (store, freshness, targets,
+pitfalls), `docs/notebook-scheduler.md` (execution), `docs/architecture.md`
+(what each tool is).
 
-> **macOS / which `make`.** Every `make` below means **GNU Make ≥ 4.3**. macOS's
-> system `/usr/bin/make` is 3.81 and the Makefile stops immediately with a
-> pointer here (it uses 4.3+ grouped targets). Install a modern make and run
-> **`gmake`**: `sudo port install gmake` (MacPorts). Everything in this section
-> works on an Apple-silicon laptop with **no GPU**.
+## Getting started
 
-**Fresh clone? One-time setup** (CPU-only — no GPU, no framework venvs):
+`make` means **GNU Make ≥ 4.3**; on macOS install it (`sudo port install
+gmake`) and type `gmake`. Rendering needs no GPU and no framework venv.
 
 ```bash
-./bootstrap.sh                          # git-lfs + .venv-build (Quarto); pulls LFS assets
-gmake html                              # render the whole book from committed outputs/
+./bootstrap.sh                          # once: git-lfs, .venv-build (Quarto), LFS images
+make html                               # render the book from the committed outputs/
 python3 -m http.server 8000 -d _book    # preview at http://localhost:8000/
 ```
 
-**Which target?** (`[any]` runs on macOS/CPU; `[GPU]` needs NVIDIA GPUs)
+| You want to… | Command | Needs | Guide |
+|---|---|---|---|
+| Render the HTML book | `make html` | any host | §4.1 |
+| Render everything, no execution | `make all-quick` | any host (+TeX) | §3 |
+| PDFs / part PDFs / slides | `make pdfs` / `make pdf-parts` / `make slides` | any host (+TeX) | §4.9 |
+| Refresh one notebook's outputs | `rm -f _notebooks/<fw>/<ch>/<f>.executed && make _notebooks/<fw>/<ch>/<f>.executed`, then `python3 tools/capture_outputs.py --frameworks <fw> <ch>/<f>.md` | that venv; GPU for GPU notebooks | §4.3 |
+| After a `#@save` change | `make lib notebooks && make audit-outputs`, then `make refresh-stale` | GPU box | §4.4 |
+| Why does `make html` say stale? | `make audit-outputs` | any host | §4.12 |
+| Full pipeline | `ulimit -u 8000; make all`, then `make capture-outputs` if `0 failed` | GPU box, 2.5–3 h | §4.7 |
+| Re-run a locked notebook | `make rerun-locked FILES=...`, then `make capture-outputs FILES=... UNLOCK=1` | its hardware | §4.8 |
+| Publish | `make deploy` | credentials | §4.11 |
+| Resource plan | `make detect` | any host | — |
 
-| You want to… | Command | Needs |
-|---|---|---|
-| Render the book (HTML, all 4 framework tabs) | `gmake html` | `[any]` |
-| Render everything from the store (html+pdfs+slides+lib, no execution) | `gmake all-quick` | `[any]` |
-| Build PDFs / slides | `gmake pdfs` / `gmake slides` | `[any]` |
-| Refresh one CPU notebook's outputs | `gmake -B _notebooks/<fw>/<ch>/<f>.executed && gmake capture-outputs FILES=<ch>/<f>.md` | `[any]`* |
-| See the detected resource / parallelism plan | `gmake detect` | `[any]` |
-| Execute **all** notebooks + rebuild (full pipeline) | `gmake all` | `[GPU]` |
-| Re-execute only stale notebooks, then re-render | `gmake render-fresh` | `[GPU]`* |
-
-**No GPU is needed to render the book, PDFs, or slides, or to re-run CPU
-notebooks.** Only executing CUDA/GPU notebooks needs a GPU box; on a GPU-less
-host the freshness gate *defers* (warns about) stale GPU notebooks instead of
-failing (`*` — see the capability-aware gate below).
-
-**Repo shape.** Source `.md` files (in `chapter_*/`) are the source of truth;
-the preprocessor `tools/d2l_preprocess.py` runs with `SOURCE=.` (this repo, not
-`../d2l-en`) and emits `chapter_*/*.qmd` which are **generated + gitignored** —
-never edit them. `outputs/` is the **committed** store of executed notebook
-outputs (text inline in JSON manifests, images in Git LFS); `_book/` (HTML),
-`_notebooks/` (scratch executed notebooks), `_slides/`, `_pdf/`, `logs/` are all
-gitignored build products.
-
-**Venvs.** One per framework (`.venv-pytorch`, `.venv-tensorflow`, `.venv-jax`,
-`.venv-mxnet`) plus `.venv-build` (Quarto only). Managed by `uv` via `make
-venv-<fw>`. **torch is pinned to 2.11.0 / torchvision 0.26.0** — the version the
-committed store was captured under (freshness keys on the *public* version, so
-the Linux `+cu128` wheel and the macOS arm64 wheel of 2.11.0 both match). To move
-to 2.12: bump the pin in `pyproject.toml` **and** re-capture the store.
-
-**Render + preview locally (CPU, no GPU needed):**
-
-```bash
-make html                                   # reads outputs/; gate is host-capability-aware
-python3 -m http.server 8000 -d _book        # preview at http://localhost:8000/
-```
-
-`make html` runs `tools/audit_outputs.py --verify-fresh`. That gate is tiered by
-host GPU count (`docs/build-system.md` §3.3a): a **CPU box renders the whole
-book**, deferring (warning, not failing) only stale notebooks it lacks the GPUs
-to re-execute; a single-GPU box defers only multi-GPU notebooks; a ≥2-GPU box is
-strict. So you can always render here; you only *re-run* what your hardware
-supports.
-
-**Surgically refresh one notebook's outputs** (CPU notebooks, locally — no GPU
-box, no full rebuild):
-
-```bash
-make -B _notebooks/<fw>/<chapter>/<file>.executed   # regen + execute that one
-make capture-outputs FILES=<chapter>/<file>.md      # bless into outputs/
-make html                                           # re-render
-```
-
-**Edit/run notebooks in VS Code:** `make kernels` once (registers the four
-`d2l-<fw>` ipykernels), then the `.vscode-extension/` "Edit Framework View"
-command (`Cmd+E Cmd+J`) opens the per-framework notebook with its kernel
-pre-selected. See `.vscode-extension/README.md`.
-
-**Where to look:** build/freshness model → `docs/build-system.md`; component
-inventory → `docs/architecture.md`; `:label:`/`:numref:`/`:eqlabel:` directive
-semantics → `docs/syntax.md`; how to author chapter content → the "Content
-authoring" section below.
+Venvs: one per framework (`.venv-pytorch`, `-tensorflow`, `-jax`, `-mxnet`,
+via `make venv-<fw>`) plus `.venv-build`. **torch is pinned to 2.11.0 /
+torchvision 0.26.0**, the version the store was captured under; moving to 2.12
+means bumping `pyproject.toml` **and** re-capturing the store. VS Code:
+`make kernels` once, then the `.vscode-extension/` "Edit Framework View"
+command (see `.vscode-extension/README.md`).
 
 ## Rules
 
-- Source .md files are the source of truth. **Never edit .qmd files** —
-  they are generated by d2l_preprocess.py and will be overwritten.
-- Use `make` targets for builds (not build.sh or manual venv invocations).
-  Makefile handles logging to `logs/` with timestamps.
-- Run notebook *execution* through `make run-all-notebooks` (all frameworks)
-  or `make run-notebooks-<fw>` (one framework). Both are driven by the unified
-  **`tools/notebook_scheduler.py`** — do NOT add an outer `make -j`, and do not
-  hand-roll parallel `run-notebooks-*`; the scheduler owns concurrency. It puts
-  every notebook on **one queue ordered framework-by-framework** (all pytorch,
-  then jax, …) and serves it as slots free: 1 GPU slot per 7.5 GiB of each GPU's
-  VRAM (tracked per physical GPU), 1 CPU slot per 8 cores. A notebook takes 1
-  slot by default (or 2-on-one-GPU / 2×1 / 2×2 if marked); 1-/2-GPU/CPU all mix,
-  no barrier and no per-relpath lock — the framework grouping keeps a notebook's
-  variants ~130 dispatches apart, so they never run together and can't race on
-  the shared `data/` tree. (CPU notebooks flow ahead onto free CPU slots even
-  while earlier frameworks' GPU work runs — it's just a queue.) Full reference:
-  **`docs/notebook-scheduler.md`** (summary in `docs/build-system.md` §6.7). Slide rendering is CPU-only and
-  parallel-safe (`make -j4 slides`). `make html` is a single `quarto render`
-  (it amortizes the crossref scan to ~2.4 s/page, ~9 min for the book;
-  per-file/subset renders do NOT amortize and flake under concurrency — §6.8) —
-  don't wrap it in `-j`.
-- **Locked notebooks** (paid API calls, A100/multi-node runs): a source `.md`
-  with `<!-- execution: locked; requires: openrouter -->` is never executed by
-  any build (`make all`, `run-*`, `refresh-stale`); its outputs are
-  materialized from `outputs/` and the scheduler reports `LOCKED (skipped)`.
-  Re-run only on request: `make rerun-locked FILES=<ch>/<f>.md
-  [FRAMEWORKS=pytorch]`, then `make capture-outputs FILES=... UNLOCK=1`.
-  Prose edits are free; a code-cell edit fails `make html` until re-run.
-  `make locks` lists them. See `docs/build-system.md` §3.7.
-- `make clean` keeps `data/`; use `make veryclean` to force re-download.
-- **Full build:** `make all` (lib → notebooks → run-all-notebooks → slides →
-  html → pdfs), or `make clean && make all` for a pristine run (~2–2.5 h on the
-  4×GPU box). `make all-quick` skips notebook execution (renders from the
-  committed `outputs/` store — CPU-only, no GPU). Before a full-concurrency
-  execution run, raise the thread limit in that shell: `ulimit -u 8000; make
-  all` (the default soft limit is 4096; 8000 leaves headroom under the 8192
-  hard cap for other work on the account). See `docs/build-system.md` §13.
+Each rule's reason and details are in `docs/build-guide.md` §5.
 
-## Build dependency notes
-
-- `make lib` rebuilds `d2l/*.py` from every source `#@save` block.
-  Because notebooks import `d2l`, a library rebuild can affect notebooks
-  outside the edited file and outside the edited framework. Rerun all
-  plausibly affected notebooks; when unsure, rerun all frameworks.
-- Notebook generation is per-framework, not per-file:
-  `make notebooks-pytorch` regenerates that framework's notebook set.
-- Notebook execution is tracked per notebook with
-  `_notebooks/<fw>/<chapter>/<file>.executed` stamps. Force a single stamp
-  target when rerunning a subset:
-  `make -B _notebooks/pytorch/chapter_x/foo.executed`.
-- Slide generation/rendering can be narrowed by source file, but Make
-  uses one `_slides/<fw>/.built` stamp. Force the target:
-  `make -B slides-jax SLIDES_FILTER=chapter_x/foo.md`.
-- `FILES=...` is the default for `SLIDES_FILTER`; slide rendering wants
-  source `.md` paths.
+- Source `.md` files are the source of truth. **Never edit `.qmd` files** or
+  anything under `_notebooks/`; they are regenerated.
+- Use `make` targets (they log to `logs/`), not manual venv invocations.
+- Notebook execution goes through the scheduler (`make run-all-notebooks`,
+  `make run-notebooks-<fw>`, `make refresh-stale`, or
+  `tools/notebook_scheduler.py --files`). **Never add an outer `make -j`**;
+  the scheduler owns concurrency (`docs/notebook-scheduler.md`).
+- **`make all` does not capture.** The book shows new outputs only after
+  `make capture-outputs` and a commit of `outputs/`.
+- **Capture only after a run that ended `0 failed`**, and only the frameworks
+  you executed: capture copies whatever generated notebook it is given.
+- Never wrap `make html` in `-j`, and never run it next to PDF or slide
+  renders or notebook runs in the same tree (`docs/build-system.md` §6.8).
+- Raise `ulimit -u 8000` before a full-concurrency run
+  (`docs/build-system.md` §13).
+- Never edit or reuse a cell ID; never edit source `.md` files during a
+  notebook run.
+- **Locked notebooks** (`<!-- execution: locked; ... -->`) are never executed
+  by a build; only `make rerun-locked` runs them (`docs/build-system.md` §3.7).
+- `make clean` keeps `data/`; `make veryclean` also deletes it.
+- A `#@save` change can stale notebooks in other chapters and frameworks; the
+  audit names them (`docs/build-system.md` §3.4).
 
 ## Source conventions (post-slides-refactor)
 
@@ -157,8 +78,8 @@ authoring" section below.
   `::: {.slide ...}` divs with `@<id>` (or `@<id>@<fw>`) placeholders
   pointing to code cells. Inline `[**…**]` markers no longer exist.
 - Slide rendering uses `eval: false`; outputs come from
-  `tools/inject_outputs.py slides`, matched by cell ID against
-  `_notebooks/<fw>/...`. Slides need no GPU.
+  `tools/inject_outputs.py slides`, matched by cell ID against the committed
+  `outputs/<fw>/...` store. Slides need no GPU.
 
 ## Content authoring (how to write a chapter)
 
@@ -343,8 +264,8 @@ when that directory is missing.
 - NVIDIA driver **590.48+** (CUDA 13.x driver line; backward-compatible
   with the CUDA 11.7/12.x pip toolkits the framework venvs install).
 - GPU count and GPU slot counts are auto-detected from
-  `nvidia-smi` (rule of thumb: ~11 GB per notebook job — 24 GB GPU → 2
-  jobs, 16 GB GPU → 1 job). Override with `NUM_GPUS=... GPU_SLOTS=...
+  `nvidia-smi` (one scheduler slot per 7.5 GiB of each card: 24 GB GPU → 3,
+  16 GB GPU → 2; `make detect`). Override with `GPU_SLOTS_PER=2,2,2,2
   CPU_SLOTS=...` on the make command line.
 - The custom MXNet wheel has native OpenCV 4.6 runtime dependencies. On
   Ubuntu 24.04 install `libopencv-core406t64 libopencv-imgproc406t64

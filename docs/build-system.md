@@ -1,16 +1,54 @@
 # Build System: Decoupled Notebook Execution & Site Rendering
 
-**Status:** **landed** — this decoupled model is the *current* reality, not a
-proposal. The `outputs/` store, `tools/capture_outputs.py`,
-`tools/audit_outputs.py`, the `inject_outputs.py` repoint, the Make rewiring
-(§6), and the Git-LFS setup (§7) are all in the tree and in use: `outputs/` is
-committed (≈1400 manifests + LFS assets), `make html` renders from it and gates
-on `tools/audit_outputs.py --verify-fresh`, and `bootstrap.sh` exists. The
-execution-*coupled* flow described in `architecture.md` has been **superseded**
-by this model (that doc's component inventory is still accurate; its "render
-reads `_notebooks/`" claim is historical). See **§16 Implementation status** for
-the per-piece state. Read this before changing anything in the
-notebook → output → render path.
+**What this is:** the reference for how notebooks are executed, how their
+outputs are stored and checked, and how the book is rendered and published.
+**When to read it:** when a recipe in [`build-guide.md`](build-guide.md) is not
+enough, when a build fails in a way the guide does not cover, or before you
+change anything in the notebook → output → render path. **New here? Read
+[`build-guide.md`](build-guide.md) first:** it has the mental model, a
+glossary and step-by-step recipes.
+
+## How to use this document
+
+Look up the section you need; the document is not meant to be read in order.
+Passages marked *Rationale* explain why a design was chosen and can be skipped
+when you only need to know what to do. Dated incidents ("fixed 2026-10-27")
+record why a guard exists; they are kept so the guard is not removed by
+mistake. Migration plans and implementation status moved to
+[`build-history.md`](build-history.md) on 2026-11-12. Section numbers are
+stable: code comments and other docs cite them.
+
+| § | Topic | Read it when |
+|---|---|---|
+| 0, 0.1 | Mental model; building on macOS / CPU-only hosts | first contact |
+| 1 | Why execution and rendering are separate (*Rationale*) | curious |
+| 2 | The committed `outputs/` store: layout, text vs LFS, manifest schema | reading or changing the store |
+| 3–3.3a | Freshness: fingerprints, staleness, gate severity, host tiers | the gate fails or a notebook looks stale |
+| 3.4, 3.4a | `#@save` library dependencies, shards, `LIB_ONLY_FILES` | you changed library code |
+| 3.5 | Capture, the freshness-disagreement trap, the capture guard | capture refused, or `refresh-stale` |
+| 3.6 | Output hygiene (ANSI, progress bars, line width) | odd characters in outputs |
+| 3.7 | Locked notebooks (the owner of all lock details) | expensive notebooks |
+| 4 | Numbering, `CHAPTER_NUMBERING`, cell IDs, integrity | adding or moving chapters |
+| 5 | Lifecycle overview (recipes live in the guide) | — |
+| 6–6.3 | Make targets, the staging override, forcing rebuilds | which target does what |
+| 6.4, 6.4.1 | Aggregate targets; hosted/Colab environment contracts | full builds, Colab |
+| 6.5 | Updating the MXNet wheel pin | wheel bumps |
+| 6.6–6.6b | PDF pitfalls, part PDFs, page size | PDF builds |
+| 6.7 | Resource detection and the scheduler (summary) | notebook execution |
+| 6.8 | Why the HTML render is one `quarto render` | render failures, speed |
+| 6.9 | Makefile layout, deploy targets, R2 buckets, timings | publishing, Makefile edits |
+| 6.10 | The hidden standard-imports cell | first cell of every notebook |
+| 7–9 | Git LFS; tool contracts; checks before merging | tooling work |
+| 11 | Runbook: first checkout, quick reference | — |
+| 12 | Slides and the store | slide work |
+| 13 | Failure modes and gotchas, by area | something broke |
+| 14, 15 | Guarantees; cross-references | — |
+| 10, 16 | Moved to [`build-history.md`](build-history.md) | — |
+
+The decoupled model has been in use since June 2026: `outputs/` is committed
+(676 manifests on 2026-11-12, images in Git LFS), and `make html` renders from
+it after `tools/audit_outputs.py --verify-fresh`. If a target or tool
+contradicts this document, the code is right; fix the document.
 
 ---
 
@@ -36,21 +74,22 @@ The book is produced by **two pipelines that share one narrow, committed seam.**
      make notebook-zips               source .md + outputs/  ─────┴─► _book/notebooks/d2l-<fw>.zip
 ```
 
-The two facts that make this possible already hold in the repo:
+Two facts make this work:
 
 1. **Quarto never executes code.** `_quarto.yml` sets `execute.enabled: false`.
    Rendering is a pure text transform; outputs are injected as *static*
    markdown (`::: {.cell-output}` divs, `![](…)` images) by
    `tools/inject_outputs.py`.
-2. **Execution and render already talk only through stable cell IDs.**
-   `inject_outputs.py` indexes a notebook by `cell.metadata.id`
-   (`index_ipynb_by_id`), not by position, and already fingerprints outputs to
-   dedup across frameworks (`_output_fingerprint`).
+2. **Execution and render talk only through stable cell IDs.**
+   `inject_outputs.py` looks outputs up by `cell.metadata.id`, not by
+   position, and fingerprints outputs to dedup across frameworks
+   (`_output_fingerprint`).
 
-So the *only* thing that ties rendering to execution today is that
-`inject_outputs` reads outputs out of the on-disk `_notebooks/` tree. We persist
-that tree's *content* (distilled) into git and repoint the readers. Nothing else
-about Quarto, numbering, or cross-refs changes.
+`inject_outputs.py` reads the committed store (`index_store_by_id`) whenever a
+manifest exists and falls back to `_notebooks/` only for a notebook that was
+never captured. `make all` executes into `_notebooks/` but does **not**
+capture, so its results reach the book only after `make capture-outputs`
+(§6.4).
 
 **The payoff:**
 
@@ -111,17 +150,16 @@ you only *re-run* what your hardware supports. First-time setup on a fresh Mac:
 
 ## 1. Why decouple
 
-Today every site target (`html`, `slides`, `pdf`) hard-depends on a locally
-populated `_notebooks/<fw>/` tree, which means a full site rebuild requires the
-four mutually-exclusive framework venvs, a CUDA stack, and ~110 GPU-minutes of
-execution — *even when the change is a CSS tweak or a new slide diagram.* That
-makes the high-value, low-risk work (layout, slides, visual quality) pay the
-price of the high-cost, high-variance work (notebook execution). Decoupling lets
-each run on its own cadence.
+*Rationale.* Before the store existed (until June 2026), every site target
+(`html`, `slides`, `pdf`) depended on a locally populated `_notebooks/<fw>/`
+tree, so a full site rebuild required the four mutually exclusive framework
+venvs, a CUDA stack and about 110 GPU-minutes of execution, even for a CSS
+tweak or a new slide diagram. Layout, slide and visual work paid the price of
+notebook execution. Separating the two lets each run on its own cadence.
 
-A second motivation: **partial re-execution**. Most edits touch a handful of
-notebooks. We want to re-run and re-publish exactly those, with a mechanism that
-keeps every index correct under partial execution (see §6).
+A second motivation is **partial re-execution**. Most edits touch a handful of
+notebooks; we re-run and re-publish exactly those, and every index stays
+correct under partial execution (§4).
 
 ---
 
@@ -156,15 +194,16 @@ This is the core storage decision (the "split pattern").
 | **Text** (`stream`, `text/plain`, `text/html`, `text/markdown`, error tracebacks) | **Inline** in the `.json` manifest, plain git | Reviewable diffs ("loss 0.34 → 0.31" shows as a one-line change); you *want* this history. |
 | **Images / binary** (`image/png`, `image/svg+xml`, `image/jpeg`, anything else) | **Asset file** under `outputs/<fw>/<chapter>/<stem>/`, tracked by **Git LFS** | Training plots churn every run (random init, shuffling, dropout, cuDNN autotune). Every blessed re-run adds image bytes permanently; LFS keeps them out of the packfile so clones stay lean and old versions are prunable. |
 
-Rationale for putting **all** text inline (not just "small" text): text is
+*Rationale* for putting **all** text inline (not just "small" text): text is
 reviewable and compresses well; the churn problem that motivates LFS is specific
-to binary blobs. A safety valve caps pathological text dumps (see §2.3,
-`max_inline_bytes`) — over the cap, the text is head/tail-truncated inline with
-an explicit `…[truncated N bytes]…` marker (the full book already trims noisy
-output; nothing reader-facing is lost). SVG is treated as binary (an asset) even
+to binary blobs. `capture_outputs.py --max-inline-bytes N` can cap a
+pathological text dump (over the cap, the text is head/tail-truncated inline
+with an explicit `…[truncated N bytes]…` marker), but the default is `0`, no
+cap, and every committed manifest records `"max_inline_bytes": 0`
+(2026-11-12). SVG is treated as binary (an asset) even
 though it is technically text, because matplotlib SVGs are large and churn like
 PNGs; *authored* diagram SVGs are a different thing and live in `img/auto/`
-(see §13).
+(see §12).
 
 > **Asset paths are stable, never content-addressed.** An asset is named
 > `<cellid>-<n>.<ext>` and **overwritten in place** on re-capture. Content-
@@ -185,10 +224,11 @@ PNGs; *authored* diagram SVGs are a different thing and live in `img/auto/`
   "framework": "pytorch",
   "provenance": {
     // Notebook-level invalidation keys (compared whole; see §3).
-    "framework_version": "torch==2.11.0+cu128",   // or the mxnet wheel tag, etc.
+    "framework_version": "torch==2.11.0",         // public version only (§3.1)
     "d2l_lib_fingerprint": "sha256:…",            // hash of just the d2l/_blocks/<fw>/*.py
                                                   //   this notebook uses (from its .d file)
-    "max_inline_bytes": 4096
+    "max_inline_bytes": 0                         // 0 = no cap (the default)
+    // locked notebooks only: "execution": {finished, runtime_s} (§3.7)
   },
   // NOTE: the manifest is a *pure function of the executed notebook + repo state*.
   // No wall-clock or HEAD-commit fields live here — otherwise re-capturing an
@@ -252,8 +292,7 @@ the hash. This signal pinpoints *which* cells drifted.
   files this notebook uses, directly or through other library symbols, read
   straight from its `.d` file (`tools/scan_d2l_usage.py` emits one per notebook
   → per-symbol block paths, closed transitively, §3.4). A `#@save` change
-  therefore marks *precisely* the notebooks that reach the changed symbol
-  stale — replacing CLAUDE.md's "when in doubt rerun all frameworks."
+  therefore marks exactly the notebooks that reach the changed symbol stale.
 - **`framework_version`** — the installed framework version, keyed on the
   PEP 440 **public** version only (`tools/capture_outputs.py:public_version`
   strips the local build segment, e.g. `torch==2.11.0+cu128` → `torch==2.11.0`).
@@ -291,6 +330,21 @@ A *stale* output means different things for the two storage classes:
   sample; the render **warns** but proceeds. You refresh it on a deliberate
   bless.
 
+Only `make html` runs the gate (`audit_outputs.py --verify-fresh`, the first
+step of the `_book/index.html` recipe). The slide and PDF targets have no gate
+of their own. Besides stale inline outputs the gate fails on orphaned cell IDs
+(§4.3), on locked notebooks with code drift (§3.7) and on images that are still
+Git-LFS pointers (`git lfs pull`).
+
+The gate compares the store against the *generated* notebooks in
+`_notebooks/`. Where a notebook has not been generated (a fresh clone), it
+checks only the no-manifest rule (§3.4) and lists the manifest under "no
+generated notebook"; run `make notebooks` (needs only `.venv-build`) to let it
+see edited code.
+
+The freshness-disagreement trap and the capture guard, which several tool
+comments cite as "§3.3", are described in §3.5.
+
 ### 3.3a Host-capability-aware gate: render anywhere
 
 The HARD gate of §3.3 only makes sense where the author could *act* on it. A
@@ -324,12 +378,11 @@ listing the deferred notebooks and render from the store meanwhile.
 
 ### 3.4 The d2l `#@save` ripple, made precise
 
-CLAUDE.md says a library rebuild "can affect notebooks outside the edited file
-and outside the edited framework — rerun all plausibly affected notebooks; when
-unsure, rerun all frameworks." The `d2l_lib_fingerprint` in each manifest
-replaces that guesswork: it covers the library code a notebook can reach
-(with the exceptions listed below), and `audit_outputs.py --stale` names the
-notebooks a library edit invalidates.
+A library rebuild can affect notebooks outside the edited file and outside the
+edited framework. The `d2l_lib_fingerprint` in each manifest covers the library
+code a notebook can reach (with the exceptions listed below), and
+`audit_outputs.py --stale` names the notebooks a library edit invalidates.
+Recipe: [build-guide.md §4.4](build-guide.md#44-change-a-save-library-function).
 
 **Shards.** `tools/build_lib.py` writes, next to each `d2l/<fw>.py`, one shard
 file `d2l/_blocks/<fw>/<name>.py` per module-level name a `#@save` block
@@ -399,19 +452,9 @@ passes it, which is the notebook that is flagged anyway.
 The `.d` files are regenerated whenever a source `.md` or any shard changes
 (`make/notebooks.mk`, `$(DEP_FILES)`); the scan takes about a second.
 
-**History (fixed 2026-10, #94).** Until then the list was not transitive (the
-JAX legend fix in `_trainer_validation_step` flagged none of the 27 JAX
-notebooks that train with `d2l.Trainer`; a `d2l.Residual` change missed the
-TF/MXNet users of `d2l.resnet18`), and a shard was named after
-`sorted(names)[0]` over all names including nested `def`s: the `plot` block
-became `has_one_axis.py`, so no notebook depended on `d2l.plot`, and two
-blocks could collide on one shard (PyTorch `train_ch6` and
-`train_concise_ch11` both became `init_weights.py`). That hid 8 PyTorch, 7
-TensorFlow, 6 MXNet and 18 JAX symbols. The fix changed the dependency list
-of all 622 notebooks (every notebook now also depends on `_preamble.py`;
-the renaming and the closure alone changed 481), so the first audit after
-`make lib` reports all of them stale once. The full re-run planned with the
-fix refreshes them.
+The dependency list became transitive, and shards got their current names, in
+October 2026 (#94); [build-history.md](build-history.md#library-dependency-tracking-before-94)
+records what the old scheme missed.
 
 **A notebook without a manifest is stale.** A source that produces a
 notebook for a framework (`file_frameworks`, the generator's own rule) and has
@@ -471,19 +514,23 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
 
 - **Never hand-authored.** Every `make capture-outputs` rewrites all inline
   outputs wholesale from the freshly executed notebook.
-- **Never rendered stale.** Every render target depends on
-  `verify-outputs-fresh`, which hard-fails if any *inline* output's
-  `code_fingerprint` has drifted from current source:
+- **Never rendered stale in HTML.** `make html` first runs
+  `audit_outputs.py --verify-fresh`, which hard-fails if a notebook the host
+  can re-run has a stale *inline* output (§3.3, §3.3a). The report lists each
+  notebook as
 
   ```
-  outputs/pytorch/chapter_x/foo.json  cell `foo-train-7`:
-    inline output stale — source changed since capture.
-    Fix: make _notebooks/pytorch/chapter_x/foo.executed && make capture-outputs FILES=chapter_x/foo.md
+  [HARD] pytorch     chapter_x/foo.md  — 2 cell(s) with changed code
+  ...
+  FAIL (verify-fresh): 1 notebook(s) have stale INLINE outputs you can re-run on
+  this host. Re-run + capture them, or use `make render-fresh`.
   ```
 
-  So no render can ship a stale inline output: it is regenerated (via the forced
-  re-run + capture) before any render that would otherwise present a drifted
-  value.
+  and the fix is a re-run plus capture
+  ([build-guide.md §4.3](build-guide.md#43-change-a-code-cell-and-refresh-its-outputs)).
+  Slides and PDFs have no gate of their own. `rebuild-book-artifacts` renders
+  the slides before `html`, so with a stale store `all` and `all-quick`
+  produce slides and then stop at the gate.
 
 - **Optional auto-regeneration.** `make render-fresh` = audit → re-execute *only*
   the stale notebooks → capture → render. This needs the relevant framework
@@ -498,9 +545,10 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
     `(framework, file)` `.executed` stamps (`audit_outputs.py --stale-stamps`)
     and `rm`s them, then feeds the stale *source* set to the unified scheduler
     (`notebook_scheduler.py --files <stale>`) for full GPU/CPU-slot parallel
-    dispatch. Removing the stamps is load-bearing — see the trap below. (The
-    earlier implementation looped `make -B …executed` one notebook at a time
-    with the GPU pool idle, then captured per file.)
+    dispatch. Removing the stamps is required — see the trap below.
+    `refresh-stale` then captures the stale set **whether or not every
+    notebook passed**; check the scheduler's `0 failed` line before
+    committing (build-guide.md §4.4).
   - `render-fresh` then rebuilds slides and PDFs with the same RAM-aware fleet as
     `rebuild-book-artifacts` (`$(MAKE) -j$(RENDER_JOBS)` under `RENDER_V8_ENV`),
     rather than a bare serial `make slides`.
@@ -558,7 +606,18 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   > audit flags it, stamp-removal forces a re-run, and the guard refuses the stale
   > bless while still accepting a genuine re-capture.
 
-  Because `refresh-stale` now always re-executes the stale set, the *fast*
+  **Capture takes every generated notebook it is pointed at.**
+  `capture_outputs.py` selects each `_notebooks/<fw>/chapter_*/*.ipynb` that
+  matches `FILES` (all of them without `FILES`) and does not look at
+  `.executed` stamps. A notebook that was generated but never executed in this
+  tree has no sidecar, so the guard cannot object, and its manifest is
+  overwritten with whatever the `.ipynb` holds (outputs carried over by
+  `gen_notebooks.py` for unchanged cells, nothing for changed or new ones).
+  So capture all only after a complete green run, and when you re-ran only
+  some frameworks of a file, name them:
+  `python3 tools/capture_outputs.py --frameworks pytorch chapter_x/foo.md`.
+
+  Because `refresh-stale` always re-executes the stale set, the *fast*
   recovery for the "I just ran `make all` after editing sources, so the
   `_notebooks/` outputs are already fresh and I only need to bless them" case is a
   **direct capture**, which never re-executes:
@@ -657,11 +716,12 @@ python3 tools/audit_outputs.py                   # warns, never blocks a render
 
 `--check-noise` fails on any stored output carrying an ANSI escape, a
 progress-bar control character, or a line wider than `--max-line-width`
-(default 100). The default is derived, not guessed: the PDF's text block is A4
-minus 1in margins = 452.6pt, and `verbatim` is `\small` (10pt in an 11pt book)
-in Inconsolata at `Scale=0.9`, i.e. 0.5em = 4.5pt per character → ~100 columns.
-Past that, `fvextra`'s `breakanywhere` wraps mid-token; nothing is lost but it
-reads badly.
+(default 100). The default follows from the page: since 2026-11-11 the PDF's
+text block is 5.55 in = 399.6pt wide (§6.6b), and `verbatim` is `\small` (9pt
+in the 10pt book) in Inconsolata at `Scale=0.9`, i.e. 0.5em ≈ 4.05pt per
+character → about 99 columns. (The A4/11pt layout before it gave the same
+~100.) Past that, `fvextra`'s `breakanywhere` wraps mid-token; nothing is lost
+but it reads badly.
 
 The plain `audit_outputs.py` report (which `make html` runs via
 `--verify-fresh`) prints the same findings as a **warning** so regressions
@@ -846,7 +906,7 @@ reorders the emitted `d2l/<fw>.py` library but not its freshness shards
 Hand-numbered figures that show chapter numbers (`img/front-book-org.svg`,
 drawn by `tools/gen_mdl_front_figures.py`) must be regenerated by hand.
 
-**Dict order is load-bearing for the PDF.** `gen_pdf.py` emits the PDF book's
+**Dict order matters for the PDF.** `gen_pdf.py` emits the PDF book's
 chapter list from `PDF_CHAPTER_FILES` — i.e. `CHAPTER_NUMBERING` **dict order**
 — and `fix_latex.py` pairs the rendered tex's `\chapter` commands against that
 same list *positionally*. HTML instead follows `_quarto.yml` order. If the two
@@ -865,114 +925,110 @@ synthetic book (no `\appendix`, 33/39/40 for math, Tools and GP).
 Injection is keyed by **stable cell IDs**. `tools/add_cell_ids.py` is idempotent
 and **never renumbers** an id, even on rename or move. The store is keyed by
 `(source-file, framework, cell-id)`, so re-running notebook *X* updates only
-*X*'s entries and cannot perturb anyone else's. **Cell-id stability is the load-
-bearing invariant** — never break it.
+*X*'s entries and cannot perturb anyone else's. **Cell-id stability is the
+invariant everything else depends on** — never break it.
 
 ### 4.3 The integrity gate
 
-`tools/audit_outputs.py` enforces referential integrity (an extension of the
-existing `audit_slides.py` slide↔cell check) so partial blessing can't silently
-break a reference:
+`tools/audit_outputs.py` checks the store against the generated notebooks, so
+partial blessing cannot silently break a reference:
 
-- Every `@id` / injected cell a page or slide references **must** have a live
-  store entry. (Dangling reference → fail.)
-- Every store entry **must** map to a live source cell. (Orphaned output → warn /
-  prune.)
-- Every executed notebook cell with an id **should** be in the store. (Missing →
-  warn: capture skipped it.)
+- A manifest entry whose cell id is gone from the notebook is **ORPHANED**: an
+  integrity error. `make audit-outputs` exits non-zero and the `make html` gate
+  fails. Re-run and capture the notebook (a cell was deleted or a file split).
+- An id'd notebook cell with no manifest entry is **MISSING**: a warning
+  ("run capture"); the page shows the code without output.
+- A source file with code cells for a framework but no manifest at all is
+  hard-stale ("no manifest", §3.4).
 
-Run it in CI so a dangling id fails loudly instead of rendering a blank.
+The audit does not check slide `@<id>` placeholders; `gen_slides.py` resolves
+them when it renders a deck, and `tools/audit_slides.py` reviews slide
+blocks.
 
 ---
 
 ## 5. Lifecycle & workflows
 
+Step-by-step recipes live in [`build-guide.md`](build-guide.md) §4; this
+section states the model they follow.
+
 ### 5.1 Execute → Capture → Commit (on the GPU box)
 
-```bash
-# 1. Execute (unchanged): writes outputs into _notebooks/<fw>/ (scratch).
-make run-notebooks-pytorch                       # or one stamp:
-make -B _notebooks/pytorch/chapter_x/foo.executed
+1. **Execute** into `_notebooks/<fw>/` (scratch): `make run-all-notebooks`,
+   `make run-notebooks-<fw>`, one stamp (`rm` it, then
+   `make _notebooks/<fw>/<chapter>/<file>.executed`), or
+   `python3 tools/notebook_scheduler.py --files ...`. Every successful run
+   writes the execution sidecar (§3.5).
+2. **Capture** into `outputs/`: `make capture-outputs [FILES=...]`. Capture
+   rewrites the manifest of every generated notebook it selects, with no
+   mtime or stamp check (§3.5); a re-capture of an unchanged notebook is
+   byte-identical, so `git status outputs/` shows only real changes.
+3. **Review and commit** `outputs/` (text diffs are readable; images are LFS
+   pointers). Push over HTTPS with `gh`; LFS uploads the images there.
 
-# 2. Capture/bless: distill _notebooks/ → committed store + LFS assets.
-make capture-outputs                             # all that changed since last capture
-make capture-outputs FILES=chapter_x/foo.md      # just one source file (all fw)
-
-# 3. Review and commit deliberately.
-git status outputs/                              # text diffs are meaningful
-git add outputs/ && git commit -m "outputs: refresh chapter_x/foo (pytorch)"
-git push        # use gh/HTTPS — see CLAUDE.md memory; LFS pushes blobs here
-```
-
-`capture-outputs` only reads the notebooks that are newer than their manifest (or
-those named by `FILES=`), so a partial execution produces a partial capture
-produces a partial commit. That is the whole point.
+A partial execution produces a partial capture and a partial commit; that is
+the point of the design.
 
 ### 5.2 Render (on any machine, CPU-only)
 
-```bash
-uv sync --extra build          # only Quarto; no framework, no CUDA
-make html                      # reads outputs/ ; fails fast if inline outputs stale
-make -j4 slides
-make -j4 pdfs
-```
+`make html`, `make slides`, `make pdfs` and `make notebook-zips` read only the
+source and `outputs/`, and need only `.venv-build` (plus TeX for PDFs). A
+fresh clone renders the whole book. `GIT_LFS_SKIP_SMUDGE=1` gives a text-only
+checkout for prose or slide-structure work; plot images are missing until
+`git lfs pull`, and the gate then fails on the pointers. Per §3.3a, a CPU or
+single-GPU host renders the whole book and only defers the stale notebooks it
+lacks the GPUs to re-run.
 
-A fresh clone with only `.venv-build` renders the whole book. (LFS assets are
-fetched on clone; `GIT_LFS_SKIP_SMUDGE=1` gives a text-only checkout if you only
-need to edit prose/slides and don't care about plot images yet.)
+### 5.3 Partial / selective refresh
 
-This holds on *any* host, including one that has framework venvs and so can
-detect staleness: per §3.3a the gate is capability-tiered, so a CPU or
-single-GPU box renders the whole book — deferring (with a warning) only the
-stale notebooks it lacks the GPUs to re-execute, which the multi-GPU box
-refreshes on the canonical build. To re-run a CPU notebook locally without a
-full rebuild: `make -B _notebooks/<fw>/<chapter>/<file>.executed` then
-`make capture-outputs FILES=<chapter>/<file>.md`.
-
-### 5.3 Partial / selective refresh (convenience)
-
-```bash
-make audit-outputs             # report stale notebooks (the to-do list)
-make refresh-stale             # audit → re-execute ONLY stale notebooks → capture
-```
+`make audit-outputs` is the to-do list; `make refresh-stale` re-executes
+exactly the audit-stale set and captures it (§3.5); `make render-fresh` adds
+the slide, HTML and PDF renders.
 
 ### 5.4 The to-do model
 
-Staleness (what *could* be refreshed) and blessing (the explicit run-+-commit
-act) are separate. `audit-outputs` is the to-do list; you may bless a subset.
-Un-blessed stale notebooks keep rendering their committed outputs and stay on the
-list until you get to them (inline-stale ones block render and must be done
-first; asset-stale ones only warn). The book never breaks in between.
+Staleness (what *could* be refreshed) and blessing (the explicit
+run-capture-commit act) are separate. You may bless a subset. Un-blessed stale
+notebooks keep rendering their committed outputs and stay on the list:
+inline-stale ones block `make html` on hosts that can re-run them, asset-stale
+ones only warn. The book stays renderable in between.
 
 ---
 
 ## 6. Make interface
 
-### 6.1 Dependency rewiring (the actual decoupling)
+### 6.1 What render targets depend on
 
-| Target | Before | After |
-|---|---|---|
-| `html`, `slides-<fw>`, `pdf-<fw>` | depend (transitively) on `_notebooks/` / `.executed` | depend on **`outputs/` + `verify-outputs-fresh`**; **never** trigger execution |
-| `inject_outputs.py {html,pdf,slides}` | read `_notebooks/<fw>/*.ipynb` | read `outputs/<fw>/…` (manifest + asset paths) |
+| Target | Reads | Gate | Triggers execution? |
+|---|---|---|---|
+| `html` (`_book/index.html`) | sources, the whole `outputs/` store (every framework tab) | `audit_outputs.py --verify-fresh` | never |
+| `pdf-<fw>` | sources, `outputs/<fw>/` | none | never |
+| `slides-<fw>` (`_slides/<fw>/.built`) | sources, `outputs/<fw>/` | none | never |
+| `notebook-zips` | generated notebooks + `outputs/` | none | never |
 
-Editing a slide block, SCSS, a diagram, or page layout therefore never makes
-Make want to execute a notebook.
+`inject_outputs.py {html,pdf,slides}` reads `outputs/<fw>/…` (manifest + asset
+files) and falls back to `_notebooks/` only for a notebook without a manifest.
+Editing a slide block, SCSS, a diagram or page layout therefore never makes
+Make want to execute a notebook. The manifests are Make prerequisites
+(`OUTPUT_MANIFESTS` in `make/render.mk`), so a changed manifest re-renders the
+HTML and only its own framework's PDF and slides.
 
-### 6.2 New / changed targets
+### 6.2 Store targets (`make/store.mk`)
 
 | Target | Role |
 |---|---|
-| `capture-outputs [FILES=…]` | Distill `_notebooks/` → `outputs/`; extract assets; recompute fingerprints. The bless step. |
-| `audit-outputs` | Report stale notebooks/cells + integrity (dangling/orphaned ids). Non-zero exit on integrity failure. |
-| `verify-outputs-fresh` | Render prerequisite: hard-fail on any stale **inline** output; warn on stale assets. |
-| `refresh-stale` | `audit-outputs` → re-execute only the stale set **in parallel** (`notebook_scheduler.py --files`; unforced, so already-executed-but-uncaptured notebooks skip straight to capture) → one `capture-outputs`. (Needs framework venvs.) |
-| `render-fresh` | `refresh-stale` then **parallel** `slides`/`pdf` (`-j$(RENDER_JOBS)` under `RENDER_V8_ENV`) + `html`. (Needs framework venvs.) |
-| `locks` | List locked notebooks (§3.7): file, framework, `requires`, capture date, runtime, status (clean / lib-drift WARNING / code-drift ERROR). |
-| `rerun-locked FILES=… [FRAMEWORKS=…]` | Execute exactly the named **locked** notebooks through the scheduler (§3.7); then `capture-outputs FILES=… UNLOCK=1`. (Needs the framework venv / hardware.) |
+| `capture-outputs [FILES=…] [UNLOCK=1]` | Distill `_notebooks/` → `outputs/`; extract assets; recompute fingerprints. The bless step. Captures every generated notebook matching `FILES` (§3.5). |
+| `audit-outputs` | Report stale notebooks/cells, locks and integrity (orphaned/missing ids). Non-zero exit on integrity failure. |
+| `verify-outputs-fresh` | The gate `make html` runs, as a standalone target. |
+| `refresh-stale` | `make notebooks`, then delete the audit's stale stamps, execute exactly that set **in parallel** (`notebook_scheduler.py --files`), then one `capture-outputs FILES=<stale set>`, also after failures. Needs framework venvs and GPUs. |
+| `render-fresh` | `refresh-stale`, then slides and PDFs at `-j$(RENDER_JOBS)` under `RENDER_V8_ENV`, `html`, `pdf-parts`. |
+| `test-trap` | CPU-only regression tests: `test_refresh_stale_trap.py`, `test_freshness_deps.py`, `test_notebook_locks.py`. |
+| `locks` | List locked notebooks (§3.7). |
+| `rerun-locked FILES=… [FRAMEWORKS=…]` | Execute exactly the named **locked** notebooks (§3.7). |
 
-`run-notebooks-*`, the `.executed` stamps, `.generated`, `notebooks-*`, `lib`,
-and `.d` dep files are **unchanged** — execution works exactly as today; capture
-is a new consumer of its results.
+Execution itself (`run-notebooks-*`, `run-all-notebooks`, the `.executed`
+stamps, `notebooks-*`, `lib`, the `.d` dependency files) lives in
+`make/notebooks.mk` and `make/lib.mk`; capture is a consumer of its results.
 
 ### 6.2a Staging override: `make html ALLOW_STALE=1`
 
@@ -988,31 +1044,35 @@ its old output beside new code, so an `ALLOW_STALE` build may go to a staging
 bucket (`make upload-r2 R2_BUCKET=…`), never to the release site. The PDF and
 slide targets have no freshness gate of their own.
 
-### 6.3 Gotcha: don't hand-delete `.preprocess.stamp` under GNU Make 3.81
+### 6.3 Forcing a rebuild: delete the stamp, or `make -B`
 
-The `.d` auto-dependencies are `-include`d, so every `make` first remakes those
-files (the `scan_d2l_usage` lines) and **re-execs itself**. Under the macOS
-system **GNU Make 3.81**, if you manually `rm .preprocess.stamp`, that re-exec
-can leave `make html` deciding `_book/index.html` is already up to date and skip
-preprocessing **and** rendering entirely — it prints only the trailing
-`Output:`/`Log:` echoes and exits 0, fooling you into thinking it rebuilt. Force
-the stamp explicitly first (`make .preprocess.stamp`) or touch a real
-prerequisite (`touch _quarto.yml`); then `make html` renders normally. Better
-still, use `make -B <target>` when you deliberately want a forced rebuild rather
-than deleting stamps by hand. (GNU Make ≥ 4.3 resolves the missing stamp
-correctly; 3.81 also emits harmless `overriding commands for target '&'` warnings
-because it predates the `&:` grouped-target syntax the Makefile uses.)
+To redo one step, delete its stamp and make it again:
 
-Note also that the preprocess step is a **single pass** — `d2l_preprocess.py`
-with no `--files` regenerates every `.qmd` for the files in `CHAPTER_NUMBERING`.
-(The former second pass that explicitly re-ran the `chapter_mdl-*` files was a
-workaround for their absence from the map; now that they are in it, the main pass
-covers them and the workaround has been removed.)
+```bash
+rm -f _notebooks/pytorch/chapter_x/foo.executed && make _notebooks/pytorch/chapter_x/foo.executed
+```
+
+`make -B <target>` also works, but GNU Make's `--always-make` remakes **every**
+prerequisite it visits, order-only ones included (checked 2026-11-12 with a
+two-rule Makefile and with `make -n -B` on a stamp). For a notebook stamp that
+means `uv sync` of `.venv-<fw>` and `.venv-build`, the mxnet-pin preflight,
+`make lib`, the runtime-deps patch step and the notebook's regeneration before
+it executes. That is slower and touches venvs that other worktrees may share.
+For `make -B slides-<fw> SLIDES_FILTER=…` it adds one `uv sync` of
+`.venv-build`, which is harmless.
+
+Deleting the stamp is also the only way to force a re-run after cells were
+merely moved or deleted: `gen_notebooks.py` counts a change only when a cell's
+id+source changed, and otherwise re-touches the existing stamp
+(notebook-scheduler.md §5, `--force-all`).
+
+The preprocess step is a single pass: `d2l_preprocess.py` with no `--files`
+regenerates every `.qmd` for the files in `CHAPTER_NUMBERING`.
 
 ### 6.4 Aggregate / full-build targets (the "rebuild everything" path)
 
-The surgical flows in §11 are the day-to-day path; they deliberately avoid full
-rebuilds. But a *whole-book* rebuild is still real — initial population, the
+The single-notebook recipes in [build-guide.md](build-guide.md) §4 are the
+day-to-day path; they avoid full rebuilds. But a *whole-book* rebuild is still real — initial population, the
 canonical green run on the multi-GPU box, or a "clean and rebuild the world"
 request. Those run through the aggregate targets:
 
@@ -1041,7 +1101,8 @@ Things that bite if you don't know them:
   rendered site until you run `make capture-outputs` and re-render. `make all`'s
   job is to (a) re-execute and surface failures and (b) let the freshness gate
   verify the committed store still matches source — *not* to publish new outputs.
-  The "execute → **capture** → render" publish path is flow A in §11.1.
+  The "execute → **capture** → render" path is
+  [build-guide.md §4.7](build-guide.md#47-full-rebuild-on-the-gpu-box).
 - **`make all` tolerates notebook failures.** The execution queues run under
   `make -k`; `all` records the exit code but still runs `rebuild-book-artifacts`,
   so the site/slides/PDFs are produced from available outputs and `make all`
@@ -1215,9 +1276,10 @@ skip Quarto's own ~2 discarded XeLaTeX passes) → `tools/fix_latex.py`
 (hierarchical chapter/section numbering) → **XeLaTeX ×3** →
 `_pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf`, then copies it into `_book/pdf/`
 for the site. `build_one_pdf.sh` is the extracted form of the old inline
-`PDF_RULE` recipe (which had to quadruple-escape `$$$$` inside a `define`/`$(eval)`);
-behavior is identical, and `--to latex` + our own compile is what made the 4 PDFs
-cheap enough to render concurrently under the HTML render. The render is
+`PDF_RULE` recipe (which had to quadruple-escape `$$$$` inside a `define`/`$(eval)`).
+`make pdfs` alone builds the four books one after another; `rebuild-book-artifacts`
+and `render-fresh` build them `-j$(RENDER_JOBS)` at a time with the Quarto heap
+capped by `RENDER_V8_ENV`, always after `html` has finished (§6.8). The render is
 **CPU-only** and reads the committed `outputs/` store like every other artifact
 (§6.1). Four pitfalls bit us; each now has a guard, so a clean `make all` builds
 all four PDFs (~46–51 MB each) with no manual steps:
@@ -1301,11 +1363,11 @@ all four PDFs (~46–51 MB each) with no manual steps:
   review session — every repo build path was tested clean of `/tmp` leaks.
   If the preflight trips, clear stale `/tmp/tmp.*` dirs first.
 
-Not fixed here (cosmetic, non-fatal): a few `:numref:`fig_mdl-dyn-*`` references
-in the still-incomplete Dynamics chapter render as "?" — the figures, SVGs, and
-labels exist, but Quarto fails to register the crossref (math-heavy captions are
-the suspect). This warns but does **not** stop the PDF build, and it is present in
-the HTML too.
+Known and not fixed (observed 2026-07, not re-checked since the Dynamics
+chapter was completed): a few `:numref:`fig_mdl-dyn-*`` references rendered as
+"?" — the figures, SVGs and labels exist, but Quarto failed to register the
+crossref (math-heavy captions are the suspect). This warns but does **not**
+stop the PDF build, and it showed in the HTML too.
 
 ### 6.6a Per-part PDFs (`make pdf-parts`)
 
@@ -1455,8 +1517,9 @@ notebook is a *separate* make process:
   so the first import burst finds a valid `d2l/__pycache__/*.pyc` and doesn't race
   on writing it (all venvs are the same CPython → one compile warms the cache).
 
-Net effect: a full `make clean` + re-execute of all 524 notebooks runs in
-~100 min (`run-all-notebooks`), 524/524 with 0 failures.
+Net effect (measured 2026-06, when the book had 524 notebooks; it has 676 on
+2026-11-12): a full `make clean` + re-execute ran in about 100 min
+(`run-all-notebooks`) with 0 failures.
 
 **Gotcha — no framework GPU ops off the main thread (MXNet).** MXNet's engine +
 the custom CUDA-13 wheel corrupts the CUDA context when `NDArray.asnumpy()` is
@@ -1558,10 +1621,10 @@ consumes.
 | `make/venvs.mk` | UV framework venvs, mxnet preflight, Quarto build venv, `kernels` |
 | `make/lib.mk` | `d2l/.built` (rebuilt from `#@save` blocks) |
 | `make/figures.mk` | committed illustrative SVGs (incremental; see below) |
-| `make/store.mk` | committed outputs store — `capture` / `audit` / `refresh-stale` / `render-fresh` |
-| `make/notebooks.mk` | **SCHEDULER CORE** — generation + resource-scheduled execution (`MANIFEST.mk`, `.d`, `EXEC_RULE`, `notebook_scheduler.py`). Relocated verbatim; logic unchanged. |
+| `make/store.mk` | committed outputs store — `capture-outputs`, `audit-outputs`, `verify-outputs-fresh`, `refresh-stale`, `render-fresh`, `test-trap`, `locks`, `rerun-locked` |
+| `make/notebooks.mk` | Notebook generation and execution: `MANIFEST.mk`, `.d` files, `EXEC_RULE`, `run-notebooks-<fw>`, `run-all-notebooks` (which call `notebook_scheduler.py`) |
 | `make/hosted.mk` | hosted/Colab notebook staging + downloadable zips |
-| `make/render.mk` | `html`, per-framework `pdf`, `slides` |
+| `make/render.mk` | `html`, `pdf-<fw>`, `pdfs`, `pdf-parts`, `pdf-preflight`, `slides-<fw>`, `slides` |
 | `make/universities.mk` | landing-page adoption grid (independent of the book) |
 | `make/deploy.mk` | `publish-colab`, `upload-r2*`, `deploy` |
 
@@ -1573,8 +1636,7 @@ independently runnable and lintable.
 
 **Deploy targets (`make/deploy.mk`).** `make deploy` = `all-quick` → then
 `publish-colab` **and** `upload-r2-delete`, both gated on the build passing but
-independent of each other (a Colab failure does not block the R2 upload). This
-promotes the old throwaway `scratchpad/fullrun.sh` into first-class targets.
+independent of each other (a Colab failure does not block the R2 upload).
 `make publish-colab` is the *verified* Colab path (`tools/publish_colab_notebooks.sh`
 — orphan-ness, per-fw counts, inline-`img/`, raw-URL checks); `make upload-r2`
 [`-delete`|`-full`|`-dry-run`] wraps `tools/upload_r2.sh` behind an `_r2-preflight`
@@ -1621,12 +1683,8 @@ Only a changed generator re-runs; it is never part of `all`/`all-quick`.
 is global, so the upstream exit status is preserved). Purely informational guards
 (`detect`, `pdf-preflight`, `.preflight.mxnet-pin`) stay terminal-only.
 
-**Removed / archived (2026-07-22).** `build.sh` (superseded legacy wrapper) and
-`tools/mkstamp.py` (unused) were deleted; already-applied one-shot migrations and
-ad-hoc probes moved to `tools/oneshot/` (see its README). University-adoption and
-diagnostic tools (`repro_mxnet_*`, `audit_slides.py`, …) are kept as **manual**
-tools — see `reviews/build-system-cleanup-proposal-2026-07-22.md` for the full
-inventory and rationale.
+Deleted scripts and archived one-shot tools are listed in
+[build-history.md](build-history.md#makefile-cleanup-2026-07-22).
 
 **Artifact-phase timing** (from-scratch, post-notebook-execution, on the 4×4090
 box, rendering from the committed store): `clean` ~4 s · **build (`all-quick`)
@@ -1684,7 +1742,7 @@ hooks still need to be set up once in each working copy:
 git lfs install                # once per clone (installs the smudge/clean hooks)
 ```
 
-`.gitattributes` (new):
+`.gitattributes`:
 
 ```gitattributes
 # Notebook-output image/binary assets → LFS. Manifests (*.json) stay plain git.
@@ -1697,7 +1755,7 @@ outputs/**/*.gif  filter=lfs diff=lfs merge=lfs -text
 
 `.gitignore` change: `outputs/` is **committed** — make sure no broad rule
 ignores it (the existing `_notebooks/ _book/ _pdf/ _slides/ img/outputs/` rules
-already do not touch it). `img/outputs/` stays gitignored: in the new model it is
+already do not touch it). `img/outputs/` stays gitignored: it is
 a *render-time* scratch copy that `inject_outputs` may still materialize from the
 committed store; the committed truth is `outputs/`.
 
@@ -1710,18 +1768,21 @@ yubikey-free path recorded in CLAUDE.md memory); LFS rides the same HTTPS remote
 
 ## 8. Tooling contracts
 
-| Script | Status | Contract |
-|---|---|---|
-| `tools/capture_outputs.py` | **NEW** | `_notebooks/<fw>/<chapter>/<stem>.ipynb` → `outputs/<fw>/<chapter>/<stem>.json` + asset files. Idempotent: identical inputs → byte-identical manifest (stable key order, no timestamps in the hashed payload). Writes assets to stable per-cell paths (overwrite in place); records `bytes`+`sha256` per asset. Computes `code_fingerprint` per §3.1. **Freshness guard (§3.3):** a pre-write pass refuses (non-zero exit, nothing written) to bless any notebook whose execution-provenance sidecar disagrees with the current lib/source; `--force` overrides. |
-| `tools/audit_outputs.py` | **NEW** | Freshness (§3.2) + integrity (§4.3). Exit non-zero on integrity failure; `--stale` lists the minimal re-execution set; `--stale-stamps` lists the `.executed` stamps to `rm` to force re-execution (§3.3); `--json` for tooling. |
-| `tools/run_notebooks.py` | **CHANGED** | Executes notebooks; on every successful run `write_execution_provenance()` records the source+lib fingerprints the run used into `_notebooks/<fw>/<ch>/<stem>.provenance.json` (gitignored, `make clean`-wiped) — the signal the capture guard reads (§3.3). Single chokepoint (`execute_notebook`) covers scheduler / direct-make / best-of-N paths. |
-| `tools/test_refresh_stale_trap.py` | **NEW** | `make test-trap`. Fast, GPU-free e2e regression for the §3.3 trap: builds a tmp fixture, moves a lib fingerprint under an unchanged notebook, and asserts the audit flags it, `refresh-stale`'s stamp-removal forces a re-run, and the capture guard refuses the stale bless (and accepts a genuine re-capture). Never touches the real store. |
-| `tools/locks.py`, `tools/test_notebook_locks.py` | **NEW** (2026-11) | Notebook locks (§3.7): the directive parser, materialization from the store and `make locks`; the GPU-free fixture test (run by `make test-trap`) covers skip + materialize, the gate's prose/lib/code cases, the capture refusal and `rerun-locked` selection. |
-| `tools/inject_outputs.py` | **CHANGED** | Output source flips from `_notebooks/` to `outputs/` via a new `index_store_by_id()` that returns the **same shape** as `index_ipynb_by_id()` — `{cell_id: [nbformat-output-dict]}` — by reconstructing nbformat dicts from the manifest (inline text → `stream`/`text/plain` dicts; assets → re-read the file, re-encode to the dict's `data`). Everything downstream (`format_cell_output`, dedup, markup) is **unchanged**, so injected output is byte-identical to the `_notebooks/` path. Auto-detects: uses `outputs/` when a manifest exists, else falls back to `_notebooks/`. |
-| `tools/inject_outputs.py` (stream coalescing) | **CHANGED 2026-07-27** | `format_cell_output()` first runs `coalesce_stream_outputs()`, merging runs of **adjacent same-name** `stream` outputs into one. A cell that prints once per loop iteration emits one stream message per flush, so Jupyter stores N stream outputs (each already `\n`-terminated); rendering each as its own fenced block put a paragraph break between consecutive printed lines — a blank line in HTML, a stretched inter-block gap in the PDF. The store is *faithful* (the split is in the `.ipynb`); the fix is render-side only, so no re-capture is needed. Non-stream outputs and stderr↔stdout transitions still separate blocks. Side effect: the `MAX_TEXT_LINES` cap now applies to the merged block (it used to be bypassed by chunking) — 10 output groups book-wide newly elide to head-20 / `...` / tail-20 in the PDF. Also new: `is_wide_table()` tags column-aligned output wider than the column with `.d2l-output-wide` (**html mode only** — 18 blocks: profiler tables, Syne Tune trial status, …). `_d2l-style.css` wraps output by default and scrolls those instead, since wrapping destroys the alignment that carries their meaning. The PDF has no scroll, so it wraps them. |
-| `tools/add_cell_ids.py` | unchanged | Still the authority for stable ids — the invariant capture/audit rely on. |
-| `tools/scan_notebook_manifests.py` | unchanged | Execution queues. Capture reuses its file enumeration. |
-| `tools/scan_d2l_usage.py` | unchanged | Emits the per-notebook `.d` files capture reads for `d2l_lib_fingerprint`. |
+| Script | Contract |
+|---|---|
+| `tools/capture_outputs.py` | `_notebooks/<fw>/<chapter>/<stem>.ipynb` → `outputs/<fw>/<chapter>/<stem>.json` + asset files. Idempotent: identical inputs → byte-identical manifest (stable key order, no timestamps in the hashed payload). Writes assets to stable per-cell paths (overwrite in place); records `bytes`+`sha256` per asset. Computes `code_fingerprint` per §3.1. **Freshness guard (§3.5):** a pre-write pass refuses (non-zero exit, nothing written) to bless any notebook whose execution-provenance sidecar disagrees with the current lib/source; `--force` overrides. Locked notebooks: §3.7. |
+| `tools/audit_outputs.py` | Freshness (§3.2) + integrity (§4.3). Exit non-zero on integrity failure; `--verify-fresh` is the `make html` gate; `--stale` lists the minimal re-execution set; `--stale-stamps` lists the `.executed` stamps to `rm` to force re-execution (§3.5); `--check-noise` (§3.6); `--check-lfs`; `--json` for tooling. |
+| `tools/run_notebooks.py` | Executes notebooks; on every successful run `write_execution_provenance()` records the source+lib fingerprints the run used into `_notebooks/<fw>/<ch>/<stem>.provenance.json` (gitignored, `make clean`-wiped) — the signal the capture guard reads (§3.5). Single chokepoint (`execute_notebook`) covers scheduler / direct-make / best-of-N paths. |
+| `tools/run_one_notebook.py` | The per-notebook recipe of `EXEC_RULE`: picks the device (scheduler assignment, or its own flock slots for a direct `make`), applies the per-notebook timeout (`NOTEBOOK_TIMEOUTS`, default 3600 s) and best-of-N retries (`BEST_OF_N`), writes `logs/nb-errors/<fw>/<rel>.log` on failure, materializes locked notebooks. |
+| `tools/notebook_scheduler.py` | The execution queue; [notebook-scheduler.md](notebook-scheduler.md). |
+| `tools/test_refresh_stale_trap.py` | `make test-trap`. Fast, GPU-free e2e regression for the §3.5 trap: builds a tmp fixture, moves a lib fingerprint under an unchanged notebook, and asserts the audit flags it, `refresh-stale`'s stamp-removal forces a re-run, and the capture guard refuses the stale bless (and accepts a genuine re-capture). Never touches the real store. |
+| `tools/test_freshness_deps.py` | `make test-trap`: shard naming, the transitive `.d` closure, the preamble/DATA_HUB/alias/module shards, the no-manifest rule (§3.4). |
+| `tools/locks.py`, `tools/test_notebook_locks.py` | Notebook locks (§3.7): the directive parser, materialization from the store and `make locks`; the GPU-free fixture test (run by `make test-trap`). |
+| `tools/inject_outputs.py` | Reads the store through `index_store_by_id()`, which returns the **same shape** as `index_ipynb_by_id()` — `{cell_id: [nbformat-output-dict]}` — by reconstructing nbformat dicts from the manifest (inline text → `stream`/`text/plain` dicts; assets → re-read the file, re-encode to the dict's `data`). Uses `outputs/` when a manifest exists, else falls back to `_notebooks/`. |
+| `tools/inject_outputs.py` (stream coalescing, 2026-07-27) | `format_cell_output()` first runs `coalesce_stream_outputs()`, merging runs of **adjacent same-name** `stream` outputs into one. A cell that prints once per loop iteration emits one stream message per flush, so Jupyter stores N stream outputs (each already `\n`-terminated); rendering each as its own fenced block put a paragraph break between consecutive printed lines — a blank line in HTML, a stretched inter-block gap in the PDF. The store is *faithful* (the split is in the `.ipynb`); the fix is render-side only, so no re-capture is needed. Non-stream outputs and stderr↔stdout transitions still separate blocks. Side effect: the `MAX_TEXT_LINES` cap applies to the merged block — 10 output groups book-wide elide to head-20 / `...` / tail-20 in the PDF. Also: `is_wide_table()` tags column-aligned output wider than the column with `.d2l-output-wide` (**html mode only** — 18 blocks: profiler tables, Syne Tune trial status, …). `_d2l-style.css` wraps output by default and scrolls those instead, since wrapping destroys the alignment that carries their meaning. The PDF has no scroll, so it wraps them. |
+| `tools/add_cell_ids.py` | The authority for stable ids — the invariant capture/audit rely on. Idempotent; `--check` reports without writing. |
+| `tools/scan_notebook_manifests.py` | Writes `_notebooks/<fw>/MANIFEST.mk`: which (framework, source) pairs produce a notebook, split CPU / GPU / multi-GPU, plus `LOCKED_<fw>`. Capture reuses its file enumeration. |
+| `tools/scan_d2l_usage.py` | Emits the per-notebook `.d` files capture reads for `d2l_lib_fingerprint`. |
 
 Determinism requirement for `capture_outputs.py`: the manifest must be a pure
 function of the executed notebook + repo state (sorted keys, fixed float
@@ -1731,50 +1792,27 @@ is "capture twice → `git diff` empty."
 
 ---
 
-## 9. CI gates
+## 9. Checks before merging
 
-1. `make audit-outputs` — integrity must pass (no dangling/orphaned ids).
-2. `make verify-outputs-fresh` — no stale **inline** outputs on `main`
-   (stale assets are allowed as a warning; they're valid old samples).
-3. `make html && make -j4 slides` — renders clean from the committed store with
-   **no framework venv** (proves the decoupling actually holds — if someone
-   reintroduces an execution dependency, this CPU-only job fails).
+There is no CI (2026-11-12); run these by hand before merging a change to the
+build or to many sources:
+
+1. `make test-trap` — CPU-only regression tests (freshness trap, library
+   dependencies, locks).
+2. `python3 tools/lint_source.py --corpus` — source lint plus cross-file label
+   uniqueness.
+3. `make audit-outputs` — integrity must pass (no orphaned ids); no hard-stale
+   notebooks on `main`.
+4. `make html` (and `make slides`) in a tree with only `.venv-build` — proves
+   rendering still needs no framework venv. A render that "needs torch" means
+   an execution dependency crept back in.
 
 ---
 
-## 10. Migration (one-time, from the current green build)
+## 10. Migration (moved)
 
-The current `_notebooks/` tree is green (129/129 MXNet, all frameworks). Bless it
-into the store once, then flip the readers.
-
-```bash
-# 0. Prereqs (git-lfs/3.4.1 already installed; just wire the clone hooks)
-git lfs install
-git checkout -b decouple-outputs
-
-# 1. Land .gitattributes (§7) BEFORE adding any asset, so blobs go to LFS, not git.
-git add .gitattributes && git commit -m "lfs: track outputs/ image assets"
-
-# 2. Build the new tools (capture_outputs.py, audit_outputs.py) and repoint
-#    inject_outputs.py per §8.
-
-# 3. Bless the current executed tree wholesale.
-make capture-outputs                      # full sweep of _notebooks/ → outputs/
-make audit-outputs                        # expect: integrity clean, 0 stale
-git add outputs/ && git commit -m "outputs: initial capture of current green build"
-
-# 4. Rewire site targets to depend on outputs/ + verify-outputs-fresh (§6.1);
-#    drop the implicit _notebooks/ dependency.
-
-# 5. Prove the decoupling: in a clean worktree with ONLY .venv-build,
-#    make html && make -j4 slides  must succeed.
-
-# 6. PR via gh; squash-merge.
-```
-
-After migration, `_notebooks/` remains a gitignored scratch dir; deleting it
-costs nothing (a render no longer needs it). Re-executing is only needed to
-*refresh* outputs, never to *render* them.
+The one-time migration from the execution-coupled build to the store (June
+2026) is recorded in [build-history.md](build-history.md#migration-to-the-outputs-store-2026-06).
 
 ---
 
@@ -1807,125 +1845,50 @@ outputs (flows A/B), which is a separate machine/role.
 
 ### 11.1 The four canonical flows
 
-The split that defines this build: flows **A–B** (notebook code changed) run on
-the GPU box and produce `outputs/` commits; flows **C–D** (presentation changed)
-are **CPU-only**, touch no `outputs/`, and commit only source/config.
+The flows that used to be spelled out here are recipes in
+[build-guide.md](build-guide.md) §4 since 2026-11-12:
 
-#### A. Build from scratch → commit  *(GPU box, all four venvs — rare, ~110 GPU-min)*
+| Flow | Machine | Recipe |
+|---|---|---|
+| A. Build from scratch → capture → commit | GPU box, all four venvs | [§4.7](build-guide.md#47-full-rebuild-on-the-gpu-box) |
+| B. Rebuild one notebook | that framework's venv (GPU if it is a GPU notebook) | [§4.3](build-guide.md#43-change-a-code-cell-and-refresh-its-outputs) |
+| C. Edit slides → render | any, `.venv-build` only | [§4.2](build-guide.md#42-change-prose-only), §12 |
+| D. Page layout / theme → render | any, `.venv-build` only | [§4.1](build-guide.md#41-render-the-book-on-a-laptop) |
 
-```bash
-# ── one-time prereqs (git-lfs already installed; hooks already wired here) ──
-git lfs install                                    # idempotent
-
-# ── execution (GPU, expensive) ──
-make lib                                            # d2l/*.py + d2l/_blocks/ from #@save
-make notebooks                                      # generate .ipynb for all fw
-make run-all-notebooks                              # EXECUTE → _notebooks/ (scratch)
-
-# ── capture / bless → committed store ──
-make capture-outputs                                # distill _notebooks/ → outputs/
-make audit-outputs                                  # expect: integrity clean, 0 stale
-
-# ── review & commit ──
-git status outputs/                                 # *.json text diffs; *.png = LFS pointers
-git add outputs/ && git commit -m "outputs: full capture of green build"
-git push                                            # gh/HTTPS; LFS blobs ride the same remote
-
-# ── render (could be a different, CPU-only machine) & publish ──
-make html && make -j4 slides && make -j4 pdfs && make notebook-zips
-tools/upload_r2.sh          # add --delete to purge bucket objects gone locally
-```
-
-Note `make notebook-zips`: `quarto render` (`make html`) wipes `_book/`, which
-also removes the downloadable `notebooks/d2l-<fw>.zip` bundles. The upload
-script rebuilds missing zips from the store when `_notebooks/` is present, but
-building them explicitly keeps the publish step deterministic. `--delete`
-diffs a *live bucket listing* against `_book/` (not the upload manifest), so
-it removes orphans from any earlier upload or layout change; a run without
-`--delete` loses nothing for a later `--delete` run.
-
-#### B. Rebuild just one notebook  *(GPU box, only that framework's venv — cheap)*
-
-```bash
-$EDITOR chapter_convolutional-neural-networks/lenet.md          # edit SOURCE .md, never .qmd/.ipynb
-
-make notebooks-pytorch                                          # regen that fw's .ipynb
-make -B _notebooks/pytorch/chapter_convolutional-neural-networks/lenet.executed   # execute just this one
-make capture-outputs FILES=chapter_convolutional-neural-networks/lenet.md         # bless just this file
-
-git status outputs/pytorch/chapter_convolutional-neural-networks/
-#   M lenet.json                    ← text outputs, reviewable diff
-#   M lenet/lenet-train-7-0.png     ← LFS pointer (plot changed)
-git add outputs/ && git commit -m "outputs: refresh lenet (pytorch)"
-```
-
-`make audit-outputs` first if a `#@save` symbol was involved — it names the exact
-notebooks that use it (via their `.d` files). Nothing you didn't touch re-runs.
-
-#### C. Edit slides → rebuild  *(any machine, `.venv-build` only — no GPU, no execution)*
-
-```bash
-$EDITOR chapter_convolutional-neural-networks/lenet.md   # <!-- slides --> divs, captions, @id refs
-$EDITOR _d2l-slides.scss                                 # visual changes here, never per-deck
-node diagrams/render.mjs --out img/auto lenet-feature-maps   # if a diagram changed
-
-make -B slides-pytorch SLIDES_FILTER=chapter_convolutional-neural-networks/lenet.md   # one deck
-# or: make -j4 slides                                    # all decks, all fw, parallel
-tools/audit_slides.py                                    # slide↔cell integrity
-
-git status                                               # only source/styling/diagrams change
-#   M chapter_.../lenet.md   M _d2l-slides.scss   ?? img/auto/lenet-feature-maps.svg
-git add -A && git commit -m "slides: lenet redesign + feature-map diagram"
-```
-
-Code cells + outputs come from the committed `outputs/` store by cell id — zero
-notebook execution. `verify-outputs-fresh` (a render prereq) only complains if
-you changed *code* without re-blessing, which you didn't.
-
-#### D. Page layout / theme → render  *(any machine, `.venv-build` only — CPU-only)*
-
-```bash
-$EDITOR _quarto.yml          # page layout, sidebar, TOC
-$EDITOR _d2l-theme.scss      # book colors / typography
-$EDITOR _d2l-tabs.html       # tab-sync / sidebar JS
-
-make html                    # full re-render from source + committed outputs/ (runs fix_crossref_numbers.py)
-
-git status                   # only config/theme change; outputs/ untouched
-git add -A && git commit -m "layout: <change>"
-make html && tools/upload_r2.sh   # publish when happy
-```
-
-Numbering and cross-refs recompute here from the full source set (execution-
-independent), so a layout change never needs a notebook to run.
+Flows A and B change `outputs/`; C and D never do. Layout files: `_quarto.yml`
+(layout, sidebar, TOC), `_d2l-theme.scss` (colours, typography),
+`_d2l-tabs.html` (tab sync, sidebar JS), `_d2l-slides.scss` (all slide
+styling; never per deck). Slide diagrams: `node diagrams/render.mjs --out
+img/auto <name>`.
 
 ### 11.2 Quick reference (scenario → commands)
 
 | You changed… | Do this | Needs GPU/venv? |
 |---|---|---|
-| Prose only, one file | `make html` (or `make -B slides-<fw> SLIDES_FILTER=<f>.md`) | No |
-| Slide block / SCSS / a diagram / layout | `make -j4 slides` (and `node diagrams/render.mjs` if a diagram) | No |
-| One notebook's **code** | `make -B _notebooks/<fw>/<ch>/<f>.executed` → `make capture-outputs FILES=<ch>/<f>.md` → review → commit | Yes (that fw) |
-| A `#@save` library symbol | `make lib` → `make audit-outputs` (names the blast radius) → re-execute those → `make capture-outputs` | Yes (affected fw) |
-| Rebuilt a framework wheel (e.g. MXNet) | bump version → `make audit-outputs` (whole fw shows stale via `framework_version`) → `make run-notebooks-<fw>` → `make capture-outputs` | Yes |
-| New chapter / new cells | `make notebooks-<fw>` → execute → `make capture-outputs` → `make audit-outputs` (confirms ids resolve) | Yes |
-| Just want to publish current outputs to R2 | `make html && make -j4 slides && make -j4 pdfs && make notebook-zips` → `tools/upload_r2.sh` | No |
+| Prose only, one file | `make html` (or `make slides-<fw> SLIDES_FILTER=<f>.md`) | No |
+| Slide block / SCSS / a diagram / layout | `make -j4 slides` or `make html` (and `node diagrams/render.mjs` if a diagram) | No |
+| One notebook's **code** | `rm` its stamp → `make _notebooks/<fw>/<ch>/<f>.executed` → capture → review → commit ([guide §4.3](build-guide.md#43-change-a-code-cell-and-refresh-its-outputs)) | that fw |
+| A `#@save` library symbol | `make lib notebooks` → `make audit-outputs` (names the blast radius) → `make refresh-stale` ([guide §4.4](build-guide.md#44-change-a-save-library-function)) | affected fw |
+| A framework version (public version, e.g. torch 2.11 → 2.12) | bump the pin in `pyproject.toml`, `uv lock`, `make venv-<fw>` → `make audit-outputs` (the whole framework is stale) → `make run-notebooks-<fw>` → `make capture-outputs` | Yes |
+| A wheel rebuild with the same public version (e.g. a new MXNet `+cu13…` build) | nothing is stale (§6.4); re-run + capture only if you want its outputs | optional |
+| New chapter / new cells | [guide §4.5](build-guide.md#45-add-split-or-move-a-section) | Yes |
+| Publish current outputs | `make deploy`, or `make all-quick` then `make upload-r2` ([guide §4.11](build-guide.md#411-publish)) | No |
 
 ---
 
 ## 12. Tie-in: the slides redesign
 
-The slide-quality work in `docs/slides-northstar-design.md` is exactly the workload this
-decoupling unblocks. Its diagrams already follow the same philosophy — authored
-SVGs committed to `img/auto/<id>.svg`, reviewable, no build dependency. With the
-outputs store in place:
+*Rationale.* The slide-quality work in `docs/slides-northstar-design.md` is the
+workload this decoupling was built for. Its diagrams follow the same idea —
+authored SVGs committed to `img/auto/<id>.svg`, reviewable, no build
+dependency. With the outputs store:
 
 - Captions, `::: {.slide}` blocks, `_d2l-slides.scss`, diagram engine, and the
   `@fig:<id>` inlining can all be iterated and rendered **CPU-only**, with the
   executed code/outputs supplied by the committed store.
 - A code edit + re-run + capture refreshes the deck's outputs by cell id with **no
-  slide-source change** (docs/slides-northstar-design.md §9), exactly as today — except now it doesn't
-  require a populated `_notebooks/` on the rendering machine.
+  slide-source change** (docs/slides-northstar-design.md §9), and the rendering
+  machine needs no populated `_notebooks/`.
 - Distinguish the two SVG kinds: **`img/auto/`** = authored diagrams (committed,
   plain git, hand-curated); **`outputs/<fw>/…/*.svg`** = matplotlib output
   figures (LFS, machine-regenerated). Don't cross them.
@@ -1942,16 +1905,24 @@ outputs store in place:
 
 ## 13. Failure modes & gotchas
 
-- **Cell id churn breaks everything.** If `add_cell_ids.py` ever renumbered an id,
-  every store entry for that cell would orphan and every reference would dangle.
-  It is idempotent and must stay so. Never hand-edit ids.
-- **Non-deterministic capture churns git.** If `capture_outputs.py` emits
-  timestamps or unsorted keys, re-capturing unchanged notebooks produces spurious
-  diffs. Keep it a pure function of the notebook (§8).
-- **Forgetting LFS before the first asset add** commits image blobs into the
-  packfile permanently. Land `.gitattributes` first (§10 step 1).
-- **A render that "needs torch"** means someone reintroduced an execution
-  dependency. The CPU-only CI render (§9.3) is the tripwire.
+Grouped by where they bite. PDF-specific pitfalls are in §6.6, HTML-render
+ones in §6.8, scheduler ones in [notebook-scheduler.md](notebook-scheduler.md),
+MXNet runtime ones in `docs/mxnet-runtime-diagnostics.md`.
+
+| Symptom | Bullet |
+|---|---|
+| `RuntimeError: can't start new thread`, `Resource temporarily unavailable` | 13.1 thread limit |
+| A run never finishes after the CPU notebooks are done | 13.1 unplaceable notebooks |
+| Notebooks re-execute that you did not touch | 13.1 editing sources mid-build |
+| A manifest lost its outputs after capture | 13.2 capture selects every generated notebook |
+| `REFUSING to capture` | §3.5 |
+| `make html` fails with stale outputs | §3.3, [build-guide.md §4.12](build-guide.md#412-diagnose-a-stale-or-failing-freshness-gate) |
+| `NotFound: … stat '<chapter>/<page>_files'` | 13.3 orphaned Quarto processes |
+| PDFs or zips vanished from the site | 13.4 standalone `make html` |
+| An updated image still shows the old version | 13.4 CDN cache |
+
+### 13.1 Execution
+
 - **A full-concurrency run can exhaust the per-user thread limit.** The
   default shell gets `ulimit -u` soft 4096 / hard 8192, and every
   JAX/TensorFlow/MXNet job keeps its own thread pools. At ~20-way concurrency
@@ -1966,11 +1937,14 @@ outputs store in place:
   but the limit still applies. Diagnose by counting threads, not processes:
   `ps -eLf -u $USER | wc -l` against the limit. Recovery is cheap: re-run
   without `make clean` and only the un-run tail executes.
-- **Stale inline output blocks render by design.** That's not a bug; it's the
-  §3.5 guarantee. Re-run + capture the named notebook, or use `render-fresh`.
-- **`GIT_LFS_SKIP_SMUDGE=1`** gives a fast text-only checkout (manifests, no
-  plot images) for prose/slide-structure work; remember plot images will be
-  missing until you `git lfs pull`.
+- **The scheduler waits for ever on a notebook the host cannot place.** It
+  skips an item whose slots are not free and retries when a job finishes; it
+  never drops an item that can *never* fit. On a host with no GPU (empty
+  `GPU_SLOTS_PER`) a GPU notebook, and on a one-GPU host a 2-GPU notebook,
+  therefore leaves `run-all-notebooks`, `run-notebooks-<fw>` and
+  `refresh-stale` waiting once everything else is done (from reading
+  `Scheduler.run` and `_reserve`, 2026-11-12; not reproduced). On such hosts
+  re-run single notebooks by stamp (build-guide.md §4.3).
 - **Don't edit a source `.md` while a build is running.** `_notebooks/%/.generated`
   depends on `$(SRC_MDS)` (every `chapter_*/*.md` + `index.md`), and notebook
   *generation is per-framework, not per-file*. So touching any source `.md`
@@ -1978,20 +1952,41 @@ outputs store in place:
   in-flight `run-notebooks-<fw>` queue **regenerate that framework's entire
   `.ipynb` set** — which can re-execute notebooks the regen freshened. The edit
   is *not* picked up by the queues that already finished, so it also won't fix
-  what you intended. Let the build finish, then do the per-notebook refresh
-  (§5.1): `make -B _notebooks/<fw>/<ch>/<f>.executed` → `make capture-outputs
-  FILES=<ch>/<f>.md`. (Editing `docs/*.md`, SCSS, or `_quarto.yml` mid-build is
-  fine — they are not in `$(SRC_MDS)` and don't feed `.generated`.)
-- **A standalone `make html` empties `_book/` — including the PDFs and notebook
-  ZIPs.** `make all-quick` puts `_book/pdf/*.pdf` and `_book/notebooks/*.zip` there
-  (the PDF rule copies each PDF in; `notebook-zips` writes the ZIPs), but a later
-  `make html` re-renders into a fresh `_book/` without them, and
-  `check-all-artifacts` checks `_pdf/<fw>/` rather than `_book/pdf/`. An
-  `upload-r2-delete` from that tree then **deletes the PDFs and ZIPs from the
-  bucket** as orphans. Before uploading after a standalone `make html`, run
-  `make notebook-zips` and copy the already-built PDFs back
-  (`cp _pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf _book/pdf/` for each `<fw>`),
-  then `tools/upload_r2.sh --dry-run --delete` and read the orphan list.
+  what you intended. Let the build finish, then refresh the notebook
+  (build-guide.md §4.3). (Editing `docs/*.md`, SCSS, or `_quarto.yml`
+  mid-build is fine — they are not in `$(SRC_MDS)` and don't feed
+  `.generated`.)
+- **`make -B` on a stamp re-syncs venvs.** See §6.3; delete the stamp instead.
+- **Never run framework GPU operations off the main thread (MXNet).** §6.7.
+
+### 13.2 Capture and the store
+
+- **Cell id churn breaks everything.** If `add_cell_ids.py` ever renumbered an id,
+  every store entry for that cell would orphan and every reference would dangle.
+  It is idempotent and must stay so. Never hand-edit ids.
+- **Capture selects every generated notebook.** `make capture-outputs`
+  without `FILES` captures every `.ipynb` under `_notebooks/`, and with
+  `FILES` every framework of the named files, executed or not (§3.5). Capture
+  everything only after a complete green run; otherwise name files and
+  frameworks, and read `git diff --stat outputs/` before committing.
+- **Non-deterministic capture churns git.** If `capture_outputs.py` emits
+  timestamps or unsorted keys, re-capturing unchanged notebooks produces spurious
+  diffs. Keep it a pure function of the notebook (§8).
+- **Forgetting LFS before the first asset add** commits image blobs into the
+  packfile permanently. Keep `.gitattributes` (§7) in place before adding
+  any new asset type.
+- **Stale inline output blocks render by design.** That's not a bug; it's the
+  §3.5 guarantee. Re-run + capture the named notebook, or use `render-fresh`.
+- **`GIT_LFS_SKIP_SMUDGE=1`** gives a fast text-only checkout (manifests, no
+  plot images) for prose/slide-structure work; remember plot images will be
+  missing until you `git lfs pull`, and `make html`'s gate fails on the
+  pointers.
+
+### 13.3 Rendering
+
+- **A render that "needs torch"** means someone reintroduced an execution
+  dependency. Rendering in a tree with only `.venv-build` (§9 check 4) is the
+  tripwire.
 - **Stopping a render must stop Quarto's engine processes too.** Killing `make`,
   the `quarto` wrapper or the shell around it leaves the `deno` (and `pandoc`)
   children running. An orphaned HTML render keeps working in the same project
@@ -2000,12 +1995,29 @@ outputs store in place:
   '<chapter>/<page>_files'`. After stopping a build, check
   `ps -eo pid,args | grep -E 'quarto|deno|pandoc'` and kill what is left before
   starting another render.
+- **Never run `make html` next to a PDF render, a slide render or a notebook
+  run in the same tree** (§6.8).
+
+### 13.4 Publishing
+
+- **A standalone `make html` empties `_book/` — including the PDFs and notebook
+  ZIPs.** `make all-quick` puts `_book/pdf/*.pdf` and `_book/notebooks/*.zip` there
+  (the PDF rule copies each PDF in; `notebook-zips` writes the ZIPs), but a later
+  `make html` re-renders into a fresh `_book/` without them, and
+  `check-all-artifacts` checks `_pdf/<fw>/` rather than `_book/pdf/`. An
+  `upload-r2-delete` from that tree then **deletes the PDFs and ZIPs from the
+  bucket** as orphans. Before uploading after a standalone `make html`, run
+  `make notebook-zips` and copy the already-built PDFs back
+  (`cp _pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf _book/pdf/` for each `<fw>`,
+  and `make pdf-parts` for `_book/pdf/parts/`),
+  then `tools/upload_r2.sh --dry-run --delete` and read the orphan list.
 - **Images replaced under the same file name are served stale for hours.** The
   site's CDN caches images (`cache-control: max-age=28800`, 8 h) under their URL,
   and the R2 key used for uploads cannot purge it. The landing page therefore
   references its logos and map with a content hash (`?v=…`,
   `tools/render_logo_grid.py`); other assets keep their plain URLs, so give a
   changed asset a new file name, or expect up to 8 h before readers see it.
+- **Do not list a bucket while an upload runs against it** (§6.9).
 
 ---
 
@@ -2023,30 +2035,18 @@ outputs store in place:
 
 ## 15. Cross-references
 
-- `docs/architecture.md` — component inventory and the *current* (coupled) flow
-  this supersedes.
+- `docs/build-guide.md` — the learning path and task recipes.
+- `docs/notebook-scheduler.md` — how notebooks are queued and placed on GPUs.
+- `docs/architecture.md` — component inventory: what each tool and file is.
+- `docs/build-history.md` — migration, implementation status and superseded designs.
 - `docs/slides-northstar-design.md` — the slide-quality redesign this unblocks.
+- `docs/mxnet-runtime-diagnostics.md` — MXNet wheel and runtime problems.
 - `CLAUDE.md` — repo rules (source-of-truth `.md`, `make` targets, gh/HTTPS).
 
 ---
 
-## 16. Implementation status
+## 16. Implementation status (moved)
 
-All of this has **landed** — the table below is now a verification checklist, not
-a plan. (Verified 2026-06-06.)
-
-| Piece | State |
-|---|---|
-| `execute.enabled: false`, cell-id-keyed injection, `_output_fingerprint`, stable ids, `.d` deps | **Landed** — the seam this design builds on. |
-| `outputs/` store, manifest schema, split (§2) | **Landed** — `outputs/` committed (≈1400 manifests; `git ls-files outputs/`); images in LFS. |
-| `tools/capture_outputs.py`, `tools/audit_outputs.py` (§8) | **Landed** — both present and used by the targets below. |
-| `inject_outputs.py` repoint to `outputs/` (§8) | **Landed** — `resolve_id_outputs()` prefers the store, falls back to `_notebooks/`. |
-| Make rewiring + new targets (§6) | **Landed** — `capture-outputs`, `audit-outputs`, `verify-outputs-fresh`, `refresh-stale`, `render-fresh` all exist; `_book/index.html` runs `audit_outputs.py --verify-fresh`. |
-| Git LFS + `.gitattributes` (§7) | **Landed** — `git-lfs/3.4.1` installed; `.gitattributes` tracks `outputs/**/*.{png,jpg,jpeg,svg,gif}`. Per-clone `git lfs install` still required once. |
-| Initial bless + reader flip (§10) | **Done** — `bootstrap.sh` exists; render reads `outputs/`. |
-| Host-capability-aware gate (§3.3a) | **Landed** — `audit_outputs.py --verify-fresh` tiers by `nvidia-smi` GPU count. |
-| Locked notebooks (§3.7) | **Landed** 2026-11 — `<!-- execution: locked; … -->`, materialized from the store, `make locks`, `make rerun-locked`, `capture-outputs UNLOCK=1`. |
-
-The repo no longer behaves as `architecture.md`'s coupled flow describes; this
-document is the operative model. If you find a target or tool that contradicts
-what's written here, the code is right and this doc has drifted — fix the doc.
+Every piece of this design has landed. The per-piece checklist (verified
+2026-06-06, locks added 2026-11) is in
+[build-history.md](build-history.md#implementation-status).

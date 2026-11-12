@@ -1,9 +1,21 @@
 # Notebook execution scheduler
 
-Reference for `tools/notebook_scheduler.py` — the component that executes the
-book's notebooks (the long pole of a build: ~100 min for all 524 on the 4×4090
-box). It is invoked by `make run-all-notebooks` (all frameworks) and
-`make run-notebooks-<fw>` (one framework); `make all` calls the former.
+**What this is:** the reference for `tools/notebook_scheduler.py`, which
+executes the book's notebooks: how it sizes slots, which notebooks need more
+than one, and how it places them. **When to read it:** when a notebook runs
+out of GPU memory, needs to be marked heavy or multi-GPU, or a run behaves
+oddly. For how to run notebooks day to day, read
+[`build-guide.md`](build-guide.md) §4.3 and §4.7 first.
+
+The scheduler is the long pole of a build (about 100 min for the 524 notebooks
+of June 2026 on the 4×4090 box; there are 676 on 2026-11-12). It is invoked by
+`make run-all-notebooks` (all frameworks), `make run-notebooks-<fw>` (one
+framework), `make refresh-stale` and `make rerun-locked`; `make all` calls
+`run-all-notebooks`. It can also be run directly, e.g.
+`python3 tools/notebook_scheduler.py --files chapter_x/foo.md --frameworks jax`
+(it reads the slot plan from `tools/detect_resources.py` when the Makefile's
+`SCHED_ENV` is absent). It works on the generated notebooks, so run
+`make notebooks` (or `make notebooks-<fw>`) first.
 
 The design has one guiding idea: **it is a queue, served as resources become
 available.** Every notebook is a task on a single queue; a task starts the moment
@@ -51,19 +63,24 @@ box) and slot *i* gets group *i*.
 ### CPU-only / macOS hosts
 
 On a host with **no GPU** (e.g. an Apple-silicon Mac) `detect_resources.py`
-reports `0` GPUs, so the queue is served entirely from the CPU pool — only the
-notebooks classified CPU-only (`CPU_ONLY_NOTEBOOKS` in `tools/runtime_env.py`)
-run; GPU notebooks have nothing to schedule onto and are left to the freshness
-gate to *defer* (build-system.md §3.3a). CPU affinity pinning uses
+reports `0` GPUs and an empty `GPU_SLOTS_PER`, so only CPU notebooks can be
+placed. The scheduler does not drop the GPU notebooks: it keeps them pending,
+and once the CPU work is done it waits for a slot that never appears (from
+reading `Scheduler.run` and `_reserve`, 2026-11-12). The same holds for a
+2-GPU notebook on a one-GPU host. So on such hosts do not run
+`run-all-notebooks`, `run-notebooks-<fw>` or `refresh-stale`; re-run single
+CPU notebooks by stamp and let the freshness gate *defer* the GPU ones
+(build-system.md §3.3a). CPU affinity pinning uses
 `os.sched_setaffinity`, which is **Linux-only**; off Linux it degrades to a
 no-op (the slot pool still bounds concurrency, the cores just aren't pinned), so
-the scheduler imports and runs unchanged on macOS. In practice on a laptop you
-rarely invoke the scheduler directly — the single-notebook refresh path
-(`gmake -B _notebooks/<fw>/<ch>/<f>.executed`, via `run_one_notebook.py`) is the
-common CPU-only flow.
+the scheduler imports and runs unchanged on macOS. On a laptop the usual path is
+the single-notebook refresh (delete `_notebooks/<fw>/<ch>/<f>.executed`, then
+`gmake` it, via `run_one_notebook.py`; build-guide.md §4.3), or the scheduler
+with `--files` naming CPU notebooks only.
 
 The Makefile hands all of this to the scheduler via `SCHED_ENV`
-(`D2L_GPU_SLOTS_PER`, `D2L_GPU_VRAM_PER`, `D2L_GPU_MIB_PER_SLOT`, `D2L_CPU_SLOTS`).
+(`D2L_GPU_SLOTS_PER`, `D2L_GPU_VRAM_PER`, `D2L_GPU_MIB_PER_SLOT`, `D2L_CPU_SLOTS`,
+`D2L_JAX_TOTAL_SLOTS`).
 Each is derived once from `detect_resources.py` and can be overridden on the
 command line (e.g. `gmake CPU_SLOTS=2 run-all-notebooks`).
 
@@ -225,7 +242,7 @@ keeping only stale notebooks (stamp missing, or older than the `.ipynb` or any
 `.d`-listed dependency; `--force-all` includes everything). The result is one
 flat list:
 
-    [pytorch/a, pytorch/b, …, pytorch/~141,
+    [pytorch/a, pytorch/b, …, pytorch/z,      # 216 pytorch notebooks on 2026-11-12
      tensorflow/a, …, jax/a, …, mxnet/a, … ]
 
 This ordering is the **only** correctness mechanism for cross-framework safety —
@@ -450,5 +467,7 @@ dead ends so they aren't reintroduced:
   slot model (a 2-GPU notebook just reserves slots on two GPUs like any other
   requirement), so multi-GPU notebooks mix freely with the rest.
 
-See also: `docs/build-system.md` §6.7 (summary), §6.8 (why HTML render is a single
-`quarto render`, not parallel), and §6.7's MXNet cross-thread-CUDA gotcha.
+See also: `docs/build-system.md` §6.7 (summary and the MXNet cross-thread CUDA
+gotcha), §6.8 (why the HTML render is a single `quarto render`), §13.1
+(execution failure modes), and `docs/build-guide.md` §4.7 (what to do after a
+run reports failures).

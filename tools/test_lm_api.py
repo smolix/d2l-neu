@@ -35,6 +35,13 @@ Library code (spec 18.7 part 5), numbered as the spec's unit tests:
 Also: the spec's signatures, `ChatResult` fields, `models()`, the sync
 `chat` inside a running event loop, `n=2` and logprobs parsing,
 `Retry-After` parsing, and `import d2l.torch` without `openai`.
+The Review* classes at the end are regression tests for the review of the
+18.7 library code: replay misses and capped calls raise out of `chat_batch`,
+`closed_loop_stats` refuses results that are not one closed loop of one run
+and reports `X_tokens` None without usage, every 5xx and stream error events
+retry, the reservation covers `n` and one token per prompt byte, torn cache
+lines, NumPy parameters, one SDK client per open event loop, and the local
+server's log and process group after a failed start.
 
 No network, no GPU: every live call goes to `d2l.FakeChatServer` through
 the SDK's own httpx transport. Run:
@@ -43,6 +50,7 @@ the SDK's own httpx transport. Run:
 
 import asyncio
 import datetime
+import gc
 import inspect
 import json
 import math
@@ -766,9 +774,9 @@ class CostCap(unittest.TestCase):
     """Test 11."""
     price = d2l.PricePoint(1000.0, 1000.0)  # 0.001 USD per token
 
-    def worst(self, messages, max_tokens):
-        n = len(json.dumps(messages, ensure_ascii=False).encode('utf-8'))
-        return (math.ceil(n / 2) + max_tokens) * 0.001
+    def worst(self, messages, max_tokens, n=1):
+        size = len(json.dumps(messages, ensure_ascii=False).encode('utf-8'))
+        return (size + n * max_tokens) * 0.001
 
     def test_single_call_over_cap(self):
         fake, api = fake_api(price=self.price,
@@ -793,7 +801,9 @@ class CostCap(unittest.TestCase):
                              cost_cap_usd=cap)
         requests = [{'messages': HELLO, 'max_tokens': 100, 'replica': i}
                     for i in range(20)]
-        out = asyncio.run(d2l.chat_batch(api, requests, concurrency=20))
+        with self.assertRaises(d2l.CostCapExceeded) as cm:  # after all ran
+            asyncio.run(d2l.chat_batch(api, requests, concurrency=20))
+        out = cm.exception.results
         capped = [r for r in out if isinstance(r, d2l.CostCapExceeded)]
         done = [r for r in out if isinstance(r, d2l.ChatResult)]
         self.assertEqual(len(capped) + len(done), 20)
@@ -805,7 +815,9 @@ class CostCap(unittest.TestCase):
             d2l.api_cost(r.usage, self.price) for r in done), delta=1e-12)
         self.assertAlmostEqual(api._reserved, 0.0, delta=1e-12)
         # the settled slack admits later calls
-        later = asyncio.run(d2l.chat_batch(api, requests, concurrency=20))
+        with self.assertRaises(d2l.CostCapExceeded) as cm:
+            asyncio.run(d2l.chat_batch(api, requests, concurrency=20))
+        later = cm.exception.results
         self.assertLessEqual(api.spent_usd, cap)
         self.assertGreater(sum(isinstance(r, d2l.ChatResult)
                                for r in later), 0)
@@ -882,6 +894,11 @@ class ClosedLoop(unittest.TestCase):
                                float(np.percentile([.1, .2, .3, .4, .5], 90)))
 
     def test_through_fake_server(self):
+        # Real time: a full collection of what earlier tests left (the build
+        # of test_build_lib_async) inside the c = 32 level skews it by 5%.
+        gc.collect()
+        gc.freeze()
+        self.addCleanup(gc.unfreeze)
         fake = d2l.FakeChatServer(0.1, 8)
         api = d2l.ChatAPI(URL, 'fake-model', mode='live',
                           http_client=fake.transport())
@@ -1180,6 +1197,338 @@ class ImportWithoutSDK(unittest.TestCase):
                              capture_output=True, text=True, timeout=300)
         self.assertEqual(out.returncode, 0, out.stderr[-2000:])
         self.assertIn('miss m: request', out.stdout)
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the review of the 18.7 library code (stage 2a): each
+# one failed before its fix.
+
+
+def numbered(n, **params):
+    return [{'messages': [{'role': 'user', 'content': f'q{i}'}], **params}
+            for i in range(n)]
+
+
+class ReviewRetry(unittest.TestCase):
+    """Finding 3: every 5xx and an error event inside a stream retry."""
+
+    def test_every_5xx_retries(self):
+        for status in (501, 520, 522, 524, 529):
+            fake, api = fake_api(d2l.FakeChatServer(0.0, 1,
+                                                    script=[status, 200]))
+            r = api.chat(HELLO, max_tokens=8)
+            self.assertEqual((fake.n_requests, r.n_retries), (2, 1), status)
+
+    def midstream(self, error):
+        """A transport that answers 200 and then an SSE error event once."""
+        import httpx2
+        first = (b'data: {"id":"x","object":"chat.completion.chunk",'
+                 b'"created":0,"model":"m","choices":[{"index":0,'
+                 b'"delta":{"content":"Hi"},"finish_reason":null}]}\n\n'
+                 b'data: ' + json.dumps(error).encode() + b'\n\n')
+        good = (b'data: {"id":"x","object":"chat.completion.chunk",'
+                b'"created":0,"model":"m","choices":[{"index":0,'
+                b'"delta":{"content":"Hi"},"finish_reason":"stop"}]}\n\n'
+                b'data: [DONE]\n\n')
+        seen = []
+
+        class Transport(httpx2.AsyncBaseTransport):
+            async def handle_async_request(self, request):
+                seen.append(1)
+                return httpx2.Response(
+                    200, headers={'content-type': 'text/event-stream'},
+                    content=first if len(seen) == 1 else good)
+
+        api = d2l.ChatAPI(URL, 'm', mode='live', http_client=Transport())
+        api.backoff_base = 0.001
+        return api, seen
+
+    def test_midstream_error_event_retries(self):
+        for error in ({'error': {'code': 502, 'message': 'Provider error'}},
+                      {'error': {'code': 'server_error', 'message': 'gone'},
+                       'choices': [{'index': 0, 'delta': {'content': ''},
+                                    'finish_reason': 'error'}]}):
+            api, seen = self.midstream(error)
+            r = api.chat(HELLO, max_tokens=8, stream=True)
+            self.assertEqual((r.text, r.n_retries, len(seen)), ('Hi', 1, 2))
+
+    def test_midstream_client_error_does_not_retry(self):
+        import openai
+        api, seen = self.midstream({'error': {'code': 400, 'message': 'no'}})
+        with self.assertRaises(openai.APIError):
+            api.chat(HELLO, max_tokens=8, stream=True)
+        self.assertEqual(len(seen), 1)
+
+
+class ReviewCostCap(unittest.TestCase):
+    """Finding 4: the reservation covers n choices and digit-heavy prompts."""
+
+    def test_n_choices_reserved(self):
+        class FakeN(d2l.FakeChatServer):
+            def _reply(self, body):  # usage of all n choices, as real servers
+                tokens, finish, usage = super()._reply(body)
+                k = body.get('n') or 1
+                return tokens, finish, dict(usage,
+                                            completion_tokens=k * len(tokens))
+        price = d2l.PricePoint(1.0, 1000.0)
+        one = d2l.api_cost({'prompt_tokens': 0, 'completion_tokens': 8}, price)
+        fake, api = fake_api(FakeN(0.01, 4), price=price,
+                             cost_cap_usd=1.5 * one + 1e-4)
+        with self.assertRaises(d2l.CostCapExceeded):
+            api.chat(HELLO, max_tokens=8, n=2)
+        self.assertEqual(fake.n_requests, 0)
+        api.cost_cap_usd = 2 * one + 1e-3
+        api.chat(HELLO, max_tokens=8, n=2)
+        self.assertLessEqual(api.spent_usd, api.cost_cap_usd)
+
+    def test_prompt_bound_holds_for_digits(self):
+        """One token per byte bounds a digit-heavy prompt that ceil(bytes/2)
+        undercounts (Qwen3 splits numbers into single digits)."""
+        price = d2l.PricePoint(1000.0, 0.0)
+        digits = [{'role': 'user', 'content': ' '.join(
+            str(random.Random(i).randrange(10**8)) for i in range(50))}]
+        size = len(json.dumps(digits).encode('utf-8'))
+        digit_tokens = sum(ch.isdigit() for ch in digits[0]['content'])
+        self.assertGreater(digit_tokens, math.ceil(size / 2))
+        _, api = fake_api(price=price, cost_cap_usd=1e-3 * size + 1e-9)
+        api.chat(digits, max_tokens=1)  # fits: size bytes, output free
+        with self.assertRaises(d2l.CostCapExceeded):
+            fake_api(price=price, cost_cap_usd=1e-3 * size - 1e-6)[1].chat(
+                digits, max_tokens=1)
+
+
+class ReviewBatch(unittest.TestCase):
+    """Findings 1 and 6: replay misses raise; malformed requests and NumPy
+    parameters."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.cache = os.path.join(self.dir.name, 'cache.jsonl')
+
+    def tearDown(self):
+        self.dir.cleanup()
+
+    def test_replay_miss_raises_after_the_batch(self):
+        reqs = numbered(16, max_tokens=8)
+        _, rec = fake_api(d2l.FakeChatServer(0.01, 8), mode='record',
+                          cache=self.cache)
+        asyncio.run(d2l.chat_batch(rec, reqs[:-2], concurrency=2))
+        replay = d2l.ChatAPI(URL, 'fake-model', cache=self.cache)
+        with self.assertRaises(d2l.ReplayMiss) as cm:
+            asyncio.run(d2l.chat_batch(replay, reqs, concurrency=2))
+        out = cm.exception.results
+        self.assertEqual(len(out), 16)
+        self.assertEqual([isinstance(r, d2l.ReplayMiss) for r in out],
+                         [False] * 14 + [True] * 2)
+        with self.assertRaises(ValueError):  # and never into statistics
+            d2l.closed_loop_stats(out, 2)
+
+    def test_malformed_request_returned(self):
+        fake, api = fake_api()
+        out = asyncio.run(d2l.chat_batch(
+            api, [{'messages': HELLO, 'max_tokens': 8}, {'max_tokens': 8}],
+            concurrency=2))
+        self.assertIsInstance(out[0], d2l.ChatResult)
+        self.assertIsInstance(out[1], KeyError)
+
+    def test_numpy_scalar_params(self):
+        _, api = fake_api()
+        r = api.chat(HELLO, max_tokens=np.int64(8),
+                     temperature=np.float32(0.5), stop=[np.str_('x')])
+        self.assertEqual(r.request_hash, d2l.request_hash(
+            URL, 'fake-model', HELLO,
+            {'max_tokens': 8, 'temperature': 0.5, 'stop': ['x']}))
+        self.assertEqual(d2l.request_hash(URL, 'm', HELLO,
+                                          {'logit_bias': {'5': np.int8(-1)}}),
+                         d2l.request_hash(URL, 'm', HELLO,
+                                          {'logit_bias': {'5': -1}}))
+
+
+class ReviewCacheFile(unittest.TestCase):
+    """Finding 5: a torn last line (a run killed mid-write)."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.cache = os.path.join(self.dir.name, 'cache.jsonl')
+
+    def tearDown(self):
+        self.dir.cleanup()
+
+    def test_torn_last_line(self):
+        _, rec = fake_api(mode='record', cache=self.cache)
+        r = rec.chat(HELLO, max_tokens=8)
+        with open(self.cache, 'a', encoding='utf-8') as f:
+            f.write('{"hash": "abc", "request": {"mod')
+        with self.assertWarns(UserWarning):
+            replay = d2l.ChatAPI(URL, 'fake-model', cache=self.cache)
+        self.assertEqual(replay.chat(HELLO, max_tokens=8).text, r.text)
+        with self.assertWarns(UserWarning):  # recording again cuts it off
+            _, rec = fake_api(mode='record', cache=self.cache)
+        rec.chat(HELLO, max_tokens=8, replica=1)
+        with open(self.cache, encoding='utf-8') as f:
+            lines = f.read().split('\n')
+        self.assertEqual(lines[-1], '')
+        self.assertEqual([json.loads(l)['result']['created'] is not None
+                          for l in lines[:-1]], [True, True])
+        replay = d2l.ChatAPI(URL, 'fake-model', cache=self.cache)
+        self.assertEqual(replay.manifest()['cache_entries'], 2)
+
+    def test_complete_last_line_without_newline_kept(self):
+        _, rec = fake_api(mode='record', cache=self.cache)
+        rec.chat(HELLO, max_tokens=8)
+        with open(self.cache, 'rb+') as f:
+            f.truncate(os.path.getsize(self.cache) - 1)  # drop the newline
+        _, rec = fake_api(mode='record', cache=self.cache)
+        self.assertTrue(rec.chat(HELLO, max_tokens=8).from_cache)
+        rec.chat(HELLO, max_tokens=8, replica=1)
+        replay = d2l.ChatAPI(URL, 'fake-model', cache=self.cache)
+        self.assertEqual(replay.manifest()['cache_entries'], 2)
+
+    def test_damaged_middle_line_raises(self):
+        _, rec = fake_api(mode='record', cache=self.cache)
+        rec.chat(HELLO, max_tokens=8)
+        with open(self.cache, 'a', encoding='utf-8') as f:
+            f.write('{"torn\n')
+        rec.chat(HELLO, max_tokens=8, replica=1)
+        with self.assertRaises(ValueError):
+            d2l.ChatAPI(URL, 'fake-model', cache=self.cache)
+
+
+class ReviewClosedLoop(unittest.TestCase):
+    """Findings 2 and 7: one loop of c from one run; X_tokens None."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.cache = os.path.join(self.dir.name, 'cache.jsonl')
+
+    def tearDown(self):
+        self.dir.cleanup()
+
+    def test_cached_and_live_refused(self):
+        c = 4
+        _, api = fake_api(d2l.FakeChatServer(0.05, 8), mode='record',
+                          cache=self.cache)
+        first = asyncio.run(d2l.chat_batch(api, numbered(8 * c,
+                                                         max_tokens=8),
+                                           concurrency=c))
+        self.assertLess(abs(d2l.closed_loop_stats(first, c)['little'] - 1),
+                        0.05)
+        _, api = fake_api(d2l.FakeChatServer(0.05, 8), mode='record',
+                          cache=self.cache)
+        doubled = asyncio.run(d2l.chat_batch(api, numbered(16 * c,
+                                                           max_tokens=8),
+                                             concurrency=c))
+        self.assertEqual(sum(r.from_cache for r in doubled), 8 * c)
+        with self.assertRaises(ValueError) as cm:
+            d2l.closed_loop_stats(doubled, c)
+        self.assertIn('cached and live', str(cm.exception))
+
+    def test_more_than_c_in_flight_refused(self):
+        out = closed_loop_sim(4, 32, 8, 0.125)
+        d2l.closed_loop_stats(out, 4)
+        with self.assertRaises(ValueError):  # two loops of 4 overlaid
+            d2l.closed_loop_stats(out + closed_loop_sim(4, 32, 8, 0.125), 4)
+
+    def test_two_runs_refused(self):
+        def stamped(results, epoch):
+            return [r._replace(created=time.strftime(
+                '%Y-%m-%dT%H:%M:%SZ', time.gmtime(epoch + r.t_send)))
+                for r in results]
+        run = closed_loop_sim(2, 16, 8, 0.125)
+        d2l.closed_loop_stats(stamped(run, 1.8e9), 2)
+        # the second half recorded after a reboot: same monotonic range,
+        # an hour later on the wall clock
+        mixed = stamped(run[:8], 1.8e9) + stamped(run[8:], 1.8e9 + 3600)
+        with self.assertRaises(ValueError) as cm:
+            d2l.closed_loop_stats(mixed, 2)
+        self.assertIn('more than one run', str(cm.exception))
+
+    def test_missing_usage_gives_none(self):
+        c = 2
+        _, api = fake_api(d2l.FakeChatServer(0.02, 8))
+        out = asyncio.run(d2l.chat_batch(api, numbered(
+            8 * c, max_tokens=8, stream=True,
+            stream_options={'include_usage': False}), concurrency=c))
+        st = d2l.closed_loop_stats(out, c)
+        self.assertGreater(st['X'], 0)
+        self.assertIsNone(st['X_tokens'])
+
+
+class ReviewClients(unittest.TestCase):
+    """Finding 8: SDK clients per event loop; the server's log and group."""
+
+    def test_one_client_per_open_loop(self):
+        _, api = fake_api()
+
+        async def notebook_cell(i):
+            return await api.achat(HELLO, max_tokens=8, replica=i)
+
+        loop = asyncio.new_event_loop()  # the notebook's loop
+        try:
+            for i in range(3):
+                api.chat(HELLO, max_tokens=8, replica=10 + i)
+                loop.run_until_complete(notebook_cell(i))
+            self.assertEqual(len(api._sdks), 2)
+        finally:
+            loop.close()
+        for i in range(3):  # scripts: asyncio.run makes a loop per call
+            asyncio.run(notebook_cell(20 + i))
+        self.assertLessEqual(len(api._sdks), 2)
+
+    def test_listing_discount_not_applied_twice(self):
+        """Novita lists 0.165 / 0.66 at discount 0.45: the price of the
+        undiscounted rows (0.3 / 1.2) times 0.55, so already discounted."""
+        self.assertEqual(NOVITA['pricing']['discount'], 0.45)
+        price = d2l.price_from_listing(LISTING, FLAGSHIP, 'novita')
+        self.assertAlmostEqual(price.input, 0.3 * (1 - 0.45), places=12)
+        self.assertAlmostEqual(price.output, 1.2 * (1 - 0.45), places=12)
+
+
+ORPHAN_STUB = textwrap.dedent('''\
+    import subprocess, sys
+    child = subprocess.Popen([sys.executable, '-c',
+                              'import time; time.sleep(120)'])
+    print('stub orphaning', child.pid, flush=True)
+    sys.exit(3)
+    ''')
+
+
+class ReviewLocalServer(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.stub = os.path.join(self.dir.name, 'stub.py')
+        with open(self.stub, 'w') as f:
+            f.write(ORPHAN_STUB)
+
+    def tearDown(self):
+        self.dir.cleanup()
+
+    def test_early_exit_kills_group_and_log(self):
+        server = d2l.LocalChatServer([sys.executable, self.stub, '{port}'],
+                                     ready_timeout=30)
+        with self.assertRaises(RuntimeError) as cm:
+            server.start()
+        self.assertIn('stub orphaning', str(cm.exception))
+        child = int(str(cm.exception).split('stub orphaning ')[1].split()[0])
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < 10:
+            try:
+                os.kill(child, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.05)
+        else:
+            os.kill(child, signal.SIGKILL)
+            self.fail('the server\'s child outlived a failed start')
+        self.assertFalse(os.path.exists(server.log_path))
+
+    def test_stop_deletes_log(self):
+        with open(self.stub, 'w') as f:
+            f.write(STUB)
+        with d2l.LocalChatServer([sys.executable, self.stub, 'serve',
+                                  '{port}'], ready_timeout=30) as server:
+            self.assertTrue(os.path.exists(server.log_path))
+        self.assertFalse(os.path.exists(server.log_path))
 
 
 if __name__ == '__main__':

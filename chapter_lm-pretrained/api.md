@@ -159,9 +159,9 @@ def backoff_delay(attempt, base=1.0, cap=60.0, rng=None, retry_after=None):
 async def achat(self, messages, *, replica=0, stream=False, **params):
     """One chat completion as a d2l.ChatResult. The cache answers first when
     the mode allows; a live call reserves its worst-case cost, retries
-    connection errors, timeouts and 408, 429 and 5xx responses with
-    full-jitter backoff (Retry-After as a floor), and raises at once on any
-    other status."""
+    connection errors, timeouts, 408, 429 and 5xx responses and error
+    events inside a stream with full-jitter backoff (Retry-After as a
+    floor), and raises at once on any other status."""
     import asyncio  # not in the d2l library preamble
     params = d2l._chat_merge(self.default_params, params)
     h = d2l.request_hash(self.base_url, self.model, messages, params, replica)
@@ -203,18 +203,25 @@ async def achat(self, messages, *, replica=0, stream=False, **params):
 async def chat_batch(api, requests, *, concurrency=8):
     """Send requests (dicts with 'messages', optionally 'replica' and request
     parameters) through api with at most `concurrency` in flight; results
-    come in input order, a failed request as its exception."""
+    come in input order, a failed request as its exception. A replay miss
+    or a capped call is not a result: once every request has finished (the
+    paid ones are cached), the first d2l.ReplayMiss or d2l.CostCapExceeded
+    is raised, with the whole list as its `results` attribute."""
     import asyncio  # not in the d2l library preamble
     semaphore = asyncio.Semaphore(concurrency)
     async def one(request):
-        request = dict(request)
-        messages = request.pop('messages')
         async with semaphore:
             try:
-                return await api.achat(messages, **request)
+                request = dict(request)
+                return await api.achat(request.pop('messages'), **request)
             except Exception as e:
                 return e
-    return await asyncio.gather(*(one(r) for r in requests))
+    results = await asyncio.gather(*(one(r) for r in requests))
+    for r in results:
+        if isinstance(r, (d2l.ReplayMiss, d2l.CostCapExceeded)):
+            r.results = results
+            raise r
+    return results
 ```
 
 <!-- Placeholder (stage 2): the SDK's own retries are off, so the client counts every 429. -->
@@ -293,7 +300,13 @@ def closed_loop_stats(results, c):
     s_i >= t_a and f_i <= t_b; Lbar = sum_i max(0, min(f_i, t_b) -
     max(s_i, t_a)) / (t_b - t_a) is the mean number in flight. little =
     X W / c checks the client's bookkeeping, sustained = Lbar / c that it
-    kept c in flight. ttft_p50 and ttft_p90 (from t_first) are over all N."""
+    kept c in flight. X_tokens is None when a counted completion has no
+    usage. ttft_p50 and ttft_p90 (from t_first) are over all N. The results
+    must come from one closed loop: a d2l.ReplayMiss or d2l.CostCapExceeded
+    among them, a mix of cached and live results, more than c requests in
+    flight at once, or send times whose wall and monotonic clocks disagree
+    by more than 2 s (two recording runs) raise ValueError."""
+    d2l._check_closed_loop(results, c)  # one loop of c, from one run
     ok = [r for r in results if not isinstance(r, BaseException)]
     N = len(ok)
     if N <= 2 * c:
@@ -306,14 +319,15 @@ def closed_loop_stats(results, c):
         raise ValueError('the steady window is empty')
     done = (f > t_a) & (f <= t_b)  # completions inside the window
     inside = (s >= t_a) & (f <= t_b)  # requests wholly inside it
-    tokens = np.array([r.usage.get('completion_tokens') or 0 for r in ok])
+    tokens = [r.usage.get('completion_tokens') for r, d in zip(ok, done) if d]
     X = done.sum() / window
     W = (f - s)[inside].mean() if inside.any() else float('nan')
     Lbar = np.clip(np.minimum(f, t_b) - np.maximum(s, t_a), 0, None).sum()
     ttft = [r.t_first - r.t_send for r in ok if r.t_first is not None]
     p50, p90 = (map(float, np.percentile(ttft, [50, 90])) if ttft
                 else (None, None))
-    return {'X': float(X), 'X_tokens': float(tokens[done].sum() / window),
+    X_tokens = None if None in tokens else float(sum(tokens) / window)
+    return {'X': float(X), 'X_tokens': X_tokens,
             'W': float(W), 'Lbar': float(Lbar / window),
             'little': float(X * W / c), 'sustained': float(Lbar / window / c),
             'ttft_p50': p50, 'ttft_p90': p90,

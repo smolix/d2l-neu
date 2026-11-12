@@ -7001,20 +7001,27 @@ def backoff_delay(attempt, base=1.0, cap=60.0, rng=None, retry_after=None):
 async def chat_batch(api, requests, *, concurrency=8):
     """Send requests (dicts with 'messages', optionally 'replica' and request
     parameters) through api with at most `concurrency` in flight; results
-    come in input order, a failed request as its exception.
+    come in input order, a failed request as its exception. A replay miss
+    or a capped call is not a result: once every request has finished (the
+    paid ones are cached), the first d2l.ReplayMiss or d2l.CostCapExceeded
+    is raised, with the whole list as its `results` attribute.
 
     Defined in :numref:`sec_lm_api`"""
     import asyncio  # not in the d2l library preamble
     semaphore = asyncio.Semaphore(concurrency)
     async def one(request):
-        request = dict(request)
-        messages = request.pop('messages')
         async with semaphore:
             try:
-                return await api.achat(messages, **request)
+                request = dict(request)
+                return await api.achat(request.pop('messages'), **request)
             except Exception as e:
                 return e
-    return await asyncio.gather(*(one(r) for r in requests))
+    results = await asyncio.gather(*(one(r) for r in requests))
+    for r in results:
+        if isinstance(r, (d2l.ReplayMiss, d2l.CostCapExceeded)):
+            r.results = results
+            raise r
+    return results
 
 def closed_loop_stats(results, c):
     """Throughput and latency of a closed loop that kept c requests in
@@ -7027,9 +7034,15 @@ def closed_loop_stats(results, c):
     s_i >= t_a and f_i <= t_b; Lbar = sum_i max(0, min(f_i, t_b) -
     max(s_i, t_a)) / (t_b - t_a) is the mean number in flight. little =
     X W / c checks the client's bookkeeping, sustained = Lbar / c that it
-    kept c in flight. ttft_p50 and ttft_p90 (from t_first) are over all N.
+    kept c in flight. X_tokens is None when a counted completion has no
+    usage. ttft_p50 and ttft_p90 (from t_first) are over all N. The results
+    must come from one closed loop: a d2l.ReplayMiss or d2l.CostCapExceeded
+    among them, a mix of cached and live results, more than c requests in
+    flight at once, or send times whose wall and monotonic clocks disagree
+    by more than 2 s (two recording runs) raise ValueError.
 
     Defined in :numref:`sec_lm_api`"""
+    d2l._check_closed_loop(results, c)  # one loop of c, from one run
     ok = [r for r in results if not isinstance(r, BaseException)]
     N = len(ok)
     if N <= 2 * c:
@@ -7042,14 +7055,15 @@ def closed_loop_stats(results, c):
         raise ValueError('the steady window is empty')
     done = (f > t_a) & (f <= t_b)  # completions inside the window
     inside = (s >= t_a) & (f <= t_b)  # requests wholly inside it
-    tokens = np.array([r.usage.get('completion_tokens') or 0 for r in ok])
+    tokens = [r.usage.get('completion_tokens') for r, d in zip(ok, done) if d]
     X = done.sum() / window
     W = (f - s)[inside].mean() if inside.any() else float('nan')
     Lbar = np.clip(np.minimum(f, t_b) - np.maximum(s, t_a), 0, None).sum()
     ttft = [r.t_first - r.t_send for r in ok if r.t_first is not None]
     p50, p90 = (map(float, np.percentile(ttft, [50, 90])) if ttft
                 else (None, None))
-    return {'X': float(X), 'X_tokens': float(tokens[done].sum() / window),
+    X_tokens = None if None in tokens else float(sum(tokens) / window)
+    return {'X': float(X), 'X_tokens': X_tokens,
             'W': float(W), 'Lbar': float(Lbar / window),
             'little': float(X * W / c), 'sustained': float(Lbar / window / c),
             'ttft_p50': p50, 'ttft_p90': p90,
@@ -10139,13 +10153,24 @@ def _chat_merge(base, update):
     Defined in :numref:`sec_lm_api`"""
     out = {}
     for k in list(base) + [k for k in update if k not in base]:
-        v = update[k] if k in update else base[k]
+        v = d2l._chat_plain(update[k] if k in update else base[k])
         if isinstance(v, dict):
             inner = base.get(k) if k in update else None
             v = d2l._chat_merge(inner if isinstance(inner, dict) else {}, v)
         if v is not None:
             out[k] = v
     return out
+
+def _chat_plain(v):
+    """v with NumPy (or torch) scalars, also inside lists and tuples, turned
+    into Python numbers, so that they hash and serialize like them.
+
+    Defined in :numref:`sec_lm_api`"""
+    if isinstance(v, (list, tuple)):
+        return [d2l._chat_plain(a) for a in v]
+    if getattr(v, 'ndim', None) == 0 and hasattr(v, 'item'):
+        return v.item()
+    return v
 
 def _chat_usage(u):
     """The usage block of a response as prompt, completion, cached and
@@ -10219,6 +10244,36 @@ def _retry_after(value):
         except (TypeError, ValueError):
             return None
 
+def _check_closed_loop(results, c):
+    """Raise ValueError unless results can be one closed loop of c recorded
+    in one run: no d2l.ReplayMiss or d2l.CostCapExceeded among them, not a
+    mix of cached and live responses, never more than c in flight, and
+    t_send minus the wall-clock `created` the same within 2 s (a monotonic
+    clock of another boot or a suspended machine shifts it).
+
+    Defined in :numref:`sec_lm_api`"""
+    import calendar  # not in the d2l library preamble
+    bad = [r for r in results
+           if isinstance(r, (d2l.ReplayMiss, d2l.CostCapExceeded))]
+    if bad:
+        raise ValueError(f'{len(bad)} requests got no response: {bad[0]!r}')
+    ok = [r for r in results if not isinstance(r, BaseException)]
+    if len({r.from_cache for r in ok} - {None}) > 1:
+        raise ValueError('the results mix cached and live responses; record '
+                         'the level in one run, into a fresh cache')
+    s = np.array([r.t_send for r in ok], dtype=float)
+    f = s + np.array([r.t_total for r in ok], dtype=float)
+    step = np.concatenate([np.ones(len(ok)), -np.ones(len(ok))])
+    order = np.lexsort((step, np.concatenate([s, f])))  # ends before starts
+    if len(ok) and np.cumsum(step[order]).max() > c:
+        raise ValueError(f'more than c = {c} requests were in flight at once: '
+                         f'not one closed loop')
+    lag = [t - calendar.timegm(time.strptime(r.created, '%Y-%m-%dT%H:%M:%SZ'))
+           for t, r in zip(s, ok) if r.created is not None]
+    if lag and max(lag) - min(lag) > 2:
+        raise ValueError('the send times come from more than one run '
+                         '(monotonic and wall clocks disagree)')
+
 class ChatAPI:
     """A measuring and replaying client for OpenAI-compatible chat
     completions. Every request is keyed by d2l.request_hash. Mode 'replay'
@@ -10238,7 +10293,7 @@ class ChatAPI:
     (None: the random module) set the retry schedule.
 
     Defined in :numref:`sec_lm_api`"""
-    RETRY_STATUS = (408, 429, 500, 502, 503, 504)
+    RETRY_STATUS = (408, 429)  # and every 5xx
 
     def __init__(self, base_url, model, api_key=None, *, cache=None,
                  mode='replay', price=None, cost_cap_usd=None, timeout=120.0,
@@ -10258,17 +10313,28 @@ class ChatAPI:
                            os.path.splitext(cache)[0] + '.calls.jsonl')
         self.backoff_base, self.backoff_cap, self.rng = 1.0, 60.0, None
         self._lock, self._cache = threading.Lock(), {}
-        self._sdk = self._sdk_loop = self._loop = self._sdk_version = None
+        self._sdk = self._loop = self._sdk_version = None
+        self._sdks = {}  # event loop -> SDK client
         self._spent = self._reserved = 0.0
         self._stats, self._costs = collections.Counter(), collections.Counter()
         self._served, self._providers = (collections.Counter(),
                                          collections.Counter())
+        self._trimmed = set()  # files whose torn last line was dealt with
         if cache is not None and os.path.exists(cache):
-            with open(cache, encoding='utf-8') as f:
-                for line in f:
-                    if line.strip():
-                        entry = json.loads(line)
-                        self._cache.setdefault(entry['hash'], []).append(entry)
+            import warnings  # not in the d2l library preamble
+            with open(cache, 'rb') as f:
+                lines = f.read().split(b'\n')
+            for i, line in enumerate(lines):
+                try:
+                    entry = json.loads(line) if line.strip() else None
+                except ValueError:
+                    if i < len(lines) - 1:  # a whole line: a damaged cache
+                        raise ValueError(f'{cache}: line {i + 1} is not JSON')
+                    warnings.warn(f'{cache}: skipping its torn last line (a '
+                                  f'run killed while writing it)')
+                    continue
+                if entry is not None:
+                    self._cache.setdefault(entry['hash'], []).append(entry)
 
     @property
     def spent_usd(self):
@@ -10327,21 +10393,27 @@ class ChatAPI:
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
     def _client(self):
-        """The SDK client of the running event loop, created on first use."""
+        """The SDK client of the running event loop, created on first use:
+        one per open loop (the private loop of chat() and a notebook's), the
+        clients of closed loops dropped."""
         import asyncio  # not in the d2l library preamble
         loop = asyncio.get_running_loop()
-        if self._sdk is None or self._sdk_loop is not loop:
+        with self._lock:
+            for old in [l for l in self._sdks if l.is_closed()]:
+                del self._sdks[old]
+            if loop in self._sdks:
+                return self._sdks[loop]
             import openai  # not in the d2l library preamble
             http = self.http_client
             if http is not None and hasattr(http, 'handle_async_request'):
                 import httpx2  # the httpx flavour of openai >= 3
                 http = httpx2.AsyncClient(transport=http)
             key = self.api_key() if callable(self.api_key) else self.api_key
-            self._sdk = openai.AsyncOpenAI(
+            self._sdk = self._sdks[loop] = openai.AsyncOpenAI(
                 base_url=self.base_url, api_key=key or 'none', max_retries=0,
                 timeout=self.timeout, http_client=http)
-            self._sdk_loop, self._sdk_version = loop, openai.__version__
-        return self._sdk
+            self._sdk_version = openai.__version__
+            return self._sdk
 
     def _lookup(self, h, messages):
         """The first cached result of h unless the mode is 'live'; a miss
@@ -10358,8 +10430,11 @@ class ChatAPI:
         return None
 
     def _reserve(self, messages, params):
-        """Reserve the worst case: ceil(bytes / 2) prompt tokens (UTF-8
-        bytes of the messages' JSON) and max_tokens completion tokens."""
+        """Reserve the worst case: one prompt token per UTF-8 byte of the
+        messages' JSON (a byte-level BPE token covers at least one byte, and
+        the JSON's quoting outweighs a chat template's few special tokens per
+        message) and max_tokens completion tokens for each of the n
+        choices."""
         if self.price is None:
             self._stats['live_calls'] += 1
             return 0.0
@@ -10367,8 +10442,8 @@ class ChatAPI:
         if out is None:
             raise ValueError('a priced live call needs max_tokens')
         n = len(json.dumps(messages, ensure_ascii=False).encode('utf-8'))
-        worst = d2l.api_cost({'prompt_tokens': math.ceil(n / 2),
-                              'completion_tokens': out}, self.price)
+        worst = d2l.api_cost({'prompt_tokens': n, 'completion_tokens': out * (
+            params.get('n') or 1)}, self.price)
         with self._lock:
             if (self.cost_cap_usd is not None and self._spent + self._reserved
                     + worst > self.cost_cap_usd):
@@ -10399,14 +10474,23 @@ class ChatAPI:
 
     def _retry_info(self, e):
         """(retry?, HTTP status, Retry-After seconds) of a failed attempt:
-        connection errors, timeouts and RETRY_STATUS are retried."""
+        connection errors, timeouts, RETRY_STATUS and every 5xx are retried,
+        and so is an error event inside a stream (the SDK raises a bare
+        APIError; its numeric code, if any, is treated as the status)."""
+        def retry(status):
+            return status in self.RETRY_STATUS or 500 <= status < 600
         status = getattr(e, 'status_code', None)
         if status is not None:
             headers = getattr(getattr(e, 'response', None), 'headers', {})
-            return (status in self.RETRY_STATUS, status,
+            return (retry(status), status,
                     d2l._retry_after(headers.get('retry-after')))
         openai = sys.modules.get('openai')
         if openai is not None and isinstance(e, openai.APIConnectionError):
+            return True, None, None
+        if openai is not None and type(e) is openai.APIError:  # mid-stream
+            code = str(getattr(e, 'code', None) or '')
+            if code.isdigit():
+                return retry(int(code)), int(code), None
             return True, None, None
         transport = [getattr(sys.modules.get(m), 'TransportError', None)
                      for m in ('httpx2', 'httpx')]
@@ -10545,15 +10629,18 @@ class ChatAPI:
             line = line.replace(key, '[api key]')
         with self._lock:
             os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+            if path not in self._trimmed:
+                d2l._jsonl_trim_torn(path)
+                self._trimmed.add(path)
             with open(path, 'a', encoding='utf-8') as f:
                 f.write(line + '\n')
 
     async def achat(self, messages, *, replica=0, stream=False, **params):
         """One chat completion as a d2l.ChatResult. The cache answers first when
         the mode allows; a live call reserves its worst-case cost, retries
-        connection errors, timeouts and 408, 429 and 5xx responses with
-        full-jitter backoff (Retry-After as a floor), and raises at once on any
-        other status.
+        connection errors, timeouts, 408, 429 and 5xx responses and error
+        events inside a stream with full-jitter backoff (Retry-After as a
+        floor), and raises at once on any other status.
 
         Defined in :numref:`sec_lm_api`"""
         import asyncio  # not in the d2l library preamble
@@ -10588,6 +10675,27 @@ class ChatAPI:
         return self._record(h, messages, params, replica, out, t_send, created,
                             n_retries, n_429, reserved)
 
+def _jsonl_trim_torn(path):
+    """End a JSONL file with a newline before appending to it: a torn last
+    line (no newline, as a run killed mid-write leaves it) is cut off unless
+    it is complete JSON, which only gets its newline.
+
+    Defined in :numref:`sec_lm_api`"""
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        return
+    with open(path, 'rb+') as f:
+        f.seek(-1, os.SEEK_END)
+        if f.read(1) == b'\n':
+            return
+        f.seek(0)
+        data = f.read()
+        cut = data.rfind(b'\n') + 1
+        try:
+            json.loads(data[cut:])
+            f.write(b'\n')
+        except ValueError:
+            f.truncate(cut)
+
 def _api_window(override, day, hhmm):
     """Whether a pricing.overrides row covers a UTC weekday and HHMM time;
     utc_end 0 means midnight, and a window may wrap past it.
@@ -10608,8 +10716,10 @@ def price_from_listing(listing, model_id, provider, *, when=None):
     [model_id] holds the endpoint rows of /api/v1/models/<id>/endpoints (or
     that whole response). provider matches a row's tag exactly, else its
     provider_name or the slug before the tag's '/'. Listed prices are USD
-    per token. Rows with time-window pricing.overrides need when, an aware
-    datetime whose UTC weekday and time select the window.
+    per token with the row's `discount` already applied (Novita's 0.165 per
+    million at discount 0.45 is 0.3 x 0.55), so it is not applied again.
+    Rows with time-window pricing.overrides need when, an aware datetime
+    whose UTC weekday and time select the window.
 
     Defined in :numref:`sec_lm_api`"""
     import datetime  # not in the d2l library preamble
@@ -10682,8 +10792,8 @@ class LocalChatServer:
     subprocess in its own process group. '{port}' in cmd becomes port (a
     free one when None); start() polls http://host:port/v1/models until it
     answers 200 and returns the base URL, or kills the server and raises
-    with the last 20 log lines; stop() terminates the whole group and
-    returns the exit code. Also a context manager.
+    with the last 20 log lines; stop() terminates the whole group, deletes
+    the temporary log and returns the exit code. Also a context manager.
 
     Defined in :numref:`sec_lm_api`"""
     def __init__(self, cmd, *, port=None, host='127.0.0.1',
@@ -10716,15 +10826,17 @@ class LocalChatServer:
         url = f'http://{self.host}:{self.port}/v1'
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         while True:
-            if self.proc.poll() is not None:
-                code, self.proc = self.proc.returncode, None
+            if self.proc.poll() is not None:  # its children may live on
+                code, tail = self.proc.returncode, self._tail()
+                self.stop()
                 raise RuntimeError(f'server exited with code {code} before '
-                                   f'it was ready:\n{self._tail()}')
+                                   f'it was ready:\n{tail}')
             left = self.ready_timeout - (time.monotonic() - t0)
             if left <= 0:
+                tail = self._tail()
                 self.stop()
                 raise TimeoutError(f'server not ready after '
-                                   f'{self.ready_timeout} s:\n{self._tail()}')
+                                   f'{self.ready_timeout} s:\n{tail}')
             try:
                 with opener.open(url + '/models',
                                  timeout=max(0.5, min(5.0, left))) as r:
@@ -10737,11 +10849,13 @@ class LocalChatServer:
         return url
 
     def stop(self):
-        import signal  # not in the d2l library preamble
+        import atexit  # not in the d2l library preamble
+        import signal
         import subprocess
         if self.proc is None:
             return None
         proc, self.proc = self.proc, None
+        atexit.unregister(self.stop)
         try:
             os.killpg(proc.pid, signal.SIGTERM)
         except ProcessLookupError:
@@ -10755,6 +10869,8 @@ class LocalChatServer:
             os.killpg(proc.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
+        if self.log_path is not None and os.path.exists(self.log_path):
+            os.remove(self.log_path)
         return code
 
     def _tail(self, n=20):

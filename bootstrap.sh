@@ -219,8 +219,9 @@ cat <<NEXT
 
 CHANGING A NOTEBOOK'S OUTPUTS — needs the per-framework GPU venv (synced on
 first use, ~20 GB CUDA wheels) and a GPU:
-    $MAKE -B _notebooks/<fw>/<chapter>/<file>.executed   # re-execute one notebook
-    $MAKE capture-outputs FILES=<chapter>/<file>.md      # bless into the store
+    rm -f _notebooks/<fw>/<chapter>/<file>.executed
+    $MAKE _notebooks/<fw>/<chapter>/<file>.executed      # re-execute one notebook
+    python3 tools/capture_outputs.py --frameworks <fw> <chapter>/<file>.md   # bless it
     $MAKE audit-outputs                                  # what's stale + integrity
-See docs/build-system.md for the full model and the four canonical flows.
+See docs/build-guide.md for the recipes and docs/build-system.md for the model.
 NEXT

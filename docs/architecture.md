@@ -1,80 +1,90 @@
 # D2L-Neu Architecture
 
-Quarto-based rebuild of *Dive into Deep Learning* (d2l.ai), replacing the
-custom d2l-book/Sphinx pipeline. Source content originates from the d2l-en
-repository; the `.md` files now live in-tree under `chapter_*/`.
+**What this is:** the component inventory: what each directory, tool and
+configuration file is, and the source syntax they consume. **When to read
+it:** when you need to know which script does what or where a piece of the
+build lives. For how to build, read [`build-guide.md`](build-guide.md); for
+the freshness and store model, [`build-system.md`](build-system.md); for
+notebook execution, [`notebook-scheduler.md`](notebook-scheduler.md).
 
-> **Note — read `build-system.md` for the build model.** The **decoupled build
-> has landed** and is the current reality: site rendering (HTML/slides/PDF) reads
-> a **committed, cell-ID-keyed notebook-output store** (`outputs/` — text in git,
-> image assets in Git LFS), so rendering runs **CPU-only**, with no notebook
-> execution and no framework venvs; notebooks re-execute only when their *code*
-> changes. This document is the **component inventory** (what each piece is and
-> how content flows through it); some per-stage prose below still describes the
-> older `_notebooks/`-coupled flow for context. For the authoritative build/
-> freshness model — the capture/bless workflow, the randomness-immune freshness
-> gate, and how partial re-execution keeps every index correct — see
-> **`build-system.md`** (and **CLAUDE.md** "Getting started" for the quickstart).
+Quarto-based rebuild of *Dive into Deep Learning* (d2l.ai), replacing the
+d2l-book/Sphinx pipeline. The source `.md` files originate from the d2l-en
+repository and now live in-tree under `chapter_*/`.
 
 ## Content scale
 
+Counted on 2026-11-12.
+
 | Artifact        | Count |
 |-----------------|-------|
-| Source .md      | 191 files across 27 chapter directories |
-| HTML pages      | 192 (multi-framework tabs) |
-| PDFs            | 4 (one per framework, ~34 MB each) |
-| Notebooks       | 413 (PT 130, TF 90, JAX 65, MX 128) |
-| Slides          | 261 (PT 75, TF 56, JAX 55, MX 75) |
-| d2l library     | 11,229 lines (torch 3441, mxnet 3321, tf 2429, jax 2026) |
-| Bibliography    | 487 entries in d2l.bib |
+| Source .md      | 401 files in 56 `chapter_*` directories; 397 entries in `CHAPTER_NUMBERING` |
+| Notebooks       | 676 (PyTorch 216, TensorFlow 129, JAX 196, MXNet 135) |
+| Captured manifests | 676 under `outputs/` |
+| Slide decks     | 229 source files have a `<!-- slides -->` section; `gen_slides.py` renders a deck per file and framework |
+| PDFs            | 4 full books (one per framework) + 4 PyTorch part PDFs |
+| d2l library     | `d2l/torch.py` 7,020 lines, `jax.py` 6,862, `tensorflow.py` 3,695, `mxnet.py` 3,649 |
+| Bibliography    | 1,586 entries in `d2l.bib` |
 
-Frameworks: **PyTorch**, **TensorFlow**, **JAX**, **MXNet**.
+Frameworks: **PyTorch**, **TensorFlow**, **JAX**, **MXNet**. The Advanced part
+(chapters 9–17) carries PyTorch and JAX only.
 
 ---
 
 ## Repository layout
 
 ```
-chapter_*/                  Source .md + generated .qmd (27 dirs, 191 files each)
-tools/                      Build scripts (5,235 lines total)
-  d2l_preprocess.py         .md → .qmd conversion (1,075 lines)
-  build_lib.py              #@save extraction → d2l package (705 lines)
-  inject_outputs.py         Notebook output → HTML/PDF/slides injection
-  gen_slides.py             Slide generation + CPU-only revealjs rendering
-  gen_pdf.py                Single-framework PDF sources (355 lines)
-  run_one_notebook.py       Per-notebook execution worker + resource locks
-  run_notebooks.py          Legacy/manual batch notebook runner
-  fix_crossref_numbers.py   Post-render HTML chapter/section numbering (332 lines)
-  gen_notebooks.py          Per-framework .ipynb generation (248 lines)
-  fix_latex.py              LaTeX hierarchy restructuring (214 lines)
-  runtime_env.py            Env vars, memory, CPU affinity, kernel cleanup (191 lines)
-  gen_api_doc.py            Per-framework tabbed API reference (307 lines)
-d2l/                        Generated Python package (preamble + auto-generated code)
-  torch.py, tensorflow.py, jax.py, mxnet.py, __init__.py
+chapter_*/                  Source .md (committed) + generated .qmd (gitignored)
+tools/                      Build scripts; the main ones:
+  d2l_preprocess.py         .md → .qmd for HTML; owns CHAPTER_NUMBERING
+  build_lib.py              #@save extraction → d2l/<lib>.py + d2l/_blocks/ shards
+  gen_notebooks.py          per-framework .ipynb generation
+  scan_notebook_manifests.py, scan_d2l_usage.py   MANIFEST.mk and per-notebook .d files
+  notebook_scheduler.py     the execution queue (notebook-scheduler.md)
+  run_one_notebook.py       per-notebook execution worker (timeouts, retries, locks)
+  run_notebooks.py          execute_notebook() + execution-provenance sidecars
+  runtime_env.py            env vars, resource tables, CPU affinity, output hygiene
+  detect_resources.py       GPU/CPU/RAM probe → slot and render-fleet plan
+  capture_outputs.py        executed notebooks → outputs/ (the bless step)
+  audit_outputs.py          freshness + integrity audit; the make html gate
+  locks.py                  locked-notebook directive, materialization, make locks
+  inject_outputs.py         outputs/ → HTML, PDF and slide .qmd
+  fix_crossref_numbers.py   post-render HTML chapter/section numbering
+  gen_pdf.py, build_one_pdf.sh, fix_latex.py, build_part_pdfs.py   PDFs
+  gen_slides.py, integrate_slides.sh, build_slides_index.py        slides
+  build_hosted_notebooks.py, build_notebook_zips.py               Colab notebooks, zips
+  upload_r2.sh, publish_colab_notebooks.sh, create_forum_topics.py publishing
+  gen_api_doc.py            per-framework tabbed API reference
+  lint_source.py, add_cell_ids.py   source lint; stable cell IDs
+  gen_mdl_*_figures.py and other gen_*  committed figure generators (make figures)
+d2l/                        torch.py, tensorflow.py, jax.py, mxnet.py (generated by make lib,
+                            committed; hand-written header above the WARNING line),
+                            __init__.py, nnx_resnet.py
+outputs/                    Committed notebook outputs: <fw>/<chapter>/<file>.json + images (LFS)
 config.ini                  Per-framework library aliases and metadata
-Makefile                    Primary build entry point (thin; includes make/*.mk)
-make/*.mk                   Included rule modules (resources, notebooks, render, deploy, …)
-_quarto.yml                 Quarto book config (307 lines)
-pyproject.toml              UV package manager, framework extras (93 lines)
-_d2l-theme.scss             Material Design blue theme (149 lines)
-_d2l-tabs.html              Tab sync + sidebar collapse JS (207 lines)
-_d2l-style.css              Scrollable output, hidden tab headers (18 lines)
+Makefile, make/*.mk         Build entry point (thin) and its rule modules (build-system.md §6.9)
+_quarto.yml                 Quarto book config (chapter order must match CHAPTER_NUMBERING)
+pyproject.toml, uv.lock     UV project: framework extras, build extra (Quarto)
+hosted/, notebook_envs/     Pinned environments for Colab notebooks and the notebook zips
+_d2l-theme.scss, _d2l-style.css, _d2l-tabs.html, _d2l-*.html   HTML theme, tab sync, navbar parts
+_d2l-slides.scss            Slide styling (all decks)
 _svg-to-pdf.lua             Lua filter: SVG → PDF for LaTeX
-static/                     Fonts (Source Serif 4, Source Sans 3, Inconsolata) + LaTeX preamble
-data/                       Shared dataset cache (git-ignored, survives `make clean`)
-img/                        SVGs (copied from d2l-en)
+static/                     Fonts, LaTeX preamble (d2l-preamble.tex), covers, landing-page assets
+diagrams/                   Slide diagram engine (node) → img/auto/
+img/                        Book figures (committed SVGs) and img/auto/ slide diagrams
+data/                       Shared dataset cache (gitignored, survives `make clean`)
 d2l.bib                     Bibliography
 ```
 
-**Build artifacts** (git-ignored):
+**Build products** (gitignored):
 
 ```
-_book/                      HTML output (192 pages)
-_pdf/<fw>/                  Per-framework PDF sources + compiled PDF
-_notebooks/<fw>/            Per-framework Jupyter notebooks (executed in-place)
-_slides/<fw>/               Per-framework Reveal.js slide decks
+_book/                      HTML site; also _book/pdf/, _book/slides/, _book/notebooks/*.zip
+_pdf/<fw>/                  Per-framework PDF project + compiled PDF; _pdf/parts/
+_notebooks/<fw>/            Generated .ipynb, .executed stamps, .d files, sidecars (scratch)
+_slides/<fw>/               Per-framework Reveal.js decks
+_hosted_notebooks/          Staged Colab notebooks
 logs/                       Timestamped build logs (<target>-YYYYMMDD-HHMMSS.log)
-.venv-<fw>/                 Isolated UV environments per framework
+.venv-<fw>/, .venv-build/   UV environments
 ```
 
 ---
@@ -90,9 +100,11 @@ PyTorch-specific explanation.
 :end_tab:
 ```
 
-**Code tabs** — framework-specific code blocks:
+**Code tabs** — framework-specific code blocks. Every Python fence carries a
+stable cell ID (`#<id>`, assigned by `tools/add_cell_ids.py`); the tabs of one
+logical cell share it:
 ````markdown
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 #@tab pytorch
 import torch
 x = torch.arange(12)
@@ -146,20 +158,26 @@ Use `@<id>@<fw>` or `@!<id>@<fw>` to force a framework-specific variant.
 
 ## Build pipeline
 
-Entry point: `make <target>`.
+Entry point: `make <target>`; the target table is in
+[build-guide.md §3](build-guide.md#3-setup-and-target-overview).
 
 ### Full pipeline (`make all`)
 
 ```
- 1. lib                     build_lib.py → d2l/*.py
- 2. notebooks               gen_notebooks.py → _notebooks/<fw>/*.ipynb
- 3. run-all-notebooks        Make CPU/GPU queues → run_one_notebook.py
- 4. slides                  gen_slides.py --render → _slides/<fw>/*.html
- 5. html (rebuild)           d2l_preprocess.py → quarto render → fix_crossref_numbers.py
- 6. pdfs (rebuild, -j4)      gen_pdf.py → inject_outputs.py → quarto → fix_latex.py → xelatex ×2
+1. lib                     build_lib.py → d2l/<lib>.py + d2l/_blocks/
+2. notebooks               gen_notebooks.py → _notebooks/<fw>/*.ipynb
+3. run-all-notebooks       notebook_scheduler.py → make <stamp> → run_one_notebook.py
+4. rebuild-book-artifacts  (all-quick runs only 1, 2 and this step)
+   a. slides               gen_slides.py --render → _slides/<fw>/  (-j RENDER_JOBS)
+   b. html                 audit gate → d2l_preprocess.py → inject_outputs.py → quarto → fix_crossref_numbers.py
+   c. pdfs                 gen_pdf.py → build_one_pdf.sh (inject → quarto --to latex → fix_latex.py → xelatex ×3)
+   d. pdf-parts            build_part_pdfs.py (from the PyTorch book)
+   e. integrate_slides.sh, notebook-zips, check-all-artifacts
 ```
 
-Steps 5–6 rebuild HTML/PDFs with executed notebook outputs injected.
+Steps 4a–4e read outputs from the committed `outputs/` store. `make all` does
+not run `capture-outputs`, so freshly executed outputs reach the book only
+after a capture (build-system.md §6.4).
 
 ### Individual stages
 
@@ -167,38 +185,39 @@ Steps 5–6 rebuild HTML/PDFs with executed notebook outputs injected.
 
 ```
 chapter_*/*.md → d2l_preprocess.py --primary pytorch → chapter_*/*.qmd
+                → inject_outputs.py html (from outputs/)
                 → quarto render --to html → _book/
-                → fix_crossref_numbers.py → _book/ (patched)
+                → fix_crossref_numbers.py, add_cfasync.py, integrate_slides.sh
 ```
 
 The preprocessor converts d2l directives to Quarto equivalents, groups
 framework code into tabsets, auto-numbers equations, and translates
-cross-references. The primary framework (PyTorch) gets executable code
-cells; others are display-only.
+cross-references. The primary framework (PyTorch) gets executable-style code
+cells; others are display-only. Quarto never executes them
+(`execute.enabled: false`).
 
 `fix_crossref_numbers.py` remaps Quarto's file-position chapter numbers
-to logical chapter numbers (defined in `CHAPTER_NUMBERING`, a 208-entry
-static map in d2l_preprocess.py; a source file *absent* from it renders
-unnumbered — see build-system.md §4.1). It patches `header-section-number`
-spans, `data-number` attributes, sidebar entries, and equation/figure
-references across all 209 HTML files.
+to logical chapter numbers (defined in `CHAPTER_NUMBERING` in
+`d2l_preprocess.py`; a source file *absent* from it renders unnumbered — see
+build-system.md §4.1). It patches `header-section-number` spans,
+`data-number` attributes, sidebar entries, breadcrumbs, `search.json`, and
+equation/figure references.
 
-#### PDF (single-framework, parallel-safe)
+#### PDF (single-framework)
 
 ```
-gen_pdf.py → _pdf/<fw>/*.qmd (single-framework, stripped prose)
-inject_outputs.py → inject notebook cell outputs into .qmd
-rsvg-convert → _pdf/<fw>/img/*.svg → .pdf
-quarto render --to pdf → .tex
-fix_latex.py → patched .tex (chapter hierarchy, frontmatter, appendix)
-xelatex ×2 → Dive-into-Deep-Learning-<fw>.pdf
+gen_pdf.py → _pdf/<fw>/*.qmd (single-framework, stripped prose) + _quarto.yml (7×10 in, 10pt)
+build_one_pdf.sh:
+  inject_outputs.py pdf → inject outputs from outputs/<fw>/
+  quarto render --to latex → .tex
+  fix_latex.py → patched .tex (chapter hierarchy, frontmatter, numbering from CHAPTER_NUMBERING)
+  xelatex ×3 → _pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf
 ```
 
-`fix_latex.py` restructures the flat LaTeX output into proper book form:
-frontmatter with roman numerals, numbered chapters, sections demoted
-within file-level chapters, appendix with letter numbering.
-
-All 4 PDFs can build in parallel (`make -j4 pdfs`).
+`fix_latex.py` restructures the flat LaTeX output into book form:
+frontmatter with roman numerals, numbered chapters (`\setcounter{chapter}`
+from the map), sections demoted within file-level chapters. Since 2026-11-11
+nothing is lettered as an appendix. Pitfalls: build-system.md §6.6.
 
 #### Notebooks (per-framework)
 
@@ -213,47 +232,47 @@ Per file: extracts the target framework's code, flattens
 Not every source file produces a notebook for every framework — only
 files that contain code for that framework.
 
-#### Notebook execution (resource-scheduled)
+#### Notebook execution
 
 ```
-make run-notebooks-<fw>
-make run-all-notebooks
+make run-all-notebooks / run-notebooks-<fw> / refresh-stale / rerun-locked
+  → notebook_scheduler.py  (one queue, GPU/CPU slots; notebook-scheduler.md)
+    → make _notebooks/<fw>/<chapter>/<file>.executed   (EXEC_RULE, make/notebooks.mk)
+      → run_one_notebook.py → run_notebooks.execute_notebook()
+        → jupyter nbconvert --execute --inplace
 ```
 
-Execution writes outputs into `_notebooks/<fw>/*.ipynb` in place. These
-outputs are later injected into HTML, PDF, and slide `.qmd` files.
-
-Make tracks one `.executed` stamp per notebook. To rerun one notebook,
-target its stamp directly:
-
-```bash
-make -B _notebooks/pytorch/chapter_linear-regression/linear-regression.executed
-```
-
-If a source edit changes any `#@save` code, rebuild `d2l/` first and
-treat downstream notebook results as potentially stale until rerun.
+Execution writes outputs into `_notebooks/<fw>/…/*.ipynb` in place, writes an
+execution-provenance sidecar next to it, and the recipe touches the
+`.executed` stamp on success. A direct `make <stamp>` (no scheduler) takes its
+own flock-based slot instead. Timeouts: 3600 s per notebook unless
+`NOTEBOOK_TIMEOUTS` in `tools/runtime_env.py` says otherwise; stochastic
+notebooks listed in `BEST_OF_N` are retried. Locked notebooks are
+materialized from the store instead of executed (build-system.md §3.7).
+`make capture-outputs` then copies the outputs into `outputs/`. Recipes:
+[build-guide.md §4.3](build-guide.md#43-change-a-code-cell-and-refresh-its-outputs)
+and [§4.7](build-guide.md#47-full-rebuild-on-the-gpu-box).
 
 #### Slides (CPU-only rendering)
 
 ```
-gen_slides.py <source> _slides --frameworks <fw> --render --workers 8
+gen_slides.py <source> _slides --frameworks <fw> --render --workers $(SLIDE_WORKERS)
 ```
 
 Extracts `::: {.slide}` divs from source `.md`, resolves `@<id>`
 placeholders to framework-specific source cells, generates per-framework
-Reveal.js `.qmd`, injects outputs from executed notebooks when present,
-then renders with `quarto render --to revealjs`.
+Reveal.js `.qmd`, injects outputs from the committed store, then renders each
+deck in an isolated project with `quarto render --to revealjs`.
 
-Slide rendering is CPU-only. It is safe to run multiple frameworks in
-parallel, for example `make -j4 slides`. To regenerate and render a
-single deck for one framework:
+Slide rendering is CPU-only and safe across frameworks (`make -j4 slides`).
+To regenerate one deck for one framework:
 
 ```bash
-make -B slides-pytorch SLIDES_FILTER=chapter_linear-regression/linear-regression.md
+make slides-pytorch SLIDES_FILTER=chapter_linear-regression/linear-regression.md
 ```
 
-The `-B` matters for the same reason as notebook execution: Make uses
-one `_slides/<fw>/.built` stamp per framework.
+Make keeps one `_slides/<fw>/.built` stamp per framework; if it is already
+newer than your edit, add `-B` (build-system.md §6.3).
 
 #### d2l library
 
@@ -261,22 +280,26 @@ one `_slides/<fw>/.built` stamp per framework.
 build_lib.py <source> d2l/
 ```
 
-Scans all source `.md` files for `#@save` code blocks, extracts
-framework-specific code, merges `@d2l.add_to_class()` methods into their
-class bodies, deduplicates (later definitions win), drops blocks with
-unresolved `d2l.*` references, and writes to `d2l/<fw>.py`.
+Scans the files in `CHAPTER_NUMBERING` plus `LIB_ONLY_FILES` for `#@save`
+code blocks, extracts framework-specific code, merges `@d2l.add_to_class()`
+methods into their class bodies, deduplicates (later definitions win), drops
+blocks with unresolved `d2l.*` references, and writes `d2l/torch.py`,
+`d2l/tensorflow.py`, `d2l/jax.py` and `d2l/mxnet.py` (names from
+`config.ini`), plus one shard per symbol under `d2l/_blocks/<fw>/` for
+freshness tracking (build-system.md §3.4). The library files are committed.
 
-Each `d2l/<fw>.py` has a hand-written **preamble** (before the `#####
+Each library file has a hand-written **preamble** (before the `#####
 WARNING #####` marker) that build_lib.py preserves. The preamble handles
-framework imports and initialization. The auto-generated section below
-the marker is overwritten on every build.
+framework imports and initialization. The generated section below the
+marker is overwritten on every build.
 
 **Preamble highlights:**
-- `d2l/jax.py`: Initializes JAX first (`jax.devices()`), then imports TF
-  and enables `memory_growth` so TF doesn't pre-allocate GPU memory.
-- `d2l/tensorflow.py`: Sets `TF_CPP_MIN_LOG_LEVEL=2`, enables
+- `d2l/jax.py`: initializes JAX first (`jax.devices()`), then imports TF and
+  hides the GPUs from it (`set_visible_devices([], 'GPU')`, falling back to
+  `memory_growth`), so TF does not take GPU memory from JAX.
+- `d2l/tensorflow.py`: defaults `TF_CPP_MIN_LOG_LEVEL` to 2 and enables
   `memory_growth` on all GPUs.
-- `d2l/torch.py`, `d2l/mxnet.py`: Straightforward framework imports.
+- `d2l/torch.py`, `d2l/mxnet.py`: plain framework imports.
 
 Aliases (simple, fluent, custom) are appended from `config.ini`.
 
@@ -288,105 +311,29 @@ inject_outputs.py pdf --framework <fw> --pdf-dir <dir>
 inject_outputs.py slides --framework <fw> --slides-dir _slides
 ```
 
-After notebooks are executed, this tool injects their cell outputs
-(text, images, tables) back into HTML, PDF, or slide source `.qmd`
-files. This is what makes rendered artifacts show actual computation
-results. Matching is by stable notebook cell ID.
+Injects captured cell outputs (text, images, tables) from `outputs/` into the
+HTML, PDF or slide `.qmd` files, matched by stable cell ID. A notebook
+without a manifest falls back to `_notebooks/`.
 
----
+#### Generating one notebook
 
-## Incremental build map
-
-The Makefile is the source of truth. Notebook execution is tracked by
-per-notebook `.executed` stamps plus generated `.d` files for `d2l.<symbol>`
-dependencies.
-
-| Change | Minimum useful command | Why |
-|--------|------------------------|-----|
-| Prose only in one source file | `make html` or `make -B slides-<fw> SLIDES_FILTER=<file.md>` | HTML and slides read source text directly. |
-| One notebook source cell | `make notebooks-<fw>` then `make -B _notebooks/<fw>/<chapter>/<file>.executed` | Notebook generation is per-framework; execution is per notebook. |
-| One slide deck | `make -B slides-<fw> SLIDES_FILTER=<file.md>` | Slide generation/rendering accepts source `.md` paths. |
-| One framework PDF | `make pdf-<fw>` | PDFs are isolated under `_pdf/<fw>/`. |
-| `#@save` library code | `make lib` then rerun affected notebooks; when in doubt rerun all frameworks | `d2l/*.py` is imported by many notebooks, so a package rebuild can affect results far beyond the edited file. |
-| `pyproject.toml` or `uv.lock` | `make venv-<fw>` or target that depends on it | `.venv-<fw>/.synced` is keyed on these files. |
-| Shared tools in `tools/*.py` | Rebuild the stage that uses the tool | Most generated artifacts depend on the relevant script. |
-
-Useful single-file examples:
-
-```bash
-# Generate notebooks for one framework, then execute one notebook.
-make notebooks-pytorch
-make -B _notebooks/pytorch/chapter_linear-regression/linear-regression.executed
-
-# Render one slide deck for one framework.
-make -B slides-jax SLIDES_FILTER=chapter_attention-mechanisms-and-transformers/transformer.md
-
-# Build one framework's PDF after notebook outputs exist.
-make pdf-tensorflow
-```
-
-There is no Make target today that generates only one notebook file.
-`gen_notebooks.py` generates all notebooks for the requested framework.
-Likewise, `html` and `pdf-<fw>` render full books, not single pages.
-
----
-
-## Notebook execution model
-
-The Makefile is the primary scheduler. `tools/scan_notebook_manifests.py`
-emits per-framework stamp lists split into:
-
-- `EXECUTED_CPU_<fw>`
-- `EXECUTED_GPU_<fw>`
-- `EXECUTED_MULTI_GPU_<fw>`
-
-`run-notebooks-<fw>` starts two sub-makes concurrently: one with
-`-j$(CPU_SLOTS)` over the CPU list, and one with `-j$(GPU_SLOTS)` over the
-single-GPU list. The multi-GPU list then runs with `-j1` after the
-single-GPU queue drains. `run-all-notebooks` does the same thing globally
-across all frameworks, so CPU-only notebooks from one framework can run
-while GPU notebooks from another framework are still using the GPUs.
-
-Each stamp recipe runs `tools/run_one_notebook.py`, which still uses
-flock-based CPU/GPU slot locks as a backstop for direct stamp builds or
-accidental external parallelism. CPU notebooks run with
-`CUDA_VISIBLE_DEVICES=""` plus `CPU_ONLY_ENV`; GPU notebooks get a single
-`CUDA_VISIBLE_DEVICES=<gpu>`; multi-GPU notebooks acquire all GPU slots.
-
-`tools/run_notebooks.py` remains as a legacy/manual batch runner, but it is
-not the Makefile's primary execution path. Successful direct runs also touch
-the corresponding `.executed` stamp so the audit report can distinguish a
-current manual rerun from a stale generated notebook.
-
-### Classification
-
-Notebooks are classified by scanning source text for GPU keywords:
-`gpu(`, `cuda`, `GPU`, `num_gpus`, `try_gpu`, `Trainer(`, `d2l.train`, etc.
-Files listed in `MULTI_GPU_NOTEBOOKS` are routed to the multi-GPU queue.
-
-### CPU affinity
-
-The Make scheduler controls CPU load with `CPU_SLOTS`. CPU-affinity helpers
-remain in `runtime_env.py` and are used by the legacy batch runner; the
-per-notebook Make path does not currently pin individual notebook processes.
-
-### Execution method
-
-- **Notebooks**: `jupyter nbconvert --execute --inplace` as a subprocess.
-  Per-cell timeout 3600s.
-
-### Stale kernel cleanup
-
-`runtime_env.py` provides `kill_stale_kernels(venv_dir)` for the legacy batch
-runner. The per-notebook Make path relies on normal nbconvert/kernel shutdown
-and the resource locks around each process.
+`make notebooks-<fw>` regenerates a framework's whole notebook set in one
+`gen_notebooks.py` call; `make _notebooks/<fw>/<chapter>/<file>.ipynb`
+regenerates one. Regeneration keeps the outputs of code cells whose id and
+source did not change, so prose edits do not invalidate execution. `html` and
+`pdf-<fw>` always render whole books.
 
 ---
 
 ## Framework environment (runtime_env.py)
 
-`setup_framework_env(framework)` sets per-framework env vars before
-execution:
+`setup_framework_env(framework)` applies per-framework env vars before
+execution with `os.environ.setdefault`, so these are **fallbacks**: in the Make
+path the `EXTRA_ENV_<fw>` lists in `make/notebooks.mk` set most of them first
+(e.g. `OMP_NUM_THREADS=2`, `TF_FORCE_GPU_ALLOW_GROWTH=true`,
+`XLA_PYTHON_CLIENT_PREALLOCATE=false`, `TF_CPP_MIN_LOG_LEVEL=3`), and the
+scheduler sets the JAX memory fraction per reservation. It also applies the
+output-hygiene switches (`QUIET_ENV`, build-system.md §3.6).
 
 | Variable | pytorch | tensorflow | jax | mxnet |
 |----------|---------|-----------|-----|-------|
@@ -396,7 +343,6 @@ execution:
 | TF_NUM_INTRAOP_THREADS | — | 4 | 4 | — |
 | TF_NUM_INTEROP_THREADS | — | 2 | 2 | — |
 | XLA_PYTHON_CLIENT_MEM_FRACTION | — | — | .40 | — |
-| TF_CPP_MIN_LOG_LEVEL | — | 2 | — | — |
 | TF_XLA_FLAGS | — | --tf_xla_auto_jit=2 | — | — |
 | MXNET_CUDNN_LIB_CHECKING | — | — | — | 0 |
 | MXNET_CPU_WORKER_NTHREADS | — | — | — | 4 |
@@ -429,40 +375,33 @@ Two mechanisms prevent TF from fighting JAX for GPU memory:
    (`tf.config.set_visible_devices([], 'GPU')`) when JAX runs on a GPU,
    falling back to `tf.config.experimental.set_memory_growth(gpu, True)` if
    the devices are already initialized.
-2. **XLA_PYTHON_CLIENT_MEM_FRACTION=.40**: JAX pre-allocates only 40% of
-   GPU memory (down from the 90% default), leaving room for a second
-   worker on the same GPU plus TF overhead.
+2. **A capped JAX memory fraction.** The scheduler sets
+   `XLA_PYTHON_CLIENT_MEM_FRACTION` to the reserved slots' share of the card
+   (e.g. 0.31 for one slot on a 24 GiB card, 0.94 for a whole card;
+   notebook-scheduler.md §3.3). A direct `make <stamp>` falls back to the
+   `.40` default above, which is too small for some heavy notebooks.
 
 ---
 
-## Makefile variables
+## Makefile variables and targets
 
-```makefile
-SOURCE              ?= .          # Source directory
-NUM_GPUS            ?= 4          # GPUs available
-GPU_SLOTS           ?= 8          # Concurrent single-GPU notebook slots
-CPU_SLOTS           ?= 4          # Concurrent CPU-only notebook slots
-SLIDES_FILTER       ?=            # Optional glob to select specific slides
-FILES               ?=            # Default for SLIDES_FILTER
-```
+`make help` prints the targets; [build-guide.md §3](build-guide.md#3-setup-and-target-overview)
+has a table of them. Resource variables (`NUM_GPUS`, `GPU_SLOTS`,
+`GPU_SLOTS_PER`, `CPU_SLOTS`, `RENDER_JOBS`, `MXNET_GPU_SLOTS`, …) are
+detected by `tools/detect_resources.py` and can be overridden on the command
+line (`make detect` prints the plan). Other variables:
 
-### Key targets
-
-| Target | What it does | Parallel-safe? |
-|--------|-------------|----------------|
-| `html` | Preprocess + quarto render + fix numbering | yes |
-| `pdf-<fw>` | Generate + render + fix one PDF | yes |
-| `pdfs` | All 4 PDFs (use `make -j4 pdfs`) | yes |
-| `notebooks` | Generate .ipynb (no execution) | yes |
-| `run-notebooks-<fw>` | Execute one framework's notebooks with CPU/GPU queues | yes, internally scheduled |
-| `run-all-notebooks` | Execute all frameworks with global CPU/GPU queues | yes, internally scheduled |
-| `slides-<fw>` | Generate + render one framework's slides | yes (CPU-only) |
-| `slides` | All 4 frameworks' slides; use `make -j4 slides` | yes (CPU-only) |
-| `lib` | Build d2l Python package | yes |
-| `all` | Full pipeline (lib → notebooks → run → slides → html → pdfs) | **no** |
-| `all-quick` | html + pdfs + notebooks + slides + lib (no execution) | partially |
-| `clean` | Remove _book/ _pdf/ _notebooks/ _slides/ (keeps data/) | — |
-| `veryclean` | Also delete data/ | — |
+| Variable | Default | Effect |
+|---|---|---|
+| `SOURCE` | `.` | source directory |
+| `FILES` | empty | source subset for `capture-outputs`, `rerun-locked` and slides |
+| `SLIDES_FILTER` | `$(FILES)` | source subset for `slides-<fw>` |
+| `FRAMEWORKS` | `pytorch tensorflow jax mxnet` | override (e.g. `FRAMEWORKS=pytorch`) to narrow `rerun-locked` |
+| `FRAMEWORKS_FILTER` | empty | framework subset for `notebook-zips`, `notebook-env-locks` |
+| `UNLOCK` | empty | `UNLOCK=1` lets `capture-outputs` replace a locked notebook's outputs |
+| `ALLOW_STALE` | empty | `ALLOW_STALE=1` turns the `make html` gate into a warning (staging only) |
+| `R2_BUCKET` | `staging-d2l` (in `tools/upload_r2.sh`) | upload target bucket |
+| `HOSTED_DOCKER_ARGS` | empty | extra arguments for `check-hosted-docker*` |
 
 All build output is logged to `logs/<target>-YYYYMMDD-HHMMSS.log`.
 
@@ -486,7 +425,11 @@ uv sync --extra mxnet --extra run
 - TensorFlow and MXNet venvs install their own
   `nvidia-*-cu12` / `nvidia-*-cu11` runtime libs; the Makefile prepends
   those paths to `LD_LIBRARY_PATH` before launching notebooks.
-- uv.lock covers Python 3.12+, linux x86_64 only.
+- `uv.lock` covers Python 3.12 on linux x86_64 and macOS
+  (`[tool.uv].environments`). On linux x86_64 the extras install the CUDA
+  builds; on macOS they install CPU builds (torch 2.11.0, plain
+  `tensorflow`, `jax`, and a CPU MXNet wheel from the same release), so a Mac
+  can execute the CPU notebooks.
 - The `run` extra adds jupyter, nbconvert, ipykernel.
 
 ---
@@ -515,9 +458,10 @@ background, 0.9rem font.
 ## Hardware assumptions
 
 The build system assumes a machine with:
-- 1–4× NVIDIA GPUs (the Makefile autodetects count and per-GPU memory
-  from `nvidia-smi`; rule of thumb is ~11 GB per notebook job, so a
-  24 GB GPU runs 2 in parallel, a 16 GB GPU runs 1, etc.)
+- 1–4× NVIDIA GPUs for execution (rendering needs none). The build
+  detects count and per-GPU memory from `nvidia-smi` and allots one
+  scheduler slot per 7.5 GiB of each card: 3 on a 24 GB card, 2 on a 16 GB
+  card (notebook-scheduler.md §1).
 - NVIDIA driver **590.48+** (CUDA 13.x driver line) recommended.
   Lower drivers work for everything except Blackwell (sm_100/sm_120):
   the cu128 and cu12 wheels load on driver 525+ via CUDA forward
@@ -525,7 +469,7 @@ The build system assumes a machine with:
   driver 570+ and the CUDA 13 driver line (590+) for the full stack.
 - Sufficient CPU cores for the parallel workers + affinity
 - ~50 GB disk for all build artifacts
-- Linux x86_64
+- Linux x86_64 for execution; rendering also runs on macOS (build-system.md §0.1)
 
 ### Per-framework GPU coverage
 
@@ -536,9 +480,6 @@ The build system assumes a machine with:
 | tensorflow | SASS through sm_89 + `compute_90` PTX (TF 2.21) | First op on Blackwell JIT-compiles from PTX (slower cold start, then cached). |
 | mxnet      | Custom MXNet 2.0 CUDA 13 wheel `2.0.0+cu133.bw.zombie.1` (pinned in `pyproject.toml`), ships `sm_89` kernels | Runs on RTX 4090; all MXNet GPU notebooks execute (the earlier `cudaErrorNoKernelImageForDevice` is resolved, see `docs/mxnet-runtime-diagnostics.md`). Image-dataset notebooks spawn many DataLoader threads, so `tools/detect_resources.py` caps concurrent MXNet jobs (`MXNET_GPU_SLOTS`) from the ulimits. |
 
-The full pipeline (`make all`) takes approximately:
-- Notebook execution: ~110 min total (PT ~21, TF ~24, JAX ~11, MX ~54)
-  on 4× 24 GB GPUs; scales linearly with effective GPU-job parallelism.
-- Slides: a few minutes with CPU parallel rendering
-- HTML + PDFs: ~15 min
-- Total wall time: ~3 hours
+The full pipeline (`make all`) takes 2.5 to 3 hours on the 4×RTX 4090 box
+(CLAUDE.md, 2026-11). Rendering alone (`all-quick` from the store) took about
+22 minutes there in July 2026 (build-system.md §6.9).

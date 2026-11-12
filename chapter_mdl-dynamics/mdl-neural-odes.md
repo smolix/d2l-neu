@@ -1341,8 +1341,8 @@ but with noise that training averages out and a single likelihood does not.
        $\log|\det D\Phi_T(\mathbf{x}_0)|=\int_0^T\operatorname{tr}\mathbf J(\mathbf{x}(t),t)\,dt$,
        and derive :eqref:`eq_mdl-ode-cnf-likelihood` from the discrete
        change of variables :eqref:`eq_mdl-ode-discrete-cov` applied to the
-       bijection $\Phi_T$. For a linear field the result is the formula
-       :eqref:`eq_mdl-ode-jacobi`.
+       bijection $\Phi_T$. For a linear field the result is the
+       formula :eqref:`eq_mdl-ode-jacobi`.
     1. Integrate $\dot{\mathbf M}=\mathbf J\mathbf M$ with RK4 alongside the $8$-unit tanh field of
        the `#mdl-neural-odes-checking-the-trace-integral-1` cell (re-create
        its weights, since the Hutchinson cells reuse the names) and compare

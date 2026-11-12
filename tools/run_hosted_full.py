@@ -30,6 +30,7 @@ from build_hosted_notebooks import git_revision
 from export_hosted_env import load_profile
 from run_hosted_docker import DEFAULT_IMAGES, docker_prefix, image_digest, runtime_log_errors
 from runtime_env import MULTI_GPU_NOTEBOOKS, SHARED_DATA_NOTEBOOKS
+import locks
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -281,6 +282,17 @@ def run_batch(docker: list[str], image: str, framework: str, notebooks: list[str
         stop_containers(docker, containers)
 
 
+def drop_locked(root: Path, framework: str,
+                notebooks: list[str]) -> tuple[list[str], list[str]]:
+    """Split framework-relative notebooks into (to run, LOCKED). A locked
+    notebook (`<!-- execution: locked -->`, docs/build-system.md §3.7) is
+    never executed by a sweep unless --include-locked."""
+    locked = [rel for rel in notebooks
+              if locks.lock_for_notebook(root, framework,
+                                         *Path(rel).with_suffix("").parts)]
+    return [rel for rel in notebooks if rel not in set(locked)], locked
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--framework", action="append", choices=FRAMEWORKS)
@@ -297,6 +309,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--notebook", action="append",
         help="execute only this framework-relative notebook (repeatable)",
+    )
+    parser.add_argument(
+        "--include-locked", action="store_true",
+        help="also execute LOCKED notebooks (`<!-- execution: locked -->`, "
+             "paid APIs or A100 runs); skipped by default",
     )
     return parser.parse_args()
 
@@ -326,6 +343,12 @@ def main() -> int:
                     f"{framework}: unknown notebook(s): {', '.join(unknown)}"
                 )
             all_notebooks = [rel for rel in all_notebooks if rel in requested]
+        if not args.include_locked:
+            all_notebooks, locked = drop_locked(ROOT, framework, all_notebooks)
+            if locked:
+                print(f"{framework}: skipping {len(locked)} LOCKED notebook(s) "
+                      f"(--include-locked to run them): {', '.join(locked)}",
+                      flush=True)
         if args.limit is not None:
             all_notebooks = all_notebooks[:args.limit]
         regular = [rel for rel in all_notebooks if rel not in MULTI_GPU_NOTEBOOKS]

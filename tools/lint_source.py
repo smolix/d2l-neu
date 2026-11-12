@@ -35,6 +35,9 @@ Checks performed (per file):
   - Unless `--no-preamble` (or D2L_LINT_PREAMBLE=0): an imports cell
     that is not the standard preamble (warn) — the book shows it instead of hiding it. Cells that are
     deliberately different are listed in preamble.UNIQUE_PREAMBLES.
+  - A malformed or duplicated `<!-- execution: locked; ... -->` directive
+    (error; tools/locks.py is the parser), and a comment that only looks
+    like one, e.g. `<!-- executon: locked -->` (warn).
 
 Cross-corpus checks (with `--corpus`):
   - `:numref:` / `:eqref:` / `:cite:` / `:ref:` point to existing
@@ -61,6 +64,7 @@ from d2l_preprocess import (CHAPTER_NUMBERING, FRAMEWORKS,
 from add_cell_ids import (slugify, file_slug, collect_fences,
                            HEADING_RE)
 import preamble
+import locks
 
 # The imports-cell check (`--preamble`) is on: the book's imports cells are
 # the standard preamble (tools/normalize_imports.py), plus the ones listed in
@@ -202,6 +206,18 @@ def lint_file(path: Path, corpus_labels=None, check_preamble=False):
 
     # ── Unknown directives ──
     issues += _check_directives(path, lines)
+
+    # ── The notebook-lock directive (tools/locks.py) ──
+    try:
+        locks.parse_text(text, path)
+    except locks.LockError as e:
+        issues.append(Issue(path, e.line, 1, 'error',
+                            f'malformed execution directive: {e.msg}'))
+    for line_no in locks.looks_like_directive(text):
+        issues.append(Issue(path, line_no, 1, 'warning',
+                            'comment looks like a misspelled execution '
+                            'directive; the lock form is '
+                            '<!-- execution: locked; requires: <class> -->'))
 
     # ── Display math: `\\` needs an alignment environment ──
     issues += _check_display_math(path, lines)

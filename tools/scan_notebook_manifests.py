@@ -22,6 +22,7 @@ from pathlib import Path
 from runtime_env import (CPU_ONLY_NOTEBOOKS, GPU_FRAMEWORK_NOTEBOOKS,
                          GPU_KEYWORDS, GPU_ONLY_NOTEBOOKS, MULTI_GPU_NOTEBOOKS)
 from build_lib import LIB_ONLY_FILES
+import locks
 
 
 FRAMEWORKS = ('pytorch', 'tensorflow', 'jax', 'mxnet')
@@ -125,7 +126,8 @@ def main():
 
     # Per-framework: list of relative source .md paths it produces, split by
     # resource class so Make can admit CPU and GPU jobs independently.
-    per_fw = {fw: {'all': [], 'cpu': [], 'gpu': [], 'multi-gpu': []}
+    per_fw = {fw: {'all': [], 'cpu': [], 'gpu': [], 'multi-gpu': [],
+                   'locked': []}
               for fw in FRAMEWORKS}
     lib_only = set(LIB_ONLY_FILES)
     for md in sorted(args.source.glob('chapter_*/*.md')):
@@ -134,10 +136,16 @@ def main():
             # Build-only lib-extraction source: scanned by `make lib` for
             # #@save blocks, but never generated or executed as a notebook.
             continue
+        try:
+            lock = locks.parse_file(md)
+        except locks.LockError as e:
+            sys.exit(f'scan_notebook_manifests: {e}')
         for fw in file_frameworks(md):
             mode = source_execution_class(md, rel, fw)
             per_fw[fw]['all'].append(rel)
             per_fw[fw][mode].append(rel)
+            if lock is not None and lock.covers(fw):
+                per_fw[fw]['locked'].append(rel)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     changed = []
@@ -164,6 +172,11 @@ def main():
             f'EXECUTED_MULTI_GPU_{fw} := ' + ' '.join(stamp_lists['multi-gpu']),
             f'IPYNB_{fw} := ' + ' '.join(ipynb_list),
         ]
+        # Locked notebooks (tools/locks.py) are materialized from outputs/,
+        # never executed; listed for tools/notebook_run_plan.py. Emitted only
+        # when there are any, so the file is unchanged for unlocked trees.
+        if stamp_lists['locked']:
+            lines.append(f'LOCKED_{fw} := ' + ' '.join(stamp_lists['locked']))
         content = ('\n'.join(lines) + '\n').encode('utf-8')
         path = fw_dir / 'MANIFEST.mk'
         if _write_if_changed(path, content):

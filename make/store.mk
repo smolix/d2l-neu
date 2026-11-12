@@ -8,10 +8,15 @@
 # verify-outputs-fresh  render gate: fail on stale INLINE outputs / orphaned ids
 # refresh-stale     re-execute ONLY stale notebooks, then re-capture
 # render-fresh      refresh-stale, then rebuild slides + html + pdfs
+# locks             list locked notebooks (docs/build-system.md "Locked notebooks")
+# rerun-locked      execute named LOCKED notebooks (FILES=..., [FRAMEWORKS=...])
 
+# UNLOCK=1 lets capture overwrite the manifest of a LOCKED notebook, and only
+# one re-executed under the current source/lib (`make rerun-locked`).
 capture-outputs:
 	@mkdir -p $(LOGDIR)
 	python3 tools/capture_outputs.py $(if $(FILES),FILES=$(FILES)) \
+		$(if $(filter 1,$(UNLOCK)),--unlock) \
 		2>&1 | tee $(LOGDIR)/capture-outputs-$(TS).log
 
 audit-outputs:
@@ -28,10 +33,50 @@ verify-outputs-fresh:
 # re-run, and the capture-side guard refuses to bless the stale outputs. Never
 # touches the committed store. See docs/build-system.md §3.3. Also runs
 # tools/test_freshness_deps.py: shard naming, the transitive .d closure, and
-# the no-manifest rule (§3.4).
+# the no-manifest rule (§3.4), and tools/test_notebook_locks.py: notebook locks
+# (§3.7).
 test-trap:
 	@mkdir -p $(LOGDIR)
-	@{ python3 tools/test_refresh_stale_trap.py && python3 tools/test_freshness_deps.py; } 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
+	@{ python3 tools/test_refresh_stale_trap.py && python3 tools/test_freshness_deps.py \
+		&& python3 tools/test_notebook_locks.py; } 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
+
+# ── Locked notebooks (docs/build-system.md "Locked notebooks") ──
+# A source .md carrying `<!-- execution: locked; requires: <class> -->` is never
+# executed by a build: the scheduler (and run_one_notebook.py, for a direct
+# `make <stamp>`) materializes its executed notebook from outputs/ and reports
+# it as LOCKED (skipped). Only rerun-locked executes it; only
+# `capture-outputs ... UNLOCK=1` replaces its manifest.
+locks:
+	@mkdir -p $(LOGDIR)
+	@python3 tools/locks.py list 2>&1 | tee $(LOGDIR)/locks-$(TS).log
+
+# Execute exactly the named locked notebooks through the scheduler, which
+# removes their stamps and sets D2L_RERUN_LOCKED=1 so run_one_notebook.py
+# executes instead of materializing. FRAMEWORKS=pytorch narrows the run.
+# Capture right after: until then the run lives only in _notebooks/.
+_comma := ,
+_empty :=
+_space := $(_empty) $(_empty)
+ifneq ($(filter rerun-locked,$(MAKECMDGOALS)),)
+ifeq ($(strip $(FILES)),)
+$(error rerun-locked needs FILES=<chapter/file.md> [FRAMEWORKS=pytorch])
+endif
+endif
+# Locked re-runs default to a 6 h per-notebook limit (a NOTEBOOK_TIMEOUTS entry
+# in tools/runtime_env.py wins); LOCKED_TIMEOUT=<seconds> overrides it.
+LOCKED_TIMEOUT ?= 21600
+rerun-locked: notebooks
+	@mkdir -p $(LOGDIR)
+	@python3 tools/detect_resources.py --report || true
+	@$(SCHED_ENV) D2L_LOCKED_TIMEOUT=$(LOCKED_TIMEOUT) \
+		python3 tools/notebook_scheduler.py --rerun-locked \
+		--files "$(FILES)" \
+		--frameworks "$(subst $(_space),$(_comma),$(strip $(FRAMEWORKS)))" \
+		2>&1 | tee -a $(LOGDIR)/rerun-locked-$(TS).log; rc=$${PIPESTATUS[0]}; \
+	if [ $$rc -eq 0 ]; then \
+		echo "Re-run done. Bless it: make capture-outputs FILES=\"$(FILES)\" UNLOCK=1"; \
+	fi; \
+	exit $$rc
 
 # Re-execute exactly what the audit reports stale, then re-capture those files.
 # Execution goes through the unified scheduler (parallel GPU/CPU dispatch),
@@ -62,7 +107,8 @@ refresh-stale: notebooks
 	rm -f $$stamps; \
 	$(SCHED_ENV) python3 tools/notebook_scheduler.py --files "$$stale" \
 		2>&1 | tee -a $(LOGDIR)/scheduler-$(TS).log; rc=$$?; \
-	$(MAKE) capture-outputs FILES="$$(echo $$stale)"; \
+	crc=0; $(MAKE) capture-outputs FILES="$$(echo $$stale)" || crc=$$?; \
+	if [ $$rc -eq 0 ]; then rc=$$crc; fi; \
 	exit $$rc
 
 # Fast recovery render: refresh stale outputs, then rebuild the artifacts with

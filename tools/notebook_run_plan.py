@@ -52,8 +52,15 @@ def _parse_manifest(path: Path) -> dict[str, list[Path]] | None:
     return pools
 
 
-def _pending(pools: dict[str, list[Path]]) -> dict[str, list[Path]]:
-    return {pool: [p for p in stamps if not p.exists()]
+def _locked(path: Path) -> set[Path]:
+    """Stamps of LOCKED notebooks (`LOCKED_<fw> := ...`, written only when a
+    framework has any): materialized from outputs/, never executed."""
+    m = re.search(r'^LOCKED_[a-z]+\s*:?=\s*(.*)$', path.read_text(), re.MULTILINE)
+    return {ROOT / p for p in m.group(1).split() if p} if m else set()
+
+
+def _pending(pools: dict[str, list[Path]], locked=frozenset()) -> dict[str, list[Path]]:
+    return {pool: [p for p in stamps if not p.exists() and p not in locked]
             for pool, stamps in pools.items()}
 
 
@@ -69,13 +76,16 @@ def main() -> int:
     fws = args.framework or list(FRAMEWORKS)
     rows = []
     total_pending = 0
+    n_locked = 0
     for fw in fws:
         manifest = ROOT / "_notebooks" / fw / "MANIFEST.mk"
         pools = _parse_manifest(manifest)
         if pools is None:
             rows.append((fw, None, None, None))
             continue
-        pending = _pending(pools)
+        locked = _locked(manifest)
+        n_locked += len(locked)
+        pending = _pending(pools, locked)
         total = sum(len(v) for v in pools.values())
         pend_total = sum(len(v) for v in pending.values())
         total_pending += pend_total
@@ -98,6 +108,9 @@ def main() -> int:
                 for stamp in pending[pool]:
                     rel = stamp.relative_to(ROOT / "_notebooks" / fw).with_suffix("")
                     print(f"      [{pool:>5}] {rel}")
+    if n_locked:
+        print(f"  locked: {n_locked} notebook(s) materialized from outputs/, "
+              f"never executed (`make locks`)")
     if total_pending == 0:
         print("  (nothing to do — all stamps present)")
     print()

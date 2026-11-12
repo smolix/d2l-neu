@@ -122,6 +122,13 @@ def normalize(nb):
     nb['nbformat_minor'] = 4
     for cell in nb.get('cells', []):
         cell.pop('id', None)
+    # Build-internal marker of a notebook materialized from the store
+    # (tools/locks.py); readers' downloads should not carry it.
+    meta = nb.get('metadata', {})
+    if isinstance(meta.get('d2l'), dict):
+        meta['d2l'].pop('materialized_from_store', None)
+        if not meta['d2l']:
+            del meta['d2l']
     return nb
 
 

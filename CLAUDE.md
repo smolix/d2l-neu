@@ -111,6 +111,14 @@ authoring" section below.
   (it amortizes the crossref scan to ~2.4 s/page, ~9 min for the book;
   per-file/subset renders do NOT amortize and flake under concurrency — §6.8) —
   don't wrap it in `-j`.
+- **Locked notebooks** (paid API calls, A100/multi-node runs): a source `.md`
+  with `<!-- execution: locked; requires: openrouter -->` is never executed by
+  any build (`make all`, `run-*`, `refresh-stale`); its outputs are
+  materialized from `outputs/` and the scheduler reports `LOCKED (skipped)`.
+  Re-run only on request: `make rerun-locked FILES=<ch>/<f>.md
+  [FRAMEWORKS=pytorch]`, then `make capture-outputs FILES=... UNLOCK=1`.
+  Prose edits are free; a code-cell edit fails `make html` until re-run.
+  `make locks` lists them. See `docs/build-system.md` §3.7.
 - `make clean` keeps `data/`; use `make veryclean` to force re-download.
 - **Full build:** `make all` (lib → notebooks → run-all-notebooks → slides →
   html → pdfs), or `make clean && make all` for a pristine run (~2–2.5 h on the

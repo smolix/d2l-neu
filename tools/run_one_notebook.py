@@ -605,6 +605,18 @@ def run_with_retry(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout,
     return False, last_err or "no successful attempt"
 
 
+def default_timeout(rel, locked, env=os.environ):
+    """Wall-clock limit for notebook *rel* when --timeout is not given: its
+    NOTEBOOK_TIMEOUTS entry, else for a LOCKED notebook (re-run only on
+    request: paid APIs, long A100 runs) D2L_LOCKED_TIMEOUT (make:
+    LOCKED_TIMEOUT, default 6 h), else 3600 s."""
+    if rel in NOTEBOOK_TIMEOUTS:
+        return NOTEBOOK_TIMEOUTS[rel]
+    if locked:
+        return int(env.get("D2L_LOCKED_TIMEOUT") or 21600)
+    return 3600
+
+
 def main():
     # Install before any subprocess is spawned so a Ctrl-C / Make kill at
     # any point cleans up the nbconvert + ipykernel descendant tree.
@@ -643,13 +655,32 @@ def main():
         print(f"Not found: {args.notebook}", file=sys.stderr)
         sys.exit(2)
 
+    # Locked notebooks (tools/locks.py) are never executed by a build: every
+    # path to a stamp (scheduler dispatch, direct `make <stamp>`, the legacy
+    # per-resource aggregate targets) ends here, so this is the one place
+    # that materializes them from the store instead. `make rerun-locked`
+    # sets D2L_RERUN_LOCKED=1 to execute them for real.
+    import locks
+    nb = args.notebook
+    lock = locks.lock_for_notebook(NOTEBOOKS_DIR.parent, args.framework,
+                                   nb.parent.name, nb.stem)
+    if os.environ.get("D2L_RERUN_LOCKED") != "1":
+        if lock is not None:
+            ok, what = locks.materialize(NOTEBOOKS_DIR.parent, args.framework,
+                                         nb, touch_stamp=False)
+            print(f"[{args.framework}] {nb.parent.name}/{nb.name}: LOCKED "
+                  f"(skipped){'' if ok else ' FAIL'} — {what} "
+                  f"[requires: {lock.requires_label}]",
+                  file=sys.stdout if ok else sys.stderr, flush=True)
+            sys.exit(0 if ok else 1)
+
     setup_framework_env(args.framework)
 
     rel = args.notebook.resolve().relative_to(
         (NOTEBOOKS_DIR / args.framework).resolve())
     label = f"[{args.framework}] {rel}"
     if args.timeout is None:
-        args.timeout = NOTEBOOK_TIMEOUTS.get(str(rel), 3600)
+        args.timeout = default_timeout(str(rel), lock is not None)
     mode = notebook_mode(args.notebook, args.framework)
     mode_tag = {'multi-gpu': '[all GPUs]', 'gpu': '[GPU]', 'cpu': '[CPU]'}[mode]
     # Assigned mode: the unified scheduler pins the device(s) via env and skips

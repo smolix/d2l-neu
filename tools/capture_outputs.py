@@ -24,6 +24,18 @@ produced under a DIFFERENT source/lib than the current tree — the capture-side
 half of the freshness-disagreement trap fix (docs/build-system.md §3.3). A genuine
 re-execution (which rewrites the sidecar) always passes; use --force to override.
 
+**Locked notebooks** (`<!-- execution: locked; ... -->`, tools/locks.py) keep
+their manifest until an explicit re-run. A notebook materialized from the store
+(marked `metadata.d2l.materialized_from_store`) is never captured. Without
+--unlock (Make: UNLOCK=1) a locked (notebook, framework) is skipped with a
+note, and the other pairs are captured; the call fails only when FILES named
+notebooks and all of them were skipped. With --unlock a locked notebook is
+blessed only if its execution sidecar covers exactly the current code cells
+(`make rerun-locked`); a lib/version change since the run only warns, and the
+manifest keeps the run's own lib/version provenance. The re-run's finish time
+and runtime go into `provenance.execution` (for `make locks`), the one
+wall-clock field, and only for locked notebooks.
+
 Usage:
     python tools/capture_outputs.py                       # all notebooks, all fw
     python tools/capture_outputs.py --frameworks pytorch  # one framework
@@ -357,7 +369,7 @@ def execution_freshness(repo_root, nb_path, fw, store_dir):
 # ── per-notebook capture ─────────────────────────────────────────
 
 def capture_notebook(repo_root, store_dir, nb_path, fw, chapter, stem,
-                     max_inline):
+                     max_inline, execution=None, run_provenance=None):
     nb = json.loads(nb_path.read_bytes())
     code_cells = code_cells_of(nb)
     fps, _ = prefix_fingerprints(code_cells)
@@ -397,6 +409,12 @@ def capture_notebook(repo_root, store_dir, nb_path, fw, chapter, stem,
             repo_root, fw, nb_path.with_suffix('.d'), max_inline),
         'cells': cells,
     }
+    if run_provenance:   # locked re-run: record the lib/version it ran under
+        for key in ('framework_version', 'd2l_lib_fingerprint'):
+            if run_provenance.get(key):
+                manifest['provenance'][key] = run_provenance[key]
+    if execution:   # locked notebooks only: when the paid re-run happened
+        manifest['provenance']['execution'] = execution
     store_chapter.mkdir(parents=True, exist_ok=True)
     out_path = store_chapter / f'{stem}.json'
     # indent=2, no sort_keys: dicts are built in a fixed (notebook) order, so the
@@ -446,6 +464,10 @@ def main():
                     help='Comma-separated subset of frameworks')
     ap.add_argument('--max-inline-bytes', type=int, default=0,
                     help='Safety cap on inline text (0 = unlimited; preserves parity)')
+    ap.add_argument('--unlock', action='store_true',
+                    help='allow overwriting the manifest of a LOCKED notebook '
+                         '(Make: UNLOCK=1); it must have been re-executed '
+                         'under the current source/lib (make rerun-locked)')
     ap.add_argument('--force', action='store_true',
                     help='bless even when the freshness guard reports a (notebook, '
                          'framework) whose executed outputs are lib/source-stale vs '
@@ -470,12 +492,88 @@ def main():
             if matches(pairs, chapter, stem):
                 selected.append((fw, nb_path, chapter, stem))
 
+    # ── locked / materialized notebooks (pre-pass, before ANY write) ──
+    # A notebook materialized from the store (tools/locks.py marks it) holds
+    # the store's own outputs: there is nothing to capture, ever. A locked
+    # notebook's manifest is replaced only with --unlock (UNLOCK=1), and only
+    # by a re-run that covers exactly the current code cells (its execution
+    # sidecar, `locks.sidecar_status` 'exact'); lib/version drift since that
+    # run only warns, and the manifest keeps the run's own provenance so the
+    # audit still reports it. Skipped pairs are named; the call fails only
+    # when FILES named notebooks and every one of them was skipped, or when
+    # an --unlock re-run does not match the current code.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import locks
+    keep, skipped, drifted = [], [], []
+    run_prov, execution = {}, {}
+    for item in selected:
+        fw, nb_path, chapter, stem = item
+        try:
+            lk = locks.lock_for_notebook(repo_root, fw, chapter, stem)
+        except locks.LockError as e:
+            print(f'ERROR: {e}', file=sys.stderr)
+            return 2
+        label = f'{fw:11} {chapter}/{stem}'
+        if locks.is_materialized(nb_path):
+            skipped.append(f'{label}: materialized from the store, not executed'
+                           + (f' (LOCKED, requires: {lk.requires_label})'
+                              if lk else ' (no longer locked: the next '
+                              'scheduler run re-executes it)'))
+            continue
+        if lk is None:
+            keep.append(item)
+            continue
+        if not args.unlock:
+            skipped.append(f'{label}: LOCKED (requires: {lk.requires_label}); '
+                           f'pass UNLOCK=1 after `make rerun-locked` to '
+                           f'replace its outputs')
+            continue
+        status, sc = locks.sidecar_status(nb_path)
+        if status == 'none':
+            skipped.append(f'{label}: LOCKED, not re-executed (no execution '
+                           f'provenance) — run `make rerun-locked`')
+            continue
+        if status == 'drift':
+            drifted.append(label)
+            continue
+        cur = build_provenance(repo_root, fw, nb_path.with_suffix('.d'))
+        old = sc.get('provenance', {})
+        if old.get('d2l_lib_fingerprint') != cur['d2l_lib_fingerprint'] or \
+                _versions_conflict(old.get('framework_version'),
+                                   cur['framework_version']):
+            print(f'  ⚠ {label}: LOCKED re-run predates the current d2l lib / '
+                  f'framework version; blessing it under its own provenance '
+                  f'(`make locks` will show a lib-drift WARNING)',
+                  file=sys.stderr)
+        keep.append(item)
+        run_prov[(fw, chapter, stem)] = old
+        execution[(fw, chapter, stem)] = sc.get('execution')
+    for msg in skipped:
+        print(f'  🔒 skipped {msg}', file=sys.stderr)
+    if drifted:
+        print(f'\nREFUSING to capture: {len(drifted)} LOCKED re-run(s) do not '
+              f'match the current code (a code cell changed, appeared or '
+              f'disappeared since the run). Re-run them: make rerun-locked '
+              f'FILES=... Nothing was written.', file=sys.stderr)
+        for label in drifted:
+            print(f'      [CODE DRIFT] {label}', file=sys.stderr)
+        return 2
+    if pairs is not None and selected and not keep:
+        print('\nREFUSING to capture: every requested notebook is locked or '
+              'materialized from the store (see above). Nothing was written.',
+              file=sys.stderr)
+        return 2
+    locked_keys = set(run_prov)
+    selected = keep
+
     # ── capture-side freshness guard (pre-pass, before ANY write) ──
     # Refuse to bless outputs produced under a different source/lib than the
     # current tree; only warn when we cannot prove it. All-or-nothing on the
     # PROVEN-stale set so a bad capture can't partially corrupt the store.
     blocked, unconfirmed = [], []
     for fw, nb_path, chapter, stem in selected:
+        if (fw, chapter, stem) in locked_keys:
+            continue      # checked above: exact code match, lib drift warns
         status, reasons = execution_freshness(repo_root, nb_path, fw, store_dir)
         if status == 'stale':
             blocked.append((fw, chapter, stem, reasons))
@@ -507,7 +605,9 @@ def main():
     per_fw = {}
     for fw, nb_path, chapter, stem in selected:
         c, a = capture_notebook(repo_root, store_dir, nb_path, fw,
-                                chapter, stem, args.max_inline_bytes)
+                                chapter, stem, args.max_inline_bytes,
+                                execution=execution.get((fw, chapter, stem)),
+                                run_provenance=run_prov.get((fw, chapter, stem)))
         total_nb += 1
         per_fw[fw] = per_fw.get(fw, 0) + 1
         total_cells += c
@@ -518,7 +618,7 @@ def main():
 
     print(f'Captured {total_nb} notebooks → {args.store_dir}/ '
           f'({total_cells} cells, {total_assets} image assets)')
-    if total_nb == 0:
+    if total_nb == 0 and not skipped:
         print('  (nothing matched — check FILES= filter or that notebooks are '
               'executed)', file=sys.stderr)
     return 0

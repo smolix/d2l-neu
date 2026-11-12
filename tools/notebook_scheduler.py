@@ -42,7 +42,15 @@ momentary gap between another user's jobs is never taken. After a dispatch the
 card is left alone for D2L_GPU_LIVE_SETTLE_S seconds (default 90) while the
 new job allocates. CPU jobs are unaffected; GPU jobs simply wait.
 
+Locked notebooks (`<!-- execution: locked; ... -->`, tools/locks.py) never go
+on the queue. Their stamps are satisfied by materializing the executed notebook
+from the committed outputs/ store (cheap, no GPU, done before dispatch), and the
+summary counts them as `LOCKED (skipped)`. `--rerun-locked --files ...` is the
+only way to execute them: it queues exactly the named locked notebooks, removes
+their stamps and sets D2L_RERUN_LOCKED=1 for run_one_notebook.py.
+
 Usage: notebook_scheduler.py [--frameworks a,b] [--dry-run] [--force-all]
+                             [--files ...] [--rerun-locked --files ...]
 """
 import argparse
 import os
@@ -54,6 +62,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from runtime_env import PINNED_GPU_NOTEBOOKS, notebook_resource, file_uses_gpu
+import locks
 
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOKS_DIR = ROOT / "_notebooks"
@@ -78,10 +87,13 @@ def _intlist(s):
 
 
 class Item:
-    __slots__ = ("fw", "rel", "nb", "stamp", "req")
+    __slots__ = ("fw", "rel", "nb", "stamp", "req", "unstamp")
 
-    def __init__(self, fw, rel, nb, stamp, req):
+    def __init__(self, fw, rel, nb, stamp, req, unstamp=False):
         self.fw, self.rel, self.nb, self.stamp, self.req = fw, rel, nb, stamp, req
+        # True for a notebook materialized from the store while it was locked
+        # and no longer locked now: its stamp must go before dispatch.
+        self.unstamp = unstamp
 
     @property
     def label(self):
@@ -133,12 +145,18 @@ def parse_files(spec):
     return pairs or None
 
 
-def build_worklist(frameworks, force_all=False, files=None):
+def build_worklist(frameworks, force_all=False, files=None, locked=None,
+                   rerun_locked=False):
     """Items in framework-grouped order (framework outer, relpath inner).
 
     `files` (a set of (chapter, stem) from parse_files) restricts the worklist to
     a subset of source notebooks — used by `make refresh-stale` to re-execute
-    only the audit-stale set in parallel instead of the whole book."""
+    only the audit-stale set in parallel instead of the whole book.
+
+    Locked notebooks (tools/locks.py) are never returned; when `locked` is a
+    list, (Item, stale, Lock) for each of them is appended to it. With
+    `rerun_locked`, ONLY locked notebooks are returned, all of them (no
+    staleness check): `make rerun-locked`."""
     items = []
     for fw in frameworks:                       # framework is the OUTER ordering
         root = NOTEBOOKS_DIR / fw
@@ -151,10 +169,22 @@ def build_worklist(frameworks, force_all=False, files=None):
             if files is not None and (nb.parent.name, nb.stem) not in files:
                 continue
             stamp = nb.with_suffix(".executed")
-            if not force_all and not _stale(nb, stamp):
+            lock = locks.lock_for_notebook(ROOT, fw, nb.parent.name, nb.stem)
+            if rerun_locked:
+                if lock is None:
+                    continue
+            elif lock is not None:
+                if locked is not None:
+                    locked.append((Item(fw, rel, nb, stamp, None),
+                                   force_all or _stale(nb, stamp), lock))
+                continue
+            # Materialized from the store while it was locked, unlocked now:
+            # its outputs were never produced by this code's execution.
+            unstamp = locks.materialized_flag(nb).exists()
+            if not unstamp and not force_all and not _stale(nb, stamp):
                 continue
             req = notebook_resource(fw, rel, file_uses_gpu(nb, NOTEBOOKS_DIR))
-            items.append(Item(fw, rel, nb, stamp, req))
+            items.append(Item(fw, rel, nb, stamp, req, unstamp))
     return items
 
 
@@ -210,6 +240,8 @@ class Scheduler:
         self._gpu_core_rr = 0
 
         self.lock = threading.Condition()
+        self.locked_skipped = 0     # locked notebooks reported in the summary
+        self.locked_failed = []     # ... whose materialization failed
         self.inflight = 0
         self.results = []
         self.peak_gpu = [0] * self.num_gpus
@@ -461,10 +493,14 @@ class Scheduler:
                     self.lock.wait(timeout=15 if self.live_gate else None)
 
         failed = [it for it, rc, _ in self.results if rc != 0]
+        locked_note = (f", {self.locked_skipped} LOCKED (skipped)"
+                       if self.locked_skipped else "")
         print(f"=== scheduler done: {self.total - len(failed)}/{self.total} ok, "
-              f"{len(failed)} failed ===", flush=True)
+              f"{len(failed)} failed{locked_note} ===", flush=True)
         for it in failed:
             print(f"  FAILED: {it.label}", flush=True)
+        for it in self.locked_failed:
+            print(f"  FAILED: {it.label} (LOCKED: not materialized)", flush=True)
         if self.args.dry_run:
             ok = all(self.peak_gpu[g] <= self.gpu_cap[g] for g in range(self.num_gpus)) \
                  and self.peak_cpu <= self.cpu_slots \
@@ -474,7 +510,7 @@ class Scheduler:
                   f"cpu={self.peak_cpu} (<= {self.cpu_slots}), "
                   f"framework={self.peak_fw} (caps {self.fw_total_cap}) — "
                   f"INVARIANTS {'OK' if ok else 'VIOLATED'}", flush=True)
-        return 1 if failed else 0
+        return 1 if failed or self.locked_failed else 0
 
     def _warm_pyc(self, frameworks):
         py = next((ROOT / f".venv-{fw}/bin/python" for fw in frameworks
@@ -490,6 +526,62 @@ class Scheduler:
             print(f"scheduler: warm-pyc skipped ({e})", flush=True)
 
 
+def handle_locked(locked, dry_run=False):
+    """Materialize the stale locked notebooks from the store (never execute
+    them). Prints one `LOCKED (skipped)` line each; returns the failed Items."""
+    failed = []
+    for it, stale, lock in locked:
+        ok, what = True, "stamp current"
+        if stale and dry_run:
+            what = "would materialize from outputs/"
+        elif stale:
+            try:
+                ok, what = locks.materialize(ROOT, it.fw, it.nb)
+            except Exception as e:    # one bad manifest must not stop the run
+                ok, what = False, f"materialize error: {e}"
+        print(f"{it.label}: LOCKED (skipped){'' if ok else ' FAIL'} — {what} "
+              f"[requires: {lock.requires_label}]", flush=True)
+        if not ok:
+            failed.append(it)
+    return failed
+
+
+def rerun_locked(args, fws, files):
+    """`make rerun-locked`: execute exactly the named locked notebooks."""
+    if not files or any(ch is None for ch, _ in files):
+        print("rerun-locked: name the notebooks as --files chapter_x/foo.md",
+              file=sys.stderr)
+        return 2
+    unlocked = [f"{ch}/{st}.md" for ch, st in sorted(files)
+                if locks.lock_for_source(ROOT, f"{ch}/{st}.md") is None]
+    if unlocked:
+        print("rerun-locked: not locked (re-run these with `make -B "
+              "_notebooks/<fw>/<chapter>/<file>.executed` or refresh-stale): "
+              + ", ".join(unlocked), file=sys.stderr)
+        return 2
+    items = build_worklist(fws, force_all=True, files=files, rerun_locked=True)
+    if not items:
+        print(f"rerun-locked: no generated notebook of {sorted(files)} is "
+              f"locked for {','.join(fws)} (run `make notebooks` first?)",
+              file=sys.stderr)
+        return 2
+    print(f"=== rerun-locked: {len(items)} LOCKED notebook(s) will EXECUTE ===",
+          flush=True)
+    for it in items:
+        lk = locks.lock_for_notebook(ROOT, it.fw, it.nb.parent.name, it.nb.stem)
+        print(f"  {it.label}  [requires: {lk.requires_label}]", flush=True)
+    # run_one_notebook executes instead of materializing. A missing stamp
+    # makes the inner make run it; dropping the old provenance sidecar means
+    # a FAILED re-run leaves none, so the next build restores the store's
+    # outputs (locks.materialize) instead of keeping a broken notebook.
+    os.environ["D2L_RERUN_LOCKED"] = "1"
+    if not args.dry_run:
+        for it in items:
+            it.stamp.unlink(missing_ok=True)
+            it.nb.with_suffix(".provenance.json").unlink(missing_ok=True)
+    return Scheduler(args).run(items)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -499,14 +591,41 @@ def main():
     ap.add_argument("--files", default=None,
                     help="whitespace/comma-separated subset of source paths "
                          "(chapter_x/foo.md) to run; default: all stale notebooks")
+    ap.add_argument("--rerun-locked", action="store_true",
+                    help="execute the LOCKED notebooks named by --files (and "
+                         "nothing else); see tools/locks.py")
     args = ap.parse_args()
     fws = [f for f in args.frameworks.split(",") if f.strip()]
-    items = build_worklist(fws, force_all=args.force_all,
-                           files=parse_files(args.files))
+    try:
+        if args.rerun_locked:
+            return rerun_locked(args, fws, parse_files(args.files))
+        locked = []
+        items = build_worklist(fws, force_all=args.force_all,
+                               files=parse_files(args.files), locked=locked)
+    except locks.LockError as e:
+        print(f"scheduler: {e}", file=sys.stderr, flush=True)
+        return 2
+    locked_failed = handle_locked(locked, args.dry_run)
     if not items:
+        if locked:
+            print(f"scheduler: nothing to execute; {len(locked)} LOCKED "
+                  f"(skipped), {len(locked_failed)} failed to materialize",
+                  flush=True)
+            for it in locked_failed:
+                print(f"  FAILED: {it.label} (LOCKED: not materialized)",
+                      flush=True)
+            return 1 if locked_failed else 0
         print("scheduler: nothing to run (all stamps fresh)", flush=True)
         return 0
-    return Scheduler(args).run(items)
+    for it in items:
+        if it.unstamp:
+            print(f"{it.label}: was materialized from outputs/ while locked; "
+                  f"no longer locked, so it is executed", flush=True)
+            if not args.dry_run:
+                it.stamp.unlink(missing_ok=True)
+    sched = Scheduler(args)
+    sched.locked_skipped, sched.locked_failed = len(locked), locked_failed
+    return sched.run(items)
 
 
 if __name__ == "__main__":

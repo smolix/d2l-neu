@@ -275,6 +275,15 @@ def execute_notebook(nb_path, timeout=600, kernel=None, cuda_devices=None,
             from runtime_env import CPU_ONLY_ENV
             env.update(CPU_ONLY_ENV)
 
+    # A real execution replaces any outputs materialized from the store, so
+    # drop that marker first (tools/locks.py); nbconvert keeps notebook
+    # metadata otherwise.
+    try:
+        import locks
+        locks.clear_materialized(nb_path)
+    except Exception:
+        pass
+
     if kernel is None:
         kernel = _SELF_KERNEL_NAME
         self_dir = ensure_self_kernelspec()
@@ -345,7 +354,7 @@ def execute_notebook(nb_path, timeout=600, kernel=None, cuda_devices=None,
         # docstring and docs/build-system.md §3.3). Provenance is a pure function
         # of source + lib, so it is identical across best-of-N re-runs of the same
         # notebook — safe to (re)write on every successful execution.
-        write_execution_provenance(nb_path)
+        write_execution_provenance(nb_path, elapsed=elapsed)
         return True, elapsed, stderr or ""
     err = (stderr or "").strip() or (stdout or "").strip()
     return False, elapsed, err
@@ -380,7 +389,7 @@ def _write_error_log(fw_root, rel, stderr):
     log_path.write_text(stderr or "")
 
 
-def write_execution_provenance(nb_path):
+def write_execution_provenance(nb_path, elapsed=None):
     """Record, in a sidecar, the source+lib provenance a notebook was executed
     under, so `capture_outputs.py`'s guard can REFUSE to bless outputs produced
     under a *different* lib/source than the current tree.
@@ -396,7 +405,12 @@ def write_execution_provenance(nb_path):
 
     Sidecar layout (mirrors the manifest so the comparison is apples-to-apples):
         {schema, framework, provenance:{framework_version, d2l_lib_fingerprint},
-         code_fingerprints:{cell_id: sha256}}
+         code_fingerprints:{cell_id: sha256},
+         execution:{finished: UTC ISO time, runtime_s}}
+
+    `execution` is informational: capture copies it into the manifest of a
+    LOCKED notebook only (`make locks` reports when the expensive run
+    happened and how long it took); the freshness guard ignores it.
 
     Written next to the executed notebook under `_notebooks/` (gitignored scratch,
     wiped by `make clean`). Best-effort: a sidecar-write hiccup must never fail an
@@ -418,6 +432,10 @@ def write_execution_provenance(nb_path):
             "provenance": cap.build_provenance(
                 repo_root, fw, nb_path.with_suffix(".d")),
             "code_fingerprints": fps,
+            "execution": {
+                "finished": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "runtime_s": None if elapsed is None else round(elapsed, 1),
+            },
         }
         nb_path.with_suffix(".provenance.json").write_text(
             json.dumps(sidecar, indent=2, ensure_ascii=False) + "\n",

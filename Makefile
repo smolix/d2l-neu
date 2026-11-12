@@ -97,6 +97,7 @@ export PYTHONUNBUFFERED := 1
 .PHONY: check-hosted-docker check-hosted-docker-cpu check-hosted-docker-gpu
 .PHONY: dry-run-notebooks-branch publish-notebooks-branch
 .PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh test-trap
+.PHONY: locks rerun-locked
 
 # ── Help ───────────────────────────────────────────────────
 
@@ -119,10 +120,13 @@ help:
 	@echo "  check-hosted-docker     [GPU] Opt-in Colab CPU/GPU framework matrix (slow)"
 	@echo "  dry-run-notebooks-branch      Build the generated branch commit without pushing"
 	@echo "  publish-notebooks-branch      Replace and push the generated notebooks branch"
-	@echo "  capture-outputs         [any] Bless executed _notebooks/ → committed outputs/ [FILES=...]"
+	@echo "  capture-outputs         [any] Bless executed _notebooks/ → committed outputs/ [FILES=...] [UNLOCK=1]"
 	@echo "  audit-outputs           [any] Report stale notebooks (code drift) + store integrity"
 	@echo "  verify-outputs-fresh    [any] Render gate: fail on stale inline outputs / orphaned ids"
-	@echo "  test-trap               [any] Regression test for the refresh-stale freshness trap"
+	@echo "  test-trap               [any] Regression tests: freshness trap, lib deps, notebook locks"
+	@echo "  locks                   [any] List locked notebooks (requires, capture date, status)"
+	@echo "  rerun-locked FILES=...  [GPU*] Execute named LOCKED notebooks [FRAMEWORKS=pytorch]; then"
+	@echo "                                capture-outputs FILES=... UNLOCK=1"
 	@echo "  lib                     [any] Build d2l Python package"
 	@echo "  venv-<fw> / kernels     [any] Sync UV env / register ipykernels (for VS Code)"
 	@echo "  detect                  [any] Print the auto-detected resource + parallelism plan"

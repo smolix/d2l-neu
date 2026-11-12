@@ -137,8 +137,13 @@ def strip_slide_divs(text):
     Slide divs (`::: {.slide}` etc.) live below this marker and are
     consumed by `gen_slides.py`. The HTML book / PDF / per-fw notebook
     renders should not see them.
+
+    Also drops the build-only `<!-- execution: locked; ... -->` directive
+    (tools/locks.py), so it reaches no rendered page, PDF or notebook; the
+    slide generator reads only slide divs and never sees it either.
     """
-    return _SLIDES_BLOCK_RE.sub('', text)
+    from locks import strip_directive
+    return strip_directive(_SLIDES_BLOCK_RE.sub('', text))
 
 
 def parse_blocks(text):

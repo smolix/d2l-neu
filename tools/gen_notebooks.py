@@ -77,6 +77,12 @@ def _merge_outputs_from_prev(ipynb_path, prev_nb):
             cell['outputs'] = prev['outputs']
         if 'execution_count' in prev:
             cell['execution_count'] = prev['execution_count']
+    # Outputs copied forward from a notebook that was materialized from the
+    # outputs/ store (tools/locks.py) are still store outputs, not an
+    # execution: keep its marker so capture never blesses them.
+    marker = prev_nb.get('metadata', {}).get('d2l')
+    if marker:
+        new_nb.setdefault('metadata', {})['d2l'] = marker
     ipynb_path.write_text(
         json.dumps(new_nb, indent=1, ensure_ascii=False),
         encoding='utf-8')

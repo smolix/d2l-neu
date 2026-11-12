@@ -28,6 +28,8 @@ from pathlib import Path
 
 FRAMEWORKS = ("pytorch", "tensorflow", "jax", "mxnet")
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+import locks  # noqa: E402
 
 
 def _parse_nb(ipynb: Path):
@@ -69,14 +71,32 @@ def has_executed_cells(nb: dict | None) -> bool | None:
     return False if has_code else None
 
 
+def _is_locked(framework: str, nb_path: Path) -> bool:
+    """True for a LOCKED notebook (tools/locks.py): materialized, not run."""
+    try:
+        return locks.lock_for_notebook(ROOT, framework, nb_path.parent.name,
+                                       nb_path.stem) is not None
+    except locks.LockError:
+        return False
+
+
 def scan(framework: str, include_errors: bool) -> dict:
     base = ROOT / "_notebooks" / framework
     notebooks = sorted(base.rglob("chapter_*/*.ipynb")) if base.exists() else []
     ok: list[Path] = []
     stale: list[tuple[Path, str | None]] = []
     failed: list[tuple[Path, str | None]] = []
+    locked: list[Path] = []
     for nb_path in notebooks:
         stamp = nb_path.with_suffix(".executed")
+        if _is_locked(framework, nb_path):
+            # LOCKED (skipped): neither ok nor failed, unless it could not
+            # even be materialized from the store (no stamp).
+            if stamp.exists():
+                locked.append(nb_path)
+            else:
+                failed.append((nb_path, "LOCKED: not materialized from outputs/"))
+            continue
         nb = _parse_nb(nb_path)
         err = last_error_from(nb) if include_errors else None
         executed = has_executed_cells(nb)
@@ -92,7 +112,8 @@ def scan(framework: str, include_errors: bool) -> dict:
             stale.append((nb_path, err))
             continue
         ok.append(nb_path)
-    return {"total": len(notebooks), "ok": ok, "stale": stale, "failed": failed}
+    return {"total": len(notebooks), "ok": ok, "stale": stale, "failed": failed,
+            "locked": locked}
 
 
 def format_report(framework: str, result: dict) -> str:
@@ -103,6 +124,8 @@ def format_report(framework: str, result: dict) -> str:
     if total == 0:
         return f"  {framework:10s}  no notebooks found under _notebooks/{framework}/"
     line = f"  {framework:10s}  OK {n_ok:>3d} / {total:>3d}   STALE {n_stale:>2d}   FAILED {n_fail:>3d}"
+    if result.get("locked"):
+        line += f"   LOCKED (skipped) {len(result['locked'])}"
     out = [line]
     for nb, err in result["failed"]:
         rel = nb.relative_to(ROOT / "_notebooks" / framework).with_suffix("")

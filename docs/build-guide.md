@@ -84,7 +84,7 @@ Three facts explain most of the build's behaviour:
 | `img/outputs/`, `_pdf/<fw>/img/outputs/` | Render scratch | no | render targets |
 | `logs/` | One log per target and run, `logs/<target>-YYYYMMDD-HHMMSS.log` | no | every recipe |
 | `data/` | Downloaded datasets; kept by `make clean` | no | notebooks |
-| `.venv-<fw>`, `.venv-build` | One venv per framework, plus Quarto | no | `make venv-<fw>`, render targets |
+| `.venv-<fw>`, `.venv-lm`, `.venv-build` | One venv per framework; `.venv-lm` for the Language Models part (`chapter_lm-*`); Quarto | no | `make venv-<fw>`, `make venv-lm`, render targets |
 
 ## 2. Glossary
 
@@ -181,8 +181,21 @@ download ([§6.4.1](build-system.md#641-hosted-notebook-environment-contracts)).
 ./bootstrap.sh --pdf      # also TeX Live + rsvg-convert, for PDFs
 make detect               # print GPUs, cores, RAM and the slot plan
 make venv-pytorch         # a framework venv, only to execute notebooks
+make venv-lm              # the Language Models part's venv (chapter_lm-*)
 make help                 # the target list
 ```
+
+The Language Models part (`chapter_lm-*`) runs in its own venv, `.venv-lm`:
+PyTorch on the book's torch pin plus Transformers 5.22.2, `huggingface-hub`,
+`accelerate`, the OpenAI client and scikit-learn (the `lm` extra in
+`pyproject.toml`). No other venv carries these packages. Those notebooks are
+still PyTorch notebooks everywhere else: stamps under `_notebooks/pytorch/`,
+manifests under `outputs/pytorch/`, freshness keyed on the torch version.
+`make _notebooks/pytorch/chapter_lm-<x>/<f>.executed` and the scheduler pick
+`.venv-lm` by themselves; `make kernels` registers a `d2l-lm` kernel, which
+the generated `chapter_lm-*` notebooks name. A Transformers or OpenAI bump
+stales nothing (the audit only warns); re-run the part by hand after one.
+Details: [`build-system.md` §6.4.2](build-system.md#642-execution-venvs-one-per-framework-plus-venv-lm).
 
 | Target | What it does | Executes notebooks? | Needs |
 |---|---|---|---|
@@ -193,7 +206,7 @@ make help                 # the target list
 | `all-quick` | `lib`, `notebooks`, then slides, html, pdfs, part PDFs, zips, artifact check | no | any host + TeX |
 | `lib` | Rebuild `d2l/*.py` and the shards | no | any host |
 | `notebooks`, `notebooks-<fw>` | Generate `.ipynb` files (no execution) | no | `.venv-build` |
-| `_notebooks/<fw>/<ch>/<f>.executed` | Execute one notebook | yes | that venv; GPU if it is a GPU notebook |
+| `_notebooks/<fw>/<ch>/<f>.executed` | Execute one notebook | yes | that venv (`.venv-lm` for `chapter_lm-*`); GPU if it is a GPU notebook |
 | `run-notebooks-<fw>`, `run-all-notebooks` | Execute every notebook whose stamp is stale | yes | GPU box |
 | `capture-outputs [FILES=...] [UNLOCK=1]` | Copy executed outputs into `outputs/` | no | any host |
 | `audit-outputs` | Report stale notebooks and integrity problems | no | any host |
@@ -203,7 +216,7 @@ make help                 # the target list
 | `locks`, `rerun-locked FILES=...` | List locked notebooks; execute named ones | `rerun-locked` only | its hardware |
 | `figures` | Re-run changed figure generators | no | `.venv-pytorch` |
 | `deploy` | `all-quick`, then `publish-colab` and `upload-r2-delete` | no | credentials |
-| `test-trap` | CPU regression tests for freshness, library deps and locks | no | any host |
+| `test-trap` | CPU regression tests for freshness, library deps, locks and venv routing | no | any host |
 | `clean`, `veryclean` | Delete build products; `veryclean` also `data/` and `logs/` | no | any host |
 
 ## 4. Recipes
@@ -282,7 +295,7 @@ awk '/chapter_x\/foo\.executed/ {print $1}' _notebooks/*/MANIFEST.mk
 
 CPU notebooks re-run on any host, a Mac included; GPU notebooks need a GPU
 host. The first execution in a framework creates `.venv-<fw>` (several GB of
-wheels on Linux).
+wheels on Linux); the first `chapter_lm-*` notebook creates `.venv-lm`.
 
 ```bash
 $EDITOR chapter_x/foo.md

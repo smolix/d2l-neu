@@ -31,7 +31,7 @@ stable: code comments and other docs cite them.
 | 4 | Numbering, `CHAPTER_NUMBERING`, cell IDs, integrity | adding or moving chapters |
 | 5 | Lifecycle overview (recipes live in the guide) | — |
 | 6–6.3 | Make targets, the staging override, forcing rebuilds | which target does what |
-| 6.4, 6.4.1 | Aggregate targets; hosted/Colab environment contracts | full builds, Colab |
+| 6.4–6.4.2 | Aggregate targets; hosted/Colab environment contracts; execution venvs (`.venv-lm`) | full builds, Colab, venvs |
 | 6.5 | Updating the MXNet wheel pin | wheel bumps |
 | 6.6–6.6b | PDF pitfalls, part PDFs, page size | PDF builds |
 | 6.7 | Resource detection and the scheduler (summary) | notebook execution |
@@ -303,6 +303,16 @@ the hash. This signal pinpoints *which* cells drifted.
   from a different machine — defeating portability. A genuine version change
   (`2.11.0 → 2.12.0`, or a MXNet-wheel rebuild) still invalidates. The audit
   also normalizes legacy `+cu128` manifests on read, so old captures match.
+  The version is read from the venv that executes the notebook: `.venv-<fw>`,
+  or `.venv-lm` for `chapter_lm-*` (§6.4.2), falling back to `.venv-pytorch`
+  on a host without `.venv-lm` (both pin the same torch, so the key is equal).
+
+A notebook executed in a separate venv (§6.4.2) also records `venv` and
+`packages` (today `{"transformers": "transformers==5.22.2"}`) in its
+provenance. These are **not** freshness keys: a Transformers bump does not
+stale the Language Models part. `audit_outputs.py` prints a warning ("captured
+under other venv package versions"), and the author re-runs those notebooks
+by hand.
 
 ### 3.2 Stale ⟺ code or provenance drift
 
@@ -1061,7 +1071,7 @@ HTML and only its own framework's PDF and slides.
 | `verify-outputs-fresh` | The gate `make html` runs, as a standalone target. |
 | `refresh-stale` | `make notebooks`, then delete the audit's stale stamps, execute exactly that set **in parallel** (`notebook_scheduler.py --files`), then one `capture-outputs FILES=<stale set>`, also after failures; exits non-zero if the run or the capture failed. Needs framework venvs and GPUs. |
 | `render-fresh` | `refresh-stale`, then slides and PDFs at `-j$(RENDER_JOBS)` under `RENDER_V8_ENV`, `html`, `pdf-parts`. |
-| `test-trap` | CPU-only regression tests: `test_refresh_stale_trap.py`, `test_freshness_deps.py`, `test_notebook_locks.py`. |
+| `test-trap` | CPU-only regression tests: `test_refresh_stale_trap.py`, `test_freshness_deps.py`, `test_notebook_locks.py`, `test_notebook_venvs.py`. |
 | `locks` | List locked notebooks (§3.7). |
 | `rerun-locked FILES=… [FRAMEWORKS=…]` | Execute exactly the named **locked** notebooks (§3.7). |
 
@@ -1206,6 +1216,18 @@ make check-hosted-runtime-contracts
 make check-hosted-notebooks
 ```
 
+The Language Models part (`chapter_lm-*`, §6.4.2) is PyTorch-only and needs
+the `lm` extra on top of the PyTorch core. The PyTorch profile lists those
+packages among its optional packages (`LM_PACKAGES` in
+`tools/export_hosted_env.py`, versions taken from the lock's `lm` fork, so
+`huggingface-hub` 2.x and not the 1.23.0 the `jax` extra holds) and names them
+under `venv_packages.lm`. Every hosted `chapter_lm-*` notebook installs all of
+them in its setup cell (`transformers[serving]`, `huggingface-hub`,
+`accelerate`, `openai` exact; `scikit-learn` kept if the provider has it),
+whatever its own cells import, because the d2l helpers import them lazily;
+such a page never becomes a NumPy variant. `check-hosted-runtime-contracts`
+checks the PyTorch profile in `.venv-pytorch` and again in `.venv-lm`.
+
 `hosted-notebooks` fails when the generated profiles are stale, so a direct
 publication cannot silently combine a new lock with old setup cells. Dockerized
 Colab-image canaries remain an occasional, explicit check; these local contracts
@@ -1262,6 +1284,57 @@ detect provider drift; pass `--cpu-image` or `--gpu-image` to reproduce a
 specific image. Linux hosts need Docker plus NVIDIA Container Toolkit for GPU
 cases. `--network auto` uses bridge networking when its DNS works and otherwise
 falls back to host networking on Linux.
+
+### 6.4.2 Execution venvs: one per framework, plus `.venv-lm`
+
+Notebooks execute in `.venv-<fw>` (`uv sync --extra <fw> --extra run`, made by
+`make venv-<fw>`; the `uv` conflict set in `pyproject.toml` keeps every
+framework extra in its own resolution). The one exception is the Language
+Models part: notebooks whose source lies under `chapter_lm-*` execute in
+**`.venv-lm`** (extra `lm`: torch/torchvision on the *same* pins as the
+`pytorch` extra, plus `transformers[serving]==5.22.2`, `huggingface-hub`,
+`accelerate`, `openai==3.49.0`, `safetensors`, `scikit-learn`), so the rest of
+the book never installs those packages. `make venv-lm` builds it with the d2l
+package installed editable from the checkout it runs in.
+
+Everything else about such a notebook stays `pytorch`: its stamp
+(`_notebooks/pytorch/chapter_lm-*/…executed`), its manifest
+(`outputs/pytorch/…`), `EXTRA_ENV_pytorch`, `run_one_notebook.py pytorch` and
+its freshness key (`torch==2.11.0`, §3.1). Only the interpreter changes. The
+routing lives in three places that a test keeps in step
+(`tools/test_notebook_venvs.py`, run by `make test-trap`):
+
+| Where | What |
+|---|---|
+| `tools/runtime_env.py` | `NOTEBOOK_VENVS = {"pytorch": (("chapter_lm-", "lm"),)}`, `notebook_venv(fw, rel)`; `VENV_PROVENANCE_PACKAGES` (what provenance records) |
+| `make/notebooks.mk` | `EXEC_RULE(fw, venv, prefix)`; `$(eval $(call EXEC_RULE,pytorch,lm,chapter_lm-))` is a pattern rule with a shorter stem than the generic one, so GNU make picks it for exactly these stamps |
+| `make/venvs.mk` | `KERNEL_VENVS` (`make kernels` registers `d2l-lm` too; `make kernels-lm` alone) |
+
+Consumers: `tools/gen_notebooks.py` writes the `d2l-lm` kernelspec into the
+generated notebooks (VS Code picks the right interpreter);
+`tools/capture_outputs.py` reads the framework version from `.venv-lm` and
+records the venv and its Transformers version (§3.1);
+`tools/notebook_scheduler.py` is unchanged in what it schedules (a dry run
+lists the same items) and tags each `chapter_lm-*` line with `[.venv-lm]`;
+hosted setup cells install the `lm` packages (§6.4.1); the PyTorch notebook
+ZIP carries `pylock.lm-{cpu,gpu}.toml` beside the PyTorch locks
+(`notebook_envs/pytorch/lm-{cpu,gpu}.in`, `make notebook-env-locks`).
+
+Two version rules come with it:
+
+- **The torch pins move together.** Bumping torch means bumping it in both the
+  `pytorch` and the `lm` extra (the test fails otherwise), then re-capturing.
+- **An `lm` package bump does not stale anything.** The audit warns that the
+  `chapter_lm-*` manifests were captured under another Transformers version;
+  re-run those notebooks by hand (`make refresh-stale` will not pick them).
+
+Adding the `lm` extra moved the shared lock in two places outside it: the `jax`
+extra pins `huggingface-hub==1.23.0` (what `.venv-jax` ran; Transformers 5.22
+needs ≥ 1.31, and without the pin `uv` moved jax to the 2.x API too), and the
+`jax` and `build` resolutions moved `idna` 3.11 → 3.20 and
+`typing-extensions` 4.15.0 → 4.16.0 (`jax` also `hf-xet` 1.5.1 → 1.8.0); the
+next `make venv-jax` / `make venv-build` picks these up. The `pytorch`,
+`tensorflow` and `mxnet` resolutions are unchanged.
 
 ### 6.5 Updating a framework wheel pin (MXNet)
 
@@ -1657,7 +1730,7 @@ consumes.
 | Include | Owns |
 |---|---|
 | `make/resources.mk` | host resource detection + render/slide-fleet sizing (`_detected`, `RENDER_JOBS`, `SLIDE_WORKERS`, …) |
-| `make/venvs.mk` | UV framework venvs, mxnet preflight, Quarto build venv, `kernels` |
+| `make/venvs.mk` | UV framework venvs and `.venv-lm` (§6.4.2), mxnet preflight, Quarto build venv, `kernels` |
 | `make/lib.mk` | `d2l/.built` (rebuilt from `#@save` blocks) |
 | `make/figures.mk` | committed illustrative SVGs (incremental; see below) |
 | `make/store.mk` | committed outputs store — `capture-outputs`, `audit-outputs`, `verify-outputs-fresh`, `refresh-stale`, `render-fresh`, `test-trap`, `locks`, `rerun-locked` |
@@ -1817,6 +1890,7 @@ yubikey-free path recorded in CLAUDE.md memory); LFS rides the same HTTPS remote
 | `tools/test_refresh_stale_trap.py` | `make test-trap`. Fast, GPU-free e2e regression for the §3.5 trap: builds a tmp fixture, moves a lib fingerprint under an unchanged notebook, and asserts the audit flags it, `refresh-stale`'s stamp-removal forces a re-run, and the capture guard refuses the stale bless (and accepts a genuine re-capture). Never touches the real store. |
 | `tools/test_freshness_deps.py` | `make test-trap`: shard naming, the transitive `.d` closure, the preamble/DATA_HUB/alias/module shards, the no-manifest rule (§3.4). |
 | `tools/locks.py`, `tools/test_notebook_locks.py` | Notebook locks (§3.7): the directive parser, materialization from the store and `make locks`; the GPU-free fixture test (run by `make test-trap`). |
+| `tools/test_notebook_venvs.py` | `make test-trap`: the separate `.venv-lm` (§6.4.2): pyproject pins, routing in `runtime_env.py` and `make/notebooks.mk`, provenance (`venv`, `packages`, warn-only drift), the `d2l-lm` kernelspec. |
 | `tools/inject_outputs.py` | Reads the store through `index_store_by_id()`, which returns the **same shape** as `index_ipynb_by_id()` — `{cell_id: [nbformat-output-dict]}` — by reconstructing nbformat dicts from the manifest (inline text → `stream`/`text/plain` dicts; assets → re-read the file, re-encode to the dict's `data`). Uses `outputs/` when a manifest exists, else falls back to `_notebooks/`. |
 | `tools/inject_outputs.py` (stream coalescing, 2026-07-27) | `format_cell_output()` first runs `coalesce_stream_outputs()`, merging runs of **adjacent same-name** `stream` outputs into one. A cell that prints once per loop iteration emits one stream message per flush, so Jupyter stores N stream outputs (each already `\n`-terminated); rendering each as its own fenced block put a paragraph break between consecutive printed lines — a blank line in HTML, a stretched inter-block gap in the PDF. The store is *faithful* (the split is in the `.ipynb`); the fix is render-side only, so no re-capture is needed. Non-stream outputs and stderr↔stdout transitions still separate blocks. Side effect: the `MAX_TEXT_LINES` cap applies to the merged block — 10 output groups book-wide elide to head-20 / `...` / tail-20 in the PDF. Also: `is_wide_table()` tags column-aligned output wider than the column with `.d2l-output-wide` (**html mode only** — 18 blocks: profiler tables, Syne Tune trial status, …). `_d2l-style.css` wraps output by default and scrolls those instead, since wrapping destroys the alignment that carries their meaning. The PDF has no scroll, so it wraps them. |
 | `tools/add_cell_ids.py` | The authority for stable ids — the invariant capture/audit rely on. Idempotent; `--check` reports without writing. |

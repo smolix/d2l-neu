@@ -36,7 +36,7 @@ stable: code comments and other docs cite them.
 | 6.6–6.6b | PDF pitfalls, part PDFs, page size | PDF builds |
 | 6.7 | Resource detection and the scheduler (summary) | notebook execution |
 | 6.8 | Why the HTML render is one `quarto render` | render failures, speed |
-| 6.9 | Makefile layout, deploy targets, R2 buckets, timings | publishing, Makefile edits |
+| 6.9 | Makefile layout, deploy targets, R2 buckets, data uploads (`make upload-data`), timings | publishing, uploading a `DATA_HUB` file, Makefile edits |
 | 6.10 | The hidden standard-imports cell | first cell of every notebook |
 | 7–9 | Git LFS; tool contracts; checks before merging | tooling work |
 | 11 | Runbook: first checkout, quick reference | — |
@@ -396,7 +396,7 @@ Recipe: [build-guide.md §4.4](build-guide.md#44-change-a-save-library-function)
 
 **Shards.** `tools/build_lib.py` writes, next to each `d2l/<fw>.py`, one shard
 file `d2l/_blocks/<fw>/<name>.py` per module-level name a `#@save` block
-defines: every *unindented* `class`, `def` or assignment
+defines: every *unindented* `class`, `def` (also `async def`) or assignment
 (`_block_shard_names`). A helper `def` nested inside a function body is not a
 library symbol and names no shard. A block that defines two top-level symbols
 is written to both shards; if two blocks define the same name, that shard
@@ -412,8 +412,17 @@ shards too:
   name (the preface imports, `import regex`, the utils.md imports). Every
   notebook of the framework depends on it, since `import d2l` runs it; it has
   no outgoing edges in the closure.
-- `DATA_HUB.py`: the `d2l.DATA_HUB['name'] = (...)` entries, reached through
-  `download`, which reads `DATA_HUB`.
+- One shard per `DATA_HUB` key: `DATA_HUB.<key>.py` holds the statement
+  `d2l.DATA_HUB['<key>'] = (...)` and nothing else
+  (`build_lib.registry_entries`, `KEYED_REGISTRIES`). A block of several
+  entries is split by statement; a named block that also registers keys
+  (`GPT2_URL = ...` plus the three `gpt2-*` entries) keeps its own shard and
+  each entry gets a key shard as well, whose bare `GPT2_URL` reference pulls
+  the named shard in. A key that is not a plain file name
+  (`[A-Za-z0-9][A-Za-z0-9._-]*`) is sanitised and suffixed with a hash of
+  the original (`registry_shard_name`). Other registries
+  (`d2l.HF_REVISIONS[...] = ...`) keep one shard per container, named after
+  it; so does a `DATA_HUB` entry whose key is computed.
 - One shard per config.ini alias (`reshape.py` holds `reshape =
   torch.reshape`), so `d2l.reshape` users depend on it.
 - One shard per hand-written module next to the libraries, named after the
@@ -421,7 +430,7 @@ shards too:
   `from d2l.nnx_resnet import ...`.
 
 The name-less `#@save` blocks in `_preamble.py` (after the header) and the
-entries in `DATA_HUB.py` come from many chapters, so they are **sorted within
+registry entries come from many chapters, so they are **sorted within
 their shard** rather than kept in chapter order. Moving or renumbering a
 chapter therefore leaves every shard byte-identical, and no notebook goes
 stale. Before this (2026-11), moving the NLP chapters to the Attic reordered
@@ -444,6 +453,25 @@ Examples: `d2l.Trainer` pulls in `ProgressBoard`, `Averager`, `as_metrics`,
 in JAX `_trainer_train_step`, `_trainer_validation_step`); `d2l.resnet18`
 pulls in `Residual`; `d2l.hpo_objective_lenet` pulls in `HPOTrainer`,
 `Trainer`, `LeNet`, `FashionMNIST` and their closures.
+
+**Registry keys are followed from string literals.** Every one-line string
+literal in a notebook's code cells, and in every shard on the closure, is a
+candidate key: if `DATA_HUB.<literal>.py` exists, it joins the list
+(`scan_d2l_usage.registry_key_refs`). So `d2l.download('airfoil')` depends on
+the `airfoil` entry only; `d2l.load_gpt2()` reaches the `gpt2-*` entries
+through the literals in its own shard; and `d2l.TokenEmbedding('glove.6b.100d')`
+depends on that key although `TokenEmbedding` downloads a variable, because the
+notebook names the key. `download` itself reads `DATA_HUB` by a variable and
+reaches no entry, so a notebook that downloads a URL
+(`d2l.download(d2l.DATA_URL + 'timemachine.txt')`) depends on no key at all.
+Registering a new key therefore adds one shard and stales nothing; editing an
+entry stales exactly the notebooks that name its key. The rule misses a key
+built at run time (`f'glove.6b.{d}d'`): write registered keys out whole.
+(Until 2026-11-12 every entry sat in one `DATA_HUB.py` that `download`
+reached, so a new key staled every notebook that downloads anything. The
+switch itself changed the fingerprint of the 191 notebooks that had depended
+on `DATA_HUB.py`: 57 PyTorch, 49 JAX, 27 TensorFlow, 58 MXNet; their code and
+entries were unchanged.)
 
 What the fingerprint still does not see:
 
@@ -479,8 +507,12 @@ and stay silent where those are absent; the human report lists such
 manifests.)
 
 Tests: `tools/test_freshness_deps.py` (run by `make test-trap`) covers the
-shard naming, the closure, the preamble/DATA_HUB/alias/module shards and the
-no-manifest rule on tmp fixtures.
+shard naming, the closure, the preamble/alias/module shards, the per-key
+`DATA_HUB` shards (a new key changes no other shard and no fingerprint; an
+edited entry stales exactly its users) and the no-manifest rule on tmp
+fixtures. `tools/test_build_lib_async.py` (run by `make test-lm`) checks that
+`async def` blocks are collected whole, sharded, merged by `add_to_class` and
+labelled like `def` blocks.
 
 ### 3.4a Build-only library sources (`LIB_ONLY_FILES`)
 
@@ -513,6 +545,20 @@ uses one of their symbols at import time). Members:
   `Timer`, which `sgd.md` held in an untagged cell until 2026-11; that cell
   is now `%%tab pytorch, jax` and times with `time.perf_counter`, while the
   legacy copies keep `time.time` so that their shards stay unchanged.
+- `chapter_lm-pretrained/eval-suites-lib.md` holds the library code that
+  `sec_lm_eval_suites` (18.5) explains in one sentence and does not show: the
+  task registry and suite manifests (`EVAL_TASKS`, `EVAL_SUITES`), the row
+  adapters, the dataset loader and the result cache. PyTorch only.
+- `chapter_lm-pretrained/api-lib.md` holds the API-client scaffolding of
+  `sec_lm_api` (18.7): `ChatResult`, the `ChatAPI` class body (the section
+  shows its `async def achat`, merged in by `add_to_class`),
+  `openrouter_api`, `LocalChatServer`, `FakeChatServer`. PyTorch only.
+
+Both Language Models files are appended (nothing uses them at import time).
+Their blocks follow the part's import rule: third-party modules
+(`transformers`, `openai`, `httpx`, `asyncio`) are imported inside the
+functions, so `import d2l.torch` works without them and the `_preamble` shard
+does not change.
 
 Each file repeats the `:label:` of the symbols' original home, so the
 "Defined in" docstring suffix, and with it every shard under `d2l/_blocks/`,
@@ -1072,6 +1118,7 @@ HTML and only its own framework's PDF and slides.
 | `refresh-stale` | `make notebooks`, then delete the audit's stale stamps, execute exactly that set **in parallel** (`notebook_scheduler.py --files`), then one `capture-outputs FILES=<stale set>`, also after failures; exits non-zero if the run or the capture failed. Needs framework venvs and GPUs. |
 | `render-fresh` | `refresh-stale`, then slides and PDFs at `-j$(RENDER_JOBS)` under `RENDER_V8_ENV`, `html`, `pdf-parts`. |
 | `test-trap` | CPU-only regression tests: `test_refresh_stale_trap.py`, `test_freshness_deps.py`, `test_notebook_locks.py`, `test_notebook_venvs.py`. |
+| `test-lm` | CPU unit tests of the Language Models library code: `tools/test_build_lib_async.py` and every `tools/test_lm_*.py`, by `unittest` in `.venv-lm` (§6.4.2). Log: `logs/test-lm-<TS>.log`. |
 | `locks` | List locked notebooks (§3.7). |
 | `rerun-locked FILES=… [FRAMEWORKS=…]` | Execute exactly the named **locked** notebooks (§3.7). |
 
@@ -1327,6 +1374,14 @@ Two version rules come with it:
 - **An `lm` package bump does not stale anything.** The audit warns that the
   `chapter_lm-*` manifests were captured under another Transformers version;
   re-run those notebooks by hand (`make refresh-stale` will not pick them).
+
+Scheduling needs no venv-specific code: the chapter's notebooks are ordinary
+`pytorch` entries in `tools/runtime_env.py` (ch. 18: `hf-models.ipynb` and
+`api.ipynb` in `FULL_CARD_NOTEBOOKS`, the other five in `HEAVY_GPU_NOTEBOOKS`
+at 2 slots). They take no `NOTEBOOK_TIMEOUTS` entry: a normal build stays
+near 15 min per notebook, and a `D2L_RERUN=1` regeneration run must finish
+within 30 min (ruling 2026-11-12), inside the default 3,600 s. Their library
+code is tested on CPU by `make test-lm` (§6.2).
 
 Adding the `lm` extra moved the shared lock in two places outside it: the `jax`
 extra pins `huggingface-hub==1.23.0` (what `.venv-jax` ran; Transformers 5.22
@@ -1733,12 +1788,12 @@ consumes.
 | `make/venvs.mk` | UV framework venvs and `.venv-lm` (§6.4.2), mxnet preflight, Quarto build venv, `kernels` |
 | `make/lib.mk` | `d2l/.built` (rebuilt from `#@save` blocks) |
 | `make/figures.mk` | committed illustrative SVGs (incremental; see below) |
-| `make/store.mk` | committed outputs store — `capture-outputs`, `audit-outputs`, `verify-outputs-fresh`, `refresh-stale`, `render-fresh`, `test-trap`, `locks`, `rerun-locked` |
+| `make/store.mk` | committed outputs store — `capture-outputs`, `audit-outputs`, `verify-outputs-fresh`, `refresh-stale`, `render-fresh`, `test-trap`, `test-lm`, `locks`, `rerun-locked` |
 | `make/notebooks.mk` | Notebook generation and execution: `MANIFEST.mk`, `.d` files, `EXEC_RULE`, `run-notebooks-<fw>`, `run-all-notebooks` (which call `notebook_scheduler.py`) |
 | `make/hosted.mk` | hosted/Colab notebook staging + downloadable zips |
 | `make/render.mk` | `html`, `pdf-<fw>`, `pdfs`, `pdf-parts`, `pdf-preflight`, `slides-<fw>`, `slides` |
 | `make/universities.mk` | landing-page adoption grid (independent of the book) |
-| `make/deploy.mk` | `publish-colab`, `upload-r2*`, `deploy` |
+| `make/deploy.mk` | `publish-colab`, `upload-r2*`, `upload-data`, `deploy` |
 
 **Extracted recipe scripts.** Two large inline-shell recipe bodies now live in
 `tools/`: `tools/build_one_pdf.sh <fw>` (the PDF pipeline, §6.6) and
@@ -1784,6 +1839,46 @@ knowing:
 Do not `aws s3 ls` a bucket while an upload runs against it — R2 answers
 `ServiceUnavailable: Reduce your concurrent request rate` when a listing competes
 with the 32 uploaders. Verify after the run, not during.
+
+**Data artifacts (`make upload-data`).** Files that a `DATA_HUB` entry pins
+(the Language Models part's `lm-...-v1` artifacts) live in the R2 bucket
+`d2l-data`, served at `https://d2l-data.smola.org/<key>`, not in the site
+buckets above and not under the legacy `d2l.DATA_URL` (S3). Upload with
+
+    make upload-data FILES="data/lm/rerun/lm-x-v1.json" PREFIX=lm/ [DRY_RUN=1]
+
+(`tools/upload_data_r2.py --prefix lm/ FILE... [--dry-run] [--force]`). The
+object key is `PREFIX` + the file's base name. For each file the script prints
+the key, content type, size, sha1, public URL and a ready `DATA_HUB` line; the
+log goes to `logs/upload-data-<TS>.log`. Rules:
+
+- **Versioned names; no overwrite.** A key that already holds the same bytes
+  (its ETag equals the file's MD5) is reported as uploaded; a key with other
+  bytes is refused (exit 1) unless `FORCE=1`. Readers' caches and the sha1 in
+  every `DATA_HUB` entry assume a published file never changes, so publish
+  `-v<N+1>` instead of forcing.
+- **After the upload** the script re-reads the object's size and ETag; the
+  sha1 is also stored as object metadata (`x-amz-meta-sha1`).
+- `DRY_RUN=1` uploads nothing; it still checks which keys exist when the
+  credentials file is present.
+- `tools/upload_data_r2.py --delete KEY...` removes keys; outside a `_test/`
+  folder it also needs `--force`. Use `lm/_test/` for trial uploads.
+
+Credentials: `~/.config/d2l/r2-data.env` (or the path in `D2L_R2_DATA_ENV`)
+holds one line `CF_API_TOKEN=...`, a Cloudflare API token scoped to the
+bucket. The S3 pair is derived as Cloudflare documents for R2: access key id
+= the token's `id` from `GET /client/v4/user/tokens/verify`, secret = the
+sha256 hex digest of the token. The script hands both to the AWS CLI through
+its environment only (with `AWS_CONFIG_FILE`/`AWS_SHARED_CREDENTIALS_FILE`
+pointed at `/dev/null`, so no profile interferes) and never prints them;
+errors name the HTTP status, not the request. Endpoint
+`https://1712830f746ac9278e7db6de736dc430.r2.cloudflarestorage.com`, region
+`auto`.
+
+Downloads: `d2l.download` (which uses `requests`) and `curl` fetch these URLs;
+Python's `urllib` with its default `Python-urllib/3.x` user agent gets
+**403** from Cloudflare (checked 2026-11-12), so any other downloader must
+send its own `User-Agent`.
 
 **`make figures` is incremental + manual.** It covers *every* chapter generator —
 including the ch6/7/8/9 ones (`gen_bg_*`, `gen_arch_*`, `gen_opt_figures`) the old
@@ -1888,7 +1983,10 @@ yubikey-free path recorded in CLAUDE.md memory); LFS rides the same HTTPS remote
 | `tools/run_one_notebook.py` | The per-notebook recipe of `EXEC_RULE`: picks the device (scheduler assignment, or its own flock slots for a direct `make`), applies the per-notebook timeout (`NOTEBOOK_TIMEOUTS`, default 3600 s) and best-of-N retries (`BEST_OF_N`), writes `logs/nb-errors/<fw>/<rel>.log` on failure, materializes locked notebooks. |
 | `tools/notebook_scheduler.py` | The execution queue; [notebook-scheduler.md](notebook-scheduler.md). |
 | `tools/test_refresh_stale_trap.py` | `make test-trap`. Fast, GPU-free e2e regression for the §3.5 trap: builds a tmp fixture, moves a lib fingerprint under an unchanged notebook, and asserts the audit flags it, `refresh-stale`'s stamp-removal forces a re-run, and the capture guard refuses the stale bless (and accepts a genuine re-capture). Never touches the real store. |
-| `tools/test_freshness_deps.py` | `make test-trap`: shard naming, the transitive `.d` closure, the preamble/DATA_HUB/alias/module shards, the no-manifest rule (§3.4). |
+| `tools/test_freshness_deps.py` | `make test-trap`: shard naming, the transitive `.d` closure, the preamble/alias/module shards, per-key `DATA_HUB` shards and literal-key following, the no-manifest rule (§3.4). |
+| `tools/test_build_lib_async.py` | `make test-lm`: `async def` in `#@save` blocks (standalone and inline markers, `add_to_class`, shards, docstring labels, dedup) (§3.4). |
+| `tools/upload_data_r2.py` | `make upload-data`: versioned `DATA_HUB` artifacts → R2 bucket `d2l-data`; never overwrites a key with other bytes without `--force`; prints URL and sha1, never the credentials (§6.9). |
+| `tools/scan_d2l_usage.py` (keys) | Also follows string literals that name a registered `DATA_HUB` key to its `DATA_HUB.<key>.py` shard (§3.4). |
 | `tools/locks.py`, `tools/test_notebook_locks.py` | Notebook locks (§3.7): the directive parser, materialization from the store and `make locks`; the GPU-free fixture test (run by `make test-trap`). |
 | `tools/test_notebook_venvs.py` | `make test-trap`: the separate `.venv-lm` (§6.4.2): pyproject pins, routing in `runtime_env.py` and `make/notebooks.mk`, provenance (`venv`, `packages`, warn-only drift), the `d2l-lm` kernelspec. |
 | `tools/inject_outputs.py` | Reads the store through `index_store_by_id()`, which returns the **same shape** as `index_ipynb_by_id()` — `{cell_id: [nbformat-output-dict]}` — by reconstructing nbformat dicts from the manifest (inline text → `stream`/`text/plain` dicts; assets → re-read the file, re-encode to the dict's `data`). Uses `outputs/` when a manifest exists, else falls back to `_notebooks/`. |

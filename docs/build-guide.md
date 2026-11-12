@@ -217,6 +217,8 @@ Details: [`build-system.md` §6.4.2](build-system.md#642-execution-venvs-one-per
 | `figures` | Re-run changed figure generators | no | `.venv-pytorch` |
 | `deploy` | `all-quick`, then `publish-colab` and `upload-r2-delete` | no | credentials |
 | `test-trap` | CPU regression tests for freshness, library deps, locks and venv routing | no | any host |
+| `test-lm` | CPU unit tests of the Language Models library code (`tools/test_lm_*.py`, `test_build_lib_async.py`) | no | `.venv-lm` |
+| `upload-data FILES=... PREFIX=lm/` | Upload versioned `DATA_HUB` artifacts to the `d2l-data` bucket; prints URL and sha1 | no | `~/.config/d2l/r2-data.env`, `aws` |
 | `clean`, `veryclean` | Delete build products; `veryclean` also `data/` and `logs/` | no | any host |
 
 ## 4. Recipes
@@ -238,6 +240,7 @@ framework.
 | PDFs and part PDFs | [4.9](#49-build-pdfs-and-part-pdfs) |
 | Inspect the state of a notebook run | [4.10](#410-diagnose-a-notebook-run-you-did-not-start) |
 | Publish (R2, Colab, forum) | [4.11](#411-publish) |
+| Publish a data file for a `DATA_HUB` entry | [4.13](#413-publish-a-data-artifact-data_hub) |
 | `make html` says outputs are stale | [4.12](#412-diagnose-a-stale-or-failing-freshness-gate) |
 
 ### 4.1 Render the book on a laptop
@@ -382,7 +385,17 @@ notebooks one by one as in 4.3 and leave the rest to the GPU box.
 
 Helpers used only by the Advanced part (chapters 9 to 17) are tagged
 `#@tab pytorch, jax`; an untagged helper adds TensorFlow and MXNet copies and
-makes those frameworks stale too.
+makes those frameworks stale too. Language Models helpers (`chapter_lm-*`) are
+tagged `%%tab pytorch`, import `transformers`, `openai` and the like inside
+their functions (`import d2l.torch` must work without them), and come with CPU
+tests in `tools/test_lm_*.py`: run `make test-lm` after `make lib`.
+
+`DATA_HUB` entries are tracked per key: a notebook depends on an entry only if
+its code, or a library function it calls, names the key as a string literal
+(`d2l.download('ptb')`, `d2l.TokenEmbedding('glove.6b.100d')`). Registering a
+new key stales nothing; changing an entry's URL or sha1 stales exactly the
+notebooks that name it. Write keys out whole, never as `f'...{x}'`
+([§3.4](build-system.md#34-the-d2l-save-ripple-made-precise)).
 
 ### 4.5 Add, split or move a section
 
@@ -627,6 +640,37 @@ For a staging preview while a planned re-run is pending,
 `make html ALLOW_STALE=1` turns the failure into a warning. Such a build shows
 old outputs beside new code; upload it only to a staging bucket
 ([§6.2a](build-system.md#62a-staging-override-make-html-allow_stale1)).
+
+### 4.13 Publish a data artifact (`DATA_HUB`)
+
+Data files that a `DATA_HUB` entry pins go to the R2 bucket `d2l-data`
+(`https://d2l-data.smola.org/<key>`). Names carry their version
+(`lm-arc-scores-v1.json`); a published file never changes.
+
+```bash
+make upload-data FILES="data/lm/rerun/lm-x-v1.json" PREFIX=lm/ DRY_RUN=1   # plan only
+make upload-data FILES="data/lm/rerun/lm-x-v1.json" PREFIX=lm/             # upload
+```
+
+Success: per file a line `uploaded: <path>` with the key, size, sha1, URL and
+a `d2l.DATA_HUB[...] = (url, sha1)` line to paste into the registering
+`#@save` cell (log: `logs/upload-data-<TS>.log`). Re-running with the same
+bytes reports `already uploaded (identical bytes)`.
+
+Common failures:
+
+- `REFUSED ... exists with other bytes`: the key is taken. Bump the version
+  (`-v2`) and update the registering cell and every claim built on the file;
+  `FORCE=1` overwrites, but readers who downloaded `-v1` keep the old bytes
+  and fail its sha1.
+- `credentials file ... not found` / `token verification failed: HTTP 401`:
+  `~/.config/d2l/r2-data.env` must hold `CF_API_TOKEN=...`, a Cloudflare token
+  scoped to `d2l-data`. The script derives the S3 keys from it and never
+  prints them.
+- Trial uploads go under `PREFIX=lm/_test/`; remove them with
+  `python3 tools/upload_data_r2.py --delete lm/_test/<file>`.
+
+Details: [`build-system.md` §6.9](build-system.md#69-makefile-layout-extracted-scripts--artifact-phase-timing).
 
 ## 5. Rules that bite
 

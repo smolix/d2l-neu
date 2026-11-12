@@ -3,9 +3,9 @@
 
 Training a network almost never uses the exact gradient of its loss. Each
 step computes the gradient on a minibatch of a few hundred examples instead
-of the whole training set. The two previous sections assumed exact
-gradients: curvature set the number of steps, and convexity made a
-stationary point a global minimizer. A minibatch gradient is right on
+of the whole training set. Every section so far assumed exact gradients:
+curvature set the number of steps, and convexity made a stationary point a
+global minimizer. A minibatch gradient is right on
 average, but it is noisy, and the noise changes the question from how many
 steps a run needs to how close to the minimizer it can get. This section
 asks what the noise costs and how that cost can be removed.
@@ -1369,7 +1369,8 @@ variance $1$ per coordinate.
 ::: {.col}
 | section | adds |
 |---|---|
-| Gradient Descent and Curvature | safe steps, $\kappa$, momentum, Newton |
+| Gradient Descent and Curvature | safe steps, $\kappa$, momentum |
+| Curvature Methods | Newton, BFGS, trust regions |
 | Convexity | local = global, rates, Jensen |
 | **Stochastic Gradient Methods** | **noise floors, step decay** |
 | Adaptive Methods | per-coordinate steps |
@@ -1662,7 +1663,7 @@ per epoch:
 at $\mathbf{x}^\star$.]{.small}
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="Noise Sets a Floor Proportional to the Step; Decay, Budgets and Control Variates Trade It Away"}
 [Wrap-up]{.kicker}
 
 - Noise $\operatorname{tr}\boldsymbol{\Sigma}/b$; floor $V = \eta\sigma^2/(\lambda(2 - \eta\lambda))$, rate $\rho^2$.

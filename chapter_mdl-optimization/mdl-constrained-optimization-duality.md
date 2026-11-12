@@ -634,42 +634,57 @@ $x_1 + x_2 = 1$ gives $\lambda^\star = 1000/1001 \approx 0.999$,
 $\mathbf{x}^\star = (1000/1001,\; 1/1001) \approx (0.999, 0.001)$, and
 $p^\star = 500/1001 \approx 0.4995$.
 
-With gradient descent's best step for this quadratic, $\eta = 2/1001$, the
-factor of the proposition is $\rho = 999/1001 \approx 0.998$. From the
-starting point $(3, 4)$, at distance $4.47$ from $\mathbf{x}^\star$, this
-factor guarantees a distance of $10^{-6}$ after about
-$\log(4.47 \times 10^6)/\log(1/\rho) \approx 7{,}660$ steps. The run below
-records the worst contraction it sees in a step, the number of steps it needs,
-and the gradient where it stops.
+Take the step $\eta = 0.0015$, an unremarkable value below the ceiling
+$2/L = 0.002$. The factor of the proposition is
+$\rho = \max(1 - \eta,\ |1 - 1000\,\eta|) = 0.9985$. From the starting point
+$(3, 4)$, at distance $4.47$ from $\mathbf{x}^\star$, this factor guarantees
+a distance of $10^{-6}$ after about
+$\log(4.47 \times 10^6)/\log(1/\rho) \approx 10{,}200$ steps. The run below
+records the largest ratio of successive distances, the number of steps it
+needs, the step from which every update is projected, the ratio per step from
+then on, and the gradient where it stops.
 
 ```{.python .input #mdl-constrained-optimization-duality-projected-gradient-descent}
 A = np.diag([1.0, 1000.0])                         # f(x) = 1/2 x^T A x, kappa = 1000
 x_star = np.array([1000 / 1001, 1 / 1001])         # KKT point of x1 + x2 >= 1
 project = lambda y: y + max(0.0, 1 - y.sum()) / 2  # onto the half-space x1 + x2 >= 1
-eta = 2 / 1001
+eta = 1.5e-3
 rho = max(abs(1 - eta), abs(1 - 1000 * eta))       # the GD contraction factor
-x, ratios, steps = np.array([3.0, 4.0]), [], None
-for k in range(5000):
-    d = np.linalg.norm(x - x_star)
-    x = project(x - eta * A @ x)
-    if d > 1e-9: ratios.append(np.linalg.norm(x - x_star) / d)  # skip rounding noise
-    if steps is None and np.linalg.norm(x - x_star) < 1e-6: steps = k + 1
-print(f'bound rho = {rho:.6f}   largest observed ratio = {max(ratios):.6f}'
-      f'   bound holds: {max(ratios) <= rho + 1e-12}')
-print(f'steps to |x - x*| < 1e-6: {steps}   grad f at the end = {A @ x}')
+x, dist, projected = np.array([3.0, 4.0]), [], []
+for k in range(1000):
+    y = x - eta * A @ x
+    projected.append(y.sum() < 1)                  # did the step leave C?
+    x = project(y)
+    dist.append(np.linalg.norm(x - x_star))
+dist, projected = np.array(dist), np.array(projected)
+ratios = dist[1:] / dist[:-1]
+steps = np.argmax(dist < 1e-6) + 1
+on_line = np.flatnonzero(~projected).max() + 2     # every step from here on is projected
+print(f'bound rho = {rho:.4f}   largest ratio in a step = '
+      f'{ratios[dist[:-1] > 1e-12].max():.4f}')
+print(f'steps to |x - x*| < 1e-6: {steps}   every step projected from step {on_line} on')
+print(f'ratio per step on the line: {np.median(ratios[on_line:steps - 1]):.4f}'
+      f'   1 - 500.5 eta = {1 - 500.5 * eta:.4f}')
+print(f'grad f at the end = {A @ x}')
 ```
 
-The largest observed ratio equals $\rho$ to six digits, so the per-step bound
-cannot be improved for this problem. The step count is another matter: 974,
-not 7,660. This is not a faster rate, and the proposition does not predict it.
-The iterates bounce. A step from the boundary line flips the sign of $x_2$
-and lands inside the half-space, and the next step is projected back onto the
-line. The first time two consecutive steps are both projected, the run lands
-on $\mathbf{x}^\star$ at once: along the line the quadratic has curvature
-$(1 + 1000)/2 = 500.5$, and $\eta = 2/1001$ happens to be its inverse, so a
-step that stays on the line is an exact Newton step there. The count 974 is
-a coincidence of the chosen step and says nothing about the rate of PGD. What
-does carry over is the last number printed. The final
+The largest ratio in a step, $0.9977$, comes close to $\rho$, so the per-step
+bound is nearly tight for this problem. The step count is another matter:
+738, not $10{,}200$. The printed numbers explain the difference, because
+the run has two phases. In the first, the constraint is inactive after the
+first step. The stiff coordinate $x_2$ dies out within a few dozen steps,
+and the flat coordinate $x_1$ shrinks by the factor $1 - \eta$ per step, as
+in unconstrained gradient descent. Reaching the line from $x_1 = 3$ takes
+about $\log 3/\eta \approx 730$ steps, and from step 733 on every step is
+projected. In the second phase the iterate moves along the line
+$x_1 + x_2 = 1$, where the quadratic has curvature $(1 + 1000)/2 = 500.5$,
+and the distance shrinks by $1 - 500.5\,\eta = 0.249$ per step, the factor
+of gradient descent on that one-dimensional problem. A handful of further
+steps finish the run. The proposition's $\rho$ bounds the worst step
+anywhere in the plane. Once the constraint is active only the curvature
+along the constraint counts, and here that curvature is far better matched
+to the step. The bound is thus tight for a single step and pessimistic for
+the run. What does carry over unchanged is the last number printed. The final
 gradient $(0.999, 0.999)$ equals $\lambda^\star(1, 1) = -\lambda^\star\nabla g$:
 it does not vanish, and it hands us the multiplier $1000/1001$ computed by
 hand.
@@ -807,14 +822,10 @@ $$
 
 and its minimizer typically has many coordinates exactly zero. The penalty
 weight is written $\lambda$ because it plays the role of the multiplier of a
-constraint $\|\mathbf{w}\|_1 \le c$. One direction takes a line: if
-$\mathbf{w}_\lambda$ minimizes $F$ and $c = \|\mathbf{w}_\lambda\|_1$, then
-every $\mathbf{w}$ with $\|\mathbf{w}\|_1 \le c$ has least-squares loss
-$F(\mathbf{w}) - \lambda\|\mathbf{w}\|_1 \ge F(\mathbf{w}_\lambda) - \lambda c$,
-the loss of $\mathbf{w}_\lambda$, so $\mathbf{w}_\lambda$ solves the
-constrained problem. The converse, a $\lambda$ for every budget $c$, we do
-not prove: :numref:`subsec_mdl-weight-decay-duality` carries out the argument
-for the squared $\ell_2$ norm only.
+constraint $\|\mathbf{w}\|_1 \le c$: every minimizer of $F$ also solves the
+least-squares problem under the budget $c$ that it uses up, and every
+budget $c > 0$ has its $\lambda$. :numref:`subsec_mdl-weight-decay-duality` proves
+both directions, for this penalty and for weight decay.
 
 We plant a sparse $\mathbf{w}$ with five of its eight coordinates zero,
 generate $n = 100$ noisy observations, and set $\lambda = 3$. The step size is
@@ -919,19 +930,7 @@ Three choices of $\psi$ show what the definition does:
   is soft-thresholding :eqref:`eq_mdl-opt-soft-threshold` applied to each
   coordinate.
 
-As a guard against a slip in the case analysis, we compare the closed form
-with a minimization over a fine grid.
-
-```{.python .input #mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-3}
-zs = np.linspace(-3.0, 3.0, 13)
-grid = np.linspace(-5.0, 5.0, 200001)          # brute-force argmin on a grid
-brute = np.array([grid[np.argmin(0.7 * np.abs(grid) + 0.5 * (grid - z)**2)]
-                  for z in zs])
-print('max |soft(z, 0.7) - brute-force argmin| =',
-      f'{np.abs(soft(zs, 0.7) - brute).max():.1e}')
-```
-
-The two agree. Exercise :exref:`ex_mdl-constrained-group-lasso-prox` derives the
+Exercise :exref:`ex_mdl-constrained-group-lasso-prox` derives the
 prox of the Euclidean norm, which zeroes a whole block of weights at once.
 Exercise :exref:`ex_mdl-convexity-moreau-decomposition` shows that the prox of a
 norm and the projection onto a related ball add up to the identity.
@@ -1084,8 +1083,8 @@ d2l.plot(np.arange(1, 31), [np.maximum(gap_i, 1e-16), np.maximum(gap_c, 1e-16)],
 
 Both methods converge linearly, as straight lines on the logarithmic axis, and
 coordinate descent is steeper: it reaches the gap in four to six sweeps,
-typically, where ISTA needs ten to twenty-five steps. Nothing proved in this
-section predicts that factor. The known rates for coordinate descent are for
+typically, where ISTA needs about fifteen to twenty-five steps. Nothing
+proved in this section predicts that factor. The known rates for coordinate descent are for
 coordinates drawn at random :cite:`Nesterov.2012`, not for cyclic sweeps.
 
 Coordinate descent has a limit. On a nonsmooth function whose kink is not a sum
@@ -1203,7 +1202,7 @@ do not produce.
        $f'(x^\star)(x - x^\star) \ge 0$ for all $x \in C$? Which step of the
        fixed-point argument fails for this set?
     1. Run the PGD cell on the half-space with $\eta = 2.2/1000$ instead of
-       $2/1001$. The projection is nonexpansive; why does the run still
+       $0.0015$. The projection is nonexpansive; why does the run still
        diverge? Which factor of the contraction proposition exceeds $1$?
    :exlabel:`ex_mdl-constrained-projected-fixed-points`
 
@@ -1432,7 +1431,8 @@ $\mathbf{x}^\star=(0.6,0.8)$, $\lambda^\star=4$, $p^\star=8$.
 ::: {.col}
 | section | adds |
 |---|---|
-| Gradient Descent and Curvature | safe steps, $\kappa$, momentum, Newton |
+| Gradient Descent and Curvature | safe steps, $\kappa$, momentum |
+| Curvature Methods | Newton, BFGS, trust regions |
 | Convexity | local = global, rates, Jensen |
 | Stochastic Gradient Methods | noise floors, step decay |
 | Adaptive Methods | per-coordinate steps |
@@ -1577,7 +1577,7 @@ $$f(\mathbf{x})\;\ge\;\varphi(\mathbf{x})\;\ge\;\varphi(\mathbf{x}^\star)\;=\;f(
 - Last $=$: complementary slackness.
 
 ::: {.d2l-note}
-Necessity needs a qualification: LICQ, or Slater (one strictly feasible point).
+Necessity needs a qualification: LICQ, or Slater (a feasible point strictly inside every constraint that is not affine).
 :::
 :::
 
@@ -1632,11 +1632,13 @@ $\mu\mathbf{I}\preceq\nabla^2f\preceq L\mathbf{I}$:
 $$\|\mathbf{x}_{k+1}-\mathbf{x}^\star\|\le\rho\,\|\mathbf{x}_k-\mathbf{x}^\star\|,\qquad\rho=\max(|1-\eta\mu|,|1-\eta L|).$$
 
 - $\mathbf{x}^\star=\Pi_C(\mathbf{x}^\star-\eta\nabla f(\mathbf{x}^\star))$, and $\Pi_C$ is nonexpansive.
-- $\tfrac12(x_1^2+1000x_2^2)$ on $x_1+x_2\ge1$, $\eta=2/1001$:
+- $\tfrac12(x_1^2+1000x_2^2)$ on $x_1+x_2\ge1$, $\eta=0.0015$:
 
 @!mdl-constrained-optimization-duality-projected-gradient-descent
 
 ::: {.d2l-note}
+$738$ steps, not the $10{,}200$ that $\rho$ guarantees: about $730$ to reach
+the line (factor $1-\eta$), then $0.249=1-500.5\,\eta$ per step along it.
 Final gradient $=\lambda^\star(1,1)$ with $\lambda^\star=1000/1001$.
 :::
 :::
@@ -1728,7 +1730,7 @@ $$\mathrm{prox}_\psi(\mathbf{z})=\mathop{\mathrm{argmin}}_{\mathbf{x}}\ \psi(\ma
 $$w_j\leftarrow\frac{\mathrm{sign}(c_j)\max(|c_j|-\lambda,0)}{\|\mathbf{a}_j\|^2},\quad c_j=\mathbf{a}_j^\top\mathbf{r}_{-j}$$
 
 - One sweep costs one gradient.
-- Typically 4 to 6 sweeps against 10 to 25 ISTA steps.
+- Typically 4 to 6 sweeps against 15 to 25 ISTA steps.
 - Stalls on $\max(|x|,|y|)$ at $(1,1)$: the kink must separate.
 :::
 
@@ -1756,7 +1758,7 @@ indicator is the projection $\Pi_C$.
 
 - Lagrange and KKT: $\nabla f+\sum\lambda_i\nabla g_i+\sum\nu_j\nabla h_j=\mathbf{0}$; clipping $(3,4)$ has $\lambda^\star=4$.
 - A multiplier is a price: $\partial p^\star/\partial b=-\nu^\star$.
-- Projection is nonexpansive; PGD contracts by GD's $\rho$ ($0.998$ on the $\kappa=10^3$ quadratic).
+- Projection is nonexpansive; PGD contracts by GD's $\rho$ ($0.9985$ at $\eta=0.0015$ on the $\kappa=10^3$ quadratic).
 - The simplex projection is a shift and a clip: $(0.9,0.5,-0.2)\mapsto(0.7,0.3,0)$.
 - The prox generalizes projection; ISTA and coordinate descent give exact lasso zeros.
 

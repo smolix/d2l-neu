@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,52 +14,31 @@
       "outputs": []
     },
     "mdl-lagrangian-duality-a-lower-bound-from-one-multiplier": {
-      "code_fingerprint": "sha256:6f8bd7d474037e33fa2bfa7ef17b8f73bf8daf49d826babbaeacb7383eb606f9",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:f2266aa894ba1dde3c8df49140ddaa1d44aeb982dd7c0fc92e82d0e78998947b",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "p* = 8.0\nq(0), ..., q(5) = [0.     5.75   7.3333 7.875  8.     7.9167]\nmax q = 8.0000 at lambda = 4.00\nq <= p* everywhere: True\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/mdl-lagrangian-duality-a-lower-bound-from-one-multiplier-1.svg",
           "bytes": 27064,
-          "sha256": "sha256:9d2122172d08f8f70818d564ce6c07c8f6399a9c1e3dfe49bfb3e1fcb06bbe4c"
-        }
-      ]
-    },
-    "mdl-lagrangian-duality-log-sum-exp-and-entropy": {
-      "code_fingerprint": "sha256:4515ab2f60d421be8dba06ff58acc65bc4b34a809468d94c878bf5371601382a",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "lse(x) = 1.199478,  p^T x + H(p) at the softmax = 1.199478\nbest of 1000 other distributions: 1.189238, below lse(x) by 0.0102\n"
+          "sha256": "sha256:0bb98f08f7aa51caa3a8e6618163ccbe585a741e80c4686f83f0621ab343a491"
         }
       ]
     },
     "constrained-weight-decay": {
-      "code_fingerprint": "sha256:53a217033a3f6144dbb930c0b06cff24c89192ffc3bd7a3e9a3d9a24dda9f0a6",
+      "code_fingerprint": "sha256:8fafd1aa485e93de822469020f1b11eef08a5049d769acd91979234389e83989",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   0.10      0.4376         2.86e-17              0.100000\n   1.00      0.4099         1.03e-16              1.000000\n  10.00      0.2543         5.83e-17             10.000000\n"
+          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.3931         9.23e-17              0.100000\n   1.00      0.3716         1.58e-16              1.000000\n  10.00      0.2524         4.38e-17             10.000000\n"
         }
       ]
     },
     "constrained-svm-dual": {
-      "code_fingerprint": "sha256:09e4370b6555332b1cdd7e168779e48718fa11514801f221db14ccbd7b5b43a9",
+      "code_fingerprint": "sha256:0a305e770741e02e6704831b8d03e1c0806bf8a91cb7fc6eeb9609e1557460af",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +49,7 @@
       ]
     },
     "constrained-water-filling": {
-      "code_fingerprint": "sha256:d6ee619567bdfa3a35b9c581b49aa0eb7e3267332358ce85500531f419f1a369",
+      "code_fingerprint": "sha256:1b37ae6d10e95235491dafa640c46d37aca99643a2d599fa9296b4aadfb1d3e8",
       "kind": "text",
       "outputs": [
         {
@@ -81,20 +60,20 @@
       ]
     },
     "constrained-duality-gap": {
-      "code_fingerprint": "sha256:27dff56dfcaec6e4b8fa35ffc245d8e8e690db7fb2d1a3f940dbd87aa55a8acb",
+      "code_fingerprint": "sha256:46cdd09aebb2312c215edf395fa8f4c7d6d747808ab4826adb0065e3262d55ec",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p* = -0.2500,  d* = -0.5000 at lambda = 1.00,  gap = 0.2500\nweak duality q(lambda) <= p* everywhere: True\n"
+          "text": "p* = -0.2500,  d* = -0.5000 at lambda = 1.00,  gap = 0.2500\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/constrained-duality-gap-1.svg",
           "bytes": 26402,
-          "sha256": "sha256:0c244c460b8b0416297b485008e1f29bd7a40a4852e590f7945d860ab330a807"
+          "sha256": "sha256:a2eb690f23f1db5e128c3b3e11c5ead375b74d89b81bdabc447b6b9f77771e03"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
+    "d2l_lib_fingerprint": "sha256:0afdcc92b4a50982bd9a5fa2d23dd020f1407b5c53a2a5ceb5e59ae28cc9db7b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,8 +13,41 @@
       "kind": "text",
       "outputs": []
     },
+    "convexity-basins": {
+      "code_fingerprint": "sha256:6b0604b6811389699db0cff0ca74f8d59d42eed088ab83b286952aeec6b8a985",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 280 runs, x = -1.0575, phi = -0.5148\nwell, right: 220 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.440\n"
+        }
+      ]
+    },
+    "convexity-three-lenses": {
+      "code_fingerprint": "sha256:22c86e0a5ca132b346eed84f24034b26a832213c7c892b8699300b2687446fa1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "               worst chord gap  worst tangent gap  smallest Hessian eig\nleast squares           -0.000             -0.003                10.525\ndouble well              0.980              2.999                -4.000\nworst chord of the double well: from -0.91 to 1.04\n"
+        }
+      ]
+    },
+    "convexity-jensen-mc": {
+      "code_fingerprint": "sha256:a06d0c8f653c1929c7ea519e79e2ee79f6c571a335d177573fffd6774206d49d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E[exp(Z)] = 1.64 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.6e-04 1.7e-06 1.7e-08\n"
+        }
+      ]
+    },
     "mdl-convexity-strict-and-strong-convexity": {
-      "code_fingerprint": "sha256:ffcdccc44e9bf4660aa5d2011c11682b783d92bd2a695cf9cab6be0acae5a28a",
+      "code_fingerprint": "sha256:54b48cbaeedb4647d85b35c2b1f4c79c43438128914deb558ec7e61ad5c94b2c",
       "kind": "mixed",
       "outputs": [
         {
@@ -27,67 +60,34 @@
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-strict-and-strong-convexity-1.svg",
           "bytes": 27365,
-          "sha256": "sha256:3dd3fd30d9b6cc4b5dba3a43a10dabab6d3021ec27d8a2bfcf7271b48dbc111e"
-        }
-      ]
-    },
-    "convexity-three-lenses": {
-      "code_fingerprint": "sha256:709baf00ac3fb034526560b3277c6071390cb1bcb8ad5c5953b65394754524ab",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "worst chord gap:   -9.88e-03\nworst tangent gap: -2.75e-01\nboth <= 0: True\nHessian eigenvalues: [17.6907 22.2619]\n"
-        }
-      ]
-    },
-    "convexity-jensen-mc": {
-      "code_fingerprint": "sha256:f9d60eaf75ad959ead4182b9205a556cd71a54ef1cb04f5e1743dfc681bbdd6f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.094\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.7e-04 1.8e-06 1.8e-08\n"
-        }
-      ]
-    },
-    "convexity-basins": {
-      "code_fingerprint": "sha256:f8443c80cfb8db48eddae7cf033c02bee537cc6fa3c88328d9ef1920bcb6dcc6",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 273 runs, x = -1.0575, phi = -0.5148\nwell, right: 227 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.454\n"
+          "sha256": "sha256:70db05622ad698a7ea2628f81d3098829226fce435aa4dc1e1bb334ba1460e5a"
         }
       ]
     },
     "convexity-rate-check": {
-      "code_fingerprint": "sha256:5b511992aa959a1f3e5f31d79224b8630a433b226262dfcf2a67803ad736c7a6",
+      "code_fingerprint": "sha256:1687b97b699f4206b84d31c881a00ae3a0cc81732cf386a18e0b2913104076bf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.1242 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
+          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.3139 0.81   0.81  ]  largest ratio: 0.81\n"
         }
       ]
     },
     "convexity-lse-hessian": {
-      "code_fingerprint": "sha256:99e82522208a8fff270454e10b512cfc279293833c78c03f1cc26ee1e9946bfc",
+      "code_fingerprint": "sha256:15745cce57127f830857398b50bc4344ba9adf27101384648b35d3044aea988b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues: [-0.        0.07743   0.091653  0.110611  0.179373  0.310334]\nmax |hess - Cov(e_Y)| = 0.0006\nmax |hess @ 1| = 8.3e-17\n"
+          "text": "  c   largest eigenvalue   median\n  0.1          0.2210        0.1844\n  1.0          0.4575        0.3073\n  3.0          0.4981        0.2963\n 10.0          0.5000        0.0150\n 30.0          0.5000        0.0000\n"
         }
       ]
     },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:126ee8ce2a2ca861665e8c020d8be75d4c63a6aae987ebb66fa49c7402e30388",
+      "code_fingerprint": "sha256:a8053543476394f9e0f287236ef5dd45c0bf510751df0bb44da8f6868362c67f",
       "kind": "text",
       "outputs": [
         {

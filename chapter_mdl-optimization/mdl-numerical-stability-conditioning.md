@@ -82,6 +82,12 @@ from d2l import jax as d2l
 ```{.python .input #mdl-numerical-stability-conditioning-numerical-stability-and-conditioning-1}
 #@tab mxnet, tensorflow, jax
 import ml_dtypes
+from fractions import Fraction
+```
+
+```{.python .input #mdl-numerical-stability-conditioning-numerical-stability-and-conditioning-1}
+#@tab pytorch
+from fractions import Fraction
 ```
 
 ## Floating-Point Arithmetic
@@ -386,6 +392,10 @@ z = np.array([0.0, 100.0], dtype=np.float32)
 with np.errstate(over='ignore', invalid='ignore'):
     print('naive  softmax(0, 100):', softmax_naive(z))
 print('stable softmax(0, 100):', softmax_stable(z))
+z = np.array([1000.0, 1001.0, 1002.0])        # the opening's logits, fp64
+with np.errstate(over='ignore', invalid='ignore'):
+    print('naive  softmax(1000, 1001, 1002):', softmax_naive(z))
+print('stable softmax(1000, 1001, 1002):', softmax_stable(z).round(4))
 z = np.array([0.0, 10.0], dtype=np.float32)
 a, b = softmax_naive(z), softmax_stable(z)
 print('softmax(0, 10), naive minus stable, in ulps:',
@@ -394,9 +404,12 @@ print('softmax(0, 10), naive minus stable, in ulps:',
 
 The shifted softmax returns $(3.8\times10^{-44}, 1)$, the exact
 $3.7\times10^{-44}$ rounded to the subnormal grid with five significant bits
-left; the direct formula returns $0$ and `NaN`. At $t=10$ the two agree to the
-last bit or differ by one or two units in the last place (*ulps*): the shift
-identity holds for real numbers, and the two orders of evaluation round
+left; the direct formula returns $0$ and `NaN`. More precision is no cure.
+The logits of the opening fail even in fp64, because $e^{1000}$ overflows
+there too: the direct formula returns three `NaN` where the shifted one
+returns $(0.09, 0.24, 0.67)$. At $t=10$ the two agree to the last bit or
+differ by one or two units in the last place (*ulps*): the shift identity
+holds for real numbers, and the two orders of evaluation round
 differently. The shift does not handle non-finite logits: a row of all
 $-\infty$ has $c=-\infty$, and $z_j-c$ is undefined.
 
@@ -504,12 +517,12 @@ $\mathrm{lse}(0,t)-0=\log(1+e^t)$. If the probabilities are formed first, the
 true-class probability $e^{-t}/(1+e^{-t})\approx e^{-t}$ leaves fp32's normal
 range once $t>87.3$ and reaches zero near $t=104$, and its negative logarithm
 becomes infinite. The cell computes the loss both ways with the library's
-functions; its last two values of $t$ (the column `gap`), $103$ and $104$,
-straddle that threshold:
+functions; its last two values of $t$, $103$ and $104$, straddle that
+threshold:
 
 ```{.python .input #numerical-stability-conditioning-cross-entropy}
 #@tab mxnet
-print('gap    CE from logits    CE via probabilities')
+print('    t  CE from logits    CE via probabilities')
 for t in [20.0, 60.0, 103.0, 104.0]:
     logits = mnp.array([[0.0, t]])        # the label is class 0, the unlikely one
     from_logits = -npx.log_softmax(logits, axis=1)[0, 0]
@@ -519,7 +532,7 @@ for t in [20.0, 60.0, 103.0, 104.0]:
 
 ```{.python .input #numerical-stability-conditioning-cross-entropy}
 #@tab pytorch
-print('gap    CE from logits    CE via probabilities')
+print('    t  CE from logits    CE via probabilities')
 for t in [20.0, 60.0, 103.0, 104.0]:
     logits = torch.tensor([[0.0, t]])
     y = torch.tensor([0])                        # label = the unlikely class
@@ -531,7 +544,7 @@ for t in [20.0, 60.0, 103.0, 104.0]:
 
 ```{.python .input #numerical-stability-conditioning-cross-entropy}
 #@tab tensorflow
-print('gap  CE from logits  CE via probabilities  Keras from_logits=False')
+print('  t  CE from logits  CE via probabilities  Keras from_logits=False')
 for t in [20.0, 60.0, 103.0, 104.0]:
     logits = tf.constant([[0.0, t]])
     y = tf.constant([0])                         # label = the unlikely class
@@ -547,7 +560,7 @@ for t in [20.0, 60.0, 103.0, 104.0]:
 
 ```{.python .input #numerical-stability-conditioning-cross-entropy}
 #@tab jax
-print('gap    CE from logits    CE via probabilities')
+print('    t  CE from logits    CE via probabilities')
 for t in [20.0, 60.0, 103.0, 104.0]:
     logits = jnp.array([[0.0, t]])
     y = jnp.array([0])                           # label = the unlikely class
@@ -720,14 +733,28 @@ $$
 
 The best forward difference keeps only about half of the format's digits. For
 $f=\sin$ at $x=1$ in fp64, $h^\star\approx2\times10^{-8}$, with predicted
-error $1.8\times10^{-8}$. We measured about $10^{-8}$ at $h=10^{-8}$, against
-$4\times10^{-5}$ at $h=10^{-12}$ (too much cancellation) and $4\times10^{-3}$
-at $h=10^{-2}$ (too much truncation). In fp32 the best step is near
-$5\times10^{-4}$ and leaves about three digits, which is why gradient checks
-are run in fp64.
+error $1.8\times10^{-8}$; in fp32, $h^\star\approx5\times10^{-4}$. The cell
+measures the error at steps from $10^{-2}$ to $10^{-12}$ in both formats.
+
+```{.python .input #mdl-numerical-stability-conditioning-subtraction-of-nearly-equal-numbers-1}
+print('      h   error in fp64   error in fp32')
+for h in 10.0 ** -np.arange(2, 13):
+    err = [abs(float((np.sin(t(1) + t(h)) - np.sin(t(1))) / t(h)) - np.cos(1.0))
+           for t in (np.float64, np.float32)]  # forward difference of sin at 1
+    print(f'{h:7.0e}  {err[0]:14.1e}  {err[1]:14.1e}')
+```
+
+In fp64 the error falls in proportion to $h$ down to about $h=10^{-8}$,
+where it is of order $10^{-8}$ or below (the exact value at a single $h$ is
+rounding noise), and rises again to $4\times10^{-5}$ at $h=10^{-12}$ (too
+much cancellation); at $h=10^{-2}$ it is $4\times10^{-3}$ (too much
+truncation). In fp32 the best steps, $10^{-3}$ and $10^{-4}$, leave about
+three digits, and from $h=10^{-8}$ down the sum $1+h$ rounds to $1$, so the
+difference quotient is $0$ and the error is the whole derivative,
+$\cos 1=0.54$. This is why gradient checks are run in fp64.
 
 Higher precision does not remove a cancellation; it moves the input at which
-the failure starts. The last line of the cell above shows $\log(1+x)$
+the failure starts. The last line of the $\log(1+x)$ cell shows $\log(1+x)$
 returning $0$ in fp64 at $x=10^{-20}$, just as fp32 did at $10^{-8}$, while
 `log1p` is accurate in both. Reformulation removes the ill-conditioned step
 itself :cite:`Higham.2002`.
@@ -1086,13 +1113,27 @@ One caveat before we judge the solver. Computing
 $\mathbf b=\mathbf H\mathbf 1$ in fp64 rounds every entry of $\mathbf b$, a
 change of the data of relative size $u$ before the solver starts. (Rounding
 the entries $1/3$, $1/7$, … does no harm here, because $\mathbf b$ is built
-from the matrix as stored.) Solved in exact rational arithmetic, the stored
-system has a solution that differs from $\mathbf 1$ by roughly $10^{-7}$,
-$10^{-4}$, and $10^{-1}$ for $n=8$, $10$, $12$, so even an exact solver would
-lose those digits.
+from the matrix as stored.) How much does that alone cost? Every fp64
+number is a rational number, so the stored system can also be solved without
+any rounding, by Gauss–Jordan elimination on `Fraction` entries. The table
+reports the error of that exact solve beside the error of `np.linalg.solve`.
+
+```{.python .input #mdl-numerical-stability-conditioning-example-the-hilbert-matrix-1}
+def solve_exact(A, b):
+    """Gauss-Jordan elimination in exact rational arithmetic."""
+    M = [[Fraction(a) for a in row] + [Fraction(c)] for row, c in zip(A, b)]
+    n = len(M)
+    for j in range(n):              # no pivoting: A is positive definite here
+        for i in range(n):
+            if i != j:
+                r = M[i][j] / M[j][j]
+                M[i] = [a - r * c for a, c in zip(M[i], M[j])]
+    return np.array([float(M[i][n] / M[i][i]) for i in range(n)])
+```
 
 ```{.python .input #numerical-stability-conditioning-hilbert}
-print(' n     kappa  forward error  digits kept  16 - log10 kappa  backward error')
+print(' n     kappa  forward error  digits kept  16 - log10 kappa  backward error'
+      '  exact solve error')
 for n in [4, 6, 8, 10, 12]:
     i = np.arange(n)
     H = 1.0 / (1.0 + i[:, None] + i[None, :])   # Hilbert matrix
@@ -1103,14 +1144,20 @@ for n in [4, 6, 8, 10, 12]:
     fwd = np.linalg.norm(x_hat - x_true) / np.linalg.norm(x_true)
     omega = (np.linalg.norm(b - H @ x_hat)
              / (np.linalg.norm(H, 2) * np.linalg.norm(x_hat)))
+    exact = np.linalg.norm(solve_exact(H, b) - x_true) / np.linalg.norm(x_true)
     print(f'{n:2d}  {kappa:8.1e}  {fwd:13.1e}  {-np.log10(fwd):11.1f}'
-          f'  {16 - np.log10(kappa):16.1f}  {omega:14.1e}')
+          f'  {16 - np.log10(kappa):16.1f}  {omega:14.1e}  {exact:17.1e}')
 ```
 
 The digits kept fall from about $13$ at $n=4$ to well under one at $n=12$,
 while the backward error stays at or below about $10^{-16}$: each computed
 vector solves a system that differs from the stored one in the sixteenth or
-seventeenth digit. The solver did all that can be asked of it. The rule of
+seventeenth digit. Is the solver to blame for the lost digits, then? The
+last column acquits it. The exact solve of the stored system, which commits
+no rounding error at all, misses $\mathbf 1$ by an error of the same order
+in every row, about $10^{-7}$, $10^{-4}$ and $10^{-1}$ for $n=8$, $10$ and
+$12$. The digits were lost when $\mathbf b$ was stored, before any solver
+ran. The rule of
 thumb is pessimistic by about one digit (from about half a digit to about
 one and a half, depending on the row), because the error is not aligned with
 the most amplified direction (Exercise
@@ -1463,7 +1510,7 @@ filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$.
        to $\mathbf{w}^\star$?
     1. Part 2 of Exercise
        :exref:`ex_mdl-gradient-based-optimization-newton-show-that-any` of
-       :numref:`sec_mdl-gradient-based-optimization` writes gradient descent
+       :numref:`sec_mdl-curvature-methods` writes gradient descent
        in new coordinates $\mathbf{u}$ with $\mathbf{w} = \mathbf T\mathbf{u}$
        as gradient descent on the original problem preconditioned by a
        positive definite matrix $\mathbf P$, with update
@@ -1640,11 +1687,11 @@ Numerical Stability and Conditioning<br>**floating point · stable softmax · ca
 :::
 :::
 
-::: {.slide title="Softmax of (1000, 1001, 1002) Is NaN in float64; a 12×12 Solve Is Off by 30%"}
+::: {.slide title="Softmax of (1000, 1001, 1002) Is NaN in fp64; a 12×12 Solve Is Off by 30%"}
 [The problem]{.kicker}
 
 - The logits $(1000,1001,1002)$ have softmax $(0.09,0.24,0.67)$.
-  Evaluated as written, even in float64: `NaN NaN NaN`.
+  Evaluated as written, even in fp64: `NaN NaN NaN`.
 - `np.linalg.solve` on a $12\times12$ Hilbert system: 30% error, although
   the answer solves a system that differs in the 17th digit.
 - The first failure stops training; the second goes unnoticed.
@@ -1675,7 +1722,8 @@ $\kappa=10^3$ quadratic $\tfrac12(x_1^2+1000x_2^2)$.
 ::: {.col}
 | section | adds |
 |---|---|
-| Gradient Descent and Curvature | safe steps, $\kappa$, momentum, Newton |
+| Gradient Descent and Curvature | safe steps, $\kappa$, momentum |
+| Curvature Methods | Newton, BFGS, trust regions |
 | Convexity | local = global, rates, Jensen |
 | Stochastic Gradient Methods | noise floors, step decay |
 | Adaptive Methods | per-coordinate steps |
@@ -1703,14 +1751,14 @@ $\kappa=10^3$ quadratic $\tfrac12(x_1^2+1000x_2^2)$.
 - fp32 is the same with $p=23$: $u\approx6\times10^{-8}$.
 :::
 
-::: {.slide title="bfloat16 Keeps fp32's Range and Gives Up Five Digits"}
+::: {.slide title="bf16 Keeps fp32's Range and Gives Up Five Digits"}
 [Floating point]{.kicker}
 
 @!numerical-stability-conditioning-finfo
 
-- eps $=2^{-p}$; bfloat16's often-quoted $2^{-8}$ is its $u=\mathrm{eps}/2$.
+- bf16 is `bfloat16` in the libraries. eps $=2^{-p}$; its often-quoted $2^{-8}$ is $u=\mathrm{eps}/2$.
 - $e^x$ overflows above $\log(\max)$: $11.1$ in fp16, $88.7$ in fp32,
-  $709.8$ in float64.
+  $709.8$ in fp64.
 - fp8 needs a scale factor per tensor or block.
 :::
 
@@ -1732,11 +1780,11 @@ Hence the fp32 master copy of the weights in mixed-precision training.
 [Check]{.kicker}
 
 A weight equals $1$. Gradient descent subtracts $\eta g=10^{-3}$. Does the
-stored weight change in bfloat16 ($p=7$)? In fp16 ($p=10$)?
+stored weight change in bf16 ($p=7$)? In fp16 ($p=10$)?
 
 . . .
 
-bfloat16: no. The threshold below $1$ is $2^{-9}\approx0.00195>10^{-3}$.
+bf16: no. The threshold below $1$ is $2^{-9}\approx0.00195>10^{-3}$.
 
 . . .
 
@@ -1872,14 +1920,26 @@ $1.0002344-1.0002341=3.0\times10^{-7}$ in fp32:
 - Near $1$, differences are whole multiples of $1.19\times10^{-7}$:
   two of them, 20% short.
 - Bound: $\frac{\lvert a\rvert+\lvert b\rvert}{\lvert a-b\rvert}u\approx7\times10^6\cdot6\times10^{-8}=0.4$.
-- More precision moves the failure ($10^{-20}$ in float64); `log1p`
+- More precision moves the failure ($10^{-20}$ in fp64); `log1p`
   removes it.
+:::
+
+::: {.slide title="The Best Forward Difference Keeps Half the Digits"}
+[Cancellation]{.kicker}
+
+Error of $(f(x+h)-f(x))/h$ for $f=\sin$ at $x=1$: truncation $\tfrac h2|f''|$ plus rounding $2u|f|/h$, smallest near $h^\star=2\sqrt{u|f|/|f''|}$.
+
+@!mdl-numerical-stability-conditioning-subtraction-of-nearly-equal-numbers-1
+
+- fp64: best near $h=10^{-8}$, error about $10^{-8}$; smaller $h$ is worse.
+- fp32: three digits at best; from $h=10^{-8}$ down $1+h=1$ and the error is $\cos1=0.54$.
+- Gradient checks therefore run in fp64.
 :::
 
 ::: {.slide title="The One-Pass Variance Returns a Multiple of 128, Never 1"}
 [Cancellation]{.kicker}
 
-$10^5$ samples, mean $m=10^9$, $s=1$, float64:
+$10^5$ samples, mean $m=10^9$, $s=1$, fp64:
 
 @!numerical-stability-conditioning-welford
 
@@ -1921,8 +1981,9 @@ $$\frac{\|\hat{\mathbf x}-\mathbf x\|}{\|\hat{\mathbf x}\|}\le\kappa(\mathbf A)\
 @!numerical-stability-conditioning-hilbert
 
 ::: {.d2l-note}
-The backward error stays near $10^{-16}$: the solver is fine, the matrix
-amplifies. The rule $16-\log_{10}\kappa$ is a worst case.
+The backward error stays near $10^{-16}$, and an exact rational solve of
+the stored system (last column) misses by as much: the digits were lost
+when $\mathbf b$ was rounded. The rule $16-\log_{10}\kappa$ is a worst case.
 :::
 :::
 
@@ -1932,7 +1993,7 @@ amplifies. The rule $16-\log_{10}\kappa$ is a worst case.
 $\kappa(\mathbf A^\top\mathbf A)=\kappa(\mathbf A)^2$, because
 $\mathbf A^\top\mathbf A$ has singular values $\sigma_i^2$.
 
-At $\kappa(\mathbf A)=10^6$ in float64, how many digits do the normal
+At $\kappa(\mathbf A)=10^6$ in fp64, how many digits do the normal
 equations keep?
 
 . . .
@@ -1960,7 +2021,7 @@ $\mathrm{diag}(1,1000)$, minimizer $(1,1)$:
 ::: {.slide title="Stable Algorithms Remove the Detour; Conditioning Sets What Any Algorithm Can Deliver"}
 [Wrap-up]{.kicker}
 
-- **Formats:** $|\delta|\le u$; a bfloat16 weight $1$ ignores steps below
+- **Formats:** $|\delta|\le u$; a bf16 weight $1$ ignores steps below
   $0.002$.
 - **Softmax:** subtract the max; NaN becomes $(0.09,0.24,0.67)$.
 - **Cancellation:** `log1p`; the one-pass variance gives multiples of

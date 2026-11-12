@@ -8,3 +8,5 @@ The plan for the book's Language Models part: 14 chapters, 97 sections and 4 Fur
 | [`blueprints/`](blueprints/README.md) | Per-chapter blueprints with further implementation detail (code budgets, fixtures, pitfalls). They use their own section numbering; [`blueprints/README.md`](blueprints/README.md) maps it to the plan, and the plan wins where they disagree. Start with [`00_conventions.md`](blueprints/00_conventions.md) and [`01_interfaces.md`](blueprints/01_interfaces.md). |
 
 Earlier drafts of the plan, its review and the decision log are in the git history (last present in commit `42ddd3bb`).
+
+Status (2026-11-12): chapter 1 (book chapter 18, `chapter_lm-pretrained/`) is in stage 2. Its specification and the author's rulings of that date override the plan and blueprint ch01 where they differ; the plan's chapter-1 entry lists them under "Stage-2 decisions", and [`01_interfaces.md`](blueprints/01_interfaces.md) §6 records the new exports and corrections.

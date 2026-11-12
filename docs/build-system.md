@@ -1383,6 +1383,36 @@ near 15 min per notebook, and a `D2L_RERUN=1` regeneration run must finish
 within 30 min (ruling 2026-11-12), inside the default 3,600 s. Their library
 code is tested on CPU by `make test-lm` (§6.2).
 
+**Regeneration runs (`D2L_RERUN`).** A `chapter_lm-*` notebook never regenerates
+an expensive artifact in a normal build. Its producing cells read
+`RERUN = os.environ.get('D2L_RERUN', '0') == '1'` (18.6 calls the flag
+`RETRAIN`, same switch): without it they download the registered, versioned
+file (`DATA_HUB['lm-…-v1']`) and run a short live check whose agreement they
+print, so the captured outputs and the registered artifact agree by
+construction. With it they write unversioned files to `../data/lm/rerun/`,
+print their sha1 and agreement, and change no source; the author then uploads
+the file (§6.9) and edits the registry cell (a new content is a new `-v2` key).
+The scheduler copies `os.environ` into each job (`_make_env`), so
+
+```bash
+D2L_RERUN=1 python3 tools/notebook_scheduler.py --frameworks pytorch \
+    --files chapter_lm-pretrained/scoring.md
+```
+
+reaches the kernel. A regeneration run must finish within 30 min measured;
+past that, the section applies its declared cuts in their declared order,
+chosen from wall clock alone. Regenerate, upload, then run the notebook once
+more without `D2L_RERUN` and capture that run.
+
+**API logs (`D2L_API_LOG_DIR`).** The models-behind-an-API section (18.7,
+locked, §3.7) writes the caches and call logs of development, smoke-test and
+closed-model calls to `$D2L_API_LOG_DIR` (default
+`~/.local/share/d2l/lm-api`, append-only), outside the repository and outside
+`data/`, so `make veryclean` cannot delete the record of paid calls and none of
+it can be committed by accident. Only the capture-run caches that the notebook
+replays are uploaded as `DATA_HUB` artifacts. `OPENROUTER_API_KEY` is read from
+the environment and must never appear in a committed file or a captured output.
+
 Adding the `lm` extra moved the shared lock in two places outside it: the `jax`
 extra pins `huggingface-hub==1.23.0` (what `.venv-jax` ran; Transformers 5.22
 needs ≥ 1.31, and without the pin `uv` moved jax to the 2.x API too), and the
@@ -1493,6 +1523,21 @@ all four PDFs (~46–51 MB each) with no manual steps:
   bottom margin. The preamble sets `\raggedbottom` (inside the same
   `\AtBeginDocument`), so pages end short instead. Facing pages may end at
   slightly different heights — the accepted trade.
+- **Chinese characters need the CJK fallback font (2026-11-12).** Source Serif 4,
+  Source Sans 3 and Inconsolata have no CJK glyphs, and XeTeX drops a missing
+  glyph with only a `Missing character` line in the log. The Language Models
+  part prints Chinese in code cells and outputs, so `static/d2l-preamble.tex`
+  gives the CJK code points (U+3000–303F, 3400–4DBF, 4E00–9FFF, F900–FAFF,
+  FF00–FFEF) an inter-character class of their own and switches each run of
+  them to `static/fonts/NotoSansSC-Regular-subset.otf` (no xeCJK, which some
+  TeX Live hosts lack and which changes Latin spacing; Latin output is
+  pixel-identical with and without the block). The font is a subset (GB 2312
+  hanzi, CJK punctuation, fullwidth forms, plus every CJK character found in
+  the chapter sources and `outputs/`), built by
+  `tools/make_cjk_font_subset.py` from Noto Sans SC (OFL,
+  `static/fonts/NotoSansSC-LICENSE.txt`). A captured output with a rarer
+  character still shows as `Missing character: … NotoSansSC` in the PDF log:
+  re-run the script (it rescans `outputs/`) and commit the new font.
 - **Stale PDFs in `img/outputs/` abort the parallel render.** Quarto's
   `convert_svg` (built-in `main.lua`) has a "skip conversion if the `.pdf`
   already exists" optimization, then `assert(read(pdf) ~= nil)`. A leftover

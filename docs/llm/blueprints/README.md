@@ -69,8 +69,8 @@ Decided 2026-10-28 and applied to the blueprints:
 
 1. **R2 tokenizer (3.6).** Byte-level BPE, vocabulary 32,768, Qwen3-style single-digit pre-tokenization, EOS id 0, no BOS. Ids 0–31 are reserved for 32 special tokens: `<|endoftext|>`, `<|pad|>`, `<|im_start|>`, `<|im_end|>`, then `<|reserved_4|>` … `<|reserved_31|>`, so later chat or tool tokens need no retraining. The merges start at id 32.
 2. **R2 production run (4.2).** The model stays at 138M parameters on 3.15B tokens, trained once as a T3 job (1.3–1.7 h on 8×A100). The T2 notebook runs a 1.05B-token short schedule and analyzes the committed checkpoints. The tokenizer, the checkpoints (about 4.8 GB) and the FineWeb-Edu shards (about 8 GB) live in d2l-owned Hugging Face repositories. Their `DATA_HUB` entries pin a commit and a sha1 (`01_interfaces.md` §3).
-3. **`d2l.generate` name collision.** The book's old `generate(step_fn, prefix, num_tokens)` becomes `d2l.generate_ids` (book-side edit below). The name `d2l.generate` belongs to 1.2's text-in, text-out sampler, with no dispatch.
-4. **Qwen3 support in the book's classes.** Chapter 1 subclasses them instead of editing them: `d2l.Qwen3Attention(GQAAttention)`, `d2l.SwiGLU(FeedForward)`, `d2l.Qwen3GPT(GPT)`. `load_qwen3` returns a `Qwen3GPT`. `Qwen3GPT` defines its own `generate_cached`, because the book's cell has no `#@save`. Chapter 4's `PackedAttention` and `PackedGPT` subclass these classes, and 14.6 uses `d2l.SwiGLU`.
+3. **`d2l.generate` name collision.** (Revised 2026-11-12: no rename. The book's old `generate(step_fn, prefix, num_tokens)` of `sec_decoding` carries no `#@save`, so it is not in the library and nothing collides.) The name `d2l.generate` belongs to 1.2's text-in, text-out sampler, with no dispatch.
+4. **Qwen3 support in the book's classes.** Chapter 1 subclasses them instead of editing them: `d2l.Qwen3Attention(CausalAttention)`, `d2l.SwiGLU(FeedForward)`, `d2l.Qwen3GPT(GPT)`. `load_qwen3` returns a `Qwen3GPT`. `Qwen3GPT` defines its own `generate_cached`, because the book's cell has no `#@save`. Chapter 4's `PackedAttention` and `PackedGPT` subclass these classes, and 14.6 uses `d2l.SwiGLU`.
 
 Decided 2026-10-29:
 
@@ -106,7 +106,7 @@ Decided 2026-10-29 and applied to the blueprints (a sweep by chapter, then a con
 
 **Infrastructure**
 
-14. **PyTorch 2.15.0** for every notebook, with Python 3.12; the book's pin moves too (book-side edit below). Engines and toolchains that pin an older `torch` run in their own environments: vLLM 0.32.0 (2.13.0), SGLang 0.5.22 (2.14.1), Unsloth and Axolotl (`<2.15.0`).
+14. **PyTorch 2.11.0** for every notebook, with Python 3.12, the book's pin (superseded 2026-11-12: the part does not move the pin to 2.15.0; its notebooks run in `.venv-lm`, the book's torch 2.11.0/torchvision 0.26.0 plus Transformers and the OpenAI client, `docs/build-system.md` §6.4.2). Engines and toolchains that pin an older `torch` run in their own environments: vLLM 0.32.0 (2.13.0), SGLang 0.5.22 (2.14.1), Unsloth and Axolotl (`<2.15.0`).
 15. **Hardware.** `00_conventions.md` has the new tiers:
     - T1: one RTX 4090. The build box (4× RTX 4090, no NVLink, unreliable peer-to-peer on its AMD host) runs no multi-GPU experiment.
     - T2: one A100 40 GB PCIe (1,555 GB/s; 5.1 adds its `chip_specs` row). Two-GPU experiments (TP2, prefill/decode split, NCCL with and without the bridge) run on a **T2 pair** joined by an NVLink bridge.
@@ -133,10 +133,10 @@ Decided 2026-10-29 and applied to the blueprints (a sweep by chapter, then a con
 
 These edits fall outside the new chapters:
 
-- **Decision 3 above, the `generate_ids` rename** (line numbers as of `main` on 29 Oct 2026):
+- **Decision 3 above, the `generate_ids` rename** (withdrawn 2026-11-12: not needed, see decision 3; kept for the record; line numbers as of `main` on 29 Oct 2026):
   - `chapter_recurrent-neural-networks/decoding.md`: the `#@save` definition (line 482) and the two calls (lines 577 and 598), the only calls in the book (`gpt.md`'s `generate` is a method and keeps its name);
   - `docs/rnn-ssm-modernization-apis.md`: the API list (line 7) and the signature (line 62).
-- **Decision 4 needs no book edit.** The book's `GQAAttention`, `FeedForward`, `TransformerBlock` and `GPT` stay as they are. Optionally, mark `sec_kv-cache`'s `generate_cached` cell `#@save`; 1.2 could then drop its copy.
+- **Decision 4 needs no book edit.** The book's `CausalAttention`, `FeedForward`, `TransformerBlock` and `GPT` stay as they are. `sec_kv-cache`'s `generate_cached` stays unsaved (2026-11-12): `Qwen3GPT` owns its cached loop.
 - **Legacy labels to re-point:**
   - `sec_word2vec_pretraining` (cited in `pandas.md`) → `subsec_lm_categorical_embeddings`;
   - `chap_nlp_pretrain` and `chap_nlp_app` (cited in the preface, `scaling-laws.md` and `encoders-decoders.md`) → `chap_lm_encoders`.
@@ -147,7 +147,7 @@ These edits fall outside the new chapters:
 - **`d2l.normalize` inconsistency:** it uses unbiased `torch.std` in one framework tab and population std in another. Chapter 8 uses population std, so the group-advantage fixtures depend on this.
 - **α–β communication model:** it appears only in the exercises of `sec_multi_gpu`. 5.4 now states it; consider moving it into that section's text.
 - **`sec_hardware_buyers`:** it has no datacenter content. 5.6 owns cost per token and owned versus rented; the buyer's guide could point there.
-- **Decision 14, PyTorch 2.15.0:** bump `torch==2.11.0` and `torchvision==0.26.0` in `pyproject.toml` (lines 39–48) and `hosted/constraints-pytorch.txt` (line 3) to 2.15.0 and its matching torchvision, check the CUDA wheel index (cu128, line 142), update `docs/build-system.md` (lines 188 and 259), and re-capture the committed outputs store, which is tied to the pin.
+- **Decision 14 (withdrawn 2026-11-12):** the pin stays `torch==2.11.0`/`torchvision==0.26.0`; no bump and no re-capture. The part's packages live in the `lm` extra and `.venv-lm` (`docs/build-system.md` §6.4.2).
 - **Decision 19, MuonClip in `sec_muon`** (`chapter_optimization/muon.md`; lines 809–813 mention MuonClip in one sentence): add a subsection that defines `d2l.qk_clip_(model, stats, tau, alpha=0.5) -> dict` with `#@save`. Contract, as 4.3 relies on it: called in place after an optimizer step; `stats[layer]['max_logit'][head]` is the per-head maximum of |q·k|/√d_h; each head with S > tau has its `W_q` rows scaled by (tau/S)^alpha and its `W_k` rows by (tau/S)^(1−alpha); returns the per-layer scale factors; a no-op that warns and returns `{}` when the model uses QK-norm. Tests: after a clip the batch maximum equals tau (relative 1e-5), a second clip changes nothing, heads at or below tau are untouched bit for bit. The book cannot import 4.3's `attn_logit_stats`, so the subsection needs its own small statistics hook, and it must decide the behaviour under grouped-query attention (4.3's testbed has as many KV heads as query heads).
 - **Decision 12, licence file:** the repository has none; add one stating that the text is CC BY-SA 4.0 and the code MIT-0 (`pyproject.toml` already declares MIT-0).
 

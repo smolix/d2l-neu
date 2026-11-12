@@ -28,7 +28,7 @@ Book labels (what is used, what must not be re-taught):
 |---|---|---|
 | `sec_gpt` | `d2l.GPT` (tied head, `blks`, `attn_factory` seam via `blk.attention = ...`), `d2l.GPT.generate`, the BPE pipeline and the GPT-2 loading (the R2 tokenizer itself is 3.6's) | GPT assembly, sampling |
 | `sec_transformer-block` | `d2l.TransformerBlock`, `d2l.FeedForward` (SwiGLU width `round(8d/3)`), QK-norm (`subsec_qk-norm`), the signal-propagation view | normalization placement, RMSNorm |
-| `sec_kv-cache` | `d2l.GQAAttention` (`W_q, W_k, W_v, W_o`, `rope=True`, `enable_gqa`), GQA ratios | GQA derivation, cache sizing |
+| `sec_kv-cache` | `d2l.CausalAttention` (fused `W_qkv`, `W_o`, `rope=True`, `num_kv_heads`), GQA ratios | GQA derivation, cache sizing |
 | `sec_adamw` | decay/no-decay parameter groups (`subsec_adamw-what-not-to-decay`), optimizer-state bytes | AdamW derivation, decoupling |
 | `sec_scheduler` | WSD, branching off the plateau (`subsec_scheduler-branching`), linear-to-zero frontier | schedule derivations; note `WSDScheduler` there is not `#@save`d, so 4.2 defines `d2l.wsd_lr` |
 | `sec_muon` | `torch.optim.Muon` and the `MultiOptimizer` split, RMS matching, and the MuonClip subsection with `d2l.qk_clip_` (4.3 imports it) | Newton–Schulz, norm-based derivation, the QK-clip rescaling and its guarantee |
@@ -168,7 +168,7 @@ All of v5's are kept, annotated with what to take from each.
 - **Label:** `sec_lm_data_path` · **Tier:** T1 (no reduction needed; every run is the T1 preset, flag `--tokens`) · **Budget:** about 15 min wall-clock on one Ada GPU and under 10 GiB peak (to be measured); T0 for all structural tests (CPU, SDPA backend)
 - **Builds on (book):**
   - `sec_gpt`: `d2l.GPT` (tied head, the `blk.attention = ...` swap idiom of `subsec_kv-cache-gqa-quality`).
-  - `sec_kv-cache`: `d2l.GQAAttention`, the base of 1.2's `d2l.Qwen3Attention`; `PackedAttention` subclasses the latter and keeps its parameter names, so checkpoints load into either.
+  - `sec_kv-cache`: `d2l.CausalAttention`, the base of 1.2's `d2l.Qwen3Attention`; `PackedAttention` subclasses the latter and keeps its parameter names, so checkpoints load into either.
   - `sec_adamw` (`subsec_adamw-what-not-to-decay`): the decay/no-decay split, reused verbatim in `param_groups`.
   - `sec_repro`, `sec_read_write`: seeds, determinism flags, safetensors, the run-checkpoint recipe. Not re-taught: only the *data* part of resume is built here.
   - `sec_memory_precision` (`subsec_mp-accumulation`): accumulation equals the full batch **for equal-size microbatches**. 4.1 derives what changes when valid-token counts differ.
@@ -257,7 +257,7 @@ Numerical tests (seed 0, CPU, fp32 unless stated):
 
 1. `doc_ids_from_eos` on `[5, 6, EOS, 7, EOS, EOS, 8]`: `doc_ids = [0,0,0,1,1,2,3]`, `pos_ids = [0,1,2,0,1,0,0]`.
 2. D1 check (≤ 1e-5 / ≥ 1e-3, see above).
-3. `PackedAttention` with `ctx=None` vs `d2l.GQAAttention` with the same weights: exact equality.
+3. `PackedAttention` with `ctx=None` vs `d2l.CausalAttention` with the same weights: exact equality.
 4. SDPA vs flex vs math backends: ≤ 1e-5 fp32 on CPU for sdpa/math; flex vs sdpa ≤ 2e-2 in bf16 on GPU.
 5. Stream: `batch(s)` repeated twice is identical; resume at step 37 gives 50 identical batches; world sizes 1, 2, 4 produce the same multiset of sequence indices at every step; changing `seed` changes the batch; `skip=(3,)` makes logical step 3 equal physical step 4.
 6. `chunked_lm_loss` equals `token_weighted_loss(F.linear(hidden, W), labels)` to 1e-6 (value and the gradient with respect to `hidden`).

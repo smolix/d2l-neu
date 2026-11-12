@@ -17,7 +17,7 @@ Rules:
 | `d2l.config_params` | 1.1 | `(config, include_vision=False, include_mtp=False, by_group=False) -> int \| dict[str, int]`. Dense and hybrid configs only; MoE raises `NotImplementedError('use d2l.config_stats (14.1)')`. With `by_group=True`, returns per-group counts that sum to the total. | 14.1 |
 | `d2l.config_memory` | 1.1 | `(config, seq_len, batch_size, dtype_bytes=2, *, state_bytes=4, ...) -> dict` with keys `params, weights, kv_cache, recurrent_state, activations, logits, total` | 5.x, 6.x, 7.1, 14.x |
 | `d2l.load_qwen3` | 1.2 | `(model_id='Qwen/Qwen3-0.6B', revision=None, *, dtype=torch.bfloat16, device=None) -> d2l.Qwen3GPT` (built on the meta device, weights assigned) | 4, 11, 12, 13 |
-| `d2l.Qwen3Attention(d2l.GQAAttention)` | 1.2 | `(num_hiddens, num_heads, num_kv_heads, *, head_dim=None, qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False, rope=True, causal=True)`; adds `forward_step(X, cache)`. The book's class is unchanged. | 4.1 (`PackedAttention`), 12, 13, 14 |
+| `d2l.Qwen3Attention(d2l.CausalAttention)` | 1.2 | `(num_hiddens, num_heads, num_kv_heads, *, head_dim=None, qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False, rope=True, causal=True)`; adds `forward_step(X, cache)`. The book's class is unchanged. | 4.1 (`PackedAttention`), 12, 13, 14 |
 | `d2l.SwiGLU(d2l.FeedForward)` | 1.2 | `(num_hiddens, hidden, bias=False)`: SwiGLU with an explicit width, names `W_g, W_1, W_2` | 14.6 |
 | `d2l.Qwen3GPT(d2l.GPT)` | 1.2 | `(vocab_size, num_hiddens, num_heads, num_kv_heads, num_blks, *, head_dim=None, qk_norm=True, rope_theta=1e6, ffn_hidden=None, norm_eps=1e-6, tie_embeddings=True, max_len=40960, bias=False)`; overrides `forward`, `forward_cached`; defines `generate_cached`; inherits `generate`. `d2l.qwen3_gpt_kwargs(cfg)` maps an HF config to these arguments. | 4.1 (`PackedGPT`), 6, 11, 12, 13, 14 |
 | `d2l.Qwen3GPT` module names (R1) | 1.2 | `model.token_emb`; `model.blks[i].attention` with `W_q, W_k, W_v, W_o, q_norm, k_norm, head_dim, num_heads, num_kv_heads`; `model.blks[i].ffn` with SwiGLU `W_g, W_1, W_2` (`W_2(silu(W_g x) * W_1 x)`). Each attention also has `rope_theta`; RoPE is interleaved (1.2 permutes the HF rows at load). Norm names follow 1.2's mapping table. There are no `W_gate/W_up/W_down`. | 4.1, 6.3, 11.x, 12.x, 13.x, 14.x |
@@ -106,6 +106,8 @@ DATA_HUB keys are `lm-<chapter-or-topic>-<name>` in hyphenated lower case, follo
 
 **Hosting (decided 2026-10-28).** Small artifacts live under `d2l.DATA_URL + 'lm/'`. The large R2 artifacts live in d2l-owned Hugging Face repositories: a model repository for the tokenizer (3.6), the checkpoints and the training state (4.2), and a dataset repository for the FineWeb-Edu shards, validation set and manifest (3.6), whose card carries the ODC-By 1.0 attribution. Their `DATA_HUB` entries are `('https://huggingface.co/[datasets/]<repo>/resolve/<commit>/<file>', sha1)` with a pinned commit hash, never `main`; the book's `gpt2-weights` entry already points at the Hub this way, minus the pin. The R2 run is a one-off T3 job whose outputs are uploaded once.
 
+**Hosting update (2026-11-12).** Small artifacts are uploaded to the Cloudflare R2 bucket `d2l-data` and served from `https://d2l-data.smola.org/<key>` (base path `lm/` for this part) with `make upload-data` (`docs/build-system.md`); a registry cell names that URL and the file's sha1. Each `DATA_HUB` key is its own freshness shard, so adding a key stales no other notebook; write keys out whole (a key built at run time is not followed by the dependency scan). The Hugging Face repositories above are unchanged.
+
 Cross-chapter artifacts:
 
 | Key | Producer | Consumers | Content |
@@ -155,3 +157,51 @@ Each chapter blueprint was patched to conform to sections 1–4 above. The owner
 - 8.5 adds `reward_fn`, `canonical_answer` and the two GRPO checkpoints.
 
 The consumers' changes are listed in the "Consumer change" column of section 2 and implied by the signatures in section 1.
+
+## 6. Chapter 1 stage-2 record (book chapter 18, 2026-11-12)
+
+The stage-2 specification of book chapter 18 settles the following. Signatures of §1 stay fixed; everything here is
+additive or a correction.
+
+**Corrections.**
+- There is no `d2l.GQAAttention`. The book's grouped-query attention class is `d2l.CausalAttention` (fused `W_qkv`);
+  `d2l.Qwen3Attention(d2l.CausalAttention)` has separate `W_q, W_k, W_v`. All blueprints now say `CausalAttention`.
+- No `d2l.generate_ids` rename and no `#@save` on `sec_kv-cache`'s `generate_cached`: the old `sec_decoding` loop
+  is not in the library, and `Qwen3GPT` owns its cached loop (§5's "defines `generate_cached` on `Qwen3GPT`" stands).
+- `d2l.HF_REVISIONS` is a literal `#@save` dict in 1.1 (eleven models); 1.6 adds the Qwen-Scope SAE repository in a
+  `#@save` registry cell of its own. There is no `data/lm_revisions.json`.
+- `lm-api-judge-v1` is removed (the judge is local, 1.5).
+- All saved code of the part is tagged `%%tab pytorch`, imports third-party modules inside functions, and uses
+  `collections.namedtuple` records; a registry block fills one container (`DATA_HUB` or `HF_REVISIONS`).
+
+**New exports** (owner in parentheses):
+- 1.1: `d2l.safetensors_header(model_id, revision=None)`; `config_params` gains the groups `per_layer_embed` and
+  `per_layer_proj` (Gemma 4) and MoE detection by truthiness and `enable_moe_block`; `config_memory` gains the
+  keyword-only `conv_bytes`, `conv_taps`, `window_cached`, `logits_to_keep`.
+- 1.2: `d2l.qwen3_rope_tables`, `qwen3_gpt_kwargs`, `qwen3_rope_permutation`, `map_qwen3_state_dict`,
+  `collect_hiddens`, `layer_errors`, `first_divergence`, `Generation`, `truncated_probs`, `sample_logits`;
+  `d2l.generate` takes a per-row seed (`seed: int | Sequence[int]`, keyword).
+- 1.3: `d2l.fewshot_prompt(demos, query, template='plain', *, fmt=None, label_map=None, system=None)`,
+  `d2l.label_logprobs`, `d2l.calibrate_labels`.
+- 1.4: `ScoreComponents`, `pass_at_k_variance`, `run_python_tests` (beside `format_mc`, `score_choices`,
+  `extract_answer`, `pass_at_k`, `bits_per_byte`).
+- 1.5: `min_detectable_effect`, `subset_ids` (prefix-stable `default_rng(seed).permutation(n_total)[:n]`),
+  `item_seed`, `JUDGE_PAD_V1`, `EVAL_SUITES` (lib-only); `judge_pairwise` gains keyword-only `max_batch_tokens` and
+  `return_mass`; `EvalSuite.run` gains `sandbox=`.
+- 1.6: `intervene`, `logit_lens`, `TunedLens`, `TopKSAE`, `train_sae`, `load_qwen_scope_sae`, `sae_metrics`.
+- 1.7: `request_hash`, `PricePoint`, `api_cost`, `backoff_delay`, `ChatAPI.achat` (`async def`, saved by
+  `tools/build_lib.py`), `chat_batch`, `closed_loop_stats`; lib-only `ChatResult`, `ReplayMiss`,
+  `CostCapExceeded`, the `ChatAPI` body, `price_from_listing(..., when=None)`, `openrouter_api`,
+  `LocalChatServer`, `FakeChatServer`.
+- Book side: `d2l.plot_intervals(x, series, xlabel, ylabel, *, kind='errorbar', reference=None, xscale='linear',
+  axes=None)` in `sec_utils` (`series` maps a label to `(mean, lo, hi)`).
+
+**Contracts for Chapters 12 and 13** (R1 = `d2l.load_qwen3`):
+- Inside each head, R1's query and key coordinates (and the `q_norm`/`k_norm` gains) are in the book's interleaved
+  RoPE order, permuted from Transformers' at load time.
+- R1's angles come from `d2l.qwen3_rope_tables` (Transformers' frequency formula). A re-implementation of the cached
+  path (12.1's `rope_tables`/`apply_rope`, 13.2's paged path) must use it.
+- `Qwen3Attention.forward_step(X, cache, tables=None)` accepts chunks of any length through
+  `d2l.causal_mask(T, t+T)`, as the book's `forward_cached` does.
+- `Qwen3GPT.forward_cached` calls `blk.norm1`, `blk.norm2` and `blk.ffn`, and `forward_step` calls `self.W_o`, as
+  modules, so hooks (1.6's `d2l.intervene`) fire on the cached path.

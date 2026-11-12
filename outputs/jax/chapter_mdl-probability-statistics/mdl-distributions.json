@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
+    "d2l_lib_fingerprint": "sha256:71f23eff288cdfc510d64d9e0a5b0d7d2805ef58e06c7cbbebe8caa44317c605",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,19 +13,8 @@
       "kind": "text",
       "outputs": []
     },
-    "distributions-bernoulli": {
-      "code_fingerprint": "sha256:e7993ef89ff6c53e89270e2a2267efd2bbfca6b35ed20d2cfecfcae69512b77f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "p(1-p) = 0.213\nfrequency of heads in 10,000 flips: 0.696   (p = 0.692)\np(1-p) at p = 0.1, 0.5, 0.9: [0.09, 0.25, 0.09]\n"
-        }
-      ]
-    },
     "distributions-binomial": {
-      "code_fingerprint": "sha256:be188b2d2c546b4d53f1b6e6501c78e8db226709469cbecceb11731bd358f65f",
+      "code_fingerprint": "sha256:10e0fb51aa5969adb7b349ae526eaf544a9bf80c3543b54e7075a1e81728675f",
       "kind": "text",
       "outputs": [
         {
@@ -36,18 +25,18 @@
       ]
     },
     "distributions-poisson": {
-      "code_fingerprint": "sha256:5461c5ec91ef7f67c987ef0df527ded08c2f4c97d81577a42649027ed36a589d",
+      "code_fingerprint": "sha256:7181306bc6e9de5639522c9cc0da05061fb9cd0dd1c68a4ef635a4fa9a6bdc5d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(0) = 0.018, P(4) = 0.195, P(X>=10) = 0.008\n100,000 simulated minutes: mean 4.00, variance 4.01\n"
+          "text": "P(0) = 0.018, P(4) = 0.195, P(X>=10) = 0.008\n100,000 simulated minutes: mean 4.00, variance 3.99\n"
         }
       ]
     },
     "distributions-binomial-to-poisson": {
-      "code_fingerprint": "sha256:eef7fe29319ee78a5d2bcf11ff9ac05cc1e8ca4efc44a603f059361247ada758",
+      "code_fingerprint": "sha256:2c28a2254ae3566b776f376ef32b910d7218e1bfae552a82b290487de14edd12",
       "kind": "mixed",
       "outputs": [
         {
@@ -60,56 +49,34 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 39227,
-          "sha256": "sha256:677569b5e9107522c0eaafa5fa3317ff16a460270f021c918f3f3cdd9bdc7665"
+          "sha256": "sha256:27e33c7a30152027a51f37aaf957a7015ed78b768a508df528090bc8bfb45603"
         }
       ]
     },
     "distributions-categorical": {
-      "code_fingerprint": "sha256:ffec12481f84a9a8da411481d76602d50ac8fab6df46d52dfd2531eb3792b7cd",
+      "code_fingerprint": "sha256:2c8fb1eba5ff708e971a46f80db79c10897a0541d0efc2a29d9a3c79539a9bd6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "softmax p   = [0.638 0.235 0.095 0.032]\nfrequencies = [0.643 0.23  0.098 0.029]\n13! / (9! 4!) = 715\n"
-        }
-      ]
-    },
-    "distributions-discrete-uniform": {
-      "code_fingerprint": "sha256:57a414c340052e46b699082b37d96bd90c214f8073b054fd3c5e2d2d1e5423bd",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "mean:     sum of k p_k = 3.500,   (n+1)/2 = 3.500\nvariance: sum of k^2 p_k - mean^2 = 2.917,   (n^2-1)/12 = 2.917\n"
+          "text": "softmax p   = [0.638 0.235 0.095 0.032]\nfrequencies = [0.636 0.23  0.101 0.033]\n"
         }
       ]
     },
     "distributions-exponential": {
-      "code_fingerprint": "sha256:f248d108727d6303905ac209236a72dc7a4a2c6cab95d5c971d4e879eb5177d2",
+      "code_fingerprint": "sha256:23cf449526ff716a22ee5c1508217a34c5976b96797aaa4128b328bb697a7866",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "requests per minute: mean 4.00, variance 3.98\nsilent minutes 0.0169,   waits over 1 min 0.0182,   e^-4 = 0.0183\nmean wait 0.250 min,   minutes with at most 3 requests 0.433\n"
-        }
-      ]
-    },
-    "distributions-continuous-uniform": {
-      "code_fingerprint": "sha256:9de6b6337ac88f6be59efe0f37e6280ac1b530345ca34378360d708747731466",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "fraction in [-1.5, -1.2): 0.086\nfraction in [1.0, 1.3): 0.086\n0.3 / (b-a) = 0.087;  sample variance 1.001,  (b-a)^2/12 = 1.000\n"
+          "text": "requests per minute: mean 4.03, variance 4.02\nsilent minutes 0.0167,   waits over 1 min 0.0180,   e^-4 = 0.0183\nmean wait 0.249 min,   minutes with at most 3 requests 0.432\n"
         }
       ]
     },
     "mdl-distributions-gaussian-2": {
-      "code_fingerprint": "sha256:fae3595b1eec784b3c82c06271bc174df7bd75606c08fcc607450ec0871d837e",
+      "code_fingerprint": "sha256:53da570992448564b94717f090db8accf7607892c726698556cb796251819806",
       "kind": "text",
       "outputs": [
         {
@@ -120,47 +87,31 @@
       ]
     },
     "mdl-distributions-gaussian-1": {
-      "code_fingerprint": "sha256:d9f61c14ee24239054126bad359c5160a3ebb9fb96ac1d0f2eca391107d5f0e9",
+      "code_fingerprint": "sha256:4de84a26de03b43af24014444bc02d80a3acb865f6081dde87afc7dff158118d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
-          "bytes": 32915,
-          "sha256": "sha256:84efac48d51d83ea3d68a5cb47a24fdc830c17bd247588ddf2adb90651c3e8a6"
-        }
-      ]
-    },
-    "distributions-gaussian": {
-      "code_fingerprint": "sha256:c1ae409bfdb4bdb7262be712f25352a21619f2375959fa1c4baf4a1124fcf3ef",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n =    1: P(|average| > 1):  Cauchy 0.493,  Gaussian 0.3243\nn =   10: P(|average| > 1):  Cauchy 0.498,  Gaussian 0.0013\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n = 1000: P(|average| > 1):  Cauchy 0.499,  Gaussian 0.0000\n"
+          "bytes": 32743,
+          "sha256": "sha256:28f4548cec42f3d956de1b19c7567ace6384171eceaf5de1e42f11aee8be023c"
         }
       ]
     },
     "distributions-laplace": {
-      "code_fingerprint": "sha256:ab177e5c25d5d007b883a72b4f06c2e68bb7be4cd82561d5e72c16d6282c05dc",
+      "code_fingerprint": "sha256:a41045e49cfab178e00b70efc0b0d6731a7b32cc64d4ac031a154ddd5b888faa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample variances: Laplace 1.99, Gaussian 2.01   (2b^2 = 2)\nP(|X| > 3 sd): Laplace 0.0141, Gaussian 0.0028\n"
+          "text": "sample variances: Laplace 2.00, Gaussian 2.00   (2b^2 = 2)\nP(|X| > 3 sd): Laplace 0.0144, Gaussian 0.0026\n"
         }
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:1c6c84c11b55c3e121341cdbed15e1a09906c20ada5c361597a0756b26286a66",
+      "code_fingerprint": "sha256:f59b07c044a14fcf04f1dd15686cae494d679e2cd358313beb9f614ea91e3cb2",
       "kind": "text",
       "outputs": [
         {
@@ -171,13 +122,13 @@
       ]
     },
     "mdl-distributions-conditioning": {
-      "code_fingerprint": "sha256:d0cf0dec92151a153fdd2a0837e59bd087231e4096549959c583abb97271a8fd",
+      "code_fingerprint": "sha256:292f16cde66ae2cacc36473df2ae30fce58e61ac973ff6fd792c7176223ba3ed",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Cov(r, x2) = 0.001,  Var(r) = 1.500\n4235 samples with x2 near 2: mean of x1 0.97, variance 1.52\n"
+          "text": "Cov(r, x2) = 0.002,  Var(r) = 1.498\n4039 samples with x2 near 2: mean of x1 1.01, variance 1.54\n"
         }
       ]
     }

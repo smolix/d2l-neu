@@ -144,7 +144,7 @@ straight line.
 
 Chebyshev's bound cannot be tightened without more information about the
 distribution. :numref:`sec_mdl-random_variables` showed that it holds with
-equality for a three-point law, so no bound that uses only the mean and the
+equality for a distribution on three points, so no bound that uses only the mean and the
 variance can improve on it for every distribution.
 The coin has more structure than two moments: it is bounded, so all its
 moments are small. A bound that uses all moments at once needs the moment
@@ -287,7 +287,7 @@ $$
 \leq\Bigl(\frac{b-a}{2}\Bigr)^2.
 $$
 
-Both inequalities are equalities for the two-point law with equal mass at
+Both inequalities are equalities for the distribution with equal mass at
 $a$ and $b$. $\blacksquare$
 
 The fair coin is this extreme case, with variance $\tfrac14$ on $[0,1]$.
@@ -314,7 +314,7 @@ $$
 
 The second derivative is a variance, as it is for the log-partition function
 of an exponential family (:numref:`sec_mdl-exponential-family`); $\psi$ is
-one. Let $q_\lambda$ be the *tilted* law, which reweights the law of $X$ by
+one. Let $q_\lambda$ be the *tilted* distribution, which reweights that of $X$ by
 $e^{\lambda x}$ and renormalizes. Then $\psi'(\lambda)$ is the mean of $X$
 under $q_\lambda$, and
 
@@ -428,15 +428,16 @@ interval attains it to second order in $\lambda$ (Exercise
 ### The Fair Coin in Numbers
 :label:`subsec_mdl-tail-bounds-numerical`
 
-We add Hoeffding's bound $2e^{-2nt^2}$ as a third column to the table for the
-fair coin at $t=0.1$, and plot all three quantities against $n$ on a log
-scale.
+We set Hoeffding's bound $2e^{-2nt^2}$ next to the exact tail of the fair
+coin at $t=0.1$, with their ratio, and plot both together with Chebyshev's
+bound against $n$ on a log scale.
 
 ```{.python .input #mdl-concentration-generalization-the-tail-race-in-code}
-print(f'{"n":>6} {"exact":>10} {"Chebyshev":>10} {"Hoeffding":>10}')
+print(f'{"n":>6} {"exact":>10} {"Hoeffding":>10} {"ratio":>8}')
 for n in (10, 100, 1000, 5000):
-    print(f'{n:6d} {exact_tail(n, t):10.2e} {0.25 / (n * t**2):10.2e} '
-          f'{2 * np.exp(-2 * n * t**2):10.2e}')
+    hoeffding = 2 * np.exp(-2 * n * t**2)
+    print(f'{n:6d} {exact_tail(n, t):10.2e} {hoeffding:10.2e} '
+          f'{hoeffding / exact_tail(n, t):8.1f}')
 
 ns = np.arange(10, 701, 10)
 d2l.plot(ns, [np.array([exact_tail(n, t) for n in ns]),
@@ -496,23 +497,28 @@ $n=10{,}000$ examples has per-example variance $\sigma^2=0.02\cdot0.98$, and
 its centered losses satisfy $M=1$. Setting the bound equal to $\delta$ gives
 $nt^2/(2(\sigma^2+t/3))=\log(2/\delta)$, a quadratic in $t$. We solve it at
 $\delta=0.05$ for both error rates we have met, next to Hoeffding and the
-Gaussian interval.
+Gaussian interval, first with the measured rate in the variance (plug-in)
+and then in the form that is a guarantee, explained below.
 
 ```{.python .input #mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables}
 def half_widths(p, n, delta=0.05, z=1.96):
-    """Hoeffding, Bernstein and Gaussian half-widths for an error rate p."""
-    L, var = np.log(2 / delta), p * (1 - p)
+    """Hoeffding, Bernstein (plug-in, guaranteed), Gaussian half-widths."""
+    L = np.log(2 / delta)
     hoeffding = np.sqrt(L / (2 * n))
     c = 2 * L / 3  # Bernstein with M = 1: n t^2 - c t - 2 L var = 0
-    bernstein = (c + np.sqrt(c**2 + 8 * n * L * var)) / (2 * n)
-    return hoeffding, bernstein, z * np.sqrt(var / n)
+    bernstein = lambda var: (c + np.sqrt(c**2 + 8 * n * L * var)) / (2 * n)
+    plug_in = t = bernstein(p * (1 - p))
+    for _ in range(20):  # true rate at most p + t: a fixed point in t
+        t = bernstein((p + t) * (1 - p - t))
+    return hoeffding, plug_in, t, z * np.sqrt(p * (1 - p) / n)
 ```
 
 ```{.python .input #mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables-1}
 for p in (0.083, 0.02):
-    hoeffding, bernstein, gauss = half_widths(p, 10000)
-    print(f'error {p:.1%}: Hoeffding ±{hoeffding:.2%}, '
-          f'Bernstein ±{bernstein:.2%}, Gaussian ±{gauss:.2%}')
+    hoeffding, plug_in, bernstein, gauss = half_widths(p, 10000)
+    print(f'error {p:.1%}: Hoeffding ±{hoeffding:.2%}, Bernstein '
+          f'±{plug_in:.2%} (plug-in) ±{bernstein:.2%} (guaranteed), '
+          f'Gaussian ±{gauss:.2%}')
 ```
 
 At an error rate of 2%, Bernstein's half-width is $\pm0.39\%$ against
@@ -525,7 +531,9 @@ into the variance $p(1-p)$, whereas Bernstein's inequality asks for a bound on
 the true variance: the substitution of $\hat\sigma$ for $\sigma$ that we held
 against the Gaussian interval. The repair is cheap. The true rate is at most
 $\hat p+t$, so we solve the same equation with variance $(\hat p+t)(1-\hat
-p-t)$, which gives $0.43\%$ and $0.79\%$ in place of $0.39\%$ and $0.76\%$.
+p-t)$, a fixed-point equation in $t$ that the cell solves by iteration. It
+gives the guaranteed $0.43\%$ and $0.79\%$ in place of $0.39\%$ and
+$0.76\%$.
 This answers the opening question for the classifier with 830 errors: with 95%
 confidence its true error lies within about $0.8\%$ of the measured 8.3%.
 Error rates of a few percent are where practitioners work, and there the
@@ -1171,11 +1179,13 @@ deviation $t=0.1$; $\mathbf x\sim\mathcal N(\mathbf 0,\mathbf I_{784})$.
 ::: {.col}
 | section | adds |
 |---|---|
-| Random Variables | densities, moments, covariance |
-| Distributions | the named laws and their losses |
+| Random Variables | densities, moments, tail bounds |
+| Joint Distributions | conditioning, covariance, change of variables |
+| Distributions | the named distributions and their losses |
 | The Exponential Family | one form, convex fits, conjugacy |
 | Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP, EM |
+| Maximum Likelihood | losses, Fisher information, MAP |
+| Latent Variables and EM | the ELBO, EM |
 | Bayesian Computation | averaging over a posterior |
 | **Concentration Inequalities** | **exponential tails of averages** |
 | Uniform Convergence | guarantees after selection |
@@ -1262,8 +1272,8 @@ Centered $X\in[a,b]$, $\psi(\lambda)=\log\mathbb{E}[e^{\lambda X}]$:
 
 . . .
 
-**II.** $\psi(0)=\psi'(0)=0$; $\psi''(\lambda)$ is the variance of $X$ under the
-law reweighted by $e^{\lambda x}$, still on $[a,b]$: $\psi''\leq(b-a)^2/4$.
+**II.** $\psi(0)=\psi'(0)=0$; $\psi''(\lambda)$ is the variance of $X$ under its
+distribution reweighted by $e^{\lambda x}$, still on $[a,b]$: $\psi''\leq(b-a)^2/4$.
 
 . . .
 
@@ -1283,7 +1293,7 @@ Independent $X_i\in[a,b]$, $Z_i=X_i-\mathbb{E}X_i$, mean $\bar X$:
 $$P(\bar X-\mathbb{E}\bar X\geq t)\leq e^{-\lambda nt}\prod_i\mathbb{E}[e^{\lambda Z_i}]\leq e^{-\lambda nt+n\lambda^2(b-a)^2/8}$$
 
 - Minimize at $\lambda=4t/(b-a)^2$: exponent $-2nt^2/(b-a)^2$.
-- Same for the lower tail; the union bound adds the two.
+- Same for the lower tail; the two tails are disjoint events, so their bounds add.
 
 $$\boxed{P(|\bar X-\mathbb{E}\bar X|\geq t)\leq2e^{-2nt^2/(b-a)^2}}$$
 
@@ -1355,13 +1365,16 @@ $\mathbb{E}[e^{\lambda(X-\mathbb{E}X)}]\leq e^{\lambda^2\sigma^2/2}$ for all $\l
 $$\boxed{P(|\bar X-\mathbb{E}\bar X|\geq t)\leq2\exp\Bigl(-\tfrac n2\min\bigl(\tfrac{t^2}{\nu^2},\tfrac t\alpha\bigr)\Bigr)}$$
 :::
 
-::: {.slide title="Bernstein Uses the True Variance: ±0.39% Instead of ±1.36% at 2% Error"}
+::: {.slide title="Bernstein Uses the Variance: ±0.43% Instead of ±1.36% at 2% Error"}
 [Bernstein]{.kicker}
 
 $|X_i-\mathbb{E}X_i|\leq M$, $\textrm{Var}(X_i)\leq\sigma^2$:
 $\;P(|\bar X-\mathbb{E}\bar X|\geq t)\leq2\exp\bigl(-\tfrac{nt^2}{2(\sigma^2+Mt/3)}\bigr)$
 
 @!mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables-1
+
+- Plug-in ($\pm0.39\%$): the measured rate $\hat p$ in the variance. Not yet a guarantee.
+- Guaranteed ($\pm0.43\%$): the true rate is at most $\hat p+t$; solve for $t$ with that variance.
 
 ::: {.d2l-note}
 Small $t$: the Gaussian tail with the true $\sigma^2$. Large $t$: only exponential.
@@ -1439,8 +1452,8 @@ with $\delta=0.05$.
 . . .
 
 - Typical $|\cos|\approx\sqrt{2/(784\pi)}=0.028$.
-- $\varepsilon=0.2$: $0.22\cdot e^{7.84}\approx570$ directions.
-- $\varepsilon=0.3$: $0.22\cdot e^{17.64}\approx10^7$ directions.
+- $\varepsilon=0.2$: the bound guarantees $0.22\cdot e^{7.84}\approx570$ directions.
+- $\varepsilon=0.3$: it guarantees $0.22\cdot e^{17.64}\approx10^7$. More may exist; the bound is not tight.
 :::
 
 ::: {.slide title="A Union Bound Flattens All Pairwise Distances Once d ≳ (8/ε²) log(n²/δ)"}
@@ -1469,7 +1482,7 @@ One exponential tail, many objects: the dimension grows only like $\log n$.
   (norm $\sqrt{d/2}$) are unseen inputs, so interpolate on the sphere.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Exponential Tails Make Guarantees Affordable at Finite n"}
 [Wrap-up]{.kicker}
 
 - **Chernoff:** Markov on $e^{\lambda X}$; independent sums multiply MGFs.
@@ -1477,9 +1490,10 @@ One exponential tail, many objects: the dimension grows only like $\log n$.
   one in a million, where Chebyshev says $\pm500\%$; 18,445 examples for
   $\pm1\%$ at 95%.
 - **Fair coin:** $2e^{-20}$ at $n=1{,}000$, within a factor 15 of the truth.
-- **Bernstein:** $\pm0.39\%$ at a 2% error rate.
+- **Bernstein:** a guaranteed $\pm0.43\%$ at a 2% error rate, $\pm0.79\%$ at 8.3%.
 - **High dimension:** norm $28.0\pm0.7$ at $d=784$; $|\cos|\approx0.03$.
 
-**Next:** the best of 1,000 fair coins shows 66% heads; guarantees for a
-model chosen after the data.
+**Next:** every bound here protects a quantity fixed before the data; the
+best of many fair coins looks biased. Guarantees for a model chosen after
+the data.
 :::

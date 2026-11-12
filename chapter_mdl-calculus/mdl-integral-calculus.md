@@ -661,7 +661,7 @@ only this unsigned form generalizes (exercise
 
 Read with $f$ a density, the formula says how a density changes under a map,
 which is how a normalizing flow computes the density of its output
-(:eqref:`eq_mdl-cov_density` in :numref:`sec_mdl-random_variables`).
+(:eqref:`eq_mdl-cov_density` in :numref:`sec_mdl-joint-distributions`).
 
 ### The Gaussian Integral
 

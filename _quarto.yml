@@ -405,10 +405,12 @@ book:
         - chapter_mdl-optimization/further-reading.qmd
         - chapter_mdl-probability-statistics/index.qmd
         - chapter_mdl-probability-statistics/mdl-random-variables.qmd
+        - chapter_mdl-probability-statistics/mdl-joint-distributions.qmd
         - chapter_mdl-probability-statistics/mdl-distributions.qmd
         - chapter_mdl-probability-statistics/mdl-exponential-family.qmd
         - chapter_mdl-probability-statistics/mdl-statistics.qmd
         - chapter_mdl-probability-statistics/mdl-maximum-likelihood.qmd
+        - chapter_mdl-probability-statistics/mdl-latent-em-elbo.qmd
         - chapter_mdl-probability-statistics/mdl-bayesian-computation.qmd
         - chapter_mdl-probability-statistics/mdl-concentration-generalization.qmd
         - chapter_mdl-probability-statistics/mdl-generalization-bounds.qmd

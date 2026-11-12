@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
+    "d2l_lib_fingerprint": "sha256:0afdcc92b4a50982bd9a5fa2d23dd020f1407b5c53a2a5ceb5e59ae28cc9db7b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 27412,
-          "sha256": "sha256:9406cef47ed20552ec3b74b84f85c159bd3088094a62653a9afce9ed1dfa5239"
+          "sha256": "sha256:a12cdcf62d10f7697df85818e7529625c6ed528502d38d9655383aa5aaed0fc6"
         }
       ]
     },
@@ -43,7 +43,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean score -0.003, variance of score 0.500, -mean curvature 0.500\n"
+          "text": "mean score 0.007, variance of score 0.502, -mean curvature 0.502\n"
         }
       ]
     },
@@ -54,14 +54,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "standard deviation of sqrt(n) * theta_hat: 1.41\n"
+          "text": "standard deviation of sqrt(n) * theta_hat: 1.43\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
-          "bytes": 24949,
-          "sha256": "sha256:c4c9da2b2824ca08dd6fadc8a3872421656c95eddc4fea72b432ab8cf50a2bed"
+          "bytes": 24932,
+          "sha256": "sha256:d06127f6ff1de2e290d3d69c4691300f0051f43dfd2f4758e10a2f2a2a1b45b8"
         }
       ]
     },
@@ -72,34 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n Var(MLE) = 1.99, n Var(median) = 2.46, n Var(mean) = 6.57e+05\n"
-        }
-      ]
-    },
-    "maximum-likelihood-em-gmm": {
-      "code_fingerprint": "sha256:3b817ed52ec0f7e4b2325f1fe43713a170010ef4f51086cc889e21138ee8fbb5",
-      "kind": "text",
-      "outputs": []
-    },
-    "mdl-maximum-likelihood-expectation-maximization-1": {
-      "code_fingerprint": "sha256:427a3f36456cc9130132d6e077b2a5294a5ca33012794c6b493155b098540034",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "steps 0-5: [-1302.9 -1000.1  -974.6  -934.7  -909.1  -904.3]  step 29: -902.9\npi = [0.61 0.39], mu = [-1.98  1.5 ], sigma = [0.92 0.6 ]\n"
-        }
-      ]
-    },
-    "mdl-maximum-likelihood-expectation-maximization-2": {
-      "code_fingerprint": "sha256:fec8cbd91b0a58b2c49683de02b493314c76184c4aee467f357a1dc95db95346",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "log-likelihood -1440.6 -> -1026.6, 123.7 below the previous fit\npi = [0.5 0.5], mu = [-0.61 -0.61], sigma = [1.89 1.89]\nmean of x = -0.61, standard deviation of x = 1.89\n"
+          "text": "n Var(MLE) = 2.03, n Var(median) = 2.52, n Var(mean) = 2.14e+05\n"
         }
       ]
     }

@@ -784,7 +784,10 @@ d2l.show_images(templates, 2, 5, titles=names, cmap='RdBu_r', vmin=-v, vmax=v);
 ```
 
 Each template is a blurred garment, and the ten of them are the whole
-model: to classify an image is to ask which template it overlaps most. The
+model: to classify an image is to ask which template it overlaps most.
+Templates of the same form can also be counted instead of trained, from how
+often each pixel is inked in each class; that is the naive Bayes classifier
+of :numref:`sec_mdl-naive_bayes`. The
 templates of trousers, bags, and shoes have outlines that no other class
 shares; the trouser template is blue between the legs, where a dress is
 bright and a trouser is dark. The four tops share most of their outline,

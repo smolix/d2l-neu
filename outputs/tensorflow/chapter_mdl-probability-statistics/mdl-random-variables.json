@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
+    "d2l_lib_fingerprint": "sha256:0b4dca083036f5aa07ff60cd246ee22ebcaf13822d2a1579534c4bd337b9600a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.09998  ratio 1.000\nwidth 0.01   probability 0.00999  ratio 0.999\nwidth 0.001  probability 0.00098  ratio 0.982\n"
+          "text": "width 0.1    probability 0.10032  ratio 1.003\nwidth 0.01   probability 0.01001  ratio 1.001\nwidth 0.001  probability 0.00102  ratio 1.017\n"
         }
       ]
     },
@@ -42,38 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.50\n"
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.48\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 45744,
-          "sha256": "sha256:c5a22612ead3d512c1fb5b7cff5e2b7573596e4b4c241a615d86754700b1c5c4"
-        }
-      ]
-    },
-    "mdl-random-variables-conditional-expectation": {
-      "code_fingerprint": "sha256:ca552cd2f850e5ea7ea7a033ea1917a83abe325983f5e145320a64f127310d9f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Var(X) 3.565 = within 1.000 + between 2.564\n"
-        }
-      ]
-    },
-    "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:c4703730a94068a2b2328907e1064475a7b18bcb70c08b4332f7077056cfbca5",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 35663,
-          "sha256": "sha256:a2e7d03b6606a125cce614f934452a921acb8dbbd9b46e5237ec483f21480ff8"
+          "bytes": 45643,
+          "sha256": "sha256:6ea27c6e3eb955cd82871f62a3061768d159ece7d7fb60cbb339f05f37531419"
         }
       ]
     }

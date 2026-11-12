@@ -14,7 +14,8 @@ the configuration whose luck was best.
 remedy of Vapnik and Chervonenkis :cite:`Vapnik.Chervonenkis.1971`: ask for
 a guarantee that holds for every candidate function at once, so that it also
 holds for whichever one the learner picks. For a finite list of candidates
-the price is the logarithm of their number. We only recall that result
+the guarantee widens only with the logarithm of their number. We only recall
+that result
 here, with one experiment that shows how much luck there is to choose from:
 flip each of 1,000 fair coins 100 times and keep the coin with the most
 heads. How many does it show?
@@ -634,8 +635,11 @@ Phi = rng.standard_normal((n, p))
 W = np.linalg.pinv(Phi) @ signs.T             # min-norm fit of each sign vector
 w_norm = np.linalg.norm(W, axis=0)
 r = np.linalg.norm(Phi, axis=1).max()         # input radius: largest row norm
+row_norm = np.linalg.norm(Phi, axis=1).mean()
 print(f'mean ||w|| = {w_norm.mean():.2f} (predicted '
       f'{np.sqrt(n / (p - n - 1)):.2f}), largest {w_norm.max():.2f}')
+print(f'typical fit: mean ||w|| * mean row norm / sqrt(n) = '
+      f'{w_norm.mean() * row_norm / np.sqrt(n):.2f}')
 print(f'r = {r:.1f}, B r / sqrt(n) with B = largest ||w||: '
       f'{w_norm.max() * r / np.sqrt(n):.1f}')
 ```
@@ -643,8 +647,8 @@ print(f'r = {r:.1f}, B r / sqrt(n) with B = largest ||w||: '
 The fits have norm about $1$ and the rows of $\boldsymbol\Phi$ length about
 $\sqrt p=10$, so a typical fit sits at
 $\|\mathbf w\|r/\sqrt n\approx1.4$. The largest of the 2,000 norms is 1.3 to
-1.5 and the longest row 11 to 12.5, which puts the ball around all the fits
-at 2 to 2.8. Interpolating noise therefore costs a norm only one and a half
+1.8 and the longest row 11 to 12.5, which puts the ball around all the fits
+at 2 to 3. Interpolating noise therefore takes a norm only one and a half
 to three times the minimum that the proposition allows: the bound
 $Br/\sqrt n$ is nearly tight for this class, even at a complexity where it
 has stopped being useful.
@@ -758,14 +762,17 @@ the curve readable.
 n, n_test, d_in, p_max, trials, noise = 40, 500, 15, 400, 20, 0.1
 p_grid = np.array([2, 5, 10, 15, 20, 25, 30, 35, 38, 39, 40, 41, 42, 45, 50,
                    60, 80, 120, 200, 400])
-keys = ('test', 'train', 'norm', 's_min', 'capacity', 'clean', 'noise')
+keys = ('test', 'train', 'norm', 's_min', 'capacity', 'clean', 'noise',
+        'ratio_q', 'ratio')
 stats = np.zeros((len(keys), trials, len(p_grid)))
+ols = np.zeros(trials)                               # least squares on x itself
 for tr in range(trials):
     beta = rng.standard_normal(d_in)
     beta /= np.linalg.norm(beta)                     # teacher: y = <beta, x>
     X, X_te = (rng.standard_normal((size, d_in)) for size in (n, n_test))
     y_clean, y_te = X @ beta, X_te @ beta
     y = y_clean + noise * rng.standard_normal(n)     # noisy training labels
+    ols[tr] = np.mean((X_te @ np.linalg.lstsq(X, y, rcond=None)[0] - y_te) ** 2)
     V = rng.standard_normal((p_max, d_in)) / np.sqrt(d_in)
     Phi, Phi_te = np.maximum(X @ V.T, 0), np.maximum(X_te @ V.T, 0)
     for j, p in enumerate(p_grid):                   # nested feature prefixes
@@ -773,14 +780,18 @@ for tr in range(trials):
         P = np.linalg.pinv(F)                        # least squares / min norm
         w = P @ y
         r = np.linalg.norm(F, axis=1).max()          # feature radius
+        _, S, Vt = np.linalg.svd(F, full_matrices=False)
+        ratio = ((np.linalg.norm(F_te @ Vt.T, axis=0) ** 2 / n_test)
+                 / (S ** 2 / n))                     # test/train feature power
         stats[:, tr, j] = (
             np.mean((F_te @ w - y_te) ** 2),                 # test MSE
             np.mean((F @ w - y) ** 2),                       # training MSE
             np.linalg.norm(w),                               # ||w||
-            np.linalg.svd(F, compute_uv=False).min(),        # sigma_min
+            S.min(),                                         # sigma_min
             np.linalg.norm(w) * r / np.sqrt(n),              # capacity
             np.mean((F_te @ (P @ y_clean) - y_te) ** 2),     # clean part
-            noise ** 2 * np.linalg.norm(F_te @ P) ** 2 / n_test)  # noise part
+            noise ** 2 * np.linalg.norm(F_te @ P) ** 2 / n_test,  # noise part
+            ratio[-1], ratio.mean())                 # along v_q, average
 med = dict(zip(keys, np.median(stats, axis=1)))
 ```
 
@@ -795,46 +806,66 @@ d2l.plot([p_grid] * 3 + [[n, n]],
          yscale='log', fmts=('-', 'm--', 'g-.', 'k:'), figsize=(6, 3.5))
 ```
 
-The table gives the numbers at seven feature counts.
+The table gives the numbers at seven feature counts. Its last two columns
+belong to :numref:`subsec_mdl-benign-overfitting`, and its last line is the
+classical model that fits the raw inputs.
 
 ```{.python .input #mdl-generalization-bounds-a-double-descent-sweep-2}
 print('   p ' + ' '.join(f'{key:>8}' for key in keys))
 for p in (15, 38, 40, 42, 50, 80, 400):
     row = [med[key][p_grid == p][0] for key in keys]
     print(f'{p:4d} ' + ' '.join(f'{v:8.2g}' for v in row))
+print(f'least squares on the {d_in} raw inputs: test MSE {np.median(ols):.4f}')
 ```
 
-Below the threshold the test error first falls, from about $1$ at $p=2$ to a
-minimum of roughly $0.6$ to $0.8$ somewhere between $p=15$ and $p=30$, then
-rises, as the U-curve leads us to expect. We should be candid about this
-classical regime: it is weak by construction. The targets have variance $1$,
-so a test error of $1$ is that of predicting zero, and the best fit here
-removes only a quarter to a third of it. Least squares on the fifteen raw
-inputs, a classical model too, has an expected test error of
-$0.01\cdot15/(40-15-1)\approx0.006$, the noise variance times $d/(n-d-1)$
-for $d=15$ inputs.
+The table is best read in three stretches: below the threshold, at it, and
+beyond it.
 
-At $p=40=n$ the training error drops from a few times $10^{-3}$ at $p=38$ to
-about $10^{-28}$, which is exact interpolation up to floating point. At the
-same point the test error peaks, typically one to two orders of magnitude
-above the underparameterized minimum. The median over 20 trials lands
-anywhere between about 5 and 50 from one run of the cell to the next,
-because the peak is heavy-tailed, as it is for a square Gaussian matrix,
-where $\mathbb{E}[1/\sigma_{\min}^2]$ is infinite. The solution norm jumps
-to between about 6 and 20, and $\sigma_{\min}$ falls to about $0.01$ to
-$0.04$, against $0.05$ to $0.12$ at $p=38$ and about $2.8$ at $p=400$.
+*Below the threshold* the model is a classical one, with fewer parameters
+than points. Its test error first falls, from about $1$ at $p=2$ to roughly
+$0.6$ to $0.8$ near $p=15$, and then rises again as $p$ approaches $40$.
+This is the U-curve that the classical account leads us to expect. Two
+things must be said about this regime before anything is compared with it.
+First, it is weak. The targets have variance $1$, so a test error of $1$ is
+what predicting zero achieves, and the best fit here removes only a quarter
+to a third of it. Second, a far better classical model exists. The teacher
+is linear in the fifteen raw inputs, and least squares on those inputs has
+an expected test error of $0.01\cdot15/(40-15-1)\approx0.006$, the noise
+variance times $d/(n-d-1)$ for $d=15$. The last line of the table confirms
+it. The random features were handicapped by construction: they have to
+assemble a linear function out of ReLU ridges, and forty points are too few
+for that.
 
-Past the threshold the norm falls steadily, as nesting requires (it does so
-in every trial, not only in the medians), down to about $0.4$ at $p=400$.
-The test error follows: about $0.2$ at $p=80$ and $0.04$ to $0.07$ at
-$p=400$. That is roughly ten times below the best model of this family with
-fewer features than points, and still several times above least squares on
-the raw inputs. The sweep thus shows that within one nested family of random
-features the widest model is best. It does not show that interpolation
-beats a well-specified small model. The training error is zero up to
-floating point everywhere past the threshold, so no criterion based on the
-training error can tell $p=42$ from $p=400$. The norm, the smallest singular
-value and the capacity product all can.
+*At the threshold* three columns move together. The training error drops
+from a few times $10^{-3}$ at $p=38$ to about $10^{-28}$, which is exact
+interpolation up to floating point. The smallest singular value falls to
+about $0.01$ to $0.04$, several times below its values at $p=38$ and $p=42$
+on either side. And since :eqref:`eq_mdl-svd-interpolant` divides by it, the
+solution is inflated: the norm jumps to between about $6$ and $20$, and the
+test error to somewhere between $5$ and $50$, one to two orders of magnitude
+above the minimum of the first stretch. These ranges are wide because the
+peak is heavy-tailed, as it is for a square Gaussian matrix, where
+$\mathbb{E}[1/\sigma_{\min}^2]$ is infinite. Even a median over 20 trials
+moves from one run of the cell to the next.
+
+*Beyond the threshold* everything that rose comes down again. The smallest
+singular value recovers, to about $2.8$ at $p=400$. The norm falls steadily,
+as nesting requires (in every trial, not only in the medians), down to about
+$0.4$. The test error follows: about $0.2$ at $p=80$, and $0.04$ to $0.07$
+at $p=400$. One column has nothing more to tell us. The training error is
+zero up to floating point everywhere past the threshold, so no criterion
+based on it can separate $p=42$ from $p=400$, whose test errors differ by
+well over an order of magnitude. The norm, the smallest singular value and the
+capacity product all can.
+
+What, then, has the sweep shown? Less than its plot suggests. The widest
+model beats every narrower model of its own family, the best one below the
+threshold included, by roughly a factor of ten. It still loses to least
+squares on the raw inputs by about another factor of ten. Within one nested
+family of random features, more features are better, even far past the
+point where the model fits its noise. That is a real and surprising fact.
+Whether interpolation can beat a well-specified small model is a different
+question, and in this experiment the answer is no.
 
 The capacity product peaks at the threshold with values of about 8 to 25,
 falls past it, and reaches about $1.2$ to $1.3$ at $p=400$. It follows the
@@ -879,7 +910,7 @@ The last two columns of the table print the two parts. At $p=40$ the noise
 part is about $1$ to $4$, a hundred times or more the noise variance $0.01$,
 and the clean part is larger still. At $p=42$ the noise part is a few
 tenths, at $p=80$ about $0.02$, and at $p=400$ just under $0.01$. The clean
-part falls from about 5 to 40 at the peak to about $0.04$ to $0.06$ at
+part falls from roughly 4 to 20 at the peak to about $0.05$ at
 $p=400$, so most of the gain past the threshold comes from a better
 approximation of the target.
 
@@ -905,11 +936,13 @@ small in the same direction. At $p=n$ the smallest singular value is small
 by an accident of the forty training points: along $\mathbf v_q$ the test
 features are typically thousands of times larger in mean square than the
 training features. At $p=400$ a small $\sigma_i$ marks a direction in which
-the features vary little for training and test points alike. The ratios
-then lie between about $0.3$ and $3$ and average just below $1$ (we computed
-them separately; the cell does not print them), so the two factors cancel.
-Overfitting is called *benign* in this sense. Benign means bounded here, not vanishing: at $p=400$ the
-predictions still carry about as much noise as a single training label.
+the features vary little for training and test points alike. The table's
+last two columns show it: the ratio along $\mathbf v_q$ (`ratio_q`) is about
+$2$, and the average over all directions (`ratio`) is just below $1$, so the
+small singular value in the denominator is cancelled by a small test feature
+in the numerator. Overfitting is called *benign* in this sense. Benign means
+bounded here, not vanishing: at $p=400$ the predictions still carry about as
+much noise as a single training label.
 
 :citet:`Bartlett.Long.Lugosi.Tsigler.2020` make this precise for linear
 regression, through two effective ranks of the covariance of the inputs, and
@@ -928,7 +961,7 @@ A guarantee for one function fixed before the data does not cover the
 function chosen because it looked best on the data. Uniform convergence
 repairs this by bounding the deviation of every function in the class at
 once. For a finite class, Hoeffding's inequality and the union bound do so
-at the price of $\log|\mathcal F|/(2t^2)$ additional examples at tolerance
+with $\log|\mathcal F|/(2t^2)$ additional examples at tolerance
 $t$. For infinite classes, symmetrization with a ghost sample turns the
 unknown risk into a correlation with random signs, and the bound adds twice
 the Rademacher complexity of the loss class. For the linear class with
@@ -1242,11 +1275,13 @@ A validation set is this experiment: configurations are coins, examples are flip
 ::: {.col}
 | section | adds |
 |---|---|
-| Random Variables | densities, moments, covariance |
-| Distributions | the named laws and their losses |
+| Random Variables | densities, moments, tail bounds |
+| Joint Distributions | conditioning, covariance, change of variables |
+| Distributions | the named distributions and their losses |
 | The Exponential Family | one form, convex fits, conjugacy |
 | Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP, EM |
+| Maximum Likelihood | losses, Fisher information, MAP |
+| Latent Variables and EM | the ELBO, EM |
 | Bayesian Computation | averaging over a posterior |
 | Concentration Inequalities | exponential tails of averages |
 | **Uniform Convergence** | **guarantees after selection** |
@@ -1448,8 +1483,10 @@ $$\mathbf w=\boldsymbol\Phi^+\mathbf y=\sum_{i=1}^{\min(n,p)}\frac{\langle\mathb
 
 ::: {.cols .vc}
 ::: {.col}
-- Minimum below the threshold about $0.7$; at $p=40$ typically one to two orders of magnitude higher.
-- $p=400$: about $0.05$, roughly ten times below the classical minimum, with zero training error.
+- Below the threshold: a U-curve with minimum about $0.7$. Predicting zero scores $1$.
+- At $p=40$: one to two orders of magnitude higher.
+- $p=400$: about $0.06$ with zero training error, ten times below the U-curve's minimum.
+- Least squares on the 15 raw inputs: $0.006$, ten times lower still.
 :::
 
 ::: {.col .fig .big}
@@ -1464,7 +1501,26 @@ $$\mathbf w=\boldsymbol\Phi^+\mathbf y=\sum_{i=1}^{\min(n,p)}\frac{\langle\mathb
 @!mdl-generalization-bounds-a-double-descent-sweep-2
 
 - Capacity $\|\mathbf w\|\,r/\sqrt n$: about 8 to 25 at $p=40$, about 1.2 at $p=400$.
-- It stays above 1, and its $B$ was read off the fit.
+- A diagnostic only: no theorem here covers squared loss on unbounded
+  targets, and its $B$ was read off the fit instead of fixed in advance.
+:::
+
+::: {.slide title="Interpolated Noise Is Harmless Where Test Features Are Small Too"}
+[Benign overfitting]{.kicker}
+
+Test error $=$ clean part (fit to noise-free labels) $+$ noise part:
+
+$$	extrm{noise part}=\sigma_\xi^2\cdot\frac1n\sum_{i=1}^{n}\frac{\textrm{mean square of test features along }\mathbf v_i}{\textrm{mean square of training features along }\mathbf v_i}$$
+
+| $p$ | ratio along $\mathbf v_{\min}$ | average ratio | noise part |
+|--:|--:|--:|--:|
+| 40 | thousands | hundreds | $1$ to $4$ |
+| 400 | about $2$ | just below $1$ | just under $0.01=\sigma_\xi^2$ |
+
+::: {.d2l-note}
+At $p=n$ a small $\sigma_i$ is an accident of the 40 training points. At
+$p=400$ it marks a direction that is small for test points as well.
+:::
 :::
 
 ::: {.slide title="Check: Training Error Is Zero at p = 42 and at p = 400. What Tells Them Apart?"}
@@ -1489,6 +1545,7 @@ just under 0.01. Training error cannot separate them.
 - Margin bound: $0.095$ at $Br/\gamma=10$, $n=50{,}000$.
 - Double descent: $\sigma_{\min}$ at $p=n$, then a shrinking minimum-norm solution.
 - $p=400$: clean part about $0.05$ plus noise part just under $0.01$, the noise variance.
+- The widest random-feature model wins within its family; least squares on the raw inputs is ten times better.
 
 **Open:** guarantees for the solution an algorithm reaches, not for the whole class.
 :::

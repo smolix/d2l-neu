@@ -3,18 +3,18 @@
 
 The Basics part trains each model to a single parameter vector, by maximum
 likelihood or, with a penalty, by the maximum a posteriori (MAP) estimate,
-the peak of the posterior. The previous section put an error bar on such a
-vector. The predictions, however, still came from that one vector,
-although many others fit the data almost as well. How much do they disagree,
-and what should we predict when they do?
+the peak of the posterior. :numref:`sec_mdl-maximum_likelihood` put an
+error bar on such a vector. The predictions, however, still came from that
+one vector, although many others fit the data almost as well. How much do
+they disagree, and what should we predict when they do?
 
 Take logistic regression with an intercept and a slope, fitted to twenty
 labeled points whose inputs lie between 0 and 4. At an input of $-3$, far
-below the data, the fitted model typically gives the label 1 a probability of
-a few in a thousand. Vectors that fit the data almost as well disagree there
-by orders of magnitude. Their average, with each vector weighted by how
-plausible it is given the data, is about five times larger. At an input of 2,
-inside the data, the two answers agree to within about $0.02$. For a rare
+below the data, the fitted model gives the label 1 a probability of four in a
+thousand. Vectors that fit the data almost as well disagree there by orders
+of magnitude. Their average, with each vector weighted by how plausible it is
+given the data, is almost five times larger. At an input of 2, inside the
+data, the two answers agree to within $0.01$. For a rare
 outcome, such as a fraud flag or a diagnosis, a factor of several in its
 probability can decide what we do.
 
@@ -143,8 +143,16 @@ The running data have $n=20$ inputs drawn uniformly from $[0,4]$ and labels
 drawn from the line with $\boldsymbol\theta^\star=(-3,1.5)$, which crosses
 $\tfrac12$ at $x=2$ and rises from $\operatorname{sigmoid}(-3)\approx0.05$ at
 $x=0$ to $\operatorname{sigmoid}(3)\approx0.95$ at $x=4$. The prior has
-$\tau^2=4$. Every run draws a fresh dataset, and twenty points leave the
-posterior wide enough for each effect in this section to be visible. In the
+$\tau^2=4$. Twenty points leave the posterior wide enough for each effect in
+this section to be visible. The twenty points are listed in the cell rather
+than drawn afresh, so that the numbers below can be quoted, and they were
+chosen with some care. We simulated 1,500 data sets from this recipe and kept
+the one closest to the medians of the quantities this section measures: the
+widths and the correlation of the posterior, the offset of its mean from its
+mode, and the ratio of the two predictions far from the data. What follows is
+therefore the typical case and neither a lucky nor an unlucky one. The data
+are fixed, but every sampler below still draws fresh random numbers, so
+their outputs are quoted as ranges. In the
 code, `log_joint` is $\log\widetilde p$; it uses `logaddexp(0, z)` for
 $\log(1+e^z)$ so that large logits do not overflow.
 
@@ -156,9 +164,10 @@ theta_star = np.array([-3.0, 1.5])
 def sigmoid(z):
     return np.exp(-np.logaddexp(0.0, -z))
 
-x = rng.uniform(0, 4, n)
+x = np.array([0.1, 0.3, 0.3, 0.4, 0.8, 1.4, 1.5, 1.6, 1.8, 2.1,
+              2.2, 2.3, 2.6, 2.7, 3.0, 3.1, 3.4, 3.5, 3.6, 3.7])
+y = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1])
 Z = np.column_stack([np.ones(n), x])          # rows z_i = (1, x_i)
-y = rng.binomial(1, sigmoid(Z @ theta_star))
 
 def log_joint(theta, Z=Z, y=y, prior_var=prior_var):
     """log p(D, theta) up to a constant; theta has final dimension 2."""
@@ -196,7 +205,7 @@ $p_i(1-p_i)\le\tfrac14$, so the points the model is unsure about count most.
 The prior adds $\tau^{-2}$ to every eigenvalue, so $\mathbf H$ is positive
 definite for every $\boldsymbol\theta$. The log posterior is therefore
 strictly concave, with a single maximum. The maximum is finite even when the
-data are linearly separable (about one run in thirty), because the
+data are linearly separable, because the
 log-likelihood is never positive while the prior term falls without bound in
 every direction.
 
@@ -214,73 +223,7 @@ def neg_hessian(theta, Z=Z, y=y, prior_var=prior_var):
 
 For two parameters these derivatives are easy by hand. For a larger model we
 would write only $\log\widetilde p$ and leave its gradient and Hessian to
-automatic differentiation, which here returns the same numbers at
-$\boldsymbol\theta^\star$ up to rounding.
-
-```{.python .input #mdl-bayesian-computation-the-gradient-and-the-hessian-2}
-#@tab pytorch
-Z_t, y_t = torch.tensor(Z), torch.tensor(y, dtype=torch.float64)
-
-def log_joint_torch(theta):
-    logits = Z_t @ theta
-    return ((y_t * logits - torch.nn.functional.softplus(logits)).sum()
-            - (theta**2).sum() / (2 * prior_var))
-
-theta0 = torch.tensor(theta_star)
-grad = torch.func.grad(log_joint_torch)(theta0).numpy()
-hess = torch.func.hessian(log_joint_torch)(theta0).numpy()
-print('gradient error:', np.abs(grad - grad_log_joint(theta_star)[0]).max())
-print('Hessian error :', np.abs(-hess - neg_hessian(theta_star)).max())
-```
-
-```{.python .input #mdl-bayesian-computation-the-gradient-and-the-hessian-2}
-#@tab jax
-def log_joint_jax(theta):
-    logits = jnp.asarray(Z) @ theta
-    return ((y * logits - jnp.logaddexp(0.0, logits)).sum()
-            - (theta**2).sum() / (2 * prior_var))
-
-theta0 = jnp.asarray(theta_star)
-grad = np.asarray(jax.grad(log_joint_jax)(theta0))
-hess = np.asarray(jax.hessian(log_joint_jax)(theta0))
-g_ref, H_ref = grad_log_joint(theta_star)[0], neg_hessian(theta_star)
-# JAX computes in single precision: compare relative errors
-print('gradient error:', np.abs(grad - g_ref).max() / np.abs(g_ref).max())
-print('Hessian error :', np.abs(-hess - H_ref).max() / np.abs(H_ref).max())
-```
-
-```{.python .input #mdl-bayesian-computation-the-gradient-and-the-hessian-2}
-#@tab tensorflow
-Z_tf, y_tf = tf.constant(Z), tf.constant(y, dtype=tf.float64)
-theta0 = tf.Variable(theta_star)
-with tf.GradientTape() as outer:
-    with tf.GradientTape() as inner:
-        logits = tf.linalg.matvec(Z_tf, theta0)
-        log_p = (tf.reduce_sum(y_tf * logits - tf.math.softplus(logits))
-                 - tf.reduce_sum(theta0**2) / (2 * prior_var))
-    grad = inner.gradient(log_p, theta0)
-hess = outer.jacobian(grad, theta0)
-print('gradient error:',
-      np.abs(grad.numpy() - grad_log_joint(theta_star)[0]).max())
-print('Hessian error :', np.abs(-hess.numpy() - neg_hessian(theta_star)).max())
-```
-
-```{.python .input #mdl-bayesian-computation-the-gradient-and-the-hessian-2}
-#@tab mxnet
-Z_mx = mnp.array(Z, dtype='float64')
-y_mx = mnp.array(y, dtype='float64')
-theta0 = mnp.array(theta_star, dtype='float64')
-theta0.attach_grad()
-with autograd.record():
-    logits = mnp.dot(Z_mx, theta0)
-    log_p = ((y_mx * logits - mnp.log1p(mnp.exp(logits))).sum()
-             - (theta0**2).sum() / (2 * prior_var))
-log_p.backward()
-# MXNet's autograd supports second derivatives for few operators, so this
-# tab checks the gradient only; |logits| stays small enough for log1p(exp)
-print('gradient error:',
-      np.abs(theta0.grad.asnumpy() - grad_log_joint(theta_star)[0]).max())
-```
+automatic differentiation.
 
 Every method in this section touches the posterior only through
 $\widetilde p$: its values, its gradient, or its Hessian.
@@ -289,8 +232,8 @@ $\widetilde p$: its values, its gradient, or its Hessian.
 :label:`subsec_mdl-bayes-laplace`
 
 The cheapest approximation reuses an optimization we already know how to run.
-The peak of the posterior is the MAP estimate, the penalized fit of the
-previous section, and Newton's method
+The peak of the posterior is the MAP estimate, the penalized fit of
+:numref:`sec_mdl-maximum_likelihood`, and Newton's method
 $\boldsymbol\theta\leftarrow\boldsymbol\theta+\mathbf
 H(\boldsymbol\theta)^{-1}\nabla\log\widetilde p(\boldsymbol\theta)$ reaches it
 in a few steps. One more Hessian turns the peak into a Gaussian.
@@ -372,9 +315,12 @@ print('Laplace sd         :', laplace_sd.round(3))
 print('Laplace correlation:', round(laplace_rho, 3))
 ```
 
-The Laplace standard deviations are typically about 1 for the intercept and
-0.5 for the slope, and the correlation is strongly negative, about $-0.85$: a
-steeper line must start lower to pass through the same points.
+The mode is $(-2.14,\,1.12)$, a shallower line than the one that generated
+the data. The Laplace standard deviations are $1.00$ for the intercept and
+$0.46$ for the slope, so the generating values $(-3,1.5)$ lie a little under
+one standard deviation away in each coordinate. The correlation is strongly
+negative, $-0.86$: a steeper line must start lower to pass through the same
+points.
 
 ### A Grid Reference
 
@@ -406,12 +352,13 @@ print('grid correlation:', round(post_rho, 3))
 print('(mean - MAP)/sd :', ((post_mean - theta_map) / post_sd).round(2))
 ```
 
-In nearly every run the slope's posterior mean lies above its MAP and the
-intercept's mean lies below its MAP. For the slope the gap is typically about
-a quarter of a posterior standard deviation. The Laplace standard deviations
-are a few percent too small, and the correlation agrees. So even the
-center of the Laplace Gaussian is in the wrong place: the posterior is skewed,
-and its mean is not its mode.
+The slope's posterior mean, $1.24$, lies above its MAP, $1.12$, by a quarter
+of a posterior standard deviation, and the intercept's mean, $-2.35$, lies
+below its MAP by a fifth. The Laplace standard deviations are $4$ to $5\%$
+too small, and the correlation agrees to two digits. The widths are a minor
+matter. More serious is that the center of the Laplace Gaussian is in the
+wrong place: the posterior is skewed toward steep lines, and its mean is not
+its mode.
 
 ### The Plug-in and the Posterior Predictive
 
@@ -436,14 +383,22 @@ for j, x0 in enumerate(x_new):
     lo, hi = grid_probs[order[np.searchsorted(cdf, [0.05, 0.95])], j]
     print(f'x={x0:+.0f}: plug-in {plug_in[j]:.4f}, predictive '
           f'{predictive[j]:.4f}, middle 90%: [{lo:.2g}, {hi:.4f}]')
+a = grid_theta @ Z_new[0]                      # logits at x = -3
+mu = grid_weight @ a
+s2 = grid_weight @ (a - mu)**2
+print(f'x=-3, log scale: plug-in {np.log(plug_in[0]):.2f}, '
+      f'mean logit {mu:.2f}, plus s^2/2 {mu + s2 / 2:.2f},')
+print(f'                 log E[e^a] {np.log(grid_weight @ np.exp(a)):.2f}, '
+      f'predictive {np.log(predictive[0]):.2f}')
 ```
 
-At $x_\star=2$ the two predictions agree to within about $0.02$, and the
-posterior's predictions there fill a moderate interval. At $x_\star=-3$ the
-middle 90% of the predictions span orders of magnitude, and the posterior
-predictive is typically three to ten times the plug-in; a draw whose fitted
-slope comes out shallow gives a factor nearer two. At $x_\star=7$ the same
-holds for the probability of a 0 label. Probabilities
+At $x_\star=2$ the two predictions, $0.524$ and $0.529$, agree to within
+$0.01$, and the plausible vectors keep their predictions between $0.32$ and
+$0.74$. At $x_\star=-3$ the middle 90% of the predictions run from
+$4\times10^{-5}$ to $0.09$, more than three orders of magnitude, and the
+posterior predictive, $0.019$, is $4.6$ times the plug-in, $0.0041$. At
+$x_\star=7$ the same holds for the probability of a 0 label, $0.017$ against
+$0.003$. Probabilities
 this close to 0 and 1 are easiest to compare as log-odds
 $\log\frac{P}{1-P}$, so the plot shows both predictions on that scale over a
 wider range than the data, with the training inputs marked along the bottom.
@@ -475,11 +430,43 @@ far side of the data the plausible vectors with a shallow slope give
 probabilities that are large compared with the typical one, and they dominate
 the average.
 
-Which effect wins? Where the probability is small,
-$\operatorname{sigmoid}(a)\approx e^a$, and a Gaussian logit $a$ with mean
-$\mu$ and variance $s^2$ has $\mathbb{E}[e^a]=e^{\mu+s^2/2}$. Averaging
-raises the log-probability by about $s^2/2$, and by less once the sigmoid
-flattens. The logit
+Which effect wins, and by how much? A short calculation gives the size of the
+second. Where the probability is small, $\operatorname{sigmoid}(a)\approx
+e^a$, so the predictive is roughly the average of $e^a$ over the posterior of
+the logit $a=\mathbf z_\star^\top\boldsymbol\theta$. If $a$ were Gaussian
+with mean $\mu$ and variance $s^2$, that average would be
+$\mathbb{E}[e^a]=e^{\mu+s^2/2}$: averaging would lift the log-probability
+by $s^2/2$ above its value at the mean logit. At $x_\star=-3$ the grid gives
+$s^2/2=2.87$, which promises a factor of $e^{2.87}\approx18$. We measured
+$4.6$, a rise of only $1.51$ on the log scale. The formula is wrong by almost
+a factor of two in the exponent, and it is worth seeing where the other
+$1.36$ went. The last two lines of the cell walk from the plug-in to the
+predictive one step at a time:
+
+| step at $x_\star=-3$ | log-probability | change |
+|:--|--:|--:|
+| plug-in: the logit at the mode | $-5.49$ | |
+| the posterior mean of the logit | $-6.06$ | $-0.57$ |
+| add $s^2/2$, as for a Gaussian logit | $-3.19$ | $+2.87$ |
+| average $e^a$ over the logit's actual distribution | $-3.66$ | $-0.47$ |
+| average $\operatorname{sigmoid}(a)$ instead of $e^a$: the predictive | $-3.98$ | $-0.32$ |
+
+Three corrections, all downward, separate $2.87$ from $1.51$. The first is
+the first effect above. The rise of $s^2/2$ starts from the mean logit, not
+from the plug-in's, and the mean logit lies $0.57$ lower, because the
+posterior mean has the steeper slope. The second is that the logit is not
+Gaussian. The skew of the posterior gives it a long tail toward very negative
+values and a short one toward zero, and the average of $e^a$ is made almost
+entirely by the tail toward zero; with less of that tail than a Gaussian
+would have, the average is lower by $0.47$. The third is the approximation
+$\operatorname{sigmoid}(a)\approx e^a$ itself. The vectors that dominate the
+average are the ones whose probabilities at $x_\star$ are no longer small,
+and there the sigmoid has begun to flatten and lies below $e^a$, which takes
+another $0.32$. Together, $2.87-0.57-0.47-0.32=1.51$.
+
+So the Gaussian formula is a guide and no more: it gives the direction of the
+effect and its order of magnitude. It also gives the scaling, and that part
+survives. The logit
 $\mathbf z_\star^\top\boldsymbol\theta$ has variance
 $\textrm{Var}(\theta_0)+2x_\star\textrm{Cov}(\theta_0,\theta_1)+x_\star^2\textrm{Var}(\theta_1)$,
 which grows quadratically with the distance from the data, while the shift
@@ -489,10 +476,10 @@ inside the data both effects are small (Exercise
 
 The larger number is not necessarily closer to the truth. The line that
 generated these data gives $\operatorname{sigmoid}(-3-1.5\cdot3)=
-\operatorname{sigmoid}(-7.5)\approx0.0006$ at $x_\star=-3$, below both numbers
-in most runs: twenty points cannot pin the slope down, and the prior pulls it
-toward zero. That value does lie inside the printed 90% range in about nine
-runs out of ten. The posterior predictive is the probability that the model
+\operatorname{sigmoid}(-7.5)\approx0.0006$ at $x_\star=-3$, below both
+numbers: twenty points cannot pin the slope down, and the prior pulls it
+toward zero. That value does lie inside the printed 90% range, as it should
+for a typical data set. The posterior predictive is the probability that the model
 and the prior assign to the label once the disagreement among plausible
 vectors is counted. It is exact in one sense: if nature draws the parameters
 from the prior and the labels from the model, then among all the worlds that
@@ -712,8 +699,7 @@ log prior falls like $t^2/(2\tau^2)$. The integral
 $\mathbb{E}_q[w^2]=\int\widetilde p^2/q$ for a Gaussian proposal
 $\mathcal N(\mathbf m,\mathbf S)$ is then infinite as soon as one eigenvalue
 of $\mathbf S$ lies below $\tau^2/2=2$. Both eigenvalues of the Laplace
-covariance are below 2 in nearly every run, typically about $1.2$ and
-$0.05$, so its weights have infinite variance in every direction, not along
+covariance, about $1.17$ and $0.05$, are far below 2, so its weights have infinite variance in every direction, not along
 one thin axis.
 
 The region where the weights blow up lies many Laplace standard deviations
@@ -991,7 +977,7 @@ def chain_ess(chains):
     return ess
 ```
 
-Now the test. If the error bar is honest, the MCMC mean of our four chains
+Now the test. If the error bar is right, the MCMC mean of our four chains
 should differ from the grid mean by about one MCSE. We also compare the
 measured $\kappa$ of the slope with the AR(1) formula evaluated at the lag-1
 autocorrelation $\rho_1$.
@@ -1168,8 +1154,8 @@ rather than the width of the whole posterior
 (:numref:`fig_mdl-prob-bayes-mean-field`). The shrinkage is a
 property of the mean-field family under the reverse KL: a full-covariance
 Gaussian fitted by the same objective to a Gaussian target is exact. In the
-running example $\rho\approx-0.85$, so the mean-field standard deviations
-should be about $\sqrt{1-0.85^2}=0.53$ times the true ones, about half.
+running example $\rho=-0.86$, so the mean-field standard deviations
+should be about $\sqrt{1-0.86^2}=0.51$ times the true ones, about half.
 
 ![Diagonal Gaussians fitted to a correlated Gaussian posterior with standard deviations $(1,0.5)$ and correlation $\rho=-0.85$, drawn as 2-sd ellipses. A factorized family cannot tilt. Under the reverse KL (orange) it also shrinks to the conditional width, $\sqrt{1-\rho^2}\approx0.53$ times the marginal standard deviation; under the forward KL (green) it keeps the marginal width and covers mass the posterior does not have.](../img/mdl-prob-bayes-mean-field.svg)
 :label:`fig_mdl-prob-bayes-mean-field`
@@ -1205,7 +1191,7 @@ print('predicted sd, grid sd * sqrt(1 - rho^2):',
 
 The mean-field mean lies within about a tenth of a posterior standard
 deviation of the grid mean. Its standard deviations are about half the grid's
-and match the predicted values to within a few percent in a typical run. The
+and match the predicted values, $0.54$ and $0.25$, to within about $2\%$. The
 optimization has converged, and the remaining error comes from the family.
 Richer families remove it at a higher cost: full-covariance Gaussians
 (Exercise :exref:`ex_mdl-bayesian-computation-variational-families`),
@@ -1239,7 +1225,7 @@ The Metropolis histogram follows the exact curve, skew included. The Laplace
 curve is centered at the mode, to the left of the exact mean, and slightly too
 narrow. The mean-field curve is about half as wide as the exact one, and the
 mean-field fit also reports a correlation of zero against the grid's
-$\rho\approx-0.85$.
+$\rho=-0.86$.
 
 | Method | Representation | Main diagnostic | Characteristic failure |
 |----|----|----|----|
@@ -1373,10 +1359,10 @@ distributions known only up to a constant.
    a uniform prior, the posterior of its heads probability $\theta$ is
    $\mathrm{Beta}(10,5)$, with mean $2/3$, standard deviation $0.118$, and
    central $95\%$ interval $[0.419,0.872]$.
-    1. Compute the Laplace approximation :eqref:`eq_mdl-bayes-laplace` in
-       the parameter $\theta$. Give its mean, its standard deviation, its
-       central $95\%$ interval, and the probability it places outside
-       $[0,1]$.
+    1. The Laplace approximation :eqref:`eq_mdl-bayes-laplace` in the
+       parameter $\theta$ has mean $9/13$ and standard deviation $0.128$,
+       as computed in the text. Give its central $95\%$ interval and the
+       probability it places outside $[0,1]$.
     1. In the log-odds $\eta=\log(\theta/(1-\theta))$ the posterior density
        is proportional to
        $\operatorname{sigmoid}(\eta)^{10}(1-\operatorname{sigmoid}(\eta))^5$,
@@ -1495,7 +1481,7 @@ distributions known only up to a constant.
        5,000 Laplace-proposal draws, and by the Laplace evidence
        $\log\widetilde p(\boldsymbol\theta_{\mathrm{MAP}})+\log2\pi-\tfrac12\log\det\mathbf H$.
        The Laplace estimate of $p(\mathcal D)$ comes out a few percent low,
-       about $0.04$ in $\log p(\mathcal D)$, in every run. Which feature of
+       about $0.04$ in $\log p(\mathcal D)$. Which feature of
        the posterior, seen in the grid cell, explains the sign?
     1. Estimate the ELBO of three Gaussians: the Laplace approximation, the
        mean-field fit, and the full-covariance fit of Exercise
@@ -1645,10 +1631,11 @@ Averaging over a posterior known only up to a constant<br>**Bayesian computation
 
 ::: {.cols .vc}
 ::: {.col}
-- Logistic regression, 20 points with $x\in[0,4]$; plug-in uses the MAP.
-- At $x=-3$ the plausible vectors disagree by orders of magnitude; their
-  average is typically 3–10× the plug-in.
-- Inside the data the two agree to about $0.02$.
+- Logistic regression fitted to 20 points with $x\in[0,4]$. At $x=-3$ the
+  fitted line says $P(y=1)=0.004$.
+- Lines that fit almost as well say anything from $4\times10^{-5}$ to $0.09$.
+- Their weighted average is $0.019$: $4.6$ times the fitted answer.
+- At $x=2$, inside the data, the two agree to $0.01$.
 :::
 
 ::: {.col .fig .big}
@@ -1678,11 +1665,13 @@ cancels. **Running examples:** the 20-point logistic posterior; the coin with
 ::: {.col}
 | section | adds |
 |---|---|
-| Random Variables | densities, moments, covariance |
-| Distributions | the named laws and their losses |
+| Random Variables | densities, moments, tail bounds |
+| Joint Distributions | conditioning, covariance, change of variables |
+| Distributions | the named distributions and their losses |
 | The Exponential Family | one form, convex fits, conjugacy |
 | Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP, EM |
+| Maximum Likelihood | losses, Fisher information, MAP |
+| Latent Variables and EM | the ELBO, EM |
 | **Bayesian Computation** | **averaging over a posterior** |
 | Concentration Inequalities | exponential tails of averages |
 | Uniform Convergence | guarantees after selection |
@@ -1693,6 +1682,24 @@ cancels. **Running examples:** the 20-point logistic posterior; the coin with
 - **Uses:** Bayes' rule, MAP, the Hessian, KL.
 - **Skips:** Gibbs, Hamiltonian Monte Carlo, network posteriors.
 :::
+:::
+:::
+
+::: {.slide title="The Posterior Is Known Only Up to Its Normalizer"}
+[The target]{.kicker}
+
+Model: $P(y_i=1\mid x_i,\boldsymbol\theta)=\operatorname{sigmoid}(\theta_0+\theta_1x_i)$;
+prior $\theta_j\sim\mathcal N(0,\tau^2)$, $\tau^2=4$. Bayes' rule:
+
+$$p(\boldsymbol\theta\mid\mathcal D)=\frac{\widetilde p(\boldsymbol\theta)}{p(\mathcal D)},\qquad\widetilde p=\textrm{likelihood}\times\textrm{prior},\qquad p(\mathcal D)=\int\widetilde p(\boldsymbol\theta)\,d\boldsymbol\theta .$$
+
+- $\widetilde p$: easy to evaluate anywhere. The evidence $p(\mathcal D)$: no closed form.
+- Goal, the posterior predictive:
+  $P(y_\star=1\mid x_\star,\mathcal D)=\int\operatorname{sigmoid}(\theta_0+\theta_1x_\star)\,p(\boldsymbol\theta\mid\mathcal D)\,d\boldsymbol\theta$.
+
+::: {.d2l-note}
+Data: 20 fixed points, the most typical of 1,500 simulated sets. With two
+parameters a fine grid gives the exact answer to check against.
 :::
 :::
 
@@ -1737,8 +1744,42 @@ Grid of $241\times241$ points at MAP $\pm7$ Laplace sds:
 
 @!bayesian-computation-grid
 
-- Slope mean above the MAP (about ¼ sd), intercept below, in nearly every run.
-- Laplace sds a few percent small; correlation about $-0.85$.
+- Slope: mean $1.24$ above the MAP $1.12$, by ¼ sd. Intercept: mean below, by ⅕ sd.
+- Laplace sds $4$ to $5\%$ small; correlation $-0.86$ in both.
+- The posterior is skewed toward steep lines, and a Gaussian at the mode has
+  its center in the wrong place.
+:::
+
+::: {.slide title="Far From the Data the Average Is 4.6 Times the Plug-in"}
+[Prediction]{.kicker}
+
+Plug-in: $\operatorname{sigmoid}$ at the MAP alone. Predictive: the grid
+average. Middle 90%: the range of the plausible vectors' answers.
+
+@!mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-1
+
+- $x=2$: the two agree. $x=-3$ and $x=7$: the average is pulled toward $\tfrac12$.
+- The generating line gives $0.0006$ at $x=-3$: below both, inside the 90% range.
+:::
+
+::: {.slide title="A Gaussian Logit Predicts a Rise of 2.9 Nats; the Posterior Delivers 1.5"}
+[Prediction]{.kicker}
+
+Small probabilities: $\operatorname{sigmoid}(a)\approx e^a$, and a Gaussian
+logit $a$ with variance $s^2$ has $\log\mathbb{E}[e^a]=\mu+s^2/2$.
+
+| step at $x=-3$ | log-probability | change |
+|:--|--:|--:|
+| plug-in (logit at the mode) | $-5.49$ | |
+| mean logit: the mean is not the mode | $-6.06$ | $-0.57$ |
+| add $s^2/2$ | $-3.19$ | $+2.87$ |
+| actual logit: short tail toward 0 | $-3.66$ | $-0.47$ |
+| $\operatorname{sigmoid}$ flattens below $e^a$ | $-3.98$ | $-0.32$ |
+
+::: {.d2l-note}
+Net $+1.51$, a factor $4.6$. The formula gives direction and scaling:
+$s^2$ grows quadratically with the distance from the data.
+:::
 :::
 
 ::: {.slide title="Rejection Sampling Is Exact but Wasteful"}
@@ -1795,7 +1836,8 @@ $rs_p$: limit $\sqrt{2r^2-1}/r^2$, and zero for $r\le1/\sqrt2$.
 
 - Posterior tails are the prior's (variance $\tau^2=4$); a Gaussian $q$
   with a covariance eigenvalue below $\tau^2/2$ has infinite weight variance.
-- The Laplace covariance has one far below 2: the ESS collapses in rare runs.
+- Both eigenvalues of the Laplace covariance ($1.17$, $0.05$) are below 2:
+  the ESS collapses in rare runs.
 - Fix: Student-$t$, or $0.9\,$Laplace $+\,0.1\,$prior.
 :::
 
@@ -1918,16 +1960,16 @@ conditional variances.
 :::
 :::
 
-::: {.slide title="Check: With $\rho=-0.85$, How Narrow Is the Mean-Field Fit?"}
+::: {.slide title="Check: With $\rho=-0.86$, How Narrow Is the Mean-Field Fit?"}
 [Check]{.kicker}
 
-The logistic posterior has correlation about $-0.85$. By what factor is each
+The logistic posterior has correlation $-0.86$. By what factor is each
 mean-field standard deviation too small, and what correlation does the fit
 report?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $\sqrt{1-0.85^2}=0.53$: about half. It reports correlation 0.
+**Answer.** $\sqrt{1-0.86^2}=0.51$: about half. It reports correlation 0.
 The run agrees:
 
 @!bayesian-computation-variational
@@ -1949,11 +1991,16 @@ The run agrees:
 
 | method | gives | check | fails by |
 |---|---|---|---|
-| Laplace | Gaussian at mode | vs. samples | skew, tails, modes |
+| Laplace | Gaussian at mode | none of its own: compare with samples | skew, tails, modes |
 | rejection | exact draws | acceptance | rate $\propto n^{-d/2}$, needs $M$ |
 | importance | weighted draws | weight ESS | light or misplaced $q$ |
 | MCMC | correlated draws | $\widehat R$, ESS, MCSE | slow mixing, lost modes |
-| mean-field VI | fitted $q$ | ELBO | too narrow |
+| mean-field VI | fitted $q$ | none of its own: compare with samples | too narrow |
+
+::: {.d2l-note}
+A converged ELBO says that the optimization stopped, not that the family
+fits the posterior.
+:::
 :::
 
 ::: {.slide title="Four Ratios in Which the Constant Cancels"}
@@ -1963,7 +2010,14 @@ The run agrees:
 - Rejection, importance: $\widetilde p/q$; coin keeps 30%, ESS 42%.
 - Metropolis: $\widetilde p'/\widetilde p$; two states keep $(1/4,3/4)$.
 - Diagnostics: $\kappa=19$ at $\phi=0.9$; error $\approx$ one MCSE.
-- VI: ELBO $=$ log evidence $-$ KL; mean field shrinks by $0.53$.
+- VI: ELBO $=$ log evidence $-$ KL; mean field shrinks by $0.51$.
+- Logistic posterior at $x=-3$: predictive $0.019$ against plug-in $0.0041$.
+
+::: {.d2l-note}
+The same tools return for other unnormalized distributions: the ELBO trains
+variational autoencoders, importance weights reuse old data in policy
+gradients, and Langevin steps sample diffusion models.
+:::
 
 **Next:** how far an average over a finite sample can be trusted.
 :::

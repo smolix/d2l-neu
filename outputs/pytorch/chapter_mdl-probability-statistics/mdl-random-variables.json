@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.09996  ratio 1.000\nwidth 0.01   probability 0.00993  ratio 0.993\nwidth 0.001  probability 0.00102  ratio 1.018\n"
+          "text": "width 0.1    probability 0.10006  ratio 1.001\nwidth 0.01   probability 0.00994  ratio 0.994\nwidth 0.001  probability 0.00099  ratio 0.990\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.667\n"
+          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.249, naive U 0.499\nmean distance: darts 0.667, sqrt(U) 0.667\n"
         }
       ]
     },
@@ -42,38 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.52\n"
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.49\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 47009,
-          "sha256": "sha256:72319dd2e257fc6b03f4e0b0acba60a86d3a6da52950b2cd51007a3cc1a729fd"
-        }
-      ]
-    },
-    "mdl-random-variables-conditional-expectation": {
-      "code_fingerprint": "sha256:82d2e3080a39cac8f13040c10d6b5e55e3fc8ef6ba9de746c05cfd552bcb8ff3",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Var(X) 3.559 = within 0.998 + between 2.560\n"
-        }
-      ]
-    },
-    "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:1c159376bf97ef43b98ae85d37c26b4e20bbf3e0f091b8ff381d60379c6683c4",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 35661,
-          "sha256": "sha256:924e129a375806fa3a639fbeb22225e99484ba69d61e285129bc4b1d70e872a3"
+          "bytes": 43722,
+          "sha256": "sha256:2d4e145a74c9f95df5d88de8174f104ce76d18c6d9eaee4a2a12ebc956da2348"
         }
       ]
     }

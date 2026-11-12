@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-joint-distributions.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:0b4dca083036f5aa07ff60cd246ee22ebcaf13822d2a1579534c4bd337b9600a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-joint-distributions-joint-distributions-and-transformations-1": {
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-joint-distributions-joint-distributions-and-transformations-2": {
+      "code_fingerprint": "sha256:e009cb2ed24323884ff541d94072c2bf9e0cedc3ed9ddb8601c2428922c438a7",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-random-variables-conditional-expectation": {
+      "code_fingerprint": "sha256:8b650de470bf487a0156ddd551345465c95edbf58f4c59a01708ac9263182f6b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Var(X) 3.564 = within 1.001 + between 2.564\n"
+        }
+      ]
+    },
+    "random-variables-change-of-variables": {
+      "code_fingerprint": "sha256:7450c46e5fe0dd3576e08ecbcb50d31754139fe304040728e79f7da9e6939c55",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-joint-distributions/random-variables-change-of-variables-1.svg",
+          "bytes": 35647,
+          "sha256": "sha256:27f546f2b5df9fc8cea93af1c2f0fe80df73f09b5a06de37de9a257b1e3c965e"
+        }
+      ]
+    }
+  }
+}

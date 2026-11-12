@@ -13,6 +13,10 @@ this section.
 
 ## Probability Models
 
+Three topics continue the sections on distributions: a kind of distribution
+that the chapter's classification misses, the limit of sums that have no
+variance, and a known flaw of the softmax as a model of choice.
+
 ### Distributions Without Atoms or Densities
 
 :numref:`sec_mdl-random_variables` notes that a variable with a density has
@@ -54,12 +58,16 @@ commuter who splits evenly between a car and a red bus should still take
 the car half the time when an identical blue bus is added, but the softmax
 gives each of the three options $\tfrac13$. Letting the noise of similar
 options be correlated (nested logit, or a probit with correlated Gaussian
-noise) keeps the car near $\tfrac12$, at the price of choice probabilities
-that have no closed form. :citet:`McFadden.1974` derived the logit from Gumbel
+noise) keeps the car near $\tfrac12$, but the choice probabilities then
+have no closed form. :citet:`McFadden.1974` derived the logit from Gumbel
 noise and discussed this property, Luce's *independence of irrelevant
 alternatives*, as its main restriction.
 
 ## Estimation and Testing
+
+The intervals and tests of :numref:`sec_mdl-statistics` leaned on a Gaussian
+approximation, on a model for the errors, or on a sample size fixed in
+advance. Each topic here drops one of the three.
 
 ### Better Bootstrap Intervals
 
@@ -109,6 +117,10 @@ always-valid $p$-values that a commercial A/B testing platform adopted.
 
 ## Computing with Posteriors
 
+:numref:`sec_mdl-bayesian-computation` had one Markov chain, the random
+walk, and a posterior with two parameters. These topics are the samplers
+used in practice and what can be done for a network.
+
 ### Gibbs Sampling and Hamiltonian Monte Carlo
 
 Random-walk Metropolis (:numref:`sec_mdl-bayes-mcmc`) needs a proposal scale
@@ -141,6 +153,13 @@ Kronecker-factored block per layer or the Hessian of the last layer alone;
 with more expensive approximations at a small fraction of their cost.
 
 ## Concentration and Learning Theory
+
+The first two topics extend the tools of
+:numref:`sec_mdl-concentration-generalization` and
+:numref:`sec_mdl-generalization-bounds`, to functions that are not averages
+and to older measures of a class. The last two take up the question on which
+the chapter's theory ended: guarantees for the solution an algorithm
+reaches, not for the worst member of its class.
 
 ### Bounded Differences and Lipschitz Functions
 
@@ -197,6 +216,10 @@ or smaller steps
 :cite:`Hardt.Recht.Singer.2016`.
 
 ## Classifiers from Counts
+
+Two topics continue :numref:`sec_mdl-naive_bayes`: probabilities that one
+temperature cannot repair, and a second thing that a generative classifier
+can do and a direct fit cannot, which is to learn from inputs without labels.
 
 ### Calibration Beyond One Temperature
 

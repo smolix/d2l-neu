@@ -47,18 +47,18 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 1: argmax frequencies [0.642 0.233 0.093 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.004\nT = 2: argmax frequencies [0.451 0.275 0.174 0.1  ]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.001\n"
+          "text": "T = 1: argmax frequencies [0.638 0.235 0.095 0.032]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.000\nT = 2: argmax frequencies [0.453 0.274 0.172 0.101]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
         }
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:5d7efba9d4a19b00cf9a91f42a2336bc79d769d5dd10502c0668e778ecef15eb",
+      "code_fingerprint": "sha256:844a8a36e1ba03fa891a99385e36e37662806a14f93998257f09f63d92deb98d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |prior * likelihood - Beta(10,5)| = 2.1e-14\nposterior mean = 0.667, sd = 0.118\n"
+          "text": "Beta(1, 1)   : mean 0.667, sd 0.118, mode 0.692\neta ~ N(0, 1): mean 0.644, sd 0.111, mode 0.665\n"
         }
       ]
     }

@@ -8,7 +8,7 @@ the image. It reached about 83% accuracy, and its probabilities passed a
 reliability check. Gradient descent is not the only way to obtain such
 numbers. We could instead describe how each class produces its images, what
 a typical coat or sandal looks like, and let Bayes' rule turn that
-description into a classifier. Can this be done, and what does it cost?
+description into a classifier. Can this be done, and what do we give up?
 
 The obstacle is size. A description of how coats look must give a
 probability to every possible picture. Even if we record each pixel only as
@@ -28,7 +28,7 @@ Naive Bayes is the simplest *generative* classifier, one built from a model
 of how each class produces its inputs. It is fitted in one pass without an
 optimizer, and it can ignore a missing feature by dropping its factor. Its
 assumption is false for images, as it is for most data, and no other model
-shows as clearly what a false independence assumption costs.
+shows as clearly what a false independence assumption does to a classifier.
 
 This section is the chapter's case study. After the bounds of
 :numref:`sec_mdl-generalization-bounds` the mathematics is light; the work
@@ -83,6 +83,11 @@ d2l.use_svg_display()
 
 ## Bayes' Rule for Classification
 
+There are two ways to arrive at the probability of a label given an input.
+The main text learned it directly. Here we go the long way round, through a
+model of the inputs, find that the long way is impassable as it stands, and
+clear it with the assumption that gives the classifier its name.
+
 ### The Generative Route
 
 A classifier assigns a label $y\in\{1,\ldots,K\}$ to an input $\mathbf x$.
@@ -98,7 +103,7 @@ $784\log_{10}2=236.0$ that is about $10^{236}$. A table of
 $p(y\mid\mathbf x)$ would need a row for every pattern, and 60,000 training
 images fill almost none of them.
 
-Bayes' rule (:numref:`sec_mdl-random_variables`) writes the posterior as
+Bayes' rule (:numref:`sec_mdl-joint-distributions`) writes the posterior as
 $p(y\mid\mathbf x)=p(\mathbf x\mid y)\,p(y)/p(\mathbf x)$. The denominator
 is the same for every class, so it cannot change which class is largest:
 
@@ -171,8 +176,8 @@ $$\hat{y} = \operatorname*{argmax}_y \; p(y) \prod_{i=1}^d p(x_i\mid y).$$
 
 The assumption is false for images. Neighbouring pixels of a garment are
 inked together or blank together, because they belong to the same sleeve or
-the same hem. How false it is, and what the error costs, we measure on
-Fashion-MNIST below.
+the same hem. How false it is, and what the error does to the classifier, we
+measure on Fashion-MNIST below.
 
 ### A Two-Word Spam Filter
 
@@ -354,6 +359,11 @@ for text, which can disagree about the same document.
 
 ## Fashion-MNIST by Counting
 
+A spam filter with two words can be checked by hand. Whether the same
+arithmetic survives 784 features that visibly depend on each other can only
+be tried, and Fashion-MNIST lets us compare the result with a model we
+already trained on the same images.
+
 ### Binary Pixels
 
 Fashion-MNIST :cite:`Xiao.Rasul.Vollgraf.2017` has 60,000 training and 10,000
@@ -524,13 +534,24 @@ W = np.log(P_xy) - np.log1p(-P_xy)              # w_iy, log-odds per pixel
 b = np.log1p(-P_xy).sum(axis=1) + np.log(P_y)   # b_y, score of a blank image
 s = X_test @ W.T + b                            # s_y(x), shape (10000, 10)
 pred = s.argmax(axis=1)
-print(f'test accuracy {(pred == Y_test).mean():.4f}')
+print(f'test accuracy {(pred == Y_test).mean():.4f}, training accuracy '
+      f'{((X @ W.T + b).argmax(axis=1) == Y).mean():.4f}')
 ```
 
 Naive Bayes classifies about 71% of the test images correctly, against 10%
 for guessing. The number does not change from run to run, because
 counting involves no randomness. How precise it is we ask under error bars
 below.
+
+The second number deserves a moment. On the 60,000 images it was fitted to,
+the model is right 72% of the time, one point more than on images it has
+never seen. A model that had memorized its training set would show a large
+gap here; this one has almost none. Its mistakes are therefore not a matter
+of too little data. It is wrong about its own training images in the same
+way, and for the same reason, as about new ones: in the terms of
+:numref:`sec_mdl-statistics`, the error is bias and not variance. More
+images would not help. A better model would, and softmax regression will
+show below that one exists within the same family of classifiers.
 
 The scores also show what the raw product of :eqref:`eq_mdl-naive_bayes`
 would have done. Each score is the natural logarithm of a Bayes numerator, so
@@ -546,7 +567,10 @@ f32 = -149 * np.log(2)     # log of 2**-149, the smallest positive float32
 f64 = -1022 * np.log(2)    # log of 2**-1022, the smallest normal float64
 print(f'images whose best numerator underflows float32: '
       f'{(s.max(axis=1) < f32).mean():.2f}')
-print(f'numerators below the smallest normal float64: {(s < f64).mean():.2f}')
+print(f'numerators below the smallest normal float64: {(s < f64).mean():.2f}, '
+      f'images whose best one is: {(s.max(axis=1) < f64).mean():.4f}')
+print(f'accuracy of the raw float64 product: '
+      f'{(np.exp(s).argmax(axis=1) == Y_test).mean():.4f}')
 ```
 
 The Bayes numerators lie between about $10^{-32}$ and $10^{-1000}$, and the
@@ -555,10 +579,12 @@ even the largest of the ten numerators is below the smallest positive
 single-precision number, so the raw rule would see ten zeros and could not
 classify them at all. In double precision 44% of the numerators fall below
 the smallest normal number, but nearly all of these belong to losing
-classes: the largest numerator stays an ordinary double for all but a
-handful of images. On 784 pixels a double would still classify, with no
-margin for a longer input. The log scores never leave the range of ordinary
-numbers.
+classes. The largest numerator stays an ordinary double for all but three
+images in ten thousand, and the raw product in double precision reaches the
+accuracy of the log scores to within one image in ten thousand. So on 784
+pixels a double still classifies, but only just: the best numerator of a
+typical image is $10^{-81}$, and an input four times as long would push it
+under as well. The log scores never leave the range of ordinary numbers.
 
 ## Evaluating the Classifier
 
@@ -603,31 +629,30 @@ more sensitively than two separate intervals
 ### Confusions and Weights
 
 The error rate says how often the model is wrong; the confusion matrix of
-:numref:`sec_classification` says how. Mind the orientation: the cell
-below puts the true class in the row and the predicted class in the column,
-so it prints the transpose of the matrix $\mathbf N$ of
-:eqref:`eq_confusion-matrix`, whose rows are the predicted classes. Each
-row shows where the 1,000 test images of one garment went.
+:numref:`sec_classification` says how. We count it in the orientation of
+:eqref:`eq_confusion-matrix`: rows are the predicted classes and columns the
+true classes, so each column shows where the 1,000 test images of one
+garment went.
 
 ```{.python .input #mdl-naive-bayes-calibration-2}
 conf = np.zeros((10, 10), dtype=int)
-np.add.at(conf, (Y_test, pred), 1)       # count (true, predicted) pairs
+np.add.at(conf, (pred, Y_test), 1)       # N[i, j]: class j predicted as i
 print(conf)
 ```
 
 A hundred counts are easier to read from their largest entries. We list the
 six largest off-diagonal counts, true class first, and the accuracy of each
-class, its diagonal entry divided by its row sum.
+class, its diagonal entry divided by its column sum.
 
 ```{.python .input #mdl-naive-bayes-confusions-and-weights-1}
 names = data.text_labels(range(10))
 off = conf - np.diag(np.diag(conf))      # errors only
 order = np.argsort(off, axis=None, kind='stable')[::-1][:6]  # largest first
-pairs = [f'{names[t]}->{names[q]} {off[t, q]}'
-         for t, q in zip(*np.unravel_index(order, off.shape))]
+pairs = [f'{names[t]}->{names[q]} {off[q, t]}'  # true -> predicted
+         for q, t in zip(*np.unravel_index(order, off.shape))]
 print(', '.join(pairs[:3]))
 print(', '.join(pairs[3:]))
-print('per-class accuracy:', np.round(np.diag(conf) / conf.sum(axis=1), 2))
+print('per-class accuracy:', np.round(np.diag(conf) / conf.sum(axis=0), 2))
 ```
 
 The errors are concentrated. Coats are taken for pullovers 372 times and
@@ -637,7 +662,7 @@ t-shirts more than 200 times each; sandals for sneakers 232 times. Trousers
 These are the two groups that softmax regression confused in
 :numref:`sec_softmax_scratch`, the four upper-body garments and the three
 kinds of shoes, but the counted model does much worse inside the first:
-there shirts were recognized 40% to 70% of the time, here one time in six.
+there shirts were recognized 40% to 60% of the time, here one time in six.
 
 Is this the best a linear classifier can do on these pixels? Softmax
 regression draws hyperplanes of the same family, but chooses them by
@@ -659,7 +684,7 @@ for epoch in range(20):                  # minibatches of 256 images
         b_sr -= 0.05 * G.mean(axis=0)
 pred_sr = (X_test @ W_sr.T + b_sr).argmax(axis=1)
 conf_sr = np.zeros((10, 10), dtype=int)
-np.add.at(conf_sr, (Y_test, pred_sr), 1)
+np.add.at(conf_sr, (pred_sr, Y_test), 1)
 print(f'accuracy: softmax regression {(pred_sr == Y_test).mean():.3f}, '
       f'naive Bayes {(pred == Y_test).mean():.3f}')
 print('pullover<->coat errors: softmax regression',
@@ -1200,11 +1225,13 @@ separately is enough; the ranking survives, the stated probabilities do not.
 ::: {.col}
 | section | adds |
 |---|---|
-| Random Variables | densities, moments, covariance |
-| Distributions | the named laws and their losses |
+| Random Variables | densities, moments, tail bounds |
+| Joint Distributions | conditioning, covariance, change of variables |
+| Distributions | the named distributions and their losses |
 | The Exponential Family | one form, convex fits, conjugacy |
 | Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP, EM |
+| Maximum Likelihood | losses, Fisher information, MAP |
+| Latent Variables and EM | the ELBO, EM |
 | Bayesian Computation | averaging over a posterior |
 | Concentration Inequalities | exponential tails of averages |
 | Uniform Convergence | guarantees after selection |
@@ -1319,8 +1346,9 @@ b_y=\log p(y)+\sum_i\log(1-\theta_{iy}).$$
 - Each inked pixel adds its log-odds; $b_y$ scores the blank image.
 
 ::: {.d2l-note}
-Same family and same 7,850 numbers as softmax regression, chosen by counting
-instead of gradient descent.
+The same family as softmax regression, with arrays of the same shapes
+($784\times10$ weights, $10$ offsets), chosen by counting instead of gradient
+descent.
 :::
 :::
 
@@ -1377,9 +1405,11 @@ $s=\mathbf X\mathbf W^\top+\mathbf b$, one matrix product for all images:
 
 - Binomial: $\sqrt{0.706\cdot0.294/10^4}=0.0046$, times $1.96$ is $0.009$.
 - The digits after the decimal point of 70.59% are noise.
+- Training accuracy 72%, one point above: the errors are bias, not too
+  little data.
 :::
 
-::: {.slide title="Same 7,850 Numbers, Fitted Directly: Higher or Lower?"}
+::: {.slide title="The Same Hyperplanes, Fitted Directly: Higher or Lower?"}
 [Check]{.kicker}
 
 Softmax regression uses the same hyperplanes on the same binary pixels, but
@@ -1390,12 +1420,15 @@ and by how much?
 
 @!mdl-naive-bayes-confusions-and-weights-2
 
-- About twelve points higher: the family of lines is not the limit.
-- Naive Bayes weights each pixel as independent evidence.
+- About twelve points higher: the family of hyperplanes is not the limit.
+- The loss lies in how counting sets the weights.
 :::
 
 ::: {.slide title="Errors Sit Among Upper-Body Garments and Among Shoes"}
 [Confusions]{.kicker}
+
+Confusion matrix $N_{ij}$: class $j$ predicted as $i$ (rows predicted,
+columns true). Its largest errors, written true $\to$ predicted:
 
 @!mdl-naive-bayes-confusions-and-weights-1
 
@@ -1433,7 +1466,7 @@ Confidence = largest softmax of the scores. Bin by confidence, compare with accu
 :::
 
 ::: {.slide title="Duplicated Evidence Multiplies the Log-Odds"}
-[Proposition]{.kicker}
+[Overconfidence]{.kicker}
 
 Two classes, priors $\pi_0,\pi_1$; one feature $x$ with likelihood ratio
 $r(x)=p(x\mid1)/p(x\mid0)$, stored $k$ times.
@@ -1441,7 +1474,7 @@ $r(x)=p(x\mid1)/p(x\mid0)$, stored $k$ times.
 $$\log\text{odds}_{\text{naive}}=\log\frac{\pi_1}{\pi_0}+k\log r(x)
 \quad\text{against}\quad\log\frac{\pi_1}{\pi_0}+\log r(x).$$
 
-- **Proof:** the copies agree, so the truth uses $p(x\mid y)$; the model uses $p(x\mid y)^k$.
+- **Why:** the copies agree, so the truth uses $p(x\mid y)$; the model uses $p(x\mid y)^k$.
 - Equal priors: same prediction for every $k$, claimed confidence $\bar r^k/(1+\bar r^k)$, $\bar r=\max(r,1/r)$.
 - Unequal priors: prior odds $1/5$, $r=4$: one copy says class 0, two say class 1.
 :::
@@ -1460,12 +1493,12 @@ what do 784 correlated pixels do?
 - $e^{-60}\approx10^{-26}$: the softmax returns 0 or 1.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Counting Ranks the Classes Usefully and Overstates Its Confidence"}
 [Wrap-up]{.kicker}
 
 - Naive assumption: $2^{784}-1$ probabilities per class become 784 counts.
 - Spam filter by hand: odds $\tfrac23\times4.5\times3=9$, posterior 0.90.
-- Log scores are affine: a linear classifier with 7,850 parameters.
+- Log scores are affine: a linear classifier, $784\times10$ weights and $10$ offsets.
 - Fashion-MNIST: about $71\%\pm0.9$; the same lines fitted directly, about 83%.
 - Claimed 99% against 71% achieved: $k$ copies multiply the log-odds by $k$.
 

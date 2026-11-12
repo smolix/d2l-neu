@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
+    "d2l_lib_fingerprint": "sha256:0afdcc92b4a50982bd9a5fa2d23dd020f1407b5c53a2a5ceb5e59ae28cc9db7b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best of 1000 coins: median 0.66, 90% of experiments in [0.64, 0.69]\n95% half-width: one coin 0.136, all 1000 coins 0.230\nexperiments in which the best coin leaves the one-coin band: 97%\n"
+          "text": "best of 1000 coins: median 0.66, 90% of experiments in [0.64, 0.69]\n95% half-width: one coin 0.136, all 1000 coins 0.230\nexperiments in which the best coin leaves the one-coin band: 96%\n"
         }
       ]
     },
@@ -36,47 +36,47 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: Monte-Carlo R_S = 0.127, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.139, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
+          "text": "d =    2: Monte-Carlo R_S = 0.124, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
         }
       ]
     },
     "mdl-generalization-bounds-rademacher-complexity-in-numbers-1": {
-      "code_fingerprint": "sha256:5990fb0f2f1ceb1544788f2040a1373f0cb1fb3f78d0a07534085cd61ea79c0d",
+      "code_fingerprint": "sha256:4fecd5a4673d5631b3c464302d083d309595e21cf50b66e1757ed33456998778",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean ||w|| = 0.99 (predicted 1.01), largest 1.35\nr = 11.6, B r / sqrt(n) with B = largest ||w||: 2.2\n"
+          "text": "mean ||w|| = 0.96 (predicted 1.01), largest 1.41\ntypical fit: mean ||w|| * mean row norm / sqrt(n) = 1.38\nr = 12.0, B r / sqrt(n) with B = largest ||w||: 2.4\n"
         }
       ]
     },
     "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
-      "code_fingerprint": "sha256:43bd76dd345631cbc769354f182e3d3ee58f06ac0a50074ada84ce089f31b561",
+      "code_fingerprint": "sha256:11fe983e5151f521e33ae7dcb8e40904dc688c5c6f25d7f18acad08c14bc54cb",
       "kind": "text",
       "outputs": []
     },
     "mdl-generalization-bounds-a-double-descent-sweep-1": {
-      "code_fingerprint": "sha256:473a11b5878774c3f5ff03b36c8ae2a57cdc4132ca8ee488d05e9f233aca8cc1",
+      "code_fingerprint": "sha256:f5c85de1eec21149b20fb1a3833eb93d0e5c63e57b111c1ebc5a8518d4a57b7d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
-          "bytes": 38273,
-          "sha256": "sha256:a65c3c0ad8501bb522b411d3665fcf016bcd85b318fa765373d1b0adfa03e030"
+          "bytes": 38262,
+          "sha256": "sha256:3ed4a4db9ed2d1f3a9e30bffcde34ee7c1a5426357cf81fb41722bdf53f8d888"
         }
       ]
     },
     "mdl-generalization-bounds-a-double-descent-sweep-2": {
-      "code_fingerprint": "sha256:4c26df759f933be062f14a74be1fd58ffad5bab4dcb4746fbeb0b31b0e25381a",
+      "code_fingerprint": "sha256:0a4998c9d08e3b627df3e8ea003166f17af82a507008edc24c78846a36539833",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.78     0.28      1.8     0.88      1.4     0.73   0.0066\n  38      2.3    0.008      4.3     0.09      4.6      2.2     0.28\n  40       17  8.7e-29       14    0.026       14       17      1.8\n  42      3.5  2.5e-29      5.8    0.087      6.8      2.8     0.24\n  50     0.62  1.2e-29      2.4     0.27      2.9     0.51    0.064\n  80     0.19  1.3e-29      1.2     0.72      1.8     0.17    0.021\n 400    0.049    1e-29     0.39      2.8      1.2    0.044   0.0094\n"
+          "text": "   p     test    train     norm    s_min capacity    clean    noise  ratio_q    ratio\n  15     0.79     0.27      2.2     0.87      1.6     0.76   0.0068      4.6      1.8\n  38      3.6   0.0027      6.3    0.078      6.3      3.5     0.26  5.8e+02       27\n  40      4.6  4.5e-29      7.3    0.029      7.8        8      1.5  4.4e+03  1.5e+02\n  42      1.8  1.6e-29      4.5    0.087      5.1        2     0.24  4.7e+02       24\n  50     0.54  1.1e-29      2.3     0.26      2.9     0.56    0.061       60      6.1\n  80     0.22    5e-30      1.1     0.71      1.8     0.19    0.021      9.9      2.1\n 400    0.058  7.5e-30     0.39      2.7      1.3    0.049   0.0099      2.1     0.99\nleast squares on the 15 raw inputs: test MSE 0.0048\n"
         }
       ]
     }

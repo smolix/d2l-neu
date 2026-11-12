@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-latent-em-elbo.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:89189f53f639fd2ba7770337b9ed0eafc574d183abcd4391d45e1305bda89290",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-latent-em-elbo-latent-variables-em-and-the-elbo": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "maximum-likelihood-em-gmm": {
+      "code_fingerprint": "sha256:b6ee12a3d6d377876271c4976b937348bff65fe7988ac7020723fce4e2e82ecd",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-maximum-likelihood-expectation-maximization-1": {
+      "code_fingerprint": "sha256:0a2d29b0dbfa5ce59bfdb8dbc8810de08d08e0a8b21828883c0b7f885900df6d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "steps 0-5: [-1297.4  -990.5  -950.9  -887.6  -859.8  -857.3]  step 29: -857.1\npi = [0.6 0.4], mu = [-2.06  1.49], sigma = [0.78 0.58]\n"
+        }
+      ]
+    },
+    "mdl-maximum-likelihood-expectation-maximization-2": {
+      "code_fingerprint": "sha256:5f724ac3ac79aa847c0d93675710b4ec9671dc319dc2c16c1931f648cea05ccf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "log-likelihood -1436.5 -> -1023.9, 166.7 below the previous fit\npi = [0.5 0.5], mu = [-0.63 -0.63], sigma = [1.88 1.88]\nmean of x = -0.63, standard deviation of x = 1.88\n"
+        }
+      ]
+    }
+  }
+}

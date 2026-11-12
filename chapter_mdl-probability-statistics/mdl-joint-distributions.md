@@ -929,6 +929,8 @@ they become two independent variables.
        $(Z_1, Z_2)$ is close to the identity.
    :exlabel:`ex_mdl-random-variables-affine-coupling`
 
+[Discussions](https://d2l.discourse.group/t/36880)
+
 <!-- slides -->
 
 ::: {.slide}

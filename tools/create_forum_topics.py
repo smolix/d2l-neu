@@ -10,6 +10,8 @@ Needs an admin API key in ~/.config/d2l/discourse.env (DISCOURSE_API_KEY=...).
 
     python3 tools/create_forum_topics.py          # dry run: list pages
     python3 tools/create_forum_topics.py --create # create topics, insert links
+    python3 tools/create_forum_topics.py --create --files a.md b.md
+                                                  # only these pages
 """
 import json
 import os
@@ -64,6 +66,13 @@ def insert_link(path, topic_id):
 
 def main():
     todo = list(pages_without_link())
+    if '--files' in sys.argv:
+        wanted = set(a for a in sys.argv[sys.argv.index('--files') + 1:]
+                     if not a.startswith('--'))
+        unknown = wanted - {path for path, _ in todo}
+        if unknown:
+            sys.exit(f'not in the book or already linked: {sorted(unknown)}')
+        todo = [(path, title) for path, title in todo if path in wanted]
     if '--create' not in sys.argv:
         for path, title in todo:
             print(f'{path:70s} {title}')

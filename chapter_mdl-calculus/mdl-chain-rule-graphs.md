@@ -463,6 +463,8 @@ derivative alone, so a loss with many inputs is differentiated backward.
        values of $h$?
    :exlabel:`ex_mdl-multivariable-calculus-gradient-check`
 
+[Discussions](https://d2l.discourse.group/t/36877)
+
 <!-- slides -->
 
 ::: {.slide}

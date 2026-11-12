@@ -687,6 +687,8 @@ adjusts the bound accordingly.
        the gradient does not see.
    :exlabel:`ex_mdl-gradient-based-optimization-trust-region-saddle`
 
+[Discussions](https://d2l.discourse.group/t/36879)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -839,6 +839,8 @@ close to $2\sqrt n$.
        :numref:`subsec_mdl-jacobian-products`?
    :exlabel:`ex_mdl-eigendecomposition-lyapunov-random-products`
 
+[Discussions](https://d2l.discourse.group/t/36876)
+
 <!-- slides -->
 
 ::: {.slide}

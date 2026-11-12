@@ -974,17 +974,17 @@ divided into $c_i$, so any noise in $\mathbf{b}$ along $\mathbf{u}_i$ is
 multiplied by $1/\sigma_i$.
 
 Two remedies damp these components. *Ridge regression* minimizes
-$\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2+\gamma\|\mathbf{x}\|^2$ with
-$\gamma>0$ and has the solution
-$\mathbf{x}_\gamma=(\mathbf{A}^\top\mathbf{A}+\gamma\mathbf{I})^{-1}\mathbf{A}^\top\mathbf{b}$.
+$\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2+\lambda\|\mathbf{x}\|^2$ with
+$\lambda>0$ and has the solution
+$\mathbf{x}_\lambda=(\mathbf{A}^\top\mathbf{A}+\lambda\mathbf{I})^{-1}\mathbf{A}^\top\mathbf{b}$.
 The *truncated pseudoinverse* solution $\mathbf{x}_k$ keeps only the first
 $k$ singular components of $\mathbf{A}^{+}\mathbf{b}$. Inserting the SVD,
 with
-$\mathbf{A}^\top\mathbf{A}+\gamma\mathbf{I}=\mathbf{V}(\boldsymbol{\Sigma}^\top\boldsymbol{\Sigma}+\gamma\mathbf{I})\mathbf{V}^\top$,
+$\mathbf{A}^\top\mathbf{A}+\lambda\mathbf{I}=\mathbf{V}(\boldsymbol{\Sigma}^\top\boldsymbol{\Sigma}+\lambda\mathbf{I})\mathbf{V}^\top$,
 the two solutions read
 
 $$
-\mathbf{x}_\gamma = \sum_{i\le r}\frac{\sigma_i^2}{\sigma_i^2+\gamma}\,
+\mathbf{x}_\lambda = \sum_{i\le r}\frac{\sigma_i^2}{\sigma_i^2+\lambda}\,
    \frac{\mathbf{u}_i^\top\mathbf{b}}{\sigma_i}\,\mathbf{v}_i,
 \qquad
 \mathbf{x}_k = \sum_{i\le k}\frac{\mathbf{u}_i^\top\mathbf{b}}{\sigma_i}\,\mathbf{v}_i .
@@ -993,9 +993,9 @@ $$
 
 Both start from the components $\mathbf{u}_i^\top\mathbf{b}/\sigma_i$ of the
 pseudoinverse solution. Ridge multiplies component $i$ by the filter factor
-$\sigma_i^2/(\sigma_i^2+\gamma)$, which is close to 1 for large $\sigma_i$ and
+$\sigma_i^2/(\sigma_i^2+\lambda)$, which is close to 1 for large $\sigma_i$ and
 close to 0 for small ones; truncation multiplies it by exactly 1 or 0. At
-$\gamma=1$, singular values $3$, $1$ and $0.3$ get the factors $0.9$, $0.5$ and
+$\lambda=1$, singular values $3$, $1$ and $0.3$ get the factors $0.9$, $0.5$ and
 $0.083$. For a linear model with squared loss, the weight decay of
 :numref:`sec_weight_decay` is ridge regression, and the filter factors show
 which directions it shrinks.
@@ -1555,8 +1555,8 @@ the Lipschitz constant that spectral normalization controls.
    infinitely many minimizers. Part (a) holds for every shape and rank;
    (b) and (c) use $\mathbf{A}\in\mathbb{R}^{m\times n}$ with $m < n$.
     1. Use the filter form :eqref:`eq_mdl-ridge-filter` to show that
-       $(\mathbf{A}^\top\mathbf{A}+\gamma\mathbf{I})^{-1}\mathbf{A}^\top\to\mathbf{A}^{+}$
-       as $\gamma\to0^{+}$, for a matrix $\mathbf{A}$ of any shape and
+       $(\mathbf{A}^\top\mathbf{A}+\lambda\mathbf{I})^{-1}\mathbf{A}^\top\to\mathbf{A}^{+}$
+       as $\lambda\to0^{+}$, for a matrix $\mathbf{A}$ of any shape and
        rank. Why does $(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$ not
        exist when $m<n$?
     1. Gradient descent on $\tfrac12\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2$
@@ -1730,20 +1730,20 @@ the Lipschitz constant that spectral normalization controls.
    $\|\mathbf{Z}\|_* = \sum_i\sigma_i(\mathbf{Z})$, the convex stand-in for
    rank :cite:`Candes.Recht.2009`, much as the $\ell_1$ norm stands in for
    sparsity. Soft-Impute :cite:`Mazumder.Hastie.Tibshirani.2010` minimizes
-   $\tfrac12\sum_{(i,j)\in\Omega}(Z_{ij}-B_{ij})^2+\gamma\|\mathbf{Z}\|_*$.
+   $\tfrac12\sum_{(i,j)\in\Omega}(Z_{ij}-B_{ij})^2+\lambda\|\mathbf{Z}\|_*$.
     1. Let $\mathbf{Y} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. Show
-       that $\tfrac12\|\mathbf{Z}-\mathbf{Y}\|_F^2+\gamma\|\mathbf{Z}\|_*$ is
+       that $\tfrac12\|\mathbf{Z}-\mathbf{Y}\|_F^2+\lambda\|\mathbf{Z}\|_*$ is
        minimized by
-       $S_\gamma(\mathbf{Y}) = \mathbf{U}\max(\boldsymbol{\Sigma}-\gamma\mathbf{I}, \mathbf{0})\mathbf{V}^\top$,
+       $S_\lambda(\mathbf{Y}) = \mathbf{U}\max(\boldsymbol{\Sigma}-\lambda\mathbf{I}, \mathbf{0})\mathbf{V}^\top$,
        with the maximum taken entrywise on the diagonal. Use von Neumann's
        trace inequality
        $\operatorname{tr}(\mathbf{Z}^\top\mathbf{Y})\le\sum_i\sigma_i(\mathbf{Z})\sigma_i(\mathbf{Y})$
        :cite:`Horn.Johnson.2012`.
     1. Let $P_\Omega$ keep the observed entries of a matrix and set the others
        to zero, and let $P_\Omega^\perp$ do the opposite. Soft-Impute iterates
-       $\mathbf{Z}\leftarrow S_\gamma\bigl(P_\Omega(\mathbf{B})+P_\Omega^\perp(\mathbf{Z})\bigr)$.
-       Implement it for a decreasing sequence of $\gamma$ that ends near
-       $10^{-4}\,\sigma_1(P_\Omega(\mathbf{B}))$, starting each $\gamma$ from
+       $\mathbf{Z}\leftarrow S_\lambda\bigl(P_\Omega(\mathbf{B})+P_\Omega^\perp(\mathbf{Z})\bigr)$.
+       Implement it for a decreasing sequence of $\lambda$ that ends near
+       $10^{-4}\,\sigma_1(P_\Omega(\mathbf{B}))$, starting each $\lambda$ from
        the solution for the previous one.
     1. Take $n = 100$, $\mathbf{B} = \mathbf{X}\mathbf{Y}^\top$ with
        Gaussian $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{n\times r}$ for

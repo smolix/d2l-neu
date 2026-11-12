@@ -137,12 +137,13 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
                    for m in prompts]
     ids, labels = _label_token_ids(tokenizer, prompts, label_words, sep)
     if not chat:  # as d2l.generate: a plain prompt gets the BOS, if any
-        head = _lm_bos_ids(tokenizer)  # and never an EOS
+        head = d2l._lm_bos_ids(tokenizer)  # and never an EOS
         ids = [head + r for r in ids]
     if not all(ids):
         raise ValueError('an empty prompt has no position to predict from')
     hf = sys.modules.get('transformers')
-    hf = hf is not None and isinstance(_lm_unwrap(model), hf.PreTrainedModel)
+    hf = hf is not None and isinstance(d2l._lm_unwrap(model),
+                                       hf.PreTrainedModel)
     if hf:  # one padded group, in input order
         groups = [list(range(len(ids)))]
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
@@ -168,7 +169,7 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
             else:
                 X = torch.tensor([ids[i] for i in rows], device=device)
                 z = (model(X, logits_to_keep=1) if isinstance(
-                    _lm_unwrap(model), d2l.Qwen3GPT) else model(X))[:, -1]
+                    d2l._lm_unwrap(model), d2l.Qwen3GPT) else model(X))[:, -1]
             lab = torch.tensor([labels[i] for i in rows], device=z.device)
             lp = z.gather(-1, lab).float().log_softmax(-1).cpu()
         out[rows] = lp  # out is an ordinary tensor the caller may modify

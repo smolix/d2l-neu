@@ -265,7 +265,7 @@ def fig_hub_repo():
     sw_ = tw(sha, fs) + 16
     f.rect(sx, 24 - 11, sw_, 22, fill=T.PAPER, stroke=T.MUTED, sw=T.SW_HAIR,
            r=11)
-    f.text(sx + sw_ / 2, 24, [mono(sha)], size=fs, color=T.MUTED)
+    f.text(sx + sw_ / 2, 24, [mono(sha)], size=fs, color=T.INK)
 
     # readers, inside the library panel; the model code below from_pretrained
     xm = pw + 26                       # merge column of the connectors
@@ -292,7 +292,7 @@ def fig_hub_repo():
     underlay(f, lambda g: g.rect(lx0, 0, lib_x1 - lx0, ph, fill="none",
                                  stroke=T.FAINT, sw=T.SW_HAIR, r=T.R_PANEL,
                                  dash=T.DASH_SOFT))
-    f.text(lx0 + 18, 24, "LIBRARY", size=T.FS_TINY, color=T.MUTED,
+    f.text(lx0 + 18, 24, "LIBRARY", size=T.FS_TINY, color=T.INK,
            anchor="start", tracking=T.LETTERSPACE_CAPS)
 
     # file -> reader connectors (rectilinear, merged per reader)
@@ -413,7 +413,7 @@ def fig_layer_layout():
             _cache_glyph(f, x, bus_y + 6, k)
     for i in (0, first_shared - 1, first_shared, n - 1):
         f.text(x0 + i * pitch + SQ / 2, bus_y + 54, str(i), size=T.FS_MIN,
-               color=T.MUTED)
+               color=T.INK)
     # KV sharing: layers 15-34 read the K/V of the last earlier layer of
     # their type (13 for sliding, 14 for full)
     last = {}
@@ -529,18 +529,18 @@ def fig_weight_map():
                                  fill=T.PANEL, stroke="none", sw=0,
                                  r=T.R_PANEL))
     f.text(xl, p_top + 14, [mono("model.layers.{i}.")], size=fs,
-           color=T.MUTED, anchor="start")
-    f.text(xr, p_top + 14, [mono("blks.{i}.")], size=fs, color=T.MUTED,
+           color=T.INK, anchor="start")
+    f.text(xr, p_top + 14, [mono("blks.{i}.")], size=fs, color=T.INK,
            anchor="start")
-    f.text(xl, 8, "TRANSFORMERS CHECKPOINT", size=T.FS_TINY, color=T.MUTED,
+    f.text(xl, 8, "TRANSFORMERS CHECKPOINT", size=T.FS_TINY, color=T.INK,
            anchor="start", tracking=T.LETTERSPACE_CAPS)
-    f.text(xr - 10, 8, [mono("d2l.Qwen3GPT", T.MUTED)], size=fs,
+    f.text(xr - 10, 8, [mono("d2l.Qwen3GPT", T.INK)], size=fs,
            anchor="start")
     prev_group = None
     for i, (name, _shape, book, perm, group) in enumerate(rows):
         y = ys[i]
-        grey = book is None
-        col = T.FAINT if grey else T.INK
+        dropped = book is None
+        col = T.INK
         x = xl + (ind if group else 0)
         lname = name
         if group == "A":
@@ -556,11 +556,11 @@ def fig_weight_map():
             spans = ([mono(pre + ".", col)] if pre else []) + [
                 mono(last, ATTN.dark if perm else col)]
             f.text(x, y, spans, size=fs, anchor="start")
-        f.text(xshape, y, [mono(shp[i], T.MUTED if not grey else T.FAINT)],
+        f.text(xshape, y, [mono(shp[i], T.INK)],
                size=fs, anchor="end")
-        if grey:
+        if dropped:
             f.text(xc0 + 4, y, "copy of embed_tokens, dropped",
-                   size=fs, color=T.MUTED, anchor="start")
+                   size=fs, color=T.INK, anchor="start")
         else:
             bx = xr + (ind if group else 0)
             if group == "A":
@@ -677,7 +677,7 @@ def token_box(f, x, cy, tok, tid=None, *, style="text", size=T.FS_SMALL,
     f.text(x + w / 2, cy, spans, size=size)
     if tid is not None:
         f.text(x + w / 2, cy + id_dy, [mono(str(tid))], size=ID_FS,
-               color=T.MUTED)
+               color=T.INK)
     return w
 
 
@@ -702,7 +702,7 @@ def fig_chat_template():
     fs = T.FS_SMALL
     pitch = 60.0
     y = 30.0
-    f.text(0, 0, "CHAT LAYOUT", size=T.FS_TINY, color=T.MUTED,
+    f.text(0, 0, "CHAT LAYOUT", size=T.FS_TINY, color=T.INK,
            anchor="start", tracking=T.LETTERSPACE_CAPS)
     exts = []
     for r, toks in enumerate(CHAT_ROWS):
@@ -727,14 +727,14 @@ def fig_chat_template():
     for k, (word, tid) in enumerate(CHAT_LABELS):
         yy = y3 + (k - 1) * 19
         on = word == "Sports"
-        f.text(sx, yy, [mono(word, T.INK if on else T.MUTED)], size=fs,
+        f.text(sx, yy, [mono(word, T.INK)], size=fs,
                anchor="start")
-        f.text(sx + 112, yy, [mono(str(tid), T.INK if on else T.MUTED)],
+        f.text(sx + 112, yy, [mono(str(tid), T.INK)],
                size=fs, anchor="end")
     f.leader(sx - 6, y3, nx + w + 4, y3)
     # plain layout
     y4 = yb + 76
-    f.text(0, y4 - 30, "PLAIN LAYOUT", size=T.FS_TINY, color=T.MUTED,
+    f.text(0, y4 - 30, "PLAIN LAYOUT", size=T.FS_TINY, color=T.INK,
            anchor="start", tracking=T.LETTERSPACE_CAPS)
     x = 0.0
     f.text(x + 10, y4, "…", size=T.FS_LABEL)
@@ -794,7 +794,7 @@ def fig_scoring_conventions():
         ph = 12 + 6 + (len(lines) - 1) * lh + 18
         f.text(x, 6, f"({'abc'[k]})", size=T.FS_LABEL, anchor="start")
         if k == 2:
-            f.text(x + 34, 6, "USER TURN", size=T.FS_TINY, color=T.MUTED,
+            f.text(x + 34, 6, "USER TURN", size=T.FS_TINY, color=T.INK,
                    anchor="start", tracking=T.LETTERSPACE_CAPS)
         _text_panel(f, x, y_p, cw, ph, lines, lh=lh)
         y_rs.append(y_p + ph + 26)   # first continuation row of the column
@@ -835,7 +835,7 @@ def fig_scoring_conventions():
     # (c) generative: a reply, the extracted span, the comparison
     x = xs[2]
     y_r = y_rs[2]
-    f.text(x, y_r - 12, "MODEL REPLY", size=T.FS_TINY, color=T.MUTED,
+    f.text(x, y_r - 12, "MODEL REPLY", size=T.FS_TINY, color=T.INK,
            anchor="start", tracking=T.LETTERSPACE_CAPS)
     reply = ["Plants take in carbon", "dioxide from the air,", "so the answer is"]
     rh = 12 + 6 + len(reply) * lh + 14
@@ -883,14 +883,14 @@ def fig_benchmark_lifecycle():
         return lo + (hi - lo) / (1 + np.exp(-(t - t0) / w))
 
     t = np.linspace(0, 10, 400)
-    ceiling, human, shift = 95.0, 70.0, 11.0
-    public = s_curve(t, 22, 91, 3.2, 0.55)
+    ceiling, human, shift = 95.0, 70.0, 14.0
+    public = s_curve(t, 25, 91, 3.2, 0.55)
     fresh = public - shift
     t_rep = t[t >= 5.6]
     repl = s_curve(t_rep, 14, 86, 8.6, 0.6)
     t_of = t[t >= 3.0]
-    overfit = (s_curve(t_of, 22, 91, 3.2, 0.55) - shift
-               - 22 * (1 - np.exp(-(t_of - 3.0) / 1.2)))
+    overfit = (s_curve(t_of, 25, 91, 3.2, 0.55) - shift
+               - 19 * (1 - np.exp(-(t_of - 3.0) / 1.2)))
     t_hum = t[t <= 6.4]                   # the public benchmark's era
 
     fig, ax = plt.subplots(figsize=(7.2, 4.0))
@@ -916,7 +916,7 @@ def fig_benchmark_lifecycle():
             va="top", color=T.INK, **kw)
     ax.text(0.1, human + 1.5, "human baseline", ha="left", va="bottom",
             color=T.INK, **kw)
-    ax.text(0.15, 33, "public test set", ha="left", va="bottom",
+    ax.text(0.15, 36, "public test set", ha="left", va="bottom",
             color=T.BLUE.dark, **kw)
     ax.text(0.15, 9.5, "fresh test set", ha="left", va="top",
             color=T.BLUE.dark, **kw)
@@ -966,7 +966,7 @@ def fig_patching():
     NW, BW = 64.0, 150.0
     y_in, y_out = 410.0, 24.0
     f.arrow(SX, y_in, SX, y_out, stroke=STREAM.base, sw=T.SW_HEAVY)
-    f.text(SX, y_in + 16, "block input", size=fs, color=T.MUTED)
+    f.text(SX, y_in + 16, "block input", size=fs, color=T.INK)
 
     def sublayer(y_read, boxes, y_add, accent):
         _, ny, _, _ = f.block(BC, y_read, "norm", min_w=NW, size=fs)
@@ -1027,9 +1027,9 @@ def fig_patching():
     grid(gx_cor, PATCH_CORRUPT, "corrupted run", " Rome", False)
     grid(gx_cln, PATCH_CLEAN, "clean run", " Paris", True)
     # block axis left of the corrupted grid
-    f.text(gx_cor - 7, gy + c / 2, "27", size=T.FS_MIN, color=T.MUTED,
+    f.text(gx_cor - 7, gy + c / 2, "27", size=T.FS_MIN, color=T.INK,
            anchor="end")
-    f.text(gx_cor - 7, g_bot - c / 2, "0", size=T.FS_MIN, color=T.MUTED,
+    f.text(gx_cor - 7, g_bot - c / 2, "0", size=T.FS_MIN, color=T.INK,
            anchor="end")
     rot_text(f, gx_cor - 30, gy + n_rows * c / 2, "block", size=fs,
              anchor="middle")
@@ -1105,7 +1105,7 @@ def fig_sae_splice():
     f.line(SX, y_bot, SX, y_tap, stroke=STREAM.base, sw=T.SW_HEAVY)
     f.arrow(SX, y_add - 11, SX, y_top, stroke=STREAM.base, sw=T.SW_HEAVY)
     f.text(SX, y_bot + 16, "residual stream, block 14", size=fs,
-           color=T.MUTED)
+           color=T.INK)
     f.circle(SX, y_tap, 4.5, fill=STREAM.base, stroke="none", sw=0)
     f.text(SX - 12, y_tap, [Span("x", "b")], size=T.FS_LABEL, anchor="end")
     # the error term: dashed side branch from the tap to the splice
@@ -1114,7 +1114,7 @@ def fig_sae_splice():
     ym = (y_tap + y_add) / 2
     math_text(f, SX - 12, ym - 10, [Span("error "), Span("x", "b"),
                                     Span(" − "), "XHAT"], anchor="end")
-    f.text(SX - 12, ym + 10, "(kept or dropped)", size=fs, color=T.MUTED,
+    f.text(SX - 12, ym + 10, "(kept or dropped)", size=fs, color=T.INK,
            anchor="end")
     f.pill_op(SX, y_add, "+", r=11)
     # encoder -> features -> decoder, to the right of the stream

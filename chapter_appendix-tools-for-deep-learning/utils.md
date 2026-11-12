@@ -261,6 +261,70 @@ def show_trace_2d(f, results):  #@save
         d2l.plt.gca().set_aspect('equal')
 ```
 
+`plot_intervals` draws estimates with their intervals, such as accuracies
+with bootstrap bars. `series` maps a label to three sequences as long as `x`:
+the estimates and the lower and upper ends of their intervals; a `nan` leaves
+a point out. With `kind='errorbar'` each estimate is a marker with a bar,
+and the series sit side by side at each `x` so that no bar hides another;
+with `kind='band'` each series is a line with a shaded band. `x` holds
+numbers or category names. `reference` draws a dashed horizontal line, such
+as chance accuracy or zero, and `xscale` takes `'linear'`, `'log'` or
+`'log2'`. Series $i$ is drawn in color `Ci`, and the function returns the
+axes, so that a caller can add matching lines.
+
+```{.python .input #utils-plot-intervals}
+%%tab pytorch
+#@save
+def plot_intervals(x, series, xlabel, ylabel, *, kind='errorbar',
+                   reference=None, xscale='linear', axes=None):
+    """Estimates with intervals: `series` maps a label to (mean, lo, hi)."""
+    if kind not in ('errorbar', 'band') or xscale not in ('linear', 'log',
+                                                          'log2'):
+        raise ValueError(f'unknown kind {kind!r} or xscale {xscale!r}')
+    x = np.asarray(x)
+    categorical = not np.issubdtype(x.dtype, np.number)
+    pos = np.arange(len(x), dtype=float) if categorical else x.astype(float)
+    logx = xscale != 'linear' and not categorical
+    # Side-by-side offsets, in the units in which the x-axis is even
+    to_axis, from_axis = (np.log, np.exp) if logx else (np.asarray,) * 2
+    gaps = np.diff(np.unique(to_axis(pos)))
+    width = 0.6 * (gaps.min() if len(gaps) else 1.0) / len(series)
+    if axes is None:
+        d2l.set_figsize()
+        axes = d2l.plt.gca()
+    for i, (label, (mean, lo, hi)) in enumerate(series.items()):
+        mean, lo, hi = (np.asarray(v, dtype=float) for v in (mean, lo, hi))
+        if not mean.shape == lo.shape == hi.shape == pos.shape:
+            raise ValueError(f'{label}: mean, lo and hi need {len(pos)} '
+                             'values each')
+        err = np.stack([mean - lo, hi - mean])
+        if np.any(err < -1e-9):  # nan (a missing point) passes
+            raise ValueError(f'{label}: an interval misses its estimate')
+        color = f'C{i % 10}'
+        if kind == 'band':
+            axes.plot(pos, mean, '-', color=color, label=label)
+            axes.fill_between(pos, lo, hi, color=color, alpha=0.2,
+                              linewidth=0)
+        else:
+            at = from_axis(to_axis(pos) + (i - (len(series) - 1) / 2) * width)
+            axes.errorbar(at, mean, yerr=np.clip(err, 0, None), fmt='o',
+                          color=color, markersize=4, capsize=3, label=label)
+    if reference is not None:
+        axes.axhline(reference, linestyle='--', color='black', linewidth=0.8)
+    if logx:
+        axes.set_xscale('log', base=2 if xscale == 'log2' else 10)
+    if categorical or logx:  # One tick per x value
+        axes.set_xticks(pos, [str(v) if categorical else f'{v:g}' for v in x])
+        axes.xaxis.set_minor_locator(ticker.NullLocator())
+    if categorical and len(x) > 3:  # Slanted names do not collide
+        axes.set_xticklabels(axes.get_xticklabels(), rotation=30, ha='right')
+    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
+    if len(series) > 1:
+        axes.legend()
+    axes.grid(axis='y' if categorical else 'both')  # No line through a bar
+    return axes
+```
+
 ## Reinforcement Learning Utilities
 
 ```{.python .input #utils-utility-functions-and-classes-18}

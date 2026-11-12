@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ae3f12c090d9f058b19f220d612dd99dea32dd7cd84193cdff9ca6a41d9a8a9f",
+    "d2l_lib_fingerprint": "sha256:85460d06d7c856cff9ced8e8b5a45989438152dab583f3b9bfe13a0972a0a0fd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -43,68 +43,73 @@
       "kind": "text",
       "outputs": []
     },
+    "utils-plot-intervals": {
+      "code_fingerprint": "sha256:2dd9d30e8da4275d713572ddf6591d9cdacc858a42d001c7e8142dc485db7535",
+      "kind": "text",
+      "outputs": []
+    },
     "utils-utility-functions-and-classes-18": {
-      "code_fingerprint": "sha256:ed7a1d4c01935c1b9e3078e49c700a7072018e9f34f688c17bbbc4b34ef6ddcd",
+      "code_fingerprint": "sha256:48a76d9ffbb003e501d3d128c4f2877daecfb762ec90d878dbcd762d238153d2",
       "kind": "text",
       "outputs": []
     },
     "utils-reinforcement-learning-utilities-1": {
-      "code_fingerprint": "sha256:e78650e7ffdbf41f226f1337ea4d28484a1d506d22968665cc648833bc26f538",
+      "code_fingerprint": "sha256:7e85b0f451d33622d3367fd4a24d45877323d275da3e6776f2ac938fdaeca85b",
       "kind": "text",
       "outputs": []
     },
     "utils-feature-networks-for-image-scores": {
-      "code_fingerprint": "sha256:4f1e8401a6d3c081fb46c17eb096c8f9c5dd18fff61ff1ee4391ebc76a308375",
+      "code_fingerprint": "sha256:93e2b6da46182c46deb2dcce700d8b8b8eeadad81c7dc74e417362456b6dcd16",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:2bb81152f174eda8473b551e9507248491b09ebf00390e8721e678d4ebcc73de",
+      "code_fingerprint": "sha256:1c0ea618955bac6659bef2b7cdca573945dd9b9bac3ad3a0ea10fc65e366a140",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:ee7067d4dd955f63a527e657fbad19236d9c211301b55ab2d4a24856ccbd0764",
+      "code_fingerprint": "sha256:489b4a080d7612add86d9498caa2fdce3f46402982f3c3177cc52c869e29a637",
       "kind": "text",
       "outputs": []
     },
     "utils-training-utilities-1": {
-      "code_fingerprint": "sha256:87c6728057a2db28f8c5a66e9fc37da4045d2dc7284f95eec9be550595fa45bb",
+      "code_fingerprint": "sha256:729b4d9d58edd57e7d19ccec4f8aea691ae74f2938eb0bf299fa4e19a15d481f",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-11": {
-      "code_fingerprint": "sha256:50fb7c4051a968760431cbe9eaeacc03be50b2e18d49da47e4a4207db2bcd651",
+      "code_fingerprint": "sha256:fd9b5d73dc8eb4b4e9863fa7a3e20e59a1e78297aa95a6f66b42a9e7eb4e7af3",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:0ddcd4057b1fe9b23bdadac4b6e7ec3eae8e0616b7495a12664aabcb060c7cb7",
+      "code_fingerprint": "sha256:0c578e75443ede1c3eb68ede337d0e6d9db8558628b0a97a02e984a96fd349f0",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-13": {
-      "code_fingerprint": "sha256:0bbc79c8e06970ff1be15f0c02e8499729b5c60cffc725acbe675745809daea3",
+      "code_fingerprint": "sha256:aefc2f7f8201226efa700c7ed8e250460e92e618d9e0e53e1eb418be9c11125e",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-14": {
-      "code_fingerprint": "sha256:f8c35158d56babfdb4b03a9f46538851b97585d7e829cab08e045aa49f79a4ef",
+      "code_fingerprint": "sha256:d5b005b7d37e96b55bf9d714b1a8f1285f67c57bfb4c4175a3b54abaa12f9667",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-15": {
-      "code_fingerprint": "sha256:775b74b2dad6e870beea203f5a1233fd5d2eeb597e13e8cb983458fabbac26c1",
+      "code_fingerprint": "sha256:6a627da2ade355994b8271faa8e6112c5e77c6256dedb9151d010187252775d7",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-16": {
-      "code_fingerprint": "sha256:edf036c8a39caf4b77606c0d30aa830ee4cef19eb9e572d1b834689fbe6dea3c",
+      "code_fingerprint": "sha256:719f8c1e9d6a2cfcb243132815772e373b63e23abdd6c773e34ffdc70af9e5f2",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-17": {
-      "code_fingerprint": "sha256:4c4c80af22b38f7104aebc79dc85947a6a11304f136ab77e2568a1ece58f7f78",
+      "code_fingerprint": "sha256:6ccf98079324d8d6c10f0b5bed234787e1303401f26f5937645e61f877c1cc75",
       "kind": "text",
       "outputs": []
     }

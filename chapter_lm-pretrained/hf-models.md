@@ -40,3 +40,36 @@ when the section is written.
 - Code and documentation: [Transformers documentation](https://huggingface.co/docs/transformers/index) and its [quick tour](https://huggingface.co/docs/transformers/quicktour); [generation strategies](https://huggingface.co/docs/transformers/main/en/generation_strategies) (the sampling fields mapped onto `sec_decoding`); [model cards](https://huggingface.co/docs/hub/model-cards); [safetensors](https://huggingface.co/docs/safetensors/index) (header format, read by range request); [PyTorch profiler recipe](https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html) (counting launches in one decode step); model cards [Qwen3.5-2B](https://huggingface.co/Qwen/Qwen3.5-2B), [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B), [Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B), [Gemma 4 E2B](https://huggingface.co/google/gemma-4-E2B-it) (sizes, windows, per-layer embeddings: read at authoring); [Qwen3.8 README](https://github.com/QwenLM/Qwen3.8) (the larger models of the same architecture).
 - Courses, tutorials and blogs: [Hugging Face LLM Course, chapter 2](https://huggingface.co/learn/llm-course/chapter2/1) (the Auto-class tour); [CS336](https://cs336.stanford.edu/) (resource accounting lecture: FLOPs, memory, arithmetic intensity).
 -->
+
+```{.python .input #hf-models-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+<!-- Placeholder prose (stage 2): the section text is written after the runs. -->
+A model id names a repository whose files change over time; a revision names
+one commit of it. `HF_REVISIONS` pins every model this chapter loads to the
+commit it was written against, and later sections add their own entries to
+it. The commits were resolved with the Hub API on 2026-11-12.
+
+```{.python .input #hf-models-revisions}
+%%tab pytorch
+#@save
+HF_REVISIONS = {
+    'Qwen/Qwen3-0.6B': 'c1899de289a04d12100db370d81485cdf75e47ca',
+    'Qwen/Qwen3-0.6B-Base': 'da87bfb608c14b7cf20ba1ce41287e8de496c0cd',
+    'Qwen/Qwen3-1.7B': '70d244cc86ccca08cf5af4e1e306ecf908b1ad5e',
+    'Qwen/Qwen3-1.7B-Base': 'ea980cb0a6c2ae4b936e82123acc929f1cec04c1',
+    'Qwen/Qwen3-4B': '1cfa9a7208912126459214e8b04321603b3df60c',
+    'Qwen/Qwen3-8B': 'b968826d9c46dd6066d109eabc6255188de91218',
+    'Qwen/Qwen3.5-0.8B': '2fc06364715b967f1860aea9cf38778875588b17',
+    'Qwen/Qwen3.5-0.8B-Base': 'dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68',
+    'Qwen/Qwen3.5-2B': '15852e8c16360a2fea060d615a32b45270f8a8fc',
+    'Qwen/Qwen3.5-4B': '851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a',
+    'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
+```

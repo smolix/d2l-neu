@@ -4330,6 +4330,22 @@ class UNetFlowMap(nn.Module):
         gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
         return self.unet(x, t, cond=gap)
 
+HF_REVISIONS = {
+    'Qwen/Qwen3-0.6B': 'c1899de289a04d12100db370d81485cdf75e47ca',
+    'Qwen/Qwen3-0.6B-Base': 'da87bfb608c14b7cf20ba1ce41287e8de496c0cd',
+    'Qwen/Qwen3-1.7B': '70d244cc86ccca08cf5af4e1e306ecf908b1ad5e',
+    'Qwen/Qwen3-1.7B-Base': 'ea980cb0a6c2ae4b936e82123acc929f1cec04c1',
+    'Qwen/Qwen3-4B': '1cfa9a7208912126459214e8b04321603b3df60c',
+    'Qwen/Qwen3-8B': 'b968826d9c46dd6066d109eabc6255188de91218',
+    'Qwen/Qwen3.5-0.8B': '2fc06364715b967f1860aea9cf38778875588b17',
+    'Qwen/Qwen3.5-0.8B-Base': 'dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68',
+    'Qwen/Qwen3.5-2B': '15852e8c16360a2fea060d615a32b45270f8a8fc',
+    'Qwen/Qwen3.5-4B': '851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a',
+    'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
+
+d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
+    'ce1a79d9c5163932d65c417380e53230e1086370')
+
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
 
@@ -4956,6 +4972,57 @@ def show_trace_2d(f, results):
     d2l.plt.ylabel('$x_2$')
     if equal:
         d2l.plt.gca().set_aspect('equal')
+
+def plot_intervals(x, series, xlabel, ylabel, *, kind='errorbar',
+                   reference=None, xscale='linear', axes=None):
+    """Estimates with intervals: `series` maps a label to (mean, lo, hi).
+
+    Defined in :numref:`sec_utils`"""
+    if kind not in ('errorbar', 'band') or xscale not in ('linear', 'log',
+                                                          'log2'):
+        raise ValueError(f'unknown kind {kind!r} or xscale {xscale!r}')
+    x = np.asarray(x)
+    categorical = not np.issubdtype(x.dtype, np.number)
+    pos = np.arange(len(x), dtype=float) if categorical else x.astype(float)
+    logx = xscale != 'linear' and not categorical
+    # Side-by-side offsets, in the units in which the x-axis is even
+    to_axis, from_axis = (np.log, np.exp) if logx else (np.asarray,) * 2
+    gaps = np.diff(np.unique(to_axis(pos)))
+    width = 0.6 * (gaps.min() if len(gaps) else 1.0) / len(series)
+    if axes is None:
+        d2l.set_figsize()
+        axes = d2l.plt.gca()
+    for i, (label, (mean, lo, hi)) in enumerate(series.items()):
+        mean, lo, hi = (np.asarray(v, dtype=float) for v in (mean, lo, hi))
+        if not mean.shape == lo.shape == hi.shape == pos.shape:
+            raise ValueError(f'{label}: mean, lo and hi need {len(pos)} '
+                             'values each')
+        err = np.stack([mean - lo, hi - mean])
+        if np.any(err < -1e-9):  # nan (a missing point) passes
+            raise ValueError(f'{label}: an interval misses its estimate')
+        color = f'C{i % 10}'
+        if kind == 'band':
+            axes.plot(pos, mean, '-', color=color, label=label)
+            axes.fill_between(pos, lo, hi, color=color, alpha=0.2,
+                              linewidth=0)
+        else:
+            at = from_axis(to_axis(pos) + (i - (len(series) - 1) / 2) * width)
+            axes.errorbar(at, mean, yerr=np.clip(err, 0, None), fmt='o',
+                          color=color, markersize=4, capsize=3, label=label)
+    if reference is not None:
+        axes.axhline(reference, linestyle='--', color='black', linewidth=0.8)
+    if logx:
+        axes.set_xscale('log', base=2 if xscale == 'log2' else 10)
+    if categorical or logx:  # One tick per x value
+        axes.set_xticks(pos, [str(v) if categorical else f'{v:g}' for v in x])
+        axes.xaxis.set_minor_locator(ticker.NullLocator())
+    if categorical and len(x) > 3:  # Slanted names do not collide
+        axes.set_xticklabels(axes.get_xticklabels(), rotation=30, ha='right')
+    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
+    if len(series) > 1:
+        axes.legend()
+    axes.grid(axis='y' if categorical else 'both')  # No line through a bar
+    return axes
 
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
                 ylim=None, x=None, xscale='linear', yscale='linear',

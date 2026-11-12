@@ -1057,6 +1057,57 @@ class TestGenerate(unittest.TestCase):
         self.assertEqual([c.args[0].shape for c in forward.call_args_list],
                          [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (2, 4)])
 
+    def test_special_tokens_and_wrappers(self):
+        """Regressions (review 18.3, findings 4 and 5, shared with
+        d2l.label_logprobs): a tokenizer that adds <s> ... <eos> feeds
+        <s> ... only, and a torch.compile or PEFT-style wrapper around a
+        Transformers model takes the Transformers path."""
+        from tokenizers.processors import TemplateProcessing
+        tok = tiny_tokenizer()
+        tok._tokenizer.post_processor = TemplateProcessing(
+            single='<s> $A <eos>', special_tokens=[('<s>', 2), ('<eos>', EOS)])
+        self.assertEqual(tok(['w4 w5'])['input_ids'], [[2, 4, 5, EOS]])
+        self.assertEqual(d2l._lm_bos_ids(tok), [2])
+        self.assertEqual(d2l._lm_bos_ids(self.tok), [])
+        seen = []
+        counter = Counter()
+        counter.forward = mock.Mock(side_effect=lambda X: (
+            seen.append(X[0].tolist()), Counter.forward(counter, X))[1])
+        g = d2l.generate(counter, tok, ['w4 w5'], 2)[0]
+        self.assertEqual(seen[0], [2, 4, 5])
+        self.assertEqual(g.token_ids, [6, 7])
+        seen.clear()
+        d2l.generate(counter, tok, ['w4'], 1, chat=True)
+        rendered = tok.apply_chat_template(
+            [{'role': 'user', 'content': 'w4'}], add_generation_prompt=True,
+            tokenize=False)  # a rendered chat prompt gets no specials
+        self.assertEqual(seen[0], tok(rendered, add_special_tokens=False)
+                         ['input_ids'])
+        self.assertNotIn(EOS, seen[0])
+
+        class PeftLike(nn.Module):
+            def __init__(self, base):
+                super().__init__()
+                self.base_model = base
+
+            def get_base_model(self):
+                return self.base_model
+
+            def forward(self, *args, **kwargs):
+                return self.base_model(*args, **kwargs)
+
+            def __getattr__(self, name):  # PEFT forwards attributes too
+                try:
+                    return super().__getattr__(name)
+                except AttributeError:
+                    return getattr(self.base_model, name)
+        ref = d2l.generate(self.hf, self.tok, self.prompts, 6, batch_size=4)
+        compiled = torch.compile(self.hf, backend='eager')
+        for wrapped in (compiled, PeftLike(self.hf)):
+            self.assertIs(d2l._lm_unwrap(wrapped), self.hf)
+            self.assertEqual(d2l.generate(wrapped, self.tok, self.prompts, 6,
+                                          batch_size=4), ref)
+
     def test_finish_reasons(self):
         counter = Counter()
         out = d2l.generate(counter, self.tok, ['w4', 'w120', 'w10'], 6,

@@ -196,6 +196,16 @@ class TestFewshotPrompt(unittest.TestCase):
         for fmt in ('Headline: {x}', 'Topic: {y}', '{x} {y} {z}', '{0}'):
             with self.assertRaises(ValueError):
                 d2l.fewshot_prompt(DEMOS, 'q', fmt=fmt)
+        # regression (review 18.3, finding 3): the prompt must end after
+        # the query's label field, so {y} comes once and last
+        for fmt in ('Topic: {y}\nHeadline: {x}', '{x} -> {y}.',
+                    '{y}: {x} -> {y}', '{x} {y}\nEnd'):
+            with self.assertRaisesRegex(ValueError, 'once and last'):
+                d2l.fewshot_prompt(DEMOS, 'q', fmt=fmt)
+        for fmt in ('{x} -> {y}\n', '{x} {x} -> {y}', '{x}:{y!s}'):
+            self.assertTrue(d2l.fewshot_prompt(DEMOS, 'q', fmt=fmt)
+                            .endswith('\n\n' + fmt.format(x='q', y='')
+                                      .rstrip()))
         with self.assertRaises(ValueError):
             d2l.fewshot_prompt(DEMOS, 'q', 'Headline: {x}\nTopic: {y}')
 
@@ -236,6 +246,18 @@ class TestCalibrateLabels(unittest.TestCase):
         out = d2l.calibrate_labels(lp.numpy(), cf[0].numpy())
         torch.testing.assert_close(
             out, (lp - cf[0]).log_softmax(-1), atol=1e-6, rtol=0)
+
+    def test_shapes(self):
+        """Regression (review 18.3, finding 1): content-free arrays over
+        another label count, or transposed, were reshaped to (-1, L) and
+        used without a word."""
+        lp = torch.randn(5, 4).log_softmax(-1)
+        for shape in ((4, 3), (4, 2), (3,), (8,), (2, 2, 4), ()):
+            with self.assertRaisesRegex(ValueError, 'content-free'):
+                d2l.calibrate_labels(lp, torch.zeros(shape))
+        for shape in ((4,), (1, 4), (7, 4)):
+            self.assertEqual(d2l.calibrate_labels(
+                lp, torch.zeros(shape)).shape, (5, 4))
 
     @staticmethod
     def _simplex(scale=1.2):
@@ -494,7 +516,7 @@ class TestLabelLogprobs(unittest.TestCase):
                 ValueError, r"'Sci/Tech' and 'Sci-Fi' .*' Sci' \(40372\)"):
             f(self.prompts, ['Sci/Tech', 'Sci-Fi', 'Business', 'World'])
         with self.assertRaisesRegex(ValueError,
-                                    r"'Sci/Tech' is 3 tokens"):
+                                    r"'Sci/Tech' after ' ' is 3 tokens"):
             f(self.prompts, ['Sci/Tech', 'Sports', 'Business', 'World'])
         # (a) before (b) before (c)
         for words in (LABELS, ['Sci/Tech', 'Sci-Fi'], ['Sci/Tech']):
@@ -507,6 +529,100 @@ class TestLabelLogprobs(unittest.TestCase):
             f([''], LABELS)
         with self.assertRaisesRegex(ValueError, 'adds no token'):
             f(['Topic:\n'], ['', 'Sports'])
+
+    def test_chinese_labels(self):
+        """Regression (review 18.3, finding 2): a space was forced before
+        every word, so ' 体育' became [' ', '体育'] after a Chinese prompt
+        and raised; next to a wide character no space is added."""
+        tok, words = self.tok, ['体育', '科技', '财经', '国际']
+        prompts = ['新闻：火箭发射成功\n主题：', '新闻：股市上涨\n主题：',
+                   'Headline: rocket launch\nTopic:']
+        self.assertEqual([d2l._label_sep(p, w) for p, w in [
+            (prompts[0], 'Sports'), (prompts[2], '体育'),
+            (prompts[2], 'Sports'), ('Topic:\n', 'Sports'),
+            ('Topic:', '')]], ['', '', ' ', '', ' '])
+        ids, labels = d2l._label_token_ids(tok, prompts, words)
+        for p, h, row in zip(prompts, ids, labels):
+            self.assertEqual(h, tok(p, add_special_tokens=False)['input_ids'])
+            self.assertEqual(row, [tok(p + w, add_special_tokens=False)[
+                'input_ids'][len(h)] for w in words])
+        self.assertEqual(labels[0], tok.convert_tokens_to_ids(
+            [tok.convert_ids_to_tokens(i) for i in labels[0]]))
+        self.assertEqual(tok.decode(labels[0][:1]), '体育')
+        out = d2l.label_logprobs(self.model, tok, prompts, words,
+                                 batch_size=2)
+        for row, p, lab in zip(out, prompts, labels):
+            torch.testing.assert_close(row, self.reference(
+                self.model, p, lab), atol=1e-5, rtol=0)
+        # an explicit sep overrides the rule; the error names it
+        _, sp = d2l._label_token_ids(tok, ['Topic:'], ['Sports'], sep='')
+        self.assertEqual(sp, [[tok.convert_tokens_to_ids('Sports')]])
+        with self.assertRaisesRegex(ValueError, r"'体育' after ' ' is 2 "):
+            d2l.label_logprobs(self.model, tok, prompts[:1], words, sep=' ')
+
+    def test_tokenizer_appends_eos(self):
+        """Regression (review 18.3, finding 4): the plain path re-encoded
+        with special tokens and so read the label after an appended EOS.
+        A tokenizer adding <BOS> ... <EOS> now feeds <BOS> ... only."""
+        tok, eos = self.tok, self.tok.eos_token_id
+
+        class BosEosTokenizer:
+            def __call__(self, texts, add_special_tokens=True):
+                ids = tok(texts, add_special_tokens=False)['input_ids']
+                return {'input_ids': [[151643] * add_special_tokens + r +
+                                      [eos] * add_special_tokens
+                                      for r in ids]}
+
+            def __getattr__(self, name):
+                return getattr(tok, name)
+        self.assertEqual(d2l._lm_bos_ids(BosEosTokenizer()), [151643])
+        self.assertEqual(d2l._lm_bos_ids(tok), [])
+        seen = []
+        orig = self.model.forward
+        with mock.patch.object(self.model, 'forward', side_effect=lambda
+                               *a, **kw: (seen.append(kw['input_ids']),
+                                          orig(*a, **kw))[1]):
+            out = d2l.label_logprobs(self.model, BosEosTokenizer(),
+                                     self.prompts[:1], LABELS)
+        plain = tok(self.prompts[0], add_special_tokens=False)['input_ids']
+        self.assertEqual(seen[0][0].tolist(), [151643] + plain)
+        X = torch.tensor([[151643] + plain])
+        with torch.no_grad():
+            lp = self.model(X).logits[0, -1].log_softmax(-1)[PLAIN_IDS]
+        torch.testing.assert_close(out[0], lp - lp.logsumexp(-1),
+                                   atol=1e-5, rtol=0)
+
+    def test_wrapped_models(self):
+        """Regression (review 18.3, finding 5): a torch.compile or PEFT
+        wrapper around a Transformers model fell into the d2l branch and
+        raised a TypeError on the output object."""
+        class PeftLike(torch.nn.Module):  # PEFT's interface, in brief
+            def __init__(self, base):
+                super().__init__()
+                self.base_model = base
+
+            def get_base_model(self):
+                return self.base_model
+
+            def forward(self, *args, **kwargs):
+                return self.base_model(*args, **kwargs)
+        ref = d2l.label_logprobs(self.model, self.tok, self.prompts, LABELS,
+                                 batch_size=4)
+        compiled = torch.compile(self.model, backend='eager')
+        for wrapped in (compiled, PeftLike(self.model), PeftLike(compiled)):
+            self.assertIs(d2l._lm_unwrap(wrapped), self.model)
+            torch.testing.assert_close(d2l.label_logprobs(
+                wrapped, self.tok, self.prompts, LABELS, batch_size=4),
+                                       ref, atol=1e-5, rtol=0)
+        torch.manual_seed(0)
+        qwen = d2l.Qwen3GPT(151936, 64, 4, 2, 2, head_dim=16).eval()
+        calls = []
+        orig = qwen.forward
+        with mock.patch.object(qwen, 'forward', side_effect=lambda X, **kw: (
+                calls.append(kw), orig(X, **kw))[1]):
+            d2l.label_logprobs(PeftLike(qwen), self.tok, self.prompts[:1],
+                               LABELS)
+        self.assertEqual(calls, [{'logits_to_keep': 1}])
 
     def test_d2l_models(self):
         prompts = self.prompts + [p.replace('Topic', 'Label')

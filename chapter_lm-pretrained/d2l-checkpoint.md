@@ -536,6 +536,28 @@ def _lm_finish(tokens, logprobs, tokenizer, eos_ids, stop):
     return Generation(text, tokens, logprobs, reason)
 
 #@save
+def _lm_unwrap(model):
+    """The model inside a torch.compile or PEFT wrapper (which pass every
+    keyword argument through to it), or model itself."""
+    while True:
+        inner = getattr(model, '_orig_mod', None)
+        if inner is None and hasattr(model, 'get_base_model'):
+            inner = model.get_base_model()
+        if inner is None or inner is model:
+            return model
+        model = inner
+
+#@save
+def _lm_bos_ids(tokenizer):
+    """The special tokens the tokenizer puts before a text (a BOS, or
+    none). Those it appends after a text, such as an EOS, are left out:
+    a prompt continues where its text ends."""
+    with_sp, plain = (tokenizer(['a'], add_special_tokens=s)['input_ids'][0]
+                      for s in (True, False))
+    return next((with_sp[:k] for k in range(len(with_sp) - len(plain) + 1)
+                 if with_sp[k:k + len(plain)] == plain), [])
+
+#@save
 @torch.inference_mode()
 def generate(model, tokenizer, prompts, max_new_tokens=None, *,
              strategy='greedy', temperature=1.0, k=None, p=None, min_p=None,
@@ -570,12 +592,13 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
             [{'role': 'user', 'content': x}] if isinstance(x, str) else x,
             tokenize=False, add_generation_prompt=True, **opts)
                    for x in prompts]
-    ids = [tokenizer(x, add_special_tokens=not chat)['input_ids']
+    head = [] if chat else _lm_bos_ids(tokenizer)  # a BOS, never an EOS
+    ids = [head + tokenizer(x, add_special_tokens=False)['input_ids']
            for x in prompts]
     if not all(ids):  # Qwen3's tokenizer adds no BOS to predict from
         raise ValueError('an empty prompt has no position to predict from')
     hf = sys.modules.get('transformers')  # loaded if model is one of its
-    if hf is not None and isinstance(model, hf.PreTrainedModel):
+    if hf is not None and isinstance(_lm_unwrap(model), hf.PreTrainedModel):
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
         start = lambda rows: _lm_hf_steps(model, rows, pad)
         groups = [list(range(len(ids)))]  # left padding: input order

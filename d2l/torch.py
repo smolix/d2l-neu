@@ -5049,6 +5049,30 @@ def _lm_finish(tokens, logprobs, tokenizer, eos_ids, stop):
         logprobs = logprobs[:len(tokens)]
     return Generation(text, tokens, logprobs, reason)
 
+def _lm_unwrap(model):
+    """The model inside a torch.compile or PEFT wrapper (which pass every
+    keyword argument through to it), or model itself.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    while True:
+        inner = getattr(model, '_orig_mod', None)
+        if inner is None and hasattr(model, 'get_base_model'):
+            inner = model.get_base_model()
+        if inner is None or inner is model:
+            return model
+        model = inner
+
+def _lm_bos_ids(tokenizer):
+    """The special tokens the tokenizer puts before a text (a BOS, or
+    none). Those it appends after a text, such as an EOS, are left out:
+    a prompt continues where its text ends.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    with_sp, plain = (tokenizer(['a'], add_special_tokens=s)['input_ids'][0]
+                      for s in (True, False))
+    return next((with_sp[:k] for k in range(len(with_sp) - len(plain) + 1)
+                 if with_sp[k:k + len(plain)] == plain), [])
+
 @torch.inference_mode()
 def generate(model, tokenizer, prompts, max_new_tokens=None, *,
              strategy='greedy', temperature=1.0, k=None, p=None, min_p=None,
@@ -5085,12 +5109,13 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
             [{'role': 'user', 'content': x}] if isinstance(x, str) else x,
             tokenize=False, add_generation_prompt=True, **opts)
                    for x in prompts]
-    ids = [tokenizer(x, add_special_tokens=not chat)['input_ids']
+    head = [] if chat else _lm_bos_ids(tokenizer)  # a BOS, never an EOS
+    ids = [head + tokenizer(x, add_special_tokens=False)['input_ids']
            for x in prompts]
     if not all(ids):  # Qwen3's tokenizer adds no BOS to predict from
         raise ValueError('an empty prompt has no position to predict from')
     hf = sys.modules.get('transformers')  # loaded if model is one of its
-    if hf is not None and isinstance(model, hf.PreTrainedModel):
+    if hf is not None and isinstance(_lm_unwrap(model), hf.PreTrainedModel):
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
         start = lambda rows: _lm_hf_steps(model, rows, pad)
         groups = [list(range(len(ids)))]  # left padding: input order
@@ -5204,20 +5229,31 @@ def first_divergence(errors, floor, factor=10.0):
     layer, point = np.argwhere(above)[0]  # row-major: layer by layer
     return int(layer), _HIDDEN_POINTS[point]
 
-def _label_token_ids(tokenizer, prompts, label_words):
+def _label_sep(prompt, word):
+    """A space between a prompt and a label word, except after whitespace
+    and next to a wide (Chinese, Japanese or Korean) character.
+
+    Defined in :numref:`sec_lm_prompting`"""
+    import unicodedata
+    wide = any(unicodedata.east_asian_width(c) in ('W', 'F')
+               for c in prompt[-1:] + word[:1])
+    return '' if wide or prompt[-1:].isspace() else ' '
+
+def _label_token_ids(tokenizer, prompts, label_words, sep=None):
     """The prompts' token ids, and per prompt the id of each label word's
-    first token as the next token; a word follows after a space unless
-    the prompt ends in whitespace. Raises if (a) the prompt's end merges
-    with a word, (b) two words share a first token, (c) a word is several
-    tokens, checked in this order.
+    first token as the next token, the word following the prompt after
+    sep (by default _label_sep's choice). Raises if (a) the prompt's end
+    merges with a word, (b) two words share a first token, (c) a word is
+    several tokens, checked in this order.
 
     Defined in :numref:`sec_lm_prompting`"""
     enc = lambda texts: tokenizer(texts, add_special_tokens=False)[
         'input_ids']
     ids, tails = enc(prompts), [[] for _ in prompts]
-    for w in label_words:
-        full = enc([p + (w if p[-1:].isspace() else ' ' + w)
-                    for p in prompts])
+    seps = [[_label_sep(p, w) if sep is None else sep for w in label_words]
+            for p in prompts]
+    for j, w in enumerate(label_words):
+        full = enc([p + s[j] + w for p, s in zip(prompts, seps)])
         for i, (p, h, f) in enumerate(zip(prompts, ids, full)):
             if f[:len(h)] != h:  # (a) the prompt ends inside a token
                 raise ValueError(
@@ -5235,23 +5271,25 @@ def _label_token_ids(tokenizer, prompts, label_words):
                     f'label words {first[s[0]]!r} and {w!r} share the '
                     f'first token {tokenizer.decode(s[:1])!r} ({s[0]})')
             first[s[0]] = w
-    for t in tails:  # (c) a word of several tokens
-        for w, s in zip(label_words, t):
+    for t, seps_i in zip(tails, seps):  # (c) a word of several tokens
+        for w, s, sp in zip(label_words, t, seps_i):
             if len(s) > 1:
                 raise ValueError(
-                    f'label word {w!r} is {len(s)} tokens '
+                    f'label word {w!r} after {sp!r} is {len(s)} tokens '
                     f'{[tokenizer.decode([u]) for u in s]}: use a word '
-                    'that is one token after the prompt')
+                    'that is one token there, or another sep')
     return ids, [[s[0] for s in t] for t in tails]
 
 def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
-                   chat=False, enable_thinking=False):
+                   chat=False, enable_thinking=False, sep=None):
     """Log-probabilities (len(prompts), len(label_words)), float32 on the
     CPU, of each label word's first token as the next token, normalized
-    over the label tokens only. With chat=True a prompt is a message list
-    (a string is one user message), rendered with the generation prefix.
-    Transformers models get left-padded batches; a d2l GPT, which takes
-    no attention mask, gets batches of prompts of equal length.
+    over the label tokens only. A word follows its prompt after sep, by
+    default a space, but none after whitespace or next to Chinese text.
+    With chat=True a prompt is a message list (a string is one user
+    message), rendered with the generation prefix. Transformers models
+    get left-padded batches; a d2l GPT, which takes no attention mask,
+    gets batches of prompts of equal length.
 
     Defined in :numref:`sec_lm_prompting`"""
     if chat:
@@ -5261,13 +5299,14 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
             [{'role': 'user', 'content': m}] if isinstance(m, str) else m,
             tokenize=False, add_generation_prompt=True, **opts)
                    for m in prompts]
-    ids, labels = _label_token_ids(tokenizer, prompts, label_words)
+    ids, labels = _label_token_ids(tokenizer, prompts, label_words, sep)
     if not chat:  # as d2l.generate: a plain prompt gets the BOS, if any
-        ids = tokenizer(prompts)['input_ids']
+        head = _lm_bos_ids(tokenizer)  # and never an EOS
+        ids = [head + r for r in ids]
     if not all(ids):
         raise ValueError('an empty prompt has no position to predict from')
     hf = sys.modules.get('transformers')
-    hf = hf is not None and isinstance(model, hf.PreTrainedModel)
+    hf = hf is not None and isinstance(_lm_unwrap(model), hf.PreTrainedModel)
     if hf:  # one padded group, in input order
         groups = [list(range(len(ids)))]
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
@@ -5293,7 +5332,7 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
             else:
                 X = torch.tensor([ids[i] for i in rows], device=device)
                 z = (model(X, logits_to_keep=1) if isinstance(
-                    model, d2l.Qwen3GPT) else model(X))[:, -1]
+                    _lm_unwrap(model), d2l.Qwen3GPT) else model(X))[:, -1]
             lab = torch.tensor([labels[i] for i in rows], device=z.device)
             lp = z.gather(-1, lab).float().log_softmax(-1).cpu()
         out[rows] = lp  # out is an ordinary tensor the caller may modify
@@ -5316,9 +5355,13 @@ def fewshot_prompt(demos, query, template='plain', *, fmt=None,
         import string
         if template not in ('plain', 'chat_single'):
             raise ValueError(f'template {template!r} takes no fmt')
-        if {f for _, f, _, _ in string.Formatter().parse(fmt)
-                if f is not None} != {'x', 'y'}:
-            raise ValueError(f'fmt needs the fields {{x}} and {{y}}: {fmt!r}')
+        parts = list(string.Formatter().parse(fmt))
+        fields = [f for _, f, _, _ in parts if f is not None]
+        tail = parts[-1][0] if parts and parts[-1][1] is None else ''
+        if (set(fields) != {'x', 'y'} or fields.count('y') > 1 or
+                fields[-1] != 'y' or tail.strip()):
+            raise ValueError('fmt needs the fields {x} and {y}, with {y} '
+                             f'once and last: {fmt!r}')
 
     def word(y):
         if label_map is not None:
@@ -5354,14 +5397,19 @@ d2l.DATA_HUB['ag-news-test'] = (
 def calibrate_labels(logprobs, content_free_logprobs):
     """Contextual calibration: subtract the mean log-probabilities (M, L)
     of content-free inputs from logprobs (N, L) and renormalize over the
-    L labels. The mean is taken in log space; Zhao et al. (2021) average
-    the probabilities instead.
+    L labels; one content-free input may be given as an (L,) row. The
+    mean is taken in log space; Zhao et al. (2021) average the
+    probabilities instead.
 
     Defined in :numref:`sec_lm_prompting`"""
     logprobs = torch.as_tensor(logprobs)
-    prior = torch.as_tensor(content_free_logprobs).reshape(
-        -1, logprobs.shape[-1]).mean(0)
-    return torch.log_softmax(logprobs - prior, dim=-1)
+    cf = torch.as_tensor(content_free_logprobs)
+    if cf.ndim not in (1, 2) or cf.shape[-1] != logprobs.shape[-1]:
+        raise ValueError(f'content-free log-probabilities {tuple(cf.shape)}'
+                         f' are not (M, {logprobs.shape[-1]}) or '
+                         f'({logprobs.shape[-1]},)')
+    return torch.log_softmax(logprobs - cf.reshape(-1, cf.shape[-1]).mean(0),
+                             dim=-1)
 
 d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
     'ce1a79d9c5163932d65c417380e53230e1086370')

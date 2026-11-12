@@ -42,6 +42,10 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # notebook path relative to _notebooks/<fw>/; applies to every framework.
 # Ruling 2026-11-06 (Alex): modern topics may run longer when the pedagogy
 # needs the experiment (17.6's DiT scaling curve: ~50 min PyTorch, ~20 JAX).
+#
+# No ch. 18 entry: a normal build stays near 15 min per notebook, and a
+# D2L_RERUN regeneration run must finish within 30 min (ruling 2026-11-12),
+# both well inside the default.
 NOTEBOOK_TIMEOUTS = {
     "chapter_diffusion-models/latent-diffusion.ipynb": 7200,
 }
@@ -257,6 +261,14 @@ FULL_CARD_NOTEBOOKS = {
     "chapter_computational-performance/multiple-gpus.ipynb": 2,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
+    # 18.1 measures bandwidth, per-token decode time and a kernel profile of
+    # Qwen3.5-2B and Gemma 4 E2B (memory alone would fit two slots); a
+    # co-tenant skews the timings the prose quotes (ruling 2026-11-12, Q5).
+    "chapter_lm-pretrained/hf-models.ipynb": 1,
+    # 18.7's capture run serves Qwen3.5-4B locally and sweeps concurrency;
+    # continuous batching sizes its KV pool from free memory. The notebook is
+    # locked, so only `make rerun-locked` reaches this entry.
+    "chapter_lm-pretrained/api.ipynb": 1,
 }
 
 # rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for
@@ -306,6 +318,16 @@ HEAVY_GPU_NOTEBOOKS = {
     # MXNet's memory pool (PyTorch ~4 GiB); 1-slot runs OOM when sharing a GPU.
     ("mxnet", "chapter_convolutional-modern/alexnet.ipynb"): 2,
     ("mxnet", "chapter_convolutional-modern/blocks.ipynb"): 2,
+    # ch. 18 (Language Models, PyTorch only): pretrained checkpoints of 0.6-4B
+    # parameters in bf16. Normal-build peaks (spec part 3.5): 18.2 10.5 GB
+    # (Qwen3-1.7B-Base in the port and in Transformers), 18.3 7.2 GB, 18.4
+    # 5 GB, 18.5 5 GB, 18.6 8 GB; the D2L_RERUN regeneration runs reach
+    # 9-13 GB (18.5's judge). Above one 7.5 GiB slot, inside two.
+    ("pytorch", "chapter_lm-pretrained/d2l-checkpoint.ipynb"): 2,
+    ("pytorch", "chapter_lm-pretrained/prompting.ipynb"): 2,
+    ("pytorch", "chapter_lm-pretrained/scoring.ipynb"): 2,
+    ("pytorch", "chapter_lm-pretrained/eval-suites.ipynb"): 2,
+    ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): 2,
 }
 
 

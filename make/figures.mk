@@ -53,6 +53,12 @@ $(patsubst tools/%.py,.figstamps/%,$(wildcard tools/figstyle/remake_ch*.py)): \
 .figstamps/gen_mdl_transformers_figures: $(wildcard tools/gen_mdl_transformers_b*.py)
 .figstamps/gen_mdl_tools_appendix_figures: tools/gen_tools_appendix_figures.py tools/arch_diagrams.py
 
+# ch. 18 (Language Models): block diagrams on figstyle.svg.Figure and one curve
+# schematic on figstyle.mpl (spec rule F2), so the shared token layer, the
+# composer and the text metrics are prerequisites as for the figstyle remakes.
+.figstamps/gen_mdl_lm_pretrained_figures: tools/figstyle/tokens.py \
+    tools/figstyle/svg.py tools/figstyle/textmetrics.py tools/figstyle/mpl.py
+
 .PHONY: figures
 figures: $(FIGURE_STAMPS)
 	@echo "Figures up to date (only changed generators ran). Verify: git diff --stat img/"

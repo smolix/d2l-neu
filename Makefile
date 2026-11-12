@@ -124,6 +124,8 @@ help:
 	@echo "  audit-outputs           [any] Report stale notebooks (code drift) + store integrity"
 	@echo "  verify-outputs-fresh    [any] Render gate: fail on stale inline outputs / orphaned ids"
 	@echo "  test-trap               [any] Regression tests: freshness trap, lib deps, notebook locks"
+	@echo "  test-lm                 [any] CPU unit tests of the Language Models library (.venv-lm)"
+	@echo "  upload-data FILES=...   [any] Upload versioned DATA_HUB files to R2 d2l-data [PREFIX=lm/] [DRY_RUN=1]"
 	@echo "  locks                   [any] List locked notebooks (requires, capture date, status)"
 	@echo "  rerun-locked FILES=...  [GPU*] Execute named LOCKED notebooks [FRAMEWORKS=pytorch]; then"
 	@echo "                                capture-outputs FILES=... UNLOCK=1"

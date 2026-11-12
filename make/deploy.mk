@@ -1,4 +1,5 @@
-# make/deploy.mk — publishing & deployment (Colab orphan branch, R2 upload).
+# make/deploy.mk — publishing & deployment (Colab orphan branch, R2 upload,
+# data artifacts).
 # Included by the top-level Makefile — see docs/build-system.md and
 # reviews/build-system-cleanup-proposal-2026-07-22.md.
 #
@@ -65,6 +66,23 @@ upload-r2-full: | _r2-preflight
 upload-r2-dry-run: | _r2-preflight
 	@mkdir -p $(LOGDIR)
 	@$(R2_UPLOAD) --dry-run 2>&1 | tee $(LOGDIR)/upload-r2-$(TS).log
+
+# ── Data artifacts (DATA_HUB files) → R2 bucket d2l-data ─────────────────────
+# Uploads versioned artifacts (`lm-...-v1.json`) to https://d2l-data.smola.org/
+# <PREFIX><file name> and prints each public URL and sha1 for the registering
+# DATA_HUB entry. Refuses to overwrite a key with other bytes (FORCE=1 to
+# override; publish -v<N+1> instead); DRY_RUN=1 changes nothing. Credentials:
+# ~/.config/d2l/r2-data.env (CF_API_TOKEN), never printed. See
+# docs/build-system.md §6.9.
+#   make upload-data FILES="data/lm/rerun/lm-x-v1.json" PREFIX=lm/ [DRY_RUN=1]
+PREFIX ?= lm/
+.PHONY: upload-data
+upload-data:
+	@test -n "$(strip $(FILES))" || { echo "usage: make upload-data FILES='<paths>' [PREFIX=lm/] [DRY_RUN=1] [FORCE=1]"; exit 1; }
+	@mkdir -p $(LOGDIR)
+	@python3 tools/upload_data_r2.py --prefix '$(PREFIX)' \
+		$(if $(filter 1,$(DRY_RUN)),--dry-run) $(if $(filter 1,$(FORCE)),--force) \
+		$(FILES) 2>&1 | tee $(LOGDIR)/upload-data-$(TS).log
 
 # ── Full deploy: build from the committed store, then publish ─────────────────
 # all-quick → then publish-colab AND upload-r2-delete. Both are gated on the

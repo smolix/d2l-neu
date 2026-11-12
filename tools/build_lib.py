@@ -12,6 +12,7 @@ Usage:
 import re
 import ast
 import sys
+import hashlib
 import argparse
 import configparser
 from pathlib import Path
@@ -35,6 +36,11 @@ LIB_ONLY_FILES = [
     'chapter_computational-performance/legacy-multigpu-lib.md',
     'chapter_optimization/legacy-timer-lib.md',
     'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
+    # 18.5's suite registry, adapters and cache I/O, and 18.7's API client
+    # scaffolding: library code the sections explain in a sentence but do
+    # not show. Appended (not early): nothing uses them at import time.
+    'chapter_lm-pretrained/eval-suites-lib.md',
+    'chapter_lm-pretrained/api-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a
@@ -58,6 +64,19 @@ LIB_ONLY_EARLY_FILES = {
 # ──────────────────────────────────────────────────────────
 # Block extraction
 # ──────────────────────────────────────────────────────────
+
+# A function definition line, coroutine functions included: every place that
+# recognises `def` recognises `async def` too (18.7's `ChatAPI.achat` and
+# `chat_batch`). DEF is the regex fragment; DEF_PREFIXES serves the
+# `str.startswith` tests.
+DEF = r'(?:async\s+)?def'
+DEF_PREFIXES = ('def ', 'async def ')
+
+
+def _is_def(line):
+    """True if *line* starts (at column 0) with `def` or `async def`."""
+    return line.startswith(DEF_PREFIXES)
+
 
 def _collect_tab_body(lines, start, body_indent=None):
     """Collect indented body lines starting at *start*. Returns (body_lines, next_i)."""
@@ -182,14 +201,14 @@ def save_blocks(source):
                 if lines[j].strip():
                     first_real = lines[j]
                     break
-            if (first_real.startswith('def ') or
+            if (_is_def(first_real) or
                     first_real.startswith('class ') or
                     first_real.startswith('@')):
                 # def/class definition — use indentation-based collection
                 while i < len(lines):
                     l = lines[i]
                     if (l.startswith(' ') or l.startswith('\t') or
-                            l.strip() == '' or l.startswith('def ') or
+                            l.strip() == '' or _is_def(l) or
                             l.startswith('class ') or l.startswith('@')):
                         block_lines.append(l)
                         i += 1
@@ -207,13 +226,13 @@ def save_blocks(source):
         else:
             # Inline #@save (e.g. "def func():  #@save" or "@decorator  #@save")
             # Collect any extra decorators, then the def/class and its body.
-            got_def = prefix.startswith('def ') or prefix.startswith('class ')
+            got_def = _is_def(prefix) or prefix.startswith('class ')
             while i < len(lines):
                 l = lines[i]
                 if l.startswith(' ') or l.startswith('\t') or l.strip() == '':
                     block_lines.append(l)
                     i += 1
-                elif not got_def and (l.startswith('def ') or
+                elif not got_def and (_is_def(l) or
                                       l.startswith('class ')):
                     block_lines.append(l)
                     got_def = True
@@ -323,7 +342,7 @@ def add_docstring_labels(blocks):
         for i, line in enumerate(lines):
             new_lines.append(line)
             # Look for docstring opening after def/class
-            if not label_added and (line.strip().startswith('def ') or
+            if not label_added and (_is_def(line.strip()) or
                                      line.strip().startswith('class ')):
                 # Find the docstring
                 for j in range(i + 1, min(i + 5, len(lines))):
@@ -363,7 +382,7 @@ def _block_defined_names(code):
     """Return the top-level names a block defines (class/def/assignment)."""
     names = set()
     for line in code.split('\n'):
-        m = re.match(r'(class|def)\s+(\w+)', line.lstrip())
+        m = re.match(rf'(class|{DEF})\s+(\w+)', line.lstrip())
         if m:
             names.add(m.group(2))
             continue
@@ -385,7 +404,7 @@ def _block_shard_names(code):
     """
     names = []
     for line in code.split('\n'):
-        m = (re.match(r'(?:class|def)\s+(\w+)', line)
+        m = (re.match(rf'(?:class|{DEF})\s+(\w+)', line)
              or re.match(r'(\w+)\s*(?::[^=]*)?=(?!=)', line))
         if m and m.group(1) not in names:
             names.append(m.group(1))
@@ -432,7 +451,8 @@ def drop_unresolved_blocks(blocks, extra_names):
         if not drop:
             return blocks
         for i, missing, source in drop:
-            top = re.search(r'^(class|def)\s+(\w+)', blocks[i][0], re.MULTILINE)
+            top = re.search(rf'^(class|{DEF})\s+(\w+)', blocks[i][0],
+                            re.MULTILINE)
             name = top.group(2) if top else '(anonymous)'
             print(f'    drop {name}: unresolved {sorted(missing)} '
                   f'(from {Path(source).name})')
@@ -481,7 +501,7 @@ def _dedup_class_methods(code):
     method_spans = []
     i = 0
     while i < len(lines):
-        m = re.match(r'^(    )def (\w+)\(', lines[i])
+        m = re.match(rf'^(    ){DEF} (\w+)\(', lines[i])
         if m:
             name = m.group(2)
             start = i
@@ -529,7 +549,7 @@ def deduplicate_blocks(blocks):
     name_to_last = {}
     for i, (code, _, _) in enumerate(result):
         names = set()
-        for m in re.finditer(r'^(?:def|class)\s+(\w+)', code, re.MULTILINE):
+        for m in re.finditer(rf'^(?:{DEF}|class)\s+(\w+)', code, re.MULTILINE):
             names.add(m.group(1))
         if len(names) == 1:
             name = next(iter(names))
@@ -539,7 +559,7 @@ def deduplicate_blocks(blocks):
     seen = {}
     for i, (code, _, _) in enumerate(result):
         names = set()
-        for m in re.finditer(r'^(?:def|class)\s+(\w+)', code, re.MULTILINE):
+        for m in re.finditer(rf'^(?:{DEF}|class)\s+(\w+)', code, re.MULTILINE):
             names.add(m.group(1))
         if len(names) == 1:
             name = next(iter(names))
@@ -622,6 +642,70 @@ HEADER = """\
 import sys
 d2l = sys.modules[__name__]
 """
+
+
+# ──────────────────────────────────────────────────────────
+# Per-key registry shards
+# ──────────────────────────────────────────────────────────
+
+# Registries whose entries get one freshness shard per key. A notebook then
+# depends only on the keys it names (as a string literal, in its own code or in
+# a library shard it reaches; see scan_d2l_usage.py), so registering a new
+# dataset stales nothing. Every other registry (`HF_REVISIONS[...] = ...`)
+# keeps one shard per container.
+KEYED_REGISTRIES = ('DATA_HUB',)
+
+_SAFE_KEY = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*')
+
+
+def registry_shard_name(container, key):
+    """Shard name (file stem) of one registry entry: `DATA_HUB.<key>`.
+
+    A key that is not a plain file name (`[A-Za-z0-9][A-Za-z0-9._-]*`) is
+    sanitised and suffixed with a hash of the original, so the name stays
+    unique and safe as a Make prerequisite. scan_d2l_usage.py maps a string
+    literal to its shard with this same function.
+    """
+    if _SAFE_KEY.fullmatch(key):
+        return f'{container}.{key}'
+    safe = re.sub(r'[^A-Za-z0-9._-]', '_', key)
+    digest = hashlib.sha1(key.encode('utf-8')).hexdigest()[:8]
+    return f'{container}.{safe}-{digest}'
+
+
+def registry_entries(code, containers=KEYED_REGISTRIES):
+    """Split a block into its keyed registry entries and the rest.
+
+    Returns `(entries, rest)`: `entries` lists `(shard_name, text)` for each
+    module-level statement `[d2l.]C['key'] = ...` with C in *containers* and a
+    string-literal key (text = the statement's full source lines); `rest` is
+    True when the block has any other statement. A block that does not parse
+    gives `([], True)` (no splitting).
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return [], True
+    lines = code.split('\n')
+    entries, rest = [], False
+    for stmt in tree.body:
+        target = (stmt.targets[0] if isinstance(stmt, ast.Assign)
+                  and len(stmt.targets) == 1 else None)
+        if (isinstance(target, ast.Subscript)
+                and isinstance(target.slice, ast.Constant)
+                and isinstance(target.slice.value, str)):
+            box = target.value
+            name = (box.id if isinstance(box, ast.Name) else
+                    box.attr if isinstance(box, ast.Attribute)
+                    and isinstance(box.value, ast.Name)
+                    and box.value.id == 'd2l' else None)
+            if name in containers:
+                text = '\n'.join(lines[stmt.lineno - 1:stmt.end_lineno])
+                entries.append(
+                    (registry_shard_name(name, target.slice.value), text))
+                continue
+        rest = True
+    return entries, rest
 
 
 def reorder_blocks_by_dependency(blocks):
@@ -780,10 +864,20 @@ def build_library(src_dir, output_file, framework, lib_config, files,
         # `d2l = sys.modules[__name__]` (preface imports) is the module's
         # self-alias, not a symbol.
         names = [n for n in _block_shard_names(code) if n != 'd2l']
+        # Each `DATA_HUB['key'] = ...` statement also gets its own shard,
+        # `DATA_HUB.<key>` (KEYED_REGISTRIES), whether its block is a pure
+        # registry block or a named one (`GPT2_URL = ...` plus three
+        # entries). The notebook scan follows string-literal keys to it.
+        entries, rest = registry_entries(code)
+        for shard, text in entries:
+            unnamed.setdefault(shard, []).append(text)
         if not names:
-            # `d2l.DATA_HUB['x'] = ...` entries go to the shard of the
-            # container they fill (DATA_HUB, reached through `download`);
-            # anything else (imports) goes to the preamble shard.
+            if entries and not rest:
+                continue
+            # Other registry entries go to the shard of the container they
+            # fill (`HF_REVISIONS[...]`); so does a keyed entry whose block
+            # cannot be split (a computed key). Anything else (imports)
+            # goes to the preamble shard.
             m = re.match(r'(?:d2l\.)?(\w+)\[', code.lstrip())
             unnamed.setdefault(m.group(1) if m else '_preamble', []).append(code)
             continue
@@ -808,7 +902,7 @@ def build_library(src_dir, output_file, framework, lib_config, files,
     seen_shards = set()
     n_shard_written = 0
     for name, codes in shard_code.items():
-        if len(codes) > 1 and name not in ('_preamble', 'DATA_HUB'):
+        if len(codes) > 1 and name not in ('_preamble',) + KEYED_REGISTRIES:
             print(f'  note: {len(codes)} blocks define {name}; '
                   f'shard {name}.py holds all of them')
         shard_path = shard_dir / f'{name}.py'

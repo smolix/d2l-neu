@@ -41,6 +41,16 @@ test-trap:
 		&& python3 tools/test_notebook_locks.py \
 		&& python3 tools/test_notebook_venvs.py; } 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
 
+# CPU unit tests of the Language Models part's library code (rule T1 of the
+# ch. 18 spec): every tools/test_lm_*.py plus tools/test_build_lib_async.py,
+# run by unittest in .venv-lm (the part's own venv: transformers, openai, ...;
+# docs/build-system.md §6.4.2). No GPU, no network unless a test opts in.
+LM_TESTS := tools/test_build_lib_async.py $(sort $(wildcard tools/test_lm_*.py))
+.PHONY: test-lm
+test-lm: | .venv-lm/.synced
+	@mkdir -p $(LOGDIR)
+	@.venv-lm/bin/python -m unittest $(LM_TESTS) 2>&1 | tee $(LOGDIR)/test-lm-$(TS).log
+
 # ── Locked notebooks (docs/build-system.md "Locked notebooks") ──
 # A source .md carrying `<!-- execution: locked; requires: <class> -->` is never
 # executed by a build: the scheduler (and run_one_notebook.py, for a direct

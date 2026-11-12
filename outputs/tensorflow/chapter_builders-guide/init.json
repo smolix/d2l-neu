@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "range [-0.0884, 0.0884], predicted bound 0.0884\nstd 0.0509, predicted 0.0510\nbias all zero: True\n"
+          "text": "range [-0.0884, 0.0884], predicted bound 0.0884\nstd 0.0510, predicted 0.0510\nbias all zero: True\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "default: mean square of the output 0.001\nHe:      mean square of the output 0.91\n"
+          "text": "default: mean square of the output 0.00076\nHe:      mean square of the output 0.76\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0983\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.0962\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.91 before, 0.23 after\n"
+          "text": "0.76 before, 0.19 after\n"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      1.94      1.51     0.995\n  8      18.5      1.52     0.989\n 32  7.63e+04      1.57     0.997\n"
+          "text": "  N  unscaled    scaled      zero\n  2      1.93      1.47     0.998\n  8      15.3      1.59     0.999\n 32     5e+04      1.75         1\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 37516,
-          "sha256": "sha256:0a3d372ab823bee63bcb817f1630691bdd1883fbb564025313fd2b595288fc48"
+          "bytes": 35632,
+          "sha256": "sha256:67584aff01ac35990ea5759c5c6e37e560767976620f3266c63a269b1efd8147"
         }
       ]
     }

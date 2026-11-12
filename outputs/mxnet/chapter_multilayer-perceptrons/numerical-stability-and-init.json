@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:bc60e530cf5491d1799eceec4f92cbaa40c331cecbd4bed0cfcde533dac054fe",
+    "d2l_lib_fingerprint": "sha256:c20ea1a9bd7d9c8b867b76e2d2bdf62de32002f267384b2216ca4c154df1c3d8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 9.0e-18\nReLU, N(0, 1): gradient mean square at layer 1: 9.3e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 5.0e-12\n"
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 1.0e-17\nReLU, N(0, 1): gradient mean square at layer 1: 1.0e+19\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.7e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
-          "bytes": 34687,
-          "sha256": "sha256:1c55b94f59593953b73788f14639e9f281919602c2199bb6173e008a1976f9fb"
+          "bytes": 34713,
+          "sha256": "sha256:a8d33e5dbdcf452e49c8c1e5752d3bf588edbbdb046df566b5c24449ef2908f0"
         }
       ]
     },
@@ -43,14 +43,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0, 0.01²): activations at layer 10: 5.7e-20, gradient at layer 1: 7.5e-18\nXavier: activations at layer 10: 6.3e-04, gradient at layer 1: 1.6e-03\nHe: activations at layer 10: 4.6e-01, gradient at layer 1: 9.2e-01\n"
+          "text": "N(0, 0.01²): activations at layer 10: 7.1e-20, gradient at layer 1: 8.3e-18\nXavier: activations at layer 10: 7.2e-04, gradient at layer 1: 1.7e-03\nHe: activations at layer 10: 1.0e+00, gradient at layer 1: 1.2e+00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31924,
-          "sha256": "sha256:94f07983a45cc30943f09cf805a9af747130749d73c9f65dedc83a1ae95a5bb4"
+          "bytes": 31926,
+          "sha256": "sha256:d8d179d7bef0e9cb2f1ed53ab235526f4aa7d365888ae25c80092585dac2bcba"
         }
       ]
     },
@@ -71,19 +71,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Xavier: validation accuracy 0.84\n"
+          "text": "Xavier: validation accuracy 0.79\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "He: validation accuracy 0.87\n"
+          "text": "He: validation accuracy 0.82\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-training-a-deep-network-2-1.svg",
-          "bytes": 25347,
-          "sha256": "sha256:f7c8fbada74abcd5e13c1b6cc7f8a05772cd56b9b80e0261cb21db156596f891"
+          "bytes": 25340,
+          "sha256": "sha256:26ccae424e0dfd3bb85ac2cfc6046f7c1f7ea5753feca9791e5f8caa6a663ee8"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.42\n"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.21\n"
         }
       ]
     }

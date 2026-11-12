@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:098cded424d975614ba9f21bbe89ae6479224a8f6582a009627b7fb0493deb80",
+    "d2l_lib_fingerprint": "sha256:2321bcb8078044f6906446cbf87a27830df30af08ef982f8a88e2216ea297493",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,7 +47,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247670,
-          "sha256": "sha256:6d10b6fa4b4707049c7a0d78f27a46a75363ed39957d1658e368a686ff9c1abd"
+          "sha256": "sha256:70d3d97e0b81187b15a1e264091b49b697567a0a28321e78576725a6f391a92c"
         }
       ]
     },
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 49420,
-          "sha256": "sha256:27c91b7b61d10839477287fca39e04b8acbed88be9e9ed6d74df8d9be7804787"
+          "sha256": "sha256:a76afea4d1e96f63d7f3b3fa50a94fff9b11c4529aab6eb728e88f2aee5ae93d"
         }
       ]
     },
@@ -110,7 +110,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 707108,
-          "sha256": "sha256:9ee2b3a0ad6ab263253eff4a4bf0646d73c42cb5f265600505caf02397430264"
+          "sha256": "sha256:59fc3013b32fcd5ef9830c9a87cc76fbd5a3801d6244f422c330b75985091a3a"
         }
       ]
     },

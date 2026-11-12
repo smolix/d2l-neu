@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3d32ff64411ce5002e85bcae64093420aca765436f5c956df190f2001986c0ab",
+    "d2l_lib_fingerprint": "sha256:3e6efa5c1024dd239b55630414622e9858a8743c437ed49a6fb1258df3abbe6f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "value-iter/value-iter-value-iteration-3-1.svg",
           "bytes": 42057,
-          "sha256": "sha256:f339a8c335273a5f967295cf39aea53182a1a087f08fc2ecd6a7829c14428321"
+          "sha256": "sha256:0ca6e96bbdaf0221f1ef7a2f95ec989f49b4c8e24ad1e1e044dd690d44515960"
         }
       ]
     },

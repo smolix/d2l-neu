@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "without the generator  max |difference| 0.00958\n"
+          "text": "without the generator  max |difference| 0.0076\n"
         }
       ]
     },
@@ -114,7 +114,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.0033, 0.0033, 0.0027, 0.0019, 0.0035]\nfresh optimizer: [0.0033, 2.4349, 0.8584, 1.1481, 0.9282]\n"
+          "text": "saved optimizer: [0.0026, 0.0035, 0.0017, 0.003, 0.0022]\nfresh optimizer: [0.0026, 4.4987, 0.5426, 1.8454, 2.1844]\n"
         }
       ]
     },

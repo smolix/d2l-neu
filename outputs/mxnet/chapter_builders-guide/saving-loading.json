@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "full checkpoint        max |difference| 0\nwithout the generator  max |difference| 0.00716\n"
+          "text": "full checkpoint        max |difference| 0\nwithout the generator  max |difference| 0.00742\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.002, 0.0016, 0.0021, 0.002, 0.0015]\nfresh optimizer: [0.002, 6.0176, 0.5508, 1.1222, 3.1388]\n"
+          "text": "saved optimizer: [0.0008, 0.001, 0.001, 0.001, 0.0009]\nfresh optimizer: [0.0008, 1.9411, 0.5375, 1.8789, 0.8948]\n"
         }
       ]
     },

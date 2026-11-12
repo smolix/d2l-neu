@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31734,
-          "sha256": "sha256:de50775c79bdce73edee67f06919d5dfe024ce65913b763d80d2dfb54cab2597"
+          "sha256": "sha256:9353388f5b82ee0178c4c5d961cc7cc22e2cd9cb038073690fccd38db466599b"
         }
       ]
     },
@@ -75,12 +75,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mean ||x||/sqrt(d) = 0.891, sd ||x|| = 0.66, mean |cos| = 0.6324 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.987, sd ||x|| = 0.70, mean |cos| = 0.1797 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.998, sd ||x|| = 0.70, mean |cos| = 0.0569 vs 0.0564\n"
+          "text": "d =    2: mean ||x||/sqrt(d) = 0.890, sd ||x|| = 0.66, mean |cos| = 0.6367 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.987, sd ||x|| = 0.71, mean |cos| = 0.1808 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.999, sd ||x|| = 0.72, mean |cos| = 0.0566 vs 0.0564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.70, mean |cos| = 0.0180 vs 0.0178\n"
+          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.71, mean |cos| = 0.0180 vs 0.0178\n"
         }
       ]
     },
@@ -91,12 +91,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.4%, median contrast = 33.534\nd =   20: mass in (1 ± 0.1) sqrt(d) =  47.6%, median contrast = 1.232\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.3%, median contrast = 0.268\n"
+          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.6%, median contrast = 35.638\nd =   20: mass in (1 ± 0.1) sqrt(d) =  46.8%, median contrast = 1.114\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.8%, median contrast = 0.275\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.080\n"
+          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.077\n"
         }
       ]
     }

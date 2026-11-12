@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:973c02a8523163af9ac139baa6492d15f01dc67df9b1446c49b38c39a2ef89d4",
+    "d2l_lib_fingerprint": "sha256:dbde35b8285c8fb8878f757e7254739aa9db2746b3296bb08e741a935382b236",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 86732,
-          "sha256": "sha256:2f46e3d87c288948e113a62b80261ca7c412ef6d74e54d7bafd626911b86b315"
+          "sha256": "sha256:bbc13bff36edb2e0a9275d9634b1d2ff504c57ba3f2a9417cdd0ccf490b9a095"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87281,
-          "sha256": "sha256:8bc48e264dc3565db1f0d70e98844985353a4bd1b72e1729f1ab428218f1d876"
+          "sha256": "sha256:8dfd9c55e10aede8a6e8936632e61dd4325b030d14296242d28105f4ba5ecee7"
         }
       ]
     }

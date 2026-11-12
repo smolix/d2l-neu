@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one example at a time:   77.376 ms\nall examples at once:     0.125 ms\nspeedup: 620x\n"
+          "text": "one example at a time:   78.185 ms\nall examples at once:     0.151 ms\nspeedup: 519x\n"
         }
       ]
     }

@@ -96,7 +96,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward mode: 80,200 operations (200 passes of 401)\nreverse mode: 802 operations (one recorded pass, one sweep)\nratio 100.0, largest gradient difference 0.0e+00\n"
+          "text": "forward mode: 80,200 operations (200 passes of 401)"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nreverse mode: 802 operations (one recorded pass, one sweep)\nratio 100.0, largest gradient difference 0.0e+00\n"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:c7bda18a52de708bb23e44f8284e3708ba9605bdcea97ec602c20a8b5a762ec4",
+    "d2l_lib_fingerprint": "sha256:4095756b5c0341cc73fc36206c0ff6ead674838e298ddbaa068815874a709925",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -165,12 +165,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   0    0.2    1.0    3.2   56.4\n   1    0.3    0.9    1.8   27.7\n   2    0.2    0.9    1.8   29.3\n   3    7.9   48.5   81.8  120.3\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   4   10.8   56.4   78.5   87.5\n"
+          "text": "   0    0.2    1.0    3.2   56.4\n   1    0.3    0.9    1.8   27.7\n   2    0.2    0.9    1.8   29.3\n   3    7.9   48.5   81.8  120.3\n   4   10.8   56.4   78.5   87.5\n"
         }
       ]
     },
@@ -203,7 +198,7 @@
           "mime": "image/svg+xml",
           "asset": "model-based/model-based-distillation-into-the-actor-3-1.svg",
           "bytes": 32962,
-          "sha256": "sha256:9b29a5510968c347a5d08150b89cefad13608d7cedf13986b3fedd6d558018cd"
+          "sha256": "sha256:4319e6aeb8085894396dea95f7c4fa94260067f6296be75056e0f05e7216659d"
         }
       ]
     }

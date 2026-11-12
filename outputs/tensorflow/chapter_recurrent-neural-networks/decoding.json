@@ -31,13 +31,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 23607,
-          "sha256": "sha256:aaf8f5747dc6a1031c51985f9a2f3c33e7ac135a1aedd2ee8c9319897bbc6bc5"
+          "bytes": 23611,
+          "sha256": "sha256:6cc0a6652bb61004af31cede576ce218cba70fcbdd0d51bd5a85d9972d17abe5"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 60.0\n"
+          "text": "validation perplexity 59.0\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller, and the faintly, and the faintly, and the faintly, and\n    the faintly, and the faintly, and the faintly, and the faintly, and the\n    faintly, and'\n'It seemed to me that I had a friendly the paradox, and the faintly, and the\n    faintly, and the faintly, and the faintly, and the faintly, and the\n    faintly,'\n"
+          "text": "'The Time Traveller, and the faintness, I saw the slope, and the faintness,\n    I saw the slope, and the faintness, I saw the slope, and the faintness,\n    I saw the s'\n'It seemed to me that the\\nside, I saw the slope, and the faintness, I saw\n    the slope, and the faintness, I saw the slope, and the faintness, I saw\n    the slope'\n"
         }
       ]
     },
@@ -69,17 +69,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=1, score -4.81: 'The Time Traveller, and the faintly, and the faintly, and\n    the faintly, and the faintly, and the faintly'\n"
+          "text": "w=1, score -4.78: 'The Time Traveller, and the faintness, I saw the slope,\n    and the faintness, I saw the slope, and the f'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.45: 'The Time Traveller, and I saw a falling, and I saw the\n    Time Machine, and I was nothinged to the Time Machine, and I was'\nw=1, score -4.64: 'It seemed to me that I had a friendly the paradox, and\n    the faintly, and the faintly, and the faint'\n"
+          "text": "w=4, score -4.12: 'The Time Traveller came to me, I saw the Time Machine, I\n    saw the Time Machine, I saw the Time Machine, I saw the Time Machine, I\n    saw'\nw=1, score -4.74: 'It seemed to me that the\\nside, I saw the slope, and the\n    faintness, I saw the slope, and the faintness'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.41: 'It seemed to me that I could not seem to me, and I saw\n    the Time Machine, and I was nothinged to the Time Machine, and I saw\n    the'\n"
+          "text": "w=4, score -4.14: 'It seemed to me that it was nothing of the Time Machine,\n    I saw the Time Machine, I saw the Time Machine, I saw the Time Machine,\n    I saw the'\n"
         }
       ]
     },
@@ -100,7 +100,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "greedy: 0\n{'k': 2} tokens drawn: [0, 1]\n{'p': 0.8} tokens drawn: [0, 1, 2]\n"
+          "text": "greedy: 0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'k': 2} tokens drawn: [0, 1]\n{'p': 0.8} tokens drawn: [0, 1, 2]\n"
         },
         {
           "type": "stream",
@@ -117,8 +122,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 51220,
-          "sha256": "sha256:b53c7ea201763f0d01b54805edea671e4e1edbd22037b56d6105ddd61d33c378"
+          "bytes": 52317,
+          "sha256": "sha256:81bad5f64869bdcd62f7ce249c6546c1af845d5cae1bf64fcf0a0635bd163ffc"
         }
       ]
     },
@@ -129,7 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller': top probability 0.22; kept: top-k 20, top-p 132, min-p 14\n'The Time': top probability 0.78; kept: top-k 20, top-p 2, min-p 2\n"
+          "text": "'The Time Traveller': top probability 0.16; kept: top-k 20, top-p 134, min-p 18\n'The Time': top probability 0.79; kept: top-k 20, top-p 3, min-p 2\n"
         }
       ]
     },
@@ -140,12 +145,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=0.5: \"The Time Traveller, and the reminded the Time Machine, and the\n    loose, for a masses of the Time Traveller's anticip, and the little\n    people, and the restless the wood, and the little people,\"\ntau=1.0: 'The Time Traveller. It\\nped rather against cceris proprove ined\n    and intense\\ninThere sheep I po out of what, in that I had differently\n    confess his\\nButin a whichures pass'\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "tau=2.0: 'The Time Traveller. setise again, in the rec indeedable mind� a\n    suddenity abovehes laughhed and laical gr craveller rem Sy came, all\n    confasnessonsed intoical ag ru wassizon shive'\n"
+          "text": "tau=0.5: \"The Time Traveller's framp, I was nothing, and they had come to\n    me. I remember the Medical Man, the most particularly\\nwell, and the\n    morning. 'I'As the p\"\ntau=1.0: 'The Time Traveller was the thick determitted in which have\\nme>\n    than\\nlike _ delack to the she was during their attlrous. The For\n    endered�\\naching more! I could'\ntau=2.0: 'The Time Travellerotion to the hidch of conse Machine whend\n    distoft�llow well�,atory and\\nworldiace was dotion there hor all on kind\n    cre fl_was more certain they which hamsfully har round and,'\n"
         }
       ]
     },
@@ -156,22 +156,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: 'The Time Traveller, and the faintly, and the faintly, and the\n    faintly, and the faintly, and the faintly, and the faintly, and the\n    faintly, and the faintly, and'\n"
+          "text": "    greedy: 'The Time Traveller, and the faintness, I saw the slope, and the\n    faintness, I saw the slope, and the faintness, I saw the slope, and the\n    faintness, I saw the s'\n     tau=1: \"The Time Traveller directionort of an Eilo things,' said\n    slready garden a leotion.\\n\\n'That hall in door me\\nOneing ballery\n    andgth of the remain from the first too\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: 'The Time Traveller in the gallery, the bright I thought against\n    me. I was desp strenteredulties of travels of a weap over a>ing scold, I\n    had receicious colour, he'\n  top-k=20: \"The Time Traveller, and it.\\nThe Time Traveller's a sadder, in\n    the pretty fruits that the sun\\nand the ends of me that it had foreed at\n    first time in the sense of the b\"\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " top-p=0.9: 'The Time Traveller faint, and love rejecting, rambering up\n    dur\\nthe wild belince negth is only a soon--and fairly, and repotion his\n    time\\nrees'\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "min-p=0.05: \"The Time Traveller's reassundering one of my eyes, and then\n    you, I could see to the\\nhand, I had a different of the light, but the\n    light was the determor.\\n\\n'It seemed\"\n"
+          "text": "  top-k=20: \"The Time Traveller. 'Ifect and there, no gartal, I could feel\n    the keen. Why and raused, I was siting of the Time Machine, I went on\n    the pallermitt\"\n top-p=0.9: \"The Time Traveller gular raster savantsurally meis\\nwhere's\n    unknown. And graves, was the intermitions as a charanged in the\n    distant\\nfound. The b\"\nmin-p=0.05: \"The Time Traveller's furs,\\nand I did not all the horrible was\n    the future and\\ntimes I was in the bronze good. They came the hill,\n    which I was me, I determatur\"\n"
         }
       ]
     },
@@ -182,32 +172,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: log-prob per token -2.05, distinct-3 0.09\n"
+          "text": "    greedy: log-prob per token -1.98, distinct-3 0.18\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " beam, w=4: log-prob per token -1.88, distinct-3 0.20\n"
+          "text": " beam, w=4: log-prob per token -1.69, distinct-3 0.10\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: log-prob per token -3.98, distinct-3 1.00\n"
+          "text": "     tau=1: log-prob per token -4.02, distinct-3 1.00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k=20: log-prob per token -2.79, distinct-3 0.98\n"
+          "text": "  top-k=20: log-prob per token -2.90, distinct-3 0.99\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " top-p=0.9: log-prob per token -3.48, distinct-3 1.00\n"
+          "text": " top-p=0.9: log-prob per token -3.44, distinct-3 1.00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: log-prob per token -2.75, distinct-3 0.98\n"
+          "text": "min-p=0.05: log-prob per token -2.80, distinct-3 0.99\n"
         }
       ]
     }

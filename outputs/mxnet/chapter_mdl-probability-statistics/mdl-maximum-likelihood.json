@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 27412,
-          "sha256": "sha256:a12cdcf62d10f7697df85818e7529625c6ed528502d38d9655383aa5aaed0fc6"
+          "sha256": "sha256:8f75a01ee748a26ec4db220cb36f312449ecda6fec5854272ebe68b79fbebfbf"
         }
       ]
     },
@@ -43,7 +43,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean score 0.007, variance of score 0.502, -mean curvature 0.502\n"
+          "text": "mean score -0.015, variance of score 0.496, -mean curvature 0.502\n"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
-          "bytes": 24932,
-          "sha256": "sha256:d06127f6ff1de2e290d3d69c4691300f0051f43dfd2f4758e10a2f2a2a1b45b8"
+          "bytes": 24958,
+          "sha256": "sha256:7acfea8f1102d5edae13e903e4f571ee216bfa9f2033319b77e6fef9569060d7"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n Var(MLE) = 2.03, n Var(median) = 2.52, n Var(mean) = 2.14e+05\n"
+          "text": "n Var(MLE) = 2.05, n Var(median) = 2.53, n Var(mean) = 9.09e+04\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:aa8403b2d184f72f1daee84e8ec7c20c0a77a26391949199ec053951d8081772",
+    "d2l_lib_fingerprint": "sha256:ee6041598c67c0f60a721fff827ce71a1199268390a62d5f732d0c734f78680e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -101,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 41682,
-          "sha256": "sha256:26ecd878112c307472e5b9ff6815dfd4efc888d5061e136f5addba626fa4db10"
+          "sha256": "sha256:ee3b6d7a78a4af49c8893103e8657a48aa88068aedad2a8ba264cd4c3816ca2a"
         }
       ]
     },

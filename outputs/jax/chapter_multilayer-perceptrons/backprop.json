@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W1: relative difference 2.6e-16\nb1: relative difference 2.0e-16\n"
+          "text": "W1: relative difference 3.5e-16\nb1: relative difference 1.7e-16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W2: relative difference 2.2e-16\nb2: relative difference 1.0e-16\n"
+          "text": "W2: relative difference 2.2e-16\nb2: relative difference 1.8e-16\n"
         }
       ]
     }

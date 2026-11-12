@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:0317ab4e7a3fa34287bbda6318db9ffb3994b093c466383decea8dd8fe9973c7",
+    "d2l_lib_fingerprint": "sha256:ec24423bfaea76ab41ad71079e6cd4eebfedbb267dfdeaac06ef03a9c95bac6f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -83,7 +83,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 85977,
-          "sha256": "sha256:3dde54adabfb71651509d98ecc5e7694ce8e94bd4ecc802f1f24bbdaf9e3c6ad"
+          "sha256": "sha256:ba2498587367cd66765d5c9179872b3e76dff3bccfc5fa7048d012e5dd206529"
         }
       ]
     },
@@ -120,7 +120,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 59s - 2s/step - accuracy: 0.7440 - loss: 37.0761 - pixel_ce: 1.1586 - val_accuracy: 0.8110 - val_loss: 22.2339 - val_pixel_ce: 0.6948\n"
+          "text": "34/34 - 53s - 2s/step - accuracy: 0.7457 - loss: 37.9041 - pixel_ce: 1.1845 - val_accuracy: 0.8117 - val_loss: 22.3448 - val_pixel_ce: 0.6983\n"
         },
         {
           "type": "stream",
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 10s - 283ms/step - accuracy: 0.8385 - loss: 17.8888 - pixel_ce: 0.5590 - val_accuracy: 0.8266 - val_loss: 19.2793 - val_pixel_ce: 0.6025\n"
+          "text": "34/34 - 10s - 285ms/step - accuracy: 0.8346 - loss: 18.6160 - pixel_ce: 0.5817 - val_accuracy: 0.8213 - val_loss: 19.6182 - val_pixel_ce: 0.6131\n"
         },
         {
           "type": "stream",
@@ -140,7 +140,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 10s - 282ms/step - accuracy: 0.8573 - loss: 14.9483 - pixel_ce: 0.4671 - val_accuracy: 0.8385 - val_loss: 17.9640 - val_pixel_ce: 0.5614\n"
+          "text": "34/34 - 10s - 282ms/step - accuracy: 0.8585 - loss: 14.9861 - pixel_ce: 0.4683 - val_accuracy: 0.8382 - val_loss: 17.6529 - val_pixel_ce: 0.5517\n"
         },
         {
           "type": "stream",
@@ -150,7 +150,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 10s - 283ms/step - accuracy: 0.8756 - loss: 12.6085 - pixel_ce: 0.3940 - val_accuracy: 0.8415 - val_loss: 17.0203 - val_pixel_ce: 0.5319\n"
+          "text": "34/34 - 10s - 281ms/step - accuracy: 0.8734 - loss: 13.0185 - pixel_ce: 0.4068 - val_accuracy: 0.8423 - val_loss: 17.0690 - val_pixel_ce: 0.5334\n"
         },
         {
           "type": "stream",
@@ -160,11 +160,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 10s - 291ms/step - accuracy: 0.8850 - loss: 11.4788 - pixel_ce: 0.3587 - val_accuracy: 0.8432 - val_loss: 16.7175 - val_pixel_ce: 0.5224\n"
+          "text": "34/34 - 9s - 279ms/step - accuracy: 0.8835 - loss: 11.7027 - pixel_ce: 0.3657 - val_accuracy: 0.8441 - val_loss: 16.8642 - val_pixel_ce: 0.5270\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x7b577bf995e0>"
+          "text": "<keras.src.callbacks.history.History at 0x779a83f957f0>"
         }
       ]
     },
@@ -186,8 +186,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 157194,
-          "sha256": "sha256:d2f551b852f24c0b16ff0f412d179ff7eba48fe39d5fb15b7cf4cadf103bf712"
+          "bytes": 157598,
+          "sha256": "sha256:28df8637e30fc81dc4df44b9a040fbcb07896ef07485b5e1645a5f990650e4a5"
         }
       ]
     }

@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "steps 0-5: [-1297.4  -990.5  -950.9  -887.6  -859.8  -857.3]  step 29: -857.1\npi = [0.6 0.4], mu = [-2.06  1.49], sigma = [0.78 0.58]\n"
+          "text": "steps 0-5: [-1252.9  -984.7  -953.8  -901.   -868.5  -862.7]  step 29: -861.4\npi = [0.6 0.4], mu = [-1.94  1.5 ], sigma = [0.82 0.55]\n"
         }
       ]
     },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log-likelihood -1436.5 -> -1023.9, 166.7 below the previous fit\npi = [0.5 0.5], mu = [-0.63 -0.63], sigma = [1.88 1.88]\nmean of x = -0.63, standard deviation of x = 1.88\n"
+          "text": "log-likelihood -1381.5 -> -1012.9, 151.5 below the previous fit\npi = [0.5 0.5], mu = [-0.57 -0.57], sigma = [1.83 1.83]\nmean of x = -0.57, standard deviation of x = 1.83\n"
         }
       ]
     }

@@ -62,7 +62,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x_t at t =        30      300     3000    15000   (x* = -1)\nadam         0.745    1.000    1.000    1.000\namsgrad     -0.953   -0.985   -0.995   -0.998\n"
+          "text": "x_t at t =        30      300     3000    15000   (x* = -1)\nadam         0.745    1.000    1.000    1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "amsgrad     -0.953   -0.985   -0.995   -0.998\n"
         },
         {
           "type": "stream",
@@ -99,14 +104,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t:                           1     2     3    10    20    30   100  1000  3000\nAdam:                     1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nexact variance:           1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nno bias correction:       3.16  3.02  2.87  2.15  1.61  1.33  0.74  0.29  0.23\nwarmup over 20 steps:     0.05  0.07  0.09  0.16  0.26  0.24  0.23  0.23  0.23\n"
+          "text": "t:                           1     2     3    10    20    30   100  1000  3000\nAdam:                     1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nexact variance:           1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nno bias correction:       3.16  3.00  2.86  2.15  1.63  1.34  0.75  0.29  0.23\nwarmup over 20 steps:     0.05  0.07  0.09  0.16  0.26  0.24  0.23  0.23  0.23\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-stochastic-methods-warmup-1.svg",
-          "bytes": 77553,
-          "sha256": "sha256:ebc299a2a1dbc5dd6121790a954112ab63fe460fb48f92c495913d0a1bfcef31"
+          "bytes": 83913,
+          "sha256": "sha256:27e86844fcb304fd29c8df43da3b14999e02340de7ee76bf0bbd4301d1414d65"
         }
       ]
     },

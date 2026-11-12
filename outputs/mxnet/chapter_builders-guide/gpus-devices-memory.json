@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b5c681dd603d5658569369d74d14882c2d226dfdd355df860a78486f602d1bf1",
+    "d2l_lib_fingerprint": "sha256:35ac056be43eb122c8c65c76cf9a68b7e11743f5c9c28ac4f3cd799a91b9de75",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.01697766],\n       [-0.01697766]], device=gpu(0))"
+          "text": "array([[-0.07292164],\n       [-0.07292164]], device=gpu(0))"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0010 sec\ntime until they all finished:     0.0546 sec\n"
+          "text": "time to queue 32 matrix products: 0.0023 sec\ntime until they all finished:     0.0549 sec\n"
         }
       ]
     },
@@ -87,12 +87,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "product on the CPU, fp32: 318.91 ms/call\nproduct on the GPU, tf32: 1.70 ms/call\n"
+          "text": "product on the CPU, fp32: 270.10 ms/call\nproduct on the GPU, tf32: 1.73 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "product on the GPU, fp16: 0.89 ms/call\ncopy from CPU to the GPU: 5.69 ms/call\n"
+          "text": "product on the GPU, fp16: 0.89 ms/call\ncopy from CPU to the GPU: 6.12 ms/call\n"
         }
       ]
     },
@@ -124,12 +124,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "num_gpus=0: 2.2 sec per epoch\n"
+          "text": "num_gpus=0: 2.7 sec per epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "num_gpus=1: 2.1 sec per epoch\n"
+          "text": "num_gpus=1: 1.0 sec per epoch\n"
         }
       ]
     }

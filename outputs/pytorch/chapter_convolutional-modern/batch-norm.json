@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'largest channel mean': 2.8385380801410065e-07,\n 'average channel variance': 0.9999988675117493,\n 'largest difference': 9.5367431640625e-07,\n 'running means': tensor([0.2007, 0.2010, 0.2003, 0.2015, 0.2004, 0.2001])}"
+          "text": "{'largest channel mean': 1.1894319840166645e-07,\n 'average channel variance': 0.9999990463256836,\n 'largest difference': 9.5367431640625e-07,\n 'running means': tensor([0.2005, 0.1997, 0.2001, 0.2010, 0.1976, 0.2012])}"
         }
       ]
     },
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24486,
-          "sha256": "sha256:51911f03110f7ea01d5d2fef80b43193f09c4548cda16209ae62c046648f64fc"
+          "bytes": 24492,
+          "sha256": "sha256:fa2630331bb00495c3076cd737954711590ab072ea3d628f645b3add239ea70b"
         }
       ]
     },
@@ -67,7 +67,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.622, 'BNLeNet': 0.885}"
+          "text": "{'CosineLeNet': 0.614, 'BNLeNet': 0.885}"
         }
       ]
     },
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-7-1.svg",
-          "bytes": 29403,
-          "sha256": "sha256:7b27fb574e0739c326a5872dabf3ed436cf0101cdfe2b97f8319c1d5e3391c6e"
+          "bytes": 29415,
+          "sha256": "sha256:4ee70a87ab80fd31889a1c12192884160a967362bdea57dd53ce648dcc14da5c"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(2.7940e-08), tensor(1.0000), tensor(0.))"
+          "text": "(tensor(2.3283e-08), tensor(1.0000), tensor(0.))"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [55, 45]\n"
+          "text": "heads, tails:  [45, 55]\n"
         }
       ]
     },
@@ -35,7 +35,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([53., 47.])"
+          "text": "tensor([48., 52.])"
         }
       ]
     },
@@ -45,7 +45,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.5000, 0.5000],\n        [0.5300, 0.4700],\n        [0.4800, 0.5200],\n        [0.5600, 0.4400],\n        [0.4200, 0.5800]])"
+          "text": "tensor([[0.5000, 0.5000],\n        [0.4500, 0.5500],\n        [0.5000, 0.5000],\n        [0.4900, 0.5100],\n        [0.5800, 0.4200]])"
         }
       ]
     },
@@ -55,7 +55,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.4878, 0.5122])"
+          "text": "tensor([0.4959, 0.5041])"
         }
       ]
     },
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 68404,
-          "sha256": "sha256:16156b7022972e1c76d1b1d6ae79a7411dfcea21f31d6eb36ab2de832f1465ee"
+          "bytes": 70259,
+          "sha256": "sha256:75475bf1c0f21e0cf578818b1fa6ed57b968ffba9a2892ba9ad3c8f8a72d4a25"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31777,
-          "sha256": "sha256:201004c5b2d77721db3906285c51169623c5d538c9c736103372f2eaa61d493e"
+          "bytes": 31776,
+          "sha256": "sha256:f95a34a24376d23980804a6332115d674c4b08a111f88469edf57295034e122f"
         }
       ]
     },
@@ -91,7 +91,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0.2790), tensor(0.))"
+          "text": "(tensor(0.2820), tensor(0.))"
         }
       ]
     },
@@ -101,7 +101,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(0.8245)"
+          "text": "tensor(0.8220)"
         }
       ]
     }

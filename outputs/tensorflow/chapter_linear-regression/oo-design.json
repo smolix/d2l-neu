@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:2146d8a46fcbb6767d3dd9a7eb06c8427c94285068c707d9829a05bb6c230267",
+    "d2l_lib_fingerprint": "sha256:ed33a92f117b8575431e3cde1721f25de77ec95b30ed3046fa5d25fa4d8d3dbc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 5.03 -0.56 10.07]\na new pass starts with labels [5.37 4.57 5.52]\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 4.14  6.44 -0.39]\na new pass starts with labels [ 3.71  4.84 -0.62]\n"
         }
       ]
     },
@@ -169,8 +169,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-training-linear-regression-again-1-1.svg",
-          "bytes": 34365,
-          "sha256": "sha256:fced4d9f52f893dd929ae8b95e83353131cac28b2dbd6a1fce36e907e2fd5ee8"
+          "bytes": 34322,
+          "sha256": "sha256:c301cd26d34d78f0cc0d1051ee0a94412b4272ee7030b2edce8570aed2605b2a"
         }
       ]
     },
@@ -181,7 +181,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 5.2e-05\nerror in w: 7.8e-04, -2.2e-04\nerror in b: -3.3e-04\n"
+          "text": "validation loss: 4.8e-05\nerror in w: 1.1e-04, 8.2e-04\nerror in b: -2.8e-04\n"
         }
       ]
     }

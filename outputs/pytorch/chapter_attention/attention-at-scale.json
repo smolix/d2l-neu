@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c39e23d1e781b9aa1cbbf803786106bc3b87b756f7cbaa76a3a6883942da38d3",
+    "d2l_lib_fingerprint": "sha256:9fd427797ec4fd78013e8f3b81e481bce7fab7263f6abcb5971edd0baa72982d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,7 +41,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  2048: 0.07 ms/call\nn =  4096: 0.47 ms/call\nn =  8192: 1.84 ms/call\nn = 16384: 7.37 ms/call\n"
+          "text": "n =  2048: 0.10 ms/call\nn =  4096: 0.46 ms/call\nn =  8192: 1.85 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 16384: 7.39 ms/call\n"
         }
       ]
     },
@@ -57,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 4.17e-07\n"
+          "text": "maximum deviation: 2.38e-07\n"
         }
       ]
     },
@@ -70,7 +75,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-a-chunked-implementation-3-1.svg",
           "bytes": 28795,
-          "sha256": "sha256:d87ba04b50210d61e8f7983ef37b90787056edebe0ef94e34fa2ba9bea669e8f"
+          "sha256": "sha256:cc2db172ad0b6f252eaedc9f2808daee1161eeaa450b83f5dd46d913921c4a7f"
         }
       ]
     },
@@ -81,7 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive:  19.98 ms, peak memory  4176.0 MiB\nfused:   1.09 ms, peak memory    16.5 MiB\n"
+          "text": "naive:  26.05 ms, peak memory  4176.0 MiB\nfused:   1.22 ms, peak memory    16.5 MiB\n"
         }
       ]
     },
@@ -98,8 +103,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-sliding-window-attention-1-1.svg",
-          "bytes": 16518,
-          "sha256": "sha256:f0c296405d05de8a3af7a006641f36e5595163cc2e30db5aeda493ebf7b949f3"
+          "bytes": 16526,
+          "sha256": "sha256:c7c20dbcd9afd2bf7641c83df53f312252ddd3fe420483d651ab14509a97dce9"
         }
       ]
     },
@@ -117,7 +122,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-depth-restores-the-reach-1.svg",
           "bytes": 90120,
-          "sha256": "sha256:86dd5937c8c32e8ed34b7bf00eaac35c330e22ba60043b6a2bd338404a670ac7"
+          "sha256": "sha256:88c1ca5842910f6f89de89964011e52eec1dba77005a31b32913c19e70f6dc33"
         }
       ]
     },
@@ -133,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 3.58e-07\n"
+          "text": "maximum deviation: 4.17e-07\n"
         }
       ]
     },
@@ -160,7 +165,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 5.96e-07\n"
+          "text": "maximum deviation: 6.56e-07\n"
         }
       ]
     },
@@ -176,7 +181,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 2.38e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
+          "text": "maximum deviation: 4.77e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
         }
       ]
     },
@@ -204,8 +209,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-the-price-of-attention-measured-1.svg",
-          "bytes": 35605,
-          "sha256": "sha256:04f0ca5263010517848524665c853acc0e1ac5c7789be437399d6aba1198833d"
+          "bytes": 35807,
+          "sha256": "sha256:67df9f31b3d7804a5442a743fdd95eeab20e4e4fbcd41dfdd291ba69a8cf1903"
         }
       ]
     }

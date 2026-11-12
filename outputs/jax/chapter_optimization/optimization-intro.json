@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
+    "d2l_lib_fingerprint": "sha256:71f23eff288cdfc510d64d9e0a5b0d7d2805ef58e06c7cbbebe8caa44317c605",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 18945,
-          "sha256": "sha256:8e7d9970c94e10a77c81a6b39214a70aec31c84ef3cfbb9eed6219810506d6ae"
+          "sha256": "sha256:b830dc9f5e791746bd2c1eeb1d33663dc80eff1577a94827614a5c4433a90fef"
         }
       ]
     },
@@ -54,14 +54,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta 0.4: sharpness 4.80 -> 5.00 (2/eta = 5), loss 0.268 -> 3.9e-04\neta 0.25: sharpness 4.80 -> 7.86 (2/eta = 8), loss 0.268 -> 5.9e-05\n"
+          "text": "eta 0.4: sharpness 2.56 -> 5.01 (2/eta = 5), loss 0.225 -> 3.7e-04\neta 0.25: sharpness 2.56 -> 7.71 (2/eta = 8), loss 0.225 -> 2.6e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-the-edge-of-stability-2-1.svg",
-          "bytes": 26323,
-          "sha256": "sha256:562a113359196ba775715212a967013c70726b47db9dbd026d57e8d8449cb7c1"
+          "bytes": 26318,
+          "sha256": "sha256:71c43b2fedb87dc0ed5a3156630a8e2a798ef562b0b84e85299138a0f8be4021"
         }
       ]
     }

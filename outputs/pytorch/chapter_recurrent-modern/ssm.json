@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b18b2fd5eb3e80bc3eefd30e289246a787e1f8d588eb26b45a1b5acaee5cbae6",
+    "d2l_lib_fingerprint": "sha256:2576c099cad1a71eeef3713eb0ec688bab3be5d86cfc20fa29309b2e51faee3e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 31136,
-          "sha256": "sha256:eaaf3e6228c4f87a154d445816bea03efca48fbc53f7b494e4345969717dfc81"
+          "bytes": 31531,
+          "sha256": "sha256:639100e4c270573e59ed09c6bb804f8f0be45caeeb4ed86c9d693d25ff42badf"
         }
       ]
     },
@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU perplexity: 3.20\n"
+          "text": "minGRU perplexity: 3.19\n"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity with the state reset: 10.78\n"
+          "text": "perplexity with the state reset: 10.81\n"
         }
       ]
     },
@@ -86,7 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gates above 0.5: 54%, above 0.9: 24%\n"
+          "text": "gates above 0.5: 53%, above 0.9: 25%\n"
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "convolution vs scan: 2.4e-07, convolution vs steps: 1.2e-07\n"
+          "text": "convolution vs scan: 1.2e-07, convolution vs steps: 1.2e-07\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D, short timescales     1.00   0.12\n"
+          "text": "S4D, short timescales     1.00   0.13\n"
         },
         {
           "type": "stream",

@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of C: min 0.253, max 2.233\nMarchenko-Pastur edges: 0.250, 2.250\n"
+          "text": "eigenvalues of C: min 0.252, max 2.234\nMarchenko-Pastur edges: 0.250, 2.250\n"
         }
       ]
     }

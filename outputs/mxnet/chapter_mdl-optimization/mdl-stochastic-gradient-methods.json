@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr Sigma = 1.098\nb =  1: measured 1.1054, tr Sigma / b = 1.0982, ratio 1.007\nb =  4: measured 0.2770, tr Sigma / b = 0.2746, ratio 1.009\nb = 16: measured 0.0688, tr Sigma / b = 0.0686, ratio 1.003\nb = 64: measured 0.0172, tr Sigma / b = 0.0172, ratio 1.000\n"
+          "text": "tr Sigma = 1.071\nb =  1: measured 1.0728, tr Sigma / b = 1.0705, ratio 1.002\nb =  4: measured 0.2690, tr Sigma / b = 0.2676, ratio 1.005\nb = 16: measured 0.0678, tr Sigma / b = 0.0669, ratio 1.013\nb = 64: measured 0.0168, tr Sigma / b = 0.0167, ratio 1.003\n"
         }
       ]
     },
@@ -41,14 +41,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean gap, last 1000 steps: 1.9e-02, 8.4e-03, 4.6e-04\nfloor(0.8) / floor(0.4) = 2.23, floor(0.8) / decay = 41\n"
+          "text": "mean gap, last 1000 steps: 1.6e-02, 7.3e-03, 4.4e-04\nfloor(0.8) / floor(0.4) = 2.24, floor(0.8) / decay = 37\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 92730,
-          "sha256": "sha256:7d7068c104532e53faaa0bd2bf4fc67092ce4b4c80f8503a2fb6ddab9bdf54af"
+          "bytes": 89365,
+          "sha256": "sha256:b1e7d73cd1e1f969de67f59b7d173badafa0da86a9ef159fc7ad8008bd6da75d"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-schedules-1.svg",
           "bytes": 30408,
-          "sha256": "sha256:c65e588062f933033148e5b015bdb31636792245134f8d81a96c3b63cc5a6ca0"
+          "sha256": "sha256:1272d7e02308074eb797a00f1d2bdd806d7fb06ec31273f1055876d89fd1e7ec"
         }
       ]
     },
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random iterate 3.3e-01 1.3e-01 5.7e-02 2.4e-02   slope -0.63\nbest iterate   3.2e-02 5.2e-03 1.3e-03 2.8e-04   slope -1.12\n"
+          "text": "random iterate 1.8e-01 7.2e-02 3.2e-02 1.5e-02   slope -0.60\nbest iterate   8.9e-03 1.3e-03 2.5e-04 3.7e-05   slope -1.31\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-ghadimi-lan-1.svg",
-          "bytes": 29504,
-          "sha256": "sha256:99ffaeedd90ebfd6b2f9ebeedcaa828bf9b557c1369fb6cdc5106e05acf5df0b"
+          "bytes": 30374,
+          "sha256": "sha256:71957c0b01742541a03278ececc082a595b6060d19831e154dd1fe6bc67b693b"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L_max = 33, 1 / (4 L_max) = 0.0076\n"
+          "text": "L_max = 31, 1 / (4 L_max) = 0.0080\n"
         }
       ]
     },
@@ -111,14 +111,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SGD: predicted floor 1.9e-02, mean gap in epochs 4-12 2.2e-02\nSVRG: gap after epochs 1, 4, 12: 2e-01, 1e-04, 1e-11\n"
+          "text": "SGD: predicted floor 1.8e-02, mean gap in epochs 4-12 2.2e-02\nSVRG: gap after epochs 1, 4, 12: 4e-01, 1e-03, 3e-11\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 29980,
-          "sha256": "sha256:161f1f782365eeb55f1b1b1c77d9acf7657c5e4141c81e97a6c2d28b5d3979cb"
+          "bytes": 31212,
+          "sha256": "sha256:4c23499cd5f558bcef7113d95147ea0c287e196fd41d46ecf5422b395744f79a"
         }
       ]
     }

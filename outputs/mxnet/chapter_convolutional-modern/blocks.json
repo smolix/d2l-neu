@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 32940,
-          "sha256": "sha256:c6454bbc61e896f517150da07d101322115d532402d6e7c8e040294b0316b84e"
+          "bytes": 31833,
+          "sha256": "sha256:bc03450fdda576191053a923e22c3ab38c2c9a20110662745edcdf5416331c37"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 33195,
-          "sha256": "sha256:cce064adcbe736f0e518371a6334293e773e20427e1d2bddb1e7e64b22f59146"
+          "bytes": 33191,
+          "sha256": "sha256:55db166789a6b1c18f27a2d9c8016ef0febadc78369a4b421eaeecc5c749f39a"
         }
       ]
     },
@@ -99,19 +99,19 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-3-1.svg",
-          "bytes": 31231,
-          "sha256": "sha256:d0c53f55144163bd0aedc13dcaefb9f3533e797dd94298bfcb45533bfef2174b"
+          "bytes": 32944,
+          "sha256": "sha256:b22eaf084d927a265a0523065eb83cedde0b97d73bf6994c18d3d3da79a10926"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-3-2.svg",
-          "bytes": 32402,
-          "sha256": "sha256:2d25063b6a5719d56d2304091e6624addabb814efd1c14b5f3e0b6a1bb5ef3fc"
+          "bytes": 31197,
+          "sha256": "sha256:b71a2bf46778cb06d6d03c7996abb10005b7826fd6abab4fc288ca25fbe725fe"
         },
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.916, 'PooledVGG': 0.896}"
+          "text": "{'VGG': 0.917, 'PooledVGG': 0.893}"
         }
       ]
     },
@@ -149,8 +149,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 32571,
-          "sha256": "sha256:2c68c3841b2445bfd7fe764315ab9ed07b83b03936275a3495452535fe601ae6"
+          "bytes": 33536,
+          "sha256": "sha256:adebec3845540908684672e6230cbda3c32454d736a1b4f4017811a6be002799"
         }
       ]
     },
@@ -160,7 +160,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.931, 'NiN': 0.889, 'PooledVGG': 0.896, 'GoogLeNet': 0.912}"
+          "text": "{'VGG': 0.934, 'NiN': 0.883, 'PooledVGG': 0.893, 'GoogLeNet': 0.905}"
         }
       ]
     }

@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(0.6674186, dtype=float32), Array(0.22368135, dtype=float32))"
+          "text": "(Array(0.66654587, dtype=float32), Array(0.22108003, dtype=float32))"
         }
       ]
     }

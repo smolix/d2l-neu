@@ -64,7 +64,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa      GD   heavy ball   Nesterov     GD/kappa   HB/sqrt(kappa)\n   10      69        27         43          6.9         8.5\n  100     691        93        155          6.9         9.3\n 1000    6908       315        508          6.9        10.0\n"
+          "text": "kappa      GD   heavy ball   Nesterov     GD/kappa   HB/sqrt(kappa)\n   10      69        27         43          6.9         8.5\n  100     691        93        155          6.9         9.3\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1000    6908       315        508          6.9        10.0\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9bcc81fcb97ea9b8e517562b3ca8f0535250032b202b71cee502447400c619d7",
+    "d2l_lib_fingerprint": "sha256:aad037f7d64d7c72e379f0698860bd0d56fd85ff42a8b85865a4c7f098c7559f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-score-variance-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25848,
-          "sha256": "sha256:ec5480b1dd7dd8c25dd58ab0dbff25b4cb8a379fdf222a6e9ae90da1662f3f22"
+          "bytes": 25852,
+          "sha256": "sha256:babf669ce2d240a2ff635a98e9bac231ac89776363fdc4e04dc21d33a340abde"
         }
       ]
     },
@@ -38,7 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   4: Jacobian norm 0.258 (unscaled), 0.181 (scaled)\nd =  64: Jacobian norm 0.202 (unscaled), 0.185 (scaled)\nd = 512: Jacobian norm 0.094 (unscaled), 0.185 (scaled)\n"
+          "text": "d =   4: Jacobian norm 0.254 (unscaled), 0.177 (scaled)\nd =  64: Jacobian norm 0.200 (unscaled), 0.183 (scaled)\nd = 512: Jacobian norm 0.092 (unscaled), 0.185 (scaled)\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[0.5718, 0.4282, 0.0000, 0.0000],\n         [0.4908, 0.5092, 0.0000, 0.0000]],\n\n        [[0.4295, 0.3456, 0.2249, 0.0000],\n         [0.2841, 0.3840, 0.3319, 0.0000]]])"
+          "text": "tensor([[[0.4920, 0.5080, 0.0000, 0.0000],\n         [0.4500, 0.5500, 0.0000, 0.0000]],\n\n        [[0.3732, 0.2170, 0.4098, 0.0000],\n         [0.4212, 0.3096, 0.2692, 0.0000]]])"
         }
       ]
     },
@@ -68,7 +68,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.3754, 0.4178, 0.2068, 0.0000]],\n\n        [[0.6541, 0.3459, 0.0000, 0.0000],\n         [0.2612, 0.1231, 0.3243, 0.2914]]])"
+          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.4348, 0.3049, 0.2604, 0.0000]],\n\n        [[0.5471, 0.4529, 0.0000, 0.0000],\n         [0.2523, 0.2052, 0.2362, 0.3063]]])"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1-1.svg",
-          "bytes": 16411,
-          "sha256": "sha256:f1f24ec5cdb365eb2918a00b8a9c1700ce17b4944b217b16aca3502d866d5f6a"
+          "bytes": 16419,
+          "sha256": "sha256:9826eee8cf02ab2acdd3386a495d3c01445705c2b15037d3803e34e4ada6df0a"
         }
       ]
     },
@@ -98,8 +98,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
-          "bytes": 27713,
-          "sha256": "sha256:9f887cdff1200ee6c629c253468a256f203d054f1daa21999eab46b30ae8e79b"
+          "bytes": 27721,
+          "sha256": "sha256:60e6bb7d9a7ee4a275fb545b5d9ac4e1eb6bb0df19d2a79b27b660c7e5e5bd4c"
         }
       ]
     },
@@ -112,7 +112,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1-1.svg",
           "bytes": 13718,
-          "sha256": "sha256:3e6ca96033b15e714856466b4ed4be020cd84144a5d5367cd70df83250cdf421"
+          "sha256": "sha256:b8cb750757500f573585fbd9baeb19a5f7b23aae7fe1bfe59dc0831389644c1a"
         }
       ]
     },
@@ -139,8 +139,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
-          "bytes": 16821,
-          "sha256": "sha256:ad44f47faa2e515fbc66be0d72db3f99cf2185d0af610199415708afc33fbac5"
+          "bytes": 16809,
+          "sha256": "sha256:d6ec2f95060ecc1b28e0d917ff5c9ce395c19624525f5ca74e39a27d4fd0af4f"
         }
       ]
     },
@@ -150,7 +150,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.1753, 0.2082, 0.1614, 0.1522, 0.1008, 0.2020],\n        [0.2350, 0.1742, 0.1704, 0.1520, 0.0864, 0.1820],\n        [0.2576, 0.2041, 0.0746, 0.1800, 0.0515, 0.2323]])"
+          "text": "tensor([[0.2818, 0.1473, 0.1029, 0.2014, 0.0971, 0.1696],\n        [0.2419, 0.1682, 0.0942, 0.2157, 0.1169, 0.1631],\n        [0.2208, 0.1576, 0.1162, 0.2236, 0.1337, 0.1481]])"
         }
       ]
     }

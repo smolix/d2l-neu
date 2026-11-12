@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b47492f2a32d4b1406cceabddeef419e7ef8403f54bac1592194875de5a2525b",
+    "d2l_lib_fingerprint": "sha256:b260c8f693c086b6a65bfc7f4c8142115b286fa80ea100f763371da77b3f55fe",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " post-LN: stream RMS at k=32:  1.00, token spread at k=8,16,32: 3.5e-01 2.5e-02 1.1e-04\n          grad norms at k=32: W_q 2.6e-09  W_k 2.7e-09  W_v 5.8e-02  W_o 5.9e-02\n  pre-LN: stream RMS at k=32:  5.13, token spread at k=8,16,32: 7.6e-01 5.6e-01 3.9e-01\n          grad norms at k=32: W_q 2.1e-03  W_k 2.2e-03  W_v 8.1e-02  W_o 8.2e-02\n"
+          "text": " post-LN: stream RMS at k=32:  1.00, token spread at k=8,16,32: 2.9e-01 2.2e-02 1.1e-04\n          grad norms at k=32: W_q 3.2e-09  W_k 2.9e-09  W_v 6.6e-02  W_o 6.1e-02\n  pre-LN: stream RMS at k=32:  5.40, token spread at k=8,16,32: 7.2e-01 4.7e-01 3.5e-01\n          grad norms at k=32: W_q 2.0e-03  W_k 2.0e-03  W_v 8.5e-02  W_o 8.1e-02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
-          "bytes": 29314,
-          "sha256": "sha256:6480940848a74cdd54b9d09057dd335cc17639ed1e758f5fd9834800e056fb7a"
+          "bytes": 29777,
+          "sha256": "sha256:c4bcb23cc7f4ef6d57eba37aaea13d695ea9e2a883e606ea182dc89f59cf24c5"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.66 ms/call\n"
+          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.72 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RMSNorm: 0.65 ms/call\n"
+          "text": "RMSNorm: 0.72 ms/call\n"
         }
       ]
     },
@@ -106,12 +106,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   gelu: validation loss at step 200/400/600: 2.49/2.17/1.89\n"
+          "text": "   gelu: validation loss at step 200/400/600: 2.49/2.16/1.89\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " swiglu: validation loss at step 200/400/600: 2.47/2.10/1.83\n"
+          "text": " swiglu: validation loss at step 200/400/600: 2.47/2.21/1.88\n"
         }
       ]
     }

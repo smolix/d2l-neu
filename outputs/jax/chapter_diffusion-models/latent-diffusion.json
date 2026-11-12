@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:56d046e3ab0e620e6477c92a306d24a054450cddbacdc31c2f388e7d33c20f6f",
+    "d2l_lib_fingerprint": "sha256:2d24e24ee7dcb753b233f9c2d33ed12d25dbdab254d96345e2a64584efc7d26e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "latent-diffusion/latent-diffusion-the-autoencoder-2-1.png",
-          "bytes": 49977,
-          "sha256": "sha256:020d3957ec239993e5cd652a613c42426ad8b89f4855bcef1d3c6b59da31b876"
+          "bytes": 50172,
+          "sha256": "sha256:dc42ddc474cfdf740ce8dd0c9b3cd21dd4c7ca04d86e3bec3a8d30e6da22949d"
         }
       ]
     },
@@ -49,7 +49,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, the other 5,000 test images: FD 0.18\n"
+          "text": "floor, the other 5,000 test images: FD 0.17\n"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "latent std 0.95 (scale factor 1.05), encoder std 0.024, excess kurtosis -0.47\n"
+          "text": "latent std 0.95 (scale factor 1.05), encoder std 0.024, excess kurtosis -0.46\n"
         }
       ]
     },
@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD: pixel U-Net 1.58, latent U-Net 2.27\n"
+          "text": "FD: pixel U-Net 1.64, latent U-Net 2.35\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "latent-diffusion/latent-diffusion-the-same-regression-on-latents-3-1.png",
-          "bytes": 51760,
-          "sha256": "sha256:ed8f67ee83ff362a1273aed6e2378d9ef9965e82700a9209f8e6ff22dc48966d"
+          "bytes": 51879,
+          "sha256": "sha256:0a88c9cdcb30070e5f03bd1e9971c38493004c9e0007844b65a445cbf9daa38f"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DiT-S   1.26M parameters   33 GFLOP per step   FD 4.96\nDiT-M   7.39M parameters  190 GFLOP per step   FD 1.61\nDiT-L  21.90M parameters  559 GFLOP per step   FD 1.19\nU-Net   1.20M parameters  192 GFLOP per step   FD 1.58\n"
+          "text": "DiT-S   1.26M parameters   33 GFLOP per step   FD 5.64\nDiT-M   7.39M parameters  190 GFLOP per step   FD 1.63\nDiT-L  21.90M parameters  559 GFLOP per step   FD 1.18\nU-Net   1.20M parameters  192 GFLOP per step   FD 1.64\n"
         }
       ]
     },
@@ -164,8 +164,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-2-1.svg",
-          "bytes": 27088,
-          "sha256": "sha256:848295ff5829cfe86807e21c6ac2e89a0d5a3db30cb5dbcf0d1e4abee1e81ae8"
+          "bytes": 27278,
+          "sha256": "sha256:ac13b0df8c84eb6aeac30a7897a958d7560b5d2641e67c96802ce5f1187c99f6"
         }
       ]
     },
@@ -177,8 +177,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-3-1.svg",
-          "bytes": 150511,
-          "sha256": "sha256:ab0d22b4703e01e382a98e1809efab968fc48bf4663ffde10d861cbe2f0b1652"
+          "bytes": 150639,
+          "sha256": "sha256:57d807e1583562ba9e18aa36450acaee15c0affe7ad8e58f177ac4ff47e5cb65"
         }
       ]
     },
@@ -189,7 +189,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "latent DiT-M, 190 GFLOP per step: FD 2.15; latent U-Net 2.27; reconstructions 0.78\n"
+          "text": "latent DiT-M, 190 GFLOP per step: FD 2.35; latent U-Net 2.35; reconstructions 0.78\n"
         }
       ]
     }

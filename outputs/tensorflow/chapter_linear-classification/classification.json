@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy 0.830\n"
+          "text": "validation accuracy 0.826\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "confidence 0.1 to 0.2:    1 predictions, mean 0.168, accuracy 0.000\nconfidence 0.2 to 0.3:   51 predictions, mean 0.267, accuracy 0.176\nconfidence 0.3 to 0.4:  281 predictions, mean 0.359, accuracy 0.370\nconfidence 0.4 to 0.5:  635 predictions, mean 0.459, accuracy 0.512\nconfidence 0.5 to 0.6:  912 predictions, mean 0.549, accuracy 0.564\nconfidence 0.6 to 0.7:  919 predictions, mean 0.651, accuracy 0.689\nconfidence 0.7 to 0.8: 1010 predictions, mean 0.751, accuracy 0.792\nconfidence 0.8 to 0.9: 1436 predictions, mean 0.853, accuracy 0.891\nconfidence 0.9 to 1.0: 4755 predictions, mean 0.972, accuracy 0.976\nECE: 0.020\n"
+          "text": "confidence 0.1 to 0.2:    2 predictions, mean 0.186, accuracy 0.000\nconfidence 0.2 to 0.3:   52 predictions, mean 0.271, accuracy 0.269\nconfidence 0.3 to 0.4:  276 predictions, mean 0.361, accuracy 0.359\nconfidence 0.4 to 0.5:  637 predictions, mean 0.456, accuracy 0.521\nconfidence 0.5 to 0.6:  897 predictions, mean 0.551, accuracy 0.548\nconfidence 0.6 to 0.7:  948 predictions, mean 0.650, accuracy 0.679\nconfidence 0.7 to 0.8: 1008 predictions, mean 0.750, accuracy 0.779\nconfidence 0.8 to 0.9: 1401 predictions, mean 0.853, accuracy 0.882\nconfidence 0.9 to 1.0: 4779 predictions, mean 0.972, accuracy 0.975\nECE: 0.016\n"
         }
       ]
     },
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "classification/softmax-regression-concise-calibration-3-1.svg",
-          "bytes": 29300,
-          "sha256": "sha256:34ba0cd53bfbd9230bb1c9d43d16cbe13034d6d12614f897627d26a9f7c81b17"
+          "bytes": 29292,
+          "sha256": "sha256:f8b1875f9350cebd1450b2354cd43643052576bb6816924ad547a366fdc85500"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 0.91; ECE on the second half: 0.018 before, 0.010 after scaling\n"
+          "text": "T = 0.93; ECE on the second half: 0.015 before, 0.013 after scaling\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:0edcc98dce6c5affc66efefcfb79ac52e55c7698a0acfde93b7e96a24034d910",
+    "d2l_lib_fingerprint": "sha256:a088ddf71b6fff64006bd13a4c0a232d3d7a9813399cd0245acfc3ef67a37896",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -103,12 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "K =  4: success of a sampled response 0.500\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "K =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
+          "text": "K =  4: success of a sampled response 0.500\nK =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
         }
       ]
     },
@@ -135,32 +130,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     lake         return: |mean|/|grad J| = 0.99, cos = 0.998, noise =  13.6\n     lake         causal: |mean|/|grad J| = 0.99, cos = 0.998, noise =  13.6\n"
+          "text": "     lake         return: |mean|/|grad J| = 0.99, cos = 0.998, noise =  13.6\n     lake         causal: |mean|/|grad J| = 0.99, cos = 0.998, noise =  13.6\n     lake   reward-to-go: |mean|/|grad J| = 1.38, cos = 0.987, noise =  12.3\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     lake   reward-to-go: |mean|/|grad J| = 1.38, cos = 0.987, noise =  12.3\n     lake       centered: |mean|/|grad J| = 1.11, cos = 0.986, noise =   7.6\n"
+          "text": "     lake       centered: |mean|/|grad J| = 1.11, cos = 0.986, noise =   7.6\n     lake     normalized: |mean|/|grad J| = 3.28, cos = 0.982, noise =   7.5\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     lake     normalized: |mean|/|grad J| = 3.28, cos = 0.982, noise =   7.5\n     lake value baseline: |mean|/|grad J| = 1.38, cos = 0.990, noise =   5.7\n"
+          "text": "     lake value baseline: |mean|/|grad J| = 1.38, cos = 0.990, noise =   5.7\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step cost         return: |mean|/|grad J| = 0.98, cos = 0.996, noise =  19.5\nstep cost         causal: |mean|/|grad J| = 1.00, cos = 0.999, noise =   5.8\n"
+          "text": "step cost         return: |mean|/|grad J| = 0.98, cos = 0.996, noise =  19.5\nstep cost         causal: |mean|/|grad J| = 1.00, cos = 0.999, noise =   5.8\nstep cost   reward-to-go: |mean|/|grad J| = 1.29, cos = 0.989, noise =   5.4\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step cost   reward-to-go: |mean|/|grad J| = 1.29, cos = 0.989, noise =   5.4\nstep cost       centered: |mean|/|grad J| = 1.07, cos = 0.985, noise =   5.6\n"
+          "text": "step cost       centered: |mean|/|grad J| = 1.07, cos = 0.985, noise =   5.6\nstep cost     normalized: |mean|/|grad J| = 2.12, cos = 0.980, noise =   5.8\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step cost     normalized: |mean|/|grad J| = 2.12, cos = 0.980, noise =   5.8\nstep cost value baseline: |mean|/|grad J| = 1.28, cos = 0.989, noise =   3.0\n"
+          "text": "step cost value baseline: |mean|/|grad J| = 1.28, cos = 0.989, noise =   3.0\n"
         }
       ]
     },
@@ -193,7 +188,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 50985,
-          "sha256": "sha256:5a32928c114e66f2e41fdd04daa2e4c30762d3ab88eb0815d1cae1ca75ce5ee6"
+          "sha256": "sha256:d87f26995860e4a014a1ce8512f46be436a363b62c9d9cdf93f337c37dc163bb"
         }
       ]
     },
@@ -217,7 +212,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
           "bytes": 45139,
-          "sha256": "sha256:4f6a57b69e311b3569ca8d88f7acd01e5a6535d4ade81d0b1684e893937e1141"
+          "sha256": "sha256:07dc70237f1b472c5ce8e91d9394c261cb53a840d98751915d042fd851bfa7dc"
         }
       ]
     }

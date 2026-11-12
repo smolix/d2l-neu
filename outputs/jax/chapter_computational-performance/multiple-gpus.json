@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:36d2735e7c4e7c5a3944898515ec88637e322ece06663966ffc0829c44f64920",
+    "d2l_lib_fingerprint": "sha256:44e3e02da9392840c46831a488f57d38ccaee87ecf5e1567eddcd2145008935b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 3.4e-01, largest difference 1.2e-07\n"
+          "text": "largest update 1.1e-01, largest difference 3.7e-08\n"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "alpha = 271 us, beta = 4.9 GB/s\n"
+          "text": "alpha = 281 us, beta = 5.6 GB/s\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "separately: 2750 us measured, 2808 us predicted\nat once   :  285 us measured,  372 us predicted\n"
+          "text": "separately: 2795 us measured, 2898 us predicted\nat once   :  279 us measured,  369 us predicted\n"
         }
       ]
     },
@@ -116,17 +116,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 256 examples each: 0.37 ms\n"
+          "text": "1 GPU(s), 256 examples each: 0.49 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 128 examples each: 0.39 ms\n"
+          "text": "1 GPU(s), 128 examples each: 0.37 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s), 128 examples each: 0.77 ms\n"
+          "text": "2 GPU(s), 128 examples each: 0.83 ms\n"
         }
       ]
     },
@@ -142,12 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 0.39 ms per step, test accuracy 0.85\n"
+          "text": "1 GPU(s): 0.42 ms per step, test accuracy 0.86\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s): 1.04 ms per step, test accuracy 0.83\n2 GPUs predicted: 1.16 ms per step\n"
+          "text": "2 GPU(s): 1.02 ms per step, test accuracy 0.86\n2 GPUs predicted: 1.13 ms per step\n"
         }
       ]
     }

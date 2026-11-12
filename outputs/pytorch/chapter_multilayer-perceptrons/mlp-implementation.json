@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:de84ca9b7282979adfc45b40485faddd7171d6f200255cf8b103edf0c0f185bc",
+    "d2l_lib_fingerprint": "sha256:46ff9aae9153d873456989e7e87b44669f26d6a344be02603136fc3e7738f56c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H: torch.Size([8, 256]) O: torch.Size([8, 10])\nloss 2.302, fraction of active units 0.53\n"
+          "text": "H: torch.Size([8, 256]) O: torch.Size([8, 10])\nloss 2.303, fraction of active units 0.52\n"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 39540,
-          "sha256": "sha256:e27d36e4299976875ce480a6ae162b837f4fd20cc3983e1b05f9adea59064cb9"
+          "bytes": 39552,
+          "sha256": "sha256:3e07fe9ef71249b9a6ba113432551718245134e682d10ee07b3d2be9e8f1c609"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 32312,
-          "sha256": "sha256:7b4e265c0dc6fd5464891544e3feceabac2a3b466eb689c5e878440f6c04675f"
+          "bytes": 29401,
+          "sha256": "sha256:90edba430606dc1467f1e6bb5e6f54ff5f147b929e0fb5561470e66166e35995"
         }
       ]
     },
@@ -87,12 +87,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.873\n  concise MLP: 0.868\n  softmax regression: 0.837\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.867\n  concise MLP: 0.870\n  softmax regression: 0.836\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training accuracy of the MLP from scratch: 0.899\n"
+          "text": "training accuracy of the MLP from scratch: 0.893\n"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class             softmax  MLP, scratch  MLP, concise\nT-shirt              0.78          0.84          0.79\ntrouser              0.96          0.97          0.97\npullover             0.62          0.86          0.81\ndress                0.85          0.84          0.89\ncoat                 0.79          0.82          0.84\nsandal               0.92          0.95          0.93\nshirt                0.65          0.61          0.69\nsneaker              0.94          0.92          0.93\nbag                  0.93          0.96          0.96\nankle boot           0.94          0.96          0.97\n"
+          "text": "class             softmax  MLP, scratch  MLP, concise\nT-shirt              0.81          0.80          0.73\ntrouser              0.95          0.96          0.96\npullover             0.75          0.91          0.86\ndress                0.89          0.87          0.95\ncoat                 0.77          0.70          0.76\nsandal               0.92          0.94          0.94\nshirt                0.51          0.61          0.61\nsneaker              0.93          0.95          0.95\nbag                  0.95          0.97          0.96\nankle boot           0.95          0.95          0.95\n"
         }
       ]
     },
@@ -120,8 +120,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-what-the-hidden-units-compute-2-1.svg",
-          "bytes": 70759,
-          "sha256": "sha256:aef0aa5820ffce0bf165c40f8852b916ae330279179995c0efd5bff24d4a6fb8"
+          "bytes": 73618,
+          "sha256": "sha256:57d2ceae66ef5c05dfd04e6959dbeedf4f7073e3a9253943bd6e709ea9863929"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "concise MLP: 2.8 s per epoch\nsoftmax regression: 2.4 s per epoch\n"
+          "text": "concise MLP: 2.3 s per epoch\nsoftmax regression: 2.4 s per epoch\n"
         }
       ]
     }

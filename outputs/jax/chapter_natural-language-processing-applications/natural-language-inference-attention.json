@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:2dfed1e50cd067d2926f1690f3484fd63e31ecdf16684d6a986d43382af86aab",
+    "d2l_lib_fingerprint": "sha256:9bbd3c6ff55d2c972ff3794dc614b1bd8c6ad5d743aa706516a4e007882a2d58",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,22 +61,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.8446, test acc 0.7425\n"
+          "text": "epoch 1, loss 0.8488, test acc 0.7467\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.6226, test acc 0.7911\n"
+          "text": "epoch 2, loss 0.6278, test acc 0.7895\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.5593, test acc 0.8076\n"
+          "text": "epoch 3, loss 0.5592, test acc 0.8127\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.5238, test acc 0.8139\n28933.3 examples/sec\n"
+          "text": "epoch 4, loss 0.5227, test acc 0.8174\n48090.8 examples/sec\n"
         }
       ]
     },

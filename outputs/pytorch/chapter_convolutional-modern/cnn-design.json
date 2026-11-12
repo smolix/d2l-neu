@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "((1, 32), (6, 192)) 94 million multiply-adds\n((2, 144), (6, 80)) 102 million multiply-adds\n"
+          "text": "((2, 128), (1, 240)) 97 million multiply-adds\n((4, 112), (1, 16)) 100 million multiply-adds\n"
         }
       ]
     },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "increasing widths: mean error 0.120, minimum 0.113\ndecreasing widths: mean error 0.119, minimum 0.111\n"
+          "text": "increasing widths: mean error 0.117, minimum 0.111\ndecreasing widths: mean error 0.122, minimum 0.112\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-comparing-design-spaces-5-1.svg",
-          "bytes": 31710,
-          "sha256": "sha256:952f5d0c51ee4fdc5cb41e537de09f8bcbfda8169c653faf0651dcdb9f893f9a"
+          "bytes": 30842,
+          "sha256": "sha256:5ed9577710357236b6644af728cdcb471d7abffb4761a1a7de1251763dc9a570"
         }
       ]
     },
@@ -101,8 +101,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 32520,
-          "sha256": "sha256:f0134ff2615138d8b6b91c056b2e4e66b247b61aaa5f75f8efc0aa97cbdba529"
+          "bytes": 31834,
+          "sha256": "sha256:5d43d0fcf113130ab8826af25298b935e1d8d8089b2af4e22eade2c4927f5260"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "519,658 parameters, validation accuracy 0.940\n"
+          "text": "519,658 parameters, validation accuracy 0.939\n"
         }
       ]
     },
@@ -130,8 +130,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
-          "bytes": 33924,
-          "sha256": "sha256:aba1a2f3a7a063b2ba16e394eacc1dd51818c48f7f12da9eeb1996f8b0e2cc22"
+          "bytes": 34516,
+          "sha256": "sha256:1aa7dd80a584be465cc048c0b448991316089b28f4e4a10549353511a740d51e"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "11,175,370 parameters, validation accuracy 0.941\n"
+          "text": "11,175,370 parameters, validation accuracy 0.939\n"
         }
       ]
     }

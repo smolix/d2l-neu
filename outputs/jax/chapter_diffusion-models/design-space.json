@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:2ebe9fd931a403a75e5734bef874dad620c657a8b3ecd06efc01b0bd9e40c530",
+    "d2l_lib_fingerprint": "sha256:e0759b8828aa82500385b2445b97052f20b8633d4df7fc4cf3db7a9bc62da103",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -95,7 +95,7 @@
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-noise-levels-are-scales-1.svg",
           "bytes": 32735,
-          "sha256": "sha256:659b532cd8d89c28f0a27fcd4e8e49de3281e708f11a5b879d142be0fd4b9b88"
+          "sha256": "sha256:c8c4f197f48834d1aa75c7e811174532c90e97953b0476a79fcc6984d66929c9"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD, real against real: 0.83\n"
+          "text": "FD, real against real: 0.85\n"
         }
       ]
     },
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    21.58           10.59           17.41\nv, vp                         7.90            8.95            6.79\nvelocity, linear              3.95            6.81            3.24\nEDM, vp                       4.64            7.54            4.08\n"
+          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    21.42           10.47           17.40\nv, vp                         8.23            9.36            7.15\nvelocity, linear              4.02            6.81            3.26\nEDM, vp                       4.61            7.62            4.05\n"
         }
       ]
     },
@@ -134,8 +134,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-a-recipe-ablation-3-1.svg",
-          "bytes": 198680,
-          "sha256": "sha256:bbb871c35fdddc57c8acce2dbbde80ff5cd43ffa469561866b8a20b890d54c9c"
+          "bytes": 200812,
+          "sha256": "sha256:c37709a95ef8dcde0bfe06aad7e939880466c0941d0c5985a4e3f348be2276b4"
         }
       ]
     }

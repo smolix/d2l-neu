@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:57120ec3325e92855ca32cadf003bb9c43399859a01be7a8f96ccd8fc04a7268",
+    "d2l_lib_fingerprint": "sha256:dc4f7a9d5a00cd48d5ff2eb289efb89318b1c436f247ff961ed6cbe7218bad99",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -147,14 +147,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class err 3.33e-03, bbox mae 3.27e-03\n10321.5 examples/sec on cuda:0\n"
+          "text": "class err 3.24e-03, bbox mae 3.24e-03\n10818.5 examples/sec on cuda:0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-training-the-model-1.svg",
-          "bytes": 20074,
-          "sha256": "sha256:92617d368eec8b8025a23e8f7801ab11c8d34d8870c8031592ead5bb1f1cde5a"
+          "bytes": 20952,
+          "sha256": "sha256:d0286adab83407de4d3482895b3b49ea989f06859f4ff71c7bd08b02ee8da9e4"
         }
       ]
     },
@@ -176,8 +176,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-prediction-3-1.svg",
-          "bytes": 420211,
-          "sha256": "sha256:fc4170d68b1af5a635a82f5ed73f2e1c82f08db20302207a607ab25ae168d3d9"
+          "bytes": 420221,
+          "sha256": "sha256:9f4bb5287570ec0196c2de403adf441a79cc555b59028f3e189a337117df75e6"
         }
       ]
     },
@@ -190,7 +190,7 @@
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-1-1.svg",
           "bytes": 18854,
-          "sha256": "sha256:cce8d0070360b925b8ce8a4cf458abfd7d17657426c6a336562b90caba16722a"
+          "sha256": "sha256:1dfc99347b41f16a32f072e653e3744e7564966ec841e06a77d5ede1dd355ef9"
         }
       ]
     },
@@ -203,7 +203,7 @@
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-2-1.svg",
           "bytes": 24888,
-          "sha256": "sha256:544f9d95872399f4efa12304380bd0c0fc878133a54e2a2a44ce17b603a60c18"
+          "sha256": "sha256:4355bda45de01f47e644ce4f8ff001e7aff24251562c384e476712fa09946067"
         }
       ]
     }

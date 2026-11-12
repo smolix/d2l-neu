@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2e15d66132cb9558f2da5c15cdeaae263fd2106a249863fcc2864599733d463a",
+    "d2l_lib_fingerprint": "sha256:f190c43425e31baf6dbf0c403408e67ab765d170c9b58fe60a080b7b105d424c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-priors/gp-priors-a-simple-gaussian-process-1.svg",
-          "bytes": 27616,
-          "sha256": "sha256:2551da1474fc846b093cf51971986f9878866e8f8a412871bc86e4f19bc111e4"
+          "bytes": 27623,
+          "sha256": "sha256:509c9407faf3f88a7959fc55a48c0a928287c16af14b34e5c4868ad422ffddc5"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-priors/gp-priors-rbf-basis-figure-1.svg",
           "bytes": 45891,
-          "sha256": "sha256:f42712d8962cc321ee2f5f157541f4c61e68f9363e78d2021a9e0c4d40c05b8f"
+          "sha256": "sha256:4765e886fba14a8da4dab260ffeecbe6bd1a648cf0711e62d08c4f57b5b2cac0"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-priors/gp-priors-the-radial-basis-function-rbf-kernel-1.svg",
-          "bytes": 16334,
-          "sha256": "sha256:2e447606163779be2c7561dd31df31b1aed8a3708590c9cf05bccbf06f27e35d"
+          "bytes": 15848,
+          "sha256": "sha256:fe71e8108c69f6d98c2d5e69fcb023d6b43fa298cbd44eded9808bd480004654"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e86ad73e7e227c75b660db6a95903d42b6679103732f7c155d87ea2243a542e8",
+    "d2l_lib_fingerprint": "sha256:79101b0fdecc1b01b0061f868cfc43e54c217b5a4163ed1d646bc67595e3249f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [6.45 0.41 7.07]\na new pass starts with labels [-2.6  11.48  8.92]\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [-0.64 -5.75  3.55]\na new pass starts with labels [-3.35  0.07 -0.03]\n"
         }
       ]
     },
@@ -174,8 +174,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-training-linear-regression-again-1-1.svg",
-          "bytes": 34346,
-          "sha256": "sha256:289218b0115e790b35243fbcb2c6731bb321303d9529a578d2e1c16e5ab45a64"
+          "bytes": 34354,
+          "sha256": "sha256:c49b2fbcb318b49464f376932479e0acbf3ea3e9444b7b5ba60497d8c1193fb7"
         }
       ]
     },
@@ -186,7 +186,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 5.0e-05\nerror in w: -2.5e-04, 6.9e-04\nerror in b: 1.5e-04\n"
+          "text": "validation loss: 5.1e-05\nerror in w: 4.3e-04, 3.0e-04\nerror in b: -6.7e-04\n"
         }
       ]
     }

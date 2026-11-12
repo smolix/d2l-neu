@@ -448,6 +448,8 @@ have a maximum at all.
        say about the tie-breaking rule of an implementation?
    :exlabel:`ex_mdl-latent-kmeans-limit`
 
+[Discussions](https://d2l.discourse.group/t/36881)
+
 <!-- slides -->
 
 ::: {.slide}

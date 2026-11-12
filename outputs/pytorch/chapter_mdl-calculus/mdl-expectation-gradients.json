@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true derivative 2*theta = 3.0\npathwise        mean=3.0005  sd=1.998 (exact 2.000)  se=0.0045\nscore           mean=2.9961  sd=7.136 (exact 7.181)  se=0.0160\nscore+baseline  mean=2.9948  sd=4.845 (exact 4.899)  se=0.0108\n"
+          "text": "true derivative 2*theta = 3.0\npathwise        mean=3.0041  sd=2.000 (exact 2.000)  se=0.0045\nscore           mean=3.0068  sd=7.146 (exact 7.181)  se=0.0160\nscore+baseline  mean=2.9961  sd=4.858 (exact 4.899)  se=0.0109\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "omega=1  true=+0.0429  pathwise +0.0430 (sd 0.66)  score +0.0418 (sd 0.54)\nomega=3  true=-0.0070  pathwise -0.0185 (sd 2.12)  score -0.0076 (sd 0.70)\n"
+          "text": "omega=1  true=+0.0429  pathwise +0.0414 (sd 0.66)  score +0.0432 (sd 0.54)\nomega=3  true=-0.0070  pathwise -0.0067 (sd 2.12)  score -0.0080 (sd 0.71)\n"
         }
       ]
     }

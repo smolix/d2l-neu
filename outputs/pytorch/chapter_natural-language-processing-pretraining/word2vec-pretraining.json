@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cdba26564bffafc96a729268c9b3b1ebb8c36f35e1334bf00d04a8a27c2c85e1",
+    "d2l_lib_fingerprint": "sha256:62e3796f6a620ca1b9a56353d51d4996c70faaf7f68f764b256e023571af0c40",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,7 +35,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[ 0.4982, -0.9156,  0.3408, -0.6456],\n         [-1.1949,  1.2932, -0.3019,  0.4941],\n         [ 1.1523,  0.0404,  0.8947,  1.6480]],\n\n        [[ 0.6921,  0.4079, -0.4255,  1.0043],\n         [ 0.4925, -0.7488, -0.4495, -2.2261],\n         [ 1.7463, -0.5000,  1.2238, -1.0886]]], grad_fn=<EmbeddingBackward0>)"
+          "text": "tensor([[[-0.5572, -0.6780,  0.6698, -1.2906],\n         [-0.6046,  0.6904, -0.0822,  0.7894],\n         [-0.5003,  0.6890,  1.1680,  0.3790]],\n\n        [[ 0.6635,  0.1762,  0.3169, -0.8887],\n         [ 0.4506,  1.0398,  0.4361, -0.8251],\n         [-1.8038,  1.0293, -0.4931,  1.0884]]], grad_fn=<EmbeddingBackward0>)"
         }
       ]
     },
@@ -97,14 +97,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.410, 478290.8 tokens/sec on cuda:0\n"
+          "text": "loss 0.410, 423356.9 tokens/sec on cuda:0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 17731,
-          "sha256": "sha256:031ec58506356e29cd8cdeff10f984eb32b16bdf925e215b99c52b9cb494830c"
+          "bytes": 17612,
+          "sha256": "sha256:5c9902b219b335bce96f92cc9ffdae5845808810ecfed99bb0abb8021249d39d"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.718: intel\ncosine sim=0.637: microprocessor\ncosine sim=0.604: nec\n"
+          "text": "cosine sim=0.698: intel\ncosine sim=0.647: disks\ncosine sim=0.644: memory\n"
         }
       ]
     }

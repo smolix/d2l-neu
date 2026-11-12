@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 1: argmax frequencies [0.638 0.235 0.095 0.032]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.000\nT = 2: argmax frequencies [0.453 0.274 0.172 0.101]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
+          "text": "T = 1: argmax frequencies [0.64  0.234 0.095 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.002\nT = 2: argmax frequencies [0.45  0.276 0.174 0.1  ]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
         }
       ]
     },

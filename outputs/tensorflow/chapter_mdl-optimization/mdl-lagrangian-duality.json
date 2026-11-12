@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/mdl-lagrangian-duality-a-lower-bound-from-one-multiplier-1.svg",
           "bytes": 27064,
-          "sha256": "sha256:fb13b6a1bd47046d88498d7f04fee0bbb9eada7340e3c61aaee097cbd36b3155"
+          "sha256": "sha256:76a97d6294ea59cb58292799872ed449412e056adf039df4ceb30a99e589f472"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.3329         2.80e-17              0.100000\n   1.00      0.3248         1.19e-16              1.000000\n  10.00      0.2654         4.22e-17             10.000000\n"
+          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.4608         1.79e-16              0.100000\n   1.00      0.4414         2.10e-16              1.000000\n  10.00      0.3185         5.93e-17             10.000000\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/constrained-duality-gap-1.svg",
           "bytes": 26402,
-          "sha256": "sha256:251173627b91ac690d66d6703894f17b044f46f25de449d2c4775d261f121fa4"
+          "sha256": "sha256:63e937c58f9a4e81d9a05c0fd5a39ec1c69093617cbd896ac74124cef96bd8ee"
         }
       ]
     }

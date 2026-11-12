@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 0.9118, std 0.0090, formula 0.0090\n"
+          "text": "mean 0.9119, std 0.0089, formula 0.0090\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   estimator  bias^2    var    MSE predicted\n        mean   0.000  0.526  0.526     0.533\n 0.65 * mean   0.125  0.222  0.347     0.348\n      median   0.000  0.777  0.777         -\n"
+          "text": "   estimator  bias^2    var    MSE predicted\n        mean   0.000  0.532  0.532     0.533\n 0.65 * mean   0.125  0.225  0.350     0.348\n      median   0.000  0.805  0.805         -\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      estimate=0.71260  error=3.4e-02  sigma/sqrt(n)=6.4e-02\nn=100     estimate=0.72376  error=2.3e-02  sigma/sqrt(n)=2.0e-02\nn=1000    estimate=0.74888  error=2.1e-03  sigma/sqrt(n)=6.4e-03\nn=10000   estimate=0.74678  error=4.8e-05  sigma/sqrt(n)=2.0e-03\nn=100000  estimate=0.74666  error=1.6e-04  sigma/sqrt(n)=6.4e-04\nexact (sqrt(pi)/2) erf(1) = 0.746824\n"
+          "text": "n=10      estimate=0.87045  error=1.2e-01  sigma/sqrt(n)=6.4e-02\nn=100     estimate=0.77742  error=3.1e-02  sigma/sqrt(n)=2.0e-02\nn=1000    estimate=0.74604  error=7.8e-04  sigma/sqrt(n)=6.4e-03\nn=10000   estimate=0.74536  error=1.5e-03  sigma/sqrt(n)=2.0e-03\nn=100000  estimate=0.74705  error=2.3e-04  sigma/sqrt(n)=6.4e-04\nexact (sqrt(pi)/2) erf(1) = 0.746824\n"
         }
       ]
     },
@@ -68,14 +68,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RMS error / (sigma/sqrt(n)) over all n: 0.90 to 1.17\n"
+          "text": "RMS error / (sigma/sqrt(n)) over all n: 0.87 to 1.08\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/mdl-integral-calculus-monte-carlo-estimation-1-1.svg",
-          "bytes": 47782,
-          "sha256": "sha256:952640d30fa33f652a7494a9e5e3c212bdb95e2a177861bf6e6f1f0904ce2c42"
+          "bytes": 53095,
+          "sha256": "sha256:8e42983650da21d2dcfb1290f8226d23affa1c4dfd6964c586333d1ce8903c54"
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "observed gap 0.0043, permutation p-value 0.183\n"
+          "text": "observed gap 0.0044, permutation p-value 0.158\n"
         }
       ]
     },
@@ -103,8 +103,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/mdl-statistics-the-permutation-test-2-1.svg",
-          "bytes": 29202,
-          "sha256": "sha256:308a3e13cbed9bf9e69203f3f385fde2fc78a0a144a7d8eb201398bdd7ac4fbb"
+          "bytes": 27763,
+          "sha256": "sha256:fd5f2fa6c8390e5c627e1eaba7158a2b3c6c5c68d386be0dde9c21825efa7be0"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gap 0.000: 0.10 0.11 0.09 0.09 0.10 0.10 0.12 0.09 0.10 0.11   p <= 0.05: 0.05\ngap 0.008: 0.81 0.08 0.04 0.03 0.02 0.01 0.00 0.00 0.01 0.01   p <= 0.05: 0.71\n"
+          "text": "gap 0.000: 0.10 0.10 0.11 0.10 0.09 0.10 0.10 0.10 0.10 0.10   p <= 0.05: 0.05\ngap 0.008: 0.82 0.08 0.04 0.02 0.01 0.01 0.01 0.01 0.01 0.01   p <= 0.05: 0.72\n"
         }
       ]
     },
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "20 seeds: rejects in 0.68 of runs, formula 0.72\n 5 seeds: rejects in 0.18 of runs, formula 0.24\n"
+          "text": "20 seeds: rejects in 0.70 of runs, formula 0.72\n 5 seeds: rejects in 0.16 of runs, formula 0.24\n"
         }
       ]
     },
@@ -159,7 +159,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first interval (-0.283, 0.149) contains 0: True\n945 of 1000 intervals contain the true mean (nominal 950, exact 947)\n"
+          "text": "first interval (-0.299, 0.098) contains 0: True\n951 of 1000 intervals contain the true mean (nominal 950, exact 947)\n"
         }
       ]
     },
@@ -170,7 +170,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bootstrap se 0.0088, formula 0.0090\n"
+          "text": "bootstrap se 0.0090, formula 0.0090\n"
         }
       ]
     },
@@ -181,7 +181,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "median 0.734, bootstrap se 0.082, 95% percentile interval (0.620, 0.914)\n"
+          "text": "median 0.741, bootstrap se 0.090, 95% percentile interval (0.636, 0.993)\n"
         }
       ]
     }

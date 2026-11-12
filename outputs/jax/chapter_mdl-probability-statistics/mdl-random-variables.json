@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.10015  ratio 1.001\nwidth 0.01   probability 0.01008  ratio 1.008\nwidth 0.001  probability 0.00102  ratio 1.019\n"
+          "text": "width 0.1    probability 0.10008  ratio 1.001\nwidth 0.01   probability 0.01009  ratio 1.009\nwidth 0.001  probability 0.00104  ratio 1.041\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.500\nmean distance: darts 0.666, sqrt(U) 0.667\n"
+          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.667\n"
         }
       ]
     },
@@ -42,14 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.48\n"
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.49\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 46482,
-          "sha256": "sha256:fc98f50bea7d4b101a2a98ff6d7e6316465b13083362653f2cbb2a88d69db488"
+          "bytes": 46803,
+          "sha256": "sha256:4ba17a56030d045c8c90fcc8cbc7b43ef3f0409609fb1b6db649235a325034a3"
         }
       ]
     }

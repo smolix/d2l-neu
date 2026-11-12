@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 38068,
-          "sha256": "sha256:85efc513a48c12e42071cd77df0a98beedcf5deb57dae8bde2f922ee1b38b894"
+          "bytes": 38069,
+          "sha256": "sha256:e5aafb544fe400294d8fd91a7621dd13f15082cf677c936b7efd697c834dfdec"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-the-learned-features-3-1.svg",
-          "bytes": 76712,
-          "sha256": "sha256:94e071779dd976078265bbc061a5062fd47991c3a90836f63d4cce62ab858527"
+          "bytes": 76636,
+          "sha256": "sha256:826aea528bf1ee5aa0752df6a1e268fddca26bb83523aa71f558bb6dcc211df3"
         }
       ]
     },
@@ -88,8 +88,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-shuffled-pixels-3-1.svg",
-          "bytes": 47975,
-          "sha256": "sha256:2a2afe64e77c53824a02e824c1a7a2bd4e9b5df4990f774f260e2dbcd1f5518f"
+          "bytes": 47899,
+          "sha256": "sha256:d1c41651776fbc85094221720d7561e6a3f04c08ee63f94c8ec97d649f61db5a"
         }
       ]
     },
@@ -100,14 +100,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pixels in place: 0.892 averaged over the last 5 epochs\npixels shuffled: 0.856 averaged over the last 5 epochs\n"
+          "text": "pixels in place: 0.896 averaged over the last 5 epochs\npixels shuffled: 0.854 averaged over the last 5 epochs\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-shuffled-pixels-4-1.svg",
-          "bytes": 25915,
-          "sha256": "sha256:ef63873086948f0cef52c0142c66a7e78d91e683e0bd669be6dbcd2852d48c80"
+          "bytes": 25917,
+          "sha256": "sha256:8bfd7a484f3405fb3638e901ec7a790d5e229417a867ef24624b2b4ce0e9dc30"
         }
       ]
     }

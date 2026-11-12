@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:f07cfca3564c7c7466fc0cdf107f1ac9c8b50fa42f749aa8b070c1b3771e1ab0",
+    "d2l_lib_fingerprint": "sha256:be1d3fe84ad3436dc8b4f0be55659c1bf5ebe034e3d8c69a37ea942a68ff1b37",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "compact ResNet-18                  3,346,675 parameters, validation accuracy 0.940\nConvNeXt blocks and stages, BN     3,377,770 parameters, validation accuracy 0.938\n+ BN -> LN                         3,377,770 parameters, validation accuracy 0.935\n+ patchify stem = ConvNeXt         3,376,450 parameters, validation accuracy 0.915\n"
+          "text": "compact ResNet-18                  3,346,675 parameters, validation accuracy 0.938\nConvNeXt blocks and stages, BN     3,377,770 parameters, validation accuracy 0.940\n+ BN -> LN                         3,377,770 parameters, validation accuracy 0.938\n+ patchify stem = ConvNeXt         3,376,450 parameters, validation accuracy 0.919\n"
         }
       ]
     }

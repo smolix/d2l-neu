@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:7e0a1ea8af9a8c131ce8f5df8bf725af52adf4929dfa50de7822064ab4563593",
+    "d2l_lib_fingerprint": "sha256:f0d10237f0599c437d7507d919585256ac4852dea5264b6bdc64d7ab897bb112",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,62 +14,72 @@
       "outputs": []
     },
     "utils-utility-functions-and-classes-4": {
-      "code_fingerprint": "sha256:2377ba054a79e2c831083c0e3b0b0e27ea683c8bc4551dcdd2158a3c99cc95f7",
+      "code_fingerprint": "sha256:e51c88bc5629b086b57eb8c84a53b0fc56dc3b7266713c6d49706be7c7b907e8",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-2": {
-      "code_fingerprint": "sha256:55ac055dbce85d02d001262180a1bb7bb0fb6ec15dbf43c897bd2634095cf17b",
+      "code_fingerprint": "sha256:80ec1ec4079153ce7830fb7bf5caef853f68fcdc527f7fee28248c489c7154b9",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-1": {
+      "code_fingerprint": "sha256:e5d30adb9ac2619a95d9b3b1e9bb5997e13bc6f727564f92af14724ffcfe73c6",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-4": {
+      "code_fingerprint": "sha256:2e857de51ae42723833838cd9bc5b8a2668e3e52d0c9fb735aa3afb21b5ff97e",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:636d9fca47b41a42c3235e82cba3ec871ec232c82b94334bcfe52e375b257183",
+      "code_fingerprint": "sha256:47426e4704209f1f6e437056d4e5ca1db397d21ab066034dc25cb799b7260e48",
       "kind": "text",
       "outputs": []
     },
     "utils-progress-and-plotting-1": {
-      "code_fingerprint": "sha256:6653347d3a3b458eeb3037f23ace289c156d975fbeb652290c9e85cd03af7d61",
+      "code_fingerprint": "sha256:07eb5ade551aa3dcb24d69afa92e39395f36f080dcdc75239d404976e93d9ed0",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-18": {
-      "code_fingerprint": "sha256:76c14b1723d7525aef693d834df0ab274bc3b52c01c11c31d0538477daaa8b18",
+      "code_fingerprint": "sha256:79b8011d09a81635cd9986d370ef76ba21343429d3a1f39ef09ee1743aae1e36",
       "kind": "text",
       "outputs": []
     },
     "utils-reinforcement-learning-utilities-1": {
-      "code_fingerprint": "sha256:c678b1f799269e0213edc6f65b8e5e6f27846e3a1b1841d97a56b43e43ceb68c",
+      "code_fingerprint": "sha256:8b0ed968eb139d7ef01fab8875c9310c9da91c1d98986b436d7be2992f43c952",
       "kind": "text",
       "outputs": []
     },
     "utils-feature-networks-for-image-scores": {
-      "code_fingerprint": "sha256:4bd808a29a611a40b03de70c7216020654d49997dd49ba614dad733d49fd0602",
+      "code_fingerprint": "sha256:36386b5558c52b53c68364d7a767bcb8b481235efb2b32cfe15de2f5ed5186f5",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:0f7b394c3ee51ec960c24ccac572e9286428616ed8c3cb0e668f00b2d8f82b44",
+      "code_fingerprint": "sha256:6eb64f6c71fe25c859131929385497106ca901b36348d73fab6ab890f68276f1",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:2b54e7eae12db9d790742f0abab1ba1f78b8b20d3e50009f23063f9392d07861",
+      "code_fingerprint": "sha256:d0b1d2f47414aba731a20db4d3bc91b130137e7bf1d5a4fdaf7c767c1c0ea928",
       "kind": "text",
       "outputs": []
     },
     "utils-training-utilities-1": {
-      "code_fingerprint": "sha256:cb11e1694f76b96735781096cf97f2ad6e77d1021cc221f8cae083e38d441f88",
+      "code_fingerprint": "sha256:e2048d836906b53af0b804ffb13af13d46764948203cd0599b887ce4af1ce333",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:89c2e7b55f45a1ad9790ad3b93f74fc79a1cb6e37756e9b1669e786dcc340c65",
+      "code_fingerprint": "sha256:60c569c21d9f5e494db3217131891a6fd48fce5a5da6735c5e268dbc22e23b97",
       "kind": "text",
       "outputs": []
     },
     "utils-embedding-gradients-for-small-vocabularies": {
-      "code_fingerprint": "sha256:27b82097c2a1ebc8ea77e37a9a67d881832a016b1773b2a0ac8897cb91539151",
+      "code_fingerprint": "sha256:84dc521f1acc6335b6781035cbb44d25ae321f5b3561a8dfb5216512be310ddd",
       "kind": "text",
       "outputs": []
     }

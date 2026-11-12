@@ -502,6 +502,8 @@ so the standard deviation $\sigma$ of one sample is the quantity to compare.
        estimator against its variance?
    :exlabel:`ex_mdl-integral-calculus-coin-flip`
 
+[Discussions](https://d2l.discourse.group/t/36878)
+
 <!-- slides -->
 
 ::: {.slide}

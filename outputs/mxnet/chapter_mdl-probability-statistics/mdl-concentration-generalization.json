@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31734,
-          "sha256": "sha256:59b9b035589d987d2a84ff7a65b06527ccd1dd7c72613bd8c2b9fbd9028e5266"
+          "sha256": "sha256:3ded33dcfe972e94213eac5b97850ca4d7a95336b42dabcb997089183b33eef6"
         }
       ]
     },
@@ -75,12 +75,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mean ||x||/sqrt(d) = 0.879, sd ||x|| = 0.67, mean |cos| = 0.6431 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.987, sd ||x|| = 0.71, mean |cos| = 0.1799 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.999, sd ||x|| = 0.71, mean |cos| = 0.0562 vs 0.0564\n"
+          "text": "d =    2: mean ||x||/sqrt(d) = 0.882, sd ||x|| = 0.65, mean |cos| = 0.6351 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.989, sd ||x|| = 0.69, mean |cos| = 0.1794 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.999, sd ||x|| = 0.70, mean |cos| = 0.0557 vs 0.0564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.70, mean |cos| = 0.0178 vs 0.0178\n"
+          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.71, mean |cos| = 0.0179 vs 0.0178\n"
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.5%, median contrast = 35.284\nd =   20: mass in (1 ± 0.1) sqrt(d) =  46.7%, median contrast = 1.207\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.8%, median contrast = 0.267\n"
+          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.9%, median contrast = 32.890\nd =   20: mass in (1 ± 0.1) sqrt(d) =  46.2%, median contrast = 1.220\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.1%, median contrast = 0.279\n"
         },
         {
           "type": "stream",

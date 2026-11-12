@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:aa77982f5107380cbf3c9cc3cbd71c34392d560754ba81b867f0a3e44048b899",
+    "d2l_lib_fingerprint": "sha256:dd3af4664b3661c638d44974a96a541e5b80e9810859e0b6659180bb2572d07a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -112,14 +112,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 1.219, train acc 0.555, valid acc 0.487\n89.6 examples/sec\n"
+          "text": "train loss 1.045, train acc 0.617, valid acc 0.463\n113.1 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-training-and-validating-the-model-1.svg",
-          "bytes": 25922,
-          "sha256": "sha256:deeef0d0ad4574ae85388c80359bf895fd7aa8a6c6a9849db187ad85771c905a"
+          "bytes": 25925,
+          "sha256": "sha256:5b58f8719fa2b1da1e92fb8ab478f05c4156d31a761959988b4e904d5067b9f1"
         }
       ]
     },
@@ -130,14 +130,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 1.163, train acc 0.575\n102.3 examples/sec\n"
+          "text": "train loss 1.007, train acc 0.630\n103.1 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 23599,
-          "sha256": "sha256:833af1d9b87f1798701ab8956833c3a7e323ed54bc282bc86102e431a4108b7f"
+          "bytes": 24520,
+          "sha256": "sha256:2576fa224ef0d2989ee9be2dfe0d91ed65eb17a4ee4ceae2b37167951f4239dc"
         }
       ]
     }

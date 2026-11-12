@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2beb9f3e51cbf3a67eaace5fe9156fc6c7b2e51891cb43433eca742da3a0a5f2",
+    "d2l_lib_fingerprint": "sha256:453ffc28235679080e3d9594721106970837662d0d1238c736025c6ec31ecaa7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -96,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 33232,
-          "sha256": "sha256:ef3561730f41263b67929a1a4ea6b01874bd79c313bd71c023d13d0177a03fa2"
+          "bytes": 33226,
+          "sha256": "sha256:315d69c605e853d38228196e3178e98fb0ca1f4af3f9843454c3dec1c7053bb8"
         }
       ]
     },
@@ -112,7 +112,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.501876806640625, 'acc': 0.8231}"
+          "text": "{'loss': 0.501600732421875, 'acc': 0.8168}"
         }
       ]
     },
@@ -122,7 +122,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.46499446614583334, 'acc': 0.8393166666666667}"
+          "text": "{'loss': 0.46417646484375, 'acc': 0.8347333333333333}"
         }
       ]
     },
@@ -133,7 +133,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "43 of 256 wrong\n"
+          "text": "44 of 256 wrong\n"
         }
       ]
     },
@@ -145,8 +145,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 46647,
-          "sha256": "sha256:e2c96b990429f246066489f8f7de43161148bd69f99ecb4082ba6da94b2687f9"
+          "bytes": 46999,
+          "sha256": "sha256:f004a504d498d3b336aa5dc7becf6c06a4195a33c3f4b1454ac5bd2790f3ae20"
         }
       ]
     },
@@ -168,8 +168,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 36824,
-          "sha256": "sha256:0a06c9c96ac714c8b52fa38a965bc961c69f3e66e16eafb598360aa72074f162"
+          "bytes": 36829,
+          "sha256": "sha256:75abc18c161b7fa6ddbe45a392abbb3b51805c7c9bacdf22ff33b8c8b7d61bae"
         }
       ]
     },
@@ -180,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pullover taken for shirt: 236\npullover taken for coat: 187\nT-shirt taken for shirt: 171\ncoat taken for shirt: 152\nshirt taken for T-shirt: 97\n"
+          "text": "coat taken for shirt: 234\npullover taken for shirt: 202\nT-shirt taken for shirt: 197\ncoat taken for pullover: 123\nshirt taken for pullover: 95\n"
         }
       ]
     },
@@ -192,8 +192,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-what-the-model-learned-1.svg",
-          "bytes": 65364,
-          "sha256": "sha256:3ae1fa3a0c0f40daf6b708035bfe4376ed1e1bb02976c0cc082156e25994cd75"
+          "bytes": 65740,
+          "sha256": "sha256:d33ae493f652b4d691103990244c2747ee67b1ae10095745c74d3ee1e5861c62"
         }
       ]
     }

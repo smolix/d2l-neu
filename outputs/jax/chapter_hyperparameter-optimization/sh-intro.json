@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:9e05208f53df224da81b97808a9d8fbb1670f9e1950c31bc8764c0ba25aa72cc",
+    "d2l_lib_fingerprint": "sha256:23eccf0fc755f3829106099ac3141e4df233e9297fcb2d1c03e43b6fe4e78875",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -55,367 +55,367 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Trial 0: learning_rate = 0.01121, batch_size = 141, max_epochs = 2\n"
+          "text": "Trial 0: learning_rate = 0.06612, batch_size = 191, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-1.svg",
-          "bytes": 34286,
-          "sha256": "sha256:1393b7e72f627bde7995386ac7a3dc9a1246624b237e8858352b1ac20f353e2f"
+          "bytes": 33613,
+          "sha256": "sha256:56167511d0fc5c3231a2569019e90dd965aa12f76900db5292d385dd7361582c"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 21.4 s\nTrial 1: learning_rate = 0.6259, batch_size = 227, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 14.2 s\nTrial 1: learning_rate = 0.03328, batch_size = 195, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-2.svg",
-          "bytes": 30009,
-          "sha256": "sha256:e675b2ffc6956b9dcba302a58ad91d9e7633039c99af19c7db7035329b702e99"
+          "bytes": 33841,
+          "sha256": "sha256:b69f255924a2d832ca37e2f45e4527a8d312a4a816bf92650709e8aea5f545b5"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.5439, runtime = 18.1 s\nTrial 2: learning_rate = 0.01108, batch_size = 59, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 11.7 s\nTrial 2: learning_rate = 0.362, batch_size = 131, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-3.svg",
-          "bytes": 30959,
-          "sha256": "sha256:b5692b7302f526b12586c4f559864dc0971aaab9bf279657549b133392d37365"
+          "bytes": 27549,
+          "sha256": "sha256:15753cbd37203526573bbc330a71f7377aa3202a8a5a0a944380972c0c82af99"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 20.6 s\nTrial 3: learning_rate = 0.0297, batch_size = 130, max_epochs = 2\n"
+          "text": "    error = 0.4842, runtime = 11.3 s\nTrial 3: learning_rate = 0.05792, batch_size = 243, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-4.svg",
-          "bytes": 32038,
-          "sha256": "sha256:d4b672662dc09970072f714351cd0a53182457358766d08ac047ae94e9ef98ca"
+          "bytes": 30960,
+          "sha256": "sha256:f00edbee11c62a9fdeb86c505793c7e9048e3b26571ea58b6b0f28bb8ae169ac"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 14.3 s\nTrial 4: learning_rate = 0.01029, batch_size = 138, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 12.1 s\nTrial 4: learning_rate = 0.06889, batch_size = 249, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-5.svg",
-          "bytes": 30957,
-          "sha256": "sha256:d8c474b2e3f77e9089cb5535596b9d90027bfa1a39372a239a6d22076dce44f6"
+          "bytes": 32126,
+          "sha256": "sha256:620b77c10909f256fd20a477d9fae20711e8b6d70e9d5ab1b2ff74e8ee9f2e5b"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 15.3 s\nTrial 5: learning_rate = 0.7984, batch_size = 87, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 10.9 s\nTrial 5: learning_rate = 0.01612, batch_size = 140, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-6.svg",
-          "bytes": 29260,
-          "sha256": "sha256:5522c349abd7f71b11e7a4fd5ea0011b29d94f77f6e7129a60f67a4fa02f3a52"
+          "bytes": 30963,
+          "sha256": "sha256:73fc9514214e64489ccc1609c70b9287dc4c29de7aa0432faa9e74d320cdf278"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2780, runtime = 16.8 s\nTrial 6: learning_rate = 0.1099, batch_size = 69, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 10.9 s\nTrial 6: learning_rate = 0.0255, batch_size = 138, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-7.svg",
-          "bytes": 30539,
-          "sha256": "sha256:88d219967c2903048aa3a73a647506018b05331873b0bc95cb23bcdfddecc225"
+          "bytes": 31876,
+          "sha256": "sha256:27f89b803d292b07e518fc2191fe27fc06e34e01bd2106dc097b57d97fe2c0f4"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.4639, runtime = 19.7 s\nTrial 7: learning_rate = 0.1, batch_size = 128, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 10.5 s\nTrial 7: learning_rate = 0.1, batch_size = 128, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-8.svg",
-          "bytes": 31271,
-          "sha256": "sha256:f8b22984b30348901d4804ed6d89e829f1c36e095931d0084edc24ac98216e64"
+          "bytes": 34276,
+          "sha256": "sha256:51abc7bacbf0473795e2e937f242f95cb2855e07f155ad16ee20d2d3aeddb634"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.7449, runtime = 17.8 s\nTrial 8: learning_rate = 0.1, batch_size = 128, max_epochs = 4\n"
+          "text": "    error = 0.9000, runtime = 11.2 s\nTrial 8: learning_rate = 0.05792, batch_size = 243, max_epochs = 4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-9.svg",
-          "bytes": 30003,
-          "sha256": "sha256:bb19bdc5223c1f1b02fafb051ed8fad3f6a3ec1b7c57e298cb91708417169220"
+          "bytes": 31719,
+          "sha256": "sha256:4bfb0ceec94d9ab779a6f916e796c2fd56f40159bc261c3a445dbc22dfba7c0f"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.6112, runtime = 10.1 s\nTrial 9: learning_rate = 0.6259, batch_size = 227, max_epochs = 4\n"
+          "text": "    error = 0.9000, runtime = 5.5 s\nTrial 9: learning_rate = 0.03328, batch_size = 195, max_epochs = 4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-10.svg",
-          "bytes": 28254,
-          "sha256": "sha256:46718aed63c37ce74c0bcd21a8cd4b43e08bb7d023730655a6b98a3ffaab58c0"
+          "bytes": 29218,
+          "sha256": "sha256:89de07837ea26af9f9e288376c5389aaacc12ee9474bbb6b5768bb3f8d148aae"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2781, runtime = 8.5 s\nTrial 10: learning_rate = 0.1099, batch_size = 69, max_epochs = 4\n"
+          "text": "    error = 0.9000, runtime = 6.8 s\nTrial 10: learning_rate = 0.06612, batch_size = 191, max_epochs = 4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-11.svg",
-          "bytes": 27014,
-          "sha256": "sha256:d342aa05ffd6340e55a009844dc5c437fd528b5550b43bf1a7aeefd1f1d5896c"
+          "bytes": 32952,
+          "sha256": "sha256:e336ee00d0106727c7fd364ecc9c35b704ee0153c071b8dc2ff83deb92e6fe4a"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.3060, runtime = 14.6 s\nTrial 11: learning_rate = 0.7984, batch_size = 87, max_epochs = 4\n"
+          "text": "    error = 0.9000, runtime = 6.7 s\nTrial 11: learning_rate = 0.362, batch_size = 131, max_epochs = 4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-12.svg",
-          "bytes": 31528,
-          "sha256": "sha256:126ea210d5ecdc0eda20b8a4b5d61b2ef839cb822259ce50648670ed17555750"
+          "bytes": 27747,
+          "sha256": "sha256:85f48e3cfd703378608d88b8f66b80f31c50c0bec971038d05d0024dff06ac62"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1942, runtime = 14.8 s\nTrial 12: learning_rate = 0.6259, batch_size = 227, max_epochs = 8\n"
+          "text": "    error = 0.3472, runtime = 8.1 s\nTrial 12: learning_rate = 0.05792, batch_size = 243, max_epochs = 8\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-13.svg",
-          "bytes": 29723,
-          "sha256": "sha256:e8d9c3a852fb6570db65792474943a2596abb092b51599ae016d94ec1359d11d"
+          "bytes": 32270,
+          "sha256": "sha256:749d62f6b7e27a3cc93ad33157d1a1c6d33de987b9b8ec15908cc614ce3507e9"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2279, runtime = 11.9 s\nTrial 13: learning_rate = 0.7984, batch_size = 87, max_epochs = 8\n"
+          "text": "    error = 0.9000, runtime = 12.7 s\nTrial 13: learning_rate = 0.362, batch_size = 131, max_epochs = 8\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-14.svg",
-          "bytes": 28475,
-          "sha256": "sha256:f2b6912b827e10c289a5b48ab0783bd9979af56637579034c91889711b7012bc"
+          "bytes": 29085,
+          "sha256": "sha256:85577b877a363b74984bf318e4ae091a60e706f5d30812209c0fddb90ae123f4"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1656, runtime = 17.9 s\nTrial 14: learning_rate = 0.7984, batch_size = 87, max_epochs = 10\n"
+          "text": "    error = 0.2602, runtime = 12.9 s\nTrial 14: learning_rate = 0.362, batch_size = 131, max_epochs = 10\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-15.svg",
-          "bytes": 30759,
-          "sha256": "sha256:661ce698ddd3a26ea21f2466ef2486dfbc4e8685f6adc7fad0cd2a383c485c46"
+          "bytes": 31425,
+          "sha256": "sha256:6575c78db7de19577e2eb93fd2e6c2c43b3dacfd797d67f8b9fb75028f86efd3"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1620, runtime = 23.1 s\nTrial 15: learning_rate = 0.01632, batch_size = 182, max_epochs = 2\n"
+          "text": "    error = 0.3311, runtime = 14.9 s\nTrial 15: learning_rate = 0.01299, batch_size = 71, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-16.svg",
-          "bytes": 31842,
-          "sha256": "sha256:76280d4336b3a548b6e5a4f146ef877853666d95024eb9fc15c42aefd9486e6b"
+          "bytes": 32923,
+          "sha256": "sha256:309fe692b1bf4c9af57c368ca26a40321913cb65a2373ad017ce9f6e1924470c"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 21.9 s\nTrial 16: learning_rate = 0.02479, batch_size = 176, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 12.2 s\nTrial 16: learning_rate = 0.04391, batch_size = 199, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-17.svg",
-          "bytes": 30962,
-          "sha256": "sha256:0325ac0140c7a8d787a6a59df4eec31a2507b20dc5ee30cc065d6e4b4caa2568"
+          "bytes": 28765,
+          "sha256": "sha256:b7c5b0f024310079201bbb367fe1164399c21ae3d47ac6915d8abcd64227ff0f"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 18.0 s\nTrial 17: learning_rate = 0.01961, batch_size = 143, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 9.9 s\nTrial 17: learning_rate = 0.3167, batch_size = 62, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-18.svg",
-          "bytes": 32728,
-          "sha256": "sha256:4dd16427d3c05eba0e9c4062aca67c5a23f685208d06f4fa4d4a9ed8098c2dac"
+          "bytes": 29264,
+          "sha256": "sha256:d247e0f6a73341d74661c85fdb595c7652dbfca6943c0dd9243f6ffacb008257"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 18.7 s\nTrial 18: learning_rate = 0.01108, batch_size = 75, max_epochs = 2\n"
+          "text": "    error = 0.2634, runtime = 15.5 s\nTrial 18: learning_rate = 0.5671, batch_size = 35, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-19.svg",
-          "bytes": 31870,
-          "sha256": "sha256:3aa651bc691de444a271630719f85d02e3ae2018dd4bd5fd1380bc6536462e47"
+          "bytes": 27203,
+          "sha256": "sha256:1b633f1f7022654116f35cdaa21290589155d8514c32f2fc88627b961961bf3b"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 12.6 s\nTrial 19: learning_rate = 0.3096, batch_size = 42, max_epochs = 2\n"
+          "text": "    error = 0.2823, runtime = 21.4 s\nTrial 19: learning_rate = 0.06123, batch_size = 215, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-20.svg",
-          "bytes": 30847,
-          "sha256": "sha256:00d554fe2c43122e146f87762a97499daad34147f5c02c396764f44faad41be4"
+          "bytes": 31840,
+          "sha256": "sha256:243e14f2aeb3753956f77884ee01d61dee691fb346a74d34708d6854f58fdfd1"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2765, runtime = 53.5 s\nTrial 20: learning_rate = 0.4244, batch_size = 81, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 8.9 s\nTrial 20: learning_rate = 0.1101, batch_size = 196, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-21.svg",
-          "bytes": 28705,
-          "sha256": "sha256:2c4112fd3e615ae64703296782d6e566430632f3a1c95eccbebcdd9326f8fdf0"
+          "bytes": 34284,
+          "sha256": "sha256:1eda666fa67820084a7be8b62b5757123d6256727efaf652168570ae7132de82"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2998, runtime = 24.5 s\nTrial 21: learning_rate = 0.04015, batch_size = 168, max_epochs = 2\n"
+          "text": "    error = 0.9000, runtime = 9.2 s\nTrial 21: learning_rate = 0.1629, batch_size = 38, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-22.svg",
-          "bytes": 31176,
-          "sha256": "sha256:7c51d2cc99196be367cc239a1bf65d962092993a366e5d5c633f72dbe23a720c"
+          "bytes": 28942,
+          "sha256": "sha256:2fc8f6bec4d61aac128913b5a2f6a8a820de9b854e2afc06f6fcae6f1f24d80b"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 16.2 s\nTrial 22: learning_rate = 0.02561, batch_size = 234, max_epochs = 2\n"
+          "text": "    error = 0.3008, runtime = 19.6 s\nTrial 22: learning_rate = 0.0417, batch_size = 219, max_epochs = 2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-23.svg",
-          "bytes": 33147,
-          "sha256": "sha256:53c0b23847a1d94e24186dc70ddfe055064a9bfb0285f846b305da363eae7fa0"
+          "bytes": 32041,
+          "sha256": "sha256:f3055cba8124badc8df33a6f4117b08f29ba024a1ebb71c23d2200a80752dd9d"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 14.4 s\nTrial 23: learning_rate = 0.02479, batch_size = 176, max_epochs = 4\n"
+          "text": "    error = 0.9000, runtime = 10.6 s\nTrial 23: learning_rate = 0.01299, batch_size = 71, max_epochs = 4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-24.svg",
-          "bytes": 33132,
-          "sha256": "sha256:ad50105dcb2b2f01f54d87d032186a61c0efd5f641a076e062b06292e37c8ecf"
+          "bytes": 30801,
+          "sha256": "sha256:52aa89fadba60935d9685cd3143f158ff8d779e370d513b3a07e5a9917ae25f1"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 8.7 s\nTrial 24: learning_rate = 0.01632, batch_size = 182, max_epochs = 4\n"
+          "text": "    error = 0.9000, runtime = 14.6 s\nTrial 24: learning_rate = 0.1629, batch_size = 38, max_epochs = 4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-25.svg",
-          "bytes": 29984,
-          "sha256": "sha256:822e58524d1b6eb53501f66204b161ef8d36ed297b2720be23690a031f9543ef"
+          "bytes": 29836,
+          "sha256": "sha256:e500e0761170d309227c36717af17977a21f643f03d52f5ad27a4a56c1d3a83a"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.8643, runtime = 7.4 s\nTrial 25: learning_rate = 0.4244, batch_size = 81, max_epochs = 4\n"
+          "text": "    error = 0.2223, runtime = 22.6 s\nTrial 25: learning_rate = 0.5671, batch_size = 35, max_epochs = 4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-26.svg",
-          "bytes": 31526,
-          "sha256": "sha256:2420260675a9e5428a88a5c517bc5f861e76530a55d9887e03e855e80bd4b858"
+          "bytes": 29810,
+          "sha256": "sha256:3a3d7a5f7e1cfb2d8c29915030728057682b80b163887bd4053b48287241c00a"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2037, runtime = 19.0 s\nTrial 26: learning_rate = 0.3096, batch_size = 42, max_epochs = 4\n"
+          "text": "    error = 0.2124, runtime = 21.8 s\nTrial 26: learning_rate = 0.3167, batch_size = 62, max_epochs = 4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-27.svg",
-          "bytes": 30078,
-          "sha256": "sha256:28ffae1631c043432585750e8b8423d376bb7db62f65f4713f1bf5d74ed98cef"
+          "bytes": 28642,
+          "sha256": "sha256:d96bc97a4aae15deda32270b3addb1c491c43170bf47e84f1ff6c0945cda003b"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2080, runtime = 26.4 s\nTrial 27: learning_rate = 0.3096, batch_size = 42, max_epochs = 8\n"
+          "text": "    error = 0.2200, runtime = 12.8 s\nTrial 27: learning_rate = 0.3167, batch_size = 62, max_epochs = 8\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-28.svg",
-          "bytes": 30507,
-          "sha256": "sha256:1c2dd92d1b17a3c62e085e66444130763c8a6f019cb11951199b75e7dde7ffdf"
+          "bytes": 29911,
+          "sha256": "sha256:8e7fde03fbe11128ed0284e427d0ea7ac87a354930fc506af102ef1e027df6d2"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1577, runtime = 61.0 s\nTrial 28: learning_rate = 0.4244, batch_size = 81, max_epochs = 8\n"
+          "text": "    error = 0.1598, runtime = 22.5 s\nTrial 28: learning_rate = 0.5671, batch_size = 35, max_epochs = 8\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-29.svg",
-          "bytes": 31762,
-          "sha256": "sha256:bae2609ad686551c26ce90dce7b2a74e7cb8f3c9734aad699fc1b864f9a0a7f0"
+          "bytes": 29525,
+          "sha256": "sha256:9619eabdc68e9e32852200af6efbb70418bd4202b3d6c8ff336d38f1ffcffb52"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1572, runtime = 20.0 s\nTrial 29: learning_rate = 0.4244, batch_size = 81, max_epochs = 10\n"
+          "text": "    error = 0.1835, runtime = 48.9 s\nTrial 29: learning_rate = 0.3167, batch_size = 62, max_epochs = 10\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-30.svg",
-          "bytes": 30957,
-          "sha256": "sha256:d9b134ea69a0eb68580a1da3c933e81ecc2d55d1f5da5513bd93e4e1cf5ce1bc"
+          "bytes": 30440,
+          "sha256": "sha256:2b4aadcafef18604d3064ca5b49dd6d4bc941810f23316c59ae6aae685db6a4e"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1614, runtime = 35.9 s\n"
+          "text": "    error = 0.1514, runtime = 36.8 s\n"
         }
       ]
     },
@@ -431,8 +431,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-7-1.svg",
-          "bytes": 25919,
-          "sha256": "sha256:3fe2abd3970ec6625e88c1de7772ccd37364cce2bcf7990ae881b6e40e4766bb"
+          "bytes": 25891,
+          "sha256": "sha256:368e68caa876937347c164b9ee8b40d08de966ad79b367f16f192de97032f54b"
         }
       ]
     }

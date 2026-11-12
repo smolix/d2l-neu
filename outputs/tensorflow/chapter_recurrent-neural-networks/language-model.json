@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time it were nearly of set of\n    would in a name time i people i in travelling great of vanished dim in\n    brain that the made\n2-gram (longest copied run: 5 words): the time traveller and the first was\n    returning towards it must have not remember a danger from my confusion\n    the battle of staying back and smiled quietly\n3-gram (longest copied run: 9 words): the time traveller put forth his\n    finger towards the sphinx was a different shape in my pocket and now i\n    saw for the time machine and showed\n"
+          "text": "1-gram (longest copied run: 2 words): the time of but through bushes the\n    weena institution such waiting was i to simon floor stone less amusement\n    through flashed its and and splendid the of\n2-gram (longest copied run: 3 words): the time travelling they fled\n    incontinently and carry her own time machine was in most constant guests\n    were innumerable years i hesitated between the dim creatures heaped\n3-gram (longest copied run: 10 words): the time traveller had more than a\n    mile from its present position i resolved to hold over the machine will\n    go it will vanish pass into future\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:343a2a2c0940c01e12a293a4d88f7b17c5641becea26d3785048fd986bd86930"
+          "sha256": "sha256:171013d91354bde86c6e0ca373ae41b7bd44942772b5276ed73ad2a099c46850"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:99dae02bbf76c90db73ab0a31f874221c0057e3b16a396cbb49240d766f8d6b8"
+          "sha256": "sha256:7cbad6022b537f388fa11e3f10c2fa93c2a0dfd6f04396f4cc935bb0c519d2ce"
         }
       ]
     },
@@ -150,12 +150,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trigram discount D = 0.93\nP(traveller | the time): Kneser-Ney 0.53, Laplace 0.36\nP(was | the time): Kneser-Ney 0.00037, Laplace 7.7e-05\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "P(filby | the time): Kneser-Ney 2.3e-05, Laplace 7.7e-05\n"
+          "text": "trigram discount D = 0.93\nP(traveller | the time): Kneser-Ney 0.53, Laplace 0.36\nP(was | the time): Kneser-Ney 0.00037, Laplace 7.7e-05\nP(filby | the time): Kneser-Ney 2.3e-05, Laplace 7.7e-05\n"
         }
       ]
     },
@@ -208,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[543 275  10 738 530 313  44 351 636 349]\n [285 818 378 705  59 269 555 507  10  79]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[275  10 738 530 313  44 351 636 349 514]\n [818 378 705  59 269 555 507  10  79  99]], shape=(2, 10), dtype=int32)\nX[0]: 'elling\\nmyself that, at any r'\nY[0]: 'ing\\nmyself that, at any rate'\n"
+          "text": "X: tf.Tensor(\n[[981 290 369 559 277 273 309 260 558 273]\n [904 750 365 869  10 110 340 631 298 786]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[290 369 559 277 273 309 260 558 273 354]\n [750 365 869  10 110 340 631 298 786 488]], shape=(2, 10), dtype=int32)\nX[0]: 'ering pillars and of my theory of'\nY[0]: ' pillars and of my theory of an'\n"
         }
       ]
     }

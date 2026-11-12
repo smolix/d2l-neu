@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.25 ms/call, 920 GB/s\ncompiled: 0.15 ms/call, 881 GB/s\n"
+          "text": "eager: 1.25 ms/call, 920 GB/s\ncompiled: 0.15 ms/call, 878 GB/s\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 4.0 s\neager: 2.83 ms, compiled: 1.73 ms\nbreak-even: 3639 steps\n"
+          "text": "first call: 0.8 s\neager: 2.74 ms, compiled: 1.59 ms\nbreak-even: 713 steps\n"
         }
       ]
     },
@@ -74,7 +74,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 2.20 ms/call\nreduce-overhead: 0.30 ms/call\n"
+          "text": "eager: 2.68 ms/call\nreduce-overhead: 0.30 ms/call\n"
         }
       ]
     }

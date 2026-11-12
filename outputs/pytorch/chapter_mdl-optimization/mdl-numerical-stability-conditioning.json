@@ -124,7 +124,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :   128.000000   (= 1 x 128)\nWelford, one pass     :     0.994388\ntwo-pass reference    :     0.994388\nWelford vs two-pass   : 3.0e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :  -128.000000   (= -1 x 128)\nWelford, one pass     :     0.999287\ntwo-pass reference    :     0.999287\nWelford vs two-pass   : 6.8e-09 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
@@ -162,7 +162,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 10.7 digits, lstsq keeps 14.2\nkappa(A) = 1e+06: normal equations keep  4.5 digits, lstsq keeps 11.4\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 10.3 digits, lstsq keeps 14.3\nkappa(A) = 1e+06: normal equations keep  5.7 digits, lstsq keeps 11.7\n"
         }
       ]
     },
@@ -191,7 +191,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:8f604a2bac6a2c3802ba40c7d7a35236ebcaad02ded5c47aa476a57e847aa2e6"
+          "sha256": "sha256:30e36e3cbc323fd5ad9f0d84e3b5b5e67406501f746a76e46d80980409107402"
         }
       ]
     }

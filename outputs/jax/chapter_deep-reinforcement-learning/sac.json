@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:fafa16a1492fc62a1255e78eddbbe02d3d3a05d33515fa8676cfa7d4f0023375",
+    "d2l_lib_fingerprint": "sha256:a29b8388c511739ce7f44e43a4efc9ee47e66cbd07005f2d7b63939daa8aa768",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
           "bytes": 38395,
-          "sha256": "sha256:33699edff2eeba7b9e05004e2dd4ab4d76acffa88675bb9e5ba02628d05d0cfd"
+          "sha256": "sha256:98ef5389030c1dcb21e6957b448a942aca7a221f9276fcfa08363ae282bf9fcd"
         }
       ]
     },
@@ -141,22 +141,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " SAC at 2k, seed 0    -1788      -0.93         0.62\n"
+          "text": " SAC at 2k, seed 0    -1788      -0.93         0.62\n SAC at 2k, seed 1    -1786      -0.93         0.60\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " SAC at 2k, seed 1    -1786      -0.93         0.60\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " SAC at 2k, seed 2    -1740      -0.93         0.79\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "SAC at 20k, seed 0     -167       0.83         0.67\n"
+          "text": " SAC at 2k, seed 2    -1740      -0.93         0.79\nSAC at 20k, seed 0     -167       0.83         0.67\n"
         }
       ]
     },
@@ -185,7 +175,7 @@
           "mime": "image/svg+xml",
           "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
           "bytes": 41745,
-          "sha256": "sha256:18035fb5b06c3c8189da3f189b013c3184d10454ba3690a26f6bc0ba8f38f527"
+          "sha256": "sha256:87222b9f8d37ebc6ca6084bd0697eaacfd1de7a025b93d9e09e082a0cee2a8b6"
         }
       ]
     },
@@ -203,7 +193,7 @@
           "mime": "image/svg+xml",
           "asset": "sac/sac-entropy-and-temperature-2-1.svg",
           "bytes": 46473,
-          "sha256": "sha256:6b9cf51e41c476241585205a7486da726fad347f317acdb3d09571c86e902b3f"
+          "sha256": "sha256:47b21b89b0b7c7cb3350afbd0b47805350f1997b483c89764d11a7e8b7bffdd8"
         }
       ]
     },

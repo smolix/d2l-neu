@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:2fda94092ad67100bb697c8a1c2d22fb62763ff2994ae116e2d389a93aa56255",
+    "d2l_lib_fingerprint": "sha256:8fe237a49fc4638e29c9e59ac63823909a490206a596a670e9c8b001c1637d15",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -78,14 +78,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.185, train acc 0.942, test acc 0.934\n341.6 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.215, train acc 0.928, test acc 0.941\n503.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-2-1.svg",
-          "bytes": 25002,
-          "sha256": "sha256:75bfd8ff30ba276036a6728f8f632de120fd43226e46800db1c160ea43ad022b"
+          "bytes": 24995,
+          "sha256": "sha256:b70e322d68b4101647993284b3ad1d0dd97eb767ea3c5434de1a3d4abf2684a0"
         }
       ]
     },
@@ -96,14 +96,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.329, train acc 0.860, test acc 0.831\n351.7 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.340, train acc 0.852, test acc 0.845\n474.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-3-1.svg",
-          "bytes": 25130,
-          "sha256": "sha256:4cacde2ad6ac429042c0460d9323a80e84954ca51e1bbff9850e8cb98b53f517"
+          "bytes": 25141,
+          "sha256": "sha256:829746a4304a31a883358c7849473ab35d7825a0bead7e86e8482f02851b941e"
         }
       ]
     },

@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H: (8, 256) O: (8, 10)\nloss 2.316, fraction of active units 0.51\n"
+          "text": "H: (8, 256) O: (8, 10)\nloss 2.301, fraction of active units 0.46\n"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 37949,
-          "sha256": "sha256:64e9476438b551957c4d5311aed9bbcd641fcf2789a1fba48a867abe3f91813e"
+          "bytes": 37950,
+          "sha256": "sha256:4e77abb6f938ee58a1db708776f05ec20f964bebb1ff003ad90221ff1b33aa96"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 29415,
-          "sha256": "sha256:27cd74e5a2e78c9f5eac76e98d0a84b255c803ccd506337390ec6f6e88ff0155"
+          "bytes": 29422,
+          "sha256": "sha256:8a7bd7168bc6d5e547503ceacad7c5cc4b1dd9f5825494f8333f85259da557f2"
         }
       ]
     },
@@ -87,12 +87,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.865\n  concise MLP: 0.872\n  softmax regression: 0.835\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.868\n  concise MLP: 0.868\n  softmax regression: 0.839\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training accuracy of the MLP from scratch: 0.900\n"
+          "text": "training accuracy of the MLP from scratch: 0.901\n"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class             softmax  MLP, scratch  MLP, concise\nT-shirt              0.76          0.83          0.85\ntrouser              0.95          0.97          0.97\npullover             0.74          0.78          0.83\ndress                0.87          0.88          0.88\ncoat                 0.66          0.88          0.77\nsandal               0.91          0.94          0.98\nshirt                0.66          0.60          0.68\nsneaker              0.93          0.96          0.87\nbag                  0.94          0.97          0.95\nankle boot           0.95          0.94          0.95\n"
+          "text": "class             softmax  MLP, scratch  MLP, concise\nT-shirt              0.81          0.80          0.86\ntrouser              0.95          0.96          0.97\npullover             0.79          0.78          0.79\ndress                0.87          0.89          0.91\ncoat                 0.75          0.78          0.80\nsandal               0.92          0.96          0.94\nshirt                0.50          0.74          0.66\nsneaker              0.93          0.92          0.94\nbag                  0.94          0.96          0.96\nankle boot           0.95          0.96          0.96\n"
         }
       ]
     },
@@ -120,8 +120,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-what-the-hidden-units-compute-2-1.svg",
-          "bytes": 69095,
-          "sha256": "sha256:836ed7188e2e4d75fbf58635446c0defcc7cc257368139a056de35b80f8da58c"
+          "bytes": 73130,
+          "sha256": "sha256:07403e8e68420757063dd18bbc5a97e95d271f528fd9309ca730ed09dd9a3692"
         }
       ]
     },

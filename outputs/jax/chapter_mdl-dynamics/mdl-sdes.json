@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
+    "d2l_lib_fingerprint": "sha256:71f23eff288cdfc510d64d9e0a5b0d7d2805ef58e06c7cbbebe8caa44317c605",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Var(W_t) at t=0.25: 0.2487   (theory: 0.25)\nVar(W_t) at t=0.50: 0.4985   (theory: 0.50)\nVar(W_t) at t=1.00: 0.9921   (theory: 1.00)\nfraction inside +-2 sqrt(t) at t=1: 0.957   (Gaussian: 0.954)\n"
+          "text": "Var(W_t) at t=0.25: 0.2514   (theory: 0.25)\nVar(W_t) at t=0.50: 0.5024   (theory: 0.50)\nVar(W_t) at t=1.00: 1.0035   (theory: 1.00)\nfraction inside +-2 sqrt(t) at t=1: 0.954   (Gaussian: 0.954)\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical E[W_s W_t]:\n[[0.1   0.099 0.1   0.1   0.102]\n [0.099 0.249 0.248 0.247 0.248]\n [0.1   0.248 0.499 0.496 0.497]\n [0.1   0.247 0.496 0.743 0.741]\n [0.102 0.248 0.497 0.741 0.992]]\nmax |empirical - min(s,t)| = 0.0089\n"
+          "text": "empirical E[W_s W_t]:\n[[0.1   0.101 0.101 0.102 0.103]\n [0.101 0.252 0.252 0.252 0.254]\n [0.101 0.252 0.502 0.501 0.504]\n [0.102 0.252 0.501 0.757 0.757]\n [0.103 0.254 0.504 0.757 1.004]]\nmax |empirical - min(s,t)| = 0.0072\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      n  QV of W  sqrt(2/n)  QV of sin  2 pi^2/n\n     16   0.7177     0.3536   1.217927  1.233701\n     64   1.0772     0.1768   0.308177  0.308425\n    256   0.9949     0.0884   0.077102  0.077106\n   1024   1.0121     0.0442   0.019277  0.019277\n   4096   0.9749     0.0221   0.004819  0.004819\n  16384   1.0094     0.0110   0.001205  0.001205\n  65536   1.0018     0.0055   0.000301  0.000301\n 262144   1.0012     0.0028   0.000075  0.000075\n"
+          "text": "      n  QV of W  sqrt(2/n)  QV of sin  2 pi^2/n\n     16   0.8586     0.3536   1.217927  1.233701\n     64   1.0784     0.1768   0.308177  0.308425\n    256   1.0022     0.0884   0.077102  0.077106\n   1024   1.0078     0.0442   0.019277  0.019277\n   4096   0.9620     0.0221   0.004819  0.004819\n  16384   0.9784     0.0110   0.001205  0.001205\n  65536   0.9875     0.0055   0.000301  0.000301\n 262144   0.9931     0.0028   0.000075  0.000075\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "left sum -0.4038   right sum 0.6348\nright - left 1.0385   sum of (dW)^2 1.0385\n"
+          "text": "left sum 0.0162   right sum 1.0061\nright - left 0.9899   sum of (dW)^2 0.9899\n"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 0.0050   (theory 0)\nvariance 0.5005   (theory 1/2)\n"
+          "text": "mean 0.0017   (theory 0)\nvariance 0.4856   (theory 1/2)\n"
         }
       ]
     },
@@ -75,14 +75,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final gap W_1^2 - int 2W dW = 1.0385   (Ito correction: t = 1)\nmax |gap_t - t| along the path = 0.0668\n"
+          "text": "final gap W_1^2 - int 2W dW = 0.9899   (Ito correction: t = 1)\nmax |gap_t - t| along the path = 0.0279\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ito-correction-1.svg",
-          "bytes": 87980,
-          "sha256": "sha256:97190725970317b9ab0b5481646307741dacd8c1838d66dff12cbc181701cc6a"
+          "bytes": 85989,
+          "sha256": "sha256:d72613a578d044b3cf3ef514726c665e7ff8803db5f0fcf4c06cc73f351d2f4e"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   t   mean 2alpha_t    std sigma_t  inside\n 0.5  1.223    1.213  0.803   0.795   0.954\n 1.0  0.737    0.736  0.943   0.930   0.949\n 1.5  0.433    0.446  0.970   0.975   0.958\n 2.0  0.256    0.271  0.986   0.991   0.955\n 4.0  0.045    0.037  1.010   1.000   0.955\n"
+          "text": "   t   mean 2alpha_t    std sigma_t  inside\n 0.5  1.209    1.213  0.796   0.795   0.954\n 1.0  0.734    0.736  0.929   0.930   0.955\n 1.5  0.437    0.446  0.969   0.975   0.955\n 2.0  0.268    0.271  0.989   0.991   0.954\n 4.0  0.026    0.037  0.997   1.000   0.957\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "simulated quantiles at t=4: [-1.93 -0.64  0.04  0.74  1.99]\nN(2 e^-4, 1) quantiles:     [-1.92 -0.64  0.04  0.71  2.  ]\nvariance 1.0192   (stationary 1, recurrence fixed point 1.0050)\n"
+          "text": "simulated quantiles at t=4: [-1.9  -0.66  0.03  0.71  1.95]\nN(2 e^-4, 1) quantiles:     [-1.92 -0.64  0.04  0.71  2.  ]\nvariance 0.9950   (stationary 1, recurrence fixed point 1.0050)\n"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   t    Var    rec  E X^4    rec 3-2abar^2\n0.00  1.000  1.000  1.000  1.000     1.000\n0.25  1.000  1.002  2.270  2.280     2.264\n1.00  1.017  1.004  3.132  2.990     2.963\n3.00  1.008  1.005  3.030  3.030     3.000\n"
+          "text": "   t    Var    rec  E X^4    rec 3-2abar^2\n0.00  1.000  1.000  1.000  1.000     1.000\n0.25  1.009  1.002  2.305  2.280     2.264\n1.00  0.997  1.004  2.960  2.990     2.963\n3.00  1.010  1.005  3.061  3.030     3.000\n"
         }
       ]
     },
@@ -142,14 +142,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "strong-order slopes:  OU (additive) 1.02,  GBM (multiplicative) 0.48\n"
+          "text": "strong-order slopes:  OU (additive) 1.03,  GBM (multiplicative) 0.46\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-em-strong-order-1.svg",
-          "bytes": 36282,
-          "sha256": "sha256:bfdb307d5cfa582c634743d0972549e74ca56588ad7bd925f2e75fcbc841ceb2"
+          "bytes": 35496,
+          "sha256": "sha256:9584bb6716ccb73353ec6f29ec228ca0c3c3f4bb5a7b1ff4d4eb62511131fff0"
         }
       ]
     },

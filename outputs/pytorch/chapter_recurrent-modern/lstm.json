@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1965711acaf2fe4697c5780026ab07d5446735c8b28ea5690fe2878a76a4c9be",
+    "d2l_lib_fingerprint": "sha256:7912f7c1957c8aa01be399084e0502b273b079230ca5b2a2a1cbb612fae86dad",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max difference: 6.0e-08\n"
+          "text": "max difference: 8.9e-08\n"
         }
       ]
     },
@@ -82,17 +82,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  1.00  1.00  1.00  0.39  0.12\n"
+          "text": "RNN               1.00  1.00  1.00  0.50  1.00  0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.23  0.12  0.13  0.12\n"
+          "text": "LSTM              1.00  1.00  0.37  0.12  0.12  0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU               1.00  1.00  1.00  0.12  0.12  0.13\n"
+          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
@@ -144,7 +144,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,859 parameters   perplexity 3.14\nLSTM    542,003 parameters   perplexity 2.98\nGRU     475,955 parameters   perplexity 3.00\n"
+          "text": "RNN     343,859 parameters   perplexity 3.13\nLSTM    542,003 parameters   perplexity 2.97\nGRU     475,955 parameters   perplexity 3.00\n"
         }
       ]
     }

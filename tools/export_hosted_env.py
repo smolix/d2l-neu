@@ -30,6 +30,10 @@ class PackageSpec:
     gpu_extra: str | None = None
     public_version: bool = False
     hosted_exact: bool = True
+    # uv.lock fork whose version to take when the lock holds several
+    # versions of this distribution (e.g. huggingface-hub: 1.23.0 for the jax
+    # extra, 2.x for the lm extra). Names a pyproject extra.
+    lock_extra: str | None = None
 
 
 PROFILES = {
@@ -60,6 +64,29 @@ PROFILES = {
     ),
 }
 
+# The `lm` extra (.venv-lm, tools/runtime_env.py NOTEBOOK_VENVS): what a
+# hosted chapter_lm-* notebook installs on top of the PyTorch core, whatever
+# its own cells import (the d2l helpers import these lazily). Locked from the
+# lm fork of uv.lock. scikit-learn is provider-managed on Colab.
+LM_PACKAGES = (
+    PackageSpec("transformers", "transformers", extra="serving",
+                lock_extra="lm"),
+    PackageSpec("huggingface-hub", "huggingface_hub", lock_extra="lm"),
+    PackageSpec("accelerate", "accelerate", lock_extra="lm"),
+    PackageSpec("openai", "openai", lock_extra="lm"),
+    PackageSpec("scikit-learn", "sklearn", hosted_exact=False,
+                lock_extra="lm"),
+)
+
+# Separate execution venvs → the optional distributions every hosted notebook
+# of such a venv's chapters installs (names from OPTIONAL_PROFILES).
+VENV_PACKAGES = {
+    "pytorch": {
+        "lm": tuple(spec.distribution for spec in LM_PACKAGES) + (
+            "safetensors",),
+    },
+}
+
 OPTIONAL_PROFILES = {
     "pytorch": (
         PackageSpec("gpytorch", "gpytorch"),
@@ -69,6 +96,7 @@ OPTIONAL_PROFILES = {
             "syne-tune", "syne_tune.optimizer.baselines", extra="gpsearchers"
         ),
         PackageSpec("tiktoken", "tiktoken"),
+        *LM_PACKAGES,
     ),
     "tensorflow": (
         PackageSpec("gymnasium", "gymnasium", extra="toy-text"),
@@ -123,10 +151,31 @@ def _lock_entries(lock: dict, distribution: str) -> list[dict]:
     ]
 
 
-def _linux_entry(lock: dict, distribution: str) -> dict:
+def _extra_version(lock: dict, distribution: str, extra: str) -> str | None:
+    """Version uv.lock pins for *distribution* as a direct requirement of the
+    project's *extra* (recorded only when the lock holds several versions)."""
+    normalized = distribution.replace("_", "-").lower()
+    for package in lock.get("package", []):
+        if package.get("source", {}).get("editable") != ".":
+            continue
+        for dep in package.get("optional-dependencies", {}).get(extra, []):
+            if (dep.get("name", "").replace("_", "-").lower() == normalized
+                    and dep.get("version")):
+                return dep["version"]
+    return None
+
+
+def _linux_entry(lock: dict, distribution: str,
+                 extra: str | None = None) -> dict:
     entries = _lock_entries(lock, distribution)
     if not entries:
         raise ValueError(f"{distribution!r} is absent from uv.lock")
+    if len(entries) > 1 and extra:
+        wanted = _extra_version(lock, distribution, extra)
+        if wanted is not None:
+            entries = [e for e in entries
+                       if e.get("version", "").split("+", 1)[0] ==
+                       wanted.split("+", 1)[0]] or entries
     if len(entries) == 1:
         return entries[0]
 
@@ -157,7 +206,7 @@ def build_profile(framework: str, lock_path: Path) -> dict:
     lock_bytes = lock_path.read_bytes()
     lock = tomllib.loads(lock_bytes.decode())
     def package_record(spec: PackageSpec) -> dict:
-        entry = _linux_entry(lock, spec.distribution)
+        entry = _linux_entry(lock, spec.distribution, spec.lock_extra)
         locked = entry["version"]
         wanted = locked.split("+", 1)[0] if spec.public_version else locked
         base = spec.distribution
@@ -192,6 +241,11 @@ def build_profile(framework: str, lock_path: Path) -> dict:
         "optional_packages": optional_packages,
         "critical_apis": list(CRITICAL_APIS[framework]),
     }
+    if VENV_PACKAGES.get(framework):
+        profile["venv_packages"] = {
+            venv: list(names)
+            for venv, names in sorted(VENV_PACKAGES[framework].items())
+        }
     environment = {
         key: value for key, value in profile.items()
         if key not in {"source_lock", "source_lock_sha256"}

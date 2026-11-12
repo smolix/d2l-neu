@@ -129,6 +129,7 @@ help:
 	@echo "                                capture-outputs FILES=... UNLOCK=1"
 	@echo "  lib                     [any] Build d2l Python package"
 	@echo "  venv-<fw> / kernels     [any] Sync UV env / register ipykernels (for VS Code)"
+	@echo "  venv-lm                 [any] Language Models venv (chapter_lm-*: torch + transformers/openai)"
 	@echo "  detect                  [any] Print the auto-detected resource + parallelism plan"
 	@echo "  run-notebooks-<fw>     [GPU*] Execute notebooks for one framework (CPU notebooks OK)"
 	@echo "  run-all-notebooks      [GPU*] Execute all frameworks (CPU/GPU queues)"

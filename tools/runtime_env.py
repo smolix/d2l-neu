@@ -350,6 +350,50 @@ NOTEBOOK_ENV = {
 }
 
 
+# Separate execution venvs. A notebook of <framework> whose chapter directory
+# starts with one of the prefixes below executes in `.venv-<venv>` instead of
+# `.venv-<framework>`; everything else about it stays <framework>'s: the
+# `_notebooks/<framework>/` stamp, the `outputs/<framework>/` manifest, the
+# EXTRA_ENV_<framework> settings and the freshness key (the framework
+# package's public version). The Language Models part (chapter_lm-*) runs in
+# .venv-lm, PyTorch plus Transformers/OpenAI on the same torch pin, so the rest
+# of the book never carries those packages. make/notebooks.mk has one EXEC_RULE
+# per entry (keep the two in step; tools/test_notebook_venvs.py checks it).
+NOTEBOOK_VENVS = {
+    "pytorch": (("chapter_lm-", "lm"),),
+}
+
+# Packages a separate venv adds on top of its framework whose versions the
+# execution provenance records (capture_outputs.build_provenance). A change only
+# warns in the audit; it never makes a notebook stale.
+VENV_PROVENANCE_PACKAGES = {
+    "lm": ("transformers",),
+}
+
+
+def notebook_venv(framework, rel):
+    """Name of the venv (`.venv-<name>`) that executes a notebook.
+
+    *rel* is the notebook's path below `_notebooks/<framework>/` (or the
+    source path, or just the chapter directory): only its first component,
+    the chapter, is read. Returns *framework* unless NOTEBOOK_VENVS maps the
+    chapter elsewhere."""
+    chapter = str(rel).replace("\\", "/").lstrip("./").split("/", 1)[0]
+    for prefix, venv in NOTEBOOK_VENVS.get(framework, ()):
+        if chapter.startswith(prefix):
+            return venv
+    return framework
+
+
+def chapter_venv(chapter):
+    """(framework, venv) of a chapter served by a separate venv, else None."""
+    for framework, entries in NOTEBOOK_VENVS.items():
+        for prefix, venv in entries:
+            if str(chapter).startswith(prefix):
+                return framework, venv
+    return None
+
+
 def apply_notebook_env(env, nb_path):
     """Add NOTEBOOK_ENV's variables for the notebook at *nb_path*
     (`.../_notebooks/<framework>/<chapter>/<file>.ipynb`) to *env*."""

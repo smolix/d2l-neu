@@ -105,23 +105,75 @@ def public_version(spec: str) -> str:
     return f'{name}=={ver.split("+", 1)[0]}'
 
 
-def framework_version(repo_root: Path, fw: str) -> str:
-    if fw in _VERSION_CACHE:
-        return _VERSION_CACHE[fw]
+def _venv_python(repo_root: Path, fw: str, venv=None):
+    """Interpreter of the venv that executes *fw* notebooks of one chapter.
+
+    *venv* names a separate execution venv (runtime_env.NOTEBOOK_VENVS, e.g.
+    'lm' for chapter_lm-*). When `.venv-<venv>` is absent on this host the
+    framework's own venv answers instead: a separate venv pins the same
+    framework version (tools/test_notebook_venvs.py), so the freshness key is
+    the same and a host without .venv-lm does not see the part as stale."""
+    for name in dict.fromkeys(n for n in (venv, fw) if n):
+        py = repo_root / f'.venv-{name}' / 'bin' / 'python'
+        if py.exists():
+            return py
+    return None
+
+
+def _installed_version(py, pkg):
+    """`pkg.__version__` as installed in the interpreter *py*, or None."""
+    try:
+        r = subprocess.run(
+            [str(py), '-c', f'import {pkg}; print({pkg}.__version__)'],
+            capture_output=True, text=True, timeout=120)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+
+def framework_version(repo_root: Path, fw: str, venv=None) -> str:
+    key = (fw, venv or fw)
+    if key in _VERSION_CACHE:
+        return _VERSION_CACHE[key]
     pkg = FRAMEWORK_PKG[fw]
-    py = repo_root / f'.venv-{fw}' / 'bin' / 'python'
-    ver = 'unknown'
-    if py.exists():
-        try:
-            r = subprocess.run(
-                [str(py), '-c', f'import {pkg}; print({pkg}.__version__)'],
-                capture_output=True, text=True, timeout=120)
-            if r.returncode == 0 and r.stdout.strip():
-                ver = public_version(f'{pkg}=={r.stdout.strip()}')
-        except Exception:
-            pass
-    _VERSION_CACHE[fw] = ver
+    py = _venv_python(repo_root, fw, venv)
+    raw = _installed_version(py, pkg) if py else None
+    ver = public_version(f'{pkg}=={raw}') if raw else 'unknown'
+    _VERSION_CACHE[key] = ver
     return ver
+
+
+def venv_packages(repo_root: Path, venv: str) -> dict:
+    """{package: 'pkg==<public version>' or 'unknown'} for the packages a
+    separate venv records in provenance (runtime_env.VENV_PROVENANCE_PACKAGES).
+    Read from `.venv-<venv>` only: these packages exist nowhere else."""
+    from runtime_env import VENV_PROVENANCE_PACKAGES
+    out = {}
+    for pkg in VENV_PROVENANCE_PACKAGES.get(venv, ()):
+        key = ('pkg', venv, pkg)
+        if key not in _VERSION_CACHE:
+            py = repo_root / f'.venv-{venv}' / 'bin' / 'python'
+            raw = _installed_version(py, pkg) if py.exists() else None
+            _VERSION_CACHE[key] = (public_version(f'{pkg}=={raw}')
+                                   if raw else 'unknown')
+        out[pkg] = _VERSION_CACHE[key]
+    return out
+
+
+def package_drift(old_prov: dict, cur_prov: dict) -> list:
+    """Human-readable changes of the recorded venv packages between two
+    provenance records. Both sides must know a version for it to count; a
+    change here never makes a notebook stale (the audit only warns)."""
+    old = old_prov.get('packages') or {}
+    cur = cur_prov.get('packages') or {}
+    out = []
+    for pkg in sorted(set(old) & set(cur)):
+        a, b = old[pkg], cur[pkg]
+        if a and b and 'unknown' not in (a, b) and a != b:
+            out.append(f'{a} → {b}')
+    return out
 
 
 # ── d2l lib fingerprint (from the notebook's .d file) ────────────
@@ -253,11 +305,32 @@ def prefix_fingerprints(code_cells):
     return fps, order
 
 
+def notebook_venv_of(fw, d_path):
+    """Execution venv of the notebook whose `.d` (or `.ipynb`) path is
+    `_notebooks/<fw>/<chapter>/<stem>.d`: runtime_env.notebook_venv on its
+    chapter directory."""
+    try:
+        from runtime_env import notebook_venv
+    except ImportError:  # imported from outside tools/
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from runtime_env import notebook_venv
+    return notebook_venv(fw, Path(d_path).parent.name)
+
+
 def build_provenance(repo_root, fw, d_path, max_inline=None):
+    venv = notebook_venv_of(fw, d_path)
     prov = {
-        'framework_version': framework_version(repo_root, fw),
+        'framework_version': framework_version(repo_root, fw, venv),
         'd2l_lib_fingerprint': d2l_lib_fingerprint(repo_root, d_path),
     }
+    if venv != fw:
+        # A separate execution venv (chapter_lm-* → .venv-lm): name it and
+        # record the versions of its extra packages. Informational: the
+        # freshness key stays framework_version + lib + code fingerprints.
+        prov['venv'] = venv
+        packages = venv_packages(repo_root, venv)
+        if packages:
+            prov['packages'] = packages
     if max_inline is not None:
         prov['max_inline_bytes'] = max_inline
     return prov
@@ -410,7 +483,7 @@ def capture_notebook(repo_root, store_dir, nb_path, fw, chapter, stem,
         'cells': cells,
     }
     if run_provenance:   # locked re-run: record the lib/version it ran under
-        for key in ('framework_version', 'd2l_lib_fingerprint'):
+        for key in ('framework_version', 'd2l_lib_fingerprint', 'packages'):
             if run_provenance.get(key):
                 manifest['provenance'][key] = run_provenance[key]
     if execution:   # locked notebooks only: when the paid re-run happened

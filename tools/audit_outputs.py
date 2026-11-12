@@ -160,6 +160,11 @@ def audit_manifest(repo_root, nb_root, manifest_path, fw, lock=None):
             rec['reasons'].append(
                 f'{key}: {old_prov.get(key)} → {cur_prov.get(key)}')
 
+    # Packages of a separate execution venv (chapter_lm-* → .venv-lm records
+    # its transformers version): a change only warns, never stales — re-run
+    # the part by hand after such a bump (docs/build-system.md §3.1).
+    rec['package_drift'] = cap.package_drift(old_prov, cur_prov)
+
     cells = manifest.get('cells', {})
     cur_ids = set(cur_fps)
     man_ids = set(cells)
@@ -544,6 +549,7 @@ def main():
     missing = [r for r in records if r['missing']]
     no_nb = [r for r in records
              if not r['notebook_present'] and not r.get('no_manifest')]
+    pkg_drift = [r for r in records if r.get('package_drift')]
     # `no_nb` is a warning, NOT an integrity error: a pure CPU-only render box has
     # the committed store but no generated _notebooks/, and must still render. The
     # freshness gate only bites where the notebooks exist (an author's dev box, or
@@ -618,6 +624,13 @@ def main():
               f'(in notebook, not captured — run capture):')
         for r in missing[:10]:
             print(f'      {r["framework"]:11} {r["source"]}: {", ".join(r["missing"][:6])}')
+
+    if pkg_drift:
+        print(f'\n  ⚠ {len(pkg_drift)} notebook(s) captured under other venv '
+              f'package versions (warning only; re-run them by hand):')
+        for r in pkg_drift[:10]:
+            print(f'      {r["framework"]:11} {r["source"]}: '
+                  f'{"; ".join(r["package_drift"])}')
 
     if stale:
         print(f'\n  ● {len(stale)} STALE notebook(s) '

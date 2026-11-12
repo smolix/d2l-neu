@@ -199,14 +199,19 @@ def main():
                     }
                     if fw == 'mxnet':
                         required.add(f'{top}/pylock.cpu-macos.toml')
+                    if fw == 'pytorch':   # the Language Models chapters' venv
+                        required |= {f'{top}/pylock.lm-cpu.toml',
+                                     f'{top}/pylock.lm-gpu.toml'}
                     missing = required - names
                     if n == 0:
                         errors.append(f'notebook zip {z} contains no .ipynb files')
                     if missing:
                         errors.append(f'notebook zip {z} lacks runnable-project files: '
                                       + ', '.join(sorted(missing)))
-                    for lock_name in (f'{top}/pylock.cpu.toml',
-                                      f'{top}/pylock.gpu.toml'):
+                    for lock_name in sorted(
+                            e for e in names
+                            if e.startswith(f'{top}/pylock.')
+                            and e.endswith('.toml')):
                         if lock_name not in names:
                             continue
                         lock = archive.read(lock_name).decode('utf-8')

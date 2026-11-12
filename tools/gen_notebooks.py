@@ -402,11 +402,18 @@ def patch_ipynb_ids(ipynb_path: Path, framework: str):
         else:
             cell['source'] = source.split('\n', 1)[1] if '\n' in source else ''
 
-    # Notebook-level kernelspec
+    # Notebook-level kernelspec. A chapter served by a separate venv
+    # (runtime_env.NOTEBOOK_VENVS: chapter_lm-* → .venv-lm) points at that
+    # venv's kernel (`make kernels` registers d2l-lm).
+    from runtime_env import notebook_venv
+    venv = notebook_venv(framework, ipynb_path.parent.name)
     nb_meta = nb.setdefault('metadata', {})
     nb_meta['kernelspec'] = {
-        'name': f'd2l-{framework}',
-        'display_name': f'd2l ({FRAMEWORK_DISPLAY.get(framework, framework)})',
+        'name': f'd2l-{venv}',
+        'display_name': (
+            f'd2l ({FRAMEWORK_DISPLAY.get(framework, framework)})'
+            if venv == framework else
+            f'd2l ({FRAMEWORK_DISPLAY.get(framework, framework)}, {venv})'),
         'language': 'python',
     }
 

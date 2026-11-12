@@ -15,6 +15,7 @@ For each framework it writes:
                                      d2l-<fw>/img/…
                                      d2l-<fw>/d2l/…
                                      d2l-<fw>/pylock.{cpu,gpu}.toml
+                                     (pytorch: also pylock.lm-{cpu,gpu}.toml)
                                      d2l-<fw>/{pyproject.toml,README.md}
 
 Computed cell outputs (plots, printed values) live inline in the notebook; the
@@ -90,7 +91,12 @@ internet connection and additional disk space.
 """
 
 _CPU_NOTE = {
-    'pytorch': '',
+    'pytorch': ('The Language Models chapters (`chapter_lm-*`) need '
+                'Transformers and the OpenAI client\non top of PyTorch: for '
+                'them use `pylock.lm-cpu.toml` (or `pylock.lm-gpu.toml`)\n'
+                'in a separate venv, e.g. `uv venv --python 3.12 .venv-lm`, '
+                'then\n`VIRTUAL_ENV=.venv-lm uv pip sync pylock.lm-cpu.toml`.'
+                '\n\n'),
     'tensorflow': '',
     'jax': '',
     'mxnet': ('On Apple Silicon, use `pylock.cpu-macos.toml` instead of '

@@ -4,7 +4,7 @@
     "torch.optim.SGD",
     "torchvision.transforms.Compose"
   ],
-  "environment_sha256": "f87317feefa68f51e5cb08aea370bdf7046ab16589002fe1ab87c8645d6899ab",
+  "environment_sha256": "ba4a993cc6ec9b2602d8880d9540d771844f7f886d8b5db4df9cbbe7de42a9f5",
   "framework": "pytorch",
   "optional_packages": [
     {
@@ -51,6 +51,51 @@
       "match": "exact",
       "requirement": "tiktoken==0.13.0",
       "version": "0.13.0"
+    },
+    {
+      "constraint": "transformers==5.22.2",
+      "distribution": "transformers",
+      "hosted_policy": "exact",
+      "import": "transformers",
+      "match": "exact",
+      "requirement": "transformers[serving]==5.22.2",
+      "version": "5.22.2"
+    },
+    {
+      "constraint": "huggingface-hub==2.4.0",
+      "distribution": "huggingface-hub",
+      "hosted_policy": "exact",
+      "import": "huggingface_hub",
+      "match": "exact",
+      "requirement": "huggingface-hub==2.4.0",
+      "version": "2.4.0"
+    },
+    {
+      "constraint": "accelerate==1.15.0",
+      "distribution": "accelerate",
+      "hosted_policy": "exact",
+      "import": "accelerate",
+      "match": "exact",
+      "requirement": "accelerate==1.15.0",
+      "version": "1.15.0"
+    },
+    {
+      "constraint": "openai==3.49.0",
+      "distribution": "openai",
+      "hosted_policy": "exact",
+      "import": "openai",
+      "match": "exact",
+      "requirement": "openai==3.49.0",
+      "version": "3.49.0"
+    },
+    {
+      "constraint": "scikit-learn==1.8.0",
+      "distribution": "scikit-learn",
+      "hosted_policy": "preserve",
+      "import": "sklearn",
+      "match": "exact",
+      "requirement": "scikit-learn==1.8.0",
+      "version": "1.8.0"
     }
   ],
   "packages": [
@@ -77,5 +122,15 @@
   "python": "3.12",
   "schema_version": 2,
   "source_lock": "uv.lock",
-  "source_lock_sha256": "54d8ce026ff8b4a9bc4a16c6aa2845db1c4e64888701080dec0faf05c2911205"
+  "source_lock_sha256": "1ef9e7694f3952350c3cd941eeaec22cdbcaa875559323bcf786357a5321948e",
+  "venv_packages": {
+    "lm": [
+      "transformers",
+      "huggingface-hub",
+      "accelerate",
+      "openai",
+      "scikit-learn",
+      "safetensors"
+    ]
+  }
 }

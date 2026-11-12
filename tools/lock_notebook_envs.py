@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate pinned CPU/GPU pylock files for downloadable notebook bundles.
 
-The inputs live in notebook_envs/<framework>/{cpu,gpu}.in. Locks keep the local
+The inputs live in notebook_envs/<framework>/{cpu,gpu}.in (PyTorch also has
+lm-{cpu,gpu}.in for the Language Models chapters). Locks keep the local
 D2L project editable as ../.. while stored in the repository; the ZIP builder
 rewrites that one path to . because locks live at the archive root.
 """
@@ -26,6 +27,10 @@ def jobs_for(framework):
     if framework == 'pytorch':
         cpu += ['--torch-backend', 'cpu']
         gpu += ['--torch-backend', 'cu128']
+        # The Language Models chapters (chapter_lm-*) run in their own venv
+        # (.venv-lm: PyTorch plus Transformers/OpenAI); the zip carries a
+        # matching pair of locks, lm-{cpu,gpu}.in → pylock.lm-{cpu,gpu}.toml.
+        return [('cpu', cpu), ('gpu', gpu), ('lm-cpu', cpu), ('lm-gpu', gpu)]
     return [('cpu', cpu), ('gpu', gpu)]
 
 

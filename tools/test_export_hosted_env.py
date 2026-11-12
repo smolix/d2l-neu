@@ -46,6 +46,29 @@ class HostedEnvironmentTests(unittest.TestCase):
                 },
             )
 
+    def test_lm_packages_come_from_the_lm_fork(self):
+        # huggingface-hub has one lock entry per fork (jax holds 1.23.0, the
+        # lm extra needs >=1.31); the pytorch profile's lm packages must take
+        # the lm extra's version, not fail on the ambiguity.
+        lock = lock_data()
+        profile = hosted_env.build_profile("pytorch", hosted_env.ROOT / "uv.lock")
+        optional = {p["distribution"]: p for p in profile["optional_packages"]}
+        for spec in hosted_env.LM_PACKAGES:
+            wanted = hosted_env._extra_version(lock, spec.distribution, "lm")
+            entry = hosted_env._linux_entry(lock, spec.distribution, "lm")
+            if wanted is not None:
+                self.assertEqual(entry["version"], wanted)
+            self.assertEqual(optional[spec.distribution]["version"],
+                             entry["version"])
+        self.assertTrue(optional["transformers"]["requirement"].startswith(
+            "transformers[serving]=="))
+        self.assertEqual(
+            set(profile["venv_packages"]["lm"]) - set(optional), set())
+        for framework in ("tensorflow", "jax"):
+            self.assertNotIn(
+                "venv_packages",
+                hosted_env.build_profile(framework, hosted_env.ROOT / "uv.lock"))
+
     def test_generation_is_deterministic_and_checkable(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp)

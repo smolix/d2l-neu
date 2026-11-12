@@ -16,11 +16,16 @@ hosted-notebooks: check-hosted-env-locks notebooks-pytorch notebooks-tensorflow 
 	@mkdir -p $(LOGDIR)
 	@python3 tools/build_hosted_notebooks.py build 2>&1 | tee $(LOGDIR)/hosted-notebooks-$(TS).log
 
+# The pytorch profile is checked twice: in .venv-pytorch, and in .venv-lm,
+# whose transformers/openai/... are the profile's lm packages (chapter_lm-*).
 check-hosted-runtime-contracts: check-hosted-env-locks d2l/.built \
-		.venv-pytorch/.synced .venv-tensorflow/.synced .venv-jax/.synced
+		.venv-pytorch/.synced .venv-lm/.synced .venv-tensorflow/.synced \
+		.venv-jax/.synced
 	@mkdir -p $(LOGDIR)
 	@{ env MPLBACKEND=Agg OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
 		.venv-pytorch/bin/python tools/check_hosted_runtime.py pytorch \
+	&& env MPLBACKEND=Agg OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+		.venv-lm/bin/python tools/check_hosted_runtime.py pytorch \
 	&& env MPLBACKEND=Agg TF_FORCE_GPU_ALLOW_GROWTH=true \
 		TF_NUM_INTRAOP_THREADS=2 TF_NUM_INTEROP_THREADS=2 \
 		OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \

@@ -172,6 +172,64 @@ The JAX implementation is unavailable.
             self.assertIn("syne-tune", setup)
             self.assertIn("'syne-tune': 'syne_tune'", setup)
 
+    def _nb(self, root, chapter, source):
+        path = Path(root) / chapter / "page.ipynb"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({
+            "cells": [{"cell_type": "code", "metadata": {},
+                       "source": source,
+                       "outputs": [], "execution_count": None}],
+            "metadata": {}, "nbformat": 4, "nbformat_minor": 5,
+        }), encoding="utf-8")
+        return path
+
+    def test_lm_chapter_setup_installs_the_lm_venv_packages(self):
+        # chapter_lm-* runs in .venv-lm (runtime_env.NOTEBOOK_VENVS): the
+        # hosted notebook installs the lm packages even when its cells import
+        # none of them (the d2l helpers import transformers lazily).
+        optional = {
+            package["distribution"]: package
+            for package in hosted.load_profile("pytorch")["optional_packages"]
+        }
+        wanted = hosted.load_profile("pytorch")["venv_packages"]["lm"]
+        self.assertIn("transformers", wanted)
+        self.assertIn("openai", wanted)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._nb(tmp, "chapter_lm-pretrained",
+                            ["from d2l import torch as d2l\n"])
+            setup = "".join(hosted.normalize_notebook(
+                path, "pytorch", "abc123")["cells"][0]["source"])
+        for name in wanted:
+            self.assertIn(optional[name]["requirement"], setup)
+        self.assertIn("transformers[serving]==", setup)
+        self.assertIn("'huggingface-hub': 'huggingface_hub'", setup)
+
+    def test_lm_chapter_without_d2l_still_gets_setup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._nb(tmp, "chapter_lm-pretrained",
+                            ["import torch\n"])
+            nb = hosted.normalize_notebook(path, "pytorch", "abc123")
+        self.assertEqual(nb["cells"][0]["id"], "d2l-hosted-setup")
+        self.assertIn("openai==", "".join(nb["cells"][0]["source"]))
+
+    def test_other_chapters_do_not_get_lm_packages(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._nb(tmp, "chapter_transformers",
+                            ["from d2l import torch as d2l\n"])
+            setup = "".join(hosted.normalize_notebook(
+                path, "pytorch", "abc123")["cells"][0]["source"])
+        for name in ("transformers", "openai", "accelerate",
+                     "huggingface-hub"):
+            self.assertNotIn(f"'{name}'", setup)
+
+    def test_lm_chapter_is_pytorch_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "chapter_lm-pretrained" / "page.md"
+            path.parent.mkdir(parents=True)
+            path.write_text("```{.python .input}\nimport numpy as np\n```\n",
+                            encoding="utf-8")
+            self.assertEqual(hosted.classify_source(path), ["pytorch"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -218,13 +218,17 @@ EXTRA_ENV_mxnet := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
                    MXNET_CUDNN_LIB_CHECKING=0 \
                    D2L_MXNET_GPU_SLOTS=$(MXNET_GPU_SLOTS) D2L_MXNET_CPU_SLOTS=$(MXNET_CPU_SLOTS)
 
+# EXEC_RULE(fw, venv, chapter-prefix): execute _notebooks/<fw>/<prefix>*.ipynb
+# with .venv-<venv>/bin/python. The framework stays <fw> for the stamp, the
+# provenance sidecar, EXTRA_ENV_<fw> and run_one_notebook.py; only the
+# interpreter (and its NVIDIA libraries) comes from <venv>.
 define EXEC_RULE
-_notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
-        | d2l/$(1).py .venv-$(1)/.synced $$(RUNTIME_DEPS_$(1))
+_notebooks/$(1)/$(3)%.executed: _notebooks/$(1)/$(3)%.ipynb \
+        | d2l/$(1).py .venv-$(2)/.synced $$(RUNTIME_DEPS_$(2))
 	@mkdir -p $$(@D) $(LOGDIR)
-	$$(eval NVIDIA_LIBS := $$(call nvidia_ld_path,$(1)))
-	@UV_PROJECT_ENVIRONMENT=.venv-$(1) \
-	PATH="$(CURDIR)/.venv-$(1)/bin:$$$$PATH" \
+	$$(eval NVIDIA_LIBS := $$(call nvidia_ld_path,$(2)))
+	@UV_PROJECT_ENVIRONMENT=.venv-$(2) \
+	PATH="$(CURDIR)/.venv-$(2)/bin:$$$$PATH" \
 	LD_LIBRARY_PATH="$$(NVIDIA_LIBS)$$$${LD_LIBRARY_PATH:+:$$$$LD_LIBRARY_PATH}" \
 	D2L_NUM_GPUS=$(NUM_GPUS) \
 	D2L_GPU_SLOTS=$(GPU_SLOTS) \
@@ -233,11 +237,19 @@ _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
 	D2L_MULTIGPU_PER_PAIR=$(MULTIGPU_PER_PAIR) \
 	D2L_JAX_MGPU_MEM_FRACTION=$(JAX_MGPU_MEM_FRACTION) \
 	$$(EXTRA_ENV_$(1)) \
-	.venv-$(1)/bin/python tools/run_one_notebook.py $(1) $$< \
+	.venv-$(2)/bin/python tools/run_one_notebook.py $(1) $$< \
 		2>&1 | tee -a $(LOGDIR)/run-$(1)-$(TS).log
 	@touch $$@
 endef
-$(foreach fw,$(FRAMEWORKS),$(eval $(call EXEC_RULE,$(fw))))
+$(foreach fw,$(FRAMEWORKS),$(eval $(call EXEC_RULE,$(fw),$(fw),)))
+
+# Separate execution venvs (tools/runtime_env.py NOTEBOOK_VENVS; keep the two
+# in step, tools/test_notebook_venvs.py checks it). The Language Models part
+# (chapter_lm-*) runs in .venv-lm: PyTorch on the same pin plus Transformers,
+# OpenAI and the rest of the `lm` extra, which the other venvs never install.
+# GNU make prefers the pattern rule with the shortest stem, so this rule wins
+# over the generic pytorch one for exactly these notebooks.
+$(eval $(call EXEC_RULE,pytorch,lm,chapter_lm-))
 
 # Resource-specific aggregate targets. The public run-notebooks-* targets
 # below invoke these through sub-makes with resource-specific -j limits.

@@ -40,6 +40,7 @@ from urllib.parse import quote
 
 from build_lib import LIB_ONLY_FILES
 from export_hosted_env import load_profile
+from runtime_env import chapter_venv
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,7 +74,12 @@ _D2L_SUBMODULE_RE = re.compile(
 )
 _CELL_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _OPTIONAL_PACKAGES = {
+    "accelerate": "accelerate",
     "gpytorch": "gpytorch",
+    "huggingface_hub": "huggingface-hub",
+    "openai": "openai",
+    "sklearn": "scikit-learn",
+    "transformers": "transformers",
     "gymnasium": "gymnasium",
     "orbax": "orbax-checkpoint",
     "safetensors": "safetensors",
@@ -82,10 +88,12 @@ _OPTIONAL_PACKAGES = {
     "tiktoken": "tiktoken",
 }
 _PACKAGE_IMPORTS = {
+    "huggingface-hub": "huggingface_hub",
     "ml-dtypes": "ml_dtypes",
     "orbax-checkpoint": "orbax",
     "pillow": "PIL",
     "protobuf": "google.protobuf",
+    "scikit-learn": "sklearn",
     "syne-tune": "syne_tune",
     "tf-keras": "tf_keras",
     "tensorflow-probability": "tensorflow_probability",
@@ -120,6 +128,12 @@ def classify_source(path: Path) -> list[str]:
     code = "\n".join(_CODE_BLOCK_RE.findall(text))
     if not code.strip():
         return []
+    # A chapter served by a separate execution venv (chapter_lm-* → .venv-lm)
+    # is that venv's framework only: its untagged cells need the venv's
+    # packages, so they never become a NumPy variant.
+    served = chapter_venv(path.parent.name)
+    if served is not None:
+        return [served[0]] if served[0] in HOSTED_FRAMEWORKS else []
 
     explicit: set[str] = set()
     has_specific = False
@@ -334,12 +348,24 @@ if str(root.resolve()) not in pythonpath:
     }
 
 
+def venv_packages(chapter: str, variant: str) -> tuple[str, ...]:
+    """Distributions every hosted *variant* notebook of *chapter* installs
+    because its chapter runs in a separate venv (runtime_env.NOTEBOOK_VENVS;
+    the list comes from the hosted profile's `venv_packages`)."""
+    served = chapter_venv(chapter)
+    if served is None or served[0] != variant:
+        return ()
+    profile = load_profile(variant)
+    return tuple(profile.get("venv_packages", {}).get(served[1], ()))
+
+
 def normalize_notebook(src: Path, variant: str, revision: str) -> dict:
     """Return the stable public representation of one generated notebook."""
     nb = json.loads(src.read_text(encoding="utf-8"))
     cells = []
     uses_d2l = False
-    optional_packages = set()
+    extra_packages = venv_packages(src.parent.name, variant)
+    optional_packages = set(extra_packages)
     helper_modules = set()
     for cell in nb.get("cells", []):
         source = _source_string(cell.get("source"))
@@ -366,7 +392,7 @@ def normalize_notebook(src: Path, variant: str, revision: str) -> dict:
             cell.setdefault("execution_count", None)
         cells.append(cell)
 
-    if uses_d2l and variant in set(HOSTED_FRAMEWORKS):
+    if (uses_d2l or extra_packages) and variant in set(HOSTED_FRAMEWORKS):
         cells.insert(0, _setup_cell(
             variant, revision, tuple(sorted(optional_packages)),
             tuple(sorted(helper_modules))))

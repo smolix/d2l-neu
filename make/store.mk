@@ -33,12 +33,13 @@ verify-outputs-fresh:
 # re-run, and the capture-side guard refuses to bless the stale outputs. Never
 # touches the committed store. See docs/build-system.md §3.3. Also runs
 # tools/test_freshness_deps.py: shard naming, the transitive .d closure, and
-# the no-manifest rule (§3.4), and tools/test_notebook_locks.py: notebook locks
-# (§3.7).
+# the no-manifest rule (§3.4), tools/test_notebook_locks.py: notebook locks
+# (§3.7), and tools/test_notebook_venvs.py: the separate .venv-lm (§6.4.2).
 test-trap:
 	@mkdir -p $(LOGDIR)
 	@{ python3 tools/test_refresh_stale_trap.py && python3 tools/test_freshness_deps.py \
-		&& python3 tools/test_notebook_locks.py; } 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
+		&& python3 tools/test_notebook_locks.py \
+		&& python3 tools/test_notebook_venvs.py; } 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
 
 # ── Locked notebooks (docs/build-system.md "Locked notebooks") ──
 # A source .md carrying `<!-- execution: locked; requires: <class> -->` is never

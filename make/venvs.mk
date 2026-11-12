@@ -78,13 +78,17 @@ update-mxnet-wheel:
 
 # ── Jupyter kernels ────────────────────────────────────────
 # Register one ipykernel per framework so VS Code can auto-select the
-# right interpreter from the .ipynb's metadata.kernelspec.name.
+# right interpreter from the .ipynb's metadata.kernelspec.name, plus one per
+# separate execution venv (tools/runtime_env.py NOTEBOOK_VENVS): d2l-lm is
+# what tools/gen_notebooks.py writes into the chapter_lm-* notebooks.
+# `make kernels-lm` (any venv name) registers a single kernel.
+KERNEL_VENVS := $(FRAMEWORKS) lm
 
 .PHONY: kernels
-kernels: $(addprefix .venv-,$(addsuffix /.synced,$(FRAMEWORKS)))
-	@for fw in $(FRAMEWORKS); do \
-	  echo "Registering kernel d2l-$$fw"; \
-	  .venv-$$fw/bin/python -m ipykernel install --user \
-	    --name d2l-$$fw --display-name "d2l ($$fw)"; \
-	done
+kernels: $(addprefix kernels-,$(KERNEL_VENVS))
 	@echo "All d2l kernels registered."
+
+kernels-%: .venv-%/.synced
+	@echo "Registering kernel d2l-$*"
+	@.venv-$*/bin/python -m ipykernel install --user \
+	  --name d2l-$* --display-name "d2l ($*)"

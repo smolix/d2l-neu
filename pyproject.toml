@@ -49,6 +49,35 @@ pytorch = [
     "torchvision==0.26.0 ; sys_platform == 'darwin'",
     "gymnasium[toy-text,classic-control] ; sys_platform == 'darwin'",
 ]
+# Language Models part (chapter_lm-*): its own venv, .venv-lm, so the rest of
+# the book never carries Transformers/OpenAI. PyTorch only, on the SAME torch /
+# torchvision pins as the pytorch extra (tools/test_notebook_venvs.py asserts
+# they stay equal): freshness keys on the torch public version, and these
+# notebooks keep framework "pytorch" for stamps, manifests and provenance.
+# Notebooks under chapter_lm-* execute in .venv-lm (tools/runtime_env.py
+# NOTEBOOK_VENVS, make/notebooks.mk). A transformers/openai bump does NOT stale
+# the store (provenance records the transformers version, drift only warns):
+# re-run the chapter_lm notebooks by hand after such a bump.
+lm = [
+    "torch==2.11.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "torchvision==0.26.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # `serving` pulls the FastAPI/uvicorn stack behind `transformers serve`,
+    # the local OpenAI-compatible endpoint of the API section.
+    "transformers[serving]==5.22.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "huggingface-hub>=1.31,<3 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "accelerate>=1.1 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "openai==3.49.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "safetensors ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "scikit-learn ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "torch==2.11.0 ; sys_platform == 'darwin'",
+    "torchvision==0.26.0 ; sys_platform == 'darwin'",
+    "transformers[serving]==5.22.2 ; sys_platform == 'darwin'",
+    "huggingface-hub>=1.31,<3 ; sys_platform == 'darwin'",
+    "accelerate>=1.1 ; sys_platform == 'darwin'",
+    "openai==3.49.0 ; sys_platform == 'darwin'",
+    "safetensors ; sys_platform == 'darwin'",
+    "scikit-learn ; sys_platform == 'darwin'",
+]
 mxnet = [
     # Custom MXNet 2.0 wheel built against CUDA 13 with Blackwell (sm_120) SASS.
     # Upstream MXNet 1.9.1 / cu117 has no Blackwell kernels and no PTX fallback.
@@ -85,7 +114,10 @@ jax = [
     "flax==0.12.12 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "optax==0.2.8 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "orbax-checkpoint==0.12.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
-    "huggingface-hub ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Held at the version .venv-jax runs (2026-11-12): the lm extra needs
+    # huggingface-hub>=1.31 (Transformers 5.22) and would otherwise move this
+    # venv to the 2.x API as well.
+    "huggingface-hub==1.23.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "safetensors ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow-datasets ; sys_platform == 'linux' and platform_machine == 'x86_64'",
@@ -98,7 +130,7 @@ jax = [
     "flax==0.12.12 ; sys_platform == 'darwin'",
     "optax==0.2.8 ; sys_platform == 'darwin'",
     "orbax-checkpoint==0.12.0 ; sys_platform == 'darwin'",
-    "huggingface-hub ; sys_platform == 'darwin'",
+    "huggingface-hub==1.23.0 ; sys_platform == 'darwin'",
     "safetensors ; sys_platform == 'darwin'",
     "tensorflow ; sys_platform == 'darwin'",
     "tensorflow-datasets ; sys_platform == 'darwin'",
@@ -140,7 +172,10 @@ environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
     "sys_platform == 'darwin'",
 ]
-conflicts = [[{ extra = "pytorch" }, { extra = "jax" }, { extra = "mxnet" }, { extra = "tensorflow" }]]
+# Each framework venv installs exactly one of these extras. lm is the pytorch
+# stack plus Transformers: it conflicts with jax/tensorflow/mxnet for the same
+# CUDA reasons and never shares a venv with pytorch.
+conflicts = [[{ extra = "pytorch" }, { extra = "jax" }, { extra = "mxnet" }, { extra = "tensorflow" }, { extra = "lm" }]]
 
 [[tool.uv.index]]
 name = "pytorch-cu128"

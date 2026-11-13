@@ -1,7 +1,7 @@
 {
   "edition": "2026-11",
-  "approved_by": null,
-  "approved_on": null,
+  "approved_by": "Alexander J. Smola",
+  "approved_on": "2026-11-13",
   "compiled_on": "2026-11-13",
   "conventions": {
     "values": "Scores and rates are fractions in [0, 1]; dates are ISO (YYYY-MM-DD, or YYYY-MM when only the month is known).",
@@ -18,7 +18,10 @@
         "benchmark": "hle",
         "date": "2025-01-24",
         "evidence": "Seven frontier models score 3.3% to 9.1% on the 3,000-question v1 (best: o1, 9.1%; DeepSeek-R1 9.4% on the text-only subset), Table 1.",
-        "best": {"model": "o1", "value": 0.091},
+        "best": {
+          "model": "o1",
+          "value": 0.091
+        },
         "source": "https://arxiv.org/abs/2501.14249v1"
       }
     },
@@ -30,8 +33,18 @@
         "date": "2023-11-20 to 2025-07",
         "evidence": "At release the strongest GPT-4 baseline reaches 39% (experts 65%, 74% discounting clear mistakes); in July 2025 Epoch AI measures Grok 4 at 87% (+-2%) on the Diamond subset, past the expert baseline.",
         "points": [
-          {"date": "2023-11-20", "model": "GPT-4 (best baseline)", "value": 0.39, "source": "https://arxiv.org/abs/2311.12022"},
-          {"date": "2025-07", "model": "grok-4-0709", "value": 0.87, "source": "https://epoch.ai/benchmarks/gpqa-diamond"}
+          {
+            "date": "2023-11-20",
+            "model": "GPT-4 (best baseline)",
+            "value": 0.39,
+            "source": "https://arxiv.org/abs/2311.12022"
+          },
+          {
+            "date": "2025-07",
+            "model": "grok-4-0709",
+            "value": 0.87,
+            "source": "https://epoch.ai/benchmarks/gpqa-diamond"
+          }
         ]
       }
     },
@@ -42,7 +55,10 @@
         "benchmark": "mmlu",
         "date": "2025-04-17",
         "evidence": "o3-high reaches 93.3% (OpenAI simple-evals); 6.49% of MMLU questions are estimated to contain errors, so the ceiling is about 93.5%.",
-        "best": {"model": "o3-high", "value": 0.933},
+        "best": {
+          "model": "o3-high",
+          "value": 0.933
+        },
         "ceiling": 0.9351,
         "source": "https://github.com/openai/simple-evals/blob/6ead091ad8e120d82d08ca67b7dbe9cc4629987d/README.md",
         "ceiling_source": "https://arxiv.org/abs/2406.04127"
@@ -95,12 +111,13 @@
       "n_test_source": "https://lastexam.ai/",
       "n_test_note": "Finalized at 2,500 public questions on 2025-04-03 (v1 of the paper had 3,000).",
       "label_error": {
-        "rate": 0.293,
-        "ci95": 0.037,
         "definition": "answers directly conflicted by peer-reviewed research, text-only biology/health and chemistry subsets only (321 questions)",
         "date": "2025-07-23",
         "source": "https://www.futurehouse.org/research/hle-exam",
-        "note": "Subset estimate by a third party, not a rate for the whole benchmark."
+        "note": "Author decision 2026-11-13: the subset estimate covers 321 bio/chem questions only, so no whole-benchmark ceiling is computed.",
+        "subset_rate": 0.293,
+        "subset_ci95": 0.037,
+        "rate": null
       },
       "best_published": {
         "model": "GPT 6 Astra",
@@ -112,7 +129,13 @@
         "source": "https://labs.scale.com/leaderboard/humanitys_last_exam"
       },
       "published": [
-        {"model": "o1", "value": 0.091, "setting": "v1, 3,000 questions, Table 1", "date": "2025-01-24", "source": "https://arxiv.org/abs/2501.14249v1"}
+        {
+          "model": "o1",
+          "value": 0.091,
+          "setting": "v1, 3,000 questions, Table 1",
+          "date": "2025-01-24",
+          "source": "https://arxiv.org/abs/2501.14249v1"
+        }
       ]
     },
     {
@@ -150,9 +173,27 @@
         "source": "https://artificialanalysis.ai/evaluations/gpqa-diamond"
       },
       "published": [
-        {"model": "GPT-4 (best baseline)", "value": 0.39, "setting": "paper baseline, all 448 questions", "date": "2023-11-20", "source": "https://arxiv.org/abs/2311.12022"},
-        {"model": "grok-4-0709", "value": 0.87, "setting": "Epoch AI, Diamond, 8 samples per question", "date": "2025-07", "source": "https://epoch.ai/benchmarks/gpqa-diamond"},
-        {"model": "Qwen3-0.6B-Base", "value": 0.2677, "setting": "5-shot, CoT (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"}
+        {
+          "model": "GPT-4 (best baseline)",
+          "value": 0.39,
+          "setting": "paper baseline, all 448 questions",
+          "date": "2023-11-20",
+          "source": "https://arxiv.org/abs/2311.12022"
+        },
+        {
+          "model": "grok-4-0709",
+          "value": 0.87,
+          "setting": "Epoch AI, Diamond, 8 samples per question",
+          "date": "2025-07",
+          "source": "https://epoch.ai/benchmarks/gpqa-diamond"
+        },
+        {
+          "model": "Qwen3-0.6B-Base",
+          "value": 0.2677,
+          "setting": "5-shot, CoT (Qwen3 Technical Report, Table 8)",
+          "date": "2025-05-14",
+          "source": "https://arxiv.org/abs/2505.09388"
+        }
       ]
     },
     {
@@ -184,9 +225,27 @@
         "note": "Frontier releases after 2025 mostly stopped reporting MMLU; aggregator pages list 92% to 93.5% without primary sources."
       },
       "published": [
-        {"model": "Qwen3-0.6B-Base", "value": 0.5281, "setting": "5-shot (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"},
-        {"model": "Qwen3-1.7B-Base", "value": 0.6263, "setting": "5-shot (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"},
-        {"model": "OpenAI o1-1217", "value": 0.918, "setting": "Pass@1 (DeepSeek-R1 report, Table 4)", "date": "2025-01-22", "source": "https://arxiv.org/abs/2501.12948"}
+        {
+          "model": "Qwen3-0.6B-Base",
+          "value": 0.5281,
+          "setting": "5-shot (Qwen3 Technical Report, Table 8)",
+          "date": "2025-05-14",
+          "source": "https://arxiv.org/abs/2505.09388"
+        },
+        {
+          "model": "Qwen3-1.7B-Base",
+          "value": 0.6263,
+          "setting": "5-shot (Qwen3 Technical Report, Table 8)",
+          "date": "2025-05-14",
+          "source": "https://arxiv.org/abs/2505.09388"
+        },
+        {
+          "model": "OpenAI o1-1217",
+          "value": 0.918,
+          "setting": "Pass@1 (DeepSeek-R1 report, Table 4)",
+          "date": "2025-01-22",
+          "source": "https://arxiv.org/abs/2501.12948"
+        }
       ]
     },
     {
@@ -224,14 +283,26 @@
         "note": "Highest primary-source value found; later frontier reports rarely give GSM8K."
       },
       "published": [
-        {"model": "Qwen3-0.6B-Base", "value": 0.5959, "setting": "4-shot, CoT (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"},
-        {"model": "Qwen3-1.7B-Base", "value": 0.7544, "setting": "4-shot, CoT (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"}
+        {
+          "model": "Qwen3-0.6B-Base",
+          "value": 0.5959,
+          "setting": "4-shot, CoT (Qwen3 Technical Report, Table 8)",
+          "date": "2025-05-14",
+          "source": "https://arxiv.org/abs/2505.09388"
+        },
+        {
+          "model": "Qwen3-1.7B-Base",
+          "value": 0.7544,
+          "setting": "4-shot, CoT (Qwen3 Technical Report, Table 8)",
+          "date": "2025-05-14",
+          "source": "https://arxiv.org/abs/2505.09388"
+        }
       ]
     },
     {
       "id": "mmlu_pro",
       "name": "MMLU-Pro",
-      "stage": "saturated",
+      "stage": "climbed",
       "introduced": "2024-06-03",
       "replaces": "mmlu",
       "source_url": "https://arxiv.org/abs/2406.01574",
@@ -257,9 +328,22 @@
         "note": "'date' is the leaderboard file's commit date."
       },
       "published": [
-        {"model": "Qwen3-0.6B-Base", "value": 0.2474, "setting": "5-shot, CoT (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"},
-        {"model": "DeepSeek-R1", "value": 0.84, "setting": "EM (DeepSeek-R1 report, Table 4)", "date": "2025-01-22", "source": "https://arxiv.org/abs/2501.12948"}
-      ]
+        {
+          "model": "Qwen3-0.6B-Base",
+          "value": 0.2474,
+          "setting": "5-shot, CoT (Qwen3 Technical Report, Table 8)",
+          "date": "2025-05-14",
+          "source": "https://arxiv.org/abs/2505.09388"
+        },
+        {
+          "model": "DeepSeek-R1",
+          "value": 0.84,
+          "setting": "EM (DeepSeek-R1 report, Table 4)",
+          "date": "2025-01-22",
+          "source": "https://arxiv.org/abs/2501.12948"
+        }
+      ],
+      "stage_note": "Author decision 2026-11-13: top entries bunch at 88.6-91.2% but no label-error estimate exists, so saturation is not established."
     },
     {
       "id": "gsm1k",
@@ -277,7 +361,10 @@
       "run_in_book": false,
       "n_test": 1205,
       "n_test_source": "https://huggingface.co/datasets/ScaleAI/gsm1k",
-      "label_error": {"rate": null, "source": null},
+      "label_error": {
+        "rate": null,
+        "source": null
+      },
       "best_published": null,
       "published": []
     },
@@ -296,9 +383,36 @@
       "latest_release_source": "https://github.com/LiveBench/LiveBench/blob/1d1006a0d10ece52c2e706f8a208a659b5bbb96f/changelog.md",
       "run_in_book": false,
       "n_test": null,
-      "label_error": {"rate": null, "source": null},
+      "label_error": {
+        "rate": null,
+        "source": null
+      },
       "best_published": null,
       "published": []
+    },
+    {
+      "id": "hle_rolling",
+      "name": "HLE-Rolling",
+      "stage": null,
+      "role": null,
+      "introduced": null,
+      "source_url": null,
+      "licence": null,
+      "licence_note": null,
+      "gated": null,
+      "moving": true,
+      "latest_release": null,
+      "latest_release_source": null,
+      "run_in_book": false,
+      "n_test": null,
+      "label_error": {
+        "rate": null,
+        "source": null
+      },
+      "best_published": null,
+      "published": [],
+      "moving_note": "Continually updated fork of HLE (release of 2026-09-17), meant to replace HLE once models reach its noise ceiling.",
+      "moving_source": "https://labs.scale.com/leaderboard/humanitys_last_exam"
     }
   ]
 }

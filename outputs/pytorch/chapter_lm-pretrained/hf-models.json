@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cdd54657f260d101d0e6d6f3a1ae0831af84fefb446fdcf4bc912d84c0c6145b",
+    "d2l_lib_fingerprint": "sha256:f16e22813dbad323363414a847e27d4b0ed549d2806bf5eb00d2c2aa67dc00de",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -18,12 +18,12 @@
       "outputs": []
     },
     "hf-models-imports-extra": {
-      "code_fingerprint": "sha256:c6412a91e5d35a67639620a4051d0b87598d5f5c04d24b0ed22de2a1184392d5",
+      "code_fingerprint": "sha256:cd9da002f309fb9dd0601ee416913c2ddf2055f794165ceb9522a5ac98902f2a",
       "kind": "text",
       "outputs": []
     },
     "hf-models-settings": {
-      "code_fingerprint": "sha256:80cf75bcef144776bde1ec3e47493561490eaa250953e9787fec59e786e06186",
+      "code_fingerprint": "sha256:448f67eec590dc98b9657a1b80aa244cb81a0a4238d468e17ca9fcfbbddbfb21",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "hf-models-gpt2-question": {
-      "code_fingerprint": "sha256:6758e7d4164849cd1b4f31fae928426c2d973a29c3e4f7fd149d00783fd9a36b",
+      "code_fingerprint": "sha256:3adbece71d8434bbc9043d773023002cba95e0b41ea53202d6876f25da9b8f41",
       "kind": "text",
       "outputs": [
         {
@@ -45,18 +45,18 @@
       ]
     },
     "hf-models-three-lines": {
-      "code_fingerprint": "sha256:3ab0e4b0350b793b8bc1de3ffe0777d12fa8452f5ecb8c8939863156e2606405",
+      "code_fingerprint": "sha256:d1ab0c7b5314d153b9b4ab47a15f2425b23e28bc475c7f5c0ea5e9199e58a1bf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Language models (like those in LLMs) use a **key-value cache** (often called\n    a **context window** or **attention mechanism**) primarily to balance\n    **computational efficiency** with **model accuracy**. Here's why it's\n    essential:\n\n### 1. **Speeding Up Generation**\n- **\nQwen3_5ForCausalLM: 1,881,825,088 parameters\n"
+          "text": "Language models (like those in LLMs) use a **key-value cache** (often called\n    a **context window** or **attention mechanism**) primarily to balance\n    **computational efficiency** with **memory constraints**. Here's why\n    it's essential:\n\n### 1. **Efficient Context Processing**\n   -\nQwen3_5ForCausalLM: 1,881,825,088 parameters\n"
         }
       ]
     },
     "hf-models-repo-files": {
-      "code_fingerprint": "sha256:2635e6c9a8115620dd6a2026c2c6a2f9516b6ea511d4318c57e75ebb49e5a3ed",
+      "code_fingerprint": "sha256:f461d96920df46e059cafc61f96aafb61e856ad389d4b2b582aa2e1da105aa0d",
       "kind": "text",
       "outputs": [
         {
@@ -67,12 +67,12 @@
       ]
     },
     "hf-models-safetensors-header": {
-      "code_fingerprint": "sha256:96bb46fbad02c807dce6ed87415b3bdd3c6bae2de383490bda0a627cf3a03dc8",
+      "code_fingerprint": "sha256:a8e79d728288effa81bb2516d719a2d8a460ec5e5dee50df4d12bd5ac8792928",
       "kind": "text",
       "outputs": []
     },
     "hf-models-header-read": {
-      "code_fingerprint": "sha256:1bf044227ce1d52f1a766b81c2e956d6031befdd37458cf94013f553d42ff5c5",
+      "code_fingerprint": "sha256:3e3660756750d9f8958790ece9bdff8f903e531aa4cda11c7c2f8b9b6f5353e9",
       "kind": "text",
       "outputs": [
         {
@@ -83,27 +83,32 @@
       ]
     },
     "hf-models-revisions": {
-      "code_fingerprint": "sha256:d59e0f021912b1821d6617f3be3018775df543d05a34405a87cdb8bbe94a1b41",
+      "code_fingerprint": "sha256:6fa4ecd495209df05e3efe485987fd05d0553dce2ce1abaac9ca183d96db1a3a",
       "kind": "text",
       "outputs": []
     },
     "hf-models-lm-data-url": {
-      "code_fingerprint": "sha256:f2de685dd900e8d628c6b3b9b4209b4a10065c3ab6bea4e84ca08554ca59205f",
+      "code_fingerprint": "sha256:5a2c7939e90d646a65898de1f6028da948cb171efc3893f48a27d86533d7a1dd",
       "kind": "text",
       "outputs": []
     },
     "hf-models-data-hub": {
-      "code_fingerprint": "sha256:7c08514894fb72625f0cce058ef895a161dd0f020feb5d1acfb3235e51716821",
+      "code_fingerprint": "sha256:43eb2a2a6706f00bdfe31fdae00c516353446a541303e6c14f3e116521e88645",
+      "kind": "text",
+      "outputs": []
+    },
+    "hf-models-kernels": {
+      "code_fingerprint": "sha256:f1910a8781cd58c2f26b06ec0e8665f42d6971e5587afe51ead81b41a261575e",
       "kind": "text",
       "outputs": []
     },
     "hf-models-load-hf": {
-      "code_fingerprint": "sha256:67bb3379cc011244ef2d15275e0ca0ded3f73c45c87aab253ca7e0dce8917271",
+      "code_fingerprint": "sha256:608c6dcec1d9e2f57cd0f3f08e14bdad3ef5ff18b32cee4b0dbb3265e5690391",
       "kind": "text",
       "outputs": []
     },
     "hf-models-pinned-check": {
-      "code_fingerprint": "sha256:1cb360da1cfddf68d368255f5777f74c55788bed19a1489dc3c57a789b2af2a9",
+      "code_fingerprint": "sha256:59b562f99985d0537175c6dbd4edecea3a71f347b2feef6a162f53a02c914a87",
       "kind": "text",
       "outputs": [
         {
@@ -114,7 +119,7 @@
       ]
     },
     "hf-models-tokenizers": {
-      "code_fingerprint": "sha256:5f8bc2c08a6363ea8b16d89f044b3389e177c2c98d179e73304e120b073ded7e",
+      "code_fingerprint": "sha256:bef702241b5217d128a0029d6332c57b5ae0c02b5e3fa7a1c43795a680d23837",
       "kind": "text",
       "outputs": [
         {
@@ -125,7 +130,7 @@
       ]
     },
     "hf-models-chat-template": {
-      "code_fingerprint": "sha256:9c1a5917d49c940e95d78c4183fca7b4634351e8e8f5230deff8a0c059e6291b",
+      "code_fingerprint": "sha256:53fc196412d3b264720f98534b7ec754d0eb86df224de54840d3c04e6a2a2196",
       "kind": "text",
       "outputs": [
         {
@@ -136,7 +141,7 @@
       ]
     },
     "hf-models-greedy-check": {
-      "code_fingerprint": "sha256:99583c6e7db23580eadf9ca0d1603f67d70fa4d8eb98805f193e8e4b8c0fb79a",
+      "code_fingerprint": "sha256:031399b6a9a9e30c40eea7e516d6ab250a0c8d5d2149436167b59b455f2577f1",
       "kind": "text",
       "outputs": [
         {
@@ -147,17 +152,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "argmax loop without a cache: 4.33 s for 32 tokens after 2,048 prompt tokens\n"
+          "text": "argmax loop without a cache: 1.93 s for 32 tokens after 2,048 prompt tokens\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "generate with a cache: 1.15 s for 32 tokens after 2,048 prompt tokens\n"
+          "text": "generate with a cache: 0.89 s for 32 tokens after 2,048 prompt tokens\n"
         }
       ]
     },
     "hf-models-generation-defaults": {
-      "code_fingerprint": "sha256:be36af7a3ee1a818217d184056c59c38afe003adb1d87f37382f4c4e235118c9",
+      "code_fingerprint": "sha256:402af8fae900027e5a3a99b1604151ff27256cde8ad0a65413a5cdad98dc76f9",
       "kind": "text",
       "outputs": [
         {
@@ -173,7 +178,7 @@
       ]
     },
     "hf-models-config-fields": {
-      "code_fingerprint": "sha256:b07e45c17479dbd75ff6bccb355702a3d33484a0b7bb183a8a6400e3da55ba0e",
+      "code_fingerprint": "sha256:6adaca9b3d8635908e7b61bb3c0b264633fa444c8d9ca3ec6063a097457cbfd6",
       "kind": "text",
       "outputs": [
         {
@@ -184,12 +189,12 @@
       ]
     },
     "hf-models-config-params": {
-      "code_fingerprint": "sha256:94b0328b265e5843db9cb664cf7b1d77af7b5674045c1ebed7649e4edcb2869e",
+      "code_fingerprint": "sha256:bfcbf23689fc1dd61636ee99f38746916dd1418465ef725f55a76afdb1853f69",
       "kind": "text",
       "outputs": []
     },
     "hf-models-reconcile": {
-      "code_fingerprint": "sha256:283cf9c1eaa224d790106417a07987915ff5778e5918d5b185abe5eef6f8c761",
+      "code_fingerprint": "sha256:811a92b854017da734d7277bd63c11932ee20c87ff35b5ebb756e7ed0e9cdbf7",
       "kind": "text",
       "outputs": [
         {
@@ -200,7 +205,7 @@
       ]
     },
     "hf-models-gemma-config": {
-      "code_fingerprint": "sha256:731e0afed0d12eebaee703fec9cef6de7af81578d10244c8c9b0b9feb459351f",
+      "code_fingerprint": "sha256:c89e92eda12c5675f4df18009172833ac83da3655876ac310abaac85369b62f3",
       "kind": "text",
       "outputs": [
         {
@@ -216,23 +221,23 @@
       ]
     },
     "hf-models-config-memory": {
-      "code_fingerprint": "sha256:49556ec8cb810ff75e938c671cfca887eb153d2b0cec90aa85bc49274e77d0d3",
+      "code_fingerprint": "sha256:6e69f95556e0c281540ad04486b0f9e1e343762049062dff5b20c5cc13f79a49",
       "kind": "text",
       "outputs": []
     },
     "hf-models-memory-table": {
-      "code_fingerprint": "sha256:9acf6693985ffecedbff8816ff66155daa418dd0655e40a03a093a9cb5aa0218",
+      "code_fingerprint": "sha256:8ba55b222797668c9ab56400ed48038e6d2bf84dbe82a4776e27977bc8d3011c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                model      n  weights  kv_cache  recurrent_state  activations  logits  total  all-attention kv\n      Qwen/Qwen3.5-2B   1024    3.505     0.012            0.018        0.049     0.0  3.585             0.047\n      Qwen/Qwen3.5-2B   4096    3.505     0.047            0.018        0.195     0.0  3.766             0.188\n      Qwen/Qwen3.5-2B  16384    3.505     0.188            0.018        0.781     0.0  4.493             0.750\n      Qwen/Qwen3.5-2B  65536    3.505     0.750            0.018        3.125     0.0  7.399             3.000\n      Qwen/Qwen3.5-2B 262144    3.505     3.000            0.018       12.500     0.0 19.024            12.000\ngoogle/gemma-4-E2B-it   1024    8.621     0.012            0.000        0.086     0.0  8.720             0.041\ngoogle/gemma-4-E2B-it   4096    8.621     0.029            0.000        0.344     0.0  8.995             0.164\ngoogle/gemma-4-E2B-it  16384    8.621     0.100            0.000        1.375     0.0 10.096             0.656\ngoogle/gemma-4-E2B-it  65536    8.621     0.381            0.000        5.500     0.0 14.503             2.625\ngoogle/gemma-4-E2B-it 131072    8.621     0.756            0.000       11.000     0.0 20.378             5.250\nQwen/Qwen3.5-2B: 12,288 B/token + 19,759,104 B against 49,152 B/token; smaller beyond 536 tokens, 0.27 of it at 16,384\ngoogle/gemma-4-E2B-it: 6,144 B/token + 6,279,168 B against 43,008 B/token; smaller at every context, 0.15 of it at 16,384\nlogits of all 16,384 positions: 8.1 GB\n"
+          "text": "                model      n  weights  kv_cache  recurrent_state  activations  logits  total  all-attention kv\n      Qwen/Qwen3.5-2B   1024    3.505     0.012            0.018        0.072     0.0  3.608             0.047\n      Qwen/Qwen3.5-2B   4096    3.505     0.047            0.018        0.289     0.0  3.860             0.188\n      Qwen/Qwen3.5-2B  16384    3.505     0.188            0.018        1.156     0.0  4.868             0.750\n      Qwen/Qwen3.5-2B  65536    3.505     0.750            0.018        4.625     0.0  8.899             3.000\n      Qwen/Qwen3.5-2B 262144    3.505     3.000            0.018       18.500     0.0 25.024            12.000\ngoogle/gemma-4-E2B-it   1024    8.621     0.012            0.000        0.099     0.0  8.733             0.041\ngoogle/gemma-4-E2B-it   4096    8.621     0.029            0.000        0.396     0.0  9.048             0.164\ngoogle/gemma-4-E2B-it  16384    8.621     0.100            0.000        1.586     0.0 10.307             0.656\ngoogle/gemma-4-E2B-it  65536    8.621     0.381            0.000        6.344     0.0 15.346             2.625\ngoogle/gemma-4-E2B-it 131072    8.621     0.756            0.000       12.688     0.0 22.065             5.250\nQwen/Qwen3.5-2B: 12,288 B/token + 19,759,104 B against 49,152 B/token; smaller beyond 536 tokens, 0.27 of it at 16,384\ngoogle/gemma-4-E2B-it: 6,144 B/token + 6,279,168 B against 43,008 B/token; smaller at every context, 0.15 of it at 16,384\nlogits of all 16,384 positions: 8.1 GB\n"
         }
       ]
     },
     "hf-models-bandwidth": {
-      "code_fingerprint": "sha256:6d1d0b5a88afd741e395cd50949cf16c04b12a576ab74b1b994cfa23a412a276",
+      "code_fingerprint": "sha256:b870f0d431a2d119359ebd4c0a6bbc542b2cbce54735223cffe24aec52573788",
       "kind": "text",
       "outputs": [
         {
@@ -243,18 +248,18 @@
       ]
     },
     "hf-models-measure-fns": {
-      "code_fingerprint": "sha256:5b91ac5e317674ce4afe407532aa3be158c32725b6ceb26059f748577cdc9bd3",
+      "code_fingerprint": "sha256:b01d108232713ee070685bb1c118a64636a21f45e441e2b9cda7dd3302cacab5",
       "kind": "text",
       "outputs": []
     },
     "hf-models-run-qwen": {
-      "code_fingerprint": "sha256:518c6cc4bdb0d1abb61e06b2eb2e579125ffbea89fe472c75294539e86e6deda",
+      "code_fingerprint": "sha256:4b9c2ccdf626608a27d6761eda56eb9d15fc6abb94bf9f90292a063fc0af2529",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet kernels: PyTorch reference code\n"
+          "text": "kernels: {'attention': 'sdpa', 'delta rule': 'fla', 'short convolution': 'PyTorch'}\n"
         },
         {
           "type": "stream",
@@ -269,33 +274,39 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    n  walker MiB  formula MiB  growth/derived  after step/derived  peak/Act  wall ms    q1    q3  R/beta sheet  R/beta meas.\n  256       21.84        21.84             1.0                 1.0      4.28    30.96 30.71 31.32          3.81          4.14\n 1024       30.84        30.84             1.0                 1.0      3.01    30.72 30.60 30.85          3.82          4.15\n 4096       66.84        66.84             1.0                 1.0      2.71    30.64 30.53 31.48          3.85          4.19\n16384      210.84       210.84             1.0                 1.0      2.64    30.52 30.44 30.65          4.00          4.36\n"
+          "text": "    n  walker MiB  formula MiB  growth/derived  after step/derived  peak/formula  wall ms    q1    q3  R/beta sheet  R/beta meas.\n  256       21.84        21.84             1.0                 1.0          0.98    26.17 25.74 27.39          3.81          4.14\n 1024       30.84        30.84             1.0                 1.0          0.98    26.10 25.67 26.92          3.82          4.15\n 4096       66.84        66.84             1.0                 1.0          0.98    26.58 25.61 27.00          3.85          4.19\n16384      210.84       210.84             1.0                 1.0          0.98    25.73 25.59 26.54          4.00          4.35\nlogits of all 4,096 positions: growth beyond the cache 2,034,237,440 B, derived 2,034,237,440 B\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "logits of all 4,096 positions: growth beyond the cache 2,034,237,440 B, derived 2,034,237,440 B\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "within 15 GiB, measured: batch 19 at 4,096 tokens, 65,536 tokens at batch 1\nby the formula, its activations an estimate: batch 44, 131,072 tokens\n"
+          "text": "within 15 GiB, measured: batch 32 at 4,096 tokens, 131,072 tokens at batch 1\nby the formula: batch 32, 131,072 tokens\nallocator overhead at batch 32: 167 MiB\n"
         }
       ]
     },
-    "hf-models-load-gemma": {
-      "code_fingerprint": "sha256:83beabf47760112e7b2490e1fc2eb56807298e7fba539a4a579e36879526d875",
+    "hf-models-kernel-compare": {
+      "code_fingerprint": "sha256:358af36ea5009f64e02faac3978e656e0132631fcb1f3f4f965f8c0d6ad54cd4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "allocated after freeing Qwen: 10 MiB\n"
+          "text": "Qwen/Qwen3.5-2B: {'attention': 'sdpa', 'delta rule': 'fla', 'short convolution': 'PyTorch'}\n    n   kernels  formula_GiB  peak_GiB  prefill_s  decode_ms  max |logit diff|\n 4096     fused        0.355     0.349      0.117     25.420               NaN\n 4096 reference        0.355     0.530      0.216     29.197             0.125\n16384     fused        1.363     1.340      0.577        NaN               NaN\n16384 reference        1.363     2.060      1.089        NaN             0.125\n65536     fused        5.394     5.306      2.806        NaN               NaN\n65536 reference        5.394     8.185      5.789        NaN             0.188\n"
+        }
+      ]
+    },
+    "hf-models-load-gemma": {
+      "code_fingerprint": "sha256:0eccc5a510fabe4c97d97a74484323ced523d3d014594a04098ee52103a4ca50",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "allocated after freeing Qwen: 9 MiB\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "google/gemma-4-E2B-it@4adf15748de9: Gemma4ForCausalLM, 0 missing keys, unexpected keys: {'model.audio_tower': 751, 'model.vision_tower': 647, 'model.embed_vision': 1, 'model.embed_audio': 1}, stop tokens [1, 106, 50]\n4,628,569,344 parameters, as config_params says\n"
+          "text": "google/gemma-4-E2B-it@4adf15748de9: Gemma4ForCausalLM, 0 missing keys, unexpected keys: {'model.audio_tower': 751, 'model.vision_tower': 647, 'model.embed_vision': 1, 'model.embed_audio': 1}, stop tokens [1, 106, 50]\nkernels: attention flex_sdpa\n4,628,569,344 parameters, as config_params says\n"
         },
         {
           "type": "stream",
@@ -310,13 +321,13 @@
       ]
     },
     "hf-models-run-gemma": {
-      "code_fingerprint": "sha256:97604b3e8216b23de4f22fe2864c50ef196951dced4820b7f49cce4a97b1c576",
+      "code_fingerprint": "sha256:aada759040111ba799fd09b06b532610062c08e79db54c25879ac81baf6f3339",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "google/gemma-4-E2B-it: attention sdpa\n"
+          "text": "google/gemma-4-E2B-it: attention flex_sdpa\n"
         },
         {
           "type": "stream",
@@ -326,47 +337,52 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    n  walker MiB  formula MiB  growth/derived  after step/derived  peak/Act  wall ms    q1    q3  R/beta sheet  R/beta meas.  busy ms  matmul ms  launches\n  256        4.50         4.50             1.0                 1.0      1.39    48.05 47.64 48.22          4.57          4.97     9.44       5.45      3113\n 1024       11.99        11.99             1.0                 1.0      1.40    49.71 49.51 49.75          4.59          4.99    10.99       5.51      3180\n 4096       29.99        29.99             1.0                 1.0      1.44    48.33 47.74 48.97          4.63          5.04    12.22       5.48      3180\n16384      101.99       101.99             1.0                 1.0      1.57    47.74 47.38 48.27          4.81          5.23    19.13       5.56      3180\nresident/logical: [1.0, 1.5, 2.4, 2.82]\n"
+          "text": "google/gemma-4-E2B-it: {'attention': 'flex_sdpa'}\n    n   kernels  formula_GiB  peak_GiB  prefill_s  decode_ms  max |logit diff|\n 4096     fused        0.467     0.479      0.163     46.139               NaN\n 4096 reference        0.467     0.494      0.208     46.067             0.812\n16384     fused        1.868     1.915      0.951        NaN               NaN\n16384 reference        1.868     2.164      1.774        NaN             0.438\n32768     fused        3.735     3.831      2.309        NaN               NaN\n32768 reference        3.735     4.985      5.681        NaN             0.375\n65536     fused        7.469     7.666      6.173        NaN               NaN\n65536 reference        7.469       NaN        NaN        NaN               NaN\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "within 15 GiB, measured: batch 10 at 4,096 tokens, 32,768 tokens at batch 1\nby the formula, its activations an estimate: batch 17, 65,536 tokens\n"
+          "text": "    n  walker MiB  formula MiB  growth/derived  after step/derived  peak/formula  wall ms    q1    q3  R/beta sheet  R/beta meas.  busy ms  matmul ms  launches\n  256        4.50         4.50             1.0                 1.0          1.01    44.96 44.86 45.00          4.57          4.97     9.63       5.44      3113\n 1024       11.99        11.99             1.0                 1.0          1.02    46.02 45.92 46.06          4.59          4.99    11.14       5.50      3180\n 4096       29.99        29.99             1.0                 1.0          1.02    46.46 46.24 46.55          4.63          5.04    12.45       5.47      3180\n16384      101.99       101.99             1.0                 1.0          1.03    46.53 46.44 46.77          4.81          5.23    19.43       5.55      3180\nresident/logical: [1.0, 1.5, 2.4, 2.82]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "within 15 GiB, measured: batch 13 at 4,096 tokens, 32,768 tokens at batch 1\nby the formula: batch 13, 32,768 tokens\nallocator overhead at batch 13: 110 MiB\n"
         }
       ]
     },
     "hf-models-profile-compare": {
-      "code_fingerprint": "sha256:39ac3daf06d0e0b7d687c7087670b695e57a05ff73a399eb19e1ef675ce1dfe7",
+      "code_fingerprint": "sha256:f9d356bd87a13e7e597b2d1ffc20db5e93e012960235ca8967f08ac17d950fd6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    n  walker MiB  formula MiB  growth/derived  after step/derived  peak/Act  wall ms    q1    q3  R/beta sheet  R/beta meas.  busy ms  matmul ms  launches\n  256       21.84        21.84             1.0                 1.0      4.28    30.96 30.71 31.32          3.81          4.14     6.70       4.31      1975\n 1024       30.84        30.84             1.0                 1.0      3.01    30.72 30.60 30.85          3.82          4.15     6.97       4.35      1975\n 4096       66.84        66.84             1.0                 1.0      2.71    30.64 30.53 31.48          3.85          4.19     6.91       4.33      1975\n16384      210.84       210.84             1.0                 1.0      2.64    30.52 30.44 30.65          4.00          4.36     7.30       4.35      1975\nQwen/Qwen3.5-2B at 1,024 tokens:\nwall 30.72 ms per step, device busy 6.97 ms (23%), matrix products 4.35 ms (62% of busy)\n  4.35 ms  62%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  0.45 ms   6%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.35 ms   5%  elementwise_kernel<128, 2, gpu_kernel_impl_nocast<Bi\n  0.17 ms   2%  vectorized_elementwise_kernel<4, CUDAFunctorOnSelf_a\ndevice busy at [256, 1024, 4096, 16384] tokens: 22%, 23%, 23%, 24% of the step\nwall time per launch: 15.5-15.7 us\n16,384 / 256 tokens: wall 0.99, busy 1.09, bytes read 1.05\ngoogle/gemma-4-E2B-it at 1,024 tokens:\nwall 49.71 ms per step, device busy 10.99 ms (22%), matrix products 5.51 ms (50% of busy)\n  4.22 ms  38%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  1.53 ms  14%  fmha_cutlassF_bf16_aligned_32x128_gmem_sm80\n  0.96 ms   9%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.91 ms   8%  gemvx::kernel<int, int, __nv_bfloat16, float, float,\ndevice busy at [256, 1024, 4096, 16384] tokens: 20%, 22%, 25%, 40% of the step\nwall time per launch: 15.0-15.6 us\n16,384 / 256 tokens: wall 0.99, busy 2.03, bytes read 1.05\nmatrix products Gemma/Qwen: 1.27 (bytes read 1.20, bytes held 2.46)\nQwen/Qwen3.5-2B: matrix products 4.35 ms, weights read at measured bandwidth 4.10 ms\ngoogle/gemma-4-E2B-it: matrix products 5.51 ms, weights read at measured bandwidth 4.96 ms\n"
+          "text": "    n  walker MiB  formula MiB  growth/derived  after step/derived  peak/formula  wall ms    q1    q3  R/beta sheet  R/beta meas.  busy ms  matmul ms  launches\n  256       21.84        21.84             1.0                 1.0          0.98    26.17 25.74 27.39          3.81          4.14     6.08       4.30      1489\n 1024       30.84        30.84             1.0                 1.0          0.98    26.10 25.67 26.92          3.82          4.15     6.28       4.34      1489\n 4096       66.84        66.84             1.0                 1.0          0.98    26.58 25.61 27.00          3.85          4.19     6.34       4.33      1489\n16384      210.84       210.84             1.0                 1.0          0.98    25.73 25.59 26.54          4.00          4.35     6.69       4.34      1489\nQwen/Qwen3.5-2B at 1,024 tokens:\nwall 26.10 ms per step, device busy 6.28 ms (24%), matrix products 4.34 ms (69% of busy)\n  4.34 ms  69%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  0.33 ms   5%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.17 ms   3%  reduce_kernel<512, 1, ReduceOp<float, MeanOps<float,\n  0.14 ms   2%  vectorized_elementwise_kernel<4, CUDAFunctorOnSelf_a\ndevice busy at [256, 1024, 4096, 16384] tokens: 23%, 24%, 24%, 26% of the step\nwall time per launch: 17.3-17.8 us\n16,384 / 256 tokens: wall 0.98, busy 1.10, bytes read 1.05\ngoogle/gemma-4-E2B-it at 1,024 tokens:\nwall 46.02 ms per step, device busy 11.14 ms (24%), matrix products 5.50 ms (49% of busy)\n  4.22 ms  38%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  1.54 ms  14%  fmha_cutlassF_bf16_aligned_32x128_gmem_sm80\n  0.98 ms   9%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.89 ms   8%  gemvx::kernel<int, int, __nv_bfloat16, float, float,\ndevice busy at [256, 1024, 4096, 16384] tokens: 21%, 24%, 27%, 42% of the step\nwall time per launch: 14.4-14.6 us\n16,384 / 256 tokens: wall 1.03, busy 2.02, bytes read 1.05\nmatrix products Gemma/Qwen: 1.27 (bytes read 1.20, bytes held 2.46)\nQwen/Qwen3.5-2B: matrix products 4.34 ms, weights read at measured bandwidth 4.09 ms\ngoogle/gemma-4-E2B-it: matrix products 5.50 ms, weights read at measured bandwidth 4.96 ms\n"
         }
       ]
     },
     "hf-models-save-table": {
-      "code_fingerprint": "sha256:ffb7c4bc74dbfabc9dfdf3e14517b8e783cc807ba199982a8fed74698251e31b",
+      "code_fingerprint": "sha256:9c7708e1fd473f9b32cd84f60904790185b16b6ca66dce2df15d3fd1350451e9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "../data/lm/rerun/lm-hf-memory-speed.json 1167fc81e60c6ae4436bab4cd92066a46004aa47\n"
+          "text": "../data/lm/rerun/lm-hf-memory-speed.json e58d6deda4801923c48680d7e35867031ec18cc6\n"
         }
       ]
     },
     "hf-models-plot": {
-      "code_fingerprint": "sha256:19b3a1ee87f7986a4cf2c99ec98a3614c8b6c115af3b9659550a8e358ffd4b07",
+      "code_fingerprint": "sha256:916647eb5542f87fc32bcf1984145bad523ae78b7a003d9cb60d98a965ef7068",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hf-models/hf-models-plot-1.svg",
-          "bytes": 70670,
-          "sha256": "sha256:38a1867cad34b861ca83a6d93d2d052378f25739ca0812b7ebd0df0853af654b"
+          "bytes": 70667,
+          "sha256": "sha256:e93baabdf299fc3cff875814c7ebf001952b5f06952377b5c190e401bd53297d"
         }
       ]
     }

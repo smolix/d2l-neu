@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """CPU tests for the library code of sec_lm_hf_models
 (chapter_lm-pretrained/hf-models.md): `d2l.HF_REVISIONS`,
-`d2l.safetensors_header`, `d2l.load_hf`, `d2l.config_params` and
-`d2l.config_memory`.
+`d2l.safetensors_header`, `d2l.load_hf` and its kernel helpers
+(`d2l.bind_hf_kernels`, `d2l.hf_attention`, `d2l.hf_kernels`,
+`d2l.reference_kernels`), `d2l.config_params` and `d2l.config_memory`.
 
 The configurations and safetensors headers of the studied checkpoints are
 committed fixtures (tools/lm/fixtures/hf_models/, Apache-2.0 metadata, no
@@ -115,6 +116,10 @@ def tiny_gemma_config(**text):
 
 def tiny_qwen35_config(**text):
     from transformers.models.qwen3_5 import Qwen3_5Config
+    import transformers.models.qwen3_5.modeling_qwen3_5  # noqa: F401
+    # Transformers binds flash-linear-attention's Triton kernels at import,
+    # for every device; routed, the CPU runs the PyTorch reference code
+    d2l.bind_hf_kernels()
     return Qwen3_5Config(text_config={**TINY_QWEN35, **text},
                          vision_config=TINY_QWEN35_VISION)
 
@@ -392,6 +397,11 @@ class ConfigMemory(unittest.TestCase):
         self.assertEqual(m['weights'], 2 * 1_881_825_088)
         self.assertEqual(m['logits'], 248_320 * 2)
         self.assertEqual(m['total'], sum(m[k] for k in self.KEYS[1:-1]))
+        # The Gated DeltaNet layer's chunked kernel sets the peak: 3 x 2,048
+        # residual entries + 2C + 3K + 4V + H_v (d_k d_v / 64 + 64)
+        self.assertEqual(m['activations'], 1024 * 2 * (
+            3 * 2048 + 2 * 6144 + 3 * 2048 + 4 * 2048 + 16 * (256 + 64)))
+        self.assertEqual(m['activations'], 1024 * 75_776)
         three = d2l.config_memory(fixture_config(QWEN35), 1024, 1,
                                   conv_taps=3)
         self.assertEqual(three['recurrent_state'], 19_537_920)
@@ -412,6 +422,27 @@ class ConfigMemory(unittest.TestCase):
         m = d2l.config_memory(fixture_config('Qwen/Qwen3-0.6B'), 1000, 1)
         self.assertEqual(m['kv_cache'], 114_688_000)  # 2 L H_kv d_h b n
         self.assertEqual(m['recurrent_state'], 0)
+        # The MLP (4 d + 3 f) and attention (3 d + 3 H d_h + 4 H_kv d_h)
+        # both hold 13,312 entries per token
+        self.assertEqual(m['activations'], 1000 * 2 * 13_312)
+
+    def test_activations(self):
+        """Per-token peak entries of the studied models: the MLP sets
+        Gemma 4's (double-wide f) plus its per-layer inputs; Qwen3.5's gated
+        attention (7 H d_h + 4 H_kv d_h) stays below its Gated DeltaNet."""
+        gemma = d2l.config_memory(fixture_config(GEMMA), 100, 1)
+        self.assertEqual(gemma['activations'], 100 * 2 * (
+            4 * 1536 + 3 * 12_288 + 35 * 256))
+        for B in (1, 3):  # batch and length enter as B n
+            self.assertEqual(
+                d2l.config_memory(fixture_config(QWEN35), 64, B)[
+                    'activations'], B * 64 * 75_776)
+        cfg = fixture_config(QWEN35)
+        attention = json.loads(json.dumps(cfg))
+        attention['text_config']['layer_types'] = ['full_attention'] * 24
+        m = d2l.config_memory(attention, 10, 1)
+        self.assertEqual(m['activations'], 10 * 2 * max(
+            4 * 2048 + 3 * 6144, 3 * 2048 + 7 * 8 * 256 + 4 * 2 * 256))
 
     def test_gemma_sharing_and_windows(self):
         cfg = fixture_config(GEMMA)
@@ -757,13 +788,166 @@ class SafetensorsHeader(unittest.TestCase):
         self.assertEqual(header, fixture_header(QWEN35))
 
 
+class Kernels(unittest.TestCase):
+    """The routing of Transformers' linear-attention functions, the
+    flex_sdpa attention and reference_kernels, on the CPU."""
+
+    @staticmethod
+    def bound(implementation, reference):
+        """A function shaped like Transformers' kernel wrapper: wraps the
+        reference, calls the implementation it bound at import."""
+        import functools
+
+        @functools.wraps(reference)
+        def wrapped(*args, **kwargs):
+            return implementation(*args, **kwargs)
+        return wrapped
+
+    def test_route_by_device_and_dtype(self):
+        def reference(x, **kwargs):
+            return 'reference'
+
+        def fused(x, **kwargs):
+            return 'fused'
+
+        routed = d2l._hf_route(self.bound(fused, reference))
+        self.assertIs(routed.fused, fused)
+        self.assertIs(routed.__wrapped__, reference)
+        cuda = lambda dtype: mock.NonCallableMock(is_cuda=True, dtype=dtype)
+        self.assertEqual(routed(torch.zeros(2)), 'reference')
+        self.assertEqual(routed(cuda(torch.bfloat16)), 'fused')
+        self.assertEqual(routed(x=cuda(torch.float32)), 'fused')
+        self.assertEqual(routed(cuda(torch.float64)), 'reference')
+        routed.fused = None  # what reference_kernels does
+        self.assertEqual(routed(cuda(torch.bfloat16)), 'reference')
+        # Without the package Transformers binds the reference itself
+        self.assertIsNone(d2l._hf_route(self.bound(reference,
+                                                   reference)).fused)
+
+    def test_bind_is_idempotent_and_reports(self):
+        import transformers.models.qwen3_5.modeling_qwen3_5 as q35
+        d2l.bind_hf_kernels()
+        first = {fn: getattr(q35, fn) for fn in d2l._HF_LINEAR_KERNELS}
+        d2l.bind_hf_kernels()
+        for fn, routed in first.items():
+            self.assertIs(getattr(q35, fn), routed)
+            self.assertFalse(hasattr(routed.__wrapped__, 'fused'))
+        from transformers import AttentionInterface, AttentionMaskInterface
+        self.assertIs(AttentionInterface._global_mapping['flex_sdpa'],
+                      d2l._hf_flex_sdpa)
+        self.assertIs(AttentionMaskInterface._global_mapping['flex_sdpa'],
+                      d2l._hf_flex_sdpa_mask)
+        model = q35.Qwen3_5ForCausalLM(tiny_qwen35_config().get_text_config())
+        kernels = d2l.hf_kernels(model)
+        self.assertEqual(kernels['attention'], 'sdpa')
+        import importlib.util
+        fla = importlib.util.find_spec('fla') is not None
+        self.assertEqual(kernels['delta rule'], 'fla' if fla else 'PyTorch')
+        conv = importlib.util.find_spec('causal_conv1d') is not None
+        self.assertEqual(kernels['short convolution'],
+                         'causal_conv1d' if conv else 'PyTorch')
+
+    def test_cpu_forward_runs_the_reference(self):
+        """With flash-linear-attention installed, a tiny Qwen3.5 still runs
+        on the CPU, and inside reference_kernels gives the same logits."""
+        from transformers.models.qwen3_5 import Qwen3_5ForCausalLM
+        torch.manual_seed(0)
+        model = Qwen3_5ForCausalLM(
+            tiny_qwen35_config().get_text_config()).eval()
+        ids = torch.randint(0, 128, (2, 9))
+        with torch.no_grad():
+            routed = model(ids).logits
+            with d2l.reference_kernels(model) as same:
+                self.assertIs(same, model)
+                reference = model(ids).logits
+        self.assertTrue(torch.equal(routed, reference))
+
+    def test_reference_kernels_restores(self):
+        import transformers.models.qwen3_5.modeling_qwen3_5 as q35
+        from transformers.models.gemma4 import Gemma4ForCausalLM
+        torch.manual_seed(0)
+        cfg = tiny_gemma_config().get_text_config()
+        cfg._attn_implementation = 'flex_sdpa'
+        d2l.bind_hf_kernels()
+        gemma = Gemma4ForCausalLM(cfg).eval()
+        self.assertEqual(gemma.config._attn_implementation, 'flex_sdpa')
+        with d2l.reference_kernels(gemma):
+            self.assertEqual(gemma.config._attn_implementation, 'sdpa')
+        self.assertEqual(gemma.config._attn_implementation, 'flex_sdpa')
+        qwen = q35.Qwen3_5ForCausalLM(tiny_qwen35_config().get_text_config())
+        before = [getattr(q35, fn).fused for fn in d2l._HF_LINEAR_KERNELS]
+        try:
+            with d2l.reference_kernels(qwen):
+                self.assertEqual(
+                    [getattr(q35, fn).fused for fn in d2l._HF_LINEAR_KERNELS],
+                    [None] * 4)
+                raise KeyError('inside')
+        except KeyError:
+            pass
+        self.assertEqual(
+            [getattr(q35, fn).fused for fn in d2l._HF_LINEAR_KERNELS], before)
+        self.assertEqual(qwen.config._attn_implementation, 'sdpa')
+
+    def test_hf_attention(self):
+        gemma, qwen = auto_config(GEMMA), auto_config(QWEN35)
+        self.assertEqual(d2l.hf_attention(gemma, 'cpu'), 'sdpa')
+        for capability, expected in [((8, 0), 'flex_sdpa'),
+                                     ((8, 9), 'flex_sdpa'), ((7, 5), 'sdpa')]:
+            with mock.patch('torch.cuda.get_device_capability',
+                            return_value=capability):
+                self.assertEqual(d2l.hf_attention(gemma, 'cuda:0'), expected)
+                self.assertEqual(d2l.hf_attention(gemma, 0), expected)
+                self.assertEqual(d2l.hf_attention(qwen, 'cuda:0'), 'sdpa')
+
+    def test_flex_sdpa_dispatch(self):
+        """A prompt gets a block mask and flex attention, with small blocks
+        for heads wider than 128; a single token gets SDPA's mask and
+        SDPA."""
+        from torch.nn.attention.flex_attention import BlockMask
+        from transformers import masking_utils
+        from transformers.integrations import flex_attention, sdpa_attention
+        with mock.patch.object(masking_utils, 'flex_attention_mask',
+                               return_value='block') as flex_mask, \
+                mock.patch.object(masking_utils, 'sdpa_mask',
+                                  return_value='rows') as sdpa_mask:
+            self.assertEqual(d2l._hf_flex_sdpa_mask(
+                batch_size=1, q_length=7, kv_length=7), 'block')
+            self.assertEqual(d2l._hf_flex_sdpa_mask(
+                batch_size=1, q_length=1, kv_length=8), 'rows')
+        self.assertEqual(flex_mask.call_args.kwargs['q_length'], 7)
+        self.assertEqual(sdpa_mask.call_args.kwargs['kv_length'], 8)
+        block = mock.NonCallableMock(spec=BlockMask)
+        with mock.patch.object(flex_attention, 'flex_attention_forward',
+                               return_value='flex') as flex, \
+                mock.patch.object(sdpa_attention, 'sdpa_attention_forward',
+                                  return_value='sdpa') as sdpa:
+            small = dict(BLOCK_M=32, BLOCK_N=32, num_stages=1)
+            for d_h, options in [(64, None), (128, None), (256, small),
+                                 (512, small)]:
+                q = torch.zeros(1, 2, 5, d_h)
+                self.assertEqual(d2l._hf_flex_sdpa(None, q, q, q, block,
+                                                   scaling=1.0), 'flex')
+                self.assertEqual(flex.call_args.kwargs.get('kernel_options'),
+                                 options)
+                self.assertEqual(flex.call_args.kwargs['scaling'], 1.0)
+            mine = dict(BLOCK_M=16)
+            d2l._hf_flex_sdpa(None, q, q, q, block, kernel_options=mine)
+            self.assertIs(flex.call_args.kwargs['kernel_options'], mine)
+            q = torch.zeros(1, 2, 1, 512)
+            self.assertEqual(d2l._hf_flex_sdpa(None, q, q, q, None), 'sdpa')
+            self.assertNotIn('kernel_options', sdpa.call_args.kwargs)
+
+
 class LoadHF(unittest.TestCase):
     def load(self, model_id, config, revision=None, missing=(), n_gpus=0,
              device_map='auto', hf_device_map=None, unexpected=(),
-             config_eos=None, tokenizer_eos=None):
+             config_eos=None, tokenizer_eos=None, capability=(8, 9),
+             **kwargs):
         import transformers
         model = mock.MagicMock()
         model.eval.return_value = model
+        model.config = mock.NonCallableMock(_attn_implementation='sdpa',
+                                            layer_types=None)
         model.hf_device_map = hf_device_map or {'': 'cpu'}
         model.generation_config = transformers.GenerationConfig(
             eos_token_id=config_eos)
@@ -781,9 +965,11 @@ class LoadHF(unittest.TestCase):
                                   'from_pretrained',
                                   return_value=tokenizer) as auto_tok, \
                 mock.patch('torch.cuda.device_count', return_value=n_gpus), \
+                mock.patch('torch.cuda.get_device_capability',
+                           return_value=capability), \
                 contextlib.redirect_stdout(out):
             result = d2l.load_hf(model_id, revision=revision,
-                                 device_map=device_map)
+                                 device_map=device_map, **kwargs)
         self.assertEqual(result, (model, tokenizer))
         model.eval.assert_called_once()
         return (model, auto_config_.call_args, auto_model.call_args,
@@ -868,7 +1054,8 @@ class LoadHF(unittest.TestCase):
                       'model.vision_tower.c']
         _, _, _, _, out = self.load(GEMMA, auto_config(GEMMA),
                                     unexpected=unexpected)
-        self.assertEqual(len(out.strip().splitlines()), 1)
+        self.assertEqual(len(out.strip().splitlines()), 2)
+        self.assertEqual(out.strip().splitlines()[1], 'kernels: attention sdpa')
         self.assertIn("'model.audio_tower': 2", out)
         self.assertIn("'model.vision_tower': 1", out)
         self.assertIn(d2l.HF_REVISIONS[GEMMA][:12], out)
@@ -881,6 +1068,26 @@ class LoadHF(unittest.TestCase):
         _, _, m, _, _ = self.load('Qwen/Qwen3-0.6B', cfg, n_gpus=4,
                                   device_map='cuda:1')
         self.assertEqual(m.kwargs['device_map'], 'cuda:1')
+
+    def test_attention_choice(self):
+        """Without an argument, load_hf asks hf_attention: flex_sdpa for
+        Gemma 4's sliding layers on a GPU of compute capability 8.0 or more,
+        SDPA otherwise; an argument wins."""
+        cases = [(GEMMA, 0, (8, 9), 'sdpa'), (GEMMA, 1, (8, 9), 'flex_sdpa'),
+                 (GEMMA, 2, (8, 0), 'flex_sdpa'), (GEMMA, 1, (7, 5), 'sdpa'),
+                 (QWEN35, 1, (8, 9), 'sdpa'),
+                 ('Qwen/Qwen3-0.6B', 1, (9, 0), 'sdpa')]
+        for model_id, n_gpus, capability, expected in cases:
+            _, _, m, _, _ = self.load(model_id, auto_config(model_id),
+                                      n_gpus=n_gpus, capability=capability)
+            self.assertEqual(m.kwargs['attn_implementation'], expected,
+                             (model_id, n_gpus, capability))
+        _, _, m, _, _ = self.load(GEMMA, auto_config(GEMMA), n_gpus=1,
+                                  attn_implementation='eager')
+        self.assertEqual(m.kwargs['attn_implementation'], 'eager')
+        _, _, m, _, _ = self.load(GEMMA, auto_config(GEMMA), n_gpus=1,
+                                  device_map='cpu')
+        self.assertEqual(m.kwargs['attn_implementation'], 'sdpa')
 
     def test_warns_when_spread_over_devices(self):
         cfg = auto_config('Qwen/Qwen3-0.6B')

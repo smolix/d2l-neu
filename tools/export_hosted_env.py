@@ -34,6 +34,9 @@ class PackageSpec:
     # versions of this distribution (e.g. huggingface-hub: 1.23.0 for the jax
     # extra, 2.x for the lm extra). Names a pyproject extra.
     lock_extra: str | None = None
+    # Installed on GPU runtimes only (its kernels need a GPU, and with no GPU
+    # importing it would break the code that binds it).
+    gpu_only: bool = False
 
 
 PROFILES = {
@@ -68,6 +71,8 @@ PROFILES = {
 # hosted chapter_lm-* notebook installs on top of the PyTorch core, whatever
 # its own cells import (the d2l helpers import these lazily). Locked from the
 # lm fork of uv.lock. scikit-learn is provider-managed on Colab.
+# flash-linear-attention (Triton kernels for Qwen3.5's Gated DeltaNet layers,
+# bound by Transformers at import for every device) goes to GPU runtimes only.
 LM_PACKAGES = (
     PackageSpec("transformers", "transformers", extra="serving",
                 lock_extra="lm"),
@@ -76,6 +81,9 @@ LM_PACKAGES = (
     PackageSpec("openai", "openai", lock_extra="lm"),
     PackageSpec("scikit-learn", "sklearn", hosted_exact=False,
                 lock_extra="lm"),
+    PackageSpec("flash-linear-attention", "fla", lock_extra="lm",
+                gpu_only=True),
+    PackageSpec("fla-core", "fla", lock_extra="lm", gpu_only=True),
 )
 
 # Separate execution venvs → the optional distributions every hosted notebook
@@ -224,6 +232,8 @@ def build_profile(framework: str, lock_path: Path) -> dict:
             record["gpu_requirement"] = (
                 f"{base}[{spec.gpu_extra}]=={wanted}"
             )
+        if spec.gpu_only:
+            record["device"] = "gpu"
         return record
 
     packages = [package_record(spec) for spec in PROFILES[framework]]

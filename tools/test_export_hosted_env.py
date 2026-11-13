@@ -64,6 +64,10 @@ class HostedEnvironmentTests(unittest.TestCase):
             "transformers[serving]=="))
         self.assertEqual(
             set(profile["venv_packages"]["lm"]) - set(optional), set())
+        gpu_only = {name for name, p in optional.items()
+                    if p.get("device") == "gpu"}
+        self.assertEqual(gpu_only, {"flash-linear-attention", "fla-core"})
+        self.assertLessEqual(gpu_only, set(profile["venv_packages"]["lm"]))
         for framework in ("tensorflow", "jax"):
             self.assertNotIn(
                 "venv_packages",

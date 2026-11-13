@@ -4402,14 +4402,144 @@ LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
 d2l.DATA_HUB['lm-hf-memory-speed-v1'] = (
     d2l.LM_DATA_URL + 'lm-hf-memory-speed-v1.json',
     'fce26dfa4ddb9d0463fcfef3ddcb3861ec7226d7')
+d2l.DATA_HUB['lm-hf-memory-speed-v2'] = (  # fused kernels (fla, flex_sdpa)
+    d2l.LM_DATA_URL + 'lm-hf-memory-speed-v2.json',
+    'e1a6407448d04a3aef8cc6fff5ed39cfea549f0b')
+
+_HF_LINEAR_KERNELS = ('torch_chunk_gated_delta_rule',  # a prompt, by chunks
+                      'torch_recurrent_gated_delta_rule',  # one token
+                      'causal_conv1d_fn', 'causal_conv1d_update')
+
+def _hf_route(bound):
+    """Transformers' kernel function `bound`, run by the fused kernel it
+    bound at import for CUDA tensors and by its PyTorch reference code for
+    the rest: the fused Triton kernels need a GPU.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import functools
+    import inspect
+    reference = bound.__wrapped__
+    fused = inspect.getclosurevars(bound).nonlocals.get('implementation')
+
+    @functools.wraps(reference)
+    def routed(*args, **kwargs):
+        x = args[0] if args else next(iter(kwargs.values()))
+        if (routed.fused is None or not x.is_cuda
+                or x.dtype == torch.float64):
+            return reference(*args, **kwargs)
+        return bound(*args, **kwargs)
+    routed.fused = None if fused is reference else fused  # None: reference
+    return routed
+
+def _hf_flex_sdpa_mask(*args, q_length, **kwargs):
+    """The flex_sdpa mask: a block mask for a prompt, SDPA's mask (one row
+    at most) for a single token.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    from transformers import masking_utils
+    mask = (masking_utils.flex_attention_mask if q_length > 1
+            else masking_utils.sdpa_mask)
+    return mask(*args, q_length=q_length, **kwargs)
+
+def _hf_flex_sdpa(module, query, key, value, attention_mask, **kwargs):
+    """Flex attention for a prompt, which materializes no n x n mask; SDPA
+    for a single token, where flex's per-step block mask costs time.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    from torch.nn.attention.flex_attention import BlockMask
+    from transformers.integrations import flex_attention, sdpa_attention
+    if not isinstance(attention_mask, BlockMask):
+        return sdpa_attention.sdpa_attention_forward(
+            module, query, key, value, attention_mask, **kwargs)
+    if query.shape[-1] > 128:  # flex's default blocks for wide heads need
+        kwargs.setdefault('kernel_options', dict(  # 148 KiB of shared
+            BLOCK_M=32, BLOCK_N=32, num_stages=1))  # memory; sm_89 has 99
+    return flex_attention.flex_attention_forward(
+        module, query, key, value, attention_mask, **kwargs)
+
+def bind_hf_kernels():
+    """Route the linear-attention functions of the imported Transformers
+    models by device (`_hf_route`); register the flex_sdpa attention.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import sys
+    from transformers import AttentionInterface, AttentionMaskInterface
+    AttentionInterface.register('flex_sdpa', _hf_flex_sdpa)
+    AttentionMaskInterface.register('flex_sdpa', _hf_flex_sdpa_mask)
+    for name, module in list(sys.modules.items()):
+        if name.startswith('transformers.models.') and module is not None:
+            for fn in _HF_LINEAR_KERNELS:
+                bound = getattr(module, fn, None)
+                if bound is not None and not hasattr(bound, 'fused'):
+                    setattr(module, fn, _hf_route(bound))
+
+def hf_attention(config, device):
+    """The attention that runs `config` on `device` without an n x n mask:
+    flex_sdpa if it has sliding-window layers and the device is a GPU of
+    compute capability 8.0 or more, SDPA otherwise.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    layers = getattr(config.get_text_config(), 'layer_types', None) or []
+    device = torch.device(device)
+    return ('flex_sdpa' if 'sliding_attention' in layers
+            and device.type == 'cuda'
+            and torch.cuda.get_device_capability(device) >= (8, 0)
+            else 'sdpa')
+
+def hf_kernels(model):
+    """The code a model's attention and Gated DeltaNet layers run on a GPU
+    (binding the latter by device first, as load_hf does).
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import sys
+    bind_hf_kernels()
+    module = sys.modules[type(model).__module__]
+    kernels = {'attention': model.config._attn_implementation}
+    if 'linear_attention' in (getattr(model.config, 'layer_types', None)
+                              or []):
+        for key, fn in (('delta rule', 'torch_chunk_gated_delta_rule'),
+                        ('short convolution', 'causal_conv1d_fn')):
+            fused = getattr(module, fn).fused
+            kernels[key] = ('PyTorch' if fused is None
+                            else fused.__module__.split('.')[0])
+    return kernels
+
+class reference_kernels:
+    """Run `model` on Transformers' reference code inside a `with` block:
+    SDPA with explicit masks and the PyTorch Gated DeltaNet.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    def __init__(self, model):
+        import sys
+        bind_hf_kernels()
+        module = sys.modules[type(model).__module__]
+        self.model, self.routed = model, [
+            getattr(module, fn) for fn in _HF_LINEAR_KERNELS
+            if hasattr(module, fn)]
+
+    def __enter__(self):
+        self.saved = (self.model.config._attn_implementation,
+                      [f.fused for f in self.routed])
+        self.model.set_attn_implementation('sdpa')
+        for f in self.routed:
+            f.fused = None
+        return self.model
+
+    def __exit__(self, *exc):
+        attention, fused = self.saved
+        for f, kernel in zip(self.routed, fused):
+            f.fused = kernel
+        self.model.set_attn_implementation(attention)
 
 _TEXT_KEY_MAPPING = {  # checkpoint key renames for a multimodal file's text
     'gemma4_text': {r'^model\.language_model\.': 'model.'}}
 
-def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
+def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto',
+            *, attn_implementation=None):
     """A pinned causal language model from the Hugging Face Hub, text part
-    only, in eval mode, and its tokenizer; prints a load report. The
-    tokenizer's end token joins the stop tokens of `generate`.
+    only, in eval mode, and its tokenizer; prints a load report and the
+    kernels it runs. The tokenizer's end token joins the stop tokens of
+    `generate`; the attention defaults to `hf_attention`'s choice.
 
     Defined in :numref:`sec_lm_hf_models`"""
     import collections
@@ -4431,9 +4561,16 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
     renames = {}
     if text is not config and text.model_type in _TEXT_KEY_MAPPING:
         renames['key_mapping'] = _TEXT_KEY_MAPPING[text.model_type]
+    bind_hf_kernels()  # registers flex_sdpa; hf_kernels routes the model
+    if attn_implementation is None:  # the device of the first module
+        device = (next(iter(device_map.values()))
+                  if isinstance(device_map, dict) else device_map)
+        attn_implementation = hf_attention(
+            text, 0 if device == 'auto' else device)
     model, info = transformers.AutoModelForCausalLM.from_pretrained(
         model_id, config=text, dtype=dtype, device_map=device_map,
-        use_safetensors=True, output_loading_info=True, **pin, **renames)
+        attn_implementation=attn_implementation, use_safetensors=True,
+        output_loading_info=True, **pin, **renames)
     if info['missing_keys']:  # these modules would stay randomly initialized
         del model  # a kept traceback would otherwise hold its memory
         raise RuntimeError(f'no weights for {sorted(info["missing_keys"])}')
@@ -4452,6 +4589,8 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
     print(f'{model_id}@{revision[:12]}: {type(model).__name__}, 0 missing '
           f'keys, unexpected keys: {dict(unexpected) or "none"}, stop tokens '
           f'{stop}')
+    print('kernels:', ', '.join(f'{k} {v}'
+                                for k, v in hf_kernels(model).items()))
     devices = set(getattr(model, 'hf_device_map', {}).values())
     if len(devices) > 1:
         warnings.warn(f'{model_id} is spread over {sorted(map(str, devices))}')
@@ -4563,9 +4702,11 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
 
     The defaults store what Transformers 5.22.2 stores: a sliding layer keeps
     `sliding_window - 1` positions, a linear-attention layer all
-    `linear_conv_kernel_dim` convolution inputs. `activations` estimates one
-    layer's tensors with fused attention; `logits_to_keep` of None or 0 keeps
-    the logits of every position.
+    `linear_conv_kernel_dim` convolution inputs; a prefill holds every
+    position until it ends: `window_cached=seq_len`. `activations` counts
+    what a prefill holds at its peak with the kernels `load_hf` binds: the
+    residual stream and the largest layer's tensors, rotary tables (under
+    3%) aside. `logits_to_keep` of None or 0 keeps every position's logits.
 
     Defined in :numref:`sec_lm_hf_models`"""
     import warnings
@@ -4579,27 +4720,41 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
     conv_bytes = b if conv_bytes is None else conv_bytes
     if conv_taps is None:
         conv_taps = t.get('linear_conv_kernel_dim')
-    kv = state = width = 0  # per sequence; width: Q, K, V entries per token
+    d, H = t['hidden_size'], t['num_attention_heads']
+    gate = 2 if (t.get('attn_output_gate')  # gated attention output
+                 or t['model_type'] == 'qwen3_5_text') else 1
+    kv = state = mixer = 0  # mixer: entries per token of the widest layer
     for kind, d_h, H_kv, shared in _hf_layers(t):
         if kind == 'linear_attention':  # fixed matrix state + conv inputs
-            H_v, d_v = t['linear_num_value_heads'], t['linear_value_head_dim']
-            C = 2 * t['linear_num_key_heads'] * t['linear_key_head_dim'] + (
-                H_v * d_v)
-            state += (H_v * t['linear_key_head_dim'] * d_v * state_bytes
-                      + C * conv_taps * conv_bytes)
+            H_v, d_k = t['linear_num_value_heads'], t['linear_key_head_dim']
+            d_v, K = t['linear_value_head_dim'], (
+                t['linear_num_key_heads'] * d_k)
+            V, C = H_v * d_v, 2 * K + H_v * d_v
+            state += H_v * d_k * d_v * state_bytes + C * conv_taps * conv_bytes
+            # Chunked kernel (64 tokens): the convolved q, k, v and their
+            # copy, normalized q, k, w, u, new values, output, output gate,
+            # one d_k x d_v state per chunk and a 64 x 64 block per chunk
+            mixer = max(mixer, 2 * C + 3 * K + 4 * V
+                        + H_v * (d_k * d_v // 64 + 64))
             continue
-        width = max(width, (t['num_attention_heads'] + 2 * H_kv) * d_h)
+        # Q (and gate), K, V, normalized and rotated Q and K, output (gated)
+        mixer = max(mixer, (3 + 4 * (gate - 1)) * H * d_h + 4 * H_kv * d_h)
         if not shared:  # a KV-sharing layer reads an earlier layer's cache
             kept = min(n, window_cached) if kind == 'sliding_attention' else n
             kv += 2 * H_kv * d_h * b * kept
     f = t['intermediate_size'] * (2 if t.get('use_double_wide_mlp')
                                   and t.get('num_kv_shared_layers') else 1)
+    # The embeddings, the layer input and its normalized copy live across a
+    # layer; the MLP adds the attention's residual and its three f-wide
+    # products. Gemma 4 keeps its per-layer inputs for the whole pass.
+    per_layer = t['num_hidden_layers'] * (
+        t.get('hidden_size_per_layer_input') or 0)
     params = config_params(config, include_vision, include_mtp)
     n_out = min(logits_to_keep, n) if logits_to_keep else n
     memory = {'params': params, 'weights': params * b,
               'kv_cache': B * kv, 'recurrent_state': B * state,
-              'activations': B * n * b * (2 * t['hidden_size'] + 3 * f
-                                          + width),
+              'activations': B * n * b * (max(3 * d + mixer, 4 * d + 3 * f)
+                                          + per_layer),
               'logits': B * n_out * t['vocab_size'] * b}
     memory['total'] = sum(memory.values()) - params
     return memory

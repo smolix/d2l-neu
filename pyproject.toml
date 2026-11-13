@@ -69,6 +69,14 @@ lm = [
     "openai==3.49.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "safetensors ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "scikit-learn ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Triton kernels for linear attention: Transformers binds fla's chunked
+    # and recurrent gated delta rule into Qwen3.5's Gated DeltaNet layers in
+    # place of its fp32 PyTorch reference code (section 18.1 measures the
+    # difference). Pure Triton, no compile. causal-conv1d (the short conv)
+    # has no torch 2.11 wheel and stays on its PyTorch path. No darwin pin:
+    # without Triton the reference code runs.
+    "flash-linear-attention==0.6.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "fla-core==0.6.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "torch==2.11.0 ; sys_platform == 'darwin'",
     "torchvision==0.26.0 ; sys_platform == 'darwin'",
     "transformers[serving]==5.22.2 ; sys_platform == 'darwin'",

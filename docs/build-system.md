@@ -1279,7 +1279,13 @@ under `venv_packages.lm`. Every hosted `chapter_lm-*` notebook installs all of
 them in its setup cell (`transformers[serving]`, `huggingface-hub`,
 `accelerate`, `openai` exact; `scikit-learn` kept if the provider has it),
 whatever its own cells import, because the d2l helpers import them lazily;
-such a page never becomes a NumPy variant. `check-hosted-runtime-contracts`
+such a page never becomes a NumPy variant. `flash-linear-attention` and
+`fla-core` (Triton kernels for Qwen3.5's Gated DeltaNet layers) carry
+`gpu_only=True`: their records say `"device": "gpu"`, and the setup cell
+installs and checks them on GPU runtimes only. Transformers binds `fla` at
+import for every device, so on a CPU runtime it would break any Qwen3.5
+forward that does not go through `d2l.load_hf`/`d2l.bind_hf_kernels`, which
+route CPU tensors to the reference code. `check-hosted-runtime-contracts`
 checks the PyTorch profile in `.venv-pytorch` and again in `.venv-lm`.
 
 `hosted-notebooks` fails when the generated profiles are stale, so a direct
@@ -1347,9 +1353,16 @@ framework extra in its own resolution). The one exception is the Language
 Models part: notebooks whose source lies under `chapter_lm-*` execute in
 **`.venv-lm`** (extra `lm`: torch/torchvision on the *same* pins as the
 `pytorch` extra, plus `transformers[serving]==5.22.2`, `huggingface-hub`,
-`accelerate`, `openai==3.49.0`, `safetensors`, `scikit-learn`), so the rest of
-the book never installs those packages. `make venv-lm` builds it with the d2l
-package installed editable from the checkout it runs in.
+`accelerate`, `openai==3.49.0`, `safetensors`, `scikit-learn`, and on
+linux-x86_64 `flash-linear-attention==0.6.0`/`fla-core==0.6.0`, the fused
+Gated DeltaNet kernels section 18.1 measures), so the rest of the book never
+installs those packages. `make venv-lm` builds it with the d2l package
+installed editable from the checkout it runs in. `causal-conv1d` is left out:
+it has no torch 2.11 wheel (it would compile), and its PyTorch fallback holds
+nothing at a prefill's memory peak. Flex attention (Gemma 4's sliding layers,
+`d2l.load_hf`'s `flex_sdpa`) compiles through Inductor and Triton, whose
+caches `EXTRA_ENV_pytorch` keeps in the repository (`/tmp` is `noexec` on the
+GPU box).
 
 Everything else about such a notebook stays `pytorch`: its stamp
 (`_notebooks/pytorch/chapter_lm-*/…executed`), its manifest

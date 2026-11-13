@@ -204,6 +204,29 @@ The JAX implementation is unavailable.
         self.assertIn("transformers[serving]==", setup)
         self.assertIn("'huggingface-hub': 'huggingface_hub'", setup)
 
+    def test_gpu_only_packages_skip_cpu_runtimes(self):
+        # flash-linear-attention's Triton kernels need a GPU, and Transformers
+        # binds them at import whatever the device: a CPU runtime must not
+        # install it, a GPU runtime installs the pinned version.
+        optional = {
+            package["distribution"]: package
+            for package in hosted.load_profile("pytorch")["optional_packages"]
+        }
+        fla = optional["flash-linear-attention"]
+        self.assertEqual(fla["device"], "gpu")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._nb(tmp, "chapter_lm-pretrained",
+                            ["from d2l import torch as d2l\n"])
+            setup = "".join(hosted.normalize_notebook(
+                path, "pytorch", "abc123")["cells"][0]["source"])
+        self.assertIn(f"'flash-linear-attention': ('{fla['version']}', None, "
+                      f"'{fla['requirement']}', 'exact')", setup)
+        self.assertIn("if requirement is None:", setup)
+        self.assertIn("if not gpu and cpu_requirement is None:", setup)
+        transformers = optional["transformers"]
+        self.assertIn(f"'transformers': ('{transformers['version']}', "
+                      f"'{transformers['requirement']}'", setup)
+
     def test_lm_chapter_without_d2l_still_gets_setup(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = self._nb(tmp, "chapter_lm-pretrained",

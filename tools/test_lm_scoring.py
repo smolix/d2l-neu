@@ -171,7 +171,9 @@ def tiny_qwen35(seed=0):
         linear_key_head_dim=16, linear_value_head_dim=16,
         layer_types=['linear_attention'] * 3 + ['full_attention'],
         tie_word_embeddings=True, attn_implementation='sdpa')
-    return _randomize(transformers.Qwen3_5ForCausalLM(config), seed)
+    model = transformers.Qwen3_5ForCausalLM(config)
+    d2l.bind_hf_kernels()  # the CPU runs Gated DeltaNet's reference code
+    return _randomize(model, seed)
 
 
 # ---------------------------------------------------------------- format_mc

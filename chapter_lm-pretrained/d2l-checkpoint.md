@@ -649,7 +649,7 @@ def mean_abs(L, R):
     return (L.double() - R.double()).abs().mean((1, 2)).cpu().numpy()
 ```
 
-<!-- Placeholder (stage 2): the fp32 rule on the 32 prompts, determinism, the two frequency formulas, and the long prompt with each set of angles. -->
+<!-- Placeholder (stage 2): the fp32 rule on the 32 prompts, determinism, the two frequency formulas, and the long prompt with each set of angles, against the reference and against the reference with exact angles (the rule tests agreement with Transformers' angle rounding, not angle accuracy). -->
 
 ```{.python .input #d2l-checkpoint-fp32-check}
 %%tab pytorch
@@ -716,7 +716,7 @@ if not SMALL:
     assert verdict == 'passes'
 ```
 
-<!-- Placeholder (stage 2): the same rule in bf16, the fp32 reference as a stand-in for fp64, and how far batch composition alone moves the ratio. -->
+<!-- Placeholder (stage 2): the same rule in bf16, the fp32 reference as a stand-in for fp64, how far batch composition alone moves the ratio, and the ratio against Transformers' default SDPA attention instead of eager. -->
 
 ```{.python .input #d2l-checkpoint-bf16-check}
 %%tab pytorch

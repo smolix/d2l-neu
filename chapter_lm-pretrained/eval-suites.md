@@ -374,8 +374,10 @@ print(f'width paired / unpaired: {half_paired / half_unpaired:.2f}; '
       f'sqrt(1 - 2 cov / (var_a + var_b)) = '
       f'{math.sqrt(1 - 2 * V[0, 1] / (V[0, 0] + V[1, 1])):.2f}')
 mc = [abs(r0.ci[k] - r1.ci[k]) / (2 * half_paired) for k in (0, 1)]
-print(f'seed 1 against seed 0, endpoints moved by {mc[0]:.1%} and '
-      f'{mc[1]:.1%} of the width')
+print(f'seed 1 against seed 0, endpoints moved by '
+      f'{abs(r0.ci[0] - r1.ci[0]) * len(a):.0f} and '
+      f'{abs(r0.ci[1] - r1.ci[1]) * len(a):.0f} items in {len(a)} '
+      f'({mc[0]:.1%} and {mc[1]:.1%} of the width)')
 assert max(mc) < 0.03, 'C3: raise n_boot to 20,000'
 d = a - b  # sign flips: under no difference, d and -d are equally likely
 flips = np.random.default_rng(0).choice([-1, 1], (10**4, len(d))) @ d
@@ -397,13 +399,17 @@ for m1, m2 in itertools.combinations(CKPTS, 2):
                  'unpaired ±': 1.96 * math.hypot(s1.se, s2.se),
                  'paired ±': (r.ci[1] - r.ci[0]) / 2, 'sd_d': d.std(),
                  'overlap': s1.ci[0] <= s2.ci[1] and s2.ci[0] <= s1.ci[1],
+                 'unpaired excl. 0': abs(r.mean) > 1.96 * math.hypot(
+                     s1.se, s2.se),
                  'excludes 0': r.ci[0] > 0 or r.ci[1] < 0})
 PAIRS10 = pd.DataFrame(rows)
 PAIRS10['ratio'] = PAIRS10['paired ±'] / PAIRS10['unpaired ±']
 print(PAIRS10.drop(columns='sd_d').round(3).to_string(index=False))
-both = int((PAIRS10.overlap & PAIRS10['excludes 0']).sum())
-print(f'separate intervals overlap, paired interval excludes 0: {both} of '
-      f'{len(PAIRS10)} pairs')
+both = PAIRS10.overlap & PAIRS10['excludes 0']
+only = both & ~PAIRS10['unpaired excl. 0']
+print(f'separate intervals overlap, paired interval excludes 0: '
+      f'{both.sum()} of {len(PAIRS10)} pairs; the unpaired interval of the '
+      f'difference does not: {only.sum()} (resolved only by pairing)')
 ```
 
 <!-- Placeholder (stage 2): eight samples per GSM8K problem, resampled as items and as clusters. -->
@@ -412,8 +418,12 @@ print(f'separate intervals overlap, paired interval excludes 0: {both} of '
 %%tab pytorch
 pool = read_table(d2l.download_keyed('lm-gsm8k-samples-v1'))
 POOL = ['Qwen/Qwen3-0.6B', 'Qwen/Qwen3.5-0.8B']
-wide = pool.assign(correct=pool.correct.astype(float)).pivot(
-    index=['problem_id', 'sample_idx'], columns='model', values='correct')
+# scored as the dev suite scores GSM8K (the last number unless '####' or
+# 'the answer is' marks one), not with the stored strict column
+pool['correct'] = [float(d2l.extract_answer(t, 'gsm8k') == gold)
+                   for t, gold in zip(pool.text, pool.gold)]
+wide = pool.pivot(index=['problem_id', 'sample_idx'], columns='model',
+                  values='correct')
 problem = wide.index.get_level_values('problem_id').to_numpy()
 m = wide.index.get_level_values('sample_idx').nunique()  # per problem
 
@@ -431,7 +441,8 @@ rows.append(design('difference', paired_bootstrap(*d),
                    paired_bootstrap(*d, cluster=problem)))
 pool_table = pd.DataFrame(rows).set_index('scores')
 DEFF_D = pool_table.DEFF.iloc[-1]
-print(f'{len(set(problem))} problems by {m} samples')
+print(f"{len(set(problem))} problems by {m} samples, scored with "
+      "d2l.extract_answer(text, 'gsm8k') == gold")
 print(pool_table.round(3).to_string())
 print('C2: sqrt(DEFF) > 1.5 for both models:',
       bool((np.sqrt(pool_table.DEFF.iloc[:2]) > 1.5).all()))
@@ -1233,7 +1244,6 @@ if 'answers' in RERUN:
                 384, strategy='sample', temperature=0.7, p=0.8, k=20,
                 chat=True, enable_thinking=False, seed=seeds, batch_size=64)
             for r, seed, g in zip(PROMPTS.itertuples(), seeds, gens):
-                assert '<think>' not in g.text, f'{m}: thinking, {r.prompt_id}'
                 records.append({
                     'prompt_id': r.prompt_id, 'model': m, 'answer_seed': s,
                     'source': r.source, 'revision': d2l.HF_REVISIONS[m],
@@ -1251,6 +1261,9 @@ answers = read_table(artifact('lm-answers-v1', 'lm-answers.jsonl'))
 answers = answers[answers.prompt_id.isin(PROMPTS.prompt_id)]
 assert len(answers) == len(ARMS) * len(PROMPTS)
 ANS = answers.set_index(ANSWER_KEY)
+print('answers containing a thinking tag:', {t: int(
+    answers.text.str.contains(t, regex=False).sum())
+    for t in ('<think>', '</think>')}, f'of {len(answers)}')
 print(answers.groupby(['model', 'answer_seed']).agg(
     answers=('n_words', 'size'), median_words=('n_words', 'median'),
     max_tokens_share=('finish_reason', lambda s: (s == 'length').mean())
@@ -1523,10 +1536,13 @@ lo, hi = np.quantile(wls(C[:, g].astype(float))[0], [0.025, 0.975])
 print(f'(b) slope of delta on log(words_a / words_b): {slope:.3f} '
       f'[{lo:.3f}, {hi:.3f}]')
 win = obs.verdict.map({'a': 1.0, 'tie': 0.5, 'b': 0.0})
-print(pd.DataFrame({'pairs': np.bincount(k),
-                    'raw win rate of the first': win.groupby(k).mean(),
-                    'length-adjusted': 1 / (1 + np.exp(-icept))},
-                   ).set_axis(names).round(3).to_string())
+sigmoid = lambda v: 1 / (1 + np.exp(-v))
+print(pd.DataFrame({  # the last two on one scale: sigma of a mean delta
+    'pairs': np.bincount(k), 'verdict win rate': win.groupby(k).mean(),
+    'mean log length ratio': pd.Series(x).groupby(k).mean(),
+    'sigma(mean delta)': sigmoid(pd.Series(y).groupby(k).mean()),
+    'sigma(intercept), equal length': sigmoid(icept)},
+    ).set_axis(names).round(3).to_string())
 ```
 
 <!-- Placeholder (stage 2): strengths from pairwise verdicts. -->

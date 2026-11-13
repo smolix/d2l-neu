@@ -65,63 +65,63 @@
       "outputs": []
     },
     "eval-suites-pair": {
-      "code_fingerprint": "sha256:e0a593f97fbdc95dbff5fc0cdc1140856396a1ada806bf7b5471b856117d4fdd",
+      "code_fingerprint": "sha256:ba4c373f5b3a4b5a92ca97b494d32e6fe04780a8ecd91c3fc9fb91cd0057dbf5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                             estimate    95% interval\nQwen3-1.7B                      0.418  [0.376, 0.460]\nQwen3-0.6B                      0.320  [0.280, 0.362]\ndifference, unpaired            0.098         ± 0.059\ndifference, paired (seed 0)     0.098  [0.054, 0.144]\ndifference, paired (seed 1)     0.098  [0.054, 0.142]\ndiscordant items: 91 right only by Qwen3-1.7B, 42 only by Qwen3-0.6B\nwidth paired / unpaired: 0.77; sqrt(1 - 2 cov / (var_a + var_b)) = 0.75\nseed 1 against seed 0, endpoints moved by 0.0% and 2.2% of the width\np-value: bootstrap 0.0000, sign-flip 0.0000\n"
+          "text": "                             estimate    95% interval\nQwen3-1.7B                      0.418  [0.376, 0.460]\nQwen3-0.6B                      0.320  [0.280, 0.362]\ndifference, unpaired            0.098         ± 0.059\ndifference, paired (seed 0)     0.098  [0.054, 0.144]\ndifference, paired (seed 1)     0.098  [0.054, 0.142]\ndiscordant items: 91 right only by Qwen3-1.7B, 42 only by Qwen3-0.6B\nwidth paired / unpaired: 0.77; sqrt(1 - 2 cov / (var_a + var_b)) = 0.75\nseed 1 against seed 0, endpoints moved by 0 and 1 items in 500 (0.0% and 2.2% of the width)\np-value: bootstrap 0.0000, sign-flip 0.0000\n"
         }
       ]
     },
     "eval-suites-paired-vs-unpaired": {
-      "code_fingerprint": "sha256:71c03f06b6483768b8d4d2d228d22ffae70a4c4c2a114d99ec4fd34f4cf01cda",
+      "code_fingerprint": "sha256:58844f15a147f52fcd349db1368c68a84f2d608b6bfe24258010d057e9396a88",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                               pair   diff  unpaired ±  paired ±  overlap  excludes 0  ratio\n       Qwen3-0.6B - Qwen3-0.6B-Base -0.058       0.058     0.036     True        True  0.619\nQwen3.5-0.8B-Base - Qwen3-0.6B-Base -0.020       0.059     0.034     True       False  0.580\n     Qwen3.5-0.8B - Qwen3-0.6B-Base -0.040       0.059     0.035     True        True  0.598\n       Qwen3-1.7B - Qwen3-0.6B-Base  0.040       0.060     0.042     True       False  0.705\n     Qwen3.5-0.8B-Base - Qwen3-0.6B  0.038       0.058     0.041     True       False  0.709\n          Qwen3.5-0.8B - Qwen3-0.6B  0.018       0.058     0.039     True       False  0.675\n            Qwen3-1.7B - Qwen3-0.6B  0.098       0.059     0.045    False        True  0.766\n   Qwen3.5-0.8B - Qwen3.5-0.8B-Base -0.020       0.058     0.025     True       False  0.429\n     Qwen3-1.7B - Qwen3.5-0.8B-Base  0.060       0.059     0.042     True        True  0.709\n          Qwen3-1.7B - Qwen3.5-0.8B  0.080       0.059     0.039     True        True  0.659\nseparate intervals overlap, paired interval excludes 0: 4 of 10 pairs\n"
+          "text": "                               pair   diff  unpaired ±  paired ±  overlap  unpaired excl. 0  excludes 0  ratio\n       Qwen3-0.6B - Qwen3-0.6B-Base -0.058       0.058     0.036     True             False        True  0.619\nQwen3.5-0.8B-Base - Qwen3-0.6B-Base -0.020       0.059     0.034     True             False       False  0.580\n     Qwen3.5-0.8B - Qwen3-0.6B-Base -0.040       0.059     0.035     True             False        True  0.598\n       Qwen3-1.7B - Qwen3-0.6B-Base  0.040       0.060     0.042     True             False       False  0.705\n     Qwen3.5-0.8B-Base - Qwen3-0.6B  0.038       0.058     0.041     True             False       False  0.709\n          Qwen3.5-0.8B - Qwen3-0.6B  0.018       0.058     0.039     True             False       False  0.675\n            Qwen3-1.7B - Qwen3-0.6B  0.098       0.059     0.045    False              True        True  0.766\n   Qwen3.5-0.8B - Qwen3.5-0.8B-Base -0.020       0.058     0.025     True             False       False  0.429\n     Qwen3-1.7B - Qwen3.5-0.8B-Base  0.060       0.059     0.042     True              True        True  0.709\n          Qwen3-1.7B - Qwen3.5-0.8B  0.080       0.059     0.039     True              True        True  0.659\nseparate intervals overlap, paired interval excludes 0: 4 of 10 pairs; the unpaired interval of the difference does not: 2 (resolved only by pairing)\n"
         }
       ]
     },
     "eval-suites-cluster-pool": {
-      "code_fingerprint": "sha256:c3456d1e2d2f1a7c7b209644b5ee76dce501ba1a8118ff57ea4258b3105ae35f",
+      "code_fingerprint": "sha256:c3f5ceb342d197e29feb9f632b1a0fced494b4c61f286490bae02a01640b98da",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "100 problems by 8 samples\n               mean           iid CI       cluster CI  width ratio   DEFF    rho\nscores                                                                          \nQwen3-0.6B    0.062   [0.046, 0.080]   [0.040, 0.087]        1.407  2.063  0.152\nQwen3.5-0.8B  0.080   [0.061, 0.100]   [0.051, 0.114]        1.613  2.746  0.249\ndifference    0.018  [-0.007, 0.044]  [-0.020, 0.056]        1.488  2.248  0.178\nC2: sqrt(DEFF) > 1.5 for both models: False\n"
+          "text": "100 problems by 8 samples, scored with d2l.extract_answer(text, 'gsm8k') == gold\n               mean           iid CI       cluster CI  width ratio   DEFF    rho\nscores                                                                          \nQwen3-0.6B    0.416   [0.383, 0.451]   [0.338, 0.494]        2.273  5.301  0.614\nQwen3.5-0.8B  0.440   [0.406, 0.475]   [0.366, 0.514]        2.145  4.638  0.520\ndifference    0.024  [-0.011, 0.059]  [-0.030, 0.076]        1.518  2.314  0.188\nC2: sqrt(DEFF) > 1.5 for both models: True\n"
         }
       ]
     },
     "eval-suites-mde": {
-      "code_fingerprint": "sha256:ab63116b46f420700a492692423ac948d2075bd16fa9780961dc84677ea921b7",
+      "code_fingerprint": "sha256:d8887525330ffaafcd0418407a4d64d5d888837af612541b31e12049d830c051",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-mde-plot": {
-      "code_fingerprint": "sha256:a000b37c2132bac83379076c0365fde1e2784a7a4ad45484d7e968a53abcc4fb",
+      "code_fingerprint": "sha256:a21cec0abcf1bf212e44aebe4f9ebc31051bd799a47d0c198ebd32459b6a447c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MDE at 500 items, two independent samples: 0.085\nMDE at 500 items, paired: 0.063\nMDE at 500 items, paired, clusters of 8: 0.095\n                               pair  |diff| items needed\n       Qwen3-0.6B - Qwen3-0.6B-Base   0.058          407\nQwen3.5-0.8B-Base - Qwen3-0.6B-Base   0.020        3,053\n     Qwen3.5-0.8B - Qwen3-0.6B-Base   0.040          757\n       Qwen3-1.7B - Qwen3-0.6B-Base   0.040        1,130\n     Qwen3.5-0.8B-Base - Qwen3-0.6B   0.038        1,177\n          Qwen3.5-0.8B - Qwen3-0.6B   0.018        4,595\n            Qwen3-1.7B - Qwen3-0.6B   0.098          210\n   Qwen3.5-0.8B - Qwen3.5-0.8B-Base   0.020        1,562\n     Qwen3-1.7B - Qwen3.5-0.8B-Base   0.060          489\n          Qwen3-1.7B - Qwen3.5-0.8B   0.080          247\n"
+          "text": "MDE at 500 items, two independent samples: 0.085\nMDE at 500 items, paired: 0.063\nMDE at 500 items, paired, clusters of 8: 0.097\n                               pair  |diff| items needed\n       Qwen3-0.6B - Qwen3-0.6B-Base   0.058          407\nQwen3.5-0.8B-Base - Qwen3-0.6B-Base   0.020        3,053\n     Qwen3.5-0.8B - Qwen3-0.6B-Base   0.040          757\n       Qwen3-1.7B - Qwen3-0.6B-Base   0.040        1,130\n     Qwen3.5-0.8B-Base - Qwen3-0.6B   0.038        1,177\n          Qwen3.5-0.8B - Qwen3-0.6B   0.018        4,595\n            Qwen3-1.7B - Qwen3-0.6B   0.098          210\n   Qwen3.5-0.8B - Qwen3.5-0.8B-Base   0.020        1,562\n     Qwen3-1.7B - Qwen3.5-0.8B-Base   0.060          489\n          Qwen3-1.7B - Qwen3.5-0.8B   0.080          247\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "eval-suites/eval-suites-mde-plot-1.svg",
-          "bytes": 39014,
-          "sha256": "sha256:c66a1849f6029b7e00dc7aed9eabddee58f8b8f1af6aa840fe5066f43094e067"
+          "bytes": 39015,
+          "sha256": "sha256:d8d7aff875491a7247983d8e69a4dca496394f64a8132dc87ca7d5d3ca6c8656"
         }
       ]
     },
     "eval-suites-lifecycle": {
-      "code_fingerprint": "sha256:ffaf07a3cab2806a40512e24f7672278201c5bfe187178ac58fbe8d4b6d3b45c",
+      "code_fingerprint": "sha256:843a059eeafdd24fb902edf829ddf59aa4d7a6c6e08cbb9b76e2e352de2d19a0",
       "kind": "text",
       "outputs": [
         {
@@ -132,32 +132,32 @@
       ]
     },
     "eval-suites-task": {
-      "code_fingerprint": "sha256:c296b4bf092bf4e61d1a909adfe80519f5a905f2baca3afa3e4344434c554a4a",
+      "code_fingerprint": "sha256:cd9ac44131ebaa5f92cf556a08dcdf403c7f2c2619ac4f97361493d4d7d34af0",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-suite": {
-      "code_fingerprint": "sha256:9a2472e472c5f71015d7cc58bd939cf81c8fbb5ebaab006e538dfef3a2423a9b",
+      "code_fingerprint": "sha256:c9d18dce6aeb421d0ea8597f2a62a0f0e9c1f27d550e5cb409022db44d0254fc",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-run-def": {
-      "code_fingerprint": "sha256:50e0712cc1a3b044147b04d8b70f54f00f01e12aa7b884c2a9065186d388f1d9",
+      "code_fingerprint": "sha256:01f16005df39d90dc24740e3159f5e74e39925284031e8d6ef26a883a3f7d016",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-result": {
-      "code_fingerprint": "sha256:d18104abcecb7d5b12e4ebfb0af4c4ca5f33a2067557096d3bb9ccfd116c60e3",
+      "code_fingerprint": "sha256:c686c1f58a5f7dc0f32047b6932963263cf49be394251044c7d5fc962f386f61",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-attach": {
-      "code_fingerprint": "sha256:f45f52aa7402b210320c5ffa9488463379a715a4a6b5fda02625124165073e7e",
+      "code_fingerprint": "sha256:84f7ff6b8e203e17da922e7b1eb35dc60cdc871f0bc48c4aae687e3487cae002",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-manifests": {
-      "code_fingerprint": "sha256:eade2fd04c0ed852c3702936ce4ad79495f01d5dd3ffcdaaf71f889f2035bae3",
+      "code_fingerprint": "sha256:cc97994093935865e45653be524a02ae62be0a4749ccd7c80b17c7bdacbc7abc",
       "kind": "text",
       "outputs": [
         {
@@ -168,12 +168,12 @@
       ]
     },
     "eval-suites-dev-def": {
-      "code_fingerprint": "sha256:2420650a44f30a1154e6fedaa92702e38780a77d7fd5d2bab28d695700e76f9a",
+      "code_fingerprint": "sha256:f7daf8d66d0538ca0aa6c7f08fc05fc4c9802f1cdadca9c346b806dbdfad07fd",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-run-dev": {
-      "code_fingerprint": "sha256:671d20a52b871d50631092391d5750d99278b8c92ed6565df2406b830d62143e",
+      "code_fingerprint": "sha256:bc9834c7cd4eac5e86cfa6a62e507ba3a6551c88d476f5fc377acaafc68daf42",
       "kind": "text",
       "outputs": [
         {
@@ -209,7 +209,7 @@
       ]
     },
     "eval-suites-survive": {
-      "code_fingerprint": "sha256:489ba08799e07a6d927f5eaced0697ab4223364f996877ee05c870a6615bf693",
+      "code_fingerprint": "sha256:43b83cc2c93f7a91fe26b437748c0e0aea7e96b1a783f902d4be33b84baed47f",
       "kind": "text",
       "outputs": [
         {
@@ -220,7 +220,7 @@
       ]
     },
     "eval-suites-symbolic-data": {
-      "code_fingerprint": "sha256:256886de8cb442fc9a56732b95cc0e761543b23662be6ab51bb7df1a8802a34b",
+      "code_fingerprint": "sha256:2c393fef6eb4051a612e358423fd2c44cef4ed4f9f2271061012b0eedfc602e4",
       "kind": "text",
       "outputs": [
         {
@@ -231,7 +231,7 @@
       ]
     },
     "eval-suites-symbolic-run": {
-      "code_fingerprint": "sha256:a1da2072b25c479cce38fe3f72e698efded4e15fcb71518dcd704691675873b8",
+      "code_fingerprint": "sha256:3db496edf36ca1b7fa996b85cf3852746e35e4cda0fd96a5e27fe0edb25c08ab",
       "kind": "text",
       "outputs": [
         {
@@ -242,7 +242,7 @@
       ]
     },
     "eval-suites-symbolic-ref": {
-      "code_fingerprint": "sha256:3b18a9c16676a2bccdeeb64c14782ff56de3a47bf7f0899a6583383722ad918e",
+      "code_fingerprint": "sha256:8a2123b4308ae4fdb1849eb268920e9b9ccb622099b3ac6a7509c9c6ce7ae9a1",
       "kind": "text",
       "outputs": [
         {
@@ -253,7 +253,7 @@
       ]
     },
     "eval-suites-symbolic-test": {
-      "code_fingerprint": "sha256:508e71b66874976374b12ce65325e7117772f5e1338a52dcef14face12f5506b",
+      "code_fingerprint": "sha256:b811b273e0e1fa7cc41b118d722fceb623fe73df9c269ba56011492152fb4b54",
       "kind": "text",
       "outputs": [
         {
@@ -269,17 +269,17 @@
       ]
     },
     "eval-suites-judge-def": {
-      "code_fingerprint": "sha256:30c85d95993fb2ea577ea57200a1fa6678ffc8613612b97d3fe219cbfe26baa7",
+      "code_fingerprint": "sha256:0eef28837d2cb92422aac05a538f9c79fa26bbcd80dff1e8ab9b926eb259670a",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-judge": {
-      "code_fingerprint": "sha256:a867bfebfcc9f2186c111125461863f2497e46d6778686d63f6a8bad70bc8f47",
+      "code_fingerprint": "sha256:0b267ba52c62e56862493b565800df7d479c88d0281a2a583c95d01f8486a2e8",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-prompts": {
-      "code_fingerprint": "sha256:f5fa5b158491695161a2cac3b802249b346c25284aaf896f4699d9e8e180b46a",
+      "code_fingerprint": "sha256:ee30597c41bae8ac9f0fe9f82a8ad2d9ec0ecb726eed5891fa3139dcdf627287",
       "kind": "text",
       "outputs": [
         {
@@ -290,18 +290,18 @@
       ]
     },
     "eval-suites-answers": {
-      "code_fingerprint": "sha256:7d1067b126289e0a98c78df1d2e3f74cd49b45766cc46505af945f28f563f404",
+      "code_fingerprint": "sha256:54e5abcceede6726bdc28fdb383a1fa6f7421ecbb92a89dd9bb04c26132c9a1a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                               answers  median_words  max_tokens_share\nmodel             answer_seed                                         \nQwen/Qwen3-0.6B   0                300          79.0             0.003\nQwen/Qwen3-1.7B   0                300         101.5             0.010\n                  1                300         103.0             0.013\nQwen/Qwen3.5-0.8B 0                300         142.0             0.070\nQwen/Qwen3.5-2B   0                300         152.0             0.020\n                  1                300         151.0             0.027\n"
+          "text": "answers containing a thinking tag: {'<think>': 0, '</think>': 1} of 1800\n                               answers  median_words  max_tokens_share\nmodel             answer_seed                                         \nQwen/Qwen3-0.6B   0                300          79.0             0.003\nQwen/Qwen3-1.7B   0                300         101.5             0.010\n                  1                300         103.0             0.013\nQwen/Qwen3.5-0.8B 0                300         142.0             0.070\nQwen/Qwen3.5-2B   0                300         152.0             0.020\n                  1                300         151.0             0.027\n"
         }
       ]
     },
     "eval-suites-human-pairs": {
-      "code_fingerprint": "sha256:d2bb94862c28ab969877fbc6845ecf8f9a5eb6fdeba0ae35e28bfd75eaf4155c",
+      "code_fingerprint": "sha256:4fccdc4af3f9315ffb1c28105c1b8b9dc20e9aed0432b099f9cb721a4fba868e",
       "kind": "text",
       "outputs": [
         {
@@ -312,12 +312,12 @@
       ]
     },
     "eval-suites-judge-human": {
-      "code_fingerprint": "sha256:2d1b3676eadb6491c41ad382292dd11dc67cfa9063c6b1b0412a2ef1b4328e1d",
+      "code_fingerprint": "sha256:c75ef62afcbc4fb860aff6339ad1f82317efe24db691b62f439536bfa8f9d2ab",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-agreement": {
-      "code_fingerprint": "sha256:e33d2cfd75e5f3f5a8802f2f6f63f22ab71816939f179f0332118ff25d40d70e",
+      "code_fingerprint": "sha256:030047cf57fe44d05e970ad1a7546bf186c895ce250c56a080f924f47d20518d",
       "kind": "text",
       "outputs": [
         {
@@ -328,7 +328,7 @@
       ]
     },
     "eval-suites-judge-pairs": {
-      "code_fingerprint": "sha256:2a504e301ecfda1d7d2f5aeb12543e26960f9e9d6c0f1798f002d446b20cb7f0",
+      "code_fingerprint": "sha256:578d3ab475185c8e2d5411288d8f129268878a90eabcdf8f80e5adc4fd5e47f0",
       "kind": "text",
       "outputs": [
         {
@@ -339,7 +339,7 @@
       ]
     },
     "eval-suites-position-bias": {
-      "code_fingerprint": "sha256:2ac7bdff2f6375790633e1070709a8fe0a1f2a203c7ecd647330cf2b1322bbcc",
+      "code_fingerprint": "sha256:beb4b78cfe4d14aae5e93cb0151a2a6ac189af363243c2e11741aa40adeb0e75",
       "kind": "mixed",
       "outputs": [
         {
@@ -352,28 +352,28 @@
           "mime": "image/svg+xml",
           "asset": "eval-suites/eval-suites-position-bias-1.svg",
           "bytes": 224007,
-          "sha256": "sha256:8d1c3846c9573c404a243281fdd940a3fe4afaadcce0afb2f4d8c1e7f4ffbe15"
+          "sha256": "sha256:85375afe08e9346d0e226accc22805b183c75c7ec982d04f502f2add2dd8ed62"
         }
       ]
     },
     "eval-suites-verbosity": {
-      "code_fingerprint": "sha256:0e76da3ed997285d85ebcaf85d66b82adce923676c6685a6e1e3d144c7f71d34",
+      "code_fingerprint": "sha256:f728ad1a73130ae3a4ea2ef69c886b9d645edd5ef84139928ca4fec1f627b21c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "(a) padded minus plain, 294 prompts: delta -0.777 [-0.844, -0.711]; consistent verdicts for the padded answer 0.010, for the plain one 0.439\n(b) 85 of 1800 pairs with a truncated or empty answer excluded\n(b) slope of delta on log(words_a / words_b): 0.514 [0.173, 0.899]\n                            pairs  raw win rate of the first  length-adjusted\nQwen3-0.6B vs Qwen3-1.7B      296                      0.135            0.080\nQwen3-0.6B vs Qwen3.5-0.8B    279                      0.414            0.466\nQwen3-0.6B vs Qwen3.5-2B      293                      0.130            0.087\nQwen3-1.7B vs Qwen3.5-0.8B    278                      0.779            0.847\nQwen3-1.7B vs Qwen3.5-2B      293                      0.365            0.327\nQwen3.5-0.8B vs Qwen3.5-2B    276                      0.163            0.133\n"
+          "text": "(a) padded minus plain, 294 prompts: delta -0.777 [-0.844, -0.711]; consistent verdicts for the padded answer 0.010, for the plain one 0.439\n(b) 85 of 1800 pairs with a truncated or empty answer excluded\n(b) slope of delta on log(words_a / words_b): 0.514 [0.173, 0.899]\n                            pairs  verdict win rate  mean log length ratio  sigma(mean delta)  sigma(intercept), equal length\nQwen3-0.6B vs Qwen3-1.7B      296             0.135                 -0.215              0.072                           0.080\nQwen3-0.6B vs Qwen3.5-0.8B    279             0.414                 -0.505              0.403                           0.466\nQwen3-0.6B vs Qwen3.5-2B      293             0.130                 -0.570              0.066                           0.087\nQwen3-1.7B vs Qwen3.5-0.8B    278             0.779                 -0.289              0.827                           0.847\nQwen3-1.7B vs Qwen3.5-2B      293             0.365                 -0.348              0.289                           0.327\nQwen3.5-0.8B vs Qwen3.5-2B    276             0.163                 -0.082              0.128                           0.133\n"
         }
       ]
     },
     "eval-suites-bt": {
-      "code_fingerprint": "sha256:c3e58b4877f8b8cb15705c7cbeceeae6b90f94b4ebdf5d54756a3120b7b52fbe",
+      "code_fingerprint": "sha256:31f2418d9aa5c74290900eda462774d6735d9f4e5ec7328c5d0972c1e6f3991c",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-bt-fit": {
-      "code_fingerprint": "sha256:32663f54e33c088e671864336418c2105b5b037c36ec524a7ea2e375e1fb7e21",
+      "code_fingerprint": "sha256:92c30a71e6e70f7a7537b80d7beb66bdec18c3cd3c4446ab1b600edfa8b4f43c",
       "kind": "text",
       "outputs": [
         {
@@ -384,7 +384,7 @@
       ]
     },
     "eval-suites-answer-seed": {
-      "code_fingerprint": "sha256:989f61b5f4aa4008be1a4035acd8aaa96876227b6616285f52711e588f653931",
+      "code_fingerprint": "sha256:ab3d92b8fda8291c32fdab05d8d173f48caa49d205a058b074e950acb36bf031",
       "kind": "text",
       "outputs": [
         {
@@ -395,7 +395,7 @@
       ]
     },
     "eval-suites-protocol": {
-      "code_fingerprint": "sha256:d988bda47a401b6979d21d8482826b7243e2115d12476bfb9d0d0ad00e2212db",
+      "code_fingerprint": "sha256:8b457c29d305f5052358850638119e24e4cfe9a2ccc3646d56bee2d8550b86a9",
       "kind": "text",
       "outputs": [
         {

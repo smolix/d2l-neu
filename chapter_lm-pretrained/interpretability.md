@@ -60,6 +60,7 @@ import contextlib
 import gc
 import hashlib
 import io
+import itertools
 import json
 import os
 import pandas as pd
@@ -169,7 +170,7 @@ d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
     'ce1a79d9c5163932d65c417380e53230e1086370')
 ```
 
-<!-- Placeholder (stage 2): the probe's treebank, pinned to a commit, and the recall pairs; the trained artifacts are registered at capture. -->
+<!-- Placeholder (stage 2): the probe's treebank, pinned to a commit, the recall pairs, and the files of the regeneration run (the tuned lens, the two SAEs, the results archive). -->
 
 ```{.python .input #interpretability-data-hub}
 %%tab pytorch
@@ -190,6 +191,19 @@ d2l.DATA_HUB['lm-ud-ewt-test'] = (
 d2l.DATA_HUB['lm-interp-recall-v1'] = (
     d2l.LM_DATA_URL + 'lm-interp-recall-v1.json',
     'e3025b0216df5384d8a14f1e8e10c4cab080ebbf')
+# What the regeneration run (D2L_RERUN=1) trained and measured
+d2l.DATA_HUB['lm-tuned-lens-qwen3-0.6b-v1'] = (
+    d2l.LM_DATA_URL + 'lm-tuned-lens-qwen3-0.6b-v1.pt',
+    'e1a9275950de634b8f8a6e7dd516de662755834e')
+d2l.DATA_HUB['lm-sae-r1-l14-v1'] = (
+    d2l.LM_DATA_URL + 'lm-sae-r1-l14-v1.pt',
+    'b7d9589fda439d7bdd9e52572a24c6ea58efb263')
+d2l.DATA_HUB['lm-sae-q17b-l14-v1'] = (
+    d2l.LM_DATA_URL + 'lm-sae-q17b-l14-v1.pt',
+    '11982ca32f0382eb9bf594faee58e808d61be12d')
+d2l.DATA_HUB['lm-interp-results-v1'] = (
+    d2l.LM_DATA_URL + 'lm-interp-results-v1.zip',
+    'fbdd35bb16901752e7c6ec15b60734fef135969d')
 ```
 
 <!-- Placeholder (prose, ### The Residual Stream as a Sum): the data of the section, each subset resolved once by a declared rule (FineWeb-Edu, Chinese and English Wikipedia, the recall pairs), and the Han-character tokens of the vocabulary. -->
@@ -202,6 +216,7 @@ WIKI = {lang: ('wikimedia/wikipedia', f'20231101.{lang}/{shard}.parquet',
                'b04c8d1ceb2f5cd4588862100d08de323dccfbaa')
         for lang, shard in (('zh', 'train-00002-of-00006'),
                             ('en', 'train-00028-of-00041'))}
+STRIDE = {'zh': 11_000, 'en': 7_500}  # 20 blocks spread over each shard
 CJK = re.compile('[㐀-䶿一-鿿豈-﫿]')  # Han
 ids_of = lambda text: tok(text, add_special_tokens=False).input_ids
 prefix = lambda n, need: lambda ids: ids[:n] if len(ids) >= need else None
@@ -211,30 +226,40 @@ def clean_prompt(ids):  # 32 tokens without Han that survive a round trip
     keep = len(ids) >= 32 and not CJK.search(text) and ids_of(text) == ids[:32]
     return ids[:32] if keep else None
 
-def walk(source, row, subsets, block=1000):
-    """From row on, the first n qualifying documents of each subset in
-    turn; subsets maps a name to (n, take), take(ids) -> ids or None."""
-    out, texts, start = {}, [], row
+def walk(label, source, rows, subsets, block=1000):
+    """Visiting rows in order, the first n qualifying documents of each
+    subset in turn; subsets maps a name to (n, take), take(ids) -> ids or
+    None. Rows are read a block of block rows at a time."""
+    out, cache, rows = {}, {}, iter(rows)
     for name, (n, take) in subsets.items():
-        docs, first, nbytes = [], row, 0
+        docs, used, nbytes = [], [], 0
         while len(docs) < n:
-            if row >= start + len(texts):  # the next block of rows
-                start = row
-                texts, b = read_rows(*source, row, row + block)
+            row = next(rows)
+            start = row - row % block
+            if start not in cache:
+                cache[start], b = read_rows(*source, start, start + block)
                 nbytes += b
-            if (ids := take(ids_of(texts[row - start]))) is not None:
+            if (ids := take(ids_of(cache[start][row - start]))) is not None:
                 docs.append(ids)
-            row += 1
+            used.append(row)
         out[name] = torch.tensor(docs)
-        print(f'{source[1]}, {name}: {n} docs from rows {first}-{row - 1}, '
-              f'{nbytes / 1e6:.1f} MB read')
+        k = len({r // block for r in used})
+        print(f'{label}, {name}: {n} docs from rows {min(used)}-{max(used)} '
+              f'({k} block{"s" * (k > 1)}), {nbytes / 1e6:.1f} MB read')
     return out
 
-fineweb = walk(FINEWEB, 8000, {
+def round_robin(stride, blocks=20, block=1000):  # row i of each block, i + 1
+    return (b * stride + i for i in range(block) for b in range(blocks))
+
+fineweb = walk('FineWeb-Edu', FINEWEB, itertools.count(8000), {
     'held-out': (SIZES['heldout'], prefix(256, 257)),
     'steering': (SIZES['steer'], clean_prompt),
     'cost': (SIZES['cost'], prefix(129, 129))})
-wiki = {lang: walk(WIKI[lang], 0, {
+# Wikipedia files are ordered by article id, and neighbours share topics
+# (hundreds of consecutive biographies of generals), so the documents
+# come from 20 blocks spread over each file
+wiki = {lang: walk(f'Wikipedia {lang}', WIKI[lang],
+                   round_robin(STRIDE[lang]), {
     'contrast': (SIZES['contrast'], prefix(128, 129)),
     'label': (SIZES['label'], prefix(128, 129))}) for lang in WIKI}
 heldout, cost_docs = fineweb['held-out'], fineweb['cost']
@@ -926,6 +951,16 @@ print(f'block {handover}: NE(subject last) {mean[0, handover, S]:.2f} + '
 
 ```{.python .input #interpretability-patch-map}
 %%tab pytorch
+def by_position(cells):  # (block, class) cells as "'class' 0-3, 7; ..."
+    parts = []
+    for c in CLASSES:
+        ls = np.array([l for l, c_ in cells if c_ == c])
+        if len(ls):
+            runs = np.split(ls, np.flatnonzero(np.diff(ls) > 1) + 1)
+            parts.append(f'{c!r} ' + ', '.join(
+                f'{r[0]}-{r[-1]}' if len(r) > 1 else f'{r[0]}' for r in runs))
+    return '; '.join(parts) or 'none'
+
 reps = np.stack([NE[..., idx].mean(-1) for idx in cluster_resample(cities)])
 lower = pct_ci(reps)[0]
 SUMMARY['patching'] = {'handover': [handover, *pct_ci(
@@ -933,13 +968,15 @@ SUMMARY['patching'] = {'handover': [handover, *pct_ci(
 for i, (kind, t) in enumerate(zip(KINDS, (0.5, 0.5, 0.1))):
     cells = [(int(l), CLASSES[c]) for l, c in zip(*np.nonzero(lower[i] > t))]
     SUMMARY['patching'][kind] = cells
-    print(f'{kind}, lower bound above {t}: {cells}')
+    print(f'{kind}, lower bound above {t}: {by_position(cells)}')
 print(f'handover block {handover}, 95% interval '
       f'{SUMMARY["patching"]["handover"][1:]}')
 print(f'{(mean < -0.05).sum()} cells with mean NE below -0.05, '
       f'minimum {mean.min():.2f}')
 if FULL is not None:
-    print('full run:', FULL['patching'])
+    print('full run: handover', FULL['patching']['handover'])
+    for kind in KINDS:
+        print(f'  {kind}: {by_position(FULL["patching"][kind])}')
 d2l.show_heatmaps(torch.tensor(mean).clamp(min=0)[None], 'position', 'block',
                   titles=list(KINDS), figsize=(7, 4.5), xticklabels=CLASSES)
 for ax in d2l.plt.gcf().axes[:len(KINDS)]:  # the names read vertically
@@ -1238,7 +1275,8 @@ else:
 SAE_REPO = 'Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'
 revision = d2l.HF_REVISIONS[SAE_REPO]
 with open(hf_hub_download(SAE_REPO, 'README.md', revision=revision)) as f:
-    print(re.search(r'## Caution\n(.*?)\n## ', f.read(), re.S)[1].strip())
+    d2l.print_wrapped(re.search(r'## Caution\n(.*?)\n## ', f.read(),
+                                re.S)[1].strip())
 sizes = [s.size for s in HfApi().model_info(
     SAE_REPO, revision=revision, files_metadata=True).siblings
          if s.rfilename.endswith('.sae.pt')]
@@ -1406,7 +1444,7 @@ table = pd.DataFrame({name: {
     **{col: f'{m[key]:.3f}' for col, key in COLUMNS.items()}}
                       for name, (width, t, m) in rows.items()}).T
 print(f'{m_ours["n_tokens"]:,} positions of {len(heldout)} documents')
-print(table.to_string())
+print(table.T.to_string())  # one column per SAE
 SUMMARY['sae'] = table.to_dict('index')
 RESULTS['sae_metrics.json'] = json.dumps({
     name: {k: v for k, v in m.items() if k not in ('density', 'per_doc')}
@@ -1474,23 +1512,28 @@ score = {'feature': acts_of(H_test, [feature])[..., 0].cpu().numpy().ravel(),
 threshold = {'feature': 0.0, 'probe': float(np.mean(
     [(H[lang]['contrast'].float() @ d_mean).mean().item() for lang in H]))}
 
-def auc(s, y):  # the Mann-Whitney statistic
-    n = y.sum()
-    return (rankdata(s)[y].sum() - n * (n + 1) / 2) / (n * (len(y) - n))
+def label_stats(idx):  # per score: precision, recall, AUC (Mann-Whitney)
+    y, out = label[idx], []
+    for name, s in score.items():
+        active, n = s[idx] > threshold[name], y.sum()
+        auc = (rankdata(s[idx])[y].sum() - n * (n + 1) / 2) / (
+            n * (len(y) - n))
+        out += [(y & active).sum() / active.sum(), (y & active).sum() / n,
+                auc]
+    return out
 
-reps = np.array([[auc(s[idx], label[idx]) for s in score.values()]
-                 for idx in cluster_resample(doc)])
-results = {}
-for j, (name, s) in enumerate(score.items()):
-    active = s > threshold[name]
-    precision = d2l.bootstrap_ci(label[active], cluster=doc[active])
-    recall_ = d2l.bootstrap_ci(active[label], cluster=doc[label])
-    results[name] = [fmt(precision.mean, precision.ci),
-                     fmt(recall_.mean, recall_.ci),
-                     fmt(auc(s, label), pct_ci(reps[:, j]))]
+# ratios over a resample of whole documents (a sparse feature can be
+# active in fewer documents than bootstrap_ci's 30 clusters)
+with np.errstate(invalid='ignore', divide='ignore'):  # no active token
+    point = label_stats(np.arange(len(label)))
+    reps = np.array([label_stats(idx) for idx in cluster_resample(doc)])
+ci = pct_ci(reps)
+results = {name: [fmt(point[3 * j + i], ci[:, 3 * j + i]) for i in range(3)]
+           for j, name in enumerate(score)}
 print(pd.DataFrame(results, index=['precision', 'recall', 'AUC']).T)
-d_auc = fmt(auc(score['feature'], label) - auc(score['probe'], label),
-            pct_ci(reps[:, 0] - reps[:, 1]))
+print('documents with an active token:', {name: len(np.unique(
+    doc[s > threshold[name]])) for name, s in score.items()})
+d_auc = fmt(point[2] - point[5], pct_ci(reps[:, 2] - reps[:, 5]))
 print(f'AUC, feature minus probe: {d_auc}')
 print(f'features never firing: {(density == 0).sum():,}; '
       f'dense (above 0.1): {(density > 0.1).sum():,}')
@@ -1525,12 +1568,15 @@ if not SMALL:  # its decoder column is all we keep of the release
     torch.cuda.empty_cache()
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): eq_lm_steer on a grid of strengths for each direction, and a fixed Chinese prefix that changes no activation: behaviour (switched prompts) and cost (cross-entropy on English text). -->
+<!-- Placeholder (prose, ### The Steering Frontier): eq_lm_steer on a grid of strengths for each direction (half-octave from 1/16 to 2; for the two informed directions also every twelfth of an octave from 1/16 to 1/4, where they switch within a third of an octave), and a fixed Chinese prefix that changes no activation: behaviour (switched prompts) and cost (cross-entropy on English text). -->
 
 ```{.python .input #interpretability-steer}
 %%tab pytorch
-ALPHAS = ([0.0, 1.0, 4.0] if SMALL else
-          [0.0] + [2 ** (j / 2) for j in range(-4, 7)])  # 0.25 to 8
+COARSE = [2 ** (j / 2) for j in range(-8, 3)]  # 1/16 to 2, half-octave
+FINE = [2 ** (j / 12) for j in range(-48, -23)]  # 1/16 to 1/4, 1/12 octave
+# the informed directions switch within a third of an octave, inside FINE
+GRID = {n: [0.0] + ([0.125, 0.5] if SMALL else sorted(set(COARSE) | set(
+    FINE)) if n in INFORMED else COARSE) for n in directions}
 PREFIX = '下面的文字将用中文继续。\n\n'  # declared before any run, not tuned
 SWITCH = 0.3  # a continuation switched: at least 30% Han characters
 for prefix in ('', PREFIX):  # one bucket of equal-length prompts each
@@ -1582,7 +1628,7 @@ def run(fn=None, prefix=''):  # Han fractions per prompt, CE per document
 base, runs = run(), {}
 for name, d in directions.items():
     runs[name, 0.0] = base  # alpha = 0 is one shared run
-    for alpha in ALPHAS[1:]:
+    for alpha in GRID[name][1:]:
         runs[name, alpha] = run(steer(alpha * n_bar * d))
     print(f'{name}: switched at alpha 1: '
           f'{(runs[name, 1.0][0] >= SWITCH).mean():.2f}')
@@ -1605,9 +1651,9 @@ RESULTS['steering_docs.csv'] = pd.DataFrame(
 ```{.python .input #interpretability-frontier}
 %%tab pytorch
 CAP = 0.5  # nats per token on English text
-SW = {n: np.array([runs[n, a][0] >= SWITCH for a in ALPHAS])
+SW = {n: np.array([runs[n, a][0] >= SWITCH for a in GRID[n]])
       for n in directions}  # (alphas, prompts)
-CE = {n: np.array([runs[n, a][1] - base[1] for a in ALPHAS])
+CE = {n: np.array([runs[n, a][1] - base[1] for a in GRID[n]])
       for n in directions}  # (alphas, documents, plain or without Han)
 sw_p = runs['prefix', 0.0][0] >= SWITCH
 ce_p = runs['prefix', 0.0][1] - base[1]
@@ -1661,7 +1707,11 @@ d2l.plot([cost[INFORMED[0]], cost[INFORMED[1]], c_rand, c_rand,
          legend=[*INFORMED, f'random (mean of {len(RANDOM)})',
                  'random (min, max)', 'prefix'],
          fmts=('C0o-', 'C1s-', 'C2x-', 'C2:', 'C3*', 'C2:', 'k--'),
-         figsize=(5, 3.5))
+         figsize=(5, 3.5), legend_loc='upper left')
+ax = d2l.plt.gca()
+ax.set_xscale('symlog', linthresh=0.01)  # linear up to 0.01 nats, then log
+ax.set_xlim(min(0, *(c.min() for c in cost.values())),
+            2 * max(c.max() for c in cost.values()))
 RESULTS['summary.json'] = json.dumps(SUMMARY, indent=1, default=float,
                                      ensure_ascii=False).encode()
 if RETRAIN and not SMALL:  # the CPU path's numbers are never published
@@ -1679,9 +1729,9 @@ for n in INFORMED:  # the smallest alpha that switches half below the cap
     below = cost[n] < CAP
     hit = np.flatnonzero(below & (SW[n].mean(1) >= 0.5))
     i = hit[0] if len(hit) else np.flatnonzero(below).max()
-    print(f'{n}: alpha {ALPHAS[i]:g}'
+    print(f'{n}: alpha {GRID[n][i]:.3g}'
           + ('' if len(hit) else ' (the largest below the cap; no half)'))
-    conditions[n] = (steer(ALPHAS[i] * n_bar * directions[n]), '',
+    conditions[n] = (steer(GRID[n][i] * n_bar * directions[n]), '',
                      CE[n][i, :, 1].mean())
 for name, (fn, prefix, renorm) in conditions.items():
     with steering(fn):

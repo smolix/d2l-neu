@@ -245,6 +245,16 @@ never change; `DATA_HUB` pins each to its SHA-1 under `LM_DATA_URL`.
 LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
 ```
 
+<!-- Placeholder (prose, none): the measured memory and speed table behind the plot in this section, for readers without a GPU. -->
+
+```{.python .input #hf-models-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-hf-memory-speed-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hf-memory-speed-v1.json',
+    'fce26dfa4ddb9d0463fcfef3ddcb3861ec7226d7')
+```
+
 <!-- Placeholder (stage 2): the pinned load, its text model and its report. -->
 
 ```{.python .input #hf-models-load-hf}
@@ -731,7 +741,12 @@ if GPU:
 ```{.python .input #hf-models-measure-fns}
 %%tab pytorch
 MiB = 2**20
-MATMUL = re.compile('gemm|gemv|xmma|cutlass|matmul|splitK', re.I)
+# Matrix-product kernels; the attention kernels (fmha, flash) are not.
+MATMUL = re.compile(
+    '^(?!.*(fmha|flash)).*(gemm|gemv|xmma|cutlass|matmul|splitK)', re.I)
+# A profiler session leaves CUPTI's launch hooks on for the rest of the
+# process, which adds about 5 ms to every later eager decode step: every
+# decode is timed before the first profile.
 
 def cache_bytes(cache):
     """Bytes of the floating-point tensors reachable from a cache object,
@@ -803,8 +818,10 @@ def step_kernels(model, cache, token, steps=10):
                 activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
             step()
             torch.cuda.synchronize()
-    return kernels, sum(e.device_type == torch.autograd.DeviceType.CUDA
-                        for e in prof.events())
+    launches = sum(e.device_type == torch.autograd.DeviceType.CUDA
+                   for e in prof.events())
+    assert launches > 0
+    return kernels, launches
 
 def bytes_read(config, n, b=2):
     """Bytes a decode step reads at context n: the weights except the
@@ -826,10 +843,9 @@ def close(measured, derived):  # allocator rounding: 5% or 2 MiB
     return abs(measured - derived) <= max(0.05 * derived, 2 * MiB)
 
 def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
-    """Memory and decode time at each context: the rows, and the kernels of
-    one decode step at 1,024 tokens."""
+    """Memory and decode time at each context, one row per context."""
     b, t = model.dtype.itemsize, config.get_text_config()
-    rows, kernels = [], None
+    rows = []
     print(f'{model.name_or_path}: attention '
           f'{model.config._attn_implementation}')
     for n in contexts:
@@ -859,8 +875,6 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
                 print('state', linear[0].recurrent_states[0].dtype,
                       'conv taps', linear[0].conv_states[0].dtype)
         wall = decode_ms(model, cache, token)
-        step_ms, launches = step_kernels(model, cache, token)
-        kernels = step_ms if n == 1024 else kernels
         logits_bytes = out.logits.nbytes
         del out
         with torch.inference_mode():  # sliding layers drop prompt keys here
@@ -880,18 +894,29 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
                 'recurrent_state'] + step.logits.nbytes),
             peak=peak, act_estimate=mem['activations'],
             wall_ms_median=wall[0], wall_ms_q1=wall[1], wall_ms_q3=wall[2],
-            busy_ms=sum(step_ms.values()),
-            matmul_ms=sum(ms for name, ms in step_ms.items()
-                          if MATMUL.search(name)),
-            launches=launches,
             r_over_beta_datasheet_ms=1e3 * R / BETA_DATASHEET,
             r_over_beta_measured_ms=1e3 * R / beta))
         del cache, step
-    return rows, kernels
+    return rows
+
+def profile_steps(model, ids, rows):
+    """Add one decode step's device time to each row, on a fresh prefill;
+    return the kernels at 1,024 tokens."""
+    kernels = None
+    for row in rows:
+        out = prefill(model, ids, row['n'])[0]
+        step_ms, row['launches'] = step_kernels(
+            model, out.past_key_values, out.logits[:, -1:].argmax(-1))
+        row['busy_ms'] = sum(step_ms.values())
+        row['matmul_ms'] = sum(ms for name, ms in step_ms.items()
+                               if MATMUL.search(name))
+        kernels = step_ms if row['n'] == 1024 else kernels
+        del out
+    return kernels
 
 def show(rows):
     df = pd.DataFrame(rows)
-    print(pd.DataFrame({
+    table = pd.DataFrame({
         'n': df.n, 'walker MiB': df.walker_logical / MiB,
         'formula MiB': df.formula / MiB,
         'growth/derived': df.growth / df.growth_derived,
@@ -899,16 +924,19 @@ def show(rows):
                                / df.growth_after_step_derived),
         'peak/Act': df.peak / df.act_estimate,
         'wall ms': df.wall_ms_median, 'q1': df.wall_ms_q1,
-        'q3': df.wall_ms_q3, 'busy ms': df.busy_ms,
-        'matmul ms': df.matmul_ms, 'R/beta sheet': df.r_over_beta_datasheet_ms,
-        'R/beta meas.': df.r_over_beta_measured_ms,
-        'launches': df.launches}).round(2).to_string(index=False))
+        'q3': df.wall_ms_q3, 'R/beta sheet': df.r_over_beta_datasheet_ms,
+        'R/beta meas.': df.r_over_beta_measured_ms})
+    for name, key in (('busy ms', 'busy_ms'), ('matmul ms', 'matmul_ms'),
+                      ('launches', 'launches')):
+        if key in df:  # after profile_steps
+            table[name] = df[key]
+    print(table.round(2).to_string(index=False))
 
 if GPU:
     print('Gated DeltaNet kernels:', 'flash-linear-attention'
           if importlib.util.find_spec('fla') else 'PyTorch reference code')
     ids = tokenizer(book, return_tensors='pt').input_ids.to(model.device)
-    qwen_rows, qwen_kernels = measure(model, configs[QWEN], ids, beta)
+    qwen_rows = measure(model, configs[QWEN], ids, beta)  # profiled later
     show(qwen_rows)
     for row in qwen_rows:  # C4, right after the prefill
         assert close(row['growth'], row['growth_derived'])
@@ -945,7 +973,7 @@ if GPU:
     torch.manual_seed(0)
     n_sea = sea['input_ids'].shape[1]
     replies = [gemma_tok.decode(  # the repository's sampling defaults
-        gemma.generate(**sea, max_new_tokens=16)[0, n_sea:],
+        gemma.generate(**sea, max_new_tokens=32)[0, n_sea:],
         skip_special_tokens=True) for _ in range(2)]
     print(replies, 'differ:', replies[0] != replies[1])
     question = chat(gemma_tok, QUESTION).to(gemma.device)
@@ -962,8 +990,8 @@ if GPU:
 if GPU:
     gemma_ids = gemma_tok(book, return_tensors='pt').input_ids.to(
         gemma.device)
-    gemma_rows, gemma_kernels = measure(gemma, configs[GEMMA], gemma_ids,
-                                        beta)
+    gemma_rows = measure(gemma, configs[GEMMA], gemma_ids, beta)
+    gemma_kernels = profile_steps(gemma, gemma_ids, gemma_rows)  # timed all
     show(gemma_rows)
     print('resident/logical:', [round(r['walker_resident']
                                       / r['walker_logical'], 2)
@@ -977,7 +1005,14 @@ if GPU:
 
 ```{.python .input #hf-models-profile-compare}
 %%tab pytorch
-if GPU:
+if GPU:  # Qwen again, to profile it after every timed decode step
+    del gemma
+    gc.collect()
+    torch.cuda.empty_cache()
+    model = AutoModelForCausalLM.from_pretrained(
+        RUN_MODEL, revision=RUN_REV, dtype=RUN_DTYPE, device_map=d2l.try_gpu())
+    qwen_kernels = profile_steps(model, ids, qwen_rows)
+    show(qwen_rows)
     at = {r['model']: r for r in qwen_rows + gemma_rows if r['n'] == 1024}
     for m, kernels in ((QWEN, qwen_kernels), (GEMMA, gemma_kernels)):
         print(m)
@@ -1054,7 +1089,7 @@ for i, (m, c) in enumerate(configs.items()):
     time_series += [
         (n_run, [r[k] for r in rows], f'C{i}{fmt}', f'{names[m]} {label}')
         for k, fmt, label in (('wall_ms_median', '-', 'wall'),
-                              ('busy_ms', '--', 'device busy'),
+                              ('busy_ms', '--', 'busy'),
                               ('r_over_beta_measured_ms', ':', 'bytes/β'))]
 _, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 3.2))
 with d2l.plt.rc_context({'legend.fontsize': 'x-small'}):
@@ -1065,6 +1100,13 @@ with d2l.plt.rc_context({'legend.fontsize': 'x-small'}):
         d2l.plot(list(X), list(Y), 'context (tokens)', ylabel, list(legend),
                  xscale='log', yscale=yscale, fmts=fmts, axes=ax,
                  legend_loc=loc)
+        ticks = [2**k for k in range(8, max(map(max, X)).bit_length(), 2)]
+        ax.set_xticks(ticks, [f'{n // 1024}k' if n >= 1024 else str(n)
+                              for n in ticks])
+        ax.set_xticks([], minor=True)
+    axes[1].set_ylim(0, 1.5 * axes[1].get_ylim()[1])  # room for the legend
+    axes[1].legend([label for *_, label in time_series], ncol=2,
+                   loc='upper center')
 for i, m in enumerate(configs):  # interquartile band of the wall time
     rows = [r for r in measured['rows'] if r['model'] == m]
     axes[1].fill_between([r['n'] for r in rows],

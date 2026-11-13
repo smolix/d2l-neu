@@ -4399,6 +4399,10 @@ HF_REVISIONS = {
 
 LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
 
+d2l.DATA_HUB['lm-hf-memory-speed-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hf-memory-speed-v1.json',
+    'fce26dfa4ddb9d0463fcfef3ddcb3861ec7226d7')
+
 _TEXT_KEY_MAPPING = {  # checkpoint key renames for a multimodal file's text
     'gemma4_text': {r'^model\.language_model\.': 'model.'}}
 

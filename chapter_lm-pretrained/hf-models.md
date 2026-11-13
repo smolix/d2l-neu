@@ -312,9 +312,16 @@ assert RUN_REV == HF_REVISIONS[RUN_MODEL]
 # A pinned load reads its files from a cache folder named after the commit
 folder = os.path.dirname(huggingface_hub.hf_hub_download(
     RUN_MODEL, 'config.json', revision=RUN_REV))
-in_file = sum(math.prod(shape)
-              for shape, _ in safetensors_header(RUN_MODEL).values())
+run_header = safetensors_header(RUN_MODEL)
+in_file = sum(math.prod(shape) for shape, _ in run_header.values())
 loaded = model.num_parameters()
+# Every tensor of the model has its counterpart in the file, where the text
+# model's names start with model.language_model; the output layer shares
+# the embedding's tensor
+tied = {'lm_head.weight'} if model.config.tie_word_embeddings else set()
+names = {re.sub(r'^model\.', 'model.language_model.', name)
+         for name in model.state_dict().keys() - tied}
+assert names <= run_header.keys()
 print(f'{folder}\non {sorted({str(p.device) for p in model.parameters()})}')
 print(f'{loaded:,} parameters loaded, {in_file:,} elements in the file, '
       f'{in_file - loaded:,} left on disk')
@@ -330,9 +337,11 @@ CHINESE = ('语言模型每次只生成一个词元。为了预测下一个词�
            '长文本推理常常受限于内存，而不是算力。')
 fname = d2l.download(d2l.DATA_URL + 'timemachine.txt', '../data',
                      '090b5e7e70c295757f55df93cb0a180b9691891a')
-book = open(fname).read()
-texts = {'The Time Machine': book[:20000],
-         'd2l/torch.py': open(d2l.__file__).read()[:20000],
+with open(fname, encoding='utf-8') as f:
+    book = f.read()
+with open(d2l.__file__, encoding='utf-8') as f:
+    library = f.read()
+texts = {'The Time Machine': book[:20000], 'd2l/torch.py': library[:20000],
          'Chinese': CHINESE}
 
 def per_char(encode):  # tokens per character of each text
@@ -382,13 +391,17 @@ with torch.inference_mode():
     ours = argmax_loop(prompt['input_ids'], ref.shape[1] - n_prompt)
     print('identical:', torch.equal(ours, ref))
     assert torch.equal(ours, ref)
+    # Without a cache every step reads the whole prefix again, so a long
+    # prompt shows what the cache saves (a short one is launch-bound)
+    long = tokenizer(book[:20000], return_tensors='pt').input_ids[
+        :, :2048 if GPU else 128].to(model.device)
     for name, f in (
-            ('argmax loop without a cache', lambda: argmax_loop(
-                prompt['input_ids'], 32)),
+            ('argmax loop without a cache', lambda: argmax_loop(long, 32)),
             ('generate with a cache', lambda: model.generate(
-                **prompt, min_new_tokens=32, max_new_tokens=32,
-                do_sample=False))):
-        print(f'{name}: {d2l.Benchmark(f, 0, 1).time:.2f} s for 32 tokens')
+                long, attention_mask=torch.ones_like(long),
+                min_new_tokens=32, max_new_tokens=32, do_sample=False))):
+        print(f'{name}: {d2l.Benchmark(f, 0, 1).time:.2f} s for 32 tokens '
+              f'after {long.shape[1]:,} prompt tokens')
 ```
 
 <!-- Placeholder (prose, ### Generation Arguments and Defaults): the sampling defaults each repository ships. -->
@@ -404,7 +417,8 @@ for m in (QWEN, GEMMA):
         source = 'config.json, library defaults'
         gen = GenerationConfig.from_model_config(
             AutoConfig.from_pretrained(m, revision=rev).get_text_config())
-    print(f'{m} ({source}): do_sample={gen.do_sample}, temperature='
+    mode = 'sampling' if gen.do_sample else 'greedy'  # unset (None): greedy
+    print(f'{m} ({source}): {mode}; do_sample={gen.do_sample}, temperature='
           f'{gen.temperature}, top_k={gen.top_k}, top_p={gen.top_p}, '
           f'stop tokens {gen.eos_token_id}')
 ```
@@ -558,6 +572,9 @@ buckets = pd.DataFrame({'from config': derived, 'from header': elements})
 buckets.loc['total'] = buckets.sum()
 print(buckets.map('{:,}'.format).to_string())
 assert derived == dict(elements)
+print(f'{RUN_MODEL} as loaded: {model.num_parameters():,} parameters, from '
+      f'its configuration {config_params(model.config):,}')
+assert model.num_parameters() == config_params(model.config)  # C2
 ```
 
 <!-- Placeholder (prose, ### The Gemma 4 Configuration): head widths, the per-layer embedding table, and what the file stores beyond the model. -->
@@ -780,6 +797,7 @@ def step_kernels(model, cache, token, steps=10):
 
     with torch.inference_mode():
         step()  # warm-up
+        torch.cuda.synchronize()  # the copy and warm-up finish unprofiled
         kernels = d2l.kernel_times(step, steps)
         with torch.profiler.profile(
                 activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
@@ -812,6 +830,8 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
     one decode step at 1,024 tokens."""
     b, t = model.dtype.itemsize, config.get_text_config()
     rows, kernels = [], None
+    print(f'{model.name_or_path}: attention '
+          f'{model.config._attn_implementation}')
     for n in contexts:
         pinned = config_memory(config, n, 1, b, window_cached=n)
         need = pinned['total'] - pinned['weights'] + (  # unfused attention
@@ -820,7 +840,11 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
         if need > torch.cuda.mem_get_info()[0]:
             print(f'{n} tokens skipped: {need / GiB:.1f} GiB not free')
             continue
-        out, before, growth, peak = prefill(model, ids, n)
+        try:
+            out, before, growth, peak = prefill(model, ids, n)
+        except torch.OutOfMemoryError:  # the estimate fell short (R6)
+            print(f'{n} tokens skipped: out of memory in the prefill')
+            continue  # the next context empties the allocator's cache
         cache, token = out.past_key_values, out.logits[:, -1:].argmax(-1)
         logical, resident = cache_bytes(cache)
         mem = config_memory(config, n, 1, b)
@@ -829,6 +853,11 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
         if n == 1024:
             print('live cache, bytes by dtype:',
                   {str(k): v for k, v in logical.items()})
+            linear = [layer for layer in cache.layers
+                      if hasattr(layer, 'recurrent_states')]
+            if linear:  # a hybrid's state and convolution taps
+                print('state', linear[0].recurrent_states[0].dtype,
+                      'conv taps', linear[0].conv_states[0].dtype)
         wall = decode_ms(model, cache, token)
         step_ms, launches = step_kernels(model, cache, token)
         kernels = step_ms if n == 1024 else kernels
@@ -905,6 +934,9 @@ if GPU:
     del model, prompt, reply, ref, ours
     gc.collect()
     torch.cuda.empty_cache()
+    left = torch.cuda.memory_allocated()  # a stray reference keeps 3.8 GB
+    print(f'allocated after freeing Qwen: {left / MiB:.0f} MiB')
+    assert left < GiB
     gemma, gemma_tok = load_hf(GEMMA)
     assert gemma.num_parameters() == config_params(configs[GEMMA])  # C2
     print(f'{gemma.num_parameters():,} parameters, as config_params says')
@@ -950,6 +982,15 @@ if GPU:
     for m, kernels in ((QWEN, qwen_kernels), (GEMMA, gemma_kernels)):
         print(m)
         d2l.show_profile(kernels, at[m]['wall_ms_median'])
+        print(f'matrix products, gemv kernels included: '
+              f'{at[m]["matmul_ms"] / at[m]["busy_ms"]:.0%} of busy time')
+        wall = {r['n']: r['wall_ms_median'] for r in qwen_rows + gemma_rows
+                if r['model'] == m}
+        if 256 in wall and 16384 in wall:  # C9: within 25% is nearly flat
+            print(f'wall time 16,384 / 256 tokens: '
+                  f'{wall[16384] / wall[256]:.2f}')
+        else:
+            print(f'wall time ratio not computed: contexts {sorted(wall)}')
         host_us = 1e3 * (at[m]['wall_ms_median'] - at[m]['busy_ms'])
         print(f'host time per launch: {host_us / at[m]["launches"]:.1f} us, '
               f'device busy under half the step: '

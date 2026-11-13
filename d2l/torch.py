@@ -6552,6 +6552,19 @@ d2l.DATA_HUB['lm-ud-ewt-test'] = (
 d2l.DATA_HUB['lm-interp-recall-v1'] = (
     d2l.LM_DATA_URL + 'lm-interp-recall-v1.json',
     'e3025b0216df5384d8a14f1e8e10c4cab080ebbf')
+# What the regeneration run (D2L_RERUN=1) trained and measured
+d2l.DATA_HUB['lm-tuned-lens-qwen3-0.6b-v1'] = (
+    d2l.LM_DATA_URL + 'lm-tuned-lens-qwen3-0.6b-v1.pt',
+    'e1a9275950de634b8f8a6e7dd516de662755834e')
+d2l.DATA_HUB['lm-sae-r1-l14-v1'] = (
+    d2l.LM_DATA_URL + 'lm-sae-r1-l14-v1.pt',
+    'b7d9589fda439d7bdd9e52572a24c6ea58efb263')
+d2l.DATA_HUB['lm-sae-q17b-l14-v1'] = (
+    d2l.LM_DATA_URL + 'lm-sae-q17b-l14-v1.pt',
+    '11982ca32f0382eb9bf594faee58e808d61be12d')
+d2l.DATA_HUB['lm-interp-results-v2'] = (
+    d2l.LM_DATA_URL + 'lm-interp-results-v2.zip',
+    '598f3366ae49d269dda2abfd8d3af715275c3f93')
 
 class _InterveneStop(Exception):
     """Raised right after the stop_after site, to end a forward early.

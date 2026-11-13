@@ -7106,7 +7106,9 @@ def closed_loop_stats(results, c):
     max(s_i, t_a)) / (t_b - t_a) is the mean number in flight. little =
     X W / c checks the client's bookkeeping, sustained = Lbar / c that it
     kept c in flight. X_tokens is None when a counted completion has no
-    usage. ttft_p50 and ttft_p90 (from t_first) are over all N. The results
+    usage. ttft_p50 and ttft_p90 are over all N, from t_first, or from
+    t_first_content when the reasoning is only whitespace (the empty think
+    block of a server with thinking off is not a first token). The results
     must come from one closed loop: a d2l.ReplayMiss or d2l.CostCapExceeded
     among them, a mix of cached and live results, more than c requests in
     flight at once, or send times whose wall and monotonic clocks disagree
@@ -7130,7 +7132,9 @@ def closed_loop_stats(results, c):
     X = done.sum() / window
     W = (f - s)[inside].mean() if inside.any() else float('nan')
     Lbar = np.clip(np.minimum(f, t_b) - np.maximum(s, t_a), 0, None).sum()
-    ttft = [r.t_first - r.t_send for r in ok if r.t_first is not None]
+    firsts = [r.t_first if (r.reasoning or '').strip() or (
+        r.t_first_content is None) else r.t_first_content for r in ok]
+    ttft = [t - r.t_send for r, t in zip(ok, firsts) if t is not None]
     p50, p90 = (map(float, np.percentile(ttft, [50, 90])) if ttft
                 else (None, None))
     X_tokens = None if None in tokens else float(sum(tokens) / window)
@@ -10611,8 +10615,10 @@ class ChatAPI:
 
     async def _read_stream(self, chunks):
         """Concatenate a streamed response; t_first is the first chunk with
-        reasoning or content, t_first_content the first with content, and
-        itl the gaps between such chunks."""
+        content or with reasoning that is not only whitespace (a server with
+        thinking off may send the empty think block before it schedules the
+        request), t_first_content the first with content, and itl the gaps
+        between the chunks from t_first on."""
         out = dict.fromkeys(('finish_reason', 'usage', 'model', 'provider',
                              'system_fingerprint', 't_first',
                              't_first_content'))
@@ -10627,7 +10633,8 @@ class ChatAPI:
                     continue
                 delta = choice.get('delta') or {}
                 r = delta.get('reasoning') or delta.get('reasoning_content')
-                if r or delta.get('content'):
+                if (delta.get('content') or (r or '').strip() or
+                        (r and out['t_first'] is not None)):
                     times.append(now)
                     if out['t_first'] is None:
                         out['t_first'] = now

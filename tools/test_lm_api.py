@@ -19,13 +19,15 @@ Library code (spec 18.7 part 5), numbered as the spec's unit tests:
     same results, and no key string reaches the cache, calls log or manifest.
 7.  The calls log: one line per HTTP attempt, append-only.
 8.  Streaming: the same text as a non-streamed call, the timestamp order,
-    `t_first` from a reasoning delta, `usage` from the final chunk.
+    `t_first` from a reasoning delta but not from an empty think block,
+    `usage` from the final chunk.
 9.  `api_cost` on hand-computed cases (1e-12).
 10. `price_from_listing`: per-token strings to per-million, the
     `pricing.overrides` windows of the DeepSeek row, errors.
 11. The cost cap: no HTTP request past the cap; 20 concurrent calls never
     overshoot it.
 12. `closed_loop_stats`: a discrete-event simulation (exact), N = 2c raises,
+    time to first token past an empty think block,
     `chat_batch` against `FakeChatServer(0.1, 8)`, and the D1 Monte Carlo.
 13. `LocalChatServer` with a stub HTTP server: start, process group gone after
     stop, a server that never becomes ready, one that exits early.
@@ -622,6 +624,27 @@ class Streaming(unittest.TestCase):
             self.assertEqual(r.usage['reasoning_tokens'],
                              r.usage['completion_tokens'])
 
+    def test_empty_think_block_is_not_a_first_token(self):
+        """transformers serve, thinking off, streams the empty think block
+        '\\n\\n' as reasoning before it schedules the request."""
+        class Chunk:
+            def __init__(self, delta):
+                self.d = {'choices': [{'index': 0, 'delta': delta}]}
+            def model_dump(self):
+                return self.d
+        async def chunks():
+            for delta in ({'reasoning_content': '\n\n'}, {},
+                          {'content': 'A'}, {'reasoning_content': '\n'},
+                          {'content': 'B'}):
+                await asyncio.sleep(0.02)
+                yield Chunk(delta)
+        _, api = fake_api()
+        out = asyncio.run(api._read_stream(chunks()))
+        self.assertEqual(out['t_first'], out['t_first_content'])
+        self.assertEqual((out['text'], out['reasoning']), ('AB', '\n\n\n'))
+        self.assertEqual(out['n_chunks'], 3)  # A, the later '\n', B
+        self.assertEqual(len(out['itl']), 2)
+
     def test_no_usage_without_include_usage(self):
         _, api = fake_api()
         r = api.chat(HELLO, max_tokens=8, stream=True,
@@ -892,6 +915,17 @@ class ClosedLoop(unittest.TestCase):
         self.assertAlmostEqual(st['ttft_p50'], 0.3)
         self.assertAlmostEqual(st['ttft_p90'],
                                float(np.percentile([.1, .2, .3, .4, .5], 90)))
+
+    def test_ttft_skips_an_empty_think_block(self):
+        # a cached reply whose t_first is the empty think block's chunk
+        out = [result(i, 1.0, t_first=i + 0.01, completion_tokens=i)
+               ._replace(reasoning='\n\n', t_first_content=i + 0.5)
+               for i in range(5)]
+        st = d2l.closed_loop_stats(out, 1)
+        self.assertAlmostEqual(st['ttft_p50'], 0.5)
+        thinking = [r._replace(reasoning='Let me think.') for r in out]
+        self.assertAlmostEqual(
+            d2l.closed_loop_stats(thinking, 1)['ttft_p50'], 0.01)
 
     def test_through_fake_server(self):
         # Real time: a full collection of what earlier tests left (the build

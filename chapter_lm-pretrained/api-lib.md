@@ -433,8 +433,10 @@ class ChatAPI:
 
     async def _read_stream(self, chunks):
         """Concatenate a streamed response; t_first is the first chunk with
-        reasoning or content, t_first_content the first with content, and
-        itl the gaps between such chunks."""
+        content or with reasoning that is not only whitespace (a server with
+        thinking off may send the empty think block before it schedules the
+        request), t_first_content the first with content, and itl the gaps
+        between the chunks from t_first on."""
         out = dict.fromkeys(('finish_reason', 'usage', 'model', 'provider',
                              'system_fingerprint', 't_first',
                              't_first_content'))
@@ -449,7 +451,8 @@ class ChatAPI:
                     continue
                 delta = choice.get('delta') or {}
                 r = delta.get('reasoning') or delta.get('reasoning_content')
-                if r or delta.get('content'):
+                if (delta.get('content') or (r or '').strip() or
+                        (r and out['t_first'] is not None)):
                     times.append(now)
                     if out['t_first'] is None:
                         out['t_first'] = now

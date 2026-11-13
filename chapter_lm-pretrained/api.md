@@ -10,7 +10,7 @@ The plan is a specification, not book text; this comment is replaced
 when the section is written.
 
 **Idea:** A hosted model is a service with a protocol, a price and limits that the client can measure, and what it cannot return is why the rest of the part works with open weights.
-**Opening:** DeepSeek-V4.1-Flash has 763 billion parameters, more than one A100 node holds even at four bits, yet it answers a GSM8K problem in about a second for a printed fraction of a cent. The section treats the client as a measuring instrument (latency, throughput under concurrency, cost, reproducibility) and closes on what survives of the chapter's toolkit when the weights are someone else's.
+**Opening:** DeepSeek-V4.1-Flash has 763 billion parameters, more than one node of eight 40 GB A100s holds even at four bits (an 8 × 80 GB node holds it at four bits), yet it answers a GSM8K problem in about a second for a printed fraction of a cent. The section treats the client as a measuring instrument (latency, throughput under concurrency, cost, reproducibility) and closes on what survives of the chapter's toolkit when the weights are someone else's.
 **Teaches:**
 - The chat-completions protocol: messages, sampling fields that map onto `sec_decoding`, streaming, `usage` as the ground truth for tokens and cost, `system_fingerprint` and served model id; a field probe matrix across a router, a local server and a closed provider.
 - `d2l.ChatAPI`: a request-hash replay cache (`replay`, `record`, `live`), bounded concurrency with full-jitter backoff honouring `Retry-After`, a cost cap, a manifest; the SDK's own retries turned off so 429s are counted.
@@ -112,8 +112,8 @@ LOCAL_LIVE = API_MODE != 'replay' and torch.cuda.is_available()
 LOCAL_MODE = API_MODE if LOCAL_LIVE else 'replay'
 API_SHA1 = {  # the committed caches (zips), recorded 2026-11-13
     'lm-api-listing-v1': '4916ce668be31ed37947dac80bc094a70ee75efc',
-    'lm-api-fields-v1': '1978c17699e6266ab84072db23a5699dfa2d42e2',
-    'lm-api-probe-v1': '18ffdf9df2c8aa0de8809f598f041c6d5fe43a56',
+    'lm-api-fields-v2': '9a12dce5a344f3e746de0c915fa3d2f505ee0f71',
+    'lm-api-probe-v2': 'e9aea3523b8ced2383500d3772bfb82893733354',
     'lm-api-sweep-v1': '63250dccbf90eae6143b5affe74ae25972f514b1',
     'lm-api-gsm8k-v1': '1fbb38c4cf5f65fb69da5ba3719cd850ba768dc6',
     'lm-api-determinism-v1': '448e39446d960dac298a5db3a4e6c0b95051683b',
@@ -240,7 +240,7 @@ print('listing retrieved', LISTING['retrieved'])
 pd.DataFrame(rows)
 ```
 
-<!-- Placeholder (stage 2): the open models people use most do not fit our GPUs, even at four bits per weight. -->
+<!-- Placeholder (stage 2): the open models people use most do not fit our GPUs, even at four bits per weight. The flagship at four bits (382 GB) exceeds a node of eight 40 GB A100s but fits eight 80 GB cards: say "40 GB" wherever an A100 node is named. -->
 
 ```{.python .input #api-weights-arith}
 %%tab pytorch
@@ -255,7 +255,8 @@ for m in (FLAGSHIP, SECOND, LOCAL):
     rows.append({'weights': LISTING['hf'][m]['repo'], 'params (B)': n / 1e9,
                  **{f'{p} (GB)': n * b / 1e9 for p, b in PRECISIONS},
                  '24 GB card': best_fit(n, 24),
-                 '8 x 40 GB node': best_fit(n, 8 * 40)})
+                 '8 x 40 GB node': best_fit(n, 8 * 40),
+                 '8 x 80 GB node': best_fit(n, 8 * 80)})
 pd.DataFrame(rows).round(1)
 ```
 
@@ -270,7 +271,7 @@ samples = pd.read_json(d2l.download_keyed('lm-gsm8k-samples-v1'),
 GSM_IDS = [int(i) for i in dict.fromkeys(samples.problem_id)]  # 18.4's
 assert GSM_IDS == list(np.random.default_rng(0).permutation(
     len(gsm_test))[:100])  # its seeded rule
-flagship = hosted(FLAGSHIP, cache_file('lm-api-probe-v1', 'flagship'),
+flagship = hosted(FLAGSHIP, cache_file('lm-api-probe-v2', 'flagship'),
                   share=0.05, reasoning={'enabled': False})
 question = [{'role': 'user', 'content': gsm_test.question[GSM_IDS[0]]}]
 r = flagship.chat(question, temperature=0, seed=0, max_tokens=512)
@@ -280,11 +281,11 @@ print(f'{r.t_total:.2f} s; served {r.model} by {r.provider}; '
       f'{d2l.api_cost(r.usage, flagship.price):.6f} USD from the listing')
 ```
 
-<!-- Placeholder (stage 2): hidden reasoning is billed as completion tokens and can use up the whole output budget (on the problem with the longest reference solution: on the first problem Qwen3.8-27B reasoned for 39 tokens and answered inside 64). -->
+<!-- Placeholder (stage 2): hidden reasoning is billed as completion tokens and can use up the whole output budget (on the problem with the longest reference solution: on the first problem Qwen3.8-27B reasoned for 39 tokens and answered inside 64). With thinking off the same problem needs about 870 tokens: at 512 it was cut off as well (lm-api-probe-v1), so the contrast runs at 1,024 and finishes with `stop`. -->
 
 ```{.python .input #api-reasoning-trap}
 %%tab pytorch
-second = hosted(SECOND, cache_file('lm-api-probe-v1', 'second'),
+second = hosted(SECOND, cache_file('lm-api-probe-v2', 'second'),
                 share=0.05)
 LONGEST = sorted(GSM_IDS, key=lambda i: -len(gsm_test.answer[i]))
 hard = [{'role': 'user', 'content': gsm_test.question[LONGEST[0]]}]
@@ -293,13 +294,15 @@ print(f'content {trap.text!r}, finish {trap.finish_reason}, '
       f'{len(trap.reasoning or "")} characters of reasoning; {trap.usage}')
 assert trap.text == '' and trap.finish_reason == 'length'
 assert trap.usage['reasoning_tokens'] == trap.usage['completion_tokens'] == 64
-answer = second.chat(hard, temperature=0, seed=0, max_tokens=512,
+answer = second.chat(hard, temperature=0, seed=0, max_tokens=1024,
                      extra_body={'reasoning': {'enabled': False}})
-print(f'thinking off: {answer.text[-80:]!r}; {answer.usage}')
+print(f'thinking off: {answer.text[-80:]!r}, finish '
+      f'{answer.finish_reason}; {answer.usage}')
 assert not answer.usage['reasoning_tokens']
+assert answer.finish_reason == 'stop', 'thinking off did not finish either'
 ```
 
-<!-- Placeholder (stage 2): the effort field moves reasoning tokens and cost, not the protocol (an anecdote on five problems). -->
+<!-- Placeholder (stage 2): the effort field moves reasoning tokens and cost, not the protocol (an anecdote on five problems). Quote the paired per-problem counts, not the medians: high is above low and medium on every problem, while low and medium are indistinguishable on these five (medium is below low on three). -->
 
 ```{.python .input #api-effort}
 %%tab pytorch
@@ -320,9 +323,14 @@ effort = pd.DataFrame({
     'USD': [usd(effort_api, r) for r in results]})
 medians = effort.groupby('effort', sort=False).median()
 print('an anecdote: n = 5 problems per effort; medians')
-print(medians.round(4))
-ordered = (np.diff(medians['reasoning tokens']) > 0).all()
-print('more reasoning tokens at higher effort:', 'yes' if ordered else 'no')
+print(medians.round({'reasoning tokens': 0, 'completion tokens': 0,
+                     'seconds': 2, 'USD': 6}))
+paired = effort['reasoning tokens'].to_numpy().reshape(3, 5)  # by problem
+for e, t in zip(EFFORTS, paired):
+    print(f'{e:6s} reasoning tokens per problem: {t.tolist()}')
+for i, j in ((0, 1), (1, 2), (0, 2)):  # paired, problem by problem
+    print(f'{EFFORTS[j]} above {EFFORTS[i]} on '
+          f'{(paired[j] > paired[i]).sum()} of 5 problems')
 ```
 
 <!-- Placeholder (stage 2): the same protocol from a server on our own GPU: transformers serve with continuous batching. -->
@@ -362,7 +370,7 @@ def local(cache, **kwargs):
     return api
 ```
 
-<!-- Placeholder (stage 2): a request field a provider accepts is not necessarily one it honours: one detection rule per field. -->
+<!-- Placeholder (stage 2): a request field a provider accepts is not necessarily one it honours: one detection rule per field. With require_parameters, any field an endpoint does not list is rejected, so each test sends only the field it probes (the seed test samples at the default temperature where temperature is not listed). gpt-5-nano's usage under max_completion_tokens=16 reports more reasoning than completion tokens, so claim 7 (reasoning inside completion tokens) is limited to the experiment arms. -->
 
 ```{.python .input #api-probe}
 %%tab pytorch
@@ -395,6 +403,12 @@ def covered(api, a):  # top-5 log-probabilities for every generated token
               'partial' if n else 'ignored')
     return status, f'{n} of {out} tokens'
 
+def capped(api, a):  # reasoning tokens are bounded by the cap as well
+    o, r = (a.usage[k] or 0 for k in ('completion_tokens', 'reasoning_tokens'))
+    if r > o:  # usage contradicts itself: no verdict on the cap
+        return 'inconsistent', f'{o} completion < {r} reasoning tokens'
+    return o <= 16, f'{o} completion, {r} reasoning tokens'
+
 def thinks(r):  # a streamed empty think block arrives as '\n\n'
     return bool(r.usage['reasoning_tokens'] or (r.reasoning or '').strip())
 
@@ -403,22 +417,25 @@ def echoed(api, a):  # prompt log-probabilities, or the prompt echoed
     echo = COUNT[0]['content'] in a.text
     return lp or echo, f'prompt_logprobs: {lp}, echo: {echo}'
 
-def tests(base, on, off, max_tokens):
+def tests(base, on, off, max_tokens, temperature):
     """field -> (requests as (messages, replica, params), rule mapping the
     client and the results to (honoured?, evidence)); base is the request
     body every test sends, on and off the bodies of the thinking switch.
+    The seed test samples at temperature 1 only where the endpoint lists
+    temperature (with require_parameters an unlisted field is rejected).
     Evidence holds flags, counts and lengths, never response text: the
     closed model's outputs may not be committed."""
     def p(body=base, **kw):
         return {'max_tokens': max_tokens, **kw,
                 **({'extra_body': body} if body else {})}
+    t = {'temperature': 1} if temperature else {}  # else the default
+    temp = t.get('temperature', 'default')
     return {
-        'seed': ([(STORY, 0, p(temperature=1, seed=7)),
-                  (STORY, 1, p(temperature=1, seed=7)),
-                  (STORY, 0, p(temperature=1, seed=8))],
-                 lambda api, a, b, c: (a.text == b.text != c.text,
-                                       f'7 = 7: {a.text == b.text}, '
-                                       f'8 differs: {c.text != a.text}')),
+        'seed': ([(STORY, 0, p(**t, seed=7)), (STORY, 1, p(**t, seed=7)),
+                  (STORY, 0, p(**t, seed=8))],
+                 lambda api, a, b, c: (a.text == b.text != c.text, (
+                     f'7 = 7: {a.text == b.text}, 8 differs: '
+                     f'{c.text != a.text}, temperature {temp}'))),
         'n=2': ([(COUNT, 0, p(n=2))], lambda api, a: (
             n_choices(api, a) == 2, f'{n_choices(api, a)} choices returned')),
         'logprobs, top 5': ([(COUNT, 0, p(logprobs=True, top_logprobs=5))],
@@ -437,8 +454,7 @@ def tests(base, on, off, max_tokens):
             f'on {thinks(a)}, off {thinks(b)}')),
         'max_completion_tokens=16': (
             [(STORY, 0, p(max_tokens=None, max_completion_tokens=16))],
-            lambda api, a: (a.usage['completion_tokens'] <= 16,
-                            f'{a.usage["completion_tokens"]} tokens')),
+            capped),
         'prompt log-probabilities': (  # vLLM's two fields
             [(COUNT, 0, p(body={**(base or {}), 'prompt_logprobs': 1,
                                 'echo': True}))],
@@ -471,8 +487,10 @@ async def check(api, requests_, rule):
 
 async def probe(name, api, base, on, off, max_tokens, model_id):
     rows = []
-    for field, (requests_, rule) in tests(base, on, off,
-                                          max_tokens).items():
+    temperature = model_id not in LISTING['endpoints'] or (  # local: none
+        'temperature' in endpoint(model_id)['supported_parameters'])
+    for field, (requests_, rule) in tests(base, on, off, max_tokens,
+                                          temperature).items():
         status, evidence, date = await check(api, requests_, rule)
         rows.append({'endpoint': name, 'field': field, 'status': status,
                      'evidence': evidence, 'date': date})
@@ -503,7 +521,7 @@ async def probe(name, api, base, on, off, max_tokens, model_id):
                  'date': day([one, *four])})
     return rows
 
-fields_file = os.path.join(api_dir('lm-api-fields-v1'), 'lm-api-fields.csv')
+fields_file = os.path.join(api_dir('lm-api-fields-v2'), 'lm-api-fields.csv')
 LOCAL_NAME = 'Qwen3-4B (local server)'
 if API_MODE != 'replay':  # replay reads the committed table
     router_off, router_on = ({'reasoning': {'enabled': s}}
@@ -522,7 +540,7 @@ if API_MODE != 'replay':  # replay reads the committed table
                                 CLOSED)}  # a closed model thinks by default
     if LOCAL_LIVE:
         ENDPOINTS[LOCAL_NAME] = (
-            local(cache_file('lm-api-probe-v1', 'local')), local_off,
+            local(cache_file('lm-api-probe-v2', 'local')), local_off,
             local_on, local_off, 64, LOCAL)
     rows = await asyncio.gather(*(probe(name, *args)
                                   for name, args in ENDPOINTS.items()))
@@ -746,7 +764,7 @@ print(f'{type(error).__name__} after {fake.n_requests} attempt')
 assert getattr(error, 'status_code', None) == 401 and fake.n_requests == 1
 ```
 
-<!-- Placeholder (stage 2): the derivation's mean sleep, and 64 clients that failed together. -->
+<!-- Placeholder (stage 2): the derivation's mean sleep, and 64 clients that failed together. Lead with the finish time (over 200 seeds, jitter finishes in about 15 s against 63 s); the attempt counts overlap (jitter 221 to 239, none 238), so do not claim fewer attempts. -->
 
 ```{.python .input #api-backoff-check}
 %%tab pytorch
@@ -781,10 +799,14 @@ def retry_storm(n=64, rate=10, jitter=True, seed=0):
             d = d2l.backoff_delay(a, rng=rng) if jitter else min(60, 2**a)
             heapq.heappush(events, (t + d, i, a + 1))
     return attempts, t_done
-for jitter in (False, True):
-    attempts, t_done = retry_storm(jitter=jitter)
-    print(f'jitter {jitter!s:5}: {attempts} attempts, all done at '
-          f'{t_done:.1f} s')
+for jitter in (False, True):  # 200 storms; without jitter all are equal
+    storms = np.array([retry_storm(jitter=jitter, seed=k)
+                       for k in range(200)])
+    (a_lo, t_lo), (a_mid, t_mid), (a_hi, t_hi) = np.percentile(
+        storms, [0, 50, 100], axis=0)
+    print(f'jitter {jitter!s:5}: all done at {t_mid:.1f} s ({t_lo:.1f} to '
+          f'{t_hi:.1f}), {a_mid:.0f} attempts ({a_lo:.0f} to {a_hi:.0f}); '
+          f'medians and ranges over 200 seeds')
 ```
 
 <!-- Placeholder (stage 2): Little's law on the client's own timestamps, measured on the steady window. -->
@@ -804,7 +826,9 @@ def closed_loop_stats(results, c):
     max(s_i, t_a)) / (t_b - t_a) is the mean number in flight. little =
     X W / c checks the client's bookkeeping, sustained = Lbar / c that it
     kept c in flight. X_tokens is None when a counted completion has no
-    usage. ttft_p50 and ttft_p90 (from t_first) are over all N. The results
+    usage. ttft_p50 and ttft_p90 are over all N, from t_first, or from
+    t_first_content when the reasoning is only whitespace (the empty think
+    block of a server with thinking off is not a first token). The results
     must come from one closed loop: a d2l.ReplayMiss or d2l.CostCapExceeded
     among them, a mix of cached and live results, more than c requests in
     flight at once, or send times whose wall and monotonic clocks disagree
@@ -826,7 +850,9 @@ def closed_loop_stats(results, c):
     X = done.sum() / window
     W = (f - s)[inside].mean() if inside.any() else float('nan')
     Lbar = np.clip(np.minimum(f, t_b) - np.maximum(s, t_a), 0, None).sum()
-    ttft = [r.t_first - r.t_send for r in ok if r.t_first is not None]
+    firsts = [r.t_first if (r.reasoning or '').strip() or (
+        r.t_first_content is None) else r.t_first_content for r in ok]
+    ttft = [t - r.t_send for r, t in zip(ok, firsts) if t is not None]
     p50, p90 = (map(float, np.percentile(ttft, [50, 90])) if ttft
                 else (None, None))
     X_tokens = None if None in tokens else float(sum(tokens) / window)
@@ -868,7 +894,7 @@ assert (abs(table[['little', 'sustained']] - 1) < 0.02).all().all(), table
 table.round(3)
 ```
 
-<!-- Placeholder (stage 2): Experiment 1: a closed-loop sweep against the local server, two passes in shuffled order. -->
+<!-- Placeholder (stage 2): Experiment 1: a closed-loop sweep against the local server, two passes in shuffled order. Time to first token is measured to the first content token: with thinking off, transformers serve streams the empty think block at once, before it schedules the request, and the first capture timed that chunk (TTFT looked flat; it grows past the knee). Exercise 5 (t_total - t_first, chunk counts) must use the same convention. -->
 
 ```{.python .input #api-sweep-local}
 %%tab pytorch
@@ -986,7 +1012,7 @@ print('parameters:', GSM_PARAMS, '; thinking off: reasoning.enabled = '
       'False (router), chat_template_kwargs.enable_thinking = False (local)')
 ```
 
-<!-- Placeholder (stage 2): four arms at once; per arm accuracy, latency, and the price of a correct answer. -->
+<!-- Placeholder (stage 2): four arms at once; per arm accuracy, latency, and the price of a correct answer. Part of the cost-per-correct ratio is prompt caching at Novita (the 4-shot prefix is billed at the cached price on most flagship calls; Parasail caches none): quote both the billed and the list-price ratio, "about 4 to 6 times", not one figure. The local arm's GPU-seconds per correct are measured at concurrency 8, below the knee (about 32): say so here and in Exercise 3; near the knee the figure is several times lower. -->
 
 ```{.python .input #api-gsm8k-run}
 %%tab pytorch
@@ -1003,36 +1029,45 @@ outs = await asyncio.gather(*(chat_batch(api, [
     {'messages': m, 'replica': k, **GSM_PARAMS} for m in GSM_MESSAGES],
     concurrency=c) for api, k, c in ARMS.values()))
 CORRECT, rows = {}, []
-for (arm, (api, _, _)), results in zip(ARMS.items(), outs):
+for (arm, (api, _, c)), results in zip(ARMS.items(), outs):
     assert not any(isinstance(r, Exception) for r in results), arm
     assert not any(thinks(r) for r in results), f'{arm}: thinking'
     correct = np.array([d2l.extract_answer(r.text) == g
                         for r, g in zip(results, GSM_GOLD)], dtype=float)
     CORRECT[arm], ci = correct, d2l.bootstrap_ci(correct)
     latency = np.percentile([r.t_total for r in results], [50, 90])
-    row = {'arm': arm, 'accuracy': ci.mean, 'lo': ci.ci[0], 'hi': ci.ci[1],
+    row = {'arm': arm, 'concurrency': c, 'accuracy': ci.mean,
+           'lo': ci.ci[0], 'hi': ci.ci[1],
            'prompt tokens': np.mean([r.usage['prompt_tokens']
                                      for r in results]),
            'completion tokens': np.mean([r.usage['completion_tokens']
                                          for r in results]),
            'p50 s': latency[0], 'p90 s': latency[1]}
     n_correct = max(correct.sum(), 1)
-    if api.price is not None:  # hosted: dollars
+    if api.price is not None:  # hosted: dollars, billed and at list price
         cost = sum(usd(api, r) for r in results)
-        row.update({'USD per 100': 100 * cost / len(results),
-                    'USD per correct': cost / n_correct})
+        listed = sum(d2l.api_cost({**r.usage, 'cached_tokens': 0}, api.price)
+                     for r in results)  # as if no prompt token were cached
+        row.update({'cached share': sum(
+                        r.usage.get('cached_tokens') or 0 for r in results)
+                        / sum(r.usage['prompt_tokens'] for r in results),
+                    'USD per 100': 100 * cost / len(results),
+                    'USD per correct': cost / n_correct,
+                    'list USD per correct': listed / n_correct})
     else:  # local: the arm's wall-clock span on one GPU
         span = (max(r.t_send + r.t_total for r in results) -
                 min(r.t_send for r in results))
         row['GPU-s per correct'] = span / n_correct
     rows.append(row)
 gsm = pd.DataFrame(rows).set_index('arm')
-per_correct = gsm['USD per correct']
-print(f'Qwen3.8-27B / flagship: accuracy x '
-      f'{gsm.accuracy["Qwen3.8-27B"] / gsm.accuracy["flagship r0"]:.2f}, '
-      f'USD per correct x '
-      f'{per_correct["Qwen3.8-27B"] / per_correct["flagship r0"]:.2f}')
-gsm.round(4).assign(**{'USD per correct': gsm['USD per correct'].round(6)})
+ratio = gsm.loc['Qwen3.8-27B'] / gsm.loc['flagship r0']
+print(f'Qwen3.8-27B / flagship: accuracy x {ratio.accuracy:.2f}, USD per '
+      f'correct x {ratio["USD per correct"]:.2f} as billed, x '
+      f'{ratio["list USD per correct"]:.2f} at list price (cached prompt '
+      f'share {gsm["cached share"]["flagship r0"]:.2f} vs '
+      f'{gsm["cached share"]["Qwen3.8-27B"]:.2f})')
+gsm.round(4).assign(**{k: gsm[k].round(6) for k in (
+    'USD per correct', 'list USD per correct')})
 ```
 
 <!-- Placeholder (stage 2): paired comparisons with exact McNemar tests, Holm-adjusted, against the replica noise floor. -->
@@ -1073,7 +1108,7 @@ else:
 compare.round(4)
 ```
 
-<!-- Placeholder (stage 2): Experiment 3: identical requests at temperature 0 with a seed: twenty to the hosted flagship, five each to the local server alone and under load. -->
+<!-- Placeholder (stage 2): Experiment 3: identical requests at temperature 0 with a seed: twenty to the hosted flagship, five each to the local server alone and under load. The cause of the local-alone divergence was checked on the GPU (stage 2b, verify-18.7-outputs.md): with prefix block sharing off (ContinuousBatchingConfig.allow_block_sharing=False; no CLI flag) five sequential repeats agree on all three problems, with it on replica 0 differs from 1 to 4 on two of three (later replicas reuse the cached 4-shot prompt blocks); under 8 background lanes they disagree with sharing on or off, so batch composition alone also breaks determinism. First divergence is counted in characters, not tokens. -->
 
 ```{.python .input #api-determinism}
 %%tab pytorch
@@ -1138,11 +1173,12 @@ for condition, results in (('flagship', on_flagship), ('local alone', alone),
     for k, i in enumerate(DET_IDS):
         texts = [r.text for r in results[n * k:n * k + n]]
         modal = collections.Counter(texts).most_common(1)[0][0]
-        firsts = [len(os.path.commonprefix([t, modal]))
+        firsts = [len(os.path.commonprefix([t, modal]))  # in characters
                   for t in texts if t != modal]
         rows.append({'condition': condition, 'problem': i, 'replicas': n,
                      'distinct completions': len(set(texts)),
-                     'first divergence, min': min(firsts, default=None),
+                     'first divergent character, min': min(
+                         firsts, default=None),
                      'median': np.median(firsts) if firsts else None,
                      'distinct answers': len({d2l.extract_answer(t)
                                               for t in texts})})
@@ -1159,7 +1195,7 @@ else:
     print('no local server in replay')
 ```
 
-<!-- Placeholder (stage 2): what every client did: calls, cache hits, retries, spend, and one provider and one served id per arm. -->
+<!-- Placeholder (stage 2): what every client did: calls, cache hits, retries, spend, and one provider and one served id per arm. Quote the recording's totals from the committed-caches line (it includes the background lanes and the local probe); the closed-model probe's spend is outside the committed caches. -->
 
 ```{.python .input #api-manifest}
 %%tab pytorch
@@ -1242,7 +1278,19 @@ if key:  # the key may occur in no cache, calls log or manifest
                 hits.append(name)
     assert not hits, f'the API key occurs in {len(hits)} files'
     print(f'key material: none in {len(files)} files')
-print(f'the recording: {sum(row["live calls"] for row in rows)} live calls, '
-      f'{total:.4f} USD of {COST_CAP_USD}; this run {spent:.4f} USD')
+print(f'clients of this notebook: {sum(row["live calls"] for row in rows)} '
+      f'live calls, {total:.4f} USD of {COST_CAP_USD}; this run '
+      f'{spent:.4f} USD')
+committed = collections.Counter()  # every arm of every committed cache
+for k in API_SHA1:
+    path = os.path.join(api_dir(k), 'manifest.json')
+    if os.path.exists(path):  # the listing and the fields table have none
+        with open(path) as f:
+            for arm in json.load(f)['recorded'].values():
+                committed.update({k: arm.get(k, 0)
+                                  for k in ('live calls', 'USD')})
+print(f'the committed caches: {committed["live calls"]} live calls, '
+      f'{committed["USD"]:.4f} USD, background lanes and the local probe '
+      f'included; the closed-model probe is not committed')
 manifest.drop(columns=['usage cost', 'listing cost'], errors='ignore')
 ```

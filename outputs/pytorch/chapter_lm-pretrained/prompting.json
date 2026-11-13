@@ -1,0 +1,403 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretrained/prompting.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e229012c10c95a982bbb81a938ef55a4cf3091ed1a91b72e83d9e9881cd56d6d",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "prompting-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-imports-extra": {
+      "code_fingerprint": "sha256:8f8981ca458ccc473140595669bb6bb9c96a8fcadeac5ee84ce2d3cc7a41a286",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-setup": {
+      "code_fingerprint": "sha256:b31910001e541898d1fefec2eb598ccd4b9e51b793d5902651b4c2cc9c61f682",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-load-models": {
+      "code_fingerprint": "sha256:5121991f34a20c3d22a0e5a51acfedcd903bc8e78e0e8cf1e474adb00b92601f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-1.7B@70d244cc86cc: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nQwen/Qwen3-1.7B-Base: 1,720,574,976 parameters in torch.bfloat16\nQwen/Qwen3-1.7B: 1,720,574,976 parameters in torch.bfloat16\n"
+        }
+      ]
+    },
+    "prompting-opening-generate": {
+      "code_fingerprint": "sha256:0e7402ba6087a046ae56ff44365169f292a8756c714458719c2de8ee0b2245f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "What is the topic of this news headline?\nLocal team wins cup final\n<continuation>'The topic of this news headline is a local team winning a'\n\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Headline: Leaders meet to settle a border dispute\nTopic: World\n\nHeadline: Striker signs a new three-year contract\nTopic: Sports\n\nHeadline: Chip maker shares climb after strong earnings\nTopic: Business\n\nHeadline: New phone battery lasts a whole week\nTopic: Tech\n\nHeadline: Local team wins cup final\nTopic:<continuation>' Sports\\n\\nHeadline: New car model launched\\nTopic:'\n\n"
+        }
+      ]
+    },
+    "prompting-chat-template": {
+      "code_fingerprint": "sha256:0168811a8239a96079e59c27c3e1832bc41e6bdf9549a17d083d185e3e5e2c9f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "<|im_start|>system\nName the topic of the headline.<|im_end|>\n<|im_start|>user\nHeadline: Striker signs a new three-year contract<|im_end|>\n<|im_start|>assistant\nSports<|im_end|>\n<|im_start|>user\nHeadline: Local team wins cup final<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n\n[151644:<|im_start|>] 8948:system 198:\\n 675:Name 279: the 8544: topic 315: of\n279: the 31163: headline 13:. [151645:<|im_end|>] 198:\\n\n[151644:<|im_start|>] 872:user 198:\\n 12346:Head 1056:line 25:: 4509: Str\n24803:iker 11929: signs 264: a 501: new 2326: three 4666:-year 5116: contract\n[151645:<|im_end|>] 198:\\n\n[151644:<|im_start|>] 77091:assistant 198:\\n 40979:Sports [151645:<|im_end|>]\n198:\\n\n[151644:<|im_start|>] 872:user 198:\\n 12346:Head 1056:line 25:: 8774: Local\n2083: team 14816: wins 10525: cup 1590: final [151645:<|im_end|>] 198:\\n\n[151644:<|im_start|>] 77091:assistant 198:\\n [151667:<think>] 271:\\n\\n\n[151668:</think>] 271:\\n\\n\n"
+        }
+      ]
+    },
+    "prompting-template-tails": {
+      "code_fingerprint": "sha256:b262f15b496b84ac0964298f85b4f6de19ccd123625609235f2a8dc9ffa27721",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "                  model                       tail, enable_thinking unset  \\\n0       Qwen/Qwen3-1.7B                         '<|im_start|>assistant\\n'   \n1  Qwen/Qwen3-1.7B-Base                         '<|im_start|>assistant\\n'   \n2       Qwen/Qwen3.5-2B  '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'   \n3       Qwen/Qwen3.5-4B                '<|im_start|>assistant\\n<think>\\n'   \n\n                        tail, enable_thinking=False template thinks by default  \n0  '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'                        yes  \n1  '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'                        yes  \n2  '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'                         no  \n3  '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'                        yes  "
+        }
+      ]
+    },
+    "prompting-label-logprobs": {
+      "code_fingerprint": "sha256:b66a25f0ddcf1fa02ca97e45bf2445a14725681a14792dd9ae8d8a103660a65d",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-reader-check": {
+      "code_fingerprint": "sha256:455e4115287ebb271b64f6f667f0c85aa46f0099cd6df0bcfa3495a3a7b09263",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reader vs full softmax: 8.9e-02 nats (tolerance 5.0e-01)\nreader vs full softmax: 1.5e-01 nats (tolerance 5.0e-01)\nreader vs full softmax: 7.7e-02 nats (tolerance 2.5e-01)\nreader vs full softmax: 1.1e-01 nats (tolerance 5.0e-01)\nbatched vs one at a time: 1.4e-01 nats (screen 2.5e-01)\nbatched vs one at a time: 1.0e-01 nats (screen 2.5e-01)\nbatched vs one at a time: 1.0e-01 nats (screen 2.5e-01)\nbatched vs one at a time: 5.8e-02 nats (screen 2.5e-01)\n"
+        }
+      ]
+    },
+    "prompting-label-tokens": {
+      "code_fingerprint": "sha256:6b475e949fc2402988a12b162423dedfa4dbcf9ebbf095f49888af08c12c4915",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    word   after \"Topic:\"  after a newline\n   World    4337 ' World'    10134 'World'\n  Sports  13180 ' Sports'   40979 'Sports'\nBusiness 8025 ' Business' 22727 'Business'\n    Tech    17374 ' Tech'     34097 'Tech'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "label mass after \"Topic:\": 0.320; after \"Topic: \", read at the bare words: 0.000\nValueError: prompt 0 ends inside a token ('inal\\nTopic: ' merges with 'World'):\nstrip trailing whitespace from the prompt, the space belongs to the label\nValueError: label word 'Sci/Tech' after ' ' is 3 tokens [' Sci', '/T', 'ech']:\nuse a word that is one token there, or another sep\n"
+        }
+      ]
+    },
+    "prompting-template-mismatch": {
+      "code_fingerprint": "sha256:99722596f9964a1218342ccdee921bffcd105cf916e863e4a7aff4e26d3398ae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "                                     World  Sports  Business   Tech  \\\ninstruct, chat template              1.000   0.000     0.000  0.000   \ninstruct, plain text                 0.999   0.001     0.000  0.000   \nbase, chat template                  0.782   0.004     0.183  0.032   \nbase, chat template, no think block  0.384   0.327     0.133  0.156   \n\n                                     label mass  \ninstruct, chat template                   0.378  \ninstruct, plain text                      0.985  \nbase, chat template                       0.000  \nbase, chat template, no think block       0.019  "
+        }
+      ]
+    },
+    "prompting-fewshot-prompt": {
+      "code_fingerprint": "sha256:61faec20e8e70c9257912096d637a15afe1f78a4ec7416cb8fecfe9a2824e5d0",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-formats": {
+      "code_fingerprint": "sha256:996eeebdf5c8a9afc94c3b6ff3f6798e63de0f9cce7454e370e3fcb177acb749",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "--- plain\nHeadline: Leaders meet to settle a border dispute\nTopic: World\n\nHeadline: Striker signs a new three-year contract\nTopic: Sports\n\nHeadline: Local team wins cup final\nTopic:\n--- qa\nQ: Leaders meet to settle a border dispute\nA: World\n\nQ: Striker signs a new three-year contract\nA: Sports\n\nQ: Local team wins cup final\nA:\n--- chat_multi\n<|im_start|>system\nName the topic of each news headline: World, Sports, Business or Tech.<|im_end|>\n<|im_start|>user\nLeaders meet to settle a border dispute<|im_end|>\n<|im_start|>assistant\nWorld<|im_end|>\n<|im_start|>user\nStriker signs a new three-year contract<|im_end|>\n<|im_start|>assistant\nSports<|im_end|>\n<|im_start|>user\nLocal team wins cup final<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n\n--- chat_single\n<|im_start|>user\nHeadline: Leaders meet to settle a border dispute\nTopic: World\n\nHeadline: Striker signs a new three-year contract\nTopic: Sports\n\nHeadline: Local team wins cup final\nTopic:<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n\n"
+        }
+      ]
+    },
+    "prompting-data-hub": {
+      "code_fingerprint": "sha256:710d77f09b45af0fe61d3d83c76a8647bcc7bd9ee998f22b722dbeb327aa4cc8",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-data-clean": {
+      "code_fingerprint": "sha256:602f404651c0bb607bbf957c4219d333f8751ff3f3babd5855cdb37bd103c54d",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-data": {
+      "code_fingerprint": "sha256:a3c8163b02a73a2fdfa4c122f6b2820f619021949cf0f93c9e445905a80755bf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "200 test items, the first 50 of each class in file order; pool per class [29675, 29626, 29474, 29347]\n1878 train titles removed as duplicates of test titles; titles changed by each cleanup rule:\n       #39; is '  #36; is $  #145; to #151;  other #n;  &entities;  <tags>  \\ and spaces\ntrain       9811        267              33         22        2590    2590          4016\ntest         580         14               0          0         151     151           218\n"
+        }
+      ]
+    },
+    "prompting-draws": {
+      "code_fingerprint": "sha256:82e247db6dd2108f1d0c0a6991c2b3831f9d4708c898d2ea7b3b52f2d713a87a",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-grid-def": {
+      "code_fingerprint": "sha256:bafe74885fea29781054beaa8ce5c777b0ee990f54752498a45ce051d4939332",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-grid-prompts": {
+      "code_fingerprint": "sha256:646d3024e8b7a049cb721239424b58955cac76883d3a1b6fe221a1b4fad21787",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-grid-size": {
+      "code_fingerprint": "sha256:1a65bc183ab39283a631953b7c4c56dc8c4fa6de3ad1553fa179098234f6b0fd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "base: 118 (condition, draw) pairs, 23,954 prompts, 5,182,579 tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "instruct: 156 (condition, draw) pairs, 31,668 prompts, 4,736,907 tokens\n"
+        }
+      ]
+    },
+    "prompting-grid-score": {
+      "code_fingerprint": "sha256:049759ecd3e14be8c7679207a45a76ef79ee2760bece4d075e73061b02e32690",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-grid-gen": {
+      "code_fingerprint": "sha256:c6616842f6b22ec62d11f2cd610417529192bf304f127f36b945a640aee63e66",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-grid-run": {
+      "code_fingerprint": "sha256:a600c75e9728d2b6c20ff682242d5326f8036de4edc7594a2582dc35f7e84286",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Downloading ../data/lm/lm-fewshot-grid-v2.csv from https://d2l-data.smola.org/lm/lm-fewshot-grid-v2.csv...\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lm-fewshot-grid-v2: 63,022 rows\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "base, plain, k = 8, draw 0, re-scored: 200 of 200 predictions as registered\n"
+        }
+      ]
+    },
+    "prompting-grid-select": {
+      "code_fingerprint": "sha256:0f83296510440522352936f066ac90b2390b34fced69a9ab2a804da1275781c5",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-paired-ci": {
+      "code_fingerprint": "sha256:92d4624427c3e2d6054c0e719c5ceca79fe3df9e72b4abd006b3060e2db85905",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-k-table": {
+      "code_fingerprint": "sha256:3a7837c15f97cd4c92f09d1c4c302e6428f473acad401bb9506c8c56cccf32d3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          curve  k  accuracy   diff     lo     hi draws                             vs k = 8\n    base, plain  0     0.650                                                                \n    base, plain  1     0.639 -0.011  -0.07  0.046   3/5                                     \n    base, plain  2     0.705  0.055  0.008  0.102   4/5                                     \n    base, plain  4     0.756  0.106  0.062  0.151   5/5                                     \n    base, plain  8     0.747  0.097  0.048  0.148   5/5                                     \n    base, plain 16     0.748  0.098  0.046   0.15   5/5 +0.001 [-0.017, +0.019] in 2/5 draws\n    base, plain 32     0.746  0.096  0.041  0.152   5/5 -0.001 [-0.027, +0.025] in 4/5 draws\n    base, plain 64     0.792  0.142  0.082  0.202   5/5 +0.045 [+0.013, +0.079] in 4/5 draws\n instruct, chat  0     0.275                                                                \n instruct, chat  1     0.667  0.392   0.32  0.462   5/5                                     \n instruct, chat  2     0.700  0.425  0.348  0.498   5/5                                     \n instruct, chat  4     0.711  0.436  0.357   0.51   5/5                                     \n instruct, chat  8     0.664  0.389  0.314  0.457   5/5                                     \n instruct, chat 16     0.711  0.436  0.359  0.507   5/5 +0.047 [+0.025, +0.070] in 4/5 draws\ninstruct, plain  0     0.680                                                                \ninstruct, plain  1     0.696  0.016 -0.043  0.077   3/5                                     \ninstruct, plain  2     0.689  0.009 -0.047  0.068   3/5                                     \ninstruct, plain  4     0.674 -0.006 -0.064  0.057   1/5                                     \ninstruct, plain  8     0.767  0.087  0.031  0.145   5/5                                     \ninstruct, plain 16     0.770   0.09  0.034  0.148   5/5 +0.003 [-0.015, +0.021] in 3/5 draws\ngain from k = 0 to 4, plain, instruct minus base: -0.112 [-0.161, -0.062] in 5/5 draws\n      prompt     rate of  rate                          vs question\n    question valid label 0.000                                     \nplain, k = 0 valid label 0.005              +0.005 [+0.000, +0.015]\nplain, k = 4 valid label 0.831 +0.831 [+0.785, +0.874] in 5/5 draws\n    question exact match 0.000                                     \nplain, k = 0 exact match 0.005              +0.005 [+0.000, +0.015]\nplain, k = 4 exact match 0.655 +0.655 [+0.597, +0.714] in 5/5 draws\n"
+        }
+      ]
+    },
+    "prompting-format-table": {
+      "code_fingerprint": "sha256:3f140d3c72fc0e72cd74154367a90e892ddf21547650f8a0f189c7191c2f61bf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "      model                       prompt  accuracy  plain, same k   diff  \\\n0      base                  chat, k = 8     0.258          0.747 -0.489   \n1      base   plain + instruction, k = 0     0.755          0.650  0.105   \n2      base  chat, no think block, k = 8     0.774          0.747  0.027   \n3  instruct                  chat, k = 8     0.664          0.767 -0.103   \n4  instruct   plain + instruction, k = 0     0.310          0.680 -0.370   \n5  instruct                  chat, k = 0     0.275          0.680 -0.405   \n\n      lo     hi draws  \n0 -0.554 -0.422   5/5  \n1  0.050  0.160   n/a  \n2 -0.010  0.062   4/5  \n3 -0.140 -0.068   5/5  \n4 -0.445 -0.290   n/a  \n5 -0.485 -0.320   n/a  "
+        }
+      ]
+    },
+    "prompting-instruction-lines": {
+      "code_fingerprint": "sha256:ab0c39d681a766bd0fa79f7fa9af2568c6e0bf4509aa419c49d5bf2b1131152d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "instruct, chat layout; each k against k = 0 with the same line\n            instruction  k  accuracy top label  top share   diff     lo     hi draws\n                   none  0     0.575     World      0.405                           \n                   none  1     0.505  Business      0.386  -0.07 -0.123 -0.017   3/5\n                   none  4     0.533    Sports      0.412 -0.042 -0.095  0.016   3/5\n                   none  8     0.648    Sports      0.321  0.073  0.014  0.133   5/5\n                 SYSTEM  0     0.275     World      0.975                           \n                 SYSTEM  1     0.667     World      0.366  0.392   0.32  0.462   5/5\n                 SYSTEM  4     0.711     World      0.334  0.436  0.357   0.51   5/5\n                 SYSTEM  8     0.664     World      0.419  0.389  0.314  0.457   5/5\nSYSTEM, labels reversed  0     0.370     World      0.730                           \nSYSTEM, labels reversed  1     0.620     World      0.416   0.25  0.178  0.321   5/5\nSYSTEM, labels reversed  4     0.644     World      0.433  0.274  0.204  0.344   5/5\nSYSTEM, labels reversed  8     0.630     World      0.468   0.26  0.194  0.325   5/5\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "      model plain, k = 0, instruction  accuracy top label  top share   diff  \\\n0      base                      none     0.650  Business      0.370          \n1      base                    SYSTEM     0.755  Business      0.320  0.105   \n2      base   SYSTEM, labels reversed     0.700     World      0.355   0.05   \n3  instruct                      none     0.680  Business      0.345          \n4  instruct                    SYSTEM     0.310     World      0.830  -0.37   \n5  instruct   SYSTEM, labels reversed     0.485     World      0.535 -0.195   \n\n      lo    hi  \n0               \n1   0.05  0.16  \n2    0.0   0.1  \n3               \n4 -0.445 -0.29  \n5  -0.27 -0.12  "
+        }
+      ]
+    },
+    "prompting-order": {
+      "code_fingerprint": "sha256:002096edc440c114873fa3f848b400e6aa0af17798ccb19b8cd1b4b27ebe66ab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "base:\n        order 0  order 1  order 2  order 3  SD over orders  flip rate  p (null)\n0         0.785    0.775    0.720    0.745           0.030      0.142     0.036\n1         0.785    0.720    0.800    0.750           0.036      0.136     0.004\n2         0.780    0.755    0.775    0.795           0.017      0.116     0.350\n3         0.655    0.740    0.780    0.710           0.053      0.153     0.000\n4         0.730    0.785    0.795    0.745           0.031      0.118     0.011\npooled    0.747    0.755    0.774    0.749           0.033      0.133     0.000\n  SD over orders: 0.033 [0.023, 0.044]\n  SD over draws: 0.056 [0.002, 0.071]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "instruct:\n        order 0  order 1  order 2  order 3  SD over orders  flip rate  p (null)\n0         0.760    0.750    0.765    0.745           0.009      0.154     0.876\n1         0.805    0.750    0.790    0.770           0.024      0.115     0.094\n2         0.765    0.775    0.770    0.810           0.020      0.087     0.094\n3         0.755    0.750    0.790    0.715           0.031      0.134     0.023\n4         0.750    0.800    0.825    0.775           0.032      0.124     0.005\npooled    0.767    0.765    0.788    0.763           0.023      0.123     0.004\n  SD over orders: 0.023 [0.016, 0.030]\n  SD over draws: 0.022 [0.003, 0.029]\n"
+        }
+      ]
+    },
+    "prompting-order-plot": {
+      "code_fingerprint": "sha256:fda0a134837b5c5dad84d912cfae28ec5fe1acaf30ffc97627d8d126c6357d7e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "prompting/prompting-order-plot-1.svg",
+          "bytes": 34624,
+          "sha256": "sha256:bc7739df6529c70699212e770a3b479201166ad1020c12e345eb5b15d331695a"
+        }
+      ]
+    },
+    "prompting-labels": {
+      "code_fingerprint": "sha256:4f395ff06cc87c6d60d54d2a5fea68cef6e244d370a10efa7ae72d0e6a58b4bd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   model    words   0.0  0.25   0.5  0.75   1.0  deranged vs y  deranged vs sigma(y)\n    base  natural 0.747 0.667 0.644 0.633 0.450          0.508                 0.158\n    base abstract 0.313 0.297 0.280 0.243 0.200          0.208                 0.324\ninstruct  natural 0.767 0.710 0.704 0.635 0.545          0.516                 0.136\ninstruct abstract 0.335 0.326 0.311 0.258 0.256          0.236                 0.336\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "       model                                        effect   diff     lo  \\\n0       base         natural, deranged: accuracy against y  0.508  0.454   \n1       base  natural, deranged: accuracy against sigma(y)  0.158  0.135   \n2       base     abstract: sigma(y) deranged minus rho = 0  0.011 -0.027   \n3       base                      drop rho 0 to 1, natural  0.297  0.249   \n4       base                     drop rho 0 to 1, abstract  0.113  0.083   \n5       base       drop rho 0 to 1, abstract minus natural -0.184 -0.228   \n6       base               natural: rho = 0.75 minus k = 0 -0.017 -0.063   \n7   instruct         natural, deranged: accuracy against y  0.516  0.468   \n8   instruct  natural, deranged: accuracy against sigma(y)  0.136  0.114   \n9   instruct     abstract: sigma(y) deranged minus rho = 0  0.001 -0.052   \n10  instruct                      drop rho 0 to 1, natural  0.222  0.182   \n11  instruct                     drop rho 0 to 1, abstract  0.079  0.048   \n12  instruct       drop rho 0 to 1, abstract minus natural -0.143 -0.193   \n13  instruct               natural: rho = 0.75 minus k = 0 -0.045 -0.101   \n\n       hi draws  \n0   0.564        \n1   0.181        \n2   0.048   3/5  \n3   0.347   5/5  \n4   0.145   4/5  \n5  -0.143   4/5  \n6   0.028   2/5  \n7   0.565        \n8   0.158        \n9   0.055   2/5  \n10  0.263   5/5  \n11  0.110   4/5  \n12 -0.093   4/5  \n13  0.011   2/5  "
+        }
+      ]
+    },
+    "prompting-labels-plot": {
+      "code_fingerprint": "sha256:39968dc8f0f9ab5b496d5cc3cb050399fe0e152fff9b782ef8a912aef8fb2376",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "prompting/prompting-labels-plot-1.svg",
+          "bytes": 37876,
+          "sha256": "sha256:568a9373d61948375fda97b314f7cf979be7f9001b9ea11c0ceebd7c9a4a923c"
+        }
+      ]
+    },
+    "prompting-calibrate": {
+      "code_fingerprint": "sha256:b63730f51bb7a4155be4fd03a6f41596a2c840fa8ebccb267de1b5c23477c4d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-calibrate-grid": {
+      "code_fingerprint": "sha256:82ed278b283ea2b240a6355d3ff93654ba56721a11764b9652a630701a0b58a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "      model  k  accuracy before  accuracy after   diff     lo     hi draws  \\\n0      base  0            0.650           0.685  0.035 -0.005  0.080   n/a   \n1      base  1            0.639           0.709  0.070  0.030  0.110   2/5   \n2      base  4            0.756           0.752 -0.004 -0.040  0.033   2/5   \n3  instruct  0            0.680           0.690  0.010 -0.040  0.065   n/a   \n4  instruct  1            0.696           0.729  0.033  0.005  0.062   4/5   \n5  instruct  4            0.674           0.682  0.008 -0.023  0.038   4/5   \n\n   top share before  top share after                      top share change  \n0             0.370            0.350               -0.020 [-0.065, +0.020]  \n1             0.520            0.348  -0.172 [-0.211, -0.105] in 5/5 draws  \n2             0.318            0.342  +0.024 [-0.018, +0.064] in 3/5 draws  \n3             0.345            0.290               -0.055 [-0.095, +0.020]  \n4             0.441            0.328  -0.113 [-0.158, -0.038] in 5/5 draws  \n5             0.364            0.422  +0.058 [+0.016, +0.091] in 4/5 draws  "
+        }
+      ]
+    },
+    "prompting-induction": {
+      "code_fingerprint": "sha256:2389c747b054f96b647a0493c10e88123aa27f678b15e8a2cbddae3921efdce5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 sequences of 2 x 64 tokens; bound ln 151,643 = 11.93 nats\nfirst copy: 14.25 nats per token (SD over sequences 0.20)\nsecond copy: 0.33 nats per token (SD over sequences 0.19)\n"
+        }
+      ]
+    },
+    "prompting-probe-def": {
+      "code_fingerprint": "sha256:7d00f2571ed3770ed5bd928a81369e64ea979d7587a89dbe261be7f1c3300dcd",
+      "kind": "text",
+      "outputs": []
+    },
+    "prompting-probe": {
+      "code_fingerprint": "sha256:61f8e66c6b9f9590b70bbd895f4e27b377131561150ec46ed8359feba3a36756",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "probe, draw 0, 16 examples: accuracy 0.565; 200 of 200 predictions as registered\n"
+        }
+      ]
+    },
+    "prompting-icl-vs-probe-plot": {
+      "code_fingerprint": "sha256:7803a6830b5f01ecd4cab0f6d786b301b113dcb086c2b083131c0883923114dc",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ICL (base, plain) minus probe, at equal labelled data\n examples  diff    lo    hi draws\n        4 0.365 0.307 0.420   5/5\n        8 0.265 0.209 0.319   5/5\n       16 0.172 0.116 0.226   5/5\n       32 0.068 0.022 0.112   5/5\n       64 0.069 0.026 0.111   5/5\nprobe at 256: 0.759\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "prompting/prompting-icl-vs-probe-plot-1.svg",
+          "bytes": 44228,
+          "sha256": "sha256:d7b73ebda87e1d284a5e48f0410cba0e104def7d24b53611535ee082bc3400bd"
+        }
+      ]
+    },
+    "prompting-cost": {
+      "code_fingerprint": "sha256:b4632cd2468b7e496d21e0d5aff9c2d03fab43bf648a3a0bbf8cdbf8b1049600",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "probe: 10.0 tokens per query; KV cache 114,688 bytes per token in bf16\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "    k  tokens per query  vs k = 0  vs probe  KV cache (MB)\n0   0              15.4       1.0       1.5            1.8\n1   1              38.4       2.5       3.8            4.4\n2   2              57.4       3.7       5.7            6.6\n3   4              90.4       5.9       9.1           10.4\n4   8             162.4      10.5      16.3           18.6\n5  16             293.4      19.1      29.4           33.6\n6  32             589.4      38.3      59.0           67.6\n7  64            1163.4      75.5     116.5          133.4"
+        }
+      ]
+    }
+  }
+}

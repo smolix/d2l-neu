@@ -388,21 +388,27 @@ class TestLabelLogprobs(unittest.TestCase):
                     one, atol=1e-4, rtol=0, msg=f'{attn}, batch {bs}')
 
     def test_transformers_call(self):
+        """The decoder runs once on the left-padded batch, without a
+        cache; the output layer is not called (no full-vocabulary logits):
+        the label logits are its label rows times the last state, in
+        fp32."""
         tok_side = self.tok.padding_side
         calls = []
-        orig = self.model.forward
+        dec = self.model.get_decoder()
+        orig = dec.forward
 
         def spy(*args, **kwargs):
             calls.append(kwargs)
-            out = orig(*args, **kwargs)
-            self.assertEqual(out.logits.shape[1], 1)  # one position kept
-            return out
-        with mock.patch.object(self.model, 'forward', side_effect=spy):
+            return orig(*args, **kwargs)
+        head = self.model.get_output_embeddings()
+        with mock.patch.object(dec, 'forward', side_effect=spy), \
+                mock.patch.object(head, 'forward', side_effect=AssertionError(
+                    'the full output layer was called')):
             d2l.label_logprobs(self.model, self.tok, self.prompts, LABELS,
                                batch_size=4)
         self.assertEqual(len(calls), 1)
         kw = calls[0]
-        self.assertEqual(kw['logits_to_keep'], 1)
+        self.assertNotIn('logits_to_keep', kw)
         self.assertIs(kw['use_cache'], False)
         mask, X = kw['attention_mask'], kw['input_ids']
         ids = self.tok(self.prompts, add_special_tokens=False)['input_ids']
@@ -412,6 +418,57 @@ class TestLabelLogprobs(unittest.TestCase):
             self.assertEqual(x[pad:].tolist(), r)
             self.assertEqual(pos[pad:].tolist(), list(range(len(r))))
         self.assertEqual(self.tok.padding_side, tok_side)
+
+    def test_fallback_without_split_head(self):
+        """A model whose logits are not a plain linear map of the last
+        state (here: a final soft cap in the config) is called as a whole,
+        with logits_to_keep=1 and no cache."""
+        calls = []
+        orig = self.model.forward
+
+        def spy(*args, **kwargs):
+            calls.append(kwargs)
+            out = orig(*args, **kwargs)
+            self.assertEqual(out.logits.shape[1], 1)  # one position kept
+            return out
+        ref = d2l.label_logprobs(self.model, self.tok, self.prompts, LABELS,
+                                 batch_size=4)
+        cfg = self.model.config
+        with mock.patch.object(cfg, 'final_logit_softcapping', 30.0,
+                               create=True), \
+                mock.patch.object(self.model, 'forward', side_effect=spy):
+            out = d2l.label_logprobs(self.model, self.tok, self.prompts,
+                                     LABELS, batch_size=4)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0]['logits_to_keep'], 1)
+        self.assertIs(calls[0]['use_cache'], False)
+        # Qwen3 ignores the cap, so both paths agree
+        torch.testing.assert_close(out, ref, atol=1e-5, rtol=0)
+
+    def test_bf16_label_logits_in_fp32(self):
+        """Regression (verify 18.3, problem 2): in bf16, logits of size 20
+        to 40 are 1/8 to 1/4 apart, so label words tied exactly and argmax
+        gave the tie to the first. The label logits are now the bf16 last
+        hidden state times the label rows of the output layer in fp32."""
+        model = tiny_qwen3().to(torch.bfloat16)
+        with torch.no_grad():  # large logits, as in a trained model
+            model.lm_head.weight.mul_(8)
+        out = d2l.label_logprobs(model, self.tok, self.prompts, LABELS,
+                                 batch_size=1)
+        W = model.lm_head.weight[PLAIN_IDS].float()
+        coarse = []
+        for row, p in zip(out, self.prompts):
+            X = torch.tensor([self.tok(p, add_special_tokens=False)
+                              ['input_ids']])
+            with torch.no_grad():
+                h = model.model(X, use_cache=False).last_hidden_state[0, -1]
+                z = model(X, use_cache=False).logits[0, -1][PLAIN_IDS]
+            ref = (h.float() @ W.T).log_softmax(-1)
+            torch.testing.assert_close(row, ref, atol=1e-5, rtol=0)
+            coarse.append(z.float().log_softmax(-1))
+        # the bf16 read-out differs from it by rounding of the logits
+        self.assertGreater((out - torch.stack(coarse)).abs().max().item(),
+                           1e-3)
 
     def test_special_tokens(self):
         """A plain prompt is encoded as d2l.generate encodes it (with the
@@ -427,8 +484,9 @@ class TestLabelLogprobs(unittest.TestCase):
             def __getattr__(self, name):
                 return getattr(tok, name)
         seen = []
-        orig = self.model.forward
-        with mock.patch.object(self.model, 'forward', side_effect=lambda
+        dec = self.model.get_decoder()
+        orig = dec.forward
+        with mock.patch.object(dec, 'forward', side_effect=lambda
                                *a, **kw: (seen.append(kw['input_ids']),
                                           orig(*a, **kw))[1]):
             out = d2l.label_logprobs(self.model, BosTokenizer(),
@@ -446,13 +504,14 @@ class TestLabelLogprobs(unittest.TestCase):
 
     def test_inference_mode(self):
         calls = []
-        orig = self.model.forward
+        dec = self.model.get_decoder()
+        orig = dec.forward
 
         def spy(*args, **kwargs):
             calls.append((torch.is_inference_mode_enabled(),
                           torch.is_grad_enabled()))
             return orig(*args, **kwargs)
-        with mock.patch.object(self.model, 'forward', side_effect=spy):
+        with mock.patch.object(dec, 'forward', side_effect=spy):
             out = d2l.label_logprobs(self.model, self.tok, self.prompts,
                                      LABELS)
         self.assertEqual(calls, [(True, False)])
@@ -578,8 +637,9 @@ class TestLabelLogprobs(unittest.TestCase):
         self.assertEqual(d2l._lm_bos_ids(BosEosTokenizer()), [151643])
         self.assertEqual(d2l._lm_bos_ids(tok), [])
         seen = []
-        orig = self.model.forward
-        with mock.patch.object(self.model, 'forward', side_effect=lambda
+        dec = self.model.get_decoder()
+        orig = dec.forward
+        with mock.patch.object(dec, 'forward', side_effect=lambda
                                *a, **kw: (seen.append(kw['input_ids']),
                                           orig(*a, **kw))[1]):
             out = d2l.label_logprobs(self.model, BosEosTokenizer(),

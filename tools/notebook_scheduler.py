@@ -344,8 +344,11 @@ class Scheduler:
         elif spg == "all":
             # n whole cards: each chosen GPU entirely free, at its own full
             # capacity (so the request means the same on 16 GB and 24 GB cards).
+            # A card given 0 slots (D2L_GPU_SLOTS_PER on a shared host) is
+            # excluded, not "entirely free".
             cand = [g for g in self._gpu_pool(it, ngpu)
-                    if self.gpu_free[g] == self.gpu_cap[g]
+                    if self.gpu_cap[g] > 0
+                    and self.gpu_free[g] == self.gpu_cap[g]
                     and self._live_ok(g, self.gpu_cap[g])]
             if len(cand) < ngpu:
                 return None

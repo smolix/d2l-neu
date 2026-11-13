@@ -87,6 +87,9 @@ RERUN = set(ARTIFACTS if names == ['1'] else names) - {'0', ''}
 assert RERUN <= set(ARTIFACTS), f'D2L_RERUN names one of {ARTIFACTS}, or 1'
 assert GPU or not RERUN, 'regenerating the artifacts needs a GPU'
 RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
+# A regeneration recomputes every suite row; D2L_RERUN_RESUME=1 resumes an
+# interrupted one from its cache (keyed by run settings, not by code)
+RESUME = os.environ.get('D2L_RERUN_RESUME', '0') == '1'
 # The declared cuts, frozen at authoring from the regeneration's wall clock
 # alone and applied in order: SMALL >= 1 judges 150 prompts instead of 300
 # and 200 human-labelled pairs instead of 400; SMALL = 2 also keeps two
@@ -102,7 +105,8 @@ print(pd.DataFrame({'role': roles, 'model': ANSWERERS + [JUDGE, BASE],
                     'revision': [d2l.HF_REVISIONS[m][:8]
                                  for m in ANSWERERS + [JUDGE, BASE]]}
                    ).to_string(index=False))
-print(f'GPU={GPU}, RERUN={",".join(sorted(RERUN)) or False}, SMALL={SMALL}')
+print(f'GPU={GPU}, RERUN={",".join(sorted(RERUN)) or False}, SMALL={SMALL}'
+      + (', resuming from the cache' if RERUN and RESUME else ''))
 ```
 
 <!-- Placeholder (stage 2): the datasets read at run time, pinned to commits; the registered artifacts follow at capture. -->
@@ -167,10 +171,11 @@ def read_table(path):
 
 def save_rerun(name, df, key, on):
     """Write a regenerated artifact to RERUN_DIR (rows sorted by the key
-    columns on), print its sha1 and its agreement with the frozen one."""
+    columns on, the declared cut SMALL in every row), print its sha1 and
+    its agreement with the frozen one."""
     path = os.path.join(RERUN_DIR, name)
     os.makedirs(RERUN_DIR, exist_ok=True)
-    df = df.sort_values(on, ignore_index=True)
+    df = df.assign(small=SMALL).sort_values(on, ignore_index=True)
     if name.endswith('.parquet'):
         df.to_parquet(path, index=False)
     else:  # JSON lines; pandas converts the numpy values
@@ -227,14 +232,17 @@ assert set(arc.model) == set(CKPTS)
 
 def arc_predictions(df, col='ll'):
     """Per (model, item_id): whether the choice with the highest
-    char-normalized score (the first on ties) is gold, and its margin over
-    the runner-up."""
+    char-normalized score (the first on ties) is gold, its margin over the
+    runner-up, and 1/n_chars of the two summed (what turns a change of
+    log-likelihood into a change of the margin)."""
     s = df.assign(s=df[col] / df.n_chars)
-    best = s.loc[s.groupby(['model', 'item_id']).s.idxmax()]
-    second = s.drop(best.index).groupby(['model', 'item_id']).s.max()
-    best = best.set_index(['model', 'item_id'])
+    top = lambda d: d.loc[d.groupby(['model', 'item_id']).s.idxmax()
+                          ].set_index(['model', 'item_id'])
+    best = top(s)
+    second = top(s.drop(s.groupby(['model', 'item_id']).s.idxmax()))
     return pd.DataFrame({'correct': (best.choice == best.gold).astype(float),
-                         'margin': best.s - second})
+                         'margin': best.s - second.s,
+                         'inv_chars': 1 / best.n_chars + 1 / second.n_chars})
 
 PRED = arc_predictions(arc)
 CORRECT = PRED.correct.unstack().loc[CKPTS]  # (5, 500): 1 if right
@@ -457,6 +465,10 @@ d2l.plot([n] * 3 + [np.minimum(need, 1e4).to_numpy()],
          'MDE (accuracy points)', legend=list(sds) + ['ARC pairs'],
          xscale='log', yscale='log', fmts=('-', '--', '-.', 'o'),
          figsize=(4.5, 3.2), legend_loc='upper right')
+for v in 100 * gaps['diff'][need > 1e4].abs():  # drawn at the right edge
+    d2l.plt.gca().annotate('beyond', (1e4, v), xytext=(-5, 0),
+                           textcoords='offset points', ha='right',
+                           va='center', fontsize=8)
 for name, s in sds.items():
     print(f'MDE at 500 items, {name}: {min_detectable_effect(s, 500):.3f}')
 print(pd.DataFrame({'pair': gaps.pair, '|diff|': gaps['diff'].abs().round(3),
@@ -798,9 +810,15 @@ assert {it['id'] for it in dev_v1.items('arc_challenge')} == set(ARC_IDS), (
 EVAL_KEY = ['model', 'suite', 'task', 'item_id']
 META = ['model', 'suite', 'revision', 'suite_hash', 'run_key', 'batch_size',
         'dtype', 'torch', 'transformers']
-# The last section's batch drift: the largest change of a char-normalized
-# score between batch sizes 8 and 1 (its pair, bf16)
-DRIFT = float(((arc.ll - arc.ll_bs1).abs() / arc.n_chars).max())
+# The last section's batch drift (its pair, bf16, batch sizes 8 and 1):
+# DLL bounds the change of 99% of the choices' log-likelihoods, so an
+# item's margin moves by at most DLL * inv_chars; FLIPS is the most items
+# of one model whose correctness changed between the two batch sizes
+bs = arc.dropna(subset='ll_bs1')
+DLL = float((bs.ll - bs.ll_bs1).abs().quantile(0.99))
+FLIPS = int((arc_predictions(bs).correct != arc_predictions(
+    bs, 'll_bs1').correct).groupby(level='model').sum().max())
+MAX_DIFFER = 3 * FLIPS  # provisional: set from the GPU disagreements
 
 def eval_rows(result, suite):
     """An EvalResult's per-item rows with its run settings."""
@@ -809,22 +827,23 @@ def eval_rows(result, suite):
 
 def results_from(df):
     """EvalResults per model from rows written by eval_rows."""
-    return {m: EvalResult(g.drop(columns=META), g[META].iloc[0].to_dict())
+    return {m: EvalResult(g.drop(columns=META + ['small'], errors='ignore'),
+                          g[META].iloc[0].to_dict())
             for m, g in df.groupby('model')}
 
 def cross_check(model_id, per_item):
-    """ARC items whose correctness differs from the last section's: each
-    must be a near-tie there, its margin below twice the drift, since
-    both of its top scores can move by the drift."""
+    """ARC items whose correctness differs from the last section's: at
+    most MAX_DIFFER, each a near-tie there whose margin the batch drift
+    can close (margin below DLL * inv_chars)."""
     ours = per_item[per_item.task == 'arc_challenge'].set_index('item_id')
     ref = PRED.loc[model_id]
     diff = ref[ref.correct != ours.score.reindex(ref.index)]
+    ratio = diff.margin / (DLL * diff.inv_chars)  # below 1: within drift
     print(f'{short(model_id)}: {len(diff)} of {len(ref)} items differ from '
-          f'the last section; their margins there (at most 10): '
-          f'{diff.margin.round(4).tolist()[:10]}')
-    assert (diff.margin < 2 * DRIFT).all(), (
+          f'the last section (at most {MAX_DIFFER}); margin over drift '
+          f'there, largest {ratio.max() if len(diff) else 0:.2f}')
+    assert len(diff) <= MAX_DIFFER and (ratio < 1).all(), (
         'C12: a disagreement beyond the batch drift (norm, prompt or subset)')
-
 ```
 
 <!-- Placeholder (stage 2): the development suite for the four answerers (regenerated only under RERUN), checked item by item against the last section. -->
@@ -835,8 +854,8 @@ if 'eval-scores' in RERUN:
     rows = []
     for m in ANSWERERS:  # one model at a time
         model, tok = d2l.load_hf(m)
-        res = dev_v1.run(model, tok, cache_dir=os.path.join(RERUN_DIR,
-                                                            'eval-cache'))
+        res = dev_v1.run(model, tok, rerun=not RESUME,
+                         cache_dir=os.path.join(RERUN_DIR, 'eval-cache'))
         print(f"{short(m)}: {res.meta['wall_clock'] / 60:.1f} min, {peak()}")
         rows.append(eval_rows(res, 'dev_v1'))
         del model
@@ -848,14 +867,15 @@ scores = pd.read_parquet(artifact('lm-eval-scores-v1',
 DEV = results_from(scores[scores.suite == 'dev_v1'])
 assert all(r.meta['suite_hash'] == dev_v1.hash for r in DEV.values()), (
     'the frozen run used another rendering of dev_v1')
-print(f'batch drift of the last section: {DRIFT:.4f}')
+print(f'batch drift of the last section: 99% of log-likelihoods within '
+      f'{DLL:.3f} nats; up to {FLIPS} items changed correctness')
 for m in CKPTS:
     if m in DEV:
         cross_check(m, DEV[m].per_item)
 if GPU and 'eval-scores' not in RERUN:  # live: two models, ARC only
     arc_suite = EvalSuite([t for t in dev_v1.tasks
-                           if t.id == 'arc_challenge'], 'dev_v1', DEV_BATCH,
-                          n=None, seed=None)
+                           if t.id == 'arc_challenge'], 'dev_v1/arc_challenge',
+                          DEV_BATCH, n=None, seed=None)
     for m in ANSWERERS[:2]:
         model, tok = d2l.load_hf(m)
         live = arc_suite.run(model, tok).per_item
@@ -1247,15 +1267,15 @@ gpt4 = orient(pd.read_parquet(d2l.download_keyed('mt-bench-gpt4-pair')))
 votes = human[human.vote != 'tie']
 cands = votes[HUMAN_KEY].drop_duplicates().sort_values(HUMAN_KEY,
                                                       ignore_index=True)
-HP = cands.iloc[np.random.default_rng(0).permutation(len(cands))[:N_HUMAN]
-                ].sort_values(HUMAN_KEY, ignore_index=True)
 # Declared rule: a model pair is easy when the experts' turn-1 win rate of
 # its first model is more than 0.3 away from 0.5
 w = votes.groupby(['model_lo', 'model_hi']).vote.apply(
     lambda v: (v == 'a').mean())
 easy = (w - 0.5).abs() > 0.3
-HP['stratum'] = np.where(easy.loc[list(zip(HP.model_lo, HP.model_hi))],
-                         'easy', 'hard')
+pair_easy = easy.loc[list(zip(cands.model_lo, cands.model_hi))].to_numpy()
+cands['stratum'] = np.where(pair_easy, 'easy', 'hard')
+HP = cands.iloc[np.random.default_rng(0).permutation(len(cands))[:N_HUMAN]
+                ].sort_values(HUMAN_KEY, ignore_index=True)
 print(f'{len(cands)} candidate pairs, {len(HP)} judged: '
       f"{(HP.stratum == 'easy').sum()} easy, {(HP.stratum == 'hard').sum()} "
       f'hard; easy model pairs {int(easy.sum())} of {len(easy)}')
@@ -1313,14 +1333,20 @@ def agreement(col, stratum):
             f'coverage {(j[col] != "tie").mean():.2f}')
 
 def expert_agreement(stratum):
-    """Agreement between non-tie votes of different experts on a pair."""
-    keys = HP if stratum == 'all' else HP[HP.stratum == stratum]
-    v = votes.merge(keys[HUMAN_KEY], on=HUMAN_KEY)
-    m = v.merge(v, on=HUMAN_KEY, suffixes=('', '_2'))
-    m = m[m.judge < m.judge_2]  # two different experts, each pair once
+    """Agreement between non-tie votes of different experts on a pair: on
+    the judged pairs, or on every candidate pair if those give fewer than
+    30 question clusters."""
+    for pairs in (HP, cands):
+        keys = pairs if stratum == 'all' else pairs[pairs.stratum == stratum]
+        v = votes.merge(keys[HUMAN_KEY], on=HUMAN_KEY)
+        m = v.merge(v, on=HUMAN_KEY, suffixes=('', '_2'))
+        m = m[m.judge < m.judge_2]  # two different experts, each pair once
+        if m.question_id.nunique() >= 30:
+            break
     ties = human.merge(keys[HUMAN_KEY], on=HUMAN_KEY).vote == 'tie'
     return ((m.vote == m.vote_2).astype(float), m.question_id,
-            f'tie share {ties.mean():.2f}')
+            f'tie share {ties.mean():.2f}' + (', all pairs' if pairs is cands
+                                               else ''))
 
 def cell(agree, question, extra):
     if question.nunique() < 30:  # too few clusters for an interval
@@ -1383,6 +1409,10 @@ if 'judge-human' in RERUN or 'judge-pairs' in RERUN:
     free()
 jp = read_table(artifact('lm-judge-pairs-v1', 'lm-judge-pairs.jsonl'))
 jp = jp[jp.prompt_id.isin(PROMPTS.prompt_id)].reset_index(drop=True)
+x2b = ANS.xs(('Qwen/Qwen3.5-2B', 0), level=['model', 'answer_seed'])
+assert jp.arm.value_counts().to_dict() == {
+    'pairs': len(PAIRS6) * len(PROMPTS), 'seed1': len(PROMPTS),
+    'pad': int((x2b.finish_reason != 'length').sum())}, 'another prompt set'
 assert (jp.rubric_sha256 == sha256(JUDGE_RUBRIC_V1)).all() and (
     jp.pad_sha256 == sha256(JUDGE_PAD_V1)).all(), 'another rubric or pad'
 jp['delta'], jp['bias'] = (jp.l1 - jp.l2) / 2, (jp.l1 + jp.l2) / 2
@@ -1449,9 +1479,10 @@ print(f"(a) padded minus plain, {len(pad)} prompts: delta "
       f"{show(bootstrap_ci(pad.delta))}; consistent verdicts for the padded "
       f"answer {(pad.verdict == 'a').mean():.3f}, for the plain one "
       f"{(pad.verdict == 'b').mean():.3f}")
-obs = P[~(P.trunc_a | P.trunc_b)].reset_index(drop=True)
-print(f'(b) {len(P) - len(obs)} of {len(P)} pairs with a truncated answer '
-      'excluded')
+obs = P[~(P.trunc_a | P.trunc_b) & (P.words_a > 0) & (P.words_b > 0)
+        ].reset_index(drop=True)
+print(f'(b) {len(P) - len(obs)} of {len(P)} pairs with a truncated or empty '
+      'answer excluded')
 x = np.log(obs.words_a / obs.words_b).to_numpy()
 y = obs.delta.to_numpy()
 k, names = pd.factorize(obs.model_a.map(short) + ' vs ' +
@@ -1568,22 +1599,23 @@ print(f'seed 1 minus seed 0: {show(r_diff)}, p {r_diff.p_two_sided:.3f}')
 ```{.python .input #eval-suites-protocol}
 %%tab pytorch
 gsm_task = next(t for t in report_v1.tasks if t.id == 'gsm8k')
-protocol = EvalSuite([gsm_task], 'report_v1', DEV_BATCH, n=None, seed=None)
+protocol = EvalSuite([gsm_task], 'report_v1/gsm8k', DEV_BATCH, n=None,
+                     seed=None)  # its own hash: report_v1's hash covers both
 if 'eval-scores' in RERUN:
     model, tok = d2l.load_hf(BASE)
-    res = protocol.run(model, tok, cache_dir=os.path.join(RERUN_DIR,
-                                                          'eval-cache'))
+    res = protocol.run(model, tok, rerun=not RESUME,
+                       cache_dir=os.path.join(RERUN_DIR, 'eval-cache'))
     print(f"{res.meta['wall_clock'] / 60:.1f} min, {peak()}")
     del model
     free()
     dev_rows = pd.read_parquet(os.path.join(RERUN_DIR,
                                             'lm-eval-scores.parquet'))
     save_rerun('lm-eval-scores.parquet', pd.concat([
-        dev_rows[dev_rows.suite == 'dev_v1'], eval_rows(res, 'report_v1')]),
+        dev_rows[dev_rows.suite == 'dev_v1'], eval_rows(res, protocol.name)]),
         'lm-eval-scores-v1', EVAL_KEY)
 scores = pd.read_parquet(artifact('lm-eval-scores-v1',
                                   'lm-eval-scores.parquet'))
-report = results_from(scores[scores.suite == 'report_v1'])[BASE]
+report = results_from(scores[scores.suite == protocol.name])[BASE]
 meta, r = report.meta, bootstrap_ci(report.scores('gsm8k'))
 assert meta['suite_hash'] == protocol.hash, 'another rendering of the task'
 template = d2l.fewshot_prompt(DEMOS, '{question}', gsm_task.template)
@@ -1592,8 +1624,9 @@ published = next(p for b in BENCH['benchmarks'] if b['id'] == 'gsm8k'
 card = {
     'model': f"{meta['model']} @ {meta['revision'][:12]}",
     'data': f'{gsm_task.dataset} @ {gsm_task.revision[:12]}, '
-            f'{gsm_task.config}, {gsm_task.split}, all items '
-            f"(suite {meta['suite_hash'][:12]})",
+            f'{gsm_task.config}, {gsm_task.split}, all items',
+    'suite': f"report_v1 {report_v1.hash[:12]}, its task gsm8k alone "
+             f"{meta['suite_hash'][:12]}",
     'prompt': f"{gsm_task.template!r} blocks 'Q: ...\\nA: ...', no chat "
               f'template (sha256 {sha256(template)[:12]})',
     'shots': f"{gsm_task.shots}, {shots(gsm_task.shots_from)}, worked "

@@ -1432,8 +1432,13 @@ of one batch per job, so the cut is fixed before any accuracy is printed.
 comma-separated subset of `bpb`, `gsm8k-samples`, `arc-generations`,
 `arc-scores`; `1` means all four) runs only those producing blocks, so a
 change to one artifact need not pay for the other three or their cuts
-(`time_scoring_rerun.py --only arc-generations` probes the same subset). The
-settings each artifact was made with are recorded in it, and the analysis
+(`time_scoring_rerun.py --only arc-generations` probes the same subset).
+18.5 (`eval-suites.md`) takes the same form (`eval-scores`, `contam-scores`,
+`answers`, `judge-human`, `judge-pairs`); its `EvalSuite` runs recompute every
+row, since their cache in `../data/lm/rerun/eval-cache` is keyed by run
+settings and not by code or weights. `D2L_RERUN_RESUME=1` resumes an
+interrupted regeneration from that cache (its wall clock then undercounts).
+The settings each artifact was made with are recorded in it, and the analysis
 cells print them (the GSM8K budget, the number of reasoning items), since the
 source's constants show the uncut values. The notebook's kernel gets
 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` (`NOTEBOOK_ENV`): without

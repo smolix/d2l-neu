@@ -432,12 +432,10 @@ d2l.DATA_HUB['ag-news-test'] = (
     '6c874e265fe5ff35861f27eaf3e681dda147ba12')
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): the test items, the demonstration pool without test duplicates, and the declared draws; counts only, no article text. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): the task data, its cleanup rules (HTML and Windows-1252 escapes left in the titles), and the key that finds near-duplicates. -->
 
-```{.python .input #prompting-data}
+```{.python .input #prompting-data-clean}
 %%tab pytorch
-N_PER_CLASS, DRAWS = 50, range(5)
-
 def read_jsonl(key):
     path = d2l.download(key, os.path.join('..', 'data', 'lm', key))
     with open(path, encoding='utf-8') as f:
@@ -448,8 +446,12 @@ CP1252 = {'145': "'", '146': "'", '147': '"', '148': '"', '151': '-'}
 def cp1252(m):  # an apostrophe or closing quote takes the space before it
     return ('' if m[2] in ('145', '146', '148') else m[1]) + CP1252[m[2]]
 
+CODES = {37, 38, 133, 160, 163, 225, 233, 234, 8217, 8482}  # in AG News
+
 def numeric(m):  # '#233;' is 'é'; 128 to 159 are Windows-1252 codes
     n = int(m[2])
+    if n not in CODES:  # left for the check at the end of clean()
+        return m[0]
     c = bytes([n]).decode('cp1252') if 128 <= n < 160 else chr(n)
     return ('' if c.isalnum() or c in "&'’" else m[1]) + c
 
@@ -477,16 +479,35 @@ def dedup_key(title):  # no source tag such as '(AP)', no punctuation
     title = re.sub(r'\s*\([^()]*\)\s*$', '', title).lower()
     title = title.translate(str.maketrans('', '', string.punctuation))
     return ' '.join(title.split())
+```
 
+<!-- Placeholder (prose, ### Number of Demonstrations): the test items and the demonstration pool without test duplicates; counts only, no article text. -->
+
+```{.python .input #prompting-data}
+%%tab pytorch
+N_PER_CLASS = 50
 train, test = read_jsonl('ag-news-train'), read_jsonl('ag-news-test')
 TRAIN_TITLES, changed_train = clean(list(train.title))
 TEST_TITLES, changed_test = clean(list(test.title))
 TRAIN_Y, TEST_Y = train.label.to_numpy() - 1, test.label.to_numpy() - 1
 ITEMS = np.sort(test.groupby('label').head(N_PER_CLASS).index.to_numpy())
 GOLD = TEST_Y[ITEMS]
+assert np.bincount(GOLD).tolist() == [N_PER_CLASS] * 4
 test_keys = {dedup_key(t) for t in TEST_TITLES}
 in_pool = np.array([dedup_key(t) not in test_keys for t in TRAIN_TITLES])
 POOL = [np.flatnonzero(in_pool & (TRAIN_Y == c)) for c in range(4)]
+print(f'{len(ITEMS)} test items, {N_PER_CLASS} per class; pool per class '
+      f'{[len(p) for p in POOL]}; {(~in_pool).sum()} train titles '
+      'removed as duplicates of test titles')
+print(pd.DataFrame({'train': changed_train, 'test': changed_test}).T
+      .to_string())
+```
+
+<!-- Placeholder (prose, ### Number of Demonstrations): the declared draws of demonstrations, their orders, wrong labels and relabelings, each from a declared seed. -->
+
+```{.python .input #prompting-draws}
+%%tab pytorch
+DRAWS = range(5)
 DRAW = {}  # train rows of each draw: blocks of one title per class
 for s in DRAWS:
     rng = np.random.default_rng(s)
@@ -506,15 +527,9 @@ DERANGEMENTS = [p for p in itertools.permutations(range(4))
 SIGMA = {s: np.array(DERANGEMENTS[np.random.default_rng(2000 + s)
                                   .integers(len(DERANGEMENTS))])
          for s in DRAWS}
-assert np.bincount(GOLD).tolist() == [N_PER_CLASS] * 4
-print(f'{len(ITEMS)} test items, {N_PER_CLASS} per class; pool per class '
-      f'{[len(p) for p in POOL]}; {(~in_pool).sum()} train titles '
-      'removed as duplicates of test titles')
-print(pd.DataFrame({'train': changed_train, 'test': changed_test}).T
-      .to_string())
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): the conditions of the grid, every one scored on the same items, and the prompt tokens they cost. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): the conditions of the grid, each a change of one factor from the reference condition. -->
 
 ```{.python .input #prompting-grid-def}
 %%tab pytorch
@@ -545,7 +560,12 @@ def conditions():
                 add(model=model, words=words, rho=rho)
             add(model=model, words=words, derange=True)
     return out
+```
 
+<!-- Placeholder (prose, ### Number of Demonstrations): a condition's demonstrations and prompts. -->
+
+```{.python .input #prompting-grid-prompts}
+%%tab pytorch
 def demos(cond):
     """The (title, label index) demonstrations of one condition."""
     s, k = cond['seed'], cond['k']
@@ -574,7 +594,12 @@ def build_prompts(cond, titles):
     system = SYSTEM if cond['instr'] else None
     return [d2l.fewshot_prompt(ds, x, fmt=FMT, label_map=words,
                                system=system) for x in titles]
+```
 
+<!-- Placeholder (prose, ### Number of Demonstrations): every condition scored on the same items, and the prompt tokens the grid costs. -->
+
+```{.python .input #prompting-grid-size}
+%%tab pytorch
 def n_tokens(tokenizer, prompts):  # per prompt, as the reader sees it
     texts = [p if isinstance(p, str) else tokenizer.apply_chat_template(
         p, tokenize=False, add_generation_prompt=True, enable_thinking=False)
@@ -593,16 +618,13 @@ for model, tokenizer in zip(MODELS, (tok, tok_i)):
 assert [sum(c['model'] == m for c in GRID) for m in MODELS] == [112, 123]
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): the registered grid, one condition re-scored live, and (D2L_RERUN=1 only) the whole grid regenerated. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): one row per condition, draw and item: the four label log-probabilities and the prediction. -->
 
-```{.python .input #prompting-grid-run}
+```{.python .input #prompting-grid-score}
 %%tab pytorch
 COLS = ['model', 'exp', 'layout', 'k', 'words', 'rho', 'perm', 'order',
         'instr', 'seed', 'item', 'lp0', 'lp1', 'lp2', 'lp3', 'pred', 'valid']
 IDS = list(ITEMS) + [-1, -2, -3]  # test rows, then the content-free inputs
-GEN = [dict(COND, k=0, layout='ask', seed=-1), dict(COND, k=0, seed=-1)] + [
-    dict(COND, k=4, seed=s) for s in DRAWS]  # free generation, base model
-RERUN_PATH = os.path.join('..', 'data', 'lm', 'rerun', 'lm-fewshot-grid.csv')
 
 def head(cond, exp='icl'):  # the condition columns of a grid row
     perm = ''.join(map(str, SIGMA[cond['seed']])) if cond['derange'] else ''
@@ -621,6 +643,21 @@ def score(cond):
     return [head(cond) + [i, *r.tolist(), int(r.argmax()), 1]
             for i, r in zip(IDS, lp)]
 
+def read_grid(path):
+    return pd.read_csv(path, dtype={'perm': str}).fillna({'perm': ''})
+
+def matched(new, old, exp):  # rows of both files, keyed by condition, item
+    return new[new.exp == exp].merge(old[old.exp == exp], on=COLS[:11],
+                                     suffixes=('', '_old'))
+```
+
+<!-- Placeholder (prose, ### Number of Demonstrations): free generation, read by a declared rule. -->
+
+```{.python .input #prompting-grid-gen}
+%%tab pytorch
+GEN = [dict(COND, k=0, layout='ask', seed=-1), dict(COND, k=0, seed=-1)] + [
+    dict(COND, k=4, seed=s) for s in DRAWS]  # free generation, base model
+
 def answer(text):
     """A free generation's label index by the declared rule, else -1."""
     line = next((s for s in text.split('\n') if s.strip()), '')
@@ -632,14 +669,13 @@ def generations(cond):  # greedy, 8 tokens, the test items only
                        max_new_tokens=8, batch_size=32)
     return [head(cond, 'gen') + [i, None, None, None, None, p, int(p >= 0)]
             for i, p in zip(ITEMS, (answer(g.text) for g in out))]
+```
 
-def read_grid(path):
-    return pd.read_csv(path, dtype={'perm': str}).fillna({'perm': ''})
+<!-- Placeholder (prose, ### Number of Demonstrations): the registered grid, one condition re-scored live, and (D2L_RERUN=1 only) the whole grid regenerated. -->
 
-def matched(new, old, exp):  # rows of both files, keyed by condition, item
-    return new[new.exp == exp].merge(old[old.exp == exp], on=COLS[:11],
-                                     suffixes=('', '_old'))
-
+```{.python .input #prompting-grid-run}
+%%tab pytorch
+RERUN_PATH = os.path.join('..', 'data', 'lm', 'rerun', 'lm-fewshot-grid.csv')
 registered = None
 if not RERUN or 'lm-fewshot-grid-v1' in d2l.DATA_HUB:
     registered = read_grid(d2l.download('lm-fewshot-grid-v1',
@@ -648,6 +684,7 @@ if RERUN:  # regenerate the grid (probe rows: prompting-probe)
     torch.cuda.reset_peak_memory_stats()
     tic = time.time()
     rows = [r for c in GRID for r in score(c)]
+    scored = time.time() - tic  # the label read-out alone
     rows += [r for c in GEN for r in generations(c)]
     wall = time.time() - tic
     os.makedirs(os.path.dirname(RERUN_PATH), exist_ok=True)
@@ -655,9 +692,10 @@ if RERUN:  # regenerate the grid (probe rows: prompting-probe)
                                             float_format='%.6g')
     grid = read_grid(RERUN_PATH)
     tokens = sum(TOKENS.values())
-    print(f'{len(grid):,} rows, {tokens:,} prompt tokens in {wall / 60:.1f} '
-          f'min ({tokens / wall:,.0f} tokens/s), peak '
-          f'{torch.cuda.max_memory_allocated() / 2**30:.1f} GiB')
+    print(f'{len(grid):,} rows in {wall / 60:.1f} min; {tokens:,} prompt '
+          f'tokens scored in {scored / 60:.1f} min ({tokens / scored:,.0f} '
+          f'tokens/s); peak {torch.cuda.max_memory_allocated() / 2**30:.1f}'
+          ' GiB')
     for exp in ('icl', 'gen') if registered is not None else ():
         m = matched(grid, registered, exp)
         print(f'{exp}: {(m.pred == m.pred_old).sum():,} of {len(m):,} '
@@ -683,7 +721,12 @@ else:
 del inst  # not needed below
 gc.collect()
 torch.cuda.empty_cache()
+```
 
+<!-- Placeholder (prose, ### Number of Demonstrations): reading one condition back from the grid. -->
+
+```{.python .input #prompting-grid-select}
+%%tab pytorch
 def grid_values(cols, items=ITEMS, **cond):
     """Columns cols of one condition, (draws, items, cols); a condition
     without demonstrations has one draw, repeated for every draw."""
@@ -727,17 +770,20 @@ def order_null(correct, n_perm=2000, seed=0):
 
 def compare(a, b):
     """a - b for (draws, items) arrays: the difference with its paired
-    interval over items, and in how many draws it has the same sign."""
+    interval over items, and in how many draws it has the same sign
+    ('n/a' when neither array varies over draws: no demonstrations)."""
     diff, lo, hi = paired_ci(a.mean(0), b.mean(0))
     same = (np.sign(a.mean(1) - b.mean(1)) == np.sign(diff)).sum()
-    return {'diff': diff, 'lo': lo, 'hi': hi, 'draws': f'{same}/{len(a)}'}
+    fixed = all((v == v[0]).all() for v in (a, b))
+    return {'diff': diff, 'lo': lo, 'hi': hi,
+            'draws': 'n/a' if fixed else f'{same}/{len(a)}'}
 
 def show(r):  # a difference with its interval, as one string
-    return (f"{r['diff']:+.3f} [{r['lo']:+.3f}, {r['hi']:+.3f}] in "
-            f"{r['draws']} draws")
+    s = f"{r['diff']:+.3f} [{r['lo']:+.3f}, {r['hi']:+.3f}]"
+    return s if r['draws'] == 'n/a' else f"{s} in {r['draws']} draws"
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): accuracy against the number of demonstrations, three curves, each against k = 0; then free generation. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): accuracy against the number of demonstrations, three curves, each against k = 0 and, beyond k = 8, against k = 8; then free generation. -->
 
 ```{.python .input #prompting-k-table}
 %%tab pytorch
@@ -746,11 +792,13 @@ curves = {'base, plain': dict(model='base'),
           'instruct, plain': dict(model='instruct')}
 rows = []
 for name, c in curves.items():
-    zero = correct(**dict(c, k=0))
+    zero, eight = correct(**dict(c, k=0)), correct(**dict(c, k=8))
     for k in K_BASE if name == 'base, plain' else K_INST:
         acc = correct(**dict(c, k=k))
         rows.append({'curve': name, 'k': k, 'accuracy': acc.mean(),
-                     **(compare(acc, zero) if k else {})})
+                     **(compare(acc, zero) if k else {}),
+                     **({'vs k = 8': show(compare(acc, eight))} if k > 8
+                        else {})})
 print(pd.DataFrame(rows).round(3).fillna('').to_string(index=False))
 gain = lambda m: correct(model=m, k=4) - correct(model=m, k=0)
 print('gain from k = 0 to 4, plain, instruct minus base:',
@@ -771,7 +819,7 @@ for name, p in gen.items():
 print(pd.DataFrame(rows).round(3).fillna('').to_string(index=False))
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): the template has to match the checkpoint (the table below). -->
+<!-- Placeholder (prose, ### Number of Demonstrations): the template has to match the checkpoint (the table below). At k = 8 the chat layout carries SYSTEM, which names the labels, and the plain layout does not, so the chat-versus-plain rows measure template plus instruction; the k = 0 rows with and without the instruction separate the two. -->
 
 ```{.python .input #prompting-format-table}
 %%tab pytorch
@@ -906,29 +954,34 @@ def calibrate_labels(logprobs, content_free_logprobs):
                              dim=-1)
 ```
 
-<!-- Placeholder (prose, ### Contextual Calibration): accuracy and the share of the most-predicted label, before and after calibration. -->
+<!-- Placeholder (prose, ### Contextual Calibration): accuracy and the share of the most-predicted label, before and after calibration, each change with its paired interval. -->
 
 ```{.python .input #prompting-calibrate-grid}
 %%tab pytorch
 LP, rows = ['lp0', 'lp1', 'lp2', 'lp3'], []
 n = len(ITEMS)
 boot = np.random.default_rng(0).integers(0, n, (2000, n))  # items resampled
-top_share = lambda p: (p[..., None] == np.arange(4)).mean(-2).max(-1).mean(0)
+share = lambda p: (p[..., None] == np.arange(4)).mean(-2).max(-1)  # per draw
 for model in MODELS:
     for k in (0, 1, 4):
         v = torch.tensor(grid_values(LP, IDS, model=model, k=k))
         before = v[:, :n].argmax(-1).numpy()  # (draws, items)
         after = torch.stack([d2l.calibrate_labels(d[:n], d[n:])
                              for d in v]).argmax(-1).numpy()
-        row = {'model': model, 'k': k,
-               'accuracy before': (before == GOLD).mean(),
-               'after': (after == GOLD).mean(),
-               **compare((after == GOLD) * 1.0, (before == GOLD) * 1.0)}
-        for name, p in (('top share before', before),
-                        ('top share after', after)):
-            lo, hi = np.percentile(top_share(p[:, boot]), [2.5, 97.5])
-            row[name] = f'{top_share(p):.3f} [{lo:.3f}, {hi:.3f}]'
-        rows.append(row)
+        change = share(after) - share(before)  # (draws,)
+        lo, hi = np.percentile((share(after[:, boot]) -
+                                share(before[:, boot])).mean(0), [2.5, 97.5])
+        same = (np.sign(change) == np.sign(change.mean())).sum()
+        draws = 'n/a' if k == 0 else f'{same}/{len(change)}'
+        rows.append({'model': model, 'k': k,
+                     'accuracy before': (before == GOLD).mean(),
+                     'accuracy after': (after == GOLD).mean(),
+                     **compare((after == GOLD) * 1.0, (before == GOLD) * 1.0),
+                     'top share before': share(before).mean(),
+                     'top share after': share(after).mean(),
+                     'top share change': show({
+                         'diff': change.mean(), 'lo': lo, 'hi': hi,
+                         'draws': draws})})
 pd.DataFrame(rows).round(3)
 ```
 
@@ -936,7 +989,8 @@ pd.DataFrame(rows).round(3)
 
 ```{.python .input #prompting-induction}
 %%tab pytorch
-V = 151643  # ordinary tokens; the ids above are special tokens and padding
+V = tok.vocab_size  # ordinary tokens; the ids above are special or padding
+assert V == min(tok.added_tokens_decoder)
 seq = torch.randint(0, V, (32, 64), generator=torch.Generator().manual_seed(0))
 X = torch.cat([seq, seq], 1)[:8 if SMALL else 32]
 losses = []
@@ -955,12 +1009,10 @@ for name, v in (('first copy', first), ('second copy', second)):
           f'{v.std():.2f})')
 ```
 
-<!-- Placeholder (prose, ### A Probe on Frozen Features): the probe, and one fit on the 16 demonstrations of draw 0. -->
+<!-- Placeholder (prose, ### A Probe on Frozen Features): the probe, a logistic regression on the base model's mean-pooled features of the headline alone. -->
 
-```{.python .input #prompting-probe}
+```{.python .input #prompting-probe-def}
 %%tab pytorch
-K_PROBE = [4, 8, 16, 32, 64, 256]
-
 def features(model, tokenizer, titles, batch_size=64):
     """Mean-pooled last hidden states of the titles alone, (n, d) fp32."""
     out = []
@@ -984,7 +1036,13 @@ def probe_accuracy(X_train, y_train, X_test, y_test):
     logp = probe.predict_log_proba(scale.transform(X_test))
     assert logp.shape[1] == 4, 'every class needs a labelled example'
     return (logp.argmax(1) == y_test).mean(), logp
+```
 
+<!-- Placeholder (prose, ### A Probe on Frozen Features): one fit on the 16 demonstrations of draw 0, and (D2L_RERUN=1 only) every draw and size. -->
+
+```{.python .input #prompting-probe}
+%%tab pytorch
+K_PROBE = [4, 8, 16, 32, 64, 256]
 if RERUN:  # every draw and size; completes the regenerated grid
     test_x, rows = features(base, tok, TEST_TITLES[ITEMS]), []
     for s in DRAWS:
@@ -1006,9 +1064,8 @@ if RERUN:  # every draw and size; completes the regenerated grid
         print(f'probe: {(m.pred == m.pred_old).sum():,} of {len(m):,} '
               'predictions as registered')
 elif not SMALL:  # one fit, live: the 16 demonstrations of draw 0
-    rows = DRAW[0][:16]
-    acc, logp = probe_accuracy(features(base, tok, TRAIN_TITLES[rows]),
-                               TRAIN_Y[rows],
+    train_x = features(base, tok, TRAIN_TITLES[DRAW[0]])  # batched as above
+    acc, logp = probe_accuracy(train_x[:16], TRAIN_Y[DRAW[0][:16]],
                                features(base, tok, TEST_TITLES[ITEMS]), GOLD)
     same = (logp.argmax(1) == pred(exp='probe', layout='none', k=16)[0]).sum()
     print(f'probe, draw 0, 16 examples: accuracy {acc:.3f}; {same} of '
@@ -1050,9 +1107,9 @@ print(f'probe at 256: '
 
 ```{.python .input #prompting-cost}
 %%tab pytorch
-c = base.config  # K and V of every layer, per token
+c = base.config  # K and V of every layer, per token, in bf16 as served
 kv_bytes = (c.num_hidden_layers * 2 * c.num_key_value_heads * c.head_dim *
-            base.dtype.itemsize)
+            torch.bfloat16.itemsize)
 probe = np.mean(n_tokens(tok, list(TEST_TITLES[ITEMS])))  # the headline
 rows = []
 for k in K_BASE:
@@ -1063,6 +1120,6 @@ for k in K_BASE:
 rows = pd.DataFrame(rows)
 rows.insert(2, 'vs k = 0', rows['tokens per query'] / rows.iloc[0, 1])
 print(f'probe: {probe:.1f} tokens per query; KV cache {kv_bytes:,} bytes '
-      f'per token ({base.dtype})')
+      'per token in bf16')
 rows.round(1)
 ```

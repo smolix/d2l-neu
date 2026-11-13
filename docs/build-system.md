@@ -1448,6 +1448,11 @@ numbers. Measured with the setting (2026-11-13, `D2L_RERUN=arc-generations`,
 the job behind that peak): 10.8 GiB allocated, 12.7 GiB reserved, 13.5 GB in
 `nvidia-smi`, inside the 2-slot budget; the run reproduced
 `lm-arc-generations-v2` bit for bit. A normal run peaks at about 4.9 GB.
+18.5's kernel gets the same setting. Its full regeneration (`D2L_RERUN=1`,
+2026-11-13, one RTX 4090) took 1,492 s (24.9 min: dev suite 3.1 min,
+GSM-Symbolic 3.1 min, answers 6.9 min, judge 0.9 + 4.4 min, protocol 5.5
+min, plus loads), so no cut applies (`SMALL = 0`); tensors peaked at
+11.3 GiB (the Qwen3.5-4B judge) and the card at 12.3 GB in `nvidia-smi`.
 Regenerate, upload, then run the notebook once
 more without `D2L_RERUN` and capture that run.
 

@@ -379,6 +379,11 @@ NOTEBOOK_ENV = {
     ("pytorch", "chapter_lm-pretrained/scoring.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
+    # 18.5: the same for its regeneration run, which generates with KV caches
+    # of changing length (answers, GSM-Symbolic) before the 4B judge loads.
+    ("pytorch", "chapter_lm-pretrained/eval-suites.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
 }
 
 

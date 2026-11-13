@@ -5958,6 +5958,22 @@ d2l.DATA_HUB['mt-bench-gpt4-pair'] = (
 d2l.DATA_HUB['lm-benchmarks-2026-v1'] = (
     d2l.LM_DATA_URL + 'lm-benchmarks-2026-v1.json',
     'f22e75c247119ba6f43196cc54beceeb9bd47e6c')
+# The measured results of this section, frozen from one D2L_RERUN=1 run
+d2l.DATA_HUB['lm-eval-scores-v1'] = (
+    d2l.LM_DATA_URL + 'lm-eval-scores-v1.parquet',
+    'd763a4a07621e9004053b655e94266a1418337cf')
+d2l.DATA_HUB['lm-contam-scores-v1'] = (
+    d2l.LM_DATA_URL + 'lm-contam-scores-v1.parquet',
+    '8d8c0222ba9c67afb186fa7e28f47a400598ccfb')
+d2l.DATA_HUB['lm-answers-v1'] = (
+    d2l.LM_DATA_URL + 'lm-answers-v1.jsonl',
+    '0ece3d97bb17848986ccd531c60b1c9d55543520')
+d2l.DATA_HUB['lm-judge-human-v1'] = (
+    d2l.LM_DATA_URL + 'lm-judge-human-v1.jsonl',
+    'deef229878dbddcba4de7d008caa38995700c4cd')
+d2l.DATA_HUB['lm-judge-pairs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-judge-pairs-v1.jsonl',
+    '1ad1a0cebbed4fc73f835ad12aece141cc23b041')
 
 BootstrapResult = collections.namedtuple(  # ci = (lo, hi); p_two_sided is
     'BootstrapResult',                      # None for a single sample

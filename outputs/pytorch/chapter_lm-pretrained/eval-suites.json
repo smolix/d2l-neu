@@ -1,0 +1,409 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretrained/eval-suites.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:ab95442b027d7ba60c833cb4de69c1bc6dfaab0352e5ab527c9df850002eb103",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "eval-suites-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-extras": {
+      "code_fingerprint": "sha256:20405d9e74a92ac4d778039565638c723f56edb5cf78b5e971eca6bfbb618c15",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-config": {
+      "code_fingerprint": "sha256:455ecc6ae21dd425e2e808b69423ad8bf2a6125ff8fdce62478d4d6754cbfd2f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "            role                model revision\n        answerer      Qwen/Qwen3-0.6B c1899de2\n        answerer      Qwen/Qwen3-1.7B 70d244cc\n        answerer    Qwen/Qwen3.5-0.8B 2fc06364\n        answerer      Qwen/Qwen3.5-2B 15852e8c\n           judge      Qwen/Qwen3.5-4B 851bf6e8\nprotocol example Qwen/Qwen3-0.6B-Base da87bfb6\nGPU=True, RERUN=False, SMALL=0\n"
+        }
+      ]
+    },
+    "eval-suites-data-hub": {
+      "code_fingerprint": "sha256:966e2b9d86e4894a86617a02c761ffb45d6bfea91a83193a79b0648c5b9f4ed5",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-artifacts": {
+      "code_fingerprint": "sha256:b9ed7b56bbb4d369463e8390682a4e3a7d6a3b262d57d93ad0a86a644dc7ccba",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-arc-load": {
+      "code_fingerprint": "sha256:99d19991c7f0fae09f4ec7e40cd9874fa8d838e1f6c6fda89a3acbf555a445ba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "500 ARC-Challenge items; accuracy (cloze, char-normalized):\nmodel\nQwen3-0.6B-Base      0.378\nQwen3-0.6B           0.320\nQwen3.5-0.8B-Base    0.358\nQwen3.5-0.8B         0.338\nQwen3-1.7B           0.418\n"
+        }
+      ]
+    },
+    "eval-suites-bootstrap": {
+      "code_fingerprint": "sha256:93677e09f5f568eb9b6eff28d1848c63baf0fbdaa9d3afc294aeabc6f62d2efe",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-paired": {
+      "code_fingerprint": "sha256:fcf24fa1d4f826814073f55a7209e624b88690a5ed7fc83afef2e5237e42185d",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-pair": {
+      "code_fingerprint": "sha256:e0a593f97fbdc95dbff5fc0cdc1140856396a1ada806bf7b5471b856117d4fdd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                             estimate    95% interval\nQwen3-1.7B                      0.418  [0.376, 0.460]\nQwen3-0.6B                      0.320  [0.280, 0.362]\ndifference, unpaired            0.098         ± 0.059\ndifference, paired (seed 0)     0.098  [0.054, 0.144]\ndifference, paired (seed 1)     0.098  [0.054, 0.142]\ndiscordant items: 91 right only by Qwen3-1.7B, 42 only by Qwen3-0.6B\nwidth paired / unpaired: 0.77; sqrt(1 - 2 cov / (var_a + var_b)) = 0.75\nseed 1 against seed 0, endpoints moved by 0.0% and 2.2% of the width\np-value: bootstrap 0.0000, sign-flip 0.0000\n"
+        }
+      ]
+    },
+    "eval-suites-paired-vs-unpaired": {
+      "code_fingerprint": "sha256:71c03f06b6483768b8d4d2d228d22ffae70a4c4c2a114d99ec4fd34f4cf01cda",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                               pair   diff  unpaired ±  paired ±  overlap  excludes 0  ratio\n       Qwen3-0.6B - Qwen3-0.6B-Base -0.058       0.058     0.036     True        True  0.619\nQwen3.5-0.8B-Base - Qwen3-0.6B-Base -0.020       0.059     0.034     True       False  0.580\n     Qwen3.5-0.8B - Qwen3-0.6B-Base -0.040       0.059     0.035     True        True  0.598\n       Qwen3-1.7B - Qwen3-0.6B-Base  0.040       0.060     0.042     True       False  0.705\n     Qwen3.5-0.8B-Base - Qwen3-0.6B  0.038       0.058     0.041     True       False  0.709\n          Qwen3.5-0.8B - Qwen3-0.6B  0.018       0.058     0.039     True       False  0.675\n            Qwen3-1.7B - Qwen3-0.6B  0.098       0.059     0.045    False        True  0.766\n   Qwen3.5-0.8B - Qwen3.5-0.8B-Base -0.020       0.058     0.025     True       False  0.429\n     Qwen3-1.7B - Qwen3.5-0.8B-Base  0.060       0.059     0.042     True        True  0.709\n          Qwen3-1.7B - Qwen3.5-0.8B  0.080       0.059     0.039     True        True  0.659\nseparate intervals overlap, paired interval excludes 0: 4 of 10 pairs\n"
+        }
+      ]
+    },
+    "eval-suites-cluster-pool": {
+      "code_fingerprint": "sha256:c3456d1e2d2f1a7c7b209644b5ee76dce501ba1a8118ff57ea4258b3105ae35f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "100 problems by 8 samples\n               mean           iid CI       cluster CI  width ratio   DEFF    rho\nscores                                                                          \nQwen3-0.6B    0.062   [0.046, 0.080]   [0.040, 0.087]        1.407  2.063  0.152\nQwen3.5-0.8B  0.080   [0.061, 0.100]   [0.051, 0.114]        1.613  2.746  0.249\ndifference    0.018  [-0.007, 0.044]  [-0.020, 0.056]        1.488  2.248  0.178\nC2: sqrt(DEFF) > 1.5 for both models: False\n"
+        }
+      ]
+    },
+    "eval-suites-mde": {
+      "code_fingerprint": "sha256:ab63116b46f420700a492692423ac948d2075bd16fa9780961dc84677ea921b7",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-mde-plot": {
+      "code_fingerprint": "sha256:a000b37c2132bac83379076c0365fde1e2784a7a4ad45484d7e968a53abcc4fb",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "MDE at 500 items, two independent samples: 0.085\nMDE at 500 items, paired: 0.063\nMDE at 500 items, paired, clusters of 8: 0.095\n                               pair  |diff| items needed\n       Qwen3-0.6B - Qwen3-0.6B-Base   0.058          407\nQwen3.5-0.8B-Base - Qwen3-0.6B-Base   0.020        3,053\n     Qwen3.5-0.8B - Qwen3-0.6B-Base   0.040          757\n       Qwen3-1.7B - Qwen3-0.6B-Base   0.040        1,130\n     Qwen3.5-0.8B-Base - Qwen3-0.6B   0.038        1,177\n          Qwen3.5-0.8B - Qwen3-0.6B   0.018        4,595\n            Qwen3-1.7B - Qwen3-0.6B   0.098          210\n   Qwen3.5-0.8B - Qwen3.5-0.8B-Base   0.020        1,562\n     Qwen3-1.7B - Qwen3.5-0.8B-Base   0.060          489\n          Qwen3-1.7B - Qwen3.5-0.8B   0.080          247\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eval-suites/eval-suites-mde-plot-1.svg",
+          "bytes": 39014,
+          "sha256": "sha256:c66a1849f6029b7e00dc7aed9eabddee58f8b8f1af6aa840fe5066f43094e067"
+        }
+      ]
+    },
+    "eval-suites-lifecycle": {
+      "code_fingerprint": "sha256:ffaf07a3cab2806a40512e24f7672278201c5bfe187178ac58fbe8d4b6d3b45c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "edition 2026-11, approved on 2026-11-13\n    stage             benchmark introduced     status  best  ceiling   MDE  steps left\n  climbed  Humanity's Last Exam    2025-01      gated 0.548        -     -           -\nsaturated GPQA (Diamond subset)    2023-11      gated 0.963        -     -           -\nsaturated                  MMLU    2020-09 named only 0.933    0.935 0.006       0.355\nsaturated                 GSM8K    2021-10   run here 0.968    0.992 0.014       1.797\n  climbed              MMLU-Pro    2024-06 named only 0.912        -     -           -\n        -                 GSM1k    2024-05 named only     -        -     -           -\n        -             LiveBench    2024-06     moving     -        -     -           -\n        -           HLE-Rolling                moving     -        -     -           -\n"
+        }
+      ]
+    },
+    "eval-suites-task": {
+      "code_fingerprint": "sha256:c296b4bf092bf4e61d1a909adfe80519f5a905f2baca3afa3e4344434c554a4a",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-suite": {
+      "code_fingerprint": "sha256:9a2472e472c5f71015d7cc58bd939cf81c8fbb5ebaab006e538dfef3a2423a9b",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-run-def": {
+      "code_fingerprint": "sha256:50e0712cc1a3b044147b04d8b70f54f00f01e12aa7b884c2a9065186d388f1d9",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-result": {
+      "code_fingerprint": "sha256:d18104abcecb7d5b12e4ebfb0af4c4ca5f33a2067557096d3bb9ccfd116c60e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-attach": {
+      "code_fingerprint": "sha256:f45f52aa7402b210320c5ffa9488463379a715a4a6b5fda02625124165073e7e",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-manifests": {
+      "code_fingerprint": "sha256:eade2fd04c0ed852c3702936ce4ad79495f01d5dd3ffcdaaf71f889f2035bae3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    suite          task kind    n     format  shots              shots from revision\n   dev_v1 arc_challenge   mc  500      cloze      0                       - 210d026f\n   dev_v1         gsm8k  gen  100 chat_multi      4      train [0, 1, 2, 3] 740312ad\nreport_v1      mmlu_pro   mc 1000     letter      5 validation:same_subject b189ec76\nreport_v1          mmlu   mc 2000       mmlu      5        dev:same_subject c30699e8\nreport_v1         gsm8k  gen 1319         qa      4      train [0, 1, 2, 3] 740312ad\ndev_v1                              c8ecbb6fed7f742a\nreport_v1                           157f876e39a5d7fa\ndev_v1, ARC n=501                   5e7e5d495f5327a0\ndev_v1, GSM8K shots from train 4-7  1d96585d927779d2\n"
+        }
+      ]
+    },
+    "eval-suites-dev-def": {
+      "code_fingerprint": "sha256:2420650a44f30a1154e6fedaa92702e38780a77d7fd5d2bab28d695700e76f9a",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-run-dev": {
+      "code_fingerprint": "sha256:671d20a52b871d50631092391d5750d99278b8c92ed6565df2406b830d62143e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "batch drift of the last section: 99% of log-likelihoods within 0.507 nats; up to 6 items changed correctness\nQwen3-0.6B: 2 of 500 items differ from the last section (at most 18); margin over drift there, largest 0.38\nQwen3.5-0.8B: 4 of 500 items differ from the last section (at most 18); margin over drift there, largest 0.09\nQwen3-1.7B: 6 of 500 items differ from the last section (at most 18); margin over drift there, largest 0.53\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-0.6B: 2 of 500 items differ from the last section (at most 18); margin over drift there, largest 0.38\n    live run against the frozen one: 1.000 of items agree\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-1.7B@70d244cc86cc: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-1.7B: 6 of 500 items differ from the last section (at most 18); margin over drift there, largest 0.53\n    live run against the frozen one: 1.000 of items agree\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "task                 arc_challenge                 gsm8k\nmodel                                                   \nQwen3-0.6B    0.320 [0.280, 0.362]  0.420 [0.330, 0.510]\nQwen3-1.7B    0.426 [0.384, 0.468]  0.760 [0.670, 0.840]\nQwen3.5-0.8B  0.338 [0.296, 0.378]  0.490 [0.400, 0.590]\nQwen3.5-2B    0.402 [0.360, 0.442]  0.690 [0.590, 0.780]\n"
+        }
+      ]
+    },
+    "eval-suites-survive": {
+      "code_fingerprint": "sha256:489ba08799e07a6d927f5eaced0697ab4223364f996877ee05c870a6615bf693",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                     pair          task   n   diff           95% CI  distinguishable   MDE\n  Qwen3-1.7B - Qwen3-0.6B arc_challenge 500  0.106   [0.060, 0.152]             True 0.064\n  Qwen3-1.7B - Qwen3-0.6B         gsm8k 100  0.340   [0.240, 0.440]             True 0.144\nQwen3.5-0.8B - Qwen3-0.6B arc_challenge 500  0.018  [-0.020, 0.056]            False 0.054\nQwen3.5-0.8B - Qwen3-0.6B         gsm8k 100  0.070  [-0.020, 0.160]            False 0.133\n  Qwen3.5-2B - Qwen3-0.6B arc_challenge 500  0.082   [0.040, 0.122]             True 0.059\n  Qwen3.5-2B - Qwen3-0.6B         gsm8k 100  0.270   [0.190, 0.360]             True 0.124\nQwen3.5-0.8B - Qwen3-1.7B arc_challenge 500 -0.088 [-0.128, -0.048]             True 0.057\nQwen3.5-0.8B - Qwen3-1.7B         gsm8k 100 -0.270 [-0.370, -0.170]             True 0.147\n  Qwen3.5-2B - Qwen3-1.7B arc_challenge 500 -0.024  [-0.066, 0.016]            False 0.059\n  Qwen3.5-2B - Qwen3-1.7B         gsm8k 100 -0.070  [-0.150, 0.010]            False 0.114\nQwen3.5-2B - Qwen3.5-0.8B arc_challenge 500  0.064   [0.030, 0.098]             True 0.048\nQwen3.5-2B - Qwen3.5-0.8B         gsm8k 100  0.200   [0.100, 0.300]             True 0.143\ndistinguishable: 8 of 12\n"
+        }
+      ]
+    },
+    "eval-suites-symbolic-data": {
+      "code_fingerprint": "sha256:256886de8cb442fc9a56732b95cc0e761543b23662be6ab51bb7df1a8802a34b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "100 templates by 50 instances; kept: 100 originals and 400 variants (instances 0 to 3)\nlicence CC BY-NC-ND 4.0: the texts are not printed or stored; canary on every row: True\n"
+        }
+      ]
+    },
+    "eval-suites-symbolic-run": {
+      "code_fingerprint": "sha256:a1da2072b25c479cce38fe3f72e698efded4e15fcb71518dcd704691675873b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "             correct  ll_byte\nis_original                  \nvariants      0.7175  -0.6977\noriginals     0.7200  -0.6220\n"
+        }
+      ]
+    },
+    "eval-suites-symbolic-ref": {
+      "code_fingerprint": "sha256:3b18a9c16676a2bccdeeb64c14782ff56de3a47bf7f0899a6583383722ad918e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GPT-2 on 500 texts in 0.3 s\nis_original\nvariants    -0.8129\noriginals   -0.7698\n"
+        }
+      ]
+    },
+    "eval-suites-symbolic-test": {
+      "code_fingerprint": "sha256:508e71b66874976374b12ce65325e7117772f5e1338a52dcef14face12f5506b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                estimate       clustered CI       p       MDE\n(a) accuracy                      0.0025  [-0.0800, 0.0850]    0.98  0.119375\n(b) ll per byte, Qwen3-1.7B     0.075712   [0.0569, 0.0937]     0.0  0.026255\n(b) ll per byte, GPT-2          0.043131   [0.0319, 0.0541]     0.0  0.015909\n(c) Qwen3-1.7B gap - GPT-2 gap   0.03258   [0.0150, 0.0496]  0.0002  0.024352\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(a) MDE predicted 0.074 to 0.113 (within-template correlation 0.7 to 0.3), measured 0.119\n(a) interval without clusters [-0.048, 0.050], design effect 2.87\ntemplates whose original is right and every variant wrong: 4\n"
+        }
+      ]
+    },
+    "eval-suites-judge-def": {
+      "code_fingerprint": "sha256:30c85d95993fb2ea577ea57200a1fa6678ffc8613612b97d3fe219cbfe26baa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-judge": {
+      "code_fingerprint": "sha256:a867bfebfcc9f2186c111125461863f2497e46d6778686d63f6a8bad70bc8f47",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-prompts": {
+      "code_fingerprint": "sha256:f5fa5b158491695161a2cac3b802249b346c25284aaf896f4699d9e8e180b46a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "source    category        \ndolly     brainstorming       52\n          creative_writing    20\n          general_qa          65\n          open_qa             83\nmt-bench  coding              10\n          extraction          10\n          humanities          10\n          math                10\n          reasoning           10\n          roleplay            10\n          stem                10\n          writing             10\n300 prompts\n"
+        }
+      ]
+    },
+    "eval-suites-answers": {
+      "code_fingerprint": "sha256:7d1067b126289e0a98c78df1d2e3f74cd49b45766cc46505af945f28f563f404",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                               answers  median_words  max_tokens_share\nmodel             answer_seed                                         \nQwen/Qwen3-0.6B   0                300          79.0             0.003\nQwen/Qwen3-1.7B   0                300         101.5             0.010\n                  1                300         103.0             0.013\nQwen/Qwen3.5-0.8B 0                300         142.0             0.070\nQwen/Qwen3.5-2B   0                300         152.0             0.020\n                  1                300         151.0             0.027\n"
+        }
+      ]
+    },
+    "eval-suites-human-pairs": {
+      "code_fingerprint": "sha256:d2bb94862c28ab969877fbc6845ecf8f9a5eb6fdeba0ae35e28bfd75eaf4155c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "756 candidate pairs, 400 judged: 224 easy, 176 hard; easy model pairs 8 of 15\n"
+        }
+      ]
+    },
+    "eval-suites-judge-human": {
+      "code_fingerprint": "sha256:2d1b3676eadb6491c41ad382292dd11dc67cfa9063c6b1b0412a2ef1b4328e1d",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-agreement": {
+      "code_fingerprint": "sha256:e33d2cfd75e5f3f5a8802f2f6f63f22ab71816939f179f0332118ff25d40d70e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                                                    all                                             easy                                             hard\nQwen3.5-4B, consistent   0.83 [0.79, 0.87], coverage 0.83, 78 questions   0.89 [0.85, 0.93], coverage 0.90, 73 questions   0.73 [0.66, 0.81], coverage 0.74, 68 questions\nQwen3.5-4B, forced       0.80 [0.76, 0.84], coverage 1.00, 78 questions   0.88 [0.84, 0.92], coverage 1.00, 75 questions   0.69 [0.62, 0.76], coverage 0.99, 75 questions\nGPT-4                    0.87 [0.83, 0.90], coverage 0.79, 75 questions   0.89 [0.84, 0.93], coverage 0.88, 70 questions   0.83 [0.76, 0.89], coverage 0.69, 63 questions\nhuman-human             0.82 [0.76, 0.88], tie share 0.13, 68 questions  0.89 [0.83, 0.94], tie share 0.09, 58 questions  0.71 [0.60, 0.81], tie share 0.19, 45 questions\nmedian probability on the tokens A and B: 1.000\n"
+        }
+      ]
+    },
+    "eval-suites-judge-pairs": {
+      "code_fingerprint": "sha256:2a504e301ecfda1d7d2f5aeb12543e26960f9e9d6c0f1798f002d446b20cb7f0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       pairs  consistent\narm                     \npad      294       0.449\npairs   1800       0.756\nseed1    300       0.670\nmedian probability on the tokens A and B: 0.999\n"
+        }
+      ]
+    },
+    "eval-suites-position-bias": {
+      "code_fingerprint": "sha256:2ac7bdff2f6375790633e1070709a8fe0a1f2a203c7ecd647330cf2b1322bbcc",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean position bias: 0.723 [0.651, 0.796]\nconsistent verdicts: 0.756 [0.730, 0.781]\nwinner changes, order 1 alone: 0.139 [0.122, 0.158]\nwinner changes, order 2 alone: 0.106 [0.089, 0.123]\nposition bias: median 0.674, IQR [0.167, 1.243]\ntotal-least-squares slope 0.982 [0.941, 1.024], intercept -1.453\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eval-suites/eval-suites-position-bias-1.svg",
+          "bytes": 224007,
+          "sha256": "sha256:8d1c3846c9573c404a243281fdd940a3fe4afaadcce0afb2f4d8c1e7f4ffbe15"
+        }
+      ]
+    },
+    "eval-suites-verbosity": {
+      "code_fingerprint": "sha256:0e76da3ed997285d85ebcaf85d66b82adce923676c6685a6e1e3d144c7f71d34",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(a) padded minus plain, 294 prompts: delta -0.777 [-0.844, -0.711]; consistent verdicts for the padded answer 0.010, for the plain one 0.439\n(b) 85 of 1800 pairs with a truncated or empty answer excluded\n(b) slope of delta on log(words_a / words_b): 0.514 [0.173, 0.899]\n                            pairs  raw win rate of the first  length-adjusted\nQwen3-0.6B vs Qwen3-1.7B      296                      0.135            0.080\nQwen3-0.6B vs Qwen3.5-0.8B    279                      0.414            0.466\nQwen3-0.6B vs Qwen3.5-2B      293                      0.130            0.087\nQwen3-1.7B vs Qwen3.5-0.8B    278                      0.779            0.847\nQwen3-1.7B vs Qwen3.5-2B      293                      0.365            0.327\nQwen3.5-0.8B vs Qwen3.5-2B    276                      0.163            0.133\n"
+        }
+      ]
+    },
+    "eval-suites-bt": {
+      "code_fingerprint": "sha256:c3e58b4877f8b8cb15705c7cbeceeae6b90f94b4ebdf5d54756a3120b7b52fbe",
+      "kind": "text",
+      "outputs": []
+    },
+    "eval-suites-bt-fit": {
+      "code_fingerprint": "sha256:32663f54e33c088e671864336418c2105b5b037c36ec524a7ea2e375e1fb7e21",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "              strength     lo     hi  raw win rate\nQwen3-0.6B      -0.957 -1.087 -0.832         0.242\nQwen3-1.7B       0.615  0.514  0.715         0.671\nQwen3.5-0.8B    -0.694 -0.814 -0.578         0.309\nQwen3.5-2B       1.036  0.900  1.178         0.778\n              Qwen3-0.6B  Qwen3-1.7B  Qwen3.5-0.8B  Qwen3.5-2B\nQwen3-0.6B         0.000         0.0         0.001         0.0\nQwen3-1.7B         1.000         0.0         1.000         0.0\nQwen3.5-0.8B       0.999         0.0         0.000         0.0\nQwen3.5-2B         1.000         1.0         1.000         0.0\nordered (probability above 0.95): ['Qwen3-1.7B > Qwen3-0.6B', 'Qwen3-1.7B > Qwen3.5-0.8B', 'Qwen3.5-0.8B > Qwen3-0.6B', 'Qwen3.5-2B > Qwen3-0.6B', 'Qwen3.5-2B > Qwen3-1.7B', 'Qwen3.5-2B > Qwen3.5-0.8B']\n"
+        }
+      ]
+    },
+    "eval-suites-answer-seed": {
+      "code_fingerprint": "sha256:989f61b5f4aa4008be1a4035acd8aaa96876227b6616285f52711e588f653931",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "win rate of Qwen3.5-2B over Qwen3-1.7B: answer seed 0 0.633 [0.590, 0.677], seed 1 0.652 [0.610, 0.695]\nseed 1 minus seed 0: 0.018 [-0.027, 0.065], p 0.457\n"
+        }
+      ]
+    },
+    "eval-suites-protocol": {
+      "code_fingerprint": "sha256:d988bda47a401b6979d21d8482826b7243e2115d12476bfb9d0d0ad00e2212db",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                 model: Qwen/Qwen3-0.6B-Base @ da87bfb608c1\n                                  data: openai/gsm8k @ 740312add88f, main, test, all items\n                                 suite: report_v1 157f876e39a5, its task gsm8k alone e306085c640a\n                                prompt: 'qa' blocks 'Q: ...\\nA: ...', no chat template (sha256 764f758d0919)\n                                 shots: 4, train [0, 1, 2, 3], worked solutions without calculator annotations\n                              decoding: greedy, max_new_tokens=384, stop=['\\n\\nQ:'], no thinking mode (base model)\n                             extractor: number after the last '####', else after 'the answer is', else the last number\n                                  seed: none needed (greedy)\n                     batch size, dtype: 32, torch.bfloat16\n                              versions: torch 2.11.0+cu128, transformers 5.22.2 (run 02b39a0f8551af87)\n                                     n: 1,319\n                     accuracy (95% CI): 0.511 [0.484, 0.538]\n                         MDE at this n: 0.039\n  held fixed against the published run: model, test set, 4 shots with worked solutions\n              not stated by the source: which shots, the template, the extractor, the stop rule\npublished: 0.5959 (4-shot, CoT (Qwen3 Technical Report, Table 8)); outside the interval\n"
+        }
+      ]
+    }
+  }
+}

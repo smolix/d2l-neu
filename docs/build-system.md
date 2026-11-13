@@ -560,8 +560,15 @@ uses one of their symbols at import time). Members:
   `sec_lm_api` (18.7): `ChatResult`, the `ChatAPI` class body (the section
   shows its `async def achat`, merged in by `add_to_class`),
   `openrouter_api`, `LocalChatServer`, `FakeChatServer`. PyTorch only.
+- `chapter_lm-pretrained/hf-models-lib.md` holds what `sec_lm_hf_models`
+  (18.1) explains in a sentence: the kernel routing behind `load_hf`
+  (`bind_hf_kernels`, `hf_attention`, `hf_kernels`, `reference_kernels`,
+  `_TEXT_KEY_MAPPING`) and the timing, profiling and capacity harness of its
+  measurements (`hf_measure`, `hf_capacity`, `hf_compare_kernels`,
+  `hf_profile_steps`, the table views). PyTorch only.
 
-Both Language Models files are appended (nothing uses them at import time).
+The three Language Models files are appended (nothing uses them at import
+time).
 Their blocks follow the part's import rule: third-party modules
 (`transformers`, `openai`, `httpx`, `asyncio`) are imported inside the
 functions, so `import d2l.torch` works without them and the `_preamble` shard

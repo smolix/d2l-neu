@@ -3,7 +3,10 @@
 (chapter_lm-pretrained/hf-models.md): `d2l.HF_REVISIONS`,
 `d2l.safetensors_header`, `d2l.load_hf` and its kernel helpers
 (`d2l.bind_hf_kernels`, `d2l.hf_attention`, `d2l.hf_kernels`,
-`d2l.reference_kernels`), `d2l.config_params` and `d2l.config_memory`.
+`d2l.reference_kernels`, in the build-only hf-models-lib.md),
+`d2l.config_params`, `d2l.config_memory`, `d2l.cache_bytes`,
+`d2l.bytes_read`, and the CPU-testable parts of the measurement harness
+(`d2l.hf_memory_table`, `d2l.hf_time_table`, `d2l.show_kernels`).
 
 The configurations and safetensors headers of the studied checkpoints are
 committed fixtures (tools/lm/fixtures/hf_models/, Apache-2.0 metadata, no
@@ -530,6 +533,107 @@ class ConfigMemory(unittest.TestCase):
                                  (cls.__name__, n, B))
 
 
+class Harness(unittest.TestCase):
+    """The section's cache walker and decode-bytes formula, and the table
+    views of the measurement harness (the GPU parts run in the notebook)."""
+
+    def test_cache_bytes_walker(self):
+        """d2l.cache_bytes on a CPU prefill: logical bytes equal the
+        formula's cache and state, by dtype (fp32 state, bf16 rest); a
+        sliding layer's view of the prompt keeps more storage resident."""
+        from transformers import Gemma4ForCausalLM
+        from transformers.models.qwen3_5 import Qwen3_5ForCausalLM
+        torch.manual_seed(0)
+        for cls, cfg in [
+                (Qwen3_5ForCausalLM, tiny_qwen35_config().get_text_config()),
+                (Gemma4ForCausalLM, tiny_gemma_config().get_text_config())]:
+            model = cls(cfg).to(torch.bfloat16).eval()
+            n = 20
+            with quiet(), torch.no_grad():
+                cache = model(torch.randint(0, 128, (1, n)), use_cache=True,
+                              logits_to_keep=1).past_key_values
+            logical, resident = d2l.cache_bytes(cache)
+            m = d2l.config_memory(model.config, n, 1)
+            self.assertEqual(sum(logical.values()),
+                             m['kv_cache'] + m['recurrent_state'])
+            self.assertEqual(sum(logical.values()), cache_bytes(cache))
+            self.assertGreaterEqual(sum(resident.values()),
+                                    sum(logical.values()))
+            if cls is Qwen3_5ForCausalLM:
+                self.assertEqual(set(logical), {torch.bfloat16,
+                                                torch.float32})
+            else:  # 20 positions against a window of 7 kept
+                self.assertEqual(set(logical), {torch.bfloat16})
+                self.assertGreater(sum(resident.values()),
+                                   sum(logical.values()))
+
+    def test_bytes_read(self):
+        """Bytes a decode step reads at 1,024 tokens: the weights (without
+        Gemma 4's gathered per-layer table), the caches a layer attends to,
+        and the state twice."""
+        qwen, gemma = auto_config(QWEN35), auto_config(GEMMA)
+        self.assertEqual(d2l.bytes_read(qwen, 1024),
+                         2 * 1_881_825_088 + 12_582_912 + 2 * 19_759_104)
+        self.assertEqual(d2l.bytes_read(qwen, 1024), 3_815_751_296)
+        self.assertEqual(d2l.bytes_read(gemma, 1024),
+                         2 * 2_279_759_104 + 29_331_456)
+        # KV-sharing layers re-read their source's cache: the shared
+        # layers count as if they held one
+        self.assertGreater(d2l.bytes_read(gemma, 16384)
+                           - d2l.bytes_read(gemma, 1024),
+                           d2l.config_memory(gemma, 16384, 1)['kv_cache']
+                           - d2l.config_memory(gemma, 1024, 1)['kv_cache'])
+
+    ROWS = [dict(model='m', n=n, walker_logical=2**20 * n,
+                 walker_resident=2**21 * n, formula=2**20 * n,
+                 growth=110, growth_derived=100, growth_after_step=90,
+                 growth_after_step_derived=100, peak=98, peak_formula=100,
+                 wall_ms_median=26.0, wall_ms_q1=25.9, wall_ms_q3=26.1,
+                 bytes_read=4e9, r_over_beta_measured_ms=4.35,
+                 busy_ms=6.5, matmul_ms=4.3, launches=1488)
+            for n in (256, 1024)]
+
+    def test_memory_table(self):
+        table = d2l.hf_memory_table(self.ROWS)
+        self.assertEqual(list(table.columns), [
+            'n', 'walker MiB', 'formula MiB', 'growth', 'after step',
+            'peak', 'held'])
+        self.assertEqual(table['walker MiB'].tolist(), [256, 1024])
+        self.assertEqual(table.iloc[0][['growth', 'after step', 'peak',
+                                        'held']].tolist(),
+                         [1.1, 0.9, 0.98, 2.0])
+        self.assertLessEqual(max(map(len, table.to_string(
+            index=False).splitlines())), 100)
+
+    def test_time_table(self):
+        table = d2l.hf_time_table(self.ROWS, beta_sheet=1e12)
+        self.assertEqual(list(table.columns), [
+            'n', 'wall', 'q1', 'q3', 'busy', 'matmul', 'launches',
+            'R/beta sheet', 'R/beta meas.'])
+        self.assertEqual(table['R/beta sheet'].tolist(), [4.0, 4.0])
+        self.assertEqual(table['R/beta meas.'].tolist(), [4.35, 4.35])
+        self.assertLessEqual(max(map(len, table.to_string(
+            index=False).splitlines())), 100)
+
+    def test_kernel_names(self):
+        kernels = {
+            'void gemvx::kernel<int, int, __nv_bfloat16>(Params)': 4.0,
+            'fmha_cutlassF_bf16_aligned_32x128_gmem_sm80(Params)': 1.0,
+            'void at::native::(anonymous namespace)::reduce_kernel<512>()':
+                0.5}
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            d2l.show_kernels(kernels, rows=2)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertIn('gemvx::kernel<int, int, __nv_bfloat16>', lines[0])
+        self.assertIn('73%', lines[0])
+        self.assertTrue(lines[1].endswith('fmha_cutlassF_bf16_aligned_32x128'
+                                          '_gmem_sm80'))
+        self.assertTrue(d2l._MATMUL_KERNELS.search(list(kernels)[0]))
+        self.assertFalse(d2l._MATMUL_KERNELS.search(list(kernels)[1]))
+
+
 class _Hub(http.server.BaseHTTPRequestHandler):
     """A Hub stand-in with the redirect shape of huggingface.co (checked
     with curl, 2026-11-12). /<org>/<repo>/resolve/<rev>/<file> answers a
@@ -868,6 +972,59 @@ class Kernels(unittest.TestCase):
                 reference = model(ids).logits
         self.assertTrue(torch.equal(routed, reference))
 
+    def test_plain_load_on_cpu_after_bind(self):
+        """Regression: Transformers imports a model's module only when
+        `from_pretrained` resolves its class, so a bind before the load must
+        import the Gated DeltaNet modules itself. In a fresh process (none
+        of them imported yet), bind_hf_kernels, then a plain
+        `from_pretrained` of a tiny Qwen3.5 and greedy `generate` on the
+        CPU in fp32: the routed functions run the reference code, and the
+        logits equal those inside reference_kernels."""
+        import subprocess
+        import sys
+        from transformers.models.qwen3_5 import Qwen3_5ForCausalLM
+        torch.manual_seed(0)
+        model = Qwen3_5ForCausalLM(tiny_qwen35_config().get_text_config())
+        script = (
+            'import sys, torch, transformers\n'
+            'from d2l import torch as d2l\n'
+            'assert not any(m.startswith("transformers.models.qwen3_5")\n'
+            '               for m in sys.modules)\n'
+            'd2l.bind_hf_kernels()\n'
+            'import transformers.models.qwen3_5.modeling_qwen3_5 as q35\n'
+            'assert all(hasattr(getattr(q35, fn), "fused")\n'
+            '           for fn in d2l._HF_LINEAR_KERNELS)\n'
+            'model = transformers.AutoModelForCausalLM.from_pretrained(\n'
+            '    sys.argv[1], dtype=torch.float32, device_map="cpu").eval()\n'
+            'ids = torch.tensor([[1, 2, 3, 4, 5]])\n'
+            'with torch.no_grad():\n'
+            '    out = model.generate(ids, max_new_tokens=4, do_sample=False,\n'
+            '                         pad_token_id=0)\n'
+            '    routed = model(out).logits\n'
+            '    with d2l.reference_kernels(model):\n'
+            '        reference = model(out).logits\n'
+            'assert torch.equal(routed, reference)\n'
+            'print("ok", out.shape[1])\n')
+        with tempfile.TemporaryDirectory() as path:
+            with quiet():
+                model.save_pretrained(path)
+            env = dict(os.environ, CUDA_VISIBLE_DEVICES='')
+            result = subprocess.run([sys.executable, '-c', script, path],
+                                    capture_output=True, text=True, env=env,
+                                    timeout=600)
+        self.assertEqual(result.returncode, 0, result.stderr[-3000:])
+        self.assertEqual(result.stdout.split()[-2:], ['ok', '9'])
+
+    def test_bind_sets_flex_guards(self):
+        """bind_hf_kernels raises torch's recompile limit to at least 64
+        (one flex compilation per prompt shape) and turns the warning of
+        flex attention's uncompiled fallback into an error."""
+        d2l.bind_hf_kernels()
+        self.assertGreaterEqual(torch._dynamo.config.recompile_limit, 64)
+        with self.assertRaises(UserWarning):
+            warnings.warn('flex_attention called without torch.compile() '
+                          'is slow', UserWarning)
+
     def test_reference_kernels_restores(self):
         import transformers.models.qwen3_5.modeling_qwen3_5 as q35
         from transformers.models.gemma4 import Gemma4ForCausalLM
@@ -1056,15 +1213,43 @@ class LoadHF(unittest.TestCase):
             self.assertIn(f'stop tokens {expected}', out)
 
     def test_load_report(self):
+        """Three lines: model, class and stop tokens; the keys; the kernels.
+        Every line fits a page (no line over 100 columns)."""
         unexpected = ['model.audio_tower.a', 'model.audio_tower.b',
                       'model.vision_tower.c']
         _, _, _, _, out = self.load(GEMMA, auto_config(GEMMA),
                                     unexpected=unexpected)
-        self.assertEqual(len(out.strip().splitlines()), 2)
-        self.assertEqual(out.strip().splitlines()[1], 'kernels: attention sdpa')
-        self.assertIn("'model.audio_tower': 2", out)
-        self.assertIn("'model.vision_tower': 1", out)
-        self.assertIn(d2l.HF_REVISIONS[GEMMA][:12], out)
+        lines = out.strip().splitlines()
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(lines[0], f'{GEMMA}@{d2l.HF_REVISIONS[GEMMA][:12]}: '
+                                   'MagicMock, stop tokens []')
+        self.assertEqual(lines[1], '0 missing keys; unexpected keys: '
+                                   '(not loaded)')
+        self.assertEqual(lines[2], '    model.audio_tower 2, '
+                                   'model.vision_tower 1')
+        self.assertEqual(lines[3], 'kernels: attention sdpa')
+        _, _, _, _, out = self.load(QWEN35, auto_config(QWEN35))
+        self.assertEqual(out.strip().splitlines()[1],
+                         '0 missing keys; unexpected keys: none')
+        self.assertEqual(len(out.strip().splitlines()), 3)
+        # The released Gemma 4 file: four groups, by count then name, in
+        # the same order whatever order the loader lists the keys in
+        groups = {'audio_tower': 751, 'vision_tower': 647, 'embed_vision': 1,
+                  'embed_audio': 1}
+        keys = [f'model.{g}.{i}' for g, n in groups.items()
+                for i in range(n)]
+        reports = set()
+        for order in (keys, keys[::-1]):
+            _, _, _, _, out = self.load(GEMMA, auto_config(GEMMA),
+                                        unexpected=order,
+                                        config_eos=[1, 106, 50])
+            reports.add(out)
+        self.assertEqual(len(reports), 1)
+        lines = out.strip().splitlines()
+        self.assertEqual(lines[2], '    model.audio_tower 751, '
+                         'model.vision_tower 647, model.embed_audio 1, '
+                         'model.embed_vision 1')
+        self.assertLessEqual(max(map(len, lines)), 100)
 
     def test_device_map(self):
         cfg = auto_config('Qwen/Qwen3-0.6B')

@@ -41,6 +41,15 @@ when the section is written.
 - Courses, tutorials and blogs: [Hugging Face LLM Course, chapter 2](https://huggingface.co/learn/llm-course/chapter2/1) (the Auto-class tour); [CS336](https://cs336.stanford.edu/) (resource accounting lecture: FLOPs, memory, arithmetic intensity).
 -->
 
+```{.python .input #hf-models-setup}
+%%tab pytorch
+import os
+# The allocator reads this setting when CUDA starts, so it comes first:
+# expandable segments grow in place instead of being fixed in size, so a
+# large tensor need not find one free block that fits it
+os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
+```
+
 ```{.python .input #hf-models-imports}
 %%tab pytorch
 import math
@@ -55,37 +64,28 @@ from d2l import torch as d2l
 %%tab pytorch
 import accelerate
 import collections
-import contextlib
-import copy
 import functools
 import gc
-import hashlib
 import huggingface_hub
 import itertools
 import json
-import os
 import pandas as pd
 import re
 import transformers
-import warnings
 from huggingface_hub import HfApi, file_exists
 from safetensors import safe_open
 from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
                           GenerationConfig)
 ```
 
-<!-- Placeholder (prose, opening): the studied models, the question, and the library versions that produced the outputs. -->
+<!-- Placeholder (prose, opening): the studied models, the question, the routing of the fused kernels, and the library versions that produced the outputs. -->
 
 ```{.python .input #hf-models-settings}
 %%tab pytorch
 QWEN, GEMMA = 'Qwen/Qwen3.5-2B', 'google/gemma-4-E2B-it'
 QWEN3 = 'Qwen/Qwen3-0.6B'  # its tokenizer only
+NAMES = {QWEN3: 'Qwen3-0.6B', QWEN: 'Qwen3.5-2B', GEMMA: 'Gemma 4 E2B'}
 GPU = torch.cuda.is_available()
-# PyTorch's allocator caches freed blocks for reuse, and a tensor larger than
-# every free block takes a new segment, so a batch can run out of memory
-# with gigabytes free in pieces. Expandable segments grow one mapping
-# instead; the setting must precede the first CUDA tensor
-os.environ.setdefault('PYTORCH_ALLOC_CONF', 'expandable_segments:True')
 # On a GPU the studied model runs in bf16; without one, its smallest sibling
 # runs in fp32 and the measurements of the last part are skipped
 RUN_MODEL, RUN_REV, RUN_DTYPE = (
@@ -94,6 +94,7 @@ RUN_MODEL, RUN_REV, RUN_DTYPE = (
           torch.float32))
 QUESTION = ('Why does a language model keep a key-value cache when it '
             'generates text?')
+d2l.bind_hf_kernels()  # fused kernels for CUDA bf16, reference code otherwise
 transformers.logging.set_verbosity_error()  # no notices or progress bars
 transformers.logging.disable_progress_bar()
 huggingface_hub.utils.disable_progress_bars()
@@ -128,6 +129,62 @@ n_prompt = prompt['input_ids'].shape[1]
 d2l.print_wrapped(tokenizer.decode(reply[0, n_prompt:],
                                    skip_special_tokens=True))
 print(f'{type(model).__name__}: {model.num_parameters():,} parameters')
+```
+
+<!-- Placeholder (prose, ### Revisions and Licences): a revision names one commit; the chapter pins every model it loads. -->
+A model id names a repository whose files change over time; a revision names
+one commit of it. `HF_REVISIONS` pins every model this chapter loads to the
+commit it was written against, and later sections add their own entries to
+it. The commits were resolved with the Hub API on 2026-11-12.
+
+```{.python .input #hf-models-revisions}
+%%tab pytorch
+#@save
+HF_REVISIONS = {
+    'Qwen/Qwen3-0.6B': 'c1899de289a04d12100db370d81485cdf75e47ca',
+    'Qwen/Qwen3-0.6B-Base': 'da87bfb608c14b7cf20ba1ce41287e8de496c0cd',
+    'Qwen/Qwen3-1.7B': '70d244cc86ccca08cf5af4e1e306ecf908b1ad5e',
+    'Qwen/Qwen3-1.7B-Base': 'ea980cb0a6c2ae4b936e82123acc929f1cec04c1',
+    'Qwen/Qwen3-4B': '1cfa9a7208912126459214e8b04321603b3df60c',
+    'Qwen/Qwen3-8B': 'b968826d9c46dd6066d109eabc6255188de91218',
+    'Qwen/Qwen3.5-0.8B': '2fc06364715b967f1860aea9cf38778875588b17',
+    'Qwen/Qwen3.5-0.8B-Base': 'dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68',
+    'Qwen/Qwen3.5-2B': '15852e8c16360a2fea060d615a32b45270f8a8fc',
+    'Qwen/Qwen3.5-4B': '851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a',
+    'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
+```
+
+<!-- Placeholder (prose, ### Revisions and Licences): the licence and the size of the weights of every pinned model, for tab_lm_revisions. -->
+
+```{.python .input #hf-models-pins}
+%%tab pytorch
+for m, rev in HF_REVISIONS.items():  # licence and weights at each pin
+    card = HfApi().model_info(m, revision=rev, files_metadata=True)
+    size = sum(f.size for f in card.siblings
+               if f.rfilename.endswith('.safetensors'))
+    print(f'{m:24} {rev[:12]}  {card.card_data.license:12} '
+          f'{size / 1e9:5.2f} GB')
+```
+
+<!-- Placeholder prose (stage 2): the section text is written after the runs. -->
+The files this part of the book records itself (measured tables, reference
+logits, cached API responses) are published once under a versioned name and
+never change; `DATA_HUB` pins each to its SHA-1 under `LM_DATA_URL`.
+
+```{.python .input #hf-models-lm-data-url}
+%%tab pytorch
+#@save
+LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
+```
+
+<!-- Placeholder (prose, none): the measured memory and speed table behind the plot in this section, for readers without a GPU. -->
+
+```{.python .input #hf-models-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-hf-memory-speed-v2'] = (  # fused kernels (fla, flex_sdpa)
+    d2l.LM_DATA_URL + 'lm-hf-memory-speed-v2.json',
+    'e1a6407448d04a3aef8cc6fff5ed39cfea549f0b')
 ```
 
 <!-- Placeholder (prose, ### Repository Anatomy): the files of the repository at its pinned commit. -->
@@ -218,195 +275,17 @@ for prefix, n in elements.items():
 assert sum(elements.values()) == info.safetensors.total
 ```
 
-<!-- Placeholder prose (stage 2): the section text is written after the runs. -->
-A model id names a repository whose files change over time; a revision names
-one commit of it. `HF_REVISIONS` pins every model this chapter loads to the
-commit it was written against, and later sections add their own entries to
-it. The commits were resolved with the Hub API on 2026-11-12.
-
-```{.python .input #hf-models-revisions}
-%%tab pytorch
-#@save
-HF_REVISIONS = {
-    'Qwen/Qwen3-0.6B': 'c1899de289a04d12100db370d81485cdf75e47ca',
-    'Qwen/Qwen3-0.6B-Base': 'da87bfb608c14b7cf20ba1ce41287e8de496c0cd',
-    'Qwen/Qwen3-1.7B': '70d244cc86ccca08cf5af4e1e306ecf908b1ad5e',
-    'Qwen/Qwen3-1.7B-Base': 'ea980cb0a6c2ae4b936e82123acc929f1cec04c1',
-    'Qwen/Qwen3-4B': '1cfa9a7208912126459214e8b04321603b3df60c',
-    'Qwen/Qwen3-8B': 'b968826d9c46dd6066d109eabc6255188de91218',
-    'Qwen/Qwen3.5-0.8B': '2fc06364715b967f1860aea9cf38778875588b17',
-    'Qwen/Qwen3.5-0.8B-Base': 'dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68',
-    'Qwen/Qwen3.5-2B': '15852e8c16360a2fea060d615a32b45270f8a8fc',
-    'Qwen/Qwen3.5-4B': '851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a',
-    'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
-```
-
-<!-- Placeholder prose (stage 2): the section text is written after the runs. -->
-The files this part of the book records itself (measured tables, reference
-logits, cached API responses) are published once under a versioned name and
-never change; `DATA_HUB` pins each to its SHA-1 under `LM_DATA_URL`.
-
-```{.python .input #hf-models-lm-data-url}
-%%tab pytorch
-#@save
-LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
-```
-
-<!-- Placeholder (prose, none): the measured memory and speed table behind the plot in this section, for readers without a GPU. -->
-
-```{.python .input #hf-models-data-hub}
-%%tab pytorch
-#@save
-d2l.DATA_HUB['lm-hf-memory-speed-v1'] = (
-    d2l.LM_DATA_URL + 'lm-hf-memory-speed-v1.json',
-    'fce26dfa4ddb9d0463fcfef3ddcb3861ec7226d7')
-d2l.DATA_HUB['lm-hf-memory-speed-v2'] = (  # fused kernels (fla, flex_sdpa)
-    d2l.LM_DATA_URL + 'lm-hf-memory-speed-v2.json',
-    'e1a6407448d04a3aef8cc6fff5ed39cfea549f0b')
-```
-
-<!-- Placeholder (prose, ### Why Kernels Matter): the code a model runs. Transformers binds the fused Gated DeltaNet kernels of flash-linear-attention at import, for every device; load_hf routes CPU tensors and fp32 or fp64 ones (fla multiplies fp32 in TF32) to the reference code and picks flex attention for prompts, SDPA for single tokens. -->
-
-```{.python .input #hf-models-kernels}
-%%tab pytorch
-#@save
-_HF_LINEAR_KERNELS = ('torch_chunk_gated_delta_rule',  # a prompt, by chunks
-                      'torch_recurrent_gated_delta_rule',  # one token
-                      'causal_conv1d_fn', 'causal_conv1d_update')
-
-#@save
-def _hf_route(bound):
-    """Transformers' kernel function `bound`, run by the fused kernel it
-    bound at import for CUDA tensors in bf16 or fp16 and by its PyTorch
-    reference code for the rest: the fused Triton kernels need a GPU, and
-    they multiply fp32 inputs in TF32, which an fp32 check does not expect."""
-    import functools
-    import inspect
-    reference = bound.__wrapped__
-    fused = inspect.getclosurevars(bound).nonlocals.get('implementation')
-
-    @functools.wraps(reference)
-    def routed(*args, **kwargs):
-        x = args[0] if args else next(iter(kwargs.values()))
-        if (routed.fused is None or not x.is_cuda
-                or x.dtype not in (torch.bfloat16, torch.float16)):
-            return reference(*args, **kwargs)
-        return bound(*args, **kwargs)
-    routed.fused = None if fused is reference else fused  # None: reference
-    return routed
-
-#@save
-def _hf_flex_sdpa_mask(*args, q_length, **kwargs):
-    """The flex_sdpa mask: a block mask for a prompt, SDPA's mask (one row
-    at most) for a single token."""
-    from transformers import masking_utils
-    mask = (masking_utils.flex_attention_mask if q_length > 1
-            else masking_utils.sdpa_mask)
-    return mask(*args, q_length=q_length, **kwargs)
-
-#@save
-def _hf_flex_sdpa(module, query, key, value, attention_mask, **kwargs):
-    """Flex attention for a prompt, which materializes no n x n mask; SDPA
-    for a single token, where flex's per-step block mask costs time."""
-    from torch.nn.attention.flex_attention import BlockMask
-    from transformers.integrations import flex_attention, sdpa_attention
-    if not isinstance(attention_mask, BlockMask):
-        return sdpa_attention.sdpa_attention_forward(
-            module, query, key, value, attention_mask, **kwargs)
-    if query.shape[-1] > 128:  # flex's default blocks for wide heads need
-        kwargs.setdefault('kernel_options', dict(  # 148 KiB of shared
-            BLOCK_M=32, BLOCK_N=32, num_stages=1))  # memory; sm_89 has 99
-    return flex_attention.flex_attention_forward(
-        module, query, key, value, attention_mask, **kwargs)
-
-#@save
-def bind_hf_kernels():
-    """Route the linear-attention functions of the imported Transformers
-    models by device (`_hf_route`); register the flex_sdpa attention."""
-    import sys
-    from transformers import AttentionInterface, AttentionMaskInterface
-    AttentionInterface.register('flex_sdpa', _hf_flex_sdpa)
-    AttentionMaskInterface.register('flex_sdpa', _hf_flex_sdpa_mask)
-    for name, module in list(sys.modules.items()):
-        if name.startswith('transformers.models.') and module is not None:
-            for fn in _HF_LINEAR_KERNELS:
-                bound = getattr(module, fn, None)
-                if bound is not None and not hasattr(bound, 'fused'):
-                    setattr(module, fn, _hf_route(bound))
-
-#@save
-def hf_attention(config, device):
-    """The attention that runs `config` on `device` without an n x n mask:
-    flex_sdpa if it has sliding-window layers and the device is a GPU of
-    compute capability 8.0 or more, SDPA otherwise."""
-    layers = getattr(config.get_text_config(), 'layer_types', None) or []
-    device = torch.device(device)
-    return ('flex_sdpa' if 'sliding_attention' in layers
-            and device.type == 'cuda'
-            and torch.cuda.get_device_capability(device) >= (8, 0)
-            else 'sdpa')
-
-#@save
-def hf_kernels(model):
-    """The code a model's attention and Gated DeltaNet layers run on a GPU
-    in the model's dtype (binding the latter by device and dtype first, as
-    load_hf does)."""
-    import sys
-    bind_hf_kernels()
-    module = sys.modules[type(model).__module__]
-    kernels = {'attention': model.config._attn_implementation}
-    if 'linear_attention' in (getattr(model.config, 'layer_types', None)
-                              or []):
-        for key, fn in (('delta rule', 'torch_chunk_gated_delta_rule'),
-                        ('short convolution', 'causal_conv1d_fn')):
-            fused = getattr(module, fn).fused
-            kernels[key] = ('PyTorch' if fused is None or model.dtype
-                            not in (torch.bfloat16, torch.float16)
-                            else fused.__module__.split('.')[0])
-    return kernels
-
-#@save
-class reference_kernels:
-    """Run `model` on Transformers' reference code inside a `with` block:
-    SDPA with explicit masks and the PyTorch Gated DeltaNet."""
-    def __init__(self, model):
-        import sys
-        bind_hf_kernels()
-        module = sys.modules[type(model).__module__]
-        self.model, self.routed = model, [
-            getattr(module, fn) for fn in _HF_LINEAR_KERNELS
-            if hasattr(module, fn)]
-
-    def __enter__(self):
-        self.saved = (self.model.config._attn_implementation,
-                      [f.fused for f in self.routed])
-        self.model.set_attn_implementation('sdpa')
-        for f in self.routed:
-            f.fused = None
-        return self.model
-
-    def __exit__(self, *exc):
-        attention, fused = self.saved
-        for f, kernel in zip(self.routed, fused):
-            f.fused = kernel
-        self.model.set_attn_implementation(attention)
-```
-
-<!-- Placeholder (stage 2): the pinned load, its text model, its report and its kernels. -->
+<!-- Placeholder (prose, ### Pinned Loading and the Text Model): load_hf, the pinned call with its load report; the kernel routing it applies (d2l.bind_hf_kernels, d2l.hf_attention) is library code, said in one sentence here and measured in Why Kernels Matter. -->
 
 ```{.python .input #hf-models-load-hf}
 %%tab pytorch
-#@save
-_TEXT_KEY_MAPPING = {  # checkpoint key renames for a multimodal file's text
-    'gemma4_text': {r'^model\.language_model\.': 'model.'}}
-
 #@save
 def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto',
             *, attn_implementation=None):
     """A pinned causal language model from the Hugging Face Hub, text part
     only, in eval mode, and its tokenizer; prints a load report and the
     kernels it runs. The tokenizer's end token joins the stop tokens of
-    `generate`; the attention defaults to `hf_attention`'s choice."""
+    `generate`; the attention defaults to `d2l.hf_attention`'s choice."""
     import collections
     import warnings
     import transformers
@@ -424,13 +303,13 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto',
     config = transformers.AutoConfig.from_pretrained(model_id, **pin)
     text = config.get_text_config()  # the language model's configuration
     renames = {}
-    if text is not config and text.model_type in _TEXT_KEY_MAPPING:
-        renames['key_mapping'] = _TEXT_KEY_MAPPING[text.model_type]
-    bind_hf_kernels()  # registers flex_sdpa; hf_kernels routes the model
+    if text is not config and text.model_type in d2l._TEXT_KEY_MAPPING:
+        renames['key_mapping'] = d2l._TEXT_KEY_MAPPING[text.model_type]
+    d2l.bind_hf_kernels()  # routes fused kernels, registers flex_sdpa
     if attn_implementation is None:  # the device of the first module
         device = (next(iter(device_map.values()))
                   if isinstance(device_map, dict) else device_map)
-        attn_implementation = hf_attention(
+        attn_implementation = d2l.hf_attention(
             text, 0 if device == 'auto' else device)
     model, info = transformers.AutoModelForCausalLM.from_pretrained(
         model_id, config=text, dtype=dtype, device_map=device_map,
@@ -451,18 +330,22 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto',
         model.generation_config.eos_token_id = stop
     unexpected = collections.Counter(  # keys in the file the model ignores
         '.'.join(key.split('.')[:2]) for key in info['unexpected_keys'])
-    print(f'{model_id}@{revision[:12]}: {type(model).__name__}, 0 missing '
-          f'keys, unexpected keys: {dict(unexpected) or "none"}, stop tokens '
-          f'{stop}')
+    print(f'{model_id}@{revision[:12]}: {type(model).__name__}, '
+          f'stop tokens {stop}')
+    print('0 missing keys; unexpected keys:',
+          '(not loaded)' if unexpected else 'none')
+    if unexpected:  # by count, then name
+        d2l.print_wrapped('    ' + ', '.join(f'{k} {n:,}' for k, n in sorted(
+            unexpected.items(), key=lambda kv: (-kv[1], kv[0]))), width=96)
     print('kernels:', ', '.join(f'{k} {v}'
-                                for k, v in hf_kernels(model).items()))
+                                for k, v in d2l.hf_kernels(model).items()))
     devices = set(getattr(model, 'hf_device_map', {}).values())
     if len(devices) > 1:
         warnings.warn(f'{model_id} is spread over {sorted(map(str, devices))}')
     return model.eval(), tokenizer
 ```
 
-<!-- Placeholder (prose, ### Auto Classes and the Text Model): the pinned commit, the device, and the parameters left on disk. -->
+<!-- Placeholder (prose, ### Pinned Loading and the Text Model): the pinned commit, the device, and the parameters left on disk. -->
 
 ```{.python .input #hf-models-pinned-check}
 %%tab pytorch
@@ -513,20 +396,20 @@ with open(d2l.__file__, encoding='utf-8') as f:
 texts = {'The Time Machine': book[:20000], 'd2l/torch.py': library[:20000],
          'Chinese': CHINESE}
 
-def per_char(encode):  # tokens per character of each text
+def per_char(encode, texts):  # tokens per character of each text
     return {name: len(encode(text)) / len(text)
             for name, text in texts.items()}
 
 table = {'GPT-2': {'vocabulary': enc.n_vocab, 'embedding rows': enc.n_vocab,
-                   **per_char(enc.encode_ordinary)}}
+                   **per_char(enc.encode_ordinary, texts)}}
 tokenizers = {}
 for m in (QWEN3, QWEN, GEMMA):
     tokenizers[m] = AutoTokenizer.from_pretrained(m, revision=HF_REVISIONS[m])
     rows = AutoConfig.from_pretrained(
         m, revision=HF_REVISIONS[m]).get_text_config().vocab_size
-    table[m] = {'vocabulary': len(tokenizers[m]), 'embedding rows': rows,
-                **per_char(functools.partial(tokenizers[m].encode,
-                                             add_special_tokens=False))}
+    encode = functools.partial(tokenizers[m].encode, add_special_tokens=False)
+    table[NAMES[m]] = {'vocabulary': len(tokenizers[m]),
+                       'embedding rows': rows, **per_char(encode, texts)}
 table = pd.DataFrame(table).T.astype({'vocabulary': int,
                                      'embedding rows': int})
 print(table.round(2).to_string())
@@ -536,19 +419,23 @@ print(table.round(2).to_string())
 
 ```{.python .input #hf-models-chat-template}
 %%tab pytorch
-text = tokenizers[QWEN].apply_chat_template(
-    [{'role': 'user', 'content': QUESTION}], add_generation_prompt=True,
-    enable_thinking=False, tokenize=False)
-print(text)
-tail = tokenizers[QWEN].encode(text, add_special_tokens=False)[-9:]
-print(tail, tokenizers[QWEN].convert_ids_to_tokens(tail))
+def chat(tok, content):  # one user turn, rendered for generation
+    return tok.apply_chat_template(
+        [{'role': 'user', 'content': content}], add_generation_prompt=True,
+        enable_thinking=False, return_dict=True, return_tensors='pt')
+
+chat_ids = chat(tokenizers[QWEN], QUESTION)['input_ids'][0]
+print(tokenizers[QWEN].decode(chat_ids))
+tail = chat_ids[-9:].tolist()
+print(tail)
+print(tokenizers[QWEN].convert_ids_to_tokens(tail))
 ```
 
-<!-- Placeholder (prose, ### Generation Arguments and Defaults): greedy generate against a four-line argmax loop. -->
+<!-- Placeholder (prose, ### Generation Arguments and Defaults): greedy generate against a four-line argmax loop; what the cache saves at two prompt lengths. -->
 
 ```{.python .input #hf-models-greedy-check}
 %%tab pytorch
-def argmax_loop(ids, steps):  # greedy decoding by hand, without a cache
+def argmax_loop(model, ids, steps):  # greedy decoding by hand, no cache
     for _ in range(steps):
         logits = model(ids, logits_to_keep=1, use_cache=False).logits
         ids = torch.cat([ids, logits[:, -1].argmax(-1, keepdim=True)], 1)
@@ -557,20 +444,22 @@ def argmax_loop(ids, steps):  # greedy decoding by hand, without a cache
 with torch.inference_mode():
     ref = model.generate(**prompt, max_new_tokens=32, do_sample=False,
                          use_cache=False)
-    ours = argmax_loop(prompt['input_ids'], ref.shape[1] - n_prompt)
+    ours = argmax_loop(model, prompt['input_ids'], ref.shape[1] - n_prompt)
     print('identical:', torch.equal(ours, ref))
     assert torch.equal(ours, ref)
-    # Without a cache every step reads the whole prefix again, so a long
-    # prompt shows what the cache saves (a short one is launch-bound)
-    long = tokenizer(book[:20000], return_tensors='pt').input_ids[
-        :, :2048 if GPU else 128].to(model.device)
-    for name, f in (
-            ('argmax loop without a cache', lambda: argmax_loop(long, 32)),
-            ('generate with a cache', lambda: model.generate(
-                long, attention_mask=torch.ones_like(long),
-                min_new_tokens=32, max_new_tokens=32, do_sample=False))):
-        print(f'{name}: {d2l.Benchmark(f, 0, 1).time:.2f} s for 32 tokens '
-              f'after {long.shape[1]:,} prompt tokens')
+    # Without a cache every step reads the whole prefix again, so what the
+    # cache saves grows with the prompt
+    book_ids = tokenizer(book, return_tensors='pt').input_ids.to(model.device)
+    for n in (1024, 8192) if GPU else (64, 128):
+        long = book_ids[:, :n]
+        for name, f in (
+                ('argmax loop without a cache',
+                 lambda: argmax_loop(model, long, 32)),
+                ('generate with a cache', lambda: model.generate(
+                    long, attention_mask=torch.ones_like(long),
+                    min_new_tokens=32, max_new_tokens=32, do_sample=False))):
+            print(f'{name}: {d2l.Benchmark(f, 0, 1).time:.2f} s for 32 '
+                  f'tokens after {n:,} prompt tokens')
 ```
 
 <!-- Placeholder (prose, ### Generation Arguments and Defaults): the sampling defaults each repository ships. -->
@@ -587,8 +476,9 @@ for m in (QWEN, GEMMA):
         gen = GenerationConfig.from_model_config(
             AutoConfig.from_pretrained(m, revision=rev).get_text_config())
     mode = 'sampling' if gen.do_sample else 'greedy'  # unset (None): greedy
-    print(f'{m} ({source}): {mode}; do_sample={gen.do_sample}, temperature='
-          f'{gen.temperature}, top_k={gen.top_k}, top_p={gen.top_p}, '
+    print(f'{NAMES[m]} ({source}): {mode}')
+    print(f'    do_sample={gen.do_sample}, temperature={gen.temperature}, '
+          f'top_k={gen.top_k}, top_p={gen.top_p}, '
           f'stop tokens {gen.eos_token_id}')
 ```
 
@@ -610,7 +500,7 @@ FIELDS = (
     'hidden_activation', 'vocab_size', 'tie_word_embeddings',
     'final_logit_softcapping', 'mtp_num_hidden_layers',
     'max_position_embeddings')
-print(pd.DataFrame({m: {f: t.get(f, '–') for f in FIELDS}
+print(pd.DataFrame({NAMES[m]: {f: t.get(f, '–') for f in FIELDS}
                     for m, t in text_configs.items()}).to_string())
 
 def layer_pattern(types):  # the shortest run-length pattern that repeats
@@ -624,8 +514,13 @@ for m, t in text_configs.items():
     pattern, repeats = layer_pattern(t['layer_types'])
     L = t['num_hidden_layers']
     own = L - (t.get('num_kv_shared_layers') or 0)
-    print(f'{m}: {pattern} x {repeats}; {own} of {L} layers keep a cache '
-          f'or state of their own; rope_parameters {t["rope_parameters"]}')
+    print(f'{NAMES[m]}: {pattern} x {repeats}')
+    print(f'    {own} of {L} layers keep a cache or state of their own')
+    rope = t['rope_parameters']  # one dict, or one per layer kind
+    per_kind = all(isinstance(p, dict) for p in rope.values())
+    for kind, p in rope.items() if per_kind else [('all layers', rope)]:
+        d2l.print_wrapped(f'    rope ({kind}): ' + ', '.join(
+            f'{k} {v}' for k, v in p.items()))
 ```
 
 <!-- Placeholder (stage 2): parameters by group from the configuration. -->
@@ -728,7 +623,7 @@ def config_params(config, include_vision=False, include_mtp=False,
     return g if by_group else sum(g.values())
 ```
 
-<!-- Placeholder (prose, ### Parameter Counts): the configuration reproduces each bucket of the file to the element. -->
+<!-- Placeholder (prose, ### Parameter Counts): the configuration reproduces each bucket of the file to the element; the embedding and one layer of each kind, for eq_lm_hf_params. -->
 
 ```{.python .input #hf-models-reconcile}
 %%tab pytorch
@@ -743,25 +638,37 @@ print(buckets.map('{:,}'.format).to_string())
 assert derived == dict(elements)
 print(f'{RUN_MODEL} as loaded: {model.num_parameters():,} parameters, from '
       f'its configuration {config_params(model.config):,}')
-assert model.num_parameters() == config_params(model.config)  # C2
+assert model.num_parameters() == config_params(model.config)
+
+def one_layer(kind):  # a stack of one such layer minus an empty stack
+    t = text_configs[QWEN] | {'num_hidden_layers': 1, 'layer_types': [kind]}
+    return config_params(t) - config_params(
+        t | {'num_hidden_layers': 0, 'layer_types': []})
+
+print(f'embedding {groups["embed"]:,}; one layer: full attention '
+      f'{one_layer("full_attention"):,}, linear attention '
+      f'{one_layer("linear_attention"):,}')
 ```
 
 <!-- Placeholder (prose, ### The Gemma 4 Configuration): head widths, the per-layer embedding table, and what the file stores beyond the model. -->
 
 ```{.python .input #hf-models-gemma-config}
 %%tab pytorch
-t = text_configs[GEMMA]
-overrides = {int(i): o for i, o in t['per_layer_config'].items()}
+gemma_text = text_configs[GEMMA]
+overrides = {int(i): o for i, o in gemma_text['per_layer_config'].items()}
 head_dims = collections.Counter(  # global layers override the head width
-    (kind, overrides.get(i, {}).get('head_dim', t['head_dim']))
-    for i, kind in enumerate(t['layer_types']))
-print(f'layers by kind and head width {dict(head_dims)}; per-layer '
-      f'embeddings {t["vocab_size_per_layer_input"]:,} x '
-      f'{t["num_hidden_layers"]} x {t["hidden_size_per_layer_input"]}')
+    (kind, overrides.get(i, {}).get('head_dim', gemma_text['head_dim']))
+    for i, kind in enumerate(gemma_text['layer_types']))
+print('layers by kind and head width:', dict(head_dims))
+print(f'per-layer embeddings: {gemma_text["vocab_size_per_layer_input"]:,} x '
+      f'{gemma_text["num_hidden_layers"]} x '
+      f'{gemma_text["hidden_size_per_layer_input"]}')
 gemma_groups = config_params(configs[GEMMA], by_group=True)
-print({g: f'{n:,}' for g, n in gemma_groups.items() if n})
+for g, n in gemma_groups.items():
+    if n:
+        print(f'{n:15,}  {g}')
 gemma_header, first_shared = safetensors_header(GEMMA), (
-    t['num_hidden_layers'] - t['num_kv_shared_layers'])
+    gemma_text['num_hidden_layers'] - gemma_text['num_kv_shared_layers'])
 
 def unused(name):  # K/V of the KV-sharing layers: stored, never built
     m = re.match(r'model\.language_model\.layers\.(\d+)\.self_attn\.'
@@ -776,8 +683,9 @@ text_total = numel(lambda name: name.startswith('model.language_model.'))
 residual = text_total - sum(gemma_groups.values())
 scalars = numel(lambda name: name.endswith('.layer_scalar'))  # buffers
 print(f'text tensors in the file {text_total:,}, from the configuration '
-      f'{sum(gemma_groups.values()):,}: {residual:,} = {numel(unused):,} '
-      f'unused K/V + {scalars} layer scalars')
+      f'{sum(gemma_groups.values()):,}')
+print(f'difference {residual:,} = {numel(unused):,} unused K/V '
+      f'+ {scalars} layer scalars')
 assert residual == numel(unused) + scalars
 print(f'parameters read per token: '
       f'{sum(gemma_groups.values()) - gemma_groups["per_layer_embed"]:,}')
@@ -892,26 +800,29 @@ for m, c in configs.items():
               c.get_text_config().max_position_embeddings):
         mem = config_memory(c, n, 1)
         kv_all = config_memory(all_attention(c), n, 1, window_cached=n)
-        rows.append({'model': m, 'n': n, **{k: mem[k] / GiB for k in TERMS},
-                     'all-attention kv': kv_all['kv_cache'] / GiB})
-print(pd.DataFrame(rows).round(3).to_string(index=False))
+        rows.append({'model': NAMES[m], 'n': n,
+                     **{k: mem[k] / GiB for k in TERMS},
+                     'all-attn kv': kv_all['kv_cache'] / GiB})
+print(pd.DataFrame(rows).rename(columns={'recurrent_state': 'state'})
+      .round(3).to_string(index=False))
 for m, c in configs.items():
-    a, b = config_memory(c, 4096, 1), config_memory(c, 4097, 1)
-    slope = b['kv_cache'] - a['kv_cache']  # bytes per token beyond windows
-    fixed = a['kv_cache'] + a['recurrent_state'] - 4096 * slope
+    mem, mem_next = config_memory(c, 4096, 1), config_memory(c, 4097, 1)
+    slope = mem_next['kv_cache'] - mem['kv_cache']  # B/token beyond windows
+    fixed = mem['kv_cache'] + mem['recurrent_state'] - 4096 * slope
     slope_all = config_memory(all_attention(c), 1, 1,
                               window_cached=1)['kv_cache']
     n_star = crossover(c)
-    print(f'{m}: {slope:,} B/token + {fixed:,} B against {slope_all:,} '
-          f'B/token; smaller ' + ('at every context' if n_star == 1 else
-                                  f'beyond {n_star - 1:,} tokens')
+    print(f'{NAMES[m]}: {slope:,} B/token + {fixed:,} B; all attention '
+          f'{slope_all:,} B/token')
+    print('    smaller ' + ('at every context' if n_star == 1 else
+                            f'beyond {n_star - 1:,} tokens')
           + f', {(slope * 16384 + fixed) / (slope_all * 16384):.2f} of it '
           f'at 16,384')
 logits = config_memory(configs[QWEN], 16384, 1, logits_to_keep=None)
 print(f'logits of all 16,384 positions: {logits["logits"] / 1e9:.1f} GB')
 ```
 
-<!-- Placeholder (prose, ### Decode Throughput): the bandwidth the card streams, next to its datasheet value. -->
+<!-- Placeholder (prose, ### Measured Memory): the bandwidth the card streams, next to its datasheet value (it scales the bytes read per decode step below). -->
 
 ```{.python .input #hf-models-bandwidth}
 %%tab pytorch
@@ -924,27 +835,16 @@ if GPU:
           f'(datasheet {BETA_DATASHEET / 1e12:.1f} TB/s)')
 ```
 
-<!-- Placeholder (prose, ### Measured Memory): the measuring functions (cache walker, prefill, decode timing, one step's kernels, bytes read per step, the largest workload within a memory budget). -->
+<!-- Placeholder (prose, ### Measured Memory): the cache walker, which counts the bytes of the tensors a cache object holds. The timing, profiling and capacity harness around it (d2l.hf_measure, d2l.hf_capacity, ...) is library code, said in one sentence. -->
 
-```{.python .input #hf-models-measure-fns}
+```{.python .input #hf-models-cache-bytes}
 %%tab pytorch
-MiB, BUDGET = 2**20, 15 * GiB  # a 15 GiB slot of a 24 GB card
-# Matrix-product kernels; the attention kernels (fmha, flash) are not.
-MATMUL = re.compile(
-    '^(?!.*(fmha|flash)).*(gemm|gemv|xmma|cutlass|matmul|splitK)', re.I)
-# A profiler session leaves CUPTI's launch hooks on for the rest of the
-# process, which adds about 5 ms to every later eager decode step: every
-# decode is timed before the first profile.
-# Flex attention is compiled for each new shape; past torch's default of 8
-# recompilations it falls back to code that materializes the n x n scores,
-# which the capacity search below (one shape per batch size) would reach
-torch._dynamo.config.recompile_limit = 64
-warnings.filterwarnings('error', 'flex_attention called without torch.compile')
-
+#@save
 def cache_bytes(cache):
     """Bytes of the floating-point tensors reachable from a cache object,
     by dtype: logical (every distinct view) and resident (every underlying
     storage once). Integer tensors are bookkeeping, not cache."""
+    import collections
     logical, resident = collections.Counter(), collections.Counter()
     views, storages, visited, todo = set(), set(), set(), [cache]
     while todo:
@@ -966,118 +866,126 @@ def cache_bytes(cache):
             elif type(obj).__module__.startswith('transformers.'):
                 todo.extend(vars(obj).values())  # cache and layer objects
     return logical, resident
+```
 
-def allocated(stat='current'):
-    """Bytes the live tensors requested (or their peak), without the
-    allocator's rounding of each block."""
-    return torch.cuda.memory_stats()[f'requested_bytes.all.{stat}']
+<!-- Placeholder (prose, ### Measured Memory): Qwen3.5-2B at four contexts; the walker, the allocator and the prefill peak against the formula. -->
 
-def prefill(model, ids, n, keep=1):
-    """Prefill the first n tokens: the output, the allocated bytes before,
-    and the growth and the peak above them."""
-    torch.cuda.synchronize()
-    torch.cuda.reset_peak_memory_stats()
-    before = allocated()
-    with torch.inference_mode():
-        out = model(ids[:, :n], logits_to_keep=keep, use_cache=True)
-    torch.cuda.synchronize()
-    return out, before, allocated() - before, allocated('peak') - before
+```{.python .input #hf-models-run-qwen}
+%%tab pytorch
+MiB, BUDGET = 2**20, 15 * GiB  # a 15 GiB slot of a 24 GB card
 
-def decode_ms(model, cache, token, steps=64, warmup=3, repeats=10):
-    """Median, first and third quartile of milliseconds per greedy decode
-    step; every repeat starts from a fresh copy of the prefilled cache."""
-    def loop(c, token):
-        for _ in range(steps):
-            logits = model(token, past_key_values=c, logits_to_keep=1).logits
-            token = logits[:, -1].argmax(-1, keepdim=True)  # on the device
+def close(measured, derived, rel=0.05):  # allocator rounding: 2 MiB
+    return abs(measured - derived) <= max(rel * derived, 2 * MiB)
 
-    times = []
-    with torch.inference_mode():
-        for _ in range(warmup + repeats):
-            c = copy.deepcopy(cache)  # outside the timer
-            seconds = d2l.Benchmark(lambda: loop(c, token), 0, 1).time
-            times.append(1e3 * seconds / steps)
-    return np.percentile(times[warmup:], [50, 25, 75])
+if GPU:
+    qwen_rows = d2l.hf_measure(model, configs[QWEN], book_ids, beta)
+    print(d2l.hf_memory_table(qwen_rows).to_string(index=False))
+    for row in qwen_rows:  # right after the prefill; the prefill's peak
+        assert close(row['growth'], row['growth_derived'])
+        assert close(row['peak'], row['peak_formula'], 0.1)
+```
 
-def step_kernels(model, cache, token, steps=10):
-    """Device milliseconds per kernel of one decode step, and the number of
-    kernels the step launches."""
-    c = copy.deepcopy(cache)
+<!-- Placeholder (prose, ### Measured Memory): the kept logits of a whole prompt, and the largest workload within a 15 GiB slot, measured and derived. -->
 
-    def step():
-        model(token, past_key_values=c, logits_to_keep=1)
+```{.python .input #hf-models-qwen-capacity}
+%%tab pytorch
+def capacity(model, config, ids):
+    """The largest batch at 4,096 tokens and the longest context that fit
+    BUDGET: measured against the formula."""
+    (b, n), (b_formula, n_formula), overhead = d2l.hf_capacity(
+        model, config, ids, BUDGET)
+    print(f'within 15 GiB, measured: batch {b} at 4,096 tokens, {n:,} '
+          f'tokens at batch 1')
+    print(f'by the formula: batch {b_formula}, {n_formula:,} tokens; '
+          f'allocator overhead {overhead / MiB:.0f} MiB')
+    assert abs(b - b_formula) <= max(1, 0.1 * b_formula)
+    assert n == n_formula
 
-    with torch.inference_mode():
-        step()  # warm-up
-        torch.cuda.synchronize()  # the copy and warm-up finish unprofiled
-        kernels = d2l.kernel_times(step, steps)
-        with torch.profiler.profile(
-                activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
-            step()
-            torch.cuda.synchronize()
-    launches = sum(e.device_type == torch.autograd.DeviceType.CUDA
-                   for e in prof.events())
-    assert launches > 0
-    return kernels, launches
+if GPU:
+    out, _, growth, _ = d2l.hf_prefill(model, book_ids, 4096, keep=0)
+    del out  # it kept every position's logits
+    mem = config_memory(configs[QWEN], 4096, 1, logits_to_keep=0)
+    extra = growth - mem['kv_cache'] - mem['recurrent_state']
+    print(f'logits of all 4,096 positions: growth beyond the cache '
+          f'{extra:,} B, derived {mem["logits"]:,} B')
+    assert abs(extra - mem['logits']) <= 0.05 * mem['logits']
+    capacity(model, configs[QWEN], book_ids)
+```
 
-def fits(model, ids, batch, n, budget=BUDGET):
-    """The allocator's overhead (reserved minus requested bytes, each at
-    its peak) of a prefill of `batch` copies of the first n tokens with the
-    allocator capped at `budget` bytes, weights included; None if it runs
-    out of memory."""
-    x = ids.repeat(1, -(-n // ids.shape[1]))[:, :n].repeat(batch, 1)
+<!-- Placeholder (prose, ### Why Kernels Matter): the code a model runs; the same prefill on the fused kernels and on Transformers' reference code: peak memory above the weights, time, one decode step, and whether the two compute the same function (top-1 agreement, with the reference at batch 2 for the size of rounding alone). -->
+
+```{.python .input #hf-models-kernel-compare}
+%%tab pytorch
+if GPU:  # the opening's model, routed by d2l.bind_hf_kernels
+    print('kernels:', ', '.join(f'{k} {v}'
+                                for k, v in d2l.hf_kernels(model).items()))
+    qwen_compare = d2l.hf_compare_kernels(model, configs[QWEN], book_ids,
+                                          (4096, 16384, 65536))
+    print(qwen_compare.to_string(index=False, na_rep=''))
+```
+
+<!-- Placeholder (prose, ### Why Kernels Matter): Gemma 4 through load_hf: the text model of a multimodal file, its load report and kernels, and its repository's sampling defaults. -->
+
+```{.python .input #hf-models-load-gemma}
+%%tab pytorch
+if GPU:
+    del model, prompt, reply, ref, ours
     gc.collect()
     torch.cuda.empty_cache()
-    torch.cuda.reset_peak_memory_stats()
-    torch.cuda.set_per_process_memory_fraction(
-        budget / torch.cuda.get_device_properties(x.device).total_memory)
-    try:
-        with torch.inference_mode():
-            model(x, logits_to_keep=1, use_cache=True)
-        stats = torch.cuda.memory_stats()
-        overhead = (stats['reserved_bytes.all.peak']
-                    - stats['requested_bytes.all.peak'])
-    except torch.OutOfMemoryError:
-        overhead = None
-    finally:
-        torch.cuda.set_per_process_memory_fraction(1.0)
-    del x
-    gc.collect()
-    torch.cuda.empty_cache()
-    return overhead
+    left = torch.cuda.memory_allocated()  # a stray reference keeps 3.8 GB
+    print(f'allocated after freeing Qwen: {left / MiB:.0f} MiB')
+    assert left < GiB
+    gemma, gemma_tok = load_hf(GEMMA)
+    assert gemma.num_parameters() == config_params(configs[GEMMA])
+    print(f'{gemma.num_parameters():,} parameters, as config_params says')
+    sea = chat(gemma_tok, 'Write one sentence about the sea.').to(
+        gemma.device)
+    torch.manual_seed(0)
+    n_sea = sea['input_ids'].shape[1]
+    replies = [gemma_tok.decode(  # the repository's sampling defaults
+        gemma.generate(**sea, max_new_tokens=32)[0, n_sea:],
+        skip_special_tokens=True) for _ in range(2)]
+    for r in replies:
+        d2l.print_wrapped(r)
+    print('the two replies differ:', replies[0] != replies[1])
+    question = chat(gemma_tok, QUESTION).to(gemma.device)
+    greedy = gemma.generate(**question, max_new_tokens=64, do_sample=False,
+                            top_k=None, top_p=None)
+    d2l.print_wrapped(gemma_tok.decode(
+        greedy[0, question['input_ids'].shape[1]:], skip_special_tokens=True))
+```
 
-def capacity(model, config, ids, n=4096):
-    """The largest batch at n tokens (doubling, then bisection) and the
-    largest power-of-two context at batch 1 within BUDGET: measured, and
-    by the formula for a prefill; prints the allocator's overhead."""
-    t = config.get_text_config()
-    overhead = {1: fits(model, ids, 1, n)}
-    assert overhead[1] is not None
-    lo = 1
-    while (fit := fits(model, ids, 2 * lo, n)) is not None:
-        lo, overhead[2 * lo] = 2 * lo, fit
-    hi = 2 * lo
-    while hi - lo > 1:
-        mid = (lo + hi) // 2
-        if (fit := fits(model, ids, mid, n)) is not None:
-            lo, overhead[mid] = mid, fit
-        else:
-            hi = mid
-    context = n
-    while (2 * context <= t.max_position_embeddings
-           and fits(model, ids, 1, 2 * context) is not None):
-        context *= 2
-    mem = config_memory(config, n, 1, window_cached=n)
-    batch = (BUDGET - mem['weights']) // (mem['total'] - mem['weights'])
-    longest = max(2**k for k in range(8, 19)
-                  if 2**k <= t.max_position_embeddings and config_memory(
-                      config, 2**k, 1, window_cached=2**k)['total'] <= BUDGET)
-    print(f'within 15 GiB, measured: batch {lo} at {n:,} tokens, '
-          f'{context:,} tokens at batch 1')
-    print(f'by the formula: batch {batch}, {longest:,} tokens')
-    print(f'allocator overhead at batch {lo}: {overhead[lo] / MiB:.0f} MiB')
-    return (lo, context), (batch, longest)
+<!-- Placeholder (prose, ### Why Kernels Matter): the memory measurements for Gemma 4, compared after its first decode step, and its capacity. -->
 
+```{.python .input #hf-models-run-gemma}
+%%tab pytorch
+if GPU:
+    gemma_ids = gemma_tok(book, return_tensors='pt').input_ids.to(
+        gemma.device)
+    gemma_rows = d2l.hf_measure(gemma, configs[GEMMA], gemma_ids, beta)
+    print(d2l.hf_memory_table(gemma_rows).to_string(index=False))
+    for row in gemma_rows:  # after the first decode step; the prefill's peak
+        assert close(row['growth_after_step'],
+                     row['growth_after_step_derived'])
+        assert close(row['peak'], row['peak_formula'], 0.1)
+    capacity(gemma, configs[GEMMA], gemma_ids)
+```
+
+<!-- Placeholder (prose, ### Why Kernels Matter): fused against reference kernels for Gemma 4, up to the context where the reference no longer fits. -->
+
+```{.python .input #hf-models-gemma-compare}
+%%tab pytorch
+if GPU:
+    gemma_compare = d2l.hf_compare_kernels(
+        gemma, configs[GEMMA], gemma_ids, (4096, 16384, 32768, 65536))
+    print(gemma_compare.to_string(index=False, na_rep=''))
+```
+
+<!-- Placeholder (prose, ### Decode Throughput): eq_lm_hf_decode_bytes in code: the bytes one decode step reads. -->
+
+```{.python .input #hf-models-bytes-read}
+%%tab pytorch
+#@save
 def bytes_read(config, n, b=2):
     """Bytes a decode step reads at context n: the weights except the
     gathered per-layer table, every cache a layer attends to (a KV-sharing
@@ -1090,303 +998,68 @@ def bytes_read(config, n, b=2):
             + mem['kv_cache'] + 2 * mem['recurrent_state'])
 ```
 
-<!-- Placeholder (prose, ### Measured Memory): Qwen3.5-2B at four contexts; the walker, the allocator and the kept logits against the formula. -->
-
-```{.python .input #hf-models-run-qwen}
-%%tab pytorch
-def close(measured, derived, rel=0.05):  # allocator rounding: 2 MiB
-    return abs(measured - derived) <= max(rel * derived, 2 * MiB)
-
-def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
-    """Memory and decode time at each context, one row per context."""
-    b, t = model.dtype.itemsize, config.get_text_config()
-    rows = []
-    print(f'{model.name_or_path}: attention '
-          f'{model.config._attn_implementation}')
-    with torch.inference_mode():  # cuBLAS allocates its workspace on the
-        out = model(ids[:, :16], logits_to_keep=1, use_cache=True)
-        model(out.logits[:, -1:].argmax(-1),  # first decode step
-              past_key_values=out.past_key_values)
-    del out
-    for n in contexts:  # a prefill holds every position: window_cached=n
-        pinned = config_memory(config, n, 1, b, window_cached=n)
-        need = 1.1 * (pinned['total'] - pinned['weights'])
-        torch.cuda.empty_cache()  # cached blocks count as free below
-        if need > torch.cuda.mem_get_info()[0]:
-            print(f'{n} tokens skipped: {need / GiB:.1f} GiB not free')
-            continue
-        try:  # a new length compiles flex attention or tunes fla's
-            prefill(model, ids, n)  # kernels, with their own buffers
-            out, before, growth, peak = prefill(model, ids, n)
-        except torch.OutOfMemoryError:  # the estimate fell short (R6)
-            print(f'{n} tokens skipped: out of memory in the prefill')
-            continue  # the next context empties the allocator's cache
-        cache, token = out.past_key_values, out.logits[:, -1:].argmax(-1)
-        logical, resident = cache_bytes(cache)
-        mem = config_memory(config, n, 1, b)
-        assert sum(logical.values()) == mem['kv_cache'] + mem[
-            'recurrent_state']  # C3
-        if n == 1024:
-            print('live cache, bytes by dtype:',
-                  {str(k): v for k, v in logical.items()})
-            linear = [layer for layer in cache.layers
-                      if hasattr(layer, 'recurrent_states')]
-            if linear:  # a hybrid's state and convolution taps
-                print('state', linear[0].recurrent_states[0].dtype,
-                      'conv taps', linear[0].conv_states[0].dtype)
-        wall = decode_ms(model, cache, token)
-        logits_bytes = out.logits.nbytes
-        del out
-        with torch.inference_mode():  # sliding layers drop prompt keys here
-            step = model(token, past_key_values=cache, logits_to_keep=1)
-        after = config_memory(config, n + 1, 1, b,
-                              window_cached=getattr(t, 'sliding_window', None))
-        R = bytes_read(config, n, b)
-        rows.append(dict(
-            model=model.name_or_path, n=n,
-            walker_logical=sum(logical.values()),
-            walker_resident=sum(resident.values()),
-            formula=mem['kv_cache'] + mem['recurrent_state'], growth=growth,
-            growth_derived=(pinned['kv_cache'] + pinned['recurrent_state']
-                            + logits_bytes),
-            growth_after_step=allocated() - before,
-            growth_after_step_derived=(after['kv_cache'] + after[
-                'recurrent_state'] + step.logits.nbytes),
-            peak=peak, peak_formula=pinned['total'] - pinned['weights'],
-            wall_ms_median=wall[0], wall_ms_q1=wall[1], wall_ms_q3=wall[2],
-            r_over_beta_datasheet_ms=1e3 * R / BETA_DATASHEET,
-            r_over_beta_measured_ms=1e3 * R / beta))
-        del cache, step
-    return rows
-
-def profile_steps(model, ids, rows):
-    """Add one decode step's device time to each row, on a fresh prefill;
-    return the kernels at 1,024 tokens."""
-    kernels = None
-    for row in rows:
-        out = prefill(model, ids, row['n'])[0]
-        step_ms, row['launches'] = step_kernels(
-            model, out.past_key_values, out.logits[:, -1:].argmax(-1))
-        row['busy_ms'] = sum(step_ms.values())
-        row['matmul_ms'] = sum(ms for name, ms in step_ms.items()
-                               if MATMUL.search(name))
-        kernels = step_ms if row['n'] == 1024 else kernels
-        del out
-    return kernels
-
-def show(rows):
-    df = pd.DataFrame(rows)
-    table = pd.DataFrame({
-        'n': df.n, 'walker MiB': df.walker_logical / MiB,
-        'formula MiB': df.formula / MiB,
-        'growth/derived': df.growth / df.growth_derived,
-        'after step/derived': (df.growth_after_step
-                               / df.growth_after_step_derived),
-        'peak/formula': df.peak / df.peak_formula,
-        'wall ms': df.wall_ms_median, 'q1': df.wall_ms_q1,
-        'q3': df.wall_ms_q3, 'R/beta sheet': df.r_over_beta_datasheet_ms,
-        'R/beta meas.': df.r_over_beta_measured_ms})
-    for name, key in (('busy ms', 'busy_ms'), ('matmul ms', 'matmul_ms'),
-                      ('launches', 'launches')):
-        if key in df:  # after profile_steps
-            table[name] = df[key]
-    print(table.round(2).to_string(index=False))
-
-if GPU:
-    print('kernels:', hf_kernels(model))  # the opening's model, routed
-    ids = tokenizer(book, return_tensors='pt').input_ids.to(model.device)
-    qwen_rows = measure(model, configs[QWEN], ids, beta)  # profiled later
-    show(qwen_rows)
-    for row in qwen_rows:  # C4, right after the prefill; the peak
-        assert close(row['growth'], row['growth_derived'])
-        assert close(row['peak'], row['peak_formula'], 0.1)
-    out, _, growth, _ = prefill(model, ids, 4096, keep=0)  # every logit
-    mem = config_memory(configs[QWEN], 4096, 1, logits_to_keep=0)
-    extra = growth - mem['kv_cache'] - mem['recurrent_state']
-    del out
-    print(f'logits of all 4,096 positions: growth beyond the cache '
-          f'{extra:,} B, derived {mem["logits"]:,} B')
-    assert abs(extra - mem['logits']) <= 0.05 * mem['logits']  # C6
-    measured, formula = capacity(model, configs[QWEN], ids)
-    assert abs(measured[0] - formula[0]) <= max(1, 0.1 * formula[0])
-    assert measured[1] == formula[1]
-```
-
-<!-- Placeholder (prose, ### Why Kernels Matter): the same prefill on the fused kernels and on Transformers' reference code: peak memory above the weights, time, and the formula's peak; one decode step. -->
-
-```{.python .input #hf-models-kernel-compare}
-%%tab pytorch
-def compare_kernels(model, config, ids, contexts, decode_at=4096):
-    """Peak memory above the weights and time of a prefill, on the fused
-    kernels and inside reference_kernels, against the formula's peak; and
-    milliseconds per decode step at `decode_at` tokens."""
-    rows, logits = [], {}
-    for n in contexts:
-        x = ids.repeat(1, -(-n // ids.shape[1]))[:, :n]
-        formula = config_memory(config, n, 1, window_cached=n)
-        for name, kernels in (('fused', contextlib.nullcontext),
-                              ('reference', reference_kernels)):
-            row = dict(n=n, kernels=name, formula_GiB=(
-                formula['total'] - formula['weights']) / GiB)
-            with kernels(model):
-                try:  # also compiles and tunes the kernels for n tokens
-                    out, _, _, peak = prefill(model, x, n)
-                except torch.OutOfMemoryError:
-                    rows.append(row | dict(peak_GiB=float('nan')))
-                    continue
-                logits[name] = out.logits[0, -1].float()
-                cache, token = out.past_key_values, out.logits[:, -1:].argmax(-1)
-                del out
-                with torch.inference_mode():
-                    seconds = d2l.Benchmark(lambda: model(
-                        x, logits_to_keep=1, use_cache=True), 1, 3).time
-                row |= dict(peak_GiB=peak / GiB, prefill_s=seconds)
-                if n == decode_at:
-                    row['decode_ms'] = decode_ms(model, cache, token,
-                                                 repeats=5)[0]
-                del cache
-            rows.append(row)
-        if len(logits) == 2:
-            row['max |logit diff|'] = float(
-                (logits['fused'] - logits['reference']).abs().max())
-        logits.clear()
-    print(f'{model.name_or_path}:', hf_kernels(model))
-    print(pd.DataFrame(rows).round(3).to_string(index=False))
-    return rows
-
-if GPU:
-    qwen_compare = compare_kernels(model, configs[QWEN], ids,
-                                   (4096, 16384, 65536))
-```
-
-<!-- Placeholder (prose, ### Auto Classes and the Text Model): Gemma 4 through load_hf, its load report, and its repository's sampling defaults. -->
-
-```{.python .input #hf-models-load-gemma}
-%%tab pytorch
-def chat(tok, content):  # one user turn, rendered for generation
-    return tok.apply_chat_template(
-        [{'role': 'user', 'content': content}], add_generation_prompt=True,
-        enable_thinking=False, return_dict=True, return_tensors='pt')
-
-if GPU:
-    del model, prompt, reply, ref, ours
-    gc.collect()
-    torch.cuda.empty_cache()
-    left = torch.cuda.memory_allocated()  # a stray reference keeps 3.8 GB
-    print(f'allocated after freeing Qwen: {left / MiB:.0f} MiB')
-    assert left < GiB
-    gemma, gemma_tok = load_hf(GEMMA)
-    assert gemma.num_parameters() == config_params(configs[GEMMA])  # C2
-    print(f'{gemma.num_parameters():,} parameters, as config_params says')
-    sea = chat(gemma_tok, 'Write one sentence about the sea.').to(
-        gemma.device)
-    torch.manual_seed(0)
-    n_sea = sea['input_ids'].shape[1]
-    replies = [gemma_tok.decode(  # the repository's sampling defaults
-        gemma.generate(**sea, max_new_tokens=32)[0, n_sea:],
-        skip_special_tokens=True) for _ in range(2)]
-    print(replies, 'differ:', replies[0] != replies[1])
-    question = chat(gemma_tok, QUESTION).to(gemma.device)
-    greedy = gemma.generate(**question, max_new_tokens=64, do_sample=False,
-                            top_k=None, top_p=None)
-    d2l.print_wrapped(gemma_tok.decode(
-        greedy[0, question['input_ids'].shape[1]:], skip_special_tokens=True))
-```
-
-<!-- Placeholder (prose, ### Measured Memory): the same measurements for Gemma 4, compared after its first decode step. -->
-
-```{.python .input #hf-models-run-gemma}
-%%tab pytorch
-if GPU:
-    gemma_ids = gemma_tok(book, return_tensors='pt').input_ids.to(
-        gemma.device)
-    gemma_rows = measure(gemma, configs[GEMMA], gemma_ids, beta)
-    gemma_compare = compare_kernels(gemma, configs[GEMMA], gemma_ids,
-                                    (4096, 16384, 32768, 65536))
-    gemma_kernels = profile_steps(gemma, gemma_ids, gemma_rows)  # timed all
-    show(gemma_rows)
-    print('resident/logical:', [round(r['walker_resident']
-                                      / r['walker_logical'], 2)
-                                for r in gemma_rows])
-    for row in gemma_rows:  # C4, after the first decode step; the peak
-        assert close(row['growth_after_step'],
-                     row['growth_after_step_derived'])
-        assert close(row['peak'], row['peak_formula'], 0.1)
-    measured, formula = capacity(gemma, configs[GEMMA], gemma_ids)
-    assert abs(measured[0] - formula[0]) <= max(1, 0.1 * formula[0])
-    assert measured[1] == formula[1]
-```
-
-<!-- Placeholder (prose, ### Decode Throughput): where a decode step's time goes, and matrix-product time against bytes read. -->
+<!-- Placeholder (prose, ### Decode Throughput): where a decode step's time goes: wall, busy and matrix-product time per context, and the kernels with the most device time at 1,024 and 16,384 tokens. -->
 
 ```{.python .input #hf-models-profile-compare}
 %%tab pytorch
-def kernel_name(name):
-    """A kernel's C++ name without return type, namespaces and arguments."""
-    name = re.sub(r'^(void |std::enable_if<.*?>::type )|\(anonymous '
-                  r'namespace\)::', '', name)
-    return re.sub(r'\b(at|native|internal|cutlass)::|\(.*', '', name)[:52]
-
-def show_kernels(kernels, row, rows=4):
-    """Busy and matrix-product time of a decode step, and its kernels with
-    the most device time."""
-    busy, wall = row['busy_ms'], row['wall_ms_median']
-    print(f'wall {wall:.2f} ms per step, device busy {busy:.2f} ms '
-          f'({busy / wall:.0%}), matrix products {row["matmul_ms"]:.2f} ms '
-          f'({row["matmul_ms"] / busy:.0%} of busy)')
-    named = collections.Counter()
-    for name, ms in kernels.items():
-        named[kernel_name(name)] += ms
-    for name, ms in named.most_common(rows):
-        print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name}')
-
-if GPU:  # Qwen again, to profile it after every timed decode step
+if GPU:  # profiling comes after every timed decode step
+    gemma_kernels = d2l.hf_profile_steps(gemma, gemma_ids, gemma_rows)
     del gemma
     gc.collect()
     torch.cuda.empty_cache()
     model = AutoModelForCausalLM.from_pretrained(
         RUN_MODEL, revision=RUN_REV, dtype=RUN_DTYPE, device_map=d2l.try_gpu())
-    qwen_kernels = profile_steps(model, ids, qwen_rows)
-    show(qwen_rows)
+    qwen_kernels = d2l.hf_profile_steps(model, book_ids, qwen_rows)
+    for m, rows, kernels in ((QWEN, qwen_rows, qwen_kernels),
+                             (GEMMA, gemma_rows, gemma_kernels)):
+        print(f'{NAMES[m]}, ms per decode step:')
+        print(d2l.hf_time_table(rows, BETA_DATASHEET).to_string(index=False))
+        for n in (1024, 16384):
+            if n in kernels:
+                print(f'kernels with the most device time at {n:,} tokens:')
+                d2l.show_kernels(kernels[n])
+```
+
+<!-- Placeholder (prose, ### Decode Throughput): device share and time per launch, wall time against context, and matrix-product time against bytes read. -->
+
+```{.python .input #hf-models-ratios}
+%%tab pytorch
+if GPU:
     at = {r['model']: r for r in qwen_rows + gemma_rows if r['n'] == 1024}
-    for m, kernels in ((QWEN, qwen_kernels), (GEMMA, gemma_kernels)):
-        rows = {r['n']: r for r in qwen_rows + gemma_rows if r['model'] == m}
-        print(f'{m} at 1,024 tokens:')
-        show_kernels(kernels, at[m])
-        # C8: the host launches one kernel after another and the device
-        # works in between, so the wall time is the launches' time
-        share = [r['busy_ms'] / r['wall_ms_median'] for r in rows.values()]
-        us = [1e3 * r['wall_ms_median'] / r['launches']
-              for r in rows.values()]
-        print(f'device busy at {list(rows)} tokens: '
-              f'{", ".join(f"{x:.0%}" for x in share)} of the step')
-        print(f'wall time per launch: {min(us):.1f}-{max(us):.1f} us')
-        assert max(share) < 0.5  # C8
-        if 256 in rows and 16384 in rows:  # C9: within 25% is nearly flat
-            grow = {k: rows[16384][k] / rows[256][k] for k in (
-                'wall_ms_median', 'busy_ms', 'r_over_beta_measured_ms')}
-            print('16,384 / 256 tokens: wall {:.2f}, busy {:.2f}, bytes '
+    for m, rows in ((QWEN, qwen_rows), (GEMMA, gemma_rows)):
+        # The host launches one kernel after another and the device works
+        # in between, so the wall time is the launches' time
+        share = [r['busy_ms'] / r['wall_ms_median'] for r in rows]
+        us_per_launch = [1e3 * r['wall_ms_median'] / r['launches']
+                         for r in rows]
+        print(f'{NAMES[m]}: device busy {min(share):.0%}-{max(share):.0%} '
+              f'of the step, {min(us_per_launch):.1f}-'
+              f'{max(us_per_launch):.1f} us of wall time per launch')
+        assert max(share) < 0.5
+        by_n = {r['n']: r for r in rows}
+        if 256 in by_n and 16384 in by_n:  # within 25% is nearly flat
+            grow = {k: by_n[16384][k] / by_n[256][k] for k in (
+                'wall_ms_median', 'busy_ms', 'bytes_read')}
+            print('    16,384 / 256 tokens: wall {:.2f}, busy {:.2f}, bytes '
                   'read {:.2f}'.format(*grow.values()))
-            assert grow['wall_ms_median'] <= 1.25  # C9
-        else:
-            print(f'wall time ratio not computed: contexts {sorted(rows)}')
+            assert grow['wall_ms_median'] <= 1.25
     held = config_params(configs[GEMMA]) / config_params(configs[QWEN])
     read = (bytes_read(configs[GEMMA], 1024)
             / bytes_read(configs[QWEN], 1024))
     ratio = at[GEMMA]['matmul_ms'] / at[QWEN]['matmul_ms']
     print(f'matrix products Gemma/Qwen: {ratio:.2f} (bytes read {read:.2f}, '
           f'bytes held {held:.2f})')
-    assert ratio < math.sqrt(read * held)  # C7: closer to bytes read
+    assert ratio < math.sqrt(read * held)  # closer to bytes read
     for m, c in configs.items():
         groups = config_params(c, by_group=True)
         weights_ms = 2e3 * (sum(groups.values()) - groups['per_layer_embed']
                             ) / beta
-        print(f'{m}: matrix products {at[m]["matmul_ms"]:.2f} ms, weights '
-              f'read at measured bandwidth {weights_ms:.2f} ms')
-        assert at[m]['matmul_ms'] <= 2 * weights_ms  # C7
+        print(f'{NAMES[m]}: matrix products {at[m]["matmul_ms"]:.2f} ms, '
+              f'weights read at measured bandwidth {weights_ms:.2f} ms')
+        assert at[m]['matmul_ms'] <= 2 * weights_ms
 ```
 
-<!-- Placeholder (prose, none): the measured rows are written for upload as lm-hf-memory-speed-v2. -->
+<!-- Placeholder (prose, none): the measured rows are written to a candidate file; it is uploaded under a new versioned name only if it replaces the published table. -->
 
 ```{.python .input #hf-models-save-table}
 %%tab pytorch
@@ -1398,8 +1071,6 @@ if GPU:  # the candidate file; a download never writes to this path
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
         json.dump(measured, f, indent=1)
-    with open(path, 'rb') as f:
-        print(path, hashlib.sha1(f.read()).hexdigest())
 ```
 
 <!-- Placeholder (prose, ### Decode Throughput): the plot below; caption sentence from spec fig_lm_memory_vs_config. -->
@@ -1410,47 +1081,40 @@ if not GPU:  # the rows of the run behind the published figure
     with open(d2l.download('lm-hf-memory-speed-v2',
                            os.path.join('..', 'data', 'lm'))) as f:
         measured = json.load(f)
-names = {QWEN: 'Qwen3.5', GEMMA: 'Gemma 4'}
-mem_series, time_series = [], []  # (x, y, format, label) per curve
-for i, (m, c) in enumerate(configs.items()):
+curves = {'mem': {}, 'time': {}}  # (panel, model, style): (x, y)
+for m, c in configs.items():
     rows = [r for r in measured['rows'] if r['model'] == m]
     n_run = [r['n'] for r in rows]
     ns = [2**k for k in range(
         8, c.get_text_config().max_position_embeddings.bit_length())]
-    formula = [config_memory(c, n, 1) for n in ns]
-    mem_series += [
-        (ns, [(f['kv_cache'] + f['recurrent_state']) / MiB for f in formula],
-         f'C{i}-', f'{names[m]} formula'),
-        (ns, [config_memory(all_attention(c), n, 1, window_cached=n)[
-            'kv_cache'] / MiB for n in ns], f'C{i}--',
-         f'{names[m]} all attention'),
-        (n_run, [r['walker_logical'] / MiB for r in rows], f'C{i}o',
-         f'{names[m]} measured')]
-    time_series += [
-        (n_run, [r[k] for r in rows], f'C{i}{fmt}', f'{names[m]} {label}')
-        for k, fmt, label in (('wall_ms_median', '-', 'wall'),
-                              ('busy_ms', '--', 'busy'),
-                              ('r_over_beta_measured_ms', ':', 'bytes/β'))]
+    mem = [config_memory(c, n, 1) for n in ns]
+    curves['mem'] |= {
+        (m, '-'): (ns, [(f['kv_cache'] + f['recurrent_state']) / MiB
+                        for f in mem]),
+        (m, '--'): (ns, [config_memory(all_attention(c), n, 1,
+                                       window_cached=n)['kv_cache'] / MiB
+                         for n in ns]),
+        (m, 'o'): (n_run, [r['walker_logical'] / MiB for r in rows])}
+    curves['time'] |= {(m, style): (n_run, [r[k] for r in rows])
+                       for k, style in (('wall_ms_median', '-'),
+                                        ('busy_ms', '--'),
+                                        ('r_over_beta_measured_ms', ':'))}
+# The solid curves of both models, then the first model's other curves: a
+# legend of four names the models by colour and the rest by line style
 _, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 3.2))
-with d2l.plt.rc_context({'legend.fontsize': 'x-small'}):
-    for ax, series, ylabel, yscale, loc in (
-            (axes[0], mem_series, 'cache + state (MiB)', 'log', 'upper left'),
-            (axes[1], time_series, 'ms per decode step', 'linear', None)):
-        X, Y, fmts, legend = zip(*series)
-        d2l.plot(list(X), list(Y), 'context (tokens)', ylabel, list(legend),
-                 xscale='log', yscale=yscale, fmts=fmts, axes=ax,
-                 legend_loc=loc)
-        ticks = [2**k for k in range(8, max(map(max, X)).bit_length(), 2)]
-        ax.set_xticks(ticks, [f'{n // 1024}k' if n >= 1024 else str(n)
-                              for n in ticks])
-        ax.set_xticks([], minor=True)
-    axes[1].set_ylim(0, 1.5 * axes[1].get_ylim()[1])  # room for the legend
-    axes[1].legend([label for *_, label in time_series], ncol=2,
-                   loc='upper center')
-for i, m in enumerate(configs):  # interquartile band of the wall time
-    rows = [r for r in measured['rows'] if r['model'] == m]
-    axes[1].fill_between([r['n'] for r in rows],
-                         [r['wall_ms_q1'] for r in rows],
-                         [r['wall_ms_q3'] for r in rows],
-                         color=f'C{i}', alpha=0.2)
+color = {QWEN: 'C0', GEMMA: 'C1'}
+for ax, panel, ylabel, yscale, xlim, ylim, loc, solid, styles in (
+        (axes[0], 'mem', 'cache + state (MiB)', 'log', None, (2, 2e5),
+         'upper left', 'formula', {'--': 'all attention', 'o': 'measured'}),
+        (axes[1], 'time', 'ms per decode step', 'linear', (128, 32768),
+         (0, 95), 'upper left', 'wall',
+         {'--': 'device busy', ':': 'bytes read / β'})):
+    keys = ([(QWEN, '-'), (GEMMA, '-')] + [(QWEN, s) for s in styles]
+            + [(GEMMA, s) for s in styles])
+    X, Y = zip(*(curves[panel][k] for k in keys))
+    d2l.plot(list(X), list(Y), 'context (tokens)', ylabel,
+             [f'{NAMES[QWEN]} {solid}', f'{NAMES[GEMMA]} {solid}',
+              *styles.values()], xlim=xlim, ylim=ylim, xscale='log',
+             yscale=yscale, fmts=[color[m] + s for m, s in keys], axes=ax,
+             legend_loc=loc)
 ```

@@ -41,6 +41,9 @@ LIB_ONLY_FILES = [
     # not show. Appended (not early): nothing uses them at import time.
     'chapter_lm-pretrained/eval-suites-lib.md',
     'chapter_lm-pretrained/api-lib.md',
+    # 18.1's kernel routing (the Transformers workaround behind load_hf) and
+    # its timing, profiling and capacity harness.
+    'chapter_lm-pretrained/hf-models-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

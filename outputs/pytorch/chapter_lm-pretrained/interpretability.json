@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f082d06fa9d8e959ca2fb53fbd9a7c11eaeb916733190788f5eee7f91758632f",
+    "d2l_lib_fingerprint": "sha256:a73bcd60cb39fcf05ca06f6b96aab6f70ef99cd992b0a0d11d8e6419d9f35e95",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -26,6 +26,11 @@
       "code_fingerprint": "sha256:455d39471c2f46fc262eade63cf5757f6aaac9b1054d27096ef16264a546af68",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"
+        },
         {
           "type": "stream",
           "name": "stdout",
@@ -156,7 +161,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-lens-compare-1.svg",
           "bytes": 61615,
-          "sha256": "sha256:d9727803e1129dc30df55a5bdb9aff8ddd3e0fc456f81a3d9e1663aff65c10e9"
+          "sha256": "sha256:d6089daa9f3bf900e4a133244a93375720fd3fff7052421652b89be512d24029"
         }
       ]
     },
@@ -205,7 +210,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "effect tensor (3, 28, 8, 40) (kinds, blocks, positions, pairs)\n10.6 s for 26,880 patched forwards (672 per pair)\n"
+          "text": "effect tensor (3, 28, 8, 40) (kinds, blocks, positions, pairs)\n10.3 s for 26,880 patched forwards (672 per pair)\n"
         }
       ]
     },
@@ -234,7 +239,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-patch-map-1.svg",
           "bytes": 54365,
-          "sha256": "sha256:c72bf7c74eaacda829a4c1df5961e62dec2aec27554692c31e700d9ba8a55052"
+          "sha256": "sha256:d71a8c14866f804cb9ab9c5836302884fc427608183a0fe8f0f69dcb5baa27f4"
         }
       ]
     },
@@ -245,7 +250,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.57 s for 672 forwards per pair; AtP: 0.53 s for 3 passes; ratio 20\n"
+          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.32 s for 672 forwards per pair; AtP: 0.53 s for 3 passes; ratio 19\n"
         }
       ]
     },
@@ -263,7 +268,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-atp-agreement-1.svg",
           "bytes": 113291,
-          "sha256": "sha256:b858007372512d30f878ea9d1d32693e81c50243219d8d6af8eac5aeb2246566"
+          "sha256": "sha256:008fb63b3b55125cad2c68857f3ea25955be73d25fcb3ee31f8784907ce98045"
         }
       ]
     },
@@ -292,11 +297,6 @@
       "code_fingerprint": "sha256:c17e6f1fa71ac49e9fb424e4e578af1e7ae92a14455e384b73d5375275cb45f4",
       "kind": "text",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"
-        },
         {
           "type": "stream",
           "name": "stdout",
@@ -481,7 +481,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-frontier-1.svg",
           "bytes": 53403,
-          "sha256": "sha256:fcc9ca26b20b904faa5ec16428a0fe02eb820b2d68c6fc55f9c9acc771360556"
+          "sha256": "sha256:3559bfe8ff7cc487f3b4a68fc9198960f80bb467684b96ddbbdc81e6e2545e31"
         }
       ]
     },

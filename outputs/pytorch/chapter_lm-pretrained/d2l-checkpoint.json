@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7e13bbc7a84a4184b3e4efdf6c15564487b11cd2e4828d553ca7a9adecab403c",
+    "d2l_lib_fingerprint": "sha256:f019d1637c339a295b27580b3146186ae91dfc109e8b880c5adabccd940dc173",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -125,12 +125,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nport: 596,049,920 parameters, a d2l.GPT: True; Transformers: 596,049,920\n"
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\nport: 596,049,920 parameters, a d2l.GPT: True; Transformers: 596,049,920\n"
         }
       ]
     },
@@ -167,7 +167,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
@@ -245,12 +245,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\n"
+          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\n"
+          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
@@ -276,17 +276,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
@@ -345,7 +345,7 @@
           "mime": "image/svg+xml",
           "asset": "d2l-checkpoint/d2l-checkpoint-divergence-plot-1.svg",
           "bytes": 44329,
-          "sha256": "sha256:30e1ce7ac3f1b4982a5a56ddd982bc1e63e6301276dabecc53aaed29bc46a162"
+          "sha256": "sha256:1e60ed37be252fbade1e8f8eefa88e7697944f57febf4d40bd02fe1f32fdff80"
         }
       ]
     }

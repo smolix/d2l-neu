@@ -816,7 +816,9 @@ class Kernels(unittest.TestCase):
         cuda = lambda dtype: mock.NonCallableMock(is_cuda=True, dtype=dtype)
         self.assertEqual(routed(torch.zeros(2)), 'reference')
         self.assertEqual(routed(cuda(torch.bfloat16)), 'fused')
-        self.assertEqual(routed(x=cuda(torch.float32)), 'fused')
+        self.assertEqual(routed(x=cuda(torch.float16)), 'fused')
+        # fla multiplies fp32 in TF32: fp32 and fp64 run the reference
+        self.assertEqual(routed(x=cuda(torch.float32)), 'reference')
         self.assertEqual(routed(cuda(torch.float64)), 'reference')
         routed.fused = None  # what reference_kernels does
         self.assertEqual(routed(cuda(torch.bfloat16)), 'reference')
@@ -837,7 +839,8 @@ class Kernels(unittest.TestCase):
                       d2l._hf_flex_sdpa)
         self.assertIs(AttentionMaskInterface._global_mapping['flex_sdpa'],
                       d2l._hf_flex_sdpa_mask)
-        model = q35.Qwen3_5ForCausalLM(tiny_qwen35_config().get_text_config())
+        model = q35.Qwen3_5ForCausalLM(
+            tiny_qwen35_config().get_text_config()).to(torch.bfloat16)
         kernels = d2l.hf_kernels(model)
         self.assertEqual(kernels['attention'], 'sdpa')
         import importlib.util
@@ -846,6 +849,9 @@ class Kernels(unittest.TestCase):
         conv = importlib.util.find_spec('causal_conv1d') is not None
         self.assertEqual(kernels['short convolution'],
                          'causal_conv1d' if conv else 'PyTorch')
+        kernels = d2l.hf_kernels(model.float())  # fp32 runs the reference
+        self.assertEqual(kernels['delta rule'], 'PyTorch')
+        self.assertEqual(kernels['short convolution'], 'PyTorch')
 
     def test_cpu_forward_runs_the_reference(self):
         """With flash-linear-attention installed, a tiny Qwen3.5 still runs

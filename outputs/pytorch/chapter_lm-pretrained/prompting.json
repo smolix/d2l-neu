@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e229012c10c95a982bbb81a938ef55a4cf3091ed1a91b72e83d9e9881cd56d6d",
+    "d2l_lib_fingerprint": "sha256:f9dd4c1f98360e77f81ee79a5cae3522e8f36f865164088bbc691064e734bec2",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -34,12 +34,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\n"
+          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-1.7B@70d244cc86cc: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nQwen/Qwen3-1.7B-Base: 1,720,574,976 parameters in torch.bfloat16\nQwen/Qwen3-1.7B: 1,720,574,976 parameters in torch.bfloat16\n"
+          "text": "Qwen/Qwen3-1.7B@70d244cc86cc: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\nQwen/Qwen3-1.7B-Base: 1,720,574,976 parameters in torch.bfloat16\nQwen/Qwen3-1.7B: 1,720,574,976 parameters in torch.bfloat16\n"
         }
       ]
     },
@@ -207,11 +207,6 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Downloading ../data/lm/lm-fewshot-grid-v2.csv from https://d2l-data.smola.org/lm/lm-fewshot-grid-v2.csv...\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
           "text": "lm-fewshot-grid-v2: 63,022 rows\n"
         },
         {
@@ -292,7 +287,7 @@
           "mime": "image/svg+xml",
           "asset": "prompting/prompting-order-plot-1.svg",
           "bytes": 34624,
-          "sha256": "sha256:bc7739df6529c70699212e770a3b479201166ad1020c12e345eb5b15d331695a"
+          "sha256": "sha256:05a7ad51274782bf564c2bf16413cea35b989d1951ba85694a16ee430876e2fe"
         }
       ]
     },
@@ -320,7 +315,7 @@
           "mime": "image/svg+xml",
           "asset": "prompting/prompting-labels-plot-1.svg",
           "bytes": 37876,
-          "sha256": "sha256:568a9373d61948375fda97b314f7cf979be7f9001b9ea11c0ceebd7c9a4a923c"
+          "sha256": "sha256:da660cd3aa2645074dbe075730af84294a256cc5335c839262cbe0128731b0f1"
         }
       ]
     },
@@ -380,7 +375,7 @@
           "mime": "image/svg+xml",
           "asset": "prompting/prompting-icl-vs-probe-plot-1.svg",
           "bytes": 44228,
-          "sha256": "sha256:d7b73ebda87e1d284a5e48f0410cba0e104def7d24b53611535ee082bc3400bd"
+          "sha256": "sha256:76799d53838092c8521cb76452880100487ccb9852b26731b08a626ece89b22d"
         }
       ]
     },

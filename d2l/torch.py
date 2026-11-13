@@ -4412,8 +4412,9 @@ _HF_LINEAR_KERNELS = ('torch_chunk_gated_delta_rule',  # a prompt, by chunks
 
 def _hf_route(bound):
     """Transformers' kernel function `bound`, run by the fused kernel it
-    bound at import for CUDA tensors and by its PyTorch reference code for
-    the rest: the fused Triton kernels need a GPU.
+    bound at import for CUDA tensors in bf16 or fp16 and by its PyTorch
+    reference code for the rest: the fused Triton kernels need a GPU, and
+    they multiply fp32 inputs in TF32, which an fp32 check does not expect.
 
     Defined in :numref:`sec_lm_hf_models`"""
     import functools
@@ -4425,7 +4426,7 @@ def _hf_route(bound):
     def routed(*args, **kwargs):
         x = args[0] if args else next(iter(kwargs.values()))
         if (routed.fused is None or not x.is_cuda
-                or x.dtype == torch.float64):
+                or x.dtype not in (torch.bfloat16, torch.float16)):
             return reference(*args, **kwargs)
         return bound(*args, **kwargs)
     routed.fused = None if fused is reference else fused  # None: reference
@@ -4488,7 +4489,8 @@ def hf_attention(config, device):
 
 def hf_kernels(model):
     """The code a model's attention and Gated DeltaNet layers run on a GPU
-    (binding the latter by device first, as load_hf does).
+    in the model's dtype (binding the latter by device and dtype first, as
+    load_hf does).
 
     Defined in :numref:`sec_lm_hf_models`"""
     import sys
@@ -4500,7 +4502,8 @@ def hf_kernels(model):
         for key, fn in (('delta rule', 'torch_chunk_gated_delta_rule'),
                         ('short convolution', 'causal_conv1d_fn')):
             fused = getattr(module, fn).fused
-            kernels[key] = ('PyTorch' if fused is None
+            kernels[key] = ('PyTorch' if fused is None or model.dtype
+                            not in (torch.bfloat16, torch.float16)
                             else fused.__module__.split('.')[0])
     return kernels
 

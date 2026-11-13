@@ -80,12 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Wikipedia en, contrast: 300 docs from rows 0-142520 (20 blocks), 24.1 MB read\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Wikipedia en, label: 100 docs from rows 22-142527 (20 blocks), 0.0 MB read\n"
+          "text": "Wikipedia en, contrast: 300 docs from rows 0-142520 (20 blocks), 24.1 MB read\nWikipedia en, label: 100 docs from rows 22-142527 (20 blocks), 0.0 MB read\n"
         },
         {
           "type": "stream",
@@ -156,7 +151,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-lens-compare-1.svg",
           "bytes": 61615,
-          "sha256": "sha256:99e85f50d871430fbda838c206ca157198c9570aa756c547963c44c0ad4daba8"
+          "sha256": "sha256:b1ef08870201b7e4f7a19a639b5bd9de3de6c89faa57bfb857922cda739e30c8"
         }
       ]
     },
@@ -205,7 +200,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "effect tensor (3, 28, 8, 40) (kinds, blocks, positions, pairs)\n11.6 s for 26,880 patched forwards (672 per pair)\n"
+          "text": "effect tensor (3, 28, 8, 40) (kinds, blocks, positions, pairs)\n10.6 s for 26,880 patched forwards (672 per pair)\n"
         }
       ]
     },
@@ -234,7 +229,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-patch-map-1.svg",
           "bytes": 54365,
-          "sha256": "sha256:5fdfc3580e39d3f9669658c5e8bcd161d4a85bd02123a069355be8acf67b4001"
+          "sha256": "sha256:1121131a0041ea783ddc91fbde7cc946a872f8c622432152847d9d6fbf225077"
         }
       ]
     },
@@ -245,7 +240,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "AtP tensor (3, 28, 8, 40)\npatching: 11.57 s for 672 forwards per pair; AtP: 0.59 s for 3 passes; ratio 20\n"
+          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.55 s for 672 forwards per pair; AtP: 0.52 s for 3 passes; ratio 20\n"
         }
       ]
     },
@@ -263,7 +258,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-atp-agreement-1.svg",
           "bytes": 113291,
-          "sha256": "sha256:fbc12aa5f3fa4059066764ef93d1a230aee5452fda3496238798a0aca260dd23"
+          "sha256": "sha256:a1a3c1593d66be12a2169def332d3717b9459017310a47fc24826b7e3249ae8b"
         }
       ]
     },
@@ -407,7 +402,7 @@
       ]
     },
     "interpretability-steer": {
-      "code_fingerprint": "sha256:53cc58e97b2c661d38f1cab79e7626af13853511dcba614b58d1f17d58cfacbb",
+      "code_fingerprint": "sha256:44ece0aefaab5f9d74fb3da9fe45de52221b10163775499729656e3e421ae10c",
       "kind": "text",
       "outputs": [
         {
@@ -458,7 +453,7 @@
       ]
     },
     "interpretability-frontier": {
-      "code_fingerprint": "sha256:19e418d0deab0ab57b8fcdc3f2004055c8d61c1f69b1e4b89bfa2af1679caaa6",
+      "code_fingerprint": "sha256:ef257ab3a9c4de46dc0d64514045d47036e9584947d9f1f3c4c9a8d50594c533",
       "kind": "mixed",
       "outputs": [
         {
@@ -471,12 +466,12 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-frontier-1.svg",
           "bytes": 53403,
-          "sha256": "sha256:51ba572a9855b8bfeec9684a40482f914259e1594f5e7b5fc8d107ee2b6f0813"
+          "sha256": "sha256:e447b13a7ff29490cf0138d6b3220f54efb628f624615eb38f2fd004b0a4d734"
         }
       ]
     },
     "interpretability-steer-samples": {
-      "code_fingerprint": "sha256:b5faa5892852861c5bc9aa118b9ff2701a4d3536e1a0bd98ef450cbeba82a64b",
+      "code_fingerprint": "sha256:33217a94d75a4de5f2e1066849bc753f9b8b6850a0a8e15137b4ffc7c51cabf3",
       "kind": "text",
       "outputs": [
         {

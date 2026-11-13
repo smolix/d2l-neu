@@ -1631,8 +1631,9 @@ for name, d in directions.items():
     runs[name, 0.0] = base  # alpha = 0 is one shared run
     for alpha in GRID[name][1:]:
         runs[name, alpha] = run(steer(alpha * n_bar * d))
-    print(f'{name}: switched at alpha 1: '
-          f'{(runs[name, 1.0][0] >= SWITCH).mean():.2f}')
+    a = min(GRID[name][1:], key=lambda a: abs(math.log(a)))  # nearest 1
+    print(f'{name}: switched at alpha {a:g}: '
+          f'{(runs[name, a][0] >= SWITCH).mean():.2f}')
 runs['prefix', 0.0] = run(prefix=PREFIX)
 print(f'prefix: switched {(runs["prefix", 0.0][0] >= SWITCH).mean():.2f}')
 RESULTS['steering_prompts.csv'] = pd.DataFrame(

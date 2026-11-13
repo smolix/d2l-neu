@@ -369,6 +369,16 @@ NOTEBOOK_ENV = {
     ("pytorch", "chapter_computational-performance/fast-transformer.ipynb"): {
         "TEARDOWN_CUPTI": "1",
     },
+    # 18.4: generation with KV caches of changing length leaves PyTorch's
+    # caching allocator holding blocks it cannot reuse. In the D2L_RERUN
+    # regeneration run tensors peaked at 10.8 GiB while the card showed
+    # 20.3-20.7 GB, past the notebook's 2-slot budget (15 GiB) on a shared
+    # card. Expandable segments grow one mapped range instead of caching
+    # fixed-size blocks; numerics are unchanged. The cell's peak() prints the
+    # reserved memory, so the next regeneration run shows the effect.
+    ("pytorch", "chapter_lm-pretrained/scoring.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
 }
 
 

@@ -5467,9 +5467,9 @@ d2l.DATA_HUB['lm-bpb-v1'] = (
 d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
     '11b561b6fb07d19016f5a00b4a5dcf35d3dbbb07')
-d2l.DATA_HUB['lm-arc-generations-v1'] = (
-    d2l.LM_DATA_URL + 'lm-arc-generations-v1.jsonl',
-    '0b58a8a81e87794c5a564bd958142ede4288d195')
+d2l.DATA_HUB['lm-arc-generations-v2'] = (  # direct budget 512 tokens
+    d2l.LM_DATA_URL + 'lm-arc-generations-v2.jsonl',
+    '6a42d4b5ef29a40d7241039779cb9b9fc40e0afc')
 d2l.DATA_HUB['lm-arc-scores-v1'] = (
     d2l.LM_DATA_URL + 'lm-arc-scores-v1.parquet',
     'e4e1ea4b45a7a5288ae3b914459e60228b5e2931')
@@ -5478,10 +5478,17 @@ def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
     """Download DATA_HUB[key] into root/key/ and return its local path.
     Files from different datasets often share a name (Hugging Face's
     'test-00000-of-00001.parquet'), and d2l.download keeps one file per
-    name and folder, so each key gets a folder of its own.
+    name and folder, so each key gets a folder of its own. The file's sha1
+    is checked after a fresh download too.
 
     Defined in :numref:`sec_lm_scoring`"""
-    return d2l.download(key, os.path.join(root, key))
+    path = d2l.download(key, os.path.join(root, key))
+    sha1 = d2l.DATA_HUB[key][1]
+    if sha1:
+        with open(path, 'rb') as f:
+            got = hashlib.sha1(f.read()).hexdigest()
+        assert got == sha1, f'{path}: sha1 {got}, DATA_HUB pins {sha1}'
+    return path
 
 def format_mc(question, options, fmt='cloze', *, shots=()):
     """A multiple-choice item as (prompt, choices). 'cloze': the prompt

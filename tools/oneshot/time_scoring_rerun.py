@@ -22,6 +22,8 @@ times and memory only: no reply is parsed or scored.
     CUDA_VISIBLE_DEVICES=<gpu> HF_HOME=$HOME/.cache/hf-lm \\
         .venv-lm/bin/python tools/oneshot/time_scoring_rerun.py
     # --dry: build the prompts and print the plan without loading a model
+    # --only arc-generations: probe and estimate only the jobs of the
+    #   artifacts that D2L_RERUN will name (default 1, all four)
 
 A generation batch is modelled as prefill plus a fixed time per new token:
 the probe also runs each batch with one new token (the prefill), and the
@@ -72,7 +74,7 @@ def notebook_state():
         for cid in CELLS:
             exec(compile(cell(source, cid), cid, 'exec'), ns)
         runs = cell(source, 'scoring-batch-size')  # its list of runs
-        exec(runs[:runs.index('\nif RERUN:')], ns)
+        exec(runs[:runs.index("\nif 'arc-scores' in RERUN:")], ns)
     return ns
 
 
@@ -83,20 +85,34 @@ def main(argv=None):
     p.add_argument('--live-min', type=float, default=10.0,
                    help='minutes of the normal build inside the run')
     p.add_argument('--ceiling-min', type=float, default=30.0)
+    p.add_argument('--only', default='1', metavar='D2L_RERUN',
+                   help='the value D2L_RERUN will have: 1 (all) or a '
+                   'comma-separated list of artifacts; only their jobs '
+                   'are probed and estimated')
     args = p.parse_args(argv)
     ns = notebook_state()
     torch, d2l = ns['torch'], ns['d2l']
+    names = args.only.split(',')
+    only = set(ns['ARTIFACTS'] if names == ['1'] else names)
+    if not only <= set(ns['ARTIFACTS']):
+        p.error(f'--only names one of {ns["ARTIFACTS"]}, or 1')
+    print('regenerating:', ', '.join(sorted(only)) + (
+        ' (bpb is part of the live run)' if 'bpb' in only else ''))
     PAIR, ARMS, GSM_SAMPLER = ns['PAIR'], ns['ARMS'], ns['GSM_SAMPLER']
     gsm_budget = GSM_SAMPLER['max_new_tokens']
     reason_budget = ARMS['reasoning'][2]['max_new_tokens']
     arc_models = list(dict.fromkeys(ARMS['direct'][0] + ARMS['reasoning'][0]))
-    print(f'GSM8K pool: {PAIR}, {N_SAMPLES} x {math.ceil(N_GSM / BATCH)} '
-          f'batches per model, budget {gsm_budget}')
-    for arm, (models, n, s) in ARMS.items():
+    if 'gsm8k-samples' in only:
+        print(f'GSM8K pool: {PAIR}, {N_SAMPLES} x '
+              f'{math.ceil(N_GSM / BATCH)} batches per model, budget '
+              f'{gsm_budget}')
+    for arm, (models, n, s) in ARMS.items() if 'arc-generations' in only \
+            else ():
         print(f'ARC {arm}: {models}, {math.ceil(n / BATCH)} batches per '
               f'model, budget {s["max_new_tokens"]}')
-    print('batch-size runs:', [(m, str(dt), bs) for m, dt, bs, _ in
-                               ns['BATCH_RUNS']])
+    if 'arc-scores' in only:
+        print('batch-size runs:', [(m, str(dt), bs) for m, dt, bs, _ in
+                                   ns['BATCH_RUNS']])
     if args.dry:
         return
     if not torch.cuda.is_available():
@@ -131,7 +147,7 @@ def main(argv=None):
 
     rows, loads = [], {'gsm': 0.0, 'arc': 0.0}
     gsm, arc = {}, {}
-    for m in PAIR:
+    for m in PAIR if 'gsm8k-samples' in only else ():
         model, tok, t = load(m)
         loads['gsm'] += t
         gsm[m] = probe_generate(model, tok, ns['GSM_PROMPTS'][:BATCH],
@@ -139,7 +155,7 @@ def main(argv=None):
         rows.append((f'GSM8K {m}', gsm[m], ns['peak']()))
         del model
         ns['free']()
-    for m in arc_models:
+    for m in arc_models if 'arc-generations' in only else ():
         model, tok, t = load(m)
         loads['arc'] += t
         for arm, (models, n, settings) in ARMS.items():
@@ -151,7 +167,8 @@ def main(argv=None):
         del model
         ns['free']()
     rescore = []  # (fp32?, seconds for the full run incl. its load)
-    for m, dtype, size, col in ns['BATCH_RUNS']:
+    for m, dtype, size, col in (ns['BATCH_RUNS'] if 'arc-scores' in only
+                                else ()):
         model, tok, t = load(m, dtype=dtype)
         for fmt in ('cloze', 'letter0'):
             prompts, choices = zip(*ns['FORMATS'][fmt][:BATCH])
@@ -170,7 +187,7 @@ def main(argv=None):
     def estimate(k, cap):
         n_reason, budget, fp32 = CUTS[k]
         g = sum(N_SAMPLES * math.ceil(N_GSM / BATCH) *
-                batch_time(gsm[m], budget, cap) for m in PAIR)
+                batch_time(gsm[m], budget, cap) for m in gsm)
         a = sum(math.ceil((N_ARC if arm == 'direct' else n_reason) / BATCH)
                 * batch_time(probe, ARMS[arm][2]['max_new_tokens'], cap)
                 for (arm, m), probe in arc.items())

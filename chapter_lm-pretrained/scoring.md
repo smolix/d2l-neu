@@ -115,9 +115,9 @@ d2l.DATA_HUB['lm-bpb-v1'] = (
 d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
     '11b561b6fb07d19016f5a00b4a5dcf35d3dbbb07')
-d2l.DATA_HUB['lm-arc-generations-v1'] = (
-    d2l.LM_DATA_URL + 'lm-arc-generations-v1.jsonl',
-    '0b58a8a81e87794c5a564bd958142ede4288d195')
+d2l.DATA_HUB['lm-arc-generations-v2'] = (  # direct budget 512 tokens
+    d2l.LM_DATA_URL + 'lm-arc-generations-v2.jsonl',
+    '6a42d4b5ef29a40d7241039779cb9b9fc40e0afc')
 d2l.DATA_HUB['lm-arc-scores-v1'] = (
     d2l.LM_DATA_URL + 'lm-arc-scores-v1.parquet',
     'e4e1ea4b45a7a5288ae3b914459e60228b5e2931')
@@ -130,8 +130,15 @@ def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
     """Download DATA_HUB[key] into root/key/ and return its local path.
     Files from different datasets often share a name (Hugging Face's
     'test-00000-of-00001.parquet'), and d2l.download keeps one file per
-    name and folder, so each key gets a folder of its own."""
-    return d2l.download(key, os.path.join(root, key))
+    name and folder, so each key gets a folder of its own. The file's sha1
+    is checked after a fresh download too."""
+    path = d2l.download(key, os.path.join(root, key))
+    sha1 = d2l.DATA_HUB[key][1]
+    if sha1:
+        with open(path, 'rb') as f:
+            got = hashlib.sha1(f.read()).hexdigest()
+        assert got == sha1, f'{path}: sha1 {got}, DATA_HUB pins {sha1}'
+    return path
 ```
 
 <!-- Placeholder (stage 2): the five checkpoints and the switches of the build (GPU, regeneration). -->
@@ -145,7 +152,12 @@ GPU = torch.cuda.is_available()
 # A job given a GPU (CUDA_VISIBLE_DEVICES set) must not fall back to the CPU
 assert GPU or not os.environ.get('CUDA_VISIBLE_DEVICES'), (
     'a GPU is assigned, but PyTorch sees none')
-RERUN = os.environ.get('D2L_RERUN', '0') == '1'  # regenerate the artifacts
+# D2L_RERUN=1 regenerates the four measured results, D2L_RERUN=bpb,... the
+# ones it names; a normal build (D2L_RERUN unset or 0) regenerates none
+ARTIFACTS = ('bpb', 'gsm8k-samples', 'arc-generations', 'arc-scores')
+names = os.environ.get('D2L_RERUN', '0').split(',')
+RERUN = set(ARTIFACTS if names == ['1'] else names) - {'0', ''}
+assert RERUN <= set(ARTIFACTS), f'D2L_RERUN names one of {ARTIFACTS}, or 1'
 assert GPU or not RERUN, 'regenerating the artifacts needs a GPU'
 RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
 # The regeneration's declared cuts, in order: D2L_RERUN_CUT=k applies the
@@ -163,7 +175,8 @@ ieee_fp32 = lambda: not (torch.backends.cuda.matmul.allow_tf32 or
 transformers.logging.set_verbosity_error()  # no notices or progress bars
 transformers.logging.disable_progress_bar()
 huggingface_hub.utils.disable_progress_bars()
-print(f'GPU={GPU}, RERUN={RERUN}' + (f', cuts {CUT}' if CUT else ''))
+print(f'GPU={GPU}, RERUN={",".join(sorted(RERUN)) or False}'
+      + (f', cuts {CUT}' if CUT else ''))
 ```
 
 <!-- Placeholder (stage 2): where the measured results live: registered files, or this run's regenerated ones. -->
@@ -177,9 +190,9 @@ def registered(key):
 def artifact(key, name):
     """The registered artifact; in the regeneration run before its first
     upload, the file name that this run wrote to RERUN_DIR."""
-    path = registered(key)
+    path, what = registered(key), name.removeprefix('lm-').split('.')[0]
     if path is None:
-        assert RERUN, f'{key} is not registered: run with D2L_RERUN=1'
+        assert what in RERUN, f'{key} is not registered: D2L_RERUN={what}'
         path = os.path.join(RERUN_DIR, name)
     return path
 
@@ -206,12 +219,15 @@ def free():
     torch.cuda.empty_cache()
 
 def peak():
-    """Peak GPU memory since the last call, as text."""
+    """Peak GPU memory since the last call, as text: what tensors held, and
+    what the allocator reserved from the card (what nvidia-smi shows, less
+    the CUDA context)."""
     if not torch.cuda.is_available():
         return 'no GPU'
-    gib = torch.cuda.max_memory_allocated() / 2**30
+    gib = [f() / 2**30 for f in (torch.cuda.max_memory_allocated,
+                                 torch.cuda.max_memory_reserved)]
     torch.cuda.reset_peak_memory_stats()
-    return f'peak {gib:.1f} GiB'
+    return f'peak {gib[0]:.1f} GiB ({gib[1]:.1f} GiB reserved)'
 ```
 
 <!-- Placeholder (stage 2): 500 seeded ARC-Challenge items, five balanced demonstrations, 100 seeded GSM8K problems. -->
@@ -849,7 +865,7 @@ if GPU:
     free()
     bpb_agreement(rows)
     bpb_rows += rows
-    if RERUN:
+    if 'bpb' in RERUN:
         save_rerun('lm-bpb.csv', lambda path: pd.DataFrame(bpb_rows).to_csv(
             path, index=False, float_format='%.10g'))
 bpb = bpb_table(bpb_rows)
@@ -969,7 +985,7 @@ def gsm_records(model_id, gens, j):
                  gold=gold, correct=EXTRACTORS['strict'](g.text) == gold)
             for i, g, gold in zip(GSM_IDS, gens, GSM_GOLD)]
 
-if RERUN:
+if 'gsm8k-samples' in RERUN:
     records, tic = [], time.time()
     for m in PAIR:
         model, tok = d2l.load_hf(m)
@@ -990,6 +1006,10 @@ if RERUN:
         print(f'correctness agrees with lm-gsm8k-samples-v1 on '
               f'{(both.correct_x == both.correct_y).sum()} of {len(both)}')
 pool = read_jsonl(artifact('lm-gsm8k-samples-v1', 'lm-gsm8k-samples.jsonl'))
+recorded = pool.settings[0]  # the sampler the pool was made with; its
+assert all(s == recorded for s in pool.settings)  # budget is cut-dependent
+assert {**recorded, 'max_new_tokens': GSM_MAX_NEW} == GSM_SAMPLER
+print('sampler recorded in the pool:', recorded)
 print(pd.DataFrame({
     'sample-0 accuracy': pool[pool.sample_idx == 0].groupby('model').correct
     .mean(), 'truncated': (pool.finish_reason == 'length').groupby(
@@ -1094,7 +1114,7 @@ K = [1, 2, 4, 8]
 
 def majority(answers):
     """The most frequent parsed answer, ties to the first one sampled."""
-    parsed = [a for a in answers if a is not None]
+    parsed = [a for a in answers if isinstance(a, str)]  # None reads as nan
     counts = collections.Counter(parsed)
     return max(parsed, key=counts.__getitem__) if parsed else None
 
@@ -1103,6 +1123,7 @@ for m in PAIR:
     g = pool[pool.model == m].sort_values('sample_idx').groupby('problem_id')
     c = g.correct.sum().to_numpy()  # correct samples of 8, per problem
     maj = (g.answer_strict.agg(majority) == g.gold.first()).to_numpy(float)
+    assert (d2l.pass_at_k(8, c, 8) >= maj).all()  # on every problem
     for k in K:
         est[m, k] = boot(d2l.pass_at_k(8, c, k))
         est[m, k, 'plug-in'] = np.mean(1 - (1 - c / 8) ** k)
@@ -1120,7 +1141,15 @@ d2l.plot([K, K, [8], [8]], [[est[m, k, 'plug-in'] for k in K] for m in PAIR]
 d2l.plot_intervals(K, {m.removeprefix('Qwen/'): tuple(np.array(
     [est[m, k] for k in K]).T) for m in PAIR}, 'k', 'pass@k', kind='band',
     xscale='log2', axes=d2l.plt.gca())
-d2l.plt.gca().autoscale(axis='y')  # d2l.plot fixed the range: fit the bands
+ax = d2l.plt.gca()
+ax.autoscale(axis='y')  # d2l.plot fixed the range: fit the bands
+old = ax.get_legend()  # the models' colours, then what each mark shows
+ax.legend(old.legend_handles + [d2l.plt.Line2D([], [], color='k', ls=ls,
+                                               marker=mk) for ls, mk in
+                                (('-', ''), ('--', ''), ('', 'D'))],
+          [t.get_text() for t in old.texts] + ['unbiased', 'plug-in',
+                                               'maj@8'],
+          loc='upper left', bbox_to_anchor=(1, 1), frameon=False);
 ```
 
 <!-- Placeholder (stage 2): how much of the band's width comes from sampling and how much from the choice of problems. -->
@@ -1225,9 +1254,11 @@ for name, program in programs.items():
 ASK = 'Give the letter of the correct option as \\boxed{X}.'
 ARC_CHAT = [d2l.format_mc(q, o, 'letter')[0].removesuffix('Answer:') + ASK
             for _, q, o, _ in ARC]
+# The budgets belong to the convention. With thinking off the models still
+# explain before the box; at 128 tokens most direct replies were cut first
 ARMS = {  # arm: (models, number of subset items, settings of generate)
     'direct': ([PAIR[0], PAIR[1], 'Qwen/Qwen3-1.7B'], 500, dict(
-        strategy='greedy', enable_thinking=False, max_new_tokens=128)),
+        strategy='greedy', enable_thinking=False, max_new_tokens=512)),
     'reasoning': ([PAIR[0], 'Qwen/Qwen3-1.7B'], N_REASON, dict(
         strategy='sample', temperature=0.6, p=0.95, k=20, seed=0,
         enable_thinking=True, max_new_tokens=1024))}
@@ -1246,7 +1277,7 @@ def boxed_letter(text, n_options, finished=True):
 
 ```{.python .input #scoring-arc-generate}
 %%tab pytorch
-if RERUN:
+if 'arc-generations' in RERUN:
     records, tic = [], time.time()
     for m in dict.fromkeys(ARMS['direct'][0] + ARMS['reasoning'][0]):
         model, tok = d2l.load_hf(m)
@@ -1270,8 +1301,14 @@ if RERUN:
           f'{peak()}')
     save_rerun('lm-arc-generations.jsonl',
                lambda path: write_jsonl(path, records))
-arc_gen = read_jsonl(artifact('lm-arc-generations-v1',
+arc_gen = read_jsonl(artifact('lm-arc-generations-v2',
                               'lm-arc-generations.jsonl'))
+for arm, (models, n, settings) in ARMS.items():  # as recorded in the file
+    d = arc_gen[arc_gen.arm == arm]
+    sizes = d.groupby('model').size()  # items per model: cut-dependent
+    assert set(sizes.index) == set(models) and sizes.nunique() == 1
+    assert all(s == settings for s in d.settings), arm
+    print(f'{arm}: {sizes.iloc[0]} items per model, settings {settings}')
 n_opts = dict(zip(ARC_IDS, (len(it[2]) for it in ARC)))
 at_cap = arc_gen.finish_reason == 'length'
 boxed = np.array([boxed_letter(t, n_opts[i]) is not None  # as if finished
@@ -1381,7 +1418,7 @@ BATCH_RUNS = [(PAIR[0], torch.bfloat16, 1, 'll_bs1'),  # model, dtype,
 if FP32_RUNS:
     BATCH_RUNS += [(PAIR[0], torch.float32, 1, 'll_fp32_bs1'),
                    (PAIR[0], torch.float32, 8, 'll_fp32_bs8')]
-if RERUN:
+if 'arc-scores' in RERUN:
     assert ieee_fp32()
     key, extra, tic = ['model', 'fmt', 'item_id', 'choice'], {}, time.time()
     for m, dtype, size, col in BATCH_RUNS:
@@ -1409,8 +1446,10 @@ for name, m, a, b in [('bf16, batch 8 vs 1', PAIR[0], 'll', 'll_bs1'),
     for conv in ('cloze-sum', 'letter-0'):
         sa, sb = (convention_scores(arc, m, conv, c) for c in (a, b))
         change = np.nanmax(np.abs(sa - sb))
+        changed = predict(sa) != predict(sb)  # count, and rate of 500
         rows.append(dict(setting=name, model=m, convention=conv,
-                         changed=(predict(sa) != predict(sb)).sum(),
+                         changed=changed.sum(),
+                         rate=round(float(changed.mean()), 3),
                          max_change=change,
                          below_change=(margin(sa) < change).sum()))
 print(pd.DataFrame(rows).to_string(index=False))
@@ -1475,8 +1514,8 @@ print(q + ''.join(f'\n{a}. {o}' for a, o in zip('ABCDE', opts)))
 print(f'gold {"ABCDE"[gold]}; Qwen3-0.6B: ' + ', '.join(
     f'{k} {v}' for k, v in verdicts.iloc[i].items()))
 print(f'first item with {rule} different letters ({ARC_IDS[i]}); items '
-      f'with at least two: {(n_verdicts > 1).sum()} of {committed.sum()} '
-      f'with a parsed reply')
+      f'with at least two: {(n_verdicts > 1).sum()} of {len(ARC)} '
+      f'({committed.sum()} with a parsed reply)')
 ```
 
 <!-- Placeholder (stage 2): accuracy with item-bootstrap intervals per checkpoint and convention, and the gold answer's bits per byte. -->
@@ -1531,23 +1570,56 @@ for name, (d, lo, hi) in [('cloze-char accuracy', PAIR_DIFF['cloze-char']),
 
 ```{.python .input #scoring-contrasts}
 %%tab pytorch
-gain = lambda m: CORRECT[m, 'letter-0'] - CORRECT[m, 'cloze-sum']
-print('pair, (letter-0 - cloze-sum) difference of differences:',
-      show(boot(gain(PAIR[1]), gain(PAIR[0]))))
+def gain(m, col='ll'):  # letter-0 minus cloze-sum, correct per item
+    return np.subtract(*((predict(convention_scores(arc, m, c, col)) ==
+                          GOLD).astype(float)
+                         for c in ('letter-0', 'cloze-sum')))
+
+def read(e, drift, names):  # the flip rule: the nearer end beyond drift
+    return (names[0] if e[1] > drift else names[1] if e[2] < -drift else
+            f'not resolved at {len(ARC)} items')
+
+# Drift of these contrasts between batch sizes 8 and 1 (bf16), measured on
+# the two models re-scored at batch 1; the largest stands for all of them
+drift = max([abs(gain(m).mean() - gain(m, 'll_bs1').mean()) for m in PAIR]
+            + [abs((gain(PAIR[1]) - gain(PAIR[0])).mean() -
+                   (gain(PAIR[1], 'll_bs1') -
+                    gain(PAIR[0], 'll_bs1')).mean())])
+print(f'drift of the contrasts, batch 8 vs 1: {drift:.3f}')
+e = boot(gain(PAIR[1]), gain(PAIR[0]))
+print(f'pair, (letter-0 - cloze-sum) difference of differences: {show(e)}'
+      f' ({read(e, drift, [m[5:] + " gains more" for m in PAIR[::-1]])})')
 for m in MODELS:
-    print(f'{m}: letter-0 - cloze-sum {show(boot(gain(m)))}')
+    e = boot(gain(m))
+    print(f'{m}: letter-0 - cloze-sum {show(e)} '
+          f'({read(e, drift, ("letter-0 ahead", "cloze-sum ahead"))})')
 for base, post in zip(BASES, PAIR):
-    print(f'{post} - {base}, (letter-0 - cloze-sum): '
-          f'{show(boot(gain(post), gain(base)))}')
+    e = boot(gain(post), gain(base))
+    print(f'{post} - {base}, (letter-0 - cloze-sum): {show(e)} ('
+          + read(e, drift, ('post-trained gains more', 'base gains more'))
+          + ')')
 for m in ARMS['reasoning'][0]:  # on the first n subset items
     n = gen_column(m, 'reasoning', 'n_tokens').notna().sum()
-    a, b = (gen_column(m, arm, 'letter').iloc[:n] for arm in ARMS)
-    tokens = [gen_column(m, arm, 'n_tokens').iloc[:n].mean()
-              for arm in ARMS]
+    col = lambda arm, c: gen_column(m, arm, c).iloc[:n]
+    cut = {arm: (col(arm, 'finish_reason') == 'length').mean()
+           for arm in ARMS}
+    binds = [arm for arm in ARMS if cut[arm] > 0.3]  # spec: over 30%
     d = paired(CORRECT[m, 'gen-reasoning'], CORRECT[m, 'gen-direct'])
-    print(f'{m}: reasoning - direct {show(d)}; letters differ on '
-          f'{(a.fillna("") != b.fillna("")).sum()} of {n}; mean tokens '
-          f'{tokens[1]:.0f} (reasoning) and {tokens[0]:.0f} (direct)')
+    both = (col('reasoning', 'letter').notna() &
+            col('direct', 'letter').notna()).to_numpy()  # both committed
+    differ = (col('reasoning', 'letter') != col('direct', 'letter'))[both]
+    acc = [col(arm, 'correct')[both].astype(float).mean() for arm in ARMS]
+    tokens = [col(arm, 'n_tokens').mean() for arm in ARMS]
+    print(f'{m}, first {n} items: reasoning - direct {show(d)} (' + (
+        f'{" and ".join(binds)} budget binds: no direction' if binds else
+        read(d, 0, ('reasoning ahead', 'direct ahead'))) +
+        '); truncated ' + ', '.join(f'{arm} {v:.2f}' for arm, v in
+                                    cut.items()))
+    print(f'    both replies commit to a letter on {both.sum()}: they differ '
+          f'on {differ.sum()}; accuracy there {acc[1]:.2f} (reasoning), '
+          f'{acc[0]:.2f} (direct), descriptive')
+    print(f'    mean tokens {tokens[1]:.0f} (reasoning), {tokens[0]:.0f} '
+          f'(direct), 1 for a scored letter')
 ```
 
 <!-- Placeholder (stage 2): how often sum and char disagree, by the spread of option lengths. -->

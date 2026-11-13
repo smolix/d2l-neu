@@ -1427,7 +1427,21 @@ past that, the section applies its declared cuts in their declared order,
 chosen from wall clock alone. 18.4 (`scoring.md`) reads its cut level from
 `D2L_RERUN_CUT=k` (the first k of its three cuts), and
 `tools/oneshot/time_scoring_rerun.py` picks k before the run from the times
-of one batch per job, so the cut is fixed before any accuracy is printed. Regenerate, upload, then run the notebook once
+of one batch per job, so the cut is fixed before any accuracy is printed.
+18.4 also regenerates single artifacts: `D2L_RERUN=arc-generations` (any
+comma-separated subset of `bpb`, `gsm8k-samples`, `arc-generations`,
+`arc-scores`; `1` means all four) runs only those producing blocks, so a
+change to one artifact need not pay for the other three or their cuts
+(`time_scoring_rerun.py --only arc-generations` probes the same subset). The
+settings each artifact was made with are recorded in it, and the analysis
+cells print them (the GSM8K budget, the number of reasoning items), since the
+source's constants show the uncut values. The notebook's kernel gets
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` (`NOTEBOOK_ENV`): without
+it the 2026-11-13 regeneration runs reserved 20.3-20.7 GB on the card for a
+10.8 GiB tensor peak, past the 2-slot budget; its `peak()` prints both
+numbers. Until a regeneration run with the setting has been measured, give a
+regeneration run a whole card (`D2L_GPU_SLOTS_PER` with every slot of one
+GPU). Regenerate, upload, then run the notebook once
 more without `D2L_RERUN` and capture that run.
 
 **API logs (`D2L_API_LOG_DIR`).** The models-behind-an-API section (18.7,

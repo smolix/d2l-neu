@@ -42,6 +42,7 @@ Run: `.venv-lm/bin/python -m unittest tools/test_lm_scoring.py`, or
 `make test-lm`.
 """
 
+import hashlib
 import math
 import os
 import subprocess
@@ -869,10 +870,11 @@ class TestDownloadKeyed(unittest.TestCase):
         names = [d2l.DATA_HUB[k][0].split('/')[-1] for k in self.KEYS]
         self.assertLess(len(set(names)), len(names))  # the hazard exists
 
-        def get(url, **kwargs):  # no network: the file holds its URL
-            return type('R', (), {'content': url.encode()})()
+        hub = {k: (d2l.DATA_HUB[k][0], hashlib.sha1(
+            d2l.DATA_HUB[k][0].encode()).hexdigest()) for k in self.KEYS}
         with tempfile.TemporaryDirectory() as tmp, \
-                mock.patch.object(d2l.requests, 'get', get), \
+                mock.patch.dict(d2l.DATA_HUB, hub), \
+                mock.patch.object(d2l.requests, 'get', self.get), \
                 mock.patch('builtins.print'):
             paths = [d2l.download_keyed(k, tmp) for k in self.KEYS]
             self.assertEqual(len(set(paths)), len(paths))
@@ -882,6 +884,22 @@ class TestDownloadKeyed(unittest.TestCase):
                 with open(path, 'rb') as f:
                     self.assertEqual(f.read(),
                                      d2l.DATA_HUB[k][0].encode())
+
+    @staticmethod
+    def get(url, **kwargs):  # no network: the file holds its URL
+        return type('R', (), {'content': url.encode()})()
+
+    def test_fresh_download_is_checked(self):
+        """d2l.download checks the sha1 of a cached file only; a fresh
+        download whose content differs from the pinned sha1 must fail."""
+        import tempfile
+        from unittest import mock
+        key = self.KEYS[0]  # the faked content cannot match the real sha1
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(d2l.requests, 'get', self.get), \
+                mock.patch('builtins.print'):
+            with self.assertRaisesRegex(AssertionError, 'DATA_HUB pins'):
+                d2l.download_keyed(key, tmp)
 
 
 class TestScoreChoicesBoundaryMerge(unittest.TestCase):

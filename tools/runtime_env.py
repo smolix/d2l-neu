@@ -392,6 +392,17 @@ VENV_PROVENANCE_PACKAGES = {
     "lm": ("transformers",),
 }
 
+# Environment of every notebook that a separate venv executes; a variable
+# already set in the environment wins (apply_notebook_env). HF_HOME: the
+# Language Models part reads tens of GB of checkpoints and datasets from the
+# Hugging Face cache. The default, ~/.cache/huggingface, may sit on a slow
+# network home (on the build box it does), and a launch from a shell that
+# forgot HF_HOME would download all of it again there. A leading ~ is
+# expanded. docs/build-system.md §6.4.2.
+VENV_ENV = {
+    "lm": {"HF_HOME": "~/.cache/hf-lm"},
+}
+
 
 def notebook_venv(framework, rel):
     """Name of the venv (`.venv-<name>`) that executes a notebook.
@@ -418,12 +429,15 @@ def chapter_venv(chapter):
 
 def apply_notebook_env(env, nb_path):
     """Add NOTEBOOK_ENV's variables for the notebook at *nb_path*
-    (`.../_notebooks/<framework>/<chapter>/<file>.ipynb`) to *env*."""
+    (`.../_notebooks/<framework>/<chapter>/<file>.ipynb`) to *env*, and
+    VENV_ENV's for the venv that executes it."""
     parts = Path(nb_path).absolute().parts
     if "_notebooks" not in parts[:-3]:
         return env
     i = parts.index("_notebooks")
     key = (parts[i + 1], "/".join(parts[i + 2:]))
+    for k, v in VENV_ENV.get(notebook_venv(*key), {}).items():
+        env.setdefault(k, os.path.expanduser(v))
     for k, v in NOTEBOOK_ENV.get(key, {}).items():
         if k == "XLA_FLAGS":
             env[k] = " ".join(f for f in (env.get(k, ""), v) if f)

@@ -1360,7 +1360,7 @@ routing lives in three places that a test keeps in step
 
 | Where | What |
 |---|---|
-| `tools/runtime_env.py` | `NOTEBOOK_VENVS = {"pytorch": (("chapter_lm-", "lm"),)}`, `notebook_venv(fw, rel)`; `VENV_PROVENANCE_PACKAGES` (what provenance records) |
+| `tools/runtime_env.py` | `NOTEBOOK_VENVS = {"pytorch": (("chapter_lm-", "lm"),)}`, `notebook_venv(fw, rel)`; `VENV_PROVENANCE_PACKAGES` (what provenance records); `VENV_ENV` (environment defaults, below) |
 | `make/notebooks.mk` | `EXEC_RULE(fw, venv, prefix)`; `$(eval $(call EXEC_RULE,pytorch,lm,chapter_lm-))` is a pattern rule with a shorter stem than the generic one, so GNU make picks it for exactly these stamps |
 | `make/venvs.mk` | `KERNEL_VENVS` (`make kernels` registers `d2l-lm` too; `make kernels-lm` alone) |
 
@@ -1373,6 +1373,22 @@ lists the same items) and tags each `chapter_lm-*` line with `[.venv-lm]`;
 hosted setup cells install the `lm` packages (§6.4.1); the PyTorch notebook
 ZIP carries `pylock.lm-{cpu,gpu}.toml` beside the PyTorch locks
 (`notebook_envs/pytorch/lm-{cpu,gpu}.in`, `make notebook-env-locks`).
+
+**The Hugging Face cache.** The part's notebooks read tens of GB of
+checkpoints and datasets through the Hugging Face cache. `VENV_ENV` in
+`tools/runtime_env.py` gives every `.venv-lm` notebook
+`HF_HOME=~/.cache/hf-lm` unless the launching shell already sets `HF_HOME`
+(`apply_notebook_env`, used by every execution path: the scheduler,
+`make _notebooks/...executed` and `run_notebooks.py`). On the build box the
+default `~/.cache/huggingface` is a symlink to a slow network home, so a
+launch that forgot `HF_HOME` would download everything again there. Scripts
+outside the notebook runner (`tools/lm/*.py`, `make test-lm`, a VS Code
+kernel) do not get the default: export `HF_HOME` yourself. Run the part
+online: `d2l.load_qwen3` asks for `model.safetensors.index.json`, which a
+single-file checkpoint lacks, and under `HF_HUB_OFFLINE=1`
+`hf_hub_download` (huggingface_hub 2.4.0) raises `LocalEntryNotFoundError`
+for it even when the Hub's "file absent" marker is cached (checked
+2026-11-13 for Qwen3-0.6B and Qwen3-1.7B-Base).
 
 Two version rules come with it:
 

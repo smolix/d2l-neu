@@ -83,6 +83,9 @@ QWEN, QWEN_17B_BASE, QWEN_8B = (
     'Qwen/Qwen3-0.6B', 'Qwen/Qwen3-1.7B-Base', 'Qwen/Qwen3-8B')
 device = d2l.try_gpu()
 SMALL = device.type == 'cpu'  # no GPU: 3 prompts of 32 tokens
+# A job given a GPU (CUDA_VISIBLE_DEVICES set) must not fall back to SMALL
+assert not (SMALL and os.environ.get('CUDA_VISIBLE_DEVICES')), (
+    'a GPU is assigned, but PyTorch sees none')
 # The tolerance rule below assumes IEEE fp32 matrix products (no TF32),
 # which is PyTorch's default
 assert torch.get_float32_matmul_precision() == 'highest'
@@ -654,12 +657,16 @@ for X in ids.split(4):  # batches of 4 prompts
     e32_ours.append(mean_abs(L_ours, L64))
     delta32 = max(delta32, (L_hf - L64).abs().max().item())
     gap = max(gap, (L_ours - L_hf).abs().max().item())
+del L64, L_hf, L_ours  # per-batch logits: free their GPU memory
 e32_hf, e32_ours = np.concatenate(e32_hf), np.concatenate(e32_ours)
 text, verdict = port_rule(e32_ours, e32_hf)
-same = torch.equal(logits(ours32, ids[:4]), logits(ours32, ids[:4]))
+L1, L2 = logits(ours32, ids[:4]), logits(ours32, ids[:4])  # twice
+same, rerun = torch.equal(L1, L2), (L1 - L2).abs().max().item()
+del L1, L2
 print(f'fp32: e_HF {e32_hf.mean():.2e}, e_ours {e32_ours.mean():.2e}, '
       f'ratio {text}\nmax |L_HF - L_64| {delta32:.1e}, max |L_ours - L_HF| '
-      f'{gap:.1e}, deterministic: {same}')
+      f'{gap:.1e}, deterministic: '
+      + ('True' if same else f'to within {rerun:.1e}'))
 two_i = torch.arange(0, 128, 2, dtype=torch.float32) / 128
 inv_hf, inv_book = 1.0 / 1e6 ** two_i, 1e6 ** -two_i  # equal in exact math
 print(f'frequencies that differ: {(inv_hf != inv_book).sum()} of 64; '
@@ -672,13 +679,16 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
         16, 16).mean(1).cpu().numpy()
     L64 = cached_logits(hf64, X, 256)
     e_hf = blocks(cached_logits(hf32, X, 256), L64)
-    book_tables = d2l.rope_tables(4096, 128, base=1e6, device=device)
+    # the book's formula on the CPU, as the frequency comparison above
+    book_tables = tuple(
+        u.to(device) for u in d2l.rope_tables(4096, 128, base=1e6))
     for name, tables in (('reference', None), ('book', book_tables)):
         e = blocks(logits(ours32, X, logits_to_keep=256, tables=tables), L64)
         text_long, verdict_long = port_rule(e, e_hf)
         print(f'long prompt, {name} angles: ratio {text_long}')
         if name == 'reference':
             assert verdict_long == 'passes'
+    del L64, book_tables
 if not SMALL:
     assert verdict == 'passes'
 ```
@@ -699,6 +709,7 @@ for X in ids.split(4):
     e16_hf.append(mean_abs(L_hf, L64))
     e16_ours.append(mean_abs(L_ours, L64))
     e16_ours_32.append(mean_abs(L_ours, L32))
+del L64, L32, L_hf, L_ours
 e16_hf, e16_ours, e16_ours_32 = map(np.concatenate,
                                     (e16_hf, e16_ours, e16_ours_32))
 text, verdict = port_rule(e16_ours, e16_hf)
@@ -1044,7 +1055,7 @@ for q, g in zip(questions, generate(
 
 ```{.python .input #d2l-checkpoint-ladder}
 %%tab pytorch
-del ours32, hf32, ours16, hf16
+del models, ours32, hf32, ours16, hf16  # models held them too
 release()
 if not SMALL:  # Qwen3-1.7B-Base: fp32 reference logits kept on the CPU
     hf32, _ = d2l.load_hf(QWEN_17B_BASE, dtype=torch.float32)
@@ -1260,8 +1271,12 @@ for name, (state, changes) in bugs.items():
     print(f'{name}: accounting passes; first divergence {there}\n'
           f'  fp32 rule {rules[0][0]}; bf16 rule {rules[1][0]}; top-1 '
           f'agreement with fp64 {top1} of {ids.numel()}')
+del hf64, L64, L32
+release()
 where, exact, _ = found['B4 layers in string order']
-assert where == (2, 'attn_out') and exact  # blocks 0 and 1 are correct
+print(f'B4: blocks 0 and 1 bitwise equal to the clean port: {exact}')
+# blocks 0 and 1 are correct; bitwise only on a deterministic device
+assert where == (2, 'attn_out') and (exact or not same)
 if not SMALL:  # B1-B4 fail both logit rules
     assert all(r[1] == 'fails' for name, (_, _, rules) in found.items()
                if not name.startswith('B5') for r in rules)

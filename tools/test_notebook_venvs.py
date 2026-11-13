@@ -8,7 +8,8 @@ stamps, manifests and freshness key. This file checks that the pieces agree:
   * pyproject.toml: the lm extra pins the same torch/torchvision as the
     pytorch extra, carries the LM packages, sits in the uv conflict set, and
     the pytorch extra (the rest of the book) carries none of them;
-  * tools/runtime_env.py routes exactly the chapter_lm-* notebooks to lm;
+  * tools/runtime_env.py routes exactly the chapter_lm-* notebooks to lm,
+    and gives them VENV_ENV's defaults (HF_HOME);
   * make/notebooks.mk has an EXEC_RULE for every NOTEBOOK_VENVS entry;
   * capture_outputs provenance: framework_version from the notebook's venv
     (falling back to the framework venv), the venv name and transformers
@@ -109,6 +110,16 @@ class RoutingTests(unittest.TestCase):
                 for fw, entries in runtime_env.NOTEBOOK_VENVS.items()
                 for prefix, venv in entries}
         self.assertEqual(rules, want)
+
+    def test_lm_notebooks_get_the_venv_env(self):
+        nb = ROOT / "_notebooks/pytorch/chapter_lm-pretrained/x.ipynb"
+        env = runtime_env.apply_notebook_env({}, nb)
+        self.assertEqual(env["HF_HOME"],
+                         str(Path("~/.cache/hf-lm").expanduser()))
+        env = runtime_env.apply_notebook_env({"HF_HOME": "/elsewhere"}, nb)
+        self.assertEqual(env["HF_HOME"], "/elsewhere")  # the caller's wins
+        other = ROOT / "_notebooks/pytorch/chapter_transformers/gpt.ipynb"
+        self.assertNotIn("HF_HOME", runtime_env.apply_notebook_env({}, other))
 
     def test_kernels_cover_every_venv(self):
         mk = (ROOT / "make" / "venvs.mk").read_text()

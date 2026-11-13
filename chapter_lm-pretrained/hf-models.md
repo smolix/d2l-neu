@@ -68,6 +68,7 @@ import pandas as pd
 import re
 import transformers
 from huggingface_hub import HfApi, file_exists
+from safetensors import safe_open
 from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
                           GenerationConfig)
 ```
@@ -319,9 +320,17 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
 ```{.python .input #hf-models-pinned-check}
 %%tab pytorch
 assert RUN_REV == HF_REVISIONS[RUN_MODEL]
-# A pinned load reads its files from a cache folder named after the commit
-folder = os.path.dirname(huggingface_hub.hf_hub_download(
-    RUN_MODEL, 'config.json', revision=RUN_REV))
+# A pinned load reads its files from a cache folder named after the commit;
+# the loaded model holds the tensors of that folder's weights file
+key = 'model.language_model.norm.weight'
+index = huggingface_hub.hf_hub_download(
+    RUN_MODEL, 'model.safetensors.index.json', revision=RUN_REV)
+with open(index) as f:
+    path = huggingface_hub.hf_hub_download(
+        RUN_MODEL, json.load(f)['weight_map'][key], revision=RUN_REV)
+with safe_open(path, 'pt') as f:
+    pinned = f.get_tensor(key)
+assert torch.equal(pinned.to(model.dtype), model.model.norm.weight.cpu())
 run_header = safetensors_header(RUN_MODEL)
 in_file = sum(math.prod(shape) for shape, _ in run_header.values())
 loaded = model.num_parameters()
@@ -332,7 +341,10 @@ tied = {'lm_head.weight'} if model.config.tie_word_embeddings else set()
 names = {re.sub(r'^model\.', 'model.language_model.', name)
          for name in model.state_dict().keys() - tied}
 assert names <= run_header.keys()
-print(f'{folder}\non {sorted({str(p.device) for p in model.parameters()})}')
+print(os.path.relpath(os.path.dirname(path),
+                      huggingface_hub.constants.HF_HUB_CACHE))
+print(f'{key} from that file = the loaded tensor, on '
+      f'{sorted({str(p.device) for p in model.parameters()})}')
 print(f'{loaded:,} parameters loaded, {in_file:,} elements in the file, '
       f'{in_file - loaded:,} left on disk')
 ```
@@ -677,11 +689,11 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
     return memory
 ```
 
-<!-- Placeholder (prose, ### Weights, Caches and State): the terms of eq_lm_hf_memory for both models, the all-attention counterfactual, and what fits a 15 GiB slot. -->
+<!-- Placeholder (prose, ### Weights, Caches and State): the terms of eq_lm_hf_memory for both models and the all-attention counterfactual; the activations term is an estimate, so what fits a 15 GiB slot is measured below. -->
 
 ```{.python .input #hf-models-memory-table}
 %%tab pytorch
-GiB, BUDGET = 2**30, 15 * 2**30  # a 15 GiB slot of a 24 GB card
+GiB = 2**30
 TERMS = ('weights', 'kv_cache', 'recurrent_state', 'activations', 'logits',
          'total')
 
@@ -694,6 +706,23 @@ def all_attention(config):
     t['num_kv_shared_layers'] = 0
     return t
 
+def crossover(config):
+    """The smallest context at which the cache and state take fewer bytes
+    than the all-attention counterfactual's cache, by bisection."""
+    def smaller(n):
+        mem = config_memory(config, n, 1)
+        return mem['kv_cache'] + mem['recurrent_state'] < config_memory(
+            all_attention(config), n, 1, window_cached=n)['kv_cache']
+
+    hi = 1
+    while not smaller(hi):
+        hi *= 2
+    lo = hi // 2  # smaller(lo) fails, smaller(hi) holds
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        lo, hi = (lo, mid) if smaller(mid) else (mid, hi)
+    return hi
+
 rows = []
 for m, c in configs.items():
     for n in (1024, 4096, 16384, 65536,
@@ -701,8 +730,7 @@ for m, c in configs.items():
         mem = config_memory(c, n, 1)
         kv_all = config_memory(all_attention(c), n, 1, window_cached=n)
         rows.append({'model': m, 'n': n, **{k: mem[k] / GiB for k in TERMS},
-                     'all-attention kv': kv_all['kv_cache'] / GiB,
-                     'fits 15 GiB': mem['total'] <= BUDGET})
+                     'all-attention kv': kv_all['kv_cache'] / GiB})
 print(pd.DataFrame(rows).round(3).to_string(index=False))
 for m, c in configs.items():
     a, b = config_memory(c, 4096, 1), config_memory(c, 4097, 1)
@@ -710,15 +738,12 @@ for m, c in configs.items():
     fixed = a['kv_cache'] + a['recurrent_state'] - 4096 * slope
     slope_all = config_memory(all_attention(c), 1, 1,
                               window_cached=1)['kv_cache']
-    batch = (BUDGET - a['weights']) // (a['total'] - a['weights'])
-    context = max(n for n in (2**k for k in range(8, 19))
-                  if n <= c.get_text_config().max_position_embeddings
-                  and config_memory(c, n, 1)['total'] <= BUDGET)
+    n_star = crossover(c)
     print(f'{m}: {slope:,} B/token + {fixed:,} B against {slope_all:,} '
-          f'B/token: smaller beyond {fixed / (slope_all - slope):.0f} '
-          f'tokens, {(slope * 16384 + fixed) / (slope_all * 16384):.2f} of it '
-          f'at 16,384; within 15 GiB: batch {batch} at 4,096 tokens, '
-          f'{context:,} tokens at batch 1')
+          f'B/token; smaller ' + ('at every context' if n_star == 1 else
+                                  f'beyond {n_star - 1:,} tokens')
+          + f', {(slope * 16384 + fixed) / (slope_all * 16384):.2f} of it '
+          f'at 16,384')
 logits = config_memory(configs[QWEN], 16384, 1, logits_to_keep=None)
 print(f'logits of all 16,384 positions: {logits["logits"] / 1e9:.1f} GB')
 ```
@@ -736,11 +761,11 @@ if GPU:
           f'(datasheet {BETA_DATASHEET / 1e12:.1f} TB/s)')
 ```
 
-<!-- Placeholder (prose, ### Measured Memory): the measuring functions (cache walker, prefill, decode timing, one step's kernels, bytes read per step). -->
+<!-- Placeholder (prose, ### Measured Memory): the measuring functions (cache walker, prefill, decode timing, one step's kernels, bytes read per step, the largest workload within a memory budget). -->
 
 ```{.python .input #hf-models-measure-fns}
 %%tab pytorch
-MiB = 2**20
+MiB, BUDGET = 2**20, 15 * GiB  # a 15 GiB slot of a 24 GB card
 # Matrix-product kernels; the attention kernels (fmha, flash) are not.
 MATMUL = re.compile(
     '^(?!.*(fmha|flash)).*(gemm|gemv|xmma|cutlass|matmul|splitK)', re.I)
@@ -774,17 +799,21 @@ def cache_bytes(cache):
                 todo.extend(vars(obj).values())  # cache and layer objects
     return logical, resident
 
+def allocated(stat='current'):
+    """Bytes the live tensors requested (or their peak), without the
+    allocator's rounding of each block."""
+    return torch.cuda.memory_stats()[f'requested_bytes.all.{stat}']
+
 def prefill(model, ids, n, keep=1):
     """Prefill the first n tokens: the output, the allocated bytes before,
     and the growth and the peak above them."""
     torch.cuda.synchronize()
     torch.cuda.reset_peak_memory_stats()
-    before = torch.cuda.memory_allocated()
+    before = allocated()
     with torch.inference_mode():
         out = model(ids[:, :n], logits_to_keep=keep, use_cache=True)
     torch.cuda.synchronize()
-    return (out, before, torch.cuda.memory_allocated() - before,
-            torch.cuda.max_memory_allocated() - before)
+    return out, before, allocated() - before, allocated('peak') - before
 
 def decode_ms(model, cache, token, steps=64, warmup=3, repeats=10):
     """Median, first and third quartile of milliseconds per greedy decode
@@ -823,6 +852,54 @@ def step_kernels(model, cache, token, steps=10):
     assert launches > 0
     return kernels, launches
 
+def fits(model, ids, batch, n, budget=BUDGET):
+    """Whether a prefill of `batch` copies of the first n tokens runs with
+    the allocator capped at `budget` bytes, weights included."""
+    x = ids.repeat(1, -(-n // ids.shape[1]))[:, :n].repeat(batch, 1)
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.set_per_process_memory_fraction(
+        budget / torch.cuda.get_device_properties(x.device).total_memory)
+    try:
+        with torch.inference_mode():
+            model(x, logits_to_keep=1, use_cache=True)
+        ok = True
+    except torch.OutOfMemoryError:
+        ok = False
+    finally:
+        torch.cuda.set_per_process_memory_fraction(1.0)
+    del x
+    gc.collect()
+    torch.cuda.empty_cache()
+    return ok
+
+def capacity(model, config, ids, n=4096):
+    """The largest batch at n tokens (doubling, then bisection) and the
+    largest power-of-two context at batch 1 within BUDGET: measured, and
+    by the formula."""
+    t = config.get_text_config()
+    assert fits(model, ids, 1, n)
+    lo = 1
+    while fits(model, ids, 2 * lo, n):
+        lo *= 2
+    hi = 2 * lo
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        lo, hi = (mid, hi) if fits(model, ids, mid, n) else (lo, mid)
+    context = n
+    while (2 * context <= t.max_position_embeddings
+           and fits(model, ids, 1, 2 * context)):
+        context *= 2
+    mem = config_memory(config, n, 1)
+    batch = (BUDGET - mem['weights']) // (mem['total'] - mem['weights'])
+    longest = max(2**k for k in range(8, 19)
+                  if 2**k <= t.max_position_embeddings
+                  and config_memory(config, 2**k, 1)['total'] <= BUDGET)
+    print(f'within 15 GiB, measured: batch {lo} at {n:,} tokens, '
+          f'{context:,} tokens at batch 1')
+    print(f'by the formula, its activations an estimate: batch {batch}, '
+          f'{longest:,} tokens')
+
 def bytes_read(config, n, b=2):
     """Bytes a decode step reads at context n: the weights except the
     gathered per-layer table, every cache a layer attends to (a KV-sharing
@@ -848,6 +925,11 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
     rows = []
     print(f'{model.name_or_path}: attention '
           f'{model.config._attn_implementation}')
+    with torch.inference_mode():  # cuBLAS allocates its workspace on the
+        out = model(ids[:, :16], logits_to_keep=1, use_cache=True)
+        model(out.logits[:, -1:].argmax(-1),  # first decode step
+              past_key_values=out.past_key_values)
+    del out
     for n in contexts:
         pinned = config_memory(config, n, 1, b, window_cached=n)
         need = pinned['total'] - pinned['weights'] + (  # unfused attention
@@ -889,7 +971,7 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
             formula=mem['kv_cache'] + mem['recurrent_state'], growth=growth,
             growth_derived=(pinned['kv_cache'] + pinned['recurrent_state']
                             + logits_bytes),
-            growth_after_step=torch.cuda.memory_allocated() - before,
+            growth_after_step=allocated() - before,
             growth_after_step_derived=(after['kv_cache'] + after[
                 'recurrent_state'] + step.logits.nbytes),
             peak=peak, act_estimate=mem['activations'],
@@ -947,6 +1029,7 @@ if GPU:
     print(f'logits of all 4,096 positions: growth beyond the cache '
           f'{extra:,} B, derived {mem["logits"]:,} B')
     assert abs(extra - mem['logits']) <= 0.05 * mem['logits']  # C6
+    capacity(model, configs[QWEN], ids)
 ```
 
 <!-- Placeholder (prose, ### Auto Classes and the Text Model): Gemma 4 through load_hf, its load report, and its repository's sampling defaults. -->
@@ -999,12 +1082,32 @@ if GPU:
     for row in gemma_rows:  # C4, after the first decode step
         assert close(row['growth_after_step'],
                      row['growth_after_step_derived'])
+    capacity(gemma, configs[GEMMA], gemma_ids)
 ```
 
 <!-- Placeholder (prose, ### Decode Throughput): where a decode step's time goes, and matrix-product time against bytes read. -->
 
 ```{.python .input #hf-models-profile-compare}
 %%tab pytorch
+def kernel_name(name):
+    """A kernel's C++ name without return type, namespaces and arguments."""
+    name = re.sub(r'^(void |std::enable_if<.*?>::type )|\(anonymous '
+                  r'namespace\)::', '', name)
+    return re.sub(r'\b(at|native|internal|cutlass)::|\(.*', '', name)[:52]
+
+def show_kernels(kernels, row, rows=4):
+    """Busy and matrix-product time of a decode step, and its kernels with
+    the most device time."""
+    busy, wall = row['busy_ms'], row['wall_ms_median']
+    print(f'wall {wall:.2f} ms per step, device busy {busy:.2f} ms '
+          f'({busy / wall:.0%}), matrix products {row["matmul_ms"]:.2f} ms '
+          f'({row["matmul_ms"] / busy:.0%} of busy)')
+    named = collections.Counter()
+    for name, ms in kernels.items():
+        named[kernel_name(name)] += ms
+    for name, ms in named.most_common(rows):
+        print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name}')
+
 if GPU:  # Qwen again, to profile it after every timed decode step
     del gemma
     gc.collect()
@@ -1015,35 +1118,40 @@ if GPU:  # Qwen again, to profile it after every timed decode step
     show(qwen_rows)
     at = {r['model']: r for r in qwen_rows + gemma_rows if r['n'] == 1024}
     for m, kernels in ((QWEN, qwen_kernels), (GEMMA, gemma_kernels)):
-        print(m)
-        d2l.show_profile(kernels, at[m]['wall_ms_median'])
-        print(f'matrix products, gemv kernels included: '
-              f'{at[m]["matmul_ms"] / at[m]["busy_ms"]:.0%} of busy time')
-        wall = {r['n']: r['wall_ms_median'] for r in qwen_rows + gemma_rows
-                if r['model'] == m}
-        if 256 in wall and 16384 in wall:  # C9: within 25% is nearly flat
-            print(f'wall time 16,384 / 256 tokens: '
-                  f'{wall[16384] / wall[256]:.2f}')
+        rows = {r['n']: r for r in qwen_rows + gemma_rows if r['model'] == m}
+        print(f'{m} at 1,024 tokens:')
+        show_kernels(kernels, at[m])
+        # C8: the host launches one kernel after another and the device
+        # works in between, so the wall time is the launches' time
+        share = [r['busy_ms'] / r['wall_ms_median'] for r in rows.values()]
+        us = [1e3 * r['wall_ms_median'] / r['launches']
+              for r in rows.values()]
+        print(f'device busy at {list(rows)} tokens: '
+              f'{", ".join(f"{x:.0%}" for x in share)} of the step')
+        print(f'wall time per launch: {min(us):.1f}-{max(us):.1f} us')
+        assert max(share) < 0.5  # C8
+        if 256 in rows and 16384 in rows:  # C9: within 25% is nearly flat
+            grow = {k: rows[16384][k] / rows[256][k] for k in (
+                'wall_ms_median', 'busy_ms', 'r_over_beta_measured_ms')}
+            print('16,384 / 256 tokens: wall {:.2f}, busy {:.2f}, bytes '
+                  'read {:.2f}'.format(*grow.values()))
+            assert grow['wall_ms_median'] <= 1.25  # C9
         else:
-            print(f'wall time ratio not computed: contexts {sorted(wall)}')
-        host_us = 1e3 * (at[m]['wall_ms_median'] - at[m]['busy_ms'])
-        print(f'host time per launch: {host_us / at[m]["launches"]:.1f} us, '
-              f'device busy under half the step: '
-              f'{at[m]["busy_ms"] < at[m]["wall_ms_median"] / 2}')
+            print(f'wall time ratio not computed: contexts {sorted(rows)}')
     held = config_params(configs[GEMMA]) / config_params(configs[QWEN])
     read = (bytes_read(configs[GEMMA], 1024)
             / bytes_read(configs[QWEN], 1024))
     ratio = at[GEMMA]['matmul_ms'] / at[QWEN]['matmul_ms']
     print(f'matrix products Gemma/Qwen: {ratio:.2f} (bytes read {read:.2f}, '
-          f'bytes held {held:.2f}); closer to bytes read: '
-          f'{ratio < math.sqrt(read * held)}')
+          f'bytes held {held:.2f})')
+    assert ratio < math.sqrt(read * held)  # C7: closer to bytes read
     for m, c in configs.items():
         groups = config_params(c, by_group=True)
         weights_ms = 2e3 * (sum(groups.values()) - groups['per_layer_embed']
                             ) / beta
         print(f'{m}: matrix products {at[m]["matmul_ms"]:.2f} ms, weights '
-              f'read at measured bandwidth {weights_ms:.2f} ms, within a '
-              f'factor of 2: {at[m]["matmul_ms"] <= 2 * weights_ms}')
+              f'read at measured bandwidth {weights_ms:.2f} ms')
+        assert at[m]['matmul_ms'] <= 2 * weights_ms  # C7
 ```
 
 <!-- Placeholder (prose, none): the measured rows are written for upload as lm-hf-memory-speed-v1. -->

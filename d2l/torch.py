@@ -4607,6 +4607,9 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
 d2l.DATA_HUB['lm-qwen3-port-prompts-v1'] = (
     d2l.LM_DATA_URL + 'lm-qwen3-port-prompts-v1.json',
     'b5840fad4ad3d8d1897c12d522def18f6eb8fa06')
+d2l.DATA_HUB['lm-qwen3-0p6b-logit-ref-v1'] = (
+    d2l.LM_DATA_URL + 'lm-qwen3-0p6b-logit-ref-v1.pt',
+    '2fa5449638a8a8924bc6b35384dc996c23513cb6')
 
 def qwen3_rope_tables(n, head_dim, theta, offset=0, device=None):
     """Cosines and sines, each (n, head_dim / 2) in fp32, of the RoPE angles

@@ -65,7 +65,7 @@ import transformers
 from safetensors.torch import load_file
 ```
 
-<!-- Placeholder (stage 2): the fixed prompts of the comparison, made by tools/lm/make_port_fixtures.py; the logit reference of assignment A1 is registered here after the GPU run. -->
+<!-- Placeholder (stage 2): the fixed prompts of the comparison (made by tools/lm/make_port_fixtures.py) and the fp64 logit reference of assignment A1 (registered here, never read by this notebook). -->
 
 ```{.python .input #d2l-checkpoint-data-hub}
 %%tab pytorch
@@ -73,6 +73,9 @@ from safetensors.torch import load_file
 d2l.DATA_HUB['lm-qwen3-port-prompts-v1'] = (
     d2l.LM_DATA_URL + 'lm-qwen3-port-prompts-v1.json',
     'b5840fad4ad3d8d1897c12d522def18f6eb8fa06')
+d2l.DATA_HUB['lm-qwen3-0p6b-logit-ref-v1'] = (
+    d2l.LM_DATA_URL + 'lm-qwen3-0p6b-logit-ref-v1.pt',
+    '2fa5449638a8a8924bc6b35384dc996c23513cb6')
 ```
 
 <!-- Placeholder (stage 2): the three checkpoints, the fp32 setting the comparison assumes, and the fixed prompts (8 categories of 4, the 28 that are text, one long prompt). -->

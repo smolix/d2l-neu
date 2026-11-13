@@ -1,0 +1,348 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretrained/d2l-checkpoint.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:7e13bbc7a84a4184b3e4efdf6c15564487b11cd2e4828d553ca7a9adecab403c",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "d2l-checkpoint-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-imports-extra": {
+      "code_fingerprint": "sha256:aa5514e5847a2c68670335d492af5dcbbf1622fd769965dbc61b107ccb013dba",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-data-hub": {
+      "code_fingerprint": "sha256:ad9de664d33f3dc2978d6b61fed988170bdb920cd8bd0606ce727158d7ba19ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-setup": {
+      "code_fingerprint": "sha256:504c03e4bba103c9b16863bf540656d7ac3b56cf0e2744a19a3d457af3f148e7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 prompts of 64 tokens, 28 of them as text; long prompt: 4,096 tokens\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-recipe-diff": {
+      "code_fingerprint": "sha256:daa69ae776c745b87369772bee660e4053195d3e1ce5b792d6ca4bfc72819597",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "role               d2l.GPT              Qwen3-0.6B (layer 0)\nquery, key, value  W_qkv (2048, 1024)   q_proj (2048, 1024)\n                                        k_proj (1024, 1024)\n                                        v_proj (1024, 1024)\nattention output   W_o (1024, 1024)     o_proj (1024, 2048)\nquery, key norms   (no counterpart)     q_norm (128,)\n                                        k_norm (128,)\nFFN gate           W_g (2731, 1024)     gate_proj (3072, 1024)\nFFN up             W_1 (2731, 1024)     up_proj (3072, 1024)\nFFN down           W_2 (1024, 2731)     down_proj (1024, 3072)\nnorms              norm1 (1024,)        input_layernorm (1024,)\n                   norm2 (1024,)        post_attention_layernorm (1024,)\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-qwen3-attention": {
+      "code_fingerprint": "sha256:a6d0f5282019e50fb3cd301fa24e481e8d414c590fda8099c72d3b2052f2adb1",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-swiglu-gpt": {
+      "code_fingerprint": "sha256:5cb76d03865e5b842f99bcac89912e1e122af1a6b5a308060a1a31509935374c",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-generalization": {
+      "code_fingerprint": "sha256:83a029852488a00ef63f03059bace505c2e30316b7fdf6f5bd4353c0a05747dd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |logit difference| from d2l.GPT: 0.0e+00; forward_cached against forward: 3.6e-07; same greedy tokens: True\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-param-count": {
+      "code_fingerprint": "sha256:8cf104fe692ddea972d698fdf9843ef2bdf804ddb42101ef99d47dc3991ce6eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "model             port  configuration         header  head\n0.6B       596,049,920    596,049,920    596,049,920  tied\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "8B       8,190,735,360  8,190,735,360  8,190,735,360  lm_head (untied)\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-rope-permutation": {
+      "code_fingerprint": "sha256:16c88347c10a0ae01934966ced65f3e219433d8d9d96f34b6dc202bc010a960f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "idx for d_h = 8: [0, 4, 1, 5, 2, 6, 3, 7]\nmax |score difference| / max |score|: rows and gain permuted 3.7e-07, gain not permuted 8.0e-01\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-map-load": {
+      "code_fingerprint": "sha256:6aa0734728b86253a500d9b731f7a8ed5cdd2a813a3199d5438715a2bab186c9",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-strict-accounting": {
+      "code_fingerprint": "sha256:ddacfc276b8b02609b7ff09f81f3bec78c4fe6fa6f54facb07fdd1cc4d7ac7ed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "consumed 311 tensors, produced 310 keys\nstored lm_head.weight equals the embedding (dropped): True\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KeyError: not consumed: []; not produced: ['blks.3.attention.k_norm.weight (from model.layers.3.self_attn.k_norm.weight)']\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-load-models": {
+      "code_fingerprint": "sha256:9febee67fd354ac049a64afb3d5c845588b2e8346a0e60c151e9837f70bd6f81",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nport: 596,049,920 parameters, a d2l.GPT: True; Transformers: 596,049,920\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-ratio-interval": {
+      "code_fingerprint": "sha256:fd5515a288d517e4c7e94f23dedbbb2c861f699b96829f9656cc998fa091fb21",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-fp32-check": {
+      "code_fingerprint": "sha256:9e77a2666b9677a60ab0e65f52423b75ee7bf7d226698d80bcc408f50b6e238f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp32: e_HF 3.94e-06, e_ours 3.89e-06, ratio 0.987 [0.957, 1.02] passes\nmax |L_HF - L_64| 1.0e-04, max |L_ours - L_HF| 1.1e-04, deterministic: True\nfrequencies that differ: 24 of 64; largest angle difference at position 63: 3.8e-06, 4,095: 2.4e-04, 32,767: 2.0e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "long prompt, reference angles: ratio 1.14 [1.09, 1.19] passes\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "long prompt, book angles: ratio 2.47 [2.23, 2.73] fails\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-bf16-check": {
+      "code_fingerprint": "sha256:2ab2ee4cfbc85b7488d530ac155e2498b5317604c93a420fe54167d5126cc9af",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bf16: e_HF 4.81e-02, e_ours 3.49e-02, ratio 0.725 [0.701, 0.75] passes\ne_ours against the fp32 instead of the fp64 reference: relative change -1.1e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ratio with the port in batches of 1: 0.763, 4: 0.725, 16: 0.712\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-sampler": {
+      "code_fingerprint": "sha256:3120a6dc6dba40672e1ad97d9359a23950c2b570fcb367d7419fabcbe1d07a61",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-generate-paths": {
+      "code_fingerprint": "sha256:ff7f6318f6d77d508c31ae4c97f925efaed9a7a1906455325e03ef9c01b333d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-generate-hf": {
+      "code_fingerprint": "sha256:89c20d6dc6395224545a03a7d9aa83ead0ffedebbaad1a3575986073d7c3b995",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-generate": {
+      "code_fingerprint": "sha256:07fdf73c0a55fc238693b6de5a79cd41ae790ba92a30ba5290663849b9a83185",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-greedy": {
+      "code_fingerprint": "sha256:7a78eff9b48cea187997c78b54416bc44aa03ac9c73351f6536c522c7a2d9655",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "generate on hf32 equals hf32.generate: 28 of 28\nours32: 28 of 28 identical to hf32; median first divergence at token 64 of 64; top-2 gaps there: none\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ours16: 14 of 28 identical to hf32; median first divergence at token 54.5 of 64; top-2 gaps there: 2.1e-02, 3.9e-02, 3.4e-02, 1.4e-02, 2.1e-01, 9.6e-03, 3.7e-02, 5.6e-02, 2.3e-02, 4.4e-02, 5.6e-02, 3.1e-02, 3.9e-04, 1.9e-02\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "hf16: 11 of 28 identical to hf32; median first divergence at token 39 of 64; top-2 gaps there: 1.1e-02, 7.3e-02, 3.9e-02, 1.4e-02, 2.1e-01, 9.6e-03, 3.7e-02, 5.6e-02, 7.4e-02, 7.2e-02, 4.4e-02, 2.6e-02, 9.2e-02, 5.6e-02, 3.1e-02, 3.9e-04, 1.8e-02\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-chat": {
+      "code_fingerprint": "sha256:f9e395eb87c29dacad2e8a65da1ffc8fcff209850a7d4044828379f9ac0e1a47",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "What does a key-value cache store, in one sentence?\n  'A key-value cache stores data in a structured format, typically as key-value pairs, for efficient lookup and retrieval.' (eos)\nName two differences between a base model and a chat model.\n  'Two differences between a base model and a chat model are:\\n\\n1. **Base models are typically used for general tasks, while chat models are designed for conversational tasks.**\\n\\n2. **Base models are often simpler and can be used for a wide range of tasks without requiring extensive training, while chat models require more complex training to achieve high-quality conversational responses.**' (eos)\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-ladder": {
+      "code_fingerprint": "sha256:f440d17a31e7aa211a28bf226823daf1d9ca559574dbb6e2544de1f9dbb6fa68",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-1.7B-Base@ea980cb0a6c2: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-1.7B-Base, bf16, 8 prompts: ratio 0.889 [0.827, 0.947] passes\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-8B dry run: 399 tensors consumed, 399 keys produced, untied lm_head: True, all on meta: True\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-hooks": {
+      "code_fingerprint": "sha256:d5fbd3c1667e90c37b4f158663c96a3f831d82e6ae01a6765b93d2eb2b6e2ec9",
+      "kind": "text",
+      "outputs": []
+    },
+    "d2l-checkpoint-layer-errors": {
+      "code_fingerprint": "sha256:13700c815f19edb1baa3441fe433f962bd1920d0cb531837757b1ec1355ca738",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "median relative error of resid_post at layer\n              0        7       14       21       27\nours32  7.4e-07  1.4e-06  1.3e-06  1.2e-06  1.1e-06\nhf32    7.0e-07  1.3e-06  1.4e-06  1.2e-06  1.1e-06\nours16  5.0e-03  1.1e-02  1.2e-02  1.1e-02  1.1e-02\nhf16    9.0e-03  1.7e-02  1.8e-02  1.6e-02  1.5e-02\nfp32: port / Transformers over every layer and point: 0.89 to 1.06; layers outside [0.5, 2]: []\nbf16: port / Transformers over every layer and point: 0.46 to 0.77; layers outside [0.5, 2]: [1]\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-bugs": {
+      "code_fingerprint": "sha256:e8e94cc9beb32a315060363ec40308710eaa9dfb39ba52a8e36b4578dfbd9688",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean square of the input, clean port: 0.norm1 7.3e-04, 0.attention.q_norm 7.1e-02, 0.attention.k_norm 1.5e-01, 0.norm2 3.2e-02, 27.norm1 3.5e+02, 27.attention.q_norm 1.9e+02, 27.attention.k_norm 2.1e+02, 27.norm2 3.8e+02\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B1 RoPE rows not permuted: accounting passes; first divergence (0, 'attn_out'), 5.84e+05 x the clean error there\n  fp32 rule 4.8e+05 [4.47e+05, 5.2e+05] fails; bf16 rule 39.3 [36.4, 43.1] fails; top-1 agreement with fp64 662 of 2048\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B2 rope_theta 1e4: accounting passes; first divergence (0, 'attn_out'), 1.86e+05 x the clean error there\n  fp32 rule 1.3e+05 [1.22e+05, 1.39e+05] fails; bf16 rule 10.7 [10.1, 11.4] fails; top-1 agreement with fp64 1658 of 2048\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B3 gate and up swapped: accounting passes; first divergence (0, 'mlp_out'), 8.76e+05 x the clean error there\n  fp32 rule 9.35e+05 [8.8e+05, 9.93e+05] fails; bf16 rule 76.5 [71.5, 82.1] fails; top-1 agreement with fp64 0 of 2048\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B4 layers in string order: accounting passes; first divergence (2, 'attn_out'), 2.41e+06 x the clean error there\n  fp32 rule 8.99e+05 [8.44e+05, 9.65e+05] fails; bf16 rule 73.6 [68.9, 79.7] fails; top-1 agreement with fp64 86 of 2048\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B5 every epsilon 1e-5: accounting passes; first divergence (0, 'attn_out'), 1.04e+04 x the clean error there\n  fp32 rule 1.93e+03 [1.61e+03, 2.28e+03] fails; bf16 rule 0.771 [0.748, 0.795] passes; top-1 agreement with fp64 2041 of 2048\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B4: blocks 0 and 1 bitwise equal to the clean port: True\n"
+        }
+      ]
+    },
+    "d2l-checkpoint-divergence-plot": {
+      "code_fingerprint": "sha256:1f92f0a536f9f8024eddaa87c2c06cfbed0b823a17448c858e5d7f73cd491587",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "d2l-checkpoint/d2l-checkpoint-divergence-plot-1.svg",
+          "bytes": 44329,
+          "sha256": "sha256:bbfb97c9325febccd9b86285e0c73eb7afd86d09b266c6319b12be1643aaff89"
+        }
+      ]
+    }
+  }
+}

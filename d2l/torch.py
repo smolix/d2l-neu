@@ -5298,8 +5298,11 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
     default a space, but none after whitespace or next to Chinese text.
     With chat=True a prompt is a message list (a string is one user
     message), rendered with the generation prefix. Transformers models
-    get left-padded batches; a d2l GPT, which takes no attention mask,
-    gets batches of prompts of equal length.
+    get left-padded batches, and their label logits are computed in
+    float32 from the last hidden state and the label words' rows of the
+    output layer (bf16 logits of size 20 to 40 are 1/8 to 1/4 apart and
+    tie); a d2l GPT, which takes no attention mask, gets batches of
+    prompts of equal length.
 
     Defined in :numref:`sec_lm_prompting`"""
     if chat:
@@ -5315,12 +5318,16 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
         ids = [head + r for r in ids]
     if not all(ids):
         raise ValueError('an empty prompt has no position to predict from')
+    inner = d2l._lm_unwrap(model)
     hf = sys.modules.get('transformers')
-    hf = hf is not None and isinstance(d2l._lm_unwrap(model),
-                                       hf.PreTrainedModel)
+    hf = hf is not None and isinstance(inner, hf.PreTrainedModel)
     if hf:  # one padded group, in input order
         groups = [list(range(len(ids)))]
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
+        W = inner.get_output_embeddings()  # a plain linear output layer
+        split = isinstance(W, nn.Linear) and getattr(  # can be split off
+            inner.config.get_text_config(), 'final_logit_softcapping',
+            None) is None
     else:
         groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
                   for n in sorted({len(r) for r in ids})]
@@ -5328,24 +5335,32 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
     out = torch.empty(len(ids), len(label_words))
     for rows in (g[j:j + batch_size] for g in groups
                  for j in range(0, len(g), batch_size)):
+        lab = torch.tensor([labels[i] for i in rows], device=device)
         with torch.inference_mode():
-            if hf:  # logits_to_keep=1 and no cache: no full-vocabulary
-                T = max(len(ids[i]) for i in rows)  # logits per position
+            if hf:
+                T = max(len(ids[i]) for i in rows)
                 X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i]
                                   for i in rows], device=device)
                 mask = torch.tensor([[0] * (T - len(ids[i])) +
                                      [1] * len(ids[i]) for i in rows],
                                     device=device)
                 pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
-                z = model(input_ids=X, attention_mask=mask,
-                          position_ids=pos, use_cache=False,
-                          logits_to_keep=1).logits[:, -1]
+                kw = dict(input_ids=X, attention_mask=mask, position_ids=pos,
+                          use_cache=False)
+            if hf and split:  # the last hidden state, then the label rows
+                h = inner.get_decoder()(**kw).last_hidden_state[:, -1]
+                z = torch.einsum('bd,bld->bl', h.float(),  # in fp32
+                                 W.weight[lab].float())
+                if W.bias is not None:
+                    z = z + W.bias[lab].float()
+            elif hf:  # logits_to_keep=1: no full-vocabulary logits for
+                z = model(**kw, logits_to_keep=1).logits[:, -1].gather(
+                    -1, lab)  # every position
             else:
                 X = torch.tensor([ids[i] for i in rows], device=device)
                 z = (model(X, logits_to_keep=1) if isinstance(
-                    d2l._lm_unwrap(model), d2l.Qwen3GPT) else model(X))[:, -1]
-            lab = torch.tensor([labels[i] for i in rows], device=z.device)
-            lp = z.gather(-1, lab).float().log_softmax(-1).cpu()
+                    inner, d2l.Qwen3GPT) else model(X))[:, -1].gather(-1, lab)
+            lp = z.float().log_softmax(-1).cpu()
         out[rows] = lp  # out is an ordinary tensor the caller may modify
     return out
 
@@ -5404,9 +5419,9 @@ d2l.DATA_HUB['ag-news-test'] = (
     'https://huggingface.co/datasets/sh0416/ag_news/resolve/'
     '70e3fa1915be9a8daebec5e840f20df9a8e18793/test.jsonl',
     '6c874e265fe5ff35861f27eaf3e681dda147ba12')
-d2l.DATA_HUB['lm-fewshot-grid-v1'] = (
-    d2l.LM_DATA_URL + 'lm-fewshot-grid-v1.csv',
-    'e746358522c92235d0c9f7aa324bd596361b47ce')
+d2l.DATA_HUB['lm-fewshot-grid-v2'] = (
+    d2l.LM_DATA_URL + 'lm-fewshot-grid-v2.csv',
+    '0c2a1c87635bbfcdca9cedb479723901b3d5cbd5')
 
 def calibrate_labels(logprobs, content_free_logprobs):
     """Contextual calibration: subtract the mean log-probabilities (M, L)

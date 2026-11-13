@@ -82,8 +82,9 @@ NATURAL = ['World', 'Sports', 'Business', 'Tech']  # AG News's 4 classes
 ABSTRACT = ['foo', 'bar', 'baz', 'zip']
 FMT = 'Headline: {x}\nTopic: {y}'
 ASK = 'What is the topic of this news headline?\n{x}\n'
-SYSTEM = ('Name the topic of each news headline: World, Sports, Business '
-          'or Tech.')
+INSTRUCTION = 'Name the topic of each news headline: {}, {}, {} or {}.'
+SYSTEM = INSTRUCTION.format(*NATURAL)  # World, Sports, Business or Tech
+SYSTEMS = [None, SYSTEM, INSTRUCTION.format(*NATURAL[::-1])]  # by 'instr'
 QUERY = 'Local team wins cup final'  # invented, as are all examples below
 DEMOS = [('Leaders meet to settle a border dispute', 'World'),
          ('Striker signs a new three-year contract', 'Sports'),
@@ -145,7 +146,7 @@ for i in tok_i(chat_text, add_special_tokens=False)['input_ids']:
 print(textwrap.fill(' '.join(line), 79))
 ```
 
-<!-- Placeholder (prose, ### Chat Templates): the generation prefix, and whether each family thinks by default (the table below). -->
+<!-- Placeholder (prose, ### Chat Templates): the generation prefix, and whether each template opens a think block by default (the table below). The column is a property of the template file: Qwen3-1.7B-Base ships the post-trained template, but the base model was never trained to think. -->
 
 ```{.python .input #prompting-template-tails}
 %%tab pytorch
@@ -160,7 +161,8 @@ for name in ('Qwen/Qwen3-1.7B', 'Qwen/Qwen3-1.7B-Base', 'Qwen/Qwen3.5-2B',
                   for kw in ({}, {'enable_thinking': False}))
     rows.append({'model': name, 'tail, enable_thinking unset': repr(unset),
                  'tail, enable_thinking=False': repr(off),
-                 'thinks by default': 'no' if '</think>' in unset else 'yes'})
+                 'template thinks by default': ('no' if '</think>' in unset
+                                                else 'yes')})
 pd.DataFrame(rows)
 ```
 
@@ -226,8 +228,11 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
     default a space, but none after whitespace or next to Chinese text.
     With chat=True a prompt is a message list (a string is one user
     message), rendered with the generation prefix. Transformers models
-    get left-padded batches; a d2l GPT, which takes no attention mask,
-    gets batches of prompts of equal length."""
+    get left-padded batches, and their label logits are computed in
+    float32 from the last hidden state and the label words' rows of the
+    output layer (bf16 logits of size 20 to 40 are 1/8 to 1/4 apart and
+    tie); a d2l GPT, which takes no attention mask, gets batches of
+    prompts of equal length."""
     if chat:
         opts = {} if enable_thinking is None else {
             'enable_thinking': enable_thinking}
@@ -241,12 +246,16 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
         ids = [head + r for r in ids]
     if not all(ids):
         raise ValueError('an empty prompt has no position to predict from')
+    inner = d2l._lm_unwrap(model)
     hf = sys.modules.get('transformers')
-    hf = hf is not None and isinstance(d2l._lm_unwrap(model),
-                                       hf.PreTrainedModel)
+    hf = hf is not None and isinstance(inner, hf.PreTrainedModel)
     if hf:  # one padded group, in input order
         groups = [list(range(len(ids)))]
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
+        W = inner.get_output_embeddings()  # a plain linear output layer
+        split = isinstance(W, nn.Linear) and getattr(  # can be split off
+            inner.config.get_text_config(), 'final_logit_softcapping',
+            None) is None
     else:
         groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
                   for n in sorted({len(r) for r in ids})]
@@ -254,24 +263,32 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
     out = torch.empty(len(ids), len(label_words))
     for rows in (g[j:j + batch_size] for g in groups
                  for j in range(0, len(g), batch_size)):
+        lab = torch.tensor([labels[i] for i in rows], device=device)
         with torch.inference_mode():
-            if hf:  # logits_to_keep=1 and no cache: no full-vocabulary
-                T = max(len(ids[i]) for i in rows)  # logits per position
+            if hf:
+                T = max(len(ids[i]) for i in rows)
                 X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i]
                                   for i in rows], device=device)
                 mask = torch.tensor([[0] * (T - len(ids[i])) +
                                      [1] * len(ids[i]) for i in rows],
                                     device=device)
                 pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
-                z = model(input_ids=X, attention_mask=mask,
-                          position_ids=pos, use_cache=False,
-                          logits_to_keep=1).logits[:, -1]
+                kw = dict(input_ids=X, attention_mask=mask, position_ids=pos,
+                          use_cache=False)
+            if hf and split:  # the last hidden state, then the label rows
+                h = inner.get_decoder()(**kw).last_hidden_state[:, -1]
+                z = torch.einsum('bd,bld->bl', h.float(),  # in fp32
+                                 W.weight[lab].float())
+                if W.bias is not None:
+                    z = z + W.bias[lab].float()
+            elif hf:  # logits_to_keep=1: no full-vocabulary logits for
+                z = model(**kw, logits_to_keep=1).logits[:, -1].gather(
+                    -1, lab)  # every position
             else:
                 X = torch.tensor([ids[i] for i in rows], device=device)
                 z = (model(X, logits_to_keep=1) if isinstance(
-                    d2l._lm_unwrap(model), d2l.Qwen3GPT) else model(X))[:, -1]
-            lab = torch.tensor([labels[i] for i in rows], device=z.device)
-            lp = z.gather(-1, lab).float().log_softmax(-1).cpu()
+                    inner, d2l.Qwen3GPT) else model(X))[:, -1].gather(-1, lab)
+            lp = z.float().log_softmax(-1).cpu()
         out[rows] = lp  # out is an ordinary tensor the caller may modify
     return out
 ```
@@ -283,26 +300,28 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
 prompts = [d2l.fewshot_prompt(DEMOS, h, fmt=FMT) for h in HEADLINES]
 _, label_ids = d2l._label_token_ids(tok, prompts, NATURAL)
 one = d2l.label_logprobs(base, tok, prompts, NATURAL, batch_size=1)
-tols = []
 for prompt, ids, lp in zip(prompts, label_ids, one):
     x = tok(prompt, return_tensors='pt').input_ids.to(base.device)
     with torch.inference_mode():  # every position's logits, then the last
         z = base(input_ids=x, use_cache=False).logits[0, -1].float()
     ref = z.log_softmax(-1)[ids].cpu()
     ref = ref - ref.logsumexp(-1)  # renormalized over the label words
-    # fp32: rounding only; bf16: two ulps of the largest label logit
+    # the reader's label logits are fp32, these are rounded to bf16 (half
+    # an ulp each, at most one after renormalizing): two ulps of the
+    # largest label logit; in fp32, rounding only
     tol = 1e-4 if SMALL else 2 * 2.0 ** (
         math.floor(math.log2(z[ids].abs().max().item())) - 7)
     err = (lp - ref).abs().max().item()
     print(f'reader vs full softmax: {err:.1e} nats (tolerance {tol:.1e})')
     assert err <= tol
-    tols.append(tol)
-# padding changes every GEMM shape, so each logit may again round one ulp
-# differently: the same bound, per prompt
+# padding changes every GEMM shape, and in bf16 every layer then rounds a
+# little differently; nothing bounds the sum, so 0.25 nats is a screen (a
+# mask or position bug moves a log-probability by whole nats)
 batched = d2l.label_logprobs(base, tok, prompts, NATURAL, batch_size=4)
-for e, tol in zip((batched - one).abs().max(-1).values.tolist(), tols):
-    print(f'batched vs one at a time: {e:.1e} nats (tolerance {tol:.1e})')
-    assert e <= tol
+screen = 1e-4 if SMALL else 0.25
+for e in (batched - one).abs().max(-1).values.tolist():
+    print(f'batched vs one at a time: {e:.1e} nats (screen {screen:.1e})')
+    assert e <= screen
 assert torch.equal(batched.argmax(-1), one.argmax(-1))  # same predictions
 ```
 
@@ -339,7 +358,7 @@ for texts, words in (([p + ' ' for p in prompts], NATURAL),
         print(textwrap.fill(f'ValueError: {e}', 79))
 ```
 
-<!-- Placeholder (prose, ### Reading a Label from the Next Token): one zero-shot item, four pairings of checkpoint and layout, with the full-softmax probability of the four label tokens (label mass). The base model never saw the empty think block that enable_thinking=False appends, and after it the label mass is near zero, so its renormalized distribution means nothing; with the template's default end (no think block) the base model reads the chat layout. -->
+<!-- Placeholder (prose, ### Reading a Label from the Next Token): one zero-shot item, four pairings of checkpoint and layout, with the full-softmax probability of the four label tokens (label mass). The base model never saw the empty think block that enable_thinking=False appends, and after it the label mass is near zero, so its renormalized distribution means nothing. Without the think block (the template's default end) the label mass on this zero-shot item rises only from 0 to about 0.02 and the top label is still wrong: say only that. The evidence that the base model reads the chat layout without the think block is the 8-shot row "chat, no think block" of the format table below (about 0.77, as good as plain text), not this item. -->
 
 ```{.python .input #prompting-template-mismatch}
 %%tab pytorch
@@ -443,9 +462,9 @@ d2l.DATA_HUB['ag-news-test'] = (
     'https://huggingface.co/datasets/sh0416/ag_news/resolve/'
     '70e3fa1915be9a8daebec5e840f20df9a8e18793/test.jsonl',
     '6c874e265fe5ff35861f27eaf3e681dda147ba12')
-d2l.DATA_HUB['lm-fewshot-grid-v1'] = (
-    d2l.LM_DATA_URL + 'lm-fewshot-grid-v1.csv',
-    'e746358522c92235d0c9f7aa324bd596361b47ce')
+d2l.DATA_HUB['lm-fewshot-grid-v2'] = (
+    d2l.LM_DATA_URL + 'lm-fewshot-grid-v2.csv',
+    '0c2a1c87635bbfcdca9cedb479723901b3d5cbd5')
 ```
 
 <!-- Placeholder (prose, ### Number of Demonstrations): the task data, its cleanup rules (HTML and Windows-1252 escapes left in the titles), and the key that finds near-duplicates. -->
@@ -497,7 +516,7 @@ def dedup_key(title):  # no source tag such as '(AP)', no punctuation
     return ' '.join(title.split())
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): the test items and the demonstration pool without test duplicates; counts only, no article text. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): the test items (the first 50 test rows of each class in file order, a fixed stratified subset, not a random sample) and the demonstration pool without test duplicates; counts only, no article text. -->
 
 ```{.python .input #prompting-data}
 %%tab pytorch
@@ -512,8 +531,8 @@ assert np.bincount(GOLD).tolist() == [N_PER_CLASS] * 4
 test_keys = {dedup_key(t) for t in TEST_TITLES}
 in_pool = np.array([dedup_key(t) not in test_keys for t in TRAIN_TITLES])
 POOL = [np.flatnonzero(in_pool & (TRAIN_Y == c)) for c in range(4)]
-print(f'{len(ITEMS)} test items, {N_PER_CLASS} per class; pool per class '
-      f'{[len(p) for p in POOL]}')
+print(f'{len(ITEMS)} test items, the first {N_PER_CLASS} of each class in '
+      f'file order; pool per class {[len(p) for p in POOL]}')
 print(f'{(~in_pool).sum()} train titles removed as duplicates of test '
       'titles; titles changed by each cleanup rule:')
 print(pd.DataFrame({'train': changed_train, 'test': changed_test}).T
@@ -554,6 +573,7 @@ MODELS, WORDS = ['base', 'instruct'], ['natural', 'abstract']
 K_BASE, K_INST = [0, 1, 2, 4, 8, 16, 32, 64], [0, 1, 2, 4, 8, 16]
 COND = dict(model='base', layout='plain', k=8, words='natural', rho=0.0,
             derange=False, order=0, instr=0)  # the reference condition
+INSTR = {0: 'none', 1: 'SYSTEM', 2: 'SYSTEM, labels reversed'}  # SYSTEMS
 CONTENT_FREE = ['N/A', '', '[MASK]']  # in place of a headline
 
 def conditions():
@@ -566,11 +586,15 @@ def conditions():
     for model, ks in zip(MODELS, (K_BASE, K_INST)):
         for k in ks:
             add(model=model, k=k)
-        add(model=model, k=0, instr=1)  # an instruction names the labels
+        for instr in (1, 2):  # an instruction names the labels
+            add(model=model, k=0, instr=instr)
         for k in ks if model == 'instruct' else [8]:  # the chat layout
-            add(model=model, layout='chat', k=k)
+            add(model=model, layout='chat', k=k, instr=1)
+        if model == 'instruct':  # no instruction, or its labels reversed
+            for instr, k in itertools.product((0, 2), (0, 1, 4, 8)):
+                add(model=model, layout='chat', k=k, instr=instr)
         if model == 'base':  # the template's default end: no think block
-            add(model=model, layout='chat_default')
+            add(model=model, layout='chat_default', instr=1)
         for order in (1, 2, 3):
             add(model=model, order=order)
         for words, rhos in (('natural', (0.25, 0.5, 0.75, 1.0)),
@@ -606,15 +630,14 @@ def build_prompts(cond, titles):
                            else ABSTRACT))
     if cond['layout'] == 'ask':
         return [ASK.format(x=x) for x in titles]
-    ds = demos(cond)
+    ds, system = demos(cond), SYSTEMS[cond['instr']]
     if cond['layout'].startswith('chat'):
         chats = [d2l.fewshot_prompt(ds, x, 'chat_multi', label_map=words,
-                                    system=SYSTEM) for x in titles]
+                                    system=system) for x in titles]
         if cond['layout'] == 'chat':  # rendered by the reader, no thinking
             return chats
         return [tok.apply_chat_template(  # base only: the default end
             m, tokenize=False, add_generation_prompt=True) for m in chats]
-    system = SYSTEM if cond['instr'] else None
     return [d2l.fewshot_prompt(ds, x, fmt=FMT, label_map=words,
                                system=system) for x in titles]
 ```
@@ -638,7 +661,7 @@ for model, tokenizer in zip(MODELS, (tok, tok_i)):
                         for c in conds)
     print(f'{model}: {len(conds)} (condition, draw) pairs, '
           f'{len(conds) * len(TITLES):,} prompts, {TOKENS[model]:,} tokens')
-assert [sum(c['model'] == m for c in GRID) for m in MODELS] == [117, 123]
+assert [sum(c['model'] == m for c in GRID) for m in MODELS] == [118, 156]
 ```
 
 <!-- Placeholder (prose, ### Number of Demonstrations): one row per condition, draw and item: the four label log-probabilities and the prediction. -->
@@ -699,9 +722,9 @@ def generations(cond):  # greedy, 8 tokens, the test items only
 ```{.python .input #prompting-grid-run}
 %%tab pytorch
 RERUN_PATH = os.path.join('..', 'data', 'lm', 'rerun', 'lm-fewshot-grid.csv')
-registered = None
-if not RERUN or 'lm-fewshot-grid-v1' in d2l.DATA_HUB:
-    registered = read_grid(d2l.download('lm-fewshot-grid-v1',
+GRID_KEY, registered = 'lm-fewshot-grid-v2', None
+if not RERUN or GRID_KEY in d2l.DATA_HUB:
+    registered = read_grid(d2l.download(GRID_KEY,
                                         os.path.join('..', 'data', 'lm')))
 if RERUN:  # regenerate the grid (probe rows: prompting-probe)
     torch.cuda.reset_peak_memory_stats()
@@ -725,7 +748,7 @@ if RERUN:  # regenerate the grid (probe rows: prompting-probe)
               'predictions as registered')
 else:
     grid = registered
-    print(f'lm-fewshot-grid-v1: {len(grid):,} rows')
+    print(f'{GRID_KEY}: {len(grid):,} rows')
     if not SMALL:  # one declared condition, re-scored live
         m = matched(pd.DataFrame(score(dict(COND, seed=0)), columns=COLS),
                     registered, 'icl')
@@ -806,12 +829,12 @@ def show(r):  # a difference with its interval, as one string
     return s if r['draws'] == 'n/a' else f"{s} in {r['draws']} draws"
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): accuracy against the number of demonstrations, three curves, each against k = 0 and, beyond k = 8, against k = 8; then free generation. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): accuracy against the number of demonstrations, three curves, each against k = 0 and, beyond k = 8, against k = 8; then free generation. The instruct chat curve carries SYSTEM; its zero-shot point, and so its gain from 0 to 4 demonstrations, depends on that line (prompting-instruction-lines), so the text quotes the gain as the range over the three lines and does not call the instruct model "at chance" zero-shot. -->
 
 ```{.python .input #prompting-k-table}
 %%tab pytorch
 curves = {'base, plain': dict(model='base'),
-          'instruct, chat': dict(model='instruct', layout='chat'),
+          'instruct, chat': dict(model='instruct', layout='chat', instr=1),
           'instruct, plain': dict(model='instruct')}
 rows = []
 for name, c in curves.items():
@@ -839,24 +862,54 @@ for what, f in (('valid label', lambda p: (p >= 0) * 1.0),
 print(pd.DataFrame(rows).round(3).to_string(index=False))
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): the template has to match the checkpoint (the table below). At k = 8 the chat layout carries SYSTEM, which names the labels, and the plain layout does not, so the chat-versus-plain rows measure template plus instruction; the k = 0 rows with and without the instruction separate the two. The base row "chat, no think block" uses the template's default end (enable_thinking unset), which separates the template from the empty think block. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): the template has to match the checkpoint (the table below). At k = 8 the chat layout carries SYSTEM, which names the labels, and the plain layout does not, so the chat-versus-plain rows measure template plus instruction; the k = 0 rows with and without the instruction separate the two. The base row "chat, no think block" uses the template's default end (enable_thinking unset), which separates the template from the empty think block. The instruct rows at k = 0 hold for this SYSTEM line only: the next table shows that the line's wording and label order move them. -->
 
 ```{.python .input #prompting-format-table}
 %%tab pytorch
 rows = []
 for model in MODELS:
-    pairs = {'chat, k = 8': (dict(layout='chat'), {}),
+    pairs = {'chat, k = 8': (dict(layout='chat', instr=1), {}),
              'plain + instruction, k = 0': (dict(k=0, instr=1), dict(k=0))}
     if model == 'base':  # the same template without the empty think block
-        pairs['chat, no think block, k = 8'] = (dict(layout='chat_default'),
-                                                {})
+        pairs['chat, no think block, k = 8'] = (
+            dict(layout='chat_default', instr=1), {})
     if model == 'instruct':
-        pairs['chat, k = 0'] = (dict(layout='chat', k=0), dict(k=0))
+        pairs['chat, k = 0'] = (dict(layout='chat', k=0, instr=1), dict(k=0))
     for name, (c, ref) in pairs.items():
         a, b = correct(model=model, **c), correct(model=model, **ref)
         rows.append({'model': model, 'prompt': name, 'accuracy': a.mean(),
                      'plain, same k': b.mean(), **compare(a, b)})
 pd.DataFrame(rows).round(3)
+```
+
+<!-- Placeholder (prose, ### Number of Demonstrations): the instruction line is part of the prompt too. The instruct model in its chat layout without an instruction, with SYSTEM, and with SYSTEM's label list reversed (k = 0, 1, 4, 8), then the plain layout at k = 0 with each line for both models: the zero-shot accuracy and the most-predicted label move with the line's wording and order, and the curves meet only by k = 8. -->
+
+```{.python .input #prompting-instruction-lines}
+%%tab pytorch
+def top(p):  # the most-predicted label and its share, over draws and items
+    counts = np.bincount(p.ravel(), minlength=4)
+    return NATURAL[counts.argmax()], counts.max() / counts.sum()
+
+rows = []
+for instr, line in INSTR.items():
+    c = dict(model='instruct', layout='chat', instr=instr)
+    for k in (0, 1, 4, 8):
+        label, share_ = top(pred(**c, k=k))
+        rows.append({'instruction': line, 'k': k,
+                     'accuracy': correct(**c, k=k).mean(), 'top label': label,
+                     'top share': share_, **(compare(
+                         correct(**c, k=k), correct(**c, k=0)) if k else {})})
+print('instruct, chat layout; each k against k = 0 with the same line')
+print(pd.DataFrame(rows).round(3).fillna('').to_string(index=False))
+rows = []  # each line against none
+for model, (instr, line) in itertools.product(MODELS, INSTR.items()):
+    label, share_ = top(pred(model=model, k=0, instr=instr))
+    acc = correct(model=model, k=0, instr=instr)
+    rows.append({'model': model, 'plain, k = 0, instruction': line,
+                 'accuracy': acc.mean(), 'top label': label,
+                 'top share': share_, **(compare(acc, correct(
+                     model=model, k=0)) if instr else {})})
+pd.DataFrame(rows).round(3).drop(columns='draws').fillna('')
 ```
 
 <!-- Placeholder (prose, ### Order): accuracy over four orders of the same demonstrations, the flip rate, and the permutation null. -->
@@ -1109,7 +1162,7 @@ else:
 %%tab pytorch
 series = {'base, ICL (plain)': (K_BASE, dict(model='base')),
           'instruct, ICL (chat)': (K_INST, dict(model='instruct',
-                                                layout='chat')),
+                                                layout='chat', instr=1)),
           'instruct, ICL (plain)': (K_INST, dict(model='instruct')),
           'base, probe': (K_PROBE, dict(exp='probe', layout='none'))}
 acc = [np.array([correct(**c, k=k).mean(1) for k in ks])  # (k, draws)
@@ -1133,7 +1186,7 @@ print(f'probe at 256: '
       f'{correct(exp="probe", layout="none", k=256).mean():.3f}')
 ```
 
-<!-- Placeholder (prose, ### A Probe on Frozen Features): the cost per query, in prompt tokens and key-value cache. -->
+<!-- Placeholder (prose, ### A Probe on Frozen Features): the cost per query, in prompt tokens and key-value cache, without prefix caching. The demonstrations are a prefix shared by every query, so a server that caches it computes it once and a query then costs about its own tokens; the table's ratios (about 30 at 16 shots) are the uncached cost. -->
 
 ```{.python .input #prompting-cost}
 %%tab pytorch

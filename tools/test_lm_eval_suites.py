@@ -453,12 +453,30 @@ class TestAdapters(unittest.TestCase):
             self.assertEqual(it['subject'], 'college_physics')
             self.assertTrue(it['prompt'].startswith(
                 'The following are multiple choice questions (with answers) '
-                'about college physics.\n\nQuestion: d0\nA. w\nB. x\nC. y\n'
-                'D. z\nAnswer: A\n\nQuestion: d1\n'))
-            self.assertEqual(it['prompt'].count('Question:'), 6)
+                'about college physics.\n\nd0\nA. w\nB. x\nC. y\n'
+                'D. z\nAnswer: A\n\nd1\n'))
+            self.assertNotIn('Question:', it['prompt'])
             self.assertTrue(it['prompt'].endswith(
-                'Question: q1\nA. w\nB. x\nC. y\nD. z\nAnswer:'))
+                '\n\nq1\nA. w\nB. x\nC. y\nD. z\nAnswer:'))
             self.assertEqual(it['choices'], [' A', ' B', ' C', ' D'])
+            # lm-evaluation-harness 0.4.13, tasks/mmlu/default: the subject
+            # description, then the first 5 dev rows of the subject
+            # (first_n), each doc_to_text + target_delimiter ' ' + letter
+            # + fewshot_delimiter '\n\n', then the item's doc_to_text; the
+            # continuations are ' A' ... ' D'
+            def doc_to_text(r):
+                c = r['choices']
+                return (f"{r['question'].strip()}\nA. {c[0]}\nB. {c[1]}\n"
+                        f"C. {c[2]}\nD. {c[3]}\nAnswer:")
+            dev = [r for r in rows(6, 'd')
+                   if r['subject'] == 'college_physics'][:5]
+            test = [r for r in rows(3, 'q')
+                    if r['subject'] == 'college_physics'][1]
+            lm_eval = ('The following are multiple choice questions (with '
+                       'answers) about college physics.\n\n' + ''.join(
+                           doc_to_text(r) + ' ' + 'ABCD'[r['answer']] +
+                           '\n\n' for r in dev) + doc_to_text(test))
+            self.assertEqual(it['prompt'], lm_eval)
             self.assertEqual(it['gold'], 1)
             short = t._replace(shots=7)
             with self.assertRaisesRegex(ValueError, '6 of 7 shots'):

@@ -5453,14 +5453,17 @@ def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
 def format_mc(question, options, fmt='cloze', *, shots=()):
     """A multiple-choice item as (prompt, choices). 'cloze': the prompt
     'Question: {question}\\nAnswer:' and each option after a space;
-    'letter': the question, a line 'A. {option}' per option and 'Answer:',
-    with the letters ' A', ' B', ... as choices. Each shot, a tuple
-    (question, options, answer_index), is rendered the same way with its
-    answer and put before the item, separated by a blank line. Callers that
-    want a header (such as MMLU's subject line) prepend it themselves.
+    'letter': 'Question: {question}', a line 'A. {option}' per option and
+    'Answer:', with the letters ' A', ' B', ... as choices (OLMES's
+    multiple-choice formulation); 'mmlu': the same without 'Question: ',
+    as the MMLU paper and lm-evaluation-harness's mmlu tasks write it. Each
+    shot, a tuple (question, options, answer_index), is rendered the same
+    way with its answer and put before the item, separated by a blank line.
+    Callers that want a header (such as MMLU's subject line) prepend it
+    themselves.
 
     Defined in :numref:`sec_lm_scoring`"""
-    if fmt not in ('cloze', 'letter'):
+    if fmt not in ('cloze', 'letter', 'mmlu'):
         raise ValueError(f'unknown fmt: {fmt!r}')
 
     def render(q, opts):
@@ -5472,8 +5475,8 @@ def format_mc(question, options, fmt='cloze', *, shots=()):
         if len(opts) > 26:
             raise ValueError(f'{len(opts)} options, but 26 letters')
         letters = [chr(ord('A') + i) for i in range(len(opts))]
-        lines = [f'Question: {q}'] + [f'{a}. {o}'
-                                      for a, o in zip(letters, opts)]
+        lines = [q if fmt == 'mmlu' else f'Question: {q}'] + [
+            f'{a}. {o}' for a, o in zip(letters, opts)]
         return '\n'.join(lines + ['Answer:']), [' ' + a for a in letters]
     blocks = []
     for q, opts, a in shots:
@@ -9834,7 +9837,8 @@ def _eval_hellaswag(row, i):
 def _eval_mmlu(row, i):
     """MMLU: the question, four options, the answer index, the subject
     (for same-subject demonstrations and as the cluster) and the subject
-    header that precedes the prompt.
+    header that precedes the prompt. With fmt='mmlu' and five
+    'dev:same_subject' shots the prompt is lm-evaluation-harness's.
 
     Defined in :numref:`sec_lm_eval_suites`"""
     subject = str(row['subject'])
@@ -10013,7 +10017,7 @@ EVAL_TASKS = {t.id: t for t in (  # pinned revisions and explicit files
     EvalTask('mmlu', 'cais/mmlu', 'c30699e8356da336a370243923dbaf21066bb9fe',
              ('all/test-00000-of-00001.parquet',
               'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu', config='all',
-             fmt='letter', norm='sum', shots=5,
+             fmt='mmlu', norm='sum', shots=5,
              shots_from='dev:same_subject', cluster='subject'),
     EvalTask('mmlu_pro', 'TIGER-Lab/MMLU-Pro',
              'b189ec765aa7ed75c8acfea42df31fdae71f97be',
@@ -10071,7 +10075,7 @@ EVAL_SUITES = {  # frozen manifests: a change here is a new suite version
                  'c30699e8356da336a370243923dbaf21066bb9fe',
                  ('all/test-00000-of-00001.parquet',
                   'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu',
-                 config='all', n=2000, fmt='letter', norm='sum', shots=5,
+                 config='all', n=2000, fmt='mmlu', norm='sum', shots=5,
                  shots_from='dev:same_subject', cluster='subject'),
         EvalTask('gsm8k', 'openai/gsm8k',
                  '740312add88f781978c0658806c59bc2815b9866',

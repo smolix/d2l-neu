@@ -87,7 +87,8 @@ def _eval_hellaswag(row, i):
 def _eval_mmlu(row, i):
     """MMLU: the question, four options, the answer index, the subject
     (for same-subject demonstrations and as the cluster) and the subject
-    header that precedes the prompt."""
+    header that precedes the prompt. With fmt='mmlu' and five
+    'dev:same_subject' shots the prompt is lm-evaluation-harness's."""
     subject = str(row['subject'])
     return {'id': str(i), 'question': row['question'].strip(),
             'options': [str(o) for o in row['choices']],
@@ -264,7 +265,7 @@ EVAL_TASKS = {t.id: t for t in (  # pinned revisions and explicit files
     EvalTask('mmlu', 'cais/mmlu', 'c30699e8356da336a370243923dbaf21066bb9fe',
              ('all/test-00000-of-00001.parquet',
               'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu', config='all',
-             fmt='letter', norm='sum', shots=5,
+             fmt='mmlu', norm='sum', shots=5,
              shots_from='dev:same_subject', cluster='subject'),
     EvalTask('mmlu_pro', 'TIGER-Lab/MMLU-Pro',
              'b189ec765aa7ed75c8acfea42df31fdae71f97be',
@@ -323,7 +324,7 @@ EVAL_SUITES = {  # frozen manifests: a change here is a new suite version
                  'c30699e8356da336a370243923dbaf21066bb9fe',
                  ('all/test-00000-of-00001.parquet',
                   'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu',
-                 config='all', n=2000, fmt='letter', norm='sum', shots=5,
+                 config='all', n=2000, fmt='mmlu', norm='sum', shots=5,
                  shots_from='dev:same_subject', cluster='subject'),
         EvalTask('gsm8k', 'openai/gsm8k',
                  '740312add88f781978c0658806c59bc2815b9866',

@@ -188,6 +188,12 @@ class TestFormatMC(unittest.TestCase):
                          'B. a gas\nAnswer: A\n\nQuestion: Pick one.\n'
                          'A. red\nB. green\nC. blue\nAnswer:')
         self.assertEqual(choices, [' A', ' B', ' C'])
+        prompt, choices = d2l.format_mc('Pick one.', ['red', 'green', 'blue'],
+                                        'mmlu', shots=[shot])
+        self.assertEqual(prompt, 'What is ice?\nA. solid water\n'
+                         'B. a gas\nAnswer: A\n\nPick one.\n'
+                         'A. red\nB. green\nC. blue\nAnswer:')
+        self.assertEqual(choices, [' A', ' B', ' C'])
 
     def test_ten_options(self):
         opts = [f'o{i}' for i in range(10)]
@@ -212,6 +218,8 @@ class TestFormatMC(unittest.TestCase):
         opts = [f'o{i}' for i in range(27)]
         with self.assertRaisesRegex(ValueError, '26'):
             d2l.format_mc('Q?', opts, 'letter')
+        with self.assertRaisesRegex(ValueError, '26'):
+            d2l.format_mc('Q?', opts, 'mmlu')
         d2l.format_mc('Q?', opts, 'cloze')  # no letters, no limit
         with self.assertRaisesRegex(ValueError, '26'):  # in a shot too
             d2l.format_mc('Q?', ['a'], 'letter', shots=[('S', opts, 0)])

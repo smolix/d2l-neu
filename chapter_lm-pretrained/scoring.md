@@ -117,12 +117,15 @@ def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
 def format_mc(question, options, fmt='cloze', *, shots=()):
     """A multiple-choice item as (prompt, choices). 'cloze': the prompt
     'Question: {question}\\nAnswer:' and each option after a space;
-    'letter': the question, a line 'A. {option}' per option and 'Answer:',
-    with the letters ' A', ' B', ... as choices. Each shot, a tuple
-    (question, options, answer_index), is rendered the same way with its
-    answer and put before the item, separated by a blank line. Callers that
-    want a header (such as MMLU's subject line) prepend it themselves."""
-    if fmt not in ('cloze', 'letter'):
+    'letter': 'Question: {question}', a line 'A. {option}' per option and
+    'Answer:', with the letters ' A', ' B', ... as choices (OLMES's
+    multiple-choice formulation); 'mmlu': the same without 'Question: ',
+    as the MMLU paper and lm-evaluation-harness's mmlu tasks write it. Each
+    shot, a tuple (question, options, answer_index), is rendered the same
+    way with its answer and put before the item, separated by a blank line.
+    Callers that want a header (such as MMLU's subject line) prepend it
+    themselves."""
+    if fmt not in ('cloze', 'letter', 'mmlu'):
         raise ValueError(f'unknown fmt: {fmt!r}')
 
     def render(q, opts):
@@ -134,8 +137,8 @@ def format_mc(question, options, fmt='cloze', *, shots=()):
         if len(opts) > 26:
             raise ValueError(f'{len(opts)} options, but 26 letters')
         letters = [chr(ord('A') + i) for i in range(len(opts))]
-        lines = [f'Question: {q}'] + [f'{a}. {o}'
-                                      for a, o in zip(letters, opts)]
+        lines = [q if fmt == 'mmlu' else f'Question: {q}'] + [
+            f'{a}. {o}' for a, o in zip(letters, opts)]
         return '\n'.join(lines + ['Answer:']), [' ' + a for a in letters]
     blocks = []
     for q, opts, a in shots:

@@ -6500,9 +6500,9 @@ d2l.DATA_HUB['lm-sae-r1-l14-v1'] = (
 d2l.DATA_HUB['lm-sae-q17b-l14-v1'] = (
     d2l.LM_DATA_URL + 'lm-sae-q17b-l14-v1.pt',
     '11982ca32f0382eb9bf594faee58e808d61be12d')
-d2l.DATA_HUB['lm-interp-results-v1'] = (
-    d2l.LM_DATA_URL + 'lm-interp-results-v1.zip',
-    'fbdd35bb16901752e7c6ec15b60734fef135969d')
+d2l.DATA_HUB['lm-interp-results-v2'] = (
+    d2l.LM_DATA_URL + 'lm-interp-results-v2.zip',
+    '598f3366ae49d269dda2abfd8d3af715275c3f93')
 
 class _InterveneStop(Exception):
     """Raised right after the stop_after site, to end a forward early.

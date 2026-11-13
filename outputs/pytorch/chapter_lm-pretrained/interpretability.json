@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e81acfd7f5f602022f34c8382ebbd2600cfd51125c82819317641aa4ccd4c478",
+    "d2l_lib_fingerprint": "sha256:f082d06fa9d8e959ca2fb53fbd9a7c11eaeb916733190788f5eee7f91758632f",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -28,11 +28,6 @@
       "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"
-        },
-        {
-          "type": "stream",
           "name": "stdout",
           "text": "SMALL=False, RETRAIN=False, device cuda:0\nQwen/Qwen3-0.6B at c1899de289a04d12100db370d81485cdf75e47ca: 596,049,920 parameters\n"
         }
@@ -49,12 +44,12 @@
       "outputs": []
     },
     "interpretability-data-hub": {
-      "code_fingerprint": "sha256:54a1b3efe5e3f8d82ca8568b5f419a34b1fc2332d64ae47b5e19ed464a77dfbe",
+      "code_fingerprint": "sha256:910372787e58ef9aaefe894c36f92c971babaca9de6fc1589d53072f721e706e",
       "kind": "text",
       "outputs": []
     },
     "interpretability-data": {
-      "code_fingerprint": "sha256:eb2cf09c7e52f210e489c9fcf2064279dd555a12dee07a14dfae9f86b098bb82",
+      "code_fingerprint": "sha256:7569e629dd98f3bc6780660cba1992030c488d6dbe61224b6af8327c4b7b5598",
       "kind": "text",
       "outputs": [
         {
@@ -75,12 +70,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Wikipedia zh, contrast: 300 docs from rows 0-209036 (20 blocks), 9.1 MB read\nWikipedia zh, label: 100 docs from rows 38-209050 (20 blocks), 0.0 MB read\n"
+          "text": "Wikipedia zh, contrast: 300 docs from rows 0-209036 (20 blocks), 9.1 MB read\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Wikipedia en, contrast: 300 docs from rows 0-142520 (20 blocks), 24.1 MB read\nWikipedia en, label: 100 docs from rows 22-142527 (20 blocks), 0.0 MB read\n"
+          "text": "Wikipedia zh, label: 100 docs from rows 5500-214508 (20 blocks), 10.1 MB read\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Wikipedia en, contrast: 300 docs from rows 0-142520 (20 blocks), 24.1 MB read\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Wikipedia en, label: 100 docs from rows 3750-146256 (20 blocks), 23.1 MB read\n"
         },
         {
           "type": "stream",
@@ -90,17 +95,17 @@
       ]
     },
     "interpretability-intervene": {
-      "code_fingerprint": "sha256:1c7c419de6b6a9c3b958fb83a512ebf2623f03dcb8b11992d6cbd619ca299f1d",
+      "code_fingerprint": "sha256:9b98c27b9e5a4da89a21ec03c131a70087e72756e79b6df6437aac80a60b3a7c",
       "kind": "text",
       "outputs": []
     },
     "interpretability-logit-lens": {
-      "code_fingerprint": "sha256:a2e2959f0e4c9872c4c5b1401d9b319371d6b6fe4fb52cb55429536624766706",
+      "code_fingerprint": "sha256:b72949f26cc1b65045b02edabaad60c7200b377010c1fe599a00dff8e8d2747a",
       "kind": "text",
       "outputs": []
     },
     "interpretability-dla-check": {
-      "code_fingerprint": "sha256:8c079f2ab7178fe03fb2206e5d9bd2cef865a38ad9e052956b35a65d56b0c612",
+      "code_fingerprint": "sha256:86f1eaa8be6f9d80fa87784e059cc27f93b9ce9457ee2d21dc92bbcb86438fde",
       "kind": "text",
       "outputs": [
         {
@@ -111,7 +116,7 @@
       ]
     },
     "interpretability-eiffel": {
-      "code_fingerprint": "sha256:9b16f4f2e68a84891146dea892408145af7b2e23e7b47963afc7852723444a2a",
+      "code_fingerprint": "sha256:2c1efd18241341c77a026ae05825e1e8cde6bdc0d2e5415af40b57c0b4b86c32",
       "kind": "text",
       "outputs": [
         {
@@ -122,12 +127,12 @@
       ]
     },
     "interpretability-tuned-lens": {
-      "code_fingerprint": "sha256:fe32853b3258914d818e5ac893b094211a5ccf05fa425f85f99fb18ab32fa5ca",
+      "code_fingerprint": "sha256:ad92c07ba334b17e0b62e79210f3339f3170128b2cb8e1802a60df45f61cd26c",
       "kind": "text",
       "outputs": []
     },
     "interpretability-tuned-lens-fit": {
-      "code_fingerprint": "sha256:c93b19c6f712d67b9c164e0c780c25478a869ed1eacb331bda27603aebd6446b",
+      "code_fingerprint": "sha256:0958afc285a7605e8b9d4c07b24759957285ac552cf4845e5ba7d9c4df8875ae",
       "kind": "text",
       "outputs": [
         {
@@ -138,36 +143,36 @@
       ]
     },
     "interpretability-lens-compare": {
-      "code_fingerprint": "sha256:00412e61c463307983284ccc2de822215f0f72e9bde829b21f9906edf7de57c7",
+      "code_fingerprint": "sha256:d28b147fd098f44462e33b1ae09b2bfcfa2713041dbaf674e697a008e3e373c2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "logit lens: median rank at most 10 from block 22, 95% interval [21. 22.]\ntuned lens: median rank at most 10 from block 20, 95% interval [20. 20.]\n"
+          "text": "logit lens: median rank at most 10 from block 22, 95% interval [21, 22]\ntuned lens: median rank at most 10 from block 20, 95% interval [20, 20]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-lens-compare-1.svg",
           "bytes": 61615,
-          "sha256": "sha256:b1ef08870201b7e4f7a19a639b5bd9de3de6c89faa57bfb857922cda739e30c8"
+          "sha256": "sha256:d9727803e1129dc30df55a5bdb9aff8ddd3e0fc456f81a3d9e1663aff65c10e9"
         }
       ]
     },
     "interpretability-probe-data": {
-      "code_fingerprint": "sha256:111ce5babcdad4dbbc03992157f03b0d7226a9f1debd135ef1c4d0d414e58357",
+      "code_fingerprint": "sha256:54d8b043d8442a752dfa3d28cb32ebe9882982a28a52df01e5672a4b8e59a0fa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train: 19,983 words, 1,231 sentences, 5,080 word types\ndev: 4,977 words, 399 sentences, 1,877 word types\ntest: 4,996 words, 409 sentences, 1,913 word types\ntest word types unseen in training: 0.47\n"
+          "text": "train: 19,983 words, 1,231 sentences, 5,080 word types\ndev: 4,977 words, 399 sentences, 1,877 word types\ntest: 4,996 words, 409 sentences, 1,913 word types\nunseen in training: 0.47 of the test word types, 0.20 of the test words\n"
         }
       ]
     },
     "interpretability-probe": {
-      "code_fingerprint": "sha256:fe252552f674320bf46f97cd3fff02a6b364b124d31afc3dbe534cd4f0e64d56",
+      "code_fingerprint": "sha256:9ba5f2a82cce3b7593b9a919f82443881018d18766d458285fbbd38ebde068eb",
       "kind": "text",
       "outputs": [
         {
@@ -183,7 +188,7 @@
       ]
     },
     "interpretability-recall-pairs": {
-      "code_fingerprint": "sha256:27dfeb16840702c8ea104ed40683003798d96e42720135e9de84f092bf10f1c2",
+      "code_fingerprint": "sha256:0c12e70bf604f2766b234a849485a05a7457b83b12eb9c022a9d4457553a88a7",
       "kind": "text",
       "outputs": [
         {
@@ -194,7 +199,7 @@
       ]
     },
     "interpretability-patch": {
-      "code_fingerprint": "sha256:bfad2affda6a54e4e2682ab20a8129078e304586930b5df3bb12ce5aa056d0bd",
+      "code_fingerprint": "sha256:c4f2294026e7e9fa2b056f94de52c7de81871135f8fd0979da1627313b99ec52",
       "kind": "text",
       "outputs": [
         {
@@ -205,7 +210,7 @@
       ]
     },
     "interpretability-patch-additivity": {
-      "code_fingerprint": "sha256:0957e25c52216cab9d11bbec9580a8b0fc25ee0c63ff4509996a52c229c52e74",
+      "code_fingerprint": "sha256:5b1f8386451d7520f70ff97a424b5ab42546379746dbffe1294ce4750612ffac",
       "kind": "text",
       "outputs": [
         {
@@ -216,64 +221,64 @@
       ]
     },
     "interpretability-patch-map": {
-      "code_fingerprint": "sha256:904d6ef20f318f47190bc7ceb3a6b077bffed76d6b0fcc0b772099211a7e52f2",
+      "code_fingerprint": "sha256:837bc1adadef5ad13810ac26be8c89c704b27eb78dc70dc834b29b7845a54766",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "resid_post, lower bound above 0.5: 'subject' 0-3; ' of' 20-27\nattn_out, lower bound above 0.5: 'subject' 0\nmlp_out, lower bound above 0.1: 'subject' 0-2; 'subject last' 2; ' of' 21-22\nhandover block 20, 95% interval [20.0, 20.0]\n1 cells with mean NE below -0.05, minimum -0.17\n"
+          "text": "resid_post, lower bound above 0.5: 'subject' 0-3; ' of' 20-27\nattn_out, lower bound above 0.5: 'subject' 0\nmlp_out, lower bound above 0.1: 'subject' 0-2; 'subject last' 2; ' of' 21-22\nhandover block 20, 95% interval [20, 20]\nresid_post, blocks 0-19, per pair: the subject classes together NE 0.97 (quartiles 0.83, 1.13)\n  over 2/3 on the earlier tokens: 17 pairs, e.g. Bolshoi Theatre, Shibuya Crossing, Ponte Vecchio\n  over 2/3 on the last token: 11 pairs, e.g. Louvre, Big Ben, Pantheon\n1 cells with mean NE below -0.05, minimum -0.17\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-patch-map-1.svg",
           "bytes": 54365,
-          "sha256": "sha256:1121131a0041ea783ddc91fbde7cc946a872f8c622432152847d9d6fbf225077"
+          "sha256": "sha256:c72bf7c74eaacda829a4c1df5961e62dec2aec27554692c31e700d9ba8a55052"
         }
       ]
     },
     "interpretability-atp": {
-      "code_fingerprint": "sha256:6d8192cc33f26e3b1d1c0b1994a770ef9f17bee2ef99656779de651e4c8a6489",
+      "code_fingerprint": "sha256:9ee93cb27f4bbf59812d4f39972ee4a6026f8dd56b05e59d091af6871fd9164c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.55 s for 672 forwards per pair; AtP: 0.52 s for 3 passes; ratio 20\n"
+          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.57 s for 672 forwards per pair; AtP: 0.53 s for 3 passes; ratio 20\n"
         }
       ]
     },
     "interpretability-atp-agreement": {
-      "code_fingerprint": "sha256:4527e7d774e2e66c172cb67090c0cd33e6a2689e368d69bede23e87c8e7ad6ba",
+      "code_fingerprint": "sha256:a0ecd8027555c10975f71f4f19949df68d71b98c81247e2d38d3ee769536c374",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Spearman, resid_post: 0.36 [0.08, 0.55]\nSpearman, attn_out: 0.34 [-0.14, 0.60]\nSpearman, mlp_out: 0.24 [-0.08, 0.55]\nSpearman, pooled: 0.42 [0.17, 0.56]\nmean absolute error by blocks: {'0-6': 0.068, '7-13': 0.043, '14-20': 0.032, '21-27': 0.01}\n"
+          "text": "Spearman, resid_post: 0.36 [0.08, 0.55]\nSpearman, attn_out: 0.34 [-0.14, 0.60]\nSpearman, mlp_out: 0.24 [-0.08, 0.55]\nSpearman, pooled: 0.42 [0.17, 0.56]\nMAE by blocks, cells with |NE| > 0.05: {'0-6': 0.322, '7-13': 0.341, '14-20': 0.207, '21-27': 0.055}\nresid_post, both subject classes, blocks 0-19: NE exact 0.98, AtP 0.10 (block means)\nresid_post, final position, blocks 20-27: NE exact 0.75, AtP 0.62 (block means)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-atp-agreement-1.svg",
           "bytes": 113291,
-          "sha256": "sha256:a1a3c1593d66be12a2169def332d3717b9459017310a47fc24826b7e3249ae8b"
+          "sha256": "sha256:b858007372512d30f878ea9d1d32693e81c50243219d8d6af8eac5aeb2246566"
         }
       ]
     },
     "interpretability-topk-sae": {
-      "code_fingerprint": "sha256:38a2d2ab71d0a3bbb746a27ba4a90091b048d3c201a16e0f9a5c5b30c6059db0",
+      "code_fingerprint": "sha256:e56f104e0d58f370b4624433ab35a4b58a312c4b95d6c49b08c44996562725b5",
       "kind": "text",
       "outputs": []
     },
     "interpretability-train-sae": {
-      "code_fingerprint": "sha256:8df073059a01c954e15982cea32f94f5ceced67a5740a00faec569d92fa16fc6",
+      "code_fingerprint": "sha256:c8ca3c718c5b07306947e4a966164a41cf77a31c11c7cbfb6e380069d4528c7a",
       "kind": "text",
       "outputs": []
     },
     "interpretability-sae-r1": {
-      "code_fingerprint": "sha256:2d9b4d537e85256c8c47f1e256102d7a498c02aa3427dce002c4155877d51f8b",
+      "code_fingerprint": "sha256:02e943450f8b19302cf9222fb3bf0ea5243de33f91c10e0d8375a0390c8abda5",
       "kind": "text",
       "outputs": [
         {
@@ -284,9 +289,14 @@
       ]
     },
     "interpretability-load-17b": {
-      "code_fingerprint": "sha256:47605c4f673b539484dc76af252c87c3f2565dad671529d09b924971e3dc6aa4",
+      "code_fingerprint": "sha256:c17e6f1fa71ac49e9fb424e4e578af1e7ae92a14455e384b73d5375275cb45f4",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"
+        },
         {
           "type": "stream",
           "name": "stdout",
@@ -300,7 +310,7 @@
       ]
     },
     "interpretability-act-cache": {
-      "code_fingerprint": "sha256:9d1b9a2f6562eaad5e7a5d9f43da62613c18bbf7ea386f6b7be2a108793c0b34",
+      "code_fingerprint": "sha256:cbd0b2c169ff25e071a69880b3f7895fb7db8c2c46238144cb79ee2eeb18977c",
       "kind": "text",
       "outputs": [
         {
@@ -311,7 +321,7 @@
       ]
     },
     "interpretability-sae-train-or-load": {
-      "code_fingerprint": "sha256:a922567589fa09413338156ead5fb40c972eb6c2dd9d6da80e2360c2c84af3d0",
+      "code_fingerprint": "sha256:f5e5be4dbb27f9ab22b44ebe70156e8ec118b52170f4a74a0e58db168618704c",
       "kind": "text",
       "outputs": [
         {
@@ -322,28 +332,28 @@
       ]
     },
     "interpretability-caution": {
-      "code_fingerprint": "sha256:3164d916409f6e38e28b0e2ca74d00204969433eabb0ab84b577bc244a570a87",
+      "code_fingerprint": "sha256:16c621c7536da1aac66a4a947f8ea27a85031112c2a971db4533e065943c4e0d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "It is strictly prohibited to use interpretability tools for non-scientific\n    research purposes to interfere with model capabilities, or to fabricate,\n    generate, and disseminate harmful information that violates public\n    order, good morals, and socialist core values, including pornographic,\n    violent, discriminatory, or incendiary content. Violators will have\n    their authorization automatically terminated and shall bear all legal\n    liabilities arising therefrom. The right of final interpretation of this\n    statement belongs to the project owner.\n28 files of [537] MB; this notebook downloads one\n"
+          "text": "It is strictly prohibited to use interpretability tools for non-scientific\n    research purposes to interfere with model capabilities, or to fabricate,\n    generate, and disseminate harmful information that violates public\n    order, good morals, and socialist core values, including pornographic,\n    violent, discriminatory, or incendiary content. Violators will have\n    their authorization automatically terminated and shall bear all legal\n    liabilities arising therefrom. The right of final interpretation of this\n    statement belongs to the project owner.\n28 files of 537 MB; this notebook downloads one\n"
         }
       ]
     },
     "interpretability-load-qwen-scope": {
-      "code_fingerprint": "sha256:b68914dd75a5f80d52367338f3bbc70d744ec5f5f12bfa6361b8f0e47a2a18bd",
+      "code_fingerprint": "sha256:6a98939735a2449f83df044fae2ad40107998f4572bb520ce355ef51e0727f66",
       "kind": "text",
       "outputs": []
     },
     "interpretability-sae-metrics": {
-      "code_fingerprint": "sha256:7d91ea324b32cb8413046a692f778f057f33e62ed34bf94ea98b701e44459b9a",
+      "code_fingerprint": "sha256:5353a0a43897781d067eb00b6d19ef2146bc6ab3cd23db42e86bae3d810146a0",
       "kind": "text",
       "outputs": []
     },
     "interpretability-sae-instrument": {
-      "code_fingerprint": "sha256:c7eb416327a00c22a681a2eb980ccc66ffb877e5efa7a173f0b171ccbc53cdfc",
+      "code_fingerprint": "sha256:1b1d73aafa891d7ea805e1eaf881a3df86f91c2a750a6404f13bd361d3bd10d4",
       "kind": "text",
       "outputs": [
         {
@@ -359,7 +369,7 @@
       ]
     },
     "interpretability-sae-compare": {
-      "code_fingerprint": "sha256:eec891c480598482f0b4acba81fa5ec7abfd4925c6ae1f97bb53c5b03323f69f",
+      "code_fingerprint": "sha256:d2a3ec8480ec65b37780ec7b7c662e7845db60591d767aaa62575f7ac279f2a8",
       "kind": "text",
       "outputs": [
         {
@@ -370,7 +380,7 @@
       ]
     },
     "interpretability-features": {
-      "code_fingerprint": "sha256:a3383025f28d26f5c8f7a9b2e84ffbd816e4af9c9e060d1388e46355db51d884",
+      "code_fingerprint": "sha256:942bbe4f8e77b397c8d8c23f81f5af7027a68d85eb8de6ac9eadfdb0b12ef05b",
       "kind": "text",
       "outputs": [
         {
@@ -386,12 +396,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                    precision                recall                   AUC\nfeature  0.777 [0.760, 0.794]  0.476 [0.405, 0.547]  0.709 [0.676, 0.743]\nprobe    0.699 [0.674, 0.722]  0.978 [0.969, 0.985]  0.950 [0.938, 0.961]\ndocuments with an active token: {'feature': 91, 'probe': 174}\nAUC, feature minus probe: -0.241 [-0.275, -0.207]\nfeatures never firing: 8,147; dense (above 0.1): 12\n"
+          "text": "                    precision                recall                   AUC\nfeature  0.729 [0.699, 0.755]  0.436 [0.368, 0.507]  0.685 [0.653, 0.719]\nprobe    0.667 [0.636, 0.694]  0.983 [0.976, 0.989]  0.948 [0.936, 0.959]\ndocuments with an active token: {'feature': 94, 'probe': 165}\nAUC, feature minus probe: -0.263 [-0.296, -0.228]\nfeatures never firing: 8,147; dense (above 0.1): 12\n"
         }
       ]
     },
     "interpretability-directions": {
-      "code_fingerprint": "sha256:bbfc0e4e5e7e49154d04f41be91cb4d02eba3cffdeede8cdd6b4e4c6905268f0",
+      "code_fingerprint": "sha256:0e2c7388522b34f13de09aa5dcbf328b354a109e5f6889b569be96d40335801b",
       "kind": "text",
       "outputs": [
         {
@@ -402,7 +412,7 @@
       ]
     },
     "interpretability-steer": {
-      "code_fingerprint": "sha256:44ece0aefaab5f9d74fb3da9fe45de52221b10163775499729656e3e421ae10c",
+      "code_fingerprint": "sha256:83d9372c4c29fa501efc4a3b72fb0d32b2cb616535a3a8daddf2863a0830c799",
       "kind": "text",
       "outputs": [
         {
@@ -413,37 +423,42 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SAE feature: switched at alpha 1: 0.33\n"
+          "text": "switched at the largest alpha below the cap (cost in nats), then at the next alpha:\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "difference of means: switched at alpha 1: 0.00\n"
+          "text": "  SAE feature: 0.29 at alpha 0.157 (0.25); 0.52 at alpha 0.167 (0.62)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random 0: switched at alpha 1: 0.00\n"
+          "text": "  difference of means: 0.17 at alpha 0.0936 (0.20); 0.41 at alpha 0.0992 (0.56)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random 1: switched at alpha 1: 0.00\n"
+          "text": "  random 0: 0.00 at alpha 0.707 (0.39); 0.00 at alpha 1 (0.81)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random 2: switched at alpha 1: 0.00\n"
+          "text": "  random 1: 0.00 at alpha 0.707 (0.39); 0.00 at alpha 1 (0.93)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random 3: switched at alpha 1: 0.00\n"
+          "text": "  random 2: 0.00 at alpha 0.707 (0.35); 0.00 at alpha 1 (0.80)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random 4: switched at alpha 1: 0.00\n"
+          "text": "  random 3: 0.00 at alpha 0.707 (0.41); 0.00 at alpha 1 (0.99)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  random 4: 0.00 at alpha 0.707 (0.39); 0.00 at alpha 1 (0.87)\n"
         },
         {
           "type": "stream",
@@ -453,25 +468,25 @@
       ]
     },
     "interpretability-frontier": {
-      "code_fingerprint": "sha256:ef257ab3a9c4de46dc0d64514045d47036e9584947d9f1f3c4c9a8d50594c533",
+      "code_fingerprint": "sha256:7d347c15c95b0571040fc82b7e42d97c9dd51821f87cb9132abae860cbc20d9f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "area, SAE feature: 0.124 [0.089, 0.162]\narea, difference of means: 0.099 [0.069, 0.135]\narea difference: 0.025 [0.001, 0.052]\nrandom excess: 0.000 [0.000, 0.000]\nprefix minus SAE feature: -0.018 [-0.070, 0.014]\nprefix minus difference of means: -0.045 [-0.093, -0.011]\nrandom excess, upper 95% bound: 0.0\n"
+          "text": "area, SAE feature: 0.124 [0.089, 0.162]\narea, difference of means: 0.099 [0.069, 0.135]\narea difference: 0.025 [0.001, 0.052]\nrandom excess: 0.000 [0.000, 0.000]\nprefix minus SAE feature: -0.018 [-0.070, 0.014]\nprefix minus difference of means: -0.045 [-0.093, -0.011]\nswitched at the cap, SAE feature: 0.446 [0.348, 0.548]\nswitched at the cap, difference of means: 0.372 [0.280, 0.476]\nrandom excess, upper 95% bound: 0.0\narea difference, replicates at most 0: 0.019\ncost of half switched, SAE feature: 0.585\ncost of half switched, difference of means: 1.159\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-frontier-1.svg",
           "bytes": 53403,
-          "sha256": "sha256:e447b13a7ff29490cf0138d6b3220f54efb628f624615eb38f2fd004b0a4d734"
+          "sha256": "sha256:fcc9ca26b20b904faa5ec16428a0fe02eb820b2d68c6fc55f9c9acc771360556"
         }
       ]
     },
     "interpretability-steer-samples": {
-      "code_fingerprint": "sha256:33217a94d75a4de5f2e1066849bc753f9b8b6850a0a8e15137b4ffc7c51cabf3",
+      "code_fingerprint": "sha256:c6d8c1a4a7ba47ad1f6c417be571705f0328b9414b4ffa848b20799e6983537f",
       "kind": "text",
       "outputs": [
         {

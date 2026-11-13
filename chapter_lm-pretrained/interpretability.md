@@ -201,12 +201,12 @@ d2l.DATA_HUB['lm-sae-r1-l14-v1'] = (
 d2l.DATA_HUB['lm-sae-q17b-l14-v1'] = (
     d2l.LM_DATA_URL + 'lm-sae-q17b-l14-v1.pt',
     '11982ca32f0382eb9bf594faee58e808d61be12d')
-d2l.DATA_HUB['lm-interp-results-v1'] = (
-    d2l.LM_DATA_URL + 'lm-interp-results-v1.zip',
-    'fbdd35bb16901752e7c6ec15b60734fef135969d')
+d2l.DATA_HUB['lm-interp-results-v2'] = (
+    d2l.LM_DATA_URL + 'lm-interp-results-v2.zip',
+    '598f3366ae49d269dda2abfd8d3af715275c3f93')
 ```
 
-<!-- Placeholder (prose, ### The Residual Stream as a Sum): the data of the section, each subset resolved once by a declared rule (FineWeb-Edu, Chinese and English Wikipedia, the recall pairs), and the Han-character tokens of the vocabulary. -->
+<!-- Placeholder (prose, ### The Residual Stream as a Sum): the data of the section, each subset resolved once by a declared rule (FineWeb-Edu, Chinese and English Wikipedia, the recall pairs), and the Han-character tokens of the vocabulary. The held-out label documents come from 20 other Wikipedia blocks, halfway between the contrast blocks, so they are other articles on other topics, not the contrast documents' neighbours. -->
 
 ```{.python .input #interpretability-data}
 %%tab pytorch
@@ -248,8 +248,10 @@ def walk(label, source, rows, subsets, block=1000):
               f'({k} block{"s" * (k > 1)}), {nbytes / 1e6:.1f} MB read')
     return out
 
-def round_robin(stride, blocks=20, block=1000):  # row i of each block, i + 1
-    return (b * stride + i for i in range(block) for b in range(blocks))
+def round_robin(stride, first=0, blocks=20, block=1000):
+    """Row i of each of the blocks at first + b * stride, then row i + 1."""
+    return (first + b * stride + i for i in range(block)
+            for b in range(blocks))
 
 fineweb = walk('FineWeb-Edu', FINEWEB, itertools.count(8000), {
     'held-out': (SIZES['heldout'], prefix(256, 257)),
@@ -257,11 +259,14 @@ fineweb = walk('FineWeb-Edu', FINEWEB, itertools.count(8000), {
     'cost': (SIZES['cost'], prefix(129, 129))})
 # Wikipedia files are ordered by article id, and neighbours share topics
 # (hundreds of consecutive biographies of generals), so the documents
-# come from 20 blocks spread over each file
-wiki = {lang: walk(f'Wikipedia {lang}', WIKI[lang],
-                   round_robin(STRIDE[lang]), {
-    'contrast': (SIZES['contrast'], prefix(128, 129)),
-    'label': (SIZES['label'], prefix(128, 129))}) for lang in WIKI}
+# come from 20 blocks spread over each file, and the held-out label
+# documents from 20 other blocks, halfway between them
+wiki = {lang: {
+    **walk(f'Wikipedia {lang}', WIKI[lang], round_robin(STRIDE[lang]),
+           {'contrast': (SIZES['contrast'], prefix(128, 129))}),
+    **walk(f'Wikipedia {lang}', WIKI[lang],
+           round_robin(STRIDE[lang], first=STRIDE[lang] // 2),
+           {'label': (SIZES['label'], prefix(128, 129))})} for lang in WIKI}
 heldout, cost_docs = fineweb['held-out'], fineweb['cost']
 steer_texts = tok.batch_decode(fineweb['steering'])
 pieces = tok.batch_decode([[v] for v in range(len(tok))])
@@ -279,7 +284,7 @@ if RETRAIN:  # every 256-token window of rows 0 to 7,999, in order
           f'{nbytes / 1e6:.1f} MB read')
 FULL = None  # the full run's summary, shown beside the CPU path's numbers
 if SMALL and not RETRAIN:
-    with zipfile.ZipFile(d2l.download_keyed('lm-interp-results-v1')) as z:
+    with zipfile.ZipFile(d2l.download_keyed('lm-interp-results-v2')) as z:
         FULL = json.loads(z.read('summary.json'))
     assert not FULL['config']['small'], 'the archive of a CPU-path run'
 ```
@@ -655,8 +660,9 @@ for name, R in ranks.items():
     reps = [first10(R[idx]) for idx in cluster_resample(cities)]
     SUMMARY[f'{name}: first block of median rank <= 10'] = [
         float(first10(R)), *pct_ci(reps).tolist()]
+    lo, hi = pct_ci(reps)
     print(f'{name}: median rank at most 10 from block {first10(R)}, '
-          f'95% interval {pct_ci(reps)}')
+          f'95% interval [{lo:.0f}, {hi:.0f}]')
     if FULL is not None:
         key = f'{name}: first block of median rank <= 10'
         print(f'  full run: {FULL[key]}')
@@ -690,7 +696,7 @@ d2l.plot(list(range(L - 1)), [KL[n][:, 0] for n in KL] + [
          fmts=('C0-', 'C1-', 'C0:', 'C0:', 'C1:', 'C1:'))
 ```
 
-<!-- Placeholder (prose, ### Linear Probes and Control Tasks): UD English EWT, every 10th training and every 5th dev and test sentence; each word read at its last token, from the embedding and after block 14. -->
+<!-- Placeholder (prose, ### Linear Probes and Control Tasks): UD English EWT, every 10th training and every 5th dev and test sentence; each word read at its last token, from the embedding and after block 14. "Unseen" counts word types (about half); by word occurrence the share is about a fifth: never write "47% of test words". -->
 
 ```{.python .input #interpretability-probe-data}
 %%tab pytorch
@@ -753,8 +759,9 @@ for split, s in ud.items():
           f'{len({w[2] for w in words[split]}):,} word types')
 test_types = {w[2] for w in words['test']}
 unseen = test_types - {w[2] for w in words['train']}
-print(f'test word types unseen in training: '
-      f'{len(unseen) / len(test_types):.2f}')
+print(f'unseen in training: {len(unseen) / len(test_types):.2f} of the test '
+      f'word types, {np.mean([w[2] in unseen for w in words["test"]]):.2f} '
+      'of the test words')
 ```
 
 <!-- Placeholder (prose, ### Linear Probes and Control Tasks): linear probes for the tags and for five control tasks (one random tag per word type), with the majority tag per type as baseline; the table above (spec tab_lm_probe_control) and the paired selectivity difference. -->
@@ -947,7 +954,7 @@ print(f'block {handover}: NE(subject last) {mean[0, handover, S]:.2f} + '
       f'NE(both) {float(both.mean()):.2f}')
 ```
 
-<!-- Placeholder (prose, ### The Patching Map): the map below with a city-cluster bootstrap: cells above the declared thresholds, the handover block with its interval, negative cells; caption from spec fig_lm_patching_map. -->
+<!-- Placeholder (prose, ### The Patching Map): the map below with a city-cluster bootstrap: cells above the declared thresholds, the handover block with its interval, negative cells; caption from spec fig_lm_patching_map. Reading (verify 18.6): there is no mid-depth subject-last band. Per pair, before the handover the subject's effect stays on the token or tokens that name the landmark (both subject classes together NE about 1): on the earlier tokens when the last word is generic (Bolshoi Theatre, Shibuya Crossing), on the last token when it is the distinctive one (Big Ben, Pantheon). The model does not gather the subject onto its last token; the information moves to the final position at the handover. Do not write that the earlier tokens carry "the other half" of a per-prompt split; the class means average two kinds of pairs. Name the pitfall: a position class pools tokens with different roles. -->
 
 ```{.python .input #interpretability-patch-map}
 %%tab pytorch
@@ -969,8 +976,20 @@ for i, (kind, t) in enumerate(zip(KINDS, (0.5, 0.5, 0.1))):
     cells = [(int(l), CLASSES[c]) for l, c in zip(*np.nonzero(lower[i] > t))]
     SUMMARY['patching'][kind] = cells
     print(f'{kind}, lower bound above {t}: {by_position(cells)}')
-print(f'handover block {handover}, 95% interval '
-      f'{SUMMARY["patching"]["handover"][1:]}')
+print('handover block {}, 95% interval [{:.0f}, {:.0f}]'.format(
+    *SUMMARY['patching']['handover']))
+# per pair, before the handover: the subject's effect, shared between
+# its earlier tokens and its last token
+early, last = NE[0, :handover, :S + 1].mean(0)  # (pairs,) each
+share = last / (early + last)
+order = np.argsort(share)
+q = np.percentile(early + last, [25, 50, 75])
+print(f'resid_post, blocks 0-{handover - 1}, per pair: the subject classes '
+      f'together NE {q[1]:.2f} (quartiles {q[0]:.2f}, {q[2]:.2f})')
+for where, idx in (('earlier tokens', order[share[order] < 1 / 3]),
+                   ('last token', order[share[order] > 2 / 3][::-1])):
+    print(f'  over 2/3 on the {where}: {len(idx)} pairs, e.g. '
+          + ', '.join(pairs[i]['landmark'] for i in idx[:3]))
 print(f'{(mean < -0.05).sum()} cells with mean NE below -0.05, '
       f'minimum {mean.min():.2f}')
 if FULL is not None:
@@ -1013,7 +1032,7 @@ print(f'patching: {sweep_time:.2f} s for {3 * L * 8} forwards per pair; '
       f'AtP: {atp_time:.2f} s for 3 passes; ratio {sweep_time / atp_time:.0f}')
 ```
 
-<!-- Placeholder (prose, ### Attribution Patching): rank agreement of AtP with exact patching outside the near-zero cells, the error by block band, and the plot below (caption from spec fig_lm_atp_vs_exact). -->
+<!-- Placeholder (prose, ### Attribution Patching): rank agreement of AtP with exact patching outside the near-zero cells, the error by block band, and the plot below (caption from spec fig_lm_atp_vs_exact). Reading (verify 18.6): AtP misses the subject positions at every block before the handover, not only early (the subject classes together: exact NE about 1, AtP about 0.1). The effect passes through attention there and the patched path is flat at the clean end (the effect rises in an S-curve from clean to corrupted; the slope at the clean end, which AtP computes exactly, is small). After the handover AtP is close but low at the final position (about 40% low at the handover block, 12-18% low from block 22 on). -->
 
 ```{.python .input #interpretability-atp-agreement}
 %%tab pytorch
@@ -1031,9 +1050,15 @@ SUMMARY['atp spearman'] = {}
 for j, name in enumerate([*KINDS, 'pooled']):
     SUMMARY['atp spearman'][name] = fmt(point[j], ci[:, j], 2)
     print(f'Spearman, {name}: {fmt(point[j], ci[:, j], 2)}')
-print('mean absolute error by blocks:', {
-    f'{b[0]}-{b[-1]}': round(float(np.abs(approx - exact)[:, b].mean()), 3)
-    for b in np.array_split(np.arange(L), 4)})
+big = np.abs(exact) > 0.05  # the cells the rank agreement uses
+print('MAE by blocks, cells with |NE| > 0.05:', {
+    f'{b[0]}-{b[-1]}': round(float(np.abs(approx - exact)[:, b][
+        big[:, b]].mean()), 3) for b in np.array_split(np.arange(L), 4)})
+for what, cols, blocks in (('both subject classes', [0, S], range(handover)),
+                           ('final position', [FINAL], range(handover, L))):
+    e, a = (x[0, blocks][:, cols].sum(-1) for x in (exact, approx))
+    print(f'resid_post, {what}, blocks {blocks[0]}-{blocks[-1]}: '
+          f'NE exact {e.mean():.2f}, AtP {a.mean():.2f} (block means)')
 if FULL is not None:
     print('full run:', FULL['atp spearman'])
 ends = [min(exact.min(), approx.min()), max(exact.max(), approx.max())]
@@ -1281,8 +1306,8 @@ with open(hf_hub_download(SAE_REPO, 'README.md', revision=revision)) as f:
 sizes = [s.size for s in HfApi().model_info(
     SAE_REPO, revision=revision, files_metadata=True).siblings
          if s.rfilename.endswith('.sae.pt')]
-print(f'{len(sizes)} files of {sorted({round(b / 1e6) for b in sizes})} MB;'
-      ' this notebook downloads one')
+mb = ', '.join(str(m) for m in sorted({round(b / 1e6) for b in sizes}))
+print(f'{len(sizes)} files of {mb} MB; this notebook downloads one')
 ```
 
 <!-- Placeholder (stage 2): one layer of the released dictionary, loaded safely. -->
@@ -1569,7 +1594,7 @@ if not SMALL:  # its decoder column is all we keep of the release
     torch.cuda.empty_cache()
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): eq_lm_steer on a grid of strengths for each direction (half-octave from 1/16 to 2; for the two informed directions also every twelfth of an octave from 1/16 to 1/4, where they switch within a third of an octave), and a fixed Chinese prefix that changes no activation: behaviour (switched prompts) and cost (cross-entropy on English text). -->
+<!-- Placeholder (prose, ### The Steering Frontier): eq_lm_steer on a grid of strengths for each direction (half-octave from 1/16 to 2; for the two informed directions also every twelfth of an octave from 1/16 to 1/4, where they switch within a third of an octave), and a fixed Chinese prefix that changes no activation: behaviour (switched prompts) and cost (cross-entropy on English text). Past the cliff the outputs degenerate ("（（（（" loops, repeated phrases); the switched fraction falls partly because fullwidth punctuation is not Han. Call it breakdown, never a return to English. -->
 
 ```{.python .input #interpretability-steer}
 %%tab pytorch
@@ -1580,6 +1605,7 @@ GRID = {n: [0.0] + ([0.125, 0.5] if SMALL else sorted(set(COARSE) | set(
     FINE)) if n in INFORMED else COARSE) for n in directions}
 PREFIX = '下面的文字将用中文继续。\n\n'  # declared before any run, not tuned
 SWITCH = 0.3  # a continuation switched: at least 30% Han characters
+CAP = 0.5  # the cost cap: nats per token on English text
 for prefix in ('', PREFIX):  # one bucket of equal-length prompts each
     lengths = {len(ids_of(prefix + t)) for t in steer_texts}
     assert len(lengths) == 1
@@ -1627,13 +1653,17 @@ def run(fn=None, prefix=''):  # Han fractions per prompt, CE per document
                 doc_ce(ids_of(prefix)))
 
 base, runs = run(), {}
+print('switched at the largest alpha below the cap (cost in nats), then at '
+      'the next alpha:')
 for name, d in directions.items():
     runs[name, 0.0] = base  # alpha = 0 is one shared run
     for alpha in GRID[name][1:]:
         runs[name, alpha] = run(steer(alpha * n_bar * d))
-    a = min(GRID[name][1:], key=lambda a: abs(math.log(a)))  # nearest 1
-    print(f'{name}: switched at alpha {a:g}: '
-          f'{(runs[name, a][0] >= SWITCH).mean():.2f}')
+    cost_of = lambda a: (runs[name, a][1] - base[1])[:, 0].mean()
+    i = max(i for i, a in enumerate(GRID[name]) if cost_of(a) < CAP)
+    print(f'  {name}: ' + '; '.join(
+        f'{(runs[name, a][0] >= SWITCH).mean():.2f} at alpha {a:.3g} '
+        f'({cost_of(a):.2f})' for a in GRID[name][i:i + 2]))
 runs['prefix', 0.0] = run(prefix=PREFIX)
 print(f'prefix: switched {(runs["prefix", 0.0][0] >= SWITCH).mean():.2f}')
 RESULTS['steering_prompts.csv'] = pd.DataFrame(
@@ -1648,11 +1678,10 @@ RESULTS['steering_docs.csv'] = pd.DataFrame(
 ).to_csv(index=False).encode()
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): the frontier plot below (caption from spec fig_lm_steering_frontier), areas up to the cost cap with paired intervals, the random-direction floor, and the prefix against each direction at its own cost; the bootstrap resamples prompts (seed 0) and cost documents (seed 1) independently. -->
+<!-- Placeholder (prose, ### The Steering Frontier): the frontier plot below (caption from spec fig_lm_steering_frontier), areas up to the cost cap with paired intervals, the random-direction floor, and the prefix against each direction at its own cost; the bootstrap resamples prompts (seed 0) and cost documents (seed 1) independently. Wording (verify 18.6): at the cap the feature switches just under half (about 0.45, an interval that includes 0.5); half takes about 0.6 nats. The difference of means reaches about 0.37 at the cap. The area difference is marginal (lower bound near 0, about 2% of replicates at or below 0): the feature is "slightly cheaper at this sample size", not clearly cheaper. A step envelope without interpolation gives the same sign. -->
 
 ```{.python .input #interpretability-frontier}
 %%tab pytorch
-CAP = 0.5  # nats per token on English text
 SW = {n: np.array([runs[n, a][0] >= SWITCH for a in GRID[n]])
       for n in directions}  # (alphas, prompts)
 CE = {n: np.array([runs[n, a][1] - base[1] for a in GRID[n]])
@@ -1678,7 +1707,13 @@ def stats(ip, idoc):  # the declared statistics on resampled prompts, docs
                  for n in RANDOM) - m[RANDOM[0]][1][0]
     cp, sp = ce_p[idoc, 0].mean(), sw_p[ip].mean()
     return [*a, a[0] - a[1], excess,
-            *(sp - np.interp(cp, *envelope(*m[n])) for n in INFORMED)]
+            *(sp - np.interp(cp, *envelope(*m[n])) for n in INFORMED),
+            *(np.interp(CAP, *envelope(*m[n])) for n in INFORMED)]
+
+def cost_of_half(x, y):  # the least cost on the frontier that switches half
+    j = np.flatnonzero(y >= 0.5)
+    return np.nan if not len(j) else x[0] if j[0] == 0 else float(
+        np.interp(0.5, y[j[0] - 1:j[0] + 1], x[j[0] - 1:j[0] + 1]))
 
 n_p, n_d = len(steer_texts), len(cost_docs)
 point = stats(np.arange(n_p), np.arange(n_d))
@@ -1688,16 +1723,22 @@ reps = np.array([stats(ip, idoc) for ip, idoc in zip(
 ci = pct_ci(reps)
 names = [f'area, {INFORMED[0]}', f'area, {INFORMED[1]}',
          'area difference', 'random excess',
-         *(f'prefix minus {n}' for n in INFORMED)]
+         *(f'prefix minus {n}' for n in INFORMED),
+         *(f'switched at the cap, {n}' for n in INFORMED)]
 SUMMARY['steering'] = {n: fmt(v, ci[:, j]) for j, (n, v) in
                        enumerate(zip(names, point))}
 SUMMARY['steering']['random excess, upper 95% bound'] = float(
     np.quantile(reps[:, 3], 0.95))
+SUMMARY['steering']['area difference, replicates at most 0'] = float(
+    np.mean(reps[:, 2] <= 0))
+cost = {n: CE[n][..., 0].mean(1) for n in directions}
+for n in INFORMED:  # a point value: beyond the cap, the grid is coarse
+    SUMMARY['steering'][f'cost of half switched, {n}'] = round(
+        cost_of_half(*envelope(cost[n], SW[n].mean(1))), 3)
 for n, v in SUMMARY['steering'].items():
     print(f'{n}: {v}')
 if FULL is not None:
     print('full run:', json.dumps(FULL['steering'], indent=1))
-cost = {n: CE[n][..., 0].mean(1) for n in directions}
 sw = np.array([SW[n].mean(1) for n in RANDOM])
 c_rand = np.mean([cost[n] for n in RANDOM], 0)
 d2l.plot([cost[INFORMED[0]], cost[INFORMED[1]], c_rand, c_rand,

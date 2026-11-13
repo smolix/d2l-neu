@@ -1285,7 +1285,9 @@ such a page never becomes a NumPy variant. `flash-linear-attention` and
 installs and checks them on GPU runtimes only. Transformers binds `fla` at
 import for every device, so on a CPU runtime it would break any Qwen3.5
 forward that does not go through `d2l.load_hf`/`d2l.bind_hf_kernels`, which
-route CPU tensors to the reference code. `check-hosted-runtime-contracts`
+route CPU tensors to the reference code. They route fp32 and fp64 tensors there
+too: `fla` multiplies fp32 inputs in TF32, which broke 18.4's fp32 scorer checks
+(3.2e-3 against a 1e-4 tolerance), so only bf16 and fp16 run the fused kernel. `check-hosted-runtime-contracts`
 checks the PyTorch profile in `.venv-pytorch` and again in `.venv-lm`.
 
 `hosted-notebooks` fails when the generated profiles are stale, so a direct
@@ -1461,6 +1463,16 @@ numbers. Measured with the setting (2026-11-13, `D2L_RERUN=arc-generations`,
 the job behind that peak): 10.8 GiB allocated, 12.7 GiB reserved, 13.5 GB in
 `nvidia-smi`, inside the 2-slot budget; the run reproduced
 `lm-arc-generations-v2` bit for bit. A normal run peaks at about 4.9 GB.
+With `fla` in `.venv-lm` (2026-11-13 merge), Qwen3.5's bf16 forwards changed,
+so the four artifacts were regenerated as `lm-bpb-v2`,
+`lm-gsm8k-samples-v2`, `lm-arc-generations-v3` and `lm-arc-scores-v2`, in two
+scheduler runs that keep the registered settings and each fit the 30-minute
+ceiling: `D2L_RERUN=arc-generations D2L_RERUN_CUT=1` (965 s) and
+`D2L_RERUN=bpb,gsm8k-samples,arc-scores D2L_RERUN_CUT=2` (1,191 s). Every
+Qwen3 row reproduced bit for bit; only the Qwen3.5 rows changed (bpb by
+2.4e-4, 3 to 11 of 500 ARC predictions per format, most GSM8K and ARC reply
+texts). `lm-gsm8k-samples-v1` stays registered because 18.7 reads its
+problem ids.
 18.5's kernel gets the same setting. Its full regeneration (`D2L_RERUN=1`,
 2026-11-13, one RTX 4090) took 1,492 s (24.9 min: dev suite 3.1 min,
 GSM-Symbolic 3.1 min, answers 6.9 min, judge 0.9 + 4.4 min, protocol 5.5

@@ -109,18 +109,23 @@ d2l.DATA_HUB['lm-heldout-texts-v1'] = (
     d2l.LM_DATA_URL + 'lm-heldout-texts-v1.json',
     '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
 # This section's measured results, written by a run with D2L_RERUN=1
-d2l.DATA_HUB['lm-bpb-v1'] = (
-    d2l.LM_DATA_URL + 'lm-bpb-v1.csv',
-    '7c2ceeeda10b3f4ca6774821ed426c896442c3d3')
+# (Qwen3.5 rows measured on the fused Gated DeltaNet kernel of 18.1)
+d2l.DATA_HUB['lm-bpb-v2'] = (
+    d2l.LM_DATA_URL + 'lm-bpb-v2.csv',
+    'cc1ebee310ca335ec420c47de5fa88a50301e6cf')
+# lm-gsm8k-samples-v1 stays registered: 18.7 reads its problem ids
 d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
     '11b561b6fb07d19016f5a00b4a5dcf35d3dbbb07')
-d2l.DATA_HUB['lm-arc-generations-v2'] = (  # direct budget 512 tokens
-    d2l.LM_DATA_URL + 'lm-arc-generations-v2.jsonl',
-    '6a42d4b5ef29a40d7241039779cb9b9fc40e0afc')
-d2l.DATA_HUB['lm-arc-scores-v1'] = (
-    d2l.LM_DATA_URL + 'lm-arc-scores-v1.parquet',
-    'e4e1ea4b45a7a5288ae3b914459e60228b5e2931')
+d2l.DATA_HUB['lm-gsm8k-samples-v2'] = (
+    d2l.LM_DATA_URL + 'lm-gsm8k-samples-v2.jsonl',
+    'e02bde69f9fca1f0af49d1170088d87a304ceb0f')
+d2l.DATA_HUB['lm-arc-generations-v3'] = (  # direct budget 512 tokens
+    d2l.LM_DATA_URL + 'lm-arc-generations-v3.jsonl',
+    'ecce2bd3b74bebd0bbc6355b1b8176d949c8abaf')
+d2l.DATA_HUB['lm-arc-scores-v2'] = (
+    d2l.LM_DATA_URL + 'lm-arc-scores-v2.parquet',
+    '6f28f8ca8ce1f5acee402086e2907b3116f758be')
 ```
 
 ```{.python .input #scoring-download}
@@ -813,19 +818,19 @@ def bpb_row(model_id, model, tok, text, ctx_len, stride):
                 ppl_tok=math.exp(nll / T))
 
 def bpb_agreement(rows):
-    path = registered('lm-bpb-v1')
+    path = registered('lm-bpb-v2')
     if path is None:
-        return print('lm-bpb-v1 is not registered yet')
-    both = pd.DataFrame(rows).merge(pd.read_csv(path), suffixes=('', '_v1'),
+        return print('lm-bpb-v2 is not registered yet')
+    both = pd.DataFrame(rows).merge(pd.read_csv(path), suffixes=('', '_reg'),
                                     on=['model', 'text', 'ctx', 'stride'])
-    print(f'{len(both)} of {len(rows)} rows in lm-bpb-v1; max |bpb '
-          f'difference| {(both.bpb - both.bpb_v1).abs().max():.1e}')
+    print(f'{len(both)} of {len(rows)} rows in lm-bpb-v2; max |bpb '
+          f'difference| {(both.bpb - both.bpb_reg).abs().max():.1e}')
 
 def bpb_table(rows):
-    """The registered table lm-bpb-v1; before its upload, this run's rows."""
-    path = registered('lm-bpb-v1')
+    """The registered table lm-bpb-v2; before its upload, this run's rows."""
+    path = registered('lm-bpb-v2')
     if path is None and not rows:
-        path = artifact('lm-bpb-v1', 'lm-bpb.csv')
+        path = artifact('lm-bpb-v2', 'lm-bpb.csv')
     return pd.DataFrame(rows) if path is None else pd.read_csv(path)
 ```
 
@@ -999,13 +1004,13 @@ if 'gsm8k-samples' in RERUN:
           f'min, {peak()}')
     save_rerun('lm-gsm8k-samples.jsonl',
                lambda path: write_jsonl(path, records))
-    path = registered('lm-gsm8k-samples-v1')
+    path = registered('lm-gsm8k-samples-v2')
     if path is not None:
         both = pd.DataFrame(records).merge(
             read_jsonl(path), on=['model', 'problem_id', 'sample_idx'])
-        print(f'correctness agrees with lm-gsm8k-samples-v1 on '
+        print(f'correctness agrees with lm-gsm8k-samples-v2 on '
               f'{(both.correct_x == both.correct_y).sum()} of {len(both)}')
-pool = read_jsonl(artifact('lm-gsm8k-samples-v1', 'lm-gsm8k-samples.jsonl'))
+pool = read_jsonl(artifact('lm-gsm8k-samples-v2', 'lm-gsm8k-samples.jsonl'))
 recorded = pool.settings[0]  # the sampler the pool was made with; its
 assert all(s == recorded for s in pool.settings)  # budget is cut-dependent
 assert {**recorded, 'max_new_tokens': GSM_MAX_NEW} == GSM_SAMPLER
@@ -1343,7 +1348,7 @@ if 'arc-generations' in RERUN:
           f'{peak()}')
     save_rerun('lm-arc-generations.jsonl',
                lambda path: write_jsonl(path, records))
-arc_gen = read_jsonl(artifact('lm-arc-generations-v2',
+arc_gen = read_jsonl(artifact('lm-arc-generations-v3',
                               'lm-arc-generations.jsonl'))
 for arm, (models, n, settings) in ARMS.items():  # as recorded in the file
     d = arc_gen[arc_gen.arm == arm]
@@ -1375,7 +1380,7 @@ print(pd.DataFrame({
 %%tab pytorch
 def score_long(model, tok, model_id, fmt, batch_size=8):
     """Components of every choice of the 500 items in format fmt, one row
-    per (item, choice), as lm-arc-scores-v1 stores them."""
+    per (item, choice), as lm-arc-scores-v2 stores them."""
     prompts, choices = zip(*FORMATS[fmt])
     c = d2l.score_choices(model, tok, prompts, choices,
                           batch_size=batch_size, return_components=True)
@@ -1427,8 +1432,8 @@ def margin(s):  # best minus second-best score
 
 ```{.python .input #scoring-grid}
 %%tab pytorch
-path = registered('lm-arc-scores-v1')
-v1 = None if path is None else pd.read_parquet(path)
+path = registered('lm-arc-scores-v2')
+reg = None if path is None else pd.read_parquet(path)
 if GPU:
     parts = []
     for m in MODELS:
@@ -1439,16 +1444,16 @@ if GPU:
         del model
         free()
         print(f'{m}: {time.time() - tic:.0f} s, {peak()}')
-        for fmt in FORMATS if v1 is not None else ():
-            new, old = matrix(parts[-1], m, fmt), matrix(v1, m, fmt)
+        for fmt in FORMATS if reg is not None else ():
+            new, old = matrix(parts[-1], m, fmt), matrix(reg, m, fmt)
             bad = np.flatnonzero(predict(new) != predict(old))
             print(f'    {fmt}: {len(ARC) - len(bad)} of {len(ARC)} '
-                  f'predictions as in lm-arc-scores-v1' + ''.join(
+                  f'predictions as in lm-arc-scores-v2' + ''.join(
                       f'; {ARC_IDS[i]} (margin {margin(old)[i]:.3f})'
                       for i in bad))
     scores = pd.concat(parts, ignore_index=True)
 else:
-    print('no GPU: the grid is read from lm-arc-scores-v1')
+    print('no GPU: the grid is read from lm-arc-scores-v2')
 ```
 
 <!-- Placeholder (stage 2): the same items at another batch size and in fp32 (regenerated only under RERUN), and what the drift does to predictions. -->
@@ -1476,7 +1481,7 @@ if 'arc-scores' in RERUN:
         scores = scores.merge(pd.concat(parts), on=key, how='left')
     save_rerun('lm-arc-scores.parquet',
                lambda path: scores.to_parquet(path, index=False))
-arc = pd.read_parquet(artifact('lm-arc-scores-v1', 'lm-arc-scores.parquet'))
+arc = pd.read_parquet(artifact('lm-arc-scores-v2', 'lm-arc-scores.parquet'))
 rows = []
 for name, m, a, b in [('bf16, batch 8 vs 1', PAIR[0], 'll', 'll_bs1'),
                       ('bf16, batch 8 vs 1', PAIR[1], 'll', 'll_bs1'),

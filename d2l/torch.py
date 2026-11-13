@@ -5637,18 +5637,23 @@ d2l.DATA_HUB['lm-heldout-texts-v1'] = (
     d2l.LM_DATA_URL + 'lm-heldout-texts-v1.json',
     '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
 # This section's measured results, written by a run with D2L_RERUN=1
-d2l.DATA_HUB['lm-bpb-v1'] = (
-    d2l.LM_DATA_URL + 'lm-bpb-v1.csv',
-    '7c2ceeeda10b3f4ca6774821ed426c896442c3d3')
+# (Qwen3.5 rows measured on the fused Gated DeltaNet kernel of 18.1)
+d2l.DATA_HUB['lm-bpb-v2'] = (
+    d2l.LM_DATA_URL + 'lm-bpb-v2.csv',
+    'cc1ebee310ca335ec420c47de5fa88a50301e6cf')
+# lm-gsm8k-samples-v1 stays registered: 18.7 reads its problem ids
 d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
     '11b561b6fb07d19016f5a00b4a5dcf35d3dbbb07')
-d2l.DATA_HUB['lm-arc-generations-v2'] = (  # direct budget 512 tokens
-    d2l.LM_DATA_URL + 'lm-arc-generations-v2.jsonl',
-    '6a42d4b5ef29a40d7241039779cb9b9fc40e0afc')
-d2l.DATA_HUB['lm-arc-scores-v1'] = (
-    d2l.LM_DATA_URL + 'lm-arc-scores-v1.parquet',
-    'e4e1ea4b45a7a5288ae3b914459e60228b5e2931')
+d2l.DATA_HUB['lm-gsm8k-samples-v2'] = (
+    d2l.LM_DATA_URL + 'lm-gsm8k-samples-v2.jsonl',
+    'e02bde69f9fca1f0af49d1170088d87a304ceb0f')
+d2l.DATA_HUB['lm-arc-generations-v3'] = (  # direct budget 512 tokens
+    d2l.LM_DATA_URL + 'lm-arc-generations-v3.jsonl',
+    'ecce2bd3b74bebd0bbc6355b1b8176d949c8abaf')
+d2l.DATA_HUB['lm-arc-scores-v2'] = (
+    d2l.LM_DATA_URL + 'lm-arc-scores-v2.parquet',
+    '6f28f8ca8ce1f5acee402086e2907b3116f758be')
 
 def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
     """Download DATA_HUB[key] into root/key/ and return its local path.

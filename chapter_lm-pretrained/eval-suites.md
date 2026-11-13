@@ -242,7 +242,7 @@ show = lambda r, d=3: f'{r.mean:.{d}f} {interval(r, d)}'  # mean [lo, hi]
 %%tab pytorch
 CKPTS = ['Qwen/Qwen3-0.6B-Base', 'Qwen/Qwen3-0.6B', 'Qwen/Qwen3.5-0.8B-Base',
          'Qwen/Qwen3.5-0.8B', 'Qwen/Qwen3-1.7B']  # those of the last section
-arc = pd.read_parquet(d2l.download_keyed('lm-arc-scores-v1'))
+arc = pd.read_parquet(d2l.download_keyed('lm-arc-scores-v2'))
 arc = arc[arc.fmt == 'cloze'].sort_values(['model', 'item_id', 'choice'])
 assert set(arc.model) == set(CKPTS)
 
@@ -416,7 +416,7 @@ print(f'separate intervals overlap, paired interval excludes 0: '
 
 ```{.python .input #eval-suites-cluster-pool}
 %%tab pytorch
-pool = read_table(d2l.download_keyed('lm-gsm8k-samples-v1'))
+pool = read_table(d2l.download_keyed('lm-gsm8k-samples-v2'))
 POOL = ['Qwen/Qwen3-0.6B', 'Qwen/Qwen3.5-0.8B']
 # scored as the dev suite scores GSM8K (the last number unless '####' or
 # 'the answer is' marks one), not with the stored strict column

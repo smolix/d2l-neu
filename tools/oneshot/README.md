@@ -16,6 +16,7 @@ as-is. Nothing in the live build imports or shells out to them.
 | `make_lm_eval_arc_fixture.py` | Made `lm-eval-reference-arc-v1` (18.4): lm-evaluation-harness 0.4.13 on 200 ARC-Challenge items, Qwen3-0.6B-Base fp32, in a throwaway env (2026-11-13). |
 | `make_lm_heldout_texts.py` | Made `lm-heldout-texts-v1` (18.4): book prose and code written after the Qwen3.5 release, at a pinned commit (2026-11-13). |
 | `build_lm_recall_pairs.py` | Made `lm-interp-recall-v1` (18.6): 40 landmark/city recall pairs filtered by Qwen3-0.6B's clean top-1 (2026-11-13). |
+| `time_scoring_rerun.py` | Picks 18.4's regeneration cut level (`D2L_RERUN_CUT`) before a `D2L_RERUN=1` run: times one batch of each generation and re-scoring job on the GPU and prints the fewest declared cuts that fit 30 min. Run on the GPU box before each regeneration of `scoring.md`'s artifacts. |
 
 If you need one again, review it before running — paths and APIs have moved on
 since it was written.

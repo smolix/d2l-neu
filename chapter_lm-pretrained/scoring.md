@@ -135,6 +135,14 @@ assert GPU or not os.environ.get('CUDA_VISIBLE_DEVICES'), (
 RERUN = os.environ.get('D2L_RERUN', '0') == '1'  # regenerate the artifacts
 assert GPU or not RERUN, 'regenerating the artifacts needs a GPU'
 RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
+# The regeneration's declared cuts, in order: D2L_RERUN_CUT=k applies the
+# first k, chosen before the run from the times of one batch per job
+# (tools/oneshot/time_scoring_rerun.py)
+CUT = int(os.environ.get('D2L_RERUN_CUT', '0'))
+assert 0 <= CUT <= 3 and (RERUN or CUT == 0), 'D2L_RERUN_CUT is 0 to 3'
+N_REASON = 100 if CUT >= 1 else 200  # items of the reasoning arm
+GSM_MAX_NEW = 320 if CUT >= 2 else 384  # token budget of a GSM8K sample
+FP32_RUNS = CUT < 3  # the fp32 batch-size re-scorings
 torch.backends.cuda.matmul.allow_tf32 = False  # fp32 means IEEE fp32
 torch.backends.cudnn.allow_tf32 = False
 ieee_fp32 = lambda: not (torch.backends.cuda.matmul.allow_tf32 or
@@ -142,7 +150,7 @@ ieee_fp32 = lambda: not (torch.backends.cuda.matmul.allow_tf32 or
 transformers.logging.set_verbosity_error()  # no notices or progress bars
 transformers.logging.disable_progress_bar()
 huggingface_hub.utils.disable_progress_bars()
-print(f'GPU={GPU}, RERUN={RERUN}')
+print(f'GPU={GPU}, RERUN={RERUN}' + (f', cuts {CUT}' if CUT else ''))
 ```
 
 <!-- Placeholder (stage 2): where the measured results live: registered files, or this run's regenerated ones. -->
@@ -543,7 +551,8 @@ assert all(err < tol for *_, err, tol in rows)
 %%tab pytorch
 with open(d2l.download_keyed('lm-eval-reference-arc-v1')) as f:
     ref = json.load(f)
-assert ref['dataset_revision'] in d2l.DATA_HUB['arc-challenge-test'][0]
+assert ref['dataset_revision'] == re.search(  # the pinned ARC commit
+    r'/resolve/([0-9a-f]{40})/', d2l.DATA_HUB['arc-challenge-test'][0])[1]
 assert ref['model'] == BASES[0]
 assert ref['model_revision'] == d2l.HF_REVISIONS[BASES[0]]
 first200 = arc_test[:200]  # in dataset order, as the harness ran them
@@ -700,14 +709,16 @@ def bits_per_byte(model, tokenizer, texts, ctx_len=2048, stride=None,
 with open(d2l.download_keyed('lm-heldout-texts-v1')) as f:
     HELD = {t['name']: unicodedata.normalize('NFC', t['text'])
             for t in json.load(f)['texts']}
-title = re.compile(r' = [^=].* = ')  # a top-level heading starts an article
-WIKI = []
+title = re.compile(r' = [^=].* = ')  # a top-level heading starts an article;
+WIKI, prev = [], ''  # it follows an empty row (text rows can match too)
 for line in pd.read_parquet(d2l.download_keyed('wikitext-2-raw-test')).text:
-    if title.fullmatch(line.rstrip('\n')):
+    if prev == '' and title.fullmatch(line.rstrip('\n')):
         WIKI.append('')
     if WIKI:
         WIKI[-1] += line
+    prev = line
 WIKI = [unicodedata.normalize('NFC', a) for a in WIKI]
+assert len(WIKI) == 60  # the articles of wikitext-2's test split
 BPB_TEXTS = {'wikitext-2': WIKI, 'held-out prose': [HELD['prose']],
              'held-out code': [HELD['code']]}
 for name, texts in BPB_TEXTS.items():
@@ -743,12 +754,13 @@ for n, ctx_len, stride in ((300, 512, 512), (3000, 512, 256)):
     text = tok32.decode(ids[:n])
     bpb = d2l.bits_per_byte(base32, tok32, text, ctx_len, stride)
     nll, times = naive_nll(base32, tok32, text, ctx_len, stride)
-    ref = nll / (math.log(2) * len(text.encode('utf-8')))
-    assert times[0] == 0 and (times[1:] == 1).all()  # each token once
+    full = nll / (math.log(2) * len(text.encode('utf-8')))
+    assert times[0] == 0 and (times[1:] == 1).all()  # the reference scores
+    # each token once, so matching it to 1e-6 tests bits_per_byte's windows
     print(f'{len(times) - 1:,} tokens, ctx {ctx_len}, stride {stride}: '
-          f'bpb {bpb:.6f}, full logits {ref:.6f}, relative difference '
-          f'{abs(bpb - ref) / ref:.1e}')
-    assert abs(bpb - ref) / ref < 1e-6
+          f'bpb {bpb:.6f}, full logits {full:.6f}, relative difference '
+          f'{abs(bpb - full) / full:.1e}')
+    assert abs(bpb - full) / full < 1e-6
 del base32
 free()
 ```
@@ -764,7 +776,8 @@ def bpb_row(model_id, model, tok, text, ctx_len, stride):
     B = sum(len(t.encode('utf-8')) for t in texts)
     bpb = d2l.bits_per_byte(model, tok, texts, ctx_len, stride)
     nll = bpb * math.log(2) * B  # nats
-    return dict(model=model_id, vocab=len(tok),
+    vocab = d2l._lm_unwrap(model).config.get_text_config().vocab_size
+    return dict(model=model_id, vocab=vocab,  # rows of the output layer
                 boundary=_lm_boundary_id(tok), text=text, ctx=ctx_len,
                 stride=stride, T=T, B=B, nll=nll, bpb=bpb,
                 ppl_tok=math.exp(nll / T))
@@ -777,6 +790,13 @@ def bpb_agreement(rows):
                                     on=['model', 'text', 'ctx', 'stride'])
     print(f'{len(both)} of {len(rows)} rows in lm-bpb-v1; max |bpb '
           f'difference| {(both.bpb - both.bpb_v1).abs().max():.1e}')
+
+def bpb_table(rows):
+    """The registered table lm-bpb-v1; before its upload, this run's rows."""
+    path = registered('lm-bpb-v1')
+    if path is None and not rows:
+        path = artifact('lm-bpb-v1', 'lm-bpb.csv')
+    return pd.DataFrame(rows) if path is None else pd.read_csv(path)
 ```
 
 <!-- Placeholder (stage 2): two base models, three texts: tokens per byte, token perplexity, bits per byte. -->
@@ -792,8 +812,7 @@ if GPU:
         del model
         free()
     bpb_agreement(bpb_rows)
-bpb = (pd.DataFrame(bpb_rows) if GPU else
-       pd.read_csv(artifact('lm-bpb-v1', 'lm-bpb.csv')))
+bpb = bpb_table(bpb_rows)
 main = bpb[(bpb.ctx == 2048) & (bpb.stride == 1024)].assign(
     tpb=lambda d: d['T'] / d['B'])  # tokens per byte
 print(main.set_index(['text', 'model'])[['T', 'B', 'tpb', 'ppl_tok', 'bpb']]
@@ -816,10 +835,10 @@ if GPU:
     free()
     bpb_agreement(rows)
     bpb_rows += rows
-    bpb = pd.DataFrame(bpb_rows)
     if RERUN:
-        save_rerun('lm-bpb.csv', lambda path: bpb.to_csv(
+        save_rerun('lm-bpb.csv', lambda path: pd.DataFrame(bpb_rows).to_csv(
             path, index=False, float_format='%.10g'))
+bpb = bpb_table(bpb_rows)
 w = bpb[(bpb.model == BASES[0]) & (bpb.text == 'wikitext-2')]
 print(w.assign(step=np.where(w.stride == w.ctx, 'stride = ctx',
                              'stride = ctx/2'))
@@ -905,7 +924,7 @@ GSM_PROMPTS = [d2l.fewshot_prompt(GSM_DEMOS, q, template='chat_multi')
                for q in gsm_test.question.iloc[GSM_IDS]]
 GSM_GOLD = [d2l.extract_answer(a) for a in gsm_test.answer.iloc[GSM_IDS]]
 GSM_SAMPLER = dict(chat=True, enable_thinking=False, strategy='sample',
-                   temperature=0.7, p=0.8, k=20, max_new_tokens=384)
+                   temperature=0.7, p=0.8, k=20, max_new_tokens=GSM_MAX_NEW)
 
 def hash_only(text):
     """The number after the last '####', GSM8K's answer line, or None."""
@@ -1194,16 +1213,16 @@ ARC_CHAT = [d2l.format_mc(q, o, 'letter')[0].removesuffix('Answer:') + ASK
 ARMS = {  # arm: (models, number of subset items, settings of generate)
     'direct': ([PAIR[0], PAIR[1], 'Qwen/Qwen3-1.7B'], 500, dict(
         strategy='greedy', enable_thinking=False, max_new_tokens=128)),
-    'reasoning': ([PAIR[0], 'Qwen/Qwen3-1.7B'], 200, dict(
+    'reasoning': ([PAIR[0], 'Qwen/Qwen3-1.7B'], N_REASON, dict(
         strategy='sample', temperature=0.6, p=0.95, k=20, seed=0,
         enable_thinking=True, max_new_tokens=1024))}
 
-def boxed_letter(g, n_options):
+def boxed_letter(text, n_options, finished=True):
     """The option a finished reply commits to in its last \\boxed{} after
-    any thinking, or None."""
-    if g.finish_reason == 'length':
+    any thinking, or None; a reply cut at its token budget commits to none."""
+    if not finished:
         return None
-    s = d2l.extract_answer(g.text.split('</think>')[-1], 'boxed') or ''
+    s = d2l.extract_answer(text.split('</think>')[-1], 'boxed') or ''
     m = re.match(r'(?:\\text\{)?\(?([A-Z])(?![A-Za-z])', s)
     return m[1] if m and ord(m[1]) - ord('A') < n_options else None
 ```
@@ -1220,7 +1239,8 @@ if RERUN:
             if m in models:
                 out = d2l.generate(model, tok, ARC_CHAT[:n], chat=True,
                                    batch_size=50, **settings)
-                letters = [boxed_letter(g, len(it[2]))
+                letters = [boxed_letter(g.text, len(it[2]),
+                                        g.finish_reason != 'length')
                            for it, g in zip(ARC, out)]
                 records += [dict(
                     model=m, revision=d2l.HF_REVISIONS[m], arm=arm,
@@ -1237,15 +1257,21 @@ if RERUN:
                lambda path: write_jsonl(path, records))
 arc_gen = read_jsonl(artifact('lm-arc-generations-v1',
                               'lm-arc-generations.jsonl'))
-summary = arc_gen.assign(
-    parsed=arc_gen.letter.notna(),
-    truncated=arc_gen.finish_reason == 'length').groupby(['model', 'arm'])
+n_opts = dict(zip(ARC_IDS, (len(it[2]) for it in ARC)))
+at_cap = arc_gen.finish_reason == 'length'
+boxed = np.array([boxed_letter(t, n_opts[i]) is not None  # as if finished
+                  for t, i in zip(arc_gen.text, arc_gen.item_id)])
+summary = arc_gen.assign(  # direct replies cut after a boxed letter
+    invalid=arc_gen.letter.isna() & ~at_cap, truncated=at_cap,
+    boxed_then_cut=(at_cap & boxed).astype(float).where(
+        arc_gen.arm == 'direct')).groupby(['model', 'arm'])
 print(pd.DataFrame({
     'accuracy': summary.correct.mean(),
     'among parsed': arc_gen[arc_gen.letter.notna()].groupby(
         ['model', 'arm']).correct.mean(),
-    'invalid': 1 - summary.parsed.mean() - summary.truncated.mean(),
+    'invalid': summary.invalid.mean(),
     'truncated': summary.truncated.mean(),
+    'boxed, then cut': summary.boxed_then_cut.mean(),
     'mean tokens': summary.n_tokens.mean()}).round(3).to_string())
 ```
 
@@ -1336,9 +1362,10 @@ else:
 ```{.python .input #scoring-batch-size}
 %%tab pytorch
 BATCH_RUNS = [(PAIR[0], torch.bfloat16, 1, 'll_bs1'),  # model, dtype,
-              (PAIR[1], torch.bfloat16, 1, 'll_bs1'),  # batch size, column
-              (PAIR[0], torch.float32, 1, 'll_fp32_bs1'),
-              (PAIR[0], torch.float32, 8, 'll_fp32_bs8')]
+              (PAIR[1], torch.bfloat16, 1, 'll_bs1')]  # batch size, column
+if FP32_RUNS:
+    BATCH_RUNS += [(PAIR[0], torch.float32, 1, 'll_fp32_bs1'),
+                   (PAIR[0], torch.float32, 8, 'll_fp32_bs8')]
 if RERUN:
     assert ieee_fp32()
     key, extra, tic = ['model', 'fmt', 'item_id', 'choice'], {}, time.time()
@@ -1361,6 +1388,9 @@ for name, m, a, b in [('bf16, batch 8 vs 1', PAIR[0], 'll', 'll_bs1'),
                       ('bf16, batch 8 vs 1', PAIR[1], 'll', 'll_bs1'),
                       ('fp32, batch 1 vs 8', PAIR[0], 'll_fp32_bs1',
                        'll_fp32_bs8')]:
+    if b not in arc:
+        print(f'{name}: cut from the regeneration run')
+        continue
     for conv in ('cloze-sum', 'letter-0'):
         sa, sb = (convention_scores(arc, m, conv, c) for c in (a, b))
         change = np.nanmax(np.abs(sa - sb))
@@ -1419,16 +1449,19 @@ verdicts = pd.DataFrame({
         arc, m, 'cloze-sum'))],
     'letter-0': [chr(65 + i) for i in predict(convention_scores(
         arc, m, 'letter-0'))],
-    'gen-direct': gen_column(m, 'direct', 'letter').fillna('none')})
-n_verdicts = verdicts.nunique(axis=1).to_numpy()
-rule = 3 if (n_verdicts == 3).any() else 2  # three apart, else two
+    'gen-direct': gen_column(m, 'direct', 'letter').to_numpy()})
+committed = verdicts['gen-direct'].notna().to_numpy()  # a parsed reply
+n_verdicts = np.where(committed, verdicts.nunique(axis=1), 0)
+rule = 3 if (n_verdicts == 3).any() else 2  # three letters, else two
+assert (n_verdicts >= rule).any(), 'no item with two different letters'
 i = int(np.argmax(n_verdicts >= rule))
 _, q, opts, gold = ARC[i]
 print(q + ''.join(f'\n{a}. {o}' for a, o in zip('ABCDE', opts)))
 print(f'gold {"ABCDE"[gold]}; Qwen3-0.6B: ' + ', '.join(
     f'{k} {v}' for k, v in verdicts.iloc[i].items()))
-print(f'first item with {rule} different verdicts ({ARC_IDS[i]}); items '
-      f'with at least two: {(n_verdicts > 1).sum()} of {len(ARC)}')
+print(f'first item with {rule} different letters ({ARC_IDS[i]}); items '
+      f'with at least two: {(n_verdicts > 1).sum()} of {committed.sum()} '
+      f'with a parsed reply')
 ```
 
 <!-- Placeholder (stage 2): accuracy with item-bootstrap intervals per checkpoint and convention, and the gold answer's bits per byte. -->
@@ -1491,13 +1524,14 @@ for m in MODELS:
 for base, post in zip(BASES, PAIR):
     print(f'{post} - {base}, (letter-0 - cloze-sum): '
           f'{show(boot(gain(post), gain(base)))}')
-for m in ARMS['reasoning'][0]:
-    a, b = (gen_column(m, arm, 'letter').iloc[:200] for arm in ARMS)
-    tokens = [gen_column(m, arm, 'n_tokens').iloc[:200].mean()
+for m in ARMS['reasoning'][0]:  # on the first n subset items
+    n = gen_column(m, 'reasoning', 'n_tokens').notna().sum()
+    a, b = (gen_column(m, arm, 'letter').iloc[:n] for arm in ARMS)
+    tokens = [gen_column(m, arm, 'n_tokens').iloc[:n].mean()
               for arm in ARMS]
     d = paired(CORRECT[m, 'gen-reasoning'], CORRECT[m, 'gen-direct'])
     print(f'{m}: reasoning - direct {show(d)}; letters differ on '
-          f'{(a.fillna("") != b.fillna("")).sum()} of 200; mean tokens '
+          f'{(a.fillna("") != b.fillna("")).sum()} of {n}; mean tokens '
           f'{tokens[1]:.0f} (reasoning) and {tokens[0]:.0f} (direct)')
 ```
 

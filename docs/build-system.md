@@ -1424,7 +1424,10 @@ D2L_RERUN=1 python3 tools/notebook_scheduler.py --frameworks pytorch \
 
 reaches the kernel. A regeneration run must finish within 30 min measured;
 past that, the section applies its declared cuts in their declared order,
-chosen from wall clock alone. Regenerate, upload, then run the notebook once
+chosen from wall clock alone. 18.4 (`scoring.md`) reads its cut level from
+`D2L_RERUN_CUT=k` (the first k of its three cuts), and
+`tools/oneshot/time_scoring_rerun.py` picks k before the run from the times
+of one batch per job, so the cut is fixed before any accuracy is printed. Regenerate, upload, then run the notebook once
 more without `D2L_RERUN` and capture that run.
 
 **API logs (`D2L_API_LOG_DIR`).** The models-behind-an-API section (18.7,

@@ -13,9 +13,9 @@ Rules:
 
 | Name | Owner | Canonical signature and return | Main consumers |
 |---|---|---|---|
-| `d2l.load_hf` | 1.1 | `(model_id, revision=None, dtype=torch.bfloat16, device_map='auto') -> (model, tokenizer)` | all |
+| `d2l.load_hf` | 1.1 | `(model_id, revision=None, dtype=torch.bfloat16, device_map='auto', *, attn_implementation=None) -> (model, tokenizer)`; `None` takes `d2l.hf_attention(config, device)` (`flex_sdpa` for sliding-window layers on a GPU of compute capability ≥ 8.0, else `sdpa`); prints a second report line, `kernels: ...` (`d2l.hf_kernels`) | all |
 | `d2l.config_params` | 1.1 | `(config, include_vision=False, include_mtp=False, by_group=False) -> int \| dict[str, int]`. Dense and hybrid configs only; MoE raises `NotImplementedError('use d2l.config_stats (14.1)')`. With `by_group=True`, returns per-group counts that sum to the total. | 14.1 |
-| `d2l.config_memory` | 1.1 | `(config, seq_len, batch_size, dtype_bytes=2, *, state_bytes=4, ...) -> dict` with keys `params, weights, kv_cache, recurrent_state, activations, logits, total` | 5.x, 6.x, 7.1, 14.x |
+| `d2l.config_memory` | 1.1 | `(config, seq_len, batch_size, dtype_bytes=2, *, state_bytes=4, ...) -> dict` with keys `params, weights, kv_cache, recurrent_state, activations, logits, total`; `activations` is a prefill's peak working set with the kernels `load_hf` binds (measured within 4%; pass `window_cached=seq_len` for a prefill's total) | 5.x, 6.x, 7.1, 14.x |
 | `d2l.load_qwen3` | 1.2 | `(model_id='Qwen/Qwen3-0.6B', revision=None, *, dtype=torch.bfloat16, device=None) -> d2l.Qwen3GPT` (built on the meta device, weights assigned) | 4, 11, 12, 13 |
 | `d2l.Qwen3Attention(d2l.CausalAttention)` | 1.2 | `(num_hiddens, num_heads, num_kv_heads, *, head_dim=None, qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False, rope=True, causal=True)`; adds `forward_step(X, cache)`. The book's class is unchanged. | 4.1 (`PackedAttention`), 12, 13, 14 |
 | `d2l.SwiGLU(d2l.FeedForward)` | 1.2 | `(num_hiddens, hidden, bias=False)`: SwiGLU with an explicit width, names `W_g, W_1, W_2` | 14.6 |
@@ -177,7 +177,11 @@ additive or a correction.
 **New exports** (owner in parentheses):
 - 1.1: `d2l.safetensors_header(model_id, revision=None)`; `config_params` gains the groups `per_layer_embed` and
   `per_layer_proj` (Gemma 4) and MoE detection by truthiness and `enable_moe_block`; `config_memory` gains the
-  keyword-only `conv_bytes`, `conv_taps`, `window_cached`, `logits_to_keep`.
+  keyword-only `conv_bytes`, `conv_taps`, `window_cached`, `logits_to_keep`. Kernels (2026-11-13):
+  `d2l.bind_hf_kernels()` (routes Transformers' Gated DeltaNet functions: fused `fla` kernels for CUDA tensors,
+  the PyTorch reference otherwise; registers the `flex_sdpa` attention), `d2l.hf_attention(config, device)`,
+  `d2l.hf_kernels(model) -> dict`, `d2l.reference_kernels(model)` (context manager: SDPA and the reference
+  Gated DeltaNet inside the block); `load_hf` gains keyword-only `attn_implementation`.
 - 1.2: `d2l.qwen3_rope_tables`, `qwen3_gpt_kwargs`, `qwen3_rope_permutation`, `map_qwen3_state_dict`,
   `collect_hiddens`, `layer_errors`, `first_divergence`, `Generation`, `truncated_probs`, `sample_logits`;
   `d2l.generate` takes a per-row seed (`seed: int | Sequence[int]`, keyword).

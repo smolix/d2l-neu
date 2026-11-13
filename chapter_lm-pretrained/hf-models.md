@@ -55,18 +55,19 @@ from d2l import torch as d2l
 %%tab pytorch
 import accelerate
 import collections
+import contextlib
 import copy
 import functools
 import gc
 import hashlib
 import huggingface_hub
-import importlib.util
 import itertools
 import json
 import os
 import pandas as pd
 import re
 import transformers
+import warnings
 from huggingface_hub import HfApi, file_exists
 from safetensors import safe_open
 from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
@@ -80,6 +81,11 @@ from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
 QWEN, GEMMA = 'Qwen/Qwen3.5-2B', 'google/gemma-4-E2B-it'
 QWEN3 = 'Qwen/Qwen3-0.6B'  # its tokenizer only
 GPU = torch.cuda.is_available()
+# PyTorch's allocator caches freed blocks for reuse, and a tensor larger than
+# every free block takes a new segment, so a batch can run out of memory
+# with gigabytes free in pieces. Expandable segments grow one mapping
+# instead; the setting must precede the first CUDA tensor
+os.environ.setdefault('PYTORCH_ALLOC_CONF', 'expandable_segments:True')
 # On a GPU the studied model runs in bf16; without one, its smallest sibling
 # runs in fp32 and the measurements of the last part are skipped
 RUN_MODEL, RUN_REV, RUN_DTYPE = (
@@ -254,9 +260,136 @@ LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
 d2l.DATA_HUB['lm-hf-memory-speed-v1'] = (
     d2l.LM_DATA_URL + 'lm-hf-memory-speed-v1.json',
     'fce26dfa4ddb9d0463fcfef3ddcb3861ec7226d7')
+d2l.DATA_HUB['lm-hf-memory-speed-v2'] = (  # fused kernels (fla, flex_sdpa)
+    d2l.LM_DATA_URL + 'lm-hf-memory-speed-v2.json',
+    'e1a6407448d04a3aef8cc6fff5ed39cfea549f0b')
 ```
 
-<!-- Placeholder (stage 2): the pinned load, its text model and its report. -->
+<!-- Placeholder (prose, ### Why Kernels Matter): the code a model runs. Transformers binds the fused Gated DeltaNet kernels of flash-linear-attention at import, for every device; load_hf routes CPU tensors to the reference code and picks flex attention for prompts, SDPA for single tokens. -->
+
+```{.python .input #hf-models-kernels}
+%%tab pytorch
+#@save
+_HF_LINEAR_KERNELS = ('torch_chunk_gated_delta_rule',  # a prompt, by chunks
+                      'torch_recurrent_gated_delta_rule',  # one token
+                      'causal_conv1d_fn', 'causal_conv1d_update')
+
+#@save
+def _hf_route(bound):
+    """Transformers' kernel function `bound`, run by the fused kernel it
+    bound at import for CUDA tensors and by its PyTorch reference code for
+    the rest: the fused Triton kernels need a GPU."""
+    import functools
+    import inspect
+    reference = bound.__wrapped__
+    fused = inspect.getclosurevars(bound).nonlocals.get('implementation')
+
+    @functools.wraps(reference)
+    def routed(*args, **kwargs):
+        x = args[0] if args else next(iter(kwargs.values()))
+        if (routed.fused is None or not x.is_cuda
+                or x.dtype == torch.float64):
+            return reference(*args, **kwargs)
+        return bound(*args, **kwargs)
+    routed.fused = None if fused is reference else fused  # None: reference
+    return routed
+
+#@save
+def _hf_flex_sdpa_mask(*args, q_length, **kwargs):
+    """The flex_sdpa mask: a block mask for a prompt, SDPA's mask (one row
+    at most) for a single token."""
+    from transformers import masking_utils
+    mask = (masking_utils.flex_attention_mask if q_length > 1
+            else masking_utils.sdpa_mask)
+    return mask(*args, q_length=q_length, **kwargs)
+
+#@save
+def _hf_flex_sdpa(module, query, key, value, attention_mask, **kwargs):
+    """Flex attention for a prompt, which materializes no n x n mask; SDPA
+    for a single token, where flex's per-step block mask costs time."""
+    from torch.nn.attention.flex_attention import BlockMask
+    from transformers.integrations import flex_attention, sdpa_attention
+    if not isinstance(attention_mask, BlockMask):
+        return sdpa_attention.sdpa_attention_forward(
+            module, query, key, value, attention_mask, **kwargs)
+    if query.shape[-1] > 128:  # flex's default blocks for wide heads need
+        kwargs.setdefault('kernel_options', dict(  # 148 KiB of shared
+            BLOCK_M=32, BLOCK_N=32, num_stages=1))  # memory; sm_89 has 99
+    return flex_attention.flex_attention_forward(
+        module, query, key, value, attention_mask, **kwargs)
+
+#@save
+def bind_hf_kernels():
+    """Route the linear-attention functions of the imported Transformers
+    models by device (`_hf_route`); register the flex_sdpa attention."""
+    import sys
+    from transformers import AttentionInterface, AttentionMaskInterface
+    AttentionInterface.register('flex_sdpa', _hf_flex_sdpa)
+    AttentionMaskInterface.register('flex_sdpa', _hf_flex_sdpa_mask)
+    for name, module in list(sys.modules.items()):
+        if name.startswith('transformers.models.') and module is not None:
+            for fn in _HF_LINEAR_KERNELS:
+                bound = getattr(module, fn, None)
+                if bound is not None and not hasattr(bound, 'fused'):
+                    setattr(module, fn, _hf_route(bound))
+
+#@save
+def hf_attention(config, device):
+    """The attention that runs `config` on `device` without an n x n mask:
+    flex_sdpa if it has sliding-window layers and the device is a GPU of
+    compute capability 8.0 or more, SDPA otherwise."""
+    layers = getattr(config.get_text_config(), 'layer_types', None) or []
+    device = torch.device(device)
+    return ('flex_sdpa' if 'sliding_attention' in layers
+            and device.type == 'cuda'
+            and torch.cuda.get_device_capability(device) >= (8, 0)
+            else 'sdpa')
+
+#@save
+def hf_kernels(model):
+    """The code a model's attention and Gated DeltaNet layers run on a GPU
+    (binding the latter by device first, as load_hf does)."""
+    import sys
+    bind_hf_kernels()
+    module = sys.modules[type(model).__module__]
+    kernels = {'attention': model.config._attn_implementation}
+    if 'linear_attention' in (getattr(model.config, 'layer_types', None)
+                              or []):
+        for key, fn in (('delta rule', 'torch_chunk_gated_delta_rule'),
+                        ('short convolution', 'causal_conv1d_fn')):
+            fused = getattr(module, fn).fused
+            kernels[key] = ('PyTorch' if fused is None
+                            else fused.__module__.split('.')[0])
+    return kernels
+
+#@save
+class reference_kernels:
+    """Run `model` on Transformers' reference code inside a `with` block:
+    SDPA with explicit masks and the PyTorch Gated DeltaNet."""
+    def __init__(self, model):
+        import sys
+        bind_hf_kernels()
+        module = sys.modules[type(model).__module__]
+        self.model, self.routed = model, [
+            getattr(module, fn) for fn in _HF_LINEAR_KERNELS
+            if hasattr(module, fn)]
+
+    def __enter__(self):
+        self.saved = (self.model.config._attn_implementation,
+                      [f.fused for f in self.routed])
+        self.model.set_attn_implementation('sdpa')
+        for f in self.routed:
+            f.fused = None
+        return self.model
+
+    def __exit__(self, *exc):
+        attention, fused = self.saved
+        for f, kernel in zip(self.routed, fused):
+            f.fused = kernel
+        self.model.set_attn_implementation(attention)
+```
+
+<!-- Placeholder (stage 2): the pinned load, its text model, its report and its kernels. -->
 
 ```{.python .input #hf-models-load-hf}
 %%tab pytorch
@@ -265,10 +398,12 @@ _TEXT_KEY_MAPPING = {  # checkpoint key renames for a multimodal file's text
     'gemma4_text': {r'^model\.language_model\.': 'model.'}}
 
 #@save
-def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
+def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto',
+            *, attn_implementation=None):
     """A pinned causal language model from the Hugging Face Hub, text part
-    only, in eval mode, and its tokenizer; prints a load report. The
-    tokenizer's end token joins the stop tokens of `generate`."""
+    only, in eval mode, and its tokenizer; prints a load report and the
+    kernels it runs. The tokenizer's end token joins the stop tokens of
+    `generate`; the attention defaults to `hf_attention`'s choice."""
     import collections
     import warnings
     import transformers
@@ -288,9 +423,16 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
     renames = {}
     if text is not config and text.model_type in _TEXT_KEY_MAPPING:
         renames['key_mapping'] = _TEXT_KEY_MAPPING[text.model_type]
+    bind_hf_kernels()  # registers flex_sdpa; hf_kernels routes the model
+    if attn_implementation is None:  # the device of the first module
+        device = (next(iter(device_map.values()))
+                  if isinstance(device_map, dict) else device_map)
+        attn_implementation = hf_attention(
+            text, 0 if device == 'auto' else device)
     model, info = transformers.AutoModelForCausalLM.from_pretrained(
         model_id, config=text, dtype=dtype, device_map=device_map,
-        use_safetensors=True, output_loading_info=True, **pin, **renames)
+        attn_implementation=attn_implementation, use_safetensors=True,
+        output_loading_info=True, **pin, **renames)
     if info['missing_keys']:  # these modules would stay randomly initialized
         del model  # a kept traceback would otherwise hold its memory
         raise RuntimeError(f'no weights for {sorted(info["missing_keys"])}')
@@ -309,6 +451,8 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
     print(f'{model_id}@{revision[:12]}: {type(model).__name__}, 0 missing '
           f'keys, unexpected keys: {dict(unexpected) or "none"}, stop tokens '
           f'{stop}')
+    print('kernels:', ', '.join(f'{k} {v}'
+                                for k, v in hf_kernels(model).items()))
     devices = set(getattr(model, 'hf_device_map', {}).values())
     if len(devices) > 1:
         warnings.warn(f'{model_id} is spread over {sorted(map(str, devices))}')
@@ -649,9 +793,11 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
 
     The defaults store what Transformers 5.22.2 stores: a sliding layer keeps
     `sliding_window - 1` positions, a linear-attention layer all
-    `linear_conv_kernel_dim` convolution inputs. `activations` estimates one
-    layer's tensors with fused attention; `logits_to_keep` of None or 0 keeps
-    the logits of every position."""
+    `linear_conv_kernel_dim` convolution inputs; a prefill holds every
+    position until it ends: `window_cached=seq_len`. `activations` counts
+    what a prefill holds at its peak with the kernels `load_hf` binds: the
+    residual stream and the largest layer's tensors, rotary tables (under
+    3%) aside. `logits_to_keep` of None or 0 keeps every position's logits."""
     import warnings
     c, t = _hf_text_config(config)
     n, B, b = seq_len, batch_size, dtype_bytes
@@ -663,27 +809,41 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
     conv_bytes = b if conv_bytes is None else conv_bytes
     if conv_taps is None:
         conv_taps = t.get('linear_conv_kernel_dim')
-    kv = state = width = 0  # per sequence; width: Q, K, V entries per token
+    d, H = t['hidden_size'], t['num_attention_heads']
+    gate = 2 if (t.get('attn_output_gate')  # gated attention output
+                 or t['model_type'] == 'qwen3_5_text') else 1
+    kv = state = mixer = 0  # mixer: entries per token of the widest layer
     for kind, d_h, H_kv, shared in _hf_layers(t):
         if kind == 'linear_attention':  # fixed matrix state + conv inputs
-            H_v, d_v = t['linear_num_value_heads'], t['linear_value_head_dim']
-            C = 2 * t['linear_num_key_heads'] * t['linear_key_head_dim'] + (
-                H_v * d_v)
-            state += (H_v * t['linear_key_head_dim'] * d_v * state_bytes
-                      + C * conv_taps * conv_bytes)
+            H_v, d_k = t['linear_num_value_heads'], t['linear_key_head_dim']
+            d_v, K = t['linear_value_head_dim'], (
+                t['linear_num_key_heads'] * d_k)
+            V, C = H_v * d_v, 2 * K + H_v * d_v
+            state += H_v * d_k * d_v * state_bytes + C * conv_taps * conv_bytes
+            # Chunked kernel (64 tokens): the convolved q, k, v and their
+            # copy, normalized q, k, w, u, new values, output, output gate,
+            # one d_k x d_v state per chunk and a 64 x 64 block per chunk
+            mixer = max(mixer, 2 * C + 3 * K + 4 * V
+                        + H_v * (d_k * d_v // 64 + 64))
             continue
-        width = max(width, (t['num_attention_heads'] + 2 * H_kv) * d_h)
+        # Q (and gate), K, V, normalized and rotated Q and K, output (gated)
+        mixer = max(mixer, (3 + 4 * (gate - 1)) * H * d_h + 4 * H_kv * d_h)
         if not shared:  # a KV-sharing layer reads an earlier layer's cache
             kept = min(n, window_cached) if kind == 'sliding_attention' else n
             kv += 2 * H_kv * d_h * b * kept
     f = t['intermediate_size'] * (2 if t.get('use_double_wide_mlp')
                                   and t.get('num_kv_shared_layers') else 1)
+    # The embeddings, the layer input and its normalized copy live across a
+    # layer; the MLP adds the attention's residual and its three f-wide
+    # products. Gemma 4 keeps its per-layer inputs for the whole pass.
+    per_layer = t['num_hidden_layers'] * (
+        t.get('hidden_size_per_layer_input') or 0)
     params = config_params(config, include_vision, include_mtp)
     n_out = min(logits_to_keep, n) if logits_to_keep else n
     memory = {'params': params, 'weights': params * b,
               'kv_cache': B * kv, 'recurrent_state': B * state,
-              'activations': B * n * b * (2 * t['hidden_size'] + 3 * f
-                                          + width),
+              'activations': B * n * b * (max(3 * d + mixer, 4 * d + 3 * f)
+                                          + per_layer),
               'logits': B * n_out * t['vocab_size'] * b}
     memory['total'] = sum(memory.values()) - params
     return memory
@@ -772,6 +932,11 @@ MATMUL = re.compile(
 # A profiler session leaves CUPTI's launch hooks on for the rest of the
 # process, which adds about 5 ms to every later eager decode step: every
 # decode is timed before the first profile.
+# Flex attention is compiled for each new shape; past torch's default of 8
+# recompilations it falls back to code that materializes the n x n scores,
+# which the capacity search below (one shape per batch size) would reach
+torch._dynamo.config.recompile_limit = 64
+warnings.filterwarnings('error', 'flex_attention called without torch.compile')
 
 def cache_bytes(cache):
     """Bytes of the floating-point tensors reachable from a cache object,
@@ -853,52 +1018,62 @@ def step_kernels(model, cache, token, steps=10):
     return kernels, launches
 
 def fits(model, ids, batch, n, budget=BUDGET):
-    """Whether a prefill of `batch` copies of the first n tokens runs with
-    the allocator capped at `budget` bytes, weights included."""
+    """The allocator's overhead (reserved minus requested bytes, each at
+    its peak) of a prefill of `batch` copies of the first n tokens with the
+    allocator capped at `budget` bytes, weights included; None if it runs
+    out of memory."""
     x = ids.repeat(1, -(-n // ids.shape[1]))[:, :n].repeat(batch, 1)
     gc.collect()
     torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
     torch.cuda.set_per_process_memory_fraction(
         budget / torch.cuda.get_device_properties(x.device).total_memory)
     try:
         with torch.inference_mode():
             model(x, logits_to_keep=1, use_cache=True)
-        ok = True
+        stats = torch.cuda.memory_stats()
+        overhead = (stats['reserved_bytes.all.peak']
+                    - stats['requested_bytes.all.peak'])
     except torch.OutOfMemoryError:
-        ok = False
+        overhead = None
     finally:
         torch.cuda.set_per_process_memory_fraction(1.0)
     del x
     gc.collect()
     torch.cuda.empty_cache()
-    return ok
+    return overhead
 
 def capacity(model, config, ids, n=4096):
     """The largest batch at n tokens (doubling, then bisection) and the
     largest power-of-two context at batch 1 within BUDGET: measured, and
-    by the formula."""
+    by the formula for a prefill; prints the allocator's overhead."""
     t = config.get_text_config()
-    assert fits(model, ids, 1, n)
+    overhead = {1: fits(model, ids, 1, n)}
+    assert overhead[1] is not None
     lo = 1
-    while fits(model, ids, 2 * lo, n):
-        lo *= 2
+    while (fit := fits(model, ids, 2 * lo, n)) is not None:
+        lo, overhead[2 * lo] = 2 * lo, fit
     hi = 2 * lo
     while hi - lo > 1:
         mid = (lo + hi) // 2
-        lo, hi = (mid, hi) if fits(model, ids, mid, n) else (lo, mid)
+        if (fit := fits(model, ids, mid, n)) is not None:
+            lo, overhead[mid] = mid, fit
+        else:
+            hi = mid
     context = n
     while (2 * context <= t.max_position_embeddings
-           and fits(model, ids, 1, 2 * context)):
+           and fits(model, ids, 1, 2 * context) is not None):
         context *= 2
-    mem = config_memory(config, n, 1)
+    mem = config_memory(config, n, 1, window_cached=n)
     batch = (BUDGET - mem['weights']) // (mem['total'] - mem['weights'])
     longest = max(2**k for k in range(8, 19)
-                  if 2**k <= t.max_position_embeddings
-                  and config_memory(config, 2**k, 1)['total'] <= BUDGET)
+                  if 2**k <= t.max_position_embeddings and config_memory(
+                      config, 2**k, 1, window_cached=2**k)['total'] <= BUDGET)
     print(f'within 15 GiB, measured: batch {lo} at {n:,} tokens, '
           f'{context:,} tokens at batch 1')
-    print(f'by the formula, its activations an estimate: batch {batch}, '
-          f'{longest:,} tokens')
+    print(f'by the formula: batch {batch}, {longest:,} tokens')
+    print(f'allocator overhead at batch {lo}: {overhead[lo] / MiB:.0f} MiB')
+    return (lo, context), (batch, longest)
 
 def bytes_read(config, n, b=2):
     """Bytes a decode step reads at context n: the weights except the
@@ -916,8 +1091,8 @@ def bytes_read(config, n, b=2):
 
 ```{.python .input #hf-models-run-qwen}
 %%tab pytorch
-def close(measured, derived):  # allocator rounding: 5% or 2 MiB
-    return abs(measured - derived) <= max(0.05 * derived, 2 * MiB)
+def close(measured, derived, rel=0.05):  # allocator rounding: 2 MiB
+    return abs(measured - derived) <= max(rel * derived, 2 * MiB)
 
 def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
     """Memory and decode time at each context, one row per context."""
@@ -930,15 +1105,15 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
         model(out.logits[:, -1:].argmax(-1),  # first decode step
               past_key_values=out.past_key_values)
     del out
-    for n in contexts:
+    for n in contexts:  # a prefill holds every position: window_cached=n
         pinned = config_memory(config, n, 1, b, window_cached=n)
-        need = pinned['total'] - pinned['weights'] + (  # unfused attention
-            t.num_attention_heads * n * n * b)
+        need = 1.1 * (pinned['total'] - pinned['weights'])
         torch.cuda.empty_cache()  # cached blocks count as free below
         if need > torch.cuda.mem_get_info()[0]:
             print(f'{n} tokens skipped: {need / GiB:.1f} GiB not free')
             continue
-        try:
+        try:  # a new length compiles flex attention or tunes fla's
+            prefill(model, ids, n)  # kernels, with their own buffers
             out, before, growth, peak = prefill(model, ids, n)
         except torch.OutOfMemoryError:  # the estimate fell short (R6)
             print(f'{n} tokens skipped: out of memory in the prefill')
@@ -974,7 +1149,7 @@ def measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
             growth_after_step=allocated() - before,
             growth_after_step_derived=(after['kv_cache'] + after[
                 'recurrent_state'] + step.logits.nbytes),
-            peak=peak, act_estimate=mem['activations'],
+            peak=peak, peak_formula=pinned['total'] - pinned['weights'],
             wall_ms_median=wall[0], wall_ms_q1=wall[1], wall_ms_q3=wall[2],
             r_over_beta_datasheet_ms=1e3 * R / BETA_DATASHEET,
             r_over_beta_measured_ms=1e3 * R / beta))
@@ -1004,7 +1179,7 @@ def show(rows):
         'growth/derived': df.growth / df.growth_derived,
         'after step/derived': (df.growth_after_step
                                / df.growth_after_step_derived),
-        'peak/Act': df.peak / df.act_estimate,
+        'peak/formula': df.peak / df.peak_formula,
         'wall ms': df.wall_ms_median, 'q1': df.wall_ms_q1,
         'q3': df.wall_ms_q3, 'R/beta sheet': df.r_over_beta_datasheet_ms,
         'R/beta meas.': df.r_over_beta_measured_ms})
@@ -1015,13 +1190,13 @@ def show(rows):
     print(table.round(2).to_string(index=False))
 
 if GPU:
-    print('Gated DeltaNet kernels:', 'flash-linear-attention'
-          if importlib.util.find_spec('fla') else 'PyTorch reference code')
+    print('kernels:', hf_kernels(model))  # the opening's model, routed
     ids = tokenizer(book, return_tensors='pt').input_ids.to(model.device)
     qwen_rows = measure(model, configs[QWEN], ids, beta)  # profiled later
     show(qwen_rows)
-    for row in qwen_rows:  # C4, right after the prefill
+    for row in qwen_rows:  # C4, right after the prefill; the peak
         assert close(row['growth'], row['growth_derived'])
+        assert close(row['peak'], row['peak_formula'], 0.1)
     out, _, growth, _ = prefill(model, ids, 4096, keep=0)  # every logit
     mem = config_memory(configs[QWEN], 4096, 1, logits_to_keep=0)
     extra = growth - mem['kv_cache'] - mem['recurrent_state']
@@ -1029,7 +1204,56 @@ if GPU:
     print(f'logits of all 4,096 positions: growth beyond the cache '
           f'{extra:,} B, derived {mem["logits"]:,} B')
     assert abs(extra - mem['logits']) <= 0.05 * mem['logits']  # C6
-    capacity(model, configs[QWEN], ids)
+    measured, formula = capacity(model, configs[QWEN], ids)
+    assert abs(measured[0] - formula[0]) <= max(1, 0.1 * formula[0])
+    assert measured[1] == formula[1]
+```
+
+<!-- Placeholder (prose, ### Why Kernels Matter): the same prefill on the fused kernels and on Transformers' reference code: peak memory above the weights, time, and the formula's peak; one decode step. -->
+
+```{.python .input #hf-models-kernel-compare}
+%%tab pytorch
+def compare_kernels(model, config, ids, contexts, decode_at=4096):
+    """Peak memory above the weights and time of a prefill, on the fused
+    kernels and inside reference_kernels, against the formula's peak; and
+    milliseconds per decode step at `decode_at` tokens."""
+    rows, logits = [], {}
+    for n in contexts:
+        x = ids.repeat(1, -(-n // ids.shape[1]))[:, :n]
+        formula = config_memory(config, n, 1, window_cached=n)
+        for name, kernels in (('fused', contextlib.nullcontext),
+                              ('reference', reference_kernels)):
+            row = dict(n=n, kernels=name, formula_GiB=(
+                formula['total'] - formula['weights']) / GiB)
+            with kernels(model):
+                try:  # also compiles and tunes the kernels for n tokens
+                    out, _, _, peak = prefill(model, x, n)
+                except torch.OutOfMemoryError:
+                    rows.append(row | dict(peak_GiB=float('nan')))
+                    continue
+                logits[name] = out.logits[0, -1].float()
+                cache, token = out.past_key_values, out.logits[:, -1:].argmax(-1)
+                del out
+                with torch.inference_mode():
+                    seconds = d2l.Benchmark(lambda: model(
+                        x, logits_to_keep=1, use_cache=True), 1, 3).time
+                row |= dict(peak_GiB=peak / GiB, prefill_s=seconds)
+                if n == decode_at:
+                    row['decode_ms'] = decode_ms(model, cache, token,
+                                                 repeats=5)[0]
+                del cache
+            rows.append(row)
+        if len(logits) == 2:
+            row['max |logit diff|'] = float(
+                (logits['fused'] - logits['reference']).abs().max())
+        logits.clear()
+    print(f'{model.name_or_path}:', hf_kernels(model))
+    print(pd.DataFrame(rows).round(3).to_string(index=False))
+    return rows
+
+if GPU:
+    qwen_compare = compare_kernels(model, configs[QWEN], ids,
+                                   (4096, 16384, 65536))
 ```
 
 <!-- Placeholder (prose, ### Auto Classes and the Text Model): Gemma 4 through load_hf, its load report, and its repository's sampling defaults. -->
@@ -1074,15 +1298,20 @@ if GPU:
     gemma_ids = gemma_tok(book, return_tensors='pt').input_ids.to(
         gemma.device)
     gemma_rows = measure(gemma, configs[GEMMA], gemma_ids, beta)
+    gemma_compare = compare_kernels(gemma, configs[GEMMA], gemma_ids,
+                                    (4096, 16384, 32768, 65536))
     gemma_kernels = profile_steps(gemma, gemma_ids, gemma_rows)  # timed all
     show(gemma_rows)
     print('resident/logical:', [round(r['walker_resident']
                                       / r['walker_logical'], 2)
                                 for r in gemma_rows])
-    for row in gemma_rows:  # C4, after the first decode step
+    for row in gemma_rows:  # C4, after the first decode step; the peak
         assert close(row['growth_after_step'],
                      row['growth_after_step_derived'])
-    capacity(gemma, configs[GEMMA], gemma_ids)
+        assert close(row['peak'], row['peak_formula'], 0.1)
+    measured, formula = capacity(gemma, configs[GEMMA], gemma_ids)
+    assert abs(measured[0] - formula[0]) <= max(1, 0.1 * formula[0])
+    assert measured[1] == formula[1]
 ```
 
 <!-- Placeholder (prose, ### Decode Throughput): where a decode step's time goes, and matrix-product time against bytes read. -->
@@ -1154,7 +1383,7 @@ if GPU:  # Qwen again, to profile it after every timed decode step
         assert at[m]['matmul_ms'] <= 2 * weights_ms  # C7
 ```
 
-<!-- Placeholder (prose, none): the measured rows are written for upload as lm-hf-memory-speed-v1. -->
+<!-- Placeholder (prose, none): the measured rows are written for upload as lm-hf-memory-speed-v2. -->
 
 ```{.python .input #hf-models-save-table}
 %%tab pytorch
@@ -1175,7 +1404,7 @@ if GPU:  # the candidate file; a download never writes to this path
 ```{.python .input #hf-models-plot}
 %%tab pytorch
 if not GPU:  # the rows of the run behind the published figure
-    with open(d2l.download('lm-hf-memory-speed-v1',
+    with open(d2l.download('lm-hf-memory-speed-v2',
                            os.path.join('..', 'data', 'lm'))) as f:
         measured = json.load(f)
 names = {QWEN: 'Qwen3.5', GEMMA: 'Gemma 4'}

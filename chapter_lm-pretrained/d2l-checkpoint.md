@@ -680,18 +680,38 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
     X = long_ids[None]
     blocks = lambda L, R: (L.double() - R).abs().mean(-1).reshape(
         16, 16).mean(1).cpu().numpy()
-    L64 = cached_logits(hf64, X, 256)
-    e_hf = blocks(cached_logits(hf32, X, 256), L64)
-    # the book's formula on the CPU, as the frequency comparison above
-    book_tables = tuple(
-        u.to(device) for u in d2l.rope_tables(4096, 128, base=1e6))
-    for name, tables in (('reference', None), ('book', book_tables)):
-        e = blocks(logits(ours32, X, logits_to_keep=256, tables=tables), L64)
-        text_long, verdict_long = port_rule(e, e_hf)
-        print(f'long prompt, {name} angles: ratio {text_long}')
+    inv64 = 1 / 1e6 ** (torch.arange(0, 128, 2, dtype=torch.float64) / 128)
+    exact = torch.arange(4096, dtype=torch.float64)[:, None] * inv64
+    angles = {'reference': None,  # the book's formula on the CPU, as above
+              'book': d2l.rope_tables(4096, 128, base=1e6),
+              'exact': (exact.cos().float(), exact.sin().float())}
+    L_ours = {name: logits(ours32, X, logits_to_keep=256, tables=None
+                           if t is None else tuple(u.to(device) for u in t))
+              for name, t in angles.items()}
+    L_hf = cached_logits(hf32, X, 256)
+    L64 = cached_logits(hf64, X, 256)  # Transformers: fp32 angles
+
+    class ExactRotary(torch.nn.Module):  # Transformers' interface, but
+        def forward(self, x, position_ids):  # the angles in fp64
+            a = position_ids[..., None].double() * inv64.to(x.device)
+            a = torch.cat((a, a), -1)
+            return a.cos().to(x.dtype), a.sin().to(x.dtype)
+
+    rotary, hf64.model.rotary_emb = hf64.model.rotary_emb, ExactRotary()
+    L64_exact = cached_logits(hf64, X, 256)
+    hf64.model.rotary_emb = rotary  # restore the reference
+    refs = (L64, L64_exact)
+    e_hf = [blocks(L_hf, R).mean() for R in refs]
+    print(f'long prompt: e_HF {e_hf[0]:.1e} against the reference, '
+          f'{e_hf[1]:.1e} against it with exact angles')
+    print(f'{"port angles":12}{"ratio, reference":28}'
+          'ratio, reference with exact angles')
+    for name, L in L_ours.items():
+        rules = [port_rule(blocks(L, R), blocks(L_hf, R)) for R in refs]
+        print(f'{name:12}{rules[0][0]:28}{rules[1][0]}')
         if name == 'reference':
-            assert verdict_long == 'passes'
-    del L64, book_tables
+            assert rules[0][1] == 'passes'
+    del L_ours, L_hf, L64, L64_exact
 if not SMALL:
     assert verdict == 'passes'
 ```
@@ -733,6 +753,12 @@ def batched_errors(model, ref, ids, batch_size):
 print('ratio with the port in batches of ' + ', '.join(
     f'{b}: {batched_errors(ours16, hf64, ids, b).mean() / e16_hf.mean():.3f}'
     for b in (1, 4, 16)))
+hf16.set_attn_implementation('sdpa')  # Transformers' default attention
+e16_sdpa = np.concatenate([mean_abs(logits(hf16, X), logits(hf64, X))
+                           for X in ids.split(4)])
+hf16.set_attn_implementation('eager')  # back to the yardstick above
+print(f'Transformers bf16 with SDPA attention: e_HF {e16_sdpa.mean():.2e}, '
+      f'ratio {port_rule(e16_ours, e16_sdpa)[0]}')
 if not SMALL:
     assert verdict == 'passes'
 ```
@@ -1072,13 +1098,8 @@ if not SMALL:  # Qwen3-1.7B-Base: fp32 reference logits kept on the CPU
     e = {name: np.concatenate([mean_abs(logits(m, X), R.to(device))
                                for X, R in zip(ids.split(4), ref)])
          for name, m in (('hf', hf16), ('ours', ours16))}
-    first = np.arange(0, len(ids), 4)  # the first prompt of each category
-    text, verdict = port_rule(e['ours'][first], e['hf'][first])
-    print(f'Qwen3-1.7B-Base, bf16, 8 prompts: ratio {text}')
-    if (verdict == 'undecided'
-            and e['ours'][first].mean() / e['hf'][first].mean() < 1.2):
-        text, verdict = port_rule(e['ours'], e['hf'])  # all 32 prompts
-        print(f'Qwen3-1.7B-Base, bf16, all 32 prompts: ratio {text}')
+    text, verdict = port_rule(e['ours'], e['hf'])
+    print(f'Qwen3-1.7B-Base, bf16, {len(ids)} prompts: ratio {text}')
     assert verdict == 'passes'
     del hf16, ours16, ref
     release()
@@ -1270,18 +1291,22 @@ for name, (state, changes) in bugs.items():
         there = f'{where}, {times:.3g} x the clean error there'
     rules = [port_rule(np.concatenate(e), e_hf)
              for e, e_hf in ((e32, e32_hf), (e16, e16_hf))]
-    found[name] = where, np.array_equal(errors[:2], floor[:2]), rules
+    found[name] = (where, np.array_equal(errors[:2], floor[:2]), rules,
+                   np.concatenate(e16))
     print(f'{name}: accounting passes; first divergence {there}\n'
           f'  fp32 rule {rules[0][0]}; bf16 rule {rules[1][0]}; top-1 '
           f'agreement with fp64 {top1} of {ids.numel()}')
 del hf64, L64, L32
 release()
-where, exact, _ = found['B4 layers in string order']
+where, exact, _, _ = found['B4 layers in string order']
 print(f'B4: blocks 0 and 1 bitwise equal to the clean port: {exact}')
+ratio, (lo, hi) = ratio_interval(found['B5 every epsilon 1e-5'][3], e16_ours)
+print(f"B5: bf16 logit error over the clean port's {ratio:.3g} "
+      f'[{lo:.3g}, {hi:.3g}]')
 # blocks 0 and 1 are correct; bitwise only on a deterministic device
 assert where == (2, 'attn_out') and (exact or not same)
 if not SMALL:  # B1-B4 fail both logit rules
-    assert all(r[1] == 'fails' for name, (_, _, rules) in found.items()
+    assert all(r[1] == 'fails' for name, (_, _, rules, _) in found.items()
                if not name.startswith('B5') for r in rules)
 ```
 

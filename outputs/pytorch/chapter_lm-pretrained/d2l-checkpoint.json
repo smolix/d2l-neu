@@ -140,7 +140,7 @@
       "outputs": []
     },
     "d2l-checkpoint-fp32-check": {
-      "code_fingerprint": "sha256:9e77a2666b9677a60ab0e65f52423b75ee7bf7d226698d80bcc408f50b6e238f",
+      "code_fingerprint": "sha256:1c89a9a85b808b88d004c8c54927ca2004568f3cca04b775c009e71ae5015f24",
       "kind": "text",
       "outputs": [
         {
@@ -151,17 +151,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "long prompt, reference angles: ratio 1.14 [1.09, 1.19] passes\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "long prompt, book angles: ratio 2.47 [2.23, 2.73] fails\n"
+          "text": "long prompt: e_HF 5.7e-06 against the reference, 2.9e-05 against it with exact angles\nport angles ratio, reference            ratio, reference with exact angles\nreference   1.14 [1.09, 1.19] passes    1.01 [1, 1.02] passes\nbook        2.47 [2.23, 2.73] fails     0.966 [0.925, 1.01] passes\nexact       5.24 [4.68, 5.96] fails     0.232 [0.207, 0.262] passes\n"
         }
       ]
     },
     "d2l-checkpoint-bf16-check": {
-      "code_fingerprint": "sha256:2ab2ee4cfbc85b7488d530ac155e2498b5317604c93a420fe54167d5126cc9af",
+      "code_fingerprint": "sha256:07397a3ffc563fe7a5ba4081e5f0a3c680c63d1b11df0ba54698461bb730c463",
       "kind": "text",
       "outputs": [
         {
@@ -178,31 +173,36 @@
           "type": "stream",
           "name": "stdout",
           "text": "ratio with the port in batches of 1: 0.763, 4: 0.725, 16: 0.712\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Transformers bf16 with SDPA attention: e_HF 3.86e-02, ratio 0.904 [0.884, 0.925] passes\n"
         }
       ]
     },
     "d2l-checkpoint-sampler": {
-      "code_fingerprint": "sha256:3120a6dc6dba40672e1ad97d9359a23950c2b570fcb367d7419fabcbe1d07a61",
+      "code_fingerprint": "sha256:505515aea1879c7bc0b4ad8a6a52060a4cb1f7f2a1408eb57b55fdd5989fd602",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate-paths": {
-      "code_fingerprint": "sha256:ff7f6318f6d77d508c31ae4c97f925efaed9a7a1906455325e03ef9c01b333d6",
+      "code_fingerprint": "sha256:a7a97c8149fe1838dcc0551996c22233c71afba497a6d77c2cec806bcb280ad6",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate-hf": {
-      "code_fingerprint": "sha256:89c20d6dc6395224545a03a7d9aa83ead0ffedebbaad1a3575986073d7c3b995",
+      "code_fingerprint": "sha256:f2b45e48ae3a964d1858e53ed88c45aeb32dd9f8b0b85489a41551d47e791976",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate": {
-      "code_fingerprint": "sha256:07fdf73c0a55fc238693b6de5a79cd41ae790ba92a30ba5290663849b9a83185",
+      "code_fingerprint": "sha256:3bae14bc103054c097f78a3bd22b982c5422450c994e577215935f5cf16a2be0",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-greedy": {
-      "code_fingerprint": "sha256:7a78eff9b48cea187997c78b54416bc44aa03ac9c73351f6536c522c7a2d9655",
+      "code_fingerprint": "sha256:111f2ecd7263ba4f6d2477d1644c0544c0c8f76453dcf93389b543610f1dd3b5",
       "kind": "text",
       "outputs": [
         {
@@ -223,7 +223,7 @@
       ]
     },
     "d2l-checkpoint-chat": {
-      "code_fingerprint": "sha256:f9e395eb87c29dacad2e8a65da1ffc8fcff209850a7d4044828379f9ac0e1a47",
+      "code_fingerprint": "sha256:d1ffb7873f8d14f99ac7c37de0b4048f39b1e0077bdebb7ecd2586cf38b07570",
       "kind": "text",
       "outputs": [
         {
@@ -234,7 +234,7 @@
       ]
     },
     "d2l-checkpoint-ladder": {
-      "code_fingerprint": "sha256:f440d17a31e7aa211a28bf226823daf1d9ca559574dbb6e2544de1f9dbb6fa68",
+      "code_fingerprint": "sha256:44f34d9a3889c589ed7d11ca3059777f5cff8906065d69cbdd7b4700ecfa927a",
       "kind": "text",
       "outputs": [
         {
@@ -250,7 +250,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen3-1.7B-Base, bf16, 8 prompts: ratio 0.889 [0.827, 0.947] passes\n"
+          "text": "Qwen3-1.7B-Base, bf16, 32 prompts: ratio 0.889 [0.86, 0.916] passes\n"
         },
         {
           "type": "stream",
@@ -260,12 +260,12 @@
       ]
     },
     "d2l-checkpoint-hooks": {
-      "code_fingerprint": "sha256:d5fbd3c1667e90c37b4f158663c96a3f831d82e6ae01a6765b93d2eb2b6e2ec9",
+      "code_fingerprint": "sha256:627f3676bce94f64f8fda5be3b13c67fc5cf693703d8da09f5d2990acea8a5ad",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-layer-errors": {
-      "code_fingerprint": "sha256:13700c815f19edb1baa3441fe433f962bd1920d0cb531837757b1ec1355ca738",
+      "code_fingerprint": "sha256:e59e71ab3b8c79baa297c078bea4826705f78b72ff062b451c44a42c068cd138",
       "kind": "text",
       "outputs": [
         {
@@ -291,7 +291,7 @@
       ]
     },
     "d2l-checkpoint-bugs": {
-      "code_fingerprint": "sha256:e8e94cc9beb32a315060363ec40308710eaa9dfb39ba52a8e36b4578dfbd9688",
+      "code_fingerprint": "sha256:61e77e9f378c5114ab1b7e08f5c04320d8d3eab1850461e3e6f6420072cb9c44",
       "kind": "text",
       "outputs": [
         {
@@ -327,12 +327,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B4: blocks 0 and 1 bitwise equal to the clean port: True\n"
+          "text": "B4: blocks 0 and 1 bitwise equal to the clean port: True\nB5: bf16 logit error over the clean port's 1.06 [1.04, 1.09]\n"
         }
       ]
     },
     "d2l-checkpoint-divergence-plot": {
-      "code_fingerprint": "sha256:1f92f0a536f9f8024eddaa87c2c06cfbed0b823a17448c858e5d7f73cd491587",
+      "code_fingerprint": "sha256:03a41b8ac32d5c323973ce9a3ab8ce440353c98673fc8aa176ec307060326e81",
       "kind": "asset",
       "outputs": [
         {
@@ -340,7 +340,7 @@
           "mime": "image/svg+xml",
           "asset": "d2l-checkpoint/d2l-checkpoint-divergence-plot-1.svg",
           "bytes": 44329,
-          "sha256": "sha256:bbfb97c9325febccd9b86285e0c73eb7afd86d09b266c6319b12be1643aaff89"
+          "sha256": "sha256:60e843cc5f9125a15e7a047f0c412ea7ebec0d1dbe9e7cd3e4d73056e56f79ab"
         }
       ]
     }

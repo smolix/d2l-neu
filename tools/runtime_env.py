@@ -265,7 +265,7 @@ FULL_CARD_NOTEBOOKS = {
     # Qwen3.5-2B and Gemma 4 E2B (memory alone would fit two slots); a
     # co-tenant skews the timings the prose quotes (ruling 2026-11-12, Q5).
     "chapter_lm-pretrained/hf-models.ipynb": 1,
-    # 18.7's capture run serves Qwen3.5-4B locally and sweeps concurrency;
+    # 18.7's capture run serves Qwen3-4B locally and sweeps concurrency;
     # continuous batching sizes its KV pool from free memory. The notebook is
     # locked, so only `make rerun-locked` reaches this entry.
     "chapter_lm-pretrained/api.ipynb": 1,

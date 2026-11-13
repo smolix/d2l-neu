@@ -1456,6 +1456,21 @@ min, plus loads), so no cut applies (`SMALL = 0`); tensors peaked at
 Regenerate, upload, then run the notebook once
 more without `D2L_RERUN` and capture that run.
 
+**18.7's capture (`api.md`, locked).** Measured 2026-11-13 on one RTX 4090
+(whole card, `GPU_SLOTS_PER="0,0,0,3"`): the record run
+(`D2L_API_MODE=record make rerun-locked FILES=chapter_lm-pretrained/api.md
+FRAMEWORKS=pytorch`) took 1,204 s (20 min; local sweep about 10 min, local
+determinism about 8 min) and the card peaked at about 11 GB; the replay run
+44 s. The local server is Qwen3-4B, not Qwen3.5-4B: continuous batching in
+Transformers 5.22.2 has no cache for Qwen3.5's `linear_attention` layers
+(and `transformers serve` loads Qwen3.5 as a vision-language class, which it
+serves one request at a time, about 22 tokens/s; `flash-linear-attention`
+moved that only to 24). A rule-only change to the probe (no request
+changes) is applied by one more record run, which replays every cached call
+and rewrites `lm-api-fields.csv`; then repack, upload (a zip already published
+changes only as a new `-v2` key) and
+replay.
+
 **API logs (`D2L_API_LOG_DIR`).** The models-behind-an-API section (18.7,
 locked, §3.7) writes the caches and call logs of development, smoke-test and
 closed-model calls to `$D2L_API_LOG_DIR` (default
@@ -1964,6 +1979,15 @@ log goes to `logs/upload-data-<TS>.log`. Rules:
   credentials file is present.
 - `tools/upload_data_r2.py --delete KEY...` removes keys; outside a `_test/`
   folder it also needs `--force`. Use `lm/_test/` for trial uploads.
+- **Do not fetch a public URL before its key exists.** The custom domain's
+  Cloudflare edge caches a 404 for 8 h (`cache-control: max-age=28800`), so a
+  `curl` of `https://d2l-data.smola.org/lm/<key>` made before the upload
+  keeps serving 404 from that edge after it (seen 2026-11-13 for the seven
+  `lm-api-*-v1` zips). Check absence with `DRY_RUN=1`, which asks the bucket.
+  If it happened, read the object with a query string
+  (`...zip?fresh=1` bypasses the cached entry), check its sha1, and place it
+  at `_notebooks/pytorch/data/lm/<key>/<file>`, where `d2l.download_keyed`
+  finds it with the right sha1 and does not fetch it.
 
 Credentials: `~/.config/d2l/r2-data.env` (or the path in `D2L_R2_DATA_ENV`)
 holds one line `CF_API_TOKEN=...`, a Cloudflare API token scoped to the

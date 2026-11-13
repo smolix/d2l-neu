@@ -1,0 +1,325 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretrained/api.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:4ccce9706c94acf7d8226657bbaf059cebad77da8de5f0df5095d2448c75e574",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0,
+    "execution": {
+      "finished": "2026-11-13T17:43:26Z",
+      "runtime_s": 24.4
+    }
+  },
+  "cells": {
+    "api-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "api-imports-extra": {
+      "code_fingerprint": "sha256:cf070cbc10acc4ac08cdda6b0e900b58663e0a28646eb7186fb6ad688ed50c15",
+      "kind": "text",
+      "outputs": []
+    },
+    "api-config": {
+      "code_fingerprint": "sha256:44f5f817e8320b7c203eb4e43fb99a40c8679f2325a98bc4f16ba98df9f85230",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mode replay, cost cap 5.0 USD, local server replayed\n"
+        }
+      ]
+    },
+    "api-listing": {
+      "code_fingerprint": "sha256:7f33b65f25657ae125a71fe710fc93ea04ff3ac07e5488dc7688c805463cdf8a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "listing retrieved 2026-11-13T17:10:46Z\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "                               model      provider quantization  context  \\\n0  deepseek/deepseek-v4.1-flash-1017    novita/fp8          fp8  1048576   \n1                   qwen/qwen3.8-27b  parasail/fp8          fp8   262144   \n2                  openai/gpt-5-nano        openai      unknown   400000   \n\n   in $/M  out $/M  cached $/M  seed  logprobs  structured_outputs  reasoning  \n0   0.165     0.66      0.0033  True      True                True       True  \n1   0.240     2.20      0.0500  True      True                True       True  \n2   0.050     0.40      0.0050  True     False                True       True  "
+        }
+      ]
+    },
+    "api-weights-arith": {
+      "code_fingerprint": "sha256:83930d80e051099eb3fe381bd3a22f5282f2620929c6a3cfd8b439bc7ebc3195",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "                                weights  params (B)  bf16 (GB)  fp8 (GB)  \\\n0  deepseek-ai/DeepSeek-V4.1-Flash-1017       763.2     1526.4     763.2   \n1                      Qwen/Qwen3.8-27B        27.8       55.6      27.8   \n2                         Qwen/Qwen3-4B         4.0        8.0       4.0   \n\n   4 bits (GB) 24 GB card 8 x 40 GB node  \n0        381.6       none           none  \n1         13.9     4 bits           bf16  \n2          2.0       bf16           bf16  "
+        }
+      ]
+    },
+    "api-first-call": {
+      "code_fingerprint": "sha256:a30f29bcfb0bea89888f82c54b2cc6d986f9a196f035ac1dfdf8db8271862c63",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Let's break it down step by step.\n\n1. **Carmen's money**:  \nCarmen has $100.\n\n2. **Samantha's money**:  \nSamantha has $25 more than Carmen.  \nSo, Samantha = $100 + $25 = $125.\n\n3. **Daisy's money**:  \nDaisy has $50 more than Samantha.  \nSo, Daisy = $125 + $50 = $175.\n\n4. **Total combined**:  \n$100 + $125 + $175 = $400.\n\n\\[\n\\boxed{400}\n\\]\nfinish stop; usage {'cached_tokens': 0, 'completion_tokens': 118, 'cost': 8.382e-05, 'prompt_tokens': 36, 'reasoning_tokens': 0}\n1.46 s; served deepseek/deepseek-v4.1-flash-1017 by Novita; 0.000084 USD from the listing\n"
+        }
+      ]
+    },
+    "api-reasoning-trap": {
+      "code_fingerprint": "sha256:8e399226fcc6c3dd286fdacb6b3325c11bf726d0ded566b349d3b5fbbeba9f07",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "content '', finish length, 258 characters of reasoning; {'cached_tokens': 0, 'completion_tokens': 64, 'cost': 0.0001708, 'prompt_tokens': 125, 'reasoning_tokens': 64}\nthinking off: '$$\\n\\n---\\n\\n### Step 5: Total for both months\\n\\n$$\\n\\\\$120{,}000 + \\\\$90{,}000 = \\\\boxed'; {'cached_tokens': 0, 'completion_tokens': 512, 'cost': 0.0011468, 'prompt_tokens': 85, 'reasoning_tokens': 0}\n"
+        }
+      ]
+    },
+    "api-effort": {
+      "code_fingerprint": "sha256:354ca83d885a98556004ca7b5f8aa3aadb59788d4d84b6a57fe6012a7192a8c4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "an anecdote: n = 5 problems per effort; medians\n        reasoning tokens  completion tokens  seconds     USD\neffort                                                      \nlow                215.0              313.0   3.0338  0.0002\nmedium             218.0              357.0   3.2575  0.0003\nhigh               316.0              429.0   3.9071  0.0003\nmore reasoning tokens at higher effort: yes\n"
+        }
+      ]
+    },
+    "api-local-start": {
+      "code_fingerprint": "sha256:e8c6d6b07b6ee8d0bf958c20180106d319178176b43a661f2230e1fb4185b6c4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "http://127.0.0.1/v1: replayed from the committed caches\n"
+        }
+      ]
+    },
+    "api-probe": {
+      "code_fingerprint": "sha256:5cad74747f375f4223a6240c046a0a26cd7addbfbe69df1b1cd76893c9579a86",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "endpoint                 DeepSeek-V4.1-Flash (Novita) Qwen3.8-27B (Parasail)  \\\nfield                                                                          \nseed                                          ignored                ignored   \nn=2                                           ignored                ignored   \nlogprobs, top 5                               partial               honoured   \nstop=['5']                                   honoured               honoured   \nresponse_format                              honoured               honoured   \nthinking switch                              honoured               honoured   \nmax_completion_tokens=16                     honoured               honoured   \nprompt log-probabilities                      ignored                ignored   \nstream usage                                 honoured               honoured   \n/v1/models                                   honoured               honoured   \n4 concurrent requests                         batched           rate-limited   \n\nendpoint                 gpt-5-nano (OpenAI) Qwen3-4B (local server)  \nfield                                                                 \nseed                                rejected                honoured  \nn=2                                  ignored                 ignored  \nlogprobs, top 5                     rejected                 ignored  \nstop=['5']                          rejected                 ignored  \nresponse_format                     honoured                 ignored  \nthinking switch                     rejected                honoured  \nmax_completion_tokens=16            honoured                 ignored  \nprompt log-probabilities             ignored                rejected  \nstream usage                        honoured                honoured  \n/v1/models                          honoured                 ignored  \n4 concurrent requests                batched                 batched  \nlocal server: batched (latency x 1.12, 0 429s)\nfields transformers serve ignores: ['logprobs', 'max_completion_tokens', 'n', 'response_format', 'stream_options', 'top_logprobs']\n"
+        }
+      ]
+    },
+    "api-request-hash": {
+      "code_fingerprint": "sha256:ab7c90ed1e48cc47cd06c94d1aed7c456fbc4381c17bffd6dade47ab1c4d3306",
+      "kind": "text",
+      "outputs": []
+    },
+    "api-hash-demo": {
+      "code_fingerprint": "sha256:8264d90751f505f0c7f3b68400330c40f96b091d79428a096612be5b901517f4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "request            7cc7806f70bb\nstream=True        7cc7806f70bb\nanother API key    7cc7806f70bb\nreplica=1          d894f66c39ee\nseed=1             55eaa444de1b\nprovider parasail  cda240a315d9\n"
+        }
+      ]
+    },
+    "api-price": {
+      "code_fingerprint": "sha256:ae5d4ce00e0d939afa065a23a97273260f44e536c84e74d66efd63a7df663c2a",
+      "kind": "text",
+      "outputs": []
+    },
+    "api-cost-example": {
+      "code_fingerprint": "sha256:97647db0262d331e8c018b73b97e15001d8ba976e10242cbeafa0ad153760430",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Novita, USD per million tokens: PricePoint(input=0.165, output=0.66, cached_input=0.0033, per=1000000)\n1,000 prompt and 300 completion tokens: 0.000363 USD\nDeepSeek at Thu 02:00 UTC: 0.300 in, 1.200 out\nDeepSeek at Thu 12:00 UTC: 0.150 in, 0.600 out\n"
+        }
+      ]
+    },
+    "api-backoff": {
+      "code_fingerprint": "sha256:ce1d068cdb054f97409aa83d94cb5c1f1e7e9070993b9eebce02acdceedd58ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "api-achat": {
+      "code_fingerprint": "sha256:c11e8001a18ced398df6a5a0bd94c35271e785e665ca5fdd8f14c4d7498325c7",
+      "kind": "text",
+      "outputs": []
+    },
+    "api-chat-batch": {
+      "code_fingerprint": "sha256:a34925b0ac597ab96062146eaed65f226b385ed2de5b51f0b86d8a334d494f78",
+      "kind": "text",
+      "outputs": []
+    },
+    "api-retry-mock": {
+      "code_fingerprint": "sha256:d065f326f96f3f2c7d333d7c2b4055e24d633a783b3bdadce93f2d7abc6e46ca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "attempts 3, 429s 2, retries 2\nAuthenticationError after 1 attempt\n"
+        }
+      ]
+    },
+    "api-backoff-check": {
+      "code_fingerprint": "sha256:e7c36b7b3bdd27b12bf16b595e2bdee8e3b6a84967d97ac12bb909d14810ef79",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E[S] = 0.3575 s; simulated 0.3573 +- 0.0093 s (3 sigma)\njitter False: 238 attempts, all done at 63.0 s\njitter True : 226 attempts, all done at 13.5 s\n"
+        }
+      ]
+    },
+    "api-closed-loop": {
+      "code_fingerprint": "sha256:e671735489be4beb6743117d0019cdff3bf84d0cc63f7ba3db8601d2cf6c1e2e",
+      "kind": "text",
+      "outputs": []
+    },
+    "api-littles-fake": {
+      "code_fingerprint": "sha256:797c842fed6546ac17ce8ae1a8813be5a7fa99c2560f80d979e981baa7e97485",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "    c       X      W  little  sustained  formula X\n0   1   9.745  0.102   0.998      0.998      9.767\n1   2  19.404  0.103   0.998      0.998     19.535\n2   4  38.736  0.103   0.996      0.998     39.070\n3   8  77.639  0.103   0.997      0.998     78.139\n4  16  79.959  0.199   0.996      0.997     80.000\n5  32  80.023  0.399   0.999      0.999     80.000"
+        }
+      ]
+    },
+    "api-sweep-local": {
+      "code_fingerprint": "sha256:ecc919e4cb9d997baaa80132baefdd64f331b6eccaf53dee52e6d44cb379ab73",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "    pass    c       X  X_tokens       W  ttft_p50  ttft_p90  n_429  n_retries  \\\n0      1    1   0.377    24.106   2.653     0.008     0.009      0          0   \n1      1    2   0.706    45.160   2.834     0.008     0.011      0          0   \n2      1    4   1.402    89.705   2.847     0.018     0.021      0          0   \n3      1    8   2.663   170.404   2.996     0.039     0.044      0          0   \n4      1   16   5.082   325.247   3.114     0.055     0.099      0          0   \n5      1   32   8.833   565.339   3.572     0.131     0.159      0          0   \n6      1   64  12.422   795.032   5.227     0.085     0.355      0          0   \n7      1  128  11.730   750.683  10.500     0.185     0.585      0          0   \n8      2    1   0.370    23.691   2.700     0.008     0.008      0          0   \n9      2    2   0.706    45.198   2.829     0.008     0.011      0          0   \n10     2    4   1.389    88.870   2.876     0.017     0.021      0          0   \n11     2    8   2.731   174.759   2.922     0.038     0.044      0          0   \n12     2   16   5.146   329.313   3.077     0.046     0.075      0          0   \n13     2   32   8.439   540.114   3.727     0.134     0.266      0          0   \n14     2   64  12.392   793.080   5.199     0.081     0.236      0          0   \n15     2  128  11.729   750.551  10.388     0.178     0.395      0          0   \n\n    n_failed  little  sustained  \n0          0   0.999      0.999  \n1          0   1.000      0.999  \n2          0   0.998      0.998  \n3          0   0.997      0.996  \n4          0   0.989      0.993  \n5          0   0.986      0.987  \n6          0   1.014      0.995  \n7          0   0.962      0.994  \n8          0   0.999      0.999  \n9          0   0.999      0.999  \n10         0   0.998      0.998  \n11         0   0.997      0.997  \n12         0   0.990      0.994  \n13         0   0.983      0.984  \n14         0   1.007      0.995  \n15         0   0.952      0.993  "
+        }
+      ]
+    },
+    "api-sweep-fit": {
+      "code_fingerprint": "sha256:d344d4b09eb8e938a764df78a58d1f6cec21916a311274c5916e405878d91371",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pass 1: W_0 2.65 s, X_max 12.4 requests/s, c* 33.0, efficiency below 0.7 from c = 64\npass 2: W_0 2.70 s, X_max 12.4 requests/s, c* 33.5, efficiency below 0.7 from c = 64\nknee in both passes: yes\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "api/api-sweep-fit-1.svg",
+          "bytes": 53568,
+          "sha256": "sha256:2650929e077a757c6d02c0ac289202f7abad4acf0b56dd52f0525cfe11738a7b"
+        }
+      ]
+    },
+    "api-sweep-hosted": {
+      "code_fingerprint": "sha256:945dc85390d4c5b9f4d50e390ab7488f88c13f0d5c973e2858dd194b08c6c26d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X(32) / X(1) = 30.2\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "    c       X  X_tokens      W  ttft_p50  ttft_p90  n_429  n_retries  \\\n0   1   0.703    44.878  1.417     1.067     1.350      0          0   \n1   8   5.628   360.203  1.333     0.982     1.168      0          0   \n2  32  21.231  1358.787  1.445     1.032     1.247      0          0   \n\n   n_failed  little  sustained  \n0         0   0.996      0.996  \n1         0   0.937      0.997  \n2         0   0.959      0.996  "
+        }
+      ]
+    },
+    "api-gsm8k-setup": {
+      "code_fingerprint": "sha256:c550978470061dfbc146cd6796c663ce02cb2be6f6dafc954bc6eef53dd663ed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "user      'Natalia sold clips to 48 of her friends in April, and then she s'\nassistant 'Natalia sold 48/2 = 24 clips in May.\\nNatalia sold 48+24 = 72 cli'\nuser      'Weng earns $12 an hour for babysitting. Yesterday, she just did '\nassistant 'Weng earns 12/60 = $0.2 per minute.\\nWorking 50 minutes, she earn'\nuser      'Betty is saving money for a new wallet which costs $100. Betty h'\nassistant \"In the beginning, Betty has only 100 / 2 = $50.\\nBetty's grandpar\"\nuser      'Julie is reading a 120-page book. Yesterday, she was able to rea'\nassistant 'Maila read 12 x 2 = 24 pages today.\\nSo she was able to read a to'\nuser      'Carmen has $100, Samantha has $25 more than Carmen, and Daisy ha'\nparameters: {'temperature': 0, 'seed': 0, 'max_tokens': 512} ; thinking off: reasoning.enabled = False (router), chat_template_kwargs.enable_thinking = False (local)\n"
+        }
+      ]
+    },
+    "api-gsm8k-run": {
+      "code_fingerprint": "sha256:7f10d3c0ede072b9195e78e3e26ef7aea0e45ac1f9aae98e57f11dd25ee052bd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3.8-27B / flagship: accuracy x 0.97, USD per correct x 6.07\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "                accuracy    lo    hi  prompt tokens  completion tokens  \\\narm                                                                      \nflagship r0         0.97  0.93  1.00         461.74             103.90   \nflagship r1         0.97  0.93  1.00         461.74              98.17   \nQwen3.8-27B         0.94  0.89  0.98         566.00             171.52   \nQwen3-4B local      0.83  0.75  0.90         540.16             182.25   \n\n                 p50 s    p90 s  USD per 100  USD per correct  \\\narm                                                             \nflagship r0     1.4054   2.1437       0.0087         0.000090   \nflagship r1     1.4526   2.1276       0.0083         0.000086   \nQwen3.8-27B     1.9663   5.2774       0.0513         0.000546   \nQwen3-4B local  7.5712  12.8917          NaN              NaN   \n\n                GPU-s per correct  \narm                                \nflagship r0                   NaN  \nflagship r1                   NaN  \nQwen3.8-27B                   NaN  \nQwen3-4B local             1.3288  "
+        }
+      ]
+    },
+    "api-gsm8k-compare": {
+      "code_fingerprint": "sha256:dd289aedca997598ea4fe8f1ebf81b4d3d2c091161149c4d0f749dd3d2307f09",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "                     comparison  difference    lo    hi   b  c  McNemar p  \\\n0     flagship r0 - Qwen3.8-27B        0.03 -0.01  0.08   4  1     0.3750   \n1  flagship r0 - Qwen3-4B local        0.14  0.07  0.22  15  1     0.0005   \n2  Qwen3.8-27B - Qwen3-4B local        0.11  0.05  0.18  12  1     0.0034   \n3     flagship r0 - flagship r1        0.00 -0.03  0.03   1  1     1.0000   \n\n      MDE  Holm p                verdict  \n0  0.0624  0.3750  unresolved at n = 100  \n1  0.1055  0.0016               resolved  \n2  0.0967  0.0068               resolved  \n3  0.0398     NaN            noise floor  "
+        }
+      ]
+    },
+    "api-determinism": {
+      "code_fingerprint": "sha256:569da434cdc8850c948c90b75c25ff21716a3a34b7079d75060ce058af375c70",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "under load: 8 background lane(s); the local server batches\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "          condition  problem  replicas  distinct completions  \\\n0          flagship      409        20                     6   \n1          flagship      422        20                     5   \n2          flagship      601        20                     7   \n3       local alone      409         5                     2   \n4       local alone      422         5                     1   \n5       local alone      601         5                     2   \n6  local under load      409         5                     5   \n7  local under load      422         5                     5   \n8  local under load      601         5                     5   \n\n   first divergence, min  median  distinct answers  \n0                   99.0    99.0                 1  \n1                    0.0    95.0                 1  \n2                   12.0    20.0                 1  \n3                  240.0   240.0                 1  \n4                    NaN     NaN                 1  \n5                   80.0    80.0                 1  \n6                   34.0   107.0                 2  \n7                  144.0   222.5                 1  \n8                   12.0    45.0                 3  "
+        }
+      ]
+    },
+    "api-local-stop": {
+      "code_fingerprint": "sha256:3e85c87ee959bddb087c362093cca51caddee294a7e39f280518744ebaa65c6d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "no local server in replay\n"
+        }
+      ]
+    },
+    "api-manifest": {
+      "code_fingerprint": "sha256:0e99d02c6584ac7c710b6dc9247c6d0fafc8f136f06d3910d45fe9dfbcf10671",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cost from the listing / cost the provider reported: 1.0000\nthe recording: 4949 live calls, 0.1003 USD of 5.0; this run 0.0000 USD\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "                                  cache  calls  cache hits  live calls  \\\n0        lm-api-probe-v1/flagship.jsonl      1           1          17   \n1          lm-api-probe-v1/second.jsonl      2           2          19   \n2       lm-api-effort-v1/flagship.jsonl     15          15          15   \n3           lm-api-sweep-v1/local.jsonl   4080        4080        4080   \n4        lm-api-sweep-v1/flagship.jsonl    328         328         328   \n5        lm-api-gsm8k-v1/flagship.jsonl    200         200         200   \n6          lm-api-gsm8k-v1/second.jsonl    100         100         100   \n7           lm-api-gsm8k-v1/local.jsonl    100         100         100   \n8  lm-api-determinism-v1/flagship.jsonl     60          60          60   \n9     lm-api-determinism-v1/local.jsonl     30          30          30   \n\n   retries  429s  failed       USD  \\\n0        0     0       0  0.000484   \n1        7     7       7  0.002896   \n2        0     0       0  0.004169   \n3        0     0       0  0.000000   \n4        0     0       0  0.017266   \n5        0     0       0  0.017025   \n6        0     0       0  0.051318   \n7        0     0       0  0.000000   \n8        0     0       0  0.007191   \n9        0     0       0  0.000000   \n\n                                              served providers  \n0                  deepseek/deepseek-v4.1-flash-1017    Novita  \n1                                   qwen/qwen3.8-27b  Parasail  \n2                  deepseek/deepseek-v4.1-flash-1017    Novita  \n3  Qwen/Qwen3-4B@1cfa9a7208912126459214e8b0432160...      None  \n4                  deepseek/deepseek-v4.1-flash-1017    Novita  \n5                  deepseek/deepseek-v4.1-flash-1017    Novita  \n6                                   qwen/qwen3.8-27b  Parasail  \n7  Qwen/Qwen3-4B@1cfa9a7208912126459214e8b0432160...      None  \n8                  deepseek/deepseek-v4.1-flash-1017    Novita  \n9  Qwen/Qwen3-4B@1cfa9a7208912126459214e8b0432160...      None  "
+        }
+      ]
+    }
+  }
+}

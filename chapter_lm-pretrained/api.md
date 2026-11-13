@@ -21,7 +21,7 @@ when the section is written.
 **Derivation:** Little's law for a closed loop with c in-flight requests and service time W0 at light load: throughput X = min(c / W0, Xmax), with the knee at c* = Xmax W0, and X W = c at every level; the expected sleep of full-jitter backoff after attempt a, half of min(cap, base 2^a). Smallest numeric case: W0 = 2 s and Xmax = 8 requests per second give the knee at 16 in-flight requests; the expected total sleep over six attempts with base 1 s and cap 60 s, summed by hand.
 **Notebook:**
 1. Probe the field matrix on three endpoints (`/v1/models`, `logprobs`, `seed`, `response_format`, thinking controls) and print it; snapshot the router listing with prices and date.
-2. Experiment 1: 100 GSM8K problems (1.4's seeded ids, 4-shot through `d2l.fewshot_prompt(template='chat_multi')`) on DeepSeek-V4.1-Flash-1017 through the router (one pinned provider), on Qwen3.8-27B, and on Qwen3.5-4B behind `transformers serve`; accuracy with intervals, the paired difference, latency p50 and p90, cost from `usage` reconciled with the billing page when live; the flagship run twice (replica 0 and 1) as the noise floor.
+2. Experiment 1: 100 GSM8K problems (1.4's seeded ids, 4-shot through `d2l.fewshot_prompt(template='chat_multi')`) on DeepSeek-V4.1-Flash-1017 through the router (one pinned provider), on Qwen3.8-27B, and on Qwen3-4B behind `transformers serve`; accuracy with intervals, the paired difference, latency p50 and p90, cost from `usage` reconciled with the billing page when live; the flagship run twice (replica 0 and 1) as the noise floor.
 3. Experiment 2: the three longest problems, 20 replicas each at temperature 0 and a fixed seed, hosted, local alone, local under 8 background requests; count distinct completions and the first character of divergence.
 4. Experiment 3: streaming on the flagship at concurrency 1, 2, 4, 8, 16, 32 requests per level, with two shuffled passes (320 requests); throughput, time to first token, 429 counts; fit min(c / W0, Xmax).
 5. One cell: the flagship at three effort settings on five committed prompts, reporting reasoning tokens, completion tokens and wall-clock (an anecdote, labelled as such).
@@ -33,7 +33,7 @@ when the section is written.
 **Writer notes:**
 - Exports (`01_interfaces.md`): `d2l.ChatAPI(base_url, model, api_key=None, *, cache=None, mode='replay', price=None, cost_cap_usd=None, timeout=120.0, max_retries=6, default_params=None, http_client=None)` with `.chat(messages, *, replica=0, stream=False, **params) -> d2l.ChatResult`, `async .achat`, `.models()`, `.spent_usd`, `.manifest()`; `mode='replay'` raises `d2l.ReplayMiss` on a miss so a build can never reach the network; a live call past the cap raises `d2l.CostCapExceeded`; `d2l.chat_batch(api, requests, *, concurrency=8)` returns results in input order with failures as exceptions; `d2l.backoff_delay(attempt, base=1.0, cap=60.0, rng=None, retry_after=None)`; `d2l.PricePoint(input, output, cached_input=None, per=1_000_000)` and `d2l.api_cost(usage, price)`; `d2l.price_from_listing`. The request hash is the sha256 of canonical JSON over host, model, messages, sampling and format params and `replica`; it excludes `stream`, timeouts, headers and keys. The API key is never read from a file and never enters the hash, cache or logs.
 - Wrap `openai.OpenAI` with `max_retries=0` (the SDK retries twice by default and would hide 429s from the counters); retry only connection errors, timeouts and 408, 429, 5xx; raise at once on 400, 401, 403, 404, 422.
-- The flagship is DeepSeek-V4.1-Flash-1017 (MIT, open weights, 763B parameters in a sparse mixture of experts), always by its dated snapshot id, never the re-pointable alias `deepseek-v4.1-flash`; the second hosted arm is Qwen3.8-27B (Apache-2.0, open weights a T2 pair can serve, the larger sibling of the local arm's family); the local arm is Qwen3.5-4B behind `transformers serve` (not Qwen3.5-9B, as the blueprint has it). Pin one provider per model through the router's provider preferences with fallbacks off, choosing one that exposes `logprobs`, `seed` and `structured_outputs` (on 2026-11-06 Morph, Nebius and Novita did for the flagship; DeepSeek's own route lacked `seed` and doubles its price in two weekday windows, 01:00 to 04:00 and 06:00 to 10:00 UTC); record the served model id and provider with every response; `:fastest` switches providers between calls. Fallback if the snapshot leaves the router: the undated alias with the served id recorded, else Qwen3.8-2.4T-A95B at about ten times the price. The release ships no chat template, only a Python prompt encoder, so the hosted arm also withholds how the prompt is encoded.
+- The flagship is DeepSeek-V4.1-Flash-1017 (MIT, open weights, 763B parameters in a sparse mixture of experts), always by its dated snapshot id, never the re-pointable alias `deepseek-v4.1-flash`; the second hosted arm is Qwen3.8-27B (Apache-2.0, open weights a T2 pair can serve, the larger sibling of the local arm's family); the local arm is Qwen3-4B behind `transformers serve` (not Qwen3.5-9B, as the blueprint has it; GPU stage 2026-11-13: not Qwen3.5-4B either, because continuous batching in Transformers 5.22.2 rejects Qwen3.5's `linear_attention` layers and the server falls back to one request at a time, about 22 tokens/s). Pin one provider per model through the router's provider preferences with fallbacks off, choosing one that exposes `logprobs`, `seed` and `structured_outputs` (on 2026-11-06 Morph, Nebius and Novita did for the flagship; DeepSeek's own route lacked `seed` and doubles its price in two weekday windows, 01:00 to 04:00 and 06:00 to 10:00 UTC); record the served model id and provider with every response; `:fastest` switches providers between calls. Fallback if the snapshot leaves the router: the undated alias with the served id recorded, else Qwen3.8-2.4T-A95B at about ten times the price. The release ships no chat template, only a Python prompt encoder, so the hosted arm also withholds how the prompt is encoded.
 - `transformers serve` is documented as experimental and rejects `logprobs`, `n`, `response_format`; the probe matrix is the evidence; fallback for the local arm is vLLM in its own environment. The `d2l.ChatAPI` is a measurement and replay client; 13.1's load-testing client is a different object and neither imports the other.
 - Terms and costs: live runs go through OpenRouter (or a similar aggregator; the Hugging Face router needs a Hub token with the Inference Providers permission) with the token held outside the repository and a fixed per-build budget set as a notebook constant (the cost cap); prices in the listing carry no stated unit, so reconcile with the billing page and use it when they disagree; outputs of the MIT and Apache-2.0 models are committed with attribution, a closed provider's outputs never.
 - Pitfalls to state: timing whole responses and calling it latency; counting streamed chunks as tokens; a `max_tokens` that hidden reasoning consumes (reasoning tokens are inside completion tokens unless the provider says otherwise, asserted from `usage`); comparing local and hosted under different prompts, thinking modes or extractors.
@@ -98,7 +98,10 @@ SECOND = 'qwen/qwen3.8-27b'
 CLOSED = 'openai/gpt-5-nano'  # probe only; its outputs are never committed
 PROVIDERS = {FLAGSHIP: 'novita', SECOND: 'parasail', CLOSED: 'openai'}
 LISTED = [FLAGSHIP, SECOND, CLOSED]  # the router models of the listing
-LOCAL = 'Qwen/Qwen3.5-4B'  # behind transformers serve on our GPU
+# Qwen3-4B, not Qwen3.5-4B: continuous batching in Transformers 5.22.2
+# has no cache for Qwen3.5's linear-attention layers, so it would serve
+# one request at a time
+LOCAL = 'Qwen/Qwen3-4B'  # behind transformers serve on our GPU
 WEIGHTS = {  # the open weights behind each model, at a pinned commit
     FLAGSHIP: ('deepseek-ai/DeepSeek-V4.1-Flash-1017',
                '1bae0e1088993b9b82de08f59de5be5a34e42170'),
@@ -107,11 +110,14 @@ WEIGHTS = {  # the open weights behind each model, at a pinned commit
 LOCAL_MODEL = f'{LOCAL}@{d2l.HF_REVISIONS[LOCAL]}'  # requests name id@rev
 LOCAL_LIVE = API_MODE != 'replay' and torch.cuda.is_available()
 LOCAL_MODE = API_MODE if LOCAL_LIVE else 'replay'
-API_SHA1 = {  # the committed caches (zips); None until a recording is uploaded
-    'lm-api-listing-v1': None, 'lm-api-fields-v1': None,
-    'lm-api-probe-v1': None, 'lm-api-sweep-v1': None,
-    'lm-api-gsm8k-v1': None, 'lm-api-determinism-v1': None,
-    'lm-api-effort-v1': None}
+API_SHA1 = {  # the committed caches (zips), recorded 2026-11-13
+    'lm-api-listing-v1': '4916ce668be31ed37947dac80bc094a70ee75efc',
+    'lm-api-fields-v1': '1978c17699e6266ab84072db23a5699dfa2d42e2',
+    'lm-api-probe-v1': '18ffdf9df2c8aa0de8809f598f041c6d5fe43a56',
+    'lm-api-sweep-v1': '63250dccbf90eae6143b5affe74ae25972f514b1',
+    'lm-api-gsm8k-v1': '1fbb38c4cf5f65fb69da5ba3719cd850ba768dc6',
+    'lm-api-determinism-v1': '448e39446d960dac298a5db3a4e6c0b95051683b',
+    'lm-api-effort-v1': '7480d44c1bc2b6f8d2ac90aadf9f50689b569b9b'}
 for key, sha1 in API_SHA1.items():
     if sha1 is not None:
         d2l.DATA_HUB[key] = (d2l.LM_DATA_URL + key + '.zip', sha1)
@@ -274,18 +280,20 @@ print(f'{r.t_total:.2f} s; served {r.model} by {r.provider}; '
       f'{d2l.api_cost(r.usage, flagship.price):.6f} USD from the listing')
 ```
 
-<!-- Placeholder (stage 2): hidden reasoning is billed as completion tokens and can use up the whole output budget. -->
+<!-- Placeholder (stage 2): hidden reasoning is billed as completion tokens and can use up the whole output budget (on the problem with the longest reference solution: on the first problem Qwen3.8-27B reasoned for 39 tokens and answered inside 64). -->
 
 ```{.python .input #api-reasoning-trap}
 %%tab pytorch
 second = hosted(SECOND, cache_file('lm-api-probe-v1', 'second'),
                 share=0.05)
-trap = second.chat(question, temperature=0, seed=0, max_tokens=64)  # thinks
+LONGEST = sorted(GSM_IDS, key=lambda i: -len(gsm_test.answer[i]))
+hard = [{'role': 'user', 'content': gsm_test.question[LONGEST[0]]}]
+trap = second.chat(hard, temperature=0, seed=0, max_tokens=64)  # thinks
 print(f'content {trap.text!r}, finish {trap.finish_reason}, '
       f'{len(trap.reasoning or "")} characters of reasoning; {trap.usage}')
 assert trap.text == '' and trap.finish_reason == 'length'
 assert trap.usage['reasoning_tokens'] == trap.usage['completion_tokens'] == 64
-answer = second.chat(question, temperature=0, seed=0, max_tokens=512,
+answer = second.chat(hard, temperature=0, seed=0, max_tokens=512,
                      extra_body={'reasoning': {'enabled': False}})
 print(f'thinking off: {answer.text[-80:]!r}; {answer.usage}')
 assert not answer.usage['reasoning_tokens']
@@ -295,7 +303,6 @@ assert not answer.usage['reasoning_tokens']
 
 ```{.python .input #api-effort}
 %%tab pytorch
-LONGEST = sorted(GSM_IDS, key=lambda i: -len(gsm_test.answer[i]))
 effort_api = hosted(FLAGSHIP, cache_file('lm-api-effort-v1', 'flagship'),
                     share=0.2)
 EFFORTS = ('low', 'medium', 'high')
@@ -303,7 +310,7 @@ batch = [{'messages': [{'role': 'user', 'content': gsm_test.question[i]}],
           'temperature': 0, 'seed': 0, 'max_tokens': 16384,
           'extra_body': {'reasoning': {'effort': e}}}
          for e in EFFORTS for i in LONGEST[:5]]
-results = await d2l.chat_batch(effort_api, batch, concurrency=5)
+results = await d2l.chat_batch(effort_api, batch, concurrency=15)
 assert not any(isinstance(r, Exception) for r in results), results
 effort = pd.DataFrame({
     'effort': [e for e in EFFORTS for _ in range(5)],
@@ -377,8 +384,19 @@ def is_answer(text):  # exactly {"answer": <integer>}
     return (isinstance(out, dict) and set(out) == {'answer'} and
             type(out['answer']) is int)
 
-def thinks(r):
-    return bool(r.usage['reasoning_tokens'] or r.reasoning)
+def n_choices(api, a):  # further choices are kept in the cache's extra
+    return max(1, len(api.entries(a.request_hash)[0]['extra'].get(
+        'choices', [])))
+
+def covered(api, a):  # top-5 log-probabilities for every generated token
+    n, out = len(a.logprobs or []), a.usage['completion_tokens']
+    full = all(len(t) == 5 for _, _, t in a.logprobs or [])
+    status = ('honoured' if full and n >= out - 1 else  # the end token
+              'partial' if n else 'ignored')
+    return status, f'{n} of {out} tokens'
+
+def thinks(r):  # a streamed empty think block arrives as '\n\n'
+    return bool(r.usage['reasoning_tokens'] or (r.reasoning or '').strip())
 
 def echoed(api, a):  # prompt log-probabilities, or the prompt echoed
     lp = 'prompt_logprobs' in api.entries(a.request_hash)[0]['extra']
@@ -402,12 +420,9 @@ def tests(base, on, off, max_tokens):
                                        f'7 = 7: {a.text == b.text}, '
                                        f'8 differs: {c.text != a.text}')),
         'n=2': ([(COUNT, 0, p(n=2))], lambda api, a: (
-            len(api.entries(a.request_hash)[0]['extra'].get('choices', [])
-                ) == 2, 'choices returned')),
+            n_choices(api, a) == 2, f'{n_choices(api, a)} choices returned')),
         'logprobs, top 5': ([(COUNT, 0, p(logprobs=True, top_logprobs=5))],
-                            lambda api, a: (bool(a.logprobs) and all(
-                                len(t) == 5 for _, _, t in a.logprobs),
-                                f'{len(a.logprobs or [])} tokens')),
+                            covered),
         "stop=['5']": ([(COUNT, 0, p(stop=['5']))], lambda api, a: (
             '4' in a.text and '5' not in a.text,
             f"has 4: {'4' in a.text}, has 5: {'5' in a.text}")),
@@ -449,9 +464,10 @@ async def check(api, requests_, rule):
         raise
     except Exception as e:  # after the client's retries; never cached
         return (*failure(e), TODAY)
-    honoured, evidence = rule(api, *results)
-    return ('honoured' if honoured else 'ignored', evidence[:80],
-            day(results))
+    honoured, evidence = rule(api, *results)  # a bool, or a status
+    if not isinstance(honoured, str):
+        honoured = 'honoured' if honoured else 'ignored'
+    return honoured, evidence[:80], day(results)
 
 async def probe(name, api, base, on, off, max_tokens, model_id):
     rows = []
@@ -478,15 +494,17 @@ async def probe(name, api, base, on, off, max_tokens, model_id):
         {'messages': COUNT, 'replica': k, **params} for k in range(11, 15)],
         concurrency=4)
     ratio = max(r.t_total for r in four) / one.t_total
-    verdict = ('batched' if ratio < 2 else 'serialized' if ratio > 3
-               else 'partial')
+    n_429 = sum(r.n_429 or 0 for r in [one, *four])  # retries add waits
+    verdict = ('rate-limited' if n_429 else 'batched' if ratio < 2
+               else 'serialized' if ratio > 3 else 'partial')
     rows.append({'endpoint': name, 'field': '4 concurrent requests',
-                 'status': verdict, 'evidence': f'latency x {ratio:.2f}',
+                 'status': verdict,
+                 'evidence': f'latency x {ratio:.2f}, {n_429} 429s',
                  'date': day([one, *four])})
     return rows
 
 fields_file = os.path.join(api_dir('lm-api-fields-v1'), 'lm-api-fields.csv')
-LOCAL_NAME = 'Qwen3.5-4B (local server)'
+LOCAL_NAME = 'Qwen3-4B (local server)'
 if API_MODE != 'replay':  # replay reads the committed table
     router_off, router_on = ({'reasoning': {'enabled': s}}
                              for s in (False, True))
@@ -854,7 +872,7 @@ table.round(3)
 
 ```{.python .input #api-sweep-local}
 %%tab pytorch
-SWEEP = {'max_tokens': 128, 'temperature': 0, 'stream': True}
+SWEEP = {'max_tokens': 64, 'temperature': 0, 'stream': True}  # 30-min run
 
 async def closed_loop(api, c, first, **params):
     """One level of a closed loop: 8c distinct GSM8K train questions from
@@ -980,7 +998,7 @@ gsm_local = local(cache_file('lm-api-gsm8k-v1', 'local'))
 ARMS = {'flagship r0': (gsm_flagship, 0, 8),
         'flagship r1': (gsm_flagship, 1, 8),
         'Qwen3.8-27B': (gsm_second, 0, 8),
-        'Qwen3.5-4B local': (gsm_local, 0, 8 if LOCAL_BATCHES else 1)}
+        'Qwen3-4B local': (gsm_local, 0, 8 if LOCAL_BATCHES else 1)}
 outs = await asyncio.gather(*(chat_batch(api, [
     {'messages': m, 'replica': k, **GSM_PARAMS} for m in GSM_MESSAGES],
     concurrency=c) for api, k, c in ARMS.values()))
@@ -1014,7 +1032,7 @@ print(f'Qwen3.8-27B / flagship: accuracy x '
       f'{gsm.accuracy["Qwen3.8-27B"] / gsm.accuracy["flagship r0"]:.2f}, '
       f'USD per correct x '
       f'{per_correct["Qwen3.8-27B"] / per_correct["flagship r0"]:.2f}')
-gsm.round(4)
+gsm.round(4).assign(**{'USD per correct': gsm['USD per correct'].round(6)})
 ```
 
 <!-- Placeholder (stage 2): paired comparisons with exact McNemar tests, Holm-adjusted, against the replica noise floor. -->
@@ -1028,8 +1046,8 @@ def holm(p):  # Holm's step-down adjustment of p-values
         adjusted[i] = running
     return adjusted
 
-PAIRS = [('flagship r0', 'Qwen3.8-27B'), ('flagship r0', 'Qwen3.5-4B local'),
-         ('Qwen3.8-27B', 'Qwen3.5-4B local'), ('flagship r0', 'flagship r1')]
+PAIRS = [('flagship r0', 'Qwen3.8-27B'), ('flagship r0', 'Qwen3-4B local'),
+         ('Qwen3.8-27B', 'Qwen3-4B local'), ('flagship r0', 'flagship r1')]
 rows = []
 for a, b in PAIRS:
     x, y = CORRECT[a], CORRECT[b]
@@ -1055,24 +1073,26 @@ else:
 compare.round(4)
 ```
 
-<!-- Placeholder (stage 2): Experiment 3: twenty identical requests at temperature 0 with a seed, hosted, local alone and local under load. -->
+<!-- Placeholder (stage 2): Experiment 3: identical requests at temperature 0 with a seed: twenty to the hosted flagship, five each to the local server alone and under load. -->
 
 ```{.python .input #api-determinism}
 %%tab pytorch
 DET_IDS = LONGEST[:3]  # the longest reference solutions
 DET_MESSAGES = [GSM_MESSAGES[GSM_IDS.index(i)] for i in DET_IDS]
 
-def replicas(first):  # 20 replicas of each of the three requests
+def replicas(first, n):  # n replicas of each of the three requests
     return [{'messages': m, 'replica': k, **GSM_PARAMS}
-            for m in DET_MESSAGES for k in range(first, first + 20)]
+            for m in DET_MESSAGES for k in range(first, first + n)]
+
+N_LOCAL = 5  # a local reply takes about 18 s: 30 fit the 30-minute run
 
 det_flagship = hosted(FLAGSHIP, cache_file('lm-api-determinism-v1',
                                            'flagship'),
                       share=0.1, reasoning={'enabled': False})
 det_local = local(cache_file('lm-api-determinism-v1', 'local'))
 on_flagship, alone = await asyncio.gather(
-    chat_batch(det_flagship, replicas(0), concurrency=4),
-    chat_batch(det_local, replicas(0), concurrency=1))
+    chat_batch(det_flagship, replicas(0, 20), concurrency=4),
+    chat_batch(det_local, replicas(0, N_LOCAL), concurrency=1))
 # Under load: background lanes cycle through 64 other test problems; their
 # responses are logged, never replayed (replay skips them). A server that
 # runs one request at a time gets one lane: more would only queue, and no
@@ -1104,7 +1124,8 @@ async def lanes():
 load = asyncio.ensure_future(lanes()) if LOCAL_LIVE else None
 if load is not None:
     await asyncio.sleep(2)  # let the lanes fill
-under_load = await chat_batch(det_local, replicas(100), concurrency=1)
+under_load = await chat_batch(det_local, replicas(100, N_LOCAL),
+                              concurrency=1)
 done.set()
 if load is not None:
     await load
@@ -1113,12 +1134,13 @@ rows = []
 for condition, results in (('flagship', on_flagship), ('local alone', alone),
                            ('local under load', under_load)):
     assert not any(isinstance(r, Exception) or thinks(r) for r in results)
+    n = len(results) // len(DET_IDS)  # replicas per problem
     for k, i in enumerate(DET_IDS):
-        texts = [r.text for r in results[20 * k:20 * k + 20]]
+        texts = [r.text for r in results[n * k:n * k + n]]
         modal = collections.Counter(texts).most_common(1)[0][0]
         firsts = [len(os.path.commonprefix([t, modal]))
                   for t in texts if t != modal]
-        rows.append({'condition': condition, 'problem': i,
+        rows.append({'condition': condition, 'problem': i, 'replicas': n,
                      'distinct completions': len(set(texts)),
                      'first divergence, min': min(firsts, default=None),
                      'median': np.median(firsts) if firsts else None,

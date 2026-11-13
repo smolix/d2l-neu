@@ -4600,6 +4600,10 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
     memory['total'] = sum(memory.values()) - params
     return memory
 
+d2l.DATA_HUB['lm-qwen3-port-prompts-v1'] = (
+    d2l.LM_DATA_URL + 'lm-qwen3-port-prompts-v1.json',
+    'b5840fad4ad3d8d1897c12d522def18f6eb8fa06')
+
 def qwen3_rope_tables(n, head_dim, theta, offset=0, device=None):
     """Cosines and sines, each (n, head_dim / 2) in fp32, of the RoPE angles
     of positions offset, ..., offset + n - 1, with the frequencies computed
@@ -5440,6 +5444,15 @@ d2l.DATA_HUB['wikitext-2-raw-test'] = (
     'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-2-raw-v1/'
     'test-00000-of-00001.parquet',
     'ab23bd60c20d2e169a8dc2d139ab6e7bf8b74e91')
+# Fixed inputs: lm-evaluation-harness's scores on 200 ARC items
+# (tools/oneshot/make_lm_eval_arc_fixture.py) and the held-out texts
+# (tools/oneshot/make_lm_heldout_texts.py)
+d2l.DATA_HUB['lm-eval-reference-arc-v1'] = (
+    d2l.LM_DATA_URL + 'lm-eval-reference-arc-v1.json',
+    'c0bdeb8593b0ba75406025d06e8cbea9016a2c71')
+d2l.DATA_HUB['lm-heldout-texts-v1'] = (
+    d2l.LM_DATA_URL + 'lm-heldout-texts-v1.json',
+    '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
 
 def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
     """Download DATA_HUB[key] into root/key/ and return its local path.
@@ -6469,6 +6482,10 @@ d2l.DATA_HUB['lm-ud-ewt-test'] = (
     'https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/'
     '6b021622f3ab7902730f313fa5955a8b8cdd52b8/en_ewt-ud-test.conllu',
     '41b279558051f482d78fff4ea7b3c8c98c91ecd4')
+# The recall pairs (tools/oneshot/build_lm_recall_pairs.py)
+d2l.DATA_HUB['lm-interp-recall-v1'] = (
+    d2l.LM_DATA_URL + 'lm-interp-recall-v1.json',
+    'e3025b0216df5384d8a14f1e8e10c4cab080ebbf')
 
 class _InterveneStop(Exception):
     """Raised right after the stop_after site, to end a forward early.

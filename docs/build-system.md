@@ -1936,6 +1936,23 @@ Python's `urllib` with its default `Python-urllib/3.x` user agent gets
 **403** from Cloudflare (checked 2026-11-12), so any other downloader must
 send its own `User-Agent`.
 
+`d2l.download` checks the sha1 only when the file is already in the cache; a
+fresh fetch is written without a check. After an upload, confirm a key by
+downloading it into an empty folder and calling `d2l.download` a second time:
+a second call that prints no `Downloading` line found the cached bytes equal
+to the pinned sha1.
+
+Fixed inputs that are not notebook outputs come from authoring scripts that
+write to `data/lm/authoring/` and print the sha1: `tools/lm/make_port_fixtures.py`
+(18.2: `prompts` on the CPU, `logit-ref` on a GPU, `a1-corrupt DIR` for
+assignment A1's hidden state dicts, which are never uploaded),
+`tools/oneshot/make_lm_eval_arc_fixture.py` (18.4; runs lm-evaluation-harness
+0.4.13 in a throwaway `uv` env outside the repository, never in a book venv),
+`tools/oneshot/make_lm_heldout_texts.py` (18.4) and
+`tools/oneshot/build_lm_recall_pairs.py` (18.6). Book text is read with
+`git show` at a commit pinned in each script (`tools/lm/book_text.py`), so a
+rerun reproduces the bytes.
+
 **`make figures` is incremental + manual.** It covers *every* chapter generator —
 including the ch6/7/8/9 ones (`gen_bg_*`, `gen_arch_*`, `gen_opt_figures`) the old
 `gen_mdl_*_figures.py` glob silently skipped — via a `.figstamps/<name>` per

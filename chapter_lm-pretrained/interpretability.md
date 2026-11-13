@@ -77,7 +77,7 @@ d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
     'ce1a79d9c5163932d65c417380e53230e1086370')
 ```
 
-<!-- Placeholder (stage 2): the probe's treebank, pinned to a commit; the section's own artifacts are registered at capture. -->
+<!-- Placeholder (stage 2): the probe's treebank, pinned to a commit, and the recall pairs; the trained artifacts are registered at capture. -->
 
 ```{.python .input #interpretability-data-hub}
 %%tab pytorch
@@ -94,6 +94,10 @@ d2l.DATA_HUB['lm-ud-ewt-test'] = (
     'https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/'
     '6b021622f3ab7902730f313fa5955a8b8cdd52b8/en_ewt-ud-test.conllu',
     '41b279558051f482d78fff4ea7b3c8c98c91ecd4')
+# The recall pairs (tools/oneshot/build_lm_recall_pairs.py)
+d2l.DATA_HUB['lm-interp-recall-v1'] = (
+    d2l.LM_DATA_URL + 'lm-interp-recall-v1.json',
+    'e3025b0216df5384d8a14f1e8e10c4cab080ebbf')
 ```
 
 <!-- Placeholder (stage 2): reading and overwriting the five sites of every block through module hooks. -->

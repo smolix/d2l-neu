@@ -59,6 +59,16 @@ import json
 import sys
 ```
 
+<!-- Placeholder (stage 2): the fixed prompts of the comparison, made by tools/lm/make_port_fixtures.py; the logit reference of assignment A1 is registered here after the GPU run. -->
+
+```{.python .input #d2l-checkpoint-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-qwen3-port-prompts-v1'] = (
+    d2l.LM_DATA_URL + 'lm-qwen3-port-prompts-v1.json',
+    'b5840fad4ad3d8d1897c12d522def18f6eb8fa06')
+```
+
 <!-- Placeholder (stage 2): QK-norm, a wider head and the reference's RoPE angles. -->
 
 ```{.python .input #d2l-checkpoint-qwen3-attention}

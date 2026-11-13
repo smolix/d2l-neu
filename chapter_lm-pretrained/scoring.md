@@ -65,7 +65,7 @@ import time
 import pandas as pd
 ```
 
-<!-- Placeholder (stage 2): the datasets, pinned to commits; the registered artifacts follow at capture. -->
+<!-- Placeholder (stage 2): the datasets, pinned to commits, and the two fixed inputs; the run artifacts are registered at capture. -->
 
 ```{.python .input #scoring-data-hub}
 %%tab pytorch
@@ -96,6 +96,15 @@ d2l.DATA_HUB['wikitext-2-raw-test'] = (
     'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-2-raw-v1/'
     'test-00000-of-00001.parquet',
     'ab23bd60c20d2e169a8dc2d139ab6e7bf8b74e91')
+# Fixed inputs: lm-evaluation-harness's scores on 200 ARC items
+# (tools/oneshot/make_lm_eval_arc_fixture.py) and the held-out texts
+# (tools/oneshot/make_lm_heldout_texts.py)
+d2l.DATA_HUB['lm-eval-reference-arc-v1'] = (
+    d2l.LM_DATA_URL + 'lm-eval-reference-arc-v1.json',
+    'c0bdeb8593b0ba75406025d06e8cbea9016a2c71')
+d2l.DATA_HUB['lm-heldout-texts-v1'] = (
+    d2l.LM_DATA_URL + 'lm-heldout-texts-v1.json',
+    '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
 ```
 
 ```{.python .input #scoring-download}

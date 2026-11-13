@@ -1,0 +1,304 @@
+{
+  "edition": "2026-11",
+  "approved_by": null,
+  "approved_on": null,
+  "compiled_on": "2026-11-13",
+  "conventions": {
+    "values": "Scores and rates are fractions in [0, 1]; dates are ISO (YYYY-MM-DD, or YYYY-MM when only the month is known).",
+    "introduced": "Date of the first public version (arXiv v1 where there is a paper).",
+    "best_published": "Highest score found in the cited source on the date in 'accessed'; 'date' is when that score was published or listed, null when the source does not say. Settings differ between sources (shots, chain of thought, judge), so best_published is a level, not a comparison.",
+    "label_error": "rate = fraction of test items with a wrong or unanswerable reference; the ceiling used by eval-suites-lifecycle is 1 - rate. Definitions differ per source (see 'definition').",
+    "stage": "Stage on the compilation date: introduced, climbed, saturated or replaced (section 18.5)."
+  },
+  "stages": [
+    {
+      "stage": "introduced",
+      "symptom": "the benchmark separates models and every model scores low",
+      "example": {
+        "benchmark": "hle",
+        "date": "2025-01-24",
+        "evidence": "Seven frontier models score 3.3% to 9.1% on the 3,000-question v1 (best: o1, 9.1%; DeepSeek-R1 9.4% on the text-only subset), Table 1.",
+        "best": {"model": "o1", "value": 0.091},
+        "source": "https://arxiv.org/abs/2501.14249v1"
+      }
+    },
+    {
+      "stage": "climbed",
+      "symptom": "the best published score rises quickly",
+      "example": {
+        "benchmark": "gpqa",
+        "date": "2023-11-20 to 2025-07",
+        "evidence": "At release the strongest GPT-4 baseline reaches 39% (experts 65%, 74% discounting clear mistakes); in July 2025 Epoch AI measures Grok 4 at 87% (+-2%) on the Diamond subset, past the expert baseline.",
+        "points": [
+          {"date": "2023-11-20", "model": "GPT-4 (best baseline)", "value": 0.39, "source": "https://arxiv.org/abs/2311.12022"},
+          {"date": "2025-07", "model": "grok-4-0709", "value": 0.87, "source": "https://epoch.ai/benchmarks/gpqa-diamond"}
+        ]
+      }
+    },
+    {
+      "stage": "saturated",
+      "symptom": "top scores bunch below a ceiling set by label errors",
+      "example": {
+        "benchmark": "mmlu",
+        "date": "2025-04-17",
+        "evidence": "o3-high reaches 93.3% (OpenAI simple-evals); 6.49% of MMLU questions are estimated to contain errors, so the ceiling is about 93.5%.",
+        "best": {"model": "o3-high", "value": 0.933},
+        "ceiling": 0.9351,
+        "source": "https://github.com/openai/simple-evals/blob/6ead091ad8e120d82d08ca67b7dbe9cc4629987d/README.md",
+        "ceiling_source": "https://arxiv.org/abs/2406.04127"
+      }
+    },
+    {
+      "stage": "replaced",
+      "symptom": "a harder successor restarts the cycle",
+      "example": {
+        "benchmark": "mmlu_pro",
+        "replaces": "mmlu",
+        "date": "2024-06-03",
+        "evidence": "MMLU-Pro raises the options from four to ten and adds reasoning-focused questions; accuracy drops by 16% to 33% compared to MMLU (abstract).",
+        "source": "https://arxiv.org/abs/2406.01574"
+      }
+    }
+  ],
+  "held_out_tier": {
+    "benchmark": "hle",
+    "design": "a private held-out set kept by the maintainers in addition to the public questions, to assess overfitting and gaming on the public benchmark",
+    "quote": "A private held-out set is kept in addition to the public set to assess model overfitting and gaming on the public benchmark.",
+    "source": "https://arxiv.org/abs/2501.14249v1",
+    "scores_published": false,
+    "scores_quote": "At this time, we do not report any model performance metrics on the private held-out set.",
+    "scores_source": "https://labs.scale.com/leaderboard/humanitys_last_exam",
+    "accessed": "2026-11-13"
+  },
+  "fresh_test_set": {
+    "benchmark": "gsm1k",
+    "for": "gsm8k",
+    "finding": "Accuracy drops of up to 8%; the Phi and Mistral families show systematic overfitting across almost all sizes, while many frontier models show minimal signs of it.",
+    "source": "https://arxiv.org/abs/2405.00332"
+  },
+  "benchmarks": [
+    {
+      "id": "hle",
+      "name": "Humanity's Last Exam",
+      "stage": "climbed",
+      "introduced": "2025-01-24",
+      "source_url": "https://arxiv.org/abs/2501.14249",
+      "licence": "MIT",
+      "licence_source": "https://huggingface.co/datasets/cais/hle",
+      "gated": true,
+      "gated_source": "https://huggingface.co/datasets/cais/hle",
+      "moving": false,
+      "moving_note": "HLE-Rolling (release of 2026-09-17) is a continually updated fork; the leaderboard below scores the fixed public set.",
+      "moving_source": "https://labs.scale.com/leaderboard/humanitys_last_exam",
+      "run_in_book": false,
+      "n_test": 2500,
+      "n_test_source": "https://lastexam.ai/",
+      "n_test_note": "Finalized at 2,500 public questions on 2025-04-03 (v1 of the paper had 3,000).",
+      "label_error": {
+        "rate": 0.293,
+        "ci95": 0.037,
+        "definition": "answers directly conflicted by peer-reviewed research, text-only biology/health and chemistry subsets only (321 questions)",
+        "date": "2025-07-23",
+        "source": "https://www.futurehouse.org/research/hle-exam",
+        "note": "Subset estimate by a third party, not a rate for the whole benchmark."
+      },
+      "best_published": {
+        "model": "GPT 6 Astra",
+        "value": 0.548,
+        "ci95": 0.0194,
+        "setting": "all public questions, o3-mini-2025-01-31 as extractor and judge",
+        "date": null,
+        "accessed": "2026-11-13",
+        "source": "https://labs.scale.com/leaderboard/humanitys_last_exam"
+      },
+      "published": [
+        {"model": "o1", "value": 0.091, "setting": "v1, 3,000 questions, Table 1", "date": "2025-01-24", "source": "https://arxiv.org/abs/2501.14249v1"}
+      ]
+    },
+    {
+      "id": "gpqa",
+      "name": "GPQA (Diamond subset)",
+      "stage": "saturated",
+      "introduced": "2023-11-20",
+      "source_url": "https://arxiv.org/abs/2311.12022",
+      "licence": "CC BY 4.0",
+      "licence_source": "https://huggingface.co/datasets/Idavidrein/gpqa",
+      "gated": true,
+      "gated_source": "https://huggingface.co/datasets/Idavidrein/gpqa",
+      "moving": false,
+      "run_in_book": false,
+      "n_test": 198,
+      "n_test_source": "https://epoch.ai/benchmarks/gpqa-diamond",
+      "human_baseline": {
+        "experts": 0.65,
+        "experts_discounting_clear_mistakes": 0.74,
+        "non_experts": 0.34,
+        "scope": "all 448 questions",
+        "source": "https://arxiv.org/abs/2311.12022"
+      },
+      "label_error": {
+        "rate": null,
+        "source": null,
+        "note": "No primary estimate for the Diamond subset found; secondary sources quote 5% to 10%."
+      },
+      "best_published": {
+        "model": "GPT-6 Astra (xhigh)",
+        "value": 0.963,
+        "setting": "independent evaluation by Artificial Analysis",
+        "date": null,
+        "accessed": "2026-11-13",
+        "source": "https://artificialanalysis.ai/evaluations/gpqa-diamond"
+      },
+      "published": [
+        {"model": "GPT-4 (best baseline)", "value": 0.39, "setting": "paper baseline, all 448 questions", "date": "2023-11-20", "source": "https://arxiv.org/abs/2311.12022"},
+        {"model": "grok-4-0709", "value": 0.87, "setting": "Epoch AI, Diamond, 8 samples per question", "date": "2025-07", "source": "https://epoch.ai/benchmarks/gpqa-diamond"},
+        {"model": "Qwen3-0.6B-Base", "value": 0.2677, "setting": "5-shot, CoT (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"}
+      ]
+    },
+    {
+      "id": "mmlu",
+      "name": "MMLU",
+      "stage": "saturated",
+      "introduced": "2020-09-07",
+      "source_url": "https://arxiv.org/abs/2009.03300",
+      "licence": "MIT",
+      "licence_source": "https://huggingface.co/datasets/cais/mmlu",
+      "gated": false,
+      "moving": false,
+      "run_in_book": "A1 (exercise of 18.4): 5-shot letter format of lm-evaluation-harness",
+      "n_test": 14042,
+      "n_test_source": "https://huggingface.co/datasets/cais/mmlu",
+      "label_error": {
+        "rate": 0.0649,
+        "definition": "questions that contain errors (wrong ground truth, unclear question or options, several correct answers, ...), estimated from an annotated sample (MMLU-Redux)",
+        "date": "2024-06-06",
+        "source": "https://arxiv.org/abs/2406.04127"
+      },
+      "best_published": {
+        "model": "o3-high",
+        "value": 0.933,
+        "setting": "OpenAI simple-evals, zero-shot with chain of thought",
+        "date": "2025-04-17",
+        "accessed": "2026-11-13",
+        "source": "https://github.com/openai/simple-evals/blob/6ead091ad8e120d82d08ca67b7dbe9cc4629987d/README.md",
+        "note": "Frontier releases after 2025 mostly stopped reporting MMLU; aggregator pages list 92% to 93.5% without primary sources."
+      },
+      "published": [
+        {"model": "Qwen3-0.6B-Base", "value": 0.5281, "setting": "5-shot (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"},
+        {"model": "Qwen3-1.7B-Base", "value": 0.6263, "setting": "5-shot (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"},
+        {"model": "OpenAI o1-1217", "value": 0.918, "setting": "Pass@1 (DeepSeek-R1 report, Table 4)", "date": "2025-01-22", "source": "https://arxiv.org/abs/2501.12948"}
+      ]
+    },
+    {
+      "id": "gsm8k",
+      "name": "GSM8K",
+      "stage": "saturated",
+      "introduced": "2021-10-27",
+      "source_url": "https://arxiv.org/abs/2110.14168",
+      "licence": "MIT",
+      "licence_source": "https://huggingface.co/datasets/openai/gsm8k",
+      "gated": false,
+      "moving": false,
+      "run_in_book": "18.5 (report_v1 and the protocol example)",
+      "n_test": 1319,
+      "n_test_source": "https://huggingface.co/datasets/openai/gsm8k",
+      "label_error": {
+        "rate": 0.0076,
+        "count": 10,
+        "n": 1319,
+        "definition": "test questions re-labeled in GSM8K-Platinum (wrong reference answer)",
+        "rejected": 110,
+        "rejected_definition": "questions removed as poorly written, most often ambiguous; GSM8K-Platinum keeps 1,209",
+        "date": "2025-02-05",
+        "source": "https://huggingface.co/datasets/madrylab/gsm8k-platinum",
+        "paper": "https://arxiv.org/abs/2502.03461",
+        "note": "With the 110 rejected questions counted as errors the rate is 120/1319 = 0.091, below the best published score's error rate; the ceiling therefore uses the re-labeled questions only."
+      },
+      "best_published": {
+        "model": "Llama 3.1 405B Instruct",
+        "value": 0.968,
+        "setting": "8-shot, CoT, em_maj1@1",
+        "date": "2024-07-23",
+        "accessed": "2026-11-13",
+        "source": "https://github.com/meta-llama/llama-models/blob/e2e67cd8b0feca839666b7082dcc1c4fc0ae11e2/models/llama3_1/MODEL_CARD.md",
+        "note": "Highest primary-source value found; later frontier reports rarely give GSM8K."
+      },
+      "published": [
+        {"model": "Qwen3-0.6B-Base", "value": 0.5959, "setting": "4-shot, CoT (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"},
+        {"model": "Qwen3-1.7B-Base", "value": 0.7544, "setting": "4-shot, CoT (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"}
+      ]
+    },
+    {
+      "id": "mmlu_pro",
+      "name": "MMLU-Pro",
+      "stage": "saturated",
+      "introduced": "2024-06-03",
+      "replaces": "mmlu",
+      "source_url": "https://arxiv.org/abs/2406.01574",
+      "licence": "MIT",
+      "licence_source": "https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro",
+      "gated": false,
+      "moving": false,
+      "run_in_book": "report_v1 manifest (hash only)",
+      "n_test": 12032,
+      "n_test_source": "https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro",
+      "label_error": {
+        "rate": null,
+        "source": null,
+        "note": "No published estimate found."
+      },
+      "best_published": {
+        "model": "Gemini-3.1-Pro",
+        "value": 0.9116,
+        "setting": "evaluated by TIGER-Lab (official leaderboard)",
+        "date": "2026-03-11",
+        "accessed": "2026-11-13",
+        "source": "https://huggingface.co/datasets/TIGER-Lab/mmlu_pro_leaderboard_submission/blob/4623b7c68d2276218d487464b0608dc978f4b301/results.csv",
+        "note": "'date' is the leaderboard file's commit date."
+      },
+      "published": [
+        {"model": "Qwen3-0.6B-Base", "value": 0.2474, "setting": "5-shot, CoT (Qwen3 Technical Report, Table 8)", "date": "2025-05-14", "source": "https://arxiv.org/abs/2505.09388"},
+        {"model": "DeepSeek-R1", "value": 0.84, "setting": "EM (DeepSeek-R1 report, Table 4)", "date": "2025-01-22", "source": "https://arxiv.org/abs/2501.12948"}
+      ]
+    },
+    {
+      "id": "gsm1k",
+      "name": "GSM1k",
+      "stage": null,
+      "role": "fresh test set for GSM8K (same format and difficulty, newly written)",
+      "introduced": "2024-05-01",
+      "source_url": "https://arxiv.org/abs/2405.00332",
+      "released": "2025-03-31",
+      "released_source": "https://huggingface.co/datasets/ScaleAI/gsm1k",
+      "licence": null,
+      "licence_note": "No licence stated on the dataset card (revision bc09569d09a614b9b530edc7f076fb214ac10493).",
+      "gated": false,
+      "moving": false,
+      "run_in_book": false,
+      "n_test": 1205,
+      "n_test_source": "https://huggingface.co/datasets/ScaleAI/gsm1k",
+      "label_error": {"rate": null, "source": null},
+      "best_published": null,
+      "published": []
+    },
+    {
+      "id": "livebench",
+      "name": "LiveBench",
+      "stage": null,
+      "role": "moving benchmark: questions added and updated in releases; record the release, not a hash",
+      "introduced": "2024-06-27",
+      "source_url": "https://arxiv.org/abs/2406.19314",
+      "licence": null,
+      "licence_note": "No licence on the Hugging Face dataset cards (livebench/*); the GitHub repository's licence is 'Other'.",
+      "gated": false,
+      "moving": true,
+      "latest_release": "2026-01-08",
+      "latest_release_source": "https://github.com/LiveBench/LiveBench/blob/1d1006a0d10ece52c2e706f8a208a659b5bbb96f/changelog.md",
+      "run_in_book": false,
+      "n_test": null,
+      "label_error": {"rate": null, "source": null},
+      "best_published": null,
+      "published": []
+    }
+  ]
+}

@@ -60,14 +60,417 @@ from d2l import torch as d2l
 %%tab pytorch
 import asyncio
 import collections
+import datetime
 import hashlib
 import heapq
+import gc
 import json
 import os
 import random
+import re
+import shutil
+import sys
 import time
+import zipfile
+import huggingface_hub
 import pandas as pd
+import requests
 from scipy import stats
+from transformers.cli.serving.chat_completion import (
+    UNUSED_CHAT_COMPLETION_FIELDS)
+```
+
+<!-- Placeholder (stage 2): the switches of a recording, the models and their pinned providers, and where the caches live. -->
+
+```{.python .input #api-config}
+%%tab pytorch
+API_MODE = os.environ.get('D2L_API_MODE', 'replay')  # or record, live
+assert API_MODE in ('replay', 'record', 'live'), API_MODE
+if API_MODE != 'replay' and not os.environ.get('OPENROUTER_API_KEY'):
+    print(f'D2L_API_MODE={API_MODE} needs OPENROUTER_API_KEY: replaying')
+    API_MODE = 'replay'
+COST_CAP_USD = 5.0  # for all paid calls of one recording
+# Development, smoke and closed-model logs stay outside the repository
+D2L_API_LOG_DIR = os.environ.get('D2L_API_LOG_DIR', os.path.expanduser(
+    '~/.local/share/d2l/lm-api'))
+FLAGSHIP = 'deepseek/deepseek-v4.1-flash-1017'  # a dated snapshot id
+SECOND = 'qwen/qwen3.8-27b'
+CLOSED = 'openai/gpt-5-nano'  # probe only; its outputs are never committed
+PROVIDERS = {FLAGSHIP: 'novita', SECOND: 'parasail', CLOSED: 'openai'}
+LISTED = [FLAGSHIP, SECOND, CLOSED]  # the router models of the listing
+LOCAL = 'Qwen/Qwen3.5-4B'  # behind transformers serve on our GPU
+WEIGHTS = {  # the open weights behind each model, at a pinned commit
+    FLAGSHIP: ('deepseek-ai/DeepSeek-V4.1-Flash-1017',
+               '1bae0e1088993b9b82de08f59de5be5a34e42170'),
+    SECOND: ('Qwen/Qwen3.8-27B', '37561816e66b5b9153b1b64c10968c18c1e6f4a0'),
+    LOCAL: (LOCAL, d2l.HF_REVISIONS[LOCAL])}
+LOCAL_MODEL = f'{LOCAL}@{d2l.HF_REVISIONS[LOCAL]}'  # requests name id@rev
+LOCAL_LIVE = API_MODE != 'replay' and torch.cuda.is_available()
+LOCAL_MODE = API_MODE if LOCAL_LIVE else 'replay'
+API_SHA1 = {  # the committed caches (zips); None until a recording is uploaded
+    'lm-api-listing-v1': None, 'lm-api-fields-v1': None,
+    'lm-api-probe-v1': None, 'lm-api-sweep-v1': None,
+    'lm-api-gsm8k-v1': None, 'lm-api-determinism-v1': None,
+    'lm-api-effort-v1': None}
+for key, sha1 in API_SHA1.items():
+    if sha1 is not None:
+        d2l.DATA_HUB[key] = (d2l.LM_DATA_URL + key + '.zip', sha1)
+RECORD_DIR = os.path.join('..', 'data', 'lm-api', 'record')
+
+def unpack(key):
+    """Download a registered zip (sha1 checked) and unpack it once."""
+    path = d2l.download_keyed(key)
+    folder = os.path.join(os.path.dirname(path), 'files')
+    if not os.path.isdir(folder):
+        with zipfile.ZipFile(path) as z:
+            z.extractall(folder + '.part')
+        os.replace(folder + '.part', folder)
+    return folder
+
+def api_dir(key):
+    """The folder of one artifact: the unpacked zip in replay; otherwise
+    RECORD_DIR/key, seeded once from the zip when it is registered (the
+    downloaded file itself is never appended to)."""
+    if API_MODE == 'replay':
+        if key not in d2l.DATA_HUB:
+            raise KeyError(f'{key} is not registered yet: record it first '
+                           '(D2L_API_MODE=record)')
+        return unpack(key)
+    folder = os.path.join(RECORD_DIR, key)
+    if not os.path.isdir(folder):
+        try:
+            shutil.copytree(unpack(key), folder)
+        except Exception as e:  # not registered, or the download failed
+            os.makedirs(folder, exist_ok=True)
+            print(f'{key}: recording into an empty cache ({e!r:.60})')
+    return folder
+
+def cache_file(key, arm):
+    return os.path.join(api_dir(key), arm + '.jsonl')
+
+CLIENTS = []  # every client with a cache, for the manifest
+
+def hosted(model, cache, *, share=1.0, **kwargs):
+    """A client of model at its pinned provider; it may spend `share` of
+    what is left of COST_CAP_USD."""
+    left = COST_CAP_USD - sum(api.spent_usd for api in CLIENTS)
+    api = d2l.openrouter_api(model, PROVIDERS[model], listing=LISTING,
+                             cache=cache, mode=API_MODE,
+                             cost_cap_usd=max(0.0, share * left), **kwargs)
+    CLIENTS.append(api)
+    return api
+
+def usd(api, r):  # cost of one response: the provider's, else the listing's
+    cost = r.usage.get('cost')
+    return d2l.api_cost(r.usage, api.price) if cost is None else cost
+
+print(f'mode {API_MODE}, cost cap {COST_CAP_USD} USD, local server '
+      f'{"live" if LOCAL_LIVE else "replayed"}')
+```
+
+<!-- Placeholder (stage 2): a dated snapshot of the router listing: providers, quantization, prices and supported fields. -->
+
+```{.python .input #api-listing}
+%%tab pytorch
+listing_file = os.path.join(api_dir('lm-api-listing-v1'), 'listing.json')
+if not os.path.exists(listing_file):  # record: snapshot the free listing
+    url = 'https://openrouter.ai/api/v1/models'
+    def get(u):
+        r = requests.get(u, timeout=60)
+        r.raise_for_status()
+        return r.json()['data']
+    rows = {m['id']: m for m in get(url)}
+    now = datetime.datetime.now(datetime.timezone.utc)
+    snapshot = {'retrieved': now.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'models': {m: rows[m] for m in LISTED},
+                'endpoints': {m: get(f'{url}/{m}/endpoints')['endpoints']
+                              for m in LISTED},
+                'hf': {}}
+    for m, (repo, rev) in WEIGHTS.items():  # parameter totals of the Hub
+        info = huggingface_hub.HfApi().model_info(repo, revision=rev)
+        snapshot['hf'][m] = {'repo': repo, 'revision': rev,
+                             'params': info.safetensors.total}
+    with open(listing_file, 'w') as f:
+        json.dump(snapshot, f, indent=1)
+with open(listing_file) as f:
+    LISTING = json.load(f)
+
+def endpoint(model):  # the row of the pinned provider, as priced below
+    rows, p = LISTING['endpoints'][model], PROVIDERS[model]
+    return next((e for e in rows if e['tag'] == p), None) or next(
+        e for e in rows if e['tag'].split('/')[0] == p)
+
+rows = []
+for m in LISTED:
+    e, price = endpoint(m), d2l.price_from_listing(LISTING, m, PROVIDERS[m])
+    rows.append({'model': m, 'provider': e['tag'],
+                 'quantization': e['quantization'],
+                 'context': e['context_length'], 'in $/M': price.input,
+                 'out $/M': price.output, 'cached $/M': price.cached_input,
+                 **{f: f in e['supported_parameters'] for f in (
+                     'seed', 'logprobs', 'structured_outputs', 'reasoning')}})
+print('listing retrieved', LISTING['retrieved'])
+pd.DataFrame(rows)
+```
+
+<!-- Placeholder (stage 2): the open models people use most do not fit our GPUs, even at four bits per weight. -->
+
+```{.python .input #api-weights-arith}
+%%tab pytorch
+PRECISIONS = (('bf16', 2), ('fp8', 1), ('4 bits', 0.5))  # bytes/weight
+
+def best_fit(n, gb):  # the highest precision whose weights fit in gb
+    return next((p for p, b in PRECISIONS if n * b <= gb * 1e9), 'none')
+
+rows = []
+for m in (FLAGSHIP, SECOND, LOCAL):
+    n = LISTING['hf'][m]['params']
+    rows.append({'weights': LISTING['hf'][m]['repo'], 'params (B)': n / 1e9,
+                 **{f'{p} (GB)': n * b / 1e9 for p, b in PRECISIONS},
+                 '24 GB card': best_fit(n, 24),
+                 '8 x 40 GB node': best_fit(n, 8 * 40)})
+pd.DataFrame(rows).round(1)
+```
+
+<!-- Placeholder (stage 2): one request to the flagship: a GSM8K problem in, text, a served id and a usage block out. -->
+
+```{.python .input #api-first-call}
+%%tab pytorch
+gsm_train = pd.read_parquet(d2l.download_keyed('gsm8k-train'))
+gsm_test = pd.read_parquet(d2l.download_keyed('gsm8k-test'))
+samples = pd.read_json(d2l.download_keyed('lm-gsm8k-samples-v1'),
+                       lines=True)
+GSM_IDS = [int(i) for i in dict.fromkeys(samples.problem_id)]  # 18.4's
+assert GSM_IDS == list(np.random.default_rng(0).permutation(
+    len(gsm_test))[:100])  # its seeded rule
+flagship = hosted(FLAGSHIP, cache_file('lm-api-probe-v1', 'flagship'),
+                  reasoning={'enabled': False})
+question = [{'role': 'user', 'content': gsm_test.question[GSM_IDS[0]]}]
+r = flagship.chat(question, temperature=0, seed=0, max_tokens=512)
+print(r.text)
+print(f'finish {r.finish_reason}; usage {r.usage}')
+print(f'{r.t_total:.2f} s; served {r.model} by {r.provider}; '
+      f'{d2l.api_cost(r.usage, flagship.price):.6f} USD from the listing')
+```
+
+<!-- Placeholder (stage 2): hidden reasoning is billed as completion tokens and can use up the whole output budget. -->
+
+```{.python .input #api-reasoning-trap}
+%%tab pytorch
+second = hosted(SECOND, cache_file('lm-api-probe-v1', 'second'))
+trap = second.chat(question, temperature=0, seed=0, max_tokens=64)  # thinks
+print(f'content {trap.text!r}, finish {trap.finish_reason}, '
+      f'{len(trap.reasoning or "")} characters of reasoning; {trap.usage}')
+assert trap.text == '' and trap.finish_reason == 'length'
+assert trap.usage['reasoning_tokens'] == trap.usage['completion_tokens'] == 64
+answer = second.chat(question, temperature=0, seed=0, max_tokens=512,
+                     extra_body={'reasoning': {'enabled': False}})
+print(f'thinking off: {answer.text[-80:]!r}; {answer.usage}')
+assert not answer.usage['reasoning_tokens']
+```
+
+<!-- Placeholder (stage 2): the effort field moves reasoning tokens and cost, not the protocol (an anecdote on five problems). -->
+
+```{.python .input #api-effort}
+%%tab pytorch
+LONGEST = sorted(GSM_IDS, key=lambda i: -len(gsm_test.answer[i]))
+effort_api = hosted(FLAGSHIP, cache_file('lm-api-effort-v1', 'flagship'))
+EFFORTS = ('low', 'medium', 'high')
+batch = [{'messages': [{'role': 'user', 'content': gsm_test.question[i]}],
+          'temperature': 0, 'seed': 0, 'max_tokens': 16384,
+          'extra_body': {'reasoning': {'effort': e}}}
+         for e in EFFORTS for i in LONGEST[:5]]
+results = await d2l.chat_batch(effort_api, batch, concurrency=5)
+assert not any(isinstance(r, Exception) for r in results), results
+effort = pd.DataFrame({
+    'effort': [e for e in EFFORTS for _ in range(5)],
+    'reasoning tokens': [r.usage['reasoning_tokens'] for r in results],
+    'completion tokens': [r.usage['completion_tokens'] for r in results],
+    'seconds': [r.t_total for r in results],
+    'USD': [usd(effort_api, r) for r in results]})
+medians = effort.groupby('effort', sort=False).median()
+print('an anecdote: n = 5 problems per effort; medians')
+print(medians.round(4))
+ordered = (np.diff(medians['reasoning tokens']) > 0).all()
+print('more reasoning tokens at higher effort:', 'yes' if ordered else 'no')
+```
+
+<!-- Placeholder (stage 2): the same protocol from a server on our own GPU: transformers serve with continuous batching. -->
+
+```{.python .input #api-local-start}
+%%tab pytorch
+NO_THINK_LOCAL = {'extra_body': {'chat_template_kwargs': {
+    'enable_thinking': False}}}
+LOCAL_HTTP = None  # the local endpoint's HTTP client (None: real HTTP)
+if LOCAL_LIVE:
+    server = d2l.LocalChatServer([
+        os.path.join(os.path.dirname(sys.executable), 'transformers'),
+        'serve', LOCAL_MODEL, '--continuous-batching', '--dtype', 'bfloat16',
+        '--model-timeout', '-1', '--cb-max-memory-percent', '0.2',
+        '--host', '127.0.0.1', '--port', '{port}'])
+    LOCAL_URL = server.start()
+    warm = d2l.ChatAPI(LOCAL_URL, LOCAL_MODEL, mode='live',
+                       default_params=NO_THINK_LOCAL)
+    tic = time.monotonic()
+    warm.chat([{'role': 'user', 'content': 'Hello'}], max_tokens=8)
+    print(f'{LOCAL_URL}: ready after {server.load_time:.0f} s, warm-up '
+          f'request {time.monotonic() - tic:.1f} s')
+else:  # the request hash keeps the host only, so any port replays
+    server, LOCAL_URL = None, 'http://127.0.0.1/v1'
+    print(f'{LOCAL_URL}: replayed from the committed caches')
+
+def local(cache, **kwargs):
+    """A client of the local server, thinking switched off."""
+    api = d2l.ChatAPI(LOCAL_URL, LOCAL_MODEL, cache=cache, mode=LOCAL_MODE,
+                      http_client=LOCAL_HTTP, default_params=NO_THINK_LOCAL,
+                      **kwargs)
+    CLIENTS.append(api)
+    return api
+```
+
+<!-- Placeholder (stage 2): a request field a provider accepts is not necessarily one it honours: one detection rule per field. -->
+
+```{.python .input #api-probe}
+%%tab pytorch
+STORY = [{'role': 'user', 'content':
+          'Write a short paragraph about a lighthouse keeper.'}]
+COUNT = [{'role': 'user', 'content':
+          'Count from 1 to 10, separated by commas.'}]
+JSON_Q = [{'role': 'user', 'content': 'What is 6 times 7? Answer in JSON.'}]
+SCHEMA = {'type': 'json_schema', 'json_schema': {
+    'name': 'answer', 'strict': True, 'schema': {
+        'type': 'object', 'properties': {'answer': {'type': 'integer'}},
+        'required': ['answer'], 'additionalProperties': False}}}
+
+def is_answer(text):  # exactly {"answer": <integer>}
+    try:
+        out = json.loads(text)
+    except ValueError:
+        return False
+    return (isinstance(out, dict) and set(out) == {'answer'} and
+            type(out['answer']) is int)
+
+def thinks(r):
+    return bool(r.usage['reasoning_tokens'] or r.reasoning)
+
+def tests(base, on, off, max_tokens):
+    """field -> (requests as (messages, replica, params), rule mapping the
+    client and the results to (honoured?, evidence)); base is the request
+    body every test sends, on and off the bodies of the thinking switch."""
+    def p(body=base, **kw):
+        return {'max_tokens': max_tokens, **kw,
+                **({'extra_body': body} if body else {})}
+    return {
+        'seed': ([(STORY, 0, p(temperature=1, seed=7)),
+                  (STORY, 1, p(temperature=1, seed=7)),
+                  (STORY, 0, p(temperature=1, seed=8))],
+                 lambda api, a, b, c: (a.text == b.text != c.text,
+                                       f'7 = 7: {a.text == b.text}, '
+                                       f'8 differs: {c.text != a.text}')),
+        'n=2': ([(COUNT, 0, p(n=2))], lambda api, a: (
+            len(api.entries(a.request_hash)[0]['extra'].get('choices', [])
+                ) == 2, 'choices returned')),
+        'logprobs, top 5': ([(COUNT, 0, p(logprobs=True, top_logprobs=5))],
+                            lambda api, a: (bool(a.logprobs) and all(
+                                len(t) == 5 for _, _, t in a.logprobs),
+                                f'{len(a.logprobs or [])} tokens')),
+        "stop=['5']": ([(COUNT, 0, p(stop=['5']))], lambda api, a: (
+            '4' in a.text and '5' not in a.text, repr(a.text[-20:]))),
+        'response_format': ([(JSON_Q, 0, p(response_format=SCHEMA))],
+                            lambda api, a: (is_answer(a.text),
+                                            repr(a.text[:40]))),
+        'thinking switch': ([(COUNT, 0, p(body=on, max_tokens=256)),
+                             (COUNT, 0, p(body=off))], lambda api, a, b: (
+            thinks(a) and not thinks(b),
+            f'on {thinks(a)}, off {thinks(b)}')),
+        'max_completion_tokens=16': (
+            [(STORY, 0, p(max_tokens=None, max_completion_tokens=16))],
+            lambda api, a: (a.usage['completion_tokens'] <= 16,
+                            f'{a.usage["completion_tokens"]} tokens')),
+        'prompt log-probabilities': (
+            [(COUNT, 0, p(body={**(base or {}), 'prompt_logprobs': 1}))],
+            lambda api, a: ('prompt_logprobs' in api.entries(
+                a.request_hash)[0]['extra'], 'prompt_logprobs field')),
+        'stream usage': ([(COUNT, 0, p(stream=True))], lambda api, a: (
+            a.usage['completion_tokens'] is not None, 'final chunk'))}
+
+async def check(api, requests_, rule):
+    try:
+        results = [await api.achat(m, replica=k, **q)
+                   for m, k, q in requests_]
+    except (d2l.ReplayMiss, d2l.CostCapExceeded):
+        raise
+    except Exception as e:  # after the client's retries
+        status = getattr(e, 'status_code', None)
+        kind = 'rejected' if status and 400 <= status < 500 else 'error'
+        return kind, f'{status or type(e).__name__}: {e}'[:80]
+    honoured, evidence = rule(api, *results)
+    return 'honoured' if honoured else 'ignored', evidence[:80]
+
+async def probe(name, api, base, on, off, max_tokens, model_id):
+    rows = []
+    for field, (requests_, rule) in tests(base, on, off,
+                                          max_tokens).items():
+        status, evidence = await check(api, requests_, rule)
+        rows.append({'endpoint': name, 'field': field, 'status': status,
+                     'evidence': evidence})
+    try:
+        listed = any(i.startswith(model_id) for i in await asyncio.to_thread(
+            api.models))
+        rows.append({'endpoint': name, 'field': '/v1/models',
+                     'status': 'honoured' if listed else 'ignored',
+                     'evidence': f'lists {model_id}: {listed}'})
+    except Exception as e:
+        rows.append({'endpoint': name, 'field': '/v1/models',
+                     'status': 'rejected', 'evidence': repr(e)[:80]})
+    params = {'max_tokens': max_tokens,
+              **({'extra_body': base} if base else {})}
+    one = await api.achat(COUNT, replica=10, **params)
+    four = await d2l.chat_batch(api, [
+        {'messages': COUNT, 'replica': k, **params} for k in range(11, 15)],
+        concurrency=4)
+    ratio = max(r.t_total for r in four) / one.t_total
+    verdict = ('batched' if ratio < 2 else 'serialized' if ratio > 3
+               else 'partial')
+    rows.append({'endpoint': name, 'field': '4 concurrent requests',
+                 'status': verdict, 'evidence': f'latency x {ratio:.2f}'})
+    return rows
+
+fields_file = os.path.join(api_dir('lm-api-fields-v1'), 'lm-api-fields.csv')
+if API_MODE != 'replay':  # replay reads the committed table
+    router_off, router_on = ({'reasoning': {'enabled': s}}
+                             for s in (False, True))
+    local_off, local_on = ({'chat_template_kwargs': {'enable_thinking': s}}
+                           for s in (False, True))
+    closed = hosted(CLOSED, os.path.join(D2L_API_LOG_DIR, 'scratch',
+                                         'closed-probe.jsonl'))
+    ENDPOINTS = {  # client, body of every test, thinking on and off,
+        # output budget, the id /v1/models should list
+        'DeepSeek-V4.1-Flash (Novita)': (flagship, router_off, router_on,
+                                         router_off, 64, FLAGSHIP),
+        'Qwen3.8-27B (Parasail)': (second, router_off, router_on,
+                                   router_off, 64, SECOND),
+        'gpt-5-nano (OpenAI)': (closed, None, router_on, router_off, 2048,
+                                CLOSED),  # a closed model thinks by default
+        'Qwen3.5-4B (local server)': (
+            local(cache_file('lm-api-probe-v1', 'local')), local_off,
+            local_on, local_off, 64, LOCAL)}
+    rows = await asyncio.gather(*(probe(name, *args)
+                                  for name, args in ENDPOINTS.items()))
+    fields = pd.DataFrame([r for rs in rows for r in rs])
+    fields['date'] = time.strftime('%Y-%m-%d', time.gmtime())
+    fields.to_csv(fields_file, index=False)
+fields = pd.read_csv(fields_file)
+table = fields.pivot(index='field', columns='endpoint', values='status')
+print(table.loc[fields.field.unique(), fields.endpoint.unique()])
+batching = fields[(fields.endpoint == 'Qwen3.5-4B (local server)') &
+                  (fields.field == '4 concurrent requests')].iloc[0]
+LOCAL_BATCHES = batching.status != 'serialized'
+print(f'local server: {batching.status} ({batching.evidence})')
+print('fields transformers serve ignores:', sorted(
+    UNUSED_CHAT_COMPLETION_FIELDS & {
+        'n', 'logprobs', 'top_logprobs', 'response_format',
+        'max_completion_tokens', 'stream_options', 'seed'}))
 ```
 
 <!-- Placeholder (stage 2): the request hash keys a replay cache on everything that can change the output and nothing secret. -->
@@ -138,6 +541,23 @@ def api_cost(usage, price):
     c = usage.get('cached_tokens') or 0
     cached = price.input if price.cached_input is None else price.cached_input
     return ((p - c) * price.input + c * cached + o * price.output) / price.per
+```
+
+<!-- Placeholder (stage 2): prices are dated inputs: the pinned provider, and a provider that prices by time window. -->
+
+```{.python .input #api-cost-example}
+%%tab pytorch
+novita = d2l.price_from_listing(LISTING, FLAGSHIP, 'novita')
+print('Novita, USD per million tokens:', novita)
+usage = {'prompt_tokens': 1000, 'completion_tokens': 300}
+cost = d2l.api_cost(usage, novita)
+assert abs(cost - (1000 * novita.input + 300 * novita.output) / 1e6) < 1e-15
+print(f'1,000 prompt and 300 completion tokens: {cost:.6f} USD')
+for hour in (2, 12):  # a Thursday, inside and outside a peak window
+    when = datetime.datetime(2026, 11, 12, hour, tzinfo=datetime.timezone.utc)
+    price = d2l.price_from_listing(LISTING, FLAGSHIP, 'deepseek', when=when)
+    print(f'DeepSeek at {when:%a %H:%M} UTC: {price.input:.3f} in, '
+          f'{price.output:.3f} out')
 ```
 
 <!-- Placeholder (stage 2): full-jitter backoff, the formula of the derivation. -->
@@ -348,10 +768,12 @@ api = d2l.ChatAPI('http://fake.local/v1', 'fake-model', mode='live',
                   http_client=d2l.FakeChatServer(service_time,
                                                  capacity).transport())
 rows = []
+gc.collect()
+gc.freeze()  # no collector pauses inside the timed requests
 for c in (1, 2, 4, 8, 16, 32):
-    requests = [{'messages': [{'role': 'user', 'content': f'question {i}'}],
-                 'max_tokens': 16} for i in range(8 * c)]
-    stats_c = closed_loop_stats(await chat_batch(api, requests,
+    batch = [{'messages': [{'role': 'user', 'content': f'question {i}'}],
+              'max_tokens': 16} for i in range(8 * c)]
+    stats_c = closed_loop_stats(await chat_batch(api, batch,
                                                  concurrency=c), c)
     rows.append({'c': c, 'X': stats_c['X'], 'W': stats_c['W'],
                  'little': stats_c['little'],
@@ -359,7 +781,336 @@ for c in (1, 2, 4, 8, 16, 32):
 table = pd.DataFrame(rows)
 W_0 = table['W'][0]  # as the client sees it: service time plus its own work
 table['formula X'] = np.minimum(table['c'] / W_0, capacity / service_time)
-assert (abs(table['X'] / table['formula X'] - 1) < 0.05).all()
-assert (abs(table[['little', 'sustained']] - 1) < 0.02).all().all()
+gc.unfreeze()
+assert (abs(table['X'] / table['formula X'] - 1) < 0.05).all(), table
+assert (abs(table[['little', 'sustained']] - 1) < 0.02).all().all(), table
 table.round(3)
+```
+
+<!-- Placeholder (stage 2): Experiment 1: a closed-loop sweep against the local server, two passes in shuffled order. -->
+
+```{.python .input #api-sweep-local}
+%%tab pytorch
+SWEEP = {'max_tokens': 128, 'temperature': 0, 'stream': True}
+
+async def closed_loop(api, c, first, **params):
+    """One level of a closed loop: 8c distinct GSM8K train questions from
+    index `first` on, c in flight; closed_loop_stats of the results."""
+    batch = [{'messages': [{'role': 'user', 'content': q}], **params}
+             for q in gsm_train.question.iloc[first:first + 8 * c]]
+    results = await chat_batch(api, batch, concurrency=c)
+    assert not any(thinks(r) for r in results
+                   if not isinstance(r, Exception)), f'c = {c}: thinking'
+    return {'c': c, **closed_loop_stats(results, c)}
+
+def check_little(table, little, sustained):
+    for _, row in table.iterrows():
+        assert abs(row.little - 1) < little and abs(row.sustained - 1) < (
+            sustained), (f'c = {row.c}: little {row.little:.3f}, sustained '
+                         f'{row.sustained:.3f}, {row.n_retries} retries, '
+                         f'{row.n_window} completions in the window')
+
+COLUMNS = ['c', 'X', 'X_tokens', 'W', 'ttft_p50', 'ttft_p90', 'n_429',
+           'n_retries', 'little', 'sustained']
+LEVELS = [1, 2, 4, 8, 16, 32, 64, 128] if LOCAL_BATCHES else [1, 2, 4, 8]
+sweep_api = local(cache_file('lm-api-sweep-v1', 'local'))
+rng, order = random.Random(0), []
+for p in (1, 2):
+    levels = list(LEVELS)
+    rng.shuffle(levels)
+    order += [(p, c) for c in levels]
+first, rows = 4, []  # train items 4, 5, ... in execution order
+for p, c in order:
+    rows.append({'pass': p, **await closed_loop(sweep_api, c, first,
+                                                 **SWEEP)})
+    first += 8 * c
+sweep = pd.DataFrame(rows).sort_values(['pass', 'c'], ignore_index=True)
+check_little(sweep, 0.05, 0.03)
+sweep[['pass'] + COLUMNS].round(3)
+```
+
+<!-- Placeholder (stage 2): the fitted closed-loop curve and the knee rule, per pass. -->
+
+```{.python .input #api-sweep-fit}
+%%tab pytorch
+def fit(table):
+    """W_0, X_max, c* and the knee: the smallest level from which on the
+    efficiency X W_0 / c stays below 0.7."""
+    table = table.sort_values('c')
+    W_0, X_max = table.W[table.c == 1].median(), table.X.max()
+    E = (table.X * W_0 / table.c).to_numpy()
+    knee = next((c for i, c in enumerate(table.c) if (E[i:] < 0.7).all()),
+                None)
+    return W_0, X_max, X_max * W_0, knee
+
+knees = []
+for p, table in sweep.groupby('pass'):
+    W_0, X_max, c_star, knee = fit(table)
+    knees.append(knee)
+    print(f'pass {p}: W_0 {W_0:.2f} s, X_max {X_max:.1f} requests/s, '
+          f'c* {c_star:.1f}, efficiency below 0.7 from c = {knee}')
+both = knees[0] is not None and knees[0] == knees[1]
+print('knee in both passes:', 'yes' if both else 'no')
+assert both, 'no knee common to both passes (claim 2: set the batch cap)'
+W_0, X_max, _, _ = fit(sweep)  # pooled, for the fitted curves
+tokens = (sweep.X_tokens / sweep.X).mean()  # completion tokens per request
+grid = np.geomspace(1, max(LEVELS), 100)
+passes = [sweep[sweep['pass'] == p] for p in (1, 2)]
+fig, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.6))
+d2l.plot([t.c.to_numpy() for t in passes] + [grid],
+         [t.X_tokens.to_numpy() for t in passes] +
+         [np.minimum(grid / W_0, X_max) * tokens], 'requests in flight c',
+         'completion tokens/s', legend=['pass 1', 'pass 2', 'fit'],
+         xscale='log', fmts=('o', 's', '-'), axes=axes[0])
+d2l.plot([t.c.to_numpy() for t in passes] + [grid],
+         [t.W.to_numpy() for t in passes] + [np.maximum(W_0, grid / X_max)],
+         'requests in flight c', 'mean latency W (s)',
+         legend=['pass 1', 'pass 2', 'fit'], xscale='log',
+         fmts=('o', 's', '-'), axes=axes[1])
+```
+
+<!-- Placeholder (stage 2): the same client against the hosted flagship: one client does not reach its capacity. -->
+
+```{.python .input #api-sweep-hosted}
+%%tab pytorch
+contrast = hosted(FLAGSHIP, cache_file('lm-api-sweep-v1', 'flagship'),
+                  reasoning={'enabled': False})
+first, rows = 4084, []  # train items after the local sweep's
+for c in (1, 8, 32):
+    rows.append(await closed_loop(contrast, c, first, **SWEEP))
+    first += 8 * c
+hosted_sweep = pd.DataFrame(rows)
+check_little(hosted_sweep, 0.10, 0.05)
+X_c = hosted_sweep.set_index('c').X
+print(f'X(32) / X(1) = {X_c[32] / X_c[1]:.1f}')
+hosted_sweep[COLUMNS].round(3)
+```
+
+<!-- Placeholder (stage 2): Experiment 2: identical 4-shot prompts, decoding, thinking mode and extractor for every arm. -->
+
+```{.python .input #api-gsm8k-setup}
+%%tab pytorch
+GSM_DEMOS = [(q, re.sub(r'<<[^>]*>>', '', a))  # calculator notes removed
+             for q, a in zip(gsm_train.question[:4], gsm_train.answer[:4])]
+GSM_MESSAGES = [d2l.fewshot_prompt(GSM_DEMOS, gsm_test.question[i],
+                                   template='chat_multi') for i in GSM_IDS]
+GSM_GOLD = [d2l.extract_answer(gsm_test.answer[i]) for i in GSM_IDS]
+GSM_PARAMS = {'temperature': 0, 'seed': 0, 'max_tokens': 512}
+for m in GSM_MESSAGES[0]:
+    print(f'{m["role"]:9s} {m["content"][:64]!r}')
+print('parameters:', GSM_PARAMS, '; thinking off: reasoning.enabled = '
+      'False (router), chat_template_kwargs.enable_thinking = False (local)')
+```
+
+<!-- Placeholder (stage 2): four arms at once; per arm accuracy, latency, and the price of a correct answer. -->
+
+```{.python .input #api-gsm8k-run}
+%%tab pytorch
+gsm_flagship = hosted(FLAGSHIP, cache_file('lm-api-gsm8k-v1', 'flagship'),
+                      share=0.5, reasoning={'enabled': False})
+gsm_second = hosted(SECOND, cache_file('lm-api-gsm8k-v1', 'second'),
+                    share=0.5, reasoning={'enabled': False})
+gsm_local = local(cache_file('lm-api-gsm8k-v1', 'local'))
+ARMS = {'flagship r0': (gsm_flagship, 0, 8),
+        'flagship r1': (gsm_flagship, 1, 8),
+        'Qwen3.8-27B': (gsm_second, 0, 8),
+        'Qwen3.5-4B local': (gsm_local, 0, 8 if LOCAL_BATCHES else 1)}
+outs = await asyncio.gather(*(chat_batch(api, [
+    {'messages': m, 'replica': k, **GSM_PARAMS} for m in GSM_MESSAGES],
+    concurrency=c) for api, k, c in ARMS.values()))
+CORRECT, rows = {}, []
+for (arm, (api, _, _)), results in zip(ARMS.items(), outs):
+    assert not any(isinstance(r, Exception) for r in results), arm
+    assert not any(thinks(r) for r in results), f'{arm}: thinking'
+    correct = np.array([d2l.extract_answer(r.text) == g
+                        for r, g in zip(results, GSM_GOLD)], dtype=float)
+    CORRECT[arm], ci = correct, d2l.bootstrap_ci(correct)
+    latency = np.percentile([r.t_total for r in results], [50, 90])
+    row = {'arm': arm, 'accuracy': ci.mean, 'lo': ci.ci[0], 'hi': ci.ci[1],
+           'prompt tokens': np.mean([r.usage['prompt_tokens']
+                                     for r in results]),
+           'completion tokens': np.mean([r.usage['completion_tokens']
+                                         for r in results]),
+           'p50 s': latency[0], 'p90 s': latency[1]}
+    n_correct = max(correct.sum(), 1)
+    if api.price is not None:  # hosted: dollars
+        cost = sum(usd(api, r) for r in results)
+        row.update({'USD per 100': 100 * cost / len(results),
+                    'USD per correct': cost / n_correct})
+    else:  # local: the arm's wall-clock span on one GPU
+        span = (max(r.t_send + r.t_total for r in results) -
+                min(r.t_send for r in results))
+        row['GPU-s per correct'] = span / n_correct
+    rows.append(row)
+gsm = pd.DataFrame(rows).set_index('arm')
+per_correct = gsm['USD per correct']
+print(f'Qwen3.8-27B / flagship: accuracy x '
+      f'{gsm.accuracy["Qwen3.8-27B"] / gsm.accuracy["flagship r0"]:.2f}, '
+      f'USD per correct x '
+      f'{per_correct["Qwen3.8-27B"] / per_correct["flagship r0"]:.2f}')
+gsm.round(4)
+```
+
+<!-- Placeholder (stage 2): paired comparisons with exact McNemar tests, Holm-adjusted, against the replica noise floor. -->
+
+```{.python .input #api-gsm8k-compare}
+%%tab pytorch
+def holm(p):  # Holm's step-down adjustment of p-values
+    adjusted, running = np.empty(len(p)), 0.0
+    for rank, i in enumerate(np.argsort(p)):
+        running = max(running, min(1.0, (len(p) - rank) * p[i]))
+        adjusted[i] = running
+    return adjusted
+
+PAIRS = [('flagship r0', 'Qwen3.8-27B'), ('flagship r0', 'Qwen3.5-4B local'),
+         ('Qwen3.8-27B', 'Qwen3.5-4B local'), ('flagship r0', 'flagship r1')]
+rows = []
+for a, b in PAIRS:
+    x, y = CORRECT[a], CORRECT[b]
+    res = d2l.paired_bootstrap(x, y, n_boot=10000, seed=0)
+    n_ab, n_ba = int((x > y).sum()), int((x < y).sum())  # discordant
+    p = (stats.binomtest(min(n_ab, n_ba), n_ab + n_ba, 0.5).pvalue
+         if n_ab + n_ba else 1.0)
+    rows.append({'comparison': f'{a} - {b}', 'difference': res.mean,
+                 'lo': res.ci[0], 'hi': res.ci[1], 'b': n_ab, 'c': n_ba,
+                 'McNemar p': p, 'MDE': d2l.min_detectable_effect(
+                     np.std(x - y, ddof=1), len(x))})
+compare = pd.DataFrame(rows)
+compare['Holm p'] = list(holm(compare['McNemar p'][:3].to_numpy())) + [None]
+floor = compare.iloc[3]
+if floor.lo > 0 or floor.hi < 0:
+    print('replicas disagree systematically: no verdicts')
+else:
+    compare['verdict'] = [
+        'resolved' if h < 0.05 and (lo > 0 or hi < 0)
+        else 'unresolved at n = 100' for h, lo, hi in zip(
+            compare['Holm p'][:3], compare.lo[:3], compare.hi[:3])] + [
+        'noise floor']
+compare.round(4)
+```
+
+<!-- Placeholder (stage 2): Experiment 3: twenty identical requests at temperature 0 with a seed, hosted, local alone and local under load. -->
+
+```{.python .input #api-determinism}
+%%tab pytorch
+DET_IDS = LONGEST[:3]  # the longest reference solutions
+DET_MESSAGES = [GSM_MESSAGES[GSM_IDS.index(i)] for i in DET_IDS]
+
+def replicas(first):  # 20 replicas of each of the three requests
+    return [{'messages': m, 'replica': k, **GSM_PARAMS}
+            for m in DET_MESSAGES for k in range(first, first + 20)]
+
+det_flagship = hosted(FLAGSHIP, cache_file('lm-api-determinism-v1',
+                                           'flagship'),
+                      reasoning={'enabled': False})
+det_local = local(cache_file('lm-api-determinism-v1', 'local'))
+on_flagship, alone = await asyncio.gather(
+    chat_batch(det_flagship, replicas(0), concurrency=4),
+    chat_batch(det_local, replicas(0), concurrency=1))
+# Under load: eight background lanes cycle through 64 other test problems;
+# their responses are logged, never replayed (replay skips them)
+BACKGROUND = [i for i in range(len(gsm_test)) if i not in GSM_IDS][:64]
+done, failures = asyncio.Event(), []
+
+async def lanes():
+    background = d2l.ChatAPI(
+        LOCAL_URL, LOCAL_MODEL, mode='live', http_client=LOCAL_HTTP,
+        cache=cache_file('lm-api-determinism-v1', 'background'),
+        default_params=NO_THINK_LOCAL)
+    CLIENTS.append(background)
+    async def lane(j):
+        while not done.is_set():
+            messages = d2l.fewshot_prompt(GSM_DEMOS, gsm_test.question[
+                BACKGROUND[j % 64]], template='chat_multi')
+            try:
+                await background.achat(messages, replica=j // 64,
+                                       **GSM_PARAMS)
+            except Exception as e:
+                failures.append(e)
+            j += 8
+    await asyncio.gather(*(lane(j) for j in range(8)))
+
+load = asyncio.ensure_future(lanes()) if LOCAL_LIVE else None
+if load is not None:
+    await asyncio.sleep(2)  # let the lanes fill
+under_load = await chat_batch(det_local, replicas(100), concurrency=1)
+done.set()
+if load is not None:
+    await load
+    print(f'background: {len(failures)} failed requests')
+rows = []
+for condition, results in (('flagship', on_flagship), ('local alone', alone),
+                           ('local under load', under_load)):
+    assert not any(isinstance(r, Exception) or thinks(r) for r in results)
+    for k, i in enumerate(DET_IDS):
+        texts = [r.text for r in results[20 * k:20 * k + 20]]
+        modal = collections.Counter(texts).most_common(1)[0][0]
+        firsts = [len(os.path.commonprefix([t, modal]))
+                  for t in texts if t != modal]
+        rows.append({'condition': condition, 'problem': i,
+                     'distinct completions': len(set(texts)),
+                     'first divergence, min': min(firsts, default=None),
+                     'median': np.median(firsts) if firsts else None,
+                     'distinct answers': len({d2l.extract_answer(t)
+                                              for t in texts})})
+pd.DataFrame(rows)
+```
+
+<!-- Placeholder (stage 2): the local server is stopped and its port freed. -->
+
+```{.python .input #api-local-stop}
+%%tab pytorch
+if server is not None:
+    print('server exit code', server.stop())
+else:
+    print('no local server in replay')
+```
+
+<!-- Placeholder (stage 2): what every client did: calls, cache hits, retries, spend, and one provider and one served id per arm. -->
+
+```{.python .input #api-manifest}
+%%tab pytorch
+rows, by_folder = [], collections.defaultdict(list)
+for api in CLIENTS:
+    m = api.manifest()
+    folder = os.path.dirname(os.path.abspath(api.cache_path))
+    by_folder[folder].append(m)
+    key = next((k for k in API_SHA1 if k in folder), 'scratch')
+    rows.append({'cache': os.path.join(key, m['cache']),
+                 **{k: m[k] for k in ('calls', 'cache_hits', 'live_calls',
+                                      'retries', 'n_429', 'spent_usd')},
+                 'served': ', '.join(map(str, m['served_models'])),
+                 'providers': ', '.join(map(str, m['providers']))})
+    if api.price is not None:  # claim 8: one provider, one served id
+        assert len(m['served_models']) <= 1 and len(m['providers']) <= 1, m
+manifest = pd.DataFrame(rows)
+spent = sum(api.spent_usd for api in CLIENTS)
+assert spent <= COST_CAP_USD, spent
+api_sum = sum(api.manifest()['sum_api_cost'] for api in CLIENTS
+              if api.manifest()['n_usage_cost'])
+usage_sum = sum(api.manifest()['sum_usage_cost'] for api in CLIENTS)
+if usage_sum:
+    print(f'cost from the listing / cost the provider reported: '
+          f'{api_sum / usage_sum:.4f}')
+if API_MODE != 'replay':  # one manifest per recorded artifact
+    for folder, ms in by_folder.items():
+        if os.path.abspath(RECORD_DIR) in folder:
+            with open(os.path.join(folder, 'manifest.json'), 'w') as f:
+                json.dump({'created': time.strftime('%Y-%m-%dT%H:%M:%SZ',
+                                                    time.gmtime()),
+                           'clients': ms}, f, indent=1, ensure_ascii=False)
+key = os.environ.get('OPENROUTER_API_KEY')
+if key:  # the key may occur in no cache, calls log or manifest
+    files = [os.path.join(d, f) for root in (
+        RECORD_DIR, os.path.join(D2L_API_LOG_DIR, 'scratch'))
+             for d, _, fs in os.walk(root) for f in fs]
+    hits = []
+    for name in files:
+        with open(name, 'rb') as f:
+            if key.encode() in f.read():
+                hits.append(name)
+    assert not hits, f'the API key occurs in {len(hits)} files'
+    print(f'key material: none in {len(files)} files')
+print(f'spent {spent:.4f} USD of {COST_CAP_USD}')
+manifest
 ```

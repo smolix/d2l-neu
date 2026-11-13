@@ -135,28 +135,33 @@
       ]
     },
     "d2l-checkpoint-ratio-interval": {
-      "code_fingerprint": "sha256:fd5515a288d517e4c7e94f23dedbbb2c861f699b96829f9656cc998fa091fb21",
+      "code_fingerprint": "sha256:2e8dd7ed7c34a07e5de9dfe1e928ebb312674a43c7e71299bf2b3e5e71ffb680",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-fp32-check": {
-      "code_fingerprint": "sha256:1c89a9a85b808b88d004c8c54927ca2004568f3cca04b775c009e71ae5015f24",
+      "code_fingerprint": "sha256:8700a8a34d4f3194e18807a7c682c201aeeaa7de0cbbd67186d3e5236bec6421",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: e_HF 3.94e-06, e_ours 3.89e-06, ratio 0.987 [0.957, 1.02] passes\nmax |L_HF - L_64| 1.0e-04, max |L_ours - L_HF| 1.1e-04, deterministic: True\nfrequencies that differ: 24 of 64; largest angle difference at position 63: 3.8e-06, 4,095: 2.4e-04, 32,767: 2.0e-03\n"
+          "text": "fp32: e_HF 3.94e-06, e_ours 3.89e-06, ratio 0.987 [0.957, 1.02] passes\nmax |L_HF - L_64| 1.0e-04, max |L_ours - L_HF| 1.1e-04, deterministic: True\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "long prompt: e_HF 5.7e-06 against the reference, 2.9e-05 against it with exact angles\nport angles ratio, reference            ratio, reference with exact angles\nreference   1.14 [1.09, 1.19] passes    1.01 [1, 1.02] passes\nbook        2.47 [2.23, 2.73] fails     0.966 [0.925, 1.01] passes\nexact       5.24 [4.68, 5.96] fails     0.232 [0.207, 0.262] passes\n"
+          "text": "ratio with the port in batches of\n   1: 0.813 [0.792, 0.832] passes\n   4: 0.987 [0.957, 1.02] passes\n  16: 1.24 [1.2, 1.27] passes\nfrequencies that differ: 24 of 64; largest angle difference at position 63: 3.8e-06, 4,095: 2.4e-04, 32,767: 2.0e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "long prompt: e_HF 5.7e-06 against the reference, 2.9e-05 against it with exact angles\nport angles ratio, reference            ratio, reference with exact angles\nreference   1.14 [1.09, 1.18] passes    1.01 [1, 1.02] passes\nbook        2.47 [2.23, 2.73] fails     0.966 [0.925, 1.01] passes\nexact       5.24 [4.68, 5.93] fails     0.232 [0.207, 0.262] passes\n"
         }
       ]
     },
     "d2l-checkpoint-bf16-check": {
-      "code_fingerprint": "sha256:07397a3ffc563fe7a5ba4081e5f0a3c680c63d1b11df0ba54698461bb730c463",
+      "code_fingerprint": "sha256:ce282116a15127cdb77102b003f106b8e3a02b0f55163f79c0c4bcbd58b9d410",
       "kind": "text",
       "outputs": [
         {
@@ -182,48 +187,48 @@
       ]
     },
     "d2l-checkpoint-sampler": {
-      "code_fingerprint": "sha256:505515aea1879c7bc0b4ad8a6a52060a4cb1f7f2a1408eb57b55fdd5989fd602",
+      "code_fingerprint": "sha256:18e3b95c651b869ae0a08dbb053de61d8d2ff81bd3e94ef46d0ffd2b78e860fc",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate-paths": {
-      "code_fingerprint": "sha256:a7a97c8149fe1838dcc0551996c22233c71afba497a6d77c2cec806bcb280ad6",
+      "code_fingerprint": "sha256:4b6607128433af491bd6dbf25b02d948c8c43ce83df3d9b28c910a5e041f98b8",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate-hf": {
-      "code_fingerprint": "sha256:f2b45e48ae3a964d1858e53ed88c45aeb32dd9f8b0b85489a41551d47e791976",
+      "code_fingerprint": "sha256:9a55473b07bb0ecb00316d1e69a52d1bfd93beada777a8cf68a42a35fe6a9552",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate": {
-      "code_fingerprint": "sha256:3bae14bc103054c097f78a3bd22b982c5422450c994e577215935f5cf16a2be0",
+      "code_fingerprint": "sha256:2963edf4feb2f8f3cc98b17bbc2d0d059c7fd87f308bf82c4b2f9fdaea5b1dce",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-greedy": {
-      "code_fingerprint": "sha256:111f2ecd7263ba4f6d2477d1644c0544c0c8f76453dcf93389b543610f1dd3b5",
+      "code_fingerprint": "sha256:7018090559d2f1c87a4acc68157343e47fe6ab7b637dec3f6d14830cff3665a0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "generate on hf32 equals hf32.generate: 28 of 28\nours32: 28 of 28 identical to hf32; median first divergence at token 64 of 64; top-2 gaps there: none\n"
+          "text": "generate on hf32 equals hf32.generate: 28 of 28\nours32: 28 of 28 identical to hf32 over 64 tokens\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ours16: 14 of 28 identical to hf32; median first divergence at token 54.5 of 64; top-2 gaps there: 2.1e-02, 3.9e-02, 3.4e-02, 1.4e-02, 2.1e-01, 9.6e-03, 3.7e-02, 5.6e-02, 2.3e-02, 4.4e-02, 5.6e-02, 3.1e-02, 3.9e-04, 1.9e-02\n"
+          "text": "ours16: 14 of 28 identical to hf32 over 64 tokens; the others first differ at token 18.5 (median), top-2 gaps there: 2.1e-02, 3.9e-02, 3.4e-02, 1.4e-02, 2.1e-01, 9.6e-03, 3.7e-02, 5.6e-02, 2.3e-02, 4.4e-02, 5.6e-02, 3.1e-02, 3.9e-04, 1.9e-02\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hf16: 11 of 28 identical to hf32; median first divergence at token 39 of 64; top-2 gaps there: 1.1e-02, 7.3e-02, 3.9e-02, 1.4e-02, 2.1e-01, 9.6e-03, 3.7e-02, 5.6e-02, 7.4e-02, 7.2e-02, 4.4e-02, 2.6e-02, 9.2e-02, 5.6e-02, 3.1e-02, 3.9e-04, 1.8e-02\n"
+          "text": "hf16: 11 of 28 identical to hf32 over 64 tokens; the others first differ at token 18 (median), top-2 gaps there: 1.1e-02, 7.3e-02, 3.9e-02, 1.4e-02, 2.1e-01, 9.6e-03, 3.7e-02, 5.6e-02, 7.4e-02, 7.2e-02, 4.4e-02, 2.6e-02, 9.2e-02, 5.6e-02, 3.1e-02, 3.9e-04, 1.8e-02\n"
         }
       ]
     },
     "d2l-checkpoint-chat": {
-      "code_fingerprint": "sha256:d1ffb7873f8d14f99ac7c37de0b4048f39b1e0077bdebb7ecd2586cf38b07570",
+      "code_fingerprint": "sha256:19735680a7608e820df90b3a7609e5f6238b950c36d01b03f93c4d935b094da4",
       "kind": "text",
       "outputs": [
         {
@@ -234,7 +239,7 @@
       ]
     },
     "d2l-checkpoint-ladder": {
-      "code_fingerprint": "sha256:44f34d9a3889c589ed7d11ca3059777f5cff8906065d69cbdd7b4700ecfa927a",
+      "code_fingerprint": "sha256:b4ba75eb1be7d440823d1eb17a884c8409e8b13125faa9a4649a32ee62aa618b",
       "kind": "text",
       "outputs": [
         {
@@ -260,12 +265,12 @@
       ]
     },
     "d2l-checkpoint-hooks": {
-      "code_fingerprint": "sha256:627f3676bce94f64f8fda5be3b13c67fc5cf693703d8da09f5d2990acea8a5ad",
+      "code_fingerprint": "sha256:8f777ba3827a35bc6695622dfc30ed5cf68279bc8ee403c6b3afab704b2fc122",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-layer-errors": {
-      "code_fingerprint": "sha256:e59e71ab3b8c79baa297c078bea4826705f78b72ff062b451c44a42c068cd138",
+      "code_fingerprint": "sha256:680759e5b3e87ab04357a3779997f690c86cd7575fcc6cfd81c0e01f68e5e6dc",
       "kind": "text",
       "outputs": [
         {
@@ -286,12 +291,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "median relative error of resid_post at layer\n              0        7       14       21       27\nours32  7.4e-07  1.4e-06  1.3e-06  1.2e-06  1.1e-06\nhf32    7.0e-07  1.3e-06  1.4e-06  1.2e-06  1.1e-06\nours16  5.0e-03  1.1e-02  1.2e-02  1.1e-02  1.1e-02\nhf16    9.0e-03  1.7e-02  1.8e-02  1.6e-02  1.5e-02\nfp32: port / Transformers over every layer and point: 0.89 to 1.06; layers outside [0.5, 2]: []\nbf16: port / Transformers over every layer and point: 0.46 to 0.77; layers outside [0.5, 2]: [1]\n"
+          "text": "median relative error of resid_post at layer\n              0        7       14       21       27\nours32  7.4e-07  1.4e-06  1.3e-06  1.2e-06  1.1e-06\nhf32    7.0e-07  1.3e-06  1.4e-06  1.2e-06  1.1e-06\nours16  5.0e-03  1.1e-02  1.2e-02  1.1e-02  1.1e-02\nhf16    9.0e-03  1.7e-02  1.8e-02  1.6e-02  1.5e-02\nport / Transformers (eager) over every layer and point\nfp32, port in batches of  1: 0.70 to 1.00, outside [0.5, 2]: []\nfp32, port in batches of  4: 0.89 to 1.06, outside [0.5, 2]: []\nfp32, port in batches of 16: 1.11 to 1.44, outside [0.5, 2]: []\nbf16, port in batches of  1: 0.43 to 0.79, outside [0.5, 2]: [0, 1]\nbf16, port in batches of  4: 0.46 to 0.77, outside [0.5, 2]: [1]\nbf16, port in batches of 16: 0.40 to 0.73, outside [0.5, 2]: [0, 1, 2]\nbf16, Transformers with SDPA:   0.84 to 0.94, outside [0.5, 2]: []\n"
         }
       ]
     },
     "d2l-checkpoint-bugs": {
-      "code_fingerprint": "sha256:61e77e9f378c5114ab1b7e08f5c04320d8d3eab1850461e3e6f6420072cb9c44",
+      "code_fingerprint": "sha256:d8e1b5645d3ad5725c9515131b033fa6061070c959fe1fb26fcbf1c787d7f429",
       "kind": "text",
       "outputs": [
         {
@@ -332,7 +337,7 @@
       ]
     },
     "d2l-checkpoint-divergence-plot": {
-      "code_fingerprint": "sha256:03a41b8ac32d5c323973ce9a3ab8ce440353c98673fc8aa176ec307060326e81",
+      "code_fingerprint": "sha256:cb6d2543ee378c1d101b80701b11715d952277d6409d98d546d0163bcbff30de",
       "kind": "asset",
       "outputs": [
         {
@@ -340,7 +345,7 @@
           "mime": "image/svg+xml",
           "asset": "d2l-checkpoint/d2l-checkpoint-divergence-plot-1.svg",
           "bytes": 44329,
-          "sha256": "sha256:60e843cc5f9125a15e7a047f0c412ea7ebec0d1dbe9e7cd3e4d73056e56f79ab"
+          "sha256": "sha256:30e1ce7ac3f1b4982a5a56ddd982bc1e63e6301276dabecc53aaed29bc46a162"
         }
       ]
     }

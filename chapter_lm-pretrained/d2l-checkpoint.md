@@ -647,6 +647,15 @@ def cached_logits(model, X, keep, chunk=1024):
 def mean_abs(L, R):
     """Per prompt: mean |L - R| over positions and vocabulary, in fp64."""
     return (L.double() - R.double()).abs().mean((1, 2)).cpu().numpy()
+
+def batched_errors(model, ref, ids, batch_size):
+    """mean_abs per prompt, model in batches of batch_size, ref in 4s."""
+    e = []
+    for X in ids.split(batch_size):
+        L = logits(model, X)
+        e += [mean_abs(L[j:j + 4], logits(ref, X[j:j + 4]))
+              for j in range(0, len(X), 4)]
+    return np.concatenate(e)
 ```
 
 <!-- Placeholder (stage 2): the fp32 rule on the 32 prompts, determinism, the two frequency formulas, and the long prompt with each set of angles, against the reference and against the reference with exact angles (the rule tests agreement with Transformers' angle rounding, not angle accuracy). -->
@@ -670,6 +679,10 @@ print(f'fp32: e_HF {e32_hf.mean():.2e}, e_ours {e32_ours.mean():.2e}, '
       f'ratio {text}\nmax |L_HF - L_64| {delta32:.1e}, max |L_ours - L_HF| '
       f'{gap:.1e}, deterministic: '
       + ('True' if same else f'to within {rerun:.1e}'))
+batch_rules = {b: port_rule(batched_errors(ours32, hf64, ids, b), e32_hf)
+               for b in (1, 4, 16)}  # batch composition alone
+print('ratio with the port in batches of\n' + '\n'.join(
+    f'{b:4}: {text}' for b, (text, _) in batch_rules.items()))
 two_i = torch.arange(0, 128, 2, dtype=torch.float32) / 128
 inv_hf, inv_book = 1.0 / 1e6 ** two_i, 1e6 ** -two_i  # equal in exact math
 print(f'frequencies that differ: {(inv_hf != inv_book).sum()} of 64; '
@@ -689,7 +702,7 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
                            if t is None else tuple(u.to(device) for u in t))
               for name, t in angles.items()}
     L_hf = cached_logits(hf32, X, 256)
-    L64 = cached_logits(hf64, X, 256)  # Transformers: fp32 angles
+    L64 = cached_logits(hf64, X, 256, chunk=512)  # Transformers: fp32 angles
 
     class ExactRotary(torch.nn.Module):  # Transformers' interface, but
         def forward(self, x, position_ids):  # the angles in fp64
@@ -698,7 +711,7 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
             return a.cos().to(x.dtype), a.sin().to(x.dtype)
 
     rotary, hf64.model.rotary_emb = hf64.model.rotary_emb, ExactRotary()
-    L64_exact = cached_logits(hf64, X, 256)
+    L64_exact = cached_logits(hf64, X, 256, chunk=512)
     hf64.model.rotary_emb = rotary  # restore the reference
     refs = (L64, L64_exact)
     e_hf = [blocks(L_hf, R).mean() for R in refs]
@@ -714,6 +727,7 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
     del L_ours, L_hf, L64, L64_exact
 if not SMALL:
     assert verdict == 'passes'
+    assert all(v == 'passes' for _, v in batch_rules.values())
 ```
 
 <!-- Placeholder (stage 2): the same rule in bf16, the fp32 reference as a stand-in for fp64, how far batch composition alone moves the ratio, and the ratio against Transformers' default SDPA attention instead of eager. -->
@@ -740,15 +754,6 @@ change = e16_ours_32.mean() / e16_ours.mean() - 1
 print(f'bf16: e_HF {e16_hf.mean():.2e}, e_ours {e16_ours.mean():.2e}, '
       f'ratio {text}\ne_ours against the fp32 instead of the fp64 '
       f'reference: relative change {change:.1e}')
-
-def batched_errors(model, ref, ids, batch_size):
-    """mean_abs per prompt, model in batches of batch_size, ref in 4s."""
-    e = []
-    for X in ids.split(batch_size):
-        L = logits(model, X)
-        e += [mean_abs(L[j:j + 4], logits(ref, X[j:j + 4]))
-              for j in range(0, len(X), 4)]
-    return np.concatenate(e)
 
 print('ratio with the port in batches of ' + ', '.join(
     f'{b}: {batched_errors(ours16, hf64, ids, b).mean() / e16_hf.mean():.3f}'
@@ -1054,11 +1059,12 @@ for name in ('ours32', 'ours16', 'hf16'):
     diverged = [(i, n) for i, n in enumerate(split) if n is not None]
     gaps = [top2_gap(hf32, tok, texts[i], ref[i][:n])
             for i, n in diverged]
+    others = '' if not diverged else (  # median over those that diverge
+        f'; the others first differ at token '
+        f'{np.median([n for _, n in diverged]):g} (median), top-2 gaps '
+        'there: ' + ', '.join(f'{g:.1e}' for g in gaps))
     print(f'{name}: {len(texts) - len(diverged)} of {len(texts)} identical '
-          f'to hf32; median first divergence at token '
-          f'{np.median([NEW_TOKENS if n is None else n for n in split]):g}'
-          f' of {NEW_TOKENS}; top-2 gaps there: '
-          + (', '.join(f'{g:.1e}' for g in gaps) or 'none'))
+          f'to hf32 over {NEW_TOKENS} tokens{others}')
     if name == 'ours32':  # in fp32 only a near-tie may flip a token
         for (i, n), g in zip(diverged, gaps):
             print(f'  prompt {i}: token {n}, near-tie {g < 10 * delta32}')
@@ -1189,11 +1195,11 @@ def first_divergence(errors, floor, factor=10.0):
 
 ```{.python .input #d2l-checkpoint-layer-errors}
 %%tab pytorch
-def errors_against(ref_model, models, ids):
+def errors_against(ref_model, models, ids, batch_size=4):
     """layer_errors of each model against ref_model on the ids, in batches
-    of 4: a dict of arrays (layers, capture points, prompts)."""
+    of batch_size: a dict of arrays (layers, capture points, prompts)."""
     errors = {name: [] for name in models}
-    for X in ids.split(4):
+    for X in ids.split(batch_size):
         X = X.to(next(ref_model.parameters()).device)
         ref = collect_hiddens(ref_model, X)
         for name, m in models.items():
@@ -1201,13 +1207,18 @@ def errors_against(ref_model, models, ids):
     return {name: np.concatenate(e, -1) for name, e in errors.items()}
 
 hf64, _ = d2l.load_hf(QWEN, dtype=torch.float64)
-err = {}
+err, other = {}, {}  # other: the port in batches of 1 and 16, SDPA
 for dtype, bits in ((torch.float32, 32), (torch.bfloat16, 16)):
     ours = load_qwen3(QWEN, dtype=dtype, device=device)
     hf, _ = d2l.load_hf(QWEN, dtype=dtype)
     hf.set_attn_implementation('eager')
     err.update(errors_against(hf64, {f'ours{bits}': ours, f'hf{bits}': hf},
                               ids))
+    for b in (1, 16):  # batch composition alone
+        other[bits, b] = errors_against(hf64, {'': ours}, ids, b)['']
+    if bits == 16:  # Transformers' default attention instead of eager
+        hf.set_attn_implementation('sdpa')
+        other['sdpa'] = errors_against(hf64, {'': hf}, ids)['']
     del ours, hf
     release()
 median = {k: np.median(e, -1) for k, e in err.items()}  # (layers, points)
@@ -1216,11 +1227,22 @@ print('median relative error of resid_post at layer')
 print(' ' * 6 + ''.join(f'{l:>9}' for l in layers))
 for k, m in median.items():
     print(f'{k:6}' + ''.join(f'{m[l, 3]:9.1e}' for l in layers))
-for bits, name in ((32, 'fp32'), (16, 'bf16')):  # port over Transformers
-    r = median[f'ours{bits}'] / median[f'hf{bits}']
-    print(f'{name}: port / Transformers over every layer and point: '
-          f'{r.min():.2f} to {r.max():.2f}; layers outside [0.5, 2]: '
-          f'{sorted(set(np.nonzero((r < 0.5) | (r > 2))[0].tolist()))}')
+
+def ratio_range(e_ours, e_hf):
+    """Port over Transformers, medians over prompts: its range over every
+    layer and point, and the layers where it leaves [0.5, 2]."""
+    r = np.median(e_ours, -1) / np.median(e_hf, -1)
+    out = sorted(set(np.nonzero((r < 0.5) | (r > 2))[0].tolist()))
+    return f'{r.min():.2f} to {r.max():.2f}, outside [0.5, 2]: {out}'
+
+print('port / Transformers (eager) over every layer and point')
+for bits, name in ((32, 'fp32'), (16, 'bf16')):
+    for b, e in ((1, other[bits, 1]), (4, err[f'ours{bits}']),
+                 (16, other[bits, 16])):
+        print(f'{name}, port in batches of {b:2}: '
+              + ratio_range(e, err[f'hf{bits}']))
+print('bf16, Transformers with SDPA:   '
+      + ratio_range(err['ours16'], other['sdpa']))
 ```
 
 <!-- Placeholder (stage 2): five porting bugs that strict accounting passes: where each first diverges, and what the two logit rules say about each. -->

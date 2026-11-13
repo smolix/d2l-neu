@@ -1248,10 +1248,13 @@ class TestReviewFixes(Fixture):
         cells = re.findall(r'```\{\.python \.input #([\w-]+)\}\n'
                            r'%%tab pytorch\n(.*?)```', src, re.S)
         self.assertIn('eval-suites-attach', [c for c, _ in cells])
-        ns = {}
+        ns = {}  # the definition cells only (the others read artifacts)
+        defs = {'imports', 'extras', 'bootstrap', 'paired', 'mde', 'task',
+                'suite', 'run-def', 'result', 'attach'}
         with mock.patch('sys.stdout'):
-            for _, code in cells:
-                exec(code, ns)
+            for cid, code in cells:
+                if cid.removeprefix('eval-suites-') in defs:
+                    exec(code, ns)
         EvalSuite, EvalResult = ns['EvalSuite'], ns['EvalResult']
         self.assertIsNot(EvalSuite, d2l.EvalSuite)
         path = os.path.join(self.tmp.name, 'fx.json')

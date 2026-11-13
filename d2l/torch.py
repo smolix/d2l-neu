@@ -5953,6 +5953,11 @@ d2l.DATA_HUB['mt-bench-gpt4-pair'] = (
     'f7d2896d2cc5d80f8b55c2bbc722613555233c25/data/'
     'gpt4_pair-00000-of-00001-c0b431264a82ddc0.parquet',
     '8928cda0399b6a0e40589cfbd3df4b7ccebdf242')
+# The benchmark data of this edition (source in the book's repository:
+# tools/lm_data/lm_benchmarks_2026.json), approved before it was frozen
+d2l.DATA_HUB['lm-benchmarks-2026-v1'] = (
+    d2l.LM_DATA_URL + 'lm-benchmarks-2026-v1.json',
+    'f22e75c247119ba6f43196cc54beceeb9bd47e6c')
 
 BootstrapResult = collections.namedtuple(  # ci = (lo, hi); p_two_sided is
     'BootstrapResult',                      # None for a single sample

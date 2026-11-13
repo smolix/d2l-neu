@@ -226,9 +226,10 @@ def _setup_cell(variant: str, revision: str,
     packages = common.split() + [
         package["distribution"] for package in locked
     ]
-    pinned = {
+    pinned = {  # (version, CPU requirement or None if GPU-only, GPU, match)
         package["distribution"]: (
-            package["version"], package["requirement"],
+            package["version"],
+            None if package.get("device") == "gpu" else package["requirement"],
             package.get("gpu_requirement", package["requirement"]),
             package["match"]
         )
@@ -296,6 +297,8 @@ for package in required:
     if package in pinned:
         wanted, cpu_requirement, gpu_requirement, match = pinned[package]
         requirement = gpu_requirement if gpu else cpu_requirement
+        if requirement is None:  # a GPU-only package on a CPU runtime
+            continue
         try:
             installed = version(package)
         except PackageNotFoundError:
@@ -310,7 +313,9 @@ if missing:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
 
 mismatched = []
-for package, (wanted, _, _, match) in pinned.items():
+for package, (wanted, cpu_requirement, _, match) in pinned.items():
+    if not gpu and cpu_requirement is None:
+        continue
     try:
         installed = version(package)
     except PackageNotFoundError:

@@ -4,7 +4,7 @@
     "torch.optim.SGD",
     "torchvision.transforms.Compose"
   ],
-  "environment_sha256": "ba4a993cc6ec9b2602d8880d9540d771844f7f886d8b5db4df9cbbe7de42a9f5",
+  "environment_sha256": "4e904e2e10f3b7adf377639aacf396c0b9ddd94e5f0dbc076192b23c8f28e62b",
   "framework": "pytorch",
   "optional_packages": [
     {
@@ -96,6 +96,26 @@
       "match": "exact",
       "requirement": "scikit-learn==1.8.0",
       "version": "1.8.0"
+    },
+    {
+      "constraint": "flash-linear-attention==0.6.0",
+      "device": "gpu",
+      "distribution": "flash-linear-attention",
+      "hosted_policy": "exact",
+      "import": "fla",
+      "match": "exact",
+      "requirement": "flash-linear-attention==0.6.0",
+      "version": "0.6.0"
+    },
+    {
+      "constraint": "fla-core==0.6.0",
+      "device": "gpu",
+      "distribution": "fla-core",
+      "hosted_policy": "exact",
+      "import": "fla",
+      "match": "exact",
+      "requirement": "fla-core==0.6.0",
+      "version": "0.6.0"
     }
   ],
   "packages": [
@@ -122,7 +142,7 @@
   "python": "3.12",
   "schema_version": 2,
   "source_lock": "uv.lock",
-  "source_lock_sha256": "1ef9e7694f3952350c3cd941eeaec22cdbcaa875559323bcf786357a5321948e",
+  "source_lock_sha256": "54e8a8b5cb41bb32c0404fbb8bdab100285181db1ac54f3bf788f1ca8a068285",
   "venv_packages": {
     "lm": [
       "transformers",
@@ -130,6 +150,8 @@
       "accelerate",
       "openai",
       "scikit-learn",
+      "flash-linear-attention",
+      "fla-core",
       "safetensors"
     ]
   }

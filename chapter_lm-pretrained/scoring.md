@@ -68,7 +68,7 @@ import pandas as pd
 import transformers
 ```
 
-<!-- Placeholder (stage 2): the datasets, pinned to commits, and the two fixed inputs; the run artifacts are registered at capture. -->
+<!-- Placeholder (stage 2): the datasets, pinned to commits, the two fixed inputs, and the four measured results of this section's regeneration run. -->
 
 ```{.python .input #scoring-data-hub}
 %%tab pytorch
@@ -108,6 +108,19 @@ d2l.DATA_HUB['lm-eval-reference-arc-v1'] = (
 d2l.DATA_HUB['lm-heldout-texts-v1'] = (
     d2l.LM_DATA_URL + 'lm-heldout-texts-v1.json',
     '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
+# This section's measured results, written by a run with D2L_RERUN=1
+d2l.DATA_HUB['lm-bpb-v1'] = (
+    d2l.LM_DATA_URL + 'lm-bpb-v1.csv',
+    '7c2ceeeda10b3f4ca6774821ed426c896442c3d3')
+d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
+    d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
+    '11b561b6fb07d19016f5a00b4a5dcf35d3dbbb07')
+d2l.DATA_HUB['lm-arc-generations-v1'] = (
+    d2l.LM_DATA_URL + 'lm-arc-generations-v1.jsonl',
+    '0b58a8a81e87794c5a564bd958142ede4288d195')
+d2l.DATA_HUB['lm-arc-scores-v1'] = (
+    d2l.LM_DATA_URL + 'lm-arc-scores-v1.parquet',
+    'e4e1ea4b45a7a5288ae3b914459e60228b5e2931')
 ```
 
 ```{.python .input #scoring-download}
@@ -510,7 +523,8 @@ def scorer_errors(model, tok, items, letter_prompts):
     prompts, choices = zip(*items)
     hand = torch.tensor([[hand_loop(model, tok, p, c) for c in cs]
                          for p, cs in items])
-    total = d2l.score_choices(model, tok, prompts, choices, 'sum')
+    total = d2l.score_choices(model, tok, prompts, choices, 'sum',
+                              batch_size=1)  # as the loop: no batch drift
     one = d2l.score_choices(model, tok, prompts, choices, batch_size=1)
     eight = d2l.score_choices(model, tok, prompts, choices, batch_size=8)
     letters = d2l.score_choices(model, tok, letter_prompts,  # one prompt
@@ -1105,7 +1119,8 @@ d2l.plot([K, K, [8], [8]], [[est[m, k, 'plug-in'] for k in K] for m in PAIR]
          fmts=('C0--', 'C1--', 'C0D', 'C1D'), figsize=(4.5, 3))
 d2l.plot_intervals(K, {m.removeprefix('Qwen/'): tuple(np.array(
     [est[m, k] for k in K]).T) for m in PAIR}, 'k', 'pass@k', kind='band',
-    xscale='log2', axes=d2l.plt.gca());
+    xscale='log2', axes=d2l.plt.gca())
+d2l.plt.gca().autoscale(axis='y')  # d2l.plot fixed the range: fit the bands
 ```
 
 <!-- Placeholder (stage 2): how much of the band's width comes from sampling and how much from the choice of problems. -->
@@ -1588,5 +1603,7 @@ d2l.plot_intervals(CONVENTIONS, {m.removeprefix('Qwen/'): tuple(np.array(
     axes=axes[0])
 d2l.plot_intervals(PAIR_CONVS, {'Qwen3.5-0.8B - Qwen3-0.6B': tuple(np.array(
     [PAIR_DIFF[c] for c in PAIR_CONVS]).T)}, 'convention',
-    'paired difference', reference=0, axes=axes[1]);
+    'paired difference', reference=0, axes=axes[1])
+axes[0].legend(loc='lower left', bbox_to_anchor=(0, 1), ncol=3,  # above
+               frameon=False);  # the panel, clear of every interval
 ```

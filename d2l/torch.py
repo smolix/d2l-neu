@@ -5460,6 +5460,19 @@ d2l.DATA_HUB['lm-eval-reference-arc-v1'] = (
 d2l.DATA_HUB['lm-heldout-texts-v1'] = (
     d2l.LM_DATA_URL + 'lm-heldout-texts-v1.json',
     '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
+# This section's measured results, written by a run with D2L_RERUN=1
+d2l.DATA_HUB['lm-bpb-v1'] = (
+    d2l.LM_DATA_URL + 'lm-bpb-v1.csv',
+    '7c2ceeeda10b3f4ca6774821ed426c896442c3d3')
+d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
+    d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
+    '11b561b6fb07d19016f5a00b4a5dcf35d3dbbb07')
+d2l.DATA_HUB['lm-arc-generations-v1'] = (
+    d2l.LM_DATA_URL + 'lm-arc-generations-v1.jsonl',
+    '0b58a8a81e87794c5a564bd958142ede4288d195')
+d2l.DATA_HUB['lm-arc-scores-v1'] = (
+    d2l.LM_DATA_URL + 'lm-arc-scores-v1.parquet',
+    'e4e1ea4b45a7a5288ae3b914459e60228b5e2931')
 
 def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
     """Download DATA_HUB[key] into root/key/ and return its local path.

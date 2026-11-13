@@ -4397,6 +4397,8 @@ HF_REVISIONS = {
     'Qwen/Qwen3.5-4B': '851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a',
     'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
 
+LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
+
 _TEXT_KEY_MAPPING = {  # checkpoint key renames for a multimodal file's text
     'gemma4_text': {r'^model\.language_model\.': 'model.'}}
 

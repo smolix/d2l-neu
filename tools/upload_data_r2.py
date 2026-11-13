@@ -46,6 +46,9 @@ from pathlib import Path
 BUCKET = 'd2l-data'
 ENDPOINT = 'https://1712830f746ac9278e7db6de736dc430.r2.cloudflarestorage.com'
 PUBLIC_URL = 'https://d2l-data.smola.org/'
+# Library constants that name a prefix of PUBLIC_URL (`d2l.LM_DATA_URL`, 18.1):
+# the printed DATA_HUB line uses the constant, as the registry cells do.
+URL_CONSTANTS = {'lm/': 'd2l.LM_DATA_URL'}
 ENV_FILE = Path(os.environ.get('D2L_R2_DATA_ENV',
                                '~/.config/d2l/r2-data.env')).expanduser()
 VERIFY_URL = 'https://api.cloudflare.com/client/v4/user/tokens/verify'
@@ -252,9 +255,19 @@ def upload(files, prefix, dry_run=False, force=False):
               f'  sha1     {sha1}\n'
               f'  url      {url}\n'
               f"  DATA_HUB d2l.DATA_HUB['{Path(key).stem}'] = (\n"
-              f"               '{url}',\n"
+              f'               {hub_url(key)},\n'
               f"               '{sha1}')")
     return failed
+
+
+def hub_url(key):
+    """The URL expression of a DATA_HUB entry for *key*: the library
+    constant plus the rest of the key when one names its folder, else the
+    full URL as a literal."""
+    for prefix, const in URL_CONSTANTS.items():
+        if key.startswith(prefix) and '/' not in key[len(prefix):]:
+            return f"{const} + '{key[len(prefix):]}'"
+    return f"'{PUBLIC_URL + key}'"
 
 
 def delete(keys, dry_run=False, force=False):

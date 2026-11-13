@@ -1895,7 +1895,11 @@ with the 32 uploaders. Verify after the run, not during.
 **Data artifacts (`make upload-data`).** Files that a `DATA_HUB` entry pins
 (the Language Models part's `lm-...-v1` artifacts) live in the R2 bucket
 `d2l-data`, served at `https://d2l-data.smola.org/<key>`, not in the site
-buckets above and not under the legacy `d2l.DATA_URL` (S3). Upload with
+buckets above and not under the legacy `d2l.DATA_URL` (S3). Registry cells
+name the `lm/` folder by the PyTorch-tagged constant `d2l.LM_DATA_URL =
+'https://d2l-data.smola.org/lm/'` (`chapter_lm-pretrained/hf-models.md`); its
+shard `LM_DATA_URL.py` is reached only through the key shards that use it, so
+the constant stales nothing else. Upload with
 
     make upload-data FILES="data/lm/rerun/lm-x-v1.json" PREFIX=lm/ [DRY_RUN=1]
 

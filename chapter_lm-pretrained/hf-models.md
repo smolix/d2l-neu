@@ -142,6 +142,17 @@ HF_REVISIONS = {
     'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
 ```
 
+<!-- Placeholder prose (stage 2): the section text is written after the runs. -->
+The files this part of the book records itself (measured tables, reference
+logits, cached API responses) are published once under a versioned name and
+never change; `DATA_HUB` pins each to its SHA-1 under `LM_DATA_URL`.
+
+```{.python .input #hf-models-lm-data-url}
+%%tab pytorch
+#@save
+LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
+```
+
 <!-- Placeholder (stage 2): the pinned load, its text model and its report. -->
 
 ```{.python .input #hf-models-load-hf}

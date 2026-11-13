@@ -654,7 +654,11 @@ make upload-data FILES="data/lm/rerun/lm-x-v1.json" PREFIX=lm/             # upl
 
 Success: per file a line `uploaded: <path>` with the key, size, sha1, URL and
 a `d2l.DATA_HUB[...] = (url, sha1)` line to paste into the registering
-`#@save` cell (log: `logs/upload-data-<TS>.log`). Re-running with the same
+`#@save` cell (log: `logs/upload-data-<TS>.log`). Under `PREFIX=lm/` the
+line writes the URL as `d2l.LM_DATA_URL + '<file>'`: the Language Models
+part names its base URL by that constant (a `#@save` in 18.1,
+`chapter_lm-pretrained/hf-models.md`, with its own freshness shard), never
+as `d2l.DATA_URL + 'lm/'` (the legacy S3 bucket). Re-running with the same
 bytes reports `already uploaded (identical bytes)`.
 
 Common failures:

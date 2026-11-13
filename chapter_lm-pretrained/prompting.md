@@ -61,6 +61,7 @@ import os
 import re
 import string
 import sys
+import textwrap
 import time
 import pandas as pd
 import transformers
@@ -136,12 +137,12 @@ start = tok_i.convert_tokens_to_ids('<|im_start|>')
 special = set(tok_i.added_tokens_decoder)  # <|im_start|>, <think>, ...
 line = []
 for i in tok_i(chat_text, add_special_tokens=False)['input_ids']:
-    if i == start and line:  # one line per message
-        print(' '.join(line))
+    if i == start and line:  # one paragraph per message
+        print(textwrap.fill(' '.join(line), 79))
         line = []
     t = tok_i.decode([i]).replace('\n', '\\n')
     line.append(f'[{i}:{t}]' if i in special else f'{i}:{t}')
-print(' '.join(line))
+print(textwrap.fill(' '.join(line), 79))
 ```
 
 <!-- Placeholder (prose, ### Chat Templates): the generation prefix, and whether each family thinks by default (the table below). -->
@@ -282,6 +283,7 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
 prompts = [d2l.fewshot_prompt(DEMOS, h, fmt=FMT) for h in HEADLINES]
 _, label_ids = d2l._label_token_ids(tok, prompts, NATURAL)
 one = d2l.label_logprobs(base, tok, prompts, NATURAL, batch_size=1)
+tols = []
 for prompt, ids, lp in zip(prompts, label_ids, one):
     x = tok(prompt, return_tensors='pt').input_ids.to(base.device)
     with torch.inference_mode():  # every position's logits, then the last
@@ -294,11 +296,14 @@ for prompt, ids, lp in zip(prompts, label_ids, one):
     err = (lp - ref).abs().max().item()
     print(f'reader vs full softmax: {err:.1e} nats (tolerance {tol:.1e})')
     assert err <= tol
+    tols.append(tol)
+# padding changes every GEMM shape, so each logit may again round one ulp
+# differently: the same bound, per prompt
 batched = d2l.label_logprobs(base, tok, prompts, NATURAL, batch_size=4)
-err = (batched - one).abs().max().item()
-same = torch.equal(batched.argmax(-1), one.argmax(-1))
-print(f'batched vs one at a time: {err:.1e} nats, same argmax: {same}')
-assert err <= 0.25 and same
+for e, tol in zip((batched - one).abs().max(-1).values.tolist(), tols):
+    print(f'batched vs one at a time: {e:.1e} nats (tolerance {tol:.1e})')
+    assert e <= tol
+assert torch.equal(batched.argmax(-1), one.argmax(-1))  # same predictions
 ```
 
 <!-- Placeholder (prose, ### Reading a Label from the Next Token): one word, two token ids; a prompt ending in a space; a label of three tokens. -->
@@ -315,10 +320,11 @@ print(pd.DataFrame({
     }).to_string(index=False))
 assert not set(after_colon) & set(after_newline)
 
-def label_mass(texts, ids):  # probability of the label tokens, full softmax
+def label_mass(texts, ids, model=base, tokenizer=tok):  # full softmax
+    """Mean probability of the label tokens ids after each text."""
     with torch.inference_mode():
-        return np.mean([base(input_ids=tok(t, return_tensors='pt').input_ids
-                             .to(base.device), use_cache=False)
+        return np.mean([model(input_ids=tokenizer(t, return_tensors='pt')
+                              .input_ids.to(model.device), use_cache=False)
                         .logits[0, -1].float().softmax(-1)[ids].sum().item()
                         for t in texts])
 
@@ -330,21 +336,28 @@ for texts, words in (([p + ' ' for p in prompts], NATURAL),
     try:
         d2l.label_logprobs(base, tok, texts, words)
     except ValueError as e:
-        print('ValueError:', e)
+        print(textwrap.fill(f'ValueError: {e}', 79))
 ```
 
-<!-- Placeholder (prose, ### Reading a Label from the Next Token): one zero-shot item, three pairings of checkpoint and layout. -->
+<!-- Placeholder (prose, ### Reading a Label from the Next Token): one zero-shot item, four pairings of checkpoint and layout, with the full-softmax probability of the four label tokens (label mass). The base model never saw the empty think block that enable_thinking=False appends, and after it the label mass is near zero, so its renormalized distribution means nothing; with the template's default end (no think block) the base model reads the chat layout. -->
 
 ```{.python .input #prompting-template-mismatch}
 %%tab pytorch
 chat = d2l.fewshot_prompt([], QUERY, 'chat_multi', system=SYSTEM)
 plain = d2l.fewshot_prompt([], QUERY, fmt=FMT, system=SYSTEM)
-runs = {'instruct, chat template': (inst, tok_i, chat, True),
-        'instruct, plain text': (inst, tok_i, plain, False),
-        'base, chat template': (base, tok, chat, True)}
-probs = {name: d2l.label_logprobs(m, t, [p], NATURAL, chat=c)[0].exp()
-         for name, (m, t, p, c) in runs.items()}
-pd.DataFrame(probs, index=NATURAL).T.round(3)
+render = lambda t, **kw: t.apply_chat_template(  # enable_thinking=False:
+    chat, tokenize=False, add_generation_prompt=True, **kw)  # empty block
+runs = {'instruct, chat template': (inst, tok_i, render(
+            tok_i, enable_thinking=False)),
+        'instruct, plain text': (inst, tok_i, plain),
+        'base, chat template': (base, tok, render(tok, enable_thinking=False)),
+        'base, chat template, no think block': (base, tok, render(tok))}
+rows = {}
+for name, (m, t, text) in runs.items():  # text: the rendered prompt
+    _, (ids,) = d2l._label_token_ids(t, [text], NATURAL)
+    p = d2l.label_logprobs(m, t, [text], NATURAL)[0].exp()
+    rows[name] = [*p.tolist(), label_mass([text], ids, m, t)]
+pd.DataFrame(rows, index=NATURAL + ['label mass']).T.round(3)
 ```
 
 <!-- Placeholder (stage 2): one set of demonstrations, four layouts. -->
@@ -430,6 +443,9 @@ d2l.DATA_HUB['ag-news-test'] = (
     'https://huggingface.co/datasets/sh0416/ag_news/resolve/'
     '70e3fa1915be9a8daebec5e840f20df9a8e18793/test.jsonl',
     '6c874e265fe5ff35861f27eaf3e681dda147ba12')
+d2l.DATA_HUB['lm-fewshot-grid-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fewshot-grid-v1.csv',
+    'e746358522c92235d0c9f7aa324bd596361b47ce')
 ```
 
 <!-- Placeholder (prose, ### Number of Demonstrations): the task data, its cleanup rules (HTML and Windows-1252 escapes left in the titles), and the key that finds near-duplicates. -->
@@ -497,8 +513,9 @@ test_keys = {dedup_key(t) for t in TEST_TITLES}
 in_pool = np.array([dedup_key(t) not in test_keys for t in TRAIN_TITLES])
 POOL = [np.flatnonzero(in_pool & (TRAIN_Y == c)) for c in range(4)]
 print(f'{len(ITEMS)} test items, {N_PER_CLASS} per class; pool per class '
-      f'{[len(p) for p in POOL]}; {(~in_pool).sum()} train titles '
-      'removed as duplicates of test titles')
+      f'{[len(p) for p in POOL]}')
+print(f'{(~in_pool).sum()} train titles removed as duplicates of test '
+      'titles; titles changed by each cleanup rule:')
 print(pd.DataFrame({'train': changed_train, 'test': changed_test}).T
       .to_string())
 ```
@@ -552,6 +569,8 @@ def conditions():
         add(model=model, k=0, instr=1)  # an instruction names the labels
         for k in ks if model == 'instruct' else [8]:  # the chat layout
             add(model=model, layout='chat', k=k)
+        if model == 'base':  # the template's default end: no think block
+            add(model=model, layout='chat_default')
         for order in (1, 2, 3):
             add(model=model, order=order)
         for words, rhos in (('natural', (0.25, 0.5, 0.75, 1.0)),
@@ -588,9 +607,13 @@ def build_prompts(cond, titles):
     if cond['layout'] == 'ask':
         return [ASK.format(x=x) for x in titles]
     ds = demos(cond)
-    if cond['layout'] == 'chat':
-        return [d2l.fewshot_prompt(ds, x, 'chat_multi', label_map=words,
-                                   system=SYSTEM) for x in titles]
+    if cond['layout'].startswith('chat'):
+        chats = [d2l.fewshot_prompt(ds, x, 'chat_multi', label_map=words,
+                                    system=SYSTEM) for x in titles]
+        if cond['layout'] == 'chat':  # rendered by the reader, no thinking
+            return chats
+        return [tok.apply_chat_template(  # base only: the default end
+            m, tokenize=False, add_generation_prompt=True) for m in chats]
     system = SYSTEM if cond['instr'] else None
     return [d2l.fewshot_prompt(ds, x, fmt=FMT, label_map=words,
                                system=system) for x in titles]
@@ -615,7 +638,7 @@ for model, tokenizer in zip(MODELS, (tok, tok_i)):
                         for c in conds)
     print(f'{model}: {len(conds)} (condition, draw) pairs, '
           f'{len(conds) * len(TITLES):,} prompts, {TOKENS[model]:,} tokens')
-assert [sum(c['model'] == m for c in GRID) for m in MODELS] == [112, 123]
+assert [sum(c['model'] == m for c in GRID) for m in MODELS] == [117, 123]
 ```
 
 <!-- Placeholder (prose, ### Number of Demonstrations): one row per condition, draw and item: the four label log-probabilities and the prediction. -->
@@ -807,19 +830,16 @@ gen = {'question': pred(exp='gen', layout='ask', k=0),
        'plain, k = 0': pred(exp='gen', k=0),
        'plain, k = 4': pred(exp='gen', k=4)}
 rows = []
-for name, p in gen.items():
-    row = {'prompt': name, 'valid label': (p >= 0).mean(),
-           'exact match': (p == GOLD).mean()}
-    for what, f in (('valid', lambda p: (p >= 0) * 1.0),
-                    ('exact', lambda p: (p == GOLD) * 1.0)):
-        if name != 'question':
-            row[f'{what} vs question'] = show(compare(f(p),
-                                                  f(gen['question'])))
-    rows.append(row)
-print(pd.DataFrame(rows).round(3).fillna('').to_string(index=False))
+for what, f in (('valid label', lambda p: (p >= 0) * 1.0),
+                ('exact match', lambda p: (p == GOLD) * 1.0)):
+    for name, p in gen.items():
+        rows.append({'prompt': name, 'rate of': what, 'rate': f(p).mean(),
+                     'vs question': '' if name == 'question' else show(
+                         compare(f(p), f(gen['question'])))})
+print(pd.DataFrame(rows).round(3).to_string(index=False))
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): the template has to match the checkpoint (the table below). At k = 8 the chat layout carries SYSTEM, which names the labels, and the plain layout does not, so the chat-versus-plain rows measure template plus instruction; the k = 0 rows with and without the instruction separate the two. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): the template has to match the checkpoint (the table below). At k = 8 the chat layout carries SYSTEM, which names the labels, and the plain layout does not, so the chat-versus-plain rows measure template plus instruction; the k = 0 rows with and without the instruction separate the two. The base row "chat, no think block" uses the template's default end (enable_thinking unset), which separates the template from the empty think block. -->
 
 ```{.python .input #prompting-format-table}
 %%tab pytorch
@@ -827,6 +847,9 @@ rows = []
 for model in MODELS:
     pairs = {'chat, k = 8': (dict(layout='chat'), {}),
              'plain + instruction, k = 0': (dict(k=0, instr=1), dict(k=0))}
+    if model == 'base':  # the same template without the empty think block
+        pairs['chat, no think block, k = 8'] = (dict(layout='chat_default'),
+                                                {})
     if model == 'instruct':
         pairs['chat, k = 0'] = (dict(layout='chat', k=0), dict(k=0))
     for name, (c, ref) in pairs.items():
@@ -908,6 +931,8 @@ for model in MODELS:
                                 sigma, correct(**c, rho=0.0))})
     drop = lambda w: (correct(model=model, words=w, rho=0.0) -
                       correct(model=model, words=w, rho=1.0))
+    effects += [{'model': model, 'effect': f'drop rho 0 to 1, {w}',
+                 **compare(drop(w), np.zeros_like(drop(w)))} for w in WORDS]
     effects += [
         {'model': model, 'effect': 'drop rho 0 to 1, abstract minus natural',
          **compare(drop('abstract'), drop('natural'))},
@@ -923,13 +948,15 @@ pd.DataFrame(effects).round(3).fillna('')
 ```{.python .input #prompting-labels-plot}
 %%tab pytorch
 keys = [(m, w) for m in MODELS for w in WORDS]
+names = [f'{m}, {w}' for m, w in keys]
 d2l.plot(RHOS, [LABEL_ACC[key] for key in keys], 'fraction of wrong labels',
-         'accuracy', legend=[f'{m}, {w}' for m, w in keys], ylim=(0, 1),
+         'accuracy', legend=names, xlim=(-0.05, 1.12), ylim=(0, 1),
          fmts=('C0-o', 'C0--s', 'C1-o', 'C1--s'), figsize=(4.5, 3))
 ax = d2l.plt.gca()
+ax.legend(names, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2)
 ax.axhline(0.25, color='gray', linestyle=':')  # chance
 for i, (m, w) in enumerate(keys):  # derangement, scored against sigma(y)
-    ax.plot([1.04], [LABEL_ACC[m, w, 'sigma']], 'os'[i % 2], mfc='none',
+    ax.plot([1.06], [LABEL_ACC[m, w, 'sigma']], 'os'[i % 2], mfc='none',
             color=f'C{i // 2}', markersize=8)
 ```
 
@@ -1094,7 +1121,10 @@ d2l.plot([at(ks) for ks, _ in series.values()] * 3,
          legend=list(series), fmts=[f'C{i}{f}' for f in ('-o', ':', ':')
                                     for i in range(4)], figsize=(5, 3.2))
 ticks = sorted(set(K_BASE + K_PROBE))
-d2l.plt.gca().set_xticks(at(ticks), [str(k) for k in ticks])
+ax = d2l.plt.gca()
+ax.set_xticks(at(ticks), [str(k) for k in ticks])
+ax.legend(list(series), loc='lower center', bbox_to_anchor=(0.5, 1.0),
+          ncol=2)  # above the axes, clear of the curves
 rows = [{'examples': k, **compare(correct(k=k), correct(
     exp='probe', layout='none', k=k))} for k in K_PROBE[:-1]]
 print('ICL (base, plain) minus probe, at equal labelled data')

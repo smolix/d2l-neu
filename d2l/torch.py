@@ -5404,6 +5404,9 @@ d2l.DATA_HUB['ag-news-test'] = (
     'https://huggingface.co/datasets/sh0416/ag_news/resolve/'
     '70e3fa1915be9a8daebec5e840f20df9a8e18793/test.jsonl',
     '6c874e265fe5ff35861f27eaf3e681dda147ba12')
+d2l.DATA_HUB['lm-fewshot-grid-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fewshot-grid-v1.csv',
+    'e746358522c92235d0c9f7aa324bd596361b47ce')
 
 def calibrate_labels(logprobs, content_free_logprobs):
     """Contextual calibration: subtract the mean log-probabilities (M, L)

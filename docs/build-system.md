@@ -1439,9 +1439,11 @@ source's constants show the uncut values. The notebook's kernel gets
 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` (`NOTEBOOK_ENV`): without
 it the 2026-11-13 regeneration runs reserved 20.3-20.7 GB on the card for a
 10.8 GiB tensor peak, past the 2-slot budget; its `peak()` prints both
-numbers. Until a regeneration run with the setting has been measured, give a
-regeneration run a whole card (`D2L_GPU_SLOTS_PER` with every slot of one
-GPU). Regenerate, upload, then run the notebook once
+numbers. Measured with the setting (2026-11-13, `D2L_RERUN=arc-generations`,
+the job behind that peak): 10.8 GiB allocated, 12.7 GiB reserved, 13.5 GB in
+`nvidia-smi`, inside the 2-slot budget; the run reproduced
+`lm-arc-generations-v2` bit for bit. A normal run peaks at about 4.9 GB.
+Regenerate, upload, then run the notebook once
 more without `D2L_RERUN` and capture that run.
 
 **API logs (`D2L_API_LOG_DIR`).** The models-behind-an-API section (18.7,

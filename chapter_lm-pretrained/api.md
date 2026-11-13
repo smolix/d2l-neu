@@ -1,6 +1,8 @@
 # Models behind an API
 :label:`sec_lm_api`
 
+<!-- execution: locked; requires: openrouter -->
+
 <!-- Author brief, copied verbatim from the Language Models part plan
 (docs/llm/language_models_part_plan.md, "1.7 Models behind an API · T0").
 Blueprint: none (the plan adds this section).

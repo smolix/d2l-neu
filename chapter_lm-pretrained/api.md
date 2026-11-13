@@ -118,9 +118,11 @@ for key, sha1 in API_SHA1.items():
 RECORD_DIR = os.path.join('..', 'data', 'lm-api', 'record')
 
 def unpack(key):
-    """Download a registered zip (sha1 checked) and unpack it once."""
+    """Download a registered zip (sha1 checked) and unpack it once, into a
+    folder named by the sha1 (a re-registered key gets a fresh folder)."""
     path = d2l.download_keyed(key)
-    folder = os.path.join(os.path.dirname(path), 'files')
+    folder = os.path.join(os.path.dirname(path),
+                          'files-' + d2l.DATA_HUB[key][1][:12])
     if not os.path.isdir(folder):
         with zipfile.ZipFile(path) as z:
             z.extractall(folder + '.part')
@@ -148,15 +150,34 @@ def api_dir(key):
 def cache_file(key, arm):
     return os.path.join(api_dir(key), arm + '.jsonl')
 
-CLIENTS = []  # every client with a cache, for the manifest
+def calls_log(api):
+    """The live attempts in a client's calls log: every session of the
+    recording (a torn last line, from a killed run, is skipped)."""
+    if api.calls_path is None or not os.path.exists(api.calls_path):
+        return []
+    calls = []
+    with open(api.calls_path, encoding='utf-8') as f:
+        for line in f:
+            try:
+                calls.append(json.loads(line))
+            except ValueError:
+                pass
+    return calls
 
-def hosted(model, cache, *, share=1.0, **kwargs):
-    """A client of model at its pinned provider; it may spend `share` of
-    what is left of COST_CAP_USD."""
-    left = COST_CAP_USD - sum(api.spent_usd for api in CLIENTS)
+CLIENTS, SHARES = [], {}  # every client with a cache; budget per cache
+
+def hosted(model, cache, *, share, **kwargs):
+    """A client of model at its pinned provider that may spend the fixed
+    fraction `share` of COST_CAP_USD over the whole recording, less what
+    earlier sessions spent on this cache. The shares sum to at most 1, so
+    concurrent clients cannot pass the cap together."""
+    SHARES[cache] = share
+    assert sum(SHARES.values()) <= 1 + 1e-9, SHARES
     api = d2l.openrouter_api(model, PROVIDERS[model], listing=LISTING,
                              cache=cache, mode=API_MODE,
-                             cost_cap_usd=max(0.0, share * left), **kwargs)
+                             cost_cap_usd=share * COST_CAP_USD, **kwargs)
+    api.cost_cap_usd = max(0.0, api.cost_cap_usd - sum(
+        c.get('cost') or 0.0 for c in calls_log(api)))
     CLIENTS.append(api)
     return api
 
@@ -244,7 +265,7 @@ GSM_IDS = [int(i) for i in dict.fromkeys(samples.problem_id)]  # 18.4's
 assert GSM_IDS == list(np.random.default_rng(0).permutation(
     len(gsm_test))[:100])  # its seeded rule
 flagship = hosted(FLAGSHIP, cache_file('lm-api-probe-v1', 'flagship'),
-                  reasoning={'enabled': False})
+                  share=0.05, reasoning={'enabled': False})
 question = [{'role': 'user', 'content': gsm_test.question[GSM_IDS[0]]}]
 r = flagship.chat(question, temperature=0, seed=0, max_tokens=512)
 print(r.text)
@@ -257,7 +278,8 @@ print(f'{r.t_total:.2f} s; served {r.model} by {r.provider}; '
 
 ```{.python .input #api-reasoning-trap}
 %%tab pytorch
-second = hosted(SECOND, cache_file('lm-api-probe-v1', 'second'))
+second = hosted(SECOND, cache_file('lm-api-probe-v1', 'second'),
+                share=0.05)
 trap = second.chat(question, temperature=0, seed=0, max_tokens=64)  # thinks
 print(f'content {trap.text!r}, finish {trap.finish_reason}, '
       f'{len(trap.reasoning or "")} characters of reasoning; {trap.usage}')
@@ -274,7 +296,8 @@ assert not answer.usage['reasoning_tokens']
 ```{.python .input #api-effort}
 %%tab pytorch
 LONGEST = sorted(GSM_IDS, key=lambda i: -len(gsm_test.answer[i]))
-effort_api = hosted(FLAGSHIP, cache_file('lm-api-effort-v1', 'flagship'))
+effort_api = hosted(FLAGSHIP, cache_file('lm-api-effort-v1', 'flagship'),
+                    share=0.2)
 EFFORTS = ('low', 'medium', 'high')
 batch = [{'messages': [{'role': 'user', 'content': gsm_test.question[i]}],
           'temperature': 0, 'seed': 0, 'max_tokens': 16384,
@@ -301,6 +324,7 @@ print('more reasoning tokens at higher effort:', 'yes' if ordered else 'no')
 %%tab pytorch
 NO_THINK_LOCAL = {'extra_body': {'chat_template_kwargs': {
     'enable_thinking': False}}}
+STORY_LOCAL = [{'role': 'user', 'content': 'Write a long story.'}]
 LOCAL_HTTP = None  # the local endpoint's HTTP client (None: real HTTP)
 if LOCAL_LIVE:
     server = d2l.LocalChatServer([
@@ -315,6 +339,9 @@ if LOCAL_LIVE:
     warm.chat([{'role': 'user', 'content': 'Hello'}], max_tokens=8)
     print(f'{LOCAL_URL}: ready after {server.load_time:.0f} s, warm-up '
           f'request {time.monotonic() - tic:.1f} s')
+    r = warm.chat(STORY_LOCAL, max_tokens=256)  # one request alone
+    print(f'{r.usage["completion_tokens"]} tokens in {r.t_total:.1f} s: '
+          f'{r.usage["completion_tokens"] / r.t_total:.1f} tokens/s')
 else:  # the request hash keeps the host only, so any port replays
     server, LOCAL_URL = None, 'http://127.0.0.1/v1'
     print(f'{LOCAL_URL}: replayed from the committed caches')
@@ -353,10 +380,17 @@ def is_answer(text):  # exactly {"answer": <integer>}
 def thinks(r):
     return bool(r.usage['reasoning_tokens'] or r.reasoning)
 
+def echoed(api, a):  # prompt log-probabilities, or the prompt echoed
+    lp = 'prompt_logprobs' in api.entries(a.request_hash)[0]['extra']
+    echo = COUNT[0]['content'] in a.text
+    return lp or echo, f'prompt_logprobs: {lp}, echo: {echo}'
+
 def tests(base, on, off, max_tokens):
     """field -> (requests as (messages, replica, params), rule mapping the
     client and the results to (honoured?, evidence)); base is the request
-    body every test sends, on and off the bodies of the thinking switch."""
+    body every test sends, on and off the bodies of the thinking switch.
+    Evidence holds flags, counts and lengths, never response text: the
+    closed model's outputs may not be committed."""
     def p(body=base, **kw):
         return {'max_tokens': max_tokens, **kw,
                 **({'extra_body': body} if body else {})}
@@ -375,10 +409,13 @@ def tests(base, on, off, max_tokens):
                                 len(t) == 5 for _, _, t in a.logprobs),
                                 f'{len(a.logprobs or [])} tokens')),
         "stop=['5']": ([(COUNT, 0, p(stop=['5']))], lambda api, a: (
-            '4' in a.text and '5' not in a.text, repr(a.text[-20:]))),
+            '4' in a.text and '5' not in a.text,
+            f"has 4: {'4' in a.text}, has 5: {'5' in a.text}")),
         'response_format': ([(JSON_Q, 0, p(response_format=SCHEMA))],
-                            lambda api, a: (is_answer(a.text),
-                                            repr(a.text[:40]))),
+                            lambda api, a: (is_answer(a.text), (
+                                f'parses as {{answer: int}}: '
+                                f'{is_answer(a.text)}, '
+                                f'{len(a.text)} characters'))),
         'thinking switch': ([(COUNT, 0, p(body=on, max_tokens=256)),
                              (COUNT, 0, p(body=off))], lambda api, a, b: (
             thinks(a) and not thinks(b),
@@ -387,12 +424,22 @@ def tests(base, on, off, max_tokens):
             [(STORY, 0, p(max_tokens=None, max_completion_tokens=16))],
             lambda api, a: (a.usage['completion_tokens'] <= 16,
                             f'{a.usage["completion_tokens"]} tokens')),
-        'prompt log-probabilities': (
-            [(COUNT, 0, p(body={**(base or {}), 'prompt_logprobs': 1}))],
-            lambda api, a: ('prompt_logprobs' in api.entries(
-                a.request_hash)[0]['extra'], 'prompt_logprobs field')),
+        'prompt log-probabilities': (  # vLLM's two fields
+            [(COUNT, 0, p(body={**(base or {}), 'prompt_logprobs': 1,
+                                'echo': True}))],
+            echoed),
         'stream usage': ([(COUNT, 0, p(stream=True))], lambda api, a: (
             a.usage['completion_tokens'] is not None, 'final chunk'))}
+
+TODAY = time.strftime('%Y-%m-%d', time.gmtime())
+
+def day(results):  # UTC date of the newest live call behind the results
+    return max(r.created for r in results)[:10]
+
+def failure(e):  # (status, evidence) of a request that failed
+    status = getattr(e, 'status_code', None)
+    kind = 'rejected' if status and 400 <= status < 500 else 'error'
+    return kind, f'{status or type(e).__name__}: {e}'[:80]
 
 async def check(api, requests_, rule):
     try:
@@ -400,29 +447,30 @@ async def check(api, requests_, rule):
                    for m, k, q in requests_]
     except (d2l.ReplayMiss, d2l.CostCapExceeded):
         raise
-    except Exception as e:  # after the client's retries
-        status = getattr(e, 'status_code', None)
-        kind = 'rejected' if status and 400 <= status < 500 else 'error'
-        return kind, f'{status or type(e).__name__}: {e}'[:80]
+    except Exception as e:  # after the client's retries; never cached
+        return (*failure(e), TODAY)
     honoured, evidence = rule(api, *results)
-    return 'honoured' if honoured else 'ignored', evidence[:80]
+    return ('honoured' if honoured else 'ignored', evidence[:80],
+            day(results))
 
 async def probe(name, api, base, on, off, max_tokens, model_id):
     rows = []
     for field, (requests_, rule) in tests(base, on, off,
                                           max_tokens).items():
-        status, evidence = await check(api, requests_, rule)
+        status, evidence, date = await check(api, requests_, rule)
         rows.append({'endpoint': name, 'field': field, 'status': status,
-                     'evidence': evidence})
-    try:
+                     'evidence': evidence, 'date': date})
+    try:  # a live GET, never cached
         listed = any(i.startswith(model_id) for i in await asyncio.to_thread(
             api.models))
-        rows.append({'endpoint': name, 'field': '/v1/models',
-                     'status': 'honoured' if listed else 'ignored',
-                     'evidence': f'lists {model_id}: {listed}'})
+        status, evidence = ('honoured' if listed else 'ignored',
+                            f'lists {model_id}: {listed}')
+    except d2l.ReplayMiss:  # a replayed client cannot list: no verdict
+        raise
     except Exception as e:
-        rows.append({'endpoint': name, 'field': '/v1/models',
-                     'status': 'rejected', 'evidence': repr(e)[:80]})
+        status, evidence = failure(e)
+    rows.append({'endpoint': name, 'field': '/v1/models', 'status': status,
+                 'evidence': evidence, 'date': TODAY})
     params = {'max_tokens': max_tokens,
               **({'extra_body': base} if base else {})}
     one = await api.achat(COUNT, replica=10, **params)
@@ -433,17 +481,19 @@ async def probe(name, api, base, on, off, max_tokens, model_id):
     verdict = ('batched' if ratio < 2 else 'serialized' if ratio > 3
                else 'partial')
     rows.append({'endpoint': name, 'field': '4 concurrent requests',
-                 'status': verdict, 'evidence': f'latency x {ratio:.2f}'})
+                 'status': verdict, 'evidence': f'latency x {ratio:.2f}',
+                 'date': day([one, *four])})
     return rows
 
 fields_file = os.path.join(api_dir('lm-api-fields-v1'), 'lm-api-fields.csv')
+LOCAL_NAME = 'Qwen3.5-4B (local server)'
 if API_MODE != 'replay':  # replay reads the committed table
     router_off, router_on = ({'reasoning': {'enabled': s}}
                              for s in (False, True))
     local_off, local_on = ({'chat_template_kwargs': {'enable_thinking': s}}
                            for s in (False, True))
     closed = hosted(CLOSED, os.path.join(D2L_API_LOG_DIR, 'scratch',
-                                         'closed-probe.jsonl'))
+                                         'closed-probe.jsonl'), share=0.05)
     ENDPOINTS = {  # client, body of every test, thinking on and off,
         # output budget, the id /v1/models should list
         'DeepSeek-V4.1-Flash (Novita)': (flagship, router_off, router_on,
@@ -451,19 +501,26 @@ if API_MODE != 'replay':  # replay reads the committed table
         'Qwen3.8-27B (Parasail)': (second, router_off, router_on,
                                    router_off, 64, SECOND),
         'gpt-5-nano (OpenAI)': (closed, None, router_on, router_off, 2048,
-                                CLOSED),  # a closed model thinks by default
-        'Qwen3.5-4B (local server)': (
+                                CLOSED)}  # a closed model thinks by default
+    if LOCAL_LIVE:
+        ENDPOINTS[LOCAL_NAME] = (
             local(cache_file('lm-api-probe-v1', 'local')), local_off,
-            local_on, local_off, 64, LOCAL)}
+            local_on, local_off, 64, LOCAL)
     rows = await asyncio.gather(*(probe(name, *args)
                                   for name, args in ENDPOINTS.items()))
     fields = pd.DataFrame([r for rs in rows for r in rs])
-    fields['date'] = time.strftime('%Y-%m-%d', time.gmtime())
+    if not LOCAL_LIVE:  # no server here: keep the recorded local column
+        old = (pd.read_csv(fields_file) if os.path.exists(fields_file)
+               else pd.DataFrame({'endpoint': []}))
+        old = old[old.endpoint == LOCAL_NAME]
+        assert len(old), 'no recorded local column: record on a GPU host'
+        print('local server column kept from', old.date.max())
+        fields = pd.concat([fields, old], ignore_index=True)
     fields.to_csv(fields_file, index=False)
 fields = pd.read_csv(fields_file)
 table = fields.pivot(index='field', columns='endpoint', values='status')
 print(table.loc[fields.field.unique(), fields.endpoint.unique()])
-batching = fields[(fields.endpoint == 'Qwen3.5-4B (local server)') &
+batching = fields[(fields.endpoint == LOCAL_NAME) &
                   (fields.field == '4 concurrent requests')].iloc[0]
 LOCAL_BATCHES = batching.status != 'serialized'
 print(f'local server: {batching.status} ({batching.evidence})')
@@ -553,6 +610,7 @@ usage = {'prompt_tokens': 1000, 'completion_tokens': 300}
 cost = d2l.api_cost(usage, novita)
 assert abs(cost - (1000 * novita.input + 300 * novita.output) / 1e6) < 1e-15
 print(f'1,000 prompt and 300 completion tokens: {cost:.6f} USD')
+assert f'{cost:.6f}' == '0.000363', 'the text quotes 0.000363 USD: update it'
 for hour in (2, 12):  # a Thursday, inside and outside a peak window
     when = datetime.datetime(2026, 11, 12, hour, tzinfo=datetime.timezone.utc)
     price = d2l.price_from_listing(LISTING, FLAGSHIP, 'deepseek', when=when)
@@ -656,13 +714,18 @@ api = d2l.ChatAPI('http://fake.local/v1', 'fake-model', mode='live',
                   http_client=fake.transport())
 r = api.chat(hello, max_tokens=8)
 print(f'attempts {fake.n_requests}, 429s {r.n_429}, retries {r.n_retries}')
+assert (fake.n_requests, r.n_429, r.n_retries) == (3, 2, 2)
 fake = d2l.FakeChatServer(0.01, 1, script=[401])
 api = d2l.ChatAPI('http://fake.local/v1', 'fake-model', mode='live',
                   http_client=fake.transport())
 try:
     api.chat(hello, max_tokens=8)
 except Exception as e:
-    print(f'{type(e).__name__} after {fake.n_requests} attempt')
+    error = e
+else:
+    raise AssertionError('the 401 was not raised')
+print(f'{type(error).__name__} after {fake.n_requests} attempt')
+assert getattr(error, 'status_code', None) == 401 and fake.n_requests == 1
 ```
 
 <!-- Placeholder (stage 2): the derivation's mean sleep, and 64 clients that failed together. -->
@@ -799,8 +862,11 @@ async def closed_loop(api, c, first, **params):
     batch = [{'messages': [{'role': 'user', 'content': q}], **params}
              for q in gsm_train.question.iloc[first:first + 8 * c]]
     results = await chat_batch(api, batch, concurrency=c)
-    assert not any(thinks(r) for r in results
-                   if not isinstance(r, Exception)), f'c = {c}: thinking'
+    failed = [r for r in results if isinstance(r, Exception)]
+    assert not failed, (  # a failure is not cached: replay would miss it
+        f'c = {c}: {len(failed)} failed, first {failed[0]!r:.100}; delete '
+        f'{api.cache_path} and record the arm again')
+    assert not any(thinks(r) for r in results), f'c = {c}: thinking'
     return {'c': c, **closed_loop_stats(results, c)}
 
 def check_little(table, little, sustained):
@@ -811,7 +877,7 @@ def check_little(table, little, sustained):
                          f'{row.n_window} completions in the window')
 
 COLUMNS = ['c', 'X', 'X_tokens', 'W', 'ttft_p50', 'ttft_p90', 'n_429',
-           'n_retries', 'little', 'sustained']
+           'n_retries', 'n_failed', 'little', 'sustained']
 LEVELS = [1, 2, 4, 8, 16, 32, 64, 128] if LOCAL_BATCHES else [1, 2, 4, 8]
 sweep_api = local(cache_file('lm-api-sweep-v1', 'local'))
 rng, order = random.Random(0), []
@@ -874,7 +940,7 @@ d2l.plot([t.c.to_numpy() for t in passes] + [grid],
 ```{.python .input #api-sweep-hosted}
 %%tab pytorch
 contrast = hosted(FLAGSHIP, cache_file('lm-api-sweep-v1', 'flagship'),
-                  reasoning={'enabled': False})
+                  share=0.1, reasoning={'enabled': False})
 first, rows = 4084, []  # train items after the local sweep's
 for c in (1, 8, 32):
     rows.append(await closed_loop(contrast, c, first, **SWEEP))
@@ -907,9 +973,9 @@ print('parameters:', GSM_PARAMS, '; thinking off: reasoning.enabled = '
 ```{.python .input #api-gsm8k-run}
 %%tab pytorch
 gsm_flagship = hosted(FLAGSHIP, cache_file('lm-api-gsm8k-v1', 'flagship'),
-                      share=0.5, reasoning={'enabled': False})
+                      share=0.2, reasoning={'enabled': False})
 gsm_second = hosted(SECOND, cache_file('lm-api-gsm8k-v1', 'second'),
-                    share=0.5, reasoning={'enabled': False})
+                    share=0.2, reasoning={'enabled': False})
 gsm_local = local(cache_file('lm-api-gsm8k-v1', 'local'))
 ARMS = {'flagship r0': (gsm_flagship, 0, 8),
         'flagship r1': (gsm_flagship, 1, 8),
@@ -1002,14 +1068,19 @@ def replicas(first):  # 20 replicas of each of the three requests
 
 det_flagship = hosted(FLAGSHIP, cache_file('lm-api-determinism-v1',
                                            'flagship'),
-                      reasoning={'enabled': False})
+                      share=0.1, reasoning={'enabled': False})
 det_local = local(cache_file('lm-api-determinism-v1', 'local'))
 on_flagship, alone = await asyncio.gather(
     chat_batch(det_flagship, replicas(0), concurrency=4),
     chat_batch(det_local, replicas(0), concurrency=1))
-# Under load: eight background lanes cycle through 64 other test problems;
-# their responses are logged, never replayed (replay skips them)
+# Under load: background lanes cycle through 64 other test problems; their
+# responses are logged, never replayed (replay skips them). A server that
+# runs one request at a time gets one lane: more would only queue, and no
+# lane can change the composition of a batch.
 BACKGROUND = [i for i in range(len(gsm_test)) if i not in GSM_IDS][:64]
+LANES = 8 if LOCAL_BATCHES else 1
+print(f'under load: {LANES} background lane(s); the local server '
+      f'{"batches" if LOCAL_BATCHES else "runs one request at a time"}')
 done, failures = asyncio.Event(), []
 
 async def lanes():
@@ -1027,8 +1098,8 @@ async def lanes():
                                        **GSM_PARAMS)
             except Exception as e:
                 failures.append(e)
-            j += 8
-    await asyncio.gather(*(lane(j) for j in range(8)))
+            j += LANES
+    await asyncio.gather(*(lane(j) for j in range(LANES)))
 
 load = asyncio.ensure_future(lanes()) if LOCAL_LIVE else None
 if load is not None:
@@ -1070,35 +1141,73 @@ else:
 
 ```{.python .input #api-manifest}
 %%tab pytorch
-rows, by_folder = [], collections.defaultdict(list)
+def recorded(api):
+    """Totals of the whole recording from a client's calls log: live calls,
+    retries, 429s, failed attempts, USD, served ids and providers, and the
+    listing's and the provider's cost of the responses with usage.cost."""
+    t, served, providers = collections.Counter(), set(), set()
+    for call in calls_log(api):
+        ok = call.get('status') == 200
+        t['live calls'] += call['attempt'] == 0
+        t['retries'] += call['attempt'] > 0
+        t['429s'] += call.get('status') == 429
+        t['failed'] += not ok
+        if not ok:
+            continue
+        t['USD'] += call.get('cost') or 0.0
+        served.add(str(call.get('served_model')))
+        providers.add(str(call.get('provider')))
+        cost = call['usage'].get('cost')
+        if cost is not None and api.price is not None:
+            t['usage cost'] += cost
+            t['listing cost'] += d2l.api_cost(call['usage'], api.price)
+    return t, sorted(served), sorted(providers)
+
+rows, by_folder, seen = [], collections.defaultdict(dict), set()
 for api in CLIENTS:
-    m = api.manifest()
+    if api.calls_path in seen:
+        continue
+    seen.add(api.calls_path)
+    m, (t, served, providers) = api.manifest(), recorded(api)
     folder = os.path.dirname(os.path.abspath(api.cache_path))
-    by_folder[folder].append(m)
+    by_folder[folder][m['cache']] = (m, {**t, 'served': served,
+                                         'providers': providers})
     key = next((k for k in API_SHA1 if k in folder), 'scratch')
-    rows.append({'cache': os.path.join(key, m['cache']),
-                 **{k: m[k] for k in ('calls', 'cache_hits', 'live_calls',
-                                      'retries', 'n_429', 'spent_usd')},
-                 'served': ', '.join(map(str, m['served_models'])),
-                 'providers': ', '.join(map(str, m['providers']))})
+    rows.append({'cache': os.path.join(key, m['cache']), 'calls': m['calls'],
+                 'cache hits': m['cache_hits'], **{k: t[k] for k in (
+                     'live calls', 'retries', '429s', 'failed', 'USD')},
+                 'usage cost': t['usage cost'],
+                 'listing cost': t['listing cost'],
+                 'served': ', '.join(served),
+                 'providers': ', '.join(providers)})
     if api.price is not None:  # claim 8: one provider, one served id
-        assert len(m['served_models']) <= 1 and len(m['providers']) <= 1, m
+        assert len(served) <= 1 and len(providers) <= 1, (m['cache'], t)
 manifest = pd.DataFrame(rows)
-spent = sum(api.spent_usd for api in CLIENTS)
-assert spent <= COST_CAP_USD, spent
-api_sum = sum(api.manifest()['sum_api_cost'] for api in CLIENTS
-              if api.manifest()['n_usage_cost'])
-usage_sum = sum(api.manifest()['sum_usage_cost'] for api in CLIENTS)
-if usage_sum:
+spent = sum(api.spent_usd for api in CLIENTS)  # this run's live calls
+total = sum(row['USD'] for row in rows)  # every session of the recording
+assert spent <= COST_CAP_USD and total <= COST_CAP_USD, (spent, total)
+usage_sum = sum(row['usage cost'] for row in rows)
+if usage_sum:  # only responses whose provider reported usage.cost
+    listing_sum = sum(row['listing cost'] for row in rows)
     print(f'cost from the listing / cost the provider reported: '
-          f'{api_sum / usage_sum:.4f}')
-if API_MODE != 'replay':  # one manifest per recorded artifact
-    for folder, ms in by_folder.items():
-        if os.path.abspath(RECORD_DIR) in folder:
-            with open(os.path.join(folder, 'manifest.json'), 'w') as f:
-                json.dump({'created': time.strftime('%Y-%m-%dT%H:%M:%SZ',
-                                                    time.gmtime()),
-                           'clients': ms}, f, indent=1, ensure_ascii=False)
+          f'{listing_sum / usage_sum:.4f}')
+if API_MODE != 'replay':  # sessions accumulate in each artifact's manifest
+    now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    for folder, arms in by_folder.items():
+        if os.path.abspath(RECORD_DIR) not in folder:
+            continue
+        path, old = os.path.join(folder, 'manifest.json'), {}
+        if os.path.exists(path):
+            with open(path) as f:
+                old = json.load(f)
+        sessions = old.get('sessions', []) + [{
+            'created': now, 'clients': {a: m for a, (m, _) in arms.items()}}]
+        totals = {**old.get('recorded', {}),  # arms this run did not use
+                  **{a: r for a, (_, r) in arms.items()}}
+        with open(path, 'w') as f:
+            json.dump({'updated': now, 'recorded': totals,
+                       'sessions': sessions}, f, indent=1,
+                      ensure_ascii=False)
 key = os.environ.get('OPENROUTER_API_KEY')
 if key:  # the key may occur in no cache, calls log or manifest
     files = [os.path.join(d, f) for root in (
@@ -1111,6 +1220,7 @@ if key:  # the key may occur in no cache, calls log or manifest
                 hits.append(name)
     assert not hits, f'the API key occurs in {len(hits)} files'
     print(f'key material: none in {len(files)} files')
-print(f'spent {spent:.4f} USD of {COST_CAP_USD}')
-manifest
+print(f'the recording: {sum(row["live calls"] for row in rows)} live calls, '
+      f'{total:.4f} USD of {COST_CAP_USD}; this run {spent:.4f} USD')
+manifest.drop(columns=['usage cost', 'listing cost'], errors='ignore')
 ```

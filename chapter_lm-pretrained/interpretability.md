@@ -88,6 +88,7 @@ R1 = 'Qwen/Qwen3-0.6B'
 model = d2l.load_qwen3(R1, dtype=torch.float32).requires_grad_(False)
 tok = AutoTokenizer.from_pretrained(R1, revision=model.revision)
 dev, L = model.token_emb.weight.device, len(model.blks)
+print(f'SMALL={SMALL}, RETRAIN={RETRAIN}, device {dev}')
 print(f'{R1} at {model.revision}: '
       f'{sum(p.numel() for p in model.parameters()):,} parameters')
 ```
@@ -126,7 +127,12 @@ def cluster_resample(clusters, n_boot=2000, seed=0):
             len(ids), size=len(ids))])
 
 def pct_ci(values, alpha=0.05):
-    """Percentile endpoints of bootstrap replicates (along axis 0)."""
+    """Percentile endpoints of bootstrap replicates (along axis 0), over
+    the replicates where the statistic is defined; says how many are not."""
+    values = np.asarray(values, dtype=float)
+    if (undefined := np.isnan(values).sum(0)).any():  # one count per column
+        print(f'  (replicates undefined, left out: {undefined.tolist()} of '
+              f'{len(values)})')
     return np.nanquantile(values, [alpha / 2, 1 - alpha / 2], axis=0)
 
 def fmt(mean, ci, digits=3):
@@ -141,7 +147,8 @@ def save_rerun(name, write):
     with open(path, 'rb') as f:
         print(f'wrote {path}, sha1 {hashlib.sha1(f.read()).hexdigest()}')
 
-RESULTS, SUMMARY = {}, {}  # the members of lm-interp-results, by name
+RESULTS = {}  # the members of lm-interp-results, by name
+SUMMARY = {'config': {'small': SMALL}}  # its summary.json
 
 def write_results(path):
     """The results archive, byte-identical for identical members."""
@@ -249,6 +256,7 @@ FULL = None  # the full run's summary, shown beside the CPU path's numbers
 if SMALL and not RETRAIN:
     with zipfile.ZipFile(d2l.download_keyed('lm-interp-results-v1')) as z:
         FULL = json.loads(z.read('summary.json'))
+    assert not FULL['config']['small'], 'the archive of a CPU-path run'
 ```
 
 <!-- Placeholder (stage 2): reading and overwriting the five sites of every block through module hooks. -->
@@ -581,6 +589,7 @@ if RETRAIN:  # LENS_STEPS batches of 16 windows: the first 1M tokens
           f'{losses[-1]:.2f} at the last')
     state = {k: v.half() for k, v in lens.state_dict().items()}
     save_rerun('lm-tuned-lens-qwen3-0.6b.pt', lambda p: torch.save(state, p))
+    lens.load_state_dict(state)  # go on with the fp16 values it publishes
 else:
     key = 'lm-tuned-lens-qwen3-0.6b-v1'
     lens.load_state_dict(torch.load(d2l.download_keyed(key),
@@ -623,6 +632,9 @@ for name, R in ranks.items():
         float(first10(R)), *pct_ci(reps).tolist()]
     print(f'{name}: median rank at most 10 from block {first10(R)}, '
           f'95% interval {pct_ci(reps)}')
+    if FULL is not None:
+        key = f'{name}: first block of median rank <= 10'
+        print(f'  full run: {FULL[key]}')
 KL = {name: [[] for _ in range(L - 1)] for name in LENSES}
 with torch.no_grad():
     for X in heldout[:, :128].split(4):  # 4 x 127 positions per chunk
@@ -779,11 +791,15 @@ for name, f in (('majority tag per type', majority),
 table = pd.DataFrame(table, index=['task accuracy', 'control accuracy',
                                    'selectivity']).T
 print(table.to_string())
+top_tag = int(freq.argmax())  # the majority class, from the training tags
+majority_rate = float((labels['test'] == top_tag).mean())
+print(f'majority class {UPOS[top_tag]}: {majority_rate:.3f} of test words')
 diff = d2l.paired_bootstrap(selectivity['block 14'], selectivity['embedding'],
                             cluster=sentence_of)
 print(f'selectivity, block 14 minus embedding: {fmt(diff.mean, diff.ci)}')
 SUMMARY['probe'] = {**table.to_dict('index'),
-                    'difference': fmt(diff.mean, diff.ci)}
+                    'difference': fmt(diff.mean, diff.ci),
+                    'majority class rate': round(majority_rate, 3)}
 buffer = io.BytesIO()
 torch.save({n: weights[n] for n in ('embedding', 'block 14')}, buffer)
 RESULTS['probe.pt'] = buffer.getvalue()
@@ -831,7 +847,7 @@ print({T: len(G) for T, G in by_length.items()}, '(prompt length: pairs)')
 %%tab pytorch
 KINDS = ('resid_post', 'attn_out', 'mlp_out')
 SITES = [(kind, l) for kind in KINDS for l in range(L)]
-PATTERNS = [(c,) for c in range(8)] + ['all', ()]  # classes, all, none
+PATTERNS = [(c,) for c in range(8)]  # one per position class
 for g in groups:  # the corrupted run, recorded at every site
     with torch.no_grad(), d2l.intervene(model, record=SITES) as ctx:
         model(g['X_x'].to(dev), logits_to_keep=1)
@@ -858,15 +874,19 @@ def patched_ld(site, patterns):
             [1.0, -1.0], device=dev)).view(-1, n).cpu()
     return out
 
+def ne(site, patterns):  # (patterns, pairs)
+    return ((m_clean[:, None] - patched_ld(site, patterns)) / gap[:, None]).T
+
 NE = torch.empty(len(KINDS), L, len(PATTERNS), len(pairs))
 def sweep():
     for i, site in enumerate(SITES):
-        ld = patched_ld(site, PATTERNS)
-        NE[i // L, i % L] = ((m_clean[:, None] - ld) / gap[:, None]).T
+        NE[i // L, i % L] = ne(site, PATTERNS)
 sweep_time = d2l.Benchmark(sweep, warmup=0, repeats=1).time
-assert (NE[0, :, 8] - 1).abs().max() < 1e-3  # all of resid_post: NE = 1
-assert NE[:, :, 9].abs().max() < 1e-3  # a null patch: NE = 0
-NE = NE[:, :, :8].numpy()
+NE = NE.numpy()
+for site in SITES:  # the checks, outside the timed sweep
+    if site[0] == 'resid_post':  # all positions of the stream: NE = 1
+        assert (ne(site, ['all']) - 1).abs().max() < 1e-3
+    assert ne(site, [()]).abs().max() < 1e-3  # a null patch: NE = 0
 
 def long_table(T, column):  # (kinds, blocks, classes, pairs) -> CSV bytes
     k, l, c, i = np.indices(T.shape).reshape(4, -1)
@@ -941,7 +961,7 @@ def atp():
                 [1.0, -1.0], device=dev)).sum().backward()
         with torch.no_grad(), d2l.intervene(model, record=SITES) as corrupt:
             model(g['X_x'].to(dev), logits_to_keep=1)
-        M = masks(g['cls'], PATTERNS[:8]).float().to(dev)  # (8, T)
+        M = masks(g['cls'], PATTERNS).float().to(dev)  # (8, T)
         for i, s in enumerate(SITES):
             delta = corrupt.cache[s][0] - clean.cache[s][0].detach()
             pe = -(delta * clean.grad_cache[s][0]).sum(-1)  # (pairs, T)
@@ -1143,6 +1163,7 @@ def train_and_save(acts, name):  # TopKSAE(d, 8192, k=50), seed 0, fp16 file
              'config': dict(d_model=sae.d_model, d_sae=sae.d_sae, k=sae.k,
                             center=sae.center), 'tokens': len(acts)}
     save_rerun(name, lambda p: torch.save(state, p))
+    sae.load_state_dict(state['state_dict'])  # the published fp16 values
     return sae, len(acts)
 
 def load_sae(key):
@@ -1170,8 +1191,13 @@ if SMALL:
 else:
     HOST = 'Qwen/Qwen3-1.7B-Base'
     del model, lens, ctx  # a context keeps the model it instruments
+    del E, gamma, target, lp  # R1's embedding, held-out logits
+    for g in groups:  # the corrupted activations of the patching runs
+        del g['acts']
     gc.collect()
     torch.cuda.empty_cache()
+    print(f'after freeing R1: {torch.cuda.memory_allocated() / 2**20:,.0f} '
+          'MiB still allocated')
     model = d2l.load_qwen3(HOST).requires_grad_(False)  # bf16
     # the same vocabulary, so the token ids of the data cell stay valid
     assert AutoTokenizer.from_pretrained(
@@ -1425,6 +1451,7 @@ feature = int(top[0])
 d_mean = (H['zh']['contrast'].flatten(0, 1).float().mean(0)
           - H['en']['contrast'].flatten(0, 1).float().mean(0))
 alive = np.flatnonzero((density >= 1e-3) & (density <= 1e-2))  # by index
+alive = alive[alive != feature]
 FEATS = [feature, *alive[np.random.default_rng(0).permutation(len(alive))[:2]]]
 docs = torch.cat([wiki['zh']['contrast'], wiki['en']['contrast'],
                   heldout[:, :128]])
@@ -1468,6 +1495,8 @@ print(f'AUC, feature minus probe: {d_auc}')
 print(f'features never firing: {(density == 0).sum():,}; '
       f'dense (above 0.1): {(density > 0.1).sum():,}')
 SUMMARY['label test'] = {**results, 'AUC difference': d_auc}
+if FULL is not None:
+    print('full run:', json.dumps(FULL['label test'], indent=1))
 ```
 
 <!-- Placeholder (prose, ### Steering Directions): three directions at block 14 (the feature's decoder column, the difference of means, random ones), and the median stream norm that makes their strengths comparable. -->
@@ -1571,7 +1600,7 @@ RESULTS['steering_docs.csv'] = pd.DataFrame(
 ).to_csv(index=False).encode()
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): the frontier plot below (caption from spec fig_lm_steering_frontier), areas up to the cost cap with paired intervals, the random-direction floor, and the prefix against each direction at its own cost. -->
+<!-- Placeholder (prose, ### The Steering Frontier): the frontier plot below (caption from spec fig_lm_steering_frontier), areas up to the cost cap with paired intervals, the random-direction floor, and the prefix against each direction at its own cost; the bootstrap resamples prompts (seed 0) and cost documents (seed 1) independently. -->
 
 ```{.python .input #interpretability-frontier}
 %%tab pytorch
@@ -1585,7 +1614,9 @@ ce_p = runs['prefix', 0.0][1] - base[1]
 
 def envelope(cost, sw):  # the most switched at each cost or less
     order = np.argsort(cost, kind='stable')
-    return np.clip(cost[order], 0, None), np.maximum.accumulate(sw[order])
+    x, y = np.clip(cost[order], 0, None), np.maximum.accumulate(sw[order])
+    last = np.append(x[1:] > x[:-1], True)  # ties: keep the last, the most
+    return x[last], y[last]
 
 def area(cost, sw):  # under the frontier, from cost 0 to CAP
     grid = np.linspace(0, CAP, 101)
@@ -1603,6 +1634,7 @@ def stats(ip, idoc):  # the declared statistics on resampled prompts, docs
 
 n_p, n_d = len(steer_texts), len(cost_docs)
 point = stats(np.arange(n_p), np.arange(n_d))
+# bootstrap seeds: 0 for the prompts, 1 for the documents (independent)
 reps = np.array([stats(ip, idoc) for ip, idoc in zip(
     cluster_resample(range(n_p)), cluster_resample(range(n_d), seed=1))])
 ci = pct_ci(reps)
@@ -1632,7 +1664,7 @@ d2l.plot([cost[INFORMED[0]], cost[INFORMED[1]], c_rand, c_rand,
          figsize=(5, 3.5))
 RESULTS['summary.json'] = json.dumps(SUMMARY, indent=1, default=float,
                                      ensure_ascii=False).encode()
-if RETRAIN:
+if RETRAIN and not SMALL:  # the CPU path's numbers are never published
     save_rerun('lm-interp-results.zip', write_results)
 ```
 

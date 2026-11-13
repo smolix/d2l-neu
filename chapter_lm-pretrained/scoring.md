@@ -54,15 +54,18 @@ from d2l import torch as d2l
 ```{.python .input #scoring-imports-extras}
 %%tab pytorch
 import collections
+import functools
+import gc
+import hashlib
 import json
 import os
 import re
-import string
-import subprocess
 import sys
-import tempfile
 import time
+import unicodedata
+import huggingface_hub
 import pandas as pd
+import transformers
 ```
 
 <!-- Placeholder (stage 2): the datasets, pinned to commits, and the two fixed inputs; the run artifacts are registered at capture. -->
@@ -118,6 +121,112 @@ def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
     return d2l.download(key, os.path.join(root, key))
 ```
 
+<!-- Placeholder (stage 2): the five checkpoints and the switches of the build (GPU, regeneration). -->
+
+```{.python .input #scoring-setup}
+%%tab pytorch
+BASES = ['Qwen/Qwen3-0.6B-Base', 'Qwen/Qwen3.5-0.8B-Base']
+PAIR = ['Qwen/Qwen3-0.6B', 'Qwen/Qwen3.5-0.8B']  # the pre-declared pair
+MODELS = [BASES[0], PAIR[0], BASES[1], PAIR[1], 'Qwen/Qwen3-1.7B']
+GPU = torch.cuda.is_available()
+# A job given a GPU (CUDA_VISIBLE_DEVICES set) must not fall back to the CPU
+assert GPU or not os.environ.get('CUDA_VISIBLE_DEVICES'), (
+    'a GPU is assigned, but PyTorch sees none')
+RERUN = os.environ.get('D2L_RERUN', '0') == '1'  # regenerate the artifacts
+assert GPU or not RERUN, 'regenerating the artifacts needs a GPU'
+RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
+torch.backends.cuda.matmul.allow_tf32 = False  # fp32 means IEEE fp32
+torch.backends.cudnn.allow_tf32 = False
+ieee_fp32 = lambda: not (torch.backends.cuda.matmul.allow_tf32 or
+                         torch.backends.cudnn.allow_tf32)
+transformers.logging.set_verbosity_error()  # no notices or progress bars
+transformers.logging.disable_progress_bar()
+huggingface_hub.utils.disable_progress_bars()
+print(f'GPU={GPU}, RERUN={RERUN}')
+```
+
+<!-- Placeholder (stage 2): where the measured results live: registered files, or this run's regenerated ones. -->
+
+```{.python .input #scoring-artifacts}
+%%tab pytorch
+def registered(key):
+    """Local path of a registered artifact, or None before its upload."""
+    return d2l.download_keyed(key) if key in d2l.DATA_HUB else None
+
+def artifact(key, name):
+    """The registered artifact; in the regeneration run before its first
+    upload, the file name that this run wrote to RERUN_DIR."""
+    path = registered(key)
+    if path is None:
+        assert RERUN, f'{key} is not registered: run with D2L_RERUN=1'
+        path = os.path.join(RERUN_DIR, name)
+    return path
+
+def save_rerun(name, write):
+    """write(path) a regenerated artifact to RERUN_DIR; print its sha1."""
+    path = os.path.join(RERUN_DIR, name)
+    os.makedirs(RERUN_DIR, exist_ok=True)
+    write(path)
+    with open(path, 'rb') as f:
+        print(f'wrote {path}, sha1 {hashlib.sha1(f.read()).hexdigest()}')
+
+def read_jsonl(path):  # one record per line, types as written
+    with open(path) as f:
+        return pd.DataFrame([json.loads(line) for line in f])
+
+def write_jsonl(path, records):
+    with open(path, 'w') as f:
+        f.writelines(json.dumps(r, ensure_ascii=False) + '\n'
+                     for r in records)
+
+def free():
+    """Return the memory of deleted models to the GPU."""
+    gc.collect()
+    torch.cuda.empty_cache()
+
+def peak():
+    """Peak GPU memory since the last call, as text."""
+    if not torch.cuda.is_available():
+        return 'no GPU'
+    gib = torch.cuda.max_memory_allocated() / 2**30
+    torch.cuda.reset_peak_memory_stats()
+    return f'peak {gib:.1f} GiB'
+```
+
+<!-- Placeholder (stage 2): 500 seeded ARC-Challenge items, five balanced demonstrations, 100 seeded GSM8K problems. -->
+
+```{.python .input #scoring-data}
+%%tab pytorch
+def arc_items(df):
+    """(id, question, options, gold index) per row; the index also reads
+    the items labelled 1 to 4 instead of A to D."""
+    return [(r.id, r.question, list(r.choices['text']),
+             list(r.choices['label']).index(r.answerKey))
+            for r in df.itertuples()]
+
+def subset(n_total, n, seed=0):  # prefix-stable: subset(N, m) starts
+    return np.random.default_rng(seed).permutation(n_total)[:n]  # (N, n)
+
+arc_test, arc_train = (arc_items(pd.read_parquet(d2l.download_keyed(
+    f'arc-challenge-{split}'))) for split in ('test', 'train'))
+ARC = [arc_test[i] for i in subset(len(arc_test), 500)]
+ARC_IDS, GOLD = [it[0] for it in ARC], np.array([it[3] for it in ARC])
+SHOTS, shot_ids = [], []  # in train order, gold letters A, B, C, D, A
+for letter in 'ABCDA':
+    it = next(it for it in arc_train if len(it[2]) == 4 and
+              'ABCD'[it[3]] == letter and it[0] not in shot_ids)
+    shot_ids.append(it[0])
+    SHOTS.append(it[1:])
+gsm_train = pd.read_parquet(d2l.download_keyed('gsm8k-train'))
+gsm_test = pd.read_parquet(d2l.download_keyed('gsm8k-test'))
+GSM_IDS = subset(len(gsm_test), 100)  # row indices of the test file
+print(f'ARC-Challenge: {len(ARC)} of {len(arc_test):,} test items; options '
+      f'per item {dict(collections.Counter(len(it[2]) for it in ARC))}')
+print('demonstrations:', ', '.join(f'{i} ({"ABCD"[s[2]]})'
+                                   for i, s in zip(shot_ids, SHOTS)))
+print(f'GSM8K: {len(GSM_IDS)} of {len(gsm_test):,} test problems')
+```
+
 <!-- Placeholder (stage 2): one item, two formats. -->
 
 ```{.python .input #scoring-format-mc}
@@ -157,6 +266,50 @@ def format_mc(question, options, fmt='cloze', *, shots=()):
         blocks.append(prompt + choices[a])
     prompt, choices = render(question, options)
     return '\n\n'.join(blocks + [prompt]), choices
+```
+
+<!-- Placeholder (stage 2): one invented item in both formats, and the tokens each choice adds to its prompt. -->
+
+```{.python .input #scoring-format-print}
+%%tab pytorch
+TOK = {m: transformers.AutoTokenizer.from_pretrained(
+    m, revision=d2l.HF_REVISIONS[m]) for m in BASES}
+tok = TOK[BASES[0]]
+question = 'Which gas do plants take in from the air to make their food?'
+options = ['oxygen', 'carbon dioxide', 'nitrogen', 'water vapor']
+for fmt in ('cloze', 'letter'):
+    prompt, choices = d2l.format_mc(question, options, fmt)
+    n = len(tok(prompt, add_special_tokens=False).input_ids)
+    print(prompt)
+    for c in choices:  # the continuation: tokens beyond the prompt's
+        cont = tok(prompt + c, add_special_tokens=False).input_ids[n:]
+        print(f'    {c!r:17} ids {cont}, pieces '
+              f'{[tok.decode(i) for i in cont]}')
+```
+
+<!-- Placeholder (stage 2): every prompt and choice of the 500 items, and a count of token merges across the boundary. -->
+
+```{.python .input #scoring-format-merges}
+%%tab pytorch
+FORMATS = {  # (prompt, choices) of the 500 items in each scored format
+    'cloze': [d2l.format_mc(q, o) for _, q, o, _ in ARC],
+    'uncond': [('Answer:', d2l.format_mc(q, o)[1]) for _, q, o, _ in ARC],
+    'letter0': [d2l.format_mc(q, o, 'letter') for _, q, o, _ in ARC],
+    'letter5': [d2l.format_mc(q, o, 'letter', shots=SHOTS)
+                for _, q, o, _ in ARC]}
+merges = collections.defaultdict(dict)
+for m, t in TOK.items():
+    for fmt, items in FORMATS.items():
+        heads = t([p for p, cs in items for _ in cs],
+                  add_special_tokens=False).input_ids
+        whole = t([p + c for p, cs in items for c in cs],
+                  add_special_tokens=False).input_ids
+        merges[fmt][m] = sum(w[:len(h)] != h for h, w in zip(heads, whole))
+    assert all(len(t(' ' + a, add_special_tokens=False).input_ids) == 1
+               for a in 'ABCDEFGHIJ')  # ' A' to ' J' are single tokens
+print(f'prompt-choice pairs per format: '
+      f'{sum(len(cs) for _, cs in FORMATS["cloze"]):,}; merges:')
+print(pd.DataFrame(merges))
 ```
 
 <!-- Placeholder (stage 2): the log-probability of each choice, from one forward pass per batch. -->
@@ -331,6 +484,111 @@ def score_choices(model, tokenizer, prompts, choices, norm='token', *,
                        'char': comps.n_chars, 'byte': comps.n_bytes}[norm]
 ```
 
+<!-- Placeholder (stage 2): three references for the scorer: a hand loop, one item at a time, and label_logprobs. -->
+
+```{.python .input #scoring-check-def}
+%%tab pytorch
+def hand_loop(model, tok, prompt, choice):
+    """log P(choice | prompt) from the log-softmax of the whole sequence."""
+    n = len(tok(prompt, add_special_tokens=False).input_ids)
+    ids = tok(prompt + choice, add_special_tokens=False).input_ids
+    with torch.inference_mode():
+        z = model(torch.tensor([ids], device=model.device)).logits[0]
+    lp = z.float().log_softmax(-1)
+    return sum(lp[t - 1, ids[t]].item() for t in range(n, len(ids)))
+
+def scorer_errors(model, tok, items, letter_prompts):
+    """Largest differences between score_choices and three references."""
+    prompts, choices = zip(*items)
+    hand = torch.tensor([[hand_loop(model, tok, p, c) for c in cs]
+                         for p, cs in items])
+    total = d2l.score_choices(model, tok, prompts, choices, 'sum')
+    one = d2l.score_choices(model, tok, prompts, choices, batch_size=1)
+    eight = d2l.score_choices(model, tok, prompts, choices, batch_size=8)
+    letters = d2l.score_choices(model, tok, letter_prompts,  # one prompt
+                                [' A', ' B', ' C', ' D'], 'sum',  # at a
+                                batch_size=1)  # time: no batch drift
+    labels = d2l.label_logprobs(model, tok, letter_prompts, list('ABCD'),
+                                batch_size=1)
+    return [('sum vs hand loop', (total - hand).abs().max().item(), 1e-4),
+            ('batch 8 vs 1', (eight - one).abs().max().item(), 1e-4),
+            ('letters vs label_logprobs',
+             (letters.log_softmax(-1) - labels).abs().max().item(), 1e-5)]
+```
+
+<!-- Placeholder (stage 2): the checks in fp32 on the first eight four-option items, for both base checkpoints. -->
+
+```{.python .input #scoring-check-scorer}
+%%tab pytorch
+assert ieee_fp32()  # the fp32 checks assume IEEE fp32 matrix products
+first8 = [i for i, it in enumerate(ARC) if len(it[2]) == 4][:8]
+items = [FORMATS['cloze'][i] for i in first8]
+letter_prompts = [FORMATS['letter0'][i][0] for i in first8]
+model, tok = d2l.load_hf(BASES[1], dtype=torch.float32)
+rows = [(BASES[1], *r)
+        for r in scorer_errors(model, tok, items, letter_prompts)]
+del model
+free()
+base32, tok32 = d2l.load_hf(BASES[0], dtype=torch.float32)  # kept below
+rows += [(BASES[0], *r)
+         for r in scorer_errors(base32, tok32, items, letter_prompts)]
+print(pd.DataFrame(rows, columns=['model', 'check', 'max error',
+                                  'tolerance']).to_string(index=False))
+assert all(err < tol for *_, err, tol in rows)
+```
+
+<!-- Placeholder (stage 2): the harness's per-item scores of the first 200 test items, and a comparison with ours. -->
+
+```{.python .input #scoring-harness-compare}
+%%tab pytorch
+with open(d2l.download_keyed('lm-eval-reference-arc-v1')) as f:
+    ref = json.load(f)
+assert ref['dataset_revision'] in d2l.DATA_HUB['arc-challenge-test'][0]
+assert ref['model'] == BASES[0]
+assert ref['model_revision'] == d2l.HF_REVISIONS[BASES[0]]
+first200 = arc_test[:200]  # in dataset order, as the harness ran them
+assert [it[0] for it in first200] == [r['id'] for r in ref['items_data']]
+prompts, choices = zip(*[d2l.format_mc(q, o) for _, q, o, _ in first200])
+
+def against_harness(c, setting):
+    """Largest |ll| difference and the predictions that differ, per norm."""
+    diff, n_differ = 0.0, {}
+    for i, r in enumerate(ref['items_data']):
+        diff = max([diff] + [abs(c.ll[i, j].item() - v)
+                             for j, v in enumerate(r['ll'])])
+    for norm, key in (('sum', 'pred_acc'), ('char', 'pred_acc_norm')):
+        s = c.ll / (1 if norm == 'sum' else c.n_chars)
+        pred = s.argmax(-1).tolist()
+        bad = [(r['id'], p, r[key], (s[i, p] - s[i, r[key]]).item())
+               for i, (r, p) in enumerate(zip(ref['items_data'], pred))
+               if p != r[key]]
+        n_differ[norm] = len(bad)
+        for item, p, h, gap in bad:
+            print(f'    {setting}, {norm}: {item} ours {"ABCDE"[p]}, '
+                  f'harness {"ABCDE"[h]}, margin {gap:.2e}')
+    print(f'{setting}: max |ll difference| {diff:.1e}; predictions that '
+          f'differ: {n_differ}')
+    return diff, n_differ
+```
+
+<!-- Placeholder (stage 2): the scorer against lm-evaluation-harness, in fp32 and (on a GPU) in bf16. -->
+
+```{.python .input #scoring-harness-fixture}
+%%tab pytorch
+assert ieee_fp32()
+diff, n_differ = against_harness(d2l.score_choices(
+    base32, tok32, prompts, choices, batch_size=1, return_components=True),
+    'fp32, batch 1')
+assert diff < 2e-3 and max(n_differ.values()) <= 2
+if GPU:
+    model, _ = d2l.load_hf(BASES[0])  # bf16
+    against_harness(d2l.score_choices(model, tok32, prompts, choices,
+                                      return_components=True),
+                    'bf16, batch 8')
+    del model
+    free()
+```
+
 <!-- Placeholder (stage 2): bits per byte of running text, in sliding windows. -->
 
 ```{.python .input #scoring-bits-per-byte}
@@ -435,6 +693,139 @@ def bits_per_byte(model, tokenizer, texts, ctx_len=2048, stride=None,
     return nll / (math.log(2) * n_bytes)
 ```
 
+<!-- Placeholder (stage 2): the texts: wikitext-2 test in articles, and the two held-out texts. -->
+
+```{.python .input #scoring-texts}
+%%tab pytorch
+with open(d2l.download_keyed('lm-heldout-texts-v1')) as f:
+    HELD = {t['name']: unicodedata.normalize('NFC', t['text'])
+            for t in json.load(f)['texts']}
+title = re.compile(r' = [^=].* = ')  # a top-level heading starts an article
+WIKI = []
+for line in pd.read_parquet(d2l.download_keyed('wikitext-2-raw-test')).text:
+    if title.fullmatch(line.rstrip('\n')):
+        WIKI.append('')
+    if WIKI:
+        WIKI[-1] += line
+WIKI = [unicodedata.normalize('NFC', a) for a in WIKI]
+BPB_TEXTS = {'wikitext-2': WIKI, 'held-out prose': [HELD['prose']],
+             'held-out code': [HELD['code']]}
+for name, texts in BPB_TEXTS.items():
+    print(f'{name}: {len(texts)} text(s), '
+          f'{sum(len(t.encode("utf-8")) for t in texts):,} bytes')
+```
+
+<!-- Placeholder (stage 2): bits per byte against full logits, one window at a time, with every position counted. -->
+
+```{.python .input #scoring-bpb-check}
+%%tab pytorch
+def naive_nll(model, tok, text, ctx_len, stride):
+    """Total NLL in nats from full logits, window by window as
+    bits_per_byte places them, and how often each position is scored."""
+    seq = [_lm_boundary_id(tok)] + tok(text, add_special_tokens=False
+                                       ).input_ids
+    nll, times, done = 0.0, np.zeros(len(seq), dtype=int), 0
+    while done < len(seq) - 1:
+        end = min(ctx_len if done == 0 else done + stride, len(seq) - 1)
+        start = max(end - ctx_len, 0)  # seq[start:end] predicts the next
+        with torch.inference_mode():
+            z = model(torch.tensor([seq[start:end]], device=model.device))
+        lp = z.logits[0].float().log_softmax(-1).cpu()
+        t = torch.arange(done + 1, end + 1)  # the targets scored here
+        nll -= lp[t - 1 - start, torch.tensor(seq)[t]].sum().item()
+        times[t] += 1
+        done = end
+    return nll, times
+
+assert ieee_fp32()
+ids = tok32(HELD['prose'], add_special_tokens=False).input_ids
+for n, ctx_len, stride in ((300, 512, 512), (3000, 512, 256)):
+    text = tok32.decode(ids[:n])
+    bpb = d2l.bits_per_byte(base32, tok32, text, ctx_len, stride)
+    nll, times = naive_nll(base32, tok32, text, ctx_len, stride)
+    ref = nll / (math.log(2) * len(text.encode('utf-8')))
+    assert times[0] == 0 and (times[1:] == 1).all()  # each token once
+    print(f'{len(times) - 1:,} tokens, ctx {ctx_len}, stride {stride}: '
+          f'bpb {bpb:.6f}, full logits {ref:.6f}, relative difference '
+          f'{abs(bpb - ref) / ref:.1e}')
+    assert abs(bpb - ref) / ref < 1e-6
+del base32
+free()
+```
+
+<!-- Placeholder (stage 2): one row of the bits-per-byte table, and its agreement with the registered values. -->
+
+```{.python .input #scoring-bpb-def}
+%%tab pytorch
+def bpb_row(model_id, model, tok, text, ctx_len, stride):
+    """Tokens, bytes, token perplexity and bits per byte of BPB_TEXTS[text]."""
+    texts = BPB_TEXTS[text]
+    T = sum(map(len, tok(texts, add_special_tokens=False).input_ids))
+    B = sum(len(t.encode('utf-8')) for t in texts)
+    bpb = d2l.bits_per_byte(model, tok, texts, ctx_len, stride)
+    nll = bpb * math.log(2) * B  # nats
+    return dict(model=model_id, vocab=len(tok),
+                boundary=_lm_boundary_id(tok), text=text, ctx=ctx_len,
+                stride=stride, T=T, B=B, nll=nll, bpb=bpb,
+                ppl_tok=math.exp(nll / T))
+
+def bpb_agreement(rows):
+    path = registered('lm-bpb-v1')
+    if path is None:
+        return print('lm-bpb-v1 is not registered yet')
+    both = pd.DataFrame(rows).merge(pd.read_csv(path), suffixes=('', '_v1'),
+                                    on=['model', 'text', 'ctx', 'stride'])
+    print(f'{len(both)} of {len(rows)} rows in lm-bpb-v1; max |bpb '
+          f'difference| {(both.bpb - both.bpb_v1).abs().max():.1e}')
+```
+
+<!-- Placeholder (stage 2): two base models, three texts: tokens per byte, token perplexity, bits per byte. -->
+
+```{.python .input #scoring-bpb-models}
+%%tab pytorch
+print('boundary token:', {m: _lm_boundary_id(t) for m, t in TOK.items()})
+bpb_rows = []
+if GPU:
+    for m in BASES:
+        model, tok = d2l.load_hf(m)
+        bpb_rows += [bpb_row(m, model, tok, t, 2048, 1024) for t in BPB_TEXTS]
+        del model
+        free()
+    bpb_agreement(bpb_rows)
+bpb = (pd.DataFrame(bpb_rows) if GPU else
+       pd.read_csv(artifact('lm-bpb-v1', 'lm-bpb.csv')))
+main = bpb[(bpb.ctx == 2048) & (bpb.stride == 1024)].assign(
+    tpb=lambda d: d['T'] / d['B'])  # tokens per byte
+print(main.set_index(['text', 'model'])[['T', 'B', 'tpb', 'ppl_tok', 'bpb']]
+      .round(3).to_string())
+tpb = main.pivot(index='text', columns='model', values='tpb')
+print('tokens per byte, Qwen3 over Qwen3.5:',
+      (tpb[BASES[0]] / tpb[BASES[1]]).round(3).to_dict())
+```
+
+<!-- Placeholder (stage 2): wikitext-2 under four windowings of Qwen3-0.6B-Base. -->
+
+```{.python .input #scoring-bpb-windows}
+%%tab pytorch
+WINDOWS = [(512, 512), (512, 256), (2048, 2048)]  # (ctx, stride)
+if GPU:
+    model, tok = d2l.load_hf(BASES[0])
+    rows = [bpb_row(BASES[0], model, tok, 'wikitext-2', c, s)
+            for c, s in WINDOWS]
+    del model
+    free()
+    bpb_agreement(rows)
+    bpb_rows += rows
+    bpb = pd.DataFrame(bpb_rows)
+    if RERUN:
+        save_rerun('lm-bpb.csv', lambda path: bpb.to_csv(
+            path, index=False, float_format='%.10g'))
+w = bpb[(bpb.model == BASES[0]) & (bpb.text == 'wikitext-2')]
+print(w.assign(step=np.where(w.stride == w.ctx, 'stride = ctx',
+                             'stride = ctx/2'))
+      .pivot(index='ctx', columns='step', values='bpb').round(4))
+```
+
 <!-- Placeholder (stage 2): the parser is part of the metric. -->
 
 ```{.python .input #scoring-extract-answer}
@@ -504,6 +895,107 @@ for text, kind, want in cases:
     print(f'{kind:5s} {got!s:12s} {text[:48]!r}')
 ```
 
+<!-- Placeholder (stage 2): 4-shot GSM8K prompts as a conversation, and three ways to read a number off a solution. -->
+
+```{.python .input #scoring-gsm8k-prompts}
+%%tab pytorch
+GSM_DEMOS = [(q, re.sub(r'<<[^>]*>>', '', a))  # calculator notes removed
+             for q, a in zip(gsm_train.question[:4], gsm_train.answer[:4])]
+GSM_PROMPTS = [d2l.fewshot_prompt(GSM_DEMOS, q, template='chat_multi')
+               for q in gsm_test.question.iloc[GSM_IDS]]
+GSM_GOLD = [d2l.extract_answer(a) for a in gsm_test.answer.iloc[GSM_IDS]]
+GSM_SAMPLER = dict(chat=True, enable_thinking=False, strategy='sample',
+                   temperature=0.7, p=0.8, k=20, max_new_tokens=384)
+
+def hash_only(text):
+    """The number after the last '####', GSM8K's answer line, or None."""
+    found = re.findall(r'####\s*(\$?-?[\d,]*\.?\d+)', text)
+    return d2l.extract_answer('#### ' + found[-1]) if found else None
+
+EXTRACTORS = {'#### only': hash_only,
+              'strict': lambda text: d2l.extract_answer(text, strict=True),
+              'last number': d2l.extract_answer}
+tok = transformers.AutoTokenizer.from_pretrained(
+    PAIR[0], revision=d2l.HF_REVISIONS[PAIR[0]])
+print(tok.apply_chat_template(GSM_PROMPTS[0], tokenize=False,
+                              add_generation_prompt=True,
+                              enable_thinking=False))
+```
+
+<!-- Placeholder (stage 2): eight samples per problem from each model of the pair (regenerated only under RERUN). -->
+
+```{.python .input #scoring-gsm8k-pool}
+%%tab pytorch
+def gsm_records(model_id, gens, j):
+    return [dict(model=model_id, revision=d2l.HF_REVISIONS[model_id],
+                 problem_id=int(i), sample_idx=j, seed=j,
+                 settings=GSM_SAMPLER, text=g.text,
+                 n_tokens=len(g.token_ids), finish_reason=g.finish_reason,
+                 **{'answer_' + k: f(g.text) for k, f in
+                    zip(['hash', 'strict', 'loose'], EXTRACTORS.values())},
+                 gold=gold, correct=EXTRACTORS['strict'](g.text) == gold)
+            for i, g, gold in zip(GSM_IDS, gens, GSM_GOLD)]
+
+if RERUN:
+    records, tic = [], time.time()
+    for m in PAIR:
+        model, tok = d2l.load_hf(m)
+        for j in range(8):  # sample j of every problem, with seed j
+            records += gsm_records(m, d2l.generate(
+                model, tok, GSM_PROMPTS, seed=j, batch_size=50,
+                **GSM_SAMPLER), j)
+        del model
+        free()
+    print(f'{len(records):,} samples in {(time.time() - tic) / 60:.1f} '
+          f'min, {peak()}')
+    save_rerun('lm-gsm8k-samples.jsonl',
+               lambda path: write_jsonl(path, records))
+    path = registered('lm-gsm8k-samples-v1')
+    if path is not None:
+        both = pd.DataFrame(records).merge(
+            read_jsonl(path), on=['model', 'problem_id', 'sample_idx'])
+        print(f'correctness agrees with lm-gsm8k-samples-v1 on '
+              f'{(both.correct_x == both.correct_y).sum()} of {len(both)}')
+pool = read_jsonl(artifact('lm-gsm8k-samples-v1', 'lm-gsm8k-samples.jsonl'))
+print(pd.DataFrame({
+    'sample-0 accuracy': pool[pool.sample_idx == 0].groupby('model').correct
+    .mean(), 'truncated': (pool.finish_reason == 'length').groupby(
+        pool.model).mean(), 'mean tokens': pool.groupby('model').n_tokens
+    .mean()}).round(3))
+```
+
+<!-- Placeholder (stage 2): the same 1,600 generations read by three extractors. -->
+
+```{.python .input #scoring-extractors}
+%%tab pytorch
+answers = pd.DataFrame({name: pool.text.map(f)
+                        for name, f in EXTRACTORS.items()})
+right = answers.apply(lambda col: col == pool.gold)
+print(right.groupby(pool.model).mean().round(3))
+differ = answers.nunique(axis=1, dropna=False) > 1
+print(f'extractors disagree on {differ.sum()} of {len(pool):,} generations; '
+      f'the last-number fallback alone credits '
+      f'{(right["last number"] & ~right["strict"]).sum()}')
+```
+
+<!-- Placeholder (stage 2): a provisional bootstrap, until d2l.paired_bootstrap in the next section. -->
+
+```{.python .input #scoring-boot}
+%%tab pytorch
+@functools.cache  # the same resamples for every statistic over n units
+def boot_counts(n, n_boot=10_000, seed=0):
+    """(n_boot, n) resampling counts: how often each unit is drawn."""
+    return np.random.default_rng(seed).multinomial(n, np.full(n, 1 / n),
+                                                   size=n_boot)
+
+def boot(a, b=None, n_boot=10_000, seed=0):
+    """Mean of a, or of a - b paired by unit, and its 95% percentile
+    interval over n_boot resamples of the units."""
+    d = np.asarray(a, float) - (0 if b is None else np.asarray(b, float))
+    means = boot_counts(len(d), n_boot, seed) @ d / len(d)
+    return d.mean(), *np.percentile(means, [2.5, 97.5])
+```
+
 <!-- Placeholder (stage 2): pass@k from a pool of n samples, and its variance. -->
 
 ```{.python .input #scoring-pass-at-k}
@@ -559,6 +1051,61 @@ plug = np.sum(pmf * (1 - (1 - c / n) ** k))
 print(f'n={n}, p={p}, k={k}: mean {mean:.5f}, variance {var:.6f} '
       f'(sd {var ** 0.5:.4f}), plug-in mean {plug:.5f} '
       f'(bias {plug - mean:+.4f})')
+```
+
+<!-- Placeholder (stage 2): pass@k, its plug-in estimate and majority voting on the pool, with intervals over problems; the plot below. -->
+
+```{.python .input #scoring-passk-pool}
+%%tab pytorch
+K = [1, 2, 4, 8]
+
+def majority(answers):
+    """The most frequent parsed answer, ties to the first one sampled."""
+    parsed = [a for a in answers if a is not None]
+    counts = collections.Counter(parsed)
+    return max(parsed, key=counts.__getitem__) if parsed else None
+
+est, rows = {}, []
+for m in PAIR:
+    g = pool[pool.model == m].sort_values('sample_idx').groupby('problem_id')
+    c = g.correct.sum().to_numpy()  # correct samples of 8, per problem
+    maj = (g.answer_strict.agg(majority) == g.gold.first()).to_numpy(float)
+    for k in K:
+        est[m, k] = boot(d2l.pass_at_k(8, c, k))
+        est[m, k, 'plug-in'] = np.mean(1 - (1 - c / 8) ** k)
+    est[m, 'maj'] = boot(maj)
+    rows.append({'model': m, **{f'pass@{k}': est[m, k] for k in K},
+                 'maj@8': est[m, 'maj'],
+                 'maj@8 - pass@1': boot(maj, d2l.pass_at_k(8, c, 1))})
+show = lambda e: f'{e[0]:.3f} [{e[1]:.3f}, {e[2]:.3f}]'
+print(pd.DataFrame(rows).set_index('model').map(show).T.to_string())
+print('plug-in:', {m: [round(float(est[m, k, 'plug-in']), 3) for k in K]
+                   for m in PAIR})
+d2l.plot([K, K, [8], [8]], [[est[m, k, 'plug-in'] for k in K] for m in PAIR]
+         + [[est[m, 'maj'][0]] for m in PAIR],
+         fmts=('C0--', 'C1--', 'C0D', 'C1D'), figsize=(4.5, 3))
+d2l.plot_intervals(K, {m.removeprefix('Qwen/'): tuple(np.array(
+    [est[m, k] for k in K]).T) for m in PAIR}, 'k', 'pass@k', kind='band',
+    xscale='log2', axes=d2l.plt.gca());
+```
+
+<!-- Placeholder (stage 2): how much of the band's width comes from sampling and how much from the choice of problems. -->
+
+```{.python .input #scoring-passk-variance-split}
+%%tab pytorch
+rows = []
+for m in PAIR:
+    c = pool[pool.model == m].groupby('problem_id').correct.sum().to_numpy()
+    M, p = len(c), c / 8
+    for k in (1, 4):
+        total = d2l.pass_at_k(8, c, k).var(ddof=1) / M
+        within = (p * (1 - p) / 7 if k == 1 else  # unbiased at k = 1
+                  np.array([d2l.pass_at_k_variance(8, q, k) for q in p])
+                  ).mean() / M
+        rows.append(dict(model=m, k=k, total=total, within=within,
+                         between=total - within, within_share=within / total,
+                         within_estimate='exact' if k == 1 else 'plug-in'))
+print(pd.DataFrame(rows).to_string(index=False, float_format='%.2e'))
 ```
 
 <!-- Placeholder (stage 2): run a program against its tests, with limits. -->
@@ -635,4 +1182,377 @@ for name, program in programs.items():
     elapsed = time.time() - tic
     print(f'{name:14s} passed={ok!s:5s} {elapsed:.2f} s')
     assert ok == (name == 'correct') and elapsed < timeout + 1
+```
+
+<!-- Placeholder (stage 2): the two generative arms on ARC: what the chat turn asks, each arm's settings, and how a reply is read. -->
+
+```{.python .input #scoring-arc-arms}
+%%tab pytorch
+ASK = 'Give the letter of the correct option as \\boxed{X}.'
+ARC_CHAT = [d2l.format_mc(q, o, 'letter')[0].removesuffix('Answer:') + ASK
+            for _, q, o, _ in ARC]
+ARMS = {  # arm: (models, number of subset items, settings of generate)
+    'direct': ([PAIR[0], PAIR[1], 'Qwen/Qwen3-1.7B'], 500, dict(
+        strategy='greedy', enable_thinking=False, max_new_tokens=128)),
+    'reasoning': ([PAIR[0], 'Qwen/Qwen3-1.7B'], 200, dict(
+        strategy='sample', temperature=0.6, p=0.95, k=20, seed=0,
+        enable_thinking=True, max_new_tokens=1024))}
+
+def boxed_letter(g, n_options):
+    """The option a finished reply commits to in its last \\boxed{} after
+    any thinking, or None."""
+    if g.finish_reason == 'length':
+        return None
+    s = d2l.extract_answer(g.text.split('</think>')[-1], 'boxed') or ''
+    m = re.match(r'(?:\\text\{)?\(?([A-Z])(?![A-Za-z])', s)
+    return m[1] if m and ord(m[1]) - ord('A') < n_options else None
+```
+
+<!-- Placeholder (stage 2): the generated answers (regenerated only under RERUN): accuracy, parsing and length per model and arm. -->
+
+```{.python .input #scoring-arc-generate}
+%%tab pytorch
+if RERUN:
+    records, tic = [], time.time()
+    for m in dict.fromkeys(ARMS['direct'][0] + ARMS['reasoning'][0]):
+        model, tok = d2l.load_hf(m)
+        for arm, (models, n, settings) in ARMS.items():
+            if m in models:
+                out = d2l.generate(model, tok, ARC_CHAT[:n], chat=True,
+                                   batch_size=50, **settings)
+                letters = [boxed_letter(g, len(it[2]))
+                           for it, g in zip(ARC, out)]
+                records += [dict(
+                    model=m, revision=d2l.HF_REVISIONS[m], arm=arm,
+                    item_id=it[0], settings=settings,
+                    seed=settings.get('seed'), text=g.text,
+                    n_tokens=len(g.token_ids), finish_reason=g.finish_reason,
+                    letter=a, correct=a == 'ABCDE'[it[3]])
+                    for it, g, a in zip(ARC, out, letters)]
+        del model
+        free()
+    print(f'{len(records):,} replies in {(time.time() - tic) / 60:.1f} min, '
+          f'{peak()}')
+    save_rerun('lm-arc-generations.jsonl',
+               lambda path: write_jsonl(path, records))
+arc_gen = read_jsonl(artifact('lm-arc-generations-v1',
+                              'lm-arc-generations.jsonl'))
+summary = arc_gen.assign(
+    parsed=arc_gen.letter.notna(),
+    truncated=arc_gen.finish_reason == 'length').groupby(['model', 'arm'])
+print(pd.DataFrame({
+    'accuracy': summary.correct.mean(),
+    'among parsed': arc_gen[arc_gen.letter.notna()].groupby(
+        ['model', 'arm']).correct.mean(),
+    'invalid': 1 - summary.parsed.mean() - summary.truncated.mean(),
+    'truncated': summary.truncated.mean(),
+    'mean tokens': summary.n_tokens.mean()}).round(3).to_string())
+```
+
+<!-- Placeholder (stage 2): the per-choice scores of the grid as a long table, and the conventions read from it. -->
+
+```{.python .input #scoring-grid-def}
+%%tab pytorch
+def score_long(model, tok, model_id, fmt, batch_size=8):
+    """Components of every choice of the 500 items in format fmt, one row
+    per (item, choice), as lm-arc-scores-v1 stores them."""
+    prompts, choices = zip(*FORMATS[fmt])
+    c = d2l.score_choices(model, tok, prompts, choices,
+                          batch_size=batch_size, return_components=True)
+    i, j = np.nonzero(c.n_tokens.numpy())
+    return pd.DataFrame({
+        'model': model_id, 'revision': d2l.HF_REVISIONS[model_id],
+        'fmt': fmt, 'item_id': np.array(ARC_IDS)[i], 'choice': j,
+        'gold': GOLD[i],
+        **{f: v.numpy()[i, j] for f, v in c._asdict().items()}})
+
+def matrix(arc, model, fmt, col='ll'):
+    """(items, 5) array of one column, in subset order; nan beyond an
+    item's options."""
+    d = arc[(arc.model == model) & (arc.fmt == fmt)]
+    return d.pivot(index='item_id', columns='choice', values=col).reindex(
+        index=ARC_IDS, columns=range(5)).to_numpy(float)
+```
+
+<!-- Placeholder (stage 2): the eight conventions, and how each turns the stored components into a prediction. -->
+
+```{.python .input #scoring-conventions}
+%%tab pytorch
+CONVENTIONS = ['cloze-sum', 'cloze-token', 'cloze-char', 'cloze-PMI',
+               'letter-0', 'letter-5', 'gen-direct', 'gen-reasoning']
+CLOZE = {'cloze-sum': None, 'cloze-token': 'n_tokens',
+         'cloze-char': 'n_chars', 'cloze-byte': 'n_bytes'}
+
+def convention_scores(arc, model, conv, col='ll'):
+    """Scores (items, 5) of a likelihood convention, nan beyond options."""
+    if conv in CLOZE:
+        s = matrix(arc, model, 'cloze', col)
+        return s if CLOZE[conv] is None else s / matrix(arc, model, 'cloze',
+                                                        CLOZE[conv])
+    if conv == 'cloze-PMI':  # minus log P(choice | 'Answer:')
+        return (matrix(arc, model, 'cloze', col) -
+                matrix(arc, model, 'uncond', col))
+    return matrix(arc, model, {'letter-0': 'letter0',
+                               'letter-5': 'letter5'}[conv], col)
+
+def predict(s):  # first index of the largest score, as score_choices
+    return np.nan_to_num(s, nan=-np.inf).argmax(1)
+
+def margin(s):  # best minus second-best score
+    top = -np.sort(-np.nan_to_num(s, nan=-np.inf), axis=1)
+    return top[:, 0] - top[:, 1]
+```
+
+<!-- Placeholder (stage 2): the grid, re-scored live on a GPU and compared with the registered scores. -->
+
+```{.python .input #scoring-grid}
+%%tab pytorch
+path = registered('lm-arc-scores-v1')
+v1 = None if path is None else pd.read_parquet(path)
+if GPU:
+    parts = []
+    for m in MODELS:
+        tic = time.time()
+        model, tok = d2l.load_hf(m)
+        parts.append(pd.concat([score_long(model, tok, m, fmt)
+                                for fmt in FORMATS]))
+        del model
+        free()
+        print(f'{m}: {time.time() - tic:.0f} s, {peak()}')
+        for fmt in FORMATS if v1 is not None else ():
+            new, old = matrix(parts[-1], m, fmt), matrix(v1, m, fmt)
+            bad = np.flatnonzero(predict(new) != predict(old))
+            print(f'    {fmt}: {len(ARC) - len(bad)} of {len(ARC)} '
+                  f'predictions as in lm-arc-scores-v1' + ''.join(
+                      f'; {ARC_IDS[i]} (margin {margin(old)[i]:.3f})'
+                      for i in bad))
+    scores = pd.concat(parts, ignore_index=True)
+else:
+    print('no GPU: the grid is read from lm-arc-scores-v1')
+```
+
+<!-- Placeholder (stage 2): the same items at another batch size and in fp32 (regenerated only under RERUN), and what the drift does to predictions. -->
+
+```{.python .input #scoring-batch-size}
+%%tab pytorch
+BATCH_RUNS = [(PAIR[0], torch.bfloat16, 1, 'll_bs1'),  # model, dtype,
+              (PAIR[1], torch.bfloat16, 1, 'll_bs1'),  # batch size, column
+              (PAIR[0], torch.float32, 1, 'll_fp32_bs1'),
+              (PAIR[0], torch.float32, 8, 'll_fp32_bs8')]
+if RERUN:
+    assert ieee_fp32()
+    key, extra, tic = ['model', 'fmt', 'item_id', 'choice'], {}, time.time()
+    for m, dtype, size, col in BATCH_RUNS:
+        model, tok = d2l.load_hf(m, dtype=dtype)
+        extra.setdefault(col, []).extend(
+            score_long(model, tok, m, fmt, size)[key + ['ll']].rename(
+                columns={'ll': col}) for fmt in ('cloze', 'letter0'))
+        del model
+        free()
+    print(f'{len(BATCH_RUNS)} re-scorings in {(time.time() - tic) / 60:.1f} '
+          f'min, {peak()}')
+    for col, parts in extra.items():
+        scores = scores.merge(pd.concat(parts), on=key, how='left')
+    save_rerun('lm-arc-scores.parquet',
+               lambda path: scores.to_parquet(path, index=False))
+arc = pd.read_parquet(artifact('lm-arc-scores-v1', 'lm-arc-scores.parquet'))
+rows = []
+for name, m, a, b in [('bf16, batch 8 vs 1', PAIR[0], 'll', 'll_bs1'),
+                      ('bf16, batch 8 vs 1', PAIR[1], 'll', 'll_bs1'),
+                      ('fp32, batch 1 vs 8', PAIR[0], 'll_fp32_bs1',
+                       'll_fp32_bs8')]:
+    for conv in ('cloze-sum', 'letter-0'):
+        sa, sb = (convention_scores(arc, m, conv, c) for c in (a, b))
+        change = np.nanmax(np.abs(sa - sb))
+        rows.append(dict(setting=name, model=m, convention=conv,
+                         changed=(predict(sa) != predict(sb)).sum(),
+                         max_change=change,
+                         below_change=(margin(sa) < change).sum()))
+print(pd.DataFrame(rows).to_string(index=False))
+```
+
+<!-- Placeholder (stage 2): the drift of the pair's accuracy difference between batch sizes, per convention. -->
+
+```{.python .input #scoring-drift}
+%%tab pytorch
+def pair_difference(conv, col):
+    acc = [(predict(convention_scores(arc, m, conv, col)) == GOLD).mean()
+           for m in PAIR]
+    return acc[1] - acc[0]
+
+measured = {conv: abs(pair_difference(conv, 'll') -
+                      pair_difference(conv, 'll_bs1'))
+            for conv in ('cloze-sum', 'cloze-token', 'cloze-char',
+                         'letter-0')}
+DRIFT = {c: measured.get(c, max(measured.values())) for c in CONVENTIONS}
+print('drift of the pair difference, batch 8 vs 1:',
+      {c: round(float(v), 4) for c, v in measured.items()})
+print('the other conventions get the largest measured drift')
+```
+
+<!-- Placeholder (stage 2): correctness of every checkpoint under every convention, item by item. -->
+
+```{.python .input #scoring-verdicts}
+%%tab pytorch
+def gen_column(model, arm, col):
+    """One column of a generative arm per subset item (nan if not run)."""
+    d = arc_gen[(arc_gen.model == model) & (arc_gen.arm == arm)]
+    return d.set_index('item_id')[col].reindex(ARC_IDS)
+
+def correct(model, conv):
+    """1 or 0 per subset item; nan where the convention did not run."""
+    if conv.startswith('gen-'):
+        return gen_column(model, conv[4:], 'correct').to_numpy(float)
+    return (predict(convention_scores(arc, model, conv)) == GOLD
+            ).astype(float)
+
+CORRECT = {(m, c): correct(m, c) for m in MODELS for c in CONVENTIONS}
+```
+
+<!-- Placeholder (stage 2): one item that Qwen3-0.6B answers differently under three conventions. -->
+
+```{.python .input #scoring-one-item}
+%%tab pytorch
+m = PAIR[0]
+verdicts = pd.DataFrame({
+    'cloze-sum': [chr(65 + i) for i in predict(convention_scores(
+        arc, m, 'cloze-sum'))],
+    'letter-0': [chr(65 + i) for i in predict(convention_scores(
+        arc, m, 'letter-0'))],
+    'gen-direct': gen_column(m, 'direct', 'letter').fillna('none')})
+n_verdicts = verdicts.nunique(axis=1).to_numpy()
+rule = 3 if (n_verdicts == 3).any() else 2  # three apart, else two
+i = int(np.argmax(n_verdicts >= rule))
+_, q, opts, gold = ARC[i]
+print(q + ''.join(f'\n{a}. {o}' for a, o in zip('ABCDE', opts)))
+print(f'gold {"ABCDE"[gold]}; Qwen3-0.6B: ' + ', '.join(
+    f'{k} {v}' for k, v in verdicts.iloc[i].items()))
+print(f'first item with {rule} different verdicts ({ARC_IDS[i]}); items '
+      f'with at least two: {(n_verdicts > 1).sum()} of {len(ARC)}')
+```
+
+<!-- Placeholder (stage 2): accuracy with item-bootstrap intervals per checkpoint and convention, and the gold answer's bits per byte. -->
+
+```{.python .input #scoring-convention-table}
+%%tab pytorch
+ACC = {key: boot(c[~np.isnan(c)]) for key, c in CORRECT.items()
+       if not np.isnan(c).all()}
+
+def gold_bpb(model):
+    """Bits per byte of each item's gold answer in the cloze format."""
+    i = np.arange(len(ARC))
+    return -matrix(arc, model, 'cloze')[i, GOLD] / (
+        matrix(arc, model, 'cloze', 'n_bytes')[i, GOLD] * math.log(2))
+
+BPB_GOLD = {m: gold_bpb(m) for m in MODELS}
+table = pd.DataFrame({m.removeprefix('Qwen/'): {
+    c: show(ACC[m, c]) for c in CONVENTIONS if (m, c) in ACC}
+    for m in MODELS}).reindex(CONVENTIONS).fillna('')
+table.loc['gold bpb'] = [show(boot(BPB_GOLD[m])) for m in MODELS]
+print(table.to_string())
+print("predictions where 'char' and 'byte' differ, five checkpoints:",
+      sum((predict(convention_scores(arc, m, 'cloze-char')) != predict(
+          convention_scores(arc, m, 'cloze-byte'))).sum() for m in MODELS))
+```
+
+<!-- Placeholder (stage 2): the pair's paired differences per convention, the flip verdict, and gold-answer bpb against accuracy. -->
+
+```{.python .input #scoring-pair-diff}
+%%tab pytorch
+def paired(a, b):  # mean of a - b on the items both cover, with interval
+    ok = ~(np.isnan(a) | np.isnan(b))
+    return boot(a[ok], b[ok])
+
+PAIR_CONVS = CONVENTIONS[:7]  # the conventions both models ran
+PAIR_DIFF = {c: paired(CORRECT[PAIR[1], c], CORRECT[PAIR[0], c])
+             for c in PAIR_CONVS}  # Qwen3.5-0.8B minus Qwen3-0.6B
+ahead = {c: PAIR[1] if lo > DRIFT[c] else PAIR[0] if hi < -DRIFT[c] else
+         'neither' for c, (_, lo, hi) in PAIR_DIFF.items()}
+print(pd.DataFrame({'difference': {c: show(e) for c, e in PAIR_DIFF.items()},
+                    'drift': {c: DRIFT[c] for c in PAIR_CONVS},
+                    'ahead': ahead}).to_string())
+print('ranking flips:', len(set(ahead.values()) - {'neither'}) == 2)
+for name, (d, lo, hi) in [('cloze-char accuracy', PAIR_DIFF['cloze-char']),
+                          ('gold bpb', boot(BPB_GOLD[PAIR[1]],
+                                            BPB_GOLD[PAIR[0]]))]:
+    print(f'{name}: {show((d, lo, hi))}, |difference| over half-width '
+          f'{abs(d) / ((hi - lo) / 2):.2f}')
+```
+
+<!-- Placeholder (stage 2): the pre-declared contrast, letter-0 minus cloze-sum per model and family, and reasoning against direct answers. -->
+
+```{.python .input #scoring-contrasts}
+%%tab pytorch
+gain = lambda m: CORRECT[m, 'letter-0'] - CORRECT[m, 'cloze-sum']
+print('pair, (letter-0 - cloze-sum) difference of differences:',
+      show(boot(gain(PAIR[1]), gain(PAIR[0]))))
+for m in MODELS:
+    print(f'{m}: letter-0 - cloze-sum {show(boot(gain(m)))}')
+for base, post in zip(BASES, PAIR):
+    print(f'{post} - {base}, (letter-0 - cloze-sum): '
+          f'{show(boot(gain(post), gain(base)))}')
+for m in ARMS['reasoning'][0]:
+    a, b = (gen_column(m, arm, 'letter').iloc[:200] for arm in ARMS)
+    tokens = [gen_column(m, arm, 'n_tokens').iloc[:200].mean()
+              for arm in ARMS]
+    d = paired(CORRECT[m, 'gen-reasoning'], CORRECT[m, 'gen-direct'])
+    print(f'{m}: reasoning - direct {show(d)}; letters differ on '
+          f'{(a.fillna("") != b.fillna("")).sum()} of 200; mean tokens '
+          f'{tokens[1]:.0f} (reasoning) and {tokens[0]:.0f} (direct)')
+```
+
+<!-- Placeholder (stage 2): how often sum and char disagree, by the spread of option lengths. -->
+
+```{.python .input #scoring-length-spread}
+%%tab pytorch
+lengths = matrix(arc, MODELS[0], 'cloze', 'n_chars')  # same for all models
+spread = np.nanmax(lengths, 1) / np.nanmin(lengths, 1)
+tercile = pd.qcut(pd.Series(spread).rank(method='first'), 3,
+                  labels=False).to_numpy()  # ties broken by item order
+flips = np.stack([predict(convention_scores(arc, m, 'cloze-sum')) !=
+                  predict(convention_scores(arc, m, 'cloze-char'))
+                  for m in MODELS]).astype(float)  # (checkpoints, items)
+pooled, C = flips.mean(0), boot_counts(len(ARC))
+ci = lambda point, reps: show((point, *np.percentile(reps, [2.5, 97.5])))
+rates = []  # per resample; items are drawn with all checkpoints together
+for t in range(3):
+    inside = tercile == t
+    rates.append(C[:, inside] @ pooled[inside] / C[:, inside].sum(1))
+    print(f'tercile {t + 1}, spread {spread[inside].min():.2f} to '
+          f'{spread[inside].max():.2f}: '
+          f'{ci(pooled[inside].mean(), rates[t])}')
+print('top - bottom:', ci(pooled[tercile == 2].mean() -
+                          pooled[tercile == 0].mean(), rates[2] - rates[0]))
+print(pd.DataFrame({f'tercile {t + 1}': flips[:, tercile == t].mean(1)
+                    for t in range(3)},
+                   index=[m.removeprefix('Qwen/') for m in MODELS]).round(3))
+```
+
+<!-- Placeholder (stage 2): which letters the letter conventions predict, against the gold letters. -->
+
+```{.python .input #scoring-letter-bias}
+%%tab pytorch
+counts = {'gold': collections.Counter('ABCDE'[g] for g in GOLD)}
+for m in MODELS:
+    for conv in ('letter-0', 'letter-5'):
+        counts[f'{m.removeprefix("Qwen/")} {conv}'] = collections.Counter(
+            'ABCDE'[i] for i in predict(convention_scores(arc, m, conv)))
+print(pd.DataFrame(counts).T.reindex(columns=list('ABCDE')).fillna(0)
+      .astype(int))
+```
+
+<!-- Placeholder (stage 2): the plot below: accuracy per checkpoint and convention, and the pair's paired difference. -->
+
+```{.python .input #scoring-flip-figure}
+%%tab pytorch
+chance = np.mean([1 / len(it[2]) for it in ARC])
+_, axes = d2l.plt.subplots(1, 2, figsize=(10, 3.5), gridspec_kw={
+    'width_ratios': [8, 7], 'wspace': 0.3})
+d2l.plot_intervals(CONVENTIONS, {m.removeprefix('Qwen/'): tuple(np.array(
+    [ACC.get((m, c), (np.nan,) * 3) for c in CONVENTIONS]).T)
+    for m in MODELS}, 'convention', 'accuracy', reference=chance,
+    axes=axes[0])
+d2l.plot_intervals(PAIR_CONVS, {'Qwen3.5-0.8B - Qwen3-0.6B': tuple(np.array(
+    [PAIR_DIFF[c] for c in PAIR_CONVS]).T)}, 'convention',
+    'paired difference', reference=0, axes=axes[1]);
 ```

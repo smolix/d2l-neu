@@ -21,6 +21,7 @@ curvature and noisy gradients. We measure the first on a two-dimensional valley 
 of the chapter reuses, and we watch a small network adjust its own
 curvature to the step size. Convex analysis, the source of most of our
 vocabulary, closes the section.
+<!-- WRITER: "we watch a small network adjust its own curvature to the step size" is no longer true here: the edge-of-stability run moved to gd.md (subsec_gd-edge-of-stability). -->
 
 ## The Goal of Optimization
 
@@ -60,20 +61,11 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #optimization-intro-the-goal-of-optimization-1}
-%%tab jax
-import functools
-import random
-```
-
 A one-dimensional example shows the difference. Let $f$ be a smooth risk
 and let $g$ be an empirical risk that fluctuates around it, as a
 finite-sample average fluctuates around its expectation. The minimum of $g$
-need not sit at the minimum of $f$, and in
-:numref:`fig_mdl-opt-risk-gap` it does not.
-
-![The optimizer minimizes the empirical risk $g$, which wobbles around the risk $f$; their minima lie in different places.](../img/mdl-opt-risk-gap.svg)
-:label:`fig_mdl-opt-risk-gap`
+need not sit at the minimum of $f$.
+<!-- WRITER: figure fig_mdl-opt-risk-gap removed from the body (structure: the goal of optimization in two paragraphs, no figure); the sentence that cited it now ends here. -->
 
 No optimizer can close this gap, because it comes from sampling the data,
 not from the algorithm. Regularization and model selection address it. For
@@ -99,10 +91,8 @@ a *local minimum*. If it is smallest over the entire domain, $x$ is the
 
 $$f(x) = x \cos(\pi x), \quad -1 \leq x \leq 2,$$
 
-has one of each (:numref:`fig_mdl-opt-local-minima`).
-
-![$f(x)=x\cos(\pi x)$ has a local minimum that is not global; near either the gradient vanishes.](../img/mdl-opt-local-minima.svg)
-:label:`fig_mdl-opt-local-minima`
+has one of each.
+<!-- WRITER: figure fig_mdl-opt-local-minima removed from the body (this subsection and the cubic are cut per LAND-4/5). -->
 
 An iterate that lands near either minimum sees its gradient shrink toward
 zero, so from the gradient alone a local minimum cannot be told apart from the
@@ -114,15 +104,13 @@ reason, as we will see below, why minibatch noise is not purely a nuisance.
 :label:`subsec_opt-intro-saddles`
 
 A *saddle point* is a critical point that is neither a minimum nor a
-maximum. In one dimension the closest example is $f(x) = x^3$
-(:numref:`fig_mdl-opt-inflection`): its first and second derivatives both
-vanish at $x = 0$, so gradient descent can stall there, although the
-function keeps decreasing to the left. Strictly speaking, this point is a
+maximum. In one dimension the closest example is $f(x) = x^3$: its first
+and second derivatives both vanish at $x = 0$, so gradient descent can
+stall there, although the function keeps decreasing to the left. Strictly speaking, this point is a
 *stationary inflection*. A true saddle, which curves up in one direction and
 down in another, needs at least two dimensions; we use "saddle" for both.
 
-![At $x=0$ the cubic $f(x)=x^3$ has $f'=f''=0$ yet no extremum: a stationary inflection.](../img/mdl-opt-inflection.svg)
-:label:`fig_mdl-opt-inflection`
+<!-- WRITER: figure fig_mdl-opt-inflection removed from the body; the cubic is cut per LAND-5. -->
 
 The function $f(x, y) = x^2 - y^2$ has a true saddle at the origin
 (:numref:`fig_mdl-opt-saddle`). Along the $x$-axis the origin is a minimum,
@@ -288,118 +276,7 @@ large eigenvalues and a bulk of eigenvalues near zero
 :cite:`Ghorbani.Krishnan.Xiao.2019`, so its largest curvature exceeds the
 typical one by factors of hundreds or more.
 
-### The Edge of Stability
-
-The valley treats curvature as a fixed property of the surface, and the
-classical advice follows from it: measure the largest curvature
-$\lambda_{\max}$, called the *sharpness*, and choose $\eta < 2/\lambda_{\max}$.
-On real networks the dependence can run the other way.
-:citet:`Cohen.Kaur.Li.ea.2021` trained networks with full-batch gradient
-descent and found that the sharpness rises during training, a behavior
-they named *progressive sharpening*, until it reaches about $2/\eta$, and
-then stays there. The loss keeps falling, although not on every step, in a
-regime that the quadratic analysis calls unstable. They called this regime
-the *edge of stability*.
-
-We can watch it happen on a network small enough to compute its full
-Hessian. The network has one input, eight $\tanh$ hidden units, and one
-output, 25 parameters in all, and it fits 16 points of $\sin(3x)$ on
-$[-2, 2]$ with the squared loss. We train it from one random start with
-full-batch gradient descent at $\eta = 0.4$ and at $\eta = 0.25$, whose
-ceilings $2/\eta$ are 5 and 8, and compute the sharpness every 500 steps.
-
-```{.python .input #optimization-intro-the-edge-of-stability-1}
-%%tab pytorch
-X = torch.linspace(-2, 2, 16)
-Y = torch.sin(3 * X)
-
-def mlp_loss(p):  # 8 hidden units: weights, biases, output weights, bias
-    W1, b1, W2, b2 = p[:8], p[8:16], p[16:24], p[24]
-    return 0.5 * ((torch.tanh(X[:, None] * W1 + b1) @ W2 + b2 - Y) ** 2).mean()
-
-def sharpness(p):  # Largest eigenvalue of the Hessian
-    return torch.linalg.eigvalsh(torch.func.hessian(mlp_loss)(p))[-1]
-
-def gd_sharpness(eta, p, steps=20000, every=500):
-    """Full-batch gradient descent; returns the sharpness every `every`
-    steps and the final loss."""
-    grad, sharp = torch.func.grad(mlp_loss), []
-    for k in range(steps + 1):
-        if k % every == 0:
-            sharp.append(sharpness(p).item())
-        p = p - eta * grad(p)
-    return sharp, mlp_loss(p).item()
-
-p0 = 0.5 * torch.randn(25)  # One random start for both runs
-```
-
-```{.python .input #optimization-intro-the-edge-of-stability-1}
-%%tab jax
-X = jnp.linspace(-2, 2, 16)
-Y = jnp.sin(3 * X)
-
-def mlp_loss(p):  # 8 hidden units: weights, biases, output weights, bias
-    W1, b1, W2, b2 = p[:8], p[8:16], p[16:24], p[24]
-    return 0.5 * ((jnp.tanh(X[:, None] * W1 + b1) @ W2 + b2 - Y) ** 2).mean()
-
-def sharpness(p):  # Largest eigenvalue of the Hessian
-    return jnp.linalg.eigvalsh(jax.hessian(mlp_loss)(p))[-1]
-
-@functools.partial(jax.jit, static_argnames=('steps', 'every'))
-def gd_sharpness(eta, p, steps=20000, every=500):
-    """Full-batch gradient descent; returns the sharpness every `every`
-    steps and the final loss."""
-    def block(p, _):  # Measure, then take `every` steps
-        p_next = jax.lax.fori_loop(
-            0, every, lambda _, p: p - eta * jax.grad(mlp_loss)(p), p)
-        return p_next, sharpness(p)
-    p, sharp = jax.lax.scan(block, p, length=steps // every)
-    return jnp.append(sharp, sharpness(p)), mlp_loss(p)
-
-p0 = 0.5 * jax.random.normal(d2l.get_key(), (25,))  # One start for both runs
-```
-
-```{.python .input #optimization-intro-the-edge-of-stability-2}
-%%tab pytorch, jax
-runs = {eta: gd_sharpness(eta, p0) for eta in (0.4, 0.25)}
-for eta, (sharp, loss) in runs.items():
-    print(f'eta {eta}: sharpness {float(sharp[0]):.2f} -> '
-          f'{float(sharp[-1]):.2f} (2/eta = {2 / eta:.0f}), loss '
-          f'{float(mlp_loss(p0)):.3f}'
-          f' -> {float(loss):.1e}')
-steps = np.arange(0, 20001, 500)
-ceilings = [np.full(len(steps), 2 / eta) for eta in (0.4, 0.25)]
-d2l.plot(steps, [runs[0.4][0], runs[0.25][0], *ceilings],
-         'step', 'sharpness', ylim=(0, 9), fmts=('C0-', 'C1-', 'C0:', 'C1:'),
-         legend=[r'$\eta = 0.4$', r'$\eta = 0.25$', '$2/0.4$', '$2/0.25$'])
-```
-
-Both runs start from the same weights, with a sharpness well below 8 and
-usually below 5. Neither stays there. In almost every run the sharpness
-climbs until it reaches the ceiling of its own learning rate and then stays
-close to $2/\eta$: near 5 for $\eta = 0.4$ and near 8 for $\eta = 0.25$.
-Meanwhile the loss keeps falling by orders of magnitude, though not on
-every step. The two runs differ only in $\eta$, yet they end in regions of
-different curvature, each as sharp as its own learning rate allows.
-
-Gradient descent stays at the edge because it corrects itself. When the
-sharpness exceeds $2/\eta$, the iterate starts to oscillate along the
-sharpest direction, as $x_2$ did on the valley, and this oscillation moves
-the iterate toward flatter parts of the surface until the sharpness drops
-back below the ceiling :cite:`Damian.Nichani.Lee.2023`. The quadratic
-model predicts the oscillation but not what follows. The third-order term
-of the Taylor expansion, which the quadratic model drops, turns the
-oscillation into a drift toward lower sharpness. The quadratic analysis
-misses this change of the surface under the iterate. Most results quoted in this
-chapter assume monotone descent on a fixed surface, and the edge of
-stability lies outside that assumption.
-
-The start of training is delicate for a related reason. In large networks
-the sharpness is often high at initialization and falls early in training,
-the reverse of our small network. A learning rate
-that suits the later surface can then diverge on the first steps, and
-warmup keeps $\eta$ small until the sharpness has fallen
-:cite:`Kalra.Barkeshli.2024` (:numref:`sec_scheduler`).
+<!-- WRITER: the edge-of-stability subsection (text and the three cells `optimization-intro-the-edge-of-stability-1` PT/JX and `-2`, IDs unchanged) moved to gd.md under the new label subsec_gd-edge-of-stability. -->
 
 ### Noisy Gradients
 :label:`subsec_opt-intro-noise`
@@ -500,6 +377,7 @@ constant learning rate from converging. Real networks also adapt their
 curvature to the step size and train at the edge of stability. The rest of
 the chapter builds optimizers that choose direction, step size, and noise
 level better than plain gradient descent.
+<!-- WRITER: the edge-of-stability sentence of this Summary ("Real networks also adapt their curvature ...") now belongs to gd.md, where the run lives. -->
 
 ## Exercises
 
@@ -626,6 +504,8 @@ level better than plain gradient descent.
 :end_tab:
 
 <!-- slides -->
+
+<!-- WRITER: the three edge-of-stability slides moved to the gd.md deck; the cover subtitle, the Goals slide ("explain how the learning rate selects the curvature") and the Recap ("Networks raise their sharpness to 2/eta") still name it. The risk-gap and local-minima slides still use img/mdl-opt-risk-gap.svg and img/mdl-opt-local-minima.svg; remove the generator entries only after the rewritten deck drops them. -->
 
 ::: {.slide}
 ::: {.cover}
@@ -819,40 +699,6 @@ many steps reduce the error by a factor of 100? And at $\eta = 0.45$?
 - $\eta = 0.45$: the flat factor is $1 - 0.0018$, so
   $\log 100 / 0.0018 \approx 2560$ steps; the steep factor $-0.8$ is no
   bottleneck.
-:::
-:::
-
-::: {.slide title="Classical Advice Fixes the Curvature, Then Picks the Step"}
-[Edge of stability]{.kicker}
-
-- Measure the *sharpness* $\lambda_{\max}$, choose $\eta < 2/\lambda_{\max}$.
-- Full-batch training of real networks (Cohen et al., 2021): the sharpness
-  **rises** during training until it reaches about $2/\eta$, then stays.
-- The loss keeps falling, though not on every step.
-
-Test: a 25-parameter $\tanh$ network fits 16 points of $\sin(3x)$, from one
-random start, at $\eta = 0.4$ and $\eta = 0.25$.
-:::
-
-::: {.slide title="Sharpness Climbs to 2/η and Stays There"}
-[Edge of stability]{.kicker}
-
-@!optimization-intro-the-edge-of-stability-2
-
-Same start, two learning rates, final sharpness near 5 and near 8.
-:::
-
-::: {.slide title="Gradient Descent Corrects Its Own Overshoot"}
-[Edge of stability]{.kicker}
-
-- Sharpness above $2/\eta$: the iterate oscillates along the sharpest
-  direction, as $x_2$ did on the valley.
-- The quadratic model predicts the oscillation; the third-order term it
-  drops turns it into a drift toward lower sharpness (Damian et al., 2023).
-
-::: {.d2l-note}
-Large networks often start sharp and flatten early, the reverse of this
-small one: **warmup** keeps $\eta$ small until the sharpness has fallen.
 :::
 :::
 

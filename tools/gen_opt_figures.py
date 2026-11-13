@@ -386,10 +386,10 @@ def fig_ns_maps():
 
 
 # =========================================================================== #
-# optimization-intro.md (Landscapes): risk vs empirical risk, the zero-        #
-# gradient traps (local minima, a stationary inflection, a saddle), and a      #
-# flat/saturated region.  Every curve is the real analytic function evaluated  #
-# on a grid, not a sketch.                                                     #
+# optimization-intro.md (Landscapes): risk vs empirical risk, the zero-       #
+# gradient traps (local minima, a saddle), and a flat/saturated region.       #
+# Every curve is the real analytic function evaluated on a grid, not a        #
+# sketch.                                                                     #
 # =========================================================================== #
 
 def _fn_axes(ax, xlabel, ylabel):
@@ -459,24 +459,6 @@ def fig_local_minima():
     ax.set_xlim(-1.0, 2.0)
     _fn_axes(ax, r"$x$", r"$f(x)$")
     fl.save(fig, "mdl-opt-local-minima")
-
-
-def fig_inflection():
-    """f(x)=x^3: at x=0 both f' and f'' vanish, yet it is no extremum -- a
-    stationary inflection (the 1-D cousin of a saddle).  The dashed horizontal
-    tangent marks the vanishing slope."""
-    x = np.linspace(-2.0, 2.0, 500)
-    y = x ** 3
-    fig, ax = plt.subplots(figsize=(5.4, 3.7))
-    ax.plot(x, y, color=BLUE, lw=2.6)
-    ax.plot([-0.8, 0.8], [0, 0], "--", color=GRAY, lw=1.5)   # tangent at 0
-    ax.plot(0, 0, "o", color=ORANGE, ms=8, zorder=5)
-    ax.annotate("stationary inflection\n" r"$f'(0)=f''(0)=0$", xy=(0, 0),
-                xytext=(-1.45, 3.4), fontsize=12.5, color="black", ha="left",
-                arrowprops=_ANN)
-    ax.set_xlim(-2.0, 2.0)
-    _fn_axes(ax, r"$x$", r"$f(x)=x^3$")
-    fl.save(fig, "mdl-opt-inflection")
 
 
 def fig_tanh_flat():
@@ -586,7 +568,6 @@ if __name__ == "__main__":
     fig_ns_maps()
     fig_risk_gap()
     fig_local_minima()
-    fig_inflection()
     fig_tanh_flat()
     fig_saddle()
     for p in fl.WRITTEN:

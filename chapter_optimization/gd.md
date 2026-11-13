@@ -88,6 +88,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #gd-one-dimensional-gradient-descent-5}
+%%tab jax
+import functools
+```
+
 ```{.python .input #gd-one-dimensional-gradient-descent-2}
 %%tab pytorch, jax
 def f(x):  # Objective function
@@ -187,6 +192,122 @@ minimum. A learning rate this large is unrealistic for a one-dimensional
 problem, but large steps in the early phase of training play the same role
 in deep networks: they decide which region of the surface training
 explores.
+
+### The Edge of Stability
+:label:`subsec_gd-edge-of-stability`
+
+<!-- WRITER: moved verbatim from optimization-intro.md. "The valley" below is the valley of sec_optimization-intro, which this file reintroduces only later (Multivariate Gradient Descent); the subsection sits under "One-Dimensional Gradient Descent" until the gd.md rebuild reorders the headings. -->
+
+The valley treats curvature as a fixed property of the surface, and the
+classical advice follows from it: measure the largest curvature
+$\lambda_{\max}$, called the *sharpness*, and choose $\eta < 2/\lambda_{\max}$.
+On real networks the dependence can run the other way.
+:citet:`Cohen.Kaur.Li.ea.2021` trained networks with full-batch gradient
+descent and found that the sharpness rises during training, a behavior
+they named *progressive sharpening*, until it reaches about $2/\eta$, and
+then stays there. The loss keeps falling, although not on every step, in a
+regime that the quadratic analysis calls unstable. They called this regime
+the *edge of stability*.
+
+We can watch it happen on a network small enough to compute its full
+Hessian. The network has one input, eight $\tanh$ hidden units, and one
+output, 25 parameters in all, and it fits 16 points of $\sin(3x)$ on
+$[-2, 2]$ with the squared loss. We train it from one random start with
+full-batch gradient descent at $\eta = 0.4$ and at $\eta = 0.25$, whose
+ceilings $2/\eta$ are 5 and 8, and compute the sharpness every 500 steps.
+
+```{.python .input #optimization-intro-the-edge-of-stability-1}
+%%tab pytorch
+X = torch.linspace(-2, 2, 16)
+Y = torch.sin(3 * X)
+
+def mlp_loss(p):  # 8 hidden units: weights, biases, output weights, bias
+    W1, b1, W2, b2 = p[:8], p[8:16], p[16:24], p[24]
+    return 0.5 * ((torch.tanh(X[:, None] * W1 + b1) @ W2 + b2 - Y) ** 2).mean()
+
+def sharpness(p):  # Largest eigenvalue of the Hessian
+    return torch.linalg.eigvalsh(torch.func.hessian(mlp_loss)(p))[-1]
+
+def gd_sharpness(eta, p, steps=20000, every=500):
+    """Full-batch gradient descent; returns the sharpness every `every`
+    steps and the final loss."""
+    grad, sharp = torch.func.grad(mlp_loss), []
+    for k in range(steps + 1):
+        if k % every == 0:
+            sharp.append(sharpness(p).item())
+        p = p - eta * grad(p)
+    return sharp, mlp_loss(p).item()
+
+p0 = 0.5 * torch.randn(25)  # One random start for both runs
+```
+
+```{.python .input #optimization-intro-the-edge-of-stability-1}
+%%tab jax
+X = jnp.linspace(-2, 2, 16)
+Y = jnp.sin(3 * X)
+
+def mlp_loss(p):  # 8 hidden units: weights, biases, output weights, bias
+    W1, b1, W2, b2 = p[:8], p[8:16], p[16:24], p[24]
+    return 0.5 * ((jnp.tanh(X[:, None] * W1 + b1) @ W2 + b2 - Y) ** 2).mean()
+
+def sharpness(p):  # Largest eigenvalue of the Hessian
+    return jnp.linalg.eigvalsh(jax.hessian(mlp_loss)(p))[-1]
+
+@functools.partial(jax.jit, static_argnames=('steps', 'every'))
+def gd_sharpness(eta, p, steps=20000, every=500):
+    """Full-batch gradient descent; returns the sharpness every `every`
+    steps and the final loss."""
+    def block(p, _):  # Measure, then take `every` steps
+        p_next = jax.lax.fori_loop(
+            0, every, lambda _, p: p - eta * jax.grad(mlp_loss)(p), p)
+        return p_next, sharpness(p)
+    p, sharp = jax.lax.scan(block, p, length=steps // every)
+    return jnp.append(sharp, sharpness(p)), mlp_loss(p)
+
+p0 = 0.5 * jax.random.normal(d2l.get_key(), (25,))  # One start for both runs
+```
+
+```{.python .input #optimization-intro-the-edge-of-stability-2}
+%%tab pytorch, jax
+runs = {eta: gd_sharpness(eta, p0) for eta in (0.4, 0.25)}
+for eta, (sharp, loss) in runs.items():
+    print(f'eta {eta}: sharpness {float(sharp[0]):.2f} -> '
+          f'{float(sharp[-1]):.2f} (2/eta = {2 / eta:.0f}), loss '
+          f'{float(mlp_loss(p0)):.3f}'
+          f' -> {float(loss):.1e}')
+steps = np.arange(0, 20001, 500)
+ceilings = [np.full(len(steps), 2 / eta) for eta in (0.4, 0.25)]
+d2l.plot(steps, [runs[0.4][0], runs[0.25][0], *ceilings],
+         'step', 'sharpness', ylim=(0, 9), fmts=('C0-', 'C1-', 'C0:', 'C1:'),
+         legend=[r'$\eta = 0.4$', r'$\eta = 0.25$', '$2/0.4$', '$2/0.25$'])
+```
+
+Both runs start from the same weights, with a sharpness well below 8 and
+usually below 5. Neither stays there. In almost every run the sharpness
+climbs until it reaches the ceiling of its own learning rate and then stays
+close to $2/\eta$: near 5 for $\eta = 0.4$ and near 8 for $\eta = 0.25$.
+Meanwhile the loss keeps falling by orders of magnitude, though not on
+every step. The two runs differ only in $\eta$, yet they end in regions of
+different curvature, each as sharp as its own learning rate allows.
+
+Gradient descent stays at the edge because it corrects itself. When the
+sharpness exceeds $2/\eta$, the iterate starts to oscillate along the
+sharpest direction, as $x_2$ did on the valley, and this oscillation moves
+the iterate toward flatter parts of the surface until the sharpness drops
+back below the ceiling :cite:`Damian.Nichani.Lee.2023`. The quadratic
+model predicts the oscillation but not what follows. The third-order term
+of the Taylor expansion, which the quadratic model drops, turns the
+oscillation into a drift toward lower sharpness. The quadratic analysis
+misses this change of the surface under the iterate. Most results quoted in this
+chapter assume monotone descent on a fixed surface, and the edge of
+stability lies outside that assumption.
+
+The start of training is delicate for a related reason. In large networks
+the sharpness is often high at initialization and falls early in training,
+the reverse of our small network. A learning rate
+that suits the later surface can then diverge on the first steps, and
+warmup keeps $\eta$ small until the sharpness has fallen
+:cite:`Kalra.Barkeshli.2024` (:numref:`sec_scheduler`).
 
 ## Multivariate Gradient Descent
 
@@ -693,6 +814,40 @@ $f(x) = 2x^2$, so $f''(x) = 4$.
 ::: {.fragment .fade-up}
 1. The factor is $1 - 4\eta$: converges iff $0 < \eta < 0.5$.
 2. $\eta = 0.25 = 1/f''$, where the factor is $0$.
+:::
+:::
+
+::: {.slide title="Classical Advice Fixes the Curvature, Then Picks the Step"}
+[Edge of stability]{.kicker}
+
+- Measure the *sharpness* $\lambda_{\max}$, choose $\eta < 2/\lambda_{\max}$.
+- Full-batch training of real networks (Cohen et al., 2021): the sharpness
+  **rises** during training until it reaches about $2/\eta$, then stays.
+- The loss keeps falling, though not on every step.
+
+Test: a 25-parameter $\tanh$ network fits 16 points of $\sin(3x)$, from one
+random start, at $\eta = 0.4$ and $\eta = 0.25$.
+:::
+
+::: {.slide title="Sharpness Climbs to 2/η and Stays There"}
+[Edge of stability]{.kicker}
+
+@!optimization-intro-the-edge-of-stability-2
+
+Same start, two learning rates, final sharpness near 5 and near 8.
+:::
+
+::: {.slide title="Gradient Descent Corrects Its Own Overshoot"}
+[Edge of stability]{.kicker}
+
+- Sharpness above $2/\eta$: the iterate oscillates along the sharpest
+  direction, as $x_2$ did on the valley.
+- The quadratic model predicts the oscillation; the third-order term it
+  drops turns it into a drift toward lower sharpness (Damian et al., 2023).
+
+::: {.d2l-note}
+Large networks often start sharp and flatten early, the reverse of this
+small one: **warmup** keeps $\eta$ small until the sharpness has fallen.
 :::
 :::
 

@@ -572,8 +572,15 @@ uses one of their symbols at import time). Members:
   `generate` (`_lm_stopping`, `_lm_prompt_ids`, `_lm_generators`,
   `_lm_bos_ids`, `_lm_unwrap`) and the registry entry of assignment A1's
   logit reference. PyTorch only.
+- `chapter_lm-pretrained/prompting-lib.md` holds what `sec_lm_prompting`
+  (18.3) uses and does not show: `label_token_ids` and `_label_sep` (each
+  label word's first token after a prompt, with its three checks), the two
+  branches of `label_logprobs` its models never take
+  (`_label_output_layer`, `_label_logprobs_logits`: soft-capped heads and
+  d2l GPTs) and `clean_ag_news` (the escapes left in AG News titles).
+  PyTorch only.
 
-The four Language Models files are appended (nothing uses them at import
+The five Language Models files are appended (nothing uses them at import
 time).
 Their blocks follow the part's import rule: third-party modules
 (`transformers`, `openai`, `httpx`, `asyncio`) are imported inside the
@@ -1430,8 +1437,9 @@ Scheduling needs no venv-specific code: the chapter's notebooks are ordinary
 `pytorch` entries in `tools/runtime_env.py` (ch. 18: `hf-models.ipynb` and
 `api.ipynb` in `FULL_CARD_NOTEBOOKS`, the other five in `HEAVY_GPU_NOTEBOOKS`
 at 2 slots). They take no `NOTEBOOK_TIMEOUTS` entry: a normal build stays
-near 15 min per notebook, and a `D2L_RERUN=1` regeneration run must finish
-within 30 min (ruling 2026-11-12), inside the default 3,600 s. Their library
+near 15 min per notebook, and a `D2L_RERUN=1` regeneration run has a 30-min
+target and a 60-min hard limit, the default 3,600 s (ruling 2026-11-13; it
+replaced the 30-min ceiling of 2026-11-12). Their library
 code is tested on CPU by `make test-lm` (§6.2).
 
 **Regeneration runs (`D2L_RERUN`).** A `chapter_lm-*` notebook never regenerates
@@ -1450,12 +1458,17 @@ D2L_RERUN=1 python3 tools/notebook_scheduler.py --frameworks pytorch \
     --files chapter_lm-pretrained/scoring.md
 ```
 
-reaches the kernel. A regeneration run must finish within 30 min measured;
-past that, the section applies its declared cuts in their declared order,
-chosen from wall clock alone. 18.4 (`scoring.md`) reads its cut level from
+reaches the kernel. A regeneration run aims at 30 min measured (the target)
+and must finish within 60 min (the hard limit, the scheduler's timeout). The
+declared cuts serve the hard limit: a section applies them, in their declared
+order and chosen from wall clock alone, only when its uncut run would not
+finish within 60 min; a run between 30 and 60 min runs uncut, and its log
+says it is over the target. 18.4 (`scoring.md`) reads its cut level from
 `D2L_RERUN_CUT=k` (the first k of its three cuts), and
 `tools/oneshot/time_scoring_rerun.py` picks k before the run from the times
-of one batch per job, so the cut is fixed before any accuracy is printed.
+of one batch per job (`--ceiling-min` is the limit it fits), so the cut is
+fixed before any accuracy is printed. 18.3 (`prompting.md`) has no cuts: its
+whole grid regenerates in about 7 min (392 s, 2026-11-13).
 18.4 also regenerates single artifacts: `D2L_RERUN=arc-generations` (any
 comma-separated subset of `bpb`, `gsm8k-samples`, `arc-generations`,
 `arc-scores`; `1` means all four) runs only those producing blocks, so a
@@ -1480,7 +1493,7 @@ With `fla` in `.venv-lm` (2026-11-13 merge), Qwen3.5's bf16 forwards changed,
 so the four artifacts were regenerated as `lm-bpb-v2`,
 `lm-gsm8k-samples-v2`, `lm-arc-generations-v3` and `lm-arc-scores-v2`, in two
 scheduler runs that keep the registered settings and each fit the 30-minute
-ceiling: `D2L_RERUN=arc-generations D2L_RERUN_CUT=1` (965 s) and
+target: `D2L_RERUN=arc-generations D2L_RERUN_CUT=1` (965 s) and
 `D2L_RERUN=bpb,gsm8k-samples,arc-scores D2L_RERUN_CUT=2` (1,191 s). Every
 Qwen3 row reproduced bit for bit; only the Qwen3.5 rows changed (bpb by
 2.4e-4, 3 to 11 of 500 ARC predictions per format, most GSM8K and ARC reply

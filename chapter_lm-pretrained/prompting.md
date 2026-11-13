@@ -54,13 +54,11 @@ from d2l import torch as d2l
 %%tab pytorch
 import gc
 import hashlib
-import html
 import itertools
 import json
 import os
 import re
 import string
-import sys
 import textwrap
 import time
 import pandas as pd
@@ -95,6 +93,10 @@ HEADLINES = [QUERY, 'Parliament votes on a new trade treaty',
              'Researchers build a faster quantum chip']
 transformers.logging.set_verbosity_error()  # no notices or progress bars
 transformers.logging.disable_progress_bar()
+
+def print_table(rows, digits=3):  # a list of dicts, or a DataFrame
+    print(pd.DataFrame(rows).to_string(
+        index=False, na_rep='', float_format=f'{{:.{digits}f}}'.format))
 ```
 
 <!-- Placeholder (prose, opening): a base checkpoint and its post-trained sibling, pinned. -->
@@ -107,8 +109,8 @@ inst, tok_i = d2l.load_hf(INST, dtype=dtype)
 for name, model in ((BASE, base), (INST, inst)):
     print(f'{name}: {model.num_parameters():,} parameters in {model.dtype}')
 if SMALL:
-    print('No GPU: the 0.6B pair in fp32 stands in for the 1.7B models, so '
-          'the outputs below differ from those quoted in the text.')
+    print('No GPU: the 0.6B pair in fp32 stands in for the 1.7B models,\n'
+          'so the outputs below differ from those quoted in the text.')
 ```
 
 <!-- Placeholder (prose, opening): asked plainly, the base model continues the text; four solved headlines change what follows. -->
@@ -150,6 +152,7 @@ print(textwrap.fill(' '.join(line), 79))
 
 ```{.python .input #prompting-template-tails}
 %%tab pytorch
+PREFIX = '<|im_start|>assistant\n'  # every template's tail starts so
 rows = []
 for name in ('Qwen/Qwen3-1.7B', 'Qwen/Qwen3-1.7B-Base', 'Qwen/Qwen3.5-2B',
              'Qwen/Qwen3.5-4B'):
@@ -159,66 +162,18 @@ for name in ('Qwen/Qwen3-1.7B', 'Qwen/Qwen3-1.7B-Base', 'Qwen/Qwen3.5-2B',
     body = render(add_generation_prompt=False)
     unset, off = (render(add_generation_prompt=True, **kw)[len(body):]
                   for kw in ({}, {'enable_thinking': False}))
-    rows.append({'model': name, 'tail, enable_thinking unset': repr(unset),
-                 'tail, enable_thinking=False': repr(off),
-                 'template thinks by default': ('no' if '</think>' in unset
-                                                else 'yes')})
-pd.DataFrame(rows)
+    assert unset.startswith(PREFIX) and off.startswith(PREFIX)
+    rows.append({'model': name, 'unset': repr(unset[len(PREFIX):]),
+                 'enable_thinking=False': repr(off[len(PREFIX):]),
+                 'thinks by default': 'no' if '</think>' in unset else 'yes'})
+print(f'tail after the user turn: {PREFIX!r}, then')
+print_table(rows)
 ```
 
 <!-- Placeholder (stage 2): read a label from the next token, over the label words only. -->
 
 ```{.python .input #prompting-label-logprobs}
 %%tab pytorch
-#@save
-def _label_sep(prompt, word):
-    """A space between a prompt and a label word, except after whitespace
-    and next to a wide (Chinese, Japanese or Korean) character."""
-    import unicodedata
-    wide = any(unicodedata.east_asian_width(c) in ('W', 'F')
-               for c in prompt[-1:] + word[:1])
-    return '' if wide or prompt[-1:].isspace() else ' '
-
-#@save
-def _label_token_ids(tokenizer, prompts, label_words, sep=None):
-    """The prompts' token ids, and per prompt the id of each label word's
-    first token as the next token, the word following the prompt after
-    sep (by default _label_sep's choice). Raises if (a) the prompt's end
-    merges with a word, (b) two words share a first token, (c) a word is
-    several tokens, checked in this order."""
-    enc = lambda texts: tokenizer(texts, add_special_tokens=False)[
-        'input_ids']
-    ids, tails = enc(prompts), [[] for _ in prompts]
-    seps = [[_label_sep(p, w) if sep is None else sep for w in label_words]
-            for p in prompts]
-    for j, w in enumerate(label_words):
-        full = enc([p + s[j] + w for p, s in zip(prompts, seps)])
-        for i, (p, h, f) in enumerate(zip(prompts, ids, full)):
-            if f[:len(h)] != h:  # (a) the prompt ends inside a token
-                raise ValueError(
-                    f'prompt {i} ends inside a token ({p[-12:]!r} merges '
-                    f'with {w!r}): strip trailing whitespace from the '
-                    'prompt, the space belongs to the label')
-            if len(f) == len(h):
-                raise ValueError(f'label word {w!r} adds no token')
-            tails[i].append(f[len(h):])
-    for t in tails:  # (b) two words, one first token
-        first = {}
-        for w, s in zip(label_words, t):
-            if s[0] in first:
-                raise ValueError(
-                    f'label words {first[s[0]]!r} and {w!r} share the '
-                    f'first token {tokenizer.decode(s[:1])!r} ({s[0]})')
-            first[s[0]] = w
-    for t, seps_i in zip(tails, seps):  # (c) a word of several tokens
-        for w, s, sp in zip(label_words, t, seps_i):
-            if len(s) > 1:
-                raise ValueError(
-                    f'label word {w!r} after {sp!r} is {len(s)} tokens '
-                    f'{[tokenizer.decode([u]) for u in s]}: use a word '
-                    'that is one token there, or another sep')
-    return ids, [[s[0] for s in t] for t in tails]
-
 #@save
 def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
                    chat=False, enable_thinking=False, sep=None):
@@ -227,12 +182,10 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
     over the label tokens only. A word follows its prompt after sep, by
     default a space, but none after whitespace or next to Chinese text.
     With chat=True a prompt is a message list (a string is one user
-    message), rendered with the generation prefix. Transformers models
-    get left-padded batches, and their label logits are computed in
-    float32 from the last hidden state and the label words' rows of the
-    output layer (bf16 logits of size 20 to 40 are 1/8 to 1/4 apart and
-    tie); a d2l GPT, which takes no attention mask, gets batches of
-    prompts of equal length."""
+    message), rendered with the generation prefix. The label logits are
+    computed in float32 from the last hidden state and the label words'
+    rows of the output layer (bf16 logits of size 20 to 40 are 1/8 to 1/4
+    apart and tie)."""
     if chat:
         opts = {} if enable_thinking is None else {
             'enable_thinking': enable_thinking}
@@ -240,56 +193,36 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
             [{'role': 'user', 'content': m}] if isinstance(m, str) else m,
             tokenize=False, add_generation_prompt=True, **opts)
                    for m in prompts]
-    ids, labels = _label_token_ids(tokenizer, prompts, label_words, sep)
+    ids, labels = d2l.label_token_ids(tokenizer, prompts, label_words, sep)
     if not chat:  # as d2l.generate: a plain prompt gets the BOS, if any
-        head = d2l._lm_bos_ids(tokenizer)  # and never an EOS
-        ids = [head + r for r in ids]
+        ids = [d2l._lm_bos_ids(tokenizer) + r for r in ids]
     if not all(ids):
         raise ValueError('an empty prompt has no position to predict from')
-    inner = d2l._lm_unwrap(model)
-    hf = sys.modules.get('transformers')
-    hf = hf is not None and isinstance(inner, hf.PreTrainedModel)
-    if hf:  # one padded group, in input order
-        groups = [list(range(len(ids)))]
-        pad = getattr(tokenizer, 'pad_token_id', None) or 0
-        W = inner.get_output_embeddings()  # a plain linear output layer
-        split = isinstance(W, nn.Linear) and getattr(  # can be split off
-            inner.config.get_text_config(), 'final_logit_softcapping',
-            None) is None
-    else:
-        groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
-                  for n in sorted({len(r) for r in ids})]
+    W = d2l._label_output_layer(model)
+    if W is None:  # a d2l GPT, or a soft-capped output layer
+        return d2l._label_logprobs_logits(model, tokenizer, ids, labels,
+                                          batch_size)
+    decoder = d2l._lm_unwrap(model).get_decoder()
+    pad = getattr(tokenizer, 'pad_token_id', None) or 0
     device = next(model.parameters()).device
     out = torch.empty(len(ids), len(label_words))
-    for rows in (g[j:j + batch_size] for g in groups
-                 for j in range(0, len(g), batch_size)):
-        lab = torch.tensor([labels[i] for i in rows], device=device)
+    for j in range(0, len(ids), batch_size):  # left-padded, in input order
+        rows, lab = ids[j:j + batch_size], labels[j:j + batch_size]
+        T = max(len(r) for r in rows)
+        X = torch.tensor([[pad] * (T - len(r)) + r for r in rows],
+                         device=device)
+        mask = torch.tensor([[0] * (T - len(r)) + [1] * len(r)
+                             for r in rows], device=device)
+        pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
         with torch.inference_mode():
-            if hf:
-                T = max(len(ids[i]) for i in rows)
-                X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i]
-                                  for i in rows], device=device)
-                mask = torch.tensor([[0] * (T - len(ids[i])) +
-                                     [1] * len(ids[i]) for i in rows],
-                                    device=device)
-                pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
-                kw = dict(input_ids=X, attention_mask=mask, position_ids=pos,
-                          use_cache=False)
-            if hf and split:  # the last hidden state, then the label rows
-                h = inner.get_decoder()(**kw).last_hidden_state[:, -1]
-                z = torch.einsum('bd,bld->bl', h.float(),  # in fp32
-                                 W.weight[lab].float())
-                if W.bias is not None:
-                    z = z + W.bias[lab].float()
-            elif hf:  # logits_to_keep=1: no full-vocabulary logits for
-                z = model(**kw, logits_to_keep=1).logits[:, -1].gather(
-                    -1, lab)  # every position
-            else:
-                X = torch.tensor([ids[i] for i in rows], device=device)
-                z = (model(X, logits_to_keep=1) if isinstance(
-                    inner, d2l.Qwen3GPT) else model(X))[:, -1].gather(-1, lab)
-            lp = z.float().log_softmax(-1).cpu()
-        out[rows] = lp  # out is an ordinary tensor the caller may modify
+            h = decoder(input_ids=X, attention_mask=mask, position_ids=pos,
+                        use_cache=False).last_hidden_state[:, -1]
+            lab = torch.tensor(lab, device=device)  # (batch, labels)
+            z = torch.einsum('bd,bld->bl', h.float(), W.weight[lab].float())
+            if W.bias is not None:
+                z = z + W.bias[lab].float()
+            lp = z.log_softmax(-1).cpu()
+        out[j:j + batch_size] = lp  # out is an ordinary tensor
     return out
 ```
 
@@ -297,60 +230,69 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
 
 ```{.python .input #prompting-reader-check}
 %%tab pytorch
+def renorm(z, ids):  # the full softmax, renormalized over the labels
+    lp = z.float().log_softmax(-1)[ids]
+    return (lp - lp.logsumexp(-1)).cpu()
+
 prompts = [d2l.fewshot_prompt(DEMOS, h, fmt=FMT) for h in HEADLINES]
-_, label_ids = d2l._label_token_ids(tok, prompts, NATURAL)
+_, label_ids = d2l.label_token_ids(tok, prompts, NATURAL)
 one = d2l.label_logprobs(base, tok, prompts, NATURAL, batch_size=1)
+W = base.lm_head.weight.float()  # the whole output layer, in fp32
 for prompt, ids, lp in zip(prompts, label_ids, one):
     x = tok(prompt, return_tensors='pt').input_ids.to(base.device)
-    with torch.inference_mode():  # every position's logits, then the last
-        z = base(input_ids=x, use_cache=False).logits[0, -1].float()
-    ref = z.log_softmax(-1)[ids].cpu()
-    ref = ref - ref.logsumexp(-1)  # renormalized over the label words
-    # the reader's label logits are fp32, these are rounded to bf16 (half
-    # an ulp each, at most one after renormalizing): two ulps of the
-    # largest label logit; in fp32, rounding only
-    tol = 1e-4 if SMALL else 2 * 2.0 ** (
-        math.floor(math.log2(z[ids].abs().max().item())) - 7)
-    err = (lp - ref).abs().max().item()
-    print(f'reader vs full softmax: {err:.1e} nats (tolerance {tol:.1e})')
-    assert err <= tol
-# padding changes every GEMM shape, and in bf16 every layer then rounds a
-# little differently; nothing bounds the sum, so 0.25 nats is a screen (a
-# mask or position bug moves a log-probability by whole nats)
+    with torch.inference_mode():  # every logit at the last position
+        h = base.model(input_ids=x, use_cache=False).last_hidden_state[0, -1]
+        ref = renorm(h.float() @ W.T, ids)
+        ref16 = renorm(base.lm_head(h), ids)  # the model's own logits
+    err, err16 = ((lp - r).abs().max().item() for r in (ref, ref16))
+    print(f'reader vs full softmax: {err:.1e} nats (from its own logits: '
+          f'{err16:.1e})')
+    assert err <= 1e-4
+del W
 batched = d2l.label_logprobs(base, tok, prompts, NATURAL, batch_size=4)
-screen = 1e-4 if SMALL else 0.25
+screen = 1e-4 if SMALL else 0.25  # a mask or position bug costs whole nats
 for e in (batched - one).abs().max(-1).values.tolist():
     print(f'batched vs one at a time: {e:.1e} nats (screen {screen:.1e})')
     assert e <= screen
 assert torch.equal(batched.argmax(-1), one.argmax(-1))  # same predictions
 ```
 
+<!-- Placeholder (prose, ### Reading a Label from the Next Token): label mass, the full-softmax probability of the label tokens, which the renormalized read-out hides. -->
+
+```{.python .input #prompting-label-mass-fn}
+%%tab pytorch
+def label_mass(model, tokenizer, texts, ids):
+    """Full-softmax probability of the label tokens ids[i] as the next
+    token after texts[i], one text at a time."""
+    mass = []
+    for text, i in zip(texts, ids):
+        x = tokenizer(text, return_tensors='pt').input_ids.to(model.device)
+        with torch.inference_mode():
+            z = model(input_ids=x, use_cache=False,
+                      logits_to_keep=1).logits[0, -1]
+        mass.append(z.float().softmax(-1)[i].sum().item())
+    return np.array(mass)
+```
+
 <!-- Placeholder (prose, ### Reading a Label from the Next Token): one word, two token ids; a prompt ending in a space; a label of three tokens. -->
 
 ```{.python .input #prompting-label-tokens}
 %%tab pytorch
-_, (after_colon,) = d2l._label_token_ids(tok, ['Topic:'], NATURAL)
-_, (after_newline,) = d2l._label_token_ids(tok_i, [chat_text], NATURAL)
-d2l._label_token_ids(tok, ['Topic:'], ABSTRACT)  # raises unless 1 token
+_, (after_colon,) = d2l.label_token_ids(tok, ['Topic:'], NATURAL)
+_, (after_newline,) = d2l.label_token_ids(tok_i, [chat_text], NATURAL)
+d2l.label_token_ids(tok, ['Topic:'], ABSTRACT)  # raises unless 1 token
 print(pd.DataFrame({
     'word': NATURAL,
     'after "Topic:"': [f'{i} {tok.decode([i])!r}' for i in after_colon],
     'after a newline': [f'{i} {tok.decode([i])!r}' for i in after_newline]
     }).to_string(index=False))
 assert not set(after_colon) & set(after_newline)
-
-def label_mass(texts, ids, model=base, tokenizer=tok):  # full softmax
-    """Mean probability of the label tokens ids after each text."""
-    with torch.inference_mode():
-        return np.mean([model(input_ids=tokenizer(t, return_tensors='pt')
-                              .input_ids.to(model.device), use_cache=False)
-                        .logits[0, -1].float().softmax(-1)[ids].sum().item()
-                        for t in texts])
-
-print(f'label mass after "Topic:": {label_mass(prompts, after_colon):.3f}; '
-      f'after "Topic: ", read at the bare words: '
-      f'{label_mass([p + " " for p in prompts], after_newline):.3f}')
-for texts, words in (([p + ' ' for p in prompts], NATURAL),
+spaced = [p + ' ' for p in prompts]  # the space typed into the prompt
+mass = [label_mass(base, tok, texts, [ids] * len(texts)).mean()
+        for texts, ids in ((prompts, after_colon), (spaced, after_newline))]
+print(f'label mass after "Topic:": {mass[0]:.3f}; after "Topic: ", read '
+      f'at the bare words: {mass[1]:.3f}')
+for texts, words in ((spaced, NATURAL),
                      (prompts, ['World', 'Sports', 'Business', 'Sci/Tech'])):
     try:
         d2l.label_logprobs(base, tok, texts, words)
@@ -364,8 +306,8 @@ for texts, words in (([p + ' ' for p in prompts], NATURAL),
 %%tab pytorch
 chat = d2l.fewshot_prompt([], QUERY, 'chat_multi', system=SYSTEM)
 plain = d2l.fewshot_prompt([], QUERY, fmt=FMT, system=SYSTEM)
-render = lambda t, **kw: t.apply_chat_template(  # enable_thinking=False:
-    chat, tokenize=False, add_generation_prompt=True, **kw)  # empty block
+render = lambda t, **kw: t.apply_chat_template(  # thinking off: empty block
+    chat, tokenize=False, add_generation_prompt=True, **kw)
 runs = {'instruct, chat template': (inst, tok_i, render(
             tok_i, enable_thinking=False)),
         'instruct, plain text': (inst, tok_i, plain),
@@ -373,10 +315,25 @@ runs = {'instruct, chat template': (inst, tok_i, render(
         'base, chat template, no think block': (base, tok, render(tok))}
 rows = {}
 for name, (m, t, text) in runs.items():  # text: the rendered prompt
-    _, (ids,) = d2l._label_token_ids(t, [text], NATURAL)
+    _, ids = d2l.label_token_ids(t, [text], NATURAL)
     p = d2l.label_logprobs(m, t, [text], NATURAL)[0].exp()
-    rows[name] = [*p.tolist(), label_mass([text], ids, m, t)]
-pd.DataFrame(rows, index=NATURAL + ['label mass']).T.round(3)
+    rows[name] = [*p.tolist(), label_mass(m, t, [text], ids)[0]]
+table = pd.DataFrame(rows, index=NATURAL + ['label mass']).T
+print(table.to_string(float_format='{:.3f}'.format))
+```
+
+<!-- Placeholder (prose, ### Reading a Label from the Next Token): the instruct model's own greedy replies to the four invented headlines in its chat layout, with SYSTEM and without an instruction line: the World answer is the model's, not the reader's, and without a line the model answers with no label word at all. -->
+
+```{.python .input #prompting-instruct-replies}
+%%tab pytorch
+for system in (SYSTEM, None):
+    chats = [d2l.fewshot_prompt([], h, 'chat_multi', system=system)
+             for h in HEADLINES]
+    replies = d2l.generate(inst, tok_i, chats, max_new_tokens=6, chat=True,
+                           enable_thinking=False)
+    print('SYSTEM line' if system else 'no instruction line')
+    for h, r in zip(HEADLINES, replies):
+        print(f'  {h:40} -> {r.text!r}')
 ```
 
 <!-- Placeholder (stage 2): one set of demonstrations, four layouts. -->
@@ -467,7 +424,7 @@ d2l.DATA_HUB['lm-fewshot-grid-v2'] = (
     '0c2a1c87635bbfcdca9cedb479723901b3d5cbd5')
 ```
 
-<!-- Placeholder (prose, ### Number of Demonstrations): the task data, its cleanup rules (HTML and Windows-1252 escapes left in the titles), and the key that finds near-duplicates. -->
+<!-- Placeholder (prose, ### Number of Demonstrations): the task data, its cleanup rules (HTML and Windows-1252 escapes left in the titles; d2l.clean_ag_news, in the library, not shown), and the key that finds near-duplicates. -->
 
 ```{.python .input #prompting-data-clean}
 %%tab pytorch
@@ -475,40 +432,6 @@ def read_jsonl(key):
     path = d2l.download(key, os.path.join('..', 'data', 'lm', key))
     with open(path, encoding='utf-8') as f:
         return pd.DataFrame([json.loads(line) for line in f])
-
-CP1252 = {'145': "'", '146': "'", '147': '"', '148': '"', '151': '-'}
-
-def cp1252(m):  # an apostrophe or closing quote takes the space before it
-    return ('' if m[2] in ('145', '146', '148') else m[1]) + CP1252[m[2]]
-
-CODES = {37, 38, 133, 160, 163, 225, 233, 234, 8217, 8482}  # in AG News
-
-def numeric(m):  # '#233;' is 'é'; 128 to 159 are Windows-1252 codes
-    n = int(m[2])
-    if n not in CODES:  # left for the check at the end of clean()
-        return m[0]
-    c = bytes([n]).decode('cp1252') if 128 <= n < 160 else chr(n)
-    return ('' if c.isalnum() or c in "&'’" else m[1]) + c
-
-CLEANUP = [  # in this order
-    ("#39; is '", lambda s: re.sub(r' ?#39;', "'", s)),
-    ('#36; is $', lambda s: s.replace('#36;', '$')),
-    ('#145; to #151;', lambda s: re.sub(r'( ?)#(14[5-8]|151);', cp1252, s)),
-    ('other #n;', lambda s: re.sub(r'( ?)#(\d+);', numeric, s)),
-    ('&entities;', html.unescape),
-    ('<tags>', lambda s: re.sub(r'<[^<>]*>', '', s)),
-    ('\\ and spaces', lambda s: ' '.join(s.replace('\\', ' ').split()))]
-
-def clean(titles):
-    changed = {}
-    for name, rule in CLEANUP:
-        new = [rule(s) for s in titles]
-        changed[name] = sum(a != b for a, b in zip(titles, new))
-        titles = new
-    left = sorted({m for s in titles
-                   for m in re.findall(r'#\d+;|&\w+;|\\', s)})
-    assert not left, f'no cleanup rule for {left}'
-    return np.array(titles, dtype=object), changed
 
 def dedup_key(title):  # no source tag such as '(AP)', no punctuation
     title = re.sub(r'\s*\([^()]*\)\s*$', '', title).lower()
@@ -522,8 +445,8 @@ def dedup_key(title):  # no source tag such as '(AP)', no punctuation
 %%tab pytorch
 N_PER_CLASS = 50
 train, test = read_jsonl('ag-news-train'), read_jsonl('ag-news-test')
-TRAIN_TITLES, changed_train = clean(list(train.title))
-TEST_TITLES, changed_test = clean(list(test.title))
+TRAIN_TITLES, changed_train = d2l.clean_ag_news(list(train.title))
+TEST_TITLES, changed_test = d2l.clean_ag_news(list(test.title))
 TRAIN_Y, TEST_Y = train.label.to_numpy() - 1, test.label.to_numpy() - 1
 ITEMS = np.sort(test.groupby('label').head(N_PER_CLASS).index.to_numpy())
 GOLD = TEST_Y[ITEMS]
@@ -532,7 +455,8 @@ test_keys = {dedup_key(t) for t in TEST_TITLES}
 in_pool = np.array([dedup_key(t) not in test_keys for t in TRAIN_TITLES])
 POOL = [np.flatnonzero(in_pool & (TRAIN_Y == c)) for c in range(4)]
 print(f'{len(ITEMS)} test items, the first {N_PER_CLASS} of each class in '
-      f'file order; pool per class {[len(p) for p in POOL]}')
+      'file order')
+print(f'demonstration pool per class: {[len(p) for p in POOL]}')
 print(f'{(~in_pool).sum()} train titles removed as duplicates of test '
       'titles; titles changed by each cleanup rule:')
 print(pd.DataFrame({'train': changed_train, 'test': changed_test}).T
@@ -722,10 +646,9 @@ def generations(cond):  # greedy, 8 tokens, the test items only
 ```{.python .input #prompting-grid-run}
 %%tab pytorch
 RERUN_PATH = os.path.join('..', 'data', 'lm', 'rerun', 'lm-fewshot-grid.csv')
-GRID_KEY, registered = 'lm-fewshot-grid-v2', None
-if not RERUN or GRID_KEY in d2l.DATA_HUB:
-    registered = read_grid(d2l.download(GRID_KEY,
-                                        os.path.join('..', 'data', 'lm')))
+GRID_KEY = 'lm-fewshot-grid-v2'
+registered = read_grid(d2l.download(GRID_KEY,
+                                    os.path.join('..', 'data', 'lm')))
 if RERUN:  # regenerate the grid (probe rows: prompting-probe)
     torch.cuda.reset_peak_memory_stats()
     tic = time.time()
@@ -742,7 +665,7 @@ if RERUN:  # regenerate the grid (probe rows: prompting-probe)
           f'tokens scored in {scored / 60:.1f} min ({tokens / scored:,.0f} '
           f'tokens/s); peak {torch.cuda.max_memory_allocated() / 2**30:.1f}'
           ' GiB')
-    for exp in ('icl', 'gen') if registered is not None else ():
+    for exp in ('icl', 'gen'):
         m = matched(grid, registered, exp)
         print(f'{exp}: {(m.pred == m.pred_old).sum():,} of {len(m):,} '
               'predictions as registered')
@@ -764,9 +687,6 @@ else:
                                  m.pred == m.pred_old):
             if not same:
                 print(f'  item {i}: margin {a:.3f} live, {b:.3f} registered')
-del inst  # not needed below
-gc.collect()
-torch.cuda.empty_cache()
 ```
 
 <!-- Placeholder (prose, ### Number of Demonstrations): reading one condition back from the grid. -->
@@ -845,7 +765,7 @@ for name, c in curves.items():
                      **(compare(acc, zero) if k else {}),
                      **({'vs k = 8': show(compare(acc, eight))} if k > 8
                         else {})})
-print(pd.DataFrame(rows).round(3).fillna('').to_string(index=False))
+print_table(rows)
 gain = lambda m: correct(model=m, k=4) - correct(model=m, k=0)
 print('gain from k = 0 to 4, plain, instruct minus base:',
       show(compare(gain('instruct'), gain('base'))))
@@ -859,7 +779,7 @@ for what, f in (('valid label', lambda p: (p >= 0) * 1.0),
         rows.append({'prompt': name, 'rate of': what, 'rate': f(p).mean(),
                      'vs question': '' if name == 'question' else show(
                          compare(f(p), f(gen['question'])))})
-print(pd.DataFrame(rows).round(3).to_string(index=False))
+print_table(rows)
 ```
 
 <!-- Placeholder (prose, ### Number of Demonstrations): the template has to match the checkpoint (the table below). At k = 8 the chat layout carries SYSTEM, which names the labels, and the plain layout does not, so the chat-versus-plain rows measure template plus instruction; the k = 0 rows with and without the instruction separate the two. The base row "chat, no think block" uses the template's default end (enable_thinking unset), which separates the template from the empty think block. The instruct rows at k = 0 hold for this SYSTEM line only: the next table shows that the line's wording and label order move them. -->
@@ -879,7 +799,7 @@ for model in MODELS:
         a, b = correct(model=model, **c), correct(model=model, **ref)
         rows.append({'model': model, 'prompt': name, 'accuracy': a.mean(),
                      'plain, same k': b.mean(), **compare(a, b)})
-pd.DataFrame(rows).round(3)
+print_table(rows)
 ```
 
 <!-- Placeholder (prose, ### Number of Demonstrations): the instruction line is part of the prompt too. The instruct model in its chat layout without an instruction, with SYSTEM, and with SYSTEM's label list reversed (k = 0, 1, 4, 8), then the plain layout at k = 0 with each line for both models: the zero-shot accuracy and the most-predicted label move with the line's wording and order, and the curves meet only by k = 8. -->
@@ -894,22 +814,57 @@ rows = []
 for instr, line in INSTR.items():
     c = dict(model='instruct', layout='chat', instr=instr)
     for k in (0, 1, 4, 8):
-        label, share_ = top(pred(**c, k=k))
+        label, top_share = top(pred(**c, k=k))
         rows.append({'instruction': line, 'k': k,
                      'accuracy': correct(**c, k=k).mean(), 'top label': label,
-                     'top share': share_, **(compare(
+                     'top share': top_share, **(compare(
                          correct(**c, k=k), correct(**c, k=0)) if k else {})})
 print('instruct, chat layout; each k against k = 0 with the same line')
-print(pd.DataFrame(rows).round(3).fillna('').to_string(index=False))
+print_table(rows)
 rows = []  # each line against none
 for model, (instr, line) in itertools.product(MODELS, INSTR.items()):
-    label, share_ = top(pred(model=model, k=0, instr=instr))
+    label, top_share = top(pred(model=model, k=0, instr=instr))
     acc = correct(model=model, k=0, instr=instr)
     rows.append({'model': model, 'plain, k = 0, instruction': line,
                  'accuracy': acc.mean(), 'top label': label,
-                 'top share': share_, **(compare(acc, correct(
+                 'top share': top_share, **(compare(acc, correct(
                      model=model, k=0)) if instr else {})})
-pd.DataFrame(rows).round(3).drop(columns='draws').fillna('')
+print('\nplain layout, k = 0; each line against none')
+print_table(pd.DataFrame(rows).drop(columns='draws'))
+```
+
+<!-- Placeholder (prose, ### Number of Demonstrations): how much probability the readings above rest on: the label mass over the 200 test items, without and with an instruction line, at k = 0 and with demonstrations (draw 0). -->
+
+```{.python .input #prompting-label-mass}
+%%tab pytorch
+MASS = [('base', 'plain', 0, 0), ('base', 'plain', 0, 1),
+        ('base', 'plain', 4, 0), ('instruct', 'plain', 0, 0),
+        ('instruct', 'plain', 0, 1), ('instruct', 'chat', 0, 0),
+        ('instruct', 'chat', 0, 1), ('instruct', 'chat', 0, 2),
+        ('instruct', 'chat', 4, 0), ('instruct', 'chat', 4, 1),
+        ('instruct', 'chat', 8, 0)]
+rows = []
+for model, layout, k, instr in MASS:  # (model, layout, k, line)
+    cond = dict(model=model, layout=layout, k=k, instr=instr,
+                seed=0 if k else -1)  # k > 0: draw 0 only
+    m, t = (base, tok) if model == 'base' else (inst, tok_i)
+    texts = build_prompts(dict(COND, **cond), TEST_TITLES[ITEMS])
+    if layout == 'chat':  # rendered as the reader renders it
+        texts = [t.apply_chat_template(x, tokenize=False,
+                                       add_generation_prompt=True,
+                                       enable_thinking=False) for x in texts]
+    _, ids = d2l.label_token_ids(t, texts, NATURAL)
+    mass = label_mass(m, t, texts, ids)
+    row = {'model': model, 'layout': layout, 'k': k,
+           'instruction': INSTR[instr], 'mean mass': mass.mean(),
+           'median mass': np.median(mass)}
+    if not SMALL:  # the grid's accuracy for the same condition
+        row['accuracy'] = correct(**cond).mean()
+    rows.append(row)
+print_table(rows)
+del inst  # not needed below
+gc.collect()
+torch.cuda.empty_cache()
 ```
 
 <!-- Placeholder (prose, ### Order): accuracy over four orders of the same demonstrations, the flip rate, and the permutation null. -->
@@ -917,8 +872,7 @@ pd.DataFrame(rows).round(3).drop(columns='draws').fillna('')
 ```{.python .input #prompting-order}
 %%tab pytorch
 ORDER_ACC = {}
-rng = np.random.default_rng(0)
-boot = rng.integers(0, len(DRAWS), (2000, len(DRAWS)))  # draws resampled
+p_text = lambda p: '<0.001' if p < 0.001 else f'{p:.3f}'  # p >= 1/2001
 for model in MODELS:
     C = np.stack([correct(model=model, order=o) for o in range(4)], 1)
     P = np.stack([pred(model=model, order=o) for o in range(4)], 1)
@@ -927,16 +881,13 @@ for model in MODELS:
     table['SD over orders'] = acc.std(1, ddof=1)
     table['flip rate'] = np.mean([(P[:, a] != P[:, b]).mean(-1) for a, b in
                                   itertools.combinations(range(4), 2)], 0)
-    table['p (null)'] = [order_null(C[s:s + 1])[1] for s in range(len(C))]
+    p_draws = [order_null(C[s:s + 1])[1] for s in range(len(C))]
     sd, p = order_null(C)  # pooled over draws
-    table.loc['pooled'] = [*acc.mean(0), sd, table['flip rate'].mean(), p]
-    print(f'{model}:\n{table.round(3).to_string()}')
-    order_sd, draw_sd = acc.std(1, ddof=1), acc[:, 0]
-    for name, v, b in (('orders', order_sd.mean(), order_sd[boot].mean(1)),
-                       ('draws', draw_sd.std(ddof=1),
-                        draw_sd[boot].std(1, ddof=1))):
-        lo, hi = np.percentile(b, [2.5, 97.5])
-        print(f'  SD over {name}: {v:.3f} [{lo:.3f}, {hi:.3f}]')
+    table.loc['pooled'] = [*acc.mean(0), sd, table['flip rate'].mean()]
+    table['p (null)'] = [p_text(v) for v in p_draws + [p]]
+    print(f"{model}:\n{table.to_string(float_format='{:.3f}'.format)}")
+    print(f'  SD over orders, mean over draws: {acc.std(1, ddof=1).mean():.3f}'
+          f'; SD over draws, order 0: {acc[:, 0].std(ddof=1):.3f}')
 ```
 
 <!-- Placeholder (prose, ### Order): the plot below; caption sentence from spec fig_lm_icl_order. -->
@@ -992,8 +943,9 @@ for model in MODELS:
         {'model': model, 'effect': 'natural: rho = 0.75 minus k = 0',
          **compare(correct(model=model, rho=0.75),
                    correct(model=model, k=0))}]
-print(pd.DataFrame(rows).round(3).to_string(index=False))
-pd.DataFrame(effects).round(3).fillna('')
+print_table(rows)
+print()
+print_table(effects)
 ```
 
 <!-- Placeholder (prose, ### Label Correctness and Label Words): the plot below; caption sentence from spec fig_lm_icl_labels. -->
@@ -1038,31 +990,56 @@ def calibrate_labels(logprobs, content_free_logprobs):
 
 ```{.python .input #prompting-calibrate-grid}
 %%tab pytorch
-LP, rows = ['lp0', 'lp1', 'lp2', 'lp3'], []
-n = len(ITEMS)
-boot = np.random.default_rng(0).integers(0, n, (2000, n))  # items resampled
-share = lambda p: (p[..., None] == np.arange(4)).mean(-2).max(-1)  # per draw
+LP, n = ['lp0', 'lp1', 'lp2', 'lp3'], len(ITEMS)
+item_boot = np.random.default_rng(0).integers(0, n, (2000, n))
+draw_top_share = lambda p: (p[..., None] == np.arange(4)).mean(-2).max(-1)
+CAL, acc_rows, share_rows = {}, [], []  # CAL: (before, after) predictions
+for model, k in itertools.product(MODELS, (0, 1, 4)):
+    v = torch.tensor(grid_values(LP, IDS, model=model, k=k))
+    before = v[:, :n].argmax(-1).numpy()  # (draws, items)
+    after = torch.stack([d2l.calibrate_labels(d[:n], d[n:])
+                         for d in v]).argmax(-1).numpy()
+    CAL[model, k] = before, after
+    acc_rows.append({'model': model, 'k': k,
+                     'before': (before == GOLD).mean(),
+                     'after': (after == GOLD).mean(),
+                     **compare((after == GOLD) * 1.0, (before == GOLD) * 1.0)})
+    change = draw_top_share(after) - draw_top_share(before)  # per draw
+    lo, hi = np.percentile((draw_top_share(after[:, item_boot]) -
+                            draw_top_share(before[:, item_boot])).mean(0),
+                           [2.5, 97.5])
+    same = (np.sign(change) == np.sign(change.mean())).sum()
+    share_rows.append({'model': model, 'k': k,
+                       'before': draw_top_share(before).mean(),
+                       'after': draw_top_share(after).mean(),
+                       'change': show({'diff': change.mean(), 'lo': lo,
+                                       'hi': hi, 'draws': 'n/a' if k == 0
+                                       else f'{same}/{len(change)}'})})
+print('accuracy, before and after calibration')
+print_table(acc_rows)
+print('\nshare of the most-predicted label, before and after calibration')
+print_table(share_rows)
+```
+
+<!-- Placeholder (prose, ### Contextual Calibration): at k = 1, draw by draw: the one demonstrated label, the content-free prior's probability of it, and what calibration does to accuracy and to the share of that label. -->
+
+```{.python .input #prompting-calibrate-draws}
+%%tab pytorch
+rows = []
 for model in MODELS:
-    for k in (0, 1, 4):
-        v = torch.tensor(grid_values(LP, IDS, model=model, k=k))
-        before = v[:, :n].argmax(-1).numpy()  # (draws, items)
-        after = torch.stack([d2l.calibrate_labels(d[:n], d[n:])
-                             for d in v]).argmax(-1).numpy()
-        change = share(after) - share(before)  # (draws,)
-        lo, hi = np.percentile((share(after[:, boot]) -
-                                share(before[:, boot])).mean(0), [2.5, 97.5])
-        same = (np.sign(change) == np.sign(change.mean())).sum()
-        draws = 'n/a' if k == 0 else f'{same}/{len(change)}'
-        rows.append({'model': model, 'k': k,
-                     'accuracy before': (before == GOLD).mean(),
-                     'accuracy after': (after == GOLD).mean(),
-                     **compare((after == GOLD) * 1.0, (before == GOLD) * 1.0),
-                     'top share before': share(before).mean(),
-                     'top share after': share(after).mean(),
-                     'top share change': show({
-                         'diff': change.mean(), 'lo': lo, 'hi': hi,
-                         'draws': draws})})
-pd.DataFrame(rows).round(3)
+    v = torch.tensor(grid_values(LP, IDS, model=model, k=1))
+    before, after = CAL[model, 1]
+    for s in DRAWS:
+        y = TRAIN_Y[DRAW[s][0]]  # the one demonstrated label
+        prior = v[s, n:].mean(0).softmax(-1)  # as calibrate_labels uses it
+        rows.append({'model': model, 'draw': s, 'demo': NATURAL[y],
+                     'prior of demo': prior[y].item(),
+                     'acc. before': (before[s] == GOLD).mean(),
+                     'acc. after': (after[s] == GOLD).mean(),
+                     'share before': (before[s] == y).mean(),
+                     'share after': (after[s] == y).mean()})
+print('k = 1, by draw; share: of the predictions, the demonstrated label')
+print_table(rows)
 ```
 
 <!-- Placeholder (prose, ### Copying in Context): a random token sequence repeated once; the loss on each copy against the uniform bound. -->
@@ -1139,10 +1116,9 @@ if RERUN:  # every draw and size; completes the regenerated grid
     with open(RERUN_PATH, 'rb') as f:
         sha1 = hashlib.sha1(f.read()).hexdigest()
     print(f'{RERUN_PATH}: {len(grid):,} rows, sha1 {sha1}')
-    if registered is not None:
-        m = matched(grid, registered, 'probe')
-        print(f'probe: {(m.pred == m.pred_old).sum():,} of {len(m):,} '
-              'predictions as registered')
+    m = matched(grid, registered, 'probe')
+    print(f'probe: {(m.pred == m.pred_old).sum():,} of {len(m):,} '
+          'predictions as registered')
 elif not SMALL:  # one fit, live: the 16 demonstrations of draw 0
     train_x = features(base, tok, TRAIN_TITLES[DRAW[0]])  # batched as above
     acc, logp = probe_accuracy(train_x[:16], TRAIN_Y[DRAW[0][:16]],
@@ -1152,11 +1128,11 @@ elif not SMALL:  # one fit, live: the 16 demonstrations of draw 0
           f'{len(ITEMS)} predictions as registered')
 else:
     print('probe, draw 0, 16 examples: accuracy '
-          f'{correct(exp="probe", layout="none", k=16)[0].mean():.3f} '
+          f'{correct(exp="probe", layout="none", k=16)[0].mean():.3f}\n'
           '(the registered 1.7B run; without a GPU the probe is not fit)')
 ```
 
-<!-- Placeholder (prose, ### A Probe on Frozen Features): the plot below; caption sentence from spec fig_lm_icl_k; ICL minus probe at equal labelled data. -->
+<!-- Placeholder (prose, ### A Probe on Frozen Features): the plot below; caption sentence from spec fig_lm_icl_k (the bands are the range over draws for base ICL and the probe; the instruct-chat k = 0 point depends on the instruction line); ICL minus probe at equal labelled data. -->
 
 ```{.python .input #prompting-icl-vs-probe-plot}
 %%tab pytorch
@@ -1168,20 +1144,23 @@ series = {'base, ICL (plain)': (K_BASE, dict(model='base')),
 acc = [np.array([correct(**c, k=k).mean(1) for k in ks])  # (k, draws)
        for ks, c in series.values()]
 at = lambda ks: np.log2(np.maximum(ks, 0.5))  # a log2 axis, 0 at the left
-d2l.plot([at(ks) for ks, _ in series.values()] * 3,
-         [a.mean(1) for a in acc] + [a.min(1) for a in acc] +
-         [a.max(1) for a in acc], 'labelled examples', 'accuracy',
-         legend=list(series), fmts=[f'C{i}{f}' for f in ('-o', ':', ':')
-                                    for i in range(4)], figsize=(5, 3.2))
+d2l.plot([at(ks) for ks, _ in series.values()], [a.mean(1) for a in acc],
+         'labelled examples', 'accuracy', legend=list(series),
+         ylim=(0.25, 0.85), fmts=[f'C{i}-o' for i in range(4)],
+         figsize=(5, 3.2))
 ticks = sorted(set(K_BASE + K_PROBE))
 ax = d2l.plt.gca()
+for i in (0, 3):  # the range over draws: base ICL and the probe
+    ks = list(series.values())[i][0]
+    ax.fill_between(at(ks), acc[i].min(1), acc[i].max(1), color=f'C{i}',
+                    alpha=0.15, lw=0)
 ax.set_xticks(at(ticks), [str(k) for k in ticks])
 ax.legend(list(series), loc='lower center', bbox_to_anchor=(0.5, 1.0),
           ncol=2)  # above the axes, clear of the curves
 rows = [{'examples': k, **compare(correct(k=k), correct(
     exp='probe', layout='none', k=k))} for k in K_PROBE[:-1]]
 print('ICL (base, plain) minus probe, at equal labelled data')
-print(pd.DataFrame(rows).round(3).to_string(index=False))
+print_table(rows)
 print(f'probe at 256: '
       f'{correct(exp="probe", layout="none", k=256).mean():.3f}')
 ```
@@ -1190,19 +1169,19 @@ print(f'probe at 256: '
 
 ```{.python .input #prompting-cost}
 %%tab pytorch
-c = base.config  # K and V of every layer, per token, in bf16 as served
-kv_bytes = (c.num_hidden_layers * 2 * c.num_key_value_heads * c.head_dim *
-            torch.bfloat16.itemsize)
-probe = np.mean(n_tokens(tok, list(TEST_TITLES[ITEMS])))  # the headline
+cfg = base.config  # K and V of every layer, per token, in bf16 as served
+kv_bytes = (cfg.num_hidden_layers * 2 * cfg.num_key_value_heads *
+            cfg.head_dim * torch.bfloat16.itemsize)
+probe_tokens = np.mean(n_tokens(tok, list(TEST_TITLES[ITEMS])))  # headline
 rows = []
 for k in K_BASE:
     cond = dict(COND, k=k, seed=-1 if k == 0 else 0)
     t = np.mean(n_tokens(tok, build_prompts(cond, TEST_TITLES[ITEMS])))
-    rows.append({'k': k, 'tokens per query': t, 'vs probe': t / probe,
+    rows.append({'k': k, 'tokens per query': t, 'vs probe': t / probe_tokens,
                  'KV cache (MB)': t * kv_bytes / 1e6})
-rows = pd.DataFrame(rows)
-rows.insert(2, 'vs k = 0', rows['tokens per query'] / rows.iloc[0, 1])
-print(f'probe: {probe:.1f} tokens per query; KV cache {kv_bytes:,} bytes '
-      'per token in bf16')
-rows.round(1)
+table = pd.DataFrame(rows)
+table.insert(2, 'vs k = 0', table['tokens per query'] / table.iloc[0, 1])
+print(f'probe: {probe_tokens:.1f} tokens per query; KV cache {kv_bytes:,} '
+      'bytes per token in bf16')
+print_table(table, digits=1)
 ```

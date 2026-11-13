@@ -47,6 +47,9 @@ LIB_ONLY_FILES = [
     # 18.2's Hub download behind load_qwen3 and the argument plumbing of
     # generate (stopping defaults, prompt ids, random streams, unwrapping).
     'chapter_lm-pretrained/d2l-checkpoint-lib.md',
+    # 18.3's label-token checks, the two read-out branches its models never
+    # take (soft-capped heads, d2l GPTs) and the AG News title cleanup.
+    'chapter_lm-pretrained/prompting-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

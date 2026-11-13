@@ -8,7 +8,7 @@ Library code (spec 18.3 part 5):
   case, and a simulation of `eq_lm_ctx_calibration` (Gaussian classes at the
   vertices of a regular simplex, a skewed prior, a content-free input that is
   computed, not set) including the residual bias of Exercise 3.
-- `label_logprobs` (and its helper `_label_token_ids`): with a tiny random
+- `label_logprobs` (and its helper `label_token_ids`): with a tiny random
   `Qwen3ForCausalLM` (2 layers, hidden size 64, fp32) and the real Qwen3
   tokenizer at the pinned revision, loaded with `local_files_only=True`;
   against the full-vocabulary softmax, batched against one at a time, the
@@ -520,21 +520,21 @@ class TestLabelLogprobs(unittest.TestCase):
         out[0] += 1
 
     def test_label_ids(self):
-        ids, labels = d2l._label_token_ids(self.tok, self.prompts, LABELS)
+        ids, labels = d2l.label_token_ids(self.tok, self.prompts, LABELS)
         self.assertEqual(labels, [PLAIN_IDS] * 4)
         self.assertEqual(ids[0], self.tok(self.prompts[0])['input_ids'])
         self.assertEqual(labels[0][1], 13180)
         chat = self.tok.apply_chat_template(
             [{'role': 'user', 'content': self.prompts[0]}], tokenize=False,
             add_generation_prompt=True, enable_thinking=False)
-        _, labels = d2l._label_token_ids(self.tok, [chat], LABELS)
+        _, labels = d2l.label_token_ids(self.tok, [chat], LABELS)
         self.assertEqual(labels[0][1], 40979)
         self.assertEqual(labels[0], self.tok.convert_tokens_to_ids(LABELS))
         # a prompt ending in a newline also takes the word without space
-        _, labels = d2l._label_token_ids(self.tok, ['Topic?\n'], ['Sports'])
+        _, labels = d2l.label_token_ids(self.tok, ['Topic?\n'], ['Sports'])
         self.assertEqual(labels, [[40979]])
         # the blueprint's Tech/Technology pair does not collide
-        _, labels = d2l._label_token_ids(self.tok, ['Topic:'],
+        _, labels = d2l.label_token_ids(self.tok, ['Topic:'],
                                          ['Tech', 'Technology'])
         self.assertEqual(labels, [[17374, 11791]])
 
@@ -600,7 +600,7 @@ class TestLabelLogprobs(unittest.TestCase):
             (prompts[0], 'Sports'), (prompts[2], '体育'),
             (prompts[2], 'Sports'), ('Topic:\n', 'Sports'),
             ('Topic:', '')]], ['', '', ' ', '', ' '])
-        ids, labels = d2l._label_token_ids(tok, prompts, words)
+        ids, labels = d2l.label_token_ids(tok, prompts, words)
         for p, h, row in zip(prompts, ids, labels):
             self.assertEqual(h, tok(p, add_special_tokens=False)['input_ids'])
             self.assertEqual(row, [tok(p + w, add_special_tokens=False)[
@@ -614,7 +614,7 @@ class TestLabelLogprobs(unittest.TestCase):
             torch.testing.assert_close(row, self.reference(
                 self.model, p, lab), atol=1e-5, rtol=0)
         # an explicit sep overrides the rule; the error names it
-        _, sp = d2l._label_token_ids(tok, ['Topic:'], ['Sports'], sep='')
+        _, sp = d2l.label_token_ids(tok, ['Topic:'], ['Sports'], sep='')
         self.assertEqual(sp, [[tok.convert_tokens_to_ids('Sports')]])
         with self.assertRaisesRegex(ValueError, r"'体育' after ' ' is 2 "):
             d2l.label_logprobs(self.model, tok, prompts[:1], words, sep=' ')
@@ -711,6 +711,49 @@ class TestLabelLogprobs(unittest.TestCase):
             d2l.label_logprobs(qwen, self.tok, prompts, LABELS)
         self.assertTrue(calls)
         self.assertTrue(all(kw == {'logits_to_keep': 1} for kw in calls))
+
+
+class TestOutputLayer(unittest.TestCase):
+    """_label_output_layer picks label_logprobs's branch: the label rows
+    of a plain linear output layer, or the model's own logits."""
+
+    def test_branches(self):
+        try:
+            import transformers  # noqa: F401
+        except ImportError as e:
+            raise unittest.SkipTest(f'transformers not installed: {e}')
+        model = tiny_qwen3()
+        self.assertIs(d2l._label_output_layer(model), model.lm_head)
+        compiled = torch.compile(model, backend='eager')
+        self.assertIs(d2l._label_output_layer(compiled), model.lm_head)
+        with mock.patch.object(model.config, 'final_logit_softcapping',
+                               30.0, create=True):
+            self.assertIsNone(d2l._label_output_layer(model))
+        torch.manual_seed(0)
+        self.assertIsNone(d2l._label_output_layer(
+            d2l.Qwen3GPT(100, 64, 4, 2, 2, head_dim=16)))
+
+
+class TestCleanAgNews(unittest.TestCase):
+    """clean_ag_news: each rule on a title of AG News's own escapes, the
+    per-rule counts, and the error on an escape no rule handles."""
+
+    def test_rules(self):
+        titles = ['Bush #39;s plan', 'Oil at #36;50',
+                  'Firm#146;s #147;big#148; win', 'Caf #233; opens',
+                  '&lt;b&gt;Update&lt;/b&gt; Rates rise',
+                  'Stocks \\ bonds  fall', 'Plain title']
+        out, changed = d2l.clean_ag_news(titles)
+        self.assertEqual(out.tolist(), [
+            "Bush's plan", 'Oil at $50', 'Firm\'s "big" win', 'Café opens',
+            'Update Rates rise', 'Stocks bonds fall', 'Plain title'])
+        self.assertEqual(out.dtype, object)
+        self.assertEqual(changed, {
+            "#39; is '": 1, '#36; is $': 1, '#145; to #151;': 1,
+            'other #n;': 1, '&entities;': 1, '<tags>': 1,
+            '\\ and spaces': 1})
+        with self.assertRaisesRegex(AssertionError, '#999;'):
+            d2l.clean_ag_news(['Odd #999; code'])
 
 
 if __name__ == '__main__':

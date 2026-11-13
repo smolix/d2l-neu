@@ -21,6 +21,7 @@ sizes each answer one of these problems. Newer methods also ask how to
 measure the size of a step. We take the questions one at a time, on
 problems we can solve exactly.
 
+<!-- WRITER: section order is now optimization-intro, gd, sgd, test-models (new, sec_test_models), momentum, adam, adamw (new, sec_adamw), muon, lr-scheduler, batch-size, scaling, practice; the route below and the slide chapter map still list Schedules before Muon and lack the two new sections. -->
 :numref:`sec_optimization-intro` asks what makes a loss hard to minimize.
 :numref:`sec_gd` asks how large a gradient step may be, and how rescaling
 the gradient removes the limit. :numref:`sec_sgd` asks what changes when the
@@ -47,10 +48,12 @@ in :numref:`sec_optimization-further-reading`.
 optimization-intro
 gd
 sgd
+test-models
 momentum
 adam
-lr-scheduler
+adamw
 muon
+lr-scheduler
 batch-size
 scaling
 practice

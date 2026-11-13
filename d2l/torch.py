@@ -4677,9 +4677,6 @@ def bytes_read(config, n, b=2):
 d2l.DATA_HUB['lm-qwen3-port-prompts-v1'] = (
     d2l.LM_DATA_URL + 'lm-qwen3-port-prompts-v1.json',
     'b5840fad4ad3d8d1897c12d522def18f6eb8fa06')
-d2l.DATA_HUB['lm-qwen3-0p6b-logit-ref-v1'] = (
-    d2l.LM_DATA_URL + 'lm-qwen3-0p6b-logit-ref-v1.pt',
-    '2fa5449638a8a8924bc6b35384dc996c23513cb6')
 
 def qwen3_rope_tables(n, head_dim, theta, offset=0, device=None):
     """Cosines and sines, each (n, head_dim / 2) in fp32, of the RoPE angles
@@ -4810,7 +4807,9 @@ class Qwen3GPT(d2l.GPT):
 
     def init_cache(self, batch_size, max_len):
         """Zeroed keys and values for every block, each (blocks, batch, kv
-        heads, max_len, head_dim)."""
+        heads, max_len, head_dim).
+
+        Defined in :numref:`sec_lm_d2l_checkpoint`"""
         attn = self.blks[0].attention
         shape = (len(self.blks), batch_size, attn.num_kv_heads, max_len,
                  attn.head_dim)
@@ -4821,9 +4820,11 @@ class Qwen3GPT(d2l.GPT):
     @torch.inference_mode()
     def forward_cached(self, X, ks, vs, t):
         """Logits after the last of the new tokens X, which sit at positions
-        t, t + 1, ...; writes their keys and values into the cache."""
-        tables = qwen3_rope_tables(X.shape[1], self.head_width,
-                                   self.rope_theta, t, X.device)
+        t, t + 1, ...; writes their keys and values into the cache.
+
+        Defined in :numref:`sec_lm_d2l_checkpoint`"""
+        tables = qwen3_rope_tables(X.shape[1], self.head_width, self.rope_theta,
+                                   t, X.device)
         H = self.token_emb(X)
         for i, blk in enumerate(self.blks):  # the modules of blk.forward
             H = H + blk.attention.forward_step(blk.norm1(H), (ks[i], vs[i], t),
@@ -4836,7 +4837,9 @@ class Qwen3GPT(d2l.GPT):
 
     @torch.inference_mode()
     def generate_cached(self, prefix, num_tokens, temperature=1.0, top_k=None):
-        """Sample as generate does, but never recompute the prefix."""
+        """Sample as generate does, but never recompute the prefix.
+
+        Defined in :numref:`sec_lm_d2l_checkpoint`"""
         assert len(prefix) + num_tokens <= self.max_len, 'cache overflow'
         X = torch.tensor(prefix, device=self.token_emb.weight.device)[None]
         ks, vs = self.init_cache(1, len(prefix) + num_tokens)
@@ -4846,8 +4849,8 @@ class Qwen3GPT(d2l.GPT):
             tokens.append(d2l.sample_logits(logits, 'sample', temperature,
                                             k=top_k))
             if t + 1 < len(prefix) + num_tokens:  # logits for the next draw
-                logits, ks, vs = self.forward_cached(tokens[-1][:, None], ks,
-                                                     vs, t)
+                logits, ks, vs = self.forward_cached(tokens[-1][:, None], ks, vs,
+                                                     t)
         return list(prefix) + torch.cat(tokens).tolist()
 
 def qwen3_gpt_kwargs(cfg):
@@ -4949,36 +4952,6 @@ def map_qwen3_state_dict(hf_state, cfg, rope_layout='permute'):
                        f'not produced: {missing}')
     return state
 
-def _qwen3_files(model_id, revision):
-    """Local paths of config.json, generation_config.json (None if the
-    repository has none) and the safetensors files of a Hub checkpoint at a
-    revision, downloaded into the Hugging Face cache.
-
-    Defined in :numref:`sec_lm_d2l_checkpoint`"""
-    import huggingface_hub
-    # the Hub answered that the file is absent; LocalEntryNotFoundError
-    # (offline, not cached) is a sibling subclass and must propagate
-    from huggingface_hub.errors import RemoteEntryNotFoundError
-
-    def get(filename, optional=False):
-        try:
-            return huggingface_hub.hf_hub_download(model_id, filename,
-                                                   revision=revision)
-        except RemoteEntryNotFoundError:
-            if optional:
-                return None
-            raise
-
-    index = get('model.safetensors.index.json', optional=True)
-    if index is None:
-        weights = [get('model.safetensors')]
-    else:  # a sharded checkpoint lists its shards in the index
-        with open(index) as fh:
-            shards = sorted(set(json.load(fh)['weight_map'].values()))
-        weights = [get(shard) for shard in shards]
-    return (get('config.json'), get('generation_config.json', optional=True),
-            weights)
-
 def load_qwen3(model_id='Qwen/Qwen3-0.6B', revision=None, *,
                dtype=torch.bfloat16, device=None):
     """A pinned Qwen3 checkpoint from the Hugging Face Hub as a Qwen3GPT in
@@ -4988,8 +4961,8 @@ def load_qwen3(model_id='Qwen/Qwen3-0.6B', revision=None, *,
     Defined in :numref:`sec_lm_d2l_checkpoint`"""
     from safetensors.torch import load_file  # lazy, as in load_gpt2
     revision = revision or d2l.HF_REVISIONS[model_id]
-    config_file, generation_file, weight_files = _qwen3_files(model_id,
-                                                              revision)
+    config_file, generation_file, weight_files = d2l._qwen3_files(
+        model_id, revision)
     with open(config_file) as fh:
         cfg = json.load(fh)
     with torch.device('meta'):  # shapes only: no memory is allocated
@@ -5132,30 +5105,6 @@ def _lm_finish(tokens, logprobs, tokenizer, eos_ids, stop):
         logprobs = logprobs[:len(tokens)]
     return Generation(text, tokens, logprobs, reason)
 
-def _lm_unwrap(model):
-    """The model inside a torch.compile or PEFT wrapper (which pass every
-    keyword argument through to it), or model itself.
-
-    Defined in :numref:`sec_lm_d2l_checkpoint`"""
-    while True:
-        inner = getattr(model, '_orig_mod', None)
-        if inner is None and hasattr(model, 'get_base_model'):
-            inner = model.get_base_model()
-        if inner is None or inner is model:
-            return model
-        model = inner
-
-def _lm_bos_ids(tokenizer):
-    """The special tokens the tokenizer puts before a text (a BOS, or
-    none). Those it appends after a text, such as an EOS, are left out:
-    a prompt continues where its text ends.
-
-    Defined in :numref:`sec_lm_d2l_checkpoint`"""
-    with_sp, plain = (tokenizer(['a'], add_special_tokens=s)['input_ids'][0]
-                      for s in (True, False))
-    return next((with_sp[:k] for k in range(len(with_sp) - len(plain) + 1)
-                 if with_sp[k:k + len(plain)] == plain), [])
-
 @torch.inference_mode()
 def generate(model, tokenizer, prompts, max_new_tokens=None, *,
              strategy='greedy', temperature=1.0, k=None, p=None, min_p=None,
@@ -5163,42 +5112,21 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
              enable_thinking=None, return_logprobs=False, batch_size=8):
     """Continue each prompt (a string, or with chat=True also a list of
     messages) and return one Generation per prompt, in input order.
-    strategy is 'greedy' or 'sample' (truncated_probs's temperature, k, p,
-    min_p). stop and eos_token_ids take one item or a list. seed is an
-    int or a torch.Generator, either one stream for the call, or a list
-    of one int per prompt: an item's random draws then depend only on its
-    seed; the
-    sampled text is batch-invariant only up to bf16 kernel drift, because
-    the logits depend on batch and padding composition
-    (:numref:`subsec_lm_nondeterminism`).
+    strategy is 'greedy' or 'sample' (with truncated_probs's temperature,
+    k, p and min_p). stop and eos_token_ids take one item or a list. seed
+    is an int or a torch.Generator (one stream for the call) or a list of
+    one int per prompt (each prompt's draws then depend only on its seed).
+    A sampled text can still depend on the batch: batch and padding change
+    the logits by rounding, which can flip a near-tie.
 
     Defined in :numref:`sec_lm_d2l_checkpoint`"""
-    config = getattr(model, 'generation_config', None)
-    if max_new_tokens is None:
-        max_new_tokens = getattr(config, 'max_new_tokens', None) or 256
-    if eos_token_ids is None:  # the tokenizer's end token and the model's
-        eos = getattr(config, 'eos_token_id', None)
-        eos_token_ids = [tokenizer.eos_token_id,
-                         *(eos if isinstance(eos, list) else [eos])]
-    if isinstance(eos_token_ids, (int, np.integer)):
-        eos_token_ids = [eos_token_ids]
-    eos_ids = {int(i) for i in eos_token_ids if i is not None}
-    if isinstance(stop, str):  # one string, not its characters
-        stop = [stop]
-    if chat:  # a string is one user message; the template adds no BOS
-        opts = {} if enable_thinking is None else {
-            'enable_thinking': enable_thinking}
-        prompts = [tokenizer.apply_chat_template(
-            [{'role': 'user', 'content': x}] if isinstance(x, str) else x,
-            tokenize=False, add_generation_prompt=True, **opts)
-                   for x in prompts]
-    head = [] if chat else _lm_bos_ids(tokenizer)  # a BOS, never an EOS
-    ids = [head + tokenizer(x, add_special_tokens=False)['input_ids']
-           for x in prompts]
-    if not all(ids):  # Qwen3's tokenizer adds no BOS to predict from
-        raise ValueError('an empty prompt has no position to predict from')
+    max_new_tokens, eos_ids, stop = d2l._lm_stopping(
+        model, tokenizer, max_new_tokens, eos_token_ids, stop)
+    ids = d2l._lm_prompt_ids(tokenizer, prompts, chat, enable_thinking)
+    generators = d2l._lm_generators(seed, len(ids))
     hf = sys.modules.get('transformers')  # loaded if model is one of its
-    if hf is not None and isinstance(_lm_unwrap(model), hf.PreTrainedModel):
+    if hf is not None and isinstance(d2l._lm_unwrap(model),
+                                     hf.PreTrainedModel):
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
         start = lambda rows: _lm_hf_steps(model, rows, pad)
         groups = [list(range(len(ids)))]  # left padding: input order
@@ -5209,19 +5137,11 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
             start = lambda rows: _lm_recompute_steps(model, rows)
         groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
                   for n in sorted({len(r) for r in ids})]
-    shared = isinstance(seed, (int, np.integer, torch.Generator))
-    if isinstance(seed, torch.Generator):
-        generator = seed
-    elif shared:
-        generator = torch.Generator().manual_seed(int(seed))
-    else:
-        assert len(seed) == len(ids), 'one seed per prompt'
-        generators = [torch.Generator().manual_seed(int(s)) for s in seed]
     out = [None] * len(ids)
     for rows in (g[j:j + batch_size] for g in groups
                  for j in range(0, len(g), batch_size)):
         logits, step = start([ids[i] for i in rows])
-        gen = generator if shared else [generators[i] for i in rows]
+        gen = generators(rows)
         tokens = [[] for _ in rows]
         logprobs = [[] for _ in rows] if return_logprobs else None
         active = set(range(len(rows)))
@@ -11761,6 +11681,125 @@ def show_kernels(kernels, rows=4):
         named[_kernel_name(name)] += ms
     for name, ms in named.most_common(rows):
         print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name}')
+
+d2l.DATA_HUB['lm-qwen3-0p6b-logit-ref-v1'] = (
+    d2l.LM_DATA_URL + 'lm-qwen3-0p6b-logit-ref-v1.pt',
+    '2fa5449638a8a8924bc6b35384dc996c23513cb6')
+
+def _qwen3_files(model_id, revision):
+    """Local paths of config.json, generation_config.json (None if the
+    repository has none) and the safetensors files of a Hub checkpoint at a
+    revision, downloaded into the Hugging Face cache.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    import huggingface_hub
+    # the Hub answered that the file is absent; LocalEntryNotFoundError
+    # (offline, not cached) is a sibling subclass and must propagate
+    from huggingface_hub.errors import RemoteEntryNotFoundError
+
+    def get(filename, optional=False):
+        try:
+            return huggingface_hub.hf_hub_download(model_id, filename,
+                                                   revision=revision)
+        except RemoteEntryNotFoundError:
+            if optional:
+                return None
+            raise
+
+    index = get('model.safetensors.index.json', optional=True)
+    if index is None:
+        weights = [get('model.safetensors')]
+    else:  # a sharded checkpoint lists its shards in the index
+        with open(index) as fh:
+            shards = sorted(set(json.load(fh)['weight_map'].values()))
+        weights = [get(shard) for shard in shards]
+    return (get('config.json'), get('generation_config.json', optional=True),
+            weights)
+
+def _lm_unwrap(model):
+    """The model inside a torch.compile or PEFT wrapper (which pass every
+    keyword argument through to it), or model itself.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    while True:
+        inner = getattr(model, '_orig_mod', None)
+        if inner is None and hasattr(model, 'get_base_model'):
+            inner = model.get_base_model()
+        if inner is None or inner is model:
+            return model
+        model = inner
+
+def _lm_bos_ids(tokenizer):
+    """The special tokens the tokenizer puts before a text (a BOS, or
+    none). Those it appends after a text, such as an EOS, are left out:
+    a prompt continues where its text ends.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    with_sp, plain = (tokenizer(['a'], add_special_tokens=s)['input_ids'][0]
+                      for s in (True, False))
+    return next((with_sp[:k] for k in range(len(with_sp) - len(plain) + 1)
+                 if with_sp[k:k + len(plain)] == plain), [])
+
+def _lm_stopping(model, tokenizer, max_new_tokens=None, eos_token_ids=None,
+                 stop=None):
+    """generate's stopping arguments with their defaults: max_new_tokens
+    from the model's generation_config (else 256); the end tokens, by
+    default the tokenizer's and the generation_config's, as a set of ids
+    (one id may be given bare); stop strings as a list (one string is one
+    stop string, not its characters).
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    config = getattr(model, 'generation_config', None)
+    if max_new_tokens is None:
+        max_new_tokens = getattr(config, 'max_new_tokens', None) or 256
+    if eos_token_ids is None:
+        eos = getattr(config, 'eos_token_id', None)
+        eos_token_ids = [tokenizer.eos_token_id,
+                         *(eos if isinstance(eos, list) else [eos])]
+    if isinstance(eos_token_ids, (int, np.integer)):
+        eos_token_ids = [eos_token_ids]
+    eos_ids = {int(i) for i in eos_token_ids if i is not None}
+    if isinstance(stop, str):
+        stop = [stop]
+    return max_new_tokens, eos_ids, stop
+
+def _lm_prompt_ids(tokenizer, prompts, chat=False, enable_thinking=None):
+    """Token ids of each prompt of generate. With chat=True a prompt is
+    rendered by the chat template (a string is one user message; the
+    template adds no BOS); otherwise the tokenizer's BOS, if it has one,
+    goes before the text, and never an EOS after it.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    if chat:
+        opts = {} if enable_thinking is None else {
+            'enable_thinking': enable_thinking}
+        prompts = [tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': x}] if isinstance(x, str) else x,
+            tokenize=False, add_generation_prompt=True, **opts)
+                   for x in prompts]
+    head = [] if chat else _lm_bos_ids(tokenizer)
+    ids = [head + tokenizer(x, add_special_tokens=False)['input_ids']
+           for x in prompts]
+    if not all(ids):  # Qwen3's tokenizer adds no BOS to predict from
+        raise ValueError('an empty prompt has no position to predict from')
+    return ids
+
+def _lm_generators(seed, num_prompts):
+    """generate's random streams, as a function rows -> the generator
+    argument of sample_logits for those prompts. seed is an int or a
+    torch.Generator (one stream for the whole call) or one int per prompt
+    (one stream each, so that a prompt's draws do not depend on the
+    others).
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    if isinstance(seed, torch.Generator):
+        return lambda rows: seed
+    if isinstance(seed, (int, np.integer)):
+        shared = torch.Generator().manual_seed(int(seed))
+        return lambda rows: shared
+    assert len(seed) == num_prompts, 'one seed per prompt'
+    streams = [torch.Generator().manual_seed(int(s)) for s in seed]
+    return lambda rows: [streams[i] for i in rows]
 
 
 ones_like = torch.ones_like

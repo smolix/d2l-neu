@@ -566,8 +566,14 @@ uses one of their symbols at import time). Members:
   `_TEXT_KEY_MAPPING`) and the timing, profiling and capacity harness of its
   measurements (`hf_measure`, `hf_capacity`, `hf_compare_kernels`,
   `hf_profile_steps`, the table views). PyTorch only.
+- `chapter_lm-pretrained/d2l-checkpoint-lib.md` holds what
+  `sec_lm_d2l_checkpoint` (18.2) uses and does not show: `_qwen3_files`
+  (the Hub download behind `load_qwen3`), the argument plumbing of
+  `generate` (`_lm_stopping`, `_lm_prompt_ids`, `_lm_generators`,
+  `_lm_bos_ids`, `_lm_unwrap`) and the registry entry of assignment A1's
+  logit reference. PyTorch only.
 
-The three Language Models files are appended (nothing uses them at import
+The four Language Models files are appended (nothing uses them at import
 time).
 Their blocks follow the part's import rule: third-party modules
 (`transformers`, `openai`, `httpx`, `asyncio`) are imported inside the

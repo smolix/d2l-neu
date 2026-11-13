@@ -5,7 +5,10 @@
 `qwen3_gpt_kwargs`, `qwen3_rope_permutation`, `map_qwen3_state_dict`,
 `_qwen3_files`, `load_qwen3`), the layer-by-layer comparison
 (`collect_hiddens`, `layer_errors`, `first_divergence`) and the part's
-sampler (`Generation`, `truncated_probs`, `sample_logits`, `generate`).
+sampler (`Generation`, `truncated_probs`, `sample_logits`, `generate`,
+and its plumbing in chapter_lm-pretrained/d2l-checkpoint-lib.md:
+`_lm_stopping`, `_lm_prompt_ids`, `_lm_generators`, `_lm_bos_ids`,
+`_lm_unwrap`).
 
 Reference models are tiny random `transformers.Qwen3ForCausalLM`s (eager
 attention) saved to a temporary directory; the configurations of the real
@@ -1226,6 +1229,70 @@ class TestGenerate(unittest.TestCase):
         # '<s> w7 w8 </s> w5 <s>' ends in <s> (2): the counter continues 3, 4
         self.assertEqual(off[0].token_ids, [3, 4])
         self.assertEqual(default[0].token_ids, [3, 4])
+
+
+class TestGeneratePlumbing(unittest.TestCase):
+    """The helpers generate calls (d2l-checkpoint-lib.md), and the cached
+    path that d2l-checkpoint.md adds to Qwen3GPT with add_to_class."""
+    def test_cached_path_is_merged_into_the_class(self):
+        for name in ('init_cache', 'forward_cached', 'generate_cached'):
+            self.assertIn(name, vars(d2l.Qwen3GPT), name)
+            self.assertIsNot(getattr(d2l.Qwen3GPT, name),
+                             getattr(d2l.GPT, name, None), name)
+
+    def test_stopping(self):
+        tok, model = tiny_tokenizer(), Counter()
+        self.assertEqual(d2l._lm_stopping(model, tok),
+                         (256, {EOS}, None))
+        model.generation_config = mock.Mock(eos_token_id=[3, None],
+                                            max_new_tokens=7)
+        self.assertEqual(d2l._lm_stopping(model, tok, stop='w9'),
+                         (7, {EOS, 3}, ['w9']))
+        model.generation_config = mock.Mock(eos_token_id=4,
+                                            max_new_tokens=None)
+        self.assertEqual(d2l._lm_stopping(model, tok)[1], {EOS, 4})
+        for eos in (9, np.int64(9)):
+            self.assertEqual(d2l._lm_stopping(model, tok, 5, eos)[:2],
+                             (5, {9}))
+        self.assertEqual(d2l._lm_stopping(model, tok, 5, [])[1], set())
+
+    def test_prompt_ids(self):
+        from tokenizers.processors import TemplateProcessing
+        tok = tiny_tokenizer()
+        self.assertEqual(d2l._lm_prompt_ids(tok, ['w4 w5', 'w6']),
+                         [[4, 5], [6]])
+        tok._tokenizer.post_processor = TemplateProcessing(
+            single='<s> $A <eos>', special_tokens=[('<s>', 2), ('<eos>', EOS)])
+        self.assertEqual(d2l._lm_prompt_ids(tok, ['w4 w5']), [[2, 4, 5]])
+        # chat: the template's ids, no BOS added; a string is a user turn
+        rendered = tok.apply_chat_template(
+            [{'role': 'user', 'content': 'w4'}], add_generation_prompt=True,
+            tokenize=False, enable_thinking=False)
+        expected = tok(rendered, add_special_tokens=False)['input_ids']
+        for prompt in ('w4', [{'role': 'user', 'content': 'w4'}]):
+            self.assertEqual(d2l._lm_prompt_ids(tok, [prompt], chat=True,
+                                                enable_thinking=False),
+                             [expected])
+        with self.assertRaisesRegex(ValueError, 'empty prompt'):
+            d2l._lm_prompt_ids(tiny_tokenizer(), ['w4', ''])
+
+    def test_generators(self):
+        g = torch.Generator().manual_seed(0)
+        self.assertIs(d2l._lm_generators(g, 3)([0, 2]), g)
+        shared = d2l._lm_generators(np.int64(5), 3)
+        self.assertIs(shared([0]), shared([1, 2]))
+        self.assertEqual(torch.rand(2, generator=shared([0])).tolist(),
+                         torch.rand(2, generator=torch.Generator()
+                                    .manual_seed(5)).tolist())
+        per_prompt = d2l._lm_generators([7, 8, 9], 3)
+        first = per_prompt([0, 2])
+        self.assertEqual(len(first), 2)
+        draw = torch.rand(1, generator=first[1]).item()
+        self.assertEqual(draw, torch.rand(
+            1, generator=torch.Generator().manual_seed(9)).item())
+        self.assertIs(per_prompt([2])[0], first[1])  # one stream per prompt
+        with self.assertRaises(AssertionError):
+            d2l._lm_generators([1, 2], 3)
 
 
 class TestQwen3Tokenizer(unittest.TestCase):

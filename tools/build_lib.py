@@ -44,6 +44,9 @@ LIB_ONLY_FILES = [
     # 18.1's kernel routing (the Transformers workaround behind load_hf) and
     # its timing, profiling and capacity harness.
     'chapter_lm-pretrained/hf-models-lib.md',
+    # 18.2's Hub download behind load_qwen3 and the argument plumbing of
+    # generate (stopping defaults, prompt ids, random streams, unwrapping).
+    'chapter_lm-pretrained/d2l-checkpoint-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

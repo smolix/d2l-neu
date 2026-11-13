@@ -65,7 +65,7 @@ import transformers
 from safetensors.torch import load_file
 ```
 
-<!-- Placeholder (stage 2): the fixed prompts of the comparison (made by tools/lm/make_port_fixtures.py) and the fp64 logit reference of assignment A1 (registered here, never read by this notebook). -->
+<!-- Placeholder (stage 2): the fixed prompts of the comparison (made by tools/lm/make_port_fixtures.py). -->
 
 ```{.python .input #d2l-checkpoint-data-hub}
 %%tab pytorch
@@ -73,9 +73,6 @@ from safetensors.torch import load_file
 d2l.DATA_HUB['lm-qwen3-port-prompts-v1'] = (
     d2l.LM_DATA_URL + 'lm-qwen3-port-prompts-v1.json',
     'b5840fad4ad3d8d1897c12d522def18f6eb8fa06')
-d2l.DATA_HUB['lm-qwen3-0p6b-logit-ref-v1'] = (
-    d2l.LM_DATA_URL + 'lm-qwen3-0p6b-logit-ref-v1.pt',
-    '2fa5449638a8a8924bc6b35384dc996c23513cb6')
 ```
 
 <!-- Placeholder (stage 2): the three checkpoints, the fp32 setting the comparison assumes, and the fixed prompts (8 categories of 4, the 28 that are text, one long prompt). -->
@@ -117,9 +114,9 @@ print(f'{len(ids)} prompts of {ids.shape[1]} tokens, {len(texts)} of them '
 ```{.python .input #d2l-checkpoint-recipe-diff}
 %%tab pytorch
 with torch.device('meta'):  # shapes only: no memory is allocated
-    book = d2l.GPT(151936, num_hiddens=1024, num_heads=16, num_blks=28,
-                   num_kv_heads=8)
-book_shapes = {k: tuple(v.shape) for k, v in book.state_dict().items()}
+    gpt_meta = d2l.GPT(151936, num_hiddens=1024, num_heads=16, num_blks=28,
+                       num_kv_heads=8)
+gpt_shapes = {k: tuple(v.shape) for k, v in gpt_meta.state_dict().items()}
 header = d2l.safetensors_header(QWEN)  # name -> (shape, dtype)
 roles = [('query, key, value', ['attention.W_qkv'],
           ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj']),
@@ -131,9 +128,9 @@ roles = [('query, key, value', ['attention.W_qkv'],
          ('norms', ['norm1', 'norm2'],
           ['input_layernorm', 'post_attention_layernorm'])]
 print(f'{"role":19}{"d2l.GPT":21}Qwen3-0.6B (layer 0)')
-for role, book_names, qwen_names in roles:
-    left = [f'{n.split(".")[-1]} {book_shapes[f"blks.0.{n}.weight"]}'
-            for n in book_names] or ['(no counterpart)']
+for role, gpt_names, qwen_names in roles:
+    left = [f'{n.split(".")[-1]} {gpt_shapes[f"blks.0.{n}.weight"]}'
+            for n in gpt_names] or ['(no counterpart)']
     right = [f'{n.split(".")[-1]} {header[f"model.layers.0.{n}.weight"][0]}'
              for n in qwen_names]
     for i, (a, b) in enumerate(itertools.zip_longest(left, right,
@@ -272,49 +269,97 @@ class Qwen3GPT(d2l.GPT):
         if hasattr(self, 'lm_head'):
             return self.lm_head(H)
         return F.linear(H, self.token_emb.weight)
+```
 
-    def init_cache(self, batch_size, max_len):
-        """Zeroed keys and values for every block, each (blocks, batch, kv
-        heads, max_len, head_dim)."""
-        attn = self.blks[0].attention
-        shape = (len(self.blks), batch_size, attn.num_kv_heads, max_len,
-                 attn.head_dim)
-        p = self.token_emb.weight
-        return (torch.zeros(shape, device=p.device, dtype=p.dtype),
-                torch.zeros(shape, device=p.device, dtype=p.dtype))
+<!-- Placeholder (stage 2): the cached path: a key-value cache for every block, a forward step that reads and writes it, and generate_cached on top. -->
 
-    @torch.inference_mode()
-    def forward_cached(self, X, ks, vs, t):
-        """Logits after the last of the new tokens X, which sit at positions
-        t, t + 1, ...; writes their keys and values into the cache."""
-        tables = qwen3_rope_tables(X.shape[1], self.head_width,
-                                   self.rope_theta, t, X.device)
-        H = self.token_emb(X)
-        for i, blk in enumerate(self.blks):  # the modules of blk.forward
-            H = H + blk.attention.forward_step(blk.norm1(H), (ks[i], vs[i], t),
-                                               tables)
-            H = H + blk.ffn(blk.norm2(H))
-        H = self.norm(H[:, -1])
-        if hasattr(self, 'lm_head'):
-            return self.lm_head(H), ks, vs
-        return F.linear(H, self.token_emb.weight), ks, vs
+```{.python .input #d2l-checkpoint-cached-path}
+%%tab pytorch
+@d2l.add_to_class(Qwen3GPT)  #@save
+def init_cache(self, batch_size, max_len):
+    """Zeroed keys and values for every block, each (blocks, batch, kv
+    heads, max_len, head_dim)."""
+    attn = self.blks[0].attention
+    shape = (len(self.blks), batch_size, attn.num_kv_heads, max_len,
+             attn.head_dim)
+    p = self.token_emb.weight
+    return (torch.zeros(shape, device=p.device, dtype=p.dtype),
+            torch.zeros(shape, device=p.device, dtype=p.dtype))
 
-    @torch.inference_mode()
-    def generate_cached(self, prefix, num_tokens, temperature=1.0, top_k=None):
-        """Sample as generate does, but never recompute the prefix."""
-        assert len(prefix) + num_tokens <= self.max_len, 'cache overflow'
-        X = torch.tensor(prefix, device=self.token_emb.weight.device)[None]
-        ks, vs = self.init_cache(1, len(prefix) + num_tokens)
-        logits, ks, vs = self.forward_cached(X, ks, vs, 0)
-        tokens = []
-        for t in range(len(prefix), len(prefix) + num_tokens):
-            tokens.append(d2l.sample_logits(logits, 'sample', temperature,
-                                            k=top_k))
-            if t + 1 < len(prefix) + num_tokens:  # logits for the next draw
-                logits, ks, vs = self.forward_cached(tokens[-1][:, None], ks,
-                                                     vs, t)
-        return list(prefix) + torch.cat(tokens).tolist()
+@d2l.add_to_class(Qwen3GPT)  #@save
+@torch.inference_mode()
+def forward_cached(self, X, ks, vs, t):
+    """Logits after the last of the new tokens X, which sit at positions
+    t, t + 1, ...; writes their keys and values into the cache."""
+    tables = qwen3_rope_tables(X.shape[1], self.head_width, self.rope_theta,
+                               t, X.device)
+    H = self.token_emb(X)
+    for i, blk in enumerate(self.blks):  # the modules of blk.forward
+        H = H + blk.attention.forward_step(blk.norm1(H), (ks[i], vs[i], t),
+                                           tables)
+        H = H + blk.ffn(blk.norm2(H))
+    H = self.norm(H[:, -1])
+    if hasattr(self, 'lm_head'):
+        return self.lm_head(H), ks, vs
+    return F.linear(H, self.token_emb.weight), ks, vs
 
+@d2l.add_to_class(Qwen3GPT)  #@save
+@torch.inference_mode()
+def generate_cached(self, prefix, num_tokens, temperature=1.0, top_k=None):
+    """Sample as generate does, but never recompute the prefix."""
+    assert len(prefix) + num_tokens <= self.max_len, 'cache overflow'
+    X = torch.tensor(prefix, device=self.token_emb.weight.device)[None]
+    ks, vs = self.init_cache(1, len(prefix) + num_tokens)
+    logits, ks, vs = self.forward_cached(X, ks, vs, 0)
+    tokens = []
+    for t in range(len(prefix), len(prefix) + num_tokens):
+        tokens.append(d2l.sample_logits(logits, 'sample', temperature,
+                                        k=top_k))
+        if t + 1 < len(prefix) + num_tokens:  # logits for the next draw
+            logits, ks, vs = self.forward_cached(tokens[-1][:, None], ks, vs,
+                                                 t)
+    return list(prefix) + torch.cat(tokens).tolist()
+```
+
+<!-- Placeholder (stage 2): with every Qwen3 feature off, the subclass is the book's GPT: same logits, same cached path, same greedy tokens. -->
+
+```{.python .input #d2l-checkpoint-generalization}
+%%tab pytorch
+torch.manual_seed(0)
+gpt = d2l.GPT(100, num_hiddens=64, num_heads=4, num_blks=2).eval()
+port = Qwen3GPT(100, num_hiddens=64, num_heads=4, num_kv_heads=4,
+                num_blks=2, qk_norm=False, rope_theta=1e4, norm_eps=1e-5,
+                ffn_hidden=round(8 * 64 / 3)).eval()
+state = {}
+for name, W in gpt.state_dict().items():  # the fused W_qkv, split by rows
+    if 'W_qkv' in name:
+        for part, rows in zip(('W_q', 'W_k', 'W_v'), W.split(64)):
+            state[name.replace('W_qkv', part)] = rows
+    else:
+        state[name] = W
+port.load_state_dict(state, strict=True)
+X = torch.randint(0, 100, (4, 32))
+with torch.no_grad():
+    book_tables = d2l.rope_tables(32, port.head_width)  # GPT's angles
+    full = (port(X, tables=book_tables) - gpt(X)).abs().max().item()
+    ks, vs = port.init_cache(4, 32)  # 16 tokens at once, then one by one
+    steps = [port.forward_cached(X[:, :16], ks, vs, 0)[0]] + [
+        port.forward_cached(X[:, t:t + 1], ks, vs, t)[0]
+        for t in range(16, 32)]
+    cached = (torch.stack(steps, 1) - port(X)[:, 15:]).abs().max().item()
+prefix = X[0, :8].tolist()
+same_greedy = (port.generate_cached(prefix, 16, top_k=1)
+               == gpt.generate(prefix, 16, top_k=1))
+print(f'max |logit difference| from d2l.GPT: {full:.1e}')
+print(f'forward_cached against forward: {cached:.1e}')
+print(f'same greedy tokens: {same_greedy}')
+assert full <= 1e-5 and cached <= 1e-5 and same_greedy
+```
+
+<!-- Placeholder (stage 2): the port's arguments from a checkpoint's configuration, and the settings it refuses. -->
+
+```{.python .input #d2l-checkpoint-gpt-kwargs}
+%%tab pytorch
 #@save
 def qwen3_gpt_kwargs(cfg):
     """Qwen3GPT's arguments from a Qwen3 configuration (a dict or a
@@ -349,39 +394,6 @@ def qwen3_gpt_kwargs(cfg):
         ffn_hidden=c['intermediate_size'], norm_eps=c['rms_norm_eps'],
         tie_embeddings=c.get('tie_word_embeddings', False),
         max_len=c['max_position_embeddings'], bias=False)
-```
-
-<!-- Placeholder (stage 2): with every Qwen3 feature off, the subclass is the book's GPT: same logits, same cached path, same greedy tokens. -->
-
-```{.python .input #d2l-checkpoint-generalization}
-%%tab pytorch
-torch.manual_seed(0)
-gpt = d2l.GPT(100, num_hiddens=64, num_heads=4, num_blks=2).eval()
-port = Qwen3GPT(100, 64, 4, 4, 2, qk_norm=False, rope_theta=1e4,
-                norm_eps=1e-5, ffn_hidden=round(8 * 64 / 3)).eval()
-state = {}
-for name, W in gpt.state_dict().items():  # the fused W_qkv, split by rows
-    if 'W_qkv' in name:
-        for part, rows in zip(('W_q', 'W_k', 'W_v'), W.split(64)):
-            state[name.replace('W_qkv', part)] = rows
-    else:
-        state[name] = W
-port.load_state_dict(state, strict=True)
-X = torch.randint(0, 100, (4, 32))
-with torch.no_grad():
-    book_tables = d2l.rope_tables(32, port.head_width)  # GPT's angles
-    full = (port(X, tables=book_tables) - gpt(X)).abs().max().item()
-    ks, vs = port.init_cache(4, 32)  # 16 tokens at once, then one by one
-    steps = [port.forward_cached(X[:, :16], ks, vs, 0)[0]] + [
-        port.forward_cached(X[:, t:t + 1], ks, vs, t)[0]
-        for t in range(16, 32)]
-    cached = (torch.stack(steps, 1) - port(X)[:, 15:]).abs().max().item()
-prefix = X[0, :8].tolist()
-same = (port.generate_cached(prefix, 16, top_k=1)
-        == gpt.generate(prefix, 16, top_k=1))
-print(f'max |logit difference| from d2l.GPT: {full:.1e}; forward_cached '
-      f'against forward: {cached:.1e}; same greedy tokens: {same}')
-assert full <= 1e-5 and cached <= 1e-5 and same
 ```
 
 <!-- Placeholder (stage 2): the port's parameter count against the configuration count of sec_lm_hf_models and the checkpoint header, for 0.6B and the untied 8B. -->
@@ -437,20 +449,20 @@ idx = qwen3_rope_permutation(d_h)
 q, k = torch.randn(T, d_h), torch.randn(T, d_h)
 gamma = 1 + 0.5 * torch.randn(d_h)  # a QK-norm gain
 norm = lambda x, g: F.rms_norm(x, (d_h,), g, 1e-6)
-tables = d2l.qwen3_rope_tables(T, d_h, 1e6)  # positions 0, ..., 63
-hf = (rotate_half(norm(q, gamma), *tables)
-      @ rotate_half(norm(k, gamma), *tables).T)
-book = lambda g: (d2l.rope(norm(q[:, idx], g), tables=tables)
-                  @ d2l.rope(norm(k[:, idx], g), tables=tables).T)
-scale = hf.abs().max()
-with_p, without = ((book(g) - hf).abs().max() / scale
+tables = qwen3_rope_tables(T, d_h, 1e6)  # positions 0, ..., 63
+hf_scores = (rotate_half(norm(q, gamma), *tables)
+             @ rotate_half(norm(k, gamma), *tables).T)
+port_scores = lambda g: (d2l.rope(norm(q[:, idx], g), tables=tables)
+                         @ d2l.rope(norm(k[:, idx], g), tables=tables).T)
+scale = hf_scores.abs().max()
+with_p, without = ((port_scores(g) - hf_scores).abs().max() / scale
                    for g in (gamma[idx], gamma))
 print(f'max |score difference| / max |score|: rows and gain permuted '
       f'{with_p:.1e}, gain not permuted {without:.1e}')
 assert with_p <= 1e-5 and without > 1e-2
 ```
 
-<!-- Placeholder (stage 2): the weight map as strict accounting, and loading. -->
+<!-- Placeholder (stage 2): the weight map as strict accounting. -->
 
 ```{.python .input #d2l-checkpoint-map-load}
 %%tab pytorch
@@ -506,36 +518,12 @@ def map_qwen3_state_dict(hf_state, cfg, rope_layout='permute'):
         raise KeyError(f'not consumed: {sorted(left)}; '
                        f'not produced: {missing}')
     return state
+```
 
-#@save
-def _qwen3_files(model_id, revision):
-    """Local paths of config.json, generation_config.json (None if the
-    repository has none) and the safetensors files of a Hub checkpoint at a
-    revision, downloaded into the Hugging Face cache."""
-    import huggingface_hub
-    # the Hub answered that the file is absent; LocalEntryNotFoundError
-    # (offline, not cached) is a sibling subclass and must propagate
-    from huggingface_hub.errors import RemoteEntryNotFoundError
+<!-- Placeholder (stage 2): loading: build on the meta device, map, assign; the Hub download itself is library plumbing. -->
 
-    def get(filename, optional=False):
-        try:
-            return huggingface_hub.hf_hub_download(model_id, filename,
-                                                   revision=revision)
-        except RemoteEntryNotFoundError:
-            if optional:
-                return None
-            raise
-
-    index = get('model.safetensors.index.json', optional=True)
-    if index is None:
-        weights = [get('model.safetensors')]
-    else:  # a sharded checkpoint lists its shards in the index
-        with open(index) as fh:
-            shards = sorted(set(json.load(fh)['weight_map'].values()))
-        weights = [get(shard) for shard in shards]
-    return (get('config.json'), get('generation_config.json', optional=True),
-            weights)
-
+```{.python .input #d2l-checkpoint-load-qwen3}
+%%tab pytorch
 #@save
 def load_qwen3(model_id='Qwen/Qwen3-0.6B', revision=None, *,
                dtype=torch.bfloat16, device=None):
@@ -544,8 +532,8 @@ def load_qwen3(model_id='Qwen/Qwen3-0.6B', revision=None, *,
     The tokenizer is loaded separately, at model.revision."""
     from safetensors.torch import load_file  # lazy, as in load_gpt2
     revision = revision or d2l.HF_REVISIONS[model_id]
-    config_file, generation_file, weight_files = _qwen3_files(model_id,
-                                                              revision)
+    config_file, generation_file, weight_files = d2l._qwen3_files(
+        model_id, revision)
     with open(config_file) as fh:
         cfg = json.load(fh)
     with torch.device('meta'):  # shapes only: no memory is allocated
@@ -584,7 +572,7 @@ try:
     map_qwen3_state_dict(hf_state, cfg)
     raise AssertionError('a missing tensor went unnoticed')
 except KeyError as e:
-    print('KeyError:', e.args[0])
+    print('KeyError:', e.args[0].replace('; ', '\n  '))
 del hf_state, state
 ```
 
@@ -597,8 +585,8 @@ def release():  # return the memory of deleted models to the GPU
     torch.cuda.empty_cache()
 
 ours32 = load_qwen3(QWEN, dtype=torch.float32, device=device)
-hf32, tok = d2l.load_hf(QWEN, dtype=torch.float32)
-hf32.set_attn_implementation('eager')
+hf32, tok = d2l.load_hf(QWEN, dtype=torch.float32,
+                        attn_implementation='eager')
 hf64, _ = d2l.load_hf(QWEN, dtype=torch.float64)  # SDPA keeps fp64 softmax
 print(f'port: {d2l.num_params(ours32):,} parameters, a d2l.GPT: '
       f'{isinstance(ours32, d2l.GPT)}; Transformers: '
@@ -606,7 +594,7 @@ print(f'port: {d2l.num_params(ours32):,} parameters, a d2l.GPT: '
 assert d2l.num_params(ours32) == hf32.num_parameters() == 596_049_920
 ```
 
-<!-- Placeholder (stage 2): a provisional paired bootstrap for the ratio of two mean errors, the rule of eq_lm_port_rule, and two helpers that read logits. -->
+<!-- Placeholder (stage 2): a provisional paired bootstrap for the ratio of two mean errors, and the rule of eq_lm_port_rule. -->
 
 ```{.python .input #d2l-checkpoint-ratio-interval}
 %%tab pytorch
@@ -619,14 +607,25 @@ def ratio_interval(a, b, num_samples=2000, seed=0):
     ratios = a[rows].mean(1) / b[rows].mean(1)
     return a.mean() / b.mean(), np.percentile(ratios, [2.5, 97.5])
 
+Rule = collections.namedtuple('Rule', 'ratio lo hi verdict')
+
 def port_rule(e_ours, e_ref, factor=1.5):
     """The rule: passes if the whole interval of the ratio is at most
-    factor, fails if it is above; a summary string and the verdict."""
+    factor, fails if it is above it, else undecided."""
     ratio, (lo, hi) = ratio_interval(e_ours, e_ref)
     verdict = ('passes' if hi <= factor else 'fails' if lo > factor
                else 'undecided')
-    return f'{ratio:.3g} [{lo:.3g}, {hi:.3g}] {verdict}', verdict
+    return Rule(ratio, lo, hi, verdict)
 
+def rule_text(rule):
+    """The ratio, its interval and the verdict, to two digits."""
+    return f'{rule.ratio:.2g} [{rule.lo:.2g}, {rule.hi:.2g}] {rule.verdict}'
+```
+
+<!-- Placeholder (stage 2): two helpers that read logits, and the mean absolute logit error per prompt. -->
+
+```{.python .input #d2l-checkpoint-read-logits}
+%%tab pytorch
 def logits(model, X, **kwargs):
     """Logits of the port or of a Transformers model for the ids X."""
     with torch.inference_mode():
@@ -658,44 +657,68 @@ def batched_errors(model, ref, ids, batch_size):
     return np.concatenate(e)
 ```
 
-<!-- Placeholder (stage 2): the fp32 rule on the 32 prompts, determinism, the two frequency formulas, and the long prompt with each set of angles, against the reference and against the reference with exact angles (the rule tests agreement with Transformers' angle rounding, not angle accuracy). -->
+<!-- Placeholder (stage 2): the fp32 rule on the 32 prompts, determinism, and how far batch composition alone moves the ratio, with Transformers in batches of 4 and in the same batches as the port. -->
 
 ```{.python .input #d2l-checkpoint-fp32-check}
 %%tab pytorch
-e32_hf, e32_ours, delta32, gap = [], [], 0, 0
+e32_hf, e32_ours, delta32, ours_vs_hf = [], [], 0, 0
 for X in ids.split(4):  # batches of 4 prompts
     L64, L_hf, L_ours = (logits(m, X) for m in (hf64, hf32, ours32))
     e32_hf.append(mean_abs(L_hf, L64))
     e32_ours.append(mean_abs(L_ours, L64))
     delta32 = max(delta32, (L_hf - L64).abs().max().item())
-    gap = max(gap, (L_ours - L_hf).abs().max().item())
+    ours_vs_hf = max(ours_vs_hf, (L_ours - L_hf).abs().max().item())
 del L64, L_hf, L_ours  # per-batch logits: free their GPU memory
 e32_hf, e32_ours = np.concatenate(e32_hf), np.concatenate(e32_ours)
-text, verdict = port_rule(e32_ours, e32_hf)
+rule32 = port_rule(e32_ours, e32_hf)
 L1, L2 = logits(ours32, ids[:4]), logits(ours32, ids[:4])  # twice
-same, rerun = torch.equal(L1, L2), (L1 - L2).abs().max().item()
+deterministic, rerun = torch.equal(L1, L2), (L1 - L2).abs().max().item()
 del L1, L2
 print(f'fp32: e_HF {e32_hf.mean():.2e}, e_ours {e32_ours.mean():.2e}, '
-      f'ratio {text}\nmax |L_HF - L_64| {delta32:.1e}, max |L_ours - L_HF| '
-      f'{gap:.1e}, deterministic: '
-      + ('True' if same else f'to within {rerun:.1e}'))
-batch_rules = {b: port_rule(batched_errors(ours32, hf64, ids, b), e32_hf)
-               for b in (1, 4, 16)}  # batch composition alone
-print('ratio with the port in batches of\n' + '\n'.join(
-    f'{b:4}: {text}' for b, (text, _) in batch_rules.items()))
+      f'ratio {rule_text(rule32)}')
+print(f'max |L_HF - L_64| {delta32:.1e}, max |L_ours - L_HF| '
+      f'{ours_vs_hf:.1e}, deterministic: '
+      + ('True' if deterministic else f'to within {rerun:.1e}'))
+print(f'{"batch":>5}  {"ratio, Transformers in 4s":28}'
+      'ratio, Transformers in the same batches')
+batch_rules = {}
+for b in (1, 4, 16):  # batch composition alone
+    e_ours = batched_errors(ours32, hf64, ids, b)
+    e_hf = batched_errors(hf32, hf64, ids, b)
+    batch_rules[b] = port_rule(e_ours, e32_hf), port_rule(e_ours, e_hf)
+    print(f'{b:5}  {rule_text(batch_rules[b][0]):28}'
+          f'{rule_text(batch_rules[b][1])}')
+if not SMALL:
+    assert rule32.verdict == 'passes'
+    assert all(r.verdict == 'passes' for rules in batch_rules.values()
+               for r in rules)
+```
+
+<!-- Placeholder (stage 2): the two frequency formulas, and the long prompt with each set of angles, against the reference and against the reference with exact angles (the rule tests agreement with Transformers' angle rounding, not angle accuracy). -->
+
+```{.python .input #d2l-checkpoint-long-prompt}
+%%tab pytorch
 two_i = torch.arange(0, 128, 2, dtype=torch.float32) / 128
 inv_hf, inv_book = 1.0 / 1e6 ** two_i, 1e6 ** -two_i  # equal in exact math
-print(f'frequencies that differ: {(inv_hf != inv_book).sum()} of 64; '
-      'largest angle difference at position ' + ', '.join(
-          f'{p:,}: {p * (inv_hf.double() - inv_book).abs().max():.1e}'
-          for p in (63, 4095, 32767)))
+print(f'frequencies that differ: {(inv_hf != inv_book).sum()} of 64')
+print('largest angle difference at position ' + ', '.join(
+    f'{p:,}: {p * (inv_hf.double() - inv_book).abs().max():.1e}'
+    for p in (63, 4095, 32767)))
+inv64 = 1 / 1e6 ** (torch.arange(0, 128, 2, dtype=torch.float64) / 128)
+
+class ExactRotary(nn.Module):
+    """Transformers' rotary-embedding interface, with the angles in fp64."""
+    def forward(self, x, position_ids):
+        a = position_ids[..., None].double() * inv64.to(x.device)
+        a = torch.cat((a, a), -1)
+        return a.cos().to(x.dtype), a.sin().to(x.dtype)
+
 if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
     X = long_ids[None]
     blocks = lambda L, R: (L.double() - R).abs().mean(-1).reshape(
         16, 16).mean(1).cpu().numpy()
-    inv64 = 1 / 1e6 ** (torch.arange(0, 128, 2, dtype=torch.float64) / 128)
     exact = torch.arange(4096, dtype=torch.float64)[:, None] * inv64
-    angles = {'reference': None,  # the book's formula on the CPU, as above
+    angles = {'reference': None,  # the port's default, qwen3_rope_tables
               'book': d2l.rope_tables(4096, 128, base=1e6),
               'exact': (exact.cos().float(), exact.sin().float())}
     L_ours = {name: logits(ours32, X, logits_to_keep=256, tables=None
@@ -703,13 +726,6 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
               for name, t in angles.items()}
     L_hf = cached_logits(hf32, X, 256)
     L64 = cached_logits(hf64, X, 256, chunk=512)  # Transformers: fp32 angles
-
-    class ExactRotary(torch.nn.Module):  # Transformers' interface, but
-        def forward(self, x, position_ids):  # the angles in fp64
-            a = position_ids[..., None].double() * inv64.to(x.device)
-            a = torch.cat((a, a), -1)
-            return a.cos().to(x.dtype), a.sin().to(x.dtype)
-
     rotary, hf64.model.rotary_emb = hf64.model.rotary_emb, ExactRotary()
     L64_exact = cached_logits(hf64, X, 256, chunk=512)
     hf64.model.rotary_emb = rotary  # restore the reference
@@ -721,13 +737,10 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
           'ratio, reference with exact angles')
     for name, L in L_ours.items():
         rules = [port_rule(blocks(L, R), blocks(L_hf, R)) for R in refs]
-        print(f'{name:12}{rules[0][0]:28}{rules[1][0]}')
+        print(f'{name:12}{rule_text(rules[0]):28}{rule_text(rules[1])}')
         if name == 'reference':
-            assert rules[0][1] == 'passes'
+            assert rules[0].verdict == 'passes'
     del L_ours, L_hf, L64, L64_exact
-if not SMALL:
-    assert verdict == 'passes'
-    assert all(v == 'passes' for _, v in batch_rules.values())
 ```
 
 <!-- Placeholder (stage 2): the same rule in bf16, the fp32 reference as a stand-in for fp64, how far batch composition alone moves the ratio, and the ratio against Transformers' default SDPA attention instead of eager. -->
@@ -737,35 +750,35 @@ if not SMALL:
 del ours32
 release()
 ours16 = load_qwen3(QWEN, dtype=torch.bfloat16, device=device)
-hf16, _ = d2l.load_hf(QWEN, dtype=torch.bfloat16)
-hf16.set_attn_implementation('eager')
-e16_hf, e16_ours, e16_ours_32 = [], [], []
+hf16, _ = d2l.load_hf(QWEN, dtype=torch.bfloat16,
+                      attn_implementation='eager')
+e16_hf, e16_ours, e16_ours_ref32 = [], [], []
 for X in ids.split(4):
     L64, L32, L_hf, L_ours = (logits(m, X)
                               for m in (hf64, hf32, hf16, ours16))
     e16_hf.append(mean_abs(L_hf, L64))
     e16_ours.append(mean_abs(L_ours, L64))
-    e16_ours_32.append(mean_abs(L_ours, L32))
+    e16_ours_ref32.append(mean_abs(L_ours, L32))
 del L64, L32, L_hf, L_ours
-e16_hf, e16_ours, e16_ours_32 = map(np.concatenate,
-                                    (e16_hf, e16_ours, e16_ours_32))
-text, verdict = port_rule(e16_ours, e16_hf)
-change = e16_ours_32.mean() / e16_ours.mean() - 1
+e16_hf, e16_ours, e16_ours_ref32 = map(np.concatenate,
+                                       (e16_hf, e16_ours, e16_ours_ref32))
+rule16 = port_rule(e16_ours, e16_hf)
+change = e16_ours_ref32.mean() / e16_ours.mean() - 1
 print(f'bf16: e_HF {e16_hf.mean():.2e}, e_ours {e16_ours.mean():.2e}, '
-      f'ratio {text}\ne_ours against the fp32 instead of the fp64 '
-      f'reference: relative change {change:.1e}')
-
+      f'ratio {rule_text(rule16)}')
+print('e_ours against the fp32 instead of the fp64 reference: relative '
+      f'change {change:.1e}')
 print('ratio with the port in batches of ' + ', '.join(
-    f'{b}: {batched_errors(ours16, hf64, ids, b).mean() / e16_hf.mean():.3f}'
+    f'{b}: {batched_errors(ours16, hf64, ids, b).mean() / e16_hf.mean():.2f}'
     for b in (1, 4, 16)))
 hf16.set_attn_implementation('sdpa')  # Transformers' default attention
 e16_sdpa = np.concatenate([mean_abs(logits(hf16, X), logits(hf64, X))
                            for X in ids.split(4)])
 hf16.set_attn_implementation('eager')  # back to the yardstick above
 print(f'Transformers bf16 with SDPA attention: e_HF {e16_sdpa.mean():.2e}, '
-      f'ratio {port_rule(e16_ours, e16_sdpa)[0]}')
+      f'ratio {rule_text(port_rule(e16_ours, e16_sdpa))}')
 if not SMALL:
-    assert verdict == 'passes'
+    assert rule16.verdict == 'passes'
 ```
 
 <!-- Placeholder (stage 2): the batched sampler of the part. -->
@@ -884,9 +897,9 @@ def _lm_hf_steps(model, ids, pad_id):
     return run(X), step
 ```
 
-<!-- Placeholder (stage 2): one sampler for the port and for Transformers. -->
+<!-- Placeholder (stage 2): how a row's generation ends: an end token, a stop string, or the length limit. -->
 
-```{.python .input #d2l-checkpoint-generate}
+```{.python .input #d2l-checkpoint-finish}
 %%tab pytorch
 #@save
 def _lm_finish(tokens, logprobs, tokenizer, eos_ids, stop):
@@ -902,29 +915,12 @@ def _lm_finish(tokens, logprobs, tokenizer, eos_ids, stop):
     if logprobs is not None:
         logprobs = logprobs[:len(tokens)]
     return Generation(text, tokens, logprobs, reason)
+```
 
-#@save
-def _lm_unwrap(model):
-    """The model inside a torch.compile or PEFT wrapper (which pass every
-    keyword argument through to it), or model itself."""
-    while True:
-        inner = getattr(model, '_orig_mod', None)
-        if inner is None and hasattr(model, 'get_base_model'):
-            inner = model.get_base_model()
-        if inner is None or inner is model:
-            return model
-        model = inner
+<!-- Placeholder (stage 2): one sampler for the port and for Transformers; argument defaults, prompt encoding and random streams are library plumbing (d2l._lm_stopping, d2l._lm_prompt_ids, d2l._lm_generators). -->
 
-#@save
-def _lm_bos_ids(tokenizer):
-    """The special tokens the tokenizer puts before a text (a BOS, or
-    none). Those it appends after a text, such as an EOS, are left out:
-    a prompt continues where its text ends."""
-    with_sp, plain = (tokenizer(['a'], add_special_tokens=s)['input_ids'][0]
-                      for s in (True, False))
-    return next((with_sp[:k] for k in range(len(with_sp) - len(plain) + 1)
-                 if with_sp[k:k + len(plain)] == plain), [])
-
+```{.python .input #d2l-checkpoint-generate}
+%%tab pytorch
 #@save
 @torch.inference_mode()
 def generate(model, tokenizer, prompts, max_new_tokens=None, *,
@@ -933,40 +929,19 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
              enable_thinking=None, return_logprobs=False, batch_size=8):
     """Continue each prompt (a string, or with chat=True also a list of
     messages) and return one Generation per prompt, in input order.
-    strategy is 'greedy' or 'sample' (truncated_probs's temperature, k, p,
-    min_p). stop and eos_token_ids take one item or a list. seed is an
-    int or a torch.Generator, either one stream for the call, or a list
-    of one int per prompt: an item's random draws then depend only on its
-    seed; the
-    sampled text is batch-invariant only up to bf16 kernel drift, because
-    the logits depend on batch and padding composition
-    (:numref:`subsec_lm_nondeterminism`)."""
-    config = getattr(model, 'generation_config', None)
-    if max_new_tokens is None:
-        max_new_tokens = getattr(config, 'max_new_tokens', None) or 256
-    if eos_token_ids is None:  # the tokenizer's end token and the model's
-        eos = getattr(config, 'eos_token_id', None)
-        eos_token_ids = [tokenizer.eos_token_id,
-                         *(eos if isinstance(eos, list) else [eos])]
-    if isinstance(eos_token_ids, (int, np.integer)):
-        eos_token_ids = [eos_token_ids]
-    eos_ids = {int(i) for i in eos_token_ids if i is not None}
-    if isinstance(stop, str):  # one string, not its characters
-        stop = [stop]
-    if chat:  # a string is one user message; the template adds no BOS
-        opts = {} if enable_thinking is None else {
-            'enable_thinking': enable_thinking}
-        prompts = [tokenizer.apply_chat_template(
-            [{'role': 'user', 'content': x}] if isinstance(x, str) else x,
-            tokenize=False, add_generation_prompt=True, **opts)
-                   for x in prompts]
-    head = [] if chat else _lm_bos_ids(tokenizer)  # a BOS, never an EOS
-    ids = [head + tokenizer(x, add_special_tokens=False)['input_ids']
-           for x in prompts]
-    if not all(ids):  # Qwen3's tokenizer adds no BOS to predict from
-        raise ValueError('an empty prompt has no position to predict from')
+    strategy is 'greedy' or 'sample' (with truncated_probs's temperature,
+    k, p and min_p). stop and eos_token_ids take one item or a list. seed
+    is an int or a torch.Generator (one stream for the call) or a list of
+    one int per prompt (each prompt's draws then depend only on its seed).
+    A sampled text can still depend on the batch: batch and padding change
+    the logits by rounding, which can flip a near-tie."""
+    max_new_tokens, eos_ids, stop = d2l._lm_stopping(
+        model, tokenizer, max_new_tokens, eos_token_ids, stop)
+    ids = d2l._lm_prompt_ids(tokenizer, prompts, chat, enable_thinking)
+    generators = d2l._lm_generators(seed, len(ids))
     hf = sys.modules.get('transformers')  # loaded if model is one of its
-    if hf is not None and isinstance(_lm_unwrap(model), hf.PreTrainedModel):
+    if hf is not None and isinstance(d2l._lm_unwrap(model),
+                                     hf.PreTrainedModel):
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
         start = lambda rows: _lm_hf_steps(model, rows, pad)
         groups = [list(range(len(ids)))]  # left padding: input order
@@ -977,19 +952,11 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
             start = lambda rows: _lm_recompute_steps(model, rows)
         groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
                   for n in sorted({len(r) for r in ids})]
-    shared = isinstance(seed, (int, np.integer, torch.Generator))
-    if isinstance(seed, torch.Generator):
-        generator = seed
-    elif shared:
-        generator = torch.Generator().manual_seed(int(seed))
-    else:
-        assert len(seed) == len(ids), 'one seed per prompt'
-        generators = [torch.Generator().manual_seed(int(s)) for s in seed]
     out = [None] * len(ids)
     for rows in (g[j:j + batch_size] for g in groups
                  for j in range(0, len(g), batch_size)):
         logits, step = start([ids[i] for i in rows])
-        gen = generator if shared else [generators[i] for i in rows]
+        gen = generators(rows)
         tokens = [[] for _ in rows]
         logprobs = [[] for _ in rows] if return_logprobs else None
         active = set(range(len(rows)))
@@ -1053,18 +1020,20 @@ def top2_gap(model, tokenizer, text, tokens):
     top = logits(model, X)[0, -1].float().topk(2).values
     return (top[0] - top[1]).item()
 
-ref = gen['hf32']
+ref, bf16_error = gen['hf32'], e16_hf.mean()  # Transformers' bf16 error
 for name in ('ours32', 'ours16', 'hf16'):
     split = [first_split(g, r) for g, r in zip(gen[name], ref)]
     diverged = [(i, n) for i, n in enumerate(split) if n is not None]
     gaps = [top2_gap(hf32, tok, texts[i], ref[i][:n])
             for i, n in diverged]
-    others = '' if not diverged else (  # median over those that diverge
-        f'; the others first differ at token '
-        f'{np.median([n for _, n in diverged]):g} (median), top-2 gaps '
-        'there: ' + ', '.join(f'{g:.1e}' for g in gaps))
     print(f'{name}: {len(texts) - len(diverged)} of {len(texts)} identical '
-          f'to hf32 over {NEW_TOKENS} tokens{others}')
+          f'to hf32 over {NEW_TOKENS} tokens')
+    if diverged:  # where the others first differ, and how close a tie
+        print(f'  the others first differ at token '
+              f'{np.median([n for _, n in diverged]):g} (median); top-2 gap '
+              f'there {min(gaps):.1e} to {max(gaps):.1e},')
+        print(f'  below the bf16 logit error ({bf16_error:.1e}) for '
+              f'{sum(g < bf16_error for g in gaps)} of {len(gaps)}')
     if name == 'ours32':  # in fp32 only a near-tie may flip a token
         for (i, n), g in zip(diverged, gaps):
             print(f'  prompt {i}: token {n}, near-tie {g < 10 * delta32}')
@@ -1083,7 +1052,11 @@ for q, g in zip(questions, generate(
         enable_thinking=False, strategy='sample',
         temperature=config.temperature, k=config.top_k, p=config.top_p,
         seed=0)):
-    print(f'{q}\n  {g.text!r} ({g.finish_reason})')
+    print(q)
+    for line in g.text.splitlines():  # the reply, wrapped
+        if line.strip():
+            d2l.print_wrapped('  ' + line, width=96)
+    print(f'  ({g.finish_reason})')
 ```
 
 <!-- Placeholder (stage 2): the same loader on Qwen3-1.7B-Base (bf16 rule against an fp32 reference) and a dry run of Qwen3-8B from its header. -->
@@ -1093,20 +1066,21 @@ for q, g in zip(questions, generate(
 del models, ours32, hf32, ours16, hf16  # models held them too
 release()
 if not SMALL:  # Qwen3-1.7B-Base: fp32 reference logits kept on the CPU
-    hf32, _ = d2l.load_hf(QWEN_17B_BASE, dtype=torch.float32)
-    hf32.set_attn_implementation('eager')
+    hf32, _ = d2l.load_hf(QWEN_17B_BASE, dtype=torch.float32,
+                          attn_implementation='eager')
     ref = [logits(hf32, X).cpu() for X in ids.split(4)]
     del hf32
     release()
-    hf16, _ = d2l.load_hf(QWEN_17B_BASE, dtype=torch.bfloat16)
-    hf16.set_attn_implementation('eager')
+    hf16, _ = d2l.load_hf(QWEN_17B_BASE, dtype=torch.bfloat16,
+                          attn_implementation='eager')
     ours16 = load_qwen3(QWEN_17B_BASE, dtype=torch.bfloat16, device=device)
     e = {name: np.concatenate([mean_abs(logits(m, X), R.to(device))
                                for X, R in zip(ids.split(4), ref)])
          for name, m in (('hf', hf16), ('ours', ours16))}
-    text, verdict = port_rule(e['ours'], e['hf'])
-    print(f'Qwen3-1.7B-Base, bf16, {len(ids)} prompts: ratio {text}')
-    assert verdict == 'passes'
+    rule = port_rule(e['ours'], e['hf'])
+    print(f'Qwen3-1.7B-Base, bf16, {len(ids)} prompts: ratio '
+          f'{rule_text(rule)}')
+    assert rule.verdict == 'passes'
     del hf16, ours16, ref
     release()
 # Qwen3-8B: meta tensors with the header's shapes, mapped and assigned
@@ -1207,18 +1181,17 @@ def errors_against(ref_model, models, ids, batch_size=4):
     return {name: np.concatenate(e, -1) for name, e in errors.items()}
 
 hf64, _ = d2l.load_hf(QWEN, dtype=torch.float64)
-err, other = {}, {}  # other: the port in batches of 1 and 16, SDPA
+err, err_batch = {}, {}  # err_batch[bits, b]: the port in batches of b
 for dtype, bits in ((torch.float32, 32), (torch.bfloat16, 16)):
     ours = load_qwen3(QWEN, dtype=dtype, device=device)
-    hf, _ = d2l.load_hf(QWEN, dtype=dtype)
-    hf.set_attn_implementation('eager')
+    hf, _ = d2l.load_hf(QWEN, dtype=dtype, attn_implementation='eager')
     err.update(errors_against(hf64, {f'ours{bits}': ours, f'hf{bits}': hf},
                               ids))
     for b in (1, 16):  # batch composition alone
-        other[bits, b] = errors_against(hf64, {'': ours}, ids, b)['']
+        err_batch[bits, b] = errors_against(hf64, {'': ours}, ids, b)['']
     if bits == 16:  # Transformers' default attention instead of eager
         hf.set_attn_implementation('sdpa')
-        other['sdpa'] = errors_against(hf64, {'': hf}, ids)['']
+        err_sdpa16 = errors_against(hf64, {'': hf}, ids)['']
     del ours, hf
     release()
 median = {k: np.median(e, -1) for k, e in err.items()}  # (layers, points)
@@ -1237,17 +1210,17 @@ def ratio_range(e_ours, e_hf):
 
 print('port / Transformers (eager) over every layer and point')
 for bits, name in ((32, 'fp32'), (16, 'bf16')):
-    for b, e in ((1, other[bits, 1]), (4, err[f'ours{bits}']),
-                 (16, other[bits, 16])):
+    for b, e in ((1, err_batch[bits, 1]), (4, err[f'ours{bits}']),
+                 (16, err_batch[bits, 16])):
         print(f'{name}, port in batches of {b:2}: '
               + ratio_range(e, err[f'hf{bits}']))
 print('bf16, Transformers with SDPA:   '
-      + ratio_range(err['ours16'], other['sdpa']))
+      + ratio_range(err['ours16'], err_sdpa16))
 ```
 
-<!-- Placeholder (stage 2): five porting bugs that strict accounting passes: where each first diverges, and what the two logit rules say about each. -->
+<!-- Placeholder (stage 2): five porting bugs that strict accounting passes, as state dicts and arguments of the port, and the clean port as their control. -->
 
-```{.python .input #d2l-checkpoint-bugs}
+```{.python .input #d2l-checkpoint-bug-states}
 %%tab pytorch
 def build(state, cfg, dtype, device, **changes):
     """A Qwen3GPT with some arguments changed and its weights assigned from
@@ -1258,37 +1231,42 @@ def build(state, cfg, dtype, device, **changes):
                           strict=True, assign=True)
     return model.eval()
 
-def mean_square(m, key):  # a hook: mean of x^2 per token, its median
-    def hook(module, args):  # over the tokens after the first
-        m[key] = (args[0][:, 1:].float() ** 2).mean(-1).median().item()
-    return hook
+def swap_gate_up(state):
+    """The gate projection's weights in W_1, the up projection's in W_g."""
+    swap = {'W_g': 'W_1', 'W_1': 'W_g'}
+    return {'.'.join(swap.get(part, part) for part in k.split('.')): v
+            for k, v in state.items()}
+
+def reorder_blocks(state, order):
+    """Block j gets the weights of layer order[j]."""
+    renamed = {}
+    for k, v in state.items():
+        parts = k.split('.')
+        if parts[0] == 'blks':
+            parts[1] = str(order.index(int(parts[1])))
+        renamed['.'.join(parts)] = v
+    return renamed
 
 hf_state = load_file(huggingface_hub.hf_hub_download(
     QWEN, 'model.safetensors', revision=d2l.HF_REVISIONS[QWEN]))
 clean = map_qwen3_state_dict(hf_state, cfg)
 order = sorted(range(cfg['num_hidden_layers']), key=str)  # 0, 1, 10, ...
-relabel = lambda f: {f(k.split('.')): v for k, v in clean.items()}
 bugs = {  # name: (state dict, changed arguments of Qwen3GPT)
+    'clean': (clean, {}),
     'B1 RoPE rows not permuted': (
         map_qwen3_state_dict(hf_state, cfg, rope_layout='none'), {}),
     'B2 rope_theta 1e4': (clean, {'rope_theta': 1e4}),
-    'B3 gate and up swapped': (relabel(lambda p: '.'.join(
-        {'W_g': 'W_1', 'W_1': 'W_g'}.get(x, x) for x in p)), {}),
-    'B4 layers in string order': (relabel(lambda p: '.'.join(  # block j
-        p[:1] + [str(order.index(int(p[1])))] + p[2:] if p[0] == 'blks'
-        else p)), {}),  # gets the weights of layer order[j]
+    'B3 gate and up swapped': (swap_gate_up(clean), {}),
+    'B4 layers in string order': (reorder_blocks(clean, order), {}),
     'B5 every epsilon 1e-5': (clean, {'norm_eps': 1e-5})}
 del hf_state
-clean32, m = build(clean, cfg, torch.float32, device), {}
-for layer in (0, len(clean32.blks) - 1):  # the input of every norm
-    for n in ('norm1', 'attention.q_norm', 'attention.k_norm', 'norm2'):
-        clean32.blks[layer].get_submodule(n).register_forward_pre_hook(
-            mean_square(m, f'{layer}.{n}'))
-logits(clean32, ids[:4])
-del clean32
-print('mean square of the input, clean port: ' + ', '.join(
-    f'{k} {v:.1e}' for k, v in m.items()))
-floor, curves, found = err['ours32'], {}, {}
+```
+
+<!-- Placeholder (stage 2): where each bug first diverges, what the two logit rules say about it, and how many fp32 argmaxes it keeps, against the clean port. -->
+
+```{.python .input #d2l-checkpoint-bugs}
+%%tab pytorch
+floor, found = err['ours32'], {}  # floor: the clean port's layer errors
 for name, (state, changes) in bugs.items():
     bug32, bug16 = (build(state, cfg, dtype, device, **changes)
                     for dtype in (torch.float32, torch.bfloat16))
@@ -1301,35 +1279,75 @@ for name, (state, changes) in bugs.items():
         e32.append(mean_abs(L32, L64))
         e16.append(mean_abs(logits(bug16, X), L64))
         top1 += (L32.argmax(-1) == L64.argmax(-1)).sum().item()
-    del bug32, bug16
+    del bug32, bug16, L64, L32
     release()
-    errors = np.concatenate(errors, -1)
-    curves[name] = np.median(errors[:, 3], -1)  # resid_post
-    where = first_divergence(errors, floor)
-    there = 'none'
-    if where is not None:
-        l, j = where[0], _HIDDEN_POINTS.index(where[1])
-        times = np.median(errors[l, j]) / np.median(floor[l, j])
-        there = f'{where}, {times:.3g} x the clean error there'
-    rules = [port_rule(np.concatenate(e), e_hf)
-             for e, e_hf in ((e32, e32_hf), (e16, e16_hf))]
-    found[name] = (where, np.array_equal(errors[:2], floor[:2]), rules,
-                   np.concatenate(e16))
-    print(f'{name}: accounting passes; first divergence {there}\n'
-          f'  fp32 rule {rules[0][0]}; bf16 rule {rules[1][0]}; top-1 '
-          f'agreement with fp64 {top1} of {ids.numel()}')
-del hf64, L64, L32
+    errors = np.concatenate(errors, -1)  # (layers, points, prompts)
+    e32, e16 = np.concatenate(e32), np.concatenate(e16)
+    found[name] = dict(errors=errors, where=first_divergence(errors, floor),
+                       rules=(port_rule(e32, e32_hf), port_rule(e16, e16_hf)),
+                       e16=e16, top1=top1)
+del hf64
 release()
-where, exact, _, _ = found['B4 layers in string order']
+print('every state dict passes strict accounting (load_state_dict)')
+print(f'{"":26}{"diverges at":14}{"x clean":>9}  {"fp32 rule":15}'
+      f'{"bf16 rule":15}top-1 of {ids.numel():,}')
+for name, f in found.items():
+    there, times = 'none', '-'
+    if f['where'] is not None:
+        layer, point = f['where']
+        j = _HIDDEN_POINTS.index(point)
+        over = np.median(f['errors'][layer, j]) / np.median(floor[layer, j])
+        there, times = f'{layer}, {point}', f'{over:.2g}'
+    print(f'{name:26}{there:14}{times:>9}  ' + ''.join(
+        f'{f"{r.ratio:.2g} {r.verdict}":15}' for r in f['rules'])
+        + f'{f["top1"]:>5}')
+b4 = found['B4 layers in string order']
+exact = np.array_equal(b4['errors'][:2], found['clean']['errors'][:2])
 print(f'B4: blocks 0 and 1 bitwise equal to the clean port: {exact}')
-ratio, (lo, hi) = ratio_interval(found['B5 every epsilon 1e-5'][3], e16_ours)
-print(f"B5: bf16 logit error over the clean port's {ratio:.3g} "
-      f'[{lo:.3g}, {hi:.3g}]')
 # blocks 0 and 1 are correct; bitwise only on a deterministic device
-assert where == (2, 'attn_out') and (exact or not same)
-if not SMALL:  # B1-B4 fail both logit rules
-    assert all(r[1] == 'fails' for name, (_, _, rules, _) in found.items()
-               if not name.startswith('B5') for r in rules)
+assert b4['where'] == (2, 'attn_out') and (exact or not deterministic)
+assert found['clean']['where'] is None
+if not SMALL:  # the clean port passes both logit rules, B1-B4 fail both
+    assert all(r.verdict == 'passes' for r in found['clean']['rules'])
+    assert all(r.verdict == 'fails' for name, f in found.items()
+               if name[:2] in ('B1', 'B2', 'B3', 'B4') for r in f['rules'])
+```
+
+<!-- Placeholder (stage 2): B5, the wrong epsilon: the mean square m that each norm divides by, B5's layer errors at the first and the last layer against the clean port's in fp32 and bf16, both rules with their intervals, and B5's bf16 logit error paired against the clean port's. -->
+
+```{.python .input #d2l-checkpoint-b5}
+%%tab pytorch
+def mean_square(m, key):  # a hook: mean of x^2 per token, its median
+    def hook(module, args):  # over the tokens after the first
+        m[key] = (args[0][:, 1:].float() ** 2).mean(-1).median().item()
+    return hook
+
+clean32, m = build(clean, cfg, torch.float32, device), {}
+norms, last = ('norm1', 'q_norm', 'k_norm', 'norm2'), len(clean32.blks) - 1
+for layer in (0, last):  # the input of every norm of the first, last block
+    blk = clean32.blks[layer]
+    for n, module in zip(norms, (blk.norm1, blk.attention.q_norm,
+                                 blk.attention.k_norm, blk.norm2)):
+        module.register_forward_pre_hook(mean_square(m, (layer, n)))
+logits(clean32, ids[:4])
+del clean32, clean
+release()
+print('m, the mean square of the input of each norm (clean port, fp32)')
+print(f'{"layer":>5}' + ''.join(f'{n:>9}' for n in norms))
+for layer in (0, last):
+    print(f'{layer:5}' + ''.join(f'{m[layer, n]:9.1e}' for n in norms))
+b5, ok = found['B5 every epsilon 1e-5'], found['clean']
+print(f'median relative error of resid_post at layer 0 and layer {last}')
+for name, e in (('B5, fp32', b5['errors']), ('clean, fp32', ok['errors']),
+                ('clean, bf16', err['ours16'])):
+    print(f'  {name:12}' + ''.join(f'{np.median(e[l, 3]):9.1e}'
+                                   for l in (0, last)))
+for name, f in (('clean', ok), ('B5', b5)):
+    print(f'{name}: fp32 rule {rule_text(f["rules"][0])}; bf16 rule '
+          f'{rule_text(f["rules"][1])}')
+ratio, (lo, hi) = ratio_interval(b5['e16'], ok['e16'])
+print(f"B5's bf16 logit error against the clean port's: {ratio - 1:+.0%} "
+      f'[{lo - 1:+.0%}, {hi - 1:+.0%}]')
 ```
 
 <!-- Placeholder (stage 2): the plot below; caption sentence from spec fig_lm_layer_divergence. -->
@@ -1338,8 +1356,8 @@ if not SMALL:  # B1-B4 fail both logit rules
 %%tab pytorch
 resid_post = lambda e: np.median(e[:, 3], -1)  # median over prompts
 precision = [resid_post(err[k]) for k in ('ours32', 'hf32', 'ours16', 'hf16')]
-porting = list(curves.values()) + [resid_post(floor)]
-names = [name.split()[0] for name in curves] + ['correct']
+porting = [resid_post(f['errors']) for f in found.values()]
+names = [name.split()[0] for name in found]  # clean, B1, ..., B5
 ylim = (min(map(min, precision + porting)) / 2,  # one scale for both
         max(map(max, precision + porting)) * 2)
 _, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.6), sharey=True)
@@ -1350,6 +1368,6 @@ with d2l.plt.rc_context({'legend.fontsize': 'x-small'}):
              fmts=('C0-', 'C0--', 'C1-', 'C1--'), axes=axes[0])
     d2l.plot(np.arange(len(floor)), porting, 'layer', None, names,
              ylim=ylim, yscale='log',
-             fmts=('C0-', 'C1-', 'C2-', 'C3-', 'C4-', 'C7--'), axes=axes[1])
+             fmts=('C7--', 'C0-', 'C1-', 'C2-', 'C3-', 'C4-'), axes=axes[1])
     axes[1].legend(names, ncol=3, loc='center', bbox_to_anchor=(0.58, 0.27))
 ```

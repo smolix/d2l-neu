@@ -1143,6 +1143,7 @@ d2l.plot_intervals(K, {m.removeprefix('Qwen/'): tuple(np.array(
     xscale='log2', axes=d2l.plt.gca())
 ax = d2l.plt.gca()
 ax.autoscale(axis='y')  # d2l.plot fixed the range: fit the bands
+ax.set_xlim(K[0] / 1.15, K[-1] * 1.15)  # room for the maj@8 marks
 old = ax.get_legend()  # the models' colours, then what each mark shows
 ax.legend(old.legend_handles + [d2l.plt.Line2D([], [], color='k', ls=ls,
                                                marker=mk) for ls, mk in

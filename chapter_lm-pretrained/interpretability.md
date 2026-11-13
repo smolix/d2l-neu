@@ -617,8 +617,8 @@ if RETRAIN:  # LENS_STEPS batches of 16 windows: the first 1M tokens
     lens.load_state_dict(state)  # go on with the fp16 values it publishes
 else:
     key = 'lm-tuned-lens-qwen3-0.6b-v1'
-    lens.load_state_dict(torch.load(d2l.download_keyed(key),
-                                    weights_only=True))
+    lens.load_state_dict(torch.load(d2l.download_keyed(key),  # GPU-saved
+                                    map_location='cpu', weights_only=True))
     print(f'{key}: sha1 {d2l.DATA_HUB[key][1]}')
 lens.requires_grad_(False);
 ```
@@ -1204,7 +1204,8 @@ def train_and_save(acts, name):  # TopKSAE(d, 8192, k=50), seed 0, fp16 file
     return sae, len(acts)
 
 def load_sae(key):
-    saved = torch.load(d2l.download_keyed(key), weights_only=True)
+    saved = torch.load(d2l.download_keyed(key), map_location='cpu',
+                       weights_only=True)  # saved from the GPU
     sae = d2l.TopKSAE(**saved['config'])
     sae.load_state_dict(saved['state_dict'])
     print(f'{key}: sha1 {d2l.DATA_HUB[key][1]}')

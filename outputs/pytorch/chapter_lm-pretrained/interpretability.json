@@ -80,7 +80,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Wikipedia en, contrast: 300 docs from rows 0-142520 (20 blocks), 24.1 MB read\nWikipedia en, label: 100 docs from rows 22-142527 (20 blocks), 0.0 MB read\n"
+          "text": "Wikipedia en, contrast: 300 docs from rows 0-142520 (20 blocks), 24.1 MB read\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Wikipedia en, label: 100 docs from rows 22-142527 (20 blocks), 0.0 MB read\n"
         },
         {
           "type": "stream",
@@ -127,7 +132,7 @@
       "outputs": []
     },
     "interpretability-tuned-lens-fit": {
-      "code_fingerprint": "sha256:595c3b211941777ba46f8634e759394d274739195b5c4c35a7e4f55cfa4cc4f7",
+      "code_fingerprint": "sha256:c93b19c6f712d67b9c164e0c780c25478a869ed1eacb331bda27603aebd6446b",
       "kind": "text",
       "outputs": [
         {
@@ -138,7 +143,7 @@
       ]
     },
     "interpretability-lens-compare": {
-      "code_fingerprint": "sha256:686ddd01b87e7307ca817f7f3f7c6ee883cceee0acf95376334be7c36ae5bfa8",
+      "code_fingerprint": "sha256:00412e61c463307983284ccc2de822215f0f72e9bde829b21f9906edf7de57c7",
       "kind": "mixed",
       "outputs": [
         {
@@ -151,12 +156,12 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-lens-compare-1.svg",
           "bytes": 61615,
-          "sha256": "sha256:585a87b7c85094790339c247baecbf3b6132c40cf702ebb5c286796923b0c171"
+          "sha256": "sha256:99e85f50d871430fbda838c206ca157198c9570aa756c547963c44c0ad4daba8"
         }
       ]
     },
     "interpretability-probe-data": {
-      "code_fingerprint": "sha256:9816813cdd2153d9407f2fc06376cd5afad0be2795aab6b48aff4c72e2066e32",
+      "code_fingerprint": "sha256:111ce5babcdad4dbbc03992157f03b0d7226a9f1debd135ef1c4d0d414e58357",
       "kind": "text",
       "outputs": [
         {
@@ -167,7 +172,7 @@
       ]
     },
     "interpretability-probe": {
-      "code_fingerprint": "sha256:98787db20e22d24800a483d6adf2bc958b36d6f721a142e00affd4cb10576182",
+      "code_fingerprint": "sha256:fe252552f674320bf46f97cd3fff02a6b364b124d31afc3dbe534cd4f0e64d56",
       "kind": "text",
       "outputs": [
         {
@@ -183,7 +188,7 @@
       ]
     },
     "interpretability-recall-pairs": {
-      "code_fingerprint": "sha256:c1fdef6ccfac2e60726d7ceca512965e455ff4e7e5a336c7eb19da0f69fb8a33",
+      "code_fingerprint": "sha256:27dfeb16840702c8ea104ed40683003798d96e42720135e9de84f092bf10f1c2",
       "kind": "text",
       "outputs": [
         {
@@ -194,18 +199,18 @@
       ]
     },
     "interpretability-patch": {
-      "code_fingerprint": "sha256:77342e362593c80966d676111de1817ff90ec5adfa2cd4f728d7db14eab0f0a4",
+      "code_fingerprint": "sha256:bfad2affda6a54e4e2682ab20a8129078e304586930b5df3bb12ce5aa056d0bd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "effect tensor (3, 28, 8, 40) (kinds, blocks, positions, pairs)\n10.5 s for 26,880 patched forwards (672 per pair)\n"
+          "text": "effect tensor (3, 28, 8, 40) (kinds, blocks, positions, pairs)\n11.6 s for 26,880 patched forwards (672 per pair)\n"
         }
       ]
     },
     "interpretability-patch-additivity": {
-      "code_fingerprint": "sha256:0e85fc93b4faf1b20c04322fe0b53a0e78ce3606b6c7af8088ed4270a2ec556a",
+      "code_fingerprint": "sha256:0957e25c52216cab9d11bbec9580a8b0fc25ee0c63ff4509996a52c229c52e74",
       "kind": "text",
       "outputs": [
         {
@@ -216,7 +221,7 @@
       ]
     },
     "interpretability-patch-map": {
-      "code_fingerprint": "sha256:78cb5984c442709e3192ffef8deae4533556062b11a9c96736889f7e904f2b7b",
+      "code_fingerprint": "sha256:904d6ef20f318f47190bc7ceb3a6b077bffed76d6b0fcc0b772099211a7e52f2",
       "kind": "mixed",
       "outputs": [
         {
@@ -229,23 +234,23 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-patch-map-1.svg",
           "bytes": 54365,
-          "sha256": "sha256:ac73351deeb99b808e2b901a584f681f760cb10453dc9e33dff16ac085bb2fd8"
+          "sha256": "sha256:5fdfc3580e39d3f9669658c5e8bcd161d4a85bd02123a069355be8acf67b4001"
         }
       ]
     },
     "interpretability-atp": {
-      "code_fingerprint": "sha256:82e8d80db035edb696263c89e48162d772bbcc780d8c8be8cb11a576ae718be8",
+      "code_fingerprint": "sha256:6d8192cc33f26e3b1d1c0b1994a770ef9f17bee2ef99656779de651e4c8a6489",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.52 s for 672 forwards per pair; AtP: 0.55 s for 3 passes; ratio 19\n"
+          "text": "AtP tensor (3, 28, 8, 40)\npatching: 11.57 s for 672 forwards per pair; AtP: 0.59 s for 3 passes; ratio 20\n"
         }
       ]
     },
     "interpretability-atp-agreement": {
-      "code_fingerprint": "sha256:07831c12daa203acc4183ff260171280bfbc6efae7819014d8a4075b874dd6c4",
+      "code_fingerprint": "sha256:4527e7d774e2e66c172cb67090c0cd33e6a2689e368d69bede23e87c8e7ad6ba",
       "kind": "mixed",
       "outputs": [
         {
@@ -258,22 +263,22 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-atp-agreement-1.svg",
           "bytes": 113291,
-          "sha256": "sha256:5db1eec75be40f0490fab11b824b4723bcc7819ac578554f3f8e01c454cddbc8"
+          "sha256": "sha256:fbc12aa5f3fa4059066764ef93d1a230aee5452fda3496238798a0aca260dd23"
         }
       ]
     },
     "interpretability-topk-sae": {
-      "code_fingerprint": "sha256:3d78dffe39463b6be6f66bed1c06a472958b947084657192b632162834a0ddba",
+      "code_fingerprint": "sha256:38a2d2ab71d0a3bbb746a27ba4a90091b048d3c201a16e0f9a5c5b30c6059db0",
       "kind": "text",
       "outputs": []
     },
     "interpretability-train-sae": {
-      "code_fingerprint": "sha256:88c33baeb49b6355e79632432c226f046df99f105c9157fea25379cbf3933fb0",
+      "code_fingerprint": "sha256:8df073059a01c954e15982cea32f94f5ceced67a5740a00faec569d92fa16fc6",
       "kind": "text",
       "outputs": []
     },
     "interpretability-sae-r1": {
-      "code_fingerprint": "sha256:f2970651bff02f32d40732ac3ae986999cfe2382662d962c53653c8f6c6ac99b",
+      "code_fingerprint": "sha256:2d9b4d537e85256c8c47f1e256102d7a498c02aa3427dce002c4155877d51f8b",
       "kind": "text",
       "outputs": [
         {
@@ -284,13 +289,13 @@
       ]
     },
     "interpretability-load-17b": {
-      "code_fingerprint": "sha256:578697f907db93d2be2a278603d68827b1d9e14b3f945168c6e8927d8cffef73",
+      "code_fingerprint": "sha256:47605c4f673b539484dc76af252c87c3f2565dad671529d09b924971e3dc6aa4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after freeing R1: 45 MiB still allocated\n"
+          "text": "after freeing R1: 46 MiB still allocated\n"
         },
         {
           "type": "stream",
@@ -300,7 +305,7 @@
       ]
     },
     "interpretability-act-cache": {
-      "code_fingerprint": "sha256:64f1e5290b9938061996d8840fa1b8140b3b7ec3f222c8e214c4e07134e889be",
+      "code_fingerprint": "sha256:9d1b9a2f6562eaad5e7a5d9f43da62613c18bbf7ea386f6b7be2a108793c0b34",
       "kind": "text",
       "outputs": [
         {
@@ -311,7 +316,7 @@
       ]
     },
     "interpretability-sae-train-or-load": {
-      "code_fingerprint": "sha256:043c265a3771a92e04b1307af4d7293e826aba4e0c0fd7fc55bc66f8d0791081",
+      "code_fingerprint": "sha256:a922567589fa09413338156ead5fb40c972eb6c2dd9d6da80e2360c2c84af3d0",
       "kind": "text",
       "outputs": [
         {
@@ -322,7 +327,7 @@
       ]
     },
     "interpretability-caution": {
-      "code_fingerprint": "sha256:d96caf1fa366bdb867805b4b3699e5a561dadc36fb11bcd3f6c7a0b4afba4d7c",
+      "code_fingerprint": "sha256:3164d916409f6e38e28b0e2ca74d00204969433eabb0ab84b577bc244a570a87",
       "kind": "text",
       "outputs": [
         {
@@ -333,17 +338,17 @@
       ]
     },
     "interpretability-load-qwen-scope": {
-      "code_fingerprint": "sha256:f44d13e17e51aea144d8402b4475f541de87df552f0ceeb7ee053b69fc60c587",
+      "code_fingerprint": "sha256:b68914dd75a5f80d52367338f3bbc70d744ec5f5f12bfa6361b8f0e47a2a18bd",
       "kind": "text",
       "outputs": []
     },
     "interpretability-sae-metrics": {
-      "code_fingerprint": "sha256:fb0c5dc0eaf44b6b63c03cb5fb1513d0bd726cb4967a0ba3fe898fac9b979e03",
+      "code_fingerprint": "sha256:7d91ea324b32cb8413046a692f778f057f33e62ed34bf94ea98b701e44459b9a",
       "kind": "text",
       "outputs": []
     },
     "interpretability-sae-instrument": {
-      "code_fingerprint": "sha256:eed1bced0d1b4d7ba2f2a00a638e769654b79e89e054a68cf6e2364b05415f2e",
+      "code_fingerprint": "sha256:c7eb416327a00c22a681a2eb980ccc66ffb877e5efa7a173f0b171ccbc53cdfc",
       "kind": "text",
       "outputs": [
         {
@@ -359,7 +364,7 @@
       ]
     },
     "interpretability-sae-compare": {
-      "code_fingerprint": "sha256:082396b142e8f99066994c876b54bd094c8901db7ee499355f6a9e9fdf590154",
+      "code_fingerprint": "sha256:eec891c480598482f0b4acba81fa5ec7abfd4925c6ae1f97bb53c5b03323f69f",
       "kind": "text",
       "outputs": [
         {
@@ -370,7 +375,7 @@
       ]
     },
     "interpretability-features": {
-      "code_fingerprint": "sha256:10498ef6b3edd581340251f3538942f5b05709762afefed999d3c9fea6027e7e",
+      "code_fingerprint": "sha256:a3383025f28d26f5c8f7a9b2e84ffbd816e4af9c9e060d1388e46355db51d884",
       "kind": "text",
       "outputs": [
         {
@@ -391,7 +396,7 @@
       ]
     },
     "interpretability-directions": {
-      "code_fingerprint": "sha256:f6417896832c7a853b5703553e4d825c6178865baf9984a1cb8e92d28d29a6e6",
+      "code_fingerprint": "sha256:bbfc0e4e5e7e49154d04f41be91cb4d02eba3cffdeede8cdd6b4e4c6905268f0",
       "kind": "text",
       "outputs": [
         {
@@ -402,7 +407,7 @@
       ]
     },
     "interpretability-steer": {
-      "code_fingerprint": "sha256:9ff18ebbccd46d65ddeaf2f44d92951f84d3d25fbeb831dbf50a62828401ad07",
+      "code_fingerprint": "sha256:53cc58e97b2c661d38f1cab79e7626af13853511dcba614b58d1f17d58cfacbb",
       "kind": "text",
       "outputs": [
         {
@@ -453,7 +458,7 @@
       ]
     },
     "interpretability-frontier": {
-      "code_fingerprint": "sha256:9cdb013d6e78c5ccfca24e11d8ed292e707734fd01657bfc7b060cfa7a62b62b",
+      "code_fingerprint": "sha256:19e418d0deab0ab57b8fcdc3f2004055c8d61c1f69b1e4b89bfa2af1679caaa6",
       "kind": "mixed",
       "outputs": [
         {
@@ -466,12 +471,12 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-frontier-1.svg",
           "bytes": 53403,
-          "sha256": "sha256:a78a97e8cb89c5bc11a1084109cbf59a2d3a89e661d1a4ac88c70db4dbe0de26"
+          "sha256": "sha256:51ba572a9855b8bfeec9684a40482f914259e1594f5e7b5fc8d107ee2b6f0813"
         }
       ]
     },
     "interpretability-steer-samples": {
-      "code_fingerprint": "sha256:2b7aea3d5efb96b4e8edde8616c589fabb46cb02e722f5d87d721fefa1d994ef",
+      "code_fingerprint": "sha256:b5faa5892852861c5bc9aa118b9ff2701a4d3536e1a0bd98ef450cbeba82a64b",
       "kind": "text",
       "outputs": [
         {

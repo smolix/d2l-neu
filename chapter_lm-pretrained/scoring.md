@@ -1026,9 +1026,37 @@ answers = pd.DataFrame({name: pool.text.map(f)
 right = answers.apply(lambda col: col == pool.gold)
 print(right.groupby(pool.model).mean().round(3))
 differ = answers.nunique(axis=1, dropna=False) > 1
-print(f'extractors disagree on {differ.sum()} of {len(pool):,} generations; '
-      f'the last-number fallback alone credits '
-      f'{(right["last number"] & ~right["strict"]).sum()}')
+print(f'extractors disagree on {differ.sum()} of {len(pool):,} generations')
+
+def strict_source(text):
+    """Where the strict extractor reads its number: on a '####' line that
+    starts with it, bold or not (GSM8K's answer line), on a '####' line
+    with words first (a markdown heading, '#### Final Answer: **52**'),
+    after 'the answer is', or nowhere (None)."""
+    ends = [k.end() for k in re.finditer('####', text)]
+    rest = text[ends[-1]:] if ends else ''
+    if re.search(r'\d', rest):
+        return ('#### N' if re.match(r'[\s*]*\$?-?\.?\d', rest)
+                else '#### heading')
+    return ('the answer is' if d2l.extract_answer(text, strict=True)
+            else None)
+
+def bold_or_boxed(text):
+    """Whether the text's last number sits in a **bold** span or a box."""
+    found = list(re.finditer(r'\d[\d,]*', text))
+    line = text[:found[-1].start()].split('\n')[-1] if found else ''
+    return line.count('**') % 2 == 1 or '\\boxed{' in line
+
+source = pool.text.map(strict_source).rename('read at')
+print('strict answers by where they are read (correct ones in brackets):')
+where = right.strict.groupby([pool.model, source]).agg(['size', 'sum'])
+print((where['size'].astype(str) + ' (' + where['sum'].astype(str) + ')')
+      .unstack(fill_value='0 (0)'))
+only = right['last number'] & ~right['strict']  # credited by the fallback
+capped = pool.finish_reason == 'length'
+print(pd.DataFrame({'fallback alone credits': only, 'number in bold or box':
+                    only & pool.text.map(bold_or_boxed), 'reply cut at budget':
+                    only & capped}).groupby(pool.model).sum().to_string())
 ```
 
 <!-- Placeholder (stage 2): a provisional bootstrap, until d2l.paired_bootstrap in the next section. -->
@@ -1118,26 +1146,38 @@ def majority(answers):
     counts = collections.Counter(parsed)
     return max(parsed, key=counts.__getitem__) if parsed else None
 
-est, rows = {}, []
+def first_parsed(answers):
+    """The first parsed answer in sample order: the same filter, no vote."""
+    return next((a for a in answers if isinstance(a, str)), None)
+
+est, rows, n_parsed = {}, [], {}
 for m in PAIR:
     g = pool[pool.model == m].sort_values('sample_idx').groupby('problem_id')
     c = g.correct.sum().to_numpy()  # correct samples of 8, per problem
-    maj = (g.answer_strict.agg(majority) == g.gold.first()).to_numpy(float)
-    assert (d2l.pass_at_k(8, c, 8) >= maj).all()  # on every problem
+    maj, first = ((g.answer_strict.agg(f) == g.gold.first()).to_numpy(float)
+                  for f in (majority, first_parsed))
+    assert (d2l.pass_at_k(8, c, 8) >= np.maximum(maj, first)).all()
+    n_parsed[m] = g.answer_strict.agg(lambda a: a.map(
+        lambda v: isinstance(v, str)).sum()).mean()
     for k in K:
         est[m, k] = boot(d2l.pass_at_k(8, c, k))
         est[m, k, 'plug-in'] = np.mean(1 - (1 - c / 8) ** k)
-    est[m, 'maj'] = boot(maj)
+    est[m, 'maj'], est[m, 'first'] = boot(maj), boot(first)
     rows.append({'model': m, **{f'pass@{k}': est[m, k] for k in K},
-                 'maj@8': est[m, 'maj'],
-                 'maj@8 - pass@1': boot(maj, d2l.pass_at_k(8, c, 1))})
+                 'maj@8': est[m, 'maj'], 'first parsed of 8': est[m, 'first'],
+                 'maj@8 - pass@1': boot(maj, d2l.pass_at_k(8, c, 1)),
+                 'maj@8 - first parsed': boot(maj, first)})
 show = lambda e: f'{e[0]:.3f} [{e[1]:.3f}, {e[2]:.3f}]'
 print(pd.DataFrame(rows).set_index('model').map(show).T.to_string())
 print('plug-in:', {m: [round(float(est[m, k, 'plug-in']), 3) for k in K]
                    for m in PAIR})
-d2l.plot([K, K, [8], [8]], [[est[m, k, 'plug-in'] for k in K] for m in PAIR]
-         + [[est[m, 'maj'][0]] for m in PAIR],
-         fmts=('C0--', 'C1--', 'C0D', 'C1D'), figsize=(4.5, 3))
+print('parsed (strict) answers per problem, of 8:',
+      {m: round(float(v), 2) for m, v in n_parsed.items()})
+d2l.plot([K, K, [8], [8], [8], [8]],
+         [[est[m, k, 'plug-in'] for k in K] for m in PAIR]
+         + [[est[m, 'maj'][0]] for m in PAIR]
+         + [[est[m, 'first'][0]] for m in PAIR],
+         fmts=('C0--', 'C1--', 'C0D', 'C1D', 'C0x', 'C1x'), figsize=(4.5, 3))
 d2l.plot_intervals(K, {m.removeprefix('Qwen/'): tuple(np.array(
     [est[m, k] for k in K]).T) for m in PAIR}, 'k', 'pass@k', kind='band',
     xscale='log2', axes=d2l.plt.gca())
@@ -1147,9 +1187,10 @@ ax.set_xlim(K[0] / 1.15, K[-1] * 1.15)  # room for the maj@8 marks
 old = ax.get_legend()  # the models' colours, then what each mark shows
 ax.legend(old.legend_handles + [d2l.plt.Line2D([], [], color='k', ls=ls,
                                                marker=mk) for ls, mk in
-                                (('-', ''), ('--', ''), ('', 'D'))],
+                                (('-', ''), ('--', ''), ('', 'D'),
+                                 ('', 'x'))],
           [t.get_text() for t in old.texts] + ['unbiased', 'plug-in',
-                                               'maj@8'],
+                                               'maj@8', 'first parsed'],
           loc='upper left', bbox_to_anchor=(1, 1), frameon=False);
 ```
 
@@ -1515,8 +1556,8 @@ print(q + ''.join(f'\n{a}. {o}' for a, o in zip('ABCDE', opts)))
 print(f'gold {"ABCDE"[gold]}; Qwen3-0.6B: ' + ', '.join(
     f'{k} {v}' for k, v in verdicts.iloc[i].items()))
 print(f'first item with {rule} different letters ({ARC_IDS[i]}); items '
-      f'with at least two: {(n_verdicts > 1).sum()} of {len(ARC)} '
-      f'({committed.sum()} with a parsed reply)')
+      f'with at least two: {(n_verdicts > 1).sum()} of the {committed.sum()} '
+      f'with a parsed reply')
 ```
 
 <!-- Placeholder (stage 2): accuracy with item-bootstrap intervals per checkpoint and convention, and the gold answer's bits per byte. -->
@@ -1526,13 +1567,16 @@ print(f'first item with {rule} different letters ({ARC_IDS[i]}); items '
 ACC = {key: boot(c[~np.isnan(c)]) for key, c in CORRECT.items()
        if not np.isnan(c).all()}
 
-def gold_bpb(model):
-    """Bits per byte of each item's gold answer in the cloze format."""
-    i = np.arange(len(ARC))
-    return -matrix(arc, model, 'cloze')[i, GOLD] / (
-        matrix(arc, model, 'cloze', 'n_bytes')[i, GOLD] * math.log(2))
+def option_bpb(model):
+    """(items, 5) bits per byte of every option in the cloze format, nan
+    beyond an item's options: the log-probability of the option's tokens,
+    its leading space included, over the bytes of the option text without
+    that space (the harness's acc_bytes length)."""
+    return -matrix(arc, model, 'cloze') / (
+        matrix(arc, model, 'cloze', 'n_bytes') * math.log(2))
 
-BPB_GOLD = {m: gold_bpb(m) for m in MODELS}
+BPB_OPT = {m: option_bpb(m) for m in MODELS}
+BPB_GOLD = {m: b[np.arange(len(ARC)), GOLD] for m, b in BPB_OPT.items()}
 table = pd.DataFrame({m.removeprefix('Qwen/'): {
     c: show(ACC[m, c]) for c in CONVENTIONS if (m, c) in ACC}
     for m in MODELS}).reindex(CONVENTIONS).fillna('')
@@ -1560,10 +1604,19 @@ print(pd.DataFrame({'difference': {c: show(e) for c, e in PAIR_DIFF.items()},
                     'drift': {c: DRIFT[c] for c in PAIR_CONVS},
                     'ahead': ahead}).to_string())
 print('ranking flips:', len(set(ahead.values()) - {'neither'}) == 2)
-for name, (d, lo, hi) in [('cloze-char accuracy', PAIR_DIFF['cloze-char']),
-                          ('gold bpb', boot(BPB_GOLD[PAIR[1]],
-                                            BPB_GOLD[PAIR[0]]))]:
-    print(f'{name}: {show((d, lo, hi))}, |difference| over half-width '
+wrong = {}  # mean bpb of an item's wrong options
+for m in PAIR:
+    b = BPB_OPT[m].copy()
+    b[np.arange(len(ARC)), GOLD] = np.nan
+    wrong[m] = np.nanmean(b, 1)
+print('Qwen3.5-0.8B - Qwen3-0.6B:')
+for name, (d, lo, hi) in [
+        ('cloze-char accuracy', PAIR_DIFF['cloze-char']),
+        ('gold bpb', boot(BPB_GOLD[PAIR[1]], BPB_GOLD[PAIR[0]])),
+        ('wrong-option bpb', boot(wrong[PAIR[1]], wrong[PAIR[0]])),
+        ('wrong - gold bpb', boot(wrong[PAIR[1]] - BPB_GOLD[PAIR[1]],
+                                  wrong[PAIR[0]] - BPB_GOLD[PAIR[0]]))]:
+    print(f'    {name}: {show((d, lo, hi))}, |difference| over half-width '
           f'{abs(d) / ((hi - lo) / 2):.2f}')
 ```
 
@@ -1669,9 +1722,11 @@ print(pd.DataFrame(counts).T.reindex(columns=list('ABCDE')).fillna(0)
 %%tab pytorch
 chance = np.mean([1 / len(it[2]) for it in ARC])
 _, axes = d2l.plt.subplots(1, 2, figsize=(10, 3.5), gridspec_kw={
-    'width_ratios': [8, 7], 'wspace': 0.3})
-d2l.plot_intervals(CONVENTIONS, {m.removeprefix('Qwen/'): tuple(np.array(
-    [ACC.get((m, c), (np.nan,) * 3) for c in CONVENTIONS]).T)
+    'wspace': 0.3})
+# The seven conventions run on all 500 items; gen-reasoning (100 items, its
+# token budget cuts a third or more of the replies) stays in the table
+d2l.plot_intervals(PAIR_CONVS, {m.removeprefix('Qwen/'): tuple(np.array(
+    [ACC.get((m, c), (np.nan,) * 3) for c in PAIR_CONVS]).T)
     for m in MODELS}, 'convention', 'accuracy', reference=chance,
     axes=axes[0])
 d2l.plot_intervals(PAIR_CONVS, {'Qwen3.5-0.8B - Qwen3-0.6B': tuple(np.array(

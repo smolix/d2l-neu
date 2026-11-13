@@ -55,7 +55,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ARC-Challenge: 500 of 1,172 test items; options per item {4: 494, 5: 3, 3: 3}\ndemonstrations: Mercury_SC_415702 (A), MCAS_2009_5_6516 (B), MEA_2016_8_14 (C), Mercury_7041615 (D), MDSA_2008_5_30 (A)\nGSM8K: 100 of 1,319 test problems\n"
+          "text": "ARC-Challenge: 500 of 1,172 test items; options per item {4: 494, 5: 3, 3: 3}"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\ndemonstrations: Mercury_SC_415702 (A), MCAS_2009_5_6516 (B), MEA_2016_8_14 (C), Mercury_7041615 (D), MDSA_2008_5_30 (A)\nGSM8K: 100 of 1,319 test problems\n"
         }
       ]
     },
@@ -261,7 +266,7 @@
       ]
     },
     "scoring-extractors": {
-      "code_fingerprint": "sha256:3007dd6acfd6b98ff0b5eadde6cd469440b7b905affc146d06c15f6728bd10b3",
+      "code_fingerprint": "sha256:d2407126bd9ca38b6c5a7ac68e27bbfc6f5abd13a23421ede3dfd3a55b6b7358",
       "kind": "text",
       "outputs": [
         {
@@ -272,22 +277,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "extractors disagree on 1482 of 1,600 generations; the last-number fallback alone credits 571\n"
+          "text": "extractors disagree on 1482 of 1,600 generations\nstrict answers by where they are read (correct ones in brackets):\nread at              #### N #### heading the answer is\nmodel                                                 \nQwen/Qwen3-0.6B       1 (0)     121 (45)        16 (5)\nQwen/Qwen3.5-0.8B  118 (64)        0 (0)         0 (0)\n                   fallback alone credits  number in bold or box  reply cut at budget\nmodel                                                                                \nQwen/Qwen3-0.6B                       283                    251                    2\nQwen/Qwen3.5-0.8B                     288                    257                   12\n"
         }
       ]
     },
     "scoring-boot": {
-      "code_fingerprint": "sha256:ad6d0bb8bfff147b7be58aa416611561c180740f3db1023f555d819f8f4b5253",
+      "code_fingerprint": "sha256:22d3596f79c101df7664de25118cb6800ef616c7705746e9ffd3098bbe059aba",
       "kind": "text",
       "outputs": []
     },
     "scoring-pass-at-k": {
-      "code_fingerprint": "sha256:d8f681a42cbcfb5596b68b3ef0617ccafe4bf250cae8646f1e6a2955b9411cac",
+      "code_fingerprint": "sha256:94a505e58853f044d5a8ed81bac5b8f236a09b19ee75c136367f0d7af2fe7aec",
       "kind": "text",
       "outputs": []
     },
     "scoring-passk-check": {
-      "code_fingerprint": "sha256:18b298f532c3b4f36a71d6e6e2d38478b91f1faba2595db14ef91511d27066db",
+      "code_fingerprint": "sha256:b4dc8d0aec1cce651d56b468bf3ab16e3b1dd03d81a10c05d4b213cda596e24e",
       "kind": "text",
       "outputs": [
         {
@@ -298,25 +303,25 @@
       ]
     },
     "scoring-passk-pool": {
-      "code_fingerprint": "sha256:8d65f60b5bad10305bea4fb8c50c681871d317e8ac0c6f7035447dd60afa5653",
+      "code_fingerprint": "sha256:571c5ef5be192fd53f00ddfad52a38f29626040f2c683850cea413dacc0bc706",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "model                Qwen/Qwen3-0.6B     Qwen/Qwen3.5-0.8B\npass@1          0.062 [0.040, 0.087]  0.080 [0.051, 0.114]\npass@2          0.112 [0.074, 0.153]  0.135 [0.091, 0.184]\npass@4          0.187 [0.127, 0.248]  0.213 [0.147, 0.281]\npass@8          0.290 [0.200, 0.380]  0.300 [0.210, 0.390]\nmaj@8           0.240 [0.160, 0.320]  0.260 [0.180, 0.350]\nmaj@8 - pass@1  0.177 [0.115, 0.245]  0.180 [0.116, 0.247]\nplug-in: {'Qwen/Qwen3-0.6B': [0.062, 0.106, 0.163, 0.222], 'Qwen/Qwen3.5-0.8B': [0.08, 0.128, 0.188, 0.245]}\n"
+          "text": "model                        Qwen/Qwen3-0.6B     Qwen/Qwen3.5-0.8B\npass@1                  0.062 [0.040, 0.087]  0.080 [0.051, 0.114]\npass@2                  0.112 [0.074, 0.153]  0.135 [0.091, 0.184]\npass@4                  0.187 [0.127, 0.248]  0.213 [0.147, 0.281]\npass@8                  0.290 [0.200, 0.380]  0.300 [0.210, 0.390]\nmaj@8                   0.240 [0.160, 0.320]  0.260 [0.180, 0.350]\nfirst parsed of 8       0.260 [0.180, 0.350]  0.250 [0.170, 0.340]\nmaj@8 - pass@1          0.177 [0.115, 0.245]  0.180 [0.116, 0.247]\nmaj@8 - first parsed  -0.020 [-0.050, 0.000]  0.010 [0.000, 0.030]\nplug-in: {'Qwen/Qwen3-0.6B': [0.062, 0.106, 0.163, 0.222], 'Qwen/Qwen3.5-0.8B': [0.08, 0.128, 0.188, 0.245]}\nparsed (strict) answers per problem, of 8: {'Qwen/Qwen3-0.6B': 1.38, 'Qwen/Qwen3.5-0.8B': 1.18}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scoring/scoring-passk-pool-1.svg",
-          "bytes": 30565,
-          "sha256": "sha256:4f355c9ea01861dc193a7f3c0c7b488ceb1f5cd084ee5ce197f009382dbbd448"
+          "bytes": 33547,
+          "sha256": "sha256:b0c6670ef587196850eeb08486ca6d10679c7d9e85d55c60b211cb74e060075b"
         }
       ]
     },
     "scoring-passk-variance-split": {
-      "code_fingerprint": "sha256:5d8eca922feab8e7b1cbb8bd7d10cc63a9a51195d6e0010efa13680b26e7889c",
+      "code_fingerprint": "sha256:78420419ccd522bb382cfcaaeb85cb83264485a0a80e9833e9c8084e0044a985",
       "kind": "text",
       "outputs": [
         {
@@ -327,12 +332,12 @@
       ]
     },
     "scoring-run-tests": {
-      "code_fingerprint": "sha256:38ba1a9ce516cef26ae7d3cc57a36712cb8b797d22e0960db7ad046ca743fc80",
+      "code_fingerprint": "sha256:e9e0e1b5e2f3d9eaf4d5d4cdbcdf15e553a17e7cf74dc82d1f59bb0c298962fc",
       "kind": "text",
       "outputs": []
     },
     "scoring-run-tests-check": {
-      "code_fingerprint": "sha256:9e4a0f50186377053fad995f32f45845d7a7071afb98a4194d35a1466d9a6159",
+      "code_fingerprint": "sha256:d007a991a982f5a7bda4fa3cf5c2b38782ecec4c0fdc2b0ac2fad78458f4fe37",
       "kind": "text",
       "outputs": [
         {
@@ -348,33 +353,38 @@
       ]
     },
     "scoring-arc-arms": {
-      "code_fingerprint": "sha256:a3e9c5f1efb74f8724317b00e3e54bd10176e8a5d8763d6f1b99ac3afdfa5a67",
+      "code_fingerprint": "sha256:9176e1bcabc45eb40ccbbd65db25d128e36801b0105eb455bf99c12aa5aba1ae",
       "kind": "text",
       "outputs": []
     },
     "scoring-arc-generate": {
-      "code_fingerprint": "sha256:a1ad5a467baabe11bdfe4f92379c813dc6ccf933c840dc605157f93de5f93be8",
+      "code_fingerprint": "sha256:1169e90a4cd40ce2d6fa593bc64537e3cda8e57a5f6889c13b9406f3e96d4bda",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "direct: 500 items per model, settings {'strategy': 'greedy', 'enable_thinking': False, 'max_new_tokens': 512}\nreasoning: 100 items per model, settings {'strategy': 'sample', 'temperature': 0.6, 'p': 0.95, 'k': 20, 'seed': 0, 'enable_thinking': True, 'max_new_tokens': 1024}\n                             accuracy  among parsed  invalid  truncated  boxed, then cut  mean tokens\nmodel             arm                                                                                \nQwen/Qwen3-0.6B   direct        0.452         0.562    0.194      0.002            0.002      130.488\n                  reasoning     0.550         0.833    0.000      0.340              NaN      780.510\nQwen/Qwen3-1.7B   direct        0.772         0.789    0.008      0.014            0.004      220.418\n                  reasoning     0.500         0.962    0.000      0.480              NaN      895.860\nQwen/Qwen3.5-0.8B direct        0.672         0.771    0.000      0.128            0.002      341.258\n"
+          "text": "direct: 500 items per model, settings {'strategy': 'greedy', 'enable_thinking': False, 'max_new_tokens': 512}\nreasoning: 100 items per model, settings {'strategy': 'sample', 'temperature': 0.6, 'p': 0.95, 'k': 20, 'seed': 0, 'enable_thinking': True, 'max_new_tokens': 1024}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                             accuracy  among parsed  invalid  truncated  boxed, then cut  mean tokens\nmodel             arm                                                                                \nQwen/Qwen3-0.6B   direct        0.452         0.562    0.194      0.002            0.002      130.488\n                  reasoning     0.550         0.833    0.000      0.340              NaN      780.510\nQwen/Qwen3-1.7B   direct        0.772         0.789    0.008      0.014            0.004      220.418\n                  reasoning     0.500         0.962    0.000      0.480              NaN      895.860\nQwen/Qwen3.5-0.8B direct        0.672         0.771    0.000      0.128            0.002      341.258\n"
         }
       ]
     },
     "scoring-grid-def": {
-      "code_fingerprint": "sha256:2d41b2f39c2e37b220f469296099149baf79d7562e470eb31dab16f8201c9a29",
+      "code_fingerprint": "sha256:9796084ab4cf0ddb33e3f9c8fb6bc4bfe2cd59027e6754e71810b3d985053b44",
       "kind": "text",
       "outputs": []
     },
     "scoring-conventions": {
-      "code_fingerprint": "sha256:093eccf755d7e3e81aa9b08d19ff0c6128f43cc359cae27ddfe0ca75281832cb",
+      "code_fingerprint": "sha256:78274d2a716e594bb7d806f99f2e0418d402b2bcfa079a3fafc623150ae7cf20",
       "kind": "text",
       "outputs": []
     },
     "scoring-grid": {
-      "code_fingerprint": "sha256:7f1b92f706dcc4544166546faa6b7050c3fd0bd0d15d9e4fd67ba22362c30a35",
+      "code_fingerprint": "sha256:15fc58b205fdbe22a465ba61852537618ef45962a03d40e4d3bffb94587e7646",
       "kind": "text",
       "outputs": [
         {
@@ -385,7 +395,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B-Base: 31 s, peak 3.8 GiB (4.3 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v1\n    uncond: 500 of 500 predictions as in lm-arc-scores-v1\n    letter0: 500 of 500 predictions as in lm-arc-scores-v1\n    letter5: 500 of 500 predictions as in lm-arc-scores-v1\n"
+          "text": "Qwen/Qwen3-0.6B-Base: 32 s, peak 3.8 GiB (4.3 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v1\n    uncond: 500 of 500 predictions as in lm-arc-scores-v1\n    letter0: 500 of 500 predictions as in lm-arc-scores-v1\n    letter5: 500 of 500 predictions as in lm-arc-scores-v1\n"
         },
         {
           "type": "stream",
@@ -395,7 +405,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B: 32 s, peak 1.6 GiB (1.6 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v1\n    uncond: 500 of 500 predictions as in lm-arc-scores-v1\n    letter0: 500 of 500 predictions as in lm-arc-scores-v1\n    letter5: 500 of 500 predictions as in lm-arc-scores-v1\n"
+          "text": "Qwen/Qwen3-0.6B: 33 s, peak 1.6 GiB (1.6 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v1\n    uncond: 500 of 500 predictions as in lm-arc-scores-v1\n    letter0: 500 of 500 predictions as in lm-arc-scores-v1\n    letter5: 500 of 500 predictions as in lm-arc-scores-v1\n"
         },
         {
           "type": "stream",
@@ -405,7 +415,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3.5-0.8B-Base: 57 s, peak 2.0 GiB (2.1 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v1\n    uncond: 500 of 500 predictions as in lm-arc-scores-v1\n    letter0: 500 of 500 predictions as in lm-arc-scores-v1\n    letter5: 500 of 500 predictions as in lm-arc-scores-v1\n"
+          "text": "Qwen/Qwen3.5-0.8B-Base: 58 s, peak 2.0 GiB (2.1 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v1\n    uncond: 500 of 500 predictions as in lm-arc-scores-v1\n    letter0: 500 of 500 predictions as in lm-arc-scores-v1\n    letter5: 500 of 500 predictions as in lm-arc-scores-v1\n"
         },
         {
           "type": "stream",
@@ -430,7 +440,7 @@
       ]
     },
     "scoring-batch-size": {
-      "code_fingerprint": "sha256:1082fe9fb1bd9827457e476a4f9264f4ffd1b4dabe4d0f3c0498dd57e4be17de",
+      "code_fingerprint": "sha256:ca39ce9e5b2071dadedda372e78eac1fb8eacafa4c052ce803501a076e64ddc9",
       "kind": "text",
       "outputs": [
         {
@@ -441,7 +451,7 @@
       ]
     },
     "scoring-drift": {
-      "code_fingerprint": "sha256:d7da8678ba8e6ef6b47ee8aa4b64070a28f32e6c347ab9ea87894270e689c5d6",
+      "code_fingerprint": "sha256:beef8a45ee98c0b9986fd65ee838f49e53c1c709af6863695d812e2d0ee64d4b",
       "kind": "text",
       "outputs": [
         {
@@ -452,23 +462,23 @@
       ]
     },
     "scoring-verdicts": {
-      "code_fingerprint": "sha256:f3c47f6d4297dc333adb3ca79506ef51690a57c81ee0fd51e086f659cdfdff99",
+      "code_fingerprint": "sha256:18807ab24dd8402f23f5c148249759ac26796b0c2b41aa514fb0d9589f755ee8",
       "kind": "text",
       "outputs": []
     },
     "scoring-one-item": {
-      "code_fingerprint": "sha256:3d373efefec9c6a03c2cd145df00ca875abedf928625e0611345658f5c70c449",
+      "code_fingerprint": "sha256:7d5fa4430c31dcc9ede60bea9e952fedc16152bd02c39c69a6e082131021b3f0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "A farmer thinks that the vegetables on her farm are not getting enough water. Her son suggests that they use water from the nearby ocean to water the vegetables. Is this a good idea?\nA. Yes, because there is plenty of ocean water.\nB. Yes, because ocean water has many natural fertilizers.\nC. No, because ocean water is too salty for plants grown on land.\nD. No, because ocean water is much more polluted than rainwater.\ngold C; Qwen3-0.6B: cloze-sum D, letter-0 B, gen-direct C\nfirst item with 3 different letters (NAEP_2005_4_S13+14); items with at least two: 320 of 500 (402 with a parsed reply)\n"
+          "text": "A farmer thinks that the vegetables on her farm are not getting enough water. Her son suggests that they use water from the nearby ocean to water the vegetables. Is this a good idea?\nA. Yes, because there is plenty of ocean water.\nB. Yes, because ocean water has many natural fertilizers.\nC. No, because ocean water is too salty for plants grown on land.\nD. No, because ocean water is much more polluted than rainwater.\ngold C; Qwen3-0.6B: cloze-sum D, letter-0 B, gen-direct C\nfirst item with 3 different letters (NAEP_2005_4_S13+14); items with at least two: 320 of the 402 with a parsed reply\n"
         }
       ]
     },
     "scoring-convention-table": {
-      "code_fingerprint": "sha256:afc1186c29efe0258a8e75daab7d1b52857e843606532578508c250f2ec751e4",
+      "code_fingerprint": "sha256:fc929304a87b9d668d42405b01c54a8846aae046c59ee3df9298b6815663f1ad",
       "kind": "text",
       "outputs": [
         {
@@ -479,29 +489,29 @@
       ]
     },
     "scoring-pair-diff": {
-      "code_fingerprint": "sha256:a76525dc459d0239f19032ddc79121fee960eb68d0f9ab0ac252deb765923090",
+      "code_fingerprint": "sha256:5b1e5b04e9a901933d57bb2d6de4d4579891d401ff2f22474bfd8a1fc98be892",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                         difference  drift              ahead\ncloze-sum    -0.008 [-0.046, 0.030]  0.002            neither\ncloze-token   0.000 [-0.038, 0.038]  0.002            neither\ncloze-char    0.018 [-0.020, 0.056]  0.004            neither\ncloze-PMI     0.038 [-0.010, 0.086]  0.012            neither\nletter-0       0.126 [0.078, 0.174]  0.012  Qwen/Qwen3.5-0.8B\nletter-5       0.072 [0.026, 0.118]  0.012  Qwen/Qwen3.5-0.8B\ngen-direct     0.220 [0.168, 0.272]  0.012  Qwen/Qwen3.5-0.8B\nranking flips: False\ncloze-char accuracy: 0.018 [-0.020, 0.056], |difference| over half-width 0.47\ngold bpb: -0.156 [-0.195, -0.117], |difference| over half-width 3.99\n"
+          "text": "                         difference  drift              ahead\ncloze-sum    -0.008 [-0.046, 0.030]  0.002            neither\ncloze-token   0.000 [-0.038, 0.038]  0.002            neither\ncloze-char    0.018 [-0.020, 0.056]  0.004            neither\ncloze-PMI     0.038 [-0.010, 0.086]  0.012            neither\nletter-0       0.126 [0.078, 0.174]  0.012  Qwen/Qwen3.5-0.8B\nletter-5       0.072 [0.026, 0.118]  0.012  Qwen/Qwen3.5-0.8B\ngen-direct     0.220 [0.168, 0.272]  0.012  Qwen/Qwen3.5-0.8B\nranking flips: False\nQwen3.5-0.8B - Qwen3-0.6B:\n    cloze-char accuracy: 0.018 [-0.020, 0.056], |difference| over half-width 0.47\n    gold bpb: -0.156 [-0.195, -0.117], |difference| over half-width 3.99\n    wrong-option bpb: -0.136 [-0.177, -0.094], |difference| over half-width 3.27\n    wrong - gold bpb: 0.020 [-0.016, 0.057], |difference| over half-width 0.55\n"
         }
       ]
     },
     "scoring-contrasts": {
-      "code_fingerprint": "sha256:aff4bbfe0f8b9435317d7dc2051d4ddeb00e1531846d923a2a813434318a1553",
+      "code_fingerprint": "sha256:7a48f71228bd80c4ef9294d7706c70ca11e7c1033a27ddb4cf50d98cc27dd400",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "drift of the contrasts, batch 8 vs 1: 0.010\npair, (letter-0 - cloze-sum) difference of differences: 0.134 [0.072, 0.198] (Qwen3.5-0.8B gains more)\nQwen/Qwen3-0.6B-Base: letter-0 - cloze-sum 0.268 [0.212, 0.326] (letter-0 ahead)\nQwen/Qwen3-0.6B: letter-0 - cloze-sum 0.206 [0.146, 0.264] (letter-0 ahead)\nQwen/Qwen3.5-0.8B-Base: letter-0 - cloze-sum 0.334 [0.278, 0.388] (letter-0 ahead)\nQwen/Qwen3.5-0.8B: letter-0 - cloze-sum 0.340 [0.286, 0.396] (letter-0 ahead)\nQwen/Qwen3-1.7B: letter-0 - cloze-sum 0.334 [0.282, 0.386] (letter-0 ahead)\n"
+          "text": "drift of the contrasts, batch 8 vs 1: 0.010\npair, (letter-0 - cloze-sum) difference of differences: 0.134 [0.072, 0.198] (Qwen3.5-0.8B gains more)\nQwen/Qwen3-0.6B-Base: letter-0 - cloze-sum 0.268 [0.212, 0.326] (letter-0 ahead)\nQwen/Qwen3-0.6B: letter-0 - cloze-sum 0.206 [0.146, 0.264] (letter-0 ahead)\nQwen/Qwen3.5-0.8B-Base: letter-0 - cloze-sum 0.334 [0.278, 0.388] (letter-0 ahead)\nQwen/Qwen3.5-0.8B: letter-0 - cloze-sum 0.340 [0.286, 0.396] (letter-0 ahead)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B - Qwen/Qwen3-0.6B-Base, (letter-0 - cloze-sum): -0.062 [-0.124, -0.002] (not resolved at 500 items)\nQwen/Qwen3.5-0.8B - Qwen/Qwen3.5-0.8B-Base, (letter-0 - cloze-sum): 0.006 [-0.038, 0.050] (not resolved at 500 items)\nQwen/Qwen3-0.6B, first 100 items: reasoning - direct 0.130 [0.010, 0.250] (reasoning budget binds: no direction); truncated direct 0.00, reasoning 0.34\n    both replies commit to a letter on 50: they differ on 16; accuracy there 0.84 (reasoning), 0.60 (direct), descriptive\n    mean tokens 781 (reasoning), 129 (direct), 1 for a scored letter\n"
+          "text": "Qwen/Qwen3-1.7B: letter-0 - cloze-sum 0.334 [0.282, 0.386] (letter-0 ahead)\nQwen/Qwen3-0.6B - Qwen/Qwen3-0.6B-Base, (letter-0 - cloze-sum): -0.062 [-0.124, -0.002] (not resolved at 500 items)\nQwen/Qwen3.5-0.8B - Qwen/Qwen3.5-0.8B-Base, (letter-0 - cloze-sum): 0.006 [-0.038, 0.050] (not resolved at 500 items)\nQwen/Qwen3-0.6B, first 100 items: reasoning - direct 0.130 [0.010, 0.250] (reasoning budget binds: no direction); truncated direct 0.00, reasoning 0.34\n    both replies commit to a letter on 50: they differ on 16; accuracy there 0.84 (reasoning), 0.60 (direct), descriptive\n    mean tokens 781 (reasoning), 129 (direct), 1 for a scored letter\n"
         },
         {
           "type": "stream",
@@ -511,7 +521,7 @@
       ]
     },
     "scoring-length-spread": {
-      "code_fingerprint": "sha256:620a29603df94b95abdf3bad65482101025fba56e7a2f6e6efa2bb19d235e8c4",
+      "code_fingerprint": "sha256:ae7dc21dd6dd135b265c205c282efbb8fa4f6aa0d33232c8acf9e5fd862550a1",
       "kind": "text",
       "outputs": [
         {
@@ -522,7 +532,7 @@
       ]
     },
     "scoring-letter-bias": {
-      "code_fingerprint": "sha256:5df158a0a71a63b34ce1f4970f0214a984469deadb0255b6c0745a90e294779e",
+      "code_fingerprint": "sha256:eb887a707e014616f770da41bc00b9d2dbacf27c68e3b54dbaa1258ced33c666",
       "kind": "text",
       "outputs": [
         {
@@ -533,15 +543,15 @@
       ]
     },
     "scoring-flip-figure": {
-      "code_fingerprint": "sha256:b7d3005cadb6a8f921d246cbe844737957822806f14a3a2dba2392ac6cc98154",
+      "code_fingerprint": "sha256:b9edf9417923cc8ac0a73d962514a1c064fc9a3cf2aba1037cb2e68d6cadcc99",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scoring/scoring-flip-figure-1.svg",
-          "bytes": 82716,
-          "sha256": "sha256:9c9bf842512b8bd44d3f3729737b0d2aa9a8af181f79ef157aedbe344057fae0"
+          "bytes": 80189,
+          "sha256": "sha256:b64f34b76da0ae35fde418d0db684f2c8c9dc20cb2ffc33be0a288f35ae5e558"
         }
       ]
     }

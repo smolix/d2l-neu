@@ -531,6 +531,9 @@ four rates.
 - Adam: 3e-4 ends at 1.92 to 1.96, 1e-3 at 1.651 to 1.691, 3e-3 at 1.580 to 1.614, 1e-2 at 1.631 to 1.659, 3e-2 at 2.73 to 2.85, finite in every run: at too large a rate Adam stalls instead of diverging, because its step is about eta whatever the gradient. Usable (within 0.15 nats): 1e-3, 3e-3, 1e-2 in every execution, a factor of ten; SGD: 0.3 only.
 - At the best rates every Adam run ended below every SGD run of the same execution, by 0.04 to 0.09 nats per seed (smaller than the margin; do not build a conclusion on the endpoint).
 - Steps to loss 1.8 at the best rates: Adam 625 to 775 (PyTorch), 650 to 875 (JAX); SGD 1,100 to 1,275 and 1,075 to 1,250. Adam gets there in about 0.6 of SGD's steps; the ranges do not overlap.
+- Largest one-step rise of the loss (new last column; a single minibatch whose loss jumps above the previous one), 8 more seeds per tab: SGD at 0.3 0.18 to 1.72 (PyTorch) and 0.15 to 1.52 (JAX), above 0.5 in 3 and 4 of 8 runs, and the runs with a jump of 1 or more end highest (1.733, 1.710; 1.693); Adam at 3e-3 0.15 to 0.23 and SGD at 0.1 0.14 to 0.26 in every run, the minibatch-to-minibatch level. So SGD at its best rate trains at its edge of stability: single steps throw the loss up by up to 1.7 nats, the start of the divergence that 0.5 completes, and a run that meets one ends higher. The occasional stall (2.041 in one notebook run, 2.247 in the old store) is the far end of the same effect: two of 30 runs at 0.3.
+- Notebook run (r3, final code): SGD 0.3: 1.648 to 1.659 (PyTorch), 1.650 to 1.685 (JAX); Adam 3e-3: 1.586 to 1.589 / 1.580 to 1.592; usable: SGD 0.3, Adam 0.001 0.003 0.01 in both; steps to 1.8: SGD 1050 to 1200 / 1100 to 1200, Adam 675 to 700 / 675 to 750; largest one-step rise: SGD 0.14, 1.40, 0.36 / 0.52, 0.15, 0.18, Adam 0.15 to 0.18 in both. Gradient-scale ratios 39 / 16 / 2.2 and 39 / 16 / 1.8.
+- Notebook run (r2): SGD 0.3: 1.657 to 1.677 (PyTorch), 1.692 to 2.041 (JAX, one stall; 0.1 then falls within 0.15 of 0.3's mean); Adam 3e-3: 1.578 to 1.587 / 1.576 to 1.594; steps to 1.8: SGD 1150 to 1225 / 1200, 1825, never; Adam 675 to 700 / 725 to 775.
 - Notebook run (r1): SGD 0.3: 1.652 to 1.661 / 1.651 to 1.669; Adam 3e-3: 1.583 to 1.589 / 1.582 to 1.614; steps to 1.8: SGD 1150 to 1250 in both tabs, Adam 700 to 750 / 700 to 875. -->
 
 ```{.python .input #adam-comparison-on-the-language-model-1}
@@ -581,19 +584,24 @@ def best_rate(curves):
     return min(mean, key=mean.get), mean
 
 print(f'{"":6}{"best lr":>8}{"final loss":>17}   {"within 0.15 nats":<18}'
-      'steps to 1.8')
+      f'{"steps to 1.8":<16}largest one-step rise')
 for name, curves in [('SGD', sgd_lm), ('Adam', adam_lm)]:
     best, mean = best_rate(curves)
-    finals = [d2l.final_loss(run) for run in curves[best]]
+    runs = curves[best]
+    finals = [d2l.final_loss(run) for run in runs]
     usable = [f'{lr:g}' for lr in curves if mean[lr] <= mean[best] + 0.15]
+    steps = ' '.join(str(d2l.steps_to_reach(run, 1.8)) for run in runs)
+    rises = ' '.join(f'{max(b - a for a, b in zip(run, run[1:])):.2f}'
+                     for run in runs)
     print(f'{name:<6}{best:>8g}{min(finals):>8.3f} to {max(finals):.3f}   '
-          f'{" ".join(usable):<18}',
-          *(d2l.steps_to_reach(run, 1.8) for run in curves[best]))
+          f'{" ".join(usable):<18}{steps:<16}{rises}')
 best_sgd, best_adam = best_rate(sgd_lm)[0], best_rate(adam_lm)[0]
 d2l.plot(list(range(0, 2000, 25)),
-         [d2l.smooth(sgd_lm[best_sgd][0]), d2l.smooth(adam_lm[best_adam][0])],
+         [d2l.smooth(sgd_lm[best_sgd][0]),
+          d2l.smooth(adam_lm[best_adam][0])],
          'step', 'training loss',
-         legend=[f'SGD + momentum, lr {best_sgd:g}', f'Adam, lr {best_adam:g}'])
+         legend=[f'SGD + momentum, lr {best_sgd:g}',
+                 f'Adam, lr {best_adam:g}'])
 ```
 
 Tuned Adam ends about 0.03 to 0.2 nats below tuned SGD, a perplexity 3

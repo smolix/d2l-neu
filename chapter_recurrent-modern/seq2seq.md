@@ -28,17 +28,7 @@ bottleneck is where attention began.
 
 ```{.python .input}
 %load_ext d2lbook.tab
-tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
-```
-
-```{.python .input #seq2seq-imports}
-%%tab mxnet
-import math
-import numpy as np
-from mxnet import autograd, gluon, init, np as mnp, npx
-from mxnet.gluon import nn
-from d2l import mxnet as d2l
-npx.set_np()
+tab.interact_select('pytorch', 'jax')
 ```
 
 ```{.python .input #seq2seq-imports}
@@ -49,14 +39,6 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
-```
-
-```{.python .input #seq2seq-imports}
-%%tab tensorflow
-import math
-import numpy as np
-import tensorflow as tf
-from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #seq2seq-imports}
@@ -110,18 +92,6 @@ information, such as the length of the source excluding padding, so we allow
 extra positional arguments.
 
 ```{.python .input #seq2seq-abstraction-encoder}
-%%tab mxnet
-class Encoder(nn.Block):  #@save
-    """The base encoder interface for the encoder-decoder architecture."""
-    def __init__(self):
-        super().__init__()
-
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def forward(self, X, *args):
-        raise NotImplementedError
-```
-
-```{.python .input #seq2seq-abstraction-encoder}
 %%tab pytorch
 class Encoder(nn.Module):  #@save
     """The base encoder interface for the encoder-decoder architecture."""
@@ -130,18 +100,6 @@ class Encoder(nn.Module):  #@save
 
     # Later there can be additional arguments (e.g., length excluding padding)
     def forward(self, X, *args):
-        raise NotImplementedError
-```
-
-```{.python .input #seq2seq-abstraction-encoder}
-%%tab tensorflow
-class Encoder(tf.keras.layers.Layer):  #@save
-    """The base encoder interface for the encoder-decoder architecture."""
-    def __init__(self):
-        super().__init__()
-
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def call(self, X, *args):
         raise NotImplementedError
 ```
 
@@ -159,20 +117,6 @@ whatever the decoder wants to carry as its running state, plus a `forward` that
 maps the next input token and the current state to an output and an updated state.
 
 ```{.python .input #seq2seq-abstraction-decoder}
-%%tab mxnet
-class Decoder(nn.Block):  #@save
-    """The base decoder interface for the encoder-decoder architecture."""
-    def __init__(self):
-        super().__init__()
-
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def forward(self, X, state):
-        raise NotImplementedError
-```
-
-```{.python .input #seq2seq-abstraction-decoder}
 %%tab pytorch
 class Decoder(nn.Module):  #@save
     """The base decoder interface for the encoder-decoder architecture."""
@@ -183,20 +127,6 @@ class Decoder(nn.Module):  #@save
         raise NotImplementedError
 
     def forward(self, X, state):
-        raise NotImplementedError
-```
-
-```{.python .input #seq2seq-abstraction-decoder}
-%%tab tensorflow
-class Decoder(tf.keras.layers.Layer):  #@save
-    """The base decoder interface for the encoder-decoder architecture."""
-    def __init__(self):
-        super().__init__()
-
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def call(self, X, state):
         raise NotImplementedError
 ```
 
@@ -218,7 +148,7 @@ model needs to specify only the encoder, the decoder, and how the two
 connect.
 
 ```{.python .input #seq2seq-abstraction-together}
-%%tab mxnet, pytorch
+%%tab pytorch
 class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder-decoder architecture."""
     def __init__(self, encoder, decoder):
@@ -231,24 +161,6 @@ class EncoderDecoder(d2l.Classifier):  #@save
         dec_state = self.decoder.init_state(enc_all_outputs, *args)
         # Return decoder output only
         return self.decoder(dec_X, dec_state)[0]
-```
-
-```{.python .input #seq2seq-abstraction-together}
-%%tab tensorflow
-class EncoderDecoder(d2l.Classifier):  #@save
-    """The base class for the encoder-decoder architecture."""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    # Keras builds a layer by passing the arguments of `call` by name, which
-    # fails for `*args`, so we name the optional source length
-    def call(self, enc_X, dec_X, enc_valid_len=None, training=None):
-        enc_all_outputs = self.encoder(enc_X, enc_valid_len, training=training)
-        dec_state = self.decoder.init_state(enc_all_outputs, enc_valid_len)
-        # Return decoder output only
-        return self.decoder(dec_X, dec_state, training=training)[0]
 ```
 
 ```{.python .input #seq2seq-abstraction-together}
@@ -301,6 +213,7 @@ attention-based decoder uses to mask padded positions
 reads it.
 
 ```{.python .input #seq2seq-mtfraeng}
+%%tab pytorch, jax
 class MTFraEng(d2l.DataModule):  #@save
     """The English-French dataset, tokenized with a shared byte-level BPE."""
     def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
@@ -346,6 +259,7 @@ takes an explicit list of pairs, we reuse it both to build the dataset and,
 later, to encode arbitrary sentences we want to translate.
 
 ```{.python .input #seq2seq-mtfraeng-encode}
+%%tab pytorch, jax
 @d2l.add_to_class(MTFraEng)  #@save
 def _encode(self, pairs):
     tok, t = self.tokenizer, self.num_steps
@@ -375,6 +289,7 @@ Two small shims let the shared tokenizer stand in for the `src_vocab` /
 id and a list of ids back to token strings.
 
 ```{.python .input #seq2seq-vocab-shims}
+%%tab pytorch, jax
 @d2l.add_to_class(d2l.BPETokenizer)  #@save
 def __getitem__(self, token):
     return self.specials[token]
@@ -404,6 +319,7 @@ this same skew that makes a masked loss (below) worthwhile: without masking, the
 padding on short sentences would dominate the gradient.
 
 ```{.python .input #seq2seq-length-hist-fn}
+%%tab pytorch, jax
 def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):  #@save
     """Plot the histogram for list length pairs."""
     d2l.set_figsize()
@@ -439,8 +355,7 @@ hidden state of every layer; the latter is the context $\mathbf{c}$ of
 One detail of initialization matters enough to name. The seq2seq paper
 :cite:`Sutskever.Vinyals.Le.2014` initializes weights with Xavier-uniform, which
 frameworks do not all do by default. In PyTorch we apply a small helper via
-`module.apply`; MXNet passes `init.Xavier()` directly; TensorFlow's Keras layers
-already default to Xavier (glorot-uniform); and the Flax NNX layers default to
+`module.apply`; the Flax NNX layers default to
 LeCun-normal input weights with orthogonal recurrent weights, a combination
 already well suited to RNNs, so we leave it in place.
 
@@ -457,26 +372,6 @@ def init_seq2seq(module):  #@save
 ```
 
 ```{.python .input #seq2seq-encoder}
-%%tab mxnet
-class Seq2SeqEncoder(d2l.Encoder):  #@save
-    """The RNN encoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
-        self.embedding.initialize(init.Xavier())
-        self.rnn.initialize()
-
-    def forward(self, X, *args):
-        embs = self.embedding(d2l.transpose(X))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-```
-
-```{.python .input #seq2seq-encoder}
 %%tab pytorch
 class Seq2SeqEncoder(d2l.Encoder):  #@save
     """The RNN encoder for sequence-to-sequence learning."""
@@ -489,24 +384,6 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
 
     def forward(self, X, *args):
         embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-```
-
-```{.python .input #seq2seq-encoder}
-%%tab tensorflow
-class Seq2SeqEncoder(d2l.Encoder):  #@save
-    """The RNN encoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
-
-    def call(self, X, valid_len=None):
-        embs = self.embedding(d2l.transpose(X))
         outputs, state = self.rnn(embs)
         # outputs: (num_steps, batch_size, num_hiddens)
         # state: (num_layers, batch_size, num_hiddens)
@@ -537,7 +414,6 @@ with a two-layer GRU of width 16, the per-step outputs have shape (`num_steps`,
 `batch_size`, `num_hiddens`) and the final state has one hidden vector per layer.
 
 ```{.python .input #seq2seq-encoder-check}
-%%tab all
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 9
 encoder = Seq2SeqEncoder(vocab_size, embed_size, num_hiddens, num_layers)
@@ -564,35 +440,6 @@ state, broadcast across time) onto the decoder's input embedding at *every* step
 A dense layer over the top-layer hidden states produces the vocabulary logits.
 
 ```{.python .input #seq2seq-decoder}
-%%tab mxnet
-class Seq2SeqDecoder(d2l.Decoder):
-    """The RNN decoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size + num_hiddens, num_hiddens, num_layers,
-                           dropout)
-        self.dense = nn.Dense(vocab_size, flatten=False)
-        self.embedding.initialize(init.Xavier())
-        self.rnn.initialize()
-        self.dense.initialize(init.Xavier())
-
-    def init_state(self, enc_all_outputs, *args):
-        return enc_all_outputs
-
-    def forward(self, X, state):
-        embs = self.embedding(d2l.transpose(X))
-        enc_output, hidden_state = state
-        context = enc_output[-1]
-        context = mnp.tile(context, (embs.shape[0], 1, 1))
-        embs_and_context = d2l.concat((embs, context), -1)
-        outputs, hidden_state = self.rnn(embs_and_context, hidden_state)
-        outputs = d2l.swapaxes(self.dense(outputs), 0, 1)
-        return outputs, [enc_output, hidden_state]
-```
-
-```{.python .input #seq2seq-decoder}
 %%tab pytorch
 class Seq2SeqDecoder(d2l.Decoder):
     """The RNN decoder for sequence-to-sequence learning."""
@@ -616,32 +463,6 @@ class Seq2SeqDecoder(d2l.Decoder):
         embs_and_context = d2l.concat((embs, context), -1)
         outputs, hidden_state = self.rnn(embs_and_context, hidden_state)
         outputs = d2l.swapaxes(self.dense(outputs), 0, 1)
-        return outputs, [enc_output, hidden_state]
-```
-
-```{.python .input #seq2seq-decoder}
-%%tab tensorflow
-class Seq2SeqDecoder(d2l.Decoder):
-    """The RNN decoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size + num_hiddens, num_hiddens, num_layers,
-                           dropout)
-        self.dense = tf.keras.layers.Dense(vocab_size)
-
-    def init_state(self, enc_all_outputs, *args):
-        return enc_all_outputs
-
-    def call(self, X, state):
-        embs = self.embedding(d2l.transpose(X))
-        enc_output, hidden_state = state
-        context = enc_output[-1]
-        context = tf.tile(tf.expand_dims(context, 0), (embs.shape[0], 1, 1))
-        embs_and_context = d2l.concat((embs, context), -1)
-        outputs, hidden_state = self.rnn(embs_and_context, hidden_state)
-        outputs = d2l.transpose(self.dense(outputs), (1, 0, 2))
         return outputs, [enc_output, hidden_state]
 ```
 
@@ -675,7 +496,6 @@ Running the decoder on the same toy batch, the output has shape (`batch_size`,
 `num_steps`, `vocab_size`): a distribution over the vocabulary at every step.
 
 ```{.python .input #seq2seq-decoder-check}
-%%tab all
 decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
 state = decoder.init_state(encoder(X))
 dec_outputs, state = decoder(X, state)
@@ -718,37 +538,6 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
 ```
 
 ```{.python .input #seq2seq-model}
-%%tab tensorflow
-class Seq2Seq(d2l.EncoderDecoder):  #@save
-    """The RNN encoder-decoder for sequence-to-sequence learning."""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.save_hyperparameters()
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1], training=False), batch[-1])
-
-    def configure_optimizers(self):
-        return tf.keras.optimizers.Adam(learning_rate=self.lr)
-```
-
-```{.python .input #seq2seq-model}
-%%tab mxnet
-class Seq2Seq(d2l.EncoderDecoder):  #@save
-    """The RNN encoder-decoder for sequence-to-sequence learning."""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.save_hyperparameters()
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1]), batch[-1])
-
-    def configure_optimizers(self):
-        return gluon.Trainer(self.collect_params(), 'adam',
-                             {'learning_rate': self.lr})
-```
-
-```{.python .input #seq2seq-model}
 %%tab jax
 class Seq2Seq(d2l.EncoderDecoder):  #@save
     """The RNN encoder-decoder for sequence-to-sequence learning."""
@@ -764,7 +553,7 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
 ```
 
 ```{.python .input #seq2seq-loss}
-%%tab pytorch, mxnet, tensorflow
+%%tab pytorch
 @d2l.add_to_class(Seq2Seq)
 def loss(self, Y_hat, Y):
     l = super(Seq2Seq, self).loss(Y_hat, Y, averaged=False)
@@ -791,7 +580,7 @@ We now train the translator on our 1,024-pair training split. Two layers, width 
 0.2, Adam at learning rate 0.005, gradients clipped to norm 1, for 30 epochs.
 
 ```{.python .input #seq2seq-training}
-%%tab pytorch, jax, mxnet
+%%tab pytorch, jax
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
 encoder = Seq2SeqEncoder(
@@ -800,20 +589,6 @@ decoder = Seq2SeqDecoder(
     len(data.tokenizer), embed_size, num_hiddens, num_layers, dropout)
 model = Seq2Seq(encoder, decoder, tgt_pad=data.tokenizer.pad, lr=0.005)
 trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
-trainer.fit(model, data)
-```
-
-```{.python .input #seq2seq-training}
-%%tab tensorflow
-data = d2l.MTFraEng(batch_size=128)
-embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
-with d2l.try_gpu():
-    encoder = Seq2SeqEncoder(
-        len(data.tokenizer), embed_size, num_hiddens, num_layers, dropout)
-    decoder = Seq2SeqDecoder(
-        len(data.tokenizer), embed_size, num_hiddens, num_layers, dropout)
-    model = Seq2Seq(encoder, decoder, tgt_pad=data.tokenizer.pad, lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
@@ -837,41 +612,6 @@ def predict_step(self, batch, device, num_steps,
     outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
     for _ in range(num_steps):
         Y, dec_state = self.decoder(outputs[-1], dec_state)
-        outputs.append(d2l.argmax(Y, 2))
-        if save_attention_weights:
-            attention_weights.append(self.decoder.attention_weights)
-    return d2l.concat(outputs[1:], 1), attention_weights
-```
-
-```{.python .input #seq2seq-predict-step}
-%%tab mxnet
-@d2l.add_to_class(d2l.EncoderDecoder)  #@save
-def predict_step(self, batch, device, num_steps,
-                 save_attention_weights=False):
-    batch = [d2l.to(a, device) for a in batch]
-    src, tgt, src_valid_len, _ = batch
-    enc_all_outputs = self.encoder(src, src_valid_len)
-    dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
-    outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-    for _ in range(num_steps):
-        Y, dec_state = self.decoder(outputs[-1], dec_state)
-        outputs.append(d2l.argmax(Y, 2))
-        if save_attention_weights:
-            attention_weights.append(self.decoder.attention_weights)
-    return d2l.concat(outputs[1:], 1), attention_weights
-```
-
-```{.python .input #seq2seq-predict-step}
-%%tab tensorflow
-@d2l.add_to_class(d2l.EncoderDecoder)  #@save
-def predict_step(self, batch, device, num_steps,
-                 save_attention_weights=False):
-    src, tgt, src_valid_len, _ = batch
-    enc_all_outputs = self.encoder(src, src_valid_len, training=False)
-    dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
-    outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-    for _ in range(num_steps):
-        Y, dec_state = self.decoder(outputs[-1], dec_state, training=False)
         outputs.append(d2l.argmax(Y, 2))
         if save_attention_weights:
             attention_weights.append(self.decoder.attention_weights)
@@ -912,7 +652,7 @@ def to_text(pred, tokenizer):  # Decode one row of ids, stop at <eos>
 ```
 
 ```{.python .input #seq2seq-greedy}
-%%tab pytorch, mxnet, tensorflow
+%%tab pytorch
 engs = ['i lost .', "i'm calm .", "i'm home ."]
 fras = ["j'ai perdu .", 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(data.build(engs, fras), d2l.try_gpu(),
@@ -945,6 +685,7 @@ character $n$-grams, and combines them with an F-score weighted toward recall
 ($\beta = 2$). It is about ten lines.
 
 ```{.python .input #seq2seq-chrf}
+%%tab pytorch, jax
 def chrf(pred, label, n=6, beta=2):  #@save
     """chrF (Popovic, 2015): character n-gram F-score."""
     def ngrams(s, k):
@@ -986,6 +727,7 @@ We keep its implementation, `d2l.bleu`, in the library for the exercises, but
 chrF is the metric we teach.
 
 ```{.python .input #seq2seq-bleu}
+%%tab pytorch, jax
 def bleu(pred_seq, label_seq, k):  #@save
     """Compute the BLEU."""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
@@ -1016,7 +758,7 @@ The decoding toolkit of :numref:`sec_decoding` plugs straight in: everything
 downstream of the model speaks one narrow interface, a `step_fn` mapping the token
 ids so far to NumPy logits for the next token. Here the source is fixed and the
 "ids so far" are the target prefix, so we encode the source (padded exactly as in
-training) and wrap the decoder. We show this on the PyTorch and JAX tabs.
+training) and wrap the decoder.
 
 ```{.python .input #seq2seq-step-fn}
 %%tab pytorch
@@ -1075,7 +817,7 @@ forgotten to fit. We can watch this happen. Below we translate a held-out set of
 sentence pairs and plot mean chrF against source length.
 
 ```{.python .input #seq2seq-bottleneck}
-%%tab pytorch, mxnet, tensorflow
+%%tab pytorch
 holdout = data._pairs(data._preprocess(data._download()))
 holdout = holdout[data.num_train + data.num_val::250][:600]
 h_src, h_tgt = [p[0] for p in holdout], [p[1] for p in holdout]
@@ -1156,16 +898,8 @@ follows.
 1. Score the example translations with both `chrf` and `d2l.bleu`. Construct a
    translation on which the two metrics most disagree, and explain the mechanism.
 
-:begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/1062)
-:end_tab:
-
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1062)
-:end_tab:
-
-:begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/3865)
 :end_tab:
 
 :begin_tab:`jax`

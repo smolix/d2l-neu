@@ -6125,48 +6125,6 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
 
-class PositionWiseFFN(nnx.Module):
-    """The positionwise feed-forward network."""
-    def __init__(self, ffn_num_hiddens, ffn_num_outputs,
-                 ffn_num_inputs=None, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        ffn_num_inputs = (ffn_num_hiddens if ffn_num_inputs is None
-                          else ffn_num_inputs)
-        self.dense1 = nnx.Linear(ffn_num_inputs, ffn_num_hiddens, rngs=rngs)
-        self.dense2 = nnx.Linear(ffn_num_hiddens, ffn_num_outputs, rngs=rngs)
-
-    def __call__(self, X):
-        return self.dense2(nnx.relu(self.dense1(X)))
-
-class AddNorm(nnx.Module):
-    """The residual connection followed by layer normalization."""
-    def __init__(self, num_hiddens, dropout, rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
-        self.dropout = nnx.Dropout(dropout, rngs=rngs)
-        self.ln = nnx.LayerNorm(num_hiddens, rngs=rngs)
-
-    def __call__(self, X, Y):
-        return self.ln(self.dropout(Y) + X)
-
-class TransformerEncoderBlock(nnx.Module):
-    """The Transformer encoder block."""
-    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
-                 use_bias=False, rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
-        self.attention = d2l.MultiHeadAttention(
-            num_hiddens, num_heads, dropout, use_bias, rngs=rngs)
-        self.addnorm1 = AddNorm(num_hiddens, dropout, rngs=rngs)
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens,
-                                   num_hiddens, rngs=rngs)
-        self.addnorm2 = AddNorm(num_hiddens, dropout, rngs=rngs)
-
-    def __call__(self, X, valid_lens):
-        mask = (None if valid_lens is None
-                else d2l.padding_mask(valid_lens, X.shape[1]))
-        Y = self.addnorm1(X, self.attention(X, X, X, mask))
-        # Attention weights are recorded on eager (un-jitted) calls only
-        return self.addnorm2(Y, self.ffn(Y)), self.attention.attention_weights
-
 class GRU(d2l.RNN):
     """The multilayer GRU model implemented with high-level APIs.
 

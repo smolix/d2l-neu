@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:15ca0735069681a4b973eaac420f515988d361dc0ac15ccbd5200a519b1ae3e8",
+    "d2l_lib_fingerprint": "sha256:c39dd03f85185e3885240a74b69bb901203d30635a5ab42458f8c09017415953",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time of but through bushes the\n    weena institution such waiting was i to simon floor stone less amusement\n    through flashed its and and splendid the of\n2-gram (longest copied run: 3 words): the time travelling they fled\n    incontinently and carry her own time machine was in most constant guests\n    were innumerable years i hesitated between the dim creatures heaped\n3-gram (longest copied run: 10 words): the time traveller had more than a\n    mile from its present position i resolved to hold over the machine will\n    go it will vanish pass into future\n"
+          "text": "1-gram (longest copied run: 2 words): the time she you constant and startled\n    the thing stamped did i because behind i go them like a mind my this had\n    are for pistol gathered\n2-gram (longest copied run: 4 words): the time machines began to move at me\n    i stooped towards those who was i got up and property must have happened\n    that arise therein till i\n3-gram (longest copied run: 9 words): the time traveller put forth his\n    finger towards the building had a weapon indeed against the wan sky\n    there was no outlet no doubt i dozed at\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:171013d91354bde86c6e0ca373ae41b7bd44942772b5276ed73ad2a099c46850"
+          "sha256": "sha256:789e7574b5a94ae6b503a1f7e7ec619265e1da4618b07821ba8b397fe2ca2371"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:7cbad6022b537f388fa11e3f10c2fa93c2a0dfd6f04396f4cc935bb0c519d2ce"
+          "sha256": "sha256:2f8829ce76eeb4961b9afe0ab77e74cd883553c4a05da84386732b4e9a9acce1"
         }
       ]
     },
@@ -150,7 +150,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trigram discount D = 0.93\nP(traveller | the time): Kneser-Ney 0.53, Laplace 0.36\nP(was | the time): Kneser-Ney 0.00037, Laplace 7.7e-05\nP(filby | the time): Kneser-Ney 2.3e-05, Laplace 7.7e-05\n"
+          "text": "trigram discount D = 0.93\nP(traveller | the time): Kneser-Ney 0.53, Laplace 0.36\nP(was | the time): Kneser-Ney 0.00037, Laplace 7.7e-05\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(filby | the time): Kneser-Ney 2.3e-05, Laplace 7.7e-05\n"
         }
       ]
     },
@@ -161,12 +166,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "3-gram held-out perplexity, Kneser-Ney:   300.1\n"
+          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n3-gram held-out perplexity, Kneser-Ney:   300.1\n"
         }
       ]
     },
@@ -203,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[981 290 369 559 277 273 309 260 558 273]\n [904 750 365 869  10 110 340 631 298 786]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[290 369 559 277 273 309 260 558 273 354]\n [750 365 869  10 110 340 631 298 786 488]], shape=(2, 10), dtype=int32)\nX[0]: 'ering pillars and of my theory of'\nY[0]: ' pillars and of my theory of an'\n"
+          "text": "X: tf.Tensor(\n[[767  46 269 609 344 816 258 279 334 100]\n [409 516 434  45  68 337 564 318 270  10]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[ 46 269 609 344 816 258 279 334 100 792]\n [516 434  45  68 337 564 318 270  10 804]], shape=(2, 10), dtype=int32)\nX[0]: ' world. I felt as perhaps a bird'\nY[0]: '. I felt as perhaps a bird may'\n"
         }
       ]
     }

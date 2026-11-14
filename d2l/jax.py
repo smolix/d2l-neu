@@ -1310,117 +1310,6 @@ def get_airfoil(batch_size=10, n=1500):
         batch_size, is_train=True)
     return data_iter, data.shape[1]-1
 
-class Timer:
-    """Record multiple running times.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
-
-    def start(self):
-        """Start the timer."""
-        self.tik = time.perf_counter()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.perf_counter() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
-
-def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
-               ylim=None):
-    """Call step(X, y) on every minibatch; about every 200 examples, record
-    full_loss() and the training time so far, and plot the loss in the range
-    ylim. Return the history.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=ylim)
-    history = {'examples': [], 'loss': []}
-    n, i, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            out = step(X, y)
-            n, i = n + len(X), i + 1
-            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                jax.block_until_ready(out)  # Wait for the queued steps
-                timer.stop()
-                l = float(full_loss())
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(i / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
-
-def train_with_rule(trainer_fn, states, hyperparams, data_iter,
-                    feature_dim, num_epochs=2, plot=True,
-                    ylim=(0.22, 0.35)):
-    """Train linear regression with an update rule; return its history. The
-    default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    w = 0.01 * jax.random.normal(d2l.get_key(), (feature_dim, 1))
-    b = jnp.zeros(1)
-    loss = lambda w, b, X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-    grad_fn = jax.jit(jax.grad(loss, argnums=(0, 1)))
-    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
-    full_loss = jax.jit(lambda w, b: loss(w, b, Xs, ys))
-
-    def step(X, y):
-        nonlocal w, b, states
-        grads = grad_fn(w, b, X, y)
-        (w, b), states = trainer_fn([w, b], list(grads), states, hyperparams)
-        return w, b
-
-    X, y = next(iter(data_iter))  # One step on the side compiles everything
-    trainer_fn([w, b], list(grad_fn(w, b, X, y)), states, hyperparams)
-    full_loss(w, b)
-    return d2l.record_run(step, lambda: full_loss(w, b), data_iter,
-                          num_epochs, plot, ylim=ylim)
-
-def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                         plot=True, ylim=(0.22, 0.35)):
-    """Train linear regression with an optax optimizer factory; return its
-    history. The default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
-    net = nnx.Linear(Xs.shape[1], 1,
-                     kernel_init=nnx.initializers.normal(0.01),
-                     rngs=nnx.Rngs(d2l.get_key()))
-    optimizer = nnx.Optimizer(net, trainer_fn(**hyperparams), wrt=nnx.Param)
-    loss = lambda net, X, y: d2l.squared_loss(net(X), y).mean()
-
-    @nnx.jit
-    def step_fn(net, optimizer, X, y):
-        l, grads = nnx.value_and_grad(loss)(net, X, y)
-        optimizer.update(net, grads)
-        return l
-
-    full_loss = nnx.jit(lambda net: loss(net, Xs, ys))
-    X, y = next(iter(data_iter))  # One step on copies compiles everything
-    step_fn(nnx.clone(net), nnx.clone(optimizer), X, y)
-    full_loss(net)
-    return d2l.record_run(lambda X, y: step_fn(net, optimizer, X, y),
-                          lambda: full_loss(net), data_iter, num_epochs, plot,
-                          ylim=ylim)
-
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
 
@@ -6821,6 +6710,35 @@ class GRU(d2l.RNN):
             if i < self.num_layers - 1:
                 outputs = self.dropouts[i](outputs)
         return outputs, new_state
+
+class Timer:
+    """Record multiple running times.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.perf_counter()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.perf_counter() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
 
 
 ones_like = jnp.ones_like

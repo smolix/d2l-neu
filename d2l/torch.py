@@ -1233,112 +1233,6 @@ def get_airfoil(batch_size=10, n=1500):
                                             batch_size=None)
     return data_iter, data.shape[1]-1
 
-class Timer:
-    """Record multiple running times.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
-
-    def start(self):
-        """Start the timer."""
-        self.tik = time.perf_counter()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.perf_counter() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
-
-def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
-               ylim=None):
-    """Call step(X, y) on every minibatch; about every 200 examples, record
-    full_loss() and the training time so far, and plot the loss in the range
-    ylim. Return the history.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    # Wait until the device has finished (CUDA runs asynchronously)
-    wait = torch.cuda.synchronize if torch.cuda.is_available() else (
-        lambda: None)
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=ylim)
-    history = {'examples': [], 'loss': []}
-    n, i, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            step(X, y)
-            n, i = n + len(X), i + 1
-            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = float(full_loss())
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(i / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
-
-def train_with_rule(trainer_fn, states, hyperparams, data_iter,
-                    feature_dim, num_epochs=2, plot=True,
-                    ylim=(0.22, 0.35)):
-    """Train linear regression with an update rule; return its history. The
-    default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
-    w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
-                     device=Xs.device, requires_grad=True)
-    b = torch.zeros(1, device=Xs.device, requires_grad=True)
-    loss = lambda X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-
-    def step(X, y):
-        loss(X, y).backward()
-        trainer_fn([w, b], states, hyperparams)
-
-    loss(Xs, ys).backward()  # Warm-up, then clear the gradients
-    w.grad, b.grad = None, None
-    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
-                          plot, ylim=ylim)
-
-def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                         plot=True, ylim=(0.22, 0.35)):
-    """Train linear regression with a torch.optim optimizer class; return
-    its history. The default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
-    net = nn.Linear(Xs.shape[1], 1).to(Xs.device)
-    nn.init.normal_(net.weight, std=0.01)
-    nn.init.zeros_(net.bias)
-    optimizer = trainer_fn(net.parameters(), **hyperparams)
-    loss = lambda X, y: d2l.squared_loss(net(X), y).mean()
-
-    def step(X, y):
-        optimizer.zero_grad()
-        loss(X, y).backward()
-        optimizer.step()
-
-    loss(Xs, ys).backward()  # Warm-up; zero_grad clears it
-    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
-                          plot, ylim=ylim)
-
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
 
@@ -6975,6 +6869,35 @@ class GRU(d2l.RNN):
         self.save_hyperparameters()
         self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
                           dropout=dropout)
+
+class Timer:
+    """Record multiple running times.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.perf_counter()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.perf_counter() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
 
 
 ones_like = torch.ones_like

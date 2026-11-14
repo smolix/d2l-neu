@@ -24,7 +24,7 @@ Library code (spec 18.5 part 5), numbered as the spec's unit tests:
 14.  Debiasing under noise and the total-least-squares slope test.
 15.  `bradley_terry`: recovery, a disconnected graph, batched weights.
 16.  `min_detectable_effect`.
-17.  Registry smoke test over the ten `EVAL_TASKS` (network; skipped unless
+17.  Registry smoke test over the eleven `EVAL_TASKS` (network; skipped unless
      `D2L_NET_TESTS=1`).
 Also: the adapters on hand-written rows, the frozen manifests, manifest and
 result round trips, dispatch by kind (mc, mc_partial, gen, code), the
@@ -524,7 +524,8 @@ class TestAdapters(unittest.TestCase):
     def test_registry(self):
         self.assertEqual(set(d2l.EVAL_TASKS), {
             'arc_challenge', 'hellaswag', 'mmlu', 'mmlu_pro', 'gsm8k',
-            'humaneval', 'arc_easy', 'piqa', 'sciq', 'winogrande'})
+            'gsm8k_cot', 'humaneval', 'arc_easy', 'piqa', 'sciq',
+            'winogrande'})
         for tid, t in d2l.EVAL_TASKS.items():
             self.assertEqual(t.id, tid)
             self.assertRegex(t.revision, '^[0-9a-f]{40}$')
@@ -1140,7 +1141,7 @@ print('ok', len(d2l.EVAL_TASKS))
         out = subprocess.run([sys.executable, '-c', code], cwd=REPO,
                              capture_output=True, text=True)
         self.assertEqual(out.returncode, 0, out.stderr)
-        self.assertEqual(out.stdout.split(), ['ok', '10'])
+        self.assertEqual(out.stdout.split(), ['ok', '11'])
 
 
 # --------------------------------------------------- registry smoke (17)
@@ -1250,7 +1251,7 @@ class TestReviewFixes(Fixture):
         self.assertIn('eval-suites-attach', [c for c, _ in cells])
         ns = {}  # the definition cells only (the others read artifacts)
         defs = {'imports', 'extras', 'bootstrap', 'paired', 'mde', 'task',
-                'suite', 'run-def', 'result', 'attach'}
+                'suite', 'run-def', 'run', 'result', 'attach'}
         with mock.patch('sys.stdout'):
             for cid, code in cells:
                 if cid.removeprefix('eval-suites-') in defs:
@@ -1264,6 +1265,7 @@ class TestReviewFixes(Fixture):
         with self.stub_scores():
             res = suite.run(TinyLM(), None)
         self.assertIs(type(res), EvalResult)
+        self.assertEqual(res.macro(200).n, 12)  # attached from the library
         out = os.path.join(self.tmp.name, 'r.parquet')
         res.save(out)
         back = EvalResult.load(out)
@@ -1440,6 +1442,107 @@ class TestJudgeFP32LogOdds(unittest.TestCase):
         np.testing.assert_allclose(r.logits, expect, rtol=1e-5, atol=1e-5)
         # the bf16 logits would have given other log-odds
         self.assertGreater(np.abs(np.subtract(expect, rounded)).max(), 1e-3)
+
+
+# ------------------------------------------------ fix-18.5 (2026-11-14)
+class TestFix185(Fixture):
+    """Written demonstrations and the harness's gsm8k_cot task, the kinds
+    moved to _eval_score_more, the judge's library half, and the chapter
+    helper lm_save_table."""
+    def cot(self, **change):
+        return d2l.EVAL_TASKS['gsm8k_cot']._replace(
+            dataset=self.gsm_dir,
+            files=('main/test-0.parquet', 'main/train-0.parquet'), **change)
+
+    def test_gsm8k_cot_prompt_is_the_harness_prompt(self):
+        t = d2l.EVAL_TASKS['gsm8k_cot']
+        self.assertEqual((t.kind, t.template, t.shots, t.stop,
+                          t.max_new_tokens), ('gen', 'qa', 8, ('Q:',), 256))
+        self.assertEqual(len(d2l.GSM8K_COT_DEMOS), 8)
+        self.assertTrue(all(a.endswith(f'The answer is {a.split()[-1]}')
+                            for _, a in d2l.GSM8K_COT_DEMOS))
+        items = d2l.EvalSuite([self.cot()], n=None, seed=None).items(
+            'gsm8k_cot')
+        # lm-evaluation-harness: 'Q: {question}\nA:', target delimiter
+        # ' ', few-shot delimiter '\n\n'
+        want = '\n\n'.join(f'Q: {q}\nA: {a}'
+                            for q, a in d2l.GSM8K_COT_DEMOS)
+        self.assertEqual(items[3]['prompt'],
+                         want + '\n\nQ: What is 3 + 3?\nA:')
+        self.assertEqual(items[3]['reference'], '6')
+
+    def test_written_demos_hash_and_errors(self):
+        base = d2l.EvalSuite([self.cot()], n=5).hash
+        demos = [list(d) for d in d2l.GSM8K_COT_DEMOS]
+        demos[0][1] = demos[0][1].replace('6.', '7.')
+        other = self.cot(shots_from={'demos': demos})
+        self.assertNotEqual(d2l.EvalSuite([other], n=5).hash, base)
+        with self.assertRaisesRegex(ValueError, 'shots=8 but 7'):
+            d2l.EvalSuite([self.cot(shots_from={'demos': demos[:7]})])
+        arc = self.arc._replace(shots=1, shots_from={'demos': [['q', 'a']]})
+        with self.assertRaisesRegex(ValueError, 'written demonstrations'):
+            d2l.EvalSuite([arc])
+
+    def test_ppl_kind_and_unknown_kind(self):
+        suite = d2l.EvalSuite([self.arc], n=3)
+        task = suite.tasks[0]._replace(kind='ppl')
+        with mock.patch.object(d2l, 'bits_per_byte',
+                               lambda m, t, texts: len(texts[0]) / 10):
+            scores, preds, reasons = d2l._eval_score_more(
+                suite, task, [{'text': 'abcd'}, {'text': 'ab'}], None, None,
+                0)
+        self.assertEqual((scores, preds, reasons),
+                         ([0.4, 0.2], [None, None], [None, None]))
+        with self.assertRaisesRegex(ValueError, 'unknown kind'):
+            d2l._eval_score_more(suite, task._replace(kind='x'), [], None,
+                                 None, 0)
+
+    def test_judge_logodds_and_empty_input(self):
+        tok, table = StubJudgeTok(), {'q': ('aa', 0.5, 1.0)}
+        texts = [tok.apply_chat_template([{'role': 'user', 'content':
+                 d2l.JUDGE_RUBRIC_V1.format(question='q', first=f,
+                                            second=g)}], tokenize=False)
+                 for f, g in (('aa', 'b'), ('b', 'aa'), ('aa', 'b'))]
+        lp = d2l._judge_logodds(StubJudge(table), tok, texts)
+        self.assertEqual(lp.shape, (3, 3))
+        np.testing.assert_allclose(lp[:, 2].numpy(), [1.5, -0.5, 1.5],
+                                   atol=1e-6)
+        np.testing.assert_allclose(lp[:, :2].exp().sum(-1).numpy(), 0.9,
+                                   atol=1e-6)
+        res, mass = d2l.judge_pairwise(StubJudge(table), tok, [], [], [],
+                                       return_mass=True)
+        self.assertEqual((res, mass.shape), ([], (0, 2)))
+
+    def test_frozen_key_and_save_table(self):
+        hub = {'lm-fx-v1': ('u1', None), 'lm-fx-v3': ('u3', None),
+               'lm-fxy-v7': ('u', None), 'other': ('u', None)}
+        with mock.patch.dict(d2l.DATA_HUB, hub):
+            self.assertEqual(d2l._lm_frozen_key('lm-fx-v4'), 'lm-fx-v3')
+            self.assertEqual(d2l._lm_frozen_key('lm-fx-v2'), 'lm-fx-v1')
+            self.assertEqual(d2l._lm_frozen_key('lm-fx-v3'), 'lm-fx-v3')
+            self.assertIsNone(d2l._lm_frozen_key('lm-fx-v1x'))
+            self.assertIsNone(d2l._lm_frozen_key('lm-new-v2'))
+        tmp = self.tmp.name
+        old = pd.DataFrame({'k': [1, 2, 3], 'x': [0.5, 1.0, 2.0],
+                            'v': ['a', 'b', 'c']})
+        new = pd.DataFrame({'k': [3, 1, 2], 'x': [2.0, 0.5, 1.25],
+                            'v': ['c', 'a', 'z']})
+        old.to_parquet(os.path.join(tmp, 'old.parquet'), index=False)
+        for name in ('t.parquet', 't.jsonl'):
+            with mock.patch.dict(d2l.DATA_HUB, {'lm-t-v1': ('u', None)}), \
+                    mock.patch.object(d2l, 'download_keyed', lambda key:
+                                      os.path.join(tmp, 'old.parquet')), \
+                    mock.patch('builtins.print') as out:
+                path = d2l.lm_save_table(name, new, ['k'], 'lm-t-v2', tmp)
+            back = d2l._lm_read_table(path)
+            self.assertEqual(back.k.tolist(), [1, 2, 3])  # sorted by on
+            text = ' '.join(str(c[0][0]) for c in out.call_args_list)
+            self.assertIn('against lm-t-v1: 3 of 3 rows matched', text)
+            self.assertIn('x max |diff| 0.25', text)
+            self.assertIn('v equal 0.667', text)
+        with mock.patch('builtins.print') as out:
+            d2l.lm_save_table('u.parquet', new, ['k'], 'lm-none-v1', tmp)
+        self.assertIn('no earlier version', out.call_args[0][0])
 
 
 if __name__ == '__main__':

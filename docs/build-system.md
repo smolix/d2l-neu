@@ -1521,6 +1521,13 @@ problem ids.
 GSM-Symbolic 3.1 min, answers 6.9 min, judge 0.9 + 4.4 min, protocol 5.5
 min, plus loads), so no cut applies (`SMALL = 0`); tensors peaked at
 11.3 GiB (the Qwen3.5-4B judge) and the card at 12.3 GB in `nvidia-smi`.
+Since 2026-11-14 its registry pairs each artifact with a `-v2` key
+(`ARTIFACTS` in `eval-suites-config`, read through `d2l.lm_rerun` and
+`d2l.lm_artifact`) for a regeneration on the fused kernels; `d2l.lm_save_table`
+(`eval-suites-lib.md`) writes each table and prints its agreement with the
+registered version it replaces. The regeneration adds a second one-task
+GSM8K protocol (lm-evaluation-harness's `gsm8k_cot`, about 5 min) and prints
+its wall clock against the 30-min target at the end.
 Regenerate, upload, then run the notebook once
 more without `D2L_RERUN` and capture that run.
 

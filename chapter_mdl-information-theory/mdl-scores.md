@@ -228,17 +228,26 @@ of polynomials is not rich enough). The cell evaluates this average for
 $g(x) = x^3$ and $g(x) = \sin x$ on a million draws from $\mathcal{N}(0, 1)$
 itself, where the identity holds.
 
+<!-- WRITER: the Stein cell is redesigned (review DD-31): the model is Q = N(0, 1) with operator g' - x g; the samples are N(0, 1), N(0.5, 1) and N(0, 4) (variance 4), 200,000 draws each; the test functions are g = 1, x, sin x; it prints the mean of g' + g s_Q with its standard error in a 3x3 table. The two sentences above ("The cell evaluates this average for g(x) = x^3 ... where the identity holds") are false now and need the new description. -->
+
 ```{.python .input #divergences-distances-stein}
 rng = np.random.default_rng()
-z = rng.standard_normal(1_000_000)
-# Stein operator for P = N(0, 1):  (A_P g)(x) = g'(x) - x g(x)
-for name, g, g_prime in [('x^3', lambda t: t ** 3, lambda t: 3 * t ** 2),
-                         ('sin x', np.sin, np.cos)]:
-    vals = g_prime(z) - z * g(z)
-    print(f"g(x) = {name:5s}: mean of g'(Z) - Z g(Z) = {vals.mean():+.4f}, "
-          f'standard error {vals.std() / np.sqrt(len(z)):.4f}')
+n = 200_000
+# Stein operator of the model Q = N(0, 1), whose score is -x:  g'(x) - x g(x)
+tests = [('g = 1', np.ones_like, np.zeros_like),
+         ('g = x', lambda t: t, np.ones_like),
+         ('g = sin x', np.sin, np.cos)]
+samples = [('N(0, 1)', rng.normal(0.0, 1.0, n)),
+           ('N(0.5, 1)', rng.normal(0.5, 1.0, n)),
+           ('N(0, 4)', rng.normal(0.0, 2.0, n))]
+print(f'{"sample":10s}' + ''.join(f'{name:>18s}' for name, _, _ in tests))
+for s_name, x in samples:
+    vals = [g_prime(x) - x * g(x) for _, g, g_prime in tests]
+    print(f'{s_name:10s}' + ''.join(f'{v.mean():+10.3f} ± {v.std() / np.sqrt(n):.3f}'
+                                    for v in vals))
 ```
 
+<!-- WRITER: measured (24 unseeded development runs, six per framework tab; the cell is NumPy only): on the model's own sample N(0, 1) every mean is within 0.005 of 0, at most about 2.5 SE (SE 0.002-0.003). On N(0.5, 1): g = 1 gives -0.49 to -0.50 (SE 0.002), g = x gives -0.24 to -0.26 (SE 0.004), sin x -0.14 to -0.15 (SE 0.002). On N(0, 4): g = 1 gives 0.00 within 3 SE (-0.011 to +0.007, SE 0.004), g = x gives -2.97 to -3.02 (SE 0.013), sin x -0.40 to -0.41 (SE 0.003). Population values: -1/2 and 1 - 1.25 = -1/4 on the shift; 0 and 1 - 4 = -3 on the wider sample. Reading (worklist section 0 item 3): each test function checks one moment, g = 1 the mean and g = x the second moment; g = 1 is blind to the change of width; g = x sees both, the shift only weakly; sin x sees both. Not "each g catches one kind". "Both means are within a few standard errors of zero, as they must be" goes. -->
 Both means are within a few standard errors of zero, as they must be. A test
 says something only on a sample that does not come from the model, and for that
 one test function is not enough.
@@ -354,13 +363,14 @@ def ksd2_ustat(x, score, ell=1.0):
     return (kappa.sum() - np.trace(kappa)) / (n * (n - 1))
 
 rng = np.random.default_rng()
-x_q = rng.standard_normal(1000)          # the sample: Q = N(0, 1)
+x_p = rng.standard_normal(2000)          # the data sample, P = N(0, 1)
 for name, s, pop in [('true model  N(0,1)', lambda t: -t, 0.0),
                      ('wrong model N(1,1)', lambda t: -(t - 1), 1 / np.sqrt(3))]:
-    print(f'KSD^2 vs the {name}: {ksd2_ustat(x_q, s):+.4f}  '
+    print(f'KSD^2 vs the {name}: {ksd2_ustat(x_p, s):+.4f}  '
           f'(population {pop:.4f})')
 ```
 
+<!-- WRITER: the KSD sample is now 2,000 points, not 1,000 (the sentence "We test one sample of $1{,}000$ points" above needs the new size). At 1,000 points the wrong-model estimate has a run-to-run SD of 0.043 and fell to 0.457 in one of twelve development runs, outside the quoted ±0.1; at 2,000 the SD is 0.031 (200 replicates: range 0.50-0.65, mean 0.575) and the true-model estimate has SD 0.0007 (|value| < 0.004 in 200 replicates); the twelve notebook runs at 2,000 (three per tab) gave 0.544-0.630 against the wrong model and -0.0008 to +0.0013 against the true one. Both sentences below hold at 2,000. -->
 Against the correct model the estimate is within about $\pm 0.005$ of zero and
 may dip slightly negative; against the wrong model it is about $0.58$, within
 about $\pm 0.1$ of the population value $1/\sqrt{3}$. The sample never changed
@@ -393,7 +403,7 @@ distance $d$ apart, the test case of :numref:`tab_mdl-point-mass-table`.
 transport families and their overlaps. The score-based comparisons, which it
 does not draw, lie outside all three.
 
-![Three of the four families and where their common members live. f-divergences average a convex function of the density ratio; integral probability metrics take a supremum of mean differences over a class of test functions; optimal-transport distances measure the cost of moving mass. Total variation sits in the first two families and Wasserstein-1 in the last two.](../img/mdl-it-divergence-taxonomy.svg)
+![Three of the four families and where their common members live. f-divergences average a convex function of the density ratio; integral probability metrics take a supremum of mean differences over a class of test functions; optimal-transport distances measure the cost of moving mass. Total variation sits in the first two families and Wasserstein-1 in the last two. Boxed names are metrics; JS and $d_{\mathrm{H}}^2$ are squares of metrics.](../img/mdl-it-divergence-taxonomy.svg)
 :label:`fig_mdl-divergence-taxonomy`
 
 The table says which comparison an objective makes. It does not say how well

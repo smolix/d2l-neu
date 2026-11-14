@@ -234,7 +234,8 @@ def gd_sharpness(eta, P, steps=20000, every=500, last=1000):
             sharp.append(sharpness(P))
         g, loss = grad_and_loss(P)
         losses.append(loss)
-        P = P - eta * g
+        if k < steps:  # The last pass only measures
+            P = P - eta * g
     losses = torch.stack(losses[-last - 1:])  # (last + 1, starts)
     return (torch.stack(sharp, 1), losses[-1],
             (losses[1:] > losses[:-1]).float().mean(0))

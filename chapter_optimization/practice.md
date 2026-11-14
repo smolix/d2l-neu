@@ -420,7 +420,7 @@ We test the average on the convolutional network `d2l.lenet_bn` of
 :numref:`sec_scheduler`: a LeNet with ReLU activations, max-pooling, and
 batch normalization after every hidden layer, initialized with Xavier
 weights and zero biases, and trained on Fashion-MNIST in minibatches of 256
-images. `d2l.evaluate_accuracy` of :numref:`sec_adam` measures its test
+images. `d2l.evaluate_accuracy` of :numref:`sec_test_models` measures its test
 accuracy. At the constant learning rate $\eta = 0.3$, the baseline of that
 section, its test accuracy gains little after about ten epochs and then
 moves up and down from epoch to epoch. Alongside the live weights we keep
@@ -698,9 +698,10 @@ def tiny_lm(seed):
 
 rng = np.random.default_rng(d2l.get_seed())
 
-def sample_lm(b):  # b windows at random offsets in the training text
-    return data.windows(data.train,
+def sample_lm(b):  # b windows at random offsets in the training text, on the GPU
+    X, Y = data.windows(data.train,
                         rng.integers(len(data.train) - data.num_steps, size=b))
+    return jnp.asarray(X), jnp.asarray(Y)
 ```
 
 ```{.python .input #practice-a-worked-configuration-2}
@@ -708,7 +709,8 @@ def sample_lm(b):  # b windows at random offsets in the training text
 model = tiny_lm(new_seed())
 print(f'{d2l.num_params(model):,} parameters')
 for b in [32, 64, 128, 256, 512, 1024]:
-    t = d2l.Benchmark(lambda: d2l.grad_sq_norm(model, *sample_lm(b))).time
+    X, Y = sample_lm(b)
+    t = d2l.Benchmark(lambda: d2l.grad_sq_norm(model, X, Y)).time
     print(f'batch {b:5d}: {1000 * t:5.1f} ms per gradient, '
           f'{b / t:6.0f} sequences per second')
 ```
@@ -785,8 +787,7 @@ results = []
 for seed in [new_seed() for _ in range(2)]:
     _, model, ema, clip_rate = train(
         seed, warmup_cosine(peak, num_steps // 50, num_steps), num_steps)
-    _, baseline, _, _ = train(seed, lambda t: peak, num_steps,
-                              max_norm=math.inf)
+    _, baseline, _, _ = train(seed, lambda t: peak, num_steps)
     results.append((val_loss(model), val_loss(baseline)))
     print(f'{"seed " + str(len(results)):<16}{results[-1][0]:11.3f}'
           f'{val_loss(ema):9.3f}{clip_rate:9.1%}{results[-1][1]:10.3f}'

@@ -2,7 +2,7 @@
 :label:`sec_mdl-adaptive-stochastic-methods`
 
 The transformers in this book, like most large networks, are trained with
-Adam or its variant AdamW (:numref:`sec_adam`) rather than with plain
+Adam or its variant AdamW (:numref:`sec_adamw`) rather than with plain
 stochastic gradient descent. One reason is the step size. The methods of
 :numref:`sec_mdl-stochastic-gradient-methods` use one step size for every
 coordinate, and their schedules change that step only over time. A network

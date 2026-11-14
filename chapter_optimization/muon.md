@@ -53,7 +53,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #muon-1}
-%%tab pytorch, jax
+%%tab pytorch
 import random
 ```
 
@@ -715,13 +715,14 @@ def run_lm(make_optimizer, lrs, seed):
                         data, lrs, seed, evaluate=val_loss,
                         metric='validation loss', every=250)
 
+lrs, wd = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1], 0.1
+
 def adamw(model, lr):  # Decay on the hidden matrices only, as for Muon
     hidden, rest = split_lm(model)
     return torch.optim.AdamW([{'params': hidden, 'weight_decay': wd},
                               {'params': rest, 'weight_decay': 0.0}], lr=lr)
 
 seed = random.getrandbits(32)  # One draw, shared by every run below
-lrs, wd = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1], 0.1
 adamw_lm, adamw_val = run_lm(adamw, lrs, seed)
 ```
 

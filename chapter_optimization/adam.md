@@ -422,7 +422,7 @@ data = d2l.WikiText103(batch_size=64, num_steps=64)
 
 ```{.python .input #adam-gradient-scales-in-a-network-1}
 %%tab pytorch
-def gradients(model, num_batches=10):
+def gradients(model, data, num_batches=10):
     """RMS over num_batches minibatches of each parameter's gradient."""
     device = d2l.try_gpu()
     sq = {name: 0 for name, _ in model.named_parameters()}
@@ -454,7 +454,7 @@ def gradient(model, X, Y):
         model(X), Y).mean()
     return nnx.grad(loss)(model)
 
-def gradients(model, num_batches=10):
+def gradients(model, data, num_batches=10):
     """RMS over num_batches minibatches of each parameter's gradient."""
     sq = {}
     for _, (X, Y) in zip(range(num_batches), data.train_dataloader()):
@@ -485,9 +485,9 @@ def rms_by_kind(tensors):
         counts[kind] = counts.get(kind, 0) + math.prod(t.shape)
     return {kind: math.sqrt(sums[kind] / counts[kind]) for kind in sums}
 
-grad_init = rms_by_kind(gradients(model))
+grad_init = rms_by_kind(gradients(model, data))
 d2l.train_steps(model, data, optimizer, num_steps=500)
-grad_500 = rms_by_kind(gradients(model))
+grad_500 = rms_by_kind(gradients(model, data))
 before = snapshot(model)
 d2l.train_steps(model, data, optimizer, num_steps=1)
 after = snapshot(model)

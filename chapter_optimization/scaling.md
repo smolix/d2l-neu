@@ -138,7 +138,7 @@ class MLP(nnx.Module):
 steps (not the full-set loss after the last step); a run whose mean is not finite is still
 capped at 2.5. The JAX tab binds model and optimizer once with nnx.cached_partial (per-step
 dispatch); both tabs keep the minibatch indices on the device. -->
-Training is a step-counted loop in the style of :numref:`sec_adam`: 400
+Training is a step-counted loop in the style of :numref:`sec_test_models`: 400
 steps of Adam at batch size 512, about three passes over the data, at a
 constant learning rate. A seed fixes both the initialization and the
 sequence of minibatches, so runs with the same seed differ only in width,

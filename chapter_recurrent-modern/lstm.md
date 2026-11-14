@@ -827,7 +827,7 @@ computes it over the validation minibatches, with dropout off.
 All models are trained with the same recipe: AdamW
 (:numref:`sec_adamw`) with learning rate 0.002 and weight decay 0.01, for
 3,000 steps of 64 windows, using the training loop `d2l.train_steps` of
-:numref:`sec_adam`, which draws minibatches and takes optimizer steps. The
+:numref:`sec_test_models`, which draws minibatches and takes optimizer steps. The
 3,000 steps cover the training text about five times. The models do not
 overfit in that time: the validation perplexity of every model in this chapter
 is still falling at the last step, so the comparisons are at a fixed budget,

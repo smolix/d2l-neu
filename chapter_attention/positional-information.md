@@ -678,7 +678,7 @@ two measure extrapolation. All three read the same 1.1 million bytes of the
 validation split. We cut it into consecutive windows of 128 bytes with
 `data.windows` and regroup them into windows of 256 and 512, so that only
 the context available to each prediction changes. `d2l.lm_perplexity`
-(:numref:`sec_adam`) sums the cross-entropy over all predicted tokens and
+(:numref:`sec_test_models`) sums the cross-entropy over all predicted tokens and
 converts it to a perplexity once at the end.
 
 The table lists the perplexity of each model at the three context lengths.

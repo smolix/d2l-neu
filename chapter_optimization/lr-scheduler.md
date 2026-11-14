@@ -267,6 +267,17 @@ def adamw(model, schedule):
 
 <!-- WRITER: the three decaying shapes, all with the peak 3e-3 and T = 2,000 steps: constant; cosine to zero, :eqref:`eq_scheduler-cosine` with eta_T = 0 (keep the equation, with t in steps); and `stable_decay`, the constant rate followed by a linear decay to zero over the last fifth (steps 1,600 to 2,000), the shape the WSD subsection names. `warmup` multiplies a schedule by a ramp that reaches 1 at its last step (it starts at 1/num_steps, not 0, so that no step is wasted). Budget sum_t eta_t, printed by the next cell: 6.00, 3.00 and 5.40. Predictions from the two numbers before the run: the constant run has the largest budget and the largest final rate; cosine has the smallest final rate but half the budget; stable-then-decay keeps 90% of the budget and ends at zero. -->
 
+*Cosine decay* :cite:`Loshchilov.Hutter.2016` follows half a cosine from
+the peak rate $\eta_0$ at step $t = 0$ down to a final rate $\eta_T$ at
+step $T$,
+
+$$
+\eta_t = \eta_T + \frac{\eta_0 - \eta_T}{2}\left(1 + \cos\frac{\pi t}{T}\right).
+$$
+:eqlabel:`eq_scheduler-cosine`
+
+Here it ends at $\eta_T = 0$.
+
 ```{.python .input #lr-scheduler-language-model-2}
 %%tab pytorch
 def constant(t, eta=3e-3):
@@ -478,7 +489,8 @@ def branch(model, optimizer, schedule):
 
 ```{.python .input #lr-scheduler-branching-2}
 %%tab pytorch, jax
-model = tiny_lm(new_seed())
+seed = new_seed()  # The planned run below starts from the same weights
+model = tiny_lm(seed)
 optimizer = adamw(model, constant)
 plateau, branched = {}, {}
 for step in range(250, 2001, 250):
@@ -489,7 +501,7 @@ for step in range(250, 2001, 250):
         twin, twin_optimizer = branch(model, optimizer, decay)
         d2l.train_steps(twin, data, twin_optimizer, 250)
         branched[step + 250] = val_loss(twin)
-planned = tiny_lm(new_seed())  # Decays from step 1000 to 1250 by design
+planned = tiny_lm(seed)  # Decays from step 1000 to 1250 by design
 d2l.train_steps(planned, data, adamw(planned, lambda t: stable_decay(
     t, decay_start=1000, T=1250)), 1250)
 print('step  plateau  branch')

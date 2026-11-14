@@ -1430,24 +1430,6 @@ def lr_sweep(make_model, make_optimizer, data, lrs, seed,
             print(line)
     return curves, scores
 
-def lenet_bn():
-    """LeNet with ReLU, max-pooling, batch normalization, Xavier weights.
-
-    Defined in :numref:`sec_scheduler`"""
-    net = nn.Sequential(
-        nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.BatchNorm2d(6),
-        nn.ReLU(), nn.MaxPool2d(kernel_size=2, stride=2),
-        nn.Conv2d(6, 16, kernel_size=5), nn.BatchNorm2d(16), nn.ReLU(),
-        nn.MaxPool2d(kernel_size=2, stride=2), nn.Flatten(),
-        nn.Linear(16 * 5 * 5, 120), nn.BatchNorm1d(120), nn.ReLU(),
-        nn.Linear(120, 84), nn.BatchNorm1d(84), nn.ReLU(),
-        nn.Linear(84, 10))
-    for m in net.modules():  # Xavier weights, zero biases
-        if isinstance(m, (nn.Conv2d, nn.Linear)):
-            nn.init.xavier_uniform_(m.weight)
-            nn.init.zeros_(m.bias)
-    return net
-
 def ce_loss(model, X, Y):
     """Mean cross-entropy of the logits model(X) for the labels Y.
 

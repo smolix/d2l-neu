@@ -411,7 +411,7 @@ lr, num_steps, every = 3e-3, 2000, 250
 seeds = [random.getrandbits(31) for _ in range(2)]
 table = {}
 print(f'{"λ":<5}' + ''.join(f'{t:>6}' for t in range(0, num_steps + 1, every))
-      + f'{"predicted":>10}  validation loss')
+      + f'{"predicted":>10}{"ratio":>7}  validation loss')
 for wd in [0, 0.1, 0.5, 1]:
     runs = [train_tracked(lambda params: torch.optim.AdamW(
         params, lr, weight_decay=wd), data, seed, num_steps, every)
@@ -419,9 +419,10 @@ for wd in [0, 0.1, 0.5, 1]:
     table[wd] = [sum(rms) / len(rms) for rms in zip(*(r[1] for r in runs))]
     val = [math.log(d2l.lm_perplexity(r[2], data.val_dataloader()))
            for r in runs]
-    predicted = f'{math.sqrt(lr / (2 * wd)):.3f}' if wd else '-'
+    pred = math.sqrt(lr / (2 * wd)) if wd else math.nan  # Equilibrium RMS
     print(f'{wd:<5g}' + ''.join(f'{v:6.3f}' for v in table[wd])
-          + f'{predicted:>10}  ' + ' '.join(f'{v:.3f}' for v in val))
+          + f'{pred:10.3f}{table[wd][-1] / pred:7.2f}  '  # Measured / predicted
+          + ' '.join(f'{v:.3f}' for v in val))
 d2l.plot(list(range(0, num_steps + 1, every)), list(table.values()), 'step',
          'RMS of the weight matrices', legend=[f'λ = {wd:g}' for wd in table])
 ```
@@ -432,16 +433,17 @@ lr, num_steps, every = 3e-3, 2000, 250
 seeds = [d2l.get_seed() for _ in range(2)]
 table = {}
 print(f'{"λ":<5}' + ''.join(f'{t:>6}' for t in range(0, num_steps + 1, every))
-      + f'{"predicted":>10}  validation loss')
+      + f'{"predicted":>10}{"ratio":>7}  validation loss')
 for wd in [0, 0.1, 0.5, 1]:
     runs = [train_tracked(optax.adamw(lr, weight_decay=wd), data, seed,
                           num_steps, every) for seed in seeds]
     table[wd] = [sum(rms) / len(rms) for rms in zip(*(r[1] for r in runs))]
     val = [math.log(d2l.lm_perplexity(r[2], data.val_dataloader()))
            for r in runs]
-    predicted = f'{math.sqrt(lr / (2 * wd)):.3f}' if wd else '-'
+    pred = math.sqrt(lr / (2 * wd)) if wd else math.nan  # Equilibrium RMS
     print(f'{wd:<5g}' + ''.join(f'{v:6.3f}' for v in table[wd])
-          + f'{predicted:>10}  ' + ' '.join(f'{v:.3f}' for v in val))
+          + f'{pred:10.3f}{table[wd][-1] / pred:7.2f}  '  # Measured / predicted
+          + ' '.join(f'{v:.3f}' for v in val))
 d2l.plot(list(range(0, num_steps + 1, every)), list(table.values()), 'step',
          'RMS of the weight matrices', legend=[f'λ = {wd:g}' for wd in table])
 ```

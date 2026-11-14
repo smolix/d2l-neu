@@ -48,7 +48,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #batch-size-1}
-%%tab pytorch, jax
+%%tab pytorch
 import random
 ```
 
@@ -240,7 +240,7 @@ def noise_scale(model, sample, b_small=16, b_big=2048, m=400):  #@save
 
 The noise scale depends on the parameters, so we measure it twice: at
 initialization, and after 500 steps of Adam with `d2l.train_steps` from
-:numref:`sec_adam`. That function streams minibatches and minimizes the
+:numref:`sec_test_models`. That function streams minibatches and minimizes the
 cross-entropy of a model's outputs for a fixed number of steps, so it trains
 the CNN as well as the language model. First the CNN:
 
@@ -737,7 +737,7 @@ Then Adam:
 
 ```{.python .input #batch-size-learning-rate-rules-3}
 %%tab pytorch
-adam_lrs = [0.0001 * 2 ** k for k in range(11)]  # 0.0001 to 0.1024
+adam_lrs = [0.0001 * 2 ** k for k in range(13)]  # 0.0001 to 0.4096
 make_adam = lambda model, lr: torch.optim.Adam(model.parameters(), lr)
 seed = random.getrandbits(32)
 adam_small = final_loss_at(make_adam, adam_lrs, b=2, seed=seed)
@@ -746,15 +746,18 @@ i, j = int(np.nanargmin(adam_small)), int(np.nanargmin(adam_big))
 print(f'best lr: {adam_lrs[i]:g} at b=2; {adam_lrs[j]:g} at b=128, '
       f'final loss {adam_big[j]:.3f}')
 for rule, k in (('no scaling', 0), ('square root', 3), ('linear', 6)):
-    print(f'{rule:11s}: lr {adam_lrs[i + k]:g} at b=128, '
-          f'final loss {adam_big[i + k]:.3f}')
+    if i + k < len(adam_lrs):
+        print(f'{rule:11s}: lr {adam_lrs[i + k]:g} at b=128, '
+              f'final loss {adam_big[i + k]:.3f}')
+    else:
+        print(f'{rule:11s}: lr {adam_lrs[i] * 2 ** k:g}, beyond the grid')
 d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=2', 'b=128'])
 ```
 
 ```{.python .input #batch-size-learning-rate-rules-3}
 %%tab jax
-adam_lrs = [0.0001 * 2 ** k for k in range(11)]  # 0.0001 to 0.1024
+adam_lrs = [0.0001 * 2 ** k for k in range(13)]  # 0.0001 to 0.4096
 make_adam = optax.adam
 seed = d2l.get_seed()
 adam_small = final_loss_at(make_adam, adam_lrs, b=2, seed=seed)
@@ -763,8 +766,11 @@ i, j = int(np.nanargmin(adam_small)), int(np.nanargmin(adam_big))
 print(f'best lr: {adam_lrs[i]:g} at b=2; {adam_lrs[j]:g} at b=128, '
       f'final loss {adam_big[j]:.3f}')
 for rule, k in (('no scaling', 0), ('square root', 3), ('linear', 6)):
-    print(f'{rule:11s}: lr {adam_lrs[i + k]:g} at b=128, '
-          f'final loss {adam_big[i + k]:.3f}')
+    if i + k < len(adam_lrs):
+        print(f'{rule:11s}: lr {adam_lrs[i + k]:g} at b=128, '
+              f'final loss {adam_big[i + k]:.3f}')
+    else:
+        print(f'{rule:11s}: lr {adam_lrs[i] * 2 ** k:g}, beyond the grid')
 d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=2', 'b=128'])
 ```

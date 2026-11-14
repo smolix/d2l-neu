@@ -413,7 +413,7 @@ for the CNN (`d2l.steps_to_reach`), and the final loss.
 # Model, batch size, steps, target loss
 setups = {'softmax regression': (softmax_regression, 60000, 1000, 0.5),
           'FashionCNN': (d2l.FashionCNN, 32, 3000, 0.3)}
-grids = {('softmax regression', 0.0): [0.125, 0.25, 0.5, 1],
+grids = {('softmax regression', 0.0): [0.0625, 0.125, 0.25, 0.5, 1],
          ('softmax regression', 0.9): [0.1, 0.2, 0.4, 0.8],
          ('FashionCNN', 0.0): [0.05, 0.1, 0.2, 0.4],
          ('FashionCNN', 0.9): [0.005, 0.01, 0.02, 0.04]}

@@ -11,9 +11,8 @@ scans it for `#@save` blocks, and `gen_notebooks.py` excludes it via
 splits each minibatch's indices instead), and no PyTorch/JAX notebook used
 it. The rebuilt
 Advanced-part chapter carries PyTorch and JAX tabs only, but the still-four-
-framework notebooks in the Language Models and Image Models parts import these
-symbols:
-  * `d2l.split_batch` (mxnet): `chapter_natural-language-processing-applications/natural-language-inference-attention.md`, `chapter_computer-vision/{image-augmentation,kaggle-cifar10,kaggle-dog}.md`
+framework notebooks in the Image Models part import these symbols:
+  * `d2l.split_batch` (mxnet): `chapter_computer-vision/{image-augmentation,kaggle-cifar10,kaggle-dog}.md`
   * `d2l.resnet18` (tensorflow, mxnet): `chapter_computer-vision/image-augmentation.md`, `chapter_computer-vision/kaggle-cifar10.md`
   * `d2l.evaluate_accuracy_gpus` (mxnet): `chapter_computer-vision/{image-augmentation,kaggle-cifar10}.md`
 `split_batch` and `evaluate_accuracy_gpus` remain byte-for-byte identical to
@@ -21,8 +20,8 @@ their pre-rebuild form in `multiple-gpus.md` / `multiple-gpus-concise.md`.
 `resnet18` has since changed (2026-10, issue #101: bias-free stem conv,
 BatchNorm decay 0.9 and epsilon 1e-5, He initialization in the tensorflow
 stem and head), so its consumers need a re-capture. This file and its
-symbols can be removed when Chapters 17–19 drop their TensorFlow and MXNet
-tabs.
+symbols can be removed when the Image Models part drops its TensorFlow and
+MXNet tabs.
 -->
 
 <!-- These labels are NOT rendered (this file is build-only, absent from
@@ -30,7 +29,7 @@ _quarto.yml/CHAPTER_NUMBERING). They exist only so `build_lib.py`'s
 `find_section_label` regenerates the same "Defined in :numref:`…`" docstring
 suffix the tf/mxnet blocks carried at their original home, keeping the
 extracted d2l/_blocks shards — and hence the freshness fingerprints of the
-ch. 18/19 tf/mxnet consumers — byte-identical after the move. -->
+Image Models tf/mxnet consumers — byte-identical after the move. -->
 :label:`sec_multi_gpu`
 
 **`split_batch` (tensorflow, mxnet only; PyTorch and JAX have none).**

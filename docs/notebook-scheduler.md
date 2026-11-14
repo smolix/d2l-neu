@@ -190,7 +190,6 @@ FULL_CARD_NOTEBOOKS = {            # n whole cards, whatever their size
 HEAVY_GPU_NOTEBOOKS = {            # 2 slots on ONE gpu (excerpt)
     ("jax", "chapter_generative-adversarial-networks/dcgan.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/ssd.ipynb"): 2,
-    ("tensorflow", "chapter_natural-language-processing-pretraining/bert-pretraining.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/fine-tuning.ipynb"): 2,
 }
 

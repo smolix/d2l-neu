@@ -41,8 +41,4 @@ pytorch chapter_hyperparameter-optimization/sh-async.md sh-async-asynchronous-sc
 # lands at 101-104 columns, i.e. 1-4 past the page, and fvextra wraps the tail
 # cleanly. Shortening it means renaming the metric (`metrics=['acc']`), which
 # costs more in the text than the wrap costs on the page.
-tensorflow chapter_natural-language-processing-applications/sentiment-analysis-cnn.md sentiment-analysis-cnn-training-and-evaluating-the-model-1 width
-tensorflow chapter_natural-language-processing-applications/sentiment-analysis-rnn.md sentiment-analysis-rnn-training-and-evaluating-the-model-1 width
-tensorflow chapter_natural-language-processing-applications/natural-language-inference-attention.md natural-language-inference-attention-training-and-evaluating-the-model-2-2 width
-tensorflow chapter_natural-language-processing-applications/natural-language-inference-bert.md natural-language-inference-bert-fine-tuning-bert-3 width
 tensorflow chapter_computer-vision/fcn.md fcn-training width

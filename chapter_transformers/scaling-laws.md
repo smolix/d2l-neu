@@ -502,7 +502,7 @@ however, takes a tenth of the computation that the optimal model would
 need. For a model that will serve trillions of tokens, the smaller model is
 the better choice. Choosing such
 budgets, and the further cost of running out of fresh data, are topics of
-the Language Models part (:numref:`chap_nlp_pretrain`). A mixture of
+the Language Models part (:numref:`chap_lm_pretraining`). A mixture of
 experts (:numref:`sec_moe`) does not fit this accounting: its training
 cost follows its active parameters, its capacity all of them, and the law
 above was fitted to dense models only.

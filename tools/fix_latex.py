@@ -252,7 +252,7 @@ def fix_all(content):
                   content[first_chapter.start():])
 
     # ── Phase 6: no appendix lettering ──
-    # The math part, Tools and the Attic print as numbered chapters (33-44),
+    # The math part, Tools and the Attic print as numbered chapters (33-42),
     # exactly as in the HTML edition: Phase 2's \setcounter{chapter}{N-1}
     # already numbers them, and no \appendix is emitted (2026-11-11, per
     # Alex; until then they were lettered A-L). Their part pages are

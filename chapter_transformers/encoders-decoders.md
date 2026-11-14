@@ -370,8 +370,9 @@ The left context "known as " allows many words, while the right-hand context
 ("he European") leaves essentially one, and a left-to-right model never sees
 that context. Scaled up to subword tokens, sentence pairs, gigabytes of
 text, and a fine-tuning recipe per downstream task, this experiment is BERT
-:cite:`Devlin.Chang.Lee.ea.2018`. The Language Models part covers its
-pretraining and fine-tuning in full (:numref:`chap_nlp_pretrain`). Encoders
+:cite:`Devlin.Chang.Lee.ea.2018`. The Language Models part fine-tunes a
+pretrained encoder of this kind (:numref:`sec_lm_bert`) and treats
+pretraining at scale (:numref:`chap_lm_pretraining`). Encoders
 have since adopted the block internals of this chapter: ModernBERT keeps the
 encoder-only wiring and uses RoPE, a gated FFN, alternating local and global
 attention, and a context of 8,192 tokens

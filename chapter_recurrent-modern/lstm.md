@@ -26,7 +26,7 @@ and its state. We build the two gated networks in wide use, the long
 short-term memory (LSTM) and the gated recurrent unit (GRU), and test them
 on a task that needs a long memory and on character-level language modeling.
 Gates fix the memory, but they read the previous state, so training must
-still process a sequence one step at a time. The next section removes that
+still process a sequence one step at a time. :numref:`sec_ssm` removes that
 restriction.
 
 Throughout the chapter we write the equations for a single sequence, with
@@ -785,6 +785,12 @@ Machine* of :numref:`sec_text-sequence`, with under 200,000, is too small
 for the models of this chapter: they memorize it within a few thousand
 training steps.
 
+```{.python .input #lstm-ptb-data-hub}
+#@save
+d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
+                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
+```
+
 ```{.python .input #lstm-character-level-language-modeling-1}
 %%tab pytorch, jax
 class PennTreebank(d2l.DataModule):  #@save
@@ -897,8 +903,10 @@ ordinary text as well as the old ones.
 The gates solved the memory problem, but not the speed problem. Every gate
 reads $\mathbf{h}_{t-1}$, so step $t$ cannot begin until step $t-1$ has
 finished, and a sequence of $T$ tokens takes $T$ dependent steps to train,
-however many processors are available. The next section asks what remains
-of a gated network when the gates read only the input.
+however many processors are available. :numref:`sec_seq2seq` first puts
+two gated networks to work as a translator and measures what a state of
+fixed size costs it; :numref:`sec_ssm` then asks what remains of a gated
+network when the gates read only the input.
 
 ## Summary
 

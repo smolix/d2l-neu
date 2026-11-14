@@ -25,6 +25,8 @@ Several recent large models interleave such layers with a few attention
 layers :cite:`Lieber.Lenz.Bata.ea.2024,Qwen.Team.2025`.
 
 :numref:`sec_lstm` asks how a network can learn what to keep.
+:numref:`sec_seq2seq` puts two gated networks to work as a translator and
+asks what a state of fixed size costs it.
 :numref:`sec_ssm` asks how to compute the states at all positions at once,
 and how fast a state should forget. :numref:`sec_mamba` asks how each input
 can decide what to write and what to forget. :numref:`sec_matrix-state` asks
@@ -46,6 +48,7 @@ which are the subject of :numref:`chap_performance`, and
 :maxdepth: 2
 
 lstm
+seq2seq
 ssm
 mamba
 matrix-state
@@ -116,6 +119,7 @@ keep** in a fixed size.
 | question | answer |
 |---|---|
 | how to keep a value for long? | gates, a learned decay |
+| what does a fixed state cost? | translation degrades with source length |
 | how to train in parallel? | linear updates, scans; SSMs for timescales |
 | how to keep only what matters? | step sizes chosen by the input |
 | how to store pairs? | a matrix state: linear attention, in chunks |

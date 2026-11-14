@@ -563,7 +563,7 @@ models with recurrent layers are hybrids for this reason.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.6]{.kicker}
+[Dive into Deep Learning · §12.7]{.kicker}
 
 Hybrid architectures<br>
 **a fixed state holds fixed bits · slots and overlapping keys · associative recall · one attention layer · memory per sequence**

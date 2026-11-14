@@ -296,9 +296,6 @@ HEAVY_GPU_NOTEBOOKS = {
     # 1-slot (~7.5 GiB) arena, deterministically on both attempts.
     ("jax", "chapter_generative-adversarial-networks/dcgan.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/ssd.ipynb"): 2,
-    # bert-pretraining: hidden=128, seq=64, batch=512 lands a
-    # BatchMatMulV2 of ~512×64×128×128 that OOMs the 8 GB budget.
-    ("tensorflow", "chapter_natural-language-processing-pretraining/bert-pretraining.ipynb"): 2,
     # fine-tuning: ResNet18 features at 224×224, batch=128, XLA-fused
     # train step allocates ~9.9 GiB in one go and OOMs the 8 GB budget.
     ("tensorflow", "chapter_computer-vision/fine-tuning.ipynb"): 2,

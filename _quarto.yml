@@ -188,6 +188,7 @@ book:
         - chapter_transformers/further-reading.qmd
         - chapter_recurrent-modern/index.qmd
         - chapter_recurrent-modern/lstm.qmd
+        - chapter_recurrent-modern/seq2seq.qmd
         - chapter_recurrent-modern/ssm.qmd
         - chapter_recurrent-modern/mamba.qmd
         - chapter_recurrent-modern/matrix-state.qmd
@@ -469,26 +470,6 @@ book:
         - chapter_recommender-systems/ctr.qmd
         - chapter_recommender-systems/fm.qmd
         - chapter_recommender-systems/deepfm.qmd
-        - chapter_natural-language-processing-pretraining/index.qmd
-        - chapter_natural-language-processing-pretraining/seq2seq.qmd
-        - chapter_natural-language-processing-pretraining/word2vec.qmd
-        - chapter_natural-language-processing-pretraining/approx-training.qmd
-        - chapter_natural-language-processing-pretraining/word-embedding-dataset.qmd
-        - chapter_natural-language-processing-pretraining/word2vec-pretraining.qmd
-        - chapter_natural-language-processing-pretraining/glove.qmd
-        - chapter_natural-language-processing-pretraining/subword-embedding.qmd
-        - chapter_natural-language-processing-pretraining/similarity-analogy.qmd
-        - chapter_natural-language-processing-pretraining/bert.qmd
-        - chapter_natural-language-processing-pretraining/bert-dataset.qmd
-        - chapter_natural-language-processing-pretraining/bert-pretraining.qmd
-        - chapter_natural-language-processing-applications/index.qmd
-        - chapter_natural-language-processing-applications/sentiment-analysis-and-dataset.qmd
-        - chapter_natural-language-processing-applications/sentiment-analysis-rnn.qmd
-        - chapter_natural-language-processing-applications/sentiment-analysis-cnn.qmd
-        - chapter_natural-language-processing-applications/natural-language-inference-and-dataset.qmd
-        - chapter_natural-language-processing-applications/natural-language-inference-attention.qmd
-        - chapter_natural-language-processing-applications/finetuning-bert.qmd
-        - chapter_natural-language-processing-applications/natural-language-inference-bert.qmd
     - references.qmd
 
 bibliography: d2l.bib

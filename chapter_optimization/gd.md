@@ -28,6 +28,32 @@ preconditioning. Preconditioning is the idea behind the adaptive methods of
 :numref:`sec_adam`. Throughout the section the gradient is exact;
 :numref:`sec_sgd` replaces it with a noisy estimate.
 
+```{.python .input #gd-one-dimensional-gradient-descent-1}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #gd-one-dimensional-gradient-descent-1}
+%%tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #gd-one-dimensional-gradient-descent-5}
+%%tab jax
+import functools
+```
+
 ## One-Dimensional Gradient Descent
 
 Why should a step against the gradient reduce the objective at all? The
@@ -67,70 +93,10 @@ $|1 - 2\eta| < 1$, that is, $0 < \eta < 1$, which is the bound $2/L$ with
 $L = 2$. With $\eta = 0.2$ the factor is $0.6$, and ten steps from $x = 10$
 should leave $10 \cdot 0.6^{10} \approx 0.06$. We check this numerically.
 
-```{.python .input #gd-one-dimensional-gradient-descent-1}
-%%tab pytorch
-import math
-import numpy as np
-import torch
-from torch import nn
-from torch.nn import functional as F
-from d2l import torch as d2l
-```
-
-```{.python .input #gd-one-dimensional-gradient-descent-1}
-%%tab jax
-import math
-import numpy as np
-import jax
-from jax import numpy as jnp
-from flax import nnx
-import optax
-from d2l import jax as d2l
-```
-
-```{.python .input #gd-one-dimensional-gradient-descent-5}
-%%tab jax
-import functools
-```
-
-```{.python .input #gd-one-dimensional-gradient-descent-2}
-%%tab pytorch, jax
-def f(x):  # Objective function
-    return x ** 2
-
-def f_grad(x):  # Its derivative
-    return 2 * x
-```
-
-```{.python .input #gd-one-dimensional-gradient-descent-3}
-%%tab pytorch, jax
-def gd(eta, f_grad, steps=10):
-    """Gradient descent from x = 10; returns all iterates."""
-    x = 10.0
-    results = [x]
-    for _ in range(steps):
-        x -= eta * f_grad(x)
-        results.append(float(x))
-    print(f'step {steps}, x: {float(x):f}')
-    return results
-
-results = gd(0.2, f_grad)
-```
+<!-- WRITER: cells gd-one-dimensional-gradient-descent-2/-3/-4 (x^2, its ten-step run printing 0.060466 and its plot) are cut (GD-2, GD-3): "We check this numerically" and the next paragraph ("The iterates approach ... We plot them on the graph of f") have no cell any more. The arithmetic 10 * 0.6^10 = 0.06 stands on its own. -->
 
 The iterates approach the minimum geometrically, each step keeping 60% of
 the distance. We plot them on the graph of $f$.
-
-```{.python .input #gd-one-dimensional-gradient-descent-4}
-%%tab pytorch, jax
-def show_trace(results, f):
-    n = max(abs(min(results)), abs(max(results)))
-    f_line = d2l.arange(-n, n, 0.01)
-    d2l.set_figsize()
-    d2l.plot([f_line, results], [f(f_line), [f(x) for x in results]],
-             '$x$', '$f(x)$', fmts=['-', '-o'])
-
-show_trace(results, f)
-```
 
 ### Learning Rate
 :label:`subsec_gd-learningrate`
@@ -140,10 +106,7 @@ direction. With $\eta = 0.05$ the factor is $0.9$, and ten steps leave
 $10 \cdot 0.9^{10} \approx 3.5$: the iterate barely moves, and reaching the
 minimum would take many more steps.
 
-```{.python .input #gd-learning-rate-1}
-%%tab pytorch, jax
-show_trace(gd(0.05, f_grad), f)
-```
+<!-- WRITER: cell gd-learning-rate-1 (a plotted ten-step run on x^2, output 3.486784) is cut (GD-2); the sentence before it states the arithmetic, which needs no cell. -->
 
 With $\eta = 1.1$ the factor is $-1.2$. Each step overshoots the minimum and
 lands farther away on the other side, so after ten steps the distance has
@@ -151,10 +114,7 @@ grown to $10 \cdot 1.2^{10} \approx 62$. In the language of
 :eqref:`gd-taylor-2`, the step $|\eta f'(x)|$ is too long for the tangent
 line to be a good guide, and the remainder term takes over.
 
-```{.python .input #gd-learning-rate-2}
-%%tab pytorch, jax
-show_trace(gd(1.1, f_grad), f)
-```
+<!-- WRITER: cell gd-learning-rate-2 (a plotted ten-step run on x^2, output 61.917364) is cut (GD-2); the sentence before it states the arithmetic, which needs no cell. -->
 
 The best learning rate for this quadratic is $\eta = 0.5$: the factor is
 zero, and a single step lands on the minimum. That rate is the inverse of
@@ -171,7 +131,27 @@ basin around $x \approx 7.3$ is close by, and a shallow one lies near
 $x \approx -1.8$. We run gradient descent with $\eta = 0.5$ and with
 $\eta = 2$, and plot the second run.
 
-```{.python .input #gd-local-minima}
+<!-- WRITER: the cells now (i) define `gd` (returns the iterates, takes a start x, no print) and `show_trace` once, (ii) define f_cos with f_cos_grad and f_cos_hess (moved here from the Newton cell), (iii) print f'' at both minima and where each run is after 10 and 100 steps, and plot the first 10 steps of both runs. "plot the second run" is now false. Measured (identical in both tabs, deterministic): f''(7.27) = 1.81, f''(-1.83) = 0.98; eta 0.5 (2/eta = 4): x = 7.269 after 10 and after 100 steps; eta 2 (2/eta = 1): x = -1.528 after 10 steps, -1.821 after 100. Reading per GD-6: at eta = 2 the deep minimum (f'' = 1.81 > 1) is unstable from any start; the shallow one (0.98 < 1) is barely stable, so the run settles there slowly (factor 1 - 2 * 0.98 = -0.96 per step). -->
+
+```{.python .input #gd-one-dimensional-gradient-descent-3}
+%%tab pytorch, jax
+def gd(eta, f_grad, x=10.0, steps=10):
+    """Gradient descent from x; returns all iterates."""
+    xs = [x]
+    for _ in range(steps):
+        x = x - eta * f_grad(x)
+        xs.append(float(x))
+    return xs
+
+def show_trace(f, *runs, legend=None):
+    """Draw the iterates of one or more runs on the graph of f."""
+    n = max(abs(x) for xs in runs for x in xs)
+    grid = d2l.arange(-n, n, 0.01)
+    d2l.plot([grid, *runs], [f(grid), *[[f(x) for x in xs] for xs in runs]],
+             '$x$', '$f(x)$', legend=legend, fmts=['-', '-o', '-s'])
+```
+
+```{.python .input #gd-local-minima-1}
 %%tab pytorch, jax
 c = d2l.tensor(0.15 * np.pi)
 
@@ -181,8 +161,20 @@ def f_cos(x):  # Objective function
 def f_cos_grad(x):  # Its derivative
     return d2l.cos(c * x) - c * x * d2l.sin(c * x)
 
-gd(0.5, f_cos_grad)  # A moderate learning rate
-show_trace(gd(2, f_cos_grad), f_cos)
+def f_cos_hess(x):  # Its second derivative
+    return -2 * c * d2l.sin(c * x) - c**2 * x * d2l.cos(c * x)
+```
+
+```{.python .input #gd-local-minima}
+%%tab pytorch, jax
+minima = [gd(0.5, f_cos_grad, x=x, steps=50)[-1] for x in (10.0, 0.0)]
+print(', '.join(f"f''({x:.2f}) = {float(f_cos_hess(x)):.2f}" for x in minima))
+runs = {eta: gd(eta, f_cos_grad, steps=100) for eta in (0.5, 2)}
+for eta, xs in runs.items():
+    print(f'eta {eta}, 2/eta = {2/eta:.0f}: x = {xs[10]:.3f} after 10 steps, '
+          f'{xs[100]:.3f} after 100')
+show_trace(f_cos, *[xs[:11] for xs in runs.values()],
+           legend=['$f$', r'$\eta = 0.5$', r'$\eta = 2$'])
 ```
 
 With $\eta = 0.5$ the iterate rolls into the deep basin and stops near
@@ -216,6 +208,8 @@ $[-2, 2]$ with the squared loss. We train it from one random start with
 full-batch gradient descent at $\eta = 0.4$ and at $\eta = 0.25$, whose
 ceilings $2/\eta$ are 5 and 8, and compute the sharpness every 500 steps.
 
+<!-- WRITER: the experiment now trains from ten random starts at once (vmap), the same ten for both learning rates, and also returns the fraction of the last 1,000 steps on which the loss rose. "from one random start" is false. The plot shows sharpness / (2/eta), median over the ten starts with a min-max band, against the reference line 1; both bands climb to 1 by about step 4,000 and stay. -->
+
 ```{.python .input #optimization-intro-the-edge-of-stability-1}
 %%tab pytorch
 X = torch.linspace(-2, 2, 16)
@@ -225,20 +219,27 @@ def mlp_loss(p):  # 8 hidden units: weights, biases, output weights, bias
     W1, b1, W2, b2 = p[:8], p[8:16], p[16:24], p[24]
     return 0.5 * ((torch.tanh(X[:, None] * W1 + b1) @ W2 + b2 - Y) ** 2).mean()
 
-def sharpness(p):  # Largest eigenvalue of the Hessian
-    return torch.linalg.eigvalsh(torch.func.hessian(mlp_loss)(p))[-1]
+def sharpness(P):  # Largest eigenvalue of the Hessian, for each row of P
+    H = torch.func.vmap(torch.func.hessian(mlp_loss))(P)
+    return torch.linalg.eigvalsh(H)[:, -1]
 
-def gd_sharpness(eta, p, steps=20000, every=500):
-    """Full-batch gradient descent; returns the sharpness every `every`
-    steps and the final loss."""
-    grad, sharp = torch.func.grad(mlp_loss), []
+def gd_sharpness(eta, P, steps=20000, every=500, last=1000):
+    """Full-batch gradient descent from each row of P. Returns the sharpness
+    every `every` steps, the final loss, and the fraction of the last `last`
+    steps on which the loss rose."""
+    grad_and_loss = torch.func.vmap(torch.func.grad_and_value(mlp_loss))
+    sharp, losses = [], []
     for k in range(steps + 1):
         if k % every == 0:
-            sharp.append(sharpness(p).item())
-        p = p - eta * grad(p)
-    return sharp, mlp_loss(p).item()
+            sharp.append(sharpness(P))
+        g, loss = grad_and_loss(P)
+        losses.append(loss)
+        P = P - eta * g
+    losses = torch.stack(losses[-last - 1:])  # (last + 1, starts)
+    return (torch.stack(sharp, 1), losses[-1],
+            (losses[1:] > losses[:-1]).float().mean(0))
 
-p0 = 0.5 * torch.randn(25)  # One random start for both runs
+P0 = 0.5 * torch.randn(10, 25)  # Ten random starts, shared by both runs
 ```
 
 ```{.python .input #optimization-intro-the-edge-of-stability-1}
@@ -250,36 +251,43 @@ def mlp_loss(p):  # 8 hidden units: weights, biases, output weights, bias
     W1, b1, W2, b2 = p[:8], p[8:16], p[16:24], p[24]
     return 0.5 * ((jnp.tanh(X[:, None] * W1 + b1) @ W2 + b2 - Y) ** 2).mean()
 
-def sharpness(p):  # Largest eigenvalue of the Hessian
-    return jnp.linalg.eigvalsh(jax.hessian(mlp_loss)(p))[-1]
+def sharpness(P):  # Largest eigenvalue of the Hessian, for each row of P
+    return jnp.linalg.eigvalsh(jax.vmap(jax.hessian(mlp_loss))(P))[:, -1]
 
-@functools.partial(jax.jit, static_argnames=('steps', 'every'))
-def gd_sharpness(eta, p, steps=20000, every=500):
-    """Full-batch gradient descent; returns the sharpness every `every`
-    steps and the final loss."""
-    def block(p, _):  # Measure, then take `every` steps
-        p_next = jax.lax.fori_loop(
-            0, every, lambda _, p: p - eta * jax.grad(mlp_loss)(p), p)
-        return p_next, sharpness(p)
-    p, sharp = jax.lax.scan(block, p, length=steps // every)
-    return jnp.append(sharp, sharpness(p)), mlp_loss(p)
+@functools.partial(jax.jit, static_argnames=('steps', 'every', 'last'))
+def gd_sharpness(eta, P, steps=20000, every=500, last=1000):
+    """Full-batch gradient descent from each row of P. Returns the sharpness
+    every `every` steps, the final loss, and the fraction of the last `last`
+    steps on which the loss rose."""
+    grad_and_loss = jax.vmap(jax.value_and_grad(mlp_loss))
+    def step(P, _):
+        loss, g = grad_and_loss(P)
+        return P - eta * g, loss
+    def block(P, _):  # Measure the sharpness, then take `every` steps
+        P_next, losses = jax.lax.scan(step, P, length=every)
+        return P_next, (sharpness(P), losses)
+    P, (sharp, losses) = jax.lax.scan(block, P, length=steps // every)
+    losses = jnp.vstack([losses.reshape(steps, -1), jax.vmap(mlp_loss)(P)])
+    losses = losses[-last - 1:]  # (last + 1, starts)
+    return (jnp.vstack([sharp, sharpness(P)]).T, losses[-1],
+            jnp.mean(losses[1:] > losses[:-1], axis=0))
 
-p0 = 0.5 * jax.random.normal(d2l.get_key(), (25,))  # One start for both runs
+P0 = 0.5 * jax.random.normal(d2l.get_key(), (10, 25))  # Ten random starts
 ```
 
 ```{.python .input #optimization-intro-the-edge-of-stability-2}
 %%tab pytorch, jax
-runs = {eta: gd_sharpness(eta, p0) for eta in (0.4, 0.25)}
-for eta, (sharp, loss) in runs.items():
-    print(f'eta {eta}: sharpness {float(sharp[0]):.2f} -> '
-          f'{float(sharp[-1]):.2f} (2/eta = {2 / eta:.0f}), loss '
-          f'{float(mlp_loss(p0)):.3f}'
-          f' -> {float(loss):.1e}')
-steps = np.arange(0, 20001, 500)
-ceilings = [np.full(len(steps), 2 / eta) for eta in (0.4, 0.25)]
-d2l.plot(steps, [runs[0.4][0], runs[0.25][0], *ceilings],
-         'step', 'sharpness', ylim=(0, 9), fmts=('C0-', 'C1-', 'C0:', 'C1:'),
-         legend=[r'$\eta = 0.4$', r'$\eta = 0.25$', '$2/0.4$', '$2/0.25$'])
+runs = {eta: gd_sharpness(eta, P0) for eta in (0.4, 0.25)}
+print('      start      |' + '|'.join(
+    f'    eta {eta}, 2/eta = {2 / eta:.0f}     ' for eta in runs))
+print('sharpness   loss |' + '|'.join([' sharpness    loss  rising '] * 2))
+for i in range(len(P0)):
+    print(f'{float(runs[0.4][0][i, 0]):9.2f} {float(mlp_loss(P0[i])):6.3f} |'
+          + '|'.join(f' {float(s[i, -1]):9.2f} {float(l[i]):7.1e} '
+                     f'{float(r[i]):6.0%} ' for s, l, r in runs.values()))
+curves = {rf'$\eta = {eta}$': eta / 2 * s for eta, (s, _, _) in runs.items()}
+d2l.plot_curves(curves, 'step', r'sharpness$\,/\,(2/\eta)$',
+                x=np.arange(0, 20001, 500), reference=1)
 ```
 
 Both runs start from the same weights, with a sharpness well below 8 and
@@ -289,6 +297,8 @@ close to $2/\eta$: near 5 for $\eta = 0.4$ and near 8 for $\eta = 0.25$.
 Meanwhile the loss keeps falling by orders of magnitude, though not on
 every step. The two runs differ only in $\eta$, yet they end in regions of
 different curvature, each as sharp as its own learning rate allows.
+
+<!-- WRITER: measured facts for this paragraph (two notebook runs plus probes of 10 x 10 and 50 starts per tab; ranges are over random starts). Initial sharpness 2.4 to 5.4 over the development draws, below 5 in all but about one start in twenty (keep "usually below 5"; a start above 5 at eta = 0.4 has its sharpness pushed down to 5.00); initial loss 0.25 to 2.4. eta = 0.4: every start ends at sharpness 4.99 to 5.01 (all probes 4.99 to 5.06), loss 2e-4 to 9e-4. eta = 0.25: every start ends at 7.6 to 8.05 (notebook runs 7.66 to 8.03), loss 4e-5 to 8e-4, i.e. a fall of three to four orders of magnitude. "though not on every step" now has its number: in a start that sits at the edge the loss rises on exactly 50% of the last 1,000 steps, i.e. on every second step (the period-two swing across the sharpest direction); in the other starts the swing has died out, the sharpness sits just below 2/eta and the loss rises on 0% (rarely in between, e.g. 35%). Which starts are still swinging varies from draw to draw (eta = 0.4: 6 to 10 of 10, 86 of 100 over ten draws; eta = 0.25: 2 to 9 of 10, 60 of 100), so do not quote a count of runs; state the two states. "In almost every run" can become "in every one of the ten starts" for reaching the ceiling. -->
 
 Gradient descent stays at the edge because it corrects itself. When the
 sharpness exceeds $2/\eta$, the iterate starts to oscillate along the
@@ -358,6 +368,21 @@ def valley_grad(x1, x2):  #@save
     """Gradient of f_valley."""
     h1, h2 = VALLEY_CURVATURES
     return h1 * x1, h2 * x2
+
+def train_2d(trainer, f_grad, steps=20, **hparams):  #@save
+    """Run a 2D update rule from (-5, -2) and return the iterates."""
+    x1, x2, s1, s2 = -5, -2, 0, 0  # s1, s2: state of stateful optimizers
+    results = [(x1, x2)]
+    for _ in range(steps):
+        x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
+        results.append((x1, x2))
+    print(f'step {steps}, x1: {float(x1):f}, x2: {float(x2):f}')
+    return results
+
+def gd_2d(x1, x2, s1, s2, f_grad, eta):  #@save
+    """One step of gradient descent in 2D; the state stays zero."""
+    g1, g2 = f_grad(x1, x2)
+    return x1 - eta * g1, x2 - eta * g2, 0, 0
 ```
 
 To follow the iterates in the plane we write a helper that the rest of the
@@ -370,31 +395,10 @@ as the learning rate are passed through as keyword arguments. The plotting
 utility `d2l.show_trace_2d` (:numref:`sec_utils`) draws the path over the
 contour lines of the objective.
 
-```{.python .input #gd-multivariate-gradient-descent-1}
-%%tab pytorch, jax
-def train_2d(trainer, f_grad, steps=20, **hparams):  #@save
-    """Run a 2D update rule from (-5, -2) and return the iterates."""
-    x1, x2, s1, s2 = -5, -2, 0, 0  # s1, s2: state of stateful optimizers
-    results = [(x1, x2)]
-    for _ in range(steps):
-        x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
-        results.append((x1, x2))
-    print(f'step {steps}, x1: {float(x1):f}, x2: {float(x2):f}')
-    return results
-```
-
 We run the same 30 steps at $\eta = 0.45$ as in
 :numref:`sec_optimization-intro`, now drawn in the plane.
 
-```{.python .input #gd-multivariate-gradient-descent-3}
-%%tab pytorch, jax
-def gd_2d(x1, x2, s1, s2, f_grad, eta):  #@save
-    """One step of gradient descent in 2D; the state stays zero."""
-    g1, g2 = f_grad(x1, x2)
-    return x1 - eta * g1, x2 - eta * g2, 0, 0
-
-d2l.show_trace_2d(f_valley, train_2d(gd_2d, valley_grad, steps=30, eta=0.45))
-```
+<!-- WRITER: train_2d and gd_2d now sit in the one helper cell above (structure 0.8, GD-8): introduce them with one sentence there and let the docstrings do the rest. The 30-step run in the plane (cell gd-multivariate-gradient-descent-3's run line, output x1 = -0.295265) is cut (GD-9): "We run the same 30 steps ..." and the paragraph after it ("Each step is perpendicular to the contour line ... after 30 steps x1 is still -0.3") describe a plot that no longer exists; the zigzag is plotted against the step count in sec_optimization-intro. -->
 
 Each step is perpendicular to the contour line through the current point,
 as steepest descent must be. On a narrow valley that direction points
@@ -452,21 +456,19 @@ def f_cosh_grad(x, c=d2l.tensor(0.5)):  # First derivative
 def f_cosh_hess(x, c=d2l.tensor(0.5)):  # Second derivative
     return c**2 * d2l.cosh(c * x)
 
-def newton(f_grad, f_hess, eta=1, steps=10):
-    """Newton's method from x = 10, with an optional step size eta."""
-    x = 10.0
-    results = [x]
-    for _ in range(steps):
-        x -= eta * f_grad(x) / f_hess(x)
-        results.append(float(x))
-    print(f'step {steps}, x: {float(x):f}')
-    return results
+def newton(f_grad, f_hess, steps=10):
+    """Newton's method from x = 10: gradient descent on f_grad / f_hess."""
+    return gd(1, lambda x: f_grad(x) / f_hess(x), steps=steps)
 
-show_trace(newton(f_cosh_grad, f_cosh_hess), f_cosh)
+xs = newton(f_cosh_grad, f_cosh_hess)
+print('x_t:', ' '.join(f'{x:.2g}' for x in xs))
+show_trace(f_cosh, xs)
 ```
 
 The iterate reaches the minimum to machine precision within ten steps, with
 no learning rate chosen by hand.
+
+<!-- WRITER: `newton` is now gradient descent with eta = 1 on f'/f'' (one line on top of `gd`) and the cell prints the iterates (identical in both tabs): x_t: 10 8 6 4 2.1 0.53 0.012 1.4e-07 0 0 0. Two phases for GD-11: four steps of almost exactly 1/c = 2 far out, then the error collapses (2.1, 0.53, 0.012, 1.4e-07, then exactly 0 in float32). The Newton run on x cos(cx) prints x_t: 10 5 24.99 27.78 26.8 26.83 ... 26.83. -->
 
 Newton's method divides by the curvature, and the curvature of a nonconvex
 function can be negative. Where it is, the step points uphill, toward a
@@ -475,10 +477,9 @@ minimum near $7.27$, close to the start.
 
 ```{.python .input #gd-newton-s-method-2}
 %%tab pytorch, jax
-def f_cos_hess(x):  # Second derivative of f_cos
-    return - 2 * c * d2l.sin(c * x) - x * c**2 * d2l.cos(c * x)
-
-show_trace(newton(f_cos_grad, f_cos_hess), f_cos)
+xs = newton(f_cos_grad, f_cos_hess)
+print('x_t:', ' '.join(f'{x:.4g}' for x in xs))
+show_trace(f_cos, xs)
 ```
 
 The first step overshoots to $x = 5$. The curvature there is positive but
@@ -493,10 +494,7 @@ the curvature is positive, and the iteration converges. It converges only
 linearly, however: each step halves the distance to $7.27$. Damping makes
 the method safe here, and in exchange it gives up Newton's fast local rate.
 
-```{.python .input #gd-newton-s-method-3}
-%%tab pytorch, jax
-show_trace(newton(f_cos_grad, f_cos_hess, eta=0.5), f_cos)
-```
+<!-- WRITER: the damped Newton run (cell gd-newton-s-method-3, output 7.269860) is cut (GD-13); the paragraph above ("Another is to bring back a learning rate ... gives up Newton's fast local rate") and the next one ("Damping is no guarantee") describe a run that no longer exists. `newton` no longer takes a step size eta. -->
 
 Damping is no guarantee: it only makes a jump into a region of negative
 curvature less likely. Two further facts about Newton's method matter
@@ -549,8 +547,15 @@ def precond_gd_2d(x1, x2, s1, s2, f_grad, eta):
     g1, g2 = f_grad(x1, x2)
     return x1 - eta * g1 / h1, x2 - eta * g2 / h2, 0, 0  # diag(H) = (h1, h2)
 
-d2l.show_trace_2d(f_valley, train_2d(precond_gd_2d, valley_grad, steps=10,
-                                     eta=0.5))
+def steps_to_1pct(xs):  # First step with both coordinates within 1% of start
+    return next(t for t, (x1, x2) in enumerate(xs)
+                if abs(x1) <= 0.01 * 5 and abs(x2) <= 0.01 * 2)
+
+plain = train_2d(gd_2d, valley_grad, steps=100, eta=2 / (h1 + h2))
+precond = train_2d(precond_gd_2d, valley_grad, steps=10, eta=0.5)
+print(f'steps to 1%: plain at its best rate {steps_to_1pct(plain)}, '
+      f'preconditioned {steps_to_1pct(precond)}')
+d2l.show_trace_2d(f_valley, precond)
 ```
 
 Both coordinates now shrink by the same factor $1 - \eta = 0.5$ per step,
@@ -559,6 +564,8 @@ against 47 for the best plain learning rate, and the count no longer
 depends on the condition number. At $\eta = 1$ one step suffices: because
 the Hessian of the valley is diagonal, the diagonal preconditioner is
 Newton's method.
+
+<!-- WRITER: the cell now prints "steps to 1%: plain at its best rate 47, preconditioned 7" (both tabs; it runs plain gradient descent at eta = 2/(h1 + h2) for 100 steps beside the 10 preconditioned steps), so "Seven steps" is printed (GD-17). -->
 
 Two limitations shape what comes next. A deep network does not give us its
 Hessian, not even the diagonal, so practical methods estimate a diagonal
@@ -592,9 +599,9 @@ from gradients.
 
 ## Exercises
 
-1. [code] **Learning-rate sweep.** Extend `gd` to run at most 100 steps
-   and to stop as soon as $|x| < 10^{-3}$. Run it on $f(x) = x^2$,
-   $f(x) = |x|^{1.5}$, and $f(x) = x^4$ at
+1. [code] **Learning-rate sweep.** Extend `gd` to stop as soon as
+   $|x| < 10^{-3}$, and run it from $x = 1$ for at most 100 steps on
+   $f(x) = x^2$, $f(x) = |x|^{1.5}$, and $f(x) = x^4$ at
    $\eta \in \{0.01, 0.1, 0.5, 0.9, 1.1\}$.
     1. Tabulate, for each of the fifteen runs, the number of steps until
        the stopping test holds, or, for a run that misses the test within
@@ -774,7 +781,7 @@ Converges iff $0 < \eta < 1 = 2/L$. Best: $\eta = 1/f''$.
 ::: {.slide title="η = 0.2 Keeps 60% of the Distance per Step"}
 [One dimension]{.kicker}
 
-@!gd-one-dimensional-gradient-descent-4
+<!-- WRITER: cell gd-one-dimensional-gradient-descent-4 is cut; this slide needs rebuilding without it (parabola runs cut, GD-2/GD-3). -->
 
 Ten steps from $x = 10$ leave $10 \cdot 0.6^{10} \approx 0.06$.
 :::
@@ -784,10 +791,10 @@ Ten steps from $x = 10$ leave $10 \cdot 0.6^{10} \approx 0.06$.
 
 ::: {.cols .vc}
 ::: {.col}
-@!gd-learning-rate-1
+<!-- WRITER: cell gd-learning-rate-1 is cut; this slide needs rebuilding without it (parabola runs cut, GD-2). -->
 :::
 ::: {.col}
-@!gd-learning-rate-2
+<!-- WRITER: cell gd-learning-rate-2 is cut; this slide needs rebuilding without it (parabola runs cut, GD-2). -->
 :::
 :::
 
@@ -834,6 +841,8 @@ random start, at $\eta = 0.4$ and $\eta = 0.25$.
 
 @!optimization-intro-the-edge-of-stability-2
 
+<!-- WRITER: the cell now runs ten random starts (shared by both rates) and prints a per-start table (start sharpness and loss; per eta: final sharpness, final loss, share of the last 1,000 steps with rising loss); the plot is sharpness / (2/eta) with a min-max band and reference 1. "Same start" here and "from one random start" on the previous slide are false. -->
+
 Same start, two learning rates, final sharpness near 5 and near 8.
 :::
 
@@ -866,7 +875,7 @@ $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$$
 ::: {.slide title="Steepest Descent Zigzags Across the Valley"}
 [Many dimensions]{.kicker}
 
-@!gd-multivariate-gradient-descent-3
+<!-- WRITER: cell gd-multivariate-gradient-descent-3's run is cut; this slide needs rebuilding without it (third valley run cut, GD-9; the cell now only defines gd_2d inside gd-multivariate-gradient-descent-4). -->
 
 At $(-5, -2)$ the gradient is $(-1, -8)$: eight times steeper across the
 valley than along it. After 30 steps at $\eta = 0.45$, $x_1 = -0.3$.
@@ -903,7 +912,7 @@ $f(x) = \cosh(0.5x)$ from $x = 10$: no learning rate chosen by hand.
 @!gd-newton-s-method-2
 :::
 ::: {.col}
-@!gd-newton-s-method-3
+<!-- WRITER: cell gd-newton-s-method-3 is cut; this slide needs rebuilding without it (damped Newton run cut, GD-13; the slide text on half steps is now false). -->
 :::
 :::
 

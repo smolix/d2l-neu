@@ -20,7 +20,8 @@ Usage (from the repository root, in .venv-lm, HF_HOME set):
   python tools/build_book_qa.py --mode record --smoke
   python tools/build_book_qa.py --mode record --out data/lm/authoring/qa
   python tools/build_book_qa.py --mode replay --cache-dir <folder> --out <dir>
-  python tools/build_book_qa.py --mode record --calibrate <generations.jsonl>
+  python tools/build_book_qa.py --mode record --calibrate <generations.jsonl> \
+      --out <dir>   (labels lm-rag-judge-labels-v1; --smoke first)
 The key is read from OPENROUTER_API_KEY by the launching shell; it is never
 printed, logged or written.
 """
@@ -84,6 +85,15 @@ NEIGHBOR_PARAMS = dict(max_tokens=600, temperature=0, seed=0,
 VERIFY_PARAMS = dict(max_tokens=1500,  # the endpoint takes no temperature
                      response_format={'type': 'json_object'})
 GEN, JUDGE = 'Qwen/Qwen3-4B', 'Qwen/Qwen3.5-4B'
+# Set version 2 (2026-11-14): the closed-book flag re-judged by the judge of
+# 19.5 chosen against frontier-model labels (lm-rag-judge-labels-v1)
+JUDGE_V2 = {'id': 'Qwen/Qwen3.8-27B-FP8',
+            'revision': 'c3a462cc3d38cf351f3b26cbd763469eeb74ef81',
+            'served': 'Qwen/Qwen3.8-27B-FP8', 'thinking': True,
+            'max_new_tokens': 3000, 'prompt': 'RAG_JUDGE_V1',
+            'engine': 'vLLM 0.33.0, pipeline parallel over two RTX 4090',
+            'default_params': {'extra_body': {'chat_template_kwargs': {
+                'enable_thinking': True}}}}
 KAPPA_SAMPLE = 40  # S4-rejected dev/test candidates the verifier also sees
 STOP = set(('''a an the of to in on for and or but is are was were be been
 being by with as at from that this these those it its into than then which
@@ -980,6 +990,87 @@ class Build:
         for x in items:
             x['closed_book_correct'] = bool(have[x['cid']]['correct'])
             x['closed_book_answer'] = have[x['cid']]['answer']
+        if self.args.set_version == 2:
+            self.closed_book_v2(items)
+
+    def closed_book_v2(self, items):
+        """Set version 2: closed_book_correct re-judged by JUDGE_V2
+        (Qwen3.8-27B, thinking on, RAG_JUDGE_V1 prompt) behind an
+        OpenAI-compatible endpoint (--judge-url: a local vLLM server);
+        verdicts keyed by candidate id in --judge-v2-file (default
+        <cache>/local/s6_judge_v2.jsonl), which replay reads."""
+        path = self.args.judge_v2_file or local_path(self.folder,
+                                                     's6_judge_v2.jsonl')
+        have = {r['cid']: r for r in read_jsonl(path)}
+        todo = [x for x in items if x['cid'] not in have]
+        if todo:
+            if self.mode == 'replay' or not self.args.judge_url:
+                raise SystemExit(f'{len(todo)} closed-book v2 verdicts '
+                                 f'missing ({path}); record with --judge-url')
+            import queue
+            import threading
+            import time
+            t0, lock = time.time(), threading.Lock()
+            # chunks of 256 items with fixed boundaries over all items, each
+            # with its own ChatAPI cache (a restart reuses every response);
+            # two workers per server keep it busy while a chunk's slowest
+            # judgments finish
+            pending = {x['cid'] for x in todo}
+            jobs = queue.Queue()
+            for c in range(0, len(items), 256):
+                part = [x for x in items[c:c + 256] if x['cid'] in pending]
+                if part:
+                    jobs.put((c // 256, part))
+            done = [0]
+
+            def work(url):
+                while True:
+                    try:
+                        c, part = jobs.get_nowait()
+                    except queue.Empty:
+                        return
+                    api = self.d2l.ChatAPI(
+                        url, JUDGE_V2['served'], mode='record',
+                        cache=os.path.join(os.path.dirname(path),
+                                           f's6_judge_v2.c{c:03d}.jsonl'),
+                        timeout=1800.0, max_retries=2,
+                        default_params=JUDGE_V2['default_params'])
+                    verdicts = self.d2l.rag_judge(
+                        api, None, [self.item_view(x) for x in part],
+                        [{'answer': x['closed_book_answer'],
+                          'cited_ids': []} for x in part],
+                        [[] for _ in part],
+                        batch_size=self.args.judge_concurrency)
+                    rows = [{'cid': x['cid'], 'correct': v['correct']}
+                            for x, v in zip(part, verdicts)]
+                    with lock:
+                        append_jsonl(path, rows)
+                        have.update({r['cid']: r for r in rows})
+                        done[0] += len(part)
+                        log(f'S6 v2: {done[0]}/{len(todo)} '
+                            f'({time.time() - t0:.0f} s)')
+            urls = self.args.judge_url.split(',')
+            threads = [threading.Thread(target=work, args=(u,))
+                       for u in urls for _ in range(2)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            missing = [x for x in todo if x['cid'] not in have]
+            if missing:
+                raise SystemExit(f'{len(missing)} closed-book v2 verdicts '
+                                 'missing after the run: run again')
+        n_none = 0
+        for x in items:
+            v = have[x['cid']]['correct']
+            n_none += v is None
+            x['closed_book_correct_v1'] = x['closed_book_correct']
+            x['closed_book_correct'] = bool(v)
+        self.stats['s6_v2']['judged'] = len(items)
+        self.stats['s6_v2']['no_verdict'] = n_none
+        self.stats['s6_v2']['changed'] = sum(
+            x['closed_book_correct'] != x['closed_book_correct_v1']
+            for x in items)
 
     def item_view(self, x):
         return {'question': x['question'], 'reference': x['reference'] or
@@ -1204,6 +1295,8 @@ class Build:
                             x['split'] in ('dev', 'test') else None),
             'checks': checks,
             'closed_book_correct': x['closed_book_correct'],
+            **({'closed_book_correct_v1': x['closed_book_correct_v1']}
+               if 'closed_book_correct_v1' in x else {}),
             'flags': sorted(set(flags)),
             'anchor_ids': list(x['anchor']['chunks'])}
 
@@ -1246,6 +1339,21 @@ Qwen3.8-27B; every dev and test item verified by a frontier model
 passage sources a train question. Built by tools/build_book_qa.py; its API
 responses and local-stage outputs are the artifact lm-book-qa-api-cache-v1,
 from which --mode replay rebuilds this set.
+"""
+
+
+README_V2 = """
+## Version 2 (2026-11-14)
+
+Items, splits, references and gold spans are those of lm-book-qa-v1. Only
+the closed-book flag changed: `closed_book_correct` is now the verdict of the
+judge chosen for section 19.5 against frontier-model labels
+(lm-rag-judge-labels-v1): Qwen3.8-27B (FP8 weights, thinking on, prompt
+RAG_JUDGE_V1). The v1 judge (Qwen3.5-4B, thinking off) marked vague answers
+correct; its flag stays in `closed_book_correct_v1`. The judge's verdicts per
+candidate are in closed_book_judge_v2.jsonl: `--mode replay --set-version 2
+--judge-v2-file closed_book_judge_v2.jsonl` with the cache
+lm-book-qa-api-cache-v1 rebuilds this set.
 """
 
 
@@ -1333,7 +1441,12 @@ def build(args):
                for s in out}
     members['manifest.json'] = json.dumps(manifest, indent=1,
                                           ensure_ascii=False) + '\n'
-    members['README.md'] = README.format(verifier=VERIFIER)
+    members['README.md'] = README.format(verifier=VERIFIER).replace(
+        'lm-book-qa-v1', KEY) + (README_V2 if args.set_version == 2 else '')
+    if args.set_version == 2:  # the verdicts replay reads
+        with open(args.judge_v2_file or local_path(
+                b.folder, 's6_judge_v2.jsonl'), encoding='utf-8') as f:
+            members['closed_book_judge_v2.jsonl'] = f.read()
     os.makedirs(args.out, exist_ok=True)
     for name, text in members.items():
         with open(os.path.join(args.out, name), 'w', encoding='utf-8') as f:
@@ -1434,7 +1547,12 @@ def make_manifest(b, out, verified, sample, cands):
         'spend_usd': {'per_stage': spend, 'per_model': {
             m: round(v, 6) for m, v in per_model.items()},
             'caps': CAP_USD, 'shares': SHARES},
-        'human_verified': False}
+        'human_verified': False,
+        **({'version': 2, 'previous': 'lm-book-qa-v1', 'closed_book_judge': {
+            k: v for k, v in JUDGE_V2.items() if k != 'default_params'},
+            'changes': 'closed_book_correct re-judged by JUDGE_V2; the v1 '
+                       'flag is kept as closed_book_correct_v1'}
+           if b.args.set_version == 2 else {})}
 
 
 def report_stats(b):
@@ -1546,47 +1664,184 @@ def smoke(b):
 
 
 CALIB_N, CALIB_KEY = 100, 'lm-rag-judge-labels-v1'
-CALIB_PARAMS = {VERIFIER: dict(max_tokens=1500,
-                               response_format={'type': 'json_object'}),
-                CHECKER: dict(max_tokens=3000, temperature=0, seed=0,
-                              response_format={'type': 'json_object'})}
+# Labellers of the judge-calibration pairs (2026-11-14 judge choice): the
+# frontier verifier of S8 first and a second frontier model of another
+# family; Qwen3.8-27B is a judge candidate, so it is not a labeller.
+SECOND, SECOND_AT = 'google/gemini-4-argon', 'google-ai-studio/flex'
+LABELLERS = {  # arm: (model, provider, request parameters, reasoning)
+    'label-frontier': (VERIFIER, VERIFIER_AT, dict(
+        max_tokens=1500, response_format={'type': 'json_object'}),
+        {'effort': 'low'}),
+    'label-second': (SECOND, SECOND_AT, dict(
+        max_tokens=4000, temperature=0, seed=0,
+        response_format={'type': 'json_object'}), {'effort': 'medium'})}
+CALIB_CAP_USD = {VERIFIER: 4.5, SECOND: 2.5, CHECKER: 1.0}
+CALIB_SHARES = {'label-frontier': 1.0, 'smoke-second': 0.2,
+                'label-second': 0.8}
+CALIB_README = """# lm-rag-judge-labels-v1: labels for choosing and validating the RAG judge
+
+200 (question, answer) pairs of section 19.5 ("Retrieval-Augmented
+Generation"): `base` answers of Qwen3-4B (thinking off, greedy) to dev items
+of lm-book-qa-v1, from the hybrid BookRetriever (sections, K=5, budget 3,000
+tokens, the fixed prompt). Two sets of 100: `calibration` (drawn uniformly
+from the 240 dev generations sorted by qid, random.Random('calib|0')) and
+`selection` (100 of the other 140 dev items with the calibration's count per
+question type, random.Random('select|0')). The judge was chosen on
+`selection`; its agreement on `calibration` is the book's claim C0.
+
+Each pair is labelled `correct` and `faithful` (prompt CALIB_V1 of
+tools/lm/book_qa_prompts.py) by two frontier models of different families:
+{frontier} (first) and {second} (second). Not labelled by people. `correct`
+and `faithful` hold the consensus where both labellers agree (label_source
+"both"), else null ("disagree" or "missing"). Licence CC BY-SA 4.0.
+
+Files: pairs.jsonl (the 200 generations), dev_judge_labels.jsonl (labels),
+manifest.json (models, served ids, parameters, kappas, spend), listing.json
+(OpenRouter listing snapshot), api/<arm>.jsonl and api/<arm>.calls.jsonl (every
+recorded response; `python tools/build_book_qa.py --mode replay --calibrate
+pairs.jsonl --cache-dir <unpacked zip>` rebuilds the labels from them),
+including the recorded responses of the judge candidates (judge-*: Qwen3.8-27B
+on OpenRouter, thinking off and on; judge-local-*: the same model's FP8
+weights served by vLLM on two RTX 4090, and Qwen3.5-9B and Qwen3.5-4B, thinking
+on). candidates/<name>.jsonl holds every candidate's verdicts on the 200 pairs
+and candidates/table.json the comparison (agreement, Cohen's kappa with
+bootstrap intervals, false-correct rate, flip rate, time and cost per 1,000
+judgments); the chosen judge is Qwen3.8-27B with thinking on.
+"""
+
+
+def calib_pairs(gens, items):
+    """(calibration, selection) generations: see CALIB_README."""
+    gens = sorted((r for r in gens if r.get('config') == 'base' and
+                   r.get('split', 'dev') == 'dev'), key=lambda r: r['qid'])
+    if len(gens) < 2 * CALIB_N:
+        raise SystemExit(f'{len(gens)} base dev generations, need '
+                         f'{2 * CALIB_N}')
+    pick = set(random.Random(f'calib|{SEED}').sample(range(len(gens)),
+                                                     CALIB_N))
+    calib = [g for i, g in enumerate(gens) if i in pick]
+    rest = [g for i, g in enumerate(gens) if i not in pick]
+    want = collections.Counter(items[g['qid']]['type'] for g in calib)
+    rng, sel = random.Random(f'select|{SEED}'), []
+    for t in sorted(want):
+        sel += rng.sample([g for g in rest if items[g['qid']]['type'] == t],
+                          want[t])
+    return calib, sorted(sel, key=lambda r: r['qid'])
+
+
+def calib_messages(corpus, item, gen):
+    """CALIB_V1 messages for one (item, generation) pair."""
+    C, c = P.CALIB_V1, corpus
+    passages = '\n\n'.join(
+        f'[{n}] {c.header(c[i])}\n{c[i]["text"]}'
+        for n, i in enumerate(gen['context_ids'], start=1)) or '(none)'
+    user = C['user'].format(
+        question=item['question'], reference=item['reference'],
+        key_facts='\n'.join(f'- {k}' for k in item['key_facts']) or
+        '- (none)', passages=passages, answer=gen['answer'])
+    return [{'role': 'system', 'content': C['system']},
+            {'role': 'user', 'content': user}]
+
+
+def calib_kappas(rows):
+    """Labeller agreement and kappa per label, overall and per set."""
+    out = {}
+    for s in ('all', 'calibration', 'selection'):
+        rs = [r for r in rows if s == 'all' or r['set'] == s]
+        for k in ('correct', 'faithful'):
+            both = [(r[f'{k}_frontier'], r[f'{k}_second']) for r in rs
+                    if None not in (r[f'{k}_frontier'], r[f'{k}_second'])]
+            out[f'{s}/{k}'] = {
+                'n': len(both), 'agree': round(sum(a == v for a, v in both)
+                                               / max(1, len(both)), 4),
+                'kappa': kappa([a for a, _ in both], [v for _, v in both]),
+                'consensus': sum(r[f'{k}_label_source'] == 'both'
+                                 for r in rs)}
+    return out
 
 
 def calibrate(args):
-    """The judge-calibration labels (W14, after 19.5's baseline run): 100
-    `base` dev generations drawn uniformly with seed 0, labelled `correct`
-    and `faithful` by the frontier verifier (first labeller) and by
-    Qwen3.8-27B with reasoning on (second); consensus where they agree;
-    Cohen's kappa between them. Writes dev_judge_labels.jsonl, a manifest
-    and the zip lm-rag-judge-labels-v1.zip with the two API caches."""
-    b = Build(args)
-    gens = [r for r in read_jsonl(args.calibrate)
-            if r.get('config') == 'base' and r.get('split', 'dev') == 'dev']
-    gens.sort(key=lambda r: r['qid'])
-    if len(gens) < CALIB_N:
-        raise SystemExit(f'{len(gens)} base dev generations, need {CALIB_N}')
-    rng = random.Random(f'calib|{SEED}')
-    pick = sorted(rng.sample(range(len(gens)), CALIB_N))
-    gens = [gens[i] for i in pick]
-    d2l, c = b.d2l, b.book.c
-    items = {q['qid']: q for q in d2l.book_qa('dev', root=os.path.join(
-        W, 'data', 'lm'))}
-    C, reqs = P.CALIB_V1, []
-    for r in gens:
-        q = items[r['qid']]
-        passages = '\n\n'.join(
-            f'[{n}] {c.header(c[i])}\n{c[i]["text"]}'
-            for n, i in enumerate(r['context_ids'], start=1)) or '(none)'
-        user = C['user'].format(
-            question=q['question'], reference=q['reference'],
-            key_facts='\n'.join(f'- {k}' for k in q['key_facts']) or
-            '- (none)', passages=passages, answer=r['answer'])
-        reqs.append([{'role': 'system', 'content': C['system']},
-                     {'role': 'user', 'content': user}])
+    """The judge-calibration labels lm-rag-judge-labels-v1 (19.5): 200
+    `base` dev generations (calibration and selection sets, see
+    CALIB_README) labelled `correct` and `faithful` by two frontier models
+    through d2l.ChatAPI (recorded; --mode replay rebuilds the labels from
+    the caches); consensus where they agree; Cohen's kappa between them.
+    Writes the zip lm-rag-judge-labels-v1.zip to --out."""
+    folder = os.path.abspath(args.cache_dir or os.path.join(
+        W, 'data', 'lm-api', 'record', CALIB_KEY))
+    gens_path, out_dir = (os.path.abspath(args.calibrate),
+                          os.path.abspath(args.out))
+    os.environ.setdefault('HF_HOME', '/home/smola/.cache/hf-lm')
+    os.chdir(os.path.join(W, 'chapter_lm-encoders'))
+    from d2l import torch as d2l
+    os.makedirs(os.path.join(folder, 'api'), exist_ok=True)
+    lp = os.path.join(folder, 'listing.json')
+    if not os.path.exists(lp):
+        if args.mode == 'replay':
+            raise SystemExit(f'{lp} missing')
+        rec = d2l.APIRecording('record', os.path.dirname(folder), 1.0, {})
+        rec.snapshot_listing([VERIFIER, SECOND, CHECKER], {},
+                             key=os.path.basename(folder))
+    with open(lp) as f:
+        listing = json.load(f)
+    recs = {}
+    for m, at in ((VERIFIER, VERIFIER_AT), (SECOND, SECOND_AT),
+                  (CHECKER, CHECKER_AT)):
+        recs[m] = d2l.APIRecording(args.mode, folder, CALIB_CAP_USD[m],
+                                   {m: at})
+        recs[m].listing = listing
+
+    def client(arm, m, reasoning):
+        return recs[m].hosted(m, os.path.join(folder, 'api', arm + '.jsonl'),
+                              share=CALIB_SHARES[arm], reasoning=reasoning,
+                              timeout=300.0, max_retries=10)
+
+    def run(api, reqs, arm):
+        import asyncio
+        import time
+        out = asyncio.run(d2l.chat_batch(api, reqs, concurrency=5))
+        for _ in range(6 if args.mode == 'record' else 0):
+            todo = [i for i, r in enumerate(out)
+                    if isinstance(r, BaseException)]
+            if not todo:
+                break
+            log(f'{arm}: {len(todo)} failed ({out[todo[0]]!r:.120}); '
+                f'retrying in 60 s')
+            time.sleep(60)
+            again = asyncio.run(d2l.chat_batch(
+                api, [reqs[i] for i in todo], concurrency=5))
+            for i, r in zip(todo, again):
+                out[i] = r
+        calls = d2l.api_calls(api.calls_path)
+        log(f'{arm}: {sum(not isinstance(r, BaseException) for r in out)}/'
+            f'{len(out)} ok; recorded spend '
+            f'{sum(c.get("cost") or 0 for c in calls):.4f} USD')
+        return out
+
+    corpus = d2l.book_corpus(root=os.path.join(W, 'data', 'lm'))
+    # the dev items of lm-book-qa-v1 (v2 changes only the closed-book flag)
+    with zipfile.ZipFile(d2l.download_keyed('lm-book-qa-v1', os.path.join(
+            W, 'data', 'lm'))) as z:
+        name = next(n for n in z.namelist() if n.endswith('qa_dev.jsonl'))
+        items = {q['qid']: q for q in map(json.loads, z.read(
+            name).decode('utf-8').splitlines()) if q}
+    calib, sel = calib_pairs(read_jsonl(gens_path), items)
+    pairs = [dict(g, set='calibration') for g in calib] + [
+        dict(g, set='selection') for g in sel]
+    msgs = [calib_messages(corpus, items[g['qid']], g) for g in pairs]
+    if args.smoke:
+        m, at, params, reasoning = LABELLERS['label-second']
+        res = run(client('smoke-second', m, reasoning),
+                  [dict(messages=x, **params) for x in msgs[:10]],
+                  'smoke-second')
+        for r in res:
+            log(repr(r)[:300] if isinstance(r, BaseException) else
+                f'{r.model} {r.provider} {r.usage} {r.text[:200]!r}')
+        return
     labels = {}
-    for arm, m in (('calib-verify', VERIFIER), ('calib-check', CHECKER)):
-        res = b.api.run(arm, [dict(messages=x, **CALIB_PARAMS[m])
-                              for x in reqs], concurrency=8)
+    for arm, (m, at, params, reasoning) in LABELLERS.items():
+        res = run(client(arm, m, reasoning),
+                  [dict(messages=x, **params) for x in msgs], arm)
         out = []
         for x in res:
             v = None if isinstance(x, BaseException) else parse_json_obj(
@@ -1595,55 +1850,72 @@ def calibrate(args):
                                              in ('correct', 'faithful'))
             out.append({'correct': v['correct'], 'faithful': v['faithful'],
                         'rationale': str(v.get('rationale', ''))[:400],
-                        'served': x.model} if ok else None)
+                        'served': x.model, 'provider': x.provider}
+                       if ok else None)
         labels[arm] = out
     rows = []
-    for r, f, q in zip(gens, labels['calib-verify'], labels['calib-check']):
-        row = {'qid': r['qid'], 'config': 'base', 'answer': r['answer'],
-               'context_ids': r['context_ids'],
-               'cited_ids': r.get('cited_ids', [])}
+    for g, f, q in zip(pairs, labels['label-frontier'],
+                       labels['label-second']):
+        it = items[g['qid']]
+        row = {'qid': g['qid'], 'set': g['set'], 'type': it['type'],
+               'answerable': it['answerable'], 'config': 'base',
+               'answer': g['answer'], 'context_ids': g['context_ids'],
+               'cited_ids': g.get('cited_ids', [])}
         for k in ('correct', 'faithful'):
             a = None if f is None else f[k]
-            bq = None if q is None else q[k]
-            row[f'{k}_frontier'], row[f'{k}_qwen'] = a, bq
-            row[k] = a if a is not None and a == bq else None
+            b = None if q is None else q[k]
+            row[f'{k}_frontier'], row[f'{k}_second'] = a, b
+            row[k] = a if a is not None and a == b else None
             row[f'{k}_label_source'] = ('both' if row[k] is not None else
-                                        'disagree' if None not in (a, bq)
+                                        'disagree' if None not in (a, b)
                                         else 'missing')
         row['rationale_frontier'] = None if f is None else f['rationale']
-        row['rationale_qwen'] = None if q is None else q['rationale']
+        row['rationale_second'] = None if q is None else q['rationale']
         rows.append(row)
-    kap = {}
-    for k in ('correct', 'faithful'):
-        both = [(r[f'{k}_frontier'], r[f'{k}_qwen']) for r in rows
-                if None not in (r[f'{k}_frontier'], r[f'{k}_qwen'])]
-        kap[k] = {'n': len(both), 'agree': sum(a == v for a, v in both) /
-                  max(1, len(both)), 'kappa': kappa(
-                      [a for a, _ in both], [v for _, v in both])}
-    manifest = {'name': CALIB_KEY, 'question_set': KEY, 'n': CALIB_N,
-                'seed': SEED, 'labellers': {
-                    'frontier': {'requested': VERIFIER, 'provider':
-                                 VERIFIER_AT, 'params': CALIB_PARAMS[VERIFIER]},
-                    'second': {'requested': CHECKER, 'provider': CHECKER_AT,
-                               'params': CALIB_PARAMS[CHECKER],
-                               'reasoning': {'enabled': True}}},
-                'kappa_frontier_vs_qwen': kap,
-                'prompt_sha256': sha256(json.dumps(P.CALIB_V1,
-                                                   sort_keys=True)),
-                'spend_usd': {a: b.api.recorded(a) for a in (
-                    'calib-verify', 'calib-check')},
-                'note': 'labels from models, not from people'}
-    members = {'dev_judge_labels.jsonl': ''.join(dumps(r) + '\n'
-                                                 for r in rows).encode(),
-               'manifest.json': (json.dumps(manifest, indent=1) +
-                                 '\n').encode()}
-    for arm in ('calib-verify', 'calib-check'):
-        for ext in ('.jsonl', '.calls.jsonl'):
-            with open(os.path.join(b.folder, arm + ext), 'rb') as f:
-                members[f'api/{arm}{ext}'] = f.read()
-    os.makedirs(args.out, exist_ok=True)
-    write_zip(os.path.join(args.out, f'{CALIB_KEY}.zip'), members)
-    log('kappa:', kap, 'wrote', os.path.join(args.out, f'{CALIB_KEY}.zip'))
+    kap = calib_kappas(rows)
+    spend = {}
+    for arm in ('smoke-second', *LABELLERS):
+        calls = d2l.api_calls(os.path.join(folder, 'api',
+                                           arm + '.calls.jsonl'))
+        ok = [c for c in calls if c.get('status') == 200]
+        spend[arm] = {'calls': len(ok), 'failed_attempts': len(calls) -
+                      len(ok), 'usd': round(sum(c.get('cost') or 0.0
+                                                for c in ok), 6),
+                      'served': sorted({str(c.get('served_model'))
+                                        for c in ok}),
+                      'providers': sorted({str(c.get('provider'))
+                                           for c in ok})}
+    snap = lambda m: listing['models'][m].get('canonical_slug', m)
+    manifest = {
+        'name': CALIB_KEY, 'question_set': KEY, 'n': len(rows),
+        'sets': {'calibration': CALIB_N, 'selection': CALIB_N},
+        'seed': SEED, 'labellers': {
+            arm.split('-')[1]: {'requested': m, 'snapshot': snap(m),
+                                'provider': at, 'params': params,
+                                'reasoning': reasoning}
+            for arm, (m, at, params, reasoning) in LABELLERS.items()},
+        'kappa_frontier_vs_second': kap,
+        'prompt_sha256': sha256(json.dumps(P.CALIB_V1, sort_keys=True)),
+        'listing_retrieved': listing.get('retrieved'),
+        'spend_usd': spend, 'note': 'labels from models, not from people'}
+    members = {
+        'pairs.jsonl': ''.join(dumps(g) + '\n' for g in pairs).encode(),
+        'dev_judge_labels.jsonl': ''.join(dumps(r) + '\n'
+                                          for r in rows).encode(),
+        'manifest.json': (json.dumps(manifest, indent=1) + '\n').encode(),
+        'README.md': CALIB_README.format(
+            frontier=snap(VERIFIER), second=snap(SECOND)).encode(),
+        'listing.json': open(lp, 'rb').read()}
+    for sub in ('api', 'candidates'):  # caches; the judge candidates' runs
+        if not os.path.isdir(os.path.join(folder, sub)):
+            continue
+        for name in sorted(os.listdir(os.path.join(folder, sub))):
+            with open(os.path.join(folder, sub, name), 'rb') as f:
+                members[f'{sub}/{name}'] = f.read()
+    os.makedirs(out_dir, exist_ok=True)
+    write_zip(os.path.join(out_dir, f'{CALIB_KEY}.zip'), members)
+    log('kappa:', json.dumps(kap), 'wrote',
+        os.path.join(out_dir, f'{CALIB_KEY}.zip'))
 
 
 def pack_cache(args):
@@ -1667,6 +1939,7 @@ def pack_cache(args):
 
 
 def main():
+    global KEY
     p = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     p.add_argument('--mode', choices=('record', 'replay'), required=True)
     p.add_argument('--cache-dir', help='API caches and local outputs '
@@ -1684,11 +1957,25 @@ def main():
                    help='draft only these splits (a pilot with --stop-after)')
     p.add_argument('--review')
     p.add_argument('--calibrate', metavar='GENERATIONS_JSONL',
-                   help="label 100 base dev generations of 19.5 (W14)")
+                   help='label 200 base dev generations of 19.5 (the '
+                   'judge selection and calibration sets; with --smoke: 10 '
+                   'calls of the second labeller)')
+    p.add_argument('--set-version', type=int, choices=(1, 2), default=1,
+                   help='2: lm-book-qa-v2 (closed-book flag by JUDGE_V2)')
+    p.add_argument('--judge-url', help='OpenAI-compatible endpoints '
+                   'serving JUDGE_V2, comma-separated (record mode, '
+                   '--set-version 2)')
+    p.add_argument('--judge-v2-file', help='closed-book v2 verdicts '
+                   '(default <cache>/local/s6_judge_v2.jsonl)')
+    p.add_argument('--judge-concurrency', type=int, default=32)
     p.add_argument('--concurrency', type=int, default=24)
     p.add_argument('--gen-batch', type=int, default=64)
     p.add_argument('--judge-batch', type=int, default=32)
     args = p.parse_args()
+    if args.set_version == 2:
+        KEY = 'lm-book-qa-v2'
+        if args.out == p.get_default('out'):
+            args.out = os.path.join(W, 'data', 'lm', 'authoring', KEY)
     if args.pack_cache:
         return pack_cache(args)
     calibrate(args) if args.calibrate else build(args)

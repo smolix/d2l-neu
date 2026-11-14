@@ -9,9 +9,14 @@ uses these symbols at import time). It holds the library code that
 :numref:`sec_lm_rag` explains in a sentence but does not show: the reader of
 the question-set artifact (`_book_qa_read`, with the notice on a second load
 of the `test` split in one process), the item list `BookQA` (`stats`,
-`subset`), and the judge's frozen prompt `RAG_JUDGE_V1` with its message
+`subset`), the judge's frozen prompt `RAG_JUDGE_V1` with its message
 builder and JSON parser (the question set's closed-book flags use them, so
-they were fixed before the set was built).
+they were fixed before the set was built), and the judge chosen on
+2026-11-14 against frontier-model labels (`RAG_JUDGE_LOCAL`: Qwen3.8-27B,
+thinking on, FP8 weights served by vLLM over two 24 GB GPUs; its server
+`rag_judge_server`, its client `rag_judge_client` and `_rag_judge_replies`,
+which reads a verdict after the reasoning, from an endpoint or a
+Transformers model).
 
 Every block is tagged `%%tab pytorch`; a module-level import would join the
 `_preamble` shard and move the freshness fingerprint of every notebook in the
@@ -36,7 +41,7 @@ def _book_qa_read(split, root=os.path.join('..', 'data', 'lm')):
     if split == 'test' and _BOOK_QA_LOADS[split] == 2:
         print('notice: the test split is loaded a second time in this '
               'process; decisions belong to train and dev')
-    path = d2l.download_keyed('lm-book-qa-v1', root)
+    path = d2l.download_keyed('lm-book-qa-v2', root)
     with zipfile.ZipFile(path) as z:
         name = next(n for n in z.namelist()
                     if n.rsplit('/', 1)[-1] == f'qa_{split}.jsonl')
@@ -103,6 +108,43 @@ RAG_JUDGE_V1 = {
     'retry': 'Reply with the JSON line only, in exactly the requested form.'}
 
 #@save
+# The judge of 19.5, chosen 2026-11-14 against frontier-model labels
+# (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights served
+# by vLLM over two 24 GB GPUs; the same open weights are served in BF16 on
+# OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
+RAG_JUDGE_LOCAL = {'model': 'Qwen/Qwen3.8-27B-FP8',
+                   'revision': 'c3a462cc3d38cf351f3b26cbd763469eeb74ef81',
+                   'vllm': '0.33.0', 'thinking': True,
+                   'max_new_tokens': 3000}
+
+#@save
+def rag_judge_server(n_gpus=2, port=None, vllm=None):
+    """A d2l.LocalChatServer that serves the judge (RAG_JUDGE_LOCAL) with
+    vLLM, its layers split over n_gpus GPUs (pipeline parallel), from the
+    executable vllm (default: the environment variable D2L_VLLM, else
+    `vllm` on the PATH). vLLM lives in an environment of its own, since it
+    pins its own PyTorch."""
+    import shutil  # not in the d2l library preamble
+    exe = vllm or os.environ.get('D2L_VLLM') or shutil.which('vllm')
+    if exe is None:
+        raise RuntimeError('no vLLM: install it in its own environment and '
+                           'set D2L_VLLM to its vllm executable')
+    j = d2l.RAG_JUDGE_LOCAL
+    return d2l.LocalChatServer([
+        exe, 'serve', j['model'], '--revision', j['revision'],
+        '--pipeline-parallel-size', str(n_gpus), '--max-model-len', '16384',
+        '--max-num-seqs', '64', '--gpu-memory-utilization', '0.9',
+        '--limit-mm-per-prompt', '{"image": 0, "video": 0}', '--seed', '0',
+        '--host', '127.0.0.1', '--port', '{port}'], port=port)
+
+def rag_judge_client(url='http://127.0.0.1/v1', cache=None, mode='replay'):
+    """A d2l.ChatAPI for the judge served at url, thinking on; the request
+    hash keeps the host only, so a recorded cache replays with no server."""
+    return d2l.ChatAPI(url, d2l.RAG_JUDGE_LOCAL['model'], cache=cache,
+                       mode=mode, default_params={'extra_body': {
+                           'chat_template_kwargs': {'enable_thinking': True}}})
+
+#@save
 def _rag_abstained(answer):
     """Whether an answer is the abstention string (case, surrounding
     whitespace and quotes, and a final period ignored)."""
@@ -129,6 +171,28 @@ def _rag_judge_messages(item, answer, context_texts, cited_ids):
         p[k] for k in keys), f'Reply exactly in this form: {form}']
     return [{'role': 'system', 'content': p['system']},
             {'role': 'user', 'content': '\n\n'.join(parts)}]
+
+def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
+                       batch_size):
+    """The judge's replies to a list of chat messages, each the text after
+    its reasoning ('</think>'), or None when the reply was cut off at
+    max_new_tokens. judge is a d2l.ChatAPI (greedy, seed 0; batch_size
+    requests in flight) or a Transformers model with its tokenizer."""
+    if hasattr(judge, 'achat'):  # an OpenAI-compatible endpoint
+        import asyncio  # not in the d2l library preamble
+        out = asyncio.run(d2l.chat_batch(judge, [dict(
+            messages=m, max_tokens=max_new_tokens, temperature=0, seed=0)
+            for m in messages], concurrency=batch_size))
+        return [None if isinstance(r, BaseException)  # counts as malformed
+                or r.finish_reason == 'length'
+                else (r.text or '').split('</think>')[-1] for r in out]
+    gens = d2l.generate(judge, tokenizer, messages,
+                        max_new_tokens=max_new_tokens, chat=True,
+                        enable_thinking=thinking, batch_size=batch_size)
+    if not thinking:
+        return [g.text for g in gens]
+    return [None if g.finish_reason == 'length' and '</think>' not in g.text
+            else g.text.split('</think>')[-1] for g in gens]
 
 def _rag_parse_json(text, keys):
     """{key: bool} from the first JSON object in a reply that has every

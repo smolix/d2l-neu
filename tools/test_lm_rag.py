@@ -8,6 +8,7 @@ judge helpers (`rag_prompt`, `parse_citations`, `_rag_parse_json`,
 `rag_judge` with a stub judge); the pure functions of
 tools/build_book_qa.py (evidence spans, lexical filter, phrase blacklist,
 identifier flag, kappa, deterministic zip)."""
+import collections
 import contextlib
 import hashlib
 import io
@@ -85,7 +86,7 @@ def qa_zip(path):
                  for i in range(40)] for s in ('train', 'dev', 'test')}
     with zipfile.ZipFile(path, 'w') as z:
         for s, rows in items.items():
-            z.writestr(f'lm-book-qa-v1/qa_{s}.jsonl',
+            z.writestr(f'lm-book-qa-v2/qa_{s}.jsonl',
                        ''.join(json.dumps(r) + '\n' for r in rows))
     with open(path, 'rb') as f:
         return hashlib.sha1(f.read()).hexdigest()
@@ -94,18 +95,18 @@ def qa_zip(path):
 class Reader(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.mkdtemp()
-        os.makedirs(os.path.join(self.root, 'lm-book-qa-v1'))
-        sha1 = qa_zip(os.path.join(self.root, 'lm-book-qa-v1',
-                                   'lm-book-qa-v1.zip'))
-        self.saved = d2l.DATA_HUB.get('lm-book-qa-v1')
-        d2l.DATA_HUB['lm-book-qa-v1'] = (
-            'https://example.invalid/lm-book-qa-v1.zip', sha1)
+        os.makedirs(os.path.join(self.root, 'lm-book-qa-v2'))
+        sha1 = qa_zip(os.path.join(self.root, 'lm-book-qa-v2',
+                                   'lm-book-qa-v2.zip'))
+        self.saved = d2l.DATA_HUB.get('lm-book-qa-v2')
+        d2l.DATA_HUB['lm-book-qa-v2'] = (
+            'https://example.invalid/lm-book-qa-v2.zip', sha1)
 
     def tearDown(self):
         if self.saved is None:
-            del d2l.DATA_HUB['lm-book-qa-v1']
+            del d2l.DATA_HUB['lm-book-qa-v2']
         else:
-            d2l.DATA_HUB['lm-book-qa-v1'] = self.saved
+            d2l.DATA_HUB['lm-book-qa-v2'] = self.saved
 
     def test_reader(self):
         qa = d2l.book_qa('dev', root=self.root)
@@ -218,6 +219,67 @@ class StubJudge(unittest.TestCase):
         self.assertEqual(len(calls[0]), 3)  # abstentions never reach it
         self.assertEqual(calls[1][0][-1]['content'],
                          d2l.RAG_JUDGE_V1['retry'])
+
+
+class StubEndpointJudge(unittest.TestCase):
+    """rag_judge with a d2l.ChatAPI-like judge (an object with achat):
+    thinking on by default, greedy requests with max_tokens 3,000 and
+    seed 0, the verdict read after '</think>', a reply cut off at the
+    token limit and a failed request treated as malformed (one retry)."""
+    def test_endpoint(self):
+        R = collections.namedtuple('R', 'text finish_reason')
+        script = {
+            'A': [R('<think>long</think>{"correct": true}', 'stop')],
+            'B': [R('', 'length'), R('{"correct": false}', 'stop')],
+            'C': [RuntimeError('503'), RuntimeError('503')]}
+        sent = []
+
+        class Stub:
+            async def achat(self, messages, **params):
+                sent.append((messages, params))
+                answer = messages[1]['content'].split(
+                    'Answer to grade: ')[1].split('\n')[0]
+                r = script[answer].pop(0)
+                if isinstance(r, BaseException):
+                    raise r
+                return r
+        q = dict(question='Q', reference='R', key_facts=['f'],
+                 answerable=True)
+        v = d2l.rag_judge(Stub(), None, [q, q, q],
+                          [dict(answer=a) for a in 'ABC'], [[], [], []],
+                          batch_size=2)
+        self.assertEqual([x['correct'] for x in v], [True, False, None])
+        self.assertEqual(len(sent), 5)  # three, then B and C again
+        self.assertEqual(sent[0][1], dict(max_tokens=3000, temperature=0,
+                                          seed=0))
+        retry = [m for m, _ in sent[3:]]
+        self.assertEqual(retry[0][-2], {'role': 'assistant', 'content': ''})
+        self.assertEqual(retry[0][-1]['content'], d2l.RAG_JUDGE_V1['retry'])
+
+    def test_model_thinking(self):
+        """A Transformers judge with thinking=True: enable_thinking is
+        passed on, the verdict follows '</think>', a reply cut off while
+        reasoning counts as malformed."""
+        seen = []
+        def fake(model, tok, prompts, **kw):
+            seen.append(kw)
+            return [d2l.Generation('x</think>{"correct": true}', [], None,
+                                   'eos'),
+                    d2l.Generation('reasoning {"correct": false', [], None,
+                                   'length')][:len(prompts)]
+        q = dict(question='Q', reference='R', key_facts=['f'],
+                 answerable=True)
+        old, d2l.generate = d2l.generate, fake
+        try:
+            v = d2l.rag_judge(None, None, [q, q], [dict(answer='A'),
+                                                   dict(answer='B')],
+                              [[], []], thinking=True)
+        finally:
+            d2l.generate = old
+        self.assertEqual(v[0]['correct'], True)
+        self.assertEqual(seen[0]['enable_thinking'], True)
+        self.assertEqual(seen[0]['max_new_tokens'], 3000)
+        self.assertEqual(len(seen), 2)  # the cut-off reply is retried
 
 
 class BuildBookQA(unittest.TestCase):

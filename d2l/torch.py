@@ -8146,10 +8146,16 @@ d2l.DATA_HUB['lm-book-qa-v1'] = (  # corpus r3.1; 5,865 train, 240 dev, 240 test
 d2l.DATA_HUB['lm-book-qa-api-cache-v1'] = (  # its drafts, checks, verdicts
     d2l.LM_DATA_URL + 'lm-book-qa-api-cache-v1.zip',
     '962322fd53b3573daeaa50a92d3f53f25a25572d')
+d2l.DATA_HUB['lm-book-qa-v2'] = (  # v1, closed-book flag by the 27B judge
+    d2l.LM_DATA_URL + 'lm-book-qa-v2.zip',
+    '65a524857b50dfdffa4e75f217b5af66256bd025')
+d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
+    d2l.LM_DATA_URL + 'lm-rag-judge-labels-v1.zip',
+    '2f10e6f4314644e7ebdf7ac7a8c1b3e7182f98d8')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):
-    """The book's question set (artifact lm-book-qa-v1), one split: a
+    """The book's question set (artifact lm-book-qa-v2), one split: a
     BookQA (a list of item dicts), optionally only answerable (or only
     unanswerable) items, only some question types, and a stratified
     sample of n items.
@@ -8211,7 +8217,8 @@ def parse_citations(answer, n_chunks):
                 out.append(n)
     return out
 
-def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8):
+def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
+              thinking=None, max_new_tokens=None):
     """The judge's verdicts on an answer: 'correct' (every key fact stated,
     nothing contradicting the reference), 'faithful' (every statement
     supported by the passages given) and 'supported' (the cited passages
@@ -8220,13 +8227,22 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8):
     match, not by the judge: it is correct exactly for an unanswerable item.
     Without passages only 'correct' is judged. item, result and
     context_texts may also be lists (a list of verdicts comes back, judged
-    in batches). A verdict missing from the judge's JSON after one retry is
+    in batches). judge is a d2l.ChatAPI (tokenizer None; batch_size
+    requests in flight; its client sets the thinking switch, records and
+    replays) or a Transformers model with its tokenizer. With thinking
+    (default: on for a d2l.ChatAPI, off for a model) the judge reasons
+    first and its verdict is read after the reasoning; a reply cut off at
+    max_new_tokens (default 3,000 with thinking, 64 without) counts as
+    malformed. A verdict missing from the judge's JSON after one retry is
     None.
 
     Defined in :numref:`sec_lm_rag`"""
     single = isinstance(item, dict)
     items, results, contexts = (([item], [result], [context_texts])
                                 if single else (item, result, context_texts))
+    api = hasattr(judge, 'achat')
+    thinking = api if thinking is None else thinking
+    max_new_tokens = max_new_tokens or (3000 if thinking else 64)
     verdicts, jobs = [], []
     for i, (q, r, ctx) in enumerate(zip(items, results, contexts)):
         r = r._asdict() if hasattr(r, '_asdict') else r
@@ -8248,15 +8264,16 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8):
     for attempt in range(2):  # one retry, with the malformed reply shown
         if not jobs:
             break
-        gens = d2l.generate(judge, tokenizer, [m for _, _, m in jobs],
-                            max_new_tokens=64, chat=True,
-                            enable_thinking=False, batch_size=batch_size)
+        replies = d2l._rag_judge_replies(
+            judge, tokenizer, [m for _, _, m in jobs], thinking,
+            max_new_tokens, batch_size)
         retry = []
-        for (i, keys, messages), g in zip(jobs, gens):
-            parsed = d2l._rag_parse_json(g.text, keys)
+        for (i, keys, messages), reply in zip(jobs, replies):
+            parsed = (None if reply is None else
+                      d2l._rag_parse_json(reply, keys))
             if parsed is None and attempt == 0:
                 retry.append((i, keys, messages + [
-                    {'role': 'assistant', 'content': g.text},
+                    {'role': 'assistant', 'content': reply or ''},
                     {'role': 'user', 'content': d2l.RAG_JUDGE_V1['retry']}]))
             for k in keys:
                 verdicts[i][k] = None if parsed is None else parsed[k]
@@ -14332,7 +14349,7 @@ def _book_qa_read(split, root=os.path.join('..', 'data', 'lm')):
     if split == 'test' and _BOOK_QA_LOADS[split] == 2:
         print('notice: the test split is loaded a second time in this '
               'process; decisions belong to train and dev')
-    path = d2l.download_keyed('lm-book-qa-v1', root)
+    path = d2l.download_keyed('lm-book-qa-v2', root)
     with zipfile.ZipFile(path) as z:
         name = next(n for n in z.namelist()
                     if n.rsplit('/', 1)[-1] == f'qa_{split}.jsonl')
@@ -14394,6 +14411,43 @@ RAG_JUDGE_V1 = {
                   'nothing.'),
     'retry': 'Reply with the JSON line only, in exactly the requested form.'}
 
+# The judge of 19.5, chosen 2026-11-14 against frontier-model labels
+# (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights served
+# by vLLM over two 24 GB GPUs; the same open weights are served in BF16 on
+# OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
+RAG_JUDGE_LOCAL = {'model': 'Qwen/Qwen3.8-27B-FP8',
+                   'revision': 'c3a462cc3d38cf351f3b26cbd763469eeb74ef81',
+                   'vllm': '0.33.0', 'thinking': True,
+                   'max_new_tokens': 3000}
+
+def rag_judge_server(n_gpus=2, port=None, vllm=None):
+    """A d2l.LocalChatServer that serves the judge (RAG_JUDGE_LOCAL) with
+    vLLM, its layers split over n_gpus GPUs (pipeline parallel), from the
+    executable vllm (default: the environment variable D2L_VLLM, else
+    `vllm` on the PATH). vLLM lives in an environment of its own, since it
+    pins its own PyTorch.
+
+    Defined in :numref:`sec_lm_rag`"""
+    import shutil  # not in the d2l library preamble
+    exe = vllm or os.environ.get('D2L_VLLM') or shutil.which('vllm')
+    if exe is None:
+        raise RuntimeError('no vLLM: install it in its own environment and '
+                           'set D2L_VLLM to its vllm executable')
+    j = d2l.RAG_JUDGE_LOCAL
+    return d2l.LocalChatServer([
+        exe, 'serve', j['model'], '--revision', j['revision'],
+        '--pipeline-parallel-size', str(n_gpus), '--max-model-len', '16384',
+        '--max-num-seqs', '64', '--gpu-memory-utilization', '0.9',
+        '--limit-mm-per-prompt', '{"image": 0, "video": 0}', '--seed', '0',
+        '--host', '127.0.0.1', '--port', '{port}'], port=port)
+
+def rag_judge_client(url='http://127.0.0.1/v1', cache=None, mode='replay'):
+    """A d2l.ChatAPI for the judge served at url, thinking on; the request
+    hash keeps the host only, so a recorded cache replays with no server."""
+    return d2l.ChatAPI(url, d2l.RAG_JUDGE_LOCAL['model'], cache=cache,
+                       mode=mode, default_params={'extra_body': {
+                           'chat_template_kwargs': {'enable_thinking': True}}})
+
 def _rag_abstained(answer):
     """Whether an answer is the abstention string (case, surrounding
     whitespace and quotes, and a final period ignored).
@@ -14422,6 +14476,28 @@ def _rag_judge_messages(item, answer, context_texts, cited_ids):
         p[k] for k in keys), f'Reply exactly in this form: {form}']
     return [{'role': 'system', 'content': p['system']},
             {'role': 'user', 'content': '\n\n'.join(parts)}]
+
+def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
+                       batch_size):
+    """The judge's replies to a list of chat messages, each the text after
+    its reasoning ('</think>'), or None when the reply was cut off at
+    max_new_tokens. judge is a d2l.ChatAPI (greedy, seed 0; batch_size
+    requests in flight) or a Transformers model with its tokenizer."""
+    if hasattr(judge, 'achat'):  # an OpenAI-compatible endpoint
+        import asyncio  # not in the d2l library preamble
+        out = asyncio.run(d2l.chat_batch(judge, [dict(
+            messages=m, max_tokens=max_new_tokens, temperature=0, seed=0)
+            for m in messages], concurrency=batch_size))
+        return [None if isinstance(r, BaseException)  # counts as malformed
+                or r.finish_reason == 'length'
+                else (r.text or '').split('</think>')[-1] for r in out]
+    gens = d2l.generate(judge, tokenizer, messages,
+                        max_new_tokens=max_new_tokens, chat=True,
+                        enable_thinking=thinking, batch_size=batch_size)
+    if not thinking:
+        return [g.text for g in gens]
+    return [None if g.finish_reason == 'length' and '</think>' not in g.text
+            else g.text.split('</think>')[-1] for g in gens]
 
 def _rag_parse_json(text, keys):
     """{key: bool} from the first JSON object in a reply that has every

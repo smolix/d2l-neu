@@ -53,7 +53,7 @@ from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
-<!-- Placeholder (stage 2): the registry of the section's artifacts: the book's question set and the API responses it was built from (tools/build_book_qa.py --mode replay rebuilds the set from them). -->
+<!-- Placeholder (stage 2): the registry of the section's artifacts: the book's question set (v2: the closed-book flag re-judged by the judge chosen on 2026-11-14), the API responses it was built from (tools/build_book_qa.py --mode replay rebuilds the set from them), and the labels the judge was chosen and validated with. -->
 
 ```{.python .input #rag-data-hub}
 %%tab pytorch
@@ -64,6 +64,12 @@ d2l.DATA_HUB['lm-book-qa-v1'] = (  # corpus r3.1; 5,865 train, 240 dev, 240 test
 d2l.DATA_HUB['lm-book-qa-api-cache-v1'] = (  # its drafts, checks, verdicts
     d2l.LM_DATA_URL + 'lm-book-qa-api-cache-v1.zip',
     '962322fd53b3573daeaa50a92d3f53f25a25572d')
+d2l.DATA_HUB['lm-book-qa-v2'] = (  # v1, closed-book flag by the 27B judge
+    d2l.LM_DATA_URL + 'lm-book-qa-v2.zip',
+    '65a524857b50dfdffa4e75f217b5af66256bd025')
+d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
+    d2l.LM_DATA_URL + 'lm-rag-judge-labels-v1.zip',
+    '2f10e6f4314644e7ebdf7ac7a8c1b3e7182f98d8')
 ```
 
 <!-- Placeholder (stage 2): the book's question set by split, and the chunks that count as relevant for an item under any chunking. -->
@@ -73,7 +79,7 @@ d2l.DATA_HUB['lm-book-qa-api-cache-v1'] = (  # its drafts, checks, verdicts
 #@save
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):
-    """The book's question set (artifact lm-book-qa-v1), one split: a
+    """The book's question set (artifact lm-book-qa-v2), one split: a
     BookQA (a list of item dicts), optionally only answerable (or only
     unanswerable) items, only some question types, and a stratified
     sample of n items."""
@@ -139,12 +145,13 @@ def parse_citations(answer, n_chunks):
     return out
 ```
 
-<!-- Placeholder (stage 2): the reference-based judge (Qwen3.5-4B, prompt RAG_JUDGE_V1): correct, faithful, supported. -->
+<!-- Placeholder (stage 2): the reference-based judge (prompt RAG_JUDGE_V1): correct, faithful, supported. The judge is Qwen3.8-27B with thinking on (RAG_JUDGE_MODEL), chosen 2026-11-14 against frontier-model labels; it runs behind an OpenAI-compatible endpoint (a d2l.ChatAPI: a local vLLM server on two 24 GB GPUs, or OpenRouter), and a Transformers model with its tokenizer works too. -->
 
 ```{.python .input #rag-judge-defs}
 %%tab pytorch
 #@save
-def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8):
+def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
+              thinking=None, max_new_tokens=None):
     """The judge's verdicts on an answer: 'correct' (every key fact stated,
     nothing contradicting the reference), 'faithful' (every statement
     supported by the passages given) and 'supported' (the cited passages
@@ -153,11 +160,20 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8):
     match, not by the judge: it is correct exactly for an unanswerable item.
     Without passages only 'correct' is judged. item, result and
     context_texts may also be lists (a list of verdicts comes back, judged
-    in batches). A verdict missing from the judge's JSON after one retry is
+    in batches). judge is a d2l.ChatAPI (tokenizer None; batch_size
+    requests in flight; its client sets the thinking switch, records and
+    replays) or a Transformers model with its tokenizer. With thinking
+    (default: on for a d2l.ChatAPI, off for a model) the judge reasons
+    first and its verdict is read after the reasoning; a reply cut off at
+    max_new_tokens (default 3,000 with thinking, 64 without) counts as
+    malformed. A verdict missing from the judge's JSON after one retry is
     None."""
     single = isinstance(item, dict)
     items, results, contexts = (([item], [result], [context_texts])
                                 if single else (item, result, context_texts))
+    api = hasattr(judge, 'achat')
+    thinking = api if thinking is None else thinking
+    max_new_tokens = max_new_tokens or (3000 if thinking else 64)
     verdicts, jobs = [], []
     for i, (q, r, ctx) in enumerate(zip(items, results, contexts)):
         r = r._asdict() if hasattr(r, '_asdict') else r
@@ -179,15 +195,16 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8):
     for attempt in range(2):  # one retry, with the malformed reply shown
         if not jobs:
             break
-        gens = d2l.generate(judge, tokenizer, [m for _, _, m in jobs],
-                            max_new_tokens=64, chat=True,
-                            enable_thinking=False, batch_size=batch_size)
+        replies = d2l._rag_judge_replies(
+            judge, tokenizer, [m for _, _, m in jobs], thinking,
+            max_new_tokens, batch_size)
         retry = []
-        for (i, keys, messages), g in zip(jobs, gens):
-            parsed = d2l._rag_parse_json(g.text, keys)
+        for (i, keys, messages), reply in zip(jobs, replies):
+            parsed = (None if reply is None else
+                      d2l._rag_parse_json(reply, keys))
             if parsed is None and attempt == 0:
                 retry.append((i, keys, messages + [
-                    {'role': 'assistant', 'content': g.text},
+                    {'role': 'assistant', 'content': reply or ''},
                     {'role': 'user', 'content': d2l.RAG_JUDGE_V1['retry']}]))
             for k in keys:
                 verdicts[i][k] = None if parsed is None else parsed[k]

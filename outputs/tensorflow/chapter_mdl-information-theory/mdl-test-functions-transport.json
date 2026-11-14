@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-information-theory/mdl-test-functions-transport.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:2fa11757925abb2a5fa5e615a3b876765ebe427ff4ba16f87f75a324cb24590c",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-test-functions-transport-test-functions-and-transport-1": {
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-test-functions-transport-test-functions-and-transport-2": {
+      "code_fingerprint": "sha256:59fa353903227067db8e426f3e84369d2de52ad00f7365ee87b351a398cb8296",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-test-functions-transport-test-functions-and-transport-3": {
+      "code_fingerprint": "sha256:3340946f34b1f7a2136d0b57ddc3dcc738503f8df00381098ba891bbcfa6ba73",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   d      KL   slope      JS   slope      TV   slope   MMD^2   slope      W1   slope\n 0.5   0.125 5.0e-01   0.030 1.2e-01   0.197 3.9e-01   0.047 1.8e-01   0.500 1.0e+00\n 1.0   0.500 1.0e+00   0.111 2.0e-01   0.383 3.5e-01   0.177 3.3e-01   1.000 1.0e+00\n 2.0   2.000 2.0e+00   0.337 2.2e-01   0.683 2.4e-01   0.562 4.0e-01   2.000 1.0e+00\n 4.0   8.000 4.0e+00   0.633 6.9e-02   0.954 5.4e-02   1.074 1.1e-01   4.000 1.0e+00\n 8.0  32.000 8.0e+00   0.693 2.0e-04   1.000 1.3e-04   1.155 7.2e-05   8.000 1.0e+00\n"
+        }
+      ]
+    },
+    "divergences-distances-mmd": {
+      "code_fingerprint": "sha256:818f39958f3c63364b49761194ac54e377bf71ea5be1c0f9027a2443f8c78dc1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0029  (population 0.0000)\nquadratic, N(0,1) vs N(0,4)    MMD^2 = +9.2698  (population 9.0000)\nRBF,       N(0,1) vs N(0,4)    MMD^2 = +0.0753  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = -0.0003  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0585  (population 0.0471)\n"
+        }
+      ]
+    },
+    "mdl-divergences-distances-integral-probability-metrics-and-mmd-1": {
+      "code_fingerprint": "sha256:11574c2d551b7384a42a77e68a599e409abeecc3a8bda5d3abca65f6c2b948dd",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "witness changes sign at x = 0.28\nE_P g - E_Q g = 0.0593\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-test-functions-transport/mdl-divergences-distances-integral-probability-metrics-and-mmd-1-1.svg",
+          "bytes": 27228,
+          "sha256": "sha256:c3f58da3961216405127b6f265ba703005ae8b950eb3c3c1c9ec5492c6701e69"
+        }
+      ]
+    },
+    "divergences-distances-w1": {
+      "code_fingerprint": "sha256:7998d501ecc45b9be914becad2bdd23d2f1814330c118074947bfaa6a5edb9fe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "W1 via the CDF formula : 1.7000000000\nW1 via the primal LP   : 1.7000000000\n"
+        }
+      ]
+    },
+    "divergences-distances-sinkhorn": {
+      "code_fingerprint": "sha256:9367a6291c4c3479f99c6ab75bf4b7204b2b48bb24cd6c3bae8aa5c86358237a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "squared cost, LP optimum : 3.5000\nepsilon = 2.0: entropic cost = 4.0649, routes above 1e-3 = 25\nepsilon = 0.5: entropic cost = 3.5696, routes above 1e-3 = 14\nepsilon = 0.1: entropic cost = 3.4995, routes above 1e-3 = 10\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-test-functions-transport/divergences-distances-sinkhorn-1.svg",
+          "bytes": 32778,
+          "sha256": "sha256:d92cafee588809b9d63e5b41d241abe6c00f50865e4b58d554ade8989049910b"
+        }
+      ]
+    }
+  }
+}

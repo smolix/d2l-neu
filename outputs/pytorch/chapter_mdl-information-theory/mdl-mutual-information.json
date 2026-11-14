@@ -9,50 +9,23 @@
   },
   "cells": {
     "mutual-information-imports": {
-      "code_fingerprint": "sha256:2873cf518be6f740de1e83e7ae767eb092b490ee935317169145e246bdd660ea",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "mutual-information-joint-conditional": {
-      "code_fingerprint": "sha256:80880c8780d979580a6478cabdc8b607b9eb16fac599db67a7bbc60848bf1ced",
+      "code_fingerprint": "sha256:05e8ed84a45759fa821499dce0cd74450b0d858a47c9b609126f24e3df813552",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H(X,Y) = 1.0182, H(X) = 0.6931, H(Y) = 0.6931 nats\nH(Y|X) = 0.3251 (average row entropy) = 0.3251 (chain rule)\n"
-        }
-      ]
-    },
-    "mutual-information-discrete-joint": {
-      "code_fingerprint": "sha256:bb89b2944c60b10181c3296b3f9e8915b58496d3e10218c0cdb288563dea84a1",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "I(X;Y) = 0.3681 nats (KL form) = 0.3681 nats (entropies) = 0.5310 bits\n"
-        }
-      ]
-    },
-    "mutual-information-gaussian-binned": {
-      "code_fingerprint": "sha256:e90b22fd8094b245bd8745e54f88990551a18a5503ffdb5aa7d0b55f039e4e52",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "rho = 0.00: binned 0.003, closed form 0.000 nats\nrho = 0.30: binned 0.050, closed form 0.047 nats\nrho = 0.60: binned 0.218, closed form 0.223 nats\nrho = 0.90: binned 0.810, closed form 0.830 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "rho = 0.99: binned 1.780, closed form 1.959 nats\n"
+          "text": "I(X;Y) = 0.3681 nats (KL form) = 0.3681 (H(Y) - H(Y|X)) = 0.531 bits\n"
         }
       ]
     },
     "mutual-information-pmi-corpus": {
-      "code_fingerprint": "sha256:5cc3620105c637a12479861aa4579faf345da6c9acc4724c3d066be984e9f063",
+      "code_fingerprint": "sha256:99bc564aa6c8421dcd3930229ab60aa875cca1820fd4ab0ae3808ab3c00f7039",
       "kind": "text",
       "outputs": [
         {
@@ -63,7 +36,7 @@
       ]
     },
     "mdl-mutual-information-mutual-information-as-nonlinear-correlation-1": {
-      "code_fingerprint": "sha256:1bfafc86ee084a60b3862301e7288f9c08ae53e274f5b3aa50541d80453e9eb2",
+      "code_fingerprint": "sha256:b0a7954e04ee89784c10946101790a36e56c25712ecc8a4b8841d03877435a60",
       "kind": "text",
       "outputs": [
         {
@@ -73,63 +46,30 @@
         }
       ]
     },
-    "mutual-information-nonlinear-correlation": {
-      "code_fingerprint": "sha256:1949ff99f264467f68ea9ae185fa3d49d69f7bc2f12faca81f65f7dcbb2519e0",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sample correlation +0.009, binned MI 0.989 nats\n"
-        }
-      ]
-    },
-    "mdl-mutual-information-mutual-information-as-nonlinear-correlation-2": {
-      "code_fingerprint": "sha256:c4a984f9dcbc8920129e5a73469a72f54cb34fff88bcae98509b615976c99c34",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "x   : correlation 0.900, binned MI 0.812, rank-binned MI 0.8156 nats\nx**3: correlation 0.696, binned MI 0.336, rank-binned MI 0.8156 nats\n"
-        }
-      ]
-    },
     "mutual-information-dpi-check": {
-      "code_fingerprint": "sha256:96df67acec9bc9d5fb22c8d7ab9646748ba8370c84f969a0f1c2061a46862005",
+      "code_fingerprint": "sha256:51df3336019c5106fc6deec16d0d9692999e2d048ff41cec155db6a059fb2411",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "I(X;Y) = 0.3681, I(X;Z) = 0.1201, I(X;Z|Y) = 0.0000, I(X;Y|Z) = 0.2480\nI(X;Y,Z) by the chain rule: 0.3681 = 0.3681\n"
-        }
-      ]
-    },
-    "mdl-mutual-information-the-data-processing-inequality-1": {
-      "code_fingerprint": "sha256:349d5a607fd144a7f0089dd70cc4d3e3674b2eb5b1e33c9514f88eebe8a0c0d7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "I(X;Y) = 0.0000, I(X;Y|Z) = 0.6931 nats\n"
+          "text": "I(X;Y) = 0.3681, I(X;Z) = 0.1201, I(X;Z|Y) = 0.0000, I(X;Y|Z) = 0.2480\nI(X;Y,Z) by the chain rule: 0.3681 = 0.3681\nXOR: I(X;Y) = 0.0000, I(X;Y|Z) = 0.6931 nats\n"
         }
       ]
     },
     "mutual-information-fano": {
-      "code_fingerprint": "sha256:847a5620e9557b90e60da896fc5f0792a9592f72aa22528eaf3b44ec0796994b",
+      "code_fingerprint": "sha256:70723c05f09392b0b4f9c57b92ccda0a976733354282c62c6805cf71bb8e8a99",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "running pair: H_b(0.1) + 0.1 log 1 = 0.3251, H(Y|X) = 0.3251\nP_e = 0.01: I(X;Y) >= 6.783 of log k = 6.908 nats\nP_e = 0.05: I(X;Y) >= 6.364 of log k = 6.908 nats\nP_e = 0.20: I(X;Y) >= 5.026 of log k = 6.908 nats\nP_e = 0.50: I(X;Y) >= 2.761 of log k = 6.908 nats\n"
+          "text": "P_e = 0.01: I(X;Y) >= 6.783 of log k = 6.908 nats\nP_e = 0.05: I(X;Y) >= 6.364 of log k = 6.908 nats\nP_e = 0.20: I(X;Y) >= 5.026 of log k = 6.908 nats\nP_e = 0.50: I(X;Y) >= 2.761 of log k = 6.908 nats\n"
         }
       ]
     },
     "mdl-mutual-information-fano-s-inequality-1": {
-      "code_fingerprint": "sha256:feaa247eff1d1ab81c11ccdaae59d2b1afeaaf220b5ba3f343063bda76cc8e7e",
+      "code_fingerprint": "sha256:ba812d14e16b20d078e6d364b2877d9fa47b9e928ef285433a03cba087ae4828",
       "kind": "text",
       "outputs": [
         {
@@ -140,7 +80,7 @@
       ]
     },
     "mdl-mutual-information-channel-capacity": {
-      "code_fingerprint": "sha256:c2dab6c244bcce5f742b071dbcf877eddcf6c84cafd40be74778177588566cff",
+      "code_fingerprint": "sha256:768a17f122d5b8f8a8632df4e1d1ad893107a9cb9e70827ceb9eecb20b869cb2",
       "kind": "text",
       "outputs": [
         {
@@ -151,23 +91,18 @@
       ]
     },
     "mdl-mutual-information-rate-distortion": {
-      "code_fingerprint": "sha256:8869c3e9356d859f65a62e7bc5be3f0ac56b7c32d0ead60c7ea549685f90f21f",
+      "code_fingerprint": "sha256:3a4144b982454af31ed0362d569f5672a992f372a83d5d76d03f3db46900b81b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma^2 = 0.1: MSE 0.0910, D = 0.0909; I(X;Z) = 1.1989 = R(D) = 1.1989\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigma^2 = 1.0: MSE 0.5000, D = 0.5000; I(X;Z) = 0.3466 = R(D) = 0.3466\nsigma^2 = 3.0: MSE 0.7474, D = 0.7500; I(X;Z) = 0.1438 = R(D) = 0.1438\n"
+          "text": "sigma^2 = 0.111: D = 0.100, MSE 0.100, I(X;Z) = R(D) = 1.151 nats\nsigma^2 = 1.000: D = 0.500, MSE 0.500, I(X;Z) = R(D) = 0.347 nats\nsigma^2 = 3.000: D = 0.750, MSE 0.750, I(X;Z) = R(D) = 0.144 nats\n"
         }
       ]
     },
     "mutual-information-ib-plane": {
-      "code_fingerprint": "sha256:21e480eb2f614564bd50f98e78dcce523fe180b293293f41dc4c8faae2d4cf84",
+      "code_fingerprint": "sha256:b3dea768087012e8aae08de8b15d9900d2a709513892a74aeb3a1e14f8c9b5a5",
       "kind": "text",
       "outputs": [
         {

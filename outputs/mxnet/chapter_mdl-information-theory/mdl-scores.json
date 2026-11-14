@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-information-theory/mdl-scores.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:c57eb77bb42342bad58502826c355477252361293a5ce3adde42ef27564294b8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-scores-score-based-comparisons-1": {
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-scores-score-based-comparisons-2": {
+      "code_fingerprint": "sha256:a711103e845f149781233335e9e6bc6cf7bfa8a57e4f6b581c678d26d8f16ea0",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-scores-score-based-comparisons-3": {
+      "code_fingerprint": "sha256:36b1edcd744a6eda1b0121d20f8770250c358b98d3e0bb20c77859f03586a4f9",
+      "kind": "text",
+      "outputs": []
+    },
+    "divergences-distances-score": {
+      "code_fingerprint": "sha256:c50a43528e4565663d724d1f10e60c378a26aed112f925e8d203c63acad00b62",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-divergences-distances-the-score-and-the-fisher-divergence-1": {
+      "code_fingerprint": "sha256:67cbf4989193d9474427e8c855c7a71c8bf3240314018eaa1e86b67e832aa346",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "m = 1: KL = 0.184 nats, Fisher = 1.1e-01\nm = 3: KL = 0.337 nats, Fisher = 7.1e-03\nm = 5: KL = 0.339 nats, Fisher = 4.0e-06\n"
+        }
+      ]
+    },
+    "divergences-distances-stein": {
+      "code_fingerprint": "sha256:dc06255ad5860a5284ea7ffef3dd3be35c4d291fff8129d4de4f35f0c361082d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sample                 g = 1             g = x         g = sin x\nN(0, 1)       -0.000 ± 0.002    +0.005 ± 0.003    +0.003 ± 0.002\nN(0.5, 1)     -0.498 ± 0.002    -0.243 ± 0.004    -0.144 ± 0.002\nN(0, 4)       +0.003 ± 0.004    -2.986 ± 0.013    -0.407 ± 0.003\n"
+        }
+      ]
+    },
+    "divergences-distances-ksd": {
+      "code_fingerprint": "sha256:25e372aa399daf219f9e3ff22473cfc2f77fe1e081cedb7da95b4b67c05ab3e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KSD^2 vs the true model  N(0,1): -0.0007  (population 0.0000)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KSD^2 vs the wrong model N(1,1): +0.5808  (population 0.5774)\n"
+        }
+      ]
+    }
+  }
+}

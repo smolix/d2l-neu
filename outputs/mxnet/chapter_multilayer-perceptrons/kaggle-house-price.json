@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:0e62d92fb3d55b66f12546d3d0c580861dfa04fb56d203e3b3896f09c81309b4",
+    "d2l_lib_fingerprint": "sha256:172666012387d985522ad73d6eef5c272bfd4e0c91c9185c2c54dd36baa08543",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.113, validation RMSE 0.147 (folds 0.123 to 0.192)\n"
+          "text": "training RMSE 0.113, validation RMSE 0.145 (folds 0.114 to 0.205)\n"
         }
       ]
     },
@@ -113,39 +113,39 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.093, validation RMSE 0.160 (folds 0.143 to 0.173)\nweight decay 0.003: "
+          "text": "training RMSE 0.094, validation RMSE 0.157 (folds 0.135 to 0.197)\nweight decay 0.003: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.096, validation RMSE 0.149 (folds 0.139 to 0.166)\nweight decay 0.01: "
+          "text": "training RMSE 0.094, validation RMSE 0.154 (folds 0.128 to 0.205)\nweight decay 0.01: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.092, validation RMSE 0.145 (folds 0.127 to 0.170)\nweight decay 0.03: "
+          "text": "training RMSE 0.094, validation RMSE 0.146 (folds 0.114 to 0.194)\nweight decay 0.03: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.105, validation RMSE 0.135 (folds 0.113 to 0.163)\nweight decay 0.1: "
+          "text": "training RMSE 0.105, validation RMSE 0.135 (folds 0.107 to 0.185)\nweight decay 0.1: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.132, validation RMSE 0.144 (folds 0.122 to 0.173)\nweight decay 0.3: "
+          "text": "training RMSE 0.132, validation RMSE 0.141 (folds 0.115 to 0.197)\nweight decay 0.3: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.163, validation RMSE 0.168 (folds 0.148 to 0.192)\n"
+          "text": "training RMSE 0.163, validation RMSE 0.167 (folds 0.144 to 0.213)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-mlp-select-1.svg",
           "bytes": 32177,
-          "sha256": "sha256:dc8413da33897e6a5794c433f0c16aa8bf8b951e7a154a7ebd9c9019f3e72ecc"
+          "sha256": "sha256:0680cd68a3434ee44d81b7d4d3b5b7c64e76abb99ee25a34b9b9eadd0f12841a"
         }
       ]
     },
@@ -156,7 +156,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weight decay 0.03: MLP minus linear, per fold [-0.01  -0.009 -0.013  0.001 -0.029]\n"
+          "text": "weight decay 0.03: MLP minus linear, per fold [-0.02   0.005 -0.018 -0.01  -0.007]\n"
         }
       ]
     },
@@ -166,7 +166,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "     Id      SalePrice\n0  1461  113517.070312\n1  1462  146336.953125\n2  1463  176505.312500\n3  1464  197645.265625\n4  1465  184032.656250"
+          "text": "     Id      SalePrice\n0  1461  117722.382812\n1  1462  146068.421875\n2  1463  183341.953125\n3  1464  199559.531250\n4  1465  185407.593750"
         }
       ]
     }

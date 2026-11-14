@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:a8e15b86d5d7ff8e0079fa21332ce97c29f4487d563092434a4206bcb3533fb5",
+    "d2l_lib_fingerprint": "sha256:208fe453767b300e7d0f1c791800ce98dcb56b54d7d21fe279fe24ea2ea64404",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time but own puzzled it a\n    remembered no convenient it large easier rather camphor be shape i a the\n    i seen the i attained of time\n2-gram (longest copied run: 4 words): the time machine so i stood up a\n    shower under the face and flowing under which were heaps of putrefaction\n    and ran past sunset of a resolute\n3-gram (longest copied run: 8 words): the time i saw over their heads was a\n    sense of the blood but jumped up and down said the medical man staring\n    hard at a later\n"
+          "text": "1-gram (longest copied run: 2 words): the time green so the these getting\n    frail seeing come their turf in worn the dimensions whole to a of stood\n    frenzy spark contributed but little that\n2-gram (longest copied run: 5 words): the time traveller smiled are now as\n    fast the hill among the earth must be deeply channelled along the doors\n    after some at least the lesson of\n3-gram (longest copied run: 8 words): the time dimension with a sudden\n    thought came to a glowing scarlet where cut by the morlocks with it i\n    saw to adorn themselves with flowers to\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:388b59200ff2954b886dac3a9f20191579e7bef8dae3d939ddd0c38b90ec2437"
+          "sha256": "sha256:d1f12bb0652ddd6ee5df3bf2e07bc3fde4ad829459876da381cfd569196e8962"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:407165c7f17de09f11ea0fe925bde05e9f79fc2597badd305cf2604243088efa"
+          "sha256": "sha256:ac940d9da4c22b2a1c8897e49a10beca44aa571e59833cceba782536c1bccda3"
         }
       ]
     },
@@ -166,12 +166,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n"
+          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2-gram held-out perplexity, Kneser-Ney:   312.3\n3-gram held-out perplexity, Kneser-Ney:   300.1\n"
+          "text": "3-gram held-out perplexity, Kneser-Ney:   300.1\n"
         }
       ]
     },
@@ -187,12 +187,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " BPE (1,024)  1024    5509   281.6  2.58   1.90\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "        word  4316    3373  2481.4  2.81   2.22\n"
+          "text": " BPE (1,024)  1024    5509   281.6  2.58   1.90\n        word  4316    3373  2481.4  2.81   2.22\n"
         }
       ]
     },
@@ -213,7 +208,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 44 407 874 316 285 674  99 400 395 514]\n [374 602  32 374 274 336 260 539 412 302]] \nY: [[407 874 316 285 674  99 400 395 514 351]\n [602  32 374 274 336 260 539 412 302 476]]\nX[0]: ', leave it to accumulate'\nY[0]: ' leave it to accumulate at'\n"
+          "text": "X: [[270 535  10 341 933  44 277 772 278 116]\n [ 10 116 119 111 407 103 115 336 260 331]] \nY: [[535  10 341 933  44 277 772 278 116 259]\n [116 119 111 407 103 115 336 260 331 291]]\nX[0]: 'ed over\\nthe lever, and incont'\nY[0]: ' over\\nthe lever, and incontin'\n"
         }
       ]
     }

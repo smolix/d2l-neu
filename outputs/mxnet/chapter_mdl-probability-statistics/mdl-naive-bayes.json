@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:8dc054201310dff31ae92945c0b4a4d2a982f37479dd86c01e5fb592a3251ead",
+    "d2l_lib_fingerprint": "sha256:d8789cac7c495c7d0a4acc6f540bad48458cc7f59023b40063cbb7b900aa9147",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
           "bytes": 49236,
-          "sha256": "sha256:ac4aa1a1ccfc03d42014734f0de3c58eaaa9d4ab77031b39bea363395d3c8d9e"
+          "sha256": "sha256:644d3985cf6ce2edbd5b543f0ddc4911de8973e1ceab98d0a280fada3458b5b8"
         }
       ]
     },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/mdl-naive-bayes-templates-and-samples-1-1.svg",
-          "bytes": 35568,
-          "sha256": "sha256:2c74e2ea64ee44b770f91d2fc44a981ba90cb43be14937d176421cd2b97714ce"
+          "bytes": 35496,
+          "sha256": "sha256:ac87d510ca8ac1f0109bd866f02c48960c7d55df09221765bc42fc7b43acaf98"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ink fraction: data 0.498, samples 0.498\nswitches per row, data:    [3.8 3.2 3.1 3.1 3.1 3.  3.3 1.5 3.1 2.6]\nswitches per row, samples: [5.1 4.1 4.8 4.7 4.8 8.2 5.4 4.  8.1 5.9]\n"
+          "text": "ink fraction: data 0.498, samples 0.498\nswitches per row, data:    [3.8 3.2 3.1 3.1 3.1 3.  3.3 1.5 3.1 2.6]\nswitches per row, samples: [5.1 4.1 4.8 4.7 4.8 8.2 5.4 4.  8.2 5.9]\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "data : P(i)=0.55  P(j)=0.55  P(i)P(j)=0.30  P(i,j)=0.54\nmodel: P(i)=0.59  P(j)=0.56  P(i)P(j)=0.33  P(i,j)=0.33\n"
+          "text": "data : P(i)=0.55  P(j)=0.55  P(i)P(j)=0.30  P(i,j)=0.54\nmodel: P(i)=0.55  P(j)=0.55  P(i)P(j)=0.30  P(i,j)=0.29\n"
         }
       ]
     },
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "accuracy 0.7059, bootstrap 95% interval (0.698, 0.715)\nbinomial half-width 1.96 se = 0.0089\n"
+          "text": "accuracy 0.7059, bootstrap 95% interval (0.697, 0.715)\nbinomial half-width 1.96 se = 0.0089\n"
         }
       ]
     },
@@ -150,7 +150,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "accuracy: softmax regression 0.832, naive Bayes 0.706\npullover<->coat errors: softmax regression 301 naive Bayes 614\n"
+          "text": "accuracy: softmax regression 0.825, naive Bayes 0.706\npullover<->coat errors: softmax regression 266 naive Bayes 614\n"
         }
       ]
     },
@@ -168,7 +168,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/mdl-naive-bayes-confusions-and-weights-3-1.svg",
           "bytes": 21441,
-          "sha256": "sha256:f1b16e829471b7d14c5ddf8620920a89fe60432aa15880b276eacfbd82e7c61b"
+          "sha256": "sha256:1df407ab30f96fcdc89c26e448c29d0296be8ecb980bfda52e9441946565a014"
         }
       ]
     },

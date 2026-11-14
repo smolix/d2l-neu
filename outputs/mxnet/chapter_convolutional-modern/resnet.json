@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:8067ddbd9448345465d9b16676f3c9d3f566d63fc9c41183e880c613f3234759",
+    "d2l_lib_fingerprint": "sha256:7b9f824e11b1f8c9ffe6e4637a0f6225e619b1e6c7f279217c0183face35e5ae",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-plain-and-residual-networks-compared-4-1.svg",
-          "bytes": 28982,
-          "sha256": "sha256:8a6e3e21062e3cea1957670e261c68feda81889c5de8e4edf281656dd06c3987"
+          "bytes": 28981,
+          "sha256": "sha256:ede9927307ae92839e1c6c2c88b061d0ff31c56c438dde1afa48cf55e07a374d"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'plain, 20 layers': (0.201, 0.909),\n 'plain, 56 layers': (0.281, 0.891),\n 'residual, 20 layers': (0.197, 0.909),\n 'residual, 56 layers': (0.143, 0.916)}"
+          "text": "{'plain, 20 layers': (0.2, 0.91),\n 'plain, 56 layers': (0.285, 0.883),\n 'residual, 20 layers': (0.193, 0.907),\n 'residual, 56 layers': (0.153, 0.914)}"
         }
       ]
     },
@@ -120,8 +120,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 31227,
-          "sha256": "sha256:38837f74a0d8d4cea3bf84ba6c3793b7b587bde9950553ab3fb81b2b92a3fdde"
+          "bytes": 30622,
+          "sha256": "sha256:d7db7d67c26e41d915199105e07bbe51385f763246cfbf76c4f9741d4c494484"
         }
       ]
     },
@@ -131,7 +131,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.932"
+          "text": "0.929"
         }
       ]
     },

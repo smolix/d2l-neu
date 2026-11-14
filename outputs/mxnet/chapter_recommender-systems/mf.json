@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:73fce61878f17b2d2cd29ff1e900c6aea311a1f1e4efedbc7abc8792841c3d7e",
+    "d2l_lib_fingerprint": "sha256:beca2ed498d12964bdddbe0a458a87293e50299dc4efabdcaeeaf6c93b25bd42",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.130, test RMSE 1.051\n101850.1 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.123, test RMSE 1.053\n146962.3 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mf/mf-training-and-evaluating-the-model-2-1.svg",
-          "bytes": 21493,
-          "sha256": "sha256:912a7e65fab13d0c28114603cb2b07c92dd8167d97b272ab9be8d53076e13ebd"
+          "bytes": 21491,
+          "sha256": "sha256:c9e9f4a61b81ae8cc8488cf95ee88930eb9e2af23fe13f06f9addc5ea6b7e0c9"
         }
       ]
     },
@@ -57,7 +57,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([2.9805734], device=gpu(0))"
+          "text": "array([3.4713945], device=gpu(0))"
         }
       ]
     }

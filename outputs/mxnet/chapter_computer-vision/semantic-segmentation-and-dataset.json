@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e8cc75c0a57da9637f653531d214f3efb663ac3d9ec1ab1894be67671d44e0b4",
+    "d2l_lib_fingerprint": "sha256:4242da0deb7687e2dcad26d16a07dbd57cba63c3c7a3a15f95f2a69c71c455f5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,8 +74,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 82887,
-          "sha256": "sha256:6c006f0da7c2e3f36933dc9447d46e2a1192cd310552b08a37fd074e6e813599"
+          "bytes": 78578,
+          "sha256": "sha256:3f87daf93fed4e13bfdd4bf085af01eeb642022f42d94693a321e3f411d99d8c"
         }
       ]
     },

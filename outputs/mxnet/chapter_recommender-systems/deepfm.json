@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:fae1a818f46856eddbb24873b1d4b2eb98b37585a52560b156b966818ba24781",
+    "d2l_lib_fingerprint": "sha256:a3526ce1ccffabb33b9e2f314946967fe8c07bee9f2a3cd6223ce46ce8697dc0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.009, train acc 0.997, test acc 0.934\n86819.9 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.010, train acc 0.996, test acc 0.937\n52406.4 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deepfm/deepfm-training-and-evaluating-the-model-1.svg",
-          "bytes": 32249,
-          "sha256": "sha256:c61cf92c354ead257fb641a22e28f1880d20b16f7ce1029a124864e13620755c"
+          "bytes": 32236,
+          "sha256": "sha256:0b8c4b4ddb59677a6e39cb2470eb5553b03ffa13eb81a0218f9ba4e9539eff0c"
         }
       ]
     }

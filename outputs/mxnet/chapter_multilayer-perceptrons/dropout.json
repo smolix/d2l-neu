@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b58e304936d07fb2ca8339ebc09baf6bb4089ead731fee0d3911e7dfe2156ab1",
+    "d2l_lib_fingerprint": "sha256:f50eb4fabcc6cf93ad5d2459768617caba1049c1965e55704c954bed58eaf29d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  2.  4.  0.  8.  0.  0.  0.]\n [ 0.  0.  0.  0. 24. 26.  0. 30.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\nmean 1.001, variance 0.250\n"
+          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  4.  0.  0.  0. 12. 14.]\n [ 0. 18.  0. 22.  0. 26.  0. 30.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\nmean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35250,
-          "sha256": "sha256:ab32d18a9d92eff6efc53601e52edba59cab2ffdf6d3092f76fbc27f00a25b59"
+          "bytes": 35257,
+          "sha256": "sha256:453ef03fe2eaa6850963cc897607209e5b22ae8af2b52d4c3537ffb35f2f8442"
         }
       ]
     },
@@ -64,19 +64,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.643\n"
+          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.647\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout 0.5: wrong labels reproduced 0.81, validation accuracy over the last 10 epochs 0.676\n"
+          "text": "dropout 0.5: wrong labels reproduced 0.70, validation accuracy over the last 10 epochs 0.683\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-noisy-labels-2-1.svg",
-          "bytes": 47724,
-          "sha256": "sha256:815a003b59be29b09974faee43bd839aca7d6cfedd485aa30bb056f1feabd01d"
+          "bytes": 48231,
+          "sha256": "sha256:4614ea16de669e98dce75ce482e7bd40f258cfc12caaf7e6cb357c0c95a0e4ae"
         }
       ]
     }

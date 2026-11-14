@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:1e651af2a9a9fbc6cc38a739b11362065cda90c49a4b9297a8e0e527b63f014e",
+    "d2l_lib_fingerprint": "sha256:bd4827219cd8da38e24e5de6f9bb1c2ac8b8748bb9737b9065e769df79e709a7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[0.051, 0.044, 0.262, 0.054], [0.051, 0.044, 0.262, 0.054]]\n"
+          "text": "[[0.483, 0.811, 0.002, 0.071], [0.483, 0.811, 0.002, 0.071]]\n"
         },
         {
           "type": "stream",
@@ -96,7 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "index_add       bitwise equal: False, largest difference 0.0038\none-hot matmul  bitwise equal: True, largest difference 0\n"
+          "text": "index_add       bitwise equal: False, largest difference 0.004\none-hot matmul  bitwise equal: True, largest difference 0\n"
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.68\nResidualBlock   std 0.86\nResidualBlock   std 1.08\nResidualBlock   std 1.35\nResidualBlock   std 1.69\nResidualBlock   std 2.06\nResidualBlock   std 2.62\nResidualBlock   std 2.97\nResidualBlock   std 3.58\nDense           std 3.94\n"
+          "text": "Dense           std 0.70\nResidualBlock   std 0.89\nResidualBlock   std 1.14\nResidualBlock   std 1.43\nResidualBlock   std 1.80\nResidualBlock   std 2.12\nResidualBlock   std 2.72\nResidualBlock   std 3.49\nResidualBlock   std 4.52\nDense           std 6.61\n"
         }
       ]
     },
@@ -134,7 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block output gradients: 1.18 0.929 0.725 0.58 0.458 0.346 0.288 0.225\nweight 16, bias 2.9\n"
+          "text": "block output gradients: 2.44 1.93 1.36 1.1 0.836 0.63 0.499 0.405\nweight 53.8, bias 9.47\n"
         }
       ]
     }

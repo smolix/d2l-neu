@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:cff7fffd5dcc4f278b33c81df91a61d1fe19847b5478f2f3b62fd4d23a435505",
+    "d2l_lib_fingerprint": "sha256:a843b3e80202a4311aebfb73521c6d942275bd5c4fbb16691f41d332131ec2aa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,13 +31,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 23601,
-          "sha256": "sha256:d17d6755987b82d8612a8057520c02165417c10987b1402f0e01861ebda0d796"
+          "bytes": 23604,
+          "sha256": "sha256:feab9c7a98c1bcde0122b89d4255d5632badf2977e05a6b055f249e160250ffa"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 58.7\n"
+          "text": "validation perplexity 60.2\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller. I had a certain\\ndismay. I had a past the silent Man. I\n    had a\\nfound. I had a certain\\ndismay. I had a past the silent Man.'\n'It seemed to me that the little people were the signs of the paradox. I had\n    nothing in the Time Traveller. I had a past the silent Man. I had\n    a\\nfound. I had a certain\\nd'\n"
+          "text": "\"The Time Traveller.\\n\\n'I had\\nday.\\n\\n'I had\\nday.\\n\\n'I had\\nday.\\n\\n'I\n    had\\nday.\\n\\n'I had\\nday.\\n\\n'I\"\n\"It seemed to me that I could\\ndisappoons of\\nthese\\nof a\\nday.\\n\\n'I\n    had\\nday.\\n\\n'I had\\nday.\\n\\n'I had\\nday.\\n\\n'\"\n"
         }
       ]
     },
@@ -69,17 +69,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=1, score -5.63: 'The Time Traveller. I had a certain\\ndismay. I had a past\n    the silent Man. I had a\\nfound. I'\n"
+          "text": "w=1, score -3.84: \"The Time Traveller.\\n\\n'I had\\nday.\\n\\n'I had\\nday.\\n\\n'I\n    had\\nday.\\n\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.07: 'The Time Traveller, and I remember. It was the Time\n    Traveller, and I remember. It was the Time Traveller, and I was'\nw=1, score -4.78: 'It seemed to me that the little people were the signs of\n    the paradox. I had nothing in the Time Traveller. I had a p'\n"
+          "text": "w=4, score -3.90: \"The Time Traveller.\\n\\n'Then I could see\\nthese\\nof\n    the\\nshames.\\n\\n'Then I could see\\n\"\nw=1, score -4.66: \"It seemed to me that I could\\ndisappoons of\\nthese\\nof\n    a\\nday.\\n\\n'I had\\nday.\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.04: 'It seemed to me that I could see the Time Traveller, and\n    I remember. It was the Time Traveller, and I remember. It was the'\n"
+          "text": "w=4, score -4.07: \"It seemed to me that I had\\nday.\\n\\n'Then I could\n    see\\nthese\\nof the\\nshames.\\n\\n'I\"\n"
         }
       ]
     },
@@ -122,8 +122,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 51677,
-          "sha256": "sha256:41821fcae05c47072b073bcf8d5613905675463d321b11d5b0ff7c50999b8844"
+          "bytes": 48483,
+          "sha256": "sha256:b596387e2e137f47bfac77cf42e1946c4b2735a9c12e673c41a3b98b84f1f5bf"
         }
       ]
     },
@@ -134,7 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller': top probability 0.11; kept: top-k 20, top-p 148, min-p 32\n'The Time': top probability 0.70; kept: top-k 20, top-p 8, min-p 2\n"
+          "text": "'The Time Traveller': top probability 0.16; kept: top-k 20, top-p 154, min-p 21\n'The Time': top probability 0.62; kept: top-k 20, top-p 25, min-p 3\n"
         }
       ]
     },
@@ -145,17 +145,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=0.5: \"The Time Traveller, and the lamp. I sat down, and I had not a\n    minute.\\n\\n'And the Time Traveller. I had the Time Traveller's own time.\n    Then, as this strange, and to make me. And the\"\n"
+          "text": "tau=0.5: \"The Time Traveller.\\n\\n'Then I\\nane.\\n\\n'What is a fairly\n    preased\\ntheir latter.\\nThen I saw\\ntheir limbs of\\nthese\\nof\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=1.0: \"The Time Traveller sleeping. A smas she. Hund\\nforground called.\n    As and the new ining in. We, I thought, I recogut I had never fire this\n    things.But,' said the Medical\"\n"
+          "text": "tau=1.0: 'The Time Traveller took them come--this black was seaps\\nit. And\n    that I thought of the\\nlisement. I tried\\ndainsitthat it might be int\n    know human poleal pass, I thought to a\\nantl'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=2.0: 'The Time Travellerss cameungate saved feel�, fch�,etivetediv.inct\n    abillant creat Med sapam Sance ro� made D(s the other Iople glrom\n    strange cheu� plect to mind'\n"
+          "text": "tau=2.0: \"The Time Traveller cleering lauctving air�ful when sp_kather\n    this\\n redd thingsill�ss their\\nandak no�appotkenL�sed awayepestot dar\n    our lastecatation�imply.'o after\"\n"
         }
       ]
     },
@@ -166,27 +166,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: 'The Time Traveller. I had a certain\\ndismay. I had a past the\n    silent Man. I had a\\nfound. I had a certain\\ndismay. I had a past the\n    silent Man.'\n"
+          "text": "    greedy: \"The Time Traveller.\\n\\n'I had\\nday.\\n\\n'I had\\nday.\\n\\n'I\n    had\\nday.\\n\\n'I had\\nday.\\n\\n'I had\\nday.\\n\\n'I\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: 'The Time Traveller. I turned on them alone. The few fal\n    orine.\\nThe mo in horrikeite human isish these, andarly, and sleeping\n    across bigways. And so gallery, I tried'\n"
+          "text": "     tau=1: 'The Time Traveller\\nherjimply fas that had improjing of a\n    scraws. The content savegents that pecare. At last Four a propect had\n    violently the land\\n'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k=20: \"The Time Traveller. 'It took no signs of the dian,, and was\n    recogen. I suggested in a little figure. Then\\nthese, and they was the\n    same course done.\"\n"
+          "text": "  top-k=20: 'The Time Traveller entered\\ninflves the Time Traveller\n    stood\\nchanisto expressed to me; there would still\\nsurple. Histometall\n    the\\ndreaded\\ncaps had seen.'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " top-p=0.9: 'The Time Traveller.\\nII must have been the Lillow the\n    end\\nlovers. In this room, which was the rare. Thic slope. For the same\n    the Psychologist. But any judge metory'\n"
+          "text": " top-p=0.9: \"The Time Traveller\\ncriptly in this\\nhand of some sphinx. And\n    and\\nstood all in unpleasant.\\n\\n'A\\nappeared to trir.\\n\\n'As I was not\n    sweet\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: \"The Time Traveller I purple of a very bright dressed the\n    warnature--hands,' said the Editor.\\n\\n'You cannot noted to the heads of\n    the delicate. Then I was d\"\n"
+          "text": "min-p=0.05: 'The Time Traveller\\nturned a thunderment\\non their lacking\\nthe\n    earth. I\\nsaid\\nthe models of\\nthere or so, of a delightfully, for\n    instance I was\\nhast'\n"
         }
       ]
     },
@@ -197,32 +197,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: log-prob per token -2.40, distinct-3 0.33\n"
+          "text": "    greedy: log-prob per token -1.70, distinct-3 0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " beam, w=4: log-prob per token -1.72, distinct-3 0.24\n"
+          "text": " beam, w=4: log-prob per token -1.73, distinct-3 0.27\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: log-prob per token -4.01, distinct-3 1.00\n"
+          "text": "     tau=1: log-prob per token -4.00, distinct-3 1.00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k=20: log-prob per token -2.78, distinct-3 0.99\n"
+          "text": "  top-k=20: log-prob per token -2.85, distinct-3 0.99\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " top-p=0.9: log-prob per token -3.46, distinct-3 1.00\n"
+          "text": " top-p=0.9: log-prob per token -3.49, distinct-3 1.00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: log-prob per token -2.83, distinct-3 0.99\n"
+          "text": "min-p=0.05: log-prob per token -2.77, distinct-3 0.98\n"
         }
       ]
     }

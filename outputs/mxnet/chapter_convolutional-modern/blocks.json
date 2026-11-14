@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:231f8b312a6bac88e76ee935d0f2ba8ac48fe99fb63657aee2706c89f9c00252",
+    "d2l_lib_fingerprint": "sha256:d855e500e88c117babd5a2e3eeaec395e0ba8314013db624547ef6aca7b25eaf",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 31833,
-          "sha256": "sha256:bc03450fdda576191053a923e22c3ab38c2c9a20110662745edcdf5416331c37"
+          "bytes": 31824,
+          "sha256": "sha256:fbe241d3925c91098065bdcd1bef4e2fa809686f74c746f7cce094823e82cb67"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 33191,
-          "sha256": "sha256:55db166789a6b1c18f27a2d9c8016ef0febadc78369a4b421eaeecc5c749f39a"
+          "bytes": 31788,
+          "sha256": "sha256:1d66c0e160b0e266d3eaeec877bdb7a4779e0d88bdffc1abb9db62fdabdbed1b"
         }
       ]
     },
@@ -99,19 +99,19 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-3-1.svg",
-          "bytes": 32944,
-          "sha256": "sha256:b22eaf084d927a265a0523065eb83cedde0b97d73bf6994c18d3d3da79a10926"
+          "bytes": 32565,
+          "sha256": "sha256:34bdc786f1080090fda4835547dcbcf9d0eb1345a1ab600a8dd56599c9599615"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-3-2.svg",
-          "bytes": 31197,
-          "sha256": "sha256:b71a2bf46778cb06d6d03c7996abb10005b7826fd6abab4fc288ca25fbe725fe"
+          "bytes": 34452,
+          "sha256": "sha256:a610795cd7c651080d1c9bd4b7782137f7ecc4ade03732d6ea40b3ac33583f4c"
         },
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.917, 'PooledVGG': 0.893}"
+          "text": "{'VGG': 0.917, 'PooledVGG': 0.894}"
         }
       ]
     },
@@ -149,8 +149,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 33536,
-          "sha256": "sha256:adebec3845540908684672e6230cbda3c32454d736a1b4f4017811a6be002799"
+          "bytes": 33392,
+          "sha256": "sha256:b08e3bdd223506cbf9a36056c74725193e53fb8bef09f56b05f063a6dd94babb"
         }
       ]
     },
@@ -160,7 +160,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.934, 'NiN': 0.883, 'PooledVGG': 0.893, 'GoogLeNet': 0.905}"
+          "text": "{'VGG': 0.932, 'NiN': 0.887, 'PooledVGG': 0.894, 'GoogLeNet': 0.903}"
         }
       ]
     }

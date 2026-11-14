@@ -45,22 +45,41 @@ $\log$ and $\ln$ denote the natural logarithm.
 
 ```{.python .input #mutual-information-imports}
 #@tab mxnet
+import math
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #mutual-information-imports}
 #@tab pytorch
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mutual-information-imports}
 #@tab tensorflow
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #mutual-information-imports}
 #@tab jax
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## The Calculus of Dependence
@@ -115,27 +134,8 @@ rule for entropy*, $H(X,Y)=H(X)+H(Y\mid X)$: the information in the pair is the
 information in $X$ plus what $Y$ adds once $X$ is known. Since $H(Y\mid X)\ge0$
 for discrete variables, a pair carries at least as much surprise as either of
 its members, with equality when the other member is a function of it. That it
-carries at most $H(X)+H(Y)$ is shown below. The cell computes $H(Y\mid X)$ both
-ways, as the average row entropy and from the chain rule.
-
-```{.python .input #mutual-information-joint-conditional}
-p_xy = np.array([[0.45, 0.05],    # rows x, columns y: a fair bit X and
-                 [0.05, 0.45]])   # its copy Y, flipped with probability 0.1
-p_x, p_y = p_xy.sum(axis=1), p_xy.sum(axis=0)    # marginals from the joint
-
-def entropy(p):
-    """Entropy of a p.m.f. of any shape, in nats (0 log 0 = 0)."""
-    p = p[p > 0]
-    return float(-(p * np.log(p)).sum())
-
-H_xy, H_x, H_y = entropy(p_xy), entropy(p_x), entropy(p_y)
-H_rows = sum(p_x[i] * entropy(p_xy[i] / p_x[i]) for i in range(2))
-print(f'H(X,Y) = {H_xy:.4f}, H(X) = {H_x:.4f}, H(Y) = {H_y:.4f} nats')
-print(f'H(Y|X) = {H_rows:.4f} (average row entropy) '
-      f'= {H_xy - H_x:.4f} (chain rule)')
-```
-
-Both give $0.3251$ nats, which is $H_b(0.1)$.
+carries at most $H(X)+H(Y)$ is shown below.
+<!-- WRITER: the cell that printed H(X,Y), H(X), H(Y) and H(Y|X) twice (0.3251 by average row entropy and by the chain rule) is merged into the definitions cell `mutual-information-joint-conditional`, which now sits after the definition of mutual information and prints one line: I(X;Y) = 0.3681 nats (KL form) = 0.3681 (H(Y) - H(Y|X), with H(Y|X) the average row entropy) = 0.531 bits. The sentences "The cell computes H(Y|X) both ways ..." and "Both give 0.3251 nats, which is H_b(0.1)." were removed; the hand arithmetic above (0.325) stands. -->
 
 ### Mutual Information
 
@@ -203,7 +203,15 @@ proposition is one way of reading off the area of the overlap.
 The function `mutual_information` implements the divergence form for any table;
 we reuse it throughout.
 
-```{.python .input #mutual-information-discrete-joint}
+```{.python .input #mutual-information-joint-conditional}
+p_xy = np.array([[0.45, 0.05],    # rows x, columns y: a fair bit X and
+                 [0.05, 0.45]])   # its copy Y, flipped with probability 0.1
+
+def entropy(p):
+    """Entropy of a p.m.f. of any shape, in nats (0 log 0 = 0)."""
+    p = p[p > 0]
+    return float(-(p * np.log(p)).sum())
+
 def mutual_information(p_xy):
     """I(X;Y) of a discrete joint p.m.f. (rows x, columns y), in nats."""
     p_x = p_xy.sum(axis=1, keepdims=True)
@@ -211,9 +219,11 @@ def mutual_information(p_xy):
     m = p_xy > 0                                  # 0 log 0 = 0
     return float((p_xy[m] * np.log(p_xy[m] / (p_x * p_y)[m])).sum())
 
-I_kl = mutual_information(p_xy)
-print(f'I(X;Y) = {I_kl:.4f} nats (KL form) = {H_x + H_y - H_xy:.4f} nats '
-      f'(entropies) = {I_kl / np.log(2):.4f} bits')
+p_x, p_y = p_xy.sum(axis=1), p_xy.sum(axis=0)     # marginals from the joint
+H_rows = sum(p_x[i] * entropy(p_xy[i] / p_x[i]) for i in range(2))   # H(Y|X)
+I = mutual_information(p_xy)
+print(f'I(X;Y) = {I:.4f} nats (KL form) = {entropy(p_y) - H_rows:.4f} '
+      f'(H(Y) - H(Y|X)) = {I / np.log(2):.3f} bits')
 ```
 
 It returns $0.3681$ nats by either form, or $0.531$ bits: a copy that is wrong
@@ -263,33 +273,7 @@ $H(Y\mid X)$ averages the entropy of $p(\cdot\mid x)$ over $x$. For a standard
 normal $X$, the sign of $X$ carries $\ln 2$ nats. The same bound caps the
 Jensen–Shannon divergence of :numref:`sec_basic_gan`, the mutual information
 between a sample and the binary label of its source, at $\ln 2$.
-
-All of this used the density. Given only samples, the simplest estimate bins
-them, here $200{,}000$ samples on a $40\times40$ grid, and applies the discrete
-formula to the bin frequencies. It is a first look at the problem of
-:numref:`subsec_mdl-mi-high-dim`.
-
-```{.python .input #mutual-information-gaussian-binned}
-def gauss_pair(rng, rho, n):
-    """n samples of a standard bivariate Gaussian with correlation rho."""
-    x = rng.standard_normal(n)
-    return x, rho * x + np.sqrt(1 - rho**2) * rng.standard_normal(n)
-
-def binned_mi(x, y, bins=40):
-    """Plug-in MI estimate from a bins x bins histogram, in nats."""
-    counts, _, _ = np.histogram2d(x, y, bins=bins)
-    return mutual_information(counts / counts.sum())
-
-rng = np.random.default_rng()
-for rho in (0.0, 0.3, 0.6, 0.9, 0.99):
-    est = binned_mi(*gauss_pair(rng, rho, 200_000))
-    print(f'rho = {rho:4.2f}: binned {est:.3f}, '
-          f'closed form {0.5 * np.log(1 / (1 - rho**2)):.3f} nats')
-```
-
-Up to $\rho=0.9$ the histogram stays within a few hundredths of a nat of the
-closed form. At $\rho=0.99$ it reads about $0.2$ nats low, because the
-probability mass sits in a ridge thinner than the bins.
+<!-- WRITER: the histogram cell `mutual-information-gaussian-binned` (gauss_pair, binned_mi, 40x40 bins at rho 0 ... 0.99) moved to "Histograms" in :numref:`sec_mdl-mi-estimation` (subsec_mdl-mi-high-dim). Its lead-in ("All of this used the density. Given only samples ...") and its reading ("Up to rho = 0.9 ... about 0.2 nats low ...") were removed. No cell of this section uses samples to estimate I any more; the closed forms above (0.144, 0.830, 1.959) are the numbers to quote. -->
 
 ### Pointwise Mutual Information
 :label:`subsec_mdl-pmi`
@@ -418,43 +402,13 @@ at $\rho=0.9$, although its correlation is zero.
 
 ![Three pairs compared by correlation and by mutual information. (a) A Gaussian pair with correlation $0.9$. (b) $Y=X^2+0.3\epsilon$, whose correlation vanishes by symmetry although $X$ nearly determines $Y$; the vertical scale of (b) differs. (c) An independent pair. Correlation cannot tell (b) from (c), and mutual information ranks (b) above (a).](../img/mdl-it-mi-corr-vs-mi.svg)
 :label:`fig_mdl-mi-corr-vs-mi`
-
-Samples tell the same story, less sharply.
-
-```{.python .input #mutual-information-nonlinear-correlation}
-x = rng.standard_normal(200_000)
-y = x**2 + 0.3 * rng.standard_normal(200_000)
-print(f'sample correlation {np.corrcoef(x, y)[0, 1]:+.3f}, '
-      f'binned MI {binned_mi(x, y):.3f} nats')
-```
-
-The sample correlation is within about $0.02$ of zero. The histogram reads
-about $0.9$ to $1.0$ nats, short of the true $1.14$, because the bins do not
-resolve the thin parabola.
+<!-- WRITER: the sampling cell `mutual-information-nonlinear-correlation` (sample correlation and 40x40 binned MI of the parabola pair) is cut; the parabola becomes a row of the histogram table in :numref:`sec_mdl-mi-estimation`. Its lead-in ("Samples tell the same story, less sharply.") and reading ("within about 0.02 of zero ... about 0.9 to 1.0 nats") were removed. -->
 
 Now apply the invertible map $x\mapsto x^3$ to the first coordinate of the
 running Gaussian pair. The mutual information stays at $0.830$ nats by the
 proposition. The correlation falls to $3\rho/\sqrt{15}=0.697$, because
-$\mathbb{E}[X^3Y]=3\rho$ and $\textrm{Var}(X^3)=15$ for a standard $X$. What
-will the histogram do? Alongside the raw samples we bin their *ranks*, their
-positions in sorted order.
-
-```{.python .input #mdl-mutual-information-mutual-information-as-nonlinear-correlation-2}
-x, y = gauss_pair(rng, 0.9, 200_000)
-rank = lambda a: np.argsort(np.argsort(a))       # position in sorted order
-for name, u in (('x', x), ('x**3', x**3)):
-    print(f'{name:4s}: correlation {np.corrcoef(u, y)[0, 1]:.3f}, binned MI '
-          f'{binned_mi(u, y):.3f}, rank-binned MI '
-          f'{binned_mi(rank(u), rank(y)):.4f} nats')
-```
-
-The correlation is as computed. The raw histogram estimate falls from about
-$0.81$ to roughly half of that (between about $0.3$ and $0.6$ from run to run),
-although the quantity it estimates has not moved: its equal-width bins are
-stretched by the few most extreme values of $x^3$. The histogram of the ranks
-is unchanged to the last digit, since an increasing map leaves ranks fixed.
-Mutual information is invariant; an estimator is invariant only if it is built
-from something invariant, such as ranks.
+$\mathbb{E}[X^3Y]=3\rho$ and $\textrm{Var}(X^3)=15$ for a standard $X$.
+<!-- WRITER: the cell `mdl-mutual-information-mutual-information-as-nonlinear-correlation-2` (x^3 and rank-binned histograms) moved to "Histograms" in :numref:`sec_mdl-mi-estimation`. The sentences "What will the histogram do? Alongside the raw samples we bin their ranks ..." and the reading after the cell ("The raw histogram estimate falls ... such as ranks.") were removed. Worklist B3: close the x^3 case here in two sentences with a pointer to :numref:`subsec_mdl-mi-high-dim` for what an estimator does with it. -->
 
 ## Processing and Prediction
 
@@ -586,7 +540,14 @@ I_xz_y, I_xy_z = cond_mi(p_xyz.transpose(0, 2, 1)), cond_mi(p_xyz)
 print(f'I(X;Y) = {I_xy:.4f}, I(X;Z) = {I_xz:.4f}, '
       f'I(X;Z|Y) = {I_xz_y:.4f}, I(X;Y|Z) = {I_xy_z:.4f}')
 print(f'I(X;Y,Z) by the chain rule: {I_xz + I_xy_z:.4f} = {I_xy + I_xz_y:.4f}')
+p_xor = np.zeros((2, 2, 2))
+for a, b in np.ndindex(2, 2):
+    p_xor[a, b, a ^ b] = 0.25          # independent fair bits, Z = X xor Y
+print(f'XOR: I(X;Y) = {mutual_information(p_xor.sum(2)):.4f}, '
+      f'I(X;Y|Z) = {cond_mi(p_xor):.4f} nats')
 ```
+<!-- WRITER: the last print line of this cell now carries the XOR counterexample (I(X;Y) = 0.0000, I(X;Y|Z) = 0.6931 nats), which the text introduces only further down; the separate XOR cell is cut. -->
+
 
 $I(X; Z \mid Y) = 0$ is the Markov property in numbers, both expansions of
 $I(X; Y, Z)$ give $0.3681$ nats, and the second noisy line removes two thirds
@@ -622,15 +583,7 @@ The inequality is a statement about Markov chains, not about conditioning in
 general. Conditioning can create dependence: let $X$ and $Y$ be independent
 fair bits and $Z=X\oplus Y$ their exclusive or. Then $X$ and $Y$ share nothing,
 but once $Z$ is known, $Y$ determines $X$.
-
-```{.python .input #mdl-mutual-information-the-data-processing-inequality-1}
-p_xor = np.zeros((2, 2, 2))
-for a in (0, 1):
-    for b in (0, 1):
-        p_xor[a, b, a ^ b] = 0.25     # independent fair bits, Z = X xor Y
-print(f'I(X;Y) = {mutual_information(p_xor.sum(2)):.4f}, '
-      f'I(X;Y|Z) = {cond_mi(p_xor):.4f} nats')
-```
+<!-- WRITER: the XOR cell is cut; its two numbers (I(X;Y) = 0.0000, I(X;Y|Z) = 0.6931 nats) are the last line printed by `mutual-information-dpi-check` above. Read them from there (worklist B5). -->
 
 Conditioning on $Z$ raises the information between $X$ and $Y$ from $0$ to
 the full $\ln2=0.693$ nats of a bit.
@@ -693,8 +646,6 @@ $I(X;Y)$ gives the information that each error rate needs.
 
 ```{.python .input #mutual-information-fano}
 H_b = lambda p: -p * np.log(p) - (1 - p) * np.log(1 - p)   # binary entropy
-print(f'running pair: H_b(0.1) + 0.1 log 1 = {H_b(0.1):.4f}, '
-      f'H(Y|X) = {H_rows:.4f}')
 k = 1000
 for p_e in (0.01, 0.05, 0.2, 0.5):
     need = np.log(k) - H_b(p_e) - p_e * np.log(k - 1)
@@ -893,19 +844,20 @@ channel* with signal-to-noise ratio $\sigma^{-2}$
 encoder at three noise levels and measures its distortion.
 
 ```{.python .input #mdl-mutual-information-rate-distortion}
+rng = np.random.default_rng()
 x = rng.standard_normal(1_000_000)
-for s2 in (0.1, 1.0, 3.0):                                # sigma^2
+for s2 in (1 / 9, 1.0, 3.0):                              # sigma^2
     z = x + np.sqrt(s2) * rng.standard_normal(x.size)     # encoder
     x_hat = z / (1 + s2)                                  # E[X | Z]
     D = s2 / (1 + s2)
-    print(f'sigma^2 = {s2:3.1f}: MSE {np.mean((x - x_hat)**2):.4f}, D = {D:.4f};'
-          f' I(X;Z) = {0.5 * np.log(1 + 1 / s2):.4f} = R(D) = '
-          f'{0.5 * np.log(1 / D):.4f}')
+    mse = np.mean((x - x_hat)**2)
+    print(f'sigma^2 = {s2:5.3f}: D = {D:.3f}, MSE {mse:.3f}, '
+          f'I(X;Z) = R(D) = {0.5 * np.log(1 + 1 / s2):.3f} nats')
 ```
 
-The measured squared error agrees with $D$ to within a few thousandths. The two
-rate columns are equal by algebra, not by measurement: $D=0.09$ costs $1.20$
-nats per sample, $D=0.5$ costs $0.35$, and $D=0.75$ costs $0.14$. The rate
+<!-- WRITER: the cell now uses sigma^2 = 1/9, 1, 3 (D = 0.1, 0.5, 0.75) and prints one rate column beside D and the measured MSE (the second, algebraically equal rate column is gone). Measured (four tabs, plus 30 unseeded NumPy draws of the same cell): MSE 0.0997-0.1003 at D = 0.1, 0.499-0.502 at D = 0.5, 0.747-0.752 at D = 0.75 (sd 0.0001 / 0.0006 / 0.0011), so "within a few thousandths" is the stable reading; rates 1.151, 0.347, 0.144 nats (exact). The sentence about "two rate columns ... equal by algebra" was removed and the D = 0.09 / 1.20 numbers replaced. -->
+The measured squared error agrees with $D$ to within a few thousandths. $D=0.1$
+costs $1.15$ nats per sample, $D=0.5$ costs $0.35$, and $D=0.75$ costs $0.14$. The rate
 grows without bound as $D\to0$, because an exact copy of a continuous variable
 has infinite information, and it reaches $0$ at $D=\sigma_X^2$. The right panel
 of :numref:`fig_mdl-it-capacity-rd` draws the curve.
@@ -1110,8 +1062,8 @@ and for a Gaussian pair it keeps nothing until $\beta$ exceeds $1/\rho^2$.
 ## Exercises
 
 1. **Gaussian pointwise mutual information.** Let $(X, Y)$ be the standard
-   bivariate Gaussian pair with correlation $\rho$ that `gauss_pair`
-   samples.
+   bivariate Gaussian pair with correlation $\rho$.
+   <!-- WRITER: `gauss_pair` moved to the estimation section; "that `gauss_pair` samples" was dropped (worklist B9: describe the pair). -->
     1. Show that
        $\textrm{pmi}(x,y)=-\tfrac12\log(1-\rho^2)-\frac{\rho^2x^2-2\rho xy+\rho^2y^2}{2(1-\rho^2)}$.
     1. Average it over $P_{X,Y}$ and recover :eqref:`eq_mdl-gaussian_mi`
@@ -1400,11 +1352,8 @@ $$I(X;Y)=D_{\textrm{KL}}(P_{X,Y}\,\|\,P_X\otimes P_Y)$$
   $h(X,Y)=\tfrac12\log\big((2\pi e)^2\det\boldsymbol\Sigma\big)$.
 - $\det\boldsymbol\Sigma=\sigma_X^2\sigma_Y^2(1-\rho^2)$: the variances cancel.
 
-A $40\times40$ histogram of $200{,}000$ samples against the closed form:
-
-@!mutual-information-gaussian-binned
-
-At $\rho=0.99$ it is about $0.2$ nats low: the ridge is thinner than a bin.
+- $\rho=0.5$: $0.144$ nats; $\rho=0.9$: $0.830$; $\rho=0.99$: $1.959$.
+- $\rho\to\pm1$: the density collapses onto a line and $I\to\infty$.
 :::
 
 ::: {.slide title="Pointwise MI Ranks Collocations; Counts Do Not"}
@@ -1426,11 +1375,9 @@ $\textrm{pmi}(x,y)=\log\dfrac{p(x,y)}{p(x)\,p(y)}$, and $I=\mathbb{E}[\textrm{pm
 
 Gaussian pair at $\rho=0.9$, then $x\mapsto x^3$:
 
-@!mdl-mutual-information-mutual-information-as-nonlinear-correlation-2
-
-- Correlation $0.90\to0.70=3\rho/\sqrt{15}$.
-- Equal-width bins lose the ridge; rank bins are unchanged.
-- $I$ is invariant; an estimator is invariant only if built from ranks.
+- $I$ stays $0.830$ nats: the Jacobians cancel in the ratio.
+- Correlation $0.90\to3\rho/\sqrt{15}=0.697$: $\mathbb{E}[X^3Y]=3\rho$, $\textrm{Var}(X^3)=15$.
+- $Y=X^2+0.3\epsilon$: correlation $0$, yet $I=1.141$ nats (by quadrature).
 :::
 
 ::: {.slide title="Check: A Fair Bit Is Flipped w.p. 0.1, Then w.p. 0.2"}
@@ -1478,7 +1425,7 @@ $I(X;Z)\le I(X;Y)$, with equality iff $X\to Z\to Y$ is also Markov.
 
 $X,Y$ independent fair bits, $Z=X\oplus Y$. Given $Z$, $Y$ determines $X$:
 
-@!mdl-mutual-information-the-data-processing-inequality-1
+@!mutual-information-dpi-check
 
 - No Markov chain holds among the three.
 - The inequality is about chains, not about conditioning in general.

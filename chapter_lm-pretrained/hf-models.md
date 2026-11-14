@@ -1,45 +1,39 @@
 # Pretrained Models with Hugging Face
 :label:`sec_lm_hf_models`
 
-<!-- Author brief, copied verbatim from the Language Models part plan
-(docs/llm/language_models_part_plan.md, "1.1 Pretrained Models with Hugging Face · T1").
-Blueprint: docs/llm/blueprints/ch01_pretrained.md section 1.1.
-The plan is a specification, not book text; this comment is replaced
-when the section is written.
+In :numref:`subsec_gpt-loading` we loaded the released weights of GPT-2 into
+our own `GPT` class, with a constructor call and a hand-written map from the
+released tensor names to ours. Ask that model a question and it does what it
+was trained to do: it continues the page. The models released today answer
+the question, and we no longer write a loader for each of them. A few lines
+of the Transformers library download a current open model and run it.
 
-**Idea:** A released model is a configuration file plus tensors, and its memory and speed follow from the configuration.
-**Opening:** The reader has `d2l.GPT` and its GPT-2 weights. Three lines load Qwen3.5-2B and it answers a question the book's model cannot. The section reads the repository until every field of the configuration maps to a section of this book and to a number of bytes, and it closes on the question of whether those same tensors would run in the book's own code.
-**Teaches:**
-- Repository anatomy: the model card, `config.json`, sharded safetensors with their index, the tokenizer files, `generation_config.json`; a revision is a commit hash, and a pinned load passes it to both model and tokenizer.
-- The Auto classes, `dtype` and `device_map`, `generate` and its sampling fields mapped onto the sampler of `sec_decoding`; one chat template serves base, instruct and thinking variants, and the rendered token sequence is printed so the text cannot drift from the file.
-- Qwen3.5's configuration read field by field: Gated DeltaNet layers with one full-attention layer in four (`sec_deltanet`, `sec_hybrids`, read as fields only), gated attention and partial RoPE, a multi-token-prediction head, a vision tower; Qwen3.6 and Qwen3.8 are the same architecture at larger scale, said in one sentence.
-- Gemma 4 E2B as the second family: per-layer embeddings, sliding windows interleaved with global layers, text-only loading; the same derivation applied to a different configuration.
-- Pinning, licences and `trust_remote_code` in two sentences with a link to `sec_software_ecosystem`.
-**Derivation:** Bytes to run a model from its configuration: weights (parameters times bytes per element, counted by group so the sum reconciles to the safetensors header), KV cache per token for full-attention layers (2 × layers × KV heads × head dimension × bytes), the fixed recurrent state of linear-attention layers (independent of context), the activation workspace of one forward pass and the logits term. Smallest numeric case: one full-attention layer with 2 KV heads of head dimension 256 in bf16 caches 2 × 2 × 256 × 2 = 2,048 bytes per token; a hybrid with one such layer in four and a 19.5 MB fixed state crosses an all-attention stack of the same width at a context the reader solves for.
-**Notebook:**
-1. Load Qwen3.5-2B pinned to its commit with `d2l.load_hf`; read the safetensors header by HTTP range request without downloading tensors (`d2l.safetensors_header`); reconcile the header's element count to `d2l.config_params(by_group=True)` (language model, vision tower, MTP head) exactly.
-2. Derive the memory terms with `d2l.config_memory`; prefill contexts of 256, 1,024, 4,096 and 16,384 tokens from a committed passage and compare the cache walker's bytes and the allocator's growth with the formula.
-3. Time 64 greedy decode steps at each context with `d2l.Benchmark` (3 warm-ups, 10 repeats, median and interquartile band) and plot tokens per second against the bandwidth ceiling of `eq_hw_decode_bound` with the card's datasheet bandwidth.
-4. Repeat steps 1 to 3 for Gemma 4 E2B (text-only); the per-layer embedding tables enter the weight term, the sliding layers cache at most the window.
-5. Claim that survives noise: measured memory is within 10% of the derived total at every context for both models (the allocator's block rounding is the gap); measured decode speed is within a factor of 2 of the bandwidth ceiling, with the gap's size stated as measured and the launch overhead counted with the profiler in one decode step.
-6. Reused pieces: `d2l.Benchmark`, `d2l.sample_next` as the semantic reference for Transformers' sampling arguments; the KV byte formula `eq_kv-cache-bytes` recapped in one paragraph.
-**Figures:** `fig_lm_hub_repo` (what a repository holds and which file each loader reads); `fig_lm_memory_vs_config` (plot: cache bytes and decode tokens per second against context for both models, formula lines and the all-attention counterfactual).
-**Restate / forward:** `subsec_hw-two-workloads` (decode reads every weight once per token, so its speed is a bandwidth ratio); `eq_kv-cache-bytes` (the KV cache grows linearly in context); `sec_software_ecosystem` (pinned revisions, licences, why `trust_remote_code` is off). Forward: 14.1 reads whole families this way.
-**Exercises:** 6 to 8. Load-bearing: derive Gemma 4 E2B's KV bytes per token from its configuration and the context at which its cache equals the per-layer embedding tables (derive); measure decode tokens per second against batch size 1 to 32 and locate the batched-decode crossover (measure); check the parameter count of Qwen3-0.6B's post-trained file against its base file and explain the duplicate head (check); open: at what context length does a hybrid's cache plus state equal an all-attention stack's, and what does that say about long-context serving.
-**Writer notes:**
-- Library exports with fixed signatures (`01_interfaces.md`): `d2l.load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto') -> (model, tokenizer)` always passes `revision` to both objects, sets `trust_remote_code=False`, `use_safetensors=True`, warns if `hf_device_map` spreads modules over devices (silent CPU offload is the performance trap); `d2l.config_params(config, include_vision=False, include_mtp=False, by_group=False)` raises `NotImplementedError('use d2l.config_stats (14.1)')` on MoE configs; `d2l.config_memory(config, seq_len, batch_size, dtype_bytes=2, *, state_bytes=4, ...)` returns the keys `params, weights, kv_cache, recurrent_state, activations, logits, total` and reads `layer_types` (`full_attention`, `sliding_attention` with `sliding_window`, `linear_attention`); `d2l.HF_REVISIONS` loads `data/lm_revisions.json`.
-- Gemma 4 adds two configuration shapes `config_memory` must handle before authoring: per-layer embedding tables (weights, not activations) and sliding layers; the blueprint's `config_memory` was written for Qwen3.5 only, so extend it and add a test per model. Numbers on the Gemma 4 cards are secondary in `sota.md`; read sizes and windows off the card at authoring.
-- Silent breakages: `generation_config.json` may set sampling (Qwen3.5-2B has none, so defaults are greedy); the state dtype of the live cache (the config's `mamba_ssm_dtype` is float32) must be read off the cache, not assumed; `torch_dtype` versus `dtype` across Transformers versions; `model.parameters()` deduplicates tied weights and `state_dict()` does not; the MTP weights are loaded but unused by `generate` (12.5 uses them).
-- Transformers version drift: Qwen3.5 modeling code is recent (`transformers >= 5.2`); the cache-walker cell is written against `cache.get_recurrent_state` and `get_conv_state` with a generic fallback that sums every tensor found by traversal. Print the bound kernel (`chunk_gated_delta_rule` fast versus the torch fallback) and run either way.
-- Do not re-teach: BPE (`sec_text-sequence`; print the two vocabularies' sizes and tokens per character only), the sampler (`sec_decoding`), safetensors as a format (`sec_read_write`), the decode bound (`sec_hardware`), the DeltaNet recurrence (`chap_modern_rnn`). The section makes the one forward reference to 14.1 and no field-by-field forward references.
-- Anecdotes stay anecdotes: prompts compared across thinking modes are labelled as such; no accuracy claim from them.
-- Committed artifacts: `data/lm_revisions.json`; the Qwen3.5-2B header (`lm-qwen35-2b-header.json`, about 100 KB) so the reconciliation runs offline; the measured table behind the figure.
-- Confirm at authoring the exact Gemma 4 E2B id to pin (`google/gemma-4-E2B` or `-it`; the instruct variant serves the chat comparison).
-**Sources:**
-- Papers: [Transformers: State-of-the-Art Natural Language Processing](https://arxiv.org/abs/1910.03771) (the library's design); [Qwen3 Technical Report](https://arxiv.org/abs/2505.09388) (Table 1 for the dense architectures that 1.2 ports; the thinking switch).
-- Code and documentation: [Transformers documentation](https://huggingface.co/docs/transformers/index) and its [quick tour](https://huggingface.co/docs/transformers/quicktour); [generation strategies](https://huggingface.co/docs/transformers/main/en/generation_strategies) (the sampling fields mapped onto `sec_decoding`); [model cards](https://huggingface.co/docs/hub/model-cards); [safetensors](https://huggingface.co/docs/safetensors/index) (header format, read by range request); [PyTorch profiler recipe](https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html) (counting launches in one decode step); model cards [Qwen3.5-2B](https://huggingface.co/Qwen/Qwen3.5-2B), [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B), [Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B), [Gemma 4 E2B](https://huggingface.co/google/gemma-4-E2B-it) (sizes, windows, per-layer embeddings: read at authoring); [Qwen3.8 README](https://github.com/QwenLM/Qwen3.8) (the larger models of the same architecture).
-- Courses, tutorials and blogs: [Hugging Face LLM Course, chapter 2](https://huggingface.co/learn/llm-course/chapter2/1) (the Auto-class tour); [CS336](https://cs336.stanford.edu/) (resource accounting lecture: FLOPs, memory, arithmetic intensity).
--->
+That convenience hides everything this book has taught us to ask about. What
+did those lines download? How much memory will the model need for a long
+prompt, or for many prompts at once? How fast can it write? And will the
+same lines load the same model next month?
+
+Since 2019 the Transformers library :cite:`Wolf.Debut.Sanh.ea.2020` has put
+many architectures behind one loading interface. Its companion, the Hugging
+Face Hub, stores each model as a git repository that holds a configuration
+file, a tokenizer and the tensors. The code that runs the model is part of
+the library, and the configuration tells the library which code to run and
+with which shapes. The configuration is therefore the blueprint of the
+model: every shape follows from it, and with the shapes every byte of
+weights, of cache and of memory traffic.
+
+Every later chapter of this part starts by loading such a *checkpoint*, as a
+released set of weights is called, and asks first whether it fits on the GPU
+and how fast it decodes. The configuration answers both before a single
+tensor is downloaded. In this section we read the repositories of two
+current models, Qwen3.5-2B, a hybrid of recurrent and attention layers, and
+Gemma 4 E2B, a transformer with sliding windows, until every field of their
+configurations points to something we built earlier in this book and to a
+number of bytes. Then we measure how well those numbers predict memory and
+speed on one RTX 4090.
+
+The first cell sets an option of PyTorch's memory allocator, which has to
+happen before CUDA starts. :numref:`subsec_lm_hf_measured` explains it.
 
 ```{.python .input #hf-models-setup}
 %%tab pytorch
@@ -78,7 +72,17 @@ from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
                           GenerationConfig)
 ```
 
-<!-- Placeholder (prose, opening): the studied models, the question, the routing of the fused kernels, and the library versions that produced the outputs. -->
+The next cell names the two models and the question we will ask them.
+Without a GPU it replaces Qwen3.5-2B by its smallest sibling in fp32, and
+the measurements at the end of the section are skipped.
+`d2l.bind_hf_kernels()` selects the GPU programs that run these models
+(:numref:`subsec_lm_hf_kernels`). It is the first of about a dozen `d2l`
+helpers that this section calls without showing their code. They are
+plumbing for the measurements (timers, profilers, searches over batch
+sizes), and the text says what each one measures. The library versions that
+the cell prints belong to the record of any result: the modeling code lives
+in the library, so another version may run the same tensors along a
+different path.
 
 ```{.python .input #hf-models-settings}
 %%tab pytorch
@@ -103,7 +107,8 @@ for module in (torch, transformers, huggingface_hub, accelerate):
     print(f'{module.__name__} {module.__version__}')
 ```
 
-<!-- Placeholder (prose, opening): GPT-2 with its released weights continues the question with more text. -->
+First the model we already have. GPT-2 gets the question in a form that a
+web page might use and writes 32 tokens greedily.
 
 ```{.python .input #hf-models-gpt2-question}
 %%tab pytorch
@@ -113,7 +118,13 @@ d2l.print_wrapped(enc.decode(out))
 del gpt2
 ```
 
-<!-- Placeholder (prose, opening): three lines load a current open model at one commit, and it answers. -->
+GPT-2 writes fluent text about the nearest topic it knows, databases, and
+begins to repeat itself. Now a current model. `from_pretrained` loads the
+tokenizer and the model, each by the name of its repository and a
+`revision`, which fixes the version of the files. The argument `dtype` asks
+for 16-bit numbers, half the bytes of fp32 (:numref:`sec_memory_precision`).
+`apply_chat_template` wraps the question in the format the model was trained
+to answer, and `generate` writes 64 tokens greedily.
 
 ```{.python .input #hf-models-three-lines}
 %%tab pytorch
@@ -131,11 +142,30 @@ d2l.print_wrapped(tokenizer.decode(reply[0, n_prompt:],
 print(f'{type(model).__name__}: {model.num_parameters():,} parameters')
 ```
 
-<!-- Placeholder (prose, ### Revisions and Licences): a revision names one commit; the chapter pins every model it loads. -->
-A model id names a repository whose files change over time; a revision names
-one commit of it. `HF_REVISIONS` pins every model this chapter loads to the
-commit it was written against, and later sections add their own entries to
-it. The commits were resolved with the Hub API on 2026-11-12.
+This reply has the form of an answer. It addresses the question and starts a
+list of reasons before its 64 tokens run out. Whether its content is right
+is another matter (a key-value cache is not "often called a context
+window"), and judging content takes the tools of later sections. Here we
+care about what we loaded, and the last line holds a first surprise: the
+model called Qwen3.5-2B has 1.88 billion parameters.
+
+## Checkpoints on the Hub
+:label:`subsec_lm_hf_hub`
+
+A repository on the Hub is addressed by a model id such as
+`Qwen/Qwen3.5-2B`. We look at how to fix its contents, at what it contains,
+and at what a load takes from it.
+
+### Revisions and Licenses
+
+A model id names a repository, and the files of a repository change: authors
+correct a chat template, replace a tokenizer file, or upload new weights
+under the old name. A *revision* names one commit by its 40-digit hash, and
+a commit never changes (:numref:`sec_software_ecosystem`). The load above
+passed the same revision to the model and to the tokenizer, whose files
+include the chat template. `HF_REVISIONS` pins every model of this chapter
+to the commit it was written against, in November 2026. Later sections add
+their own entries.
 
 ```{.python .input #hf-models-revisions}
 %%tab pytorch
@@ -154,7 +184,8 @@ HF_REVISIONS = {
     'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
 ```
 
-<!-- Placeholder (prose, ### Revisions and Licences): the licence and the size of the weights of every pinned model, for tab_lm_revisions. -->
+For each pin, the Hub reports the license at that commit and the size of the
+weight files.
 
 ```{.python .input #hf-models-pins}
 %%tab pytorch
@@ -166,10 +197,19 @@ for m, rev in HF_REVISIONS.items():  # licence and weights at each pin
           f'{size / 1e9:5.2f} GB')
 ```
 
-<!-- Placeholder prose (stage 2): the section text is written after the runs. -->
-The files this part of the book records itself (measured tables, reference
-logits, cached API responses) are published once under a versioned name and
-never change; `DATA_HUB` pins each to its SHA-1 under `LM_DATA_URL`.
+All eleven repositories carry the Apache 2.0 license at their pins, and none
+is *gated*, that is, none asks us to accept terms before a download. A
+repository can change its license from one revision to the next, so the
+license belongs in the record next to the commit. Names that end in `-Base`
+are *base* models, trained only to continue text. The others were
+*post-trained* by their authors to follow instructions and to hold a
+conversation. The two models of this section take 4.55 GB and 10.25 GB on
+disk.
+
+The book holds its own files to the same rule. The measured tables,
+reference logits and cached API responses of this part are published once
+under a versioned name, and `DATA_HUB` pins each of them to its SHA-1 hash
+under `LM_DATA_URL`.
 
 ```{.python .input #hf-models-lm-data-url}
 %%tab pytorch
@@ -177,7 +217,8 @@ never change; `DATA_HUB` pins each to its SHA-1 under `LM_DATA_URL`.
 LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
 ```
 
-<!-- Placeholder (prose, none): the measured memory and speed table behind the plot in this section, for readers without a GPU. -->
+The first such file is the table of measurements behind the plot at the end
+of this section, for readers without a GPU.
 
 ```{.python .input #hf-models-data-hub}
 %%tab pytorch
@@ -187,7 +228,9 @@ d2l.DATA_HUB['lm-hf-memory-speed-v2'] = (  # fused kernels (fla, flex_sdpa)
     'e1a6407448d04a3aef8cc6fff5ed39cfea549f0b')
 ```
 
-<!-- Placeholder (prose, ### Repository Anatomy): the files of the repository at its pinned commit. -->
+### Repository Anatomy
+
+What does the pinned commit of Qwen3.5-2B contain?
 
 ```{.python .input #hf-models-repo-files}
 %%tab pytorch
@@ -198,7 +241,32 @@ for file in info.siblings:
 print(f'safetensors: {info.safetensors.total:,} elements')
 ```
 
-<!-- Placeholder (stage 2): a shard's header is read by two range requests. -->
+One of the thirteen files is more than 99% of the repository. `config.json`
+holds the shapes. `tokenizer.json` and `tokenizer_config.json` define the
+tokenizer (`vocab.json` and `merges.txt` repeat it in the older format of
+GPT-2), `chat_template.jinja` wrapped our question, and the two preprocessor
+files describe image and video inputs: this model also reads pictures. The
+weights are in a single *shard*, a safetensors file, next to an index that
+maps tensor names to shards. Larger models have several shards. One file is
+absent: many repositories carry a `generation_config.json` with default
+sampling settings, and this one has none. :numref:`fig_lm_hub_repo` shows
+which part of the library reads which file.
+
+![What the repository of Qwen3.5-2B holds at one commit, and which loader reads each file. The dashed file is optional and absent here. The modeling code is part of the library, not of the repository. Reading the header of a shard takes two small range requests and no tensor data.](../img/mdl-lm-pretrained-hub-repo.svg)
+:label:`fig_lm_hub_repo`
+
+The last line of the output counts 2,274,069,824 elements. At two bytes each
+they take 4,548 MB, the size of the shard, so the file holds 16-bit numbers
+and little else. To find out which tensors they form, we need not download
+them. A safetensors file starts with an 8-byte integer, the length of a JSON
+header that lists the name, dtype, shape and byte range of every tensor
+(:numref:`sec_read_write`). Two HTTP range requests per shard therefore
+return every shape and no tensor data. `safetensors_header` does this for a
+pinned repository. The format is all in its last loop: eight bytes give the
+length `n` of the header, and the next `n` bytes are the JSON. The lines
+before the loop deal with access to sharded and to gated repositories, and
+`huggingface_hub.get_safetensors_metadata` does the same job in production
+code.
 
 ```{.python .input #hf-models-safetensors-header}
 %%tab pytorch
@@ -256,7 +324,7 @@ def safetensors_header(model_id, revision=None, timeout=30):
     return tensors
 ```
 
-<!-- Placeholder (prose, ### Repository Anatomy): elements by top-level prefix and by dtype, read from the header alone. -->
+We group the tensors by the first part of their names and count elements.
 
 ```{.python .input #hf-models-header-read}
 %%tab pytorch
@@ -275,7 +343,53 @@ for prefix, n in elements.items():
 assert sum(elements.values()) == info.safetensors.total
 ```
 
-<!-- Placeholder (prose, ### Pinned Loading and the Text Model): load_hf, the pinned call with its load report; the kernel routing it applies (d2l.bind_hf_kernels, d2l.hf_attention) is library code, said in one sentence here and measured in Why Kernels Matter. -->
+The file holds three things. The language model has the 1,881,825,088
+elements that the opening reported as parameters. A vision tower of 331
+million parameters encodes images, and a head of 61 million (`mtp`) serves
+multi-token prediction, the prediction of tokens beyond the next one
+:cite:`Gloeckle.Idrissi.Roziere.ea.2024`, which `generate` does not use. All
+but 36 tensors are in bf16. The exceptions are two small tensors in each of
+the 18 recurrent layers. So the "2B" of the name counts neither what the
+file holds, 2.27 billion elements, nor what a text model loads. A model card
+rounds. The header does not.
+
+### Pinned Loading and the Text Model
+
+We want the language model alone, and loading a part of a checkpoint can
+fail silently. A loader that finds no tensor for a module warns and leaves
+the module at its random initialization, and the parameter count looks right
+all the same. A multimodal file invites this accident. The names of its
+language model's tensors start with a prefix, `model.language_model`, that a
+text model does not expect. For Qwen3.5 the library translates the names by
+itself. For Gemma 4 it does not, and a careless load of the text model would
+find none of its tensors.
+
+The function `load_hf` wraps the loading call for the rest of this part,
+with one guard for each thing that can go wrong. It passes the revision from
+`HF_REVISIONS` to the configuration, the model and the tokenizer. It refuses
+repositories that bring their own Python code (`trust_remote_code=False`)
+and pickled weights, which can execute code when they are loaded
+(`use_safetensors=True`, :numref:`sec_software_ecosystem`). On a machine
+with one GPU it places every module there, because a model that the library
+has spread over the GPU and the CPU runs without an error and very slowly.
+It adds the tokenizer's end token to the stop tokens of `generate`, because
+the end token of the configuration is not always the one that ends a chat
+turn.
+
+`load_hf` also decides which model to build. The Auto classes of
+Transformers choose a class by the field `model_type` of the configuration.
+Asked for a causal language model, they build the text model for Qwen3.5,
+which is why the opening printed `Qwen3_5ForCausalLM`, and the multimodal
+model for Gemma 4. A multimodal configuration nests that of its language
+model, so `load_hf` asks with the inner one (`get_text_config`), and vision
+and audio towers stay on disk. It passes the translation of names where the
+file needs one (`key_mapping`), and it raises an error if any tensor of the
+model is still missing.
+
+The function ends with a *load report* of three lines: the class that was
+built and its stop tokens, the tensors of the file that the model ignored,
+and the kernels that the model runs. We will read our first report when we
+load Gemma 4 E2B, the model that needs these guards.
 
 ```{.python .input #hf-models-load-hf}
 %%tab pytorch
@@ -345,7 +459,9 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto',
     return model.eval(), tokenizer
 ```
 
-<!-- Placeholder (prose, ### Pinned Loading and the Text Model): the pinned commit, the device, and the parameters left on disk. -->
+Qwen3.5-2B is already in memory, loaded by the plain call of the opening.
+We do not load it a second time. We check that load against the pin
+instead.
 
 ```{.python .input #hf-models-pinned-check}
 %%tab pytorch
@@ -379,7 +495,29 @@ print(f'{loaded:,} parameters loaded, {in_file:,} elements in the file, '
       f'{in_file - loaded:,} left on disk')
 ```
 
-<!-- Placeholder (prose, ### Tokenizers and Chat Templates): vocabulary sizes and tokens per character on three texts. -->
+A pinned load reads its files from a cache folder named after the commit,
+and the tensor read from that folder equals the one in the model on the GPU.
+The cell also asserts that every tensor of the model has a counterpart in
+the file under the prefix `model.language_model`, except the output layer,
+which shares the embedding matrix. The other 392,244,736 elements, the
+vision tower and the head for multi-token prediction, stay on disk.
+
+## Tokenizers and Generation
+:label:`subsec_lm_hf_generate`
+
+Between the text we type and the tensors we loaded stand two more files of
+the repository, the tokenizer and the chat template. Between the logits and
+the text the model writes stand the arguments of `generate`.
+
+### Tokenizers and Chat Templates
+
+The cell compares four tokenizers: that of GPT-2, those of our two models,
+and that of Qwen3-0.6B, a dense predecessor of Qwen3.5 whose family later
+sections use. All four split text into subword tokens, like the byte-pair
+encoding of :numref:`sec_text-sequence`. The cell counts the vocabulary of
+each and the tokens it spends per character on the opening of *The Time
+Machine*, on the first 20,000 characters of this book's library, and on a
+Chinese paragraph about the key-value cache.
 
 ```{.python .input #hf-models-tokenizers}
 %%tab pytorch
@@ -415,7 +553,27 @@ table = pd.DataFrame(table).T.astype({'vocabulary': int,
 print(table.round(2).to_string())
 ```
 
-<!-- Placeholder (prose, ### Tokenizers and Chat Templates): the prompt the model of the opening read, and the token ids of its tail. -->
+On English prose the four agree: about a quarter of a token per character.
+On other text they part. GPT-2 spends one and a half to two times as many
+tokens on Python code as the newer tokenizers do, and more than two tokens
+per Chinese character on average, where the others need about two thirds of
+one. The vocabulary column says why. GPT-2 built its 50,257 tokens from
+English web text. It spends one token on every space of an indentation, and
+a Chinese character, three bytes in UTF-8, falls apart into pieces. The
+newer vocabularies are three to five times as large, with tokens for runs
+of spaces and for the characters of many languages. The ratio matters
+because it converts every per-token quantity of this section, bytes of cache
+or milliseconds of decoding, into a quantity per character of text.
+
+One detail of the table enters the counts below. The embedding matrices of
+the Qwen models have a few hundred more rows than their tokenizers have
+tokens, and the number of rows, `vocab_size`, is what a parameter count
+needs.
+
+What did the model of the opening read? Not our question alone:
+`apply_chat_template` renders the conversation with the template in
+`chat_template.jinja`. The cell prints the result and the ids of its last
+nine tokens.
 
 ```{.python .input #hf-models-chat-template}
 %%tab pytorch
@@ -431,7 +589,53 @@ print(tail)
 print(tokenizers[QWEN].convert_ids_to_tokens(tail))
 ```
 
-<!-- Placeholder (prose, ### Generation Arguments and Defaults): greedy generate against a four-line argmax loop; what the cache saves at two prompt lengths. -->
+The markers `<|im_start|>` and `<|im_end|>` open and close a turn, each as a
+single token (`Ċ` displays a newline). The prompt ends inside the
+assistant's turn, which is why the model answers the question and does not
+continue it. More exactly, it ends after an empty `<think>` block. Qwen
+models can write out reasoning before they answer, and the template, not the
+weights, switches this on and off: with `enable_thinking=False` the template
+closes the block itself. The default differs between checkpoints. The
+post-trained Qwen3 models and Qwen3.5-4B think unless told otherwise, and
+Qwen3.5-0.8B and Qwen3.5-2B do not, so every helper in this part passes
+`enable_thinking` explicitly. Templates, roles and the difference between
+base and post-trained checkpoints are the subject of
+:numref:`sec_lm_prompting`.
+
+### Generation Arguments and Defaults
+
+`generate` is the loop of :numref:`sec_decoding`: compute the logits of the
+next token, choose a token, append it, and stop at an end token. Its
+arguments are the settings of our `sample_next` under other names
+(:numref:`tab_lm_hf_sampling_map`).
+
+:The sampling arguments of `generate` in Transformers and their counterparts in the sampler of :numref:`sec_decoding`.
+:label:`tab_lm_hf_sampling_map`
+
+| `generate` | `sample_next` | effect |
+|---|---|---|
+| `do_sample=False` | `temperature=0` | greedy: take the most probable token |
+| `temperature` | `temperature` | divide the logits before the softmax |
+| `top_k` | `k` | keep the $k$ most probable tokens |
+| `top_p` | `p` | keep the smallest set of most probable tokens whose total probability reaches $p$ |
+| `min_p` | `min_p` | keep tokens with at least this fraction of the top probability |
+| `num_beams` | `d2l.beam_search` | search over several continuations at once |
+| `repetition_penalty` | none | lower the logits of tokens already in the text |
+
+The two samplers differ where truncations combine. Transformers applies each
+truncation to the renormalized distribution that the previous one left,
+whereas `sample_next` computes every cutoff on the full distribution and
+keeps the smallest count. With probabilities $(0.4, 0.3, 0.2, 0.1)$, a
+top-$k$ of 3 and a top-$p$ of 0.75, `sample_next` keeps three tokens, and
+Transformers keeps two, since after renormalization to $(0.44, 0.33, 0.22)$
+two tokens pass 0.75. The difference is not academic: the defaults of
+Gemma's repository set both arguments.
+
+Is `generate` the loop we think it is? The cell compares 32 greedy tokens
+from `generate` with a four-line argmax loop over the model's forward pass,
+both without a cache. It then times 32 new tokens after 1,024 and after
+8,192 tokens of *The Time Machine*, once with that loop, which reads the
+whole prefix again at every step, and once with `generate` and its cache.
 
 ```{.python .input #hf-models-greedy-check}
 %%tab pytorch
@@ -462,7 +666,17 @@ with torch.inference_mode():
                   f'tokens after {n:,} prompt tokens')
 ```
 
-<!-- Placeholder (prose, ### Generation Arguments and Defaults): the sampling defaults each repository ships. -->
+The tokens are identical. With its cache, `generate` takes about a second
+for 32 tokens after either prompt. The loop without a cache takes about 1.5
+times as long after 1,024 tokens and about 8 times as long after 8,192, as
+:numref:`sec_kv-cache` leads us to expect. But the cached time itself is
+suspicious. It amounts to roughly 30 ms per token. The model has 3.8 GB of
+weights, and a card that moves about 1 TB per second reads them in about
+4 ms. :numref:`subsec_lm_hf_decode` finds the missing time.
+
+When we pass no settings, `generate` takes them from
+`generation_config.json` if the repository has one, and from defaults of the
+library otherwise. The cell prints what our two models would use.
 
 ```{.python .input #hf-models-generation-defaults}
 %%tab pytorch
@@ -482,7 +696,28 @@ for m in (QWEN, GEMMA):
           f'stop tokens {gen.eos_token_id}')
 ```
 
-<!-- Placeholder (prose, ### The Two Configurations): the fields of both configurations, the layer pattern, and the layers that keep memory of their own. -->
+Qwen3.5-2B ships no such file, so its defaults are greedy, and its only stop
+token is 248044, the end-of-text token of the configuration. A chat turn
+ends with `<|im_end|>`, token 248046 in the template above, so a plain call
+of `generate` would write past the end of the assistant's turn. This is why
+`load_hf` adds the tokenizer's end token. Gemma 4 E2B ships the file and
+asks for sampling at temperature 1 with a top-$k$ of 64 and a top-$p$ of
+0.95, so two calls with the same prompt return two replies, as we will see.
+A comparison that leaves defaults in place compares a greedy model with a
+sampling one. In this book, every call that generates text passes its
+sampling arguments explicitly.
+
+## Reading a Configuration
+:label:`subsec_lm_hf_config`
+
+We now read `config.json` itself, for both models side by side. No field
+should remain a mystery: each should point to a layer we have built and to a
+number of parameters.
+
+### The Two Configurations
+
+The cell prints the fields of the two language models, the repeating pattern
+of their layer types, and the settings of their rotary position embeddings.
 
 ```{.python .input #hf-models-config-fields}
 %%tab pytorch
@@ -523,7 +758,126 @@ for m, t in text_configs.items():
             f'{k} {v}' for k, v in p.items()))
 ```
 
-<!-- Placeholder (stage 2): parameters by group from the configuration. -->
+The table is long, and four things in it are worth reading first: the
+width `hidden_size`, the number of layers, the head fields, and the pattern
+of layer types in the lines below the table. The remaining rows are listed
+so that no field stays unexplained.
+
+Qwen3.5-2B has 24 layers of width 2,048 in a pattern of three
+`linear_attention` layers and one `full_attention` layer, six times over.
+Linear attention is the configuration's name for the Gated DeltaNet of
+:numref:`sec_deltanet`, a recurrent layer. Each of its heads keeps a matrix
+$\mathbf{S}$ of fixed size that maps keys to values. For every token with
+key $\mathbf{k}_t$ and value $\mathbf{v}_t$, the head shrinks the matrix by
+a decay $a_t$, erases a fraction $\beta_t$ of what is stored under the key,
+and writes the same fraction of the value there:
+
+$$
+\mathbf{S}_t = a_t\, \mathbf{S}_{t-1}(\mathbf{I} - \beta_t
+\mathbf{k}_t\mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top.
+$$
+
+This update is the *delta rule*, and $\beta_t$ is its write strength. The
+state $\mathbf{S}$ does not grow with the text, so the model is a hybrid in
+the sense of :numref:`sec_hybrids`: only its six attention layers keep a
+cache that does.
+
+Gemma 4 E2B has 35 layers of width 1,536, four `sliding_attention` layers
+followed by one `full_attention` layer, seven times over. A sliding layer
+attends to the last 512 positions only (:numref:`sec_attention-at-scale`).
+The last 20 layers do something we have not met. They compute no keys and
+values and attend to those of an earlier layer, which leaves 15 layers with
+a cache of their own (:numref:`fig_lm_hf_layer_layout`).
+
+![The layers of Qwen3.5-2B and of Gemma 4 E2B with the memory each keeps per sequence. Qwen3.5-2B keeps a cache that grows with the context in 6 of its 24 layers and a state of fixed size in the others. Gemma 4 E2B keeps a cache in 15 of its 35 layers, capped at the window in the sliding ones, and its last 20 layers reuse the keys and values of layers 13 and 14.](../img/mdl-lm-pretrained-layer-layout.svg)
+:label:`fig_lm_hf_layer_layout`
+
+:numref:`tab_lm_hf_config` says what each field means and gives it the
+symbol that the formulas below use.
+
+:The configuration fields printed above, their symbols in this section, and where the book builds what they describe.
+:label:`tab_lm_hf_config`
+
+| field | symbol | meaning |
+|---|---|---|
+| `hidden_size` | $d$ | width of the residual stream (:numref:`sec_transformer-block`) |
+| `num_hidden_layers` | $L$ | layers; `layer_types` gives the kind of each |
+| `num_attention_heads`, `num_key_value_heads`, `head_dim` | $H$, $H_\textrm{kv}$, $d_h$ | query heads, key--value heads and head width of grouped-query attention (:numref:`sec_kv-cache`) |
+| `attn_output_gate` | | a sigmoid gate on the output of each head, the remedy for attention sinks of :numref:`subsec_kv-cache-sinks` |
+| `sliding_window` | $w$ | positions that a sliding layer attends to |
+| `linear_num_key_heads`, `linear_key_head_dim` | $H_k$, $d_k$ | key heads of Gated DeltaNet and their width |
+| `linear_num_value_heads`, `linear_value_head_dim` | $H_v$, $d_v$ | value heads and their width; each head keeps a $d_k \times d_v$ state |
+| `linear_conv_kernel_dim` | $k_c$ | width of a short causal convolution over queries, keys and values |
+| `mamba_ssm_dtype` | | dtype of the recurrent state |
+| `num_kv_shared_layers` | | last layers, which reuse earlier keys and values |
+| `use_double_wide_mlp` | | twice the MLP width on those layers |
+| `hidden_size_per_layer_input` | | width of a second embedding with one vector per token and layer |
+| `intermediate_size` | $f$ | width of the gated MLP (:numref:`sec_transformer-block`); `hidden_act` names its activation |
+| `vocab_size`, `tie_word_embeddings` | $V$ | rows of the embedding matrix, which the output layer shares |
+| `final_logit_softcapping` | | the logits $z$ are squashed to $30 \tanh(z / 30)$ |
+| `mtp_num_hidden_layers` | | blocks of the head for multi-token prediction |
+| `max_position_embeddings` | | the longest context the model was built for |
+
+Both models use grouped-query attention with 8 query heads and 2 or 1
+key--value heads. Qwen3.5 rotates a quarter of each head's dimensions, 64 of
+256, in its rotary position embedding
+(:numref:`sec_positional-information`), and the `mrope` entries concern
+positions inside images. The larger Qwen3.6 and Qwen3.8 models carry the
+same fields with more and wider layers, so what we read here is read for a
+family.
+
+### Parameter Counts
+
+Can we predict the 1,881,825,088 parameters of Qwen3.5-2B from these fields?
+Take $V$ embedding rows of width $d$ with a tied output layer, $L_f$
+full-attention layers and $L_l$ linear-attention layers. Each layer has the
+part that moves information between positions, attention or Gated DeltaNet,
+with $A_f$ or $A_l$ parameters. It also has a gated MLP of three matrices
+between the widths $d$ and $f$, and two normalizations of $d$ weights each.
+With a final normalization, the model has
+
+$$
+P = Vd + L_f\,(A_f + 3df + 2d) + L_l\,(A_l + 3df + 2d) + d
+$$
+:eqlabel:`eq_lm_hf_params`
+
+parameters. A full-attention layer has
+
+$$
+A_f = 2\,d H d_h + 2\,d H_\textrm{kv} d_h + H d_h d + 2 d_h
+$$
+
+of them: the query projection, twice as wide as usual because it also
+produces the output gate, the key and value projections, the output
+projection, and a normalization of queries and of keys. For Qwen3.5-2B,
+$A_f = 14{,}680{,}576$, and the MLP has $3 \cdot 2048 \cdot 6144 =
+37{,}748{,}736$ parameters, which is 72% of the layer's 52,433,408. Most of
+a transformer's weights are in its MLPs.
+
+A Gated DeltaNet layer has more parts, and we count them one by one.
+Projections map the input to queries, keys and values of total width
+$C = 2 H_k d_k + H_v d_v$ and to an output gate of width $U = H_v d_v$,
+with $dC + dU$ parameters. A short convolution of width $k_c$ per channel
+runs over queries, keys and values, with $C k_c$. Two projections compute
+the decay $a_t$ and the write strength $\beta_t$ for each value head, with
+$2\,d H_v$. And an output projection maps the result back to the width $d$,
+with $U d$. In total,
+
+$$
+A_l = dC + dU + C k_c + 2\,d H_v + U d + (2 H_v + d_v).
+$$
+
+The bracket holds two constants per head and one normalization. Here
+$C = 6{,}144$, $U = 2{,}048$ and $A_l = 21{,}061{,}792$, so a recurrent
+layer of this model has more parameters than an attention layer.
+
+`config_params` is :eqref:`eq_lm_hf_params` in code. The equation is the
+loop over `_hf_layers`: the inner function `attention` returns $A_f$, and
+the branch for `linear_attention` adds $A_l$. Everything else extends the
+count to the fields of Gemma 4, to the head for multi-token prediction and
+to the vision tower, and can be skipped at a first reading. The function
+refuses a configuration whose layout it does not know, such as a mixture of
+experts, because a plausible wrong count is worse than an error.
 
 ```{.python .input #hf-models-config-params}
 %%tab pytorch
@@ -623,7 +977,8 @@ def config_params(config, include_vision=False, include_mtp=False,
     return g if by_group else sum(g.values())
 ```
 
-<!-- Placeholder (prose, ### Parameter Counts): the configuration reproduces each bucket of the file to the element; the embedding and one layer of each kind, for eq_lm_hf_params. -->
+We compare its counts with the three groups of the header, and print the
+terms of :eqref:`eq_lm_hf_params`.
 
 ```{.python .input #hf-models-reconcile}
 %%tab pytorch
@@ -650,7 +1005,19 @@ print(f'embedding {groups["embed"]:,}; one layer: full attention '
       f'{one_layer("linear_attention"):,}')
 ```
 
-<!-- Placeholder (prose, ### The Gemma 4 Configuration): head widths, the per-layer embedding table, and what the file stores beyond the model. -->
+The configuration reproduces the file to the last element in each group, and
+the printed terms let us check the language model by hand:
+$508{,}559{,}360 + 6 \cdot 52{,}433{,}408 + 18 \cdot 58{,}814{,}624 +
+2{,}048 = 1{,}881{,}825{,}088$. An exact match says more than it may seem
+to. A count that is off by one normalization vector means that we have
+misread the architecture somewhere. A count that agrees in all ten digits
+means that every shape in the file is accounted for.
+
+### The Gemma 4 Configuration
+
+The derivation is the same for Gemma 4 E2B, with different fields. The cell
+counts its layers by kind and head width, prints the parameter groups, and
+compares their sum with the text tensors of the file.
 
 ```{.python .input #hf-models-gemma-config}
 %%tab pytorch
@@ -691,7 +1058,80 @@ print(f'parameters read per token: '
       f'{sum(gemma_groups.values()) - gemma_groups["per_layer_embed"]:,}')
 ```
 
-<!-- Placeholder (stage 2): bytes of weights, caches, state and logits. -->
+Three things here have no counterpart in the models we have built. The first
+is the group `per_layer_embed`, a second embedding table that holds, for
+every token, a vector of width 256 for each of the 35 layers. It has
+$262{,}144 \times 35 \times 256 = 2{,}348{,}810{,}240$ parameters, half of
+the text model. This table is looked up, not multiplied: a forward pass
+reads one row of it per token.
+
+The second is the sharing of keys and values. The last 20 layers have no key
+and value projections. Each attends to the keys and values of the last
+earlier layer of its kind, layer 13 or layer 14, and has an MLP twice as
+wide. The file nevertheless stores projections for these layers, 18,880,512
+elements that the library never builds. With 35 single numbers that the
+library keeps as buffers, they are the whole difference between the file and
+our count. Sharing across layers is a way of shrinking a cache that
+:numref:`sec_kv-cache` did not list. It reduces the number of layers that
+keep one, here from 35 to 15.
+
+The third is the head width: the seven full-attention layers override
+`head_dim` with heads of width 512.
+
+Of Gemma's 4,628,569,344 parameters, a forward pass therefore multiplies
+2,279,759,104, everything except the per-layer table. This is the
+"effective" size that the E in the model's name refers to. The model
+occupies memory like one of 4.6 billion parameters, and we will see that it
+computes like one of 2.3 billion.
+
+## Memory and Speed
+:label:`subsec_lm_hf_memory`
+
+The parameter count gives the bytes of the weights. A running model needs
+memory for three more things: what it remembers of each sequence, the
+activations of a forward pass, and the logits. All of them follow from the
+same fields. We derive them, test the derivation on Qwen3.5-2B, and then
+exchange the model on the GPU for Gemma 4 E2B, so that each model is
+measured with the card to itself. The speed of both models comes last.
+
+### Weights, Caches and State
+
+Each attention layer caches one key and one value vector of
+$H_\textrm{kv} d_h$ numbers per token (:numref:`sec_kv-cache`). The smallest
+case is one full-attention layer of Qwen3.5-2B: 2 key--value heads of width
+256 at $b = 2$ bytes per number cache $2 \cdot 2 \cdot 256 \cdot 2 =
+2{,}048$ bytes per token. A sliding layer caches as much per token, but only
+for the positions in its window. A linear-attention layer caches nothing per
+token. It keeps a state of $H_v d_k d_v$ numbers and the last inputs of its
+convolution. For $B$ sequences of $n$ tokens the model then needs
+
+$$
+\begin{aligned}
+M(n, B) = bP &+ B \Big[ \sum_{\textrm{full}} 2 H_\textrm{kv} d_h\, b\, n
++ \sum_{\textrm{sliding}} 2 H_\textrm{kv} d_h\, b \min(n, w_c)
++ L_l\,(H_v d_k d_v\, s + C k_c\, b) \Big] \\
+&+ \textrm{Act}(n, B) + B\, n_\textrm{out} V b
+\end{aligned}
+$$
+:eqlabel:`eq_lm_hf_memory`
+
+bytes. The first term is the weights. The bracket is the memory of one
+sequence: the caches of the full and of the sliding layers that keep one,
+and the state of the linear-attention layers at $s$ bytes per number.
+$\textrm{Act}$ stands for the activations of a forward pass, and the last
+term for the logits of the $n_\textrm{out}$ positions that are kept. Two
+constants follow the library. A window of $w = 512$ covers the current token
+and 511 earlier ones, so $w_c = w - 1$ positions are cached. And although a
+causal convolution of width 4 needs three earlier inputs, all $k_c = 4$ are
+kept.
+
+`config_memory` evaluates the five terms. Its loop over `_hf_layers` is the
+bracket of :eqref:`eq_lm_hf_memory`: the first branch adds the state of a
+linear-attention layer, and the last lines add the cache of an attention
+layer that keeps one. The quantity `mixer` belongs to the activation term,
+which counts the residual stream and the tensors of the widest layer while
+a prompt is processed. This term is an estimate assembled from the tensors
+that the kernels allocate, and it has to be tested.
 
 ```{.python .input #hf-models-config-memory}
 %%tab pytorch
@@ -760,7 +1200,25 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
     return memory
 ```
 
-<!-- Placeholder (prose, ### Weights, Caches and State): the terms of eq_lm_hf_memory for both models and the all-attention counterfactual; the activations term is an estimate, so what fits a 15 GiB slot is measured below. -->
+The next cell tabulates the terms for one sequence, up to the maximum
+context of each model. A word on units first. Memory that the allocator
+hands out is counted in GiB and MiB, $2^{30}$ and $2^{20}$ bytes, as PyTorch
+reports it. File sizes and bytes moved per second are counted in GB and MB,
+$10^9$ and $10^6$ bytes, as the Hub and the datasheets report them. A GiB is
+7% more than a GB, so the 3.8 GB of Qwen's weights appear in the table as
+3.505 GiB.
+
+The last column of the table is the cache of an imagined model of the same
+shape in which every layer keeps its own keys and values at every position.
+For Qwen3.5-2B we can predict where the real model falls below it. Six
+attention layers cache $6 \cdot 2{,}048 = 12{,}288$ bytes per token. Each of
+the 18 recurrent layers holds 16 states of $128 \times 128$ numbers at
+$s = 4$ bytes, since the field `mamba_ssm_dtype` asks for a state in fp32,
+and four convolution inputs of 6,144 numbers in bf16. Together they hold
+$18\,(16 \cdot 128 \cdot 128 \cdot 4 + 6{,}144 \cdot 4 \cdot 2) =
+19{,}759{,}104$ bytes at any context. And 24 attention layers would cache
+49,152 bytes per token. The two are equal when
+$12{,}288\,n + 19{,}759{,}104 = 49{,}152\,n$, at $n = 536$.
 
 ```{.python .input #hf-models-memory-table}
 %%tab pytorch
@@ -822,7 +1280,35 @@ logits = config_memory(configs[QWEN], 16384, 1, logits_to_keep=None)
 print(f'logits of all 16,384 positions: {logits["logits"] / 1e9:.1f} GB')
 ```
 
-<!-- Placeholder (prose, ### Measured Memory): the bandwidth the card streams, next to its datasheet value (it scales the bytes read per decode step below). -->
+The memory of a hybrid per sequence is a slope plus a constant
+(:numref:`fig_hy-cache`). Below 536 tokens Qwen3.5-2B holds more memory per
+sequence than a transformer of its shape would. At 16,384 tokens it holds
+0.27 of it, on the way to the quarter that its share of attention layers
+predicts. Gemma 4 E2B caches 6,144 bytes per token in its three
+full-attention layers that keep a cache, and at most 6.0 MiB in its twelve
+sliding ones: 0.15 of its all-attention counterpart at 16,384 tokens.
+
+Two terms are larger than the caches. Processing a prompt in one pass holds
+about 74 KiB of activations per token for Qwen3.5-2B, six times its cache
+per token, so a long prompt may not fit in one pass although its cache
+would. At the maximum context of 262,144 tokens the cache takes 3 GiB and
+the activations 18.5 GiB. And the logits column shows zero only because the
+table, like `generate`, keeps the logits of one position. A forward pass
+returns logits for every position unless told otherwise, and those of
+16,384 positions over 248,320 vocabulary entries take 8.1 GB, or 7.6 GiB,
+more than twice the weights. Generation needs the last position alone,
+which is what `logits_to_keep=1` computes.
+
+### Measured Memory
+:label:`subsec_lm_hf_measured`
+
+We now test the formula on the GPU. One other measurement has to come
+first, because the harness below times decode steps in the same pass in
+which it measures memory. Reading those times will take the memory bandwidth
+$\beta$, the rate at which the GPU moves bytes between its memory and its
+arithmetic units (:numref:`sec_hardware`). The cell doubles an array of
+about a gigabyte, which reads the array once and writes one of the same
+size.
 
 ```{.python .input #hf-models-bandwidth}
 %%tab pytorch
@@ -835,7 +1321,27 @@ if GPU:
           f'(datasheet {BETA_DATASHEET / 1e12:.1f} TB/s)')
 ```
 
-<!-- Placeholder (prose, ### Measured Memory): the cache walker, which counts the bytes of the tensors a cache object holds. The timing, profiling and capacity harness around it (d2l.hf_measure, d2l.hf_capacity, ...) is library code, said in one sentence. -->
+The card streams about 0.9 TB/s, a little less than the 1.0 TB/s of its
+datasheet (:numref:`tab_gpu_specs`).
+
+Now the memory. We process a prompt in one pass and measure three things,
+and each can catch an error that the other two would miss.
+
+The first is the cache itself. `cache_bytes` walks every tensor that can be
+reached from the cache object and adds up the bytes by dtype, and we compare
+the sum with the bracket of :eqref:`eq_lm_hf_memory`. Only this count sees
+the dtype of each tensor. The second is the growth of the allocator from
+before the pass to after it, compared with the bracket plus the logits that
+are kept. Only the allocator sees memory that the pass left behind without
+a reference from the cache object. The third is the allocator's peak during
+the pass, compared with the whole formula. Only the peak tests the
+activation estimate.
+
+`cache_bytes` returns two counts. Its *logical* bytes count every distinct
+tensor once, and its *resident* bytes count every underlying block of memory
+once. The two differ when a small view keeps a large block alive. The tables
+below report their ratio in the column `held`, and a cache that occupies
+only what it uses has a `held` of 1.
 
 ```{.python .input #hf-models-cache-bytes}
 %%tab pytorch
@@ -868,7 +1374,14 @@ def cache_bytes(cache):
     return logical, resident
 ```
 
-<!-- Placeholder (prose, ### Measured Memory): Qwen3.5-2B at four contexts; the walker, the allocator and the prefill peak against the formula. -->
+Processing a prompt in one pass and keeping its cache is called a *prefill*
+(:numref:`sec_kv-cache`). The helper `d2l.hf_measure` prefills the first
+256, 1,024, 4,096 and 16,384 tokens of *The Time Machine*, takes the three
+measurements, times the decode steps, and asserts that the bytes found by
+`cache_bytes` equal the formula's. `d2l.hf_memory_table` prints that count
+in MiB (the column `walker`) next to the formula, and the other measurements
+divided by their derived values. At 256 tokens we expect
+$12{,}288 \cdot 256 + 19{,}759{,}104$ bytes, or 21.84 MiB.
 
 ```{.python .input #hf-models-run-qwen}
 %%tab pytorch
@@ -885,7 +1398,26 @@ if GPU:
         assert close(row['peak'], row['peak_formula'], 0.1)
 ```
 
-<!-- Placeholder (prose, ### Measured Memory): the kept logits of a whole prompt, and the largest workload within a 15 GiB slot, measured and derived. -->
+`cache_bytes` finds the bytes of the formula at every context, to the byte.
+The first two lines of the output confirm what the field `mamba_ssm_dtype`
+announced: the model runs in bf16 and keeps its recurrent state in fp32, the
+$s = 4$ of the formula. The allocator grows by what the formula derives, the
+cache and the logits of one position, after the prefill and again after one
+decode step, and the cache keeps no block alive that it does not use (`held`
+is 1). The peak is 0.98 of the estimate. This agreement is the least
+impressive of the three. We assembled the activation term from the tensors
+that these kernels allocate, so it confirms that the list is complete, not
+that we could have predicted it.
+
+Two more checks. A prefill that keeps the logits of all 4,096 positions
+should grow by $4{,}096 \cdot 248{,}320 \cdot 2 = 2{,}034{,}237{,}440$ bytes
+beyond the cache. And the formula should tell us what fits into a budget of
+15 GiB, about what a 16 GB card offers. We search for the largest batch of
+4,096-token prompts and, in powers of two, for the longest single prompt
+that a prefill survives. The table of terms predicts the batch. Its total
+at 4,096 tokens is 3.860 GiB, of which the weights are 3.505 GiB, so each
+sequence adds 0.355 GiB. Then $(15 - 3.505) / 0.355 = 32.4$, and 32
+sequences should fit.
 
 ```{.python .input #hf-models-qwen-capacity}
 %%tab pytorch
@@ -912,7 +1444,58 @@ if GPU:
     capacity(model, configs[QWEN], book_ids)
 ```
 
-<!-- Placeholder (prose, ### Why Kernels Matter): the code a model runs; the same prefill on the fused kernels and on Transformers' reference code: peak memory above the weights, time, one decode step, and whether the two compute the same function (top-1 agreement, with the reference at batch 2 for the size of rounding alone). -->
+The logits term is exact, and the search finds a batch of 32 and a context
+of 131,072 tokens, as the formula says. A configuration file and a page of
+arithmetic would have told us what this model can serve before the download.
+
+The agreement depends on the allocator setting in the first cell of this
+section. PyTorch's allocator obtains memory in large segments and reuses
+freed blocks inside them (:numref:`fig_bg_allocator`). A tensor larger than
+every free block needs a new segment, so a batch can run out of memory while
+gigabytes are free in pieces. With `expandable_segments` a segment grows in
+place, and the allocator holds only 167 MiB beyond what the tensors request.
+The formula counts requests. A capacity plan reaches it only with an
+allocator that does not fragment.
+
+### Fused Kernels
+:label:`subsec_lm_hf_kernels`
+
+So far we have taken the code that runs the model as given. But the same
+tensors can be run by different GPU programs, and the choice changes how
+much memory a prompt needs and how long it takes.
+
+Every PyTorch operation on a GPU tensor launches a *kernel*, a compiled GPU
+program that reads its inputs from the memory of the GPU and writes its
+result back. Each launch costs the host 5 to 15 µs
+(:numref:`subsec_comp-overhead`), and every intermediate result between two
+kernels occupies memory and is written and read once more. A *fused* kernel
+performs a chain of operations in one launch and keeps the intermediate
+values in registers (:numref:`subsec_comp-fusion`). The modeling code of
+Transformers is written to be read, as a sequence of PyTorch operations. We
+call it the *reference* code. For two operations of our models fused kernels
+exist, and `load_hf` selects them wherever they can run. The first is the
+delta rule.
+
+The recurrent layers of Qwen3.5 do not apply the delta rule token by token
+when they read a prompt. They take 64 tokens at a time and solve one small
+triangular system per chunk for everything that the chunk writes
+(:numref:`sec_deltanet`). The reference code copies queries, keys, values,
+decays and write strengths to fp32 and builds every intermediate matrix of
+this computation for all chunks at once. Then it visits the chunks in a
+Python loop, with several launches per chunk and layer. The package
+`flash-linear-attention` (`fla`) replaces all of this by a few fused kernels
+per layer. They read the bf16 inputs and keep their fp32 sums on the chip,
+in registers and in the small memory that the threads of a kernel share. To
+the memory of the GPU they write little more than the solutions of the
+triangular systems, one state per chunk and the output. The fp32 copies, the
+padding and the per-chunk temporaries of the reference code never reach it.
+These kernels need a GPU and 16-bit inputs.
+
+The cell prefills three prompt lengths in both ways.
+`d2l.reference_kernels` switches a model to the reference code inside a
+`with` block. The columns give the peak above the weights in GiB, as
+:eqref:`eq_lm_hf_memory` estimates it and as measured, and the times of the
+prefill and of a decode step.
 
 ```{.python .input #hf-models-kernel-compare}
 %%tab pytorch
@@ -924,7 +1507,36 @@ if GPU:  # the opening's model, routed by d2l.bind_hf_kernels
     print(qwen_compare.to_string(index=False, na_rep=''))
 ```
 
-<!-- Placeholder (prose, ### Why Kernels Matter): Gemma 4 through load_hf: the text model of a multimodal file, its load report and kernels, and its repository's sampling defaults. -->
+The first line names what the model runs: PyTorch's fused attention (`sdpa`,
+the FlashAttention of :numref:`sec_attention-at-scale`), `fla` for the delta
+rule, and plain PyTorch for the short convolution. The fused prefill needs
+about two thirds of the reference's memory and about half its time at every
+length. A prompt of 65,536 tokens takes 5.3 GiB above the weights, where the
+reference takes 8.2 GiB. A decode step gains less, about 26 ms against about
+30 ms.
+
+Do the two compute the same function? Not bit for bit, because they add the
+same bf16 numbers in a different order. The last two columns compare the
+logits at the last 64 positions of each prompt, and the most probable next
+token agrees at 97% to 100% of them. The row `ref., batch 2` gives the
+scale. It compares the reference code with itself at a batch size of 2
+instead of 1, and that agreement is 98%. At 4,096 tokens, switching kernels
+moves the logits about as much as changing the batch size does. In bf16,
+near-ties flip, which is worth remembering whenever two runs of a model
+disagree about a token.
+
+The second operation is attention under a sliding window. Neither Qwen model
+has one, so this comparison needs the second model.
+
+### The Second Model
+
+Gemma 4 E2B has waited since the configurations were read, and three open
+items have waited with it. We have not seen a load report of `load_hf`. We
+have not run the sampling defaults of Gemma's repository. And the memory
+formula has been tested on one architecture only. We free Qwen3.5-2B first
+and check that its memory was returned. `load_hf` then loads the text model,
+and the cell generates three times: twice with the defaults of the
+repository, and once greedily on our question.
 
 ```{.python .input #hf-models-load-gemma}
 %%tab pytorch
@@ -955,7 +1567,22 @@ if GPU:
         greedy[0, question['input_ids'].shape[1]:], skip_special_tokens=True))
 ```
 
-<!-- Placeholder (prose, ### Why Kernels Matter): the memory measurements for Gemma 4, compared after its first decode step, and its capacity. -->
+The load report reads as it should. The class is the text model
+`Gemma4ForCausalLM`, and no tensor is missing. The 1,400 ignored tensors
+belong to an audio tower and a vision tower with their embedding layers.
+They close the account of the file: its text tensors take 9.3 GB at two
+bytes each, and the towers the remaining 1 GB of the 10.25 GB. (The unused
+key and value projections of the sharing layers are not listed, because the
+library knows to skip them.) The model has the 4,628,569,344 parameters that
+its configuration predicted. The last line of the report names a kernel,
+`flex_sdpa`, that the next subsection explains.
+
+With the defaults of the repository the same prompt gave two different
+sentences about the sea, because those defaults sample. The greedy reply to
+our question starts on the right track, with text generated one token at a
+time, before its 64 tokens run out.
+
+We repeat the memory measurements for Gemma.
 
 ```{.python .input #hf-models-run-gemma}
 %%tab pytorch
@@ -971,7 +1598,46 @@ if GPU:
     capacity(gemma, configs[GEMMA], gemma_ids)
 ```
 
-<!-- Placeholder (prose, ### Why Kernels Matter): fused against reference kernels for Gemma 4, up to the context where the reference no longer fits. -->
+The cache again matches the formula to the byte, and the growth of the
+allocator and the peak of the prefill match within 3%. The column to watch
+is `held`. Transformers implements the window by keeping a view of the last
+511 positions of each sliding layer's keys and values, and after a prefill
+this view keeps those of the whole prompt alive. At 16,384 tokens the cache
+occupies 2.8 times the bytes it uses. The first decode step copies the
+window and releases the rest (`after step`). The column `growth` matches
+right after the prefill only because we derived it with every position
+counted.
+
+A capacity plan has to count the same way. From the table of terms, one
+sequence of 4,096 tokens adds $9.048 - 8.621 = 0.427$ GiB to Gemma's
+weights, and $(15 - 8.621) / 0.427 = 14.9$ would promise 14 sequences. But
+during the prefill each of the twelve sliding layers holds all 4,096
+positions and not 511, at 1,024 bytes per position for the keys and values
+of its one head of width 256. That is another 0.04 GiB and makes 0.467 GiB
+per sequence. Then $(15 - 8.621) / 0.467 = 13.7$, and the search finds 13
+sequences, or a single one of 32,768 tokens. The model with the smaller
+cache serves fewer sequences than Qwen3.5-2B, for two reasons: its weights
+take 8.6 GiB of the budget against 3.5, and each of its sequences needs
+0.47 GiB during a prefill against 0.36.
+
+### Sliding Windows and Flex Attention
+
+A sliding window is a mask that is neither absent nor plainly causal.
+PyTorch's fused attention accepts such a mask only as a tensor, and the
+reference code builds one: a byte for every pair of positions, $n^2$ bytes
+per sequence, 0.25 GiB at 16,384 tokens and 4 GiB at 65,536. The quadratic
+memory that fused attention had removed
+(:numref:`subsec_attn-counting-memory`) comes back through the mask. *Flex
+attention*, a newer interface of PyTorch, takes the mask as a function and
+compiles it into the kernel, with a small table that marks each tile of the
+score matrix as empty, full or mixed. Empty tiles are skipped, so a sliding
+layer works in proportion to $n$ times the window. For one decode token
+nothing can be skipped, and the plain kernel is faster. The `flex_sdpa` of
+the load report is our name for the combination: flex attention on a prompt
+and `sdpa` on a single token.
+
+The cell prefills four prompt lengths with the fused kernel and with the
+reference code.
 
 ```{.python .input #hf-models-gemma-compare}
 %%tab pytorch
@@ -981,7 +1647,45 @@ if GPU:
     print(gemma_compare.to_string(index=False, na_rep=''))
 ```
 
-<!-- Placeholder (prose, ### Decode Throughput): eq_lm_hf_decode_bytes in code: the bytes one decode step reads. -->
+At 4,096 tokens the reference costs little. Then the mask takes over. The
+peak of the reference exceeds that of the fused run by 0.015 GiB at 4,096
+tokens, 0.25 GiB at 16,384 and 1.15 GiB at 32,768, and a mask of $n^2$ bytes
+takes 0.016, 0.25 and 1 GiB at these lengths. At 65,536 tokens the fused
+prefill peaks at 7.7 GiB above the weights, and the reference runs out of
+memory on a 24 GB card. Time follows memory: the fused prefill is 1.3 times
+faster at 4,096 tokens, about 2 times at 16,384 and 2.5 times at 32,768.
+Decode steps take the same time either way, to within 2%, as they run the
+same kernel. The most probable next token agrees at 95% to 100% of the last
+64 positions.
+
+The practical advice is short: know which kernels a model runs. The load
+report prints them, and `d2l.hf_kernels(model)` returns them. On a CPU both
+models run the reference code, as do the recurrent layers in fp32 and the
+sliding windows on older GPUs, and the numbers of these comparisons then do
+not apply. When a model card quotes the memory or the speed of a long
+prompt, the kernel is part of the claim.
+
+### Decode Throughput
+:label:`subsec_lm_hf_decode`
+
+What remains is the speed of writing. A decode step produces one token, and
+:numref:`sec_hardware` bounded its time from below. The step reads every
+weight once and performs about one floating-point operation per byte, so it
+cannot finish before the bytes it reads have passed through the memory
+bandwidth $\beta$. One step of our models reads
+
+$$
+R(n) = b\,(P - P_g) + \textrm{KV}_\textrm{read}(n) + 2S
+$$
+:eqlabel:`eq_lm_hf_decode_bytes`
+
+bytes and takes at least $R(n) / \beta$. Here $P_g$ counts the parameters
+that are looked up and not multiplied, which is Gemma's per-layer table.
+(The ordinary embedding is looked up as well, but it is read in full as the
+output layer.) $\textrm{KV}_\textrm{read}$ is the cache that the layers
+attend to. For Gemma it includes the 20 sharing layers, which read the
+caches of layers 13 and 14 again. $S$ is the recurrent state in bytes, read
+and written once per step. `bytes_read` evaluates the formula.
 
 ```{.python .input #hf-models-bytes-read}
 %%tab pytorch
@@ -998,7 +1702,16 @@ def bytes_read(config, n, b=2):
             + mem['kv_cache'] + 2 * mem['recurrent_state'])
 ```
 
-<!-- Placeholder (prose, ### Decode Throughput): where a decode step's time goes: wall, busy and matrix-product time per context, and the kernels with the most device time at 1,024 and 16,384 tokens. -->
+`d2l.hf_measure` has already timed the decode steps: at each context, 64
+greedy steps from a copy of the prefilled cache, ten times after three
+repeats of warm-up. `d2l.hf_profile_steps` now profiles single steps and
+records the time the GPU spends in each kernel, first for Gemma, which is in
+memory, and then for Qwen3.5-2B, which the cell loads again. Profiling comes
+last, because a profiler that has run once slows every later launch in the
+process. The tables give, in ms per decode step, the median wall time with
+its quartiles, the time the device was busy, the part of it spent in matrix
+products, the number of kernel launches, and $R / \beta$ for the bandwidth
+of the datasheet and for the measured one.
 
 ```{.python .input #hf-models-profile-compare}
 %%tab pytorch
@@ -1020,7 +1733,14 @@ if GPU:  # profiling comes after every timed decode step
                 d2l.show_kernels(kernels[n])
 ```
 
-<!-- Placeholder (prose, ### Decode Throughput): device share and time per launch, wall time against context, and matrix-product time against bytes read. -->
+Read the last column first. One step of Qwen3.5-2B reads 3.8 GB, which takes
+4.1 ms at the measured bandwidth, and one step of Gemma 4 E2B reads 4.6 GB,
+or 5.0 ms. If the bound decided, the models would write about 240 and 200
+tokens per second. The wall times are far from it: about 26 ms for
+Qwen3.5-2B, six times its bound, and about 45 ms for Gemma 4 E2B, nine times
+its bound. The column `busy` says where the time is not. The GPU works for
+about 6 ms of Qwen's 26 and for 10 to 20 ms of Gemma's 45, and waits for the
+rest. The next cell turns the columns into three ratios and asserts each.
 
 ```{.python .input #hf-models-ratios}
 %%tab pytorch
@@ -1059,7 +1779,53 @@ if GPU:
         assert at[m]['matmul_ms'] <= 2 * weights_ms
 ```
 
-<!-- Placeholder (prose, none): the measured rows are written to a candidate file; it is uploaded under a new versioned name only if it replaces the published table. -->
+*The host sets the pace.* The device is busy for about a quarter of a step,
+and for up to about 40% of Gemma's at 16,384 tokens. A step launches about
+1,500 kernels for Qwen3.5-2B and about 3,200 for Gemma 4 E2B, and the wall
+time divided by the launches is about 15 µs for both (14 to 18). That is the
+cost of issuing one operation from Python (:numref:`subsec_comp-overhead`),
+with the library's own Python around it. Gemma's steps take longer because
+they launch twice as many kernels, and the size of the model has little to
+do with it.
+
+This also explains the 30 ms per token of the cached `generate` that looked
+suspicious earlier. The cache removed most of the GPU's work, and the GPU's
+work was not what we were waiting for. These shares belong to this host and
+to an eager loop: a faster CPU would shorten the wall time and leave the
+device time where it is. Transformers, then, is the reference implementation
+of these models and not the fast path. The 20 ms and more that every step
+spends on the host are what compiled decode loops and serving engines
+remove, by taking Python out of the loop as the CUDA graphs of
+:numref:`subsec_comp-overhead` did.
+
+*Matrix products run at the speed of memory.* At batch size 1 every linear
+layer multiplies a matrix by one vector (`gemv` in the kernel names) and
+reads the matrix once. These kernels take 4.35 ms for Qwen3.5-2B, against
+4.09 ms for reading its weights at the measured bandwidth, and 5.50 ms
+against 4.96 ms for Gemma 4 E2B: within about 10% of the bound. Gemma's
+matrix products take about 1.3 times as long as Qwen's. This is close to the
+ratio of the bytes the two models read, 1.2, and far from the ratio of the
+bytes they hold, 2.5. Half of Gemma's parameters cost memory and no time.
+One kernel of its profile shows the bound at work. It takes 0.89 ms, the
+time to read the output layer once: $262{,}144 \times 1{,}536$ numbers in
+bf16, or 805 MB.
+
+*The context barely matters, with one exception.* From 256 to 16,384 tokens
+the bytes read grow by 5% for both models, and the wall time stays within
+2%. Qwen's device time grows by 10%, and its profile at 16,384 tokens shows
+why. The kernel that appends the new token's keys and values copies each
+attention layer's whole cache at every step, and at this length the copy
+takes 0.35 ms. Gemma's device time doubles, and the bound does not explain
+it. Its seven full-attention layers read about 0.2 GB of cache at 16,384
+tokens, a quarter of a millisecond at this bandwidth, yet the attention
+kernel (`fmha` in the profile) takes 10 ms, half of the device time.
+PyTorch's attention kernel for this case, a single query against a long
+cache of wide heads, works far below the speed of memory. The wall time
+hides this, since the host is slower still.
+
+A last plot collects the measurements of both models. The cell before it
+stores the measured rows, and without a GPU the plot reads the published
+copy.
 
 ```{.python .input #hf-models-save-table}
 %%tab pytorch
@@ -1072,8 +1838,6 @@ if GPU:  # the candidate file; a download never writes to this path
     with open(path, 'w') as f:
         json.dump(measured, f, indent=1)
 ```
-
-<!-- Placeholder (prose, ### Decode Throughput): the plot below; caption sentence from spec fig_lm_memory_vs_config. -->
 
 ```{.python .input #hf-models-plot}
 %%tab pytorch
@@ -1118,3 +1882,458 @@ for ax, panel, ylabel, yscale, xlim, ylim, loc, solid, styles in (
              yscale=yscale, fmts=[color[m] + s for m, s in keys], axes=ax,
              legend_loc=loc)
 ```
+
+On the left, the measured points lie on the lines derived from the
+configuration. The hybrid starts nearly flat, just above its 18.8 MiB of
+state, and crosses below its dashed all-attention line at 536 tokens. On the
+right, the three curves of each model keep one order at every context: the
+dotted bound $R(n) / \beta$ lies below the dashed device time, and the
+device time far below the solid wall time.
+
+Everything in this section ran on modeling code that we did not write and
+have not read. Qwen3.5's dense predecessor Qwen3 differs from the
+transformer block of this book in a short list of places, which invites a
+test: would its released tensors run in the book's own code, and agree with
+Transformers layer by layer (:numref:`sec_lm_d2l_checkpoint`)?
+
+## Summary
+
+A released model is one commit of a repository: a configuration, a tokenizer
+with its chat template, and tensors, run by code that lives in the library.
+A load that can be repeated therefore pins the commit, checks which tensors
+were loaded, and passes its sampling arguments explicitly. The configuration
+fixes every shape, and from its fields we counted, before any download, the
+parameters, the memory of each sequence as a slope per token plus a
+constant, and the bytes that a decode step must read. The GPU confirmed the
+memory to within a few percent, provided that the allocator does not
+fragment and that fused kernels run. For the speed of writing the
+configuration gives only a bound, 4 to 5 ms per token here. The eager loop
+of Transformers takes 26 to 45 ms, because the host spends about 15 µs on
+each of thousands of kernel launches.
+
+## Exercises
+
+1. **The cache of Gemma 4 E2B.** Use the fields of the configuration
+   printed in :numref:`subsec_lm_hf_config`.
+    1. Derive the cache bytes per token of Gemma 4 E2B in bf16 for contexts
+       beyond its window, and the constant that its sliding layers add.
+       Check both against the table of memory terms in
+       the first part of :numref:`subsec_lm_hf_memory`.
+    1. At which context would the cache of one sequence equal the bytes of
+       the per-layer embedding table? Compare the answer with the model's
+       maximum context.
+    1. At the maximum context, how many sequences does it take for their
+       caches to outweigh the table? Which term dominates the memory of
+       this model when it serves one user, and which when it serves many?
+
+1. [code] **Batched decoding of a hybrid.** A decode step of $B$ sequences
+   reads the weights once and the cache and state of every sequence
+   (:numref:`subsec_kv-cache-batching`).
+    1. From :eqref:`eq_lm_hf_decode_bytes`, derive the batch size $B^*(n)$
+       at which the caches and states of the batch equal the weights in
+       bytes read, for Qwen3.5-2B and for its all-attention counterpart.
+       Evaluate both at $n = 1{,}024$ and at $n = 16{,}384$.
+    1. Measure the time of a decode step of Qwen3.5-2B for batch sizes from
+       1 to 32 at a context of 1,024 tokens. Where does the time per step
+       begin to grow? Explain the result with the device-busy share and the
+       launch count of :numref:`subsec_lm_hf_decode`, and compare it with
+       $B^*$.
+
+1. [code] **Two files for one architecture.** The post-trained Qwen3-0.6B
+   and its base model have the same architecture, yet the weight files
+   listed in :numref:`subsec_lm_hf_hub` differ by a quarter in size.
+    1. Read both headers with `d2l.safetensors_header` and find the tensor
+       that accounts for the difference.
+    1. Predict what `model.num_parameters()` and `len(model.state_dict())`
+       return for each of the two models after `d2l.load_hf`, then check.
+       Which of the two counts a tied tensor twice?
+
+1. **Crossover contexts.** ● The cache and state of Qwen3.5-2B fall below
+   the cache of an all-attention model beyond 536 tokens.
+    1. Express the crossover context $n^*$ through the symbols of
+       :numref:`tab_lm_hf_config` for a hybrid in which one layer in $r$ is
+       full attention. Which fields move $n^*$, and in which direction?
+    1. Compute $n^*$ from the configuration of Qwen3.5-4B with
+       `d2l.config_memory`.
+    1. The recurrent state is read and written at every decode step, and
+       the cache is only read. For many long requests on one GPU, which
+       limit does a hybrid reach first, the memory of the card or the bytes
+       it can move per step?
+
+1. [code] **A table on the host.** ● The per-layer embedding table of
+   Gemma 4 E2B is looked up, never multiplied.
+    1. Predict the GPU memory that is saved by keeping the table
+       (`embed_tokens_per_layer`) in host memory, and the bytes that then
+       cross from the host to the GPU at every decode step and for a prompt
+       of 4,096 tokens.
+    1. Move the table to the CPU, route the lookup accordingly, and measure
+       the memory and the time of a prefill and of a decode step. Was time
+       lost where you predicted it?
+
+1. [code] **Two top-$p$ rules.** Collect the next-token distributions of
+   Qwen3.5-2B at 1,000 positions of *The Time Machine*.
+    1. At $p = 0.9$, compare the set of tokens kept by Transformers'
+       `TopPLogitsWarper` with the set kept by the `sample_next` function
+       of :numref:`sec_decoding`. Then construct logits with an exact tie
+       for which the two sets differ.
+    1. Repeat the comparison with Gemma's defaults, a top-$k$ of 64 followed
+       by a top-$p$ of 0.95. At how many positions do the combined rules
+       keep different sets, and which rule keeps more tokens?
+
+1. [extended] **A model passport.** ●● Write a function that takes a model
+   id and prints, from `config.json` and the safetensors headers alone: the
+   parameters by group, the bytes of weights, of cache and of state for a
+   workload of your choice, the license and whether the repository is
+   gated, and every field of the configuration that your function does not
+   understand. Run it on five recent models of different families. Which
+   fields break it, and which of them change the memory?
+
+1. [code] **Prediction before the download.** Before you load Qwen3.5-4B,
+   use `d2l.config_memory` to predict the memory of a prefill of 4
+   sequences of 32,768 tokens. Does it fit a budget of 15 GiB, and does it
+   fit a 24 GB card? Then load the model with `d2l.load_hf`, run the
+   largest such workload that fits, and compare its peak with your
+   prediction. Which term did the prediction miss by the most, and why was
+   that the term to expect?
+
+1. [code] **The cost of a mask.** Inside `d2l.reference_kernels`, measure
+   the peak memory of a Gemma 4 E2B prefill at 8,192, 16,384 and 32,768
+   tokens for batch sizes 1 and 2, and subtract the peak of the fused run.
+   Fit the excess to $c\,B\,n^2$ and compare $c$ with the one byte per pair
+   of positions that a Boolean mask takes. What does the fit predict for a
+   single prompt at the maximum context of 131,072 tokens?
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §18.1]{.kicker}
+
+Pretrained Models with Hugging Face<br>
+**repositories and pins · templates and sampling defaults · configurations · memory · fused kernels · decode speed**
+:::
+:::
+
+::: {.slide title="The Card Says 2B, the File Holds 2.27B, the Model Loads 1.88B"}
+[The problem]{.kicker}
+
+A few library calls download Qwen3.5-2B and it answers a question.
+
+- The weight file: 4.55 GB, 2,274,069,824 numbers.
+- The loaded model: 1,881,825,088 parameters.
+- Will a prompt of 16,384 tokens fit next to it? How many prompts at once?
+- How fast can it write on a card that moves 1 TB/s?
+
+::: {.d2l-note}
+A released model is **a configuration file plus tensors**. Its memory and
+its speed follow from the configuration, before any download.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- read every tensor's shape from a repository without downloading weights;
+- pin a load so that it returns the same model next month;
+- count a model's parameters from its configuration, to the last one;
+- derive the memory per sequence and the largest batch within a budget;
+- bound the time of a decode step and find where an eager step spends it.
+
+**Running example:** Qwen3.5-2B in bf16 on one RTX 4090 (24 GB,
+1.0 TB/s): 24 layers of width 2,048, 3.5 GiB of weights.
+**Second model:** Gemma 4 E2B, 35 layers, 8.6 GiB.
+:::
+
+::: {.slide title="First Open a Checkpoint, Then Measure It"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | question |
+|---|---|
+| **Pretrained Models with Hugging Face** | **what is in a checkpoint, and what does it cost to run?** |
+| A Released Checkpoint in the Book's Own Code | do its tensors run in our code? |
+| Prompting and In-Context Learning | how much does the prompt decide? |
+| Scoring Language Models | which convention gives which score? |
+| Evaluation Suites, Judges and Error Bars | is a difference real? |
+| Interpretability | how is a claim about the inside tested? |
+| Models behind an API | what does a hosted model withhold? |
+:::
+
+::: {.col .narrow}
+- **Uses:** `d2l.GPT` with GPT-2's weights, the KV cache, hybrids, the
+  bandwidth bound on decoding.
+- **Skips:** fine-tuning, serving engines, licenses in depth (Tools
+  appendix).
+:::
+:::
+:::
+
+::: {.slide title="GPT-2 Continues the Question; a Current Model Answers It"}
+GPT-2 (2019), 32 greedy tokens:
+
+@!hf-models-gpt2-question
+
+Qwen3.5-2B, 64 greedy tokens after `apply_chat_template`:
+
+@!hf-models-three-lines
+:::
+
+::: {.slide title="A Repository Is One Commit of Configuration, Tokenizer and Tensors"}
+::: {.cols .vc}
+::: {.col}
+- `config.json`: every shape.
+- Tokenizer files and `chat_template.jinja`: text to token ids.
+- One safetensors *shard*: 4,548 MB of 4,571 MB.
+- `generation_config.json`: optional, absent here.
+- The modeling code is **in the library**, selected by `model_type`.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-lm-pretrained-hub-repo.svg)
+:::
+:::
+:::
+
+::: {.slide title="Two Range Requests Read Every Tensor's Shape"}
+| bytes of a safetensors file | content |
+|---|---|
+| 0 to 7 | length $m$ of the header, an integer |
+| 8 to $7 + m$ | JSON: name, dtype, shape and byte range of each tensor |
+| the rest | tensor data, 4.5 GB |
+
+@!hf-models-header-read
+
+The file holds a language model, a vision tower and a head for multi-token
+prediction. A text model loads the first and leaves 392,244,736 numbers on
+disk.
+:::
+
+::: {.slide title="A Pin Fixes the Files; a Load Report Checks the Load"}
+| risk | guard in `d2l.load_hf` |
+|---|---|
+| the repository changes | `revision=` one commit hash, for model **and** tokenizer |
+| the library changes | print its version: the code lives there |
+| code in the repository | `trust_remote_code=False`, `use_safetensors=True` |
+| a module finds no tensor: it stays random, the count looks right | error on any missing key |
+| a tower we do not need | text class and `key_mapping`; ignored tensors listed by prefix |
+
+::: {.d2l-note .warn}
+A loader that finds no weights for a module **only warns**. The load report
+is the check.
+:::
+:::
+
+::: {.slide title="The Model Reads the Rendered Template, Not the Question"}
+@!hf-models-chat-template
+
+- The markers that open and close a turn are one token each (248045 and
+  248046).
+- `enable_thinking=False`: the **template** closes the `<think>` block; the
+  weights are the same. Defaults differ between checkpoints, so pass it.
+- English: about 4 characters per token for GPT-2, Qwen and Gemma alike.
+:::
+
+::: {.slide title="The Arguments of generate Are the Book's Sampler"}
+| `generate` | sampler of the decoding section |
+|---|---|
+| `do_sample=False` | temperature 0: greedy |
+| `temperature`, `top_k`, `top_p`, `min_p` | temperature, top-$k$, top-$p$, min-$p$ |
+| `num_beams` | beam search |
+
+@!hf-models-greedy-check
+
+- A four-line argmax loop reproduces greedy `generate` token for token.
+- The cache saves more as the prompt grows: about 1.5 times at 1,024
+  tokens, about 8 times at 8,192.
+:::
+
+::: {.slide title="Sampling Defaults Hide in the Repository"}
+@!hf-models-generation-defaults
+
+- No `generation_config.json`: greedy, and the only stop token is not the
+  one that ends a chat turn.
+- With one: Gemma samples, so two calls give two replies.
+
+::: {.d2l-note .rule}
+Pass every sampling argument explicitly. Otherwise a comparison sets a
+greedy model against a sampling one.
+:::
+:::
+
+::: {.slide title="Check: Top-k and Top-p Together"}
+[Check]{.kicker}
+
+Next-token probabilities $(0.4, 0.3, 0.2, 0.1)$, top-$k$ = 3,
+top-$p$ = 0.75. How many tokens can be sampled if (a) each cutoff is
+computed on the full distribution and the smaller count wins, (b) top-$p$
+is applied to the renormalized top-$k$ distribution?
+
+::: {.fragment .fade-up}
+- (a) The book's sampler: top-$k$ keeps 3; top-$p$ needs 3, since two
+  tokens hold only 0.7. **Three tokens.**
+- (b) Transformers: drop the fourth, renormalize to $(0.44, 0.33, 0.22)$;
+  two tokens hold 0.78. **Two tokens.**
+:::
+:::
+
+::: {.slide title="Qwen3.5 Has One Attention Layer in Four; Gemma 4 One in Five"}
+![](../img/mdl-lm-pretrained-layer-layout.svg){width=92%}
+
+- Qwen3.5-2B: (3 Gated DeltaNet layers, 1 attention layer) × 6. Only 6 of
+  24 layers keep a cache that grows.
+- Gemma 4 E2B: (4 sliding-window layers, 1 full layer) × 7. The last 20
+  layers reuse earlier keys and values: 15 of 35 keep a cache.
+:::
+
+::: {.slide title="The Configuration Counts the Parameters to the Last One"}
+$$P = Vd + L_f\,(A_f + 3df + 2d) + L_l\,(A_l + 3df + 2d) + d$$
+
+$V$ vocabulary rows, $d$ width, $f$ MLP width, $L_f$ attention layers with
+$A_f$ mixer parameters each, $L_l$ recurrent layers with $A_l$ each.
+
+@!hf-models-reconcile
+
+$508{,}559{,}360 + 6 \cdot 52{,}433{,}408 + 18 \cdot 58{,}814{,}624 +
+2{,}048 = 1{,}881{,}825{,}088$. The MLP, $3df$, is 72% of an attention layer.
+:::
+
+::: {.slide title="Half of Gemma 4 E2B Is a Table Read One Row per Token"}
+| group | parameters |
+|---|---|
+| per-layer embedding, $262{,}144 \times 35 \times 256$ | 2,348,810,240 |
+| embedding, shared with the output layer | 402,653,184 |
+| attention, MLPs, projections and norms of 35 layers | 1,877,105,920 |
+| **loaded text model** | **4,628,569,344** |
+| multiplied in a forward pass | 2,279,759,104 |
+
+- The table is looked up: it costs memory, not time.
+- The file stores 18,880,512 more numbers: key and value projections of
+  the 20 sharing layers, which the library never builds.
+:::
+
+::: {.slide title="A Hybrid's Memory per Sequence Is a Slope Plus a Constant"}
+Bytes per sequence at context $n$, in bf16, with an fp32 state:
+
+| | per token | constant |
+|---|---|---|
+| Qwen3.5-2B: 6 attention layers, 18 states | $6 \cdot 2{,}048 = 12{,}288$ | 19,759,104 |
+| the same shape, 24 attention layers | 49,152 | 0 |
+| Gemma 4 E2B: 3 full, 12 sliding layers | 6,144 | at most 6,279,168 |
+| the same shape, 35 caches, no window | 43,008 | 0 |
+
+- One attention layer: 2 (keys, values) × 2 heads × 256 × 2 bytes = 2,048
+  bytes per token.
+- $12{,}288\,n + 19{,}759{,}104 = 49{,}152\,n$ at $n = 536$; at 16,384
+  tokens the hybrid holds 0.27 of the all-attention cache.
+:::
+
+::: {.slide title="The Live Cache Matches the Formula to the Byte"}
+@!hf-models-run-qwen
+
+- `walker`: bytes of all tensors in the cache. `growth`, `after step`,
+  `peak`: the allocator, over the derived value. `held`: bytes occupied
+  over bytes used.
+- The state is fp32 although the model runs in bf16.
+- Keeping all logits of 16,384 positions would add 8.1 GB, twice the
+  weights: `logits_to_keep=1`.
+:::
+
+::: {.slide title="Check: How Many Prompts Fit in 15 GiB?"}
+[Check]{.kicker}
+
+Qwen3.5-2B: weights 3.505 GiB. A prefill of 4,096 tokens needs 0.355 GiB
+per sequence (cache, state, activations). How many sequences fit a budget
+of 15 GiB? And for Gemma 4 E2B, with 8.621 GiB and 0.467 GiB?
+
+::: {.fragment .fade-up}
+- $(15 - 3.505) / 0.355 = 32.4$: **32 sequences.** Measured: 32.
+- Gemma: $(15 - 8.621) / 0.467 = 13.7$: **13.** Measured: 13. A prefill
+  holds every position of the sliding layers, not the window.
+- Only with an allocator that does not fragment
+  (`expandable_segments:True`); its overhead is then 167 MiB.
+:::
+:::
+
+::: {.slide title="A Fused Kernel Takes Two Thirds of the Memory and Half the Time"}
+@!hf-models-kernel-compare
+
+- A kernel launch costs the host 5 to 15 µs, and intermediates between
+  kernels pass through memory.
+- Reference: fp32 copies, all intermediates of every 64-token chunk in
+  memory, a Python loop over chunks.
+- Fused (`fla`): a few kernels per layer, no fp32 copies, intermediates
+  mostly in registers.
+- Same top token at 97% to 100% of positions; batch 2 against 1: 98%.
+:::
+
+::: {.slide title="A Sliding-Window Mask Costs n² Bytes; Flex Attention Compiles It Away"}
+@!hf-models-gemma-compare
+
+- Reference: a Boolean mask, one byte per pair of positions: 0.25 GiB at
+  16,384 tokens, 1 GiB at 32,768, 4 GiB at 65,536.
+- Flex attention: the mask is a function inside the kernel; empty tiles
+  are skipped.
+:::
+
+::: {.slide title="A Decode Step Reads the Weights Once: at Least 4 ms"}
+$$R(n) = b\,(P - P_g) + \textrm{KV}_\textrm{read}(n) + 2S, \qquad
+t_\textrm{step} \ge R(n) / \beta$$
+
+$b$ bytes per number, $P$ parameters, $P_g$ of them looked up, not
+multiplied; cache read; state $S$ read and written; $\beta$ bandwidth.
+
+| | bytes held | bytes read per step | $R / \beta$ at 0.92 TB/s |
+|---|---|---|---|
+| Qwen3.5-2B | 3.8 GB | 3.8 GB | 4.1 ms |
+| Gemma 4 E2B | 9.3 GB | 4.6 GB | 5.0 ms |
+| ratio | 2.46 | 1.20 | |
+:::
+
+::: {.slide title="An Eager Decode Step Spends Three Quarters of Its Time on the Host"}
+@!hf-models-plot
+
+Right: wall time (solid), device busy (dashed), bytes read / $\beta$
+(dotted). Qwen3.5-2B: about 26 ms per token against a bound of 4 ms.
+:::
+
+::: {.slide title="Matrix Products Follow Bytes Read: 1.3 Times, Not 2.5"}
+@!hf-models-ratios
+
+- About 1,500 and 3,200 kernel launches per step, about 15 µs of wall
+  time each: the host sets the pace.
+- Matrix products run within about 10% of the bandwidth bound.
+- Gemma's device time doubles by 16,384 tokens: its attention kernel for
+  one query takes 10 ms there.
+:::
+
+::: {.slide title="Check: The Bound and the Clock"}
+[Check]{.kicker}
+
+Qwen3.5-2B at batch 1 reads 3.8 GB per decode step at 0.92 TB/s, and a
+step launches 1,490 kernels at about 17 µs of wall time each. What does the
+bound allow, and what does the clock show?
+
+::: {.fragment .fade-up}
+- Bound: $3.8 / 0.92 \approx 4.1$ ms, about 240 tokens per second.
+- Clock: $1{,}490 \times 17$ µs $\approx$ 26 ms, about 40 tokens per
+  second.
+- A compiled decode loop removes the launches, not the 4 ms.
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- A checkpoint is a pinned commit: configuration, tokenizer, template,
+  tensors. The code is in the library.
+- The configuration of Qwen3.5-2B gives its 1,881,825,088 parameters
+  exactly, and its memory per sequence: 12,288 bytes per token plus
+  18.8 MiB.
+- Within 15 GiB: 32 prompts of 4,096 tokens, as derived.
+- Fused kernels: two thirds of the memory, half the prefill time.
+- Decode: bound 4 ms, matrix products within 10% of it, wall time 26 ms.
+
+**Next:** the same kind of tensors in the book's own code, checked layer by
+layer.
+:::

@@ -51,6 +51,31 @@ from d2l import jax as d2l
 
 ```{.python .input #mdl-test-functions-transport-test-functions-and-transport-2}
 from scipy import optimize
+from scipy.stats import norm
+```
+
+<!-- WRITER: new cell (worklist 37.4 A2, the opening answer). It compares N(0, 1) with N(d, 1) for d = 0.5, 1, 2, 4, 8 (RBF length scale 1) and prints the value and the slope in d (central difference, h = 1e-3) of KL (d^2/2), JS (quadrature, mixture in log space), TV (2 Phi(d/2) - 1), MMD^2 (2/sqrt(3) (1 - e^{-d^2/6})) and W1 (= d). Deterministic, identical in all four tabs. Values at d = 0.5/1/2/4/8: JS 0.030/0.111/0.337/0.633/0.693; TV 0.197/0.383/0.683/0.954/1.000; MMD^2 0.047/0.177/0.562/1.074/1.155. Slopes at d = 8: KL 8.0, JS 2.0e-4, TV 1.3e-4, MMD^2 7.2e-5, W1 1.0 (at d = 0.5: 0.50, 0.12, 0.39, 0.18, 1.0). Needs a lead sentence (the reader's question) before it and its reading after it; the OT opening that retells disjoint supports becomes a clause pointing here (B3). -->
+
+```{.python .input #mdl-test-functions-transport-test-functions-and-transport-3}
+def js(d, x=np.linspace(-12, 20, 6401)):
+    """JS divergence of N(0, 1) and N(d, 1) by quadrature on the grid x."""
+    log_p, log_q = norm.logpdf(x), norm.logpdf(x, loc=d)
+    log_m = np.logaddexp(log_p, log_q) - math.log(2)    # log of the mixture
+    terms = np.exp(log_p) * (log_p - log_m) + np.exp(log_q) * (log_q - log_m)
+    return terms.sum() * (x[1] - x[0]) / 2
+
+comparisons = {                       # N(0, 1) against N(d, 1), RBF ell = 1
+    'KL': lambda d: d ** 2 / 2,
+    'JS': js,
+    'TV': lambda d: 2 * norm.cdf(d / 2) - 1,
+    'MMD^2': lambda d: 2 / math.sqrt(3) * (1 - math.exp(-d ** 2 / 6)),
+    'W1': lambda d: d}
+h = 1e-3                              # step of the central difference
+print('   d' + ''.join(f'{name:>8s} {"slope":>7s}' for name in comparisons))
+for d in (0.5, 1.0, 2.0, 4.0, 8.0):
+    print(f'{d:4.1f}' + ''.join(
+        f'{f(d):8.3f} {(f(d + h) - f(d - h)) / (2 * h):7.1e}'
+        for f in comparisons.values()))
 ```
 
 ## Integral Probability Metrics and MMD
@@ -231,9 +256,8 @@ grid = np.linspace(-4.0, 4.5, 400)
 witness = g(grid)
 print(f'witness changes sign at x = {grid[np.argmax(witness < 0)]:.2f}')
 print(f'E_P g - E_Q g = {g(x_p).mean() - g(y_shift).mean():.4f}')
-pdf = lambda t, mu: np.exp(-(t - mu) ** 2 / 2) / np.sqrt(2 * np.pi)
-d2l.plot(grid, [witness / np.abs(witness).max(), pdf(grid, 0.0),
-                pdf(grid, 0.5)], 'x', '',
+d2l.plot(grid, [witness / np.abs(witness).max(), norm.pdf(grid),
+                norm.pdf(grid, loc=0.5)], 'x', '',
          legend=['witness (scaled)', 'p = N(0, 1)', 'q = N(0.5, 1)'],
          figsize=(5, 3))
 ```

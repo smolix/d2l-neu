@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:cf6458ed238214f91de52588970e1cd7fc811d71a7c790035541388b55062fae",
+    "d2l_lib_fingerprint": "sha256:88a3279357d59ceb14e26363b0b3a0ba567c85b70be8f59c1b70eb9689d5227a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "# training examples: 25000\nlabel: 1 review: Zentropa has much in common with The Third Man, another noir\nlabel: 1 review: Zentropa is the most original movie I've seen in years. If y\nlabel: 1 review: Lars Von Trier is never backward in trying out new technique\n"
+          "text": "# training examples: 25000\nlabel: 1 review: Without question, this film has to be one of the greatest ..\nlabel: 1 review: This movie is one among the very few Indian movies, that wou\nlabel: 1 review: Pakeezah is in my mind the greatest achievement of Indian ci\n"
         }
       ]
     },
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
           "bytes": 20698,
-          "sha256": "sha256:a8d9633d99b3da227068fd61ecf7a6b1c78593819383b3eb3868eb574a899600"
+          "sha256": "sha256:f20b72fe471182fe47166d7f6977ff3132b6d62481c3ccb505d0023bda128592"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:5d135c97d948bdba5b4f67bcf07b1b8ea2d4f490d05fe12b5f8583b8c0ba43ff",
+    "d2l_lib_fingerprint": "sha256:8ad561b0ad8d9e09cbb1e7e11c19d54e670a64ef439a0affe2601ec077ca3afe",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,8 +74,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 79423,
-          "sha256": "sha256:271f57c84e9b393f8ce5fa20cad65f5a35e88f5e6d61ba582d9cc579fa6d1c3f"
+          "bytes": 79992,
+          "sha256": "sha256:7534762432a32ee570a1c47ae80de87fba47c269f5efe005b8b030a1b1862ed5"
         }
       ]
     },

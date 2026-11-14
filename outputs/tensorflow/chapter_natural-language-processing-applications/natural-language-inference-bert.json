@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:74a5335dc27b687c2578a1d15f61dce395e8014dfdec10c0f965c41f5d264abb",
+    "d2l_lib_fingerprint": "sha256:898ac9d446fa56414cf520829edacb3c9d55839755ba87b412666f53da449a52",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,7 +71,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[-0.04434294, -2.4169698 , -0.14444727],\n       [-0.04434294, -2.4169698 , -0.14444727]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[ 0.8664489 , -0.3681177 , -0.30259174],\n       [ 0.8664489 , -0.3681177 , -0.30259174]], dtype=float32)>"
         }
       ]
     },
@@ -87,7 +87,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 129s - 120ms/step - accuracy: 0.6502 - loss: 0.7817 - val_accuracy: 0.7287 - val_loss: 0.6496\n"
+          "text": "1073/1073 - 184s - 171ms/step - accuracy: 0.6526 - loss: 0.7774 - val_accuracy: 0.7317 - val_loss: 0.6411\n"
         },
         {
           "type": "stream",
@@ -97,7 +97,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 44s - 41ms/step - accuracy: 0.7343 - loss: 0.6359 - val_accuracy: 0.7595 - val_loss: 0.5936\n"
+          "text": "1073/1073 - 92s - 86ms/step - accuracy: 0.7362 - loss: 0.6318 - val_accuracy: 0.7564 - val_loss: 0.5883\n"
         },
         {
           "type": "stream",
@@ -107,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 43s - 40ms/step - accuracy: 0.7671 - loss: 0.5682 - val_accuracy: 0.7665 - val_loss: 0.5662\n"
+          "text": "1073/1073 - 94s - 88ms/step - accuracy: 0.7696 - loss: 0.5645 - val_accuracy: 0.7725 - val_loss: 0.5627\n"
         },
         {
           "type": "stream",
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 45s - 41ms/step - accuracy: 0.7904 - loss: 0.5196 - val_accuracy: 0.7713 - val_loss: 0.5588\n"
+          "text": "1073/1073 - 92s - 86ms/step - accuracy: 0.7922 - loss: 0.5161 - val_accuracy: 0.7845 - val_loss: 0.5415\n"
         },
         {
           "type": "stream",
@@ -127,11 +127,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 51s - 48ms/step - accuracy: 0.8072 - loss: 0.4834 - val_accuracy: 0.7794 - val_loss: 0.5558\n"
+          "text": "1073/1073 - 92s - 86ms/step - accuracy: 0.8088 - loss: 0.4802 - val_accuracy: 0.7895 - val_loss: 0.5384\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x7e96f8f9bb30>"
+          "text": "<keras.src.callbacks.history.History at 0x76ebcdf0ce60>"
         }
       ]
     }

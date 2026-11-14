@@ -7039,6 +7039,8 @@ class PooledClassifier(nn.Module):
         H = self.encoder(input_ids=input_ids,
                          attention_mask=attention_mask).last_hidden_state
         if self.pooling == 'cls':
+            if not attention_mask[:, 0].all():
+                raise ValueError('cls pooling needs right padding')
             h = H[:, 0]
         else:  # padding positions do not count
             m = attention_mask.unsqueeze(-1).to(H.dtype)
@@ -7054,7 +7056,8 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
     an output with .logits. AdamW (weight decay 0.01 on matrices), linear
     warmup over the share warmup of the steps then linear decay, gradients
     clipped to norm 1, bf16 autocast on a GPU; each batch is padded to its
-    longest sequence; seed fixes the data order and dropout. Returns the
+    longest sequence (with id 0: the attention mask hides it, so any id
+    serves); seed fixes the data order and dropout. Returns the
     training losses, the eval accuracy and predictions (a label per
     example, or per scored token), the training seconds and the peak GPU
     memory in GiB.

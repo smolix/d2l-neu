@@ -101,11 +101,35 @@ LABELS = {'mnli': ('entailment', 'neutral', 'contradiction'),
 LIVE = (dict(n=250, items=200, dec_items=8, tag_train=1000, tag_items=500)
         if SMALL else dict(n=1000, items=2000, dec_items=200,
                            tag_train=None, tag_items=None))  # None: all
+TAG_LR = 5e-5  # the tagger's learning rate, fixed (not tuned)
+VERBAL = {'mnli': ('yes', 'maybe', 'no'), 'sst2': ('negative', 'positive')}
+FMT = {'mnli': '{x}\nAnswer: {y}', 'sst2': 'Review: {x}\nSentiment: {y}'}
+DRAWS = {0: 1, 4: 1, 8: 3}  # demonstration sets per shot count
+N_POOL, MIN_WORDS = 1000, {'mnli': 1, 'sst2': 8}  # demonstrations: the pool
+CONFIG = {  # what each result is made with; reading one checks it
+    'bert-sweep': dict(model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC],
+                       sizes=SIZES, seeds=SEEDS, lrs=LRS, maxlen=MAXLEN,
+                       epochs=EPOCHS, batch=BATCH, n_carve=N_CARVE,
+                       n_hyp=N_HYP, head='pretrained dense and norm'),
+    'bert-tagging': dict(model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC],
+                         lr=TAG_LR, epochs=EPOCHS, batch=BATCH),
+    'bert-decoder': dict(model=DEC, revision=d2l.HF_REVISIONS[DEC],
+                         shots=SHOTS, draws=DRAWS, fmt=FMT, verbal=VERBAL,
+                         norm='token', n_pool=N_POOL, min_words=MIN_WORDS,
+                         demos='label round-robin, one slice per draw')}
 
 def result_path(name):
     """The file this run regenerates for name, else the registered one."""
     key, file = ARTIFACTS[name]
     return d2l.lm_artifact(key, file if name in RERUN else None)
+
+def read_result(name):
+    """The results of name, checked against this notebook's settings."""
+    with open(result_path(name)) as f:
+        result = json.load(f)
+    assert result['config'] == json.loads(json.dumps(CONFIG[name])), \
+        f'{name} was made with other settings: D2L_RERUN={name}'
+    return result
 
 print(pd.DataFrame({'model': [ENC, DEC], 'revision': [
     d2l.HF_ENCODER_REVISIONS[ENC][:12], d2l.HF_REVISIONS[DEC][:12]]},
@@ -212,29 +236,28 @@ def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
     return model.eval(), tokenizer
 ```
 
-<!-- Placeholder (prose, opening): read the registered results: the encoder fine-tuned on 16,000 labelled pairs against Qwen3-1.7B with 8 demonstrations in its prompt, on the same 2,000 MNLI validation items. -->
+<!-- Placeholder (prose, opening): read the registered results: the encoder fine-tuned on 16,000 labelled pairs against Qwen3-1.7B with 8 demonstrations in its prompt, on the same 2,000 MNLI validation items (the encoder's accuracy is the mean of three seeds, the decoder's the mean of three demonstration sets). -->
 
 ```{.python .input #bert-opening}
 %%tab pytorch
 if RERUN & {'bert-sweep', 'bert-decoder'}:
     print('regenerating: the table reads the registered results')
 else:
-    with open(result_path('bert-sweep')) as f:
-        sweep = json.load(f)
-    with open(result_path('bert-decoder')) as f:
-        decoder = json.load(f)
+    sweep, decoder = read_result('bert-sweep'), read_result('bert-decoder')
     y = np.array(sweep['eval']['mnli']['label'])
     mnli_runs = [r for r in sweep['runs'] if r['task'] == 'mnli']
     n = max(r['n'] for r in mnli_runs)
     enc = np.mean([np.mean(np.array(r['pred']) == y) for r in mnli_runs
                    if r['n'] == n])  # the mean over seeds
-    dec = np.mean(np.array(decoder['pred']['mnli']['8']) == y)
+    dec = np.mean([np.mean(np.array(p) == y)  # over demonstration draws
+                   for p in decoder['pred']['mnli']['8']])
     print(pd.DataFrame({
         'labelled examples': [n, 8], 'accuracy': [enc, dec],
         'ms per 1,000 examples': [sweep['timing']['mnli'],
                                   decoder['timing']['mnli']['8']]},
-        index=[f'{ENC.split("/")[1]}, fine-tuned', f'{decoder["config"][
-            "model"].split("/")[1]}, 8 shots in the prompt']).round(
+        index=[f'{ENC.split("/")[1]}, fine-tuned (mean of {len(SEEDS)} '
+               f'seeds)', f'{DEC.split("/")[1]}, 8 shots in the prompt '
+               f'(mean of {DRAWS[8]} draws)']).round(
         {'accuracy': 3, 'ms per 1,000 examples': 0}).to_string())
 ```
 
@@ -266,7 +289,7 @@ print(pd.Series({
                 ).to_string())
 ```
 
-<!-- Placeholder (prose, ## A Released Masked-Token Encoder): what the pretrained masked-token head predicts at one masked position per sentence, the five most probable fills. -->
+<!-- Placeholder (prose, ## A Released Masked-Token Encoder): what the pretrained masked-token head predicts at one masked position per sentence, the five most probable fills. The head's first layers (dense, GELU, norm) are kept: the sentence head below starts from them, as Transformers' sequence classifier does. -->
 
 ```{.python .input #bert-mlm-fill}
 %%tab pytorch
@@ -281,6 +304,8 @@ for text, p, i in zip(texts, *P.topk(5)):
     print(f'{text:58s}', ', '.join(
         f'{tok.decode(j, clean_up_tokenization_spaces=False).strip()} {q:.2f}'
         for q, j in zip(p.tolist(), i.tolist())))
+MLM_HEAD = {k: v.detach().clone()  # dense and norm: the sentence head's start
+            for k, v in mlm.head.state_dict().items()}
 del mlm
 d2l.lm_free()
 ```
@@ -351,7 +376,7 @@ for L in (512, 8192):
 print(pd.DataFrame.from_dict(rows, orient='index').round(3).to_string())
 ```
 
-<!-- Placeholder (prose, ## Three Heads): the sentence head written out: pool the final hidden states (mean over the attention mask, as config.classifier_pooling says, or the first token), then dense, GELU, layer norm, dropout and a linear map to the logits; its submodule names follow ModernBertForSequenceClassification, so loading that head's weights is a rename. Figure fig_lm_encoder_heads. -->
+<!-- Placeholder (prose, ## Three Heads): the sentence head written out: pool the final hidden states (mean over the attention mask, as config.classifier_pooling says, or the first token), then dense, GELU, layer norm, dropout and a linear map to the logits; its submodule names follow ModernBertForSequenceClassification, so loading that head's weights is a rename. First-token pooling needs right padding (under left padding the first position is a pad). Figure fig_lm_encoder_heads. -->
 
 ```{.python .input #bert-pooled-classifier}
 %%tab pytorch
@@ -380,6 +405,8 @@ class PooledClassifier(nn.Module):
         H = self.encoder(input_ids=input_ids,
                          attention_mask=attention_mask).last_hidden_state
         if self.pooling == 'cls':
+            if not attention_mask[:, 0].all():
+                raise ValueError('cls pooling needs right padding')
             h = H[:, 0]
         else:  # padding positions do not count
             m = attention_mask.unsqueeze(-1).to(H.dtype)
@@ -388,7 +415,7 @@ class PooledClassifier(nn.Module):
         return self.classifier(self.drop(h))
 ```
 
-<!-- Placeholder (prose, ## Three Heads): the check: Transformers' sequence classifier with a new head, its weights renamed into PooledClassifier (model. becomes encoder.; a strict load proves the names map one to one), logits on eight padded MNLI pairs in fp32 and in bf16. -->
+<!-- Placeholder (prose, ## Three Heads): the check: Transformers' sequence classifier with a new head, its weights renamed into PooledClassifier (model. becomes encoder.; a strict load proves the names map one to one), logits on eight padded MNLI pairs in fp32 and in bf16. The library's classifier takes its dense and norm from the checkpoint (the masked-token head's), so only the final linear map is new. -->
 
 ```{.python .input #bert-head-check}
 %%tab pytorch
@@ -400,6 +427,9 @@ clf = d2l.PooledClassifier(copy.deepcopy(encoder), 3,
                            pooling=ref.config.classifier_pooling)
 clf.load_state_dict({k.replace('model.', 'encoder.', 1): v
                      for k, v in ref.state_dict().items()})
+same = all(torch.equal(ref.head.state_dict()[k], v)
+           for k, v in MLM_HEAD.items())
+print('dense and norm as in the masked-token head:', same)
 X = tok(list(mnli_val.premise[:8]), list(mnli_val.hypothesis[:8]),
         padding=True, truncation='only_first', max_length=MAXLEN['mnli'],
         return_tensors='pt').to(dev)
@@ -409,7 +439,7 @@ with torch.inference_mode():
         ref, clf = ref.to(dtype), clf.to(dtype)
         diff[str(dtype)] = (ref(**X).logits - clf(**X)).abs().max().item()
 print('max |logit difference|:', diff)
-assert diff['torch.float32'] <= 1e-4 and diff['torch.bfloat16'] <= 2e-2
+assert same and diff['torch.float32'] <= 1e-4 and diff['torch.bfloat16'] <= 2e-2
 del ref, clf
 d2l.lm_free()
 ```
@@ -427,7 +457,8 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
     an output with .logits. AdamW (weight decay 0.01 on matrices), linear
     warmup over the share warmup of the steps then linear decay, gradients
     clipped to norm 1, bf16 autocast on a GPU; each batch is padded to its
-    longest sequence; seed fixes the data order and dropout. Returns the
+    longest sequence (with id 0: the attention mask hides it, so any id
+    serves); seed fixes the data order and dropout. Returns the
     training losses, the eval accuracy and predictions (a label per
     example, or per scored token), the training seconds and the peak GPU
     memory in GiB."""
@@ -508,7 +539,7 @@ def cost_per_example(n_params, n_tokens, n_embed=0):
     return 2 * (n_params - n_embed) * n_tokens
 ```
 
-<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): the data: nested training subsets (each a prefix of one seed-0 permutation of the training set), 2,000 items after the largest subset carved off for choosing the learning rate (never the validation items), and fixed validation items: the first 2,000 of a seed-0 shuffle of MNLI validation_matched, all 872 of SST-2. A pair is encoded jointly, premise first, and cut from the premise's end (truncation='only_first'), so the hypothesis is never cut. -->
+<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): the data: nested training subsets (each a prefix of one seed-0 permutation of the training set), 2,000 items after the largest subset carved off for choosing the learning rate (never the validation items), and fixed validation items: the first 2,000 of a seed-0 shuffle of MNLI validation_matched, all 872 of SST-2. A pair is encoded jointly, premise first, and cut from the premise's end (truncation='only_first'), so the hypothesis is never cut; every pair is checked to read [CLS] a [SEP] b [SEP]. MNLI's annotators wrote one hypothesis per label for each premise, so validation items that share a premise are not independent: the intervals resample premises (cluster bootstrap). The decoder's demonstrations come from the end of the same permutation, disjoint from every training subset: label-balanced (round-robin over the labels, the order rotated per draw), SST-2's restricted to sentences of at least eight words (its training set is mostly phrases, its validation items sentences), three disjoint draws. -->
 
 ```{.python .input #bert-data}
 %%tab pytorch
@@ -526,6 +557,15 @@ def encode(task, df, hypothesis_only=False):
                   truncation='only_first', max_length=MAXLEN[task])
     return list(zip(ids['input_ids'], df.label.tolist()))
 
+def demonstrations(task, pool, draw, k=max(SHOTS)):
+    """Demonstration set draw: k rows of pool, labels in round-robin order
+    (rotated by draw), each label's rows from a slice no other draw uses;
+    the first j rows are the j-shot set."""
+    C = len(LABELS[task])
+    per = -(-k // C)  # rows of each label a draw uses at most
+    return pd.DataFrame([pool[pool.label == (draw + i) % C].iloc[
+        draw * per + i // C] for i in range(k)])
+
 train = {'mnli': read('glue-mnli-train'), 'sst2': read('glue-sst2-train')}
 val = {'mnli': mnli_val.iloc[np.random.default_rng(0).permutation(
     len(mnli_val))], 'sst2': read('glue-sst2-validation')}
@@ -534,11 +574,21 @@ for task, sizes in SIZES.items():
     perm = np.random.default_rng(0).permutation(len(train[task]))
     rows = train[task].iloc[perm[:max(sizes) + N_CARVE]]
     ev = val[task].iloc[:N_EVAL[task]]
+    assert max(sizes) + N_CARVE + N_POOL <= len(perm)  # all disjoint
+    pool = train[task].iloc[perm[-N_POOL:]]  # the permutation's end
+    pool = pool[pool[{'mnli': 'premise', 'sst2': 'sentence'}[task]]
+                .str.split().str.len() >= MIN_WORDS[task]]
     DATA[task] = {'perm': perm, 'train_df': rows.iloc[:max(sizes)],
                   'eval_df': ev, 'train': encode(task, rows.iloc[:max(sizes)]),
                   'carve': encode(task, rows.iloc[max(sizes):]),
                   'eval': encode(task, ev), 'eval_idx': ev.idx.tolist(),
-                  'shots': train[task].iloc[perm[-max(SHOTS):]]}
+                  'cluster': pd.factorize(ev.premise)[0] if task == 'mnli'
+                  else None,  # MNLI: items that share a premise
+                  'shots': [demonstrations(task, pool, d)
+                            for d in range(max(DRAWS.values()))]}
+assert all(x[0] == tok.cls_token_id and x[-1] == tok.sep_token_id and
+           x.count(tok.sep_token_id) == 2 for part in ('train', 'carve', 'eval')
+           for x, _ in DATA['mnli'][part])  # [CLS] a [SEP] b [SEP]
 DATA['mnli']['hyp_train'] = encode('mnli', train['mnli'].iloc[
     DATA['mnli']['perm'][:N_HYP]], hypothesis_only=True)
 DATA['mnli']['hyp_eval'] = encode('mnli', DATA['mnli']['eval_df'],
@@ -548,11 +598,13 @@ print(pd.DataFrame.from_dict({task: {
     len(D['carve']), 'validation items': len(D['eval']),
     'cut at MAXLEN': sum(len(x) == MAXLEN[task] for x, _ in D['train']),
     'majority rate (validation)': D['eval_df'].label.value_counts(
-        normalize=True).max().round(3)} for task, D in DATA.items()},
+        normalize=True).max().round(3), 'premises (validation)': 'n/a'
+    if D['cluster'] is None else len(set(D['cluster']))}
+    for task, D in DATA.items()},
                              orient='index').to_string())
 ```
 
-<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): helpers for the runs: a fresh copy of the pretrained encoder under a new head whose initialization the seed fixes, prediction in batches padded to their own longest pair, a timer per 1,000 examples, and the fine-tuned classifier as a zip of bf16 weights. -->
+<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): helpers for the runs: a fresh copy of the pretrained encoder under the pretrained head's dense and norm and a new final layer (initialized as Transformers initializes it, from the seed), pooled as config.classifier_pooling says, prediction in batches padded to their own longest pair, a timer per 1,000 examples, and the fine-tuned classifier as a zip of bf16 weights. -->
 
 ```{.python .input #bert-run-defs}
 %%tab pytorch
@@ -564,8 +616,17 @@ def pad(seqs):
     return X.to(dev), M.to(dev)
 
 def finetune(task, train, ev, lr, seed):
-    torch.manual_seed(seed)  # the new head's initialization
-    model = d2l.PooledClassifier(copy.deepcopy(encoder), len(LABELS[task]))
+    """A fresh copy of the encoder under the pretrained dense and norm
+    and a new final layer, initialized as in Transformers from seed."""
+    c = encoder.config
+    model = d2l.PooledClassifier(copy.deepcopy(encoder), len(LABELS[task]),
+                                 pooling=c.classifier_pooling)
+    model.head.load_state_dict(MLM_HEAD)
+    torch.manual_seed(seed)  # the new final layer
+    std, cut = c.hidden_size ** -0.5, c.initializer_cutoff_factor
+    nn.init.trunc_normal_(model.classifier.weight, std=std, a=-cut * std,
+                          b=cut * std)
+    nn.init.zeros_(model.classifier.bias)
     return model, d2l.finetune_classifier(model, train, ev, lr, EPOCHS,
                                           BATCH, seed)
 
@@ -610,26 +671,40 @@ def load_ckpt(path, dtype):
     return model.to(dev, dtype).eval()
 ```
 
-<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): the sweep, regenerated under D2L_RERUN=bert-sweep (about 20 minutes on one card): the learning rate per task chosen on the carved items at the largest size, then every size with three seeds, a hypothesis-only model, timings and the MNLI checkpoint. A normal build reads the registered results and checks them twice: it retrains one cell of the grid and compares the predictions, and it loads the registered checkpoint and predicts the validation items. -->
+<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): the sweep, regenerated under D2L_RERUN=bert-sweep (about 20 minutes on one card): the learning rate per task chosen on the carved items at the largest size (the chosen run is also the grid's largest size, seed 0), then every size with three seeds, a hypothesis-only model, timings and the MNLI checkpoint. A normal build reads the registered results and checks them twice: it retrains one cell of the grid and compares the predictions, and it loads the registered checkpoint and predicts the validation items. -->
 
 ```{.python .input #bert-sweep}
 %%tab pytorch
 if 'bert-sweep' in RERUN:
     t0 = time.perf_counter()
-    out = {'config': dict(model=ENC, revision=encoder.revision, sizes=SIZES,
-                          seeds=SEEDS, lrs=LRS, maxlen=MAXLEN, epochs=EPOCHS,
-                          batch=BATCH, n_carve=N_CARVE, n_hyp=N_HYP),
+    out = {'config': CONFIG['bert-sweep'],
            'eval': {t: {'idx': D['eval_idx'], 'label': [y for _, y in D[
                'eval']]} for t, D in DATA.items()},
            'lr': {}, 'runs': [], 'hyp_only': [], 'timing': {}}
     for task, D in DATA.items():  # learning rate on the carved items
-        acc = {lr: finetune(task, D['train'], D['carve'], lr, 0)[1][
-            'eval_acc'] for lr in LRS}
-        lr = max(acc, key=acc.get)
-        out['lr'][task] = {'chosen': lr, 'carved_acc': list(acc.values())}
+        nc, carved, best = len(D['carve']), {}, None
+        y_carve = np.array([y for _, y in D['carve']])
+        for lr in LRS:  # the validation items ride along (not used here)
+            model, r = finetune(task, D['train'], D['carve'] + D['eval'],
+                                lr, 0)
+            carved[lr] = float(np.mean(np.array(r['eval_pred'][:nc]) ==
+                                       y_carve))
+            if best is None or carved[lr] > carved[best[0]]:
+                best = (lr, model, r)
+            del model
+            d2l.lm_free()
+        lr = best[0]
+        out['lr'][task] = {'chosen': lr, 'carved_acc': list(carved.values())}
         for n in SIZES[task]:
             for seed in SEEDS:
-                model, r = finetune(task, D['train'][:n], D['eval'], lr, seed)
+                if (n, seed) == (max(SIZES[task]), 0):  # the chosen run
+                    _, model, r = best
+                    best, r['eval_pred'] = None, r['eval_pred'][nc:]
+                    r['eval_acc'] = float(np.mean(np.array(r['eval_pred']) ==
+                                                  out['eval'][task]['label']))
+                else:
+                    model, r = finetune(task, D['train'][:n], D['eval'], lr,
+                                        seed)
                 out['runs'].append(dict(
                     task=task, n=n, seed=seed, lr=lr, acc=r['eval_acc'],
                     pred=r['eval_pred'], seconds=r['seconds'],
@@ -654,8 +729,7 @@ if 'bert-sweep' in RERUN:
     out['minutes'] = (time.perf_counter() - t0) / 60
     d2l.lm_save_rerun(ARTIFACTS['bert-sweep'][1], write_json(out))
     print(f'regenerated in {out["minutes"]:.1f} min; {d2l.lm_peak()}')
-with open(result_path('bert-sweep')) as f:
-    SWEEP = json.load(f)
+SWEEP = read_result('bert-sweep')
 assert all(SWEEP['eval'][t]['idx'] == D['eval_idx'] for t, D in DATA.items())
 runs = pd.DataFrame(SWEEP['runs'])
 grid = runs.groupby(['task', 'n']).acc.agg(['mean', 'min', 'max'])
@@ -668,7 +742,7 @@ for task in SIZES:  # the seed range at the smallest size against size steps
           f'median gain per size step: {np.median(np.diff(g["mean"])):.3f}')
 ```
 
-<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): live check (i): one cell of the grid retrained, seed 0, with the registered learning rate; GPU kernels are not deterministic, so the predictions agree on most items, not all. -->
+<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): live check (i): one cell of the grid retrained, seed 0, with the registered learning rate; GPU kernels are not deterministic, so the predictions agree on most items, not all, and the live accuracy must lie within the registered seeds' spread at that size (at least two points) of the registered run. -->
 
 ```{.python .input #bert-sweep-live}
 %%tab pytorch
@@ -679,9 +753,13 @@ model, r = finetune('mnli', DATA['mnli']['train'][:n], DATA['mnli']['eval'][
 reg = np.array(runs.query('task == "mnli" and n == @n and seed == 0')
                .pred.iloc[0][:k])
 live = np.array(r['eval_pred'])
+gap, bound = abs(np.mean(live == y) - np.mean(reg == y)), max(
+    0.02, grid.loc[('mnli', n), 'range'])  # the registered seeds' spread
 print(f'n = {n}, seed 0, {k} items: accuracy {np.mean(live == y):.3f} live, '
-      f'{np.mean(reg == y):.3f} registered; same prediction on '
-      f'{np.mean(live == reg):.3f}; {r["seconds"]:.0f} s')
+      f'{np.mean(reg == y):.3f} registered (bound on the difference '
+      f'{bound:.3f}); same prediction on {np.mean(live == reg):.3f}; '
+      f'{r["seconds"]:.0f} s')
+assert SMALL or gap <= bound
 del model
 d2l.lm_free()
 ```
@@ -692,6 +770,7 @@ d2l.lm_free()
 %%tab pytorch
 clf16 = load_ckpt(result_path('bert-ckpt'),
                   torch.bfloat16 if GPU else torch.float32)
+k = LIVE['items']
 y = np.array(SWEEP['eval']['mnli']['label'][:k])
 trained = np.array(runs.query('task == "mnli" and seed == 0').sort_values(
     'n').pred.iloc[-1][:k])  # the fp32 weights at the end of training
@@ -711,7 +790,8 @@ y = np.array(SWEEP['eval']['mnli']['label'])
 majority = np.bincount(y).max() / len(y)
 rows = {}
 for r in SWEEP['hyp_only']:
-    b = d2l.bootstrap_ci(np.array(r['pred']) == y)
+    b = d2l.bootstrap_ci(np.array(r['pred']) == y,
+                         cluster=DATA['mnli']['cluster'])
     rows[f'seed {r["seed"]}'] = {'accuracy': b.mean, 'CI low': b.ci[0],
                                  'CI high': b.ci[1]}
 print(f'majority-class rate: {majority:.3f}')
@@ -817,8 +897,8 @@ def train_tagger(seed, train, valid):
     tagger, _ = d2l.load_encoder(ENC, head='token_cls', num_labels=len(
         id2label), dtype=torch.float32)
     r = d2l.finetune_classifier(tagger, [(x, l) for x, _, l in train],
-                                [(x, l) for x, _, l in valid], 5e-5, EPOCHS,
-                                BATCH, seed)
+                                [(x, l) for x, _, l in valid], TAG_LR,
+                                EPOCHS, BATCH, seed)
     del tagger
     d2l.lm_free()
     return r
@@ -831,10 +911,8 @@ if 'bert-tagging' in RERUN:
         tagging.append(dict(seed=seed, seconds=r['seconds'], peak_gib=r[
             'peak_gib'], **d2l.span_f1(r['eval_pred'], gold, id2label)))
     d2l.lm_save_rerun(ARTIFACTS['bert-tagging'][1], write_json(
-        {'config': dict(model=ENC, revision=encoder.revision, lr=5e-5,
-                        epochs=EPOCHS, batch=BATCH), 'runs': tagging}))
-with open(result_path('bert-tagging')) as f:
-    TAGGING = json.load(f)
+        {'config': CONFIG['bert-tagging'], 'runs': tagging}))
+TAGGING = read_result('bert-tagging')
 r = train_tagger(0, TAGGED['train'][:LIVE['tag_train']],
                  TAGGED['valid'][:LIVE['tag_items']])
 gold = gold[:LIVE['tag_items']]
@@ -846,18 +924,20 @@ oracle = seqeval_f1(names(gold), names(r['eval_pred']))
 print(f'live, seed 0, {len(gold)} sentences: precision {f1["precision"]:.3f}, '
       f'recall {f1["recall"]:.3f}, F1 {f1["f1"]:.4f}; seqeval F1 {oracle:.4f}')
 print(pd.DataFrame(f1['per_type']).round(3).to_string())
-seeds_f1 = [x['f1'] for x in TAGGING['runs']]
-print(f'registered, {len(seeds_f1)} seeds: F1 {min(seeds_f1):.3f} to '
-      f'{max(seeds_f1):.3f}; {d2l.lm_peak()}')
+seeds_f1 = {x['seed']: x['f1'] for x in TAGGING['runs']}
+bound = max(0.01, np.ptp(list(seeds_f1.values())))  # the seeds' spread
+print(f'registered, {len(seeds_f1)} seeds: F1 {min(seeds_f1.values()):.3f} '
+      f'to {max(seeds_f1.values()):.3f}, seed 0 {seeds_f1[0]:.4f} (bound on '
+      f'the live difference {bound:.3f}); {d2l.lm_peak()}')
 assert abs(f1['f1'] - oracle) < 1e-9
+assert SMALL or abs(f1['f1'] - seeds_f1[0]) <= bound
 ```
 
-<!-- Placeholder (prose, ## Encoder or Prompted Decoder): the decoder labels the same validation items from k demonstrations drawn once from the training set (nested: the 4 shots are the first 4 of the 8), each answer scored as the log-probability of its label word (d2l.score_choices). The regeneration (D2L_RERUN=bert-decoder, about 10 minutes) scores every item at 0, 4 and 8 shots for both tasks; the normal build re-scores the first items at 8 shots. -->
+<!-- Placeholder (prose, ## Encoder or Prompted Decoder): the decoder labels the same validation items from k demonstrations (label-balanced sets from the training set's held-out end, nested: the 4 shots are the first 4 of the 8), each answer scored as the log-probability of its label word (d2l.score_choices). Which demonstrations are shown moves few-shot accuracy as a seed moves fine-tuning, so 8 shots are scored with three disjoint demonstration sets (4 shots with one: say so). The regeneration (D2L_RERUN=bert-decoder, about 20 minutes) scores every item at 0, 4 and 8 shots for both tasks; the normal build re-scores the first items at 8 shots and checks that every prediction whose registered margin is not a near tie is reproduced. -->
 
 ```{.python .input #bert-decoder}
 %%tab pytorch
-VERBAL = {'mnli': ('yes', 'maybe', 'no'), 'sst2': ('negative', 'positive')}
-FMT = {'mnli': '{x}\nAnswer: {y}', 'sst2': 'Review: {x}\nSentiment: {y}'}
+TIE = 0.05  # nats per token: score margins that bf16 batch drift may flip
 
 def query(task, row):
     if task == 'mnli':
@@ -865,42 +945,54 @@ def query(task, row):
                 'Yes, no, or maybe?')
     return row.sentence.strip()
 
-def classify(task, k, rows):
+def classify(task, k, rows, draw=0):
+    """Scores (items, labels): each label word's log-probability per token
+    after a prompt with k demonstrations of set draw."""
     demos = [(query(task, r), VERBAL[task][r.label])
-             for r in DATA[task]['shots'].iloc[:k].itertuples()]
+             for r in DATA[task]['shots'][draw].iloc[:k].itertuples()]
     prompts = [d2l.fewshot_prompt(demos, query(task, r), fmt=FMT[task])
                for r in rows.itertuples()]
     return d2l.score_choices(dec, dtok, prompts, [' ' + v for v in VERBAL[
-        task]], norm='token', batch_size=16).argmax(-1).tolist()
+        task]], norm='token', batch_size=16).numpy()
 
 dec, dtok = d2l.load_hf(DEC, dtype=torch.bfloat16 if GPU else torch.float32)
 if 'bert-decoder' in RERUN:
-    out = {'config': dict(model=DEC, revision=dec.revision, shots=SHOTS,
-                          fmt=FMT, verbal=VERBAL, norm='token'),
+    out = {'config': CONFIG['bert-decoder'],
            'eval': {t: D['eval_idx'] for t, D in DATA.items()},
            'pred': {}, 'timing': {}}
     for task, D in DATA.items():
-        out['pred'][task] = {k: classify(task, k, D['eval_df']) for k in SHOTS}
+        scores = {k: [classify(task, k, D['eval_df'], d)
+                      for d in range(DRAWS[k])] for k in SHOTS}
+        out['pred'][task] = {k: [s.argmax(-1).tolist() for s in v]
+                             for k, v in scores.items()}
+        if task == 'mnli':  # for the live check
+            out['scores'] = np.round(scores[8][0], 4).tolist()
         out['timing'][task] = {k: ms_per_1k(lambda: classify(
             task, k, D['eval_df'].iloc[:BATCH]), BATCH, 1, 3) for k in SHOTS}
     d2l.lm_save_rerun(ARTIFACTS['bert-decoder'][1], write_json(out))
-with open(result_path('bert-decoder')) as f:
-    DECODER = json.load(f)
-assert DECODER['config']['model'] == DEC and all(
-    DECODER['eval'][t] == D['eval_idx'] for t, D in DATA.items())
+DECODER = read_result('bert-decoder')
+assert all(DECODER['eval'][t] == D['eval_idx'] for t, D in DATA.items())
 rows = {}
 for task in DATA:
     for k in SHOTS:
-        b = d2l.bootstrap_ci(np.array(DECODER['pred'][task][str(k)]) == np.array(
-            SWEEP['eval'][task]['label']))
-        rows[task, k] = {'accuracy': b.mean, 'CI low': b.ci[0], 'CI high': b.ci[1]}
-print(pd.DataFrame(rows).T.round(3).to_string())
+        for d, pred in enumerate(DECODER['pred'][task][str(k)]):
+            b = d2l.bootstrap_ci(np.array(pred) == np.array(SWEEP['eval'][
+                task]['label']), cluster=DATA[task]['cluster'])
+            rows[task, k, d] = {'accuracy': b.mean, 'CI low': b.ci[0],
+                                'CI high': b.ci[1]}
+print(pd.DataFrame(rows).T.rename_axis(['task', 'shots', 'draw']).round(3)
+      .to_string())
 m = LIVE['dec_items']
 live = classify('mnli', 8, DATA['mnli']['eval_df'].iloc[:m])
-agree = np.mean(np.array(live) == np.array(DECODER['pred']['mnli']['8'][:m]))
-print(f'live, 8 shots, {m} MNLI items: same prediction on {agree:.3f}; '
+reg = np.array(DECODER['scores'][:m])
+top2 = np.sort(reg, -1)[:, -2:]
+clear = top2[:, 1] - top2[:, 0] > TIE  # not a near tie
+agree = np.mean(live.argmax(-1)[clear] == reg.argmax(-1)[clear])
+print(f'live, 8 shots, {m} MNLI items: largest score change '
+      f'{np.abs(live - reg).max():.4f} nats per token; {np.sum(~clear)} near '
+      f'ties (margin <= {TIE}); same prediction on {agree:.3f} of the others; '
       f'{d2l.lm_peak()}')
-assert SMALL or agree >= 0.99
+assert SMALL or agree == 1.0
 ```
 
 <!-- Placeholder (prose, ## Encoder or Prompted Decoder): the classical floor: naive Bayes on word counts (sec_mdl-naive_bayes), trained on the same nested subsets; a pair is two bags, premise words and hypothesis words kept apart by a prefix. Before transformers, a one-dimensional convolution over token embeddings was the usual learned sentence encoder; it sits between this floor and the fine-tuned encoder. -->
@@ -926,7 +1018,7 @@ for task, D in DATA.items():
 print(pd.Series(NB).unstack(0).round(3).to_string())
 ```
 
-<!-- Placeholder (prose, ## Encoder or Prompted Decoder): measured cost per example on this card (bf16, SDPA): a batch of 32 MNLI pairs through the fine-tuned encoder, and 32 items through the 8-shot decoder, which re-reads its demonstrations for every item and every label word; against the FLOP estimate 2 N L with N the non-embedding parameters and L the tokens computed per example (padding included for the encoder's batch). -->
+<!-- Placeholder (prose, ## Encoder or Prompted Decoder): measured cost per example on this card (bf16, SDPA): a batch of 32 MNLI pairs through the fine-tuned encoder, and 32 items through the 8-shot decoder, which re-reads its demonstrations for every item and every label word; against the FLOP estimate 2 N L with N the non-embedding parameters and L the tokens of an example (padding excluded for both: the timed batches also compute padding, which the measured ratio includes). -->
 
 ```{.python .input #bert-timing}
 %%tab pytorch
@@ -938,8 +1030,9 @@ ms = {'encoder': ms_per_1k(lambda: clf16(*X), BATCH, warm, reps),
       'decoder': ms_per_1k(lambda: classify('mnli', 8, items), B,
                            min(warm, 1), max(1, reps // 3))}
 demos = [(query('mnli', r), VERBAL['mnli'][r.label])
-         for r in DATA['mnli']['shots'].iloc[:8].itertuples()]
-tokens = {'encoder': X[0].shape[1], 'decoder': np.mean([sum(len(dtok(
+         for r in DATA['mnli']['shots'][0].iloc[:8].itertuples()]
+tokens = {'encoder': X[1].sum(1).float().mean().item(),  # without padding
+          'decoder': np.mean([sum(len(dtok(
     d2l.fewshot_prompt(demos, query('mnli', r), fmt=FMT['mnli']) + ' ' + v)
     ['input_ids']) for v in VERBAL['mnli']) for r in items.itertuples()])}
 flops = {'encoder': d2l.cost_per_example(
@@ -962,23 +1055,33 @@ del dec, clf16
 d2l.lm_free()
 ```
 
-<!-- Placeholder (prose, ## Encoder or Prompted Decoder): the learning curve (left: accuracy against labelled examples, the encoder's band spanning its three seeds, the decoder's k-shot lines with their bootstrap intervals, naive Bayes, the majority rate dashed) and the cost plot (right: accuracy against seconds per 1,000 examples on a log scale, the tables' milliseconds per 1,000 divided by 1,000); MNLI above, SST-2 below. -->
+<!-- Placeholder (prose, ## Encoder or Prompted Decoder): the learning curve (left: accuracy against labelled examples, the encoder's band spanning its three seeds, the decoder's k-shot lines (8 shots: the band spans its three demonstration sets; 0 and 4 shots: the bootstrap interval of one set), naive Bayes, the majority rate dashed) and the cost plot (right: accuracy against seconds per 1,000 examples on a log scale, the tables' milliseconds per 1,000 divided by 1,000); MNLI above, SST-2 below. -->
 
 ```{.python .input #bert-curve}
 %%tab pytorch
 def correct(pred, task):
     return np.array(pred) == np.array(SWEEP['eval'][task]['label'])
 
+def decoder_band(task, k):
+    """Accuracy at k shots: mean, low, high over the demonstration sets, or
+    the bootstrap interval of a single set."""
+    preds = DECODER['pred'][task][str(k)]
+    if len(preds) > 1:
+        accs = [correct(p, task).mean() for p in preds]
+        return np.mean(accs), min(accs), max(accs)
+    b = d2l.bootstrap_ci(correct(preds[0], task), cluster=DATA[task]['cluster'])
+    return b.mean, *b.ci
+
 _, axes = d2l.plt.subplots(2, 2, figsize=(8, 6.4))
 for ax, task in zip(axes, ('mnli', 'sst2')):
     acc = runs.query('task == @task').groupby('n').acc
     sizes, big = acc.mean().index.to_numpy(), acc.get_group(acc.mean().index[-1])
-    dec = {k: d2l.bootstrap_ci(correct(DECODER['pred'][task][str(k)], task))
-           for k in SHOTS}
-    flat = lambda v: [v] * len(sizes)
+    dec_acc = {k: decoder_band(task, k) for k in SHOTS}
     series = {'encoder (seed range)': (acc.mean(), acc.min(), acc.max())}
-    series |= {f'decoder, {k} shots': (flat(b.mean), flat(b.ci[0]),
-                                        flat(b.ci[1])) for k, b in dec.items()}
+    series |= {f'decoder, {k} shots' + (f' ({DRAWS[k]} sets)' if DRAWS[k] > 1
+                                        else ''): tuple([v] * len(sizes) for v
+                                                        in b)
+               for k, b in dec_acc.items()}
     series['naive Bayes'] = ([NB[task, n] for n in sizes],) * 3
     majority = np.bincount(SWEEP['eval'][task]['label']).max() / len(
         SWEEP['eval'][task]['label'])
@@ -988,12 +1091,12 @@ for ax, task in zip(axes, ('mnli', 'sst2')):
     sec = [SWEEP['timing'][task] / 1e3] + [DECODER['timing'][task][str(
         k)] / 1e3 for k in SHOTS]  # x: one cost per model
     none = [np.nan] * len(SHOTS)
-    d2l.plot_intervals([float(f'{v:.2g}') for v in sec], {
+    d2l.plot_intervals(sec, {
         f'encoder, n = {sizes[-1]:,}': ([big.mean(), *none],
                                        [big.min(), *none], [big.max(), *none]),
-        'decoder, 0, 4, 8 shots': ([np.nan] + [b.mean for b in dec.values()],
-                                   [np.nan] + [b.ci[0] for b in dec.values()],
-                                   [np.nan] + [b.ci[1] for b in dec.values()])},
+        'decoder, 0, 4, 8 shots': tuple([np.nan] + [b[i] for b in
+                                                    dec_acc.values()]
+                                        for i in range(3))},
         'seconds per 1,000 examples', f'{task} accuracy', xscale='log',
         reference=majority, axes=ax[1])
 for top, bottom in zip(*axes):  # the top row's legends serve both rows
@@ -1001,19 +1104,24 @@ for top, bottom in zip(*axes):  # the top row's legends serve both rows
     bottom.get_legend().remove()
 ```
 
-<!-- Placeholder (prose, ## Encoder or Prompted Decoder): where the encoder passes the 8-shot decoder: per training size and seed, a paired bootstrap of per-item correctness on the same validation items; a size counts as passed when every seed's interval excludes zero on the encoder's side and the seed range is narrower than the mean gap. -->
+<!-- Placeholder (prose, ## Encoder or Prompted Decoder): where the encoder passes the 8-shot decoder: per training size, encoder seed and demonstration set, a paired bootstrap of per-item correctness on the same validation items (MNLI resampled by premise); a size counts as passed when every pair's interval excludes zero on the encoder's side and both the seed range and the demonstration-set range are narrower than the mean gap; the crossing is the smallest size from which every larger size is passed too. -->
 
 ```{.python .input #bert-crossing}
 %%tab pytorch
 def crossing(task):
-    dec8, rows = correct(DECODER['pred'][task]['8'], task), {}
+    """Per size: the encoder against 8 shots for every (seed, demonstration
+    set) pair; the crossing is the smallest size from which on every size
+    is 'encoder ahead'."""
+    cl, rows = DATA[task]['cluster'], {}
+    decs = [correct(p, task) for p in DECODER['pred'][task]['8']]
+    dec_range = np.ptp([d.mean() for d in decs])
     for n, group in runs.query('task == @task').groupby('n'):
-        diffs = [d2l.paired_bootstrap(correct(p, task), dec8)
-                 for p in group.pred]
+        diffs = [d2l.paired_bootstrap(correct(p, task), d8, cluster=cl)
+                 for p in group.pred for d8 in decs]
         accs, gap = group.acc.to_numpy(), np.mean([d.mean for d in diffs])
         signs = {int(np.sign(d.ci[0])) if d.ci[0] * d.ci[1] > 0 else 0
                  for d in diffs}
-        clear = len(signs) == 1 and np.ptp(accs) < abs(gap)
+        clear = len(signs) == 1 and max(np.ptp(accs), dec_range) < abs(gap)
         rows[n] = {'seeds': len(accs), 'encoder': accs.mean(),
                    'seed range': np.ptp(accs), 'gap to 8 shots': gap,
                    'CIs from': min(d.ci[0] for d in diffs),
@@ -1021,12 +1129,15 @@ def crossing(task):
                        {1: 'encoder ahead', -1: 'decoder ahead'}[signs.pop()]
                        if clear and 0 not in signs else 'within noise')}
     table = pd.DataFrame(rows).T.infer_objects()
-    return table, next((n for n, v in table.verdict.items()
-                        if v == 'encoder ahead'), None)
+    ahead = (table.verdict == 'encoder ahead').to_numpy()
+    on = np.logical_and.accumulate(ahead[::-1])[::-1]  # and every larger n
+    return table, dec_range, table.index[on][0] if on.any() else None
 
 for task in ('mnli', 'sst2'):
-    table, n = crossing(task)
-    print(f'{task}: the encoder passes 8 shots at n = {n or "none measured"}')
+    table, dec_range, n = crossing(task)
+    print(f'{task}: the encoder passes 8 shots from n = '
+          f'{n or "none measured"} on; range over the {DRAWS[8]} '
+          f'demonstration sets {dec_range:.3f}')
     print(table.to_string(float_format=lambda v: f'{v:.3f}'))
 ```
 

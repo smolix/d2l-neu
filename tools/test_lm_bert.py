@@ -77,6 +77,17 @@ class Pooled(unittest.TestCase):
         with self.assertRaises(ValueError):
             d2l.PooledClassifier(enc, 2, pooling='max')
 
+    def test_cls_needs_right_padding(self):
+        import transformers
+        clf = d2l.PooledClassifier(transformers.ModernBertModel(tiny_config(
+            attn_implementation='sdpa')), 2, pooling='cls').eval()
+        X = torch.randint(5, 64, (2, 6))
+        M = torch.tensor([[1] * 6, [0, 0, 1, 1, 1, 1]])  # left padded
+        with torch.no_grad(), self.assertRaises(ValueError):
+            clf(X, M)
+        with torch.no_grad():  # right padded: fine
+            self.assertEqual(clf(X, M.flip(-1)).shape, (2, 2))
+
 
 class Align(unittest.TestCase):
     def test_one_label_per_word(self):

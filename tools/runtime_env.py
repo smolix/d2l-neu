@@ -269,6 +269,11 @@ FULL_CARD_NOTEBOOKS = {
     # continuous batching sizes its KV pool from free memory. The notebook is
     # locked, so only `make rerun-locked` reaches this entry.
     "chapter_lm-pretrained/api.ipynb": 1,
+    # 19.2 times the fine-tuned encoder against 8-shot Qwen3-1.7B and stores
+    # the timings of its regeneration runs; the normal build holds the fp32
+    # encoder, the bf16 checkpoint, Qwen3-1.7B and score_choices' fp32 output
+    # layer together (about 7 GiB), above one slot's headroom.
+    "chapter_lm-encoders/bert.ipynb": 1,
 }
 
 # rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for
@@ -391,6 +396,12 @@ NOTEBOOK_ENV = {
     # 137 columns) that huggingface_hub logs once per process; it depends on
     # the build box having no HF_TOKEN, so it is noise on the page. Errors
     # still raise.
+    # 19.2: fine-tuning runs of changing batch shapes (each batch padded to
+    # its own longest pair) and the decoder's long prompts follow each other
+    # in one process; expandable segments keep the cached blocks reusable.
+    ("pytorch", "chapter_lm-encoders/bert.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
     ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): {
         "HF_HUB_VERBOSITY": "error",
     },

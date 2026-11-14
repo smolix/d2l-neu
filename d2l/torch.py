@@ -6846,6 +6846,7 @@ def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
     the pin comes from HF_ENCODER_REVISIONS, then HF_REVISIONS.
 
     Defined in :numref:`sec_lm_bert`"""
+    import logging
     import transformers
     revision = revision or d2l.HF_ENCODER_REVISIONS.get(
         model_id, d2l.HF_REVISIONS.get(model_id))
@@ -6857,9 +6858,17 @@ def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
             'token_cls': transformers.AutoModelForTokenClassification}[head]
     device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
     extra = {} if num_labels is None else {'num_labels': num_labels}
-    model = auto.from_pretrained(
-        model_id, revision=revision, dtype=dtype, use_safetensors=True,
-        attn_implementation=attn_implementation, **extra).to(device)
+    report = logging.getLogger('transformers.modeling_utils')
+    quiet = lambda record: 'LOAD REPORT' not in record.getMessage()
+    report.addFilter(quiet)  # its key table; the summary below replaces it
+    try:
+        model, info = auto.from_pretrained(
+            model_id, revision=revision, dtype=dtype, use_safetensors=True,
+            attn_implementation=attn_implementation, output_loading_info=True,
+            **extra)
+    finally:
+        report.removeFilter(quiet)
+    model = model.to(device)
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         model_id, revision=revision)
     if padding_side is not None:
@@ -6868,7 +6877,200 @@ def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
     print(f'{model_id}@{revision[:12]}: {type(model).__name__}, '
           f'{dtype}, {device}, attention '
           f'{model.config._attn_implementation}')
+    for what, keys in (('not used', info['unexpected_keys']),
+                       ('new, at random', info['missing_keys'])):
+        if keys:
+            print(f'    {what}: {", ".join(sorted(keys))}')
     return model.eval(), tokenizer
+
+def mlm_corrupt(ids, mask_id, vocab_size, special_ids, p=0.15,
+                probs=(0.8, 0.1, 0.1), generator=None):
+    """BERT's masked-token corruption of ids: each token that is not in
+    special_ids is selected with probability p; a selected token becomes
+    mask_id with probability probs[0], a uniformly random token with
+    probs[1], and stays with probs[2]. Returns the corrupted ids and the
+    labels: the original id where selected, -100 (not scored) elsewhere.
+
+    Defined in :numref:`sec_lm_bert`"""
+    special = torch.isin(ids, torch.as_tensor(special_ids, device=ids.device))
+    u, v = (torch.rand(ids.shape, generator=generator, device=ids.device)
+            for _ in range(2))
+    selected = (u < p) & ~special
+    noise = torch.randint(vocab_size, ids.shape, generator=generator,
+                          device=ids.device)
+    out = torch.where(selected & (v < probs[0]), mask_id, ids)
+    out = torch.where(selected & (v >= probs[0]) & (v < probs[0] + probs[1]),
+                      noise, out)
+    return out, torch.where(selected, ids, -100)
+
+class PooledClassifier(nn.Module):
+    """A sentence or sentence-pair classifier on an encoder: the final
+    hidden states pooled (the mean over the attention mask, or the first
+    token), then dense, GELU, layer norm, dropout and a linear map to
+    num_labels logits. Biases and the norm follow the encoder's
+    configuration, as in Transformers' ModernBERT head.
+
+    Defined in :numref:`sec_lm_bert`"""
+    def __init__(self, encoder, num_labels, pooling='mean', dropout=0.0):
+        super().__init__()
+        if pooling not in ('mean', 'cls'):
+            raise ValueError(f'unknown pooling: {pooling!r}')
+        c = encoder.config
+        bias, d = getattr(c, 'classifier_bias', True), c.hidden_size
+        self.encoder, self.pooling = encoder, pooling
+        self.head = nn.Module()
+        self.head.dense = nn.Linear(d, d, bias=bias)
+        self.head.norm = nn.LayerNorm(d, eps=getattr(c, 'norm_eps', 1e-5),
+                                      bias=getattr(c, 'norm_bias', True))
+        self.drop = nn.Dropout(dropout)
+        self.classifier = nn.Linear(d, num_labels)
+
+    def forward(self, input_ids, attention_mask):
+        H = self.encoder(input_ids=input_ids,
+                         attention_mask=attention_mask).last_hidden_state
+        if self.pooling == 'cls':
+            h = H[:, 0]
+        else:  # padding positions do not count
+            m = attention_mask.unsqueeze(-1).to(H.dtype)
+            h = (H * m).sum(1) / m.sum(1)
+        h = self.head.norm(F.gelu(self.head.dense(h)))
+        return self.classifier(self.drop(h))
+
+def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
+                        warmup=0.1, device=None):
+    """Fine-tune model on train, a list of (input_ids, label) or, for token
+    tagging, (input_ids, labels) with a label per token (-100: not scored),
+    then predict eval. model(input_ids=, attention_mask=) returns logits or
+    an output with .logits. AdamW (weight decay 0.01 on matrices), linear
+    warmup over the share warmup of the steps then linear decay, gradients
+    clipped to norm 1, bf16 autocast on a GPU; each batch is padded to its
+    longest sequence; seed fixes the data order and dropout. Returns the
+    training losses, the eval accuracy and predictions (a label per
+    example, or per scored token), the training seconds and the peak GPU
+    memory in GiB.
+
+    Defined in :numref:`sec_lm_bert`"""
+    device = torch.device(device or ('cuda' if torch.cuda.is_available()
+                                     else 'cpu'))
+    cuda = device.type == 'cuda'
+
+    def batches(data, order):
+        for i in range(0, len(order), batch_size):
+            rows = [data[j] for j in order[i:i + batch_size]]
+            T = max(len(x) for x, _ in rows)
+            X = torch.tensor([x + [0] * (T - len(x)) for x, _ in rows])
+            M = torch.tensor([[1] * len(x) + [0] * (T - len(x))
+                              for x, _ in rows])
+            y = torch.tensor([y if isinstance(y, int) else
+                              y + [-100] * (T - len(y)) for _, y in rows])
+            yield X.to(device), M.to(device), y.to(device)
+
+    def logits(X, M):
+        with torch.autocast(device.type, torch.bfloat16, enabled=cuda):
+            out = model(input_ids=X, attention_mask=M)
+        return getattr(out, 'logits', out).float()
+
+    model.to(device).train()
+    torch.manual_seed(seed)  # dropout
+    order = torch.Generator().manual_seed(seed)
+    steps = epochs * math.ceil(len(train) / batch_size)
+    n_warm = max(1, round(warmup * steps))
+    params = [p for p in model.parameters() if p.requires_grad]
+    opt = torch.optim.AdamW([
+        {'params': [p for p in params if p.ndim >= 2], 'weight_decay': 0.01},
+        {'params': [p for p in params if p.ndim < 2], 'weight_decay': 0.0}],
+        lr=lr)
+    sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: (
+        (s + 1) / n_warm if s < n_warm else
+        max(0.0, (steps - s) / max(1, steps - n_warm))))
+    if cuda:
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
+    t0, losses = time.perf_counter(), []
+    for _ in range(epochs):
+        perm = torch.randperm(len(train), generator=order).tolist()
+        for X, M, y in batches(train, perm):
+            loss = F.cross_entropy(logits(X, M).flatten(0, -2), y.flatten(),
+                                   ignore_index=-100)
+            loss.backward()
+            nn.utils.clip_grad_norm_(params, 1.0)
+            opt.step()
+            sched.step()
+            opt.zero_grad(set_to_none=True)
+            losses.append(loss.detach())
+    if cuda:
+        torch.cuda.synchronize(device)
+    seconds = time.perf_counter() - t0
+    model.eval()
+    with torch.inference_mode():
+        out = [(logits(X, M).argmax(-1), y)
+               for X, M, y in batches(eval, range(len(eval)))]
+    hits = sum(((p == y) & (y != -100)).sum().item() for p, y in out)
+    total = sum((y != -100).sum().item() for _, y in out)
+    preds = [v for p, y in out for v in (p.tolist() if y.ndim == 1 else [
+        r[y_r != -100].tolist() for r, y_r in zip(p, y)])]
+    return dict(loss=torch.stack(losses).tolist(),
+                eval_acc=hits / total if total else float('nan'),
+                eval_pred=preds, seconds=seconds,
+                peak_gib=(torch.cuda.max_memory_allocated(device) / 2**30
+                          if cuda else float('nan')))
+
+def cost_per_example(n_params, n_tokens, n_embed=0):
+    """Forward FLOPs per example, 2 (n_params - n_embed) n_tokens: a
+    multiply and an add per weight and token, embedding lookups excluded.
+
+    Defined in :numref:`sec_lm_bert`"""
+    return 2 * (n_params - n_embed) * n_tokens
+
+def align_token_labels(word_ids, word_labels, scheme='first'):
+    """Token labels from word labels; word_ids gives each token's word
+    (None for a special token). scheme='first' labels the first sub-token
+    of each word and gives the others -100 (not scored); 'all' gives every
+    sub-token its word's label.
+
+    Defined in :numref:`sec_lm_bert`"""
+    if scheme not in ('first', 'all'):
+        raise ValueError(f'unknown scheme: {scheme!r}')
+    labels, prev = [], None
+    for w in word_ids:
+        first = w is not None and w != prev
+        labels.append(word_labels[w] if first or (
+            w is not None and scheme == 'all') else -100)
+        prev = w
+    return labels
+
+def span_f1(pred_tags, gold_tags, id2label):
+    """Entity-level precision, recall and F1 of IOB2 tag sequences (a list
+    of label ids per sentence), counted as conlleval and seqeval count
+    them: an entity starts at a B- tag, or at an I- tag after O or after
+    another type, and a predicted entity is correct if its type and both
+    ends match; per_type holds the three numbers per entity type.
+
+    Defined in :numref:`sec_lm_bert`"""
+    def entities(seqs):
+        found = set()
+        for s, seq in enumerate(seqs):
+            start, kind = None, None
+            for i, t in enumerate([id2label[t] for t in seq] + ['O']):
+                bio, _, typ = t.partition('-')
+                if start is not None and (bio != 'I' or typ != kind):
+                    found.add((kind, s, start, i))
+                    start = None
+                if bio == 'B' or (bio == 'I' and start is None):
+                    start, kind = i, typ
+        return found
+
+    def prf(pred, gold):
+        tp = len(pred & gold)
+        p = tp / len(pred) if pred else 0.0
+        r = tp / len(gold) if gold else 0.0
+        return dict(precision=p, recall=r, f1=2 * p * r / (p + r) if tp
+                    else 0.0)
+    pred, gold = entities(pred_tags), entities(gold_tags)
+    kinds = sorted({e[0] for e in pred | gold})
+    return dict(**prf(pred, gold), per_type={k: prf(
+        {e for e in pred if e[0] == k}, {e for e in gold if e[0] == k})
+        for k in kinds})
 
 d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Embedding-0.6B'] = (
     '97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3')

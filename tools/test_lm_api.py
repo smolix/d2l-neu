@@ -1565,5 +1565,172 @@ class ReviewLocalServer(unittest.TestCase):
         self.assertFalse(os.path.exists(server.log_path))
 
 
+# ---------------------------------------------------------------------------
+# Pre-writing fix of 18.7: the recording plumbing moved from the section's
+# cells into api-lib.md, and closed_loop_stats reports ttft_mean.
+
+
+class TestFix187(unittest.TestCase):
+    """listing_endpoint, APIRecording (folders, cost shares), the calls-log
+    totals, manifests and key scan, BackgroundLoad, the field probe through
+    FakeChatServer, chat_thinks and closed_loop_stats' ttft_mean."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.rec = d2l.APIRecording('record', self.dir.name, 1.0,
+                                    {FLAGSHIP: 'novita'})
+        self.rec.listing = LISTING
+
+    def test_listing_endpoint(self):
+        self.assertIs(d2l.listing_endpoint(LISTING, FLAGSHIP, 'novita'),
+                      NOVITA)
+        self.assertIs(d2l.listing_endpoint(LISTING, FLAGSHIP, 'novita/fp8'),
+                      NOVITA)
+        self.assertIs(d2l.listing_endpoint(LISTING, FLAGSHIP, 'DeepSeek'),
+                      DEEPSEEK)
+        with self.assertRaises(ValueError):
+            d2l.listing_endpoint(LISTING, FLAGSHIP, 'parasail')
+        self.assertEqual(d2l.price_from_listing(LISTING, FLAGSHIP, 'novita'),
+                         d2l.PricePoint(0.165, 0.66, 0.0033))
+
+    def test_folders(self):
+        replay = d2l.APIRecording('replay', self.dir.name, 1.0, {})
+        with self.assertRaises(KeyError):  # never recorded, never registered
+            replay.folder('lm-api-unit-test-v0')
+        with mock.patch('builtins.print'):  # 'recording into an empty cache'
+            path = self.rec.cache('lm-api-unit-test-v0', 'arm')
+        self.assertEqual(path, os.path.join(
+            self.dir.name, 'lm-api-unit-test-v0', 'arm.jsonl'))
+        self.assertTrue(os.path.isdir(os.path.dirname(path)))
+
+    def test_cost_shares(self):
+        cache = os.path.join(self.dir.name, 'arm.jsonl')
+        with open(os.path.join(self.dir.name, 'arm.calls.jsonl'), 'w') as f:
+            f.write(json.dumps({'attempt': 0, 'status': 200, 'cost': 0.1})
+                    + '\n{"torn')  # an earlier session; a killed run's line
+        api = self.rec.hosted(FLAGSHIP, cache, share=0.5,
+                              reasoning={'enabled': False})
+        self.assertAlmostEqual(api.cost_cap_usd, 0.4)
+        self.assertEqual(self.rec.clients, [api])
+        same = d2l.openrouter_api(FLAGSHIP, 'novita', listing=LISTING,
+                                  reasoning={'enabled': False})
+        self.assertEqual(  # the same requests, so the caches still replay
+            api.default_params, same.default_params)
+        with self.assertRaises(ValueError):
+            self.rec.hosted(FLAGSHIP, cache + '2', share=0.6)
+
+    def test_recorded_manifests_and_committed(self):
+        fake = d2l.FakeChatServer(0.0, 4)
+        folder = os.path.join(self.dir.name, 'lm-api-unit-test-v0')
+        os.makedirs(folder)
+        cache = os.path.join(folder, 'flagship.jsonl')
+        api = self.rec.hosted(FLAGSHIP, cache, share=1.0, api_key=KEY,
+                              http_client=fake.transport())
+        for i in range(3):
+            api.chat([{'role': 'user', 'content': f'q{i}'}], max_tokens=8)
+        t = d2l.api_recorded(api)
+        self.assertEqual((t['live calls'], t['retries'], t['failed']),
+                         (3, 0, 0))
+        self.assertEqual(t['providers'], ['novita'])
+        self.assertGreater(t['USD'], 0)
+        self.assertAlmostEqual(t['usage cost'], sum(
+            c['usage']['cost'] for c in d2l.api_calls(api.calls_path)))
+        d2l.write_api_manifests(self.rec.clients, self.dir.name)
+        d2l.write_api_manifests(self.rec.clients, self.dir.name)
+        with open(os.path.join(folder, 'manifest.json')) as f:
+            m = json.load(f)
+        self.assertEqual(len(m['sessions']), 2)
+        self.assertEqual(m['recorded']['flagship.jsonl']['live calls'], 3)
+        committed = d2l.api_committed([folder, self.dir.name])
+        self.assertEqual(committed['live calls'], 3)
+        self.assertAlmostEqual(committed['USD'], t['USD'])
+        import openai
+        self.assertEqual(committed['sdk'], [openai.__version__])
+        self.assertEqual(d2l.assert_key_absent([self.dir.name], KEY), 3)
+        with open(os.path.join(folder, 'leak.txt'), 'w') as f:
+            f.write(KEY)
+        with self.assertRaises(AssertionError):
+            d2l.assert_key_absent([self.dir.name], KEY)
+
+    def test_background_load(self):
+        fake, api = fake_api(d2l.FakeChatServer(0.02, 8))
+        sent = []
+
+        def request(j):
+            sent.append(j)
+            return {'messages': [{'role': 'user', 'content': f'bg {j}'}],
+                    'replica': j // 4, 'max_tokens': 4}
+
+        async def run():
+            async with d2l.BackgroundLoad(api, request, 3,
+                                          warmup=0.5) as load:
+                await api.achat(HELLO, max_tokens=4)
+            return load
+        load = asyncio.run(run())
+        self.assertEqual(load.failures, [])
+        self.assertEqual(sorted(sent)[:4], [0, 1, 2, 3])  # lanes cycled
+        self.assertEqual(len(sent), fake.n_requests - 1)
+        self.assertLessEqual(fake.max_in_flight, 4)  # 3 lanes and the call
+
+    def probe(self, endpoints, path, **kwargs):
+        story = [{'role': 'user', 'content': 'Write a short paragraph.'}]
+        count = [{'role': 'user', 'content': 'Count from 1 to 10.'}]
+        rules = {'seed': lambda a, b, c: a.text == b.text != c.text,
+                 'stop': lambda a: '4' in a.text and '5' not in a.text}
+        with mock.patch('builtins.print'):
+            asyncio.run(d2l.record_field_probe(
+                path, endpoints, listing=LISTING, providers={}, story=story,
+                count=count, rules=rules, **kwargs))
+        import pandas as pd
+        return pd.read_csv(path)
+
+    def test_field_probe(self):
+        fake, api = fake_api(d2l.FakeChatServer(0.01, 4), mode='record',
+                             cache=os.path.join(self.dir.name, 'p.jsonl'))
+        off, on = ({'chat_template_kwargs': {'enable_thinking': s}}
+                   for s in (False, True))
+        path = os.path.join(self.dir.name, 'fields.csv')
+        endpoints = {'fake': (api, off, on, off, 64, 'fake-model')}
+        fields = self.probe(endpoints, path, local_name='fake')
+        status = dict(zip(fields.field, fields.status))
+        self.assertEqual(list(status), [
+            'seed', 'n=2', 'logprobs, top 5', "stop=['5']",
+            'response_format', 'thinking switch', 'max_completion_tokens=16',
+            'prompt log-probabilities', 'stream usage', '/v1/models',
+            '4 concurrent requests'])
+        self.assertEqual(status['n=2'], 'honoured')
+        self.assertEqual(status['logprobs, top 5'], 'honoured')
+        self.assertEqual(status['thinking switch'], 'honoured')
+        self.assertEqual(status['seed'], 'ignored')  # the fake has no sampler
+        self.assertEqual(status['/v1/models'], 'honoured')
+        self.assertEqual(status['4 concurrent requests'], 'batched')
+        self.assertTrue((fields.endpoint == 'fake').all())
+        # without the local endpoint its recorded column is kept
+        fake2, api2 = fake_api(d2l.FakeChatServer(0.01, 4))
+        fields = self.probe({'other': (api2, off, on, off, 64, 'fake-model')},
+                            path, local_name='fake')
+        self.assertEqual(sorted(set(fields.endpoint)), ['fake', 'other'])
+        with self.assertRaises(ValueError):  # and none was ever recorded
+            self.probe({'other': (api2, off, on, off, 64, 'fake-model')},
+                       os.path.join(self.dir.name, 'none.csv'),
+                       local_name='fake')
+
+    def test_chat_thinks_and_ttft_mean(self):
+        r = result(0, 1.0)._replace(usage={'reasoning_tokens': 0})
+        self.assertFalse(d2l.chat_thinks(r._replace(reasoning='\n\n')))
+        self.assertTrue(d2l.chat_thinks(r._replace(reasoning='Hm.')))
+        self.assertTrue(d2l.chat_thinks(r._replace(
+            usage={'reasoning_tokens': 3})))
+        # five sequential 1-s requests (c = 1): requests 1, 2 and 3 lie
+        # wholly inside the window [1, 4]; their ttft are 0.2, 0.3, 0.4
+        out = [result(i, 1.0, t_first=i + 0.1 * (i + 1)) for i in range(5)]
+        st = d2l.closed_loop_stats(out, 1)
+        self.assertAlmostEqual(st['ttft_mean'], 0.3)
+        self.assertAlmostEqual(st['X'] * (st['W'] - st['ttft_mean']), 0.7)
+        self.assertIsNone(d2l.closed_loop_stats(
+            closed_loop_sim(2, 16, 8, 0.125), 2)['ttft_mean'])
+
+
 if __name__ == '__main__':
     unittest.main()

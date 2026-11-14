@@ -60,21 +60,18 @@ from d2l import torch as d2l
 %%tab pytorch
 import asyncio
 import collections
+import contextlib
 import datetime
+import gc
 import hashlib
 import heapq
-import gc
 import json
 import os
+import pandas as pd
 import random
 import re
-import shutil
 import sys
 import time
-import zipfile
-import huggingface_hub
-import pandas as pd
-import requests
 from scipy import stats
 from transformers.cli.serving.chat_completion import (
     UNUSED_CHAT_COMPLETION_FIELDS)
@@ -90,23 +87,15 @@ if API_MODE != 'replay' and not os.environ.get('OPENROUTER_API_KEY'):
     print(f'D2L_API_MODE={API_MODE} needs OPENROUTER_API_KEY: replaying')
     API_MODE = 'replay'
 COST_CAP_USD = 5.0  # for all paid calls of one recording
-# Development, smoke and closed-model logs stay outside the repository
-D2L_API_LOG_DIR = os.environ.get('D2L_API_LOG_DIR', os.path.expanduser(
-    '~/.local/share/d2l/lm-api'))
+RECORD_DIR = os.path.join('..', 'data', 'lm-api', 'record')
+D2L_API_LOG_DIR = os.environ.get(  # logs outside the repository
+    'D2L_API_LOG_DIR', os.path.expanduser('~/.local/share/d2l/lm-api'))
 FLAGSHIP = 'deepseek/deepseek-v4.1-flash-1017'  # a dated snapshot id
 SECOND = 'qwen/qwen3.8-27b'
 CLOSED = 'openai/gpt-5-nano'  # probe only; its outputs are never committed
 PROVIDERS = {FLAGSHIP: 'novita', SECOND: 'parasail', CLOSED: 'openai'}
 LISTED = [FLAGSHIP, SECOND, CLOSED]  # the router models of the listing
-# Qwen3-4B, not Qwen3.5-4B: continuous batching in Transformers 5.22.2
-# has no cache for Qwen3.5's linear-attention layers, so it would serve
-# one request at a time
 LOCAL = 'Qwen/Qwen3-4B'  # behind transformers serve on our GPU
-WEIGHTS = {  # the open weights behind each model, at a pinned commit
-    FLAGSHIP: ('deepseek-ai/DeepSeek-V4.1-Flash-1017',
-               '1bae0e1088993b9b82de08f59de5be5a34e42170'),
-    SECOND: ('Qwen/Qwen3.8-27B', '37561816e66b5b9153b1b64c10968c18c1e6f4a0'),
-    LOCAL: (LOCAL, d2l.HF_REVISIONS[LOCAL])}
 LOCAL_MODEL = f'{LOCAL}@{d2l.HF_REVISIONS[LOCAL]}'  # requests name id@rev
 LOCAL_LIVE = API_MODE != 'replay' and torch.cuda.is_available()
 LOCAL_MODE = API_MODE if LOCAL_LIVE else 'replay'
@@ -121,71 +110,7 @@ API_SHA1 = {  # the committed caches (zips), recorded 2026-11-13
 for key, sha1 in API_SHA1.items():
     if sha1 is not None:
         d2l.DATA_HUB[key] = (d2l.LM_DATA_URL + key + '.zip', sha1)
-RECORD_DIR = os.path.join('..', 'data', 'lm-api', 'record')
-
-def unpack(key):
-    """Download a registered zip (sha1 checked) and unpack it once, into a
-    folder named by the sha1 (a re-registered key gets a fresh folder)."""
-    path = d2l.download_keyed(key)
-    folder = os.path.join(os.path.dirname(path),
-                          'files-' + d2l.DATA_HUB[key][1][:12])
-    if not os.path.isdir(folder):
-        with zipfile.ZipFile(path) as z:
-            z.extractall(folder + '.part')
-        os.replace(folder + '.part', folder)
-    return folder
-
-def api_dir(key):
-    """The folder of one artifact: the unpacked zip in replay; otherwise
-    RECORD_DIR/key, seeded once from the zip when it is registered (the
-    downloaded file itself is never appended to)."""
-    if API_MODE == 'replay':
-        if key not in d2l.DATA_HUB:
-            raise KeyError(f'{key} is not registered yet: record it first '
-                           '(D2L_API_MODE=record)')
-        return unpack(key)
-    folder = os.path.join(RECORD_DIR, key)
-    if not os.path.isdir(folder):
-        try:
-            shutil.copytree(unpack(key), folder)
-        except Exception as e:  # not registered, or the download failed
-            os.makedirs(folder, exist_ok=True)
-            print(f'{key}: recording into an empty cache ({e!r:.60})')
-    return folder
-
-def cache_file(key, arm):
-    return os.path.join(api_dir(key), arm + '.jsonl')
-
-def calls_log(api):
-    """The live attempts in a client's calls log: every session of the
-    recording (a torn last line, from a killed run, is skipped)."""
-    if api.calls_path is None or not os.path.exists(api.calls_path):
-        return []
-    calls = []
-    with open(api.calls_path, encoding='utf-8') as f:
-        for line in f:
-            try:
-                calls.append(json.loads(line))
-            except ValueError:
-                pass
-    return calls
-
-CLIENTS, SHARES = [], {}  # every client with a cache; budget per cache
-
-def hosted(model, cache, *, share, **kwargs):
-    """A client of model at its pinned provider that may spend the fixed
-    fraction `share` of COST_CAP_USD over the whole recording, less what
-    earlier sessions spent on this cache. The shares sum to at most 1, so
-    concurrent clients cannot pass the cap together."""
-    SHARES[cache] = share
-    assert sum(SHARES.values()) <= 1 + 1e-9, SHARES
-    api = d2l.openrouter_api(model, PROVIDERS[model], listing=LISTING,
-                             cache=cache, mode=API_MODE,
-                             cost_cap_usd=share * COST_CAP_USD, **kwargs)
-    api.cost_cap_usd = max(0.0, api.cost_cap_usd - sum(
-        c.get('cost') or 0.0 for c in calls_log(api)))
-    CLIENTS.append(api)
-    return api
+rec = d2l.APIRecording(API_MODE, RECORD_DIR, COST_CAP_USD, PROVIDERS)
 
 def usd(api, r):  # cost of one response: the provider's, else the listing's
     cost = r.usage.get('cost')
@@ -195,49 +120,29 @@ print(f'mode {API_MODE}, cost cap {COST_CAP_USD} USD, local server '
       f'{"live" if LOCAL_LIVE else "replayed"}')
 ```
 
-<!-- Placeholder (stage 2): a dated snapshot of the router listing: providers, quantization, prices and supported fields. -->
+<!-- Placeholder (stage 2): a dated snapshot of the router listing: providers (the tag names the quantization), prices and supported fields (`json` is the listing's `structured_outputs`). -->
 
 ```{.python .input #api-listing}
 %%tab pytorch
-listing_file = os.path.join(api_dir('lm-api-listing-v1'), 'listing.json')
-if not os.path.exists(listing_file):  # record: snapshot the free listing
-    url = 'https://openrouter.ai/api/v1/models'
-    def get(u):
-        r = requests.get(u, timeout=60)
-        r.raise_for_status()
-        return r.json()['data']
-    rows = {m['id']: m for m in get(url)}
-    now = datetime.datetime.now(datetime.timezone.utc)
-    snapshot = {'retrieved': now.strftime('%Y-%m-%dT%H:%M:%SZ'),
-                'models': {m: rows[m] for m in LISTED},
-                'endpoints': {m: get(f'{url}/{m}/endpoints')['endpoints']
-                              for m in LISTED},
-                'hf': {}}
-    for m, (repo, rev) in WEIGHTS.items():  # parameter totals of the Hub
-        info = huggingface_hub.HfApi().model_info(repo, revision=rev)
-        snapshot['hf'][m] = {'repo': repo, 'revision': rev,
-                             'params': info.safetensors.total}
-    with open(listing_file, 'w') as f:
-        json.dump(snapshot, f, indent=1)
-with open(listing_file) as f:
-    LISTING = json.load(f)
-
-def endpoint(model):  # the row of the pinned provider, as priced below
-    rows, p = LISTING['endpoints'][model], PROVIDERS[model]
-    return next((e for e in rows if e['tag'] == p), None) or next(
-        e for e in rows if e['tag'].split('/')[0] == p)
-
+WEIGHTS = {  # the open weights behind each model, at a pinned commit
+    FLAGSHIP: ('deepseek-ai/DeepSeek-V4.1-Flash-1017',
+               '1bae0e1088993b9b82de08f59de5be5a34e42170'),
+    SECOND: ('Qwen/Qwen3.8-27B', '37561816e66b5b9153b1b64c10968c18c1e6f4a0'),
+    LOCAL: (LOCAL, d2l.HF_REVISIONS[LOCAL])}
+LISTING = rec.snapshot_listing(LISTED, WEIGHTS)  # taken when recording
 rows = []
 for m in LISTED:
-    e, price = endpoint(m), d2l.price_from_listing(LISTING, m, PROVIDERS[m])
-    rows.append({'model': m, 'provider': e['tag'],
-                 'quantization': e['quantization'],
-                 'context': e['context_length'], 'in $/M': price.input,
-                 'out $/M': price.output, 'cached $/M': price.cached_input,
+    e = d2l.listing_endpoint(LISTING, m, PROVIDERS[m])
+    price = d2l.price_from_listing(LISTING, m, PROVIDERS[m])
+    rows.append({'model': m.split('/')[1], 'provider': e['tag'],
+                 'context': e['context_length'], 'in': price.input,
+                 'out': price.output, 'cached': price.cached_input,
                  **{f: f in e['supported_parameters'] for f in (
-                     'seed', 'logprobs', 'structured_outputs', 'reasoning')}})
-print('listing retrieved', LISTING['retrieved'])
-pd.DataFrame(rows)
+                     'seed', 'logprobs', 'reasoning')},
+                 'json': 'structured_outputs' in e['supported_parameters']})
+print(f'listing retrieved {LISTING["retrieved"]}; prices in USD per million '
+      f'tokens')
+print(pd.DataFrame(rows).to_string(index=False))
 ```
 
 <!-- Placeholder (stage 2): the open models people use most do not fit our GPUs, even at four bits per weight. The flagship at four bits (382 GB) exceeds a node of eight 40 GB A100s but fits eight 80 GB cards: say "40 GB" wherever an A100 node is named. -->
@@ -252,12 +157,12 @@ def best_fit(n, gb):  # the highest precision whose weights fit in gb
 rows = []
 for m in (FLAGSHIP, SECOND, LOCAL):
     n = LISTING['hf'][m]['params']
-    rows.append({'weights': LISTING['hf'][m]['repo'], 'params (B)': n / 1e9,
+    rows.append({'weights': LISTING['hf'][m]['repo'].split('/')[1],
+                 'params (B)': n / 1e9,
                  **{f'{p} (GB)': n * b / 1e9 for p, b in PRECISIONS},
-                 '24 GB card': best_fit(n, 24),
-                 '8 x 40 GB node': best_fit(n, 8 * 40),
-                 '8 x 80 GB node': best_fit(n, 8 * 80)})
-pd.DataFrame(rows).round(1)
+                 '24GB card': best_fit(n, 24), '8x40GB': best_fit(n, 8 * 40),
+                 '8x80GB': best_fit(n, 8 * 80)})
+print(pd.DataFrame(rows).round(1).to_string(index=False))
 ```
 
 <!-- Placeholder (stage 2): one request to the flagship: a GSM8K problem in, text, a served id and a usage block out. -->
@@ -268,37 +173,49 @@ gsm_train = pd.read_parquet(d2l.download_keyed('gsm8k-train'))
 gsm_test = pd.read_parquet(d2l.download_keyed('gsm8k-test'))
 samples = pd.read_json(d2l.download_keyed('lm-gsm8k-samples-v1'),
                        lines=True)
-GSM_IDS = [int(i) for i in dict.fromkeys(samples.problem_id)]  # 18.4's
+# the 100 test problems of the scoring section, by its seeded rule
+GSM_IDS = [int(i) for i in dict.fromkeys(samples.problem_id)]
 assert GSM_IDS == list(np.random.default_rng(0).permutation(
-    len(gsm_test))[:100])  # its seeded rule
-flagship = hosted(FLAGSHIP, cache_file('lm-api-probe-v2', 'flagship'),
-                  share=0.05, reasoning={'enabled': False})
+    len(gsm_test))[:100])
+flagship = rec.hosted(FLAGSHIP, rec.cache('lm-api-probe-v2', 'flagship'),
+                      share=0.05, reasoning={'enabled': False})
 question = [{'role': 'user', 'content': gsm_test.question[GSM_IDS[0]]}]
 r = flagship.chat(question, temperature=0, seed=0, max_tokens=512)
 print(r.text)
-print(f'finish {r.finish_reason}; usage {r.usage}')
+u = r.usage
+print(f'finish {r.finish_reason}; {u["prompt_tokens"]} prompt and '
+      f'{u["completion_tokens"]} completion tokens ({u["reasoning_tokens"]} '
+      f'reasoning, {u["cached_tokens"]} cached)')
 print(f'{r.t_total:.2f} s; served {r.model} by {r.provider}; '
-      f'{d2l.api_cost(r.usage, flagship.price):.6f} USD from the listing')
+      f'system_fingerprint {r.system_fingerprint}')
+print(f'{u["cost"]:.6f} USD billed, {d2l.api_cost(u, flagship.price):.6f} '
+      f'USD from the listing')
 ```
 
 <!-- Placeholder (stage 2): hidden reasoning is billed as completion tokens and can use up the whole output budget (on the problem with the longest reference solution: on the first problem Qwen3.8-27B reasoned for 39 tokens and answered inside 64). With thinking off the same problem needs about 870 tokens: at 512 it was cut off as well (lm-api-probe-v1), so the contrast runs at 1,024 and finishes with `stop`. -->
 
 ```{.python .input #api-reasoning-trap}
 %%tab pytorch
-second = hosted(SECOND, cache_file('lm-api-probe-v2', 'second'),
-                share=0.05)
+second = rec.hosted(SECOND, rec.cache('lm-api-probe-v2', 'second'),
+                    share=0.05)
 LONGEST = sorted(GSM_IDS, key=lambda i: -len(gsm_test.answer[i]))
 hard = [{'role': 'user', 'content': gsm_test.question[LONGEST[0]]}]
 trap = second.chat(hard, temperature=0, seed=0, max_tokens=64)  # thinks
+u = trap.usage
 print(f'content {trap.text!r}, finish {trap.finish_reason}, '
-      f'{len(trap.reasoning or "")} characters of reasoning; {trap.usage}')
+      f'{len(trap.reasoning or "")} characters of reasoning')
+print(f'usage: {u["prompt_tokens"]} prompt, {u["completion_tokens"]} '
+      f'completion, {u["reasoning_tokens"]} reasoning tokens')
 assert trap.text == '' and trap.finish_reason == 'length'
-assert trap.usage['reasoning_tokens'] == trap.usage['completion_tokens'] == 64
+assert u['reasoning_tokens'] == u['completion_tokens'] == 64
 answer = second.chat(hard, temperature=0, seed=0, max_tokens=1024,
                      extra_body={'reasoning': {'enabled': False}})
-print(f'thinking off: {answer.text[-80:]!r}, finish '
-      f'{answer.finish_reason}; {answer.usage}')
-assert not answer.usage['reasoning_tokens']
+u, last = answer.usage, answer.text.strip().splitlines()[-1]
+print(f'thinking off: last line {last!r} (reference '
+      f'{d2l.extract_answer(gsm_test.answer[LONGEST[0]])}), '
+      f'{u["completion_tokens"]} completion tokens, finish '
+      f'{answer.finish_reason}')
+assert not u['reasoning_tokens']
 assert answer.finish_reason == 'stop', 'thinking off did not finish either'
 ```
 
@@ -306,8 +223,8 @@ assert answer.finish_reason == 'stop', 'thinking off did not finish either'
 
 ```{.python .input #api-effort}
 %%tab pytorch
-effort_api = hosted(FLAGSHIP, cache_file('lm-api-effort-v1', 'flagship'),
-                    share=0.2)
+effort_api = rec.hosted(FLAGSHIP, rec.cache('lm-api-effort-v1', 'flagship'),
+                        share=0.2)
 EFFORTS = ('low', 'medium', 'high')
 batch = [{'messages': [{'role': 'user', 'content': gsm_test.question[i]}],
           'temperature': 0, 'seed': 0, 'max_tokens': 16384,
@@ -361,13 +278,11 @@ else:  # the request hash keeps the host only, so any port replays
     server, LOCAL_URL = None, 'http://127.0.0.1/v1'
     print(f'{LOCAL_URL}: replayed from the committed caches')
 
-def local(cache, **kwargs):
+def local(cache, mode=LOCAL_MODE):
     """A client of the local server, thinking switched off."""
-    api = d2l.ChatAPI(LOCAL_URL, LOCAL_MODEL, cache=cache, mode=LOCAL_MODE,
-                      http_client=LOCAL_HTTP, default_params=NO_THINK_LOCAL,
-                      **kwargs)
-    CLIENTS.append(api)
-    return api
+    return rec.add(d2l.ChatAPI(LOCAL_URL, LOCAL_MODEL, cache=cache, mode=mode,
+                               http_client=LOCAL_HTTP,
+                               default_params=NO_THINK_LOCAL))
 ```
 
 <!-- Placeholder (stage 2): a request field a provider accepts is not necessarily one it honours: one detection rule per field. With require_parameters, any field an endpoint does not list is rejected, so each test sends only the field it probes (the seed test samples at the default temperature where temperature is not listed). gpt-5-nano's usage under max_completion_tokens=16 reports more reasoning than completion tokens, so claim 7 (reasoning inside completion tokens) is limited to the experiment arms. -->
@@ -378,192 +293,62 @@ STORY = [{'role': 'user', 'content':
           'Write a short paragraph about a lighthouse keeper.'}]
 COUNT = [{'role': 'user', 'content':
           'Count from 1 to 10, separated by commas.'}]
-JSON_Q = [{'role': 'user', 'content': 'What is 6 times 7? Answer in JSON.'}]
-SCHEMA = {'type': 'json_schema', 'json_schema': {
-    'name': 'answer', 'strict': True, 'schema': {
-        'type': 'object', 'properties': {'answer': {'type': 'integer'}},
-        'required': ['answer'], 'additionalProperties': False}}}
 
-def is_answer(text):  # exactly {"answer": <integer>}
-    try:
-        out = json.loads(text)
-    except ValueError:
-        return False
-    return (isinstance(out, dict) and set(out) == {'answer'} and
-            type(out['answer']) is int)
+def seed_honoured(a, b, c):  # STORY with seed 7 twice (replicas), then 8
+    return a.text == b.text != c.text
 
-def n_choices(api, a):  # further choices are kept in the cache's extra
-    return max(1, len(api.entries(a.request_hash)[0]['extra'].get(
-        'choices', [])))
+def stop_honoured(a):  # COUNT with stop=['5']
+    return '4' in a.text and '5' not in a.text
 
-def covered(api, a):  # top-5 log-probabilities for every generated token
-    n, out = len(a.logprobs or []), a.usage['completion_tokens']
-    full = all(len(t) == 5 for _, _, t in a.logprobs or [])
-    status = ('honoured' if full and n >= out - 1 else  # the end token
-              'partial' if n else 'ignored')
-    return status, f'{n} of {out} tokens'
-
-def capped(api, a):  # reasoning tokens are bounded by the cap as well
-    o, r = (a.usage[k] or 0 for k in ('completion_tokens', 'reasoning_tokens'))
-    if r > o:  # usage contradicts itself: no verdict on the cap
-        return 'inconsistent', f'{o} completion < {r} reasoning tokens'
-    return o <= 16, f'{o} completion, {r} reasoning tokens'
-
-def thinks(r):  # a streamed empty think block arrives as '\n\n'
-    return bool(r.usage['reasoning_tokens'] or (r.reasoning or '').strip())
-
-def echoed(api, a):  # prompt log-probabilities, or the prompt echoed
-    lp = 'prompt_logprobs' in api.entries(a.request_hash)[0]['extra']
-    echo = COUNT[0]['content'] in a.text
-    return lp or echo, f'prompt_logprobs: {lp}, echo: {echo}'
-
-def tests(base, on, off, max_tokens, temperature):
-    """field -> (requests as (messages, replica, params), rule mapping the
-    client and the results to (honoured?, evidence)); base is the request
-    body every test sends, on and off the bodies of the thinking switch.
-    The seed test samples at temperature 1 only where the endpoint lists
-    temperature (with require_parameters an unlisted field is rejected).
-    Evidence holds flags, counts and lengths, never response text: the
-    closed model's outputs may not be committed."""
-    def p(body=base, **kw):
-        return {'max_tokens': max_tokens, **kw,
-                **({'extra_body': body} if body else {})}
-    t = {'temperature': 1} if temperature else {}  # else the default
-    temp = t.get('temperature', 'default')
-    return {
-        'seed': ([(STORY, 0, p(**t, seed=7)), (STORY, 1, p(**t, seed=7)),
-                  (STORY, 0, p(**t, seed=8))],
-                 lambda api, a, b, c: (a.text == b.text != c.text, (
-                     f'7 = 7: {a.text == b.text}, 8 differs: '
-                     f'{c.text != a.text}, temperature {temp}'))),
-        'n=2': ([(COUNT, 0, p(n=2))], lambda api, a: (
-            n_choices(api, a) == 2, f'{n_choices(api, a)} choices returned')),
-        'logprobs, top 5': ([(COUNT, 0, p(logprobs=True, top_logprobs=5))],
-                            covered),
-        "stop=['5']": ([(COUNT, 0, p(stop=['5']))], lambda api, a: (
-            '4' in a.text and '5' not in a.text,
-            f"has 4: {'4' in a.text}, has 5: {'5' in a.text}")),
-        'response_format': ([(JSON_Q, 0, p(response_format=SCHEMA))],
-                            lambda api, a: (is_answer(a.text), (
-                                f'parses as {{answer: int}}: '
-                                f'{is_answer(a.text)}, '
-                                f'{len(a.text)} characters'))),
-        'thinking switch': ([(COUNT, 0, p(body=on, max_tokens=256)),
-                             (COUNT, 0, p(body=off))], lambda api, a, b: (
-            thinks(a) and not thinks(b),
-            f'on {thinks(a)}, off {thinks(b)}')),
-        'max_completion_tokens=16': (
-            [(STORY, 0, p(max_tokens=None, max_completion_tokens=16))],
-            capped),
-        'prompt log-probabilities': (  # vLLM's two fields
-            [(COUNT, 0, p(body={**(base or {}), 'prompt_logprobs': 1,
-                                'echo': True}))],
-            echoed),
-        'stream usage': ([(COUNT, 0, p(stream=True))], lambda api, a: (
-            a.usage['completion_tokens'] is not None, 'final chunk'))}
-
-TODAY = time.strftime('%Y-%m-%d', time.gmtime())
-
-def day(results):  # UTC date of the newest live call behind the results
-    return max(r.created for r in results)[:10]
-
-def failure(e):  # (status, evidence) of a request that failed
-    status = getattr(e, 'status_code', None)
-    kind = 'rejected' if status and 400 <= status < 500 else 'error'
-    return kind, f'{status or type(e).__name__}: {e}'[:80]
-
-async def check(api, requests_, rule):
-    try:
-        results = [await api.achat(m, replica=k, **q)
-                   for m, k, q in requests_]
-    except (d2l.ReplayMiss, d2l.CostCapExceeded):
-        raise
-    except Exception as e:  # after the client's retries; never cached
-        return (*failure(e), TODAY)
-    honoured, evidence = rule(api, *results)  # a bool, or a status
-    if not isinstance(honoured, str):
-        honoured = 'honoured' if honoured else 'ignored'
-    return honoured, evidence[:80], day(results)
-
-async def probe(name, api, base, on, off, max_tokens, model_id):
-    rows = []
-    temperature = model_id not in LISTING['endpoints'] or (  # local: none
-        'temperature' in endpoint(model_id)['supported_parameters'])
-    for field, (requests_, rule) in tests(base, on, off, max_tokens,
-                                          temperature).items():
-        status, evidence, date = await check(api, requests_, rule)
-        rows.append({'endpoint': name, 'field': field, 'status': status,
-                     'evidence': evidence, 'date': date})
-    try:  # a live GET, never cached
-        listed = any(i.startswith(model_id) for i in await asyncio.to_thread(
-            api.models))
-        status, evidence = ('honoured' if listed else 'ignored',
-                            f'lists {model_id}: {listed}')
-    except d2l.ReplayMiss:  # a replayed client cannot list: no verdict
-        raise
-    except Exception as e:
-        status, evidence = failure(e)
-    rows.append({'endpoint': name, 'field': '/v1/models', 'status': status,
-                 'evidence': evidence, 'date': TODAY})
-    params = {'max_tokens': max_tokens,
-              **({'extra_body': base} if base else {})}
-    one = await api.achat(COUNT, replica=10, **params)
-    four = await d2l.chat_batch(api, [
-        {'messages': COUNT, 'replica': k, **params} for k in range(11, 15)],
-        concurrency=4)
-    ratio = max(r.t_total for r in four) / one.t_total
-    n_429 = sum(r.n_429 or 0 for r in [one, *four])  # retries add waits
-    verdict = ('rate-limited' if n_429 else 'batched' if ratio < 2
-               else 'serialized' if ratio > 3 else 'partial')
-    rows.append({'endpoint': name, 'field': '4 concurrent requests',
-                 'status': verdict,
-                 'evidence': f'latency x {ratio:.2f}, {n_429} 429s',
-                 'date': day([one, *four])})
-    return rows
-
-fields_file = os.path.join(api_dir('lm-api-fields-v2'), 'lm-api-fields.csv')
+FIELDS_FILE = os.path.join(rec.folder('lm-api-fields-v2'),
+                           'lm-api-fields.csv')
 LOCAL_NAME = 'Qwen3-4B (local server)'
 if API_MODE != 'replay':  # replay reads the committed table
-    router_off, router_on = ({'reasoning': {'enabled': s}}
-                             for s in (False, True))
+    off, on = ({'reasoning': {'enabled': s}} for s in (False, True))
     local_off, local_on = ({'chat_template_kwargs': {'enable_thinking': s}}
                            for s in (False, True))
-    closed = hosted(CLOSED, os.path.join(D2L_API_LOG_DIR, 'scratch',
-                                         'closed-probe.jsonl'), share=0.05)
-    ENDPOINTS = {  # client, body of every test, thinking on and off,
+    closed = rec.hosted(CLOSED, os.path.join(D2L_API_LOG_DIR, 'scratch',
+                                             'closed-probe.jsonl'),
+                        share=0.05)
+    endpoints = {  # client, body of every test, thinking on and off,
         # output budget, the id /v1/models should list
-        'DeepSeek-V4.1-Flash (Novita)': (flagship, router_off, router_on,
-                                         router_off, 64, FLAGSHIP),
-        'Qwen3.8-27B (Parasail)': (second, router_off, router_on,
-                                   router_off, 64, SECOND),
-        'gpt-5-nano (OpenAI)': (closed, None, router_on, router_off, 2048,
+        'DeepSeek-V4.1-Flash (Novita)': (flagship, off, on, off, 64,
+                                         FLAGSHIP),
+        'Qwen3.8-27B (Parasail)': (second, off, on, off, 64, SECOND),
+        'gpt-5-nano (OpenAI)': (closed, None, on, off, 2048,
                                 CLOSED)}  # a closed model thinks by default
     if LOCAL_LIVE:
-        ENDPOINTS[LOCAL_NAME] = (
-            local(cache_file('lm-api-probe-v2', 'local')), local_off,
-            local_on, local_off, 64, LOCAL)
-    rows = await asyncio.gather(*(probe(name, *args)
-                                  for name, args in ENDPOINTS.items()))
-    fields = pd.DataFrame([r for rs in rows for r in rs])
-    if not LOCAL_LIVE:  # no server here: keep the recorded local column
-        old = (pd.read_csv(fields_file) if os.path.exists(fields_file)
-               else pd.DataFrame({'endpoint': []}))
-        old = old[old.endpoint == LOCAL_NAME]
-        assert len(old), 'no recorded local column: record on a GPU host'
-        print('local server column kept from', old.date.max())
-        fields = pd.concat([fields, old], ignore_index=True)
-    fields.to_csv(fields_file, index=False)
-fields = pd.read_csv(fields_file)
+        endpoints[LOCAL_NAME] = (local(rec.cache('lm-api-probe-v2', 'local')),
+                                 local_off, local_on, local_off, 64, LOCAL)
+    await d2l.record_field_probe(
+        FIELDS_FILE, endpoints, local_name=LOCAL_NAME, listing=LISTING,
+        providers=PROVIDERS, story=STORY, count=COUNT,
+        rules={'seed': seed_honoured, 'stop': stop_honoured})
+```
+
+<!-- Placeholder (stage 2): the probe matrix, one status per endpoint and field, and for each OpenAI field whether transformers serve declares it unused. The local server ignores `stop` although it is not declared unused (Transformers maps it to `stop_strings`, which the continuous-batching path never reads); `seed` is not declared and is honoured. Its `/v1/models` "ignored" is a listing artifact: the server lists cached models by branch ref, and Qwen3-4B was fetched by commit. -->
+
+```{.python .input #api-probe-table}
+%%tab pytorch
+SHORT = {'DeepSeek-V4.1-Flash (Novita)': 'flagship',
+         'Qwen3.8-27B (Parasail)': 'Qwen3.8-27B',
+         'gpt-5-nano (OpenAI)': 'gpt-5-nano', LOCAL_NAME: 'local'}
+SENT = {'seed': ['seed'], 'n=2': ['n'],  # the OpenAI fields each test sends
+        'logprobs, top 5': ['logprobs', 'top_logprobs'], "stop=['5']":
+        ['stop'], 'response_format': ['response_format'],
+        'max_completion_tokens=16': ['max_completion_tokens'],
+        'stream usage': ['stream_options']}
+fields = pd.read_csv(FIELDS_FILE).replace({'endpoint': SHORT})
 table = fields.pivot(index='field', columns='endpoint', values='status')
-print(table.loc[fields.field.unique(), fields.endpoint.unique()])
-batching = fields[(fields.endpoint == LOCAL_NAME) &
+table = table.loc[fields.field.unique(), fields.endpoint.unique()]
+table['serve declares unused'] = [
+    ('yes' if set(SENT[f]) <= UNUSED_CHAT_COMPLETION_FIELDS else 'no')
+    if f in SENT else '' for f in table.index]
+print(table.to_string())
+batching = fields[(fields.endpoint == 'local') &
                   (fields.field == '4 concurrent requests')].iloc[0]
 LOCAL_BATCHES = batching.status != 'serialized'
 print(f'local server: {batching.status} ({batching.evidence})')
-print('fields transformers serve ignores:', sorted(
-    UNUSED_CHAT_COMPLETION_FIELDS & {
-        'n', 'logprobs', 'top_logprobs', 'response_format',
-        'max_completion_tokens', 'stream_options', 'seed'}))
 ```
 
 <!-- Placeholder (stage 2): the request hash keys a replay cache on everything that can change the output and nothing secret. -->
@@ -579,8 +364,8 @@ def request_hash(base_url, model, messages, params, replica=0):
     the client-side replica number."""
     from urllib.parse import urlsplit  # not in the d2l library preamble
     transport = ('stream', 'stream_options', 'timeout', 'extra_headers')
-    params = {k: v for k, v in d2l._chat_merge(params, {}).items()
-              if k not in transport}
+    params = d2l._chat_merge(params, {})  # drops None values at every level
+    params = {k: v for k, v in params.items() if k not in transport}
     key = {'host': urlsplit(base_url).hostname, 'model': model,
            'messages': messages, 'params': params, 'replica': replica}
     blob = json.dumps(key, sort_keys=True, separators=(',', ':'),
@@ -641,7 +426,8 @@ def api_cost(usage, price):
 ```{.python .input #api-cost-example}
 %%tab pytorch
 novita = d2l.price_from_listing(LISTING, FLAGSHIP, 'novita')
-print('Novita, USD per million tokens:', novita)
+print(f'Novita, USD per million tokens: {novita.input} in, {novita.output} '
+      f'out, {novita.cached_input} cached in')
 usage = {'prompt_tokens': 1000, 'completion_tokens': 300}
 cost = d2l.api_cost(usage, novita)
 assert abs(cost - (1000 * novita.input + 300 * novita.output) / 1e6) < 1e-15
@@ -764,7 +550,7 @@ print(f'{type(error).__name__} after {fake.n_requests} attempt')
 assert getattr(error, 'status_code', None) == 401 and fake.n_requests == 1
 ```
 
-<!-- Placeholder (stage 2): the derivation's mean sleep, and 64 clients that failed together. Lead with the finish time (over 200 seeds, jitter finishes in about 15 s against 63 s); the attempt counts overlap (jitter 221 to 239, none 238), so do not claim fewer attempts. -->
+<!-- Placeholder (stage 2): the derivation's mean sleep, checked by a Monte Carlo. -->
 
 ```{.python .input #api-backoff-check}
 %%tab pytorch
@@ -780,7 +566,12 @@ draws = np.array([total_sleep() for _ in range(200_000)])
 formula = sum(p**(a + 1) * min(60, 2**a) / 2 for a in range(K))
 print(f'E[S] = {formula:.4f} s; simulated {draws.mean():.4f} '
       f'+- {3 * draws.std() / np.sqrt(len(draws)):.4f} s (3 sigma)')
+```
 
+<!-- Placeholder (stage 2): 64 clients that failed together. Lead with the finish time (over 200 seeds, jitter finishes in about 15 s against 63 s, the unjittered sum 1 + 2 + ... + 32); full jitter also makes fewer attempts on almost every seed, but only about 4% fewer (a fixed-window server admits a whole wave each time), so do not build on the attempt count. -->
+
+```{.python .input #api-retry-storm}
+%%tab pytorch
 def retry_storm(n=64, rate=10, jitter=True, seed=0):
     """Simulated time: n clients send at t = 0 to a server that admits at
     most `rate` requests in any one-second window and rejects the rest; a
@@ -799,14 +590,17 @@ def retry_storm(n=64, rate=10, jitter=True, seed=0):
             d = d2l.backoff_delay(a, rng=rng) if jitter else min(60, 2**a)
             heapq.heappush(events, (t + d, i, a + 1))
     return attempts, t_done
-for jitter in (False, True):  # 200 storms; without jitter all are equal
-    storms = np.array([retry_storm(jitter=jitter, seed=k)
-                       for k in range(200)])
+
+storms = {jitter: np.array([retry_storm(jitter=jitter, seed=k)
+                            for k in range(200)]) for jitter in (False, True)}
+print('over 200 seeds: median (min to max)')
+for jitter, name in ((False, 'no jitter:  '), (True, 'full jitter:')):
     (a_lo, t_lo), (a_mid, t_mid), (a_hi, t_hi) = np.percentile(
-        storms, [0, 50, 100], axis=0)
-    print(f'jitter {jitter!s:5}: all done at {t_mid:.1f} s ({t_lo:.1f} to '
-          f'{t_hi:.1f}), {a_mid:.0f} attempts ({a_lo:.0f} to {a_hi:.0f}); '
-          f'medians and ranges over 200 seeds')
+        storms[jitter], [0, 50, 100], axis=0)
+    print(f'{name} all done at {t_mid:.1f} s ({t_lo:.1f} to {t_hi:.1f}), '
+          f'{a_mid:.0f} attempts ({a_lo:.0f} to {a_hi:.0f})')
+fewer = (storms[True][:, 0] < storms[False][:, 0]).sum()
+print(f'full jitter makes fewer attempts on {fewer} of 200 seeds')
 ```
 
 <!-- Placeholder (stage 2): Little's law on the client's own timestamps, measured on the steady window. -->
@@ -816,24 +610,13 @@ for jitter in (False, True):  # 200 storms; without jitter all are equal
 #@save
 def closed_loop_stats(results, c):
     """Throughput and latency of a closed loop that kept c requests in
-    flight. Exceptions count as n_failed and are excluded. For the N
-    remaining results let s_i = t_send, f_i = s_i + t_total and f_(1) <= ...
-    <= f_(N) the sorted completion times; N <= 2c raises ValueError. The
-    steady window runs from t_a = f_(c) to t_b = f_(N-c). X counts the
-    completions with t_a < f_i <= t_b per second of the window and X_tokens
-    their completion tokens; W is the mean of f_i - s_i over requests with
-    s_i >= t_a and f_i <= t_b; Lbar = sum_i max(0, min(f_i, t_b) -
-    max(s_i, t_a)) / (t_b - t_a) is the mean number in flight. little =
-    X W / c checks the client's bookkeeping, sustained = Lbar / c that it
-    kept c in flight. X_tokens is None when a counted completion has no
-    usage. ttft_p50 and ttft_p90 are over all N, from t_first, or from
-    t_first_content when the reasoning is only whitespace (the empty think
-    block of a server with thinking off is not a first token). The results
-    must come from one closed loop: a d2l.ReplayMiss or d2l.CostCapExceeded
-    among them, a mix of cached and live results, more than c requests in
-    flight at once, or send times whose wall and monotonic clocks disagree
-    by more than 2 s (two recording runs) raise ValueError."""
-    d2l._check_closed_loop(results, c)  # one loop of c, from one run
+    flight; exceptions count as n_failed. The steady window runs from the
+    c-th to the (N - c)-th of the N completions. X is the completions per
+    second inside it (X_tokens their completion tokens), W the mean latency
+    and ttft_mean the mean time to first token of the requests wholly inside
+    it, and Lbar the mean number in flight; little = X W / c, sustained =
+    Lbar / c. ttft_p50 and ttft_p90 are over all N."""
+    d2l.check_closed_loop(results, c)  # one loop of c, from one run
     ok = [r for r in results if not isinstance(r, BaseException)]
     N = len(ok)
     if N <= 2 * c:
@@ -850,16 +633,21 @@ def closed_loop_stats(results, c):
     X = done.sum() / window
     W = (f - s)[inside].mean() if inside.any() else float('nan')
     Lbar = np.clip(np.minimum(f, t_b) - np.maximum(s, t_a), 0, None).sum()
+    # the first token: the first content when the reasoning is only
+    # whitespace (the empty think block of a server with thinking off)
     firsts = [r.t_first if (r.reasoning or '').strip() or (
         r.t_first_content is None) else r.t_first_content for r in ok]
-    ttft = [t - r.t_send for r, t in zip(ok, firsts) if t is not None]
-    p50, p90 = (map(float, np.percentile(ttft, [50, 90])) if ttft
+    ttft = [None if t is None else t - r.t_send for r, t in zip(ok, firsts)]
+    known = [t for t in ttft if t is not None]
+    p50, p90 = (map(float, np.percentile(known, [50, 90])) if known
                 else (None, None))
+    steady = [t for t, i in zip(ttft, inside) if i and t is not None]
     X_tokens = None if None in tokens else float(sum(tokens) / window)
     return {'X': float(X), 'X_tokens': X_tokens,
             'W': float(W), 'Lbar': float(Lbar / window),
             'little': float(X * W / c), 'sustained': float(Lbar / window / c),
             'ttft_p50': p50, 'ttft_p90': p90,
+            'ttft_mean': float(np.mean(steady)) if steady else None,
             'n_429': sum(getattr(r, 'n_429', 0) or 0 for r in results),
             'n_retries': sum(getattr(r, 'n_retries', 0) or 0 for r in results),
             'n_failed': len(results) - N, 'window': float(window),
@@ -894,11 +682,12 @@ assert (abs(table[['little', 'sustained']] - 1) < 0.02).all().all(), table
 table.round(3)
 ```
 
-<!-- Placeholder (stage 2): Experiment 1: a closed-loop sweep against the local server, two passes in shuffled order. Time to first token is measured to the first content token: with thinking off, transformers serve streams the empty think block at once, before it schedules the request, and the first capture timed that chunk (TTFT looked flat; it grows past the knee). Exercise 5 (t_total - t_first, chunk counts) must use the same convention. -->
+<!-- Placeholder (stage 2): Experiment 1: a closed-loop sweep against the local server, two passes in shuffled order. Time to first token is measured to the first content token: with thinking off, transformers serve streams the empty think block at once, before it schedules the request, and the first capture timed that chunk (TTFT looked flat; it grows past the knee). Exercise 5 (t_total - t_first, chunk counts) must use the same convention. The `in decode` column is Little's law applied to the decode stage alone, X (W - ttft_mean): it levels off at about 45 from c = 64 while time to first token jumps, so beyond the knee requests wait for a batch slot. The knee is this server's admission capacity at the KV budget the notebook sets (`--cb-max-memory-percent 0.2` in `api-local-start`), on one RTX 4090; it is not where batching stops paying (the median gap between tokens grows only from about 41 to 56 ms) and not the GPU's capacity. -->
 
 ```{.python .input #api-sweep-local}
 %%tab pytorch
-SWEEP = {'max_tokens': 64, 'temperature': 0, 'stream': True}  # 30-min run
+# 64 tokens keep the recording near its 30-minute target
+SWEEP = {'max_tokens': 64, 'temperature': 0, 'stream': True}
 
 async def closed_loop(api, c, first, **params):
     """One level of a closed loop: 8c distinct GSM8K train questions from
@@ -910,7 +699,7 @@ async def closed_loop(api, c, first, **params):
     assert not failed, (  # a failure is not cached: replay would miss it
         f'c = {c}: {len(failed)} failed, first {failed[0]!r:.100}; delete '
         f'{api.cache_path} and record the arm again')
-    assert not any(thinks(r) for r in results), f'c = {c}: thinking'
+    assert not any(d2l.chat_thinks(r) for r in results), f'c = {c}: thinking'
     return {'c': c, **closed_loop_stats(results, c)}
 
 def check_little(table, little, sustained):
@@ -920,10 +709,26 @@ def check_little(table, little, sustained):
                          f'{row.sustained:.3f}, {row.n_retries} retries, '
                          f'{row.n_window} completions in the window')
 
-COLUMNS = ['c', 'X', 'X_tokens', 'W', 'ttft_p50', 'ttft_p90', 'n_429',
-           'n_retries', 'n_failed', 'little', 'sustained']
+def show(table):
+    """Print a sweep: X in requests/s, X_tokens in tokens/s, times in s, and
+    'in decode' = X (W - ttft_mean), Little's law for the decode stage."""
+    table = table.assign(decode=table.X * (table.W - table.ttft_mean))
+    columns = [k for k in ('pass', 'c', 'X', 'X_tokens', 'W', 'ttft_p50',
+                           'ttft_p90', 'decode', 'little', 'sustained')
+               if k in table]
+    counts = ['n_429', 'n_retries', 'n_failed']
+    if table[counts].to_numpy().any():
+        columns += counts
+    print(table[columns].rename(columns={'decode': 'in decode'}).to_string(
+        index=False, formatters={'X': '{:.2f}'.format,
+                                 'X_tokens': '{:.0f}'.format,
+                                 'in decode': '{:.1f}'.format},
+        float_format='{:.3f}'.format))
+    if not table[counts].to_numpy().any():
+        print('no 429s, retries or failed requests at any level')
+
 LEVELS = [1, 2, 4, 8, 16, 32, 64, 128] if LOCAL_BATCHES else [1, 2, 4, 8]
-sweep_api = local(cache_file('lm-api-sweep-v1', 'local'))
+sweep_api = local(rec.cache('lm-api-sweep-v1', 'local'))
 rng, order = random.Random(0), []
 for p in (1, 2):
     levels = list(LEVELS)
@@ -936,7 +741,7 @@ for p, c in order:
     first += 8 * c
 sweep = pd.DataFrame(rows).sort_values(['pass', 'c'], ignore_index=True)
 check_little(sweep, 0.05, 0.03)
-sweep[['pass'] + COLUMNS].round(3)
+show(sweep)
 ```
 
 <!-- Placeholder (stage 2): the fitted closed-loop curve and the knee rule, per pass. -->
@@ -961,12 +766,13 @@ for p, table in sweep.groupby('pass'):
           f'c* {c_star:.1f}, efficiency below 0.7 from c = {knee}')
 both = knees[0] is not None and knees[0] == knees[1]
 print('knee in both passes:', 'yes' if both else 'no')
-assert both, 'no knee common to both passes (claim 2: set the batch cap)'
+assert both, "no knee common to both passes: set the server's batch cap"
 W_0, X_max, _, _ = fit(sweep)  # pooled, for the fitted curves
 tokens = (sweep.X_tokens / sweep.X).mean()  # completion tokens per request
 grid = np.geomspace(1, max(LEVELS), 100)
 passes = [sweep[sweep['pass'] == p] for p in (1, 2)]
-fig, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.6))
+fig, axes = d2l.plt.subplots(1, 2, figsize=(7.4, 2.6),
+                             gridspec_kw={'wspace': 0.4})
 d2l.plot([t.c.to_numpy() for t in passes] + [grid],
          [t.X_tokens.to_numpy() for t in passes] +
          [np.minimum(grid / W_0, X_max) * tokens], 'requests in flight c',
@@ -983,8 +789,8 @@ d2l.plot([t.c.to_numpy() for t in passes] + [grid],
 
 ```{.python .input #api-sweep-hosted}
 %%tab pytorch
-contrast = hosted(FLAGSHIP, cache_file('lm-api-sweep-v1', 'flagship'),
-                  share=0.1, reasoning={'enabled': False})
+contrast = rec.hosted(FLAGSHIP, rec.cache('lm-api-sweep-v1', 'flagship'),
+                      share=0.1, reasoning={'enabled': False})
 first, rows = 4084, []  # train items after the local sweep's
 for c in (1, 8, 32):
     rows.append(await closed_loop(contrast, c, first, **SWEEP))
@@ -993,7 +799,7 @@ hosted_sweep = pd.DataFrame(rows)
 check_little(hosted_sweep, 0.10, 0.05)
 X_c = hosted_sweep.set_index('c').X
 print(f'X(32) / X(1) = {X_c[32] / X_c[1]:.1f}')
-hosted_sweep[COLUMNS].round(3)
+show(hosted_sweep)
 ```
 
 <!-- Placeholder (stage 2): Experiment 2: identical 4-shot prompts, decoding, thinking mode and extractor for every arm. -->
@@ -1008,19 +814,20 @@ GSM_GOLD = [d2l.extract_answer(gsm_test.answer[i]) for i in GSM_IDS]
 GSM_PARAMS = {'temperature': 0, 'seed': 0, 'max_tokens': 512}
 for m in GSM_MESSAGES[0]:
     print(f'{m["role"]:9s} {m["content"][:64]!r}')
-print('parameters:', GSM_PARAMS, '; thinking off: reasoning.enabled = '
-      'False (router), chat_template_kwargs.enable_thinking = False (local)')
+print('parameters:', GSM_PARAMS)
+print('thinking off: reasoning.enabled=False (router), '
+      'enable_thinking=False (local)')
 ```
 
-<!-- Placeholder (stage 2): four arms at once; per arm accuracy, latency, and the price of a correct answer. Part of the cost-per-correct ratio is prompt caching at Novita (the 4-shot prefix is billed at the cached price on most flagship calls; Parasail caches none): quote both the billed and the list-price ratio, "about 4 to 6 times", not one figure. The local arm's GPU-seconds per correct are measured at concurrency 8, below the knee (about 32): say so here and in Exercise 3; near the knee the figure is several times lower. -->
+<!-- Placeholder (stage 2): four arms at once; per arm accuracy with its interval, tokens and latency. -->
 
 ```{.python .input #api-gsm8k-run}
 %%tab pytorch
-gsm_flagship = hosted(FLAGSHIP, cache_file('lm-api-gsm8k-v1', 'flagship'),
-                      share=0.2, reasoning={'enabled': False})
-gsm_second = hosted(SECOND, cache_file('lm-api-gsm8k-v1', 'second'),
-                    share=0.2, reasoning={'enabled': False})
-gsm_local = local(cache_file('lm-api-gsm8k-v1', 'local'))
+gsm_flagship = rec.hosted(FLAGSHIP, rec.cache('lm-api-gsm8k-v1', 'flagship'),
+                          share=0.2, reasoning={'enabled': False})
+gsm_second = rec.hosted(SECOND, rec.cache('lm-api-gsm8k-v1', 'second'),
+                        share=0.2, reasoning={'enabled': False})
+gsm_local = local(rec.cache('lm-api-gsm8k-v1', 'local'))
 ARMS = {'flagship r0': (gsm_flagship, 0, 8),
         'flagship r1': (gsm_flagship, 1, 8),
         'Qwen3.8-27B': (gsm_second, 0, 8),
@@ -1028,46 +835,59 @@ ARMS = {'flagship r0': (gsm_flagship, 0, 8),
 outs = await asyncio.gather(*(chat_batch(api, [
     {'messages': m, 'replica': k, **GSM_PARAMS} for m in GSM_MESSAGES],
     concurrency=c) for api, k, c in ARMS.values()))
-CORRECT, rows = {}, []
-for (arm, (api, _, c)), results in zip(ARMS.items(), outs):
+RESULTS, CORRECT, rows = dict(zip(ARMS, outs)), {}, []
+for arm, results in RESULTS.items():
     assert not any(isinstance(r, Exception) for r in results), arm
-    assert not any(thinks(r) for r in results), f'{arm}: thinking'
+    assert not any(d2l.chat_thinks(r) for r in results), f'{arm}: thinking'
     correct = np.array([d2l.extract_answer(r.text) == g
                         for r, g in zip(results, GSM_GOLD)], dtype=float)
     CORRECT[arm], ci = correct, d2l.bootstrap_ci(correct)
-    latency = np.percentile([r.t_total for r in results], [50, 90])
-    row = {'arm': arm, 'concurrency': c, 'accuracy': ci.mean,
-           'lo': ci.ci[0], 'hi': ci.ci[1],
-           'prompt tokens': np.mean([r.usage['prompt_tokens']
-                                     for r in results]),
-           'completion tokens': np.mean([r.usage['completion_tokens']
-                                         for r in results]),
-           'p50 s': latency[0], 'p90 s': latency[1]}
-    n_correct = max(correct.sum(), 1)
+    p50, p90 = np.percentile([r.t_total for r in results], [50, 90])
+    rows.append({'arm': arm, 'concurrency': ARMS[arm][2],
+                 'accuracy': ci.mean, 'lo': ci.ci[0], 'hi': ci.ci[1],
+                 'prompt tokens': np.mean([r.usage['prompt_tokens']
+                                           for r in results]),
+                 'completion tokens': np.mean([r.usage['completion_tokens']
+                                               for r in results]),
+                 'p50 s': p50, 'p90 s': p90})
+gsm = pd.DataFrame(rows).set_index('arm')
+print(gsm.to_string(formatters={
+    'prompt tokens': '{:.0f}'.format, 'completion tokens': '{:.0f}'.format,
+    'p50 s': '{:.1f}'.format, 'p90 s': '{:.1f}'.format},
+    float_format='{:.2f}'.format))
+```
+
+<!-- Placeholder (stage 2): the price of a correct answer, as billed and at list price, and the local arm's GPU-seconds. Part of the cost-per-correct ratio is prompt caching at Novita (the 4-shot prefix is billed at the cached price on most flagship calls; Parasail caches none): quote both the billed and the list-price ratio, "about 4 to 6 times", not one figure. The local arm's GPU-seconds per correct are measured at concurrency 8, below the knee (about 32): say so here and in Exercise 3. No cell measures the figure near the knee, so quote no factor for it. -->
+
+```{.python .input #api-gsm8k-cost}
+%%tab pytorch
+rows = []
+for arm, (api, _, _) in ARMS.items():
+    results, n_correct = RESULTS[arm], max(CORRECT[arm].sum(), 1)
     if api.price is not None:  # hosted: dollars, billed and at list price
         cost = sum(usd(api, r) for r in results)
         listed = sum(d2l.api_cost({**r.usage, 'cached_tokens': 0}, api.price)
                      for r in results)  # as if no prompt token were cached
-        row.update({'cached share': sum(
-                        r.usage.get('cached_tokens') or 0 for r in results)
-                        / sum(r.usage['prompt_tokens'] for r in results),
-                    'USD per 100': 100 * cost / len(results),
-                    'USD per correct': cost / n_correct,
-                    'list USD per correct': listed / n_correct})
+        cached = sum(r.usage.get('cached_tokens') or 0 for r in results)
+        rows.append({'arm': arm, 'cached share': cached / sum(
+                         r.usage['prompt_tokens'] for r in results),
+                     'USD per 100': 100 * cost / len(results),
+                     'USD per 1,000 correct': 1000 * cost / n_correct,
+                     'at list price': 1000 * listed / n_correct})
     else:  # local: the arm's wall-clock span on one GPU
         span = (max(r.t_send + r.t_total for r in results) -
                 min(r.t_send for r in results))
-        row['GPU-s per correct'] = span / n_correct
-    rows.append(row)
-gsm = pd.DataFrame(rows).set_index('arm')
-ratio = gsm.loc['Qwen3.8-27B'] / gsm.loc['flagship r0']
-print(f'Qwen3.8-27B / flagship: accuracy x {ratio.accuracy:.2f}, USD per '
-      f'correct x {ratio["USD per correct"]:.2f} as billed, x '
-      f'{ratio["list USD per correct"]:.2f} at list price (cached prompt '
-      f'share {gsm["cached share"]["flagship r0"]:.2f} vs '
-      f'{gsm["cached share"]["Qwen3.8-27B"]:.2f})')
-gsm.round(4).assign(**{k: gsm[k].round(6) for k in (
-    'USD per correct', 'list USD per correct')})
+        rows.append({'arm': arm, 'GPU-s per correct': span / n_correct})
+cost = pd.DataFrame(rows).set_index('arm')
+ratio = cost.loc['Qwen3.8-27B'] / cost.loc['flagship r0']
+print(f'Qwen3.8-27B / flagship: accuracy x '
+      f'{gsm.accuracy["Qwen3.8-27B"] / gsm.accuracy["flagship r0"]:.2f}; '
+      f'USD per correct x {ratio["USD per 1,000 correct"]:.2f} billed, '
+      f'x {ratio["at list price"]:.2f} at list price')
+print(cost.to_string(na_rep='-', formatters={
+    'cached share': '{:.2f}'.format, 'USD per 100': '{:.4f}'.format,
+    'USD per 1,000 correct': '{:.3f}'.format,
+    'at list price': '{:.3f}'.format, 'GPU-s per correct': '{:.2f}'.format}))
 ```
 
 <!-- Placeholder (stage 2): paired comparisons with exact McNemar tests, Holm-adjusted, against the replica noise floor. -->
@@ -1081,16 +901,18 @@ def holm(p):  # Holm's step-down adjustment of p-values
         adjusted[i] = running
     return adjusted
 
-PAIRS = [('flagship r0', 'Qwen3.8-27B'), ('flagship r0', 'Qwen3-4B local'),
-         ('Qwen3.8-27B', 'Qwen3-4B local'), ('flagship r0', 'flagship r1')]
+PAIRS = {'flagship - 27B': ('flagship r0', 'Qwen3.8-27B'),
+         'flagship - local': ('flagship r0', 'Qwen3-4B local'),
+         '27B - local': ('Qwen3.8-27B', 'Qwen3-4B local'),
+         'r0 - r1': ('flagship r0', 'flagship r1')}  # the noise floor
 rows = []
-for a, b in PAIRS:
+for name, (a, b) in PAIRS.items():
     x, y = CORRECT[a], CORRECT[b]
     res = d2l.paired_bootstrap(x, y, n_boot=10000, seed=0)
     n_ab, n_ba = int((x > y).sum()), int((x < y).sum())  # discordant
     p = (stats.binomtest(min(n_ab, n_ba), n_ab + n_ba, 0.5).pvalue
          if n_ab + n_ba else 1.0)
-    rows.append({'comparison': f'{a} - {b}', 'difference': res.mean,
+    rows.append({'comparison': name, 'difference': res.mean,
                  'lo': res.ci[0], 'hi': res.ci[1], 'b': n_ab, 'c': n_ba,
                  'McNemar p': p, 'MDE': d2l.min_detectable_effect(
                      np.std(x - y, ddof=1), len(x))})
@@ -1105,7 +927,10 @@ else:
         else 'unresolved at n = 100' for h, lo, hi in zip(
             compare['Holm p'][:3], compare.lo[:3], compare.hi[:3])] + [
         'noise floor']
-compare.round(4)
+print(compare.to_string(index=False, na_rep='', formatters={
+    'difference': '{:.2f}'.format, 'lo': '{:.2f}'.format,
+    'hi': '{:.2f}'.format, 'McNemar p': '{:.4f}'.format,
+    'MDE': '{:.2f}'.format, 'Holm p': '{:.4f}'.format}))
 ```
 
 <!-- Placeholder (stage 2): Experiment 3: identical requests at temperature 0 with a seed: twenty to the hosted flagship, five each to the local server alone and under load. The cause of the local-alone divergence was checked on the GPU (stage 2b, verify-18.7-outputs.md): with prefix block sharing off (ContinuousBatchingConfig.allow_block_sharing=False; no CLI flag) five sequential repeats agree on all three problems, with it on replica 0 differs from 1 to 4 on two of three (later replicas reuse the cached 4-shot prompt blocks); under 8 background lanes they disagree with sharing on or off, so batch composition alone also breaks determinism. First divergence is counted in characters, not tokens. -->
@@ -1119,56 +944,38 @@ def replicas(first, n):  # n replicas of each of the three requests
     return [{'messages': m, 'replica': k, **GSM_PARAMS}
             for m in DET_MESSAGES for k in range(first, first + n)]
 
-N_LOCAL = 5  # a local reply takes about 18 s: 30 fit the 30-minute run
-
-det_flagship = hosted(FLAGSHIP, cache_file('lm-api-determinism-v1',
-                                           'flagship'),
-                      share=0.1, reasoning={'enabled': False})
-det_local = local(cache_file('lm-api-determinism-v1', 'local'))
+N_LOCAL = 5  # 30 local replies of 13-18 s stay inside the 30-min target
+det_flagship = rec.hosted(FLAGSHIP, rec.cache('lm-api-determinism-v1',
+                                              'flagship'),
+                          share=0.1, reasoning={'enabled': False})
+det_local = local(rec.cache('lm-api-determinism-v1', 'local'))
 on_flagship, alone = await asyncio.gather(
     chat_batch(det_flagship, replicas(0, 20), concurrency=4),
     chat_batch(det_local, replicas(0, N_LOCAL), concurrency=1))
-# Under load: background lanes cycle through 64 other test problems; their
-# responses are logged, never replayed (replay skips them). A server that
-# runs one request at a time gets one lane: more would only queue, and no
-# lane can change the composition of a batch.
 BACKGROUND = [i for i in range(len(gsm_test)) if i not in GSM_IDS][:64]
-LANES = 8 if LOCAL_BATCHES else 1
+LANES = 8 if LOCAL_BATCHES else 1  # more would queue at a serial server
 print(f'under load: {LANES} background lane(s); the local server '
       f'{"batches" if LOCAL_BATCHES else "runs one request at a time"}')
-done, failures = asyncio.Event(), []
 
-async def lanes():
-    background = d2l.ChatAPI(
-        LOCAL_URL, LOCAL_MODEL, mode='live', http_client=LOCAL_HTTP,
-        cache=cache_file('lm-api-determinism-v1', 'background'),
-        default_params=NO_THINK_LOCAL)
-    CLIENTS.append(background)
-    async def lane(j):
-        while not done.is_set():
-            messages = d2l.fewshot_prompt(GSM_DEMOS, gsm_test.question[
-                BACKGROUND[j % 64]], template='chat_multi')
-            try:
-                await background.achat(messages, replica=j // 64,
-                                       **GSM_PARAMS)
-            except Exception as e:
-                failures.append(e)
-            j += LANES
-    await asyncio.gather(*(lane(j) for j in range(LANES)))
+def background(j):  # request j of the load: 64 other problems, cycled
+    return {'messages': d2l.fewshot_prompt(GSM_DEMOS, gsm_test.question[
+        BACKGROUND[j % 64]], template='chat_multi'), 'replica': j // 64,
+            **GSM_PARAMS}
 
-load = asyncio.ensure_future(lanes()) if LOCAL_LIVE else None
-if load is not None:
-    await asyncio.sleep(2)  # let the lanes fill
-under_load = await chat_batch(det_local, replicas(100, N_LOCAL),
-                              concurrency=1)
-done.set()
-if load is not None:
-    await load
-    print(f'background: {len(failures)} failed requests')
+load = (d2l.BackgroundLoad(local(rec.cache('lm-api-determinism-v1',
+                                           'background'), mode='live'),
+                           background, LANES)
+        if LOCAL_LIVE else contextlib.nullcontext())
+async with load:  # the load's responses are logged, never replayed
+    under_load = await chat_batch(det_local, replicas(100, N_LOCAL),
+                                  concurrency=1)
+if LOCAL_LIVE:
+    print(f'background: {len(load.failures)} failed requests')
 rows = []
 for condition, results in (('flagship', on_flagship), ('local alone', alone),
                            ('local under load', under_load)):
-    assert not any(isinstance(r, Exception) or thinks(r) for r in results)
+    assert not any(isinstance(r, Exception) or d2l.chat_thinks(r)
+                   for r in results)
     n = len(results) // len(DET_IDS)  # replicas per problem
     for k, i in enumerate(DET_IDS):
         texts = [r.text for r in results[n * k:n * k + n]]
@@ -1176,13 +983,12 @@ for condition, results in (('flagship', on_flagship), ('local alone', alone),
         firsts = [len(os.path.commonprefix([t, modal]))  # in characters
                   for t in texts if t != modal]
         rows.append({'condition': condition, 'problem': i, 'replicas': n,
-                     'distinct completions': len(set(texts)),
-                     'first divergent character, min': min(
-                         firsts, default=None),
-                     'median': np.median(firsts) if firsts else None,
-                     'distinct answers': len({d2l.extract_answer(t)
-                                              for t in texts})})
-pd.DataFrame(rows)
+                     'distinct': len(set(texts)),
+                     'diverges at (min)': min(firsts, default=None),
+                     '(median)': np.median(firsts) if firsts else None,
+                     'answers': len({d2l.extract_answer(t) for t in texts})})
+print(pd.DataFrame(rows).to_string(index=False, na_rep='-', formatters={
+    'diverges at (min)': '{:.0f}'.format, '(median)': '{:g}'.format}))
 ```
 
 <!-- Placeholder (stage 2): the local server is stopped and its port freed. -->
@@ -1195,102 +1001,47 @@ else:
     print('no local server in replay')
 ```
 
-<!-- Placeholder (stage 2): what every client did: calls, cache hits, retries, spend, and one provider and one served id per arm. Quote the recording's totals from the committed-caches line (it includes the background lanes and the local probe); the closed-model probe's spend is outside the committed caches. -->
+<!-- Placeholder (stage 2): what every client's recording did over all its sessions: live calls, retries, 429s, failed attempts and spend; one provider and one served id per arm; the openai SDK version of the recording. Quote the recording's totals from the committed-caches line (it includes the background lanes and the local probe); the closed-model probe's spend is outside the committed caches. -->
 
 ```{.python .input #api-manifest}
 %%tab pytorch
-def recorded(api):
-    """Totals of the whole recording from a client's calls log: live calls,
-    retries, 429s, failed attempts, USD, served ids and providers, and the
-    listing's and the provider's cost of the responses with usage.cost."""
-    t, served, providers = collections.Counter(), set(), set()
-    for call in calls_log(api):
-        ok = call.get('status') == 200
-        t['live calls'] += call['attempt'] == 0
-        t['retries'] += call['attempt'] > 0
-        t['429s'] += call.get('status') == 429
-        t['failed'] += not ok
-        if not ok:
-            continue
-        t['USD'] += call.get('cost') or 0.0
-        served.add(str(call.get('served_model')))
-        providers.add(str(call.get('provider')))
-        cost = call['usage'].get('cost')
-        if cost is not None and api.price is not None:
-            t['usage cost'] += cost
-            t['listing cost'] += d2l.api_cost(call['usage'], api.price)
-    return t, sorted(served), sorted(providers)
-
-rows, by_folder, seen = [], collections.defaultdict(dict), set()
-for api in CLIENTS:
-    if api.calls_path in seen:
-        continue
-    seen.add(api.calls_path)
-    m, (t, served, providers) = api.manifest(), recorded(api)
-    folder = os.path.dirname(os.path.abspath(api.cache_path))
-    by_folder[folder][m['cache']] = (m, {**t, 'served': served,
-                                         'providers': providers})
-    key = next((k for k in API_SHA1 if k in folder), 'scratch')
-    rows.append({'cache': os.path.join(key, m['cache']), 'calls': m['calls'],
-                 'cache hits': m['cache_hits'], **{k: t[k] for k in (
-                     'live calls', 'retries', '429s', 'failed', 'USD')},
-                 'usage cost': t['usage cost'],
-                 'listing cost': t['listing cost'],
-                 'served': ', '.join(served),
-                 'providers': ', '.join(providers)})
-    if api.price is not None:  # claim 8: one provider, one served id
-        assert len(served) <= 1 and len(providers) <= 1, (m['cache'], t)
+rows, ids = [], set()
+for api in {api.calls_path: api for api in rec.clients}.values():
+    t = d2l.api_recorded(api)  # totals of every session of the recording
+    key = next((k for k in API_SHA1 if k in api.cache_path), 'scratch')
+    arm = os.path.splitext(os.path.basename(api.cache_path))[0]
+    rows.append({'cache': key.replace('lm-api-', '') + '/' + arm,
+                 **{k: t.get(k, 0) for k in (
+                     'live calls', 'retries', '429s', 'failed', 'USD',
+                     'usage cost', 'listing cost')}})
+    if api.price is not None:  # one provider and one served id per arm
+        assert len(t['served']) <= 1 and len(t['providers']) <= 1, t
+    ids.update((re.sub(r'@([0-9a-f]{8})[0-9a-f]+', r'@\1', s),
+                'local' if p == 'None' else p)
+               for s, p in zip(t['served'], t['providers']))
 manifest = pd.DataFrame(rows)
-spent = sum(api.spent_usd for api in CLIENTS)  # this run's live calls
-total = sum(row['USD'] for row in rows)  # every session of the recording
+spent = sum(api.spent_usd for api in rec.clients)  # this run's live calls
+total = manifest.USD.sum()  # every session of the recording
 assert spent <= COST_CAP_USD and total <= COST_CAP_USD, (spent, total)
-usage_sum = sum(row['usage cost'] for row in rows)
-if usage_sum:  # only responses whose provider reported usage.cost
-    listing_sum = sum(row['listing cost'] for row in rows)
-    print(f'cost from the listing / cost the provider reported: '
-          f'{listing_sum / usage_sum:.4f}')
+reported = manifest['usage cost'].sum()  # where the provider sent a cost
+if reported:
+    print('cost from the listing / cost the provider reported: '
+          f'{manifest["listing cost"].sum() / reported:.4f}')
 if API_MODE != 'replay':  # sessions accumulate in each artifact's manifest
-    now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-    for folder, arms in by_folder.items():
-        if os.path.abspath(RECORD_DIR) not in folder:
-            continue
-        path, old = os.path.join(folder, 'manifest.json'), {}
-        if os.path.exists(path):
-            with open(path) as f:
-                old = json.load(f)
-        sessions = old.get('sessions', []) + [{
-            'created': now, 'clients': {a: m for a, (m, _) in arms.items()}}]
-        totals = {**old.get('recorded', {}),  # arms this run did not use
-                  **{a: r for a, (_, r) in arms.items()}}
-        with open(path, 'w') as f:
-            json.dump({'updated': now, 'recorded': totals,
-                       'sessions': sessions}, f, indent=1,
-                      ensure_ascii=False)
-key = os.environ.get('OPENROUTER_API_KEY')
-if key:  # the key may occur in no cache, calls log or manifest
-    files = [os.path.join(d, f) for root in (
-        RECORD_DIR, os.path.join(D2L_API_LOG_DIR, 'scratch'))
-             for d, _, fs in os.walk(root) for f in fs]
-    hits = []
-    for name in files:
-        with open(name, 'rb') as f:
-            if key.encode() in f.read():
-                hits.append(name)
-    assert not hits, f'the API key occurs in {len(hits)} files'
-    print(f'key material: none in {len(files)} files')
-print(f'clients of this notebook: {sum(row["live calls"] for row in rows)} '
-      f'live calls, {total:.4f} USD of {COST_CAP_USD}; this run '
-      f'{spent:.4f} USD')
-committed = collections.Counter()  # every arm of every committed cache
-for k in API_SHA1:
-    path = os.path.join(api_dir(k), 'manifest.json')
-    if os.path.exists(path):  # the listing and the fields table have none
-        with open(path) as f:
-            for arm in json.load(f)['recorded'].values():
-                committed.update({k: arm.get(k, 0)
-                                  for k in ('live calls', 'USD')})
-print(f'the committed caches: {committed["live calls"]} live calls, '
-      f'{committed["USD"]:.4f} USD, background lanes and the local probe '
-      f'included; the closed-model probe is not committed')
-manifest.drop(columns=['usage cost', 'listing cost'], errors='ignore')
+    d2l.write_api_manifests(rec.clients, RECORD_DIR)
+if os.environ.get('OPENROUTER_API_KEY'):  # in no cache, log or manifest
+    n = d2l.assert_key_absent([RECORD_DIR, os.path.join(
+        D2L_API_LOG_DIR, 'scratch')], os.environ['OPENROUTER_API_KEY'])
+    print(f'key material: none in {n} files')
+print(f'clients of this notebook: {manifest["live calls"].sum()} live '
+      f'calls, {total:.4f} USD of {COST_CAP_USD}; this run {spent:.4f} USD')
+committed = d2l.api_committed([rec.folder(k) for k in API_SHA1])
+print(f'committed caches: {committed["live calls"]} live calls, '
+      f'{committed["USD"]:.4f} USD, openai SDK {", ".join(committed["sdk"])}')
+print('(the background lanes and the local probe included, the '
+      'closed-model probe not)')
+for s, p in sorted(ids):
+    print(f'served id {s} by {p}')
+print(manifest.drop(columns=['usage cost', 'listing cost']).to_string(
+    index=False, formatters={'USD': '{:.6f}'.format}))
 ```

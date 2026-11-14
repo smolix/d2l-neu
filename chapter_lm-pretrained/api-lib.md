@@ -10,8 +10,12 @@ uses these symbols at import time). It holds the scaffolding of
 `ChatResult`, the errors `ReplayMiss` and `CostCapExceeded`, the parameter
 merge, response parsing and `Retry-After` helpers, the `ChatAPI` class body
 (the section shows its `async def achat`, merged in by
-`@d2l.add_to_class`), `price_from_listing`, `openrouter_api`,
-`LocalChatServer` and `FakeChatServer`. Every block is tagged
+`@d2l.add_to_class`), `listing_endpoint`, `price_from_listing`,
+`openrouter_api`, `LocalChatServer`, `FakeChatServer`, and the recording
+plumbing the section only calls: `APIRecording` (cache folders, the listing
+snapshot, cost shares), the calls-log totals and manifests, the key scan,
+the field probe (`probe_endpoint`, `record_field_probe`) and
+`BackgroundLoad`. Every block is tagged
 `%%tab pytorch`; `openai`, `httpx`, `asyncio` and the other modules outside
 the library preamble are imported inside the functions that use them, so
 `import d2l.torch` works without them.
@@ -138,7 +142,7 @@ def _retry_after(value):
             return None
 
 #@save
-def _check_closed_loop(results, c):
+def check_closed_loop(results, c):
     """Raise ValueError unless results can be one closed loop of c recorded
     in one run: no d2l.ReplayMiss or d2l.CostCapExceeded among them, not a
     mix of cached and live responses, never more than c in flight, and
@@ -569,18 +573,12 @@ def _api_window(override, day, hhmm):
         hhmm >= start or hhmm < end)
 
 #@save
-def price_from_listing(listing, model_id, provider, *, when=None):
-    """The d2l.PricePoint (USD per million tokens) of one provider's endpoint
-    of model_id in an OpenRouter listing snapshot: listing['endpoints']
-    [model_id] holds the endpoint rows of /api/v1/models/<id>/endpoints (or
-    that whole response). provider matches a row's tag exactly, else its
-    provider_name or the slug before the tag's '/'. Listed prices are USD
-    per token with the row's `discount` already applied (Novita's 0.165 per
-    million at discount 0.45 is 0.3 x 0.55), so it is not applied again.
-    Rows with time-window pricing.overrides need when, an aware datetime
-    whose UTC weekday and time select the window."""
-    import datetime  # not in the d2l library preamble
-    import decimal
+def listing_endpoint(listing, model_id, provider):
+    """The endpoint row of one provider of model_id in an OpenRouter listing
+    snapshot: listing['endpoints'][model_id] holds the endpoint rows of
+    /api/v1/models/<id>/endpoints (or that whole response). provider matches
+    a row's tag exactly, else its provider_name or the slug before the tag's
+    '/'; ValueError unless exactly one row matches."""
     rows = listing['endpoints'][model_id]
     if isinstance(rows, dict):
         rows = rows['data']['endpoints']
@@ -591,7 +589,20 @@ def price_from_listing(listing, model_id, provider, *, when=None):
     if len(match) != 1:
         raise ValueError(f'{len(match)} endpoints of {model_id} match '
                          f'{provider!r}: {[r.get("tag") for r in match]}')
-    pricing = match[0]['pricing']
+    return match[0]
+
+#@save
+def price_from_listing(listing, model_id, provider, *, when=None):
+    """The d2l.PricePoint (USD per million tokens) of one provider's endpoint
+    of model_id in an OpenRouter listing snapshot (the row that
+    d2l.listing_endpoint picks). Listed prices are USD per token with the
+    row's `discount` already applied (Novita's 0.165 per million at
+    discount 0.45 is 0.3 x 0.55), so it is not applied again.
+    Rows with time-window pricing.overrides need when, an aware datetime
+    whose UTC weekday and time select the window."""
+    import datetime  # not in the d2l library preamble
+    import decimal
+    pricing = d2l.listing_endpoint(listing, model_id, provider)['pricing']
     if pricing.get('overrides'):
         if when is None or when.tzinfo is None:
             raise ValueError(f'{provider} prices {model_id} by time window: '
@@ -945,4 +956,433 @@ class FakeChatServer:
                 self._release(start + self.service_time)
         finally:
             self.in_flight -= 1
+```
+
+```{.python .input #api-lib-recording}
+%%tab pytorch
+#@save
+def chat_thinks(r):
+    """Whether a chat result reasoned: reasoning tokens in its usage, or
+    reasoning text that is not only whitespace (a streamed empty think block
+    arrives as '\n\n')."""
+    return bool(r.usage['reasoning_tokens'] or (r.reasoning or '').strip())
+
+#@save
+def api_unpack(key):
+    """Download a registered zip (sha1 checked) and unpack it once, into a
+    folder named by the sha1 (a re-registered key gets a fresh folder)."""
+    path = d2l.download_keyed(key)
+    folder = os.path.join(os.path.dirname(path),
+                          'files-' + d2l.DATA_HUB[key][1][:12])
+    if not os.path.isdir(folder):
+        with zipfile.ZipFile(path) as z:
+            z.extractall(folder + '.part')
+        os.replace(folder + '.part', folder)
+    return folder
+
+#@save
+def api_calls(calls_path):
+    """The live attempts in a client's calls log (d2l.ChatAPI.calls_path)
+    over every session of a recording; a torn last line, from a killed run,
+    is skipped."""
+    if calls_path is None or not os.path.exists(calls_path):
+        return []
+    calls = []
+    with open(calls_path, encoding='utf-8') as f:
+        for line in f:
+            try:
+                calls.append(json.loads(line))
+            except ValueError:
+                pass
+    return calls
+
+#@save
+class APIRecording:
+    """The caches, the listing and the shared cost cap of one recording. In
+    mode 'replay' the folder of an artifact key is its unpacked registered
+    zip; in 'record' and 'live' it is record_dir/<key>, seeded once from the
+    zip when the key is registered (the downloaded file itself is never
+    appended to). Every client made through it is kept in `clients`."""
+    def __init__(self, mode, record_dir, cost_cap_usd, providers):
+        self.mode, self.record_dir = mode, record_dir
+        self.cost_cap_usd, self.providers = cost_cap_usd, providers
+        self.listing, self.clients, self.shares = None, [], {}
+
+    def folder(self, key):
+        """The folder of one artifact (see the class docstring)."""
+        if self.mode == 'replay':
+            if key not in d2l.DATA_HUB:
+                raise KeyError(f'{key} is not registered yet: record it '
+                               f'first (D2L_API_MODE=record)')
+            return d2l.api_unpack(key)
+        folder = os.path.join(self.record_dir, key)
+        if not os.path.isdir(folder):
+            try:
+                shutil.copytree(d2l.api_unpack(key), folder)
+            except Exception as e:  # not registered, or the download failed
+                os.makedirs(folder, exist_ok=True)
+                print(f'{key}: recording into an empty cache ({e!r:.60})')
+        return folder
+
+    def cache(self, key, arm):
+        """The JSONL cache file of one arm of an artifact."""
+        return os.path.join(self.folder(key), arm + '.jsonl')
+
+    def snapshot_listing(self, models, weights,
+                         key='lm-api-listing-v1'):
+        """The router listing of this recording, from <folder of key>/
+        listing.json; when that is absent (a recording), it is taken now:
+        the router's rows and endpoint rows of each model (free GETs) and the
+        parameter count of each model's open weights on the Hub at a pinned
+        commit (weights maps a model to (repo, revision))."""
+        import datetime  # not in the d2l library preamble
+        path = os.path.join(self.folder(key), 'listing.json')
+        if not os.path.exists(path):
+            import huggingface_hub  # not in the d2l library preamble
+            url = 'https://openrouter.ai/api/v1/models'
+            def get(u):
+                r = requests.get(u, timeout=60)
+                r.raise_for_status()
+                return r.json()['data']
+            rows = {m['id']: m for m in get(url)}
+            now = datetime.datetime.now(datetime.timezone.utc)
+            snapshot = {'retrieved': now.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                        'models': {m: rows[m] for m in models},
+                        'endpoints': {m: get(f'{url}/{m}/endpoints')[
+                            'endpoints'] for m in models}, 'hf': {}}
+            for m, (repo, rev) in weights.items():
+                info = huggingface_hub.HfApi().model_info(repo, revision=rev)
+                snapshot['hf'][m] = {'repo': repo, 'revision': rev,
+                                     'params': info.safetensors.total}
+            with open(path, 'w') as f:
+                json.dump(snapshot, f, indent=1)
+        with open(path) as f:
+            self.listing = json.load(f)
+        return self.listing
+
+    def hosted(self, model, cache, *, share, **kwargs):
+        """A d2l.openrouter_api client of model at its pinned provider that
+        may spend the fixed fraction `share` of cost_cap_usd over the whole
+        recording, less what earlier sessions spent on this cache. The
+        shares sum to at most 1, so concurrent clients cannot pass the cap
+        together."""
+        self.shares[cache] = share
+        if sum(self.shares.values()) > 1 + 1e-9:
+            raise ValueError(f'the cost shares sum to more than 1: '
+                             f'{self.shares}')
+        earlier = sum(c.get('cost') or 0.0 for c in d2l.api_calls(
+            os.path.splitext(cache)[0] + '.calls.jsonl'))
+        return self.add(d2l.openrouter_api(
+            model, self.providers[model], listing=self.listing, cache=cache,
+            mode=self.mode,
+            cost_cap_usd=max(0.0, share * self.cost_cap_usd - earlier),
+            **kwargs))
+
+    def add(self, api):
+        """Keep a client for the manifest; returns it."""
+        self.clients.append(api)
+        return api
+
+#@save
+def api_recorded(api):
+    """Totals of a whole recording from a client's calls log: live calls,
+    retries, 429s, failed attempts, USD, the listing's and the provider's
+    cost of the responses with usage.cost, and the sorted served ids and
+    providers."""
+    t, served, providers = collections.Counter(), set(), set()
+    for call in d2l.api_calls(api.calls_path):
+        ok = call.get('status') == 200
+        t['live calls'] += call['attempt'] == 0
+        t['retries'] += call['attempt'] > 0
+        t['429s'] += call.get('status') == 429
+        t['failed'] += not ok
+        if not ok:
+            continue
+        t['USD'] += call.get('cost') or 0.0
+        served.add(str(call.get('served_model')))
+        providers.add(str(call.get('provider')))
+        cost = call['usage'].get('cost')
+        if cost is not None and api.price is not None:
+            t['usage cost'] += cost
+            t['listing cost'] += d2l.api_cost(call['usage'], api.price)
+    return {**t, 'served': sorted(served), 'providers': sorted(providers)}
+
+#@save
+def write_api_manifests(clients, record_dir):
+    """Append this session to the manifest.json of every cache folder under
+    record_dir that one of the clients uses: per arm the session's
+    d2l.ChatAPI.manifest() and the recording's totals (d2l.api_recorded);
+    arms this session did not use keep their totals."""
+    by_folder, seen = collections.defaultdict(dict), set()
+    for api in clients:
+        if api.calls_path in seen:
+            continue
+        seen.add(api.calls_path)
+        folder = os.path.dirname(os.path.abspath(api.cache_path))
+        m = api.manifest()
+        by_folder[folder][m['cache']] = (m, d2l.api_recorded(api))
+    now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    for folder, arms in by_folder.items():
+        if os.path.abspath(record_dir) not in folder:
+            continue
+        path, old = os.path.join(folder, 'manifest.json'), {}
+        if os.path.exists(path):
+            with open(path) as f:
+                old = json.load(f)
+        sessions = old.get('sessions', []) + [{
+            'created': now, 'clients': {a: m for a, (m, _) in arms.items()}}]
+        totals = {**old.get('recorded', {}),
+                  **{a: r for a, (_, r) in arms.items()}}
+        with open(path, 'w') as f:
+            json.dump({'updated': now, 'recorded': totals,
+                       'sessions': sessions}, f, indent=1,
+                      ensure_ascii=False)
+
+#@save
+def assert_key_absent(roots, key):
+    """Raise AssertionError if the bytes of key occur in any file under the
+    folders roots; returns the number of files read."""
+    files = [os.path.join(d, f) for root in roots
+             for d, _, fs in os.walk(root) for f in fs]
+    hits = []
+    for name in files:
+        with open(name, 'rb') as f:
+            if key.encode() in f.read():
+                hits.append(name)
+    assert not hits, f'the API key occurs in {len(hits)} files'
+    return len(files)
+
+#@save
+def api_committed(folders):
+    """Totals over every arm in the manifest.json of each folder that has
+    one: live calls, USD, and the SDK versions that made live calls."""
+    totals, sdks = collections.Counter(), set()
+    for folder in folders:
+        path = os.path.join(folder, 'manifest.json')
+        if not os.path.exists(path):  # the listing and the fields table
+            continue
+        with open(path) as f:
+            m = json.load(f)
+        for arm in m['recorded'].values():
+            totals.update({k: arm.get(k, 0) for k in ('live calls', 'USD')})
+        for session in m['sessions']:
+            sdks.update(c['sdk'] for c in session['clients'].values()
+                        if c.get('sdk') and c.get('live_calls'))
+    return {**totals, 'sdk': sorted(sdks)}
+
+#@save
+class BackgroundLoad:
+    """An async context manager that keeps `lanes` requests in flight
+    through api while its block runs: lane j sends request(j), then
+    request(j + lanes), ..., where request(i) returns the keyword arguments
+    of one api.achat call (messages included). The block starts once the
+    lanes had `warmup` seconds to fill; when it ends, each lane stops after
+    its current request. Failed requests are kept in `failures`."""
+    def __init__(self, api, request, lanes, warmup=2.0):
+        self.api, self.request, self.lanes = api, request, lanes
+        self.warmup, self.failures = warmup, []
+
+    async def _lane(self, j):
+        while not self._done.is_set():
+            kwargs = dict(self.request(j))
+            try:
+                await self.api.achat(kwargs.pop('messages'), **kwargs)
+            except Exception as e:
+                self.failures.append(e)
+            j += self.lanes
+
+    async def __aenter__(self):
+        import asyncio  # not in the d2l library preamble
+        self._done = asyncio.Event()
+        self._task = asyncio.gather(*(self._lane(j)
+                                      for j in range(self.lanes)))
+        await asyncio.sleep(self.warmup)
+        return self
+
+    async def __aexit__(self, *exc):
+        self._done.set()
+        await self._task
+```
+
+```{.python .input #api-lib-probe}
+%%tab pytorch
+#@save
+def _probe_tests(story, count, rules, base, on, off, max_tokens,
+                 temperature):
+    """field -> (requests as (messages, replica, params), rule mapping the
+    client and the results to (honoured?, evidence)) of the field probe;
+    base is the request body every test sends, on and off the bodies of the
+    thinking switch. rules['seed'] and rules['stop'] are the caller's
+    detection rules. The seed test samples at temperature 1 only where the
+    endpoint lists temperature (with require_parameters an unlisted field is
+    rejected). Evidence holds flags, counts and lengths, never response
+    text: a closed model's outputs may not be committed."""
+    json_q = [{'role': 'user',
+               'content': 'What is 6 times 7? Answer in JSON.'}]
+    schema = {'type': 'json_schema', 'json_schema': {
+        'name': 'answer', 'strict': True, 'schema': {
+            'type': 'object', 'properties': {'answer': {'type': 'integer'}},
+            'required': ['answer'], 'additionalProperties': False}}}
+
+    def is_answer(text):  # exactly {"answer": <integer>}
+        try:
+            out = json.loads(text)
+        except ValueError:
+            return False
+        return (isinstance(out, dict) and set(out) == {'answer'} and
+                type(out['answer']) is int)
+
+    def n_choices(api, a):  # further choices are kept in the cache's extra
+        return max(1, len(api.entries(a.request_hash)[0]['extra'].get(
+            'choices', [])))
+
+    def covered(api, a):  # top-5 log-probabilities for every token
+        n, out = len(a.logprobs or []), a.usage['completion_tokens']
+        full = all(len(t) == 5 for _, _, t in a.logprobs or [])
+        status = ('honoured' if full and n >= out - 1 else  # the end token
+                  'partial' if n else 'ignored')
+        return status, f'{n} of {out} tokens'
+
+    def capped(api, a):  # reasoning tokens are bounded by the cap as well
+        o, r = (a.usage[k] or 0 for k in ('completion_tokens',
+                                          'reasoning_tokens'))
+        if r > o:  # usage contradicts itself: no verdict on the cap
+            return 'inconsistent', f'{o} completion < {r} reasoning tokens'
+        return o <= 16, f'{o} completion, {r} reasoning tokens'
+
+    def echoed(api, a):  # prompt log-probabilities, or the prompt echoed
+        lp = 'prompt_logprobs' in api.entries(a.request_hash)[0]['extra']
+        echo = count[0]['content'] in a.text
+        return lp or echo, f'prompt_logprobs: {lp}, echo: {echo}'
+
+    def p(body=base, **kw):
+        return {'max_tokens': max_tokens, **kw,
+                **({'extra_body': body} if body else {})}
+    t = {'temperature': 1} if temperature else {}  # else the default
+    temp = t.get('temperature', 'default')
+    thinks = d2l.chat_thinks
+    return {
+        'seed': ([(story, 0, p(**t, seed=7)), (story, 1, p(**t, seed=7)),
+                  (story, 0, p(**t, seed=8))],
+                 lambda api, a, b, c: (rules['seed'](a, b, c), (
+                     f'7 = 7: {a.text == b.text}, 8 differs: '
+                     f'{c.text != a.text}, temperature {temp}'))),
+        'n=2': ([(count, 0, p(n=2))], lambda api, a: (
+            n_choices(api, a) == 2, f'{n_choices(api, a)} choices returned')),
+        'logprobs, top 5': ([(count, 0, p(logprobs=True, top_logprobs=5))],
+                            covered),
+        "stop=['5']": ([(count, 0, p(stop=['5']))], lambda api, a: (
+            rules['stop'](a),
+            f"has 4: {'4' in a.text}, has 5: {'5' in a.text}")),
+        'response_format': ([(json_q, 0, p(response_format=schema))],
+                            lambda api, a: (is_answer(a.text), (
+                                f'parses as {{answer: int}}: '
+                                f'{is_answer(a.text)}, '
+                                f'{len(a.text)} characters'))),
+        'thinking switch': ([(count, 0, p(body=on, max_tokens=256)),
+                             (count, 0, p(body=off))], lambda api, a, b: (
+            thinks(a) and not thinks(b),
+            f'on {thinks(a)}, off {thinks(b)}')),
+        'max_completion_tokens=16': (
+            [(story, 0, p(max_tokens=None, max_completion_tokens=16))],
+            capped),
+        'prompt log-probabilities': (  # vLLM's two fields
+            [(count, 0, p(body={**(base or {}), 'prompt_logprobs': 1,
+                                'echo': True}))],
+            echoed),
+        'stream usage': ([(count, 0, p(stream=True))], lambda api, a: (
+            a.usage['completion_tokens'] is not None, 'final chunk'))}
+
+#@save
+async def probe_endpoint(name, api, base, on, off, max_tokens, model_id, *,
+                         story, count, rules, temperature):
+    """Rows (endpoint, field, status, evidence, UTC date) of the field
+    probe of one endpoint: one test per request field, each sending only
+    the field it probes (d2l._probe_tests), then GET /v1/models and four
+    concurrent requests against one (latency ratio and 429s). A request that
+    fails after the client's retries is 'rejected' (4xx) or 'error'."""
+    import asyncio  # not in the d2l library preamble
+    today = time.strftime('%Y-%m-%d', time.gmtime())
+
+    def day(results):  # UTC date of the newest live call behind them
+        return max(r.created for r in results)[:10]
+
+    def failure(e):  # (status, evidence) of a request that failed
+        status = getattr(e, 'status_code', None)
+        kind = 'rejected' if status and 400 <= status < 500 else 'error'
+        return kind, f'{status or type(e).__name__}: {e}'[:80]
+
+    rows = []
+    for field, (requests, rule) in d2l._probe_tests(
+            story, count, rules, base, on, off, max_tokens,
+            temperature).items():
+        try:
+            results = [await api.achat(m, replica=k, **q)
+                       for m, k, q in requests]
+        except (d2l.ReplayMiss, d2l.CostCapExceeded):
+            raise
+        except Exception as e:  # after the client's retries; never cached
+            status, evidence, date = *failure(e), today
+        else:
+            status, evidence = rule(api, *results)  # a bool, or a status
+            if not isinstance(status, str):
+                status = 'honoured' if status else 'ignored'
+            evidence, date = evidence[:80], day(results)
+        rows.append({'endpoint': name, 'field': field, 'status': status,
+                     'evidence': evidence, 'date': date})
+    try:  # a live GET, never cached
+        listed = any(i.startswith(model_id) for i in await asyncio.to_thread(
+            api.models))
+        status, evidence = ('honoured' if listed else 'ignored',
+                            f'lists {model_id}: {listed}')
+    except d2l.ReplayMiss:  # a replayed client cannot list: no verdict
+        raise
+    except Exception as e:
+        status, evidence = failure(e)
+    rows.append({'endpoint': name, 'field': '/v1/models', 'status': status,
+                 'evidence': evidence, 'date': today})
+    params = {'max_tokens': max_tokens,
+              **({'extra_body': base} if base else {})}
+    one = await api.achat(count, replica=10, **params)
+    four = await d2l.chat_batch(api, [
+        {'messages': count, 'replica': k, **params} for k in range(11, 15)],
+        concurrency=4)
+    ratio = max(r.t_total for r in four) / one.t_total
+    n_429 = sum(r.n_429 or 0 for r in [one, *four])  # retries add waits
+    verdict = ('rate-limited' if n_429 else 'batched' if ratio < 2
+               else 'serialized' if ratio > 3 else 'partial')
+    rows.append({'endpoint': name, 'field': '4 concurrent requests',
+                 'status': verdict,
+                 'evidence': f'latency x {ratio:.2f}, {n_429} 429s',
+                 'date': day([one, *four])})
+    return rows
+
+#@save
+async def record_field_probe(path, endpoints, *, local_name, listing,
+                             providers, **kwargs):
+    """Probe every endpoint at once (name -> (client, base, on, off,
+    max_tokens, model id); keyword arguments go to d2l.probe_endpoint) and
+    write the rows to the CSV at path. The seed test samples at temperature
+    1 where the router's listing has temperature for the pinned provider,
+    and always for a model the listing lacks (a local server). Without the
+    local endpoint (no GPU here) the recorded local column of the old CSV
+    is kept."""
+    import asyncio  # not in the d2l library preamble
+    def temperature(model_id):
+        return model_id not in listing['endpoints'] or 'temperature' in (
+            d2l.listing_endpoint(listing, model_id, providers[model_id])[
+                'supported_parameters'])
+    rows = await asyncio.gather(*(
+        d2l.probe_endpoint(name, *args, temperature=temperature(args[-1]),
+                           **kwargs) for name, args in endpoints.items()))
+    fields = pd.DataFrame([r for rs in rows for r in rs])
+    if local_name not in endpoints:  # keep the recorded local column
+        old = (pd.read_csv(path) if os.path.exists(path)
+               else pd.DataFrame({'endpoint': []}))
+        old = old[old.endpoint == local_name]
+        if not len(old):
+            raise ValueError('no recorded local column: record on a GPU host')
+        print('local server column kept from', old.date.max())
+        fields = pd.concat([fields, old], ignore_index=True)
+    fields.to_csv(path, index=False)
 ```

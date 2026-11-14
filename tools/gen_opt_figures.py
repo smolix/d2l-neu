@@ -58,7 +58,7 @@ def fig_critical_damping():
     # regime labels for the better-conditioned (blue) curve
     ax.text(0.145, 0.585, "overdamped:\nmonotone, slow", color="black",
             fontsize=12.5, ha="center", va="center")
-    ax.text(0.785, 0.60, "underdamped:\noscillates, rate $\\sqrt{\\beta}$",
+    ax.text(0.785, 0.60, "underdamped:\noscillates, factor $\\sqrt{\\beta}$",
             color="black", fontsize=12.5, ha="center", va="center")
     # the head stops just under the sqrt(beta) curve instead of piercing it
     ax.annotate("", xy=(0.86, np.sqrt(0.86) - 0.03), xytext=(0.86, 0.77),
@@ -68,9 +68,9 @@ def fig_critical_damping():
     ax.set_xlim(0.0, 0.97)
     ax.set_ylim(0.5, 1.06)
     ax.set_xlabel(r"momentum $\beta$", fontsize=13, color="black")
-    ax.set_ylabel("convergence rate per step", fontsize=13, color="black")
+    ax.set_ylabel("contraction factor per step", fontsize=13, color="black")
     # black ticks/spines, like the chapter's other function plots (_fn_axes)
-    ax.tick_params(labelsize=11, colors="black")
+    ax.tick_params(labelsize=12.5, colors="black")
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
     for s in ("left", "bottom"):

@@ -57,6 +57,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #momentum-1}
+%%tab pytorch
+import random
+```
+
 ## An Ill-Conditioned Valley
 
 The valley `d2l.f_valley` of :numref:`sec_gd` curves gently along $x_1$,
@@ -69,12 +74,7 @@ it from $(-5, -2)$ and `d2l.show_trace_2d` draws the path over the contour
 lines. Gradient descent, `d2l.gd_2d`, ignores the state. We run it at
 $\eta = 0.4$:
 
-```{.python .input #momentum-an-ill-conditioned-problem-1}
-%%tab pytorch, jax
-h1, h2 = d2l.VALLEY_CURVATURES  # Curvatures of the valley along x1 and x2
-f_valley, valley_grad = d2l.f_valley, d2l.valley_grad
-d2l.show_trace_2d(f_valley, d2l.train_2d(d2l.gd_2d, valley_grad, eta=0.4))
-```
+<!-- WRITER: cell momentum-an-ill-conditioned-problem-1 (gradient descent at eta = 0.4, a repeat of the run in sec_gd) is cut (MOM-2); its two alias lines moved into the divergent run below. The sentence "We run it at $\eta = 0.4$:" and the paragraph after it now describe no plot: reduce to a clause, as the structure asks (keep the factors 0.92 and -0.6 if wanted, they are arithmetic). -->
 
 In each coordinate a step of gradient descent multiplies the distance to
 the minimum by $1 - \eta h$. At $\eta = 0.4$ the factor is $0.92$ along
@@ -87,6 +87,8 @@ throws $x_2$ farther up the opposite wall than the last:
 
 ```{.python .input #momentum-an-ill-conditioned-problem-2}
 %%tab pytorch, jax
+h1, h2 = d2l.VALLEY_CURVATURES  # Curvatures of the valley along x1 and x2
+f_valley, valley_grad = d2l.f_valley, d2l.valley_grad
 d2l.train_2d(d2l.gd_2d, valley_grad, eta=0.6);
 ```
 
@@ -310,6 +312,8 @@ past it rises again as $\sqrt{\beta}$.
 ![Convergence rate per step, the contraction factor of the error, of heavy-ball momentum on a single quadratic mode, as a function of the momentum $\beta$. Below the critical value $\beta_\textrm{c} = (1 - \sqrt{\eta\lambda})^2$ the iteration is overdamped and slow; at $\beta_\textrm{c}$ it is fastest; beyond it the rate degrades gently as $\sqrt{\beta}$. Worse conditioning (smaller $\eta\lambda$, dashed) pushes $\beta_\textrm{c}$ toward one, which is why large momentum values are the common default.](../img/mdl-opt-critical-damping.svg)
 :label:`fig_opt_critical_damping`
 
+<!-- WRITER: MOM-8: the figure's y axis now reads "contraction factor per step" (was "convergence rate per step"), its tick labels match the in-figure labels, and the underdamped label reads "oscillates, factor sqrt(beta)". Start the caption with "Contraction factor per step" and drop "Convergence rate per step" / "the rate degrades" so caption and axis use one term. -->
+
 The $\sqrt{\kappa}$ law is a statement about quadratics. On general
 objectives it holds near a minimum, where the quadratic approximation of
 the loss applies, and the evidence that momentum speeds up the training of
@@ -318,121 +322,129 @@ deep networks is empirical :cite:`Sutskever.Martens.Dahl.ea.2013`.
 the matching lower bound: no method built from gradients has a better
 dependence on $\kappa$ in the worst case.
 
-## Implementation
+## Momentum on Data
 
-### From Scratch
+<!-- WRITER: the airfoil cells (momentum-implementation-from-scratch-1/-2/-3, momentum-concise-implementation, and momentum-nesterov-momentum-2 below) are cut (MOM-9: five runs between 0.244 and 0.287, no gain shown), with the from-scratch update sgd_momentum, its tab notes and the train_with_rule / train_with_optimizer helpers (deleted from the library in sec_sgd). This section replaces "Implementation" (structure 5). The large-batch arm is the structure's fallback, softmax regression on Fashion-MNIST at full batch: FashionCNN at b = 6,000 did not pass the acceptance test (see the WRITER note after the repeats cell). Predictions to state before the sweep cell: at full batch, where curvature limits the step (raw pixels are not centered, so the problem is badly conditioned), momentum is stable at an effective step eta/(1-beta) far beyond the plain ceiling and reaches the target in far fewer steps; on the CNN at b = 32, where noise limits it, the best rates differ by 1/(1-beta) = 10 and the two tie at the same effective step. Momentum in the frameworks is one argument: torch.optim.SGD(..., momentum=beta) implements eq_momentum as written (dampening=0); optax.sgd(lr, momentum=beta) chains optax.trace, the velocity of eq_momentum, with a scaling by -eta. Those two facts were tab notes of the cut concise cell; keep them as one tab note each at the cell that defines make_sgd. -->
 
-Compared with minibatch SGD, momentum keeps one buffer per parameter, the
-velocity, of the same shape as the parameter. The training function
-`d2l.train_with_rule` of :numref:`subsec_sgd-airfoil` provides the `states`
-argument for it. That function trains a linear regression model on the
-airfoil data with a given update rule and returns the loss over the
-examples processed.
+We train two models on the Fashion-MNIST training set
+(:numref:`sec_fashion_mnist`), each by SGD with and without momentum. The
+first is softmax regression, a single linear layer from the pixels to the
+ten logits: its loss is convex, and we train it on all 60,000 images at
+every step, so no sampling noise limits it. The second is `FashionCNN` of
+:numref:`subsec_fashioncnn`, trained on minibatches of 32 images, where
+sampling noise does. The training set sits on the device, and `Batches`
+cuts a fresh random order into minibatches on every pass;
+`d2l.train_steps` asks a data object only for `train_dataloader()`.
 
-```{.python .input #momentum-implementation-from-scratch-1}
+```{.python .input #momentum-momentum-on-a-network-1}
 %%tab pytorch
-def init_momentum_states(feature_dim):
-    device = d2l.try_gpu()  # Where get_airfoil puts the data
-    return (d2l.zeros((feature_dim, 1), device=device),
-            d2l.zeros(1, device=device))
+fashion = d2l.FashionMNIST()
+X = fashion.train.data[:, None].to(d2l.try_gpu()) / 255  # NCHW
+y = fashion.train.targets.to(d2l.try_gpu())
+
+class Batches:
+    """The examples X, y on the GPU, in a new random order on every pass."""
+    def __init__(self, X, y, batch_size):
+        self.X, self.y, self.batch_size = X, y, batch_size
+
+    def train_dataloader(self):
+        order = torch.randperm(len(self.y), device=self.y.device)
+        return ((self.X[i], self.y[i])
+                for i in order.view(-1, self.batch_size))
 ```
 
-```{.python .input #momentum-implementation-from-scratch-1}
+```{.python .input #momentum-momentum-on-a-network-1}
 %%tab jax
-def init_momentum_states(feature_dim):
-    return [d2l.zeros((feature_dim, 1)), d2l.zeros(1)]
+fashion = d2l.FashionMNIST()
+X = jnp.asarray(fashion.train[0][..., None], jnp.float32) / 255  # NHWC
+y = jnp.asarray(fashion.train[1], jnp.int32)
+
+class Batches:
+    """The examples X, y on the device, in a new random order on every pass."""
+    def __init__(self, X, y, batch_size):
+        self.X, self.y, self.batch_size = X, y, batch_size
+        self.key = d2l.get_key()  # Advanced on every pass
+
+    def train_dataloader(self):
+        self.key, key = jax.random.split(self.key)
+        order = jax.random.permutation(key, len(self.y))
+        return ((self.X[i], self.y[i])
+                for i in order.reshape(-1, self.batch_size))
 ```
 
-```{.python .input #momentum-implementation-from-scratch-2}
+Softmax regression starts from zero weights. `make_sgd(beta)` returns the
+optimizer with momentum `beta` in the form that `d2l.lr_sweep` expects.
+
+```{.python .input #momentum-momentum-on-data-1}
 %%tab pytorch
-def sgd_momentum(params, states, hyperparams):
-    for p, v in zip(params, states):
-        with torch.no_grad():
-            v[:] = hyperparams['momentum'] * v + p.grad
-            p[:] -= hyperparams['lr'] * v
-        p.grad.zero_()
+def softmax_regression():
+    """A linear layer from the pixels to the logits, starting at zero."""
+    net = nn.Sequential(nn.Flatten(), nn.Linear(28 * 28, 10))
+    nn.init.zeros_(net[1].weight)
+    nn.init.zeros_(net[1].bias)
+    return net
+
+make_sgd = lambda beta: lambda model, lr: torch.optim.SGD(
+    model.parameters(), lr, momentum=beta)
+new_seed = lambda: random.getrandbits(31)
 ```
 
-```{.python .input #momentum-implementation-from-scratch-2}
+```{.python .input #momentum-momentum-on-data-1}
 %%tab jax
-def sgd_momentum(params, grads, states, hyperparams):
-    states = [hyperparams['momentum'] * v + g for v, g in zip(states, grads)]
-    return [p - hyperparams['lr'] * v for p, v in zip(params, states)], states
+def softmax_regression(rngs):
+    """A linear layer from the pixels to the logits, starting at zero."""
+    return nnx.Sequential(lambda X: X.reshape(len(X), -1),
+                          nnx.Linear(28 * 28, 10, rngs=rngs,
+                                     kernel_init=nnx.initializers.zeros))
+
+make_sgd = lambda beta: lambda lr: optax.sgd(lr, momentum=beta)
+new_seed = d2l.get_seed
 ```
 
-:begin_tab:`pytorch`
-The update changes each velocity and each parameter in place and clears
-the gradient for the next minibatch, as `sgd` of :numref:`sec_sgd` does.
-:end_tab:
+For each model and each $\beta \in \{0, 0.9\}$ we sweep the learning
+rate in factors of two with `d2l.lr_sweep` and keep the rate with the
+lowest final loss. Softmax regression trains for 1,000 steps, the CNN for
+3,000. For the best rate of each arm we print the first step at which the
+smoothed training loss reaches a target, 0.5 for softmax regression and 0.3
+for the CNN (`d2l.steps_to_reach`), and the final loss.
 
-:begin_tab:`jax`
-The update returns the new parameters and the new velocities, which
-`train_with_rule` passes back at the next step.
-:end_tab:
-
-The effective step $\eta/(1-\beta)$ predicts how momentum interacts with
-the learning rate. We train with minibatches of 10 examples for two epochs
-in three configurations: plain SGD at $\eta = 0.05$; momentum
-$\beta = 0.9$ at $\eta = 0.005$, the same effective step; and
-$\beta = 0.9$ at $\eta = 0.05$, ten times the effective step.
-
-```{.python .input #momentum-implementation-from-scratch-3}
+```{.python .input #momentum-momentum-on-a-network-2}
 %%tab pytorch, jax
-def train_momentum(lr, momentum, num_epochs=2):
-    data_iter, feature_dim = d2l.get_airfoil(batch_size=10)
-    return d2l.train_with_rule(sgd_momentum, init_momentum_states(feature_dim),
-                               {'lr': lr, 'momentum': momentum}, data_iter,
-                               feature_dim, num_epochs, plot=False)
-
-runs = {r'$\beta = 0$, $\eta = 0.05$': train_momentum(0.05, 0),
-        r'$\beta = 0.9$, $\eta = 0.005$': train_momentum(0.005, 0.9),
-        r'$\beta = 0.9$, $\eta = 0.05$': train_momentum(0.05, 0.9)}
-d2l.plot([h['examples'] for h in runs.values()],
-         [h['loss'] for h in runs.values()], 'examples processed', 'loss',
-         legend=list(runs), ylim=[0.22, 0.4])
+# Model, batch size, steps, target loss
+setups = {'softmax regression': (softmax_regression, 60000, 1000, 0.5),
+          'FashionCNN': (d2l.FashionCNN, 32, 3000, 0.3)}
+grids = {('softmax regression', 0.0): [0.125, 0.25, 0.5, 1],
+         ('softmax regression', 0.9): [0.1, 0.2, 0.4, 0.8],
+         ('FashionCNN', 0.0): [0.05, 0.1, 0.2, 0.4],
+         ('FashionCNN', 0.9): [0.005, 0.01, 0.02, 0.04]}
+best = {}
+for (name, beta), lrs in grids.items():
+    make_model, b, num_steps, target = setups[name]
+    curves, _ = d2l.lr_sweep(make_model, make_sgd(beta), Batches(X, y, b),
+                             lrs, new_seed(), num_steps, verbose=False)
+    best[name, beta] = min(lrs, key=lambda lr: d2l.final_loss(curves[lr]))
+    c = curves[best[name, beta]]
+    print(f'{name:<18}  beta={beta}  best lr {best[name, beta]:<5g}  steps to '
+          f'{target}: {d2l.steps_to_reach(c, target)}  final loss '
+          f'{d2l.final_loss(c):.3f}')
 ```
 
-The two runs with the same effective step are almost indistinguishable.
-On this small, noisy problem momentum brings no speedup: the loss is
-limited by the noise of the minibatch gradients, and momentum at a matched
-effective step leaves the iterates about as noisy as plain SGD
-(Exercise :exref:`ex_momentum-momentum-under-minibatch-noise` shows why).
-The third run keeps $\eta$ and adds momentum, which multiplies the
-effective step by ten, and its loss stays higher and fluctuates more. The
-rule of :numref:`subsec_momentum-timescale` holds: when $\beta$ goes up,
-$\eta$ comes down by the factor $1 - \beta$.
+Three runs at each best rate, from three new initializations and data
+orders, give the spread of these numbers.
 
-### Concise Implementation
-
-Momentum is a single argument of the SGD optimizer in every framework.
-`d2l.train_with_optimizer` of :numref:`sec_sgd` trains the same linear model
-with a framework optimizer. At $\eta = 0.005$ and $\beta = 0.9$ it
-reproduces the from-scratch run.
-
-```{.python .input #momentum-concise-implementation}
-%%tab pytorch
-data_iter, _ = d2l.get_airfoil(batch_size=10)
-d2l.train_with_optimizer(torch.optim.SGD, {'lr': 0.005, 'momentum': 0.9},
-                         data_iter);
+```{.python .input #momentum-momentum-on-a-network-3}
+%%tab pytorch, jax
+for (name, beta), lr in best.items():
+    make_model, b, num_steps, target = setups[name]
+    runs = [d2l.lr_sweep(make_model, make_sgd(beta), Batches(X, y, b), [lr],
+                         new_seed(), num_steps, verbose=False)[0][lr]
+            for _ in range(3)]
+    print(f'{name:<18}  beta={beta}  lr {lr:<5g}  steps:',
+          *[d2l.steps_to_reach(c, target) for c in runs], '  final loss:',
+          *[f'{d2l.final_loss(c):.3f}' for c in runs])
 ```
 
-```{.python .input #momentum-concise-implementation}
-%%tab jax
-data_iter, _ = d2l.get_airfoil(batch_size=10)
-d2l.train_with_optimizer(
-    optax.sgd, {'learning_rate': 0.005, 'momentum': 0.9}, data_iter);
-```
-
-:begin_tab:`pytorch`
-`torch.optim.SGD` implements :eqref:`eq_momentum` as written: with its
-default `dampening=0` it adds each gradient to $\beta$ times the stored
-velocity.
-:end_tab:
-
-:begin_tab:`jax`
-`optax.sgd` with `momentum=0.9` chains `optax.trace`, which keeps the
-velocity of :eqref:`eq_momentum`, with a scaling by $-\eta$.
-:end_tab:
+<!-- WRITER: measured, development runs on GPU (not captured): PyTorch and JAX, one sweep and three repeats per arm per notebook run. Softmax regression, full batch, 1,000 steps: plain best lr 0.125, 625 steps to loss 0.5, final loss 0.472; momentum 0.9 best lr 0.4 (effective step 4, 32 times the plain best), 100 steps to 0.5, final loss 0.365. Identical in both tabs and in every repeat (zero start, full batch: the only randomness left is the order of a sum), so the run-to-run range is zero and the sixfold gain in steps is firm. FashionCNN, b = 32, 3,000 steps (four notebook runs, two per tab): plain best lr 0.2 in every run; momentum best lr 0.02 in three runs and 0.04 in one, so the best rates differ by a factor of 10 (once 5, one grid step). Steps to loss 0.3: plain 1,225 to 2,000, momentum 1,075 to 1,750; final loss: plain 0.264 to 0.300, momentum 0.255 to 0.299. The ranges overlap: at the small batch the two tie, at a tenfold smaller rate for momentum. Do not state a winner on the CNN. Not printed by the notebook (do not quote numbers): FashionCNN at b = 6,000 (1,000 steps, five seeds per tab) gained about twofold in steps to 0.3 (plain 0.4: 575 to 825; momentum 0.08: 300 to 375), but momentum's best grid point 0.16 sits at its stability edge (steps 225 to 550, one of five PyTorch runs stuck at ln 10), so three repeats did not give a gain three times the spread; this is why the fallback arm is softmax regression. -->
 
 ## Nesterov Momentum
 
@@ -488,32 +500,7 @@ $\sqrt{\kappa}$ rate, with a proof that is not confined to quadratics
 :cite:`Nesterov.2018`. :numref:`subsec_mdl-momentum-acceleration`
 states the result, proves it on quadratics, and cites the general proof.
 
-The SGD optimizer of each framework offers Nesterov momentum as the flag
-`nesterov=True`, which is off by default. The implementation is a rewrite
-of :eqref:`eq_nesterov` that takes the gradient at the parameters it
-stores, so the look-ahead needs no extra gradient evaluation. Exercise
-:exref:`ex_momentum-two-forms-nesterov-momentum` works out how these
-parameters relate to the iterates of :eqref:`eq_nesterov`.
-
-```{.python .input #momentum-nesterov-momentum-2}
-%%tab pytorch
-d2l.train_with_optimizer(
-    torch.optim.SGD,
-    {'lr': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter);
-```
-
-```{.python .input #momentum-nesterov-momentum-2}
-%%tab jax
-d2l.train_with_optimizer(
-    optax.sgd,
-    {'learning_rate': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter);
-```
-
-On the airfoil data the loss curve is nearly the same as with plain
-momentum. At a batch size of 10 the sampling noise is much larger than the
-correction from the look-ahead. The correction matters when curvature
-rather than noise limits progress, as in full-batch or large-batch training
-with $\beta$ close to 1.
+<!-- WRITER: cell momentum-nesterov-momentum-2 (Nesterov on the airfoil data) is cut with the other airfoil runs; the two paragraphs that stood here (the nesterov=True flag, and "On the airfoil data the loss curve is nearly the same ... matters when curvature rather than noise limits progress") lose their cell. Keep the flag in a sentence (torch.optim.SGD(..., nesterov=True), optax.sgd(..., nesterov=True); off by default; the library form needs no extra gradient evaluation, Exercise ex_momentum-two-forms-nesterov-momentum); the data claim has no run behind it now: cut it, or state it only as what the large-batch arm of "Momentum on a Network" shows for heavy ball. Also (structure 5, reviewer): the printed step 20 is not the place to compare overshoot (step 20: Nesterov x1 = 0.218 vs heavy ball 0.196; largest overshoot of x1 0.67 vs 1.13). -->
 
 Momentum fixes the slow progress along the flat directions of a valley,
 but it does so with one learning rate for all coordinates, and that rate
@@ -618,6 +605,8 @@ momentum cannot do is give different coordinates different step sizes.
        effect of momentum with the prediction of the first item.
    :exlabel:`ex_momentum-momentum-under-minibatch-noise`
 
+<!-- WRITER: item 2 of the exercise above uses d2l.get_airfoil with d2l.train_with_rule and sgd_momentum, which no longer exist (train_with_rule is deleted from the library; sgd_momentum was cut with the airfoil cells). Rewrite it on the network of "Momentum on a Network": Batches(X, y, b) for b in {32, 256, 6000}, beta in {0, 0.9} at a matched eta/(1-beta), d2l.lr_sweep, final loss and spread of the last 100 losses. Worklist: also add the averaged form m_t = beta m_{t-1} + (1-beta) g_t and PyTorch's dampening. -->
+
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1070)
 :end_tab:
@@ -702,7 +691,7 @@ then the airfoil regression data.
 Gradient descent, $\eta = 0.4$, 20 steps: factor $1 - \eta h$ is $0.92$
 along $x_1$ and $-0.6$ along $x_2$.
 
-@!momentum-an-ill-conditioned-problem-1
+<!-- WRITER: cell momentum-an-ill-conditioned-problem-1 is cut (MOM-2); this slide loses its plot: fold its two factors into the next slide or drop it. -->
 :::
 
 ::: {.slide title="At η = 0.6 Gradient Descent Diverges Along the Steep Wall"}
@@ -835,24 +824,22 @@ Factors $0.9998$ and $0.980$ per step: about 23,000 steps against about
 :::
 :::
 
-::: {.slide title="Momentum Needs One Buffer per Parameter"}
-[Implementation]{.kicker}
+<!-- WRITER: the two airfoil slides ("Momentum Needs One Buffer per Parameter", "At a Matched Effective Step, Momentum and SGD Train Alike") are cut with their cells. The two slides below carry the network result; titles and takeaways to be written from the measured numbers (full batch: momentum gains in steps; CNN at b = 32: tie at a tenfold smaller rate). -->
 
-@momentum-implementation-from-scratch-2
+::: {.slide title="Momentum on Data"}
+[Momentum on data]{.kicker}
 
-The velocity has the shape of its parameter; `train_with_rule` carries it in
-`states`.
+SGD with $\beta = 0$ and $\beta = 0.9$, best rate of a factor-2 grid:
+softmax regression at full batch (60,000 images), `FashionCNN` at 32
+images per batch:
+
+@!momentum-momentum-on-a-network-2
 :::
 
-::: {.slide title="At a Matched Effective Step, Momentum and SGD Train Alike"}
-[Implementation]{.kicker}
+::: {.slide title="Three Repeats at the Best Rates"}
+[Momentum on data]{.kicker}
 
-Airfoil data, minibatches of 10, two epochs:
-
-@!momentum-implementation-from-scratch-3
-
-Same $\eta/(1-\beta)$: same curve. Ten times the effective step: higher,
-noisier loss.
+@!momentum-momentum-on-a-network-3
 :::
 
 ::: {.slide title="Nesterov Takes the Gradient Where the Velocity Is Headed"}
@@ -880,13 +867,7 @@ Same $\eta = 0.3$, $\beta = 0.8$ as the underdamped heavy-ball run:
   $O(1/k)$, optimal among gradient methods.
 :::
 
-::: {.slide title="Nesterov Is One Flag, Off by Default"}
-[Nesterov momentum]{.kicker}
-
-@momentum-nesterov-momentum-2
-
-At batch size 10 the curve matches plain momentum: noise dwarfs the look-ahead.
-:::
+<!-- WRITER: slide "Nesterov Is One Flag, Off by Default" is cut with cell momentum-nesterov-momentum-2 (airfoil); the flag can go as a bullet on the previous slide. The goals slide and "Momentum Is the Fourth Stop" still name the airfoil data as running example / use; replace by softmax regression at full batch and FashionCNN at b = 32. -->
 
 ::: {.slide title="Momentum Turns κ into √κ"}
 [Wrap-up]{.kicker}

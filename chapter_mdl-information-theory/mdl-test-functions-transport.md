@@ -315,21 +315,23 @@ for name, y, k, pop in [
           f'(population {pop:.4f})')
 ```
 
-The linear kernel reports a value near zero because the means agree: a few
-thousandths in most runs, and never much below $-0.005$. The quadratic kernel
-reports about $9$, give or take $3$; its estimate involves fourth powers and is
-noisy. The RBF kernel reports about $0.094$, give or take $0.03$, and for the
-shifted pair about $0.047$, typically within $0.02$, an error that can reach a
-third of the value. When the two distributions are equal the estimate is far
-steadier, within a few thousandths of zero and sometimes below it, because the
-errors of the three averages then cancel to first order. Where the indicators
-found a gap of $1$ between two samples of one distribution, the kernel finds
-none.
+The linear kernel reports a value near zero because the means agree. Its
+estimate is the squared difference of the two sample means, less an estimate
+of the variance of that difference, about $(1 + 4)/1{,}000 = 0.005$. It
+therefore cannot fall much below $-0.005$, while about one run in twenty
+exceeds $+0.015$. The quadratic kernel reports about $9$, give or take $3$;
+its estimate involves fourth powers and is noisy. The RBF kernel reports about
+$0.094$, give or take $0.03$, and for the shifted pair about $0.047$, typically
+within $0.02$, an error that can reach a third of the value. Between the two
+samples of $\mathcal{N}(0, 1)$ the RBF estimate is far steadier, within a few
+thousandths of zero and sometimes below it, because the errors of the three
+averages then cancel to first order. Where the indicators found a gap of $1$
+between two samples of one distribution, the kernel finds none.
 
-The estimator measures the size of a difference poorly and detects its presence
-well, and this makes it a *two-sample test*: from $1{,}000$ points, a value of
-a few hundredths is strong evidence that the samples differ in distribution. No
-critic was trained and no density was evaluated.
+The RBF estimator measures the size of a difference poorly and detects its
+presence well, and this makes it a *two-sample test*: from $1{,}000$ points, a
+value of a few hundredths is strong evidence that the samples differ in
+distribution. No critic was trained and no density was evaluated.
 
 ### The Witness
 
@@ -364,8 +366,8 @@ d2l.plot(grid, [witness / np.abs(witness).max(), norm.pdf(grid),
 The witness is positive where $P$ has more mass and negative where $Q$ has
 more. It changes sign near $x = 0.25$; with $1{,}000$ points per sample the
 crossing moves by a tenth or two from draw to draw. The printed gap agrees with
-the $\textrm{MMD}^2$ of the previous cell to about $0.001$, and the difference
-is the self-pairs.
+the last line of the previous output, the unbiased estimate for the same two
+samples, to about $0.001$, and the difference is the self-pairs.
 
 The ends of the plot say more than the crossing. A model that lowers the gap
 moves each of its samples uphill on the test function, so the slope of the test
@@ -552,8 +554,12 @@ surprising that a linear program should collapse this far. We watch it happen
 once, on the six points of :numref:`fig_mdl-ot-transport-plan`. Between
 neighboring points the two CDFs differ by $0.25$, $0.35$, $0.5$, $0.35$ and
 $0.25$, which sum to $1.7$, the shaded area in the figure. The cell computes
-this sum and then solves the linear program over plans, where a plan is a
-$6 \times 6$ matrix with row sums $p$ and column sums $q$.
+$W_1$ three times. It adds up the five gaps. It solves the linear program over
+plans, where a plan is a $6 \times 6$ matrix with row sums $p$ and column sums
+$q$. And it builds the monotone plan of Step 2, in which each route carries the
+overlap of two quantile intervals, and adds up its cost. The last line of the
+output compares the plan that the linear program returned with the monotone
+plan.
 
 ```{.python .input #divergences-distances-w1}
 atoms = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
@@ -584,14 +590,16 @@ print(f'LP plan = monotone plan  : {np.allclose(plan_lp, mono)}, '
       f'mass the LP plan moves leftward: {np.tril(plan_lp, -1).sum():.2f}')
 ```
 
-Both routes give $W_1 = 1.7$: one sum over five gaps replaces a $36$-variable
-linear program.
+All three computations give $W_1 = 1.7$: one sum over five gaps replaces a
+$36$-variable linear program. The last line is the unexpected one. The linear
+program did not return the monotone plan. It returned another plan of the same
+cost, which also moves no mass to the left.
 
-The optimal plan is not unique here. $F_P \geq F_Q$ at every point, so no mass
-has to move left, and for a plan that moves mass only rightward
-$|x - y| = y - x$. Its cost is then the difference of the two means,
-$3.35 - 1.65 = 1.7$, whatever else the plan does. The plan drawn in the figure
-is the monotone one, and it is one of many optimal plans.
+The optimal plan is not unique here, then, and the reason is simple.
+$F_P \geq F_Q$ at every point, so no mass has to move left, and for a plan
+that moves mass only rightward $|x - y| = y - x$. Its cost is then the
+difference of the two means, $3.35 - 1.65 = 1.7$, whatever else the plan does.
+The monotone plan, the one drawn in the figure, is one of many optimal plans.
 
 Two tools that we meet elsewhere measure transport with the square of the
 distance: the Fréchet inception distance, the other score for generated images
@@ -650,9 +658,12 @@ $\mathbf{b}$ fixed, $\mathbf{a} = \mathbf{p} / (\mathbf{K}\mathbf{b})$
 $\mathbf{b} = \mathbf{q} / (\mathbf{K}^\top \mathbf{a})$ makes the column sums
 equal to $\mathbf{q}$.
 
-The **Sinkhorn iterations** alternate these two updates. Each iteration costs
-two matrix-vector products, so the iterations run well on a GPU and can be
-differentiated through. We report the *entropic cost*, the transport cost
+The **Sinkhorn iterations** alternate these two updates, first $\mathbf{b}$
+and then $\mathbf{a}$. After the second update the row sums are right, and we
+stop once the column sums agree with $\mathbf{q}$ to within $10^{-9}$ as well.
+Each iteration costs two matrix-vector products, so the iterations run well on
+a GPU and can be differentiated through. We report the *entropic cost*, the
+transport cost
 $\sum_{ij} (\gamma_\varepsilon)_{ij} C_{ij}$ of the regularized plan without
 the entropy term. As $\varepsilon \to 0$ it approaches the unregularized
 optimum, but the iterations converge ever more slowly
@@ -660,12 +671,13 @@ optimum, but the iterations converge ever more slowly
 practical code iterates on $\log \mathbf{a}$ and $\log \mathbf{b}$ (Exercise
 :exref:`ex_mdl-divergences-distances-sinkhorn-divergences`b).
 
-To see how small $\varepsilon$ must be, we take the squared cost
-$C_{ij} = (x_i - x_j)^2$ on the six-point example, for which the monotone plan
-of :numref:`fig_mdl-ot-transport-plan` is the only optimum and its ten routes
-cost $W_2^2 = 3.5$. The cell checks this value with the linear program, runs
-Sinkhorn at three values of $\varepsilon$, and counts the routes that carry
-more than $10^{-3}$ of mass.
+To see how small $\varepsilon$ must be, and what a small $\varepsilon$ takes,
+we use the squared cost $C_{ij} = (x_i - x_j)^2$ on the six-point example, for
+which the monotone plan of :numref:`fig_mdl-ot-transport-plan` is the only
+optimum and its ten routes cost $W_2^2 = 3.5$. The cell checks this value with
+the linear program and runs Sinkhorn at three values of $\varepsilon$. For each
+it prints the number of iterations, the entropic cost, and the number of routes
+that carry more than $10^{-3}$ of mass.
 
 ```{.python .input #divergences-distances-sinkhorn}
 def sinkhorn(p, q, C, eps, tol=1e-9, max_iters=10 ** 6):
@@ -701,14 +713,18 @@ source's mass over several destinations ($25$ of the $36$ routes carry more
 than $10^{-3}$), and its cost, $4.06$, is well above the optimum. At
 $\varepsilon = 0.5$ the plan has $14$ routes and costs $3.57$. At
 $\varepsilon = 0.1$ only the ten routes of the monotone plan remain, and the
-cost is within $0.001$ of the optimum. In the heat maps a broad band sharpens
-into a staircase. The yardstick for $\varepsilon$ is the difference in cost
-between competing routes, which is of order $1$ on this grid. The last cost,
-$3.4995$, lies a shade *below* the optimum, which no plan with the right
-marginals can do: $5{,}000$ iterations at this $\varepsilon$ leave the column
-sums slightly off (Exercise
-:exref:`ex_mdl-divergences-distances-sinkhorn-divergences`c iterates to
-convergence).
+cost, $3.50002$, lies above the optimum by $2 \times 10^{-5}$. In the heat
+maps a broad band sharpens into a staircase. The yardstick for $\varepsilon$
+is the difference in cost between competing routes, which is of order $1$ on
+this grid, and a tenth of it was small enough.
+
+The iteration counts show what this accuracy takes. About $50$ iterations were
+enough at $\varepsilon = 2$ and about $190$ at $\varepsilon = 0.5$, but
+$\varepsilon = 0.1$ needed some $150{,}000$. Between the last two runs
+$\varepsilon$ fell fivefold and the work grew $800$ times. Sinkhorn iterations
+are fast only as long as the plan may stay blurred (Exercise
+:exref:`ex_mdl-test-functions-transport-sinkhorn-iterations`b measures the
+growth).
 
 ## Fixed Kernels and Trained Critics
 
@@ -724,9 +740,9 @@ halving that error takes $2^{100}$ times the data. Nobody estimates $W_1$ that
 way. A critic network searches a far smaller class than all functions of slope
 one, and Sinkhorn iterations serve where the problem is small.
 
-Kernel and critic alike begin by drawing samples from the model. What if a
-model can say how plausible a point is, and cannot easily be sampled?
-:numref:`sec_mdl-scores` compares such a model with data.
+Kernel and critic alike begin by drawing samples from the model. For some
+models that is the expensive step, and :numref:`sec_mdl-scores` asks what can
+be compared without it.
 
 ## Summary
 
@@ -810,7 +826,7 @@ on an entropically regularized plan.
        $\textrm{sign}\big(F_Q(t) - F_P(t)\big)$ between neighboring atoms, as
        in Step 4 of the proof, and check that
        $\mathbb{E}_P[g] - \mathbb{E}_Q[g]$ equals the LP value. For every
-       route $(i, j)$ that carries mass in the LP solution `res.x`, compare
+       route $(i, j)$ that carries mass in the LP solution `plan_lp`, compare
        $g(x_i) - g(x_j)$ with $|x_i - x_j|$. Why must the two agree on every
        such route for any optimal plan and any optimal test function?
     1. *Uniqueness under the squared cost.* Suppose a plan moves mass from
@@ -819,7 +835,9 @@ on an entropically regularized plan.
        same mass from $x$ to $y$ and from $x'$ to $y'$ saves
        $2(x' - x)(y' - y)$ per unit of mass, and deduce that the monotone
        plan is the only optimal one. What does the same exchange save under
-       the cost $|x - y|$ when all four moves go rightward?
+       the cost $|x - y|$ when all four moves go rightward? Find two ribbons
+       that cross in `plan_lp`, the plan that the linear program returned for
+       the six-point example, and check your answer on them.
    :exlabel:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`
 
 1. **Optimal critics on the line.** Step 4 of the proof of
@@ -914,29 +932,41 @@ on an entropically regularized plan.
        - \tfrac{1}{2} \textrm{OT}_\varepsilon(Q, Q)$ removes this bias
        :cite:`Genevay.Peyre.Cuturi.2018,Feydy.Sejourne.Vialard.ea.2019`.
        Compute $S_\varepsilon(P, Q)$ for `p_w` and `q_w` with the absolute
-       cost `C` at $\varepsilon \in \{10^{-2}, 10^{-1}, \ldots, 10^3\}$. For
-       small $\varepsilon$, carry out the Sinkhorn updates on $\log \mathbf{a}$
-       and $\log \mathbf{b}$ with `scipy.special.logsumexp`. Check that
+       cost `C` at $\varepsilon \in \{10^{-3}, 10^{-2}, \ldots, 10^3\}$. At
+       $\varepsilon = 10^{-3}$ the entries of $\mathbf{K}$ underflow, so
+       carry out the Sinkhorn updates on $\log \mathbf{a}$ and
+       $\log \mathbf{b}$ there, with `scipy.special.logsumexp`. Check that
        $S_\varepsilon$ approaches $W_1$ as $\varepsilon \to 0$ and
        $\tfrac{1}{2} \mathcal{E}(P, Q)$ as $\varepsilon \to \infty$, where
        $\mathcal{E}(P, Q) = 2\mathbb{E}|X - Y| - \mathbb{E}|X - X'| - \mathbb{E}|Y - Y'|$
        is the energy distance :cite:`Szekely.Rizzo.2013`, the expression
        :eqref:`eq_mdl-mmd2` with $-|x - y|$ in place of the kernel. Derive
        the second limit from (a).
-    1. *Convergence.* Change `sinkhorn` so that it stops when the column
-       sums match $\mathbf{q}$ to within $10^{-10}$ and returns the number
-       of iterations. With the squared cost `C2`, count the iterations at
-       $\varepsilon = 2$, $0.5$ and $0.1$ (you should find tens, hundreds,
-       and more than $10^5$). The run in the text printed $3.4995$ at
-       $\varepsilon = 0.1$. What is the converged cost, and on which side of
-       the optimum $3.5$ does it lie?
+   :exlabel:`ex_mdl-divergences-distances-sinkhorn-divergences`
+
+1. [code] **Sinkhorn iterations at small $\varepsilon$.** ● Use `sinkhorn`,
+   `p_w` and `q_w` of the six-point example.
+    1. *Stopping early.* Call `sinkhorn` with the squared cost `C2` at
+       $\varepsilon = 0.1$ and `max_iters=5000`, so that the loop ends before
+       the column sums have settled. The cost that it returns is below the
+       optimum $3.5$. Print the column sums of the returned matrix minus
+       `q_w`. Which destinations receive too little, and why does that lower
+       the cost? Why can no matrix with row sums `p_w` and column sums `q_w`
+       cost less than $3.5$?
+    1. *The number of iterations.* Count the iterations that `sinkhorn`
+       needs with `C2` at
+       $\varepsilon \in \{2, 1, 0.5, 0.3, 0.2, 0.15, 0.1\}$, and plot the
+       logarithm of the count against $1/\varepsilon$. What kind of growth do
+       the points at small $\varepsilon$ show, and what count does it predict
+       for $\varepsilon = 0.05$?
     1. *Ties.* Under the absolute cost `C` every plan that moves mass only
        rightward is optimal for `p_w` and `q_w`. Run `sinkhorn` with `C` at
        $\varepsilon = 0.1$ and $0.02$. How many routes carry mass? Show that
        the limit plan has the form $\gamma_{ij} = a_i b_j$ for $j \geq i$
-       and $0$ otherwise, and use (a) to explain why it is the plan of
-       largest entropy among the optimal plans.
-   :exlabel:`ex_mdl-divergences-distances-sinkhorn-divergences`
+       and $0$ otherwise. On plans the regularizer is $-\varepsilon$ times
+       the entropy plus a constant. Use this to explain why the limit is the
+       plan of largest entropy among the optimal plans.
+   :exlabel:`ex_mdl-test-functions-transport-sinkhorn-iterations`
 
 <!-- Discussions: forum topic to be created at deploy -->
 
@@ -1091,7 +1121,7 @@ Test pair, $\ell=1$: $\mathbb{E}\,e^{-Z^2/2}=(1+s^2)^{-1/2}$ for $Z\sim\mathcal 
 $$\boxed{\textrm{MMD}^2=3^{-1/2}+9^{-1/2}-2\cdot6^{-1/2}=0.094}$$
 :::
 
-::: {.slide title="With No Gap to Find, the Estimate Stays Within Thousandths of Zero"}
+::: {.slide title="Between Equal Distributions the RBF Estimate Stays Within Thousandths of Zero"}
 [Estimation]{.kicker}
 
 Unbiased estimate: average $k$ over pairs, leaving out the pairs of a point with itself. $1{,}000$ points per sample:
@@ -1171,7 +1201,7 @@ Left: the monotone plan and the CDFs of $P$, $Q$. Right: point masses $d$ apart.
 @fig:mdl-it-ot-transport-plan
 :::
 
-::: {.slide title="A Linear Program over 36 Routes Returns the Same 1.7"}
+::: {.slide title="A 36-Route Linear Program Returns 1.7 by a Different Plan"}
 [Worked example]{.kicker}
 
 | point | $0$ | $1$ | $2$ | $3$ | $4$ | $5$ |
@@ -1184,6 +1214,7 @@ Left: the monotone plan and the CDFs of $P$, $Q$. Right: point masses $d$ apart.
 
 ::: {.d2l-note}
 $F_P\ge F_Q$, so the best critic is $g(x)=-x$: gap $\mathbb{E}_QX-\mathbb{E}_PX=3.35-1.65=1.7$.
+Every plan that moves mass only rightward costs the same $1.7$. The monotone plan is one of many.
 :::
 :::
 
@@ -1216,10 +1247,10 @@ Two matrix–vector products per step. Small $\varepsilon$: closer to the optimu
 :::
 :::
 
-::: {.slide title="At ε = 0.1 Sinkhorn Keeps the Ten Routes of the Monotone Plan" layout="tight"}
+::: {.slide title="Ten Sharp Routes at ε = 0.1 Take Sinkhorn 150,000 Iterations" layout="tight"}
 [Entropic transport]{.kicker}
 
-Six points, squared cost, optimum $3.5$. After $5{,}000$ steps $\varepsilon=0.1$ has not quite converged: its cost is a shade below $3.5$.
+Six points, squared cost: the ten routes of the monotone plan cost $3.5$. Stop when the column sums match $\mathbf q$ to $10^{-9}$.
 
 @!divergences-distances-sinkhorn
 :::
@@ -1262,7 +1293,7 @@ The best critic is $g(x)=-\lvert x\rvert$: it tells every sample of the wider mo
 | JS, TV | functions of the ratio $p/q$ | slopes near $10^{-4}$ at $d=8$ | overlap only |
 | MMD | distance between mean features: three kernel averages | $0$, $9$, $0.094$ for linear, quadratic, RBF | a few length scales |
 | $W_1$ | least mass × distance; best critic of slope $\le1$ | $1.7$: five CDF gaps, or a linear program | every distance |
-| Sinkhorn | transport with an entropy term | $\varepsilon=0.1$: ten routes, cost within $0.001$ of $3.5$ | as transport, blurred by $\varepsilon$ |
+| Sinkhorn | transport with an entropy term | $\varepsilon=0.1$: ten routes, cost $3.50002$ against $3.5$, after $150{,}000$ iterations | as transport, blurred by $\varepsilon$ |
 
 **Next:** a model known only up to its normalizing constant offers neither a density nor cheap samples. Its slopes can still be compared.
 :::

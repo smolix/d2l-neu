@@ -504,15 +504,17 @@ what that changes when $P$ approaches $Q$.
 Maximum likelihood, the criterion behind most models in this book, minimizes
 KL with the data in the first argument. Variational inference minimizes KL with
 the model in the first argument. The two orders are the two KL rows of
-:numref:`tab_mdl-f-div-generators`, and when we fit a model $Q_\theta$ to a
-target $P$ that it cannot match, they ask for different things:
+:numref:`tab_mdl-f-div-generators`, and when we fit a model
+$Q_{\boldsymbol{\theta}}$, with density $q_{\boldsymbol{\theta}}$, to a target
+$P$ that it cannot match, they ask for different things:
 
-* **Forward KL**, $D_{\textrm{KL}}(P \,\|\, Q_\theta) = \mathbb{E}_P[\log(p/q_\theta)]$,
-  averages over the *truth*. If $q_\theta(x) \to 0$ while $p(x) > 0$, the
-  divergence blows up. Forward KL is *zero-avoiding*, or *mode-covering*:
-  the model must cover every mode of the data, that is, every region where
-  $p$ is concentrated, even if that smears mass over regions $P$ never visits.
-* **Reverse KL**, $D_{\textrm{KL}}(Q_\theta \,\|\, P) = \mathbb{E}_{Q_\theta}[\log(q_\theta/p)]$,
+* **Forward KL**, $D_{\textrm{KL}}(P \,\|\, Q_{\boldsymbol{\theta}}) = \mathbb{E}_P[\log(p/q_{\boldsymbol{\theta}})]$,
+  averages over the *truth*. If $q_{\boldsymbol{\theta}}(x) \to 0$ while
+  $p(x) > 0$, the divergence blows up. Forward KL is *zero-avoiding*, or
+  *mode-covering*: the model must cover every mode of the data, that is,
+  every region where $p$ is concentrated, even if that smears mass over
+  regions $P$ never visits.
+* **Reverse KL**, $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \,\|\, P) = \mathbb{E}_{Q_{\boldsymbol{\theta}}}[\log(q_{\boldsymbol{\theta}}/p)]$,
   averages over the *model*. The model is punished for putting mass where
   the truth has none, while modes it never visits leave the objective
   untouched. Reverse KL is *zero-forcing*, or *mode-seeking*: the model
@@ -527,7 +529,8 @@ constant. Reverse KL needs samples from the model and the density of the
 target, and a density known only up to its normalizing constant will do.
 Variational inference (:numref:`sec_mdl-latent-em-elbo`) is in that position.
 Its target $P$ is a posterior whose normalizing constant is unknown, and it
-minimizes $D_{\textrm{KL}}(Q_\theta\|P)$ over approximations $Q_\theta$.
+minimizes $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}}\|P)$ over approximations
+$Q_{\boldsymbol{\theta}}$.
 
 Where samples and densities are available on both sides, the direction is a
 decision. A student network distilled from a teacher
@@ -553,8 +556,10 @@ $0.7(-2) + 0.3(2) = -0.8$. Its variance is the variance within a component
 plus the variance of the component means, which for weights $w_1$, $w_2$ and
 means $\Delta$ apart is $w_1 w_2 \Delta^2$:
 $0.36 + 0.7 \cdot 0.3 \cdot 4^2 = 3.72$. The reverse fit we leave to a
-derivative-free optimizer over $(\mu, \log\sigma)$, started once at the origin
-and once near the minor mode, with each KL evaluated by quadrature on a grid.
+derivative-free optimizer over $\boldsymbol{\theta} = (\mu, \log\sigma)$,
+started once at the origin and once near the minor mode, with each KL evaluated
+by quadrature on a grid. For every fit the cell prints the mean, the standard
+deviation and both divergences.
 
 ```{.python .input #divergences-distances-fwd-rev-kl}
 w, mus, sigmas = np.array([0.7, 0.3]), np.array([-2.0, 2.0]), np.array([0.6, 0.6])
@@ -606,29 +611,33 @@ The forward fit lands on the prediction, $\mu = -0.800$ and
 $\sigma = 1.929 \approx \sqrt{3.72}$. It is a broad Gaussian draped across both
 modes, with substantial mass in the valley between them where $P$ has almost
 none. The reverse fit lands at $\mu = -1.998$, $\sigma = 0.603$: it matches the
-dominant component and assigns little mass to the minor one. Its divergence,
+dominant component and assigns little mass to the minor one. Its reverse KL,
 $0.356$ nats, is close to $\log(1/0.7) \approx 0.357$, the divergence of
 treating the $70\%$ component as the whole distribution. Started near the minor
-mode, the optimizer converges instead to $\mu = +1.995$, where the divergence
+mode, the optimizer converges instead to $\mu = +1.995$, where the reverse KL
 is $1.202$ nats, close to $\log(1/0.3) \approx 1.204$. Which optimum a
-variational method finds therefore depends on its initialization. Reverse KL
-is an average under the model, so a mode that the model never visits is never
-inspected. All that the objective registers is that the mode it does visit
-carries weight $0.7$, or $0.3$, in place of $1$. This is why variational
-posteriors tend to be too narrow: here the reverse fit has width $0.60$ where
-the target has standard deviation $1.93$.
+variational method finds therefore depends on its initialization.
 
-Maximum likelihood judges the same omission harshly. For the Gaussian
-$\mathcal{N}(-2, 0.6^2)$ that the reverse fit all but reproduces, forward KL
-is about $6$ nats, against $0.558$ at the forward fit. The dropped mode lies
-more than six of the model's standard deviations from its mean, where $\log q$
-is very negative (Exercise
-:exref:`ex_mdl-divergences-distances-mode-dropping`c). Reverse KL had put the
-omission at $0.356$ nats. The conventions for vanishing densities say the same
-in the limit. The function $u \log u$ has $f'(\infty) = \infty$, which makes
-any mass of $P$ where $Q$ has none infinitely costly, and $f(0) = 0$, so that
-mass of $Q$ where $P$ has none adds no term at all. For $-\log u$ the two
-values are exchanged.
+Reverse KL is an average under the model, so a mode that the model never
+visits is never inspected. All that the objective registers is that the mode it
+does visit carries weight $0.7$, or $0.3$, in place of $1$. This is why
+variational posteriors tend to be too narrow: here the reverse fit has width
+$0.60$ where the target has standard deviation $1.93$.
+
+The last two columns show how differently the two criteria judge the same
+omission. Forward KL, the criterion of maximum likelihood, puts the fit on the
+dominant mode at $5.98$ nats, more than ten times the $0.558$ of the broad fit,
+and the fit on the minor mode at $14.5$. In both, the dropped mode lies more
+than six of the model's standard deviations from its mean, where $\log q$ is
+very negative (Exercise
+:exref:`ex_mdl-divergences-distances-mode-dropping`c). Reverse KL ranks the
+first two fits the other way, $0.356$ nats against $1.27$: what it penalizes
+is the broad fit's mass in the valley, where $P$ has almost none.
+
+The conventions for vanishing densities say the same in the limit. The function
+$u \log u$ has $f'(\infty) = \infty$, which gives any mass of $P$ where $Q$ has
+none an infinite penalty, and $f(0) = 0$, so that mass of $Q$ where $P$ has
+none adds no term at all. For $-\log u$ the two values are exchanged.
 
 ## Total Variation, Pinsker's Inequality, and Data Processing
 :label:`sec_mdl-tv-pinsker`
@@ -787,7 +796,7 @@ d2l.plot([kl_pq[:2000], grid], [tv[:2000], np.sqrt(grid / 2)], 'KL (nats)',
 ```
 
 In the scatter plot every pair lies below the curve $\sqrt{\textrm{KL}/2}$. The
-median pair reaches about $0.78$ of the bound, and the largest ratio among the
+median pair reaches nearly $0.8$ of the bound, and the largest ratio among the
 $10{,}000$ comes within a few hundredths of $1$. Beyond $\textrm{KL} = 2$ the
 curve exceeds $1$ and the bound says nothing. For nearly fair coins the ratio
 climbs to $0.9899$, $0.9999$ and $0.999999$, so the constant $\tfrac{1}{2}$
@@ -985,8 +994,8 @@ divergence, after ten steps $90\%$, and after twenty $99\%$. At no step does
 the bound exceed the exact value. The overconfident critic reports zero, no
 more than the untrained one. With exact expectations, as here, an adversarial
 estimate of a divergence is therefore an underestimate, by an amount that the
-estimate itself does not reveal. With averages over samples it remains one
-only on samples that the critic was not trained on (Exercise
+estimate itself does not reveal. With averages over samples it remains one, on
+average, only for samples that the critic was not trained on (Exercise
 :exref:`ex_mdl-divergences-distances-restricted-critics`d).
 
 The update also tells us where the missing part hides. It moves $T(x)$ at a
@@ -1069,14 +1078,6 @@ the supports are.
        $d_{\mathrm{H}}$ is a metric. Find three distributions on two outcomes
        for which both $d_{\mathrm{H}}^2$ and JS violate the triangle
        inequality.
-    1. The last row of :numref:`tab_mdl-point-mass-table` is not an
-       f-divergence. For distributions on the real line with cumulative
-       distribution functions $F_P$ and $F_Q$, the Wasserstein distance of
-       :numref:`sec_mdl-optimal-transport` is the area between them,
-       $W_1(P, Q) = \int_{-\infty}^{\infty} |F_P(t) - F_Q(t)|\, dt$. Check
-       that this formula gives the last row of the table, and use it to
-       show that $W_1$ is a metric on the distributions on $\mathbb{R}$
-       with finite first moments.
    :exlabel:`ex_mdl-divergences-distances-prove-that-total-variation`
 
 1. **Cost of dropping a mode.** A model $Q$ misses part of a data
@@ -1099,23 +1100,28 @@ the supports are.
        $x$ has non-negligible density under at most one of them. Show that
        $D_{\textrm{KL}}(P\|Q) \approx w_2 \Delta^2 / (2 s^2)
        + w_1 \log w_1 + w_2 \log w_2$. Evaluate the approximation for
-       the mixture of that experiment, check it
-       with `kl(log_p(x), log_q(x, [-2.0, np.log(0.6)]), x)`, and compare it
-       with the value $0.558$ nats of $D_{\textrm{KL}}(P\|Q)$ at the forward
-       fit `th_fwd`.
+       the mixture of that experiment, and check it
+       with `kl(log_p(x), log_q(x, [-2.0, np.log(0.6)]), x)`. The experiment
+       prints two values in its forward-KL column to compare with:
+       $5.981$ nats at the reverse-KL fit, whose parameters
+       $(-1.998, 0.603)$ are not quite $(-2, 0.6)$, and $0.558$ nats at the
+       forward fit.
    :exlabel:`ex_mdl-divergences-distances-mode-dropping`
 
 1. **Local quadratic regime.** The proposition
    :eqref:`eq_mdl-f-div-local` bounds the gap between $D_f$ and
    $\tfrac12 f''(1)\, \chi^2$.
-    1. Verify $f''(1) = \tfrac{1}{4}$ for the Jensen--Shannon function and
-       $f''(1) = 1$ for both KL functions. Exercise
-       :exref:`ex_mdl-information-theory-gaussian-kl`b of
+    1. Exercise :exref:`ex_mdl-information-theory-gaussian-kl`b of
        :numref:`sec_mdl-information_theory` finds the order at which the two
        directions of the Gaussian KL divergence first differ. Which property
-       of the KL and reverse-KL functions explains that order? Rerun the
-       local-quadratic cell with $t = 0.001$ added, and explain from the
-       proposition's error term the rate at which each ratio approaches $1$.
+       of the KL and reverse-KL functions explains that order? Carry the
+       Taylor expansion of the proof one term further, and show that the
+       ratio which the local-quadratic experiment prints is
+       $1 + c\, t\, f'''(1)/f''(1) + O(t^2)$ with
+       $c = \mathbb{E}_Q[(u - 1)^3] / \big(3 \chi^2(P\|Q)\big)$, about $0.49$
+       for the running pair. Compute $f'''(1)/f''(1)$ for the four functions.
+       Why is the shortfall of reverse KL at $t = 0.01$ twice that of KL, and
+       why do squared Hellinger and JS print the same value there?
     1. The total-variation function $\tfrac{1}{2}|u - 1|$ has no second
        derivative at $1$. Let $P_t = Q + t\,(P - Q)$ for
        $t \in (0, 1]$. How do $\textrm{TV}(P_t, Q)$ and
@@ -1219,7 +1225,7 @@ the supports are.
    is tight only when the critic class contains the optimal critic. Take
    the $\chi^2$ function with the conjugate $f^*(t) = t + t^2/4$, and
    critics $T_{\boldsymbol{\theta}}(x) = \boldsymbol{\theta}^\top \boldsymbol{\phi}(x)$
-   that are linear in a feature vector $\boldsymbol{\phi}(x) \in \mathbb{R}^m$.
+   that are linear in a feature vector $\boldsymbol{\phi}(x)$.
    Write $\mathbf{m}_P = \mathbb{E}_P[\boldsymbol{\phi}]$,
    $\mathbf{m}_Q = \mathbb{E}_Q[\boldsymbol{\phi}]$ and
    $\boldsymbol{\Sigma} = \mathbb{E}_Q[\boldsymbol{\phi} \boldsymbol{\phi}^\top]$,
@@ -1234,26 +1240,27 @@ the supports are.
        What does the restricted bound certify for $P = \mathcal{N}(0, 1)$
        and $Q = \mathcal{N}(0, 4)$?
     1. Use the features $\phi_k(x) = \mathrm{He}_k\big((x - \mu_Q)/\sigma_Q\big)$
-       for $k = 0, \ldots, d$, where $\mathrm{He}_k$ are the probabilists'
+       for $k = 0, \ldots, K$, where $\mathrm{He}_k$ are the probabilists'
        Hermite polynomials (`numpy.polynomial.hermite_e.hermevander`) and
        $\mu_Q$, $\sigma_Q$ are the mean and standard deviation of $Q$.
        Compute $\mathbf{m}_P$, $\mathbf{m}_Q$ and $\boldsymbol{\Sigma}$ by
-       quadrature on a grid, and plot the value against $d \leq 10$ for the
+       quadrature on a grid, and plot the value against $K \leq 10$ for the
        pairs $\big(\mathcal{N}(1, 1), \mathcal{N}(0, 1)\big)$ and
        $\big(\mathcal{N}(0, 1), \mathcal{N}(0, 4)\big)$, together with
        their exact divergences $\chi^2 = e - 1$ and $4/\sqrt{7} - 1$. For the
        first pair the values are partial sums of a familiar series. Explain
        why from the generating function
        $e^{xt - t^2/2} = \sum_k \mathrm{He}_k(x)\, t^k / k!$ and the
-       orthogonality $\mathbb{E}[\mathrm{He}_j(Z)\, \mathrm{He}_k(Z)] = k!\, \delta_{jk}$
-       for $Z \sim \mathcal{N}(0, 1)$.
+       orthogonality of the polynomials: for $Z \sim \mathcal{N}(0, 1)$,
+       $\mathbb{E}[\mathrm{He}_j(Z)\, \mathrm{He}_k(Z)]$ is $k!$ if $j = k$
+       and $0$ otherwise.
     1. For the second pair, replace the expectations by averages over
        $n = 200$ samples from each distribution and fit
        $\boldsymbol{\theta}^\star$ on these samples. Evaluate the bound on
        the same samples and on $10^5$ fresh samples, averaged over $200$
-       repetitions, for $d \in \{2, 4, 6, 8, 10\}$. Which of the two
+       repetitions, for $K \in \{2, 4, 6, 8, 10\}$. Which of the two
        evaluations estimates a valid lower bound on $\chi^2$? Why does the
-       other one exceed the restricted value of (c) and, for large $d$, even
+       other one exceed the restricted value of (c) and, for large $K$, even
        $\chi^2$ itself?
    :exlabel:`ex_mdl-divergences-distances-restricted-critics`
 
@@ -1336,6 +1343,7 @@ $$D_f(P\Vert Q)=\mathbb{E}_{x\sim Q}\big[f\big(p(x)/q(x)\big)\big]$$
 $\mathbb{E}_Q[u]=\sum_x p(x)=1$, so Jensen gives $D_f\ge f(\mathbb{E}_Q[u])=f(1)=0$. $\blacksquare$
 :::
 
+- $D_f=0$ only for $P=Q$, if some line through $(1,0)$ lies strictly below $f$ elsewhere.
 - Running pair: $u=3,\ 0.6,\ \tfrac13$ with weights $0.2,\ 0.5,\ 0.3$.
 - KL $=0.659-0.153-0.110=0.396$ nats.
 
@@ -1361,7 +1369,7 @@ $\mathbb{E}_Q[u]=\sum_x p(x)=1$, so Jensen gives $D_f\ge f(\mathbb{E}_Q[u])=f(1)
 [Disjoint supports]{.kicker}
 
 - Where $p=0<q$: the term is $q\,f(0)$.
-- Where $q=0<p$: the term is $p\,f'(\infty)$, with $f'(\infty)=\lim_{t\to\infty}f(t)/t$.
+- Where $q=0<p$: the limit of $q\,f(p/q)$ as $q\to0$, which is $p\,f'(\infty)$ with $f'(\infty)=\lim_{t\to\infty}f(t)/t$.
 - Point masses: $D_f(\delta_0\Vert\delta_d)=f(0)+f'(\infty)$ for every $d\ne0$.
 
 | divergence function | $f(0)$ | $f'(\infty)$ | sum |
@@ -1439,14 +1447,14 @@ The choice of $f$ matters only far from the target, as early in training.
 ::: {.slide title="Forward KL Averages over the Data, Reverse KL over the Model"}
 [Forward and reverse KL]{.kicker}
 
-Fit a model $Q_\theta$ to a target $P$:
+Fit a model $Q_{\boldsymbol\theta}$ with density $q_{\boldsymbol\theta}$ to a target $P$:
 
-| | forward $D_{\textrm{KL}}(P\Vert Q_\theta)$ | reverse $D_{\textrm{KL}}(Q_\theta\Vert P)$ |
+| | forward $D_{\textrm{KL}}(P\Vert Q_{\boldsymbol\theta})$ | reverse $D_{\textrm{KL}}(Q_{\boldsymbol\theta}\Vert P)$ |
 |:--|:--|:--|
 | averages over | the target | the model |
-| infinite when | $q_\theta=0<p$ | $p=0<q_\theta$ |
+| infinite when | $q_{\boldsymbol\theta}=0<p$ | $p=0<q_{\boldsymbol\theta}$ |
 | so the model | covers every mode | may settle on one |
-| needs | samples of $P$, density $q_\theta$ | samples of $Q_\theta$, $p$ up to a constant |
+| needs | samples of $P$, density $q_{\boldsymbol\theta}$ | samples of $Q_{\boldsymbol\theta}$, $p$ up to a constant |
 | used by | maximum likelihood | variational inference |
 
 ::: {.d2l-note}
@@ -1465,7 +1473,7 @@ Target $P=0.7\,\mathcal N(-2,0.6^2)+0.3\,\mathcal N(2,0.6^2)$, model $\mathcal N
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $\mu=0.7(-2)+0.3(2)=-0.8$ and $\sigma^2=0.36+0.7\cdot0.3\cdot4^2=3.72$, so $\sigma=1.93$.
-On that mode $p\approx0.7\,q$, so reverse KL $\approx\log(1/0.7)=0.357$ nats.
+On that mode $p\approx0.7\,q$, so reverse KL $\approx\log(1/0.7)=0.357$ nats; on the other mode, $\log(1/0.3)=1.204$.
 :::
 :::
 :::
@@ -1475,7 +1483,7 @@ On that mode $p\approx0.7\,q$, so reverse KL $\approx\log(1/0.7)=0.357$ nats.
 
 @!divergences-distances-fwd-rev-kl
 
-One-mode fit: reverse KL $0.356\approx\log(1/0.7)$ nats; its forward KL is about $6$.
+Each criterion prefers its own fit. Third row: a start near the $30\%$ mode stays there.
 :::
 
 ::: {.slide title="Total Variation Is the Largest Disagreement About Any Event"}
@@ -1514,14 +1522,14 @@ A GAN discriminator (data or generated?) and a detector of generated text are su
 ::: {.slide title="Pinsker: TV Is at Most √(KL/2)"}
 [Pinsker's inequality]{.kicker}
 
-**I. Two coins** $\textrm{Ber}(a)$, $\textrm{Ber}(b)$ with heads probabilities $a$ and $b$:
-$\rho(a)=D_{\textrm{KL}}(\textrm{Ber}(a)\Vert\textrm{Ber}(b))-2(a-b)^2$ has
-$\rho(b)=\rho'(b)=0$ and $\rho''(a)=\tfrac1{a(1-a)}-4\ge0$, so $\rho\ge0$.
+**I. Two coins** $\textrm{Ber}(a)$, $\textrm{Ber}(b)$ with heads probabilities $a$ and $b$.<br>
+Let $\rho(a)=D_{\textrm{KL}}(\textrm{Ber}(a)\Vert\textrm{Ber}(b))-2(a-b)^2$.<br>
+Then $\rho(b)=\rho'(b)=0$ and $\rho''(a)=\tfrac1{a(1-a)}-4\ge0$, so $\rho\ge0$.
 
 . . .
 
-**II. Merge** the outcomes in $A^\star$ and in its complement: KL can only fall, and
-$a=P(A^\star)$, $b=Q(A^\star)$ have $a-b=\textrm{TV}$.
+**II. Merge** the outcomes in $A^\star$ and in its complement: KL can only fall
+(log-sum inequality, one Jensen step), and $a=P(A^\star)$, $b=Q(A^\star)$ have $a-b=\textrm{TV}$.
 
 . . .
 
@@ -1533,8 +1541,10 @@ Running pair: $0.4\le\sqrt{0.396/2}=0.445$. No converse: $q=0$ on a rare event g
 :::
 :::
 
-::: {.slide title="The Constant ½ Is Sharp; the Median Pair Sits Near 0.78" layout="tight"}
+::: {.slide title="The Constant ½ Is Sharp; the Median Pair Sits Near 0.8" layout="tight"}
 [Pinsker's inequality]{.kicker}
+
+$10{,}000$ random pairs on five outcomes, then a fair coin against biases $0.6$, $0.51$, $0.501$:
 
 @!divergences-distances-pinsker
 :::
@@ -1580,6 +1590,7 @@ The length is a processed text: no better.
 - The tangent of slope $t$ has intercept $-f^*(t)$.
 - Fenchel–Young: $f(u)\ge ut-f^*(t)$, with equality at $t=f'(u)$.
 - $f(u)=u\log u$: maximum where $\log u+1=t$, so $f^*(t)=e^{t-1}$.
+- $f(u)=(u-1)^2$, over all real $u$: $f^*(t)=t+t^2/4$.
 :::
 
 ::: {.col .fig}
@@ -1597,9 +1608,9 @@ Fenchel–Young at $u=p/q$ and $t=T$, multiplied by $q$:
 
 $$q\,f(p/q)\ \ge\ p\,T-q\,f^*(T)\quad\Longrightarrow\quad\boxed{D_f(P\Vert Q)\ge\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]}$$
 
-- Equality at $T^\star=f'(p/q)$.
+- Equality at $T^\star=f'(p/q)$; for $\chi^2$, $T^\star=2(p/q-1)$.
 - Both terms are averages over samples: no densities.
-- f-GAN: the critic maximizes the bound, the generator network minimizes it.
+- f-GAN: the critic maximizes the bound; the generator, the network whose samples are $Q$, minimizes it.
 
 [Assumes differentiable $f$, $p=0$ wherever $q=0$, finite expectations.]{.small}
 :::
@@ -1617,10 +1628,11 @@ $$\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]=\mathbb{E}_P[\log D]+\mathbb{E}_Q[\log(1-
 
 . . .
 
-**III.** $T^\star=f'(p/q)$ gives $D^\star=\tfrac p{p+q}$, and the value is $\boxed{2\,\textrm{JS}(P,Q)-\log4}$
+**III.** $T^\star=f'(p/q)$ gives $D^\star=\tfrac p{p+q}$, and $f=2f_{\textrm{JS}}-(u-1)\log2-\log4$.<br>
+Since $\mathbb{E}_Q[u-1]=0$, the value is $\boxed{2\,\textrm{JS}(P,Q)-\log4}$
 
 ::: {.d2l-note}
-Running pair: $2(0.0911)-1.386=-1.204$.
+Running pair: $2(0.0911)-1.386=-1.204$. Here $f_{\textrm{JS}}$ is the Jensen–Shannon function of the table.
 :::
 :::
 
@@ -1628,17 +1640,19 @@ Running pair: $2(0.0911)-1.386=-1.204$.
 [Chi-squared on the running pair · gradient ascent from T = 0]{.kicker}
 
 @!divergences-distances-f-gan-bound
+
+Exact expectations: every critic but $T^\star$ reports too little, and does not say by how much.
 :::
 
 ::: {.slide title="On Disjoint Supports the Best Critic Is Constant"}
 [Limits of the bound]{.kicker}
 
-- **Biased low.** Any critic but $T^\star$ underestimates $D_f$ (exact expectations or fresh samples), and the estimate does not say by how much.
-- **No signal when far.** With disjoint supports $p/q$ is $\infty$ on the data and $0$ on the model's samples, so $T^\star=f'(p/q)$ is one constant on each.
-- A critic that is constant on the model's samples gives the generator no gradient.
+- With disjoint supports $p/q$ is $\infty$ on the data and $0$ on the model's samples.
+- So $T^\star=f'(p/q)$ is one constant on each support: $f'(\infty)$ and $f'(0)$.
+- The generator is updated through the critic's gradient at its own samples, and a constant has gradient zero.
 
 ::: {.d2l-note .warn}
-Both limits come from the ratio $p/q$.
+The ratio $p/q$ keeps no trace of the distance between the supports, so the generator learns nothing about which way to move.
 :::
 :::
 

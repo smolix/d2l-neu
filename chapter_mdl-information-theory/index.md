@@ -32,7 +32,8 @@ measures and why it is a file length (:numref:`sec_mdl-information_theory`,
 :numref:`sec_mdl-coding-compression`). The second, from
 :numref:`sec_mdl-divergences-distances` on, asks what to use when the KL
 divergence is infinite: other functions of the density ratio, test functions
-and transport, and scores. The third turns to two variables: how much one
+and transport (:numref:`sec_mdl-test-functions-transport`), and scores
+(:numref:`sec_mdl-scores`). The third turns to two variables: how much one
 tells about the other (:numref:`sec_mdl-mutual-information`), and how much of
 that samples can show (:numref:`sec_mdl-mi-estimation`). It needs from the
 second only data processing and the critic bound, so transport and scores can
@@ -71,7 +72,7 @@ collected in :numref:`sec_mdl-information-theory-further-reading`.
 - [Elements of Information Theory — Cover & Thomas](https://onlinelibrary.wiley.com/doi/book/10.1002/047174882X) — the graduate reference that develops entropy, relative entropy, mutual information and their chain rules from first principles, with chapters on source coding, channel capacity and rate–distortion; it accompanies :numref:`sec_mdl-information_theory`, :numref:`sec_mdl-coding-compression` and :numref:`sec_mdl-mutual-information`.
 - [Information Theory, Inference, and Learning Algorithms — David MacKay](https://www.inference.org.uk/mackay/itila/) — free to read online; treats information theory and machine learning together, and its chapters on symbol codes and stream codes (including arithmetic coding) accompany :numref:`sec_mdl-coding-compression`.
 - [Information Theory: From Coding to Learning — Polyanskiy & Wu](https://www.cambridge.org/9781108832908) — a modern graduate text oriented toward statistics and learning, whose treatment of f-divergences, their variational forms and data processing accompanies :numref:`sec_mdl-divergences-distances` and :numref:`sec_mdl-mutual-information`.
-- [Computational Optimal Transport — Peyré & Cuturi](https://optimaltransport.github.io/book/) — Wasserstein distances, entropic regularization and Sinkhorn iterations for data science, the transport part of :numref:`sec_mdl-divergences-distances`; the full text is on [arXiv](https://arxiv.org/abs/1803.00567).
+- [Computational Optimal Transport — Peyré & Cuturi](https://optimaltransport.github.io/book/) — Wasserstein distances, entropic regularization and Sinkhorn iterations for data science, the transport part of :numref:`sec_mdl-test-functions-transport`; the full text is on [arXiv](https://arxiv.org/abs/1803.00567).
 - [The Minimum Description Length Principle — Peter Grünwald](https://mitpress.mit.edu/9780262072816/the-minimum-description-length-principle/) — develops learning as data compression through two-part and universal codes, the subject of :numref:`subsec_mdl-mdl`; the core ideas also appear in a [freely available tutorial](https://arxiv.org/abs/math/0406077).
 
 **Courses and lecture notes**
@@ -82,7 +83,7 @@ collected in :numref:`sec_mdl-information-theory-further-reading`.
 **Tutorials and blogs**
 
 - [Visual Information Theory — Christopher Olah](https://colah.github.io/posts/2015-09-Visual-Information/) — a visual introduction to entropy, cross-entropy, KL divergence and mutual information, for :numref:`sec_mdl-information_theory` and :numref:`sec_mdl-mutual-information`.
-- [From GAN to WGAN — Lilian Weng](https://lilianweng.github.io/posts/2017-08-20-gan/) — compares the KL, Jensen--Shannon and Wasserstein losses of generative models, the comparison of :numref:`sec_mdl-divergences-distances`.
+- [From GAN to WGAN — Lilian Weng](https://lilianweng.github.io/posts/2017-08-20-gan/) — compares the KL, Jensen--Shannon and Wasserstein losses of generative models, the comparison of :numref:`sec_mdl-divergences-distances` and :numref:`sec_mdl-test-functions-transport`.
 
 **Foundational papers**
 

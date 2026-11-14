@@ -362,7 +362,6 @@ def ksd2_ustat(x, score, ell=1.0):
     n = len(x)
     return (kappa.sum() - np.trace(kappa)) / (n * (n - 1))
 
-rng = np.random.default_rng()
 x_p = rng.standard_normal(2000)          # the data sample, P = N(0, 1)
 for name, s, pop in [('true model  N(0,1)', lambda t: -t, 0.0),
                      ('wrong model N(1,1)', lambda t: -(t - 1), 1 / np.sqrt(3))]:

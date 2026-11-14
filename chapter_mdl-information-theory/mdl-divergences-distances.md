@@ -1334,13 +1334,14 @@ $$D_f(P\|Q)\ge\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]$$
 [Assumes differentiable $f$, $P\ll Q$, finite expectations.]{.small}
 :::
 
-::: {.slide title="A Half-Trained Critic Reports 75% of the Divergence"}
-<!-- WRITER/SLIDES: the cell now trains a three-number critic by gradient ascent (bound 0, 0.224, 0.394, 0.704, 0.911, 1.001, 1.013 after 0/1/2/5/10/20/50 steps; 2T* gives 0); the title and the line 'critics T = cT*: bound chi^2 (2c - c^2)' and the note 'c = 2 reports zero' need rewriting to the run. -->
-$\chi^2$ generator, critics $T=c\,T^\star$: bound $\chi^2\,(2c-c^2)$.
+::: {.slide title="Training the Critic Climbs to the Divergence"}
+$\chi^2$ generator on three outcomes; the critic $T$, one number per outcome,
+starts at zero and takes gradient-ascent steps on the bound.
 
 @!divergences-distances-f-gan-bound
 
 ::: {.d2l-note}
-Estimates are biased low; $c=2$ reports zero.
+The bound rises to $\chi^2$ in about 20 steps and never passes it; an
+overconfident critic $2T^\star$ falls back to zero.
 :::
 :::

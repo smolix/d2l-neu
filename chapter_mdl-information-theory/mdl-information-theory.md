@@ -1055,8 +1055,8 @@ right mean for every $\sigma$, and its entropy grows without limit.
 Two matters are left unsettled. The KL divergence is infinite as soon as the
 model gives zero probability to an outcome that the data can produce, as
 happens for a generator whose samples lie on a thin surface;
-:numref:`sec_mdl-divergences-distances` builds comparisons that stay finite in
-that case. And we have counted questions and called the loss a code length
+:numref:`sec_mdl-test-functions-transport` builds comparisons that stay finite
+in that case. And we have counted questions and called the loss a code length
 without ever building a code. :numref:`sec_mdl-coding-compression` builds one
 and asks how close a real compressor gets to the entropy.
 

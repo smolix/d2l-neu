@@ -177,13 +177,13 @@ def binned_mi(x, y, bins):
     nz = p > 0                                            # occupied cells
     return float((p[nz] * np.log(p[nz] / q[nz])).sum())
 
+mi_parabola = 1.141  # by quadrature, sec_mdl-mi-nonlinear-correlation
 n = 200_000
 x = rng.standard_normal(n)
 pairs = {'rho = 0': (gauss_pair(rng, 0.0, n), 0.0),
          'rho = 0.9': (gauss_pair(rng, 0.9, n), mi_gauss(0.9)),
          'rho = 0.99': (gauss_pair(rng, 0.99, n), mi_gauss(0.99)),
-         # I(X; X^2 + 0.3 eps) by quadrature, sec_mdl-mi-nonlinear-correlation
-         'parabola': ((x, x**2 + 0.3 * rng.standard_normal(n)), 1.141)}
+         'parabola': ((x, x**2 + 0.3 * rng.standard_normal(n)), mi_parabola)}
 print('pair        truth  b = 10  b = 40  b = 160')
 for name, ((u, v), truth) in pairs.items():
     print(f'{name:10}  {truth:5.3f}'
@@ -472,7 +472,7 @@ The second bound needs neither a normalized model nor $H(X)$. It writes the
 KL divergence, and hence mutual information, as a supremum over arbitrary
 critic functions $T$, with no requirement that anything integrate to one.
 This is the convex-duality pattern behind the f-GAN construction of
-:numref:`sec_mdl-divergences-distances`.
+:numref:`sec_mdl-f-gan-dual`.
 
 **Proposition (Donsker–Varadhan bound).** *For distributions $P$ and $Q$ and
 any function $T$ for which $\mathbb{E}_P[T]$ is defined and
@@ -539,7 +539,7 @@ any other critic it is smaller than the DV bound, which is what the tangent
 inequality says. Since $e^{-1}\, \mathbb{E}_Q[e^T] = \mathbb{E}_Q[e^{T-1}]$,
 it is the f-GAN bound on the KL divergence,
 $D_{\textrm{KL}}(P \| Q) \geq \mathbb{E}_P[T] - \mathbb{E}_Q[e^{T-1}]$, that
-:numref:`sec_mdl-divergences-distances` derived from the convex conjugate of
+:numref:`sec_mdl-f-gan-dual` derived from the convex conjugate of
 $u \log u$.
 
 No logarithm of an average appears, so the minibatch value of
@@ -1044,9 +1044,7 @@ def infonce_eval(score, x, y, N):
     return np.mean([infonce_bound(score(x[i:i + N], y[i:i + N]))
                     for i in range(0, len(x), N)])
 
-def exact_np(a, b):
-    """The exact critic T = pmi on the evaluation pairs."""
-    return exact_scores(a, b, rho)
+exact_np = lambda a, b: exact_scores(a, b, rho)   # the exact critic T = pmi
 
 print('   N   ln N   learned   exact')
 for N_ev in (2, 8, 32, 128):

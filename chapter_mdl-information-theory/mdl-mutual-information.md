@@ -1243,7 +1243,7 @@ and for a Gaussian pair it keeps nothing until $\beta$ exceeds $1/\rho^2$.
    $\kappa$ that maps an input to a random output, and any two
    distributions $P$ and $Q$ of the input, the output distributions satisfy
    $D_f(P\kappa\,\|\,Q\kappa)\le D_f(P\,\|\,Q)$ for every $f$-divergence
-   (:numref:`sec_mdl-divergences-distances`). The KL divergence and
+   (:numref:`subsec_mdl-f-div-data-processing`). The KL divergence and
    $\chi^2(P\|Q)=\sum_x p(x)^2/q(x)-1$ are two of them.
     1. Let $X\to Y\to Z$ be a Markov chain. Take $P=P_{X,Y}$,
        $Q=P_X\otimes P_Y$, and the channel $\kappa$ that maps $(x,y)$ to

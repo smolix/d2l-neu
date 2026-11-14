@@ -871,8 +871,9 @@ which no tokenizer changes. Where every character is one byte, as in our
 Every code in this section needs a model whose probability for each symbol
 the encoder and the decoder can both evaluate. Two distributions known only
 through samples, such as a generator's samples and the data, give no code
-to measure. :numref:`sec_mdl-divergences-distances` builds comparisons that
-work from samples.
+to measure. :numref:`sec_mdl-divergences-distances` and
+:numref:`sec_mdl-test-functions-transport` build comparisons that work from
+samples.
 
 ## Summary
 

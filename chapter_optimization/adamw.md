@@ -2,7 +2,6 @@
 :label:`sec_adamw`
 
 <!-- WRITER: split from adam.md (structure 7). The opening below is the old "Decoupled Weight Decay" introduction; the new opening starts from the reader (every recipe since :numref:`sec_training_recipes` wrote "AdamW, weight decay 0.1"; what does 0.1 mean?). -->
-<!-- CODER (AdamW step): the cells below moved byte for byte from adam.md and still use names defined there: the from-scratch `Adam` (PyTorch) and `scale_by_adam` (JAX), `compare`, `data`, `lm_seed`, `best_adam`, `adam_lm`. This notebook does not run until they are defined here. -->
 
 Adam is almost always trained with weight decay, which shrinks the weights
 toward zero at every step (:numref:`sec_weight_decay`). Under SGD it makes
@@ -37,8 +36,8 @@ from d2l import jax as d2l
 
 ```{.python .input #adamw-2}
 %%tab pytorch
+import copy
 import random
-from functools import partial
 ```
 
 ## Penalty and Preconditioner
@@ -99,29 +98,29 @@ we follow them.
 The decoupled update adds one operation to Adam: shrink the weights, then
 take the Adam step.
 
+<!-- WRITER: AdamW is now built on the library's Adam (`torch.optim.Adam`; `optax.scale_by_adam`, the library's version of the `scale_by_adam` written in :numref:`sec_adam`), since the from-scratch Adam lives in the Adam notebook and was checked against the library there. The PyTorch class keeps its own decay coefficient (`self.weight_decay`) because `torch.optim.Adam`'s own `weight_decay` setting is the coupled form; the shrink uses each group's current learning rate, so it follows a schedule. -->
+
 ```{.python .input #adamw-adamw-from-scratch-1}
 %%tab pytorch
-class AdamW(Adam):
+class AdamW(torch.optim.Adam):
     """Adam with decoupled weight decay: shrink the weights, then step."""
     def __init__(self, params, lr=1e-3, weight_decay=0.01):
-        super().__init__(params, lr)
-        self.defaults['weight_decay'] = weight_decay  # For later groups
-        for group in self.param_groups:
-            group.setdefault('weight_decay', weight_decay)
+        super().__init__(params, lr)  # Adam's own weight_decay stays 0
+        self.weight_decay = weight_decay
 
     @torch.no_grad()
     def step(self):
         for group in self.param_groups:
             for p in group['params']:
                 if p.grad is not None:
-                    p.mul_(1 - group['lr'] * group['weight_decay'])
+                    p.mul_(1 - group['lr'] * self.weight_decay)
         super().step()
 ```
 
 ```{.python .input #adamw-adamw-from-scratch-1}
 %%tab jax
 def adamw(learning_rate, weight_decay):
-    return optax.chain(scale_by_adam(),
+    return optax.chain(optax.scale_by_adam(),
                        optax.add_decayed_weights(weight_decay),
                        optax.scale(-learning_rate))
 ```
@@ -144,16 +143,44 @@ updates we get.
 
 We check it against the library's AdamW as before, at $\lambda = 0.1$:
 
+<!-- WRITER: the check no longer calls the Adam section's `compare` (it lives in that notebook); it trains two copies of one linear model on the same least-squares data for 100 steps, ours and the library's AdamW, and prints only the largest difference between their weights: 0.0e+00 in both tabs (bit-identical, since the library performs the same operations in the same order). The first-step print is gone, so the sentence about the first step after the cell has no output behind it: drop it or state it as arithmetic. -->
+
 ```{.python .input #adamw-adamw-from-scratch-2}
 %%tab pytorch
-compare(partial(AdamW, weight_decay=0.1),
-        partial(torch.optim.AdamW, weight_decay=0.1), lr=0.01)
+X, y = torch.randn(512, 20), torch.randn(512, 1)
+net = nn.Linear(20, 1)
+twin = copy.deepcopy(net)
+for model, optimizer in [
+        (net, AdamW(net.parameters(), lr=0.01, weight_decay=0.1)),
+        (twin, torch.optim.AdamW(twin.parameters(), lr=0.01,
+                                 weight_decay=0.1))]:
+    for _ in range(100):
+        loss = F.mse_loss(model(X), y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+print('largest difference after 100 steps: '
+      f'{(net.weight - twin.weight).abs().max():.1e}')
 ```
 
 ```{.python .input #adamw-adamw-from-scratch-2}
 %%tab jax
-compare(adamw(0.01, weight_decay=0.1),
-        optax.adamw(0.01, weight_decay=0.1), lr=0.01)
+@nnx.jit
+def least_squares_step(model, optimizer, X, y):
+    grads = nnx.grad(lambda model: ((model(X) - y) ** 2).mean())(model)
+    optimizer.update(model, grads)
+
+k_X, k_y, k_w = jax.random.split(d2l.get_key(), 3)
+X, y = jax.random.normal(k_X, (512, 20)), jax.random.normal(k_y, (512, 1))
+net = nnx.Linear(20, 1, rngs=nnx.Rngs(k_w))
+twin = nnx.clone(net)
+for model, tx in [(net, adamw(0.01, weight_decay=0.1)),
+                  (twin, optax.adamw(0.01, weight_decay=0.1))]:
+    optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
+    for _ in range(100):
+        least_squares_step(model, optimizer, X, y)
+diff = jnp.abs(net.kernel[...] - twin.kernel[...]).max()
+print(f'largest difference after 100 steps: {diff:.1e}')
 ```
 
 The first step now also shrinks every weight by the factor $1 -
@@ -169,21 +196,68 @@ steps at the learning rate $\eta = 0.003$ and the common choice $\lambda =
 also once without any decay for reference. All three runs start from the
 same random initialization.
 
+<!-- WRITER: two new cells before the runs: the byte-level data of :numref:`sec_test_models`, and `matrix_rms` (RMS of the entries of the weight matrices, embeddings excluded: the same matrices that the group code below decays) with `train_tracked` (trains TinyLM from a seed and records `matrix_rms` at the start and every `every` steps; the timescale experiment below uses it too). The run cell now prints, per run, the final training loss and the RMS of the weight matrices at initialization and at step 1,000. Measured, three development runs and one notebook run per tab (seeds differ between runs): initialization 0.0447 to 0.0448 in every run (the uniform initialization of TinyLM); no decay 0.109 to 0.111, final loss 1.69 to 1.74; AdamW 0.098 to 0.099 (decay has removed a tenth of the norm), final loss within 0.02 of the run without decay of the same seed, in either direction (1.706 against 1.702, 1.745 against 1.741 in the notebook runs); Adam + l2 0.0026 to 0.0028, forty times smaller than without decay, final loss 3.12 to 3.19, against a byte entropy of 3.17. The coupled run's smoothed loss is lowest at step 75 (3.03 to 3.07, about 0.1 below the entropy), rises to about 3.2 to 3.3 by step 250 and stays near the entropy: it never learned much to forget; its weights were held near zero from the start (development probe: the token embeddings shrink from RMS 1.0 to 0.10 as well, the vectors from 0.43 to 0.03). -->
+
+```{.python .input #adamw-coupled-and-decoupled-decay-compared-1}
+%%tab pytorch, jax
+data = d2l.WikiText103(batch_size=64, num_steps=64)
+```
+
+```{.python .input #adamw-coupled-and-decoupled-decay-compared-2}
+%%tab pytorch
+def matrix_rms(model):
+    """RMS of the entries of the weight matrices, embeddings excluded."""
+    W = torch.cat([p.detach().flatten() for name, p in model.named_parameters()
+                   if p.ndim == 2 and 'emb' not in name])
+    return float(W.square().mean().sqrt())
+
+def train_tracked(make_optimizer, data, seed, num_steps, every=250):
+    """Train TinyLM from seed with make_optimizer(params); return the losses,
+    the matrix RMS at the start and every `every` steps, and the model."""
+    torch.manual_seed(seed)
+    model = d2l.TinyLM(len(data.vocab))
+    optimizer = make_optimizer(model.parameters())
+    losses, rms = [], [matrix_rms(model)]
+    for _ in range(num_steps // every):
+        losses += d2l.train_steps(model, data, optimizer, every)
+        rms.append(matrix_rms(model))
+    return losses, rms, model
+```
+
+```{.python .input #adamw-coupled-and-decoupled-decay-compared-2}
+%%tab jax
+def matrix_rms(model):
+    """RMS of the entries of the weight matrices, embeddings excluded."""
+    leaves = jax.tree_util.tree_leaves_with_path(nnx.state(model, nnx.Param))
+    W = jnp.concatenate([p.ravel() for path, p in leaves
+                         if p.ndim == 2 and 'emb' not in str(path)])
+    return float(jnp.sqrt((W ** 2).mean()))
+
+def train_tracked(tx, data, seed, num_steps, every=250):
+    """Train TinyLM from seed with the optax transformation tx; return the
+    losses, the matrix RMS at the start and every `every` steps, the model."""
+    model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
+    optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
+    losses, rms = [], [matrix_rms(model)]
+    for _ in range(num_steps // every):
+        losses += d2l.train_steps(model, data, optimizer, every)
+        rms.append(matrix_rms(model))
+    return losses, rms, model
+```
+
 ```{.python .input #adamw-one-number-two-meanings}
 %%tab pytorch
 seed = random.getrandbits(31)
 curves = {}
 for name, make_optimizer in [
-        ('no decay',
-         lambda model, lr: torch.optim.Adam(model.parameters(), lr)),
-        ('Adam + ℓ2', lambda model, lr: torch.optim.Adam(
-            model.parameters(), lr, weight_decay=0.1)),
-        ('AdamW', lambda model, lr: torch.optim.AdamW(
-            model.parameters(), lr, weight_decay=0.1))]:
-    print(f'{name}: ', end='')
-    curves[name] = d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)),
-                                make_optimizer, data, [0.003], seed,
-                                num_steps=1000)[0][0.003]
+        ('no decay', lambda params: torch.optim.Adam(params, 3e-3)),
+        ('Adam + ℓ2', lambda params: torch.optim.Adam(params, 3e-3,
+                                                       weight_decay=0.1)),
+        ('AdamW', lambda params: torch.optim.AdamW(params, 3e-3,
+                                                    weight_decay=0.1))]:
+    curves[name], rms, _ = train_tracked(make_optimizer, data, seed, 1000)
+    print(f'{name:<10} final loss {d2l.final_loss(curves[name]):.3f}, RMS of '
+          f'the weight matrices {rms[0]:.4f} -> {rms[-1]:.4f}')
 d2l.plot(list(range(0, 1000, 25)), [d2l.smooth(c) for c in curves.values()],
          'step', 'training loss', legend=list(curves))
 ```
@@ -195,13 +269,12 @@ def coupled(lr, wd):  # The penalty's gradient enters Adam's moments
 
 seed = d2l.get_seed()
 curves = {}
-for name, make_tx in [('no decay', optax.adam),
-                      ('Adam + ℓ2', lambda lr: coupled(lr, 0.1)),
-                      ('AdamW', lambda lr: optax.adamw(lr, weight_decay=0.1))]:
-    print(f'{name}: ', end='')
-    curves[name] = d2l.lr_sweep(
-        lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
-        make_tx, data, [0.003], seed, num_steps=1000)[0][0.003]
+for name, tx in [('no decay', optax.adam(3e-3)),
+                 ('Adam + ℓ2', coupled(3e-3, 0.1)),
+                 ('AdamW', optax.adamw(3e-3, weight_decay=0.1))]:
+    curves[name], rms, _ = train_tracked(tx, data, seed, 1000)
+    print(f'{name:<10} final loss {d2l.final_loss(curves[name]):.3f}, RMS of '
+          f'the weight matrices {rms[0]:.4f} -> {rms[-1]:.4f}')
 d2l.plot(list(range(0, 1000, 25)), [d2l.smooth(c) for c in curves.values()],
          'step', 'training loss', legend=list(curves))
 ```
@@ -229,6 +302,8 @@ other gradient, so every coordinate shrinks by about $\eta$ per step
 whatever the value of $\lambda$: past this point, changing $\lambda$ hardly
 changes the run.
 
+<!-- WRITER: the decay grid (cells adamw-a-grid-twice-1..4, adam-coupled-and-decoupled-decay-compared-1, the 800-step runs on The Time Machine) is cut (ADAM-18, structure 7): from here to the end of this subsection every paragraph describes cells that no longer exist (`sweep`, `small`, `coupled_tbl`, `decoupled_tbl`, the two plots); the grid becomes an exercise, and the "column against grid" claim and the fixed-point paragraph go with it. -->
+
 The coupled form needs a much smaller $\lambda$, which is easy to find. The
 harder question is how the best $\lambda$ moves when the learning rate
 changes: if it moves, the two settings must be searched together on a
@@ -244,97 +319,15 @@ the first 8,000 windows of *The Time Machine*, split into characters as in
 six times, and we measure the held-out loss on the 2,000 windows that
 follow.
 
-```{.python .input #adamw-a-grid-twice-1}
-%%tab pytorch, jax
-small = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                        num_train=8000, num_val=2000)
-```
-
 The function `sweep` trains one model per pair $(\eta, \lambda)$, with a
 quiet `lr_sweep` for each $\lambda$, and returns the table of held-out
 losses, one row per learning rate. The held-out loss is the mean
 cross-entropy over the validation windows, the logarithm of
 `lm_perplexity`.
 
-```{.python .input #adamw-a-grid-twice-2}
-%%tab pytorch
-lrs = [1e-3, 3e-3, 1e-2]
-wds_coupled, wds_decoupled = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2], [0.3, 1, 3, 10]
-
-def sweep(make_optimizer, data, lrs, wds, seed, num_steps=800):
-    """Held-out loss for each pair (lr, wd), one row per learning rate."""
-    held_out = lambda model: math.log(d2l.lm_perplexity(
-        model, data.val_dataloader()))
-    columns = [d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)),
-                        lambda model, lr: make_optimizer(model, lr, wd),
-                        data, lrs, seed, num_steps, evaluate=held_out,
-                        verbose=False)[1]
-               for wd in wds]
-    table = [[column[lr][-1] for column in columns] for lr in lrs]
-    for lr, row in zip(lrs, table):
-        print(f'lr {lr:g}: ' + ' '.join(f'{v:.2f}' for v in row))
-    return table
-
-seed = random.getrandbits(31)
-coupled_tbl = sweep(lambda model, lr, wd: torch.optim.Adam(
-    model.parameters(), lr, weight_decay=wd), small, lrs, wds_coupled, seed)
-```
-
-```{.python .input #adamw-a-grid-twice-2}
-%%tab jax
-lrs = [1e-3, 3e-3, 1e-2]
-wds_coupled, wds_decoupled = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2], [0.3, 1, 3, 10]
-
-def sweep(make_tx, data, lrs, wds, seed, num_steps=800):
-    """Held-out loss for each pair (lr, wd), one row per learning rate."""
-    held_out = lambda model: math.log(d2l.lm_perplexity(
-        model, data.val_dataloader()))
-    columns = [d2l.lr_sweep(
-        lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
-        lambda lr: make_tx(lr, wd), data, lrs, seed,
-        num_steps, evaluate=held_out, verbose=False)[1]
-               for wd in wds]
-    table = [[column[lr][-1] for column in columns] for lr in lrs]
-    for lr, row in zip(lrs, table):
-        print(f'lr {lr:g}: ' + ' '.join(f'{v:.2f}' for v in row))
-    return table
-
-seed = d2l.get_seed()
-coupled_tbl = sweep(coupled, small, lrs, wds_coupled, seed)
-```
-
-```{.python .input #adamw-a-grid-twice-3}
-%%tab pytorch
-decoupled_tbl = sweep(lambda model, lr, wd: torch.optim.AdamW(
-    model.parameters(), lr, weight_decay=wd), small, lrs, wds_decoupled,
-    seed)
-```
-
-```{.python .input #adamw-a-grid-twice-3}
-%%tab jax
-decoupled_tbl = sweep(lambda lr, wd: optax.adamw(lr, weight_decay=wd),
-                      small, lrs, wds_decoupled, seed)
-```
-
 We plot the held-out loss against $\lambda$, one curve per learning rate,
 for the coupled form and then for the decoupled form, on a common vertical
 scale.
-
-```{.python .input #adamw-a-grid-twice-4}
-%%tab pytorch, jax
-values = [v for table in (coupled_tbl, decoupled_tbl)
-          for row in table for v in row]
-ylim = (min(values) - 0.1, max(values) + 0.1)
-legend = [f'lr {lr:g}' for lr in lrs]
-d2l.plot(wds_coupled, coupled_tbl, '$\\lambda$ (Adam + $\\ell_2$)',
-         'held-out loss', legend=legend, ylim=ylim, xscale='log')
-```
-
-```{.python .input #adam-coupled-and-decoupled-decay-compared-1}
-%%tab pytorch, jax
-d2l.plot(wds_decoupled, decoupled_tbl, '$\\lambda$ (AdamW)',
-         'held-out loss', legend=legend, ylim=ylim, xscale='log')
-```
 
 In this grid the AdamW curves have their minimum at about the same
 $\lambda$, 3 or 10, for all three learning rates: changing $\eta$ moves a curve up
@@ -400,6 +393,59 @@ $\lambda$ can be set from $B$, $D$, and the model size rather than tuned
 again. The horizon also explains why $\eta$ and $\lambda$ act on the
 equilibrium through their product.
 
+<!-- WRITER: NEW experiment (worklist 7.3), the timescale of decay; this subsection becomes "The Timescale of Decay" and keeps :label:`subsec_wd-at-scale`. The cell trains TinyLM with AdamW at eta = 3e-3 for 2,000 steps with lambda in {0, 0.1, 0.5, 1}, decaying every parameter as in the three-run comparison, two runs per lambda (two seeds, shared across lambda), and prints per lambda the RMS of the weight matrices (mean of the two runs) at steps 0, 250, ..., 2,000, the predicted equilibrium sqrt(eta / (2 lambda)), and the validation loss of each run; then plots the RMS curves. Timescales 1/(eta lambda): infinite, 3,333, 667 and 333 steps.
+Prediction (the two-line equilibrium of Exercise 9 in the body): with the update u_t orthogonal to x_t, ||x_{t+1}||^2 = (1 - eta lambda)^2 ||x_t||^2 + eta^2 ||u_t||^2, so the norm settles where 2 eta lambda ||x||^2 = eta^2 ||u||^2, an RMS per entry of sqrt(eta / (2 lambda)) * RMS(u). Which u: over many steps the momentum average m_hat passes every gradient on in full, so the steps add up like the normalized gradients g / sqrt(v_hat), whose RMS is about 1 because v_hat estimates E[g^2] (measured in PyTorch at step 2,000: 0.82 to 1.13 over six runs), not like Adam's one-step update m_hat / sqrt(v_hat), whose RMS is only 0.16 to 0.23 (the value the gradient-scale cell of :numref:`sec_adam` prints, about 0.2; with it the prediction would be five times too small). Hence the printed prediction sqrt(eta / (2 lambda)): 0.122, 0.055, 0.039.
+Measured (development runs, three PyTorch seeds at 0 / 0.1 / 0.5, two PyTorch seeds at 0.5 / 1 / 2, two JAX seeds at 0 / 0.1 / 0.5 / 1, plus the notebook runs; seed-to-seed differences of the RMS at any checkpoint at most 0.002):
+- initialization 0.0447 in every run.
+- lambda = 0: grows throughout, 0.068 at step 250, 0.110 at 1,000, 0.142 to 0.144 at 2,000, still rising by 0.007 per 250 steps: without decay nothing stops the growth.
+- lambda = 0.1: 0.116 to 0.117 at 2,000, still rising by 0.003 per 250 steps; it has not settled, because 2,000 steps are less than its timescale of 3,333.
+- lambda = 0.5: 0.073 to 0.074 at 1,000, then 0.0755 to 0.0766 from step 1,500 on: settled after about two timescales (667 steps each).
+- lambda = 1: rises to 0.054 by step 750 and stays at 0.053 to 0.055 (slight drift down).
+- So the level scales as 1/sqrt(lambda): 0.0765 / 0.053 = 1.44 against sqrt(2) = 1.41 (and lambda = 2, development only, ended at 0.035 to 0.037, half of lambda = 0.5's as predicted); the formula's level is low by a constant factor of about 1.4 (0.076 against 0.055, 0.053 against 0.039), because successive gradients are not independent and part of each step points along x.
+- Notebook runs (PyTorch / JAX, mean RMS at 2,000; validation losses): 0: 0.142 / 0.142, 1.563 1.564 / 1.566 1.560; 0.1: 0.116 / 0.116, 1.574 1.572 / 1.575 1.571; 0.5: 0.076 / 0.076 (flat from 1,500), 1.660 1.665 / 1.660 1.663; 1: 0.054 / 0.053, 1.821 1.828 / 1.825 1.821.
+- Validation loss over all runs: lambda = 0 1.560 to 1.570, lambda = 0.1 1.570 to 1.577 (within the spread of :numref:`sec_test_models`: no effect in this run), lambda = 0.5 1.656 to 1.670 (0.09 worse), lambda = 1 1.82 to 1.83 (0.25 worse). In a 2,000-step single pass, decay strong enough to settle within the run only costs; 0.1 is too slow to act at all. -->
+
+```{.python .input #adamw-the-timescale-of-decay-1}
+%%tab pytorch
+lr, num_steps, every = 3e-3, 2000, 250
+seeds = [random.getrandbits(31) for _ in range(2)]
+table = {}
+print(f'{"λ":<5}' + ''.join(f'{t:>6}' for t in range(0, num_steps + 1, every))
+      + f'{"predicted":>10}  validation loss')
+for wd in [0, 0.1, 0.5, 1]:
+    runs = [train_tracked(lambda params: torch.optim.AdamW(
+        params, lr, weight_decay=wd), data, seed, num_steps, every)
+            for seed in seeds]
+    table[wd] = [sum(rms) / len(rms) for rms in zip(*(r[1] for r in runs))]
+    val = [math.log(d2l.lm_perplexity(r[2], data.val_dataloader()))
+           for r in runs]
+    predicted = f'{math.sqrt(lr / (2 * wd)):.3f}' if wd else '-'
+    print(f'{wd:<5g}' + ''.join(f'{v:6.3f}' for v in table[wd])
+          + f'{predicted:>10}  ' + ' '.join(f'{v:.3f}' for v in val))
+d2l.plot(list(range(0, num_steps + 1, every)), list(table.values()), 'step',
+         'RMS of the weight matrices', legend=[f'λ = {wd:g}' for wd in table])
+```
+
+```{.python .input #adamw-the-timescale-of-decay-1}
+%%tab jax
+lr, num_steps, every = 3e-3, 2000, 250
+seeds = [d2l.get_seed() for _ in range(2)]
+table = {}
+print(f'{"λ":<5}' + ''.join(f'{t:>6}' for t in range(0, num_steps + 1, every))
+      + f'{"predicted":>10}  validation loss')
+for wd in [0, 0.1, 0.5, 1]:
+    runs = [train_tracked(optax.adamw(lr, weight_decay=wd), data, seed,
+                          num_steps, every) for seed in seeds]
+    table[wd] = [sum(rms) / len(rms) for rms in zip(*(r[1] for r in runs))]
+    val = [math.log(d2l.lm_perplexity(r[2], data.val_dataloader()))
+           for r in runs]
+    predicted = f'{math.sqrt(lr / (2 * wd)):.3f}' if wd else '-'
+    print(f'{wd:<5g}' + ''.join(f'{v:6.3f}' for v in table[wd])
+          + f'{predicted:>10}  ' + ' '.join(f'{v:.3f}' for v in val))
+d2l.plot(list(range(0, num_steps + 1, every)), list(table.values()), 'step',
+         'RMS of the weight matrices', legend=[f'λ = {wd:g}' for wd in table])
+```
+
 Keeping the product fixed when $\eta$ changes is the opposite of what our
 grid showed. The two results describe different regimes. A scale-invariant
 matrix has no fixed point of the kind found in the previous subsection: its
@@ -435,7 +481,6 @@ the split is the one we counted for `TinyLM`.
 
 ```{.python .input #adamw-what-not-to-decay-1}
 %%tab pytorch
-torch.manual_seed(lm_seed)  # The initialization of the comparison's runs
 model = d2l.TinyLM(len(data.vocab))
 decay = [p for name, p in model.named_parameters()
          if p.ndim == 2 and 'emb' not in name]
@@ -443,7 +488,7 @@ no_decay = [p for name, p in model.named_parameters()
             if p.ndim != 2 or 'emb' in name]
 optimizer = torch.optim.AdamW([
     {'params': decay, 'weight_decay': 0.1},
-    {'params': no_decay, 'weight_decay': 0.0}], lr=best_adam)
+    {'params': no_decay, 'weight_decay': 0.0}], lr=3e-3)
 n_decay = sum(p.numel() for p in decay)
 n = n_decay + sum(p.numel() for p in no_decay)
 print(f'decayed: {n_decay} of {n} parameters')
@@ -451,15 +496,14 @@ print(f'decayed: {n_decay} of {n} parameters')
 
 ```{.python .input #adamw-what-not-to-decay-1}
 %%tab jax
-model = d2l.TinyLM(len(data.vocab),
-                   rngs=nnx.Rngs(lm_seed))  # As in the comparison
+model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(0))
 
 def decay_mask(params):  # True for the matrices, False for the rest
     return jax.tree_util.tree_map_with_path(
         lambda path, p: p.ndim == 2 and 'emb' not in str(path), params)
 
 optimizer = nnx.Optimizer(
-    model, optax.adamw(best_adam, weight_decay=0.1, mask=decay_mask),
+    model, optax.adamw(3e-3, weight_decay=0.1, mask=decay_mask),
     wrt=nnx.Param)
 params = nnx.state(model, nnx.Param)
 n_decay = sum(int(p.size) for p, m in zip(
@@ -479,19 +523,12 @@ keyword arguments.
 tree of booleans; only the parameters marked `True` are decayed.
 :end_tab:
 
+<!-- WRITER: the 2,000-step run of this configuration (cell adamw-what-not-to-decay-2) is cut (ADAM-20): the rest of this paragraph and the next describe it. The group cell above no longer reuses the comparison's initialization or Adam's tuned rate from the Adam notebook: it builds a fresh TinyLM and uses eta = 3e-3; it still prints 425,984 of 470,784 decayed. -->
+
 About 90% of the parameters are decayed. We train this configuration for
 2,000 steps at Adam's tuned learning rate, from the same initialization as
 the runs of the language-model comparison, and compare it with Adam's
 tuned run there, which used no decay:
-
-```{.python .input #adamw-what-not-to-decay-2}
-%%tab pytorch, jax
-losses = d2l.train_steps(model, data, optimizer, num_steps=2000)
-d2l.plot(list(range(0, 2000, 25)), [d2l.smooth(losses)],
-         'step', 'training loss')
-print(f'perplexity: AdamW {math.exp(d2l.final_loss(losses)):.2f}, '
-      f'Adam without decay {math.exp(d2l.final_loss(adam_lm[best_adam])):.2f}')
-```
 
 AdamW ends within a few percent of the run without decay, in either
 direction. In
@@ -507,7 +544,7 @@ remains is its cost in memory.
 
 Adam and AdamW store two numbers per parameter, $m$ and $v$, on top of the
 weights and the gradients. At the size of `TinyLM` that is invisible; at
-the size of a language model it decides what fits on a device. We count
+the size of a language model it decides what fits on a device. <!-- WRITER: the memory cell (adamw-optimizer-state-and-memory, the bytes-per-parameter table and the 7B column) is cut (ADAM-21); this subsection becomes one paragraph without a cell (8 bytes per parameter for m and v in fp32, 16 with weights and gradients, consistent with :numref:`sec_memory_precision`). --> We count
 the bytes per parameter for three common setups and multiply by the
 parameter count $n$ of `TinyLM`, which `d2l.num_params` returns.
 
@@ -519,19 +556,6 @@ weights and gradients, 2 bytes each, but stable training keeps an fp32
 again 16 bytes. Many setups also keep an fp32 copy of the gradients to
 accumulate them over several minibatches, which brings the total to 20
 (:numref:`sec_training_systems`).
-
-```{.python .input #adamw-optimizer-state-and-memory}
-%%tab pytorch, jax
-n = d2l.num_params(model)  # The TinyLM just trained
-setups = {'fp32 weights, grads, m, v': (4, 4, 8),
-          'bf16 weights + grads, fp32 master, m, v': (2, 2, 12),
-          'the same + fp32 gradient accumulator': (2, 6, 12)}
-print(f'{"":<42}{"B/param":>8}{"TinyLM":>10}{"7B model":>10}')
-for name, (w, g, s) in setups.items():
-    per = w + g + s
-    print(f'{name:<42}{per:>8}{n * per / 1e6:>8.1f}MB'
-          f'{7e9 * per / 1e9:>8.0f}GB')
-```
 
 For `TinyLM` the total is a few megabytes. The same arithmetic for a model
 with 7 billion parameters gives 112 to 140 GB before a single activation
@@ -547,6 +571,8 @@ instead of copied to each, the systems techniques of
 <!-- WRITER: new Summary (the AdamW sentences of the old adam.md Summary belong here). -->
 
 ## Exercises
+
+<!-- WRITER: names the exercises below use that no longer exist after the code step: `decoupled_tbl`, `sweep` and the grid of :numref:`subsec_adamw-grid` (Exercise 2; the cut grid becomes the new decay-grid exercise), the `setups` table of the memory cell (Exercise 4). Available in this notebook: `data`, `matrix_rms`, `train_tracked`, `AdamW` / `adamw`, `coupled` (JAX). -->
 
 1. [code] **Saturation of coupled decay.** The experiment of
    :numref:`subsec_mdl-decoupled-weight-decay` starts two parameters at
@@ -700,15 +726,7 @@ saturation.
 Held-out loss after 800 steps on 8,000 windows of *The Time Machine*
 (about six passes, overfitting on purpose), one curve per $\eta$:
 
-::: {.cols}
-::: {.col}
-@!adamw-a-grid-twice-4
-:::
-
-::: {.col}
-@!adam-coupled-and-decoupled-decay-compared-1
-:::
-:::
+<!-- WRITER: the grid cells this slide showed are cut (the grid is now an exercise); replace this slide with the timescale experiment (cell adamw-the-timescale-of-decay-1, see the note above that cell). -->
 
 - AdamW: $\eta$ moves each curve up or down, hardly sideways. At the
   fixed point $\lambda\mathbf{x} = -\hat{\mathbf{m}}/(\sqrt{\hat{\mathbf{v}}} + \epsilon)$,
@@ -734,7 +752,7 @@ Held-out loss after 800 steps on 8,000 windows of *The Time Machine*
 ::: {.slide title="Adam Costs 16 to 20 Bytes per Parameter"}
 [Memory]{.kicker}
 
-@!adamw-optimizer-state-and-memory
+<!-- WRITER: the memory cell is cut; the slide states the arithmetic without it. -->
 
 - 7B parameters: 112 to 140 GB before any activation.
 - 12 of the 20 bytes (fp32 master, $m$, $v$) are read only by the

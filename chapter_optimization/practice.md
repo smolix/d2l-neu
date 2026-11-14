@@ -46,7 +46,7 @@ from d2l import jax as d2l
 
 ```{.python .input #practice-1}
 %%tab pytorch
-import copy
+import random
 ```
 
 ## Choosing a Configuration
@@ -154,6 +154,16 @@ In Optax, clipping is a gradient transformation like any other, so
 transformation drops into `nnx.Optimizer` like a plain one.
 :end_tab:
 
+<!-- WRITER: the JAX `record_norms` transformation moved into the JAX cell below from its own cell after the data cell (PRAC-8), and `clipped` now records the norm before clipping on every step, as the PyTorch `Clipped` does (it takes the number of steps to record). The JAX tab note that explained `record_norms` moved up with it and follows; merge the two JAX notes into one or two sentences. -->
+
+:begin_tab:`jax`
+An Optax transformation is a pair of pure functions, `init` and `update`,
+so a quantity that must persist from step to step lives in the
+transformation's state. `record_norms` passes the gradients through
+unchanged and writes each step's global norm into an array of fixed length
+in its state.
+:end_tab:
+
 ```{.python .input #practice-gradient-clipping-1}
 %%tab pytorch
 class Clipped:
@@ -172,9 +182,23 @@ class Clipped:
 
 ```{.python .input #practice-gradient-clipping-1}
 %%tab jax
-def clipped(tx, max_norm=1.0):
-    """Clip the global gradient norm before an optimizer's update."""
-    return optax.chain(optax.clip_by_global_norm(max_norm), tx)
+def record_norms(num_steps):
+    """Pass the gradients through unchanged, storing each step's norm."""
+    def init(params):
+        return dict(norms=jnp.zeros(num_steps), step=jnp.zeros((), jnp.int32))
+
+    def update(grads, state, params=None):
+        norm = optax.global_norm(grads)
+        norms = state['norms'].at[state['step']].set(norm)
+        return grads, dict(norms=norms, step=state['step'] + 1)
+
+    return optax.GradientTransformation(init, update)
+
+def clipped(tx, num_steps, max_norm=1.0):
+    """Clip the global gradient norm before an optimizer's update, recording
+    the norm before clipping on each of the first num_steps steps."""
+    return optax.chain(record_norms(num_steps),
+                       optax.clip_by_global_norm(max_norm), tx)
 ```
 
 ### Preventing a Numerical Failure
@@ -192,72 +216,64 @@ steps; they differ only in the clipping. To see how often and when clipping
 intervenes, we also record the global gradient norm before clipping at
 every step.
 
+<!-- WRITER: the experiment is now four settings of SGD with momentum 0.9, each run twice (two seeds; within a seed every setting starts from the same initialization, and in PyTorch from the same minibatch order): lr 1 unclipped, lr 1 clipped at 1, lr 0.3 unclipped (the best rate of the SGD grid in :numref:`sec_adam`), and lr 3 clipped at 1. A threshold of infinity is no clipping (`clip_grad_norm_` and `clip_by_global_norm` then leave the gradient unchanged), so one function serves every run. For each clipped run the table prints the number of clipped steps, the last clipped step, the median gradient norm, and the largest norm after step 100 divided by the median (PRAC-12). Measured (development and two notebook runs, PyTorch / JAX):
+- lr 1 unclipped: inf in every run (the loss leaves the plot within about 15 steps).
+- lr 1 clipped at 1: trains in every run, 50 runs in all. Final loss 1.610 to 1.654 (PyTorch, 37 runs; median 1.620) and 1.608 to 1.615 (JAX, 13 runs). (PyTorch's spread is wider; enabling or disabling TF32 matmuls in PyTorch does not change it, 8 runs each; the medians differ by 0.008, below the spread of :numref:`sec_test_models`, and the lesson is the same in both tabs.) Clipping acts on 11 to 18 of 2,000 steps, the last at step 10 to 17, never after step 100; median norm 0.25 to 0.26, so the threshold 1 is about four times the typical norm.
+- lr 0.3 unclipped: 1.647 to 1.703 (PyTorch) and 1.652 to 1.683 (JAX). In every one of the 26 paired runs (13 per tab) the clipped run at lr 1 ended below the unclipped run at 0.3 of the same seed, by 0.01 to 0.08 nats (median about 0.045). The difference is consistent but not larger than the spread of independent runs (0.04 to 0.06), so state it as "at least as low as the best unclipped rate", not as a margin. Not printed, probed: clipped at lr 0.5, 1.615 to 1.662 (12 runs), also always trains, while unclipped 0.5 diverged in 16 of 18 runs in :numref:`sec_adam`. The firm lesson: clipping moves SGD's edge of stability from between 0.3 and 0.5 up to between 1 and 3 on this model, because the edge was set by the first few steps (PRAC-11).
+- lr 3 clipped at 1: clipping acts on all 2,000 steps (a brake, not a guard), median norm 22 to 43, and the run fails anyway: final loss 88 to 207 in every run, far above the uniform guess ln 256 = 5.5. Clipping does not rescue a rate three times above the new edge (author ruling 3, "what it does not fix"). The plot shows its loss climbing within the first 20 steps.
+- Largest gradient norm after step 100 over the median: 1.5 to 2.1 in every run at lr 1 (clipped) and 0.3; nothing like a heavy tail on this model with minibatches of 64 full windows, so "gradient noise in language models is heavy-tailed" must be stated as what large runs report (:cite:`Zhang.Karimireddy.Veit.ea.2020`), not as what this run shows (PRAC-12). (For lr 3 the ratio is meaningless: the norms grow with the failing run.)
+- Plot: first 50 steps of the first seed, all four settings, log scale; the unclipped lr 1 run falls for two to three steps and then climbs (PRAC-10: "after the first few steps"). -->
+
 ```{.python .input #practice-a-nan-averted-1}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=64)
 ```
 
-:begin_tab:`jax`
-An Optax transformation is a pair of pure functions, `init` and `update`,
-so a quantity that must persist from step to step lives in the
-transformation's state. `record_norms` passes the gradients through
-unchanged and writes each step's global norm into an array of fixed length
-in its state.
-:end_tab:
-
-```{.python .input #practice-a-nan-averted-4}
-%%tab jax
-def record_norms(num_steps):
-    """Pass the gradients through unchanged, storing each step's norm."""
-    def init(params):
-        return dict(norms=jnp.zeros(num_steps), step=jnp.zeros((), jnp.int32))
-
-    def update(grads, state, params=None):
-        norm = optax.global_norm(grads)
-        norms = state['norms'].at[state['step']].set(norm)
-        return grads, dict(norms=norms, step=state['step'] + 1)
-
-    return optax.GradientTransformation(init, update)
-```
-
-```{.python .input #practice-a-nan-averted-2}
+```{.python .input #practice-preventing-a-numerical-failure-1}
 %%tab pytorch
-num_steps = 2000
-model0 = d2l.TinyLM(len(data.vocab))
-curves = {}
-for clip in (False, True):
-    model = copy.deepcopy(model0)  # Both runs start from the same weights
-    optimizer = torch.optim.SGD(model.parameters(), lr=1.0, momentum=0.9)
-    if clip:
-        optimizer = Clipped(optimizer, model.parameters())
-    label = 'clipped at 1' if clip else 'unclipped'
-    curves[label] = d2l.train_steps(model, data, optimizer, num_steps)
-    print(f'{label}: final loss {sum(curves[label][-100:]) / 100:.3f}')
-norms = torch.stack(optimizer.norms)
-fired = torch.nonzero(norms > 1).flatten()  # Steps on which clipping acted
-print(f'clipped {len(fired)} of {len(norms)} steps, the last at step '
-      f'{int(fired.max())}; median gradient norm {norms.median():.2f}')
+new_seed = lambda: random.getrandbits(31)
+
+def run(seed, lr, max_norm, num_steps=2000):
+    """SGD with momentum 0.9 on TinyLM, clipped at max_norm (math.inf: not
+    at all); return the losses and the gradient norms before clipping."""
+    torch.manual_seed(seed)  # The initialization and the minibatch order
+    model = d2l.TinyLM(len(data.vocab))
+    optimizer = Clipped(torch.optim.SGD(model.parameters(), lr, momentum=0.9),
+                        model.parameters(), max_norm)
+    losses = d2l.train_steps(model, data, optimizer, num_steps)
+    return losses, torch.stack(optimizer.norms).cpu().numpy()
+```
+
+```{.python .input #practice-preventing-a-numerical-failure-1}
+%%tab jax
+new_seed = d2l.get_seed
+
+def run(seed, lr, max_norm, num_steps=2000):
+    """SGD with momentum 0.9 on TinyLM, clipped at max_norm (math.inf: not
+    at all); return the losses and the gradient norms before clipping."""
+    model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
+    tx = clipped(optax.sgd(lr, momentum=0.9), num_steps, max_norm)
+    optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
+    losses = d2l.train_steps(model, data, optimizer, num_steps)
+    return losses, np.asarray(optimizer.opt_state[0]['norms'][...])
 ```
 
 ```{.python .input #practice-a-nan-averted-2}
-%%tab jax
-num_steps = 2000
-model0 = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
-curves = {}
-for clip in (False, True):
-    model = nnx.clone(model0)  # Both runs start from the same weights
-    tx = optax.sgd(1.0, momentum=0.9)
-    if clip:
-        tx = optax.chain(record_norms(num_steps), clipped(tx))
-    optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
-    label = 'clipped at 1' if clip else 'unclipped'
-    curves[label] = d2l.train_steps(model, data, optimizer, num_steps)
-    print(f'{label}: final loss {sum(curves[label][-100:]) / 100:.3f}')
-norms = optimizer.opt_state[0]['norms'][...]
-fired = jnp.nonzero(norms > 1)[0]  # Steps on which clipping acted
-print(f'clipped {len(fired)} of {len(norms)} steps, the last at step '
-      f'{int(fired.max())}; median gradient norm '
-      f'{float(jnp.median(norms)):.2f}')
+%%tab pytorch, jax
+settings = [(1.0, math.inf), (1.0, 1.0), (0.3, math.inf), (3.0, 1.0)]
+seeds, runs = [new_seed() for _ in range(2)], {}
+print(f'{"lr":>4}{"clip at":>9}{"final loss":>12}{"steps clipped":>15}'
+      f'{"last":>6}{"median norm":>13}{"largest / median":>18}')
+for seed in seeds:
+    for lr, max_norm in settings:
+        losses, norms = runs[seed, lr, max_norm] = run(seed, lr, max_norm)
+        line = f'{lr:4g}{max_norm:9g}{d2l.final_loss(losses):12.3f}'
+        if max_norm < math.inf:
+            fired = np.nonzero(norms > max_norm)[0]  # Steps clipping changed
+            median = np.median(norms)
+            line += (f'{len(fired):15d}{fired.max(initial=0):6d}{median:13.2f}'
+                     f'{norms[100:].max() / median:18.1f}')  # After step 100
+        print(line)
 ```
 
 The unclipped run ends with a loss of `nan`, "not a number", the value that
@@ -266,8 +282,11 @@ instability occurs early, so we plot the first 50 steps on a log scale.
 
 ```{.python .input #practice-a-nan-averted-3}
 %%tab pytorch, jax
-d2l.plot(list(range(50)), [curves[k][:50] for k in curves], 'step',
-         'training loss', legend=list(curves), yscale='log')
+d2l.plot(list(range(1, 51)),
+         [runs[seeds[0], lr, max_norm][0][:50] for lr, max_norm in settings],
+         'step', 'training loss', yscale='log', figsize=(5, 2.5),
+         legend=[f'lr {lr:g}, clip at {max_norm:g}' for lr, max_norm in settings],
+         legend_loc='outside')
 ```
 
 The first step lowers the loss, and from the second on the unclipped run
@@ -408,100 +427,134 @@ moves up and down from epoch to epoch. Alongside the live weights we keep
 an EMA with $\alpha = 0.999$, whose window of about 1,000 steps spans
 roughly four epochs of 235 steps each.
 
-```{.python .input #practice-weight-averaging-1}
-%%tab pytorch
-fashion = d2l.FashionMNIST(batch_size=256)
-device = d2l.try_gpu()
-```
+<!-- WRITER: the experiment moved from `lenet_bn` (removed from the library by the Schedules step) to `FashionCNN` with plain SGD at 0.3, the baseline of :numref:`sec_test_models`. `FashionCNN` has no batch normalization, so the paragraph on averaging batch-normalization statistics and `use_buffers=True` are gone (keep the advice to recompute the statistics after averaging saved checkpoints, in one sentence where averaged checkpoints are discussed, PRAC-20). The average now starts after epoch 5 (PRAC-18), so the lag paragraph shrinks to a sentence. A cosine decay of the same length (15 epochs, from the same initialization, warmup 0) runs next to the constant rate (PRAC-19), and both keep an EMA. Two seeds. Measured, ten paired runs over both tabs (three development seeds and two notebook runs of two seeds per tab), test accuracy: constant rate, live weights: the last five epochs scatter over 1 to 5 points within a run (overall 0.859 to 0.917), and the final epoch lands anywhere in that range (0.859 to 0.916); constant rate, EMA: final 0.911 to 0.915, rising steadily over the last five epochs; cosine decay, final live weights: 0.908 to 0.914. EMA at the constant rate minus the decayed run's final weights: +0.001 to +0.006 in all ten runs, smaller than the spread of either setting, so state "matches", not "beats". The EMA ends above the final live weights of the same run in 9 of 10 runs (by up to 5 points); in one run the last live epoch landed at 0.916 against the EMA's 0.914, so the firm statement is about the scatter of the live weights, not about one final value. The EMA of the cosine run (also from epoch 5) ends at or up to 0.3 points below that run's final live weights: after a decay the average only lags. The window of alpha = 0.999 is about 1,000 steps, a little over four epochs of 235 steps; the average covers epochs 6 to 15. -->
 
 ```{.python .input #practice-weight-averaging-1}
-%%tab jax
+%%tab pytorch, jax
 fashion = d2l.FashionMNIST(batch_size=256)
+num_epochs, num_batches = 15, len(fashion.train_dataloader())
+test_acc = lambda model: d2l.evaluate_accuracy(model, fashion.val_dataloader())
 ```
 
-The averaged network needs batch-normalization statistics of its own for
-prediction, so we average the running means and variances along with the
-weights. This is an approximation: an average of the statistics of many
-networks is not the statistic of the averaged network. It is close when the
-weights change little over the window.
+<!-- WRITER: the two tab notes below describe the new cells (PyTorch: `AveragedModel` updated from an optimizer step hook that is registered when averaging starts; JAX: the EMA kept by an Optax transformation chained after the optimizer). Shorten to a sentence each. -->
 
 :begin_tab:`pytorch`
 `AveragedModel` keeps a copy of the network. The first call of its method
 `update_parameters` copies the live weights into it, and with
 `get_ema_multi_avg_fn` every later call blends them in as in
-:eqref:`eq_practice_ema`. With
-`use_buffers=True` it averages the batch-normalization statistics too.
+:eqref:`eq_practice_ema`. `register_step_post_hook` makes the optimizer
+call a function after every step; we use it to advance the learning-rate
+schedule and, from epoch 5 on, to update the average.
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.state` with the filter `(nnx.Param, nnx.BatchStat)` collects the
-weights and the running statistics of a model.
-`optax.incremental_update(new, old, 1 - alpha)` computes
-:eqref:`eq_practice_ema` for every array, and `nnx.update` writes the result
-into the averaged model.
+`ema_of_weights` is an Optax transformation placed after the optimizer in
+the chain: it passes the updates through unchanged, applies them to a copy
+of the parameters, and blends the result into an average in its state with
+`optax.incremental_update`, which computes :eqref:`eq_practice_ema` for
+every array. `averaged` writes that average into a copy of the model.
 :end_tab:
 
 ```{.python .input #practice-weight-averaging-4}
-%%tab jax
-@nnx.jit
-def train_step(model, optimizer, X, y):
-    def loss_fn(model):
-        return optax.softmax_cross_entropy_with_integer_labels(
-            model(X), y).mean()
-    optimizer.update(model, nnx.grad(loss_fn)(model))
-
-@nnx.jit
-def ema_update(ema, model, alpha=0.999):
-    kinds = (nnx.Param, nnx.BatchStat)  # Weights and running statistics
-    nnx.update(ema, optax.incremental_update(
-        nnx.state(model, kinds), nnx.state(ema, kinds), 1 - alpha))
-```
-
-```{.python .input #practice-weight-averaging-2}
 %%tab pytorch
-lr, num_epochs = 0.3, 15
-net = d2l.lenet_bn().to(device)
-ema = torch.optim.swa_utils.AveragedModel(
-    net, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999),
-    use_buffers=True)
-ema.update_parameters(net)  # Start the average at the initial weights
-optimizer = torch.optim.SGD(net.parameters(), lr=lr)
-live_acc, avg_acc = [], []
-for epoch in range(num_epochs):
-    for X, y in fashion.train_dataloader():
-        optimizer.zero_grad()
-        nn.functional.cross_entropy(net(X.to(device)), y.to(device)).backward()
-        optimizer.step()
-        ema.update_parameters(net)
-    live_acc.append(d2l.evaluate_accuracy(net, fashion.val_dataloader()))
-    avg_acc.append(d2l.evaluate_accuracy(ema, fashion.val_dataloader()))
-for name, acc in (('live', live_acc), ('EMA', avg_acc)):
-    print(f'{name}: final test accuracy {acc[-1]:.3f}, last five epochs '
-          f'{min(acc[-5:]):.3f} to {max(acc[-5:]):.3f}')
+def warmup_cosine(peak, warmup, num_steps):
+    """A linear warmup to peak over warmup steps, then a cosine to zero."""
+    def schedule(t):
+        if t < warmup:
+            return peak * t / warmup
+        return peak * (1 + math.cos(math.pi * (t - warmup)
+                                    / (num_steps - warmup))) / 2
+    return schedule
+```
+
+```{.python .input #practice-weight-averaging-4}
+%%tab jax
+warmup_cosine = lambda peak, warmup, num_steps: (
+    optax.warmup_cosine_decay_schedule(0.0, peak, warmup, num_steps))
+
+def ema_of_weights(alpha=0.999, start=0):
+    """Pass the updates through unchanged, keeping an EMA of the updated
+    weights that averages from step start on (copies them before)."""
+    def init(params):
+        return dict(ema=params, step=jnp.zeros((), jnp.int32))
+
+    def update(updates, state, params):
+        new = optax.apply_updates(params, updates)
+        rate = jnp.where(state['step'] < start, 1.0, 1 - alpha)
+        ema = optax.incremental_update(new, state['ema'], rate)
+        return updates, dict(ema=ema, step=state['step'] + 1)
+
+    return optax.GradientTransformation(init, update)
+
+def averaged(model, optimizer):
+    """A copy of model with the EMA kept by the last transformation."""
+    ema = nnx.clone(model)
+    nnx.update(ema, optimizer.opt_state[-1]['ema'])
+    return ema
+```
+
+```{.python .input #practice-averaging-at-a-constant-learning-rate-1}
+%%tab pytorch
+def train_fashion(seed, schedule, alpha=0.999, start=5):
+    """Plain SGD on FashionCNN at the rate schedule(t); the test accuracy
+    after every epoch of the weights and of their EMA from epoch start on."""
+    torch.manual_seed(seed)  # The initialization and the minibatch order
+    model = d2l.FashionCNN().to(d2l.try_gpu())
+    optimizer = torch.optim.SGD(model.parameters(), lr=1.0)  # Times schedule
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule)
+    optimizer.register_step_post_hook(lambda *_: scheduler.step())
+    ema = torch.optim.swa_utils.AveragedModel(
+        model, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(alpha))
+    live, avg = [], []
+    for epoch in range(num_epochs):
+        if epoch == start:  # Its first update copies the current weights
+            optimizer.register_step_post_hook(
+                lambda *_: ema.update_parameters(model))
+        d2l.train_steps(model, fashion, optimizer, num_batches)
+        live.append(test_acc(model))
+        avg.append(test_acc(ema) if epoch >= start else math.nan)
+    return live, avg
+```
+
+```{.python .input #practice-averaging-at-a-constant-learning-rate-1}
+%%tab jax
+def train_fashion(seed, schedule, alpha=0.999, start=5):
+    """Plain SGD on FashionCNN at the rate schedule(t); the test accuracy
+    after every epoch of the weights and of their EMA from epoch start on."""
+    model = d2l.FashionCNN(rngs=nnx.Rngs(seed))
+    tx = optax.chain(optax.sgd(schedule),
+                     ema_of_weights(alpha, start * num_batches))
+    optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
+    live, avg = [], []
+    for epoch in range(num_epochs):
+        d2l.train_steps(model, fashion, optimizer, num_batches)
+        live.append(test_acc(model))
+        avg.append(test_acc(averaged(model, optimizer)) if epoch >= start
+                   else math.nan)
+    return live, avg
 ```
 
 ```{.python .input #practice-weight-averaging-2}
-%%tab jax
-lr, num_epochs = 0.3, 15
-model = d2l.lenet_bn(nnx.Rngs(d2l.get_key()))
-ema = nnx.clone(model)
-optimizer = nnx.Optimizer(model, optax.sgd(lr), wrt=nnx.Param)
-live_acc, avg_acc = [], []
-for epoch in range(num_epochs):
-    for X, y in fashion.train_dataloader():
-        train_step(model, optimizer, jnp.asarray(X), jnp.asarray(y))
-        ema_update(ema, model)
-    live_acc.append(d2l.evaluate_accuracy(model, fashion.val_dataloader()))
-    avg_acc.append(d2l.evaluate_accuracy(ema, fashion.val_dataloader()))
-for name, acc in (('live', live_acc), ('EMA', avg_acc)):
-    print(f'{name}: final test accuracy {acc[-1]:.3f}, last five epochs '
-          f'{min(acc[-5:]):.3f} to {max(acc[-5:]):.3f}')
+%%tab pytorch, jax
+schedules = {'constant rate': lambda t: 0.3,
+             'cosine decay': warmup_cosine(0.3, 0, num_epochs * num_batches)}
+cnn_seeds, curves = [new_seed() for _ in range(2)], {}
+print(f'{"test accuracy":<15}{"live, last five epochs":>24}{"live, final":>13}'
+      f'{"EMA, final":>12}')
+for seed in cnn_seeds:
+    for name, schedule in schedules.items():
+        live, avg = curves[seed, name] = train_fashion(seed, schedule)
+        print(f'{name:<15}{min(live[-5:]):15.3f} to {max(live[-5:]):.3f}'
+              f'{live[-1]:13.3f}{avg[-1]:12.3f}')
 ```
 
 ```{.python .input #practice-weight-averaging-3}
 %%tab pytorch, jax
-d2l.plot(list(range(1, num_epochs + 1)), [live_acc, avg_acc], 'epoch',
-         'test accuracy', legend=['live weights', 'EMA of weights'])
+(live, avg), (decayed, _) = (curves[cnn_seeds[0], name] for name in schedules)
+d2l.plot(list(range(1, num_epochs + 1)), [live, avg, decayed], 'epoch',
+         'test accuracy', ylim=[0.85, 0.925], figsize=(5, 2.5),
+         legend=['constant rate, live weights', 'constant rate, EMA',
+                 'cosine decay, live weights'], legend_loc='outside')
 ```
 
 Two features of the curves matter. First, the average needs its window to
@@ -613,6 +666,136 @@ run once a model no longer fits on one device, and how the optimizer state
 is divided among many devices. That is the subject of
 :numref:`chap_performance`.
 
+## A Worked Configuration
+
+<!-- WRITER: NEW subsection (structure 12.3), the chapter's ending; it replaces "Choosing a Configuration", "Comparing Optimizers" and "The Chapter's Three Decisions" (move the table of reported configurations here as the precedent). The cells configure a TinyLM the chapter has not tuned, four blocks of width 256 with four heads (3,307,264 parameters), from nothing to a finished 3,000-step run, every step from an earlier section. Measured in development (PyTorch, JAX; RTX 4090, shared GPU):
+(1) Batch size from the device: throughput, sequences per second, levels off at a batch of 256 in both tabs (PyTorch about 17,500 to 19,300 at 256 and 18,900 to 19,100 at 512 and 1,024; one gradient takes about 12 to 15 ms up to 256 and doubles with each doubling beyond; JAX 20,700 to 25,000 at 256 and less at 512 and 1,024; one gradient 4 to 8 ms up to 128, 10 to 12 ms at 256). Small batches are launch-bound, so their time per gradient is noisy on a shared GPU; the knee is stable. We train at 256. The noise scale (:numref:`sec_batch_size`, `d2l.noise_scale`) is 2 at initialization in every run and 55 to 205 after 300 steps at the chosen rate (ten runs over both tabs; repeated measurements of one model agree within 3%), and 400 to 580 after 1,500 steps (probe): the batch of 256 is at or above the noise scale for the first few hundred steps and below it for most of the run, the growth that :numref:`sec_batch_size` measured.
+(2) AdamW with (0.9, 0.95), weight decay 0.1 on the matrices only (:numref:`subsec_adamw-what-not-to-decay`), clipping at 1 with the fraction of clipped steps logged, an EMA of the weights (alpha = 0.995, a window of 200 steps). `train` takes the schedule and the threshold, so the baseline is the same function with a constant rate and a threshold of infinity (its EMA is not used).
+(3) Three 300-step runs at constant rates 1e-3, 3e-3, 1e-2 (one seed per notebook run): 1.862 to 1.894, 1.717 to 1.757, 2.463 to 2.508 (eight sweeps over both tabs). 1e-2 stalls in every sweep, so 3e-3 is both the largest stable rate and the best; `peak` is the grid point with the lowest 300-step loss. Probed: 3e-4 and 3e-2 are worse (2.19 to 2.20, 2.57 to 2.62). Clipping acts on 2 to 7% of the steps of these short runs, all early. The choice holds at full length: constant rates for 3,000 steps end at 1.336 / 1.340 (1e-3), 1.322 / 1.324 (3e-3), 2.442 / 2.477 (1e-2) (training loss, one seed per tab).
+(4) Warmup over 2% of the steps (60), then a cosine to zero, at the peak 3e-3 (`warmup_cosine`, defined with the averaging cells).
+(5) Final runs, validation loss in nats per byte, 14 seeds over both tabs (development and two notebook runs): configured 1.242 to 1.254; baseline, the same AdamW at the constant 3e-3 without warmup, clipping or averaging, 1.299 to 1.310; gap per seed 0.048 to 0.065, against a spread between the two seeds of one notebook run of 0.000 to 0.008 for either setting: the gap is six to ten times the spread. Clipping acts on 0.5 to 0.7% of the steps, all in the first 100. Most of the gap is the decay (warmup and clipping touch only the first steps; :numref:`sec_scheduler` measured the decay alone). The EMA after the cosine decay equals the final weights to within 0.001 in every run: after a full decay there is nothing left to average, as "Averaging and Decay" predicts. Probed: an EMA with a 1,000-step window (alpha = 0.999 from step 0) ends 0.025 above the final weights, because it reaches back into steps the decay had not finished. The average earns its keep on a run stopped before its decay ends, or at a constant rate (the FashionCNN cell). Run time: about 3 minutes per tab for the whole subsection. -->
+
+```{.python .input #practice-a-worked-configuration-1}
+%%tab pytorch
+def tiny_lm(seed):
+    """A TinyLM of four blocks of width 256 on the GPU."""
+    torch.manual_seed(seed)  # The initialization and the minibatch order
+    return d2l.TinyLM(len(data.vocab), d_model=256, num_heads=4,
+                      num_blks=4).to(d2l.try_gpu())
+
+def sample_lm(b):  # b windows at random offsets in the training text
+    starts = torch.randint(len(data.train) - data.num_steps, (b,))
+    X, Y = data.windows(data.train, starts.numpy())
+    return X.to(d2l.try_gpu()), Y.to(d2l.try_gpu())
+```
+
+```{.python .input #practice-a-worked-configuration-1}
+%%tab jax
+def tiny_lm(seed):
+    """A TinyLM of four blocks of width 256."""
+    return d2l.TinyLM(len(data.vocab), d_model=256, num_heads=4, num_blks=4,
+                      rngs=nnx.Rngs(seed))
+
+rng = np.random.default_rng(d2l.get_seed())
+
+def sample_lm(b):  # b windows at random offsets in the training text
+    return data.windows(data.train,
+                        rng.integers(len(data.train) - data.num_steps, size=b))
+```
+
+```{.python .input #practice-a-worked-configuration-2}
+%%tab pytorch, jax
+model = tiny_lm(new_seed())
+print(f'{d2l.num_params(model):,} parameters')
+for b in [32, 64, 128, 256, 512, 1024]:
+    t = d2l.Benchmark(lambda: d2l.grad_sq_norm(model, *sample_lm(b))).time
+    print(f'batch {b:5d}: {1000 * t:5.1f} ms per gradient, '
+          f'{b / t:6.0f} sequences per second')
+```
+
+```{.python .input #practice-a-worked-configuration-3}
+%%tab pytorch
+def train(seed, schedule, num_steps, max_norm=1.0, alpha=0.995):
+    """AdamW with betas (0.9, 0.95) and weight decay 0.1 on the matrices at
+    the rate schedule(t), clipped at max_norm, with an EMA of the weights;
+    return the losses, the model, the EMA and the fraction of clipped steps."""
+    model = tiny_lm(seed)
+    matrices = [p for name, p in model.named_parameters()
+                if p.ndim == 2 and 'emb' not in name]
+    others = [p for name, p in model.named_parameters()
+              if p.ndim != 2 or 'emb' in name]
+    adamw = torch.optim.AdamW([{'params': matrices, 'weight_decay': 0.1},
+                               {'params': others, 'weight_decay': 0.0}],
+                              lr=1.0, betas=(0.9, 0.95))  # Times schedule
+    scheduler = torch.optim.lr_scheduler.LambdaLR(adamw, schedule)
+    ema = torch.optim.swa_utils.AveragedModel(
+        model, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(alpha))
+    adamw.register_step_post_hook(lambda *_: scheduler.step())
+    adamw.register_step_post_hook(lambda *_: ema.update_parameters(model))
+    optimizer = Clipped(adamw, model.parameters(), max_norm)
+    losses = d2l.train_steps(model, data, optimizer, num_steps)
+    clip_rate = (torch.stack(optimizer.norms) > max_norm).float().mean()
+    return losses, model, ema, float(clip_rate)
+```
+
+```{.python .input #practice-a-worked-configuration-3}
+%%tab jax
+def decay_mask(params):  # True for the matrices, False for the rest
+    return jax.tree_util.tree_map_with_path(
+        lambda path, p: p.ndim == 2 and 'emb' not in str(path), params)
+
+def train(seed, schedule, num_steps, max_norm=1.0, alpha=0.995):
+    """AdamW with betas (0.9, 0.95) and weight decay 0.1 on the matrices at
+    the rate schedule(t), clipped at max_norm, with an EMA of the weights;
+    return the losses, the model, the EMA and the fraction of clipped steps."""
+    model = tiny_lm(seed)
+    adamw = optax.adamw(schedule, b1=0.9, b2=0.95, weight_decay=0.1,
+                        mask=decay_mask)
+    tx = optax.chain(clipped(adamw, num_steps, max_norm), ema_of_weights(alpha))
+    optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
+    losses = d2l.train_steps(model, data, optimizer, num_steps)
+    norms = optimizer.opt_state[0][0]['norms'][...]  # Recorded by clipped
+    clip_rate = (norms > max_norm).mean()
+    return losses, model, averaged(model, optimizer), float(clip_rate)
+```
+
+```{.python .input #practice-a-worked-configuration-4}
+%%tab pytorch, jax
+data.batch_size = 256  # Where the throughput levels off
+seed, short = new_seed(), {}
+print('noise scale at initialization: '
+      f'{d2l.noise_scale(tiny_lm(seed), sample_lm, b_small=8, b_big=256):.0f}')
+for lr in [1e-3, 3e-3, 1e-2]:
+    losses, model, _, clip_rate = train(seed, lambda t: lr, num_steps=300)
+    short[lr] = (d2l.final_loss(losses), model)
+    print(f'lr {lr:g}: loss {short[lr][0]:.3f} after 300 steps, '
+          f'{clip_rate:.0%} of the steps clipped')
+peak = min(short, key=lambda lr: short[lr][0])
+print(f'peak rate {peak:g}; noise scale after its 300 steps: '
+      f'{d2l.noise_scale(short[peak][1], sample_lm, b_small=8, b_big=256):.0f}')
+```
+
+```{.python .input #practice-a-worked-configuration-5}
+%%tab pytorch, jax
+num_steps = 3000
+val_loss = lambda model: math.log(d2l.lm_perplexity(model, data.val_dataloader()))
+print(f'{"validation loss":<16}{"configured":>11}{"its EMA":>9}'
+      f'{"clipped":>9}{"baseline":>10}{"gap":>7}')
+results = []
+for seed in [new_seed() for _ in range(2)]:
+    _, model, ema, clip_rate = train(
+        seed, warmup_cosine(peak, num_steps // 50, num_steps), num_steps)
+    _, baseline, _, _ = train(seed, lambda t: peak, num_steps,
+                              max_norm=math.inf)
+    results.append((val_loss(model), val_loss(baseline)))
+    print(f'{"seed " + str(len(results)):<16}{results[-1][0]:11.3f}'
+          f'{val_loss(ema):9.3f}{clip_rate:9.1%}{results[-1][1]:10.3f}'
+          f'{results[-1][1] - results[-1][0]:7.3f}')
+(c1, b1), (c2, b2) = results
+print(f'spread between the seeds: configured {abs(c1 - c2):.3f}, '
+      f'baseline {abs(b1 - b2):.3f}')
+```
+
 ## Summary
 
 A large training run is configured once, guarded against rare failures, and
@@ -634,6 +817,8 @@ optimizers is evidence only when each arm's nuisance hyperparameters were
 retuned and the protocol is stated.
 
 ## Exercises
+
+<!-- WRITER: Exercise 4 needs updating to the new cell: the EMA now starts after epoch 5 (so the weight on the initial weights in part 1 becomes the weight on the epoch-5 weights after 10 epochs, about 2,350 steps), and part 3 (EMA on a cosine-decayed run) is now done in the text: the cell prints it, and the EMA ends at or 0.1 to 0.3 points below the decayed run's final live weights (lag after decay). Replace part 3, e.g. by starting the average at epoch 1 or 10, or by an equal-weight tail average. -->
 
 1. **The decay timescale.** The horizon of :numref:`subsec_wd-at-scale` is
    $\tau = B/(\eta\lambda D)$ epochs for batch size $B$ and dataset size
@@ -749,6 +934,8 @@ retuned and the protocol is stated.
 [Discussions](https://d2l.discourse.group/t/36767)
 
 <!-- slides -->
+
+<!-- WRITER: slide material changed by the code step. `@!practice-a-nan-averted-2` now prints a table of four settings over two seeds (lr 1 unclipped / clipped at 1, lr 0.3 unclipped, lr 3 clipped at 1); `@!practice-a-nan-averted-3` plots all four over the first 50 steps. `@!practice-weight-averaging-3` now shows FashionCNN (no LeNet-BN): constant rate live and EMA (from epoch 5) against a cosine decay of the same length; `@!practice-weight-averaging-2` prints both schedules for two seeds. The new worked configuration has outputs at `practice-a-worked-configuration-2` (throughput per batch size), `-4` (noise scale, 300-step grid, chosen peak) and `-5` (final runs: configured, its EMA, clip rate, baseline, gap, spread), for the closing slide sequence. Kicker "LeNet-BN, Fashion-MNIST, η = 0.3" and the recap's "reaches a decayed schedule's accuracy" need the new numbers (see the WRITER notes in the body). -->
 
 ::: {.slide}
 ::: {.cover}

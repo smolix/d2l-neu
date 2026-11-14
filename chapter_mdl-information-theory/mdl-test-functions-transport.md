@@ -571,8 +571,17 @@ for i in range(n_atoms):
     A_eq[n_atoms + i, i::n_atoms] = 1            # column sums = q
 res = optimize.linprog(C.ravel(), A_eq=A_eq,
                        b_eq=np.concatenate([p_w, q_w]), method='highs')
-print(f'W1 via the CDF formula : {w1_cdf:.10f}')
-print(f'W1 via the primal LP   : {res.fun:.10f}')
+plan_lp = res.x.reshape(n_atoms, n_atoms)
+# Monotone plan (Step 2): source i holds the quantiles (F_p[i-1], F_p[i]],
+# destination j holds (F_q[j-1], F_q[j]]; route i -> j carries their overlap
+lo_p, lo_q = F_p - p_w, F_q - q_w
+mono = np.clip(np.minimum(F_p[:, None], F_q[None, :])
+               - np.maximum(lo_p[:, None], lo_q[None, :]), 0, None)
+print(f'W1 from the CDF gaps     : {w1_cdf:.4f}')
+print(f'W1 from the LP           : {res.fun:.4f}')
+print(f'cost of the monotone plan: {np.sum(mono * C):.4f}')
+print(f'LP plan = monotone plan  : {np.allclose(plan_lp, mono)}, '
+      f'mass the LP plan moves leftward: {np.tril(plan_lp, -1).sum():.2f}')
 ```
 
 Both routes give $W_1 = 1.7$: one sum over five gaps replaces a $36$-variable
@@ -659,26 +668,29 @@ Sinkhorn at three values of $\varepsilon$, and counts the routes that carry
 more than $10^{-3}$ of mass.
 
 ```{.python .input #divergences-distances-sinkhorn}
-def sinkhorn(p, q, C, eps, iters=5000):
-    """Entropic OT by Sinkhorn iterations; returns the plan and its cost."""
+def sinkhorn(p, q, C, eps, tol=1e-9, max_iters=10 ** 6):
+    """Entropic OT by Sinkhorn iterations, stopped once the column sums are
+    within tol of q (L1); returns the plan, its cost and the iterations."""
     K = np.exp(-C / eps)                         # the Gibbs kernel
     a = np.ones_like(p)
-    for _ in range(iters):
+    for it in range(1, max_iters + 1):
         b = q / (K.T @ a)                        # match the column sums
-        a = p / (K @ b)                          # match the row sums
+        a = p / (K @ b)                          # match the row sums ...
+        if np.abs(b * (K.T @ a) - q).sum() < tol:  # ... columns still right?
+            break
     plan = a[:, None] * K * b[None, :]
-    return plan, np.sum(plan * C)
+    return plan, np.sum(plan * C), it
 
 C2 = (atoms[:, None] - atoms[None, :]) ** 2      # squared cost (x_i - y_j)^2
 res2 = optimize.linprog(C2.ravel(), A_eq=A_eq,
                         b_eq=np.concatenate([p_w, q_w]), method='highs')
-print(f'squared cost, LP optimum : {res2.fun:.4f}')
+print(f'squared cost, LP optimum : {res2.fun:.5f}')
 plans, eps_values = [], (2.0, 0.5, 0.1)
 for eps in eps_values:
-    plan, cost = sinkhorn(p_w, q_w, C2, eps)
+    plan, cost, iters = sinkhorn(p_w, q_w, C2, eps)
     plans.append(plan)
-    print(f'epsilon = {eps}: entropic cost = {cost:.4f}, '
-          f'routes above 1e-3 = {(plan > 1e-3).sum()}')
+    print(f'epsilon = {eps}: {iters:6d} iterations, entropic cost = '
+          f'{cost:.5f}, routes above 1e-3 = {(plan > 1e-3).sum()}')
 d2l.show_heatmaps(d2l.tensor(np.stack(plans)[None]), 'destination j',
                   'source i', titles=[f'epsilon = {e}' for e in eps_values],
                   figsize=(9, 2.8), cmap='Blues')

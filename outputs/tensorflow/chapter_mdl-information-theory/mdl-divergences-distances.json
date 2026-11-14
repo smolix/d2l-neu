@@ -52,43 +52,43 @@
       ]
     },
     "divergences-distances-fwd-rev-kl": {
-      "code_fingerprint": "sha256:c7534d97f0fa00f7793ef2af1292a536a415e7edc32ebe754632294d7ab22625",
+      "code_fingerprint": "sha256:c605b5d3b76031a2edf0374e2aeec57421edfdbb023a7fd82d7e0863faaac852",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward KL             mu = -0.800, sigma = 1.929, KL = 0.558 nats\nreverse KL             mu = -1.998, sigma = 0.603, KL = 0.356 nats\nreverse KL, 2nd start  mu = +1.995, sigma = 0.607, KL = 1.202 nats\n"
+          "text": "fit                             mu  sigma  forward KL  reverse KL\nforward-KL fit              -0.800  1.929       0.558       1.274\nreverse-KL fit              -1.998  0.603       5.981       0.356\nreverse-KL fit, 2nd start   +1.995  0.607      14.534       1.202\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37856,
-          "sha256": "sha256:1f6b07fba355e07c9c02f6585283920ebd5a425494b3b20f9086d6386e1aedc1"
+          "sha256": "sha256:d4e2a5d213ef9a0f33b4d9bad54b758125f05a938a00899e39effaa143446e1c"
         }
       ]
     },
     "divergences-distances-pinsker": {
-      "code_fingerprint": "sha256:52d58e13121c7c5dad1019bccde2a8af9a21865d4abaa3d5e4eef5f7b1c90616",
+      "code_fingerprint": "sha256:1b28607eee02bbef201ee5907dff2100ac2ad62d132004e47fa2ab0da52fad68",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "TV / sqrt(KL/2) over 10,000 random pairs: median 0.78, max 0.993\ncoins 1/2 vs 1/2 +   0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2 +  0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2 + 0.001: TV / sqrt(KL/2) = 0.999999\n"
+          "text": "TV / sqrt(KL/2) over 10,000 random pairs: median 0.78, max 0.991\ncoins 1/2 vs 1/2 +   0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2 +  0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2 + 0.001: TV / sqrt(KL/2) = 0.999999\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-pinsker-1.svg",
-          "bytes": 242245,
-          "sha256": "sha256:23766544dc4486a0c2291a24bd3f277bc0a82f69953c7d40f072fe4dc71ae4e8"
+          "bytes": 242193,
+          "sha256": "sha256:5bd334866840c60dc90e9843cda3e3e902fa5dcd84c2e71ffa490a82cd7e73bb"
         }
       ]
     },
     "divergences-distances-f-gan-bound": {
-      "code_fingerprint": "sha256:5731463a14125935edb7504285fe5aee454d58453dceae912cf17dd330fc29c9",
+      "code_fingerprint": "sha256:0a0dd10231c5d5de2d381aaa648077901b50803321ea96f4b6d790c955a05c3f",
       "kind": "mixed",
       "outputs": [
         {
@@ -101,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-f-gan-bound-1.svg",
           "bytes": 29473,
-          "sha256": "sha256:3774f31d066410b32df1a7661cb8ffc4794777ce3f341e5d89788554e13d10e8"
+          "sha256": "sha256:161ebb1873f31137e5121b6e1b5d02b05a471299846d32bc1c32949bbbb2fa38"
         }
       ]
     }

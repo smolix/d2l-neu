@@ -489,13 +489,16 @@ the output shows which effect wins at each order.
 ```{.python .input #mdl-coding-compression-a-language-model-as-a-compressor-2}
 k, n = len(set(text)), len(text)
 freq = [text.count(ch) / n for ch in set(text)]
+h_freq = -sum(f * math.log2(f) for f in freq)
 print(f'{n} characters over {k} symbols, letter-frequency entropy '
-      f'{-sum(f * math.log2(f) for f in freq):.3f} bits')
-for m in range(5):
-    bits = adaptive_bits(text, m, k)
-    print(f'order {m}: {bits:.2f} bits/char = {bits * math.log(2):.2f} '
-          f'nats/char, perplexity 2^bits = {2 ** bits:.2f}')
+      f'{h_freq:.3f} bits')
+bits = [adaptive_bits(text, m, k) for m in range(5)]
+for m, b in enumerate(bits):
+    print(f'order {m}: {b:.2f} bits/char = {b * math.log(2):.2f} '
+          f'nats/char, perplexity 2^bits = {2 ** b:.2f}')
 print(f'zlib -9: {8 * len(zlib.compress(text.encode(), 9)) / n:.2f} bits/char')
+print(f'order 0 minus the letter-frequency entropy: {bits[0] - h_freq:.4f} '
+      f'bits/char, {(bits[0] - h_freq) * n:.0f} bits in all')
 ```
 
 Context lowers the code length from $4.08$ bits per character with no

@@ -36,7 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0045  (population 0.0000)\nquadratic, N(0,1) vs N(0,4)    MMD^2 = +8.0333  (population 9.0000)\nRBF,       N(0,1) vs N(0,4)    MMD^2 = +0.0865  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = -0.0001  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0588  (population 0.0471)\n"
+          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0033  (population 0.0000)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "quadratic, N(0,1) vs N(0,4)    MMD^2 = +10.2618  (population 9.0000)\nRBF,       N(0,1) vs N(0,4)    MMD^2 = +0.1180  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = +0.0001  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0351  (population 0.0471)\n"
         }
       ]
     },
@@ -47,48 +52,48 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "witness changes sign at x = 0.28\nE_P g - E_Q g = 0.0597\n"
+          "text": "witness changes sign at x = 0.35\nE_P g - E_Q g = 0.0360\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-test-functions-transport/mdl-divergences-distances-integral-probability-metrics-and-mmd-1-1.svg",
-          "bytes": 27436,
-          "sha256": "sha256:38c6119460237f494d96369e9ae77760d5d1e2b801402114dafcd249465422e6"
+          "bytes": 27733,
+          "sha256": "sha256:92aee9d1a82b34d334dae4ebd232279b0f7f4e13f28bc667d887a8f10cd5bc18"
         }
       ]
     },
     "divergences-distances-w1": {
-      "code_fingerprint": "sha256:28388e53381cb106ba844edc787e65bf4cd356ecdc2f7bbf889bdc228edb4f0b",
+      "code_fingerprint": "sha256:a0a45bb9dca2796df18141410954621ed6e0a0f27daee3d35b2fe4ae86fcf74b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W1 via the CDF formula : 1.7000000000\nW1 via the primal LP   : 1.7000000000\n"
+          "text": "W1 from the CDF gaps     : 1.7000\nW1 from the LP           : 1.7000\ncost of the monotone plan: 1.7000\nLP plan = monotone plan  : False, mass the LP plan moves leftward: 0.00\n"
         }
       ]
     },
     "divergences-distances-sinkhorn": {
-      "code_fingerprint": "sha256:2627d76b22d693509ec63e695d91049fe34ab0a3aa6482b5be2dbc586a883260",
+      "code_fingerprint": "sha256:d1d360876f32a24c9eb7a233049f240e1b23647330d6eaee02153049f00a7313",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "squared cost, LP optimum : 3.5000\n"
+          "text": "squared cost, LP optimum : 3.50000\nepsilon = 2.0:     47 iterations, entropic cost = 4.06489, routes above 1e-3 = 25\nepsilon = 0.5:    186 iterations, entropic cost = 3.56963, routes above 1e-3 = 14\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epsilon = 2.0: entropic cost = 4.0649, routes above 1e-3 = 25\nepsilon = 0.5: entropic cost = 3.5696, routes above 1e-3 = 14\nepsilon = 0.1: entropic cost = 3.4995, routes above 1e-3 = 10\n"
+          "text": "epsilon = 0.1: 154325 iterations, entropic cost = 3.50002, routes above 1e-3 = 10\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-test-functions-transport/divergences-distances-sinkhorn-1.svg",
-          "bytes": 32778,
-          "sha256": "sha256:db3e6b6890b17e1ed7232896b26ef00095afa38a44e5f954e6d8a2ce6c66ffdc"
+          "bytes": 32795,
+          "sha256": "sha256:9b21a529b9d5236d9a32866cebf11a71f1fb00e2344f3d269156f95dbbea71da"
         }
       ]
     }

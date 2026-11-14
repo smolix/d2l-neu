@@ -533,11 +533,20 @@ def ksd2_ustat(x, score, ell=1.0):
     n = len(x)
     return (kappa.sum() - np.trace(kappa)) / (n * (n - 1))
 
+def ksd2_population(score, ell=1.0):
+    """KSD^2 of the data P = N(0, 1) against a model with this score, from
+    the score difference s_Q - s_P weighted by the kernel, by quadrature."""
+    t = np.linspace(-10.0, 10.0, 2001)
+    h = np.exp(-t ** 2 / 2) / np.sqrt(2 * np.pi) * (score(t) + t)
+    k = np.exp(-(t[:, None] - t[None, :]) ** 2 / (2 * ell ** 2))
+    return h @ k @ h * (t[1] - t[0]) ** 2
+
 x_p = rng.standard_normal(2000)          # the data sample, P = N(0, 1)
-for name, s, pop in [('true model  N(0,1)', lambda t: -t, 0.0),
-                     ('wrong model N(1,1)', lambda t: -(t - 1), 1 / np.sqrt(3))]:
-    print(f'KSD^2 vs the {name}: {ksd2_ustat(x_p, s):+.4f}  '
-          f'(population {pop:.4f})')
+for name, s in [('true model  N(0,1)', lambda t: -t),
+                ('wrong model N(1,1)', lambda t: -(t - 1)),
+                ('quartic exp(-x^4/4)', lambda t: -t ** 3)]:
+    print(f'KSD^2 vs the {name:19s}: {ksd2_ustat(x_p, s):+.4f}  '
+          f'(population {ksd2_population(s):.4f})')
 ```
 
 Against the correct model the estimate is within a few thousandths of zero and

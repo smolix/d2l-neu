@@ -589,11 +589,12 @@ th_fwd = optimize.minimize(fwd, x0=[0.0, 0.0], method='Nelder-Mead').x
 th_rev = optimize.minimize(rev, x0=[0.0, 0.0], method='Nelder-Mead').x
 th_rev2 = optimize.minimize(rev, x0=[2.5, -0.5], method='Nelder-Mead').x
 
-for name, th, val in [('forward KL', th_fwd, fwd(th_fwd)),
-                      ('reverse KL', th_rev, rev(th_rev)),
-                      ('reverse KL, 2nd start', th_rev2, rev(th_rev2))]:
-    print(f'{name:22s} mu = {th[0]:+.3f}, sigma = {np.exp(th[1]):.3f}, '
-          f'KL = {val:.3f} nats')
+print(f'{"fit":26s}{"mu":>8s}{"sigma":>7s}'
+      f'{"forward KL":>12s}{"reverse KL":>12s}')
+for name, th in [('forward-KL fit', th_fwd), ('reverse-KL fit', th_rev),
+                 ('reverse-KL fit, 2nd start', th_rev2)]:
+    print(f'{name:26s}{th[0]:+8.3f}{np.exp(th[1]):7.3f}'
+          f'{fwd(th):12.3f}{rev(th):12.3f}')
 
 d2l.plot(x, [np.exp(log_p(x)), np.exp(log_q(x, th_fwd)),
              np.exp(log_q(x, th_rev))], 'x', 'density',

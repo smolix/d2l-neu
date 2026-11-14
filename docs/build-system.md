@@ -1419,7 +1419,10 @@ the rest of `_book/` (no upload change was needed). `rebuild-book-artifacts`
 (so `all-quick`, `all`, `deploy`) and `render-fresh` run it right after
 `pdfs`. Each PDF holds the part's cover, a table of contents of that part
 only, the part's chapters (part page first) and the references that part
-cites. Pages are 7 × 10 in, the covers' trim size.
+cites. Pages are 7 × 10 in, the covers' trim size. The four full-book PDFs open
+the same way: `fix_latex.py` (`add_book_cover`) replaces Quarto's `\maketitle`
+with the book cover `static/cover/d2l-cover-D-inter-trim-7x10in.pdf` and a
+blank back page (a missing cover file keeps the title page, with a warning).
 
 **Design: cut the parts out of the finished full book.** There is no second
 render pipeline. `tools/build_part_pdfs.py` reads the full PyTorch book's

@@ -164,6 +164,7 @@ book:
         - chapter_optimization/test-models.qmd
         - chapter_optimization/momentum.qmd
         - chapter_optimization/adam.qmd
+        - chapter_optimization/adamw.qmd
         - chapter_optimization/lr-scheduler.qmd
         - chapter_optimization/muon.qmd
         - chapter_optimization/batch-size.qmd

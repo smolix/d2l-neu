@@ -734,6 +734,13 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   make capture-outputs FILES="chapter_x/foo.md chapter_y/bar.md"
   ```
 
+  It captures every framework that has a generated notebook for those files
+  (the `make notebooks` that `rerun-locked` runs first generates all four), so
+  when only one framework was re-run, call `python3 tools/capture_outputs.py
+  --frameworks pytorch FILES=…`. In a worktree without the other frameworks'
+  venvs, a four-framework capture rewrites their manifests with
+  `framework_version unknown`, which marks them stale (2026-11-14, `utils.md`).
+
   This shortcut is safe precisely because the capture-side guard above backs it:
   if those `_notebooks/` outputs turn out to be lib-stale (not actually
   re-executed under the current lib), the guard refuses rather than silently

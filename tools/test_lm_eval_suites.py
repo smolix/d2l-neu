@@ -1524,9 +1524,9 @@ class TestFix185(Fixture):
             self.assertIsNone(d2l._lm_frozen_key('lm-new-v2'))
         tmp = self.tmp.name
         old = pd.DataFrame({'k': [1, 2, 3], 'x': [0.5, 1.0, 2.0],
-                            'v': ['a', 'b', 'c']})
+                            'v': ['a', 'b', 'c'], 'w': [None, 'b', None]})
         new = pd.DataFrame({'k': [3, 1, 2], 'x': [2.0, 0.5, 1.25],
-                            'v': ['c', 'a', 'z']})
+                            'v': ['c', 'a', 'z'], 'w': [None, None, 'b']})
         old.to_parquet(os.path.join(tmp, 'old.parquet'), index=False)
         for name in ('t.parquet', 't.jsonl'):
             with mock.patch.dict(d2l.DATA_HUB, {'lm-t-v1': ('u', None)}), \
@@ -1540,6 +1540,7 @@ class TestFix185(Fixture):
             self.assertIn('against lm-t-v1: 3 of 3 rows matched', text)
             self.assertIn('x max |diff| 0.25', text)
             self.assertIn('v equal 0.667', text)
+            self.assertIn('w equal 1.000', text)  # missing in both: equal
         with mock.patch('builtins.print') as out:
             d2l.lm_save_table('u.parquet', new, ['k'], 'lm-none-v1', tmp)
         self.assertIn('no earlier version', out.call_args[0][0])

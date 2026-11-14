@@ -1529,6 +1529,16 @@ Qwen3 row reproduced bit for bit; only the Qwen3.5 rows changed (bpb by
 2.4e-4, 3 to 11 of 500 ARC predictions per format, most GSM8K and ARC reply
 texts). `lm-gsm8k-samples-v1` stays registered because 18.7 reads its
 problem ids.
+On 2026-11-14 (fp32 output layer in `score_choices` and `bits_per_byte`, a
+2,048-token reasoning arm) three of them were regenerated again as
+`lm-bpb-v3`, `lm-arc-generations-v4` and `lm-arc-scores-v3`, in one
+scheduler run (`D2L_RERUN=bpb,arc-generations,arc-scores`, 1,832 s, just
+over the 30-min target; ARC generation 17.6 min, re-scoring 6.8 min; card
+peak 13.1 GB). They could not run as per-artifact jobs: a run reads every
+artifact it does not regenerate from its registered key, and all three new
+keys were still unregistered. So when `ARTIFACTS` names several new keys at
+once, regenerate them in one run, or upload and register the first part
+before the second run.
 18.5's kernel gets the same setting. Its full regeneration (`D2L_RERUN=1`,
 2026-11-13, one RTX 4090) took 1,492 s (24.9 min: dev suite 3.1 min,
 GSM-Symbolic 3.1 min, answers 6.9 min, judge 0.9 + 4.4 min, protocol 5.5
@@ -1540,7 +1550,14 @@ Since 2026-11-14 its registry pairs each artifact with a `-v2` key
 (`eval-suites-lib.md`) writes each table and prints its agreement with the
 registered version it replaces. The regeneration adds a second one-task
 GSM8K protocol (lm-evaluation-harness's `gsm8k_cot`, about 5 min) and prints
-its wall clock against the 30-min target at the end.
+its wall clock against the 30-min target at the end. That regeneration ran
+on 2026-11-14 (one RTX 4090, fused kernels): 1,870 s in the scheduler, 30.6
+min by the notebook's own clock, just over the target and far inside the
+hard limit, so still uncut; the card peaked at 11.2 GB. Its files are the
+registered `lm-eval-scores-v2`, `lm-contam-scores-v2`, `lm-answers-v2`,
+`lm-judge-human-v2` and `lm-judge-pairs-v2` (Qwen3 answers and every
+GSM-Symbolic extraction reproduced; Qwen3.5 answer texts and the judge's
+log-odds changed).
 18.6 (`interpretability.md`) takes the same form since 2026-11-14 (`ARTIFACTS`
 in `interpretability-setup`: `tuned-lens`, `sae-06b`, `sae-17b`, `results`).
 `D2L_RERUN=results` loads the registered lens and SAEs and rewrites only the

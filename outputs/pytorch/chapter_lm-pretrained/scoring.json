@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:54d1764860749d5754cd38d429cde3e36245837d2b6ba1511aa70b272eaf23de",
+    "d2l_lib_fingerprint": "sha256:80703d651a8e6e41ec4e5f517b58f977a16259e44581a65b0c8786727b829f10",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -18,22 +18,17 @@
       "outputs": []
     },
     "scoring-imports-extras": {
-      "code_fingerprint": "sha256:b111bc26597f794f479c93e6d062955af938a910d5d61c838234b8b921581c53",
+      "code_fingerprint": "sha256:acaeffdaa9286e001eca730556ce5b5012cdcb43092fb8dcae57df9ade152d8f",
       "kind": "text",
       "outputs": []
     },
     "scoring-data-hub": {
-      "code_fingerprint": "sha256:41dc55f8e5c1213259072da67f5ff1210d3f913c4ba328cae73aae73c2718edf",
-      "kind": "text",
-      "outputs": []
-    },
-    "scoring-download": {
-      "code_fingerprint": "sha256:d7b26b3ed92cc8cf7e33cb801bbf52a2be5e0ea2d745356c9ce2f28ee9e47cec",
+      "code_fingerprint": "sha256:2255be80729a7bac56799c5094afc81aa51c90df266223c6e321aa17d7131293",
       "kind": "text",
       "outputs": []
     },
     "scoring-setup": {
-      "code_fingerprint": "sha256:36c4a595ca764c98717da4b6fe6fd455e386d49ee4a65390b5b63061fdfc8d85",
+      "code_fingerprint": "sha256:3f1bbe2b38b769edaa59bbe686f940ef69f189993145d7071faa6aa732c2e968",
       "kind": "text",
       "outputs": [
         {
@@ -43,29 +38,24 @@
         }
       ]
     },
-    "scoring-artifacts": {
-      "code_fingerprint": "sha256:142e35e234d82f78a003ec7dd602b285d40d7b4213589c249b3c28677c403ee4",
-      "kind": "text",
-      "outputs": []
-    },
     "scoring-data": {
-      "code_fingerprint": "sha256:3fa3d26428590728e75607a43d16127b525be00811a5c0dd563d88af36cfe3e3",
+      "code_fingerprint": "sha256:50fb3c16cb54ff199035ae2137e17c6165d3192790e436650e2e3de684db078f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ARC-Challenge: 500 of 1,172 test items; options per item {4: 494, 5: 3, 3: 3}\ndemonstrations: Mercury_SC_415702 (A), MCAS_2009_5_6516 (B), MEA_2016_8_14 (C), Mercury_7041615 (D), MDSA_2008_5_30 (A)\nGSM8K: 100 of 1,319 test problems\n"
+          "text": "ARC-Challenge: 500 of 1,172 test items; options per item {4: 494, 5: 3, 3: 3}\ndemonstrations (id, gold letter):\n    Mercury_SC_415702 (A)\n    MCAS_2009_5_6516 (B)\n    MEA_2016_8_14 (C)\n    Mercury_7041615 (D)\n    MDSA_2008_5_30 (A)\nGSM8K: 100 of 1,319 test problems\n"
         }
       ]
     },
     "scoring-format-mc": {
-      "code_fingerprint": "sha256:403a0d57a2f28841e9cb125ad024f10034eaf09604acff7e93667124a0426379",
+      "code_fingerprint": "sha256:196cfd1a4f4fd51fc24326d3d71df603ef38690f1bbf63c46faa94ee290a2436",
       "kind": "text",
       "outputs": []
     },
     "scoring-format-print": {
-      "code_fingerprint": "sha256:a6095f415120fca70a15959635bd7a0fe898c6ef83f45bf0868b975e9b785e72",
+      "code_fingerprint": "sha256:2c3a7fcd7a0cf34f67617f79faaf0f22d4b50019aab997842df46c09ffe778d1",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +66,7 @@
       ]
     },
     "scoring-format-merges": {
-      "code_fingerprint": "sha256:b7e801a7974ad42b9b08a3c7302725dc03784d3da40163ce5a3a5fc2a02ca33d",
+      "code_fingerprint": "sha256:66d0866b2f7ace3f0a512adb60f256f888da44dc0642c27e325ca8a46f7cadaf",
       "kind": "text",
       "outputs": [
         {
@@ -86,44 +76,54 @@
         }
       ]
     },
+    "scoring-components": {
+      "code_fingerprint": "sha256:6746698d68bbb9994370d7cb02e5d9d6b02bbb8c5f121f44ec717d8b0d7d6242",
+      "kind": "text",
+      "outputs": []
+    },
     "scoring-score-choices": {
-      "code_fingerprint": "sha256:0c4b95574140c1ad5c6d9cf0983d3c3411018506f8c07dfb2e2061b145fa70d8",
+      "code_fingerprint": "sha256:9b43dd65f2a0aefc3184b2aeb12d749b80040a7139584fdb8eebdbf85b93dd78",
       "kind": "text",
       "outputs": []
     },
     "scoring-check-def": {
-      "code_fingerprint": "sha256:55cbf1dcb8cd5eb764099b1c02348d76dc1e740df2e55df5c0aab27ce06ea31d",
+      "code_fingerprint": "sha256:dbe437360f7f982dd8566b6aee2e6b9b1b199ba6975a518016492536d2e83c18",
       "kind": "text",
       "outputs": []
     },
     "scoring-check-scorer": {
-      "code_fingerprint": "sha256:62652cd4864e9817a970e5b2a4a9fa5e455f6c693bf81b5cf0278a98e636e94e",
+      "code_fingerprint": "sha256:b1c76558ff13abc748aa65ab9d941b44e86f5655fdc242520a80ae2b244a5044",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3.5-0.8B-Base@dc7cdfe2ee41: Qwen3_5ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [248044]\nkernels: attention sdpa, delta rule PyTorch, short convolution PyTorch\n"
+          "text": "Qwen/Qwen3.5-0.8B-Base@dc7cdfe2ee41: Qwen3_5ForCausalLM, stop tokens [248044]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa, delta rule PyTorch, short convolution PyTorch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\nkernels: attention sdpa\n"
+          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, stop tokens [151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                 model                     check  max error  tolerance\nQwen/Qwen3.5-0.8B-Base          sum vs hand loop   0.000038    0.00010\nQwen/Qwen3.5-0.8B-Base              batch 8 vs 1   0.000024    0.00010\nQwen/Qwen3.5-0.8B-Base letters vs label_logprobs   0.000005    0.00001\n  Qwen/Qwen3-0.6B-Base          sum vs hand loop   0.000055    0.00010\n  Qwen/Qwen3-0.6B-Base              batch 8 vs 1   0.000037    0.00010\n  Qwen/Qwen3-0.6B-Base letters vs label_logprobs   0.000006    0.00001\n"
+          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, stop tokens [151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                 model                           check  max error  tolerance\nQwen/Qwen3.5-0.8B-Base                sum vs hand loop    3.8e-05    1.0e-04\nQwen/Qwen3.5-0.8B-Base                    batch 8 vs 1    2.4e-05    1.0e-04\nQwen/Qwen3.5-0.8B-Base       letters vs label_logprobs    5.0e-06    1.0e-05\n  Qwen/Qwen3-0.6B-Base                sum vs hand loop    5.5e-05    1.0e-04\n  Qwen/Qwen3-0.6B-Base                    batch 8 vs 1    3.3e-05    1.0e-04\n  Qwen/Qwen3-0.6B-Base       letters vs label_logprobs    5.7e-06    1.0e-05\n  Qwen/Qwen3-0.6B-Base letters vs label_logprobs, bf16    3.8e-06    1.0e-05\n"
         }
       ]
     },
     "scoring-harness-compare": {
-      "code_fingerprint": "sha256:651fff4516b7b8848ceea9ed6b00ce94b55f834418a6d7f0bda1571501444521",
+      "code_fingerprint": "sha256:74dad9287509d58a5296b6709eba5e113e1307b0708fc9764cbc0ae203ec8036",
       "kind": "text",
       "outputs": []
     },
     "scoring-harness-fixture": {
-      "code_fingerprint": "sha256:7d5cd92fb59c70b76f5e6c4c759d0c0f6bb457caa33e88ae25e9cfaabfeb39b4",
+      "code_fingerprint": "sha256:dbf1b63c30b7cf2b3affc2e5183f6d50a7aea1087fb5a9c85195f6b1d22a2ae3",
       "kind": "text",
       "outputs": [
         {
@@ -134,22 +134,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\nkernels: attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "    bf16, batch 8, sum: Mercury_7166425 ours B, harness A, margin 4.84e-02\n    bf16, batch 8, sum: Mercury_7186568 ours A, harness B, margin 1.26e-01\n    bf16, batch 8, sum: Mercury_404894 ours C, harness D, margin 3.08e-02\n    bf16, batch 8, sum: Mercury_SC_408366 ours A, harness D, margin 1.34e-01\n    bf16, batch 8, sum: Mercury_SC_415762 ours A, harness B, margin 0.00e+00\n    bf16, batch 8, char: Mercury_7127943 ours A, harness D, margin 9.67e-04\n    bf16, batch 8, char: AKDE&ED_2008_8_47 ours B, harness D, margin 2.47e-03\n    bf16, batch 8, char: Mercury_SC_416155 ours C, harness A, margin 1.64e-02\n    bf16, batch 8, char: Mercury_SC_401818 ours C, harness D, margin 1.39e-02\n    bf16, batch 8, char: Mercury_7102323 ours D, harness C, margin 2.41e-04\n    bf16, batch 8, char: Mercury_409301 ours B, harness C, margin 6.52e-03\n    bf16, batch 8, char: CSZ_2005_5_CSZ10021 ours B, harness C, margin 4.39e-03\nbf16, batch 8: max |ll difference| 8.7e-01; predictions that differ: {'sum': 5, 'char': 7}\n"
+          "text": "    bf16, batch 8, sum: Mercury_7186568 ours A, harness B, margin 1.58e-01\n    bf16, batch 8, sum: Mercury_404894 ours C, harness D, margin 1.29e-02\n    bf16, batch 8, sum: Mercury_178325 ours C, harness A, margin 2.05e-02\n    bf16, batch 8, sum: TIMSS_2003_8_pg80 ours B, harness A, margin 2.57e-04\n    bf16, batch 8, sum: Mercury_SC_408366 ours A, harness D, margin 1.86e-01\n    bf16, batch 8, char: AKDE&ED_2008_8_47 ours B, harness D, margin 3.41e-03\n    bf16, batch 8, char: Mercury_SC_416155 ours C, harness A, margin 9.95e-03\n    bf16, batch 8, char: Mercury_SC_401818 ours C, harness D, margin 9.41e-03\n    bf16, batch 8, char: Mercury_7102323 ours D, harness C, margin 1.73e-03\n    bf16, batch 8, char: CSZ_2005_5_CSZ10021 ours B, harness C, margin 2.50e-04\nbf16, batch 8: max |ll difference| 8.8e-01; predictions that differ: {'sum': 5, 'char': 5}\n"
         }
       ]
     },
     "scoring-bits-per-byte": {
-      "code_fingerprint": "sha256:d2dd187168f3076430a22b8d868bf0e4e57c2c4aef26a7bf17410bdee7879ff3",
+      "code_fingerprint": "sha256:5192ffe668f1b77f978858f389477dfea5d86cec34ff187bd9efb0c37c4ba732",
       "kind": "text",
       "outputs": []
     },
     "scoring-texts": {
-      "code_fingerprint": "sha256:71ca9f7e0914d2e3c706f617b1209e77157c1b93b487bed208b81ba2dd0bb35c",
+      "code_fingerprint": "sha256:99cbe5541fafd2f10971607b0deac2efb14a55237ca0b36f8b54a1221e5f73d9",
       "kind": "text",
       "outputs": [
         {
@@ -160,75 +155,70 @@
       ]
     },
     "scoring-bpb-check": {
-      "code_fingerprint": "sha256:0b2ab2d43ff9d1f6e159144c85a4f42f561bbc0c1af1262bd14c5481656d0639",
+      "code_fingerprint": "sha256:c2243fb7afa401b66ccaedb28c9901d56c198b2eac2db5fb9dd1bad551bdb5ca",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "300 tokens, ctx 512, stride 512: bpb 0.988367, full logits 0.988367, relative difference 7.0e-08\n"
+          "text": "300 tokens, ctx 512, stride 512:\n    bpb 0.988367, full logits 0.988367, relative difference 7.0e-08\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3,000 tokens, ctx 512, stride 256: bpb 0.950500, full logits 0.950500, relative difference 2.8e-08\n"
+          "text": "3,000 tokens, ctx 512, stride 256:\n    bpb 0.950500, full logits 0.950500, relative difference 2.8e-08\n"
         }
       ]
     },
     "scoring-bpb-def": {
-      "code_fingerprint": "sha256:58639efb8e34e2a2fd0b6e9c46a844649c08a555a7674b6b65054c179e83efd4",
+      "code_fingerprint": "sha256:614e311fa820a5d93d2180fa76bc0a63d06d972b65a2d19503329a0a226a2120",
       "kind": "text",
       "outputs": []
     },
     "scoring-bpb-models": {
-      "code_fingerprint": "sha256:4834bd7a9ab6a41f6ef355b19f9b9469e19f0f70ecf69cb9724e4e46c6f64b33",
+      "code_fingerprint": "sha256:b54ae1071edccfabdac93940434c8b1aab92292ffb9d735449de91e33a113f3d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "boundary token: {'Qwen/Qwen3-0.6B-Base': 151643, 'Qwen/Qwen3.5-0.8B-Base': 248044}\n"
+          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, stop tokens [151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\nkernels: attention sdpa\n"
+          "text": "Qwen/Qwen3.5-0.8B-Base@dc7cdfe2ee41: Qwen3_5ForCausalLM, stop tokens [248044]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa, delta rule fla, short convolution PyTorch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3.5-0.8B-Base@dc7cdfe2ee41: Qwen3_5ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [248044]\nkernels: attention sdpa, delta rule fla, short convolution PyTorch\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "6 of 6 rows in lm-bpb-v2; max |bpb difference| 4.2e-11\n                                            T        B    tpb  ppl_tok    bpb\ntext           model                                                         \nwikitext-2     Qwen/Qwen3-0.6B-Base    298938  1287656  0.232   11.184  0.809\nheld-out prose Qwen/Qwen3-0.6B-Base     17641    68148  0.259   10.531  0.879\nheld-out code  Qwen/Qwen3-0.6B-Base     20425    56401  0.362    3.406  0.640\nwikitext-2     Qwen/Qwen3.5-0.8B-Base  297053  1287656  0.231   11.697  0.819\nheld-out prose Qwen/Qwen3.5-0.8B-Base   17881    68148  0.262   10.082  0.875\nheld-out code  Qwen/Qwen3.5-0.8B-Base   21351    56401  0.379    3.635  0.705\ntokens per byte, Qwen3 over Qwen3.5: {'held-out code': 0.957, 'held-out prose': 0.987, 'wikitext-2': 1.006}\n"
+          "text": "6 of 6 rows in lm-bpb-v3; max |bpb difference| 4.8e-11\nQwen3-0.6B-Base: boundary token 151643, output layer of 151,936 rows\nQwen3.5-0.8B-Base: boundary token 248044, output layer of 248,320 rows\n                                       T        B    tpb  ppl_tok    bpb\ntext           model                                                    \nwikitext-2     Qwen3-0.6B-Base    298938  1287656  0.232   11.180  0.809\nheld-out prose Qwen3-0.6B-Base     17641    68148  0.259   10.527  0.879\nheld-out code  Qwen3-0.6B-Base     20425    56401  0.362    3.406  0.640\nwikitext-2     Qwen3.5-0.8B-Base  297053  1287656  0.231   11.695  0.818\nheld-out prose Qwen3.5-0.8B-Base   17881    68148  0.262   10.074  0.874\nheld-out code  Qwen3.5-0.8B-Base   21351    56401  0.379    3.634  0.705\ntokens per byte, Qwen3 over Qwen3.5:\n    held-out code: 0.957\n    held-out prose: 0.987\n    wikitext-2: 1.006\n"
         }
       ]
     },
     "scoring-bpb-windows": {
-      "code_fingerprint": "sha256:705c5d62332cd3b948c850032956c9bc1fbed4c755b767ba1e49e4ab6404e665",
+      "code_fingerprint": "sha256:fa0921a3d79d8bd4b3dccacbcd90031362f493036274d7e51b14eb32edeacd87",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\nkernels: attention sdpa\n"
+          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, stop tokens [151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3 of 3 rows in lm-bpb-v2; max |bpb difference| 4.3e-11\nstep  stride = ctx  stride = ctx/2\nctx                               \n512         0.9330          0.8696\n2048        0.8308          0.8087\n"
+          "text": "3 of 3 rows in lm-bpb-v3; max |bpb difference| 4.0e-11\nstep  stride = ctx  stride = ctx/2\nctx                               \n512         0.9328          0.8695\n2048        0.8307          0.8086\n"
         }
       ]
     },
     "scoring-extract-answer": {
-      "code_fingerprint": "sha256:dbf3b5f4a4114a2a4ad8036a17aa96ba99c441d08c66b0fe82c64d2ebb545e37",
+      "code_fingerprint": "sha256:08665b40b4f6a3fcac5a59111219e85b53da0223728b47c4a787a51e6f134411",
       "kind": "text",
       "outputs": []
     },
     "scoring-extract-check": {
-      "code_fingerprint": "sha256:9a9df1e3a931819d60fc4abfb2a7b2c91fb4bdafbe0dd0b4a08d9f240568baf3",
+      "code_fingerprint": "sha256:692211ab01ee7dd49c3dc186bdbfb5efa35589300a7dfe16195824bf6ac4f0b0",
       "kind": "text",
       "outputs": [
         {
@@ -239,29 +229,29 @@
       ]
     },
     "scoring-gsm8k-prompts": {
-      "code_fingerprint": "sha256:7420f3b9bf13fa24688d09e1453ec2916550a420eb4f0d36308ff362cf1366f1",
+      "code_fingerprint": "sha256:6484e9aa28faea54fb95ac0cfe5c97a436a59609e9342ae47f053a5a711264fa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "<|im_start|>user\nNatalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?<|im_end|>\n<|im_start|>assistant\nNatalia sold 48/2 = 24 clips in May.\nNatalia sold 48+24 = 72 clips altogether in April and May.\n#### 72<|im_end|>\n<|im_start|>user\nWeng earns $12 an hour for babysitting. Yesterday, she just did 50 minutes of babysitting. How much did she earn?<|im_end|>\n<|im_start|>assistant\nWeng earns 12/60 = $0.2 per minute.\nWorking 50 minutes, she earned 0.2 x 50 = $10.\n#### 10<|im_end|>\n<|im_start|>user\nBetty is saving money for a new wallet which costs $100. Betty has only half of the money she needs. Her parents decided to give her $15 for that purpose, and her grandparents twice as much as her parents. How much more money does Betty need to buy the wallet?<|im_end|>\n<|im_start|>assistant\nIn the beginning, Betty has only 100 / 2 = $50.\nBetty's grandparents gave her 15 * 2 = $30.\nThis means, Betty needs 100 - 50 - 30 - 15 = $5 more.\n#### 5<|im_end|>\n<|im_start|>user\nJulie is reading a 120-page book. Yesterday, she was able to read 12 pages and today, she read twice as many pages as yesterday. If she wants to read half of the remaining pages tomorrow, how many pages should she read?<|im_end|>\n<|im_start|>assistant\nMaila read 12 x 2 = 24 pages today.\nSo she was able to read a total of 12 + 24 = 36 pages since yesterday.\nThere are 120 - 36 = 84 pages left to be read.\nSince she wants to read half of the remaining pages tomorrow, then she should read 84/2 = 42 pages.\n#### 42<|im_end|>\n<|im_start|>user\nCarmen has $100, Samantha has $25 more than Carmen, and Daisy has $50 more than Samantha. How much do all three girls have combined?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n\n"
+          "text": "<|im_start|>user\nNatalia sold clips to 48 of her friends in April, and then she sold half as\nmany clips in May. How many clips did Natalia sell altogether in April and\nMay?<|im_end|>\n<|im_start|>assistant\nNatalia sold 48/2 = 24 clips in May.\nNatalia sold 48+24 = 72 clips altogether in April and May.\n#### 72<|im_end|>\n[three more demonstrations]\n<|im_start|>user\nCarmen has $100, Samantha has $25 more than Carmen, and Daisy has $50 more than\nSamantha. How much do all three girls have combined?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n\n"
         }
       ]
     },
     "scoring-gsm8k-pool": {
-      "code_fingerprint": "sha256:a2a782b427cc454628e5fe089413c8f12d089232f433341e58689d79b99d6198",
+      "code_fingerprint": "sha256:514462d0835e9826ed0d96426b3c4c629594c82586b5999585151ae8ad9c59a8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sampler recorded in the pool: {'chat': True, 'enable_thinking': False, 'strategy': 'sample', 'temperature': 0.7, 'p': 0.8, 'k': 20, 'max_new_tokens': 320}\n                   sample-0 accuracy  truncated  mean tokens\nmodel                                                       \nQwen/Qwen3-0.6B                 0.06      0.045      148.360\nQwen/Qwen3.5-0.8B               0.09      0.225      216.322\n"
+          "text": "sampler of the pool:\n    chat=True\n    enable_thinking=False\n    strategy=sample\n    temperature=0.7\n    p=0.8\n    k=20\n    max_new_tokens=320\n                   samples  cut at the budget  mean tokens\nmodel                                                     \nQwen/Qwen3-0.6B        800              0.045        148.0\nQwen/Qwen3.5-0.8B      800              0.225        216.0\n"
         }
       ]
     },
     "scoring-extractors": {
-      "code_fingerprint": "sha256:9a6e27ae1065e20b5c50e19d486164c219847a2fbb28c60d77d308dcdadd1ba5",
+      "code_fingerprint": "sha256:9d9698567221c261f93e5a733aeffc1160ed39ab471defd0aabcf575ce5a983a",
       "kind": "text",
       "outputs": [
         {
@@ -277,17 +267,17 @@
       ]
     },
     "scoring-boot": {
-      "code_fingerprint": "sha256:47529976dd3d959c3c94b087b11e9b48ac28a468412c2bdd37d86f70a895146f",
+      "code_fingerprint": "sha256:d3ad6c1192b49b90c903d9d9130009ee0dbccd807ba368222fe343cb1681f7f5",
       "kind": "text",
       "outputs": []
     },
     "scoring-pass-at-k": {
-      "code_fingerprint": "sha256:1f33ec554196a90bcd5963b15461a48700ab727ab6e2fa1ec6cc26aac524c125",
+      "code_fingerprint": "sha256:34b348450273ed600303d0b83110f2c1b1953de67c04a7f73df08bad819bedfb",
       "kind": "text",
       "outputs": []
     },
     "scoring-passk-check": {
-      "code_fingerprint": "sha256:88980bfd09e65882d4d65c386b5a0a5bce1b0d76e54e77dfbae2e4bcb41012f0",
+      "code_fingerprint": "sha256:b75d14278353b5c1a75140b8924b76b530879bc16f8e36748aa3d4271d55c0b5",
       "kind": "text",
       "outputs": [
         {
@@ -298,250 +288,267 @@
       ]
     },
     "scoring-passk-pool": {
-      "code_fingerprint": "sha256:443a0fbad022679530a2d058685dbbdc7798d1159c1fe568f435aff21015acb8",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:a004a8f6e9fefdd03d0c14e3221027b0fc0ed905be720c34701b7919ee0020ad",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "model                        Qwen/Qwen3-0.6B     Qwen/Qwen3.5-0.8B\npass@1                  0.062 [0.040, 0.087]  0.092 [0.061, 0.129]\npass@2                  0.112 [0.074, 0.153]  0.156 [0.107, 0.210]\npass@4                  0.187 [0.127, 0.248]  0.240 [0.171, 0.312]\npass@8                  0.290 [0.200, 0.380]  0.340 [0.250, 0.430]\nmaj@8                   0.240 [0.160, 0.320]  0.300 [0.210, 0.390]\nfirst parsed of 8       0.260 [0.180, 0.350]  0.280 [0.190, 0.370]\nmaj@8 - pass@1          0.177 [0.115, 0.245]  0.207 [0.141, 0.276]\nmaj@8 - first parsed  -0.020 [-0.050, 0.000]  0.020 [0.000, 0.050]\nplug-in: {'Qwen/Qwen3-0.6B': [0.062, 0.106, 0.163, 0.222], 'Qwen/Qwen3.5-0.8B': [0.092, 0.148, 0.213, 0.276]}\nparsed (strict) answers per problem, of 8: {'Qwen/Qwen3-0.6B': 1.38, 'Qwen/Qwen3.5-0.8B': 1.31}\n"
-        },
+          "text": "                               Qwen3-0.6B          Qwen3.5-0.8B\npass@1               0.414 [0.334, 0.491]  0.429 [0.351, 0.505]\npass@2               0.506 [0.423, 0.588]  0.538 [0.454, 0.617]\npass@4               0.602 [0.516, 0.681]  0.633 [0.545, 0.714]\npass@8               0.700 [0.610, 0.790]  0.710 [0.620, 0.790]\nplug-in@1                           0.414                 0.429\nplug-in@2                           0.495                 0.524\nplug-in@4                           0.573                 0.604\nplug-in@8                           0.638                 0.664\nmaj@8                0.480 [0.380, 0.580]  0.550 [0.450, 0.650]\nmaj@8 - pass@1       0.066 [0.021, 0.114]  0.121 [0.069, 0.176]\nanswers per problem                  7.64                  6.20\n"
+        }
+      ]
+    },
+    "scoring-passk-figure": {
+      "code_fingerprint": "sha256:529acf13a1cef44141fadcdfcd44d33ed0c333de54e9f2aad325d9e67edf073c",
+      "kind": "asset",
+      "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "scoring/scoring-passk-pool-1.svg",
-          "bytes": 30764,
-          "sha256": "sha256:c96e8d4a4c6d51931056b045dd61e8af5aa8c50bd7989936b6b2a90db1e3dcf0"
+          "asset": "scoring/scoring-passk-figure-1.svg",
+          "bytes": 28588,
+          "sha256": "sha256:5c8f9e8d45405f6309c695f287cad295e5f27a3afb7539a23dbacd50e7bce9e7"
         }
       ]
     },
     "scoring-passk-variance-split": {
-      "code_fingerprint": "sha256:0131a66a912a246bdc0d896d0a0dfebe4e723f6f54f3c7128cbf3707c41ac7b4",
+      "code_fingerprint": "sha256:10fc3ee08617508497218f4ce97179fa5351069c633e3e3f14e5aa645395967c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "            model  k    total   within  between  within_share within_estimate\n  Qwen/Qwen3-0.6B  1 1.53e-04 6.21e-05 9.10e-05      4.05e-01           exact\n  Qwen/Qwen3-0.6B  4 9.72e-04 2.50e-04 7.23e-04      2.57e-01         plug-in\nQwen/Qwen3.5-0.8B  1 2.89e-04 7.90e-05 2.10e-04      2.73e-01           exact\nQwen/Qwen3.5-0.8B  4 1.27e-03 2.57e-04 1.01e-03      2.02e-01         plug-in\n"
+          "text": "       model  k    total   within  between within_share within_estimate\n  Qwen3-0.6B  1 1.63e-03 1.16e-04 1.52e-03         0.07           exact\n  Qwen3-0.6B  4 1.85e-03 2.62e-04 1.59e-03         0.14         plug-in\nQwen3.5-0.8B  1 1.51e-03 1.36e-04 1.38e-03         0.09           exact\nQwen3.5-0.8B  4 1.87e-03 2.27e-04 1.64e-03         0.12         plug-in\n"
         }
       ]
     },
     "scoring-run-tests": {
-      "code_fingerprint": "sha256:693f61b0b0c7fbd3458916b6d1c3a343b9e37f3892f5b3c24bf646915ebb8b34",
+      "code_fingerprint": "sha256:a9f731535bde1c3bfd00cc5ed656b1c7d67d236891d711b0a67c40042a8dbf9a",
       "kind": "text",
       "outputs": []
     },
     "scoring-run-tests-check": {
-      "code_fingerprint": "sha256:5af5d4ca10255042ae21d687ff567d697586a708b8016e526232d0106d5c15f9",
+      "code_fingerprint": "sha256:be1826c17169480cd0e55d3d907667d13675587a285d11b8f136374abd166e28",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "correct        passed=True  0.07 s\nwrong          passed=False 0.07 s\n"
+          "text": "correct        passed=True \nwrong          passed=False\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "infinite loop  passed=False 5.00 s\nsyntax error   passed=False 0.07 s\n"
+          "text": "infinite loop  passed=False stopped after 5 s\nsyntax error   passed=False\n"
         }
       ]
     },
     "scoring-arc-arms": {
-      "code_fingerprint": "sha256:ce7d8c7da507961ec8ed1cf8dbda7cd8ce8dc17c9946d46a851ae77832df72f0",
+      "code_fingerprint": "sha256:162dbdfabc620225058996e6b5b09bb8e3a9f1cf550b02590fad7770639c5a29",
       "kind": "text",
       "outputs": []
     },
     "scoring-arc-generate": {
-      "code_fingerprint": "sha256:555afd7ae50fb0f238a4b484bb6b1866c9dc6100524a890feb57e166eefead27",
+      "code_fingerprint": "sha256:7806dbdb83e50f0cced9a6bd9834dd8a3d0dfc00e3bd1bb4d372f86b25930d9c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "direct: 500 items per model, settings {'strategy': 'greedy', 'enable_thinking': False, 'max_new_tokens': 512}\nreasoning: 100 items per model, settings {'strategy': 'sample', 'temperature': 0.6, 'p': 0.95, 'k': 20, 'seed': 0, 'enable_thinking': True, 'max_new_tokens': 1024}\n                             accuracy  among parsed  invalid  truncated  boxed, then cut  mean tokens\nmodel             arm                                                                                \nQwen/Qwen3-0.6B   direct        0.452         0.562    0.194      0.002            0.002      130.488\n                  reasoning     0.550         0.833    0.000      0.340              NaN      780.510\nQwen/Qwen3-1.7B   direct        0.772         0.789    0.008      0.014            0.004      220.418\n                  reasoning     0.500         0.962    0.000      0.480              NaN      895.860\nQwen/Qwen3.5-0.8B direct        0.672         0.781    0.000      0.140            0.002      342.412\n"
+          "text": "direct: 500 items per model, batch 50, settings:\n    strategy=greedy, enable_thinking=False, max_new_tokens=512\nreasoning: 100 items per model, batch 25, settings:\n    strategy=sample, temperature=0.6, p=0.95, k=20, seed=0,\n    enable_thinking=True, max_new_tokens=2048\n                        accuracy  among parsed  invalid  truncated  mean tokens\nmodel        arm                                                               \nQwen3-0.6B   direct        0.514         0.571    0.098      0.002         98.0\n             reasoning     0.690         0.726    0.000      0.050        883.0\nQwen3-1.7B   direct        0.772         0.820    0.036      0.022        237.0\n             reasoning     0.760         0.905    0.000      0.160       1228.0\nQwen3.5-0.8B direct        0.656         0.770    0.000      0.148        346.0\n"
         }
       ]
     },
     "scoring-grid-def": {
-      "code_fingerprint": "sha256:b36d030d4d44cfacc1115cc8f9572125f34bfb6684cdf9a4f2a4946d39acdf33",
+      "code_fingerprint": "sha256:af8a4de20aa71d2a8645a391b32defd20882579ab9f709a7b2aeb0228b054f78",
       "kind": "text",
       "outputs": []
     },
     "scoring-conventions": {
-      "code_fingerprint": "sha256:eea87a3ecac0ff5caab88cf130a5fd773cb0af94cce181a1df99a10fcd4d96ab",
+      "code_fingerprint": "sha256:7eb72b5989d61ca27f01bf65b94313a12173a311558a7e14d3ccd1fd9a2d8510",
       "kind": "text",
       "outputs": []
     },
     "scoring-grid": {
-      "code_fingerprint": "sha256:c8f98f35e81bb4b7b8550de54ba46c3a9216bb122b446793f7827fa421acb64b",
+      "code_fingerprint": "sha256:48aa61fd75cb1b4171eb431c3bb9362d9e0bdbc5c1f146b27e6728f8a9052aeb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151643]\nkernels: attention sdpa\n"
+          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, stop tokens [151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B-Base: 33 s, peak 3.8 GiB (4.3 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v2\n    uncond: 500 of 500 predictions as in lm-arc-scores-v2\n    letter0: 500 of 500 predictions as in lm-arc-scores-v2\n    letter5: 500 of 500 predictions as in lm-arc-scores-v2\n"
+          "text": "Qwen3-0.6B-Base: peak 4.3 GiB (4.7 GiB reserved)\n    predictions as registered: cloze 500/500, uncond 500/500, letter0 500/500, letter5 500/500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\n"
+          "text": "Qwen/Qwen3-0.6B@c1899de289a0: Qwen3ForCausalLM, stop tokens [151645, 151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B: 33 s, peak 1.6 GiB (1.6 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v2\n    uncond: 500 of 500 predictions as in lm-arc-scores-v2\n    letter0: 500 of 500 predictions as in lm-arc-scores-v2\n    letter5: 500 of 500 predictions as in lm-arc-scores-v2\n"
+          "text": "Qwen3-0.6B: peak 1.9 GiB (2.0 GiB reserved)\n    predictions as registered: cloze 500/500, uncond 500/500, letter0 500/500, letter5 500/500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3.5-0.8B-Base@dc7cdfe2ee41: Qwen3_5ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [248044]\nkernels: attention sdpa, delta rule fla, short convolution PyTorch\n"
+          "text": "Qwen/Qwen3.5-0.8B-Base@dc7cdfe2ee41: Qwen3_5ForCausalLM, stop tokens [248044]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa, delta rule fla, short convolution PyTorch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3.5-0.8B-Base: 48 s, peak 2.0 GiB (2.1 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v2\n    uncond: 500 of 500 predictions as in lm-arc-scores-v2\n    letter0: 500 of 500 predictions as in lm-arc-scores-v2\n    letter5: 500 of 500 predictions as in lm-arc-scores-v2\n"
+          "text": "Qwen3.5-0.8B-Base: peak 2.8 GiB (2.8 GiB reserved)\n    predictions as registered: cloze 500/500, uncond 500/500, letter0 500/500, letter5 500/500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3.5-0.8B@2fc06364715b: Qwen3_5ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [248044, 248046]\nkernels: attention sdpa, delta rule fla, short convolution PyTorch\n"
+          "text": "Qwen/Qwen3.5-0.8B@2fc06364715b: Qwen3_5ForCausalLM, stop tokens [248044, 248046]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa, delta rule fla, short convolution PyTorch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3.5-0.8B: 47 s, peak 2.0 GiB (2.1 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v2\n    uncond: 500 of 500 predictions as in lm-arc-scores-v2\n    letter0: 500 of 500 predictions as in lm-arc-scores-v2\n    letter5: 500 of 500 predictions as in lm-arc-scores-v2\n"
+          "text": "Qwen3.5-0.8B: peak 2.8 GiB (2.8 GiB reserved)\n    predictions as registered: cloze 500/500, uncond 500/500, letter0 500/500, letter5 500/500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-1.7B@70d244cc86cc: Qwen3ForCausalLM, 0 missing keys, unexpected keys: none, stop tokens [151645, 151643]\nkernels: attention sdpa\n"
+          "text": "Qwen/Qwen3-1.7B@70d244cc86cc: Qwen3ForCausalLM, stop tokens [151645, 151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-1.7B: 46 s, peak 4.1 GiB (4.1 GiB reserved)\n    cloze: 500 of 500 predictions as in lm-arc-scores-v2\n    uncond: 500 of 500 predictions as in lm-arc-scores-v2\n    letter0: 500 of 500 predictions as in lm-arc-scores-v2\n    letter5: 500 of 500 predictions as in lm-arc-scores-v2\n"
+          "text": "Qwen3-1.7B: peak 4.6 GiB (5.0 GiB reserved)\n    predictions as registered: cloze 500/500, uncond 500/500, letter0 500/500, letter5 500/500\n"
         }
       ]
     },
     "scoring-batch-size": {
-      "code_fingerprint": "sha256:9d88d6a280bda5bb97a6acd261877478a80f772aef18cd650cfd6b4dd7f11c71",
+      "code_fingerprint": "sha256:5eff9c16f4db028872d8610c2e606461ae57fbc8e7124bb251980e4aa135a765",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "           setting             model convention  changed  rate  max_change  below_change\nbf16, batch 8 vs 1   Qwen/Qwen3-0.6B  cloze-sum        9 0.018    1.139523           155\nbf16, batch 8 vs 1   Qwen/Qwen3-0.6B   letter-0       12 0.024    0.854779           157\nbf16, batch 8 vs 1 Qwen/Qwen3.5-0.8B  cloze-sum        5 0.010    0.472658            73\nbf16, batch 8 vs 1 Qwen/Qwen3.5-0.8B   letter-0       11 0.022    0.309713           109\nfp32, batch 1 vs 8   Qwen/Qwen3-0.6B  cloze-sum        0 0.000    0.000122             0\nfp32, batch 1 vs 8   Qwen/Qwen3-0.6B   letter-0        0 0.000    0.000125             0\n"
+          "text": "           setting        model convention  changed  rate max_change  below_change\nbf16, batch 8 vs 1   Qwen3-0.6B  cloze-sum        6 0.012        1.1           144\nbf16, batch 8 vs 1   Qwen3-0.6B   letter-0       12 0.024       0.78           150\nbf16, batch 8 vs 1 Qwen3.5-0.8B  cloze-sum        1 0.002       0.35            55\nbf16, batch 8 vs 1 Qwen3.5-0.8B   letter-0        7 0.014       0.27            95\nfp32, batch 1 vs 8   Qwen3-0.6B  cloze-sum        0 0.000    0.00012             0\nfp32, batch 1 vs 8   Qwen3-0.6B   letter-0        0 0.000    0.00013             0\n"
         }
       ]
     },
     "scoring-drift": {
-      "code_fingerprint": "sha256:eef83ddce3ed4fb019a94db57ea608405316219f68f01e9692a299f451f3cf7d",
+      "code_fingerprint": "sha256:df648e7d38e9d463d399a5e091ad690fe772e3731497f77a98b5776c422e5ba2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "drift of the pair difference, batch 8 vs 1: {'cloze-sum': 0.006, 'cloze-token': 0.002, 'cloze-char': 0.008, 'letter-0': 0.002}\nthe other conventions get the largest measured drift\n"
+          "text": "drift of the pair difference, batch 8 vs 1:\ncloze-sum      0.004\ncloze-token    0.004\ncloze-char     0.002\nletter-0       0.010\nnot re-scored at batch 1, so given the largest: cloze-PMI, letter-5, gen-direct, gen-reasoning\n"
         }
       ]
     },
     "scoring-verdicts": {
-      "code_fingerprint": "sha256:9656019f619c1258f0a577ddd981a061b1c871c32fe13ad5ac16bc3cc5212a17",
+      "code_fingerprint": "sha256:d9ae0ba17fe21d81e113e2440a399f3e8ae04dd26951c97280126e130d0d4bb9",
       "kind": "text",
       "outputs": []
     },
     "scoring-one-item": {
-      "code_fingerprint": "sha256:f44ed7d6393ddc03b558f75612d69ad94a8390d8a110d0b4c921c20813e2a5a1",
+      "code_fingerprint": "sha256:d40fc994004076d0158a30172da047bb5e97e6026e546d9af608419916a9f6a8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "A farmer thinks that the vegetables on her farm are not getting enough water. Her son suggests that they use water from the nearby ocean to water the vegetables. Is this a good idea?\nA. Yes, because there is plenty of ocean water.\nB. Yes, because ocean water has many natural fertilizers.\nC. No, because ocean water is too salty for plants grown on land.\nD. No, because ocean water is much more polluted than rainwater.\ngold C; Qwen3-0.6B: cloze-sum D, letter-0 B, gen-direct C\nfirst item with 3 different letters (NAEP_2005_4_S13+14); items with at least two: 320 of the 402 with a parsed reply\n"
+          "text": "A farmer thinks that the vegetables on her farm are not getting enough water.\n   Her son suggests that they use water from the nearby ocean to water the\n   vegetables. Is this a good idea?\nA. Yes, because there is plenty of ocean water.\nB. Yes, because ocean water has many natural fertilizers.\nC. No, because ocean water is too salty for plants grown on land.\nD. No, because ocean water is much more polluted than rainwater.\ngold C; Qwen3-0.6B: cloze-sum D, letter-0 B, gen-direct C\nthe first item with 3 different letters: NAEP_2005_4_S13+14\nitems with at least two: 351 of the 450 with a parsed direct reply\n"
         }
       ]
     },
     "scoring-convention-table": {
-      "code_fingerprint": "sha256:159e550ecc59ecc572232cda0597bdd78a8fb30765e936994f775311ce026c88",
+      "code_fingerprint": "sha256:c695f1dec2725be83fd3eec38e71f88f8e5575f329bdf82f79c855773022d03f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                    Qwen3-0.6B-Base            Qwen3-0.6B     Qwen3.5-0.8B-Base          Qwen3.5-0.8B            Qwen3-1.7B\ncloze-sum      0.332 [0.292, 0.374]  0.294 [0.254, 0.336]  0.350 [0.308, 0.392]  0.288 [0.248, 0.328]  0.390 [0.346, 0.434]\ncloze-token    0.360 [0.318, 0.402]  0.318 [0.278, 0.358]  0.384 [0.342, 0.426]  0.322 [0.282, 0.364]  0.418 [0.374, 0.462]\ncloze-char     0.378 [0.336, 0.420]  0.320 [0.280, 0.360]  0.352 [0.310, 0.394]  0.334 [0.292, 0.376]  0.418 [0.374, 0.462]\ncloze-PMI      0.414 [0.370, 0.458]  0.358 [0.316, 0.400]  0.416 [0.372, 0.460]  0.390 [0.346, 0.432]  0.460 [0.418, 0.504]\nletter-0       0.600 [0.558, 0.642]  0.500 [0.456, 0.544]  0.680 [0.638, 0.720]  0.616 [0.574, 0.658]  0.724 [0.686, 0.764]\nletter-5       0.658 [0.616, 0.700]  0.590 [0.546, 0.634]  0.692 [0.650, 0.730]  0.670 [0.628, 0.712]  0.758 [0.720, 0.794]\ngen-direct                           0.452 [0.408, 0.496]                        0.672 [0.630, 0.712]  0.772 [0.734, 0.808]\ngen-reasoning                        0.550 [0.450, 0.650]                                              0.500 [0.400, 0.600]\ngold bpb       1.379 [1.289, 1.481]  1.352 [1.281, 1.428]  1.152 [1.080, 1.230]  1.197 [1.129, 1.269]  1.303 [1.222, 1.393]\npredictions where 'char' and 'byte' differ, five checkpoints: 2\n"
+          "text": "accuracy (gold bpb: mean bits per byte of the gold option), with\nhalf the width of the 95% bootstrap interval over items:\n               Q3-0.6B-Base       Q3-0.6B Q3.5-0.8B-Base     Q3.5-0.8B       Q3-1.7B\ncloze-sum      0.330 ±0.041  0.294 ±0.041   0.350 ±0.042  0.288 ±0.040  0.392 ±0.044\ncloze-token    0.358 ±0.042  0.318 ±0.040   0.382 ±0.042  0.326 ±0.041  0.414 ±0.044\ncloze-char     0.378 ±0.042  0.320 ±0.040   0.354 ±0.042  0.334 ±0.042  0.420 ±0.044\ncloze-PMI      0.414 ±0.044  0.362 ±0.042   0.420 ±0.044  0.392 ±0.043  0.460 ±0.043\nletter-0       0.604 ±0.042  0.502 ±0.044   0.686 ±0.041  0.612 ±0.043  0.724 ±0.039\nletter-5       0.662 ±0.041  0.588 ±0.044   0.684 ±0.041  0.664 ±0.042  0.758 ±0.037\ngen-direct                   0.514 ±0.044                 0.656 ±0.042  0.772 ±0.037\ngen-reasoning                0.690 ±0.090                               0.760 ±0.080\ngold bpb       1.379 ±0.096  1.352 ±0.074   1.152 ±0.075  1.197 ±0.070  1.303 ±0.086\npredictions where 'char' and 'byte' differ, five checkpoints: 2\n"
         }
       ]
     },
     "scoring-pair-diff": {
-      "code_fingerprint": "sha256:e9de5646f7d38cfb40cabb671e63b2abcbd2a18795ad796f63698eacee03726b",
+      "code_fingerprint": "sha256:19c7aee099072c3f0387f909044563b639e7efd5d12b322998b59ae955073067",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                         difference  drift              ahead\ncloze-sum    -0.006 [-0.044, 0.032]  0.006            neither\ncloze-token   0.004 [-0.034, 0.042]  0.002            neither\ncloze-char    0.014 [-0.024, 0.052]  0.008            neither\ncloze-PMI     0.032 [-0.018, 0.080]  0.008            neither\nletter-0       0.116 [0.068, 0.164]  0.002  Qwen/Qwen3.5-0.8B\nletter-5       0.080 [0.034, 0.126]  0.008  Qwen/Qwen3.5-0.8B\ngen-direct     0.220 [0.168, 0.272]  0.008  Qwen/Qwen3.5-0.8B\nranking flips: False\nQwen3.5-0.8B - Qwen3-0.6B:\n    cloze-char accuracy: 0.014 [-0.024, 0.052], |difference| over half-width 0.37\n    gold bpb: -0.155 [-0.194, -0.115], |difference| over half-width 3.94\n    wrong-option bpb: -0.136 [-0.177, -0.094], |difference| over half-width 3.26\n    wrong - gold bpb: 0.019 [-0.017, 0.056], |difference| over half-width 0.52\n"
+          "text": "                         difference        drift         ahead\ncloze-sum    -0.006 [-0.044, 0.032]        0.004       neither\ncloze-token   0.008 [-0.030, 0.046]        0.004       neither\ncloze-char    0.014 [-0.024, 0.052]        0.002       neither\ncloze-PMI     0.030 [-0.020, 0.080]  0.010 (max)       neither\nletter-0       0.110 [0.062, 0.158]        0.010  Qwen3.5-0.8B\nletter-5       0.076 [0.030, 0.122]  0.010 (max)  Qwen3.5-0.8B\ngen-direct     0.142 [0.088, 0.196]  0.010 (max)  Qwen3.5-0.8B\nranking flips: False\nQwen3.5-0.8B - Qwen3-0.6B:\n    cloze-char accuracy: 0.014 [-0.024, 0.052], |difference| over half-width 0.37\n    gold bpb: -0.155 [-0.194, -0.115], |difference| over half-width 3.94\n    wrong-option bpb: -0.135 [-0.177, -0.094], |difference| over half-width 3.25\n    wrong - gold bpb: 0.020 [-0.017, 0.057], |difference| over half-width 0.53\n"
         }
       ]
     },
     "scoring-contrasts": {
-      "code_fingerprint": "sha256:da49c66749c8d562f92636cbaf127de4bcc8dac9c700782a507d07fb0572a0bb",
+      "code_fingerprint": "sha256:0afdeba3f050989cc058c285da1e994cc8500c060f85604c2d7f1f0fbd2d389c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "drift of the contrasts, batch 8 vs 1: 0.006\npair, (letter-0 - cloze-sum) difference of differences: 0.122 [0.062, 0.184] (Qwen3.5-0.8B gains more)\nQwen/Qwen3-0.6B-Base: letter-0 - cloze-sum 0.268 [0.212, 0.326] (letter-0 ahead)\nQwen/Qwen3-0.6B: letter-0 - cloze-sum 0.206 [0.146, 0.264] (letter-0 ahead)\nQwen/Qwen3.5-0.8B-Base: letter-0 - cloze-sum 0.330 [0.276, 0.384] (letter-0 ahead)\nQwen/Qwen3.5-0.8B: letter-0 - cloze-sum 0.328 [0.274, 0.382] (letter-0 ahead)\n"
+          "text": "drift of the contrasts, batch 8 vs 1: 0.014\npair, difference of (letter-0 - cloze-sum):\n    0.116 [0.054, 0.178] (Qwen3.5-0.8B gains more)\nletter-0 - cloze-sum:\n    Qwen3-0.6B-Base: 0.274 [0.218, 0.332] (letter-0 ahead)\n    Qwen3-0.6B: 0.208 [0.148, 0.266] (letter-0 ahead)\n    Qwen3.5-0.8B-Base: 0.336 [0.282, 0.390] (letter-0 ahead)\n    Qwen3.5-0.8B: 0.324 [0.270, 0.378] (letter-0 ahead)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-1.7B: letter-0 - cloze-sum 0.334 [0.282, 0.386] (letter-0 ahead)\nQwen/Qwen3-0.6B - Qwen/Qwen3-0.6B-Base, (letter-0 - cloze-sum): -0.062 [-0.124, -0.002] (not resolved at 500 items)\nQwen/Qwen3.5-0.8B - Qwen/Qwen3.5-0.8B-Base, (letter-0 - cloze-sum): -0.002 [-0.044, 0.042] (not resolved at 500 items)\nQwen/Qwen3-0.6B, first 100 items: reasoning - direct 0.130 [0.010, 0.250] (reasoning budget binds: no direction); truncated direct 0.00, reasoning 0.34\n    both replies commit to a letter on 50: they differ on 16; accuracy there 0.84 (reasoning), 0.60 (direct), descriptive\n    mean tokens 781 (reasoning), 129 (direct), 1 for a scored letter\n"
+          "text": "    Qwen3-1.7B: 0.332 [0.280, 0.384] (letter-0 ahead)\npost-trained - base, difference of (letter-0 - cloze-sum):\n    Qwen3-0.6B - Qwen3-0.6B-Base: -0.066 [-0.126, -0.006]\n        (not resolved at 500 items)\n    Qwen3.5-0.8B - Qwen3.5-0.8B-Base: -0.012 [-0.056, 0.032]\n        (not resolved at 500 items)\n"
+        }
+      ]
+    },
+    "scoring-reasoning-vs-direct": {
+      "code_fingerprint": "sha256:26c1e2ba5b3df384f6eba49ecab87e4586d4c31bd7a47c3e17f3578e1420cd0b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-0.6B, first 100 items: reasoning - direct 0.200 [0.100, 0.310]\n    (reasoning ahead); cut at the budget: direct 0.00, reasoning 0.05\n    both replies commit to a letter on 83: they differ on 25\n    accuracy there 0.72 (reasoning), 0.55 (direct), descriptive\n    mean tokens 883 (reasoning), 91 (direct), 1 for a scored letter\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-1.7B, first 100 items: reasoning - direct -0.260 [-0.360, -0.160] (reasoning budget binds: no direction); truncated direct 0.00, reasoning 0.48\n    both replies commit to a letter on 52: they differ on 4; accuracy there 0.96 (reasoning), 0.92 (direct), descriptive\n    mean tokens 896 (reasoning), 214 (direct), 1 for a scored letter\n"
+          "text": "Qwen3-1.7B, first 100 items: reasoning - direct 0.000 [-0.090, 0.090]\n    (not resolved at 100 items); cut at the budget: direct 0.01, reasoning 0.16\n    both replies commit to a letter on 81: they differ on 10\n    accuracy there 0.90 (reasoning), 0.84 (direct), descriptive\n    mean tokens 1228 (reasoning), 242 (direct), 1 for a scored letter\n"
         }
       ]
     },
     "scoring-length-spread": {
-      "code_fingerprint": "sha256:6d9715129baa2713f374811d54ac318864869af0fcb85b1416e71ae077334b3a",
+      "code_fingerprint": "sha256:67aeaaae9344729950a31776ba8acc1973d08d130d683e979679fa077dbc3a48",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tercile 1, spread 1.00 to 1.29: 0.172 [0.136, 0.210]\ntercile 2, spread 1.29 to 1.60: 0.367 [0.320, 0.417]\ntercile 3, spread 1.60 to 6.00: 0.576 [0.523, 0.631]\ntop - bottom: 0.404 [0.339, 0.469]\n                   tercile 1  tercile 2  tercile 3\nQwen3-0.6B-Base        0.240      0.428      0.689\nQwen3-0.6B             0.186      0.392      0.605\nQwen3.5-0.8B-Base      0.162      0.349      0.575\nQwen3.5-0.8B           0.144      0.331      0.557\nQwen3-1.7B             0.132      0.337      0.455\n"
+          "text": "tercile 1, spread 1.00 to 1.29: 0.174 [0.138, 0.212]\ntercile 2, spread 1.29 to 1.60: 0.369 [0.321, 0.417]\ntercile 3, spread 1.60 to 6.00: 0.572 [0.519, 0.628]\ntop - bottom: 0.399 [0.334, 0.465]\n                   tercile 1  tercile 2  tercile 3\nQwen3-0.6B-Base        0.246      0.440      0.683\nQwen3-0.6B             0.186      0.398      0.605\nQwen3.5-0.8B-Base      0.162      0.349      0.569\nQwen3.5-0.8B           0.150      0.325      0.551\nQwen3-1.7B             0.126      0.331      0.455\n"
         }
       ]
     },
     "scoring-letter-bias": {
-      "code_fingerprint": "sha256:d0c37a182a6fa6cffbbb3e43da323928055efdbd50a8c16f9cf68dcf6c6015ab",
+      "code_fingerprint": "sha256:3ce22426db5aa2266f42110d238712b55a169a0f8ec6a32c7b679973af30d961",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                              A    B    C    D  E\ngold                        108  133  136  123  0\nQwen3-0.6B-Base letter-0     90  140  115  155  0\nQwen3-0.6B-Base letter-5    116  149  139   96  0\nQwen3-0.6B letter-0         121  147   73  159  0\nQwen3-0.6B letter-5          83  132  154  131  0\nQwen3.5-0.8B-Base letter-0  108  118  134  140  0\nQwen3.5-0.8B-Base letter-5   93  123  135  148  1\nQwen3.5-0.8B letter-0        59  124  103  213  1\nQwen3.5-0.8B letter-5        86  145  131  137  1\nQwen3-1.7B letter-0         114  141  138  107  0\nQwen3-1.7B letter-5         113  130  133  124  0\n"
+          "text": "                              A    B    C    D  E\ngold                        108  133  136  123  0\nQwen3-0.6B-Base letter-0     87  135  117  161  0\nQwen3-0.6B-Base letter-5    110  148  143   99  0\nQwen3-0.6B letter-0         118  146   73  163  0\nQwen3-0.6B letter-5          81  131  156  132  0\nQwen3.5-0.8B-Base letter-0  103  119  135  143  0\nQwen3.5-0.8B-Base letter-5   91  122  136  150  1\nQwen3.5-0.8B letter-0        57  114  105  223  1\nQwen3.5-0.8B letter-5        83  139  134  143  1\nQwen3-1.7B letter-0         112  141  140  107  0\nQwen3-1.7B letter-5         111  130  135  124  0\n"
         }
       ]
     },
     "scoring-flip-figure": {
-      "code_fingerprint": "sha256:6e905c18e75bf902ca37d5b5b26b971367a160f6a835c17e12d5a9a66e18b223",
+      "code_fingerprint": "sha256:7a05391bba6709c8c223a4e1c10d4efa59070080b00cef18693226393c0eb52c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scoring/scoring-flip-figure-1.svg",
-          "bytes": 80208,
-          "sha256": "sha256:c8e39a26bb9a11d257614fe05e0535fb970bffec8179c2ba689f394899653ff0"
+          "bytes": 79028,
+          "sha256": "sha256:740e5002a62cd3339b76820821bd0897e34d2cee3f1414480a05ef2ccf885246"
         }
       ]
     }

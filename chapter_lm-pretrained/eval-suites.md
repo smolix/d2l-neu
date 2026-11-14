@@ -95,7 +95,7 @@ CACHE = os.path.join('..', 'data', 'lm', 'rerun', 'eval-cache')
 # alone, only if the uncut run would not finish within 60 min: SMALL >= 1
 # judges 150 prompts instead of 300 and 200 human-labelled pairs instead
 # of 400; SMALL = 2 also keeps two GSM-Symbolic instances per template
-# instead of four. The uncut D2L_RERUN=1 run took 24.9 min, so SMALL = 0.
+# instead of four. The uncut D2L_RERUN=1 run took 30.6 min, so SMALL = 0.
 SMALL = 0
 N_DOLLY, N_HUMAN = (70, 200) if SMALL >= 1 else (220, 400)
 N_INSTANCES = 2 if SMALL >= 2 else 4
@@ -147,21 +147,21 @@ d2l.DATA_HUB['lm-benchmarks-2026-v1'] = (
     d2l.LM_DATA_URL + 'lm-benchmarks-2026-v1.json',
     'f22e75c247119ba6f43196cc54beceeb9bd47e6c')
 # The measured results of this section, frozen from one D2L_RERUN=1 run
-d2l.DATA_HUB['lm-eval-scores-v1'] = (
-    d2l.LM_DATA_URL + 'lm-eval-scores-v1.parquet',
-    'd763a4a07621e9004053b655e94266a1418337cf')
-d2l.DATA_HUB['lm-contam-scores-v1'] = (
-    d2l.LM_DATA_URL + 'lm-contam-scores-v1.parquet',
-    '8d8c0222ba9c67afb186fa7e28f47a400598ccfb')
-d2l.DATA_HUB['lm-answers-v1'] = (
-    d2l.LM_DATA_URL + 'lm-answers-v1.jsonl',
-    '0ece3d97bb17848986ccd531c60b1c9d55543520')
-d2l.DATA_HUB['lm-judge-human-v1'] = (
-    d2l.LM_DATA_URL + 'lm-judge-human-v1.jsonl',
-    'deef229878dbddcba4de7d008caa38995700c4cd')
-d2l.DATA_HUB['lm-judge-pairs-v1'] = (
-    d2l.LM_DATA_URL + 'lm-judge-pairs-v1.jsonl',
-    '1ad1a0cebbed4fc73f835ad12aece141cc23b041')
+d2l.DATA_HUB['lm-eval-scores-v2'] = (
+    d2l.LM_DATA_URL + 'lm-eval-scores-v2.parquet',
+    'd41b6cba069ee196d11cf37c789ba50e63b8e0e7')
+d2l.DATA_HUB['lm-contam-scores-v2'] = (
+    d2l.LM_DATA_URL + 'lm-contam-scores-v2.parquet',
+    '2b192f436b2d85ebb6cb53ade24cba451c8f1327')
+d2l.DATA_HUB['lm-answers-v2'] = (
+    d2l.LM_DATA_URL + 'lm-answers-v2.jsonl',
+    '6e8460ba43a3a5299a682461e0bdc91a0fbdde55')
+d2l.DATA_HUB['lm-judge-human-v2'] = (
+    d2l.LM_DATA_URL + 'lm-judge-human-v2.jsonl',
+    '03d9c0400e75ee4dc542dddbbdd6936d242f48e3')
+d2l.DATA_HUB['lm-judge-pairs-v2'] = (
+    d2l.LM_DATA_URL + 'lm-judge-pairs-v2.jsonl',
+    '767530058ce52af5fa4d985e3bbc96e07e7191ae')
 ```
 
 <!-- Placeholder (stage 2): where the measured results live: registered files, or this run's regenerated ones; short names and interval formats for the tables. -->

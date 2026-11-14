@@ -5397,7 +5397,7 @@ d2l.DATA_HUB['lm-heldout-texts-v1'] = (
     '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
 # This section's measured results, written by a run with D2L_RERUN (the
 # keys in use are in ARTIFACTS below). The next section reads
-# lm-gsm8k-samples-v2 and lm-arc-scores-v2; the API section reads the
+# lm-gsm8k-samples-v2 and lm-arc-scores-v3; the API section reads the
 # problem ids of lm-gsm8k-samples-v1
 d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
@@ -5405,9 +5405,15 @@ d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
 d2l.DATA_HUB['lm-gsm8k-samples-v2'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v2.jsonl',
     'e02bde69f9fca1f0af49d1170088d87a304ceb0f')
-d2l.DATA_HUB['lm-arc-scores-v2'] = (
-    d2l.LM_DATA_URL + 'lm-arc-scores-v2.parquet',
-    '6f28f8ca8ce1f5acee402086e2907b3116f758be')
+d2l.DATA_HUB['lm-bpb-v3'] = (
+    d2l.LM_DATA_URL + 'lm-bpb-v3.csv',
+    '1afa5c853c605511c3c5d8f41ee4607ee7bfd12b')
+d2l.DATA_HUB['lm-arc-generations-v4'] = (
+    d2l.LM_DATA_URL + 'lm-arc-generations-v4.jsonl',
+    'd0ae416ceb8865bfac71df64e0526d470026ba40')
+d2l.DATA_HUB['lm-arc-scores-v3'] = (
+    d2l.LM_DATA_URL + 'lm-arc-scores-v3.parquet',
+    '7f3e186697deceed231f826da256c2fce646eef1')
 
 def format_mc(question, options, fmt='cloze', *, shots=()):
     """A multiple-choice item as (prompt, choices). 'cloze': the prompt
@@ -5733,21 +5739,21 @@ d2l.DATA_HUB['lm-benchmarks-2026-v1'] = (
     d2l.LM_DATA_URL + 'lm-benchmarks-2026-v1.json',
     'f22e75c247119ba6f43196cc54beceeb9bd47e6c')
 # The measured results of this section, frozen from one D2L_RERUN=1 run
-d2l.DATA_HUB['lm-eval-scores-v1'] = (
-    d2l.LM_DATA_URL + 'lm-eval-scores-v1.parquet',
-    'd763a4a07621e9004053b655e94266a1418337cf')
-d2l.DATA_HUB['lm-contam-scores-v1'] = (
-    d2l.LM_DATA_URL + 'lm-contam-scores-v1.parquet',
-    '8d8c0222ba9c67afb186fa7e28f47a400598ccfb')
-d2l.DATA_HUB['lm-answers-v1'] = (
-    d2l.LM_DATA_URL + 'lm-answers-v1.jsonl',
-    '0ece3d97bb17848986ccd531c60b1c9d55543520')
-d2l.DATA_HUB['lm-judge-human-v1'] = (
-    d2l.LM_DATA_URL + 'lm-judge-human-v1.jsonl',
-    'deef229878dbddcba4de7d008caa38995700c4cd')
-d2l.DATA_HUB['lm-judge-pairs-v1'] = (
-    d2l.LM_DATA_URL + 'lm-judge-pairs-v1.jsonl',
-    '1ad1a0cebbed4fc73f835ad12aece141cc23b041')
+d2l.DATA_HUB['lm-eval-scores-v2'] = (
+    d2l.LM_DATA_URL + 'lm-eval-scores-v2.parquet',
+    'd41b6cba069ee196d11cf37c789ba50e63b8e0e7')
+d2l.DATA_HUB['lm-contam-scores-v2'] = (
+    d2l.LM_DATA_URL + 'lm-contam-scores-v2.parquet',
+    '2b192f436b2d85ebb6cb53ade24cba451c8f1327')
+d2l.DATA_HUB['lm-answers-v2'] = (
+    d2l.LM_DATA_URL + 'lm-answers-v2.jsonl',
+    '6e8460ba43a3a5299a682461e0bdc91a0fbdde55')
+d2l.DATA_HUB['lm-judge-human-v2'] = (
+    d2l.LM_DATA_URL + 'lm-judge-human-v2.jsonl',
+    '03d9c0400e75ee4dc542dddbbdd6936d242f48e3')
+d2l.DATA_HUB['lm-judge-pairs-v2'] = (
+    d2l.LM_DATA_URL + 'lm-judge-pairs-v2.jsonl',
+    '767530058ce52af5fa4d985e3bbc96e07e7191ae')
 
 BootstrapResult = collections.namedtuple(  # ci = (lo, hi); p_two_sided is
     'BootstrapResult',                      # None for a single sample
@@ -6218,9 +6224,9 @@ d2l.DATA_HUB['lm-sae-r1-l14-v1'] = (
 d2l.DATA_HUB['lm-sae-q17b-l14-v1'] = (
     d2l.LM_DATA_URL + 'lm-sae-q17b-l14-v1.pt',
     '11982ca32f0382eb9bf594faee58e808d61be12d')
-d2l.DATA_HUB['lm-interp-results-v2'] = (
-    d2l.LM_DATA_URL + 'lm-interp-results-v2.zip',
-    '598f3366ae49d269dda2abfd8d3af715275c3f93')
+d2l.DATA_HUB['lm-interp-results-v3'] = (
+    d2l.LM_DATA_URL + 'lm-interp-results-v3.zip',
+    '75606ff34dc535f0705dfeb9194e4791c2820484')
 
 class _InterveneStop(Exception):
     """Raised right after the stop_after site, to end a forward early.
@@ -10093,7 +10099,9 @@ def lm_save_table(name, df, on, key, rerun_dir=os.path.join(
         if pd.api.types.is_float_dtype(a) and pd.api.types.is_float_dtype(b):
             agree.append(f'{c} max |diff| {np.nanmax(np.abs(a - b)):.2g}')
         else:
-            same = np.mean(a.astype(str) == b.astype(str))
+            missing = (a.isna() & b.isna()).to_numpy(bool)  # equal too
+            same = np.mean(missing | (a.astype(object).astype(str) == b.astype(
+                object).astype(str)).to_numpy(bool))
             agree.append(f'{c} equal {same:.3f}')
     print(f'against {frozen}: {len(m)} of {len(df)} rows matched')
     for k in range(0, len(agree), 3):

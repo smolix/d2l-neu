@@ -694,7 +694,9 @@ def lm_save_table(name, df, on, key, rerun_dir=os.path.join(
         if pd.api.types.is_float_dtype(a) and pd.api.types.is_float_dtype(b):
             agree.append(f'{c} max |diff| {np.nanmax(np.abs(a - b)):.2g}')
         else:
-            same = np.mean(a.astype(str) == b.astype(str))
+            missing = (a.isna() & b.isna()).to_numpy(bool)  # equal too
+            same = np.mean(missing | (a.astype(object).astype(str) == b.astype(
+                object).astype(str)).to_numpy(bool))
             agree.append(f'{c} equal {same:.3f}')
     print(f'against {frozen}: {len(m)} of {len(df)} rows matched')
     for k in range(0, len(agree), 3):

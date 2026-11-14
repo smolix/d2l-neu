@@ -143,9 +143,9 @@ d2l.DATA_HUB['lm-sae-r1-l14-v1'] = (
 d2l.DATA_HUB['lm-sae-q17b-l14-v1'] = (
     d2l.LM_DATA_URL + 'lm-sae-q17b-l14-v1.pt',
     '11982ca32f0382eb9bf594faee58e808d61be12d')
-d2l.DATA_HUB['lm-interp-results-v2'] = (
-    d2l.LM_DATA_URL + 'lm-interp-results-v2.zip',
-    '598f3366ae49d269dda2abfd8d3af715275c3f93')
+d2l.DATA_HUB['lm-interp-results-v3'] = (
+    d2l.LM_DATA_URL + 'lm-interp-results-v3.zip',
+    '75606ff34dc535f0705dfeb9194e4791c2820484')
 ```
 
 <!-- Placeholder (prose, ### The Residual Stream as a Sum): the data of the section, each subset resolved once by a declared rule (FineWeb-Edu, Chinese and English Wikipedia, the recall pairs), and the Han-character tokens of the vocabulary. Wikipedia files are ordered by article id and neighbours share topics (hundreds of consecutive biographies of generals), so the documents come from 20 blocks spread over each file. The held-out label documents come from 20 other Wikipedia blocks, halfway between the contrast blocks, so they are other articles on other topics, not the contrast documents' neighbours. -->

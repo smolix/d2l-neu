@@ -109,7 +109,7 @@ d2l.DATA_HUB['lm-heldout-texts-v1'] = (
     '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
 # This section's measured results, written by a run with D2L_RERUN (the
 # keys in use are in ARTIFACTS below). The next section reads
-# lm-gsm8k-samples-v2 and lm-arc-scores-v2; the API section reads the
+# lm-gsm8k-samples-v2 and lm-arc-scores-v3; the API section reads the
 # problem ids of lm-gsm8k-samples-v1
 d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
@@ -117,9 +117,15 @@ d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
 d2l.DATA_HUB['lm-gsm8k-samples-v2'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v2.jsonl',
     'e02bde69f9fca1f0af49d1170088d87a304ceb0f')
-d2l.DATA_HUB['lm-arc-scores-v2'] = (
-    d2l.LM_DATA_URL + 'lm-arc-scores-v2.parquet',
-    '6f28f8ca8ce1f5acee402086e2907b3116f758be')
+d2l.DATA_HUB['lm-bpb-v3'] = (
+    d2l.LM_DATA_URL + 'lm-bpb-v3.csv',
+    '1afa5c853c605511c3c5d8f41ee4607ee7bfd12b')
+d2l.DATA_HUB['lm-arc-generations-v4'] = (
+    d2l.LM_DATA_URL + 'lm-arc-generations-v4.jsonl',
+    'd0ae416ceb8865bfac71df64e0526d470026ba40')
+d2l.DATA_HUB['lm-arc-scores-v3'] = (
+    d2l.LM_DATA_URL + 'lm-arc-scores-v3.parquet',
+    '7f3e186697deceed231f826da256c2fce646eef1')
 ```
 
 <!-- Placeholder (stage 2): the five checkpoints, the switches of the build (GPU, regeneration), and where the measured results live: registered files, or this run's regenerated ones. -->
@@ -1444,9 +1450,9 @@ def gain(m, col='ll'):  # letter-0 minus cloze-sum, correct per item
                           GOLD).astype(float)
                          for c in ('letter-0', 'cloze-sum')))
 
-def verdict(e, drift, names):  # the flip rule: the nearer end beyond drift
+def verdict(e, drift, names, n=len(ARC)):  # nearer end beyond drift wins
     return (names[0] if e[1] > drift else names[1] if e[2] < -drift else
-            f'not resolved at {len(ARC)} items')
+            f'not resolved at {n} items')
 
 # Drift of these contrasts between batch sizes 8 and 1 (bf16), measured on
 # the two models re-scored at batch 1; the largest stands for all of them
@@ -1491,7 +1497,7 @@ for m in ARMS['reasoning'][0]:
     print(f'{m[5:]}, first {n} items: reasoning - direct {show(d)}')
     print('    (' + (f'{" and ".join(binds)} budget binds: no direction'
                      if binds else verdict(d, 0, ('reasoning ahead',
-                                                  'direct ahead')))
+                                                  'direct ahead'), n))
           + '); cut at the budget: ' + ', '.join(
               f'{arm} {v:.2f}' for arm, v in cut.items()))
     print(f'    both replies commit to a letter on {both.sum()}: they differ '

@@ -51,6 +51,8 @@ information geometry.
 mdl-information-theory
 mdl-coding-compression
 mdl-divergences-distances
+mdl-test-functions-transport
+mdl-scores
 mdl-mutual-information
 mdl-mi-estimation
 further-reading

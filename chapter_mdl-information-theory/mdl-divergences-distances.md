@@ -1,4 +1,4 @@
-# Divergences and Distances Between Distributions
+# f-Divergences
 :label:`sec_mdl-divergences-distances`
 
 :numref:`sec_mdl-information_theory` ended with a difficulty: the KL divergence
@@ -367,6 +367,7 @@ an increasing function of $D_{f_\alpha}$ (problem
 that differential privacy bounds :cite:`Mironov.2017`.
 
 We evaluate the first six rows on the running pair, in both argument orders.
+<!-- WRITER: the cell no longer recomputes JS from the mixture formula (the line repeated the JS row, 0.0911); the next sentence is now false and goes. -->
 The last line of the output recomputes JS from the mixture formula.
 
 ```{.python .input #divergences-distances-f-table}
@@ -388,11 +389,6 @@ q = np.array([0.2, 0.5, 0.3])
 for name, f in generators.items():
     print(f'{name:12s} D_f(P||Q) = {f_divergence(f, p, q):.4f}   '
           f'D_f(Q||P) = {f_divergence(f, q, p):.4f}')
-
-m = (p + q) / 2
-js_mix = 0.5 * f_divergence(generators['KL'], p, m) \
-    + 0.5 * f_divergence(generators['KL'], q, m)
-print(f'JS via the mixture formula: {js_mix:.4f}')
 ```
 
 The KL row is asymmetric ($0.3961$ against $0.3653$ nats, the two numbers of
@@ -589,165 +585,6 @@ divergence functions say so in the conventions for vanishing densities:
 $u \log u$ has $f(0) = 0$ and $f'(\infty) = \infty$, and $-\log u$ has them the
 other way round.
 
-### The Fenchel Conjugate and the f-GAN Bound
-:label:`sec_mdl-f-gan-dual`
-
-A network that generates samples gives us draws from its distribution $Q$, and
-we hold draws from the data distribution $P$, but neither tells us the ratio
-$p(x)/q(x)$ that :eqref:`eq_mdl-f-div-def` needs. Can $D_f$ be computed from
-samples alone? It can be bounded from below, and the bound turns a divergence
-into a training objective.
-
-The tool is the convex conjugate of :numref:`subsec_mdl-convex-conjugate`: for
-a convex $f$,
-
-$$
-f^*(t) = \sup_{u}\, \big( ut - f(u) \big),
-$$
-
-so that $-f^*(t)$ is the intercept of the tangent line to $f$ with slope $t$
-(:numref:`fig_mdl-f-gan-tangent-bound`). A convex function lies above each of
-its tangents, which is the Fenchel--Young inequality
-
-$$
-f(u) \geq ut - f^*(t) \quad \textrm{for all } t,
-$$
-:eqlabel:`eq_mdl-fenchel-young`
-
-with equality when $t$ is the slope of $f$ at $u$, that is, $t = f'(u)$.
-
-![A convex divergence function, here $f(u)=u\log u$, is the upper envelope of its tangent lines. Each tangent of slope $t$ has intercept given by the negative conjugate $-f^*(t)$ (here $-e^{t-1}$), so keeping one tangent yields the Fenchel--Young lower bound and taking the supremum over slopes recovers the function exactly. Applied pointwise to the density ratio, this picture is the $f$-GAN variational bound.](../img/mdl-it-f-gan-tangent-bound.svg)
-:label:`fig_mdl-f-gan-tangent-bound`
-
-Now we apply the inequality *pointwise inside the divergence* and let the slope
-vary with $x$. We choose a function $T(x)$, the **critic**, and apply
-:eqref:`eq_mdl-fenchel-young` at $u = p(x)/q(x)$ and $t = T(x)$.
-
-**Proposition (f-GAN variational bound).** *Let $f$ be convex and
-differentiable with $f(1) = 0$, let $P \ll Q$, and let $T$ be any critic with
-$\mathbb{E}_P|T| < \infty$ and $\mathbb{E}_Q|f^*(T)| < \infty$. Then*
-
-$$
-D_f(P\|Q) \;\geq\; \mathbb{E}_{x \sim P}[T(x)] - \mathbb{E}_{x \sim Q}[f^*(T(x))].
-$$
-:eqlabel:`eq_mdl-f-gan-bound`
-
-*The supremum of the right side over critics equals $D_f(P\|Q)$, and it is
-attained by $T^\star(x) = f'\big(p(x)/q(x)\big)$ wherever $T^\star$ is finite*
-:cite:`Nowozin.Cseke.Tomioka.2016`.
-
-**Proof.** Multiply :eqref:`eq_mdl-fenchel-young` at $u = p(x)/q(x)$,
-$t = T(x)$ by $q(x) \geq 0$:
-
-$$
-q(x)\, f\!\left(\frac{p(x)}{q(x)}\right)
-\;\geq\; p(x)\, T(x) - q(x)\, f^*(T(x)).
-$$
-
-Summing (or integrating) over $x$ gives :eqref:`eq_mdl-f-gan-bound`. Since
-Fenchel--Young holds with equality at $t = f'(u)$, the choice
-$T^\star(x) = f'(p(x)/q(x))$ makes the inequality an equality at every $x$,
-hence in expectation. $\blacksquare$
-
-Both expectations on the right of :eqref:`eq_mdl-f-gan-bound` are averages over
-samples, of $T$ under $P$ and of $f^*(T)$ under $Q$, and neither needs a
-density. A neural network $T$ can therefore be trained on minibatches to
-maximize the bound. In the **f-GAN** objective the critic maximizes the bound,
-which equals the divergence at the optimal critic, while the network that
-produces the samples of $Q$, the generator of the GAN literature, minimizes it;
-:numref:`sec_gan_objectives` trains such pairs. For KL, $f(u) = u \log u$, the
-conjugate is $f^*(t) = e^{t-1}$, so
-$D_{\textrm{KL}}(P\|Q) \geq \mathbb{E}_P[T] - \mathbb{E}_Q[e^{T - 1}]$ for
-every critic.
-
-The original GAN of :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` is the case
-$f(u) = u\log u - (u+1)\log(u+1)$. Its conjugate is $f^*(t) = -\log(1 - e^t)$
-for $t < 0$, and writing the critic as the logarithm of a discriminator with
-values in $(0, 1)$, $T = \log D$, turns the bound into the familiar objective
-
-$$
-\mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]
-= \mathbb{E}_{x \sim P}[\log D(x)] + \mathbb{E}_{x \sim Q}[\log(1 - D(x))].
-$$
-
-The optimal critic $f'(p/q) = \log\big(p/(p+q)\big)$ is the discriminator
-$D^\star = p/(p + q)$. This $f$ equals
-$2 f_{\textrm{JS}}(u) - (u - 1)\log 2 - \log 4$: twice the Jensen--Shannon
-function, a multiple of $u - 1$, which changes nothing, and the constant
-$f(1) = -\log 4$, which only shifts the value. At $D^\star$ the game is
-therefore worth $2\,\textrm{JS}(P, Q) - \log 4$, on the running pair
-$2(0.0911) - 1.386 = -1.204$.
-
-Two caveats limit the bound in practice. First, it is tight only at the optimal
-critic, so a critic that is not fully trained *underestimates* the divergence:
-adversarial estimates are biased low. Second, the bound inherits the constancy
-on disjoint supports. If we extend $T^\star = f'(p/q)$ formally beyond the
-proposition's hypothesis $P \ll Q$, the ratio is $\infty$ on the data and $0$
-on the model's samples, so $T^\star$ is the constant $f'(\infty)$ on one
-support and $f'(0)$ on the other. A critic that is constant on the model's
-samples gives the generator no gradient.
-
-The first caveat can be measured on the running pair, where expectations are
-sums. Take $\chi^2$, with $f(u) = (u-1)^2$, conjugate $f^*(t) = t + t^2/4$ and
-optimal critic $T^\star = 2(p/q - 1)$. (The conjugate takes the supremum over
-all real $u$; problem
-:exref:`ex_mdl-divergences-distances-derive-convex-conjugate`a derives it and
-shows that this loses nothing at $T^\star$.) Consider the critics
-$T = c\,T^\star$ for a scale $c$, from untrained ($c = 0$) to overconfident
-($c = 2$). Three sums give the bound in closed form:
-$\sum_x p\, T^\star = 2\chi^2$, $\sum_x q\, T^\star = 0$ and
-$\sum_x q\, (T^\star)^2/4 = \chi^2$, so
-
-$$
-\mathbb{E}_P[c\,T^\star] - \mathbb{E}_Q[f^*(c\,T^\star)]
-= 2c\,\chi^2 - c^2 \chi^2 = \chi^2(P\|Q)\,(2c - c^2),
-$$
-
-a concave parabola in $c$ with its maximum $\chi^2$ at $c = 1$. The cell
-evaluates it at six scales.
-
-```{.python .input #divergences-distances-f-gan-bound}
-chi_sq = generators['chi^2']            # f(u) = (u - 1)^2
-f_star = lambda t: t + t ** 2 / 4       # its convex conjugate
-
-def fgan_bound(T, p, q):
-    """E_P[T] - E_Q[f*(T)]: a lower bound on D_f for any critic T."""
-    return np.sum(p * T) - np.sum(q * f_star(T))
-
-T_star = 2 * (p / q - 1)                # the optimal critic f'(p/q)
-scales = np.array([0.0, 0.25, 0.5, 1.0, 1.5, 2.0])
-print(f'exact chi^2(P||Q) = {f_divergence(chi_sq, p, q):.4f}')
-print('c     ' + ''.join(f'{c:8.2f}' for c in scales))
-print('bound ' + ''.join(f'{fgan_bound(c * T_star, p, q):8.4f}' for c in scales))
-cs = np.linspace(0, 2, 41)
-d2l.plot(cs, [[fgan_bound(c * T_star, p, q) for c in cs],
-              np.full_like(cs, f_divergence(chi_sq, p, q))],
-         'critic scale c', 'value', legend=['bound at c T*', 'chi^2(P||Q)'],
-         figsize=(4.5, 2.8))
-```
-
-The optimal critic reproduces the exact divergence, $1.0133$. A half-trained
-critic ($c = \tfrac12$) reports $0.76$, which is $75\%$ of the divergence, and
-an overconfident one ($c = 2$) reports zero. Every critic other than $T^\star$
-reports less than the divergence.
-
-The f-divergences thus leave two things wanting. Estimated through a critic
-they are biased low, and on disjoint supports they are constant whatever the
-critic. Both defects come from the ratio $p/q$. The integral probability
-metrics of :numref:`sec_mdl-ipm-mmd` and the transport distances of
-:numref:`sec_mdl-optimal-transport` do without it.
-
-<!-- split: new section "Test Functions and Transport" starts here -->
-
-## Test Functions and Transport
-
-An f-divergence needs the density ratio $p/q$, which samples do not give and
-which disjoint supports destroy (:numref:`sec_mdl-f-divergences`). Here we
-build comparisons that ask only how differently $P$ and $Q$ *average* a class
-of functions, and then how far mass has to move. As before, $P$ is the data and
-$Q$ the model. The worked examples are on the line; in $\mathbb{R}^n$ a squared
-difference $(x - x')^2$ becomes a squared norm and nothing else changes.
-
 ### Total Variation and Pinsker's Inequality
 :label:`sec_mdl-tv-pinsker`
 
@@ -866,8 +703,9 @@ rng = np.random.default_rng()
 pr, qr = rng.dirichlet(np.ones(5), 10000), rng.dirichlet(np.ones(5), 10000)
 tv = 0.5 * np.abs(pr - qr).sum(axis=1)
 kl_pq = np.sum(pr * np.log(pr / qr), axis=1)
-print(f'max TV / sqrt(KL/2) over 10,000 random pairs: '
-      f'{np.max(tv / np.sqrt(kl_pq / 2)):.4f}')
+ratio = tv / np.sqrt(kl_pq / 2)
+print(f'TV / sqrt(KL/2) over 10,000 random pairs: median {np.median(ratio):.2f}, '
+      f'max {ratio.max():.3f}')
 for delta in (0.1, 0.01, 0.001):
     a, b = np.array([0.5, 0.5]), np.array([0.5 + delta, 0.5 - delta])
     print(f'coins 1/2 vs 1/2 + {delta:5}: TV / sqrt(KL/2) = '
@@ -878,6 +716,7 @@ d2l.plot([kl_pq[:2000], grid], [tv[:2000], np.sqrt(grid / 2)], 'KL (nats)',
          xlim=[0, 3], figsize=(4.5, 3))
 ```
 
+<!-- WRITER: the cell now prints the median ratio TV/sqrt(KL/2) over the 10,000 pairs: 0.78 in all four tabs (run-to-run 0.78-0.79), slightly above "three quarters"; read the printed median. Max 0.98-0.99 (unchanged, "within a few hundredths of 1" holds). -->
 In the scatter plot every pair lies below the curve $\sqrt{\textrm{KL}/2}$,
 typically at about three quarters of it, and the gap grows with KL; the largest
 ratio among the $10{,}000$ pairs comes within a few hundredths of $1$. For
@@ -927,823 +766,157 @@ follows from the case of KL. The inequality belongs to the f-divergences alone:
 MMD and $W_1$ can grow under a map (problem
 :exref:`ex_mdl-divergences-distances-q-mathcaln-delta`a).
 
-### Integral Probability Metrics and MMD
-:label:`sec_mdl-ipm-mmd`
+### The Fenchel Conjugate and the f-GAN Bound
+:label:`sec_mdl-f-gan-dual`
 
-Total variation takes a supremum over events, that is, over indicator
-functions. Other classes of functions give other distances, and for some of
-them the supremum can be computed. For a class $\mathcal{G}$ of test functions
-$g$, the **integral probability metric** :cite:`Muller.1997` is
+A network that generates samples gives us draws from its distribution $Q$, and
+we hold draws from the data distribution $P$, but neither tells us the ratio
+$p(x)/q(x)$ that :eqref:`eq_mdl-f-div-def` needs. Can $D_f$ be computed from
+samples alone? It can be bounded from below, and the bound turns a divergence
+into a training objective.
 
-$$
-\textrm{IPM}_{\mathcal{G}}(P, Q)
-= \sup_{g \in \mathcal{G}} \,\big( \mathbb{E}_{x \sim P}[g(x)] - \mathbb{E}_{x \sim Q}[g(x)] \big).
-$$
-:eqlabel:`eq_mdl-ipm-def`
-
-The class $\mathcal{G}$ is a panel of auditors, and the IPM reports the largest
-gap in averages that any auditor in the panel can find. The critic of the f-GAN
-bound :eqref:`eq_mdl-f-gan-bound` was such a function too; there the second
-expectation is of $f^*(T)$, here of $g$ itself. Three panels give three
-distances. Functions bounded by $\|g\|_\infty \leq \tfrac{1}{2}$ give total
-variation, with $g = \tfrac12\,\textrm{sign}(p - q)$ attaining the supremum.
-The 1-Lipschitz functions give the Wasserstein distance of
-:numref:`sec_mdl-optimal-transport`. The unit ball of a kernel's feature space
-gives the **maximum mean discrepancy** (MMD)
-:cite:`Gretton.Borgwardt.Rasch.ea.2012`.
-
-An IPM compares expectations, which samples estimate directly, where
-:eqref:`eq_mdl-f-div-def` needs a density ratio. But the panel must not be too
-large. Two samples of $1{,}000$ points from the same continuous distribution
-share no point, so the indicator of the first sample has mean $1$ on it and $0$
-on the other: the empirical TV is $1$ whatever the distributions are. A class
-of test functions must be small or smooth enough that sample averages track
-population averages.
-
-We build one from the smallest panel up. First, take linear test functions
-$g(x) = w\, x$ with $|w| \leq 1$. Then
-$\mathbb{E}_P g - \mathbb{E}_Q g = w\,(\mathbb{E}_P X - \mathbb{E}_Q X)$, and
-the supremum is $|\mathbb{E}_P X - \mathbb{E}_Q X|$: the IPM over linear
-functions is the difference of the means. It cannot see a change of spread; for
-$\mathcal{N}(0, 1)$ against $\mathcal{N}(0, 4)$ it reports $0$.
-
-Second, take a feature vector $\boldsymbol{\varphi}(x) = (x, x^2)$ and test
-functions $g(x) = \mathbf{w}^\top \boldsymbol{\varphi}(x)$ with
-$\|\mathbf{w}\| \leq 1$. Write
-$\mathbf{m}_P = \mathbb{E}_P[\boldsymbol{\varphi}(x)]$ for the *mean feature*
-of $P$. Then
-$\mathbb{E}_P g - \mathbb{E}_Q g = \mathbf{w}^\top(\mathbf{m}_P - \mathbf{m}_Q)$,
-and by the Cauchy--Schwarz inequality the supremum of a linear function over
-the unit ball is the norm of its coefficient vector:
+The tool is the convex conjugate of :numref:`subsec_mdl-convex-conjugate`: for
+a convex $f$,
 
 $$
-\textrm{MMD}(P, Q) = \sup_{\|\mathbf{w}\| \leq 1} \mathbf{w}^\top(\mathbf{m}_P - \mathbf{m}_Q)
-= \|\mathbf{m}_P - \mathbf{m}_Q\|.
+f^*(t) = \sup_{u}\, \big( ut - f(u) \big),
 $$
-:eqlabel:`eq_mdl-mmd-features`
 
-MMD is the distance between the mean features, and the supremum has gone. For
-$\mathcal{N}(0, 1)$ against $\mathcal{N}(0, 4)$ the mean features are $(0, 1)$
-and $(0, 4)$, so $\textrm{MMD}^2 = 0^2 + 3^2 = 9$: means and second moments are
-now both compared.
-
-Third, we expand the squared norm. With $x, x'$ independent draws from $P$ and
-$y, y'$ from $Q$, $\|\mathbf{m}_P - \mathbf{m}_Q\|^2 =
-\mathbb{E}\langle\boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x')\rangle +
-\mathbb{E}\langle\boldsymbol{\varphi}(y), \boldsymbol{\varphi}(y')\rangle -
-2\,\mathbb{E}\langle\boldsymbol{\varphi}(x), \boldsymbol{\varphi}(y)\rangle$.
-Only inner products of features appear. We call
-$k(x, x') = \langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x')\rangle$
-the **kernel** and obtain
+so that $-f^*(t)$ is the intercept of the tangent line to $f$ with slope $t$
+(:numref:`fig_mdl-f-gan-tangent-bound`). A convex function lies above each of
+its tangents, which is the Fenchel--Young inequality
 
 $$
-\textrm{MMD}^2(P, Q)
-= \mathbb{E}_{x, x' \sim P}[k(x, x')] + \mathbb{E}_{y, y' \sim Q}[k(y, y')]
-- 2\, \mathbb{E}_{x \sim P, y \sim Q}[k(x, y)].
+f(u) \geq ut - f^*(t) \quad \textrm{for all } t,
 $$
-:eqlabel:`eq_mdl-mmd2`
+:eqlabel:`eq_mdl-fenchel-young`
 
-The first two terms measure similarity within each sample and the third
-similarity across the two. If the samples interleave, the three terms cancel;
-if they form separate clumps, the within-sample terms exceed the across-sample
-term.
+with equality when $t$ is the slope of $f$ at $u$, that is, $t = f'(u)$.
 
-Fourth, we choose the kernel directly instead of the features. The RBF kernel
-$k(x, x') = e^{-(x - x')^2/(2\ell^2)}$ with length scale $\ell$ factors as
-$e^{-x^2/(2\ell^2)}\, e^{-x'^2/(2\ell^2)}\, e^{x x'/\ell^2}$, and the power
-series of the last factor writes it as an inner product of infinitely many
-features $\varphi_m(x) = x^m e^{-x^2/(2\ell^2)} / (\ell^m \sqrt{m!})$,
-$m = 0, 1, 2, \ldots$ So the RBF kernel compares damped monomials of every
-order, with weights that decrease quickly. A kernel for which
-$\textrm{MMD}(P, Q) = 0$ only if $P = Q$ is called *characteristic*. The RBF
-kernel is characteristic :cite:`Gretton.Borgwardt.Rasch.ea.2012`, so its MMD is
-a metric; the linear and quadratic kernels above are not. (The functions
-spanned by the features form the reproducing kernel Hilbert space of $k$
-:cite:`Scholkopf.Smola.2002`; we need nothing more from it.)
+![A convex divergence function, here $f(u)=u\log u$, is the upper envelope of its tangent lines. Each tangent of slope $t$ has intercept given by the negative conjugate $-f^*(t)$ (here $-e^{t-1}$), so keeping one tangent yields the Fenchel--Young lower bound and taking the supremum over slopes recovers the function exactly. Applied pointwise to the density ratio, this picture is the $f$-GAN variational bound.](../img/mdl-it-f-gan-tangent-bound.svg)
+:label:`fig_mdl-f-gan-tangent-bound`
 
-For Gaussians the RBF expectations have a closed form. For
-$Z \sim \mathcal{N}(m, s^2)$, a Gaussian integral gives
+Now we apply the inequality *pointwise inside the divergence* and let the slope
+vary with $x$. We choose a function $T(x)$, the **critic**, and apply
+:eqref:`eq_mdl-fenchel-young` at $u = p(x)/q(x)$ and $t = T(x)$.
+
+**Proposition (f-GAN variational bound).** *Let $f$ be convex and
+differentiable with $f(1) = 0$, let $P \ll Q$, and let $T$ be any critic with
+$\mathbb{E}_P|T| < \infty$ and $\mathbb{E}_Q|f^*(T)| < \infty$. Then*
 
 $$
-\mathbb{E}\big[e^{-Z^2/(2\ell^2)}\big]
-= \Big(1 + \frac{s^2}{\ell^2}\Big)^{-1/2} \exp\!\Big(-\frac{m^2}{2(\ell^2 + s^2)}\Big),
+D_f(P\|Q) \;\geq\; \mathbb{E}_{x \sim P}[T(x)] - \mathbb{E}_{x \sim Q}[f^*(T(x))].
 $$
-:eqlabel:`eq_mdl-rbf-gaussian-integral`
+:eqlabel:`eq_mdl-f-gan-bound`
 
-and the difference of two independent Gaussians is Gaussian with the variances
-added. For $\mathcal{N}(0, 1)$ against $\mathcal{N}(0, 4)$ at $\ell = 1$ the
-three differences $x - x'$, $y - y'$ and $x - y$ have variances $2$, $8$ and
-$5$, so
-$\textrm{MMD}^2 = 3^{-1/2} + 9^{-1/2} - 2 \cdot 6^{-1/2} \approx 0.094$.
+*The supremum of the right side over critics equals $D_f(P\|Q)$, and it is
+attained by $T^\star(x) = f'\big(p(x)/q(x)\big)$ wherever $T^\star$ is finite*
+:cite:`Nowozin.Cseke.Tomioka.2016`.
 
-From samples, each expectation in :eqref:`eq_mdl-mmd2` becomes an average over
-pairs. The unbiased estimator :cite:`Gretton.Borgwardt.Rasch.ea.2012` leaves
-out the pairs of a point with itself, whose kernel value is $1$ and would bias
-the within-sample terms upward. We apply it to $1{,}000$ draws from
-$\mathcal{N}(0, 1)$ and $1{,}000$ draws from $\mathcal{N}(0, 4)$ under the
-linear, quadratic and RBF kernels, whose population values are $0$, $9$ and
-$0.094$, and then, with the RBF kernel, to a second sample from
-$\mathcal{N}(0, 1)$ and to a sample from $\mathcal{N}(0.5, 1)$, for which
-problem :exref:`ex_mdl-divergences-distances-q-mathcaln-delta`b derives the
-population value $0.047$. What the mathematics does not supply is the size of
-the sampling error.
+**Proof.** Multiply :eqref:`eq_mdl-fenchel-young` at $u = p(x)/q(x)$,
+$t = T(x)$ by $q(x) \geq 0$:
 
-```{.python .input #divergences-distances-mmd}
-def mmd2_unbiased(x, y, k):
-    """Unbiased MMD^2 between samples x and y for the kernel k(a, b)."""
-    kxx = k(x[:, None], x[None, :])
-    kyy = k(y[:, None], y[None, :])
-    n, m = len(x), len(y)
-    return ((kxx.sum() - np.trace(kxx)) / (n * (n - 1))
-            + (kyy.sum() - np.trace(kyy)) / (m * (m - 1))
-            - 2 * k(x[:, None], y[None, :]).mean())
+$$
+q(x)\, f\!\left(\frac{p(x)}{q(x)}\right)
+\;\geq\; p(x)\, T(x) - q(x)\, f^*(T(x)).
+$$
 
-linear = lambda a, b: a * b                         # features phi(x) = x
-quadratic = lambda a, b: a * b + a ** 2 * b ** 2    # features (x, x^2)
-rbf = lambda a, b: np.exp(-(a - b) ** 2 / 2)        # RBF kernel, ell = 1
+Summing (or integrating) over $x$ gives :eqref:`eq_mdl-f-gan-bound`. Since
+Fenchel--Young holds with equality at $t = f'(u)$, the choice
+$T^\star(x) = f'(p(x)/q(x))$ makes the inequality an equality at every $x$,
+hence in expectation. $\blacksquare$
 
-rng = np.random.default_rng()
-n = 1000
-x_p = rng.standard_normal(n)                # P = N(0, 1)
-y_var = 2 * rng.standard_normal(n)          # N(0, 4)
-y_same = rng.standard_normal(n)             # N(0, 1) again
-y_shift = rng.standard_normal(n) + 0.5      # N(0.5, 1)
-for name, y, k, pop in [
-        ('linear,    N(0,1) vs N(0,4)', y_var, linear, 0.0),
-        ('quadratic, N(0,1) vs N(0,4)', y_var, quadratic, 9.0),
-        ('RBF,       N(0,1) vs N(0,4)', y_var, rbf,
-         3 ** -0.5 + 9 ** -0.5 - 2 * 6 ** -0.5),
-        ('RBF,       N(0,1) vs N(0,1)', y_same, rbf, 0.0),
-        ('RBF,       N(0,1) vs N(0.5,1)', y_shift, rbf,
-         2 / np.sqrt(3) * (1 - np.exp(-1 / 24)))]:
-    print(f'{name:30s} MMD^2 = {mmd2_unbiased(x_p, y, k):+.4f}  '
-          f'(population {pop:.4f})')
+Both expectations on the right of :eqref:`eq_mdl-f-gan-bound` are averages over
+samples, of $T$ under $P$ and of $f^*(T)$ under $Q$, and neither needs a
+density. A neural network $T$ can therefore be trained on minibatches to
+maximize the bound. In the **f-GAN** objective the critic maximizes the bound,
+which equals the divergence at the optimal critic, while the network that
+produces the samples of $Q$, the generator of the GAN literature, minimizes it;
+:numref:`sec_gan_objectives` trains such pairs. For KL, $f(u) = u \log u$, the
+conjugate is $f^*(t) = e^{t-1}$, so
+$D_{\textrm{KL}}(P\|Q) \geq \mathbb{E}_P[T] - \mathbb{E}_Q[e^{T - 1}]$ for
+every critic.
+
+The original GAN of :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` is the case
+$f(u) = u\log u - (u+1)\log(u+1)$. Its conjugate is $f^*(t) = -\log(1 - e^t)$
+for $t < 0$, and writing the critic as the logarithm of a discriminator with
+values in $(0, 1)$, $T = \log D$, turns the bound into the familiar objective
+
+$$
+\mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]
+= \mathbb{E}_{x \sim P}[\log D(x)] + \mathbb{E}_{x \sim Q}[\log(1 - D(x))].
+$$
+
+The optimal critic $f'(p/q) = \log\big(p/(p+q)\big)$ is the discriminator
+$D^\star = p/(p + q)$. This $f$ equals
+$2 f_{\textrm{JS}}(u) - (u - 1)\log 2 - \log 4$: twice the Jensen--Shannon
+function, a multiple of $u - 1$, which changes nothing, and the constant
+$f(1) = -\log 4$, which only shifts the value. At $D^\star$ the game is
+therefore worth $2\,\textrm{JS}(P, Q) - \log 4$, on the running pair
+$2(0.0911) - 1.386 = -1.204$.
+
+Two caveats limit the bound in practice. First, it is tight only at the optimal
+critic, so a critic that is not fully trained *underestimates* the divergence:
+adversarial estimates are biased low. Second, the bound inherits the constancy
+on disjoint supports. If we extend $T^\star = f'(p/q)$ formally beyond the
+proposition's hypothesis $P \ll Q$, the ratio is $\infty$ on the data and $0$
+on the model's samples, so $T^\star$ is the constant $f'(\infty)$ on one
+support and $f'(0)$ on the other. A critic that is constant on the model's
+samples gives the generator no gradient.
+
+<!-- WRITER: the cell is redesigned. It no longer evaluates the parabola chi^2 (2c - c^2) at six scales: it trains the critic, three numbers T(x) on the running pair, by gradient ascent on the bound E_P[T] - E_Q[f*(T)] for chi^2 (f*(t) = t + t^2/4), from T = 0 with gradient p - q (1 + T/2) and step size 1, and prints the bound after 0, 1, 2, 5, 10, 20, 50 steps beside the exact 1.0133, plus the overconfident critic 2T* (bound 0). The parabola derivation below (from 'Consider the critics T = c T*' to 'evaluates it at six scales') goes; keep the conjugate and T* sentences. The function fgan_bound now takes f_star as an argument. -->
+The first caveat can be measured on the running pair, where expectations are
+sums. Take $\chi^2$, with $f(u) = (u-1)^2$, conjugate $f^*(t) = t + t^2/4$ and
+optimal critic $T^\star = 2(p/q - 1)$. (The conjugate takes the supremum over
+all real $u$; problem
+:exref:`ex_mdl-divergences-distances-derive-convex-conjugate`a derives it and
+shows that this loses nothing at $T^\star$.) Consider the critics
+$T = c\,T^\star$ for a scale $c$, from untrained ($c = 0$) to overconfident
+($c = 2$). Three sums give the bound in closed form:
+$\sum_x p\, T^\star = 2\chi^2$, $\sum_x q\, T^\star = 0$ and
+$\sum_x q\, (T^\star)^2/4 = \chi^2$, so
+
+$$
+\mathbb{E}_P[c\,T^\star] - \mathbb{E}_Q[f^*(c\,T^\star)]
+= 2c\,\chi^2 - c^2 \chi^2 = \chi^2(P\|Q)\,(2c - c^2),
+$$
+
+a concave parabola in $c$ with its maximum $\chi^2$ at $c = 1$. The cell
+evaluates it at six scales.
+
+```{.python .input #divergences-distances-f-gan-bound}
+def fgan_bound(T, p, q, f_star):
+    """E_P[T] - E_Q[f*(T)]: a lower bound on D_f(P||Q) for any critic T."""
+    return np.sum(p * T) - np.sum(q * f_star(T))
+
+chi2_star = lambda t: t + t ** 2 / 4    # conjugate of f(u) = (u - 1)^2
+exact = f_divergence(generators['chi^2'], p, q)
+T, bounds = np.zeros(3), []             # untrained critic: one number per outcome
+for step in range(51):
+    bounds.append(fgan_bound(T, p, q, chi2_star))
+    T = T + (p - q * (1 + T / 2))       # ascent step 1 along p - q f*'(T)
+shown = (0, 1, 2, 5, 10, 20, 50)
+print(f'exact chi^2(P||Q) = {exact:.4f}')
+print('steps ' + ''.join(f'{s:8d}' for s in shown))
+print('bound ' + ''.join(f'{bounds[s]:8.4f}' for s in shown))
+T_star = 2 * (p / q - 1)                # the optimal critic f'(p/q)
+print(f'overconfident critic 2 T*: bound = '
+      f'{fgan_bound(2 * T_star, p, q, chi2_star):.4f}')
+d2l.plot(np.arange(51), [bounds, [exact] * 51], 'ascent steps', 'value',
+         legend=['bound', 'chi^2(P||Q)'], figsize=(4.5, 2.8))
 ```
 
-The linear kernel reports a few hundredths at most, because the means agree.
-The quadratic kernel reports about $9$, give or take $3$; its estimate involves
-fourth powers and is noisy. The RBF kernel reports about $0.094$, give or take
-$0.03$. On two samples from the same distribution the RBF estimate is within a
-few thousandths of zero and may be slightly negative, which an unbiased
-estimator of zero must sometimes be. The half-standard-deviation shift gives
-about $0.047$, typically within $0.02$ of it. No critic was trained and no
-density was evaluated.
-
-Where do the two samples differ? The supremum in :eqref:`eq_mdl-mmd-features`
-is attained by $\mathbf{w}^\star \propto \mathbf{m}_P - \mathbf{m}_Q$, and the
-corresponding test function, the **witness**,
-$g^\star(x) \propto \langle \mathbf{m}_P - \mathbf{m}_Q, \boldsymbol{\varphi}(x)\rangle = \mathbb{E}_P[k(x, X)] - \mathbb{E}_Q[k(x, Y)]$,
-needs only kernel evaluations. We estimate it by sample means on a grid for the
-shifted pair and plot it with the two densities. The cell also prints
-$\mathbb{E}_P g - \mathbb{E}_Q g$ for the unscaled witness $g$, which is
-$\textrm{MMD}^2$ once more, this time with the self-pairs included.
-
-```{.python .input #mdl-divergences-distances-integral-probability-metrics-and-mmd-1}
-g = lambda s: (rbf(s[:, None], x_p[None, :]).mean(axis=1)    # the unscaled
-               - rbf(s[:, None], y_shift[None, :]).mean(axis=1))  # witness
-grid = np.linspace(-4.0, 4.5, 400)
-witness = g(grid)
-print(f'witness changes sign at x = {grid[np.argmax(witness < 0)]:.2f}')
-print(f'E_P g - E_Q g = {g(x_p).mean() - g(y_shift).mean():.4f}')
-pdf = lambda t, mu: np.exp(-(t - mu) ** 2 / 2) / np.sqrt(2 * np.pi)
-d2l.plot(grid, [witness / np.abs(witness).max(), pdf(grid, 0.0),
-                pdf(grid, 0.5)], 'x', '',
-         legend=['witness (scaled)', 'p = N(0, 1)', 'q = N(0.5, 1)'],
-         figsize=(5, 3))
-```
-
-The witness is positive where $P$ has more mass and negative where $Q$ has
-more, and it changes sign near the midpoint $x = 0.25$ of the two means (within
-about $0.2$ of it, depending on the draw). The printed gap agrees with the
-$\textrm{MMD}^2$ of the previous cell to about $0.001$; the difference is the
-self-pairs. The witness plays the role of $A^\star$ in
-:numref:`fig_mdl-tv-area`: it is the one test function that sees the whole gap.
-
-Because MMD with a fixed kernel needs only samples and no training, it serves
-as a kernel two-sample test and as an adversary-free training loss, as in
-generative moment matching networks :cite:`Li.Swersky.Zemel.2015`. MMD-GANs
-instead learn the kernel's features adversarially
-:cite:`Li.Chang.Cheng.ea.2017`; :numref:`sec_gan_objectives` compares both with
-the other critics. The kernel inception distance by which generative models are
-commonly scored is the unbiased estimate of this subsection, applied to image
-features with a cubic kernel (:eqref:`eq_gan_kid`).
-
-### Optimal Transport and the Wasserstein Distance
-:label:`sec_mdl-optimal-transport`
-
-On disjoint supports every f-divergence is constant
-(:numref:`sec_mdl-f-divergences`), so it gives a model no gradient, and a
-better optimizer cannot repair that :cite:`Arjovsky.Chintala.Bottou.2017`. MMD
-does move, but only while the supports are within a few length scales of each
-other. Geometry distinguishes such distributions at every distance:
-$\delta_{0.01}$ is near $\delta_0$ because its mass need only move $0.01$. The
-**Wasserstein-1 distance**, also called the earth mover's distance, makes this
-precise. A **coupling** $\gamma$ of $P$ and $Q$ is a joint distribution of
-pairs $(x, y)$ whose marginals are $P$ and $Q$. It is a transport plan: it says
-how much mass travels from each source $x$ to each destination $y$, as in
-:numref:`fig_mdl-ot-transport-plan`. Writing $\Pi(P, Q)$ for the set of
-couplings, for $P$ and $Q$ on $\mathbb{R}^n$ with finite first moments,
-
-$$
-W_1(P, Q) = \inf_{\gamma \in \Pi(P, Q)} \mathbb{E}_{(x, y) \sim \gamma}\big[ \|x - y\| \big],
-$$
-:eqlabel:`eq_mdl-w1-primal`
-
-the smallest total of mass times distance over all plans. Between the point
-masses $\delta_0$ and $\delta_d$ the only plan moves all mass from $0$ to $d$,
-so $W_1(\delta_0, \delta_d) = |d|$: continuous and 1-Lipschitz in $d$, with
-gradient $\pm 1$ for $d \neq 0$. This is the training signal that the
-f-divergences lack.
-
-![Optimal transport between two distributions on the line. Top left: the monotone transport plan moves each parcel of mass from $P$ (top) to $Q$ (bottom), ribbon width proportional to the mass moved; this plan is optimal for every convex cost, and for the cost $|x-y|$ it is one of several optimal plans. Bottom left: the shaded area between the two CDFs equals the Wasserstein-1 distance, $1.7$. Right: for two point masses at separation $d$, the Jensen--Shannon divergence (in nats) is frozen at $\log 2$ for every nonzero $d$ while the Wasserstein distance (in units of $x$) grows linearly; only transport gives a gradient. The vertical axis shows the value of each.](../img/mdl-it-ot-transport-plan.svg)
-:label:`fig_mdl-ot-transport-plan`
-
-The primal problem :eqref:`eq_mdl-w1-primal` optimizes over joint
-distributions, which are hard even to parameterize from samples. Its dual does
-not, and the dual is the reason $W_1$ matters to deep learning.
-
-**Proposition (Kantorovich--Rubinstein duality).** *For distributions $P$ and
-$Q$ on $\mathbb{R}^n$ (or any complete separable metric space) with finite
-first moments,*
-
-$$
-W_1(P, Q) = \sup_{\|g\|_{\textrm{Lip}} \leq 1}
-\big( \mathbb{E}_{x \sim P}[g(x)] - \mathbb{E}_{y \sim Q}[g(y)] \big),
-$$
-:eqlabel:`eq_mdl-kr-dual`
-
-*where the supremum runs over all 1-Lipschitz functions $g$, those with
-$|g(x) - g(y)| \leq \|x - y\|$ for all $x, y$.*
-
-An infimum over joint distributions has become a supremum over one function:
-$W_1$ is the IPM :eqref:`eq_mdl-ipm-def` over test functions with slope at most
-$1$, and a network can represent such a function. The **WGAN**
-:cite:`Arjovsky.Chintala.Bottou.2017` trains this dual, with a neural critic in
-the role of $g$ that is constrained to be approximately 1-Lipschitz.
-:numref:`sec_gan_objectives` trains such a critic, and
-:numref:`sec_gan_convergence` treats the gradient penalties that enforce the
-constraint. What an approximately Lipschitz critic reports is no longer exactly
-$W_1$.
-
-We prove the duality only on the line, where the proof also yields a closed
-form and transport needs no optimization at all; :citet:`Peyre.Cuturi.2019`
-give the general proof. The idea is to count crossings. At a point $t$, $P$ has
-a fraction $F_P(t)$ of its mass to the left of $t$ and $Q$ has $F_Q(t)$, so any
-plan must carry at least $|F_P(t) - F_Q(t)|$ of mass across $t$. A parcel moved
-from $x$ to $y$ crosses every $t$ between them, so its distance $|x - y|$ is
-the length of the set of points it crosses, and the total cost is the mass
-crossing each $t$, integrated over $t$.
-
-**Proposition ($W_1$ on the line).** *For distributions $P$ and $Q$ on
-$\mathbb{R}$ with CDFs $F_P$, $F_Q$ and finite first moments,*
-
-$$
-W_1(P, Q) = \int_{-\infty}^{\infty} \lvert F_P(t) - F_Q(t) \rvert \, dt
-= \sup_{\|g\|_{\textrm{Lip}} \leq 1}
-\big( \mathbb{E}_P[g] - \mathbb{E}_Q[g] \big),
-$$
-:eqlabel:`eq_mdl-w1-cdf`
-
-*so Kantorovich--Rubinstein duality holds on the line.*
-
-**Proof.** *Step 1: every plan costs at least the area.* For
-$(X, Y) \sim \gamma$,
-$|X - Y| = \int \mathbf{1}(t \textrm{ lies between } X \textrm{ and } Y)\, dt$.
-The integrand is non-negative, so expectation and integral may be exchanged:
-
-$$
-\mathbb{E}_\gamma|X - Y|
-= \int \Big( \gamma(X \leq t < Y) + \gamma(Y \leq t < X) \Big)\, dt
-\geq \int \big| \gamma(X \leq t < Y) - \gamma(Y \leq t < X) \big|\, dt.
-$$
-
-The step that is not routine is the difference inside the last integral. Add
-and subtract $\gamma(X \leq t, Y \leq t)$: then
-$\gamma(X \leq t < Y) - \gamma(Y \leq t < X) = \gamma(X \leq t) - \gamma(Y \leq t) = F_P(t) - F_Q(t)$,
-because the marginals of $\gamma$ are $P$ and $Q$. So every plan costs at least
-$\int |F_P - F_Q|$.
-
-*Step 2: one plan costs exactly the area.* Let $U$ be uniform on $(0, 1)$ and
-use the *monotone coupling* $X = F_P^{-1}(U)$, $Y = F_Q^{-1}(U)$, with the
-quantile function $F^{-1}(\lambda) = \inf\{x : F(x) \geq \lambda\}$ for
-$\lambda \in (0, 1)$, which satisfies $F^{-1}(\lambda) \leq t$ exactly when
-$\lambda \leq F(t)$. Then
-$\gamma(X \leq t < Y) = \Pr\big(F_Q(t) < U \leq F_P(t)\big)$ and
-$\gamma(Y \leq t < X) = \Pr\big(F_P(t) < U \leq F_Q(t)\big)$. At least one of
-the two is zero, so the inequality of Step 1 is an equality for this plan.
-Hence the primal $W_1$ equals the area.
-
-*Step 3: no test function beats any plan.* This is *weak duality*, and it holds
-in any dimension. For a 1-Lipschitz $g$ and a coupling $\gamma$,
-$g(x) - g(y) \leq \|x - y\|$ at every pair, and taking the expectation under
-$\gamma$ gives
-$\mathbb{E}_P[g] - \mathbb{E}_Q[g] \leq \mathbb{E}_\gamma\|x - y\|$ (compare
-the weak duality of :numref:`subsec_mdl-dual-problem`).
-
-*Step 4: one test function attains the area.* It suffices to consider
-$g(x) = g(0) + \int_0^x g'(t)\, dt$ with $|g'| \leq 1$: every such $g$ is
-1-Lipschitz, and Step 3 already bounds all the others. The constant $g(0)$
-cancels in $\mathbb{E}_P[g] - \mathbb{E}_Q[g]$. Writing
-$\int_0^X g'(t)\,dt = \int_0^{\infty} g'(t)\, \mathbf{1}(X > t)\, dt - \int_{-\infty}^0 g'(t)\, \mathbf{1}(X \leq t)\, dt$
-and swapping expectation and integral (Fubini's theorem from
-:numref:`sec_mdl-integral_calculus`, which the finite first moments justify),
-
-$$
-\mathbb{E}_P[g] - \mathbb{E}_Q[g] = \int_{-\infty}^{\infty} g'(t)\, \big( F_Q(t) - F_P(t) \big)\, dt.
-$$
-
-The choice $g'(t) = \textrm{sign}\big(F_Q(t) - F_P(t)\big)$ makes the right
-side equal to the area. Together, the dual is at least the area (Step 4), at
-most the primal (Step 3), and the primal equals the area (Steps 1 and 2).
-$\blacksquare$
-
-On the line, then, $W_1$ is the area between the two CDFs, the shaded region of
-:numref:`fig_mdl-ot-transport-plan`, and for two samples of equal size it is
-the mean absolute difference of the sorted values (problem
-:exref:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`a). It is rather
-surprising that a linear program should collapse this far. We watch it happen
-once, for two distributions on the six points $0, 1, \ldots, 5$, with $P$
-mostly on the left and $Q$ mostly on the right: by the CDF formula, and by
-solving the primal :eqref:`eq_mdl-w1-primal` as a linear program over plans (a
-plan is a $6 \times 6$ matrix with row sums $p$ and column sums $q$).
-
-```{.python .input #divergences-distances-w1}
-atoms = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
-p_w = np.array([0.30, 0.20, 0.25, 0.10, 0.10, 0.05])
-q_w = np.array([0.05, 0.10, 0.10, 0.25, 0.20, 0.30])
-
-F_p, F_q = np.cumsum(p_w), np.cumsum(q_w)
-w1_cdf = np.sum(np.abs(F_p - F_q)[:-1] * np.diff(atoms))
-
-C = np.abs(atoms[:, None] - atoms[None, :])      # cost matrix |x_i - y_j|
-n_atoms = len(atoms)
-A_eq = np.zeros((2 * n_atoms, n_atoms * n_atoms))
-for i in range(n_atoms):
-    A_eq[i, i * n_atoms:(i + 1) * n_atoms] = 1   # row sums    = p
-    A_eq[n_atoms + i, i::n_atoms] = 1            # column sums = q
-res = optimize.linprog(C.ravel(), A_eq=A_eq,
-                       b_eq=np.concatenate([p_w, q_w]), method='highs')
-print(f'W1 via the CDF formula : {w1_cdf:.10f}')
-print(f'W1 via the primal LP   : {res.fun:.10f}')
-```
-
-Both routes give $W_1 = 1.7$: one sum over five gaps replaces a $36$-variable
-linear program.
-
-The optimal plan is not unique here. $F_P \geq F_Q$ at every atom, so every
-plan that moves mass only rightward costs
-$\sum_j x_j q_j - \sum_i x_i p_i = 3.35 - 1.65 = 1.7$, and the linear program
-returns one of them, not necessarily the monotone plan of the figure. A
-strictly convex cost removes the ambiguity. The *Wasserstein-$p$ distance*
-replaces the cost by $\|x - y\|^p$ and takes the $p$-th root,
-$W_p(P, Q) = \big(\inf_{\gamma} \mathbb{E}_\gamma \|x - y\|^p\big)^{1/p}$, and
-for $p > 1$ on the line the monotone plan is the unique optimum (problem
-:exref:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`d). The case $p = 2$ is
-the one that papers on generative models report: the Fréchet inception distance
-is the squared $W_2$ between two Gaussians fitted to image features
-(:eqref:`eq_gan_fid`).
-
-### Entropic Regularization and Sinkhorn Iterations
-:label:`subsec_mdl-sinkhorn`
-
-In more than one dimension there is in general no CDF formula, and the linear
-program has $N^2$ variables for $N$ points on each side. The standard remedy is
-**entropic regularization** :cite:`Cuturi.2013`: we add the term
-$\varepsilon \sum_{ij} \gamma_{ij} (\log \gamma_{ij} - 1)$ to the transport
-cost $\sum_{ij} \gamma_{ij} C_{ij}$, for a cost matrix $\mathbf{C}$ and a
-regularizer $\varepsilon > 0$. On plans, $\sum_{ij}\gamma_{ij} = 1$, so the
-added term is $-\varepsilon$ times the entropy of $\gamma$ plus a constant; it
-penalizes plans that concentrate on few routes. With it, transport became
-usable as a loss in deep learning: Sinkhorn divergences are trained on directly
-:cite:`Genevay.Peyre.Cuturi.2018`, and the minibatch couplings of
-:numref:`sec_mdl-flow-matching-transport` solve small transport problems of
-this kind on every batch. The subsection can be skipped on a first reading.
-
-The regularized problem can be solved almost in closed form. Its Lagrangian, as
-in :numref:`subsec_mdl-dual-problem`, adds a multiplier $\xi_i$ for each
-row-sum constraint $\sum_j \gamma_{ij} = p_i$ and $\zeta_j$ for each column-sum
-constraint $\sum_i \gamma_{ij} = q_j$. Setting its derivative in $\gamma_{ij}$
-to zero gives $C_{ij} + \varepsilon \log \gamma_{ij} - \xi_i - \zeta_j = 0$, so
-$\gamma_{ij} = e^{\xi_i/\varepsilon}\, e^{-C_{ij}/\varepsilon}\, e^{\zeta_j/\varepsilon}$.
-In matrix form,
-
-$$
-\boldsymbol{\gamma}_\varepsilon = \textrm{diag}(\mathbf{a})\, \mathbf{K}\, \textrm{diag}(\mathbf{b}),
-\qquad \mathbf{K} = e^{-\mathbf{C}/\varepsilon} \textrm{ (entrywise)},
-$$
-:eqlabel:`eq_mdl-sinkhorn-form`
-
-with positive scalings $\mathbf{a} = e^{\boldsymbol{\xi}/\varepsilon}$ and
-$\mathbf{b} = e^{\boldsymbol{\zeta}/\varepsilon}$. The regularized plan is the
-*Gibbs kernel* $\mathbf{K}$, rescaled row by row and column by column. Only the
-scalings are unknown, and each half of the constraints determines one of them.
-With $\mathbf{b}$ fixed, $\mathbf{a} = \mathbf{p} / (\mathbf{K}\mathbf{b})$
-(entrywise) makes the row sums equal to $\mathbf{p}$. With $\mathbf{a}$ fixed,
-$\mathbf{b} = \mathbf{q} / (\mathbf{K}^\top \mathbf{a})$ makes the column sums
-equal to $\mathbf{q}$.
-
-The **Sinkhorn iterations** alternate these two updates. Each iteration costs
-two matrix-vector products, so the iterations run well on a GPU and can be
-differentiated through. They converge linearly, at a rate that worsens as
-$\varepsilon \to 0$. For small $\varepsilon$ the entries of $\mathbf{K}$
-underflow, so practical code iterates on $\log \mathbf{a}$ and
-$\log \mathbf{b}$ (problem
-:exref:`ex_mdl-divergences-distances-sinkhorn-divergences`b). We report the
-*entropic cost*, the transport cost
-$\sum_{ij} (\gamma_\varepsilon)_{ij} C_{ij}$ of the regularized plan without
-the entropy term. As $\varepsilon \to 0$ it approaches the unregularized
-optimum :cite:`Peyre.Cuturi.2019`.
-
-How small must $\varepsilon$ be? We take the squared cost
-$C_{ij} = (x_i - x_j)^2$ on the six-point example, whose optimal value is
-$W_2^2$ and whose optimal plan is unique, solve the linear program, run
-Sinkhorn at three values of $\varepsilon$, and count the routes that carry more
-than $10^{-3}$ of mass.
-
-```{.python .input #divergences-distances-sinkhorn}
-def sinkhorn(p, q, C, eps, iters=5000):
-    """Entropic OT by Sinkhorn iterations; returns the plan and its cost."""
-    K = np.exp(-C / eps)                         # the Gibbs kernel
-    a = np.ones_like(p)
-    for _ in range(iters):
-        b = q / (K.T @ a)                        # match the column sums
-        a = p / (K @ b)                          # match the row sums
-    plan = a[:, None] * K * b[None, :]
-    return plan, np.sum(plan * C)
-
-C2 = (atoms[:, None] - atoms[None, :]) ** 2      # squared cost (x_i - y_j)^2
-res2 = optimize.linprog(C2.ravel(), A_eq=A_eq,
-                        b_eq=np.concatenate([p_w, q_w]), method='highs')
-print(f'squared cost, LP optimum : {res2.fun:.4f}')
-plans, eps_values = [], (2.0, 0.5, 0.1)
-for eps in eps_values:
-    plan, cost = sinkhorn(p_w, q_w, C2, eps)
-    plans.append(plan)
-    print(f'epsilon = {eps}: entropic cost = {cost:.4f}, '
-          f'routes above 1e-3 = {(plan > 1e-3).sum()}')
-d2l.show_heatmaps(d2l.tensor(np.stack(plans)[None]), 'destination j',
-                  'source i', titles=[f'epsilon = {e}' for e in eps_values],
-                  figsize=(9, 2.8), cmap='Blues')
-```
-
-The linear program gives $W_2^2 = 3.5$. At $\varepsilon = 2$ the plan spreads
-each source's mass over several destinations ($25$ of the $36$ routes carry
-more than $10^{-3}$), and its cost, $4.06$, is well above the optimum. At
-$\varepsilon = 0.5$ the plan has $14$ routes and costs $3.57$. At
-$\varepsilon = 0.1$ only the ten routes of the monotone plan remain, and the
-cost, $3.4995$, is within $0.001$ of the linear program: an $\varepsilon$ of
-about $3\%$ of the optimal cost suffices here.
-
-The squared cost has one more use. $W_2$ has a dynamical form, as the least
-kinetic energy needed to move one distribution into the other, and
-:numref:`sec_mdl-flow-matching-transport` builds generative models on that
-form.
-
-<!-- split: new section "Scores" starts here -->
-
-## Scores
-
-An energy-based model specifies a density only up to its normalizing constant:
-it gives $\tilde{q}(\mathbf{x})$, but not
-$Z = \int \tilde{q}(\mathbf{x})\, d\mathbf{x}$. Without $Z$, the likelihood,
-the KL divergence and every other f-divergence
-(:numref:`sec_mdl-f-divergences`) are out of reach, and drawing samples needs a
-Markov chain, so the sample-based comparisons of :numref:`sec_mdl-ipm-mmd` are
-costly too. Here we compare distributions through the slopes of their
-log-densities, which do not depend on $Z$. As before, $P$ is the data and $Q$
-the model. The Fisher divergence and its blind spot are what the chapters on
-diffusion models use; Stein's identity and the kernel discrepancy built on it
-can be skipped on a first reading.
-
-### The Score and the Fisher Divergence
-:label:`sec_mdl-fisher-divergence`
-
-The **score** of a distribution $P$ with differentiable density $p$ is the
-gradient of its log-density *with respect to the data point*:
-
-$$
-s_P(\mathbf{x}) = \nabla_{\mathbf{x}} \log p(\mathbf{x}).
-$$
-:eqlabel:`eq_mdl-score-def`
-
-(In classical statistics, "score" means the gradient with respect to the
-*parameters*, as in :numref:`sec_mdl-maximum_likelihood`. Here the gradient is
-in $\mathbf{x}$.) The score is a vector field on the sample space that points
-uphill toward the mass, as :numref:`fig_mdl-score-field` shows. For a Gaussian
-$\mathcal{N}(\mu, \sigma^2)$ it is
-
-$$
-s(x) = -\frac{x - \mu}{\sigma^2},
-$$
-
-a spring pulling toward the mean with stiffness $1/\sigma^2$. For a mixture
-$p = \sum_k w_k\, p_k$ the chain rule gives $s(x) = \sum_k r_k(x)\, s_k(x)$
-with $r_k(x) = w_k p_k(x) / p(x)$: each component's spring, weighted by the
-posterior probability, or *responsibility*, that $x$ came from that component.
-
-![The score field of a two-component Gaussian mixture. Arrows show the gradient of the log-density: near each mode the field is a spring pulling toward that mode's mean, and along the valley between modes the responsibilities hand the point off from one attractor to the other. Density contours are underlaid for reference.](../img/mdl-it-score-field.svg)
-:label:`fig_mdl-score-field`
-
-The score does not depend on a normalizing constant. If
-$q(\mathbf{x}) = \tilde{q}(\mathbf{x}) / Z$, then
-
-$$
-\nabla_{\mathbf{x}} \log q(\mathbf{x})
-= \nabla_{\mathbf{x}} \log \tilde{q}(\mathbf{x})
-- \nabla_{\mathbf{x}} \log Z
-= \nabla_{\mathbf{x}} \log \tilde{q}(\mathbf{x}),
-$$
-
-since $Z$ does not depend on $\mathbf{x}$. A divergence built from scores can
-therefore compare an unnormalized model with data. The natural choice is the
-mean squared difference of the two vector fields under the data distribution,
-the **Fisher divergence**:
-
-$$
-D_{\textrm{F}}(P\|Q) = \frac{1}{2}\, \mathbb{E}_{\mathbf{x} \sim P}\!\left[
-\big\| s_P(\mathbf{x}) - s_Q(\mathbf{x}) \big\|^2 \right].
-$$
-:eqlabel:`eq_mdl-fisher-div-def`
-
-It is non-negative, and it is a divergence on distributions whose densities are
-positive on the same connected support. There, equal scores force
-$\log p - \log q$ to be constant, and normalization makes the constant zero.
-For two Gaussians with equal variance $\sigma^2$ the scores differ by the
-constant $(\mu_1 - \mu_2)/\sigma^2$, so
-$D_{\textrm{F}} = (\mu_1 - \mu_2)^2 / (2\sigma^4)$, against the KL value
-$(\mu_1 - \mu_2)^2/(2\sigma^2)$ from :eqref:`eq_mdl-dd-gaussian-kl`. The
-general case is problem :exref:`ex_mdl-divergences-distances-fisher-stein`a.
-
-The next cell defines the mixture score by the responsibility formula. The
-number it prints is the largest difference from a finite-difference derivative
-of $\log p$ for the mixture of :numref:`sec_mdl-fwd-vs-rev-kl`.
-
-```{.python .input #divergences-distances-score}
-def mix_score(x, w, mus, sigmas):
-    """Score of a Gaussian mixture: responsibility-weighted component scores."""
-    r = np.exp(log_components(x, w, mus, sigmas) - log_mix(x, w, mus, sigmas))
-    return np.sum(r * -(x - mus[:, None]) / sigmas[:, None] ** 2, axis=0)
-
-numeric = np.gradient(log_p(x), x)               # finite differences
-gap = np.abs(mix_score(x, w, mus, sigmas) - numeric)[10:-10].max()
-print(f'mixture score, max |analytic - numerical|: {gap:.2e}')
-```
-
-The two agree to the accuracy of finite differences on this grid.
-
-The Fisher divergence has a blind spot, and the mixture score explains it. Take
-two mixtures with the same components and swapped weights,
-$P_w = w\,\mathcal{N}(-m, 1) + (1 - w)\,\mathcal{N}(m, 1)$ with $w = 0.7$
-against $w = 0.3$. Near each mode the responsibility of that mode is close to
-one for both mixtures, so the two scores agree. They differ only in the valley
-between the modes, where the responsibilities hand over, and there $P_{0.7}$
-has little mass. How much can the Fisher divergence miss? We compute it, and KL
-for comparison, as the modes move apart.
-
-```{.python .input #mdl-divergences-distances-the-score-and-the-fisher-divergence-1}
-xs = np.linspace(-14.0, 14.0, 14001)
-w_a, w_b, unit = np.array([0.7, 0.3]), np.array([0.3, 0.7]), np.ones(2)
-for m in (1.0, 3.0, 5.0):
-    mus_m = np.array([-m, m])
-    log_a, log_b = log_mix(xs, w_a, mus_m, unit), log_mix(xs, w_b, mus_m, unit)
-    score_gap = mix_score(xs, w_a, mus_m, unit) - mix_score(xs, w_b, mus_m, unit)
-    fisher = 0.5 * integrate.trapezoid(np.exp(log_a) * score_gap ** 2, xs)
-    print(f'm = {m:.0f}: KL = {kl(log_a, log_b, xs):.3f} nats, '
-          f'Fisher = {fisher:.1e}')
-```
-
-As the modes separate, KL settles at
-$0.7 \log\tfrac{7}{3} + 0.3 \log\tfrac{3}{7} = 0.339$ nats, the divergence
-between the two weight vectors, while the Fisher divergence falls by more than
-four orders of magnitude, from about $0.1$ to about $4 \times 10^{-6}$. A loss
-built from scores cannot see how mass is divided between distant modes. Adding
-noise to the data fills the valley (problem
-:exref:`ex_mdl-divergences-distances-score-blindness`c), which is one reason
-why diffusion models perturb the data with noise before they match scores;
-:numref:`sec_diffusion-denoising` measures the blind spot on trained networks.
-
-One obstacle remains. :eqref:`eq_mdl-fisher-div-def` contains $s_P$, the score
-of the data distribution, which we do not know. Expanding the square gives
-$\tfrac12\mathbb{E}_P\|s_Q\|^2 - \mathbb{E}_P[s_Q^\top s_P]$ plus a term that
-does not depend on the model $Q$, and an integration by parts removes $s_P$
-from the cross term :cite:`Hyvarinen.2005`. :numref:`sec_mdl-score-matching`
-carries it out in $\mathbb{R}^n$ (:eqref:`eq_mdl-hyvarinen`) and derives the
-training loss of diffusion models from it. On the line, the integration by
-parts is the identity of the next subsection.
-
-### Stein's Identity
-:label:`sec_mdl-stein-discrepancy`
-
-The score can also *test* a sample against a model. The starting point is an
-identity that every distribution satisfies with its own score; we state it for
-the model $Q$. Let $Q$ have a differentiable density $q > 0$ on $\mathbb{R}$
-with score $s_Q = (\log q)'$, and let $g$ be differentiable with
-$g(x)\, q(x) \to 0$ as $x \to \pm\infty$, $\mathbb{E}_Q|g'| < \infty$ and
-$\mathbb{E}_Q|g\, s_Q| < \infty$. Then *Stein's identity* :cite:`Stein.1981`
-holds:
-
-$$
-\mathbb{E}_{x \sim Q}\big[ g'(x) + g(x)\, s_Q(x) \big] = 0.
-$$
-:eqlabel:`eq_mdl-stein-identity`
-
-It is one integration by parts (:numref:`subsec_mdl-integration-by-parts`).
-Since $q' = s_Q\, q$, we have
-$\int g'\, q\, dx = \big[ g\, q \big]_{-\infty}^{\infty} - \int g\, q'\, dx = -\int g\, s_Q\, q\, dx$,
-where the boundary term vanishes and both integrals converge by the conditions
-on $g$.
-
-For $Q = \mathcal{N}(0, 1)$ the score is $s_Q(x) = -x$ and the identity reads
-$\mathbb{E}[g'(X)] = \mathbb{E}[X g(X)]$; with $g(x) = x$ it gives
-$\mathbb{E}[X^2] = 1$. Applied to the data distribution $P$, with $g$ equal to
-the model's score $s_Q$, it reads
-$\mathbb{E}_P[s_Q\, s_P] = -\mathbb{E}_P[s_Q']$, which is the integration by
-parts that removes the data score from the Fisher divergence.
-
-The identity holds for a large class of $g$ at once and, for a rich enough
-class, only for $Q$ itself. If the average of $g' + g\, s_Q$ over a sample is
-far from zero for some $g$, the sample does not come from $Q$ (problem
-:exref:`ex_mdl-divergences-distances-fisher-stein`c shows that a finite class
-of polynomials is not rich enough). The cell evaluates this average for
-$g(x) = x^3$ and $g(x) = \sin x$ on a million draws from $\mathcal{N}(0, 1)$
-itself, where the identity holds.
-
-```{.python .input #divergences-distances-stein}
-rng = np.random.default_rng()
-z = rng.standard_normal(1_000_000)
-# Stein operator for P = N(0, 1):  (A_P g)(x) = g'(x) - x g(x)
-for name, g, g_prime in [('x^3', lambda t: t ** 3, lambda t: 3 * t ** 2),
-                         ('sin x', np.sin, np.cos)]:
-    vals = g_prime(z) - z * g(z)
-    print(f"g(x) = {name:5s}: mean of g'(Z) - Z g(Z) = {vals.mean():+.4f}, "
-          f'standard error {vals.std() / np.sqrt(len(z)):.4f}')
-```
-
-Both means are within a few standard errors of zero, as they must be. A test
-says something only on a sample that does not come from the model, and for that
-one test function is not enough.
-
-### The Kernel Stein Discrepancy
-
-One test function catches one kind of violation. As with MMD, we take the
-largest violation over the unit ball of a feature space, and the supremum again
-has a closed form. Write the *Stein operator* of the model $Q$ as
-$(\mathcal{A}_Q g)(x) = g'(x) + s_Q(x)\, g(x)$, so that Stein's identity says
-$\mathbb{E}_Q[\mathcal{A}_Q g] = 0$, and measure the data distribution $P$ by
-$\sup_g \mathbb{E}_P[\mathcal{A}_Q g]$.
-
-The derivation follows that of MMD in :numref:`sec_mdl-ipm-mmd` step by step.
-For $g(x) = \langle \mathbf{w}, \boldsymbol{\varphi}(x) \rangle$ with
-$\|\mathbf{w}\| \leq 1$ the operator acts on the features,
-$(\mathcal{A}_Q g)(x) = \langle \mathbf{w}, \boldsymbol{\psi}(x) \rangle$ with
-$\boldsymbol{\psi} = \boldsymbol{\varphi}' + s_Q\, \boldsymbol{\varphi}$, and
-the supremum over the ball is $\big\| \mathbb{E}_P[\boldsymbol{\psi}] \big\|$
-by Cauchy--Schwarz. Its square is
-$\mathbb{E}\langle \boldsymbol{\psi}(x), \boldsymbol{\psi}(x') \rangle$ for
-independent draws $x, x'$ from $P$. Multiplying out leaves four inner products
-of features, and each is the kernel or one of its derivatives:
-$\langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x') \rangle = k$,
-$\langle \boldsymbol{\varphi}'(x), \boldsymbol{\varphi}(x') \rangle = \partial_x k$,
-$\langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}'(x') \rangle = \partial_{x'} k$
-and
-$\langle \boldsymbol{\varphi}'(x), \boldsymbol{\varphi}'(x') \rangle = \partial_x \partial_{x'} k$.
-Their sum $\langle \boldsymbol{\psi}(x), \boldsymbol{\psi}(x') \rangle$ is the
-**Stein kernel** $k_Q$ of $Q$. In $\mathbb{R}^n$, $g$ is a vector field, the
-operator is $s_Q^\top g + \nabla \cdot g$, the kernel $k$ must be continuously
-differentiable in each argument, and the Stein kernel is
-
-$$
-\begin{aligned}
-k_Q(\mathbf{x}, \mathbf{x}') = {}& s_Q(\mathbf{x})^\top s_Q(\mathbf{x}')\, k(\mathbf{x}, \mathbf{x}')
-+ s_Q(\mathbf{x})^\top \nabla_{\mathbf{x}'} k(\mathbf{x}, \mathbf{x}') \\
-&+ \nabla_{\mathbf{x}} k(\mathbf{x}, \mathbf{x}')^\top s_Q(\mathbf{x}')
-+ \nabla_{\mathbf{x}} \cdot \nabla_{\mathbf{x}'} k(\mathbf{x}, \mathbf{x}'),
-\end{aligned}
-$$
-:eqlabel:`eq_mdl-stein-kernel`
-
-where the last term is $\sum_i \partial_{x_i} \partial_{x'_i} k$. The squared
-**kernel Stein discrepancy** (KSD) is the average Stein kernel over two
-independent draws from the data:
-
-$$
-\mathrm{KSD}^2(P, Q) = \mathbb{E}_{\mathbf{x}, \mathbf{x}' \sim P}\big[ k_Q(\mathbf{x}, \mathbf{x}') \big].
-$$
-:eqlabel:`eq_mdl-ksd-def`
-
-A second reading gives its population value. If $P$ also has a score and
-satisfies its own Stein identity, then
-$\mathbb{E}_P[g' + s_Q\, g] = \mathbb{E}_P[g' + s_P\, g] + \mathbb{E}_P[(s_Q - s_P)\, g] = \mathbb{E}_P[(s_Q - s_P)\, g]$,
-and the same feature argument gives
-
-$$
-\mathrm{KSD}^2(P, Q) = \mathbb{E}_{x, x' \sim P}\big[ (s_Q - s_P)(x)\, k(x, x')\, (s_Q - s_P)(x') \big].
-$$
-:eqlabel:`eq_mdl-ksd-score-diff`
-
-So the KSD is a kernel-smoothed relative of the Fisher divergence
-$D_{\textrm{F}}(P\|Q)$: the same difference of scores under the same data
-distribution, multiplied across pairs of points with weight $k$ where the
-Fisher divergence squares it at each point. For data $P = \mathcal{N}(0, 1)$
-and the wrong model $Q' = \mathcal{N}(1, 1)$, the score difference is
-$-(x - 1) - (-x) = 1$, so $\mathrm{KSD}^2 = \mathbb{E}[k(X, X')]$ with
-$X - X' \sim \mathcal{N}(0, 2)$. By :eqref:`eq_mdl-rbf-gaussian-integral` this
-is $(1 + 2/\ell^2)^{-1/2} = 1/\sqrt{3} \approx 0.577$ at $\ell = 1$.
-
-What recommends the KSD is what it does not need. :eqref:`eq_mdl-stein-kernel`
-involves the model only through its score, so an unnormalized model serves as
-well as a normalized one. And :eqref:`eq_mdl-ksd-def` is a double expectation
-under $P$ alone, so a sample $x_1, \ldots, x_N$ from the data gives the
-unbiased estimator
-
-$$
-\widehat{\mathrm{KSD}}^2 = \frac{1}{N(N-1)} \sum_{i \neq j} k_Q(x_i, x_j),
-$$
-
-the same average without self-pairs as the MMD estimator, and the model is
-never sampled. For suitable kernels (the RBF kernel among them, under mild
-conditions on the score) $\mathrm{KSD}^2(P, Q) = 0$ if and only if $P = Q$
-:cite:`Liu.Lee.Jordan.2016,Chwialkowski.Strathmann.Gretton.2016`. No training
-objective in this book uses the KSD. The literature uses it as a
-goodness-of-fit test for unnormalized models, as a measure of how well the
-output of a sampler matches its target, and, turned from a statistic into a
-velocity field, in Stein variational gradient descent :cite:`Liu.Wang.2016`.
-
-For the one-dimensional RBF kernel $k(x, y) = e^{-(x-y)^2/(2\ell^2)}$ the
-derivatives in :eqref:`eq_mdl-stein-kernel` are
-$\partial_y k = \frac{x-y}{\ell^2}\, k$,
-$\partial_x k = -\frac{x-y}{\ell^2}\, k$ and
-$\partial_x \partial_y k = \big( \frac{1}{\ell^2} - \frac{(x-y)^2}{\ell^4} \big)\, k$.
-We test one sample of $1{,}000$ points from $\mathcal{N}(0, 1)$ against the
-correct model $\mathcal{N}(0, 1)$, whose score is $-x$, and against the wrong
-model $\mathcal{N}(1, 1)$, whose score is $-(x - 1)$. Nothing but a score
-function tells the statistic which model is wrong.
-
-```{.python .input #divergences-distances-ksd}
-def ksd2_ustat(x, score, ell=1.0):
-    """U-statistic KSD^2 with the RBF kernel exp(-(a-b)^2 / (2 ell^2))."""
-    d = x[:, None] - x[None, :]
-    k = np.exp(-d ** 2 / (2 * ell ** 2))
-    dk_dx = -d / ell ** 2 * k
-    dk_dy = d / ell ** 2 * k
-    d2k = (1 / ell ** 2 - d ** 2 / ell ** 4) * k
-    s = score(x)
-    kappa = (s[:, None] * s[None, :] * k + s[:, None] * dk_dy
-             + dk_dx * s[None, :] + d2k)
-    n = len(x)
-    return (kappa.sum() - np.trace(kappa)) / (n * (n - 1))
-
-rng = np.random.default_rng()
-x_q = rng.standard_normal(1000)          # the sample: Q = N(0, 1)
-for name, s, pop in [('true model  N(0,1)', lambda t: -t, 0.0),
-                     ('wrong model N(1,1)', lambda t: -(t - 1), 1 / np.sqrt(3))]:
-    print(f'KSD^2 vs the {name}: {ksd2_ustat(x_q, s):+.4f}  '
-          f'(population {pop:.4f})')
-```
-
-Against the correct model the estimate is within about $\pm 0.005$ of zero and
-may dip slightly negative; against the wrong model it is about $0.58$, within
-about $\pm 0.1$ of the population value $1/\sqrt{3}$. The sample never changed
-and the wrong model was never sampled: the discrepancy reads the mismatch off
-the score.
-
-## Training Objectives and Their Divergences
-:label:`sec_mdl-divergence-objective-map`
-
-:numref:`tab_mdl-divergence-objectives` pairs common training objectives with
-the divergence that each one's population optimum minimizes, what the objective
-needs from the model and the data, and what it reports for two point masses a
-distance $d$ apart, the test case of :numref:`tab_mdl-point-mass-table`.
-
-:Training objectives and the divergences they minimize at their population optimum. The column on point masses is the value for $\delta_0$ against $\delta_d$ with $d \neq 0$; the MMD entry uses the RBF kernel with length scale $\ell$.
-:label:`tab_mdl-divergence-objectives`
-
-| Objective | Divergence | What it needs | Two point masses $d$ apart | Treated in |
-|:----|:----|:----|:----|:----|
-| maximum likelihood (autoregressive models, flows) | forward KL | model density at data points | $\infty$ | :numref:`sec_mdl-fwd-vs-rev-kl` |
-| variational inference, VAE posterior | reverse KL | model samples and the unnormalized target | $\infty$ | :numref:`sec_mdl-fwd-vs-rev-kl` |
-| original GAN at the optimal discriminator | Jensen--Shannon | samples of both, through a critic | $\log 2$, constant | :numref:`sec_mdl-f-gan-dual` |
-| f-GAN | the chosen $D_f$ | samples of both, through a critic | $f(0) + f'(\infty)$, constant | :numref:`sec_mdl-f-gan-dual` |
-| WGAN | $W_1$ | samples of both, a 1-Lipschitz critic | $d$ | :numref:`sec_mdl-optimal-transport` |
-| moment matching, two-sample tests | MMD | samples of both, no critic for a fixed kernel | $2 - 2e^{-d^2/(2\ell^2)}$, moves for $d$ below a few $\ell$ | :numref:`sec_mdl-ipm-mmd` |
-| score matching, diffusion models | Fisher (blind to the weights of distant modes) | model score, data samples | undefined (a point mass has no score) | :numref:`sec_mdl-fisher-divergence` |
-| goodness-of-fit tests, sampler quality | KSD | model score, data samples | undefined (a point mass has no score) | :numref:`sec_mdl-stein-discrepancy` |
-
-:numref:`fig_mdl-divergence-taxonomy` places the ratio, test-function and
-transport families and their overlaps. The score-based comparisons, which it
-does not draw, lie outside all three.
-
-![Three of the four families and where their common members live. f-divergences average a convex function of the density ratio; integral probability metrics take a supremum of mean differences over a class of test functions; optimal-transport distances measure the cost of moving mass. Total variation sits in the first two families and Wasserstein-1 in the last two.](../img/mdl-it-divergence-taxonomy.svg)
-:label:`fig_mdl-divergence-taxonomy`
-
-The table says which comparison an objective makes. It does not say how well
-the comparison can be made from data. Every sample-based number above, the
-f-GAN bound, $\textrm{MMD}^2$ and $\mathrm{KSD}^2$, is an estimate with an
-error, and the f-GAN bound is biased low. :numref:`sec_mdl-mutual-information`
-uses KL to measure the dependence between two variables, and
-:numref:`sec_mdl-mi-estimation` asks how well a divergence can be estimated
-from $N$ samples at all: no distribution-free estimate certifies more than
-about $\log N$ nats.
+<!-- WRITER: measured (deterministic, identical in all four tabs): bound 0.0000, 0.2240, 0.3935, 0.7036, 0.9107, 1.0013, 1.0133 after 0, 1, 2, 5, 10, 20, 50 steps, rising monotonically and always below the exact 1.0133 (gap 1e-5 at 50 steps); the overconfident critic 2T* gives 0.0000. 'c = 1/2 reports 0.76' is no longer printed (T*/2 still gives 0.760 by the formula); read 'half-trained' off the steps instead (about 70% of the divergence after 5 steps, 90% after 10). The plot is now the bound against ascent steps with the exact value as a line. -->
+The optimal critic reproduces the exact divergence, $1.0133$. A half-trained
+critic ($c = \tfrac12$) reports $0.76$, which is $75\%$ of the divergence, and
+an overconfident one ($c = 2$) reports zero. Every critic other than $T^\star$
+reports less than the divergence.
+
+The f-divergences thus leave two things wanting. Estimated through a critic
+they are biased low, and on disjoint supports they are constant whatever the
+critic. Both defects come from the ratio $p/q$. The integral probability
+metrics of :numref:`sec_mdl-ipm-mmd` and the transport distances of
+:numref:`sec_mdl-optimal-transport` do without it.
 
 ## Summary
 
@@ -1755,17 +928,9 @@ bound, that a critic estimates from samples with a downward bias. Forward KL,
 which maximum likelihood minimizes, covers every mode, while reverse KL, which
 variational inference minimizes, can settle on one.
 
-Test-function comparisons look at averages. Total variation is the best
-advantage of a test that sees one sample. It is bounded by
-$\sqrt{D_{\textrm{KL}}/2}$, and no f-divergence grows when the data are
-processed. MMD is the distance between mean features, computed from samples in
-closed form. Transport looks at geometry: $W_1$ keeps a gradient on disjoint
-supports, and its dual is a supremum over 1-Lipschitz critics.
-
-Score-based comparisons never see the normalizing constant. The Fisher
-divergence is the objective of score matching, but it cannot see how mass is
-split between distant modes, and the kernel Stein discrepancy tests a sample
-against a model that is known only through its score.
+Total variation is the best advantage of a test that sees one sample. It
+is bounded by $\sqrt{D_{\textrm{KL}}/2}$, and no f-divergence grows when
+the data are processed.
 
 ## Exercises
 
@@ -1845,6 +1010,7 @@ against a model that is known only through its score.
     1. Use the $\mathbb{R}$-conjugate. Show that for every critic $T$ the
        gap between $\chi^2(P\|Q)$ and the bound equals
        $\tfrac{1}{4} \mathbb{E}_Q\big[(T - T^\star)^2\big]$. Deduce the
+       <!-- WRITER: the experiment no longer scales T* (it now trains the critic by gradient ascent); reword: e.g. derive (2c - c^2) chi^2 here, and/or show that the ascent of the cell contracts T - T* by (1 - q/2) per step, so the gap falls like a geometric series. -->
        formula $\chi^2(P\|Q)\,(2c - c^2)$ for the critics $T = c\,T^\star$
        that the experiment with scaled critics prints, and check
        the gap formula on three critics of your own.
@@ -1895,54 +1061,6 @@ against a model that is known only through its score.
     1. Use :eqref:`eq_mdl-w1-cdf` to show that $W_1$ is a metric on the
        distributions on $\mathbb{R}$ with finite first moments.
    :exlabel:`ex_mdl-divergences-distances-prove-that-total-variation`
-
-1. [code] **MMD in closed form, and what data processing does not
-   preserve.** Use the Gaussian integral
-   :eqref:`eq_mdl-rbf-gaussian-integral` for the RBF kernel with length
-   scale $\ell$.
-    1. Apply the map $x \mapsto 2x$ to both $P$ and $Q$. Show from
-       :eqref:`eq_mdl-f-div-def` that no f-divergence changes under an
-       invertible map, and that $W_1$ doubles. Show that the RBF
-       $\textrm{MMD}^2$ at $\ell = 1$ falls from $0.047$ to $0.036$ for
-       $\mathcal{N}(0, 1)$ against $\mathcal{N}(0.5, 1)$, but rises from
-       $0.235$ to $0.787$ for $\delta_0$ against $\delta_{0.5}$. Why does the
-       data-processing proposition :eqref:`eq_mdl-f-div-dpi` say nothing
-       about MMD and $W_1$?
-    1. For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(\delta, 1)$, show
-       that $\textrm{MMD}^2 = \frac{2\ell}{\sqrt{\ell^2 + 2}}
-       \big(1 - e^{-\delta^2/(2(\ell^2 + 2))}\big)$. Which length scale
-       maximizes $\textrm{MMD}^2$ for small shifts $\delta$? What happens
-       as $\ell \to 0$ and as $\ell \to \infty$?
-    1. Evaluate the formula of (b) at $\ell = 1$ and $\delta = 0.5$.
-       Recompute `mmd2_unbiased` with the RBF kernel on $200$ fresh pairs of
-       samples drawn like `x_p` and `y_shift`, at $n = 250$ and at
-       $n = 1000$, and compare the mean and the standard deviation of the
-       estimates with the closed form. How does the standard deviation scale
-       with $n$? Is the value that your run of the MMD experiment printed
-       within the spread?
-   :exlabel:`ex_mdl-divergences-distances-q-mathcaln-delta`
-
-1. **Fisher divergence and Stein moments.** The score of
-   $\mathcal{N}(\mu, \sigma^2)$ is $-(x - \mu)/\sigma^2$.
-    1. Compute the Fisher divergence :eqref:`eq_mdl-fisher-div-def` between
-       $\mathcal{N}(\mu_1, \sigma_1^2)$ and $\mathcal{N}(\mu_2, \sigma_2^2)$
-       in closed form, and check that it reduces to
-       $(\mu_1 - \mu_2)^2 / (2\sigma^4)$ for equal variances. Is the
-       Fisher divergence symmetric?
-    1. Apply Stein's identity :eqref:`eq_mdl-stein-identity` for
-       $\mathcal{N}(0, 1)$ to $g(x) = x^k$, derive the recursion
-       $\mathbb{E}[X^{k+1}] = k\, \mathbb{E}[X^{k-1}]$, and compute
-       $\mathbb{E}[X^4]$ and $\mathbb{E}[X^6]$. What does $g(x) = 1$ give for
-       a general $P$ that satisfies the conditions of the identity?
-    1. Let the data distribution $P$ on $\mathbb{R}$ have finite moments of
-       all orders, and let $\mathbb{E}_P[g'(X) - X g(X)] = 0$ for every
-       polynomial $g$. Explain why $P = \mathcal{N}(0, 1)$, using that the
-       normal distribution is determined by its moments. Then let
-       $P(X = 1) = P(X = -1) = \tfrac{1}{2}$, and show that it satisfies the
-       identity for every polynomial $g$ of degree at most $2$ but not for
-       $g(x) = x^3$. What does this imply for a goodness-of-fit test that
-       checks the identity only on polynomials up to a fixed degree?
-   :exlabel:`ex_mdl-divergences-distances-fisher-stein`
 
 1. [code] **Restricted critics.** ● The bound :eqref:`eq_mdl-f-gan-bound`
    is tight only when the critic class contains the optimal critic. Take
@@ -2011,116 +1129,17 @@ against a model that is known only through its score.
        require? Why can Pinsker's inequality not give a bound of this kind?
    :exlabel:`ex_mdl-divergences-distances-hellinger-bretagnolle-huber`
 
-1. [code] **One-dimensional transport.** ● On the real line, $W_1$ is the
-   area between the CDFs :eqref:`eq_mdl-w1-cdf`.
-    1. For two empirical distributions on samples $x_1, \ldots, x_n$ and
-       $y_1, \ldots, y_n$ of equal size, use the monotone coupling of the
-       proof to show that $W_1 = \tfrac{1}{n} \sum_i |x_{(i)} - y_{(i)}|$,
-       the mean absolute difference of the sorted values. Check this against
-       the linear program of the six-point example on two
-       random samples of size $7$.
-    1. Compute the sorted-sample $W_1$ between `x_p` and `y_shift` and
-       between `x_p` and `y_same` of the MMD experiment.
-       Then average it over $20$ pairs of independent samples of size $n$
-       from $\mathcal{N}(0, 1)$, for $n \in \{10^2, 10^3, 10^4\}$, and find
-       the rate at which it decreases. The estimate is never negative. Why
-       does this rule out unbiasedness when $P = Q$?
-    1. Change `q_w` to $(0.40, 0.05, 0.05, 0.10, 0.10, 0.30)$, so that the
-       two CDFs cross, and rerun the cell. Build the test function $g$ with
-       $g(0) = 0$ and slope $\textrm{sign}\big(F_Q(t) - F_P(t)\big)$
-       between neighboring atoms, as in Step 4 of the proof, and check that
-       $\mathbb{E}_P[g] - \mathbb{E}_Q[g]$ equals the LP value. For every
-       route $(i, j)$ that carries mass in the LP solution `res.x`, compare
-       $g(x_i) - g(x_j)$ with $|x_i - x_j|$. Why must the two agree on every
-       such route for any optimal plan and any optimal test function?
-    1. *Non-uniqueness.* With the original `p_w` and `q_w`, show that
-       $F_P \geq F_Q$ at every atom and that every plan that moves mass only
-       rightward costs $\sum_j x_j q_j - \sum_i x_i p_i = 1.7$. Run
-       `sinkhorn` with the absolute cost `C` at $\varepsilon = 0.1$ and
-       $0.02$. How many routes carry mass? Show that the limit plan has the
-       form $\gamma_{ij} = a_i b_j$ for $j \geq i$ and $0$ otherwise, and
-       explain why it is the plan of largest entropy among the optimal plans
-       (use part (a) of problem
-       :exref:`ex_mdl-divergences-distances-sinkhorn-divergences`). Why is
-       the optimal plan unique for the squared cost?
-   :exlabel:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`
-
-1. [code] **Score blindness to mixing weights.** ● Let
-   $P_w = w\, \mathcal{N}(-m, 1) + (1 - w)\, \mathcal{N}(m, 1)$.
-    1. The text computes $D_{\textrm{F}}(P_{0.7}\|P_{0.3})$ and
-       $D_{\textrm{KL}}(P_{0.7}\|P_{0.3})$ for $m \in \{1, 3, 5\}$. Extend
-       the computation to $m \in \{1, \ldots, 6\}$. Show that the KL
-       divergence tends to $0.4 \log\tfrac{7}{3}$, and find the rate at which
-       the Fisher divergence decays by fitting $\log D_{\textrm{F}}$ against
-       $m^2$.
-    1. Use the responsibility form of the mixture score to explain where
-       the scores of $P_{0.7}$ and $P_{0.3}$ differ, and why the weights
-       barely affect them. What does this imply for the mixing weights of
-       a model fitted by score matching :cite:`Wenliang.Kanagawa.2020`?
-    1. Add independent $\mathcal{N}(0, \sigma^2)$ noise to samples of both
-       mixtures, so that each component becomes
-       $\mathcal{N}(\pm m, 1 + \sigma^2)$. Repeat (a) at $m = 5$ for
-       $\sigma \in \{0, 0.5, 1, 2\}$. How does the noise change the two
-       divergences? Relate the result to the noise-perturbed score models
-       of :citet:`song2019generative`.
-   :exlabel:`ex_mdl-divergences-distances-score-blindness`
-
-1. [code] **Sinkhorn divergences.** ●● Regularize the transport LP of the
-   six-point example by the divergence from the independent
-   coupling,
-
-   $$
-   \textrm{OT}_\varepsilon(P, Q) = \min_{\gamma}\, \sum_{i, j} \gamma_{ij} C_{ij}
-   + \varepsilon\, D_{\textrm{KL}}\big(\gamma \,\|\, p\, q^\top\big),
-   $$
-
-   where $\gamma$ ranges over the plans with row sums $p$ and column sums
-   $q$.
-    1. Show that
-       $D_{\textrm{KL}}(\gamma \,\|\, p\, q^\top) = -H(\gamma) + H(P) + H(Q)$
-       for every such plan, where $H$ denotes the entropy, so that `sinkhorn`
-       returns the minimizer. Show that
-       $\textrm{OT}_\varepsilon(P, Q) \to \sum_{i, j} p_i q_j C_{ij}$
-       as $\varepsilon \to \infty$, and that
-       $\textrm{OT}_\varepsilon(P, P) > 0$ for every $\varepsilon > 0$
-       unless $P$ is a point mass. With $C_{ij} = |x_i - x_j|$, which
-       distribution $P$ on the atoms minimizes
-       $\textrm{OT}_\varepsilon(P, Q)$ for large $\varepsilon$?
-    1. The Sinkhorn divergence
-       $S_\varepsilon(P, Q) = \textrm{OT}_\varepsilon(P, Q)
-       - \tfrac{1}{2} \textrm{OT}_\varepsilon(P, P)
-       - \tfrac{1}{2} \textrm{OT}_\varepsilon(Q, Q)$ removes this bias
-       :cite:`Genevay.Peyre.Cuturi.2018,Feydy.Sejourne.Vialard.ea.2019`.
-       Compute $S_\varepsilon(P, Q)$ for `p_w` and `q_w` with the absolute
-       cost `C` at $\varepsilon \in \{10^{-2}, 10^{-1}, \ldots, 10^3\}$. For
-       small $\varepsilon$, carry out the Sinkhorn updates on $\log \mathbf{a}$
-       and $\log \mathbf{b}$ with `scipy.special.logsumexp`. Check that
-       $S_\varepsilon$ approaches $W_1$ as $\varepsilon \to 0$ and
-       $\tfrac{1}{2} \mathcal{E}(P, Q)$ as $\varepsilon \to \infty$, where
-       $\mathcal{E}(P, Q) = 2\mathbb{E}|X - Y| - \mathbb{E}|X - X'| - \mathbb{E}|Y - Y'|$
-       is the energy distance :cite:`Szekely.Rizzo.2013`, the expression
-       :eqref:`eq_mdl-mmd2` with $-|x - y|$ in place of the kernel. Derive
-       the second limit from (a).
-    1. Discretize the mixture $P$ of :numref:`sec_mdl-fwd-vs-rev-kl`
-       on $61$ equally spaced points of $[-6, 6]$, and model it by a
-       Gaussian $Q_{\boldsymbol{\theta}}$ discretized on the same points,
-       with log-weights normalized by `logsumexp`. At $\varepsilon = 1$,
-       minimize $\textrm{OT}_\varepsilon(Q_{\boldsymbol{\theta}}, P)$ and
-       $S_\varepsilon(Q_{\boldsymbol{\theta}}, P)$ over
-       $\boldsymbol{\theta} = (\mu, \log\sigma)$, and compare both fits with
-       the Gaussian that minimizes $W_1$ by :eqref:`eq_mdl-w1-cdf`. How does
-       the bias of (a) show in the fitted $\sigma$?
-   :exlabel:`ex_mdl-divergences-distances-sinkhorn-divergences`
-
 [Discussions](https://d2l.discourse.group/t/36835)
 
 <!-- slides -->
 
+<!-- WRITER/SLIDES: deck cut at the split seams (code step). Slides on MMD, W1, Sinkhorn moved to mdl-test-functions-transport.md, slides on scores, Stein, KSD and the wrap-up to mdl-scores.md; TV and Pinsker now come before the critic slides under their own divider. Still to do: goals slide (drop the W1 and score bullets), 'Skips' line, 'Generators' title, a closer for this deck. -->
+
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §28.3]{.kicker}
+[Dive into Deep Learning · §37.3]{.kicker}
 
-Divergences and Distances Between Distributions<br>**what you compare decides what you can detect**
+f-Divergences<br>**one convex function of the density ratio**
 :::
 :::
 
@@ -2166,7 +1185,9 @@ The GAN loss at the best discriminator, $2\,\textrm{JS}-\log 4$, is $0$ in all t
 |---|---|
 | Entropy, Cross-Entropy, and KL | surprise, KL, the loss floor |
 | Codes, Compression, and Perplexity | the code behind the log-loss |
-| **Divergences and Distances** | **four ways to compare two laws** |
+| **f-Divergences** | **one convex function of the ratio** |
+| Test Functions and Transport | averages and moving mass |
+| Score-Based Comparisons | slopes, no normalizer |
 | Mutual Information | dependence and what it limits |
 | Estimating Mutual Information | lower bounds from samples |
 :::
@@ -2243,44 +1264,13 @@ Fit $\mathcal N(\mu,\sigma^2)$ to $0.7\,\mathcal N(-2,0.6^2)+0.3\,\mathcal N(2,0
 Reverse KL charges only $\log(1/0.7)=0.357$ for the dropped mode.
 :::
 
-::: {.slide title="Any f-Divergence Is a Game Against a Critic"}
-[Variational form]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Fenchel–Young, $f(u)\ge ut-f^*(t)$, at $u=p/q$, $t=T(x)$:
-
-$$D_f(P\|Q)\ge\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]$$
-
-- Equality at $T^\star=f'(p/q)$.
-- Both terms are sample averages: no densities.
-:::
-
-::: {.col .fig}
-@fig:mdl-it-f-gan-tangent-bound
-:::
-:::
-
-[Assumes differentiable $f$, $P\ll Q$, finite expectations.]{.small}
-:::
-
-::: {.slide title="A Half-Trained Critic Reports 75% of the Divergence"}
-$\chi^2$ generator, critics $T=c\,T^\star$: bound $\chi^2\,(2c-c^2)$.
-
-@!divergences-distances-f-gan-bound
-
-::: {.d2l-note}
-Estimates are biased low; $c=2$ reports zero.
-:::
-:::
-
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
 
-[Test functions and transport]{.dtitle}
+[Total variation and Pinsker]{.dtitle}
 
-[comparisons from samples]{.dsub}
+[tests, KL, and processing]{.dsub}
 :::
 :::
 
@@ -2313,150 +1303,44 @@ No converse: Gaussians 50 apart have TV $\approx1$ but KL $=1250$.
 :::
 :::
 
-::: {.slide title="MMD Is the Distance Between Mean Features"}
-[Integral probability metrics]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- $\sup_{\|\mathbf w\|\le1}\mathbb{E}_P[\mathbf w^\top\varphi]-\mathbb{E}_Q[\mathbf w^\top\varphi]=\|\mathbf m_P-\mathbf m_Q\|$
-- $\textrm{MMD}^2=\mathbb{E}k(x,x')+\mathbb{E}k(y,y')-2\mathbb{E}k(x,y)$
-- $\mathcal N(0,1)$ vs $\mathcal N(0,4)$: features $x$: $0$; $(x,x^2)$: $9$; RBF: $0.094$.
-- The witness $\mathbb{E}_Pk(x,X)-\mathbb{E}_Qk(x,Y)$ shows where:
-:::
-
-::: {.col}
-@!mdl-divergences-distances-integral-probability-metrics-and-mmd-1
-:::
-:::
-:::
-
-::: {.slide title="Transport Sees Distance: W₁ Is the Cheapest Mass × Distance"}
-[Optimal transport]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- Coupling $\gamma$: a joint law with marginals $P$, $Q$.
-- $W_1=\inf_\gamma\mathbb{E}_\gamma|x-y|$; $W_1(\delta_0,\delta_d)=d$, gradient $\pm1$.
-- Dual: $W_1=\sup_{\|g\|_{\mathrm{Lip}}\le1}\mathbb{E}_P g-\mathbb{E}_Q g$, the WGAN critic.
-:::
-
-::: {.col .fig}
-@fig:mdl-it-ot-transport-plan
-:::
-:::
-:::
-
-::: {.slide title="Check: Two Point Masses 3 Apart"}
-[Check]{.kicker}
-
-$P=\delta_0$, $Q=\delta_3$. What are KL, JS, TV and $W_1$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\infty$, $\log 2$, $1$, $3$. The RBF $\textrm{MMD}^2$ at $\ell=1$ is
-$2-2e^{-4.5}\approx1.98$: it still moves, but barely, three length scales out.
-:::
-:::
-:::
-
-::: {.slide title="On the Line, W₁ Is the Area Between the CDFs"}
-[Wasserstein on the line]{.kicker}
-
-- **I.** At each $t$ any plan carries at least $|F_P(t)-F_Q(t)|$ of mass across $t$.
-- **II.** A parcel moved $x\to y$ crosses every $t$ between: cost $=\int(\text{mass crossing } t)\,dt$.
-- **III.** The monotone plan $F_P^{-1}(U)\to F_Q^{-1}(U)$ never crosses back, so it attains it.
-
-$$W_1=\int|F_P(t)-F_Q(t)|\,dt$$
-
-Six points $0,\dots,5$, $P$ heavy on the left, $Q$ on the right; CDF area against a 36-variable LP:
-
-@!divergences-distances-w1
-:::
-
-::: {.slide title="Sinkhorn Sharpens Toward the Monotone Plan as ε → 0"}
-[Entropic transport]{.kicker}
-
-$\gamma_\varepsilon=\mathrm{diag}(\mathbf a)\,e^{-\mathbf C/\varepsilon}\,\mathrm{diag}(\mathbf b)$: alternately match rows and columns. Squared cost:
-
-@!divergences-distances-sinkhorn
-:::
-
 ::: {.slide}
 ::: {.divider}
 [03]{.dnum}
 
-[Scores]{.dtitle}
+[The critic bound]{.dtitle}
 
-[comparisons without a normalizer]{.dsub}
+[a divergence from samples]{.dsub}
 :::
 :::
 
-::: {.slide title="The Score Ignores Z; the Fisher Divergence Compares Score Fields"}
-[Fisher divergence]{.kicker}
+::: {.slide title="Any f-Divergence Is a Game Against a Critic"}
+[Variational form]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- $s_P(\mathbf x)=\nabla_{\mathbf x}\log p=\nabla_{\mathbf x}\log\tilde p$, since $Z$ is constant in $\mathbf x$.
-- $D_{\mathrm F}(P\|Q)=\tfrac12\mathbb{E}_P\|s_P-s_Q\|^2$.
-- Equal-variance Gaussians: $\frac{(\mu_1-\mu_2)^2}{2\sigma^4}$; KL gives $\frac{(\mu_1-\mu_2)^2}{2\sigma^2}$.
+Fenchel–Young, $f(u)\ge ut-f^*(t)$, at $u=p/q$, $t=T(x)$:
+
+$$D_f(P\|Q)\ge\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]$$
+
+- Equality at $T^\star=f'(p/q)$.
+- Both terms are sample averages: no densities.
 :::
 
 ::: {.col .fig}
-@fig:mdl-it-score-field
-:::
-:::
-:::
-
-::: {.slide title="The Fisher Divergence Cannot See a 70/30 Split of Distant Modes"}
-[A blind spot]{.kicker}
-
-$0.7\,\mathcal N(-m,1)+0.3\,\mathcal N(m,1)$ against the 30/70 mixture:
-
-@!mdl-divergences-distances-the-score-and-the-fisher-divergence-1
-
-- KL settles at $0.4\log\tfrac73=0.339$; Fisher falls to $4\times10^{-6}$.
-- The scores differ only in the valley, where there is almost no mass.
-
-[Adding noise to the data fills the valley.]{.small}
-:::
-
-::: {.slide title="Stein's Identity Needs Only the Score; KSD Measures Its Violation"}
-[Kernel Stein discrepancy]{.kicker}
-
-- $\mathbb{E}_P[g'+g\,s_P]=0$ for every smooth $g$ that decays suitably.
-- $\mathrm{KSD}^2(Q,P)=\mathbb{E}_{x,x'\sim Q}[k_P(x,x')]=\mathbb{E}[(s_P-s_Q)\,k\,(s_P-s_Q)]$.
-- Sample from $\mathcal N(0,1)$; wrong model $\mathcal N(1,1)$: $\mathrm{KSD}^2=1/\sqrt3\approx0.577$.
-
-@!divergences-distances-ksd
-
-The wrong model is never sampled.
-:::
-
-::: {.slide title="Check: Which Comparisons Survive an Unknown Normalizer?"}
-[Check]{.kicker}
-
-An energy-based model $\tilde p(x)$ with unknown $Z$, and a data sample.
-Which of KL, JS, MMD, $W_1$, Fisher, KSD can you compute?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** KSD directly (model score, data samples). Fisher after an
-integration by parts. MMD and $W_1$ need samples from the model; KL and JS
-need $Z$.
-:::
+@fig:mdl-it-f-gan-tangent-bound
 :::
 :::
 
-::: {.slide title="What You Compare Decides What You Can Detect"}
-[Wrap-up]{.kicker}
+[Assumes differentiable $f$, $P\ll Q$, finite expectations.]{.small}
+:::
 
-- **Ratio:** KL $0.396$ / $0.365$; $\infty$ on point masses; $D_f\ge0$ by one Jensen step.
-- **Test functions:** TV $0.4\le\sqrt{\textrm{KL}/2}$; MMD $0$ / $9$ / $0.094$ by feature.
-- **Transport:** $W_1=1.7$ on six points; $W_1(\delta_0,\delta_d)=d$.
-- **Scores:** KL $0.339$ against Fisher $4\times10^{-6}$; KSD $1/\sqrt3$ without sampling.
-- ML → forward KL · VI → reverse KL · GAN → JS · WGAN → $W_1$ · moment matching → MMD · diffusion → Fisher.
+::: {.slide title="A Half-Trained Critic Reports 75% of the Divergence"}
+<!-- WRITER/SLIDES: the cell now trains a three-number critic by gradient ascent (bound 0, 0.224, 0.394, 0.704, 0.911, 1.001, 1.013 after 0/1/2/5/10/20/50 steps; 2T* gives 0); the title and the line 'critics T = cT*: bound chi^2 (2c - c^2)' and the note 'c = 2 reports zero' need rewriting to the run. -->
+$\chi^2$ generator, critics $T=c\,T^\star$: bound $\chi^2\,(2c-c^2)$.
+
+@!divergences-distances-f-gan-bound
 
 ::: {.d2l-note}
-Next: every number here is an estimate. How well can a divergence be estimated from $N$ samples?
+Estimates are biased low; $c=2$ reports zero.
 :::
 :::

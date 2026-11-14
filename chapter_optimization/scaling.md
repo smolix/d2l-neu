@@ -49,6 +49,8 @@ import random
 
 ### A Family of Widths
 
+<!-- WRITER: widths now run from 128 to 8,192 (a 64-fold range: 128, 512, 2,048, 8,192); the
+coordinate check covers every power of two from 128 to 8,192. -->
 We want the smallest experiment in which a model can be scaled up while
 remaining the same model. A multilayer perceptron on Fashion-MNIST serves:
 three hidden layers of width $n$, with $n$ from 128 to 1,024. Every member
@@ -132,6 +134,10 @@ class MLP(nnx.Module):
         return nnx.Optimizer(self, optax.adam(lr), wrt=nnx.Param)
 ```
 
+<!-- WRITER: the score is now the mean minibatch training loss of the last 50 of the 400
+steps (not the full-set loss after the last step); a run whose mean is not finite is still
+capped at 2.5. The JAX tab binds model and optimizer once with nnx.cached_partial (per-step
+dispatch); both tabs keep the minibatch indices on the device. -->
 Training is a step-counted loop in the style of :numref:`sec_adam`: 400
 steps of Adam at batch size 512, about three passes over the data, at a
 constant learning rate. A seed fixes both the initialization and the
@@ -153,12 +159,11 @@ def train_mlp(arch, width, lr, seed, num_steps=400, batch_size=512):
     torch.manual_seed(seed)
     model = arch(width).to(device)
     optimizer = model.configure_adam(lr)
-    idx = np.random.default_rng(seed).integers(0, X.shape[0],
-                                               (num_steps, batch_size))
-    for i in idx:
-        train_step(model, optimizer, X[i], Y[i])
-    with torch.inference_mode():
-        v = float(F.cross_entropy(model(X), Y))
+    idx = torch.as_tensor(np.random.default_rng(seed).integers(
+        0, X.shape[0], (num_steps, batch_size)), device=device)
+    losses = torch.stack([train_step(model, optimizer, X[i], Y[i])
+                          for i in idx])
+    v = float(losses[-50:].mean())  # Mean minibatch loss of the last 50 steps
     return min(v, 2.5) if math.isfinite(v) else 2.5
 ```
 
@@ -175,37 +180,65 @@ def train_step(model, optimizer, Xb, Yb):
 
 def train_mlp(arch, width, lr, seed, num_steps=400, batch_size=512):
     model = arch(width, rngs=nnx.Rngs(seed))
-    optimizer = model.configure_adam(lr)
-    idx = np.random.default_rng(seed).integers(0, X.shape[0],
-                                               (num_steps, batch_size))
-    for i in idx:
-        train_step(model, optimizer, X[i], Y[i])
-    v = float(optax.softmax_cross_entropy_with_integer_labels(
-        model(X), Y).mean())
+    step = nnx.cached_partial(train_step, model, model.configure_adam(lr))
+    idx = jnp.asarray(np.random.default_rng(seed).integers(
+        0, X.shape[0], (num_steps, batch_size)))
+    losses = jnp.stack([step(X[i], Y[i]) for i in idx])
+    v = float(losses[-50:].mean())  # Mean minibatch loss of the last 50 steps
     return min(v, 2.5) if math.isfinite(v) else 2.5
 ```
 
 ### Learning-Rate Sweep
 :label:`subsec_scaling-sweep`
 
+<!-- WRITER: the sweep is now four widths (128, 512, 2,048, 8,192) x ten rates (2^-14 to
+2^-5, factors of two) x two seeds drawn once and shared by every sweep of the section: 80 SP
+runs. A new definitions cell before it holds `sweep` (loss array per width, one column per
+seed), `print_optimum` (best rate of the seed-averaged loss per width and the least-squares
+slope of log best rate against log width) and `plot_sweep` (seed-averaged curves). -->
 We evaluate four widths and nine learning rates spaced by factors of two,
 one short run per configuration, all from one random seed. The 36 runs stand
 in for the proxy sweep of a large project. They show whether the learning
 rate selected at one width serves the others.
 
-```{.python .input #scaling-the-sweep}
+```{.python .input #scaling-learning-rate-sweep-1}
 %%tab pytorch, jax
-widths = [128, 256, 512, 1024]
-lrs = [2 ** k for k in range(-13, -4)]
-seed = random.getrandbits(32)  # One draw for every run of this section
-sp_loss = {w: [train_mlp(MLP, w, lr, seed) for lr in lrs] for w in widths}
-for w in widths:
-    print(f'width {w:4d}: best lr {min(zip(sp_loss[w], lrs))[1]:.1e}')
-d2l.plot(lrs, [sp_loss[w] for w in widths], 'learning rate',
-         'training loss', xscale='log', ylim=[0.25, 0.8],
-         legend=[f'width {w}' for w in widths])
+def sweep(arch, widths, lrs, seeds):
+    """Score of every width and learning rate, one column per seed."""
+    return {w: np.array([[train_mlp(arch, w, lr, s) for s in seeds]
+                         for lr in lrs]) for w in widths}
+
+def print_optimum(loss, lrs):
+    """Best rate of the seed-averaged loss per width; slope in log-log."""
+    widths = list(loss)
+    best = [lrs[loss[w].mean(1).argmin()] for w in widths]
+    slope = np.polyfit(np.log(widths), np.log(best), 1)[0]
+    print('best lr:', '  '.join(f'{lr:.1e}' for lr in best),
+          f'   slope {slope:+.2f}')
+
+def plot_sweep(loss, lrs):
+    d2l.plot(lrs, [l.mean(1) for l in loss.values()], 'learning rate',
+             'training loss', xscale='log', ylim=[0.2, 0.8],
+             legend=[f'width {w}' for w in loss])
 ```
 
+```{.python .input #scaling-the-sweep}
+%%tab pytorch, jax
+widths = [128, 512, 2048, 8192]
+lrs = [2.0 ** k for k in range(-14, -4)]
+seeds = [random.getrandbits(32) for _ in range(2)]  # Shared by every sweep
+sp_loss = sweep(MLP, widths, lrs, seeds)
+print_optimum(sp_loss, lrs)
+plot_sweep(sp_loss, lrs)
+```
+
+<!-- WRITER: measured (four development runs of two seeds each per tab, PT and JX): SP best
+rate 3.9e-3 (once 7.8e-3), 2.0e-3, 4.9e-4, 2.4e-4 (once 1.2e-4) at widths 128, 512, 2,048,
+8,192: a 16-to 32-fold fall over a 64-fold widening; fitted slope -0.70 to -0.85 in every
+run of both tabs, against -1 from the first-step argument. Tuned SP loss falls with width:
+0.32-0.33, 0.29-0.30, 0.26-0.27, 0.22-0.23. On the right, the wider the network the lower
+the rate at which its U climbs. "Several times smaller" and the eightfold range are now
+false. -->
 Each width traces a U: too small a learning rate undertrains, and too large
 a one destabilizes. On the right the wider networks tend to climb fastest,
 in some runs off the top of the chart, where the capped runs sit. The U's do
@@ -290,6 +323,14 @@ weights and biases, and the rest of the forward pass do not.
 | hidden matrices | variance $\propto 1/\textrm{fan-in}$ (unchanged) | $\eta / m$ | unchanged |
 | output matrix | unchanged | $\eta$ | logits $\times\, 1/m$ |
 
+<!-- WRITER: `MuMLP` now follows the published rule for the output matrix (Yang et al. 2022,
+Table 8 / mup's MuReadout): its initial variance is held at 1/base_width at every width (the
+code multiplies the 1/fan-in init by sqrt(m), as MuReadout._rescale_parameters does), with
+the logits divided by m and the output learning rate unchanged. The table's output row
+should read "variance 1/n_base (fixed)"; the sentence "variance 1/fan-in is right at every
+width" is true for input and hidden matrices only. The code comments now number three rules
+(output init, logit multiplier, hidden LR / m); the JAX Rule comment sits on the `lr /
+self.m` line. -->
 The initialization column is the one that does *not* change: variance
 $\propto 1/\textrm{fan-in}$ is right at every width, and `MLP` already uses
 it. The hidden learning rate shrinks as $1/m$, which cancels the $n$-fold
@@ -307,46 +348,63 @@ full table and its pitfalls. Here the whole change is a subclass:
 ```{.python .input #scaling-the-rules}
 %%tab pytorch
 class MuMLP(MLP):
-    """The same network under muP, relative to a width-1,024 base."""
-    def __init__(self, width, base_width=1024):
+    """The same network under muP, relative to a width-8,192 base."""
+    def __init__(self, width, base_width=8192):
         super().__init__(width)
         self.m = width / base_width
+        # Rule 1: output init variance 1/base_width at every width
+        with torch.no_grad():
+            self.fc_out.weight.mul_(self.m ** 0.5)
 
     def forward(self, X):
-        # Rule 1: scale the output matrix's logits; the bias is untouched
+        # Rule 2: scale the output matrix's logits; the bias is untouched
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
         hidden = [self.fc_h1.weight, self.fc_h2.weight]
         rest = [p for p in self.parameters()
                 if not any(p is q for q in hidden)]
-        return torch.optim.Adam([              # Rule 2: hidden LR / m
+        return torch.optim.Adam([
             {'params': rest, 'lr': lr},
-            {'params': hidden, 'lr': lr / self.m}])
+            {'params': hidden, 'lr': lr / self.m}])  # Rule 3: hidden LR / m
 ```
 
 ```{.python .input #scaling-the-rules}
 %%tab jax
 class MuMLP(MLP):
-    """The same network under muP, relative to a width-1,024 base."""
-    def __init__(self, width, base_width=1024, *, rngs):
+    """The same network under muP, relative to a width-8,192 base."""
+    def __init__(self, width, base_width=8192, *, rngs):
         super().__init__(width, rngs=rngs)
         self.m = width / base_width
+        # Rule 1: output init variance 1/base_width at every width
+        self.fc_out.kernel[...] *= self.m ** 0.5
 
     def __call__(self, X):
-        # Rule 1: scale the output matrix's logits; the bias is untouched
+        # Rule 2: scale the output matrix's logits; the bias is untouched
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
-        def label(path, _):                   # Rule 2: hidden LR / m
+        def label(path, _):
             name = jax.tree_util.keystr(path)
             return 'hidden' if 'fc_h' in name and 'kernel' in name else 'rest'
         tx = optax.multi_transform(
-            {'hidden': optax.adam(lr / self.m), 'rest': optax.adam(lr)},
+            {'hidden': optax.adam(lr / self.m),  # Rule 3: hidden LR / m
+             'rest': optax.adam(lr)},
             lambda params: jax.tree_util.tree_map_with_path(label, params))
         return nnx.Optimizer(self, tx, wrt=nnx.Param)
 ```
 
+<!-- WRITER: base width is now 8,192, the widest member (not 128 as ruling 4 proposed, not
+1,024 as before); see the code log. Measured with the published output rule, two seeds, both
+tabs, one development run each: with the base at 128 muP's curves collapse onto one
+width-independent limit (widths 512 to 8,192 agree to 0.01 at every rate up to the optimum)
+whose tuned loss at width 8,192 is 0.29 against 0.22 for tuned SP, and whose optimum sits
+one to three grid steps higher at the wide end (slope +0.15 PT, +0.45 JX). The base fixes
+the per-layer constants: at width 8,192, base 128 gives the input matrix and biases 64x the
+hidden matrices' rate (base 8,192: equal) and logits that start 8x smaller; base 8,192 costs
+0.01-0.02 nats at width 128 (PT 0.326 vs 0.315, JX 0.338 vs 0.318) but base 128 costs 0.07
+at width 8,192, so a width-128 proxy cannot tune them. With the base at the widest, muP at
+width 8,192 is SP, and the narrow members borrow the wide model's constants. -->
 At the base width $m = 1$, and `MuMLP` is `MLP`. Which width serves as the
 base is a free choice. Every choice gives the same dependence on the width;
 choices differ only by constant factors per layer, such as how fast the input
@@ -364,6 +422,10 @@ traces which constants make the difference.
 ### The Coordinate Check
 :label:`subsec_scaling-coord-check`
 
+<!-- WRITER: each check now runs one Adam step at the rate tuned at that parametrization's
+reference width: SP at its width-128 optimum (`lr_128`, 3.9e-3 = 2^-8 in both tabs), muP at
+the SP optimum at the base width 8,192 (`lr_base`, 2.4e-4 = 2^-12 in both tabs), where the
+two coincide. "A learning rate in the middle of the grid" is false. -->
 The *coordinate check* tests the width scaling of
 :eqref:`eq_scaling_first_step` directly, and the practitioner's guide of
 :citet:`Dey.Anthony.Hestness.2024` recommends it as the first test of any
@@ -385,7 +447,7 @@ def activations(model, Xb):
         h3 = F.relu(model.fc_h2(h2))
         return [float(h.abs().mean()) for h in (h1, h2, h3, model(Xb))]
 
-def coord_check(arch, widths, seed, lr=2**-8, num_steps=1):
+def coord_check(arch, widths, lr, seed, num_steps=1):
     Xb, Yb = X[:256], Y[:256]
     sizes = []
     for width in widths:
@@ -406,7 +468,7 @@ def activations(model, Xb):
     h3 = nnx.relu(model.fc_h2(h2))
     return [float(jnp.abs(h).mean()) for h in (h1, h2, h3, model(Xb))]
 
-def coord_check(arch, widths, seed, lr=2**-8, num_steps=1):
+def coord_check(arch, widths, lr, seed, num_steps=1):
     Xb, Yb = X[:256], Y[:256]
     sizes = []
     for width in widths:
@@ -418,18 +480,24 @@ def coord_check(arch, widths, seed, lr=2**-8, num_steps=1):
     return list(zip(*sizes))
 ```
 
+<!-- WRITER: the check now spans 128 to 8,192, the same range as the sweep (not beyond it).
+-->
 First under standard parametrization. The check takes seconds, so we extend
 the widths to 4,096, beyond those of the training sweep:
 
 ```{.python .input #scaling-the-coordinate-check-2}
 %%tab pytorch, jax
-check_widths = [128, 256, 512, 1024, 2048, 4096]
-sp_acts = coord_check(MLP, check_widths, seed)
+check_widths = [128 * 2 ** k for k in range(7)]  # 128 to 8,192
+lr_128 = lrs[sp_loss[128].mean(1).argmin()]  # SP's best rate at width 128
+sp_acts = coord_check(MLP, check_widths, lr_128, seeds[0])
 d2l.plot(check_widths, list(sp_acts), 'width', 'mean |activation|',
-         xscale='log', yscale='log', ylim=[0.01, 100],
+         xscale='log', yscale='log', ylim=[0.05, 1000],
          legend=['layer 1', 'layer 2', 'layer 3', 'logits'])
 ```
 
+<!-- WRITER: SP check (both tabs): layer 1 flat near 0.3; layers 2 and 3 flat to about width
+512, then layer 2 grows from 0.2 to 2.4 and layer 3 from 0.2 to 12-14 by width 8,192; logits
+grow from about 0.2 to 180-260, three orders of magnitude (not two). -->
 The plot shows :eqref:`eq_scaling_first_step` at work. Layer 1, behind the
 input matrix with its fixed fan-in, is flat. Layers 2 and 3, behind the
 square matrices, grow with width, and the growth compounds with depth
@@ -440,12 +508,18 @@ under muP, on the same axes:
 
 ```{.python .input #scaling-the-coordinate-check-3}
 %%tab pytorch, jax
-mup_acts = coord_check(MuMLP, check_widths, seed)
+lr_base = lrs[sp_loss[8192].mean(1).argmin()]  # Best at the base width
+mup_acts = coord_check(MuMLP, check_widths, lr_base, seeds[0])
 d2l.plot(check_widths, list(mup_acts), 'width', 'mean |activation|',
-         xscale='log', yscale='log', ylim=[0.01, 100],
+         xscale='log', yscale='log', ylim=[0.05, 1000],
          legend=['layer 1', 'layer 2', 'layer 3', 'logits'])
 ```
 
+<!-- WRITER: muP check (both tabs, base 8,192): all three layer curves flat (0.1-0.2); the
+logits are nearly flat too, about 3 at width 128 falling to about 1.7 at 8,192: with the
+base at the widest, the narrow members start with logits about 8x (sqrt(64)) those of SP at
+their width, falling as 1/sqrt(m) toward SP's at the base. They do not "fall by design
+toward small values"; they fall to the base's level. -->
 All three layer curves are flat: no layer's update size depends on the
 width anymore. The logits *fall* with width, and this is by design. The
 $1/m$ multiplier keeps the logits of the wider networks small at first, and
@@ -467,14 +541,19 @@ with the same seed:
 
 ```{.python .input #scaling-learning-rate-transfer}
 %%tab pytorch, jax
-mup_loss = {w: [train_mlp(MuMLP, w, lr, seed) for lr in lrs] for w in widths}
-for w in widths:
-    print(f'width {w:4d}: best lr {min(zip(mup_loss[w], lrs))[1]:.1e}')
-d2l.plot(lrs, [mup_loss[w] for w in widths], 'learning rate',
-         'training loss', xscale='log', ylim=[0.25, 0.8],
-         legend=[f'width {w}' for w in widths])
+mup_loss = sweep(MuMLP, widths[:-1], lrs, seeds)
+mup_loss[widths[-1]] = sp_loss[widths[-1]]  # At the base width muP is SP
+print_optimum(mup_loss, lrs)
+plot_sweep(mup_loss, lrs)
 ```
 
+<!-- WRITER: the muP sweep runs widths 128, 512 and 2,048 and reuses the SP runs at width
+8,192 (at the base muP is SP, same seeds), so it costs 60 runs. Measured best rate per width
+(two seeds each, three runs per tab): 2.4e-4 or 1.2e-4 at every width in every run, never
+more than one grid step from the width-128 optimum; slope -0.10 to +0.20 (PT 0.00, -0.05,
++0.05; JX +0.05, +0.20, -0.10) against SP's -0.70 to -0.85. Right walls: under muP the
+narrow widths destabilize at lower rates (width 128 leaves the chart near 1e-3, width 8,192
+climbs slowly), the opposite order from SP. -->
 The width-1,024 curve repeats the earlier one, because at the base width the
 two parametrizations coincide and the seed is the same. The narrower curves
 have moved to meet it, and the minimum no longer drifts with width: across
@@ -488,13 +567,28 @@ of tuning every width separately:
 ```{.python .input #scaling-learning-rate-transfer-1}
 %%tab pytorch, jax
 for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
-    tuned = loss[128].index(min(loss[128]))  # Grid index chosen at width 128
-    excess = loss[1024][tuned] / min(loss[1024]) - 1
-    best = '  '.join(f'{min(loss[w]):.3f}' for w in widths)
-    print(f'{name:3s}  best loss at widths {widths}: {best}')
-    print(f'     width-128 lr at width 1024: {excess:.0%} above its best')
+    mean = {w: l.mean(1) for w, l in loss.items()}
+    print(f'{name:3s} best loss per width:',
+          '  '.join(f'{m.min():.3f}' for m in mean.values()))
+    small, wide = widths[0], widths[-1]
+    tuned, own = mean[small].argmin(), mean[wide].argmin()
+    for label, i in ((f'the width-{small} lr', tuned), ('its own lr', own)):
+        runs = '  '.join(f'{v:.3f}' for v in loss[wide][i])
+        print(f'    width {wide} at {label:16s} {mean[wide][i]:.3f}'
+              f'  (seeds {runs})')
 ```
 
+<!-- WRITER: transfer at width 8,192, three runs of two seeds per tab. SP at the width-128
+rate: 0.325-0.385 (single seeds 0.314-0.404) against 0.219-0.229 at its own rate (the two
+seeds differ by 0.000-0.014): a cost of 0.10-0.16 nats, at least seven times the seed
+difference, in every run of both tabs; a clear loss, not a divergence. muP at the width-128
+rate: 0.000-0.003 above its own optimum (the same grid point in five of six runs). Best loss
+per width, SP: 0.32-0.33, 0.29-0.30, 0.26-0.27, 0.22-0.23; muP: 0.33-0.34, 0.26-0.27,
+0.235-0.24, equal to SP at 8,192 (same runs). Tuned muP beats tuned SP at widths 512 (by
+0.03-0.04) and 2,048 (by 0.02-0.03), ties or trails by up to 0.02 at width 128 (the cost of
+borrowing the wide model's constants), and equals it at the base by construction. "10% to
+30%", "a few percent", "retuned at width 1,024" and the GPT-3 sentence's framing of "muP
+saves that sweep" need the new numbers. -->
 Under muP the transferred learning rate typically lands within a few
 percent of the best loss at width 1,024. Under standard parametrization it
 typically lands 10% to 30% above it. Each number comes from a single seed
@@ -565,6 +659,9 @@ any family of models one intends to scale, whatever the parametrization.
 
 ## Summary
 
+<!-- WRITER: Summary: "with the base at the widest member" stays true (now 8,192), but
+"within a grid step or two ... across an eightfold change" is now "within one grid step
+across a 64-fold change (fitted slope -0.10 to +0.20, against -0.70 to -0.85 under SP)". -->
 Hyperparameters tuned on a small model do not transfer by default: the best
 learning rate falls as the network widens, because one Adam step perturbs a
 hidden layer's activations in proportion to its fan-in
@@ -584,6 +681,15 @@ carry part of that scaling by construction.
 
 ## Exercises
 
+<!-- WRITER: Exercises. 1: the cell now runs two seeds and prints them (worklist: drop). 3:
+`MuMLP` now puts its base at 8,192; the interesting variant is `base_width=128`, which with
+two seeds gives an optimum one to three grid steps higher at width 8,192 and a tuned loss
+0.07 nats above SP's there (the limit of the base-128 constants; see the WRITER note on the
+base). The three constants that differ (input and bias learning rate x64, output init std
+x1/8 at width 8,192) are named in that note. 4: `print_optimum` now prints the fitted slope
+over 128-8,192, so part 1 and the extrapolation to 2,048/4,096 are inside the sweep; rewrite
+or cut. 7: worklist cuts it to its pencil part. Exercise 2.3 still compares against
+`mup_loss`. -->
 1. [code] **Transfer across seeds.** `sp_loss` and `mup_loss` hold one run
    per width and learning rate, all from one seed, so the transfer cost
    that they show carries no error bar.
@@ -683,6 +789,11 @@ carry part of that scaling by construction.
        say about the cited claim.
 
 [Discussions](https://d2l.discourse.group/t/36766)
+
+<!-- WRITER: slides: widths are 128-8,192 (not 1,024), ten rates x two seeds, base at 8,192;
+the "several times smaller", "10% to 30%", "a few percent", "one or two grid steps", "logits
+grow about 100x" (now ~1,000x) and base-1,024 lines are false; the muP rules slide needs the
+output-init row; the transfer slide now shows a 0.10-nat SP cost vs none under muP. -->
 
 <!-- slides -->
 

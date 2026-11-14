@@ -349,6 +349,7 @@ def fig_kraft_tree():
     ax.set_ylim(-5.55, 0.45)
     ax.axis("off")
     fl.save(fig, "mdl-it-kraft-tree")
+    _copy_to_auto("mdl-it-kraft-tree")
 
 
 # =========================================================================== #
@@ -501,6 +502,7 @@ def fig_f_gan_tangent_bound():
               frameon=True, facecolor="white", edgecolor="none",
               framealpha=0.9)
     fl.save(fig, "mdl-it-f-gan-tangent-bound")
+    _copy_to_auto("mdl-it-f-gan-tangent-bound")
 
 
 def fig_tv_area():
@@ -738,6 +740,7 @@ def fig_score_field():
     ax.set_ylabel(r"$x_2$")
     fl.clean_axes(ax, lim=((-4.4, 4.4), (-3.6, 3.6)), hide=False)
     fl.save(fig, "mdl-it-score-field")
+    _copy_to_auto("mdl-it-score-field")
 
 
 # =========================================================================== #

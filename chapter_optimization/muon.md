@@ -29,6 +29,7 @@ a training-speed competition to the pretraining of a trillion-parameter
 model. We derive Muon, implement it, and compare it with AdamW on `TinyLM`
 and on a CNN. We then relate it to Shampoo and look at variants that change
 its per-neuron step sizes and its communication cost.
+<!-- WRITER: the CNN comparison is cut (worklist 8.4) and the variants (optimized polynomials, per-neuron normalization, communication) go to Further Reading; "and on a CNN" and the last sentence no longer describe the section. -->
 
 ```{.python .input #muon}
 %%tab pytorch
@@ -229,6 +230,7 @@ five times.
 ![Newton--Schulz as a map on each singular value. Left: one step of the classical cubic and of the tuned quintic :eqref:`eq_muon-quintic`; the quintic rises more than twice as steeply near zero and overshoots $1$. Right: five steps of each, composed, for singular values from $10^{-3}$ to $1$ on a log scale. The quintic maps every input above $0.01$ into a band from about $0.68$ to $1.13$; the cubic brings only inputs above about $0.2$ close to $1$; the Polar Express polynomials of :numref:`subsec_muon-polar-express` map the whole range from $10^{-3}$ to $1$ into the narrower band from $0.85$ to $1.12$.](../img/mdl-opt-ns-maps.svg)
 :label:`fig_opt_ns_maps`
 
+<!-- WRITER: `newton_schulz` now takes one triple (a, b, c), defaulting to the tuned quintic, instead of a list of triples (the list served only the cut Polar Express cell); the first two sentences below are false. Exercises 3(b) and 4 still name POLAR_EXPRESS, which no cell defines any more. -->
 The implementation below takes a list of coefficient triples $(a, b, c)$, one
 per iteration, and repeats the last triple once the list runs out. Muon's
 choice is the single quintic :eqref:`eq_muon-quintic`. A tall matrix is
@@ -237,15 +239,13 @@ smaller of the two possible squares.
 
 ```{.python .input #muon-orthogonalization-by-newton-schulz-1}
 %%tab pytorch
-QUINTIC = [(3.4445, -4.7750, 2.0315)]  # Jordan et al.'s tuned quintic
-
-def newton_schulz(M, num_iters=5, coeffs=QUINTIC, eps=1e-7):
-    """Approximate the orthogonalization U V^T of M by odd polynomials."""
+def newton_schulz(M, num_iters=5, a=3.4445, b=-4.7750, c=2.0315, eps=1e-7):
+    """Approximate the orthogonalization U V^T of M by num_iters steps of
+    the odd polynomial a x + b x^3 + c x^5 (Jordan et al.'s tuned quintic)."""
     tall = M.shape[0] > M.shape[1]
     X = M.T if tall else M  # Keep the Gram factor X @ X.T small
     X = X / (X.norm() + eps)
-    for t in range(num_iters):
-        a, b, c = coeffs[min(t, len(coeffs) - 1)]  # The last triple repeats
+    for _ in range(num_iters):
         A = X @ X.T
         X = a * X + (b * A + c * A @ A) @ X
     return X.T if tall else X
@@ -253,15 +253,13 @@ def newton_schulz(M, num_iters=5, coeffs=QUINTIC, eps=1e-7):
 
 ```{.python .input #muon-orthogonalization-by-newton-schulz-1}
 %%tab jax
-QUINTIC = [(3.4445, -4.7750, 2.0315)]  # Jordan et al.'s tuned quintic
-
-def newton_schulz(M, num_iters=5, coeffs=QUINTIC, eps=1e-7):
-    """Approximate the orthogonalization U V^T of M by odd polynomials."""
+def newton_schulz(M, num_iters=5, a=3.4445, b=-4.7750, c=2.0315, eps=1e-7):
+    """Approximate the orthogonalization U V^T of M by num_iters steps of
+    the odd polynomial a x + b x^3 + c x^5 (Jordan et al.'s tuned quintic)."""
     tall = M.shape[0] > M.shape[1]
     X = M.T if tall else M  # Keep the Gram factor X @ X.T small
     X = X / (jnp.linalg.norm(X) + eps)
-    for t in range(num_iters):
-        a, b, c = coeffs[min(t, len(coeffs) - 1)]  # The last triple repeats
+    for _ in range(num_iters):
         A = X @ X.T
         X = a * X + (b * A + c * A @ A) @ X
     return X.T if tall else X
@@ -280,8 +278,8 @@ sigmas = [torch.linalg.svdvals(newton_schulz(G, num_iters=k))
           for k in (0, 1, 3, 5)]
 d2l.plot(torch.arange(1, 65), sigmas, 'index', 'singular value',
          legend=[f'k = {k}' for k in (0, 1, 3, 5)], yscale='log')
-print(f'singular values after 5 iterations: '
-      f'[{sigmas[-1].min():.2f}, {sigmas[-1].max():.2f}]')
+for k, sigma in zip((3, 5), sigmas[2:]):
+    print(f'after {k} iterations: [{sigma.min():.2f}, {sigma.max():.2f}]')
 ```
 
 ```{.python .input #muon-orthogonalization-by-newton-schulz-2}
@@ -291,10 +289,11 @@ sigmas = [jnp.linalg.svd(newton_schulz(G, num_iters=k), compute_uv=False)
           for k in (0, 1, 3, 5)]
 d2l.plot(jnp.arange(1, 65), sigmas, 'index', 'singular value',
          legend=[f'k = {k}' for k in (0, 1, 3, 5)], yscale='log')
-print(f'singular values after 5 iterations: '
-      f'[{sigmas[-1].min():.2f}, {sigmas[-1].max():.2f}]')
+for k, sigma in zip((3, 5), sigmas[2:]):
+    print(f'after {k} iterations: [{sigma.min():.2f}, {sigma.max():.2f}]')
 ```
 
+<!-- WRITER: the cell now also prints the range after three iterations: [0.68, 1.20] in every run, both tabs (MUON-14: three steps already put this Gaussian spectrum in a band around 1; five narrow it to [0.68, 1.13]). -->
 One iteration lifts the whole spectrum, and three compress it to within a
 factor of a few. After five, every singular value lies in a band around $1$,
 from about $0.7$ to $1.13$, for essentially every random draw. That is
@@ -304,6 +303,68 @@ Frobenius norm, at the left end of the right panel of
 :numref:`fig_opt_ns_maps`, needs a few more iterations to climb into the
 band. A random Gaussian matrix has no such singular values, but we will see
 that real gradients have many.
+
+<!-- WRITER: the cell below is the measuring half of the former `muon-per-neuron-normalization-1`, moved here (worklist 8.1, MUON-1): one gradient of a fresh `TinyLM` on one minibatch, the four hidden matrices of the first block, written outputs by inputs. Neuron norms are gone. It prints the rank, sigma_1/|G|_F, the smallest and largest of the r nonzero singular values after five steps, the share of them at or above 0.68, and |NS_5(G)|_F / |UV^T|_F = |NS_5(G)|_F / sqrt(r). Measured (three notebook runs per tab plus five probe draws, identical in both tabs within these ranges): the largest image after five steps is 1.20 for every matrix, not 1.13 (inputs between about 0.15% and 0.5% of |G|_F overshoot to 1.20; the band 0.68 to 1.13 of the figure holds for inputs above 1%; nothing lands above 1.21). qkv 384 x 128: rank 125-127, sigma_1/|G|_F 0.98-0.99, smallest image 0.02-0.03, 48-53% of the nonzero singular values reach 0.68, |NS_5|/|UV^T| 0.70-0.73. proj 128 x 128: rank 118-121, 0.99, 0.01, 29-32%, 0.55-0.58. mlp1 512 x 128: rank 127, 0.64-0.74, 0.18-0.36, 88-94%, 0.89-0.91. mlp2 128 x 512: rank 127, 0.92-0.95, 0.17-0.20, 61-67%, 0.79-0.82. Reading: a fresh gradient is close to rank one for qkv and proj, so five steps leave half to two thirds of their singular values well below the band and the update is 0.55 to 0.73 of the norm of U V^T; this is the extreme case, see cell `muon-parameter-groups-1`. -->
+
+```{.python .input #muon-per-neuron-normalization-1}
+%%tab pytorch
+def ns_spectrum(name, G):
+    """Print the spectrum of G and of five Newton-Schulz steps applied to G."""
+    r = int(torch.linalg.matrix_rank(G))  # Number of nonzero singular values
+    sigma = torch.linalg.svdvals(G)
+    ns = torch.linalg.svdvals(newton_schulz(G))[:r]  # Images of those r
+    print(f'{name:<4} {G.shape[0]:>3} x {G.shape[1]:<3}  rank {r:>3}  '
+          f'sigma_1/|G|_F {sigma[0] / G.norm():.2f}  '
+          f'NS_5 {ns.min():.2f}-{ns.max():.2f}, '
+          f'{(ns >= 0.68).float().mean():4.0%} >= 0.68, '
+          f'|NS_5|/|UV^T| {ns.norm() / math.sqrt(r):.2f}')
+
+def block_weights(model):  # The hidden matrices of the first block
+    blk = model.blks[0]  # PyTorch weights are (out, in)
+    return {'qkv': blk['qkv'].weight, 'proj': blk['proj'].weight,
+            'mlp1': blk['mlp'][0].weight, 'mlp2': blk['mlp'][2].weight}
+
+data = d2l.WikiText103(batch_size=64, num_steps=64)
+model = d2l.TinyLM(len(data.vocab))
+X, Y = next(iter(data.train_dataloader()))
+logits = model(X)
+F.cross_entropy(logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).backward()
+for name, W in block_weights(model).items():
+    ns_spectrum(name, W.grad)
+```
+
+```{.python .input #muon-per-neuron-normalization-1}
+%%tab jax
+@jax.default_matmul_precision('highest')  # float32, not TF32
+def ns_spectrum(name, G):
+    """Print the spectrum of G and of five Newton-Schulz steps applied to G."""
+    r = int(jnp.linalg.matrix_rank(G))  # Number of nonzero singular values
+    sigma = jnp.linalg.svd(G, compute_uv=False)
+    ns = jnp.linalg.svd(newton_schulz(G), compute_uv=False)[:r]
+    print(f'{name:<4} {G.shape[0]:>3} x {G.shape[1]:<3}  rank {r:>3}  '
+          f'sigma_1/|G|_F {sigma[0] / jnp.linalg.norm(G):.2f}  '
+          f'NS_5 {ns.min():.2f}-{ns.max():.2f}, '
+          f'{(ns >= 0.68).mean():4.0%} >= 0.68, '
+          f'|NS_5|/|UV^T| {jnp.linalg.norm(ns) / math.sqrt(r):.2f}')
+
+def block_weights(tree):  # The hidden matrices of the first block
+    blk = tree['blks'][0]  # Flax kernels are (in, out): transpose
+    return {name: blk[name]['kernel'][...].T
+            for name in ('qkv', 'proj', 'mlp1', 'mlp2')}
+
+def loss_fn(model, X, Y):
+    logits = model(X)
+    return optax.softmax_cross_entropy_with_integer_labels(
+        logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
+
+data = d2l.WikiText103(batch_size=64, num_steps=64)
+model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
+X, Y = (jnp.asarray(a) for a in next(iter(data.train_dataloader())))
+with jax.default_matmul_precision('highest'):
+    grads = nnx.grad(loss_fn)(model, X, Y)
+for name, G in block_weights(grads).items():
+    ns_spectrum(name, G)
+```
 
 How expensive are fifteen multiplications next to an elementwise Adam
 update? For an $m \times n$ matrix with $m \leq n$, one iteration
@@ -365,53 +426,7 @@ p(\sigma_i)|$. Besides the Gaussian matrix `G` we build an ill-conditioned
 matrix `H` with the same singular vectors and singular values spread
 evenly on a log scale from $1$ to $10^{-3}$, a condition number of $1000$.
 
-```{.python .input #muon-optimized-polynomials}
-%%tab pytorch
-POLAR_EXPRESS = [(8.2052, -22.9019, 16.4607), (4.0664, -2.8612, 0.5184),
-                 (3.9096, -2.8234, 0.5250), (3.2856, -2.4153, 0.4853),
-                 (2.2779, -1.6198, 0.3985), (1.8726, -1.2307, 0.3585),
-                 (1.8564, -1.2132, 0.3568), (1.875, -1.25, 0.375)]
-
-def distance(M, k, coeffs):  # Spectral distance from U V^T after k steps
-    sigma = torch.linalg.svdvals(newton_schulz(M, k, coeffs))
-    return float((1 - sigma).abs().max())
-
-U, _, Vt = torch.linalg.svd(G, full_matrices=False)
-H = U @ torch.diag(torch.logspace(0, -3, 64)) @ Vt  # Condition number 1000
-d2l.plot(list(range(11)), [[distance(M, k, c) for k in range(11)]
-                           for M in (G, H) for c in (QUINTIC, POLAR_EXPRESS)],
-         'iterations', 'distance from orthogonal',
-         legend=['G, quintic', 'G, Polar Express', 'H, quintic',
-                 'H, Polar Express'], yscale='log')
-```
-
-```{.python .input #muon-optimized-polynomials}
-%%tab jax
-POLAR_EXPRESS = [(8.2052, -22.9019, 16.4607), (4.0664, -2.8612, 0.5184),
-                 (3.9096, -2.8234, 0.5250), (3.2856, -2.4153, 0.4853),
-                 (2.2779, -1.6198, 0.3985), (1.8726, -1.2307, 0.3585),
-                 (1.8564, -1.2132, 0.3568), (1.875, -1.25, 0.375)]
-
-def distance(M, k, coeffs):  # Spectral distance from U V^T after k steps
-    sigma = jnp.linalg.svd(newton_schulz(M, k, coeffs), compute_uv=False)
-    return float(jnp.abs(1 - sigma).max())
-
-with jax.default_matmul_precision('highest'):  # float32, not TF32
-    U, _, Vt = jnp.linalg.svd(G, full_matrices=False)
-    H = U @ jnp.diag(jnp.logspace(0, -3, 64)) @ Vt  # Condition number 1000
-    curves = [[distance(M, k, c) for k in range(11)]
-              for M in (G, H) for c in (QUINTIC, POLAR_EXPRESS)]
-d2l.plot(list(range(11)), curves, 'iterations', 'distance from orthogonal',
-         legend=['G, quintic', 'G, Polar Express', 'H, quintic',
-                 'H, Polar Express'], yscale='log')
-```
-
-:begin_tab:`jax`
-On recent GPUs, JAX multiplies `float32` matrices in the faster but less
-precise TF32 format by default. The cell above runs under
-`jax.default_matmul_precision('highest')`, because in TF32 the distance
-would stop falling near $10^{-3}$, the round-off of that format.
-:end_tab:
+<!-- WRITER: cell `muon-optimized-polynomials` (POLAR_EXPRESS table, `distance`, the ill-conditioned H, the distance plot) is cut (worklist 8.4): the optimized polynomials go to Further Reading in words. This subsection, its equation, the JAX TF32 tab note (deleted with the cell; the remaining `default_matmul_precision('highest')` in the gradient cell carries a code comment), the two paragraphs after it, the figure caption's Polar Express clause and Exercises 3(b) and 4 refer to it. -->
 
 The tuned quintic stalls at a distance of about $0.32$ on both matrices,
 set by the bottom of its band at $0.68$. Polar Express keeps going: after
@@ -457,6 +472,7 @@ $$
 :eqlabel:`eq_muon-update`
 
 where $\mathrm{NS}_5$ denotes five steps of the tuned quintic.
+<!-- WRITER: both implementations now take a decoupled weight decay (MUON-7): PyTorch multiplies the matrix by 1 - eta * lambda before the step (`weight_decay`, default 0); JAX splits the update into `scale_by_muon` (the orthogonalized, RMS-scaled direction) chained with `optax.add_decayed_weights` and `optax.scale_by_learning_rate`, as `optax.adamw` is built. The displayed update needs the term: W_{t+1} = (1 - eta lambda) W_t - eta * 0.2 sqrt(max(m, n)) NS_5(G_t + beta M_t). The JAX tab note below ("a pair of pure functions ... turn gradients into updates") should name the chain. -->
 
 The scale factor makes Muon a drop-in partner for AdamW. An orthogonalized
 $m \times n$ matrix has $\min(m, n)$ singular values equal to $1$, hence
@@ -475,6 +491,8 @@ spectral-norm view suggests $\sqrt{d_\textrm{out} / d_\textrm{in}}$
 :cite:`Bernstein.2025`. The difference matters when transferring
 hyperparameters across widths, which :numref:`sec_scaling` takes up.)
 
+<!-- WRITER (MUON-6): measured ratio |NS_5(G)|_F / |U V^T|_F on TinyLM: 0.55-0.91 on a fresh gradient (per matrix, see the Newton-Schulz cell), 0.88-0.92 on the momentum buffer after 500 steps (cell `muon-parameter-groups-1`); the update RMS in training is therefore about 0.18 eta, slightly below 0.2 eta. -->
+
 The implementation is short. `reshape` handles one wrinkle that we will need
 later: a convolution kernel is a matrix in disguise, with one row per output
 channel and one column per input channel and kernel position, so flattening
@@ -486,8 +504,9 @@ rows.
 %%tab pytorch
 class Muon(torch.optim.Optimizer):
     """Steepest descent under the spectral norm: orthogonalized momentum."""
-    def __init__(self, params, lr, momentum=0.95):
-        super().__init__(params, dict(lr=lr, momentum=momentum))
+    def __init__(self, params, lr, momentum=0.95, weight_decay=0.0):
+        super().__init__(params, dict(lr=lr, momentum=momentum,
+                                      weight_decay=weight_decay))
 
     @torch.no_grad()
     def step(self):
@@ -503,24 +522,30 @@ class Muon(torch.optim.Optimizer):
                 M = G.reshape(len(G), -1)             # Flattens conv kernels
                 O = newton_schulz(M).reshape(p.shape)
                 rms_scale = 0.2 * math.sqrt(max(M.shape))  # AdamW's RMS
+                p.mul_(1 - group['lr'] * group['weight_decay'])  # Decoupled
                 p.add_(O, alpha=-group['lr'] * rms_scale)
 ```
 
 ```{.python .input #muon-the-update}
 %%tab jax
-def scratch_muon(learning_rate, momentum=0.95):
+def scale_by_muon(momentum=0.95):
+    """Orthogonalized Nesterov momentum, scaled to AdamW's update RMS."""
     def init(params):
         return jax.tree.map(jnp.zeros_like, params)
     def update(grads, bufs, params=None):
         bufs = jax.tree.map(lambda b, g: momentum * b + g, bufs, grads)
-        def step(g, b):
+        def direction(g, b):
             G = g + momentum * b            # Nesterov momentum
             M = G.reshape(-1, G.shape[-1])  # Flattens conv kernels
             O = newton_schulz(M).reshape(G.shape)
-            rms_scale = 0.2 * math.sqrt(max(M.shape))  # AdamW's RMS
-            return -learning_rate * rms_scale * O
-        return jax.tree.map(step, grads, bufs), bufs
+            return 0.2 * math.sqrt(max(M.shape)) * O  # AdamW's RMS
+        return jax.tree.map(direction, grads, bufs), bufs
     return optax.GradientTransformation(init, update)
+
+def scratch_muon(learning_rate, momentum=0.95, weight_decay=0.0):
+    return optax.chain(scale_by_muon(momentum),
+                       optax.add_decayed_weights(weight_decay),  # Decoupled
+                       optax.scale_by_learning_rate(learning_rate))
 ```
 
 :begin_tab:`pytorch`
@@ -549,8 +574,6 @@ to AdamW. We count both groups in `TinyLM`.
 
 ```{.python .input #muon-dividing-the-census-1}
 %%tab pytorch
-data = d2l.WikiText103(batch_size=64, num_steps=64)
-
 def split_lm(model):
     hidden, rest = [], []
     for name, p in model.named_parameters():
@@ -567,13 +590,11 @@ print(f'AdamW: {len(rest):>2} tensors, '
 
 ```{.python .input #muon-dividing-the-census-1}
 %%tab jax
-data = d2l.WikiText103(batch_size=64, num_steps=64)
-
-def muon_labels(params, exclude=('emb', 'head')):
+def muon_labels(params):
     """'muon' for the hidden matrices, 'adamw' for every other parameter."""
     def label(path, p):
         name = jax.tree_util.keystr(path)
-        is_hidden = p.ndim >= 2 and not any(s in name for s in exclude)
+        is_hidden = p.ndim == 2 and 'emb' not in name and 'head' not in name
         return 'muon' if is_hidden else 'adamw'
     return jax.tree_util.tree_map_with_path(label, params)
 
@@ -611,17 +632,20 @@ class MultiOptimizer:
         for opt in self.optimizers:
             opt.zero_grad()
 
-def muon_adamw(hidden, rest, lr):
-    return MultiOptimizer(Muon(hidden, lr=lr),
-                          torch.optim.AdamW(rest, lr=lr, weight_decay=0.0))
+def muon_adamw(hidden, rest, lr, weight_decay):
+    """Muon with decoupled weight decay on hidden, AdamW without it on rest."""
+    return MultiOptimizer(Muon(hidden, lr, weight_decay=weight_decay),
+                          torch.optim.AdamW(rest, lr, weight_decay=0.0))
 ```
 
 ```{.python .input #muon-dividing-the-census-2}
 %%tab jax
-def muon_adamw(lr, exclude=('emb', 'head'), muon=scratch_muon):
+def muon_adamw(lr, weight_decay):
+    """Muon with decoupled weight decay on the hidden matrices, AdamW without
+    it on the rest."""
     return optax.multi_transform(
-        {'muon': muon(lr), 'adamw': optax.adamw(lr, weight_decay=0.0)},
-        lambda params: muon_labels(params, exclude))
+        {'muon': scratch_muon(lr, weight_decay=weight_decay),
+         'adamw': optax.adamw(lr, weight_decay=0.0)}, muon_labels)
 ```
 
 :begin_tab:`pytorch`
@@ -637,6 +661,30 @@ that label. The `muon` argument lets us
 swap in another orthogonalizing transformation later, such as the library
 version.
 :end_tab:
+<!-- WRITER: `muon_adamw` lost its `muon` and `exclude` arguments (their only users, the library run and the CNN, are cut) and gained `weight_decay` (both tabs); the sentence on the `muon` argument is false. `muon_labels` no longer takes `exclude`. In PyTorch `muon_adamw(hidden, rest, lr, weight_decay)`. -->
+
+<!-- WRITER: new cell (MUON-1, MUON-6, worklist Exercise 10 -> body): the hybrid trains `TinyLM` for 500 steps at eta = 3e-3, weight decay 0.1 (the hybrid's best rate in the comparison below), and `ns_spectrum` of the Newton-Schulz subsection measures the momentum buffer of the same four matrices, the input Muon orthogonalizes. Measured (three notebook runs per tab plus one probe): rank 127-128; sigma_1/|G|_F 0.27-0.38 (against 0.64-0.99 at initialization); the share of nonzero singular values that reach 0.68 after five steps is 99% for qkv and mlp1, 100% for mlp2, 90-94% for proj; |NS_5|/|UV^T| 0.88-0.92 for all four. A PyTorch probe on the exact Nesterov blend G + beta M at steps 1, 10, 100, 500, 2000 gives the same picture: rank-one-like for the first ten steps (|NS_5|/|UV^T| 0.54-0.79), spread out from step 100 on (0.82-0.93). So in training five steps orthogonalize the update nearly fully, and the entrywise RMS is about 0.9 x 0.2 eta = 0.18 eta, not two thirds of 0.2 eta (MUON-6's estimate holds only at initialization). Exercise 10 is now this measurement. -->
+
+```{.python .input #muon-parameter-groups-1}
+%%tab pytorch
+model = d2l.TinyLM(len(data.vocab))
+optimizer = muon_adamw(*split_lm(model), lr=3e-3, weight_decay=0.1)
+d2l.train_steps(model, data, optimizer, 500)
+muon = optimizer.optimizers[0]
+for name, W in block_weights(model).items():
+    ns_spectrum(name, muon.state[W]['buf'].cpu())  # The momentum buffer
+```
+
+```{.python .input #muon-parameter-groups-1}
+%%tab jax
+model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
+optimizer = nnx.Optimizer(model, muon_adamw(lr=3e-3, weight_decay=0.1),
+                          wrt=nnx.Param)
+d2l.train_steps(model, data, optimizer, 500)
+state = optimizer.opt_state.inner_states['muon'].inner_state
+for name, M in block_weights(state[0]).items():  # The momentum buffers
+    ns_spectrum(name, M)
+```
 
 ### Comparison on the Language Model
 :label:`subsec_muon-lm-race`
@@ -652,6 +700,7 @@ means the best point of this coarse grid and nothing finer. Within each
 comparison every run starts from the same random initialization, drawn anew
 each time the notebook runs. Weight decay is off in both arms, so the only
 difference between them is the direction of the update on the hidden matrices.
+<!-- WRITER: weight decay is now ON in both arms (MUON-7, worklist 8.3): decoupled, 0.1, on the hidden matrices only (AdamW through a parameter group / mask, Muon through its own `weight_decay`); embeddings, head and vectors are undecayed in both arms, so the only difference is still the update direction on the hidden matrices. (The head is left undecayed in the AdamW arm as well, unlike `adamw-what-not-to-decay-1`, to keep the two arms identical outside the hidden matrices.) -->
 First the baseline, with every parameter on AdamW:
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
@@ -666,11 +715,14 @@ def run_lm(make_optimizer, lrs, seed):
                         data, lrs, seed, evaluate=val_loss,
                         metric='validation loss', every=250)
 
+def adamw(model, lr):  # Decay on the hidden matrices only, as for Muon
+    hidden, rest = split_lm(model)
+    return torch.optim.AdamW([{'params': hidden, 'weight_decay': wd},
+                              {'params': rest, 'weight_decay': 0.0}], lr=lr)
+
 seed = random.getrandbits(32)  # One draw, shared by every run below
-lrs = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
-adamw_lm, adamw_val = run_lm(
-    lambda model, lr: torch.optim.AdamW(model.parameters(), lr,
-                                        weight_decay=0.0), lrs, seed)
+lrs, wd = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1], 0.1
+adamw_lm, adamw_val = run_lm(adamw, lrs, seed)
 ```
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
@@ -685,10 +737,13 @@ def run_lm(make_tx, lrs, seed):
                         make_tx, data, lrs, seed, evaluate=val_loss,
                         metric='validation loss', every=250)
 
+def hidden_only(params):  # Decay on the hidden matrices only, as for Muon
+    return jax.tree.map(lambda label: label == 'muon', muon_labels(params))
+
 seed = d2l.get_seed()  # One draw, shared by every run below
-lrs = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
-adamw_lm, adamw_val = run_lm(lambda lr: optax.adamw(lr, weight_decay=0.0),
-                             lrs, seed)
+lrs, wd = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1], 0.1
+adamw_lm, adamw_val = run_lm(
+    lambda lr: optax.adamw(lr, weight_decay=wd, mask=hidden_only), lrs, seed)
 ```
 
 The hybrid runs over the same grid from the same initialization:
@@ -696,12 +751,12 @@ The hybrid runs over the same grid from the same initialization:
 ```{.python .input #muon-the-race-on-the-language-model-2}
 %%tab pytorch
 muon_lm, muon_val = run_lm(
-    lambda model, lr: muon_adamw(*split_lm(model), lr), lrs, seed)
+    lambda model, lr: muon_adamw(*split_lm(model), lr, wd), lrs, seed)
 ```
 
 ```{.python .input #muon-the-race-on-the-language-model-2}
 %%tab jax
-muon_lm, muon_val = run_lm(muon_adamw, lrs, seed)
+muon_lm, muon_val = run_lm(lambda lr: muon_adamw(lr, wd), lrs, seed)
 ```
 
 ```{.python .input #muon-the-race-on-the-language-model-3}
@@ -715,12 +770,23 @@ d2l.plot([list(range(0, 2000, 25))] * 2 + [list(range(250, 2001, 250))] * 2,
                  'AdamW, validation', 'Muon + AdamW, validation'],
          fmts=('C0-', 'C1-', 'C0o--', 'C1o--'), ylim=(1.4, 2.6),
          figsize=(5, 3.5))
-for name, lr, vals in [('AdamW', best_adamw, adamw_val[best_adamw]),
-                       ('Muon+AdamW', best_muon, muon_val[best_muon])]:
-    print(f'{name:<10} lr {lr:g}: validation {vals[1]:.3f} at step 500, '
-          f'{vals[-1]:.3f} at 2000 ({vals[-1] / math.log(2):.2f} bits)')
+print('validation loss  lr     step 500  step 2000  below 1.6  within 0.15')
+for name, lr, vals in [('AdamW', best_adamw, adamw_val),
+                       ('Muon+AdamW', best_muon, muon_val)]:
+    below = d2l.steps_to_reach(vals[lr], 1.6, k=1)  # Checkpoint 1, 2, ...
+    near = [r for r in lrs if vals[r][-1] < vals[lr][-1] + 0.15]
+    print(f'{name:<16} {lr:<6g} {vals[lr][1]:<9.3f} {vals[lr][-1]:<10.3f} '
+          f'{250 * below if below else "never":<10} '
+          f'{near[0]:g} to {near[-1]:g}')
 ```
 
+<!-- WRITER: measured, weight decay 0.1, three notebook runs per tab plus three probe sweeps per tab (twelve sweeps); the cell prints a table per arm: best rate, validation at step 500 and 2000, the first checkpoint (250 apart) below 1.6, and the range of rates within 0.15 nats of the arm's best.
+Best rate: AdamW 3e-3 in all twelve; hybrid 3e-3 in eleven, 1e-2 once (JAX, its 3e-3 within 0.002).
+Step 500: AdamW 1.86-1.90, hybrid 1.70-1.77 (1.75-1.77 at 3e-3): lead 0.11-0.18 nats, against a run-to-run range of about 0.03 per arm. Firm.
+Below 1.6: hybrid at checkpoint 1,250-1,500, AdamW 1,750-2,000; no overlap in twelve sweeps.
+Step 2000: AdamW 1.574-1.586; hybrid 1.532-1.574 (single-rate repeats at 3e-3: PyTorch 1.532-1.569 over 8 seeds, JAX 1.536-1.574 over 11 seeds). Final gap 0.007 to 0.05: comparable to the hybrid's own run-to-run range of 0.04, so "a few hundredths ahead" and "the gap does not close" cannot be stated; state that the lead at step 500 shrinks to at most a few hundredths, within the spread, by step 2,000. Weight decay costs the hybrid about 0.015 here (PyTorch repeats without decay 1.517-1.553 over 7 seeds); the spread is the same without decay (seed 2 is the slow one in both), so the spread is not caused by decay.
+Usable range: within 0.15 nats of its best, AdamW spans 1e-3 to 1e-2 and the hybrid 1e-3 to 3e-2 in all twelve sweeps (closest calls: AdamW at 1e-3 +0.07 to +0.12, hybrid at 3e-2 +0.10 to +0.13; at a 0.1 margin it does not hold). Firm reading: at 3e-2 AdamW ends at 1.94-2.75 while the hybrid ends at 1.66-1.68, at least 0.27 nats apart; at 1e-1 both fail (the hybrid's validation loss spikes to 6-69 in some runs).
+Old numbers in this paragraph and the slides ("about 1.7 against about 1.9", "1.52 to 1.55 against 1.56 to 1.58", "1,000 to 1,250 steps ... 1,500 to 2,000", "matches after about 1,500") are from runs without weight decay. -->
 Both optimizers have their best rate inside the grid, so the comparison is
 between two tuned methods. The validation loss falls at every checkpoint
 and stays slightly below the training loss: a run reads only a few percent
@@ -757,70 +823,8 @@ stages, `conv1` and `conv2`, followed by two linear layers, `fc1` and
 above. The output layer `fc2` and the biases stay with AdamW. We record the
 training loss and the accuracy on the test set.
 
-```{.python .input #muon-the-same-race-on-a-cnn-1}
-%%tab pytorch
-fashion = d2l.FashionMNIST(batch_size=256)
+<!-- WRITER: cells `muon-the-same-race-on-a-cnn-1/-2/-3` are cut (worklist 8.4; store: test accuracy AdamW 0.913 vs hybrid 0.917 in PyTorch, 0.919 vs 0.915 in JAX, the sign flips between tabs; training loss five times lower is memorization). This subsection and the Summary's CNN clause describe them. -->
 
-def split_cnn(model):
-    is_hidden = lambda name, p: p.ndim >= 2 and not name.startswith('fc2')
-    params = list(model.named_parameters())
-    return ([p for n, p in params if is_hidden(n, p)],
-            [p for n, p in params if not is_hidden(n, p)])
-
-def run_cnn(make_optimizer, lrs, seed):
-    """d2l.lr_sweep of FashionCNN, with the test accuracy at the end."""
-    return d2l.lr_sweep(d2l.FashionCNN, make_optimizer, fashion, lrs, seed,
-                        evaluate=lambda model: d2l.evaluate_accuracy(
-                            model, fashion.val_dataloader()),
-                        metric='test accuracy')
-
-adamw_cnn, adamw_acc = run_cnn(
-    lambda model, lr: torch.optim.AdamW(model.parameters(), lr,
-                                        weight_decay=0.0),
-    [3e-4, 1e-3, 3e-3, 1e-2], seed)
-```
-
-```{.python .input #muon-the-same-race-on-a-cnn-1}
-%%tab jax
-fashion = d2l.FashionMNIST(batch_size=256)
-
-def run_cnn(make_tx, lrs, seed):
-    """d2l.lr_sweep of FashionCNN, with the test accuracy at the end."""
-    return d2l.lr_sweep(d2l.FashionCNN, make_tx, fashion, lrs, seed,
-                        evaluate=lambda model: d2l.evaluate_accuracy(
-                            model, fashion.val_dataloader()),
-                        metric='test accuracy')
-
-adamw_cnn, adamw_acc = run_cnn(lambda lr: optax.adamw(lr, weight_decay=0.0),
-                               [3e-4, 1e-3, 3e-3, 1e-2], seed)
-```
-
-```{.python .input #muon-the-same-race-on-a-cnn-2}
-%%tab pytorch
-muon_cnn, muon_acc = run_cnn(
-    lambda model, lr: muon_adamw(*split_cnn(model), lr),
-    [3e-4, 1e-3, 3e-3, 1e-2], seed)
-```
-
-```{.python .input #muon-the-same-race-on-a-cnn-2}
-%%tab jax
-muon_cnn, muon_acc = run_cnn(lambda lr: muon_adamw(lr, exclude=('fc2',)),
-                             [3e-4, 1e-3, 3e-3, 1e-2], seed)
-```
-
-```{.python .input #muon-the-same-race-on-a-cnn-3}
-%%tab pytorch, jax
-best_adamw_cnn = min(adamw_cnn, key=lambda lr: d2l.final_loss(adamw_cnn[lr]))
-best_muon_cnn = min(muon_cnn, key=lambda lr: d2l.final_loss(muon_cnn[lr]))
-d2l.plot(list(range(0, 2000, 25)),
-         [d2l.smooth(adamw_cnn[best_adamw_cnn]),
-          d2l.smooth(muon_cnn[best_muon_cnn])],
-         'step', 'training loss',
-         legend=[f'AdamW, lr {best_adamw_cnn:g}',
-                 f'Muon + AdamW, lr {best_muon_cnn:g}'])
-print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn][-1]:.3f}, '
-      f'Muon+AdamW {muon_acc[best_muon_cnn][-1]:.3f}')
-```
 
 The two metrics disagree. On training loss the hybrid descends faster and
 ends several times lower: orthogonalized updates drive this small CNN into
@@ -859,33 +863,7 @@ from :eqref:`eq_muon-update` only in the first few dozen steps, while the
 bias correction is still far from one.
 :end_tab:
 
-```{.python .input #muon-library-implementations}
-%%tab pytorch
-torch.manual_seed(seed)
-model = d2l.TinyLM(len(data.vocab))
-hidden, rest = split_lm(model)
-optimizer = MultiOptimizer(
-    torch.optim.Muon(hidden, lr=best_muon, momentum=0.95, nesterov=True,
-                     weight_decay=0.0, adjust_lr_fn='match_rms_adamw'),
-    torch.optim.AdamW(rest, lr=best_muon, weight_decay=0.0))
-losses = d2l.train_steps(model, data, optimizer, 2000)
-print(f'validation loss {val_loss(model):.3f}, '
-      f'scratch {muon_val[best_muon][-1]:.3f}')
-```
-
-```{.python .input #muon-library-implementations}
-%%tab jax
-def optax_muon(lr):
-    return optax.contrib.muon(learning_rate=lr, consistent_rms=0.2,
-                              beta=0.95, nesterov=True, weight_decay=0.0)
-
-model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
-optimizer = nnx.Optimizer(model, muon_adamw(best_muon, muon=optax_muon),
-                          wrt=nnx.Param)
-losses = d2l.train_steps(model, data, optimizer, 2000)
-print(f'validation loss {val_loss(model):.3f}, '
-      f'scratch {muon_val[best_muon][-1]:.3f}')
-```
+<!-- WRITER: cell `muon-library-implementations` is cut (worklist 8.4): one sentence on the defaults that differ (torch.optim.Muon: 2-D only, weight decay 0.1 by default, bfloat16 Newton-Schulz, `adjust_lr_fn='match_rms_adamw'`; optax.contrib.muon: `consistent_rms=0.2`, internal AdamW for the rest, momentum as a bias-corrected moving average). The tab notes above and the paragraph after describe the cut run. -->
 
 The library version lands within about 0.02 of the scratch result, no
 more than the spread between runs: both compute the update
@@ -944,56 +922,7 @@ singular value carries. The exact orthogonalization keeps only the nonzero
 singular values and sets them to $1$. Newton--Schulz does the same, since
 it leaves zeros at zero.
 
-```{.python .input #muon-per-neuron-normalization-1}
-%%tab pytorch
-def neuron_norms(O):  # PyTorch weights are (out, in): one row per neuron
-    return O.norm(dim=1)
-
-model = d2l.TinyLM(len(data.vocab))
-X, Y = next(iter(data.train_dataloader()))
-logits = model(X)
-nn.functional.cross_entropy(logits.reshape(-1, logits.shape[-1]),
-                            Y.reshape(-1)).backward()
-blk = model.blks[0]
-grads = {'qkv': blk['qkv'].weight.grad, 'proj': blk['proj'].weight.grad,
-         'mlp1': blk['mlp'][0].weight.grad, 'mlp2': blk['mlp'][2].weight.grad}
-for name, grad in grads.items():
-    U_g, s, Vt_g = torch.linalg.svd(grad, full_matrices=False)
-    r = torch.linalg.matrix_rank(grad)  # Drop the zero singular values
-    exact = neuron_norms(U_g[:, :r] @ Vt_g[:r])
-    ns = neuron_norms(newton_schulz(grad))
-    print(f'{name:<4} {grad.shape[0]:>3} x {grad.shape[1]:<3}  rank {r:>3}  '
-          f'sigma_1/norm {s[0] / grad.norm():.2f}  '
-          f'exact {exact.min():.2f}-{exact.max():.2f}  '
-          f'NS_5 {ns.min():.2f}-{ns.max():.2f}')
-```
-
-```{.python .input #muon-per-neuron-normalization-1}
-%%tab jax
-def neuron_norms(O):  # Flax kernels are (in, out): one column per neuron
-    return jnp.linalg.norm(O, axis=0)
-
-def loss_fn(model, X, Y):
-    logits = model(X)
-    return optax.softmax_cross_entropy_with_integer_labels(
-        logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
-
-model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
-X, Y = (jnp.asarray(a) for a in next(iter(data.train_dataloader())))
-with jax.default_matmul_precision('highest'):  # float32, not TF32
-    blk = nnx.grad(loss_fn)(model, X, Y)['blks'][0]
-grads = {name: blk[name]['kernel'][...]
-         for name in ('qkv', 'proj', 'mlp1', 'mlp2')}
-for name, grad in grads.items():
-    U_g, s, Vt_g = jnp.linalg.svd(grad, full_matrices=False)
-    r = int(jnp.linalg.matrix_rank(grad))  # Drop the zero singular values
-    exact = neuron_norms(U_g[:, :r] @ Vt_g[:r])
-    ns = neuron_norms(newton_schulz(grad))
-    print(f'{name:<4} {grad.shape[1]:>3} x {grad.shape[0]:<3}  rank {r:>3}  '
-          f'sigma_1/norm {s[0] / jnp.linalg.norm(grad):.2f}  '
-          f'exact {exact.min():.2f}-{exact.max():.2f}  '
-          f'NS_5 {ns.min():.2f}-{ns.max():.2f}')
-```
+<!-- WRITER: the measurement cell `muon-per-neuron-normalization-1` moved to the Newton-Schulz subsection and no longer prints neuron norms; the paragraph before this point and the two after it describe the old output ("exact 0.37-0.72", "NS_5 0.24-0.62", the neuron norms 0.2 to 0.9, which were row norms, not singular values). The singular-value facts now printed there are given in the WRITER note at that cell. -->
 
 The rows are the projection to queries, keys, and values (`qkv`), the
 attention output (`proj`), and the two MLP layers (`mlp1`, `mlp2`), with
@@ -1047,35 +976,7 @@ negligible addition to Muon's momentum buffer. NorMuon is the last step of a
 progression through this chapter: Adam equalizes coordinates, Muon
 equalizes singular directions, and NorMuon equalizes neurons on top of it.
 
-```{.python .input #muon-per-neuron-normalization-2}
-%%tab pytorch
-def normalize_neurons(O, v, beta2=0.95, eps=1e-8):
-    """Divide each neuron's update by its running RMS; keep the norm of O."""
-    v = beta2 * v + (1 - beta2) * (O * O).mean(dim=1)
-    O_hat = O / (v.sqrt()[:, None] + eps)
-    return O_hat * (O.norm() / O_hat.norm()), v
-
-O = newton_schulz(grads['mlp1'])  # 512 x 128, a tall matrix
-O_hat, v = normalize_neurons(O, torch.zeros(O.shape[0]))
-print(f'neuron norms {neuron_norms(O_hat).min():.3f}-'
-      f'{neuron_norms(O_hat).max():.3f}; Frobenius norm {O.norm():.2f} '
-      f'before, {O_hat.norm():.2f} after')
-```
-
-```{.python .input #muon-per-neuron-normalization-2}
-%%tab jax
-def normalize_neurons(O, v, beta2=0.95, eps=1e-8):
-    """Divide each neuron's update by its running RMS; keep the norm of O."""
-    v = beta2 * v + (1 - beta2) * (O * O).mean(axis=0)
-    O_hat = O / (jnp.sqrt(v) + eps)
-    return O_hat * (jnp.linalg.norm(O) / jnp.linalg.norm(O_hat)), v
-
-O = newton_schulz(grads['mlp1'])  # 128 x 512 (in, out): a neuron per column
-O_hat, v = normalize_neurons(O, jnp.zeros(O.shape[1]))
-print(f'neuron norms {neuron_norms(O_hat).min():.3f}-'
-      f'{neuron_norms(O_hat).max():.3f}; Frobenius norm '
-      f'{jnp.linalg.norm(O):.2f} before, {jnp.linalg.norm(O_hat):.2f} after')
-```
+<!-- WRITER: cell `muon-per-neuron-normalization-2` (`normalize_neurons` and its check, which cannot fail) is cut (worklist 8.4, MUON-9); per-neuron normalization goes to Further Reading. Exercise 6 uses `normalize_neurons`, which no cell defines any more. -->
 
 On the first step the running average is proportional to each neuron's
 current mean square, so every neuron ends up with the same norm while the
@@ -1153,6 +1054,7 @@ $\sqrt{\tau / S}$ each, which scales all of the head's logits by $\tau / S$.
 The report describes the whole run without a single loss spike.
 
 ## Summary
+<!-- WRITER: the Summary still names Polar Express, NorMuon and the CNN result (all cut from the body) and the old comparison; see the WRITER notes at the comparison cell for the measured facts. -->
 
 The direction of steepest descent depends on the norm that measures the
 step. The Euclidean ball gives the SGD direction, and the $\ell_\infty$ box
@@ -1296,6 +1198,7 @@ fixed, and the next section asks how large it should be.
    at most $\eta$ when $\hat{v}_{t-1}$ equals the stationary mean of the
    squared gradients, and find how large a single step can become.
 
+<!-- WRITER: Exercise 10 is now the body measurement (cell `muon-parameter-groups-1`, momentum buffer after 500 steps; worklist: 10 -> body). -->
 1. [code] **Spectral concentration of gradients.** ● Equation
    :eqref:`eq_muon-spectral-step` equalizes singular directions on the
    grounds that a training gradient's singular values are dominated by a
@@ -1357,6 +1260,7 @@ What is the best step for a *matrix* parameter?
 :::
 
 ::: {.slide title="Muon Is the Chapter's Matrix-Shaped Direction"}
+<!-- WRITER: Muon now comes before Schedules (and AdamW is its own section); the table's order is out of date. -->
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
@@ -1476,7 +1380,7 @@ pass: $5m/B$, about 0.7% for $m = 768$ and $B = 524{,}288$ tokens.
 
 $$p_t = \operatorname*{argmin}_{p \textrm{ odd quintic}} \max_{x \in [\ell_t, u_t]} |1 - p(x)|,\quad [\ell_1, u_1] = [10^{-3}, 1]$$
 
-@!muon-optimized-polynomials
+<!-- WRITER: cell `muon-optimized-polynomials` is cut; this slide needs rebuilding without it (Polar Express goes to Further Reading). -->
 
 - The quintic stalls at distance 0.32; Polar Express reaches round-off
   after 7 steps on G, 9 on the ill-conditioned H.
@@ -1538,6 +1442,7 @@ $0.2\sqrt{512} \approx 4.5$: exactly $0.2$.
 
 ::: {.cols .vc}
 ::: {.col}
+<!-- WRITER: the comparison now has weight decay 0.1 on the hidden matrices in both arms and prints a table; the bullets below quote the old runs (see the WRITER note at the comparison cell). -->
 Same initialization, 2,000 steps, constant rate, grid $10^{-3}$ to
 $10^{-1}$, no weight decay, scored by validation loss.
 
@@ -1557,7 +1462,7 @@ $10^{-1}$, no weight decay, scored by validation loss.
 ::: {.slide title="On a CNN Muon Optimizes Faster but Predicts the Same"}
 [Muon from scratch]{.kicker}
 
-@!muon-the-same-race-on-a-cnn-3
+<!-- WRITER: cells `muon-the-same-race-on-a-cnn-*` are cut; this slide goes (CNN comparison cut, worklist 8.4). -->
 
 - Training loss: several times lower with the hybrid.
 - Test accuracy: within a point.
@@ -1588,6 +1493,7 @@ geometry.
 
 Neuron norms (rows of the update) for one TinyLM gradient, block 1:
 
+<!-- WRITER: `muon-per-neuron-normalization-1` moved to the Newton-Schulz subsection and now prints singular values after five steps, not neuron norms; this slide's title and bullets no longer match it, and it belongs after the Gaussian-spectrum slide. -->
 @!muon-per-neuron-normalization-1
 
 - LayerNorm removes one direction: every gradient has rank ≤ 127.
@@ -1632,6 +1538,7 @@ Newton–Schulz couples all rows through $\mathbf{X}\mathbf{X}^\top$:
 - Five quintic Newton–Schulz steps put every σ above 1% of
   $\|\mathbf{G}\|_F$ in $[0.7, 1.13]$; Polar Express converges.
 - $0.2\sqrt{\max(m, n)}$ matches AdamW's RMS: one rate for the hybrid.
+<!-- WRITER: CNN cut; the TinyLM claim needs the new numbers (lead 0.11-0.18 at step 500, within the spread at step 2,000). -->
 - TinyLM: lower validation loss than tuned AdamW throughout, with 58% of
   the state; CNN: about the same test accuracy.
 - Matched tuning: gains of tens of percent, shrinking with scale.

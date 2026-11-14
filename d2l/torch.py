@@ -6790,10 +6790,10 @@ d2l.DATA_HUB['wikitext-103-raw-train-0'] = (
     'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-103-raw-v1/'
     'train-00000-of-00002.parquet',
     '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
-d2l.DATA_HUB['wordsim353'] = (
-    'https://huggingface.co/datasets/almogtavor/WordSim353/resolve/'
-    '9a9434427c4b41d6277a684f4263b77defe0124e/wordsim353crowd.csv',
-    '21a5314118bbebfd95d26552b9f93f7164dd3066')
+d2l.DATA_HUB['wordsim353'] = (  # Finkelstein et al.'s combined ratings
+    'https://raw.githubusercontent.com/piskvorky/gensim/'
+    '37f90ec121eb7cd401448a947e80953e0c53ccdc/gensim/test/test_data/'
+    'wordsim353.tsv', '5207d1bb6dd863994fa4032f48f149bf28a5468e')
 d2l.DATA_HUB['simlex999'] = (
     'https://huggingface.co/datasets/Yuti/SimLex-999/resolve/'
     'e87197824261f272ad1e9c02e32db3144bbeb0ca/data/'

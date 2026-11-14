@@ -63,6 +63,7 @@ from d2l import torch as d2l
 ```{.python .input #word-embeddings-imports-extras}
 %%tab pytorch
 import collections
+import hashlib
 import json
 import os
 import pandas as pd
@@ -103,10 +104,10 @@ d2l.DATA_HUB['wikitext-103-raw-train-0'] = (
     'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-103-raw-v1/'
     'train-00000-of-00002.parquet',
     '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
-d2l.DATA_HUB['wordsim353'] = (
-    'https://huggingface.co/datasets/almogtavor/WordSim353/resolve/'
-    '9a9434427c4b41d6277a684f4263b77defe0124e/wordsim353crowd.csv',
-    '21a5314118bbebfd95d26552b9f93f7164dd3066')
+d2l.DATA_HUB['wordsim353'] = (  # Finkelstein et al.'s combined ratings
+    'https://raw.githubusercontent.com/piskvorky/gensim/'
+    '37f90ec121eb7cd401448a947e80953e0c53ccdc/gensim/test/test_data/'
+    'wordsim353.tsv', '5207d1bb6dd863994fa4032f48f149bf28a5468e')
 d2l.DATA_HUB['simlex999'] = (
     'https://huggingface.co/datasets/Yuti/SimLex-999/resolve/'
     'e87197824261f272ad1e9c02e32db3144bbeb0ca/data/'
@@ -128,8 +129,14 @@ d2l.DATA_HUB['glove.6b.100d'] = (d2l.DATA_URL + 'glove.6B.100d.zip',
 
 ```{.python .input #word-embeddings-slice}
 %%tab pytorch
-path = d2l.download('wikitext-103-raw-train-0',
-                    os.path.join('..', 'data', 'wikitext-103'))
+def check_sha1(path, key):  # d2l.download checks only a cached file
+    with open(path, 'rb') as f:
+        got = hashlib.sha1(f.read()).hexdigest()
+    assert got == d2l.DATA_HUB[key][1], f'{path}: sha1 {got}'
+    return path
+
+path = check_sha1(d2l.download('wikitext-103-raw-train-0', os.path.join(
+    '..', 'data', 'wikitext-103')), 'wikitext-103-raw-train-0')
 lines, n = [], 0
 for line in pd.read_parquet(path)['text']:
     line = line.strip().lower()
@@ -184,9 +191,10 @@ def cooccurrence_counts(corpus, vocab_size, window=5, weighting='uniform'):
 tic = time.time()
 X = d2l.cooccurrence_counts(ids, V, WINDOW)
 print(f'{X.nnz:,} nonzero counts of {V * V:,} ({X.nnz / V**2:.2%}), '
-      f'{X.sum():,.0f} pairs, {time.time() - tic:.1f} s')
-C = X.tocoo()
-upper = scipy.sparse.triu(X).tocoo()  # each unordered pair once
+      f'{X.sum():,.0f} (word, context) pairs, {time.time() - tic:.1f} s')
+# X[w, o]: how often o occurs in the window of w; X is symmetric, so its
+# upper triangle lists each pair of words once
+upper = scipy.sparse.triu(X).tocoo()
 for i in np.argsort(-upper.data)[:5]:
     a, b = (vocab.idx_to_token[j] for j in (upper.row[i], upper.col[i]))
     print(f'    {a:>5} {b:<5} {upper.data[i]:9,.0f}')
@@ -231,21 +239,23 @@ def spearman_eval(embeddings, vocab, pairs, n_boot=2000, seed=0):
                           len(p), len(pairs), cos)
 ```
 
-<!-- Placeholder (stage 2): WordSim353 (relatedness and similarity mixed) and SimLex-999 (similarity only); how many pairs the slice's vocabulary covers. -->
+<!-- Placeholder (stage 2): WordSim353 (Finkelstein et al., the combined mean ratings; relatedness and similarity mixed; the pair money/cash occurs twice, as in the original) and SimLex-999 (similarity only); how many pairs the slice's vocabulary covers. -->
 
 ```{.python .input #word-embeddings-similarity-data}
 %%tab pytorch
+SOURCES = {'WordSim353': 'wordsim353', 'SimLex-999': 'simlex999'}
 SETS = {
-    'WordSim353': pd.read_csv(d2l.download_keyed('wordsim353')),
+    'WordSim353': pd.read_csv(d2l.download_keyed('wordsim353'), sep='\t',
+                              comment='#', header=None),
     'SimLex-999': pd.read_parquet(d2l.download_keyed('simlex999'))}
+covered = {}
 for name, df in SETS.items():
     df = df.iloc[:, :3].set_axis(['word1', 'word2', 'score'], axis=1)
-    SETS[name] = df.assign(word1=df.word1.str.lower(),
-                           word2=df.word2.str.lower())
-    covered = sum(w1 in vocab.token_to_idx and w2 in vocab.token_to_idx
-                  for w1, w2 in zip(df.word1.str.lower(),
-                                    df.word2.str.lower()))
-    print(f'{name}: {covered} of {len(df)} pairs covered')
+    SETS[name] = df = df.assign(word1=df.word1.str.lower(),
+                                word2=df.word2.str.lower())
+    covered[name] = sum(w1 in vocab.token_to_idx and w2 in vocab.token_to_idx
+                        for w1, w2 in zip(df.word1, df.word2))
+    print(f'{name}: {covered[name]} of {len(df)} pairs covered')
 ```
 
 <!-- Placeholder (stage 2): the floor: random vectors of the same width correlate with the ratings only by chance. -->
@@ -490,12 +500,13 @@ assert rel < 1e-8
 report(svd_vecs, 'SVD-PPMI')
 ```
 
-<!-- Placeholder (stage 2): GloVe is weighted least squares on the log counts, w^T w~ + b + b~ ~ log X, over the nonzero counts only (its one difference: the zeros are never seen); AdaGrad as in the paper, 50 passes for fewer than 300 dimensions. -->
+<!-- Placeholder (stage 2): GloVe is weighted least squares on the log counts, w^T w~ + b + b~ ~ log X, over the nonzero counts only (its one difference: the zeros are never seen); AdaGrad as in the paper, 50 passes for fewer than 300 dimensions; present it as the paper's recipe, not tuned (there is no development split for word similarity, and the recipe was fixed before the grid). -->
 
 ```{.python .input #word-embeddings-glove}
 %%tab pytorch
-def train_glove(X, seed=0, epochs=50, lr=0.05, batch_size=65536, x_max=100,
-                verbose=True):
+GLOVE = dict(epochs=50, lr=0.05, batch_size=65536, x_max=100)  # the paper's
+
+def train_glove(X, epochs, lr, batch_size, x_max, seed=0, verbose=True):
     """GloVe on the nonzero entries of X; returns W + W~ on the CPU."""
     torch.manual_seed(seed)
     gen = torch.Generator(device).manual_seed(seed)
@@ -530,21 +541,22 @@ def train_glove(X, seed=0, epochs=50, lr=0.05, batch_size=65536, x_max=100,
     return (W + Wt).detach().cpu()
 
 tic = time.time()
-glove_vecs = train_glove(X)
+glove_vecs = train_glove(X, **GLOVE)
 print(f'{time.time() - tic:.0f} s')
 report(glove_vecs, 'GloVe')
 ```
 
-<!-- Placeholder (stage 2): the trained SGNS scores against the shifted PMI of the 2,000 most frequent pairs; trained SGNS sees subsampled, dynamically windowed counts, at 100 dimensions, so the relation is approximate. -->
+<!-- Placeholder (stage 2): the trained SGNS scores against the shifted PMI of the 2,000 most frequent pairs, computed from the counts SGNS is shown: windows over the subsampled stream (which reach past deleted words) with a window size drawn per center (the average of the fixed-window counts); at 100 dimensions the relation is approximate. -->
 
 ```{.python .input #word-embeddings-scatter}
 %%tab pytorch
-# The counts SGNS is shown: a window size drawn from 1..WINDOW averages the
-# fixed-window counts, and subsampling keeps a pair at both keep rates
-keep = np.minimum(1, np.sqrt(T_SUB * counts.sum() / np.maximum(counts, 1)))
-X_seen = sum(d2l.cooccurrence_counts(ids, V, b)
-             for b in range(1, WINDOW + 1)) / WINDOW
-X_seen = (scipy.sparse.diags(keep) @ X_seen @ scipy.sparse.diags(keep)).tocoo()
+# The counts SGNS is shown: windows over the subsampled stream (they reach
+# past the deleted words), and a window size drawn from 1..WINDOW, which
+# averages the fixed-window counts; three subsampling draws
+rng = np.random.default_rng(0)
+kept = [ids[keep_mask(ids, counts, T_SUB, rng)] for _ in range(3)]
+X_seen = (sum(d2l.cooccurrence_counts(k, V, b) for k in kept
+              for b in range(1, WINDOW + 1)) / (len(kept) * WINDOW)).tocoo()
 top = np.argsort(-X_seen.data)[:2000]  # the most frequent (w, o) pairs
 w, o = X_seen.row[top], X_seen.col[top]
 n_word = np.asarray(X_seen.sum(1)).ravel()
@@ -556,11 +568,13 @@ score = (sgns_v[w] * sgns_u[o]).sum(1).numpy()
 print(f'Pearson r = {np.corrcoef(target, score)[0, 1]:.2f} over {len(top)} '
       f'pairs; mean score - target {np.mean(score - target):+.2f}')
 lim = [min(target.min(), score.min()), max(target.max(), score.max())]
-d2l.plot([target, lim], [score, lim], 'pmi - log K + log(p(o)/P(o))',
-         'SGNS score u_o^T v_w', fmts=('.', 'k--'), figsize=(3.5, 3.5))
+d2l.plot([target, lim], [score, lim],
+         r'$\mathrm{pmi}(w, o) - \log K + \log(p(o) / P(o))$',
+         r'SGNS score $\mathbf{u}_o^\top \mathbf{v}_w$', fmts=('.', 'k--'),
+         figsize=(3.5, 3.5))
 ```
 
-<!-- Placeholder (stage 2), ## Evaluating Word Vectors: three methods, the noise exponent and subsampling, three seeds each; the grid is regenerated with D2L_RERUN=we-grid and read from the registered file otherwise. -->
+<!-- Placeholder (stage 2), ## Evaluating Word Vectors: three methods, the noise exponent and subsampling, three seeds each; the grid is regenerated with D2L_RERUN=we-grid and read from the registered file otherwise, after checking that it was made with the current settings; the agreement line matches only on the device that made the grid (other devices draw other random numbers). -->
 
 ```{.python .input #word-embeddings-grid}
 %%tab pytorch
@@ -578,29 +592,39 @@ def write_json(path, records):
     with open(path, 'w') as f:
         json.dump(records, f)
 
+ALPHAS = (0.0, 0.75, 1.0)  # SGNS noise exponents; SVD-PPMI takes 1 and ALPHA
+CONFIG = json.loads(json.dumps(dict(  # everything the grid's numbers rest on
+    corpus=hashlib.sha1(ids.astype(np.int64).tobytes()).hexdigest(), V=V,
+    window=WINDOW, dim=DIM, K=K, t_sub=T_SUB, alpha=ALPHA, alphas=ALPHAS,
+    epochs=EPOCHS, batch=BATCH, lr=LR, seeds=SEEDS, glove=GLOVE,
+    sets={name: dict(sha1=d2l.DATA_HUB[SOURCES[name]][1], n=covered[name])
+          for name in SETS})))
+
 if 'we-grid' in RERUN:
     rows = []
     for seed in SEEDS:
-        for alpha in (0.0, 0.75, 1.0):
+        for alpha in ALPHAS:
             for sub in (True, False):
                 tic = time.time()
                 E, _ = train_sgns(ids, counts, alpha, sub, seed, verbose=False)
                 rows.append(grid_row('SGNS', E, time.time() - tic,
                                      alpha=alpha, subsample=sub, seed=seed))
         tic = time.time()
-        E = train_glove(X, seed, verbose=False)
+        E = train_glove(X, **GLOVE, seed=seed, verbose=False)
         rows.append(grid_row('GloVe', E, time.time() - tic, alpha=None,
                              subsample=False, seed=seed))
-    for alpha in (1.0, 0.75):  # deterministic: one run each
+    for alpha in (1.0, ALPHA):  # deterministic: one run each
         tic = time.time()
         E = svd_embed(d2l.ppmi(X, alpha=alpha), DIM)
         rows.append(grid_row('SVD-PPMI', E, time.time() - tic, alpha=alpha,
                              subsample=False, seed=0))
-    d2l.lm_save_rerun(ARTIFACTS['we-grid'][1],
-                      lambda path: write_json(path, rows))
+    d2l.lm_save_rerun(ARTIFACTS['we-grid'][1], lambda path: write_json(
+        path, dict(config=CONFIG, runs=rows)))
 key, file = ARTIFACTS['we-grid']
 with open(d2l.lm_artifact(key, file if 'we-grid' in RERUN else None)) as f:
-    grid = json.load(f)  # a list of runs
+    grid = json.load(f)
+assert grid['config'] == CONFIG, 'the grid was made with other settings'
+grid = grid['runs']
 
 def setting(r):
     return r['method'] + ('' if r['method'] == 'GloVe' else
@@ -627,6 +651,8 @@ print(pd.DataFrame(summary).T.to_string())
 default = runs('SGNS', alpha=ALPHA, subsample=True)[0]
 live = {name: d2l.spearman_eval(sgns_v, vocab, p, n_boot=0).rho
         for name, p in SETS.items()}
+# The same on the device that made the grid; another device draws other
+# random numbers, so the two then differ by a few hundredths
 print('this run vs the grid (SGNS defaults, seed 0): ' + '; '.join(
     f"{n} {live[n]:.3f} vs {default[n]['rho']:.3f}" for n in SETS))
 ```
@@ -646,17 +672,17 @@ for k, name in enumerate(SETS):  # seed 0 and its interval; all seeds
                    for i, rs in enumerate(methods.values()) for r in rs])
     seeds[name] = (xs, ys)
 fig, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 3))
-d2l.plot_intervals(list(methods), series, 'method', 'Spearman rho',
+d2l.plot_intervals(list(methods), series, 'method', r'Spearman $\rho$',
                    axes=axes[0], marks={'seeds': ('x', seeds)})
-bands, alphas = {}, (0.0, 0.75, 1.0)
+bands = {}
 for name in SETS:  # mean over seeds; the band spans them
     for sub in (True, False):
         rho = np.array([[r[name]['rho'] for r in runs(
-            'SGNS', alpha=a, subsample=sub)] for a in alphas])
+            'SGNS', alpha=a, subsample=sub)] for a in ALPHAS])
         bands[f"{name}{'' if sub else ', no subsampling'}"] = (
             rho.mean(1), rho.min(1), rho.max(1))
-d2l.plot_intervals(alphas, bands, 'noise exponent alpha', 'Spearman rho',
-                   kind='band', axes=axes[1])
+d2l.plot_intervals(ALPHAS, bands, r'noise exponent $\alpha$',
+                   r'Spearman $\rho$', kind='band', axes=axes[1])
 for ax in axes:
     ax.legend(fontsize='small')
 d2l.plt.tight_layout()
@@ -680,6 +706,10 @@ COMPARE = {  # name: (kind, runs A, runs B); a single run pairs every seed
                          runs('GloVe')),
     'alpha 0.75 - 0': ('setting', sgns, runs('SGNS', alpha=0.0,
                                              subsample=True)),
+    'alpha 1 - 0.75': ('setting', runs('SGNS', alpha=1.0, subsample=True),
+                       sgns),
+    'SVD alpha 0.75 - 1': ('setting', runs('SVD-PPMI', alpha=ALPHA),
+                           runs('SVD-PPMI', alpha=1.0)),
     'subsampling on - off': ('setting', sgns, runs('SGNS', alpha=ALPHA,
                                                    subsample=False))}
 rows = []
@@ -691,6 +721,7 @@ for label, (kind, A, B) in COMPARE.items():
         human = p[[w1 in idx and w2 in idx for w1, w2 in
                    zip(p.word1, p.word2)]].score.to_numpy()
         a, b = (np.array(r[name]['cosines']) for r in (A[0], B[0]))
+        assert len(a) == len(b) == len(human)  # the same pairs, in order
         boot = np.random.default_rng(0).integers(0, len(human),
                                                  (2000, len(human)))
         diff = rank_corr(a[boot], human[boot]) - rank_corr(b[boot],
@@ -787,6 +818,7 @@ class TokenEmbedding:
 
 ```{.python .input #word-embeddings-analogy}
 %%tab pytorch
+check_sha1(d2l.download('glove.6b.100d'), 'glove.6b.100d')
 glove6b = d2l.TokenEmbedding('glove.6b.100d')
 Z6b = F.normalize(glove6b.idx_to_vec.float(), dim=1)
 
@@ -821,19 +853,25 @@ PROFESSIONS = ['nurse', 'receptionist', 'librarian', 'housekeeper',
 g = F.normalize(Z6b[glove6b.token_to_idx['he']]
                 - Z6b[glove6b.token_to_idx['she']], dim=0)
 Z_hidden = F.normalize(Z6b - (Z6b @ g)[:, None] * g, dim=1)  # all words
+lean = Z6b @ g  # every word's original projection on he - she
 rows = []
 for w in PROFESSIONS:
-    near = [{t for t, _ in d2l.nearest_neighbors(Z, glove6b, w, k=10)}
+    near = [[glove6b.token_to_idx[t] for t, _ in
+             d2l.nearest_neighbors(Z, glove6b, w, k=10)]
             for Z in (Z6b, Z_hidden)]
     i = glove6b.token_to_idx[w]
-    rows.append(dict(word=w, before=float(Z6b[i] @ g),
+    rows.append(dict(word=w, before=float(lean[i]),
                      after=float(Z_hidden[i] @ g),
-                     overlap=len(near[0] & near[1])))
+                     overlap=len(set(near[0]) & set(near[1])),
+                     # the original lean of its neighbours after removal
+                     neighbours=float(lean[near[1]].mean())))
 bias = pd.DataFrame(rows).sort_values('before')
 print(bias.round(3).to_string(index=False))
 assert bias.after.abs().max() < 1e-6  # zero by construction
 print(f'median overlap of the top 10 neighbours: '
-      f'{bias.overlap.median():.0f} of 10')
+      f'{bias.overlap.median():.0f} of 10; correlation of a profession\'s '
+      f'original projection with its neighbours\' after removal: '
+      f'{np.corrcoef(bias.before, bias.neighbours)[0, 1]:.2f}')
 ```
 
 <!-- Placeholder (stage 2), ## Static Vectors and a Language Model's Table: the input table of Qwen3-0.6B, one row per token, shared with the output layer; one vector per word type, so "bank" is one point for the river and the money. -->

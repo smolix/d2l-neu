@@ -1448,6 +1448,35 @@ def lenet_bn():
             nn.init.zeros_(m.bias)
     return net
 
+def ce_loss(model, X, Y):
+    """Mean cross-entropy of the logits model(X) for the labels Y.
+
+    Defined in :numref:`sec_batch_size`"""
+    logits = model(X)
+    return F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
+                           Y.reshape(-1))
+
+def grad_sq_norm(model, X, Y):
+    """Squared norm of the gradient of ce_loss over all parameters.
+
+    Defined in :numref:`sec_batch_size`"""
+    grads = torch.autograd.grad(ce_loss(model, X, Y),
+                                list(model.parameters()))
+    return sum((g ** 2).sum() for g in grads)
+
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+    """Gradient-noise scale from the mean squared gradient norms of m
+    minibatches of size b_small and m // 8 of size b_big from sample(b).
+
+    Defined in :numref:`sec_batch_size`"""
+    def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
+        return torch.stack([grad_sq_norm(model, *sample(b))
+                            for _ in range(m)]).mean()
+    n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
+    tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
+    sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
+    return (tr_sigma / sq_norm).item()
+
 def masked_softmax(X, mask=None):
     """Softmax over the last axis with zero weight where mask is False.
 

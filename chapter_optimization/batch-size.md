@@ -188,17 +188,21 @@ their ratio.
 
 ```{.python .input #batch-size-a-two-batch-estimator-2}
 %%tab pytorch
-def ce_loss(model, X, Y):
+def ce_loss(model, X, Y):  #@save
+    """Mean cross-entropy of the logits model(X) for the labels Y."""
     logits = model(X)
     return F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
                            Y.reshape(-1))
 
-def grad_sq_norm(model, X, Y):
+def grad_sq_norm(model, X, Y):  #@save
+    """Squared norm of the gradient of ce_loss over all parameters."""
     grads = torch.autograd.grad(ce_loss(model, X, Y),
                                 list(model.parameters()))
     return sum((g ** 2).sum() for g in grads)
 
-def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):  #@save
+    """Gradient-noise scale from the mean squared gradient norms of m
+    minibatches of size b_small and m // 8 of size b_big from sample(b)."""
     def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
         return torch.stack([grad_sq_norm(model, *sample(b))
                             for _ in range(m)]).mean()
@@ -210,17 +214,21 @@ def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
 
 ```{.python .input #batch-size-a-two-batch-estimator-2}
 %%tab jax
-def ce_loss(model, X, Y):
+def ce_loss(model, X, Y):  #@save
+    """Mean cross-entropy of the logits model(X) for the labels Y."""
     logits = model(X)
     return optax.softmax_cross_entropy_with_integer_labels(
         logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
 
-@nnx.jit
+@nnx.jit  #@save
 def grad_sq_norm(model, X, Y):
+    """Squared norm of the gradient of ce_loss over all parameters."""
     grads = nnx.grad(ce_loss)(model, X, Y)
     return sum((g ** 2).sum() for g in jax.tree.leaves(grads))
 
-def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):  #@save
+    """Gradient-noise scale from the mean squared gradient norms of m
+    minibatches of size b_small and m // 8 of size b_big from sample(b)."""
     def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
         return jnp.stack([grad_sq_norm(model, *sample(b))
                           for _ in range(m)]).mean()
@@ -243,7 +251,8 @@ print(f'noise scale at initialization: '
       f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = torch.optim.Adam(cnn.parameters(), lr=0.004)
 d2l.train_steps(cnn, fashion, optimizer, num_steps=500)
-print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
+print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}, '
+      f'measured again: {noise_scale(cnn, sample_fashion):.0f}')
 ```
 
 ```{.python .input #batch-size-a-two-batch-estimator-3}
@@ -253,7 +262,8 @@ print(f'noise scale at initialization: '
       f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = nnx.Optimizer(cnn, optax.adam(0.004), wrt=nnx.Param)
 d2l.train_steps(cnn, fashion, optimizer, num_steps=500)
-print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
+print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}, '
+      f'measured again: {noise_scale(cnn, sample_fashion):.0f}')
 ```
 
 Then the language model, with smaller probe batches because one example is
@@ -295,6 +305,8 @@ disagreement between examples. As training removes the easy part of the
 loss, $\|\nabla f\|^2$ shrinks, while the scatter of the per-example
 gradients shrinks more slowly. We return to this growth at the end of the
 section.
+
+<!-- WRITER: cell batch-size-a-two-batch-estimator-3 now measures the trained CNN twice and prints both values ("after 500 steps of Adam: A, measured again: B") (BATCH-5). Development runs, three measurements of one trained CNN each: PyTorch 457, 410, 446; JAX 948, 787, 871, so repeated measurements of one model differ by 10 to 20% (largest/smallest 1.11 and 1.20); at initialization 81/84 (PyTorch) and 174/178 (JAX). Across seeds the trained CNN's noise scale varies far more: after 500 steps 226 and 197 in the store, 446 and 871 in the probes, in the four notebook runs 1,983/2,055 and 805/828 (PyTorch), 76/82 (JAX, below its value of 120 at initialization) and 1,123/1,129, so 76 to about 2,000 images across seeds while two measurements of one model differ by at most 20% (at most 4% in the notebook runs). TinyLM after 500 steps: 51 to 183 sequences over eight runs (prose "about 50 to 200" holds). "Less than a third" holds; "within about a fifth" is the printed bound. The same holds for TinyLM: three repeated measurements at step 3,000 gave 241 to 245 (PyTorch) and 161 to 172 (JAX), and probe batches of 8/1024 and 32/1024 agree with 8/256 within 3%. -->
 
 The estimate itself is repeatable. Measured again on the same trained
 model, it changes by less than a third, so the spread between runs comes
@@ -678,21 +690,14 @@ def final_loss_at(make_optimizer, lrs, b, seed, num_examples=12800):
 
 ```{.python .input #batch-size-learning-rate-rules-1}
 %%tab jax
-class FixedOrder(d2l.DataModule):  # Minibatches in one order, fixed by key
-    def __init__(self, arrays, batch_size, key):
-        super().__init__()
-        self.save_hyperparameters()
-
-    def get_dataloader(self, train):
-        return d2l.ArrayLoader(self.arrays, self.batch_size, shuffle=train,
-                               key=self.key)
-
 def final_loss_at(make_tx, lrs, b, seed, num_examples=12800):
     """Train the CNN once per learning rate; return the final losses."""
     init_key, order_key = jax.random.split(jax.random.key(seed))
-    curves, _ = d2l.lr_sweep(d2l.FashionCNN, make_tx,
-                             FixedOrder((X_f, y_f), b, order_key), lrs,
-                             init_key, num_examples // b, verbose=False)
+    data = d2l.DataModule()  # Every run sees the images in one order
+    data.train_dataloader = lambda: d2l.ArrayLoader(
+        (X_f, y_f), b, shuffle=True, key=order_key)
+    curves, _ = d2l.lr_sweep(d2l.FashionCNN, make_tx, data, lrs, init_key,
+                             num_examples // b, verbose=False)
     return [d2l.final_loss(c, k=len(c) // 4) for c in curves.values()]
 ```
 
@@ -726,51 +731,45 @@ d2l.plot(sgd_lrs, [sgd_small, sgd_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
 
-For Adam the predicted shift, $\sqrt{8} \approx 2.8$, falls between two
-grid points, and in a flat basin the best grid point can move by a whole
-step from one run to the next. We therefore locate each minimum between
-the grid points: fit a parabola in $\log \eta$ through the lowest final
-loss and its two neighbors, and take its vertex.
-
-```{.python .input #batch-size-learning-rate-sweeps-at-two-batch-sizes-1}
-%%tab pytorch, jax
-def best_lr(lrs, losses):
-    """Vertex of a parabola in log(lr) through the minimum and neighbors."""
-    i = int(np.clip(np.nanargmin(losses), 1, len(lrs) - 2))
-    c2, c1, _ = np.polyfit(np.log(lrs[i - 1:i + 2]), losses[i - 1:i + 2], 2)
-    return math.exp(-c1 / (2 * c2))
-```
+<!-- WRITER: the parabola fit (`best_lr`, cell batch-size-learning-rate-sweeps-at-two-batch-sizes-1) is gone. The Adam sweep now runs at b = 2 and b = 128, a batch ratio of 64, on a grid of factors of two from 0.0001 to 0.1024, with the same budget of 12,800 examples (6,400 steps at b = 2, 100 at b = 128). The three rules predict a shift of 1 (no scaling), 8 (square root) and 64 (linear), three and six grid steps apart; the cell prints the best rate at each batch size and the b = 128 loss at each rule's prediction. Measured numbers: see the WRITER comment after the cell. -->
 
 Then Adam:
 
 ```{.python .input #batch-size-learning-rate-rules-3}
 %%tab pytorch
-adam_lrs = [0.0002, 0.0004, 0.0008, 0.0016, 0.0032, 0.0064, 0.0128,
-            0.0256]
+adam_lrs = [0.0001 * 2 ** k for k in range(11)]  # 0.0001 to 0.1024
 make_adam = lambda model, lr: torch.optim.Adam(model.parameters(), lr)
 seed = random.getrandbits(32)
-adam_small = final_loss_at(make_adam, adam_lrs, b=8, seed=seed)
-adam_big = final_loss_at(make_adam, adam_lrs, b=64, seed=seed)
-lr_small, lr_big = best_lr(adam_lrs, adam_small), best_lr(adam_lrs, adam_big)
-print(f'best lr: {lr_small:.2g} at b=8, {lr_big:.2g} at b=64, '
-      f'a factor of {lr_big / lr_small:.1f}')
+adam_small = final_loss_at(make_adam, adam_lrs, b=2, seed=seed)
+adam_big = final_loss_at(make_adam, adam_lrs, b=128, seed=seed)
+i, j = int(np.nanargmin(adam_small)), int(np.nanargmin(adam_big))
+print(f'best lr: {adam_lrs[i]:g} at b=2; {adam_lrs[j]:g} at b=128, '
+      f'final loss {adam_big[j]:.3f}')
+for rule, k in (('no scaling', 0), ('square root', 3), ('linear', 6)):
+    print(f'{rule:11s}: lr {adam_lrs[i + k]:g} at b=128, '
+          f'final loss {adam_big[i + k]:.3f}')
 d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
-         xscale='log', legend=['b=8', 'b=64'])
+         xscale='log', legend=['b=2', 'b=128'])
 ```
 
 ```{.python .input #batch-size-learning-rate-rules-3}
 %%tab jax
-adam_lrs = [0.0002, 0.0004, 0.0008, 0.0016, 0.0032, 0.0064, 0.0128,
-            0.0256]
+adam_lrs = [0.0001 * 2 ** k for k in range(11)]  # 0.0001 to 0.1024
+make_adam = optax.adam
 seed = d2l.get_seed()
-adam_small = final_loss_at(optax.adam, adam_lrs, b=8, seed=seed)
-adam_big = final_loss_at(optax.adam, adam_lrs, b=64, seed=seed)
-lr_small, lr_big = best_lr(adam_lrs, adam_small), best_lr(adam_lrs, adam_big)
-print(f'best lr: {lr_small:.2g} at b=8, {lr_big:.2g} at b=64, '
-      f'a factor of {lr_big / lr_small:.1f}')
+adam_small = final_loss_at(make_adam, adam_lrs, b=2, seed=seed)
+adam_big = final_loss_at(make_adam, adam_lrs, b=128, seed=seed)
+i, j = int(np.nanargmin(adam_small)), int(np.nanargmin(adam_big))
+print(f'best lr: {adam_lrs[i]:g} at b=2; {adam_lrs[j]:g} at b=128, '
+      f'final loss {adam_big[j]:.3f}')
+for rule, k in (('no scaling', 0), ('square root', 3), ('linear', 6)):
+    print(f'{rule:11s}: lr {adam_lrs[i + k]:g} at b=128, '
+          f'final loss {adam_big[i + k]:.3f}')
 d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
-         xscale='log', legend=['b=8', 'b=64'])
+         xscale='log', legend=['b=2', 'b=128'])
 ```
+
+<!-- WRITER: measured, development runs (four seeds per tab for Adam, three for SGD; the notebook prints one). SGD with momentum, b = 8 against 64 (unchanged cell): the best rate at b = 8 is 0.0125 in all six runs and at b = 64 it is 0.1 (four runs) or 0.05 (two), a factor of 8 or 4, never 16 ("four to sixteen" becomes "four to eight", the linear rule's 8 or one grid step below). Adam, b = 2 against 128 (ratio 64): the best rate at b = 2 is 0.0008 in all eight runs; at b = 128 it is 0.0032 (three runs) or 0.0064 (five), a factor of 4 or 8 in every run: the square-root rule's 8 or one grid step below, never near the linear rule's 64 and never 1. Final loss at b = 128 at each rule's prediction from the b = 2 optimum, against the best grid point of the same run (best 0.449 to 0.507): no scaling (0.0008) 0.572 to 0.666, worse than the best by 0.12 to 0.19 in every run; square root (0.0064) 0.449 to 0.580, within 0.07 of the best (in six of eight runs within 0.01); linear (0.0512) 0.485 to 0.726 and once 2.306 (training failed, PyTorch), worse than the best by 0.04 to 0.27, and by 1.8 in the failed run. Notebook runs (final code, r1): PyTorch best 0.0016 at b = 2, 0.0064 at b = 128 (factor 4), no scaling 0.582, square root 0.533, linear (0.1024) 2.309, failed; JAX best 0.0008 and 0.0128 (factor 16), no scaling 0.617, square root 0.462, linear 0.599. Notebook runs r2: PyTorch 0.0008 and 0.0064 (factor 8), best loss 0.495, no scaling 0.635, square root 0.495, linear 0.665; JAX 0.0016 and 0.0032 (factor 2), best 0.463, no scaling 0.532, square root (0.0128) 0.507, linear (0.1024) 0.673. Over all twelve runs the factor is 2 (one run), 4 (four), 8 (six) or 16 (one): the square-root prediction lies within one grid step (a factor of two) of the best rate in 11 of 12 runs, the linear prediction two to five grid steps above it in every run. The firm statements: the best rate moves by far less than the batch ratio; the square-root rule lands within a factor of two of it; the linear rule overshoots by a factor of 4 to 32 and is never the best; at the square-root rate the loss is below the no-scaling loss in every run (by 0.02 to 0.19), at the best rate by 0.07 to 0.19; once the b = 2 optimum itself sits one grid step off (PyTorch r1, 0.0016), every prediction moves with it. The cell now also prints the best final loss at b = 128, so the reader can read the cost of each rule directly. The run-to-run spread of the best loss is 0.06, so "no scaling costs about a tenth of a nat" is firm and the square root lands on the optimum; "the linear rule fails" is firm only as "overshoots by eight times and is never the best". At b = 2 the runs above the optimum fall back to the uniform guess (final loss 2.30 = ln 10) from a rate between 0.0032 and 0.0512 on (two to six grid steps above the optimum, varying with the seed): the small batch has a sharp failure edge, the large one a flat basin. Cut "and by about 2.5 on average" (BATCH-15): no cell prints an average, and the parabola is gone. The b = 128 basin is still flat from 0.0032 to 0.0128 (within about 0.05), so the text should read the shift from the best grid point and the loss at the three predictions, not from the curve's shape. -->
 
 Both plots show a broad minimum, with the loss rising on the right, where
 runs become unstable and, in many sweeps, some fail outright.
@@ -839,6 +838,40 @@ also follow a measurement instead of a fixed schedule.
 :citet:`Merrill.Arora.Groeneveld.ea.2025` measured the critical batch size
 as training proceeded and doubled the batch each time the measurement
 overtook it.
+
+<!-- WRITER: NEW closing experiment (structure 10, promoted from Exercise 1): a fresh `TinyLM` trained with Adam at 0.003 and b = 64 for 3,000 steps; every 250 steps the cell prints the held-out loss (`eval_loss` on `X_val`, `Y_val`) and the noise scale (`noise_scale` with probe batches 8 and 256), and plots the noise scale against the step. Measured numbers: see the WRITER comment after the cell. Exercise 1 now repeats this in the body; it needs a variation (for example the doubling rule of its part 2 only). -->
+
+```{.python .input #batch-size-growing-the-batch}
+%%tab pytorch
+data.batch_size = 64
+lm = d2l.TinyLM(len(data.vocab)).to(device)
+optimizer = torch.optim.Adam(lm.parameters(), lr=0.003)
+steps, noise = list(range(0, 3001, 250)), []
+for step in steps:
+    if step > 0:
+        d2l.train_steps(lm, data, optimizer, num_steps=250)
+    noise.append(noise_scale(lm, sample_lm, b_small=8, b_big=256))
+    print(f'step {step:4d}  held-out loss {eval_loss(lm, X_val, Y_val):.3f}  '
+          f'noise scale {noise[-1]:5.1f}')
+d2l.plot(steps, noise, 'step', 'noise scale (sequences)', yscale='log')
+```
+
+```{.python .input #batch-size-growing-the-batch}
+%%tab jax
+data.batch_size = 64
+lm = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
+optimizer = nnx.Optimizer(lm, optax.adam(0.003), wrt=nnx.Param)
+steps, noise = list(range(0, 3001, 250)), []
+for step in steps:
+    if step > 0:
+        d2l.train_steps(lm, data, optimizer, num_steps=250)
+    noise.append(noise_scale(lm, sample_lm, b_small=8, b_big=256))
+    print(f'step {step:4d}  held-out loss {eval_loss(lm, X_val, Y_val):.3f}  '
+          f'noise scale {noise[-1]:5.1f}')
+d2l.plot(steps, noise, 'step', 'noise scale (sequences)', yscale='log')
+```
+
+<!-- WRITER: measured (six runs: two probes and four notebook runs, three per tab). Held-out loss falls from 5.6-5.8 to 1.87-1.88 at step 500 and 1.504-1.509 at step 3,000 in every run. The noise scale starts at 2.0 to 2.4 sequences, is 33 to 79 at step 250, 40 to 96 at step 500, and 166 to 328 at step 3,000 (six runs: two probes, four notebook runs; held-out loss at step 3,000 1.502 to 1.509): a factor of about 100 over the run, and still rising at the end (no run has leveled off by step 3,000; the values at step 3,000 lie above those at step 500 in every run, with no overlap). From one checkpoint to the next the values scatter by up to a factor of two around the trend (PyTorch notebook run: 182 at step 750, 88 at 1,000; probe: 272 at 2,500, 202 at 2,750). This scatter is a property of the weights, not of the estimator: three repeated measurements of one checkpoint agree within 3 to 7%. So the lesson is the trend over hundreds of steps, not the value at one step; a reader who measures once should measure twice, a few hundred steps apart. The growth is fastest while the loss falls fastest (step 0 to 250, factor 15 to 35). -->
 
 A batch ramp interacts with the learning-rate schedule. In the noise ball
 of SGD above, $\eta$ and $b$ enter only through $\eta / b$, so raising $b$ at a fixed $\eta$ reduces the noise as
@@ -1201,6 +1234,8 @@ CNN, budget of 12,800 examples, SGD with momentum 0.9:
 The basin shifts right by the batch ratio to within one grid step (4× to
 16× on this grid).
 :::
+
+<!-- WRITER: slide text is out of date: the Adam sweep is now b = 2 against 128 (ratio 64), no parabola; it prints the best rate at each batch size and the b = 128 loss at the three rules' predictions. The new cell batch-size-growing-the-batch (noise scale every 250 steps of a 3,000-step TinyLM run) can carry the "Large Runs Grow Their Batch" slide. -->
 
 ::: {.slide title="Adam: The Best Rate Moves Less Than the Batch"}
 Same budget, Adam:

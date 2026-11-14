@@ -9,6 +9,7 @@ appendix lettering).
 Usage:
     python tools/fix_latex.py <tex_file>
 """
+import os
 import re
 import sys
 from pathlib import Path
@@ -48,6 +49,44 @@ def add_frontmatter_page_numbering(content):
     replacement = (f'{match.group("indent")}\\begin{{document}}\n'
                    f'{match.group("indent")}\\pagenumbering{{roman}}')
     return content[:match.start()] + replacement + content[match.end():]
+
+
+# The full book's front cover (7 x 10 in trim, one page), the counterpart of
+# the part covers that build_part_pdfs.py puts first in each part PDF.
+BOOK_COVER = (Path(__file__).resolve().parent.parent
+              / 'static/cover/d2l-cover-D-inter-trim-7x10in.pdf')
+
+
+def add_book_cover(content, tex_dir):
+    """Open the book with its cover instead of LaTeX's title page.
+
+    Replaces the \\maketitle that Quarto puts after \\frontmatter by the
+    cover PDF and a blank back page, as build_part_pdfs.py does for the
+    parts, and loads pdfpages. The cover path is relative to the directory
+    xelatex runs in (the .tex file's), so the build stays relocatable. A
+    missing cover keeps \\maketitle with a warning instead of failing the
+    build. Idempotent.
+    """
+    if '\\includepdf[pages=1]' in content:
+        return content
+    if not BOOK_COVER.exists():
+        print(f'  WARNING: no book cover at {BOOK_COVER}; keeping \\maketitle')
+        return content
+    m = re.search(r'(?m)^\\frontmatter[ \t]*\n\\maketitle[ \t]*$', content)
+    if m is None:
+        print('  WARNING: no \\frontmatter + \\maketitle to replace; no cover')
+        return content
+    rel = Path(os.path.relpath(BOOK_COVER, tex_dir)).as_posix()
+    cover = ('\\frontmatter\n'
+             f'\\includepdf[pages=1]{{{rel}}}\n'
+             # the back of the cover: blank, without a running head
+             '\\null\\thispagestyle{empty}\\newpage')
+    content = content[:m.start()] + cover + content[m.end():]
+    begin = re.search(r'(?m)^\\begin\{document\}[ \t]*$', content)
+    content = (content[:begin.start()] + '\\usepackage{pdfpages}\n'
+               + content[begin.start():])
+    print(f'  Book cover: {rel}')
+    return content
 
 
 def fix_html_only_refs(content):
@@ -262,6 +301,7 @@ def main():
 
     print(f'Post-processing {tex_file}...')
     content = fix_all(content)
+    content = add_book_cover(content, Path(tex_file).resolve().parent)
 
     with open(tex_file, 'w') as f:
         f.write(content)

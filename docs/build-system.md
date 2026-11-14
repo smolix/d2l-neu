@@ -429,7 +429,14 @@ shards too:
   (`[A-Za-z0-9][A-Za-z0-9._-]*`) is sanitised and suffixed with a hash of
   the original (`registry_shard_name`). Other registries
   (`d2l.HF_REVISIONS[...] = ...`) keep one shard per container, named after
-  it; so does a `DATA_HUB` entry whose key is computed.
+  it; so does a `DATA_HUB` entry whose key is computed. A new entry in such
+  a container therefore changes its shard and stales every notebook that
+  reaches the container: a pin added to `HF_REVISIONS` stales every chapter
+  18 notebook (they reach it through `load_hf`). Chapter 19 keeps its encoder,
+  embedder and reranker pins in a container of its own,
+  `HF_ENCODER_REVISIONS` (read by `load_encoder`, then `HF_REVISIONS`), for
+  this reason; making `HF_REVISIONS` keyed like `DATA_HUB` would end this, at
+  the cost of one re-run of the notebooks that use it.
 - One shard per config.ini alias (`reshape.py` holds `reshape =
   torch.reshape`), so `d2l.reshape` users depend on it.
 - One shard per hand-written module next to the libraries, named after the
@@ -1408,7 +1415,9 @@ Models part: notebooks whose source lies under `chapter_lm-*` execute in
 `pytorch` extra, plus `transformers[serving]==5.22.2`, `huggingface-hub`,
 `accelerate`, `openai==3.49.0`, `safetensors`, `scikit-learn`, and on
 linux-x86_64 `flash-linear-attention==0.6.0`/`fla-core==0.6.0`, the fused
-Gated DeltaNet kernels section 18.1 measures), so the rest of the book never
+Gated DeltaNet kernels section 18.1 measures; for chapter 19 `faiss-cpu`,
+and `bm25s`, `pytrec-eval-terrier`, `seqeval` and `sentence-transformers` as
+the oracles its library is tested against), so the rest of the book never
 installs those packages. `make venv-lm` builds it with the d2l package
 installed editable from the checkout it runs in. `causal-conv1d` is left out:
 it has no torch 2.11 wheel (it would compile), and its PyTorch fallback holds

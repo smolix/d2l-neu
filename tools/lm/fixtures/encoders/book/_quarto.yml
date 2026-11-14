@@ -1,0 +1,13 @@
+# Fixture book for tools/test_lm_build_r3.py (the book corpus builder).
+book:
+  chapters:
+    - index.qmd
+    - part: chapter_basics/index.qmd
+      chapters:
+        - chapter_alpha/index.qmd
+        - chapter_alpha/one.qmd
+        - chapter_alpha/two.qmd
+        - chapter_beta/index.qmd
+    - part: chapter_lm-zeta/index.qmd
+      chapters:
+        - chapter_lm-zeta/index.qmd

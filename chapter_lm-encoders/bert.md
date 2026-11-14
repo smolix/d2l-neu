@@ -41,3 +41,103 @@ when the section is written.
 - Code and documentation: [`answerdotai/ModernBERT-base`](https://huggingface.co/answerdotai/ModernBERT-base) (model card and configuration) and its repository [AnswerDotAI/ModernBERT](https://github.com/AnswerDotAI/ModernBERT) (fine-tuning recipes); Transformers' `modeling_modernbert.py` (the head to replicate).
 - Courses, tutorials and blogs: [ModernBERT blog](https://huggingface.co/blog/modernbert); Jay Alammar, [The Illustrated BERT](https://jalammar.github.io/illustrated-bert/); [CS224N](https://web.stanford.edu/class/cs224n/) (pretraining lecture); [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/chapter1/1) (the fine-tuning chapter).
 -->
+
+<!-- Placeholder (stage 2, infra step): the cells below are the section's
+shared library, written before the section; the prose around them comes with
+the section. Cell ids follow the section specification. -->
+
+```{.python .input #bert-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+<!-- Placeholder (stage 2): the encoder is pinned like the decoders of the previous chapter. The encoders, embedders and rerankers of this chapter keep their pins in a registry of their own, so that adding one does not change `d2l.HF_REVISIONS`. -->
+
+```{.python .input #bert-revisions}
+%%tab pytorch
+#@save
+HF_ENCODER_REVISIONS = {
+    'answerdotai/ModernBERT-base': '8949b909ec900327062f0ebf497f51aef5e6f0c8'}
+```
+
+<!-- Placeholder (stage 2): GLUE (MNLI, SST-2) and CoNLL-2003, pinned to commits and downloaded at run time. -->
+
+```{.python .input #bert-data-hub}
+%%tab pytorch
+#@save
+# Several of these files share a name: fetch them with d2l.download_keyed
+d2l.DATA_HUB['glue-mnli-train'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/mnli/'
+    'train-00000-of-00001.parquet',
+    '29c714bf5419e6a351ba0fc979f000dcc1ccf671')
+d2l.DATA_HUB['glue-mnli-validation-matched'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/mnli/'
+    'validation_matched-00000-of-00001.parquet',
+    '190b5f94bc4126d3747a817da7c0da9df619dfbc')
+d2l.DATA_HUB['glue-sst2-train'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2/'
+    'train-00000-of-00001.parquet',
+    '12cd5d3347611f133d19fd975afe391fa457553f')
+d2l.DATA_HUB['glue-sst2-validation'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2/'
+    'validation-00000-of-00001.parquet',
+    'bc4155c5b85fcdda2784ea3154a9cfd00bf2009a')
+d2l.DATA_HUB['conll2003-train'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/train.json',
+    '09a4703c703992a75087ece5b5eab2e0621b0590')
+d2l.DATA_HUB['conll2003-valid'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/valid.json',
+    '3f9256142388f6da88b2269541fab5b8dbfe49f0')
+d2l.DATA_HUB['conll2003-labels'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/label.json',
+    'd4fd1344c9af2613a3094dd2c84ff594e5215af0')
+```
+
+<!-- Placeholder (stage 2): a pinned encoder with one of three heads; load_hf of the previous chapter loads causal models only. -->
+
+```{.python .input #bert-load-encoder}
+%%tab pytorch
+#@save
+def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
+                 dtype=torch.bfloat16, device=None, attn_implementation='sdpa',
+                 padding_side=None):
+    """A pinned encoder from the Hugging Face Hub and its tokenizer, in eval
+    mode: the bare model (head=None), or with a masked-token head ('mlm'), a
+    sequence classifier ('seq_cls') or a token classifier ('token_cls');
+    the pin comes from HF_ENCODER_REVISIONS, then HF_REVISIONS."""
+    import transformers
+    revision = revision or d2l.HF_ENCODER_REVISIONS.get(
+        model_id, d2l.HF_REVISIONS.get(model_id))
+    if revision is None:
+        raise KeyError(f'{model_id} is not pinned: pass revision=')
+    auto = {None: transformers.AutoModel,
+            'mlm': transformers.AutoModelForMaskedLM,
+            'seq_cls': transformers.AutoModelForSequenceClassification,
+            'token_cls': transformers.AutoModelForTokenClassification}[head]
+    device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    extra = {} if num_labels is None else {'num_labels': num_labels}
+    model = auto.from_pretrained(
+        model_id, revision=revision, dtype=dtype, use_safetensors=True,
+        attn_implementation=attn_implementation, **extra).to(device)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        model_id, revision=revision)
+    if padding_side is not None:
+        tokenizer.padding_side = padding_side
+    model.revision = revision
+    print(f'{model_id}@{revision[:12]}: {type(model).__name__}, '
+          f'{dtype}, {device}, attention '
+          f'{model.config._attn_implementation}')
+    return model.eval(), tokenizer
+```

@@ -38,3 +38,46 @@ when the section is written.
 - Code and documentation: [RAGAS](https://github.com/vibrantlabsai/ragas) (the metric implementations); Transformers [chat templating](https://huggingface.co/docs/transformers/chat_templating) and [generation strategies](https://huggingface.co/docs/transformers/main/en/generation_strategies) (batched grounded generation); [Pyserini](https://github.com/castorini/pyserini) (retrieval baselines).
 - Courses, tutorials and blogs: Hugging Face cookbook, [Advanced RAG](https://huggingface.co/learn/cookbook/advanced_rag); Jason Liu, [Systematically Improving Your RAG](https://jxnl.co/writing/2024/05/22/systematically-improving-your-rag/); Hamel Husain, [Stop Saying RAG Is Dead](https://hamel.dev/notes/llm/rag/not_dead.html); Eugene Yan, [Patterns for Building LLM-based Systems](https://eugeneyan.com/writing/llm-patterns/); [CMU 11-711](https://cmu-l3.github.io/anlp-spring2026) (the retrieval and RAG lecture).
 -->
+
+<!-- Placeholder (stage 2, infra step): the cells below are the section's
+shared library, written before the section; the prose around them comes with
+the section. Cell ids follow the section specification. -->
+
+```{.python .input #rag-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+<!-- Placeholder (stage 2): the book's question set by split, and the chunks that count as relevant for an item under any chunking. -->
+
+```{.python .input #rag-qa-def}
+%%tab pytorch
+#@save
+def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
+            root=os.path.join('..', 'data', 'lm')):
+    """The book's question set (artifact lm-book-qa-v1), one split: a
+    BookQA (a list of item dicts), optionally only answerable (or only
+    unanswerable) items, only some question types, and a stratified
+    sample of n items."""
+    items = d2l._book_qa_read(split, root)
+    if answerable is not None:
+        items = [q for q in items if q['answerable'] == answerable]
+    if types is not None:
+        items = [q for q in items if q['type'] in types]
+    qa = d2l.BookQA(items, split)
+    return qa if n is None else qa.subset(n, seed)
+
+def gold_chunk_ids(item, corpus, min_overlap=0.5, include_alt=True):
+    """Ids of the chunks of corpus relevant to a question: those that
+    overlap one of its gold spans (and, with include_alt, the passages
+    judged to answer it as well) by at least min_overlap of the span's or
+    of the chunk's characters."""
+    spans = item['gold_spans'] + (item['alt_spans'] if include_alt else [])
+    return {i for s in spans for i in corpus.span_to_chunk_ids(
+        s['doc_id'], s['char_start'], s['char_end'], min_overlap)}
+```

@@ -38,3 +38,131 @@ when the section is written.
 - Code and documentation: [`Qwen/Qwen3-Embedding-0.6B`](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) (pooling, padding side and instruction format on the card); [`Qwen/Qwen3-Reranker-0.6B`](https://huggingface.co/Qwen/Qwen3-Reranker-0.6B) (the yes/no scoring prompt); [sentence-transformers](https://github.com/huggingface/sentence-transformers) (losses, cached-gradient loss, quantization helpers); [mteb](https://github.com/embeddings-benchmark/mteb).
 - Courses, tutorials and blogs: [Sentence Transformers training overview](https://sbert.net/docs/sentence_transformer/training_overview.html); Hugging Face, [Embedding quantization](https://huggingface.co/blog/embedding-quantization) (int8 and binary with rescoring); [CS224N](https://web.stanford.edu/class/cs224n/) (the retrieval lecture).
 -->
+
+<!-- Placeholder (stage 2, infra step): the cells below are the section's
+shared library, written before the section; the prose around them comes with
+the section. Cell ids follow the section specification. -->
+
+```{.python .input #text-embeddings-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+<!-- Placeholder (stage 2): the two released embedders and the reranker, pinned. -->
+
+```{.python .input #text-embeddings-revisions}
+%%tab pytorch
+#@save
+d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Embedding-0.6B'] = (
+    '97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3')
+d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Reranker-0.6B'] = (
+    'e61197ed45024b0ed8a2d74b80b4d909f1255473')
+d2l.HF_ENCODER_REVISIONS['microsoft/harrier-oss-v1-0.6b'] = (
+    'f9b9dc8d367d443f2479d27aa5d8d2850c0774ee')
+```
+
+<!-- Placeholder (stage 2): question-passage pairs from Natural Questions, pinned to a commit and downloaded at run time. -->
+
+```{.python .input #text-embeddings-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['nq-pairs'] = (
+    'https://huggingface.co/datasets/sentence-transformers/'
+    'natural-questions/resolve/f9e894e1081e206e577b4eaa9ee6de2b06ae6f17/'
+    'pair/train-00000-of-00001.parquet',
+    '545c1495f10231652b59e67f7ab02e6d21252fd0')
+```
+
+<!-- Placeholder (stage 2): three ways to pool token states into one vector. -->
+
+```{.python .input #text-embeddings-pool-def}
+%%tab pytorch
+#@save
+def pool_hidden(hidden, attention_mask, mode):
+    """One vector per sequence from hidden states (B, T, m): the first
+    ('cls'), the mean ('mean') or the last ('last') of the positions the
+    mask keeps; left and right padding both work."""
+    mask = attention_mask.to(hidden.dtype)
+    if mode == 'mean':
+        return (hidden * mask[..., None]).sum(1) / mask.sum(1, keepdim=True)
+    rows = torch.arange(hidden.shape[0], device=hidden.device)
+    if mode == 'cls':
+        return hidden[rows, attention_mask.argmax(1)]
+    if mode == 'last':
+        T = attention_mask.shape[1]
+        return hidden[rows, T - 1 - attention_mask.flip(1).argmax(1)]
+    raise ValueError(f'unknown pooling {mode!r}')
+```
+
+<!-- Placeholder (stage 2): batched encoding of many texts, longest first. -->
+
+```{.python .input #text-embeddings-embed-def}
+%%tab pytorch
+#@save
+def embed_texts(model, tokenizer, texts, pooling='mean', batch_size=64,
+                max_len=512, normalize=True, prefix='', padding_side=None,
+                device=None):
+    """Vectors (N, m), float32 on the CPU, of prefix + text for each text:
+    pooled last hidden states of an encoder, unit length if normalize.
+    Batches hold texts of similar length; the output is in input order."""
+    device = device or next(model.parameters()).device
+    side = padding_side or tokenizer.padding_side
+    pad = tokenizer.pad_token_id
+    ids = tokenizer([prefix + t for t in texts], truncation=True,
+                    max_length=max_len)['input_ids']
+    full = tokenizer([prefix + t for t in texts])['input_ids']
+    n_cut = sum(len(a) < len(b) for a, b in zip(ids, full))
+    if n_cut:
+        print(f'{n_cut} of {len(texts)} texts truncated to {max_len} tokens')
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out = torch.empty(len(ids), model.config.hidden_size)
+    for j in range(0, len(order), batch_size):
+        rows = [ids[i] for i in order[j:j + batch_size]]
+        T = max(len(r) for r in rows)
+        fill = lambda r, v: ([v] * (T - len(r)) + r if side == 'left'
+                             else r + [v] * (T - len(r)))
+        X = torch.tensor([fill(r, pad) for r in rows], device=device)
+        mask = torch.tensor([fill([1] * len(r), 0) for r in rows],
+                            device=device)
+        with torch.inference_mode():
+            h = model(input_ids=X, attention_mask=mask).last_hidden_state
+            z = d2l.pool_hidden(h.float(), mask, pooling)
+            if normalize:
+                z = F.normalize(z, dim=-1)
+        out[order[j:j + batch_size]] = z.cpu()
+    return out
+```
+
+<!-- Placeholder (stage 2): Recall@k, MRR@10 and nDCG@10 per query. -->
+
+```{.python .input #text-embeddings-metrics-def}
+%%tab pytorch
+#@save
+def retrieval_metrics(ranked_ids, gold_ids, ks=(1, 5, 10, 100)):
+    """Per-query metrics of ranked lists against gold sets (binary
+    relevance): recall@k is 1 if a relevant id is among the first k (the
+    question is answerable from what was retrieved), mrr@10 the reciprocal
+    rank of the first relevant id within 10, ndcg@10 the discounted gain
+    over the ideal ordering. NaN for a query with an empty gold set."""
+    out = {f'recall@{k}': [] for k in ks} | {'mrr@10': [], 'ndcg@10': []}
+    for ranked, gold in zip(ranked_ids, gold_ids):
+        gold = set(gold)
+        if not gold:
+            for v in out.values():
+                v.append(np.nan)
+            continue
+        rel = np.array([i in gold for i in ranked], dtype=float)
+        for k in ks:
+            out[f'recall@{k}'].append(float(rel[:k].any()))
+        hits = np.flatnonzero(rel[:10])
+        out['mrr@10'].append(1 / (hits[0] + 1) if len(hits) else 0.0)
+        disc = 1 / np.log2(np.arange(2, 12))
+        idcg = disc[:min(len(gold), 10)].sum()
+        out['ndcg@10'].append((rel[:10] * disc[:len(rel[:10])]).sum() / idcg)
+    return {k: np.array(v) for k, v in out.items()}
+```

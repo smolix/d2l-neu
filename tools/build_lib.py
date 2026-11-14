@@ -58,6 +58,10 @@ LIB_ONLY_FILES = [
     # reader, the cluster bootstrap, the regeneration bookkeeping and the
     # steering measurements.
     'chapter_lm-pretrained/interpretability-lib.md',
+    # 19.4's corpus builder (cleaning, chunkers, BookCorpus) and embedding
+    # cache, and 19.5's question-set reader: explained in a sentence each.
+    'chapter_lm-encoders/retrieval-lib.md',
+    'chapter_lm-encoders/rag-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

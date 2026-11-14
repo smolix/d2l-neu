@@ -41,3 +41,80 @@ when the section is written.
 - Code and documentation: the [WikiText dataset card](https://huggingface.co/datasets/Salesforce/wikitext) (the `wikitext-103-raw-v1` parquet files that `d2l.WikiText103` downloads and 2.1 reads as words); the Qwen3-0.6B card for the tied table ([Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B)).
 - Courses, tutorials and blogs: [CS224N](https://web.stanford.edu/class/cs224n/) (word-vector lectures and assignment A1); Jay Alammar, [The Illustrated Word2vec](https://jalammar.github.io/illustrated-word2vec/).
 -->
+
+<!-- Placeholder (stage 2, infra step): the cells below are the section's
+shared library, written before the section; the prose around them comes with
+the section. Cell ids follow the section specification. The GloVe registry
+cell (`word-embeddings-glove-hub`) waits until the retiring
+`similarity-analogy.md`, which registers the same two keys, is deleted. -->
+
+```{.python .input #word-embeddings-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+<!-- Placeholder (stage 2): the WikiText-103 slice and the two word-similarity sets, pinned to commits and downloaded at run time. -->
+
+```{.python .input #word-embeddings-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['wikitext-103-raw-train-0'] = (
+    'https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+    'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-103-raw-v1/'
+    'train-00000-of-00002.parquet',
+    '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
+d2l.DATA_HUB['wordsim353'] = (
+    'https://huggingface.co/datasets/almogtavor/WordSim353/resolve/'
+    '9a9434427c4b41d6277a684f4263b77defe0124e/wordsim353crowd.csv',
+    '21a5314118bbebfd95d26552b9f93f7164dd3066')
+d2l.DATA_HUB['simlex999'] = (
+    'https://huggingface.co/datasets/Yuti/SimLex-999/resolve/'
+    'e87197824261f272ad1e9c02e32db3144bbeb0ca/data/'
+    'train-00000-of-00001.parquet',
+    'f3b074e2e08f83aa469f2d05c5b789b5ad2d3c49')
+```
+
+<!-- Placeholder (stage 2): pretrained word vectors (GloVe, fastText format) with the interface of the retiring word-similarity section, so that its callers keep working. Until that section is deleted it defines the same class, and the library keeps its copy (the later one in book order); the two are the same code. -->
+
+```{.python .input #word-embeddings-token-embedding}
+%%tab pytorch
+#@save
+class TokenEmbedding:
+    """Token Embedding."""
+    def __init__(self, embedding_name):
+        self.idx_to_token, self.idx_to_vec = self._load_embedding(
+            embedding_name)
+        self.unknown_idx = 0
+        self.token_to_idx = {token: idx for idx, token in
+                             enumerate(self.idx_to_token)}
+
+    def _load_embedding(self, embedding_name):
+        idx_to_token, idx_to_vec = ['<unk>'], []
+        data_dir = d2l.download_extract(embedding_name)
+        # GloVe website: https://nlp.stanford.edu/projects/glove/
+        # fastText website: https://fasttext.cc/
+        with open(os.path.join(data_dir, 'vec.txt'), 'r') as f:
+            for line in f:
+                elems = line.rstrip().split(' ')
+                token, elems = elems[0], [float(elem) for elem in elems[1:]]
+                # Skip header information, such as the top row in fastText
+                if len(elems) > 1:
+                    idx_to_token.append(token)
+                    idx_to_vec.append(elems)
+        idx_to_vec = [[0] * len(idx_to_vec[0])] + idx_to_vec
+        return idx_to_token, d2l.tensor(idx_to_vec)
+
+    def __getitem__(self, tokens):
+        indices = [self.token_to_idx.get(token, self.unknown_idx)
+                   for token in tokens]
+        vecs = self.idx_to_vec[d2l.tensor(indices)]
+        return vecs
+
+    def __len__(self):
+        return len(self.idx_to_token)
+```

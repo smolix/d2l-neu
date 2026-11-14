@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 23034,
-          "sha256": "sha256:eb882ec3b53a1d445b8f3b4d4bd4bcc7ab05a7552ac5b8b477e84e54838e9c00"
+          "bytes": 25694,
+          "sha256": "sha256:4e113589e254ece4dbed54d9bb72aac11a398bbd88620abb88534c1033cb8704"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 90.5\n"
+          "text": "validation perplexity 88.3\n"
         }
       ]
     },
@@ -114,91 +114,91 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 1: highest 3.73e+08, final 1.28e+03\n"
+          "text": "run 1: highest 8.92e+03, final 394\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 2: highest 1.16e+07, final 3.7e+03\n"
+          "text": "run 2: highest 2.22e+03, final 296\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 3: highest 3.15e+05, final 263\n3 of 3 runs end above twice the clipped 90.5; finals from 263 to 3.7e+03\n"
+          "text": "run 3: highest 4.84e+06, final 903\n3 of 3 runs end above twice the clipped 88.3; finals from 296 to 903\n"
         }
       ]
     },
     "rnn-implementation-a-plain-model-4": {
-      "code_fingerprint": "sha256:aff4132270ae09a218363d2f8fffa3162da2e46e5f761d8b7d1d2ca2202d8037",
+      "code_fingerprint": "sha256:7cae5e210e59d01dfc156a26ed4bdea0ae499374b0d743c79bc5ad1fdee6ac38",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-plain-model-4-1.svg",
-          "bytes": 25428,
-          "sha256": "sha256:57cf1dc9c2f3f738d5e4a866ea3b6a8826a194af643cb121db53398536f165f9"
+          "bytes": 35417,
+          "sha256": "sha256:abe694338759715ac5289ddd54fe81626155b25ee6a2bd07c0825526da8437fa"
         }
       ]
     },
     "rnn-implementation-training-5": {
-      "code_fingerprint": "sha256:d44a12cd4f2d2ad0105c1a9321f1e3a8c200abdfa651a9b47f602ac6f12d84c4",
+      "code_fingerprint": "sha256:11f3330b7f1aa8a57f8027795575b5ac596409976316119cf7e033faf29fe030",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.34 bits per byte\n"
+          "text": "2.78 bytes/token, 2.33 bits per byte\n"
         }
       ]
     },
     "rnn-implementation-embeddings-under-sgd-1": {
-      "code_fingerprint": "sha256:dcb4dc2ba808be2881bc5221523345c9abded4d002c7650f0f84a328333832b1",
+      "code_fingerprint": "sha256:771360f8401cff9f24b8ca097d7857aec136386b01960ae10dd936f67153b983",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-embeddings-under-sgd-2": {
-      "code_fingerprint": "sha256:ab6caf4fee759a0f4b7d839e6957df69c9d2db01d22bf6197e55981404fd9cff",
+      "code_fingerprint": "sha256:5ad26962036d7cd97104dc384a8d53d33213ce89c352a817d6ba3704c34c24cb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean change of an embedding row: 4.1% of its length\n"
+          "text": "mean change of an embedding row: 4.3% of its length\n"
         }
       ]
     },
     "rnn-implementation-a-wider-embedding-with-dropout-1": {
-      "code_fingerprint": "sha256:aa1103d98b84b0c0a2fc98079bc77d8c1a9b2e9986d86cb4fbe754d28acc5774",
+      "code_fingerprint": "sha256:6c91c3995389fc5a6af90d81494d373990cfefa70f2d72606145a70ee4c50973",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-a-wider-embedding-with-dropout-2": {
-      "code_fingerprint": "sha256:99e4be24f97dc7a8d723bf6191e8a7b61a0b7a95bc7b170767f74abcb0a7f154",
+      "code_fingerprint": "sha256:076215c9863d0f5e883eebeffa3b189353949f9cff74fe8c1183a8ff5f1fd9f1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-wider-embedding-with-dropout-2-1.svg",
-          "bytes": 23609,
-          "sha256": "sha256:093912c44ef45a57350c6abd6735a5fcf40f5a43d1ae970b9a16a822afbc6473"
+          "bytes": 23615,
+          "sha256": "sha256:815d9a424f4e722a61e627287e8fc564484c57a6f3035550826f3ba912dcef0e"
         }
       ]
     },
     "rnn-implementation-a-wider-embedding-with-dropout-3": {
-      "code_fingerprint": "sha256:5ee8ebef00cf20117f1373b39d1f6de3c0734f6efc2bdcb3afca79c736b3bfd9",
+      "code_fingerprint": "sha256:3260548bac6048923edcf7d5230c9d38ec47d413bbe4ce06bf3c7c6b5f97cd2c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 59.8, 2.12 bits per byte\n"
+          "text": "validation perplexity 60.2, 2.13 bits per byte\n"
         }
       ]
     },
     "rnn-implementation-training-6": {
-      "code_fingerprint": "sha256:6071e263db2e6dbb2eca35b583cd78028cca4abfc424f785c952470ed1b493e6",
+      "code_fingerprint": "sha256:07c801b39e5cbea9ec931fb67786fe0abddf8f244b9fd16e6da681a144a8dbbe",
       "kind": "text",
       "outputs": [
         {
@@ -209,51 +209,51 @@
       ]
     },
     "rnn-implementation-comparison-with-kneser-ney-1": {
-      "code_fingerprint": "sha256:19416a3a4d37f928aff0bececc20117da5ec737008ab54e81720ba0a5f78aa2a",
+      "code_fingerprint": "sha256:3edb1b2e756a8444fdb1bc13730cea51101cc9340ef347f60d1ca05a8bdd60fc",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-comparison-with-kneser-ney-2": {
-      "code_fingerprint": "sha256:daedb2a8e6f5d839ebaf646e458b7c09f4db653e404dcb8f6e998348fcbcf4ba",
+      "code_fingerprint": "sha256:0920db1d3635595733ac37a41f6e595ef63b5af85e0e403f0f6aa35089034a6c",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-comparison-with-kneser-ney-3": {
-      "code_fingerprint": "sha256:f484ba1f02e2e458f98d1e44d88a64e1d4e2a55f00716d540422515f7e59c059",
+      "code_fingerprint": "sha256:94e3d649455057b2001c6f45b40a09f34e97be124a73bc309f8dea590eb53fc2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN: 2.12 bits per byte\nKN trigram: 2.09 bits per byte\nmixture: 2.03 bits per byte\nthe RNN is the more confident model on 50% of the tokens\n"
+          "text": "RNN: 2.12 bits per byte\nKN trigram: 2.09 bits per byte\nmixture: 2.03 bits per byte\nthe RNN is the more confident model on 51% of the tokens\n"
         }
       ]
     },
     "rnn-implementation-comparison-with-kneser-ney-4": {
-      "code_fingerprint": "sha256:2c95e0fb9f1ebc3a0307b1e526d6d3d65c29f763128d82bc0cef12b0cd4e77b2",
+      "code_fingerprint": "sha256:fe31cd63c1640c3bcd21337e5368f8729e7f9c66aebab5140c20598de7cf5c82",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.3, 2.14, 2.12, 2.12, 2.12, 2.12]\n"
+          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.29, 2.14, 2.13, 2.12, 2.12, 2.12]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-comparison-with-kneser-ney-4-1.svg",
-          "bytes": 28104,
-          "sha256": "sha256:b0071ec5f81492aa1aab6fa0527767fc375bee916d4601c1a61c77655ed2a8ed"
+          "bytes": 28425,
+          "sha256": "sha256:ffa0abc7ba4fb2d6dc1ed6f196eb10d174396f3da8b67ab292972da5c6dfeb08"
         }
       ]
     },
     "rnn-implementation-generating-text-1": {
-      "code_fingerprint": "sha256:d4cdb9320601e5059220aa0a591b5df2ea8d6b0db79eb399d90699d2de769206",
+      "code_fingerprint": "sha256:b442cbb5e757fe3345c532c8c33e8c51ffa6a4371ad041d90738dfe23cf09093",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-generating-text-2": {
-      "code_fingerprint": "sha256:5daa7ae5b045fca1ed26e56eb320c4de24820252c683455ae9f83195c7b2ec59",
+      "code_fingerprint": "sha256:2940b0baead720d6561a40e4ea43382a8fa1db5b794fe37781fdcb72acf6cc48",
       "kind": "text",
       "outputs": [
         {
@@ -264,41 +264,41 @@
       ]
     },
     "rnn-implementation-concise-implementation-1": {
-      "code_fingerprint": "sha256:11bbb635516da61f166bf314a4f5569a565e7c49df1ef4f22f1278c6b324ae0c",
+      "code_fingerprint": "sha256:a519cea7c091e58a1cf11337abf898ae8034c0b98e7c3b4f521a7a367fb60421",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-2": {
-      "code_fingerprint": "sha256:2ce46d24f4cb1e1156c0d56225b304347e2fd4610a6d140b086924f46b83c4fb",
+      "code_fingerprint": "sha256:32b2e022a6d455c204da64b9637f2926db7fe3eeec92cbf051680b7c6b42c246",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-3": {
-      "code_fingerprint": "sha256:9831a8bde531bcbdff118304ad074e5597879b3dbd917a19f7d3ae02a74957c8",
+      "code_fingerprint": "sha256:7f61227e50b5554c84ee29896bbef8cb75070537b20c9a88acf4f82a4b6ee9bd",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-5": {
-      "code_fingerprint": "sha256:eb46a7855b32e88b377761d1fdfb8c68d3321003d3c86133e8cd91daac457b72",
+      "code_fingerprint": "sha256:ead91c74655a16dfa58592467974de5a12ff0bc19e18d73affe1b8b8fdcead5f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 23609,
-          "sha256": "sha256:03be0a9a632956a922a2369ea2c7078ab777a1c5da7871ecbe0556fd53769747"
+          "bytes": 23611,
+          "sha256": "sha256:08f8fc75c9ced45e8b68fc5dc5752d8443c5ca669acb3706b6a6cca32fa06910"
         }
       ]
     },
     "rnn-implementation-concise-implementation-6": {
-      "code_fingerprint": "sha256:d0727a8f364f1651d8fd7d4c22d76100b8a464ba53aa1834c3f6250122547a86",
+      "code_fingerprint": "sha256:df9023980b2797699cc6f7f6a317b12f21388e21180ad7ea8087d9e57225bcb5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 59.2, 'The Time Traveller, and\\nthese, and\\nthe\\nside,\n    and\\nthe\\nside, and\\nthe\\nside, and\\nthe'\n"
+          "text": "perplexity 58.9, 'The Time Traveller, and I was a little\\nfrail. I had\n    a\\nfrail. I had a\\nfrail. I had a'\n"
         }
       ]
     }

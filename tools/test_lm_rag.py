@@ -3,7 +3,11 @@
 written before the section: `gold_chunk_ids` on a hand-made three-document
 corpus under two chunkings, with and without the alternative spans; the
 `book_qa` reader on a fixture question-set zip (splits, filters, the
-stratified `subset`, `stats`, the notice on a second `test` load)."""
+stratified `subset`, `stats`, the notice on a second `test` load); the prompt, citation and
+judge helpers (`rag_prompt`, `parse_citations`, `_rag_parse_json`,
+`rag_judge` with a stub judge); the pure functions of
+tools/build_book_qa.py (evidence spans, lexical filter, phrase blacklist,
+identifier flag, kappa, deterministic zip)."""
 import contextlib
 import hashlib
 import io
@@ -133,6 +137,149 @@ class Reader(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             d2l.book_qa('test', root=self.root)
         self.assertIn('loaded a second time', out.getvalue())
+
+
+class Prompts(unittest.TestCase):
+    def test_rag_prompt(self):
+        hits = [dict(heading_path=['Ch', 'Sec'], text='alpha'),
+                dict(heading_path=['Ch'], text='beta')]
+        m = d2l.rag_prompt('Why?', hits)
+        self.assertIn('[1] Ch > Sec\nalpha', m[1]['content'])
+        self.assertIn('[2] Ch\nbeta', m[1]['content'])
+        self.assertTrue(m[0]['content'].endswith(d2l.ABSTAIN))
+        closed = d2l.rag_prompt('Why?', None)
+        self.assertNotIn('Passages', closed[1]['content'])
+        self.assertNotIn('cite', closed[0]['content'])
+        self.assertTrue(closed[0]['content'].endswith(d2l.ABSTAIN))
+
+    def test_parse_citations(self):
+        self.assertEqual(d2l.parse_citations('a [1] b [1][3] c [2, 5]', 4),
+                         [1, 3, 2])
+        self.assertEqual(d2l.parse_citations('none here', 4), [])
+        self.assertEqual(d2l.parse_citations('[0] [9]', 4), [])
+
+    def test_parse_json(self):
+        keys = ['correct', 'faithful']
+        self.assertEqual(d2l._rag_parse_json(
+            'x {"correct": true, "faithful": "no"} y', keys),
+            {'correct': True, 'faithful': False})
+        self.assertIsNone(d2l._rag_parse_json('{"correct": true}', keys))
+        self.assertIsNone(d2l._rag_parse_json('not json', keys))
+        self.assertEqual(d2l._rag_parse_json(
+            '{"a": 1} {"correct": false, "faithful": true}', keys),
+            {'correct': False, 'faithful': True})
+
+    def test_abstained(self):
+        self.assertTrue(d2l._rag_abstained(' ' + d2l.ABSTAIN.upper()))
+        self.assertTrue(d2l._rag_abstained(d2l.ABSTAIN[:-1]))
+        self.assertFalse(d2l._rag_abstained('It is 4. ' + d2l.ABSTAIN))
+
+
+class StubJudge(unittest.TestCase):
+    """rag_judge with d2l.generate replaced: abstentions by string match,
+    closed book judged for 'correct' only, one retry on malformed JSON."""
+    def test_verdicts(self):
+        replies = iter(['{"correct": true}', 'garbage',
+                        '{"correct": false, "faithful": true, '
+                        '"supported": false}'])
+        retry = iter(['{"correct": true, "faithful": true, '
+                      '"supported": true}'])
+        calls = []
+        def fake(model, tok, prompts, **kw):
+            calls.append(prompts)
+            src = replies if len(calls) == 1 else retry
+            return [d2l.Generation(next(src), [], None, 'eos')
+                    for _ in prompts]
+        q = dict(question='Q', reference='R', key_facts=['f'],
+                 answerable=True)
+        u = dict(question='Q', reference='none', key_facts=[],
+                 answerable=False)
+        old, d2l.generate = d2l.generate, fake
+        try:
+            v = d2l.rag_judge(None, None, [q, q, q, u, q],
+                              [dict(answer='A'), dict(answer='A [1]',
+                                                      cited_ids=[1]),
+                               dict(answer='B'), dict(answer=d2l.ABSTAIN),
+                               dict(answer=d2l.ABSTAIN)],
+                              [[], ['p'], ['p'], ['p'], []])
+        finally:
+            d2l.generate = old
+        self.assertEqual(v[0], dict(correct=True, faithful=None,
+                                    supported=None))
+        self.assertEqual(v[1], dict(correct=True, faithful=True,
+                                    supported=True))  # after the retry
+        self.assertEqual(v[2], dict(correct=False, faithful=True,
+                                    supported=False))
+        self.assertEqual(v[3], dict(correct=True, faithful=True,
+                                    supported=None))
+        self.assertEqual(v[4], dict(correct=False, faithful=True,
+                                    supported=None))
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls[0]), 3)  # abstentions never reach it
+        self.assertEqual(calls[1][0][-1]['content'],
+                         d2l.RAG_JUDGE_V1['retry'])
+
+
+class BuildBookQA(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'build_book_qa.py')
+        spec = importlib.util.spec_from_file_location('build_book_qa', path)
+        cls.m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.m)
+
+    def test_evidence(self):
+        f = self.m.find_evidence
+        text = 'The block adds its\ninput to the output.'
+        self.assertEqual(f(text, 'adds its input to'), (10, 27))
+        self.assertEqual(f(text, 'The block adds'), (0, 14))
+        self.assertIsNone(f(text, 'removes its input'))
+        self.assertIsNone(f(text, 'adds'))  # too short to anchor
+
+    def test_lexical(self):
+        anchor = ('We note that each convolution followed by batch '
+                  'normalization drops the `conv_bias` term.')
+        jac, shared = self.m.lexical_check(
+            'Why does each convolution followed by batch normalization '
+            'lose a term?', anchor)
+        self.assertEqual(shared, ['convolution followed by batch '
+                                  'normalization', 'each convolution '
+                                  'followed by batch'])
+        jac, shared = self.m.lexical_check(
+            'Which term does `conv_bias` drop?', anchor)
+        self.assertEqual(shared, [])
+        self.assertLess(jac, 0.5)
+
+    def test_phrases_and_identifiers(self):
+        bad = self.m.CONTEXT_PHRASES.search
+        self.assertTrue(bad('What does the passage say about Adam?'))
+        self.assertTrue(bad('What does this section define?'))
+        self.assertTrue(bad('Which value is shown above?'))
+        self.assertFalse(bad('What learning rate does the book use for '
+                             'AdamW in its transformer example?'))
+        ident = self.m.identifier_flag
+        for q in ('What does `foo` return?', 'Why use batch_size 64?',
+                  'What does d2l.Trainer do?', 'When is nn.Linear lazy?',
+                  'What does fit() call?', 'Why is LayerNorm used?'):
+            self.assertTrue(ident(dict(question=q, reference='')), q)
+        self.assertFalse(ident(dict(question='Why, e.g., use dropout?',
+                                    reference='It regularizes.')))
+
+    def test_kappa(self):
+        k = self.m.kappa
+        self.assertAlmostEqual(k([1, 1, 0, 0], [1, 1, 0, 0]), 1.0)
+        self.assertAlmostEqual(k([1, 0, 1, 0], [1, 1, 0, 0]), 0.0)
+        self.assertIsNone(k([1, 1], [1, 1]))
+
+    def test_zip_deterministic(self):
+        with tempfile.TemporaryDirectory() as d:
+            a, b = os.path.join(d, 'a.zip'), os.path.join(d, 'b.zip')
+            self.m.write_zip(a, {'y': b'2', 'x': b'1'})
+            self.m.write_zip(b, {'x': b'1', 'y': b'2'})
+            with open(a, 'rb') as f, open(b, 'rb') as g:
+                self.assertEqual(f.read(), g.read())
 
 
 if __name__ == '__main__':

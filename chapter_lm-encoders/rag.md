@@ -53,6 +53,19 @@ from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
+<!-- Placeholder (stage 2): the registry of the section's artifacts: the book's question set and the API responses it was built from (tools/build_book_qa.py --mode replay rebuilds the set from them). -->
+
+```{.python .input #rag-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-book-qa-v1'] = (  # corpus r3.1; 5,865 train, 240 dev, 240 test
+    d2l.LM_DATA_URL + 'lm-book-qa-v1.zip',
+    '3b8dba5ceae43c88274e52ce6ae7525884ea4168')
+d2l.DATA_HUB['lm-book-qa-api-cache-v1'] = (  # its drafts, checks, verdicts
+    d2l.LM_DATA_URL + 'lm-book-qa-api-cache-v1.zip',
+    '962322fd53b3573daeaa50a92d3f53f25a25572d')
+```
+
 <!-- Placeholder (stage 2): the book's question set by split, and the chunks that count as relevant for an item under any chunking. -->
 
 ```{.python .input #rag-qa-def}
@@ -80,4 +93,104 @@ def gold_chunk_ids(item, corpus, min_overlap=0.5, include_alt=True):
     spans = item['gold_spans'] + (item['alt_spans'] if include_alt else [])
     return {i for s in spans for i in corpus.span_to_chunk_ids(
         s['doc_id'], s['char_start'], s['char_end'], min_overlap)}
+```
+
+<!-- Placeholder (stage 2): the fixed grounded prompt with numbered passages and the abstention string; without passages it is the closed-book prompt. -->
+
+```{.python .input #rag-prompt-defs}
+%%tab pytorch
+#@save
+ABSTAIN = 'I cannot answer this from the provided passages.'
+
+#@save
+def rag_prompt(question, hits, abstain=ABSTAIN):
+    """Chat messages asking for an answer from numbered passages (hits: Hit
+    records or dicts with heading_path and text), each statement citing
+    them as [n], or the abstention string; hits=None gives the closed-book
+    prompt (no passages, no citations)."""
+    if hits is None:
+        system = ('You answer questions about the textbook Dive into Deep '
+                  'Learning. If you do not know the answer, reply exactly: '
+                  + abstain)
+        user = f'Question: {question}\nAnswer in at most four sentences.'
+    else:
+        system = ('You answer questions about the textbook Dive into Deep '
+                  'Learning using only the numbered passages. After each '
+                  'statement, cite the passage numbers that support it, for '
+                  'example [2]. If the passages do not contain the answer, '
+                  'reply exactly: ' + abstain)
+        get = lambda h, k: h[k] if isinstance(h, dict) else getattr(h, k)
+        passages = '\n\n'.join(
+            f'[{n}] {" > ".join(get(h, "heading_path"))}\n{get(h, "text")}'
+            for n, h in enumerate(hits, start=1))
+        user = (f'Passages:\n{passages}\n\nQuestion: {question}\n'
+                f'Answer in at most four sentences.')
+    return [{'role': 'system', 'content': system},
+            {'role': 'user', 'content': user}]
+
+def parse_citations(answer, n_chunks):
+    """The passage numbers an answer cites ([1], [1][3], [1, 3]), in order
+    of first mention, without numbers outside 1..n_chunks."""
+    out = []
+    for group in re.findall(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
+        for n in map(int, group.split(',')):
+            if 1 <= n <= n_chunks and n not in out:
+                out.append(n)
+    return out
+```
+
+<!-- Placeholder (stage 2): the reference-based judge (Qwen3.5-4B, prompt RAG_JUDGE_V1): correct, faithful, supported. -->
+
+```{.python .input #rag-judge-defs}
+%%tab pytorch
+#@save
+def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8):
+    """The judge's verdicts on an answer: 'correct' (every key fact stated,
+    nothing contradicting the reference), 'faithful' (every statement
+    supported by the passages given) and 'supported' (the cited passages
+    alone support it). result is a RAGResult or a dict with answer and
+    cited_ids (1-based passage numbers). An abstention is decided by string
+    match, not by the judge: it is correct exactly for an unanswerable item.
+    Without passages only 'correct' is judged. item, result and
+    context_texts may also be lists (a list of verdicts comes back, judged
+    in batches). A verdict missing from the judge's JSON after one retry is
+    None."""
+    single = isinstance(item, dict)
+    items, results, contexts = (([item], [result], [context_texts])
+                                if single else (item, result, context_texts))
+    verdicts, jobs = [], []
+    for i, (q, r, ctx) in enumerate(zip(items, results, contexts)):
+        r = r._asdict() if hasattr(r, '_asdict') else r
+        answer, ctx = r['answer'].strip(), list(ctx or [])
+        abstained = d2l._rag_abstained(answer)
+        v = {'correct': None, 'faithful': None, 'supported': None}
+        if abstained or not q['answerable']:
+            v['correct'] = abstained and not q['answerable']
+        if abstained:
+            v['faithful'] = True  # an abstention states nothing
+        verdicts.append(v)
+        keys = [] if abstained else [
+            k for k in ('correct', 'faithful', 'supported')
+            if v[k] is None and (k == 'correct' or ctx)]
+        if keys:
+            cited = r.get('cited_ids') or []
+            jobs.append((i, keys, d2l._rag_judge_messages(
+                q, answer, ctx, cited)))
+    for attempt in range(2):  # one retry, with the malformed reply shown
+        if not jobs:
+            break
+        gens = d2l.generate(judge, tokenizer, [m for _, _, m in jobs],
+                            max_new_tokens=64, chat=True,
+                            enable_thinking=False, batch_size=batch_size)
+        retry = []
+        for (i, keys, messages), g in zip(jobs, gens):
+            parsed = d2l._rag_parse_json(g.text, keys)
+            if parsed is None and attempt == 0:
+                retry.append((i, keys, messages + [
+                    {'role': 'assistant', 'content': g.text},
+                    {'role': 'user', 'content': d2l.RAG_JUDGE_V1['retry']}]))
+            for k in keys:
+                verdicts[i][k] = None if parsed is None else parsed[k]
+        jobs = retry
+    return verdicts[0] if single else verdicts
 ```

@@ -7583,6 +7583,13 @@ class BookRetriever:
         self._enc = self._rr = None
         d2l.lm_free()
 
+d2l.DATA_HUB['lm-book-qa-v1'] = (  # corpus r3.1; 5,865 train, 240 dev, 240 test
+    d2l.LM_DATA_URL + 'lm-book-qa-v1.zip',
+    '3b8dba5ceae43c88274e52ce6ae7525884ea4168')
+d2l.DATA_HUB['lm-book-qa-api-cache-v1'] = (  # its drafts, checks, verdicts
+    d2l.LM_DATA_URL + 'lm-book-qa-api-cache-v1.zip',
+    '962322fd53b3573daeaa50a92d3f53f25a25572d')
+
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):
     """The book's question set (artifact lm-book-qa-v1), one split: a
@@ -7607,6 +7614,97 @@ def gold_chunk_ids(item, corpus, min_overlap=0.5, include_alt=True):
     spans = item['gold_spans'] + (item['alt_spans'] if include_alt else [])
     return {i for s in spans for i in corpus.span_to_chunk_ids(
         s['doc_id'], s['char_start'], s['char_end'], min_overlap)}
+
+ABSTAIN = 'I cannot answer this from the provided passages.'
+
+def rag_prompt(question, hits, abstain=ABSTAIN):
+    """Chat messages asking for an answer from numbered passages (hits: Hit
+    records or dicts with heading_path and text), each statement citing
+    them as [n], or the abstention string; hits=None gives the closed-book
+    prompt (no passages, no citations).
+
+    Defined in :numref:`sec_lm_rag`"""
+    if hits is None:
+        system = ('You answer questions about the textbook Dive into Deep '
+                  'Learning. If you do not know the answer, reply exactly: '
+                  + abstain)
+        user = f'Question: {question}\nAnswer in at most four sentences.'
+    else:
+        system = ('You answer questions about the textbook Dive into Deep '
+                  'Learning using only the numbered passages. After each '
+                  'statement, cite the passage numbers that support it, for '
+                  'example [2]. If the passages do not contain the answer, '
+                  'reply exactly: ' + abstain)
+        get = lambda h, k: h[k] if isinstance(h, dict) else getattr(h, k)
+        passages = '\n\n'.join(
+            f'[{n}] {" > ".join(get(h, "heading_path"))}\n{get(h, "text")}'
+            for n, h in enumerate(hits, start=1))
+        user = (f'Passages:\n{passages}\n\nQuestion: {question}\n'
+                f'Answer in at most four sentences.')
+    return [{'role': 'system', 'content': system},
+            {'role': 'user', 'content': user}]
+
+def parse_citations(answer, n_chunks):
+    """The passage numbers an answer cites ([1], [1][3], [1, 3]), in order
+    of first mention, without numbers outside 1..n_chunks."""
+    out = []
+    for group in re.findall(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
+        for n in map(int, group.split(',')):
+            if 1 <= n <= n_chunks and n not in out:
+                out.append(n)
+    return out
+
+def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8):
+    """The judge's verdicts on an answer: 'correct' (every key fact stated,
+    nothing contradicting the reference), 'faithful' (every statement
+    supported by the passages given) and 'supported' (the cited passages
+    alone support it). result is a RAGResult or a dict with answer and
+    cited_ids (1-based passage numbers). An abstention is decided by string
+    match, not by the judge: it is correct exactly for an unanswerable item.
+    Without passages only 'correct' is judged. item, result and
+    context_texts may also be lists (a list of verdicts comes back, judged
+    in batches). A verdict missing from the judge's JSON after one retry is
+    None.
+
+    Defined in :numref:`sec_lm_rag`"""
+    single = isinstance(item, dict)
+    items, results, contexts = (([item], [result], [context_texts])
+                                if single else (item, result, context_texts))
+    verdicts, jobs = [], []
+    for i, (q, r, ctx) in enumerate(zip(items, results, contexts)):
+        r = r._asdict() if hasattr(r, '_asdict') else r
+        answer, ctx = r['answer'].strip(), list(ctx or [])
+        abstained = d2l._rag_abstained(answer)
+        v = {'correct': None, 'faithful': None, 'supported': None}
+        if abstained or not q['answerable']:
+            v['correct'] = abstained and not q['answerable']
+        if abstained:
+            v['faithful'] = True  # an abstention states nothing
+        verdicts.append(v)
+        keys = [] if abstained else [
+            k for k in ('correct', 'faithful', 'supported')
+            if v[k] is None and (k == 'correct' or ctx)]
+        if keys:
+            cited = r.get('cited_ids') or []
+            jobs.append((i, keys, d2l._rag_judge_messages(
+                q, answer, ctx, cited)))
+    for attempt in range(2):  # one retry, with the malformed reply shown
+        if not jobs:
+            break
+        gens = d2l.generate(judge, tokenizer, [m for _, _, m in jobs],
+                            max_new_tokens=64, chat=True,
+                            enable_thinking=False, batch_size=batch_size)
+        retry = []
+        for (i, keys, messages), g in zip(jobs, gens):
+            parsed = d2l._rag_parse_json(g.text, keys)
+            if parsed is None and attempt == 0:
+                retry.append((i, keys, messages + [
+                    {'role': 'assistant', 'content': g.text},
+                    {'role': 'user', 'content': d2l.RAG_JUDGE_V1['retry']}]))
+            for k in keys:
+                verdicts[i][k] = None if parsed is None else parsed[k]
+        jobs = retry
+    return verdicts[0] if single else verdicts
 
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
@@ -14571,6 +14669,75 @@ class BookQA(list):
         picked = sorted(i for g in keys for i in rng.choice(
             groups[g], size=min(take[g], len(groups[g])), replace=False))
         return BookQA([self[i] for i in picked], self.split)
+
+# The judge's prompt, version 1: frozen before the book's question set was
+# built (its closed-book flags use it); a change is RAG_JUDGE_V2 and a new
+# question-set version
+RAG_JUDGE_V1 = {
+    'system': ('You grade answers to questions about the textbook Dive into '
+               'Deep Learning. Reply with one line of JSON and nothing '
+               'else.'),
+    'correct': ('correct: true if the answer states every key fact (in any '
+                'wording) and says nothing that contradicts the reference '
+                'answer; otherwise false.'),
+    'faithful': ('faithful: true if every factual statement in the answer is '
+                 'supported by the passages given (ignore the reference '
+                 'answer for this); otherwise false.'),
+    'supported': ('supported: true if the cited passages alone support the '
+                  'answer; false if they do not, or if the answer cites '
+                  'nothing.'),
+    'retry': 'Reply with the JSON line only, in exactly the requested form.'}
+
+def _rag_abstained(answer):
+    """Whether an answer is the abstention string (case, surrounding
+    whitespace and quotes, and a final period ignored).
+
+    Defined in :numref:`sec_lm_rag`"""
+    norm = lambda s: s.strip().strip('"\'*').rstrip('.').strip().lower()
+    return norm(answer) == norm(d2l.ABSTAIN)
+
+def _rag_judge_messages(item, answer, context_texts, cited_ids):
+    """The judge's chat messages (RAG_JUDGE_V1) for the verdicts it has to
+    give on one answer: 'correct' always, 'faithful' and 'supported' when
+    there are passages."""
+    p = d2l.RAG_JUDGE_V1
+    facts = '\n'.join(f'- {f}' for f in item['key_facts']) or '- (none)'
+    parts = [f'Question: {item["question"]}',
+             f'Reference answer: {item["reference"]}', f'Key facts:\n{facts}']
+    keys = ['correct']
+    if context_texts:
+        keys += ['faithful', 'supported']
+        parts.append('Passages given to the system:\n' + '\n\n'.join(
+            f'[{n}] {t}' for n, t in enumerate(context_texts, start=1)))
+        parts.append('Cited passages: ' + (', '.join(
+            f'[{n}]' for n in cited_ids) if cited_ids else 'none'))
+    form = json.dumps({k: True for k in keys})
+    parts += [f'Answer to grade: {answer}', 'Decide:\n' + '\n'.join(
+        p[k] for k in keys), f'Reply exactly in this form: {form}']
+    return [{'role': 'system', 'content': p['system']},
+            {'role': 'user', 'content': '\n\n'.join(parts)}]
+
+def _rag_parse_json(text, keys):
+    """{key: bool} from the first JSON object in a reply that has every
+    one of keys as a boolean (or 'yes'/'no', 'true'/'false'); None if
+    there is none."""
+    for m in re.finditer(r'\{[^{}]*\}', text):
+        try:
+            obj = json.loads(m.group(0))
+        except ValueError:
+            continue
+        out = {}
+        for k in keys:
+            v = obj.get(k)
+            if isinstance(v, str) and v.strip().lower() in (
+                    'yes', 'no', 'true', 'false'):
+                v = v.strip().lower() in ('yes', 'true')
+            if not isinstance(v, bool):
+                break
+            out[k] = v
+        else:
+            return out
+    return None
 
 
 ones_like = torch.ones_like

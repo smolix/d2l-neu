@@ -8,8 +8,10 @@ scans it for `#@save` blocks, and `gen_notebooks.py` excludes it via
 uses these symbols at import time). It holds the library code that
 :numref:`sec_lm_rag` explains in a sentence but does not show: the reader of
 the question-set artifact (`_book_qa_read`, with the notice on a second load
-of the `test` split in one process) and the item list `BookQA` (`stats`,
-`subset`).
+of the `test` split in one process), the item list `BookQA` (`stats`,
+`subset`), and the judge's frozen prompt `RAG_JUDGE_V1` with its message
+builder and JSON parser (the question set's closed-book flags use them, so
+they were fixed before the set was built).
 
 Every block is tagged `%%tab pytorch`; a module-level import would join the
 `_preamble` shard and move the freshness fingerprint of every notebook in the
@@ -77,4 +79,76 @@ class BookQA(list):
         picked = sorted(i for g in keys for i in rng.choice(
             groups[g], size=min(take[g], len(groups[g])), replace=False))
         return BookQA([self[i] for i in picked], self.split)
+```
+
+```{.python .input #rag-lib-judge}
+%%tab pytorch
+#@save
+# The judge's prompt, version 1: frozen before the book's question set was
+# built (its closed-book flags use it); a change is RAG_JUDGE_V2 and a new
+# question-set version
+RAG_JUDGE_V1 = {
+    'system': ('You grade answers to questions about the textbook Dive into '
+               'Deep Learning. Reply with one line of JSON and nothing '
+               'else.'),
+    'correct': ('correct: true if the answer states every key fact (in any '
+                'wording) and says nothing that contradicts the reference '
+                'answer; otherwise false.'),
+    'faithful': ('faithful: true if every factual statement in the answer is '
+                 'supported by the passages given (ignore the reference '
+                 'answer for this); otherwise false.'),
+    'supported': ('supported: true if the cited passages alone support the '
+                  'answer; false if they do not, or if the answer cites '
+                  'nothing.'),
+    'retry': 'Reply with the JSON line only, in exactly the requested form.'}
+
+#@save
+def _rag_abstained(answer):
+    """Whether an answer is the abstention string (case, surrounding
+    whitespace and quotes, and a final period ignored)."""
+    norm = lambda s: s.strip().strip('"\'*').rstrip('.').strip().lower()
+    return norm(answer) == norm(d2l.ABSTAIN)
+
+def _rag_judge_messages(item, answer, context_texts, cited_ids):
+    """The judge's chat messages (RAG_JUDGE_V1) for the verdicts it has to
+    give on one answer: 'correct' always, 'faithful' and 'supported' when
+    there are passages."""
+    p = d2l.RAG_JUDGE_V1
+    facts = '\n'.join(f'- {f}' for f in item['key_facts']) or '- (none)'
+    parts = [f'Question: {item["question"]}',
+             f'Reference answer: {item["reference"]}', f'Key facts:\n{facts}']
+    keys = ['correct']
+    if context_texts:
+        keys += ['faithful', 'supported']
+        parts.append('Passages given to the system:\n' + '\n\n'.join(
+            f'[{n}] {t}' for n, t in enumerate(context_texts, start=1)))
+        parts.append('Cited passages: ' + (', '.join(
+            f'[{n}]' for n in cited_ids) if cited_ids else 'none'))
+    form = json.dumps({k: True for k in keys})
+    parts += [f'Answer to grade: {answer}', 'Decide:\n' + '\n'.join(
+        p[k] for k in keys), f'Reply exactly in this form: {form}']
+    return [{'role': 'system', 'content': p['system']},
+            {'role': 'user', 'content': '\n\n'.join(parts)}]
+
+def _rag_parse_json(text, keys):
+    """{key: bool} from the first JSON object in a reply that has every
+    one of keys as a boolean (or 'yes'/'no', 'true'/'false'); None if
+    there is none."""
+    for m in re.finditer(r'\{[^{}]*\}', text):
+        try:
+            obj = json.loads(m.group(0))
+        except ValueError:
+            continue
+        out = {}
+        for k in keys:
+            v = obj.get(k)
+            if isinstance(v, str) and v.strip().lower() in (
+                    'yes', 'no', 'true', 'false'):
+                v = v.strip().lower() in ('yes', 'true')
+            if not isinstance(v, bool):
+                break
+            out[k] = v
+        else:
+            return out
+    return None
 ```

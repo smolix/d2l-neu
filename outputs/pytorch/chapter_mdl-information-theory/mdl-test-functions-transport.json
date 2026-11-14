@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-information-theory/mdl-test-functions-transport.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:71e33333c662d72536a41ae7c1868cbba72c153aab96dfc98aa0e83cf1aebd01",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-test-functions-transport-test-functions-and-transport-1": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-test-functions-transport-test-functions-and-transport-2": {
+      "code_fingerprint": "sha256:b5e7bce057acabc108f3780c214459fbd00741b884eeef4f913b8b8278a1532e",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-test-functions-transport-test-functions-and-transport-3": {
+      "code_fingerprint": "sha256:1a7e1b4e675e60766bdf38ab7a08afe2e5b3f2f750bd28bebb0450b091925e5b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   d      KL   slope      JS   slope      TV   slope   MMD^2   slope      W1   slope\n 0.5   0.125 5.0e-01   0.030 1.2e-01   0.197 3.9e-01   0.047 1.8e-01   0.500 1.0e+00\n 1.0   0.500 1.0e+00   0.111 2.0e-01   0.383 3.5e-01   0.177 3.3e-01   1.000 1.0e+00\n 2.0   2.000 2.0e+00   0.337 2.2e-01   0.683 2.4e-01   0.562 4.0e-01   2.000 1.0e+00\n 4.0   8.000 4.0e+00   0.633 6.9e-02   0.954 5.4e-02   1.074 1.1e-01   4.000 1.0e+00\n 8.0  32.000 8.0e+00   0.693 2.0e-04   1.000 1.3e-04   1.155 7.2e-05   8.000 1.0e+00\n"
+        }
+      ]
+    },
+    "divergences-distances-mmd": {
+      "code_fingerprint": "sha256:917b611b826a42aa2b9cf7bb8da79ca70eb23d2039331c429b3730853cf73919",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0033  (population 0.0000)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "quadratic, N(0,1) vs N(0,4)    MMD^2 = +10.2618  (population 9.0000)\nRBF,       N(0,1) vs N(0,4)    MMD^2 = +0.1180  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = +0.0001  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0351  (population 0.0471)\n"
+        }
+      ]
+    },
+    "mdl-divergences-distances-integral-probability-metrics-and-mmd-1": {
+      "code_fingerprint": "sha256:af381c6968b43741ddbf4589fccf9f3657643d3fcf3e6ad6370e86de09892252",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "witness changes sign at x = 0.35\nE_P g - E_Q g = 0.0360\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-test-functions-transport/mdl-divergences-distances-integral-probability-metrics-and-mmd-1-1.svg",
+          "bytes": 27733,
+          "sha256": "sha256:92aee9d1a82b34d334dae4ebd232279b0f7f4e13f28bc667d887a8f10cd5bc18"
+        }
+      ]
+    },
+    "divergences-distances-w1": {
+      "code_fingerprint": "sha256:a0a45bb9dca2796df18141410954621ed6e0a0f27daee3d35b2fe4ae86fcf74b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "W1 from the CDF gaps     : 1.7000\nW1 from the LP           : 1.7000\ncost of the monotone plan: 1.7000\nLP plan = monotone plan  : False, mass the LP plan moves leftward: 0.00\n"
+        }
+      ]
+    },
+    "divergences-distances-sinkhorn": {
+      "code_fingerprint": "sha256:d1d360876f32a24c9eb7a233049f240e1b23647330d6eaee02153049f00a7313",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "squared cost, LP optimum : 3.50000\nepsilon = 2.0:     47 iterations, entropic cost = 4.06489, routes above 1e-3 = 25\nepsilon = 0.5:    186 iterations, entropic cost = 3.56963, routes above 1e-3 = 14\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 0.1: 154325 iterations, entropic cost = 3.50002, routes above 1e-3 = 10\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-test-functions-transport/divergences-distances-sinkhorn-1.svg",
+          "bytes": 32795,
+          "sha256": "sha256:9b21a529b9d5236d9a32866cebf11a71f1fb00e2344f3d269156f95dbbea71da"
+        }
+      ]
+    }
+  }
+}

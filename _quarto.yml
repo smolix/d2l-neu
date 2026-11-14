@@ -420,6 +420,8 @@ book:
         - chapter_mdl-information-theory/mdl-information-theory.qmd
         - chapter_mdl-information-theory/mdl-coding-compression.qmd
         - chapter_mdl-information-theory/mdl-divergences-distances.qmd
+        - chapter_mdl-information-theory/mdl-test-functions-transport.qmd
+        - chapter_mdl-information-theory/mdl-scores.qmd
         - chapter_mdl-information-theory/mdl-mutual-information.qmd
         - chapter_mdl-information-theory/mdl-mi-estimation.qmd
         - chapter_mdl-information-theory/further-reading.qmd

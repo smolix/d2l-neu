@@ -1015,7 +1015,7 @@ z
    </g>
    <g id="text_18">
     <!-- $f$ = sup of its tangents -->
-    <g style="fill: #1f77b4" transform="translate(80.8144 41.2592) scale(0.14 -0.14)">
+    <g style="fill: #1f77b4" transform="translate(80.8144 50.5412) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-877" d="M 218 2599 
 L 218 2995 
@@ -1158,131 +1158,6 @@ z
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(772.976303 0.59375)"/>
      <use xlink:href="#SourceSans3-Regular-2f" transform="translate(827.676254 0.59375)"/>
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(861.476227 0.59375)"/>
-    </g>
-    <!-- (biconjugation) -->
-    <g style="fill: #1f77b4" transform="translate(80.8144 59.8232) scale(0.14 -0.14)">
-     <defs>
-      <path id="SourceSans3-Regular-5a2" d="M 1370 -1126 
-Q 973 -480 749 227 
-Q 525 934 525 1779 
-Q 525 2624 749 3334 
-Q 973 4045 1370 4685 
-L 1696 4531 
-Q 1325 3923 1142 3216 
-Q 960 2509 960 1779 
-Q 960 1050 1142 342 
-Q 1325 -365 1696 -973 
-L 1370 -1126 
-z
-" transform="scale(0.015625)"/>
-      <path id="SourceSans3-Regular-1d" d="M 1901 -77 
-Q 1683 -77 1449 28 
-Q 1216 134 1011 320 
-L 992 320 
-L 947 0 
-L 525 0 
-L 525 4557 
-L 1050 4557 
-L 1050 3315 
-L 1037 2752 
-Q 1248 2938 1501 3062 
-Q 1754 3187 2010 3187 
-Q 2618 3187 2931 2758 
-Q 3245 2330 3245 1606 
-Q 3245 1075 3056 697 
-Q 2867 320 2563 121 
-Q 2259 -77 1901 -77 
-z
-M 1811 365 
-Q 2195 365 2448 694 
-Q 2701 1024 2701 1600 
-Q 2701 2112 2512 2429 
-Q 2323 2746 1882 2746 
-Q 1683 2746 1478 2637 
-Q 1274 2528 1050 2323 
-L 1050 691 
-Q 1254 512 1456 438 
-Q 1658 365 1811 365 
-z
-" transform="scale(0.015625)"/>
-      <path id="SourceSans3-Regular-1e" d="M 1760 -77 
-Q 1344 -77 1011 115 
-Q 678 307 486 672 
-Q 294 1037 294 1549 
-Q 294 2074 502 2438 
-Q 710 2803 1052 2995 
-Q 1395 3187 1792 3187 
-Q 2099 3187 2320 3084 
-Q 2541 2982 2701 2822 
-L 2438 2502 
-Q 2317 2611 2166 2681 
-Q 2016 2752 1811 2752 
-Q 1536 2752 1315 2601 
-Q 1094 2451 966 2179 
-Q 838 1907 838 1549 
-Q 838 1018 1107 688 
-Q 1376 358 1805 358 
-Q 2016 358 2201 441 
-Q 2387 525 2528 653 
-L 2758 333 
-Q 2566 147 2313 35 
-Q 2061 -77 1760 -77 
-z
-" transform="scale(0.015625)"/>
-      <path id="SourceSans3-Regular-25" d="M 205 -1389 
-Q 64 -1389 -54 -1363 
-Q -173 -1338 -256 -1299 
-L -147 -909 
-Q -90 -928 -10 -944 
-Q 70 -960 147 -960 
-Q 378 -960 454 -797 
-Q 531 -634 531 -352 
-L 531 3110 
-L 1056 3110 
-L 1056 -352 
-Q 1056 -826 864 -1107 
-Q 672 -1389 205 -1389 
-z
-M 787 3750 
-Q 633 3750 534 3843 
-Q 435 3936 435 4096 
-Q 435 4250 534 4346 
-Q 633 4442 787 4442 
-Q 941 4442 1040 4346 
-Q 1139 4250 1139 4096 
-Q 1139 3936 1040 3843 
-Q 941 3750 787 3750 
-z
-" transform="scale(0.015625)"/>
-      <path id="SourceSans3-Regular-5a3" d="M 570 -1126 
-L 243 -973 
-Q 614 -365 796 342 
-Q 979 1050 979 1779 
-Q 979 2509 796 3216 
-Q 614 3923 243 4531 
-L 570 4685 
-Q 966 4045 1190 3334 
-Q 1414 2624 1414 1779 
-Q 1414 934 1190 227 
-Q 966 -480 570 -1126 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#SourceSans3-Regular-5a2"/>
-     <use xlink:href="#SourceSans3-Regular-1d" transform="translate(30.296875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-24" transform="translate(85.59375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1e" transform="translate(110.1875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(153.6875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-29" transform="translate(207.890625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-25" transform="translate(262.59375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-30" transform="translate(287.296875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-22" transform="translate(341.703125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(390.515625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2f" transform="translate(439.515625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-24" transform="translate(473.3125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(497.90625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-29" transform="translate(552.109375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-5a3" transform="translate(606.8125 0)"/>
     </g>
    </g>
    <g id="line2d_18">

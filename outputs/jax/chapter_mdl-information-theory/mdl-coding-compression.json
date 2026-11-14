@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:98c3eb234d08f12da9fb8bd52a90f0ade2dafb82f62bd2f92dfddeaef4a4e5aa",
+    "d2l_lib_fingerprint": "sha256:0195909598080685812cdc1096df23e5ab974cbf8ba70855bc35018127fc5ac1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,43 +46,23 @@
       "outputs": []
     },
     "mdl-coding-compression-a-language-model-as-a-compressor-2": {
-      "code_fingerprint": "sha256:cccd73c0ec6fee950b3a196b5150d7dff32384bf5a32f1d6623ee521822e6ae6",
+      "code_fingerprint": "sha256:f07b8d3902487c62ea2ab7f26abaa309c74aec0400a6077a14a22d701e9baea0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "173428 characters over 27 symbols\n"
+          "text": "173428 characters over 27 symbols, letter-frequency entropy 4.078 bits\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "order 0: 4.08 bits/char\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "order 1: 3.29 bits/char\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "order 2: 2.75 bits/char\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "order 3: 2.55 bits/char\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "order 4: 2.78 bits/char\nzlib -9: 2.84 bits/char\n"
+          "text": "order 0: 4.08 bits/char = 2.83 nats/char, perplexity 2^bits = 16.91\norder 1: 3.29 bits/char = 2.28 nats/char, perplexity 2^bits = 9.81\norder 2: 2.75 bits/char = 1.90 nats/char, perplexity 2^bits = 6.70\norder 3: 2.55 bits/char = 1.77 nats/char, perplexity 2^bits = 5.84\norder 4: 2.78 bits/char = 1.92 nats/char, perplexity 2^bits = 6.85\nzlib -9: 2.84 bits/char\norder 0 minus the letter-frequency entropy: 0.0011 bits/char, 183 bits in all\n"
         }
       ]
     },
     "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
-      "code_fingerprint": "sha256:88e4baa2d26800cee9de9d63ed326718c632d0b23e30f480bc4faf7fd833d909",
+      "code_fingerprint": "sha256:14315ae252e563fe172ba6ac030263e00b53686de2fea2382a2edc2900214e51",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +73,7 @@
       ]
     },
     "mdl-coding-compression-typical-sequences-1": {
-      "code_fingerprint": "sha256:cd0affe58a7c04e4c739e17596aa4fcca73c78b92243de540e92c67ea7f4a5c5",
+      "code_fingerprint": "sha256:803d8fcf45d1ecf94f5d71c379a94eb7deba1d789c5f2cc3c748c209a8c8c987",
       "kind": "asset",
       "outputs": [
         {
@@ -101,18 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
           "bytes": 31016,
-          "sha256": "sha256:64d816fc76d7a5396ac003dec84af6430257f00d064baa69fcfb6b70a5680729"
-        }
-      ]
-    },
-    "information-theory-perplexity": {
-      "code_fingerprint": "sha256:9f238184a47bd7d9df68682a3c458b187fd31381aa6cf1f368b374dedb48a1aa",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "per-token NLL (nats): [1.609, 2.303, 0.916, 1.386, 2.996]\nCE = 1.8421 nats, perplexity e^CE = 6.31\nCE2 = 2.6575 bits, 2^CE2 = 6.31\n"
+          "sha256": "sha256:fc847cdbcd455633d8ae7cbe1abf7f676391d541a79234e5f769f6cc7eb1626c"
         }
       ]
     }

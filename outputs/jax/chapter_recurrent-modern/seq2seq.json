@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source": "chapter_natural-language-processing-pretraining/seq2seq.md",
+  "source": "chapter_recurrent-modern/seq2seq.md",
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",

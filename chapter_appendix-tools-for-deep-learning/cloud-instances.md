@@ -208,10 +208,10 @@ of the year eventually costs more to rent than to buy, and
 
 1. [code] **Peak memory and batch size.** Most of the book's notebooks stay
    below 8 GB of GPU memory, so a 24 GB card in :numref:`tab_cloud_prices`
-   leaves room for a larger batch. Run
-   :numref:`sec_bert-pretraining` on a GPU, for example in a hosted
-   notebook (:numref:`sec_hosted_notebooks`), once with
-   `batch_size = 512` and once with `batch_size = 256`. Record the peak of
+   leaves room for a larger batch. Run the encoder fine-tuning of
+   :numref:`sec_lm_bert` on a GPU, for example in a hosted
+   notebook (:numref:`sec_hosted_notebooks`), once with its batch size and
+   once with half of it. Record the peak of
    each of the three views of GPU memory in :numref:`fig_bg_allocator` for
    both runs.
     1. Which of the three views decides whether a run fits on a card, and

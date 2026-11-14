@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:897a72272e263e23973760d94576c2e68a0dda0de4ec6d75ca6d1eb2644c459c",
+    "d2l_lib_fingerprint": "sha256:c39dd03f85185e3885240a74b69bb901203d30635a5ab42458f8c09017415953",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 4 words): the time with the thinking in a great\n    my its to followed things and assured distinctly more ancestry dreams\n    reputations saw less me with the after stars\n2-gram (longest copied run: 4 words): the time traveller s against intrusion\n    and security in no appliances i heard his chair and cries of fear that\n    moment i tied some subtle point that\n3-gram (longest copied run: 19 words): the time traveller asked us what we\n    thought of it all it sounds plausible enough to night said the\n    psychologist from the world was invisible my sensations\n"
+          "text": "1-gram (longest copied run: 2 words): the time she you constant and startled\n    the thing stamped did i because behind i go them like a mind my this had\n    are for pistol gathered\n2-gram (longest copied run: 4 words): the time machines began to move at me\n    i stooped towards those who was i got up and property must have happened\n    that arise therein till i\n3-gram (longest copied run: 9 words): the time traveller put forth his\n    finger towards the building had a weapon indeed against the wan sky\n    there was no outlet no doubt i dozed at\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:c34406ad1a74b51c9bdf443980f9fa490557bcd4556eb38f3575b21922ef932b"
+          "sha256": "sha256:789e7574b5a94ae6b503a1f7e7ec619265e1da4618b07821ba8b397fe2ca2371"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:bdfa054f1ffa99f9c79df56b581e1a5967c1d3c2405a4222717f3a62bb8e0a16"
+          "sha256": "sha256:2f8829ce76eeb4961b9afe0ab77e74cd883553c4a05da84386732b4e9a9acce1"
         }
       ]
     },
@@ -166,12 +166,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "3-gram held-out perplexity, Kneser-Ney:   300.1\n"
+          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n3-gram held-out perplexity, Kneser-Ney:   300.1\n"
         }
       ]
     },
@@ -208,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[262  99 289 318  46 497 331 700 316 285]\n [523 323 986 741 277 536 115 417 582  46]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[ 99 289 318  46 497 331 700 316 285 708]\n [323 986 741 277 536 115 417 582  46 691]], shape=(2, 10), dtype=int32)\nX[0]: 'recision. And he put it to'\nY[0]: 'cision. And he put it to us'\n"
+          "text": "X: tf.Tensor(\n[[767  46 269 609 344 816 258 279 334 100]\n [409 516 434  45  68 337 564 318 270  10]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[ 46 269 609 344 816 258 279 334 100 792]\n [516 434  45  68 337 564 318 270  10 804]], shape=(2, 10), dtype=int32)\nX[0]: ' world. I felt as perhaps a bird'\nY[0]: '. I felt as perhaps a bird may'\n"
         }
       ]
     }

@@ -18,8 +18,6 @@
     ['chapter_optimization',               'i-gauge'],
     ['chapter_computational-performance',  'i-gauge'],
     ['chapter_computer-vision',            'i-eye'],
-    ['chapter_natural-language-processing-pretraining', 'i-message'],
-    ['chapter_natural-language-processing-applications', 'i-message'],
     ['chapter_reinforcement-learning',     'i-target'],
     ['chapter_gaussian-processes',         'i-flow'],
     ['chapter_hyperparameter-optimization','i-gauge'],

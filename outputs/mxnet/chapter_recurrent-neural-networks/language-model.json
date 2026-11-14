@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:208fe453767b300e7d0f1c791800ce98dcb56b54d7d21fe279fe24ea2ea64404",
+    "d2l_lib_fingerprint": "sha256:bc763127756497678e3d70309721964db98be22ed94c680c6b7ae38712f52281",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time green so the these getting\n    frail seeing come their turf in worn the dimensions whole to a of stood\n    frenzy spark contributed but little that\n2-gram (longest copied run: 5 words): the time traveller smiled are now as\n    fast the hill among the earth must be deeply channelled along the doors\n    after some at least the lesson of\n3-gram (longest copied run: 8 words): the time dimension with a sudden\n    thought came to a glowing scarlet where cut by the morlocks with it i\n    saw to adorn themselves with flowers to\n"
+          "text": "1-gram (longest copied run: 2 words): the time pulled you could flesh not\n    night hall should the at by began my filby machine or the headlong saw\n    some recall feel would the later\n2-gram (longest copied run: 4 words): the time traveller asked me i could\n    they all have ever larger edition of the floor was clear in sconces so\n    that of finding a sudden realization\n3-gram (longest copied run: 9 words): the time dimension or even creek where\n    i judged there had been carefully oiled and cleaned i have no doubt have\n    to pay rent and not a\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:d1f12bb0652ddd6ee5df3bf2e07bc3fde4ad829459876da381cfd569196e8962"
+          "sha256": "sha256:c6386758965e972f942fa7d46eaa3e69c95c48c0db874a87f1093e450f0ca20c"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:ac940d9da4c22b2a1c8897e49a10beca44aa571e59833cceba782536c1bccda3"
+          "sha256": "sha256:46d521ff203dae0eccc18148018b0709d11fc5160aca853f509d865d1b6c4de8"
         }
       ]
     },
@@ -208,7 +208,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[270 535  10 341 933  44 277 772 278 116]\n [ 10 116 119 111 407 103 115 336 260 331]] \nY: [[535  10 341 933  44 277 772 278 116 259]\n [116 119 111 407 103 115 336 260 331 291]]\nX[0]: 'ed over\\nthe lever, and incont'\nY[0]: ' over\\nthe lever, and incontin'\n"
+          "text": "X: [[931 416 415 526 375 285  44 657 667  10]\n [ 44 258 745 391 478 690 620 107  44 284]] \nY: [[416 415 526 375 285  44 657 667  10 943]\n [258 745 391 478 690 620 107  44 284 506]]\nX[0]: \" earth have you been up to, man?'\\n\"\nY[0]: \" have you been up to, man?'\\nsa\"\n"
         }
       ]
     }

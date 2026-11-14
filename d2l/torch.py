@@ -7518,6 +7518,176 @@ def retrieval_metrics(ranked_ids, gold_ids, ks=(1, 5, 10, 100)):
         out['ndcg@10'].append((rel[:10] * disc[:len(rel[:10])]).sum() / idcg)
     return {k: np.array(v) for k, v in out.items()}
 
+def anisotropy(Z, n_pairs=200_000, seed=0):
+    """Mean cosine similarity between distinct rows of Z, over n_pairs
+    random pairs, or over all pairs if n_pairs is None or covers them.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    Z = F.normalize(torch.as_tensor(Z, dtype=torch.float64), dim=-1)
+    n = len(Z)
+    if n_pairs is None or n_pairs >= n * (n - 1) // 2:
+        G = Z @ Z.T
+        return float((G.sum() - G.diagonal().sum()) / (n * (n - 1)))
+    rng = np.random.default_rng(seed)
+    i, j = rng.integers(n, size=n_pairs), rng.integers(n - 1, size=n_pairs)
+    j = j + (j >= i)  # a partner other than i, uniformly
+    return float((Z[i] * Z[j]).sum(-1).mean())
+
+def align_uniform(Zx, Zy, t=2.0):
+    """Wang and Isola's alignment, the mean squared distance between the
+    unit vectors of positive pairs (rows of Zx and Zy), and uniformity,
+    the log of the mean of exp(-t ||z - z'||^2) over the distinct pairs
+    of all rows of Zx and Zy.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    Zx, Zy = (F.normalize(torch.as_tensor(Z, dtype=torch.float64), dim=-1)
+              for Z in (Zx, Zy))
+    sq = torch.pdist(torch.cat([Zx, Zy])) ** 2
+    uniformity = torch.logsumexp(-t * sq, 0) - math.log(len(sq))
+    return float(((Zx - Zy) ** 2).sum(-1).mean()), float(uniformity)
+
+def info_nce_loss(q, d, tau=0.05, hard_neg=None, symmetric=False):
+    """InfoNCE with in-batch negatives for unit vectors q, d (B, m), row i
+    of d the positive passage of query i: the cross-entropy of the scores
+    q_i . d_j / tau over all d_j, and over all hard_neg_j too if given.
+    symmetric averages in the passage-to-query direction (each d_i
+    against all q_j). Returns the loss and the share of queries whose
+    positive scores highest.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    S = q @ (d if hard_neg is None else torch.cat([d, hard_neg])).T / tau
+    labels = torch.arange(len(q), device=q.device)
+    loss = F.cross_entropy(S, labels)
+    if symmetric:
+        loss = (loss + F.cross_entropy(S[:, :len(q)].T, labels)) / 2
+    return loss, (S.argmax(1) == labels).float().mean()
+
+def no_duplicate_batches(queries, passages, batch_size, seed=0,
+                         negatives=None):
+    """Batches of indices into the pairs (queries[i], passages[i]), in a
+    seeded random order, none holding a query text twice or a passage text
+    twice (with negatives[i], an extra passage per pair, counted among the
+    passages): a duplicate would be a negative of its own query. A pair
+    that would repeat a text waits for a later batch.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    pending = collections.deque(
+        np.random.default_rng(seed).permutation(len(queries)).tolist())
+    batches = []
+    while pending:
+        batch, seen, waiting = [], set(), []
+        while pending and len(batch) < batch_size:
+            i = pending.popleft()
+            texts = {('q', queries[i]), ('p', passages[i])}
+            if negatives is not None:
+                texts.add(('p', negatives[i]))
+            if texts & seen:
+                waiting.append(i)
+            else:
+                batch.append(i)
+                seen |= texts
+        pending.extendleft(reversed(waiting))
+        batches.append(batch)
+    return batches
+
+def train_embedder(model, tokenizer, pairs, *, pooling='mean', tau=0.05,
+                   batch_size=64, lr=3e-5, steps=None, epochs=1,
+                   hard_negs=None, mrl_dims=None, q_prefix='query: ',
+                   d_prefix='passage: ', max_len_q=48, max_len_d=160,
+                   seed=0):
+    """Train an encoder in place on (query, passage) pairs: InfoNCE with
+    in-batch negatives at temperature tau, plus hard_negs[i] as one more
+    candidate per pair if given; with mrl_dims, the mean of the losses on
+    the leading mrl_dims coordinates (Matryoshka). Batches from
+    no_duplicate_batches; AdamW (weight decay 0.01 on matrices), linear
+    warmup over the first 10% of the steps then linear decay, gradients
+    clipped to norm 1, bf16 autocast on a GPU. Returns the loss per step,
+    the steps, the training seconds and the peak GPU memory in GiB."""
+    device = next(model.parameters()).device
+    cuda = device.type == 'cuda'
+    qs, ds = [q for q, _ in pairs], [d for _, d in pairs]
+    plan = [b for e in range(epochs) for b in d2l.no_duplicate_batches(
+        qs, ds, batch_size, seed + e, hard_negs)]
+    steps = steps or len(plan)
+
+    def embed(texts, prefix, max_len):  # pooled, not yet unit length
+        ids = tokenizer([prefix + t for t in texts], truncation=True,
+                        max_length=max_len)['input_ids']
+        T = max(map(len, ids))
+        X = torch.tensor([r + [tokenizer.pad_token_id] * (T - len(r))
+                          for r in ids], device=device)
+        M = torch.tensor([[1] * len(r) + [0] * (T - len(r)) for r in ids],
+                         device=device)
+        with torch.autocast(device.type, torch.bfloat16, enabled=cuda):
+            h = model(input_ids=X, attention_mask=M).last_hidden_state
+        return d2l.pool_hidden(h.float(), M, pooling)
+
+    def loss_fn(b):
+        q, d = embed([qs[i] for i in b], q_prefix, max_len_q), embed(
+            [ds[i] for i in b], d_prefix, max_len_d)
+        h = (None if hard_negs is None else
+             embed([hard_negs[i] for i in b], d_prefix, max_len_d))
+        cut = lambda Z, k: None if Z is None else F.normalize(Z[:, :k], dim=-1)
+        dims = mrl_dims or (q.shape[1],)
+        return sum(d2l.info_nce_loss(cut(q, k), cut(d, k), tau, cut(h, k))[0]
+                   for k in dims) / len(dims)
+
+    model.train()
+    torch.manual_seed(seed)
+    params = [p for p in model.parameters() if p.requires_grad]
+    opt = torch.optim.AdamW([
+        {'params': [p for p in params if p.ndim >= 2], 'weight_decay': 0.01},
+        {'params': [p for p in params if p.ndim < 2], 'weight_decay': 0.0}],
+        lr=lr)
+    n_warm = max(1, round(0.1 * steps))
+    sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: (
+        (s + 1) / n_warm if s < n_warm else
+        max(0.0, (steps - s) / max(1, steps - n_warm))))
+    if cuda:
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
+    t0, losses = time.perf_counter(), []
+    for s in range(steps):
+        loss = loss_fn(plan[s % len(plan)])
+        loss.backward()
+        nn.utils.clip_grad_norm_(params, 1.0)
+        opt.step()
+        sched.step()
+        opt.zero_grad(set_to_none=True)
+        losses.append(loss.detach())
+    if cuda:
+        torch.cuda.synchronize(device)
+    model.eval()
+    return dict(loss=torch.stack(losses).tolist(), steps=steps,
+                seconds=time.perf_counter() - t0,
+                peak_gib=(torch.cuda.max_memory_allocated(device) / 2**30
+                          if cuda else float('nan')))
+
+def truncate_embeddings(Z, dim):
+    """The first dim coordinates of each row of Z, rescaled to unit length.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    return F.normalize(Z[:, :dim], dim=-1)
+
+def binarize(Z):
+    """The signs of Z (N, m) as bits, eight per byte: uint8 (N, m / 8).
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    return np.packbits(np.asarray(Z) > 0, axis=1)
+
+def hamming_scores(Qbits, Dbits):
+    """The number of equal bits of each packed query and each packed
+    document (m minus their Hamming distance): int32 (nq, nd).
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    pop = np.unpackbits(np.arange(256, dtype=np.uint8)[:, None], axis=1).sum(
+        1, dtype=np.uint8)  # set bits per byte value
+    out = np.empty((len(Qbits), len(Dbits)), np.int32)
+    for i in range(0, len(Qbits), 16):
+        out[i:i + 16] = 8 * Qbits.shape[1] - pop[
+            Qbits[i:i + 16, None] ^ Dbits[None]].sum(-1, dtype=np.int32)
+    return out
+
 d2l.DATA_HUB['lm-book-r3-v1'] = (  # book commit 098bf463, corpus r3.1
     d2l.LM_DATA_URL + 'lm-book-r3-v1.zip',
     '0b7f11e044a4838139ac02dffb6e2d7eb32b48b8')

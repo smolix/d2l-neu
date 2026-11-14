@@ -2,15 +2,15 @@
 :label:`sec_batch_size`
 
 Most runs in this chapter so far used a batch size chosen once and never
-changed, such as the 64 sequences per step of `TinyLM` (:numref:`sec_adam`).
-This section asks when a larger batch trains faster. Doubling the batch
-from 64 to 128 sequences doubles the work in every step. If the run then
-needs half as many steps to reach the same loss, nothing is lost:
-the total work is unchanged, and on twice as many accelerators the run
-finishes in half the time. If it needs as many steps as before, half of
-the work was spent for nothing. Which of the two happens decides how fast
-a model can be trained, because a run can be shared among only as many
-accelerators as its batch can feed.
+changed, such as the 64 sequences per step of `TinyLM`
+(:numref:`sec_test_models`). This section asks when a larger batch trains
+faster. Doubling the batch from 64 to 128 sequences doubles the work in every
+step. If the run then needs half as many steps to reach the same loss, nothing
+is lost: the total work is unchanged, and on twice as many accelerators the run
+finishes in half the time. If it needs as many steps as before, half of the
+work was spent for nothing. Which of the two happens decides how fast a model
+can be trained, because a run can be shared among only as many accelerators as
+its batch can feed.
 
 Two facts from earlier sections frame the question. Averaging $b$ examples
 divides the variance of a gradient estimate by $b$ (:numref:`sec_sgd`), and
@@ -657,15 +657,14 @@ grows eightfold: by 8 for SGD and by $\sqrt{8} \approx 2.8$ for Adam. Both
 batch sizes lie below the critical batch size of two to four hundred images
 that we fitted for the CNN. There extra examples per step still turn into
 fewer steps, so both rules should hold. `d2l.lr_sweep` of
-:numref:`sec_adam` runs the grid, quietly, and `d2l.final_loss` summarizes
-each run, so the sweep takes a few lines. The budget is a fifth of the
-training set, so every minibatch is new to the model, and
-its loss, recorded before the update, is a loss on unseen images. We
-average it over the last quarter of each run, the last 3,200 images at
-either batch size, which smooths out the jitter of the final weights. Each
-sweep draws one seed, so all its runs start from the same initialization
-and see the same images in the same order, and the differences along a
-curve come from the learning rate alone.
+:numref:`sec_test_models` runs the grid, quietly, and `d2l.final_loss`
+summarizes each run, so the sweep takes a few lines. The budget is a fifth of
+the training set, so every minibatch is new to the model, and its loss,
+recorded before the update, is a loss on unseen images. We average it over the
+last quarter of each run, the last 3,200 images at either batch size, which
+smooths out the jitter of the final weights. Each sweep draws one seed, so all
+its runs start from the same initialization and see the same images in the same
+order, and the differences along a curve come from the learning rate alone.
 
 ```{.python .input #batch-size-learning-rate-rules-1}
 %%tab pytorch

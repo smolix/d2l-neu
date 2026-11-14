@@ -88,7 +88,7 @@ with eight attention heads each, rotary position embeddings, RMSNorm and
 SwiGLU, and an input embedding shared with the output layer. The data are
 also those of :numref:`sec_gpt`: windows of 128 bytes of WikiText-103 at
 random offsets, with the 256 byte values as the vocabulary
-(`d2l.WikiText103`, :numref:`sec_adam`).
+(`d2l.WikiText103`, :numref:`sec_test_models`).
 
 We change one setting: the width, from 256 to 512. The reason is
 arithmetic intensity, the number of FLOPs that an operation performs per byte it
@@ -227,8 +227,8 @@ process stays slower.
 
 :begin_tab:`jax`
 The step is one function, `train_step`, compiled with `nnx.jit` as in the
-training loop `d2l.train_steps` of :numref:`sec_adam`. It receives the model
-and the optimizer as arguments and returns the loss, which it computes
+training loop `d2l.train_steps` of :numref:`sec_test_models`. It receives the
+model and the optimizer as arguments and returns the loss, which it computes
 from fp32 logits. The notebook runs with `--xla_gpu_enable_triton_gemm=false`
 in the environment variable `XLA_FLAGS`, so that XLA calls cuBLAS for the
 matrix products: the Triton kernels it would otherwise generate run the

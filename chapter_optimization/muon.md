@@ -641,19 +641,18 @@ version.
 ### Comparison on the Language Model
 :label:`subsec_muon-lm-race`
 
-The protocol follows :numref:`sec_adam`. Each optimizer trains `TinyLM` on
-the bytes of WikiText-103 for 2,000 steps at a constant learning rate, on a
-five-point grid of learning rates from $10^{-3}$ to $10^{-1}$. Every 250
-steps `val_loss` computes the mean cross-entropy per byte over the whole
-validation split, text the model never trains on, and the lowest
-validation loss at step 2,000 speaks for the optimizer. Scoring on held-out
-text keeps an optimizer from winning by memorizing the training text
-faster. "Tuned" in what follows means the best point of this coarse grid
-and nothing finer. Within each comparison every run starts from the same
-random initialization, drawn anew each time the notebook runs. Weight
-decay is off in both arms, so the only difference between them is the
-direction of the update on the hidden matrices. First the baseline, with
-every parameter on AdamW:
+The protocol follows :numref:`sec_test_models`. Each optimizer trains `TinyLM`
+on the bytes of WikiText-103 for 2,000 steps at a constant learning rate, on a
+five-point grid of learning rates from $10^{-3}$ to $10^{-1}$. Every 250 steps
+`val_loss` computes the mean cross-entropy per byte over the whole validation
+split, text the model never trains on, and the lowest validation loss at step
+2,000 speaks for the optimizer. Scoring on held-out text keeps an optimizer
+from winning by memorizing the training text faster. "Tuned" in what follows
+means the best point of this coarse grid and nothing finer. Within each
+comparison every run starts from the same random initialization, drawn anew
+each time the notebook runs. Weight decay is off in both arms, so the only
+difference between them is the direction of the update on the hidden matrices.
+First the baseline, with every parameter on AdamW:
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
 %%tab pytorch

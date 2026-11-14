@@ -55,6 +55,16 @@ LIB_ONLY_EARLY_FILES = {
     'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
 }
 
+# Source files whose saved blocks keep the "Defined in" label of the file
+# they moved out of. The label is part of each symbol's library shard, which
+# notebook freshness keys on: the test-model harness moved from adam.md
+# (sec_adam) to test-models.md (sec_test_models), and keeping sec_adam keeps
+# its many consumers outside the chapter fresh. Remove at the next full
+# re-execution of the book.
+DOCSTRING_LABEL_OVERRIDES = {
+    'chapter_optimization/test-models.md': 'sec_adam',
+}
+
 # ──────────────────────────────────────────────────────────
 # Block extraction
 # ──────────────────────────────────────────────────────────
@@ -256,6 +266,9 @@ def extract_save_blocks(src_path, framework):
 
     saved = []
     markdown_so_far = ''
+    label_override = next((label for rel, label
+                           in DOCSTRING_LABEL_OVERRIDES.items()
+                           if Path(src_path).as_posix().endswith(rel)), None)
     i = 0
 
     while i < len(lines):
@@ -295,7 +308,8 @@ def extract_save_blocks(src_path, framework):
             code = flatten_tab_branches(code, framework)
 
             for extracted in save_blocks(code):
-                label = find_section_label(markdown_so_far)
+                label = (label_override or
+                         find_section_label(markdown_so_far))
                 saved.append((extracted, label, str(src_path)))
         else:
             markdown_so_far += line + '\n'

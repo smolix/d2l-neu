@@ -508,6 +508,16 @@ Each file repeats the `:label:` of the symbols' original home, so the
 "Defined in" docstring suffix, and with it every shard under `d2l/_blocks/`,
 stays byte-identical after a move.
 
+A rendered section that takes over saved blocks from another section can keep
+their shards the same way without a hidden label (a second `:label:` would
+fail the corpus label check): `DOCSTRING_LABEL_OVERRIDES` in
+`tools/build_lib.py` maps a source file to the label its "Defined in" suffixes
+use. `chapter_optimization/test-models.md` maps to `sec_adam`, because the
+test-model harness (`TinyLM`, `train_steps`, `lr_sweep`, ...) moved there out
+of `adam.md` in 2026-11 and about fourteen notebooks in chapters 10 to 13 and
+the Language Models part consume it. Remove the entry at the next full
+re-execution of the book.
+
 ### 3.5 "Regenerated when a new render occurs" (the requirement, made concrete)
 
 Inline outputs are a **regenerated snapshot, not a frozen cache:**

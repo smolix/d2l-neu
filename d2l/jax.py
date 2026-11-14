@@ -1393,6 +1393,48 @@ class TinyLM(nnx.Module):
                                             approximate=False))
         return self.head(self.norm(H))
 
+class FashionCNN(nnx.Module):
+    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self, *, rngs):
+        def init(fan_in):  # Weights and biases ~ U(-a, a), a = 1/sqrt(fan_in)
+            a = 1 / math.sqrt(fan_in)
+            f = lambda key, shape, dtype: jax.random.uniform(
+                key, shape, dtype, -a, a)
+            return dict(kernel_init=f, bias_init=f, rngs=rngs)
+        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), **init(9))
+        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), **init(9 * 32))
+        self.fc1 = nnx.Linear(64 * 7 * 7, 128, **init(64 * 7 * 7))
+        self.fc2 = nnx.Linear(128, 10, **init(128))
+
+    def __call__(self, X):
+        X = nnx.max_pool(nnx.relu(self.conv1(X)), window_shape=(2, 2),
+                         strides=(2, 2))
+        X = nnx.max_pool(nnx.relu(self.conv2(X)), window_shape=(2, 2),
+                         strides=(2, 2))
+        return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
+
+@nnx.jit
+def num_correct(model, X, y):
+    """Number of examples in (X, y) that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    return (model(X).argmax(axis=1) == y).sum()
+
+def evaluate_accuracy(model, batches):
+    """Fraction of the examples in batches that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    # A view with dropout off and batch norm on running statistics
+    model = nnx.view(model, deterministic=True, use_running_average=True,
+                     raise_if_not_found=False)
+    correct, total = 0, 0
+    for X, y in batches:
+        correct += num_correct(model, jnp.asarray(X), jnp.asarray(y))
+        total += len(y)
+    return float(correct) / total
+
 @nnx.jit
 def _cross_entropy_step(model, optimizer, X, Y):
     """One optimizer step on the mean cross-entropy of the logits model(X)
@@ -1466,47 +1508,15 @@ def smooth(losses, k=25):
     return [sum(losses[i:i + k]) / k
             for i in range(0, len(losses) - k + 1, k)]
 
-class FashionCNN(nnx.Module):
-    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+def steps_to_reach(losses, target, k=25):
+    """First step at which the smoothed losses reach target; None if they
+    never do.
 
     Defined in :numref:`sec_adam`"""
-    def __init__(self, *, rngs):
-        def init(fan_in):  # Weights and biases ~ U(-a, a), a = 1/sqrt(fan_in)
-            a = 1 / math.sqrt(fan_in)
-            f = lambda key, shape, dtype: jax.random.uniform(
-                key, shape, dtype, -a, a)
-            return dict(kernel_init=f, bias_init=f, rngs=rngs)
-        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), **init(9))
-        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), **init(9 * 32))
-        self.fc1 = nnx.Linear(64 * 7 * 7, 128, **init(64 * 7 * 7))
-        self.fc2 = nnx.Linear(128, 10, **init(128))
-
-    def __call__(self, X):
-        X = nnx.max_pool(nnx.relu(self.conv1(X)), window_shape=(2, 2),
-                         strides=(2, 2))
-        X = nnx.max_pool(nnx.relu(self.conv2(X)), window_shape=(2, 2),
-                         strides=(2, 2))
-        return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
-
-@nnx.jit
-def num_correct(model, X, y):
-    """Number of examples in (X, y) that model classifies correctly.
-
-    Defined in :numref:`sec_adam`"""
-    return (model(X).argmax(axis=1) == y).sum()
-
-def evaluate_accuracy(model, batches):
-    """Fraction of the examples in batches that model classifies correctly.
-
-    Defined in :numref:`sec_adam`"""
-    # A view with dropout off and batch norm on running statistics
-    model = nnx.view(model, deterministic=True, use_running_average=True,
-                     raise_if_not_found=False)
-    correct, total = 0, 0
-    for X, y in batches:
-        correct += num_correct(model, jnp.asarray(X), jnp.asarray(y))
-        total += len(y)
-    return float(correct) / total
+    for i, v in enumerate(smooth(losses, k)):
+        if v <= target:
+            return k * (i + 1)
+    return None
 
 def lr_sweep(make_model, make_tx, data, lrs, seed,
              num_steps=2000, *, evaluate=None, metric='score', every=None,

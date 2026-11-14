@@ -508,10 +508,10 @@ clipped to a global norm of 1, which shortens the rare large gradient
 without changing its direction (:numref:`sec_practice`).
 
 `LMOptimizer` bundles the four parts behind the interface of an ordinary
-optimizer, so the training loop `d2l.train_steps` of :numref:`sec_adam`, which
-draws minibatches of windows and takes a fixed number of steps on the
-next-byte loss, uses it unchanged. We use no dropout: a model that almost
-never reads the same passage twice has nothing to memorize.
+optimizer, so the training loop `d2l.train_steps` of :numref:`sec_test_models`,
+which draws minibatches of windows and takes a fixed number of steps on the
+next-byte loss, uses it unchanged. We use no dropout: a model that almost never
+reads the same passage twice has nothing to memorize.
 
 ```{.python .input #gpt-training-the-model-2}
 %%tab pytorch
@@ -594,7 +594,7 @@ reference levels to compare it with. We train for
 1,000 steps of 64 windows and record both losses every 50 steps. The
 training loss is the mean over those 50 steps. The validation loss is the
 mean cross-entropy per byte on the validation windows, which is the
-logarithm of `d2l.lm_perplexity` (:numref:`sec_adam`).
+logarithm of `d2l.lm_perplexity` (:numref:`sec_test_models`).
 
 The experiments of this section build their models and plain optimizers
 through two shorthands: `gpt` constructs a `GPT` with fresh random weights,

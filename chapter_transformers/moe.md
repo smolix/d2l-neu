@@ -501,7 +501,7 @@ the softmax and changes only the selection bias, the mechanism that
 :label:`subsec_moe-balance-comparison`
 
 Both remedies fit into an ordinary training loop. The loop below is
-`d2l.train_steps` of :numref:`sec_adam`, which draws minibatches, takes
+`d2l.train_steps` of :numref:`sec_test_models`, which draws minibatches, takes
 optimizer steps, and returns the training losses, with the two remedies
 added: `aux_weight` adds $\alpha$ times the sum of
 $\mathcal{L}_{\mathrm{balance}}$ over the expert layers to the loss, and
@@ -580,7 +580,7 @@ def train_moe_lm(model, data, optimizer, num_steps, aux_weight=0.0,
 ```
 
 To read a trained model, we compute its validation loss with
-`d2l.lm_perplexity` of :numref:`sec_adam`, whose logarithm is the mean
+`d2l.lm_perplexity` of :numref:`sec_test_models`, whose logarithm is the mean
 cross-entropy in nats per byte, and count during that pass how many
 validation tokens each expert receives and how many assignments the
 buffers drop. The shares of each layer are returned busiest first:

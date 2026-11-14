@@ -56,19 +56,8 @@ from d2l import jax as d2l
 ```{.python .input #adam-adam-and-adamw-1}
 %%tab pytorch
 import copy
-import os
-import pandas as pd
 import random
-import textwrap
 from functools import partial
-```
-
-```{.python .input #adam-adam-and-adamw-1}
-%%tab jax
-import os
-import pandas as pd
-import random
-import textwrap
 ```
 
 ## Per-Coordinate Learning Rates
@@ -380,564 +369,12 @@ The first step moves every weight by $\eta$, as the bias correction
 promises, and after 100 steps the two copies agree to within rounding
 error. From now on we call the library version.
 
-## TinyLM and FashionCNN
-:label:`subsec_tinylm`
+<!-- WRITER: the harness (TinyLM, FashionCNN, train_steps, lm_perplexity, final_loss, smooth, steps_to_reach, evaluate_accuracy, lr_sweep) moved to test-models.md (sec_test_models); the cells below call it from d2l. The first Adam run on TinyLM (perplexity about 4.9) is cut. The cell below loads the two data sets. -->
 
-A comparison of optimizers needs models on which the optimizers behave
-differently, and models small enough to train many times. We use two of
-about the same size: a transformer language model, the kind of model Adam
-is used for in practice, and a convolutional image classifier, the kind of
-model that SGD with momentum trained for a decade. Both go into the `d2l`
-library, and the rest of this chapter trains them.
-
-### The Language Model
-
-The data is WikiText-103 :cite:`Merity.Xiong.Bradbury.ea.2016`, about 100
-million words of Wikipedia articles kept as raw text, with case, digits, and
-punctuation. A run of 2,000 steps on minibatches of 64 windows of 64 tokens
-makes about 8 million predictions. On the 100,000 characters of *The Time
-Machine* each character would be a target about 80 times, and the model
-would memorize the text. Here the training windows start at random offsets
-in the first of the two training files, about 270 million bytes, so a run
-reads about 3% of it and rarely sees the same text twice. The tokens are the
-UTF-8 bytes of the text: the byte-level tokenizer of
-:numref:`sec_text-sequence` without any merges, a vocabulary of 256 tokens,
-so the loss converts directly to bits per byte
-(:numref:`sec_language-model`). Validation windows are consecutive,
-non-overlapping pieces of the official validation split, about 1.1 million
-bytes.
-
-```{.python .input #adam-the-language-model-1}
-%%tab pytorch
-class WikiText103(d2l.DataModule):  #@save
-    """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes."""
-    def __init__(self, batch_size, num_steps, num_train=None, num_val=None):
-        super().__init__()
-        self.save_hyperparameters()
-        self.vocab = d2l.BPETokenizer(vocab_size=256, specials=())  # Bytes
-        self.train = self._read('train-00000-of-00002',
-                                '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
-        self.val = self._read('validation-00000-of-00001',
-                              '49d15019b0476afc752bd5f010b5a2aab2de89ca')
-        self.train, self.val = self.train[:num_train], self.val[:num_val]
-
-    def _read(self, split, sha1):
-        url = ('https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
-               f'main/wikitext-103-raw-v1/{split}.parquet')
-        fname = d2l.download(url, os.path.join(self.root, 'wikitext-103'),
-                             sha1)
-        lines = pd.read_parquet(fname)['text']  # Each line ends with '\n'
-        return np.frombuffer(b''.join(s.encode() for s in lines), np.uint8)
-
-    def windows(self, corpus, starts):
-        """Inputs and next-byte targets of the windows at `starts`."""
-        idx = np.asarray(starts)[:, None] + np.arange(self.num_steps + 1)
-        array = torch.from_numpy(corpus[idx].astype(np.int64))
-        return array[:, :-1], array[:, 1:]
-
-    def train_dataloader(self):  # A pass of minibatches at random offsets
-        n = len(self.train) - self.num_steps
-        for _ in range(n // (self.batch_size * self.num_steps)):
-            yield self.windows(self.train,
-                               torch.randint(n, (self.batch_size,)).numpy())
-
-    def val_dataloader(self):  # Consecutive, non-overlapping windows
-        starts = np.arange(0, len(self.val) - self.num_steps, self.num_steps)
-        for i in range(0, len(starts), self.batch_size):
-            yield self.windows(self.val, starts[i:i + self.batch_size])
-```
-
-```{.python .input #adam-the-language-model-1}
-%%tab jax
-class WikiText103(d2l.DataModule):  #@save
-    """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes."""
-    def __init__(self, batch_size, num_steps, num_train=None, num_val=None):
-        super().__init__()
-        self.save_hyperparameters()
-        self.vocab = d2l.BPETokenizer(vocab_size=256, specials=())  # Bytes
-        self.train = self._read('train-00000-of-00002',
-                                '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
-        self.val = self._read('validation-00000-of-00001',
-                              '49d15019b0476afc752bd5f010b5a2aab2de89ca')
-        self.train, self.val = self.train[:num_train], self.val[:num_val]
-
-    def _read(self, split, sha1):
-        url = ('https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
-               f'main/wikitext-103-raw-v1/{split}.parquet')
-        fname = d2l.download(url, os.path.join(self.root, 'wikitext-103'),
-                             sha1)
-        lines = pd.read_parquet(fname)['text']  # Each line ends with '\n'
-        return np.frombuffer(b''.join(s.encode() for s in lines), np.uint8)
-
-    def windows(self, corpus, starts):
-        """Inputs and next-byte targets of the windows at `starts`."""
-        idx = np.asarray(starts)[:, None] + np.arange(self.num_steps + 1)
-        array = corpus[idx].astype(np.int32)
-        return array[:, :-1], array[:, 1:]
-
-    def train_dataloader(self):  # A pass of minibatches at random offsets
-        n = len(self.train) - self.num_steps
-        rng = np.random.default_rng(d2l.get_seed())
-        for _ in range(n // (self.batch_size * self.num_steps)):
-            yield self.windows(self.train,
-                               rng.integers(n, size=self.batch_size))
-
-    def val_dataloader(self):  # Consecutive, non-overlapping windows
-        starts = np.arange(0, len(self.val) - self.num_steps, self.num_steps)
-        for i in range(0, len(starts), self.batch_size):
-            yield self.windows(self.val, starts[i:i + self.batch_size])
-```
-
-Both splits are held in memory as arrays of bytes, one byte per token, and
-a minibatch is gathered from them on demand. A training pass draws as many
-windows as the text holds non-overlapping ones, each at an independent
-random offset, so `train_steps` below can run for any number of steps without
-reusing a fixed set of windows.
-
-```{.python .input #adam-a-tiny-language-model-1}
+```{.python .input #adam-adam-from-scratch-1}
 %%tab pytorch, jax
-data = WikiText103(batch_size=64, num_steps=64)
-print(f'{len(data.train):,} training bytes, '
-      f'{len(data.val):,} validation bytes')
-text = data.vocab.decode(data.train[:300])
-print('\n'.join(textwrap.fill(line, 72) for line in text.splitlines()))
-```
-
-The model, `TinyLM`, is a *decoder-only transformer*, the architecture of
-:numref:`chap_transformers`. We use it two chapters early because an
-optimizer does not need to know what attention does: it sees a
-differentiable function with parameters of several kinds, and only their
-gradients. The model has learned token and position embeddings, two blocks,
-and a linear head that predicts the next byte. Each block has an
-attention layer and a two-layer MLP, each behind a LayerNorm and each with a
-residual connection. The attention computation is a single library call.
-Every linear layer draws its weights and biases uniformly from
-$\pm 1/\sqrt{d_\textrm{in}}$, and every embedding row from a standard
-normal distribution.
-
-```{.python .input #adam-a-tiny-language-model-2}
-%%tab pytorch
-class TinyLM(nn.Module):  #@save
-    """A small decoder-only transformer language model."""
-    def __init__(self, vocab_size, d_model=128, num_heads=2, num_blks=2,
-                 max_len=64):
-        super().__init__()
-        self.num_heads = num_heads
-        self.token_emb = nn.Embedding(vocab_size, d_model)
-        self.pos_emb = nn.Embedding(max_len, d_model)
-        self.blks = nn.ModuleList([nn.ModuleDict(dict(
-            norm1=nn.LayerNorm(d_model),
-            qkv=nn.Linear(d_model, 3 * d_model),
-            proj=nn.Linear(d_model, d_model),
-            norm2=nn.LayerNorm(d_model),
-            mlp=nn.Sequential(nn.Linear(d_model, 4 * d_model), nn.GELU(),
-                              nn.Linear(4 * d_model, d_model))))
-            for _ in range(num_blks)])
-        self.norm = nn.LayerNorm(d_model)
-        self.head = nn.Linear(d_model, vocab_size)
-
-    def attention(self, blk, X):
-        B, T, D = X.shape
-        q, k, v = blk['qkv'](X).chunk(3, dim=-1)
-        q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
-                   for u in (q, k, v))
-        Y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
-        return blk['proj'](Y.transpose(1, 2).reshape(B, T, D))
-
-    def forward(self, X):
-        H = self.token_emb(X) + self.pos_emb(torch.arange(X.shape[1],
-                                                          device=X.device))
-        for blk in self.blks:
-            H = H + self.attention(blk, blk['norm1'](H))
-            H = H + blk['mlp'](blk['norm2'](H))
-        return self.head(self.norm(H))
-```
-
-```{.python .input #adam-a-tiny-language-model-2}
-%%tab jax
-class TinyLM(nnx.Module):  #@save
-    """A small decoder-only transformer language model."""
-    def __init__(self, vocab_size, d_model=128, num_heads=2, num_blks=2,
-                 max_len=64, *, rngs):
-        self.num_heads = num_heads
-        def linear(d_in, d_out):
-            a = 1 / math.sqrt(d_in)  # Weights and biases ~ U(-a, a)
-            init = lambda key, shape, dtype: jax.random.uniform(
-                key, shape, dtype, -a, a)
-            return nnx.Linear(d_in, d_out, kernel_init=init, bias_init=init,
-                              rngs=rngs)
-        def embed(n):  # Embedding rows ~ N(0, I)
-            return d2l.Embed(n, d_model, rngs=rngs,
-                             embedding_init=nnx.initializers.normal(1.0))
-        def norm():
-            return nnx.LayerNorm(d_model, epsilon=1e-5, rngs=rngs)
-        self.token_emb, self.pos_emb = embed(vocab_size), embed(max_len)
-        self.blks = nnx.List([nnx.Dict(
-            norm1=norm(), qkv=linear(d_model, 3 * d_model),
-            proj=linear(d_model, d_model), norm2=norm(),
-            mlp1=linear(d_model, 4 * d_model),
-            mlp2=linear(4 * d_model, d_model))
-            for _ in range(num_blks)])
-        self.norm = norm()
-        self.head = linear(d_model, vocab_size)
-
-    def attention(self, blk, X):
-        B, T, D = X.shape
-        q, k, v = jnp.split(blk['qkv'](X), 3, axis=-1)
-        q, k, v = (u.reshape(B, T, self.num_heads, -1) for u in (q, k, v))
-        Y = jax.nn.dot_product_attention(q, k, v, is_causal=True)
-        return blk['proj'](Y.reshape(B, T, D))
-
-    def __call__(self, X):
-        H = self.token_emb(X) + self.pos_emb(jnp.arange(X.shape[1]))
-        for blk in self.blks:
-            H = H + self.attention(blk, blk['norm1'](H))
-            H = H + blk['mlp2'](jax.nn.gelu(blk['mlp1'](blk['norm2'](H)),
-                                            approximate=False))
-        return self.head(self.norm(H))
-```
-
-:begin_tab:`pytorch`
-The initialization described above is the default of `nn.Linear` and
-`nn.Embedding`, and `nn.GELU` computes the exact GELU.
-:end_tab:
-
-:begin_tab:`jax`
-Flax's default initializers differ from the ones described above, so
-`TinyLM` passes them explicitly: uniform $\pm 1/\sqrt{d_\textrm{in}}$ for
-every kernel and bias, a standard normal for the embeddings, and
-LayerNorm with $\epsilon = 10^{-5}$. `approximate=False` selects the exact
-GELU. The random stream `rngs` is a required argument: every model states
-where its initialization comes from.
-
-The embeddings are `d2l.Embed`, an `nnx.Embed` whose gradient is one
-matrix product for small vocabularies, which on frequent tokens such as
-the space byte is far faster than XLA's default
-(:numref:`subsec_utils_embed`).
-:end_tab:
-
-### Parameter Groups
-
-The parameters of `TinyLM` fall into three groups. *Embeddings* are tables
-whose rows receive a gradient only when their token or position occurs,
-the sparse features that motivated AdaGrad. Two-dimensional *matrices*, the
-weights of the linear layers, hold nearly all of the parameters.
-One-dimensional *vectors* are the biases and the LayerNorm scales and
-shifts. Weight decay at the end of this section and Muon in
-:numref:`sec_muon` treat the three groups differently, so we count them
-once here.
-
-```{.python .input #adam-a-tiny-language-model-3}
-%%tab pytorch
-model = TinyLM(vocab_size=len(data.vocab))
-kinds = {'embeddings': 0, 'matrices': 0, 'vectors': 0}
-print(f'{"parameter":<22} {"shape":<14} {"count":>7}')
-for name, p in model.named_parameters():
-    kind = ('embeddings' if 'emb' in name else
-            'matrices' if p.ndim == 2 else 'vectors')
-    kinds[kind] += p.numel()
-    print(f'{name:<22} {str(tuple(p.shape)):<14} {p.numel():>7}')
-for kind, count in kinds.items():
-    print(f'{kind:>37} {count:>7}')
-print(f'{"total":>37} {sum(kinds.values()):>7}')
-```
-
-```{.python .input #adam-a-tiny-language-model-3}
-%%tab jax
-model = TinyLM(vocab_size=len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
-kinds = {'embeddings': 0, 'matrices': 0, 'vectors': 0}
-print(f'{"parameter":<22} {"shape":<14} {"count":>7}')
-for path, p in nnx.to_flat_state(nnx.state(model, nnx.Param)):
-    name = '.'.join(str(k) for k in path)
-    kind = ('embeddings' if 'emb' in name else
-            'matrices' if p.ndim == 2 else 'vectors')
-    kinds[kind] += p.size
-    print(f'{name:<22} {str(tuple(p.shape)):<14} {p.size:>7}')
-for kind, count in kinds.items():
-    print(f'{kind:>37} {count:>7}')
-print(f'{"total":>37} {sum(kinds.values()):>7}')
-```
-
-The model has about 0.47 million parameters, 90% of them in the matrices.
-
-### Training for a Fixed Number of Steps
-
-Training is a loop counted in steps rather than epochs: draw a minibatch,
-compute the mean cross-entropy of the next-token predictions, take an
-optimizer step, record the loss. Nothing in it is specific to language: it
-trains any model that maps a minibatch to logits, so we save it for the
-rest of the book as `train_steps`. Positions labeled $-100$ add no loss,
-which lets a model train on part of its outputs only. An optional function
-`stop` of the step count ends a run early once it returns true.
-
-```{.python .input #adam-a-tiny-language-model-4}
-%%tab pytorch
-def train_steps(model, data, optimizer, num_steps, *, stop=None):  #@save
-    """Minimize the mean cross-entropy of the logits model(X) for the labels
-    Y over the minibatches (X, Y) of data, leaving out the labels -100, for
-    num_steps steps or until stop(step) is true; return every step's loss."""
-    device = d2l.try_gpu()
-    model.to(device)
-    losses, step = [], 0
-    while step < num_steps:
-        for X, Y in data.train_dataloader():
-            X, Y = X.to(device), Y.to(device)
-            logits = model(X)
-            loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
-                                   Y.reshape(-1), ignore_index=-100)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            losses.append(loss.detach())
-            step += 1
-            if step >= num_steps or (stop is not None and stop(step)):
-                return torch.stack(losses).tolist()
-```
-
-```{.python .input #adam-a-tiny-language-model-4}
-%%tab jax
-@nnx.jit  #@save
-def _cross_entropy_step(model, optimizer, X, Y):
-    """One optimizer step on the mean cross-entropy of the logits model(X)
-    for the labels Y; negative labels, such as -100, add no loss."""
-    def loss_fn(model):
-        logits = model(X)
-        logits, y = logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)
-        valid = y >= 0
-        losses = optax.softmax_cross_entropy_with_integer_labels(
-            logits, jnp.where(valid, y, 0))
-        return (losses * valid).sum() / valid.sum()
-    loss, grads = nnx.value_and_grad(loss_fn)(model)
-    optimizer.update(model, grads)
-    return loss
-
-def train_steps(model, data, optimizer, num_steps, *, stop=None):  #@save
-    """Minimize the mean cross-entropy of the logits model(X) for the labels
-    Y over the minibatches (X, Y) of data, leaving out the labels -100, for
-    num_steps steps or until stop(step) is true; return every step's loss."""
-    losses, pending, step = [], [], 0
-    while step < num_steps:
-        for X, Y in data.train_dataloader():
-            pending.append(_cross_entropy_step(
-                model, optimizer, jnp.asarray(X), jnp.asarray(Y)))
-            step += 1
-            done = step >= num_steps or (stop is not None and stop(step))
-            if len(pending) == 50 or done:  # Sync now and then
-                losses.extend(float(l) for l in jax.device_get(pending))
-                pending = []
-            if done:
-                return losses
-```
-
-The counterpart for evaluation is `lm_perplexity`. It sums the
-cross-entropy of the next-token predictions over a set of minibatches,
-usually the validation set, with dropout off, and returns the exponential
-of the mean, the perplexity of :numref:`sec_language-model`. Its logarithm
-is the mean loss per token.
-
-```{.python .input #adam-training-for-a-fixed-number-of-steps-1}
-%%tab pytorch
-def lm_perplexity(model, batches):  #@save
-    """Perplexity of a language model on the minibatches (X, Y) of batches."""
-    device = next(model.parameters()).device
-    modes = {m: m.training for m in model.modules()}  # Restored at the end
-    model.eval()  # Dropout off while we measure
-    total, count = 0, 0
-    with torch.inference_mode():
-        for X, Y in batches:
-            logits = model(X.to(device))
-            total += F.cross_entropy(logits.flatten(0, 1),
-                                     Y.to(device).flatten(), reduction='sum')
-            count += Y.numel()
-    for m, training in modes.items():
-        m.training = training
-    return math.exp(float(total) / count)
-```
-
-```{.python .input #adam-training-for-a-fixed-number-of-steps-1}
-%%tab jax
-@jax.jit(static_argnums=0)  #@save
-def lm_loss_sum(graphdef, state, X, Y):
-    """Summed next-token cross-entropy of a batch, and the model's state."""
-    model = nnx.merge(graphdef, state)
-    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
-    return loss, nnx.state(model)
-
-def lm_perplexity(model, batches):  #@save
-    """Perplexity of a language model on the minibatches (X, Y) of batches."""
-    # A view with dropout off, sharing the weights; one walk through it
-    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
-                                         raise_if_not_found=False))
-    total, count = 0, 0
-    for X, Y in batches:
-        loss, state = lm_loss_sum(graphdef, state, X, Y)
-        total, count = total + loss, count + Y.size
-    nnx.update(model, state)  # Keep statistics the model records, if any
-    return math.exp(float(total) / count)
-```
-
-Three helpers read a run: the final loss, averaged over the last hundred
-steps and set to infinity if the run diverged; a curve smoothed over blocks
-of 25 steps for plotting; and the first step at which the smoothed curve
-reaches a given loss, or `None` if it never does. Later sections use the
-first two as well.
-
-```{.python .input #adam-a-tiny-language-model-5}
-%%tab pytorch, jax
-def final_loss(losses, k=100):  #@save
-    """Mean of the last k losses; infinity if the run diverged."""
-    v = sum(losses[-k:]) / k
-    return v if math.isfinite(v) else float('inf')
-
-def smooth(losses, k=25):  #@save
-    """Means over consecutive blocks of k losses, for plotting."""
-    return [sum(losses[i:i + k]) / k
-            for i in range(0, len(losses) - k + 1, k)]
-
-def steps_to_reach(losses, target, k=25):
-    for i, v in enumerate(smooth(losses, k)):
-        if v <= target:
-            return k * (i + 1)
-    return None
-```
-
-A first run trains `TinyLM` with Adam at $\eta = 0.003$ for 2,000 steps:
-
-```{.python .input #adam-a-tiny-language-model-6}
-%%tab pytorch
-model = TinyLM(len(data.vocab))
-optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
-losses = train_steps(model, data, optimizer, num_steps=2000)
-d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
-         'step', 'training loss')
-print(f'training perplexity per byte: '
-      f'{math.exp(final_loss(losses)):.2f}')
-```
-
-```{.python .input #adam-a-tiny-language-model-6}
-%%tab jax
-model = TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
-optimizer = nnx.Optimizer(model, optax.adam(0.003), wrt=nnx.Param)
-losses = train_steps(model, data, optimizer, num_steps=2000)
-d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
-         'step', 'training loss')
-print(f'training perplexity per byte: '
-      f'{math.exp(final_loss(losses)):.2f}')
-```
-
-The model reaches a training perplexity per byte of about 5, or about
-2.3 bits per byte, against 256 for a uniform guess over the bytes: it has
-learned a good deal of English spelling, and its loss is still falling
-slowly when the run ends. Strong language models compress text like this
-to below one bit per byte (:numref:`sec_language-model`).
-
-### The Image Classifier
-:label:`subsec_fashioncnn`
-
-`FashionCNN` classifies the $28 \times 28$ grayscale images of
-Fashion-MNIST (:numref:`sec_fashion_mnist`). Two stages of a $3 \times 3$
-convolution, a ReLU, and $2 \times 2$ max-pooling, with 32 and 64 channels,
-reduce each image to $64 \times 7 \times 7$ features. Two fully connected
-layers map them to 128 hidden units and then to the ten classes. Every
-weight and bias is drawn uniformly from $\pm 1/\sqrt{\textrm{fan-in}}$,
-where the fan-in of a unit is the number of inputs it sums over.
-
-```{.python .input #adam-the-same-race-on-a-cnn-1}
-%%tab pytorch
-class FashionCNN(nn.Module):  #@save
-    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear."""
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
-        self.fc2 = nn.Linear(128, 10)
-
-    def forward(self, X):
-        X = F.max_pool2d(F.relu(self.conv1(X)), 2)
-        X = F.max_pool2d(F.relu(self.conv2(X)), 2)
-        return self.fc2(F.relu(self.fc1(X.flatten(1))))
-```
-
-```{.python .input #adam-the-same-race-on-a-cnn-1}
-%%tab jax
-class FashionCNN(nnx.Module):  #@save
-    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear."""
-    def __init__(self, *, rngs):
-        def init(fan_in):  # Weights and biases ~ U(-a, a), a = 1/sqrt(fan_in)
-            a = 1 / math.sqrt(fan_in)
-            f = lambda key, shape, dtype: jax.random.uniform(
-                key, shape, dtype, -a, a)
-            return dict(kernel_init=f, bias_init=f, rngs=rngs)
-        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), **init(9))
-        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), **init(9 * 32))
-        self.fc1 = nnx.Linear(64 * 7 * 7, 128, **init(64 * 7 * 7))
-        self.fc2 = nnx.Linear(128, 10, **init(128))
-
-    def __call__(self, X):
-        X = nnx.max_pool(nnx.relu(self.conv1(X)), window_shape=(2, 2),
-                         strides=(2, 2))
-        X = nnx.max_pool(nnx.relu(self.conv2(X)), window_shape=(2, 2),
-                         strides=(2, 2))
-        return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
-```
-
-:begin_tab:`pytorch`
-The initialization described above is the default of `nn.Conv2d` and
-`nn.Linear`. Images arrive as (batch, channel, height, width).
-:end_tab:
-
-:begin_tab:`jax`
-Flax's default initializers draw kernels from a normal distribution scaled
-by the fan-in and set biases to zero, so `FashionCNN` passes the uniform
-initialization explicitly. Images arrive as (batch, height, width,
-channel). As for `TinyLM`, the random stream `rngs` is required.
-:end_tab:
-
-With 421,642 parameters, `FashionCNN` is about the same size as
-`TinyLM`. Since `train_steps` only asks a model for logits, it trains the CNN
-unchanged; Fashion-MNIST minibatches of 256 images take the place of the
-byte windows. The CNN also needs a test accuracy: `evaluate_accuracy`
-returns the fraction of the examples in a set of minibatches that a model
-classifies correctly.
-
-```{.python .input #adam-the-image-classifier-1}
-%%tab pytorch
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 fashion = d2l.FashionMNIST(batch_size=256)
-
-def evaluate_accuracy(model, batches):  #@save
-    """Fraction of the examples in batches that model classifies correctly."""
-    device = next(model.parameters()).device
-    training, correct, total = model.training, 0, 0
-    model.eval()  # Dropout off, batch norm on running statistics
-    with torch.inference_mode():
-        for X, y in batches:
-            y_hat = model(X.to(device)).argmax(dim=1)
-            correct += (y_hat == y.to(device)).sum()
-            total += len(y)
-    model.train(training)
-    return float(correct) / total
-```
-
-```{.python .input #adam-the-image-classifier-1}
-%%tab jax
-fashion = d2l.FashionMNIST(batch_size=256)
-
-@nnx.jit  #@save
-def num_correct(model, X, y):
-    """Number of examples in (X, y) that model classifies correctly."""
-    return (model(X).argmax(axis=1) == y).sum()
-
-def evaluate_accuracy(model, batches):  #@save
-    """Fraction of the examples in batches that model classifies correctly."""
-    # A view with dropout off and batch norm on running statistics
-    model = nnx.view(model, deterministic=True, use_running_average=True,
-                     raise_if_not_found=False)
-    correct, total = 0, 0
-    for X, y in batches:
-        correct += num_correct(model, jnp.asarray(X), jnp.asarray(y))
-        total += len(y)
-    return float(correct) / total
 ```
 
 ## Strengths and Limits of Adam
@@ -963,79 +400,26 @@ four rates.
 
 ### Comparison on the Language Model
 
-The function `lr_sweep` trains one fresh model per learning rate, every
-one from the same initialization, and prints its final loss unless
-`verbose` is false. Given a function `evaluate`, it also evaluates each
-model, at the end of training or every `every` steps, and prints the last
-value under the name `metric`. Later sections run their comparisons with
-it as well.
-
-```{.python .input #adam-the-race-on-the-language-model-1}
+```{.python .input #adam-comparison-on-the-language-model-1}
 %%tab pytorch
-def lr_sweep(make_model, make_optimizer, data, lrs, seed,  #@save
-             num_steps=2000, *, evaluate=None, metric='score', every=None,
-             verbose=True):
-    """Train make_model() with make_optimizer(model, lr) for each lr, from
-    one initialization; return the loss curves and the evaluations."""
-    every = every or num_steps
-    curves, scores = {}, {}
-    for lr in lrs:
-        torch.manual_seed(seed)  # The same initialization for every lr
-        model = make_model()
-        optimizer = make_optimizer(model, lr)
-        curves[lr], scores[lr] = [], []
-        for _ in range(num_steps // every):
-            curves[lr] += train_steps(model, data, optimizer, every)
-            if evaluate is not None:
-                scores[lr].append(evaluate(model))
-        line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
-        if scores[lr]:
-            line += f', {metric} {scores[lr][-1]:.3f}'
-        if verbose:
-            print(line)
-    return curves, scores
-
 lm_seed = random.getrandbits(31)
-sgd_lm, _ = lr_sweep(lambda: TinyLM(len(data.vocab)),
+sgd_lm, _ = d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)),
                      lambda model, lr: torch.optim.SGD(model.parameters(), lr,
                                                        momentum=0.9),
                      data, lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
 ```
 
-```{.python .input #adam-the-race-on-the-language-model-1}
+```{.python .input #adam-comparison-on-the-language-model-1}
 %%tab jax
-def lr_sweep(make_model, make_tx, data, lrs, seed,  #@save
-             num_steps=2000, *, evaluate=None, metric='score', every=None,
-             verbose=True):
-    """Train make_model(rngs=...) with the optax transformation make_tx(lr)
-    for each lr, from one initialization; return the loss curves and the
-    evaluations."""
-    every = every or num_steps
-    curves, scores = {}, {}
-    for lr in lrs:  # The same initialization for every lr
-        model = make_model(rngs=nnx.Rngs(seed))
-        optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        curves[lr], scores[lr] = [], []
-        for _ in range(num_steps // every):
-            curves[lr] += train_steps(model, data, optimizer, every)
-            if evaluate is not None:
-                scores[lr].append(evaluate(model))
-        line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
-        if scores[lr]:
-            line += f', {metric} {scores[lr][-1]:.3f}'
-        if verbose:
-            print(line)
-    return curves, scores
-
 lm_seed = d2l.get_seed()
-sgd_lm, _ = lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
+sgd_lm, _ = d2l.lr_sweep(lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
                      lambda lr: optax.sgd(lr, momentum=0.9), data,
                      lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
 ```
 
 ```{.python .input #adam-the-race-on-the-language-model-2}
 %%tab pytorch
-adam_lm, _ = lr_sweep(lambda: TinyLM(len(data.vocab)),
+adam_lm, _ = d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)),
                       lambda model, lr: torch.optim.Adam(model.parameters(),
                                                          lr),
                       data, lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=lm_seed)
@@ -1043,7 +427,7 @@ adam_lm, _ = lr_sweep(lambda: TinyLM(len(data.vocab)),
 
 ```{.python .input #adam-the-race-on-the-language-model-2}
 %%tab jax
-adam_lm, _ = lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
+adam_lm, _ = d2l.lr_sweep(lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
                       optax.adam, data, lrs=[3e-4, 1e-3, 3e-3, 1e-2],
                       seed=lm_seed)
 ```
@@ -1054,19 +438,19 @@ neighbors on both sides. We plot the two tuned runs:
 
 ```{.python .input #adam-the-race-on-the-language-model-3}
 %%tab pytorch, jax
-best_sgd = min(sgd_lm, key=lambda lr: final_loss(sgd_lm[lr]))
-best_adam = min(adam_lm, key=lambda lr: final_loss(adam_lm[lr]))
+best_sgd = min(sgd_lm, key=lambda lr: d2l.final_loss(sgd_lm[lr]))
+best_adam = min(adam_lm, key=lambda lr: d2l.final_loss(adam_lm[lr]))
 d2l.plot(list(range(0, 2000, 25)),
-         [smooth(sgd_lm[best_sgd]), smooth(adam_lm[best_adam])],
+         [d2l.smooth(sgd_lm[best_sgd]), d2l.smooth(adam_lm[best_adam])],
          'step', 'training loss',
          legend=[f'SGD + momentum, lr {best_sgd:g}',
                  f'Adam, lr {best_adam:g}'])
-loss_sgd = final_loss(sgd_lm[best_sgd])
-loss_adam = final_loss(adam_lm[best_adam])
+loss_sgd = d2l.final_loss(sgd_lm[best_sgd])
+loss_adam = d2l.final_loss(adam_lm[best_adam])
 print(f'final loss: SGD {loss_sgd:.3f}, Adam {loss_adam:.3f}, '
       f'gap {loss_sgd - loss_adam:.3f} nats')
 print(f"Adam reaches SGD's final loss at step "
-      f'{steps_to_reach(adam_lm[best_adam], loss_sgd)} of 2000')
+      f'{d2l.steps_to_reach(adam_lm[best_adam], loss_sgd)} of 2000')
 ```
 
 Tuned Adam ends about 0.03 to 0.2 nats below tuned SGD, a perplexity 3
@@ -1088,8 +472,8 @@ grid moves one step lower, and every run also records its test accuracy.
 %%tab pytorch
 def run_cnn(make_optimizer, lrs, seed):
     """lr_sweep of FashionCNN, with the test accuracy at the end."""
-    return lr_sweep(FashionCNN, make_optimizer, fashion, lrs, seed,
-                    evaluate=lambda model: evaluate_accuracy(
+    return d2l.lr_sweep(d2l.FashionCNN, make_optimizer, fashion, lrs, seed,
+                    evaluate=lambda model: d2l.evaluate_accuracy(
                         model, fashion.val_dataloader()),
                     metric='test accuracy')
 
@@ -1103,8 +487,8 @@ sgd_cnn, sgd_cnn_acc = run_cnn(
 %%tab jax
 def run_cnn(make_tx, lrs, seed):
     """lr_sweep of FashionCNN, with the test accuracy at the end."""
-    return lr_sweep(FashionCNN, make_tx, fashion, lrs, seed,
-                    evaluate=lambda model: evaluate_accuracy(
+    return d2l.lr_sweep(d2l.FashionCNN, make_tx, fashion, lrs, seed,
+                    evaluate=lambda model: d2l.evaluate_accuracy(
                         model, fashion.val_dataloader()),
                     metric='test accuracy')
 
@@ -1128,19 +512,20 @@ adam_cnn, adam_cnn_acc = run_cnn(optax.adam,
 
 ```{.python .input #adam-the-same-race-on-a-cnn-4}
 %%tab pytorch, jax
-best_sgd_cnn = min(sgd_cnn, key=lambda lr: final_loss(sgd_cnn[lr]))
-best_adam_cnn = min(adam_cnn, key=lambda lr: final_loss(adam_cnn[lr]))
+best_sgd_cnn = min(sgd_cnn, key=lambda lr: d2l.final_loss(sgd_cnn[lr]))
+best_adam_cnn = min(adam_cnn, key=lambda lr: d2l.final_loss(adam_cnn[lr]))
 d2l.plot(list(range(0, 2000, 25)),
-         [smooth(sgd_cnn[best_sgd_cnn]), smooth(adam_cnn[best_adam_cnn])],
+         [d2l.smooth(sgd_cnn[best_sgd_cnn]),
+          d2l.smooth(adam_cnn[best_adam_cnn])],
          'step', 'training loss',
          legend=[f'SGD + momentum, lr {best_sgd_cnn:g}',
                  f'Adam, lr {best_adam_cnn:g}'])
-loss_sgd = final_loss(sgd_cnn[best_sgd_cnn])
-loss_adam = final_loss(adam_cnn[best_adam_cnn])
+loss_sgd = d2l.final_loss(sgd_cnn[best_sgd_cnn])
+loss_adam = d2l.final_loss(adam_cnn[best_adam_cnn])
 print(f'final loss: SGD {loss_sgd:.3f}, Adam {loss_adam:.3f}, '
       f'gap {loss_sgd - loss_adam:.3f} nats')
 print(f"Adam reaches SGD's final loss at step "
-      f'{steps_to_reach(adam_cnn[best_adam_cnn], loss_sgd)} of 2000')
+      f'{d2l.steps_to_reach(adam_cnn[best_adam_cnn], loss_sgd)} of 2000')
 print(f'test accuracy: SGD {sgd_cnn_acc[best_sgd_cnn][-1]:.3f}, '
       f'Adam {adam_cnn_acc[best_adam_cnn][-1]:.3f}')
 ```
@@ -1404,9 +789,10 @@ for name, make_optimizer in [
         ('AdamW', lambda model, lr: torch.optim.AdamW(
             model.parameters(), lr, weight_decay=0.1))]:
     print(f'{name}: ', end='')
-    curves[name] = lr_sweep(lambda: TinyLM(len(data.vocab)), make_optimizer,
-                            data, [0.003], seed, num_steps=1000)[0][0.003]
-d2l.plot(list(range(0, 1000, 25)), [smooth(c) for c in curves.values()],
+    curves[name] = d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)),
+                                make_optimizer, data, [0.003], seed,
+                                num_steps=1000)[0][0.003]
+d2l.plot(list(range(0, 1000, 25)), [d2l.smooth(c) for c in curves.values()],
          'step', 'training loss', legend=list(curves))
 ```
 
@@ -1421,10 +807,10 @@ for name, make_tx in [('no decay', optax.adam),
                       ('Adam + ℓ2', lambda lr: coupled(lr, 0.1)),
                       ('AdamW', lambda lr: optax.adamw(lr, weight_decay=0.1))]:
     print(f'{name}: ', end='')
-    curves[name] = lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
-                            make_tx, data, [0.003], seed,
-                            num_steps=1000)[0][0.003]
-d2l.plot(list(range(0, 1000, 25)), [smooth(c) for c in curves.values()],
+    curves[name] = d2l.lr_sweep(
+        lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
+        make_tx, data, [0.003], seed, num_steps=1000)[0][0.003]
+d2l.plot(list(range(0, 1000, 25)), [d2l.smooth(c) for c in curves.values()],
          'step', 'training loss', legend=list(curves))
 ```
 
@@ -1485,9 +871,9 @@ wds_coupled, wds_decoupled = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2], [0.3, 1, 3, 10]
 
 def sweep(make_optimizer, data, lrs, wds, seed, num_steps=800):
     """Held-out loss for each pair (lr, wd), one row per learning rate."""
-    held_out = lambda model: math.log(lm_perplexity(model,
-                                                    data.val_dataloader()))
-    columns = [lr_sweep(lambda: TinyLM(len(data.vocab)),
+    held_out = lambda model: math.log(d2l.lm_perplexity(
+        model, data.val_dataloader()))
+    columns = [d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)),
                         lambda model, lr: make_optimizer(model, lr, wd),
                         data, lrs, seed, num_steps, evaluate=held_out,
                         verbose=False)[1]
@@ -1509,11 +895,12 @@ wds_coupled, wds_decoupled = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2], [0.3, 1, 3, 10]
 
 def sweep(make_tx, data, lrs, wds, seed, num_steps=800):
     """Held-out loss for each pair (lr, wd), one row per learning rate."""
-    held_out = lambda model: math.log(lm_perplexity(model,
-                                                    data.val_dataloader()))
-    columns = [lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
-                        lambda lr: make_tx(lr, wd), data, lrs, seed,
-                        num_steps, evaluate=held_out, verbose=False)[1]
+    held_out = lambda model: math.log(d2l.lm_perplexity(
+        model, data.val_dataloader()))
+    columns = [d2l.lr_sweep(
+        lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
+        lambda lr: make_tx(lr, wd), data, lrs, seed,
+        num_steps, evaluate=held_out, verbose=False)[1]
                for wd in wds]
     table = [[column[lr][-1] for column in columns] for lr in lrs]
     for lr, row in zip(lrs, table):
@@ -1657,7 +1044,7 @@ the split is the one we counted for `TinyLM`.
 ```{.python .input #adamw-what-not-to-decay-1}
 %%tab pytorch
 torch.manual_seed(lm_seed)  # The initialization of the comparison's runs
-model = TinyLM(len(data.vocab))
+model = d2l.TinyLM(len(data.vocab))
 decay = [p for name, p in model.named_parameters()
          if p.ndim == 2 and 'emb' not in name]
 no_decay = [p for name, p in model.named_parameters()
@@ -1672,7 +1059,8 @@ print(f'decayed: {n_decay} of {n} parameters')
 
 ```{.python .input #adamw-what-not-to-decay-1}
 %%tab jax
-model = TinyLM(len(data.vocab), rngs=nnx.Rngs(lm_seed))  # As in the comparison
+model = d2l.TinyLM(len(data.vocab),
+                   rngs=nnx.Rngs(lm_seed))  # As in the comparison
 
 def decay_mask(params):  # True for the matrices, False for the rest
     return jax.tree_util.tree_map_with_path(
@@ -1706,11 +1094,11 @@ tuned run there, which used no decay:
 
 ```{.python .input #adamw-what-not-to-decay-2}
 %%tab pytorch, jax
-losses = train_steps(model, data, optimizer, num_steps=2000)
-d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
+losses = d2l.train_steps(model, data, optimizer, num_steps=2000)
+d2l.plot(list(range(0, 2000, 25)), [d2l.smooth(losses)],
          'step', 'training loss')
-print(f'perplexity: AdamW {math.exp(final_loss(losses)):.2f}, '
-      f'Adam without decay {math.exp(final_loss(adam_lm[best_adam])):.2f}')
+print(f'perplexity: AdamW {math.exp(d2l.final_loss(losses)):.2f}, '
+      f'Adam without decay {math.exp(d2l.final_loss(adam_lm[best_adam])):.2f}')
 ```
 
 AdamW ends within a few percent of the run without decay, in either
@@ -2149,26 +1537,6 @@ framework's.
 - Every weight moves by $\eta$ on step 1, as the bias correction promises.
 - Written as a framework optimizer, the from-scratch version trains any
   model; afterwards we call the library's.
-:::
-
-::: {.slide title="TinyLM and FashionCNN: Two Models of About 0.45M Parameters"}
-[Two models]{.kicker}
-
-| | `TinyLM` | `FashionCNN` |
-|---|---|---|
-| task | next byte, WikiText-103 | 10 classes, Fashion-MNIST |
-| layers | 2 pre-norm transformer blocks, width 128 | 2 conv-pool stages, 2 linear |
-| parameters | 470,784 | 421,642 |
-| minibatch | 64 windows of 64 bytes | 256 images |
-
-`TinyLM`'s groups: embeddings 9%, matrices 90%, vectors 1%. A run reads
-about 3% of the 270M training bytes and sees almost no text twice. Both
-models are in `d2l` and train with `d2l.train_steps`.
-
-::: {.d2l-note}
-Protocol: same random initialization, 2,000 steps, constant rate, four
-rates per method spaced by about 3×; "tuned" is the lowest final loss.
-:::
 :::
 
 ::: {.slide title="On Both Models, Adam Reaches SGD's Final Loss 1.3–2.5× Faster"}

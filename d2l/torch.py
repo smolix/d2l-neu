@@ -1309,6 +1309,37 @@ class TinyLM(nn.Module):
             H = H + blk['mlp'](blk['norm2'](H))
         return self.head(self.norm(H))
 
+class FashionCNN(nn.Module):
+    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, X):
+        X = F.max_pool2d(F.relu(self.conv1(X)), 2)
+        X = F.max_pool2d(F.relu(self.conv2(X)), 2)
+        return self.fc2(F.relu(self.fc1(X.flatten(1))))
+
+def evaluate_accuracy(model, batches):
+    """Fraction of the examples in batches that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    device = next(model.parameters()).device
+    training, correct, total = model.training, 0, 0
+    model.eval()  # Dropout off, batch norm on running statistics
+    with torch.inference_mode():
+        for X, y in batches:
+            y_hat = model(X.to(device)).argmax(dim=1)
+            correct += (y_hat == y.to(device)).sum()
+            total += len(y)
+    model.train(training)
+    return float(correct) / total
+
 def train_steps(model, data, optimizer, num_steps, *, stop=None):
     """Minimize the mean cross-entropy of the logits model(X) for the labels
     Y over the minibatches (X, Y) of data, leaving out the labels -100, for
@@ -1364,36 +1395,15 @@ def smooth(losses, k=25):
     return [sum(losses[i:i + k]) / k
             for i in range(0, len(losses) - k + 1, k)]
 
-class FashionCNN(nn.Module):
-    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+def steps_to_reach(losses, target, k=25):
+    """First step at which the smoothed losses reach target; None if they
+    never do.
 
     Defined in :numref:`sec_adam`"""
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
-        self.fc2 = nn.Linear(128, 10)
-
-    def forward(self, X):
-        X = F.max_pool2d(F.relu(self.conv1(X)), 2)
-        X = F.max_pool2d(F.relu(self.conv2(X)), 2)
-        return self.fc2(F.relu(self.fc1(X.flatten(1))))
-
-def evaluate_accuracy(model, batches):
-    """Fraction of the examples in batches that model classifies correctly.
-
-    Defined in :numref:`sec_adam`"""
-    device = next(model.parameters()).device
-    training, correct, total = model.training, 0, 0
-    model.eval()  # Dropout off, batch norm on running statistics
-    with torch.inference_mode():
-        for X, y in batches:
-            y_hat = model(X.to(device)).argmax(dim=1)
-            correct += (y_hat == y.to(device)).sum()
-            total += len(y)
-    model.train(training)
-    return float(correct) / total
+    for i, v in enumerate(smooth(losses, k)):
+        if v <= target:
+            return k * (i + 1)
+    return None
 
 def lr_sweep(make_model, make_optimizer, data, lrs, seed,
              num_steps=2000, *, evaluate=None, metric='score', every=None,

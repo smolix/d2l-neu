@@ -821,7 +821,7 @@ We measure a model by its *perplexity* on the validation text, the
 exponential of the average cross-entropy loss per character
 (:numref:`sec_language-model`). A perplexity of 3 means that the model is,
 on average, as uncertain about the next character as if it chose
-uniformly among 3 candidates. `d2l.lm_perplexity` of :numref:`sec_adam`
+uniformly among 3 candidates. `d2l.lm_perplexity` of :numref:`sec_test_models`
 computes it over the validation minibatches, with dropout off.
 
 All models are trained with the same recipe: AdamW

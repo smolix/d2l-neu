@@ -1,44 +1,31 @@
 # Landscapes
 :label:`sec_optimization-intro`
 
-Training a network is a walk downhill. A model with a million parameters
-defines a loss over a million-dimensional space, and every optimizer in this
-chapter does the same thing on that surface: it measures the slope where it
-stands and takes a step. Whether the step makes progress depends on the
-shape of the surface nearby. Where the surface is flat, the slope carries
-almost no information and the step goes nowhere. Where it curves steeply in
-one direction and gently in another, a step small enough to be safe in the
-steep direction barely moves along the gentle one. And because the slope is
-computed from a minibatch rather than from the whole dataset, every step is
-also slightly wrong.
+Every loss curve in this book came from one procedure: compute the gradient
+of the loss on a minibatch, take a small step against it, and repeat. The
+curves were not alike. Some fell within an epoch and others crept for
+dozens, and a learning rate that trained one model sent the loss of another
+to `nan`. The procedure was the same each time. What differed was the
+function it was applied to.
 
-This section examines these shapes before we build any optimizer. We first
-ask what minimizing the training loss achieves and what it cannot achieve.
-We then look at the points where the slope vanishes: local minima, saddle
-points, and plateaus. The larger part of the section is about two effects
-that slow routine training far more often than critical points do: uneven
-curvature and noisy gradients. We measure the first on a two-dimensional valley that the rest
-of the chapter reuses, and we watch a small network adjust its own
-curvature to the step size. Convex analysis, the source of most of our
-vocabulary, closes the section.
-<!-- WRITER: "we watch a small network adjust its own curvature to the step size" is no longer true here: the edge-of-stability run moved to gd.md (subsec_gd-edge-of-stability). -->
+A model with a million parameters defines a loss over a million-dimensional
+space, and it helps to think of this function as a landscape on which the
+optimizer walks downhill, able to measure only the slope under its feet.
+Whether a step makes progress depends on the shape of the surface nearby.
+Where the surface is flat, the slope says almost nothing. Where it curves
+steeply in one direction and gently in another, a step small enough to be
+safe in the steep direction barely moves along the gentle one.
 
-## The Goal of Optimization
-
-In optimization, the function to be minimized is called the *objective
-function*. By convention we minimize; maximizing a quantity is the same as
-minimizing its negative. Optimization texts also collect all parameters
-into a single vector $\mathbf{x}$, and we follow them in this chapter:
-$\mathbf{x}$ holds everything that earlier chapters wrote as
-$(\mathbf{w}, b)$.
-
-Optimization and learning share a loss function but not a goal. The optimizer
-minimizes the *empirical risk*, the average loss over the training set.
-Learning wants a low *risk*, the expected loss over the whole population of
-examples the model will ever see (:numref:`subsec_empirical-risk-and-risk`).
-The optimizer only ever sees the former, and as
-:numref:`sec_generalization_basics` showed, driving the training error
-toward zero can even raise the error on new data.
+Which of these shapes is to blame when training is slow? The hazard with
+the longest reputation is the local minimum, a dip in which the walk ends
+too early. This section gives a different answer: uneven curvature. We meet
+it on a valley in two variables, small enough to solve by hand, where the
+ratio of the largest to the smallest curvature decides how many steps are
+needed, whatever the learning rate. We then return to the points where the
+slope vanishes and see why they do less harm than their reputation
+suggests. The optimizer throughout is the plain gradient step. We analyze
+it completely, because every later method of the chapter answers something
+that goes wrong on this valley.
 
 ```{.python .input #optimization-intro-goal-of-optimization-1}
 %%tab pytorch
@@ -61,126 +48,31 @@ import optax
 from d2l import jax as d2l
 ```
 
-A one-dimensional example shows the difference. Let $f$ be a smooth risk
-and let $g$ be an empirical risk that fluctuates around it, as a
-finite-sample average fluctuates around its expectation. The minimum of $g$
-need not sit at the minimum of $f$.
-<!-- WRITER: figure fig_mdl-opt-risk-gap removed from the body (structure: the goal of optimization in two paragraphs, no figure); the sentence that cited it now ends here. -->
+## The Goal of Optimization
 
-No optimizer can close this gap, because it comes from sampling the data,
-not from the algorithm. Regularization and model selection address it. For
-the rest of the chapter we therefore set generalization aside and take the
-objective at face value. Even so, the problem is hard. A deep network's
-objective has no closed-form minimizer like the one we found for linear
-regression in :numref:`sec_linear_regression`, so every algorithm in this
-chapter is iterative, and the surface it iterates over is far from a
-convex bowl.
+In optimization, the function to be minimized is called the *objective
+function*, or simply the objective. Optimization texts collect all
+parameters into a single vector $\mathbf{x}$, and we follow them in this
+chapter: $\mathbf{x}$ holds everything that earlier chapters wrote as
+$(\mathbf{w}, b)$. Our objective is the *empirical risk*, the average loss
+over the training set. Linear regression had a formula for its minimizer
+(:numref:`sec_linear_regression`). A deep network has none, so every method
+in this chapter is iterative: it starts somewhere and improves the
+parameters step by step.
 
-## Critical Points and Plateaus
+Learning wants something else, a low *risk*, the expected loss on examples
+the model has not seen (:numref:`subsec_empirical-risk-and-risk`). The two
+differ because the training set is a finite sample. That difference is not
+the optimizer's doing, and no optimizer can remove it; regularization and
+model selection address it (:numref:`sec_generalization_basics`). The
+optimizer is not a bystander, though. The empirical risk of a network has
+many minimizers, they do not all generalize equally well, and the learning
+rate and the noise in the gradient help decide which of them a run reaches.
+For most of this chapter we ask the narrower question of how fast and how
+reliably a method lowers the objective it is given, and we point out the
+places where its choice among minimizers shows.
 
-An iterative method needs a signal to follow, and the gradient is that
-signal. The signal gives out at *critical points*, where the gradient is
-zero, and nearly gives out on *plateaus*, where it is tiny. These are the
-classical hazards of nonconvex optimization, and we look at each in turn.
-
-### Local Minima
-
-If the value of $f$ at $x$ is smaller than at any nearby point, then $x$ is
-a *local minimum*. If it is smallest over the entire domain, $x$ is the
-*global minimum*. The function
-
-$$f(x) = x \cos(\pi x), \quad -1 \leq x \leq 2,$$
-
-has one of each.
-<!-- WRITER: figure fig_mdl-opt-local-minima removed from the body (this subsection and the cubic are cut per LAND-4/5). -->
-
-An iterate that lands near either minimum sees its gradient shrink toward
-zero, so from the gradient alone a local minimum cannot be told apart from the
-global one. Deep learning objectives have many local minima. Noise in the
-gradient can move the parameters out of a shallow basin. This is one
-reason, as we will see below, why minibatch noise is not purely a nuisance.
-
-### Saddle Points
-:label:`subsec_opt-intro-saddles`
-
-A *saddle point* is a critical point that is neither a minimum nor a
-maximum. In one dimension the closest example is $f(x) = x^3$: its first
-and second derivatives both vanish at $x = 0$, so gradient descent can
-stall there, although the function keeps decreasing to the left. Strictly speaking, this point is a
-*stationary inflection*. A true saddle, which curves up in one direction and
-down in another, needs at least two dimensions; we use "saddle" for both.
-
-<!-- WRITER: figure fig_mdl-opt-inflection removed from the body; the cubic is cut per LAND-5. -->
-
-The function $f(x, y) = x^2 - y^2$ has a true saddle at the origin
-(:numref:`fig_mdl-opt-saddle`). Along the $x$-axis the origin is a minimum,
-along the $y$-axis it is a maximum, and the surface has the shape of the
-saddle that gives the point its name.
-
-![The saddle $z=x^2-y^2$: a minimum along $x$ and a maximum along $y$ (left), seen in the two slices through the origin (right).](../img/mdl-opt-saddle.svg)
-:label:`fig_mdl-opt-saddle`
-
-In high dimensions saddles become the rule. To see why, recall the
-second-order test for a critical point of a function of $k$ variables. Its
-Hessian, the $k \times k$ matrix of second derivatives, has $k$ real
-eigenvalues, one curvature per principal direction, and their signs decide
-the shape:
-
-* all $k$ eigenvalues positive (the Hessian is *positive definite*): a
-  strict local minimum;
-* all $k$ negative: a strict local maximum;
-* some positive and some negative (the Hessian is *indefinite*): a saddle
-  point, called *strict* because at least one direction curves downward;
-* no negative and some zero eigenvalues, or no positive and some zero: the
-  test is inconclusive, and higher-order terms decide.
-
-A strict local minimum needs all $k$ curvatures to be positive. If the signs were
-independent fair coin flips, a critical point of a function with
-$k = 1000$ parameters would be a minimum with probability
-$2^{-1000} \approx 10^{-301}$, and nearly every critical point would be a
-saddle. The coin-flip model is only a heuristic. The eigenvalues of a
-Hessian are not independent, as
-Exercise :exref:`ex_optimization-intro-eigenvalues-symmetric-random-matrices`
-shows. At the critical points of real networks, the fraction of negative
-eigenvalues falls as the loss falls: high-loss critical points are mostly
-saddles, while low-loss ones are close to minima
-:cite:`Dauphin.Pascanu.Gulcehre.ea.2014`. The measurements agree with the
-heuristic where it matters: in high dimensions the critical points a method
-meets on its way down are overwhelmingly saddles, not poor local minima.
-
-### Plateaus
-
-A gradient can also be too small to guide an update at a point that is not
-critical at all. Suppose we minimize $f(x) = \tanh(x)$, starting from
-$x = 4$. The derivative is $f'(x) = 1 - \tanh^2(x)$, so $f'(4) \approx
-0.0013$. The surface is nearly flat at the starting point
-(:numref:`fig_mdl-opt-tanh-flat`), and gradient descent barely moves for a
-long time before it reaches the slope.
-
-![Minimizing $f(x)=\tanh x$ from $x=4$ stalls: the surface is nearly flat, slope about $0.0013$, a vanishing gradient with no critical point.](../img/mdl-opt-tanh-flat.svg)
-:label:`fig_mdl-opt-tanh-flat`
-
-This is the vanishing-gradient problem of
-:numref:`sec_numerical_stability` in one variable. In a deep network the
-gradient of an early layer is a product of one derivative per later layer,
-and a product of many factors below one shrinks fast. Saturating
-activations made deep networks hard to train until ReLU activations and
-careful initialization removed most such plateaus. Those fixes belong to
-model design (:numref:`subsec_activation-functions`), not to the optimizer.
-
-The classical hazards are real, but two facts soften them. Deep learning
-does not need *the* global minimum: a good local minimum serves as well,
-and at low loss most critical points are good. And what limits the speed
-of routine training is usually something else, which we turn to next.
-
-## Curvature and Noise
-
-Two effects make training slow or unstable far more often than critical
-points do. The curvature of the objective differs from direction to
-direction, and the gradient we compute is only an estimate. Most methods in
-this chapter address one of these effects or both.
-
-### An Ill-Conditioned Valley
+## An Ill-Conditioned Valley
 
 The smallest example of uneven curvature is a quadratic valley in two
 variables,
@@ -188,15 +80,18 @@ variables,
 $$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2.$$
 :eqlabel:`eq_opt-intro-valley`
 
-It curves gently along $x_1$, with second derivative $h_1 = 0.2$, and
-steeply along $x_2$, with second derivative $h_2 = 4$, so its contours are
-long, narrow ellipses. The gradient is $(0.2 x_1, 4 x_2)$. Gradient descent, the
-simplest optimizer, steps against the gradient with a learning rate $\eta$:
-$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$. On this
-valley each step multiplies the two coordinates by fixed factors,
+It curves gently along $x_1$, with second derivative $\lambda_1 = 0.2$, and
+steeply along $x_2$, with second derivative $\lambda_2 = 4$, so its contours
+are long, narrow ellipses around the minimum at the origin. We minimize it
+by gradient descent, the update we have used in one form or another since
+:numref:`sec_linear_regression`: step against the gradient with a learning
+rate $\eta$, that is, $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla
+f(\mathbf{x})$. The gradient of the valley is $(0.2 x_1, 4 x_2)$, so each
+step multiplies the two coordinates by fixed factors,
 
 $$x_1 \leftarrow (1 - 0.2\eta)\, x_1, \qquad x_2 \leftarrow (1 - 4\eta)\, x_2.$$
 
+The coordinates do not interact, and each makes its own demand on $\eta$.
 The steep coordinate sets a ceiling: $x_2$ shrinks only if
 $|1 - 4\eta| < 1$, that is, if $\eta < 0.5$. The flat coordinate sets the
 pace: below that ceiling, $1 - 0.2\eta$ stays above $0.9$, so each step
@@ -204,8 +99,15 @@ removes less than a tenth of the distance along $x_1$. This valley is the
 running example of the chapter: gradient descent, stochastic gradient
 descent, momentum, and Adam are all tested on it.
 
-We run 30 steps from $(-5, -2)$ at $\eta = 0.45$, just under the ceiling,
-and plot both coordinates against the step count.
+Let us take $\eta = 0.45$, just under the ceiling, and start at
+$(-5, -2)$. The steep factor is $1 - 4 \cdot 0.45 = -0.8$, so $x_2$ should
+overshoot the valley floor on every step, flipping its sign and losing a
+fifth of its size. The flat factor is $0.91$, so $x_1$ should shed only
+nine percent of its remaining distance per step. At that rate every factor
+of ten along $x_1$ takes about 24 steps, and 30 steps should leave $x_1$
+near $-5 \cdot 0.91^{30} \approx -0.3$. We run the 30 steps and plot both
+coordinates against the step count. The array `h` in the code holds the
+two curvatures.
 
 ```{.python .input #optimization-intro-an-ill-conditioned-valley}
 %%tab pytorch, jax
@@ -223,12 +125,9 @@ d2l.plot(np.arange(31), [xs[:, 0], xs[:, 1]], 'step', 'coordinate',
          legend=['$x_1$', '$x_2$'])
 ```
 
-The steep coordinate overshoots the valley floor on every step. Its factor
-is $1 - 4 \cdot 0.45 = -0.8$, so $x_2$ flips sign and loses a fifth of its
-size each time. The flat coordinate never overshoots, but its factor is
-$0.91$, so it sheds only nine percent of its remaining distance per step.
-At that rate every factor of ten along $x_1$ takes about 24 steps, and after
-30 steps $x_1$ is still $-0.3$. In the plane, the iterate zigzags across
+The plot shows both predictions. The steep coordinate swings from side to
+side and is too small to see after twenty steps, while the flat one is
+still at $-0.3$ when the run ends. In the plane, the iterate zigzags across
 the narrow valley while it creeps along its floor.
 
 Could another learning rate do better? We count the steps until both
@@ -255,129 +154,212 @@ above it the steep coordinate becomes the slow one, and at $\eta = 0.5$ it
 stops shrinking altogether. No choice of $\eta$ reaches 1% in fewer than
 47 steps.
 
-The quantity behind this floor is the ratio of the largest to the smallest
-curvature, the *condition number*
+The table is lopsided around its best row: 49 steps at $\eta = 0.45$, 113
+at $\eta = 0.49$. Close to the ceiling, a learning rate slightly too large
+costs far more than one slightly too small.
+
+## The Condition Number
+
+The floor is not a peculiarity of this example. Nothing in the argument
+depended on the valley being aligned with the axes or on its having two
+variables. Take any quadratic
+$f(\mathbf{x}) = \frac{1}{2} \mathbf{x}^\top \mathbf{H} \mathbf{x}$, where
+the symmetric matrix $\mathbf{H}$ is the *Hessian*, the matrix of second
+derivatives (for the valley, $\textrm{diag}(0.2, 4)$). Its gradient is
+$\mathbf{H}\mathbf{x}$, so a step of gradient descent maps $\mathbf{x}$ to
+$(\mathbf{I} - \eta\mathbf{H})\mathbf{x}$, and an eigenvector of
+$\mathbf{H}$ with eigenvalue $\lambda_i$ to $1 - \eta\lambda_i$ times
+itself. It is therefore instructive to measure $\mathbf{x}$ along the
+eigenvectors, which are orthogonal because $\mathbf{H}$ is symmetric. Each
+of these coordinates is multiplied by its own factor $1 - \eta\lambda_i$,
+as $x_1$ and $x_2$ were. Every quadratic is a valley like ours, possibly
+turned in space, with one curvature per eigenvector. If all eigenvalues are
+positive, in which case $\mathbf{H}$ is called *positive definite* and the
+origin is the minimum, the largest eigenvalue $\lambda_{\max}$ sets the
+ceiling $\eta < 2/\lambda_{\max}$, and the smallest, $\lambda_{\min}$,
+sets the pace.
+
+What decides the number of steps is the ratio of the two, the *condition
+number*
 
 $$\kappa = \frac{\lambda_{\max}}{\lambda_{\min}},$$
 
-where $\lambda_{\max}$ and $\lambda_{\min}$ are the largest and smallest
-eigenvalues of the Hessian. The valley's Hessian is diagonal, so its
-eigenvalues are the two curvatures, $\lambda_{\min} = h_1 = 0.2$ and
-$\lambda_{\max} = h_2 = 4$, and $\kappa = 20$. At the best rate,
-$\eta = 2/(\lambda_{\min} + \lambda_{\max})$, both factors have size
-$(\kappa - 1)/(\kappa + 1) \approx 1 - 2/\kappa$, which is
-$19/21 = 0.905$ for the valley. Reducing the error by a factor $\epsilon$
-then takes about $(\kappa/2) \log(1/\epsilon)$ steps, and for the valley
-this is $10 \log 100 \approx 46$, the count we measured.
-:numref:`subsec_mdl-quadratic-model` derives the formula. The cost of
-gradient descent grows linearly with $\kappa$, and the $\kappa$ of a deep
-network is far larger than 20. The Hessian of a trained network has a few
-large eigenvalues and a bulk of eigenvalues near zero
-:cite:`Ghorbani.Krishnan.Xiao.2019`, so its largest curvature exceeds the
-typical one by factors of hundreds or more.
+which is $4/0.2 = 20$ for the valley. A problem with a large $\kappa$ is
+called *ill-conditioned*. The best learning rate balances the two extreme
+factors, as in the sweep. At $\eta = 2/(\lambda_{\min} + \lambda_{\max})$
+both have size $(\kappa - 1)/(\kappa + 1)$, about $1 - 2/\kappa$ for large
+$\kappa$, and every direction in between shrinks at least as fast. Each
+step thus removes a fraction of about $2/\kappa$ of the error, and
+shrinking the error to a fraction $\epsilon$ of its starting value takes
+about $(\kappa/2) \log(1/\epsilon)$ steps, with $\log$ the natural
+logarithm. For the valley the factor is $19/21 = 0.905$ and the estimate
+is $10 \log 100 \approx 46$, against the 47 we measured
+(:numref:`subsec_mdl-quadratic-model` gives the argument in full). The
+number of steps grows in proportion to $\kappa$, and no learning rate can
+change that. To do better we have to change the method, which is what most
+of this chapter does.
 
-<!-- WRITER: the edge-of-stability subsection (text and the three cells `optimization-intro-the-edge-of-stability-1` PT/JX and `-2`, IDs unchanged) moved to gd.md under the new label subsec_gd-edge-of-stability. -->
+For a network the definition needs care. It presumes a positive definite
+Hessian, and the Hessian of a network's loss is not one: it has a few large
+eigenvalues and a bulk of eigenvalues near zero, some of them negative
+:cite:`Ghorbani.Krishnan.Xiao.2019`. The ratio
+$\lambda_{\max}/\lambda_{\min}$ is then infinite or negative and says
+nothing. What carries over is the comparison that the valley taught us to
+make. The largest eigenvalue, called the *sharpness* of the network's loss,
+limits the learning rate as $\lambda_2$ did on the valley, and below that
+limit a direction of curvature $\lambda$ loses only a fraction
+$\eta\lambda$ of its error per step. The sharpness exceeds the typical
+curvature by orders of magnitude, so a network is a far narrower valley
+than ours.
 
-### Noisy Gradients
-:label:`subsec_opt-intro-noise`
+One thing the valley lacks is noise. Its gradient is exact, whereas a
+minibatch gradient is an estimate whose error does not vanish at the
+minimum, so a constant learning rate leaves the parameters fluctuating
+around it (:numref:`subsec_linear-regression-minibatch-sgd`).
+:numref:`sec_sgd` adds this noise to the valley and computes how far from
+the minimum the iterates stay.
 
-The second effect is that the gradient we use is an estimate. The
-objective is an average of $n$ per-example losses, so its exact gradient
-costs a pass over all $n$ examples, far too much for a single step on a
-large dataset. Practical methods compute the gradient on a *minibatch* of
-$b$ examples instead. This estimate is correct on average, and because it
-averages $b$ independent terms, its variance is $1/b$ times the variance of
-a single example's gradient.
+## Critical Points and Plateaus
 
-Noise changes what a constant learning rate can achieve. Near the minimum
-the true gradient is small, but the noise in its estimate is not, so the
-iterates never settle. They keep moving inside a region around the minimum,
-a *noise ball*, whose size grows with $\eta$. Convergence therefore needs a
-learning rate that decays over time, and the batch size $b$ becomes a
-second dial for the noise, with its own computational cost.
+A reader may object that the valley is too kind. It has a single minimum,
+while the loss of a network has many, of different depth. Should we not
+worry first about getting stuck in a poor one? The worry is about the
+places where a gradient method loses its signal: *critical points*, where
+the gradient is zero, and *plateaus*, where it is merely tiny. A *local
+minimum*, where $f$ is smaller than at all nearby points, is a critical
+point, and the gradient cannot tell it from the *global minimum*, where $f$
+is smallest over the whole domain. Most critical points of a network's
+loss, however, are not minima at all.
 
-Noise is not only a nuisance. It can push the iterate off a saddle point or
-out of a shallow basin. Gradient descent with a small enough learning rate
-escapes strict saddles from a random start even without noise, because the
-starting points that lead into a strict saddle form a set of measure zero
-:cite:`Lee.Simchowitz.Jordan.ea.2016`. Escape can still take many steps,
-and noise shortens it. Noise rarely lifts the iterate out of a deep
-basin.
+### Saddle Points
+:label:`subsec_opt-intro-saddles`
 
-## The Role of Convexity
+The function $f(x, y) = x^2 - y^2$ has a critical point at the origin that
+is neither a minimum nor a maximum (:numref:`fig_mdl-opt-saddle`). Along
+the $x$-axis the origin is a minimum, along the $y$-axis it is a maximum,
+and the surface has the shape of the saddle that gives such a point its
+name, a *saddle point*.
 
-Every surface in this section except the valley has been nonconvex. Yet
-the words we used to describe them (condition number, convergence rate,
-noise ball) come from *convex* analysis, where they are the subjects of
-theorems.
-A convex function has no saddle points and no local minima other than its
-global ones, so any weakness an optimizer shows on a convex problem belongs
-to the optimizer. A method that fails on a quadratic is unlikely to succeed
-on a transformer, which is why the first methods of this chapter meet the
-valley before they meet a network.
+![The saddle $z=x^2-y^2$: a minimum along $x$ and a maximum along $y$ (left), seen in the two slices through the origin (right).](../img/mdl-opt-saddle.svg)
+:label:`fig_mdl-opt-saddle`
 
-Convex analysis also applies locally. Near a minimum, a smooth loss is
-approximately a quadratic bowl, so the valley describes the last phase of
-training reasonably well even when the surface as a whole is far from
-convex. Some practical methods come directly from this local
-approximation: averaging the iterates near the bottom of the bowl, as in stochastic weight
-averaging :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`, is a convex-analysis
-idea that works on deep networks (:numref:`sec_practice`).
+In high dimensions saddle points are the rule, and the Hessian shows why.
+Its eigenvalues are the curvatures along its eigenvectors, as they were on
+the valley. At a critical point of a function of $k$ variables, the signs
+of the $k$ eigenvalues decide the shape:
 
-The local approximation does not extend to the whole surface. Permuting the
-hidden units of a layer leaves the function a network computes unchanged,
-so every minimum comes with a large family of copies of itself, one per
-permutation. If the loss were convex, the average of these copies would be
-a minimizer too. That average is a network whose units in the layer are
-all identical. It is no more expressive than a network with one unit and
-usually fits worse, as
+* all $k$ eigenvalues positive: a strict local minimum;
+* all $k$ negative: a strict local maximum;
+* some positive and some negative: a saddle point, called *strict* because
+  at least one direction curves downward;
+* no negative and some zero eigenvalues, or no positive and some zero: the
+  test is inconclusive, and higher-order terms decide. In one variable,
+  $x^4$ and $x^3$ both have second derivative zero at the origin, and only
+  the first has a minimum there.
+
+A minimum needs every one of the $k$ signs to come out positive. If the
+signs were independent fair coin flips, a critical point of a function with
+$k = 1000$ parameters would be a minimum with probability
+$2^{-1000} \approx 10^{-301}$, and nearly every critical point would be a
+saddle. The coin-flip model is only a heuristic. The eigenvalues of a
+Hessian are not independent, as
+Exercise :exref:`ex_optimization-intro-eigenvalues-symmetric-random-matrices`
+shows. Critical points located in small networks show the pattern in the
+form that matters: those at high loss are saddles with many descending
+directions, the fraction of negative eigenvalues falls as the loss falls,
+and those at low loss have few descending directions or none
+:cite:`Dauphin.Pascanu.Gulcehre.ea.2014`.
+
+Does a saddle trap gradient descent? Only if the iterate arrives on it
+exactly. On $x^2 - y^2$ the valley's rule applies with one curvature of
+each sign: a step multiplies $x$ by $1 - 2\eta$ and $y$ by $1 + 2\eta$. The
+second factor exceeds one, so any nonzero $y$ grows geometrically, and only
+a start with $y = 0$ ends on the saddle. This holds in general: from a
+random start, gradient descent with a small enough learning rate avoids
+every strict saddle, because the starting points that lead into one form a
+set of measure zero :cite:`Lee.Simchowitz.Jordan.ea.2016`. The escape can
+take long when the iterate passes close to the saddle. Here the noise of
+minibatch gradients is a help and not a nuisance: it pushes the iterate off
+the ridge and shortens the escape, as
+Exercise :exref:`ex_optimization-intro-saddle-escape-time` measures.
+
+Critical points at high loss are saddles, and gradient methods leave
+saddles, so the places where a run can come to rest have low loss. A run
+stuck in a poor local minimum, the classical worry, is not what limits the
+training of a large network.
+
+### Plateaus
+
+A gradient can also be too small to guide an update at a point that is not
+critical at all. Suppose we minimize $f(x) = \tanh(x)$, starting from
+$x = 4$. The derivative is $f'(x) = 1 - \tanh^2(x)$, so $f'(4) \approx
+0.0013$. The surface is nearly flat at the starting point
+(:numref:`fig_mdl-opt-tanh-flat`), and gradient descent barely moves for a
+long time before it reaches the slope.
+
+![Minimizing $f(x)=\tanh x$ from $x=4$ stalls: the surface is nearly flat, slope about $0.0013$, a vanishing gradient with no critical point.](../img/mdl-opt-tanh-flat.svg)
+:label:`fig_mdl-opt-tanh-flat`
+
+This is the vanishing-gradient problem of
+:numref:`sec_numerical_stability` in one variable. In a deep network the
+gradient of an early layer is a product of one derivative per later layer,
+and a product of many factors below one shrinks fast. ReLU activations and
+careful initialization removed most such plateaus
+(:numref:`subsec_activation-functions`). They are remedies in the design of
+the model, not in the optimizer. Uneven curvature is another matter: it is
+present at every step of every run, and dealing with it is the optimizer's
+job.
+
+## Convexity as a Local Model
+
+The valley is a convex function, and the loss of a network is not, so it
+is fair to ask why what we learn on the one should carry over to the
+other. A function is *convex* if the straight line between any two points
+of its graph lies on or above the graph, as it does for a bowl. A convex
+function has no saddle points and no local minima other than its global
+ones, so any weakness an optimizer shows on a convex problem belongs to the
+optimizer. A method that fails on a quadratic is unlikely to succeed on a
+transformer, which is why the methods of this chapter meet the valley
+before they meet a network.
+
+A convex model is also accurate where training ends. Near a minimum with a
+positive definite Hessian, a smooth loss is approximately a quadratic bowl,
+so the valley describes the last phase of training reasonably well. The
+vocabulary of this chapter, from the condition number onward, is that of
+convex analysis, which the appendix develops
+(:numref:`sec_mdl-convexity`).
+
+The approximation is local and no more. Permuting the hidden units of a
+layer leaves the function a network computes unchanged, so every minimum
+comes with a large family of copies of itself, one per permutation. If the
+loss were convex, the average of these copies would be a minimizer too.
+That average is a network whose units in the layer are all identical. It is
+no more expressive than a network with one unit and usually fits worse, as
 Exercise :exref:`ex_optimization-intro-permutation-symmetric-minima` makes
-precise. For deep learning, convexity is a local approximation
-and a source of tools, never a global fact. The appendix develops convex
-sets and functions, Jensen's inequality, and duality
-(:numref:`sec_mdl-convexity`), and proves the convergence rates this chapter
-quotes (:numref:`chap_mdl-optimization`).
+precise. For deep learning, convexity is a local approximation and a source
+of tools, never a global fact.
 
-## Three Decisions
-
-What we have seen suggests that any optimizer can be described by three
-decisions. The first is the *descent direction*. The negative gradient is
-the steepest direction when the size of a step is measured by its Euclidean
-length, and on the valley it points mostly across the valley rather than
-along it. The second is the *step size over time*: how far to move along
-the chosen direction, limited by the largest curvature, and how that
-distance should change as training proceeds. The third is the *treatment of
-noise*: the batch size and any averaging of gradients over steps decide how
-noisy each update is.
-
-Each method in this chapter is a particular set of these decisions.
-Gradient descent (:numref:`sec_gd`) makes the plainest choice for each and
-shows how dividing by the curvature would remove the condition number of
-the valley altogether. Stochastic gradient descent (:numref:`sec_sgd`)
-brings in the noise that the valley lacks. Momentum
-(:numref:`sec_momentum`) averages gradients over steps, which builds up
-speed along the flat floor of the valley and also damps the noise. Adam
-(:numref:`sec_adam`) rescales the step coordinate by coordinate, and Muon
-(:numref:`sec_muon`) measures the length of a step differently and so
-changes the direction itself. Schedules and the batch size settle the
-remaining two decisions in the later sections.
+Even locally, the valley has told us only part of what we need. It gave a
+ceiling for the learning rate and a best value, but on a quadratic whose
+curvatures we chose ourselves. Nobody tells us the curvatures of a
+network's loss. What limits the step on a general function, and what would
+the ideal step be if the curvature could be measured?
 
 ## Summary
 
-Optimization minimizes the empirical risk, while learning wants a low risk
-on new data, and no optimizer can close the gap between the two. On the
-training objective, gradients vanish at local minima, at saddle points,
-which dominate in high dimensions, and on plateaus such as saturated
-activations. Routine training is limited more often by two other effects.
-Uneven curvature forces one learning rate to serve both steep and flat
-directions, so gradient descent needs a number of steps proportional to the
-condition number $\kappa$: on the valley, with $\kappa = 20$, no learning
-rate reaches 1% in fewer than 47 steps. Noise in minibatch gradients keeps a
-constant learning rate from converging. Real networks also adapt their
-curvature to the step size and train at the edge of stability. The rest of
-the chapter builds optimizers that choose direction, step size, and noise
-level better than plain gradient descent.
-<!-- WRITER: the edge-of-stability sentence of this Summary ("Real networks also adapt their curvature ...") now belongs to gd.md, where the run lives. -->
+Optimization minimizes the empirical risk. The gap to the risk on new data
+is not the optimizer's to close, although the optimizer does choose among
+the minimizers of its objective. What slows gradient descent is uneven
+curvature: one learning rate must stay below $2/\lambda_{\max}$ for the
+steepest direction, and it then removes only a fraction
+$\eta\lambda_{\min}$ of the error along the flattest one, so the number of
+steps grows in proportion to the condition number
+$\kappa = \lambda_{\max}/\lambda_{\min}$. On the valley, with $\kappa = 20$,
+no learning rate reaches 1% in fewer than 47 steps. Critical points do less
+harm: in high dimensions those at high loss are saddle points, which
+gradient methods leave, and the plateaus of saturating activations are
+removed by the design of the model. Convexity holds near a minimum, where
+the loss is approximately a quadratic like the valley, and never globally.
 
 ## Exercises
 
@@ -395,8 +377,8 @@ level better than plain gradient descent.
        at $x_0 = \epsilon$ or at $x_0 = -\epsilon$ for a small
        $\epsilon > 0$. For each sign, determine whether the iterates
        approach $0$ or move away, and find the rate at which $x_t$ decays
-       on the side that approaches. Explain why the escape of strict
-       saddles stated in :numref:`subsec_opt-intro-noise` does not apply
+       on the side that approaches. Explain why the result on strict
+       saddles stated in :numref:`subsec_opt-intro-saddles` does not apply
        to this point.
     1. Using $1 - \tanh^2 x \approx 4e^{-2x}$ for large $x$, estimate how
        many steps gradient descent at $\eta = 1$ needs to move from $x = 4$
@@ -407,18 +389,19 @@ level better than plain gradient descent.
     Problem 6.6.*
 
 1. [code] **Saddle escape time.** Balancing a ball on the saddle
-   $f(x_1, x_2) = x_1^2 - x_2^2$ of :numref:`fig_mdl-opt-saddle` is stable
-   along $x_1$ and unstable along $x_2$. Gradient descent with learning
-   rate $\eta$ started at $(1, \delta)$ behaves the same way.
-    1. Write the iterates in closed form and derive the number of steps
-       until $|x_2| \geq 1$ as a function of $\delta$ and $\eta$. Evaluate
-       it for $\delta \in \{10^{-2}, 10^{-6}\}$ at $\eta = 0.1$, check both
-       counts numerically, and state what happens for $\delta = 0$.
+   $f(x, y) = x^2 - y^2$ of :numref:`fig_mdl-opt-saddle` is stable along
+   $x$ and unstable along $y$. Gradient descent with learning rate $\eta$
+   started at $(1, \delta)$ behaves the same way.
+    1. Derive the number of steps until $|y| \geq 1$ as a function of
+       $\delta$ and $\eta$. Evaluate it for
+       $\delta \in \{10^{-2}, 10^{-6}\}$ at $\eta = 0.1$, check both counts
+       numerically, and state what happens for $\delta = 0$.
     1. Add zero-mean Gaussian noise of standard deviation $\sigma$ to every
        gradient evaluation and measure the escape time from $\delta = 0$
        for $\sigma \in \{10^{-3}, 10^{-1}\}$. Reconcile the result with
-       the statement in :numref:`subsec_opt-intro-noise` that gradient
-       descent from a random start escapes strict saddles without noise.
+       the statement in :numref:`subsec_opt-intro-saddles` that gradient
+       descent from a random start avoids strict saddles without noise.
+   :exlabel:`ex_optimization-intro-saddle-escape-time`
 
 1. [code] **An ill-conditioned valley.** Gradient descent on the valley
    :eqref:`eq_opt-intro-valley` multiplies $x_1$ by $1 - 0.2\eta$ and
@@ -430,17 +413,17 @@ level better than plain gradient descent.
        the same fraction of the stability limit $2/\lambda_{\max}$ as
        $\eta = 0.45$ is of $0.5$. Predict the step count from the two
        factors for $\kappa = \lambda_{\max}/\lambda_{\min} \in
-       \{10, 100, 1000\}$, check it numerically, and compare with the
-       linear growth in $\kappa$ that :numref:`subsec_mdl-quadratic-model`
-       derives.
-    1. Derive the best rate that the section quotes: show that the learning
-       rate minimizing the larger of the two factors
-       $|1 - \eta\lambda_{\min}|$ and $|1 - \eta\lambda_{\max}|$ is
-       $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$, and that the
-       factor it achieves is $(\kappa - 1)/(\kappa + 1)$. Use the result to
-       explain why tuning the learning rate cannot remove the dependence of
-       the step count on $\kappa$, and compare your derivation with the
-       appendix's :eqref:`eq_mdl-opt-optimal-step`.
+       \{10, 100, 1000\}$, check it numerically, and compare it with the
+       count $(\kappa/2)\log 100$ at the best learning rate.
+    1. The section found the best rate by balancing the two factors. Prove
+       that this is optimal: show that the learning rate minimizing the
+       larger of $|1 - \eta\lambda_{\min}|$ and $|1 - \eta\lambda_{\max}|$
+       is $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$, that the
+       factor it achieves is $(\kappa - 1)/(\kappa + 1)$, and that a
+       direction with an eigenvalue between $\lambda_{\min}$ and
+       $\lambda_{\max}$ shrinks at least as fast. Use the result to
+       explain why tuning the learning rate cannot remove the dependence
+       of the step count on $\kappa$.
 
 1. [code] **Learning rate and sharpness.** A two-layer scalar linear
    network $\hat{y} = abx$ is fit to the single example $(x, y) = (1, 1)$
@@ -505,14 +488,12 @@ level better than plain gradient descent.
 
 <!-- slides -->
 
-<!-- WRITER: the three edge-of-stability slides moved to the gd.md deck; the cover subtitle, the Goals slide ("explain how the learning rate selects the curvature") and the Recap ("Networks raise their sharpness to 2/eta") still name it. The risk-gap and local-minima slides still use img/mdl-opt-risk-gap.svg and img/mdl-opt-local-minima.svg; remove the generator entries only after the rewritten deck drops them. -->
-
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §9.1]{.kicker}
 
 Landscapes<br>
-**risk and empirical risk · critical points · the ill-conditioned valley · the edge of stability · noisy gradients**
+**the goal of optimization · the ill-conditioned valley · the condition number · saddle points and plateaus · convexity as a local model**
 :::
 :::
 
@@ -529,7 +510,7 @@ $$x_1 \leftarrow (1 - 0.2\eta)\, x_1, \qquad x_2 \leftarrow (1 - 4\eta)\, x_2.$$
 
 ::: {.d2l-note}
 The best $\eta$ still needs **47 steps** to get within 1% of the minimum.
-A deep network's curvatures differ by factors of hundreds or more.
+A network's curvatures differ by orders of magnitude.
 :::
 :::
 
@@ -537,38 +518,33 @@ A deep network's curvatures differ by factors of hundreds or more.
 [Goals]{.kicker}
 
 - say what an optimizer can and cannot fix about generalization;
+- predict each coordinate's factor $1 - \eta\lambda$ from its curvature
+  $\lambda$, and the largest stable learning rate;
+- compute the best learning rate and the step count from the condition
+  number;
 - classify a critical point from the signs of its Hessian eigenvalues;
-- predict the step count of gradient descent from the condition number;
-- explain how the learning rate selects the curvature (edge of stability);
-- say why gradient noise forces the learning rate to decay.
+- explain why saddle points and plateaus rarely limit training.
 
 **Running example:** the valley, curvatures 0.2 and 4, start $(-5, -2)$.
-**The idea:** curvature and noise, not critical points, set the speed of
-routine training.
+**The idea:** uneven curvature, not critical points, sets the speed of
+training.
 :::
 
-::: {.slide title="Landscapes Opens the Optimization Chapter"}
+::: {.slide title="Landscapes Opens the Chapter on a Valley We Can Solve by Hand"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| **Landscapes** | **curvature and noise slow training** |
-| Gradient Descent | step size against curvature |
-| Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
-| Momentum | averaging over time |
-| Adam and AdamW | a step size per coordinate, decoupled decay |
-| Schedules | warmup and decay |
-| Muon | orthogonalized updates for matrices |
-| Batch Size | how many examples per step |
-| Scaling Up | learning rates across widths |
-| Practice | clipping, averaging, fair comparisons |
+| movement | decks | question |
+|---|---|---|
+| a valley we can solve | **Landscapes** · Gradient Descent · Stochastic and Minibatch GD | what limits a step |
+| two small networks | Two Test Models · Momentum · Adam · AdamW · Muon | which direction to step in |
+| a whole run | Schedules · Batch Size · Scaling Up · Practice | how the step should change |
 :::
 
 ::: {.col .narrow}
-- **Uses:** the Hessian and eigenvalues.
-- **Skips:** proofs (math appendix).
+- **Uses:** gradients, the Hessian and its eigenvalues.
+- **Skips:** gradient noise (the SGD deck) and proofs.
 :::
 :::
 :::
@@ -576,29 +552,138 @@ routine training.
 ::: {.slide title="The Optimizer Sees Only the Empirical Risk"}
 [The goal]{.kicker}
 
-![](../img/mdl-opt-risk-gap.svg){width=62%}
+- **Objective:** the empirical risk, the average loss on the training
+  set, as a function of all parameters $\mathbf{x}$.
+- **Learning wants:** a low risk, the expected loss on new data.
+- The gap comes from sampling the data. No optimizer closes it.
+- A network's objective has many minimizers. The learning rate and the
+  gradient noise help choose among them.
 
-- Empirical risk $g$: average loss on the training set.
-- Risk $f$: expected loss on all data. Their minima differ.
-- The gap comes from sampling, so no optimizer can close it.
+::: {.d2l-note}
+This deck asks how fast a method lowers the objective it is given.
+:::
 :::
 
-::: {.slide title="A Vanishing Gradient Looks the Same at Every Minimum"}
-[Critical points]{.kicker}
+::: {.slide title="The Steep Coordinate Flips Sign, the Flat One Creeps"}
+[The valley]{.kicker}
 
-![](../img/mdl-opt-local-minima.svg){width=58%}
+@!optimization-intro-an-ill-conditioned-valley
 
-$f(x) = x\cos(\pi x)$ on $[-1, 2]$: the slope is zero at the local and at
-the global minimum. Noise can lift the iterate out of a shallow basin.
+$\eta = 0.45$, 30 steps from $(-5, -2)$. Predicted: $x_2$ times $-0.8$ per
+step, $x_1$ times $0.91$, so $x_1$ ends near
+$-5 \cdot 0.91^{30} \approx -0.3$. A factor of ten along $x_1$ takes about
+24 steps.
+:::
+
+::: {.slide title="No Learning Rate Beats 47 Steps"}
+[The valley]{.kicker}
+
+Steps until both coordinates are within 1% of the minimum, from $(-5, -2)$:
+
+| $\eta$ | 0.1 | 0.45 | 0.476 | 0.49 | 0.5 |
+|---|---:|---:|---:|---:|---:|
+| factor $x_1$ | 0.98 | 0.91 | 0.905 | 0.902 | 0.9 |
+| factor $x_2$ | 0.6 | −0.8 | −0.905 | −0.96 | −1 |
+| steps | 228 | 49 | 47 | 113 | never |
+
+::: {.d2l-note}
+Best: $1 - 0.2\eta = -(1 - 4\eta)$, so $\eta = 2/4.2 \approx 0.476$ and
+both factors have size $0.905$.
+:::
+:::
+
+::: {.slide title="Check: Which Coordinate Is Slow at η = 0.49?"}
+[Check]{.kicker}
+
+On the valley, gradient descent at $\eta = 0.49$ needs 113 steps, more
+than twice as many as at $\eta = 0.45$. Which coordinate is to blame?
+
+::: {.fragment .fade-up}
+$x_2$: its factor is $1 - 4 \cdot 0.49 = -0.96$, larger in size than the
+flat factor $0.902$. Close to the ceiling, a rate slightly too large costs
+far more than one slightly too small.
+:::
+:::
+
+::: {.slide title="Every Quadratic Is a Valley Along Its Eigenvectors"}
+[The condition number]{.kicker}
+
+$f(\mathbf{x}) = \frac{1}{2}\mathbf{x}^\top\mathbf{H}\mathbf{x}$ with
+Hessian $\mathbf{H}$ (the matrix of second derivatives; for the valley
+$\textrm{diag}(0.2, 4)$). One step of gradient descent:
+
+$$\mathbf{x} \leftarrow (\mathbf{I} - \eta\mathbf{H})\,\mathbf{x}$$
+
+Along an eigenvector $\mathbf{v}_i$ of $\mathbf{H}$ with eigenvalue
+$\lambda_i$, the coordinate $c_i = \mathbf{v}_i^\top\mathbf{x}$ obeys
+
+$$c_i \leftarrow (1 - \eta\lambda_i)\, c_i$$
+
+::: {.d2l-note}
+The largest eigenvalue sets the ceiling, $\eta < 2/\lambda_{\max}$. The
+smallest, $\lambda_{\min}$, sets the pace.
+:::
+:::
+
+::: {.slide title="Steps Grow in Proportion to the Condition Number"}
+[The condition number]{.kicker}
+
+$$\kappa = \frac{\lambda_{\max}}{\lambda_{\min}}, \qquad \textrm{valley: } \frac{4}{0.2} = 20$$
+
+- Best rate $\eta = 2/(\lambda_{\min} + \lambda_{\max})$: both extreme
+  factors have size $(\kappa - 1)/(\kappa + 1) \approx 1 - 2/\kappa$, here
+  $19/21 = 0.905$.
+- Error down to a fraction $\epsilon$: about $(\kappa/2)\ln(1/\epsilon)$
+  steps. Valley: $10 \ln 100 \approx 46$, measured 47.
+
+::: {.d2l-note}
+No learning rate removes the factor $\kappa$. A faster method must change
+the step itself.
+:::
+:::
+
+::: {.slide title="Check: A Valley with Condition Number 1000"}
+[Check]{.kicker}
+
+Curvatures $0.004$ and $4$. With the best fixed learning rate, about how
+many steps reduce the error by a factor of 100? And at $\eta = 0.45$?
+
+::: {.fragment .fade-up}
+- Best $\eta \approx 2/4.004$: about $(1000/2) \cdot \ln 100 \approx 2300$
+  steps.
+- $\eta = 0.45$: the flat factor is $1 - 0.0018$, so
+  $\ln 100 / 0.0018 \approx 2560$ steps; the steep factor $-0.8$ is no
+  bottleneck.
+:::
+:::
+
+::: {.slide title="A Network Has No Finite κ, Only a Far Narrower Valley"}
+[The condition number]{.kicker}
+
+The Hessian of a network's loss (Ghorbani et al., 2019):
+
+- a few large eigenvalues;
+- a bulk near zero, some negative: $\lambda_{\max}/\lambda_{\min}$ is
+  infinite or negative.
+
+What carries over from the valley:
+
+- the largest eigenvalue, the **sharpness**, limits $\eta$;
+- a direction of curvature $\lambda$ loses a fraction $\eta\lambda$ of its
+  error per step.
+
+::: {.d2l-note}
+The sharpness exceeds the typical curvature by orders of magnitude.
+:::
 :::
 
 ::: {.slide title="A Saddle Curves Up in One Direction and Down in Another"}
 [Critical points]{.kicker}
 
-![](../img/mdl-opt-saddle.svg){width=78%}
+![](../img/mdl-opt-saddle.svg){width=74%}
 
-$z = x^2 - y^2$: minimum along $x$, maximum along $y$, zero gradient at
-the origin. In 1-D, $x^3$ at $0$ stalls descent the same way.
+A **critical point** has zero gradient. At the origin of $z = x^2 - y^2$
+it is a minimum along $x$ and a maximum along $y$: a **saddle point**.
 :::
 
 ::: {.slide title="Hessian Eigenvalue Signs Classify a Critical Point"}
@@ -612,9 +697,9 @@ the origin. In 1-D, $x^3$ at $0$ stalls descent the same way.
 | zeros, all others one sign | inconclusive |
 
 ::: {.d2l-note}
-Coin-flip signs, $k = 1000$: a minimum with probability $10^{-301}$. Real
-signs are not independent, but high-loss critical points are mostly
-saddles (Dauphin et al., 2014).
+Coin-flip signs, $k = 1000$ parameters: a minimum with probability
+$2^{-1000} \approx 10^{-301}$. Real signs are not independent, but
+critical points at high loss are saddles (Dauphin et al., 2014).
 :::
 :::
 
@@ -635,133 +720,81 @@ The gradient is zero, and the Hessian is
 :::
 :::
 
+::: {.slide title="Gradient Descent Leaves a Saddle Unless It Starts on the Ridge"}
+[Critical points]{.kicker}
+
+On $x^2 - y^2$, one step with learning rate $\eta$:
+
+$$x \leftarrow (1 - 2\eta)\, x, \qquad y \leftarrow (1 + 2\eta)\, y$$
+
+- $\eta = 0.1$: $y$ grows by $1.2$ per step. From $y = 10^{-3}$ it reaches
+  1 in $\ln 10^3 / \ln 1.2 \approx 38$ steps.
+- Only $y = 0$ stays, a set of measure zero (Lee et al., 2016).
+- Minibatch noise pushes $y$ off zero and shortens the escape.
+
+::: {.d2l-note}
+High-loss critical points are saddles, and descent leaves saddles: a run
+comes to rest only at low loss.
+:::
+:::
+
 ::: {.slide title="A Plateau Stalls Descent Without a Critical Point"}
 [Plateaus]{.kicker}
 
 ![](../img/mdl-opt-tanh-flat.svg){width=56%}
 
 $f(x) = \tanh x$ from $x = 4$: $f'(4) = 1 - \tanh^2 4 \approx 0.0013$.
-Deep networks saturate the same way; ReLU and good initialization fix it
+Deep networks saturate the same way. ReLU and good initialization fix it
 in the model, not in the optimizer.
 :::
 
-::: {.slide title="The Steep Coordinate Flips Sign, the Flat One Creeps"}
-[The valley]{.kicker}
-
-@!optimization-intro-an-ill-conditioned-valley
-
-$\eta = 0.45$: $x_2$ is multiplied by $-0.8$, $x_1$ by $0.91$. Every
-factor of ten along $x_1$ takes about 24 steps.
-:::
-
-::: {.slide title="No Learning Rate Beats 47 Steps"}
-[The valley]{.kicker}
-
-Steps until both coordinates are within 1% of the minimum, from $(-5, -2)$:
-
-| $\eta$ | 0.1 | 0.45 | 0.476 | 0.49 | 0.5 |
-|---|---:|---:|---:|---:|---:|
-| factor $x_1$ | 0.98 | 0.91 | 0.905 | 0.902 | 0.9 |
-| factor $x_2$ | 0.6 | −0.8 | −0.905 | −0.96 | −1 |
-| steps | 228 | 49 | 47 | 113 | never |
-
-Best: $\eta = 2/(0.2 + 4) \approx 0.476$, where both factors have size
-$0.905$. Larger $\eta$ makes $x_2$ the slow coordinate.
-:::
-
-::: {.slide title="Steps Grow Linearly with the Condition Number"}
-[The valley]{.kicker}
-
-$$\kappa = \frac{\lambda_{\max}}{\lambda_{\min}} = \frac{4}{0.2} = 20$$
-
-- Best rate $\eta = 2/(\lambda_{\min} + \lambda_{\max})$: both factors
-  have size $(\kappa - 1)/(\kappa + 1) \approx 1 - 2/\kappa$, here
-  $19/21 = 0.905$.
-- Reducing the error by $\epsilon$: about $(\kappa/2)\log(1/\epsilon)$
-  steps. Valley: $10 \log 100 \approx 46$.
-
-::: {.d2l-note}
-A trained network's Hessian has a few large eigenvalues and a bulk near
-zero (Ghorbani et al., 2019): the largest curvature exceeds the typical one
-by factors of hundreds or more.
-:::
-:::
-
-::: {.slide title="Check: A Valley with Condition Number 1000"}
-[Check]{.kicker}
-
-Curvatures $0.004$ and $4$. With the best fixed learning rate, about how
-many steps reduce the error by a factor of 100? And at $\eta = 0.45$?
-
-::: {.fragment .fade-up}
-- Best $\eta \approx 2/4.004$: about $(1000/2) \cdot \log 100 \approx 2300$
-  steps.
-- $\eta = 0.45$: the flat factor is $1 - 0.0018$, so
-  $\log 100 / 0.0018 \approx 2560$ steps; the steep factor $-0.8$ is no
-  bottleneck.
-:::
-:::
-
-::: {.slide title="A Minibatch Gradient Is Right on Average and Noisy per Step"}
-[Noise]{.kicker}
-
-- Exact gradient: a pass over all $n$ examples per step.
-- Minibatch of $b$: unbiased, variance $1/b$ of one example's.
-- Constant $\eta$: the iterates wander in a **noise ball** whose size grows
-  with $\eta$, so $\eta$ must decay to converge.
-- Noise helps leave saddles and shallow basins, rarely deep ones.
-:::
-
-::: {.slide title="Convexity Gives the Vocabulary, Not the Landscape"}
+::: {.slide title="Convexity Describes the Neighborhood of a Minimum, Not the Landscape"}
 [Convexity]{.kicker}
 
-- Convex: no saddles, every local minimum global. A method that fails on
-  a quadratic is unlikely to succeed on a transformer.
-- Near a minimum, any smooth loss is roughly a quadratic bowl: the valley
-  describes late training.
-- Not globally: permuting $d$ hidden units gives $d!$ copies of every
-  minimum; their average is a network of identical units.
+- **Convex:** the line between two points of the graph lies on or above
+  it. No saddles, and every local minimum is global.
+- **Locally true:** near a minimum a smooth loss is roughly a quadratic
+  bowl, so the valley describes late training.
+- **Globally false:** permuting $d$ hidden units gives $d!$ copies of
+  every minimum, and their average is a network of identical units.
+
+::: {.d2l-note}
+A method that fails on a quadratic is unlikely to succeed on a
+transformer.
+:::
 :::
 
-::: {.slide title="An Optimizer Is Three Decisions"}
-[Three decisions]{.kicker}
-
-| decision | limited by | methods ahead |
-|---|---|---|
-| descent direction | uneven curvature | Newton, preconditioning, momentum, Adam, Muon |
-| step size over time | largest curvature, noise | schedules, warmup |
-| treatment of noise | minibatch variance | batch size, momentum, averaging |
-
-On the valley the negative gradient $(-1, -8)$ at $(-5, -2)$ points
-mostly *across* the valley, not along it.
-:::
-
-::: {.slide title="Check: Which Coordinate Is Slow at η = 0.49?"}
+::: {.slide title="Check: Multiply the Loss by 10. What Changes?"}
 [Check]{.kicker}
 
-On the valley, gradient descent at $\eta = 0.49$ needs 113 steps, more
-than twice as many as at $\eta = 0.45$. Which coordinate is to blame?
+The valley becomes $f(\mathbf{x}) = x_1^2 + 20 x_2^2$. What are the
+ceiling, the best learning rate, the condition number, and the steps to
+1%?
 
 ::: {.fragment .fade-up}
-$x_2$: its factor is $1 - 4 \cdot 0.49 = -0.96$, larger in size than the
-flat factor $0.902$. Close to the ceiling, the steep direction oscillates
-almost without damping.
+- Curvatures 2 and 40: ceiling $2/40 = 0.05$, best
+  $\eta = 2/42 \approx 0.048$, ten times smaller.
+- $\kappa = 40/2 = 20$ and 47 steps, both unchanged.
+
+The learning rate absorbs the scale of the loss. The condition number is
+what remains.
 :::
 :::
 
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- The optimizer minimizes the empirical risk; regularization addresses
-  the gap to the risk.
-- Gradients vanish at minima, saddles (dominant in high dimension), and
-  plateaus.
-- The valley, $\kappa = 20$: no fixed $\eta$ beats 47 steps to 1%; steps grow
-  linearly with $\kappa$.
-- Networks raise their sharpness to $2/\eta$ and train at the edge of
-  stability.
-- Minibatch noise forces a decaying learning rate.
+- The optimizer minimizes the empirical risk. It cannot close the gap to
+  the risk, but it chooses among minimizers.
+- The valley, curvatures 0.2 and 4: ceiling $\eta < 0.5$, best
+  $\eta \approx 0.476$, never fewer than 47 steps to 1%.
+- $\kappa = \lambda_{\max}/\lambda_{\min} = 20$: about
+  $(\kappa/2)\ln(1/\epsilon)$ steps at the best rate.
+- A network is a far narrower valley: its sharpness against a bulk of
+  curvatures near zero.
+- Saddles are left behind, plateaus are fixed in the model, and convexity
+  holds only near a minimum.
 
-**Next:** gradient descent, step sizes, and how Newton's method divides out
-the curvature.
+**Next:** what limits the step on a general function, and the ideal step
+when the curvature is known.
 :::

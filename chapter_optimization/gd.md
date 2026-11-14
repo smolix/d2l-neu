@@ -1,32 +1,30 @@
 # Gradient Descent
 :label:`sec_gd`
 
-Every model in this book was trained with a learning rate fixed before
-the run, usually copied from a recipe and lowered if the loss diverged.
-The previous section showed why the choice is delicate: on a valley that
-curves steeply in one direction and gently in another, a step small enough
-for the steep direction makes little progress along the gentle one. This
-section asks what decides which learning rates work, and how fast the best
-of them can go. We answer it for gradient descent, the simplest optimizer
-and the ancestor of every other method in this chapter: compute the
-gradient, take a step against it, and repeat.
+When a training run diverges, we halve the learning rate and try again,
+and sooner or later the loss goes down. Once it does, we push the learning
+rate back up as far as it will go. Both habits assume a ceiling somewhere,
+and neither says where it is or what puts it there.
 
-Gradient descent has a single knob, the learning rate $\eta$, and on the
-valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ of
-:numref:`sec_optimization-intro` this knob already decides everything. At
-$\eta = 0.45$ the iterate needs 49 steps to come within 1% of the minimum,
-at $\eta = 0.5$ it never arrives, and no learning rate does better than 47
-steps. A learning rate that makes a large network diverge does so for the
-same reason that it makes a one-dimensional quadratic diverge, so the small
-cases are worth understanding completely.
+The valley of :numref:`sec_optimization-intro` answered the question for
+one quadratic. Its steep direction, with curvature 4, put a ceiling of
+$2/4 = 0.5$ on the learning rate, and its flat direction made gradient
+descent take 47 steps even at the best rate below that ceiling. We found
+both numbers by multiplying two coordinates by two fixed factors, which
+works for a quadratic whose axes we know. A training loss is neither
+quadratic nor aligned with any axes we know.
 
-We split the question into three. Why does a step against the gradient
-lower the objective, and how large may the step be? What would the ideal
-step be if we also knew the curvature? And how can we approximate that
-ideal cheaply? The answers are a Taylor expansion, Newton's method, and
-preconditioning. Preconditioning is the idea behind the adaptive methods of
-:numref:`sec_adam`. Throughout the section the gradient is exact;
-:numref:`sec_sgd` replaces it with a noisy estimate.
+The idea of this section is a single inequality: a step of gradient
+descent is safe as long as the learning rate stays below 2 divided by the
+largest curvature. We prove it in three lines, for any function whose
+slope does not change too fast, and then follow it to three places. At a
+minimum, it decides whether gradient descent can stay there, so the
+learning rate chooses among the minima of a loss. On a small network, we
+watch the curvature rise during training until it meets the limit. And if
+curvature is what limits the step, the ideal step should divide by it: we
+ask what such a step would cost on a network, and which part of it is
+cheap enough to keep. The gradient is exact throughout the section;
+:numref:`sec_sgd` replaces it by an estimate.
 
 ```{.python .input #gd-one-dimensional-gradient-descent-1}
 %%tab pytorch
@@ -54,84 +52,101 @@ from d2l import jax as d2l
 import functools
 ```
 
-## One-Dimensional Gradient Descent
+## The Descent Guarantee
 
-Why should a step against the gradient reduce the objective at all? The
-one-dimensional case already contains the answer. Let
-$f: \mathbb{R} \rightarrow \mathbb{R}$ be continuously differentiable. For
-a small change $\epsilon$ in its argument, its Taylor expansion reads
+Why should a step against the gradient lower the objective at all? Near a
+point $\mathbf{x}$, a differentiable function
+$f: \mathbb{R}^d \to \mathbb{R}$ is close to its tangent plane, so a small
+step $\boldsymbol{\epsilon}$ changes it by
 
-$$f(x + \epsilon) = f(x) + \epsilon f'(x) + O(\epsilon^2).$$
-:eqlabel:`gd-taylor`
+$$f(\mathbf{x} + \boldsymbol{\epsilon}) \approx f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}).$$
 
-Near $x$ the function is close to its tangent line, so a move downhill
-along the tangent should decrease $f$. We pick a step size $\eta > 0$, set
-$\epsilon = -\eta f'(x)$, and substitute:
+Among all steps of a fixed small length $r$, which one lowers $f$ the
+most? By the Cauchy–Schwarz inequality, the inner product
+$\boldsymbol{\epsilon}^\top \nabla f(\mathbf{x})$ is at least
+$-r \|\nabla f(\mathbf{x})\|$, with equality only when
+$\boldsymbol{\epsilon}$ points along $-\nabla f(\mathbf{x})$. The negative
+gradient is therefore the direction of *steepest descent*, and a step of
+gradient descent with learning rate $\eta > 0$,
 
-$$f(x - \eta f'(x)) = f(x) - \eta f'(x)^2 + O(\eta^2 f'(x)^2).$$
-:eqlabel:`gd-taylor-2`
+$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}),$$
 
-The first-order change $-\eta f'(x)^2$ is negative whenever the derivative
-is not zero, and for small enough $\eta$ it outweighs the remainder.
-Iterating the update
+changes $f$ by $-\eta \|\nabla f(\mathbf{x})\|^2$ to first order. This is
+negative wherever the gradient is not zero.
 
-$$x \leftarrow x - \eta f'(x)$$
+The words "to first order" hide the difficulty. The tangent plane is a
+good guide only near $\mathbf{x}$, and a long step leaves the region where
+it can be trusted. How long is too long depends on how fast the slope
+changes along the way. One variable is enough to see how.
 
-therefore decreases $f$ as long as the step is small. How small depends on
-how fast the slope changes. If $f'$ is $L$-Lipschitz, that is, if the slope
-changes by at most $L$ per unit of $x$, then every learning rate with
-$0 < \eta < 2/L$ decreases $f$; :numref:`chap_mdl-optimization` proves this.
+Let $f$ be a function of one variable whose slope changes by at most $L$
+per unit of $x$,
 
-The quadratic $f(x) = x^2$ shows all of this in closed form. Its derivative
-is $2x$, so one step maps $x$ to $x - 2\eta x$:
+$$|f'(y) - f'(x)| \leq L\, |y - x| \quad \textrm{for all } x \textrm{ and } y.$$
 
-$$x \leftarrow (1 - 2\eta)\, x.$$
+For a function with a second derivative this says $|f''| \leq L$, so $L$
+is a bound on the curvature. Now walk a distance $\epsilon > 0$ away from
+$x$. After a distance $s$ the slope differs from $f'(x)$ by at most $Ls$,
+and $f$ can rise above its tangent line only by the excess slope that
+accumulates along the way:
 
-On a quadratic, gradient descent multiplies the distance to the minimum by
-a fixed factor at every step. The iterates converge if and only if
-$|1 - 2\eta| < 1$, that is, $0 < \eta < 1$, which is the bound $2/L$ with
-$L = 2$. With $\eta = 0.2$ the factor is $0.6$, and ten steps from $x = 10$
-should leave $10 \cdot 0.6^{10} \approx 0.06$. We check this numerically.
+$$f(x + \epsilon) - f(x) - \epsilon f'(x) = \int_0^\epsilon \big(f'(x + s) - f'(x)\big)\, ds \leq \int_0^\epsilon L s \, ds = \frac{L}{2} \epsilon^2.$$
 
-<!-- WRITER: cells gd-one-dimensional-gradient-descent-2/-3/-4 (x^2, its ten-step run printing 0.060466 and its plot) are cut (GD-2, GD-3): "We check this numerically" and the next paragraph ("The iterates approach ... We plot them on the graph of f") have no cell any more. The arithmetic 10 * 0.6^10 = 0.06 stands on its own. -->
+A step to the left obeys the same bound. The function therefore lies
+below a parabola of curvature $L$ that touches it at $x$. It remains to
+insert the step of gradient descent, $\epsilon = -\eta f'(x)$:
 
-The iterates approach the minimum geometrically, each step keeping 60% of
-the distance. We plot them on the graph of $f$.
+$$f(x - \eta f'(x)) \leq f(x) - \eta \Big(1 - \frac{\eta L}{2}\Big) f'(x)^2.$$
+:eqlabel:`gd-guarantee`
 
-### Learning Rate
-:label:`subsec_gd-learningrate`
+Every learning rate with $0 < \eta < 2/L$ therefore lowers $f$ wherever
+the slope is not zero, and :eqref:`gd-guarantee` says by how much. The
+guaranteed decrease is largest at $\eta = 1/L$, where it equals
+$f'(x)^2 / (2L)$: one over the curvature is the natural size of a step, an
+observation that returns with Newton's method. At $2/L$ and beyond, the
+bound promises nothing.
 
-The learning rate is ours to choose, and the choice can go wrong in either
-direction. With $\eta = 0.05$ the factor is $0.9$, and ten steps leave
-$10 \cdot 0.9^{10} \approx 3.5$: the iterate barely moves, and reaching the
-minimum would take many more steps.
+The same argument, applied along the straight line from $\mathbf{x}$ to
+$\mathbf{x} - \eta \nabla f(\mathbf{x})$, gives the result for $d$
+variables: :eqref:`gd-guarantee` holds with $\|\nabla f(\mathbf{x})\|^2$
+in place of $f'(x)^2$, where $L$ now bounds the curvature in every
+direction, that is, the size of every eigenvalue of the Hessian
+(:numref:`subsec_mdl-gd-smoothness`). On the valley the Hessian is
+$\textrm{diag}(0.2, 4)$ everywhere, so $L = 4$ and the guarantee reads
+$\eta < 0.5$. The ceiling we found by hand was no peculiarity of
+quadratics.
 
-<!-- WRITER: cell gd-learning-rate-1 (a plotted ten-step run on x^2, output 3.486784) is cut (GD-2); the sentence before it states the arithmetic, which needs no cell. -->
+The guarantee says that $f$ falls, not that it falls quickly: at
+$\eta = 1/L = 0.25$ the flat coordinate of the valley still keeps the
+factor $0.95$ per step. It is also a worst-case statement, made with no
+knowledge but $L$. On the valley, where we knew the flat direction as
+well, the best learning rate was $0.476$, almost twice $1/L$.
 
-With $\eta = 1.1$ the factor is $-1.2$. Each step overshoots the minimum and
-lands farther away on the other side, so after ten steps the distance has
-grown to $10 \cdot 1.2^{10} \approx 62$. In the language of
-:eqref:`gd-taylor-2`, the step $|\eta f'(x)|$ is too long for the tangent
-line to be a good guide, and the remainder term takes over.
-
-<!-- WRITER: cell gd-learning-rate-2 (a plotted ten-step run on x^2, output 61.917364) is cut (GD-2); the sentence before it states the arithmetic, which needs no cell. -->
-
-The best learning rate for this quadratic is $\eta = 0.5$: the factor is
-zero, and a single step lands on the minimum. That rate is the inverse of
-the curvature $f''(x) = 2$, an observation that returns with Newton's
-method below.
-
-### Local Minima
+## Stability of Minima
 :label:`subsec_gd-local-minima`
 
-On a convex parabola the only risk is the step size. A nonconvex function
-adds another: where the iterate ends up can depend on the learning rate.
-Consider $f(x) = x \cos(cx)$ with $c = 0.15\pi$. From $x = 10$ the deep
-basin around $x \approx 7.3$ is close by, and a shallow one lies near
-$x \approx -1.8$. We run gradient descent with $\eta = 0.5$ and with
-$\eta = 2$, and plot the second run.
+The guarantee assumed one bound $L$ for the whole function. A loss
+surface has no such number worth using: it is nearly flat in some regions
+and sharply curved in others. So let us fix the learning rate instead and
+ask what happens at a minimum whose curvature exceeds $2/\eta$.
 
-<!-- WRITER: the cells now (i) define `gd` (returns the iterates, takes a start x, no print) and `show_trace` once, (ii) define f_cos with f_cos_grad and f_cos_hess (moved here from the Newton cell), (iii) print f'' at both minima and where each run is after 10 and 100 steps, and plot the first 10 steps of both runs. "plot the second run" is now false. Measured (identical in both tabs, deterministic): f''(7.27) = 1.81, f''(-1.83) = 0.98; eta 0.5 (2/eta = 4): x = 7.269 after 10 and after 100 steps; eta 2 (2/eta = 1): x = -1.528 after 10 steps, -1.821 after 100. Reading per GD-6: at eta = 2 the deep minimum (f'' = 1.81 > 1) is unstable from any start; the shallow one (0.98 < 1) is barely stable, so the run settles there slowly (factor 1 - 2 * 0.98 = -0.96 per step). -->
+Near a minimum $x^*$, a smooth function of one variable is close to a
+parabola with curvature $\lambda = f''(x^*)$, and on a parabola each step
+of gradient descent multiplies the distance to the minimum by
+$1 - \eta\lambda$ (:numref:`sec_optimization-intro`). If
+$\lambda < 2/\eta$, this factor is smaller than one in size, and an
+iterate that comes close is drawn in. If $\lambda > 2/\eta$, the factor
+lies below $-1$: an iterate that comes close,
+however close, is thrown to the other side and farther out with every
+step. Unless a step happens to land on it exactly, gradient descent cannot
+converge to such a minimum, whatever its starting point. A learning rate
+therefore does more than set the pace. It sorts the minima of a function
+into those sharper than $2/\eta$, which are out of reach, and the rest.
+
+The function $f(x) = x \cos(cx)$ with $c = 0.15\pi$ has minima of both
+kinds, a deep one near $x = 7.27$ and a shallow one near $x = -1.83$. We
+write a helper `gd` that returns the iterates of gradient descent, and
+`show_trace`, which draws them on the graph of $f$.
 
 ```{.python .input #gd-one-dimensional-gradient-descent-3}
 %%tab pytorch, jax
@@ -165,6 +180,18 @@ def f_cos_hess(x):  # Its second derivative
     return -2 * c * d2l.sin(c * x) - c**2 * x * d2l.cos(c * x)
 ```
 
+We start at $x = 10$, on the slope above the deep minimum, and run
+gradient descent at $\eta = 0.5$ and at $\eta = 2$, whose thresholds
+$2/\eta$ are 4 and 1. The second derivative is about $1.8$ at the deep
+minimum and just under 1 at the shallow one; the cell prints both. This
+is enough to predict the runs. At $\eta = 0.5$ both minima lie far below
+the threshold, so the iterate should settle in the first one it meets, the
+deep one. At $\eta = 2$ the deep minimum is out of reach. The shallow one
+is barely within reach: its factor, $1 - 2 \cdot 0.98 = -0.96$, removes
+only 4% of the distance per step, so the iterate should arrive there
+slowly. The cell reports each run after 10 and after 100 steps and plots
+the first ten.
+
 ```{.python .input #gd-local-minima}
 %%tab pytorch, jax
 minima = [gd(0.5, f_cos_grad, x=x, steps=50)[-1] for x in (10.0, 0.0)]
@@ -177,38 +204,44 @@ show_trace(f_cos, *[xs[:11] for xs in runs.values()],
            legend=['$f$', r'$\eta = 0.5$', r'$\eta = 2$'])
 ```
 
-With $\eta = 0.5$ the iterate rolls into the deep basin and stops near
-$7.27$. With $\eta = 2$ the first step jumps over that basin to
-$x \approx 0.6$, and the iterate ends up bouncing around the shallow
-minimum. A learning rate this large is unrealistic for a one-dimensional
-problem, but large steps in the early phase of training play the same role
-in deep networks: they decide which region of the surface training
-explores.
+With $\eta = 0.5$ the iterate descends into the deep minimum and has
+settled at $7.269$ within ten steps. With $\eta = 2$ the first step throws
+it to $x \approx 0.6$, past the deep basin altogether, and it then swings
+around the shallow minimum: after ten steps it is at $-1.53$, still $0.3$
+away, and after a hundred at $-1.821$. The long first jump is not the
+reason the run ends there. Had it started right next to the deep minimum,
+the factor $1 - 2 \cdot 1.81 = -2.6$ would have driven it out all the
+same.
+
+A learning rate of 2 is absurdly large for a problem in one variable, but
+the conclusion carries over to surfaces with many minima: the learning
+rate chooses among them, and it chooses by curvature, never by depth. On
+this function the deeper minimum happens to be the sharper one, so the
+larger learning rate ends at the worse value.
+Exercise :exref:`ex_gd-minima-within-reach` examines the other minima of
+$f$ and what an iterate does just above a threshold.
 
 ### The Edge of Stability
 :label:`subsec_gd-edge-of-stability`
 
-<!-- WRITER: moved verbatim from optimization-intro.md. "The valley" below is the valley of sec_optimization-intro, which this file reintroduces only later (Multivariate Gradient Descent); the subsection sits under "One-Dimensional Gradient Descent" until the gd.md rebuild reorders the headings. -->
+So far the surface was given and the learning rate was chosen to suit it.
+The classical advice has the same order: measure the sharpness of the
+loss, the largest eigenvalue $\lambda_{\max}$ of its Hessian
+(:numref:`sec_optimization-intro`), and choose $\eta < 2/\lambda_{\max}$.
+On a network the dependence can run the other way. :citet:`Cohen.Kaur.Li.ea.2021` trained networks by gradient descent
+on the full training set and found that the sharpness rises during
+training, a behavior they named *progressive sharpening*, until it reaches
+about $2/\eta$, and then stays there. The loss keeps falling in the long
+run, although no longer on every step, since the guarantee has run out.
+They called this regime the *edge of stability*.
 
-The valley treats curvature as a fixed property of the surface, and the
-classical advice follows from it: measure the largest curvature
-$\lambda_{\max}$, called the *sharpness*, and choose $\eta < 2/\lambda_{\max}$.
-On real networks the dependence can run the other way.
-:citet:`Cohen.Kaur.Li.ea.2021` trained networks with full-batch gradient
-descent and found that the sharpness rises during training, a behavior
-they named *progressive sharpening*, until it reaches about $2/\eta$, and
-then stays there. The loss keeps falling, although not on every step, in a
-regime that the quadratic analysis calls unstable. They called this regime
-the *edge of stability*.
-
-We can watch it happen on a network small enough to compute its full
-Hessian. The network has one input, eight $\tanh$ hidden units, and one
-output, 25 parameters in all, and it fits 16 points of $\sin(3x)$ on
-$[-2, 2]$ with the squared loss. We train it from one random start with
-full-batch gradient descent at $\eta = 0.4$ and at $\eta = 0.25$, whose
-ceilings $2/\eta$ are 5 and 8, and compute the sharpness every 500 steps.
-
-<!-- WRITER: the experiment now trains from ten random starts at once (vmap), the same ten for both learning rates, and also returns the fraction of the last 1,000 steps on which the loss rose. "from one random start" is false. The plot shows sharpness / (2/eta), median over the ten starts with a min-max band, against the reference line 1; both bands climb to 1 by about step 4,000 and stay. -->
+We can watch it happen on a network small enough that its whole Hessian
+can be computed. The network has one input, eight $\tanh$ hidden units and
+one output, 25 parameters in all, and it fits 16 points of $\sin(3x)$ on
+$[-2, 2]$ with the squared loss. We train it by full-batch gradient
+descent for 20,000 steps at $\eta = 0.4$ and at $\eta = 0.25$, whose
+thresholds $2/\eta$ are 5 and 8, from ten random starts that the two
+learning rates share, and we compute the sharpness every 500 steps.
 
 ```{.python .input #optimization-intro-the-edge-of-stability-1}
 %%tab pytorch
@@ -276,6 +309,12 @@ def gd_sharpness(eta, P, steps=20000, every=500, last=1000):
 P0 = 0.5 * jax.random.normal(d2l.get_key(), (10, 25))  # Ten random starts
 ```
 
+For each start, the next cell prints the sharpness and the loss before
+training and after it at each learning rate, together with the fraction
+of the last 1,000 steps on which the loss went up. It plots the sharpness
+divided by its threshold $2/\eta$: the median over the ten starts, with a
+band from the smallest to the largest.
+
 ```{.python .input #optimization-intro-the-edge-of-stability-2}
 %%tab pytorch, jax
 runs = {eta: gd_sharpness(eta, P0) for eta in (0.4, 0.25)}
@@ -291,68 +330,77 @@ d2l.plot_curves(curves, 'step', r'sharpness$\,/\,(2/\eta)$',
                 x=np.arange(0, 20001, 500), reference=1)
 ```
 
-Both runs start from the same weights, with a sharpness well below 8 and
-usually below 5. Neither stays there. In almost every run the sharpness
-climbs until it reaches the ceiling of its own learning rate and then stays
-close to $2/\eta$: near 5 for $\eta = 0.4$ and near 8 for $\eta = 0.25$.
-Meanwhile the loss keeps falling by orders of magnitude, though not on
-every step. The two runs differ only in $\eta$, yet they end in regions of
-different curvature, each as sharp as its own learning rate allows.
+The starts have a sharpness of roughly $2.5$ to 6, in most cases below
+both thresholds. None of them stays where it began. From every one of the
+ten starts the sharpness moves to the threshold of its own learning rate,
+and there it remains: the runs at $\eta = 0.4$ all end at $5.0$, and the
+runs at $\eta = 0.25$ end between $7.8$ and $8.05$. Most starts climb to
+the threshold. A start that happens to be sharper than 5 is brought down
+to $5.0$ by the run at $\eta = 0.4$, so the threshold holds from both
+sides.
+Meanwhile the loss falls by a factor of several hundred or more, to below
+$10^{-3}$ in every run.
 
-<!-- WRITER: measured facts for this paragraph (two notebook runs plus probes of 10 x 10 and 50 starts per tab; ranges are over random starts). Initial sharpness 2.4 to 5.4 over the development draws, below 5 in all but about one start in twenty (keep "usually below 5"; a start above 5 at eta = 0.4 has its sharpness pushed down to 5.00); initial loss 0.25 to 2.4. eta = 0.4: every start ends at sharpness 4.99 to 5.01 (all probes 4.99 to 5.06), loss 2e-4 to 9e-4. eta = 0.25: every start ends at 7.6 to 8.05 (notebook runs 7.66 to 8.03), loss 4e-5 to 8e-4, i.e. a fall of three to four orders of magnitude. "though not on every step" now has its number: in a start that sits at the edge the loss rises on exactly 50% of the last 1,000 steps, i.e. on every second step (the period-two swing across the sharpest direction); in the other starts the swing has died out, the sharpness sits just below 2/eta and the loss rises on 0% (rarely in between, e.g. 35%). Which starts are still swinging varies from draw to draw (eta = 0.4: 6 to 10 of 10, 86 of 100 over ten draws; eta = 0.25: 2 to 9 of 10, 60 of 100), so do not quote a count of runs; state the two states. "In almost every run" can become "in every one of the ten starts" for reaching the ceiling. -->
+The last column shows how the loss behaves at the edge, and it takes one
+of two values, with rare exceptions in between. In the runs marked 50% the
+loss goes up on every second step. The iterate swings from one side of the
+sharpest direction to the other, as $x_2$ did on the valley, except that
+at a curvature of $2/\eta$ the factor $1 - \eta\lambda$ is $-1$, so the
+swing neither dies out nor grows. Each rise of the loss is undone, with a
+little to spare, by the step that follows. In the runs marked 0% the swing
+has died out, the sharpness rests at the threshold or slightly below it,
+and the loss falls on every step. Which runs end in which state varies
+with the random starts.
+
+The two learning rates share their starts, yet they end in regions of
+different curvature, each as sharp as its learning rate allows. This is
+the sorting of minima by curvature again, performed by a network on
+itself: among all the places where the loss is low, gradient
+descent with learning rate $\eta$ stays only where the sharpness is at
+most $2/\eta$.
 
 Gradient descent stays at the edge because it corrects itself. When the
-sharpness exceeds $2/\eta$, the iterate starts to oscillate along the
-sharpest direction, as $x_2$ did on the valley, and this oscillation moves
-the iterate toward flatter parts of the surface until the sharpness drops
-back below the ceiling :cite:`Damian.Nichani.Lee.2023`. The quadratic
-model predicts the oscillation but not what follows. The third-order term
-of the Taylor expansion, which the quadratic model drops, turns the
-oscillation into a drift toward lower sharpness. The quadratic analysis
-misses this change of the surface under the iterate. Most results quoted in this
-chapter assume monotone descent on a fixed surface, and the edge of
-stability lies outside that assumption.
+sharpness exceeds $2/\eta$, the swing along the sharpest direction grows,
+as a factor below $-1$ demands, and on a quadratic it would grow without
+bound. A network's loss is not a quadratic. The third-order term of its
+Taylor expansion, which records how the curvature changes from place to
+place, turns the growing swing into a drift toward flatter regions, until
+the sharpness is back below the threshold
+:cite:`Damian.Nichani.Lee.2023`. Then the sharpening resumes. Most
+convergence results quoted in this chapter assume a fixed surface and a
+loss that falls at every step. The edge of stability lies outside both
+assumptions, and training works there all the same. The result is one
+about gradient descent with the exact gradient, though: minibatch noise
+and the optimizers of later sections change the threshold.
 
-The start of training is delicate for a related reason. In large networks
-the sharpness is often high at initialization and falls early in training,
-the reverse of our small network. A learning rate
-that suits the later surface can then diverge on the first steps, and
-warmup keeps $\eta$ small until the sharpness has fallen
-:cite:`Kalra.Barkeshli.2024` (:numref:`sec_scheduler`).
+The same self-correction explains a habit of training recipes that might
+otherwise pass for superstition: they raise the learning rate gradually
+over the first steps instead of starting at its peak. As $\eta$ grows,
+the threshold $2/\eta$ falls, and at each stage the mechanism above
+lowers the sharpness to the new threshold, so the run arrives at its peak
+rate in a region flat enough for it. Started at the peak rate, the same
+network can find itself far above the threshold and diverge before the
+correction has time to act :cite:`Kalra.Barkeshli.2024`. The ramp is
+called *warmup*, and we return to it in :numref:`sec_scheduler`.
 
-## Multivariate Gradient Descent
+## Newton's Method
+:label:`subsec_gd-newton`
 
-The same update works for a vector of parameters
-$\mathbf{x} = (x_1, \ldots, x_d)$ and an objective
-$f: \mathbb{R}^d \to \mathbb{R}$. The gradient collects the $d$ partial
-derivatives,
+The bound $\eta < 2/L$ protects the steepest direction and starves all
+the others. At the start $(-5, -2)$ of the valley the negative gradient is
+$(1, 8)$: it points almost straight at the opposite wall, while the
+minimum lies in the direction $(5, 2)$, along the floor. Steepest is not
+the same as shortest. The steep coordinate tolerates no learning rate
+above $0.5$, whereas the flat one, with curvature $0.2$, would be solved
+in a single step by a learning rate of $1/0.2 = 5$. What the valley needs
+is a different learning rate in each direction. Newton's method makes this
+idea general: it measures the curvature in every direction and divides the
+gradient by it.
 
-$$\nabla f(\mathbf{x}) = \left(\frac{\partial f(\mathbf{x})}{\partial x_1}, \ldots, \frac{\partial f(\mathbf{x})}{\partial x_d}\right),$$
-
-and each entry measures how fast $f$ changes when its coordinate alone
-changes. The multivariate Taylor expansion has the same form as the
-one-dimensional one,
-
-$$f(\mathbf{x} + \boldsymbol{\epsilon}) = f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + O(\|\boldsymbol{\epsilon}\|^2).$$
-:eqlabel:`gd-multi-taylor`
-
-Among all steps $\boldsymbol{\epsilon}$ of a fixed small length $r$, which
-one decreases $f$ the most? To first order the change is
-$\boldsymbol{\epsilon}^\top \nabla f(\mathbf{x})$, and by the
-Cauchy–Schwarz inequality this inner product is at least
-$-r \|\nabla f(\mathbf{x})\|$, with equality exactly when
-$\boldsymbol{\epsilon}$ points along $-\nabla f(\mathbf{x})$. The negative
-gradient is therefore the direction of *steepest descent*, and with a
-learning rate $\eta > 0$ we obtain gradient descent:
-
-$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
-
-We return to the valley, $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$, with
-curvatures $h_1 = 0.2$ along $x_1$ and $h_2 = 4$ along $x_2$. These are the
-eigenvalues $\lambda_{\min}$ and $\lambda_{\max}$ of its Hessian in
-:numref:`sec_optimization-intro`, and the gradient is
-$(h_1 x_1, h_2 x_2) = (0.2 x_1, 4 x_2)$. The rest of the chapter returns to
-this valley, so we save it and its gradient.
+Later sections return to the valley, so the next cell saves it and its
+gradient, together with `train_2d`, which runs a given update rule from
+$(-5, -2)$ and returns the iterates, and `gd_2d`, the update rule of
+gradient descent.
 
 ```{.python .input #gd-multivariate-gradient-descent-4}
 %%tab pytorch, jax
@@ -386,65 +434,34 @@ def gd_2d(x1, x2, s1, s2, f_grad, eta):  #@save
     return x1 - eta * g1, x2 - eta * g2, 0, 0
 ```
 
-To follow the iterates in the plane we write a helper that the rest of the
-chapter reuses. `train_2d` starts at $(-5, -2)$ and applies an update rule
-with the gradient `f_grad` for a given number of steps. Besides the two
-coordinates and the gradient, the update rule receives and returns two
-state variables, which the methods with memory in later sections
-(momentum, Adam) use; gradient descent ignores them. Hyperparameters such
-as the learning rate are passed through as keyword arguments. The plotting
-utility `d2l.show_trace_2d` (:numref:`sec_utils`) draws the path over the
-contour lines of the objective.
-
-We run the same 30 steps at $\eta = 0.45$ as in
-:numref:`sec_optimization-intro`, now drawn in the plane.
-
-<!-- WRITER: train_2d and gd_2d now sit in the one helper cell above (structure 0.8, GD-8): introduce them with one sentence there and let the docstrings do the rest. The 30-step run in the plane (cell gd-multivariate-gradient-descent-3's run line, output x1 = -0.295265) is cut (GD-9): "We run the same 30 steps ..." and the paragraph after it ("Each step is perpendicular to the contour line ... after 30 steps x1 is still -0.3") describe a plot that no longer exists; the zigzag is plotted against the step count in sec_optimization-intro. -->
-
-Each step is perpendicular to the contour line through the current point,
-as steepest descent must be. On a narrow valley that direction points
-mostly across the valley: from $(-5, -2)$ the gradient is $(-1, -8)$, eight
-times steeper across than along. The iterate therefore zigzags from wall
-to wall and makes slow progress along the floor, and after 30 steps $x_1$
-is still $-0.3$. A larger $\eta$ would speed up progress along the floor
-but make the oscillation across the valley unstable. What the valley needs is a different learning rate in each
-direction.
-
-## Newton's Method
-:label:`subsec_gd-newton`
-
-On the quadratic $x^2$ the best learning rate was the inverse of the
-curvature. The valley has two curvatures, $0.2$ along $x_1$ and $4$ along
-$x_2$, so a learning rate of $1/0.2 = 5$ along $x_1$ and $1/4$ along $x_2$
-would solve each coordinate in a single step. Newton's method makes this
-idea general: it measures the curvature in every direction and divides the
-gradient by it.
-
 The curvature enters through the second-order term of the Taylor
 expansion,
 
-$$f(\mathbf{x} + \boldsymbol{\epsilon}) = f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \frac{1}{2} \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon} + O(\|\boldsymbol{\epsilon}\|^3),$$
-:eqlabel:`gd-hot-taylor`
+$$f(\mathbf{x} + \boldsymbol{\epsilon}) \approx f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \frac{1}{2} \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon},$$
 
-where $\mathbf{H} = \nabla^2 f(\mathbf{x})$ is the *Hessian*, the
-$d \times d$ matrix of second derivatives. Ignoring the remainder, the
-right-hand side is a quadratic in $\boldsymbol{\epsilon}$. Setting its
-gradient with respect to $\boldsymbol{\epsilon}$ to zero (with the rules of
-:numref:`subsec_calculus-grad`) gives the step that minimizes it:
+where $\mathbf{H} = \nabla^2 f(\mathbf{x})$ is the Hessian, the
+$d \times d$ matrix of second derivatives. The right-hand side is a
+quadratic in $\boldsymbol{\epsilon}$, and unlike a tangent plane, a
+quadratic with positive curvature has a lowest point. Setting its gradient
+with respect to $\boldsymbol{\epsilon}$ to zero (with the rules of
+:numref:`subsec_calculus-grad`) gives the step that reaches it:
 
 $$\nabla f(\mathbf{x}) + \mathbf{H} \boldsymbol{\epsilon} = 0, \quad \textrm{hence} \quad \boldsymbol{\epsilon} = -\mathbf{H}^{-1} \nabla f(\mathbf{x}).$$
 
-Newton's method is gradient descent with the gradient multiplied by the
-inverse Hessian. Each direction receives the step its own curvature calls
-for, and there is no learning rate to tune. When $f$ is itself a quadratic,
+Newton's method is gradient descent with the inverse Hessian in place of
+the learning rate. Each direction receives the step that its own curvature
+calls for, and nothing is left to tune. When $f$ is itself a quadratic,
 the expansion is exact and a single Newton step lands on the minimum. On
 the valley, $\mathbf{H} = \textrm{diag}(0.2, 4)$ and
-$\mathbf{H}^{-1} \nabla f(\mathbf{x}) = \mathbf{x}$, so one step from any
+$\nabla f(\mathbf{x}) = (0.2 x_1, 4 x_2)$, so
+$\mathbf{H}^{-1} \nabla f(\mathbf{x}) = \mathbf{x}$, and one step from any
 point reaches the origin, whatever the condition number.
 
-On functions that are not quadratic, the method has to iterate. The convex
-function $f(x) = \cosh(cx)$ with $c = 0.5$ has its minimum at $x = 0$, and
-we run ten Newton steps from $x = 10$.
+On functions that are not quadratic the method has to iterate. In one
+variable the Newton step is $-f'(x)/f''(x)$, which the code below takes
+literally: `newton` is `gd` with learning rate 1 applied to $f'/f''$. The
+convex function $f(x) = \cosh(cx)$ with $c = 0.5$ has its minimum at
+$x = 0$. We take ten Newton steps from $x = 10$ and print the iterates.
 
 ```{.python .input #gd-newton-s-method-1}
 %%tab pytorch, jax
@@ -466,15 +483,23 @@ print('x_t:', ' '.join(f'{x:.2g}' for x in xs))
 show_trace(f_cosh, xs)
 ```
 
-The iterate reaches the minimum to machine precision within ten steps, with
-no learning rate chosen by hand.
-
-<!-- WRITER: `newton` is now gradient descent with eta = 1 on f'/f'' (one line on top of `gd`) and the cell prints the iterates (identical in both tabs): x_t: 10 8 6 4 2.1 0.53 0.012 1.4e-07 0 0 0. Two phases for GD-11: four steps of almost exactly 1/c = 2 far out, then the error collapses (2.1, 0.53, 0.012, 1.4e-07, then exactly 0 in float32). The Newton run on x cos(cx) prints x_t: 10 5 24.99 27.78 26.8 26.83 ... 26.83. -->
+The run has two phases, and both are typical of Newton's method. Far from
+the minimum the iterate walks: four steps of almost exactly 2 each take it
+from 10 to 4, because out there $f'/f'' = \tanh(cx)/c$ is close to
+$1/c = 2$. Near the minimum the error collapses, from $0.53$ to $0.012$
+to $10^{-7}$ and then to zero in the precision of the arithmetic. This
+second phase made the method's reputation. Near a minimum with positive curvature, Newton's method
+converges at least *quadratically*: the error after a step is at most a
+constant times the square of the error before it, so the number of correct
+digits at least doubles with every step
+(:numref:`subsec_mdl-why-not-newton`). On $\cosh$ it does even better,
+because the function is symmetric about its minimum
+(Exercise :exref:`ex_gd-newton-order`).
 
 Newton's method divides by the curvature, and the curvature of a nonconvex
-function can be negative. Where it is, the step points uphill, toward a
-maximum. We return to $f(x) = x \cos(cx)$ with $c = 0.15\pi$, which has a
-minimum near $7.27$, close to the start.
+function can be negative. Where it is, the step points uphill. We return
+to $f(x) = x \cos(cx)$ and start again at $x = 10$, with the minimum at
+$7.27$ close by.
 
 ```{.python .input #gd-newton-s-method-2}
 %%tab pytorch, jax
@@ -483,64 +508,70 @@ print('x_t:', ' '.join(f'{x:.4g}' for x in xs))
 show_trace(f_cos, xs)
 ```
 
-The first step overshoots to $x = 5$. The curvature there is positive but
-small, so the next step divides a large slope by a small number and jumps
-to $x \approx 25$, where the curvature is negative. From there the
-iteration climbs to the local maximum near $26.8$, a point where the
-gradient vanishes as it does at a minimum. One remedy is to
-replace the Hessian by its absolute value, so that every step points
-downhill. Another is to bring back a learning rate. With $\eta = 0.5$ the
-first step stops at $x = 7.5$, inside the basin around the minimum, where
-the curvature is positive, and the iteration converges. It converges only
-linearly, however: each step halves the distance to $7.27$. Damping makes
-the method safe here, and in exchange it gives up Newton's fast local rate.
+The first step overshoots the minimum and lands at $x = 5$. The curvature
+there is positive but small, about $0.12$, so the next step divides a
+slope of $-2.4$ by a small number and jumps by 20, to $x \approx 25$,
+where the curvature is negative. From there the iteration climbs to the
+local maximum at $26.83$ and stays. Seen from the method, nothing went
+wrong: Newton's method looks for a point where the gradient vanishes, and
+a maximum is such a point as much as a minimum is. One remedy replaces the
+Hessian by its absolute value, the matrix with the same eigenvectors and
+the sizes of its eigenvalues, so that every direction is treated as if it
+curved upward and every step points downhill.
 
-<!-- WRITER: the damped Newton run (cell gd-newton-s-method-3, output 7.269860) is cut (GD-13); the paragraph above ("Another is to bring back a learning rate ... gives up Newton's fast local rate") and the next one ("Damping is no guarantee") describe a run that no longer exists. `newton` no longer takes a step size eta. -->
-
-Damping is no guarantee: it only makes a jump into a region of negative
-curvature less likely. Two further facts about Newton's method matter
-here, and the appendix proves both. First, near a minimum with positive
-curvature it converges at least *quadratically*: the number of correct
-digits roughly doubles with every step
-(:numref:`subsec_mdl-why-not-newton`). Second, the method does not scale to
-deep learning.
-
-Storing the Hessian of a model with $d$ parameters takes
-$O(d^2)$ memory and solving a linear system with it takes
-$O(d^3)$ time. For $d = 10^9$ the Hessian has $10^{18}$ entries,
-four exabytes in single precision, before the first step. And a deep
-network's Hessian has negative eigenvalues, which steer the raw Newton step
-toward saddles and maxima. Classical optimization lowers these costs with
-curvature estimates built from successive gradients and with safer step
-rules (:numref:`subsec_mdl-quasi-newton`). Deep learning keeps a simpler
-part of the idea: rescale the gradient, direction by direction, with an
+Even where it behaves, Newton's method is out of reach for a network,
+though not for the reason usually given. The Hessian of a model with $d$
+parameters has $d^2$ entries: for $d = 10^9$ that is $10^{18}$ numbers,
+four exabytes in single precision, before the first step. But the method
+does not need the matrix. The product of the Hessian with a vector costs
+roughly one more gradient (:numref:`subsec_mdl-hvp`), and an iterative
+solver finds the Newton step from such products alone. Three other
+obstacles remain. The solver needs many products for a single step, each
+as costly as a gradient step that would have made progress by itself. In
+training, derivatives are computed on a minibatch, and a division by an
+estimated curvature is unforgiving: where the true curvature is close to
+zero, a small error in the estimate changes the step by a large factor or
+reverses it. And the Hessian of a network has negative eigenvalues, which
+send the raw step toward saddle points and maxima, as in the run above.
+Classical optimization answers each of these with curvature estimates
+built from successive gradients and with safer step rules
+(:numref:`subsec_mdl-quasi-newton`). Deep learning keeps a simpler part of
+the idea: rescale the gradient, direction by direction, with an
 inexpensive estimate of the curvature.
 
 ## Preconditioning
 :label:`subsec_gd-preconditioning`
 
-A *preconditioner* rescales the gradient before the step. The simplest
-useful one keeps only the diagonal of the Hessian,
+A *preconditioner* is a matrix that rescales the gradient before the
+step. Newton's method uses the inverse Hessian. The simplest useful
+preconditioner keeps only the diagonal of the Hessian,
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \, \textrm{diag}(\mathbf{H})^{-1} \nabla f(\mathbf{x}),$$
 :eqlabel:`eq_gd-diag-precond`
 
 which divides each coordinate of the gradient by the curvature along that
-coordinate. In effect, every coordinate receives its own learning rate.
-Storing the diagonal takes as much memory as storing the gradient.
+coordinate. In effect, every coordinate receives its own learning rate,
+and the diagonal takes no more memory than the gradient itself.
 
-Ill-conditioning of this axis-aligned kind arises from something as
-mundane as units. Suppose a linear regression model receives two unrelated
-length features of similar size, one recorded in meters and the other in
-millimeters. The curvature of the squared loss along a weight is the mean
-of the squared feature, so the millimeter weight has a curvature $10^6$
-times larger than the meter weight. The units alone give a condition
-number of at least $10^6$. A single learning rate small enough for the
-millimeter weight leaves the meter weight almost frozen. Dividing by the diagonal curvature
-removes the factor $10^6$ without our ever noticing the units.
+Curvature that differs wildly between coordinates arises from something
+as mundane as units. Suppose a linear regression model receives two
+unrelated length features of similar size, one recorded in meters and the
+other in millimeters. The curvature of the squared loss along a weight is
+the mean of the squared feature, so the millimeter weight has a curvature
+$10^6$ times larger than the meter weight. The units alone give a
+condition number of at least $10^6$. A single learning rate small enough
+for the millimeter weight leaves the meter weight almost frozen. Dividing
+by the diagonal curvature removes the factor $10^6$ without our ever
+noticing the units.
 
-On the valley, the diagonal of the Hessian is $(0.2, 4)$, and we run the
-preconditioned update at $\eta = 0.5$.
+On the valley the diagonal of the Hessian is $(0.2, 4)$, and at
+$\eta = 0.5$ the preconditioned update multiplies both coordinates by the
+same factor, $1 - \eta = 0.5$. Since $0.5^6 \approx 0.016$ and
+$0.5^7 \approx 0.008$, both coordinates should be within 1% of the minimum
+after seven steps. The cell counts the steps, and for comparison those of
+plain gradient descent at its best learning rate, $2/(0.2 + 4)$. The first
+two lines of the output are the last iterates of the two runs, which
+`train_2d` prints.
 
 ```{.python .input #gd-preconditioning}
 %%tab pytorch, jax
@@ -559,62 +590,72 @@ print(f'steps to 1%: plain at its best rate {steps_to_1pct(plain)}, '
 d2l.show_trace_2d(f_valley, precond)
 ```
 
-Both coordinates now shrink by the same factor $1 - \eta = 0.5$ per step,
-so the path runs straight to the minimum. Seven steps bring both within 1%,
-against 47 for the best plain learning rate, and the count no longer
-depends on the condition number. At $\eta = 1$ one step suffices: because
-the Hessian of the valley is diagonal, the diagonal preconditioner is
-Newton's method.
+Seven steps do the work of 47. The path in the plot runs straight to the
+minimum, since both coordinates shrink in step and nothing is left to
+zigzag. More important than the count is what it no longer depends on: the
+factor $1 - \eta$ is the same for every curvature, so the condition number
+has dropped out. At $\eta = 1$ one step suffices, because the Hessian of
+the valley is diagonal and the diagonal preconditioner is then Newton's
+method.
 
-<!-- WRITER: the cell now prints "steps to 1%: plain at its best rate 47, preconditioned 7" (both tabs; it runs plain gradient descent at eta = 2/(h1 + h2) for 100 steps beside the 10 preconditioned steps), so "Seven steps" is printed (GD-17). -->
+A network offers neither of the two things this run relied on. It does not
+give us its Hessian, not even the diagonal, so practical methods estimate
+a scale for each coordinate from the gradients they observe. AdaGrad,
+RMSProp, and Adam (:numref:`sec_adam`) differ mainly in how they form that
+estimate. Nor do its steep and flat directions line up with the coordinate
+axes, which a diagonal preconditioner needs. Turn the valley by
+$45^\circ$ and the two diagonal entries of its Hessian become equal, both
+$2.1$. Dividing by them is then a plain change of learning rate, and the
+condition number is 20 again
+(Exercise :exref:`ex_gd-diagonal-preconditioning`). This is one motive for
+methods that treat a whole weight matrix at once (:numref:`sec_muon`).
 
-Two limitations shape what comes next. A deep network does not give us its
-Hessian, not even the diagonal, so practical methods estimate a diagonal
-scale from the gradients they observe. AdaGrad, RMSProp, and Adam
-(:numref:`sec_adam`) differ mainly in how they form that estimate. And a
-diagonal preconditioner only helps when the steep and flat directions line
-up with the coordinate axes. Exercise :exref:`ex_gd-diagonal-preconditioning`
-rotates the valley and shows the preconditioner failing. For this reason
-later methods precondition whole weight matrices rather than single
-coordinates.
-
-With an exact gradient, then, the step size and the curvature explain
-everything we have seen. But an exact gradient of a training loss requires
-a pass over the whole dataset. The next section takes up this problem.
+One assumption has run through the whole section: the gradient was exact.
+For a training loss, an exact gradient costs a pass over the entire
+dataset, once for every step. What remains of the ceiling and of the pace
+when the gradient is estimated from a few examples is the subject of
+:numref:`sec_sgd`.
 
 ## Summary
 
-Gradient descent decreases a differentiable function by stepping against
-the gradient, and the decrease is guaranteed only while the step is short
-enough for the first-order Taylor expansion to hold. On a quadratic each
-step multiplies the error by a fixed factor: a learning rate that is too
-small makes the factor close to one, and one that is too large makes it
-exceed one in size and the iterates diverge. On nonconvex functions the
-learning rate also decides which minimum the iterate reaches. Newton's
-method divides the gradient by the curvature and solves a quadratic in one
-step, whatever its condition number, but its cost and its attraction to
-maxima and saddles rule it out for deep networks. Preconditioning keeps the
-useful part: a diagonal rescaling solved the valley in seven steps instead
-of 47, and the adaptive methods of later sections estimate such a rescaling
-from gradients.
+Wherever the curvature of a function is at most $L$, a step of gradient
+descent with a learning rate below $2/L$ lowers it; the ceiling of $0.5$
+on the valley is this bound with $L = 4$. The same threshold decides where
+gradient descent can come to rest: a minimum sharper than $2/\eta$ is
+unstable, so the learning rate selects minima by their curvature. Under
+full-batch gradient descent, the sharpness of a network rises during
+training until it reaches about $2/\eta$ and stays there, while the loss
+keeps falling without falling on every step. Dividing the gradient by the
+curvature removes the condition number, and Newton's method solves any
+quadratic in one step. On a network it would need many gradient-sized
+computations per step, it would divide by noisy curvature estimates, and
+it is drawn to saddle points and maxima. Diagonal preconditioning keeps
+the affordable part: it solved the valley in seven steps instead of 47,
+given the curvature of each coordinate and axes aligned with the valley,
+neither of which a network supplies.
 
 ## Exercises
 
-1. [code] **Learning-rate sweep.** Extend `gd` to stop as soon as
+1. [code] **Three kinds of curvature.** Extend `gd` to stop as soon as
    $|x| < 10^{-3}$, and run it from $x = 1$ for at most 100 steps on
    $f(x) = x^2$, $f(x) = |x|^{1.5}$, and $f(x) = x^4$ at
    $\eta \in \{0.01, 0.1, 0.5, 0.9, 1.1\}$.
     1. Tabulate, for each of the fifteen runs, the number of steps until
        the stopping test holds, or, for a run that misses the test within
-       100 steps, whether $|x|$ grew without bound or stayed bounded.
-    1. The second derivative of $|x|^{1.5}$ is unbounded near the origin.
-       Explain what the iterates do close to $0$ at any fixed $\eta$, and
-       why the stopping test is reached late or not at all.
-    1. The second derivative of $x^4$ vanishes at the origin. Show that
-       once the iterates are small, $x_{t+1} \approx x_t (1 - 4\eta x_t^2)$,
-       and that $|x_t|$ then decays like $1/\sqrt{8 \eta t}$ rather than
-       geometrically. Why can no fixed learning rate restore a geometric
-       rate on this function?
+       100 steps, whether $|x|$ is still shrinking, cycles, or grows.
+       Which entries of the row for $x^2$ does the guarantee
+       $\eta < 2/L$ predict? What does the entry at $\eta = 0.01$ show
+       about what a guarantee of descent leaves out?
+    1. The second derivative of $|x|^{1.5}$ is unbounded near the origin,
+       so no bound $L$ exists. Show that at a fixed $\eta$ the iterates
+       end in a cycle between $\pm (0.75\eta)^2$, and find the learning
+       rates for which the stopping test can be met at all.
+    1. The second derivative of $x^4$ is unbounded far from the origin and
+       vanishes at it. Show that the update is
+       $x \leftarrow x (1 - 4\eta x^2)$, that it shrinks $|x|$ only from
+       starts with $x^2 < 1/(2\eta)$, and that $|x_t|$ then decays like
+       $1/\sqrt{8 \eta t}$ rather than geometrically. Why can no fixed
+       learning rate restore a geometric rate on this function?
 
 1. [code] **Diagonal preconditioning under rotation.** Rotate the valley
    by an angle $\theta$: $f_\theta(\mathbf{x}) = \frac{1}{2}
@@ -625,8 +666,8 @@ from gradients.
        $\eta = 0.45$, the diagonal preconditioner
        :eqref:`eq_gd-diag-precond` at $\eta = 0.5$, and Newton's method
        with `d2l.train_2d`. Which of the three behave as on the unrotated
-       valley? Explain the behavior of the diagonal preconditioner from
-       the entries of the rotated Hessian.
+       valley? The preconditioned run follows the path of plain gradient
+       descent at a different learning rate. Which one?
     1. The preconditioned update behaves like plain gradient descent on a
        quadratic with Hessian
        $\mathbf{D}^{-1/2} \mathbf{H}_\theta \mathbf{D}^{-1/2}$, where
@@ -647,22 +688,34 @@ from gradients.
    update direction is a descent direction. Does every step decrease $f$?
    Explain the size of the largest step of the run.
 
-1. **Certifying the lowest minimum.** ● Modify the objective
-   $f(x) = x\cos(cx)$ with $c = 0.15\pi$ of :numref:`subsec_gd-local-minima`
-   so that its local minima in $(-20, 20)$ differ in value by at most
-   $10^{-3}$ except for one. Explain why any method that uses only $f$ and
-   $f'$ at the points it visits must then visit every basin before it can
-   certify which local minimum is lowest.
+1. [code] **Minima within reach.** The function $f(x) = x\cos(cx)$ with
+   $c = 0.15\pi$ of :numref:`subsec_gd-local-minima` has four local minima
+   in the interval $(-20, 30)$.
+    1. Locate them with `gd` at a small learning rate and compute $f''$ at
+       each with `f_cos_hess`. For each minimum, state the largest
+       learning rate at which gradient descent can converge to it.
+    1. Start `gd` at a distance of $0.01$ from each minimum and run 300
+       steps at $0.9$ and at $1.1$ times that learning rate. Above the
+       threshold, does the iterate diverge, move to another minimum, or
+       do something else? Relate what you see to the runs that
+       :numref:`subsec_gd-edge-of-stability` marks with 50%.
+    1. Run 2,000 steps at $\eta = 2$ from $x = 20$, $10$, $0$, and $-12$.
+       Where do the four runs end? Rank the four minima by their value
+       and by their curvature. Which of the two did the learning rate
+       select for?
+   :exlabel:`ex_gd-minima-within-reach`
 
 1. [code] **Newton's convergence order.** ● In :numref:`subsec_gd-newton`,
-   `newton` converges in a few steps on $f(x) = \cosh(cx)$. Run it with
-   $c = 0.5$ from $x_0 = 10$ and record $|x_t|$ after every step.
+   `newton` minimizes $f(x) = \cosh(cx)$ with $c = 0.5$ from $x_0 = 10$
+   within ten steps. Record $|x_t|$ after every step.
     1. From the last steps before $x_t$ reaches $0$ in floating point,
-       estimate the order $p$ in $|x_{t+1}| \approx C |x_t|^p$. Where does
-       this fast phase begin, and what governs the steps before it?
+       estimate the order $p$ in $|x_{t+1}| \approx C |x_t|^p$. How many
+       steps would the walking phase take from $x_0 = 100$, and how many
+       the fast phase?
     1. Derive $p$ and $C$ from the Taylor expansion of the update
        $x - \tanh(cx)/c$ around $0$, and reconcile $p$ with the quadratic
        rate stated in :numref:`subsec_mdl-why-not-newton`.
+   :exlabel:`ex_gd-newton-order`
 
 1. [code] **Stale Hessian factorizations.** ● A Newton step in $d$
    dimensions can reuse the Hessian factorization of an earlier step.
@@ -692,242 +745,305 @@ from gradients.
 [Dive into Deep Learning · §9.2]{.kicker}
 
 Gradient Descent<br>
-**the Taylor argument · learning rates · steepest descent · Newton's method · preconditioning**
+**the descent guarantee · stable and unstable minima · the edge of stability · Newton's method · preconditioning**
 :::
 :::
 
-::: {.slide title="One Learning Rate Decides Between 49 Steps and Never"}
+::: {.slide title="On the Valley No Learning Rate Works at 0.5 or Above"}
 [The problem]{.kicker}
 
-Gradient descent on the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$, from
-$(-5, -2)$, until both coordinates are within 1%:
+Gradient descent $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$
+on the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$, from $(-5, -2)$.
+Steps until both coordinates are within 1% of the minimum:
 
-| $\eta$ | 0.1 | 0.45 | 0.476 | 0.5 |
-|---|---:|---:|---:|---:|
-| steps | 228 | 49 | 47 | never |
+| learning rate $\eta$ | 0.1 | 0.3 | 0.45 | 0.476 | 0.49 | 0.5 |
+|---|---:|---:|---:|---:|---:|---:|
+| steps | 228 | 75 | 49 | 47 | 113 | never |
 
 ::: {.d2l-note}
-A learning rate that makes a large network diverge does so for the same
-reason it makes a quadratic diverge.
+A diverging run is cured by halving $\eta$. What puts the ceiling where
+it is, on a function that is not a quadratic?
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- derive from a Taylor expansion why a small step against the gradient
-  descends;
-- predict convergence, slowness, or divergence from the factor $1 - \eta h$
-  of a curvature $h$;
-- explain why the negative gradient zigzags across a narrow valley;
-- write Newton's update and say when it fails;
+- prove that every learning rate below $2/L$ lowers a function whose
+  curvature is at most $L$;
+- decide from $f''$ whether gradient descent can settle in a minimum;
+- predict the sharpness of a network trained by full-batch gradient
+  descent;
+- write Newton's update and name what rules it out for a network;
 - precondition the valley and count the steps saved.
 
-**Running example:** the valley, curvatures $h_1 = 0.2$ and $h_2 = 4$.
-**The idea:** the best step divides the gradient by the curvature.
+**Running example:** the valley, curvatures $0.2$ and $4$, condition
+number $\kappa = 20$.
+**The idea:** curvature sets the step, at most $2/L$, ideally one over
+the curvature of each direction.
 :::
 
-::: {.slide title="Gradient Descent Is the Second Stop of the Chapter"}
+::: {.slide title="Gradient Descent Turns the Valley Into a General Rule"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 | section | adds |
 |---|---|
-| Landscapes | curvature and noise slow training |
+| Landscapes | uneven curvature, the valley |
 | **Gradient Descent** | **step size against curvature** |
-| Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
-| Momentum | averaging over time |
-| Adam and AdamW | a step size per coordinate, decoupled decay |
+| Stochastic and Minibatch GD | sampled gradients, the noise ball |
+| Two Test Models | a language model and a CNN to measure on |
+| Momentum | averaging gradients over steps |
+| Adam, AdamW | a step size per coordinate, weight decay |
+| Muon | a step for a whole weight matrix |
 | Schedules | warmup and decay |
-| Muon | orthogonalized updates for matrices |
-| Batch Size | how many examples per step |
-| Scaling Up | learning rates across widths |
-| Practice | clipping, averaging, fair comparisons |
+| Batch Size, Scaling Up, Practice | larger batches, wider models, a recipe |
 :::
 
 ::: {.col .narrow}
-- **Uses:** exact gradients and the Hessian.
-- **Skips:** noise (next deck).
+- **Uses:** gradients, the Hessian and its eigenvalues.
+- **Skips:** noisy gradients (next deck), quasi-Newton methods, line
+  search.
 :::
-:::
-:::
-
-::: {.slide title="A Short Step Against the Slope Always Descends"}
-[One dimension]{.kicker}
-
-$$f(x - \eta f'(x)) = f(x) - \eta f'(x)^2 + O(\eta^2 f'(x)^2)$$
-
-- The first-order change $-\eta f'(x)^2$ is negative unless $f'(x) = 0$.
-- For small $\eta$ it outweighs the remainder: $x \leftarrow x - \eta f'(x)$
-  descends.
-- If $f'$ is $L$-Lipschitz, every $0 < \eta < 2/L$ descends.
-:::
-
-::: {.slide title="On a Quadratic Each Step Multiplies by 1 − 2η"}
-[One dimension]{.kicker}
-
-$f(x) = x^2$: $x \leftarrow x - 2\eta x = (1 - 2\eta)\, x$.
-
-| $\eta$ | factor | $x$ after 10 steps from 10 |
-|---|---:|---:|
-| 0.05 | 0.9 | 3.49 |
-| 0.2 | 0.6 | 0.060 |
-| 0.5 | 0 | 0 (one step) |
-| 1.1 | −1.2 | 61.9 |
-
-Converges iff $0 < \eta < 1 = 2/L$. Best: $\eta = 1/f''$.
-:::
-
-::: {.slide title="η = 0.2 Keeps 60% of the Distance per Step"}
-[One dimension]{.kicker}
-
-<!-- WRITER: cell gd-one-dimensional-gradient-descent-4 is cut; this slide needs rebuilding without it (parabola runs cut, GD-2/GD-3). -->
-
-Ten steps from $x = 10$ leave $10 \cdot 0.6^{10} \approx 0.06$.
-:::
-
-::: {.slide title="η = 0.05 Crawls; η = 1.1 Overshoots and Diverges"}
-[Learning rate]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-<!-- WRITER: cell gd-learning-rate-1 is cut; this slide needs rebuilding without it (parabola runs cut, GD-2). -->
-:::
-::: {.col}
-<!-- WRITER: cell gd-learning-rate-2 is cut; this slide needs rebuilding without it (parabola runs cut, GD-2). -->
-:::
-:::
-
-Factor $0.9$: still at 3.5. Factor $-1.2$: each step lands farther away.
-:::
-
-::: {.slide title="The Learning Rate Decides Which Basin the Iterate Reaches"}
-[Local minima]{.kicker}
-
-@!gd-local-minima
-
-$x\cos(0.15\pi x)$ from $x = 10$: $\eta = 0.5$ rolls into the deep basin
-at 7.27, $\eta = 2$ jumps over it to the shallow one near $-1.8$.
-:::
-
-::: {.slide title="Check: When Does Gradient Descent Diverge?"}
-[Check]{.kicker}
-
-$f(x) = 2x^2$, so $f''(x) = 4$.
-
-1. Which learning rates converge?
-2. Which learning rate reaches the minimum in one step?
-
-::: {.fragment .fade-up}
-1. The factor is $1 - 4\eta$: converges iff $0 < \eta < 0.5$.
-2. $\eta = 0.25 = 1/f''$, where the factor is $0$.
-:::
-:::
-
-::: {.slide title="Classical Advice Fixes the Curvature, Then Picks the Step"}
-[Edge of stability]{.kicker}
-
-- Measure the *sharpness* $\lambda_{\max}$, choose $\eta < 2/\lambda_{\max}$.
-- Full-batch training of real networks (Cohen et al., 2021): the sharpness
-  **rises** during training until it reaches about $2/\eta$, then stays.
-- The loss keeps falling, though not on every step.
-
-Test: a 25-parameter $\tanh$ network fits 16 points of $\sin(3x)$, from one
-random start, at $\eta = 0.4$ and $\eta = 0.25$.
-:::
-
-::: {.slide title="Sharpness Climbs to 2/η and Stays There"}
-[Edge of stability]{.kicker}
-
-@!optimization-intro-the-edge-of-stability-2
-
-<!-- WRITER: the cell now runs ten random starts (shared by both rates) and prints a per-start table (start sharpness and loss; per eta: final sharpness, final loss, share of the last 1,000 steps with rising loss); the plot is sharpness / (2/eta) with a min-max band and reference 1. "Same start" here and "from one random start" on the previous slide are false. -->
-
-Same start, two learning rates, final sharpness near 5 and near 8.
-:::
-
-::: {.slide title="Gradient Descent Corrects Its Own Overshoot"}
-[Edge of stability]{.kicker}
-
-- Sharpness above $2/\eta$: the iterate oscillates along the sharpest
-  direction, as $x_2$ did on the valley.
-- The quadratic model predicts the oscillation; the third-order term it
-  drops turns it into a drift toward lower sharpness (Damian et al., 2023).
-
-::: {.d2l-note}
-Large networks often start sharp and flatten early, the reverse of this
-small one: **warmup** keeps $\eta$ small until the sharpness has fallen.
 :::
 :::
 
 ::: {.slide title="The Negative Gradient Is the Steepest Direction"}
-[Many dimensions]{.kicker}
+[The descent guarantee]{.kicker}
 
-$$f(\mathbf{x} + \boldsymbol{\epsilon}) \approx f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x})$$
+A small step $\boldsymbol{\epsilon}$ changes $f$ by about
+$\boldsymbol{\epsilon}^\top \nabla f(\mathbf{x})$.
 
 - Among steps of length $r$, Cauchy–Schwarz gives
-  $\boldsymbol{\epsilon}^\top \nabla f \geq -r \|\nabla f\|$.
-- Equality iff $\boldsymbol{\epsilon}$ points along $-\nabla f$.
+  $\boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) \geq -r \|\nabla f(\mathbf{x})\|$.
+- Equality only if $\boldsymbol{\epsilon}$ points along
+  $-\nabla f(\mathbf{x})$.
 
-$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$$
+$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}) \quad \textrm{changes } f \textrm{ by about } -\eta \|\nabla f(\mathbf{x})\|^2$$
+
+::: {.d2l-note .warn}
+True for a short step only. How short is short enough?
+:::
 :::
 
-::: {.slide title="Steepest Descent Zigzags Across the Valley"}
-[Many dimensions]{.kicker}
+::: {.slide title="I. A Slope That Changes by at Most L Keeps f Below a Parabola"}
+[The descent guarantee]{.kicker}
 
-<!-- WRITER: cell gd-multivariate-gradient-descent-3's run is cut; this slide needs rebuilding without it (third valley run cut, GD-9; the cell now only defines gd_2d inside gd-multivariate-gradient-descent-4). -->
+Assume $|f'(y) - f'(x)| \leq L\,|y - x|$ for all $x, y$; with a second
+derivative, $|f''| \leq L$.
 
-At $(-5, -2)$ the gradient is $(-1, -8)$: eight times steeper across the
-valley than along it. After 30 steps at $\eta = 0.45$, $x_1 = -0.3$.
+After a distance $s$ the slope exceeds $f'(x)$ by at most $Ls$:
+
+$$f(x + \epsilon) - f(x) - \epsilon f'(x) = \int_0^\epsilon \big(f'(x + s) - f'(x)\big)\, ds \leq \int_0^\epsilon L s\, ds = \frac{L}{2}\epsilon^2$$
+
+::: {.d2l-note}
+$f$ lies below the parabola of curvature $L$ that touches it at $x$.
+:::
+:::
+
+::: {.slide title="II. Every Learning Rate Below 2/L Lowers f"}
+[The descent guarantee]{.kicker}
+
+Insert the gradient step $\epsilon = -\eta f'(x)$:
+
+$$\boxed{f(x - \eta f'(x)) \leq f(x) - \eta \Big(1 - \frac{\eta L}{2}\Big) f'(x)^2}$$
+
+- $0 < \eta < 2/L$: a strict decrease wherever $f'(x) \neq 0$.
+- Largest guaranteed decrease at $\eta = 1/L$: $f'(x)^2 / (2L)$.
+- In $d$ variables: $\|\nabla f(\mathbf{x})\|^2$ replaces $f'(x)^2$, and
+  $L$ bounds the size of every eigenvalue of the Hessian.
+:::
+
+::: {.slide title="On the Valley L = 4, and the Guarantee Is the Ceiling 0.5"}
+[The descent guarantee]{.kicker}
+
+Hessian $\textrm{diag}(0.2, 4)$ everywhere, so $L = 4$ and $2/L = 0.5$.
+
+| $\eta$ | steep factor $1 - 4\eta$ | flat factor $1 - 0.2\eta$ | guarantee |
+|---|---:|---:|---|
+| $0.25 = 1/L$ | 0 | 0.95 | holds, largest |
+| $0.476$ | −0.905 | 0.905 | holds |
+| $0.5 = 2/L$ | −1 | 0.9 | none |
+
+::: {.d2l-note}
+The guarantee says that $f$ falls, not how fast: the flat direction
+still sets the pace.
+:::
+:::
+
+::: {.slide title="Check: Which Learning Rates Are Safe on cos x?"}
+[Check]{.kicker}
+
+$f(x) = \cos x$.
+
+1. For which learning rates does the guarantee hold?
+2. Which learning rate has the largest guaranteed decrease, and how
+   large is it?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $|f''(x)| = |\cos x| \leq 1$, so $L = 1$: every
+$0 < \eta < 2$ lowers $f$. The best guaranteed rate is $\eta = 1$, with
+decrease $f'(x)^2/2 = \sin^2(x)/2$.
+:::
+:::
+:::
+
+::: {.slide title="A Minimum Sharper Than 2/η Repels Gradient Descent"}
+[Stability of minima]{.kicker}
+
+Near a minimum $x^*$ with curvature $\lambda = f''(x^*)$, each step
+multiplies the distance to $x^*$ by $1 - \eta\lambda$.
+
+- $\lambda < 2/\eta$: factor smaller than 1 in size, the minimum
+  attracts.
+- $\lambda > 2/\eta$: factor below $-1$, the minimum repels from any
+  start.
+
+$f(x) = x\cos(0.15\pi x)$ has a deep and a shallow minimum:
+
+| minimum | $f''$ | factor at $\eta = 0.5$ | factor at $\eta = 2$ |
+|---|---:|---:|---:|
+| $x = 7.27$ (deep) | 1.81 | 0.09 | −2.6 |
+| $x = -1.83$ (shallow) | 0.98 | 0.51 | −0.96 |
+:::
+
+::: {.slide title="At η = 2 the Deep Minimum Is Out of Reach"}
+[Stability of minima]{.kicker}
+
+@!gd-local-minima
+
+From $x = 10$: $\eta = 0.5$ settles in the deep minimum; $\eta = 2$ ends
+at the shallow one, slowly (factor $-0.96$). The learning rate selects
+minima by curvature, not by depth.
+:::
+
+::: {.slide title="On a Network the Sharpness Rises Until It Meets 2/η"}
+[Edge of stability]{.kicker}
+
+- *Sharpness*: the largest eigenvalue $\lambda_{\max}$ of the Hessian of
+  the loss. Classical advice: measure it, choose $\eta < 2/\lambda_{\max}$.
+- Full-batch gradient descent on networks (Cohen et al., 2021): the
+  sharpness **rises** during training to about $2/\eta$, then stays.
+- The loss keeps falling, but not on every step.
+
+**Test:** a $\tanh$ network with 25 parameters fits 16 points of
+$\sin(3x)$; ten random starts; $\eta = 0.4$ and $\eta = 0.25$, thresholds
+$2/\eta = 5$ and $8$; 20,000 steps.
+:::
+
+::: {.slide title="Ten Starts End at Sharpness 5.0 and 8, One per Learning Rate"}
+[Edge of stability]{.kicker}
+
+@!optimization-intro-the-edge-of-stability-2
+
+Plot: sharpness divided by $2/\eta$, median and range over the starts.
+Same starts, loss below $10^{-3}$ in every run.
+:::
+
+::: {.slide title="At the Edge the Loss Rises on Every Second Step"}
+[Edge of stability]{.kicker}
+
+- At curvature $2/\eta$ the factor $1 - \eta\lambda$ is $-1$: the iterate
+  swings across the sharpest direction, and the loss rises on 50% of the
+  steps.
+- Above $2/\eta$ the swing grows; the third-order term of the Taylor
+  expansion turns it into a drift toward flatter regions (Damian et al.,
+  2023).
+- Other runs rest just below the threshold: the loss rises on 0% of the
+  steps.
+
+::: {.d2l-note}
+**Warmup:** a learning rate that rises gradually lowers the sharpness
+stage by stage, so the peak rate arrives in a region flat enough for it
+(Kalra and Barkeshli, 2024).
+:::
+:::
+
+::: {.slide title="Check: What Sharpness Will Training Reach?"}
+[Check]{.kicker}
+
+The 25-parameter network is trained by full-batch gradient descent at
+$\eta = 0.1$.
+
+1. What sharpness do you expect after long training?
+2. A minimum of the loss has sharpness 30. Can this run end there?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** About $2/\eta = 20$. No: 30 exceeds 20, so the minimum
+repels the iterate. It is within reach only for $\eta < 2/30 \approx 0.067$.
+:::
+:::
+:::
+
+::: {.slide title="The Negative Gradient Points at the Wall, Not at the Minimum"}
+[Newton's method]{.kicker}
+
+Valley, start $(-5, -2)$:
+
+- negative gradient $(1, 8)$, direction to the minimum $(5, 2)$;
+- $x_2$ (curvature 4) tolerates no $\eta$ above $0.5$;
+- $x_1$ (curvature $0.2$) would be solved in one step by
+  $\eta = 1/0.2 = 5$.
+
+::: {.d2l-note}
+The valley needs a learning rate per direction: 5 along $x_1$, $1/4$
+along $x_2$. One over the curvature.
+:::
 :::
 
 ::: {.slide title="Newton's Method Divides the Gradient by the Curvature"}
 [Newton's method]{.kicker}
 
 Minimize the second-order model
-$f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f + \frac{1}{2} \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon}$:
+$f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \frac{1}{2} \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon}$
+over the step $\boldsymbol{\epsilon}$:
 
 $$\nabla f(\mathbf{x}) + \mathbf{H} \boldsymbol{\epsilon} = 0 \quad\Longrightarrow\quad \mathbf{x} \leftarrow \mathbf{x} - \mathbf{H}^{-1} \nabla f(\mathbf{x})$$
 
 - $\mathbf{H}$: the Hessian, the matrix of second derivatives.
 - No learning rate. A quadratic is solved in one step.
-- Valley: $\mathbf{H} = \textrm{diag}(0.2, 4)$ and
-  $\mathbf{H}^{-1} \nabla f = \mathbf{x}$, so one step reaches the origin,
-  for any $\kappa$.
+- Valley: $\mathbf{H} = \textrm{diag}(0.2, 4)$,
+  $\nabla f(\mathbf{x}) = (0.2 x_1, 4 x_2)$, so
+  $\mathbf{H}^{-1} \nabla f(\mathbf{x}) = \mathbf{x}$: one step to the
+  origin, for any $\kappa$.
 :::
 
-::: {.slide title="On cosh, Ten Newton Steps Reach Machine Precision"}
+::: {.slide title="Far Away Newton Walks, Near the Minimum the Error Collapses"}
 [Newton's method]{.kicker}
 
 @!gd-newton-s-method-1
 
-$f(x) = \cosh(0.5x)$ from $x = 10$: no learning rate chosen by hand.
+$f(x) = \cosh(0.5x)$ from $x = 10$. Far out
+$f'/f'' = \tanh(0.5x)/0.5 \approx 2$: steps of 2. Then $0.53$, $0.012$,
+$10^{-7}$: the correct digits at least double per step.
 :::
 
-::: {.slide title="Negative Curvature Sends Newton Uphill"}
+::: {.slide title="Negative Curvature Sends Newton to a Maximum"}
 [Newton's method]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 @!gd-newton-s-method-2
-:::
-::: {.col}
-<!-- WRITER: cell gd-newton-s-method-3 is cut; this slide needs rebuilding without it (damped Newton run cut, GD-13; the slide text on half steps is now false). -->
-:::
+
+$x\cos(0.15\pi x)$ from $x = 10$: at $x = 5$ the curvature is $0.12$,
+the step is 20 long and lands where $f'' < 0$. Newton finds points with
+zero gradient; a maximum is one.
 :::
 
-$x\cos(0.15\pi x)$: the full step lands at $x = 5$ ($f''$ small), jumps
-to 25 ($f'' < 0$), and climbs to a maximum at 26.8. Half steps stay in the
-basin and halve the distance to 7.27 per step.
-:::
-
-::: {.slide title="A Billion Parameters Need Four Exabytes of Hessian"}
+::: {.slide title="Storage Is Not What Rules Newton Out for a Network"}
 [Newton's method]{.kicker}
 
-- Hessian of $d$ parameters: $d^2$ entries; solve: $O(d^3)$.
-- $d = 10^9$: $10^{18}$ entries $\times$ 4 bytes = 4 exabytes.
-- Negative eigenvalues steer the raw step to saddles and maxima.
+- $d = 10^9$ parameters: $10^{18}$ Hessian entries $\times$ 4 bytes =
+  4 exabytes.
+- But a Hessian–vector product costs about one more gradient, and an
+  iterative solver needs only such products.
+
+What remains:
+
+1. many products per step, each as costly as a gradient step;
+2. minibatch noise: dividing by a curvature estimated near zero;
+3. negative eigenvalues: steps toward saddle points and maxima.
 
 ::: {.d2l-note}
 Keep the cheap part: rescale each direction by an estimate of its
@@ -935,14 +1051,14 @@ curvature.
 :::
 :::
 
-::: {.slide title="Units Alone Can Create a Condition Number of a Million"}
+::: {.slide title="Units Alone Create a Condition Number of a Million"}
 [Preconditioning]{.kicker}
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta\, \textrm{diag}(\mathbf{H})^{-1} \nabla f(\mathbf{x})$$
 
 - Linear regression: curvature along a weight = mean squared feature.
-- Two unrelated lengths, in meters and in millimeters: curvatures differ
-  by $10^6$.
+- Two unrelated lengths, one in meters, one in millimeters: curvatures
+  differ by $10^6$.
 - Dividing by the diagonal removes the factor without knowing the units.
 :::
 
@@ -951,47 +1067,40 @@ $$\mathbf{x} \leftarrow \mathbf{x} - \eta\, \textrm{diag}(\mathbf{H})^{-1} \nabl
 
 @!gd-preconditioning
 
-$\eta = 0.5$: both coordinates shrink by $0.5$ per step, on a straight
-line. At $\eta = 1$ this is Newton's method: one step.
-:::
-
-::: {.slide title="Practical Optimizers Estimate the Preconditioner"}
-[Where this leads]{.kicker}
-
-| method | preconditioner | from |
-|---|---|---|
-| Newton | $\mathbf{H}^{-1}$ | exact Hessian, $O(d^2)$ memory |
-| diagonal | $\textrm{diag}(\mathbf{H})^{-1}$ | exact curvatures |
-| AdaGrad, RMSProp, Adam | per-coordinate scale | observed gradients |
-| Muon | per weight matrix | the gradient matrix |
+$\eta = 0.5$: both coordinates keep the factor $1 - \eta = 0.5$, and
+$0.5^7 \approx 0.008$. The condition number has dropped out. At
+$\eta = 1$ this is Newton's method.
 :::
 
 ::: {.slide title="Check: Rotate the Valley by 45°"}
 [Check]{.kicker}
 
 The rotated valley has Hessian
-$\begin{pmatrix} 2.1 & 1.9 \\ 1.9 & 2.1 \end{pmatrix}$ (eigenvalues 4 and
-0.2). What does the diagonal preconditioner do?
+$\begin{pmatrix} 2.1 & 1.9 \\ 1.9 & 2.1 \end{pmatrix}$, with eigenvalues
+4 and $0.2$. What does the diagonal preconditioner do?
 
 ::: {.fragment .fade-up}
-$\textrm{diag}(\mathbf{H}) = (2.1, 2.1)$: it divides both coordinates by
-the same number, a plain change of learning rate. The condition number
-stays 20. Only a preconditioner that mixes coordinates, such as
-$\mathbf{H}^{-1}$, undoes a rotation.
+::: {.d2l-note}
+**Answer.** $\textrm{diag}(\mathbf{H}) = (2.1, 2.1)$: both coordinates
+are divided by the same number, a plain change of learning rate. The
+condition number stays 20. Only a preconditioner that mixes coordinates,
+such as $\mathbf{H}^{-1}$, undoes a rotation.
+:::
 :::
 :::
 
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- A short step against the gradient descends; on $x^2$ it multiplies the
-  distance by $1 - 2\eta$: crawl at 0.9, diverge beyond $-1$.
-- The learning rate also picks the basin: 7.27 at $\eta = 0.5$, the shallow
-  basin at $\eta = 2$.
-- Steepest descent zigzags across the valley: 49 steps at $\eta = 0.45$.
-- Newton divides by the curvature: one step on a quadratic, uphill under
-  negative curvature, $d^2$ memory.
+- Curvature at most $L$: every $\eta < 2/L$ lowers $f$. Valley: $L = 4$,
+  ceiling $0.5$.
+- A minimum sharper than $2/\eta$ repels: at $\eta = 2$ the run leaves
+  the minimum with $f'' = 1.81$ for the one with $f'' = 0.98$.
+- Full-batch gradient descent on a network: sharpness rises to $2/\eta$
+  ($5.0$ at $\eta = 0.4$, about 8 at $\eta = 0.25$) and stays.
+- Newton divides by the curvature: one step on the valley; a maximum
+  under negative curvature; too costly and too noisy for a network.
 - Diagonal preconditioning: 7 steps instead of 47.
 
-**Next:** the gradient becomes a noisy minibatch estimate.
+**Next:** the gradient becomes a noisy estimate from a minibatch.
 :::

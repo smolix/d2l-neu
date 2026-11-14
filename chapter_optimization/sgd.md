@@ -2,39 +2,36 @@
 :label:`sec_sgd`
 
 Every model since :numref:`sec_linear_regression` has been trained on
-minibatches, most of them with minibatch SGD: at each step we drew a few
-dozen or a few hundred examples, computed the gradient of their average
-loss, and stepped against it. :numref:`sec_gd` studied step size and
-curvature with the exact gradient, which requires a pass over the whole
-training set for every step. This section asks what is gained and what is
-lost when the gradient is estimated from a few examples instead.
+minibatches. At each step we drew a few dozen or a few hundred examples,
+computed the gradient of their average loss, and stepped against it.
+:numref:`sec_gd` did something we have never done in practice: it used the
+exact gradient, which takes a pass over the whole training set for every
+step.
 
-The gain is large. A common recipe trains ResNet-50 on the 1.28 million
-images of ImageNet for 90 epochs in minibatches of 256 images
-:cite:`Goyal.Dollar.Girshick.ea.2017`, which comes to 450,000 parameter
-updates. The same number of updates with exact gradients would take
-450,000 passes over the data, 5,000 times the work. Yet a few hundred
-randomly chosen images already indicate which way is downhill.
-*Stochastic gradient descent* (SGD) uses that observation: it estimates the
-gradient from a random sample of examples and steps along the estimate.
-Each step is cheap, and the estimate is right on average, but any single
-estimate is noisy.
+Nobody trains that way, and a little arithmetic shows why. A common recipe
+trains ResNet-50 on the 1.28 million images of ImageNet for 90 epochs in
+minibatches of 256 images :cite:`Goyal.Dollar.Girshick.ea.2017`, which
+comes to 450,000 parameter updates. The same number of updates with exact
+gradients would take 450,000 passes over the data, 5,000 times the work.
+Yet a few hundred randomly chosen images already indicate which way is
+downhill. *Stochastic gradient descent* (SGD) steps along that indication.
 
-We first ask what the noise does. On a quadratic valley we compute exactly
-how far from the minimum the iterates of constant-step SGD keep wandering,
-and how that distance depends on the learning rate, the curvature, and the
-noise. We then ask what averaging over a minibatch of $b$ examples gains.
-Averaging divides the variance of the estimate by $b$, which we measure on a
-small network. On parallel hardware, moreover, $b$ examples take far less
-time than $b$ separate steps, and we measure that too.
+What does the shortcut cost? :numref:`subsec_linear-regression-minibatch-sgd`
+answered for a single weight: a minibatch gradient is right on average,
+its variance falls in proportion to one over the batch size, and at a
+constant learning rate the weight never settles but fluctuates in a cloud
+around the minimizer, the *noise ball*. A single weight has a single
+curvature, however, and the two previous sections showed that what makes a
+loss hard is curvature that differs between directions.
 
-A race of full-batch, single-example, and minibatch updates against the
-clock closes the section and builds the training function that the next
-section uses for momentum. Lowering the learning rate during training is
-the subject of :numref:`sec_scheduler`, and the limits of larger batches
-that of :numref:`sec_batch_size`.
-
-<!-- WRITER: this roadmap is out of date after the code pass. The 1/b variance is no longer measured on a small network (the MLP cells are cut, SGD-7), the batched-computation timing is cut (SGD-10/11, to chap_performance), and the race no longer builds a training function for momentum (record_run, train_with_rule and train_with_optimizer are deleted; Timer moved to the build-only legacy-timer-lib.md). The section now measures (i) the noise ball of linear regression on the airfoil data, with the least-squares optimum in closed form, and the exact-fit case in which it vanishes (new subsection "Where the Model Stops"); (ii) batch sizes 1, 10, 100 and 1,500 on the same data, per example and per second ("Batch Size and Wall-Clock Time"). The extras imports cell is gone: nothing uses time or random any more. -->
+This section puts noise and curvature together. On the valley of
+:numref:`sec_optimization-intro` we compute how far the cloud extends in
+each direction, and find that it reaches farthest along the flat
+direction, where gradient descent was already slowest. We then test the
+formula on data, where it predicts the loss at which a training run stops,
+and meet a case in which the cloud disappears altogether. The two
+remedies, a learning rate that falls during training and a larger batch,
+each have a section of their own later in the chapter.
 
 ```{.python .input #sgd-stochastic-gradient-descent}
 %%tab pytorch
@@ -61,53 +58,40 @@ from d2l import jax as d2l
 
 ### Sampled Gradients
 
-In deep learning the objective is an average of per-example losses. With
-$n$ training examples, a parameter vector $\mathbf{x}$, and the loss
-$f_i(\mathbf{x})$ on example $i$, the objective and its gradient are
+In deep learning the objective is an average of per-example losses. Let
+$f_i(\mathbf{x})$ be the loss on example $i$ of $n$; as everywhere in this
+chapter, $\mathbf{x}$ is the vector of parameters, and the data appear only
+in the code, as `X` and `y`. The objective and its gradient are
 
 $$f(\mathbf{x}) = \frac{1}{n} \sum_{i = 1}^n f_i(\mathbf{x}), \qquad
 \nabla f(\mathbf{x}) = \frac{1}{n} \sum_{i = 1}^n \nabla f_i(\mathbf{x}).$$
 
-One exact gradient therefore costs $n$ per-example gradients. SGD instead
-draws an index $i$ uniformly at random from $\{1, \ldots, n\}$ and steps
-along that example's gradient,
+One exact gradient costs $n$ per-example gradients. SGD in its simplest
+form draws a single index $i$ uniformly at random and steps along that
+example's gradient,
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x}),$$
 
-where $\eta$ is the learning rate. A step now costs one per-example gradient
-instead of $n$. The sampled gradient is an *unbiased* estimate of the full
-gradient: every index has probability $1/n$, so
-
-$$\mathbb{E}_i \big[\nabla f_i(\mathbf{x})\big] = \frac{1}{n} \sum_{i = 1}^n \nabla f_i(\mathbf{x}) = \nabla f(\mathbf{x}).$$
-
-On average the stochastic gradient points where the true gradient points.
-A single draw, however, can point almost anywhere, since one example's
-gradient pulls toward fitting that example alone. It helps to write the
-stochastic gradient as the true gradient plus noise,
+where $\eta$ is the learning rate. Every index is equally likely, so the
+expected value of the sampled gradient is the full gradient: the estimate
+is *unbiased*. A single draw, however, can point almost anywhere, since
+one example's gradient pulls toward fitting that example alone. We write
+the sampled gradient as the true gradient plus noise,
 $\nabla f_i(\mathbf{x}) = \nabla f(\mathbf{x}) + \boldsymbol{\xi}$, where
-the noise $\boldsymbol{\xi}$ has mean zero.
+$\boldsymbol{\xi}$ has mean zero, and ask what the noise does to the
+iterates.
 
 ### SGD on the Valley
 
-To see what the noise does, we return to the valley of
-:numref:`sec_optimization-intro`,
-
-$$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2,$$
-
-which curves gently along $x_1$ (second derivative $0.2$) and steeply along
-$x_2$ (second derivative $4$), a condition number of $20$. Gradient descent
-converges on it, slowly along $x_1$. We simulate sampling noise by adding
-independent Gaussian noise of unit variance to both coordinates of the
-exact gradient. Exercise :exref:`ex_sgd-noise-dataset` shows that this is
-SGD on a dataset whose examples are randomly shifted copies of the
-valley.
-
-The update rule `sgd_2d` has the form that `d2l.train_2d` of
-:numref:`sec_gd` iterates from the starting point $(-5, -2)$, here with
-the gradient `d2l.valley_grad` of the valley `d2l.f_valley`. It is the
-`gd_2d` of that section with noise added to the gradient. The noise comes
-from a NumPy random generator `rng`, which `train_2d` passes on together
-with the learning rate.
+The valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ of
+:numref:`sec_optimization-intro` curves gently along $x_1$, with curvature
+$0.2$, and steeply along $x_2$, with curvature $4$. It has no examples to
+sample from, so we simulate the sampling: we add independent Gaussian
+noise of unit variance to both coordinates of the exact gradient.
+(Exercise :exref:`ex_sgd-noise-dataset` shows that this is SGD on a dataset
+whose examples are randomly shifted copies of the valley.) The update rule
+`sgd_2d` is the `gd_2d` of :numref:`sec_gd` with noise added to the
+gradient.
 
 ```{.python .input #sgd-stochastic-gradient-updates-2}
 %%tab pytorch, jax
@@ -117,7 +101,8 @@ def sgd_2d(x1, x2, s1, s2, f_grad, eta, rng):
     return x1 - eta * (g1 + n1), x2 - eta * (g2 + n2), 0, 0
 ```
 
-We run 300 steps at $\eta = 0.1$.
+We run 300 steps at $\eta = 0.1$ from the starting point $(-5, -2)$ of the
+earlier sections.
 
 ```{.python .input #sgd-stochastic-gradient-updates-3}
 %%tab pytorch, jax
@@ -130,9 +115,9 @@ For the first hundred or so steps the iterate heads for the minimum much as
 gradient descent would, slowly along $x_1$. Then it stops making progress
 and wanders in a cloud around the minimum, a cloud that is longer along the
 flat $x_1$ direction than along the steep $x_2$ direction. Running longer
-does not shrink the cloud. Near the minimum the true gradient vanishes but
-the noise does not, so every step still moves the parameters by $\eta$
-times pure noise.
+does not shrink the cloud. Near the minimum the true gradient vanishes, but
+the noise we add does not, so every step still moves the parameters by
+$\eta$ times pure noise.
 
 ### The Noise Ball
 
@@ -197,31 +182,55 @@ sampling error of 10,000 runs. Halving the learning rate halves the
 variance along $x_1$, as the approximation in
 :eqref:`eq_sgd-noise-ball` says. Along $x_2$ it shrinks by a little more
 than half, because there $\eta\lambda = 0.4$ is not small and the exact
-formula applies.
+formula applies. The appendix solves the recursion step by step, which
+adds the time needed to reach the ball
+(:numref:`subsec_mdl-stochastic-gradients`); its valley is steeper than
+ours, with curvatures 1 and 1,000.
+
+### Decreasing Learning Rates
 
 A constant learning rate therefore forces a choice. Halving $\eta$ halves
 the squared radius of the ball, but it also halves the fraction
 $\eta\lambda$ by which each step closes the remaining distance, so reaching
 the ball takes twice as many steps. Large steps make fast early progress;
 small steps finish close. The way out is to change $\eta$ during training,
-large at first and small at the end. :citet:`Robbins.Monro.1951` gave the
-classical conditions under which such a decreasing sequence $\eta_t$
-converges on problems like this one. The rates must sum to infinity,
-$\sum_t \eta_t = \infty$, so that the iterate can still travel arbitrarily
-far. Their squares must have a finite sum, $\sum_t \eta_t^2 < \infty$, so
-that the noise injected over the whole run, whose variances add up to
-$\sigma^2 \sum_t \eta_t^2$, stays bounded. The rate $\eta_t \propto 1/t$
-satisfies both. :numref:`sec_scheduler` develops the schedules used for
-deep networks, where these conditions are a guide rather than a recipe.
+large at first and small at the end.
+
+How fast may the rate fall? :citet:`Robbins.Monro.1951` gave the classical
+answer for a sequence of rates $\eta_t$:
+
+$$\sum_{t=1}^{\infty} \eta_t = \infty \qquad \textrm{and} \qquad \sum_{t=1}^{\infty} \eta_t^2 < \infty.$$
+:eqlabel:`eq_sgd-robbins-monro`
+
+The first condition lets the iterate travel arbitrarily far, so that no
+starting point is out of reach. The second bounds the noise: step $t$
+injects noise of variance $\eta_t^2 \sigma^2$, later steps can only shrink
+it, and so the noise left at the end of the run has variance at most
+$\sigma^2 \sum_t \eta_t^2$. On a loss that curves upward in every
+direction, as the valley does, and with unbiased gradients of bounded
+variance, the two conditions guarantee that SGD converges to the
+minimizer. The rates $\eta_t = c/t$ satisfy both. A constant rate fails
+the second condition, and a geometrically decaying rate the first.
+
+Convergence under noise is slow, though. With $\eta_t = c/t$ and a large
+enough constant $c$, the expected squared distance to the minimum falls in
+proportion to $1/t$; the appendix derives this rate
+(:numref:`subsec_mdl-step-size-decay`), and exercise
+:exref:`ex_sgd-one-over-t` finds the threshold on $c$. Gradient descent at
+its best rate came a hundred times closer to the minimum of the valley
+every 47 steps (:numref:`sec_optimization-intro`). SGD with the rates
+$c/t$ has to multiply its number of steps by 10,000 to do the same. In
+return, each of its steps is cheaper by the factor $n/b$ when it uses $b$
+of the $n$ examples, and a training loss rarely needs to be minimized to
+many digits. :numref:`sec_scheduler` develops the schedules used for deep
+networks, where the two conditions are a guide rather than a recipe.
 
 ## Minibatches
 :label:`sec_minibatch_sgd`
 
 A decaying learning rate shrinks the noise ball by taking smaller steps.
 Averaging the gradient over several examples shrinks it by reducing the
-noise itself, and every training loop in this book does so. We quantify
-the reduction, and we measure why averaging adds so little time on modern
-hardware.
+noise itself, and every training loop in this book does so.
 
 ### Gradient Variance and Batch Size
 :label:`subsec_sgd-variance`
@@ -231,39 +240,50 @@ uniformly at random, gives the gradient estimate
 
 $$\mathbf{g}_t = \frac{1}{b} \sum_{i \in \mathcal{B}_t} \nabla f_i(\mathbf{x}_t).$$
 
-It is unbiased because every term is. Its noise is smaller. In
-:numref:`subsec_linear-regression-minibatch-sgd` we met this as the
-proportionality of the noise ball to $1 / |\mathcal{B}|$; here we derive the
-exact constant and use it throughout the chapter. Let
-$\boldsymbol{\Sigma}$ be the covariance of a single example's gradient, so
-that its trace
-$\operatorname{tr} \boldsymbol{\Sigma} = \mathbb{E}_i \|\nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})\|^2$
-is the expected squared error of a single-example gradient. The errors of
-independent draws have mean zero and are uncorrelated, so the expected
-squared norm of their sum is the sum of their expected squared norms,
-$b \operatorname{tr} \boldsymbol{\Sigma}$. Dividing the sum by $b$ divides
-this by $b^2$:
+It is unbiased because every term is, and its noise is smaller. For a
+single weight, :numref:`subsec_linear-regression-minibatch-sgd` needed one
+line: the variance of an average of $b$ independent draws is the variance
+of one draw divided by $b$. With many parameters the gradient of an example
+is a vector, and we measure its spread by its expected squared distance
+from the full gradient,
+$\operatorname{tr} \boldsymbol{\Sigma} = \mathbb{E}_i \|\nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})\|^2$,
+the trace of the covariance matrix $\boldsymbol{\Sigma}$ of a single
+example's gradient. The errors of independent draws have mean zero and are
+uncorrelated, so their squared norms add: the sum of $b$ errors has the
+expected squared norm $b \operatorname{tr} \boldsymbol{\Sigma}$, and
+dividing the sum by $b$ divides this by $b^2$:
 
 $$\mathbb{E} \big\|\mathbf{g}_t - \nabla f(\mathbf{x}_t)\big\|^2 = \frac{\operatorname{tr} \boldsymbol{\Sigma}}{b}.$$
+:eqlabel:`eq_sgd-variance`
 
-A minibatch of $b$ examples divides the gradient variance by $b$, and it
-does so in every coordinate. In the noise ball :eqref:`eq_sgd-noise-ball`
-the variance $\sigma^2$ becomes $\sigma^2 / b$, and the squared radius
-becomes about $\eta \sigma^2 / (2\lambda b)$. Halving the learning rate
-and doubling the batch size shrink the ball by the same factor, at
-different costs: the first doubles the number of steps needed to reach the
-ball, the second doubles the work per step.
+A minibatch of $b$ examples divides the gradient variance by $b$, in every
+coordinate. This is less than it sounds. The size of the noise falls only
+like $1/\sqrt{b}$: a batch 100 times larger, at 100 times the computation
+per step, makes the gradient error only 10 times smaller.
 
-The derivation holds for any model. To see it on a real one, we need data.
-The next experiments use a small regression problem, the self-noise of
-airfoils that NASA measured in a wind tunnel. Each example has five
-features: the frequency, the angle of attack, the chord length, the
-free-stream velocity, and the thickness of the boundary layer. The target
-is the sound pressure level. `get_airfoil` standardizes every column to
-mean zero and variance one and keeps the first 1,500 examples. It returns
-a minibatch iterator that reshuffles the examples in each epoch, together
-with the number of features. A training run on these data takes seconds,
-so we can repeat it many times.
+In the noise ball :eqref:`eq_sgd-noise-ball` the variance $\sigma^2$
+becomes $\sigma^2 / b$, and the squared radius becomes about
+$\eta \sigma^2 / (2\lambda b)$. The learning rate and the batch size enter
+only through their ratio. We call this the *$\eta/b$ invariance*: as long
+as $\eta\lambda$ is small, runs of SGD with the same $\eta/b$ fluctuate in
+the same ball. Halving the learning rate and doubling the batch size
+shrink the ball by the same factor, at different costs: the first doubles
+the number of steps needed to reach the ball, the second doubles the work
+per step. Which to prefer depends on how much the noise still limits the
+optimizer, the question of :numref:`sec_batch_size`.
+
+### Where the Model Stops
+:label:`subsec_sgd-where-stops`
+
+So far the noise was invented: Gaussian, of unit variance, the same at
+every point. To test the formula on data we need a problem whose minimum is
+known, so that the distance from it can be measured and not merely
+estimated. Linear regression is such a problem. As data we take 1,500
+wind-tunnel measurements of the sound that airfoils make, recorded by
+NASA: five features and one target, the sound pressure level, each
+standardized to mean zero and variance one. `get_airfoil` returns them as
+a minibatch iterator that reshuffles the examples in every epoch, together
+with the number of features.
 
 ```{.python .input #minibatch-sgd-reading-the-dataset}
 %%tab pytorch
@@ -304,46 +324,18 @@ def get_airfoil(batch_size=10, n=1500):
     return data_iter, data.shape[1]-1
 ```
 
-:begin_tab:`pytorch`
-The data live on the GPU if there is one. A `DataLoader` given a batch
-size would fetch the examples of a minibatch one at a time and stack them,
-which on these data takes longer than the update itself. The
-`BatchSampler` instead draws the indices of a whole minibatch, and the
-dataset gathers them in a single indexing operation.
-:end_tab:
-
-:begin_tab:`jax`
-`d2l.load_array` slices the arrays one whole minibatch at a time and places
-each minibatch on the default device, the GPU if there is one.
-:end_tab:
-
-<!-- WRITER: the get_airfoil cells are #@save blocks that must stay byte-identical (structure 5, library fingerprints), so the two tab notes above cannot become code comments. The PyTorch code already carries "# Whole minibatches of indices"; both notes can be cut (SGD-17). One sentence on the data is enough (SGD-6); the feature names are not used again. -->
-
-On these data we fix a two-layer MLP with 64 hidden units at a random
-initialization. `batch_grads` computes the gradient of the squared loss,
-flattened into one vector, for a whole stack of minibatches at once. Given
-all 1,500 examples as minibatches of one, it returns every per-example
-gradient, and from those we compute the full gradient and
-$\operatorname{tr} \boldsymbol{\Sigma}$ exactly.
-
-<!-- WRITER: cells sgd-gradient-variance-and-batch-size-1 and sgd-gradient-variance-and-batch-size (the MLP frozen at initialization, its 1,500 per-example gradients and the tr(Sigma)/b plot) are cut (SGD-7, structure 3: a check that cannot fail). The paragraph before ("On these data we fix a two-layer MLP ...") and the one after ("For each batch size from 1 to 512 ...") describe cells that no longer exist, and "The measured errors lie on the predicted line over a factor of 500" is no longer measured. Keep the 1/b law with its two-line reason and the 1/sqrt(b) consequence ("a batch 100 times larger ... only 10 times smaller"). -->
-
-For each batch size from 1 to 512 we now draw 200 minibatches, with
-replacement as the derivation assumes, and compare their mean squared
-gradient error with $\operatorname{tr} \boldsymbol{\Sigma} / b$.
-
-The measured errors lie on the predicted line over a factor of 500 in
-batch size, within the sampling error of 200 draws. The logarithmic axes
-hide one consequence. Variance falling like $1/b$ means that the size
-of the noise falls only like $1/\sqrt{b}$: a batch 100 times larger, at 100
-times the computation per step, makes the gradient error only 10 times
-smaller. Whether the larger batch is worth its computation depends on how
-much the noise still limits the optimizer, which is the question of
-:numref:`sec_batch_size`.
-
-### Where the Model Stops
-
-<!-- WRITER: NEW subsection and experiment (SGD-4; structure 3 "Where the model stops"). Linear regression on the 1,500 airfoil examples with the squared loss (1/2)(x_i^T w - y_i)^2, the bias as a sixth weight. The loss is a quadratic, so its Hessian H = X^T X / n and its minimizer w_star (np.linalg.lstsq) are exact, and the excess loss f(w) - f(w_star) = (1/2)(w - w_star)^T H (w - w_star) is computed without sampling error. The first cell prints L, the largest eigenvalue of H (SGD-14: the race's "L = 2.1" is now printed), and tr Sigma, the mean squared norm of the per-example gradients at w_star (their mean is zero there). Measured in every run (the data are fixed): "L = 2.10, tr Sigma = 3.24", so 2/L = 0.95. Other eigenvalues of H, for reference: 0.17, 0.67, 0.92, 1.00 (the bias), 1.13, 2.10. -->
+We fit a linear model with the squared loss of
+:numref:`sec_linear_regression`, the bias written as a sixth weight on a
+constant feature. The loss is a quadratic in six weights, as the valley is
+in two, so its Hessian `H` and its minimizer `w_star` have closed forms.
+The next cell computes them and prints two numbers that we shall need: the
+largest eigenvalue $L$ of the Hessian, which caps the learning rate of
+gradient descent at $2/L$ (:numref:`sec_gd`), and
+$\operatorname{tr} \boldsymbol{\Sigma}$ at the minimizer. The full gradient
+vanishes there, so $\operatorname{tr} \boldsymbol{\Sigma}$ is the mean
+squared norm of the per-example gradients: it measures how much the
+examples still disagree about the weights when no better compromise
+exists.
 
 ```{.python .input #sgd-where-the-model-stops-1}
 %%tab pytorch, jax
@@ -357,7 +349,30 @@ tr_Sigma = (G ** 2).sum(axis=1).mean()
 print(f'L = {np.linalg.eigvalsh(H).max():.2f}, tr Sigma = {tr_Sigma:.2f}')
 ```
 
-<!-- WRITER: sgd_runs runs 400 independent copies of minibatch SGD at once, one per row of W, drawing each minibatch with replacement as the derivation of the noise ball assumes; excess_loss evaluates the quadratic form above for every stored iterate. Prediction for the prose, from the noise ball: in an eigendirection of H with curvature lambda_k and gradient-noise variance s_k^2 / b, the stationary second moment is about eta s_k^2 / (2 lambda_k b), and the direction contributes (1/2) lambda_k times that to the excess loss, i.e. eta s_k^2 / (4b). The curvature cancels: summed over directions the excess loss is about eta tr(Sigma) / (4b), whatever the conditioning. Halving eta halves it. -->
+Before running SGD we predict where it will stop. Along each eigenvector
+of the Hessian the iterate obeys the recursion of the noise ball on its
+own, as along the two coordinates of the valley. Take an eigenvector with
+curvature $\lambda_k$, along which the gradient of a single example has
+variance $s_k^2$. With minibatches of $b$ examples the iterate fluctuates
+in that direction with a second moment of about
+$\eta s_k^2 / (2 \lambda_k b)$, and a displacement of squared size $v$
+raises the loss by $\frac{1}{2} \lambda_k v$. The direction therefore
+adds $\eta s_k^2 / (4b)$ to the loss. The curvature has cancelled: a flat
+direction lets the iterate wander farther, by the same factor that its
+flatness takes off the loss. The variances $s_k^2$ add up
+to $\operatorname{tr} \boldsymbol{\Sigma}$, so SGD should stop at an
+*excess loss*, the loss above its minimum, of about
+
+$$\mathbb{E}\big[f(\mathbf{x}_t)\big] - f(\mathbf{x}^*) \approx \frac{\eta \operatorname{tr} \boldsymbol{\Sigma}}{4b},$$
+:eqlabel:`eq_sgd-excess-loss`
+
+where $\mathbf{x}^*$ is the minimizer, `w_star` in the code. With
+$\eta = 0.05$ and $b = 10$ this is $0.05 \cdot 3.24 / 40 \approx 0.004$,
+and half of that at $\eta = 0.025$.
+
+`sgd_runs` runs minibatch SGD 400 times at once, drawing every minibatch
+with replacement as the derivation assumes, and `excess_loss` evaluates
+the loss above its minimum for every iterate.
 
 ```{.python .input #sgd-where-the-model-stops-2}
 %%tab pytorch, jax
@@ -377,7 +392,9 @@ def excess_loss(W, w_star, H):
     return 0.5 * np.einsum('...d,de,...e->...', D, H, D)
 ```
 
-<!-- WRITER: the runs start at w_star, so the cell measures the stationary ball only, with no transient; b = 10, three epochs (450 steps), excess loss averaged over the last epoch and over the 400 runs. Measured over 10 development runs of this cell with 400 runs each, plus the notebook runs: eta = 0.05: 0.0042 to 0.0043 (predicted 0.0041); eta = 0.025: 0.0020 to 0.0021 (predicted 0.0020); the ratio of the two 2.03 to 2.11 (predicted 2). Halving eta halves the excess loss. (With 100 runs per cell the ratio spread was 1.99 to 2.3, hence 400.) The measured value sits up to 6% above the small-step prediction at eta = 0.05 because eta * L = 0.1 is not negligible (the exact factor 2 / (2 - eta lambda) of the noise ball, 1.06 at L = 2.1). Scale for the reader: the excess is under 2% of the minimum loss 0.2417. -->
+All runs start at the minimizer, so that they measure the ball alone and
+not the approach to it, and we average the excess loss over the last of
+three epochs.
 
 ```{.python .input #sgd-where-the-model-stops-3}
 %%tab pytorch, jax
@@ -389,7 +406,21 @@ for eta in (0.05, 0.025):  # b = 10, three epochs of 150 steps from w_star
           f'predicted {eta * tr_Sigma / (4 * 10):.4f}')
 ```
 
-<!-- WRITER: the exact-fit arm. Redesigned from the worklist's "5 of the examples, b = 1": random sets of 5 airfoil examples are badly conditioned (the features take few distinct values; smallest nonzero curvature 0.02 in the median draw, below 0.001 in one draw in twenty), and constant-step SGD at eta = 0.05 left a median excess loss of 7e-5 after 2,000 steps and 0.04 in the worst 5% of draws; no firm lesson. Instead the cell keeps the same 1,500 inputs, the same Hessian, eta = 0.05 and b = 10, and changes one thing: the targets become y_fit = X w_star, the predictions of the best linear model, so that the model fits every example exactly, as an overparameterized network fits its training set. Every per-example gradient then vanishes at w_star, the noise vanishes with it, and constant-step SGD converges from w = 0 geometrically to float32 rounding. Measured (worst of 100 or 400 runs; 8 development runs plus four notebook runs, the same every time to one digit): after 1 epoch 1e-3; after 5 epochs 3e-8 to 5e-8; after 10 epochs 1e-13 to 2e-13; after 20 epochs 2e-14 (float32 rounding). Compare 0.004 for the noisy targets at the same eta and b. The networks of the book sit between the two cases: the examples still disagree at the end of training, but less than at the start (Exercise 4). -->
+SGD stops where the formula says: at an excess loss of about $0.004$, and
+at half of that for half the learning rate. Note how little is at stake:
+the minimum of the loss is about $0.24$, so SGD stops within 2% of it.
+
+The formula has a hidden assumption. We treated $\sigma^2$, and with it
+$\operatorname{tr} \boldsymbol{\Sigma}$, as constants, but they describe
+the point at which the iterate sits: the spread of the per-example
+gradients there. What if the examples stop disagreeing at the minimum? We
+can arrange this without touching the inputs, the Hessian, the learning
+rate or the batch size, by replacing the targets with the predictions of
+the best linear model, `y_fit = X @ w_star`. The model now fits every
+example exactly, as a network with more parameters than examples can fit
+its training set. Every per-example gradient vanishes at the minimizer,
+and :eqref:`eq_sgd-excess-loss` predicts no ball at all. We start the runs
+at zero weights and print the largest excess loss among the 400 runs.
 
 ```{.python .input #sgd-where-the-model-stops-4}
 %%tab pytorch, jax
@@ -400,136 +431,73 @@ print('exact fit, worst of 400 runs after 1, 5, 10, 20 epochs:',
       *(f'{worst[e - 1]:.0e}' for e in (1, 5, 10, 20)))
 ```
 
+After one epoch the worst run is already below the $0.004$ at which the
+noisy targets held SGD. After five epochs it stands below $10^{-7}$, and
+after twenty at about $10^{-14}$, the rounding error of single-precision
+arithmetic. With the learning rate and the batch size that stalled a
+moment ago, SGD now converges geometrically, by a constant factor per
+epoch, as gradient descent does.
+
+The noise ball is therefore as large as the disagreement between the
+examples at the minimum. Where the examples pull in different directions,
+constant-step SGD stops at a distance set by
+$\eta \operatorname{tr} \boldsymbol{\Sigma} / b$; where one parameter
+vector satisfies them all, it does not stop. The networks of this book lie
+between the two cases: a classifier trained until it fits its training set
+approaches the second, and a language model that reads every sentence once
+stays in the first, since no model predicts the next word with certainty.
+In the formulas of this section, $\sigma^2$ and
+$\operatorname{tr} \boldsymbol{\Sigma}$ should be read as the variance near
+the point where the run ends (exercise :exref:`ex_sgd-variance-training`
+follows it through training).
 
 ### Sampling without Replacement
 
-The derivation drew the examples of a minibatch independently, with
-replacement. Training loops do something else: they shuffle the dataset
-at the start of every epoch and cut it into consecutive minibatches, so
-that each example is used exactly once per epoch. Drawing $n$ times with
-replacement would touch only a fraction $1 - (1 - 1/n)^n \approx 1 - e^{-1}
-\approx 0.63$ of the examples per pass and use others twice or more.
-Within a minibatch, sampling without replacement only helps: the variance
-of the average of $b$ distinct examples is
+Derivation and experiment both drew the examples of a minibatch
+independently, with replacement. Training loops do something else. They
+shuffle the dataset at the start of every epoch and cut it into
+consecutive minibatches, so that each example is used once per epoch;
+$n$ draws with replacement would reach only a fraction
+$1 - e^{-1} \approx 0.63$ of the examples. Within a minibatch, drawing
+without replacement can only help. The variance of the average of $b$
+distinct examples is
 
-$$\mathbb{E} \big\|\mathbf{g}_t - \nabla f(\mathbf{x}_t)\big\|^2 = \frac{\operatorname{tr} \boldsymbol{\Sigma}}{b} \cdot \frac{n - b}{n - 1},$$
+$$\mathbb{E} \big\|\mathbf{g}_t - \nabla f(\mathbf{x}_t)\big\|^2 = \frac{\operatorname{tr} \boldsymbol{\Sigma}}{b} \cdot \frac{n - b}{n - 1}.$$
+:eqlabel:`eq_sgd-finite-population`
 
-where $\operatorname{tr} \boldsymbol{\Sigma}$ averages over the $n$
-examples of the dataset. To see where the factor comes from, write
-$\mathbf{e}_i = \nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})$ for the
-error of example $i$, so that
-$\operatorname{tr} \boldsymbol{\Sigma} = \frac{1}{n} \sum_i \|\mathbf{e}_i\|^2$.
-The $n$ errors sum to zero, and so two distinct examples drawn at random
-have errors that point, on average, slightly against each other:
+The reason takes one line: the errors
+$\nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})$ of the $n$ examples sum to
+zero, so the errors of two distinct examples point, on average, slightly
+against each other (exercise :exref:`ex_sgd-finite-population` fills in
+the algebra). The factor is close to 1 while the batch is a small part of
+the dataset, $0.994$ for 10 of our 1,500 examples, and it reaches 0 at
+$b = n$, where the gradient is exact.
 
-$$\mathbb{E} \big[\mathbf{e}_i^\top \mathbf{e}_j\big] = \frac{1}{n(n - 1)} \sum_{i \neq j} \mathbf{e}_i^\top \mathbf{e}_j = \frac{\big\|\sum_i \mathbf{e}_i\big\|^2 - \sum_i \|\mathbf{e}_i\|^2}{n(n - 1)} = -\frac{\operatorname{tr} \boldsymbol{\Sigma}}{n - 1}.$$
+Across the minibatches of an epoch the cancellation is stronger: evaluated
+at a fixed point, the errors of all the minibatches of one epoch sum to
+zero, since together they contain every example once. The draws are then
+no longer independent, and the analysis of this section does not apply as
+it stands. Reshuffling usually converges faster in practice, and for small
+learning rates on losses that curve upward in every direction provably so
+:cite:`Mishchenko.Khaled.Richtarik.2020`. Exercise
+:exref:`ex_sgd-reshuffling` measures the difference.
 
-The squared norm of the sum of $b$ errors has $b$ terms
-$\|\mathbf{e}_i\|^2$, each of expectation
-$\operatorname{tr} \boldsymbol{\Sigma}$, and $b(b - 1)$ cross terms, each
-of expectation $-\operatorname{tr} \boldsymbol{\Sigma} / (n - 1)$. They
-add up to $b \operatorname{tr} \boldsymbol{\Sigma}\, (n - b) / (n - 1)$,
-and dividing by $b^2$ gives the formula. The correction factor is close to
-1 while the batch is a small part of the dataset. It reaches 0 at $b = n$,
-where the minibatch is the whole dataset and its gradient is exact. Across the
-minibatches of one epoch, however, the draws are no longer independent:
-an example used early in the epoch cannot come back later. The analysis of
-this section then no longer applies verbatim. Reshuffling usually
-converges faster in practice, and on strongly convex problems with small
-learning rates provably so :cite:`Mishchenko.Khaled.Richtarik.2020`.
-Exercise :exref:`ex_sgd-reshuffling` measures the difference.
+### Batch Size on Data
 
-### Batched Computation
-:label:`subsec_minibatch-vectorization`
+Statistics alone would not make minibatches the default. A step on $b$
+examples costs $b$ per-example gradients, as many as $b$ steps of
+single-example SGD at a $b$ times smaller rate, and by the $\eta/b$
+invariance those small steps end in the same ball. What makes minibatches
+the default is the hardware, on which one step over $b$ examples takes far
+less time than $b$ steps over one. We measure both on the airfoil
+regression, with batches of 1, 10 and 100 examples and with all 1,500,
+which is gradient descent.
 
-Statistics alone would not make minibatches the default: $b$ examples in
-one step cost $b$ per-example gradients, as many as $b$ steps of SGD. What
-makes them the default is the hardware, on which one step over $b$
-examples takes far less time than $b$ steps over one.
-:numref:`sec_linear_regression` measured one part of the reason:
-predicting 1,000 examples in one matrix product is hundreds of times
-faster than a Python loop over them, because every operation launched
-from Python carries a fixed overhead of microseconds.
-
-Memory is the other part. A linear layer with a $d \times d$ weight
-matrix, applied to one example, reads all $d^2$ weights from memory and
-performs $2d^2$ floating-point operations, a multiplication and an
-addition per weight. In single precision, with 4 bytes per weight, that is
-half an operation per byte read. Applied to a minibatch of $b$ examples,
-the layer reads the weights once and performs $2bd^2$ operations, about
-$b/2$ per byte while $b$ is small compared with $d$. This ratio of
-operations to bytes moved is the *arithmetic intensity* of a computation.
-A current GPU performs on the order of a hundred floating-point operations
-in the time it reads one byte from its memory, a CPU on the order of ten.
-With one example per call the arithmetic units therefore wait for memory
-most of the time. Only a batch of tens to hundreds of examples gives them
-enough work per byte.
-
-We measure the combined effect on such a layer: a $1024 \times 1024$
-weight matrix applied to 4,096 examples, in blocks of $b$ examples per
-call, on a GPU if one is available. `d2l.Benchmark` of
-:numref:`subsec_async_dispatch` times a function: a warm-up call absorbs
-one-time costs, and the clock stops only once the device has finished all
-the timed calls, here five, whose mean time it reports.
-
-<!-- WRITER: cells sgd-batched-computation-1/-2 (the 1024 x 1024 matrix product timed in blocks of b) are cut (SGD-10, SGD-11; structure 3: the arithmetic-intensity argument, the benchmark and the micro-batch paragraph go to the chapter 13 hand-over list). This whole subsection now has no cell: keep one sentence with a pointer to chap_performance on why the device prefers batches, and one sentence on accumulation with subsec_mp-accumulation (SGD-12). The label subsec_minibatch-vectorization is still cited by Exercise 6, which also moves out. -->
-
-The time per example first falls steeply, at small $b$ close to the $1/b$
-line. A call takes about the same time whether it carries one example or a
-few: its time goes to launching it and to reading $\mathbf{W}$, and more
-examples share that time. Once a call carries enough examples to keep the
-arithmetic units busy, its time grows with $b$, and the time per example
-levels off at the time of the arithmetic itself. Between one example per
-call and the level part of the curve lies more than an order of magnitude.
-A minibatch should therefore be at least large enough to reach the level
-part. The weights of this layer take 4 MB, which fits in the on-chip cache
-of a current GPU and of many CPUs, so the measurement shows the launch
-overhead and the bandwidth of the cache more than the speed of main
-memory. The weights of a large network, gigabytes in all, do not fit; a
-forward pass streams them from main memory, and the argument above applies
-directly.
-
-Memory limits the batch from above, since the activations stored for the
-backward pass grow in proportion to $b$. When the desired batch does not
-fit, the gradients of several smaller *micro-batches* can be accumulated
-before a single update. This reproduces the large batch only if each
-micro-batch loss is scaled so that the sum is the mean over the whole
-batch. The update and any gradient clipping must also wait for the last
-micro-batch. Layers that couple the examples of a batch, batch
-normalization above all (:numref:`sec_batch_norm`), still see only the
-micro-batch. :numref:`subsec_mp-accumulation` implements this technique.
-
-## Minibatch SGD on the Airfoil Data
-:label:`subsec_sgd-airfoil`
-
-We now race the extremes and the middle on the airfoil data: full-batch
-gradient descent, single-example SGD, and minibatches of 10 and 100, each
-measured against the clock. The race also builds the training function
-that the next section uses for momentum.
-
-### The Training Function
-
-The training function takes the optimizer as an update rule with a fixed
-interface. The rule receives the parameters, a `states` object that holds
-whatever auxiliary variables the algorithm keeps, and a dictionary of
-hyperparameters. SGD keeps no state; momentum, in the next section, keeps a
-running average of past gradients. The training function averages the loss
-over each minibatch, so the update rule never divides by the batch size.
-
-<!-- WRITER: everything this subsection describes is gone: the update-rule interface and the cell `sgd` (minibatch-sgd-implementation-from-scratch-1), the Timer cell (moved byte for byte to the build-only legacy-timer-lib.md, d2l.Timer unchanged), record_run and train_with_rule (#@save, deleted; their only other consumer, momentum.md, loses its airfoil runs in its own pass), and the four tab notes (SGD-17). In their place is one compact training function per tab, not saved, train_sgd(lr, batch_size, num_epochs): plain minibatch SGD on linear regression from w = 0 (one weight vector, the bias last, as in "Where the Model Stops"); it returns the training loss after every update and the seconds per epoch. The losses are computed after training from the stored iterates, so the clock counts training alone. The time comes from d2l.Benchmark (sec_use_gpu; one clause: it waits for the device before stopping the clock) with one repeat per epoch. PyTorch: a warm-up backward pass before the clock starts. JAX: the step is jitted once at module level, and one call per batch size compiles it before the clock starts. -->
-
-To record training time we use a small timer that accumulates intervals.
-We save it in the `d2l` package, since later chapters use it too.
-
-`train_with_rule` trains a linear regression model with a given update rule.
-Its inner function `step` is the training step proper: the gradient of the
-loss on a minibatch, then the update rule. The rest is bookkeeping, which
-`record_run` takes over. It calls `step` on every minibatch, and about
-every 200 examples it pauses the timer and evaluates the loss on the whole
-dataset, so the recorded times count training alone. It plots the loss
-against the epoch unless told not to, and returns a history: the number of
-examples processed, the cumulative training time, and the loss at each
-evaluation.
+`train_sgd` trains the linear model from zero weights with plain minibatch
+SGD and returns the training loss after every update and the seconds per
+epoch. The time is taken by `d2l.Benchmark`
+(:numref:`subsec_async_dispatch`), which waits for the device to finish
+before it stops the clock.
 
 ```{.python .input #sgd-the-training-function}
 %%tab pytorch
@@ -584,25 +552,11 @@ def train_sgd(lr, batch_size, num_epochs=2):
     return losses, seconds
 ```
 
-### Batch Size and Wall-Clock Time
-
-A smaller batch takes more steps per epoch, and each step is cheaper and
-noisier than a step on a larger batch. We now race batch sizes against the
-clock to see which lowers the loss fastest.
-
-`train_sgd` trains with plain SGD at a given learning rate and batch size.
-We run four configurations. Batch size 1,500 is the whole dataset, which
-makes it gradient descent with one update per epoch; it runs for 10 epochs.
-Batch size 1 is single-example SGD with 1,500 updates per epoch. Batch
-sizes 10 and 100 lie in between. The stochastic runs take 2 epochs each.
-Their learning rates keep the ratio $\eta/b$ between $0.004$ and $0.005$,
-so by the noise ball their iterates fluctuate about equally. Gradient
-descent has no noise and can take larger steps, up to the stability limit
-$\eta < 2/L$ of :numref:`sec_gd`, where $L$ is the largest curvature of the
-loss. On these data $L \approx 2.1$, so the limit is about $0.95$, and we
-run gradient descent at $0.9$.
-
-<!-- WRITER: the learning rates now keep eta/b at exactly 0.005 (0.005, 0.05, 0.5), not "between 0.004 and 0.005"; gradient descent stays at 0.9, below 2/L = 0.95 with L = 2.10 printed in "Where the Model Stops" (SGD-14), so "On these data L is about 2.1" can cite that output. -->
+The three stochastic runs share $\eta/b = 0.005$ and train for two epochs,
+so the invariance predicts one ball for all of them, at an excess loss of
+$0.005 \cdot 3.24 / 4 \approx 0.004$. Gradient descent has no noise to
+fear and runs at $\eta = 0.9$, just below its ceiling $2/L \approx 0.95$,
+for ten epochs of one update each.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-3}
 %%tab pytorch, jax
@@ -616,17 +570,28 @@ for b, lr, num_epochs in ((1500, 0.9, 10), (1, 0.005, 2), (10, 0.05, 2),
           f'last-epoch loss {float(runs[b][-updates:].mean()):.3f}')
 ```
 
-<!-- WRITER: the printout is now per run: updates per epoch, seconds per epoch, milliseconds per update, and the training loss averaged over the last epoch. Measured on an RTX 4090 (3 development runs and 3 to 4 notebook runs per tab; times depend on the machine and its load). PyTorch: b = 1: 1.31 to 1.84 s/epoch (0.9 to 1.2 ms/update); b = 10: 0.11 to 0.16 s (0.7 to 1.1 ms); b = 100: 0.011 to 0.020 s (0.7 to 1.3 ms); b = 1,500: 0.002 s (2.0 to 2.4 ms for its one update; the loader gathers 1,500 indices). JAX: b = 1: 0.88 to 0.94 s/epoch (0.6 ms/update); b = 10: 0.09 to 0.13 s (0.6 to 0.8 ms); b = 100: 0.010 to 0.021 s (0.7 to 1.4 ms); b = 1,500: 0.002 to 0.004 s (1.8 to 3.6 ms). In the JAX tab about 0.45 ms of every update is the loader copying the minibatch to the device, and a fresh process spends its first epochs at higher cost while the GPU clocks up, which is why b = 100 (15 updates per epoch) reads above b = 1; at steady state its update costs 0.6 to 0.7 ms like the others. Firm lessons, both tabs: an update costs about a millisecond (0.6 to 1.4 ms) whether it carries 1 or 100 examples, so per example b = 100 is 40 to 100 times cheaper than b = 1; a full gradient on 1,500 examples costs no more than two or three minibatch updates, so these data cannot show gradient descent losing on the clock (SGD-13; the ResNet-50 arithmetic of the opening does). Last-epoch losses: 0.242 for gradient descent (deterministic; the minimum is 0.2417) and 0.244 to 0.249 for the three stochastic runs. The eta/b invariance predicts the same ball for all three, 0.2417 + eta tr(Sigma)/(4b) = 0.2417 + 0.005 * 3.24 / 4 = 0.246, which matches; build nothing on their order. -->
+Consider the clock first. An update takes about a millisecond whether it
+carries 1, 10 or 100 examples. The time goes into fixed costs, fetching a
+minibatch and launching a handful of operations from Python, as in the
+loop that :numref:`sec_linear_regression` timed against a matrix product;
+the arithmetic on a hundred examples is negligible beside them. A pass
+over the data therefore takes as long as its number of updates, and
+single-example SGD needs some 50 to 100 times as long as the batch of 100
+for the same 1,500 per-example gradients. On a large model the arithmetic
+is no longer negligible, and :numref:`chap_performance` works out why
+batches still win: a batch reads the weights from memory once and uses
+them for every example. When the batch one wants does not fit in memory,
+its gradient can be accumulated over smaller pieces before a single update
+(:numref:`subsec_mp-accumulation`).
 
-All four runs end at about the same loss, so the race is decided by time.
-The printed times per epoch already show the hardware effect. Every run
-processes the same 1,500 examples per epoch, but single-example SGD does so
-in 1,500 steps, against 150 and 15 for the batches of 10 and 100. Each step
-launches its computations separately, however little work they hold, so
-single-example SGD takes by far the longest per epoch. We plot the loss
-twice: against the number of examples processed, which measures how much
-each method extracts from the data, and against the training time, which
-also reflects how well each method uses the hardware.
+Gradient descent looks better on this clock than it should. A full
+gradient over 1,500 examples takes no longer than a few minibatch updates,
+so these data cannot show gradient descent losing time. The arithmetic of
+the opening can: on ImageNet one exact gradient costs as much as 5,000
+minibatch steps.
+
+The clock says how well a method uses the hardware. To see how well it
+uses the data, we plot the loss against the number of examples processed.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-7}
 %%tab pytorch, jax
@@ -636,61 +601,52 @@ d2l.plot([b * np.arange(1, len(losses) + 1) for b, losses in runs.items()],
          xscale='log')
 ```
 
-<!-- WRITER: the plot is now one panel, loss against examples processed (log axis, every update from the first), so the whole descent from 0.5 at w = 0 is visible; the wall-clock panel is cut (SGD-13). "We plot the loss twice" above and "Measured in seconds, ..." below are false; the clock now lives in the printed seconds per epoch and milliseconds per update. What the plot shows in both tabs: the three stochastic runs fall together from 0.5 and reach the noise floor near 0.245 after about 500 examples, a third of one pass; gradient descent makes one update per 1,500 examples, stands at 0.29 after its first pass, reaches the stochastic runs after about three passes (4,500 examples) and then ends lowest (0.242), since it has no noise ball. Delete "but only because the dataset is tiny" and "even" (SGD-13). -->
+Per example, the three stochastic runs trace one curve. They fall together
+from the loss of about $0.5$ at zero weights and reach their floor before
+the first pass over the data is complete. This is the $\eta/b$ invariance
+seen from the other side: at equal $\eta/b$, one step on $b$ examples moves
+the weights about as far as $b$ steps on one. Gradient descent makes one
+update per pass. After its first pass it stands at $0.29$, a loss that the
+stochastic runs passed after a few hundred examples. It draws level with
+them after about three passes and ends lowest, at $0.242$, because it has
+no noise ball; the stochastic runs stay a few thousandths above it, as
+predicted.
 
-Measured in examples, the three stochastic runs progress at about the same
-rate, since they take about the same step $\eta/b$ per example. Gradient
-descent lags far behind: after one pass over the data it has made one
-update, the others 15 to 1,500. Measured in seconds, single-example SGD is
-the slowest, because it computes its gradients one example at a time, and
-the batch of 10 lies between it and the batch of 100. Only the batch of
-100 is among the fastest in both views. Gradient descent even pulls ahead
-of it on the clock, but only because the dataset is tiny, so that a full
-gradient takes no longer than a few minibatch steps. With millions of
-examples, one full gradient would take as long as thousands of minibatch
-steps, and gradient descent would lag on the clock as well.
+The two extremes each waste something. Single-example SGD learns as much
+from every example as any batch here and takes up to a hundred times as
+long over it; gradient descent uses the hardware well and takes one step
+per pass. A minibatch gives up neither. The tie per example cannot last
+for ever, however. Holding $\eta/b$ at $0.005$ drives $\eta$ toward the
+ceiling $2/L$, which a batch of about 190 examples reaches on these data;
+the batch of 100, at $\eta = 0.5$, is already halfway there. Beyond the
+ceiling a larger batch can no longer take a proportionally larger step
+(exercise :exref:`ex_sgd-batch-lr`).
 
-### Concise Implementation
-
-Every framework ships these update rules as optimizer objects.
-`train_with_optimizer` is the counterpart of `train_with_rule` for them. It
-trains the same linear model with the same initialization and the same
-squared loss, including the factor $\frac{1}{2}$ of
-:numref:`sec_linear_regression`. The built-in mean squared error of most
-libraries omits that factor, which would double the gradient and change
-the meaning of a learning rate.
-
-<!-- WRITER: cells minibatch-sgd-concise-implementation-1/-2 (train_with_optimizer, #@save, deleted; the confirming run with torch.optim.SGD / optax.sgd) are cut (SGD-16; structure 3). Keep at most the remark about the factor 1/2 and the meaning of a learning rate, if anywhere. The "We can now" recap below and its three-question roadmap go (SGD-15); keep the last question as the ending. -->
-
-Repeating the run with batch size 10 and learning rate 0.05 through the
-framework's optimizer reproduces the from-scratch result.
-
-We can now predict where constant-step SGD stalls and how a minibatch
-moves that point, and we have measured why minibatches add so little time
-on parallel hardware. Three questions remain. How should the learning rate
-fall during training? How large can the batch grow before a larger one
-stops reducing the number of steps? And how can SGD move faster along the
-flat directions of an ill-conditioned valley, where gradient descent is
-slow and the noise ball is widest? Later sections of this chapter take up
-the first two questions. The next section answers the third with momentum.
+Neither remedy of this section touches the curvature. A smaller $\eta/b$
+shrinks the noise ball by the same factor in every direction and leaves it
+widest along the flat ones, where the approach was slowest to begin with.
+How can SGD move faster along the flat directions of an ill-conditioned
+valley, where gradient descent is slow and the noise ball is widest? The
+next section builds two small networks on which to ask the question, and
+:numref:`sec_momentum` gives the first answer.
 
 ## Summary
 
-Stochastic gradient descent replaces the exact gradient, which requires a
-pass over all $n$ examples, with an unbiased estimate from a random sample.
-With a constant learning rate $\eta$ the iterates do not converge. They
-fluctuate in a noise ball whose squared radius is about
-$\eta\sigma^2/(2\lambda)$ in a direction of curvature $\lambda$, so the
-ball is widest where the objective is flattest. Decreasing learning rates
-converge if their sum diverges and the sum of their squares does not. A
-minibatch of $b$ examples divides the gradient variance by $b$, which we
-measured over a factor of 500 in batch size. On parallel hardware it also
-takes far less time than $b$ single-example steps, because the computation
-becomes limited by arithmetic rather than by memory and launch overhead.
-Of gradient descent, single-example SGD, and minibatch SGD, only the last
-is fast both per example processed and per second.
-
-<!-- WRITER: "which we measured over a factor of 500 in batch size" is false (the variance cells are cut); "the computation becomes limited by arithmetic rather than by memory and launch overhead" is no longer measured (batched computation cut); the new measured facts are the excess loss eta tr(Sigma)/(4b) on the airfoil regression, halved with eta, and its vanishing to rounding error when the model fits every example; about a millisecond per update at b = 1, 10 and 100. -->
+Stochastic gradient descent replaces the exact gradient, which costs a
+pass over all $n$ examples, by an unbiased estimate from a minibatch of
+$b$. At a constant learning rate $\eta$ the iterates stop in a noise ball:
+their squared distance from the minimum settles at about
+$\eta\sigma^2/(2\lambda b)$ in a direction of curvature $\lambda$, so the
+ball is widest where the loss is flattest. The learning rate and the batch
+size enter only through $\eta/b$; a smaller rate costs steps, a larger
+batch costs computation per step. On linear regression the loss stopped
+$\eta \operatorname{tr}\boldsymbol{\Sigma}/(4b)$ above its minimum, as
+predicted, and the excess vanished when the model fit every example: the
+ball is as large as the disagreement between the examples at the minimum.
+Rates that decay like $1/t$ remove the ball, at a speed of $1/t$ in place
+of the geometric rate of gradient descent. An update on 100 examples took
+about as long as an update on one and made the same progress per example,
+which is why training uses minibatches.
 
 ## Exercises
 
@@ -706,16 +662,6 @@ is fast both per example processed and per second.
        along $x_2$? How does the expected loss
        $\mathbb{E}_{\mathbf{w}} f(\mathbf{x}, \mathbf{w})$ differ from the
        valley?
-1. [code] **Reshuffling versus replacement.** ● Draw a dataset of
-   $n = 100$ vectors $\mathbf{w}_i$ from the distribution of the previous
-   problem and run SGD on the resulting finite sum for 20 epochs from the
-   starting point $(-5, -2)$, once sampling $i$ with replacement and once
-   reshuffling the dataset before each epoch. Record the distance to the
-   minimizer of the finite sum after each epoch, averaged over 20 runs, at
-   the constant learning rates
-   $\eta = 0.1$ and $\eta = 0.01$. At which learning rate does reshuffling
-   make the larger difference, and why?
-   :exlabel:`ex_sgd-reshuffling`
 1. [code] **Per-coordinate learning rates.** ● The noise ball
    :eqref:`eq_sgd-noise-ball` applies to each coordinate of the valley
    separately, with curvatures $\lambda_1 = 0.2$ and $\lambda_2 = 4$.
@@ -728,97 +674,111 @@ is fast both per example processed and per second.
        with $\eta = 0.1$, and verify both predictions numerically.
     1. Why does this choice need information that a single stochastic
        gradient does not supply?
-1. [code] **Gradient variance after training.** ● The measurement in
-   :numref:`subsec_sgd-variance` froze the two-layer network at a random
-   initialization. Train it on the airfoil data for ten epochs of
-   minibatch SGD with batch size 10 and learning rate 0.05, reshuffling
-   the examples before each epoch. At initialization and again after
-   training, compute `g_full` and $\operatorname{tr}\boldsymbol{\Sigma}$
-   from the per-example gradients. Split $\operatorname{tr}\boldsymbol{\Sigma}$
-   into the contributions of `W1`, `b1`, `W2`, and `b2`, and explain the
-   changes in the `b2` and `W1` contributions from the form of the
-   per-example gradient of the squared loss.
-   <!-- WRITER: the measurement this exercise cites (the MLP at random initialization in subsec_sgd-variance, its batch_grads and tr_Sigma) is cut. The exercise is kept (structure 3) but must now define the two-layer network and the per-example gradients itself, or move to the linear model of "Where the Model Stops" (tr Sigma there is 3.24 at the optimum and 0 for the exact-fit targets). -->
+1. [code] **The constant of a $1/t$ schedule.** ● Take one coordinate with
+   curvature $\lambda$ and gradient noise of variance $\sigma^2$, and the
+   learning rates $\eta_t = c / (t + t_0)$, where the shift $t_0 \geq 0$
+   keeps the first steps small.
+   :exlabel:`ex_sgd-one-over-t`
+    1. Write down the recursion for the second moment
+       $e_t = \mathbb{E}[x_t^2]$, following the derivation
+       of :eqref:`eq_sgd-noise-ball`.
+    1. For large $t$, substitute $e_t \approx A/t$, expand both sides to
+       order $1/t^2$, and show that
+       $A = c^2 \sigma^2 / (2 c \lambda - 1)$. Which values of $c$ does
+       this solution require, and which $c$ makes $A$ smallest?
+    1. Iterate the recursion (no sampling is needed) for the flat
+       coordinate of the valley, $\lambda = 0.2$ and $\sigma = 1$, from
+       $e_0 = 25$ with $t_0 = 20$ and $c \in \{1, 2.5, 5, 10\}$, up to
+       $t = 10^6$. Plot $t\, e_t$ against $t$ on logarithmic axes. Which
+       runs approach the constant $A$ of the previous part, and what slope
+       do the others have?
+    1. The steep coordinate has $\lambda = 4$. Which $c$ is best for it,
+       and why can no single $c$ be best for both coordinates?
+1. **From noise ball to sampler.** ● Constant-rate SGD does not converge;
+   its iterates fluctuate in the noise ball :eqref:`eq_sgd-noise-ball`,
+   whose size is set by the rate. Stochastic gradient Langevin dynamics
+   :cite:`Welling.Teh.2011` adds Gaussian noise to every step so that the
+   iterates approximately sample the density proportional to $e^{-f}$:
+   $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, \mathbf{g}_t + \sqrt{2\eta}\,
+   \boldsymbol{\zeta}_t, \qquad \boldsymbol{\zeta}_t \sim \mathcal{N}(\mathbf{0}, \mathbf{I}),$$
+   where $\mathbf{g}_t$ is a stochastic gradient of $f$.
+    1. For $f(x) = \frac{\lambda}{2}x^2$ with the exact gradient, derive
+       the stationary variance of $x_t$ and compare it with the variance
+       $1/\lambda$ of the density proportional to $e^{-f(x)}$.
+    1. Compare the injected noise $\sqrt{2\eta}\, \zeta_t$ with the
+       gradient-noise term $\eta\, \xi_t$ of SGD. For which gradient-noise
+       variance $\sigma^2$ do the two contributions have equal variance,
+       and which of them dominates as $\eta$ decays?
+1. [code] **The finite-population factor.** Let
+   $\mathbf{e}_i = \nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})$ be the
+   error of example $i$, so that
+   $\operatorname{tr} \boldsymbol{\Sigma} = \frac{1}{n} \sum_i \|\mathbf{e}_i\|^2$.
+   :exlabel:`ex_sgd-finite-population`
+    1. Show that the $n$ errors sum to zero, and deduce that two distinct
+       examples drawn uniformly at random satisfy
+       $\mathbb{E}\big[\mathbf{e}_i^\top \mathbf{e}_j\big] = -\operatorname{tr} \boldsymbol{\Sigma} / (n - 1)$.
+    1. The squared norm of the sum of $b$ distinct errors has $b$ terms
+       $\|\mathbf{e}_i\|^2$ and $b(b - 1)$ cross terms. Take expectations
+       and derive :eqref:`eq_sgd-finite-population`.
+    1. With the per-example gradients `G` of the airfoil regression,
+       estimate the mean squared error of the minibatch gradient from
+       2,000 minibatches each of $b \in \{10, 100, 500, 1000\}$ examples,
+       drawn with and without replacement. Compare the eight estimates
+       with :eqref:`eq_sgd-variance` and with
+       the finite-population formula :eqref:`eq_sgd-finite-population`.
+1. [code] **Reshuffling versus replacement.** ● Draw a dataset of
+   $n = 100$ vectors $\mathbf{w}_i$ from the distribution of exercise
+   :exref:`ex_sgd-noise-dataset` and run SGD on the resulting finite sum
+   for 20 epochs from the starting point $(-5, -2)$, once sampling $i$
+   with replacement and once reshuffling the dataset before each epoch.
+   Record the distance to the minimizer of the finite sum after each
+   epoch, averaged over 20 runs, at the constant learning rates
+   $\eta = 0.1$ and $\eta = 0.01$. At which learning rate does reshuffling
+   make the larger difference, and why?
+   :exlabel:`ex_sgd-reshuffling`
+1. [code] **Gradient variance during training.** ● The text evaluated
+   $\operatorname{tr}\boldsymbol{\Sigma}$ at the minimizer of a linear
+   model. During training it changes.
+   :exlabel:`ex_sgd-variance-training`
+    1. For the linear model, compute
+       $\operatorname{tr}\boldsymbol{\Sigma}$ at zero weights from `X` and
+       `y`, and compare it with its value at `w_star`. The per-example
+       gradient is the feature vector times the residual of the example;
+       use this to explain the direction of the change.
+    1. Define a two-layer MLP with 64 ReLU hidden units for the airfoil
+       data, with weights `W1` and `W2` drawn from a normal distribution
+       with standard deviation $0.1$ and biases `b1` and `b2` at zero.
+       Train it with the squared loss for ten epochs of minibatch SGD
+       with batch size 10 and learning rate $0.05$. At initialization and
+       again after training, compute the 1,500 per-example gradients (a
+       loop over the examples is fast enough) and from them
+       $\operatorname{tr}\boldsymbol{\Sigma}$.
+    1. Split $\operatorname{tr}\boldsymbol{\Sigma}$ into the contributions
+       of `W1`, `b1`, `W2`, and `b2`, and explain the changes in the `b2`
+       and `W1` contributions from the form of the per-example gradient of
+       the squared loss.
 1. **Duplicated data.** Suppose every example in the training set is
    silently duplicated, so that the dataset doubles in size while its
    empirical distribution is unchanged. For SGD with $b = 1$, for minibatch
    SGD at a fixed $b$, and for full-batch gradient descent, state whether
    the cost per step, the number of steps to reach a given loss, and the
    variance of the gradient estimate change, and explain each answer.
-1. [code] **Where the time per example levels off.** ● The measurement in
-   :numref:`subsec_minibatch-vectorization` applied a $1024 \times 1024$
-   weight matrix to blocks of $b$ examples.
-    1. Repeat it for $d \times d$ weight matrices with
-       $d \in \{256, 1024, 4096\}$. For each $d$, find the smallest $b$ at
-       which the time per example is within 20% of its minimum.
-    1. Including the bytes of the inputs and outputs, the arithmetic
-       intensity of the layer in single precision is $b / (2 + 4b/d)$.
-       Derive this expression, and use it to predict how the $b$ you found
-       should depend on $d$. Does the measurement agree?
-    1. On a GPU, repeat the measurement for $d = 1024$ in bfloat16. Which
-       way does the bend move, and which two properties of the format
-       explain the move?
-1. **Memory traffic of matrix multiplication.** Computing
-   $\mathbf{A} = \mathbf{B}\mathbf{C}$ for $n \times n$ matrices takes
-   $2n^3$ floating-point operations, however they are ordered. Count the
-   floats each of three orderings reads from main memory, assuming a cache
-   that holds $M$ floats with $n < M \ll n^2$, and keep only the terms of
-   order $n^3$.
-    1. Computing every entry as a dot product of a row of $\mathbf{B}$ with
-       a column of $\mathbf{C}$ reads both for every entry. Computing
-       $\mathbf{A}$ one column at a time keeps the column
-       $\mathbf{C}_{:,j}$ in cache while it reads all of $\mathbf{B}$. Show
-       that the second ordering halves the traffic of the first, and
-       compute the arithmetic intensity of both in single precision.
-    1. A blocked ordering splits the matrices into $w \times w$ blocks. It
-       keeps one block of $\mathbf{A}$ in cache while it accumulates the
-       $n/w$ products of a block of $\mathbf{B}$ with a block of
-       $\mathbf{C}$ that contribute to it. Show that it reads about
-       $2n^3/w$ floats, and find the largest $w$ for which the three blocks
-       fit in the cache.
-    1. How many bytes of cache does the blocked ordering need to reach an
-       arithmetic intensity of 100 operations per byte in single precision?
-1. **Unequal micro-batches.** A training loop accumulates the gradients of
-   $k = 4$ micro-batches into one update with an effective batch of $100$
-   examples, drawn uniformly at random from the training set. The
-   micro-batches hold $32$, $32$, $32$, and $4$ examples. The loop averages
-   the loss of each micro-batch over its own examples and divides the
-   accumulated gradient by $k$. Assume that the per-example gradients are
-   independent, with mean $\nabla f(\mathbf{x})$ and covariance
-   $\boldsymbol{\Sigma}$.
-    1. Find the weight that the accumulated gradient gives to each example,
-       and show that it is still an unbiased estimate of
-       $\nabla f(\mathbf{x})$.
-    1. Express the covariance of the accumulated gradient as a multiple of
-       $\boldsymbol{\Sigma}$, and find the batch size of a uniformly
-       weighted average with the same covariance.
-    1. State the scaling of the micro-batch losses that makes the
-       accumulated gradient the average over all $100$ examples. Use
-       :eqref:`eq_sgd-noise-ball` to compare the squared radius of the
-       noise ball of the two loops at the same learning rate.
 1. [code] **Batch size and learning rate together.** ● `train_sgd` trains
-   the linear model at a chosen batch size and learning rate and returns
-   its history: the examples processed, the cumulative training time, and
-   the loss at each evaluation. Fix
+   the linear model at a chosen learning rate and batch size and returns
+   the loss after every update and the seconds per epoch. Fix
    $\eta = 0.05$ at $b = 10$ and derive the learning rate for each
-   $b \in \{1, 10, 100, 1000\}$ by two rules, $\eta \propto \sqrt{b}$ and
+   $b \in \{1, 10, 100, 1500\}$ by two rules, $\eta \propto \sqrt{b}$ and
    $\eta \propto b$.
+   :exlabel:`ex_sgd-batch-lr`
     1. Train each configuration for two epochs. Report the time per epoch
-       and the final loss of each run, and name the runs that diverge.
-    1. The training loss is a quadratic in the weights and the bias. Its
-       Hessian is
-
-       $$\mathbf{H} = \frac{1}{n} \sum_{i=1}^{n} \tilde{\mathbf{x}}_i \tilde{\mathbf{x}}_i^\top,$$
-
-       where $\tilde{\mathbf{x}}_i$ appends a constant $1$ to the features
-       of example $i$ and $n = 1500$. Compute the largest eigenvalue $L$ of
-       $\mathbf{H}$ from the standardized data that `get_airfoil` loads,
-       and confirm the value quoted for the race. Gradient descent on a
-       quadratic is stable only for $\eta < 2/L$ (:numref:`sec_gd`); use
-       this to explain which runs diverge.
-    1. At $b = 1$, which rule reaches the lower final loss? Explain the
-       ordering with :eqref:`eq_sgd-noise-ball`.
-   <!-- WRITER: train_sgd now returns (losses after every update, seconds per epoch), not a history dict with examples, cumulative time and loss; its signature train_sgd(lr, batch_size, num_epochs=2) is unchanged. L = 2.10 is now printed in "Where the Model Stops", so part 2 "confirm the value quoted for the race" can say "compute L yourself from H". -->
+       and the mean loss over the last epoch of each run, and name the
+       runs that diverge.
+    1. Gradient descent on a quadratic is stable only for $\eta < 2/L$
+       (:numref:`sec_gd`), and the text printed $L = 2.10$ for these data.
+       Use this to explain which runs diverge. From which batch size on
+       does the rule $\eta \propto b$ cross the limit?
+    1. At $b = 1$, which rule reaches the lower loss? Explain the ordering
+       with :eqref:`eq_sgd-excess-loss`.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/497)
@@ -834,7 +794,7 @@ is fast both per example processed and per second.
 ::: {.cover}
 [Dive into Deep Learning · §9.3]{.kicker}
 
-Stochastic and Minibatch Gradient Descent<br>**sampled gradients · the noise ball · gradient variance · batched computation**
+Stochastic and Minibatch Gradient Descent<br>**sampled gradients · the noise ball · minibatches · where a run stops**
 :::
 :::
 
@@ -862,43 +822,32 @@ images already show which way is downhill.
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- derive how far constant-step SGD wanders from the minimum;
-- predict how the learning rate, the curvature, and the batch size change
-  that distance;
-- compute the arithmetic intensity of a layer applied to a minibatch;
-- read a race of batch sizes against examples and against time.
+- derive where constant-step SGD stops on a quadratic;
+- predict how learning rate $\eta$, curvature $\lambda$, noise variance
+  $\sigma^2$ and batch size $b$ move that point;
+- predict the loss at which a training run stalls, or that it will not;
+- compare batch sizes per example and per second.
 
-**Running example:** the valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$
-(condition number 20) with unit gradient noise, then the airfoil
-regression data (1,500 examples, 5 features).
+**Idea:** constant-step SGD stops in a *noise ball* of squared radius
+$\eta\sigma^2/(2\lambda b)$.
+
+**Running example:** the valley $0.1x_1^2 + 2x_2^2$ with unit gradient
+noise, then the airfoil regression (1,500 examples, 6 weights).
 :::
 
-::: {.slide title="Noise Is the Second Problem of the Chapter"}
+::: {.slide title="Noise Is the Second Difficulty of the Chapter"}
 [Where this fits]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
+| movement | sections |
 |---|---|
-| Landscapes | curvature and noise slow training |
-| Gradient Descent | step size against curvature |
-| **Stochastic and Minibatch GD** | **sampled gradients, noise ball, batching** |
-| Momentum | averaging over time |
-| Adam and AdamW | a step size per coordinate, decoupled decay |
-| Schedules | warmup and decay |
-| Muon | orthogonalized updates for matrices |
-| Batch Size | how many examples per step |
-| Scaling Up | learning rates across widths |
-| Practice | clipping, averaging, fair comparisons |
-:::
+| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · **Stochastic and Minibatch GD** |
+| which direction to step in, on two small networks | Two Test Models · Momentum · Adam · AdamW · Muon |
+| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · Practice |
 
-::: {.col .narrow}
-- **Uses:** gradient descent on a quadratic; minibatch SGD for linear
-  regression; autograd.
-- **Skips:** convergence proofs, variance-reduction methods, schedules
-  beyond the Robbins–Monro conditions.
-:::
-:::
+- **Uses:** gradient descent on a quadratic, its ceiling $\eta < 2/L$
+  ($L$: largest curvature), minibatch SGD for linear regression.
+- **Skips:** convergence proofs, variance reduction, schedules for
+  networks, the hardware reasons for batching.
 :::
 
 ::: {.slide title="A Sampled Gradient Is Right on Average"}
@@ -908,6 +857,8 @@ $$f(\mathbf{x}) = \frac{1}{n}\sum_{i=1}^n f_i(\mathbf{x}), \qquad
 \mathbf{x} \leftarrow \mathbf{x} - \eta\, \nabla f_i(\mathbf{x}),
 \quad i \sim \textrm{uniform}$$
 
+- $\mathbf{x}$: parameters; $f_i$: loss on example $i$ of $n$; $\eta$:
+  learning rate.
 - One step costs one per-example gradient instead of $n$.
 - Unbiased: $\mathbb{E}_i[\nabla f_i(\mathbf{x})] = \nabla f(\mathbf{x})$.
 - Noisy: $\nabla f_i = \nabla f + \boldsymbol{\xi}$ with
@@ -915,11 +866,25 @@ $$f(\mathbf{x}) = \frac{1}{n}\sum_{i=1}^n f_i(\mathbf{x}), \qquad
   fitting itself alone.
 :::
 
+::: {.slide title="On the Valley, SGD Is Gradient Descent plus Unit Noise"}
+[Sampled gradients]{.kicker}
+
+The valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$: curvature 0.2 along $x_1$
+(flat), 4 along $x_2$ (steep). Sampling is simulated by Gaussian noise of
+variance 1 on both gradient coordinates:
+
+@-sgd-stochastic-gradient-updates-2
+
+::: {.d2l-note}
+Same start $(-5, -2)$ and same update as gradient descent; only the
+gradient is noisy.
+:::
+:::
+
 ::: {.slide title="Constant-Step SGD Stalls in a Cloud"}
 [Sampled gradients]{.kicker}
 
-The valley, $\eta = 0.1$, 300 steps, unit-variance noise on both gradient
-coordinates:
+The valley, $\eta = 0.1$, 300 steps:
 
 @!sgd-stochastic-gradient-updates-3
 
@@ -968,7 +933,9 @@ variance of each coordinate across runs:
 
 @!sgd-the-noise-ball
 
-Measured and predicted agree to within the sampling error.
+::: {.d2l-note}
+Agreement within a few percent, the sampling error of 10,000 runs.
+:::
 :::
 
 ::: {.slide title="Check: Halve the Learning Rate"}
@@ -990,20 +957,33 @@ steps.
 :::
 
 ::: {.slide title="Decreasing Rates Converge if Their Sum Diverges and Their Squares Do Not"}
-[The noise ball]{.kicker}
+[Decreasing learning rates]{.kicker}
 
-- $\sum_t \eta_t = \infty$: the iterate can still travel arbitrarily far.
-- $\sum_t \eta_t^2 < \infty$: the injected noise, of total variance
-  $\sigma^2 \sum_t \eta_t^2$, stays bounded.
-- $\eta_t \propto 1/t$ satisfies both; $\eta_t \propto e^{-ct}$ fails the
-  first and stops short of the minimum.
+$$\sum_t \eta_t = \infty \qquad \textrm{and} \qquad \sum_t \eta_t^2 < \infty$$
 
-::: {.d2l-note}
-Deep networks use schedules (warmup, cosine, WSD) for which these
-conditions are a guide, not a recipe.
+- First: the iterate can travel arbitrarily far.
+- Second: the noise left at the end has variance at most
+  $\sigma^2 \sum_t \eta_t^2$.
+- $\eta_t = c/t$ satisfies both; a constant rate fails the second,
+  geometric decay the first.
+
+[Robbins and Monro, 1951; positive curvature in every direction, noise of bounded variance]{.small}
 :::
 
-[Robbins and Monro (1951)]{.small}
+::: {.slide title="Noise Turns a Geometric Rate into 1/t"}
+[Decreasing learning rates]{.kicker}
+
+To come 100 times closer to the minimum of the valley:
+
+| method | squared distance after $t$ steps | cost of 100 times closer |
+|:--|:--|:--|
+| gradient descent, best rate | $\propto 0.905^{2t}$ | 47 more steps |
+| SGD, $\eta_t = c/t$, $c$ large enough | $\propto 1/t$ | 10,000 times the steps |
+
+::: {.d2l-note}
+An SGD step is cheaper by $n/b$ ($b$ examples out of $n$), and a training
+loss rarely needs many digits.
+:::
 :::
 
 ::: {.slide title="Averaging b Examples Divides the Variance by b"}
@@ -1013,135 +993,163 @@ $$\mathbf{g}_t = \frac{1}{b}\sum_{i\in\mathcal{B}_t} \nabla f_i(\mathbf{x}_t),
 \qquad
 \mathbb{E}\,\|\mathbf{g}_t - \nabla f\|^2 = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}$$
 
-- $\operatorname{tr}\boldsymbol{\Sigma}$: expected squared error of one
-  example's gradient; independent errors add in squared norm.
-- Noise ball: $\eta\sigma^2/(2\lambda) \;\to\; \eta\sigma^2/(2\lambda b)$.
-- Halving $\eta$ and doubling $b$ shrink the ball equally: the first
-  doubles the steps, the second the work per step.
-:::
-
-::: {.slide title="On an MLP, the Error Follows tr Σ / b from b = 1 to 512"}
-[Minibatches]{.kicker}
-
-Two-layer MLP (64 hidden units) frozen at a random initialization,
-airfoil data, 200 minibatches per batch size:
-
-<!-- WRITER: cell sgd-gradient-variance-and-batch-size is cut (SGD-7); this slide needs rebuilding without it, e.g. around the noise ball on data (cells under "Where the Model Stops"). -->
-:::
-
-::: {.slide title="A 100 Times Larger Batch Makes the Noise Only 10 Times Smaller"}
-[Minibatches]{.kicker}
-
-- Variance $\propto 1/b$, so the size of the noise $\propto 1/\sqrt{b}$.
-- Without replacement within a batch:
-  $\dfrac{\operatorname{tr}\boldsymbol{\Sigma}}{b}\cdot\dfrac{n-b}{n-1}$,
-  exactly 0 at $b = n$.
-- Shuffling once per epoch uses every example once; $n$ draws with
-  replacement reach only $1 - e^{-1} \approx 63\%$ of them.
+- $\mathcal{B}_t$: $b$ examples drawn independently.
+- $\operatorname{tr}\boldsymbol{\Sigma} = \mathbb{E}_i\|\nabla f_i - \nabla f\|^2$:
+  squared error of one example's gradient; independent errors add in
+  squared norm.
 
 ::: {.d2l-note}
-When a larger batch stops reducing the number of steps is the question of
-the Batch Size section.
+Variance $\propto 1/b$, so noise $\propto 1/\sqrt{b}$: a batch 100 times
+larger makes the gradient error only 10 times smaller.
 :::
 :::
 
-::: {.slide title="One Example per Call Leaves the Arithmetic Units Idle"}
-[Batched computation]{.kicker}
+::: {.slide title="The Ball Depends on η and b Only through η/b"}
+[Minibatches]{.kicker}
 
-A $d \times d$ linear layer in float32 (4 bytes per weight):
+$$\sigma^2 \to \frac{\sigma^2}{b}: \qquad
+\mathbb{E}[x_\infty^2] \approx \frac{\eta\,\sigma^2}{2\lambda b}$$
 
-| examples per call | operations | bytes of weights | operations per byte |
-|:--|--:|--:|--:|
-| 1 | $2d^2$ | $4d^2$ | 0.5 |
-| $b \ll d$ | $2bd^2$ | $4d^2$ | $b/2$ |
+| to halve the squared radius | cost |
+|:--|:--|
+| halve $\eta$ | twice the steps to reach the ball |
+| double $b$ | twice the work per step |
 
-A GPU does about 100 operations per byte it reads, a CPU about 10.
-
-::: {.d2l-note}
-Every call also carries a launch overhead of microseconds. A batch shares
-both among its examples.
+::: {.d2l-note .rule}
+**The $\eta/b$ invariance.** For small $\eta\lambda$, runs with the same
+$\eta/b$ fluctuate in the same ball.
 :::
 :::
 
-::: {.slide title="Time per Example Falls until the Device Is Busy"}
-[Batched computation]{.kicker}
+::: {.slide title="The Loss Stops η tr Σ / (4b) above Its Minimum"}
+[Where the model stops]{.kicker}
 
-A $1024 \times 1024$ layer applied to 4,096 examples, $b$ examples per
-call:
+Quadratic loss, eigenvector $k$ of the Hessian: curvature $\lambda_k$,
+gradient variance $s_k^2$ per example.
 
-<!-- WRITER: cell sgd-batched-computation-2 is cut (SGD-10/11, to chap_performance); this slide and the two around it ("One Example per Call ...", "Check: Which Batch Keeps a Layer Busy?") go with it. -->
+I. Second moment of the iterate: $\;\eta s_k^2/(2\lambda_k b)$
 
-The curve follows $1/b$ at first and levels off at the time of the
-arithmetic itself.
+II. Loss of a displacement of squared size $v$: $\;\tfrac12\lambda_k v$
+
+III. Product: $\eta s_k^2/(4b)$; the curvature cancels. Sum over $k$:
+
+$$\boxed{\mathbb{E}[f(\mathbf{x}_t)] - f(\mathbf{x}^*) \approx \frac{\eta \operatorname{tr}\boldsymbol{\Sigma}}{4b}}$$
+
+$\mathbf{x}^*$: the minimizer; the left side is the *excess loss*.
 :::
 
-::: {.slide title="Check: Which Batch Keeps a Layer Busy?"}
+::: {.slide title="Linear Regression Stops Where the Formula Says, 0.004 above the Minimum"}
+[Where the model stops]{.kicker}
+
+Linear regression, 1,500 examples, 6 weights; Hessian and minimizer in
+closed form. $L$: largest curvature;
+$\operatorname{tr}\boldsymbol{\Sigma}$ at the minimizer:
+
+@!sgd-where-the-model-stops-1
+
+Prediction at $\eta = 0.05$, $b = 10$:
+$0.05 \cdot 3.24/40 \approx 0.004$; half at $\eta = 0.025$. Measured,
+400 runs started at the minimizer:
+
+@!sgd-where-the-model-stops-3
+:::
+
+::: {.slide title="Check: What if the Model Fits Every Example?"}
 [Check]{.kicker}
 
-A $4096 \times 4096$ layer in bfloat16 (2 bytes per weight) runs on a GPU
-that does 300 operations per byte. Ignoring inputs and outputs, from which
-$b$ on is the layer limited by arithmetic rather than by memory?
+Replace the targets by the predictions of the best linear model. Inputs,
+Hessian, $\eta = 0.05$ and $b = 10$ stay the same. Where does
+constant-step SGD stop now?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $2bd^2$ operations over $2d^2$ bytes is $b$ operations per
-byte, so $b \approx 300$. Counting inputs and outputs, $b$ is somewhat
-larger.
+**Answer.** Every per-example gradient vanishes at the minimizer, so
+$\operatorname{tr}\boldsymbol{\Sigma} = 0$ there and the formula predicts
+no ball: SGD should converge.
 :::
 :::
 :::
 
-::: {.slide title="SGD and Momentum Share One Update-Rule Interface"}
-[Minibatch SGD on the airfoil data]{.kicker}
+::: {.slide title="With an Exact Fit, Constant-Step SGD Converges"}
+[Where the model stops]{.kicker}
 
-Interface `(params, states, hyperparams)` (JAX also passes the gradients
-and returns the new states);
-`states` is empty for SGD and holds a running average for momentum:
+Largest excess loss among 400 runs from zero weights, same $\eta$ and $b$:
 
-<!-- WRITER: cell minibatch-sgd-implementation-from-scratch-1 (the update-rule interface) is cut, with train_with_rule; this slide needs rebuilding or removal. -->
+@!sgd-where-the-model-stops-4
 
-`train_with_rule` trains linear regression with any such rule and records the
-loss against examples and training time.
+With noisy targets the same settings stalled at 0.004.
+
+::: {.d2l-note}
+The ball is as large as the disagreement between the examples at the
+minimum. Networks lie between the two cases.
+:::
 :::
 
-::: {.slide title="Only Minibatches Are Fast per Example and per Second"}
-[Minibatch SGD on the airfoil data]{.kicker}
+::: {.slide title="Distinct Examples Shrink the Variance by (n − b)/(n − 1)"}
+[Sampling without replacement]{.kicker}
+
+$$\mathbb{E}\,\|\mathbf{g}_t - \nabla f\|^2 = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}\cdot\frac{n-b}{n-1}$$
+
+- The $n$ errors $\nabla f_i - \nabla f$ sum to zero, so two distinct
+  examples partly cancel.
+- $b = 10$, $n = 1{,}500$: factor 0.994. $b = n$: factor 0, the gradient
+  is exact.
+- Shuffling once per epoch uses every example once; $n$ draws with
+  replacement reach only $1 - e^{-1} \approx 63\%$ of them.
+:::
+
+::: {.slide title="An Update Costs about a Millisecond with 1 or with 100 Examples"}
+[Batch size on data]{.kicker}
+
+Airfoil regression, $\eta/b = 0.005$ for $b = 1, 10, 100$; gradient
+descent ($b = 1{,}500$) at $\eta = 0.9$:
+
+@!minibatch-sgd-implementation-from-scratch-3
+
+::: {.d2l-note}
+The time goes into fixed costs per update, so a pass at $b = 1$ takes
+50 to 100 times as long as at $b = 100$. A full gradient on 1,500 examples
+costs only a few updates.
+:::
+:::
+
+::: {.slide title="Per Example the Stochastic Runs Tie and Gradient Descent Lags"}
+[Batch size on data]{.kicker}
 
 @!minibatch-sgd-implementation-from-scratch-7
 
-<!-- WRITER: the plot is now one panel (loss against examples processed); the per-second facts are in the printout of minibatch-sgd-implementation-from-scratch-3 (about 1 ms per update for b = 1, 10, 100). -->
-
-Per example the stochastic runs tie and gradient descent lags; per second
-single examples lag, and on these 1,500 examples gradient descent leads. On
-millions of examples gradient descent lags on both.
+- Equal $\eta/b$: one step on $b$ examples moves as far as $b$ steps on
+  one.
+- Gradient descent: one update per pass, level after about three passes,
+  then lowest (0.242, no ball).
 :::
 
-::: {.slide title="Memory and Batch Normalization Bound the Batch from Above"}
-[Minibatch SGD on the airfoil data]{.kicker}
+::: {.slide title="Check: How Far Does the Tie Extend?"}
+[Check]{.kicker}
 
-- Stored activations grow in proportion to $b$.
-- Too large to fit: accumulate the gradients of several micro-batches,
-  scale each loss so the sum is the batch mean, update and clip once.
-- Batch normalization still sees only one micro-batch.
+The stochastic runs keep $\eta/b = 0.005$, and gradient descent is stable
+only below $2/L = 0.95$. At which batch size does the rule
+$\eta = 0.005\,b$ reach the ceiling, and what happens beyond?
 
+::: {.fragment .fade-up}
 ::: {.d2l-note}
-Choose $b$ large enough to keep the device busy and small enough to fit.
+**Answer.** $0.95/0.005 = 190$ examples. Beyond it the rate can no longer
+grow with the batch, so larger batches make less progress per example.
+:::
 :::
 :::
 
-::: {.slide title="Noise Sets the Floor; Batches Lower It Cheaply"}
+::: {.slide title="Noise Sets a Floor, and η/b Sets Its Height"}
 [Wrap-up]{.kicker}
 
-- SGD: an unbiased gradient from a single example.
-- Constant $\eta$: noise ball $\eta\sigma^2/(\lambda(2-\eta\lambda))$; on
-  the valley at $\eta = 0.1$, standard deviation 0.5 along $x_1$, 0.125
-  along $x_2$.
-- Convergence: $\sum_t\eta_t = \infty$, $\sum_t\eta_t^2 < \infty$.
-- Minibatch of $b$: variance $\operatorname{tr}\boldsymbol{\Sigma}/b$,
-  measured from $b = 1$ to 512.
-- Hardware: about $b/2$ operations per byte; time per example falls by
-  more than an order of magnitude.
+- Noise ball $\eta\sigma^2/(2\lambda b)$: on the valley at $\eta = 0.1$,
+  standard deviation 0.5 along $x_1$, 0.125 along $x_2$.
+- Excess loss $\eta \operatorname{tr}\boldsymbol{\Sigma}/(4b)$: 0.004 on
+  the airfoil regression, zero when the model fits every example.
+- Rates $c/t$ remove the ball at a speed of $1/t$.
+- $b = 1$ and $b = 100$: same progress per example, about a millisecond
+  per update.
 
-**Next:** momentum, for the slow flat directions where the noise ball is
-also widest.
+**Next:** two small networks to test optimizers on, then momentum for the
+flat directions.
 :::

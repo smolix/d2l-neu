@@ -24,7 +24,7 @@ CPU_ONLY_NOTEBOOKS = {
     # "GPU" appearing only in prose; every cell runs in seconds on CPU.
     "chapter_mdl-dynamics/mdl-neural-odes.ipynb",
     "chapter_mdl-dynamics/mdl-flow-matching-transport.ipynb",
-    "chapter_mdl-information-theory/mdl-divergences-distances.ipynb",
+    "chapter_mdl-information-theory/mdl-test-functions-transport.ipynb",
     "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
     "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
 }

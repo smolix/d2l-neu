@@ -5,41 +5,64 @@ The chapter kept to what can be proved in a page and checked on a small
 example, and each entry below starts where a section stopped. Books and papers
 for what the chapter teaches are listed in its introduction
 (:numref:`chap_mdl-information-theory`); these entries are for what it does
-not. Read first the three that bear on practice: calibration, the caveats on
-scaling laws, and the bias and variance of mutual-information estimators. The
-entries on capacity and on information geometry are for the curious. Nothing
-else in the book depends on this section.
+not. Read first the three that bear on practice: calibration, the constant of
+a scaling law, and the bias and variance of mutual-information estimators.
+Bits-back coding is worth reading for its own sake. The entries on capacity
+and on information geometry are for the curious. Nothing else in the book
+depends on this section.
 
 ## Entropy and Losses
 
 ### Calibration after Training
 
-:numref:`subsec_mdl-irreducible-loss` shows that the population log-loss is
-minimized by the true conditional probabilities, so a classifier at that
-optimum is calibrated. Trained networks are not at the optimum: with the
-reliability diagram of :numref:`subsec_beyond-accuracy`,
-:citet:`Guo.Pleiss.Sun.Weinberger.2017` find modern ones systematically
-overconfident. Their repair is *temperature scaling*: divide the logits by one
-constant $\tau$ chosen to minimize the log-loss on held-out data. The argmax,
-and hence the accuracy, does not change. This is the temperature of
-distillation used for a different purpose, and one constant cannot help a
-model that is overconfident on some classes and underconfident on others.
-:citet:`Gneiting.Raftery.2007` give the general theory of proper scoring
-rules, of which the log score is one member.
+Over the population the log-loss is smallest at the true conditional
+probabilities (:numref:`subsec_mdl-irreducible-loss`), which are calibrated.
+A trained network is somewhere else, and
+:citet:`Guo.Pleiss.Sun.Weinberger.2017` find that modern networks miss on one
+side: they are overconfident. :numref:`sec_mdl-information_theory` gives the
+reason. One-hot targets ask for an infinite gap between the logits, so once
+the training set is classified without error, the loss can fall only by
+pushing the logits apart. Late in training the held-out log-loss rises again,
+although the held-out error does not: the network overfits its probabilities
+and not its decisions. The temperature scaling of
+:numref:`sec_classification` repairs this with one constant, fitted on
+held-out data. It is the temperature of distillation, used for a different
+purpose.
+
+How much can such a repair achieve? Let $\bar{\mathbf{p}}(\mathbf{q})$ be the
+frequencies of the classes among the inputs that receive the prediction
+$\mathbf{q}$. A cross-entropy is an entropy plus a KL divergence, and this
+holds for each prediction, so the held-out log-loss is
+
+$$
+\mathbb{E}\big[-\log q_y\big]
+= \mathbb{E}_{\mathbf{q}}\big[D_{\textrm{KL}}\big(\bar{\mathbf{p}}(\mathbf{q}) \,\|\, \mathbf{q}\big)\big]
++ \mathbb{E}_{\mathbf{q}}\big[H\big(\bar{\mathbf{p}}(\mathbf{q})\big)\big].
+$$
+
+The first term is the miscalibration, in nats: it is zero only when the
+classes occur as often as the predictions say. The second is the uncertainty
+that remains about the label once the prediction is known. A map from
+predictions to new predictions can remove the first term and cannot lower the
+second. Temperature scaling is such a map with one parameter, and one is too
+few for a model that is overconfident on some classes and underconfident on
+others. Every proper scoring rule splits in the same way, with an entropy and
+a divergence of its own :cite:`Gneiting.Raftery.2007`.
 
 ### Entropy Relative to a Reference
 
-:numref:`subsec_mdl-differential-entropy` shows that differential entropy
-changes by $\ln 100$ when metres become centimetres. Measuring entropy
-relative to a reference density $m$, as
-$-\int p \log(p/m)\,dx = -D_{\textrm{KL}}(P\|M)$, removes the units: a change
-of variables applied to both $p$ and $m$ leaves the value unchanged. The ordinary $h$ is this quantity
-with $m = 1$ in the chosen units, so the $\ln 100$ was a change of reference.
-:citet:`Jaynes.1968` obtains the form as the limit of discrete entropies on
-ever finer grids, and in this form the maximum-entropy principle of
-:citet:`Jaynes.1957` reads as "stay as close to the reference as the
-constraints allow". The KL penalty of a variational autoencoder is such a
-relative entropy, hence independent of the coordinates of the latent variable.
+:numref:`subsec_mdl-differential-entropy` found that differential entropy
+grows by $\ln 100$ when metres become centimetres. Measuring entropy against
+a reference density $m$, as $-\int p \log(p/m)\,dx$, removes the units: a
+change of variables multiplies $p$ and $m$ by the same factor, which cancels.
+The ordinary $h$ is this quantity with $m = 1$ in the chosen units, and one
+per metre is not one per centimetre, so the $\ln 100$ was a change of
+reference. :citet:`Jaynes.1968` obtains the form as the limit of discrete
+entropies on ever finer grids, and with it the maximum-entropy principle
+reads "stay as close to the reference as the constraints allow". The KL
+penalty of a variational autoencoder is, up to its sign, such a relative
+entropy, with the prior as the reference, and so it does not depend on the
+coordinates of the latent variable.
 
 ## Codes and Compression
 
@@ -50,72 +73,134 @@ that predicts the next symbol. The Lempel–Ziv algorithms need none. LZ77
 :cite:`Ziv.Lempel.1977` replaces a repeated substring by a pointer to its
 previous occurrence, and LZ78 :cite:`Ziv.Lempel.1978` builds a dictionary of
 phrases as it parses. Both are *universal*: on any stationary ergodic source
-their rate approaches the entropy rate as the text grows. On a short text
-they pay for this generality: `zlib`, which combines LZ77 with a Huffman
-code, loses on *The Time Machine* to the small adaptive context model that
-opens that section.
+their rate approaches the entropy rate as the text grows, although nobody
+tells them what the source is. The approach to that rate is slow. On *The
+Time Machine*, `zlib`, which combines LZ77 with a Huffman code, needs $2.84$
+bits per character, and the counting model that opens that section needs
+$2.55$.
+
+### Bits-Back Coding
+
+A model with a latent variable $z$, such as a variational autoencoder, cannot
+drive the arithmetic coder of :numref:`subsec_mdl-arithmetic-coding`. The
+coder needs $p(x)$, and the model offers only the ELBO of
+:numref:`sec_mdl-latent-em-elbo`, a lower bound on $\log p(x)$ computed with
+an approximate posterior $q(z \mid x)$. Surprisingly, the bound is a file
+length all the same, because decoding is sampling. A decoder for
+$q(z \mid x)$ that is fed random bits returns a $z$ drawn from $q$ and uses
+up $\log_2 1/q(z \mid x)$ of them. In *bits-back coding* the sender takes
+these bits from the end of the file that already holds the earlier data
+points and that, being compressed, is as good as random. The sender then
+appends $x$, coded with $p(x \mid z)$, and $z$, coded with the prior $p(z)$.
+The receiver decodes $z$ and $x$ and then *encodes* $z$ with $q(z \mid x)$,
+which puts the borrowed bits back. The file has grown by
+$\log_2 1/p(x \mid z) + \log_2 1/p(z)$ bits and shrunk by
+$\log_2 1/q(z \mid x)$, and on average over $q$ the net growth is the
+negative ELBO. The receiver undoes the sender's steps last to first, so the
+coder must work as a stack. The arithmetic coder on which
+:citet:`Frey.Hinton.1997` built the scheme is not one. Asymmetric numeral
+systems :cite:`Duda.2013` are, and with them
+:citet:`Townsend.Bird.Barber.2019` compress MNIST with a small variational
+autoencoder at a rate close to its negative ELBO.
 
 ### Description Length beyond Two-Part Codes
 
 The two-part code of :numref:`subsec_mdl-mdl` spends bits on the parameter at
 a chosen precision, so its length depends on the grid. A *prequential* code
-sends no parameter: it codes each symbol with the model fitted to the symbols
-before it, and the cost of learning appears inside the data term.
-:citet:`Blier.Ollivier.2018` code the training labels of deep networks in this
-way and find the code far shorter than two-part and variational codes: a large
-network does compress its labels. :citet:`Grunwald.2007` develops these codes
-together with normalized maximum likelihood, the code with the smallest
-worst-case regret over a model class. Kolmogorov complexity, the length of the
-shortest program that prints the data, is the idealization of all of them; it
-is defined up to an additive constant and is not computable
+sends no parameter. It codes each symbol with the model fitted to the symbols
+before it, as the adaptive counting model of
+:numref:`subsec_mdl-lm-compressor` did, and the cost of learning appears
+inside the data term. :citet:`Blier.Ollivier.2018` code the training labels
+of deep networks in this way and find the code far shorter than two-part
+codes and than variational codes, which apply bits-back coding to the
+weights. A large network, for all its parameters, does compress its labels.
+:citet:`Grunwald.2007` develops these codes together with normalized maximum
+likelihood, the code with the smallest worst-case regret over a model class.
+Kolmogorov complexity, the length of the shortest program that prints the
+data, is the idealization of all of them, and it is not computable
 :cite:`Li.Vitanyi.2019`.
 
-### Scaling Laws of Held-Out Cross-Entropy
+### The Constant of a Scaling Law
 
-Can the held-out loss of a language model be predicted before training it?
-Within the ranges studied, fits of the form $L = L_\infty + a x^{-\alpha}$,
-with $x$ the number of parameters, tokens or units of compute, describe the
-held-out cross-entropy well :cite:`kaplan2020scaling,hoffmann2022training`.
-A power law says that each constant *multiple* of $x$ removes a constant
-fraction of the reducible loss $L - L_\infty$. The fitted $L_\infty$ is a
-regression constant, not a measured entropy rate of language, and since the
-loss is per token (:numref:`subsec_mdl-perplexity`), fits with different
-tokenizers cannot be compared directly.
+:numref:`sec_scaling-laws` fits the held-out loss of a language model with
+$N$ parameters and $D$ training tokens by
+$L = E + A N^{-\alpha} + B D^{-\beta}$ :cite:`hoffmann2022training` and reads
+$E$ as the entropy of the text. At best $E$ is the entropy rate per token
+(:numref:`subsec_mdl-entropy-rate`), below which no expected loss falls. The
+fitted value is a regression constant, extrapolated from losses that all lie
+above it, and not a measurement of that rate. :citet:`kaplan2020scaling` fit
+similar runs with no constant at all, which must fail somewhere beyond their
+range, because a loss that tends to zero ends below the floor. And $E$ is
+counted per token, so constants fitted with different tokenizers cannot be
+compared until both are converted to bits per byte
+(:numref:`subsec_bits-per-byte`).
 
-## Divergences
+## Comparing Distributions
 
 ### Rényi Divergences and Privacy
 
 How much does a randomized algorithm reveal about one record when it is run
-many times? The Rényi divergence of order $\alpha$ :cite:`Renyi.1961`,
+many times? Differential privacy measures the leak by a divergence between
+the distributions of the output on two data sets that differ in that record.
+Differentially private SGD adds noise to every gradient step and takes
+thousands of steps, so the divergence must be one that adds up over them. The
+Rényi divergence of order $\alpha$ :cite:`Renyi.1961`,
 
 $$
 D_\alpha(P\|Q) = \frac{1}{\alpha - 1}\log\sum_x p(x)^\alpha q(x)^{1-\alpha},
 $$
 
-has its logarithm *outside* the sum. The sum factorizes over independent
-components, so $D_\alpha$ adds over them, as KL does and $\chi^2$ and total
-variation do not. It is nondecreasing in $\alpha$ and tends to KL as
-$\alpha \to 1$; :citet:`Van-Erven.Harremoes.2014` collect its limits and
-inequalities,
-and problem :exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`d of
-:numref:`sec_mdl-f-divergences` relates it to the $\alpha$-divergences. Rényi
-differential privacy :cite:`Mironov.2017` bounds $D_\alpha$ between the
-outputs on neighboring data sets, and the bounds of repeated runs simply add.
+does. Its logarithm stands *outside* the sum, where an f-divergence has its
+function inside. The sum factorizes over independent components, so
+$D_\alpha$ adds over them, as KL does and $\chi^2$ and total variation do
+not. Rényi differential privacy :cite:`Mironov.2017` bounds $D_\alpha$ for
+one step, and the bound for a training run is the sum over its steps. KL adds
+too, but it bounds the log-ratio $\log(p(x)/q(x))$ only on average.
+$D_\alpha$ is nondecreasing in $\alpha$, from KL as $\alpha \to 1$ to the
+largest value of the log-ratio as $\alpha \to \infty$, so a large order also
+protects the record against the worst output.
+:citet:`Van-Erven.Harremoes.2014` collect the limits and inequalities, and
+Exercise :exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`d of
+:numref:`sec_mdl-divergences-distances` relates $D_\alpha$ to the
+$\alpha$-divergences.
+
+### Information Geometry
+
+To second order, every smooth f-divergence between
+$q_{\boldsymbol\theta + \mathbf{h}}$ and $q_{\boldsymbol\theta}$ is the
+quadratic
+$\tfrac12 f''(1)\, \mathbf{h}^\top \mathbf{I}(\boldsymbol\theta)\, \mathbf{h}$
+in the Fisher information (:numref:`sec_mdl-divergences-distances`). That
+section found this by a Taylor expansion. Chentsov's theorem says that it had
+to come out so: for distributions on finite sets the Fisher information is,
+up to scale, the only metric that is unchanged when the data are replaced by
+a sufficient statistic :cite:`Cencov.1982`, and no f-divergence changes under
+such a replacement. Gradient descent in this metric is the natural gradient,
+which K-FAC approximates layer by layer
+(:numref:`subsec_mdl-preconditioning-ladder`), and the KL trust region of
+:numref:`sec_ppo` is, to second order, a ball in it. :citet:`Amari.2016`
+develops the geometry further.
 
 ### Sinkhorn Divergences and Sliced Wasserstein
 
 How is a transport distance used as a loss on minibatches in many dimensions?
-Entropic regularization (:numref:`subsec_mdl-sinkhorn`) is one answer, and
-problem :exref:`ex_mdl-divergences-distances-sinkhorn-divergences` removes its
-bias with the Sinkhorn divergence. Beyond that problem lies the theorem that
-makes the divergence a loss: for common costs it is nonnegative, zero only for
-equal distributions, and metrizes weak convergence
+Entropic regularization (:numref:`subsec_mdl-sinkhorn`) is one answer, and it
+has a flaw: the regularized cost from a distribution to itself is not zero,
+and a model that minimizes this cost ends up more concentrated than its data.
+The Sinkhorn divergence of Exercise
+:exref:`ex_mdl-divergences-distances-sinkhorn-divergences` in
+:numref:`sec_mdl-test-functions-transport` subtracts the two self-costs.
+Beyond that exercise lies the theorem that makes the divergence a loss: for
+the usual costs it is nonnegative, zero only for equal distributions, and
+tends to zero exactly when one distribution converges to the other
 :cite:`Feydy.Sejourne.Vialard.ea.2019`. The *sliced* Wasserstein distance is
-the other answer. It averages the one-dimensional closed form of
-:numref:`sec_mdl-optimal-transport` over random directions, so each direction
-costs a sort :cite:`Bonneel.Rabin.Peyre.ea.2015`, and image generators are
-trained on it directly :cite:`Deshpande.Zhang.Schwing.2018`.
+the other answer. Projected onto one direction, two samples lie on a line,
+where transport is solved by sorting (:numref:`sec_mdl-optimal-transport`),
+and the sliced distance averages this cost over random directions
+:cite:`Bonneel.Rabin.Peyre.ea.2015`. In many dimensions a random direction
+seldom shows where two distributions differ, and the image generators of
+:citet:`Deshpande.Zhang.Schwing.2018` therefore train a discriminator and
+project its features in place of the pixels.
 
 ### Lipschitz Critics in Wasserstein GANs
 
@@ -124,57 +209,54 @@ The Kantorovich–Rubinstein dual of :numref:`sec_mdl-optimal-transport` needs a
 :numref:`sec_gan-further-reading` compares the three ways of making it one,
 and :numref:`sec_gan_convergence` treats gradient penalties. One remark
 belongs here: the penalty of :citet:`Gulrajani.Ahmed.Arjovsky.ea.2017` asks
-for a gradient of norm one between the two distributions because the optimal
-function has unit slope along the lines on which transport moves mass.
+for a gradient of norm one between the two distributions because an optimal
+critic has unit slope along the lines on which transport moves mass (Exercise
+:exref:`ex_mdl-test-functions-transport-optimal-critics` of
+:numref:`sec_mdl-test-functions-transport`).
 
 ### Stein Variational Gradient Descent
 
-The kernel Stein discrepancy of :numref:`sec_mdl-stein-discrepancy` *measures*
-how far a sample from $P$ is from a distribution $Q$ known only through its
-score $s_Q$. Stein variational gradient descent :cite:`Liu.Wang.2016` *moves*
-the sample instead, along
+Sampling a model that is known only through its score $s_Q$ takes a long
+random walk (:numref:`sec_mdl-scores`). The kernel Stein discrepancy of
+:numref:`sec_mdl-ksd` *measures* how far a sample from $P$ is from such a
+model $Q$. Stein variational gradient descent :cite:`Liu.Wang.2016` *moves* a
+sample instead. Starting from any set of points, with distribution $P$, each
+point $y$ takes small steps along
 
 $$
-\phi^\star(\cdot) = \mathbb{E}_{x \sim P}\big[k(x, \cdot)\, s_Q(x) + \nabla_x k(x, \cdot)\big],
+\phi^\star(y) = \mathbb{E}_{x \sim P}\big[k(x, y)\, s_Q(x) + \nabla_x k(x, y)\big].
 $$
 
-the direction in the unit ball of the kernel's function space that decreases
-$D_{\textrm{KL}}(P\|Q)$ fastest. Its norm is the kernel Stein discrepancy
-:cite:`Liu.Lee.Jordan.2016`, the square root of :eqref:`eq_mdl-ksd-def`, so
-the same Stein operator serves as a test statistic and as a velocity field.
-
-### Information Geometry
-
-On a parametric family every smooth f-divergence has the same local quadratic,
-a multiple of the Fisher information $\mathbf{I}(\boldsymbol\theta)$
-(:eqref:`eq_mdl-f-div-local` and the text after it). Chentsov's theorem
-explains why: up to scale, it is the only metric that is unchanged when the
-data are replaced by a sufficient statistic :cite:`Amari.2016`. Gradient
-descent in this metric is the natural gradient :cite:`Amari.1998`. K-FAC
-:cite:`Martens.Grosse.2015` approximates it layer by layer, and the KL trust
-region of :numref:`sec_ppo` is, to second order, a ball in it.
+The first term carries $y$ uphill on $\log q$, and the second pushes the
+points apart, so that they do not all gather at the mode. Scaled to the unit
+ball of the kernel's function space, this direction decreases
+$D_{\textrm{KL}}(P\|Q)$ faster than any other in the ball, at the rate
+$\|\phi^\star\| = \mathrm{KSD}(P, Q)$. The same Stein operator serves as a
+test statistic and as a velocity field.
 
 ## Mutual Information
 
 ### Codes That Approach Capacity
 
-:numref:`subsec_mdl-channel-capacity` states that every rate below capacity is
-achievable, but Shannon's random codes take exponential time to decode.
-Low-density parity-check codes, decoded by belief propagation on the graph of
+:numref:`subsec_mdl-channel-capacity` states that every rate below capacity
+can be reached, but Shannon's random codes take exponential time to decode.
+Low-density parity-check codes, decoded by passing messages on the graph of
 the code, come close to capacity in practice :cite:`Richardson.Urbanke.2008`,
 and polar codes :cite:`Arikan.2009` provably achieve it on symmetric
 binary-input channels, with encoding and decoding in $O(n \log n)$ operations
-for block length $n$.
+for block length $n$. A 5G phone uses both.
 
 ### Learned Lossy Compression
 
 :numref:`subsec_mdl-rate-distortion` computes the rate–distortion function
-of a Gaussian source. A learned image codec is a point above the curve of
-its own source. :citet:`Balle.Laparra.Simoncelli.2017` train an encoder, a
-decoder and an *entropy model* of the quantized latent together, and the
-rate in their loss is the arithmetic-coding length of the latent under that
-model (:numref:`sec_mdl-coding-compression`). Minimizing $R + \lambda D$
-picks the point of the codec's curve at which its slope is $-\lambda$.
+of a Gaussian source. Nobody knows that function for photographs, and a
+learned image codec is a point somewhere above it.
+:citet:`Balle.Laparra.Simoncelli.2017` train an encoder, a decoder and an
+*entropy model* of the quantized latent together, with uniform noise in place
+of the rounding, which has no gradient. The rate in their loss is the
+arithmetic-coding length of the latent under that model
+(:numref:`sec_mdl-coding-compression`), and minimizing $R + \lambda D$ picks
+the point of the codec's curve at which its slope is $-\lambda$.
 :citet:`Balle.Minnen.Singh.ea.2018` make the entropy model conditional on a
 second latent, a *hyperprior*, which lowers the rate at equal distortion.
 
@@ -183,38 +265,52 @@ second latent, a *hyperprior*, which lowers the rate at equal distortion.
 ### Upper Bounds
 
 Every variational estimator of :numref:`sec_mdl-mi-estimation` is a lower
-bound, so none can certify that a representation keeps *little* information.
-An upper bound needs the conditional density $p(z \mid x)$, which a stochastic
+bound, so none can certify that a representation keeps *little* information,
+for instance about a protected attribute that it should have forgotten. An
+upper bound needs the conditional density $p(z \mid x)$, which a stochastic
 encoder supplies. The variational bottleneck of
-:numref:`sec_mdl-information-bottleneck` is one such bound, with a fixed
-density $r(z)$ in place of the marginal. CLUB :cite:`Cheng.Hao.Dai.ea.2020`
-needs no $r$: it averages $\log p(z \mid x)$ over the matched pairs of a batch
-and subtracts its average over the mismatched pairs. It is an upper bound in
-expectation when the density is the encoder's own; a learned approximation
-needs an extra condition.
+:numref:`subsec_mdl-variational-bottleneck` is one such bound, with a fixed
+density $r(z)$ in place of the marginal. The contrastive log-ratio upper
+bound, CLUB :cite:`Cheng.Hao.Dai.ea.2020`, needs no $r$: it averages
+$\log p(z \mid x)$ over the matched pairs of a batch and subtracts its
+average over the mismatched pairs. It is an upper bound in expectation when
+the density is the encoder's own. Between a representation and an attribute
+there is no such density, and a network is fitted in its place. The result is
+then an upper bound only if the fitted density lies closer in KL divergence
+to the joint distribution than to the product of the marginals, which cannot
+be checked without the density that was missing.
 
-### Trading Bias for Variance
+### Bias and Variance of the Bounds
 
 With an exact critic NWJ is right on average but noisy, and InfoNCE is steady
 but capped at $\log N$ (:numref:`subsec_mdl-exact-critics`).
 :citet:`Poole.Oord.Alemi.ea.2019` interpolate between the two with one mixing
-parameter. :citet:`Song.Ermon.2020b` prove that the variance of estimators of
-the NWJ and MINE kind can grow exponentially with the true information, show
-that existing estimators fail consistency checks such as additivity over
-independent pairs, and reduce the variance by clipping the critic's density
-ratio, at the price of a bias.
+parameter, which selects a point of the trade-off. :citet:`Song.Ermon.2020b`
+prove that the noise is no accident of one estimator: for the NWJ and DV
+bounds the variance grows exponentially with the true information, even with
+an exact critic. Their repair clips the critic's density ratio, which lowers
+the variance and introduces a bias. Every repair on offer moves error from
+variance to bias, and none removes it.
+
+The same authors propose tests that need no known answer: an estimate must
+not change when a function of one variable is appended to that variable,
+and it must double when the pair is replaced by two independent copies of
+itself. On images the estimators they try fail these tests. Check a reported
+mutual information of several nats against the logarithm of the batch size,
+and trust an estimator on your own data only after it has passed such a
+test there.
 
 ### Noisy Networks and the Bottleneck View
 
 :numref:`subsec_mdl-compression-debate` leaves the compression phase with
 nothing to measure: in a deterministic network on continuous inputs, $I(X; Z)$
-is infinite. The view behind the debate, that a layer should be judged against
-the bottleneck frontier of :numref:`sec_mdl-information-bottleneck`, goes back
-to :citet:`Tishby.Zaslavsky.2015`. :citet:`Goldfeld.Berg.Greenewald.ea.2019`
-make the question well posed by adding Gaussian noise to the activations,
-which makes $I(X; Z)$ finite. It can then fall during training, and they
-trace the fall to the clustering of the representations of each class, which,
-they argue, is also what the binned estimates on deterministic networks
-measured.
+is infinite. The debate began with the proposal of
+:citet:`Tishby.Zaslavsky.2015` to judge each layer against the bottleneck
+frontier of :numref:`sec_mdl-information-bottleneck`.
+:citet:`Goldfeld.Berg.Greenewald.ea.2019` make the question well posed by
+adding Gaussian noise to the activations, which makes $I(X; Z)$ finite. It
+can then fall during training, and they trace the fall to clustering: the
+representations of each class draw together. This, they argue, is also what
+the binned estimates on deterministic networks had measured.
 
 [Discussions](https://d2l.discourse.group/t/36867)

@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-information-theory/mdl-test-functions-transport.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:fec6567979866e57c42ba44aa5f5c0a1874068ff745110fe56e1e28083d0bd88",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-test-functions-transport-test-functions-and-transport-1": {
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-test-functions-transport-test-functions-and-transport-2": {
+      "code_fingerprint": "sha256:d47e099858c29f918821ea9c0c2f466856c2624e5b033b9474230177079118db",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-test-functions-transport-test-functions-and-transport-3": {
+      "code_fingerprint": "sha256:503664762ea33cc9440e5277f2d5eab0d64fb7bd2ba12f0ccc3068d5b0fea1f0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   d      KL   slope      JS   slope      TV   slope   MMD^2   slope      W1   slope\n 0.5   0.125 5.0e-01   0.030 1.2e-01   0.197 3.9e-01   0.047 1.8e-01   0.500 1.0e+00\n 1.0   0.500 1.0e+00   0.111 2.0e-01   0.383 3.5e-01   0.177 3.3e-01   1.000 1.0e+00\n 2.0   2.000 2.0e+00   0.337 2.2e-01   0.683 2.4e-01   0.562 4.0e-01   2.000 1.0e+00\n 4.0   8.000 4.0e+00   0.633 6.9e-02   0.954 5.4e-02   1.074 1.1e-01   4.000 1.0e+00\n 8.0  32.000 8.0e+00   0.693 2.0e-04   1.000 1.3e-04   1.155 7.2e-05   8.000 1.0e+00\n"
+        }
+      ]
+    },
+    "divergences-distances-mmd": {
+      "code_fingerprint": "sha256:de492191a13a796c977bac5ad90778f68f36175d1c28b0644c68adde4e7c2ea6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0050  (population 0.0000)\nquadratic, N(0,1) vs N(0,4)    MMD^2 = +7.7618  (population 9.0000)\nRBF,       N(0,1) vs N(0,4)    MMD^2 = +0.0688  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = +0.0005  (population 0.0000)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0320  (population 0.0471)\n"
+        }
+      ]
+    },
+    "mdl-divergences-distances-integral-probability-metrics-and-mmd-1": {
+      "code_fingerprint": "sha256:96fd430d21b099c5be14fb45ce3b021df9f3912b95f1d8b83834f0b6e00b25ca",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "witness changes sign at x = 0.03\nE_P g - E_Q g = 0.0328\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-test-functions-transport/mdl-divergences-distances-integral-probability-metrics-and-mmd-1-1.svg",
+          "bytes": 26546,
+          "sha256": "sha256:97d95d878d5e9941b6eaf4fb2d293c1f85f44aae4c1141a9c192cda6bfe65f03"
+        }
+      ]
+    },
+    "divergences-distances-w1": {
+      "code_fingerprint": "sha256:5e6e4c72fb8da1a0e0d825430c10b21b7544752dd49d0cb8fa66c296316d974c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "W1 via the CDF formula : 1.7000000000\nW1 via the primal LP   : 1.7000000000\n"
+        }
+      ]
+    },
+    "divergences-distances-sinkhorn": {
+      "code_fingerprint": "sha256:3f416a9cbb64c79a9375b5fc3160f3144e8bcb43d1cbf529d912f57abb2c1a8a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "squared cost, LP optimum : 3.5000\nepsilon = 2.0: entropic cost = 4.0649, routes above 1e-3 = 25\nepsilon = 0.5: entropic cost = 3.5696, routes above 1e-3 = 14\nepsilon = 0.1: entropic cost = 3.4995, routes above 1e-3 = 10\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-test-functions-transport/divergences-distances-sinkhorn-1.svg",
+          "bytes": 32779,
+          "sha256": "sha256:b6c862cf229ba83ff214797bceaf1a10d5d80be50de6eea005952a01bea6f1de"
+        }
+      ]
+    }
+  }
+}

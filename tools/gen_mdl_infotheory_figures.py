@@ -386,7 +386,7 @@ def fig_divergence_taxonomy():
               color=GREEN, fontsize=14)
 
     # f-divergence-only members (density-ratio family); the two whose
-    # square root is a metric are boxed like the metrics.
+    # square root is a metric are boxed too.
     for y, s in zip((0.86, 0.45, 0.04), ("KL", "reverse KL", r"$\chi^2$")):
         fl.vlabel(ax, (-2.35, y), s, color=BLUE, fontsize=13)
     _metric_label(ax, (-2.35, -0.40), "JS", BLUE)
@@ -403,7 +403,7 @@ def fig_divergence_taxonomy():
     # Legend note distinguishing the metrics.
     fl.vlabel(ax, (0.0, -r - 0.78),
               r"boxed = a metric, or (for JS and $d_{\mathrm{H}}^2$) the "
-              "square root of one",
+              "square of one",
               color=INK, fontsize=13)
 
     fl.clean_axes(ax, lim=((-3.6, 3.6), (-r - 1.05, r + 0.62)), hide=True)
@@ -433,7 +433,8 @@ def fig_f_div_generators():
     for name, y, col in curves:
         ax.plot(u, y, color=col, lw=2.0, label=name)
 
-    # Every normalized generator touches zero with zero slope at u = 1.
+    # Every shifted divergence function is zero at u = 1 (the smooth ones
+    # with zero slope; total variation has a corner there).
     ax.plot([1.0], [0.0], "o", color="black", ms=6, zorder=6)
     ax.annotate(r"$f(1) = 0,\ f'(1) = 0$", xy=(1.0, 0.0),
                 xytext=(1.55, -0.32), fontsize=13, ha="left", va="center",
@@ -441,7 +442,7 @@ def fig_f_div_generators():
 
     ax.axhline(0.0, color="black", lw=0.9, zorder=0)
     ax.set_xlabel(r"density ratio $u = p/q$")
-    ax.set_ylabel(r"normalized generator $f(u)$")
+    ax.set_ylabel(r"divergence function $f(u)$")
     ax.set_xlim(0.05, 3.0)
     ax.set_ylim(-0.5, 2.6)
     # Legend above the axes: inside, every placement sits on a curve (the
@@ -486,7 +487,7 @@ def fig_f_gan_tangent_bound():
     ax.text(-0.075, -u0, r"$-f^*(t)$", color=ORANGE, fontsize=14,
             ha="right", va="center", clip_on=False)
 
-    ax.text(0.16, 2.55, "$f$ = sup of its tangents\n(biconjugation)",
+    ax.text(0.16, 2.55, "$f$ = sup of its tangents",
             color=BLUE, fontsize=14, ha="left", va="center")
 
     ax.axhline(0.0, color=LIGHT, lw=0.9, zorder=0)

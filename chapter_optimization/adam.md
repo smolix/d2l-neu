@@ -32,6 +32,8 @@ is used in practice. AdamW applies weight decay outside the per-coordinate
 scaling. It also stores two extra numbers for every parameter, and we count
 that memory at the end.
 
+<!-- WRITER: after the split this section no longer builds the two models (they are in :numref:`sec_test_models`), no longer trains the CNN, and no longer ends with AdamW (now :numref:`sec_adamw`); the last four sentences of this paragraph and "why weight decay must then bypass them" in the first paragraph are false. -->
+
 ```{.python .input #adam}
 %%tab pytorch
 import math
@@ -181,6 +183,19 @@ def rmsprop_2d(x1, x2, v1, v2, f_grad, eta=0.4, beta2=0.9, eps=1e-6):
 d2l.show_trace_2d(d2l.f_valley, d2l.train_2d(rmsprop_2d, d2l.valley_grad))
 ```
 
+<!-- WRITER: new cell below (ADAM-3). Measured, both tabs identical (deterministic): at step 200 AdaGrad (eta = 0.4) is at x1 = -0.047, still moving toward 0 (last four x1: -0.050, -0.049, -0.048, -0.047); RMSProp is at (0.201, 0.200) and its last four x1 alternate -0.199, 0.200, -0.201, 0.201: it is not converging but jumping across the minimum by eta = 0.4, a band of eta/2 = 0.2 around it, in both coordinates. RMSProp's step after step 20 is still about eta: its ten-step average follows the gradient down, so g/sqrt(v) stays near 1. "Gets close to the minimum" is true at step 20 (x1 = -0.0106) and false from step 50 on. -->
+
+```{.python .input #adam-rmsprop-1}
+%%tab pytorch, jax
+def last_x1(path, k=4):
+    return ' '.join(f'{x1:.3f}' for x1, _ in path[-k:])
+
+for name, rule in [('AdaGrad', adagrad_2d), ('RMSProp', rmsprop_2d)]:
+    print(f'{name}, ', end='')
+    path = d2l.train_2d(rule, d2l.valley_grad, steps=200)
+    print(f'  x1 over the last four steps: {last_x1(path)}')
+```
+
 The first step of this run is larger than intended. Since
 $\mathbf{v}_0 = \mathbf{0}$, the average after one step is
 $\mathbf{v}_1 = 0.1\, \mathbf{g}_1^2$, a tenth of the squared gradient, and
@@ -248,6 +263,30 @@ placement matters little. It decides the update where
 $\sqrt{\hat{\mathbf{v}}_t}$ is small, and we return to it when we look at
 the limits of the method. The usual default is $\epsilon = 10^{-8}$.
 
+<!-- WRITER: new cell below (structure 6, "Adam on the valley"), placed here for the writer to move. Measured, both tabs identical: Adam at eta = 0.4 and the defaults reaches (0.996, -0.213) at step 20, overshooting the minimum through its momentum, and is at (0.00002, 0.00004) at step 200, still converging (last four x1 0.000). With RMSProp's ten-step window, beta2 = 0.9, Adam does not settle: its last four x1 are 0.006, -0.015, 0.017, -0.010, a band of about 0.017 that stays the same out to 20,000 steps. Reason: with beta2 = 0.999 the denominator still remembers the large gradients of the first steps, so the steps shrink with the gradient as in AdaGrad; development runs (not printed) show that this memory runs out: at 20,000 steps the defaults also oscillate, in a band of about 1e-3. With noisy gradients the denominator is held up by the noise instead (the network case), so a constant-rate Adam settles only as far as its step eta allows; that is the job of the schedule. -->
+
+```{.python .input #adam-adam-on-the-valley-1}
+%%tab pytorch, jax
+def adam_2d(x1, x2, s1, s2, f_grad, eta=0.4, beta1=0.9, beta2=0.999,
+            eps=1e-8):
+    def update(x, g, state):  # state: (m, v, t), 0 before the first step
+        m, v, t = state if state else (0, 0, 0)
+        m, v = beta1 * m + (1 - beta1) * g, beta2 * v + (1 - beta2) * g ** 2
+        m_hat, v_hat = m / (1 - beta1 ** (t + 1)), v / (1 - beta2 ** (t + 1))
+        return x - eta * m_hat / (math.sqrt(v_hat) + eps), (m, v, t + 1)
+    g1, g2 = f_grad(x1, x2)
+    (x1, s1), (x2, s2) = update(x1, g1, s1), update(x2, g2, s2)
+    return x1, x2, s1, s2
+
+paths = {}
+for beta2 in [0.999, 0.9]:
+    print(f'beta2 = {beta2}, ', end='')
+    paths[beta2] = d2l.train_2d(adam_2d, d2l.valley_grad, steps=200,
+                                beta2=beta2)
+    print(f'  x1 over the last four steps: {last_x1(paths[beta2])}')
+d2l.show_trace_2d(d2l.f_valley, paths[0.999])
+```
+
 ### Adam from Scratch
 
 The update needs two buffers per parameter and a step counter for the
@@ -310,6 +349,8 @@ by $-\eta$. Keeping the two apart lets us insert weight decay between them
 later in the section.
 :end_tab:
 
+<!-- WRITER: "later in the section" above: the AdamW chain is now in :numref:`sec_adamw`. -->
+
 Before using our version we check it against the library on a small
 least-squares problem: two copies of the same linear model, the same data,
 100 steps each. The first step should move every weight by exactly $\eta$.
@@ -368,12 +409,98 @@ The first step moves every weight by $\eta$, as the bias correction
 promises, and after 100 steps the two copies agree to within rounding
 error. From now on we call the library version.
 
-<!-- WRITER: the harness (TinyLM, FashionCNN, train_steps, lm_perplexity, final_loss, smooth, steps_to_reach, evaluate_accuracy, lr_sweep) moved to test-models.md (sec_test_models); the cells below call it from d2l. The first Adam run on TinyLM (perplexity about 4.9) is cut. The cell below loads the two data sets. -->
+<!-- WRITER: the harness (TinyLM, FashionCNN, train_steps, lm_perplexity, final_loss, smooth, steps_to_reach, evaluate_accuracy, lr_sweep) moved to test-models.md (sec_test_models); the cells below call it from d2l. The first Adam run on TinyLM (perplexity about 4.9) is cut. The cell below loads the byte-level data (FashionMNIST is no longer used here). -->
 
 ```{.python .input #adam-adam-from-scratch-1}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=64)
-fashion = d2l.FashionMNIST(batch_size=256)
+```
+
+### Gradient Scales in a Network
+
+<!-- WRITER: NEW subsection (structure 6, "gradient scales in TinyLM"); heading is a placeholder. The cells measure, for eight kinds of parameters of TinyLM, the RMS gradient (over 10 minibatches, the quantity sqrt(v) estimates) at initialization and after 500 Adam steps at eta = 3e-3, and the RMS of Adam's step divided by eta at step 501 (at step 1 that ratio is exactly 1 for every coordinate, by the bias correction, so it is read after 500 steps). Under SGD every step is eta times the gradient, so the first two columns are also SGD's steps per unit of eta. Measured, two development runs and one notebook run per tab (the last line of the table prints the ratios): RMS gradient at initialization from 1.6e-4 to 2.1e-4 (position and token embeddings) to 6.6e-3 to 7.3e-3 (biases), a ratio of 35 to 45; after 500 steps from 8.7e-5 to 1.2e-4 (token embeddings) to 1.2e-3 to 1.7e-3 (output layer and LayerNorm), a ratio of 13 to 18; Adam's step per unit of eta 0.11 to 0.28 for every kind, a ratio of 2.0 to 2.6. Notebook run: 39 / 14 / 2.3 (PyTorch), 40 / 16 / 2.4 (JAX). Tabs agree. The embeddings' small RMS comes partly from rows of bytes that do not occur in a minibatch and get no gradient. Read as the valley's condition number found in a network: one SGD rate moves the kinds by amounts that differ 15- to 40-fold; Adam's moves agree within a factor of about 2.5. -->
+
+```{.python .input #adam-gradient-scales-in-a-network-1}
+%%tab pytorch
+def gradients(model, num_batches=10):
+    """RMS over num_batches minibatches of each parameter's gradient."""
+    device = d2l.try_gpu()
+    sq = {name: 0 for name, _ in model.named_parameters()}
+    for _, (X, Y) in zip(range(num_batches), data.train_dataloader()):
+        model.zero_grad()
+        loss = F.cross_entropy(model(X.to(device)).flatten(0, 1),
+                               Y.to(device).flatten())
+        loss.backward()
+        for name, p in model.named_parameters():
+            sq[name] += p.grad ** 2 / num_batches
+    return {name: v.sqrt() for name, v in sq.items()}
+
+def snapshot(model):
+    return {name: p.detach().clone() for name, p in model.named_parameters()}
+
+model = d2l.TinyLM(len(data.vocab)).to(d2l.try_gpu())
+optimizer = torch.optim.Adam(model.parameters(), lr=3e-3)
+```
+
+```{.python .input #adam-gradient-scales-in-a-network-1}
+%%tab jax
+def flat(state):  # {'blks.0.qkv.kernel': array, ...}
+    return {'.'.join(map(str, path)): v[...]
+            for path, v in nnx.to_flat_state(state)}
+
+@nnx.jit
+def gradient(model, X, Y):
+    loss = lambda model: optax.softmax_cross_entropy_with_integer_labels(
+        model(X), Y).mean()
+    return nnx.grad(loss)(model)
+
+def gradients(model, num_batches=10):
+    """RMS over num_batches minibatches of each parameter's gradient."""
+    sq = {}
+    for _, (X, Y) in zip(range(num_batches), data.train_dataloader()):
+        for name, g in flat(gradient(model, jnp.asarray(X),
+                                     jnp.asarray(Y))).items():
+            sq[name] = sq.get(name, 0) + g ** 2 / num_batches
+    return {name: jnp.sqrt(v) for name, v in sq.items()}
+
+def snapshot(model):
+    return flat(nnx.state(model, nnx.Param))
+
+model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_seed()))
+optimizer = nnx.Optimizer(model, optax.adam(3e-3), wrt=nnx.Param)
+```
+
+```{.python .input #adam-gradient-scales-in-a-network-2}
+%%tab pytorch, jax
+KINDS = ['token_emb', 'pos_emb', 'qkv', 'proj', 'mlp', 'head']
+
+def rms_by_kind(tensors):
+    """RMS of the entries of each kind of parameter, from {name: tensor}."""
+    sums, counts = {}, {}
+    for name, t in tensors.items():
+        kind = (('LayerNorm' if 'norm' in name else 'biases')
+                if len(t.shape) == 1 else
+                next(k for k in KINDS if k in name))
+        sums[kind] = sums.get(kind, 0) + float((t ** 2).sum())
+        counts[kind] = counts.get(kind, 0) + math.prod(t.shape)
+    return {kind: math.sqrt(sums[kind] / counts[kind]) for kind in sums}
+
+grad_init = rms_by_kind(gradients(model))
+d2l.train_steps(model, data, optimizer, num_steps=500)
+grad_500 = rms_by_kind(gradients(model))
+before = snapshot(model)
+d2l.train_steps(model, data, optimizer, num_steps=1)
+after = snapshot(model)
+step = rms_by_kind({name: (before[name] - after[name]) / 3e-3
+                    for name in before})
+print(f'{"":<11}{"RMS gradient at step 0":>24}{"at step 500":>13}'
+      f'{"Adam step / lr":>16}')
+for kind in KINDS + ['LayerNorm', 'biases']:
+    print(f'{kind:<11}{grad_init[kind]:>24.1e}{grad_500[kind]:>13.1e}'
+          f'{step[kind]:>16.2f}')
+ratio = lambda column: max(column.values()) / min(column.values())
+print(f'{"max / min":<11}{ratio(grad_init):>24.0f}{ratio(grad_500):>13.0f}'
+      f'{ratio(step):>16.1f}')
 ```
 
 ## Strengths and Limits of Adam
@@ -399,36 +526,46 @@ four rates.
 
 ### Comparison on the Language Model
 
+<!-- WRITER: the comparison now runs each optimizer's grid three times (three seeds; within a seed both optimizers and all rates start from the same initialization) and prints every final loss. SGD's grid is 0.1, 0.3, 0.5, 1 (0.03 dropped; 0.5 added between the best rate and divergence, ADAM-12), Adam's 3e-4 to 3e-2 (3e-2 added: Adam's upper edge). The last cell prints, per optimizer, the best rate (lowest mean of the three runs), the range of its three final losses, the rates whose mean is within 0.15 nats of that best (the margin Muon uses, five times the largest spread printed in :numref:`sec_test_models`; that section's comment proposes 0.1, reconcile to one number), and the step at which each of its three best runs first reaches loss 1.8. Measured, six seeds per tab (three probe seeds plus one notebook run) and six more seeds at SGD 0.3 and 0.5 per tab:
+- SGD with momentum: 0.1 ends at 1.836 to 1.882 (PyTorch), 1.838 to 1.900 (JAX), 0.19 to 0.23 above 0.3; 0.3 ends at 1.648 to 1.705 (12 runs) and 1.648 to 1.688 (12 runs); 0.5 diverged in 7 of 9 runs (PyTorch) and 9 of 9 (JAX), and the two runs that survived ended at 1.640 and 1.641, below every run at 0.3: SGD's optimum lies at its edge of divergence. 1 diverged in every run. (The old store's 2.247 at 0.3 did not recur in 24 runs.)
+- Adam: 3e-4 ends at 1.92 to 1.96, 1e-3 at 1.651 to 1.691, 3e-3 at 1.580 to 1.614, 1e-2 at 1.631 to 1.659, 3e-2 at 2.73 to 2.85, finite in every run: at too large a rate Adam stalls instead of diverging, because its step is about eta whatever the gradient. Usable (within 0.15 nats): 1e-3, 3e-3, 1e-2 in every execution, a factor of ten; SGD: 0.3 only.
+- At the best rates every Adam run ended below every SGD run of the same execution, by 0.04 to 0.09 nats per seed (smaller than the margin; do not build a conclusion on the endpoint).
+- Steps to loss 1.8 at the best rates: Adam 625 to 775 (PyTorch), 650 to 875 (JAX); SGD 1,100 to 1,275 and 1,075 to 1,250. Adam gets there in about 0.6 of SGD's steps; the ranges do not overlap.
+- Notebook run (r1): SGD 0.3: 1.652 to 1.661 / 1.651 to 1.669; Adam 3e-3: 1.583 to 1.589 / 1.582 to 1.614; steps to 1.8: SGD 1150 to 1250 in both tabs, Adam 700 to 750 / 700 to 875. -->
+
 ```{.python .input #adam-comparison-on-the-language-model-1}
 %%tab pytorch
-lm_seed = random.getrandbits(31)
-sgd_lm, _ = d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)),
-                     lambda model, lr: torch.optim.SGD(model.parameters(), lr,
-                                                       momentum=0.9),
-                     data, lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
+make_lm = lambda: d2l.TinyLM(len(data.vocab))
+make_sgd = lambda model, lr: torch.optim.SGD(model.parameters(), lr,
+                                             momentum=0.9)
+make_adam = lambda model, lr: torch.optim.Adam(model.parameters(), lr)
+seeds = [random.getrandbits(31) for _ in range(3)]
 ```
 
 ```{.python .input #adam-comparison-on-the-language-model-1}
 %%tab jax
-lm_seed = d2l.get_seed()
-sgd_lm, _ = d2l.lr_sweep(lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
-                     lambda lr: optax.sgd(lr, momentum=0.9), data,
-                     lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
+make_lm = lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs)
+make_sgd = lambda lr: optax.sgd(lr, momentum=0.9)
+make_adam = optax.adam
+seeds = [d2l.get_seed() for _ in range(3)]
 ```
 
 ```{.python .input #adam-the-race-on-the-language-model-2}
-%%tab pytorch
-adam_lm, _ = d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)),
-                      lambda model, lr: torch.optim.Adam(model.parameters(),
-                                                         lr),
-                      data, lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=lm_seed)
-```
+%%tab pytorch, jax
+def sweep(make_optimizer, lrs):
+    """Loss curves of one run per learning rate and seed, printing the final
+    losses; the runs of one seed start from the same initialization."""
+    runs = [d2l.lr_sweep(make_lm, make_optimizer, data, lrs, seed,
+                         verbose=False)[0] for seed in seeds]
+    for lr in lrs:
+        print(f'  lr {lr:<7g}', *(f'{d2l.final_loss(run[lr]):6.3f}'
+                                  for run in runs))
+    return {lr: [run[lr] for run in runs] for lr in lrs}
 
-```{.python .input #adam-the-race-on-the-language-model-2}
-%%tab jax
-adam_lm, _ = d2l.lr_sweep(lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
-                      optax.adam, data, lrs=[3e-4, 1e-3, 3e-3, 1e-2],
-                      seed=lm_seed)
+print('final loss of three runs, SGD with momentum')
+sgd_lm = sweep(make_sgd, [0.1, 0.3, 0.5, 1.0])
+print('Adam')
+adam_lm = sweep(make_adam, [3e-4, 1e-3, 3e-3, 1e-2, 3e-2])
 ```
 
 SGD's best learning rate sits directly below one at which training
@@ -437,19 +574,26 @@ neighbors on both sides. We plot the two tuned runs:
 
 ```{.python .input #adam-the-race-on-the-language-model-3}
 %%tab pytorch, jax
-best_sgd = min(sgd_lm, key=lambda lr: d2l.final_loss(sgd_lm[lr]))
-best_adam = min(adam_lm, key=lambda lr: d2l.final_loss(adam_lm[lr]))
+def best_rate(curves):
+    """The lr with the lowest mean final loss, and each lr's mean."""
+    mean = {lr: sum(map(d2l.final_loss, runs)) / len(runs)
+            for lr, runs in curves.items()}
+    return min(mean, key=mean.get), mean
+
+print(f'{"":6}{"best lr":>8}{"final loss":>17}   {"within 0.15 nats":<18}'
+      'steps to 1.8')
+for name, curves in [('SGD', sgd_lm), ('Adam', adam_lm)]:
+    best, mean = best_rate(curves)
+    finals = [d2l.final_loss(run) for run in curves[best]]
+    usable = [f'{lr:g}' for lr in curves if mean[lr] <= mean[best] + 0.15]
+    print(f'{name:<6}{best:>8g}{min(finals):>8.3f} to {max(finals):.3f}   '
+          f'{" ".join(usable):<18}',
+          *(d2l.steps_to_reach(run, 1.8) for run in curves[best]))
+best_sgd, best_adam = best_rate(sgd_lm)[0], best_rate(adam_lm)[0]
 d2l.plot(list(range(0, 2000, 25)),
-         [d2l.smooth(sgd_lm[best_sgd]), d2l.smooth(adam_lm[best_adam])],
+         [d2l.smooth(sgd_lm[best_sgd][0]), d2l.smooth(adam_lm[best_adam][0])],
          'step', 'training loss',
-         legend=[f'SGD + momentum, lr {best_sgd:g}',
-                 f'Adam, lr {best_adam:g}'])
-loss_sgd = d2l.final_loss(sgd_lm[best_sgd])
-loss_adam = d2l.final_loss(adam_lm[best_adam])
-print(f'final loss: SGD {loss_sgd:.3f}, Adam {loss_adam:.3f}, '
-      f'gap {loss_sgd - loss_adam:.3f} nats')
-print(f"Adam reaches SGD's final loss at step "
-      f'{d2l.steps_to_reach(adam_lm[best_adam], loss_sgd)} of 2000')
+         legend=[f'SGD + momentum, lr {best_sgd:g}', f'Adam, lr {best_adam:g}'])
 ```
 
 Tuned Adam ends about 0.03 to 0.2 nats below tuned SGD, a perplexity 3
@@ -462,95 +606,7 @@ line of the output measures the gap in time rather than in loss. Adam
 reaches the loss on which SGD ends 40% to 80% of the way through the run,
 so it optimizes this model about 1.3 to 2.5 times as fast.
 
-### Comparison on a CNN
-
-The same protocol trains `FashionCNN`. Adam's grid stays the same, SGD's
-grid moves one step lower, and every run also records its test accuracy.
-
-```{.python .input #adam-the-same-race-on-a-cnn-2}
-%%tab pytorch
-def run_cnn(make_optimizer, lrs, seed):
-    """lr_sweep of FashionCNN, with the test accuracy at the end."""
-    return d2l.lr_sweep(d2l.FashionCNN, make_optimizer, fashion, lrs, seed,
-                    evaluate=lambda model: d2l.evaluate_accuracy(
-                        model, fashion.val_dataloader()),
-                    metric='test accuracy')
-
-seed = random.getrandbits(31)
-sgd_cnn, sgd_cnn_acc = run_cnn(
-    lambda model, lr: torch.optim.SGD(model.parameters(), lr, momentum=0.9),
-    lrs=[0.01, 0.03, 0.1, 0.3], seed=seed)
-```
-
-```{.python .input #adam-the-same-race-on-a-cnn-2}
-%%tab jax
-def run_cnn(make_tx, lrs, seed):
-    """lr_sweep of FashionCNN, with the test accuracy at the end."""
-    return d2l.lr_sweep(d2l.FashionCNN, make_tx, fashion, lrs, seed,
-                    evaluate=lambda model: d2l.evaluate_accuracy(
-                        model, fashion.val_dataloader()),
-                    metric='test accuracy')
-
-seed = d2l.get_seed()
-sgd_cnn, sgd_cnn_acc = run_cnn(lambda lr: optax.sgd(lr, momentum=0.9),
-                               lrs=[0.01, 0.03, 0.1, 0.3], seed=seed)
-```
-
-```{.python .input #adam-the-same-race-on-a-cnn-3}
-%%tab pytorch
-adam_cnn, adam_cnn_acc = run_cnn(
-    lambda model, lr: torch.optim.Adam(model.parameters(), lr),
-    lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=seed)
-```
-
-```{.python .input #adam-the-same-race-on-a-cnn-3}
-%%tab jax
-adam_cnn, adam_cnn_acc = run_cnn(optax.adam,
-                                 lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=seed)
-```
-
-```{.python .input #adam-the-same-race-on-a-cnn-4}
-%%tab pytorch, jax
-best_sgd_cnn = min(sgd_cnn, key=lambda lr: d2l.final_loss(sgd_cnn[lr]))
-best_adam_cnn = min(adam_cnn, key=lambda lr: d2l.final_loss(adam_cnn[lr]))
-d2l.plot(list(range(0, 2000, 25)),
-         [d2l.smooth(sgd_cnn[best_sgd_cnn]),
-          d2l.smooth(adam_cnn[best_adam_cnn])],
-         'step', 'training loss',
-         legend=[f'SGD + momentum, lr {best_sgd_cnn:g}',
-                 f'Adam, lr {best_adam_cnn:g}'])
-loss_sgd = d2l.final_loss(sgd_cnn[best_sgd_cnn])
-loss_adam = d2l.final_loss(adam_cnn[best_adam_cnn])
-print(f'final loss: SGD {loss_sgd:.3f}, Adam {loss_adam:.3f}, '
-      f'gap {loss_sgd - loss_adam:.3f} nats')
-print(f"Adam reaches SGD's final loss at step "
-      f'{d2l.steps_to_reach(adam_cnn[best_adam_cnn], loss_sgd)} of 2000')
-print(f'test accuracy: SGD {sgd_cnn_acc[best_sgd_cnn][-1]:.3f}, '
-      f'Adam {adam_cnn_acc[best_adam_cnn][-1]:.3f}')
-```
-
-Two things repeat from the language model. SGD's best rate again sits
-close to the edge of stability: at $\eta = 0.3$ training is unreliable.
-Often the loss stays at $\log 10 \approx 2.30$, the loss of a uniform
-guess over the ten classes, and when the run does train, it ends well
-above the run at $\eta = 0.1$. On both models SGD trains best at or just
-below the largest rate that trains reliably. And tuned Adam again reaches
-a lower training loss.
-
-Both losses are cross-entropies in nats per prediction, so the two gaps
-can be compared directly: a few hundredths to about a tenth of a nat on
-the CNN, about 0.03 to 0.2 on the language model. A gap of $\Delta$ nats
-means that the better model assigns, on average, $e^\Delta$ times as much
-probability to each correct answer: a few percent to about 10% more on the
-CNN, about 3 to 20% more on the language model.
-
-Measured in time, the question our protocol asks, the two models are
-close as well: on both, Adam reaches SGD's final loss about 1.3 to 2.5
-times as fast. After the first hundred steps the two CNN curves run
-within about a tenth of a nat of each other, and the test accuracies of
-the two tuned runs lie within a point or two of each other, between 90%
-and 93%. On this problem SGD with momentum is a competitive choice, which
-is why it served computer vision for a decade.
+<!-- WRITER: the CNN comparison (old subsection "Comparison on a CNN": cells adam-the-same-race-on-a-cnn-2/-3/-4 and its three paragraphs) is cut (structure 6). For the record, the 2026-11-12 store: SGD with momentum 0.174 / test 0.901 against Adam 0.126 / 0.918 (PyTorch), 0.154 / 0.904 against 0.116 / 0.921 (JAX). -->
 
 ### Sources of the Gap
 
@@ -600,6 +656,19 @@ text, whereas the rare words of a word-level vocabulary together make up a
 sizable share of it. And with two blocks of width 128 the model is far
 smaller than the transformers of these studies. The exercises test both
 explanations on this model.
+
+<!-- WRITER: new cell below (ADAM-11): it prints the byte statistics of the paragraph above, which no cell printed before. Measured on the full training text (the cell counts every tenth byte and prints 99 values, 0.07%, 2.6): 101 byte values appear less than once in ten minibatches of 4,096 targets, together 0.07% of the text; the rarest lowercase letter, q, appears 2.6 times per minibatch; 62 byte values make up 99% of the text. All four statements of the paragraph hold. -->
+
+```{.python .input #adam-sources-of-the-gap-1}
+%%tab pytorch, jax
+text = data.train[::10]  # Every tenth byte of the training text
+freq = np.bincount(text, minlength=256) / len(text)
+per_batch = freq * 64 * 64  # Expected count in a minibatch of 4,096 targets
+rare = (freq > 0) & (per_batch < 0.1)
+print(f'{rare.sum()} byte values appear less than once in ten minibatches, '
+      f'{freq[rare].sum():.2%} of the text')
+print(f'rarest lowercase letter: {per_batch[97:123].min():.1f} per minibatch')
+```
 
 ### Limits of the Variance Estimate
 :label:`subsec_adam-variance-estimate`
@@ -657,6 +726,8 @@ sets the effective learning rate of normalized layers. Adam stores two
 extra numbers per parameter, which in mixed precision bring a parameter
 to 16 to 20 bytes. What Adam does not remove is the choice of $\eta$ over
 time, the subject of :numref:`sec_scheduler`.
+
+<!-- WRITER: Summary predates the split and the new runs: the CNN, "1.3 to 2.5 times as fast", "a few hundredths to about two tenths of a nat", and the AdamW and memory sentences (now :numref:`sec_adamw`) no longer hold here. -->
 
 ## Exercises
 
@@ -769,7 +840,7 @@ time, the subject of :numref:`sec_scheduler`.
 ::: {.cover}
 [Dive into Deep Learning · §9.6]{.kicker}
 
-Adam and AdamW<br>**per-coordinate learning rates · bias correction · Adam against SGD · decoupled weight decay · optimizer memory**
+Adam<br>**per-coordinate learning rates · bias correction · gradient scales in a network · Adam against SGD**
 :::
 :::
 
@@ -948,20 +1019,10 @@ framework's.
   model; afterwards we call the library's.
 :::
 
-::: {.slide title="On Both Models, Adam Reaches SGD's Final Loss 1.3–2.5× Faster"}
-::: {.cols}
-::: {.col}
-`TinyLM`: gap about 0.03–0.2 nats
+<!-- WRITER: deck to rebuild (worklist 6): chain, valley with Adam (@!adam-adam-on-the-valley-1, RMSProp's band @!adam-rmsprop-1), scale invariance, gradient scales in TinyLM (@!adam-gradient-scales-in-a-network-2), usable range (@!adam-the-race-on-the-language-model-3). The CNN half of the slide below is cut with its cells; its title and bullets still quote the old numbers. -->
 
+::: {.slide title="On TinyLM, Adam Reaches SGD's Final Loss Faster"}
 @!adam-the-race-on-the-language-model-3
-:::
-
-::: {.col}
-`FashionCNN`: gap about 0.03–0.1 nats
-
-@!adam-the-same-race-on-a-cnn-4
-:::
-:::
 
 - SGD trains best at or just below its largest stable rate; Adam's best
   rate lies inside its grid.

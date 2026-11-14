@@ -1253,7 +1253,7 @@ jh = HP.merge(read('judge-human').drop(columns='stratum'), on=HUMAN_KEY)
 assert len(jh) == len(HP)
 ```
 
-<!-- Placeholder (stage 2): agreement with the experts, beside GPT-4 and the experts' agreement with each other; then the judge against GPT-4 on the same votes. -->
+<!-- Placeholder (stage 2): agreement with the experts, beside GPT-4 and the experts' agreement with each other. -->
 
 ```{.python .input #eval-suites-agreement}
 %%tab pytorch
@@ -1305,6 +1305,15 @@ print('agreement with the experts\' non-tie votes, on the pairs each judge '
 print(pd.DataFrame(agree_rows, columns=[
     'judge', 'stratum', 'agree', '95% CI', 'decided', 'questions']).to_string(
         index=False, float_format='{:.2f}'.format))
+mass_ab = np.median(jh[['mass1', 'mass2']].to_numpy())
+print(f'median probability on the tokens A and B: {mass_ab:.3f}')
+assert mass_ab > 0.5, 'C5c: the judge does not answer with A or B'
+```
+
+<!-- Placeholder (stage 2): the judge against GPT-4 on the same expert votes: a paired comparison, not two overlapping intervals. -->
+
+```{.python .input #eval-suites-agreement-gpt4}
+%%tab pytorch
 gpt4_rows = []
 for s in STRATA:  # paired: the same expert votes, clustered by question
     v = in_stratum(jv, s)
@@ -1327,9 +1336,6 @@ dd = jh[(jh.consistent != 'tie') & (jh.gpt4 != 'tie')]
 same = bootstrap_ci(dd.consistent == dd.gpt4, 2000, dd.question_id)
 print(f'Qwen3.5-4B gives GPT-4\'s verdict on {len(dd)} pairs both decide: '
       f'{show(same, 2)}')
-mass_ab = np.median(jh[['mass1', 'mass2']].to_numpy())
-print(f'median probability on the tokens A and B: {mass_ab:.3f}')
-assert mass_ab > 0.5, 'C5c: the judge does not answer with A or B'
 ```
 
 <!-- Placeholder (stage 2): the judge on the section's own answers: six answerer pairs, a second answer seed, and padded answers (regenerated only under RERUN). -->
@@ -1581,7 +1587,7 @@ print(f'  answer seed 0 {show(bootstrap_ci(s0))}, seed 1 '
 print(f'seed 1 minus seed 0: {show(r_diff)}, p {r_diff.p_two_sided:.3f}')
 ```
 
-<!-- Placeholder (stage 2): a published GSM8K score checked under a stated protocol and under the evaluation harness's protocol (both regenerated only under RERUN). -->
+<!-- Placeholder (stage 2): a published GSM8K score checked under a stated protocol, written as a card (the runs of this cell and the next are regenerated only under RERUN). -->
 
 ```{.python .input #eval-suites-protocol}
 %%tab pytorch
@@ -1640,6 +1646,12 @@ card = {
 for k, v in card.items():
     print(textwrap.fill(v, 100, initial_indent=f'{k:<16}',
                         subsequent_indent=' ' * 16))
+```
+
+<!-- Placeholder (stage 2): the same model and test items under the evaluation harness's chain-of-thought protocol, and the published score against both. -->
+
+```{.python .input #eval-suites-protocol-alt}
+%%tab pytorch
 alt = bootstrap_ci(runs[1].scores('gsm8k_cot'))
 qa_cot = runs[0].per_item.merge(runs[1].per_item, on='item_id',
                                 suffixes=('_qa', '_cot'))

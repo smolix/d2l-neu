@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4b61dc4b3a42b1813793a6ace6cd86a4163519c5cf53f2dbaede30603f5ae363",
+    "d2l_lib_fingerprint": "sha256:de17c1a43a9d3b0b17d7e1286c3014551dee07f6fe786448018938fcd3333c6f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:88563d65f0532a70068d358dd0f3a33bb3507e7a8ebb9eb31ca6b2e712da80ba"
+          "sha256": "sha256:123942696cda76a4ffedd4ff6f6ee868b1dbabb5dfc6b6c8341664018d5daa4a"
         }
       ]
     },
@@ -69,12 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size  16, decay per step: relative deviation 2.2e-07\nchunk size  16, decay per key: relative deviation 2.1e-07\nchunk size  64, decay per step: relative deviation 2.5e-07\nchunk size  64, decay per key: relative deviation 2.1e-07\nchunk size 256, decay per step: relative deviation 8.8e-07\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "chunk size 256, decay per key: relative deviation 6.4e-07\n"
+          "text": "chunk size  16, decay per step: relative deviation 2.2e-07\nchunk size  16, decay per key: relative deviation 2.1e-07\nchunk size  64, decay per step: relative deviation 2.5e-07\nchunk size  64, decay per key: relative deviation 2.1e-07\nchunk size 256, decay per step: relative deviation 8.8e-07\nchunk size 256, decay per key: relative deviation 6.4e-07\n"
         }
       ]
     },
@@ -85,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence       258.73 ms\ndual               2.09 ms\nchunks of 16       1.26 ms\nchunks of 64       1.29 ms\nchunks of 256      1.13 ms\n"
+          "text": "recurrence       239.30 ms\ndual               3.73 ms\nchunks of 16       2.01 ms\nchunks of 64       1.02 ms\nchunks of 256      1.04 ms\n"
         }
       ]
     },
@@ -132,7 +127,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "without convolution, SiLU, and gate: 3.19\n"
+          "text": "without convolution, SiLU, and gate: 3.25\n"
         }
       ]
     }

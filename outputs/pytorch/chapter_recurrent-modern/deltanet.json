@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bf4459c4862b80804149d4a66a36328026a2da58a9c106011ae0fb8c89b7320d",
+    "d2l_lib_fingerprint": "sha256:a3847ffdb8465cbdfc38237293e55ea17f37917b1e2ad77e5f51c8804d36b55f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -78,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet perplexity: 3.13\n"
+          "text": "Gated DeltaNet perplexity: 3.09\n"
         }
       ]
     }

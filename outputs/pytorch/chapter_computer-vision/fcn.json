@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6acc05f6fbdc1d7ba7b74776a8eed1bb5704939d6bd9fdaef5b02bdbf659a542",
+    "d2l_lib_fingerprint": "sha256:e7e386aae598999b9c65d5ee50d1ec88a5a63ed8e0cb22d1220b30730ff12e06",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -77,7 +77,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 85901,
-          "sha256": "sha256:07cd8291564e9cebc8de4626a795b2f9591a822ee91bd9c283f9137e36da540f"
+          "sha256": "sha256:a93d3fec489b9fbc7cf2b51ea4ea9d39075ff52df84821f660aeed63ff34f1d2"
         }
       ]
     },
@@ -109,14 +109,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.417, train acc 0.869, test acc 0.854\n402.8 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.409, train acc 0.871, test acc 0.852\n377.0 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-training-1.svg",
-          "bytes": 25003,
-          "sha256": "sha256:1c85302486709075ea04538cd48767a72bc5fc45cb960742f4d9a6cf5a733f62"
+          "bytes": 25002,
+          "sha256": "sha256:4db2629344924b1b56a2733051ca0783e60bfae7d0a87ebc7fd6b3c681540f8e"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 155426,
-          "sha256": "sha256:9e2af2d04405e9c6e3a246f57091eab5ff23696572323b028a001356ff924753"
+          "bytes": 155874,
+          "sha256": "sha256:9f3fd84e347f927065b87ac11e9bbf145cbe51dbab38f71fb69b22cc6fd84f8b"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c5d7c66c77e8757a8c88d936707f4832fccc7f64aecee4264eb418e59954422c",
+    "d2l_lib_fingerprint": "sha256:d00708f266c0fd15070c632bb2e7e0d32e988bf1dac078dd205e80b6ca432fff",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-an-ill-conditioned-problem-1-1.svg",
           "bytes": 18000,
-          "sha256": "sha256:1039543192087dfb5b5db49946b1cce99a187b01a5707dcd20584ed7a1ce22d2"
+          "sha256": "sha256:ea0bfceae314550cf28d2662b816efdf3bb2990293e0692d6a33669fe330307b"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-1-1.svg",
           "bytes": 20333,
-          "sha256": "sha256:ab71167c59f6e2d3a94b55fc0d71cbfdd2462000d44f56704248e9f3b04451fa"
+          "sha256": "sha256:4920a3a93d0764153b074f2ba9e5d2211247e61cc22f5d1b96b30bb30b27ef1f"
         }
       ]
     },
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-acceleration-and-damping-1.svg",
           "bytes": 18186,
-          "sha256": "sha256:d6a819377691d61a3be8836d9619147fdf1755e081e1ec0827b78a645a5ac653"
+          "sha256": "sha256:9ae3a4df0714412e62ff77f9369a0d13d5f18feaffa8b440bb80811d70b2deca"
         }
       ]
     },
@@ -117,24 +117,24 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.248, 0.545 sec/epoch\n"
+          "text": "loss: 0.242, 1.388 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.249, 0.542 sec/epoch\n"
+          "text": "loss: 0.246, 1.385 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.287, 0.541 sec/epoch\n"
+          "text": "loss: 0.280, 1.387 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-3-1.svg",
-          "bytes": 26206,
-          "sha256": "sha256:661ae94ee14b76438febee70f75df7a09380760297a26621042b80a0a66f7b7c"
+          "bytes": 26196,
+          "sha256": "sha256:6915c18899a7fe36819d5aad6b7ddaa7a80e2b6a42cca44ee0655da0b38ba20b"
         }
       ]
     },
@@ -145,14 +145,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.537 sec/epoch\n"
+          "text": "loss: 0.250, 1.387 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-concise-implementation-1.svg",
           "bytes": 18790,
-          "sha256": "sha256:6d92cc11123919e2fd15808ba7b95cd12cdb2949cd2b7cf2d36f06bc088f873c"
+          "sha256": "sha256:e63421ff9e2fc26910c00a663cca5bc0af79d42c3e47fa92c552406d83c2a710"
         }
       ]
     },
@@ -170,7 +170,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-nesterov-momentum-1-1.svg",
           "bytes": 18106,
-          "sha256": "sha256:97ff84f58dd4756c20b5bfb1720e184ddff201e82a259f785e88d2f966cfd90e"
+          "sha256": "sha256:5149e0b3c991d05669dbe495413aaa1a74f1ba65b2b81303a17147b63d2ead25"
         }
       ]
     },
@@ -181,14 +181,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.503 sec/epoch\n"
+          "text": "loss: 0.254, 1.377 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-nesterov-momentum-2-1.svg",
-          "bytes": 18790,
-          "sha256": "sha256:6d5347fb7bbcb71de259a8c268e5139576c3ce0ac3c6fc492c4a4f825ca749e6"
+          "bytes": 18787,
+          "sha256": "sha256:90c194816d257635c6d4b5717c31181721a7f914dcae87ebb9b34b355d54fe56"
         }
       ]
     }

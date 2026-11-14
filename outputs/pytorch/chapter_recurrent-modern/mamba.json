@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d34c81097f8a1d6c68537237894a46885341077e2d28ee7eb1a266ecc0f50ece",
+    "d2l_lib_fingerprint": "sha256:91f1d6447d70a39b0f74396028f327e37bcd45c01dd89d9f206f3c75ae569ff0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[0, 2, 0, 0, 0, 0, 6, 0, 0, 5, 0, 7, 1, 1, 1, 1],\n        [6, 0, 0, 9, 0, 0, 0, 2, 5, 0, 0, 0, 1, 1, 1, 1]])\ntensor([[2, 6, 5, 7],\n        [6, 9, 2, 5]])\n"
+          "text": "tensor([[0, 0, 0, 0, 5, 5, 0, 8, 0, 0, 0, 6, 1, 1, 1, 1],\n        [0, 9, 7, 0, 9, 0, 0, 0, 4, 0, 0, 0, 1, 1, 1, 1]])\ntensor([[5, 5, 8, 6],\n        [9, 7, 9, 4]])\n"
         }
       ]
     },
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.95\n"
+          "text": "minGRU   accuracy 0.97\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 9.5e-07\n"
+          "text": "max deviation: 2.9e-06\n"
         }
       ]
     },
@@ -109,14 +109,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.03\nMamba  share from the symbols: 0.81\n"
+          "text": "S4D    share from the symbols: 0.01\nMamba  share from the symbols: 0.93\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 36547,
-          "sha256": "sha256:0cf1c76e9ab8fdb21edcadcced6ffd23823346ad00a5789a3757973f2a5ed020"
+          "bytes": 40695,
+          "sha256": "sha256:ac7c585325262dd311a372d151bd2a9331dd9fb90016b6c75793949493cbb053"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 3.02\n"
+          "text": "Mamba perplexity: 3.00\n"
         }
       ]
     }

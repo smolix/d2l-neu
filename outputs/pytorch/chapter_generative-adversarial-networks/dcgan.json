@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bec2eaa68c471839c27d09dc37076708f80a9945d9bcb6a4f44cc286a0fff560",
+    "d2l_lib_fingerprint": "sha256:ff3ec0aece30c29fdce079e5756ead11ad1524e0a911c63e497f9740fbaf2025",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -129,17 +129,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NS               critic loss 0.34, penalty 0.000, train-holdout gap +0.21\n"
+          "text": "NS               critic loss 0.61, penalty 0.000, train-holdout gap +0.05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NS + R1 + R2     critic loss 1.12, penalty 0.121, train-holdout gap +0.03\n"
+          "text": "NS + R1 + R2     critic loss 1.04, penalty 0.128, train-holdout gap +0.03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RpGAN + R1 + R2  critic loss 0.50, penalty 0.085, train-holdout gap +0.01\n"
+          "text": "RpGAN + R1 + R2  critic loss 0.45, penalty 0.099, train-holdout gap +0.02\n"
         }
       ]
     },
@@ -151,8 +151,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-4-1.svg",
-          "bytes": 71128,
-          "sha256": "sha256:69aae7d90757edd9cdbf39501a345a8ee04802ef9c797ffdfeec92b588ca0c2a"
+          "bytes": 71385,
+          "sha256": "sha256:21e8aba8d0b8cc7ed00acdacd1331d96a2c0653c884fc02616cbe9724ffa519d"
         }
       ]
     },
@@ -169,8 +169,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-3-1.svg",
-          "bytes": 928192,
-          "sha256": "sha256:c99b71214a12b6b5aa5f3ee37bb87ca258516c2b2f9d592b88e99ae198bca1d8"
+          "bytes": 881068,
+          "sha256": "sha256:4ca77ac30cd8d3f0b1606b5f5011f35c41ceed4311f8a9170534f2b545376d5a"
         }
       ]
     },
@@ -191,7 +191,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.780\n"
+          "text": "CIFAR-10 test accuracy: 0.778\n"
         }
       ]
     },
@@ -207,7 +207,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.29  -0.012\nDCGAN                 3.58   0.198         0.000\nNS                   69.15   7.852         0.006\nNS + R1 + R2          4.56   0.598         0.141\nRpGAN + R1 + R2       3.51   0.223         0.149\nreal pixel values equal to +1: 45%\n"
+          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.26  -0.013\nDCGAN                 3.63   0.202         0.000\nNS                   85.38   9.698         0.000\nNS + R1 + R2          4.32   0.533         0.141\nRpGAN + R1 + R2       4.77   0.608         0.162\nreal pixel values equal to +1: 45%\n"
         }
       ]
     }

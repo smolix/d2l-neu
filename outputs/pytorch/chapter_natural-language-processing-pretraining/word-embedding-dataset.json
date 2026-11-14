@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0a669b5e91dfcab782cb7add33d54b0b04d5e370d1dd54932e35146bfb21fae7",
+    "d2l_lib_fingerprint": "sha256:f47e5c333046705e3cb7a0a36ca9d83c50a8c0180bf4c212e62bb9796383a08c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word-embedding-dataset/word-embedding-dataset-subsampling-2-1.svg",
-          "bytes": 28753,
-          "sha256": "sha256:bc85ee33931ea5c6d4ddbfa5dc8cfc30bb44c98c378bd6994b256269be1d4f65"
+          "bytes": 28742,
+          "sha256": "sha256:220d33618487799d2d074923178dd1f6bf870197bbd03ad0e61299a2caf9a21b"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'# of \"the\": before=50770, after=2026'"
+          "text": "'# of \"the\": before=50770, after=2096'"
         }
       ]
     },
@@ -82,7 +82,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[[], [393, 2116, 146, 407], [23, 141, 5278, 3055, 1581, 96]]"
+          "text": "[[], [393, 2116, 407], [141, 4, 5278, 3055, 1581, 96]]"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1]\ncenter 1 has contexts [0, 2, 3]\ncenter 2 has contexts [0, 1, 3, 4]\ncenter 3 has contexts [1, 2, 4, 5]\ncenter 4 has contexts [2, 3, 5, 6]\ncenter 5 has contexts [3, 4, 6]\ncenter 6 has contexts [4, 5]\ncenter 7 has contexts [8, 9]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [7, 8]\n"
+          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1]\ncenter 1 has contexts [0, 2, 3]\ncenter 2 has contexts [1, 3]\ncenter 3 has contexts [1, 2, 4, 5]\ncenter 4 has contexts [2, 3, 5, 6]\ncenter 5 has contexts [4, 6]\ncenter 6 has contexts [4, 5]\ncenter 7 has contexts [8]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [8]\n"
         }
       ]
     },
@@ -108,7 +108,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'# center-context pairs: 1499080'"
+          "text": "'# center-context pairs: 1500953'"
         }
       ]
     },
@@ -123,7 +123,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[1, 2, 2, 2, 1, 1, 3, 3, 2, 1]"
+          "text": "[3, 3, 3, 3, 3, 1, 2, 2, 2, 2]"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:482d143a5c38e18cf9f78baec6e52d20a08c8005c422ed80f9cb1fb038b1a9d3",
+    "d2l_lib_fingerprint": "sha256:da5b2b8fc0d491355dd91d1c82a5562ca97c8452ea4387099527a1fcef6d481e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -101,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
           "bytes": 31016,
-          "sha256": "sha256:20ee18ad1b7213ac72f4a253c32161cee583998b65e21721595218fb4130bffa"
+          "sha256": "sha256:8246c434cc5dda69a14880bbbfa8c1491ecff67589fa640f504e1aef4f0dfe4f"
         }
       ]
     },

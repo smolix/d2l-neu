@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d3b81eb3d875429180dfbab9aadbfe8d80a0607ccaf4be3fa5405d9fe4cf5ceb",
+    "d2l_lib_fingerprint": "sha256:65e1fd9d2c6d77cef823e4ee871a390771df25b16a083003e1d9073123d02497",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.688, test RMSE 1.040\n329120.7 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.688, test RMSE 1.037\n243178.7 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mf/mf-training-and-evaluating-the-model-2-1.svg",
-          "bytes": 21491,
-          "sha256": "sha256:79233e52c64e2c09dc9eade158eee7d37913f5b5c804f3ab0e2316463a9c862b"
+          "bytes": 21493,
+          "sha256": "sha256:a4e6598f29f7ec86be1356e6377240395551245b4e93472370c62cac5b55d40a"
         }
       ]
     },
@@ -52,7 +52,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([2.9652], device='cuda:0', grad_fn=<AddBackward0>)"
+          "text": "tensor([2.8092], device='cuda:0', grad_fn=<AddBackward0>)"
         }
       ]
     }

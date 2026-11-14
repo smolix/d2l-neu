@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ddc8dffb28820d0e275aea312e99a92c58f9c6539279593cf34145ee69b8abe9",
+    "d2l_lib_fingerprint": "sha256:d6bd72ecf30ecff0352874f9afbe7b5c5ebb52f7a637c634c1c65a016d6a34e0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,14 +65,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.092, train acc 0.968, test acc 0.865\n13323.8 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.096, train acc 0.967, test acc 0.866\n5632.5 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-cnn/sentiment-analysis-cnn-training-and-evaluating-the-model-1-1.svg",
-          "bytes": 25125,
-          "sha256": "sha256:4e3c316adde5899c8a757639b54b69be367a6215c8427653942610783d5418b9"
+          "bytes": 25130,
+          "sha256": "sha256:739572462a7266cec4804d8d7ed2e805dc56bc8ce4353592fd52f5e846933609"
         }
       ]
     },

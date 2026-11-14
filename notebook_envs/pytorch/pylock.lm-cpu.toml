@@ -115,6 +115,13 @@ sdist = { url = "https://files.pythonhosted.org/packages/48/3c/e12ac860709702bd5
 wheels = [{ url = "https://files.pythonhosted.org/packages/58/9d/40b6267367182187139a4000b82a3b287d84d745bccd808e75d916920e9d/bleach-6.4.0-py3-none-any.whl", upload-time = 2026-06-05T13:01:12Z, size = 165109, hashes = { sha256 = "4b6b6a54fff2e69a3dde9d21cc6301220bee3c3cb792187d11403fd795031081" } }]
 
 [[packages]]
+name = "bm25s"
+version = "0.3.16"
+marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
+sdist = { url = "https://files.pythonhosted.org/packages/95/de/f888ccc0787164b4cf60b318b2225dbc21519beaf099cf2cf7424ca6f616/bm25s-0.3.16.tar.gz", upload-time = 2026-10-28T18:49:06Z, size = 81944, hashes = { sha256 = "96301f99558c2318a889abfe1bc27cf53dc225f3860cdf03b0aaa5e72f8f4a2e" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/dc/5f/73f19cc86ecfd4533f0a82e55e689d5cbc4b5f845526a191316c17d38ee6/bm25s-0.3.16-py3-none-any.whl", upload-time = 2026-10-28T18:49:04Z, size = 76043, hashes = { sha256 = "65d973bd496de883ae525955379e3e7cf90a12c3d54ed175036315ae677512c9" } }]
+
+[[packages]]
 name = "certifi"
 version = "2026.10.23"
 marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
@@ -293,6 +300,17 @@ version = "2.3.0"
 marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
 sdist = { url = "https://files.pythonhosted.org/packages/52/92/8a611141e42930c0f194f7504063ab87dfe970cf1a5af28e7703df448734/executing-2.3.0.tar.gz", upload-time = 2026-10-10T14:06:04Z, size = 1338003, hashes = { sha256 = "15919cb5d667e5cb4e099511971d00d659573fff2dd5c4e6cd8b71636c7858d2" } }
 wheels = [{ url = "https://files.pythonhosted.org/packages/4d/dd/8bc67e7d5ffc1d88aa5af511189dfb76dc4e1e5b808fab186146ef2663e5/executing-2.3.0-py3-none-any.whl", upload-time = 2026-10-10T14:06:02Z, size = 29393, hashes = { sha256 = "736e859c9f8701f11fcf516856f26f562e04776387824b43a35a1dfe21c84122" } }]
+
+[[packages]]
+name = "faiss-cpu"
+version = "1.15.1"
+marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9b/ed/d1b8e6720e9947469cab45dbfbf1b82e1d5acf9fe063dc97a6e82db83094/faiss_cpu-1.15.1-cp310-abi3-macosx_14_0_arm64.whl", upload-time = 2026-09-16T18:33:29Z, size = 4987669, hashes = { sha256 = "ea9e12d540ca8ac0347b831d034c0f6d7ff5eed20523a247db44b3543ad2aad4" } },
+    { url = "https://files.pythonhosted.org/packages/ef/75/eb2f36334a58b343a87a2c1feaa747655fde7efdaad9c5d9eb367da89f15/faiss_cpu-1.15.1-cp310-abi3-macosx_15_0_x86_64.whl", upload-time = 2026-09-16T18:33:31Z, size = 7237206, hashes = { sha256 = "f52e727992ce86a783f61657f0c4f3498a235883083b982ba1be49d05f924450" } },
+    { url = "https://files.pythonhosted.org/packages/6c/f4/098bd9d178ae36fa078c66068d3264e27fff4308d5131655e5e743153d4c/faiss_cpu-1.15.1-cp310-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", upload-time = 2026-09-16T18:33:36Z, size = 18834180, hashes = { sha256 = "f2c31b7f2f6647eb76829a5cfe3c398fb9346df9f26b1d4db35269c91eb58c33" } },
+    { url = "https://files.pythonhosted.org/packages/01/28/0855b161a081556a1df0ff14d5e7e73db23bd24ed85505009387fb61762e/faiss_cpu-1.15.1-cp310-abi3-musllinux_1_2_x86_64.whl", upload-time = 2026-09-16T18:33:42Z, size = 19574480, hashes = { sha256 = "d4a250000112ac26ae79530e67a18fa986c8b7b0329154aefeb7692b270ed366" } },
+]
 
 [[packages]]
 name = "fastapi"
@@ -1119,6 +1137,30 @@ sdist = { url = "https://files.pythonhosted.org/packages/21/25/5473e46b179f8e8b4
 wheels = [{ url = "https://files.pythonhosted.org/packages/dc/55/6467fde553886cb293e41538f3a8b4e4fd4688c6df242cf982162d8367fb/python_json_logger-4.2.0-py3-none-any.whl", upload-time = 2026-08-15T11:36:36Z, size = 14988, hashes = { sha256 = "158a52126fcd6869e09574d2b66272666f3dc8f468c62637ef9a1fa883719cb9" } }]
 
 [[packages]]
+name = "pytrec-eval-terrier"
+version = "0.5.11"
+marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
+sdist = { url = "https://files.pythonhosted.org/packages/2b/ea/83ddbb17763272db4322f6d2287cc0183bbf91b9dece6c321758c41136cc/pytrec_eval_terrier-0.5.11.tar.gz", upload-time = 2026-10-16T13:12:58Z, size = 18665, hashes = { sha256 = "37258242d8bc1f8ed47a819c5b176198b1b4871f3c3a5f34349e534f74811924" } }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/04/1c/2bee393f2937cddebd2047c5ee761d3c3e1aeb90f3741f14748d4e03b10b/pytrec_eval_terrier-0.5.11-cp312-cp312-macosx_10_13_universal2.whl", upload-time = 2026-10-16T13:13:40Z, size = 140251, hashes = { sha256 = "c6f84ed3e2434ae0f6919daba7448f4b3b4f5f2716599321ee15a971c89372aa" } },
+    { url = "https://files.pythonhosted.org/packages/60/d2/af56ea9f0533b85ebae858014b5d330be689bf6e783f60c2db6aabacb1c0/pytrec_eval_terrier-0.5.11-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", upload-time = 2026-10-16T13:17:37Z, size = 304737, hashes = { sha256 = "49d471ea922ee0b86b8c4413b0f3669ef193b7df21652acca711b4f325bfa2e5" } },
+    { url = "https://files.pythonhosted.org/packages/31/35/55048896187fc3c68592eb3e530b5bdc51255209ec0924fb011e4c586ea8/pytrec_eval_terrier-0.5.11-cp312-cp312-musllinux_1_2_x86_64.whl", upload-time = 2026-10-16T13:17:38Z, size = 1330188, hashes = { sha256 = "f716fab32712efe6cfe5cf61c32fcd98acbac6633388928dc4be9c5aa485cee4" } },
+    { url = "https://files.pythonhosted.org/packages/48/dd/48565c62ab446da0244bfda45ccc421ef4463bad84c42d01da6f2f3a332a/pytrec_eval_terrier-0.5.11-cp313-cp313-macosx_10_13_universal2.whl", upload-time = 2026-10-16T13:14:26Z, size = 140261, hashes = { sha256 = "6d0a7da20656e09c70415a6938d7d00165913c8aca50a3c22658ab1d305f56fa" } },
+    { url = "https://files.pythonhosted.org/packages/e8/5e/7ac59052eda4909f541aac4500030b305f1c38d2b0ec89bcf93cbbbceec9/pytrec_eval_terrier-0.5.11-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", upload-time = 2026-10-16T13:17:40Z, size = 304859, hashes = { sha256 = "e9954aba9d9fdf5cf6539be511248b10525b3adbfd98bbcfba90b993e5cce7b3" } },
+    { url = "https://files.pythonhosted.org/packages/68/a2/c3cfb88bdbf56173838be36d8fb5eb274c350e31adf8e51e4ecda33c45fa/pytrec_eval_terrier-0.5.11-cp313-cp313-musllinux_1_2_x86_64.whl", upload-time = 2026-10-16T13:17:41Z, size = 1330203, hashes = { sha256 = "7587cffb3e88e76ec182c5057cfec0bd1cb7a0add31f3cc72e96aa99c1db218f" } },
+    { url = "https://files.pythonhosted.org/packages/5d/47/8fc8fcdf6e5a821029e5ea7da0f975b757d29141b738ff17a39c36ccba21/pytrec_eval_terrier-0.5.11-cp314-cp314-macosx_10_15_universal2.whl", upload-time = 2026-10-16T13:14:39Z, size = 140322, hashes = { sha256 = "5fc894b6925667300a9a65d83d8d45bbfb9c3647649a738c4c4d0efff6764d51" } },
+    { url = "https://files.pythonhosted.org/packages/ce/ba/ae272eacdf43096448ca740fad401c55aee58629e47e5dab65b77f505546/pytrec_eval_terrier-0.5.11-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", upload-time = 2026-10-16T13:17:42Z, size = 304834, hashes = { sha256 = "a5d249bdda4fad4779510cc6a0ad40df4981f8c98fec83a098de71168ab78772" } },
+    { url = "https://files.pythonhosted.org/packages/ea/26/95f7188fd4a824126cb3944ced3da6790a7911dca78a5b04f6e4909b70c0/pytrec_eval_terrier-0.5.11-cp314-cp314-musllinux_1_2_x86_64.whl", upload-time = 2026-10-16T13:17:44Z, size = 1330207, hashes = { sha256 = "983373ea37f3b63dba8c463b9bf2e5be1ce2ea423febca5e128b78457017be1d" } },
+    { url = "https://files.pythonhosted.org/packages/20/1f/3f9ff42945371c61231200166c4697d89e6df54b8cb1007d2e84d8b3cd9b/pytrec_eval_terrier-0.5.11-cp314-cp314t-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", upload-time = 2026-10-16T13:17:45Z, size = 307930, hashes = { sha256 = "6b67c4e2b3285c92d6223387a7518a235ef5e433b474d483dde054c4dd0fe088" } },
+    { url = "https://files.pythonhosted.org/packages/d8/bc/617ff12355cfc43b4e6a26a9fd4ca3ccfb4acf5d620820b26e00dd4cd4a8/pytrec_eval_terrier-0.5.11-cp314-cp314t-musllinux_1_2_x86_64.whl", upload-time = 2026-10-16T13:17:46Z, size = 1332663, hashes = { sha256 = "df547e0f313df968f8eb80b898bba3af8d8fe345fff78ef7aadc947ddd64140a" } },
+    { url = "https://files.pythonhosted.org/packages/4e/64/9b565de9a129918eac4b943cd8fd2b560a6395f10de3575e72bbf7dc5fbc/pytrec_eval_terrier-0.5.11-cp315-cp315-macosx_10_15_universal2.whl", upload-time = 2026-10-16T13:13:43Z, size = 140377, hashes = { sha256 = "ecf83c451b56ed5d6ebcb3b186801cc5bacba801e0b28b0de0bc2379865d6445" } },
+    { url = "https://files.pythonhosted.org/packages/0e/fc/b4268592a30a8db230658bfa61cf644cf774d8c959b3979bfe2c5f901960/pytrec_eval_terrier-0.5.11-cp315-cp315-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", upload-time = 2026-10-16T13:17:47Z, size = 306597, hashes = { sha256 = "3ccde49137fc16717ca784b1d6d177b21a40f5b4f165dc5325a2d5ef1e00ce5c" } },
+    { url = "https://files.pythonhosted.org/packages/23/a6/1998ec76a52de65bf50fa2a3c67d23297f3c3314fac04561aee9a4b75c79/pytrec_eval_terrier-0.5.11-cp315-cp315-musllinux_1_2_x86_64.whl", upload-time = 2026-10-16T13:17:49Z, size = 1331521, hashes = { sha256 = "65c0df9802d4eb30e7b7a928472b11308f22aaca660bcffb7ee49fecb1586cf2" } },
+    { url = "https://files.pythonhosted.org/packages/94/df/1464a7053a6eca19fcadd6de682c214bbe7c1b181a33b56aab78aa6fcf4e/pytrec_eval_terrier-0.5.11-cp315-cp315t-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", upload-time = 2026-10-16T13:17:50Z, size = 309347, hashes = { sha256 = "7e1759bf57acea08b89b1a1b52ec93ac6dc542bed7cf43d21876dd38317f5552" } },
+    { url = "https://files.pythonhosted.org/packages/3e/42/acd8d7b9128305634174c3b9fc6ff4cacea0f436bbf1f23b38f07cd86928/pytrec_eval_terrier-0.5.11-cp315-cp315t-musllinux_1_2_x86_64.whl", upload-time = 2026-10-16T13:17:51Z, size = 1333489, hashes = { sha256 = "27953e1054868489295cad57bd01a15a7baffd0082e747be7487df403807c5d0" } },
+]
+
+[[packages]]
 name = "pyyaml"
 version = "6.0.3"
 marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
@@ -1366,6 +1408,19 @@ version = "2.2.0"
 marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
 sdist = { url = "https://files.pythonhosted.org/packages/aa/9c/41c11853a5fb67b4639993a628182d326ffe4327eb28a125d202fb49950f/send2trash-2.2.0.tar.gz", upload-time = 2026-11-12T00:35:19Z, size = 19703, hashes = { sha256 = "e0ac412073f7984288908d9d8b8d13c82be69a615bb513d948fa2f053447970a" } }
 wheels = [{ url = "https://files.pythonhosted.org/packages/b2/de/7a9e77bd4c5f6eb11d90eb75807c1e1f0ea54997b05ae86d6fc5fa080c04/send2trash-2.2.0-py3-none-any.whl", upload-time = 2026-11-12T00:35:18Z, size = 17436, hashes = { sha256 = "7f540296d59744fbf2f88b0d6f3a484af78c94d3c20e0875a4d5eed61aef037c" } }]
+
+[[packages]]
+name = "sentence-transformers"
+version = "6.2.0"
+marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
+sdist = { url = "https://files.pythonhosted.org/packages/7f/66/635443b9b1d7ea618c4699c8ad4c43b022ceac0c0a1dc4404b7597b38754/sentence_transformers-6.2.0.tar.gz", upload-time = 2026-10-21T12:26:50Z, size = 600810, hashes = { sha256 = "1e3cd8796ab7bcad4cfa2f51e2083d8b37b15d6b68e6fa6b91a147c67380574d" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/66/ae/aac4fcaf7aa27daee96aa15d74770b38bb5ff50b1d31ccf12becd68c6e8b/sentence_transformers-6.2.0-py3-none-any.whl", upload-time = 2026-10-21T12:26:49Z, size = 760709, hashes = { sha256 = "ffb51ccfef65427cfa61776d0eeeb257600b0099cf0c7533ae9a6856d31e4665" } }]
+
+[[packages]]
+name = "seqeval"
+version = "1.2.2"
+marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'"
+sdist = { url = "https://files.pythonhosted.org/packages/9d/2d/233c79d5b4e5ab1dbf111242299153f3caddddbb691219f363ad55ce783d/seqeval-1.2.2.tar.gz", upload-time = 2020-10-24T00:24:54Z, size = 43605, hashes = { sha256 = "f28e97c3ab96d6fcd32b648f6438ff2e09cfba87f05939da9b3970713ec56e6f" } }
 
 [[packages]]
 name = "setuptools"

@@ -11,3 +11,8 @@ openai==3.49.0
 scikit-learn
 flash-linear-attention==0.6.0
 fla-core==0.6.0
+faiss-cpu==1.15.1
+bm25s==0.3.16
+pytrec-eval-terrier==0.5.11
+seqeval==1.2.2
+sentence-transformers==6.2.0

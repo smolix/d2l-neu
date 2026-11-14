@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:ab3a3ca7a088cd506891fcf08d7c5de19781d118e93b75c87db050f90fab9381",
+    "d2l_lib_fingerprint": "sha256:78fea196f746fd609bc38daff9a87123856a9f8a735885c39da2c50645b9c778",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:2e6263396adc125fd64ac26e904d20131dc1dea822313ae6eea5e6e07a951f15"
+          "sha256": "sha256:c706522aef99fde5f07132e90d185df7d094b72ffb7612ee2bbaf742f088aadd"
         }
       ]
     },
@@ -110,27 +110,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence        59.79 ms\n"
+          "text": "recurrence        57.34 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dual               0.23 ms\n"
+          "text": "dual               1.04 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 16       0.15 ms\n"
+          "text": "chunks of 16       0.52 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 64       0.14 ms\n"
+          "text": "chunks of 64       0.47 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 256      0.16 ms\n"
+          "text": "chunks of 256      0.85 ms\n"
         }
       ]
     },
@@ -161,7 +161,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention perplexity: 3.11\n"
+          "text": "gated linear attention perplexity: 3.09\n"
         }
       ]
     },
@@ -177,7 +177,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "without convolution, SiLU, and gate: 3.23\n"
+          "text": "without convolution, SiLU, and gate: 3.18\n"
         }
       ]
     }

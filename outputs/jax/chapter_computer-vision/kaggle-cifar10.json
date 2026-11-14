@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:d3de9f8b7c9bcd7bd8108447ee052124e42bac7752240df2513333bded6928a7",
+    "d2l_lib_fingerprint": "sha256:a066e0e2b3b95106c67d76d5225193424c48ac98cbcf5154b3648cdcaf2196e9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Found 920 files belonging to 10 classes.\n"
+          "text": "Found 959 files belonging to 10 classes.\n"
         },
         {
           "type": "stream",
@@ -81,7 +81,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Found 80 files belonging to 10 classes.\n"
+          "text": "Found 119 files belonging to 10 classes.\n"
         },
         {
           "type": "stream",
@@ -112,14 +112,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.741, train acc 0.760, valid acc 0.450\n1026.1 examples/sec\n"
+          "text": "train loss 0.720, train acc 0.742, valid acc 0.664\n993.7 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-training-and-validating-the-model-1.svg",
-          "bytes": 21314,
-          "sha256": "sha256:c19b9d11cb60c9b5f519277d60919794baacea20c66a0a83c0e58532dbcf85fe"
+          "bytes": 22039,
+          "sha256": "sha256:55329488fd7071ec040c2249a63c7e9ef548f10ff6db5e6c61a551e0034b90fd"
         }
       ]
     },
@@ -130,14 +130,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.751, train acc 0.730\n1187.3 examples/sec\n"
+          "text": "train loss 0.707, train acc 0.743\n1145.5 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 18977,
-          "sha256": "sha256:d117d4fb1679495c141b29b59e13078b169271c6c492c2d8707cb95a9ce72c1c"
+          "bytes": 18975,
+          "sha256": "sha256:23e83c790749d672a2b65a7e084ef204ebbe8414bd1b0352d344230bc8ffdd56"
         }
       ]
     }

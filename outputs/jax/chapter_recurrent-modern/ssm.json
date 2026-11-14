@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:a6d99eecfa117aa418f79e70049ade3cbdf98e7ffd0d2bc82f1d51d5124a9596",
+    "d2l_lib_fingerprint": "sha256:ca4e8df5e798a736183c664d6f3612f435ca188d32e5b1510debab4dad62f7ce",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 33396,
-          "sha256": "sha256:9a269038aedd683580d0c1662905d4786fba2229c6975910e991178f5eff7f70"
+          "bytes": 32802,
+          "sha256": "sha256:82996820486fc6e6aa61b512341610d6319b89c1c714748d443a1760a64d0e81"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU perplexity: 3.21\n"
+          "text": "minGRU perplexity: 3.19\n"
         }
       ]
     },
@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity with the state reset: 10.81\n"
+          "text": "perplexity with the state reset: 10.71\n"
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gates above 0.5: 54%, above 0.9: 25%\n"
+          "text": "gates above 0.5: 53%, above 0.9: 25%\n"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D perplexity: 3.35\n"
+          "text": "S4D perplexity: 3.34\n"
         }
       ]
     }

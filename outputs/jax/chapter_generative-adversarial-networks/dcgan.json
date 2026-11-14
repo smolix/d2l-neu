@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:60525667eb10fc34f9be63b300e5b38d06e42ef0607b3fd852da8d1a7fcd7c3d",
+    "d2l_lib_fingerprint": "sha256:4b8b35bd08e7e4571f9523ace806916f7b5935fed7858f4e4215123e8325e232",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -157,7 +157,7 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-4-1.svg",
           "bytes": 69464,
-          "sha256": "sha256:df6755fcea02076592cdb7b7c77d679b119b2cfbc338bfdbfa2dcfc30ad272c6"
+          "sha256": "sha256:74a7e4e012b440bbeb89197827858f24c6e4eb0168646302e25597afea192413"
         }
       ]
     },
@@ -175,7 +175,7 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-3-1.svg",
           "bytes": 893460,
-          "sha256": "sha256:4c2c45b283a9ed806558c78cdc6f74a07f14bdf16b49c45e1934c18c2dc5dc51"
+          "sha256": "sha256:9c6d9178479a00ab86c83ec9472a2bdafc59b6e4be5b582485990b7e19b38d97"
         }
       ]
     },

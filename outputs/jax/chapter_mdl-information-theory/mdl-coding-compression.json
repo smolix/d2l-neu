@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:0195909598080685812cdc1096df23e5ab974cbf8ba70855bc35018127fc5ac1",
+    "d2l_lib_fingerprint": "sha256:98c3eb234d08f12da9fb8bd52a90f0ade2dafb82f62bd2f92dfddeaef4a4e5aa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,12 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "order 1: 3.29 bits/char"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\n"
+          "text": "order 1: 3.29 bits/char\n"
         },
         {
           "type": "stream",
@@ -77,12 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "order 3: 2.55 bits/char"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\n"
+          "text": "order 3: 2.55 bits/char\n"
         },
         {
           "type": "stream",
@@ -111,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
           "bytes": 31016,
-          "sha256": "sha256:543ea76df40c5e25a01d7c446e5613f48b99f681c10d98d6ac0c1af7953d8d68"
+          "sha256": "sha256:64d816fc76d7a5396ac003dec84af6430257f00d064baa69fcfb6b70a5680729"
         }
       ]
     },

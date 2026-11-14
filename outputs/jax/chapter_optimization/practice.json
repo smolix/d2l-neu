@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:86a1e01a989e8dc3e5870c04ee93a277978ed613d4856acebef8cccd32153e98",
+    "d2l_lib_fingerprint": "sha256:68db9f94e6144e7258850adc293fee6db1d2183a74b6419eff10063787388a16",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,12 +40,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1: final loss 1.612\n"
+          "text": "clipped at 1: final loss 1.645\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped 17 of 2000 steps, the last at step 20; median gradient norm 0.25\n"
+          "text": "clipped 21 of 2000 steps, the last at step 35; median gradient norm 0.25\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 24677,
-          "sha256": "sha256:846a07a8f149fe2a2d69f431d5d876c348b5343f4b6179de93f44ad271e1c211"
+          "bytes": 24721,
+          "sha256": "sha256:4f23d76776472a98c97a567cc65923797eb8b91ae66d340cda04c51f0887eeb6"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.882, last five epochs 0.880 to 0.892\nEMA: final test accuracy 0.910, last five epochs 0.901 to 0.910\n"
+          "text": "live: final test accuracy 0.895, last five epochs 0.843 to 0.901\nEMA: final test accuracy 0.907, last five epochs 0.883 to 0.907\n"
         }
       ]
     },
@@ -92,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
           "bytes": 24007,
-          "sha256": "sha256:9851651edb389db61924c09b58f9f179a706bb8e64402424ee08948c35daa4f6"
+          "sha256": "sha256:af4970ca1ab1e26d118cd10123ea0c3214c8d3f507e3a69c77740b9bf5854999"
         }
       ]
     }

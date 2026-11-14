@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:9781760f4aab1b563270a4beec6b14df45f49a8229e325db1fa4bf18dc115e37",
+    "d2l_lib_fingerprint": "sha256:af1cd842caf2873393b5768d78a7d41b53de8b8561d4e8318844714b4fcb5bee",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -63,17 +63,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.75 / 1.49 / 1.37, training 1.39\n"
+          "text": "d =  96, 3 blocks, N =  0.33M: validation 2.06 / 1.49 / 1.38, training 1.40\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.61 / 1.44 / 1.35, training 1.37\n"
+          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.63 / 1.44 / 1.36, training 1.38\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.28, training 1.30\n"
+          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.39 / 1.29, training 1.30\n"
         },
         {
           "type": "stream",
@@ -83,7 +83,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.46 / 1.32 / 1.23, training 1.24\n"
+          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.45 / 1.32 / 1.23, training 1.24\n"
         }
       ]
     },
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slope -0.041; the largest model lies 0.048 nats above the line\n"
+          "text": "slope -0.043; the largest model lies 0.047 nats above the line\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 39434,
-          "sha256": "sha256:362edc4048a681cfee4dec04d8c1265615015810a3f56ab0ad825f46573d51a2"
+          "bytes": 37869,
+          "sha256": "sha256:36cbb251701671f539af4b0f7aad52d0cdbb831b466a122cff8f2411a4bb2160"
         }
       ]
     },

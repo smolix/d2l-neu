@@ -939,7 +939,8 @@ Dynamics 38) — each group's `index.md` is the chapter, its siblings the `N.k`
 sections — the **Tools for Deep Learning** appendix is chapter **39**, and the
 **Attic** closes the book: GP **40**, HPO **41**, RecSys **42** (it moved
 behind Tools on 2026-11-11; the two NLP chapters that were **43** and **44**
-were retired on 2026-11-14, their `seq2seq.md` moving to §12.2). The PDFs number these chapters exactly as the HTML does: since
+were retired on 2026-11-14, their `seq2seq.md` moving to §12.2). The PDFs
+number these chapters exactly as the HTML does: since
 2026-11-11 `fix_latex.py` emits no `\appendix` and letters nothing (the math
 part used to print as appendices A–F, Tools as G); each part keeps its
 unnumbered part page as the divider. The legacy

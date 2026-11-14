@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 18945,
-          "sha256": "sha256:0cf94cc3f86e6359dd3879eeffefab9a1b264be6add300a4247b9404fbe7ab11"
+          "sha256": "sha256:dae2455f599ebfd0731848fbd45dd6f141a1ea27dda8506aed5c0cb2585f1ae4"
         }
       ]
     },
@@ -34,29 +34,6 @@
           "type": "stream",
           "name": "stdout",
           "text": "  eta   factor x1   factor x2   steps to 1%\n0.100       0.980       0.600           228\n0.200       0.960       0.200           113\n0.300       0.940      -0.200            75\n0.400       0.920      -0.600            56\n0.450       0.910      -0.800            49\n0.476       0.905      -0.905            47\n0.490       0.902      -0.960           113\n0.500       0.900      -1.000         never\n"
-        }
-      ]
-    },
-    "optimization-intro-the-edge-of-stability-1": {
-      "code_fingerprint": "sha256:c96fe028a9716fc28f5dbd2a58009d2be2fdb88a31403fc12bceb853416e6708",
-      "kind": "text",
-      "outputs": []
-    },
-    "optimization-intro-the-edge-of-stability-2": {
-      "code_fingerprint": "sha256:f257d7b15c67a281deed679a42abb8ca5f5bfec311e17335454f58c4f97625bd",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eta 0.4: sharpness 3.27 -> 5.01 (2/eta = 5), loss 1.171 -> 4.0e-04\neta 0.25: sharpness 3.27 -> 7.97 (2/eta = 8), loss 1.171 -> 2.3e-04\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "optimization-intro/optimization-intro-the-edge-of-stability-2-1.svg",
-          "bytes": 26318,
-          "sha256": "sha256:9b6f3355d34ef1a3d8ff8fba2afb03d13fcb15ab3bbfabbe155f85aaeed036b4"
         }
       ]
     }

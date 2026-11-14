@@ -731,7 +731,7 @@ d2l.plot(sgd_lrs, [sgd_small, sgd_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
 
-<!-- WRITER: the parabola fit (`best_lr`, cell batch-size-learning-rate-sweeps-at-two-batch-sizes-1) is gone. The Adam sweep now runs at b = 2 and b = 128, a batch ratio of 64, on a grid of factors of two from 0.0001 to 0.1024, with the same budget of 12,800 examples (6,400 steps at b = 2, 100 at b = 128). The three rules predict a shift of 1 (no scaling), 8 (square root) and 64 (linear), three and six grid steps apart; the cell prints the best rate at each batch size and the b = 128 loss at each rule's prediction. Measured numbers: see the WRITER comment after the cell. -->
+<!-- WRITER: the parabola fit (`best_lr`, cell batch-size-learning-rate-sweeps-at-two-batch-sizes-1) is gone. The Adam sweep now runs at b = 2 and b = 128, a batch ratio of 64, on a grid of factors of two from 0.0001 to 0.4096 (13 points; a prediction beyond the grid prints "beyond the grid"), with the same budget of 12,800 examples (6,400 steps at b = 2, 100 at b = 128). The three rules predict a shift of 1 (no scaling), 8 (square root) and 64 (linear), three and six grid steps apart; the cell prints the best rate at each batch size and the b = 128 loss at each rule's prediction. Measured numbers: see the WRITER comment after the cell. -->
 
 Then Adam:
 

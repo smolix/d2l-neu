@@ -13,13 +13,8 @@
       "kind": "text",
       "outputs": []
     },
-    "optimization-intro-the-goal-of-optimization-1": {
-      "code_fingerprint": "sha256:fac9ec33d4902e458f911d2add23201fa0c884a9015372833330ae83adf389bb",
-      "kind": "text",
-      "outputs": []
-    },
     "optimization-intro-an-ill-conditioned-valley": {
-      "code_fingerprint": "sha256:37e9ce529a0b1fd17405843a52bb84c49087243a62af2f81479ea5496a52ff04",
+      "code_fingerprint": "sha256:52565093210c81644ac3e4dcf05c82866eb33f7dc25c94006beefb1c9a69ecde",
       "kind": "asset",
       "outputs": [
         {
@@ -27,41 +22,18 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 18945,
-          "sha256": "sha256:b830dc9f5e791746bd2c1eeb1d33663dc80eff1577a94827614a5c4433a90fef"
+          "sha256": "sha256:5a2331e9e6c0d02e2b4bf7530f5a374840ec266b06b85ee1d09ca4a7782a6490"
         }
       ]
     },
     "optimization-intro-an-ill-conditioned-valley-1": {
-      "code_fingerprint": "sha256:7fef31b88567eea346caa1f27fd7f3c7ea9c096e4c8c6463b49ee4e9d946fa63",
+      "code_fingerprint": "sha256:57d90a9323a9bd1ba34ba77674d8d53cc6253654b3877a3fa497ad796571969b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "  eta   factor x1   factor x2   steps to 1%\n0.100       0.980       0.600           228\n0.200       0.960       0.200           113\n0.300       0.940      -0.200            75\n0.400       0.920      -0.600            56\n0.450       0.910      -0.800            49\n0.476       0.905      -0.905            47\n0.490       0.902      -0.960           113\n0.500       0.900      -1.000         never\n"
-        }
-      ]
-    },
-    "optimization-intro-the-edge-of-stability-1": {
-      "code_fingerprint": "sha256:c3cdc84f3bdd0a669adeefe14545879df86d07ab76962610cbc62c7728913481",
-      "kind": "text",
-      "outputs": []
-    },
-    "optimization-intro-the-edge-of-stability-2": {
-      "code_fingerprint": "sha256:80827fcd68b92031724b506a86c07dcc6091599182a0c1ef925142ed7c453d13",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eta 0.4: sharpness 2.56 -> 5.01 (2/eta = 5), loss 0.225 -> 3.7e-04\neta 0.25: sharpness 2.56 -> 7.71 (2/eta = 8), loss 0.225 -> 2.6e-04\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "optimization-intro/optimization-intro-the-edge-of-stability-2-1.svg",
-          "bytes": 26318,
-          "sha256": "sha256:71c43b2fedb87dc0ed5a3156630a8e2a798ef562b0b84e85299138a0f8be4021"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:4955f17bb89521608304c076eecd1d029387013b89d7fe5ee4a0da65dc344a25",
+    "d2l_lib_fingerprint": "sha256:590c98d1b8fb0084e0ac45a78e63f23f5501fdc0c650ed40fb1059d923d8d8fa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,170 +13,134 @@
       "kind": "text",
       "outputs": []
     },
-    "sgd-stochastic-and-minibatch-gradient-descent-1": {
-      "code_fingerprint": "sha256:874b59743cca26bdea19d1e28cdef989ea8bbefe24c22fbae6f4eb49e01c1270",
-      "kind": "text",
-      "outputs": []
-    },
     "sgd-stochastic-gradient-updates-2": {
-      "code_fingerprint": "sha256:9452fc7bceb68216b896af3dd329b37600e486a6647c97242f784a7171085c83",
+      "code_fingerprint": "sha256:aee55fa518e507d6660d8416f778a909d8bb6d8f3216e47a5176fc81b43506cf",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-3": {
-      "code_fingerprint": "sha256:a2ab05d425ae9cae50a6bc97ff29fbd68893cb8da4fd6143c84927f8990d2baf",
+      "code_fingerprint": "sha256:1b735b5cca186e87050fb90e5317c7a4ee8794a917b0e253f0d9dfb6f95b353b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 300, x1: -0.411388, x2: 0.107592\n"
+          "text": "step 300, x1: -0.429937, x2: 0.088675\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 54178,
-          "sha256": "sha256:855a4aeb9c30c7e44c7e204af4c62bc7684de4b5e67d95876cafac085e45ab8f"
+          "bytes": 54289,
+          "sha256": "sha256:2da813ff66eab76f1c182ad0c344028a1411a6b09e535407ce3121844dc36a90"
         }
       ]
     },
     "sgd-the-noise-ball": {
-      "code_fingerprint": "sha256:b67bc54b4f72c332e1e2f62f31e494b5f66a5783d9e6ab71acdef2fe0f57b6c8",
+      "code_fingerprint": "sha256:69d4514e97f158bbaed68a6d3274a4652b6274a9b092e7a87e311e635bc75eb2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.1: measured [0.261  0.0153], predicted [0.2525 0.0156]\n"
+          "text": "eta=0.1: measured [0.2563 0.0153], predicted [0.2525 0.0156]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.05: measured [0.127 0.007], predicted [0.1256 0.0069]\n"
+          "text": "eta=0.05: measured [0.1252 0.0069], predicted [0.1256 0.0069]\n"
         }
       ]
     },
     "minibatch-sgd-reading-the-dataset": {
-      "code_fingerprint": "sha256:e69afc38a72b120ba2a48d3650da9f0a382fcc96f0945618a1d5214949a9cd6f",
+      "code_fingerprint": "sha256:e8919856f4fa11254da4b190e4409bdbb0dd975d470c010dabc597d1182b04a2",
       "kind": "text",
       "outputs": []
     },
-    "sgd-gradient-variance-and-batch-size-1": {
-      "code_fingerprint": "sha256:3a14b9488e488c1a8474406844d7113b7f45ef652eaee19089a177c4e0f5127d",
+    "sgd-where-the-model-stops-1": {
+      "code_fingerprint": "sha256:3e0816924712aba4a17b5228123c9123ae1ceb50ccb881b3e5981d33b4bfc93d",
       "kind": "text",
-      "outputs": []
-    },
-    "sgd-gradient-variance-and-batch-size": {
-      "code_fingerprint": "sha256:94aa9f6d41ddd6717515b7b61ad08a92e92ddf87a0b66de208eacb3f5a2a4e86",
-      "kind": "asset",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
-          "bytes": 30977,
-          "sha256": "sha256:dbd1ff2c2bc3ef87db882b01048710837311a804059389a3c419e0672ecd73e6"
+          "type": "stream",
+          "name": "stdout",
+          "text": "L = 2.10, tr Sigma = 3.24\n"
         }
       ]
     },
-    "sgd-batched-computation-1": {
-      "code_fingerprint": "sha256:5e31b23cf46c7bc7fcc51301c5c4869cb7e22949c1af4bac9addc33fc510c34b",
+    "sgd-where-the-model-stops-2": {
+      "code_fingerprint": "sha256:4460155485239286838f21846a6b1cb15a9e207c31708b2916ab318ae5d55972",
       "kind": "text",
       "outputs": []
     },
-    "sgd-batched-computation-2": {
-      "code_fingerprint": "sha256:f14cc84fca878e4db5c12f5b975ae403bac586b8bdba611b5b12de1f68853b59",
-      "kind": "asset",
+    "sgd-where-the-model-stops-3": {
+      "code_fingerprint": "sha256:312bfa93954cea95484d461e27fe7696efd3cbeeb0f3ce2c8a8874650cb537ff",
+      "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "sgd/sgd-batched-computation-2-1.svg",
-          "bytes": 34957,
-          "sha256": "sha256:f1870467440037b78af649658131eac6c61963a455f98cdd0be7ef05fa982d89"
+          "type": "stream",
+          "name": "stdout",
+          "text": "eta=0.05: excess loss 0.0043, predicted 0.0041\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eta=0.025: excess loss 0.0021, predicted 0.0020\n"
         }
       ]
     },
-    "minibatch-sgd-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:a44a089c9559b610909ef420c06f142b9e0e3a56c96b279ced542606a4626cbc",
+    "sgd-where-the-model-stops-4": {
+      "code_fingerprint": "sha256:cd46bd4bcf247409a3983c3ffd2a94f877dc857e17a22c44277036f573bffd51",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact fit, worst of 400 runs after 1, 5, 10, 20 epochs: 1e-03 4e-08 1e-13 2e-14\n"
+        }
+      ]
     },
-    "minibatch-sgd-vectorization-and-caches-2": {
-      "code_fingerprint": "sha256:6ab9d795733e23dc096b1ab40313889d91c425f124aa31724516bb88bc9fab47",
-      "kind": "text",
-      "outputs": []
-    },
-    "sgd-the-training-function-1": {
-      "code_fingerprint": "sha256:dc934d6fbb803c9c3f0db23f03ef91452d4412ac45abeb679cf8f4e7aaae40e4",
-      "kind": "text",
-      "outputs": []
-    },
-    "minibatch-sgd-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:8938315aa0357acdd7f1bb8d00ea7ff76c8d32433b45185028c2bf3d641565fe",
+    "sgd-the-training-function": {
+      "code_fingerprint": "sha256:1f654a464f40108e7945d2b6e22f8d6e9b33be1ff4231aa05a0f97fb2f896015",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:d67f140950341ca8e5e6650901749a7cf131e86900b741b81f7d910eb07e11e9",
+      "code_fingerprint": "sha256:a314f2dd74fc7ad5f68484d9f5a6ec1d96f4b4bed50063b7ca87016cc5016528",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.003 sec/epoch\n"
+          "text": "b=1500:    1 updates/epoch, 0.003 s/epoch (2.9 ms/update), last-epoch loss 0.242\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.248, 1.436 sec/epoch\n"
+          "text": "b=   1: 1500 updates/epoch, 0.873 s/epoch (0.6 ms/update), last-epoch loss 0.245\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.155 sec/epoch\n"
+          "text": "b=  10:  150 updates/epoch, 0.094 s/epoch (0.6 ms/update), last-epoch loss 0.246\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.252, 0.030 sec/epoch\n"
+          "text": "b= 100:   15 updates/epoch, 0.019 s/epoch (1.3 ms/update), last-epoch loss 0.249\n"
         }
       ]
     },
     "minibatch-sgd-implementation-from-scratch-7": {
-      "code_fingerprint": "sha256:c1647300f74b00e3efef82f27da0d30f9cf5a005384937378446f92427727784",
+      "code_fingerprint": "sha256:4ae0f5565e67b7282afb5de3d8c9d0a60dda99adbc8cd17b333d8e09769ad3a1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 51844,
-          "sha256": "sha256:456f92f67de112ef67143d1f494798c90ce3f17e5611e385c9b9e52fdff20f7b"
-        }
-      ]
-    },
-    "minibatch-sgd-concise-implementation-1": {
-      "code_fingerprint": "sha256:7c985ef5b4ea25ebc4ec451e537ab06f28cd9f627f22ba9804e27181b129e9ae",
-      "kind": "text",
-      "outputs": []
-    },
-    "minibatch-sgd-concise-implementation-2": {
-      "code_fingerprint": "sha256:eeceb2e1406103f82bdf62877e49d48cf65b30e9299520bde0cc6052acfba1f1",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "loss: 0.243, 0.155 sec/epoch\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "sgd/minibatch-sgd-concise-implementation-2-1.svg",
-          "bytes": 18789,
-          "sha256": "sha256:19b49803bfddb0747cd7a2579d89e2310c86b8bf8e1ce44030f2978b1acc83ac"
+          "bytes": 60904,
+          "sha256": "sha256:521ecc1d62138c8a507543b99fde89cb5c79ba7c83576b3dd05a013dd362a56a"
         }
       ]
     }

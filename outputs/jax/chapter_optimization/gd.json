@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:953b816d574d565cbadf18598f7e9ea3b3f9605498d9f93ebe954d2e523af45c",
+    "d2l_lib_fingerprint": "sha256:bc0bcbcc64a5cab7d368edea8cdcaf258e07f4b34d75fb7a950ca652507ca5bb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,186 +13,128 @@
       "kind": "text",
       "outputs": []
     },
-    "gd-one-dimensional-gradient-descent-2": {
-      "code_fingerprint": "sha256:e0b94651c278a494c7c57e19dd80f0ef8c271306e5eeb26fc9f7b09693549f93",
+    "gd-one-dimensional-gradient-descent-5": {
+      "code_fingerprint": "sha256:63fa2c35bc9cf782c1ef68b8b5ed46caeaa4b58dc7c3d2ac0c0ce6dc652b5066",
       "kind": "text",
       "outputs": []
     },
     "gd-one-dimensional-gradient-descent-3": {
-      "code_fingerprint": "sha256:5770db5e6c50a9274a23dd24a605a9c9a1e01470ce2c83a962fb73313ab64678",
+      "code_fingerprint": "sha256:9bfe33fc732ec845bc6ac0eb0fe9aae898cdf76c4c67b5c83b3b4595adf1c98e",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 10, x: 0.060466\n"
-        }
-      ]
+      "outputs": []
     },
-    "gd-one-dimensional-gradient-descent-4": {
-      "code_fingerprint": "sha256:74433952c9a4f2c81e72db1e2639028a681d256659f6205de033935504b4ff2e",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gd/gd-one-dimensional-gradient-descent-4-1.svg",
-          "bytes": 18525,
-          "sha256": "sha256:4f71364eb9d588ada5f87a9d50a3f544633ee77649c011e5d095073647beb5f6"
-        }
-      ]
-    },
-    "gd-learning-rate-1": {
-      "code_fingerprint": "sha256:66fd92337d9382aecaa0891e31832bbc7fcf46d8794d40c11333dbe37652ed03",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 10, x: 3.486784\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gd/gd-learning-rate-1-1.svg",
-          "bytes": 18515,
-          "sha256": "sha256:305486fe6f4cc517ebbf26c43477a24166f9140f65be1b4a8dafac6bd758ccd8"
-        }
-      ]
-    },
-    "gd-learning-rate-2": {
-      "code_fingerprint": "sha256:b9913fae1aba2914996458989ea111296a8539c80edb17970aa3c6e2163457e4",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 10, x: 61.917364\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gd/gd-learning-rate-2-1.svg",
-          "bytes": 18041,
-          "sha256": "sha256:e782f4aa204e45009780d053b2b04a403d39c7bf4d4417966243d081b61c3589"
-        }
-      ]
+    "gd-local-minima-1": {
+      "code_fingerprint": "sha256:dd84c9e44f07219f133b0199c08d5e6129f9ffa11237e2ec5553b4d4bcddbe5a",
+      "kind": "text",
+      "outputs": []
     },
     "gd-local-minima": {
-      "code_fingerprint": "sha256:3d0094a5e83ac8dd5d06de5953e11cc84b9e210e241b5e50f217b08b25fefedc",
+      "code_fingerprint": "sha256:93eb84ee6f95b2ae04e7a7705c00c1d48169af0e3d9762adb9dad2f8d4236240",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 10, x: 7.269388\nstep 10, x: -1.528165\n"
+          "text": "f''(7.27) = 1.81, f''(-1.83) = 0.98\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eta 0.5, 2/eta = 4: x = 7.269 after 10 steps, 7.269 after 100\neta 2, 2/eta = 1: x = -1.528 after 10 steps, -1.821 after 100\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
-          "bytes": 15052,
-          "sha256": "sha256:7bd6e416363a2561deaa926a4e17b5ad88e5fd2b7ea711a754e4330e91273bdb"
+          "bytes": 20738,
+          "sha256": "sha256:068a39df5cb4f56521ce46ed219c738328d987ef4b8969faa417ad130a597d00"
         }
       ]
     },
-    "gd-multivariate-gradient-descent-4": {
-      "code_fingerprint": "sha256:0c7968db60a5db1eb479c44eadb8c82879c65af06b0249a95c79103d97b22d10",
+    "optimization-intro-the-edge-of-stability-1": {
+      "code_fingerprint": "sha256:83c4d7cb43123989ef74001bcc5a9bb21a9e2f93ea775336f7aa59bea71df72b",
       "kind": "text",
       "outputs": []
     },
-    "gd-multivariate-gradient-descent-1": {
-      "code_fingerprint": "sha256:8cdf223c756e39082696b44660ac710253eba8cee624b4c3b83cb160bee63354",
-      "kind": "text",
-      "outputs": []
-    },
-    "gd-multivariate-gradient-descent-3": {
-      "code_fingerprint": "sha256:e3b03fc5813e02bce7b72b5b336c91b0223f099cc4a076988be43498e2025d14",
+    "optimization-intro-the-edge-of-stability-2": {
+      "code_fingerprint": "sha256:01f6e1277db97965b23bbf673d4315b59fe3e84eb8bfc7a7c450527fb5cfbe59",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 30, x1: -0.295265, x2: -0.002476\n"
+          "text": "      start      |    eta 0.4, 2/eta = 5     |    eta 0.25, 2/eta = 8     \nsharpness   loss | sharpness    loss  rising | sharpness    loss  rising \n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     3.62  0.612 |      5.01 4.1e-04    50% |      8.02 3.0e-04    50% \n     2.69  0.563 |      5.01 5.6e-04    50% |      7.91 1.3e-04     0% \n     5.81  1.090 |      5.00 3.4e-04    50% |      8.00 4.2e-04    49% \n     2.79  0.356 |      5.00 2.7e-04    50% |      7.99 1.9e-04    50% \n     3.23  2.364 |      5.01 1.2e-04    50% |      7.94 4.8e-05     0% \n     3.44  1.119 |      5.00 3.3e-04    50% |      7.81 1.2e-04     0% \n     4.07  1.849 |      4.99 3.4e-04    50% |      7.97 2.9e-04    50% \n     3.78  1.455 |      5.00 5.0e-04    50% |      7.97 2.2e-04    50% \n     2.92  0.274 |      4.99 4.7e-04    50% |      7.99 1.1e-04    50% \n     3.23  1.543 |      5.01 5.0e-05    50% |      7.96 8.6e-05     0% \n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "gd/gd-multivariate-gradient-descent-3-1.svg",
-          "bytes": 19265,
-          "sha256": "sha256:3bdcdfd383ac88f2d19bc71d9f21a4bf9caa4bf2fdec2e659698325726055092"
+          "asset": "gd/optimization-intro-the-edge-of-stability-2-1.svg",
+          "bytes": 30838,
+          "sha256": "sha256:104a754a212c449f62393155044f42df61f6af3a10179f6c9ca62f15acd0fd9a"
         }
       ]
     },
+    "gd-multivariate-gradient-descent-4": {
+      "code_fingerprint": "sha256:a18e5a286c922bb6079484707da6e83b3747cf2208bfcbf0ac2775d786654a08",
+      "kind": "text",
+      "outputs": []
+    },
     "gd-newton-s-method-1": {
-      "code_fingerprint": "sha256:fea6454dff23d1f5b0891b56f305ad697f14d6fc97c1285bfbc52f5ecc4e0465",
+      "code_fingerprint": "sha256:b00f468c268216d4d1be280d8eeb02a0bf33c613b96a9f820ba617ac75441648",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 10, x: 0.000000\n"
+          "text": "x_t: 10 8 6 4 2.1 0.53 0.012 1.4e-07 0 0 0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-1-1.svg",
           "bytes": 16562,
-          "sha256": "sha256:7dd42adf698462fbf32e2a224bcefa27f58559e5521c62aaef4f8b44e15b0fc6"
+          "sha256": "sha256:a840903f1e396651db934f3d0e6ec697fb105902dadf7814a39ddf0a9a26f8ae"
         }
       ]
     },
     "gd-newton-s-method-2": {
-      "code_fingerprint": "sha256:18fcece6edb3ec0d8e0fb420bf8f56e832eabc309056d1ced71b3d8cf3528a0b",
+      "code_fingerprint": "sha256:e6597ab527141b7a4527be6e968f61e3e407f8515066fd8ef354f13e08442667",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 10, x: 26.834133\n"
+          "text": "x_t: 10 5 24.99 27.78 26.8 26.83 26.83 26.83 26.83 26.83 26.83\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-2-1.svg",
           "bytes": 16848,
-          "sha256": "sha256:2395d176704ef2bc4d2ffe4bd67d11ddc39f26d0f50d0e5e95a397f4536f0258"
-        }
-      ]
-    },
-    "gd-newton-s-method-3": {
-      "code_fingerprint": "sha256:9450b03d44070a4c31401bc5fe9d4bf49c5cd4138098c4f3f50b5c45e9561d9f",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 10, x: 7.269860\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gd/gd-newton-s-method-3-1.svg",
-          "bytes": 15062,
-          "sha256": "sha256:011b92a064b448d15b979a1d3d3000e8bc203b0647e78522c7b1e8fb2e3fcc1b"
+          "sha256": "sha256:b0d0575434f6097c11fa35c2891e838c2395c734353d2aad1d22eb472d62741c"
         }
       ]
     },
     "gd-preconditioning": {
-      "code_fingerprint": "sha256:17ea16ece496f9efb68c68ed5009cced59c68bb9b739ba0302d5a3028c1413ad",
+      "code_fingerprint": "sha256:cf07d22ef8c2eac76b3c4c3f712e2cfe08b7ee87b12f2ed9c956176c0668fe34",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 10, x1: -0.004883, x2: -0.001953\n"
+          "text": "step 100, x1: -0.000225, x2: -0.000090\nstep 10, x1: -0.004883, x2: -0.001953\nsteps to 1%: plain at its best rate 47, preconditioned 7\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-preconditioning-1.svg",
           "bytes": 16677,
-          "sha256": "sha256:13a25274f48a113dda1cee49ef3d5ef76ef02b4d4b50c4e11c1f1f7c76abec4b"
+          "sha256": "sha256:d8f0cb1d2ced42ab3620b5b7ccfa949003e4d3b6a3fbe793175c9ab26bdb2361"
         }
       ]
     }

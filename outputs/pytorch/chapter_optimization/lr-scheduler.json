@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:70bd6366c922dfffb715fc776aa69f0e582849c9f454633f5ad130346e12ee20",
+    "d2l_lib_fingerprint": "sha256:6a8c2d15ee5ba9b9588717f2dc1aa3a45de58b61d9c0263ac7ff5001a721e058",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,275 +14,137 @@
       "outputs": []
     },
     "lr-scheduler-schedules-1": {
-      "code_fingerprint": "sha256:99a08246570621ec759e5fc68c95b43e1accd7f57287e66cc2fd8fe22515efc2",
+      "code_fingerprint": "sha256:3aeed6603ef091d04b78bdf43c22ba62716f147893b6b2db679c65fd5ec95392",
       "kind": "text",
       "outputs": []
     },
     "lr-scheduler-four-schedules-on-the-valley": {
-      "code_fingerprint": "sha256:97a12be93c1f739d499583373764d87ac6d35c1191575c42709c37c6e45bc934",
+      "code_fingerprint": "sha256:fc07208bdb5a66d0b252a7eb0cdca4d4e85b91a4c199649b9246f312a4b7104f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant        budget  300.0, final rate 0.1, mean squared distance 0.263\n"
+          "text": "constant        budget  300.0, final rate 0.1, mean squared distance 0.264\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exponential     budget   20.0, final rate 1.9e-27, mean squared distance 0.128\n"
+          "text": "exponential     budget   20.0, final rate 1.9e-27, mean squared distance 0.134\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "polynomial 1/2  budget  200.2, final rate 0.036, mean squared distance 0.104\n"
+          "text": "polynomial 1/2  budget  200.2, final rate 0.036, mean squared distance 0.088\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "polynomial 1    budget   48.2, final rate 0.0033, mean squared distance 0.012\n"
+          "text": "polynomial 1    budget   48.2, final rate 0.0033, mean squared distance 0.011\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-four-schedules-on-the-valley-1.svg",
-          "bytes": 96694,
-          "sha256": "sha256:0bbdce9c43f39e0713e5a02f6ec0611d690392270028d03bb4ac8d995849da24"
+          "bytes": 97877,
+          "sha256": "sha256:8ac87a4281008fbf8ec4c0f68247f0a47c66d6a923fe401a830feb82fe6b23a0"
         }
       ]
     },
-    "lr-scheduler-a-testbed-2": {
-      "code_fingerprint": "sha256:63de696232501caea14fe0e427b951b19596369234d0bea6a6646d40230e46ce",
+    "lr-scheduler-language-model-1": {
+      "code_fingerprint": "sha256:8cb9def51fd445bf5560d42d7acdd52f814e45f27e116ad8aac19d3f59877a14",
       "kind": "text",
       "outputs": []
     },
-    "lr-scheduler-a-testbed-5": {
-      "code_fingerprint": "sha256:f781d2b130f0c8050fcee92051976e4f63082645baaeb172128a9d11e6cf7917",
+    "lr-scheduler-language-model-2": {
+      "code_fingerprint": "sha256:bf5d8671363c6a6dfcd8b23c78a4845156df540269d83f028b0a39eb7fbc6d05",
       "kind": "text",
       "outputs": []
     },
-    "lr-scheduler-a-testbed-4": {
-      "code_fingerprint": "sha256:10fc72cb868acf862b02b5680cc9a80ec1387b414d29e5990c3ed0d97bb3f5d8",
-      "kind": "text",
-      "outputs": []
-    },
-    "lr-scheduler-a-testbed-3": {
-      "code_fingerprint": "sha256:c5e109c5be7ad682e60441e6df0a9eb216ef5a802037418e6825d813c172b4c2",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-a-testbed-3-1.svg",
-          "bytes": 38861,
-          "sha256": "sha256:46833596f36d0361683467fe54fb8e98502c8a5a3f7d647346c4c1a85ebca8e3"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.055, test loss 0.432, test accuracy 0.890\n"
-        }
-      ]
-    },
-    "lr-scheduler-four-decay-shapes-1": {
-      "code_fingerprint": "sha256:d0d98c9e44d174351d8f88241fea3e68b5a8c7206ebfdfac6f84086d35f5a37a",
-      "kind": "text",
-      "outputs": []
-    },
-    "lr-scheduler-four-decay-shapes-2": {
-      "code_fingerprint": "sha256:51cc47cf28e799b0ac176a6dd0a83a96157bcc3e00bc641385e03e2d24b9ee64",
+    "lr-scheduler-decay-on-a-language-model-1": {
+      "code_fingerprint": "sha256:255a723ca944dae25c659d138122a4aedb2f94917d693e6212b648f5286c5c63",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant     budget  9.00, final rate 0.300\nsquare root  budget  2.75, final rate 0.054\nexponential  budget  2.74, final rate 0.013\npiecewise    budget  4.82, final rate 0.003\ncosine       budget  4.66, final rate 0.010\n"
+          "text": "schedule             budget  validation loss at step 1500, 2000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "constant               6.00   1.604 1.610    1.565 1.564\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine                 3.00   1.570 1.586    1.545 1.561\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stable, then decay     5.40   1.604 1.610    1.503 1.510\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-four-decay-shapes-2-1.svg",
-          "bytes": 31161,
-          "sha256": "sha256:254a941cb4d2b2c88d66fe9c21c9058ef5e36b61443e2fc1e1ae66baadbc085b"
+          "asset": "lr-scheduler/lr-scheduler-decay-on-a-language-model-1-1.svg",
+          "bytes": 33368,
+          "sha256": "sha256:cd4b0b57fd746c60b65558e981725ec1ad97c9de5c5317d531e3cba89a5edd63"
         }
       ]
     },
-    "lr-scheduler-decay-schedules-compared-1": {
-      "code_fingerprint": "sha256:51b12fb254a93f213b00cd1b29342e642da2c882e5cec7a6febec934fedde8a4",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "square root: "
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.090, test loss 0.323, test accuracy 0.897\nexponential: "
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.082, test loss 0.289, test accuracy 0.908\npiecewise: "
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.066, test loss 0.284, test accuracy 0.911\ncosine: "
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.062, test loss 0.310, test accuracy 0.907\n"
-        }
-      ]
-    },
-    "lr-scheduler-decay-schedules-compared-2": {
-      "code_fingerprint": "sha256:f5f30ee0f95e66c1b01d9a2262d67c4cc03979047e1758515332c6a172a5438a",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "test accuracy over the last 5 epochs: mean, std\nconstant     0.891 0.008\nsquare root  0.898 0.003\nexponential  0.910 0.001\npiecewise    0.912 0.000\ncosine       0.907 0.000\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-decay-schedules-compared-2-1.svg",
-          "bytes": 30566,
-          "sha256": "sha256:eca3e047adf001668258f85485a66c96eb1b4c5f25a1487fe579f9c1b883a6c5"
-        }
-      ]
-    },
-    "lr-scheduler-warmup-1": {
-      "code_fingerprint": "sha256:9c15d35ea76dbb7feb8ba30393cdf1a9585ec8bf60a241c7c0d48ec533648777",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-warmup-1-1.svg",
-          "bytes": 34010,
-          "sha256": "sha256:dd0ba8532eeb8c2834877180707454cf2492fd9c85dbf4e39fdf7d18d0ff8a77"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 2.313, test loss 2.357, test accuracy 0.100\n"
-        }
-      ]
-    },
-    "lr-scheduler-warmup-2": {
-      "code_fingerprint": "sha256:f6af3ec3bb8bc08d9b941ddfbadfc141ab43241ff84c70d84efb4c989b8f2534",
+    "lr-scheduler-cold-and-ramped-1": {
+      "code_fingerprint": "sha256:c214d8e13bfd6287b090a8ee84c1ed19ac4d058e47042d93828ee9098cee1feb",
       "kind": "text",
       "outputs": []
     },
-    "lr-scheduler-warmup-3": {
-      "code_fingerprint": "sha256:5eec89b54bbe5e0c2d295cb7fc15795b0f4eea2620799f94a3460c4c2e9ae2c7",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-warmup-3-1.svg",
-          "bytes": 31291,
-          "sha256": "sha256:d36ea2d2b4fd14a730ded28e9c0210c26004c6bcbfbc270569e38c5c84c4f1d8"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.190, test loss 0.391, test accuracy 0.868\n"
-        }
-      ]
-    },
-    "lr-scheduler-warmup-5": {
-      "code_fingerprint": "sha256:82a877f5dd3605f2ff6a5c10f03271ec1a63d960e8915a31fcf1928b3bb9b25d",
+    "lr-scheduler-cold-and-ramped-2": {
+      "code_fingerprint": "sha256:43913967febaefbc8d4578d9439f1588d90dfe86f033465b1eed68974d8821a0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.059, test loss 0.304, test accuracy 0.908\n"
+          "text": "step size / weight size at steps 1, 5, 20, 100; final loss\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cold start     0.67 0.14 0.02 0.01   training 2.801, validation 2.791\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "20-step ramp   0.03 0.10 0.06 0.01   training 1.978, validation 1.901\n"
         }
       ]
     },
-    "lr-scheduler-warmup-stable-decay-1": {
-      "code_fingerprint": "sha256:df1f4ce12d9208f10d02124b0cdb4f903bb5b117c7394884ac1a37678422a0a2",
+    "lr-scheduler-branching-1": {
+      "code_fingerprint": "sha256:65b93443fc1dc7945ea4a719c0dca5e635c6d46c7b3a287826e86fbc84cb21e3",
       "kind": "text",
       "outputs": []
     },
-    "lr-scheduler-warmup-stable-decay-2": {
-      "code_fingerprint": "sha256:3b396ba1923461230775167c1998b65c3d65c95374b498dcb4e892b25f7647a4",
+    "lr-scheduler-branching-2": {
+      "code_fingerprint": "sha256:5dc37026457c0535774e92c4e7519cd95c93d0147ce3ac74068a36b0ec98453a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.032, test loss 0.344, test accuracy 0.911\n"
+          "text": "step  plateau  branch\n 750    1.759   1.730\n1250    1.644   1.585\n1750    1.578   1.524\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "planned run of 1250 steps: 1.585\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-warmup-stable-decay-2-1.svg",
-          "bytes": 28416,
-          "sha256": "sha256:e61668f44856fa0fdd43449c21d1a707b517f7aede8ee72b51d0efe458c0ae9a"
-        }
-      ]
-    },
-    "lr-scheduler-branching-off-the-plateau-1": {
-      "code_fingerprint": "sha256:28e27b4fc1ad41a566656ed04cb7cdf35cbf4b0cb1c6dcd70a3193bff46135ec",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.089, test loss 1.064, test accuracy 0.819\n"
-        }
-      ]
-    },
-    "lr-scheduler-branching-off-the-plateau-2": {
-      "code_fingerprint": "sha256:80d003dcb4d82863b7d3c9da9432377833ec9ee78aaa3888b2d62e74a6636e90",
-      "kind": "text",
-      "outputs": []
-    },
-    "lr-scheduler-branching-off-the-plateau-3": {
-      "code_fingerprint": "sha256:af567cb8550161c6bff22cc835e782f4bbab60e2e5de45d12883142414c9e91d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "branch: "
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.027, test loss 0.369, test accuracy 0.907\nplateau: "
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.060, test loss 0.578, test accuracy 0.852\n"
-        }
-      ]
-    },
-    "lr-scheduler-branching-off-the-plateau-4": {
-      "code_fingerprint": "sha256:30636a04ef7f586021ccdfba07f6851e97e9eed20e69d12e8473ca47f4193d3e",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "test accuracy, epochs 25 to 30\nplateau      0.847 0.893 0.877 0.893 0.890 0.852\nbranch       0.891 0.904 0.901 0.900 0.906 0.907\nplanned WSD  0.881 0.907 0.904 0.909 0.910 0.911\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-branching-off-the-plateau-4-1.svg",
-          "bytes": 28819,
-          "sha256": "sha256:d35c37fe783f63ad6942223942cd1209357f28e30f19caa313fdc989031e4a1e"
+          "asset": "lr-scheduler/lr-scheduler-branching-2-1.svg",
+          "bytes": 23908,
+          "sha256": "sha256:f764359429e2886825135771af4d3879483cacc1a8c8d2a03c165ceb42f48fd0"
         }
       ]
     }

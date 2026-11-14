@@ -393,7 +393,7 @@ $\lambda$ can be set from $B$, $D$, and the model size rather than tuned
 again. The horizon also explains why $\eta$ and $\lambda$ act on the
 equilibrium through their product.
 
-<!-- WRITER: NEW experiment (worklist 7.3), the timescale of decay; this subsection becomes "The Timescale of Decay" and keeps :label:`subsec_wd-at-scale`. The cell trains TinyLM with AdamW at eta = 3e-3 for 2,000 steps with lambda in {0, 0.1, 0.5, 1}, decaying every parameter as in the three-run comparison, two runs per lambda (two seeds, shared across lambda), and prints per lambda the RMS of the weight matrices (mean of the two runs) at steps 0, 250, ..., 2,000, the predicted equilibrium sqrt(eta / (2 lambda)), and the validation loss of each run; then plots the RMS curves. Timescales 1/(eta lambda): infinite, 3,333, 667 and 333 steps.
+<!-- WRITER: NEW experiment (worklist 7.3), the timescale of decay; this subsection becomes "The Timescale of Decay" and keeps :label:`subsec_wd-at-scale`. The cell trains TinyLM with AdamW at eta = 3e-3 for 2,000 steps with lambda in {0, 0.1, 0.5, 1}, decaying every parameter as in the three-run comparison, two runs per lambda (two seeds, shared across lambda), and prints per lambda the RMS of the weight matrices (mean of the two runs) at steps 0, 250, ..., 2,000, the predicted equilibrium sqrt(eta / (2 lambda)), the measured RMS at step 2,000 divided by it ("ratio"), and the validation loss of each run; then plots the RMS curves. Timescales 1/(eta lambda): infinite, 3,333, 667 and 333 steps.
 Prediction (the two-line equilibrium of Exercise 9 in the body): with the update u_t orthogonal to x_t, ||x_{t+1}||^2 = (1 - eta lambda)^2 ||x_t||^2 + eta^2 ||u_t||^2, so the norm settles where 2 eta lambda ||x||^2 = eta^2 ||u||^2, an RMS per entry of sqrt(eta / (2 lambda)) * RMS(u). Which u: over many steps the momentum average m_hat passes every gradient on in full, so the steps add up like the normalized gradients g / sqrt(v_hat), whose RMS is about 1 because v_hat estimates E[g^2] (measured in PyTorch at step 2,000: 0.82 to 1.13 over six runs), not like Adam's one-step update m_hat / sqrt(v_hat), whose RMS is only 0.16 to 0.23 (the value the gradient-scale cell of :numref:`sec_adam` prints, about 0.2; with it the prediction would be five times too small). Hence the printed prediction sqrt(eta / (2 lambda)): 0.122, 0.055, 0.039.
 Measured (development runs, three PyTorch seeds at 0 / 0.1 / 0.5, two PyTorch seeds at 0.5 / 1 / 2, two JAX seeds at 0 / 0.1 / 0.5 / 1, plus the notebook runs; seed-to-seed differences of the RMS at any checkpoint at most 0.002):
 - initialization 0.0447 in every run.
@@ -419,9 +419,12 @@ for wd in [0, 0.1, 0.5, 1]:
     table[wd] = [sum(rms) / len(rms) for rms in zip(*(r[1] for r in runs))]
     val = [math.log(d2l.lm_perplexity(r[2], data.val_dataloader()))
            for r in runs]
-    pred = math.sqrt(lr / (2 * wd)) if wd else math.nan  # Equilibrium RMS
-    print(f'{wd:<5g}' + ''.join(f'{v:6.3f}' for v in table[wd])
-          + f'{pred:10.3f}{table[wd][-1] / pred:7.2f}  '  # Measured / predicted
+    if wd:  # The equilibrium RMS, and the measured RMS divided by it
+        pred = math.sqrt(lr / (2 * wd))
+        cols = f'{pred:10.3f}{table[wd][-1] / pred:7.2f}'
+    else:
+        cols = f'{"-":>10}{"-":>7}'
+    print(f'{wd:<5g}' + ''.join(f'{v:6.3f}' for v in table[wd]) + cols + '  '
           + ' '.join(f'{v:.3f}' for v in val))
 d2l.plot(list(range(0, num_steps + 1, every)), list(table.values()), 'step',
          'RMS of the weight matrices', legend=[f'λ = {wd:g}' for wd in table])
@@ -440,9 +443,12 @@ for wd in [0, 0.1, 0.5, 1]:
     table[wd] = [sum(rms) / len(rms) for rms in zip(*(r[1] for r in runs))]
     val = [math.log(d2l.lm_perplexity(r[2], data.val_dataloader()))
            for r in runs]
-    pred = math.sqrt(lr / (2 * wd)) if wd else math.nan  # Equilibrium RMS
-    print(f'{wd:<5g}' + ''.join(f'{v:6.3f}' for v in table[wd])
-          + f'{pred:10.3f}{table[wd][-1] / pred:7.2f}  '  # Measured / predicted
+    if wd:  # The equilibrium RMS, and the measured RMS divided by it
+        pred = math.sqrt(lr / (2 * wd))
+        cols = f'{pred:10.3f}{table[wd][-1] / pred:7.2f}'
+    else:
+        cols = f'{"-":>10}{"-":>7}'
+    print(f'{wd:<5g}' + ''.join(f'{v:6.3f}' for v in table[wd]) + cols + '  '
           + ' '.join(f'{v:.3f}' for v in val))
 d2l.plot(list(range(0, num_steps + 1, every)), list(table.values()), 'step',
          'RMS of the weight matrices', legend=[f'λ = {wd:g}' for wd in table])

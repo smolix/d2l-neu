@@ -73,13 +73,15 @@ section restates the few it needs.
 | $N$ | number of candidates in a contrastive batch | |
 
 We use the following imports throughout the section.
+<!-- WRITER: the imports cell is now the canonical preamble in all four tabs, which the book hides; this sentence introduces a cell the reader does not see. -->
 
 ```{.python .input #information-theory-imports}
 #@tab mxnet
 import math
 import numpy as np
-from mxnet import autograd, npx
-from mxnet import np as mnp
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -88,6 +90,9 @@ npx.set_np()
 import math
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #information-theory-imports}
@@ -95,6 +100,7 @@ import torch
 import math
 import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #information-theory-imports}
@@ -103,7 +109,9 @@ import math
 import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## Information and Entropy
@@ -148,15 +156,8 @@ deck, needs $\ln 52!$. We compute it through the log-gamma function, $\ln 52! =
 \ln \Gamma(53)$, without ever forming the 68-digit number $52!$.
 
 ```{.python .input #information-theory-self-information}
-def self_information(p):
-    """Self-information -log p = log(1/p), in nats."""
-    return math.log(1 / p)
-
-reports = {'a card': 1.0, 'a heart': 1 / 4, 'the three of spades': 1 / 52}
-for name, p in reports.items():
-    print(f'{name:22s} {self_information(p):7.3f} nats')
 deck_order = math.lgamma(53)          # ln 52! without forming 52!
-print(f'{"the order of the deck":22s} {deck_order:7.2f} nats '
+print(f'the order of the deck: {deck_order:.2f} nats '
       f'= {deck_order / math.log(2):.1f} bits')
 ```
 
@@ -482,243 +483,11 @@ the other pair.
 ![The decomposition :eqref:`eq_mdl-ce_decomp` for the dyadic source $P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$ and the uniform model $U$, in bits. Asking the questions adapted to $P$ takes $H_2(P) = 1.75$ questions on average, asking two fixed questions takes $\textrm{CE}_2(P, U) = 2.0$, and the waste is $D_{\textrm{KL}}(P\|U) = 0.25$ bits.](../img/mdl-it-code-length-bars.svg)
 :label:`fig_mdl-code-length-bars`
 
-The cell below evaluates all three quantities for both examples, the pair in
-nats and the dyadic source against the uniform model in bits.
-
-```{.python .input #information-theory-kl-categorical}
-ce_pq = float(-np.dot(p, np.log(q)))
-print(f'CE(P,Q) = {ce_pq:.4f}, H(P) = {entropy(p):.4f}, '
-      f'CE - H = {ce_pq - entropy(p):.4f}')
-u = np.full(4, 1 / 4)
-bits = math.log(2)
-h_bits = entropy(p_dyadic) / bits
-kl_bits = kl_divergence(p_dyadic, u) / bits
-ce_bits = float(-np.dot(p_dyadic, np.log2(u)))
-print(f'dyadic vs uniform, in bits: H = {h_bits:.2f}, KL = {kl_bits:.2f}, '
-      f'CE = {ce_bits:.2f}')
-```
-
-The first line is the arithmetic above to four digits, and the second is
-:numref:`fig_mdl-code-length-bars` in numbers.
-
 For discrete data, the average negative log-likelihood of a model
 $q_{\boldsymbol\theta}$ is the cross-entropy from the empirical distribution
 $\hat p_{\textrm{data}}$ to the model (:numref:`subsec_mdl-nll-crossentropy`),
 so maximum likelihood minimizes $D_{\textrm{KL}}(\hat
 p_{\textrm{data}}\|q_{\boldsymbol\theta})$.
-
-### Differential Entropy
-:label:`subsec_mdl-differential-entropy`
-
-For a continuous random variable $X$ with density $p$, the sum in the entropy
-becomes an integral. The result is called the *differential entropy*,
-
-$$
-h(X) = -\int p(x) \log p(x) \,dx.
-$$
-:eqlabel:`eq_mdl-diff-ent-def`
-
-It is the average surprise of a density value, and density values are not
-probabilities: they carry the units of $1/x$, and they can exceed one. We
-write a lowercase $h$ to keep it apart from the discrete $H$, because the two
-behave differently.
-
-The smallest case shows how. The uniform density on $[0, a]$ equals $1/a$
-there, so $h = -\int_0^a \tfrac1a \log \tfrac1a \,dx = \log a$. For
-$a = \tfrac12$ this is $-\ln 2 \approx -0.693$ nats, a negative entropy, which
-no discrete distribution can have. Measuring the same variable in centimetres
-instead of metres multiplies $a$ by $100$ and adds $\ln 100 \approx 4.61$
-nats, although the uncertainty has not changed.
-
-A shift of this kind occurs under any smooth change of variables. If $y = g(x)$
-is invertible with Jacobian $\partial g/\partial x$, the density of $Y$ at
-$g(x)$ is $p_X(x)/|\det \partial g/\partial x|$, and so
-
-$$
-h(Y) = h(X) + \mathbb{E}\big[\log\lvert\det \partial g/\partial x\rvert\big].
-$$
-
-Stretching a variable raises its differential entropy, and squeezing it lowers
-the entropy without limit. A Gaussian with standard deviation $\sigma$ has $h =
-\tfrac12 \log(2\pi e \sigma^2)$, as we compute in
-:numref:`subsec_mdl-gaussian-max-entropy`, which is negative once $\sigma <
-(2\pi e)^{-1/2} \approx 0.24$.
-
-The KL divergence does not share this defect. Transport a model density $q$
-along with the data: both densities are divided by the same factor, which
-cancels in the ratio $p/q$, so the KL divergence does not change. For two
-uniform densities $p_1$ on $[0, a_1]$ and $p_2$ on $[0, a_2]$ with $a_1 \le
-a_2$, for instance, it is $\int p_1 \log(p_1/p_2)\,dx = \log(a_2/a_1)$, which
-for $a_1 = \tfrac12$ and $a_2 = 1$ is $\ln 2 \approx 0.693$ nats in metres and
-in centimetres alike. The cross-entropy $-\mathbb{E}_P[\log q]$, on which a
-continuous model is trained, shifts by the same constant as $h$. The constant
-does not depend on the model, so the gradients and the minimizer of the
-cross-entropy are unchanged. When $h(p)$ is finite, the decomposition
-:eqref:`eq_mdl-ce_decomp` holds with $h$ in place of $H$, and maximum
-likelihood for densities minimizes $D_{\textrm{KL}}(p\|q_{\boldsymbol\theta})$
-at the population level.
-
-Differential entropy is not the limit of discrete entropy. Divide the line
-into cells of width $\Delta$, and let $X_\Delta$ record which cell contains
-$X$. Then $P(X_\Delta = i) \approx p(x_i) \Delta$ for a point $x_i$ in cell
-$i$, and
-
-$$
-H(X_\Delta) + \log \Delta \to h(X) \quad \textrm{as } \Delta \to 0
-$$
-
-for densities regular enough that the sums converge to the integrals (for
-example, when $p$ is continuous and $p$ and $p \log p$ are Riemann-integrable).
-The discrete entropy itself grows like $\log(1/\Delta)$, since a finer grid
-takes more questions, and $h$ is what remains after that growth is subtracted.
-For the uniform density on $[0, 1]$ with $\Delta = \tfrac18$, the eight cells
-are equally likely, $H_2(X_\Delta) = 3$ bits and $\log_2 \Delta = -3$, which
-sum to $0 = h$. Exercise :exref:`ex_mdl-information-theory-quantized-entropy`
-proves the limit and checks it on a Gaussian.
-
-### KL Divergence Between Gaussians
-
-Gaussians are the continuous distributions we meet most often, and
-comparing two of them is a common task. A variational autoencoder, for
-instance, penalizes the KL divergence between the Gaussian distribution of
-its code and a standard normal prior. For two univariate Gaussians the KL
-divergence has a closed form. For
-$P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$,
-
-$$
-D_{\textrm{KL}}\!\left(\mathcal{N}(\mu_1,\sigma_1^2) \,\big\|\, \mathcal{N}(\mu_2,\sigma_2^2)\right)
-= \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac{1}{2}.
-$$
-:eqlabel:`eq_mdl-gaussian_kl`
-
-The divergence is a log ratio of standard deviations plus the variance and the
-squared mean gap of $P$, both measured in units of the model's variance. It is
-non-negative and zero only when $\mu_1 = \mu_2$ and $\sigma_1 = \sigma_2$, as
-Gibbs' inequality requires. It is not symmetric, because $\sigma_1$ and
-$\sigma_2$ enter differently. Exercise
-:exref:`ex_mdl-information-theory-gaussian-kl` derives the formula from the
-definition.
-
-The smallest case is a unit mean shift with equal variances, $P =
-\mathcal{N}(0, 1)$ and $Q = \mathcal{N}(1, 1)$, where the formula gives
-$(\mu_1 - \mu_2)^2/(2\sigma^2) = \tfrac12$ nat. The definition suggests a
-second way to compute it: draw samples from $P$ and average $\log p(x) - \log
-q(x)$. Such sample averages are how a KL divergence is estimated when no
-closed form exists (:numref:`sec_mdl-mi-estimation`), so their accuracy is
-worth seeing once. The next cell defines the closed form and the Monte Carlo
-estimate.
-
-```{.python .input #information-theory-example-1}
-def gaussian_kl(mu1, sigma1, mu2, sigma2):
-    """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
-    return (math.log(sigma2 / sigma1)
-            + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
-            - 0.5)
-
-def gaussian_log_pdf(x, mu, sigma):
-    """Log-density of N(mu, sigma^2) at x."""
-    return (-0.5 * math.log(2 * math.pi * sigma ** 2)
-            - (x - mu) ** 2 / (2 * sigma ** 2))
-
-def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
-    """Monte Carlo estimate of the same KL from n samples x ~ P."""
-    x = np.random.default_rng().normal(loc=mu1, scale=sigma1, size=n)
-    return float((gaussian_log_pdf(x, mu1, sigma1)
-                  - gaussian_log_pdf(x, mu2, sigma2)).mean())
-```
-
-We run both on the unit mean shift. How far from $\tfrac12$ should an average
-of $2 \cdot 10^5$ samples land?
-
-```{.python .input #information-theory-example-2}
-closed_form = gaussian_kl(0.0, 1.0, 1.0, 1.0)
-monte_carlo = mc_kl(0.0, 1.0, 1.0, 1.0)
-
-closed_form, monte_carlo
-```
-
-For this pair $\log p(x) - \log q(x) = \tfrac12 - x$ has variance one, so the
-average of $2 \cdot 10^5$ samples has standard error $0.0022$. The estimate
-usually falls within about $\pm 0.005$ (two standard errors) of $\tfrac12$ and
-almost never beyond $\pm 0.01$.
-
-Now let the variances differ: $P = \mathcal{N}(0,1)$ and $Q =
-\mathcal{N}(0,4)$, so $\sigma_2 = 2$. Which direction gives the larger
-divergence?
-
-```{.python .input #information-theory-example-3}
-kl_pq = gaussian_kl(0.0, 1.0, 0.0, 2.0)
-kl_qp = gaussian_kl(0.0, 2.0, 0.0, 1.0)
-
-kl_pq, kl_qp
-```
-
-The formula gives $D_{\textrm{KL}}(P\|Q) = \ln 2 + \tfrac18 - \tfrac12 \approx
-0.318$ and $D_{\textrm{KL}}(Q\|P) = -\ln 2 + 2 - \tfrac12 \approx 0.807$ nats,
-a factor of $2.5$ apart. :numref:`fig_mdl-kl-integrand` shows where each number
-comes from. In both directions the integrand changes sign at $|x| = (8 \ln
-2/3)^{1/2} \approx 1.36$, where the two densities cross. In panel (a) the wide
-model explains narrow data. It is too surprised in the core $|x| < 1.36$, which
-contributes $+0.424$, and less surprised than the truth in the tails, which
-contribute $-0.106$. In panel (b) the narrow model has to explain wide data.
-The core contributes $-0.240$, and the tails, where the narrow model gives
-almost no probability to outcomes that occur, contribute $+1.046$. What this
-asymmetry does to a model that is fitted in one direction or the other is the
-subject of :numref:`sec_mdl-fwd-vs-rev-kl`.
-
-![Where the KL divergence between $\mathcal{N}(0,1)$ and $\mathcal{N}(0,4)$ comes from. (a) The narrow distribution coded with the wide model: a positive core and slightly negative tails sum to $0.318$ nats. (b) The wide distribution coded with the narrow model: the tails, where the narrow model assigns almost no probability, contribute $1.05$ nats against a core of $-0.24$, for a total of $0.807$. The sign changes at $|x| = 1.36$ in both directions.](../img/mdl-it-kl-integrand.svg)
-:label:`fig_mdl-kl-integrand`
-
-### Maximum Entropy and the Gaussian
-:label:`subsec_mdl-gaussian-max-entropy`
-
-On a finite set the uniform distribution has the largest entropy, and the proof
-took one line because $-\log u(x)$ is the same for every outcome. That is the
-whole mechanism of maximum entropy. Let $r$ belong to a set $\mathcal{C}$ of
-distributions, and suppose that the cross-entropy $\textrm{CE}(P, r)$ takes the
-same finite value for every $P$ in $\mathcal{C}$. Taking $P = r$ shows that
-this value is $H(r)$, and :eqref:`eq_mdl-ce_decomp` with Gibbs' inequality
-gives
-
-$$
-H(P) = \textrm{CE}(P, r) - D_{\textrm{KL}}(P\|r) = H(r) - D_{\textrm{KL}}(P\|r) \le H(r),
-$$
-
-with equality only for $P = r$; for densities, read $h$ for $H$. The condition
-holds whenever $-\log r$ is, up to a constant, a linear combination of the
-statistics whose expectations define $\mathcal{C}$. This is the maximum-entropy
-proposition of :numref:`subsec_mdl-max-entropy-derivation`, told there from the
-side of the exponential family.
-
-On $\mathbb{R}$ there is no uniform density, and with no constraint the
-differential entropy is unbounded. Fix the mean $\mu$ and the variance
-$\sigma^2$, and let $\varphi$ be the Gaussian density with these moments. Then
-$-\log \varphi(x) = \tfrac{1}{2}\log(2\pi\sigma^2) +
-\tfrac{(x-\mu)^2}{2\sigma^2}$ is a quadratic in $x$, so for every density $P$
-with the same two moments
-
-$$
-\textrm{CE}(P, \varphi)
-= \tfrac{1}{2}\log(2\pi\sigma^2) + \frac{\mathbb{E}_P\big[(x-\mu)^2\big]}{2\sigma^2}
-= \tfrac{1}{2}\log(2\pi\sigma^2) + \tfrac{1}{2}
-= \tfrac{1}{2}\log(2\pi e \sigma^2),
-$$
-
-the same value for every such $P$. For $P = \varphi$ it is the Gaussian's own
-differential entropy, the closed form quoted whenever a Gaussian entropy is
-needed. For every other such $P$, the argument above gives
-
-$$
-h(P) \leq \tfrac{1}{2}\log(2\pi e \sigma^2) = h(\mathcal{N}(\mu, \sigma^2)),
-$$
-:eqlabel:`eq_mdl-gaussian-max-entropy`
-
-with equality if and only if $P = \mathcal{N}(\mu, \sigma^2)$. With only the
-mean fixed, on the outcomes $\{0, 1, 2, \ldots\}$, the same argument gives the
-geometric distribution (Exercise
-:exref:`ex_mdl-information-theory-geometric-max-entropy`). On $\mathbb{R}$ with
-only the mean fixed there is no maximum: $\mathcal{N}(\mu, \sigma^2)$ has the
-right mean for every $\sigma$, and its entropy grows without limit.
 
 ## The Classification Loss
 
@@ -736,71 +505,13 @@ $$
 \textrm{CE} = -\frac{1}{n} \sum_{i=1}^n \log q_{i, y_i},
 $$
 
-in nats, the quantity a built-in classification loss computes. In code it is
-one line of indexing.
-
-```{.python .input #information-theory-formal-definition-1}
-def cross_entropy(q, y):
-    """Mean cross-entropy loss for predicted probabilities q, in nats."""
-    return float(-np.log(q[np.arange(len(q)), y]).mean())
-```
-
-Take two examples with three classes. The first example's true class is $0$,
-predicted with probability $0.3$; the second's is $2$, predicted with
-probability $0.5$.
-
-```{.python .input #information-theory-formal-definition-2}
-labels = np.array([0, 2])
-preds = np.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
-
-cross_entropy(preds, labels)
-```
-
-The value is $\tfrac{1}{2}(-\ln 0.3 - \ln 0.5) \approx 0.949$ nats. A built-in
+in nats, the quantity a built-in classification loss computes. A built-in
 loss does not take probabilities. It takes the *logits* $\mathbf{z}$, the
 unnormalized scores whose softmax is $\mathbf{q}$, and applies a stable
 log-softmax itself, for the reasons given in
 :numref:`subsec_softmax-implementation-revisited`
-(:numref:`subsec_mdl-stable-softmax` derives the stable form). To call it on
-the toy example we therefore pass $\mathbf{z} = \log \mathbf{q}$, whose softmax
-is $\mathbf{q}$ again.
-
-```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
-#@tab mxnet
-preds_mx = mnp.array(preds.tolist())
-labels_mx = mnp.array(labels.tolist(), dtype='int32')
-logits = mnp.log(preds_mx)
-log_probs = npx.log_softmax(logits, axis=1)
--log_probs[mnp.arange(len(labels_mx)), labels_mx].mean()
-```
-
-```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
-#@tab pytorch
-preds_torch = torch.tensor(preds, dtype=torch.float32)
-labels_torch = torch.tensor(labels)
-logits = torch.log(preds_torch)
-torch.nn.CrossEntropyLoss()(logits, labels_torch)
-```
-
-```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
-#@tab tensorflow
-preds_tf = tf.convert_to_tensor(preds, dtype=tf.float32)
-labels_tf = tf.convert_to_tensor(labels)
-logits = tf.math.log(preds_tf)
-loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-loss_fn(labels_tf, logits).numpy()
-```
-
-```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
-#@tab jax
-preds_jax = jnp.asarray(preds)
-labels_jax = jnp.asarray(labels)
-logits = jnp.log(preds_jax)
-optax.softmax_cross_entropy_with_integer_labels(
-    logits, labels_jax).mean()
-```
-
-The result is the same number.
+(:numref:`subsec_mdl-stable-softmax` derives the stable form).
+<!-- WRITER: the cells cross_entropy (formal-definition-1/-2, the toy 0.949) and the four-tab built-in-loss cell are cut; their narration sentences were removed here. Make this subsection the one logits paragraph at the head of "The Classification Loss" (worklist B5). -->
 
 ### The Irreducible Loss
 :label:`subsec_mdl-irreducible-loss`
@@ -947,18 +658,26 @@ between the true class and each other class. For $k = 10$ classes and $\epsilon
 not zero, so a label-smoothed loss curve levels off above zero even when the
 model predicts the softened target exactly. The next cell prints both numbers
 and, for contrast, the loss of an overconfident prediction with logit gap $10$.
+<!-- WRITER: the cell is now a run: gradient descent (step size 1, gradient q - p_eps) on the logits of one example, k = 10, zero start, eps in {0, 0.1}, printing the logit gap and the loss after 10, 100, 1,000, 10,000 steps, then the optimum. It no longer evaluates an overconfident prediction (the 0.900 nats below is no longer printed). -->
 
 ```{.python .input #information-theory-label-smoothing}
-k, eps = 10, 0.1
-p_eps = np.full(k, eps / k)
-p_eps[0] += 1 - eps                               # the true class first
-gap = math.log(p_eps[0] / p_eps[1])               # optimal logit gap
-z = np.array([10.0] + [0.0] * (k - 1))            # an overconfident prediction
-q_conf = np.exp(z) / np.exp(z).sum()
-print(f'optimal logit gap = ln(91) = {gap:.4f}')
-print(f'CE at q* = H(p_eps) = {entropy(p_eps):.4f} nats')
-print(f'CE at the overconfident q = {float(-np.dot(p_eps, np.log(q_conf))):.4f} nats')
+k, checkpoints = 10, (10, 100, 1000, 10000)
+for eps in (0.0, 0.1):
+    p_eps = np.full(k, eps / k)
+    p_eps[0] += 1 - eps                   # the true class first
+    z = np.zeros(k)                       # the logits of one example
+    for step in range(1, checkpoints[-1] + 1):
+        q = np.exp(z - z.max())
+        z -= q / q.sum() - p_eps          # gradient step, step size 1
+        if step in checkpoints:
+            log_q = z - z.max() - np.log(np.exp(z - z.max()).sum())
+            print(f'eps = {eps}  step {step:5d}  gap = {z[0] - z[1]:5.2f}  '
+                  f'loss = {-p_eps @ log_q:.4f}')
+print(f'optimum for eps = 0.1: gap = ln 91 = {math.log(91):.2f}, '
+      f'loss = H(p_eps) = {entropy(p_eps):.4f}')
 ```
+
+<!-- WRITER: measured, identical in all four tabs (NumPy, deterministic): eps = 0: gap 4.29, 6.87, 9.21, 11.51 after 10, 100, 1,000, 10,000 steps (grows by ln 10 = 2.3 per decade, like the log of the step count), loss 0.1158, 0.0093, 0.0009, 0.0001; eps = 0.1: gap 3.81 after 10 steps, then 4.51 = ln 91 from step 100 on, loss 0.5243, then 0.5003 = H(p_eps). The 0.900-nat overconfident reading below is gone (worklist B6). -->
 
 The floor is $0.500$ nats. The overconfident prediction, which one-hot targets
 would score as nearly perfect, has loss $0.900$ nats: label smoothing penalizes
@@ -1035,49 +754,53 @@ gradient approaches the limit above instead of vanishing.
 #@tab mxnet
 z_tea = mnp.array([5.0, 2.0, -1.0])
 z_stu = mnp.array([3.0, 3.0, 0.0])
-z_stu.attach_grad()
-
-for tau in (1.0, 2.0, 5.0, 10.0):
+z_stu.attach_grad()                   # every backward() overwrites the grad
+print(' tau  |grad|  |tau^2 grad|  tau^2 grad')
+for tau in (1.0, 2.0, 5.0, 10.0, 20.0):
     with autograd.record():
-        p_tau, q_tau = npx.softmax(z_tea / tau), npx.softmax(z_stu / tau)
-        kl = mnp.sum(p_tau * (mnp.log(p_tau) - mnp.log(q_tau)))
+        p_tau = npx.softmax(z_tea / tau)
+        kl = (p_tau * (mnp.log(p_tau) - npx.log_softmax(z_stu / tau))).sum()
     kl.backward()
-    closed = (npx.softmax(z_stu / tau) - npx.softmax(z_tea / tau)) / tau
-    err = float(mnp.abs(z_stu.grad - closed).max())
-    print(f'tau={tau:4.1f}  |autograd - closed| = {err:.1e}  '
-          f'tau^2 grad = {[round(g, 3) for g in (tau**2 * z_stu.grad).tolist()]}')
+    g = z_stu.grad.asnumpy()
+    print(f'{tau:4.0f}  {np.linalg.norm(g):.4f}  '
+          f'{np.linalg.norm(tau**2 * g):12.3f}  {np.round(tau**2 * g, 3)}')
+limit = (z_stu - z_stu.mean()) - (z_tea - z_tea.mean())
+limit = limit.asnumpy() / len(limit)
+print(f'limit {"":6s}  {np.linalg.norm(limit):12.3f}  {np.round(limit, 3)}')
 ```
 
 ```{.python .input #information-theory-distillation}
 #@tab pytorch
 z_tea = torch.tensor([5.0, 2.0, -1.0])
-
-for tau in (1.0, 2.0, 5.0, 10.0):
-    z_stu = torch.tensor([3.0, 3.0, 0.0], requires_grad=True)
+z_stu = torch.tensor([3.0, 3.0, 0.0], requires_grad=True)
+print(' tau  |grad|  |tau^2 grad|  tau^2 grad')
+for tau in (1.0, 2.0, 5.0, 10.0, 20.0):
     p_tau = torch.softmax(z_tea / tau, 0)
-    q_tau = torch.softmax(z_stu / tau, 0)
-    kl = torch.sum(p_tau * (torch.log(p_tau) - torch.log(q_tau)))
-    grad, = torch.autograd.grad(kl, z_stu)
-    closed = (q_tau - p_tau).detach() / tau
-    err = (grad - closed).abs().max().item()
-    print(f'tau={tau:4.1f}  |autograd - closed| = {err:.1e}  '
-          f'tau^2 grad = {[round(g, 3) for g in (tau**2 * grad).tolist()]}')
+    kl = (p_tau * (torch.log(p_tau) - torch.log_softmax(z_stu / tau, 0))).sum()
+    g = torch.autograd.grad(kl, z_stu)[0].numpy()
+    print(f'{tau:4.0f}  {np.linalg.norm(g):.4f}  '
+          f'{np.linalg.norm(tau**2 * g):12.3f}  {np.round(tau**2 * g, 3)}')
+limit = (z_stu - z_stu.mean()) - (z_tea - z_tea.mean())
+limit = limit.detach().numpy() / len(limit)
+print(f'limit {"":6s}  {np.linalg.norm(limit):12.3f}  {np.round(limit, 3)}')
 ```
 
 ```{.python .input #information-theory-distillation}
 #@tab tensorflow
 z_tea = tf.constant([5.0, 2.0, -1.0])
 z_stu = tf.Variable([3.0, 3.0, 0.0])
-
-for tau in (1.0, 2.0, 5.0, 10.0):
+print(' tau  |grad|  |tau^2 grad|  tau^2 grad')
+for tau in (1.0, 2.0, 5.0, 10.0, 20.0):
     with tf.GradientTape() as tape:
-        p_tau, q_tau = tf.nn.softmax(z_tea / tau), tf.nn.softmax(z_stu / tau)
-        kl = tf.reduce_sum(p_tau * (tf.math.log(p_tau) - tf.math.log(q_tau)))
-    grad = tape.gradient(kl, z_stu)
-    closed = (q_tau - p_tau) / tau
-    err = float(tf.reduce_max(tf.abs(grad - closed)).numpy())
-    print(f'tau={tau:4.1f}  |autograd - closed| = {err:.1e}  '
-          f'tau^2 grad = {[round(g, 3) for g in (tau**2 * grad).numpy().tolist()]}')
+        p_tau = tf.nn.softmax(z_tea / tau)
+        kl = tf.reduce_sum(
+            p_tau * (tf.math.log(p_tau) - tf.nn.log_softmax(z_stu / tau)))
+    g = tape.gradient(kl, z_stu).numpy()
+    print(f'{tau:4.0f}  {np.linalg.norm(g):.4f}  '
+          f'{np.linalg.norm(tau**2 * g):12.3f}  {np.round(tau**2 * g, 3)}')
+limit = (z_stu - tf.reduce_mean(z_stu)) - (z_tea - tf.reduce_mean(z_tea))
+limit = limit.numpy() / len(limit)
+print(f'limit {"":6s}  {np.linalg.norm(limit):12.3f}  {np.round(limit, 3)}')
 ```
 
 ```{.python .input #information-theory-distillation}
@@ -1085,18 +808,21 @@ for tau in (1.0, 2.0, 5.0, 10.0):
 z_tea = jnp.array([5.0, 2.0, -1.0])
 z_stu = jnp.array([3.0, 3.0, 0.0])
 
-def distill_kl(z_stu, tau):
+def distill_kl(z_stu, z_tea, tau):
     p_tau = jax.nn.softmax(z_tea / tau)
-    q_tau = jax.nn.softmax(z_stu / tau)
-    return jnp.sum(p_tau * (jnp.log(p_tau) - jnp.log(q_tau)))
+    return (p_tau * (jnp.log(p_tau) - jax.nn.log_softmax(z_stu / tau))).sum()
 
-for tau in (1.0, 2.0, 5.0, 10.0):
-    grad = jax.grad(distill_kl)(z_stu, tau)
-    closed = (jax.nn.softmax(z_stu / tau) - jax.nn.softmax(z_tea / tau)) / tau
-    err = jnp.abs(grad - closed).max().item()
-    print(f'tau={tau:4.1f}  |autograd - closed| = {err:.1e}  '
-          f'tau^2 grad = {[round(g, 3) for g in (tau**2 * grad).tolist()]}')
+print(' tau  |grad|  |tau^2 grad|  tau^2 grad')
+for tau in (1.0, 2.0, 5.0, 10.0, 20.0):
+    g = np.asarray(jax.grad(distill_kl)(z_stu, z_tea, tau))
+    print(f'{tau:4.0f}  {np.linalg.norm(g):.4f}  '
+          f'{np.linalg.norm(tau**2 * g):12.3f}  {np.round(tau**2 * g, 3)}')
+limit = (z_stu - z_stu.mean()) - (z_tea - z_tea.mean())
+limit = np.asarray(limit) / len(limit)
+print(f'limit {"":6s}  {np.linalg.norm(limit):12.3f}  {np.round(limit, 3)}')
 ```
+
+<!-- WRITER: the cell no longer compares autograd with the closed form (the check could not fail: 0 to 6e-8 in all tabs); "The next cell checks both claims ... the closed-form gradient matches autograd" above and "The closed form matches autograd to floating-point precision" below are now false. It prints per temperature (1, 2, 5, 10, 20) the norm of the unscaled gradient, the norm of the tau^2-scaled gradient and the scaled vector, and a last row with the limit. Measured, identical to 3 decimals in all four tabs: unscaled norm 0.6391, 0.2190, 0.0368, 0.0088, 0.0021 for tau = 1, 2, 5, 10, 20 (it falls like 1/tau^2: 0.64 to 0.0021, three hundred times smaller at tau = 20); scaled norm 0.639, 0.876, 0.920, 0.884, 0.854, approaching the limit 0.816; scaled vector at tau = 5 (-0.741, 0.478, 0.263) overshoots the limit -0.667 in the first component, tau = 10 (-0.719, 0.413, 0.306), tau = 20 (-0.697, 0.374, 0.322); limit row (-0.667, 0.333, 0.333). Replace "the unscaled gradient is the printed row divided by tau^2, a hundred times smaller" by a reading of the printed norms (worklist B7). -->
 
 The closed form matches autograd to floating-point precision at every
 temperature, and the $\tau^2$-scaled gradient stays of order one (the unscaled
@@ -1109,6 +835,222 @@ the $\tau = 10$ row reads $(-0.719, 0.413, 0.306)$, and the first component
 overshoots its limit on the way. At $\tau = 1$ the loss is the ordinary KL
 divergence, and with a one-hot teacher, which has zero entropy, it is the
 ordinary cross-entropy loss, so standard training is a special case.
+
+## Entropy and KL Divergence for Densities
+<!-- WRITER: this group (differential entropy, KL between Gaussians, maximum entropy and the Gaussian, with cells example-1 and example-2) was moved here verbatim from the end of "KL Divergence and Cross-Entropy" (structure.md order, group 4); add its lead, and connect the closing paragraph below to the narrow model's 1.05 nats in the tails (worklist B2-B3). -->
+
+### Differential Entropy
+:label:`subsec_mdl-differential-entropy`
+
+For a continuous random variable $X$ with density $p$, the sum in the entropy
+becomes an integral. The result is called the *differential entropy*,
+
+$$
+h(X) = -\int p(x) \log p(x) \,dx.
+$$
+:eqlabel:`eq_mdl-diff-ent-def`
+
+It is the average surprise of a density value, and density values are not
+probabilities: they carry the units of $1/x$, and they can exceed one. We
+write a lowercase $h$ to keep it apart from the discrete $H$, because the two
+behave differently.
+
+The smallest case shows how. The uniform density on $[0, a]$ equals $1/a$
+there, so $h = -\int_0^a \tfrac1a \log \tfrac1a \,dx = \log a$. For
+$a = \tfrac12$ this is $-\ln 2 \approx -0.693$ nats, a negative entropy, which
+no discrete distribution can have. Measuring the same variable in centimetres
+instead of metres multiplies $a$ by $100$ and adds $\ln 100 \approx 4.61$
+nats, although the uncertainty has not changed.
+
+A shift of this kind occurs under any smooth change of variables. If $y = g(x)$
+is invertible with Jacobian $\partial g/\partial x$, the density of $Y$ at
+$g(x)$ is $p_X(x)/|\det \partial g/\partial x|$, and so
+
+$$
+h(Y) = h(X) + \mathbb{E}\big[\log\lvert\det \partial g/\partial x\rvert\big].
+$$
+
+Stretching a variable raises its differential entropy, and squeezing it lowers
+the entropy without limit. A Gaussian with standard deviation $\sigma$ has $h =
+\tfrac12 \log(2\pi e \sigma^2)$, as we compute in
+:numref:`subsec_mdl-gaussian-max-entropy`, which is negative once $\sigma <
+(2\pi e)^{-1/2} \approx 0.24$.
+
+The KL divergence does not share this defect. Transport a model density $q$
+along with the data: both densities are divided by the same factor, which
+cancels in the ratio $p/q$, so the KL divergence does not change. For two
+uniform densities $p_1$ on $[0, a_1]$ and $p_2$ on $[0, a_2]$ with $a_1 \le
+a_2$, for instance, it is $\int p_1 \log(p_1/p_2)\,dx = \log(a_2/a_1)$, which
+for $a_1 = \tfrac12$ and $a_2 = 1$ is $\ln 2 \approx 0.693$ nats in metres and
+in centimetres alike. The cross-entropy $-\mathbb{E}_P[\log q]$, on which a
+continuous model is trained, shifts by the same constant as $h$. The constant
+does not depend on the model, so the gradients and the minimizer of the
+cross-entropy are unchanged. When $h(p)$ is finite, the decomposition
+:eqref:`eq_mdl-ce_decomp` holds with $h$ in place of $H$, and maximum
+likelihood for densities minimizes $D_{\textrm{KL}}(p\|q_{\boldsymbol\theta})$
+at the population level.
+
+Differential entropy is not the limit of discrete entropy. Divide the line
+into cells of width $\Delta$, and let $X_\Delta$ record which cell contains
+$X$. Then $P(X_\Delta = i) \approx p(x_i) \Delta$ for a point $x_i$ in cell
+$i$, and
+
+$$
+H(X_\Delta) + \log \Delta \to h(X) \quad \textrm{as } \Delta \to 0
+$$
+
+for densities regular enough that the sums converge to the integrals (for
+example, when $p$ is continuous and $p$ and $p \log p$ are Riemann-integrable).
+The discrete entropy itself grows like $\log(1/\Delta)$, since a finer grid
+takes more questions, and $h$ is what remains after that growth is subtracted.
+For the uniform density on $[0, 1]$ with $\Delta = \tfrac18$, the eight cells
+are equally likely, $H_2(X_\Delta) = 3$ bits and $\log_2 \Delta = -3$, which
+sum to $0 = h$. Exercise :exref:`ex_mdl-information-theory-quantized-entropy`
+proves the limit and checks it on a Gaussian.
+
+### KL Divergence Between Gaussians
+
+Gaussians are the continuous distributions we meet most often, and
+comparing two of them is a common task. A variational autoencoder, for
+instance, penalizes the KL divergence between the Gaussian distribution of
+its code and a standard normal prior. For two univariate Gaussians the KL
+divergence has a closed form. For
+$P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$,
+
+$$
+D_{\textrm{KL}}\!\left(\mathcal{N}(\mu_1,\sigma_1^2) \,\big\|\, \mathcal{N}(\mu_2,\sigma_2^2)\right)
+= \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac{1}{2}.
+$$
+:eqlabel:`eq_mdl-gaussian_kl`
+
+The divergence is a log ratio of standard deviations plus the variance and the
+squared mean gap of $P$, both measured in units of the model's variance. It is
+non-negative and zero only when $\mu_1 = \mu_2$ and $\sigma_1 = \sigma_2$, as
+Gibbs' inequality requires. It is not symmetric, because $\sigma_1$ and
+$\sigma_2$ enter differently. Exercise
+:exref:`ex_mdl-information-theory-gaussian-kl` derives the formula from the
+definition.
+
+The smallest case is a unit mean shift with equal variances, $P =
+\mathcal{N}(0, 1)$ and $Q = \mathcal{N}(1, 1)$, where the formula gives
+$(\mu_1 - \mu_2)^2/(2\sigma^2) = \tfrac12$ nat. The definition suggests a
+second way to compute it: draw samples from $P$ and average $\log p(x) - \log
+q(x)$. Such sample averages are how a KL divergence is estimated when no
+closed form exists (:numref:`sec_mdl-mi-estimation`), so their accuracy is
+worth seeing once. The next cell defines the closed form and the Monte Carlo
+estimate.
+
+```{.python .input #information-theory-example-1}
+def gaussian_kl(mu1, sigma1, mu2, sigma2):
+    """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
+    return (math.log(sigma2 / sigma1)
+            + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
+            - 0.5)
+
+def gaussian_log_pdf(x, mu, sigma):
+    """Log-density of N(mu, sigma^2) at x."""
+    return (-0.5 * math.log(2 * math.pi * sigma ** 2)
+            - (x - mu) ** 2 / (2 * sigma ** 2))
+
+def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
+    """Monte Carlo estimate of the same KL from n samples x ~ P, with its
+    standard error."""
+    x = np.random.default_rng().normal(loc=mu1, scale=sigma1, size=n)
+    r = gaussian_log_pdf(x, mu1, sigma1) - gaussian_log_pdf(x, mu2, sigma2)
+    return float(r.mean()), float(r.std() / math.sqrt(n))
+```
+
+We run both on the unit mean shift. How far from $\tfrac12$ should an average
+of $2 \cdot 10^5$ samples land?
+<!-- WRITER: cell information-theory-example-2 moved below the N(0,4) paragraph and now prints one table (closed form, estimate, standard error) for all three pairs; the questions here and in the next paragraph no longer sit directly before a cell. The SE 0.0022 quoted next is now printed. -->
+
+For this pair $\log p(x) - \log q(x) = \tfrac12 - x$ has variance one, so the
+average of $2 \cdot 10^5$ samples has standard error $0.0022$. The estimate
+usually falls within about $\pm 0.005$ (two standard errors) of $\tfrac12$ and
+almost never beyond $\pm 0.01$.
+
+Now let the variances differ: $P = \mathcal{N}(0,1)$ and $Q =
+\mathcal{N}(0,4)$, so $\sigma_2 = 2$. Which direction gives the larger
+divergence?
+
+```{.python .input #information-theory-example-2}
+pairs = {'N(0,1) || N(1,1)': (0.0, 1.0, 1.0, 1.0),
+         'N(0,1) || N(0,4)': (0.0, 1.0, 0.0, 2.0),
+         'N(0,4) || N(0,1)': (0.0, 2.0, 0.0, 1.0)}
+print(f'{"P || Q":18s} {"closed":>7s} {"sampled":>8s} {"std err":>8s}')
+for name, args in pairs.items():
+    estimate, std_err = mc_kl(*args)
+    print(f'{name:18s} {gaussian_kl(*args):7.4f} {estimate:8.4f} {std_err:8.4f}')
+```
+
+<!-- WRITER: measured (pytorch/tf/jax/mxnet dev runs, unseeded, n = 2e5): closed forms 0.5000 / 0.3181 / 0.8069; standard errors 0.0022 (mean shift), 0.0012 (N(0,1)||N(0,4)), 0.0047-0.0048 (N(0,4)||N(0,1)); estimates fall within about 2 SE of the closed form. The reverse direction, whose integrand lives in the tails, is four times noisier than the forward one (0.0047 vs 0.0012), about twice the mean shift. Replace "usually within about +-0.005 ... almost never beyond +-0.01" by a reading of the printed SEs (worklist B8). -->
+
+The formula gives $D_{\textrm{KL}}(P\|Q) = \ln 2 + \tfrac18 - \tfrac12 \approx
+0.318$ and $D_{\textrm{KL}}(Q\|P) = -\ln 2 + 2 - \tfrac12 \approx 0.807$ nats,
+a factor of $2.5$ apart. :numref:`fig_mdl-kl-integrand` shows where each number
+comes from. In both directions the integrand changes sign at $|x| = (8 \ln
+2/3)^{1/2} \approx 1.36$, where the two densities cross. In panel (a) the wide
+model explains narrow data. It is too surprised in the core $|x| < 1.36$, which
+contributes $+0.424$, and less surprised than the truth in the tails, which
+contribute $-0.106$. In panel (b) the narrow model has to explain wide data.
+The core contributes $-0.240$, and the tails, where the narrow model gives
+almost no probability to outcomes that occur, contribute $+1.046$. What this
+asymmetry does to a model that is fitted in one direction or the other is the
+subject of :numref:`sec_mdl-fwd-vs-rev-kl`.
+
+![Where the KL divergence between $\mathcal{N}(0,1)$ and $\mathcal{N}(0,4)$ comes from. (a) The narrow distribution coded with the wide model: a positive core and slightly negative tails sum to $0.318$ nats. (b) The wide distribution coded with the narrow model: the tails, where the narrow model assigns almost no probability, contribute $1.05$ nats against a core of $-0.24$, for a total of $0.807$. The sign changes at $|x| = 1.36$ in both directions.](../img/mdl-it-kl-integrand.svg)
+:label:`fig_mdl-kl-integrand`
+
+### Maximum Entropy and the Gaussian
+:label:`subsec_mdl-gaussian-max-entropy`
+
+On a finite set the uniform distribution has the largest entropy, and the proof
+took one line because $-\log u(x)$ is the same for every outcome. That is the
+whole mechanism of maximum entropy. Let $r$ belong to a set $\mathcal{C}$ of
+distributions, and suppose that the cross-entropy $\textrm{CE}(P, r)$ takes the
+same finite value for every $P$ in $\mathcal{C}$. Taking $P = r$ shows that
+this value is $H(r)$, and :eqref:`eq_mdl-ce_decomp` with Gibbs' inequality
+gives
+
+$$
+H(P) = \textrm{CE}(P, r) - D_{\textrm{KL}}(P\|r) = H(r) - D_{\textrm{KL}}(P\|r) \le H(r),
+$$
+
+with equality only for $P = r$; for densities, read $h$ for $H$. The condition
+holds whenever $-\log r$ is, up to a constant, a linear combination of the
+statistics whose expectations define $\mathcal{C}$. This is the maximum-entropy
+proposition of :numref:`subsec_mdl-max-entropy-derivation`, told there from the
+side of the exponential family.
+
+On $\mathbb{R}$ there is no uniform density, and with no constraint the
+differential entropy is unbounded. Fix the mean $\mu$ and the variance
+$\sigma^2$, and let $\varphi$ be the Gaussian density with these moments. Then
+$-\log \varphi(x) = \tfrac{1}{2}\log(2\pi\sigma^2) +
+\tfrac{(x-\mu)^2}{2\sigma^2}$ is a quadratic in $x$, so for every density $P$
+with the same two moments
+
+$$
+\textrm{CE}(P, \varphi)
+= \tfrac{1}{2}\log(2\pi\sigma^2) + \frac{\mathbb{E}_P\big[(x-\mu)^2\big]}{2\sigma^2}
+= \tfrac{1}{2}\log(2\pi\sigma^2) + \tfrac{1}{2}
+= \tfrac{1}{2}\log(2\pi e \sigma^2),
+$$
+
+the same value for every such $P$. For $P = \varphi$ it is the Gaussian's own
+differential entropy, the closed form quoted whenever a Gaussian entropy is
+needed. For every other such $P$, the argument above gives
+
+$$
+h(P) \leq \tfrac{1}{2}\log(2\pi e \sigma^2) = h(\mathcal{N}(\mu, \sigma^2)),
+$$
+:eqlabel:`eq_mdl-gaussian-max-entropy`
+
+with equality if and only if $P = \mathcal{N}(\mu, \sigma^2)$. With only the
+mean fixed, on the outcomes $\{0, 1, 2, \ldots\}$, the same argument gives the
+geometric distribution (Exercise
+:exref:`ex_mdl-information-theory-geometric-max-entropy`). On $\mathbb{R}$ with
+only the mean fixed there is no maximum: $\mathcal{N}(\mu, \sigma^2)$ has the
+right mean for every $\sigma$, and its entropy grows without limit.
 
 Two matters are left unsettled. The KL divergence is infinite as soon as the
 model gives zero probability to an outcome that the data can produce, as
@@ -1576,9 +1518,9 @@ $\textrm{CE}(P, P) = H(P) = 0.898$ nats, the floor.
 - Two examples, true classes predicted with $0.3$ and $0.5$:
   $\tfrac12(-\ln 0.3 - \ln 0.5) = 0.949$ nats.
 - Built-in losses take logits $\mathbf{z}$ and apply a stable log-softmax
-  inside:
+  inside.
 
-@!information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification
+<!-- SLIDES: the cell information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification and the toy 0.949 cells are cut; restate this slide without code (worklist slides). -->
 :::
 
 ::: {.slide title="No Classifier Beats the Label Noise: 10% Noise on 10 Classes Floors the Loss at 0.545"}

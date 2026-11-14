@@ -120,9 +120,9 @@ d2l.DATA_HUB['lm-gsm8k-samples-v2'] = (
 d2l.DATA_HUB['lm-bpb-v3'] = (
     d2l.LM_DATA_URL + 'lm-bpb-v3.csv',
     '1afa5c853c605511c3c5d8f41ee4607ee7bfd12b')
-d2l.DATA_HUB['lm-arc-generations-v4'] = (
-    d2l.LM_DATA_URL + 'lm-arc-generations-v4.jsonl',
-    'd0ae416ceb8865bfac71df64e0526d470026ba40')
+d2l.DATA_HUB['lm-arc-generations-v5'] = (
+    d2l.LM_DATA_URL + 'lm-arc-generations-v5.jsonl',
+    'c4f2733f91d489a0b89101531a037f12e77a03c8')
 d2l.DATA_HUB['lm-arc-scores-v3'] = (
     d2l.LM_DATA_URL + 'lm-arc-scores-v3.parquet',
     '7f3e186697deceed231f826da256c2fce646eef1')
@@ -142,7 +142,7 @@ assert GPU or not os.environ.get('CUDA_VISIBLE_DEVICES'), (
 ARTIFACTS = {  # measured result: (registered key, file a regeneration writes)
     'bpb': ('lm-bpb-v3', 'lm-bpb.csv'),
     'gsm8k-samples': ('lm-gsm8k-samples-v2', 'lm-gsm8k-samples.jsonl'),
-    'arc-generations': ('lm-arc-generations-v4', 'lm-arc-generations.jsonl'),
+    'arc-generations': ('lm-arc-generations-v5', 'lm-arc-generations.jsonl'),
     'arc-scores': ('lm-arc-scores-v3', 'lm-arc-scores.parquet')}
 RERUN = d2l.lm_rerun(ARTIFACTS)  # D2L_RERUN=1: all four; unset: none
 assert GPU or not RERUN, 'regenerating the artifacts needs a GPU'
@@ -1107,14 +1107,15 @@ for name, program in programs.items():
 ASK = 'Put the letter of the correct option inside \\boxed{}.'
 ARC_CHAT = [d2l.format_mc(q, o, 'letter')[0].removesuffix('Answer:') + ASK
             for _, q, o, _ in ARC]
-# The budgets belong to the convention. With thinking off the models still
-# explain before the box, so the direct budget leaves room for that too
+# The budgets belong to the convention, and they are set so that few
+# replies reach them: with thinking off the models still explain before the
+# box, and with thinking on they deliberate for up to a few thousand tokens
 ARMS = {  # arm: (models, subset items, batch size, settings of generate)
     'direct': ([PAIR[0], PAIR[1], 'Qwen/Qwen3-1.7B'], 500, 50, dict(
-        strategy='greedy', enable_thinking=False, max_new_tokens=512)),
+        strategy='greedy', enable_thinking=False, max_new_tokens=1024)),
     'reasoning': ([PAIR[0], 'Qwen/Qwen3-1.7B'], 100, 25, dict(
         strategy='sample', temperature=0.6, p=0.95, k=20, seed=0,
-        enable_thinking=True, max_new_tokens=2048))}
+        enable_thinking=True, max_new_tokens=4096))}
 
 def boxed_letter(text, n_options, finished=True):
     """The option a finished reply commits to in its last \\boxed{} after

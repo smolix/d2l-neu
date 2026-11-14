@@ -1546,6 +1546,19 @@ artifact it does not regenerate from its registered key, and all three new
 keys were still unregistered. So when `ARTIFACTS` names several new keys at
 once, regenerate them in one run, or upload and register the first part
 before the second run.
+Later on 2026-11-14 the ARC arms got budgets that few replies reach
+(reasoning 4,096 tokens, was 2,048, which cut 16 of Qwen3-1.7B's 100
+thinking replies mid-deliberation, not in loops; direct 1,024, was 512,
+which cut 15% of Qwen3.5-0.8B's explanations). `lm-arc-generations-v5`
+came from `D2L_RERUN=arc-generations` on one card: 2,468 s (41 min), ARC
+generation 35.0 min (reasoning about 10.5 and 14 min, direct 2.5 to 4.5
+min per model); replies cut 0-1% in the reasoning arm, 0-6% in the direct
+arm. Tensors peaked at 15.3 GiB (20.7 GiB reserved, 20 GB in
+`nvidia-smi`), past the 2-slot budget: run this regeneration on a card
+with no other job (`D2L_GPU_SLOTS_PER` masked to that card). A full
+`D2L_RERUN=1` is now about 55 min (this run plus the 6.8-min re-scoring and
+the 7.4-min GSM8K pool, measured 2026-11-13/14): inside the 60-min hard
+limit, far over the 30-min target; per-artifact runs keep each job shorter.
 18.5's kernel gets the same setting. Its full regeneration (`D2L_RERUN=1`,
 2026-11-13, one RTX 4090) took 1,492 s (24.9 min: dev suite 3.1 min,
 GSM-Symbolic 3.1 min, answers 6.9 min, judge 0.9 + 4.4 min, protocol 5.5

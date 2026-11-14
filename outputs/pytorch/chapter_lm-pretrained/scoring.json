@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80703d651a8e6e41ec4e5f517b58f977a16259e44581a65b0c8786727b829f10",
+    "d2l_lib_fingerprint": "sha256:d8695decbee45ff973b9840101b19886333d62b08b1e698348734396a912462e",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,12 +23,12 @@
       "outputs": []
     },
     "scoring-data-hub": {
-      "code_fingerprint": "sha256:2255be80729a7bac56799c5094afc81aa51c90df266223c6e321aa17d7131293",
+      "code_fingerprint": "sha256:0493a778bfcaee89731ba218d8163b41e628640247d64678332ab1220334844d",
       "kind": "text",
       "outputs": []
     },
     "scoring-setup": {
-      "code_fingerprint": "sha256:3f1bbe2b38b769edaa59bbe686f940ef69f189993145d7071faa6aa732c2e968",
+      "code_fingerprint": "sha256:096a814c5f636ab7b01d2509b1ba689a430ed7b1ab0d2a902d0cecadb3aadebe",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "scoring-data": {
-      "code_fingerprint": "sha256:50fb3c16cb54ff199035ae2137e17c6165d3192790e436650e2e3de684db078f",
+      "code_fingerprint": "sha256:d40eab37ac790f4eefd64c02ce22425dd0a961b4c59bfa97dbbc7392ed19bb63",
       "kind": "text",
       "outputs": [
         {
@@ -50,12 +50,12 @@
       ]
     },
     "scoring-format-mc": {
-      "code_fingerprint": "sha256:196cfd1a4f4fd51fc24326d3d71df603ef38690f1bbf63c46faa94ee290a2436",
+      "code_fingerprint": "sha256:e73f2c46490c8caff17045d45ca70bb6e5204dd17a13ac775ae3753be8d09397",
       "kind": "text",
       "outputs": []
     },
     "scoring-format-print": {
-      "code_fingerprint": "sha256:2c3a7fcd7a0cf34f67617f79faaf0f22d4b50019aab997842df46c09ffe778d1",
+      "code_fingerprint": "sha256:9589d37ea27d11f1ab6a1a47d4d5afdee8dcf5c8b8bd3ac7ee5a41fd2deb23d5",
       "kind": "text",
       "outputs": [
         {
@@ -66,7 +66,7 @@
       ]
     },
     "scoring-format-merges": {
-      "code_fingerprint": "sha256:66d0866b2f7ace3f0a512adb60f256f888da44dc0642c27e325ca8a46f7cadaf",
+      "code_fingerprint": "sha256:41131965f6d694892667b1f5dd26f68506dea27b8813736610c467e4264ef430",
       "kind": "text",
       "outputs": [
         {
@@ -77,22 +77,22 @@
       ]
     },
     "scoring-components": {
-      "code_fingerprint": "sha256:6746698d68bbb9994370d7cb02e5d9d6b02bbb8c5f121f44ec717d8b0d7d6242",
+      "code_fingerprint": "sha256:02f7c1ec7a2acd3d9d4c8d2b79ac44f388c312910883504bf3c772d2e4de00b2",
       "kind": "text",
       "outputs": []
     },
     "scoring-score-choices": {
-      "code_fingerprint": "sha256:9b43dd65f2a0aefc3184b2aeb12d749b80040a7139584fdb8eebdbf85b93dd78",
+      "code_fingerprint": "sha256:c3053204bcbcc1e3422b493358a1368f4b26da8f2559bf4fcbe9c6c4564ab6f8",
       "kind": "text",
       "outputs": []
     },
     "scoring-check-def": {
-      "code_fingerprint": "sha256:dbe437360f7f982dd8566b6aee2e6b9b1b199ba6975a518016492536d2e83c18",
+      "code_fingerprint": "sha256:a3e7b429d0693be9077ea969f460cd3aaf98c2d76f755d39110778264c1f4844",
       "kind": "text",
       "outputs": []
     },
     "scoring-check-scorer": {
-      "code_fingerprint": "sha256:b1c76558ff13abc748aa65ab9d941b44e86f5655fdc242520a80ae2b244a5044",
+      "code_fingerprint": "sha256:a678c2d5487398d4351a31c0a18287c75bc8c624c7a9209b6eaf82528843f35c",
       "kind": "text",
       "outputs": [
         {
@@ -118,12 +118,12 @@
       ]
     },
     "scoring-harness-compare": {
-      "code_fingerprint": "sha256:74dad9287509d58a5296b6709eba5e113e1307b0708fc9764cbc0ae203ec8036",
+      "code_fingerprint": "sha256:14aad819f2bdb39b355b2641eb0af4e226ef875c6cb9278be4e86c2c38ab8850",
       "kind": "text",
       "outputs": []
     },
     "scoring-harness-fixture": {
-      "code_fingerprint": "sha256:dbf1b63c30b7cf2b3affc2e5183f6d50a7aea1087fb5a9c85195f6b1d22a2ae3",
+      "code_fingerprint": "sha256:bef5da170501d89b1d3916e9aa122b3102f5961d2be62373d2f6d44455214c97",
       "kind": "text",
       "outputs": [
         {
@@ -139,12 +139,12 @@
       ]
     },
     "scoring-bits-per-byte": {
-      "code_fingerprint": "sha256:5192ffe668f1b77f978858f389477dfea5d86cec34ff187bd9efb0c37c4ba732",
+      "code_fingerprint": "sha256:8eebe9a6c1286d791803b5dad993b14fb4f82c2ffbdb80013e8c54c37d8dcd92",
       "kind": "text",
       "outputs": []
     },
     "scoring-texts": {
-      "code_fingerprint": "sha256:99cbe5541fafd2f10971607b0deac2efb14a55237ca0b36f8b54a1221e5f73d9",
+      "code_fingerprint": "sha256:3f456f2ee9c7341d43f215163bb298c44ce81c7c78b16c58c811ad0541a4f3a4",
       "kind": "text",
       "outputs": [
         {
@@ -155,7 +155,7 @@
       ]
     },
     "scoring-bpb-check": {
-      "code_fingerprint": "sha256:c2243fb7afa401b66ccaedb28c9901d56c198b2eac2db5fb9dd1bad551bdb5ca",
+      "code_fingerprint": "sha256:b249df8e21fa2aef5a74f8577ed5acf52d7243b08523dffc289e02e70ce996af",
       "kind": "text",
       "outputs": [
         {
@@ -171,12 +171,12 @@
       ]
     },
     "scoring-bpb-def": {
-      "code_fingerprint": "sha256:614e311fa820a5d93d2180fa76bc0a63d06d972b65a2d19503329a0a226a2120",
+      "code_fingerprint": "sha256:d82bea2b850b7f14f743f640ebd4945f6b56410d5d008f3c27c325e1ed787c5c",
       "kind": "text",
       "outputs": []
     },
     "scoring-bpb-models": {
-      "code_fingerprint": "sha256:b54ae1071edccfabdac93940434c8b1aab92292ffb9d735449de91e33a113f3d",
+      "code_fingerprint": "sha256:eb596234ce7cf076e3aee00e0e905fa21e164ab8561a78e0e50c9689f1d36ee1",
       "kind": "text",
       "outputs": [
         {
@@ -197,7 +197,7 @@
       ]
     },
     "scoring-bpb-windows": {
-      "code_fingerprint": "sha256:fa0921a3d79d8bd4b3dccacbcd90031362f493036274d7e51b14eb32edeacd87",
+      "code_fingerprint": "sha256:c66ccab9e06369c6c46b647b1179c609038edee3b50501a078965a7f4957b915",
       "kind": "text",
       "outputs": [
         {
@@ -213,12 +213,12 @@
       ]
     },
     "scoring-extract-answer": {
-      "code_fingerprint": "sha256:08665b40b4f6a3fcac5a59111219e85b53da0223728b47c4a787a51e6f134411",
+      "code_fingerprint": "sha256:e751f4184c48b192f3892a2f7977849fc3d8baa1e5630e9ea130684c45c88a70",
       "kind": "text",
       "outputs": []
     },
     "scoring-extract-check": {
-      "code_fingerprint": "sha256:692211ab01ee7dd49c3dc186bdbfb5efa35589300a7dfe16195824bf6ac4f0b0",
+      "code_fingerprint": "sha256:2a8209a15c612b061e406628fc443420ec85e085760e1ac9c488f8033f90097e",
       "kind": "text",
       "outputs": [
         {
@@ -229,7 +229,7 @@
       ]
     },
     "scoring-gsm8k-prompts": {
-      "code_fingerprint": "sha256:6484e9aa28faea54fb95ac0cfe5c97a436a59609e9342ae47f053a5a711264fa",
+      "code_fingerprint": "sha256:a24b4991a90c0981e6bcb2c44676a5a36de8ebf53ad1cd98b3b7977e94816391",
       "kind": "text",
       "outputs": [
         {
@@ -240,7 +240,7 @@
       ]
     },
     "scoring-gsm8k-pool": {
-      "code_fingerprint": "sha256:514462d0835e9826ed0d96426b3c4c629594c82586b5999585151ae8ad9c59a8",
+      "code_fingerprint": "sha256:9fcaf608e14506a5debf1b82ca735cb3d0109d0db573d31386d77b3e8c1ba05f",
       "kind": "text",
       "outputs": [
         {
@@ -251,7 +251,7 @@
       ]
     },
     "scoring-extractors": {
-      "code_fingerprint": "sha256:9d9698567221c261f93e5a733aeffc1160ed39ab471defd0aabcf575ce5a983a",
+      "code_fingerprint": "sha256:10bb8f1a1f6c1779c4e34625cdd5a2299e6b0263daf0b737fa71697641bd22d9",
       "kind": "text",
       "outputs": [
         {
@@ -267,17 +267,17 @@
       ]
     },
     "scoring-boot": {
-      "code_fingerprint": "sha256:d3ad6c1192b49b90c903d9d9130009ee0dbccd807ba368222fe343cb1681f7f5",
+      "code_fingerprint": "sha256:45e63b0069f2828fc8e2b063da161c48096eaf82db176f4581de103a839b5b1a",
       "kind": "text",
       "outputs": []
     },
     "scoring-pass-at-k": {
-      "code_fingerprint": "sha256:34b348450273ed600303d0b83110f2c1b1953de67c04a7f73df08bad819bedfb",
+      "code_fingerprint": "sha256:0afb497ad3e48220657da6ac63c9ac360b3742f1442f8dcebc63b569ad5ba6ec",
       "kind": "text",
       "outputs": []
     },
     "scoring-passk-check": {
-      "code_fingerprint": "sha256:b75d14278353b5c1a75140b8924b76b530879bc16f8e36748aa3d4271d55c0b5",
+      "code_fingerprint": "sha256:6c230d3b060aa19de3b13c2f218c7c6895588733ffdc599dfcc99007d51a7963",
       "kind": "text",
       "outputs": [
         {
@@ -288,7 +288,7 @@
       ]
     },
     "scoring-passk-pool": {
-      "code_fingerprint": "sha256:a004a8f6e9fefdd03d0c14e3221027b0fc0ed905be720c34701b7919ee0020ad",
+      "code_fingerprint": "sha256:b1b4f82993a06185ecacf5b8905e11327856e33b44be060fd4fffc9db794bf09",
       "kind": "text",
       "outputs": [
         {
@@ -299,7 +299,7 @@
       ]
     },
     "scoring-passk-figure": {
-      "code_fingerprint": "sha256:529acf13a1cef44141fadcdfcd44d33ed0c333de54e9f2aad325d9e67edf073c",
+      "code_fingerprint": "sha256:c6d68aeea79ed3f3e7780a8803ce7ab03c40f1884284aeff8687c1b936c834d6",
       "kind": "asset",
       "outputs": [
         {
@@ -307,12 +307,12 @@
           "mime": "image/svg+xml",
           "asset": "scoring/scoring-passk-figure-1.svg",
           "bytes": 28588,
-          "sha256": "sha256:5c8f9e8d45405f6309c695f287cad295e5f27a3afb7539a23dbacd50e7bce9e7"
+          "sha256": "sha256:4a944f22c2ed075e0457ef38cb264d1a7c62bcca9f4fac994fdf790d1f597b5b"
         }
       ]
     },
     "scoring-passk-variance-split": {
-      "code_fingerprint": "sha256:10fc3ee08617508497218f4ce97179fa5351069c633e3e3f14e5aa645395967c",
+      "code_fingerprint": "sha256:1f03cfa0b6a3e2f73f224c87430772cf8782eac00ccb1e90a29b4808999c6428",
       "kind": "text",
       "outputs": [
         {
@@ -323,12 +323,12 @@
       ]
     },
     "scoring-run-tests": {
-      "code_fingerprint": "sha256:a9f731535bde1c3bfd00cc5ed656b1c7d67d236891d711b0a67c40042a8dbf9a",
+      "code_fingerprint": "sha256:b6a42f157e476bc83978bee8d6b76cb02832234f6c4a074da0ff3e98e56fe543",
       "kind": "text",
       "outputs": []
     },
     "scoring-run-tests-check": {
-      "code_fingerprint": "sha256:be1826c17169480cd0e55d3d907667d13675587a285d11b8f136374abd166e28",
+      "code_fingerprint": "sha256:3e19bc69cfbebd61c23eaccf85e859dbbf40b12751b85e931006f40e10af59e4",
       "kind": "text",
       "outputs": [
         {
@@ -344,33 +344,33 @@
       ]
     },
     "scoring-arc-arms": {
-      "code_fingerprint": "sha256:162dbdfabc620225058996e6b5b09bb8e3a9f1cf550b02590fad7770639c5a29",
+      "code_fingerprint": "sha256:1061d1c5dc918ea874a4a38e4ef2b5c556a0d6f3b1d58072aabf45aa2aaadbce",
       "kind": "text",
       "outputs": []
     },
     "scoring-arc-generate": {
-      "code_fingerprint": "sha256:7806dbdb83e50f0cced9a6bd9834dd8a3d0dfc00e3bd1bb4d372f86b25930d9c",
+      "code_fingerprint": "sha256:27610d0cb74fc6764e6bd4f34011f019e41b5ee9f0b8f1c9ccb62358cf662e0a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "direct: 500 items per model, batch 50, settings:\n    strategy=greedy, enable_thinking=False, max_new_tokens=512\nreasoning: 100 items per model, batch 25, settings:\n    strategy=sample, temperature=0.6, p=0.95, k=20, seed=0,\n    enable_thinking=True, max_new_tokens=2048\n                        accuracy  among parsed  invalid  truncated  mean tokens\nmodel        arm                                                               \nQwen3-0.6B   direct        0.514         0.571    0.098      0.002         98.0\n             reasoning     0.690         0.726    0.000      0.050        883.0\nQwen3-1.7B   direct        0.772         0.820    0.036      0.022        237.0\n             reasoning     0.760         0.905    0.000      0.160       1228.0\nQwen3.5-0.8B direct        0.656         0.770    0.000      0.148        346.0\n"
+          "text": "direct: 500 items per model, batch 50, settings:\n    strategy=greedy, enable_thinking=False, max_new_tokens=1024\nreasoning: 100 items per model, batch 25, settings:\n    strategy=sample, temperature=0.6, p=0.95, k=20, seed=0,\n    enable_thinking=True, max_new_tokens=4096\n                        accuracy  among parsed  invalid  truncated  mean tokens\nmodel        arm                                                               \nQwen3-0.6B   direct        0.516         0.572    0.098      0.000         98.0\n             reasoning     0.670         0.670    0.000      0.000       1019.0\nQwen3-1.7B   direct        0.788         0.821    0.036      0.004        241.0\n             reasoning     0.830         0.838    0.000      0.010       1321.0\nQwen3.5-0.8B direct        0.714         0.760    0.000      0.060        390.0\n"
         }
       ]
     },
     "scoring-grid-def": {
-      "code_fingerprint": "sha256:af8a4de20aa71d2a8645a391b32defd20882579ab9f709a7b2aeb0228b054f78",
+      "code_fingerprint": "sha256:b819d655def3eb28d881427b4786a3c1d8130aeccb436ce56b63b4dad884da01",
       "kind": "text",
       "outputs": []
     },
     "scoring-conventions": {
-      "code_fingerprint": "sha256:7eb72b5989d61ca27f01bf65b94313a12173a311558a7e14d3ccd1fd9a2d8510",
+      "code_fingerprint": "sha256:45fad80cbeb130a69a1ad261c6ea3cb7f201d8ef25e8b324ef93fcaf9a500598",
       "kind": "text",
       "outputs": []
     },
     "scoring-grid": {
-      "code_fingerprint": "sha256:48aa61fd75cb1b4171eb431c3bb9362d9e0bdbc5c1f146b27e6728f8a9052aeb",
+      "code_fingerprint": "sha256:620c5392d2f4643d8e333c53ee23c132dac7218f180ea7a039f1df9ad5f9da9d",
       "kind": "text",
       "outputs": [
         {
@@ -426,7 +426,7 @@
       ]
     },
     "scoring-batch-size": {
-      "code_fingerprint": "sha256:5eff9c16f4db028872d8610c2e606461ae57fbc8e7124bb251980e4aa135a765",
+      "code_fingerprint": "sha256:94223fd0ad148ddf92ad3fd3a3aefbb8cabbdf277eefcfdfabfc7293b1bfe230",
       "kind": "text",
       "outputs": [
         {
@@ -437,7 +437,7 @@
       ]
     },
     "scoring-drift": {
-      "code_fingerprint": "sha256:df648e7d38e9d463d399a5e091ad690fe772e3731497f77a98b5776c422e5ba2",
+      "code_fingerprint": "sha256:64306020403ca91bf938b44b73a6f0b5fcff57ac822fd7f6952efd2f6fac051f",
       "kind": "text",
       "outputs": [
         {
@@ -448,77 +448,77 @@
       ]
     },
     "scoring-verdicts": {
-      "code_fingerprint": "sha256:d9ae0ba17fe21d81e113e2440a399f3e8ae04dd26951c97280126e130d0d4bb9",
+      "code_fingerprint": "sha256:c537ca418c7cc8c530166677fc25522ff77d5a15d6a354f4a497e188c6726183",
       "kind": "text",
       "outputs": []
     },
     "scoring-one-item": {
-      "code_fingerprint": "sha256:d40fc994004076d0158a30172da047bb5e97e6026e546d9af608419916a9f6a8",
+      "code_fingerprint": "sha256:b4da99e52b8398fab32d2e88ef29a7fcecd3ae4b5918b12ffc4ccfc42a6a374d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "A farmer thinks that the vegetables on her farm are not getting enough water.\n   Her son suggests that they use water from the nearby ocean to water the\n   vegetables. Is this a good idea?\nA. Yes, because there is plenty of ocean water.\nB. Yes, because ocean water has many natural fertilizers.\nC. No, because ocean water is too salty for plants grown on land.\nD. No, because ocean water is much more polluted than rainwater.\ngold C; Qwen3-0.6B: cloze-sum D, letter-0 B, gen-direct C\nthe first item with 3 different letters: NAEP_2005_4_S13+14\nitems with at least two: 351 of the 450 with a parsed direct reply\n"
+          "text": "A farmer thinks that the vegetables on her farm are not getting enough water.\n   Her son suggests that they use water from the nearby ocean to water the\n   vegetables. Is this a good idea?\nA. Yes, because there is plenty of ocean water.\nB. Yes, because ocean water has many natural fertilizers.\nC. No, because ocean water is too salty for plants grown on land.\nD. No, because ocean water is much more polluted than rainwater.\ngold C; Qwen3-0.6B: cloze-sum D, letter-0 B, gen-direct C\nthe first item with 3 different letters: NAEP_2005_4_S13+14\nitems with at least two: 352 of the 451 with a parsed direct reply\n"
         }
       ]
     },
     "scoring-convention-table": {
-      "code_fingerprint": "sha256:c695f1dec2725be83fd3eec38e71f88f8e5575f329bdf82f79c855773022d03f",
+      "code_fingerprint": "sha256:2b4075677691575e952bfcfd734577adc616dba79663f4d68a0c76ab061f95b6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "accuracy (gold bpb: mean bits per byte of the gold option), with\nhalf the width of the 95% bootstrap interval over items:\n               Q3-0.6B-Base       Q3-0.6B Q3.5-0.8B-Base     Q3.5-0.8B       Q3-1.7B\ncloze-sum      0.330 ±0.041  0.294 ±0.041   0.350 ±0.042  0.288 ±0.040  0.392 ±0.044\ncloze-token    0.358 ±0.042  0.318 ±0.040   0.382 ±0.042  0.326 ±0.041  0.414 ±0.044\ncloze-char     0.378 ±0.042  0.320 ±0.040   0.354 ±0.042  0.334 ±0.042  0.420 ±0.044\ncloze-PMI      0.414 ±0.044  0.362 ±0.042   0.420 ±0.044  0.392 ±0.043  0.460 ±0.043\nletter-0       0.604 ±0.042  0.502 ±0.044   0.686 ±0.041  0.612 ±0.043  0.724 ±0.039\nletter-5       0.662 ±0.041  0.588 ±0.044   0.684 ±0.041  0.664 ±0.042  0.758 ±0.037\ngen-direct                   0.514 ±0.044                 0.656 ±0.042  0.772 ±0.037\ngen-reasoning                0.690 ±0.090                               0.760 ±0.080\ngold bpb       1.379 ±0.096  1.352 ±0.074   1.152 ±0.075  1.197 ±0.070  1.303 ±0.086\npredictions where 'char' and 'byte' differ, five checkpoints: 2\n"
+          "text": "accuracy (gold bpb: mean bits per byte of the gold option), with\nhalf the width of the 95% bootstrap interval over items:\n               Q3-0.6B-Base       Q3-0.6B Q3.5-0.8B-Base     Q3.5-0.8B       Q3-1.7B\ncloze-sum      0.330 ±0.041  0.294 ±0.041   0.350 ±0.042  0.288 ±0.040  0.392 ±0.044\ncloze-token    0.358 ±0.042  0.318 ±0.040   0.382 ±0.042  0.326 ±0.041  0.414 ±0.044\ncloze-char     0.378 ±0.042  0.320 ±0.040   0.354 ±0.042  0.334 ±0.042  0.420 ±0.044\ncloze-PMI      0.414 ±0.044  0.362 ±0.042   0.420 ±0.044  0.392 ±0.043  0.460 ±0.043\nletter-0       0.604 ±0.042  0.502 ±0.044   0.686 ±0.041  0.612 ±0.043  0.724 ±0.039\nletter-5       0.662 ±0.041  0.588 ±0.044   0.684 ±0.041  0.664 ±0.042  0.758 ±0.037\ngen-direct                   0.516 ±0.044                 0.714 ±0.039  0.788 ±0.036\ngen-reasoning                0.670 ±0.090                               0.830 ±0.075\ngold bpb       1.379 ±0.096  1.352 ±0.074   1.152 ±0.075  1.197 ±0.070  1.303 ±0.086\npredictions where 'char' and 'byte' differ, five checkpoints: 2\n"
         }
       ]
     },
     "scoring-pair-diff": {
-      "code_fingerprint": "sha256:19c7aee099072c3f0387f909044563b639e7efd5d12b322998b59ae955073067",
+      "code_fingerprint": "sha256:9614d4baea876c1fadd52fde091190825ccda703d5d10bb8c2009e879f40ce7f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                         difference        drift         ahead\ncloze-sum    -0.006 [-0.044, 0.032]        0.004       neither\ncloze-token   0.008 [-0.030, 0.046]        0.004       neither\ncloze-char    0.014 [-0.024, 0.052]        0.002       neither\ncloze-PMI     0.030 [-0.020, 0.080]  0.010 (max)       neither\nletter-0       0.110 [0.062, 0.158]        0.010  Qwen3.5-0.8B\nletter-5       0.076 [0.030, 0.122]  0.010 (max)  Qwen3.5-0.8B\ngen-direct     0.142 [0.088, 0.196]  0.010 (max)  Qwen3.5-0.8B\nranking flips: False\nQwen3.5-0.8B - Qwen3-0.6B:\n    cloze-char accuracy: 0.014 [-0.024, 0.052], |difference| over half-width 0.37\n    gold bpb: -0.155 [-0.194, -0.115], |difference| over half-width 3.94\n    wrong-option bpb: -0.135 [-0.177, -0.094], |difference| over half-width 3.25\n    wrong - gold bpb: 0.020 [-0.017, 0.057], |difference| over half-width 0.53\n"
+          "text": "                         difference        drift         ahead\ncloze-sum    -0.006 [-0.044, 0.032]        0.004       neither\ncloze-token   0.008 [-0.030, 0.046]        0.004       neither\ncloze-char    0.014 [-0.024, 0.052]        0.002       neither\ncloze-PMI     0.030 [-0.020, 0.080]  0.010 (max)       neither\nletter-0       0.110 [0.062, 0.158]        0.010  Qwen3.5-0.8B\nletter-5       0.076 [0.030, 0.122]  0.010 (max)  Qwen3.5-0.8B\ngen-direct     0.198 [0.146, 0.250]  0.010 (max)  Qwen3.5-0.8B\nranking flips: False\nQwen3.5-0.8B - Qwen3-0.6B:\n    cloze-char accuracy: 0.014 [-0.024, 0.052], |difference| over half-width 0.37\n    gold bpb: -0.155 [-0.194, -0.115], |difference| over half-width 3.94\n    wrong-option bpb: -0.135 [-0.177, -0.094], |difference| over half-width 3.25\n    wrong - gold bpb: 0.020 [-0.017, 0.057], |difference| over half-width 0.53\n"
         }
       ]
     },
     "scoring-contrasts": {
-      "code_fingerprint": "sha256:0afdeba3f050989cc058c285da1e994cc8500c060f85604c2d7f1f0fbd2d389c",
+      "code_fingerprint": "sha256:1df323424977dd99bff21d1d9946e00b730ef8377f6bcba6c871670c0c06243d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "drift of the contrasts, batch 8 vs 1: 0.014\npair, difference of (letter-0 - cloze-sum):\n    0.116 [0.054, 0.178] (Qwen3.5-0.8B gains more)\nletter-0 - cloze-sum:\n    Qwen3-0.6B-Base: 0.274 [0.218, 0.332] (letter-0 ahead)\n    Qwen3-0.6B: 0.208 [0.148, 0.266] (letter-0 ahead)\n    Qwen3.5-0.8B-Base: 0.336 [0.282, 0.390] (letter-0 ahead)\n    Qwen3.5-0.8B: 0.324 [0.270, 0.378] (letter-0 ahead)\n"
+          "text": "drift of the contrasts, batch 8 vs 1: 0.014\npair, difference of (letter-0 - cloze-sum):\n    0.116 [0.054, 0.178] (Qwen3.5-0.8B gains more)\nletter-0 - cloze-sum:\n    Qwen3-0.6B-Base: 0.274 [0.218, 0.332] (letter-0 ahead)\n    Qwen3-0.6B: 0.208 [0.148, 0.266] (letter-0 ahead)\n    Qwen3.5-0.8B-Base: 0.336 [0.282, 0.390] (letter-0 ahead)\n    Qwen3.5-0.8B: 0.324 [0.270, 0.378] (letter-0 ahead)\n    Qwen3-1.7B: 0.332 [0.280, 0.384] (letter-0 ahead)\npost-trained - base, difference of (letter-0 - cloze-sum):\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    Qwen3-1.7B: 0.332 [0.280, 0.384] (letter-0 ahead)\npost-trained - base, difference of (letter-0 - cloze-sum):\n    Qwen3-0.6B - Qwen3-0.6B-Base: -0.066 [-0.126, -0.006]\n        (not resolved at 500 items)\n    Qwen3.5-0.8B - Qwen3.5-0.8B-Base: -0.012 [-0.056, 0.032]\n        (not resolved at 500 items)\n"
+          "text": "    Qwen3-0.6B - Qwen3-0.6B-Base: -0.066 [-0.126, -0.006]\n        (not resolved at 500 items)\n    Qwen3.5-0.8B - Qwen3.5-0.8B-Base: -0.012 [-0.056, 0.032]\n        (not resolved at 500 items)\n"
         }
       ]
     },
     "scoring-reasoning-vs-direct": {
-      "code_fingerprint": "sha256:26c1e2ba5b3df384f6eba49ecab87e4586d4c31bd7a47c3e17f3578e1420cd0b",
+      "code_fingerprint": "sha256:630cccb8b3d22672e5ef216c88130a88feaa86d767fbfc39fa97b2d291ccd9df",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen3-0.6B, first 100 items: reasoning - direct 0.200 [0.100, 0.310]\n    (reasoning ahead); cut at the budget: direct 0.00, reasoning 0.05\n    both replies commit to a letter on 83: they differ on 25\n    accuracy there 0.72 (reasoning), 0.55 (direct), descriptive\n    mean tokens 883 (reasoning), 91 (direct), 1 for a scored letter\n"
+          "text": "Qwen3-0.6B, first 100 items: reasoning - direct 0.180 [0.070, 0.290]\n    (reasoning ahead); cut at the budget: direct 0.00, reasoning 0.00\n    both replies commit to a letter on 88: they differ on 30\n    accuracy there 0.66 (reasoning), 0.56 (direct), descriptive\n    mean tokens 1019 (reasoning), 91 (direct), 1 for a scored letter\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen3-1.7B, first 100 items: reasoning - direct 0.000 [-0.090, 0.090]\n    (not resolved at 100 items); cut at the budget: direct 0.01, reasoning 0.16\n    both replies commit to a letter on 81: they differ on 10\n    accuracy there 0.90 (reasoning), 0.84 (direct), descriptive\n    mean tokens 1228 (reasoning), 242 (direct), 1 for a scored letter\n"
+          "text": "Qwen3-1.7B, first 100 items: reasoning - direct 0.070 [0.000, 0.150]\n    (not resolved at 100 items); cut at the budget: direct 0.00, reasoning 0.01\n    both replies commit to a letter on 95: they differ on 16\n    accuracy there 0.84 (reasoning), 0.80 (direct), descriptive\n    mean tokens 1321 (reasoning), 242 (direct), 1 for a scored letter\n"
         }
       ]
     },
     "scoring-length-spread": {
-      "code_fingerprint": "sha256:67aeaaae9344729950a31776ba8acc1973d08d130d683e979679fa077dbc3a48",
+      "code_fingerprint": "sha256:d55530549565ca9bcd41e7bcb73f61f3979c566ffcc1ed82929fb853583fb972",
       "kind": "text",
       "outputs": [
         {
@@ -529,7 +529,7 @@
       ]
     },
     "scoring-letter-bias": {
-      "code_fingerprint": "sha256:3ce22426db5aa2266f42110d238712b55a169a0f8ec6a32c7b679973af30d961",
+      "code_fingerprint": "sha256:b03609ea2edb0f9999483746f1b89a04028caf08cebbd4d8b9e38686c7560f46",
       "kind": "text",
       "outputs": [
         {
@@ -540,15 +540,15 @@
       ]
     },
     "scoring-flip-figure": {
-      "code_fingerprint": "sha256:7a05391bba6709c8c223a4e1c10d4efa59070080b00cef18693226393c0eb52c",
+      "code_fingerprint": "sha256:b038b641d4f03091540250bfc93f8704c632e8baa807d11286f3e5cb2e0b57c9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scoring/scoring-flip-figure-1.svg",
-          "bytes": 79028,
-          "sha256": "sha256:740e5002a62cd3339b76820821bd0897e34d2cee3f1414480a05ef2ccf885246"
+          "bytes": 79842,
+          "sha256": "sha256:dbbc9daf88240380410f4d78abffd77850a633ea2490c246a9135cfc51051f6c"
         }
       ]
     }

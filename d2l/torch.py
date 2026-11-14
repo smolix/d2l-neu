@@ -5408,9 +5408,9 @@ d2l.DATA_HUB['lm-gsm8k-samples-v2'] = (
 d2l.DATA_HUB['lm-bpb-v3'] = (
     d2l.LM_DATA_URL + 'lm-bpb-v3.csv',
     '1afa5c853c605511c3c5d8f41ee4607ee7bfd12b')
-d2l.DATA_HUB['lm-arc-generations-v4'] = (
-    d2l.LM_DATA_URL + 'lm-arc-generations-v4.jsonl',
-    'd0ae416ceb8865bfac71df64e0526d470026ba40')
+d2l.DATA_HUB['lm-arc-generations-v5'] = (
+    d2l.LM_DATA_URL + 'lm-arc-generations-v5.jsonl',
+    'c4f2733f91d489a0b89101531a037f12e77a03c8')
 d2l.DATA_HUB['lm-arc-scores-v3'] = (
     d2l.LM_DATA_URL + 'lm-arc-scores-v3.parquet',
     '7f3e186697deceed231f826da256c2fce646eef1')

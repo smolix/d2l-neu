@@ -322,7 +322,9 @@ HEAVY_GPU_NOTEBOOKS = {
     # parameters in bf16. Normal-build peaks (spec part 3.5): 18.2 10.5 GB
     # (Qwen3-1.7B-Base in the port and in Transformers), 18.3 7.2 GB, 18.4
     # 5 GB, 18.5 5 GB, 18.6 8 GB; the D2L_RERUN regeneration runs reach
-    # 9-13 GB (18.5's judge). Above one 7.5 GiB slot, inside two.
+    # 9-13 GB (18.5's judge). Above one 7.5 GiB slot, inside two. The one
+    # exception, 18.4's ARC arms (D2L_RERUN=arc-generations, 4,096-token
+    # thinking), reaches 20 GB: run it on a card masked for it alone.
     ("pytorch", "chapter_lm-pretrained/d2l-checkpoint.ipynb"): 2,
     ("pytorch", "chapter_lm-pretrained/prompting.ipynb"): 2,
     ("pytorch", "chapter_lm-pretrained/scoring.ipynb"): 2,

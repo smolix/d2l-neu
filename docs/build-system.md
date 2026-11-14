@@ -485,13 +485,14 @@ chapter's definition under the last-writer-wins collision rule (except the
 files in `LIB_ONLY_EARLY_FILES`, which are prepended because a later chapter
 uses one of their symbols at import time). Members:
 
-- `chapter_recurrent-modern/legacy-attention-lib.md` quarantines the frozen
-  2017 `TransformerEncoderBlock` (all four frameworks), the tensorflow/mxnet
-  variants of the attention primitives whose PyTorch/JAX homes moved to
-  `chapter_attention/`, and the tensorflow/mxnet `LSTMScratch`/`LSTM`/`GRU`
-  plus the PyTorch/JAX `GRU` that `seq2seq.md` builds on. It lived in the
-  NLP Pretraining chapter until that chapter was retired (2026-11) and moved
-  unchanged, so no shard changed.
+- `chapter_recurrent-modern/legacy-attention-lib.md` holds only the
+  PyTorch/JAX `GRU` that `seq2seq.md` builds on (`lstm.md` teaches the GRU
+  without saving it). It came from the retired NLP Pretraining chapter
+  (2026-11) with the frozen 2017 `TransformerEncoderBlock`, the
+  tensorflow/mxnet attention primitives and the tensorflow/mxnet
+  `LSTMScratch`/`LSTM`/`GRU`; those lost their last user when `seq2seq.md`
+  went PyTorch/JAX-only (2026-11-14) and were removed. The file kept its
+  name.
 - `chapter_lm-encoders/legacy-datahub-lib.md` keeps the `DATA_HUB` entries of
   the two retired NLP chapters (SNLI, IMDb, GloVe, fastText `wiki.en`),
   byte-for-byte. Dropping them would change the `DATA_HUB` shard and mark

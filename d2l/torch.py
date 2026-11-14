@@ -6324,44 +6324,6 @@ class CTRDataset(torch.utils.data.Dataset):
                              for i, v in enumerate(self.data[idx]['x'])])
         return feat + self.offsets, torch.tensor(self.data[idx]['y'])
 
-class PositionWiseFFN(nn.Module):
-    """The positionwise feed-forward network."""
-    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
-        super().__init__()
-        self.dense1 = nn.LazyLinear(ffn_num_hiddens)
-        self.relu = nn.ReLU()
-        self.dense2 = nn.LazyLinear(ffn_num_outputs)
-
-    def forward(self, X):
-        return self.dense2(self.relu(self.dense1(X)))
-
-class AddNorm(nn.Module):
-    """The residual connection followed by layer normalization."""
-    def __init__(self, norm_shape, dropout):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
-        self.ln = nn.LayerNorm(norm_shape)
-
-    def forward(self, X, Y):
-        return self.ln(self.dropout(Y) + X)
-
-class TransformerEncoderBlock(nn.Module):
-    """The Transformer encoder block."""
-    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
-                 use_bias=False):
-        super().__init__()
-        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
-                                                dropout, use_bias)
-        self.addnorm1 = AddNorm(num_hiddens, dropout)
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
-        self.addnorm2 = AddNorm(num_hiddens, dropout)
-
-    def forward(self, X, valid_lens):
-        mask = (None if valid_lens is None
-                else d2l.padding_mask(valid_lens, X.shape[1]))
-        Y = self.addnorm1(X, self.attention(X, X, X, mask))
-        return self.addnorm2(Y, self.ffn(Y))
-
 class GRU(d2l.RNN):
     """The multilayer GRU model implemented with high-level APIs.
 

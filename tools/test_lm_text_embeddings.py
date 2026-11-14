@@ -197,6 +197,12 @@ class Geometry(unittest.TestCase):
         self.assertAlmostEqual(align, 2.0, places=12)  # adjacent: |z-z'|^2=2
         want = np.log((4 * np.exp(-4) + 2 * np.exp(-8)) / 6)
         self.assertAlmostEqual(unif, want, places=12)
+        # Zu: uniformity over its own rows only; alignment unchanged
+        Zu = torch.tensor([[1.0, 0.0], [0.0, 1.0], [0.0, -1.0]])
+        align_u, unif_u = d2l.align_uniform(Z[[0, 2]], Z[[1, 3]], Zu=3 * Zu)
+        self.assertAlmostEqual(align_u, align, places=12)
+        want_u = np.log((2 * np.exp(-4) + np.exp(-8)) / 3)
+        self.assertAlmostEqual(unif_u, want_u, places=12)
 
     def test_truncate(self):
         Z = unit(10, 12, seed=9)

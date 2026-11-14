@@ -88,15 +88,18 @@ RERUN = set(ARTIFACTS) if RERUN else RERUN
 assert GPU or not RERUN, 'regenerating the results needs a GPU'
 N_PAIRS, N_HELD, B, TAU = 20_000, 300, 64, 0.05
 LRS, SEEDS = (1e-5, 3e-5, 1e-4), (0, 1, 2)
+N_CAND, LR_SEED = 5_000, 3  # held-out candidates; the lr check's own seed
 MRL_DIMS = (768, 512, 256, 128, 64)  # the Matryoshka prefixes
 HARD_RANKS, AUDIT_N = (11, 50), 500  # mined negatives; audited per bucket
 BUCKETS = ((1, 5), (6, 10), (11, 30), (31, 50))
 MAX_LEN = {'chunk': 1024, 'query': 128, 'nq_query': 48, 'nq_passage': 160}
 PREFIX = {'query': 'query: ', 'passage': 'passage: '}  # E5's convention
-INSTRUCT = d2l._EMBEDDERS[EMB_QWEN]['query_format']  # from the model card
+QWEN = d2l._EMBEDDERS[EMB_QWEN]  # pooling, padding side, query format
+INSTRUCT = QWEN['query_format']  # from the model card
 CONFIG = dict(  # what the results are made with; reading them checks it
     model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC], corpus=d2l.R3_VERSION,
-    pairs=N_PAIRS, held=N_HELD, batch=B, tau=TAU, lrs=LRS, seeds=SEEDS,
+    pairs=N_PAIRS, held=N_HELD, cands=N_CAND, batch=B, tau=TAU, lrs=LRS,
+    lr_seed=LR_SEED, seeds=SEEDS,
     mrl_dims=MRL_DIMS, hard_ranks=HARD_RANKS, audit_n=AUDIT_N,
     buckets=BUCKETS, max_len=MAX_LEN, prefix=PREFIX, pooling='mean',
     reranker=RERANKER, reranker_revision=d2l.HF_ENCODER_REVISIONS[RERANKER])
@@ -260,6 +263,9 @@ print(f'{len(CORPUS):,} chunks of {len({c["doc_id"] for c in CORPUS.chunks})}'
       f'documents, {np.mean([len(g) for g in GOLD]):.2f} relevant chunks each')
 print(f'BM25: Recall@10 {ci(METRICS["BM25"]["recall@10"])}, '
       f'nDCG@10 {ci(METRICS["BM25"]["ndcg@10"])}')
+if SMALL:
+    print('CPU path: the chunks of the dev documents only, an easier problem; '
+          'the numbers in the text come from the GPU run over all chunks')
 ```
 
 <!-- Placeholder (prose, opening): the raw encoder of the previous section, one forward over every chunk and question per pooling: the first token, the mean, and the mean with the corpus mean vector subtracted; the hits are poor. -->
@@ -317,14 +323,16 @@ def anisotropy(Z, n_pairs=200_000, seed=0):
     return float((Z[i] * Z[j]).sum(-1).mean())
 
 #@save
-def align_uniform(Zx, Zy, t=2.0):
+def align_uniform(Zx, Zy, t=2.0, Zu=None):
     """Wang and Isola's alignment, the mean squared distance between the
     unit vectors of positive pairs (rows of Zx and Zy), and uniformity,
     the log of the mean of exp(-t ||z - z'||^2) over the distinct pairs
-    of all rows of Zx and Zy."""
+    of the rows of Zu, or of all rows of Zx and Zy if Zu is None."""
     Zx, Zy = (F.normalize(torch.as_tensor(Z, dtype=torch.float64), dim=-1)
               for Z in (Zx, Zy))
-    sq = torch.pdist(torch.cat([Zx, Zy])) ** 2
+    Zu = (torch.cat([Zx, Zy]) if Zu is None else F.normalize(
+        torch.as_tensor(Zu, dtype=torch.float64), dim=-1))
+    sq = torch.pdist(Zu) ** 2
     uniformity = torch.logsumexp(-t * sq, 0) - math.log(len(sq))
     return float(((Zx - Zy) ** 2).sum(-1).mean()), float(uniformity)
 ```
@@ -516,20 +524,28 @@ def train_embedder(model, tokenizer, pairs, *, pooling='mean', tau=0.05,
                           if cuda else float('nan')))
 ```
 
-<!-- Placeholder (prose, ### Training on Question-Answer Pairs): the training pairs: Natural Questions (search-engine questions with a Wikipedia passage that answers them); none comes from the book, so the book measures transfer. 20,000 pairs from one seed-0 permutation (the next section reuses the rule), 300 more held out for the learning rate. Some passages answer several questions: these pairs must not share a batch. -->
+<!-- Placeholder (prose, ### Training on Question-Answer Pairs): the training pairs: Natural Questions (search-engine questions with a Wikipedia passage that answers them); none comes from the book, so the book measures transfer. 20,000 pairs from one seed-0 permutation (the next section reuses the rule). For the learning rate, the next 300 pairs whose question and passage the training pairs do not contain (a held-out pair with a training passage would favour the rate that fits the training passages best), each question ranked among 5,000 unseen passages so that the score does not saturate. Some passages answer several questions: these pairs must not share a batch. -->
 
 ```{.python .input #text-embeddings-nq}
 %%tab pytorch
 nq = pd.read_parquet(d2l.download_keyed('nq-pairs'))
 perm = np.random.default_rng(0).permutation(len(nq))
-TRAIN_IDX, HELD_IDX = perm[:N_PAIRS], perm[N_PAIRS:N_PAIRS + N_HELD]
-PAIRS, HELD = (list(nq.iloc[idx][['query', 'answer']].itertuples(
-    index=False, name=None)) for idx in (TRAIN_IDX, HELD_IDX))
+TRAIN_IDX = perm[:N_PAIRS]
+PAIRS = list(nq.iloc[TRAIN_IDX][['query', 'answer']].itertuples(
+    index=False, name=None))
+qtext, ptext = nq['query'].to_numpy(), nq['answer'].to_numpy()
+seen_q, seen_p = {q for q, _ in PAIRS}, {d for _, d in PAIRS}
+unseen = [i for i in perm[N_PAIRS:]  # rows sharing no text with training
+          if qtext[i] not in seen_q and ptext[i] not in seen_p]
+HELD = [(qtext[i], ptext[i]) for i in unseen[:N_HELD]]
+CANDS = list(dict.fromkeys([d for _, d in HELD] + [  # distinct passages
+    ptext[i] for i in unseen[N_HELD:]]))[:N_CAND]
 shared = collections.Counter(d for _, d in PAIRS)
 print(f'{len(nq):,} pairs, {nq.answer.nunique():,} distinct passages; '
       f'training on {len(PAIRS):,} pairs with {len(shared):,} distinct '
       f'passages ({sum(n for n in shared.values() if n > 1):,} pairs share '
-      f'theirs), {len(HELD)} pairs held out for the learning rate')
+      f'theirs); {len(HELD)} unseen pairs held out for the learning rate, '
+      f'ranked among {len(CANDS):,} unseen passages')
 ```
 
 <!-- Placeholder (prose, ### Training on Question-Answer Pairs): helpers for the runs: the raw encoder in fp32 for training, encoding with the prefixes, the top 10 of a trained encoder over the book (stored in the results, also over the dev documents alone for the CPU path), the held-out score that picks the learning rate (never the book), mining, and the checkpoint as a zip of bf16 weights. -->
@@ -561,14 +577,14 @@ def stored(run):
     return [[FULL.ids[i] for i in row]
             for row in run['top10_dev' if SMALL else 'top10']]
 
-def nq_mrr(model, pairs):
-    """MRR@10 of held-out questions among the held-out passages."""
-    qs, ds = zip(*pairs)
-    S = encode(model, qs, 'nq_query', PREFIX['query']) @ encode(
-        model, ds, 'nq_passage', PREFIX['passage']).T
-    gold = [{j for j, t in enumerate(ds) if t == d} for d in ds]  # repeats
-    return float(d2l.retrieval_metrics(S.topk(10).indices.tolist(), gold, ks=(
-        10,))['mrr@10'].mean())
+def nq_rr(model):
+    """Reciprocal rank (0 beyond 10) of each held-out question's passage
+    among the unseen candidate passages."""
+    S = encode(model, [q for q, _ in HELD], 'nq_query', PREFIX['query']) @ \
+        encode(model, CANDS, 'nq_passage', PREFIX['passage']).T
+    gold = [[CANDS.index(d)] for _, d in HELD]
+    return d2l.retrieval_metrics(S.topk(10).indices.tolist(), gold, ks=(
+        10,))['mrr@10']
 
 def mine(model, depth=50):
     """The distinct training passages and, per training question, the
@@ -591,24 +607,27 @@ def write_json(obj):
             json.dump(obj, f)
     return write
 
+BASE = dict(model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC],
+            pooling='mean', prefix=PREFIX)  # how a checkpoint is used
+
 def save_ckpt(model):
     """A writer for the encoder's weights as a zip of bf16 safetensors."""
     members = {'model.safetensors': save_safetensors({
         k: v.to(torch.bfloat16).contiguous().cpu()
-        for k, v in model.state_dict().items()}), 'base.json': json.dumps(
-            dict(model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC],
-                 pooling='mean', prefix=PREFIX)).encode()}
+        for k, v in model.state_dict().items()}),
+               'base.json': json.dumps(BASE).encode()}
     return lambda path: d2l.lm_write_zip(path, members)
 
 def load_ckpt(path):
     """The raw encoder with the trained weights of a checkpoint zip."""
     model, _ = d2l.load_encoder(ENC, dtype=DTYPE)
     with zipfile.ZipFile(path) as z:
+        assert json.loads(z.read('base.json')) == BASE, f'{path}: other base'
         model.load_state_dict(load_safetensors(z.read('model.safetensors')))
     return model.eval()
 ```
 
-<!-- Placeholder (prose, ### Training on Question-Answer Pairs): the regeneration (D2L_RERUN=emb-train, about 12 minutes on one card): (a) the learning rate: seed 0 at three rates, scored on the 300 held-out NQ pairs, never on the book; the chosen run is the seed-0 model, saved; (b) the same recipe with seeds 1 and 2, for the training noise. A normal build reads the stored results and loads the saved checkpoint. -->
+<!-- Placeholder (prose, ### Training on Question-Answer Pairs): the regeneration (D2L_RERUN=emb-train, about 12 minutes on one card): (a) the learning rate: three rates, each trained with a seed of its own that no reported model uses (so the reported runs are not the winners of a selection), scored on the 300 unseen NQ pairs, never on the book; (b) the chosen rate with seeds 0, 1 and 2, for the training noise; the seed-0 model is saved. A normal build reads the stored results and loads the saved checkpoint. -->
 
 ```{.python .input #text-embeddings-train}
 %%tab pytorch
@@ -631,18 +650,17 @@ if 'emb-train' in RERUN:
             steps=r['steps'], loss=[round(v, 4) for v in r['loss']])
 
     for lr in LRS:  # (a) the learning rate, on held-out NQ pairs
-        model, info = train(lr)
-        OUT['lr_check'][str(lr)] = nq_mrr(model, HELD)
-        if lr == LRS[0] or OUT['lr_check'][str(lr)] > OUT['lr_check'][str(
-                OUT['lr'])]:
-            OUT['lr'], R2 = lr, (model, info)
+        model, _ = train(lr, LR_SEED)  # a seed no reported model uses
+        OUT['lr_check'][str(lr)] = nq_rr(model).round(4).tolist()
         del model
         d2l.lm_free()
-    OUT['runs']['contrastive seed 0'] = R2[1] | book_rankings(R2[0])
-    d2l.lm_save_rerun(ARTIFACTS['emb-ckpt'][1], save_ckpt(R2[0]))
-    for seed in SEEDS[1:]:  # (b) the seed noise of the same recipe
+    OUT['lr'] = max(LRS, key=lambda lr: np.mean(OUT['lr_check'][str(lr)]))
+    for seed in SEEDS:  # (b) the chosen rate, three seeds: training noise
         model, info = train(OUT['lr'], seed)
         OUT['runs'][f'contrastive seed {seed}'] = info | book_rankings(model)
+        if seed == SEEDS[0]:  # kept for mining, and saved
+            R2 = model
+            d2l.lm_save_rerun(ARTIFACTS['emb-ckpt'][1], save_ckpt(R2))
         del model
         d2l.lm_free()
 ```
@@ -652,7 +670,7 @@ if 'emb-train' in RERUN:
 ```{.python .input #text-embeddings-mine}
 %%tab pytorch
 if 'emb-train' in RERUN:
-    texts, ranks = mine(R2[0])  # with the seed-0 model
+    texts, ranks = mine(R2)  # with the seed-0 model
     R2 = None
     d2l.lm_free()
     rng = np.random.default_rng(0)
@@ -688,14 +706,22 @@ if 'emb-train' in RERUN:
     print(f'regenerated in {OUT["minutes"]:.1f} min; {d2l.lm_peak()}')
 ```
 
-<!-- Placeholder (prose, ### Hard Negatives and False Negatives): the stored results: the learning-rate check, a training summary (one epoch is about 310 steps; the hard-negative run encodes a third text per pair), and the audit: the share of probably relevant mined passages per rank bucket, with intervals over the 500 questions. -->
+<!-- Placeholder (prose, ### Hard Negatives and False Negatives): the stored results: the learning-rate check (each rate's MRR@10 with its interval, and the chosen rate minus each other, so the reader sees whether the choice was within noise), a training summary (one epoch is about 310 steps; the hard-negative run encodes a third text per pair), and the audit: the share of probably relevant mined passages per rank bucket, with intervals over the 500 questions. -->
 
 ```{.python .input #text-embeddings-train-read}
 %%tab pytorch
 EMB = read_result('emb-train')
 assert EMB['qids'] == [q['qid'] for q in ITEMS], 'other dev questions'
-print('MRR@10 on the held-out pairs by learning rate:', {
-    lr: round(v, 3) for lr, v in EMB['lr_check'].items()}, '-> lr', EMB['lr'])
+best = np.array(EMB['lr_check'][str(EMB['lr'])])
+lr_rows = []
+for lr, rr in EMB['lr_check'].items():  # intervals over the 300 questions
+    rr = np.array(rr)
+    b, r = d2l.bootstrap_ci(rr), d2l.paired_bootstrap(best, rr)
+    lr_rows.append({'lr': lr, 'MRR@10': b.mean, 'low': b.ci[0],
+                    'high': b.ci[1], 'chosen minus this': r.mean,
+                    'delta low': r.ci[0], 'delta high': r.ci[1]})
+print(pd.DataFrame(lr_rows).round(3).to_string(index=False))
+print('chosen lr:', EMB['lr'])
 print(pd.DataFrame({name: dict(
     seconds=r['seconds'], peak_gib=r['peak_gib'], steps=r['steps'],
     loss_first_10=np.mean(r['loss'][:10]), loss_last_10=np.mean(r['loss'][
@@ -711,7 +737,7 @@ print('falls from bucket to bucket:', bool(np.all(np.diff(
     relevant.mean(0)) <= 0)))
 ```
 
-<!-- Placeholder (prose, ### Training on Question-Answer Pairs): the ladder on the book's dev questions: BM25, raw pooling, the contrastive models (seed 0 and the Matryoshka model live from their checkpoints; seeds 1 and 2 and the hard-negative model from the stored top 10), and the released embedder with and without its query instruction (last-token pooling, left padding; its chunk vectors are the retriever's). Anisotropy on the same 2,000 chunks; the live seed-0 model is checked against the stored ranking. -->
+<!-- Placeholder (prose, ### Training on Question-Answer Pairs): the ladder on the book's dev questions: BM25, raw pooling, the contrastive models (seed 0 and the Matryoshka model live from their checkpoints; seeds 1 and 2 and the hard-negative model from the stored top 10), and the released embedder with and without its query instruction (last-token pooling, left padding; its chunk vectors are the retriever's). Anisotropy on the same 2,000 chunks; both live models are checked against their stored rankings (a swapped or wrongly registered checkpoint would fail). -->
 
 ```{.python .input #text-embeddings-ladder}
 %%tab pytorch
@@ -722,13 +748,14 @@ for name, key in (('contrastive seed 0', 'emb-ckpt'),
                   encode(model, CHUNKS, 'chunk', PREFIX['passage']))
     del model
     d2l.lm_free()
-emb, emb_tok = d2l.load_encoder(EMB_QWEN, dtype=DTYPE, padding_side='left')
+emb, emb_tok = d2l.load_encoder(EMB_QWEN, dtype=DTYPE,
+                                padding_side=QWEN['padding_side'])
 X5 = d2l.BookRetriever(FULL, dense=EMB_QWEN).chunk_vectors().float().cpu()[
     [FULL_INDEX[c] for c in CORPUS.ids]]
 for name, fmt in (('Qwen3-Embedding', '{query}'),
                   ('Qwen3-Embedding + instruction', INSTRUCT)):
     ROWS[name] = (d2l.embed_texts(emb, emb_tok, [fmt.format(
-        task=d2l.BOOK_TASK, query=q) for q in QUESTIONS], 'last',
+        task=d2l.BOOK_TASK, query=q) for q in QUESTIONS], QWEN['pooling'],
                                   max_len=MAX_LEN['query']), X5)
 RANKED |= {name: top10(Q @ X.T) for name, (Q, X) in ROWS.items()}
 RANKED |= {name: stored(EMB['runs'][name]) for name in (
@@ -740,13 +767,14 @@ print(pd.DataFrame({name: {k: m[k].mean() for k in m if k != 'ndcg@10'} | {
     'ndcg@10 [CI]': ci(m['ndcg@10']), 'anisotropy': d2l.anisotropy(
         ROWS[name][1][SAMPLE]) if name in ROWS else np.nan}
                     for name, m in METRICS.items()}).T.round(3).to_string())
-reg = stored(EMB['runs']['contrastive seed 0'])
-same = np.mean([a == b for a, b in zip(RANKED['contrastive seed 0'], reg)])
-agree = np.mean(METRICS['contrastive seed 0']['recall@10'] ==
-                d2l.retrieval_metrics(reg, GOLD, ks=(10,))['recall@10'])
-print(f'live seed-0 model against its stored ranking: same top 10 for '
-      f'{same:.3f} of the questions, same Recall@10 for {agree:.3f}')
-assert SMALL or agree >= 0.98
+for name in ('contrastive seed 0', 'Matryoshka'):  # live against stored
+    reg = stored(EMB['runs'][name])
+    same = np.mean([a == b for a, b in zip(RANKED[name], reg)])
+    agree = np.mean(METRICS[name]['recall@10'] == d2l.retrieval_metrics(
+        reg, GOLD, ks=(10,))['recall@10'])
+    print(f'live {name} model against its stored ranking: same top 10 for '
+          f'{same:.3f} of the questions, same Recall@10 for {agree:.3f}')
+    assert SMALL or agree >= 0.98, f'{name}: checkpoint and results differ'
 ```
 
 <!-- Placeholder (prose, ### Hard Negatives and False Negatives and ## Embedders Derived from Language Models): paired differences on the same questions, intervals resampling documents: raw mean pooling against BM25 (C1), contrastive training against raw pooling (C3, against the best raw pooling too), the mined negative (C4), the released embedder against the notebook's model (C5), and the instruction (C6); the seed range of the contrastive recipe is the noise floor each gain is read against. -->
@@ -781,19 +809,19 @@ gain = D[(D['from'] == best_raw) & (D['to'] == 'contrastive seed 0')].iloc[0]
 assert SMALL or gain.low > 0, 'no gain from contrastive training: a bug'
 ```
 
-<!-- Placeholder (prose, ### Alignment and Uniformity): alignment and uniformity on the dev questions paired with each of their relevant chunks, before and after contrastive training and for the released embedder; the plot below projects 2,000 unit chunk vectors on the top two right singular vectors of each model's (uncentered) matrix, so the shared direction stays visible: raw mean pooling crowds around a long mean vector (the star), the contrastive model spreads around the origin. -->
+<!-- Placeholder (prose, ### Alignment and Uniformity): alignment on the dev questions paired with each of their relevant chunks, uniformity on the 2,000 sampled chunks (the chunks' own spread, the quantity anisotropy is about; pooling questions and chunks would count the gap between the two prefixes as spread), before and after contrastive training and for the released embedder; the plot below projects 2,000 unit chunk vectors on the top two right singular vectors of each model's (uncentered) matrix, so the shared direction stays visible: raw mean pooling crowds around a long mean vector (the star), the contrastive model spreads around the origin. -->
 
 ```{.python .input #text-embeddings-alignment}
 %%tab pytorch
 CIDX = {c: j for j, c in enumerate(CORPUS.ids)}
 qi, cj = map(list, zip(*[(i, CIDX[c]) for i, g in enumerate(GOLD)
                          for c in sorted(g)]))
-print(f'{len(qi)} positive (question, relevant chunk) pairs')
-print(pd.DataFrame([dict(zip(('model', 'alignment', 'uniformity'), (
-    name, *d2l.align_uniform(ROWS[name][0][qi], ROWS[name][1][cj]))))
-                    for name in ('raw mean', 'contrastive seed 0',
-                                 'Qwen3-Embedding + instruction')]).round(3)
-      .to_string(index=False))
+print(f'alignment over {len(qi)} (question, relevant chunk) pairs, '
+      f'uniformity over {len(SAMPLE):,} chunks')
+print(pd.DataFrame({name: dict(zip(('alignment', 'uniformity'), (
+    d2l.align_uniform(Q[qi], X[cj], Zu=X[SAMPLE])))) for name, (Q, X) in (
+        (n, ROWS[n]) for n in ('raw mean', 'contrastive seed 0',
+                               'Qwen3-Embedding + instruction'))}).T.round(3))
 _, axes = d2l.plt.subplots(1, 2, figsize=(7, 3.6))
 circle = np.linspace(0, 2 * np.pi, 200)
 for ax, name in zip(axes, ('raw mean', 'contrastive seed 0')):
@@ -836,7 +864,7 @@ def hamming_scores(Qbits, Dbits):
     return out
 ```
 
-<!-- Placeholder (prose, ## Smaller Vectors): Recall@10 against bytes per vector: truncation of the plain contrastive model, of the Matryoshka model and of the released embedder (trained for truncation down to 32 coordinates); int8 with one symmetric scale per coordinate taken from the corpus; binary vectors by Hamming distance alone, and with the top 100 rescored by the float query against the document's signs (the documents stay one bit per coordinate). The memory table counts bytes per vector and per 10^8 vectors. -->
+<!-- Placeholder (prose, ## Smaller Vectors): Recall@10 against bytes per vector: truncation of the plain contrastive model, of the Matryoshka model and of the released embedder (trained for truncation down to 32 coordinates); int8 with one symmetric scale per coordinate taken from the corpus; binary vectors by Hamming distance alone (integer scores tie often; ties are put in random order, seeded, rather than in corpus order), and with the top 100 rescored by the float query against the document's signs (the documents stay one bit per coordinate). The memory table counts bytes per vector and per 10^8 vectors. -->
 
 ```{.python .input #text-embeddings-compress}
 %%tab pytorch
@@ -846,6 +874,7 @@ def recall10(S):
 MODELS = {'contrastive': 'contrastive seed 0', 'Matryoshka': 'Matryoshka',
           'Qwen3-Embedding': 'Qwen3-Embedding + instruction'}
 R10, rows = {}, []
+gen = torch.Generator().manual_seed(0)  # breaks ties of equal bit counts
 for label, name in MODELS.items():
     Q, X = ROWS[name]
     m = X.shape[1]
@@ -858,6 +887,7 @@ for label, name in MODELS.items():
         Q @ (torch.round(X / scale).to(torch.int8).float() * scale).T)))
     Xb = d2l.binarize(X)
     H = torch.from_numpy(d2l.hamming_scores(d2l.binarize(Q), Xb)).float()
+    H += 0.5 * torch.rand(H.shape, generator=gen)  # ties in random order
     rows.append((label, f'binary, {m}', m // 8, recall10(H)))
     top = H.topk(100).indices  # rescored: float query, document signs
     signs = torch.from_numpy(np.unpackbits(Xb, axis=1)).float() * 2 - 1
@@ -881,7 +911,7 @@ d2l.plot([t.bytes.tolist() for t in lines + points],
          fmts=('C0-o', 'C1-s', 'C2-^', 'C0*', 'C1*', 'C2*'))
 ```
 
-<!-- Placeholder (prose, ## Smaller Vectors): paired differences at 128 coordinates (the Matryoshka model against the truncated plain one, C7) and of binary vectors with rescoring against float vectors at full width, at 1/32 of the bytes. -->
+<!-- Placeholder (prose, ## Smaller Vectors): paired differences at 128 coordinates (the Matryoshka model against the truncated plain one, C7: two single-seed models, so the gap is read against the seed range of the full-width models as well as its interval; "keeps more" only if it clears both) and of binary vectors with rescoring against float vectors at full width, at 1/32 of the bytes. -->
 
 ```{.python .input #text-embeddings-compress-compare}
 %%tab pytorch
@@ -889,25 +919,34 @@ pairs = [('Matryoshka, 128 - contrastive, 128', R10['Matryoshka', 128],
           R10['contrastive', 128])]
 pairs += [(f'{l}: binary + rescoring - float', R10[l, 'binary + rescoring'],
            R10[l, ROWS[n][1].shape[1]]) for l, n in MODELS.items()]
-print(pd.DataFrame([dict(comparison=c, delta=r.mean, low=r.ci[0],
-                         high=r.ci[1]) for c, r in ((c, d2l.paired_bootstrap(
-                             a, b, cluster=CLUSTER)) for c, a, b in pairs)])
-      .round(3).to_string(index=False))
+C = pd.DataFrame([dict(comparison=c, delta=r.mean, low=r.ci[0], high=r.ci[1])
+                  for c, r in ((c, d2l.paired_bootstrap(a, b, cluster=CLUSTER))
+                               for c, a, b in pairs)])
+C['CI excludes 0'] = (C.low > 0) | (C.high < 0)
+C['beyond seed range'] = C.delta.abs() > seed_range
+print(C.round(3).to_string(index=False))
+print(f'seed range of Recall@10 at full width (a proxy for the training '
+      f'noise at 128 coordinates): {seed_range:.3f}')
 ```
 
-<!-- Placeholder (prose, ## Embedders Derived from Language Models): in practice: sentence-transformers loads the released embedder with its pooling, padding side and normalization from the model's own configuration; its vectors agree with embed_texts, and its MultipleNegativesRankingLoss at scale 1/tau is the InfoNCE loss above. Then LLM2Vec, NV-Embed and E5-Mistral one clause each; MTEB and why a leaderboard average does not predict a domain; contamination. -->
+<!-- Placeholder (prose, ## Embedders Derived from Language Models): in practice: sentence-transformers loads the released embedder with its pooling, padding side and normalization from the model's own configuration; the notebook's instruction format and last-token pooling are checked against that configuration (a mismatch with a checkpoint's training convention is a silent pitfall); its vectors agree with embed_texts, and its MultipleNegativesRankingLoss at scale 1/tau is the InfoNCE loss above. Then LLM2Vec, NV-Embed and E5-Mistral one clause each; MTEB and why a leaderboard average does not predict a domain; contamination. -->
 
 ```{.python .input #text-embeddings-production}
 %%tab pytorch
 st = SentenceTransformer(
     EMB_QWEN, revision=d2l.HF_ENCODER_REVISIONS[EMB_QWEN],
     device='cuda' if GPU else 'cpu', model_kwargs={'dtype': DTYPE},
-    processor_kwargs={'padding_side': 'left'})
+    processor_kwargs={'padding_side': QWEN['padding_side']})
+card_task = ('Given a web search query, retrieve relevant passages that '
+             'answer the query')  # the model's own query prompt
+assert st.prompts['query'] == INSTRUCT.format(task=card_task, query='')
+assert st[1].pooling_mode == 'lasttoken' and QWEN['pooling'] == 'last'
 prompt = INSTRUCT.format(task=d2l.BOOK_TASK, query='')
-ours = torch.cat([d2l.embed_texts(emb, emb_tok, CHUNKS[:16], 'last',
+ours = torch.cat([d2l.embed_texts(emb, emb_tok, CHUNKS[:16], QWEN['pooling'],
                                   max_len=MAX_LEN['chunk']),
                   d2l.embed_texts(emb, emb_tok, [prompt + q for q in
-                                                 QUESTIONS[:4]], 'last')])
+                                                 QUESTIONS[:4]],
+                                  QWEN['pooling'])])
 theirs = torch.cat([st.encode(texts, prompt=p, normalize_embeddings=True,
                               convert_to_tensor=True).float().cpu()
                     for texts, p in ((CHUNKS[:16], ''),

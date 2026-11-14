@@ -7533,16 +7533,18 @@ def anisotropy(Z, n_pairs=200_000, seed=0):
     j = j + (j >= i)  # a partner other than i, uniformly
     return float((Z[i] * Z[j]).sum(-1).mean())
 
-def align_uniform(Zx, Zy, t=2.0):
+def align_uniform(Zx, Zy, t=2.0, Zu=None):
     """Wang and Isola's alignment, the mean squared distance between the
     unit vectors of positive pairs (rows of Zx and Zy), and uniformity,
     the log of the mean of exp(-t ||z - z'||^2) over the distinct pairs
-    of all rows of Zx and Zy.
+    of the rows of Zu, or of all rows of Zx and Zy if Zu is None.
 
     Defined in :numref:`sec_lm_text_embeddings`"""
     Zx, Zy = (F.normalize(torch.as_tensor(Z, dtype=torch.float64), dim=-1)
               for Z in (Zx, Zy))
-    sq = torch.pdist(torch.cat([Zx, Zy])) ** 2
+    Zu = (torch.cat([Zx, Zy]) if Zu is None else F.normalize(
+        torch.as_tensor(Zu, dtype=torch.float64), dim=-1))
+    sq = torch.pdist(Zu) ** 2
     uniformity = torch.logsumexp(-t * sq, 0) - math.log(len(sq))
     return float(((Zx - Zy) ** 2).sum(-1).mean()), float(uniformity)
 

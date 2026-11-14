@@ -228,9 +228,7 @@ def rerank_yes_no(model, tokenizer, query, docs, instruction=None,
 ```{.python .input #retrieval-default-embedder}
 %%tab pytorch
 #@save
-# Qwen3-Embedding-0.6B until the selection on train questions: the 2026
-# candidate (harrier-oss-v1-0.6b) replaces it only if its Recall@10 is
-# higher with a document-clustered paired interval that excludes zero
+# The embedder that the retriever, this chapter and later chapters use
 DEFAULT_EMBEDDER = 'Qwen/Qwen3-Embedding-0.6B'
 ```
 

@@ -62,8 +62,6 @@ d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Embedding-0.6B'] = (
     '97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3')
 d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Reranker-0.6B'] = (
     'e61197ed45024b0ed8a2d74b80b4d909f1255473')
-d2l.HF_ENCODER_REVISIONS['microsoft/harrier-oss-v1-0.6b'] = (
-    'f9b9dc8d367d443f2479d27aa5d8d2850c0774ee')
 ```
 
 <!-- Placeholder (stage 2): question-passage pairs from Natural Questions, pinned to a commit and downloaded at run time. -->

@@ -757,15 +757,11 @@ def _r3_local(root, tokenizer, revision):
 _EMBEDDERS = {
     'Qwen/Qwen3-Embedding-0.6B': dict(
         pooling='last', padding_side='left',
-        query_format='Instruct: {task}\nQuery:{query}'),
-    'microsoft/harrier-oss-v1-0.6b': dict(
-        pooling='last', padding_side='left',
-        query_format='Instruct: {task}\nQuery: {query}')}
+        query_format='Instruct: {task}\nQuery:{query}')}
 BOOK_TASK = 'Given a question about the book, retrieve passages that answer it'
 # Registered chunk vectors (sec512 chunks, 'dense' view, float16) by embedder
 _R3_EMB_KEYS = {
-    'Qwen/Qwen3-Embedding-0.6B': 'lm-enc-r3-emb-qwen3emb06b-sec512-v1',
-    'microsoft/harrier-oss-v1-0.6b': 'lm-enc-r3-emb-harrier06b-sec512-v1'}
+    'Qwen/Qwen3-Embedding-0.6B': 'lm-enc-r3-emb-qwen3emb06b-sec512-v1'}
 
 #@save
 def _emb_cache_key(corpus_version, tag, view, model_id, revision, max_len,

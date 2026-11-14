@@ -2,8 +2,13 @@
 """CPU tests for sec_lm_retrieval (chapter_lm-encoders/retrieval.md):
 `bm25_tokenize` cases; `BM25Index` against `bm25s` (method 'lucene', the same
 tokens) on a 300-document fixture (rank-1 ids, scores to 1e-4 relative);
-`rrf_fuse` by hand; `Hit`; `BookRetriever(dense=None)` on a hand-made corpus,
-whose `bm25_params=None` resolves to the stored defaults. Network-gated
+`rrf_fuse` by hand; `kmeans` (inertia never rises with more iterations,
+seeded runs repeat, each row's label is its nearest centroid); `IVFIndex`
+probing every cell equals exact search; `ProductQuantizer` (table distances
+equal the distances to the reconstructions, the hand case of the text, codes
+equal Faiss `IndexPQ`'s given the same codebooks); `Hit`;
+`BookRetriever(dense=None)` on a hand-made corpus, whose `bm25_params=None`
+resolves to the stored defaults. Network-gated
 (D2L_TEST_NET=1 and the model in the HF cache): `rerank_yes_no` against the
 Qwen3-Reranker-0.6B card's reference code on 8 pairs (CPU float32, P(yes) to
 1e-4)."""
@@ -123,6 +128,85 @@ class Fusion(unittest.TestCase):
         self.assertEqual(order, ['c', 'a', 'b', 'd'])  # tie: first seen
         w = dict(d2l.rrf_fuse([['a'], ['b']], k=1, weights=[2, 1]))
         self.assertEqual(w, {'a': 1.0, 'b': 0.5})
+
+
+def blobs(n=2000, d=16, k=8, seed=0):
+    """n points around k random centres in d dimensions, float32."""
+    rng = np.random.default_rng(seed)
+    centres = 3 * rng.standard_normal((k, d))
+    return torch.tensor(centres[rng.integers(k, size=n)]
+                        + rng.standard_normal((n, d)), dtype=torch.float32)
+
+
+class KMeans(unittest.TestCase):
+    def test_inertia_seed_and_labels(self):
+        X = blobs()
+        inertia = []
+        for n_iter in (0, 1, 2, 5, 10):
+            C, a = d2l.kmeans(X, 8, n_iter=n_iter, seed=0)
+            inertia.append(((X - C[a]) ** 2).sum().item())
+        for before, after in zip(inertia, inertia[1:]):
+            self.assertLessEqual(after, before * (1 + 1e-6))
+        C1, a1 = d2l.kmeans(X, 8, n_iter=10, seed=0)
+        self.assertTrue(torch.equal(C, C1) and torch.equal(a, a1))
+        self.assertTrue(torch.equal(torch.cdist(X, C).argmin(1), a))
+        C2, _ = d2l.kmeans(X, 8, n_iter=10, seed=1)
+        self.assertEqual(C2.shape, (8, 16))
+
+    def test_ivf_all_cells_is_exact(self):
+        X, Q = blobs(), blobs(50, seed=1)
+        ivf = d2l.IVFIndex(16, nprobe=16)
+        ivf.train(X)
+        ivf.add(X)
+        D, I = ivf.search(Q, 5)
+        exact = ((Q[:, None] - X) ** 2).sum(-1).topk(5, largest=False)
+        self.assertTrue(torch.equal(I, exact.indices))
+        torch.testing.assert_close(D, exact.values, rtol=1e-5, atol=1e-5)
+        ivf.nprobe = 1  # fewer cells: ids still valid, some neighbours lost
+        _, I1 = ivf.search(Q, 5)
+        self.assertTrue(bool(((I1 >= -1) & (I1 < len(X))).all()))
+
+
+class PQ(unittest.TestCase):
+    def test_adc_equals_reconstruction_distance(self):
+        X, Y = blobs(3000, 32), blobs(10, 32, seed=2)
+        pq = d2l.ProductQuantizer(4, nbits=8).fit(X)
+        codes = pq.encode(X)
+        self.assertEqual((codes.dtype, tuple(codes.shape)),
+                         (torch.uint8, (3000, 4)))
+        Xh = pq.decode(codes)
+        for y in Y:
+            table = pq.adc_table(y)
+            self.assertEqual(tuple(table.shape), (4, 256))
+            adc = table[torch.arange(4), codes.long()].sum(1).double()
+            want = ((y.double() - Xh.double()) ** 2).sum(1)
+            self.assertLess(((adc - want).abs() / want).max().item(), 1e-5)
+            D, I = pq.adc_search(y, codes, 5)
+            self.assertTrue(torch.equal(I, adc.topk(5, largest=False).indices))
+        D, I = pq.adc_search(Y, codes, 5)
+        self.assertEqual(tuple(I.shape), (10, 5))
+        try:
+            import faiss
+        except ImportError as e:
+            self.skipTest(f'faiss not installed: {e}')
+        index = faiss.IndexPQ(32, 4, 8)
+        faiss.copy_array_to_vector(pq.codebooks.numpy().ravel(),
+                                   index.pq.centroids)
+        index.is_trained = True
+        same = (index.sa_encode(X.numpy()) == codes.numpy()).all(1).mean()
+        self.assertGreaterEqual(same, 0.999)
+
+    def test_hand_case(self):
+        pq = d2l.ProductQuantizer(2, nbits=1)
+        pq.codebooks = torch.tensor([[[1., 0.], [0., 1.]],
+                                     [[1., 1.], [-1., 0.]]])
+        code = pq.encode(torch.tensor([[0.9, 0.2, -0.8, 0.1]]))
+        self.assertEqual(code[0].tolist(), [0, 1])
+        self.assertEqual(pq.decode(code)[0].tolist(), [1., 0., -1., 0.])
+        table = pq.adc_table(torch.tensor([1., 1., 0., 0.]))
+        self.assertEqual(table.tolist(), [[1., 1.], [2., 1.]])
+        with self.assertRaises(ValueError):
+            d2l.ProductQuantizer(3).encode(torch.zeros(2, 4))
 
 
 class Retriever(unittest.TestCase):

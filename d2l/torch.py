@@ -7833,6 +7833,137 @@ def rerank_yes_no(model, tokenizer, query, docs, instruction=None,
                             sep='', batch_size=batch_size)
     return torch.exp(lp[:, 0]).numpy()
 
+def kmeans(X, n_clusters, n_iter=20, seed=0):
+    """Lloyd's k-means of the rows of X from a seeded k-means++ start:
+    (centroids (n_clusters, d), assign (N,)) as tensors on X's device,
+    assign naming each row's nearest centroid. A cluster that loses all
+    its rows keeps its centroid.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    X = torch.as_tensor(X, dtype=torch.float32)
+    x2, gen = (X ** 2).sum(1), torch.Generator().manual_seed(seed)
+
+    def nearest(C):  # ||x||^2 is the same for every centroid: left out
+        c2 = (C ** 2).sum(1)
+        return torch.cat([(c2 - 2 * Xb @ C.T).argmin(1)
+                          for Xb in X.split(8192)])
+
+    def pick(d2):  # a row drawn with probability proportional to d2
+        w = d2.double().cpu().clamp(min=0)
+        if w.sum() == 0:
+            return torch.randint(len(X), (1,), generator=gen).item()
+        return torch.multinomial(w, 1, generator=gen).item()
+
+    C = [X[pick(torch.ones(len(X)))]]
+    d2 = x2 - 2 * X @ C[0] + C[0] @ C[0]
+    for _ in range(1, n_clusters):  # k-means++: far rows are likelier
+        C.append(X[pick(d2)])
+        d2 = torch.minimum(d2, x2 - 2 * X @ C[-1] + C[-1] @ C[-1])
+    C = torch.stack(C)
+    for _ in range(n_iter):
+        assign = nearest(C)
+        counts = torch.bincount(assign, minlength=n_clusters)
+        sums = torch.zeros_like(C).index_add_(0, assign, X)
+        keep = counts > 0
+        C[keep] = sums[keep] / counts[keep, None]
+    return C, nearest(C)
+
+class IVFIndex:
+    """Inverted file index: the k-means cells of the training vectors; a
+    query scans the vectors of its nprobe nearest cells exactly, by
+    squared Euclidean distance (for unit vectors, the cosine order).
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, nlist, nprobe=1):
+        self.nlist, self.nprobe = nlist, nprobe
+
+    def train(self, X, n_iter=20, seed=0):
+        self.centroids = d2l.kmeans(X, self.nlist, n_iter, seed)[0]
+
+    def _cells(self, X, n):
+        """The n nearest cells of each row of X."""
+        d = (self.centroids ** 2).sum(1) - 2 * X @ self.centroids.T
+        return d.topk(n, dim=1, largest=False).indices
+
+    def add(self, X):
+        """Store the rows of X (ids 0, 1, ...) grouped by cell."""
+        X = torch.as_tensor(X, dtype=torch.float32)
+        cell = self._cells(X, 1)[:, 0]
+        self.ids = torch.argsort(cell, stable=True)
+        self.X = X[self.ids]
+        sizes = torch.bincount(cell, minlength=self.nlist)
+        self.start = torch.cat([torch.zeros(1, dtype=torch.long),
+                                sizes.cumsum(0)])  # cell c: start[c:c + 2]
+
+    def search(self, Q, k):
+        """(distances, ids) of the k nearest stored rows per query, nearest
+        first, among the probed cells; id -1 where they hold fewer."""
+        Q = torch.as_tensor(Q, dtype=torch.float32)
+        D = torch.full((len(Q), k), torch.inf)
+        I = torch.full((len(Q), k), -1, dtype=torch.long)
+        for j, cells in enumerate(self._cells(Q, self.nprobe).tolist()):
+            rows = torch.cat([torch.arange(self.start[c], self.start[c + 1])
+                              for c in cells])
+            top = ((self.X[rows] - Q[j]) ** 2).sum(1).topk(
+                min(k, len(rows)), largest=False)
+            n = len(top.values)
+            D[j, :n], I[j, :n] = top.values, self.ids[rows[top.indices]]
+        return D, I
+
+class ProductQuantizer:
+    """Product quantization: a vector of d coordinates is cut into m
+    sub-vectors, each replaced by the index of the nearest of 2^nbits
+    centroids of its own k-means codebook (one byte per sub-vector here).
+    A query's squared distances to all codes are sums of m entries of a
+    table computed once per query: the asymmetric distance.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, m, nbits=8):
+        if not 1 <= nbits <= 8:
+            raise ValueError('codes are stored as one byte per sub-vector')
+        self.m, self.nbits = m, nbits
+
+    def _split(self, X):  # (..., d) -> (..., m, d / m)
+        X = torch.as_tensor(X, dtype=torch.float32)
+        if X.shape[-1] % self.m:
+            raise ValueError(f'{X.shape[-1]} coordinates in {self.m} parts')
+        return X.reshape(*X.shape[:-1], self.m, X.shape[-1] // self.m)
+
+    def fit(self, X, n_iter=20, seed=0):
+        S = self._split(X)
+        self.codebooks = torch.stack([d2l.kmeans(  # (m, 2^nbits, d / m)
+            S[:, j], 2 ** self.nbits, n_iter, seed)[0] for j in range(self.m)])
+        return self
+
+    def encode(self, X):
+        """Codes (N, m), uint8: the nearest centroid of each sub-vector."""
+        S, c2 = self._split(X), (self.codebooks ** 2).sum(-1)
+        return torch.cat([(c2 - 2 * torch.einsum(
+            'nmd,mkd->nmk', block, self.codebooks)).argmin(-1)
+                          for block in S.split(1024)]).to(torch.uint8)
+
+    def decode(self, codes):
+        """The reconstructions x-hat (N, d) of codes."""
+        codes = torch.as_tensor(codes).long()
+        return self.codebooks[torch.arange(self.m), codes].flatten(1)
+
+    def adc_table(self, q):
+        """(m, 2^nbits) squared distances of q's sub-vectors to the
+        centroids."""
+        return ((self._split(q)[:, None, :] - self.codebooks) ** 2).sum(-1)
+
+    def adc_search(self, q, codes, k):
+        """(distances, ids) of the k codes nearest to the query q, or to
+        each row of q, by m table look-ups per code."""
+        q = torch.as_tensor(q, dtype=torch.float32)
+        if q.ndim == 2:
+            out = [self.adc_search(row, codes, k) for row in q]
+            return tuple(torch.stack(t) for t in zip(*out))
+        codes = torch.as_tensor(codes).long()
+        d = self.adc_table(q)[torch.arange(self.m), codes].sum(1)
+        top = d.topk(min(k, len(d)), largest=False)
+        return top.values, top.indices
+
 # The embedder that the retriever, this chapter and later chapters use
 DEFAULT_EMBEDDER = 'Qwen/Qwen3-Embedding-0.6B'
 
@@ -7847,8 +7978,8 @@ class BookRetriever:
     build Faiss indexes on first use.
 
     Defined in :numref:`sec_lm_retrieval`"""
-    # BM25 parameters tuned on train questions (19.4, cell bm25-tune)
-    BM25_PARAMS = dict(k1=1.2, b=0.75, split_identifiers=True)
+    # BM25 parameters chosen on the book's training questions
+    BM25_PARAMS = dict(k1=1.2, b=0.9, split_identifiers=True)
 
     def __init__(self, corpus=None, dense=DEFAULT_EMBEDDER, index='flat',
                  reranker=None, fusion='rrf', rrf_k=60, device=None,

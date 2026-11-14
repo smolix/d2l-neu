@@ -486,14 +486,23 @@ better once its counts are learned, so one might expect the code length to
 fall with every added character. Does it?
 
 ```{.python .input #mdl-coding-compression-a-language-model-as-a-compressor-2}
-k = len(set(text))
-print(f'{len(text)} characters over {k} symbols')
+k, n = len(set(text)), len(text)
+freq = [text.count(ch) / n for ch in set(text)]
+print(f'{n} characters over {k} symbols, letter-frequency entropy '
+      f'{-sum(f * math.log2(f) for f in freq):.3f} bits')
 for m in range(5):
-    print(f'order {m}: {adaptive_bits(text, m, k):.2f} bits/char')
-print(f'zlib -9: {8 * len(zlib.compress(text.encode(), 9)) / len(text):.2f} '
-      f'bits/char')
+    bits = adaptive_bits(text, m, k)
+    print(f'order {m}: {bits:.2f} bits/char = {bits * math.log(2):.2f} '
+          f'nats/char, perplexity 2^bits = {2 ** bits:.2f}')
+print(f'zlib -9: {8 * len(zlib.compress(text.encode(), 9)) / n:.2f} bits/char')
 ```
 
+<!-- WRITER: the cell now also prints the letter-frequency entropy (4.078
+bits) and, per order, nats/char and per-character perplexity 2^bits: order 0
+4.08 bits = 2.83 nats, perplexity 16.91; order 1 3.29 = 2.28, 9.81; order 2
+2.75 = 1.90, 6.70; order 3 2.55 = 1.77, 5.84 (5.84, not 5.86: computed from
+the unrounded bits); order 4 2.78 = 1.92, 6.85; zlib 2.84 bits. Deterministic
+given the text, identical in all four tabs. -->
 It does not. Context lowers the code length from $4.08$ bits per character
 with no context to $2.55$ with three characters, which beats `zlib`'s
 $2.84$, but the four-character model loses to the three-character one, at
@@ -501,7 +510,7 @@ $2.78$ bits per character. Most of its $27^4 \approx 530{,}000$ possible
 contexts are seen too rarely to learn their next-character distribution, and
 the bits spent while each context learns are part of the code length. The
 order-$0$ length $4.08$ agrees to two decimals with the entropy of the
-text's letter frequencies, $4.078$ bits (the cell does not print it):
+text's letter frequencies, $4.078$ bits:
 learning $26$ free frequencies costs about $\tfrac{26}{2} \log_2 n \approx
 226$ bits for the whole text, $0.001$ bits per character.
 
@@ -791,22 +800,12 @@ $\textrm{PPL} = b^{\textrm{CE}_b}$ for the cross-entropy $\textrm{CE}_b$ in
 any log base $b$, perplexity is the one quantity of this chapter that does
 not depend on the unit
 (Exercise :exref:`ex_mdl-information-theory-show-that-perplexity-does`).
-The cell computes it in nats and in bits for five tokens to which a model
-assigned the probabilities $0.2, 0.1, 0.4, 0.25, 0.05$.
-
-```{.python .input #information-theory-perplexity}
-q_tok = [0.2, 0.1, 0.4, 0.25, 0.05]   # model prob. of each observed token
-nll = [-math.log(q_i) for q_i in q_tok]
-mean_nll = sum(nll) / len(nll)        # CE in nats
-ce2 = mean_nll / math.log(2)          # the same CE in bits
-print(f'per-token NLL (nats): {[round(v, 3) for v in nll]}')
-print(f'CE = {mean_nll:.4f} nats, perplexity e^CE = {math.exp(mean_nll):.2f}')
-print(f'CE2 = {ce2:.4f} bits, 2^CE2 = {2 ** ce2:.2f}')
-```
-
-Both units give $6.31$. The geometric mean punishes confident mistakes: the
-single token of probability $0.05$ costs $3.0$ nats, more than the tokens
-of probability $0.4$ and $0.25$ together.
+<!-- WRITER: the five-token cell `information-theory-perplexity` (6.31) is
+cut. Read the branching factor off the Time Machine cell
+(`mdl-coding-compression-a-language-model-as-a-compressor-2`) instead:
+per-character perplexity 16.91 with no context (order 0, 4.08 bits = 2.83
+nats), 5.84 with three characters of context (order 3, 2.55 bits = 1.77
+nats), 6.85 at order 4. -->
 
 ### The Perplexity Floor
 
@@ -1365,12 +1364,11 @@ and how many does arithmetic coding average?
 $$\textrm{PPL}=\exp\Big(-\tfrac1n\textstyle\sum_i\log q(x_i\mid x_{<i})\Big)=\Big(\prod_i q(x_i\mid x_{<i})\Big)^{-1/n}$$
 
 - Uniform over $k$ tokens: $\textrm{PPL}=k$. Same value in every log base.
+- *The Time Machine*, per character: $2^{4.08}\approx 16.9$ with no context,
+  $2^{2.55}\approx 5.8$ with three characters of context.
 
-@!information-theory-perplexity
-
-::: {.d2l-note}
-One token at $0.05$ costs $3.0$ nats: confident mistakes dominate.
-:::
+<!-- WRITER: slide re-pointed from the cut five-token cell to the Time
+Machine numbers (order 0: 16.91, order 3: 5.84). -->
 :::
 
 ::: {.slide title="The Expected Perplexity Is at Least the Exponentiated Entropy Rate"}

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source": "chapter_natural-language-processing-pretraining/seq2seq.md",
+  "source": "chapter_recurrent-modern/seq2seq.md",
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",

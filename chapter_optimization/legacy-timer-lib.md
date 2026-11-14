@@ -7,10 +7,9 @@ scans it for `#@save` blocks, and `gen_notebooks.py` excludes it via
 `LIB_ONLY_FILES`. It carries the tensorflow and mxnet variants of `Timer`.
 The PyTorch/JAX `Timer` lives in `chapter_optimization/sgd.md`, whose
 Advanced-part cell is tagged `%%tab pytorch, jax`. The still-four-framework
-notebooks of the Language Models and Image Models parts and the Tools
-appendix call `d2l.Timer` in their tensorflow and mxnet tabs too:
+notebooks of the Image Models part and the Tools appendix call `d2l.Timer`
+in their tensorflow and mxnet tabs too:
   * `chapter_computer-vision/{image-augmentation,kaggle-cifar10,kaggle-dog,ssd}.md`
-  * `chapter_natural-language-processing-pretraining/word2vec-pretraining.md`
   * `chapter_appendix-tools-for-deep-learning/utils.md` (training helpers)
 The two classes are byte-for-byte the cell that `sgd.md` held untagged until
 2026-11 (the `sgd.md` copy has since moved to `time.perf_counter`), so the

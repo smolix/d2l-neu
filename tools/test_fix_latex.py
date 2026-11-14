@@ -4,7 +4,10 @@
 import unittest
 
 from d2l_preprocess import CHAPTER_NUMBERING, PDF_CHAPTER_FILES
-from fix_latex import SRC_MARKER, add_frontmatter_page_numbering, fix_all
+from pathlib import Path
+
+from fix_latex import (BOOK_COVER, SRC_MARKER, add_book_cover,
+                       add_frontmatter_page_numbering, fix_all)
 
 
 class AddFrontmatterPageNumberingTest(unittest.TestCase):
@@ -70,6 +73,26 @@ class ChapterNumberingTest(unittest.TestCase):
             self.assertEqual(CHAPTER_NUMBERING[rel], [n])
             self.assertIn(f'{SRC_MARKER}{rel}\n\\setcounter{{chapter}}'
                           f'{{{n - 1}}}\n', self.result)
+
+
+class AddBookCoverTest(unittest.TestCase):
+    DOC = ('\\documentclass{book}\n% \\begin{document} in a comment\n'
+           '\\begin{document}\n\\pagenumbering{roman}\n\\frontmatter\n'
+           '\\maketitle\n\n\\tableofcontents\n\\end{document}\n')
+
+    def test_cover_replaces_title_page(self):
+        tex_dir = BOOK_COVER.parent.parent.parent / '_pdf' / 'pytorch'
+        out = add_book_cover(self.DOC, tex_dir)
+        self.assertNotIn('\\maketitle', out)
+        self.assertIn('\\includepdf[pages=1]{../../static/cover/'
+                      'd2l-cover-D-inter-trim-7x10in.pdf}', out)
+        # pdfpages is loaded before the real \\begin{document}, not the comment
+        self.assertIn('\\usepackage{pdfpages}\n\\begin{document}', out)
+        self.assertIn('% \\begin{document} in a comment', out)
+        self.assertEqual(add_book_cover(out, tex_dir), out)  # idempotent
+
+    def test_cover_file_exists(self):
+        self.assertTrue(BOOK_COVER.exists(), BOOK_COVER)
 
 
 if __name__ == '__main__':

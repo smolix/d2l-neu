@@ -32,7 +32,7 @@ from d2l_preprocess import (
 # with no imports cell — see each file's header). gen_notebooks.py imports
 # this list to keep them out of the notebook set.
 LIB_ONLY_FILES = [
-    'chapter_natural-language-processing-pretraining/legacy-attention-lib.md',
+    'chapter_recurrent-modern/legacy-attention-lib.md',
     'chapter_computational-performance/legacy-multigpu-lib.md',
     'chapter_optimization/legacy-timer-lib.md',
     'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
@@ -62,6 +62,7 @@ LIB_ONLY_FILES = [
     # cache, and 19.5's question-set reader: explained in a sentence each.
     'chapter_lm-encoders/retrieval-lib.md',
     'chapter_lm-encoders/rag-lib.md',
+    'chapter_lm-encoders/legacy-datahub-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:312c2b209171413f666624b8a1c4d49d9cfa90c181d0f7383a47ebebe5111614",
+    "d2l_lib_fingerprint": "sha256:6d4b2b43109542a1cb06fbcc92e2fe63ebf96c0a5e413d898033f609f4e98a7f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25701,
-          "sha256": "sha256:557828c0047908edcb0821a1a50df7e72cc73d13a2d6a5a431204cafc85c6acc"
+          "bytes": 25703,
+          "sha256": "sha256:8c9bd08f15b306da654617bc2b64b0bfd7cadd546a364b7a3f830897266f6cb4"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 88.1\n"
+          "text": "validation perplexity 90.0\n"
         }
       ]
     },
@@ -115,13 +115,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-plain-model-3-1.svg",
-          "bytes": 24281,
-          "sha256": "sha256:af15e57b80db611f2e938983664332a736c1ea8af4ce28341a8b3c0f8b42cd44"
+          "bytes": 25693,
+          "sha256": "sha256:64490722a3401d803bff191a8bc7cb4286832eb939e928b8b239815f5e9b1494"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity without clipping: highest 11193, final 172\n"
+          "text": "validation perplexity without clipping: highest 237, final 86\n"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.32 bits per byte\n"
+          "text": "2.78 bytes/token, 2.34 bits per byte\n"
         }
       ]
     },
@@ -165,8 +165,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-wider-embedding-with-dropout-2-1.svg",
-          "bytes": 23608,
-          "sha256": "sha256:5b7b0d343216bd4acb3c45922d243a356de411a33d79d1654c2a37d214f45542"
+          "bytes": 23614,
+          "sha256": "sha256:5c65ba6627d39558913c628db38d8c46a9b055e9f1f58b3878039514e0bd1470"
         }
       ]
     },
@@ -177,7 +177,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 58.7, 2.11 bits per byte\n"
+          "text": "validation perplexity 59.2, 2.12 bits per byte\n"
         }
       ]
     },
@@ -220,14 +220,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.28, 2.13, 2.11, 2.11, 2.11, 2.11]\n"
+          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.28, 2.13, 2.12, 2.11, 2.11, 2.11]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-comparison-with-kneser-ney-4-1.svg",
-          "bytes": 27298,
-          "sha256": "sha256:36b8ed824ca415b24fc7c4ac6099fcd8dc095aec065183e74432900a88f88c1b"
+          "bytes": 27297,
+          "sha256": "sha256:e7d1fecff6aae5dc55c3dd74b89bdd66c25826739bd093c482ee529f477fa184"
         }
       ]
     },
@@ -243,7 +243,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller, and the preased. I had a\\nfrail. I had a\\nfrail. I had\n    a\\nfrail. I had a\\nfrail. I had a\\nfrail. I had'\n"
+          "text": "'The Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller'\n"
         }
       ]
     },
@@ -270,8 +270,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 23612,
-          "sha256": "sha256:c602c60d838923479a3537b0f0138dca008b56dbba3ddf9d9df61d5651c9a596"
+          "bytes": 23609,
+          "sha256": "sha256:0d5bf8f0848efd6ef7374caaa1d7595af4a9cfb9d2d8e852004c3ded5119a71f"
         }
       ]
     },
@@ -282,7 +282,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 58.8, 'The Time Traveller, and the faintness of the\\nside, and\n    the faintness of the\\nside, and the faintness of the'\n"
+          "text": "perplexity 58.9, 'The Time Traveller, and the\\ntime, and the\\ntime, and\n    the\\ntime, and the\\ntime, and the\\ntime'\n"
         }
       ]
     }

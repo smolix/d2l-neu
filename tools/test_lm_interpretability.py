@@ -19,6 +19,7 @@ import io
 import json
 import os
 import pickle
+import re
 import tempfile
 import unittest
 from unittest import mock
@@ -701,7 +702,7 @@ class TestTopKSAE(unittest.TestCase):
         sae.normalize_decoder_()  # already unit: nothing changes
         for a, b in zip(sae(self.x), out):
             self.assertTrue(torch.equal(a, b))
-        mse, _ = sae.loss(self.x)
+        mse, _, _ = sae.loss(self.x)
         mse.backward()
         sae.remove_parallel_grad_()
         dots = (sae.W_dec * sae.W_dec.grad).sum(0)
@@ -709,15 +710,16 @@ class TestTopKSAE(unittest.TestCase):
         self.assertGreater(sae.W_dec.grad.abs().max(), 1e-4)
 
     def test_loss(self):
-        mse, aux = self.sae.loss(self.x)
-        x_hat, _ = self.sae(self.x)
+        mse, aux, z = self.sae.loss(self.x)
+        x_hat, z_ = self.sae(self.x)
+        self.assertTrue(torch.equal(z, z_))  # the codes come back too
         want = ((x_hat - self.x) ** 2).sum(-1).mean() / (
             (self.x - self.x.mean(0)) ** 2).sum(-1).mean()
         torch.testing.assert_close(mse, want)
         self.assertEqual(float(aux), 0.0)
         dead = torch.zeros(64, dtype=torch.bool)
         dead[:10] = True
-        mse2, aux = self.sae.loss(self.x, dead, k_aux=3)
+        mse2, aux, _ = self.sae.loss(self.x, dead, k_aux=3)
         self.assertTrue(torch.equal(mse, mse2))
         pre = self.x @ self.sae.W_enc.T + self.sae.b_enc
         e = self.x - x_hat
@@ -1015,10 +1017,7 @@ class TestSAEMetrics(unittest.TestCase):
         self.assertEqual(m['unfired_frac'], 0.0)
         np.testing.assert_array_equal(m['density'], np.ones(D))
         self.assertEqual(m['n_tokens'], 2 * 3 * 9)  # position 0 excluded
-        self.assertEqual(m['per_doc']['sse'].shape, (6,))
-        np.testing.assert_array_equal(m['per_doc']['n'], np.full(6, 9))
-        self.assertAlmostEqual(
-            float(m['per_doc']['ce_orig'].mean()), m['ce_orig'], places=5)
+        self.assertNotIn('per_doc', m)
 
     def test_mean_sae(self):  # spec test 15
         xs = self.stream()
@@ -1047,39 +1046,298 @@ class TestSAEMetrics(unittest.TestCase):
             sae.W_dec.zero_()  # x_hat = 0: a splice would change the run
         m = d2l.sae_metrics(sae, model, iter(batches), self.layer)
         self.assertEqual(m['n_tokens'], 2 * 3 * 9 - 2)
-        self.assertEqual(m['per_doc']['n'].tolist(), [8, 9, 9, 9, 9, 8])
         with self.assertRaisesRegex(ValueError, 'width'):
             d2l.sae_metrics(d2l.TopKSAE(D + 1, 8, 2), model, batches, 1)
 
-    def test_per_doc_ce_counts(self):
-        """Review 18.6 F5: n_ce counts the kept positions that have a next
-        token, so n_ce-weighted per-row CE is the pooled CE (an outlier at
-        the last position counts in n but not in n_ce); a row with no such
-        position has CE NaN, not 0."""
+    def test_pooled_ce_counts(self):
+        """Review 18.6 F5, pooled: the cross-entropy averages over the kept
+        positions that have a next token (an outlier at the last position
+        counts in n_tokens but has no target)."""
         model = tiny()
         with torch.no_grad():
             model.token_emb.weight[5] *= 1000
         batches = [b.clone() for b in self.batches]
         batches[0][0, 4] = batches[0][1, 9] = 5  # 9: the last position
-        batches[1][2, 1:] = 5  # every position >= 1 an outlier
-        batches[1][2, 1] = 6  # ... but the first
         sae = d2l.TopKSAE(D, D, D)
         m = d2l.sae_metrics(sae, model, batches, self.layer)
-        pd = m['per_doc']
-        self.assertEqual(pd['n'].tolist(), [8, 8, 9, 9, 9, 1])
-        self.assertEqual(pd['n_ce'].tolist(), [7, 8, 8, 8, 8, 1])
-        for key in ('ce_orig', 'ce_splice'):
-            w = pd['n_ce']
-            weighted = float((pd[key] * w).sum() / w.sum())
-            self.assertLess(abs(weighted / m[key] - 1), 1e-6, key)
-            n_weighted = float((pd[key] * pd['n']).sum() / pd['n'].sum())
-            self.assertGreater(abs(n_weighted / m[key] - 1), 1e-4, key)
-        batches[1][2, 1] = 5  # now no position of row 6 is kept
-        pd = d2l.sae_metrics(sae, model, batches, self.layer)['per_doc']
-        self.assertEqual(pd['n_ce'][5], 0)
-        self.assertTrue(np.isnan(pd['ce_orig'][5]))
-        self.assertTrue(np.isnan(pd['ce_splice'][5]))
+        site, losses = ('resid_post', self.layer), []
+        with torch.no_grad():
+            for X in batches:
+                with d2l.intervene(model, record=[site]) as ctx:
+                    logits = model(X)
+                norms = ctx.cache[site][0].norm(dim=-1)
+                keep = norms <= 10 * norms[:, 1:].median()
+                keep[:, 0] = False
+                ce = F.cross_entropy(logits[:, :-1].flatten(0, 1),
+                                     X[:, 1:].flatten(), reduction='none')
+                losses.append(ce[keep[:, :-1].flatten()])
+        self.assertEqual(m['n_tokens'], 2 * 3 * 9 - 2)
+        want = float(torch.cat(losses).double().mean())
+        self.assertLess(abs(m['ce_orig'] / want - 1), 1e-6)
 
+
+
+# ------------------------------------------- interpretability-lib.md
+class OffsetTok(CharTok):
+    """CharTok with the offsets a fast tokenizer returns: one per char."""
+    def __call__(self, text, add_special_tokens=True,
+                 return_offsets_mapping=False):
+        if not return_offsets_mapping:
+            return super().__call__(text, add_special_tokens)
+        ids = self._enc(text)
+        return mock.Mock(input_ids=ids,
+                         offset_mapping=[(i, i + 1) for i in range(len(ids))])
+
+
+CONLLU = """# text = I can't go.
+1\tI\tI\tPRON\t_\t_\t0\t_\t_\t_
+2-3\tcan't\t_\t_\t_\t_\t_\t_\t_\t_
+2\tca\tcan\tAUX\t_\t_\t0\t_\t_\t_
+3\tn't\tnot\tPART\t_\t_\t0\t_\t_\t_
+4\tgo\tgo\tVERB\t_\t_\t0\t_\t_\tSpaceAfter=No
+5\t.\t.\tPUNCT\t_\t_\t0\t_\t_\t_
+
+# text = Hi there
+1\tHi\thi\tINTJ\t_\t_\t0\t_\t_\t_
+1.1\tx\tx\tX\t_\t_\t_\t_\t_\t_
+2\tthere\tthere\tADV\t_\t_\t0\t_\t_\t_
+
+# text = Go
+1\tGo\tgo\tVERB\t_\t_\t0\t_\t_\t_
+"""
+
+
+class TestInterpretabilityLib(unittest.TestCase):
+    def test_intervene_args(self):
+        model = tiny()
+        sites, record, stop = d2l._intervene_args(
+            model, {('mlp_out', np.int64(1)): abs}, [('attn_out', 0)],
+            ('resid_post', 2))
+        self.assertEqual(sites, {('mlp_out', 1): abs})
+        self.assertEqual(record, {('attn_out', 0), ('resid_post', 2)})
+        self.assertEqual(stop, ('resid_post', 2))
+        self.assertIs(type(next(iter(sites))[1]), int)
+        with self.assertRaisesRegex(ValueError, 'not a site'):
+            d2l._intervene_site(model, ('head_z', L))
+
+    def test_walk_docs_and_round_robin(self):
+        rows = [f'doc {i} ' + 'w ' * (i % 7) for i in range(50)]
+        calls = []
+
+        def fake(repo, path, revision, start, stop, column='text'):
+            calls.append((start, stop))
+            return rows[start:stop], 10 * (stop - start)
+
+        encode = lambda text: [int(w) if w.isdigit() else 0
+                               for w in text.split()]
+        take = lambda need: lambda ids: ids[:2] if len(ids) >= need else None
+        with mock.patch.object(d2l, 'lm_hub_rows', fake):
+            docs, seen = d2l.lm_walk_docs(
+                encode, ('r', 'p', 'v'), iter(range(3, 50)),
+                {'a': (3, take(5)), 'b': (2, take(8))}, block=10)
+        # 'a': rows 3, 4, 5 qualify (lengths 5, 6, 7); 'b' needs 8 tokens:
+        # rows 6 (8 tokens) and 13 (8 tokens)
+        self.assertEqual(docs['a'].tolist(), [[0, 3], [0, 4], [0, 5]])
+        self.assertEqual(docs['b'].tolist(), [[0, 6], [0, 13]])
+        self.assertEqual(seen, {'rows': (3, 13), 'blocks': 2, 'nbytes': 200})
+        self.assertEqual(calls, [(0, 10), (10, 20)])  # each block once
+        self.assertEqual(list(d2l.lm_round_robin(100, first=5, blocks=3,
+                                                 block=2)),
+                         [5, 105, 205, 6, 106, 206])
+
+    def test_read_conllu_and_word_features(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'x.conllu')
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(CONLLU)
+            out = d2l.read_conllu(path, 1, 100)
+            self.assertEqual(d2l.read_conllu(path, 1, 7), out[:2])
+            self.assertEqual(d2l.read_conllu(path, 2, 100),
+                             [out[0], out[2]])
+        self.assertEqual([t for t, _ in out], ["I can't go.", 'Hi there',
+                                               'Go'])
+        text, words = out[0]
+        self.assertEqual([w[2:] for w in words], [
+            ('I', 'PRON'), ('ca', 'AUX'), ("n't", 'PART'), ('go', 'VERB'),
+            ('.', 'PUNCT')])
+        self.assertEqual([text[s:e] for s, e, _, _ in words],
+                         ['I', 'ca', "n't", 'go', '.'])
+        model = tiny()
+        feats = d2l.lm_word_features(model, OffsetTok(), out, 1, batch=2)
+        site = ('resid_post', 1)
+        with torch.no_grad(), d2l.intervene(model, record=[site]) as ctx:
+            X = torch.tensor([OffsetTok()._enc('Hi there')])
+            model(X)
+        # 'Hi' ends at char 1, 'there' at char 7 (one token per char)
+        torch.testing.assert_close(feats['block 1'][5:7],
+                                   ctx.cache[site][0][0, [1, 7]])
+        torch.testing.assert_close(feats['embedding'][5:7],
+                                   model.token_emb(X)[0, [1, 7]])
+        self.assertEqual(len(feats['embedding']), 8)
+
+    def test_type_tag_baseline(self):
+        pred = d2l.type_tag_baseline(['a', 'a', 'a', 'b', 'c', 'c'],
+                                     np.array([1, 2, 1, 0, 2, 2]),
+                                     ['a', 'b', 'c', 'd'])
+        self.assertEqual(pred.tolist(), [1, 0, 2, 2])  # 'd': overall mode
+
+    def test_cluster_resample_and_ci(self):
+        clusters = ['x', 'x', 'y', 'z', 'z', 'z']
+        reps = list(d2l.cluster_resample(clusters, n_boot=50, seed=3))
+        self.assertEqual(len(reps), 50)
+        members = {'x': [0, 1], 'y': [2], 'z': [3, 4, 5]}
+        rng = np.random.default_rng(3)
+        for r in reps:  # whole clusters, drawn as the seed says
+            pick = rng.integers(3, size=3)
+            want = np.concatenate([members['xyz'[g]] for g in pick])
+            np.testing.assert_array_equal(r, want)
+        values = np.array([[1.0, np.nan], [2.0, 3.0], [3.0, np.nan]])
+        buf = io.StringIO()
+        with mock.patch('sys.stdout', buf):
+            lo, hi = d2l.percentile_ci(values, names=['a', 'b'])
+        self.assertEqual(buf.getvalue(),
+                         '  b: 2 of 3 replicates undefined, left out\n')
+        np.testing.assert_allclose(lo, [1.05, 3.0])
+        np.testing.assert_allclose(hi, [2.95, 3.0])
+        self.assertEqual(d2l.fmt_ci(0.5, (0.25, 1.0), 2),
+                         '0.50 [0.25, 1.00]')
+
+    def test_detection_stats(self):
+        g = np.random.default_rng(0)
+        y = g.random(300) < 0.3
+        score = y + g.normal(size=300)
+        score[:4] = score[4]  # ties
+        precision, recall, auc = d2l.detection_stats(y, score, 0.5)
+        active = score > 0.5
+        self.assertAlmostEqual(precision, (y & active).sum() / active.sum())
+        self.assertAlmostEqual(recall, (y & active).sum() / y.sum())
+        pos, neg = score[y], score[~y]
+        want = ((pos[:, None] > neg).sum()
+                + 0.5 * (pos[:, None] == neg).sum()) / (len(pos) * len(neg))
+        self.assertAlmostEqual(auc, want)
+
+    def test_long_csv_and_block_runs(self):
+        T = np.arange(12.0).reshape(2, 3, 2)
+        csv = d2l.long_csv(T, [('kind', ('a', 'b')), ('block', range(3)),
+                               ('pos', ['p', 'q'])], 'v').decode()
+        lines = csv.strip().split('\n')
+        self.assertEqual(lines[0], 'kind,block,pos,v')
+        self.assertEqual(lines[1:4], ['a,0,p,0.0', 'a,0,q,1.0', 'a,1,p,2.0'])
+        self.assertEqual(lines[-1], 'b,2,q,11.0')
+        cells = [(0, 's'), (1, 's'), (2, 's'), (5, 's'), (7, 'f'), (8, 'f')]
+        self.assertEqual(d2l.block_runs(cells, ['f', 's', 'x']),
+                         "'f' 7-8; 's' 0-2, 5")
+        self.assertEqual(d2l.block_runs([], ['f']), 'none')
+
+    def test_write_zip_is_deterministic(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            blobs = []
+            for i, members in enumerate(({'b': b'2', 'a': b'1'},
+                                         {'a': b'1', 'b': b'2'})):
+                path = os.path.join(tmp, f'{i}.zip')
+                d2l.lm_write_zip(path, members)
+                with open(path, 'rb') as f:
+                    blobs.append(f.read())
+        self.assertEqual(blobs[0], blobs[1])
+        import zipfile
+        with zipfile.ZipFile(io.BytesIO(blobs[0])) as z:
+            self.assertEqual(z.namelist(), ['a', 'b'])
+            self.assertEqual(z.read('b'), b'2')
+
+    def test_cache_stream_and_stream(self):
+        model = tiny()
+        with torch.no_grad():
+            model.token_emb.weight[5] *= 1000
+        windows = tokens(B=5, T=8, seed=2)
+        windows[windows == 5] = 6
+        windows[1, 3] = 5  # the one outlier
+        site = ('resid_post', 1)
+        acts = d2l.cache_stream(model, windows, 1, batch=2)
+        self.assertEqual(acts.dtype, torch.float16)
+        with torch.no_grad(), d2l.intervene(model, record=[site]) as ctx:
+            model(windows)
+        h = ctx.cache[site][0]
+        self.assertEqual(len(acts), 5 * 7 - 1)
+        torch.testing.assert_close(acts[:7], h[0, 1:].half())
+        torch.testing.assert_close(acts[7:9], h[1, 1:3].half())
+        torch.testing.assert_close(acts[9:13], h[1, 4:].half())
+        torch.testing.assert_close(d2l.lm_stream(model, windows, site,
+                                                 batch=2), h[:, 1:])
+
+    def test_save_and_load_sae(self):
+        sae = d2l.TopKSAE(8, 16, 2, center=True, seed=0)
+        with tempfile.TemporaryDirectory() as tmp:
+            rerun = os.path.join(tmp, 'rerun')
+            with mock.patch.object(
+                    d2l, 'lm_save_rerun',
+                    lambda name, write: write(os.path.join(rerun, name))):
+                os.makedirs(rerun)
+                d2l.lm_save_sae(sae, 123, 'x.pt')
+            for p in sae.parameters():  # it now holds the published values
+                self.assertTrue(torch.equal(p, p.half().float()))
+            with mock.patch.object(d2l, 'download_keyed',
+                                   lambda key: os.path.join(rerun, 'x.pt')):
+                back, n = d2l.lm_load_sae('k')
+        self.assertEqual(n, 123)
+        self.assertTrue(back.center)
+        for (name, p), q in zip(sae.named_parameters(), back.parameters()):
+            self.assertTrue(torch.equal(p, q), name)
+
+    def test_fire_rate_and_acts(self):
+        sae = d2l.TopKSAE(16, 64, 5, seed=0)
+        H = torch.randn(3, 7, 16)
+        z = sae.encode(H.reshape(-1, 16))
+        torch.testing.assert_close(d2l.sae_fire_rate(sae, H, chunk=4),
+                                   (z > 0).float().mean(0))
+        torch.testing.assert_close(d2l.sae_acts(sae, H, [3, 0], chunk=5),
+                                   z[:, [3, 0]].view(3, 7, 2))
+
+    def test_char_fraction(self):
+        han = re.compile('[一-鿿]')
+        self.assertAlmostEqual(d2l.char_fraction('中文 ab，', han), 2 / 5)
+        self.assertEqual(d2l.char_fraction('  ', han), 0)
+
+    def test_doc_ce(self):
+        model = tiny()
+        docs = tokens(B=5, T=6, seed=4)
+        mask = torch.zeros(V, dtype=torch.bool)
+        mask[:40] = True
+        got = d2l.lm_doc_ce(model, docs, [7, 8], mask, batch=2)
+        X = torch.cat([torch.tensor([[7, 8]]).expand(5, 2), docs], 1)
+        with torch.no_grad():
+            z = model(X)[:, 2:-1].float()
+        y = docs[:, 1:]
+        ce = F.cross_entropy(z.transpose(1, 2), y, reduction='none')
+        torch.testing.assert_close(torch.tensor(got[:, 0]), ce.mean(1))
+        for i in range(5):  # renormalized over the vocabulary outside mask
+            rest = ~mask[y[i]]
+            lp = F.log_softmax(z[i][:, ~mask], -1)
+            idx = (torch.cumsum(~mask, 0) - 1)[y[i][rest]]
+            want = -lp[rest].gather(1, idx[:, None]).mean()
+            self.assertAlmostEqual(got[i, 1], float(want), places=5)
+        torch.testing.assert_close(  # no prefix: tokens 1 to T - 1
+            torch.tensor(d2l.lm_doc_ce(model, docs, [], mask)[:, 0]),
+            F.cross_entropy(model(docs)[:, :-1].transpose(1, 2), y,
+                            reduction='none').mean(1))
+
+    def test_frontier(self):
+        cost = np.array([0.0, 0.2, 0.556, 1.35, 9.3, 1.036])
+        sw = np.array([0.0, 0.1, 0.41, 0.64, 0.2, 0.0])
+        x, y = d2l.frontier_envelope(cost, sw)
+        np.testing.assert_allclose(x, [0, 0.2, 0.556, 1.036, 1.35, 9.3])
+        np.testing.assert_allclose(y, [0, 0.1, 0.41, 0.41, 0.64, 0.64])
+        # review 18.6: along the strengths, not through the envelope's
+        # vertex (1.036, 0.41) that a broken-down point puts there
+        self.assertAlmostEqual(d2l.cost_of_half(cost, sw),
+                               0.556 + 0.09 / 0.23 * 0.794)
+        self.assertTrue(np.isnan(d2l.cost_of_half(cost, sw / 2)))
+        self.assertEqual(d2l.cost_of_half(cost, sw + 0.5), 0.0)
+        g = np.linspace(0, 0.5, 101)
+        want = np.trapezoid(np.interp(g, x, y), g)
+        self.assertAlmostEqual(d2l.frontier_area(cost, sw, 0.5), want)
+        self.assertAlmostEqual(  # a flat frontier at 1: the cap
+            d2l.frontier_area(np.array([0.0, 0.1]), np.array([1.0, 1.0]),
+                              0.5), 0.5)
 
 if __name__ == '__main__':
     unittest.main()

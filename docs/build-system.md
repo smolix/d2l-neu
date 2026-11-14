@@ -590,8 +590,21 @@ uses one of their symbols at import time). Members:
   `lm_registered`, `lm_artifact`, `lm_save_rerun`, `read_jsonl`,
   `write_jsonl`, `lm_free`, `lm_peak`), which 18.5 and 18.6 may call
   instead of their own copies. PyTorch only.
+- `chapter_lm-pretrained/interpretability-lib.md` holds what
+  `sec_lm_interpretability` (18.6) uses and does not show: the argument
+  checks of `intervene` (`_intervene_site`, `_intervene_args`), the Hub
+  range reads and the document walk (`lm_hub_rows`, `lm_walk_docs`,
+  `lm_round_robin`), the probe's treebank reader and word features
+  (`read_conllu`, `lm_word_features`, `type_tag_baseline`), the cluster
+  bootstrap and its formatting (`cluster_resample`, `percentile_ci`,
+  `fmt_ci`, `detection_stats`, `long_csv`, `block_runs`), the regeneration
+  bookkeeping (`lm_write_zip`, `cache_stream`, `lm_save_sae`,
+  `lm_load_sae`), the stream and feature reads (`lm_stream`,
+  `sae_fire_rate`, `sae_acts`) and the steering measurements
+  (`char_fraction`, `lm_doc_ce`, `frontier_envelope`, `frontier_area`,
+  `cost_of_half`). PyTorch only.
 
-The six Language Models files are appended (nothing uses them at import
+The seven Language Models files are appended (nothing uses them at import
 time).
 Their blocks follow the part's import rule: third-party modules
 (`transformers`, `openai`, `httpx`, `asyncio`) are imported inside the
@@ -1455,8 +1468,8 @@ code is tested on CPU by `make test-lm` (§6.2).
 
 **Regeneration runs (`D2L_RERUN`).** A `chapter_lm-*` notebook never regenerates
 an expensive artifact in a normal build. Its producing cells read
-`RERUN = os.environ.get('D2L_RERUN', '0') == '1'` (18.6 calls the flag
-`RETRAIN`, same switch): without it they download the registered, versioned
+`RERUN = os.environ.get('D2L_RERUN', '0') == '1'`, or since 18.4 the set of
+artifacts `d2l.lm_rerun` reads from it: without it they download the registered, versioned
 file (`DATA_HUB['lm-…-v1']`) and run a short live check whose agreement they
 print, so the captured outputs and the registered artifact agree by
 construction. With it they write unversioned files to `../data/lm/rerun/`,
@@ -1528,6 +1541,15 @@ Since 2026-11-14 its registry pairs each artifact with a `-v2` key
 registered version it replaces. The regeneration adds a second one-task
 GSM8K protocol (lm-evaluation-harness's `gsm8k_cot`, about 5 min) and prints
 its wall clock against the 30-min target at the end.
+18.6 (`interpretability.md`) takes the same form since 2026-11-14 (`ARTIFACTS`
+in `interpretability-setup`: `tuned-lens`, `sae-06b`, `sae-17b`, `results`).
+`D2L_RERUN=results` loads the registered lens and SAEs and rewrites only the
+results archive `lm-interp-results.zip` (about a normal run's 10 min);
+`D2L_RERUN=1` also retrains the tuned lens and both SAEs, caching 28.5 GB of
+fp16 activations in host memory (about 34 GB of RAM; 1,498 and 1,515 s on
+2026-11-13, inside the target, no cuts). Retraining is deterministic: those
+runs reproduced the registered lens and SAE files bit for bit. The CPU path
+(`SMALL`) refuses `D2L_RERUN`.
 Regenerate, upload, then run the notebook once
 more without `D2L_RERUN` and capture that run.
 

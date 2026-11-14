@@ -44,6 +44,7 @@ when the section is written.
 - Courses, tutorials and blogs: [ARENA](https://github.com/ARENA-education/ARENA_materials) (the curriculum this section follows: lenses, patching, SAEs); nostalgebraist, [Interpreting GPT: the logit lens](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens); Neel Nanda, [Attribution Patching](https://www.neelnanda.io/mechanistic-interpretability/attribution-patching) (the first-order estimate at scale).
 -->
 
+
 ```{.python .input #interpretability-imports}
 %%tab pytorch
 import math
@@ -57,106 +58,47 @@ from d2l import torch as d2l
 ```{.python .input #interpretability-extras}
 %%tab pytorch
 import contextlib
-import gc
-import hashlib
 import io
 import itertools
 import json
 import os
 import pandas as pd
-import pyarrow.parquet as pq
 import re
+import unicodedata
 import zipfile
-from huggingface_hub import HfApi, HfFileSystem, hf_hub_download
-from scipy.stats import rankdata, spearmanr
+from huggingface_hub import HfApi, hf_hub_download
+from scipy.stats import spearmanr
 from transformers import AutoTokenizer
 ```
 
-<!-- Placeholder (prose, opening): the flags of the CPU path and of regeneration; Qwen3-0.6B in fp32, as loaded in the d2l-checkpoint section. -->
+<!-- Placeholder (prose, opening): the flags of the CPU path and of regeneration (D2L_RERUN names the artifacts to regenerate: the tuned lens, the two SAEs, the results archive; 1 means all four); Qwen3-0.6B in fp32, as loaded in the d2l-checkpoint section. The plumbing (Hub range reads, the cluster bootstrap, the regeneration bookkeeping) is library code in interpretability-lib.md, not shown. -->
 
 ```{.python .input #interpretability-setup}
 %%tab pytorch
-SMALL = not torch.cuda.is_available()  # the CPU path: R1 only, less data
-RETRAIN = os.environ.get('D2L_RERUN', '0') == '1'  # regenerate artifacts
-RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
+SMALL = not torch.cuda.is_available()  # the CPU path: Qwen3-0.6B only
+ARTIFACTS = {'tuned-lens': 'lm-tuned-lens-qwen3-0.6b-v1',
+             'sae-06b': 'lm-sae-r1-l14-v1', 'sae-17b': 'lm-sae-q17b-l14-v1',
+             'results': 'lm-interp-results-v3'}
+RERUN = d2l.lm_rerun(ARTIFACTS)  # D2L_RERUN: the artifacts to regenerate
+assert not (SMALL and RERUN), 'regenerating the artifacts needs a GPU'
 SIZES = (dict(pairs=10, heldout=32, steer=20, cost=20, contrast=60,
-              label=40, words=(5_000, 2_000, 2_000), random=2) if SMALL else
+              label=40, words=(5_000, 2_000, 2_000), random=2,
+              wds=(1e-3, 1e-2)) if SMALL else
          dict(pairs=40, heldout=200, steer=100, cost=200, contrast=300,
-              label=100, words=(20_000, 5_000, 5_000), random=5))
-TRAIN_TOKENS, LENS_STEPS, SAE_STEPS = 8_000_000, 250, 5_000  # RETRAIN only
-torch.manual_seed(0)
-R1 = 'Qwen/Qwen3-0.6B'
-model = d2l.load_qwen3(R1, dtype=torch.float32).requires_grad_(False)
-tok = AutoTokenizer.from_pretrained(R1, revision=model.revision)
-dev, L = model.token_emb.weight.device, len(model.blks)
-print(f'SMALL={SMALL}, RETRAIN={RETRAIN}, device {dev}')
-print(f'{R1} at {model.revision}: '
-      f'{sum(p.numel() for p in model.parameters()):,} parameters')
-```
-
-<!-- Placeholder (prose, none; helpers): range reads of parquet files on the Hub, the cluster bootstrap over cities or documents, and the bookkeeping of the regeneration rule. -->
-
-```{.python .input #interpretability-helpers}
-%%tab pytorch
-FS = HfFileSystem()
-
-def read_rows(repo, path, revision, start, stop, column='text'):
-    """Rows start, ..., stop - 1 of one column of a parquet file on the
-    Hub, reading only the row groups that hold them (range requests);
-    returns the values and the compressed bytes read."""
-    with FS.open(f'datasets/{repo}@{revision}/{path}', 'rb') as f:
-        pf = pq.ParquetFile(f)
-        md, col = pf.metadata, pf.schema_arrow.names.index(column)
-        ends = np.cumsum([md.row_group(g).num_rows
-                          for g in range(md.num_row_groups)])
-        groups = [g for g, e in enumerate(ends)
-                  if e > start and e - md.row_group(g).num_rows < stop]
-        values = pf.read_row_groups(groups, columns=[column]).column(0)
-        first = ends[groups[0]] - md.row_group(groups[0]).num_rows
-        nbytes = sum(md.row_group(g).column(col).total_compressed_size
-                     for g in groups)
-    return values.to_pylist()[start - first:stop - first], nbytes
-
-def cluster_resample(clusters, n_boot=2000, seed=0):
-    """Per replicate, the item indices of a resample of whole clusters
-    (clusters holds one cluster id per item)."""
-    ids, inverse = np.unique(np.asarray(clusters), return_inverse=True)
-    members = [np.flatnonzero(inverse == g) for g in range(len(ids))]
-    rng = np.random.default_rng(seed)
-    for _ in range(n_boot):
-        yield np.concatenate([members[g] for g in rng.integers(
-            len(ids), size=len(ids))])
-
-def pct_ci(values, alpha=0.05):
-    """Percentile endpoints of bootstrap replicates (along axis 0), over
-    the replicates where the statistic is defined; says how many are not."""
-    values = np.asarray(values, dtype=float)
-    if (undefined := np.isnan(values).sum(0)).any():  # one count per column
-        print(f'  (replicates undefined, left out: {undefined.tolist()} of '
-              f'{len(values)})')
-    return np.nanquantile(values, [alpha / 2, 1 - alpha / 2], axis=0)
-
-def fmt(mean, ci, digits=3):
-    return f'{mean:.{digits}f} [{ci[0]:.{digits}f}, {ci[1]:.{digits}f}]'
-
-def save_rerun(name, write):
-    """Rule R1: write(path) makes an unversioned file in RERUN_DIR, which
-    the author uploads as the next -vN; prints its sha1."""
-    os.makedirs(RERUN_DIR, exist_ok=True)
-    path = os.path.join(RERUN_DIR, name)
-    write(path)
-    with open(path, 'rb') as f:
-        print(f'wrote {path}, sha1 {hashlib.sha1(f.read()).hexdigest()}')
-
-RESULTS = {}  # the members of lm-interp-results, by name
+              label=100, words=(20_000, 5_000, 5_000), random=5,
+              wds=(1e-4, 1e-3, 1e-2, 1e-1)))
+TRAIN_TOKENS, LENS_STEPS, SAE_STEPS = 8_000_000, 250, 5_000  # RERUN only
+RESULTS = {}  # the members of the results archive, by name
 SUMMARY = {'config': {'small': SMALL}}  # its summary.json
-
-def write_results(path):
-    """The results archive, byte-identical for identical members."""
-    with zipfile.ZipFile(path, 'w') as z:
-        for name, data in sorted(RESULTS.items()):
-            info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
-            z.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED)
+torch.manual_seed(0)
+MODEL_ID = 'Qwen/Qwen3-0.6B'
+model = d2l.load_qwen3(MODEL_ID, dtype=torch.float32).requires_grad_(False)
+tok = AutoTokenizer.from_pretrained(MODEL_ID, revision=model.revision)
+dev, L = model.token_emb.weight.device, len(model.blks)
+print(f'SMALL={SMALL}, regenerating: {", ".join(sorted(RERUN)) or "none"}, '
+      f'device {dev}')
+print(f'{MODEL_ID} at {model.revision}: '
+      f'{sum(p.numel() for p in model.parameters()):,} parameters')
 ```
 
 <!-- Placeholder prose (stage 2): the section text is written after the runs. -->
@@ -191,7 +133,7 @@ d2l.DATA_HUB['lm-ud-ewt-test'] = (
 d2l.DATA_HUB['lm-interp-recall-v1'] = (
     d2l.LM_DATA_URL + 'lm-interp-recall-v1.json',
     'e3025b0216df5384d8a14f1e8e10c4cab080ebbf')
-# What the regeneration run (D2L_RERUN=1) trained and measured
+# What the regeneration run (D2L_RERUN) trained and measured
 d2l.DATA_HUB['lm-tuned-lens-qwen3-0.6b-v1'] = (
     d2l.LM_DATA_URL + 'lm-tuned-lens-qwen3-0.6b-v1.pt',
     'e1a9275950de634b8f8a6e7dd516de662755834e')
@@ -206,7 +148,7 @@ d2l.DATA_HUB['lm-interp-results-v2'] = (
     '598f3366ae49d269dda2abfd8d3af715275c3f93')
 ```
 
-<!-- Placeholder (prose, ### The Residual Stream as a Sum): the data of the section, each subset resolved once by a declared rule (FineWeb-Edu, Chinese and English Wikipedia, the recall pairs), and the Han-character tokens of the vocabulary. The held-out label documents come from 20 other Wikipedia blocks, halfway between the contrast blocks, so they are other articles on other topics, not the contrast documents' neighbours. -->
+<!-- Placeholder (prose, ### The Residual Stream as a Sum): the data of the section, each subset resolved once by a declared rule (FineWeb-Edu, Chinese and English Wikipedia, the recall pairs), and the Han-character tokens of the vocabulary. Wikipedia files are ordered by article id and neighbours share topics (hundreds of consecutive biographies of generals), so the documents come from 20 blocks spread over each file. The held-out label documents come from 20 other Wikipedia blocks, halfway between the contrast blocks, so they are other articles on other topics, not the contrast documents' neighbours. -->
 
 ```{.python .input #interpretability-data}
 %%tab pytorch
@@ -217,74 +159,57 @@ WIKI = {lang: ('wikimedia/wikipedia', f'20231101.{lang}/{shard}.parquet',
         for lang, shard in (('zh', 'train-00002-of-00006'),
                             ('en', 'train-00028-of-00041'))}
 STRIDE = {'zh': 11_000, 'en': 7_500}  # 20 blocks spread over each shard
-CJK = re.compile('[㐀-䶿一-鿿豈-﫿]')  # Han
+HAN = re.compile('[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]')  # ideographs
 ids_of = lambda text: tok(text, add_special_tokens=False).input_ids
-prefix = lambda n, need: lambda ids: ids[:n] if len(ids) >= need else None
+
+def first_tokens(n, min_len):  # the rule: a document's first n tokens
+    return lambda ids: ids[:n] if len(ids) >= min_len else None
 
 def clean_prompt(ids):  # 32 tokens without Han that survive a round trip
     text = tok.decode(ids[:32])
-    keep = len(ids) >= 32 and not CJK.search(text) and ids_of(text) == ids[:32]
+    keep = len(ids) >= 32 and not HAN.search(text) and ids_of(text) == ids[:32]
     return ids[:32] if keep else None
 
-def walk(label, source, rows, subsets, block=1000):
-    """Visiting rows in order, the first n qualifying documents of each
-    subset in turn; subsets maps a name to (n, take), take(ids) -> ids or
-    None. Rows are read a block of block rows at a time."""
-    out, cache, rows = {}, {}, iter(rows)
-    for name, (n, take) in subsets.items():
-        docs, used, nbytes = [], [], 0
-        while len(docs) < n:
-            row = next(rows)
-            start = row - row % block
-            if start not in cache:
-                cache[start], b = read_rows(*source, start, start + block)
-                nbytes += b
-            if (ids := take(ids_of(cache[start][row - start]))) is not None:
-                docs.append(ids)
-            used.append(row)
-        out[name] = torch.tensor(docs)
-        k = len({r // block for r in used})
-        print(f'{label}, {name}: {n} docs from rows {min(used)}-{max(used)} '
-              f'({k} block{"s" * (k > 1)}), {nbytes / 1e6:.1f} MB read')
-    return out
-
-def round_robin(stride, first=0, blocks=20, block=1000):
-    """Row i of each of the blocks at first + b * stride, then row i + 1."""
-    return (first + b * stride + i for i in range(block)
-            for b in range(blocks))
+def walk(label, source, rows, subsets):  # the first qualifying documents
+    docs, seen = d2l.lm_walk_docs(ids_of, source, rows, subsets)
+    k = seen['blocks']
+    print(f'{label}: ' + ', '.join(f'{name} {len(d)}' for name, d in
+                                   docs.items())
+          + f' docs from rows {seen["rows"][0]}-{seen["rows"][1]} '
+          f'({k} block{"s" * (k > 1)}, {seen["nbytes"] / 1e6:.1f} MB read)')
+    return docs
 
 fineweb = walk('FineWeb-Edu', FINEWEB, itertools.count(8000), {
-    'held-out': (SIZES['heldout'], prefix(256, 257)),
+    'held-out': (SIZES['heldout'], first_tokens(256, 257)),
     'steering': (SIZES['steer'], clean_prompt),
-    'cost': (SIZES['cost'], prefix(129, 129))})
-# Wikipedia files are ordered by article id, and neighbours share topics
-# (hundreds of consecutive biographies of generals), so the documents
-# come from 20 blocks spread over each file, and the held-out label
-# documents from 20 other blocks, halfway between them
+    'cost': (SIZES['cost'], first_tokens(129, 129))})
 wiki = {lang: {
-    **walk(f'Wikipedia {lang}', WIKI[lang], round_robin(STRIDE[lang]),
-           {'contrast': (SIZES['contrast'], prefix(128, 129))}),
+    **walk(f'Wikipedia {lang}', WIKI[lang], d2l.lm_round_robin(STRIDE[lang]),
+           {'contrast': (SIZES['contrast'], first_tokens(128, 129))}),
     **walk(f'Wikipedia {lang}', WIKI[lang],
-           round_robin(STRIDE[lang], first=STRIDE[lang] // 2),
-           {'label': (SIZES['label'], prefix(128, 129))})} for lang in WIKI}
+           d2l.lm_round_robin(STRIDE[lang], first=STRIDE[lang] // 2),
+           {'label': (SIZES['label'], first_tokens(128, 129))})}
+        for lang in WIKI}
 heldout, cost_docs = fineweb['held-out'], fineweb['cost']
 steer_texts = tok.batch_decode(fineweb['steering'])
-pieces = tok.batch_decode([[v] for v in range(len(tok))])
-cjk = torch.zeros(model.token_emb.num_embeddings, dtype=torch.bool)
-cjk[:len(tok)] = torch.tensor([CJK.search(p) is not None for p in pieces])
-print(f'{int(cjk.sum()):,} of {len(tok):,} tokens hold a Han character')
+pieces = tok.batch_decode([[v] for v in range(len(tok))])  # each token alone
+han_tokens = torch.zeros(model.token_emb.num_embeddings, dtype=torch.bool)
+han_tokens[:len(tok)] = torch.tensor([HAN.search(p) is not None
+                                      for p in pieces])
+print(f'{int(han_tokens.sum()):,} of {len(tok):,} tokens hold a Han '
+      'character')
 with open(d2l.download_keyed('lm-interp-recall-v1')) as f:
     recall = json.load(f)['rows'][:SIZES['pairs']]
-if RETRAIN:  # every 256-token window of rows 0 to 7,999, in order
-    texts, nbytes = read_rows(*FINEWEB, 0, 8000)
+if RERUN - {'results'}:  # every 256-token window of rows 0 to 7,999
+    texts, nbytes = d2l.lm_hub_rows(*FINEWEB, 0, 8000)
     windows = [ids[i:i + 256] for ids in ids_of(texts)
                for i in range(0, len(ids) - 255, 256)]
     train_windows = torch.tensor(windows[:TRAIN_TOKENS // 256])
     print(f'training windows: {train_windows.numel():,} tokens, '
           f'{nbytes / 1e6:.1f} MB read')
 FULL = None  # the full run's summary, shown beside the CPU path's numbers
-if SMALL and not RETRAIN:
-    with zipfile.ZipFile(d2l.download_keyed('lm-interp-results-v2')) as z:
+if SMALL:
+    with zipfile.ZipFile(d2l.lm_artifact(ARTIFACTS['results'])) as z:
         FULL = json.loads(z.read('summary.json'))
     assert not FULL['config']['small'], 'the archive of a CPU-path run'
 ```
@@ -303,31 +228,11 @@ class _Intervention:
     KINDS = ('resid_post', 'resid_mid', 'attn_out', 'mlp_out', 'head_z')
 
     def __init__(self, model, sites, record, record_grad, stop_after):
-        assert isinstance(model, d2l.GPT), 'intervene instruments a d2l.GPT'
-        for blk in model.blks:
-            assert blk.pre_norm, 'intervene needs pre-norm blocks'
-            assert not (blk.training and blk.dropout.p > 0), (
-                'dropout must be inactive: call model.eval()')
         self.model, self.record_grad = model, record_grad
-        self.sites = {self._check(s): fn for s, fn in (sites or {}).items()}
-        for site, fn in self.sites.items():
-            if fn is None:  # recording is record='s job
-                raise ValueError(f'site {site} maps to None; use record=')
-        self.stop_after = None if stop_after is None else self._check(
-            stop_after)
-        self.record = {self._check(s) for s in record}
-        if self.stop_after is not None:  # a stopped forward is for reading
-            self.record.add(self.stop_after)
+        self.sites, self.record, self.stop_after = d2l._intervene_args(
+            model, sites, record, stop_after)
         self.cache = {s: [] for s in self.record}
         self.wanted = set(self.sites) | self.record
-
-    def _check(self, site):
-        if not (isinstance(site, tuple) and len(site) == 2
-                and site[0] in self.KINDS
-                and isinstance(site[1], (int, np.integer))
-                and 0 <= site[1] < len(self.model.blks)):
-            raise ValueError(f'not a site of this model: {site!r}')
-        return site[0], int(site[1])
 
     @property
     def grad_cache(self):
@@ -435,22 +340,8 @@ class _Intervention:
 #@save
 def intervene(model, sites=None, *, record=(), record_grad=False,
               stop_after=None):
-    """Context manager that reads and overwrites activations of a d2l.GPT
-    with pre-norm blocks, in the full forward and in forward_cached. A
-    site is (kind, layer), kind one of 'resid_post', 'resid_mid',
-    'attn_out', 'mlp_out', 'head_z' (the per-head input of W_o, (B, T,
-    heads * head_dim)). sites maps a site to fn(x) -> x_new (same shape and
-    dtype), applied in every call; at a resid site the block's own add
-    then carries x_new (rounded), and exactly x wherever x_new equals x.
-    Nested contexts apply the outer fn first, and each context reads a
-    block at its own hooks: an outer context's resid_mid or resid_post is
-    the stream before an inner context's edit of attn_out or mlp_out in
-    that block, so record and edit in one context. ctx.cache[site]
-    lists, for each recorded site, one tensor per call (after fn). With
-    record_grad=True, ctx.grad_cache[site] lists their gradients after
-    the caller's backward. stop_after=site ends the forward right after
-    that site (recorded) without an error. On a normal exit, a site that
-    never fired raises."""
+    """Context manager over a d2l.GPT that overwrites the sites (kind,
+    layer) -> fn(x) and records the sites in record."""
     return _Intervention(model, sites, record, record_grad, stop_after)
 ```
 
@@ -496,8 +387,8 @@ for r in recall[:8]:
     assert torch.allclose(d2l.logit_lens(model, h[-1]), z, rtol=0, atol=1e-4)
     ratios.append((rho(h[-1]) / rho(h[::4])).tolist())
 print(pd.DataFrame(np.mean(ratios, 0)[None], index=['rho_27 / rho_l'],
-                   columns=[f'block {l}' for l in range(0, L, 4)]).round(
-    2).to_string())
+                   columns=[f'block {l}' for l in range(0, L, 4)]).to_string(
+    float_format='{:.1f}'.format))
 ```
 
 <!-- Placeholder (prose, opening and ### Logit Lens and Tuned Lens): the opening picture, the final top-5 for the Eiffel prompt and the logit lens's top-1 token and the rank of " Paris" at every fourth block. -->
@@ -508,11 +399,11 @@ eiffel = recall[0]['template'].format(recall[0]['landmark'])
 paris = ids_of(' Paris')[0]
 with torch.no_grad(), d2l.intervene(model, record=blocks) as ctx:
     p = F.softmax(model(torch.tensor([ids_of(eiffel)], device=dev))[0, -1], -1)
-top = p.topk(5)
+top5 = p.topk(5)
 print(eiffel)
 print(pd.DataFrame({
-    'next token': map(repr, tok.batch_decode(top.indices[:, None])),
-    'probability': top.values.tolist()}).round(3))
+    'next token': map(repr, tok.batch_decode(top5.indices[:, None])),
+    'probability': top5.values.tolist()}).round(3).to_string(index=False))
 lens_rows = []
 for l in [*range(0, L, 4), L - 1]:
     z = d2l.logit_lens(model, ctx.cache[blocks[l]][0][0, -1])
@@ -561,11 +452,9 @@ class TunedLens(nn.Module):
 
     def fit(self, model, batches, *, steps, lr=1e-3, frac=0.25, seed=0,
             chunk=512):
-        """Adam on KL(final || lens), summed over the layers, at a random
-        fraction frac of the positions >= 1 of each sequence of each batch
-        (equal-length (B, T) ids) of the frozen model. Each layer's loss is
-        backpropagated alone, chunk positions at a time, so the memory
-        holds one chunk of logits. Returns the loss of each step."""
+        """Adam on KL(final || lens) summed over the layers, at a random
+        fraction frac of the positions >= 1 of each (B, T) batch of ids;
+        returns the loss of each step."""
         assert not any(p.requires_grad for p in model.parameters()), (
             'freeze the model first: model.requires_grad_(False)')
         self._check(model)
@@ -591,6 +480,8 @@ class TunedLens(nn.Module):
             del ctx
             optimizer.zero_grad()
             total = 0.0
+            # each layer's loss is backpropagated alone, chunk positions at
+            # a time: the memory holds one chunk of logits
             for i in range(0, len(rows), chunk):
                 with torch.no_grad():  # the final distribution, the target
                     target = F.log_softmax(
@@ -607,28 +498,29 @@ class TunedLens(nn.Module):
         return losses
 ```
 
-<!-- Placeholder (prose, ### Logit Lens and Tuned Lens): the translators are fitted on the first million training tokens under RETRAIN; a normal build loads the committed ones. -->
+<!-- Placeholder (prose, ### Logit Lens and Tuned Lens): the translators are fitted on the first million training tokens under D2L_RERUN; a normal build loads the committed ones. -->
 
 ```{.python .input #interpretability-tuned-lens-fit}
 %%tab pytorch
 lens = d2l.TunedLens(model.num_hiddens, L).to(dev)
-if RETRAIN:  # LENS_STEPS batches of 16 windows: the first 1M tokens
+if 'tuned-lens' in RERUN:  # LENS_STEPS batches of 16 windows: 1M tokens
     losses = lens.fit(model, train_windows[:16 * LENS_STEPS].split(16),
                       steps=LENS_STEPS)
     print(f'KL summed over blocks: {losses[0]:.2f} at the first step, '
           f'{losses[-1]:.2f} at the last')
     state = {k: v.half() for k, v in lens.state_dict().items()}
-    save_rerun('lm-tuned-lens-qwen3-0.6b.pt', lambda p: torch.save(state, p))
+    d2l.lm_save_rerun('lm-tuned-lens-qwen3-0.6b.pt',
+                      lambda p: torch.save(state, p))
     lens.load_state_dict(state)  # go on with the fp16 values it publishes
 else:
-    key = 'lm-tuned-lens-qwen3-0.6b-v1'
-    lens.load_state_dict(torch.load(d2l.download_keyed(key),  # GPU-saved
+    key = ARTIFACTS['tuned-lens']
+    lens.load_state_dict(torch.load(d2l.download_keyed(key),
                                     map_location='cpu', weights_only=True))
     print(f'{key}: sha1 {d2l.DATA_HUB[key][1]}')
 lens.requires_grad_(False);
 ```
 
-<!-- Placeholder (prose, ### Logit Lens and Tuned Lens): the keep rule of the recall pairs, the rank of the correct city by block under both lenses (scale-free), and the KL to the final distribution on held-out text (with the scale); the plot below, caption from spec fig_lm_lens_rank. -->
+<!-- Placeholder (prose, ### Logit Lens and Tuned Lens): the keep rule of the recall pairs, and the rank of the correct city by block under both lenses (scale-free): the first block where the median rank is at most 10, with a city-cluster interval. -->
 
 ```{.python .input #interpretability-lens-compare}
 %%tab pytorch
@@ -657,15 +549,20 @@ def first10(R):  # the first block where the median rank is at most 10
 
 for name, R in ranks.items():
     R = ranks[name] = np.array(R)
-    reps = [first10(R[idx]) for idx in cluster_resample(cities)]
-    SUMMARY[f'{name}: first block of median rank <= 10'] = [
-        float(first10(R)), *pct_ci(reps).tolist()]
-    lo, hi = pct_ci(reps)
+    key = f'{name}: first block of median rank <= 10'
+    lo, hi = d2l.percentile_ci([first10(R[idx]) for idx in
+                                d2l.cluster_resample(cities)], names=[key])
+    SUMMARY[key] = [float(first10(R)), lo, hi]
     print(f'{name}: median rank at most 10 from block {first10(R)}, '
           f'95% interval [{lo:.0f}, {hi:.0f}]')
     if FULL is not None:
-        key = f'{name}: first block of median rank <= 10'
         print(f'  full run: {FULL[key]}')
+```
+
+<!-- Placeholder (prose, ### Logit Lens and Tuned Lens): the KL to the final distribution on held-out text (with the scale), with document-cluster intervals; the plot below, caption from spec fig_lm_lens_rank (the 95% bands of panel (b) are narrower than the lines, and the dashed lines of panel (a) are the quartiles: the caption says both). -->
+
+```{.python .input #interpretability-lens-kl}
+%%tab pytorch
 KL = {name: [[] for _ in range(L - 1)] for name in LENSES}
 with torch.no_grad():
     for X in heldout[:, :128].split(4):  # 4 x 127 positions per chunk
@@ -676,10 +573,10 @@ with torch.no_grad():
                 lp = F.log_softmax(f(ctx.cache[blocks[l]][0][:, 1:], l), -1)
                 KL[name][l].append(F.kl_div(lp, target, reduction='none',
                                             log_target=True).sum(-1).ravel())
-doc = np.repeat(np.arange(len(heldout)), 127)
+kl_doc = np.repeat(np.arange(len(heldout)), 127)
 
 def mean_ci(values):  # over positions, resampling whole documents
-    r = d2l.bootstrap_ci(torch.cat(values).cpu().numpy(), cluster=doc)
+    r = d2l.bootstrap_ci(torch.cat(values).cpu().numpy(), cluster=kl_doc)
     return [r.mean, *r.ci]
 
 KL = {name: np.array([mean_ci(v) for v in kls]) for name, kls in KL.items()}
@@ -700,57 +597,12 @@ d2l.plot(list(range(L - 1)), [KL[n][:, 0] for n in KL] + [
 
 ```{.python .input #interpretability-probe-data}
 %%tab pytorch
-def read_conllu(path, stride, max_words):
-    """Every stride-th sentence, up to max_words words: the text rebuilt
-    with SpaceAfter=No, and per word (start, end, form, UPOS)."""
-    with open(path, encoding='utf-8') as f:
-        sentences, out, n = f.read().strip().split('\n\n'), [], 0
-    for sentence in sentences[::stride]:
-        text, words, end = '', [], 0
-        for c in (line.split('\t') for line in sentence.split('\n')
-                  if not line.startswith('#')):
-            spaced = 'SpaceAfter=No' not in c[9]
-            if '-' in c[0]:  # a multiword token; its words follow, unspaced
-                end, space = int(c[0].split('-')[1]), spaced
-            elif '.' not in c[0]:  # skip empty nodes
-                words.append((len(text), len(text) + len(c[1]), c[1], c[3]))
-                text += c[1]
-                i = int(c[0])
-                if i == end and space or i > end and spaced:
-                    text += ' '
-        if n + len(words) > max_words:
-            break
-        out.append((text.rstrip(), words))
-        n += len(words)
-    return out
-
-def probe_features(sentences, batch=32):
-    """Per word, at its last token: the embedding and the block-14 stream.
-    Right padding is safe: a causal model never reads a later position."""
-    emb, h14 = [], []
-    for i in range(0, len(sentences), batch):
-        chunk = [tok(t, return_offsets_mapping=True, add_special_tokens=False)
-                 for t, _ in sentences[i:i + batch]]
-        T = max(len(e.input_ids) for e in chunk)
-        X = torch.tensor([e.input_ids + [0] * (T - len(e.input_ids))
-                          for e in chunk], device=dev)
-        with torch.no_grad(), d2l.intervene(
-                model, stop_after=('resid_post', 14)) as ctx:
-            model(X)
-        H = ctx.cache[('resid_post', 14)][0]
-        with torch.no_grad():
-            E0 = model.token_emb(X)
-        for j, (e, (_, ws)) in enumerate(zip(chunk, sentences[i:i + batch])):
-            starts = [s for s, _ in e.offset_mapping]
-            pos = [int(np.searchsorted(starts, w[1])) - 1 for w in ws]
-            emb.append(E0[j, pos].cpu())
-            h14.append(H[j, pos].cpu())
-    return {'embedding': torch.cat(emb), 'block 14': torch.cat(h14)}
-
-ud = {split: read_conllu(d2l.download_keyed(f'lm-ud-ewt-{split}'), stride, n)
+ud = {split: d2l.read_conllu(d2l.download_keyed(f'lm-ud-ewt-{split}'),
+                             stride, n)
       for split, stride, n in zip(('train', 'dev', 'test'), (10, 5, 5),
                                   SIZES['words'])}
-feats = {split: probe_features(s) for split, s in ud.items()}
+feats = {split: d2l.lm_word_features(model, tok, s, 14)
+         for split, s in ud.items()}
 words = {split: [w for _, ws in s for w in ws] for split, s in ud.items()}
 sentence_of = np.repeat(np.arange(len(ud['test'])),
                         [len(ws) for _, ws in ud['test']])
@@ -770,7 +622,6 @@ print(f'unseen in training: {len(unseen) / len(test_types):.2f} of the test '
 %%tab pytorch
 UPOS = sorted({w[3] for ws in words.values() for w in ws})
 TYPES = sorted({w[2] for ws in words.values() for w in ws})  # all splits
-WDS = (1e-4, 1e-3, 1e-2, 1e-1)
 labels = {s: np.array([UPOS.index(w[3]) for w in words[s]]) for s in words}
 freq = np.bincount(labels['train'], minlength=len(UPOS)) / len(words['train'])
 
@@ -797,40 +648,37 @@ def probe(layer, y):  # weight decay chosen on dev; correct per test word
     X = {s: ((feats[s][layer] - mu) / sd).to(dev) for s in feats}
     Y = {s: torch.tensor(y[s], device=dev) for s in y}
     correct = lambda Wb, s: (X[s] @ Wb[0] + Wb[1]).argmax(-1) == Y[s]
-    fits = {wd: fit_probe(X['train'], Y['train'], wd) for wd in WDS}
-    wd = max(WDS, key=lambda w: float(correct(fits[w], 'dev').float().mean()))
+    fits = {wd: fit_probe(X['train'], Y['train'], wd) for wd in SIZES['wds']}
+    wd = max(fits, key=lambda w: float(correct(fits[w], 'dev').float().mean()))
     return correct(fits[wd], 'test').cpu().numpy(), (*fits[wd], mu, sd)
 
 def majority(y):  # the most frequent train tag of each word type
-    best = pd.DataFrame({'type': [w[2] for w in words['train']],
-                         'tag': y['train']}).groupby('type')['tag'].agg(
-        lambda t: t.value_counts().idxmax())
-    default = np.bincount(y['train']).argmax()
-    pred = np.array([best.get(w[2], default) for w in words['test']])
+    pred = d2l.type_tag_baseline([w[2] for w in words['train']], y['train'],
+                                 [w[2] for w in words['test']])
     return pred == y['test'], None
 
 controls = [control(seed) for seed in range(5)]
-table, selectivity, weights = {}, {}, {}
+probe_table, selectivity, weights = {}, {}, {}
 for name, f in (('majority tag per type', majority),
                 ('embedding', lambda y: probe('embedding', y)),
                 ('block 14', lambda y: probe('block 14', y))):
     task, weights[name] = f(labels)
     ctrl = np.mean([f(c)[0] for c in controls], 0)
     selectivity[name] = task.astype(float) - ctrl
-    table[name] = [fmt(r.mean, r.ci) for r in (
+    probe_table[name] = [d2l.fmt_ci(r.mean, r.ci) for r in (
         d2l.bootstrap_ci(v, cluster=sentence_of)
         for v in (task, ctrl, selectivity[name]))]
-table = pd.DataFrame(table, index=['task accuracy', 'control accuracy',
-                                   'selectivity']).T
-print(table.to_string())
+probe_table = pd.DataFrame(probe_table, index=[
+    'task accuracy', 'control accuracy', 'selectivity']).T
+print(probe_table.to_string())
 top_tag = int(freq.argmax())  # the majority class, from the training tags
 majority_rate = float((labels['test'] == top_tag).mean())
 print(f'majority class {UPOS[top_tag]}: {majority_rate:.3f} of test words')
 diff = d2l.paired_bootstrap(selectivity['block 14'], selectivity['embedding'],
                             cluster=sentence_of)
-print(f'selectivity, block 14 minus embedding: {fmt(diff.mean, diff.ci)}')
-SUMMARY['probe'] = {**table.to_dict('index'),
-                    'difference': fmt(diff.mean, diff.ci),
+print(f'selectivity, block 14 minus embedding: {d2l.fmt_ci(diff.mean, diff.ci)}')
+SUMMARY['probe'] = {**probe_table.to_dict('index'),
+                    'difference': d2l.fmt_ci(diff.mean, diff.ci),
                     'majority class rate': round(majority_rate, 3)}
 buffer = io.BytesIO()
 torch.save({n: weights[n] for n in ('embedding', 'block 14')}, buffer)
@@ -843,13 +691,13 @@ if FULL is not None:
 
 ```{.python .input #interpretability-recall-pairs}
 %%tab pytorch
-assert int(p.argmax()) == paris  # without a chat template, R1 says " Paris"
+assert int(p.argmax()) == paris  # without a chat template: " Paris"
 assert kept[0] and recall[0]['corrupt_landmark'] == 'Colosseum'
 pairs = [r for r, k in zip(recall, kept) if k]
 assert SMALL or (len(pairs) >= 30 and len(set(cities)) >= 15)
 dropped = [r['landmark'] for r in recall if r not in pairs]
-print(f'{len(pairs)} of {len(recall)} pairs kept, {len(set(cities))} '
-      f'cities; discarded: {dropped}')
+print(f'{len(pairs)} of {len(recall)} pairs kept, {len(set(cities))} cities'
+      + (f'; discarded: {", ".join(dropped)}' if dropped else ''))
 m_clean, m_corrupt = torch.tensor([ld for ld, k in zip(LD, kept) if k]).T
 gap = m_clean - m_corrupt
 print(f'mean LD: clean {m_clean.mean():.2f}, corrupted {m_corrupt.mean():.2f}')
@@ -870,7 +718,8 @@ groups = [{'idx': torch.tensor([g[0] for g in G]),
            'ab': torch.tensor([g[3:] for g in G]),
            'cls': torch.tensor([-1] + [0] * (T - 8) + list(range(1, 8)))}
           for T, G in by_length.items()]  # 'The' is in no class (-1)
-print({T: len(G) for T, G in by_length.items()}, '(prompt length: pairs)')
+print('pairs per prompt length: ' + ', '.join(
+    f'{T} tokens {len(by_length[T])}' for T in sorted(by_length)))
 ```
 
 <!-- Placeholder (prose, ### The Patching Map): the noising sweep, three site kinds at every block and position class, one batched forward per site and prompt length; the checks that a complete cut gives NE 1 and a null patch NE 0. -->
@@ -919,68 +768,58 @@ for site in SITES:  # the checks, outside the timed sweep
     if site[0] == 'resid_post':  # all positions of the stream: NE = 1
         assert (ne(site, ['all']) - 1).abs().max() < 1e-3
     assert ne(site, [()]).abs().max() < 1e-3  # a null patch: NE = 0
-
-def long_table(T, column):  # (kinds, blocks, classes, pairs) -> CSV bytes
-    k, l, c, i = np.indices(T.shape).reshape(4, -1)
-    return pd.DataFrame({
-        'kind': np.array(KINDS)[k], 'block': l,
-        'position': np.array(CLASSES)[c],
-        'landmark': np.array([r['landmark'] for r in pairs])[i],
-        column: T.ravel()}).to_csv(index=False).encode()
-
-RESULTS['patching.csv'] = long_table(NE, 'ne')
+AXES = [('kind', KINDS), ('block', range(L)), ('position', CLASSES),
+        ('landmark', [r['landmark'] for r in pairs])]
+RESULTS['patching.csv'] = d2l.long_csv(NE, AXES, 'ne')
 print(f'effect tensor {NE.shape} (kinds, blocks, positions, pairs)')
-print(f'{sweep_time:.1f} s for {NE.size:,} patched forwards '
-      f'({NE[..., 0].size} per pair)')
+print(f'{NE.size:,} patched forwards, {NE[..., 0].size} per pair')
 ```
 
-<!-- Placeholder (prose, ### The Patching Map): single-site effects do not add: at the handover block, NE(subject last) + NE(final) against NE(both). -->
+<!-- Placeholder (prose, ### The Patching Map): additivity at the handover block, NE(subject last) + NE(final) against NE(both). The two-site toy shows that effects need not add; on this pair at the handover block they nearly do (review 18.6: 0.11 + 0.55 = 0.66 against 0.68): never title it "effects do not add". -->
 
 ```{.python .input #interpretability-patch-additivity}
 %%tab pytorch
-S, FINAL = 1, 7  # position classes: the subject's last token, the final one
+SUBJ_LAST, FINAL = 1, 7  # position classes: subject's last token, final one
 
 def handover_of(mean):  # first block where final overtakes subject last
-    after = mean[0, :, FINAL] > mean[0, :, S]
+    after = mean[0, :, FINAL] > mean[0, :, SUBJ_LAST]
     return int(np.argmax(after)) if after.any() else np.nan
 
 mean = NE.mean(-1)  # (kinds, blocks, positions)
 handover = handover_of(mean)
-both = (m_clean - patched_ld(('resid_post', handover), [(S, FINAL)])[:, 0]
-        ) / gap
-print(f'block {handover}: NE(subject last) {mean[0, handover, S]:.2f} + '
-      f'NE(final) {mean[0, handover, FINAL]:.2f} = '
-      f'{mean[0, handover, S] + mean[0, handover, FINAL]:.2f}; '
+both = (m_clean - patched_ld(('resid_post', handover),
+                             [(SUBJ_LAST, FINAL)])[:, 0]) / gap
+print(f'block {handover}: NE(subject last) {mean[0, handover, SUBJ_LAST]:.2f}'
+      f' + NE(final) {mean[0, handover, FINAL]:.2f} = '
+      f'{mean[0, handover, SUBJ_LAST] + mean[0, handover, FINAL]:.2f}; '
       f'NE(both) {float(both.mean()):.2f}')
 ```
 
-<!-- Placeholder (prose, ### The Patching Map): the map below with a city-cluster bootstrap: cells above the declared thresholds, the handover block with its interval, negative cells; caption from spec fig_lm_patching_map. Reading (verify 18.6): there is no mid-depth subject-last band. Per pair, before the handover the subject's effect stays on the token or tokens that name the landmark (both subject classes together NE about 1): on the earlier tokens when the last word is generic (Bolshoi Theatre, Shibuya Crossing), on the last token when it is the distinctive one (Big Ben, Pantheon). The model does not gather the subject onto its last token; the information moves to the final position at the handover. Do not write that the earlier tokens carry "the other half" of a per-prompt split; the class means average two kinds of pairs. Name the pitfall: a position class pools tokens with different roles. -->
+<!-- Placeholder (prose, ### The Patching Map): the map below with a city-cluster bootstrap: cells above the declared thresholds, the handover block with its interval (block 20 in every replicate: say so; the percentile interval is narrow), attn_out at the final position at the handover block (one attention layer moves the fact), negative cells (the one below -0.05 is mlp_out at block 27, final position: consistent with final-layer suppression, mention it); caption from spec fig_lm_patching_map (the colour is mean NE). Reading (verify 18.6, review 18.6): the subject-last column stays near 0.4 through blocks 0-19 and only the 0.5 threshold hides it: never write that there is no subject-last band; write that the subject's effect splits across its tokens (both subject classes together NE about 1) and neither class alone passes 0.5. Per pair, before the handover the subject's effect stays on the token or tokens that name the landmark: on the earlier tokens when the last word is generic (Bolshoi Theatre, Shibuya Crossing), on the last token when it is the distinctive one (Big Ben, Pantheon). The information moves to the final position at the handover. Do not write that the earlier tokens carry "the other half" of a per-prompt split; the class means average two kinds of pairs. Name the pitfall: a position class pools tokens with different roles. Single-layer noising shows no mid-depth MLP band (mlp_out passes 0.1 only at blocks 0-2 and 21-22): explain it by single-layer noising, redundancy and a different corruption, not as a refutation of causal tracing. -->
 
 ```{.python .input #interpretability-patch-map}
 %%tab pytorch
-def by_position(cells):  # (block, class) cells as "'class' 0-3, 7; ..."
-    parts = []
-    for c in CLASSES:
-        ls = np.array([l for l, c_ in cells if c_ == c])
-        if len(ls):
-            runs = np.split(ls, np.flatnonzero(np.diff(ls) > 1) + 1)
-            parts.append(f'{c!r} ' + ', '.join(
-                f'{r[0]}-{r[-1]}' if len(r) > 1 else f'{r[0]}' for r in runs))
-    return '; '.join(parts) or 'none'
-
-reps = np.stack([NE[..., idx].mean(-1) for idx in cluster_resample(cities)])
-lower = pct_ci(reps)[0]
-SUMMARY['patching'] = {'handover': [handover, *pct_ci(
-    [handover_of(r) for r in reps]).tolist()]}
+reps = np.stack([NE[..., idx].mean(-1)
+                 for idx in d2l.cluster_resample(cities)])
+lower = d2l.percentile_ci(reps)[0]
+SUMMARY['patching'] = {'handover': [handover, *d2l.percentile_ci(
+    [handover_of(r) for r in reps], names=['handover']).tolist()]}
 for i, (kind, t) in enumerate(zip(KINDS, (0.5, 0.5, 0.1))):
     cells = [(int(l), CLASSES[c]) for l, c in zip(*np.nonzero(lower[i] > t))]
     SUMMARY['patching'][kind] = cells
-    print(f'{kind}, lower bound above {t}: {by_position(cells)}')
+    print(f'{kind}, lower bound above {t}: {d2l.block_runs(cells, CLASSES)}')
 print('handover block {}, 95% interval [{:.0f}, {:.0f}]'.format(
     *SUMMARY['patching']['handover']))
-# per pair, before the handover: the subject's effect, shared between
-# its earlier tokens and its last token
-early, last = NE[0, :handover, :S + 1].mean(0)  # (pairs,) each
+attn = mean[1, :, FINAL]  # attn_out at the final position, per block
+lo, hi = d2l.percentile_ci(reps[:, 1, handover, FINAL])
+others = [l for l in np.argsort(-attn) if l != handover][:2]
+SUMMARY['patching']['attn_out, final, handover'] = [
+    float(attn[handover]), lo, hi]
+print(f'attn_out at the final position, block {handover}: '
+      f'{d2l.fmt_ci(attn[handover], (lo, hi), 2)}')
+print('  next highest: ' + ', '.join(f'block {l} {attn[l]:.2f}'
+                                     for l in others))
+early, last = NE[0, :handover, :SUBJ_LAST + 1].mean(0)  # per pair
 share = last / (early + last)
 order = np.argsort(share)
 q = np.percentile(early + last, [25, 50, 75])
@@ -990,19 +829,22 @@ for where, idx in (('earlier tokens', order[share[order] < 1 / 3]),
                    ('last token', order[share[order] > 2 / 3][::-1])):
     print(f'  over 2/3 on the {where}: {len(idx)} pairs, e.g. '
           + ', '.join(pairs[i]['landmark'] for i in idx[:3]))
-print(f'{(mean < -0.05).sum()} cells with mean NE below -0.05, '
-      f'minimum {mean.min():.2f}')
+neg = np.argwhere(mean < -0.05)
+print(f'cells with mean NE below -0.05: {len(neg)}' + ''.join(
+    f'; {KINDS[k]}, block {l}, {CLASSES[c]!r}: {mean[k, l, c]:.2f}'
+    for k, l, c in neg))
 if FULL is not None:
     print('full run: handover', FULL['patching']['handover'])
     for kind in KINDS:
-        print(f'  {kind}: {by_position(FULL["patching"][kind])}')
+        print(f'  {kind}: {d2l.block_runs(FULL["patching"][kind], CLASSES)}')
 d2l.show_heatmaps(torch.tensor(mean).clamp(min=0)[None], 'position', 'block',
                   titles=list(KINDS), figsize=(7, 4.5), xticklabels=CLASSES)
 for ax in d2l.plt.gcf().axes[:len(KINDS)]:  # the names read vertically
     ax.tick_params('x', labelrotation=90)
+d2l.plt.gcf().axes[-1].set_ylabel('mean NE');  # the colour bar
 ```
 
-<!-- Placeholder (prose, ### Attribution Patching): eq_lm_atp at every site from one clean forward and backward and one corrupted forward, timed against the sweep. -->
+<!-- Placeholder (prose, ### Attribution Patching): eq_lm_atp at every site from one clean forward and backward and one corrupted forward, timed against the sweep (quote "about 20 times faster": the pass-count ratio is 224, and batching the patches closes most of that gap). -->
 
 ```{.python .input #interpretability-atp}
 %%tab pytorch
@@ -1026,13 +868,13 @@ def atp():
 
 atp_time = d2l.Benchmark(atp, warmup=1, repeats=3).time
 NE_atp = atp()
-RESULTS['atp.csv'] = long_table(NE_atp, 'atp_ne')
+RESULTS['atp.csv'] = d2l.long_csv(NE_atp, AXES, 'atp_ne')
 print(f'AtP tensor {NE_atp.shape}')
 print(f'patching: {sweep_time:.2f} s for {3 * L * 8} forwards per pair; '
       f'AtP: {atp_time:.2f} s for 3 passes; ratio {sweep_time / atp_time:.0f}')
 ```
 
-<!-- Placeholder (prose, ### Attribution Patching): rank agreement of AtP with exact patching outside the near-zero cells, the error by block band, and the plot below (caption from spec fig_lm_atp_vs_exact). Reading (verify 18.6): AtP misses the subject positions at every block before the handover, not only early (the subject classes together: exact NE about 1, AtP about 0.1). The effect passes through attention there and the patched path is flat at the clean end (the effect rises in an S-curve from clean to corrupted; the slope at the clean end, which AtP computes exactly, is small). After the handover AtP is close but low at the final position (about 40% low at the handover block, 12-18% low from block 22 on). -->
+<!-- Placeholder (prose, ### Attribution Patching): rank agreement of AtP with exact patching outside the near-zero cells (the attn_out interval rests on few cells), the error by block band, and the plot below (caption from spec fig_lm_atp_vs_exact). Reading (verify 18.6): AtP misses the subject positions at every block before the handover, not only early (the subject classes together: exact NE about 1, AtP about 0.1); cite Kramar et al. 2024 (AtP*) on attention saturation. The effect passes through attention there and the patched path is flat at the clean end (the effect rises in an S-curve from clean to corrupted; the slope at the clean end, which AtP computes exactly, is small). After the handover AtP is close but low at the final position (about 40% low at the handover block, 11-18% low from block 22 on). Without the early subject cells resid_post's Spearman is about 0.88, but that cut was not declared: word it by block band only. -->
 
 ```{.python .input #interpretability-atp-agreement}
 %%tab pytorch
@@ -1043,24 +885,28 @@ def spearman(E, A):  # per kind and pooled, cells with |exact NE| > 0.05
             for k in range(len(KINDS))] + [pooled]
 
 exact, approx = NE.mean(-1), NE_atp.mean(-1)
-point = spearman(exact, approx)
-ci = pct_ci([spearman(NE[..., idx].mean(-1), NE_atp[..., idx].mean(-1))
-             for idx in cluster_resample(cities)])
-SUMMARY['atp spearman'] = {}
-for j, name in enumerate([*KINDS, 'pooled']):
-    SUMMARY['atp spearman'][name] = fmt(point[j], ci[:, j], 2)
-    print(f'Spearman, {name}: {fmt(point[j], ci[:, j], 2)}')
 big = np.abs(exact) > 0.05  # the cells the rank agreement uses
-print('MAE by blocks, cells with |NE| > 0.05:', {
-    f'{b[0]}-{b[-1]}': round(float(np.abs(approx - exact)[:, b][
-        big[:, b]].mean()), 3) for b in np.array_split(np.arange(L), 4)})
-for what, cols, blocks in (('both subject classes', [0, S], range(handover)),
-                           ('final position', [FINAL], range(handover, L))):
-    e, a = (x[0, blocks][:, cols].sum(-1) for x in (exact, approx))
-    print(f'resid_post, {what}, blocks {blocks[0]}-{blocks[-1]}: '
+rho = spearman(exact, approx)
+rho_ci = d2l.percentile_ci(
+    [spearman(NE[..., idx].mean(-1), NE_atp[..., idx].mean(-1))
+     for idx in d2l.cluster_resample(cities)], names=[*KINDS, 'pooled'])
+SUMMARY['atp spearman'] = {}
+print('Spearman over the cells with |exact NE| > 0.05:')
+for j, (name, n) in enumerate(zip([*KINDS, 'pooled'],
+                                  [*big.sum((1, 2)), big.sum()])):
+    SUMMARY['atp spearman'][name] = d2l.fmt_ci(rho[j], rho_ci[:, j], 2)
+    print(f'  {name} ({n} cells): {d2l.fmt_ci(rho[j], rho_ci[:, j], 2)}')
+print('mean absolute error on those cells, by blocks: ' + ', '.join(
+    f'{b[0]}-{b[-1]} {np.abs(approx - exact)[:, b][big[:, b]].mean():.2f}'
+    for b in np.array_split(np.arange(L), 4)))
+for what, cols, bs in (('both subject classes', [0, SUBJ_LAST],
+                        range(handover)),
+                       ('final position', [FINAL], range(handover, L))):
+    e, a = (x[0, bs][:, cols].sum(-1) for x in (exact, approx))
+    print(f'resid_post, {what}, blocks {bs[0]}-{bs[-1]}: '
           f'NE exact {e.mean():.2f}, AtP {a.mean():.2f} (block means)')
 if FULL is not None:
-    print('full run:', FULL['atp spearman'])
+    print('full run:', json.dumps(FULL['atp spearman'], indent=1))
 ends = [min(exact.min(), approx.min()), max(exact.max(), approx.max())]
 d2l.plot([exact[k].ravel() for k in range(3)] + [ends],
          [approx[k].ravel() for k in range(3)] + [ends], 'exact NE',
@@ -1120,21 +966,23 @@ class TopKSAE(nn.Module):
         return self.decode(z), z
 
     def loss(self, x, dead=None, k_aux=256):
-        """Squared error normalized by the batch variance, and the auxiliary
-        loss: the same for the residual x - x_hat reconstructed from the
-        k_aux largest pre-activations of the dead features (a mask)."""
+        """Squared error normalized by the batch variance; the auxiliary
+        loss, the same for the residual x - x_hat reconstructed from the
+        k_aux largest pre-activations of the dead features (a mask); and
+        the codes."""
         x = x.to(self.W_enc.dtype).reshape(-1, self.d_model)
         pre = self.pre_acts(x)
-        x_hat = self.decode(self.topk_relu(pre, self.k))
+        z = self.topk_relu(pre, self.k)
+        x_hat = self.decode(z)
         nmse = lambda u, v: ((u - v) ** 2).sum(-1).mean() / (
             (v - v.mean(0)) ** 2).sum(-1).mean()
         aux = x_hat.new_zeros(())
         if dead is not None and dead.any():
             e = (x - x_hat).detach()
-            z = self.topk_relu(pre.masked_fill(~dead, -torch.inf),
-                               min(k_aux, int(dead.sum())))
-            aux = nmse(F.linear(z, self.W_dec), e)
-        return nmse(x_hat, x), aux
+            z_dead = self.topk_relu(pre.masked_fill(~dead, -torch.inf),
+                                    min(k_aux, int(dead.sum())))
+            aux = nmse(F.linear(z_dead, self.W_dec), e)
+        return nmse(x_hat, x), aux, z
 
     @torch.no_grad()
     def normalize_decoder_(self):
@@ -1161,11 +1009,9 @@ class TopKSAE(nn.Module):
 #@save
 def train_sae(sae, activations, *, steps, batch_size=4096, lr=2e-4,
               aux_coef=1/32, dead_after=200, seed=0):
-    """Train a TopKSAE with Adam on random rows of activations, an (N, d)
-    CPU tensor (fp16 allowed), with unit decoder columns and the auxiliary
-    loss of the features that have not fired for dead_after steps. seed
-    fixes the batches; the initial dictionary is the SAE's own (see
-    TopKSAE's seed). Returns the loss of each step."""
+    """Train a TopKSAE with Adam on random rows of activations (N, d), with
+    unit decoder columns and the auxiliary loss of the features idle for
+    dead_after steps; seed fixes the batches. Returns the losses."""
     dev, dtype = sae.W_dec.device, sae.W_dec.dtype
     gen, N = torch.Generator().manual_seed(seed), len(activations)
     with torch.no_grad():  # b_dec at the data mean, W_enc = W_dec^T
@@ -1179,11 +1025,10 @@ def train_sae(sae, activations, *, steps, batch_size=4096, lr=2e-4,
     for _ in range(steps):
         x = activations[torch.randint(N, (batch_size,), generator=gen)].to(
             dev, dtype)
-        mse, aux = sae.loss(x, idle >= dead_after)
+        mse, aux, z = sae.loss(x, idle >= dead_after)
         loss = mse + aux_coef * aux
         with torch.no_grad():  # steps since each feature last fired
-            fired = (sae.encode(x) > 0).any(0)
-            idle = torch.where(fired, 0, idle + 1)
+            idle = torch.where((z > 0).any(0), 0, idle + 1)
         optimizer.zero_grad()
         loss.backward()
         sae.remove_parallel_grad_()
@@ -1193,56 +1038,29 @@ def train_sae(sae, activations, *, steps, batch_size=4096, lr=2e-4,
     return losses
 ```
 
-<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): caching the block-14 stream and training an SAE on it under RETRAIN; the CPU path loads the one trained for Qwen3-0.6B. -->
+<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): caching the block-14 stream and training an SAE on it under D2L_RERUN; the CPU path loads the one trained for Qwen3-0.6B. -->
 
 ```{.python .input #interpretability-sae-r1}
 %%tab pytorch
-def cache_stream(model, windows, layer, batch=32):
-    """The stream after block layer at the positions >= 1 of windows,
-    without norm outliers (above 10 times the batch median), as one fp16
-    tensor in host memory."""
-    site, n = ('resid_post', layer), 0
-    acts = torch.empty(windows[:, 1:].numel(), model.num_hiddens,
-                       dtype=torch.float16)  # filled in place: one copy
-    for X in windows.split(batch):
-        with torch.no_grad(), d2l.intervene(model, stop_after=site) as ctx:
-            model(X.to(dev))
-        h = ctx.cache[site][0][:, 1:].flatten(0, 1)
-        norms = h.float().norm(dim=-1)
-        h = h[norms <= 10 * norms.median()]
-        acts[n:n + len(h)] = h.half().cpu()
-        n += len(h)
-    assert torch.isfinite(acts[:n]).all()
-    return acts[:n]
-
-def train_and_save(acts, name):  # TopKSAE(d, 8192, k=50), seed 0, fp16 file
+def train_ours(acts, name):  # TopKSAE(d, 8192, k=50), seed 0, fp16 file
     sae = d2l.TopKSAE(model.num_hiddens, 8192, 50, center=True,
                       seed=0).to(dev)
     losses = d2l.train_sae(sae, acts, steps=SAE_STEPS)
     print(f'loss at steps 0, {SAE_STEPS // 2}, {SAE_STEPS}: ' + ', '.join(
         f'{losses[i]:.3f}' for i in (0, SAE_STEPS // 2, -1)))
-    state = {'state_dict': {k: v.half() for k, v in sae.state_dict().items()},
-             'config': dict(d_model=sae.d_model, d_sae=sae.d_sae, k=sae.k,
-                            center=sae.center), 'tokens': len(acts)}
-    save_rerun(name, lambda p: torch.save(state, p))
-    sae.load_state_dict(state['state_dict'])  # the published fp16 values
+    d2l.lm_save_sae(sae, len(acts), name)
     return sae, len(acts)
 
-def load_sae(key):
-    saved = torch.load(d2l.download_keyed(key), map_location='cpu',
-                       weights_only=True)  # saved from the GPU
-    sae = d2l.TopKSAE(**saved['config'])
-    sae.load_state_dict(saved['state_dict'])
+def load_ours(key):
+    sae, tokens = d2l.lm_load_sae(key, dev)
     print(f'{key}: sha1 {d2l.DATA_HUB[key][1]}')
-    return sae.to(dev), saved['tokens']
+    return sae, tokens
 
-if RETRAIN:
-    sae_r1, r1_tokens = train_and_save(
-        cache_stream(model, train_windows, 14), 'lm-sae-r1-l14.pt')
+if 'sae-06b' in RERUN:
+    sae_06b, tokens_06b = train_ours(
+        d2l.cache_stream(model, train_windows, 14), 'lm-sae-r1-l14.pt')
 elif SMALL:
-    sae_r1, r1_tokens = load_sae('lm-sae-r1-l14-v1')
-else:
-    print("this run reads Qwen3-1.7B-Base's SAE; R1's is the CPU path's")
+    sae_06b, tokens_06b = load_ours(ARTIFACTS['sae-06b'])
 ```
 
 <!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): Qwen3-1.7B-Base replaces Qwen3-0.6B, because the released dictionaries exist for it. -->
@@ -1252,46 +1070,42 @@ else:
 if SMALL:
     print('CPU path: Qwen3-0.6B with its own SAE; the release is skipped')
 else:
-    HOST = 'Qwen/Qwen3-1.7B-Base'
+    BASE_MODEL = 'Qwen/Qwen3-1.7B-Base'
     del model, lens, ctx  # a context keeps the model it instruments
-    del E, gamma, target, lp  # R1's embedding, held-out logits
+    del E, gamma, target, lp  # Qwen3-0.6B's embedding, held-out logits
     for g in groups:  # the corrupted activations of the patching runs
         del g['acts']
-    gc.collect()
-    torch.cuda.empty_cache()
-    print(f'after freeing R1: {torch.cuda.memory_allocated() / 2**20:,.0f} '
-          'MiB still allocated')
-    model = d2l.load_qwen3(HOST).requires_grad_(False)  # bf16
+    d2l.lm_free()
+    assert torch.cuda.memory_allocated() < 2**29, 'Qwen3-0.6B is still held'
+    model = d2l.load_qwen3(BASE_MODEL).requires_grad_(False)  # bf16
     # the same vocabulary, so the token ids of the data cell stay valid
     assert AutoTokenizer.from_pretrained(
-        HOST, revision=model.revision).get_vocab() == tok.get_vocab()
-    print(f'{HOST} at {model.revision}: '
+        BASE_MODEL, revision=model.revision).get_vocab() == tok.get_vocab()
+    print(f'{BASE_MODEL} at {model.revision}: '
           f'{sum(p.numel() for p in model.parameters()):,} parameters')
 ```
 
-<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): under RETRAIN, the block-14 stream of Qwen3-1.7B-Base on the training windows. -->
+<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): under D2L_RERUN, the block-14 stream of Qwen3-1.7B-Base on the training windows. -->
 
 ```{.python .input #interpretability-act-cache}
 %%tab pytorch
-if RETRAIN and not SMALL:
-    acts = cache_stream(model, train_windows, 14)
+if 'sae-17b' in RERUN:
+    acts = d2l.cache_stream(model, train_windows, 14)
     print(f'{len(acts):,} positions cached, {acts.numel() * 2 / 1e9:.1f} GB '
           'of host memory')
-else:
-    print('no cache: the next cell loads the trained SAE')
 ```
 
-<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): our SAE for Qwen3-1.7B-Base, trained under RETRAIN and loaded otherwise. -->
+<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): our SAE for Qwen3-1.7B-Base, trained under D2L_RERUN and loaded otherwise (about 7 M tokens, not 8 M: the outliers and position 0 are left out). -->
 
 ```{.python .input #interpretability-sae-train-or-load}
 %%tab pytorch
 if SMALL:
-    sae, sae_tokens = sae_r1, r1_tokens
-elif RETRAIN:
-    sae, sae_tokens = train_and_save(acts, 'lm-sae-q17b-l14.pt')
+    sae, sae_tokens = sae_06b, tokens_06b
+elif 'sae-17b' in RERUN:
+    sae, sae_tokens = train_ours(acts, 'lm-sae-q17b-l14.pt')
     del acts
 else:
-    sae, sae_tokens = load_sae('lm-sae-q17b-l14-v1')
+    sae, sae_tokens = load_ours(ARTIFACTS['sae-17b'])
 ```
 
 <!-- Placeholder (prose, ### A Released Dictionary): Qwen-Scope's Caution paragraph, quoted from the README at the pinned revision, and the size of the release. -->
@@ -1352,16 +1166,9 @@ def load_qwen_scope_sae(repo_id, layer, revision=None, *, device=None,
 #@save
 @torch.no_grad()
 def sae_metrics(sae, model, token_batches, layer):
-    """Reconstruction statistics of sae on the stream after block layer,
-    over token_batches (equal-length (B, T) ids), at the positions >= 1
-    whose stream norm is at most 10 times the batch median: L0, pooled FVU,
-    the next-token cross-entropy of the model, with x_hat spliced in, and
-    with the mean activation, loss recovered, the fraction of features
-    that never fire, each feature's firing rate, and per-row values:
-    sse and sst over the n kept positions, mean ce_orig and ce_splice
-    over the n_ce kept positions that have a next token (NaN if none).
-    The cross-entropy goes one row at a time, so the fp32 buffers hold
-    one row of logits."""
+    """L0, FVU, loss recovered and firing density of sae on the stream
+    after block layer of model over token_batches ((B, T) ids), at the
+    positions >= 1 whose norm is at most 10 times the batch median."""
     if sae.W_dec.shape[0] != model.num_hiddens:
         raise ValueError(f'SAE width {sae.W_dec.shape[0]} != model width '
                          f'{model.num_hiddens}')
@@ -1371,7 +1178,7 @@ def sae_metrics(sae, model, token_batches, layer):
     def ce(logits, X, keep):  # per row: summed loss and count, kept t
         loss = torch.stack([F.cross_entropy(row[:-1].float(), x[1:],
                                             reduction='none')
-                            for row, x in zip(logits, X)])
+                            for row, x in zip(logits, X)])  # a row at a time
         m = keep[:, :-1]
         return (loss * m).sum(1), m.sum(1)
 
@@ -1390,7 +1197,7 @@ def sae_metrics(sae, model, token_batches, layer):
         total = total + x[keep].double().sum(0)
         n += int(keep.sum())
     mean = (total / n).float()
-    rows = {'sse': [], 'sst': []}
+    sse, sst = [], []  # per row, over its kept positions
     fired = torch.zeros(sae.d_sae, device=sae.W_dec.device)
     nnz, ce_splice, ce_mean = 0, [], []
     for X, keep in zip(token_batches, keeps):  # pass 2: the two splices
@@ -1400,8 +1207,8 @@ def sae_metrics(sae, model, token_batches, layer):
             nonlocal nnz, fired
             x_hat, z = sae(x)
             xf, x_hat = x.float(), x_hat.float()
-            rows['sse'].append((((x_hat - xf) ** 2).sum(-1) * keep).sum(1))
-            rows['sst'].append((((xf - mean) ** 2).sum(-1) * keep).sum(1))
+            sse.append((((x_hat - xf) ** 2).sum(-1) * keep).sum(1))
+            sst.append((((xf - mean) ** 2).sum(-1) * keep).sum(1))
             active = (z > 0) & k
             nnz += int(active.sum())
             fired = fired + active.flatten(0, 1).sum(0)
@@ -1413,25 +1220,18 @@ def sae_metrics(sae, model, token_batches, layer):
                 k, mean.to(x.dtype), x)}):
             ce_mean.append(ce(model(X), X, keep))
     cat = lambda xs: torch.cat(xs).double().cpu().numpy()
-    per_row = lambda pairs: cat([s / c for s, c in pairs])  # 0/0: NaN
     pooled = lambda pairs: (sum(float(s.sum()) for s, _ in pairs)
                             / sum(int(c.sum()) for _, c in pairs))
     ce_o, ce_s, ce_m = pooled(ce_orig), pooled(ce_splice), pooled(ce_mean)
-    sse, sst = cat(rows['sse']), cat(rows['sst'])
     density = (fired / n).cpu().numpy()
-    return {'l0': nnz / n, 'fvu': float(sse.sum() / sst.sum()),
+    return {'l0': nnz / n, 'fvu': float(cat(sse).sum() / cat(sst).sum()),
             'ce_orig': ce_o, 'ce_splice': ce_s, 'ce_mean_ablate': ce_m,
             'loss_recovered': (ce_m - ce_s) / (ce_m - ce_o),
             'unfired_frac': float((density == 0).mean()), 'density': density,
-            'n_tokens': n,
-            'per_doc': {'sse': sse, 'sst': sst,
-                        'n': cat([keep.sum(1) for keep in keeps]),
-                        'n_ce': cat([c for _, c in ce_orig]),
-                        'ce_orig': per_row(ce_orig),
-                        'ce_splice': per_row(ce_splice)}}
+            'n_tokens': n}
 ```
 
-<!-- Placeholder (prose, ### A Released Dictionary): the instrument check, both encoder conventions of the release by reconstruction on held-out text, and the declared rule that decides whether the release is used. -->
+<!-- Placeholder (prose, ### A Released Dictionary): the instrument check, both encoder conventions of the release by reconstruction on held-out text, and the declared rule that decides whether the release is used. The release reconstructs only with the raw residual (center=False): a good teaching point for the instrument check. -->
 
 ```{.python .input #interpretability-sae-instrument}
 %%tab pytorch
@@ -1453,7 +1253,7 @@ else:
     print(f'kept center={release.center}; release used: {USE_RELEASE}')
 ```
 
-<!-- Placeholder (prose, ### A Released Dictionary): the table above (spec tab_lm_sae_compare), ours beside the release as context, not a contest; FVU and loss recovered are different instruments. -->
+<!-- Placeholder (prose, ### A Released Dictionary): the table above (spec tab_lm_sae_compare), ours beside the release as context, not a contest; FVU and loss recovered are different instruments. Loss recovered compresses because mean ablation is a weak baseline (its cross-entropy is about 9.2); the cross-entropy the splice adds is the more telling number. "Unfired" counts the features that never fire on these held-out positions: never call them dead. -->
 
 ```{.python .input #interpretability-sae-compare}
 %%tab pytorch
@@ -1461,126 +1261,131 @@ m_ours = d2l.sae_metrics(sae, model, eval_batches, 14)
 rows = {'ours': (sae.d_sae, sae_tokens, m_ours)}
 if not SMALL:  # the release states no token count
     rows['Qwen-Scope'] = (release.d_sae, None, m_release)
-COLUMNS = {'L0': 'l0', 'FVU': 'fvu', 'CE orig': 'ce_orig',
-           'CE splice': 'ce_splice', 'CE mean-ablate': 'ce_mean_ablate',
-           'loss recovered': 'loss_recovered', 'unfired': 'unfired_frac'}
-table = pd.DataFrame({name: {
+COLUMNS = {'FVU': 'fvu', 'CE orig': 'ce_orig', 'CE splice': 'ce_splice',
+           'CE mean-ablate': 'ce_mean_ablate',
+           'loss recovered': 'loss_recovered'}
+sae_table = pd.DataFrame({name: {
     'width': f'{width:,}',
     'training tokens': 'not stated' if t is None else f'{t:,}',
-    **{col: f'{m[key]:.3f}' for col, key in COLUMNS.items()}}
-                      for name, (width, t, m) in rows.items()}).T
+    'L0': f'{m["l0"]:.0f}',
+    **{col: f'{m[key]:.3f}' for col, key in COLUMNS.items()},
+    'unfired features': f'{int((m["density"] == 0).sum()):,}'}
+                          for name, (width, t, m) in rows.items()}).T
 print(f'{m_ours["n_tokens"]:,} positions of {len(heldout)} documents')
-print(table.T.to_string())  # one column per SAE
-SUMMARY['sae'] = table.to_dict('index')
+print(sae_table.T.to_string())  # one column per SAE
+SUMMARY['sae'] = sae_table.to_dict('index')
 RESULTS['sae_metrics.json'] = json.dumps({
-    name: {k: v for k, v in m.items() if k not in ('density', 'per_doc')}
+    name: {k: v for k, v in m.items() if k != 'density'}
     for name, (_, _, m) in rows.items()}, indent=1).encode()
 if FULL is not None:
     print('full run:', json.dumps(FULL['sae'], indent=1))
 ```
 
-<!-- Placeholder (prose, ### Features and Their Labels): a feature chosen by contrast (Chinese against English Wikipedia) and two by a density rule, their top contexts, and the contrast feature's label tested as a token rule beside the difference-of-means probe. -->
+<!-- Placeholder (prose, ### Features and Their Labels): a feature chosen by contrast (Chinese against English Wikipedia) and two by a density rule, their top contexts; never-firing and dense features (feature splitting and absorption named). -->
 
 ```{.python .input #interpretability-features}
 %%tab pytorch
-fsae = (release if USE_RELEASE else sae).requires_grad_(False)
+feature_sae = (release if USE_RELEASE else sae).requires_grad_(False)
 density = (m_release if USE_RELEASE else m_ours)['density']  # held-out
 SITE = ('resid_post', 14)
-
-def stream(docs, batch=16):  # the block-14 stream at the positions >= 1
-    out = []
-    for X in docs.split(batch):
-        with torch.no_grad(), d2l.intervene(model, stop_after=SITE) as ctx:
-            model(X.to(dev))
-        out.append(ctx.cache[SITE][0][:, 1:])
-    return torch.cat(out)  # (docs, positions, d)
-
-def fire_rate(H):  # the fraction of positions where each feature fires
-    flat = H.flatten(0, 1)
-    fired = sum((fsae.encode(h) > 0).sum(0) for h in flat.split(2048))
-    return fired / len(flat)
-
-def acts_of(H, feats):  # activations of the features feats, (..., feats)
-    return torch.cat([fsae.encode(h)[:, feats] for h in H.flatten(0, 1).split(
-        2048)]).view(*H.shape[:2], len(feats)).float()
-
-H = {lang: {part: stream(docs) for part, docs in wiki[lang].items()}
-     for lang in wiki}
-rate = {lang: fire_rate(H[lang]['contrast']) for lang in H}
-top = (rate['zh'] - rate['en']).topk(5).indices
-print(pd.DataFrame({'feature': top.tolist(),
-                    'rate zh': rate['zh'][top].tolist(),
-                    'rate en': rate['en'][top].tolist()}).round(3))
-feature = int(top[0])
+H = {lang: {part: d2l.lm_stream(model, docs, SITE)
+            for part, docs in wiki[lang].items()} for lang in wiki}
+rate = {lang: d2l.sae_fire_rate(feature_sae, H[lang]['contrast'])
+        for lang in H}
+contrast_top = (rate['zh'] - rate['en']).topk(5).indices
+print(pd.DataFrame({'feature': contrast_top.tolist(),
+                    'rate zh': rate['zh'][contrast_top].tolist(),
+                    'rate en': rate['en'][contrast_top].tolist()}).round(
+    3).to_string(index=False))
+feature = int(contrast_top[0])
 d_mean = (H['zh']['contrast'].flatten(0, 1).float().mean(0)
           - H['en']['contrast'].flatten(0, 1).float().mean(0))
+print(f'features never firing on the held-out text: {(density == 0).sum():,}'
+      f'; dense (above 0.1): {(density > 0.1).sum():,}')
 alive = np.flatnonzero((density >= 1e-3) & (density <= 1e-2))  # by index
 alive = alive[alive != feature]
 FEATS = [feature, *alive[np.random.default_rng(0).permutation(len(alive))[:2]]]
-docs = torch.cat([wiki['zh']['contrast'], wiki['en']['contrast'],
-                  heldout[:, :128]])
-A = torch.cat([acts_of(H[lang]['contrast'], FEATS) for lang in H]
-              + [acts_of(stream(heldout[:, :128]), FEATS)])
+context_docs = torch.cat([wiki['zh']['contrast'], wiki['en']['contrast'],
+                          heldout[:, :128]])
+A = torch.cat([d2l.sae_acts(feature_sae, H[lang]['contrast'], FEATS)
+               for lang in H] + [d2l.sae_acts(feature_sae, d2l.lm_stream(
+                   model, heldout[:, :128], SITE), FEATS)])
 for j, f in enumerate(FEATS):  # top-8 contexts: 11 tokens, then [token]
     print(f'feature {f}:')
     for i, t in (divmod(int(k), A.shape[1]) for k in A[..., j].ravel().topk(8)
                  .indices):
-        before, at = tok.decode(docs[i, max(0, t - 10):t + 1]), tok.decode(
-            docs[i, t + 1:t + 2])
+        before, at = tok.decode(context_docs[i, max(0, t - 10):t + 1]), (
+            tok.decode(context_docs[i, t + 1:t + 2]))
         print(f'  {A[i, t, j]:6.1f}  {before}[{at}]'.replace('\n', '\\n'))
-# the label as a token rule on held-out documents, beside the probe
-label_ids = torch.cat([wiki[lang]['label'][:, 1:] for lang in H])
-label = cjk[label_ids].numpy().ravel()  # the token itself holds Han
-doc = np.repeat(np.arange(len(label_ids)), label_ids.shape[1])
+```
+
+<!-- Placeholder (prose, ### Features and Their Labels): the contrast feature's label "Chinese text" tested as a token rule on held-out documents, beside the difference-of-means probe and the five contrast features together (feature splitting). The rule counts a token as Chinese if it holds a CJK character, punctuation included, and leaves out byte-fragment tokens; an earlier rule ("holds a Han character") counted the fullwidth punctuation and the fragments of Chinese text as not Chinese: say that the rule corrects the instrument. -->
+
+```{.python .input #interpretability-label-test}
+%%tab pytorch
+# the rule: a token is Chinese if it holds a CJK ideograph, CJK punctuation
+# or a fullwidth form; a token that decodes alone to U+FFFD (part of a
+# character's bytes) cannot be labelled alone and is left out
+CHINESE = re.compile('[\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff'
+                     '\uf900-\ufaff\uff00-\uffef]')
+zh_tokens = np.array([CHINESE.search(p) is not None for p in pieces])
+fragments = np.array(['\ufffd' in p for p in pieces])
+label_ids = torch.cat([wiki[lang]['label'][:, 1:] for lang in H]).numpy()
+keep = ~fragments[label_ids].ravel()
+y = zh_tokens[label_ids].ravel()[keep]
+label_doc = np.repeat(np.arange(len(label_ids)), label_ids.shape[1])[keep]
+doc_lang = np.repeat(list(H), [len(wiki[lang]['label']) for lang in H])
 H_test = torch.cat([H[lang]['label'] for lang in H])
-score = {'feature': acts_of(H_test, [feature])[..., 0].cpu().numpy().ravel(),
-         'probe': (H_test.float() @ d_mean).cpu().numpy().ravel()}
-threshold = {'feature': 0.0, 'probe': float(np.mean(
+acts5 = d2l.sae_acts(feature_sae, H_test, contrast_top.tolist())
+score = {'feature': acts5[..., 0], 'probe': H_test.float() @ d_mean,
+         'any of the top 5': acts5.max(-1).values}
+score = {name: s.cpu().numpy().ravel()[keep] for name, s in score.items()}
+threshold = {'feature': 0.0, 'any of the top 5': 0.0, 'probe': float(np.mean(
     [(H[lang]['contrast'].float() @ d_mean).mean().item() for lang in H]))}
+print(f'{len(y):,} tokens labelled, {y.sum():,} of them Chinese; '
+      f'{(~keep).sum():,} byte fragments left out')
 
-def label_stats(idx):  # per score: precision, recall, AUC (Mann-Whitney)
-    y, out = label[idx], []
-    for name, s in score.items():
-        active, n = s[idx] > threshold[name], y.sum()
-        auc = (rankdata(s[idx])[y].sum() - n * (n + 1) / 2) / (
-            n * (len(y) - n))
-        out += [(y & active).sum() / active.sum(), (y & active).sum() / n,
-                auc]
-    return out
+def label_stats(idx):  # per score: precision, recall, AUC
+    return [v for name, s in score.items() for v in d2l.detection_stats(
+        y[idx], s[idx], threshold[name])]
 
-# ratios over a resample of whole documents (a sparse feature can be
-# active in fewer documents than bootstrap_ci's 30 clusters)
+STATS = [f'{stat}, {name}' for name in score
+         for stat in ('precision', 'recall', 'AUC')]
 with np.errstate(invalid='ignore', divide='ignore'):  # no active token
-    point = label_stats(np.arange(len(label)))
-    reps = np.array([label_stats(idx) for idx in cluster_resample(doc)])
-ci = pct_ci(reps)
-results = {name: [fmt(point[3 * j + i], ci[:, 3 * j + i]) for i in range(3)]
-           for j, name in enumerate(score)}
-print(pd.DataFrame(results, index=['precision', 'recall', 'AUC']).T)
-print('documents with an active token:', {name: len(np.unique(
-    doc[s > threshold[name]])) for name, s in score.items()})
-d_auc = fmt(point[2] - point[5], pct_ci(reps[:, 2] - reps[:, 5]))
+    label_est = label_stats(np.arange(len(y)))
+    label_reps = np.array([label_stats(idx) for idx in
+                           d2l.cluster_resample(label_doc)])
+label_ci = d2l.percentile_ci(label_reps, names=STATS)
+results = {name: [d2l.fmt_ci(label_est[3 * j + i], label_ci[:, 3 * j + i])
+                  for i in range(3)] for j, name in enumerate(score)}
+print(pd.DataFrame(results, index=['precision', 'recall', 'AUC']).T.to_string())
+for name, s in score.items():
+    active = doc_lang[np.unique(label_doc[s > threshold[name]])]
+    print(f'{name}: active in ' + ', '.join(
+        f'{(active == lang).sum()} of {(doc_lang == lang).sum()} {lang}'
+        for lang in H) + ' documents')
+d_auc = d2l.fmt_ci(label_est[2] - label_est[5], d2l.percentile_ci(
+    label_reps[:, 2] - label_reps[:, 5]))
 print(f'AUC, feature minus probe: {d_auc}')
-print(f'features never firing: {(density == 0).sum():,}; '
-      f'dense (above 0.1): {(density > 0.1).sum():,}')
 SUMMARY['label test'] = {**results, 'AUC difference': d_auc}
 if FULL is not None:
     print('full run:', json.dumps(FULL['label test'], indent=1))
 ```
 
-<!-- Placeholder (prose, ### Steering Directions): three directions at block 14 (the feature's decoder column, the difference of means, random ones), and the median stream norm that makes their strengths comparable. -->
+<!-- Placeholder (prose, ### Steering Directions): three directions at block 14 (the feature's decoder column, the difference of means, random ones), and the median stream norm that makes their strengths comparable. The two informed directions have cosine only about 0.28, yet both steer. -->
 
 ```{.python .input #interpretability-directions}
 %%tab pytorch
 directions = {
-    'SAE feature': F.normalize(fsae.W_dec[:, feature].float(), dim=0),
+    'SAE feature': F.normalize(feature_sae.W_dec[:, feature].float(), dim=0),
     'difference of means': F.normalize(d_mean, dim=0)}
 for seed in range(SIZES['random']):
     g = torch.Generator().manual_seed(seed)
     directions[f'random {seed}'] = F.normalize(
         torch.randn(model.num_hiddens, generator=g), dim=0).to(dev)
 INFORMED, RANDOM = list(directions)[:2], list(directions)[2:]
-n_bar = float(stream(cost_docs).float().norm(dim=-1).median())
+n_bar = float(d2l.lm_stream(model, cost_docs, SITE).float().norm(
+    dim=-1).median())
 cos = lambda u, v: float(u @ v)
 print(f'median stream norm on English text: {n_bar:.1f}')
 print(f'cosine of the feature and the difference of means: '
@@ -1589,28 +1394,34 @@ worst = max(abs(cos(directions[r], directions[i]))
             for r in RANDOM for i in INFORMED)
 print(f'largest |cosine| of a random direction with either: {worst:.3f}')
 if not SMALL:  # its decoder column is all we keep of the release
-    del release, fsae
-    gc.collect()
-    torch.cuda.empty_cache()
+    del release, feature_sae
+    d2l.lm_free()
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): eq_lm_steer on a grid of strengths for each direction (half-octave from 1/16 to 2; for the two informed directions also every twelfth of an octave from 1/16 to 1/4, where they switch within a third of an octave), and a fixed Chinese prefix that changes no activation: behaviour (switched prompts) and cost (cross-entropy on English text). Past the cliff the outputs degenerate ("（（（（" loops, repeated phrases); the switched fraction falls partly because fullwidth punctuation is not Han. Call it breakdown, never a return to English. -->
+<!-- Placeholder (prose, ### The Steering Frontier): eq_lm_steer on a grid of strengths for each direction (half-octave from 1/16 to 2; for the two informed directions also every twelfth of an octave from 1/16 to 1/4: this fine grid was added after a first run showed the switch happening within a third of an octave; say so), and a fixed Chinese prefix that changes no activation: behaviour (switched prompts) and cost (cross-entropy on English text). The CPU path (Qwen3-0.6B with its own SAE, another model) uses half-octave steps up to 1/2 plus two quarter-octave points between 1/8 and 1/4, where its switch happens; its frontier numbers are not comparable with the full run's. Past the cliff the outputs degenerate ("（（（（" loops, repeated phrases); the switched fraction falls partly because fullwidth punctuation is not Han. Call it breakdown, never a return to English: the cost falls there only because a broken model predicts less confidently. -->
 
 ```{.python .input #interpretability-steer}
 %%tab pytorch
 COARSE = [2 ** (j / 2) for j in range(-8, 3)]  # 1/16 to 2, half-octave
 FINE = [2 ** (j / 12) for j in range(-48, -23)]  # 1/16 to 1/4, 1/12 octave
-# the informed directions switch within a third of an octave, inside FINE
-GRID = {n: [0.0] + ([0.125, 0.5] if SMALL else sorted(set(COARSE) | set(
-    FINE)) if n in INFORMED else COARSE) for n in directions}
+GRID = {}
+for name in directions:  # each grid starts at alpha = 0
+    if SMALL:  # the CPU path: half-octave steps up to 1/2, and quarter-
+        # octave steps between 1/8 and 1/4 for the informed directions
+        alphas = ([a for a in COARSE if a <= 0.5] + [2 ** -2.75, 2 ** -2.25]
+                  if name in INFORMED else [0.125, 0.5])
+    elif name in INFORMED:
+        alphas = sorted(set(COARSE) | set(FINE))
+    else:
+        alphas = COARSE
+    GRID[name] = [0.0] + sorted(alphas)
 PREFIX = '下面的文字将用中文继续。\n\n'  # declared before any run, not tuned
 SWITCH = 0.3  # a continuation switched: at least 30% Han characters
 CAP = 0.5  # the cost cap: nats per token on English text
-for prefix in ('', PREFIX):  # one bucket of equal-length prompts each
-    lengths = {len(ids_of(prefix + t)) for t in steer_texts}
-    assert len(lengths) == 1
-    print(f'one bucket: {len(steer_texts)} prompts of {lengths.pop()} tokens')
-cjk_dev = cjk.to(dev)
+lengths = [{len(ids_of(pre + t)) for t in steer_texts} for pre in ('', PREFIX)]
+assert all(len(n) == 1 for n in lengths)  # one bucket of prompts each
+print(f'{len(steer_texts)} prompts of {lengths[0].pop()} tokens, '
+      f'{lengths[1].pop()} with the prefix')
 
 def steer(v):  # adds v at every position but the first
     def fn(x):
@@ -1623,49 +1434,37 @@ def steering(fn):
     return contextlib.nullcontext() if fn is None else d2l.intervene(
         model, {SITE: fn})
 
-def han_fraction(text):
-    chars = [c for c in text if not c.isspace()]
-    return sum(CJK.match(c) is not None for c in chars) / max(len(chars), 1)
-
-@torch.no_grad()
-def doc_ce(prefix_ids, batch=16):
-    """Per cost document, the mean cross-entropy of its tokens 1 to 128,
-    plain and renormalized over the tokens without Han characters."""
-    P, out = len(prefix_ids), []
-    X = torch.cat([torch.tensor(prefix_ids, dtype=torch.long).expand(
-        len(cost_docs), P), cost_docs], 1)
-    for Xb in X.split(batch):  # 16 x 129 tokens: about 2,048 per chunk
-        Xb = Xb.to(dev)
-        z, y = model(Xb)[:, P:-1].float(), Xb[:, P + 1:]
-        z_y = z.gather(-1, y[..., None])[..., 0]
-        ce = z.logsumexp(-1) - z_y
-        ce_rest = z.masked_fill(cjk_dev, -torch.inf).logsumexp(-1) - z_y
-        rest = ~cjk_dev[y]
-        out.append(torch.stack([ce.mean(1), (ce_rest * rest).sum(1)
-                                / rest.sum(1)], 1).cpu())
-    return torch.cat(out).numpy()  # (documents, 2)
-
 def run(fn=None, prefix=''):  # Han fractions per prompt, CE per document
     with steering(fn):
         gens = d2l.generate(model, tok, [prefix + t for t in steer_texts],
                             max_new_tokens=48, batch_size=len(steer_texts))
-        return (np.array([han_fraction(g.text) for g in gens]),
-                doc_ce(ids_of(prefix)))
+        return (np.array([d2l.char_fraction(g.text, HAN) for g in gens]),
+                d2l.lm_doc_ce(model, cost_docs, ids_of(prefix), han_tokens))
 
 base, runs = run(), {}
-print('switched at the largest alpha below the cap (cost in nats), then at '
-      'the next alpha:')
 for name, d in directions.items():
     runs[name, 0.0] = base  # alpha = 0 is one shared run
     for alpha in GRID[name][1:]:
         runs[name, alpha] = run(steer(alpha * n_bar * d))
-    cost_of = lambda a: (runs[name, a][1] - base[1])[:, 0].mean()
-    i = max(i for i, a in enumerate(GRID[name]) if cost_of(a) < CAP)
-    print(f'  {name}: ' + '; '.join(
-        f'{(runs[name, a][0] >= SWITCH).mean():.2f} at alpha {a:.3g} '
-        f'({cost_of(a):.2f})' for a in GRID[name][i:i + 2]))
 runs['prefix', 0.0] = run(prefix=PREFIX)
-print(f'prefix: switched {(runs["prefix", 0.0][0] >= SWITCH).mean():.2f}')
+switched = lambda n, a: (runs[n, a][0] >= SWITCH).mean()
+cost_of = lambda n, a: (runs[n, a][1] - base[1])[:, 0].mean()
+below = {n: max(i for i, a in enumerate(GRID[n]) if cost_of(n, a) < CAP)
+         for n in directions}  # the largest alpha below the cap
+print('switched at the largest alpha below the cap (cost in nats), then at '
+      'the next alpha:')
+for n in INFORMED:
+    print(f'  {n}: ' + '; '.join(
+        f'{switched(n, a):.2f} at alpha {a:.3g} ({cost_of(n, a):.2f})'
+        for a in GRID[n][below[n]:below[n] + 2]))
+i = max(below[n] for n in RANDOM)  # the random draws share their grid
+print(f'  random ({len(RANDOM)} draws): at most '
+      f'{max(switched(n, a) for n in RANDOM for a in GRID[n]):.2f} '
+      'switched at any alpha;\n    cost ' + ', '.join(
+          f'{min(cost_of(n, a) for n in RANDOM):.2f}-'
+          f'{max(cost_of(n, a) for n in RANDOM):.2f} at alpha {a:.3g}'
+          for a in GRID[RANDOM[0]][i:i + 2]))
+print(f'prefix: switched {switched("prefix", 0.0):.2f}')
 RESULTS['steering_prompts.csv'] = pd.DataFrame(
     [(n, a, i, h) for (n, a), (hs, _) in runs.items()
      for i, h in enumerate(hs)],
@@ -1678,7 +1477,7 @@ RESULTS['steering_docs.csv'] = pd.DataFrame(
 ).to_csv(index=False).encode()
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): the frontier plot below (caption from spec fig_lm_steering_frontier), areas up to the cost cap with paired intervals, the random-direction floor, and the prefix against each direction at its own cost; the bootstrap resamples prompts (seed 0) and cost documents (seed 1) independently. Wording (verify 18.6): at the cap the feature switches just under half (about 0.45, an interval that includes 0.5); half takes about 0.6 nats. The difference of means reaches about 0.37 at the cap. The area difference is marginal (lower bound near 0, about 2% of replicates at or below 0): the feature is "slightly cheaper at this sample size", not clearly cheaper. A step envelope without interpolation gives the same sign. -->
+<!-- Placeholder (prose, ### The Steering Frontier): the frontier plot below (caption from spec fig_lm_steering_frontier: the line is the frontier, the most switched at each cost or less; grey points are strengths past each direction's peak, where the output breaks down; every random draw switches nothing, so their mean is the floor), areas up to the cost cap with paired intervals under both costs (plain cross-entropy on English, which partly measures the intended shift to Chinese, and the same without Han tokens, the collateral damage), the random-direction floor, and the prefix against each direction at its own cost; the bootstrap resamples prompts (seed 0) and cost documents (seed 1) independently. Cost of half switched is read along the strengths, between the first strength that switches half and the one before it. Wording (verify 18.6, review 18.6): the area difference is marginal (lower bound near 0, about 2% of replicates at or below 0): the feature is "slightly cheaper at this sample size", not clearly cheaper; a step envelope without interpolation gives the same sign. The prefix is an instruction on a base model, which continues the document: at its cost every method switches only a few percent, so "worse than a direction" carries little; AxBench's comparison is about instruction-tuned models (author ruling pending, review 18.6 finding 5). Samples are taken at the largest strength below the cap, where only a minority of prompts switch: that is why most continuations stay English. -->
 
 ```{.python .input #interpretability-frontier}
 %%tab pytorch
@@ -1688,68 +1487,73 @@ CE = {n: np.array([runs[n, a][1] - base[1] for a in GRID[n]])
       for n in directions}  # (alphas, documents, plain or without Han)
 sw_p = runs['prefix', 0.0][0] >= SWITCH
 ce_p = runs['prefix', 0.0][1] - base[1]
+COSTS = ('plain', 'without Han')  # CE[n][..., 0] and CE[n][..., 1]
+ROWS = [*(f'area, {n}' for n in INFORMED), 'area difference',
+        *(f'switched at the cap, {n}' for n in INFORMED),
+        *(f'cost of half switched, {n}' for n in INFORMED)]
 
-def envelope(cost, sw):  # the most switched at each cost or less
-    order = np.argsort(cost, kind='stable')
-    x, y = np.clip(cost[order], 0, None), np.maximum.accumulate(sw[order])
-    last = np.append(x[1:] > x[:-1], True)  # ties: keep the last, the most
-    return x[last], y[last]
-
-def area(cost, sw):  # under the frontier, from cost 0 to CAP
-    grid = np.linspace(0, CAP, 101)
-    return np.trapezoid(np.interp(grid, *envelope(cost, sw)), grid)
-
-def stats(ip, idoc):  # the declared statistics on resampled prompts, docs
-    m = {n: (CE[n][:, idoc, 0].mean(1), SW[n][:, ip].mean(1))
-         for n in directions}
-    a = [area(*m[n]) for n in INFORMED]
-    excess = max(m[n][1][np.flatnonzero(m[n][0] < CAP).max()]
-                 for n in RANDOM) - m[RANDOM[0]][1][0]
+def frontier_stats(ip, idoc):  # the declared statistics, resampled
+    out = []
+    for m in range(len(COSTS)):  # per alpha: (mean cost, switched fraction)
+        curve = {n: (CE[n][:, idoc, m].mean(1), SW[n][:, ip].mean(1))
+                 for n in directions}
+        a = [d2l.frontier_area(*curve[n], CAP) for n in INFORMED]
+        out += [*a, a[0] - a[1], *(np.interp(CAP, *d2l.frontier_envelope(
+            *curve[n])) for n in INFORMED), *(d2l.cost_of_half(*curve[n])
+                                               for n in INFORMED)]
+        if m == 0:
+            plain = curve
+    excess = max(plain[n][1][np.flatnonzero(plain[n][0] < CAP).max()]
+                 for n in RANDOM) - plain[RANDOM[0]][1][0]
     cp, sp = ce_p[idoc, 0].mean(), sw_p[ip].mean()
-    return [*a, a[0] - a[1], excess,
-            *(sp - np.interp(cp, *envelope(*m[n])) for n in INFORMED),
-            *(np.interp(CAP, *envelope(*m[n])) for n in INFORMED)]
-
-def cost_of_half(x, y):  # the least cost on the frontier that switches half
-    j = np.flatnonzero(y >= 0.5)
-    return np.nan if not len(j) else x[0] if j[0] == 0 else float(
-        np.interp(0.5, y[j[0] - 1:j[0] + 1], x[j[0] - 1:j[0] + 1]))
+    return out + [excess, *(sp - np.interp(cp, *d2l.frontier_envelope(
+        *plain[n])) for n in INFORMED)]
 
 n_p, n_d = len(steer_texts), len(cost_docs)
-point = stats(np.arange(n_p), np.arange(n_d))
+NAMES = [f'{r}, cost {c}' for c in COSTS for r in ROWS] + [
+    'random excess', *(f'prefix minus {n}' for n in INFORMED)]
+est = frontier_stats(np.arange(n_p), np.arange(n_d))
 # bootstrap seeds: 0 for the prompts, 1 for the documents (independent)
-reps = np.array([stats(ip, idoc) for ip, idoc in zip(
-    cluster_resample(range(n_p)), cluster_resample(range(n_d), seed=1))])
-ci = pct_ci(reps)
-names = [f'area, {INFORMED[0]}', f'area, {INFORMED[1]}',
-         'area difference', 'random excess',
-         *(f'prefix minus {n}' for n in INFORMED),
-         *(f'switched at the cap, {n}' for n in INFORMED)]
-SUMMARY['steering'] = {n: fmt(v, ci[:, j]) for j, (n, v) in
-                       enumerate(zip(names, point))}
-SUMMARY['steering']['random excess, upper 95% bound'] = float(
-    np.quantile(reps[:, 3], 0.95))
-SUMMARY['steering']['area difference, replicates at most 0'] = float(
-    np.mean(reps[:, 2] <= 0))
-cost = {n: CE[n][..., 0].mean(1) for n in directions}
-for n in INFORMED:  # a point value: beyond the cap, the grid is coarse
-    SUMMARY['steering'][f'cost of half switched, {n}'] = round(
-        cost_of_half(*envelope(cost[n], SW[n].mean(1))), 3)
-for n, v in SUMMARY['steering'].items():
-    print(f'{n}: {v}')
+est_reps = np.array([frontier_stats(ip, idoc) for ip, idoc in zip(
+    d2l.cluster_resample(range(n_p)),
+    d2l.cluster_resample(range(n_d), seed=1))])
+est_ci = d2l.percentile_ci(est_reps, names=NAMES)
+cells = [d2l.fmt_ci(v, est_ci[:, j]) for j, v in enumerate(est)]
+SUMMARY['steering'] = dict(zip(NAMES, cells))
+excess_bound = float(np.quantile(est_reps[:, NAMES.index('random excess')],
+                                 0.95))
+below_0 = float(np.mean(est_reps[:, 2] <= 0))
+SUMMARY['steering']['random excess, upper 95% bound'] = excess_bound
+SUMMARY['steering']['area difference, replicates at most 0'] = below_0
+print(pd.DataFrame({f'cost {c}': cells[len(ROWS) * m:len(ROWS) * (m + 1)]
+                    for m, c in enumerate(COSTS)}, index=ROWS).to_string())
+print(f'area difference, plain cost: {below_0:.1%} of replicates at most 0')
+print(f'random directions, switched beyond the unsteered rate below the cap: '
+      f'{est[NAMES.index("random excess")]:.3f} (upper 95% bound '
+      f'{excess_bound:.3f})')
+for n in INFORMED:
+    print(f'prefix minus {n}, at the prefix\'s cost: '
+          f'{SUMMARY["steering"][f"prefix minus {n}"]}')
 if FULL is not None:
     print('full run:', json.dumps(FULL['steering'], indent=1))
-sw = np.array([SW[n].mean(1) for n in RANDOM])
-c_rand = np.mean([cost[n] for n in RANDOM], 0)
-d2l.plot([cost[INFORMED[0]], cost[INFORMED[1]], c_rand, c_rand,
-          [ce_p[:, 0].mean()], c_rand, [CAP, CAP]],
-         [SW[INFORMED[0]].mean(1), SW[INFORMED[1]].mean(1), sw.mean(0),
-          sw.min(0), [sw_p.mean()], sw.max(0), [0, 1]],
+cost = {n: CE[n][..., 0].mean(1) for n in directions}  # plain, per alpha
+frac = {n: SW[n].mean(1) for n in directions}
+peak = {n: len(frac[n]) - 1 - int(np.argmax(frac[n][::-1]))
+        for n in INFORMED}  # the last alpha of the most switched
+env = {n: d2l.frontier_envelope(cost[n], frac[n]) for n in INFORMED}
+past = [np.concatenate([v[n][peak[n] + 1:] for n in INFORMED])
+        for v in (cost, frac)]  # past the peak: the output breaks down
+d2l.plot([env[n][0] for n in INFORMED]
+         + [np.mean([cost[n] for n in RANDOM], 0), [ce_p[:, 0].mean()],
+            past[0]] + [cost[n][:peak[n] + 1] for n in INFORMED] + [[CAP, CAP]],
+         [env[n][1] for n in INFORMED]
+         + [np.mean([frac[n] for n in RANDOM], 0), [sw_p.mean()], past[1]]
+         + [frac[n][:peak[n] + 1] for n in INFORMED] + [[0, 1]],
          'cross-entropy increase on English (nats per token)',
          'fraction switched to Chinese',
-         legend=[*INFORMED, f'random (mean of {len(RANDOM)})',
-                 'random (min, max)', 'prefix'],
-         fmts=('C0o-', 'C1s-', 'C2x-', 'C2:', 'C3*', 'C2:', 'k--'),
+         legend=[*INFORMED, f'random (mean of {len(RANDOM)})', 'prefix',
+                 'past the peak'],
+         fmts=('C0-', 'C1-', 'C2x', 'C3*', 'C7o', 'C0o', 'C1s', 'k--'),
          figsize=(5, 3.5), legend_loc='upper left')
 ax = d2l.plt.gca()
 ax.set_xscale('symlog', linthresh=0.01)  # linear up to 0.01 nats, then log
@@ -1757,21 +1561,42 @@ ax.set_xlim(min(0, *(c.min() for c in cost.values())),
             2 * max(c.max() for c in cost.values()))
 RESULTS['summary.json'] = json.dumps(SUMMARY, indent=1, default=float,
                                      ensure_ascii=False).encode()
-if RETRAIN and not SMALL:  # the CPU path's numbers are never published
-    save_rerun('lm-interp-results.zip', write_results)
+if 'results' in RERUN:  # the CPU path's numbers are never published
+    d2l.lm_save_rerun('lm-interp-results.zip',
+                      lambda p: d2l.lm_write_zip(p, RESULTS))
 ```
 
 <!-- Placeholder (prose, ### The Steering Frontier): continuations at each informed direction's operating point, beside the unsteered model and the prefix, including the Eiffel prompt. -->
 
 ```{.python .input #interpretability-steer-samples}
 %%tab pytorch
+def print_folded(text, width=76, indent='    '):  # Han takes two columns
+    cols = lambda s: sum(1 + (unicodedata.east_asian_width(c) in 'WF')
+                         for c in s)
+    lines, line = [], ''
+    for word in text.split(' '):
+        sep = ' ' if line.strip() else ''
+        if cols(line + sep + word) <= width:
+            line += sep + word
+        elif cols(word) == len(word) and len(indent + word) <= width:
+            lines.append(line)  # a word without wide characters: next line
+            line = indent + word
+        else:  # a run of wide characters: fill the line, then go on
+            line += sep
+            for c in word:
+                if cols(line + c) > width:
+                    lines.append(line)
+                    line = indent
+                line += c
+    print('\n'.join(l.rstrip() for l in lines + [line]))
+
 samples = [*steer_texts[:3], eiffel]
 conditions = {'unsteered': (None, '', 0.0),
               'prefix': (None, PREFIX, ce_p[:, 1].mean())}
 for n in INFORMED:  # the smallest alpha that switches half below the cap
-    below = cost[n] < CAP
-    hit = np.flatnonzero(below & (SW[n].mean(1) >= 0.5))
-    i = hit[0] if len(hit) else np.flatnonzero(below).max()
+    under = cost[n] < CAP
+    hit = np.flatnonzero(under & (SW[n].mean(1) >= 0.5))
+    i = hit[0] if len(hit) else np.flatnonzero(under).max()
     print(f'{n}: alpha {GRID[n][i]:.3g}'
           + ('' if len(hit) else ' (the largest below the cap; no half)'))
     conditions[n] = (steer(GRID[n][i] * n_bar * directions[n]), '',
@@ -1782,5 +1607,5 @@ for name, (fn, prefix, renorm) in conditions.items():
                             max_new_tokens=48)
     print(f'--- {name} (cost without Han: {renorm:+.3f} nats per token)')
     for s, g in zip(samples, gens):
-        d2l.print_wrapped(f'...{s[-30:]}|{g.text}'.replace('\n', ' '))
+        print_folded(f'...{s[-30:]}|{g.text}'.replace('\n', ' '))
 ```

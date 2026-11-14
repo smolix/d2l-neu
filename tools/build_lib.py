@@ -54,6 +54,10 @@ LIB_ONLY_FILES = [
     # branches its models never take, the POSIX parts of run_python_tests
     # and the chapter's measured-result plumbing (download_keyed, D2L_RERUN).
     'chapter_lm-pretrained/scoring-lib.md',
+    # 18.6's argument checks of intervene, the Hub document walk, the UD
+    # reader, the cluster bootstrap, the regeneration bookkeeping and the
+    # steering measurements.
+    'chapter_lm-pretrained/interpretability-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

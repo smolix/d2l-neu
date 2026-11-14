@@ -384,6 +384,14 @@ NOTEBOOK_ENV = {
     ("pytorch", "chapter_lm-pretrained/eval-suites.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
+    # 18.6: the Hub answers the range reads of its parquet files with an
+    # X-HF-Warning header ("You are sending unauthenticated requests ...",
+    # 137 columns) that huggingface_hub logs once per process; it depends on
+    # the build box having no HF_TOKEN, so it is noise on the page. Errors
+    # still raise.
+    ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
 }
 
 

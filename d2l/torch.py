@@ -7956,10 +7956,10 @@ class ProductQuantizer:
         """(distances, ids) of the k codes nearest to the query q, or to
         each row of q, by m table look-ups per code."""
         q = torch.as_tensor(q, dtype=torch.float32)
+        codes = torch.as_tensor(codes).long()  # a no-op if already int64
         if q.ndim == 2:
             out = [self.adc_search(row, codes, k) for row in q]
             return tuple(torch.stack(t) for t in zip(*out))
-        codes = torch.as_tensor(codes).long()
         d = self.adc_table(q)[torch.arange(self.m), codes].sum(1)
         top = d.topk(min(k, len(d)), largest=False)
         return top.values, top.indices
@@ -7973,9 +7973,10 @@ Hit = collections.namedtuple('Hit',
 class BookRetriever:
     """Hybrid retrieval over the book corpus: BM25 over the 'sparse' view
     and a dense embedder over the 'dense' view, fused by reciprocal rank,
-    optionally reranked by a yes/no reranker. dense=None gives a BM25-only
-    retriever; index 'flat' scans all chunk vectors, 'hnsw' and 'ivfpq'
-    build Faiss indexes on first use.
+    optionally reranked by a yes/no reranker (which reads the 'dense' view
+    with the embedder's instruction, BOOK_TASK). dense=None gives a
+    BM25-only retriever; index 'flat' scans all chunk vectors, 'hnsw' and
+    'ivfpq' build Faiss indexes on first use.
 
     Defined in :numref:`sec_lm_retrieval`"""
     # BM25 parameters chosen on the book's training questions
@@ -7997,7 +7998,7 @@ class BookRetriever:
         self.rrf_k, self.cache = rrf_k, cache
         self.device = device or ('cuda' if torch.cuda.is_available()
                                  else 'cpu')
-        self._X = self._ann = self._enc = self._rr = None
+        self._X = self._ann = self._enc = self._rr = self._texts = None
 
     def _encoder(self):
         if self._enc is None:
@@ -8055,11 +8056,17 @@ class BookRetriever:
                 nlist = max(1, len(Xf) // 64)
                 self._ann = faiss.index_factory(
                     m, f'IVF{nlist},PQ64', faiss.METRIC_INNER_PRODUCT)
+                if len(Xf) < 256 * 39:  # below what Faiss asks per codebook
+                    print(f'IVF-PQ: codebooks of 256 centroids trained on '
+                          f'{len(Xf):,} vectors')
+                    self._ann.pq.cp.min_points_per_centroid = 1
                 self._ann.train(Xf)
                 self._ann.nprobe = 16
             self._ann.add(Xf)
         s, i = self._ann.search(np.ascontiguousarray(Q.numpy()), depth)
-        return i, s, None
+        keep = i >= 0  # Faiss pads with id -1 when it finds fewer
+        return [r[k] for r, k in zip(i, keep)], [
+            r[k] for r, k in zip(s, keep)], None
 
     def search_batch(self, queries, k=10, mode='hybrid', rerank_k=None):
         """search for each of several queries."""
@@ -8094,10 +8101,12 @@ class BookRetriever:
                                           k=self.rrf_k)[:depth]
                     stages['rrf'] = dict(ranked)
             if rerank_k:
+                if self._texts is None:
+                    self._texts = self.corpus.texts('dense')
                 top = [i for i, _ in ranked[:rerank_k]]
                 pr = d2l.rerank_yes_no(*self._reranker(), q,
-                                       [self.corpus.chunks[i]['text']
-                                        for i in top])
+                                       [self._texts[i] for i in top],
+                                       instruction=d2l.BOOK_TASK)
                 stages['rerank'] = dict(zip(top, pr.tolist()))
                 order = np.argsort(-pr, kind='stable')
                 ranked = [(top[o], float(pr[o])) for o in order]

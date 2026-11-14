@@ -61,6 +61,7 @@ from d2l import torch as d2l
 import bm25s
 import collections
 import faiss
+import hashlib
 import json
 import os
 import pandas as pd
@@ -86,7 +87,8 @@ ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
     'ret-ann': ('lm-enc-ann-v1', 'lm-enc-ann.json'),
     'ret-crossover': ('lm-enc-ret-crossover-v1', 'lm-enc-ret-crossover.json')}
 RERUN = d2l.lm_rerun(ARTIFACTS)
-assert GPU or not RERUN, 'regenerating the results needs a GPU'
+assert GPU or not RERUN & {'ret-stress-emb', 'ret-rerank'}, \
+    'encoding and reranking for a regeneration need a GPU'
 K_RRF, DEPTH = 60, 100  # fusion constant; candidates kept per retriever
 RR_DEPTHS, RR_MAX_LEN, RR_BATCH = (20, 100), 1024, 32  # reranked prefixes
 RR_LIVE = None if GPU else 8  # dev questions reranked live (None: all)
@@ -96,7 +98,8 @@ BM25_GRID = dict(k1=(0.9, 1.2, 1.5, 2.0), b=(0.4, 0.75, 0.9),
 LAMBDAS = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)  # dense weight
 STRESS_N = None  # all; 20_000 is the reduced path for small machines
 N_NQ_QUERIES, N_WARM, BUILD_THREADS = 1_000, 100, 8
-NLIST, NPROBES = 1024, (1, 2, 4, 8, 16, 32, 64)
+NLIST = 1024 if STRESS_N is None else 128  # IVF cells: about sqrt(N)
+NPROBES = (1, 2, 4, 8, 16, 32, 64)
 PQ_MS, PQ_SEEDS = (64, 32), (0, 1, 2)  # sub-vectors; k-means seeds
 HNSW_M, EF_CONSTRUCTION, EF_SEARCHES = 32, 200, (16, 32, 64, 128, 256)
 QUERY = d2l._EMBEDDERS[EMB]  # pooling, padding side, query format
@@ -111,27 +114,33 @@ CONFIG = {  # what each result is made with; reading it checks this
     'ret-rerank': dict(model=RERANKER, revision=REV[RERANKER], embedder=EMB,
                        embedder_revision=REV[EMB], corpus=d2l.R3_VERSION,
                        bm25=d2l.BookRetriever.BM25_PARAMS, k_rrf=K_RRF,
-                       depth=max(RR_DEPTHS), max_len=RR_MAX_LEN),
+                       depths=RR_DEPTHS, max_len=RR_MAX_LEN, batch=RR_BATCH,
+                       instruction=d2l.BOOK_TASK, view='dense'),
     'ret-ann': dict(stress=ARTIFACTS['ret-stress-emb'][0], n=STRESS_N,
                     nlist=NLIST, nprobes=NPROBES, pq_ms=PQ_MS, seeds=PQ_SEEDS,
                     hnsw=(HNSW_M, EF_CONSTRUCTION), ef=EF_SEARCHES,
                     queries=N_NQ_QUERIES, threads=BUILD_THREADS),
     'ret-crossover': dict(stress=ARTIFACTS['ret-stress-emb'][0], n=10**6,
-                          noise=0.05, hnsw=(HNSW_M, EF_CONSTRUCTION),
+                          noise='median nearest-neighbour distance',
+                          hnsw=(HNSW_M, EF_CONSTRUCTION),
                           threads=BUILD_THREADS)}
+# The chunk vectors (ret-stress-emb, ret-rerank) and the dev questions
+# (ret-rerank) these results depend on are added as sha1s once loaded.
 
 def result_path(name):
     """The file this run regenerates for name, else the registered one."""
     key, file = ARTIFACTS[name]
     return d2l.lm_artifact(key, file if name in RERUN else None)
 
-def read_result(name):
-    """The results of name, checked against this notebook's settings."""
+def read_result(name, strict=True):
+    """The results of name, checked against this notebook's settings; with
+    strict=False, None when they were made with other settings."""
     with open(result_path(name)) as f:
         result = json.load(f)
-    assert result['config'] == json.loads(json.dumps(CONFIG[name])), \
-        f'{name} was made with other settings: D2L_RERUN={name}'
-    return result
+    if result['config'] == json.loads(json.dumps(CONFIG[name])):
+        return result
+    assert not strict, f'{name} was made with other settings: D2L_RERUN={name}'
+    return None
 
 def write_result(name, **fields):
     """Write a regenerated result with its settings and machine."""
@@ -174,7 +183,7 @@ d2l.DATA_HUB['lm-book-r3-v1'] = (  # book commit 098bf463, corpus r3.1
     '0b7f11e044a4838139ac02dffb6e2d7eb32b48b8')
 ```
 
-<!-- Placeholder (prose, opening): the retriever this section ends with, used before it is built: BM25 alone and the embedder alone on the 220 answerable dev questions; Recall@10 of each with document-clustered intervals, the share of questions exactly one of them finds (their errors differ), and one question of each kind: an identifier question BM25 finds and the embedder misses, and a paraphrase the other way round. -->
+<!-- Placeholder (prose, opening): the retriever this section ends with, used before it is built: BM25 alone and the embedder alone on the 220 answerable dev questions; Recall@10 of each with document-clustered intervals, the share of questions exactly one of them finds (their errors differ), and one question of each kind (the first in the question set's order): an identifier question BM25 finds and the embedder misses, and a question without an identifier the other way round. -->
 
 ```{.python .input #retrieval-opening}
 %%tab pytorch
@@ -186,19 +195,33 @@ GOLD = [d2l.gold_chunk_ids(q, FULL) for q in DEV]
 CLUSTER = np.array([q['gold_spans'][0]['doc_id'] for q in DEV])
 IDENT = np.array(['identifier' in q['flags'] for q in DEV])
 
+def signflip_p(d, cluster, n=10_000):
+    """Two-sided sign-flip p-value of the mean of the per-document mean
+    differences: each document's mean keeps or flips its sign at random."""
+    m = np.array([d[cluster == c].mean() for c in np.unique(cluster)])
+    flips = np.random.default_rng(0).choice([-1.0, 1.0], (n, len(m)))
+    return np.mean(np.abs(flips @ m) >= abs(m.sum()) - 1e-12)
+
 def boot(a, b=None, cluster=CLUSTER):
     """Mean of per-question scores a (or of a - b, paired) with its 95%
-    interval: documents are resampled, or questions (marked *) when the
-    questions come from fewer than 30 documents."""
+    interval, documents resampled. Marked *: fewer than 100 questions or
+    30 documents; with fewer than 30 documents, questions are resampled (an
+    interval that ignores the documents' correlation: likely too narrow),
+    and a paired difference gets a document-level sign-flip p."""
     by_doc = len(set(cluster)) >= 30
-    with warnings.catch_warnings():  # few items: the * says so
+    with warnings.catch_warnings():  # few items: the * and the note say so
         warnings.simplefilter('ignore')
         r = (d2l.bootstrap_ci(a, cluster=cluster if by_doc else None)
              if b is None else d2l.paired_bootstrap(
                  a, b, cluster=cluster if by_doc else None))
     f = '.3f' if b is None else '+.3f'
-    return (f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
-            + ('' if by_doc else '*'))
+    out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
+    if by_doc and len(a) >= 100:
+        return out
+    if by_doc or b is None:
+        return out + '*'
+    p = signflip_p(np.asarray(a, float) - np.asarray(b, float), cluster)
+    return out + f'* (sign-flip p {p:.3f}, {len(set(cluster))} documents)'
 
 HITS = {m: RET.search_batch(QUESTIONS, k=10, mode=m)
         for m in ('bm25', 'dense')}
@@ -211,7 +234,7 @@ print(f'{len(DEV)} dev questions; Recall@10: BM25 {boot(FOUND["bm25"])}, '
 print(f'found by exactly one: '
       f'{boot((FOUND["bm25"] != FOUND["dense"]).astype(float))}')
 for kind, win, mask in (('identifier question', 'bm25', IDENT),
-                        ('paraphrase', 'dense', ~IDENT)):
+                        ('question without an identifier', 'dense', ~IDENT)):
     lose = 'dense' if win == 'bm25' else 'bm25'
     i = next((i for i in np.flatnonzero(mask)
               if FOUND[win][i] > FOUND[lose][i]), None)  # the first one
@@ -502,11 +525,17 @@ assert np.allclose(S_BM25, [RET.bm25.scores(d2l.bm25_tokenize(
 print(f'{MS["BM25"]:.2f} ms per question, including tokenization')
 ```
 
-<!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): flat dense search is a matrix product: the question's vector against all N chunk vectors of m coordinates, 2Nm FLOPs and Nm elements read; at batch 1 the arithmetic intensity is one FLOP per two bytes (float16), so the scan is memory-bound (roofline of :numref:`sec_perf_model`), and a batch of B questions reuses each vector B times. The chunk vectors are the registered ones; 64 chunks are encoded again here and must agree with them. -->
+<!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): flat dense search is a matrix product: the question's vector against all N chunk vectors of m coordinates, 2Nm FLOPs and Nm elements read; at batch 1 the arithmetic intensity is one FLOP per two bytes (float16), so a scan of a matrix larger than the cache is memory-bound (roofline of :numref:`sec_perf_model`), and a batch of B questions reuses each vector B times. The chunk vectors are the registered ones; 64 chunks are encoded again here and must agree with them. -->
 
 ```{.python .input #retrieval-dense}
 %%tab pytorch
 X = RET.chunk_vectors()  # (N, m) unit vectors, float16, on DEVICE
+X_SHA1 = hashlib.sha1(X.cpu().numpy().tobytes()).hexdigest()
+for name in ('ret-stress-emb', 'ret-rerank'):  # results made from them
+    CONFIG[name]['chunk_vectors'] = X_SHA1
+CONFIG['ret-rerank']['dev_questions'] = hashlib.sha1(json.dumps(
+    [[q['qid'], q['question']] for q in DEV]).encode()).hexdigest()
+TEXTS = FULL.texts('dense')  # what the embedder (and the reranker) reads
 encoder = d2l.load_encoder(EMB, padding_side=QUERY['padding_side'],
                            dtype=DTYPE)
 
@@ -518,11 +547,13 @@ def embed_queries(encoder, questions, task=d2l.BOOK_TASK):
 
 check = np.random.default_rng(0).choice(len(FULL), 64 if GPU else 16,
                                         replace=False)
-again = d2l.embed_texts(*encoder, [FULL.texts('dense')[i] for i in check],
+again = d2l.embed_texts(*encoder, [TEXTS[i] for i in check],
                         pooling=QUERY['pooling'], max_len=1024, batch_size=16)
 cos = (again * X[torch.as_tensor(check)].float().cpu()).sum(1)
-print(f'{len(check)} chunks encoded again: min cosine {cos.min():.4f}')
+print(f'chunk vectors sha1 {X_SHA1[:12]}; {len(check)} chunks encoded '
+      f'again: min cosine {cos.min():.4f}')
 assert cos.min() >= (0.999 if GPU else 0.99)
+
 def dense_scores(Q):
     """Cosines (questions, chunks) as the retriever computes them."""
     return (Q.to(X.device, X.dtype) @ X.T).float().cpu().numpy()
@@ -544,7 +575,7 @@ for name in ('BM25', 'dense'):
     print(f'{name}: dev Recall@10 {boot(r10)}, {MS[name]:.2f} ms per question')
 ```
 
-<!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): the scan itself, timed at batch 1 and with all dev questions in one batch, against the roofline's estimate (on the GPU of the measurement; on the CPU path only the times): well under a millisecond per question either way (C7), and at batch 1 the time is mostly the cost of launching the kernels. -->
+<!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): the scan itself, timed at batch 1 and with all dev questions in one batch, against the roofline's estimate (on the GPU of the measurement; on the CPU path only the times): well under a millisecond per question either way (C7). The book's matrix (11 MB) fits in the GPU's 72 MB L2 cache, so at batch 1 the time is mostly the cost of launching the kernels and the measurement cannot show the memory bound; a synthetic matrix of 2^17 random unit vectors (256 MiB, GPU only) is read from memory on every scan and shows the time approaching bytes over bandwidth at batch 1 and the reuse of a batch. -->
 
 ```{.python .input #retrieval-dense-timing}
 %%tab pytorch
@@ -561,17 +592,28 @@ def scan_seconds(Q, X, reps=50):
         times.append(time.perf_counter() - t0)
     return np.median(times[5:])
 
-N, m = X.shape
+m = X.shape[1]
 P_PEAK, BANDWIDTH = 165.2e12, 1.008e12  # RTX 4090: bf16 FLOP/s, bytes/s
-for B in (1, len(DEV)):
-    t = scan_seconds(Q_DEV[:B].to(X.device, X.dtype), X)
-    flops, nbytes = 2 * N * m * B, 2 * (N + B) * m  # float16
-    line = (f'batch {B:3d}: {t * 1e3:.3f} ms, {t / B * 1e3:.4f} ms per '
-            f'question; {flops / 1e9:.2f} GFLOP, {nbytes / 2**20:.1f} MiB')
-    if GPU and '4090' in torch.cuda.get_device_name():
-        roof = max(flops / P_PEAK, nbytes / BANDWIDTH)
-        line += f'; roofline {roof * 1e3:.4f} ms'
-    print(line)
+MATRICES = {'book': X}  # 11 MB: it stays in a GPU's L2 cache (72 MB here)
+if GPU:  # 2^17 random unit vectors, 256 MiB: read from memory every time
+    g = torch.Generator(device='cuda').manual_seed(0)
+    R = torch.randn(2**17, m, generator=g, device='cuda')
+    MATRICES['synthetic'] = (R / R.norm(dim=1, keepdim=True)).to(X.dtype)
+    del R
+for name, Xm in MATRICES.items():
+    for B in (1, len(DEV)):
+        t = scan_seconds(Q_DEV[:B].to(Xm.device, Xm.dtype), Xm)
+        flops, nbytes = 2 * len(Xm) * m * B, 2 * (len(Xm) + B) * m  # 16 bit
+        line = (f'{name:9s} N {len(Xm):7,}, batch {B:3d}: {t * 1e3:.3f} ms, '
+                f'{t / B * 1e3:.4f} ms per question; {flops / 1e9:5.2f} '
+                f'GFLOP, {nbytes / 2**20:5.1f} MiB; achieved '
+                f'{nbytes / t / 1e9:4.0f} GB/s, {flops / t / 1e12:5.2f} '
+                f'TFLOP/s')
+        if GPU and '4090' in torch.cuda.get_device_name():
+            roof = max(flops / P_PEAK, nbytes / BANDWIDTH)
+            line += f'; roofline {roof * 1e3:.4f} ms'
+        print(line)
+del MATRICES
 ```
 
 <!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): reciprocal-rank fusion (eq_lm_rrf, Cormack, Clarke and Büttcher, cited by title): each chunk scores the sum over the rankings of 1/(k + rank), with k = 60; it needs no score scales, only ranks. -->
@@ -667,60 +709,73 @@ def rerank_yes_no(model, tokenizer, query, docs, instruction=None,
     return torch.exp(lp[:, 0]).numpy()
 ```
 
-<!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): the reranker reorders the first 20 of the fused list, live, and the first 100, read from the registered results (D2L_RERUN=ret-rerank recomputes them: about 22,000 pairs); the live scores are checked against the registered ones. Milliseconds per question for each depth: the reranker's cost grows with the depth, its gain does not (a reranker cannot lift Recall@k beyond the depth it reads, pitfall). -->
+<!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): the reranker reads each question with the instruction the embedder gets (BOOK_TASK) and each chunk in the dense view (heading line first), the inputs fixed before any dev number was seen; it reorders the first 20 of the fused list, live, and the first 100 with the registered scores (D2L_RERUN=ret-rerank recomputes them: about 22,000 pairs); both rows reorder the live fused lists, the registered scores are stored per chunk, and the live scores are checked against them. On the CPU path both rows use the registered scores. Milliseconds per question for each depth: the reranker's cost grows with the depth, its gain does not (a reranker cannot lift Recall@k beyond the depth it reads, pitfall). -->
 
 ```{.python .input #retrieval-rerank}
 %%tab pytorch
 reranker = d2l.load_hf(RERANKER, revision=REV[RERANKER], dtype=DTYPE)
+TEXT_OF = dict(zip(FULL.ids, TEXTS))  # the dense view: headings, then text
+D0, D1 = RR_DEPTHS
 
 def rerank(rows, depth):
-    """P(yes) of the first depth fused chunks of the dev questions rows, by
-    question id, and the seconds per question."""
+    """P(yes) of the first depth fused chunks of the dev questions rows, as
+    {question id: {chunk id: P(yes)}} in fused order, and the seconds per
+    question. The first D0 chunks are one call, as the live run scores
+    them, so the two runs share their batches."""
     P, t0 = {}, time.perf_counter()
     for i in rows:
-        P[DEV[i]['qid']] = d2l.rerank_yes_no(
-            *reranker, QUESTIONS[i], [FULL[c]['text'] for c in RANKED[
-                'RRF'][i][:depth]], batch_size=RR_BATCH,
-            max_len=RR_MAX_LEN).tolist()
+        ids = RANKED['RRF'][i][:depth]
+        p = np.concatenate([d2l.rerank_yes_no(
+            *reranker, QUESTIONS[i], [TEXT_OF[c] for c in part],
+            instruction=d2l.BOOK_TASK, batch_size=RR_BATCH,
+            max_len=RR_MAX_LEN) for part in (ids[:D0], ids[D0:]) if part])
+        P[DEV[i]['qid']] = dict(zip(ids, p.tolist()))
     return P, (time.perf_counter() - t0) / len(rows)
 
-def reorder(fused, p_yes):
-    """The fused list with its first len(p_yes) ids sorted by P(yes)."""
-    n = len(p_yes)
-    return [fused[o] for o in np.argsort(-np.asarray(p_yes),
-                                         kind='stable')] + fused[n:]
+def reorder(fused, p_yes, depth):
+    """The fused list with its first depth ids sorted by P(yes) (by chunk
+    id; ties and ids without a score keep the fused order)."""
+    head = fused[:depth]
+    return (sorted([c for c in head if c in p_yes], key=lambda c: -p_yes[c])
+            + [c for c in head if c not in p_yes] + fused[depth:])
 
 if 'ret-rerank' in RERUN:
-    P, sec = rerank(range(len(DEV)), max(RR_DEPTHS))
-    write_result('ret-rerank', fused={q['qid']: r for q, r in zip(
-        DEV, RANKED['RRF'])}, p_yes=P, seconds_per_question=sec)
+    P, sec = rerank(range(len(DEV)), D1)
+    write_result('ret-rerank', p_yes=P, seconds_per_question=sec)
 REG = read_result('ret-rerank')
 live = range(len(DEV)) if RR_LIVE is None else range(RR_LIVE)
-D0, D1 = RR_DEPTHS
 P0, sec0 = rerank(live, D0)  # the shorter depth, live
-same = [REG['fused'][DEV[i]['qid']][:D0] == RANKED['RRF'][i][:D0]
-        for i in live]
-diff = max([np.max(np.abs(np.subtract(P0[DEV[i]['qid']], REG['p_yes'][
-    DEV[i]['qid']][:D0]))) for i, s in zip(live, same) if s], default=np.nan)
-print(f'live against registered: same fused top {D0} for {np.mean(same):.3f}'
-      f' of {len(same)} questions; largest |P(yes) difference| {diff:.4f}')
-for depth in RR_DEPTHS:  # live for the shorter depth on the GPU
-    use_live = depth == D0 and RR_LIVE is None
+same = np.mean([list(REG['p_yes'][q['qid']]) == RANKED['RRF'][i][:D1]
+                for i, q in enumerate(DEV)])
+cover = np.mean([c in REG['p_yes'][q['qid']] for i, q in enumerate(DEV)
+                 for c in RANKED['RRF'][i][:D1]])
+diff = np.array([abs(p - REG['p_yes'][qid][c]) for qid, ps in P0.items()
+                 for c, p in ps.items() if c in REG['p_yes'][qid]])
+print(f'live fused top {D1} as registered for {same:.3f} of the questions;'
+      f' registered P(yes) for {cover:.4f} of their chunks')
+print(f'live against registered P(yes), {len(diff):,} pairs: 99th '
+      f'percentile of |difference| {np.quantile(diff, 0.99):.4f}, largest '
+      f'{diff.max():.4f}')
+assert cover >= (0.99 if GPU else 0.9), 'registered for other fused lists'
+assert not GPU or np.quantile(diff, 0.99) <= 0.02, 'P(yes) disagree'
+for depth in RR_DEPTHS:  # every row reorders the live fused lists
+    scores = P0 if depth == D0 and RR_LIVE is None else REG['p_yes']
     RANKED[f'RRF + rerank@{depth}'] = [
-        reorder(RANKED['RRF'][i], P0[q['qid']]) if use_live else
-        reorder(REG['fused'][q['qid']], REG['p_yes'][q['qid']][:depth])
+        reorder(RANKED['RRF'][i], scores[q['qid']], depth)
         for i, q in enumerate(DEV)]
     MS[f'RRF + rerank@{depth}'] = MS['RRF'] + 1e3 * (
         sec0 if depth == D0 else REG['seconds_per_question'])
 print(f'reranking {D0} chunks: {sec0 * 1e3:.0f} ms per question on '
       f'{DEVICE} (live); {D1} chunks: '
       f'{REG["seconds_per_question"] * 1e3:.0f} ms per question '
-      f'(registered: {REG["machine"]["gpu"].split(",")[0]})')
+      f'(registered: {REG["machine"]["gpu"].split(",")[0]}); scores of '
+      f'rerank@{D0}: {"live" if RR_LIVE is None else "registered"}, of '
+      f'rerank@{D1}: registered')
 del reranker
 d2l.lm_free()
 ```
 
-<!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): the whole stack on the dev questions with document-clustered intervals and time per question; the paired differences that carry the claims: tuned against usual BM25 (C8), dense against BM25 overall and split by whether the question names an identifier (C2; an interval marked * resamples questions because those questions come from fewer than 30 documents), fusion against each single retriever (C3), reranking at 20 and at 100 (C4). "Dense beats BM25" is a claim about a corpus, a question set and a model. -->
+<!-- Placeholder (prose, ## Dense Retrieval, Fusion and Reranking): the whole stack on the dev questions with document-clustered intervals and time per question; the paired differences that carry the claims: tuned against usual BM25 (C8), dense against BM25 overall and split by whether the question names an identifier (C2; an interval marked * comes from fewer than 100 questions or 30 documents; the identifier questions come from fewer than 30 documents, so their interval resamples questions and is likely too narrow, and a difference there counts as excluding 0 only if the document-level sign-flip test agrees), fusion against each single retriever (C3), reranking at 20 and at 100 (C4). "Dense beats BM25" is a claim about a corpus, a question set and a model. -->
 
 ```{.python .input #retrieval-stack}
 %%tab pytorch
@@ -749,8 +804,11 @@ for a, b, k, sub in DELTAS:
                  'questions': f'{sub} ({keep.sum()})', 'mean [95% CI]': boot(
                      M[a][k][keep], M[b][k][keep], CLUSTER[keep])})
 print(pd.DataFrame(rows).to_string(index=False))
-print(f'(the better single retriever on dev is {better}; * resamples '
-      f'questions: fewer than 30 documents)')
+print(f'the better single retriever on dev is {better}')
+print('* fewer than 100 questions or 30 documents: the interval is '
+      'unreliable; with fewer than 30 documents it resamples questions,\n'
+      '  ignores their correlation within a document and is likely too '
+      "narrow; the sign-flip p over the documents' mean differences decides")
 d2l.use_svg_display()
 _, axes = d2l.plt.subplots(1, 2, figsize=(8.5, 3.6), layout='constrained')
 for ax, k in zip(axes, ('recall@10', 'ndcg@10')):
@@ -889,16 +947,16 @@ class ProductQuantizer:
         """(distances, ids) of the k codes nearest to the query q, or to
         each row of q, by m table look-ups per code."""
         q = torch.as_tensor(q, dtype=torch.float32)
+        codes = torch.as_tensor(codes).long()  # a no-op if already int64
         if q.ndim == 2:
             out = [self.adc_search(row, codes, k) for row in q]
             return tuple(torch.stack(t) for t in zip(*out))
-        codes = torch.as_tensor(codes).long()
         d = self.adc_table(q)[torch.arange(self.m), codes].sum(1)
         top = d.topk(min(k, len(d)), largest=False)
         return top.values, top.indices
 ```
 
-<!-- Placeholder (prose, ## Approximate Nearest Neighbours): the smallest case by hand, d = 4, M = 2, b = 1 (two codebooks of two centroids each): the code of x, its reconstruction, the query's table and the distance as two look-ups, against the exact distance and the error bound. Then the identities on 20,000 points of a mixture of 16 Gaussians in 64 dimensions (M = 8, b = 8): table distances equal the distances to the reconstructions, the bound holds on 10^5 pairs, the cross term y^T e averages to zero, and Faiss, given our codebooks, assigns our codes. -->
+<!-- Placeholder (prose, ## Approximate Nearest Neighbours): the smallest case by hand, d = 4, M = 2, b = 1 (two codebooks of two centroids each): the code of x, its reconstruction, the query's table and the distance as two look-ups, against the exact distance and the error bound. Then the identities on 20,000 points of a mixture of 16 Gaussians in 64 dimensions (M = 8, b = 8): table distances equal the distances to the reconstructions, the bound holds on 10^5 pairs, the cross term y^T e averages to zero (the pairs are drawn with replacement, so its standard error is slightly optimistic), Faiss, given our codebooks, assigns our codes, and the mean squared error is the sum of the eight blocks' distortions. -->
 
 ```{.python .input #retrieval-pq-check}
 %%tab pytorch
@@ -941,13 +999,18 @@ faiss.copy_array_to_vector(pq.codebooks.numpy().ravel(), fpq.pq.centroids)
 fpq.is_trained = True
 same = (fpq.sa_encode(Xg.numpy()) == codes.numpy()).all(1).mean()
 print(f'(4) Faiss codes with our codebooks equal ours for {same:.4f} of '
-      f'the vectors; mean |e|^2 {((Xg - Xh) ** 2).sum(1).mean():.3f} = sum '
-      f'of the 8 blocks\' distortions')
+      f'the vectors')
+err2 = ((Xg - Xh) ** 2).double()  # (N, 64): squared error per coordinate
+blocks = err2.reshape(-1, 8, 8).sum(-1).mean(0)  # each block's distortion
+print(f'(5) mean |e|^2 {err2.sum(1).mean():.3f} = sum of the 8 blocks\' '
+      f'distortions {blocks.sum():.3f} ('
+      + ', '.join(f'{b:.2f}' for b in blocks) + ')')
 assert abs(adc_hand - 2.0) < 1e-6
 assert ((adc - exact).abs() / exact).max() < 1e-5
 assert bool((gap <= (X0 - X1).norm(dim=1) + 1e-9).all())
 assert abs(cross.mean()) < 3 * cross.std() / len(cross) ** 0.5
 assert same >= 0.999
+assert abs(err2.sum(1).mean() - blocks.sum()) < 1e-9 * blocks.sum()
 ```
 
 <!-- Placeholder (prose, ## Approximate Nearest Neighbours): the stress corpus: the book's chunk vectors plus about 60,000 off-topic passages from Natural Questions (rows not used for training in :numref:`sec_lm_text_embeddings`) and 1,000 of their questions; it tests whether an index finds the exact neighbours, not how hard the task is. D2L_RERUN=ret-stress-emb encodes the passages again (about 5 minutes on a GPU). -->
@@ -981,6 +1044,7 @@ with np.load(result_path('ret-stress-emb')) as Z:
     QS = Z['Q'].astype(np.float32)
     book_diff = np.abs(Z['X'][:len(FULL)].astype(np.float32)
                        - X.float().cpu().numpy()).max()
+assert book_diff == 0, 'the stress file holds other book chunk vectors'
 QD = Q_DEV.numpy()
 print(f'{len(XS):,} vectors of {XS.shape[1]} coordinates '
       f'({XS.nbytes / 2**20:,.0f} MiB in float32), '
@@ -989,7 +1053,7 @@ print(f'{len(XS):,} vectors of {XS.shape[1]} coordinates '
       f'the chunk vectors by at most {book_diff:.1e}')
 ```
 
-<!-- Placeholder (prose, ## Approximate Nearest Neighbours): HNSW (Malkov and Yashunin) through Faiss: a hierarchy of proximity graphs, each vector linked to about M neighbours per layer (efConstruction candidates kept while building); a search descends the layers and keeps efSearch candidates at the bottom. Memory is the vectors plus the links, and the vectors dominate; deletes are expensive. The measurement: for every index family along its knob, Recall@10 against the exact top 10 (which is not task recall: the second column is the dev questions' Recall@10), the 50th and 95th percentile latency of 1,000 one-question searches on one thread after 100 warm-up searches, bytes per vector of the codes and of the whole index, and build seconds (8 threads); IVF-PQ with M = 64 is rebuilt with two more k-means seeds. Always measured live; D2L_RERUN=ret-ann stores the table, and a normal build prints the live table against the registered one (seeded builds give the same recall; HNSW's threaded build differs a little; latency depends on the machine and its load). -->
+<!-- Placeholder (prose, ## Approximate Nearest Neighbours): HNSW (Malkov and Yashunin) through Faiss: a hierarchy of proximity graphs, each vector linked to about M neighbours per layer (efConstruction candidates kept while building); a search descends the layers and keeps efSearch candidates at the bottom. Memory is the vectors plus the links, and the vectors dominate; deletes are expensive. The measurement: for every index family along its knob, Recall@10 against the exact top 10 (which is not task recall: the second column is the dev questions' Recall@10), the 50th and 95th percentile latency of 1,000 one-question searches on one thread after 100 warm-up searches, bytes per vector of the codes and of the whole index, and build seconds (8 threads); IVF-PQ with M = 64 is rebuilt with two more k-means seeds. The rows marked "ours" (IVFIndex and ProductQuantizer) show recall, not speed: their latency is Python's loop and indexing overhead. Always measured live; D2L_RERUN=ret-ann stores the table, and a normal build prints the live table against the registered one (seeded builds give the same recall; HNSW's threaded build differs a little; latency depends on the machine and its load). The reduced path (STRESS_N = 20,000) uses 128 cells, builds no HNSW graph and makes no comparison with the registered table. -->
 
 ```{.python .input #retrieval-ann}
 %%tab pytorch
@@ -1062,11 +1126,12 @@ for fam, key, code in [('IVF-Flat', f'IVF{NLIST},Flat', 4 * d)] + [
             faiss.extract_index_ivf(index).nprobe = p
             record(fam, f'nprobe {p}', lambda Q: index.search(Q, 10), code,
                    size(index), t, seed)
-index, t = build(f'HNSW{HNSW_M}', XS)
-for ef in EF_SEARCHES:
-    index.hnsw.efSearch = ef
-    record(f'HNSW{HNSW_M}', f'efSearch {ef}', lambda Q: index.search(Q, 10),
-           4 * d, size(index), t)
+if STRESS_N is None:  # the reduced path builds no graph
+    index, t = build(f'HNSW{HNSW_M}', XS)
+    for ef in EF_SEARCHES:
+        index.hnsw.efSearch = ef
+        record(f'HNSW{HNSW_M}', f'efSearch {ef}',
+               lambda Q: index.search(Q, 10), 4 * d, size(index), t)
 threads(BUILD_THREADS)
 t0 = time.perf_counter()
 ivf = d2l.IVFIndex(NLIST, nprobe=16)
@@ -1078,9 +1143,10 @@ record('IVF-Flat (ours)', 'nprobe 16', lambda Q: [
        time.perf_counter() - t0)
 t0 = time.perf_counter()
 pq = d2l.ProductQuantizer(PQ_MS[0]).fit(XS)
-codes = pq.encode(XS)
+codes = pq.encode(XS)  # one byte per sub-vector
+idx = codes.long()  # the table look-ups take int64: converted once
 record(f'PQ{PQ_MS[0]} (ours)', 'all codes', lambda Q: [
-    a.numpy() for a in pq.adc_search(Q, codes, 10)], PQ_MS[0], (
+    a.numpy() for a in pq.adc_search(Q, idx, 10)], PQ_MS[0], (
         codes.numel() + pq.codebooks.numel() * 4) / len(XS),
        time.perf_counter() - t0)
 if GPU:  # every question at once: a batched point, not a batch-1 latency
@@ -1101,13 +1167,19 @@ print(f'IVF-PQ{PQ_MS[0]}, nprobe 16, k-means seeds {list(seeds.seed)}: '
       f'recall {seeds.recall.min():.3f} to {seeds.recall.max():.3f}')
 if 'ret-ann' in RERUN:
     write_result('ret-ann', rows=json.loads(TABLE.to_json(orient='records')))
-reg = pd.DataFrame(read_result('ret-ann')['rows'])
-both = TABLE.merge(reg, on=['family', 'knob', 'seed'], suffixes=('', '_reg'))
-both['recall_diff'] = (both.recall - both.recall_reg).abs()
-both['p50_ratio'] = both.p50 / both.p50_reg
-print(both.groupby('family', sort=False).agg(
-    largest_recall_difference=('recall_diff', 'max'),
-    median_p50_live_over_registered=('p50_ratio', 'median')).round(3))
+reg = read_result('ret-ann', strict=False)
+if reg is None:  # e.g. the reduced path, STRESS_N set
+    print(f'the registered table was made with other settings than these '
+          f'(N = {len(XS):,}, {NLIST} cells): no comparison')
+else:
+    reg = pd.DataFrame(reg['rows'])
+    both = TABLE.merge(reg, on=['family', 'knob', 'seed'],
+                       suffixes=('', '_reg'))
+    both['recall_diff'] = (both.recall - both.recall_reg).abs()
+    both['p50_ratio'] = both.p50 / both.p50_reg
+    print(both.groupby('family', sort=False).agg(
+        largest_recall_difference=('recall_diff', 'max'),
+        median_p50_live_over_registered=('p50_ratio', 'median')).round(3))
 ```
 
 <!-- Placeholder (prose, ## Approximate Nearest Neighbours): the trade-off: recall against the exact top 10 and latency (log scale) for each family along its knob, marker area proportional to bytes per vector, the flat scan as one point; the right panel the dev questions' Recall@10 against latency, where the approximate indexes lose less than the left panel suggests, because most of their misses are off-topic neighbours. -->
@@ -1130,7 +1202,7 @@ for ax, col, label in zip(axes, ('recall', 'task_recall'), (
                    color=f'C{i}', alpha=0.6)
 ```
 
-<!-- Placeholder (prose, ## Approximate Nearest Neighbours): which index wins at this size: if HNSW reaches recall 0.95 at a lower latency than the flat scan, the ratio (one significant figure, C6); if the flat scan were already the fastest at about 65,000 vectors, a synthetic extension to a million vectors (copies of the stress vectors with small noise, clearly labelled synthetic; D2L_RERUN=ret-crossover, about 20 minutes and 9 GB of memory) would show where the graph takes over. -->
+<!-- Placeholder (prose, ## Approximate Nearest Neighbours): which index wins at this size: if HNSW reaches recall 0.95 at a lower latency than the flat scan, the ratio (one significant figure, C6); if the flat scan were already the fastest at about 65,000 vectors, a synthetic extension to a million vectors (copies of the stress vectors, each moved by noise as large as the median nearest-neighbour distance, so the copies are not near-duplicates; clearly labelled synthetic; D2L_RERUN=ret-crossover, about 20 minutes and 9 GB of memory) would show where the graph takes over. -->
 
 ```{.python .input #retrieval-crossover}
 %%tab pytorch
@@ -1142,14 +1214,17 @@ for _, r in hnsw.iterrows():  # the fastest HNSW search with recall >= 0.95
     print(f'{r.family}, {r.knob}: recall {r.recall:.3f} at p50 {r.p50:.3f} ms;'
           f' flat scan {flat.p50:.2f} ms, {flat.p50 / r.p50:.2g} times longer')
 if hnsw.empty:
-    print(f'no HNSW{HNSW_M} search reaches recall 0.95')
+    print(f'no HNSW{HNSW_M} search reaches recall 0.95' if STRESS_N is None
+          else 'no HNSW graph on the reduced path')
 if good.iloc[0].family != 'flat':
     print(f'fastest configuration with recall >= 0.95 at N = {len(XS):,}: '
           f'{good.iloc[0].family}, {good.iloc[0].knob}')
 elif 'ret-crossover' in RERUN:  # synthetic: a million noisy copies
     rng, n = np.random.default_rng(0), CONFIG['ret-crossover']['n']
-    big = XS[np.arange(n) % len(XS)] + CONFIG['ret-crossover']['noise'] / (
-        d ** 0.5) * rng.standard_normal((n, d), dtype=np.float32)
+    nn = exact.search(XS[:2_000], 2)[0][:, 1]  # squared, nearest other row
+    noise = float(np.sqrt(np.median(nn)))  # copies as far apart as neighbours
+    big = XS[np.arange(n) % len(XS)] + noise / d ** 0.5 * rng.standard_normal(
+        (n, d), dtype=np.float32)
     big /= np.linalg.norm(big, axis=1, keepdims=True)
     flat_big, t_flat = build('Flat', big)
     true_big, rows = flat_big.search(QS, 10)[1], []
@@ -1163,7 +1238,9 @@ elif 'ret-crossover' in RERUN:  # synthetic: a million noisy copies
         rows.append(dict(family=name, knob=knob and f'efSearch {knob}',
                          recall=overlap(search(QS)[1], true_big), p50=p50,
                          p95=p95, build_s=t))
-    write_result('ret-crossover', n=n, rows=rows)
+    write_result('ret-crossover', n=n, noise=noise, rows=rows)
+    print(f'synthetic: {n:,} copies of the stress vectors, noise of norm '
+          f'{noise:.3f} (the median nearest-neighbour distance)')
     print(pd.DataFrame(rows).round(4).to_string(index=False))
 elif ARTIFACTS['ret-crossover'][0] in d2l.DATA_HUB:
     print('synthetic, 10^6 noisy copies of the stress vectors:')
@@ -1193,9 +1270,10 @@ Hit = collections.namedtuple('Hit',
 class BookRetriever:
     """Hybrid retrieval over the book corpus: BM25 over the 'sparse' view
     and a dense embedder over the 'dense' view, fused by reciprocal rank,
-    optionally reranked by a yes/no reranker. dense=None gives a BM25-only
-    retriever; index 'flat' scans all chunk vectors, 'hnsw' and 'ivfpq'
-    build Faiss indexes on first use."""
+    optionally reranked by a yes/no reranker (which reads the 'dense' view
+    with the embedder's instruction, BOOK_TASK). dense=None gives a
+    BM25-only retriever; index 'flat' scans all chunk vectors, 'hnsw' and
+    'ivfpq' build Faiss indexes on first use."""
     # BM25 parameters chosen on the book's training questions
     BM25_PARAMS = dict(k1=1.2, b=0.9, split_identifiers=True)
 
@@ -1215,7 +1293,7 @@ class BookRetriever:
         self.rrf_k, self.cache = rrf_k, cache
         self.device = device or ('cuda' if torch.cuda.is_available()
                                  else 'cpu')
-        self._X = self._ann = self._enc = self._rr = None
+        self._X = self._ann = self._enc = self._rr = self._texts = None
 
     def _encoder(self):
         if self._enc is None:
@@ -1273,11 +1351,17 @@ class BookRetriever:
                 nlist = max(1, len(Xf) // 64)
                 self._ann = faiss.index_factory(
                     m, f'IVF{nlist},PQ64', faiss.METRIC_INNER_PRODUCT)
+                if len(Xf) < 256 * 39:  # below what Faiss asks per codebook
+                    print(f'IVF-PQ: codebooks of 256 centroids trained on '
+                          f'{len(Xf):,} vectors')
+                    self._ann.pq.cp.min_points_per_centroid = 1
                 self._ann.train(Xf)
                 self._ann.nprobe = 16
             self._ann.add(Xf)
         s, i = self._ann.search(np.ascontiguousarray(Q.numpy()), depth)
-        return i, s, None
+        keep = i >= 0  # Faiss pads with id -1 when it finds fewer
+        return [r[k] for r, k in zip(i, keep)], [
+            r[k] for r, k in zip(s, keep)], None
 
     def search_batch(self, queries, k=10, mode='hybrid', rerank_k=None):
         """search for each of several queries."""
@@ -1312,10 +1396,12 @@ class BookRetriever:
                                           k=self.rrf_k)[:depth]
                     stages['rrf'] = dict(ranked)
             if rerank_k:
+                if self._texts is None:
+                    self._texts = self.corpus.texts('dense')
                 top = [i for i, _ in ranked[:rerank_k]]
                 pr = d2l.rerank_yes_no(*self._reranker(), q,
-                                       [self.corpus.chunks[i]['text']
-                                        for i in top])
+                                       [self._texts[i] for i in top],
+                                       instruction=d2l.BOOK_TASK)
                 stages['rerank'] = dict(zip(top, pr.tolist()))
                 order = np.argsort(-pr, kind='stable')
                 ranked = [(top[o], float(pr[o])) for o in order]

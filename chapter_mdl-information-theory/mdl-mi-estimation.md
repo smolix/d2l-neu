@@ -9,11 +9,13 @@ a pair tells us about the other. Representation learning goes a step further
 and trains models to make that amount large, so the estimate becomes the
 training objective.
 
-A familiar loss makes the question concrete. A contrastive model such as
-SimCLR or CLIP learns to pick the true partner of an example out of a batch
-of candidates, say $128$ of them, and reports a cross-entropy loss. Papers
-often subtract that loss from $\ln 128 = 4.85$ and quote the difference as
-the information that the two views share. That number can never exceed
+A widely used loss makes the question concrete. A contrastive model such as
+SimCLR or CLIP is trained on pairs, two crops of one photograph or an image
+and its caption, which are called two *views* of one example. It learns to
+pick the true partner of a view out of a batch of candidates, say $128$ of
+them, and reports a cross-entropy loss, the InfoNCE loss. Papers often
+subtract that loss from $\ln 128 = 4.85$ and quote the difference as the
+information that the two views share. That number can never exceed
 $4.85$ nats, however much the views share, because a model that always
 picks the right partner has shown only that it can tell $128$ candidates
 apart. Since models are trained on such numbers and papers read them as
@@ -27,7 +29,7 @@ replaces the unknown densities by a model, built so that the result is a
 lower bound on the information, and maximizes the bound. Two results matter
 most: the limit on what any estimator can guarantee without assumptions
 (:numref:`subsec_mdl-mi-distribution-free`), and the bound behind the
-contrastive loss, with its ceiling (:numref:`sec_mdl-infonce`).
+InfoNCE loss, with its ceiling (:numref:`sec_mdl-infonce`).
 
 ```{.python .input #mdl-mi-estimation-estimating-mutual-information-1}
 #@tab mxnet
@@ -127,16 +129,18 @@ print(f'mean exp(pmi) over independent pairs = '
 
 Both averages agree with their targets to about a hundredth. The bounds of
 this section rest on these two identities, and the second will cause most
-of the trouble.
+of the trouble. At $\rho = 0.9$ it is an average of tame numbers: the
+variance of $e^{\textrm{pmi}}$ over independent pairs is $e^{2I} - 1$
+(Exercise :exref:`ex_mdl-mi-estimation-heavy-tails`), which is $4.3$ here.
+At $I = 6$ the variance is $160{,}000$, and the same $200{,}000$ samples
+would leave the average uncertain by about $0.9$.
 
 ## Nonparametric Estimation
 :label:`sec_mdl-mi-hard`
 
 The obvious way to estimate a probability is to count the samples that fall
-into a region. Regions fixed in advance serve for a pair of numbers and are
-hopeless for vectors, regions that adapt to the sample reach a few
-dimensions, and a short argument shows that no estimator can promise much
-more without assuming something about the distribution.
+into a region. What remains to choose is the regions, and we begin with a
+grid fixed in advance.
 
 ### Histograms
 :label:`subsec_mdl-mi-high-dim`
@@ -200,11 +204,10 @@ about $0.6$ for $0.83$ nats at $\rho = 0.9$, and roughly half of the truth
 at $\rho = 0.99$ and for the pair on the parabola. With $b = 160$ the
 independent pair is credited with a few hundredths of a nat, and the pair at
 $\rho = 0.9$ reads above its true value, which binning alone could never
-bring about.
-The entry for $\rho = 0.99$ at $b = 160$ lands within about $0.01$ of the
-truth, but only because a loss and a gain partly cancel there; the row
-above shows the same bins overshooting. With the truth unknown, nothing in
-the sample says which column to believe.
+bring about. The entry for $\rho = 0.99$ at $b = 160$ lands within about
+$0.01$ of the truth, but only because a loss and a gain partly cancel
+there; the row above shows the same bins overshooting. With the truth
+unknown, nothing in the sample says which column to believe.
 
 A third weakness concerns the coordinates. An invertible map of either
 variable leaves the mutual information unchanged
@@ -228,14 +231,15 @@ for name, u in (('x', x), ('x**3', x**3)):
 ```
 
 The information is still $0.830$ nats, yet the cube lowers the correlation
-from $0.90$ to $0.70$ and cuts the raw estimate roughly in half, to $0.4$ or
-$0.5$ nats. The estimate from ranks is the same for $x$ and for $x^3$,
-digit for digit, and within $0.02$ of the truth.
+from $0.90$ to about $0.7$ and cuts the raw estimate to between $0.3$ and
+$0.5$ nats. Where in that range a sample lands depends on its few largest
+values, which set the width of the bins. The estimate from ranks is the same
+for $x$ and for $x^3$, digit for digit, and within $0.02$ of the truth.
 
 Ranks repair the coordinates. Nothing repairs the dimension. A pair of
 five-dimensional vectors needs a histogram with ten axes, and ten bins on
 each give $10^{10}$ cells, nearly all of them empty for any sample we can
-afford. An estimator for vectors must let the data set the resolution, with
+collect. An estimator for vectors must let the data set the resolution, with
 small cells where samples are dense and large cells where they are sparse.
 
 ### The KSG Estimator
@@ -393,27 +397,28 @@ exponentially with the dimension.
 
 Perhaps a cleverer estimator does better. Ask only for a lower bound: a
 function $B$ of $n$ samples such that $B \leq I(X; Y)$ with probability at
-least $1 - \delta$ *for every distribution* of the pair, with failure
-probability $\delta < \tfrac{1}{2}$. Lower bounds are the useful direction,
-because a representation learner wants to be sure that two views share a
-lot.
+least $0.95$ *for every distribution* of the pair. (Any level above one
+half would serve.) Lower bounds are the useful direction, because a
+representation learner wants to be sure that two views share a lot.
 
 The smallest case shows the obstacle. Let $Y = X$ be a copy of a discrete
-variable, so that $I(X; Y) = H(X)$. Suppose that $B$ is a function of which
-values repeat in the sample and how often (its *type*), as it must be for
-any estimator that treats the symbols as labels without meaning. Four steps
-give the limit, and the third is the one to watch.
+variable, so that $I(X; Y) = H(X)$. An estimator that treats the symbols as
+labels without meaning cannot use which values it saw. It can use only the
+pattern of repetitions: how many distinct values occur once in the sample,
+how many occur twice, and so on. This pattern is the *type* of the sample,
+and we suppose that $B$ is a function of it. Four steps give the limit, and
+the third is the one to watch.
 
 1. Let $X$ be uniform on $M$ symbols and draw $n$ samples. Two given samples
    coincide with probability $1/M$, so by the union bound some two of the
    $n(n-1)/2$ pairs coincide with probability at most $n(n-1)/(2M)$.
 1. Apply the guarantee to the uniform distribution on $M = n^2$ symbols,
    whose entropy is $2 \log n$: on a sample from *that* distribution,
-   $B \leq 2 \log n$ with probability at least $1 - \delta > \tfrac{1}{2}$.
+   $B \leq 2 \log n$ with probability at least $0.95$.
 1. By the first step, a sample from that distribution consists of $n$
-   distinct values with probability more than $\tfrac{1}{2}$. Two events of
-   probability more than $\tfrac{1}{2}$ overlap, so $B \leq 2 \log n$ on
-   some all-distinct sample.
+   distinct values with probability more than $\tfrac{1}{2}$. Two events
+   whose probabilities add to more than $1$ overlap, so $B \leq 2 \log n$
+   on some all-distinct sample.
 1. All samples of $n$ distinct values have the same type, so $B$ reports at
    most $2 \log n$ on every one of them, whatever source produced it.
 
@@ -436,10 +441,10 @@ The invariance of mutual information is part of the reason. An invertible
 relabelling of either variable leaves the information unchanged
 (:numref:`sec_mdl-mi-nonlinear-correlation`), so an estimator that assumes
 nothing about the coordinates must cope with every relabelling of the
-sample at once, and all it can rely on is which values repeat. Whoever wants
-more must assume something. KSG assumes that distances in the given
-coordinates mean something and that the density is smooth in them, and what
-it offers in return is an estimate without a guarantee. The bounds of
+sample at once, and all it can rely on is the pattern of repetitions.
+Whoever wants more must assume something. KSG assumes that distances in the
+given coordinates mean something and that the density is smooth in them, and
+what it offers in return is an estimate without a guarantee. The bounds of
 :numref:`sec_mdl-mi-variational-bounds` can report more than the logarithm
 of their sample size, and :numref:`subsec_mdl-exact-critics` shows what such
 a report is worth.
@@ -450,8 +455,9 @@ a report is worth.
 Both limits met so far, a histogram that depends on its bins and a sample
 that cannot show more than the logarithm of its size, bear on a well-known
 experiment.
-:citet:`Shwartz-Ziv.Tishby.2017` binned the activations of each layer $Z$ of
-a classifier during training and plotted the estimates of $I(X; Z)$ and
+:citet:`Shwartz-Ziv.Tishby.2017` took a small classifier whose inputs are
+the $4{,}096$ binary patterns of $12$ bits, binned the activations of each
+layer $Z$ during training, and plotted the estimates of $I(X; Z)$ and
 $I(Y; Z)$, with input $X$ and label $Y$. They reported a short *fitting*
 phase, in which both rise, and a long *compression* phase, in which
 $I(X; Z)$ falls while $I(Y; Z)$ holds, and they proposed compression as the
@@ -528,38 +534,39 @@ $H(X)$, which is unknown in the situations where we need the bound. It is a
 constant, however, so *maximizing* the bound over $q$ never needs it.
 Substituting $H(X) = -\mathbb{E}\log p(x)$ gives the equivalent ratio form
 $I(X; Y) \geq \mathbb{E}\left[\log \left(q(x \mid y)/p(x)\right)\right]$,
-which InfoNCE will use.
+which the proof of the InfoNCE bound will use.
 
 We say that a model *certifies* the value of its bound. The word refers to
 the inequality between expectations. An average over a batch only estimates
 the certified value and can land on either side of it.
 
-Two instances show what a decoder certifies. First, exchange the roles of
-the variables, which is allowed because $I$ is symmetric, and let
-$q(y \mid x)$ be a classifier. The bound is then the loss certificate of
-:numref:`subsec_mdl-loss-certificate`: for $k$ balanced classes and held-out
-cross-entropy $L$, $I(X; Y) \geq \log k - L$. Since $L \geq 0$, no 10-class
-classifier certifies more than $\ln 10 = 2.30$ nats. InfoNCE will have this
-shape.
+A classifier is a decoder of the label. To see what it certifies, exchange
+the roles of the variables, which the symmetry of $I$ allows, and take the
+classifier as the model $q(y \mid x)$. The bound is then the loss
+certificate of :numref:`subsec_mdl-loss-certificate`: for $k$ balanced
+classes and held-out cross-entropy $L$, $I(X; Y) \geq \log k - L$. Since
+$L \geq 0$, no 10-class classifier certifies more than $\ln 10 = 2.30$
+nats. The InfoNCE bound will have this shape.
 
-Second, for the Gaussian pair, a decoder trained by squared error alone is a
-Gaussian $q(x \mid y) = \mathcal{N}(x; a y, 1)$ with unit variance. With
-$h(X) = \tfrac{1}{2}\log(2\pi e)$ the bound becomes
+The Gaussian pair shows what a poor decoder loses. A decoder trained by
+squared error alone is a Gaussian $q(x \mid y) = \mathcal{N}(x; a y, 1)$
+with unit variance. With $h(X) = \tfrac{1}{2}\log(2\pi e)$ the bound becomes
 $\tfrac{1}{2} - \tfrac{1}{2}\mathbb{E}(X - aY)^2 = \tfrac{1}{2} - \tfrac{1}{2}(1 - 2a\rho + a^2)$,
 which is largest at $a = \rho$, where it equals $\rho^2/2$. At $\rho = 0.9$
 this decoder certifies $0.41$ nats of the true $0.83$, and it never
-certifies more than $\tfrac{1}{2}$ however strong the dependence. The gap is
-the bias of a decoder whose variance is fixed at $1$ instead of the true
-conditional variance $1 - \rho^2$ (Exercise
+certifies more than $\tfrac{1}{2}$ however strong the dependence. The
+shortfall is the error of a decoder whose variance is fixed at $1$ instead
+of the true conditional variance $1 - \rho^2$ (Exercise
 :exref:`ex_mdl-mutual-information-ba-gaussian-decoder`).
 
 ### The Donsker–Varadhan Bound
 
-The second bound needs neither a normalized model nor $H(X)$. It bounds the
-KL divergence, and hence mutual information, through an arbitrary function
-$T$, the *critic*, with no requirement that anything integrate to one. For
-the KL divergence it sharpens the critic bound that
-:numref:`sec_mdl-f-gan-dual` gives for every f-divergence.
+The second bound needs neither a normalized model nor $H(X)$. Mutual
+information is itself a KL divergence, from the joint distribution to the
+product of the marginals (:numref:`sec_mdl-mutual-information`), so it
+suffices to bound a KL divergence from below. The bound does so through an
+arbitrary function $T$ that scores a point, a *critic* as in
+:numref:`sec_mdl-f-gan-dual`, and nothing in it has to integrate to one.
 
 **Proposition (Donsker–Varadhan bound).** *For distributions $P$ and $Q$ and
 any function $T$ for which $\mathbb{E}_P[T]$ is defined and
@@ -574,9 +581,10 @@ therefore attains $D_{\textrm{KL}}(P \| Q)$, which is the Donsker–Varadhan
 representation of the divergence* :cite:`Donsker.Varadhan.1983`.
 
 **Proof.** If $P$ is not absolutely continuous with respect to $Q$, the left
-side is infinite. Otherwise, given $T$, define the *Gibbs distribution*
-$\tilde{Q}$ with density $\tilde{q}(x) = q(x)\, e^{T(x)} / Z$ and normalizer
-$Z = \mathbb{E}_Q[e^T]$: the distribution $Q$ tilted by the critic. Then
+side is infinite. Otherwise, given $T$, tilt $Q$ by the critic: let
+$\tilde{Q}$ be the *tilted distribution* with density
+$\tilde{q}(x) = q(x)\, e^{T(x)} / Z$ and normalizer
+$Z = \mathbb{E}_Q[e^T]$. Then
 
 $$
 D_{\textrm{KL}}(P \| Q) - \left(\mathbb{E}_P[T] - \log Z\right)
@@ -601,9 +609,8 @@ $$
 and the best critic is the pmi plus any constant. The first expectation is
 an average over the sample pairs. The second needs independent pairs, and
 the mismatched pairs of a batch supply them. With a neural network as the
-critic, this estimator is
-known as *MINE*, for mutual information neural estimation
-:cite:`Belghazi.Baratin.Rajeshwar.ea.2018`.
+critic, this estimator is known as *MINE*, for mutual information neural
+estimation :cite:`Belghazi.Baratin.Rajeshwar.ea.2018`.
 
 ### The NWJ Bound
 
@@ -625,18 +632,20 @@ critic it is never larger than the DV bound, and the two agree only when
 $Z = e$. It is tight at $T^* = 1 + \textrm{pmi}$: where DV accepts the pmi
 plus any constant, NWJ insists on the constant $1$. Since
 $e^{-1}\, \mathbb{E}_Q[e^T] = \mathbb{E}_Q[e^{T-1}]$, it is the critic bound
-of :numref:`sec_mdl-f-gan-dual` for the KL divergence,
+that :numref:`sec_mdl-f-gan-dual` gives for every f-divergence, written out
+for the KL divergence:
 $D_{\textrm{KL}}(P \| Q) \geq \mathbb{E}_P[T] - \mathbb{E}_Q[e^{T-1}]$,
-obtained there from the convex conjugate of $u \log u$.
+obtained there from the convex conjugate of $u \log u$. For this one
+divergence, then, DV sharpens the general bound.
 
 No logarithm of an average appears, so the batch value of
 :eqref:`eq_mdl-nwj_bound` is an unbiased estimate of the bound. Unbiased is
 not the same as reliable. For the optimal critic, $e^{T^*-1} = e^{\textrm{pmi}}$
 is the density ratio. Its expectation over independent pairs is $1$, but when
-$X$ and $Y$ are strongly dependent that $1$ is made of a few enormous values
-among many that are close to zero, and a batch without an enormous value
-reports too much. :numref:`subsec_mdl-exact-critics` works out how much, and
-measures it.
+$X$ and $Y$ are strongly dependent that expectation is carried by a few
+enormous values among many that are close to zero, and a batch without an
+enormous value reports too much. :numref:`subsec_mdl-exact-critics` works
+out how much, and measures it.
 
 ## InfoNCE
 :label:`sec_mdl-infonce`
@@ -645,11 +654,12 @@ measures it.
 
 The $e^T$ of the DV and NWJ bounds is unnormalized, so a single pair can
 dominate a batch. InfoNCE normalizes it within the batch: it makes the
-candidates compete. Draw one *positive* pair $(x, y^+) \sim P_{X,Y}$ and
-$N - 1$ *negatives* $y_2, \ldots, y_N$ drawn independently from $P_Y$. Score
-every candidate with the critic $T(x, y)$, and ask a softmax over the $N$
-scores to point at the positive. The *InfoNCE loss*
-:cite:`Oord.Li.Vinyals.2018` is the resulting cross-entropy,
+candidates compete. Draw one *positive* pair $(x, y^+) \sim P_{X,Y}$, whose
+first member $x$ we call the *anchor*, and $N - 1$ *negatives*
+$y_2, \ldots, y_N$ drawn independently from $P_Y$. Score every candidate
+with the critic $T(x, y)$, and ask a softmax over the $N$ scores to point at
+the positive. The *InfoNCE loss* :cite:`Oord.Li.Vinyals.2018` is the
+resulting cross-entropy,
 
 $$\mathcal{L}_{\textrm{NCE}} = -\mathbb{E}\left[\log \frac{e^{T(x, y^+)}}{e^{T(x, y^+)} + \sum_{j=2}^{N} e^{T(x, y_j)}}\right],$$
 :eqlabel:`eq_mdl-infonce_def`
@@ -670,18 +680,19 @@ fixed labels. It is the loss of CPC, SimCLR and CLIP
 where $x$ and $y$ are two views or two modalities of one example and the
 batch supplies the negatives.
 
-![The InfoNCE game. Left: an anchor $x$ is scored by the critic against the positive $y^+$, drawn jointly with it, and $N-1$ negatives drawn independently from the marginal; the rays carry the scores $T(x, y_j)$. Right: a softmax over the $N$ scores must point at the positive. The resulting cross-entropy certifies $I(X;Y) \geq \log N - \mathcal{L}_{\textrm{NCE}}$, a bound that can never exceed $\log N$.](../img/mdl-it-infonce-pos-neg.svg)
+![The InfoNCE task. Left: an anchor $x$ is scored by the critic against the positive $y^+$, drawn jointly with it, and $N-1$ negatives drawn independently from the marginal; the rays carry the scores $T(x, y_j)$. Right: a softmax over the $N$ scores must point at the positive. The resulting cross-entropy certifies $I(X;Y) \geq \log N - \mathcal{L}_{\textrm{NCE}}$, a bound that can never exceed $\log N$.](../img/mdl-it-infonce-pos-neg.svg)
 :label:`fig_mdl-infonce-pos-neg`
 
-:numref:`fig_mdl-infonce-pos-neg` shows the game. Its smallest case is
-$N = 2$: one negative, and the loss is the binary cross-entropy of telling
-the true partner from an impostor. Even a perfect answer shows only that one
-of two candidates was right, and the estimate is at most $\ln 2 = 0.69$ nats.
+:numref:`fig_mdl-infonce-pos-neg` shows the task. Its smallest case is
+$N = 2$: with a single negative, the loss is the binary cross-entropy of
+telling the true partner from the other candidate. Even a perfect answer
+shows only that one of two candidates was right, and the estimate is at
+most $\ln 2 = 0.69$ nats.
 
 ### The InfoNCE Bound
 
 The proposition says that a small loss certifies information, and that the
-certificate is capped :cite:`Poole.Oord.Alemi.ea.2019`.
+certificate has a ceiling :cite:`Poole.Oord.Alemi.ea.2019`.
 
 **Proposition (InfoNCE bound).** *For any measurable critic $T$ and any
 $N \geq 1$,*
@@ -712,9 +723,10 @@ $$
 
 which lies between $0$ and $N$. Let $p(v)$ be the distribution of a bag of
 $N$ independent draws from $P_Y$, the positive slot included. The $N$
-candidates of such a bag are exchangeable, so the $N$ ratios
-$e^{T(x, y_i)} / \frac{1}{N}\sum_j e^{T(x, y_j)}$ have the same expectation,
-and for every fixed $x$
+candidates of such a bag are independent and identically distributed, so
+permuting them does not change the distribution of the bag. The $N$ ratios
+$e^{T(x, y_i)} / \frac{1}{N}\sum_j e^{T(x, y_j)}$ therefore have the same
+expectation, and for every fixed $x$
 
 $$
 \mathbb{E}_{p(v)}\left[\gamma(x, V)\right]
@@ -744,13 +756,13 @@ and the right-hand side is at most $\log N$. $\blacksquare$
 
 Naming the right partner out of $N$ candidates, even with certainty,
 demonstrates $\log N$ nats, the information in one choice among $N$; no
-critic can make the game show more. The ten-class classifier that could not
-certify more than $\ln 10$ was the same game with the labels as candidates.
-The loss is smallest for the critics $T^*(x, y) = \textrm{pmi}(x, y) + c(x)$,
-with any function $c$ of the anchor alone (Exercise
-:exref:`ex_mdl-mutual-information-optimal-critic`). A larger $N$ raises the
-ceiling, which is the reason usually given for the large batches of CPC,
-SimCLR and CLIP.
+critic can make that choice show more. The ten-class classifier that could
+not certify more than $\ln 10$ faced the same task with the labels as
+candidates. A larger $N$ raises the ceiling, which is the reason usually
+given for the large batches of CPC, SimCLR and CLIP. The loss is smallest
+for the critics $T^*(x, y) = \textrm{pmi}(x, y) + c(x)$, with any function
+$c$ of the anchor alone (Exercise
+:exref:`ex_mdl-mutual-information-optimal-critic`).
 
 ### The Ceiling with an Exact Critic
 :label:`subsec_mdl-infonce-ceiling`
@@ -766,9 +778,9 @@ own slack, so it is nonnegative by the proposition, and we can say roughly
 how large it is. The average inside the logarithm has two parts. The $N - 1$
 negatives are independent of $x$, so each of their terms has mean $1$ (the
 second of the two identities we checked at the start), and together they
-contribute about $1$.
-The positive contributes $e^{\textrm{pmi}(x, y^+)}/N$, which is about
-$e^I/N$ for a typical pair. Replacing both parts by these values gives
+contribute about $1$. The positive contributes
+$e^{\textrm{pmi}(x, y^+)}/N$, which is about $e^I/N$ for a typical pair.
+Replacing both parts by these values gives
 
 $$\hat{I}_{\textrm{NCE}} \approx I - \log\left(1 + \frac{e^I}{N}\right) = -\log\left(e^{-I} + \frac{1}{N}\right).$$
 :eqlabel:`eq_mdl-infonce-smooth-min`
@@ -785,9 +797,11 @@ approximation needs a test. For $N = 128$ and $I = 4$ it predicts $3.6$
 nats, although the ceiling $\ln 128 = 4.85$ leaves room for the truth. The
 cell scores all $N \times N$ pairs of a batch at once: row $i$ holds anchor
 $x_i$ against every $y_j$, its diagonal entry is the positive, and the other
-$N - 1$ entries are its negatives. It sweeps the true information for
-$N = 16$, $128$ and $1024$, whose ceilings $\ln N$ are $2.77$, $4.85$ and
-$6.93$ nats, and prints the estimates at three levels.
+$N - 1$ entries are its negatives. The rows share their candidates, which
+the proposition permits (Exercise
+:exref:`ex_mdl-mi-estimation-in-batch-negatives`). The cell sweeps the true
+information for $N = 16$, $128$ and $1024$, whose ceilings $\ln N$ are
+$2.77$, $4.85$ and $6.93$ nats, and prints the estimates at three levels.
 
 ```{.python .input #mutual-information-log-n-ceiling}
 def infonce_bound(f):
@@ -817,8 +831,8 @@ for I in (1, 4, 7):
 ```
 
 No curve has a corner. Each leaves the diagonal early and bends smoothly
-toward its ceiling, and all nine printed values lie within less than $0.1$
-nat of :eqref:`eq_mdl-infonce-smooth-min`. At $I = 1$ every batch size is
+toward its ceiling, and all nine printed values lie within $0.1$ nat of
+:eqref:`eq_mdl-infonce-smooth-min`. At $I = 1$ every batch size is
 within about $0.1$ nat of the truth. At $I = 4$ a batch of $128$ reports
 $3.7$, and even $N = 1024$ falls a little short. At $I = 7$, just above its
 ceiling of $6.93$, $N = 1024$ reports $6.3$.
@@ -826,20 +840,23 @@ ceiling of $6.93$, $N = 1024$ reports $6.3$.
 Two exact statements stand behind the approximation. The average inside the
 logarithm is at least the positive's own term $e^{\textrm{pmi}(x, y^+)}/N$,
 so the correction is at least
-$\mathbb{E}[\textrm{pmi}(x, y^+)] - \log N = I - \log N$, which is the cap
-again. And the correction vanishes only as $N \to \infty$ (Exercise
-:exref:`ex_mdl-mutual-information-optimal-critic`). The cap is the crudest
-consequence of this slack.
+$\mathbb{E}[\textrm{pmi}(x, y^+)] - \log N = I - \log N$, which is the
+ceiling again. And the correction vanishes only as $N \to \infty$ (Exercise
+:exref:`ex_mdl-mutual-information-optimal-critic`). The ceiling is the
+crudest consequence of this slack.
 
 The smooth minimum also makes the estimate hard to invert. With $N = 128$ a
 reading of $3.7$ stands for $4$ nats and a reading near $4.75$ for $7$, so
 the top $1.2$ nats of the scale hold every truth from $4$ nats to infinity.
-Fano's inequality
-(:numref:`subsec_mdl-fano`) gives the cap a scale: $5\%$ error on $1{,}000$
-balanced classes needs $6.36$ nats about the label. A loss with $128$
-candidates cannot show that two views share even that much, and $N = 1024$
-reports $6.3$ only when they share $7$. How good such representations are
-for classification cannot be read off this number.
+
+Classification gives these numbers a scale. If each of two views of an image
+determines its label among $1{,}000$ balanced classes, the label is a
+function of either view, and by the data-processing inequality
+(:numref:`subsec_mdl-dpi`) the views share at least its entropy,
+$\ln 1000 = 6.91$ nats. A loss with $128$ candidates cannot show that much,
+and with $N = 1024$ the estimate is still $6.3$ when the views share $7$.
+Whether two views carry enough for classification cannot be read off such a
+number.
 
 ### Exact Critics Compared
 :label:`subsec_mdl-exact-critics`
@@ -930,11 +947,13 @@ In that last row NWJ's median is about $7 = I + 1$ with its upper quartile
 on top of it, so half of the batches overshoot by about a nat. The quarter
 or so of the batches that are hit pull the mean back to within about half a
 nat of $6$. DV's median lies several nats above the truth, with an upper
-quartile in the tens, so its curve leaves the plot.
-InfoNCE reads $4.6$ with an interquartile range below $0.1$. The spread of
-NWJ can be computed: its mismatched-pair term has variance
-$(e^{2I} - 1)/N$, a standard deviation of $36$ nats at $I = 6$, carried by
-batches so rare that $200$ draws seldom include one (Exercise
+quartile in the tens, so its curve leaves the plot. InfoNCE reads $4.6$
+with an interquartile range below $0.1$.
+
+The spread of NWJ can be computed. Its mismatched-pair term is a batch
+average of $e^{\textrm{pmi}}$, with variance $(e^{2I} - 1)/N$: a standard
+deviation of $36$ nats at $I = 6$, carried by batches so rare that $200$
+draws seldom include one (Exercise
 :exref:`ex_mdl-mi-estimation-heavy-tails`).
 
 None of this contradicts the bounds, which hold for expectations over the
@@ -966,8 +985,8 @@ x_ev, y_ev = (a.astype(np.float32) for a in gauss_pair(rng, rho, n_pool))
 
 Each encoder is a multilayer perceptron with two hidden layers of $64$ ReLU
 units and Glorot-uniform initialization. The loss is the InfoNCE loss of the
-score matrix, a cross-entropy whose label for row $i$ is $i$, the index of
-the positive; every framework has it as its standard classification loss.
+score matrix. It is the ordinary classification cross-entropy, in which the
+label of row $i$ is $i$, the index of its positive.
 
 ```{.python .input #mdl-mi-estimation-training-a-critic-2}
 #@tab mxnet
@@ -1071,8 +1090,8 @@ params = (init_encoder(key_g), init_encoder(key_h))
 
 Training runs $1{,}000$ Adam steps with learning rate $10^{-3}$ on batches of
 $N = 128$ pairs drawn from the training pool. Afterwards, `critic_np`
-evaluates the trained critic on NumPy arrays, so that one evaluation cell
-serves every framework.
+evaluates the trained critic on NumPy arrays, the form in which the exact
+critic `exact_scores` takes its inputs.
 
 ```{.python .input #mutual-information-infonce-train}
 #@tab mxnet
@@ -1156,7 +1175,9 @@ def critic_np(a, b):
 The comparison that answers the question puts both critics on the *same*
 batches. The evaluation cell cuts the evaluation pool into disjoint batches
 of $N$ pairs, for $N$ from $2$ to $128$, and computes the InfoNCE bound of
-the learned critic and of the exact critic on each.
+the learned critic and of the exact critic on each. A critic trained with
+$128$ candidates may be tested with fewer, because the best critic,
+$\textrm{pmi}(x, y) + c(x)$, does not depend on $N$.
 
 ```{.python .input #mdl-mi-estimation-training-a-critic-3}
 def infonce_eval(score, x, y, N):
@@ -1178,25 +1199,28 @@ The learned critic matches the exact one to within a few hundredths of a nat
 at every $N$. The gap to the true $1.96$ nats belongs to the bound, and it
 closes only as $N$ grows: both critics reach about $1.9$ nats at $N = 128$.
 At $N = 8$ the ceiling $\ln 8 = 2.08$ already exceeds the truth, so the
-shortfall of about $0.55$ nat there is the slack of the bound, not its cap;
-:eqref:`eq_mdl-infonce-smooth-min` puts it at about $0.6$. A scalar pair
-gives the critic an easy job. In high dimension its error is no longer
-negligible, and without a known truth the two errors cannot be separated.
+shortfall of about $0.55$ nat there is not the ceiling at work. It is the
+slack of the bound, which :eqref:`eq_mdl-infonce-smooth-min` puts at about
+$0.6$. A scalar pair gives the critic an easy job. In high dimension its
+error is no longer negligible, and without a known truth the two errors
+cannot be separated.
 
 SimCLR-style systems use a different critic: they normalize the two
 embeddings $z_x$ and $z_y$ and divide their cosine similarity by a
 *temperature* $\tau$, $T(x, y) = \textrm{sim}(z_x, z_y)/\tau$
-:cite:`Chen.Kornblith.Norouzi.ea.2020`. A small $\tau$ sharpens the softmax
-over the candidates, and it also caps the bound: a cosine lies in
-$[-1, 1]$, so a cosine critic certifies less than $2/\tau$ nats whatever
-$N$ is (Exercise :exref:`ex_mdl-mutual-information-temperature`).
+:cite:`Chen.Kornblith.Norouzi.ea.2020`. The temperature sets how sharply the
+softmax separates the candidates, and it adds a ceiling of its own. A cosine
+lies in $[-1, 1]$, so no two scores differ by more than $2/\tau$, and a
+cosine critic certifies less than $2/\tau$ nats whatever $N$ is (Exercise
+:exref:`ex_mdl-mutual-information-temperature`): $4$ nats at $\tau = 0.5$
+and $20$ at $\tau = 0.1$. It is a large temperature that limits the bound.
 
 What should one use, then? For two variables of one or two dimensions that
 share at most a few nats, count neighbors: KSG was within about $0.1$ nat
 there. For vectors, no estimator of this section measures a large mutual
 information, and the question changes from *how much* to *at least how
 much*. InfoNCE answers that one steadily. Train with it on as many
-candidates as the batch affords and read
+candidates as fit in a batch and read
 $\log N - \mathcal{L}_{\textrm{NCE}}$ as a lower bound. A reading within a
 nat or so of $\log N$ says only that the views share at least that much,
 and a low reading may be the critic's fault. DV and NWJ have no range of
@@ -1210,25 +1234,24 @@ correlates poorly with the tightness of the bound being maximized. Looser
 bounds sometimes give better representations, and the encoder architecture
 and the form of the critic matter as much as the information. Two questions
 remain open: how to estimate a large mutual information in high dimension at
-all, when every method here is capped by the logarithm of something it can
-afford, and why loose bounds still train good representations.
+all, and why loose bounds still train good representations.
 
 ## Summary
 
 Samples can measure mutual information when it is small and the variables
-have few dimensions. Beyond that, every estimate is capped by the logarithm
-of something the estimator can count: $\log b$ for a histogram with $b$
-bins, $\psi(n) - \psi(m) \approx \log(n/m)$ for nearest-neighbor counts,
+have few dimensions. Beyond that, no estimator reports more than the
+logarithm of the number of things it can tell apart: $\log b$ for a
+histogram with $b$ bins, about $\log(n/m)$ for nearest-neighbor counts,
 which saturate far below that in high dimension, and the order of $\log n$
 for any lower bound that holds for every distribution. Variational methods
 therefore settle for a lower bound, computed from a decoder or a critic and
 maximized. InfoNCE, the loss of contrastive learning, is steady, and with an
 exact critic it reports about $-\log(e^{-I} + 1/N)$, never more than
 $\log N$ for $N$ candidates. The Donsker–Varadhan and NWJ bounds can report
-more, but their batch values can be trusted only below about $\log N$ as
-well. On the Gaussian pair a trained critic matched the exact one, so the
-shortfall of the contrastive estimate belonged to the bound. None of these
-numbers says how good the trained representation is.
+more, but their batch values can be trusted only a couple of nats below
+$\log N$. On the Gaussian pair a trained critic matched the exact one, so
+the shortfall of the contrastive estimate belonged to the bound. None of
+these numbers says how good the trained representation is.
 
 ## Exercises
 
@@ -1236,8 +1259,8 @@ numbers says how good the trained representation is.
    `binned_mi` of :numref:`subsec_mdl-mi-high-dim` reports about $0.003$
    nats at $b = 40$ and a few hundredths of a nat at $b = 160$, from
    $n = 200{,}000$ samples. This problem predicts such numbers.
-    1. For an independent pair, $2n$ times the plug-in estimate is the
-       $G$-statistic of the test for independence. When every cell's
+    1. For an independent pair, $2n$ times the estimate of `binned_mi` is
+       the $G$-statistic of the test for independence. When every cell's
        expected count is large, this statistic is approximately
        $\chi^2$-distributed with $(b-1)^2$ degrees of freedom, and so has
        mean $(b-1)^2$. Predict the mean estimate at $b = 40$ and at
@@ -1258,12 +1281,12 @@ numbers says how good the trained representation is.
 
 1. **Heavy tails of the exponentiated pmi.** ● Let $(X, Y)$ be the Gaussian
    pair with correlation $\rho$, $I = -\tfrac{1}{2}\log(1 - \rho^2)$, and
-   $Q = P_X \otimes P_Y$.
-    1. Show that $\mathbb{E}_Q[e^{\textrm{pmi}}] = 1$ for every $\rho$,
-       although at $\rho = 0.99$ a typical independent pair has
-       $e^{\textrm{pmi}}$ near $0$. Which pairs carry the expectation?
+   $Q = P_X \otimes P_Y$. Under $Q$ the mean of $e^{\textrm{pmi}}$ is $1$
+   for every $\rho$, although a typical independent pair has
+   $e^{\textrm{pmi}}$ near $0$ when $\rho$ is close to $1$.
     1. Show that
-       $\mathbb{E}_Q[e^{2\,\textrm{pmi}}] = \int p^2/q = 1/(1 - \rho^2) = e^{2I}$.
+       $\mathbb{E}_Q[e^{2\,\textrm{pmi}}] = \int p^2/q = 1/(1 - \rho^2) = e^{2I}$,
+       so that $e^{\textrm{pmi}}$ has variance $e^{2I} - 1$ under $Q$.
        *Hint:* the integrand is proportional to a Gaussian density with
        precision matrix $2\boldsymbol{\Sigma}^{-1} - \mathbf{I}$, where
        $\boldsymbol{\Sigma}$ is the covariance of the pair, and
@@ -1282,12 +1305,9 @@ numbers says how good the trained representation is.
        share a variable. *Hint:* condition on the shared pair.
    :exlabel:`ex_mdl-mi-estimation-heavy-tails`
 
-1. [code] **The sample-size ceiling of KSG.** The function `ksg_counts`
-   counts neighbors with strict inequalities and excludes each point from
-   its own counts, and `ksg_mi` turns the counts into an estimate.
-    1. Run `ksg_mi(x, x)` at $n = 500$ and compare with
-       $\psi(n) - \psi(m)$ and with $\log(n/m)$ for $m = 5$. How many
-       samples would raise the ceiling to $20$ nats?
+1. [code] **Limits of KSG.** The function `ksg_counts` counts neighbors
+   with strict inequalities and excludes each point from its own counts,
+   and `ksg_mi` turns the counts into an estimate.
     1. The table of :numref:`subsec_mdl-ksg-dimension` prints the mean
        strip count $\bar{n}$ of each row. Using $\psi(j) \approx \log j$ and
        $n_x \approx n_y \approx \bar{n}$, show that the estimate is about
@@ -1301,7 +1321,7 @@ numbers says how good the trained representation is.
     1. Let $Y$ be $X$ plus Gaussian noise of standard deviation $10^{-6}$,
        with $X$ standard normal and one-dimensional. What is the true
        $I(X; Y)$, and what does KSG report at $n = 2000$? Which ceiling
-       binds?
+       binds, and how many samples would raise it to the truth?
    :exlabel:`ex_mdl-mi-estimation-ksg-ceiling`
 
 1. **Barber–Agakov with a Gaussian decoder.** Take the standard bivariate
@@ -1313,10 +1333,12 @@ numbers says how good the trained representation is.
     1. Evaluate the right-hand side of :eqref:`eq_mdl-ba_bound` as a
        function of $a$ and $s^2$. Maximize it over both parameters and show
        that the maximum is the true information.
-    1. A decoder trained with the squared error alone corresponds to the
-       fixed variance $s^2 = 1$. Show that the best bound in this family is
-       $\rho^2/2$, and compare it with the true value at $\rho = 0.9$ and
-       $\rho = 0.99$. How does the gap behave as $\rho \to 1$?
+    1. The text fixes $s^2 = 1$, which is what training with the squared
+       error alone amounts to, and finds the best bound $\rho^2/2$. Show
+       that its gap to the true information is
+       $D_{\textrm{KL}}\big(\mathcal{N}(0, 1 - \rho^2) \,\|\, \mathcal{N}(0, 1)\big)$,
+       as the proof of the proposition says it must be. How does the gap
+       behave as $\rho \to 1$?
     1. Let $\hat{x}(y)$ be any predictor of $X$ with mean squared error $D$.
        Use the decoder $\mathcal{N}(x; \hat{x}(y), D)$ to show that
        $I(X; Y) \geq -\tfrac{1}{2}\log D$. What is the corresponding bound
@@ -1335,7 +1357,7 @@ numbers says how good the trained representation is.
     1. Show that
        $\mathcal{L}_{\textrm{NCE}} \geq \log\big(1 + (N-1)e^{-2/\tau}\big)$,
        and hence $\hat{I}_{\textrm{NCE}} < 2/\tau$ for every $N$. Evaluate
-       the cap $\log N - \log\big(1 + (N-1)e^{-2/\tau}\big)$ for $N = 4096$
+       the ceiling $\log N - \log\big(1 + (N-1)e^{-2/\tau}\big)$ for $N = 4096$
        and $\tau \in \{1, 0.5, 0.1\}$ (you should find about $2.0$, $4.0$ and
        $8.3$ nats). When does the temperature rather than the batch size
        limit the bound?
@@ -1359,21 +1381,15 @@ numbers says how good the trained representation is.
    $S$ records, for each $i \geq 1$, how many distinct values occur exactly
    $i$ times in $S$; it forgets which values these are. Let $B$ be a
    function of the type that is a lower confidence bound for every discrete
-   distribution: $P_{S \sim p^n}\big(B \leq H(p)\big) \geq 1 - \delta$ for
-   every $p$, with $\delta < 1/2$. Let $\mathcal{T}_0$ be the type of a
-   sample of $n$ distinct values.
+   distribution: $P_{S \sim p^n}\big(B \leq H(p)\big) \geq 0.95$ for every
+   $p$. Let $\mathcal{T}_0$ be the type of a sample of $n$ distinct values.
     1. The text applies the guarantee to the uniform distribution on $n^2$
-       values. Show that any integer $M \geq n^2/(2(1 - \delta))$ serves as
-       well, so that $B(\mathcal{T}_0) \leq \log M$. By how much does this
-       improve on $2 \log n$ at $\delta = 0.05$?
+       values. Show that any integer $M \geq n^2/1.9$ serves as well, so
+       that $B(\mathcal{T}_0) \leq \log M$. By how much does this improve
+       on $2 \log n$?
     1. Let $p$ be uniform on $M = 2^{256}$ values. How large must $n$ be
        before $2 \log n$ reaches $H(p)$? What does this say about measuring
        the entropy of a cryptographic key from samples?
-    1. For $X = Y$ uniform on $M$ values, $I(X;Y) = H(X)$. Explain why a
-       distribution-free lower bound on $I(X;Y)$ that depends on the sample
-       of pairs only through its type obeys the same limit. Which assumption
-       must an estimator add to guarantee more than $2 \log n$ nats from
-       $n$ samples?
    :exlabel:`ex_mdl-mutual-information-entropy-bounds-samples`
 
 1. **Optimal InfoNCE critic.** ● For one anchor $x$ and one bag
@@ -1423,11 +1439,13 @@ numbers says how good the trained representation is.
     1. CLIP uses the symmetric loss, the mean of the row-wise and the
        column-wise cross-entropies. Show that it bounds $I(X; Y)$ in the same
        way, with the same ceiling $\log N$.
-    1. Count the network evaluations needed for the $N \times N$ scores of a
-       joint critic $T(x, y)$, a network applied to the concatenated pair,
-       and of the separable critic $g(x)^\top h(y)$. CLIP trains with
-       batches of $N = 32{,}768$. How many evaluations does each critic need
-       per batch?
+    1. A joint critic $T(x, y)$, a network applied to the concatenated
+       pair, needs $N^2$ network evaluations for the scores of a batch,
+       where the separable critic $g(x)^\top h(y)$ needs $2N$. Evaluate both
+       counts for CLIP's batches of $N = 32{,}768$. A separable critic
+       cannot represent every function of the pair. Show that the pmi of
+       the Gaussian pair is separable with embeddings of three dimensions,
+       and that two suffice for InfoNCE.
    :exlabel:`ex_mdl-mi-estimation-in-batch-negatives`
 
 1. **Negative sampling as shifted PMI.** ● Skip-gram with negative
@@ -1453,7 +1471,7 @@ numbers says how good the trained representation is.
        count raised to the power $0.75$. Show that $s^*$ then differs from
        $\textrm{pmi}(w, o) - \log K$ by a term that depends on $o$ alone.
        For which context words is this term negative? How does it act on
-       the rare pairs of Exercise
+       pairs of rare words, such as the "sri lanka" of Exercise
        :exref:`ex_mdl-mutual-information-rare-pairs` of
        :numref:`sec_mdl-mutual-information`?
     1. Compare $s^*$ with the optimal InfoNCE critic of Exercise
@@ -1463,8 +1481,8 @@ numbers says how good the trained representation is.
    :exlabel:`ex_mdl-mutual-information-negative-sampling-pmi`
 
 1. [extended] **Compression phase at small scale.** ●●
-   :citet:`Shwartz-Ziv.Tishby.2017` trained fully connected tanh networks of
-   widths 12-10-7-5-4-3-2 on all $4096$ binary input patterns of $12$ bits.
+   :citet:`Shwartz-Ziv.Tishby.2017` studied fully connected tanh networks of
+   widths 12-10-7-5-4-3-2 on the $4096$ binary input patterns of $12$ bits.
    For each hidden layer $Z$ they binned every unit's activation into $30$
    equal intervals of $[-1, 1]$ and computed $I(X;Z)$ and $I(Y;Z)$ from the
    binned values. :numref:`subsec_mdl-compression-debate` describes the
@@ -1502,8 +1520,10 @@ Estimating Mutual Information<br>**neighbors · bounds · InfoNCE**
 ::: {.slide title="A Batch of 128 Can Show at Most 4.85 Nats"}
 [The problem]{.kicker}
 
+- Two *views* of one example: two crops of a photograph, an image and its
+  caption.
 - A contrastive loss $\mathcal{L}$ asks a model to pick the true partner of
-  an example among $N = 128$ candidates.
+  a view among $N = 128$ candidates.
 - Papers report $\ln 128 - \mathcal{L}$ as the information two views share.
 - $\mathcal{L} \geq 0$, so the report never exceeds $\ln 128 = 4.85$ nats,
   whatever the views share.
@@ -1520,7 +1540,7 @@ Which reported numbers are measurements, and which are bounds?
   where each fails;
 - show that $n$ samples cannot guarantee more than about $2\log n$ nats;
 - derive the decoder and critic lower bounds;
-- prove the InfoNCE bound and its $\log N$ cap;
+- prove the InfoNCE bound and its $\log N$ ceiling;
 - tell the error of a critic from the slack of its bound.
 
 **Running example:** $X, Y$ standard normal with correlation $\rho$,
@@ -1558,7 +1578,8 @@ number of things it can tell apart.
 [Nonparametric]{.kicker}
 
 Cut each axis into $b$ bins and apply the discrete formula to the cell
-frequencies; $200{,}000$ samples:
+frequencies. $200{,}000$ samples of Gaussian pairs and of the parabola
+$Y = X^2 + 0.3\,\epsilon$ (correlation zero):
 
 @!mutual-information-gaussian-binned
 
@@ -1609,6 +1630,8 @@ $\textrm{pmi} = \log\frac{p(x,y)}{p(x)\,p(y)}$ from counts.
 @fig:mdl-it-ksg-box
 :::
 :::
+
+[Kraskov, Stögbauer & Grassberger (2004).]{.small}
 :::
 
 ::: {.slide title="KSG Cannot Report More Than $\psi(n) - \psi(m)$"}
@@ -1655,8 +1678,9 @@ $d$ independent pairs at $\rho = 0.9$, $n = 2{,}000$:
 ::: {.slide title="A Million Samples Cannot Guarantee 30 Nats"}
 [Distribution-free]{.kicker}
 
-$B \leq H(X)$ with probability $1 - \delta > \tfrac12$ for every
-distribution; $B$ sees only which values repeat.
+$Y = X$ discrete, so $I(X;Y) = H(X)$. A lower bound $B$ from $n$ samples:
+$B \leq H(X)$ with probability $0.95$ for every distribution. $B$ sees only
+the pattern of repeats.
 
 - Uniform on $M = n^2$ symbols, $H = 2\log n$: all $n$ draws distinct with
   probability $> \tfrac12$.
@@ -1672,14 +1696,17 @@ $O(\log n)$.]{.small}
 
 A deterministic network sees $4{,}096$ distinct inputs $X$. The activations
 of a layer $Z$ are binned and $I(X; Z_{\mathrm{bin}})$ is plotted over
-training. How large can it be? When does it fall?
+training. It rose, then fell for most of training: a "compression phase",
+proposed as the reason deep networks generalize. How large can it be? When
+does it fall?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $Z_{\mathrm{bin}}$ is a function of $X$, so
 $I(X; Z_{\mathrm{bin}}) = H(Z_{\mathrm{bin}}) \leq \ln 4096 = 8.3$ nats. It
 falls when inputs come to share a cell, as saturating $\tanh$ units make
-them: the "compression phase" tracks the bins.
+them: the fall tracks the bins. ReLU networks show none and generalize as
+well.
 :::
 :::
 
@@ -1699,6 +1726,13 @@ The gap is $\mathbb{E}_y D_{\textrm{KL}}\big(p(\cdot\mid y)\,\|\,q(\cdot\mid y)\
   at most $\ln 10 = 2.30$ nats for ten classes.
 - A squared-error decoder of the pair: $\rho^2/2 = 0.41$ of $0.83$ nats,
   never more than $0.5$.
+
+::: {.d2l-note}
+"Certifies": the inequality holds for expectations. A batch average only
+estimates the certified value.
+:::
+
+[Barber & Agakov (2003).]{.small}
 :::
 
 ::: {.slide title="A Critic Certifies a Lower Bound"}
@@ -1710,9 +1744,14 @@ $$D_{\textrm{KL}}(P\|Q) \geq \mathbb{E}_P[T] - \log \mathbb{E}_Q[e^T]$$
 
 - Tilt $Q$ by the critic: $\tilde q = q\,e^T/Z$, $Z = \mathbb{E}_Q[e^T]$.
 - The gap is $\mathbb{E}_P\log(p/\tilde q) = D_{\textrm{KL}}(P\|\tilde Q) \geq 0$.
-- Equality at $T = \log(p/q) + c$.
 - For $I(X;Y)$: $P = P_{XY}$, $Q = P_X P_Y$. *Mismatched pairs*, each $x$
   with its neighbor's $y$, sample $Q$.
+
+::: {.d2l-note}
+The best critic is $\log(p/q) + c$: for $I(X;Y)$, the pmi plus any constant.
+:::
+
+[Donsker & Varadhan (1983); with a neural critic: MINE, Belghazi et al. (2018).]{.small}
 :::
 
 ::: {.slide title="The Tangent Line $\log z \le z/e$ Gives NWJ"}
@@ -1723,8 +1762,14 @@ $$I(X;Y) \geq \mathbb{E}_{P_{XY}}[T] - e^{-1}\,\mathbb{E}_{P_X P_Y}[e^T]$$
 - No logarithm of an average: the batch value is unbiased. The batch value
   of DV is biased upward (Jensen).
 - Tight at $T^* = 1 + \textrm{pmi}$: the constant is no longer free.
-- $e^{T^*-1} = e^{\textrm{pmi}}$ averages to $1$ over mismatched pairs,
-  through a few enormous values among many near zero.
+
+::: {.d2l-note}
+Unbiased is not the same as reliable: $e^{T^*-1} = e^{\textrm{pmi}}$ averages
+to $1$ over mismatched pairs through a few enormous values among many near
+zero.
+:::
+
+[NWJ: Nguyen, Wainwright & Jordan (2010).]{.small}
 :::
 
 ::: {.slide title="InfoNCE Is an $N$-Class Cross-Entropy"}
@@ -1732,7 +1777,7 @@ $$I(X;Y) \geq \mathbb{E}_{P_{XY}}[T] - e^{-1}\,\mathbb{E}_{P_X P_Y}[e^T]$$
 
 ::: {.cols .vc}
 ::: {.col}
-One positive $y^+$, $N - 1$ negatives from $P_Y$:
+Anchor $x$, one positive $y^+$ drawn with it, $N - 1$ negatives from $P_Y$:
 
 $$\mathcal{L} = -\mathbb{E}\log\frac{e^{T(x,y^+)}}{\sum_{j} e^{T(x,y_j)}}$$
 
@@ -1744,6 +1789,8 @@ the batch: CPC, SimCLR, CLIP.
 @fig:mdl-it-infonce-pos-neg
 :::
 :::
+
+[van den Oord, Li & Vinyals (2018).]{.small}
 :::
 
 ::: {.slide title="Proof I: Independent Negatives Add Nothing"}
@@ -1762,7 +1809,8 @@ Given $Y_1$, the negatives are still independent of $X$.
 
 $$\gamma(x, v) = \frac{e^{T(x, y_1)}}{\frac1N \sum_j e^{T(x, y_j)}} \in (0, N]$$
 
-- Under $p(v)$, all $N$ candidates i.i.d. from $P_Y$, so exchangeable.
+- Under $p(v)$, all $N$ candidates are i.i.d. from $P_Y$: every position
+  has the same law.
 - The $N$ ratios have equal means, and they sum to $N$:
   $\mathbb{E}_{p(v)}[\gamma(x, V)] = 1$.
 - So $q(v \mid x) = p(v)\,\gamma(x, v)$ is a distribution over bags.
@@ -1781,17 +1829,22 @@ estimate is at most $\log N$.
 :::
 
 Naming the right one of $N$ candidates shows $\log N$ nats, never more.
+
+[Poole et al. (2019).]{.small}
 :::
 
 ::: {.slide title="Check: The Most a Batch of 256 Can Certify"}
 [Check]{.kicker}
 
-InfoNCE with $N = 256$ candidates. What is the largest estimate? And with
-a cosine critic $T = \mathrm{sim}/\tau$ at temperature $\tau = 0.5$?
+InfoNCE with $N = 256$ candidates. What is the largest estimate?
+
+SimCLR's critic is a cosine over a temperature, $T = \mathrm{sim}/\tau$
+with $\mathrm{sim} \in [-1, 1]$: no two scores differ by more than
+$2/\tau$. What is the largest estimate at $\tau = 0.5$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $\ln 256 = 5.55$ nats. A cosine lies in $[-1, 1]$, so the loss
+**Answer.** $\ln 256 = 5.55$ nats. With scores at most $4$ apart the loss
 is at least $\log(1 + 255\,e^{-4}) = 1.74$: at most $3.8 < 2/\tau = 4$ nats.
 The temperature binds first.
 :::
@@ -1816,11 +1869,12 @@ batch. $N = 128$, exact critics, medians over $200$ batches:
 | true $I$ | $N e^{-I}$ | starved | DV | NWJ | InfoNCE |
 |---|---|---|---|---|---|
 | 2 | 17 | 0% | 2.0–2.1 | 2.0–2.1 | 1.9–2.0 |
-| 4 | 2.3 | up to 10% | 4.2–4.3 | 4.2–4.3 | 3.7 |
+| 4 | 2.3 | up to 10% | just above 4 | just above 4 | 3.7 |
 | 6 | 0.3 | about 60% | far above 6 | about 7 | 4.6 |
 
 - Starved batch: no such pair, mean $e^{\textrm{pmi}}$ over mismatched
-  pairs below $0.1$. NWJ then reads $I + 1$.
+  pairs below $0.1$. NWJ then reads $I + 1$; DV subtracts the log of that
+  mean and reads far more.
 - Hit batch: a mismatched pair with $e^{\textrm{pmi}} \geq N$, about a
   quarter of batches at $I = 6$. They pull NWJ's mean back to about $6$.
 :::
@@ -1828,8 +1882,9 @@ batch. $N = 128$, exact critics, medians over $200$ batches:
 ::: {.slide title="Check: Whose Fault Is the Missing Half Nat?"}
 [Check]{.kicker}
 
-Critic $T = g(x)^\top h(y)$, trained by InfoNCE at $N = 128$,
-$\rho = 0.99$; learned and exact critic on the same batches:
+Two small networks $g, h$ embed $x$ and $y$; critic $T = g(x)^\top h(y)$,
+trained by InfoNCE at $N = 128$, $\rho = 0.99$. Learned and exact critic
+on the same batches:
 
 @!mdl-mi-estimation-training-a-critic-3
 
@@ -1839,7 +1894,7 @@ optimizer, or bound?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** The bound: the exact critic reads the same, and
-$\ln 8 = 2.08 > 1.96$, so this is slack, not the cap.
+$\ln 8 = 2.08 > 1.96$, so this is slack, not the ceiling.
 :::
 :::
 :::
@@ -1860,7 +1915,7 @@ tightness poorly.
 [Tschannen et al. (2020).]{.small}
 :::
 
-::: {.slide title="Every Estimate Here Is Capped by a Logarithm"}
+::: {.slide title="Every Estimate Here Has a Logarithmic Ceiling"}
 [Wrap-up]{.kicker}
 
 - Histogram: half the truth lost at $b = 10$ ($\rho = 0.99$), a few

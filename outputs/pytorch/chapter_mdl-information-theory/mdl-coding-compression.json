@@ -46,7 +46,7 @@
       "outputs": []
     },
     "mdl-coding-compression-a-language-model-as-a-compressor-2": {
-      "code_fingerprint": "sha256:e034d67f0b000880148cab3eec18e61e755bc76f84f8f48b601dc0a33a6bb68b",
+      "code_fingerprint": "sha256:4c967718b90aab40b4f7c531967d9384fc852f302b53b85c198d690e85fa75ea",
       "kind": "text",
       "outputs": [
         {
@@ -57,32 +57,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "order 0: 4.08 bits/char = 2.83 nats/char, perplexity 2^bits = 16.91\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "order 1: 3.29 bits/char = 2.28 nats/char, perplexity 2^bits = 9.81\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "order 2: 2.75 bits/char = 1.90 nats/char, perplexity 2^bits = 6.70\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "order 3: 2.55 bits/char = 1.77 nats/char, perplexity 2^bits = 5.84\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "order 4: 2.78 bits/char = 1.92 nats/char, perplexity 2^bits = 6.85\nzlib -9: 2.84 bits/char\n"
+          "text": "order 0: 4.08 bits/char = 2.83 nats/char, perplexity 2^bits = 16.91\norder 1: 3.29 bits/char = 2.28 nats/char, perplexity 2^bits = 9.81\norder 2: 2.75 bits/char = 1.90 nats/char, perplexity 2^bits = 6.70\norder 3: 2.55 bits/char = 1.77 nats/char, perplexity 2^bits = 5.84\norder 4: 2.78 bits/char = 1.92 nats/char, perplexity 2^bits = 6.85\nzlib -9: 2.84 bits/char\norder 0 minus the letter-frequency entropy: 0.0011 bits/char, 183 bits in all\n"
         }
       ]
     },
     "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
-      "code_fingerprint": "sha256:262c1631e640263c5d9ab22bb1e643c55b1abdc5f508fbbf28fe79443273939e",
+      "code_fingerprint": "sha256:676bef48d0154f94930d2f65b07134e6d6d1640f9344c39ac408d9b4728d6eb6",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +73,7 @@
       ]
     },
     "mdl-coding-compression-typical-sequences-1": {
-      "code_fingerprint": "sha256:47601cb4b7ad54136e55eb1eb934c624ccd2743e30e9811c35735394a77f44d5",
+      "code_fingerprint": "sha256:6c616f4fa6c8ab53084bf5af8668f90e42c3647d38c10bb3837921e53b4e7551",
       "kind": "asset",
       "outputs": [
         {
@@ -101,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
           "bytes": 31016,
-          "sha256": "sha256:94d3aabc8126886f42642b62e0f8f265479eb05645dd59cf86242e3a771c61d2"
+          "sha256": "sha256:a2b83dd0e52cc6a6f98328b915b1ca99d99de942f56c532b74e1320ec9f116e9"
         }
       ]
     }

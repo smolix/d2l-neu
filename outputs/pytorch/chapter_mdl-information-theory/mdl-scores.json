@@ -46,23 +46,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample                 g = 1             g = x         g = sin x\nN(0, 1)       -0.002 ± 0.002    -0.002 ± 0.003    -0.001 ± 0.002\nN(0.5, 1)     -0.498 ± 0.002    -0.252 ± 0.004    -0.145 ± 0.002\nN(0, 4)       -0.002 ± 0.004    -3.000 ± 0.013    -0.405 ± 0.003\n"
+          "text": "sample                 g = 1             g = x         g = sin x\nN(0, 1)       -0.001 ± 0.002    -0.002 ± 0.003    -0.001 ± 0.002\nN(0.5, 1)     -0.503 ± 0.002    -0.249 ± 0.004    -0.145 ± 0.002\nN(0, 4)       +0.002 ± 0.004    -3.006 ± 0.013    -0.410 ± 0.003\n"
         }
       ]
     },
     "divergences-distances-ksd": {
-      "code_fingerprint": "sha256:6edc87e3c6d808b7756a5522c7bbd2918c0ce2738504b76c68ec50abbe34d3f2",
+      "code_fingerprint": "sha256:9a268a731edfca1379ed65fb5182d200cee264e332bcc4b141441b3bfd7f3993",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "KSD^2 vs the true model  N(0,1): -0.0004  (population 0.0000)\n"
+          "text": "KSD^2 vs the true model  N(0,1) : +0.0010  (population 0.0000)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "KSD^2 vs the wrong model N(1,1): +0.5580  (population 0.5774)\n"
+          "text": "KSD^2 vs the wrong model N(1,1) : +0.5274  (population 0.5774)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KSD^2 vs the quartic exp(-x^4/4): +0.2835  (population 0.3208)\n"
         }
       ]
     }

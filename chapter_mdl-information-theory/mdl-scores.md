@@ -121,7 +121,7 @@ $$
 :eqlabel:`eq_mdl-score-def`
 
 (In classical statistics, "score" means the gradient of the log-likelihood
-with respect to the *parameters*, as in :numref:`sec_mdl-maximum_likelihood`.
+with respect to the parameters, as in :numref:`sec_mdl-maximum_likelihood`.
 Here the gradient is in $\mathbf{x}$.) For a Gaussian
 $\mathcal{N}(\mu, \sigma^2)$ on the line it is
 
@@ -192,8 +192,12 @@ by the formula for two Gaussians in :numref:`sec_mdl-information_theory`. At
 $\sigma = 1$ the two agree. Measure $x$ in units half as large, and $\Delta$
 and $\sigma$ both double: the KL divergence stays where it was, and the Fisher
 divergence falls to a quarter. It is measured in units of $1/x^2$, as a squared
-slope must be, and not in nats. Exercise
-:exref:`ex_mdl-divergences-distances-fisher-stein`a treats unequal variances.
+slope must be, and not in nats. Its size therefore depends on the units of the
+data, and a score-matching loss on one data set cannot be compared with the
+loss on another, or with a budget in nats. Exercise
+:exref:`ex_mdl-divergences-distances-fisher-stein`a treats unequal variances,
+and Exercise :exref:`ex_mdl-scores-change-of-variables` a general change of
+variables.
 
 ### Mixing Weights of Distant Modes
 
@@ -213,7 +217,8 @@ $0.7 \log\tfrac{7}{3} + 0.3 \log\tfrac{3}{7} = 0.339$ nats, whatever $m$ is.
 
 The scores hardly differ. Near each mode the responsibility of that mode is
 close to $1$ in both mixtures, so both scores are that mode's spring. Written
-out, the score of $P_w$ is
+out (Exercise :exref:`ex_mdl-divergences-distances-score-blindness`b derives
+it), the score of $P_w$ is
 
 $$
 s_w(x) = -x + m \tanh(m x - c_w), \qquad c_w = \tfrac{1}{2} \log\frac{w}{1 - w}.
@@ -243,17 +248,25 @@ for m in (1.0, 3.0, 5.0):
 
 The KL divergence settles at $0.339$ nats, and the Fisher divergence falls by
 more than four orders of magnitude, from about $0.1$ to about
-$4 \times 10^{-6}$. A loss built from scores cannot see how mass is divided
-between distant modes. The word "connected" above was a warning: on two
-separate regions, equal scores allow $\log p - \log q$ a constant of its own on
-each. A model fitted by score matching to such data can give both modes the
-right place and the right shape and still hold $30\%$ of its mass where the
-data hold $70\%$ :cite:`Wenliang.Kanagawa.2020`. Gaussian noise added to the
-data fills the valley (Exercise
-:exref:`ex_mdl-divergences-distances-score-blindness`c), which is one reason
-why diffusion models perturb the data with noise at many scales before they
-match scores; :numref:`sec_diffusion-denoising` measures the same blind spot on
-trained networks.
+$4 \times 10^{-6}$. At $m = 5$ it is of the size of
+$e^{-m^2/2} = e^{-12.5} \approx 4 \times 10^{-6}$, as the empty valley led us
+to expect. A loss built from scores cannot see how mass is divided between
+distant modes. The word "connected" above was a warning: on two separate
+regions, equal scores allow $\log p - \log q$ a constant of its own on each
+(Exercise :exref:`ex_mdl-scores-separate-regions`). A model fitted to such
+data by minimizing the Fisher divergence can give both modes the right place
+and the right shape and still hold $30\%$ of its mass where the data hold
+$70\%$ :cite:`Wenliang.Kanagawa.2020`.
+
+Noise fills the valley. Add independent Gaussian noise of standard deviation
+$2$ to both mixtures, and the variance of every mode grows from $1$ to $5$.
+The modes, ten standard deviations apart before, are now $4.5$ apart, and the
+density in the valley rises from $1.5 \times 10^{-6}$ to about $0.015$. The
+data now visit the place where the two scores disagree (Exercise
+:exref:`ex_mdl-divergences-distances-score-blindness`c measures what is
+gained). This is one reason why diffusion models perturb the data with noise
+at many scales before they match scores. :numref:`sec_diffusion-denoising`
+measures the same blind spot on trained networks.
 
 ## Stein's Identity
 :label:`sec_mdl-stein-discrepancy`
@@ -300,12 +313,13 @@ where the boundary term vanishes and both integrals converge by the conditions
 on $g$. $\blacksquare$
 
 For the standard normal density the score is $-x$ and the identity reads
-$\mathbb{E}[g'(X)] = \mathbb{E}[X g(X)]$, which is Stein's lemma
-:cite:`Stein.1981`. With $g(x) = x$ it says $\mathbb{E}[X^2] = 1$. The
-identity turns knowledge of a slope into statements about averages, and
-averages are what samples estimate.
+$\mathbb{E}[g'(X)] = \mathbb{E}[X g(X)]$. With $g(x) = x$ it says
+$\mathbb{E}[X^2] = 1$. This case is Stein's lemma for the normal distribution
+:cite:`Stein.1981`, and the form for a general density is in
+:cite:`Stein.1986`. The identity turns knowledge of a slope into statements
+about averages, and averages are what samples estimate.
 
-### Removing the Data Score
+### Score Matching
 
 Suppose that the data distribution $P$ has a smooth density, even though we
 see only samples of it. Then the identity holds for the data, with $s = s_P$,
@@ -323,8 +337,9 @@ $$
 The derivative has moved from the data, which have none, to the model. The
 last term is the same for every model, and the rest is an average over the
 data of quantities that the model supplies: it can be estimated from a sample
-and minimized, with no $Z$ and no $s_P$. This is *score matching*
-:cite:`Hyvarinen.2005`.
+and minimized, with no $Z$ and no $s_P$. This is *score matching*.
+:citet:`Hyvarinen.2005` devised it for models without a normalizing constant
+and fitted a model of natural image patches with it.
 
 The quartic of :numref:`sec_mdl-fisher-divergence` shows what has been gained.
 Give it a parameter, $\tilde{q}_\theta(x) = e^{-\theta x^4/4}$, so that
@@ -352,13 +367,15 @@ pass that gave the score turns into $n$ of them, far too many for an image.
 how noise added to the data avoids these derivatives, and derives the training
 loss of diffusion models from the result.
 
-### Testing a Sample
+### A Test for Samples
 
-The identity can also *test* a sample against a model. Stated for the model,
-it says that for every admissible $g$ the function $g' + g\, s_Q$ averages to
-zero under $Q$. If its average over a sample is far from zero for some $g$,
-the sample did not come from $Q$. The check needs the model's score at the
-sample points and nothing else, neither $Z$ nor samples of the model.
+The identity can also test a sample against a model. Stated for the model, it
+says that for every $g$ that meets the conditions of the proposition the
+function $g' + g\, s_Q$ averages to zero under $Q$. The map that takes $g$ to
+$g' + g\, s_Q$ is called the *Stein operator* of the model. If the average of
+$g' + g\, s_Q$ over a sample is far from zero for some $g$, the sample did not
+come from $Q$. The check needs the model's score at the sample points and
+nothing else, neither $Z$ nor samples of the model.
 
 How much can one test function detect? Let the model be
 $Q = \mathcal{N}(0, 1)$, so that the function to average is
@@ -397,8 +414,8 @@ hardly a subtle violation. Only $g = x$, at about $-3$, and $\sin x$, at about
 $-0.4$, notice it. A test function checks one property of the sample, and a
 sample can be wrong in a property that the function does not check.
 
-The table has a short explanation. A sample from a distribution $P$ with a
-smooth density obeys the identity of $P$,
+Why does $g = 1$ see the shift and miss the width? A sample from a
+distribution $P$ with a smooth density obeys the identity of $P$,
 $\mathbb{E}_P[g'] = -\mathbb{E}_P[g\, s_P]$, and therefore
 
 $$
@@ -409,9 +426,9 @@ $$
 The average is the difference of the two scores, weighted by $g$. For the
 shifted sample the difference is the constant $-x + (x - 0.5) = -0.5$, and
 $g = 1$ picks it up in full. For the wide sample it is
-$-x + x/4 = -\tfrac{3}{4}x$, an odd function, which the even function $g = 1$
-averages to zero. No single test function is correlated with every possible
-difference of scores.
+$-x + x/4 = -\tfrac{3}{4}x$. This is an odd function, and a distribution that
+is symmetric about zero averages it to zero when the weight is $g = 1$. No
+single test function is correlated with every possible difference of scores.
 
 ## The Kernel Stein Discrepancy
 :label:`sec_mdl-ksd`
@@ -421,10 +438,9 @@ in the unit ball of a feature space, and among them the one whose average is
 largest. :numref:`sec_mdl-ipm-mmd` did the same for the difference of two
 means and found a closed form, the maximum mean discrepancy (MMD). There is one
 here as well, which is rather remarkable. A supremum over infinitely many test
-functions, applied to a model without a normalizing constant, reduces to kernel
-evaluations on pairs of data points.
+functions reduces to kernel evaluations on pairs of data points.
 
-Write the *Stein operator* of the model $Q$ as
+Write $\mathcal{A}_Q$ for the Stein operator of the model $Q$,
 $(\mathcal{A}_Q g)(x) = g'(x) + s_Q(x)\, g(x)$, so that Stein's identity says
 $\mathbb{E}_Q[\mathcal{A}_Q g] = 0$, and measure the data distribution $P$ by
 $\sup_g \mathbb{E}_P[\mathcal{A}_Q g]$, the largest amount by which the data
@@ -474,6 +490,8 @@ $$
 $$
 
 the same average over pairs without self-pairs as the MMD estimator.
+Statisticians call such an average a U-statistic, which is where the name
+`ksd2_ustat` in the code below comes from.
 
 To see what the KSD measures, we apply :eqref:`eq_mdl-stein-score-diff` to
 each feature. It gives
@@ -495,29 +513,33 @@ $\mathrm{KSD}^2$ decays roughly like $e^{-m^2}$, the square of the rate of
 the Fisher divergence (Exercise
 :exref:`ex_mdl-divergences-distances-score-blindness`e).
 
-The formula also gives us a value to predict, provided that we know both
-scores. For this reason, and for no other, the models of our experiment are
-Gaussians, whose normalizing constants everybody knows. For data
-$P = \mathcal{N}(0, 1)$ and the wrong model $\mathcal{N}(1, 1)$ the difference
-of scores is $-(x - 1) - (-x) = 1$ at every point, so
+Where both scores are known, :eqref:`eq_mdl-ksd-score-diff` predicts the
+value. Let the data be $P = \mathcal{N}(0, 1)$ and take three models. Against
+the correct model $\mathcal{N}(0, 1)$ the difference of scores vanishes and
+$\mathrm{KSD}^2 = 0$. Against the shifted model $\mathcal{N}(1, 1)$ the
+difference is $-(x - 1) - (-x) = 1$ at every point, so
 $\mathrm{KSD}^2 = \mathbb{E}[k(X, X')]$. For the RBF kernel
 $k(x, x') = e^{-(x - x')^2/(2\ell^2)}$ with length scale $\ell$ this is the
 Gaussian integral of :numref:`sec_mdl-ipm-mmd`: the difference $X - X'$ has
 the distribution $\mathcal{N}(0, 2)$, and the average of the kernel over it is
 $(1 + 2/\ell^2)^{-1/2}$. At $\ell = 1$ we obtain
-$\mathrm{KSD}^2 = 1/\sqrt{3} \approx 0.577$. Against the correct model the
-difference of scores vanishes and $\mathrm{KSD}^2 = 0$.
+$\mathrm{KSD}^2 = 1/\sqrt{3} \approx 0.577$.
+
+The third model is of the kind that this section is about: the quartic
+$\tilde{q}(x) = e^{-x^4/4}$ of :numref:`sec_mdl-fisher-divergence`, which we
+know only up to its constant. Its score is $-x^3$, the difference of scores is
+$x - x^3$, and the double integral in :eqref:`eq_mdl-ksd-score-diff` has no
+such short form. The function `ksd2_population` in the cell evaluates it on a
+grid. It can do so because we, unlike the test, know the density of the data.
 
 For the RBF kernel on the line the derivatives in :eqref:`eq_mdl-stein-kernel`
 are $\partial_{x'} k = \frac{x-x'}{\ell^2}\, k$,
 $\partial_x k = -\frac{x-x'}{\ell^2}\, k$ and
-$\partial_x \partial_{x'} k = \big( \frac{1}{\ell^2} - \frac{(x-x')^2}{\ell^4} \big)\, k$
-(the code calls the second argument `y`). We test one sample of $2{,}000$
-points from $\mathcal{N}(0, 1)$ against the correct model $\mathcal{N}(0, 1)$,
-whose score is $-x$, and against the wrong model $\mathcal{N}(1, 1)$, whose
-score is $-(x - 1)$. The function receives each model as a score function and
-as nothing else. Handed `lambda t: -t**3`, it would test the same sample
-against the quartic, and it would not ask for $Z$.
+$\partial_x \partial_{x'} k = \big( \frac{1}{\ell^2} - \frac{(x-x')^2}{\ell^4} \big)\, k$.
+In the code, `dk_dy` is the derivative in the second argument and `kappa` the
+matrix of all $k_Q(x_i, x_j)$. We test one sample of $2{,}000$ points from
+$\mathcal{N}(0, 1)$ against the three models. The function `ksd2_ustat`
+receives each model as a score function and as nothing else.
 
 ```{.python .input #divergences-distances-ksd}
 def ksd2_ustat(x, score, ell=1.0):
@@ -533,19 +555,33 @@ def ksd2_ustat(x, score, ell=1.0):
     n = len(x)
     return (kappa.sum() - np.trace(kappa)) / (n * (n - 1))
 
+def ksd2_population(score, ell=1.0):
+    """KSD^2 of the data P = N(0, 1) against a model with this score, from
+    the score difference s_Q - s_P weighted by the kernel, by quadrature."""
+    t = np.linspace(-10.0, 10.0, 2001)
+    h = np.exp(-t ** 2 / 2) / np.sqrt(2 * np.pi) * (score(t) + t)
+    k = np.exp(-(t[:, None] - t[None, :]) ** 2 / (2 * ell ** 2))
+    return h @ k @ h * (t[1] - t[0]) ** 2
+
 x_p = rng.standard_normal(2000)          # the data sample, P = N(0, 1)
-for name, s, pop in [('true model  N(0,1)', lambda t: -t, 0.0),
-                     ('wrong model N(1,1)', lambda t: -(t - 1), 1 / np.sqrt(3))]:
-    print(f'KSD^2 vs the {name}: {ksd2_ustat(x_p, s):+.4f}  '
-          f'(population {pop:.4f})')
+for name, s in [('true model  N(0,1)', lambda t: -t),
+                ('wrong model N(1,1)', lambda t: -(t - 1)),
+                ('quartic exp(-x^4/4)', lambda t: -t ** 3)]:
+    print(f'KSD^2 vs the {name:19s}: {ksd2_ustat(x_p, s):+.4f}  '
+          f'(population {ksd2_population(s):.4f})')
 ```
 
 Against the correct model the estimate is within a few thousandths of zero and
 may be slightly negative, as an unbiased estimate of zero must sometimes be.
-Against the wrong model it lands close to the predicted
-$1/\sqrt{3} \approx 0.58$, within about $0.1$. Between the two lines of output
-only the score function changed. The sample is the same, and neither model was
-sampled.
+Against the shifted model, in the second line, it lands close to the predicted
+$1/\sqrt{3} \approx 0.58$, within about $0.1$. Against the quartic it is a few
+tenths, far from zero. The population value is $0.32$ here, and a single
+sample can miss it by $0.1$ and more, because the score $-x^3$ is large at the
+few points far from the origin and these dominate the average.
+
+Between the three lines of output only the score function changed. The sample
+is the same, no model was sampled, and the normalizing constant of the
+quartic, $Z \approx 2.56$, appears nowhere in the code.
 
 With the RBF kernel a value of zero can be trusted. For data with a smooth
 density, and under mild conditions on the two scores,
@@ -567,13 +603,24 @@ objective in this book uses the KSD.
 ## Training Objectives and Their Divergences
 :label:`sec_mdl-divergence-objective-map`
 
-:numref:`tab_mdl-divergence-objectives` collects this section and the two
-before it. Each row names an objective, what it needs from the model and the
-data, and the divergence that it minimizes when its averages are taken over
-the whole distributions and, for the adversarial objectives, the critic is the
-best possible. A critic, as in :numref:`sec_mdl-f-gan-dual`, is a function
-trained on the two samples, in practice a second network. The fourth column
-returns to the test case with which
+The two sections before this one produced three families of comparisons, and
+this one has added two comparisons of scores.
+:numref:`fig_mdl-divergence-taxonomy` places the families and the members they
+share. It does not draw the Fisher divergence, which belongs to none of the
+three. Nor does it draw the KSD, which has the form of the second family, a
+largest difference of averages over a class of test functions, but with a
+class that is built from the model's score and changes with the model.
+
+![The ratio, test-function and transport families and their common members. f-divergences average a convex function of the density ratio, integral probability metrics take a supremum of mean differences over a class of test functions, and optimal-transport distances measure the cost of moving mass. Total variation belongs to the first two families and Wasserstein-1 to the last two. (Total variation is also a transport cost, the one that charges $1$ for moving mass by any distance at all, which the figure does not draw.) Boxed names are metrics; JS and the squared Hellinger divergence $d_{\mathrm{H}}^2$ are squares of metrics.](../img/mdl-it-divergence-taxonomy.svg)
+:label:`fig_mdl-divergence-taxonomy`
+
+:numref:`tab_mdl-divergence-objectives` lists the objectives that are built
+on these comparisons. Each row names an objective, what it needs from the
+model and the data, and the divergence that it minimizes when its averages are
+taken over the whole distributions and, for the adversarial objectives, the
+critic is the best possible. A critic, as in :numref:`sec_mdl-f-gan-dual`, is
+a function trained on the two samples, in practice a second network. The
+fourth column returns to the test case with which
 :numref:`sec_mdl-divergences-distances` began, the data at a single point,
 $P = \delta_0$, and the model's samples at a point a distance $d$ away,
 $Q = \delta_d$. A comparison that does not change with $d$ gives such a model
@@ -597,37 +644,35 @@ Read from the top, the table is advice, because its rows are ordered by what a
 model can supply. A model whose density can be evaluated, and is positive
 wherever data may fall, should be trained by maximum likelihood: forward KL
 needs nothing but the data, its sample average is unbiased, and it leaves no
-mode of the data uncovered. A model that only produces samples leaves three
-choices. A critic gives an estimate that is biased low and goes flat when the
-samples are far from the data (:numref:`sec_mdl-f-gan-dual`). A fixed kernel
-needs no training and loses its gradient beyond a few length scales. A
-Lipschitz critic is the choice when distance in the space of the data must
-count.
+mode of the data uncovered. A model that only produces samples has three
+choices. A critic trained as in a GAN is the usual one for images
+(:numref:`sec_basic_gan`), where nobody knows in advance which features tell
+the model's samples from the data, and the critic learns them. Its estimate
+of the divergence is biased low and goes flat when the samples are far from
+the data (:numref:`sec_mdl-f-gan-dual`). A 1-Lipschitz critic is the choice
+for a model that starts far away, because $W_1$ keeps its slope at every
+distance (:numref:`sec_gan_objectives` trains with both kinds). A fixed kernel
+needs no second network, and the error of its estimate is of order $N^{-1/2}$
+in any dimension (:numref:`sec_mdl-ipm-mmd`). It suits two-sample tests and
+the evaluation of samples, and it loses its gradient beyond a few length
+scales.
 
 The last three rows are for the cases in which a normalizing constant is
 missing. When it is the target that is known only up to its constant, and the
 model can be sampled and has a density, as in variational inference, reverse
 KL applies, at the risk of settling on one mode. And a model known only
 through its score calls for the Fisher divergence, which leaves the weights of
-distant modes undetermined unless noise is added, as diffusion models do.
-
-:numref:`fig_mdl-divergence-taxonomy` places the ratio, test-function and
-transport families and the members they share. It does not draw the Fisher
-divergence, which belongs to none of the three.
-
-![The ratio, test-function and transport families and their common members. f-divergences average a convex function of the density ratio, integral probability metrics take a supremum of mean differences over a class of test functions, and optimal-transport distances measure the cost of moving mass. Total variation belongs to the first two families and Wasserstein-1 to the last two. (Total variation is also a transport cost, the one that charges $1$ for moving mass by any distance at all, which the figure does not draw.) Boxed names are metrics; JS and the squared Hellinger divergence $d_{\mathrm{H}}^2$ are squares of metrics.](../img/mdl-it-divergence-taxonomy.svg)
-:label:`fig_mdl-divergence-taxonomy`
+distant modes undetermined unless noise is added, as diffusion models do
+(:numref:`sec_diffusion-denoising`).
 
 The table says which comparison an objective makes. It does not say how well
 that comparison can be made from data. Every sample-based number of these
 three sections, the critic bound, $\textrm{MMD}^2$ and $\mathrm{KSD}^2$, is an
 estimate with an error, and the critic bound is biased low besides. The next
-two sections turn from two distributions to two variables:
+two sections turn from two distributions to two variables.
 :numref:`sec_mdl-mutual-information` uses the KL divergence to measure how
 much one variable tells about another, and :numref:`sec_mdl-mi-estimation`
-asks how much of it a sample of $n$ pairs can certify. Without assumptions
-on the distributions, the answer turns out to be a small multiple of
-$\log n$ nats and no more.
+asks how much of it a sample of $n$ pairs can certify.
 
 ## Summary
 
@@ -667,6 +712,25 @@ density, samples, or a score.
        checks the identity only on polynomials up to a fixed degree?
    :exlabel:`ex_mdl-divergences-distances-fisher-stein`
 
+1. **Units and changes of variables.** Let $a > 0$, and write $P_a$ and $Q_a$
+   for the distributions of $aX$ when $X$ is drawn from $P$ and from $Q$.
+    1. Show that $D_{\textrm{KL}}(P_a\|Q_a) = D_{\textrm{KL}}(P\|Q)$ and
+       $D_{\textrm{F}}(P_a\|Q_a) = D_{\textrm{F}}(P\|Q)/a^2$. A set of
+       images is stored once with pixel values between $0$ and $255$ and
+       once with values between $0$ and $1$. By what factor does the Fisher
+       divergence between the data and a model differ in the two units?
+    1. Replace the scaling by a smooth increasing map $y = \phi(x)$ of the
+       line. Show that the two scores at $y$ differ by
+       $\big(s_P(x) - s_Q(x)\big)/\phi'(x)$, although each of them gains a
+       term in $\phi''$. Conclude that the Fisher divergence becomes
+       $\tfrac{1}{2}\, \mathbb{E}_P\big[(s_P - s_Q)^2 / \phi'^2\big]$,
+       while the KL divergence does not change.
+    1. A change of variables can therefore make a Fisher divergence that is
+       not zero as large or as small as we please. For the two mixtures of
+       the text, where on the line would $\phi$ have to be nearly flat to
+       make the difference of the weights visible?
+   :exlabel:`ex_mdl-scores-change-of-variables`
+
 1. [code] **Score blindness to mixing weights.** ● Let
    $P_w = w\, \mathcal{N}(-m, 1) + (1 - w)\, \mathcal{N}(m, 1)$.
     1. The text computes $D_{\textrm{F}}(P_{0.7}\|P_{0.3})$ and
@@ -688,8 +752,10 @@ density, samples, or a score.
        mixtures, so that each component becomes
        $\mathcal{N}(\pm m, 1 + \sigma^2)$. Repeat (a) at $m = 5$ for
        $\sigma \in \{0, 0.5, 1, 2\}$. How does the noise change the two
-       divergences? Relate the result to the noise-perturbed score models
-       of :citet:`song2019generative`.
+       divergences? Heavy noise shows the weights and blurs the shape of
+       each mode, and light noise does the opposite. Why would a model that
+       matches scores at several noise levels recover both
+       :cite:`song2019generative`?
     1. Write $P_t$ and $Q_t$ for two distributions after independent
        $\mathcal{N}(0, t)$ noise has been added to both. For two Gaussians
        of equal variance $\sigma^2$, which the noise raises to
@@ -706,11 +772,33 @@ density, samples, or a score.
        :eqref:`eq_mdl-ksd-score-diff` for the two mixtures by quadrature on a
        grid, with the RBF kernel at $\ell = 1$ and $m \in \{1, 3, 5\}$, and
        compare with the Fisher divergences of the text (at $m = 5$ you
-       should find about $10^{-11}$). Where must both points of a pair fall
+       should find about $10^{-11}$). The function `ksd2_population` of the
+       text is the pattern; it is written for the data $\mathcal{N}(0, 1)$,
+       and here the data are $P_{0.7}$. Where must both points of a pair fall
        to contribute, and how wide is that region compared with $\ell$?
        Conclude that $\mathrm{KSD}^2$ decays like $e^{-m^2}$. Would a
        smaller length scale help?
    :exlabel:`ex_mdl-divergences-distances-score-blindness`
+
+1. **Two separate regions.** Let $p_0(x) = 30\, x^2 (1 - x)^2$ for
+   $0 < x < 1$ and $p_0(x) = 0$ elsewhere, and let $P_w$ have the density
+   $w\, p_0(x) + (1 - w)\, p_0(x - 2)$: two humps of the same shape with a
+   gap between them.
+    1. Show that the score of $P_w$ does not depend on $w$ at any point
+       where the density is positive. Conclude that
+       $D_{\textrm{F}}(P_{0.7}\|P_{0.3}) = 0$, and compute
+       $D_{\textrm{KL}}(P_{0.7}\|P_{0.3})$.
+    1. Which step fails in the argument of the text that the Fisher
+       divergence is zero only for $P = Q$? How is this example related to
+       the two Gaussian mixtures of the text as $m$ grows?
+    1. Let $P_w$ be the data, and fit the weight $v$ of a model $P_v$ by
+       score matching. What does the objective
+       :eqref:`eq_mdl-score-matching-line` say about $v$?
+    1. Evaluate :eqref:`eq_mdl-ksd-score-diff` for $P_{0.7}$ and $P_{0.3}$.
+       The text states that $\mathrm{KSD}^2 = 0$ only for $P = Q$, under
+       conditions that it does not spell out. Name one condition that the
+       statement must contain.
+   :exlabel:`ex_mdl-scores-separate-regions`
 
 1. **Score matching for a Gaussian model.** Let the data distribution $P$
    have mean $a$ and variance $v$, take the model
@@ -758,22 +846,29 @@ density, samples, or a score.
        $\theta = 1$, compute both estimates, and repeat $2{,}000$ times.
        Which estimate has the smaller standard deviation, and by what
        factor? What does score matching give up for not needing $Z$?
+    1. Now let the data be standard normal, as in the experiment on the
+       KSD, so that no quartic is right. On a large sample the two estimates
+       of (b) approach $3\, \mathbb{E}[X^2]/\mathbb{E}[X^6] = \tfrac{1}{5}$
+       and $1/\mathbb{E}[X^4] = \tfrac{1}{3}$. Evaluate `ksd2_population`
+       at the scores of both fits, and find the $\theta$ at which it is
+       smallest. Three criteria have chosen three different quartics. Why is
+       this no contradiction, and when would the three agree?
    :exlabel:`ex_mdl-scores-unnormalized-quartic`
 
 1. [code] **A polynomial Stein kernel.** Let the model be
    $Q = \mathcal{N}(0, 1)$ and take the kernel
-   $k(x, x') = \sum_{j=0}^{J} x^j x'^j$, whose features are the monomials
-   $1, x, \ldots, x^J$.
+   $k(x, x') = \sum_{j=0}^{M} x^j x'^j$, whose features are the monomials
+   $1, x, \ldots, x^M$.
     1. Show that
-       $\mathrm{KSD}^2(P, Q) = \sum_{j=0}^{J} \big(\mathbb{E}_P[j X^{j-1} - X^{j+1}]\big)^2$,
+       $\mathrm{KSD}^2(P, Q) = \sum_{j=0}^{M} \big(\mathbb{E}_P[j X^{j-1} - X^{j+1}]\big)^2$,
        a sum of squared averages of the kind that the experiment on Stein's
-       identity prints, one for each monomial. Evaluate it for $J = 1$ on
+       identity prints, one for each monomial. Evaluate it for $M = 1$ on
        $P = \mathcal{N}(0.5, 1)$ and on $P = \mathcal{N}(0, 4)$, and compare
        with the first two columns of that experiment's output.
     1. Let $P(X = 1) = P(X = -1) = \tfrac{1}{2}$, as in Exercise
        :exref:`ex_mdl-divergences-distances-fisher-stein`c. Show that
-       $\mathrm{KSD}^2(P, Q) = 0$ for $J \leq 2$ and that it is $4$ for
-       $J = 3$. Why can a kernel with finitely many features not have the
+       $\mathrm{KSD}^2(P, Q) = 0$ for $M \leq 2$ and that it is $4$ for
+       $M = 3$. Why can a kernel with finitely many features not have the
        property that $\mathrm{KSD}^2 = 0$ only for $P = Q$?
     1. The Stein kernel :eqref:`eq_mdl-stein-kernel` needs no density of
        $P$. For the RBF kernel with $\ell = 1$ and the two-point
@@ -784,6 +879,26 @@ density, samples, or a score.
        kernel (:numref:`sec_mdl-ipm-mmd`) detect what the monomials up to
        degree $2$ miss?
    :exlabel:`ex_mdl-scores-polynomial-stein-kernel`
+
+1. [code] **The length scale of the Stein kernel.** Let the data be
+   $P = \mathcal{N}(0, 1)$, as in the experiment of the text, and use the
+   RBF kernel with length scale $\ell$.
+    1. For the model $\mathcal{N}(\mu, 1)$, show from
+       :eqref:`eq_mdl-ksd-score-diff` that
+       $\mathrm{KSD}^2 = \mu^2\, (1 + 2/\ell^2)^{-1/2}$. What is its limit
+       as $\ell \to \infty$? Which single test function $g$ gives the same
+       number as the square of its average $\mathbb{E}_P[g' + g\, s_Q]$?
+    1. For the model $\mathcal{N}(0, 4)$, whose score is $-x/4$, show that
+       $\mathrm{KSD}^2 = \tfrac{9}{16}\, \ell\, (\ell^2 + 2)^{-3/2}$.
+       (Write $X X'$ in terms of the independent variables $X + X'$ and
+       $X - X'$.) Show that the value is largest at $\ell = 1$, the standard
+       deviation of the data, and that it tends to zero as
+       $\ell \to \infty$. Explain the limit with the answer to (a).
+    1. Check both formulas with `ksd2_population` at
+       $\ell \in \{0.25, 1, 4, 16\}$, and compute the same four values for
+       the quartic, whose score is $-x^3$. Why can no length scale be the
+       best one against every wrong model?
+   :exlabel:`ex_mdl-scores-ksd-length-scale`
 
 <!-- Discussions: forum topic to be created at deploy -->
 
@@ -806,7 +921,7 @@ $$q(\mathbf x)=\tilde q(\mathbf x)/Z,\qquad\tilde q=e^{-E},\qquad Z=\int\tilde q
 
 - For a $28\times28$ image, $Z$ is an integral over $784$ dimensions.
 - Likelihood: needs $q$, hence $Z$.
-- Critics, MMD, $W_1$: need samples of the model, each the end of a long random walk toward low energy.
+- Comparing samples instead, by a critic (a second network trained to tell them apart), by kernel means (MMD) or by transport cost ($W_1$): needs samples of the model, each the end of a long random walk toward low energy.
 
 ::: {.d2l-note .warn}
 What is left to compare when $Z$ is unknown?
@@ -822,7 +937,7 @@ What is left to compare when $Z$ is unknown?
 - test a sample against a model that is known only through its score;
 - choose a training objective from what the model can supply.
 
-**Running examples:** $P_w=w\,\mathcal N(-m,1)+(1-w)\,\mathcal N(m,1)$ at $w=0.7$ against $w=0.3$; the model $\mathcal N(0,1)$ against shifted and widened samples.
+**Running examples:** $P_w=w\,\mathcal N(-m,1)+(1-w)\,\mathcal N(m,1)$ at $w=0.7$ against $w=0.3$; the model $\mathcal N(0,1)$ against shifted and widened samples; the unnormalized quartic $e^{-x^4/4}$.
 
 **The idea:** compare slopes of log-densities. A constant has no slope.
 :::
@@ -875,11 +990,12 @@ What is left to compare when $Z$ is unknown?
 $$D_{\mathrm F}(P\Vert Q)=\tfrac12\,\mathbb{E}_{\mathbf x\sim P}\big\Vert s_P(\mathbf x)-s_Q(\mathbf x)\big\Vert^2$$
 
 - Averaged where the data are, and nowhere else.
+- Zero only for $P=Q$, if both densities are positive on one connected region.
 - Two Gaussians, variance $\sigma^2$, means $\Delta$ apart: the scores differ by $\Delta/\sigma^2$.
 - $D_{\mathrm F}=\dfrac{\Delta^2}{2\sigma^4}$, where $D_{\textrm{KL}}=\dfrac{\Delta^2}{2\sigma^2}$.
 
 ::: {.d2l-note}
-Not in nats: the unit is $1/x^2$. Zero only for $P=Q$ when both densities are positive on one connected region.
+Not in nats: the unit is $1/x^2$, so the value changes with the units of the data.
 :::
 :::
 
@@ -906,35 +1022,75 @@ $P_w=w\,\mathcal N(-m,1)+(1-w)\,\mathcal N(m,1)$, with $w=0.7$ against $w=0.3$. 
 
 $$s_w(x)=-x+m\tanh(mx-c_w),\qquad c_w=\tfrac12\log\tfrac w{1-w}.$$
 
-- The weight only moves the hand-over between the two springs: $x=\pm0.085$ at $m=5$, where the density is $e^{-m^2/2}/\sqrt{2\pi}\approx1.5\times10^{-6}$.
+- The weight only moves the hand-over between the two springs: $x=\pm0.085$ at $m=5$, in the valley between the modes, where the density is $1.5\times10^{-6}$.
 
 @!mdl-divergences-distances-the-score-and-the-fisher-divergence-1
 
 ::: {.d2l-note .warn}
-KL settles at $0.7\log\tfrac73+0.3\log\tfrac37=0.339$ nats. Noise added to the data fills the valley.
+At $m=5$: KL $0.339$ nats, Fisher $4\times10^{-6}$.
+:::
+:::
+
+::: {.slide title="Noise Fills the Valley Where the Two Scores Disagree"}
+[A remedy]{.kicker}
+
+Add independent Gaussian noise of standard deviation $2$ to both mixtures at $m=5$.
+
+| | clean | with noise |
+|:--|:--|:--|
+| variance of each mode | $1$ | $1+4=5$ |
+| distance between the modes | $10$ standard deviations | $10/\sqrt5\approx4.5$ |
+| density in the valley | $1.5\times10^{-6}$ | $0.015$ |
+
+- The data now visit the place where the two scores differ, and the weights show in the average.
+
+::: {.d2l-note}
+One reason why diffusion models add noise at many scales before they match scores.
+:::
+:::
+
+::: {.slide title="Every Smooth Density Satisfies Stein's Identity with Its Own Score"}
+[Stein's identity]{.kicker}
+
+A density $p>0$ on the line with score $s=p'/p$, and a test function $g$ with $g\,p\to0$ at $\pm\infty$.
+
+**I.** $p'=s\,p$.
+
+. . .
+
+**II.** By parts: $\int g'p\,dx=[g\,p]_{-\infty}^{\infty}-\int g\,p'\,dx=-\int g\,s\,p\,dx$.
+
+. . .
+
+**III.** $\;\boxed{\mathbb{E}_p[g'+g\,s]=0}$
+
+- $\mathcal N(0,1)$, $s=-x$: $\ \mathbb{E}[g'(X)]=\mathbb{E}[X\,g(X)]$. With $g=x$: $\mathbb{E}[X^2]=1$.
+
+::: {.d2l-note}
+A known slope becomes a statement about averages, and samples estimate averages.
 :::
 :::
 
 ::: {.slide title="One Integration by Parts Removes the Score of the Data"}
-[Stein's identity]{.kicker}
+[Score matching]{.kicker}
 
-**I.** Any density $p$ with score $s=p'/p$, test function $g$: $\int g'p\,dx=[g\,p]_{-\infty}^{\infty}-\int g\,s\,p\,dx$, so $\;\boxed{\mathbb{E}_p[g'+g\,s]=0}$
+Data are points, and a finite set of points has no slope: $s_P$ is unknown.
 
-. . .
-
-**II.** On the line, $D_{\mathrm F}=\tfrac12\mathbb{E}_P[s_P^2]-\mathbb{E}_P[s_Q\,s_P]+\tfrac12\mathbb{E}_P[s_Q^2]$, and $s_P$ is unknown.
+**I.** On the line, $D_{\mathrm F}=\tfrac12\mathbb{E}_P[s_P^2]-\mathbb{E}_P[s_Q\,s_P]+\tfrac12\mathbb{E}_P[s_Q^2]$. The first term is the same for every model. The cross term is the obstacle.
 
 . . .
 
-**III.** The identity for the data, with $s=s_P$ and $g=s_Q$, gives $\mathbb{E}_P[s_Q\,s_P]=-\mathbb{E}_P[s_Q']$:
+**II.** Stein's identity for the data, with $s=s_P$ and $g=s_Q$: $\ \mathbb{E}_P[s_Q\,s_P]=-\mathbb{E}_P[s_Q']$.
 
-$$D_{\mathrm F}(P\Vert Q)=\mathbb{E}_P\big[\tfrac12s_Q^2+s_Q'\big]+\textrm{const}$$
+. . .
+
+**III.** $\;\boxed{D_{\mathrm F}(P\Vert Q)=\mathbb{E}_P\big[\tfrac12s_Q^2+s_Q'\big]+\textrm{const}}$
 
 ::: {.d2l-note}
 Score matching: an average over data of what the model supplies. No $Z$, no $s_P$.
 :::
 
-[Assumes smooth positive densities and $g\,p\to0$ at $\pm\infty$.]{.small}
+[Assumes that the data have a smooth positive density.]{.small}
 :::
 
 ::: {.slide title="Score Matching Fits a Quartic from Two Moments of the Data"}
@@ -977,34 +1133,53 @@ $g=1$ misses a sample with four times the model's variance.
 ::: {.slide title="The Largest Violation over a Kernel Ball Has a Closed Form"}
 [Kernel Stein discrepancy]{.kicker}
 
-- Test functions $g=\langle\mathbf w,\boldsymbol\varphi\rangle$, $\Vert\mathbf w\Vert\le1$; kernel $k(x,x')=\langle\boldsymbol\varphi(x),\boldsymbol\varphi(x')\rangle$.
+- Test functions $g=\langle\mathbf w,\boldsymbol\varphi\rangle$ with a feature vector $\boldsymbol\varphi(x)$ and $\Vert\mathbf w\Vert\le1$; kernel $k(x,x')=\langle\boldsymbol\varphi(x),\boldsymbol\varphi(x')\rangle$.
 - $\sup_g\mathbb{E}_P[g'+s_Q\,g]=\big\Vert\mathbb{E}_P[\boldsymbol\varphi'+s_Q\,\boldsymbol\varphi]\big\Vert$, and its square is
 
 $$\mathrm{KSD}^2(P,Q)=\mathbb{E}_{x,x'\sim P}\big[k_Q(x,x')\big]$$
 
 $$k_Q(x,x')=s_Q(x)\,s_Q(x')\,k+s_Q(x)\,\partial_{x'}k+\partial_xk\,s_Q(x')+\partial_x\partial_{x'}k$$
 
-- Also $\mathrm{KSD}^2=\mathbb{E}\big[(s_Q-s_P)(x)\,k(x,x')\,(s_Q-s_P)(x')\big]$: a kernel-smoothed Fisher divergence.
+- From points $x_1,\ldots,x_N$ of the data: the average of $k_Q(x_i,x_j)$ over all pairs $i\ne j$.
 
 ::: {.d2l-note}
 Needs the model's score and data samples. No $Z$, no samples of the model.
 :::
 :::
 
-::: {.slide title="KSD Tells the Wrong Model from the Right One by Its Score Alone"}
+::: {.slide title="Check: Predict the KSD of a Shifted Model"}
+[Check]{.kicker}
+
+Stein's identity for the data turns the KSD into a kernel-smoothed Fisher divergence:
+
+$$\mathrm{KSD}^2(P,Q)=\mathbb{E}_{x,x'\sim P}\big[(s_Q-s_P)(x)\,k(x,x')\,(s_Q-s_P)(x')\big]$$
+
+Data $\mathcal N(0,1)$, model $\mathcal N(1,1)$, kernel $k=e^{-(x-x')^2/2}$. What is $\mathrm{KSD}^2$?
+
+[Hint: $\mathbb{E}\,e^{-D^2/2}=(1+\tau^2)^{-1/2}$ for $D\sim\mathcal N(0,\tau^2)$.]{.small}
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The score gap is $-(x-1)+x=1$ everywhere, so $\mathrm{KSD}^2=\mathbb{E}[k(X,X')]$. With $X-X'\sim\mathcal N(0,2)$: $\mathrm{KSD}^2=1/\sqrt3\approx0.577$.
+:::
+:::
+:::
+
+::: {.slide title="KSD Tells Wrong Models from the Right One by Their Scores Alone"}
 [Kernel Stein discrepancy]{.kicker}
 
-Data: $2{,}000$ points from $\mathcal N(0,1)$. RBF kernel, length scale $1$.
+One sample of $2{,}000$ points from $\mathcal N(0,1)$, tested against three scores; RBF kernel, length scale $1$. In parentheses: the value for infinitely many points.
 
-- Wrong model $\mathcal N(1,1)$: the score gap is $1$ everywhere, so $\mathrm{KSD}^2=\mathbb{E}[k(X,X')]=1/\sqrt3\approx0.577$.
-- Right model $\mathcal N(0,1)$: $\mathrm{KSD}^2=0$.
-- Gaussians only so that the value can be predicted: the score $-x^3$ would test the quartic.
+- $-x$: the true model. $-(x-1)$: the wrong model $\mathcal N(1,1)$, predicted $1/\sqrt3$.
+- $-x^3$: the quartic $e^{-x^4/4}$, whose $Z$ is never computed.
 
 @!divergences-distances-ksd
 
 ::: {.d2l-note}
-Between the two lines only the score function changed. Neither model was sampled.
+Between the three lines only the score function changed. No model was sampled.
 :::
+
+[Used to test goodness of fit and to check samplers. No training objective in the book uses it.]{.small}
 :::
 
 ::: {.slide title="Check: Which Comparisons Survive an Unknown Normalizer?"}
@@ -1036,10 +1211,8 @@ data to the model, the likelihood, needs $Z$.
 | a score | score matching, diffusion | Fisher | blind to weights of far modes |
 
 ::: {.d2l-note}
-On two point masses a distance $d$ apart, only $W_1=d$ and, up to a few length scales, MMD still change with $d$.
+A density: maximum likelihood. Samples only: a critic or a kernel. A score only: score matching.
 :::
-
-[A critic is a second network trained to tell the two samples apart.]{.small}
 :::
 
 ::: {.slide title="Recap: Slopes Compare What Densities Cannot"}
@@ -1048,8 +1221,8 @@ On two point masses a distance $d$ apart, only $W_1=d$ and, up to a few length s
 - **Score:** $\nabla_{\mathbf x}\log\tilde q$; the constant $Z$ drops out.
 - **Fisher:** $\tfrac12\mathbb{E}_P\Vert s_P-s_Q\Vert^2$; Gaussians $\Delta^2/(2\sigma^4)$.
 - **Blind spot:** at $m=5$, KL $0.339$ nats against Fisher $4\times10^{-6}$.
-- **Stein:** $\mathbb{E}_Q[g'+g\,s_Q]=0$ removes the data score and tests a sample: $-0.5$ on a shift, $-3$ on a wide sample.
-- **KSD:** $1/\sqrt3$ for the wrong model, $0$ for the right one, no sampling.
+- **Stein:** $\mathbb{E}_p[g'+g\,s]=0$. For the data it removes $s_P$; for the model it tests a sample: $-0.5$ on a shift, $-3$ on a wide sample.
+- **KSD:** $0$ for the right model, $1/\sqrt3$ for the shifted one, $0.32$ for the quartic; no sampling, no $Z$.
 
 ::: {.d2l-note}
 Next: how much does one variable tell about another, and how much of it can $n$ samples certify?

@@ -6800,6 +6800,116 @@ d2l.DATA_HUB['simlex999'] = (
     'train-00000-of-00001.parquet',
     'f3b074e2e08f83aa469f2d05c5b789b5ad2d3c49')
 
+def cooccurrence_counts(corpus, vocab_size, window=5, weighting='uniform'):
+    """Word-context counts within `window` positions as a symmetric
+    scipy.sparse.csr_matrix (float64). `corpus` is a 1-D array of word ids
+    with -1 at sentence breaks, which no pair crosses; `weighting` is
+    'uniform' (each pair counts 1) or 'harmonic' (1/distance).
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    import scipy.sparse
+    if weighting not in ('uniform', 'harmonic'):
+        raise ValueError(f'unknown weighting {weighting!r}')
+    corpus = np.asarray(corpus)
+    sentence = np.cumsum(corpus < 0)  # the sentence of each position
+    X = scipy.sparse.csr_matrix((vocab_size, vocab_size))
+    for d in range(1, window + 1):  # all pairs at distance d
+        a, b = corpus[:-d], corpus[d:]
+        ok = (a >= 0) & (b >= 0) & (sentence[:-d] == sentence[d:])
+        a, b = a[ok], b[ok]
+        w = 1.0 if weighting == 'uniform' else 1.0 / d
+        X = X + scipy.sparse.csr_matrix(  # duplicate entries are summed
+            (np.full(2 * len(a), w), (np.r_[a, b], np.r_[b, a])),
+            shape=(vocab_size, vocab_size))
+    return X
+
+SpearmanResult = collections.namedtuple(
+    'SpearmanResult', 'rho ci n_covered n_total cosines')
+
+def spearman_eval(embeddings, vocab, pairs, n_boot=2000, seed=0):
+    """Spearman correlation between the cosine similarities of embeddings
+    and the human scores of `pairs` (a DataFrame with columns word1, word2,
+    score), on the pairs whose two words `vocab` (a d2l.Vocab or a
+    TokenEmbedding) holds; `ci` is the 95% percentile interval of n_boot
+    resamples of those pairs (nan for n_boot=0), `cosines` their cosines.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    from scipy.stats import rankdata
+    idx = vocab.token_to_idx
+    covered = [w1 in idx and w2 in idx
+               for w1, w2 in zip(pairs.word1, pairs.word2)]
+    p = pairs[covered]
+    Z = F.normalize(torch.as_tensor(embeddings).float(), dim=1)
+    i = torch.tensor([idx[w] for w in p.word1], dtype=torch.long)
+    j = torch.tensor([idx[w] for w in p.word2], dtype=torch.long)
+    cos = (Z[i] * Z[j]).sum(1).double().numpy()
+    human = p.score.to_numpy(np.float64)
+
+    def rho(a, b):  # Pearson correlation of the ranks, along the last axis
+        a, b = rankdata(a, axis=-1), rankdata(b, axis=-1)
+        a, b = a - a.mean(-1, keepdims=True), b - b.mean(-1, keepdims=True)
+        return (a * b).sum(-1) / np.sqrt((a * a).sum(-1) * (b * b).sum(-1))
+
+    ci = (math.nan, math.nan)
+    if n_boot:
+        b = np.random.default_rng(seed).integers(0, len(p), (n_boot, len(p)))
+        ci = tuple(np.quantile(rho(cos[b], human[b]), [0.025, 0.975]))
+    return SpearmanResult(float(rho(cos, human)), tuple(map(float, ci)),
+                          len(p), len(pairs), cos)
+
+def sgns_loss(v, u, centers, contexts_negatives, labels, masks):
+    """Skip-gram with negative sampling: the binary cross-entropy of the
+    scores u_o^T v_w of each center (centers, shape (B,)) with its context
+    and noise words (contexts_negatives, (B, L)), labels 1 for a context
+    word and 0 for a noise word, averaged over the slots where masks is 1.
+    v and u are the center and the context tables (nn.Embedding).
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    scores = torch.einsum('bd,bld->bl', v(centers), u(contexts_negatives))
+    loss = F.binary_cross_entropy_with_logits(
+        scores, labels.float(), weight=masks.float(), reduction='sum')
+    return loss / masks.sum()
+
+def ppmi(counts, alpha=1.0, shift=0.0):
+    """Positive (shifted) PMI of a count matrix as a scipy.sparse.csr_matrix:
+    max(log(p(w, o) / (p(w) p_alpha(o))) - shift, 0), where p_alpha(o) is
+    proportional to n(o)^alpha over the contexts that occur.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    import scipy.sparse
+    C = scipy.sparse.coo_matrix(counts)
+    total = C.sum()
+    p_w = np.asarray(C.sum(1)).ravel() / total
+    n_o = np.asarray(C.sum(0)).ravel()
+    p_o = np.where(n_o > 0, n_o ** alpha, 0.0)
+    p_o = p_o / p_o.sum()
+    pmi = (np.log(C.data / total) - np.log(p_w[C.row])
+           - np.log(p_o[C.col]) - shift)
+    keep = pmi > 0
+    return scipy.sparse.csr_matrix(
+        (pmi[keep], (C.row[keep], C.col[keep])), shape=C.shape)
+
+def nearest_neighbors(E, vocab, word, k=5, exclude_self=True):
+    """The k rows of E nearest to word's row in cosine, as a list of
+    (token, cosine). vocab is a d2l.Vocab or a TokenEmbedding (whose
+    unknown token at index 0 is never returned), or a Hugging Face
+    tokenizer, for which word must be a single token.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    if hasattr(vocab, 'token_to_idx'):
+        i, skip = vocab.token_to_idx[word], [0]
+        name = lambda j: vocab.idx_to_token[j]
+    else:
+        ids = vocab.encode(word, add_special_tokens=False)
+        if len(ids) != 1:
+            raise ValueError(f'{word!r} is {len(ids)} tokens, not one')
+        i, skip, name = ids[0], [], lambda j: vocab.decode([j])
+    Z = F.normalize(torch.as_tensor(E)[:len(vocab)].float(), dim=1)
+    cos = Z @ Z[i]
+    cos[skip + ([i] if exclude_self else [])] = -math.inf
+    top = torch.topk(cos, k)
+    return [(name(int(j)), float(c)) for c, j in zip(top.values, top.indices)]
+
 HF_ENCODER_REVISIONS = {
     'answerdotai/ModernBERT-base': '8949b909ec900327062f0ebf497f51aef5e6f0c8'}
 

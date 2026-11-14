@@ -151,6 +151,55 @@ estimate is about $(b - 1)^2/(2n)$ on average from $n$ samples, not zero
 either variable changes the estimate, although it leaves the information
 unchanged.
 
+<!-- WRITER: this cell and the next moved here from the Mutual Information
+section (its histogram narration is cut there). They need a lead-in sentence
+each and a reading after the output. Ranges below are over 15 development
+runs (3 NumPy probes + 3 runs of each of the four tabs). Table: 200,000
+samples, equal-width bins, b = 10 / 40 / 160: rho 0: 0.000 / 0.003 /
+0.033-0.038; rho 0.9: 0.60-0.64 / 0.81-0.82 / 0.842-0.853 (truth 0.830);
+rho 0.99: 1.00-1.14 / 1.75-1.81 / 1.945-1.957 (truth 1.959); parabola
+Y = X^2 + 0.3 eps: 0.41-0.57 / 0.94-1.01 / 1.127-1.137 (truth 1.141). So
+the "(b - 1)^2/(2n) on average" sentence above does not match the printed
+b = 160 value: (b-1)^2/(2n) = 0.063, printed 0.033-0.038 (equal-width bins
+leave the tail cells nearly empty; rank bins would give 0.065). Quote "a few
+hundredths of a nat" and leave the prediction to the exercise. At b = 160
+the upward bias and the lost ridge partly cancel at rho = 0.99: do not read
+that row as "fine bins are right". Second cell, rho = 0.9, b = 40:
+correlation 0.900 -> 0.694-0.700 under x -> x^3; raw estimate 0.81-0.82 ->
+0.38-0.51; the rank estimate (0.813-0.819) is identical for x and x^3 in
+every run; truth 0.830 printed. -->
+
+```{.python .input #mutual-information-gaussian-binned}
+def binned_mi(x, y, bins):
+    """Plug-in MI of the bins x bins histogram of (x, y), in nats."""
+    p = np.histogram2d(x, y, bins=bins)[0] / len(x)       # cell frequencies
+    q = p.sum(axis=1, keepdims=True) * p.sum(axis=0, keepdims=True)
+    nz = p > 0                                            # occupied cells
+    return float((p[nz] * np.log(p[nz] / q[nz])).sum())
+
+n = 200_000
+x = rng.standard_normal(n)
+pairs = {'rho = 0': (gauss_pair(rng, 0.0, n), 0.0),
+         'rho = 0.9': (gauss_pair(rng, 0.9, n), mi_gauss(0.9)),
+         'rho = 0.99': (gauss_pair(rng, 0.99, n), mi_gauss(0.99)),
+         # I(X; X^2 + 0.3 eps) by quadrature, sec_mdl-mi-nonlinear-correlation
+         'parabola': ((x, x**2 + 0.3 * rng.standard_normal(n)), 1.141)}
+print('pair        truth  b = 10  b = 40  b = 160')
+for name, ((u, v), truth) in pairs.items():
+    print(f'{name:10}  {truth:5.3f}'
+          + ''.join(f'  {binned_mi(u, v, b):6.3f}' for b in (10, 40, 160)))
+```
+
+```{.python .input #mdl-mutual-information-mutual-information-as-nonlinear-correlation-2}
+x, y = gauss_pair(rng, 0.9, n)
+rank = lambda a: np.argsort(np.argsort(a))       # position in sorted order
+print(f'true I = {mi_gauss(0.9):.3f} nats; histograms with b = 40:')
+for name, u in (('x', x), ('x**3', x**3)):
+    print(f'{name:4}: correlation {np.corrcoef(u, y)[0, 1]:.3f}, '
+          f'raw {binned_mi(u, y, 40):.3f}, '
+          f'ranks {binned_mi(rank(u), rank(y), 40):.3f} nats')
+```
+
 In more dimensions the histogram fails outright. With $b$ bins per axis, a
 histogram over a $d$-dimensional space has $b^d$ cells. At $d = 10$ and
 $b = 10$ that is $10^{10}$ cells, nearly all empty for any sample we can
@@ -199,16 +248,20 @@ joint distance is their elementwise maximum, because the largest coordinate
 difference of $(x, y)$ is the larger of the two largest differences.
 
 ```{.python .input #mdl-mutual-information-the-curse-of-estimation}
-def ksg_mi(x, y, m=5):
-    """KSG nearest-neighbor estimate of I(X;Y) in nats; x, y are (n, d)."""
-    n = len(x)
+def ksg_counts(x, y, m=5):
+    """Strip counts n_x, n_y of every sample point; x, y are (n, d)."""
     dx, dy = cdist(x, x, 'chebyshev'), cdist(y, y, 'chebyshev')
     d = np.maximum(dx, dy)                       # joint Chebyshev distance
     np.fill_diagonal(d, np.inf)
-    r = np.sort(d, axis=1)[:, m - 1]             # half-width: m-th neighbor
+    r = np.partition(d, m - 1, axis=1)[:, m - 1]  # half-width: m-th neighbor
     n_x = (dx < r[:, None]).sum(axis=1) - 1      # strict, self excluded
     n_y = (dy < r[:, None]).sum(axis=1) - 1
-    return float(digamma(m) + digamma(n)
+    return n_x, n_y
+
+def ksg_mi(x, y, m=5):
+    """KSG nearest-neighbor estimate of I(X;Y) in nats; x, y are (n, d)."""
+    n_x, n_y = ksg_counts(x, y, m)
+    return float(digamma(m) + digamma(len(x))
                  - (digamma(n_x + 1) + digamma(n_y + 1)).mean())
 ```
 
@@ -258,10 +311,12 @@ the ceiling.
 
 ```{.python .input #mdl-mi-estimation-ksg-in-dimension}
 n, rho = 2000, 0.9
-for dim in (1, 4, 16):
+print(' d  true I    KSG  mean strip count')
+for dim in (1, 2, 4, 8, 16):
     x, y = gauss_pair(rng, rho, (n, dim))        # dim independent pairs
-    print(f'd = {dim:2d}: true I = {dim * mi_gauss(rho):6.2f}, '
-          f'KSG = {ksg_mi(x, y):5.2f} nats')
+    n_x, n_y = ksg_counts(x, y)
+    print(f'{dim:2d}  {dim * mi_gauss(rho):6.2f}  {ksg_mi(x, y):5.2f}  '
+          f'{(n_x.mean() + n_y.mean()) / 2:16.1f}')
 x = rng.standard_normal((n, 1))
 print(f'Y = X:  KSG = {ksg_mi(x, x):.2f}, '
       f'ceiling psi(n) - psi(m) = {digamma(n) - digamma(5):.2f} nats')
@@ -272,6 +327,17 @@ it reports about $2.5$ for $3.3$, almost a nat low. At $d = 16$ it reports
 $2.8$ for $13.3$, less than half of its $6.1$-nat ceiling. The estimator has
 saturated: the truth quadrupled between the last two rows and the output
 barely moved.
+
+<!-- WRITER: the cell now has rows d = 1, 2, 4, 8, 16 and prints the mean
+strip count (average of n_x and n_y over the sample). Ranges over 15
+development runs (3 NumPy probes + 3 runs of each tab): KSG 0.83-0.88 /
+1.59-1.70 / 2.46-2.60 / 2.79-2.93 / 2.76-2.81 for truth 0.83 / 1.66 / 3.32 /
+6.64 / 13.29; mean strip count 69.5-71.6 / 48.1-50.9 / 29.9-32.1 /
+24.6-26.4 / 25.8-26.7. So d = 2 is still accurate, the saturation is
+complete by d = 8, and "(the cell does not print them; ... computes them)"
+below is now false. The counting is split into `ksg_counts` (strip counts)
+and `ksg_mi` (estimate from them); the description before the KSG cell still
+holds. -->
 
 The strip counts show the saturation directly. They hold about $70$ of the
 $2{,}000$ points at $d = 1$, about $31$ at $d = 4$ and about $26$ at
@@ -617,14 +683,27 @@ def exact_scores(x, y, rho):
 true_mi = np.array([0.25, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7])
 rhos = np.sqrt(1 - np.exp(-2 * true_mi))                 # invert mi_gauss
 Ns = (16, 128, 1024)
-ests = [[np.mean([infonce_bound(exact_scores(*gauss_pair(rng, r, N), r))
-                  for _ in range(200 if N <= 128 else 50)]) for r in rhos]
-        for N in Ns]
-d2l.plot(true_mi, ests + [true_mi] + [[np.log(N)] * len(true_mi) for N in Ns],
-         'true I(X;Y) (nats)', 'InfoNCE estimate (nats)',
-         legend=[f'N = {N}' for N in Ns] + ['truth'],
-         fmts=('-', '-', '-', 'k--', 'k:', 'k:', 'k:'), figsize=(5, 3))
+ests = np.array([[np.mean([infonce_bound(exact_scores(*gauss_pair(rng, r, N), r))
+                            for _ in range(200 if N <= 128 else 50)])
+                  for r in rhos] for N in Ns])              # (N, level)
+ceilings = [[np.log(N)] * len(true_mi) for N in Ns]
+d2l.plot(true_mi, [*ests, true_mi, *ceilings], 'true I(X;Y) (nats)',
+         'InfoNCE estimate (nats)',
+         legend=[f'N = {N}' for N in Ns] + ['truth'] + [f'ln {N}' for N in Ns],
+         fmts=('C0-', 'C1-', 'C2-', 'k--', 'C0:', 'C1:', 'C2:'),
+         figsize=(5.5, 3), legend_loc='outside')
+for I in (1, 4, 7):
+    k = list(true_mi).index(I)
+    print(f'I = {I}:  ' + '   '.join(f'N = {N}: {e:.2f}'
+                                     for N, e in zip(Ns, ests[:, k])))
 ```
+
+<!-- WRITER: the cell now prints the estimates at I = 1, 4, 7 for the three
+N under its plot; the dotted ceilings take their curve's colour and the
+legend sits beside the axes. Ranges over 15 development runs, N = 16 / 128 /
+1024: I = 1: 0.88-0.91 / 0.98-0.99 / 0.99-1.00; I = 4: 2.52-2.57 /
+3.67-3.69 / 3.94-3.96; I = 7: 2.76-2.77 / 4.75-4.76 / 6.31-6.32. The 3.7 and
+6.3 below are the printed values. -->
 
 The guess is wrong. Each curve leaves the diagonal early and smoothly, not
 at its ceiling. At $I = 4$ the $N = 128$ curve reads about $3.7$, although
@@ -673,6 +752,18 @@ quartiles of the batch values, which describe heavy tails better than a
 standard deviation does, and the mean for NWJ. The plot shows the medians
 as solid lines and the quartiles as dotted lines of the same colour.
 
+<!-- WRITER: the plot now shows only the three medians, the truth (dashed)
+and the ceiling ln N (dotted), legend beside the axes; the quartile lines
+are gone ("quartiles as dotted lines of the same colour" above is false).
+The table gained two columns per level: "<0.1" = share of the 200 batches
+whose mean e^pmi over the 128 mismatched (rolled) pairs is below 0.1,
+">=N" = share holding a mismatched pair with e^pmi >= N. Ranges over 15
+development runs, I = 4 / 5 / 6: "<0.1" 4-11% / 26-36% / 56-66%; ">=N"
+5-8% / 27-40% / 22-30%; for I <= 3 both are 0-3%. So "What the table cannot
+show ..." below is now false: the table shows it. Other columns at I = 6
+(12 notebook runs): NWJ median 6.89-6.94, NWJ mean 5.65-6.05, InfoNCE
+4.60-4.62, DV median 11-17. -->
+
 ```{.python .input #mutual-information-perfect-critic-bounds}
 def quartiles(a):
     """Median and quartiles of a list of batch values, as text."""
@@ -680,27 +771,31 @@ def quartiles(a):
     return f'{med:5.2f} [{q1:5.2f}, {q3:5.2f}]'
 
 N, true_mi = 128, np.array([0.5, 1, 2, 3, 4, 5, 6])
-medians, quarts = [], []
+medians = []
+# Last two columns: share of batches whose mean e^pmi over mismatched pairs
+# is below 0.1, and share holding a mismatched pair with e^pmi >= N.
 print(f'{"I":>3}  {"DV median [IQR]":20}  {"NWJ median [IQR]":20}  '
-      f'{"NWJ mean":>8}  {"InfoNCE median [IQR]":20}')
+      f'{"NWJ mean":>8}  {"InfoNCE median [IQR]":20}  {"<0.1":>4}  {">=N":>4}')
 for I in true_mi:
-    rho, dv, nwj, nce = np.sqrt(1 - np.exp(-2 * I)), [], [], []
+    rho, batches = np.sqrt(1 - np.exp(-2 * I)), []
     for _ in range(200):
         x, y = gauss_pair(rng, rho, N)
         T_joint = 1 + pmi_gauss(x, y, rho)               # T* on true pairs
         T_prod = 1 + pmi_gauss(x, np.roll(y, 1), rho)    # T* on mismatched
-        dv.append(T_joint.mean() - (logsumexp(T_prod) - np.log(N)))
-        nwj.append(T_joint.mean() - np.exp(T_prod - 1).mean())
-        nce.append(infonce_bound(exact_scores(x, y, rho)))
+        e_pmi = np.exp(T_prod - 1)                       # e^pmi, mismatched
+        batches.append((T_joint.mean() - (logsumexp(T_prod) - np.log(N)),  # DV
+                        T_joint.mean() - e_pmi.mean(),                     # NWJ
+                        infonce_bound(exact_scores(x, y, rho)),
+                        e_pmi.mean() < 0.1, e_pmi.max() >= N))
+    dv, nwj, nce, low, rare = np.array(batches).T
     medians.append([np.median(a) for a in (dv, nwj, nce)])
-    quarts.append([np.percentile(a, q) for a in (dv, nwj, nce) for q in (25, 75)])
-    print(f'{I:3.1f}  {quartiles(dv)}  {quartiles(nwj)}  {np.mean(nwj):8.2f}'
-          f'  {quartiles(nce)}')
-d2l.plot(true_mi, list(np.array(medians).T) + [true_mi, [np.log(N)] * 7]
-         + list(np.array(quarts).T), 'true I(X;Y) (nats)', 'batch value (nats)',
-         legend=['DV', 'NWJ', 'InfoNCE', 'truth'], ylim=[0, 8],
-         fmts=('C0-', 'C1-', 'C2-', 'k--', 'k:', 'C0:', 'C0:', 'C1:', 'C1:',
-               'C2:', 'C2:'), figsize=(5, 3))
+    print(f'{I:3.1f}  {quartiles(dv)}  {quartiles(nwj)}  {nwj.mean():8.2f}'
+          f'  {quartiles(nce)}  {low.mean():4.0%}  {rare.mean():4.0%}')
+d2l.plot(true_mi, [*np.array(medians).T, true_mi, [np.log(N)] * len(true_mi)],
+         'true I(X;Y) (nats)', 'median batch value (nats)',
+         legend=['DV', 'NWJ', 'InfoNCE', 'truth', 'ln N'], ylim=[0, 8],
+         fmts=('C0-', 'C1-', 'C2-', 'k--', 'k:'), figsize=(5.5, 3),
+         legend_loc='outside')
 ```
 
 Up to $I = 3$ the three medians are within about $0.15$ nat of the truth,
@@ -1036,6 +1131,15 @@ representation it trains.
 
 ## Exercises
 
+<!-- WRITER: three exercises overlap the new cells. Ex. 1 asks the reader to
+"Write a function binned_mi(x, y, bins)": the section now defines it (same
+signature, equal-width np.histogram2d bins), and (c) is now the body's
+second histogram cell (x^3 and ranks at rho = 0.9). Ex. 2(e) asks to
+simulate the share of batches with a pair e^pmi >= N and the batch average
+at I = 6: the exact-critics table now prints both shares. Ex. 3(b) asks to
+modify ksg_mi to return the mean of n_x and run d = 1, 4, 16: the body now
+has `ksg_counts` and prints the mean strip count for d = 1, 2, 4, 8, 16. -->
+
 1. [code] **Bias of the histogram estimator.** Write a function
    `binned_mi(x, y, bins)` that bins each coordinate into $b$ equal-width
    bins over its range (`np.histogram2d` does this), takes the cell
@@ -1359,13 +1463,36 @@ $\rho = 0.99$.
 :::
 :::
 
+::: {.slide title="A Histogram Errs in Both Directions"}
+[Nonparametric]{.kicker}
+
+Bin each axis into $b$ cells, apply the discrete formula to the
+frequencies; $200{,}000$ samples:
+
+@!mutual-information-gaussian-binned
+
+- Coarse bins hide the ridge: $\rho = 0.99$ at $b = 10$ reads about half
+  the truth.
+- Fine bins invent information: an independent pair reads a few hundredths
+  at $b = 160$.
+:::
+
+::: {.slide title="An Invertible Map Moves the Histogram, Not the Ranks"}
+[Nonparametric]{.kicker}
+
+Gaussian pair at $\rho = 0.9$, then $x \mapsto x^3$; $I$ stays $0.830$:
+
+@!mdl-mutual-information-mutual-information-as-nonlinear-correlation-2
+
+- Equal-width bins are stretched by the extreme values of $x^3$.
+- Ranks do not move under an increasing map, so neither does their
+  histogram.
+:::
+
 ::: {.slide title="A Histogram Needs $b^d$ Cells"}
 [Nonparametric]{.kicker}
 
-- Bin each axis into $b$ cells, apply the discrete formula to the
-  frequencies.
-- 2-D, $\rho = 0.99$, $200{,}000$ samples, $40 \times 40$ bins: about $1.78$
-  for $1.96$; the mass sits on a ridge thinner than a bin.
+- 2-D histograms already need the bin width chosen by hand.
 - $d = 10$, $b = 10$: $10^{10}$ cells, nearly all empty.
 
 ::: {.d2l-note}

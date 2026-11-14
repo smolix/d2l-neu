@@ -682,13 +682,10 @@ assert (abs(table[['little', 'sustained']] - 1) < 0.02).all().all(), table
 table.round(3)
 ```
 
-<!-- Placeholder (stage 2): Experiment 1: a closed-loop sweep against the local server, two passes in shuffled order. Time to first token is measured to the first content token: with thinking off, transformers serve streams the empty think block at once, before it schedules the request, and the first capture timed that chunk (TTFT looked flat; it grows past the knee). Exercise 5 (t_total - t_first, chunk counts) must use the same convention. The `in decode` column is Little's law applied to the decode stage alone, X (W - ttft_mean): it levels off at about 45 from c = 64 while time to first token jumps, so beyond the knee requests wait for a batch slot. The knee is this server's admission capacity at the KV budget the notebook sets (`--cb-max-memory-percent 0.2` in `api-local-start`), on one RTX 4090; it is not where batching stops paying (the median gap between tokens grows only from about 41 to 56 ms) and not the GPU's capacity. -->
+<!-- Placeholder (stage 2): one level of a closed loop, the Little's-law check on every row, and the printed table. -->
 
-```{.python .input #api-sweep-local}
+```{.python .input #api-sweep-helpers}
 %%tab pytorch
-# 64 tokens keep the recording near its 30-minute target
-SWEEP = {'max_tokens': 64, 'temperature': 0, 'stream': True}
-
 async def closed_loop(api, c, first, **params):
     """One level of a closed loop: 8c distinct GSM8K train questions from
     index `first` on, c in flight; closed_loop_stats of the results."""
@@ -726,7 +723,14 @@ def show(table):
         float_format='{:.3f}'.format))
     if not table[counts].to_numpy().any():
         print('no 429s, retries or failed requests at any level')
+```
 
+<!-- Placeholder (stage 2): Experiment 1: a closed-loop sweep against the local server, two passes in shuffled order. Time to first token is measured to the first content token: with thinking off, transformers serve streams the empty think block at once, before it schedules the request, and the first capture timed that chunk (TTFT looked flat; it grows past the knee). Exercise 5 (t_total - t_first, chunk counts) must use the same convention. The `in decode` column is Little's law applied to the decode stage alone, X (W - ttft_mean): it levels off at about 45 from c = 64 while time to first token jumps, so beyond the knee requests wait for a batch slot. The knee is this server's admission capacity at the KV budget the notebook sets (`--cb-max-memory-percent 0.2` in `api-local-start`), on one RTX 4090; it is not where batching stops paying (the median gap between tokens grows only from about 41 to 56 ms) and not the GPU's capacity. -->
+
+```{.python .input #api-sweep-local}
+%%tab pytorch
+# 64 tokens keep the recording near its 30-minute target
+SWEEP = {'max_tokens': 64, 'temperature': 0, 'stream': True}
 LEVELS = [1, 2, 4, 8, 16, 32, 64, 128] if LOCAL_BATCHES else [1, 2, 4, 8]
 sweep_api = local(rec.cache('lm-api-sweep-v1', 'local'))
 rng, order = random.Random(0), []
@@ -971,6 +975,12 @@ async with load:  # the load's responses are logged, never replayed
                                   concurrency=1)
 if LOCAL_LIVE:
     print(f'background: {len(load.failures)} failed requests')
+```
+
+<!-- Placeholder (stage 2): per problem and condition, distinct completions, the first divergent character and distinct final answers. -->
+
+```{.python .input #api-determinism-table}
+%%tab pytorch
 rows = []
 for condition, results in (('flagship', on_flagship), ('local alone', alone),
                            ('local under load', under_load)):

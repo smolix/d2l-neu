@@ -832,7 +832,7 @@ a strong language model at this scale.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.3]{.kicker}
+[Dive into Deep Learning · §12.4]{.kicker}
 
 Selective state space models<br>
 **selective copying · input-chosen step sizes · the scan and its gradient · the Mamba layer · where the state comes from**

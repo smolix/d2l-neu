@@ -329,6 +329,7 @@ and by learning to remove noise.
 * **Language Models and Image Models**.
 Language Models, a part still being written,
 takes the recipe of the Advanced part to large language models:
+encoders, embeddings, and retrieval (:numref:`chap_lm_encoders`),
 pretraining (:numref:`chap_lm_pretraining`),
 fine-tuning (:numref:`chap_lm_finetuning`),
 learning from preferences and verifiable rewards (:numref:`chap_lm_rl`),
@@ -368,10 +369,7 @@ It also documents the `d2l` library (:numref:`sec_d2l`).
 * **Attic**.
 The last part keeps chapters that this edition no longer develops:
 Gaussian processes, hyperparameter optimization, and recommender systems
-(:numref:`chap_gp` through :numref:`chap_recsys`),
-and the first edition's chapters on pretraining and applying
-language representations
-(:numref:`chap_nlp_pretrain` and :numref:`chap_nlp_app`).
+(:numref:`chap_gp` through :numref:`chap_recsys`).
 
 
 ### Code

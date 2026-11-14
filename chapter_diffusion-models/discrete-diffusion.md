@@ -949,7 +949,7 @@ modes in the one-step panel of the pair.
 Trained at a single masking level,
 :eqref:`eq_diffusion-masked-loss` is the objective of BERT
 :cite:`Devlin.Chang.Lee.ea.2018`, which hides 15% of the tokens of a text
-and predicts them from both sides (:numref:`sec_bert`), up to BERT's
+and predicts them from both sides (:numref:`sec_transformer`), up to BERT's
 replacement of some masks by random or unchanged tokens. A masked language
 model is thus a discrete diffusion model with one step
 :cite:`Austin.Johnson.Ho.ea.2021`, though one that has seen

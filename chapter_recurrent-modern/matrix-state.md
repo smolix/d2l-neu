@@ -1017,7 +1017,7 @@ twice returns the sum of its values.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.4]{.kicker}
+[Dive into Deep Learning · §12.5]{.kicker}
 
 Matrix-state recurrences<br>
 **outer-product memory · interference · decay · attention with a decaying mask · chunked computation**

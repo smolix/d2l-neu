@@ -485,15 +485,22 @@ chapter's definition under the last-writer-wins collision rule (except the
 files in `LIB_ONLY_EARLY_FILES`, which are prepended because a later chapter
 uses one of their symbols at import time). Members:
 
-- `chapter_natural-language-processing-pretraining/legacy-attention-lib.md`
-  quarantines the frozen 2017 `TransformerEncoderBlock` (all four
-  frameworks) plus the tensorflow/mxnet variants of the attention primitives
-  whose PyTorch/JAX homes moved to `chapter_attention/` — BERT builds on these
-  until the Language-Models part is modernized, at which point the file is
-  deleted and its entry removed.
+- `chapter_recurrent-modern/legacy-attention-lib.md` quarantines the frozen
+  2017 `TransformerEncoderBlock` (all four frameworks), the tensorflow/mxnet
+  variants of the attention primitives whose PyTorch/JAX homes moved to
+  `chapter_attention/`, and the tensorflow/mxnet `LSTMScratch`/`LSTM`/`GRU`
+  plus the PyTorch/JAX `GRU` that `seq2seq.md` builds on. It lived in the
+  NLP Pretraining chapter until that chapter was retired (2026-11) and moved
+  unchanged, so no shard changed.
+- `chapter_lm-encoders/legacy-datahub-lib.md` keeps the `DATA_HUB` entries of
+  the two retired NLP chapters (SNLI, IMDb, GloVe, fastText `wiki.en`),
+  byte-for-byte. Dropping them would change the `DATA_HUB` shard and mark
+  every downloading notebook stale (147 notebooks over the four frameworks
+  in 2026-11); a chapter-19 section that registers one of them moves the
+  block there verbatim. The rest go at the next full re-execution.
 - `chapter_computational-performance/legacy-multigpu-lib.md` (early) carries
   the tensorflow/mxnet `split_batch`, `resnet18` and `evaluate_accuracy_gpus`
-  that the Image Models and Language Models parts still call.
+  that the Image Models part still calls.
 - `chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md` (early)
   declares the empty class `HyperParameters`, the import-time base of
   `Module`, `DataModule`, `Trainer` and `SGD` (`sec_oo-design`). The book
@@ -930,9 +937,9 @@ Deep Learning** part is chapters **33–38** (Linear Algebra 33, Calculus 34,
 Optimization 35, Probability & Statistical Learning 36, Information Theory 37,
 Dynamics 38) — each group's `index.md` is the chapter, its siblings the `N.k`
 sections — the **Tools for Deep Learning** appendix is chapter **39**, and the
-**Attic** closes the book: GP **40**, HPO **41**, RecSys **42**, NLP
-Pretraining **43**, NLP Applications **44** (it moved behind Tools on
-2026-11-11). The PDFs number these chapters exactly as the HTML does: since
+**Attic** closes the book: GP **40**, HPO **41**, RecSys **42** (it moved
+behind Tools on 2026-11-11; the two NLP chapters that were **43** and **44**
+were retired on 2026-11-14, their `seq2seq.md` moving to §12.2). The PDFs number these chapters exactly as the HTML does: since
 2026-11-11 `fix_latex.py` emits no `\appendix` and letters nothing (the math
 part used to print as appendices A–F, Tools as G); each part keeps its
 unnumbered part page as the divider. The legacy

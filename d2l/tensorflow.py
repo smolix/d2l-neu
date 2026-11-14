@@ -1182,6 +1182,203 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
 
+d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
+                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
+
+class Encoder(tf.keras.layers.Layer):
+    """The base encoder interface for the encoder-decoder architecture.
+
+    Defined in :numref:`sec_encoder-decoder`"""
+    def __init__(self):
+        super().__init__()
+
+    # Later there can be additional arguments (e.g., length excluding padding)
+    def call(self, X, *args):
+        raise NotImplementedError
+
+class Decoder(tf.keras.layers.Layer):
+    """The base decoder interface for the encoder-decoder architecture.
+
+    Defined in :numref:`sec_encoder-decoder`"""
+    def __init__(self):
+        super().__init__()
+
+    def init_state(self, enc_all_outputs, *args):
+        raise NotImplementedError
+
+    def call(self, X, state):
+        raise NotImplementedError
+
+class EncoderDecoder(d2l.Classifier):
+    """The base class for the encoder-decoder architecture.
+
+    Defined in :numref:`sec_encoder-decoder`"""
+    def __init__(self, encoder, decoder):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+
+    # Keras builds a layer by passing the arguments of `call` by name, which
+    # fails for `*args`, so we name the optional source length
+    def call(self, enc_X, dec_X, enc_valid_len=None, training=None):
+        enc_all_outputs = self.encoder(enc_X, enc_valid_len, training=training)
+        dec_state = self.decoder.init_state(enc_all_outputs, enc_valid_len)
+        # Return decoder output only
+        return self.decoder(dec_X, dec_state, training=training)[0]
+
+    def predict_step(self, batch, device, num_steps,
+                     save_attention_weights=False):
+        src, tgt, src_valid_len, _ = batch
+        enc_all_outputs = self.encoder(src, src_valid_len, training=False)
+        dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
+        outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
+        for _ in range(num_steps):
+            Y, dec_state = self.decoder(outputs[-1], dec_state, training=False)
+            outputs.append(d2l.argmax(Y, 2))
+            if save_attention_weights:
+                attention_weights.append(self.decoder.attention_weights)
+        return d2l.concat(outputs[1:], 1), attention_weights
+
+class MTFraEng(d2l.DataModule):
+    """The English-French dataset, tokenized with a shared byte-level BPE.
+
+    Defined in :numref:`sec_machine_translation`"""
+    def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
+                 vocab_size=4000):
+        super().__init__()
+        self.save_hyperparameters()
+        pairs = self._pairs(self._preprocess(self._download()))
+        # Train ONE shared byte-level BPE over both languages.
+        m = min(5000, len(pairs))
+        self.tokenizer = d2l.BPETokenizer(
+            vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
+        self.tokenizer.train('\n'.join([p[0] for p in pairs[:m]] +
+                                       [p[1] for p in pairs[:m]]))
+        # src_vocab / tgt_vocab both refer to the shared tokenizer.
+        self.src_vocab = self.tgt_vocab = self.tokenizer
+        pairs = pairs[:num_train + num_val]
+        self.src_sents = [p[0] for p in pairs]
+        self.tgt_sents = [p[1] for p in pairs]
+        self.arrays = self._encode(pairs)
+
+    def _download(self):
+        d2l.extract(d2l.download(
+            d2l.DATA_URL + 'fra-eng.zip', self.root,
+            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
+        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
+            return f.read()
+
+    def _preprocess(self, text):
+        # Normalize spaces, lowercase, and put a space before punctuation.
+        text = text.replace(' ', ' ').replace('\xa0', ' ').lower()
+        no_space = lambda c, prev: c in ',.!?' and prev != ' '
+        return ''.join([' ' + c if i > 0 and no_space(c, text[i - 1]) else c
+                        for i, c in enumerate(text)])
+
+    def _pairs(self, text):
+        return [ln.split('\t') for ln in text.split('\n') if ln.count('\t') == 1]
+
+    def _encode(self, pairs):
+        tok, t = self.tokenizer, self.num_steps
+        def row(sent, is_tgt):
+            ids = tok.encode(sent)
+            ids = (ids[:t - 1] + [tok.eos] if len(ids) >= t else
+                   ids + [tok.eos] + [tok.pad] * (t - 1 - len(ids)))
+            return [tok.bos] + ids if is_tgt else ids
+        src = d2l.tensor([row(s, False) for s, _ in pairs])
+        tgt = d2l.tensor([row(t, True) for _, t in pairs])
+        valid_len = d2l.reduce_sum(d2l.astype(src != tok.pad, d2l.int32), 1)
+        return src, tgt[:, :-1], valid_len, tgt[:, 1:]
+
+    def build(self, src_sentences, tgt_sentences):
+        return self._encode([(self._preprocess(s), self._preprocess(t))
+                             for s, t in zip(src_sentences, tgt_sentences)])
+
+    def get_dataloader(self, train):
+        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
+        return self.get_tensorloader(self.arrays, train, idx)
+
+def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
+    """Plot the histogram for list length pairs.
+
+    Defined in :numref:`sec_machine_translation`"""
+    d2l.set_figsize()
+    _, _, patches = d2l.plt.hist(
+        [[len(l) for l in xlist], [len(l) for l in ylist]])
+    d2l.plt.xlabel(xlabel)
+    d2l.plt.ylabel(ylabel)
+    for patch in patches[1].patches:
+        patch.set_hatch('/')
+    d2l.plt.legend(legend)
+
+class Seq2SeqEncoder(d2l.Encoder):
+    """The RNN encoder for sequence-to-sequence learning.
+
+    Defined in :numref:`sec_machine_translation`"""
+    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+                 dropout=0):
+        super().__init__()
+        self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
+        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
+
+    def call(self, X, valid_len=None):
+        embs = self.embedding(d2l.transpose(X))
+        outputs, state = self.rnn(embs)
+        # outputs: (num_steps, batch_size, num_hiddens)
+        # state: (num_layers, batch_size, num_hiddens)
+        return outputs, state
+
+class Seq2Seq(d2l.EncoderDecoder):
+    """The RNN encoder-decoder for sequence-to-sequence learning.
+
+    Defined in :numref:`sec_machine_translation`"""
+    def __init__(self, encoder, decoder, tgt_pad, lr):
+        super().__init__(encoder, decoder)
+        self.save_hyperparameters()
+
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1], training=False), batch[-1])
+
+    def configure_optimizers(self):
+        return tf.keras.optimizers.Adam(learning_rate=self.lr)
+
+def chrf(pred, label, n=6, beta=2):
+    """chrF (Popovic, 2015): character n-gram F-score.
+
+    Defined in :numref:`sec_seq2seq_training`"""
+    def ngrams(s, k):
+        s = s.replace(' ', '')
+        return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
+    prec = rec = 0.0
+    for k in range(1, n + 1):
+        p, r = ngrams(pred, k), ngrams(label, k)
+        overlap = sum((p & r).values())
+        if sum(p.values()) and sum(r.values()):
+            prec += overlap / sum(p.values())
+            rec += overlap / sum(r.values())
+    prec, rec = prec / n, rec / n
+    if prec + rec == 0:
+        return 0.0
+    return (1 + beta**2) * prec * rec / (beta**2 * prec + rec)
+
+def bleu(pred_seq, label_seq, k):
+    """Compute the BLEU.
+
+    Defined in :numref:`sec_seq2seq_training`"""
+    pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
+    len_pred, len_label = len(pred_tokens), len(label_tokens)
+    score = math.exp(min(0, 1 - len_label / len_pred))
+    for n in range(1, min(k, len_pred) + 1):
+        num_matches, label_subs = 0, collections.defaultdict(int)
+        for i in range(len_label - n + 1):
+            label_subs[' '.join(label_tokens[i: i + n])] += 1
+        for i in range(len_pred - n + 1):
+            if label_subs[' '.join(pred_tokens[i: i + n])] > 0:
+                num_matches += 1
+                label_subs[' '.join(pred_tokens[i: i + n])] -= 1
+        score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
+    return score
+
 def train_batch_ch13(net, X, y, loss, optimizer):
     """Train for a minibatch with Keras (defined in Chapter 13).
 
@@ -2607,817 +2804,6 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
 
-class Encoder(tf.keras.layers.Layer):
-    """The base encoder interface for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self):
-        super().__init__()
-
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def call(self, X, *args):
-        raise NotImplementedError
-
-class Decoder(tf.keras.layers.Layer):
-    """The base decoder interface for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self):
-        super().__init__()
-
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def call(self, X, state):
-        raise NotImplementedError
-
-class EncoderDecoder(d2l.Classifier):
-    """The base class for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    # Keras builds a layer by passing the arguments of `call` by name, which
-    # fails for `*args`, so we name the optional source length
-    def call(self, enc_X, dec_X, enc_valid_len=None, training=None):
-        enc_all_outputs = self.encoder(enc_X, enc_valid_len, training=training)
-        dec_state = self.decoder.init_state(enc_all_outputs, enc_valid_len)
-        # Return decoder output only
-        return self.decoder(dec_X, dec_state, training=training)[0]
-
-    def predict_step(self, batch, device, num_steps,
-                     save_attention_weights=False):
-        src, tgt, src_valid_len, _ = batch
-        enc_all_outputs = self.encoder(src, src_valid_len, training=False)
-        dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
-        outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-        for _ in range(num_steps):
-            Y, dec_state = self.decoder(outputs[-1], dec_state, training=False)
-            outputs.append(d2l.argmax(Y, 2))
-            if save_attention_weights:
-                attention_weights.append(self.decoder.attention_weights)
-        return d2l.concat(outputs[1:], 1), attention_weights
-
-class MTFraEng(d2l.DataModule):
-    """The English-French dataset, tokenized with a shared byte-level BPE.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
-                 vocab_size=4000):
-        super().__init__()
-        self.save_hyperparameters()
-        pairs = self._pairs(self._preprocess(self._download()))
-        # Train ONE shared byte-level BPE over both languages.
-        m = min(5000, len(pairs))
-        self.tokenizer = d2l.BPETokenizer(
-            vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
-        self.tokenizer.train('\n'.join([p[0] for p in pairs[:m]] +
-                                       [p[1] for p in pairs[:m]]))
-        # src_vocab / tgt_vocab both refer to the shared tokenizer.
-        self.src_vocab = self.tgt_vocab = self.tokenizer
-        pairs = pairs[:num_train + num_val]
-        self.src_sents = [p[0] for p in pairs]
-        self.tgt_sents = [p[1] for p in pairs]
-        self.arrays = self._encode(pairs)
-
-    def _download(self):
-        d2l.extract(d2l.download(
-            d2l.DATA_URL + 'fra-eng.zip', self.root,
-            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
-        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
-            return f.read()
-
-    def _preprocess(self, text):
-        # Normalize spaces, lowercase, and put a space before punctuation.
-        text = text.replace(' ', ' ').replace('\xa0', ' ').lower()
-        no_space = lambda c, prev: c in ',.!?' and prev != ' '
-        return ''.join([' ' + c if i > 0 and no_space(c, text[i - 1]) else c
-                        for i, c in enumerate(text)])
-
-    def _pairs(self, text):
-        return [ln.split('\t') for ln in text.split('\n') if ln.count('\t') == 1]
-
-    def _encode(self, pairs):
-        tok, t = self.tokenizer, self.num_steps
-        def row(sent, is_tgt):
-            ids = tok.encode(sent)
-            ids = (ids[:t - 1] + [tok.eos] if len(ids) >= t else
-                   ids + [tok.eos] + [tok.pad] * (t - 1 - len(ids)))
-            return [tok.bos] + ids if is_tgt else ids
-        src = d2l.tensor([row(s, False) for s, _ in pairs])
-        tgt = d2l.tensor([row(t, True) for _, t in pairs])
-        valid_len = d2l.reduce_sum(d2l.astype(src != tok.pad, d2l.int32), 1)
-        return src, tgt[:, :-1], valid_len, tgt[:, 1:]
-
-    def build(self, src_sentences, tgt_sentences):
-        return self._encode([(self._preprocess(s), self._preprocess(t))
-                             for s, t in zip(src_sentences, tgt_sentences)])
-
-    def get_dataloader(self, train):
-        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
-        return self.get_tensorloader(self.arrays, train, idx)
-
-def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
-    """Plot the histogram for list length pairs.
-
-    Defined in :numref:`sec_machine_translation`"""
-    d2l.set_figsize()
-    _, _, patches = d2l.plt.hist(
-        [[len(l) for l in xlist], [len(l) for l in ylist]])
-    d2l.plt.xlabel(xlabel)
-    d2l.plt.ylabel(ylabel)
-    for patch in patches[1].patches:
-        patch.set_hatch('/')
-    d2l.plt.legend(legend)
-
-class Seq2SeqEncoder(d2l.Encoder):
-    """The RNN encoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
-
-    def call(self, X, valid_len=None):
-        embs = self.embedding(d2l.transpose(X))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-
-class Seq2Seq(d2l.EncoderDecoder):
-    """The RNN encoder-decoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.save_hyperparameters()
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1], training=False), batch[-1])
-
-    def configure_optimizers(self):
-        return tf.keras.optimizers.Adam(learning_rate=self.lr)
-
-def chrf(pred, label, n=6, beta=2):
-    """chrF (Popovic, 2015): character n-gram F-score.
-
-    Defined in :numref:`sec_seq2seq_training`"""
-    def ngrams(s, k):
-        s = s.replace(' ', '')
-        return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
-    prec = rec = 0.0
-    for k in range(1, n + 1):
-        p, r = ngrams(pred, k), ngrams(label, k)
-        overlap = sum((p & r).values())
-        if sum(p.values()) and sum(r.values()):
-            prec += overlap / sum(p.values())
-            rec += overlap / sum(r.values())
-    prec, rec = prec / n, rec / n
-    if prec + rec == 0:
-        return 0.0
-    return (1 + beta**2) * prec * rec / (beta**2 * prec + rec)
-
-def bleu(pred_seq, label_seq, k):
-    """Compute the BLEU.
-
-    Defined in :numref:`sec_seq2seq_training`"""
-    pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
-    len_pred, len_label = len(pred_tokens), len(label_tokens)
-    score = math.exp(min(0, 1 - len_label / len_pred))
-    for n in range(1, min(k, len_pred) + 1):
-        num_matches, label_subs = 0, collections.defaultdict(int)
-        for i in range(len_label - n + 1):
-            label_subs[' '.join(label_tokens[i: i + n])] += 1
-        for i in range(len_pred - n + 1):
-            if label_subs[' '.join(pred_tokens[i: i + n])] > 0:
-                num_matches += 1
-                label_subs[' '.join(pred_tokens[i: i + n])] -= 1
-        score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
-    return score
-
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
-
-def read_ptb():
-    """Load the PTB dataset into a list of text lines.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    data_dir = d2l.download_extract('ptb')
-    # Read the training set
-    with open(os.path.join(data_dir, 'ptb.train.txt')) as f:
-        raw_text = f.read()
-    return [line.split() for line in raw_text.split('\n')]
-
-def subsample(sentences, vocab):
-    """Subsample high-frequency words.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    # Exclude unknown tokens ('<unk>')
-    sentences = [[token for token in line if vocab[token] != vocab.unk]
-                 for line in sentences]
-    counter = collections.Counter([
-        token for line in sentences for token in line])
-    num_tokens = sum(counter.values())
-
-    # Return True if `token` is kept during subsampling
-    def keep(token):
-        return(random.uniform(0, 1) <
-               math.sqrt(1e-4 / counter[token] * num_tokens))
-
-    return ([[token for token in line if keep(token)] for line in sentences],
-            counter)
-
-def get_centers_and_contexts(corpus, max_window_size):
-    """Return center words and context words in skip-gram.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    centers, contexts = [], []
-    for line in corpus:
-        # To form a "center word--context word" pair, each sentence needs to
-        # have at least 2 words
-        if len(line) < 2:
-            continue
-        centers += line
-        for i in range(len(line)):  # Context window centered at `i`
-            window_size = random.randint(1, max_window_size)
-            indices = list(range(max(0, i - window_size),
-                                 min(len(line), i + 1 + window_size)))
-            # Exclude the center word from the context words
-            indices.remove(i)
-            contexts.append([line[idx] for idx in indices])
-    return centers, contexts
-
-class RandomGenerator:
-    """Randomly draw among {1, ..., n} according to n sampling weights.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    def __init__(self, sampling_weights):
-        # Exclude 
-        self.population = list(range(1, len(sampling_weights) + 1))
-        self.sampling_weights = sampling_weights
-        self.candidates = []
-        self.i = 0
-
-    def draw(self):
-        if self.i == len(self.candidates):
-            # Cache `k` random sampling results
-            self.candidates = random.choices(
-                self.population, self.sampling_weights, k=10000)
-            self.i = 0
-        self.i += 1
-        return self.candidates[self.i - 1]
-
-def get_negatives(all_contexts, vocab, counter, K):
-    """Return noise words in negative sampling.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    # Sampling weights for words with indices 1, 2, ... (index 0 is the
-    # excluded unknown token) in the vocabulary
-    sampling_weights = [counter[vocab.to_tokens(i)]**0.75
-                        for i in range(1, len(vocab))]
-    all_negatives, generator = [], RandomGenerator(sampling_weights)
-    for contexts in all_contexts:
-        negatives = []
-        while len(negatives) < len(contexts) * K:
-            neg = generator.draw()
-            # Noise words cannot be context words
-            if neg not in contexts:
-                negatives.append(neg)
-        all_negatives.append(negatives)
-    return all_negatives
-
-def batchify(data):
-    """Return a minibatch of examples for skip-gram with negative sampling.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    max_len = max(len(c) + len(n) for _, c, n in data)
-    centers, contexts_negatives, masks, labels = [], [], [], []
-    for center, context, negative in data:
-        cur_len = len(context) + len(negative)
-        centers += [center]
-        contexts_negatives += [context + negative + [0] * (max_len - cur_len)]
-        masks += [[1] * cur_len + [0] * (max_len - cur_len)]
-        labels += [[1] * len(context) + [0] * (max_len - len(context))]
-    return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
-        contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
-
-def _pad_ptb(all_centers, all_contexts, all_negatives):
-    """Pre-pad all skip-gram examples to the global max length.
-
-    Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
-    masks (N, L), labels (N, L), where L = max(len(c) + len(n)).
-
-    Defined in :numref:`sec_word2vec_data`"""
-    import numpy as _np
-    n = len(all_centers)
-    max_len = max(len(c) + len(neg)
-                  for c, neg in zip(all_contexts, all_negatives))
-    centers = _np.asarray(all_centers, dtype=_np.int64)
-    contexts_negatives = _np.zeros((n, max_len), dtype=_np.int64)
-    masks = _np.zeros((n, max_len), dtype=_np.float32)
-    labels = _np.zeros((n, max_len), dtype=_np.float32)
-    for i, (c, neg) in enumerate(zip(all_contexts, all_negatives)):
-        cur_len = len(c) + len(neg)
-        contexts_negatives[i, :cur_len] = c + neg
-        masks[i, :cur_len] = 1.
-        labels[i, :len(c)] = 1.
-    return centers, contexts_negatives, masks, labels
-
-def load_data_ptb(batch_size, max_window_size, num_noise_words):
-    """Download the PTB dataset and then load it into memory.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    sentences = read_ptb()
-    vocab = d2l.Vocab(sentences, min_freq=10)
-    subsampled, counter = subsample(sentences, vocab)
-    corpus = [vocab[line] for line in subsampled]
-    all_centers, all_contexts = get_centers_and_contexts(
-        corpus, max_window_size)
-    all_negatives = get_negatives(
-        all_contexts, vocab, counter, num_noise_words)
-    centers, cn, masks, labels = _pad_ptb(
-        all_centers, all_contexts, all_negatives)
-    # centers shape: (N,) -> (N, 1) to match batchify convention
-    centers_t = tf.constant(centers[:, None], dtype=tf.int64)
-    cn_t = tf.constant(cn, dtype=tf.int64)
-    masks_t = tf.constant(masks, dtype=tf.float32)
-    labels_t = tf.constant(labels, dtype=tf.float32)
-    dataset = tf.data.Dataset.from_tensor_slices(
-        (centers_t, cn_t, masks_t, labels_t))
-    dataset = dataset.shuffle(buffer_size=len(centers)).batch(
-        batch_size).prefetch(tf.data.AUTOTUNE)
-    return dataset, vocab
-
-d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
-                                '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
-
-d2l.DATA_HUB['glove.6b.100d'] = (d2l.DATA_URL + 'glove.6B.100d.zip',
-                                 'cd43bfb07e44e6f27cbcc7bc9ae3d80284fdaf5a')
-
-d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
-                                  'b5116e234e9eb9076672cfeabf5469f3eec904fa')
-
-d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
-                           'c1816da3821ae9f43899be655002f6c723e91b88')
-
-class TokenEmbedding:
-    """Token Embedding.
-
-    Defined in :numref:`sec_synonyms`"""
-    def __init__(self, embedding_name):
-        self.idx_to_token, self.idx_to_vec = self._load_embedding(
-            embedding_name)
-        self.unknown_idx = 0
-        self.token_to_idx = {token: idx for idx, token in
-                             enumerate(self.idx_to_token)}
-
-    def _load_embedding(self, embedding_name):
-        idx_to_token, idx_to_vec = ['<unk>'], []
-        data_dir = d2l.download_extract(embedding_name)
-        with open(os.path.join(data_dir, 'vec.txt'), 'r') as f:
-            for line in f:
-                elems = line.rstrip().split(' ')
-                token, elems = elems[0], [float(elem) for elem in elems[1:]]
-                if len(elems) > 1:
-                    idx_to_token.append(token)
-                    idx_to_vec.append(elems)
-        idx_to_vec = [[0] * len(idx_to_vec[0])] + idx_to_vec
-        return idx_to_token, tf.constant(idx_to_vec, dtype=tf.float32)
-
-    def __getitem__(self, tokens):
-        indices = [self.token_to_idx.get(token, self.unknown_idx)
-                   for token in tokens]
-        return tf.gather(self.idx_to_vec, indices)
-
-    def __len__(self):
-        return len(self.idx_to_token)
-
-def get_tokens_and_segments(tokens_a, tokens_b=None):
-    """Get tokens of the BERT input sequence and their segment IDs.
-
-    Defined in :numref:`sec_bert`"""
-    tokens = ['<cls>'] + tokens_a + ['<sep>']
-    # 0 and 1 are marking segment A and B, respectively
-    segments = [0] * (len(tokens_a) + 2)
-    if tokens_b is not None:
-        tokens += tokens_b + ['<sep>']
-        segments += [1] * (len(tokens_b) + 1)
-    return tokens, segments
-
-class BERTEncoder(keras.layers.Layer):
-    """BERT encoder.
-
-    Defined in :numref:`sec_bert`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
-                 num_blks, dropout, max_len=1000, **kwargs):
-        super(BERTEncoder, self).__init__(**kwargs)
-        self.token_embedding = keras.layers.Embedding(vocab_size, num_hiddens)
-        self.segment_embedding = keras.layers.Embedding(2, num_hiddens)
-        # In BERT, positional embeddings are learnable, thus we create a
-        # trainable variable of positional embeddings that are long enough
-        self.pos_embedding = self.add_weight(
-            name='pos_embedding', shape=(1, max_len, num_hiddens),
-            initializer='random_normal', trainable=True)
-        # BERT's attention sublayers use biased projections; the default for
-        # `TransformerEncoderBlock` is `bias=False`, so override here.
-        self.blks = [d2l.TransformerEncoderBlock(
-            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias=True)
-            for _ in range(num_blks)]
-
-    def call(self, tokens, segments, valid_lens, training=False, **kwargs):
-        # Shape of `X` remains unchanged in the following code snippet:
-        # (batch size, max sequence length, `num_hiddens`)
-        X = self.token_embedding(tokens) + self.segment_embedding(segments)
-        X = X + self.pos_embedding[:, :tf.shape(X)[1], :]
-        for blk in self.blks:
-            X = blk(X, valid_lens, training=training)
-        return X
-
-class MaskLM(keras.layers.Layer):
-    """The masked language model task of BERT.
-
-    Defined in :numref:`sec_bert`"""
-    def __init__(self, vocab_size, num_hiddens, **kwargs):
-        super(MaskLM, self).__init__(**kwargs)
-        self.mlp = keras.Sequential([
-            keras.layers.Dense(num_hiddens, activation='relu'),
-            keras.layers.LayerNormalization(),
-            keras.layers.Dense(vocab_size),
-        ])
-
-    def call(self, X, pred_positions, **kwargs):
-        num_pred_positions = pred_positions.shape[1]
-        pred_positions_flat = tf.reshape(pred_positions, [-1])
-        batch_size = tf.shape(X)[0]
-        batch_idx = tf.repeat(tf.range(batch_size), num_pred_positions)
-        # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
-        # `batch_idx` is `tf.tensor([0, 0, 0, 1, 1, 1])`
-        indices = tf.stack([batch_idx, pred_positions_flat], axis=1)
-        masked_X = tf.gather_nd(X, indices)
-        masked_X = tf.reshape(masked_X, [batch_size, num_pred_positions, -1])
-        mlm_Y_hat = self.mlp(masked_X)
-        return mlm_Y_hat
-
-class NextSentencePred(keras.layers.Layer):
-    """The next sentence prediction task of BERT.
-
-    Defined in :numref:`sec_bert`"""
-    def __init__(self, **kwargs):
-        super(NextSentencePred, self).__init__(**kwargs)
-        # `output` is reserved on Keras Layer (a read-only property), so use
-        # `dense` for the head.
-        self.dense = keras.layers.Dense(2)
-
-    def call(self, X, **kwargs):
-        # `X` shape: (batch size, `num_hiddens`)
-        return self.dense(X)
-
-class BERTModel(keras.Model):
-    """The BERT model.
-
-    Defined in :numref:`sec_bert`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
-                 num_heads, num_blks, dropout, max_len=1000):
-        super(BERTModel, self).__init__()
-        self.encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens,
-                                   num_heads, num_blks, dropout,
-                                   max_len=max_len)
-        self.hidden = keras.layers.Dense(num_hiddens, activation='tanh')
-        self.mlm = MaskLM(vocab_size, num_hiddens)
-        self.nsp = NextSentencePred()
-
-    def call(self, tokens, segments, valid_lens=None, pred_positions=None,
-             training=False, **kwargs):
-        encoded_X = self.encoder(tokens, segments, valid_lens,
-                                 training=training)
-        if pred_positions is not None:
-            mlm_Y_hat = self.mlm(encoded_X, pred_positions)
-        else:
-            mlm_Y_hat = None
-        # The hidden layer of the MLP classifier for next sentence prediction.
-        # 0 is the index of the '<cls>' token
-        nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, 0, :]))
-        return encoded_X, mlm_Y_hat, nsp_Y_hat
-
-WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
-                  'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
-WIKITEXT_2_SHA1 = '98ee727e59fcc34fddaadae93e15b1f8ed5561a4'
-
-def _read_wiki(data_dir=None):
-    import contextlib
-    import io
-    import pandas as pd
-    with contextlib.redirect_stdout(io.StringIO()):
-        fname = d2l.download(WIKITEXT_2_URL, folder='../data',
-                              sha1_hash=WIKITEXT_2_SHA1)
-    lines = pd.read_parquet(fname)['text'].tolist()
-    # Uppercase letters are converted to lowercase ones
-    paragraphs = [line.strip().lower().split(' . ')
-                  for line in lines if len(line.split(' . ')) >= 2]
-    random.shuffle(paragraphs)
-    return paragraphs
-
-def _get_next_sentence(sentence, next_sentence, paragraphs):
-    if random.random() < 0.5:
-        is_next = True
-    else:
-        # `paragraphs` is a list of lists of lists
-        next_sentence = random.choice(random.choice(paragraphs))
-        is_next = False
-    return sentence, next_sentence, is_next
-
-def _get_nsp_data_from_paragraph(paragraph, paragraphs, vocab, max_len):
-    nsp_data_from_paragraph = []
-    for i in range(len(paragraph) - 1):
-        tokens_a, tokens_b, is_next = _get_next_sentence(
-            paragraph[i], paragraph[i + 1], paragraphs)
-        # Consider 1 '<cls>' token and 2 '<sep>' tokens
-        if len(tokens_a) + len(tokens_b) + 3 > max_len:
-            continue
-        tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
-        nsp_data_from_paragraph.append((tokens, segments, is_next))
-    return nsp_data_from_paragraph
-
-def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds,
-                        vocab):
-    # For the input of a masked language model, make a new copy of tokens and
-    # replace some of them by '<mask>' or random tokens
-    mlm_input_tokens = [token for token in tokens]
-    pred_positions_and_labels = []
-    # Shuffle for getting 15% random tokens for prediction in the masked
-    # language modeling task
-    random.shuffle(candidate_pred_positions)
-    for mlm_pred_position in candidate_pred_positions:
-        if len(pred_positions_and_labels) >= num_mlm_preds:
-            break
-        masked_token = None
-        # 80% of the time: replace the word with the '<mask>' token
-        if random.random() < 0.8:
-            masked_token = '<mask>'
-        else:
-            # 10% of the time: keep the word unchanged
-            if random.random() < 0.5:
-                masked_token = tokens[mlm_pred_position]
-            # 10% of the time: replace the word with a random word
-            else:
-                masked_token = random.choice(vocab.idx_to_token)
-        mlm_input_tokens[mlm_pred_position] = masked_token
-        pred_positions_and_labels.append(
-            (mlm_pred_position, tokens[mlm_pred_position]))
-    return mlm_input_tokens, pred_positions_and_labels
-
-def _get_mlm_data_from_tokens(tokens, vocab):
-    candidate_pred_positions = []
-    # `tokens` is a list of strings
-    for i, token in enumerate(tokens):
-        # Special tokens are not predicted in the masked language modeling
-        # task
-        if token in ['<cls>', '<sep>']:
-            continue
-        candidate_pred_positions.append(i)
-    # 15% of random tokens are predicted in the masked language modeling task
-    num_mlm_preds = max(1, round(len(tokens) * 0.15))
-    mlm_input_tokens, pred_positions_and_labels = _replace_mlm_tokens(
-        tokens, candidate_pred_positions, num_mlm_preds, vocab)
-    pred_positions_and_labels = sorted(pred_positions_and_labels,
-                                       key=lambda x: x[0])
-    pred_positions = [v[0] for v in pred_positions_and_labels]
-    mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
-    return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
-
-def _pad_bert_inputs(examples, max_len, vocab):
-    max_num_mlm_preds = round(max_len * 0.15)
-    all_token_ids, all_segments, valid_lens,  = [], [], []
-    all_pred_positions, all_mlm_weights, all_mlm_labels = [], [], []
-    nsp_labels = []
-    for (token_ids, pred_positions, mlm_pred_label_ids, segments,
-         is_next) in examples:
-        all_token_ids.append(token_ids + [vocab['<pad>']] * (
-            max_len - len(token_ids)))
-        all_segments.append(segments + [0] * (max_len - len(segments)))
-        # `valid_lens` excludes count of '<pad>' tokens
-        valid_lens.append(float(len(token_ids)))
-        all_pred_positions.append(pred_positions + [0] * (
-            max_num_mlm_preds - len(pred_positions)))
-        # Predictions of padded tokens will be filtered out in the loss via
-        # multiplication of 0 weights
-        all_mlm_weights.append(
-            [1.0] * len(mlm_pred_label_ids) + [0.0] * (
-                max_num_mlm_preds - len(pred_positions)))
-        all_mlm_labels.append(mlm_pred_label_ids + [0] * (
-            max_num_mlm_preds - len(mlm_pred_label_ids)))
-        nsp_labels.append(int(is_next))
-    return (all_token_ids, all_segments, valid_lens, all_pred_positions,
-            all_mlm_weights, all_mlm_labels, nsp_labels)
-
-class _WikiTextDataset:
-    def __init__(self, paragraphs, max_len):
-        # Input `paragraphs[i]` is a list of sentence strings representing a
-        # paragraph; while output `paragraphs[i]` is a list of sentences
-        # representing a paragraph, where each sentence is a list of tokens
-        paragraphs = [d2l.tokenize(
-            paragraph, token='word') for paragraph in paragraphs]
-        sentences = [sentence for paragraph in paragraphs
-                     for sentence in paragraph]
-        self.vocab = d2l.Vocab(sentences, min_freq=5, reserved_tokens=[
-            '<pad>', '<mask>', '<cls>', '<sep>'])
-        # Get data for the next sentence prediction task
-        examples = []
-        for paragraph in paragraphs:
-            examples.extend(_get_nsp_data_from_paragraph(
-                paragraph, paragraphs, self.vocab, max_len))
-        # Get data for the masked language model task
-        examples = [(_get_mlm_data_from_tokens(tokens, self.vocab)
-                      + (segments, is_next))
-                     for tokens, segments, is_next in examples]
-        # Pad inputs
-        (self.all_token_ids, self.all_segments, self.valid_lens,
-         self.all_pred_positions, self.all_mlm_weights,
-         self.all_mlm_labels, self.nsp_labels) = _pad_bert_inputs(
-            examples, max_len, self.vocab)
-
-    def __len__(self):
-        return len(self.all_token_ids)
-
-def load_data_wiki(batch_size, max_len):
-    """Load the WikiText-2 dataset.
-
-    Defined in :numref:`sec_bert-dataset`"""
-    paragraphs = _read_wiki()
-    train_set = _WikiTextDataset(paragraphs, max_len)
-    AUTOTUNE = tf.data.AUTOTUNE
-    train_iter = tf.data.Dataset.from_tensor_slices((
-        tf.constant(train_set.all_token_ids, dtype=tf.int32),
-        tf.constant(train_set.all_segments, dtype=tf.int32),
-        tf.constant(train_set.valid_lens, dtype=tf.float32),
-        tf.constant(train_set.all_pred_positions, dtype=tf.int32),
-        tf.constant(train_set.all_mlm_weights, dtype=tf.float32),
-        tf.constant(train_set.all_mlm_labels, dtype=tf.int32),
-        tf.constant(train_set.nsp_labels, dtype=tf.int32),
-    )).shuffle(buffer_size=10000).batch(batch_size).prefetch(AUTOTUNE)
-    return train_iter, train_set.vocab
-
-# Construct loss functions once at module scope; re-instantiating per batch
-# is wasteful.
-_mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
-    from_logits=True, reduction='none')
-_nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
-    from_logits=True, reduction='none')
-
-def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
-                         valid_lens_x, pred_positions_X, mlm_weights_X,
-                         mlm_Y, nsp_y, training=True):
-    # Forward pass
-    _, mlm_Y_hat, nsp_Y_hat = net(
-        tokens_X, segments_X, tf.cast(tf.reshape(valid_lens_x, [-1]),
-                                      dtype=tf.float32),
-        pred_positions_X, training=training)
-    # Compute masked language model loss (mask per-token losses before summing)
-    mlm_l = _mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
-                         tf.reshape(mlm_Y_hat, [-1, vocab_size]))
-    mlm_l = tf.reduce_sum(mlm_l * tf.reshape(mlm_weights_X, [-1])) / (
-        tf.reduce_sum(mlm_weights_X) + 1e-8)
-    # Compute next sentence prediction loss
-    nsp_l = tf.reduce_mean(_nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
-    l = mlm_l + nsp_l
-    return mlm_l, nsp_l, l
-
-d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
-                          '01ada507287d82875905620988597833ad4e0903')
-
-def read_imdb(data_dir, is_train):
-    """Read the IMDb review dataset text sequences and labels.
-
-    Defined in :numref:`sec_sentiment`"""
-    data, labels = [], []
-    for label in ('pos', 'neg'):
-        folder_name = os.path.join(data_dir, 'train' if is_train else 'test',
-                                   label)
-        for file in os.listdir(folder_name):
-            with open(os.path.join(folder_name, file), 'rb') as f:
-                review = f.read().decode('utf-8').replace('\n', '')
-                data.append(review)
-                labels.append(1 if label == 'pos' else 0)
-    return data, labels
-
-def load_data_imdb(batch_size, num_steps=500):
-    """Return data iterators and the vocabulary of the IMDb review dataset.
-
-    Defined in :numref:`sec_sentiment`"""
-    data_dir = d2l.download_extract('aclImdb', 'aclImdb')
-    train_data = read_imdb(data_dir, True)
-    test_data = read_imdb(data_dir, False)
-    train_tokens = d2l.tokenize(train_data[0], token='word')
-    test_tokens = d2l.tokenize(test_data[0], token='word')
-    vocab = d2l.Vocab(train_tokens, min_freq=5)
-    train_features = np.array([d2l.truncate_pad(
-        vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
-    test_features = np.array([d2l.truncate_pad(
-        vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
-    train_iter = d2l.load_array((train_features, np.array(train_data[1])),
-                                batch_size)
-    test_iter = d2l.load_array((test_features, np.array(test_data[1])),
-                               batch_size,
-                               is_train=False)
-    return train_iter, test_iter, vocab
-
-def predict_sentiment(net, vocab, sequence):
-    """Predict the sentiment of a text sequence.
-
-    Defined in :numref:`sec_sentiment_rnn`"""
-    sequence = tf.constant(vocab[sequence.split()], dtype=tf.int32)
-    sequence = tf.reshape(sequence, (1, -1))
-    label = tf.argmax(net(sequence, training=False), axis=1)
-    return 'positive' if int(label[0]) == 1 else 'negative'
-
-d2l.DATA_HUB['SNLI'] = (
-    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
-    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
-
-def read_snli(data_dir, is_train):
-    """Read the SNLI dataset into premises, hypotheses, and labels.
-
-    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
-    def extract_text(s):
-        # Remove information that will not be used by us
-        s = re.sub('\\(', '', s) 
-        s = re.sub('\\)', '', s)
-        # Substitute two or more consecutive whitespace with space
-        s = re.sub('\\s{2,}', ' ', s)
-        return s.strip()
-    label_set = {'entailment': 0, 'contradiction': 1, 'neutral': 2}
-    file_name = os.path.join(data_dir, 'snli_1.0_train.txt'
-                             if is_train else 'snli_1.0_test.txt')
-    with open(file_name, 'r') as f:
-        rows = [row.split('\t') for row in f.readlines()[1:]]
-    premises = [extract_text(row[1]) for row in rows if row[0] in label_set]
-    hypotheses = [extract_text(row[2]) for row in rows if row[0] in label_set]
-    labels = [label_set[row[0]] for row in rows if row[0] in label_set]
-    return premises, hypotheses, labels
-
-class SNLIDataset:
-    """A customized dataset to load the SNLI dataset.
-
-    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
-    def __init__(self, dataset, num_steps, vocab=None):
-        self.num_steps = num_steps
-        all_premise_tokens = d2l.tokenize(dataset[0])
-        all_hypothesis_tokens = d2l.tokenize(dataset[1])
-        if vocab is None:
-            self.vocab = d2l.Vocab(all_premise_tokens + all_hypothesis_tokens,
-                                   min_freq=5, reserved_tokens=['<pad>'])
-        else:
-            self.vocab = vocab
-        self.premises = self._pad(all_premise_tokens)
-        self.hypotheses = self._pad(all_hypothesis_tokens)
-        self.labels = np.array(dataset[2])
-        print('read ' + str(len(self.premises)) + ' examples')
-
-    def _pad(self, lines):
-        return np.array([d2l.truncate_pad(
-            self.vocab[line], self.num_steps, self.vocab['<pad>'])
-                         for line in lines])
-
-    def __getitem__(self, idx):
-        return (self.premises[idx], self.hypotheses[idx]), self.labels[idx]
-
-    def __len__(self):
-        return len(self.premises)
-
-def load_data_snli(batch_size, num_steps=50):
-    """Download the SNLI dataset and return data iterators and vocabulary.
-
-    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
-    data_dir = d2l.download_extract('SNLI')
-    train_data = read_snli(data_dir, True)
-    test_data = read_snli(data_dir, False)
-    train_set = SNLIDataset(train_data, num_steps)
-    test_set = SNLIDataset(test_data, num_steps, train_set.vocab)
-    AUTOTUNE = tf.data.AUTOTUNE
-    train_iter = tf.data.Dataset.from_tensor_slices(
-        (train_set.premises, train_set.hypotheses, train_set.labels)
-    ).shuffle(buffer_size=len(train_set.labels)).batch(batch_size).prefetch(AUTOTUNE)
-    test_iter = tf.data.Dataset.from_tensor_slices(
-        (test_set.premises, test_set.hypotheses, test_set.labels)
-    ).batch(batch_size).prefetch(AUTOTUNE)
-    return train_iter, test_iter, train_set.vocab
-
-def predict_snli(net, vocab, premise, hypothesis):
-    """Predict the logical relationship between the premise and hypothesis.
-
-    Defined in :numref:`sec_natural-language-inference-attention`"""
-    premise = tf.constant([vocab[premise]], dtype=tf.int32)
-    hypothesis = tf.constant([vocab[hypothesis]], dtype=tf.int32)
-    label = tf.argmax(net((premise, hypothesis), training=False), axis=1)
-    return 'entailment' if label == 0 else 'contradiction' if label == 1 \
-            else 'neutral'
-
 def masked_softmax(X, valid_lens):
     """Perform softmax operation by masking elements on the last axis."""
     # X: 3D tensor, valid_lens: 1D or 2D tensor
@@ -3654,6 +3040,25 @@ class Timer:
     def cumsum(self):
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
+
+d2l.DATA_HUB['SNLI'] = (
+    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
+    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
+
+d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
+                          '01ada507287d82875905620988597833ad4e0903')
+
+d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
+                                '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
+
+d2l.DATA_HUB['glove.6b.100d'] = (d2l.DATA_URL + 'glove.6B.100d.zip',
+                                 'cd43bfb07e44e6f27cbcc7bc9ae3d80284fdaf5a')
+
+d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
+                                  'b5116e234e9eb9076672cfeabf5469f3eec904fa')
+
+d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
+                           'c1816da3821ae9f43899be655002f6c723e91b88')
 
 
 reshape = tf.reshape

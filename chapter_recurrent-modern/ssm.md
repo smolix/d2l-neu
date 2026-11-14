@@ -1146,7 +1146,7 @@ the next section lets the dynamics depend on the input.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.2]{.kicker}
+[Dive into Deep Learning · §12.3]{.kicker}
 
 Linear recurrences and state space models<br>
 **affine steps compose · parallel scans · the minGRU · the step size is a gate · S4D as a convolution**

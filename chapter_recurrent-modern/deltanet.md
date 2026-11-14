@@ -745,7 +745,7 @@ at query time.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.5]{.kicker}
+[Dive into Deep Learning · §12.6]{.kicker}
 
 The delta rule<br>
 **writes as gradient steps · one direction at a time · Gated DeltaNet · chunks with a triangular solve · memory as regression**

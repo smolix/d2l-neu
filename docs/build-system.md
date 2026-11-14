@@ -579,8 +579,19 @@ uses one of their symbols at import time). Members:
   (`_label_output_layer`, `_label_logprobs_logits`: soft-capped heads and
   d2l GPTs) and `clean_ag_news` (the escapes left in AG News titles).
   PyTorch only.
+- `chapter_lm-pretrained/scoring-lib.md` holds what `sec_lm_scoring` (18.4)
+  uses and does not show: the tokenization behind `score_choices` and
+  `bits_per_byte` (`_lm_encode`, `_lm_boundary_id`, `_lm_max_len`,
+  `_lm_ctx_len`, `_lm_continuations`, `_lm_components`), the branches its
+  models never take (`_lm_cont_logits`: soft-capped heads and d2l GPTs;
+  `_lm_unscored_head`: tokenizers without a boundary token), the POSIX
+  parts of `run_python_tests` (`_run_limits`, `_kill_session`) and the
+  chapter's measured-result plumbing (`download_keyed`, `lm_rerun`,
+  `lm_registered`, `lm_artifact`, `lm_save_rerun`, `read_jsonl`,
+  `write_jsonl`, `lm_free`, `lm_peak`), which 18.5 and 18.6 may call
+  instead of their own copies. PyTorch only.
 
-The five Language Models files are appended (nothing uses them at import
+The six Language Models files are appended (nothing uses them at import
 time).
 Their blocks follow the part's import rule: third-party modules
 (`transformers`, `openai`, `httpx`, `asyncio`) are imported inside the
@@ -1463,25 +1474,31 @@ and must finish within 60 min (the hard limit, the scheduler's timeout). The
 declared cuts serve the hard limit: a section applies them, in their declared
 order and chosen from wall clock alone, only when its uncut run would not
 finish within 60 min; a run between 30 and 60 min runs uncut, and its log
-says it is over the target. 18.4 (`scoring.md`) reads its cut level from
-`D2L_RERUN_CUT=k` (the first k of its three cuts), and
-`tools/oneshot/time_scoring_rerun.py` picks k before the run from the times
-of one batch per job (`--ceiling-min` is the limit it fits), so the cut is
-fixed before any accuracy is printed. 18.3 (`prompting.md`) has no cuts: its
-whole grid regenerates in about 7 min (392 s, 2026-11-13).
-18.4 also regenerates single artifacts: `D2L_RERUN=arc-generations` (any
-comma-separated subset of `bpb`, `gsm8k-samples`, `arc-generations`,
-`arc-scores`; `1` means all four) runs only those producing blocks, so a
-change to one artifact need not pay for the other three or their cuts
-(`time_scoring_rerun.py --only arc-generations` probes the same subset).
+says it is over the target. 18.3 (`prompting.md`) has no cuts: its whole
+grid regenerates in about 7 min (392 s, 2026-11-13). 18.4 (`scoring.md`)
+has no cuts either (since 2026-11-14; its `D2L_RERUN_CUT` levels were
+retired with the 30-min ceiling, and its source now states the settings its
+artifacts record: GSM8K budget 320, 100 reasoning items). It regenerates
+single artifacts instead: `D2L_RERUN=arc-generations` (any comma-separated
+subset of `bpb`, `gsm8k-samples`, `arc-generations`, `arc-scores`; `1`
+means all four) runs only those producing blocks, so a run that would pass
+the hard limit splits into per-artifact runs, and a change to one artifact
+need not pay for the other three. `tools/oneshot/time_scoring_rerun.py`
+times one batch per job before the run and checks the estimate against the
+target (`--target-min 30`) and the hard limit (`--limit-min 60`); `--only`
+probes a subset. The section's registry pairs each artifact with the key
+it is read from (`ARTIFACTS` in `scoring-setup`); a regeneration reads its
+own files from `../data/lm/rerun/`, so a new `-vN` key can be named before
+its upload (helpers `d2l.lm_rerun`, `d2l.lm_artifact`, `d2l.lm_save_rerun`
+in `scoring-lib.md`).
 18.5 (`eval-suites.md`) takes the same form (`eval-scores`, `contam-scores`,
 `answers`, `judge-human`, `judge-pairs`); its `EvalSuite` runs recompute every
 row, since their cache in `../data/lm/rerun/eval-cache` is keyed by run
 settings and not by code or weights. `D2L_RERUN_RESUME=1` resumes an
 interrupted regeneration from that cache (its wall clock then undercounts).
 The settings each artifact was made with are recorded in it, and the analysis
-cells print them (the GSM8K budget, the number of reasoning items), since the
-source's constants show the uncut values. The notebook's kernel gets
+cells assert and print them (the GSM8K budget, the number of reasoning items,
+the batch size of each ARC arm). The notebook's kernel gets
 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` (`NOTEBOOK_ENV`): without
 it the 2026-11-13 regeneration runs reserved 20.3-20.7 GB on the card for a
 10.8 GiB tensor peak, past the 2-slot budget; its `peak()` prints both
@@ -1493,8 +1510,8 @@ With `fla` in `.venv-lm` (2026-11-13 merge), Qwen3.5's bf16 forwards changed,
 so the four artifacts were regenerated as `lm-bpb-v2`,
 `lm-gsm8k-samples-v2`, `lm-arc-generations-v3` and `lm-arc-scores-v2`, in two
 scheduler runs that keep the registered settings and each fit the 30-minute
-target: `D2L_RERUN=arc-generations D2L_RERUN_CUT=1` (965 s) and
-`D2L_RERUN=bpb,gsm8k-samples,arc-scores D2L_RERUN_CUT=2` (1,191 s). Every
+target: `D2L_RERUN=arc-generations` (965 s, then cut level 1) and
+`D2L_RERUN=bpb,gsm8k-samples,arc-scores` (1,191 s, then cut level 2). Every
 Qwen3 row reproduced bit for bit; only the Qwen3.5 rows changed (bpb by
 2.4e-4, 3 to 11 of 500 ARC predictions per format, most GSM8K and ARC reply
 texts). `lm-gsm8k-samples-v1` stays registered because 18.7 reads its

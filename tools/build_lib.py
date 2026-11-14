@@ -50,6 +50,10 @@ LIB_ONLY_FILES = [
     # 18.3's label-token checks, the two read-out branches its models never
     # take (soft-capped heads, d2l GPTs) and the AG News title cleanup.
     'chapter_lm-pretrained/prompting-lib.md',
+    # 18.4's tokenization behind score_choices and bits_per_byte, the
+    # branches its models never take, the POSIX parts of run_python_tests
+    # and the chapter's measured-result plumbing (download_keyed, D2L_RERUN).
+    'chapter_lm-pretrained/scoring-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

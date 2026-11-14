@@ -55,12 +55,11 @@ from d2l import torch as d2l
 %%tab pytorch
 import collections
 import functools
-import gc
-import hashlib
 import json
 import os
 import re
 import sys
+import textwrap
 import time
 import unicodedata
 import huggingface_hub
@@ -108,45 +107,22 @@ d2l.DATA_HUB['lm-eval-reference-arc-v1'] = (
 d2l.DATA_HUB['lm-heldout-texts-v1'] = (
     d2l.LM_DATA_URL + 'lm-heldout-texts-v1.json',
     '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
-# This section's measured results, written by a run with D2L_RERUN=1
-# (Qwen3.5 rows measured on the fused Gated DeltaNet kernel of 18.1)
-d2l.DATA_HUB['lm-bpb-v2'] = (
-    d2l.LM_DATA_URL + 'lm-bpb-v2.csv',
-    'cc1ebee310ca335ec420c47de5fa88a50301e6cf')
-# lm-gsm8k-samples-v1 stays registered: 18.7 reads its problem ids
+# This section's measured results, written by a run with D2L_RERUN (the
+# keys in use are in ARTIFACTS below). The next section reads
+# lm-gsm8k-samples-v2 and lm-arc-scores-v2; the API section reads the
+# problem ids of lm-gsm8k-samples-v1
 d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
     '11b561b6fb07d19016f5a00b4a5dcf35d3dbbb07')
 d2l.DATA_HUB['lm-gsm8k-samples-v2'] = (
     d2l.LM_DATA_URL + 'lm-gsm8k-samples-v2.jsonl',
     'e02bde69f9fca1f0af49d1170088d87a304ceb0f')
-d2l.DATA_HUB['lm-arc-generations-v3'] = (  # direct budget 512 tokens
-    d2l.LM_DATA_URL + 'lm-arc-generations-v3.jsonl',
-    'ecce2bd3b74bebd0bbc6355b1b8176d949c8abaf')
 d2l.DATA_HUB['lm-arc-scores-v2'] = (
     d2l.LM_DATA_URL + 'lm-arc-scores-v2.parquet',
     '6f28f8ca8ce1f5acee402086e2907b3116f758be')
 ```
 
-```{.python .input #scoring-download}
-%%tab pytorch
-#@save
-def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
-    """Download DATA_HUB[key] into root/key/ and return its local path.
-    Files from different datasets often share a name (Hugging Face's
-    'test-00000-of-00001.parquet'), and d2l.download keeps one file per
-    name and folder, so each key gets a folder of its own. The file's sha1
-    is checked after a fresh download too."""
-    path = d2l.download(key, os.path.join(root, key))
-    sha1 = d2l.DATA_HUB[key][1]
-    if sha1:
-        with open(path, 'rb') as f:
-            got = hashlib.sha1(f.read()).hexdigest()
-        assert got == sha1, f'{path}: sha1 {got}, DATA_HUB pins {sha1}'
-    return path
-```
-
-<!-- Placeholder (stage 2): the five checkpoints and the switches of the build (GPU, regeneration). -->
+<!-- Placeholder (stage 2): the five checkpoints, the switches of the build (GPU, regeneration), and where the measured results live: registered files, or this run's regenerated ones. -->
 
 ```{.python .input #scoring-setup}
 %%tab pytorch
@@ -157,22 +133,20 @@ GPU = torch.cuda.is_available()
 # A job given a GPU (CUDA_VISIBLE_DEVICES set) must not fall back to the CPU
 assert GPU or not os.environ.get('CUDA_VISIBLE_DEVICES'), (
     'a GPU is assigned, but PyTorch sees none')
-# D2L_RERUN=1 regenerates the four measured results, D2L_RERUN=bpb,... the
-# ones it names; a normal build (D2L_RERUN unset or 0) regenerates none
-ARTIFACTS = ('bpb', 'gsm8k-samples', 'arc-generations', 'arc-scores')
-names = os.environ.get('D2L_RERUN', '0').split(',')
-RERUN = set(ARTIFACTS if names == ['1'] else names) - {'0', ''}
-assert RERUN <= set(ARTIFACTS), f'D2L_RERUN names one of {ARTIFACTS}, or 1'
+ARTIFACTS = {  # measured result: (registered key, file a regeneration writes)
+    'bpb': ('lm-bpb-v3', 'lm-bpb.csv'),
+    'gsm8k-samples': ('lm-gsm8k-samples-v2', 'lm-gsm8k-samples.jsonl'),
+    'arc-generations': ('lm-arc-generations-v4', 'lm-arc-generations.jsonl'),
+    'arc-scores': ('lm-arc-scores-v3', 'lm-arc-scores.parquet')}
+RERUN = d2l.lm_rerun(ARTIFACTS)  # D2L_RERUN=1: all four; unset: none
 assert GPU or not RERUN, 'regenerating the artifacts needs a GPU'
-RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
-# The regeneration's declared cuts, in order: D2L_RERUN_CUT=k applies the
-# first k, chosen before the run from the times of one batch per job
-# (tools/oneshot/time_scoring_rerun.py)
-CUT = int(os.environ.get('D2L_RERUN_CUT', '0'))
-assert 0 <= CUT <= 3 and (RERUN or CUT == 0), 'D2L_RERUN_CUT is 0 to 3'
-N_REASON = 100 if CUT >= 1 else 200  # items of the reasoning arm
-GSM_MAX_NEW = 320 if CUT >= 2 else 384  # token budget of a GSM8K sample
-FP32_RUNS = CUT < 3  # the fp32 batch-size re-scorings
+
+def result(name):
+    """The file of a measured result: the one this run regenerated if
+    D2L_RERUN names it, else the registered one."""
+    key, file = ARTIFACTS[name]
+    return d2l.lm_artifact(key, file if name in RERUN else None)
+
 torch.backends.cuda.matmul.allow_tf32 = False  # fp32 means IEEE fp32
 torch.backends.cudnn.allow_tf32 = False
 ieee_fp32 = lambda: not (torch.backends.cuda.matmul.allow_tf32 or
@@ -180,59 +154,7 @@ ieee_fp32 = lambda: not (torch.backends.cuda.matmul.allow_tf32 or
 transformers.logging.set_verbosity_error()  # no notices or progress bars
 transformers.logging.disable_progress_bar()
 huggingface_hub.utils.disable_progress_bars()
-print(f'GPU={GPU}, RERUN={",".join(sorted(RERUN)) or False}'
-      + (f', cuts {CUT}' if CUT else ''))
-```
-
-<!-- Placeholder (stage 2): where the measured results live: registered files, or this run's regenerated ones. -->
-
-```{.python .input #scoring-artifacts}
-%%tab pytorch
-def registered(key):
-    """Local path of a registered artifact, or None before its upload."""
-    return d2l.download_keyed(key) if key in d2l.DATA_HUB else None
-
-def artifact(key, name):
-    """The registered artifact; in the regeneration run before its first
-    upload, the file name that this run wrote to RERUN_DIR."""
-    path, what = registered(key), name.removeprefix('lm-').split('.')[0]
-    if path is None:
-        assert what in RERUN, f'{key} is not registered: D2L_RERUN={what}'
-        path = os.path.join(RERUN_DIR, name)
-    return path
-
-def save_rerun(name, write):
-    """write(path) a regenerated artifact to RERUN_DIR; print its sha1."""
-    path = os.path.join(RERUN_DIR, name)
-    os.makedirs(RERUN_DIR, exist_ok=True)
-    write(path)
-    with open(path, 'rb') as f:
-        print(f'wrote {path}, sha1 {hashlib.sha1(f.read()).hexdigest()}')
-
-def read_jsonl(path):  # one record per line, types as written
-    with open(path) as f:
-        return pd.DataFrame([json.loads(line) for line in f])
-
-def write_jsonl(path, records):
-    with open(path, 'w') as f:
-        f.writelines(json.dumps(r, ensure_ascii=False) + '\n'
-                     for r in records)
-
-def free():
-    """Return the memory of deleted models to the GPU."""
-    gc.collect()
-    torch.cuda.empty_cache()
-
-def peak():
-    """Peak GPU memory since the last call, as text: what tensors held, and
-    what the allocator reserved from the card (what nvidia-smi shows, less
-    the CUDA context)."""
-    if not torch.cuda.is_available():
-        return 'no GPU'
-    gib = [f() / 2**30 for f in (torch.cuda.max_memory_allocated,
-                                 torch.cuda.max_memory_reserved)]
-    torch.cuda.reset_peak_memory_stats()
-    return f'peak {gib[0]:.1f} GiB ({gib[1]:.1f} GiB reserved)'
+print(f'GPU={GPU}, RERUN={",".join(sorted(RERUN)) or False}')
 ```
 
 <!-- Placeholder (stage 2): 500 seeded ARC-Challenge items, five balanced demonstrations, 100 seeded GSM8K problems. -->
@@ -264,8 +186,9 @@ gsm_test = pd.read_parquet(d2l.download_keyed('gsm8k-test'))
 GSM_IDS = subset(len(gsm_test), 100)  # row indices of the test file
 print(f'ARC-Challenge: {len(ARC)} of {len(arc_test):,} test items; options '
       f'per item {dict(collections.Counter(len(it[2]) for it in ARC))}')
-print('demonstrations:', ', '.join(f'{i} ({"ABCD"[s[2]]})'
-                                   for i, s in zip(shot_ids, SHOTS)))
+print('demonstrations (id, gold letter):')
+for i, shot in zip(shot_ids, SHOTS):
+    print(f'    {i} ({"ABCD"[shot[2]]})')
 print(f'GSM8K: {len(GSM_IDS)} of {len(gsm_test):,} test problems')
 ```
 
@@ -356,49 +279,17 @@ print(pd.DataFrame(merges))
 
 <!-- Placeholder (stage 2): the log-probability of each choice, from one forward pass per batch. -->
 
-```{.python .input #scoring-score-choices}
+```{.python .input #scoring-components}
 %%tab pytorch
 #@save
 ScoreComponents = collections.namedtuple(  # each (N, C_max), padded with
     'ScoreComponents', 'll n_tokens n_chars n_bytes')  # -inf (ll) and 0
+```
 
-#@save
-def _lm_encode(tokenizer, texts):
-    """Token ids of each text without special tokens: a Transformers
-    tokenizer is called with add_special_tokens=False, any other one (such
-    as tiktoken's) through its plain encode."""
-    hf = sys.modules.get('transformers')
-    texts = [str(t) for t in texts]  # also numpy arrays, pandas Series
-    if not texts:
-        return []
-    if hf is not None and isinstance(tokenizer, hf.PreTrainedTokenizerBase):
-        return tokenizer(texts, add_special_tokens=False)['input_ids']
-    return [list(tokenizer.encode(t)) for t in texts]
+<!-- Placeholder (stage 2): one forward pass per batch: the prompts left-padded so that every row ends with its continuation, the continuation positions projected and log-softmaxed in fp32. -->
 
-#@save
-def _lm_boundary_id(tokenizer):
-    """The token that separates documents in pretraining: <|endoftext|> if
-    the tokenizer has it, else its EOS, else None. Qwen3: 151643, Qwen3.5:
-    248044, for base and post-trained checkpoints alike."""
-    conv = getattr(tokenizer, 'convert_tokens_to_ids', None)
-    if conv is not None:
-        i = conv('<|endoftext|>')
-        if i is not None and i != getattr(tokenizer, 'unk_token_id', None):
-            return int(i)
-    elif '<|endoftext|>' in getattr(tokenizer, 'special_tokens_set', ()):
-        return tokenizer.encode_single_token('<|endoftext|>')  # tiktoken
-    return getattr(tokenizer, 'eos_token_id', None)
-
-#@save
-def _lm_max_len(model):
-    """The longest input the model takes, or None if it does not say."""
-    model = d2l._lm_unwrap(model)
-    cfg = getattr(model, 'config', None)
-    if cfg is not None and hasattr(cfg, 'get_text_config'):
-        cfg = cfg.get_text_config()
-    return (getattr(cfg, 'max_position_embeddings', None) or
-            getattr(model, 'max_len', None))
-
+```{.python .input #scoring-score-choices}
+%%tab pytorch
 #@save
 def score_choices(model, tokenizer, prompts, choices, norm='token', *,
                   batch_size=8, return_components=False):
@@ -408,118 +299,54 @@ def score_choices(model, tokenizer, prompts, choices, norm='token', *,
     summed log-probability ll: 'sum' by 1, 'token' by the continuation's
     tokens, 'char' and 'byte' by the length and UTF-8 length of the choice
     without one leading whitespace character (lm-evaluation-harness's
-    acc_norm and acc_bytes). Trailing whitespace of a prompt moves to the
-    front of its choices; the continuation is the suffix of
-    encode(prompt + choice) beyond encode(prompt) (a warning says when the
-    prompt's last token merges into the choice's, which this rule scores as
-    a different text), with no BOS (Qwen has none; for a tokenizer that
-    needs one, start each prompt with tokenizer.bos_token); an empty
-    prompt is preceded by the document-boundary token. With
+    acc_norm and acc_bytes). The continuation is the suffix of
+    encode(prompt + choice) beyond encode(prompt), trailing prompt
+    whitespace moved to the choice, no BOS (see _lm_continuations). With
     return_components=True, returns ScoreComponents, from which every norm
-    follows. Log-softmax is taken in fp32 over the continuation positions
-    only. In bf16 an item's score depends on which items share its batch,
-    so a different call over the same items (another batch size or item
-    set) agrees only up to that batch drift, not bit for bit."""
-    import warnings
+    follows. The scored positions are projected by the output layer in
+    fp32 (as label_logprobs does) and log-softmaxed in fp32. In bf16 an
+    item's score depends on which items share its batch, so a different
+    call over the same items (another batch size or item set) agrees only
+    up to that batch drift, not bit for bit."""
     if norm not in ('sum', 'token', 'char', 'byte'):
         raise ValueError(f'unknown norm: {norm!r}')
-    prompts, choices = list(prompts), list(choices)  # also arrays, Series
-    if len(choices) and isinstance(choices[0], str):  # one shared list
-        choices = [choices] * len(prompts)
-    choices = [list(cs) for cs in choices]
-    if len(choices) != len(prompts):
-        raise ValueError(f'{len(prompts)} prompts, {len(choices)} choices')
-    heads = [p.rstrip() for p in prompts]
-    rows = [(i, j) for i, cs in enumerate(choices) for j in range(len(cs))]
-    conts = [prompts[i][len(heads[i]):] + choices[i][j] for i, j in rows]
-    texts = [c[1:] if c[:1].isspace() else c for c in conts]
-    ctx_ids = _lm_encode(tokenizer, heads)
-    full = _lm_encode(tokenizer, [heads[i] + c
-                                  for (i, _), c in zip(rows, conts)])
-    max_len, cut_items, inputs, cont_ids = _lm_max_len(model), set(), [], []
-    merged = []  # pairs whose prompt tokens are not a prefix of the whole
-    for (i, j), f in zip(rows, full):
-        ctx, cont = ctx_ids[i], f[len(ctx_ids[i]):]
-        if not cont:
-            raise ValueError(f'item {i}, choice {j}: empty continuation')
-        if f[:len(ctx)] != ctx:
-            merged.append((i, j))
-        if not ctx:
-            b = _lm_boundary_id(tokenizer)
-            if b is None:
-                raise ValueError(f'item {i}: empty prompt and no boundary '
-                                 'token to put before it')
-            ctx = [b]
-        cut = len(ctx) + len(cont) - 1 - (max_len or float('inf'))
-        if cut > 0:  # cut the prompt from the left
-            if cut >= len(ctx):
-                raise ValueError(f'item {i}, choice {j}: the continuation '
-                                 f'does not fit the context of {max_len}')
-            if i not in cut_items:
-                warnings.warn(f'score_choices: prompt of item {i} cut by '
-                              f'{cut} tokens to fit the context of {max_len}')
-                cut_items.add(i)
-            ctx = ctx[cut:]
-        inputs.append((ctx + cont)[:-1])  # the last token predicts nothing
-        cont_ids.append(cont)
-    if merged:
-        warnings.warn(
-            f'score_choices: in {len(merged)} of {len(rows)} prompt-choice '
-            f'pairs (first: item {merged[0][0]}, choice {merged[0][1]}) the '
-            "prompt's last token merges with the choice's first, so the "
-            'scored tokens do not spell prompt + choice; end the prompts '
-            'differently (for example without a newline)')
-    hf = sys.modules.get('transformers')
-    hf = hf is not None and isinstance(d2l._lm_unwrap(model),
-                                       hf.PreTrainedModel)
-    qwen3 = isinstance(d2l._lm_unwrap(model), d2l.Qwen3GPT)
-    pad = (getattr(tokenizer, 'pad_token_id', None) or 0) if hf else 0
+    rows, inputs, conts, texts, shape = d2l._lm_continuations(
+        tokenizer, prompts, choices, d2l._lm_max_len(model))
+    head = d2l._label_output_layer(model)  # a plain linear layer, or None
+    if head is not None:  # its weights in fp32, once per call
+        W = head.weight.float()
+        bias = None if head.bias is None else head.bias.float()
+    pad = getattr(tokenizer, 'pad_token_id', None) or 0
     device = next(model.parameters()).device
     order = sorted(range(len(rows)), key=lambda r: (-len(inputs[r]), r))
     ll = torch.empty(len(rows), dtype=torch.float64)
-    for s in range(0, len(order), batch_size):
+    for s in range(0, len(order), batch_size):  # longest inputs first
         b = order[s:s + batch_size]
-        T = max(len(inputs[r]) for r in b)
-        m = [len(cont_ids[r]) for r in b]
+        x, m = [inputs[r] for r in b], [len(conts[r]) for r in b]
+        y = torch.tensor([t for r in b for t in conts[r]], device=device)
         with torch.inference_mode():
-            if hf:  # left padding: the continuations end every row
-                X = torch.tensor([[pad] * (T - len(inputs[r])) + inputs[r]
-                                  for r in b], device=device)
-                mask = (torch.arange(T, device=device) >= torch.tensor(
-                    [T - len(inputs[r]) for r in b], device=device)[:, None]
-                        ).long()
+            if head is None:  # a d2l GPT, or a soft-capped output layer
+                H = d2l._lm_cont_logits(model, x, m, pad)
+            else:  # left padding: every row ends with its continuation
+                T = max(map(len, x))
+                X = torch.tensor([[pad] * (T - len(r)) + r for r in x],
+                                 device=device)
+                mask = torch.tensor([[0] * (T - len(r)) + [1] * len(r)
+                                     for r in x], device=device)
                 pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
-                z = model(input_ids=X, attention_mask=mask, position_ids=pos,
-                          use_cache=False, logits_to_keep=max(m)).logits
-                Z = torch.cat([z[k, z.shape[1] - mk:]
-                               for k, mk in enumerate(m)])
-            else:  # right padding, exact under the causal mask
-                X = torch.tensor([inputs[r] + [pad] * (T - len(inputs[r]))
-                                  for r in b], device=device)
-                starts = [len(inputs[r]) - mk for r, mk in zip(b, m)]
-                off = min(starts) if qwen3 else 0
-                out = model(X, logits_to_keep=T - off) if qwen3 else model(X)
-                z = getattr(out, 'logits', out)
-                Z = torch.cat([z[k, st - off:st - off + mk]
-                               for k, (st, mk) in enumerate(zip(starts, m))])
-            y = torch.tensor([t for r in b for t in cont_ids[r]],
-                             device=Z.device)
-            lp = torch.cat([  # fp32 log-softmax, at most 4,096 rows at once
-                Z[i:i + 4096].float().log_softmax(-1).gather(
-                    -1, y[i:i + 4096, None])[:, 0]
-                for i in range(0, len(y), 4096)])
-            sums = torch.stack([v.double().sum() for v in lp.split(m)])
-        ll[b] = sums.cpu()
-    C = max(map(len, choices), default=0)
-    comps = [torch.zeros(len(prompts), C, dtype=dt)
-             for dt in (torch.float32, torch.long, torch.long, torch.long)]
-    comps[0].fill_(-math.inf)
-    for r, (i, j) in enumerate(rows):
-        for t, v in zip(comps, (ll[r].item(), len(cont_ids[r]),
-                                len(texts[r]),
-                                len(texts[r].encode('utf-8')))):
-            t[i, j] = v
-    comps = ScoreComponents(*comps)
+                H = d2l._lm_unwrap(model).get_decoder()(
+                    input_ids=X, attention_mask=mask, position_ids=pos,
+                    use_cache=False).last_hidden_state
+                H = torch.cat([H[k, T - mk:] for k, mk in enumerate(m)])
+            lp = []  # fp32, at most 1,024 scored positions at a time
+            for i in range(0, len(y), 1024):
+                z = H[i:i + 1024].float()
+                z = z if head is None else F.linear(z, W, bias)
+                lp.append(z.log_softmax(-1).gather(
+                    -1, y[i:i + 1024, None])[:, 0])
+            lp = torch.cat(lp).double()
+        ll[b] = torch.stack([v.sum() for v in lp.split(m)]).cpu()
+    comps = d2l._lm_components(rows, ll, conts, texts, shape)
     if return_components:
         return comps
     return comps.ll / {'sum': 1, 'token': comps.n_tokens,
@@ -559,7 +386,7 @@ def scorer_errors(model, tok, items, letter_prompts):
              (letters.log_softmax(-1) - labels).abs().max().item(), 1e-5)]
 ```
 
-<!-- Placeholder (stage 2): the checks in fp32 on the first eight four-option items, for both base checkpoints. -->
+<!-- Placeholder (stage 2): the checks in fp32 on the first eight four-option items, for both base checkpoints, and the letter check in bf16. -->
 
 ```{.python .input #scoring-check-scorer}
 %%tab pytorch
@@ -571,12 +398,20 @@ model, tok = d2l.load_hf(BASES[1], dtype=torch.float32)
 rows = [(BASES[1], *r)
         for r in scorer_errors(model, tok, items, letter_prompts)]
 del model
-free()
+d2l.lm_free()
 base32, tok32 = d2l.load_hf(BASES[0], dtype=torch.float32)  # kept below
 rows += [(BASES[0], *r)
          for r in scorer_errors(base32, tok32, items, letter_prompts)]
-print(pd.DataFrame(rows, columns=['model', 'check', 'max error',
-                                  'tolerance']).to_string(index=False))
+if GPU:  # bf16: both read one hidden state through an fp32 output layer
+    base16, _ = d2l.load_hf(BASES[0])  # kept below
+    letters = d2l.score_choices(base16, tok32, letter_prompts,
+                                [' A', ' B', ' C', ' D'], 'sum', batch_size=1)
+    labels = d2l.label_logprobs(base16, tok32, letter_prompts, list('ABCD'),
+                                batch_size=1)
+    rows.append((BASES[0], 'letters vs label_logprobs, bf16',
+                 (letters.log_softmax(-1) - labels).abs().max().item(), 1e-5))
+print(pd.DataFrame(rows, columns=['model', 'check', 'max error', 'tolerance'])
+      .to_string(index=False, float_format='%.1e'))
 assert all(err < tol for *_, err, tol in rows)
 ```
 
@@ -625,12 +460,11 @@ diff, n_differ = against_harness(d2l.score_choices(
     'fp32, batch 1')
 assert diff < 2e-3 and max(n_differ.values()) <= 2
 if GPU:
-    model, _ = d2l.load_hf(BASES[0])  # bf16
-    against_harness(d2l.score_choices(model, tok32, prompts, choices,
+    against_harness(d2l.score_choices(base16, tok32, prompts, choices,
                                       return_components=True),
                     'bf16, batch 8')
-    del model
-    free()
+    del base16
+    d2l.lm_free()
 ```
 
 <!-- Placeholder (stage 2): bits per byte of running text, in sliding windows. -->
@@ -644,44 +478,34 @@ def bits_per_byte(model, tokenizer, texts, ctx_len=2048, stride=None,
     over ln 2 times the total bytes. Each text is put in Unicode NFC form
     (as Qwen's tokenizers do themselves, so the bytes counted are those
     scored), tokenized whole (no BOS) and preceded by one unscored
-    document-boundary token (Qwen3: 151643, Qwen3.5: 248044; see
-    _lm_boundary_id); without one, its first token, and any more up to the
-    end of the character it starts, are unscored and their bytes leave the
-    denominator. Windows of ctx_len input tokens (capped at the model's
-    maximum input length, with a warning) advance by stride (default
-    ctx_len // 2) and score every token once, the first window ctx_len
-    tokens and each later one stride tokens, each with at least
-    ctx_len - stride + 1 tokens of context; texts are scored independently.
-    A Transformers model with a linear output layer runs its decoder on
-    batch_size windows and projects 1,024 positions at a time; any other
-    model runs one window at a time."""
+    document-boundary token (Qwen3: 151643, Qwen3.5: 248044); without one,
+    its first tokens go unscored (see _lm_unscored_head). Windows of
+    ctx_len input tokens (capped at the model's maximum input length, with
+    a warning) advance by stride (default ctx_len // 2) and score every
+    token once, the first window ctx_len tokens and each later one stride
+    tokens, each with at least ctx_len - stride + 1 tokens of context;
+    texts are scored independently. A model with a plain linear output
+    layer runs its decoder on batch_size windows and projects the scored
+    positions in fp32, 1,024 at a time; any other model runs one window at
+    a time on its own logits."""
     import unicodedata
-    import warnings
     texts = [texts] if isinstance(texts, str) else list(texts)
     texts = [unicodedata.normalize('NFC', str(t)) for t in texts]
-    max_len = _lm_max_len(model)
-    if max_len and ctx_len > max_len:
-        warnings.warn(f'bits_per_byte: ctx_len {ctx_len} capped at the '
-                      f"model's maximum input length {max_len}")
-        ctx_len = max_len
+    ctx_len = d2l._lm_ctx_len(model, ctx_len)
     stride = ctx_len // 2 if stride is None else stride
     if ctx_len < 1 or not 1 <= stride <= ctx_len:
         raise ValueError(f'need 1 <= stride <= ctx_len, got {stride}, '
                          f'{ctx_len}')
-    b, windows, n_bytes = _lm_boundary_id(tokenizer), [], 0
-    for text, ids in zip(texts, _lm_encode(tokenizer, texts)):
+    b, windows, n_bytes = d2l._lm_boundary_id(tokenizer), [], 0
+    for text, ids in zip(texts, d2l._lm_encode(tokenizer, texts)):
         if not ids:
             continue
         n_bytes += len(text.encode('utf-8'))
-        first = 1  # unscored tokens: the boundary, or the text's first ones
-        if b is None:  # the first token has no context; if it ends inside
-            while first < len(ids):  # a character, so do the next ones
-                head = tokenizer.decode(ids[:first])
-                if text.startswith(head) or '\ufffd' not in head:
-                    break
-                first += 1
-            n_bytes -= len(tokenizer.decode(ids[:first]).encode('utf-8'))
-        seq = ids if b is None else [b] + ids
+        if b is None:  # the text's first tokens have no context
+            first, unscored = d2l._lm_unscored_head(tokenizer, text, ids)
+            seq, n_bytes = ids, n_bytes - unscored
+        else:  # the boundary token is the first one's context
+            first, seq = 1, [b] + ids
         done = first - 1  # targets seq[first:done + 1] are scored
         while done < len(seq) - 1:  # inputs seq[start:end] predict
             end = min(max(ctx_len, done + 1) if done == first - 1
@@ -691,49 +515,35 @@ def bits_per_byte(model, tokenizer, texts, ctx_len=2048, stride=None,
             done = end
     if not n_bytes:
         raise ValueError('no text to score')
-    inner = d2l._lm_unwrap(model)
-    hf = sys.modules.get('transformers')
-    hf = hf is not None and isinstance(inner, hf.PreTrainedModel)
-    head = inner.get_output_embeddings() if hf else None
-    cfg = inner.config.get_text_config() if hf else None
-    split = (hf and isinstance(head, nn.Linear) and
-             getattr(cfg, 'final_logit_softcapping', None) is None)
+    head = d2l._label_output_layer(model)  # a plain linear layer, or None
+    if head is not None:
+        W = head.weight.float()
+        bias = None if head.bias is None else head.bias.float()
+    size = 1 if head is None else batch_size
     device, nll = next(model.parameters()).device, 0.0
-
-    def add_nll(H, y, project):  # H: (positions, d) or logits; y: targets
-        total = 0.0
-        for i in range(0, len(y), 1024):
-            z = project(H[i:i + 1024]).float()
-            total += F.cross_entropy(z, y[i:i + 1024], reduction='sum').item()
-        return total
-    with torch.inference_mode():
-        for s in range(0, len(windows), batch_size if split else 1):
-            w = windows[s:s + (batch_size if split else 1)]
-            T = max(len(x) for x, _ in w)
-            X = torch.tensor([x + [0] * (T - len(x)) for x, _ in w],
-                             device=device)
-            y = torch.tensor([t for _, ys in w for t in ys], device=device)
-            if split:  # decoder states, then the head in chunks
+    for s in range(0, len(windows), size):
+        w = windows[s:s + size]
+        y = torch.tensor([t for _, ys in w for t in ys], device=device)
+        with torch.inference_mode():
+            if head is None:  # the model's own logits
+                H = d2l._lm_cont_logits(model, [x for x, _ in w],
+                                        [len(ys) for _, ys in w])
+            else:  # right padding: decoder states of the scored positions
+                T = max(len(x) for x, _ in w)
+                X = torch.tensor([x + [0] * (T - len(x)) for x, _ in w],
+                                 device=device)
                 mask = (torch.arange(T, device=device) < torch.tensor(
                     [len(x) for x, _ in w], device=device)[:, None]).long()
-                dec = (inner.get_decoder() if hasattr(inner, 'get_decoder')
-                       else inner.model)
-                H = dec(input_ids=X, attention_mask=mask,
-                        use_cache=False).last_hidden_state
+                H = d2l._lm_unwrap(model).get_decoder()(
+                    input_ids=X, attention_mask=mask,
+                    use_cache=False).last_hidden_state
                 H = torch.cat([H[k, len(x) - len(ys):len(x)]
                                for k, (x, ys) in enumerate(w)])
-                nll += add_nll(H, y, head)
-            else:  # one window: logits for its scored positions
-                n = len(y)
-                if hf:
-                    z = model(input_ids=X, use_cache=False,
-                              logits_to_keep=n).logits[0]
-                elif isinstance(inner, d2l.Qwen3GPT):
-                    z = model(X, logits_to_keep=n)[0]
-                else:
-                    out = model(X)
-                    z = getattr(out, 'logits', out)[0, -n:]
-                nll += add_nll(z, y, lambda v: v)
+            for i in range(0, len(y), 1024):  # fp32, 1,024 at a time
+                z = H[i:i + 1024].float()
+                z = z if head is None else F.linear(z, W, bias)
+                nll += F.cross_entropy(z, y[i:i + 1024],
+                                       reduction='sum').item()
     return nll / (math.log(2) * n_bytes)
 ```
 
@@ -768,7 +578,7 @@ for name, texts in BPB_TEXTS.items():
 def naive_nll(model, tok, text, ctx_len, stride):
     """Total NLL in nats from full logits, window by window as
     bits_per_byte places them, and how often each position is scored."""
-    seq = [_lm_boundary_id(tok)] + tok(text, add_special_tokens=False
+    seq = [d2l._lm_boundary_id(tok)] + tok(text, add_special_tokens=False
                                        ).input_ids
     nll, times, done = 0.0, np.zeros(len(seq), dtype=int), 0
     while done < len(seq) - 1:
@@ -792,12 +602,12 @@ for n, ctx_len, stride in ((300, 512, 512), (3000, 512, 256)):
     full = nll / (math.log(2) * len(text.encode('utf-8')))
     assert times[0] == 0 and (times[1:] == 1).all()  # the reference scores
     # each token once, so matching it to 1e-6 tests bits_per_byte's windows
-    print(f'{len(times) - 1:,} tokens, ctx {ctx_len}, stride {stride}: '
-          f'bpb {bpb:.6f}, full logits {full:.6f}, relative difference '
+    print(f'{len(times) - 1:,} tokens, ctx {ctx_len}, stride {stride}:')
+    print(f'    bpb {bpb:.6f}, full logits {full:.6f}, relative difference '
           f'{abs(bpb - full) / full:.1e}')
     assert abs(bpb - full) / full < 1e-6
 del base32
-free()
+d2l.lm_free()
 ```
 
 <!-- Placeholder (stage 2): one row of the bits-per-byte table, and its agreement with the registered values. -->
@@ -813,48 +623,52 @@ def bpb_row(model_id, model, tok, text, ctx_len, stride):
     nll = bpb * math.log(2) * B  # nats
     vocab = d2l._lm_unwrap(model).config.get_text_config().vocab_size
     return dict(model=model_id, vocab=vocab,  # rows of the output layer
-                boundary=_lm_boundary_id(tok), text=text, ctx=ctx_len,
+                boundary=d2l._lm_boundary_id(tok), text=text, ctx=ctx_len,
                 stride=stride, T=T, B=B, nll=nll, bpb=bpb,
                 ppl_tok=math.exp(nll / T))
 
 def bpb_agreement(rows):
-    path = registered('lm-bpb-v2')
+    """This run's rows against the registered table."""
+    key = ARTIFACTS['bpb'][0]
+    path = d2l.lm_registered(key)
     if path is None:
-        return print('lm-bpb-v2 is not registered yet')
+        return print(f'{key} is not registered yet')
     both = pd.DataFrame(rows).merge(pd.read_csv(path), suffixes=('', '_reg'),
                                     on=['model', 'text', 'ctx', 'stride'])
-    print(f'{len(both)} of {len(rows)} rows in lm-bpb-v2; max |bpb '
+    print(f'{len(both)} of {len(rows)} rows in {key}; max |bpb '
           f'difference| {(both.bpb - both.bpb_reg).abs().max():.1e}')
 
 def bpb_table(rows):
-    """The registered table lm-bpb-v2; before its upload, this run's rows."""
-    path = registered('lm-bpb-v2')
-    if path is None and not rows:
-        path = artifact('lm-bpb-v2', 'lm-bpb.csv')
-    return pd.DataFrame(rows) if path is None else pd.read_csv(path)
+    """This run's rows if it regenerates the table, else the registered
+    one."""
+    return pd.DataFrame(rows) if 'bpb' in RERUN else pd.read_csv(
+        result('bpb'))
 ```
 
 <!-- Placeholder (stage 2): two base models, three texts: tokens per byte, token perplexity, bits per byte. -->
 
 ```{.python .input #scoring-bpb-models}
 %%tab pytorch
-print('boundary token:', {m: _lm_boundary_id(t) for m, t in TOK.items()})
 bpb_rows = []
 if GPU:
     for m in BASES:
         model, tok = d2l.load_hf(m)
         bpb_rows += [bpb_row(m, model, tok, t, 2048, 1024) for t in BPB_TEXTS]
         del model
-        free()
+        d2l.lm_free()
     bpb_agreement(bpb_rows)
-bpb = bpb_table(bpb_rows)
-main = bpb[(bpb.ctx == 2048) & (bpb.stride == 1024)].assign(
-    tpb=lambda d: d['T'] / d['B'])  # tokens per byte
+bpb = bpb_table(bpb_rows).assign(model=lambda d: d.model.str.removeprefix(
+    'Qwen/'), tpb=lambda d: d['T'] / d['B'])  # tokens per byte
+for m, d in bpb.groupby('model', sort=False):
+    print(f'{m}: boundary token {d.boundary.iloc[0]}, output layer of '
+          f'{d.vocab.iloc[0]:,} rows')
+main = bpb[(bpb.ctx == 2048) & (bpb.stride == 1024)]
 print(main.set_index(['text', 'model'])[['T', 'B', 'tpb', 'ppl_tok', 'bpb']]
       .round(3).to_string())
 tpb = main.pivot(index='text', columns='model', values='tpb')
-print('tokens per byte, Qwen3 over Qwen3.5:',
-      (tpb[BASES[0]] / tpb[BASES[1]]).round(3).to_dict())
+print('tokens per byte, Qwen3 over Qwen3.5:')
+for text, r in (tpb[BASES[0][5:]] / tpb[BASES[1][5:]]).items():
+    print(f'    {text}: {r:.3f}')
 ```
 
 <!-- Placeholder (stage 2): wikitext-2 under four windowings of Qwen3-0.6B-Base. -->
@@ -867,12 +681,12 @@ if GPU:
     rows = [bpb_row(BASES[0], model, tok, 'wikitext-2', c, s)
             for c, s in WINDOWS]
     del model
-    free()
+    d2l.lm_free()
     bpb_agreement(rows)
     bpb_rows += rows
     if 'bpb' in RERUN:
-        save_rerun('lm-bpb.csv', lambda path: pd.DataFrame(bpb_rows).to_csv(
-            path, index=False, float_format='%.10g'))
+        d2l.lm_save_rerun(ARTIFACTS['bpb'][1], lambda path: pd.DataFrame(
+            bpb_rows).to_csv(path, index=False, float_format='%.10g'))
 bpb = bpb_table(bpb_rows)
 w = bpb[(bpb.model == BASES[0]) & (bpb.text == 'wikitext-2')]
 print(w.assign(step=np.where(w.stride == w.ctx, 'stride = ctx',
@@ -959,7 +773,7 @@ GSM_PROMPTS = [d2l.fewshot_prompt(GSM_DEMOS, q, template='chat_multi')
                for q in gsm_test.question.iloc[GSM_IDS]]
 GSM_GOLD = [d2l.extract_answer(a) for a in gsm_test.answer.iloc[GSM_IDS]]
 GSM_SAMPLER = dict(chat=True, enable_thinking=False, strategy='sample',
-                   temperature=0.7, p=0.8, k=20, max_new_tokens=GSM_MAX_NEW)
+                   temperature=0.7, p=0.8, k=20, max_new_tokens=320)
 
 def hash_only(text):
     """The number after the last '####', GSM8K's answer line, or None."""
@@ -971,9 +785,14 @@ EXTRACTORS = {'#### only': hash_only,
               'last number': d2l.extract_answer}
 tok = transformers.AutoTokenizer.from_pretrained(
     PAIR[0], revision=d2l.HF_REVISIONS[PAIR[0]])
-print(tok.apply_chat_template(GSM_PROMPTS[0], tokenize=False,
-                              add_generation_prompt=True,
-                              enable_thinking=False))
+text = tok.apply_chat_template(GSM_PROMPTS[0], tokenize=False,
+                               add_generation_prompt=True,
+                               enable_thinking=False)
+first = text.index('<|im_end|>', text.index('<|im_start|>assistant')) + 11
+last = text.rindex('<|im_start|>user')  # the question
+for line in (text[:first] + '[three more demonstrations]\n' +
+             text[last:]).split('\n'):
+    print(textwrap.fill(line, 79))
 ```
 
 <!-- Placeholder (stage 2): eight samples per problem from each model of the pair (regenerated only under RERUN). -->
@@ -999,27 +818,27 @@ if 'gsm8k-samples' in RERUN:
                 model, tok, GSM_PROMPTS, seed=j, batch_size=50,
                 **GSM_SAMPLER), j)
         del model
-        free()
+        d2l.lm_free()
     print(f'{len(records):,} samples in {(time.time() - tic) / 60:.1f} '
-          f'min, {peak()}')
-    save_rerun('lm-gsm8k-samples.jsonl',
-               lambda path: write_jsonl(path, records))
-    path = registered('lm-gsm8k-samples-v2')
+          f'min, {d2l.lm_peak()}')
+    key, file = ARTIFACTS['gsm8k-samples']
+    d2l.lm_save_rerun(file, lambda path: d2l.write_jsonl(path, records))
+    path = d2l.lm_registered(key)
     if path is not None:
         both = pd.DataFrame(records).merge(
-            read_jsonl(path), on=['model', 'problem_id', 'sample_idx'])
-        print(f'correctness agrees with lm-gsm8k-samples-v2 on '
-              f'{(both.correct_x == both.correct_y).sum()} of {len(both)}')
-pool = read_jsonl(artifact('lm-gsm8k-samples-v2', 'lm-gsm8k-samples.jsonl'))
-recorded = pool.settings[0]  # the sampler the pool was made with; its
-assert all(s == recorded for s in pool.settings)  # budget is cut-dependent
-assert {**recorded, 'max_new_tokens': GSM_MAX_NEW} == GSM_SAMPLER
-print('sampler recorded in the pool:', recorded)
+            d2l.read_jsonl(path), on=['model', 'problem_id', 'sample_idx'])
+        print(f'texts as in {key}: {(both.text_x == both.text_y).sum()} '
+              f'of {len(both)}')
+pool = d2l.read_jsonl(result('gsm8k-samples'))
+assert all(s == GSM_SAMPLER for s in pool.settings)  # as the pool records
+print('sampler of the pool:')
+for k, v in GSM_SAMPLER.items():
+    print(f'    {k}={v}')
 print(pd.DataFrame({
-    'sample-0 accuracy': pool[pool.sample_idx == 0].groupby('model').correct
-    .mean(), 'truncated': (pool.finish_reason == 'length').groupby(
-        pool.model).mean(), 'mean tokens': pool.groupby('model').n_tokens
-    .mean()}).round(3))
+    'samples': pool.groupby('model').size(),
+    'cut at the budget': (pool.finish_reason == 'length').groupby(
+        pool.model).mean().round(3),
+    'mean tokens': pool.groupby('model').n_tokens.mean().round(0)}))
 ```
 
 <!-- Placeholder (stage 2): the same 1,600 generations read by three extractors. -->
@@ -1080,6 +899,9 @@ def boot(a, b=None, n_boot=10_000, seed=0):
     d = np.asarray(a, float) - (0 if b is None else np.asarray(b, float))
     means = boot_counts(len(d), n_boot, seed) @ d / len(d)
     return d.mean(), *np.percentile(means, [2.5, 97.5])
+
+def show(e, digits=3):  # (mean, lo, hi) as text
+    return f'{e[0]:.{digits}f} [{e[1]:.{digits}f}, {e[2]:.{digits}f}]'
 ```
 
 <!-- Placeholder (stage 2): pass@k from a pool of n samples, and its variance. -->
@@ -1139,83 +961,77 @@ print(f'n={n}, p={p}, k={k}: mean {mean:.5f}, variance {var:.6f} '
       f'(bias {plug - mean:+.4f})')
 ```
 
-<!-- Placeholder (stage 2): pass@k, its plug-in estimate and majority voting on the pool, with intervals over problems; the plot below. -->
+<!-- Placeholder (stage 2): the answer each sample commits to; pass@k, its plug-in estimate and majority voting on the pool, with intervals over problems. -->
 
 ```{.python .input #scoring-passk-pool}
 %%tab pytorch
 K = [1, 2, 4, 8]
+# The answer a sample commits to: as for ARC, a reply cut at its token
+# budget commits to none, and a finished one to the number extract_answer
+# reads (its last-number fallback reads the bold or boxed final numbers)
+pool['answer'] = [None if f == 'length' else d2l.extract_answer(t)
+                  for t, f in zip(pool.text, pool.finish_reason)]
+pool['solved'] = pool.answer == pool.gold
 
 def majority(answers):
-    """The most frequent parsed answer, ties to the first one sampled."""
-    parsed = [a for a in answers if isinstance(a, str)]  # None reads as nan
-    counts = collections.Counter(parsed)
-    return max(parsed, key=counts.__getitem__) if parsed else None
+    """The most frequent answer, ties to the first one sampled; samples
+    that commit to no answer (None) do not vote."""
+    voted = [a for a in answers if isinstance(a, str)]
+    counts = collections.Counter(voted)
+    return max(voted, key=counts.__getitem__) if voted else None
 
-def first_parsed(answers):
-    """The first parsed answer in sample order: the same filter, no vote."""
-    return next((a for a in answers if isinstance(a, str)), None)
-
-est, rows, n_parsed = {}, [], {}
+est, rows = {}, {}
 for m in PAIR:
     g = pool[pool.model == m].sort_values('sample_idx').groupby('problem_id')
-    c = g.correct.sum().to_numpy()  # correct samples of 8, per problem
-    maj, first = ((g.answer_strict.agg(f) == g.gold.first()).to_numpy(float)
-                  for f in (majority, first_parsed))
-    assert (d2l.pass_at_k(8, c, 8) >= np.maximum(maj, first)).all()
-    n_parsed[m] = g.answer_strict.agg(lambda a: a.map(
-        lambda v: isinstance(v, str)).sum()).mean()
+    solved = g.solved.sum().to_numpy()  # solving samples of 8, per problem
+    maj = (g.answer.agg(majority) == g.gold.first()).to_numpy(float)
+    assert (d2l.pass_at_k(8, solved, 8) >= maj).all()
     for k in K:
-        est[m, k] = boot(d2l.pass_at_k(8, c, k))
-        est[m, k, 'plug-in'] = np.mean(1 - (1 - c / 8) ** k)
-    est[m, 'maj'], est[m, 'first'] = boot(maj), boot(first)
-    rows.append({'model': m, **{f'pass@{k}': est[m, k] for k in K},
-                 'maj@8': est[m, 'maj'], 'first parsed of 8': est[m, 'first'],
-                 'maj@8 - pass@1': boot(maj, d2l.pass_at_k(8, c, 1)),
-                 'maj@8 - first parsed': boot(maj, first)})
-show = lambda e: f'{e[0]:.3f} [{e[1]:.3f}, {e[2]:.3f}]'
-print(pd.DataFrame(rows).set_index('model').map(show).T.to_string())
-print('plug-in:', {m: [round(float(est[m, k, 'plug-in']), 3) for k in K]
-                   for m in PAIR})
-print('parsed (strict) answers per problem, of 8:',
-      {m: round(float(v), 2) for m, v in n_parsed.items()})
-d2l.plot([K, K, [8], [8], [8], [8]],
-         [[est[m, k, 'plug-in'] for k in K] for m in PAIR]
-         + [[est[m, 'maj'][0]] for m in PAIR]
-         + [[est[m, 'first'][0]] for m in PAIR],
-         fmts=('C0--', 'C1--', 'C0D', 'C1D', 'C0x', 'C1x'), figsize=(4.5, 3))
-d2l.plot_intervals(K, {m.removeprefix('Qwen/'): tuple(np.array(
-    [est[m, k] for k in K]).T) for m in PAIR}, 'k', 'pass@k', kind='band',
-    xscale='log2', axes=d2l.plt.gca())
-ax = d2l.plt.gca()
-ax.autoscale(axis='y')  # d2l.plot fixed the range: fit the bands
-ax.set_xlim(K[0] / 1.15, K[-1] * 1.15)  # room for the maj@8 marks
-old = ax.get_legend()  # the models' colours, then what each mark shows
-ax.legend(old.legend_handles + [d2l.plt.Line2D([], [], color='k', ls=ls,
-                                               marker=mk) for ls, mk in
-                                (('-', ''), ('--', ''), ('', 'D'),
-                                 ('', 'x'))],
-          [t.get_text() for t in old.texts] + ['unbiased', 'plug-in',
-                                               'maj@8', 'first parsed'],
-          loc='upper left', bbox_to_anchor=(1, 1), frameon=False);
+        est[m, k] = boot(d2l.pass_at_k(8, solved, k))
+        est[m, k, 'plug-in'] = np.mean(1 - (1 - solved / 8) ** k)
+    est[m, 'maj'] = boot(maj)
+    rows[m[5:]] = {**{f'pass@{k}': show(est[m, k]) for k in K},
+                   **{f'plug-in@{k}': f'{est[m, k, "plug-in"]:.3f}'
+                      for k in K},
+                   'maj@8': show(est[m, 'maj']),
+                   'maj@8 - pass@1': show(boot(maj, d2l.pass_at_k(8, solved,
+                                                                  1))),
+                   'answers per problem': f'{g.answer.count().mean():.2f}'}
+print(pd.DataFrame(rows).to_string())
+```
+
+<!-- Placeholder (stage 2): the plot below: pass@k against k with its band, the plug-in estimate, and majority voting at k = 8. -->
+
+```{.python .input #scoring-passk-figure}
+%%tab pytorch
+ax = d2l.plot_intervals(
+    K, {m[5:]: tuple(np.array([est[m, k] for k in K]).T) for m in PAIR},
+    'k', 'pass@k', kind='band', xscale='log2', marks={
+        'plug-in': ('--', {m[5:]: (K, [est[m, k, 'plug-in'] for k in K])
+                           for m in PAIR}),
+        'maj@8': ('D', {m[5:]: ([8], [est[m, 'maj'][0]]) for m in PAIR})})
+ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False);
 ```
 
 <!-- Placeholder (stage 2): how much of the band's width comes from sampling and how much from the choice of problems. -->
 
 ```{.python .input #scoring-passk-variance-split}
 %%tab pytorch
-rows = []
+shares = []
 for m in PAIR:
-    c = pool[pool.model == m].groupby('problem_id').correct.sum().to_numpy()
-    M, p = len(c), c / 8
+    solved = pool[pool.model == m].groupby('problem_id').solved.sum()
+    M, p = len(solved), solved.to_numpy() / 8
     for k in (1, 4):
-        total = d2l.pass_at_k(8, c, k).var(ddof=1) / M
+        total = d2l.pass_at_k(8, solved.to_numpy(), k).var(ddof=1) / M
         within = (p * (1 - p) / 7 if k == 1 else  # unbiased at k = 1
                   np.array([d2l.pass_at_k_variance(8, q, k) for q in p])
                   ).mean() / M
-        rows.append(dict(model=m, k=k, total=total, within=within,
-                         between=total - within, within_share=within / total,
-                         within_estimate='exact' if k == 1 else 'plug-in'))
-print(pd.DataFrame(rows).to_string(index=False, float_format='%.2e'))
+        shares.append(dict(model=m[5:], k=k, total=f'{total:.2e}',
+                           within=f'{within:.2e}',
+                           between=f'{total - within:.2e}',
+                           within_share=f'{within / total:.2f}',
+                           within_estimate='exact' if k == 1 else 'plug-in'))
+print(pd.DataFrame(shares).to_string(index=False))
 ```
 
 <!-- Placeholder (stage 2): run a program against its tests, with limits. -->
@@ -1234,26 +1050,16 @@ def run_python_tests(program, test_code, timeout=5.0):
     the code runs as the caller, can read and write the caller's files and
     reach the network. Run code you did not write in a container."""
     import secrets
-    import signal
     import subprocess
     import tempfile
     token = secrets.token_hex(16)  # written only once test_code has run
-    limits = ''
-    if os.name == 'posix':  # set in the child, before the program runs
-        cpu = math.ceil(timeout) + 1
-        limits = (
-            'import resource\n'
-            'for r, v in ((resource.RLIMIT_CPU, %d), '
-            '(resource.RLIMIT_AS, 1 << 30)):\n'
-            '    try:\n        resource.setrlimit(r, (v, v))\n'
-            '    except (ValueError, OSError):\n        pass\n' % cpu)
     with tempfile.TemporaryDirectory() as tmp:
         with open(os.path.join(tmp, 'main.py'), 'w') as f:
             f.write(program + '\n' + test_code + '\n')
         done = os.path.join(tmp, 'done')  # absolute: the code may chdir
         proc = subprocess.Popen(
-            [sys.executable, '-I', '-c', limits + 'import runpy\n'
-             "runpy.run_path('main.py', run_name='__main__')\n"
+            [sys.executable, '-I', '-c', d2l._run_limits(timeout) +
+             "import runpy\nrunpy.run_path('main.py', run_name='__main__')\n"
              f'open({done!r}, "w").write({token!r})'],
             cwd=tmp, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, start_new_session=os.name == 'posix')
@@ -1265,14 +1071,7 @@ def run_python_tests(program, test_code, timeout=5.0):
         except (subprocess.TimeoutExpired, OSError):
             return False
         finally:
-            if os.name == 'posix':  # the process and any it started
-                try:
-                    os.killpg(proc.pid, signal.SIGKILL)
-                except (ProcessLookupError, PermissionError):
-                    pass
-            else:
-                proc.kill()
-            proc.wait()
+            d2l._kill_session(proc)
 ```
 
 <!-- Placeholder (stage 2): four hand-written programs, one verdict each. -->
@@ -1290,7 +1089,8 @@ for name, program in programs.items():
     tic = time.time()
     ok = d2l.run_python_tests(program, tests, timeout=timeout)
     elapsed = time.time() - tic
-    print(f'{name:14s} passed={ok!s:5s} {elapsed:.2f} s')
+    print(f'{name:14s} passed={ok!s:5s}' + (  # only the loop runs long
+        f' stopped after {elapsed:.0f} s' if name == 'infinite loop' else ''))
     assert ok == (name == 'correct') and elapsed < timeout + 1
 ```
 
@@ -1298,17 +1098,17 @@ for name, program in programs.items():
 
 ```{.python .input #scoring-arc-arms}
 %%tab pytorch
-ASK = 'Give the letter of the correct option as \\boxed{X}.'
+ASK = 'Put the letter of the correct option inside \\boxed{}.'
 ARC_CHAT = [d2l.format_mc(q, o, 'letter')[0].removesuffix('Answer:') + ASK
             for _, q, o, _ in ARC]
 # The budgets belong to the convention. With thinking off the models still
-# explain before the box; at 128 tokens most direct replies were cut first
-ARMS = {  # arm: (models, number of subset items, settings of generate)
-    'direct': ([PAIR[0], PAIR[1], 'Qwen/Qwen3-1.7B'], 500, dict(
+# explain before the box, so the direct budget leaves room for that too
+ARMS = {  # arm: (models, subset items, batch size, settings of generate)
+    'direct': ([PAIR[0], PAIR[1], 'Qwen/Qwen3-1.7B'], 500, 50, dict(
         strategy='greedy', enable_thinking=False, max_new_tokens=512)),
-    'reasoning': ([PAIR[0], 'Qwen/Qwen3-1.7B'], N_REASON, dict(
+    'reasoning': ([PAIR[0], 'Qwen/Qwen3-1.7B'], 100, 25, dict(
         strategy='sample', temperature=0.6, p=0.95, k=20, seed=0,
-        enable_thinking=True, max_new_tokens=1024))}
+        enable_thinking=True, max_new_tokens=2048))}
 
 def boxed_letter(text, n_options, finished=True):
     """The option a finished reply commits to in its last \\boxed{} after
@@ -1328,50 +1128,47 @@ if 'arc-generations' in RERUN:
     records, tic = [], time.time()
     for m in dict.fromkeys(ARMS['direct'][0] + ARMS['reasoning'][0]):
         model, tok = d2l.load_hf(m)
-        for arm, (models, n, settings) in ARMS.items():
+        for arm, (models, n, size, settings) in ARMS.items():
             if m in models:
                 out = d2l.generate(model, tok, ARC_CHAT[:n], chat=True,
-                                   batch_size=50, **settings)
+                                   batch_size=size, **settings)
                 letters = [boxed_letter(g.text, len(it[2]),
                                         g.finish_reason != 'length')
                            for it, g in zip(ARC, out)]
                 records += [dict(
                     model=m, revision=d2l.HF_REVISIONS[m], arm=arm,
-                    item_id=it[0], settings=settings,
+                    item_id=it[0], settings=settings, batch_size=size,
                     seed=settings.get('seed'), text=g.text,
                     n_tokens=len(g.token_ids), finish_reason=g.finish_reason,
                     letter=a, correct=a == 'ABCDE'[it[3]])
                     for it, g, a in zip(ARC, out, letters)]
         del model
-        free()
+        d2l.lm_free()
     print(f'{len(records):,} replies in {(time.time() - tic) / 60:.1f} min, '
-          f'{peak()}')
-    save_rerun('lm-arc-generations.jsonl',
-               lambda path: write_jsonl(path, records))
-arc_gen = read_jsonl(artifact('lm-arc-generations-v3',
-                              'lm-arc-generations.jsonl'))
-for arm, (models, n, settings) in ARMS.items():  # as recorded in the file
+          f'{d2l.lm_peak()}')
+    d2l.lm_save_rerun(ARTIFACTS['arc-generations'][1],
+                      lambda path: d2l.write_jsonl(path, records))
+arc_gen = d2l.read_jsonl(result('arc-generations'))
+for arm, (models, n, size, settings) in ARMS.items():  # as the file records
     d = arc_gen[arc_gen.arm == arm]
-    sizes = d.groupby('model').size()  # items per model: cut-dependent
-    assert set(sizes.index) == set(models) and sizes.nunique() == 1
+    assert (d.groupby('model').size() == n).all() and set(d.model) == set(
+        models) and (d.batch_size == size).all(), arm
     assert all(s == settings for s in d.settings), arm
-    print(f'{arm}: {sizes.iloc[0]} items per model, settings {settings}')
-n_opts = dict(zip(ARC_IDS, (len(it[2]) for it in ARC)))
+    print(f'{arm}: {n} items per model, batch {size}, settings:')
+    print(textwrap.fill(', '.join(f'{k}={v}' for k, v in settings.items()),
+                        79, initial_indent='    ', subsequent_indent='    '))
 at_cap = arc_gen.finish_reason == 'length'
-boxed = np.array([boxed_letter(t, n_opts[i]) is not None  # as if finished
-                  for t, i in zip(arc_gen.text, arc_gen.item_id)])
-summary = arc_gen.assign(  # direct replies cut after a boxed letter
-    invalid=arc_gen.letter.isna() & ~at_cap, truncated=at_cap,
-    boxed_then_cut=(at_cap & boxed).astype(float).where(
-        arc_gen.arm == 'direct')).groupby(['model', 'arm'])
+replies = arc_gen.assign(model=arc_gen.model.str.removeprefix('Qwen/'),
+                         invalid=arc_gen.letter.isna() & ~at_cap,
+                         truncated=at_cap)
+summary = replies.groupby(['model', 'arm'])
 print(pd.DataFrame({
-    'accuracy': summary.correct.mean(),
-    'among parsed': arc_gen[arc_gen.letter.notna()].groupby(
-        ['model', 'arm']).correct.mean(),
-    'invalid': summary.invalid.mean(),
-    'truncated': summary.truncated.mean(),
-    'boxed, then cut': summary.boxed_then_cut.mean(),
-    'mean tokens': summary.n_tokens.mean()}).round(3).to_string())
+    'accuracy': summary.correct.mean().round(3),
+    'among parsed': replies[replies.letter.notna()].groupby(
+        ['model', 'arm']).correct.mean().round(3),
+    'invalid': summary.invalid.mean().round(3),
+    'truncated': summary.truncated.mean().round(3),
+    'mean tokens': summary.n_tokens.mean().round(0)}).to_string())
 ```
 
 <!-- Placeholder (stage 2): the per-choice scores of the grid as a long table, and the conventions read from it. -->
@@ -1380,7 +1177,7 @@ print(pd.DataFrame({
 %%tab pytorch
 def score_long(model, tok, model_id, fmt, batch_size=8):
     """Components of every choice of the 500 items in format fmt, one row
-    per (item, choice), as lm-arc-scores-v2 stores them."""
+    per (item, choice), as the artifact lm-arc-scores stores them."""
     prompts, choices = zip(*FORMATS[fmt])
     c = d2l.score_choices(model, tok, prompts, choices,
                           batch_size=batch_size, return_components=True)
@@ -1432,74 +1229,76 @@ def margin(s):  # best minus second-best score
 
 ```{.python .input #scoring-grid}
 %%tab pytorch
-path = registered('lm-arc-scores-v2')
+key = ARTIFACTS['arc-scores'][0]
+path = d2l.lm_registered(key)
 reg = None if path is None else pd.read_parquet(path)
 if GPU:
     parts = []
     for m in MODELS:
-        tic = time.time()
         model, tok = d2l.load_hf(m)
         parts.append(pd.concat([score_long(model, tok, m, fmt)
                                 for fmt in FORMATS]))
         del model
-        free()
-        print(f'{m}: {time.time() - tic:.0f} s, {peak()}')
-        for fmt in FORMATS if reg is not None else ():
+        d2l.lm_free()
+        print(f'{m[5:]}: {d2l.lm_peak()}')
+        if reg is None:
+            continue
+        same = {}  # predictions as registered, per format
+        for fmt in FORMATS:
             new, old = matrix(parts[-1], m, fmt), matrix(reg, m, fmt)
             bad = np.flatnonzero(predict(new) != predict(old))
-            print(f'    {fmt}: {len(ARC) - len(bad)} of {len(ARC)} '
-                  f'predictions as in lm-arc-scores-v2' + ''.join(
-                      f'; {ARC_IDS[i]} (margin {margin(old)[i]:.3f})'
-                      for i in bad))
+            same[fmt] = len(ARC) - len(bad)
+            for i in bad:
+                print(f'    {fmt}: {ARC_IDS[i]} differs from {key} '
+                      f'(margin there {margin(old)[i]:.3f})')
+        print('    predictions as registered: ' + ', '.join(
+            f'{fmt} {n}/{len(ARC)}' for fmt, n in same.items()))
     scores = pd.concat(parts, ignore_index=True)
 else:
-    print('no GPU: the grid is read from lm-arc-scores-v2')
+    print(f'no GPU: the grid is read from {key}')
 ```
 
 <!-- Placeholder (stage 2): the same items at another batch size and in fp32 (regenerated only under RERUN), and what the drift does to predictions. -->
 
 ```{.python .input #scoring-batch-size}
 %%tab pytorch
-BATCH_RUNS = [(PAIR[0], torch.bfloat16, 1, 'll_bs1'),  # model, dtype,
-              (PAIR[1], torch.bfloat16, 1, 'll_bs1')]  # batch size, column
-if FP32_RUNS:
-    BATCH_RUNS += [(PAIR[0], torch.float32, 1, 'll_fp32_bs1'),
-                   (PAIR[0], torch.float32, 8, 'll_fp32_bs8')]
+BATCH_RUNS = [  # model, dtype, batch size, column of the re-scoring
+    (PAIR[0], torch.bfloat16, 1, 'll_bs1'),
+    (PAIR[1], torch.bfloat16, 1, 'll_bs1'),
+    (PAIR[0], torch.float32, 1, 'll_fp32_bs1'),
+    (PAIR[0], torch.float32, 8, 'll_fp32_bs8')]
 if 'arc-scores' in RERUN:
     assert ieee_fp32()
-    key, extra, tic = ['model', 'fmt', 'item_id', 'choice'], {}, time.time()
+    on, extra, tic = ['model', 'fmt', 'item_id', 'choice'], {}, time.time()
     for m, dtype, size, col in BATCH_RUNS:
         model, tok = d2l.load_hf(m, dtype=dtype)
         extra.setdefault(col, []).extend(
-            score_long(model, tok, m, fmt, size)[key + ['ll']].rename(
+            score_long(model, tok, m, fmt, size)[on + ['ll']].rename(
                 columns={'ll': col}) for fmt in ('cloze', 'letter0'))
         del model
-        free()
+        d2l.lm_free()
     print(f'{len(BATCH_RUNS)} re-scorings in {(time.time() - tic) / 60:.1f} '
-          f'min, {peak()}')
+          f'min, {d2l.lm_peak()}')
     for col, parts in extra.items():
-        scores = scores.merge(pd.concat(parts), on=key, how='left')
-    save_rerun('lm-arc-scores.parquet',
-               lambda path: scores.to_parquet(path, index=False))
-arc = pd.read_parquet(artifact('lm-arc-scores-v2', 'lm-arc-scores.parquet'))
-rows = []
+        scores = scores.merge(pd.concat(parts), on=on, how='left')
+    d2l.lm_save_rerun(ARTIFACTS['arc-scores'][1],
+                      lambda path: scores.to_parquet(path, index=False))
+arc = pd.read_parquet(result('arc-scores'))
+drift_rows = []
 for name, m, a, b in [('bf16, batch 8 vs 1', PAIR[0], 'll', 'll_bs1'),
                       ('bf16, batch 8 vs 1', PAIR[1], 'll', 'll_bs1'),
                       ('fp32, batch 1 vs 8', PAIR[0], 'll_fp32_bs1',
                        'll_fp32_bs8')]:
-    if b not in arc:
-        print(f'{name}: cut from the regeneration run')
-        continue
     for conv in ('cloze-sum', 'letter-0'):
         sa, sb = (convention_scores(arc, m, conv, c) for c in (a, b))
         change = np.nanmax(np.abs(sa - sb))
         changed = predict(sa) != predict(sb)  # count, and rate of 500
-        rows.append(dict(setting=name, model=m, convention=conv,
-                         changed=changed.sum(),
-                         rate=round(float(changed.mean()), 3),
-                         max_change=change,
-                         below_change=(margin(sa) < change).sum()))
-print(pd.DataFrame(rows).to_string(index=False))
+        drift_rows.append(dict(setting=name, model=m[5:], convention=conv,
+                               changed=changed.sum(),
+                               rate=round(float(changed.mean()), 3),
+                               max_change=f'{change:.2g}',
+                               below_change=(margin(sa) < change).sum()))
+print(pd.DataFrame(drift_rows).to_string(index=False))
 ```
 
 <!-- Placeholder (stage 2): the drift of the pair's accuracy difference between batch sizes, per convention. -->
@@ -1516,9 +1315,10 @@ measured = {conv: abs(pair_difference(conv, 'll') -
             for conv in ('cloze-sum', 'cloze-token', 'cloze-char',
                          'letter-0')}
 DRIFT = {c: measured.get(c, max(measured.values())) for c in CONVENTIONS}
-print('drift of the pair difference, batch 8 vs 1:',
-      {c: round(float(v), 4) for c, v in measured.items()})
-print('the other conventions get the largest measured drift')
+print('drift of the pair difference, batch 8 vs 1:')
+print(pd.Series(measured).round(3).to_string())
+print('not re-scored at batch 1, so given the largest:',
+      ', '.join(c for c in CONVENTIONS if c not in measured))
 ```
 
 <!-- Placeholder (stage 2): correctness of every checkpoint under every convention, item by item. -->
@@ -1557,12 +1357,13 @@ rule = 3 if (n_verdicts == 3).any() else 2  # three letters, else two
 assert (n_verdicts >= rule).any(), 'no item with two different letters'
 i = int(np.argmax(n_verdicts >= rule))
 _, q, opts, gold = ARC[i]
-print(q + ''.join(f'\n{a}. {o}' for a, o in zip('ABCDE', opts)))
+for line in [q] + [f'{a}. {o}' for a, o in zip('ABCDE', opts)]:
+    print(textwrap.fill(line, 79, subsequent_indent='   '))
 print(f'gold {"ABCDE"[gold]}; Qwen3-0.6B: ' + ', '.join(
     f'{k} {v}' for k, v in verdicts.iloc[i].items()))
-print(f'first item with {rule} different letters ({ARC_IDS[i]}); items '
-      f'with at least two: {(n_verdicts > 1).sum()} of the {committed.sum()} '
-      f'with a parsed reply')
+print(f'the first item with {rule} different letters: {ARC_IDS[i]}')
+print(f'items with at least two: {(n_verdicts > 1).sum()} of the '
+      f'{committed.sum()} with a parsed direct reply')
 ```
 
 <!-- Placeholder (stage 2): accuracy with item-bootstrap intervals per checkpoint and convention, and the gold answer's bits per byte. -->
@@ -1582,10 +1383,17 @@ def option_bpb(model):
 
 BPB_OPT = {m: option_bpb(m) for m in MODELS}
 BPB_GOLD = {m: b[np.arange(len(ARC)), GOLD] for m, b in BPB_OPT.items()}
-table = pd.DataFrame({m.removeprefix('Qwen/'): {
-    c: show(ACC[m, c]) for c in CONVENTIONS if (m, c) in ACC}
+SHORT = {m: m[5:].replace('Qwen', 'Q') for m in MODELS}  # Q3-0.6B-Base
+
+def plus_minus(e):  # the estimate and half the width of its interval
+    return f'{e[0]:.3f} ±{(e[2] - e[1]) / 2:.3f}'
+
+table = pd.DataFrame({SHORT[m]: {
+    c: plus_minus(ACC[m, c]) for c in CONVENTIONS if (m, c) in ACC}
     for m in MODELS}).reindex(CONVENTIONS).fillna('')
-table.loc['gold bpb'] = [show(boot(BPB_GOLD[m])) for m in MODELS]
+table.loc['gold bpb'] = [plus_minus(boot(BPB_GOLD[m])) for m in MODELS]
+print('accuracy (gold bpb: mean bits per byte of the gold option), with')
+print('half the width of the 95% bootstrap interval over items:')
 print(table.to_string())
 print("predictions where 'char' and 'byte' differ, five checkpoints:",
       sum((predict(convention_scores(arc, m, 'cloze-char')) != predict(
@@ -1603,11 +1411,13 @@ def paired(a, b):  # mean of a - b on the items both cover, with interval
 PAIR_CONVS = CONVENTIONS[:7]  # the conventions both models ran
 PAIR_DIFF = {c: paired(CORRECT[PAIR[1], c], CORRECT[PAIR[0], c])
              for c in PAIR_CONVS}  # Qwen3.5-0.8B minus Qwen3-0.6B
-ahead = {c: PAIR[1] if lo > DRIFT[c] else PAIR[0] if hi < -DRIFT[c] else
-         'neither' for c, (_, lo, hi) in PAIR_DIFF.items()}
-print(pd.DataFrame({'difference': {c: show(e) for c, e in PAIR_DIFF.items()},
-                    'drift': {c: DRIFT[c] for c in PAIR_CONVS},
-                    'ahead': ahead}).to_string())
+ahead = {c: PAIR[1][5:] if lo > DRIFT[c] else PAIR[0][5:] if hi < -DRIFT[c]
+         else 'neither' for c, (_, lo, hi) in PAIR_DIFF.items()}
+print(pd.DataFrame({
+    'difference': {c: show(e) for c, e in PAIR_DIFF.items()},
+    'drift': {c: f'{DRIFT[c]:.3f}' + ('' if c in measured else ' (max)')
+              for c in PAIR_CONVS},
+    'ahead': ahead}).to_string())
 print('ranking flips:', len(set(ahead.values()) - {'neither'}) == 2)
 wrong = {}  # mean bpb of an item's wrong options
 for m in PAIR:
@@ -1625,7 +1435,7 @@ for name, (d, lo, hi) in [
           f'{abs(d) / ((hi - lo) / 2):.2f}')
 ```
 
-<!-- Placeholder (stage 2): the pre-declared contrast, letter-0 minus cloze-sum per model and family, and reasoning against direct answers. -->
+<!-- Placeholder (stage 2): the pre-declared contrast, and letter-0 minus cloze-sum per model and family. -->
 
 ```{.python .input #scoring-contrasts}
 %%tab pytorch
@@ -1634,7 +1444,7 @@ def gain(m, col='ll'):  # letter-0 minus cloze-sum, correct per item
                           GOLD).astype(float)
                          for c in ('letter-0', 'cloze-sum')))
 
-def read(e, drift, names):  # the flip rule: the nearer end beyond drift
+def verdict(e, drift, names):  # the flip rule: the nearer end beyond drift
     return (names[0] if e[1] > drift else names[1] if e[2] < -drift else
             f'not resolved at {len(ARC)} items')
 
@@ -1646,19 +1456,28 @@ drift = max([abs(gain(m).mean() - gain(m, 'll_bs1').mean()) for m in PAIR]
                     gain(PAIR[0], 'll_bs1')).mean())])
 print(f'drift of the contrasts, batch 8 vs 1: {drift:.3f}')
 e = boot(gain(PAIR[1]), gain(PAIR[0]))
-print(f'pair, (letter-0 - cloze-sum) difference of differences: {show(e)}'
-      f' ({read(e, drift, [m[5:] + " gains more" for m in PAIR[::-1]])})')
+print('pair, difference of (letter-0 - cloze-sum):')
+print(f'    {show(e)} ('
+      + verdict(e, drift, [m[5:] + ' gains more' for m in PAIR[::-1]]) + ')')
+print('letter-0 - cloze-sum:')
 for m in MODELS:
     e = boot(gain(m))
-    print(f'{m}: letter-0 - cloze-sum {show(e)} '
-          f'({read(e, drift, ("letter-0 ahead", "cloze-sum ahead"))})')
+    print(f'    {m[5:]}: {show(e)} '
+          f'({verdict(e, drift, ("letter-0 ahead", "cloze-sum ahead"))})')
+print('post-trained - base, difference of (letter-0 - cloze-sum):')
 for base, post in zip(BASES, PAIR):
     e = boot(gain(post), gain(base))
-    print(f'{post} - {base}, (letter-0 - cloze-sum): {show(e)} ('
-          + read(e, drift, ('post-trained gains more', 'base gains more'))
-          + ')')
-for m in ARMS['reasoning'][0]:  # on the first n subset items
-    n = gen_column(m, 'reasoning', 'n_tokens').notna().sum()
+    print(f'    {post[5:]} - {base[5:]}: {show(e)}')
+    print('        (' + verdict(e, drift, ('post-trained gains more',
+                                          'base gains more')) + ')')
+```
+
+<!-- Placeholder (stage 2): reasoning against direct answers on the items of the reasoning arm: accuracy, truncation, agreement and tokens. -->
+
+```{.python .input #scoring-reasoning-vs-direct}
+%%tab pytorch
+for m in ARMS['reasoning'][0]:
+    n = ARMS['reasoning'][1]  # the first n subset items
     col = lambda arm, c: gen_column(m, arm, c).iloc[:n]
     cut = {arm: (col(arm, 'finish_reason') == 'length').mean()
            for arm in ARMS}
@@ -1669,14 +1488,16 @@ for m in ARMS['reasoning'][0]:  # on the first n subset items
     differ = (col('reasoning', 'letter') != col('direct', 'letter'))[both]
     acc = [col(arm, 'correct')[both].astype(float).mean() for arm in ARMS]
     tokens = [col(arm, 'n_tokens').mean() for arm in ARMS]
-    print(f'{m}, first {n} items: reasoning - direct {show(d)} (' + (
-        f'{" and ".join(binds)} budget binds: no direction' if binds else
-        read(d, 0, ('reasoning ahead', 'direct ahead'))) +
-        '); truncated ' + ', '.join(f'{arm} {v:.2f}' for arm, v in
-                                    cut.items()))
+    print(f'{m[5:]}, first {n} items: reasoning - direct {show(d)}')
+    print('    (' + (f'{" and ".join(binds)} budget binds: no direction'
+                     if binds else verdict(d, 0, ('reasoning ahead',
+                                                  'direct ahead')))
+          + '); cut at the budget: ' + ', '.join(
+              f'{arm} {v:.2f}' for arm, v in cut.items()))
     print(f'    both replies commit to a letter on {both.sum()}: they differ '
-          f'on {differ.sum()}; accuracy there {acc[1]:.2f} (reasoning), '
-          f'{acc[0]:.2f} (direct), descriptive')
+          f'on {differ.sum()}')
+    print(f'    accuracy there {acc[1]:.2f} (reasoning), {acc[0]:.2f} '
+          f'(direct), descriptive')
     print(f'    mean tokens {tokens[1]:.0f} (reasoning), {tokens[0]:.0f} '
           f'(direct), 1 for a scored letter')
 ```
@@ -1693,7 +1514,10 @@ flips = np.stack([predict(convention_scores(arc, m, 'cloze-sum')) !=
                   predict(convention_scores(arc, m, 'cloze-char'))
                   for m in MODELS]).astype(float)  # (checkpoints, items)
 pooled, C = flips.mean(0), boot_counts(len(ARC))
-ci = lambda point, reps: show((point, *np.percentile(reps, [2.5, 97.5])))
+
+def ci(point, reps):  # a point estimate and its percentile interval
+    return show((point, *np.percentile(reps, [2.5, 97.5])))
+
 rates = []  # per resample; items are drawn with all checkpoints together
 for t in range(3):
     inside = tercile == t
@@ -1728,15 +1552,14 @@ print(pd.DataFrame(counts).T.reindex(columns=list('ABCDE')).fillna(0)
 chance = np.mean([1 / len(it[2]) for it in ARC])
 _, axes = d2l.plt.subplots(1, 2, figsize=(10, 3.5), gridspec_kw={
     'wspace': 0.3})
-# The seven conventions run on all 500 items; gen-reasoning (100 items, its
-# token budget cuts a third or more of the replies) stays in the table
+# The conventions run on all 500 items
 d2l.plot_intervals(PAIR_CONVS, {m.removeprefix('Qwen/'): tuple(np.array(
     [ACC.get((m, c), (np.nan,) * 3) for c in PAIR_CONVS]).T)
     for m in MODELS}, 'convention', 'accuracy', reference=chance,
     axes=axes[0])
 d2l.plot_intervals(PAIR_CONVS, {'Qwen3.5-0.8B - Qwen3-0.6B': tuple(np.array(
     [PAIR_DIFF[c] for c in PAIR_CONVS]).T)}, 'convention',
-    'paired difference', reference=0, axes=axes[1])
+    'Qwen3.5-0.8B - Qwen3-0.6B', reference=0, axes=axes[1])
 axes[0].legend(loc='lower left', bbox_to_anchor=(0, 1), ncol=3,  # above
                frameon=False);  # the panel, clear of every interval
 ```

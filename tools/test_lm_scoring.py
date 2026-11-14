@@ -26,6 +26,11 @@ Library code (spec 18.4 part 5):
 - `plot_intervals` (book-side, `sec_utils`, requested by this section):
   a smoke test of both kinds.
 - `import d2l.torch` and the scorers work with `transformers` blocked.
+- The bf16 letter format against `d2l.label_logprobs` (both through the
+  output layer in fp32), the soft-capped-head path of `score_choices`,
+  `plot_intervals`' marks, and the measured-result helpers of
+  `scoring-lib.md` (`lm_rerun`, `lm_artifact`, `lm_save_rerun`,
+  `read_jsonl`, `write_jsonl`, `lm_free`, `lm_peak`).
 - Review fixes (lib 18.4): numpy and pandas inputs; `download_keyed`
   keeps same-named files apart; the warning when a prompt's last token
   merges into the continuation; `extract_answer` after 'İ', with range
@@ -436,16 +441,21 @@ class TestScoreChoicesHF(unittest.TestCase):
                     model, ctx, full[len(ctx):]), delta=1e-5)
 
     def test_transformers_call(self):
-        calls = []
-        h = self.model.register_forward_pre_hook(
+        """One decoder call per batch; the model's own output layer never
+        runs (the scored rows are projected in fp32 by score_choices)."""
+        calls, heads = [], []
+        h = self.model.get_decoder().register_forward_pre_hook(
             lambda m, args, kw: calls.append(kw), with_kwargs=True)
+        g = self.model.get_output_embeddings().register_forward_pre_hook(
+            lambda m, args: heads.append(1))
         try:
             d2l.score_choices(self.model, self.tok, self.prompts,
                               self.choices, batch_size=8)
         finally:
             h.remove()
+            g.remove()
         (kw,) = calls  # seven rows, one batch
-        self.assertEqual(kw['logits_to_keep'], 2)  # longest continuation
+        self.assertEqual(heads, [])
         self.assertFalse(kw['use_cache'])
         mask, pos = kw['attention_mask'], kw['position_ids']
         self.assertTrue((mask[:, -1] == 1).all())  # left padding
@@ -482,6 +492,48 @@ class TestScoreChoicesHF(unittest.TestCase):
             self.assertTrue(torch.equal(d2l.score_choices(
                 self.model, self.tok, list(prompts), list(choices),
                 norm).argmax(-1), s.argmax(-1)))
+
+    def test_bf16_letter_format_is_label_logprobs(self):
+        """In bf16 both read the same hidden state through the output
+        layer in fp32, so they agree far below bf16's logit spacing; the
+        model's own bf16 logits would not."""
+        model = tiny_qwen3().to(torch.bfloat16)
+        prompts, choices = zip(*[d2l.format_mc(QUESTION, OPTIONS, 'letter'),
+                                 d2l.format_mc('Which is a metal?',
+                                               ['iron', 'wood', 'glass',
+                                                'tin'], 'letter')])
+        s = d2l.score_choices(model, self.tok, list(prompts), list(choices),
+                              'sum', batch_size=1)
+        ref = d2l.label_logprobs(model, self.tok, list(prompts), list('ABCD'),
+                                 batch_size=1)
+        torch.testing.assert_close(s.log_softmax(-1), ref, atol=1e-5, rtol=0)
+        ids = self.encode(prompts[0])
+        with torch.no_grad():  # the bf16 logits round each value
+            z = model(torch.tensor([ids]), use_cache=False).logits[0, -1]
+        letters = [self.encode(prompts[0] + c)[-1] for c in choices[0]]
+        own = z.float()[letters].log_softmax(-1)
+        self.assertGreater((own - ref[0]).abs().max().item(), 1e-4)
+
+    def test_softcapped_head_uses_the_model_logits(self):
+        """A head that is not a plain linear layer: the model itself runs,
+        left-padded, with logits_to_keep; the scores are unchanged (Qwen3
+        ignores the soft-capping field)."""
+        ref = d2l.score_choices(self.model, self.tok, self.prompts,
+                                self.choices, 'sum')
+        calls = []
+        h = self.model.register_forward_pre_hook(
+            lambda m, args, kw: calls.append(kw), with_kwargs=True)
+        try:
+            self.model.config.final_logit_softcapping = 30.0
+            got = d2l.score_choices(self.model, self.tok, self.prompts,
+                                    self.choices, 'sum', batch_size=8)
+        finally:
+            h.remove()
+            del self.model.config.final_logit_softcapping
+        torch.testing.assert_close(got, ref, atol=1e-5, rtol=0)
+        (kw,) = calls
+        self.assertEqual(kw['logits_to_keep'], 2)  # longest continuation
+        self.assertTrue((kw['attention_mask'][:, -1] == 1).all())
 
 
 # ---------------------------------------------------------- bits_per_byte
@@ -904,6 +956,52 @@ class TestDownloadKeyed(unittest.TestCase):
                 d2l.download_keyed(key, tmp)
 
 
+class TestMeasuredResults(unittest.TestCase):
+    """The chapter's measured-result plumbing (scoring-lib.md)."""
+    def test_rerun_flags(self):
+        from unittest import mock
+        names = ('bpb', 'arc-scores')
+        for value, want in ((None, set()), ('0', set()), ('', set()),
+                            ('1', set(names)), ('bpb', {'bpb'}),
+                            ('bpb,arc-scores', set(names))):
+            env = {} if value is None else {'D2L_RERUN': value}
+            with mock.patch.dict(os.environ, env, clear=False):
+                if value is None:
+                    os.environ.pop('D2L_RERUN', None)
+                self.assertEqual(d2l.lm_rerun(names), want, value)
+        with mock.patch.dict(os.environ, {'D2L_RERUN': 'bpb,typo'}):
+            with self.assertRaisesRegex(ValueError, 'D2L_RERUN'):
+                d2l.lm_rerun(names)
+
+    def test_artifact_save_and_jsonl(self):
+        import tempfile
+        from unittest import mock
+        records = [{'a': 1, 'text': 'naïve'}, {'a': 2, 'text': None}]
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch('builtins.print') as out:
+            path = d2l.lm_save_rerun(
+                'lm-x.jsonl', lambda p: d2l.write_jsonl(p, records), tmp)
+            self.assertEqual(path, os.path.join(tmp, 'lm-x.jsonl'))
+            with open(path, 'rb') as f:
+                sha1 = hashlib.sha1(f.read()).hexdigest()
+            self.assertIn(sha1, out.call_args[0][0])
+            df = d2l.read_jsonl(path)
+            self.assertEqual(df.a.tolist(), [1, 2])
+            self.assertEqual(df.text[0], 'naïve')
+            self.assertTrue(d2l.pd.isna(df.text[1]))  # None reads as missing
+            self.assertEqual(d2l.lm_artifact('lm-x-v9', 'lm-x.jsonl', tmp),
+                             path)  # this run's file, registered or not
+        self.assertIsNone(d2l.lm_registered('lm-x-v9'))
+        with self.assertRaisesRegex(KeyError, 'not registered'):
+            d2l.lm_artifact('lm-x-v9')
+
+    def test_free_and_peak_without_gpu(self):
+        if torch.cuda.is_available():
+            self.skipTest('a GPU is visible')
+        d2l.lm_free()
+        self.assertEqual(d2l.lm_peak(), 'no GPU')
+
+
 class TestScoreChoicesBoundaryMerge(unittest.TestCase):
     """Qwen merges ':' + '\n' into one token: the suffix rule then scores
     'Answer:B'. The rule stays (lm-evaluation-harness's), with a warning."""
@@ -1090,6 +1188,24 @@ class TestPlotIntervals(unittest.TestCase):
                            'k', 'pass@k', kind='band', xscale='log2',
                            axes=ax)
         self.assertEqual(len(ax.collections), 1)
+        fig, ax = plt.subplots()  # marks: in the series' colours, one
+        d2l.plot_intervals(  # legend entry each, in black
+            [1, 2, 4, 8], {'a': ([.2, .4, .6, .7], [.1, .3, .5, .6],
+                                 [.3, .5, .7, .8]),
+                           'b': ([.1, .2, .3, .4], [0, .1, .2, .3],
+                                 [.2, .3, .4, .5])},
+            'k', 'pass@k', kind='band', xscale='log2', axes=ax,
+            marks={'plug-in': ('--', {'a': ([1, 8], [.2, .6]),
+                                      'b': ([1, 8], [.1, .3])}),
+                   'maj@8': ('D', {'a': ([8], [.65])})})
+        texts = [t.get_text() for t in ax.get_legend().texts]
+        self.assertEqual(texts, ['a', 'b', 'plug-in', 'maj@8'])
+        lines = {(tuple(l.get_ydata()), l.get_linestyle(), l.get_marker()):
+                 l.get_color() for l in ax.get_lines()}
+        self.assertEqual(lines[((.2, .6), '--', 'None')], 'C0')
+        self.assertEqual(lines[((.1, .3), '--', 'None')], 'C1')
+        self.assertEqual(lines[((.65,), 'None', 'D')], 'C0')
+        self.assertEqual(lines[((), 'None', 'D')], 'black')
         plt.close('all')
         with self.assertRaises(ValueError):
             d2l.plot_intervals([1], {'a': ([1], [0], [2])}, 'x', 'y',

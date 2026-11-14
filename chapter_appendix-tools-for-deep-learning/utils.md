@@ -270,14 +270,18 @@ with `kind='band'` each series is a line with a shaded band. `x` holds
 numbers or category names. `reference` draws a dashed horizontal line, such
 as chance accuracy or zero, and `xscale` takes `'linear'`, `'log'` or
 `'log2'`. Series $i$ is drawn in color `Ci`, and the function returns the
-axes, so that a caller can add matching lines.
+axes, so that a caller can add matching lines. `marks` adds more points to
+the series, such as a second estimator: it maps a name to a matplotlib
+format (`'--'`, `'D'`) and, per series label, the points `(xs, ys)`, drawn
+in the series' color and listed once in the legend, in black.
 
 ```{.python .input #utils-plot-intervals}
 %%tab pytorch
 #@save
 def plot_intervals(x, series, xlabel, ylabel, *, kind='errorbar',
-                   reference=None, xscale='linear', axes=None):
-    """Estimates with intervals: `series` maps a label to (mean, lo, hi)."""
+                   reference=None, xscale='linear', axes=None, marks=None):
+    """Estimates with intervals: `series` maps a label to (mean, lo, hi);
+    `marks` maps a name to (fmt, {label: (xs, ys)})."""
     if kind not in ('errorbar', 'band') or xscale not in ('linear', 'log',
                                                           'log2'):
         raise ValueError(f'unknown kind {kind!r} or xscale {xscale!r}')
@@ -309,6 +313,11 @@ def plot_intervals(x, series, xlabel, ylabel, *, kind='errorbar',
             at = from_axis(to_axis(pos) + (i - (len(series) - 1) / 2) * width)
             axes.errorbar(at, mean, yerr=np.clip(err, 0, None), fmt='o',
                           color=color, markersize=4, capsize=3, label=label)
+    for name, (fmt, points) in (marks or {}).items():
+        for i, label in enumerate(series):
+            if label in points:
+                axes.plot(*points[label], fmt, color=f'C{i % 10}')
+        axes.plot([], [], fmt, color='black', label=name)  # legend only
     if reference is not None:
         axes.axhline(reference, linestyle='--', color='black', linewidth=0.8)
     if logx:
@@ -319,7 +328,7 @@ def plot_intervals(x, series, xlabel, ylabel, *, kind='errorbar',
     if categorical and len(x) > 3:  # Slanted names do not collide
         axes.set_xticklabels(axes.get_xticklabels(), rotation=30, ha='right')
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
-    if len(series) > 1:
+    if len(series) > 1 or marks:
         axes.legend()
     axes.grid(axis='y' if categorical else 'both')  # No line through a bar
     return axes

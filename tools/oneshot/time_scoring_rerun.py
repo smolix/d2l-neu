@@ -1,22 +1,25 @@
-"""Time one batch of every job of 18.4's regeneration run and pick its cut.
+"""Time one batch of every job of 18.4's regeneration run before it runs.
 
-`chapter_lm-pretrained/scoring.md` regenerates its artifacts under
-`D2L_RERUN=1`, and such a run must finish within 30 minutes measured (ruling
-2026-11-12). Its cuts apply in a declared order, `D2L_RERUN_CUT=k` applying
-the first k:
+`chapter_lm-pretrained/scoring.md` regenerates its measured results under
+`D2L_RERUN` (`1` for all four, or a comma-separated subset of `bpb`,
+`gsm8k-samples`, `arc-generations`, `arc-scores`). A regeneration run has a
+30-minute target and a 60-minute hard limit, the scheduler's per-notebook
+timeout (ruling 2026-11-13). The section declares no cuts: its settings are
+the ones the registered artifacts record. A run that would exceed the hard
+limit is split into per-artifact runs (`D2L_RERUN=<one artifact>`), each of
+which repeats the normal build's live part.
 
-  1. the reasoning arm on 100 subset items instead of 200;
-  2. GSM8K samples capped at 320 new tokens instead of 384;
-  3. no fp32 batch-size re-scorings.
-
-This script picks k from wall clock alone, before the run, so that no
-accuracy has been seen when the cut is chosen. It executes the notebook's own
-setup cells (subsets, prompts, samplers, arms, formats), then times one batch
-of 50 prompts of every generation job and 50 items of every re-scoring,
-loading each model as the run does. It extrapolates to the full run, adds the
-normal build's live part (`--live-min`, the spec's 10 min unless measured),
-and prints the smallest k whose estimate fits `--ceiling-min`. It prints
-times and memory only: no reply is parsed or scored.
+This script executes the notebook's own setup cells (subsets, prompts,
+samplers, arms with their batch sizes, formats), then times one batch of
+every generation job and 50 items of every re-scoring, loading each model
+as the run does. It extrapolates to the full run, adds the normal build's
+live part (`--live-min`), and checks the estimate against `--target-min`
+and `--limit-min`: within the target, run as one; over the target but with
+its at-cap estimate within the limit, run as one (the log says it is over
+the target); otherwise it prints the per-artifact estimates and whether
+each fits the limit, or says to escalate. It prints times, memory and the
+share of the probed replies cut at the token budget (whether the budget
+binds), never an accuracy.
 
     cd <worktree>
     CUDA_VISIBLE_DEVICES=<gpu> HF_HOME=$HOME/.cache/hf-lm \\
@@ -43,13 +46,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 SOURCE = os.path.join(ROOT, 'chapter_lm-pretrained', 'scoring.md')
 CELLS = ['scoring-imports', 'scoring-imports-extras', 'scoring-data-hub',
-         'scoring-download', 'scoring-setup', 'scoring-artifacts',
-         'scoring-data', 'scoring-format-print', 'scoring-format-merges',
-         'scoring-gsm8k-prompts', 'scoring-arc-arms', 'scoring-grid-def']
-BATCH = 50  # prompts per generation batch, as the notebook's cells
+         'scoring-setup', 'scoring-data', 'scoring-format-print',
+         'scoring-format-merges', 'scoring-gsm8k-prompts', 'scoring-arc-arms',
+         'scoring-grid-def']
+GSM_BATCH = 50  # prompts per GSM8K batch, as the notebook's cell
 N_SAMPLES, N_GSM, N_ARC = 8, 100, 500  # GSM8K samples and problems; ARC
-CUTS = {0: (200, 384, True), 1: (100, 384, True), 2: (100, 320, True),
-        3: (100, 320, False)}  # k: reasoning items, GSM8K budget, fp32 runs
+PROBE = 50  # items per probed re-scoring
 
 
 def cell(source, cid):
@@ -63,9 +65,8 @@ def cell(source, cid):
 
 def notebook_state():
     """Run the notebook's setup cells, as a normal build would, and return
-    their namespace (CUT 0, RERUN off; their printed output is dropped)."""
-    for var in ('D2L_RERUN', 'D2L_RERUN_CUT'):
-        os.environ.pop(var, None)
+    their namespace (RERUN off; their printed output is dropped)."""
+    os.environ.pop('D2L_RERUN', None)
     with open(SOURCE) as f:
         source = f.read()
     ns = {'__name__': '__scoring__'}
@@ -84,7 +85,8 @@ def main(argv=None):
                    help='print the plan without loading a model')
     p.add_argument('--live-min', type=float, default=10.0,
                    help='minutes of the normal build inside the run')
-    p.add_argument('--ceiling-min', type=float, default=30.0)
+    p.add_argument('--target-min', type=float, default=30.0)
+    p.add_argument('--limit-min', type=float, default=60.0)
     p.add_argument('--only', default='1', metavar='D2L_RERUN',
                    help='the value D2L_RERUN will have: 1 (all) or a '
                    'comma-separated list of artifacts; only their jobs '
@@ -95,21 +97,20 @@ def main(argv=None):
     names = args.only.split(',')
     only = set(ns['ARTIFACTS'] if names == ['1'] else names)
     if not only <= set(ns['ARTIFACTS']):
-        p.error(f'--only names one of {ns["ARTIFACTS"]}, or 1')
+        p.error(f'--only names one of {tuple(ns["ARTIFACTS"])}, or 1')
     print('regenerating:', ', '.join(sorted(only)) + (
         ' (bpb is part of the live run)' if 'bpb' in only else ''))
     PAIR, ARMS, GSM_SAMPLER = ns['PAIR'], ns['ARMS'], ns['GSM_SAMPLER']
     gsm_budget = GSM_SAMPLER['max_new_tokens']
-    reason_budget = ARMS['reasoning'][2]['max_new_tokens']
     arc_models = list(dict.fromkeys(ARMS['direct'][0] + ARMS['reasoning'][0]))
     if 'gsm8k-samples' in only:
         print(f'GSM8K pool: {PAIR}, {N_SAMPLES} x '
-              f'{math.ceil(N_GSM / BATCH)} batches per model, budget '
+              f'{math.ceil(N_GSM / GSM_BATCH)} batches per model, budget '
               f'{gsm_budget}')
-    for arm, (models, n, s) in ARMS.items() if 'arc-generations' in only \
-            else ():
-        print(f'ARC {arm}: {models}, {math.ceil(n / BATCH)} batches per '
-              f'model, budget {s["max_new_tokens"]}')
+    for arm, (models, n, size, s) in ARMS.items() if 'arc-generations' in \
+            only else ():
+        print(f'ARC {arm}: {models}, {math.ceil(n / size)} batches of {size} '
+              f'per model, budget {s["max_new_tokens"]}')
     if 'arc-scores' in only:
         print('batch-size runs:', [(m, str(dt), bs) for m, dt, bs, _ in
                                    ns['BATCH_RUNS']])
@@ -131,83 +132,102 @@ def main(argv=None):
         (model, tok), t = timed(lambda: d2l.load_hf(m, **kw))
         return model, tok, t
 
-    def probe_generate(model, tok, prompts, settings):
-        """(prefill s, s per new token, tokens reached) of one batch."""
+    def probe_generate(model, tok, prompts, settings, size):
+        """(prefill s, s per new token, tokens reached, share cut at the
+        budget) of one batch."""
         one = dict(settings, max_new_tokens=1)
         _, t1 = timed(lambda: d2l.generate(model, tok, prompts,
-                                           batch_size=BATCH, **one))
+                                           batch_size=size, **one))
         out, t = timed(lambda: d2l.generate(model, tok, prompts,
-                                            batch_size=BATCH, **settings))
+                                            batch_size=size, **settings))
         reached = max(len(g.token_ids) for g in out)
-        return t1, max(t - t1, 0.0) / max(reached - 1, 1), reached
+        cut = sum(g.finish_reason == 'length' for g in out) / len(out)
+        return t1, max(t - t1, 0.0) / max(reached - 1, 1), reached, cut
 
     def batch_time(probe, budget, cap=False):
-        t1, step, reached = probe
+        t1, step, reached, _ = probe
         return t1 + step * ((budget if cap else min(reached, budget)) - 1)
 
-    rows, loads = [], {'gsm': 0.0, 'arc': 0.0}
+    rows, loads = [], {'gsm8k-samples': 0.0, 'arc-generations': 0.0}
     gsm, arc = {}, {}
     for m in PAIR if 'gsm8k-samples' in only else ():
         model, tok, t = load(m)
-        loads['gsm'] += t
-        gsm[m] = probe_generate(model, tok, ns['GSM_PROMPTS'][:BATCH],
-                                dict(GSM_SAMPLER, seed=0))
-        rows.append((f'GSM8K {m}', gsm[m], ns['peak']()))
+        loads['gsm8k-samples'] += t
+        gsm[m] = probe_generate(model, tok, ns['GSM_PROMPTS'][:GSM_BATCH],
+                                dict(GSM_SAMPLER, seed=0), GSM_BATCH)
+        rows.append((f'GSM8K {m}', gsm[m], d2l.lm_peak()))
         del model
-        ns['free']()
+        d2l.lm_free()
     for m in arc_models if 'arc-generations' in only else ():
         model, tok, t = load(m)
-        loads['arc'] += t
-        for arm, (models, n, settings) in ARMS.items():
+        loads['arc-generations'] += t
+        for arm, (models, n, size, settings) in ARMS.items():
             if m in models:
                 arc[arm, m] = probe_generate(
-                    model, tok, ns['ARC_CHAT'][:BATCH],
-                    dict(settings, chat=True))
-                rows.append((f'ARC {arm} {m}', arc[arm, m], ns['peak']()))
+                    model, tok, ns['ARC_CHAT'][:size],
+                    dict(settings, chat=True), size)
+                rows.append((f'ARC {arm} {m}', arc[arm, m], d2l.lm_peak()))
         del model
-        ns['free']()
-    rescore = []  # (fp32?, seconds for the full run incl. its load)
+        d2l.lm_free()
+    rescore = 0.0  # seconds for the full re-scorings, loads included
     for m, dtype, size, col in (ns['BATCH_RUNS'] if 'arc-scores' in only
                                 else ()):
         model, tok, t = load(m, dtype=dtype)
         for fmt in ('cloze', 'letter0'):
-            prompts, choices = zip(*ns['FORMATS'][fmt][:BATCH])
+            prompts, choices = zip(*ns['FORMATS'][fmt][:PROBE])
             _, s = timed(lambda: d2l.score_choices(
                 model, tok, prompts, choices, batch_size=size))
-            t += s * N_ARC / BATCH
-        rescore.append((dtype == torch.float32, t))
+            t += s * N_ARC / PROBE
+        rescore += t
         print(f're-score {m} {dtype} batch {size}: {t / 60:.1f} min '
-              f'(est.), {ns["peak"]()}')
+              f'(est.), {d2l.lm_peak()}')
         del model
-        ns['free']()
-    for name, (t1, step, reached), mem in rows:
+        d2l.lm_free()
+    for name, (t1, step, reached, cut), mem in rows:
         print(f'{name}: prefill {t1:.1f} s, {1e3 * step:.0f} ms/token, '
-              f'reached {reached} tokens, {mem}')
+              f'reached {reached} tokens, {cut:.0%} of the batch cut at the '
+              f'budget, {mem}')
 
-    def estimate(k, cap):
-        n_reason, budget, fp32 = CUTS[k]
-        g = sum(N_SAMPLES * math.ceil(N_GSM / BATCH) *
-                batch_time(gsm[m], budget, cap) for m in gsm)
-        a = sum(math.ceil((N_ARC if arm == 'direct' else n_reason) / BATCH)
-                * batch_time(probe, ARMS[arm][2]['max_new_tokens'], cap)
+    def minutes(cap):
+        """Minutes per artifact, without the live part."""
+        g = sum(N_SAMPLES * math.ceil(N_GSM / GSM_BATCH) *
+                batch_time(gsm[m], gsm_budget, cap) for m in gsm)
+        a = sum(math.ceil(ARMS[arm][1] / ARMS[arm][2]) *
+                batch_time(probe, ARMS[arm][3]['max_new_tokens'], cap)
                 for (arm, m), probe in arc.items())
-        r = sum(t for is_fp32, t in rescore if fp32 or not is_fp32)
-        return (args.live_min * 60 + loads['gsm'] + loads['arc'] + g + a +
-                r) / 60
-    print(f'\nestimated run (live part {args.live_min:g} min included):')
-    choice = None
-    for k in CUTS:
-        mid, top = estimate(k, False), estimate(k, True)
-        print(f'  D2L_RERUN_CUT={k}: {mid:.1f} min measured lengths, '
-              f'{top:.1f} min at the token caps')
-        if choice is None and mid <= args.ceiling_min:
-            choice = k
-    if choice is None:
-        print(f'no cut level fits {args.ceiling_min:g} min: escalate')
+        return {'bpb': 0.0,
+                'gsm8k-samples': (loads['gsm8k-samples'] + g) / 60,
+                'arc-generations': (loads['arc-generations'] + a) / 60,
+                'arc-scores': rescore / 60}
+    mid, top = minutes(False), minutes(True)
+    total = [args.live_min + sum(e[k] for k in only) for e in (mid, top)]
+    print(f'\nestimated run, live part ({args.live_min:g} min) included: '
+          f'{total[0]:.1f} min at the measured lengths, {total[1]:.1f} min '
+          f'at the token caps')
+    if total[0] <= args.target_min:
+        print(f'within the {args.target_min:g}-min target: run '
+              f'D2L_RERUN={args.only} as one job')
+    elif total[1] <= args.limit_min:
+        print(f'WARNING: over the {args.target_min:g}-min target, within the '
+              f'{args.limit_min:g}-min hard limit at the caps: run '
+              f'D2L_RERUN={args.only} as one job; its log says it is over '
+              'the target')
     else:
-        print(f'choose D2L_RERUN_CUT={choice} (the fewest cuts that fit '
-              f'{args.ceiling_min:g} min)')
-    print(f'(budgets probed: GSM8K {gsm_budget}, reasoning {reason_budget})')
+        print(f'over the {args.limit_min:g}-min hard limit as one job; '
+              'per-artifact runs:')
+        fits = True
+        for k in sorted(only):
+            t = [args.live_min + e[k] for e in (mid, top)]
+            ok = t[1] <= args.limit_min
+            fits &= ok
+            print(f'  D2L_RERUN={k}: {t[0]:.1f} min measured, {t[1]:.1f} min '
+                  f'at the caps' + ('' if ok else ' (over the limit)'))
+        if not fits:
+            print('an artifact alone does not fit the hard limit: escalate')
+    for arm, (_, n, size, s) in ARMS.items() if arc else ():
+        cut = [arc[arm, m][3] for m in ARMS[arm][0]]
+        print(f'(ARC {arm}: budget {s["max_new_tokens"]}, probed batch cut '
+              f'at the budget {min(cut):.0%} to {max(cut):.0%})')
 
 
 if __name__ == '__main__':

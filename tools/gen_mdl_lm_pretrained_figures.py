@@ -780,9 +780,8 @@ def fig_scoring_conventions():
     cols = [
         q_lines + ["Answer:"],
         q_lines + opts + ["Answer:"],
-        ["Which gas do plants take in", "from the air to make their",
-         "food?"] + opts + ["Give the letter of the correct",
-                            r"option as \boxed{X}."],
+        q_lines + opts + ["Put the letter of the correct",
+                          r"option inside \boxed{}."],
     ]
     lh = 19.0
     cw = max(tw(ln, fs) for c in cols for ln in c) + 24

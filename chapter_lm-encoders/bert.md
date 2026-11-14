@@ -638,7 +638,8 @@ if 'bert-sweep' in RERUN:
                     model = model.to(torch.bfloat16)
                     X = pad([x for x, _ in D['eval'][:BATCH]])
                     out['timing'][task] = ms_per_1k(lambda: model(*X), BATCH)
-                    if task == 'mnli':
+                    if task == 'mnli':  # what the saved weights predict
+                        out['ckpt_pred'] = predict(model, D['eval'])
                         d2l.lm_save_rerun(ARTIFACTS['bert-ckpt'][1],
                                           save_ckpt(model, task))
                 del model
@@ -685,19 +686,20 @@ del model
 d2l.lm_free()
 ```
 
-<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): live check (ii): the registered checkpoint (bf16 weights) predicts the validation items; it stays loaded for the timing below. -->
+<!-- Placeholder (prose, ## Fine-Tuning and Its Variance): live check (ii): the registered checkpoint (bf16 weights) predicts the validation items, compared with what the same weights predicted when they were saved and with the fp32 weights at the end of training; it stays loaded for the timing below. -->
 
 ```{.python .input #bert-ckpt-live}
 %%tab pytorch
 clf16 = load_ckpt(result_path('bert-ckpt'),
                   torch.bfloat16 if GPU else torch.float32)
 y = np.array(SWEEP['eval']['mnli']['label'][:k])
-reg = np.array(runs.query('task == "mnli" and seed == 0').sort_values('n')
-               .pred.iloc[-1][:k])
+trained = np.array(runs.query('task == "mnli" and seed == 0').sort_values(
+    'n').pred.iloc[-1][:k])  # the fp32 weights at the end of training
 pred = np.array(predict(clf16, DATA['mnli']['eval'][:k]))
-agree = np.mean(pred == reg)
+agree = np.mean(pred == np.array(SWEEP['ckpt_pred'][:k]))
 print(f'registered checkpoint, {k} items: accuracy {np.mean(pred == y):.3f}; '
-      f'same prediction as its training run on {agree:.3f}; {d2l.lm_peak()}')
+      f'same prediction as when it was saved on {agree:.3f}, as its fp32 '
+      f'training run on {np.mean(pred == trained):.3f}; {d2l.lm_peak()}')
 assert SMALL or agree >= 0.99
 ```
 

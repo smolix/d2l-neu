@@ -11,8 +11,9 @@ on.
 
 The remaining chapters supply the probabilistic and dynamical foundations:
 *probability and statistical learning* (distributions, estimation, and
-generalization), *information theory* (entropy, cross-entropy, and the KL
-divergence that most losses descend from), and *dynamics* (differential
+generalization), *information theory* (entropy and the KL divergence that
+most losses descend from, codes, other ways to compare two distributions,
+and mutual information), and *dynamics* (differential
 equations and the continuous-time view that connects to modern normalizing-flow
 and diffusion models). Read it start to finish, or dip in when a main-text
 chapter cites a result.

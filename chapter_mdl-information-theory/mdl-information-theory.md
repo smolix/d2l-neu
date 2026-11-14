@@ -1,54 +1,41 @@
 # Entropy, Cross-Entropy, and KL Divergence
 :label:`sec_mdl-information_theory`
 
-Almost every classifier in this book was trained by pushing a cross-entropy
-loss down, and we have grown used to watching that number fall. We have not yet
-asked what it measures, and without knowing that, a loss curve cannot be
-read. Its starting value already means something. A freshly initialized
-classifier with ten classes reports a loss of about $2.30$, and
-:numref:`sec_mlp-implementation` used this value to check that an untrained
-network is set up correctly. The value is $\ln 10$, the cost in nats of
-naming one of ten labels when the model still finds all ten equally likely.
-The end of the curve raises harder questions. Is a final loss of $0.6$ good?
-Is a plateau a bug or a property of the data? If some of the labels are
+A loss curve is the first thing we look at when a classifier trains, and we
+have learned to read its shape: a falling curve is good news, a flat one is
+suspicious. The numbers on its axis are another matter. So far we can explain
+one of them. A freshly initialized classifier with ten classes reports a loss
+of about $2.30$, and :numref:`sec_mlp-implementation` used this value to check
+that an untrained network is set up correctly. The value is $\ln 10$, the cost
+of naming one of ten labels when the model still finds all ten equally likely.
+The other end of the curve raises harder questions. Is a final loss of $0.6$
+good? Is a plateau a bug or a property of the data? If some of the labels are
 wrong, how low can any model go?
 
 The loss is the average of $-\log q(y)$, the model's surprise at the label
 $y$ that occurred. That average splits into two parts. The first is the
-average surprise of someone who knows the true distribution of the labels. It
-is called the *entropy*. The data fix it, and no model can reduce it. On a
-finite set of outcomes, entropy also has a concrete meaning that we use
-throughout: the average number of yes/no questions needed to identify the
-outcome.
+average surprise of someone who knows the true distribution of the labels,
+the *entropy*. The data fix it, and no model can reduce it. The second is the
+extra surprise of using the wrong distribution, the *Kullback--Leibler (KL)
+divergence*. It is never negative, and it is zero only for the right model. A
+loss can therefore be judged only against its floor.
 
-The second part is the extra surprise of using the wrong distribution. It is
-called the *Kullback--Leibler (KL) divergence*. It is never negative, and it is
-zero only for the right model. The previous chapter has used both parts:
-:numref:`subsec_mdl-nll-crossentropy` showed that the average negative
-log-likelihood of a model is a cross-entropy from the empirical distribution of
-the data to the model, and :numref:`subsec_mdl-max-entropy-derivation` defined
-the KL divergence and proved Gibbs' inequality
-:eqref:`eq_mdl-exp_family_gibbs`, that it is never negative. There the
-inequality was a tool. Here it is the subject.
-
-Three results carry the section: the decomposition :eqref:`eq_mdl-ce_decomp` of
-the cross-entropy, Gibbs' inequality, and the floor
-:eqref:`eq_mdl-irreducible-loss` of the classification loss. The subsections on
-differential entropy and on maximum entropy can be skipped on a first reading.
+The previous chapter used both parts: maximum likelihood minimizes a
+cross-entropy (:numref:`subsec_mdl-nll-crossentropy`), and the KL divergence
+is never negative (:numref:`subsec_mdl-max-entropy-derivation`), which is
+Gibbs' inequality. There the inequality was a tool. Here it is the subject. We
+start from a deck of cards and a source with four symbols, where entropy
+counts yes/no questions. We then compare two distributions, and return to the
+classifier to find its floor. The last two parts ask what changes when the
+targets are softened and when the outcomes are real numbers.
 
 The logarithm base is a choice of unit: base $2$ gives *bits*, base $e$ gives
-*nats*. **We work in nats throughout**, matching deep-learning practice: the
-library `log` is natural, so reported training losses are already in nats.
-Base $2$ suits yes/no questions, and we say so when we use it,
-writing $H_2$ for an entropy in bits. Since $\log_2 x = \ln x / \ln 2$,
-converting is a fixed rescaling: $1\textrm{ bit} = \ln 2 \approx 0.693$ nats
-and $1\textrm{ nat} = 1/\ln 2 \approx 1.443$ bits. Changing the base leaves
-every argmin unchanged.
+*nats*. **We work in nats throughout**, as the library `log` does and as
+training losses are reported. Bits suit yes/no questions, and we write $H_2$
+for an entropy in bits. One bit is $\ln 2 \approx 0.693$ nats.
+:numref:`tab_mdl-it-notation` collects the symbols of the chapter.
 
-The chapter uses the symbols of :numref:`tab_mdl-it-notation`; each later
-section restates the few it needs.
-
-:Symbols of the information theory chapter. The binary entropy $H_b(p)$ is the entropy of a coin with heads probability $p$, a function of a number rather than of a random variable. The last six rows belong to later sections, which define them where they are first used.
+:Symbols of the information theory chapter. The binary entropy $H_b(p)$ is a function of a number, not of a random variable. The mutual information $I(X;Y)$ and the last five rows are defined in later sections.
 :label:`tab_mdl-it-notation`
 
 | Symbol | Meaning | Unit |
@@ -60,20 +47,17 @@ section restates the few it needs.
 | $D_{\textrm{KL}}(P \Vert Q)$ | KL divergence from $P$ to $Q$ | nats |
 | $\textrm{CE}(P, Q)$ | cross-entropy from $P$ to $Q$ | nats |
 | $k$ | number of classes (size of the set of outcomes) | |
-| $n$ | number of examples | |
+| $n$ | number of examples, or of symbols in a message; the dimension in $\mathbb{R}^n$ | |
 | $\mathbf{p}$, $\mathbf{q}$ | probability vectors on $k$ classes (truth, model) | |
 | $\mathbf{z}$ | logits, with $\mathbf{q} = \mathrm{softmax}(\mathbf{z})$ | |
 | $\epsilon$ | label-smoothing mass (in later sections, a noise variable) | |
 | $\tau$ | temperature | |
 | $H(X \mid Y)$, $I(X;Y)$ | conditional entropy, mutual information | nats |
-| $D_f(P \Vert Q)$ | f-divergence with convex generator $f$ | |
+| $D_f(P \Vert Q)$ | f-divergence with divergence function $f$ | |
 | $T$ | critic: a function whose averages under two distributions bound a divergence | |
 | $g$ | test function of an integral probability metric | |
 | $\gamma$ | coupling (transport plan) of two distributions | |
-| $N$ | number of candidates in a contrastive batch | |
-
-We use the following imports throughout the section.
-<!-- WRITER: the imports cell is now the canonical preamble in all four tabs, which the book hides; this sentence introduces a cell the reader does not see. -->
+| $N$ | number of points in each of two samples that are compared; number of candidates in a contrastive batch | |
 
 ```{.python .input #information-theory-imports}
 #@tab mxnet
@@ -130,8 +114,9 @@ $$
 I(x) = -\log p(x).
 $$
 
-The main text calls it the *surprisal* of the outcome, and we also speak simply
-of its surprise. A certain event carries no information, and halving the
+It is also called the *surprisal* of the outcome, the name used in
+:numref:`subsec_info_theory_basics`: the less we expected an outcome, the more
+it surprises us. A certain event carries no information, and halving the
 probability of an outcome adds $\ln 2$ nats, one bit, to its surprisal. The
 first three card reports carry $0$, $\ln 4 \approx 1.39$ and $\ln 52 \approx
 3.95$ nats. In bits, where one bit is the information of one fair coin flip,
@@ -143,7 +128,7 @@ events adds up. Since independent probabilities multiply, the third property
 says $I(p_1 p_2) = I(p_1) + I(p_2)$, and the only decreasing functions with
 this property are multiples of $-\log p$ (:citet:`Csiszar.2008`;
 Exercise :exref:`ex_mdl-information-theory-show-that-self-information` gives
-the argument). The choice of multiple is the choice of unit. Surprise depends
+the argument). The choice of multiple is the choice of unit. Surprisal depends
 on the model that assigns the probabilities, so a confidently wrong model
 finds ordinary events surprising.
 
@@ -152,8 +137,9 @@ finds ordinary events surprising.
 
 :numref:`fig_mdl-self-info-curve` plots the curve: decreasing, convex, zero at
 $p = 1$, and diverging as $p \to 0$. The fourth card report, the order of the
-deck, needs $\ln 52!$. We compute it through the log-gamma function, $\ln 52! =
-\ln \Gamma(53)$, without ever forming the 68-digit number $52!$.
+deck, lies far out on it, at $\ln 52!$. We compute this value through the
+log-gamma function, $\ln 52! = \ln \Gamma(53)$, without ever forming the
+68-digit number $52!$.
 
 ```{.python .input #information-theory-self-information}
 deck_order = math.lgamma(53)          # ln 52! without forming 52!
@@ -167,7 +153,7 @@ $226$ fair coin flips.
 ### Entropy
 
 How surprised should we expect to be before the outcome arrives? We average
-the surprise over the outcomes. Let $X$ be a discrete random variable that
+the surprisal over the outcomes. Let $X$ be a discrete random variable that
 takes the value $x_i$ with probability $p_i$. Its *entropy* is the expected
 self-information of its outcome,
 
@@ -181,11 +167,11 @@ as $t \to 0$): an impossible outcome contributes nothing. Since the entropy
 depends only on the distribution $P$ of $X$, we write $H(P)$ as well as $H(X)$.
 
 On a finite set, entropy in bits has a concrete meaning: to within one
-question, it is the average number of yes/no questions that a good
-questioner needs to identify the outcome. Take the distribution $P = (\tfrac12, \tfrac14, \tfrac18,
-\tfrac18)$ on four symbols $a, b, c, d$. We carry it through the section and
-call it the *dyadic source*, since all its probabilities are powers of
-$\tfrac12$. A good questioner first asks "Is it $a$?", which settles the
+question, it is the average number of yes/no questions that a good questioner
+needs to identify the outcome. Take the distribution $P = (\tfrac12, \tfrac14,
+\tfrac18, \tfrac18)$ on four symbols $a, b, c, d$. We carry it through the
+section and call it the *dyadic source*, since all its probabilities are powers
+of $\tfrac12$. A good questioner first asks "Is it $a$?", which settles the
 matter half the time. If not, they ask "Is it $b$?", and then "Is it $c$?",
 where "no" means $d$. The expected number of questions is
 
@@ -234,7 +220,10 @@ and $10^9$ with the dyadic probabilities also has $1.75$ bits.
 ### Joint and Conditional Entropy
 :label:`subsec_mdl-joint-conditional-entropy`
 
-A pair $(X, Y)$ with joint mass function $p(x, y)$ is a single random variable
+A label comes with an input, and a character with the text before it. We
+therefore need the entropy of two variables together, and the entropy left in
+one of them once the other is known. The first needs nothing new. A pair
+$(X, Y)$ with joint mass function $p(x, y)$ is a single random variable
 whose outcomes are pairs, and the entropy of the pair is the *joint entropy*
 $H(X, Y) = -\mathbb{E}[\log p(X, Y)]$. The *conditional entropy* is the
 surprisal left in $Y$ once $X$ is known, averaged over both,
@@ -252,21 +241,22 @@ H(X, Y) = H(X) + H(Y \mid X).
 $$
 :eqlabel:`eq_mdl-entropy-chain-rule`
 
-Applied repeatedly, it reads $H(X_1, \ldots, X_n) = \sum_{i=1}^n H(X_i \mid
-X_1, \ldots, X_{i-1})$: the entropy of a sequence is the sum of the entropies
-of its symbols, each given the symbols before it. This is the form that
-:numref:`sec_mdl-coding-compression` and every language model use.
+The entropy of a pair is the entropy of the first variable plus what the
+second adds once the first is known. Applied repeatedly, the rule reads $H(X_1,
+\ldots, X_n) = \sum_{i=1}^n H(X_i \mid X_1, \ldots, X_{i-1})$: the entropy of a
+sequence is the sum of the entropies of its symbols, each given the symbols
+before it. A language model predicts text in this order, one symbol at a time.
 
-The questions game is an instance. Let $Y$ be the answer to the first question,
-"Is it $a$?", about the dyadic source $X$. The answer is a fair coin, so
-$H_2(Y) = 1$ bit. After "yes" nothing is left to ask. After "no" the outcome is
-$b$, $c$ or $d$ with probabilities $(\tfrac12, \tfrac14, \tfrac14)$, a
-distribution with $1.5$ bits, so $H_2(X \mid Y) = \tfrac12 \cdot 0 + \tfrac12
-\cdot 1.5 = 0.75$ bits. Because $Y$ is a function of $X$, the pair carries no
-more than $X$ alone, and the chain rule, with the roles of $X$ and $Y$
-exchanged, reads $1.75 = 1 + 0.75$: the first answer supplies one bit and the
-later questions the rest. :numref:`sec_mdl-mutual-information` treats both
-quantities at length.
+The questions game is an instance. Let $X$ be the answer to the first question,
+"Is it $a$?", and let $Y$ be the outcome of the dyadic source. The answer is a
+fair coin, so $H_2(X) = 1$ bit. After "yes" nothing is left to ask. After "no"
+the outcome is $b$, $c$ or $d$ with probabilities $(\tfrac12, \tfrac14,
+\tfrac14)$, a distribution with $1.5$ bits, so $H_2(Y \mid X) = \tfrac12 \cdot
+0 + \tfrac12 \cdot 1.5 = 0.75$ bits. The chain rule gives $H_2(X, Y) = 1 +
+0.75 = 1.75$ bits: the first answer supplies one bit and the later questions
+the rest. The sum is the entropy of the outcome alone, as it has to be. The
+outcome determines the answer, so $H(X \mid Y) = 0$, and the chain rule in the
+other order reads $H(X, Y) = H(Y) + 0$.
 
 ### Maximum Entropy on a Finite Set
 
@@ -309,7 +299,7 @@ turn to the comparison first.
 We now want to measure how badly a model $Q$ misrepresents a truth $P$.
 Information theory answers with the *Kullback--Leibler (KL) divergence*, also
 called *relative entropy* :cite:`Kullback.Leibler.1951`: the average extra
-surprise of someone who believes $Q$ when the outcomes are drawn from $P$. In
+surprisal of someone who believes $Q$ when the outcomes are drawn from $P$. In
 the questions game, the KL divergence in bits is the average number of extra
 questions that a strategy designed for $Q$ needs on outcomes drawn from $P$,
 up to rounding to whole questions. Let $P$ and $Q$ have mass functions (or
@@ -321,11 +311,11 @@ $$
 :eqlabel:`eq_mdl-kl_def`
 
 The term inside the expectation is
-$\log p(x) - \log q(x) = (-\log q(x)) - (-\log p(x))$: the surprise of the
-believer in $Q$ minus the surprise of the believer in $P$. It is positive
+$\log p(x) - \log q(x) = (-\log q(x)) - (-\log p(x))$: the surprisal of the
+believer in $Q$ minus the surprisal of the believer in $P$. It is positive
 where $Q$ underestimates the outcome ($q(x) < p(x)$) and negative where $Q$
-overestimates it. KL averages this relative surprise over outcomes drawn from
-the truth.
+overestimates it. KL averages this difference over outcomes drawn from the
+truth.
 
 The definition is asymmetric. $P$ supplies both the samples and the numerator,
 so in general $D_{\textrm{KL}}(P\|Q) \neq D_{\textrm{KL}}(Q\|P)$. Outcomes
@@ -376,7 +366,7 @@ happens.
 
 ### Gibbs' Inequality
 
-Can the extra surprise be negative? That would mean a wrong model is less
+Can the extra surprisal be negative? That would mean a wrong model is less
 surprised, on average, than the truth itself. Gibbs' inequality
 :cite:`Gibbs.1902` says that it cannot: no model beats the truth on average.
 Everything that follows rests on it, so we prove it in full, as a statement
@@ -391,7 +381,9 @@ Averaging first and applying $f$ second gives the larger value. For an $X$ with
 two values, this is the chord below the curve of
 :numref:`fig_mdl-bernoulli-entropy`. For strictly concave $f$, equality holds
 only when $X$ is constant with probability one. :numref:`subsec_mdl-jensen`
-proves the general case.
+proves the general case. We need it for one function, the logarithm, which is
+strictly concave: the logarithm of an average is at least the average of the
+logarithms.
 
 **Proposition (Gibbs' inequality).** *For any distributions $P$ and $Q$ on
 the same space,*
@@ -403,15 +395,14 @@ $$
 *with equality if and only if $P = Q$.*
 
 **Proof.** If $q(x) = 0$ for some $x$ with $p(x) > 0$, the divergence is
-$+\infty$ and there is nothing to prove, so assume otherwise. Jensen's
-inequality for the convex function $-\log$ reads
-$\mathbb{E}[-\log Z] \ge -\log \mathbb{E}[Z]$, and with
-$Z = q(x)/p(x)$ it gives
+$+\infty$ and there is nothing to prove, so assume otherwise. Write the
+divergence as minus the average of $\log(q(x)/p(x))$ over $x \sim P$, and
+apply Jensen's inequality to that logarithm:
 
 $$
 \begin{aligned}
 D_{\textrm{KL}}(P\|Q)
-&= \mathbb{E}_{x\sim P}\!\left[-\log\frac{q(x)}{p(x)}\right]
+&= -\mathbb{E}_{x\sim P}\!\left[\log\frac{q(x)}{p(x)}\right]
 \geq -\log \mathbb{E}_{x\sim P}\!\left[\frac{q(x)}{p(x)}\right] \\
 &= -\log \!\!\sum_{x\,:\,p(x)>0}\!\! q(x)
 = -\log Q(\textrm{supp}\,P)
@@ -419,35 +410,51 @@ D_{\textrm{KL}}(P\|Q)
 \end{aligned}
 $$
 
-Everything happens in the second line. The expectation runs over the support of
-$P$, the factors $p(x)$ cancel, and what remains is the $Q$-mass of that
-support, a number at most $1$, whose negative logarithm is non-negative. For
-densities, the same computation runs with integrals. For equality, both
-inequalities must be tight. Because $-\log$ is strictly convex, the first is an
-equality only when $q(x)/p(x)$ equals a constant $c$ for $P$-almost every $x$,
+The minus sign turns Jensen's "at most" into "at least". Everything else
+happens in the second line. The expectation runs over the support of $P$, the
+set of outcomes with $p(x) > 0$. The factors $p(x)$ cancel, and what remains
+is the $Q$-mass of that support, a number at most $1$, whose negative logarithm
+is non-negative. For densities, the same computation runs with integrals. For
+equality, both inequalities must be tight. Because the logarithm is strictly
+concave, the first is an equality only when $q(x)/p(x)$ equals a constant $c$
+for $P$-almost every $x$ (for all $x$ outside a set of $P$-probability zero),
 and the second requires $Q(\textrm{supp}\,P) = 1$. Summing (or integrating) $q
-= c\,p$ over the support of $P$ then gives $c = 1$, so $q = p$, almost
-everywhere in the case of densities. $\blacksquare$
+= c\,p$ over the support of $P$ then gives $c = 1$, so $q = p$, in the case of
+densities again outside a set of probability zero. $\blacksquare$
 
-For the concave logarithm, the log of an average is at least the average of the
-logs, with equality only when there is nothing to average. A model incurs no
-extra surprise only when it is right. Exercise
-:exref:`ex_mdl-information-theory-gibbs-tangent` compares this proof with the
-tangent-line proof.
+The proof has one idea. Averaged over the truth, the ratio $q/p$ is at most
+one, so its logarithm averages to at most zero, with equality only when there
+is nothing to average. A model incurs no extra surprisal only when it is
+right. Exercise :exref:`ex_mdl-information-theory-gibbs-tangent` compares this
+proof with the tangent-line proof.
 
 The inequality settles the uniform bound that we left unproved. For a
 distribution $P$ on $k$ outcomes and the uniform distribution $U$ on the same
 outcomes, $D_{\textrm{KL}}(P\|U) = \sum_i p_i \log(k\,p_i) = \log k - H(P)$,
-which is non-negative and zero only for $P = U$. It also shows that
-conditioning cannot increase entropy: $H(Y) - H(Y \mid X) =
-D_{\textrm{KL}}(p_{X,Y} \,\|\, p_X\, p_Y) \ge 0$, with equality only when $X$
-and $Y$ are independent. This holds on average; a particular observation $X =
-x$ can leave $Y$ more uncertain than before.
+which is non-negative and zero only for $P = U$.
+
+It also shows that conditioning cannot increase entropy. Compare the joint
+distribution of a pair with the product of its marginals. The log-ratio is
+$\log \frac{p(x, y)}{p(x)\,p(y)} = \log p(y \mid x) - \log p(y)$, and its
+average over the joint distribution is $H(Y) - H(Y \mid X)$. That average is a
+KL divergence, so
+
+$$
+H(Y) - H(Y \mid X) = D_{\textrm{KL}}(p_{X,Y} \,\|\, p_X\, p_Y) \ge 0,
+$$
+
+with equality only when $X$ and $Y$ are independent. On average, knowing $X$
+never makes $Y$ more uncertain. A particular observation can. Let $Y$ be tails
+for certain when $X = 0$, and a fair coin when $X = 1$, which happens one time
+in five. Then $Y$ shows heads with probability $0.1$, and $H(Y) = H_b(0.1)
+\approx 0.325$ nats. Observing $X = 1$ raises the uncertainty about $Y$ to $\ln
+2 \approx 0.693$ nats, yet the average $H(Y \mid X) = 0.2 \cdot 0.693 \approx
+0.139$ nats is less than half of $H(Y)$.
 
 ### Cross-Entropy
 
 Classifiers are trained with a close relative of the KL divergence. The
-*cross-entropy* from $P$ to $Q$ is the average surprise of the
+*cross-entropy* from $P$ to $Q$ is the average surprisal of the
 believer in $Q$ on outcomes drawn from $P$,
 
 $$
@@ -456,8 +463,8 @@ $$
 :eqlabel:`eq_mdl-ce_def`
 
 Adding and subtracting $\log p(x)$ inside the expectation, which is
-legitimate whenever $H(P)$ is finite, splits the model's surprise into the
-truth's own surprise plus the relative surprise:
+legitimate whenever $H(P)$ is finite, splits the model's surprisal into the
+truth's own surprisal plus the excess:
 
 $$
 \textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P\|Q).
@@ -476,9 +483,10 @@ game, for the dyadic source and the uniform model $U = (\tfrac14, \tfrac14,
 \tfrac14, \tfrac14)$. Asking adaptively takes $H_2(P) = 1.75$ questions on
 average. The two fixed questions of the uniform questioner take
 $\textrm{CE}_2(P, U) = 2$, and the difference, $D_{\textrm{KL}}(P\|U) = 0.25$
-bits, is the waste. For this pair the reverse divergence $D_{\textrm{KL}}(U\|P)$
-also happens to be $0.25$ bits, which is why we showed the asymmetry of KL on
-the other pair.
+bits, is the waste. Since a questioning strategy is a code, the same numbers
+are average codeword lengths in bits per symbol. For this pair the reverse
+divergence $D_{\textrm{KL}}(U\|P)$ also happens to be $0.25$ bits, which is why
+we showed the asymmetry of KL on the other pair.
 
 ![The decomposition :eqref:`eq_mdl-ce_decomp` for the dyadic source $P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$ and the uniform model $U$, in bits. Asking the questions adapted to $P$ takes $H_2(P) = 1.75$ questions on average, asking two fixed questions takes $\textrm{CE}_2(P, U) = 2.0$, and the waste is $D_{\textrm{KL}}(P\|U) = 0.25$ bits.](../img/mdl-it-code-length-bars.svg)
 :label:`fig_mdl-code-length-bars`
@@ -491,39 +499,45 @@ p_{\textrm{data}}\|q_{\boldsymbol\theta})$.
 
 ## The Classification Loss
 
-### Cross-Entropy Loss from Logits
-
-In a $k$-class classification problem, the truth for one example is the
-one-hot distribution that puts all its mass on the correct label $y$, and the
+In a $k$-class classification problem, the target for one example is the
+one-hot distribution that puts all its mass on the recorded label $y$, and the
 model supplies a predicted distribution $\mathbf{q} = (q_1, \ldots, q_k)$.
 The cross-entropy :eqref:`eq_mdl-ce_def` between them collapses to a single
-term, $-\log q_y$, the model's surprise at the correct class. Averaged over
-$n$ examples with labels $y_i$ and predictions $\mathbf{q}_i$, the
-*cross-entropy loss* is
+term, $-\log q_y$, the model's surprisal at the label. Averaged over
+$n$ examples with labels $y_i$ and predictions $\mathbf{q}_i$, it is the
+*cross-entropy loss*
 
 $$
 \textrm{CE} = -\frac{1}{n} \sum_{i=1}^n \log q_{i, y_i},
 $$
 
-in nats, the quantity a built-in classification loss computes. A built-in
-loss does not take probabilities. It takes the *logits* $\mathbf{z}$, the
-unnormalized scores whose softmax is $\mathbf{q}$, and applies a stable
+in nats. A built-in loss computes this number from the *logits* $\mathbf{z}$,
+the unnormalized scores whose softmax is $\mathbf{q}$, and applies a stable
 log-softmax itself, for the reasons given in
 :numref:`subsec_softmax-implementation-revisited`
-(:numref:`subsec_mdl-stable-softmax` derives the stable form).
-<!-- WRITER: the cells cross_entropy (formal-definition-1/-2, the toy 0.949) and the four-tab built-in-loss cell are cut; their narration sentences were removed here. Make this subsection the one logits paragraph at the head of "The Classification Loss" (worklist B5). -->
+(:numref:`subsec_mdl-stable-softmax` derives the stable form). The rest of
+this part reads that number.
 
 ### The Irreducible Loss
 :label:`subsec_mdl-irreducible-loss`
 
-One question of the opening is still unanswered: how low can the loss go when
-some labels are wrong? In real data the label is not a function of the input:
-the same image can carry different labels, from ambiguity or from annotation
-errors.
+The opening asked how low the loss can go when some labels are wrong. On a
+fixed training set the answer is disappointing. A network large enough to
+memorize the set can fit every recorded label, the wrong ones included, and
+push the training loss toward zero. The question has content only for examples
+that the model has not seen, and there the one-hot target is not the truth. In
+real data the label is not a function of the input: the same image can carry
+different labels, from ambiguity or from annotation errors. The truth about an
+input $\mathbf{x}$ is the distribution from which its label is drawn, and the
+recorded label is one draw from it.
 
 Let the input $\mathbf{x}$ and the label $y \in \{1, \ldots, k\}$ have a
 joint distribution, let $p(\cdot \mid \mathbf{x})$ be the true conditional
-distribution of the label, and let $q(\cdot \mid \mathbf{x})$ be any model's.
+distribution of the label, and let $q(\cdot \mid \mathbf{x})$ be any model's
+prediction. As the number of fresh examples grows, their average loss
+approaches its expectation over the pair $(\mathbf{x}, y)$. We call this
+expectation the *population loss*. No model can bring it below the average
+entropy of the label given the input.
 
 **Proposition (the irreducible classification loss).** *The population
 cross-entropy loss of any model satisfies*
@@ -537,8 +551,8 @@ $$
 :eqlabel:`eq_mdl-irreducible-loss`
 
 *with equality if and only if $q(\cdot \mid \mathbf{x}) = p(\cdot \mid
-\mathbf{x})$ for almost every $\mathbf{x}$ (with respect to the distribution
-of the inputs).*
+\mathbf{x})$ for almost every $\mathbf{x}$, that is, for all inputs outside a
+set of probability zero.*
 
 **Proof.** Condition on $\mathbf{x}$. The inner expectation over $y$ is the
 cross-entropy $\textrm{CE}(p(\cdot \mid \mathbf{x}), q(\cdot \mid
@@ -585,19 +599,32 @@ for name, q_hat in predictors.items():
 ```
 
 The confident predictor reports $0.689$, well above the floor: every flipped
-label surprises it, and its confidence costs more on the tenth of the labels
-that are flipped than it saves on the rest. Only the Bayes predictor reaches
-the floor. A validation loss below the floor on such data cannot come from a
-better model; Exercise :exref:`ex_mdl-information-theory-label-noise-floor`
-asks what it signals instead.
+label surprises it, and its confidence loses more on the tenth of the labels
+that are flipped than it gains on the rest. Only the Bayes predictor reaches
+the floor.
+
+The opening asked whether a final loss of $0.6$ is good. On clean labels,
+where the floor is zero, it leaves room for a better model. On these noisy
+labels it lies within $0.06$ nats of the floor and leaves almost none. A
+plateau at the floor is a property of the data, and only a plateau above it
+is the fault of the model or of its training. All of this holds for fresh
+data. There a loss below the floor cannot come from a better model, and
+Exercise :exref:`ex_mdl-information-theory-label-noise-floor` asks what it
+signals instead.
+
+The floor was derived for one penalty, $-\log q_y$, for labels as the data
+deliver them, and for outcomes that can be counted. The rest of the section
+changes these one at a time: other penalties, softened targets, and outcomes
+that are real numbers.
 
 ### Proper Scoring Rules
 
-The cross-entropy loss also has a decision-theoretic justification. A *scoring
-rule* assigns a penalty $S(\mathbf{q}, y)$ for having reported the probability
-vector $\mathbf{q}$ when class $y$ then occurs. The rule is *proper* if
-truthful reporting is optimal: when the labels follow $\mathbf{p}$, the
-expected penalty $\mathbb{E}_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is
+The floor is reached only by the true conditional probabilities, which is
+what we want of a loss whose outputs we read as probabilities. The property
+has a name. A *scoring rule* assigns a penalty $S(\mathbf{q}, y)$ for having reported
+the probability vector $\mathbf{q}$ when class $y$ then occurs. The rule is
+*proper* if truthful reporting is optimal: when the labels follow $\mathbf{p}$,
+the expected penalty $\mathbb{E}_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is
 minimized by reporting $\mathbf{q} = \mathbf{p}$. It is *strictly proper* if
 this report is the unique optimum. The cross-entropy loss is the *log score*
 $S(\mathbf{q}, y) = -\log q_y$, and it is strictly proper, since its expected
@@ -610,28 +637,27 @@ particular they are *calibrated*: among the inputs that receive probability
 $0.8$ for a class, that class occurs $80\%$ of the time. A finite sample or a
 restricted model class can still leave a trained model miscalibrated.
 
-Other strictly proper rules exist. The *Brier score*
+The log score is not the only strictly proper rule. The *Brier score*
 $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}(j = y))^2$ is strictly proper
 too, with a bounded penalty on confident errors where the log score's
 penalty diverges :cite:`Gneiting.Raftery.2007`. Exercise
 :exref:`ex_mdl-information-theory-scoring-rule-is-strictly` computes its
 excess penalty and tests an improper rule.
 
-## Label Smoothing and Distillation
-
-Label smoothing and knowledge distillation both train against a target other
-than the one-hot label. In both, the optimum is the target itself, by
-:eqref:`eq_mdl-ce_decomp`. What remains to ask is what the softened target
-demands of the logits and, in distillation, how the loss should be scaled.
-
 ### Label Smoothing
 
-A classifier trained on one-hot targets is asked to assign probability $1$ to
-the true class, which a softmax can approach only by driving the true class's
-logit infinitely far above the rest. The result is overconfident models and
-ever-growing weights. *Label smoothing* :cite:`Szegedy.Vanhoucke.Ioffe.ea.2016`
-replaces the one-hot target $\mathbf{e}_y$ by a mixture with a fraction
-$\epsilon$ of the uniform distribution over all $k$ classes,
+Label smoothing and knowledge distillation replace the one-hot label by a
+softer target. By :eqref:`eq_mdl-ce_decomp` the best prediction is that target
+itself. What remains to ask is what the target demands of the logits, where
+the floor of the loss then lies, and, in distillation, how the loss should be
+scaled.
+
+One-hot targets ask for something that a softmax cannot deliver. Probability
+$1$ on the true class needs a logit infinitely far above the others, so the
+loss has no minimizer, and training pushes the logits apart for as long as it
+runs. *Label smoothing* :cite:`Szegedy.Vanhoucke.Ioffe.ea.2016` replaces the
+one-hot target $\mathbf{e}_y$ by a mixture with a fraction $\epsilon$ of the
+uniform distribution over all $k$ classes,
 
 $$
 \mathbf{p}^\epsilon = (1 - \epsilon)\, \mathbf{e}_y + \frac{\epsilon}{k}\, \mathbf{1}.
@@ -640,25 +666,30 @@ $$
 
 The true class gets target probability $1 - \epsilon + \epsilon/k$ and each
 other class $\epsilon/k$. The training loss is the ordinary cross-entropy
-$\textrm{CE}(\mathbf{p}^\epsilon, \mathbf{q})$ to this softened target.
-:numref:`sec_training_recipes` writes the same loss as $-(1-\epsilon)\log q_y -
-\tfrac{\epsilon}{K}\sum_j \log q_j$, with $K$ for our $k$. It is smallest at
-$\mathbf{q} = \mathbf{p}^\epsilon$, where it equals $H(\mathbf{p}^\epsilon)$,
-and two things have changed relative to one-hot targets. First, the optimum is
-no longer at infinity. A softmax reaches $1 - \epsilon + \epsilon/k$ on the
-true class with the finite logit gap
+$\textrm{CE}(\mathbf{p}^\epsilon, \mathbf{q})$ to this target, the smoothed
+loss of :numref:`sec_training_recipes`. It is smallest at $\mathbf{q} =
+\mathbf{p}^\epsilon$, and a softmax reaches that prediction with a finite gap
+between the logit of the true class and each other logit,
 
 $$
 z_y - z_j = \log\frac{1 - \epsilon + \epsilon/k}{\epsilon/k}
-= \log\!\Big(1 + \frac{k(1-\epsilon)}{\epsilon}\Big)
+= \log\!\Big(1 + \frac{k(1-\epsilon)}{\epsilon}\Big).
 $$
 
-between the true class and each other class. For $k = 10$ classes and $\epsilon
-= 0.1$, the gap is $\ln 91 \approx 4.51$. Second, the loss at the optimum is
-not zero, so a label-smoothed loss curve levels off above zero even when the
-model predicts the softened target exactly. The next cell prints both numbers
-and, for contrast, the loss of an overconfident prediction with logit gap $10$.
-<!-- WRITER: the cell is now a run: gradient descent (step size 1, gradient q - p_eps) on the logits of one example, k = 10, zero start, eps in {0, 0.1}, printing the logit gap and the loss after 10, 100, 1,000, 10,000 steps, then the optimum. It no longer evaluates an overconfident prediction (the 0.900 nats below is no longer printed). -->
+For $k = 10$ classes and $\epsilon = 0.1$ the gap is $\ln 91 \approx 4.51$,
+and the loss at the optimum is the entropy of the target,
+$H(\mathbf{p}^\epsilon) = 0.500$ nats.
+
+It is instructive to see how fast the logits run away without smoothing. Take
+one example, start its logits at zero, and descend the loss with step size
+$1$. The gradient with respect to the logits is $\mathbf{q} -
+\mathbf{p}^\epsilon$. With a one-hot target the wrong classes stay tied, and a
+step widens the gap $g$ between the true class and the rest by $(1 - q_y) +
+q_j = k/(e^g + k - 1)$, about $k e^{-g}$ once the gap is large. So $e^g$ grows
+by about $k$ per step, and $g \approx \ln(kt)$ after $t$ steps. The gap never
+stops growing, but ten times the training adds only $\ln 10 \approx 2.30$ to
+it. After $10{,}000$ steps we expect $\ln 10^5 \approx 11.51$. The next cell
+runs the descent with and without smoothing.
 
 ```{.python .input #information-theory-label-smoothing}
 k, checkpoints = 10, (10, 100, 1000, 10000)
@@ -677,11 +708,20 @@ print(f'optimum for eps = 0.1: gap = ln 91 = {math.log(91):.2f}, '
       f'loss = H(p_eps) = {entropy(p_eps):.4f}')
 ```
 
-<!-- WRITER: measured, identical in all four tabs (NumPy, deterministic): eps = 0: gap 4.29, 6.87, 9.21, 11.51 after 10, 100, 1,000, 10,000 steps (grows by ln 10 = 2.3 per decade, like the log of the step count), loss 0.1158, 0.0093, 0.0009, 0.0001; eps = 0.1: gap 3.81 after 10 steps, then 4.51 = ln 91 from step 100 on, loss 0.5243, then 0.5003 = H(p_eps). The 0.900-nat overconfident reading below is gone (worklist B6). -->
+With one-hot targets the gap reads $4.29$, $6.87$, $9.21$ and $11.51$. The
+prediction $\ln(kt)$ is $4.61$, $6.91$, $9.21$ and $11.51$ at these steps: the
+gap starts a little below it, where $k e^{-g}$ is still a rough approximation,
+and agrees with it to two decimals from $1{,}000$ steps on. The loss keeps
+falling without ever arriving at zero. In a network this growth shows as ever
+larger weights and overconfident predictions. With $\epsilon = 0.1$ the gap is
+$4.51$ after $100$ steps and stays there, and the loss stops at $0.500$.
 
-The floor is $0.500$ nats. The overconfident prediction, which one-hot targets
-would score as nearly perfect, has loss $0.900$ nats: label smoothing penalizes
-the behavior that one-hot targets demand. Exercise
+Training can now come to rest, but a smoothed model has to be read
+differently. Its training loss levels off at $H(\mathbf{p}^\epsilon)$, not at
+zero, even when it predicts the target without error. Its probabilities are
+no longer the true conditional ones: no class receives more than $1 - \epsilon
++ \epsilon/k$, here $0.91$. In practice $\epsilon = 0.1$ is the usual choice,
+and the recipe of :numref:`sec_training_recipes` uses it. Exercise
 :exref:`ex_mdl-information-theory-label-smoothing` asks what smoothing does to
 the logits of the wrong classes, and why teachers trained with it distill
 poorly.
@@ -690,12 +730,13 @@ poorly.
 :label:`subsec_mdl-distillation`
 
 *Knowledge distillation* :cite:`Hinton.Vinyals.Dean.2015` trains a small
-*student* network to imitate a large *teacher*. The student learns the
-teacher's whole distribution over the classes, not only its most probable
-class. That a "2" looks somewhat like a "7" is information a one-hot label
-does not carry. A trained teacher's softmax is nearly one-hot, so both
-distributions are first *softened*: the logits are divided by a
-*temperature* $\tau > 0$ before the softmax,
+*student* network to imitate a large *teacher*, and
+:numref:`sec_lm_distillation` applies it to language models. The student
+learns the teacher's whole distribution over the classes, not only its most
+probable class. That a "2" looks somewhat like a "7" is information a one-hot
+label does not carry. A trained teacher's softmax is nearly one-hot, so both
+distributions are first *softened*: the logits are divided by a *temperature*
+$\tau > 0$ before the softmax,
 
 $$
 p_j^{(\tau)} = \mathrm{softmax}(\mathbf{z}^{\textrm{tea}}/\tau)_j, \qquad
@@ -703,8 +744,8 @@ q_j^{(\tau)} = \mathrm{softmax}(\mathbf{z}^{\textrm{stu}}/\tau)_j.
 $$
 
 A temperature above one shrinks the gaps between logits and moves
-probability toward the wrong classes. The distillation loss is the KL divergence between the softened distributions,
-scaled by $\tau^2$:
+probability toward the wrong classes. The distillation loss is the KL
+divergence between the softened distributions, scaled by $\tau^2$:
 
 $$
 \mathcal{L}_{\textrm{distill}}
@@ -712,12 +753,11 @@ $$
 $$
 :eqlabel:`eq_mdl-distill-loss`
 
-The loss is zero only when the student matches the softened teacher
-(:numref:`sec_lm_distillation` returns to its use). The factor $\tau^2$ needs
-an explanation. Differentiate the KL term with respect to a student logit. Only
-$-\sum_j p_j^{(\tau)} \log q_j^{(\tau)}$ depends on the student, and the
-derivative of a log-softmax at temperature $\tau$ is the usual
-softmax-minus-target expression scaled by $1/\tau$:
+The loss is zero only when the student matches the softened teacher. The
+factor $\tau^2$ needs an explanation. Differentiate the KL term with respect
+to a student logit. Only $-\sum_j p_j^{(\tau)} \log q_j^{(\tau)}$ depends on
+the student, and the derivative of a log-softmax at temperature $\tau$ is the
+usual softmax-minus-target expression scaled by $1/\tau$:
 
 $$
 \frac{\partial}{\partial z^{\textrm{stu}}_j}
@@ -728,13 +768,13 @@ $$
 Each student logit is pushed by the gap between the two softened
 probabilities of its class, divided by $\tau$.
 
-For large $\tau$ the softened distributions flatten toward uniform. Subtract
-the mean logit $\bar z$, which leaves the softmax unchanged, and expand
-$e^{(z_j - \bar z)/\tau} \approx 1 + (z_j - \bar z)/\tau$ to first order. The
-denominator becomes $k$ because the deviations sum to zero, so
-$\mathrm{softmax}(\mathbf{z}/\tau)_j \approx \tfrac{1}{k}\big(1 + (z_j - \bar
-z)/\tau\big)$. The difference $q_j^{(\tau)} - p_j^{(\tau)}$ therefore shrinks
-like $1/\tau$, and the gradient like $1/\tau^2$:
+The gap itself shrinks as well. For large $\tau$ the softened distributions
+flatten toward uniform. Subtract the mean logit $\bar z$, which leaves the
+softmax unchanged, and expand $e^{(z_j - \bar z)/\tau} \approx 1 + (z_j - \bar
+z)/\tau$ to first order. The denominator becomes $k$ because the deviations
+sum to zero, so $\mathrm{softmax}(\mathbf{z}/\tau)_j \approx \tfrac{1}{k}\big(1
++ (z_j - \bar z)/\tau\big)$. The difference $q_j^{(\tau)} - p_j^{(\tau)}$
+therefore shrinks like $1/\tau$, and the gradient like $1/\tau^2$:
 
 $$
 \frac{1}{\tau}\big(q_j^{(\tau)} - p_j^{(\tau)}\big)
@@ -744,11 +784,15 @@ $$
 
 Multiplying the loss by $\tau^2$ therefore keeps the size of the gradient
 roughly constant as the temperature is tuned. The temperature can then be
-chosen for the quality of the soft targets without changing the loss's weight
-relative to any hard-label loss it is mixed with. The next cell
-checks both claims for teacher logits $(5, 2, -1)$ and student logits
-$(3, 3, 0)$: the closed-form gradient matches autograd, and $\tau^2$ times the
-gradient approaches the limit above instead of vanishing.
+chosen for the quality of the soft targets without changing the weight of
+this loss relative to a hard-label loss it is mixed with.
+
+We check the scaling on teacher logits $(5, 2, -1)$ and student logits $(3, 3,
+0)$. Both have mean $2$, so $\tau^2$ times the gradient should approach
+$\tfrac13\big((1, 1, -2) - (3, 0, -3)\big) = (-0.667, 0.333, 0.333)$, a vector
+of norm $0.816$. The next cell differentiates the KL term automatically at
+five temperatures and prints the norm of the gradient without and with the
+factor $\tau^2$.
 
 ```{.python .input #information-theory-distillation}
 #@tab mxnet
@@ -822,22 +866,26 @@ limit = np.asarray(limit) / len(limit)
 print(f'limit {"":6s}  {np.linalg.norm(limit):12.3f}  {np.round(limit, 3)}')
 ```
 
-<!-- WRITER: the cell no longer compares autograd with the closed form (the check could not fail: 0 to 6e-8 in all tabs); "The next cell checks both claims ... the closed-form gradient matches autograd" above and "The closed form matches autograd to floating-point precision" below are now false. It prints per temperature (1, 2, 5, 10, 20) the norm of the unscaled gradient, the norm of the tau^2-scaled gradient and the scaled vector, and a last row with the limit. Measured, identical to 3 decimals in all four tabs: unscaled norm 0.6391, 0.2190, 0.0368, 0.0088, 0.0021 for tau = 1, 2, 5, 10, 20 (it falls like 1/tau^2: 0.64 to 0.0021, three hundred times smaller at tau = 20); scaled norm 0.639, 0.876, 0.920, 0.884, 0.854, approaching the limit 0.816; scaled vector at tau = 5 (-0.741, 0.478, 0.263) overshoots the limit -0.667 in the first component, tau = 10 (-0.719, 0.413, 0.306), tau = 20 (-0.697, 0.374, 0.322); limit row (-0.667, 0.333, 0.333). Replace "the unscaled gradient is the printed row divided by tau^2, a hundred times smaller" by a reading of the printed norms (worklist B7). -->
-
-The closed form matches autograd to floating-point precision at every
-temperature, and the $\tau^2$-scaled gradient stays of order one (the unscaled
-gradient is the printed row divided by $\tau^2$, a hundred times smaller at
-$\tau = 10$). Its limit as $\tau \to \infty$ is
-$\tfrac{1}{k}\big((\mathbf{z}^{\textrm{stu}} - \bar z^{\textrm{stu}}) -
-(\mathbf{z}^{\textrm{tea}} - \bar z^{\textrm{tea}})\big) = (-0.667, 0.333,
-0.333)$ here. The convergence is $O(1/\tau)$ and still incomplete in the table:
-the $\tau = 10$ row reads $(-0.719, 0.413, 0.306)$, and the first component
-overshoots its limit on the way. At $\tau = 1$ the loss is the ordinary KL
-divergence, and with a one-hot teacher, which has zero entropy, it is the
-ordinary cross-entropy loss, so standard training is a special case.
+Without the factor the gradient collapses. Its norm falls from $0.64$ at $\tau
+= 1$ to $0.0021$ at $\tau = 20$, about three hundred times smaller, and the
+last doubling of $\tau$ divides it by about four, as $1/\tau^2$ predicts. With
+the factor, the norm stays between $0.64$ and $0.92$, and the gradient
+approaches the predicted limit. The approach is slow, of order $1/\tau$, and
+not monotone: the first component passes its limit, reaches $-0.741$ at $\tau
+= 5$, and is still $0.03$ away at $\tau = 20$. At $\tau = 1$ the loss is the
+ordinary KL divergence, and with a one-hot teacher, which has zero entropy, it
+is the ordinary cross-entropy loss, so standard training is a special case.
 
 ## Entropy and KL Divergence for Densities
-<!-- WRITER: this group (differential entropy, KL between Gaussians, maximum entropy and the Gaussian, with cells example-1 and example-2) was moved here verbatim from the end of "KL Divergence and Cross-Entropy" (structure.md order, group 4); add its lead, and connect the closing paragraph below to the narrow model's 1.05 nats in the tails (worklist B2-B3). -->
+
+So far every outcome could be counted. A regression target is a real number
+with a density, and the sums become integrals. The KL divergence survives
+this change. The entropy does not: it can be negative, and it comes to depend
+on the units in which the variable is measured. The loss of a continuous
+model can therefore fall below zero, and its floor moves with the units. What
+keeps its meaning is the excess over the floor, and with it the difference
+between two models on the same data. A first reading can skip this part and
+resume at the last paragraph of the section.
 
 ### Differential Entropy
 :label:`subsec_mdl-differential-entropy`
@@ -850,7 +898,7 @@ h(X) = -\int p(x) \log p(x) \,dx.
 $$
 :eqlabel:`eq_mdl-diff-ent-def`
 
-It is the average surprise of a density value, and density values are not
+It is the average surprisal of a density value, and density values are not
 probabilities: they carry the units of $1/x$, and they can exceed one. We
 write a lowercase $h$ to keep it apart from the discrete $H$, because the two
 behave differently.
@@ -910,11 +958,10 @@ proves the limit and checks it on a Gaussian.
 
 ### KL Divergence Between Gaussians
 
-Gaussians are the continuous distributions we meet most often, and
-comparing two of them is a common task. A variational autoencoder, for
-instance, penalizes the KL divergence between the Gaussian distribution of
-its code and a standard normal prior. For two univariate Gaussians the KL
-divergence has a closed form. For
+When a model reports a real number together with its uncertainty, it usually
+reports a Gaussian: a mean and a variance. To compare such a model with the
+data, or two such models with each other, we need the KL divergence between
+two Gaussians. It has a closed form. For
 $P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$,
 
 $$
@@ -933,12 +980,36 @@ definition.
 
 The smallest case is a unit mean shift with equal variances, $P =
 \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(1, 1)$, where the formula gives
-$(\mu_1 - \mu_2)^2/(2\sigma^2) = \tfrac12$ nat. The definition suggests a
-second way to compute it: draw samples from $P$ and average $\log p(x) - \log
-q(x)$. Such sample averages are how a KL divergence is estimated when no
-closed form exists (:numref:`sec_mdl-mi-estimation`), so their accuracy is
-worth seeing once. The next cell defines the closed form and the Monte Carlo
-estimate.
+$(\mu_1 - \mu_2)^2/(2\sigma^2) = \tfrac12$ nat in either direction. Now let
+the variances differ: $P = \mathcal{N}(0,1)$ and $Q = \mathcal{N}(0,4)$, so
+$\sigma_2 = 2$. The formula gives $D_{\textrm{KL}}(P\|Q) = \ln 2 + \tfrac18 -
+\tfrac12 \approx 0.318$ and $D_{\textrm{KL}}(Q\|P) = -\ln 2 + 2 - \tfrac12
+\approx 0.807$ nats, a factor of $2.5$ apart.
+
+:numref:`fig_mdl-kl-integrand` shows where each of the two divergences comes
+from. In both directions the integrand changes sign at $|x| = (8 \ln 2/3)^{1/2}
+\approx 1.36$, where the two densities cross. In panel (a) the wide model
+explains narrow data. It is too surprised in the core $|x| < 1.36$, which
+contributes $+0.424$, and less surprised than the truth in the tails, which
+contribute $-0.106$. In panel (b) the narrow model has to explain wide data.
+The core contributes $-0.240$, and the tails, where the narrow model gives
+little probability to outcomes that occur, contribute $+1.046$.
+
+![Where the KL divergence between $\mathcal{N}(0,1)$ and $\mathcal{N}(0,4)$ comes from. (a) The narrow distribution explained by the wide model: a positive core and slightly negative tails sum to $0.318$ nats. (b) The wide distribution explained by the narrow model: the tails, where the narrow model assigns little probability, contribute $1.05$ nats against a core of $-0.24$, for a total of $0.807$. The sign changes at $|x| = 1.36$ in both directions.](../img/mdl-it-kl-integrand.svg)
+:label:`fig_mdl-kl-integrand`
+
+A narrow model is far more surprised by wide data than a wide model is by
+narrow data. The KL divergence grows large when outcomes occur that the model
+has nearly ruled out, and it stays small when the model merely spreads
+probability over outcomes that do not occur. What this asymmetry does to a
+model that is fitted in one direction or the other is the subject of
+:numref:`sec_mdl-fwd-vs-rev-kl`.
+
+The definition suggests a second way to compute a KL divergence: draw samples
+from $P$ and average $\log p(x) - \log q(x)$. This is how a divergence is
+estimated when no closed form exists, so it is worth knowing how accurate
+such averages are. The next cell defines the closed form and the Monte Carlo
+estimate with its standard error.
 
 ```{.python .input #information-theory-example-1}
 def gaussian_kl(mu1, sigma1, mu2, sigma2):
@@ -960,18 +1031,15 @@ def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
     return float(r.mean()), float(r.std() / math.sqrt(n))
 ```
 
-We run both on the unit mean shift. How far from $\tfrac12$ should an average
-of $2 \cdot 10^5$ samples land?
-<!-- WRITER: cell information-theory-example-2 moved below the N(0,4) paragraph and now prints one table (closed form, estimate, standard error) for all three pairs; the questions here and in the next paragraph no longer sit directly before a cell. The SE 0.0022 quoted next is now printed. -->
+For the mean shift the accuracy can be predicted. The log-ratio is $\log p(x)
+- \log q(x) = \tfrac12 - x$, which has variance one under $P$, so the average
+of $n = 2 \cdot 10^5$ samples has standard error $1/\sqrt{n} = 0.0022$.
 
-For this pair $\log p(x) - \log q(x) = \tfrac12 - x$ has variance one, so the
-average of $2 \cdot 10^5$ samples has standard error $0.0022$. The estimate
-usually falls within about $\pm 0.005$ (two standard errors) of $\tfrac12$ and
-almost never beyond $\pm 0.01$.
-
-Now let the variances differ: $P = \mathcal{N}(0,1)$ and $Q =
-\mathcal{N}(0,4)$, so $\sigma_2 = 2$. Which direction gives the larger
-divergence?
+For the pair with different variances, the two directions are not equally
+easy to estimate. Both average the same function up to its sign, $\ln 2 -
+\tfrac38 x^2$, one over samples from the narrow Gaussian and the other over
+samples from the wide one, where $x^2$ fluctuates four times as much. The
+next cell estimates all three divergences.
 
 ```{.python .input #information-theory-example-2}
 pairs = {'N(0,1) || N(1,1)': (0.0, 1.0, 1.0, 1.0),
@@ -983,132 +1051,103 @@ for name, args in pairs.items():
     print(f'{name:18s} {gaussian_kl(*args):7.4f} {estimate:8.4f} {std_err:8.4f}')
 ```
 
-<!-- WRITER: measured (pytorch/tf/jax/mxnet dev runs, unseeded, n = 2e5): closed forms 0.5000 / 0.3181 / 0.8069; standard errors 0.0022 (mean shift), 0.0012 (N(0,1)||N(0,4)), 0.0047-0.0048 (N(0,4)||N(0,1)); estimates fall within about 2 SE of the closed form. The reverse direction, whose integrand lives in the tails, is four times noisier than the forward one (0.0047 vs 0.0012), about twice the mean shift. Replace "usually within about +-0.005 ... almost never beyond +-0.01" by a reading of the printed SEs (worklist B8). -->
-
-The formula gives $D_{\textrm{KL}}(P\|Q) = \ln 2 + \tfrac18 - \tfrac12 \approx
-0.318$ and $D_{\textrm{KL}}(Q\|P) = -\ln 2 + 2 - \tfrac12 \approx 0.807$ nats,
-a factor of $2.5$ apart. :numref:`fig_mdl-kl-integrand` shows where each number
-comes from. In both directions the integrand changes sign at $|x| = (8 \ln
-2/3)^{1/2} \approx 1.36$, where the two densities cross. In panel (a) the wide
-model explains narrow data. It is too surprised in the core $|x| < 1.36$, which
-contributes $+0.424$, and less surprised than the truth in the tails, which
-contribute $-0.106$. In panel (b) the narrow model has to explain wide data.
-The core contributes $-0.240$, and the tails, where the narrow model gives
-almost no probability to outcomes that occur, contribute $+1.046$. What this
-asymmetry does to a model that is fitted in one direction or the other is the
-subject of :numref:`sec_mdl-fwd-vs-rev-kl`.
-
-![Where the KL divergence between $\mathcal{N}(0,1)$ and $\mathcal{N}(0,4)$ comes from. (a) The narrow distribution coded with the wide model: a positive core and slightly negative tails sum to $0.318$ nats. (b) The wide distribution coded with the narrow model: the tails, where the narrow model assigns almost no probability, contribute $1.05$ nats against a core of $-0.24$, for a total of $0.807$. The sign changes at $|x| = 1.36$ in both directions.](../img/mdl-it-kl-integrand.svg)
-:label:`fig_mdl-kl-integrand`
+The standard errors are $0.0022$, $0.0012$ and $0.0047$, and every estimate
+lies within a few of its standard errors of the closed form. The direction that
+draws from the wide Gaussian is four times noisier than its reverse, so it
+needs sixteen times as many samples for the same accuracy. Panel (b) of
+:numref:`fig_mdl-kl-integrand` shows why: this divergence is collected far out
+in the tails, where the log-ratio is large and the samples thin out.
+:numref:`sec_mdl-mi-estimation` meets the same difficulty at a much larger
+scale.
 
 ### Maximum Entropy and the Gaussian
 :label:`subsec_mdl-gaussian-max-entropy`
 
-On a finite set the uniform distribution has the largest entropy, and the proof
-took one line because $-\log u(x)$ is the same for every outcome. That is the
-whole mechanism of maximum entropy. Let $r$ belong to a set $\mathcal{C}$ of
-distributions, and suppose that the cross-entropy $\textrm{CE}(P, r)$ takes the
-same finite value for every $P$ in $\mathcal{C}$. Taking $P = r$ shows that
-this value is $H(r)$, and :eqref:`eq_mdl-ce_decomp` with Gibbs' inequality
-gives
+On a finite set the uniform distribution is the most uncertain one. Which
+density on the real line is? Without a constraint there is none. No density is
+uniform on $\mathbb{R}$, and stretching a density raises its differential
+entropy without limit. So we fix the two numbers that a Gaussian model reports,
+the mean $\mu$ and the variance $\sigma^2$. Among all densities with these two
+moments, the Gaussian has the largest entropy. This is the sense in which a
+Gaussian noise model assumes the least: it commits to a mean and a variance,
+and to nothing else.
 
-$$
-H(P) = \textrm{CE}(P, r) - D_{\textrm{KL}}(P\|r) = H(r) - D_{\textrm{KL}}(P\|r) \le H(r),
-$$
-
-with equality only for $P = r$; for densities, read $h$ for $H$. The condition
-holds whenever $-\log r$ is, up to a constant, a linear combination of the
-statistics whose expectations define $\mathcal{C}$. This is the maximum-entropy
-proposition of :numref:`subsec_mdl-max-entropy-derivation`, told there from the
-side of the exponential family.
-
-On $\mathbb{R}$ there is no uniform density, and with no constraint the
-differential entropy is unbounded. Fix the mean $\mu$ and the variance
-$\sigma^2$, and let $\varphi$ be the Gaussian density with these moments. Then
-$-\log \varphi(x) = \tfrac{1}{2}\log(2\pi\sigma^2) +
-\tfrac{(x-\mu)^2}{2\sigma^2}$ is a quadratic in $x$, so for every density $P$
-with the same two moments
+The proof is the one-line argument for the uniform bound, with one change.
+There $-\log u(x) = \log k$ was the same for every outcome, so every
+distribution $P$ had the same cross-entropy $\log k$ to the uniform model.
+Here let $\varphi$ be the Gaussian density with the given moments. Its
+surprisal $-\log \varphi(x) = \tfrac{1}{2}\log(2\pi\sigma^2) +
+\tfrac{(x-\mu)^2}{2\sigma^2}$ is not constant, but it is a quadratic in $x$,
+and the average of a quadratic depends on $P$ only through the two moments
+that we fixed. For every density $P$ with these moments,
 
 $$
 \textrm{CE}(P, \varphi)
 = \tfrac{1}{2}\log(2\pi\sigma^2) + \frac{\mathbb{E}_P\big[(x-\mu)^2\big]}{2\sigma^2}
 = \tfrac{1}{2}\log(2\pi\sigma^2) + \tfrac{1}{2}
-= \tfrac{1}{2}\log(2\pi e \sigma^2),
+= \tfrac{1}{2}\log(2\pi e \sigma^2).
 $$
 
-the same value for every such $P$. For $P = \varphi$ it is the Gaussian's own
-differential entropy, the closed form quoted whenever a Gaussian entropy is
-needed. For every other such $P$, the argument above gives
+The cross-entropy to the Gaussian does not depend on which such $P$ produced
+the data. For $P = \varphi$ the cross-entropy is the entropy, so this value is
+the Gaussian's own differential entropy, the closed form quoted whenever a
+Gaussian entropy is needed. For every other such $P$, the decomposition
+:eqref:`eq_mdl-ce_decomp`, with $h$ in place of $H$, and Gibbs' inequality
+give
 
 $$
-h(P) \leq \tfrac{1}{2}\log(2\pi e \sigma^2) = h(\mathcal{N}(\mu, \sigma^2)),
+h(P) = \textrm{CE}(P, \varphi) - D_{\textrm{KL}}(P\|\varphi)
+\leq \tfrac{1}{2}\log(2\pi e \sigma^2) = h(\mathcal{N}(\mu, \sigma^2)),
 $$
 :eqlabel:`eq_mdl-gaussian-max-entropy`
 
-with equality if and only if $P = \mathcal{N}(\mu, \sigma^2)$. With only the
-mean fixed, on the outcomes $\{0, 1, 2, \ldots\}$, the same argument gives the
-geometric distribution (Exercise
+with equality if and only if $P = \mathcal{N}(\mu, \sigma^2)$. (If $h(P) =
+-\infty$, there is nothing to prove.)
+
+The uniform and the Gaussian are two cases of one mechanism. Whenever the
+surprisal of a candidate averages to the same value under every distribution
+that meets the constraints, the candidate has the largest entropy among them.
+:numref:`subsec_mdl-max-entropy-derivation` proves this for constraints on the
+averages of any set of statistics, where the candidates form an exponential
+family. With only the mean fixed, on the outcomes $\{0, 1, 2, \ldots\}$, the
+same argument gives the geometric distribution (Exercise
 :exref:`ex_mdl-information-theory-geometric-max-entropy`). On $\mathbb{R}$ with
 only the mean fixed there is no maximum: $\mathcal{N}(\mu, \sigma^2)$ has the
 right mean for every $\sigma$, and its entropy grows without limit.
 
-Two matters are left unsettled. The KL divergence is infinite as soon as the
-model gives zero probability to an outcome that the data can produce, as
-happens for a generator whose samples lie on a thin surface;
-:numref:`sec_mdl-test-functions-transport` builds comparisons that stay finite
-in that case. And we have counted questions and called the loss a code length
-without ever building a code. :numref:`sec_mdl-coding-compression` builds one
-and asks how close a real compressor gets to the entropy.
+The model $Q'$ gave zero probability to an outcome that occurs, and its KL
+divergence was infinite; the narrow Gaussian of :numref:`fig_mdl-kl-integrand`
+came close, with a divergence that arose in tails it had nearly ruled out. A
+model that turns a few random numbers into an image puts all its probability
+on a thin surface in the space of pixels. If the data do not lie on that
+surface, the KL divergence is infinite whether the surface passes close by
+the data or far from them. :numref:`sec_mdl-divergences-distances` shows that
+every divergence built on the ratio $p/q$ shares this blindness, and
+:numref:`sec_mdl-test-functions-transport` builds comparisons that still tell
+near from far. A second question is closer at hand. We counted questions and
+read them as codewords, but only for a source whose surprisals are whole
+numbers of bits. :numref:`sec_mdl-coding-compression` builds a code for every
+source and asks how close a real compressor gets to the entropy.
 
 ## Summary
 
-A cross-entropy loss is an average surprisal, the mean of $-\log q(y)$ over the
-data. It is the entropy of the truth, which no model can change, plus the KL
-divergence from the truth to the model, which by Gibbs' inequality is never
-negative and vanishes only for the right model. The floor of a classification
-loss is therefore the conditional entropy of the label given the input: zero
-when the input determines the label, $H_b(\rho) + \rho \log(k-1)$ under
-symmetric label noise, and reached only by a model that predicts the true
-conditional probabilities. On a set of $k$ outcomes, entropy is at most $\log
-k$, and in bits it is the average number of yes/no questions needed to identify
-the outcome, to within one question. For densities, differential entropy
-depends on the units of the data; the KL divergence and the minimizer of the
-cross-entropy do not. A smoothed target moves the optimum to a finite logit gap
-and raises the floor, and the $\tau^2$ factor in distillation keeps the
-gradient scale fixed as the temperature changes.
+A cross-entropy loss is the model's average surprisal at the data. It is the
+entropy of the data, which no model can lower, plus the KL divergence from the
+data to the model, which by Gibbs' inequality is never negative and vanishes
+only for the right model. A loss must therefore be read against its floor, the
+conditional entropy of the label given the input: zero when the input
+determines the label, $H_b(\rho) + \rho \log(k-1)$ under symmetric label noise,
+and reached on fresh data only by a model that reports the true conditional
+probabilities. In bits, the entropy of a finite source is the average number
+of yes/no questions needed to identify an outcome, to within one question,
+and it is at most $\log_2 k$ for $k$ outcomes. Softened targets move the
+optimum: label smoothing to a finite logit gap with a floor above zero,
+distillation to the softened teacher, where the factor $\tau^2$ holds the
+gradient scale fixed as the temperature changes. For densities the entropy
+depends on the units of the data, while the KL divergence and the minimizer of
+the cross-entropy do not.
 
 ## Exercises
-
-1. **Gaussian KL divergence.** Let $P = \mathcal{N}(\mu_1, \sigma_1^2)$.
-    1. Derive the closed form :eqref:`eq_mdl-gaussian_kl` by writing out
-       $\mathbb{E}_{x\sim P}[\log p(x) - \log q(x)]$ and using
-       $\mathbb{E}_{x \sim P}[x] = \mu_1$ and
-       $\mathbb{E}_{x\sim P}[(x-\mu_1)^2] = \sigma_1^2$.
-    1. Let $Q$ have mean $\mu_1 + \delta$ and standard deviation
-       $\sigma_1 e^{\eta}$. Expand both $D_{\textrm{KL}}(P\|Q)$ and
-       $D_{\textrm{KL}}(Q\|P)$ to second order in $\delta$ and $\eta$. At
-       which order do the two directions first differ?
-    1. Evaluate the second-order approximation for $P = \mathcal{N}(0, 1)$
-       and $Q = \mathcal{N}(0, 4)$, and compare it with the exact values
-       $0.318$ and $0.807$ nats of the two directions.
-   :exlabel:`ex_mdl-information-theory-gaussian-kl`
-
-1. **Other scoring rules.** A scoring rule $S(\mathbf{q}, y)$ is strictly
-   proper if the expected penalty
-   $\mathbb{E}_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is uniquely minimized
-   at $\mathbf{q} = \mathbf{p}$. For the log score, this property is Gibbs'
-   inequality.
-    1. Show that the expected Brier score, with
-       $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}(j = y))^2$, exceeds the
-       expected Brier score of the truthful report by
-       $\|\mathbf{q} - \mathbf{p}\|^2$, so that the Brier score is strictly
-       proper :cite:`Gneiting.Raftery.2007`.
-    1. The linear score $S(\mathbf{q}, y) = -q_y$ rewards the probability
-       placed on the observed class. Which report minimizes its expected
-       penalty? Is the linear score proper? What does a classifier trained
-       with it report for an input whose label is class $1$ with probability
-       $0.6$ and class $2$ with probability $0.4$?
-   :exlabel:`ex_mdl-information-theory-scoring-rule-is-strictly`
 
 1. **Uniqueness of self-information.** ● Show that self-information is
    unique up to scale: if a strictly decreasing function $I(p)$ on $(0, 1]$
@@ -1119,8 +1158,7 @@ gradient scale fixed as the temperature changes.
 
 1. **Two proofs of Gibbs' inequality.** The text proves Gibbs' inequality
    with Jensen's inequality. :numref:`subsec_mdl-max-entropy-derivation`
-   proves it from the tangent line $\ln u \le u - 1$
-   (:eqref:`eq_mdl-exp_family_gibbs`).
+   proves it from the tangent line $\ln u \le u - 1$.
     1. Show that the tangent-line proof, with $u = q(x)/p(x)$ on the support
        of $P$, gives $D_{\textrm{KL}}(P\|Q) \ge 1 - Q(\textrm{supp}\,P)$,
        where the text obtains $-\log Q(\textrm{supp}\,P)$. Which bound is
@@ -1128,45 +1166,10 @@ gradient scale fixed as the temperature changes.
     1. Find a pair $P \neq Q$ for which the bound of the text holds with
        equality. Can the tangent-line bound hold with equality for
        $P \neq Q$?
-    1. Why are the two proofs nevertheless the same argument? Hint: the standard proof of Jensen's inequality
-       for a concave $f$ bounds $f$ by its tangent line at $\mathbb{E}[X]$.
+    1. Why are the two proofs nevertheless the same argument? Hint: the
+       standard proof of Jensen's inequality for a concave $f$ bounds $f$ by
+       its tangent line at $\mathbb{E}[X]$.
    :exlabel:`ex_mdl-information-theory-gibbs-tangent`
-
-1. **Maximum entropy with a fixed mean.**
-   :numref:`subsec_mdl-max-entropy-derivation` lists the geometric
-   distribution $g(j) = (1-r)r^j$ with $r = \mu/(1+\mu)$ as the distribution
-   of largest entropy on $\{0, 1, 2, \ldots\}$ with mean $\mu > 0$.
-    1. Check the condition of :numref:`subsec_mdl-gaussian-max-entropy`
-       directly: show that $-\log g(j)$ is affine in $j$, so that
-       $\textrm{CE}(P, g)$ is the same for every $P$ with mean $\mu$.
-    1. For $\mu = 2$, compute $H(g) = -\log(1-r) - \mu \log r$, and compare
-       it with the entropy of the distribution that puts probability
-       $\tfrac12$ on $0$ and $\tfrac12$ on $4$, which has the same mean.
-    1. Why is there no maximum-entropy density on $\mathbb{R}$ with only the
-       mean fixed? Why does the argument of (a) fail there?
-   :exlabel:`ex_mdl-information-theory-geometric-max-entropy`
-
-1. [code] **Quantized entropy against differential entropy.** Let $X$ have
-   density $p$, and let $X_\Delta$ record which cell
-   $[i\Delta, (i+1)\Delta)$ contains $X$.
-    1. Show that $H(X_\Delta) + \log \Delta \to h(X)$ as $\Delta \to 0$ when
-       $p$ is continuous and $p$ and $p \log p$ are Riemann-integrable. Write
-       $P(X_\Delta = i) = p(x_i)\Delta$ for some $x_i$ in the cell, by the
-       mean value theorem for integrals.
-    1. Check the limit by hand for the uniform density on $[0, 1]$ with
-       $\Delta = \tfrac18$. What happens for a cell width that does not
-       divide $1$, such as $\Delta = 0.3$?
-    1. Compute $H(X_\Delta) + \log \Delta$ numerically for
-       $X \sim \mathcal{N}(0, 1)$ with $\Delta = 0.5, 0.1, 0.01$, using the
-       Gaussian distribution function for the cell probabilities, and compare
-       it with $h = \tfrac12\log(2\pi e) \approx 1.4189$ nats. (At
-       $\Delta = 0.5$ you should find $1.4292$.)
-    1. Why does $H(X_\Delta)$ itself diverge as $\Delta \to 0$? A regression
-       target is binned into cells of width $\Delta$ and predicted with a
-       softmax classifier. Which quantity does its loss approach at best,
-       and what must be added to it before it can be compared with the
-       negative log-density of a continuous model?
-   :exlabel:`ex_mdl-information-theory-quantized-entropy`
 
 1. [code] **The label-noise floor.** Labels on $k$ classes are correct with
    probability $1-\rho$ and otherwise uniform over the other $k-1$ classes,
@@ -1204,6 +1207,23 @@ gradient scale fixed as the temperature changes.
        change in the initialization? Given what you found in (b), is the
        formula still trustworthy at that scale?
    :exlabel:`ex_mdl-information-theory-initial-loss`
+
+1. **Other scoring rules.** A scoring rule $S(\mathbf{q}, y)$ is strictly
+   proper if the expected penalty
+   $\mathbb{E}_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is uniquely minimized
+   at $\mathbf{q} = \mathbf{p}$. For the log score, this property is Gibbs'
+   inequality.
+    1. Show that the expected Brier score, with
+       $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}(j = y))^2$, exceeds the
+       expected Brier score of the truthful report by
+       $\|\mathbf{q} - \mathbf{p}\|^2$, so that the Brier score is strictly
+       proper :cite:`Gneiting.Raftery.2007`.
+    1. The linear score $S(\mathbf{q}, y) = -q_y$ rewards the probability
+       placed on the observed class. Which report minimizes its expected
+       penalty? Is the linear score proper? What does a classifier trained
+       with it report for an input whose label is class $1$ with probability
+       $0.6$ and class $2$ with probability $0.4$?
+   :exlabel:`ex_mdl-information-theory-scoring-rule-is-strictly`
 
 1. **Label smoothing on ambiguous inputs.** ● Label smoothing trains with
    the target :eqref:`eq_mdl-label-smoothing-target`.
@@ -1269,15 +1289,65 @@ gradient scale fixed as the temperature changes.
        logits.
    :exlabel:`ex_mdl-information-theory-distillation-high-temperature`
 
+1. [code] **Quantized entropy against differential entropy.** Let $X$ have
+   density $p$, and let $X_\Delta$ record which cell
+   $[i\Delta, (i+1)\Delta)$ contains $X$.
+    1. Show that $H(X_\Delta) + \log \Delta \to h(X)$ as $\Delta \to 0$ when
+       $p$ is continuous and $p$ and $p \log p$ are Riemann-integrable. Write
+       $P(X_\Delta = i) = p(x_i)\Delta$ for some $x_i$ in the cell, by the
+       mean value theorem for integrals.
+    1. Check the limit by hand for the uniform density on $[0, 1]$ with
+       $\Delta = \tfrac18$. What happens for a cell width that does not
+       divide $1$, such as $\Delta = 0.3$?
+    1. Compute $H(X_\Delta) + \log \Delta$ numerically for
+       $X \sim \mathcal{N}(0, 1)$ with $\Delta = 0.5, 0.1, 0.01$, using the
+       Gaussian distribution function for the cell probabilities, and compare
+       it with $h = \tfrac12\log(2\pi e) \approx 1.4189$ nats. (At
+       $\Delta = 0.5$ you should find $1.4292$.)
+    1. Why does $H(X_\Delta)$ itself diverge as $\Delta \to 0$? A regression
+       target is binned into cells of width $\Delta$ and predicted with a
+       softmax classifier. Which quantity does its loss approach at best,
+       and what must be added to it before it can be compared with the
+       negative log-density of a continuous model?
+   :exlabel:`ex_mdl-information-theory-quantized-entropy`
+
+1. **Gaussian KL divergence.** Let $P = \mathcal{N}(\mu_1, \sigma_1^2)$.
+    1. Derive the closed form :eqref:`eq_mdl-gaussian_kl` by writing out
+       $\mathbb{E}_{x\sim P}[\log p(x) - \log q(x)]$ and using
+       $\mathbb{E}_{x \sim P}[x] = \mu_1$ and
+       $\mathbb{E}_{x\sim P}[(x-\mu_1)^2] = \sigma_1^2$.
+    1. Let $Q$ have mean $\mu_1 + \delta$ and standard deviation
+       $\sigma_1 e^{\eta}$. Expand both $D_{\textrm{KL}}(P\|Q)$ and
+       $D_{\textrm{KL}}(Q\|P)$ to second order in $\delta$ and $\eta$. At
+       which order do the two directions first differ?
+    1. Evaluate the second-order approximation for $P = \mathcal{N}(0, 1)$
+       and $Q = \mathcal{N}(0, 4)$, and compare it with the exact values
+       $0.318$ and $0.807$ nats of the two directions.
+   :exlabel:`ex_mdl-information-theory-gaussian-kl`
+
+1. **Maximum entropy with a fixed mean.**
+   :numref:`subsec_mdl-max-entropy-derivation` lists the geometric
+   distribution $g(j) = (1-r)r^j$ with $r = \mu/(1+\mu)$ as the distribution
+   of largest entropy on $\{0, 1, 2, \ldots\}$ with mean $\mu > 0$.
+    1. Check the condition of :numref:`subsec_mdl-gaussian-max-entropy`
+       directly: show that $-\log g(j)$ is affine in $j$, so that
+       $\textrm{CE}(P, g)$ is the same for every $P$ with mean $\mu$.
+    1. For $\mu = 2$, compute $H(g) = -\log(1-r) - \mu \log r$, and compare
+       it with the entropy of the distribution that puts probability
+       $\tfrac12$ on $0$ and $\tfrac12$ on $4$, which has the same mean.
+    1. Why is there no maximum-entropy density on $\mathbb{R}$ with only the
+       mean fixed? Why does the argument of (a) fail there?
+   :exlabel:`ex_mdl-information-theory-geometric-max-entropy`
+
 [Discussions](https://d2l.discourse.group/t/1104)
 
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §26.1]{.kicker}
+[Dive into Deep Learning · §37.1]{.kicker}
 
-The loss you report is an average surprise<br>**entropy, cross-entropy, and KL divergence**
+The loss you report is an average surprisal<br>**entropy, cross-entropy, and KL divergence**
 :::
 :::
 
@@ -1287,10 +1357,10 @@ The loss you report is an average surprise<br>**entropy, cross-entropy, and KL d
 - An untrained classifier, nearly uniform predictions: $\ln 10 \approx 2.30$ nats.
 - Clean labels and a perfect model: $0$.
 - $10\%$ of the labels flipped to one of the other nine classes: no model,
-  however large, gets below $0.545$.
+  however large, gets below $0.545$ on fresh data.
 
 ::: {.d2l-note .warn}
-What does the number measure, and where is its floor?
+Is a final loss of $0.6$ good? What does the number measure, and where is its floor?
 :::
 :::
 
@@ -1301,11 +1371,11 @@ What does the number measure, and where is its floor?
 - prove that KL is never negative (Gibbs' inequality);
 - split any log-loss into a floor plus a never-negative excess;
 - compute the floor of a noisy classification problem;
-- say what label smoothing and distillation ask the model to predict.
+- say what label smoothing and distillation ask of the logits.
 
 **Running examples:** the dyadic source $(\tfrac12, \tfrac14, \tfrac18, \tfrac18)$;
 the pair $P = (0.6, 0.3, 0.1)$, $Q = (0.2, 0.5, 0.3)$.
-**Idea:** loss $=$ average surprise $=$ entropy $+$ KL.
+**Idea:** loss $=$ average surprisal $=$ entropy $+$ KL.
 :::
 
 ::: {.slide title="Losses First, Codes and Comparisons Later"}
@@ -1317,28 +1387,36 @@ the pair $P = (0.6, 0.3, 0.1)$, $Q = (0.2, 0.5, 0.3)$.
 |---|---|
 | **Entropy, Cross-Entropy, and KL** | **surprise, KL, the loss floor** |
 | Codes, Compression, and Perplexity | the code behind the log-loss |
-| Divergences and Distances | four ways to compare two laws |
+| f-Divergences | one convex function of the ratio |
+| Test Functions and Transport | averages and moving mass |
+| Score-Based Comparisons | slopes, no normalizer |
 | Mutual Information | dependence and what it limits |
-| Estimating Mutual Information | lower bounds from samples |
+| Estimating Mutual Information | what samples can show |
 :::
 
 ::: {.col .narrow}
 - **Uses:** softmax regression, Jensen's inequality.
-- **Skips:** building a code, comparing distributions by samples.
+- **Skips:** building a code, comparing distributions when KL is infinite.
 :::
 :::
 :::
 
-::: {.slide title="Surprise Is $-\log p$, and Independent Surprises Add"}
+::: {.slide title="Surprisal Is $-\log p$, and Independent Surprisals Add"}
 [Self-information]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$I(x) = -\log p(x)$, in nats. A card, a heart, the three of spades, the
-order of the deck: $0$, $1.39$, $3.95$, $156.4$ nats ($0$, $2$, $5.70$,
-$225.6$ bits).
+$I(x) = -\log p(x)$: the *self-information* or *surprisal* of an outcome of
+probability $p(x)$.
 
-Independent probabilities multiply, so a logarithm makes surprises add.
+| report | $p$ | nats | bits |
+|---|---|---|---|
+| a card | $1$ | $0$ | $0$ |
+| a heart | $1/4$ | $1.39$ | $2$ |
+| the three of spades | $1/52$ | $3.95$ | $5.70$ |
+| the order of the deck | $1/52!$ | $156.4$ | $225.6$ |
+
+Independent probabilities multiply, so a logarithm makes surprisals add.
 :::
 
 ::: {.col .fig}
@@ -1350,8 +1428,8 @@ Independent probabilities multiply, so a logarithm makes surprises add.
 ::: {.slide title="Entropy Is the Average Number of Yes/No Questions"}
 [Entropy]{.kicker}
 
-$H(P) = -\sum_i p_i \log p_i$, with $0 \log 0 = 0$. Dyadic source: ask
-"$a$?", then "$b$?", then "$c$?":
+$H(P) = -\sum_i p_i \log p_i$, the expected surprisal, with $0 \log 0 = 0$.
+Dyadic source on $a, b, c, d$: ask "$a$?", then "$b$?", then "$c$?":
 $\tfrac12 \cdot 1 + \tfrac14 \cdot 2 + \tfrac18 \cdot 3 + \tfrac18 \cdot 3 = 1.75$.
 
 @information-theory-definition
@@ -1359,38 +1437,22 @@ $\tfrac12 \cdot 1 + \tfrac14 \cdot 2 + \tfrac18 \cdot 3 + \tfrac18 \cdot 3 = 1.7
 Two fixed questions would always take $2$.
 :::
 
-::: {.slide title="On $k$ Outcomes, Entropy Peaks at $\log k$, at the Uniform Law"}
-[The maximum]{.kicker}
+::: {.slide title="The First Answer Supplies One Bit, the Later Questions 0.75"}
+[Joint and conditional entropy]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-Jensen, for concave $f$: $\mathbb{E}[f(X)] \le f(\mathbb{E}[X])$; the chord
-lies below the curve.
+- Joint entropy $H(X, Y) = -\mathbb{E}[\log p(X, Y)]$: the entropy of the pair.
+- Conditional entropy $H(Y \mid X) = \sum_x p(x)\, H(Y \mid X = x)$: what is
+  left in $Y$ once $X$ is known.
 
 ::: {.d2l-note .rule}
-$H = \mathbb{E}[\log\tfrac{1}{p(X)}] \le \log\mathbb{E}[\tfrac{1}{p(X)}]
-= \log m \le \log k$, with $m$ the number of outcomes with $p_i > 0$.
-Equality: $1/p$ constant and $m = k$, the uniform law. $\blacksquare$
-:::
+Chain rule: $H(X, Y) = H(X) + H(Y \mid X)$, since
+$\log p(x, y) = \log p(x) + \log p(y \mid x)$.
 :::
 
-::: {.col .fig}
-@fig:mdl-it-bernoulli-entropy
-:::
-:::
-:::
-
-::: {.slide title="Differential Entropy Moves with the Units"}
-[Differential entropy]{.kicker}
-
-$h(X) = -\int p(x) \log p(x)\,dx$: density values are not probabilities.
-
-- Uniform on $[0, a]$: $h = \log a$; for $a = \tfrac12$, $h = -0.69$ nats.
-- Metres to centimetres: $a \to 100a$, and $h$ gains $\ln 100 = 4.6$ nats.
-- A ratio of densities does not move:
-  $\int p_1 \log(p_1/p_2)\,dx = \log(a_2/a_1)$ in any unit.
-- Cells of width $\Delta$: $H(X_\Delta) + \log \Delta \to h(X)$, while
-  $H(X_\Delta)$ itself diverges.
+$X$ answers "Is it $a$?", $Y$ is the outcome of the dyadic source:
+$H_2(X) = 1$ bit. After "no", $(\tfrac12, \tfrac14, \tfrac14)$ has $1.5$
+bits, so $H_2(Y \mid X) = \tfrac12 \cdot 1.5 = 0.75$ and
+$H_2(X, Y) = 1 + 0.75 = 1.75 = H_2(Y)$: the outcome determines the answer.
 :::
 
 ::: {.slide title="Check: What Does an Untrained 3-Class Model Report? A 10-Class One, in Bits?"}
@@ -1407,11 +1469,12 @@ is the familiar $2.30$ nats.
 :::
 :::
 
-::: {.slide title="KL Averages the Extra Surprise of Believing Q When the Truth Is P"}
+::: {.slide title="KL Averages the Extra Surprisal of Believing Q When the Truth Is P"}
 [KL divergence]{.kicker}
 
-$D_{\textrm{KL}}(P\|Q) = \mathbb{E}_{x \sim P}[\log p(x)/q(x)]$: surprise
-under $Q$ minus surprise under $P$, averaged over $P$.
+$D_{\textrm{KL}}(P\|Q) = \mathbb{E}_{x \sim P}[\log p(x) - \log q(x)]$:
+surprisal under $Q$ minus surprisal under $P$, averaged over $P$. In bits:
+extra questions.
 
 ~~~python
 def kl(p, q):
@@ -1421,7 +1484,8 @@ def kl(p, q):
 
 @!information-theory-definition-2
 
-Asymmetric ($0.396$ against $0.365$), and $+\infty$ where $q = 0 < p$.
+Asymmetric, and $+\infty$ for $Q' = (0.5, 0.5, 0)$, which rules out an outcome
+that occurs.
 :::
 
 ::: {.slide title="KL Is Never Negative, and Zero Only at P = Q"}
@@ -1432,13 +1496,41 @@ $D_{\textrm{KL}}(P\|Q) \ge 0$, with equality if and only if $P = Q$.
 :::
 
 $$
-D_{\textrm{KL}}(P\|Q) = \mathbb{E}_P\Big[-\log\frac{q}{p}\Big]
+D_{\textrm{KL}}(P\|Q) = -\mathbb{E}_P\Big[\log\frac{q}{p}\Big]
 \ge -\log \mathbb{E}_P\Big[\frac{q}{p}\Big] = -\log Q(\mathrm{supp}\,P) \ge 0
 $$
 
-- Jensen for the convex $-\log$; the factors $p$ cancel.
-- Equality: $q/p$ constant on the support, and $Q(\mathrm{supp}\,P) = 1$, so $q = p$.
+- Jensen for the concave $\log$: $\mathbb{E}[\log Z] \le \log\mathbb{E}[Z]$;
+  the factors $p$ cancel.
+- $\mathrm{supp}\,P$: the outcomes with $p > 0$. Equality: $q/p$ constant
+  there, and $Q(\mathrm{supp}\,P) = 1$, so $q = p$.
 - No model beats the truth on average.
+:::
+
+::: {.slide title="Entropy Is at Most log k, and Conditioning Cannot Raise It"}
+[Two corollaries]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Against the uniform $U$ on $k$ outcomes, equality only at $P = U$:
+
+$$\begin{aligned}
+D_{\textrm{KL}}(P\|U) &= \textstyle\sum_i p_i \log(k\,p_i) \\
+&= \log k - H(P) \ge 0.
+\end{aligned}$$
+
+- Coin with heads probability $p$:
+  $H_b(p) = -p\log p - (1-p)\log(1-p) \le \ln 2$.
+- Dyadic source: $1.75 < \log_2 4 = 2$ bits.
+- Pair against its marginals: the average of
+  $\log p(y \mid x) - \log p(y)$ is
+  $H(Y) - H(Y \mid X) = D_{\textrm{KL}}(p_{X,Y}\|p_X p_Y) \ge 0$.
+:::
+
+::: {.col .fig}
+@fig:mdl-it-bernoulli-entropy
+:::
+:::
 :::
 
 ::: {.slide title="Cross-Entropy = Entropy + KL, So the Loss Has a Floor"}
@@ -1449,7 +1541,8 @@ $$
 $\textrm{CE}(P, Q) = -\mathbb{E}_P[\log q] = H(P) + D_{\textrm{KL}}(P\|Q)$
 
 - the pair: $1.294 = 0.898 + 0.396$ nats;
-- dyadic source, uniform model: $2.0 = 1.75 + 0.25$ bits;
+- dyadic source, uniform model: $2.0 = 1.75 + 0.25$ bits, questions or
+  codeword length per symbol;
 - $H(P)$ does not depend on $Q$: minimizing CE is minimizing KL.
 :::
 
@@ -1459,68 +1552,21 @@ $\textrm{CE}(P, Q) = -\mathbb{E}_P[\log q] = H(P) + D_{\textrm{KL}}(P\|Q)$
 :::
 :::
 
-::: {.slide title="A Narrow Model Is Far More Surprised by Wide Data Than the Reverse"}
-[Gaussians]{.kicker}
-
-$D_{\textrm{KL}} = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac12$
-
-::: {.cols .vc}
-::: {.col .narrow}
-$\mathcal{N}(0,1)$ against $\mathcal{N}(0,4)$: $0.318$ one way, $0.807$
-the other. The wide tails, where the narrow model is very surprised, carry
-the $0.807$.
-:::
-
-::: {.col .fig}
-@fig:mdl-it-kl-integrand
-:::
-:::
-:::
-
-::: {.slide title="With Mean and Variance Fixed, the Gaussian Has the Largest Entropy"}
-[Maximum entropy]{.kicker}
-
-Gaussian density $\varphi$ with mean $\mu$, variance $\sigma^2$; any density
-$P$ with the same two moments.
-
-I. $-\log \varphi(x) = \tfrac12\log(2\pi\sigma^2) + \tfrac{(x-\mu)^2}{2\sigma^2}$
-is quadratic, so $\textrm{CE}(P, \varphi) = \tfrac12 \log(2\pi e \sigma^2)$
-for every such $P$.
-
-II. $\textrm{CE}(P, \varphi) = h(P) + D_{\textrm{KL}}(P\|\varphi) \ge h(P)$,
-with equality if and only if $P = \varphi$. $\blacksquare$
-
-::: {.d2l-note}
-The same trick with only the mean fixed on $\{0, 1, 2, \ldots\}$ gives the
-geometric distribution.
-:::
-:::
-
-::: {.slide title="Check: KL from P to Q′ = (0.5, 0.5, 0)? And CE(P, P)?"}
-[Check]{.kicker}
-
-For the truth $P = (0.6, 0.3, 0.1)$, compute $D_{\textrm{KL}}(P\|Q')$ for
-the model $Q' = (0.5, 0.5, 0)$, and the cross-entropy $\textrm{CE}(P, P)$.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $D_{\textrm{KL}}(P\|Q') = +\infty$: the third outcome happens
-one time in ten, and $Q'$ calls it impossible.
-$\textrm{CE}(P, P) = H(P) = 0.898$ nats, the floor.
-:::
-:::
-:::
-
-::: {.slide title="The One-Hot Cross-Entropy Is the Model's Surprise at the Label"}
+::: {.slide title="With a One-Hot Target, Cross-Entropy Is the Surprisal at the Label"}
 [Classification]{.kicker}
 
-- One-hot target on the label $y$: $\textrm{CE} = -\log q_y$.
-- Two examples, true classes predicted with $0.3$ and $0.5$:
-  $\tfrac12(-\ln 0.3 - \ln 0.5) = 0.949$ nats.
-- Built-in losses take logits $\mathbf{z}$ and apply a stable log-softmax
+- One-hot target on the label $y$, prediction $\mathbf{q}$ on $k$ classes:
+  $\textrm{CE} = -\log q_y$.
+- Over $n$ examples: $\textrm{CE} = -\tfrac1n \sum_i \log q_{i, y_i}$, in nats.
+- Uniform $\mathbf{q}$: $\ln k$ whatever the labels, $2.30$ for $k = 10$.
+- Built-in losses take the logits $\mathbf{z}$, with
+  $\mathbf{q} = \mathrm{softmax}(\mathbf{z})$, and apply a stable log-softmax
   inside.
 
-<!-- SLIDES: the cell information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification and the toy 0.949 cells are cut; restate this slide without code (worklist slides). -->
+::: {.d2l-note}
+Maximum likelihood on discrete data minimizes the KL divergence from the
+data frequencies to the model.
+:::
 :::
 
 ::: {.slide title="No Classifier Beats the Label Noise: 10% Noise on 10 Classes Floors the Loss at 0.545"}
@@ -1531,10 +1577,16 @@ $$
 + \mathbb{E}_{\mathbf{x}}[D_{\textrm{KL}}(p \,\|\, q)] \ge \mathbb{E}_{\mathbf{x}}[H(p(\cdot\mid\mathbf{x}))]
 $$
 
-Noise $\rho = 0.1$, $k = 10$:
-$H_b(0.1) + 0.1 \ln 9 = 0.325 + 0.220 = 0.545$ nats. Three predictors:
+On fresh data the label $y$ is one draw from the true $p(\cdot \mid \mathbf{x})$;
+the model predicts $q(\cdot \mid \mathbf{x})$. Clean class fixed by the input,
+label flipped with probability $\rho = 0.1$, $k = 10$:
+$H_b(0.1) + 0.1 \ln 9 = 0.325 + 0.220 = 0.545$ nats. Three predictors $q$:
 
 @!mdl-information-theory-the-irreducible-loss
+
+::: {.d2l-note}
+On this data a loss of $0.6$ is within $0.06$ nats of the best possible.
+:::
 :::
 
 ::: {.slide title="Truthful Reporting Is the Unique Optimum of the Log Score"}
@@ -1550,46 +1602,138 @@ $H_b(0.1) + 0.1 \ln 9 = 0.325 + 0.220 = 0.545$ nats. Three predictors:
   with a bounded penalty on confident errors.
 :::
 
-::: {.slide title="A Smoothed Target Makes the Optimum a Finite Logit Gap: ln 91 = 4.51"}
+::: {.slide title="Check: Where Is the Floor with 20% Label Noise on 10 Classes?"}
+[Check]{.kicker}
+
+The clean class is fixed by the input, and $20\%$ of the labels are flipped
+to one of the other nine classes. What is the smallest loss on fresh data?
+What would a reported $0.40$ mean?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $H_b(0.2) + 0.2 \ln 9 = 0.500 + 0.439 = 0.940$ nats, at best
+$80\%$ accuracy. A loss of $0.40$ on fresh data cannot be a better model:
+look for leaked or cleaned labels.
+:::
+:::
+:::
+
+::: {.slide title="A Smoothed Target Puts the Optimum at a Finite Logit Gap: ln 91 = 4.51"}
 [Label smoothing]{.kicker}
 
-Target $\mathbf{p}^\epsilon = (1-\epsilon)\,\mathbf{e}_y + \tfrac{\epsilon}{k}\mathbf{1}$.
-Since $\textrm{CE}(\mathbf{p}^\epsilon, \mathbf{q}) = H(\mathbf{p}^\epsilon)
-+ D_{\textrm{KL}}(\mathbf{p}^\epsilon\|\mathbf{q})$, the optimum is
-$\mathbf{q} = \mathbf{p}^\epsilon$, with logit gap
-$\log\frac{1-\epsilon+\epsilon/k}{\epsilon/k}$. For $k = 10$, $\epsilon = 0.1$:
+- One-hot target: $q_y = 1$ needs an infinite gap between the logits; the
+  loss has no minimizer.
+- Smoothed target, $\epsilon$ spread over all $k$ classes:
+  $\mathbf{p}^\epsilon = (1-\epsilon)\,\mathbf{e}_y + \tfrac{\epsilon}{k}\mathbf{1}$.
+  The loss $\textrm{CE}(\mathbf{p}^\epsilon, \mathbf{q})$ is smallest at
+  $\mathbf{q} = \mathbf{p}^\epsilon$.
+- Gap at the optimum: $z_y - z_j = \log\frac{1-\epsilon+\epsilon/k}{\epsilon/k}$.
+  For $k = 10$, $\epsilon = 0.1$: $\ln\frac{0.91}{0.01} = \ln 91 = 4.51$.
+- Loss at the optimum: $H(\mathbf{p}^\epsilon) = 0.500$ nats, not $0$.
+
+::: {.d2l-note}
+Usual choice: $\epsilon = 0.1$.
+:::
+:::
+
+::: {.slide title="One-Hot Targets Let the Logit Gap Grow Like ln(10t); Smoothing Stops It at 4.51"}
+[Label smoothing]{.kicker}
+
+Gradient descent on the logits of one example, $k = 10$, step size $1$,
+gradient $\mathbf{q} - \mathbf{p}^\epsilon$. One-hot: a step adds about
+$k e^{-\textrm{gap}}$, so the gap is about $\ln(kt)$ after $t$ steps.
 
 @!information-theory-label-smoothing
-
-The loss levels off at $0.500$ nats, not at $0$.
 :::
 
 ::: {.slide title="The τ² Factor Keeps Distillation Gradients of Order One"}
 [Distillation]{.kicker}
 
+A student matches a teacher softened by a temperature $\tau$:
 $\mathbf{p}^{(\tau)} = \mathrm{softmax}(\mathbf{z}^{\mathrm{tea}}/\tau)$,
 $\mathbf{q}^{(\tau)} = \mathrm{softmax}(\mathbf{z}^{\mathrm{stu}}/\tau)$; loss
 $\tau^2 D_{\textrm{KL}}(\mathbf{p}^{(\tau)}\|\mathbf{q}^{(\tau)})$.
-The gradient $\tfrac1\tau(\mathbf{q}^{(\tau)} - \mathbf{p}^{(\tau)})$ shrinks like $1/\tau^2$:
+Gradient of the KL term: $\tfrac1\tau(\mathbf{q}^{(\tau)} - \mathbf{p}^{(\tau)})$,
+which shrinks like $1/\tau^2$. Logits $(5, 2, -1)$ and $(3, 3, 0)$:
 
 @!information-theory-distillation
 
-Limit as $\tau \to \infty$: centered logit differences over $k$,
-$(-0.667, 0.333, 0.333)$.
+Unscaled: $300$ times smaller at $\tau = 20$. Scaled: toward the centered
+logit difference over $k$.
 :::
 
-::: {.slide title="Check: With ε = 0.1 on 10 Classes, What Loss Does a Perfect Student Report?"}
+::: {.slide title="Differential Entropy Moves with the Units; KL Does Not"}
+[Densities]{.kicker}
+
+$h(X) = -\int p(x) \log p(x)\,dx$: density values are not probabilities.
+
+- Uniform on $[0, a]$: $h = \log a$; for $a = \tfrac12$, $h = -0.69$ nats.
+- Metres to centimetres: $a \to 100a$, and $h$ gains $\ln 100 = 4.6$ nats.
+- A ratio of densities does not move:
+  $\int p_1 \log(p_1/p_2)\,dx = \log(a_2/a_1)$ in any unit.
+- Cells of width $\Delta$: $H(X_\Delta) + \log \Delta \to h(X)$, while
+  $H(X_\Delta)$ itself diverges.
+:::
+
+::: {.slide title="A Narrow Model Is Far More Surprised by Wide Data Than the Reverse"}
+[Gaussians]{.kicker}
+
+$D_{\textrm{KL}}\big(\mathcal{N}(\mu_1, \sigma_1^2)\,\|\,\mathcal{N}(\mu_2, \sigma_2^2)\big) = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac12$
+
+![](../img/mdl-it-kl-integrand.svg){width=82%}
+
+$\mathcal{N}(0,1)$ against $\mathcal{N}(0,4)$: $0.318$ one way, $0.807$ the
+other. The tails, where the narrow model gives little probability to
+outcomes that occur, contribute $1.05$ nats.
+:::
+
+::: {.slide title="The Direction That Lives in the Tails Is Four Times Noisier to Estimate"}
+[Gaussians]{.kicker}
+
+Estimate $D_{\textrm{KL}}(P\|Q)$ by averaging $\log p(x) - \log q(x)$ over
+$2 \cdot 10^5$ samples $x \sim P$; the standard error is the spread of the
+log-ratio over $\sqrt{n}$.
+
+@!information-theory-example-2
+
+::: {.d2l-note}
+Both directions average $\pm(\ln 2 - \tfrac38 x^2)$; under $\mathcal{N}(0,4)$,
+$x^2$ fluctuates four times as much. Same accuracy: $16$ times the samples.
+:::
+:::
+
+::: {.slide title="With Mean and Variance Fixed, the Gaussian Has the Largest Entropy"}
+[Maximum entropy]{.kicker}
+
+Gaussian density $\varphi$ with mean $\mu$, variance $\sigma^2$; any density
+$P$ with the same two moments.
+
+**I.** $-\log \varphi(x) = \tfrac12\log(2\pi\sigma^2) + \tfrac{(x-\mu)^2}{2\sigma^2}$
+is quadratic, so $\textrm{CE}(P, \varphi) = \tfrac12 \log(2\pi e \sigma^2)$
+for every such $P$.
+
+**II.** $h(P) = \textrm{CE}(P, \varphi) - D_{\textrm{KL}}(P\|\varphi) \le
+\tfrac12 \log(2\pi e \sigma^2) = h(\varphi)$, with equality only for
+$P = \varphi$. $\blacksquare$
+
+::: {.d2l-note}
+The uniform bound is the same argument: $-\log u$ is constant, so
+$\textrm{CE}(P, U) = \log k$ for every $P$.
+:::
+:::
+
+::: {.slide title="Check: Heights Have σ = 0.07 m. Entropy in Metres? In Centimetres?"}
 [Check]{.kicker}
 
-A student trained with label smoothing, $\epsilon = 0.1$ and $k = 10$,
-predicts the smoothed target exactly. What loss does it report, and what is
-its logit gap?
+Body heights are roughly Gaussian with $\sigma = 0.07$ m. What is their
+differential entropy in nats? What is it when heights are recorded in
+centimetres, and what happens to the KL divergence from a model?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** The entropy of the smoothed target, $H(\mathbf{p}^\epsilon) =
-0.500$ nats, not $0$. The gap between the true class and every other class
-is $\ln 91 \approx 4.51$.
+**Answer.** $\tfrac12 \ln(2\pi e) + \ln 0.07 = 1.42 - 2.66 = -1.24$ nats. In
+centimetres, add $\ln 100 = 4.61$ to get $3.36$ nats. The KL divergence does
+not change.
 :::
 :::
 :::
@@ -1598,12 +1742,13 @@ is $\ln 91 \approx 4.51$.
 [Wrap-up]{.kicker}
 
 - Dyadic source: $H_2 = 1.75$ bits, the average number of questions.
-- The pair: $D_{\textrm{KL}} = 0.396$ one way, $0.365$ the other.
-- Gaussians $\mathcal{N}(0,1)$, $\mathcal{N}(0,4)$: $0.318$ against $0.807$.
-- $\textrm{CE} = H + D_{\textrm{KL}} \ge H$; on 10 classes with $10\%$
-  noise the floor is $0.545$ nats.
-- Label smoothing: optimum at a logit gap of $\ln 91$; distillation: the
-  $\tau^2$ factor fixes the gradient scale.
+- The pair: $D_{\textrm{KL}} = 0.396$ one way, $0.365$ the other;
+  $\textrm{CE} = H + D_{\textrm{KL}} \ge H$.
+- $10$ classes, $10\%$ noise: the floor is $0.545$ nats.
+- Label smoothing: optimum at a logit gap of $\ln 91$, loss $0.500$;
+  distillation: $\tau^2$ fixes the gradient scale.
+- $\mathcal{N}(0,1)$, $\mathcal{N}(0,4)$: $0.318$ against $0.807$; entropy
+  of a density depends on units, KL does not.
 
 ::: {.d2l-note}
 Next: build the code whose length is this loss, and compare distributions

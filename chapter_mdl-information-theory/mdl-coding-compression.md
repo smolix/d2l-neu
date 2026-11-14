@@ -1,61 +1,37 @@
 # Codes, Compression, and Perplexity
 :label:`sec_mdl-coding-compression`
 
-:numref:`sec_mdl-information_theory` read every log-loss as a code length:
-a model whose loss on a text is $x$ bits per symbol should be able to store
-that text in about $x$ bits per symbol. We never built the code that does
-this, and the reading means little until such a code exists. This section
-asks two questions: is there a code whose length is a model's log-loss, and
-how close do real compressors come to it?
+A model that reaches a loss of $x$ bits per symbol on a text should be able
+to store that text in about $x$ bits per symbol.
+:numref:`sec_mdl-information_theory` suggested as much when it read an
+entropy and a cross-entropy as average codeword lengths. It did so for one
+source, whose surprisals are whole numbers of bits, and we never built a
+code for any other. The claim means little until such a code exists. This
+section asks two questions: is there a code whose length is a model's
+log-loss, and how close do real compressors come to it?
 
 Compressors are familiar tools, and they already suggest the answer. Take
 *The Time Machine*, the novel of :numref:`sec_text-sequence`, reduced to
 173,428 characters over 27 symbols, the 26 letters and the space. The
 general-purpose compressor `zlib`, which replaces repeated strings by
-pointers and codes the result with a Huffman code, stores it in $2.84$ bits
-per character. A
-small model that predicts each character from the three before it, learning
-its counts as it reads, codes the same text in $2.55$ bits per character.
-The model that predicts the text better also writes the shorter file, and
-this section shows why. Once a code exists whose length is the log-loss, a
-loss of $1.8$ nats per token is a file size, a perplexity is a branching
-factor, and choosing between two models becomes a question of which complete
-description is shorter.
+pointers and then codes one symbol at a time, stores it in $2.84$ bits per
+character. A small model that predicts each character from the three before
+it, learning its counts as it reads, codes the same text in $2.55$ bits per
+character. The better predictor writes the shorter file, and this section
+shows why. Once a code exists whose length is the log-loss, a loss such as
+the $1.2$ nats per character of the chapter introduction is a file size,
+and two models can be compared by the length of the files they write.
 
-We build the code in steps. A code that needs no separators between its
-codewords has a fixed budget of short codewords to hand out. The best length
-for a symbol of probability $p$ is $\log_2(1/p)$ bits, and rounding these
-lengths to whole bits costs up to one bit per symbol. Coding the whole
-message as one unit rounds only once. For a source with memory, such as
-text, the long-run floor is the entropy rate, and perplexity is the
-per-token loss exponentiated. Two results carry the section, the entropy
-bound for symbol codes and the two-bit bound :eqref:`eq_mdl-arith-bound` for
-arithmetic coding; typical sequences can be skipped on a first reading.
+We build the code in steps, and each step answers a question. How short can
+codewords be when the receiver gets no separators between them? What does it
+cost that every codeword has a whole number of bits, and can a code avoid
+that cost? How short can a file of text get, where each character depends
+on those before it? And what does a perplexity, the number that language
+models report, say about the file? We count in bits throughout, because
+codewords are binary strings; $x$ bits are $x \ln 2$ nats.
 
-The section rests on one fact from the previous section, the decomposition
-:eqref:`eq_mdl-ce_decomp`, here in bits. The expected log-loss of a model
-$Q$ on data from $P$, the cross-entropy, splits into the entropy of the
-data and the Kullback–Leibler divergence,
-
-$$
-\textrm{CE}_2(P, Q) = -\sum_i p_i \log_2 q_i
-= H_2(P) + D_{\textrm{KL}}^{(2)}(P \| Q),
-\qquad D_{\textrm{KL}}^{(2)}(P \| Q) \geq 0,
-$$
-
-with equality in the last inequality only when $Q = P$ (Gibbs'
-inequality). A model can never beat the entropy of the data, and it
-reaches the entropy only by matching the data distribution. For the
-running pair $P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$ the three terms
-are $1.867 = 1.295 + 0.571$ bits.
-
-This section works in bits because codewords are binary strings. The
-subscript $2$ and the superscript $(2)$ mark base-$2$ logarithms, and a
-quantity of $x$ bits is $x \ln 2$ nats ($1$ bit $= 0.693$ nats). For a coin
-with bias $p$ we write $H_2(p, 1-p) = H_b(p)/\ln 2$, its binary entropy in
-bits.
-
-We use the following imports throughout the section.
+Beyond the book's standard imports, the section needs `re` to clean the text
+and `zlib` as the compressor to beat.
 
 ```{.python .input #mdl-coding-compression-codes-compression-and-perplexity}
 #@tab mxnet
@@ -103,9 +79,9 @@ import zlib
 
 ## Symbol Codes
 
-We must send a stream of symbols, drawn independently from a distribution
-$P$ over $k$ outcomes, as one binary string with no separators, and the
-receiver must split it back into symbols.
+We start with the simplest sender. A stream of symbols, drawn independently
+from a distribution $P$ over $k$ outcomes, must travel as one binary string
+with no separators, and the receiver must split it back into symbols.
 
 ### Prefix Codes and the Kraft Inequality
 :label:`subsec_mdl-kraft`
@@ -135,9 +111,10 @@ for instance as $0, 10, 1100$.
 
 The tree is also a strategy for the questions game of
 :numref:`sec_mdl-information_theory`. Every internal node asks a yes/no
-question, and a codeword is the list of answers: the code
+question, and a codeword is the list of answers. With $0$ for yes, the code
 $0, 10, 110, 111$ asks "Is it the first symbol?", then "the second?", then
-"the third?".
+"the third?". The previous section wrote $1$ for yes and obtained the
+mirror image, $1, 01, 001, 000$.
 
 **Proposition (Kraft inequality).** *A prefix-free binary code with
 codeword lengths $\ell_1, \ldots, \ell_k$ exists if and only if*
@@ -168,8 +145,7 @@ therefore the dyadic interval of the codeword formed by the first $\ell_i$
 binary digits of $s_i$. The intervals are disjoint, so by the first part no
 codeword is a prefix of another. $\blacksquare$
 
-Codeword lengths are a budget: each codeword of length $\ell$ spends
-$2^{-\ell}$, and a prefix code can spend at most $1$. A code is *uniquely
+The budget binds more codes than the prefix-free ones. A code is *uniquely
 decodable* if every concatenation of codewords parses in only one way,
 prefix-free or not. McMillan showed that such codes obey the same
 inequality :cite:`McMillan.1956`
@@ -202,15 +178,37 @@ $$
 
 So each symbol gets as many bits as its *surprisal* $\log_2(1/p_i)$, the
 self-information of :numref:`sec_mdl-information_theory` in bits, and the
-expected length is the entropy. Real codewords need whole bits. For the
-dyadic source $P = (\tfrac12, \tfrac14, \tfrac18, \tfrac18)$ the surprisals
-$1, 2, 3, 3$ are already integers, the code of :numref:`fig_mdl-kraft-tree`
-has these lengths, and $\mathbb{E}[\ell] = 1.75$ bits $= H_2(P)$, with
-nothing wasted. For the running $P = (0.6, 0.3, 0.1)$ the surprisals are
-$0.74$, $1.74$ and $3.32$ bits. Rounding them up gives the *Shannon lengths*
-$1, 2, 4$, the profile that fit the tree with room to spare. Its Kraft sum
-is $0.8125$, and $\mathbb{E}[\ell] = 0.6 + 0.6 + 0.4 = 1.6$ bits, against
+expected length is $H_2(P)$, the entropy in bits. Real codewords need whole
+bits. For the dyadic source $P = (\tfrac12, \tfrac14, \tfrac18, \tfrac18)$
+the surprisals $1, 2, 3, 3$ are already integers, the code of
+:numref:`fig_mdl-kraft-tree` has these lengths, and
+$\mathbb{E}[\ell] = 1.75$ bits $= H_2(P)$, with nothing wasted. For
+$P = (0.6, 0.3, 0.1)$, the first of the chapter's running pair of
+distributions, the surprisals are $0.74$, $1.74$ and $3.32$ bits. Rounding
+them up gives the *Shannon lengths* $1, 2, 4$, the profile that fit the
+tree with room to spare. Its Kraft sum is $0.8125$, and
+$\mathbb{E}[\ell] = 0.6 + 0.6 + 0.4 = 1.6$ bits, against
 $H_2(P) = 1.295$.
+
+Whole-bit lengths chosen with more care cannot beat the entropy, and the
+Shannon lengths never land more than one bit above it. Both statements rest
+on one fact from :numref:`sec_mdl-information_theory`, the decomposition of
+the cross-entropy, which we restate in bits; the subscript $2$ and the
+superscript $(2)$ mark base-$2$ logarithms. The expected log-loss of a
+model $Q$ on data from $P$, the cross-entropy, splits into the entropy of
+the data and the Kullback–Leibler divergence,
+
+$$
+\textrm{CE}_2(P, Q) = -\sum_i p_i \log_2 q_i
+= H_2(P) + D_{\textrm{KL}}^{(2)}(P \| Q),
+\qquad D_{\textrm{KL}}^{(2)}(P \| Q) \geq 0,
+$$
+:eqlabel:`eq_mdl-ce2-decomp`
+
+where the last inequality is Gibbs': no model beats the entropy of the
+data, and only $Q = P$ reaches it. For the running pair, the $P$ above and
+$Q = (0.2, 0.5, 0.3)$, the three terms are $1.867 = 1.295 + 0.571$ bits, up
+to rounding in the last digit.
 
 **Proposition (entropy bounds the code length).** *Let $P$ have all
 $p_i > 0$ (symbols of probability zero need no codeword). Every
@@ -242,7 +240,7 @@ gives $\mathbb{E}[\ell] < H_2(P) + 1$. $\blacksquare$
 
 The identity :eqref:`eq_mdl-code-length-decomp` is worth more than the bound
 it proves. Every code wastes bits in two ways: by implying a distribution
-$Q$ other than $P$, and by leaving budget unspent. On the running pair the
+$Q$ other than $P$, and by leaving budget unspent. For the running $P$ the
 Shannon code wastes $1.6 - 1.295 = 0.305$ bits, of which $0.005$ is mismatch
 and $0.300$ is unspent budget (Exercise
 :exref:`ex_mdl-coding-compression-slack`). The entropy therefore determines
@@ -251,19 +249,23 @@ the number of questions that the previous section promised, and the two are
 equal only for dyadic probabilities.
 
 The one bit is not an artifact of the proof. Huffman's algorithm
-:cite:`Huffman.1952` builds the best symbol code, and for the pair it finds
-the lengths $1, 2, 2$ and $1.4$ bits, only $0.1$ above the entropy (Exercise
+:cite:`Huffman.1952` builds the best symbol code, the kind that `zlib`
+uses, and for the running $P$ it finds the lengths $1, 2, 2$ and $1.4$ bits,
+only $0.1$ above the entropy (Exercise
 :exref:`ex_mdl-coding-compression-huffman`). But no codeword is shorter than
 one bit, and for a skewed source that is nearly the whole of the allowed
-slack. Take a source that emits the symbol `a` with probability $0.9$ and
-the symbol `b` with probability $0.1$. Its entropy is $0.47$ bits per
-symbol, and each `a` carries only $\log_2(1/0.9) = 0.15$ bits of surprise.
-Yet every symbol code spends a whole bit on an `a`, more than six times its
+slack.
+
+Take a source that emits the symbol `a` with probability $0.9$ and the
+symbol `b` with probability $0.1$. Its entropy is $0.47$ bits per symbol,
+and each `a` carries only $\log_2(1/0.9) = 0.15$ bits of surprise. Yet
+every symbol code spends a whole bit on an `a`, more than six times its
 information. At probability $0.999$ the entropy is $0.011$ bits per symbol,
 and the cost is still $1$. The "$+1$" is the cost of coding one symbol at a
-time. Coding blocks of symbols shrinks it: Huffman's code for pairs of
-`a`/`b` symbols spends $0.645$ bits per symbol, and long blocks drive the
-slack to zero :cite:`Cover.Thomas.1999`.
+time. Coding blocks of symbols shrinks it. A block of $n$ symbols is one
+symbol of a larger alphabet, and its code rounds up once for the whole
+block, so the slack per original symbol is below $1/n$. Huffman's code for
+pairs of `a`/`b` symbols already spends only $0.645$ bits per symbol.
 
 ### Mismatched Codes and Cross-Entropy
 
@@ -274,19 +276,18 @@ data from $P$ its expected length satisfies
 
 $$
 \textrm{CE}_2(P, Q) \;\leq\; \mathbb{E}_P[\ell] \;<\; \textrm{CE}_2(P, Q) + 1,
-\qquad
-\textrm{CE}_2(P, Q) = -\sum_i p_i \log_2 q_i = H_2(P) + D_{\textrm{KL}}^{(2)}(P \| Q).
 $$
 :eqlabel:`eq_mdl-wrong-code-length`
 
 because termwise $\log_2(1/q_i) \leq \ell_i < \log_2(1/q_i) + 1$, and we
 average under $P$. Cross-entropy is therefore the length of a code built
-from the model, and KL is the extra length over the code built from the
-truth. For the running pair, the Shannon lengths for $Q = (0.2, 0.5, 0.3)$
-are $3, 1, 2$, and on data from $P$ they average $1.8 + 0.3 + 0.2 = 2.3$
-bits, inside the window $1.867 \leq 2.3 < 2.867$. The dyadic source coded
-with two bits for every symbol costs $2.0 = 1.75 + 0.25$ bits, the matched
-length plus the KL divergence from the uniform distribution.
+from the model, to within one bit, and by :eqref:`eq_mdl-ce2-decomp` the KL
+divergence is the extra length over the code built from the truth. For the
+running pair, the Shannon lengths for $Q = (0.2, 0.5, 0.3)$ are $3, 1, 2$,
+and on data from $P$ they average $1.8 + 0.3 + 0.2 = 2.3$ bits, inside the
+window $1.867 \leq 2.3 < 2.867$. The dyadic source coded with two bits for
+every symbol costs $2.0 = 1.75 + 0.25$ bits, the matched length plus the KL
+divergence from the uniform distribution.
 
 The cell builds each code from the distribution it is given and averages
 its lengths under the data distribution, for the four cases just worked by
@@ -315,34 +316,33 @@ code_report('P, code from Q', p, q)
 
 When the code is built from the data distribution, the column `CE2` is the
 entropy. The Kraft column adds what the hand calculation left out: the two
-codes for the dyadic source spend the whole budget, while the pair's own
-Shannon code leaves $0.1875$ of it unspent and the code from $Q$ leaves
-$0.125$.
+codes for the dyadic source spend the whole budget, while the Shannon code
+of the running $P$ leaves $0.1875$ of it unspent and the code from $Q$
+leaves $0.125$.
 
 The bound :eqref:`eq_mdl-wrong-code-length` covers the Shannon code of $Q$,
 not every code someone might build from $Q$. Huffman's code for $Q$ has
 lengths $2, 1, 2$ and costs $1.2 + 0.3 + 0.2 = 1.7 < 1.867$ bits on data
 from $P$. Its implied distribution is $(\tfrac14, \tfrac12, \tfrac14)$, not
-$Q$, and it happens to be closer to $P$. Every code implies a distribution,
-$2^{-\ell_i}/Z$, and its expected length on $P$ is the cross-entropy of $P$
-with that distribution, plus any unspent budget $-\log_2 Z$.
+$Q$, and it happens to be closer to $P$. By
+:eqref:`eq_mdl-code-length-decomp` it is the implied distribution that a
+code is charged for.
 
 ## Stream Codes
 
 ### Arithmetic Coding
 :label:`subsec_mdl-arithmetic-coding`
 
-The ceiling in $\ell_i = \lceil \log_2(1/p_i) \rceil$ rounds a fraction of
-a bit up to a whole bit once per symbol. For a skewed source the rounding
-dominates the code length: the `a` of probability $0.9$ carries $0.15$ bits
-and costs $1$. The remedy is to stop coding symbols and to code the whole
-message as one interval. A code that assigns one codeword to a whole
-message, rather than one to each symbol, is a *stream code*. *Arithmetic
-coding* :cite:`Rissanen.1976,Witten.Neal.Cleary.1987` is the standard
-stream code, and :numref:`fig_mdl-arith-intervals` shows it on the message
-`aaaaaaaaba`.
+Blocks remove the rounding loss, but they need a table. A code for blocks of
+$100$ binary symbols has $2^{100}$ codewords, more than any computer can
+store. What we want is the length of the block code without its table: one
+codeword for the whole message, computed from the message itself. A code of
+this kind is a *stream code*. *Arithmetic coding*
+:cite:`Rissanen.1976,Witten.Neal.Cleary.1987` is the standard stream code.
+It represents the message as an interval, and
+:numref:`fig_mdl-arith-intervals` shows it on the message `aaaaaaaaba`.
 
-![Arithmetic coding of the message aaaaaaaaba under the model $q(\texttt{a}) = 0.9$. (a) Each symbol keeps the slice of the current interval that the model assigns to it; after ten symbols the interval has width $w = 0.9^9 \cdot 0.1 = 0.0387$, the probability of the message. (b) The final interval is named by a dyadic interval inside it. Neither cell of length $2^{-5}$ that meets it fits inside, but the cell of length $2^{-6}$ from $0.390625$ to $0.40625$ does, so the codeword is its address 011001: six bits for a message of $4.69$ bits of surprisal.](../img/mdl-it-arith-intervals.svg)
+![Arithmetic coding of the message aaaaaaaaba under the model $q(\texttt{a}) = 0.9$. (a) Each symbol keeps the slice of the current interval that the model assigns to it; after ten symbols the interval has width $w = 0.9^9 \cdot 0.1 = 0.0387$, the probability of the message. (b) The final interval is named by a dyadic interval inside it. Neither dyadic interval of length $2^{-5}$ that meets it fits inside, but the one of length $2^{-6}$ from $0.390625$ to $0.40625$ does, so the codeword is its address 011001: six bits for a message of $4.69$ bits of surprisal.](../img/mdl-it-arith-intervals.svg)
 :label:`fig_mdl-arith-intervals`
 
 The coder keeps a current interval, initially $[0, 1)$. To encode the next
@@ -367,11 +367,12 @@ binary, and the dyadic intervals of the Kraft proof do this.
 Any interval of width $w$ contains a dyadic interval of length $2^{-\ell}$
 when $\ell = \lceil \log_2(1/w) \rceil + 1$. Then $2^{-\ell} \leq w/2$, so
 the first multiple of $2^{-\ell}$ at or above the interval's left end lies
-in its left half, and the cell of length $2^{-\ell}$ starting there ends
-inside the interval. Panel (b) of :numref:`fig_mdl-arith-intervals` shows
-both sides of this: the cells of length $2^{-5}$ stick out of the final
-interval, while one cell of length $2^{-6}$ fits. Since
-$\ell < \log_2(1/w) + 2$, the codeword length satisfies
+in its left half, and the dyadic interval of length $2^{-\ell}$ starting
+there ends inside the interval. Panel (b) of
+:numref:`fig_mdl-arith-intervals` shows both sides of this: the dyadic
+intervals of length $2^{-5}$ stick out of the final interval, while one of
+length $2^{-6}$ fits. Since $\ell < \log_2(1/w) + 2$, the codeword length
+satisfies
 
 $$
 \ell \;<\; \sum_{i=1}^n \log_2 \frac{1}{q(x_i \mid x_{<i})} + 2,
@@ -381,14 +382,14 @@ $$
 the message's total surprisal under the model plus at most two bits, for a
 message length $n$ known to the decoder. The rounding now happens once per
 message, not once per symbol. The codewords of different messages of
-length $n$ name dyadic cells inside disjoint message intervals, so by the
-first half of the Kraft proof they form a prefix code, and the entropy
+length $n$ name dyadic intervals inside disjoint message intervals, so by
+the first half of the Kraft proof they form a prefix code, and the entropy
 bound applies to them as a code for whole messages.
 
-We run the coder on `aaaaaaaaba`. The cell narrows the interval, constructs
-the codeword from the interval's ends, checks that its dyadic cell lies
-inside, and counts what the symbol-by-symbol Shannon code spends on the same
-message.
+We run the coder on `aaaaaaaaba`. The code narrows the interval, constructs
+the codeword from the interval's ends, checks that the codeword's dyadic
+interval lies inside the final interval, and counts what the
+symbol-by-symbol Shannon code spends on the same message.
 
 ```{.python .input #mdl-information-theory-from-symbol-codes-to-arithmetic-coding}
 msg = 'aaaaaaaaba'                    # nine a's, one b
@@ -416,7 +417,7 @@ The final width $0.0387$ is the product $0.9^9 \cdot 0.1$, as the
 construction promises. The message has $4.69$ bits of surprisal and the
 arithmetic code spends $6$ bits on it, the codeword `011001`, while the
 symbol-by-symbol code spends $13$, a whole bit on each of the nine cheap
-`a`'s. This message has the source's typical composition, nine `a`'s and
+`a`'s. This message has the source's average composition, nine `a`'s and
 one `b`, so its surprisal equals $10\, H_2(0.9, 0.1) = 4.69$ bits. A message
 with two `b`'s would cost more. On long messages the two extra bits vanish
 into the total, and the code length per symbol approaches the model's
@@ -482,8 +483,8 @@ def adaptive_bits(text, m, k):
 
 The second cell codes the text with contexts of zero to four characters and
 compresses it with `zlib` at its highest level. A longer context predicts
-better once its counts are learned, so one might expect the code length to
-fall with every added character. Does it?
+better once its counts are learned, but it has more counts to learn, and
+the output shows which effect wins at each order.
 
 ```{.python .input #mdl-coding-compression-a-language-model-as-a-compressor-2}
 k, n = len(set(text)), len(text)
@@ -497,22 +498,20 @@ for m in range(5):
 print(f'zlib -9: {8 * len(zlib.compress(text.encode(), 9)) / n:.2f} bits/char')
 ```
 
-<!-- WRITER: the cell now also prints the letter-frequency entropy (4.078
-bits) and, per order, nats/char and per-character perplexity 2^bits: order 0
-4.08 bits = 2.83 nats, perplexity 16.91; order 1 3.29 = 2.28, 9.81; order 2
-2.75 = 1.90, 6.70; order 3 2.55 = 1.77, 5.84 (5.84, not 5.86: computed from
-the unrounded bits); order 4 2.78 = 1.92, 6.85; zlib 2.84 bits. Deterministic
-given the text, identical in all four tabs. -->
-It does not. Context lowers the code length from $4.08$ bits per character
-with no context to $2.55$ with three characters, which beats `zlib`'s
-$2.84$, but the four-character model loses to the three-character one, at
-$2.78$ bits per character. Most of its $27^4 \approx 530{,}000$ possible
-contexts are seen too rarely to learn their next-character distribution, and
-the bits spent while each context learns are part of the code length. The
-order-$0$ length $4.08$ agrees to two decimals with the entropy of the
-text's letter frequencies, $4.078$ bits:
-learning $26$ free frequencies costs about $\tfrac{26}{2} \log_2 n \approx
-226$ bits for the whole text, $0.001$ bits per character.
+Context lowers the code length from $4.08$ bits per character with no
+context to $2.55$ with three characters, which beats `zlib`'s $2.84$. A
+fourth character makes it worse: the four-character model needs $2.78$ bits
+per character. Most of its $27^4 \approx 530{,}000$ possible contexts are
+seen too rarely to learn their next-character distribution, and the bits
+spent while each context learns are part of the code length.
+
+With no context there is little to learn. The first line of the output
+gives the entropy of the text's letter frequencies, $4.078$ bits per
+character, which is what a code without context that knew the frequencies
+in advance would spend. The order-$0$ model starts without them and, to the
+two decimals printed, spends the same. Twenty-six frequencies are cheap to
+learn, and half a million contexts are not. The columns in nats and as a
+perplexity are read in :numref:`subsec_mdl-perplexity`.
 
 An adaptive model transmits no parameters, but it codes the early text
 poorly while it learns. A pretrained model codes every file well from the
@@ -528,12 +527,16 @@ authors report that with the model counted it no longer competes.
 ### Minimum Description Length
 :label:`subsec_mdl-mdl`
 
-The richer of two models always fits the data at least as well: an order-$4$
-model fitted to the whole text has lower cross-entropy than an order-$3$
-model. Judged by the code length of the data alone, the richer model
-always wins. A receiver who does not have the model, however, must first
-be told it. The *minimum description length* (MDL) principle chooses the
-model $\mathcal{M}$ with the shortest complete code, model and data
+The table for *The Time Machine* charged each adaptive model for learning
+its counts. Without that charge the comparison comes out differently. Take
+the counts from the whole text first and then score the same text with
+them: now order $4$ beats order $3$, and order $5$ beats order $4$, because
+a table that has already seen the text can memorize it (Exercise
+:exref:`ex_mdl-information-theory-adaptive-compression` computes these
+lengths). Judged by the code length of the data alone, the richer of two
+models never loses. A receiver who does not have the model, however, must
+first be told it. The *minimum description length* (MDL) principle chooses
+the model $\mathcal{M}$ with the shortest complete code, model and data
 together,
 
 $$
@@ -547,36 +550,38 @@ where $L(\mathcal{M})$ is the length of the model's description in bits
 and $L(\mathcal{D}\mid\mathcal{M})$ is the log-loss of the data
 $\mathcal{D}$ under the model, a code length by the previous subsections.
 A model must therefore save more bits on the data than it costs to
-describe.
-MDL is Occam's razor with simplicity measured in bits.
+describe. MDL is Occam's razor with simplicity measured in bits. With a
+code built from a prior, $L(\mathcal{M}) = -\log_2 P(\mathcal{M})$, it is
+maximum a posteriori estimation (:numref:`subsec_mdl-map`).
 
 A coin makes the trade concrete. A sequence of $n = 1{,}000$ flips shows
 $600$ heads. The fair coin $\mathcal{M}_0$ has nothing to describe, and it
 codes each flip in one bit: $L(\mathcal{D} \mid \mathcal{M}_0) = 1{,}000$
 bits. The model $\mathcal{M}_1$, a coin with bias $\theta$, must first send
-$\theta$. Sending it to a precision of about $1/\sqrt{n}$ costs
-$L(\mathcal{M}_1) \approx \tfrac12 \log_2 1{,}000 \approx 5$ bits, and a
-finer precision would save fewer bits on the data than it costs to send
-(Exercise :exref:`ex_mdl-information-theory-two-part-coin` derives the
-$\tfrac12 \log_2 n$). Charging $\tfrac12 \log_2 n$ bits for each parameter
-is the *Bayesian information criterion*.
-
-The data then cost
-$L(\mathcal{D} \mid \mathcal{M}_1) \approx 1{,}000\, H_2(0.6, 0.4) = 971$
-bits. The total $976 < 1{,}000$ selects the biased coin: it saves $29$ bits
+$\theta$, and a real number needs a precision. A grid of spacing
+$1/\sqrt{n}$ has $\sqrt{n}$ points, and naming one of them costs
+$L(\mathcal{M}_1) = \log_2 \sqrt{n} = \tfrac12 \log_2 1{,}000 \approx 5$
+bits. A finer grid would save fewer bits on the data than it costs to send
+(Exercise :exref:`ex_mdl-information-theory-two-part-coin`). The data then
+cost $L(\mathcal{D} \mid \mathcal{M}_1) \approx 1{,}000\, H_2(0.6, 0.4)
+= 971$ bits. The total $976 < 1{,}000$ selects the biased coin: it saves $29$ bits
 on the data for $5$ bits of parameter. With $520$ heads the saving would be
-$1.2$ bits, less than the $5$, and MDL keeps the fair coin. A parameter
-count alone is therefore not a description length: a real-valued weight
-needs a precision, and it is worth its cost only if it saves more than
-about $\tfrac12 \log_2 n$ bits on the data.
+$1.2$ bits, less than the $5$, and MDL keeps the fair coin.
 
-With $L(\mathcal{M}) = -\log_2 P(\mathcal{M})$, a code built from a prior,
-:eqref:`eq_mdl-mdl` is the MAP objective.
+Charging $\tfrac12 \log_2 n$ bits for each parameter is the *Bayesian
+information criterion*. A parameter count alone is not a description
+length: a real-valued weight needs a precision, and it is worth its cost
+only if it saves more than that on the data.
 
-The compressor experiment above applied the same rule. The adaptive code
+The compressor experiment had already applied this rule. The adaptive code
 length is a complete description, with the cost of learning the model
-inside it, and it selected the order-$3$ model: the order-$4$ model's extra
-contexts cost more to learn than they saved.
+inside it. For the order-$0$ model that cost is small: $26$ free
+frequencies at roughly $\tfrac12 \log_2 n \approx 9$ bits each come to some
+two hundred bits, about $0.001$ bits per character, which is why its $4.08$
+could not be told apart from the letter-frequency entropy of $4.078$. The
+order-$4$ model must learn a separate set of frequencies for every context
+that occurs, and that cost exceeded what the fourth character saved. The
+adaptive code length therefore selected order $3$.
 
 ## Entropy Rate and Typical Sequences
 
@@ -590,16 +595,17 @@ not independent: after `q` comes `u`. Let the source $X_1, X_2, \ldots$ be
 does not change when the block is shifted in time.
 
 We need the joint and the conditional entropy of
-:numref:`subsec_mdl-joint-conditional-entropy`. The joint entropy
-$H(X_1, \ldots, X_n)$ treats the block as one random variable. The
-conditional entropy of the next symbol given the past,
+:numref:`subsec_mdl-joint-conditional-entropy`, from here on in bits and
+without a subscript. The joint entropy $H(X_1, \ldots, X_n)$ treats the
+block as one random variable. The conditional entropy of the next symbol
+given the past,
 $H(X_n \mid X_{<n}) = \mathbb{E}\big[-\log_2 p(X_n \mid X_{<n})\big]$, is
 the expected log-loss of the best possible model of the next symbol, the
-source itself, and the chain rule :eqref:`eq_mdl-entropy-chain-rule` gives
-$H(X_1, \ldots, X_n) = \sum_{i=1}^n H(X_i \mid X_{<i})$. From here to the
-end of the section, entropies of sequences are in bits and carry no
-subscript. The *entropy rate* is the limit of the conditional entropy, or
-equivalently of the entropy per symbol of long blocks,
+source itself. The chain rule $H(X, Y) = H(X) + H(Y \mid X)$ of that
+subsection, applied repeatedly, gives
+$H(X_1, \ldots, X_n) = \sum_{i=1}^n H(X_i \mid X_{<i})$. The *entropy
+rate* is the limit of the conditional entropy, or equivalently of the
+entropy per symbol of long blocks,
 
 $$
 H_{\textrm{rate}} = \lim_{n \to \infty} \frac{1}{n} H(X_1, \ldots, X_n)
@@ -607,14 +613,15 @@ H_{\textrm{rate}} = \lim_{n \to \infty} \frac{1}{n} H(X_1, \ldots, X_n)
 $$
 :eqlabel:`eq_mdl-entropy_rate`
 
-By the chain rule, the first expression is the average of the losses of
-which the second is the last. For a stationary source both limits exist
-and agree, and $\tfrac1n H(X_1, \ldots, X_n)$ decreases monotonically to
-the limit :cite:`Cover.Thomas.1999`. We grant these facts. Intuitively,
-each extra symbol of context can only help prediction (conditioning never
-increases entropy), and the average of a nonincreasing sequence of losses
-is itself nonincreasing. For independent, identically distributed symbols
-both limits equal $H(X_1)$.
+By the chain rule the block entropy is a sum of $n$ conditional entropies,
+so the first expression is their average and the second is the last of
+them. For a stationary source both limits exist and agree, and
+$\tfrac1n H(X_1, \ldots, X_n)$ decreases monotonically to the limit
+:cite:`Cover.Thomas.1999`. We grant these facts. Intuitively, each extra
+symbol of context can only help prediction, because conditioning never
+increases entropy (:numref:`sec_mdl-information_theory`), and the average of
+a nonincreasing sequence of losses is itself nonincreasing. For independent,
+identically distributed symbols both limits equal $H(X_1)$.
 
 The smallest source with memory is a two-state chain. Let it emit `a` or
 `b`, keep its current symbol with probability $0.9$, and switch with
@@ -632,22 +639,31 @@ to uniquely decodable codes by McMillan's theorem, says that it spends at
 least $H(X_1, \ldots, X_n)$ bits per block, and the monotone decrease gives
 $H(X_1, \ldots, X_n) \geq n H_{\textrm{rate}}$.
 
+The floor can be reached. An arithmetic coder driven by the source's own
+conditional probabilities spends less than the surprisal of the message plus
+two bits, by :eqref:`eq_mdl-arith-bound`, and the expected surprisal of a
+block under its own distribution is $H(X_1, \ldots, X_n)$. Per symbol the
+coder therefore averages less than $\tfrac1n H(X_1, \ldots, X_n) + \tfrac2n$
+bits, which tends to $H_{\textrm{rate}}$.
+
 Shannon estimated the entropy rate of printed English at about one bit per
 character :cite:`Shannon.1951`, far below the $\log_2 27 = 4.75$ bits of
 uniformly random letters and spaces. The bits per character that a
 compressor achieves estimate an *upper* bound on the entropy rate, and the
 $2.55$ of the order-$3$ model is one such estimate. No compressor reports a
 lower bound. The loss of $1.2$ nats per character that the chapter
-introduction asked about is $1.73$ bits: better than the counting model,
-and well above Shannon's estimate.
+introduction asked about is $1.73$ bits. That is below the counting model's
+$2.55$ bits and still well above Shannon's estimate of one bit.
 
 ### Typical Sequences
 :label:`subsec_mdl-aep`
 
 The entropy bound concerns averages. What does one long message look like,
-and how many likely messages are there? Take independent bits that are $1$
-with probability $0.3$, and messages of length $n = 200$. All numbers are
-in bits.
+and how many likely messages are there? The answer explains the entropy a
+second time, as an exponent that counts the likely messages. Nothing later
+depends on it, and the subsection can be skipped on a first reading. Take
+independent bits that are $1$ with probability $0.3$, and messages of
+length $n = 200$.
 
 The most probable message, all zeros, has probability
 $0.7^{200} = 2^{-103}$. A message with $60$ ones, the expected number, has
@@ -671,9 +687,9 @@ $$
 :eqlabel:`eq_mdl-aep`
 
 So for any fixed $\delta > 0$ a long message has, with probability
-tending to one, surprisal within $n\delta$ of $nH$ bits. This
-is the *asymptotic equipartition property* (AEP). The messages it singles
-out form the *typical set* with tolerance $\delta$ bits per symbol,
+tending to one, surprisal within $n\delta$ of $nH$ bits. This is the
+*asymptotic equipartition property* (AEP). The messages it singles out form
+the *typical set* with tolerance $\delta$ bits per symbol,
 
 $$
 A_\delta = \Big\{x_{1:n} :\ \Big|-\frac1n \log_2 P(x_{1:n}) - H\Big| < \delta\Big\}.
@@ -716,16 +732,15 @@ P(B) \leq P(B \cap A_\delta) + P(A_\delta^c)
 $$
 
 So every fixed-length code of rate below $H$ fails with probability tending
-to one. For stationary
-ergodic sources the same holds with $H_{\textrm{rate}}$ in place of $H$, a
-theorem we grant :cite:`Cover.Thomas.1999`.
+to one. For stationary ergodic sources the same holds with
+$H_{\textrm{rate}}$ in place of $H$, a theorem we grant
+:cite:`Cover.Thomas.1999`.
 
 For the Bernoulli source the typical set can be counted *exactly*, because
-all messages with the same number $j$ of ones share one probability. How
-many of the $2^{200}$ messages are typical at $\delta = 0.1$, and how much
-probability do they carry? The cell groups the messages by $j$ and adds up
-the counts and probabilities of the typical groups, working with base-$2$
-logarithms throughout.
+all messages with the same number $j$ of ones share one probability. The
+cell groups the $2^{200}$ messages by $j$ and adds up the counts and the
+probabilities of the groups that are typical at $\delta = 0.1$. The round
+figure to compare the count with is $2^{nH} = 2^{176.3}$.
 
 ```{.python .input #mdl-information-theory-typical-sequences-and-the-source-coding-theorem}
 n, p, delta = 200, 0.3, 0.1
@@ -747,11 +762,12 @@ print(f'bounds: {prob:.3f} * 2^{n * (h - delta):.1f} <= |A| '
 ```
 
 The $2^{188.8}$ typical messages, those with $44$ to $76$ ones, are one in
-$2^{11}$ of all messages and carry probability $0.989$. That is far more
-than $2^{nH} = 2^{176.3}$: with $\delta = 0.1$ the set reaches out to $76$
-ones, and the messages there are its most numerous. Their count lies
-between the proposition's bounds $0.989 \cdot 2^{156.3}$ and $2^{196.3}$.
-The plot shows where the probability and the messages sit.
+$2^{11}$ of all messages and carry probability $0.989$. The count exceeds
+$2^{nH}$ by a factor of several thousand: with $\delta = 0.1$ the set
+reaches out to $76$ ones, and the messages there are its most numerous. It
+does lie between the proposition's bounds $0.989 \cdot 2^{156.3}$ and
+$2^{196.3}$, which is all that the proposition promised. The plot shows
+where the probability and the messages sit.
 
 ```{.python .input #mdl-coding-compression-typical-sequences-1}
 d2l.plot(j, [log2_prob_j, log2_count - n], 'j (number of ones)', 'log2',
@@ -766,11 +782,12 @@ chart. The typical messages are therefore neither the most probable
 messages nor the most numerous ones.
 
 The typical set serves proofs, and it makes a poor coder. Indexing it costs
-$189$ bits for every typical message, $13$ bits above $nH = 176.3$, plus the
-flag bit. Arithmetic coding of the same source with the true model averages
-under $nH + 2 = 178.3$ bits by :eqref:`eq_mdl-arith-bound`. What the typical
-set shows is that a long message almost surely has the source's composition,
-and that about $2^{nH}$ messages have that composition.
+$189$ bits for every typical message, $13$ bits above $nH = 176.3$, and the
+code fails on one message in a hundred. Arithmetic coding of the same source
+with the true model never fails and averages under $nH + 2 = 178.3$ bits by
+:eqref:`eq_mdl-arith-bound`. What the typical set shows is that a long
+message almost surely has the source's composition, and that about $2^{nH}$
+messages have that composition.
 
 ## Perplexity
 
@@ -795,33 +812,36 @@ The second form is an inverse geometric mean of probabilities.
 :numref:`subsec_perplexity` introduces perplexity and reads it as an
 *effective branching factor*: a model that is uniformly undecided among $k$
 tokens at every step has perplexity $k$, and a perfect model of a
-deterministic sequence has perplexity $1$. We add one remark. Since
+deterministic sequence has perplexity $1$.
+
+The table of :numref:`subsec_mdl-lm-compressor` shows the reading on real
+text, with characters as tokens. A model that knew nothing would hesitate
+among all $27$ symbols. The letter frequencies alone bring the perplexity
+down to $16.91$, about $17$ equally likely symbols, and three characters of
+context bring it to $5.84$: the model is then, on average, about as
+uncertain of the next character as of the roll of a die. The table computes
+perplexity as $2$ to the power of the bits per character, and $e$ to the
+power of the nats gives the same values, because
 $\textrm{PPL} = b^{\textrm{CE}_b}$ for the cross-entropy $\textrm{CE}_b$ in
-any log base $b$, perplexity is the one quantity of this chapter that does
-not depend on the unit
+any log base $b$
 (Exercise :exref:`ex_mdl-information-theory-show-that-perplexity-does`).
-<!-- WRITER: the five-token cell `information-theory-perplexity` (6.31) is
-cut. Read the branching factor off the Time Machine cell
-(`mdl-coding-compression-a-language-model-as-a-compressor-2`) instead:
-per-character perplexity 16.91 with no context (order 0, 4.08 bits = 2.83
-nats), 5.84 with three characters of context (order 3, 2.55 bits = 1.77
-nats), 6.85 at order 4. -->
 
 ### The Perplexity Floor
 
-How low can perplexity go? For a stationary source the floor is the
-exponentiated entropy rate, and it holds only in expectation. The loss is in
-nats and the entropy rate $H_{\textrm{rate}}$ of
-:eqref:`eq_mdl-entropy_rate` is in bits, hence the factor $\ln 2$.
+Perplexity has a floor. For a stationary source it is the exponentiated
+entropy rate, and it holds only in expectation. The loss is in nats and the
+entropy rate $H_{\textrm{rate}}$ of :eqref:`eq_mdl-entropy_rate` is in
+bits, hence the factor $\ln 2$.
 
 **Proposition (perplexity floor).** *Let the text $X_1, \ldots, X_n$ come
-from a stationary source, let $q$ be any model, and let
-$\textrm{CE}_n = -\frac1n \sum_{i=1}^n \log q(X_i \mid X_{<i})$. Then*
+from a stationary source, let $q$ be any model, and let $\textrm{CE}$ and
+$\textrm{PPL}$ be the loss and the perplexity
+:eqref:`eq_mdl-perplexity-def` of this text under $q$. Then*
 
 $$
-\mathbb{E}[\textrm{CE}_n] \geq H_{\textrm{rate}} \ln 2,
+\mathbb{E}[\textrm{CE}] \geq H_{\textrm{rate}} \ln 2,
 \qquad
-\mathbb{E}[\textrm{PPL}_n] = \mathbb{E}\big[e^{\textrm{CE}_n}\big] \geq 2^{H_{\textrm{rate}}}.
+\mathbb{E}[\textrm{PPL}] = \mathbb{E}\big[e^{\textrm{CE}}\big] \geq 2^{H_{\textrm{rate}}}.
 $$
 :eqlabel:`eq_mdl-ppl-floor`
 
@@ -833,22 +853,28 @@ distribution. Averaging over prefixes gives
 $\mathbb{E}[-\log q(X_i \mid X_{<i})] \geq \mathbb{E}[-\log p(X_i \mid
 X_{<i})]$. The log-probability of a text is the sum of its next-token
 log-probabilities, $\log p(x_{1:n}) = \sum_i \log p(x_i \mid x_{<i})$, so
-summing over $i$ and dividing by $n$ gives $\mathbb{E}[\textrm{CE}_n] \geq
+summing over $i$ and dividing by $n$ gives $\mathbb{E}[\textrm{CE}] \geq
 \tfrac{\ln 2}{n} H(X_1, \ldots, X_n) \geq H_{\textrm{rate}} \ln 2$, the
-last step by the
-monotone decrease of the block entropy per symbol. Finally, $e^x$ is
-convex, so its average lies above its value at the average (Jensen's
-inequality): $\mathbb{E}[e^{\textrm{CE}_n}] \geq e^{\mathbb{E}[\textrm{CE}_n]}
+last step by the monotone decrease of the block entropy per symbol.
+Finally, $e^x$ is convex, so its average lies above its value at the
+average (Jensen's inequality):
+$\mathbb{E}[e^{\textrm{CE}}] \geq e^{\mathbb{E}[\textrm{CE}]}
 \geq 2^{H_{\textrm{rate}}}$. $\blacksquare$
 
 No model can be less perplexed, on average, than the source's own
-randomness allows. For an ergodic source and the true model, the
+randomness allows. If English has Shannon's one bit per character, the
+floor for a character model is a perplexity of $2$, one coin flip per
+letter, and the counting model's $5.84$ is far above it.
+
+The proposition bounds an expectation, and the perplexity of a single short
+text can fall below the floor. A source that emits `a` with probability
+$0.9$ has $2^H = 1.38$, yet its own true model scores a text of ten symbols
+below that whenever the text contains no `b`, which happens with
+probability $0.9^{10} = 35\%$
+(Exercise :exref:`ex_mdl-coding-compression-perplexity-floor`). Long texts
+leave no such room: for an ergodic source and the true model, the
 perplexity of one long text converges to $2^{H_{\textrm{rate}}}$ as
-$n \to \infty$, a fact we grant. The floor does not bound the perplexity of
-a single short text. A source that emits `a` with probability $0.9$ has
-$2^H = 1.38$, yet its own true model scores a text of ten symbols below
-that whenever the text contains no `b`, which happens with probability
-$0.9^{10} = 35\%$ (Exercise :exref:`ex_mdl-coding-compression-perplexity-floor`).
+$n \to \infty$, a fact we grant.
 
 ### Perplexity across Tokenizers
 
@@ -865,8 +891,9 @@ $$
 $$
 :eqlabel:`eq_mdl-bpc`
 
-which no tokenizer changes. Where every character is one byte, as in our
-27-symbol text, bits per character are the main text's bits per byte.
+and the denominator now depends on the text alone. Where every character
+is one byte, as in our 27-symbol text, bits per character are the main
+text's bits per byte.
 
 Every code in this section needs a model whose probability for each symbol
 the encoder and the decoder can both evaluate. Two distributions known only
@@ -877,47 +904,43 @@ samples.
 
 ## Summary
 
-There is a code whose length is a model's log-loss. A prefix code is a
-budget, $\sum_i 2^{-\ell_i} \leq 1$, and the best lengths for a
-distribution $P$ are the surprisals $\log_2(1/p_i)$. Every uniquely
-decodable code averages at least $H_2(P)$ bits per symbol, the Shannon code
-stays below $H_2(P) + 1$, and a code built from a model $Q$ costs the
-cross-entropy, with the KL divergence as the excess over the matched code.
-Arithmetic coding rounds once per message, so any next-symbol model, a
-language model included, codes a message in its surprisal plus at most two
-bits.
+There is a code whose length is a model's log-loss, so a loss is a file
+size. A prefix code has a budget, $\sum_i 2^{-\ell_i} \leq 1$, and the best
+way to spend it gives a symbol of probability $p_i$ a codeword of about
+$\log_2(1/p_i)$ bits. The best symbol code then averages between $H_2(P)$
+and $H_2(P) + 1$ bits per symbol, and a code built from a model $Q$ costs
+the cross-entropy, of which the KL divergence is the excess over the
+matched code. Arithmetic coding rounds once per message instead of once per
+symbol, so any next-symbol model, a language model included, stores a
+message in its total surprisal plus at most two bits.
 
-For a stationary source the least average length per symbol is the entropy
-rate, and every compressor reports an upper bound on it. MDL compares models by the total length of
-model and data. For independent symbols the AEP puts almost all of the
-*probability* of length-$n$ messages on about $2^{nH}$ typical messages of
-probability about $2^{-nH}$ each. Perplexity is the exponentiated per-token
-cross-entropy, the same number in every log base, at least
-$2^{H_{\textrm{rate}}}$ in expectation, and comparable across models only
-under one tokenizer.
+Real compressors therefore compete with models. On *The Time Machine* a
+counting model with three characters of context beats `zlib`, and a fourth
+character makes it worse, because the cost of learning a model is part of
+its code length. MDL makes this a rule for choosing between models: the
+shortest description of model and data together wins. For a source with
+memory the least average length per symbol is the entropy rate, and every
+compressor reports an upper bound on it. Perplexity is the exponentiated
+per-token loss, at least $2^{H_{\textrm{rate}}}$ in expectation, and
+comparable across models only under one tokenizer.
 
 ## Exercises
 
-1. **Perplexity across tokenizers.** Perplexity is computed per token, so
-   it depends on how a text is split into tokens.
-    1. Show that $b^{\textrm{CE}_b}$ is the same number for every log base
-       $b$, where $\textrm{CE}_b$ is the per-token cross-entropy in
-       base-$b$ units. Two language models are evaluated on the same text
-       of $10^6$ characters. The tokenizer of model A splits it into
-       $2.5 \times 10^5$ tokens, and A reaches a per-token perplexity of
-       $20$. The tokenizer of model B splits it into $6.7 \times 10^5$
-       tokens, and B reaches a per-token perplexity of $8$. Convert both
-       results to bits per character with :eqref:`eq_mdl-bpc`. Which model
-       predicts the text better?
-    1. Take the entropy rate of the text to be one bit per character, the
-       estimate of :citet:`Shannon.1951`. By :eqref:`eq_mdl-ppl-floor` the
-       expected per-token perplexity is at least $2^{H}$, where $H$ is the
-       entropy rate per *token* in bits. What is the lowest perplexity any
-       model can reach in expectation with the tokenizer of A, and with
-       that of B? How far is each model from its floor?
-    1. Explain in two sentences why the two perplexities cannot be compared
-       directly while the two values of bits per character can.
-   :exlabel:`ex_mdl-information-theory-show-that-perplexity-does`
+1. **McMillan's theorem.** A code is uniquely decodable if every
+   concatenation of codewords parses in only one way.
+    1. Show that the code $\{0, 01, 011\}$ is uniquely decodable but not
+       prefix-free, and check that it satisfies the Kraft inequality.
+    1. Prove that every uniquely decodable code satisfies the Kraft
+       inequality :eqref:`eq_mdl-kraft`. Hint: expand
+       $\big(\sum_i 2^{-\ell_i}\big)^m$ as a sum over all strings of $m$
+       codewords of $2^{-(\textrm{total length})}$, and group the strings
+       by their total length $L$, where $m \leq L \leq m \ell_{\max}$.
+       Unique decodability allows at most $2^L$ strings of total length
+       $L$, so the sum is at most $m \ell_{\max}$. Take $m$-th roots and let
+       $m \to \infty$.
+    1. Conclude that restricting to prefix codes costs nothing in expected
+       length.
+   :exlabel:`ex_mdl-coding-compression-mcmillan`
 
 1. **Huffman codes.** Huffman's algorithm :cite:`Huffman.1952` builds a
    prefix code by repeatedly merging the two least probable symbols into
@@ -937,26 +960,10 @@ under one tokenizer.
     1. For the source that emits `a` with probability $0.9$,
        show that every symbol code spends at least one bit per symbol. Then
        code *pairs* of symbols as a four-symbol source with Huffman's
-       algorithm and compute the bits per original symbol. How large is the
-       codebook for blocks of $n$ symbols, and how does arithmetic coding
-       avoid building it?
+       algorithm and check the text's $0.645$ bits per original symbol. Do
+       the same for triples. How does the slack over the entropy compare
+       with the bound $1/n$ in each case?
    :exlabel:`ex_mdl-coding-compression-huffman`
-
-1. **McMillan's theorem.** A code is uniquely decodable if every
-   concatenation of codewords parses in only one way.
-    1. Show that the code $\{0, 01, 011\}$ is uniquely decodable but not
-       prefix-free, and check that it satisfies the Kraft inequality.
-    1. Prove that every uniquely decodable code satisfies the Kraft
-       inequality :eqref:`eq_mdl-kraft`. Hint: expand
-       $\big(\sum_i 2^{-\ell_i}\big)^m$ as a sum over all strings of $m$
-       codewords of $2^{-(\textrm{total length})}$, and group the strings
-       by their total length $L$, where $m \leq L \leq m \ell_{\max}$.
-       Unique decodability allows at most $2^L$ strings of total length
-       $L$, so the sum is at most $m \ell_{\max}$. Take $m$-th roots and let
-       $m \to \infty$.
-    1. Conclude that restricting to prefix codes costs nothing in expected
-       length.
-   :exlabel:`ex_mdl-coding-compression-mcmillan`
 
 1. **Where the slack goes.** A code with lengths $\ell_i$ spends
    $Z = \sum_i 2^{-\ell_i} \leq 1$ of its budget and implies the
@@ -998,32 +1005,27 @@ under one tokenizer.
        a single message?
    :exlabel:`ex_mdl-information-theory-exact-arithmetic-coding`
 
-1. [code] **Typical and high-probability sets.** ● The code of
-   :numref:`subsec_mdl-aep` declares a binary string of length $n = 200$
-   from a Bernoulli source with $p = 0.3$ typical when its surprisal per
-   symbol lies within $\delta = 0.1$ bit of the entropy $H$ in bits. It
-   finds $2^{188.8}$ typical strings, inside the bounds
-   $0.989 \cdot 2^{156.3} \leq |A_\delta| \leq 2^{196.3}$ of the AEP
-   proposition and well above $2^{nH} = 2^{176.3}$.
-    1. Which string is the most probable one? Compute its surprisal per
-       symbol and decide whether it is typical. Why does this string not
-       matter for compression?
-    1. Let $A$ be the typical set and let $B$ be any set of strings with
-       $P(B) \geq 1 - \eta$. Show that
-       $P(A \cap B) \geq 1 - \eta - P(A^c)$, and conclude that
-       $|B| \geq \big(1 - \eta - P(A^c)\big)\, 2^{n(H - \delta)}$.
-    1. The smallest set with probability at least $0.9$ collects strings in
-       order of decreasing probability. Group the strings by their number
-       $j$ of ones, as the code does, and compute $\tfrac{1}{n}\log_2$ of
-       the size of this set for $n = 200$, $1000$, $5000$, and $20000$.
-       Compare it with $H$ and with $\tfrac{1}{n}\log_2 |A_\delta|$ at the
-       same $n$. Which of the two sets grows like $2^{nH}$, and why does
-       the typical set with a fixed $\delta$ not?
-
-   *Adapted from David Tse,
-   [EE376A/Stats376A: Information Theory, Homework 2](https://web.stanford.edu/~kedart/ee376a_winter1617/hw2.pdf),
-   Problem 6.*
-   :exlabel:`ex_mdl-information-theory-typical-sets`
+1. [extended] **Adaptive context-model compression.** ●● The text's
+   `adaptive_bits` is a complete description length in the sense of
+   :eqref:`eq_mdl-mdl`, with the cost of learning the model inside it.
+   By :eqref:`eq_mdl-arith-bound`, an arithmetic coder driven by its
+   predictions spends at most two bits more. :citet:`Blier.Ollivier.2018`
+   use such prequential codes to measure the description length of deep
+   networks.
+    1. Extend the text's experiment to $m = 0, 1, \ldots, 8$. For each $m$,
+       compare the adaptive code length with the per-character
+       cross-entropy of the order-$m$ model whose counts are taken from the
+       entire text, and with `zlib`.
+    1. Explain why the adaptive code length has a minimum over $m$ while
+       the cross-entropy of the fitted model keeps falling. Which order does
+       MDL select? Which term of :eqref:`eq_mdl-mdl` does the cross-entropy
+       of the fitted model leave out?
+    1. Design an adaptive model that combines contexts of several orders,
+       for example by falling back to shorter contexts when a long context
+       has few counts. Report a table of bits per character for every model
+       you tried, together with `zlib`, and a paragraph on the design choice
+       that mattered most.
+   :exlabel:`ex_mdl-information-theory-adaptive-compression`
 
 1. **Two-part code for a coin.** ● A sequence $\mathcal{D}$ of $n$ coin
    flips contains $j$ heads, and $\hat\theta = j/n$. Hypothesis
@@ -1033,11 +1035,12 @@ under one tokenizer.
    $\theta_q$ nearest to $\hat\theta$ on a grid of spacing $\Delta$ in
    $(0, 1)$, which costs $L(\mathcal{M}_1) = \log(1/\Delta)$, and the
    decoder knows $n$ and $\Delta$.
-    1. Use the decomposition :eqref:`eq_mdl-ce_decomp` to show that
-       $L(\mathcal{D} \mid \mathcal{M}_1) = n H_b(\hat\theta) +
-       n D_{\textrm{KL}}(\hat\theta \,\|\, \theta_q)$, where the KL
-       divergence is that of the Bernoulli distributions with these
-       parameters. Expand the KL term to second order and show that the
+    1. Use the decomposition :eqref:`eq_mdl-ce2-decomp`, in nats, to show
+       that $L(\mathcal{D} \mid \mathcal{M}_1) = n H_b(\hat\theta) +
+       n D_{\textrm{KL}}(\hat\theta \,\|\, \theta_q)$, where
+       $H_b(p) = -p \log p - (1-p) \log(1-p)$ is the binary entropy in nats
+       and the KL divergence is that of the Bernoulli distributions with
+       these parameters. Expand the KL term to second order and show that the
        total length :eqref:`eq_mdl-mdl` of $\mathcal{M}_1$ exceeds
        $n H_b(\hat\theta)$ by at most about
        $\log(1/\Delta) + n\Delta^2 / \big(8\hat\theta(1 - \hat\theta)\big)$.
@@ -1068,22 +1071,49 @@ under one tokenizer.
     1. Show that $\tfrac1n H(X_1, \ldots, X_n) = \tfrac1n\big(H(X_1) +
        (n-1) H_{\textrm{rate}}\big)$ and that it decreases to
        $H_{\textrm{rate}}$.
-    1. Consider two limits. With both transition probabilities equal to
-       $\tfrac12$ the chain is i.i.d. and the rate is $1$ bit. With both stay
-       probabilities equal to $\sigma$, the rate tends to $0$ as
-       $\sigma \to 1$, while $H(X_1)$ stays at $1$ bit. What does $H(X_1)$ say about how well the chain
-       compresses?
+    1. Consider two limits. With both exit probabilities equal to
+       $\tfrac12$ the chain is i.i.d. and the rate is $1$ bit. With both
+       exit probabilities equal to $r$, the rate tends to $0$ as $r \to 0$,
+       while $H(X_1)$ stays at $1$ bit. What does $H(X_1)$ say about how
+       well the chain compresses?
     1. [code] Simulate $10^5$ steps of the first chain and code them with
        the text's `adaptive_bits` at orders $0$, $1$ and $2$. Which orders
        reach the rate, and what does the order-$0$ length converge to?
    :exlabel:`ex_mdl-coding-compression-markov-entropy-rate`
 
+1. [code] **Typical and high-probability sets.** ● The code of
+   :numref:`subsec_mdl-aep` declares a binary string of length $n = 200$
+   from a Bernoulli source with $p = 0.3$ typical when its surprisal per
+   symbol lies within $\delta = 0.1$ bit of the entropy $H$ in bits. It
+   finds $2^{188.8}$ typical strings, inside the bounds
+   $0.989 \cdot 2^{156.3} \leq |A_\delta| \leq 2^{196.3}$ of the AEP
+   proposition and well above $2^{nH} = 2^{176.3}$.
+    1. Which string is the most probable one? Compute its surprisal per
+       symbol and decide whether it is typical. Why does this string not
+       matter for compression?
+    1. Let $A$ be the typical set and let $B$ be any set of strings with
+       $P(B) \geq 1 - \eta$. Show that
+       $P(A \cap B) \geq 1 - \eta - P(A^c)$, and conclude that
+       $|B| \geq \big(1 - \eta - P(A^c)\big)\, 2^{n(H - \delta)}$.
+    1. The smallest set with probability at least $0.9$ collects strings in
+       order of decreasing probability. Group the strings by their number
+       $j$ of ones, as the code does, and compute $\tfrac{1}{n}\log_2$ of
+       the size of this set for $n = 200$, $1000$, $5000$, and $20000$.
+       Compare it with $H$ and with $\tfrac{1}{n}\log_2 |A_\delta|$ at the
+       same $n$. Which of the two sets grows like $2^{nH}$, and why does
+       the typical set with a fixed $\delta$ not?
+
+   *Adapted from David Tse,
+   [EE376A/Stats376A: Information Theory, Homework 2](https://web.stanford.edu/~kedart/ee376a_winter1617/hw2.pdf),
+   Problem 6.*
+   :exlabel:`ex_mdl-information-theory-typical-sets`
+
 1. **The perplexity floor.**
     1. A Bernoulli source emits `a` with probability $0.9$ and `b`
        otherwise, and its own true model scores texts of $n = 10$ symbols.
-       Write $\textrm{CE}_{10}$ as a function of the number of `b`'s and
-       show that $\textrm{PPL}_{10} < 2^{H}$ exactly when the text has no
-       `b`. What is the probability of that?
+       Write the loss $\textrm{CE}$ of :eqref:`eq_mdl-perplexity-def` as a
+       function of the number of `b`'s and show that
+       $\textrm{PPL} < 2^{H}$ exactly when the text has no `b`. What is the probability of that?
     1. A leaderboard reports one perplexity on one held-out set. Explain why
        :eqref:`eq_mdl-ppl-floor` does not bound that number, and why a
        *lower* reported perplexity, under the same tokenizer, nevertheless
@@ -1091,27 +1121,27 @@ under one tokenizer.
        arithmetic code length to within two bits.
    :exlabel:`ex_mdl-coding-compression-perplexity-floor`
 
-1. [extended] **Adaptive context-model compression.** ●● The text's
-   `adaptive_bits` is a complete description length in the sense of
-   :eqref:`eq_mdl-mdl`, with the cost of learning the model inside it.
-   By :eqref:`eq_mdl-arith-bound`, an arithmetic coder driven by its
-   predictions spends at most two bits more. :citet:`Blier.Ollivier.2018`
-   use such prequential codes to measure the description length of deep
-   networks.
-    1. Extend the text's experiment to $m = 0, 1, \ldots, 8$. For each $m$,
-       compare the adaptive code length with the per-character
-       cross-entropy of the order-$m$ model whose counts are taken from the
-       entire text, and with `zlib`.
-    1. Explain why the adaptive code length has a minimum over $m$ while
-       the cross-entropy of the fitted model keeps falling. Which order does
-       MDL select? Which term of :eqref:`eq_mdl-mdl` does the cross-entropy
-       of the fitted model leave out?
-    1. Design an adaptive model that combines contexts of several orders,
-       for example by falling back to shorter contexts when a long context
-       has few counts. Report a table of bits per character for every model
-       you tried, together with `zlib`, and a paragraph on the design choice
-       that mattered most.
-   :exlabel:`ex_mdl-information-theory-adaptive-compression`
+1. **Perplexity across tokenizers.** Perplexity is computed per token, so
+   it depends on how a text is split into tokens.
+    1. Show that $b^{\textrm{CE}_b}$ is the same number for every log base
+       $b$, where $\textrm{CE}_b$ is the per-token cross-entropy in
+       base-$b$ units.
+    1. Two language models are evaluated on the same text of $10^6$
+       characters. The tokenizer of model A splits it into
+       $2.5 \times 10^5$ tokens, and A reaches a per-token perplexity of
+       $20$. The tokenizer of model B splits it into $6.7 \times 10^5$
+       tokens, and B reaches a per-token perplexity of $8$. Convert both
+       results to bits per character with :eqref:`eq_mdl-bpc`. Which model
+       predicts the text better?
+    1. Take the entropy rate of the text to be one bit per character, the
+       estimate of :citet:`Shannon.1951`. By :eqref:`eq_mdl-ppl-floor` the
+       expected per-token perplexity is at least $2^{H}$, where $H$ is the
+       entropy rate per *token* in bits. What is the lowest perplexity any
+       model can reach in expectation with the tokenizer of A, and with
+       that of B? How far is each model from its floor?
+    1. Explain in two sentences why the two perplexities cannot be compared
+       directly while the two values of bits per character can.
+   :exlabel:`ex_mdl-information-theory-show-that-perplexity-does`
 
 [Discussions](https://d2l.discourse.group/t/36865)
 
@@ -1119,23 +1149,24 @@ under one tokenizer.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §28.2]{.kicker}
+[Dive into Deep Learning · §37.2]{.kicker}
 
 Codes, compression, and perplexity<br>**Kraft · Shannon · arithmetic coding · entropy rate · perplexity**
 :::
 :::
 
-::: {.slide title="A 90% Symbol Carries 0.15 Bits but Costs a Whole Bit"}
+::: {.slide title="A Counting Model Stores The Time Machine in Fewer Bits than zlib"}
 [The problem]{.kicker}
 
-- Source: `a` with probability $0.9$, `b` with $0.1$; entropy $0.47$ bits/symbol.
-- One `a` carries $\log_2(1/0.9)=0.15$ bits, but every binary codeword
-  has at least $1$ bit: a symbol-by-symbol code overpays sixfold.
-- *The Time Machine*, 173,428 characters: `zlib` needs $2.84$ bits/char;
-  a 3-character context model that learns as it reads needs $2.55$.
+- We called a loss of $x$ bits per symbol a code length, and never built
+  the code.
+- *The Time Machine*: 173,428 characters over 27 symbols.
+- `zlib`: $2.84$ bits per character.
+- A model that predicts each character from the three before it, learning
+  its counts as it reads: $2.55$.
 
 ::: {.d2l-note}
-A probability model is a code: its log-loss is a file size.
+Is there a code whose length is a model's log-loss?
 :::
 :::
 
@@ -1146,11 +1177,13 @@ A probability model is a code: its log-loss is a file size.
 - compute the cost of a code built from the wrong model $Q$;
 - code a whole message in its surprisal plus at most $2$ bits;
 - choose between models by total description length;
-- compute an entropy rate, and read a perplexity and its floor.
+- read a perplexity as a branching factor and find its floor.
 
 **Running examples:** $P=(0.6,0.3,0.1)$ against $Q=(0.2,0.5,0.3)$; the
 dyadic source $(\tfrac12,\tfrac14,\tfrac18,\tfrac18)$; the message
-`aaaaaaaaba`.
+`aaaaaaaaba`; *The Time Machine*.
+
+**The idea:** a probability model is a code, and its log-loss is the file size.
 :::
 
 ::: {.slide title="Log-Losses Become Code Lengths"}
@@ -1162,13 +1195,17 @@ dyadic source $(\tfrac12,\tfrac14,\tfrac18,\tfrac18)$; the message
 |---|---|
 | Entropy, Cross-Entropy, and KL | surprise, KL, the loss floor |
 | **Codes, Compression, and Perplexity** | **the code behind the log-loss** |
-| Divergences and Distances | four ways to compare two laws |
+| f-Divergences | one convex function of the ratio |
+| Test Functions and Transport | averages and moving mass |
+| Score-Based Comparisons | slopes, no normalizer |
 | Mutual Information | dependence and what it limits |
-| Estimating Mutual Information | lower bounds from samples |
+| Estimating Mutual Information | what samples can show |
 :::
 
 ::: {.col .narrow}
-- **Uses:** $\textrm{CE}_2(P,Q)=H_2(P)+D^{(2)}_{\textrm{KL}}(P\|Q)$, KL $\ge0$.
+- **Uses:** cross-entropy $=$ entropy $+$ KL divergence, in bits (base-2
+  logs): $\textrm{CE}_2(P,Q)=H_2(P)+D^{(2)}_{\textrm{KL}}(P\|Q)$, and
+  KL $\ge0$ (Gibbs).
 - **Skips:** channel codes, Lempel–Ziv, Kolmogorov complexity.
 :::
 :::
@@ -1179,8 +1216,11 @@ dyadic source $(\tfrac12,\tfrac14,\tfrac18,\tfrac18)$; the message
 
 ::: {.cols .vc}
 ::: {.col}
-- Codeword $c$ of length $\ell$ owns $[0.c,\ 0.c+2^{-\ell})$: all
-  numbers whose binary expansion begins with $c$.
+- **Prefix-free:** no codeword begins another; `110010111` can only be
+  `110|0|10|111`.
+- Codeword $c$ of length $\ell$ owns the **dyadic interval**
+  $[0.c,\ 0.c+2^{-\ell})$: all numbers whose binary expansion begins
+  with $c$.
 - $c$ prefix of $c'$ $\iff$ intervals nested; otherwise disjoint.
 - $\tfrac12+\tfrac14+\tfrac18+\tfrac18=1$: the whole tree.
 :::
@@ -1207,7 +1247,8 @@ codeword.
 $$\boxed{\textstyle\sum_i 2^{-\ell_i}\le 1}$$
 
 ::: {.d2l-note}
-Uniquely decodable codes obey it too (McMillan): prefix-freeness costs nothing.
+Codes that are only uniquely decodable (every concatenation parses one
+way) obey it too (McMillan): prefix-freeness costs nothing.
 :::
 :::
 
@@ -1215,10 +1256,11 @@ Uniquely decodable codes obey it too (McMillan): prefix-freeness costs nothing.
 [Symbol codes]{.kicker}
 
 - Minimize $\sum_i p_i\ell_i$ subject to $\sum_i 2^{-\ell_i}=1$, $\ell_i$ real.
-- Lagrange: $p_i=\lambda\,2^{-\ell_i}\ln2$, so $2^{-\ell_i}=p_i$ and
-  $\mathbb{E}[\ell]=H_2(P)$.
+- Lagrange: $2^{-\ell_i}=c\,p_i$, and summing over $i$ gives $c=1$.
+- $\ell_i=\log_2(1/p_i)$, the **surprisal** of symbol $i$, and
+  $\mathbb{E}[\ell]=H_2(P)$, the entropy in bits.
 - Dyadic source: $\ell=1,2,3,3$ and $\mathbb{E}[\ell]=1.75=H_2$, no waste.
-- $P=(0.6,0.3,0.1)$: $\log_2(1/p_i)=0.74,\,1.74,\,3.32$; round up to the
+- $P=(0.6,0.3,0.1)$: surprisals $0.74,\,1.74,\,3.32$; round up to the
   **Shannon lengths** $1,2,4$.
 :::
 
@@ -1251,7 +1293,8 @@ KL is the extra length of the wrong code: $2.3\in[1.867,\,2.867)$ bits.
 
 Shannon's code rounds each surprisal up. Huffman's merges the two least
 probable symbols, repeatedly. What lengths and expected lengths result?
-Can any symbol code beat $1$ bit/symbol on the $0.9/0.1$ source?
+Can any symbol code beat $1$ bit/symbol on a source with
+$P(\texttt{a})=0.9$?
 
 . . .
 
@@ -1262,17 +1305,21 @@ Can any symbol code beat $1$ bit/symbol on the $0.9/0.1$ source?
 ::: {.slide title="Code the Whole Message as One Interval"}
 [Whole messages]{.kicker}
 
+An `a` of probability $0.9$ carries $\log_2(1/0.9)=0.15$ bits; a symbol
+code charges $1$. Blocks of $n$ symbols round once per block, but need a
+table of $2^n$ codewords.
+
 ![Arithmetic coding of aaaaaaaaba under $q(\texttt{a})=0.9$.](../img/mdl-it-arith-intervals.svg){width=100%}
 
 - Each symbol keeps its model slice: final width $w=\prod_i q(x_i\mid x_{<i})$.
-- Name the interval by a dyadic cell inside it: here `011001`.
+- Name the interval by a dyadic interval inside it: here `011001`.
 :::
 
 ::: {.slide title="Arithmetic Coding Costs the Surprisal Plus at Most Two Bits"}
 [Whole messages]{.kicker}
 
-- $\ell=\lceil\log_2(1/w)\rceil+1$ gives $2^{-\ell}\le w/2$: a cell of
-  length $2^{-\ell}$ fits inside, and $\ell<\log_2(1/w)+2$.
+- $\ell=\lceil\log_2(1/w)\rceil+1$ gives $2^{-\ell}\le w/2$: a dyadic
+  interval of length $2^{-\ell}$ fits inside, and $\ell<\log_2(1/w)+2$.
 - The decoder replays the model; it must know $n$ (or see an end symbol).
 
 @!mdl-information-theory-from-symbol-codes-to-arithmetic-coding
@@ -1285,14 +1332,28 @@ The rounding happens once per message: $6$ bits against $13$.
 ::: {.slide title="Any Next-Symbol Model Drives the Coder: Prediction Is Compression"}
 [Whole messages]{.kicker}
 
-Adaptive order-$m$ model: $q(x\mid s)=\dfrac{c(s,x)+\frac12}{c(s)+\frac k2}$,
-counts updated after each character; the decoder counts too.
+- The coder slices by $q(\cdot\mid x_{<i})$; the symbols need not be independent.
+- Adaptive order-$m$ model, with $s$ the last $m$ characters, $c$ the
+  counts so far, $k=27$:
+  $q(x\mid s)=\dfrac{c(s,x)+\frac12}{c(s)+\frac k2}$.
+- The decoder counts the same characters, so no parameters are sent.
+
+::: {.d2l-note}
+A 70B-parameter language model as the predictor: ImageNet patches to 43.4%
+(PNG 58.5%), LibriSpeech to 16.4% (FLAC 30.3%), the 140 GB model not counted.
+:::
+
+[Source: Delétang et al., 2023.]{.small}
+:::
+
+::: {.slide title="Three Characters of Context Beat zlib; a Fourth Costs More than It Saves"}
+[Whole messages]{.kicker}
 
 @!mdl-coding-compression-a-language-model-as-a-compressor-2
 
 ::: {.d2l-note}
-An LLM-driven coder: ImageNet patches to 43.4% (PNG 58.5%), LibriSpeech to
-16.4% (FLAC 30.3%). Source: Delétang et al., 2023.
+Most of the $27^4\approx530{,}000$ four-character contexts are seen too
+rarely to learn, and the bits spent learning are part of the file.
 :::
 :::
 
@@ -1301,11 +1362,18 @@ An LLM-driven coder: ImageNet patches to 43.4% (PNG 58.5%), LibriSpeech to
 
 $$\hat{\mathcal M}=\operatorname{argmin}_{\mathcal M}\big[L(\mathcal M)+L(\mathcal D\mid\mathcal M)\big]$$
 
+$L(\mathcal M)$: bits to describe the model. $L(\mathcal D\mid\mathcal M)$:
+log-loss of the data under it, in bits.
+
 - $1{,}000$ flips, $600$ heads. Fair coin: $1{,}000$ bits.
-- Biased coin: $\theta$ to precision $1/\sqrt n$ costs
+- Biased coin: $\theta$ on a grid of $\sqrt n$ points costs
   $\tfrac12\log_2 1000\approx5$ bits; data $1000\,H_2(0.6,0.4)=971$; total $976$.
 - $520$ heads: saving $1.2<5$ bits, the fair coin wins.
-- Order $4$ lost to order $3$ for the same reason: its contexts cost more to learn.
+
+::: {.d2l-note}
+Order $4$ lost to order $3$ by the same rule: the adaptive code length
+includes the bits spent learning the counts.
+:::
 :::
 
 ::: {.slide title="The Entropy Rate Is the Best Possible Next-Symbol Loss"}
@@ -1313,25 +1381,30 @@ $$\hat{\mathcal M}=\operatorname{argmin}_{\mathcal M}\big[L(\mathcal M)+L(\mathc
 
 $$H_{\textrm{rate}}=\lim_{n\to\infty}\tfrac1n H(X_1,\dots,X_n)=\lim_{n\to\infty}\mathbb{E}\big[-\log_2 p(X_n\mid X_{<n})\big]$$
 
-- Stationary source: no uniquely decodable code beats $H_{\textrm{rate}}$
-  bits/symbol.
+$H(X_1,\dots,X_n)$: entropy of the block in bits; $p$: the source's own
+probabilities.
+
+- Stationary source (block statistics do not shift in time): no uniquely
+  decodable code beats $H_{\textrm{rate}}$ bits/symbol, and arithmetic
+  coding with $p$ reaches it.
 - Chain that keeps its symbol with prob. $0.9$: $H(X_1)=1$ bit, rate $0.47$.
 - English: about $1$ bit/char (Shannon, 1951), vs $\log_2 27=4.75$.
+- A loss of $1.2$ nats/char is $1.73$ bits: below the $2.55$ of order 3,
+  above Shannon.
 :::
 
 ::: {.slide title="Almost All Probability Sits on About 2ⁿᴴ Typical Strings"}
 [Entropy rate]{.kicker}
 
-Typical set, tolerance $\delta$:
+Independent symbols with entropy $H$ bits. Typical set, tolerance $\delta$:
 $A_\delta=\{x_{1:n}:\ |-\tfrac1n\log_2P(x_{1:n})-H|<\delta\}$.
 
-- $P(A_\delta)\to1$: the surprisal per symbol is a sample mean (LLN).
-- Inside: $2^{-n(H+\delta)}<P(x_{1:n})<2^{-n(H-\delta)}$.
-- Count: $1\ge P(A_\delta)>|A_\delta|\,2^{-n(H+\delta)}$, so
-  $|A_\delta|\le2^{n(H+\delta)}$; and $|A_\delta|\ge(1-\eta)2^{n(H-\delta)}$
-  if $P(A_\delta)\ge1-\eta$.
-- Rates above $H$ suffice; $2^{nR}$ codewords with $R<H$ name a set of
-  probability $\to0$.
+- $P(A_\delta)\to1$: the surprisal per symbol is a sample mean (law of
+  large numbers).
+- Inside: $2^{-n(H+\delta)}<P(x_{1:n})<2^{-n(H-\delta)}$, so
+  $|A_\delta|\le2^{n(H+\delta)}$.
+- Index $A_\delta$ with $n(H+\delta)$ bits: failure probability $\to0$.
+- Any $2^{nR}$ codewords with $R<H$ name a set of probability $\to0$.
 :::
 
 ::: {.slide title="Typical ≠ Most Probable ≠ Most Numerous"}
@@ -1354,8 +1427,8 @@ and how many does arithmetic coding average?
 
 . . .
 
-- Index: $189$ bits, $13$ above $nH$, plus a flag bit.
-- Arithmetic coding: under $nH+2=178.3$ bits on average.
+- Index: $189$ bits, $13$ above $nH$, and it fails on $1\%$ of messages.
+- Arithmetic coding: under $nH+2=178.3$ bits on average, never fails.
 - The typical set is a device for proofs, not a coder.
 :::
 
@@ -1364,33 +1437,44 @@ and how many does arithmetic coding average?
 
 $$\textrm{PPL}=\exp\Big(-\tfrac1n\textstyle\sum_i\log q(x_i\mid x_{<i})\Big)=\Big(\prod_i q(x_i\mid x_{<i})\Big)^{-1/n}$$
 
-- Uniform over $k$ tokens: $\textrm{PPL}=k$. Same value in every log base.
-- *The Time Machine*, per character: $2^{4.08}\approx 16.9$ with no context,
-  $2^{2.55}\approx 5.8$ with three characters of context.
+Uniform over $k$ tokens: $\textrm{PPL}=k$. *The Time Machine*, per character:
 
-<!-- WRITER: slide re-pointed from the cut five-token cell to the Time
-Machine numbers (order 0: 16.91, order 3: 5.84). -->
+| context | bits | nats | perplexity |
+|:---|---:|---:|---:|
+| none (uniform would be $27$) | $4.08$ | $2.83$ | $16.91$ |
+| 3 characters | $2.55$ | $1.77$ | $5.84$ |
+| 4 characters | $2.78$ | $1.92$ | $6.85$ |
+
+::: {.d2l-note}
+$2^{\text{bits}}=e^{\text{nats}}$: perplexity is the same in every log base.
+:::
 :::
 
-::: {.slide title="The Expected Perplexity Is at Least the Exponentiated Entropy Rate"}
+::: {.slide title="The Expected Perplexity Is at Least 2 to the Entropy Rate"}
 [Perplexity]{.kicker}
+
+Text $X_{1:n}$ from a stationary source $p$; any model $q$; $\textrm{CE}$ its loss per token in nats, $\textrm{PPL}=e^{\textrm{CE}}$.
 
 **I.** Per token, given the prefix, Gibbs: $\mathbb{E}[-\log q]\ge\mathbb{E}[-\log p]$.
 
-**II.** Sum over tokens: $\mathbb{E}[\textrm{CE}_n]\ge\tfrac1nH(X_{1:n})\ge H_{\textrm{rate}}$.
+**II.** Sum over tokens (entropies in bits): $\mathbb{E}[\textrm{CE}]\ge\tfrac{\ln 2}{n}H(X_{1:n})\ge H_{\textrm{rate}}\ln 2$.
 
-**III.** $e^x$ is convex (Jensen): $\mathbb{E}[e^{\textrm{CE}_n}]\ge e^{\mathbb{E}[\textrm{CE}_n]}$.
+**III.** $e^x$ is convex (Jensen): $\mathbb{E}[e^{\textrm{CE}}]\ge e^{\mathbb{E}[\textrm{CE}]}$.
 
-$$\boxed{\mathbb{E}[\textrm{PPL}_n]\ge e^{H_{\textrm{rate}}}\quad(H_{\textrm{rate}}\text{ in nats})}$$
+$$\boxed{\mathbb{E}[\textrm{PPL}]\ge 2^{H_{\textrm{rate}}}}$$
 
 ::: {.d2l-note}
-Stationary source, in expectation only: a 10-symbol text from the $0.9/0.1$
-source beats the floor with probability $0.9^{10}=35\%$.
+English at $1$ bit/char: floor $2$; order 3 reaches $5.84$. Expectation
+only: ten symbols with $P(\texttt{a})=0.9$ beat their floor $1.38$ with
+probability $0.9^{10}=35\%$.
 :::
 :::
 
 ::: {.slide title="Perplexities Compare Only Under One Tokenizer"}
 [Perplexity]{.kicker}
+
+A text of $n_{\textrm{char}}$ characters in $n_{\textrm{tok}}$ tokens costs
+$n_{\textrm{tok}}\log_2\textrm{PPL}$ bits. Bits per character (bpc):
 
 $$\textrm{bpc}=\frac{n_{\textrm{tok}}}{n_{\textrm{char}}}\log_2\textrm{PPL}$$
 
@@ -1421,7 +1505,8 @@ token?
   $2.3\in[1.87,2.87)$.
 - Arithmetic coding of `aaaaaaaaba`: `011001`, $6$ bits vs $13$.
 - Order-3 model $2.55$ bpc vs `zlib` $2.84$; MDL coin $976<1000$.
-- Typical strings $2^{188.8}$ carry $0.989$; perplexity $6.3$ at $1.84$ nats.
+- Typical strings $2^{188.8}$ carry $0.989$; perplexity $16.91\to5.84$
+  with three characters, floor $2^{H_{\textrm{rate}}}$.
 
 **Next:** comparing distributions known only through samples.
 :::

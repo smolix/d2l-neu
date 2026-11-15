@@ -8197,6 +8197,9 @@ d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
 d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
     '7c08b175e12fe3138742f46e14720df1ab45e277')
+d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
+    d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
+    'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
 d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
     d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
     'dd66f91cc44070f7e2256c63d5e5caf912c4054e')

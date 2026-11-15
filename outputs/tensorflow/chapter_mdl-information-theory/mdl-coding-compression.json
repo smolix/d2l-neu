@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:17b282018b6ae248451866b6ea6c82727a41b717a892ab462b1bb31267031ef5",
+    "d2l_lib_fingerprint": "sha256:115599b6b799e8ae6478cd65654be8b983281fff15bf11557b3a43d93e23792b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -81,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
           "bytes": 31016,
-          "sha256": "sha256:d2565361bbb58f10aca74704ceae42dca0a2d623a68f3294552f4c7b6f87badd"
+          "sha256": "sha256:a7e6ddd0ab205030dbc5492ae66f5ecd695f63532b5db156d0d34b95df45732e"
         }
       ]
     }

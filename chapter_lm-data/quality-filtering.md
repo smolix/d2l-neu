@@ -431,8 +431,10 @@ for lang in FW2_LANGS:
     k, n = sum(bool(c) for c in codes), len(codes)
     lo, hi = d2l.wilson_ci(k, n)
     first = collections.Counter(c[0] for c in codes if c).most_common(1)
+    other = sum(bool(set(c) - {'gopher_stop_words'}) for c in codes)
     rows.append(dict(language=lang, n=n, removed=k, rate=k / n, lo=lo,
-                     hi=hi, top_rule=first[0][0] if first else '-'))
+                     hi=hi, top_rule=first[0][0] if first else '-',
+                     rate_without_stop_words=other / n))
 LANG_TABLE = pd.DataFrame(rows)
 print('FineWeb-2 (each already filtered with its own language rules), '
       'under these English rules:')

@@ -21,7 +21,7 @@ sentence reads "Modules in a plain list stay unregistered, without any
 warning." The model writes four fluent sentences about registration, cites
 the second and third passages, and never says that nothing warns you. Was
 the right passage ranked too low? Was it in the context and ignored? Did a
-neighbouring passage say something else?
+neighboring passage say something else?
 
 Systems of this kind are called *retrieval-augmented generation* (RAG),
 after a 2020 paper that trained a retriever's query encoder together with a
@@ -292,7 +292,7 @@ The set was written and checked by models, in four steps:
    find the answer and make retrieval look easy), or that nearly repeats
    another.
 3. A checker, Qwen3.8-27B, tested that each question stands alone and that
-   its reference is supported, complete and unique. A search of neighbouring
+   its reference is supported, complete and unique. A search of neighboring
    passages collected other passages that answer it.
 4. A frontier model, Claude Opus 5.5, verified every `dev` and `test` item
    in a fresh context.
@@ -436,12 +436,13 @@ print(pd.DataFrame({s: {
 print('every anchor and span lies in a document of its split; quotas met')
 ```
 
-A chunk is *relevant* to a question if it overlaps a gold or alternative
-span by at least half of the span's characters or half of the chunk's. The
-rule serves the section chunks of :numref:`sec_lm_retrieval` (at most 512
-tokens, cut at headings) as well as *fixed windows*, runs of 256 tokens cut
-without regard to the text. Consecutive windows may overlap, here by 64
-tokens, so that a sentence cut at one boundary appears whole in the next.
+`gold_chunk_ids` calls a chunk relevant to a question if it overlaps a gold
+or alternative span by at least half of the span's characters or half of
+the chunk's, the rule of :numref:`sec_lm_retrieval`. It serves the section
+chunks of that section (at most 512 tokens, cut at headings) as well as its
+fixed windows of 256 tokens, cut without regard to the text. Consecutive
+windows overlap, here by 64 tokens, so that a sentence cut at one boundary
+appears whole in the next.
 
 ```{.python .input #rag-qa-gold}
 %%tab pytorch
@@ -1429,15 +1430,15 @@ The replayed verdicts match the recorded ones. Every baseline answer has a
 verdict, and seven answers of other arms stay unjudged.
 
 Why this judge? It was chosen by measurement. Two frontier models from
-other families, Claude Opus 5.5 and Gemini 4 Argon, labelled 200 answers of
+other families, Claude Opus 5.5 and Gemini 4 Argon, labeled 200 answers of
 an earlier generator, Qwen3-4B, and nine Qwen candidates of three sizes
 judged them, with thinking on and off. With thinking off every candidate was
-lenient, passing many answers that both labellers call wrong. With thinking
+lenient, passing many answers that both labelers call wrong. With thinking
 on, a judge works through the key facts before it decides, which is what
 catches a missing fact, but the smaller candidates reasoned until their
 replies were cut off. Half of the 200 answers served this choice. The other
 100, the *calibration set*, test the chosen judge before we read any
-accuracy: against each labeller, and against their *consensus*, the answers
+accuracy: against each labeler, and against their *consensus*, the answers
 on which both agree. The labels come from models, not from people, and they
 were made on answers of the earlier generator; ours may make subtler
 mistakes, which this check cannot see.
@@ -1527,11 +1528,11 @@ if len(JUD) and 2 * CONCURRENCY in JUD.concurrency.values:
 The judge agrees with the consensus on 0.95 of the `correct` verdicts,
 κ 0.85 [0.70, 0.97], and on 0.96 of the `faithful` ones, κ 0.87
 [0.71, 0.97]. These numbers flatter, because the consensus leaves out the
-hard answers on which the labellers disagree. Against each labeller alone
-the judge reaches κ 0.83 and 0.71 on `correct`, and the labellers reach 0.81
-with each other: the judge is about as reliable as a third labeller. The
+hard answers on which the labelers disagree. Against each labeler alone
+the judge reaches κ 0.83 and 0.71 on `correct`, and the labelers reach 0.81
+with each other: the judge is about as reliable as a third labeler. The
 judge it replaced, a 4B model with thinking off, passed 14 of the 21 answers
-that both labellers call wrong.
+that both labelers call wrong.
 
 ### The Baseline Report
 
@@ -1543,7 +1544,7 @@ per-question differences, which removes the questions' difficulty from the
 comparison (:numref:`subsec_mdl-paired-comparisons`). Make a prediction
 first:
 `base-repeat` sends the same 240 prompts to the same model with greedy
-decoding, and only the neighbours in each batch of eight differ. How many
+decoding, and only the neighbors in each batch of eight differ. How many
 answers will change?
 
 ```{.python .input #rag-baseline-report}
@@ -1776,7 +1777,7 @@ accuracy by less than 0.03, and a stage change has to do better than that.
 The judge is batched by its server too, so the same effect reaches the
 verdicts: judged again with twice as many requests in flight, 5 of 54
 answers changed a verdict. Every arm was judged at the same concurrency, so
-this noise widens the paired intervals rather than favouring one arm.
+this noise widens the paired intervals rather than favoring one arm.
 
 Now the failure of the opening, picked by a fixed rule: the first `dev`
 answer, by question id, whose context held a relevant chunk, that the judge
@@ -1999,7 +2000,7 @@ rule. Experimental science calls this *pre-registration*: the analysis is
 written down before the data are seen. The cell counts the classes with
 intervals and prints five *failure cards*, records of a failure with its
 question, answer, ranking and verdicts. Claude Opus 5.5 also read each card
-and labelled its class, and the cell compares these labels, again a
+and labeled its class, and the cell compares these labels, again a
 model's, with the rule's.
 
 ```{.python .input #rag-failures}
@@ -2095,13 +2096,13 @@ interval overlaps that of unsupported, 0.23 [0.08, 0.38], so 26 failures
 cannot tell which of the two is larger.
 
 The 31 cards cover all 26 failures and five answers that the judge counts
-as correct after its re-judging; the labeller calls those five correct
-too, the first row of the table. On the 26 failures, labeller and rule
-agree on 13. Of the 13 disagreements, 9 are answers that the labeller calls
+as correct after its re-judging; the labeler calls those five correct
+too, the first row of the table. On the 26 failures, labeler and rule
+agree on 13. Of the 13 disagreements, 9 are answers that the labeler calls
 correct and our grading does not. In seven the judge insists on a key fact
-the labeller lets pass. In two, unanswerable questions were declined in
+the labeler lets pass. In two, unanswerable questions were declined in
 words other than the abstention sentence, which the string rule counts as
-answers. Only four disagreements concern the stage. Rule and labeller disagree about whether an answer
+answers. Only four disagreements concern the stage. Rule and labeler disagree about whether an answer
 is wrong far more often than about where it went wrong.
 
 The rule picks the ignored class and its fix: the generator quotes the
@@ -2291,12 +2292,12 @@ combines passages too, through attention over their concatenation, with one
 long prompt instead of one short pass per document.
 
 The sum over the corpus is too large, so it runs over the $k$ documents of
-largest $p(z \mid x)$, the retrieved set $K$. What does that drop? Write
-$L_z = p(y \mid x, z)$, $p_S^{(k)}$ for the sum restricted to $K$, and
-$m_k = \sum_{z \in K} p(z \mid x)$ for the retriever's mass on $K$. The
+largest $p(z \mid x)$, the retrieved set $\mathcal{K}$. What does that drop? Write
+$L_z = p(y \mid x, z)$, $p_S^{(k)}$ for the sum restricted to $\mathcal{K}$, and
+$m_k = \sum_{z \in \mathcal{K}} p(z \mid x)$ for the retriever's mass on $\mathcal{K}$. The
 dropped terms are nonnegative and each $L_z$ is at most $\max_z L_z$, so
 
-$$0 \le p_S - p_S^{(k)} = \sum_{z \notin K} p(z \mid x)\, L_z \le (1 - m_k) \max_z L_z.$$
+$$0 \le p_S - p_S^{(k)} = \sum_{z \notin \mathcal{K}} p(z \mid x)\, L_z \le (1 - m_k) \max_z L_z.$$
 :eqlabel:`eq_lm_rag_topk`
 
 The truncation error is at most the probability mass that the retriever
@@ -2512,7 +2513,7 @@ remains open.
        answer of one token, whatever the number of documents.
     1. Is $p_T \ge p_S$ always? Prove it, or give a counterexample with two
        documents and two tokens.
-    1. Which kind of answer does each marginalization favour, and which of
+    1. Which kind of answer does each marginalization favor, and which of
        them can a greedy decoder evaluate one token at a time?
    :exlabel:`ex_lm_rag-marginals`
 
@@ -2706,7 +2707,7 @@ of a gold span? Equal text, not equal chunk counts.
   reply is a false answer (string match, no judge).
 :::
 
-::: {.slide title="The Judge Agrees with Each Frontier Labeller as They Agree with Each Other"}
+::: {.slide title="The Judge Agrees with Each Frontier Labeler as They Agree with Each Other"}
 [A judge, checked first]{.kicker}
 
 Qwen3.8-27B, thinking on, FP8 on two 24 GB GPUs. Verdicts: **correct**
@@ -2715,9 +2716,9 @@ passages suffice).
 
 | `correct`, 100 calibration answers | κ |
 |---|---|
-| judge vs frontier labeller | 0.83 |
-| judge vs second labeller | 0.71 |
-| the two labellers | 0.81 |
+| judge vs frontier labeler | 0.83 |
+| judge vs second labeler | 0.71 |
+| the two labelers | 0.81 |
 | judge vs their consensus | 0.85 [0.70, 0.97] |
 | old judge, 4B, thinking off, vs consensus | 0.33 |
 
@@ -2833,7 +2834,7 @@ overlap.
 | false answer | abstain below a reranker score tuned on `train` |
 | false abstention | abstention rule after the passages |
 
-A model labeller agrees with the rule on 13 of the 26 failures; 9 of the
+A model labeler agrees with the rule on 13 of the 26 failures; 9 of the
 13 disagreements are about *whether* an answer is wrong.
 :::
 
@@ -2913,7 +2914,7 @@ Qwen3.5-9B on one RTX 4090, batches of 8 (4 at 6,000 tokens).
 [Recap]{.kicker}
 
 - 240 `dev` questions with gold spans, made and checked by models.
-- Judge ≈ a third frontier labeller (κ 0.71 to 0.83 vs their 0.81).
+- Judge ≈ a third frontier labeler (κ 0.71 to 0.83 vs their 0.81).
 - Closed 0.30, baseline 0.89, oracle 0.92: the generator limits accuracy.
 - No stage change helped; fixed windows $-0.08$, budget 1,500 $-0.03$.
 - Re-batching changed 45% of answers in bf16, not accuracy.

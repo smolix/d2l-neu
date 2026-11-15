@@ -28,7 +28,7 @@ BM25 (:numref:`sec_lm_retrieval`) scores a passage only by the words it
 shares with the question, with weights fixed by counts. A question that asks
 about a "container of layers" misses a passage that only ever says
 `nn.Sequential`. Dense vectors catch such paraphrases, but they need a
-nearest-neighbour index and can lose an exact identifier. SPLADE
+nearest-neighbor index and can lose an exact identifier. SPLADE
 :cite:`Formal.Piwowarski.Clinchant.2021` keeps the inverted index and learns
 its weights.
 
@@ -123,7 +123,7 @@ affordable, and another run whenever a document changes.
 long-context embedder reads the whole document once, and each chunk's vector
 is the mean of the token vectors inside the chunk's span. Every token vector
 has attended to the whole document, so the chunk vector carries what its
-neighbours say, without any further training. It has two costs. The
+neighbors say, without any further training. It has two costs. The
 encoder runs over the whole document in one pass, whose attention cost grows
 with the square of the document's length, and every chunk's vector now
 depends on the whole document, so editing one paragraph re-encodes every
@@ -204,8 +204,8 @@ toward chain-of-thought answers that quote the relevant passage. It targets
 the `ignored` failures of :numref:`sec_lm_rag`, where a relevant passage was
 in the context and the answer missed it. The fix chosen in advance there
 asked Qwen3.5-9B, by prompt alone, to quote before answering, with the best
-passages at both ends. It lowered accuracy by 0.08 on dev and by 0.075 on
-test, because the quoting format crowded out the sentence that declares a
+passages at both ends. It lowered accuracy by 0.08 on dev and on test,
+because the quoting format crowded out the sentence that declares a
 question unanswerable: false answers to unanswerable dev questions rose from
 2 to 15. RAFT trains the quoting into the weights instead, at the cost of a
 fine-tuning run per domain, with distractors drawn from one's own retriever.
@@ -296,7 +296,7 @@ methods target passages that one search misses, most often on multi-hop
 questions, and their latency grows with the number of rounds. In Search-R1
 :cite:`Jin.Zeng.Yue.ea.2025` and ReSearch :cite:`Chen.Sun.Li.ea.2025` the
 decision is a policy learned by reinforcement learning from the correctness
-of the final answer, with no labelled search steps, so the model itself
+of the final answer, with no labeled search steps, so the model itself
 decides when and what to search. At that point the pipeline has become an
 agent with a search tool, the subject of :numref:`chap_lm_agents`.
 
@@ -326,12 +326,12 @@ as headers.
 
 :numref:`sec_lm_rag` grades answers against reference answers with a judge
 model, Qwen3.8-27B, and checks the judge first. On the 93 of the 100
-calibration pairs where the two labelling models agree, its correctness
+calibration pairs where the two labeling models agree, its correctness
 verdicts match theirs at $\kappa = 0.85$ (interval 0.70 to 0.97), where
-$\kappa$ is agreement corrected for chance. Against each labeller alone on
-all 100 pairs it reaches 0.83 and 0.71, about as well as the labellers agree
+$\kappa$ is agreement corrected for chance. Against each labeler alone on
+all 100 pairs it reaches 0.83 and 0.71, about as well as the labelers agree
 with each other (0.81). Those labels were written by two frontier language
-models, not by people, so a blind spot that labellers and judge share goes
+models, not by people, so a blind spot that labelers and judge share goes
 undetected.
 
 Three other approaches each change one thing. RAGAS
@@ -343,16 +343,16 @@ context supports, not whether the answer is right. ARES
 :cite:`SaadFalcon.Khattab.Potts.ea.2024` fine-tunes small judges on synthetic
 data and then corrects their estimates with a small set of labels written
 by people, through prediction-powered inference. With $f(x)$ the judge's
-verdict on an answer $x$ and $y_i$ the label of a labelled one, the judge's
+verdict on an answer $x$ and $y_i$ the label of a labeled one, the judge's
 average over all $N$ answers is corrected by its average error on the $n$
-labelled answers,
+labeled answers,
 
 $$
 \hat\theta = \frac{1}{N}\sum_{j=1}^{N} f(x_j) - \frac{1}{n}\sum_{i=1}^{n} \big(f(x_i) - y_i\big),
 $$
 
 so the estimate stays unbiased however wrong the judge is, and its interval
-widens with the judge's errors. :numref:`sec_lm_rag` uses its labelled set
+widens with the judge's errors. :numref:`sec_lm_rag` uses its labeled set
 only to measure the judge's agreement, and its labels come from models.
 ALCE :cite:`Gao.Yen.Yu.ea.2023` scores citations with an entailment model,
 the kind of classifier that :numref:`sec_lm_bert` fine-tunes on MNLI: the

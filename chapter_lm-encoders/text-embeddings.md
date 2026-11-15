@@ -1308,13 +1308,13 @@ more important than the others. *Matryoshka representation learning*
 (Kusupati et al., 2022) makes them so by averaging the loss over prefixes,
 
 $$
-\ell_{\textrm{MRL}} = \frac{1}{|K|} \sum_{k \in K} \ell^{(k)},
+\ell_{\textrm{MRL}} = \frac{1}{|\mathcal{K}|} \sum_{k \in \mathcal{K}} \ell^{(k)},
 $$
 
 with $\ell^{(k)}$ the loss :eqref:`eq_lm_infonce` on the first $k$
-coordinates, renormalized, and $K$ a set of widths. Each prefix must then be
-an embedding on its own, as each doll of a Russian nesting set is a complete
-doll. Qwen3-Embedding supports such prefixes: its model card allows any
+coordinates, renormalized, and $\mathcal{K}$ a set of widths. Each prefix
+must then be an embedding on its own, as each doll of a Russian nesting set
+is a complete doll. Qwen3-Embedding supports such prefixes: its model card allows any
 width from 32 to 1,024 coordinates.
 
 *Quantization* keeps all coordinates at lower precision. The simplest form,
@@ -2006,7 +2006,7 @@ Only the plain model lost beyond its interval, $-0.045$
 ::: {.slide title="Down to 64 Coordinates, Plain Truncation Matches Matryoshka Training"}
 [Truncation]{.kicker}
 
-$$\ell_{\textrm{MRL}} = \frac{1}{|K|}\sum_{k \in K} \ell^{(k)}, \qquad K = \{768, 512, 256, 128, 64\}$$
+$$\ell_{\textrm{MRL}} = \frac{1}{|\mathcal{K}|}\sum_{k \in \mathcal{K}} \ell^{(k)}, \qquad \mathcal{K} = \{768, 512, 256, 128, 64\}$$
 
 $\ell^{(k)}$: InfoNCE on the first $k$ coordinates, renormalized.
 

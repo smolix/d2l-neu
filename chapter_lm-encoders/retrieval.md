@@ -16,7 +16,7 @@ Search engines met both problems long before neural networks. For the blind
 spot they had the word index, which lists for every word the passages that
 contain it, scored by BM25, a rule from the mid-1990s that is still the
 default of the Lucene search library. For speed they gave up exactness: an
-*approximate nearest-neighbour* index looks at a small fraction of the
+*approximate nearest-neighbor* index looks at a small fraction of the
 vectors and accepts that it sometimes misses the nearest one.
 
 Both old answers still hold. A word index and a vector index fail on
@@ -369,9 +369,10 @@ assert all(c['text'] == FIXED.docs[c['doc_id']]['text'][
 
 The corpus holds 232 documents, 168 for training and 32 each for dev and
 test. The default chunking makes 5,324 chunks of at most 512 tokens, median
-364. A chunk id such as `sec512:chapter_transformers/kv-cache#001` names the
-chunking, the document and the position, and stays fixed within a corpus
-version, so a stored result can name chunks without their text.
+364, the passages that :numref:`sec_lm_text_embeddings` searched. A chunk id
+such as `sec512:chapter_transformers/kv-cache#001` names the chunking, the
+document and the position, and stays fixed within a corpus version, so a
+stored result can name chunks without their text.
 
 Each chunk is read in one of three *views*, copies of its text prepared for
 one reader: `display`, a heading line and the text, for a language model
@@ -415,8 +416,10 @@ The questions come from the book's question set (:numref:`sec_lm_rag`),
 drafted from passages of the book by one language model and checked by
 others; no person wrote or verified them. The 5,614 answerable training
 questions ask about other documents than the 220 dev questions. A chunk is
-*relevant* if it contains a gold span of the question, a passage that
-answers it. :numref:`tab_lm_ret_metrics` collects the three measures of a
+*relevant* if it overlaps a stretch of the book that answers the question,
+the span the question was drafted from or another that answers it as well,
+by at least half of the span or half of the chunk.
+:numref:`tab_lm_ret_metrics` collects the three measures of a
 ranked list from :numref:`sec_lm_text_embeddings`.
 
 :Measures of a ranked list for one question; the reported value is the mean over questions. $r$ is the rank of the first relevant chunk, and $\mathrm{rel}_i$ is 1 if the chunk at rank $i$ is relevant and 0 otherwise.
@@ -945,7 +948,8 @@ not its first ten.
 Both retrievers so far encode question and chunk separately. Such a
 *bi-encoder* computes every chunk vector once, before any question arrives,
 but the vector of a chunk must anticipate every question anyone might ask. A
-*cross-encoder* reads question and chunk together and scores the pair. Its
+cross-encoder, like the MNLI classifier of :numref:`sec_lm_bert`, reads
+question and chunk together as one input and scores the pair. Its
 attention can connect a word of the question with the sentence that answers
 it, at the cost of one forward pass per pair, so it can only reorder a short
 list that a bi-encoder found (Nogueira and Cho, "Passage Re-ranking with
@@ -1164,7 +1168,7 @@ BM25 on another. On such text the word index is a high floor. Keep it, and
 fuse instead of choosing: fusion costs a few milliseconds and covers both
 kinds of failure.
 
-## Approximate Nearest Neighbours
+## Approximate Nearest Neighbors
 :label:`subsec_lm_ann`
 
 For the book, the flat scan needs no help, but its cost grows with the
@@ -1188,7 +1192,7 @@ n_{\text{list}} + n_{\text{probe}}\, \frac{N}{n_{\text{list}}}
 $$
 
 vectors instead of $N$: the centroids, then the probed cells. What the index
-gives up is exactness: a neighbour just across the border of an unprobed
+gives up is exactness: a neighbor just across the border of an unprobed
 cell is never seen. `kmeans` starts from k-means++ seeds, each new centroid
 drawn with probability proportional to its squared distance from the nearest
 centroid chosen so far, and runs Lloyd's iterations; `IVFIndex` stores the
@@ -1346,8 +1350,8 @@ independent of $\mathbf{x}$ the middle term therefore averages to zero: the
 asymmetric distance underestimates the squared distance by the mean
 distortion, on average and for every question alike. A shift that is the
 same for every vector would leave the ranking alone. What reorders
-neighbours is that $\|\mathbf{e}\|$ differs from vector to vector, and the
-bound says by how much: two neighbours closer together than their
+neighbors is that $\|\mathbf{e}\|$ differs from vector to vector, and the
+bound says by how much: two neighbors closer together than their
 quantization errors can swap places.
 
 A product quantizer compresses each vector as a low-rank approximation does
@@ -1492,8 +1496,8 @@ shared by the whole collection.
 
 ### Navigable Small-World Graphs
 
-The third index needs no cells. Link every vector to a few near neighbours
-and search by walking: start somewhere, move to whichever neighbour is closest
+The third index needs no cells. Link every vector to a few near neighbors
+and search by walking: start somewhere, move to whichever neighbor is closest
 to the question, and stop when none is closer. On a well-built graph a few
 dozen steps cross millions of vectors, as a short chain of acquaintances
 connects two strangers.
@@ -1524,7 +1528,7 @@ from Natural Questions, the pairs of search questions and passages that
 contrastive training did not use. The same model embeds them, and 1,000 of
 their questions serve as timed queries. The off-topic passages enlarge the
 haystack without making the book's questions harder: the collection tests
-whether an index finds the exact nearest neighbours, not how hard retrieval
+whether an index finds the exact nearest neighbors, not how hard retrieval
 is.
 
 ```{.python .input #retrieval-stress}
@@ -1569,7 +1573,7 @@ The collection holds 67,853 vectors, 265 MiB in float32.
 
 For every index along its knob, the next cell measures two kinds of recall.
 *Recall against exact search* is the share of the exact ten nearest
-neighbours that the index returns for the 1,000 timed questions; it
+neighbors that the index returns for the 1,000 timed questions; it
 measures the index. *Task recall* is the Recall@10 of the 220 dev questions
 searched among all 67,853 vectors; it measures what a reader of the results
 sees. The cell also records the median (p50) and 95th-percentile latency of
@@ -1714,7 +1718,7 @@ else:
 The inverted file does what the count predicts. At 16 probes it compares about
 $1{,}024 + 16 \times 66 \approx 2{,}100$ vectors instead of 67,853, 33 times
 fewer, and runs 36 times faster than the flat scan, 0.43 ms against 15.3 ms.
-It returns 0.85 of the exact neighbours (ours 0.845), 0.94 at 64 probes.
+It returns 0.85 of the exact neighbors (ours 0.845), 0.94 at 64 probes.
 
 Product quantization trades recall for memory. IVF-PQ stores 149 bytes per
 vector: the 64-byte code, the 8-byte id and, spread over this collection,
@@ -1724,17 +1728,17 @@ probes (0.591 to 0.599 over three k-means seeds), 0.62 at 64. Our
 `ProductQuantizer` reaches 0.69 with no cells at all, so the loss comes
 mostly from the codes, and halving them to 32 bytes loses more, 0.52 against
 0.60, far beyond the seed range. These are the swaps the bound allowed:
-neighbours that lie closer together than their quantization errors. The
+neighbors that lie closer together than their quantization errors. The
 usual repair rescores the best hundred candidates with exact vectors kept on
 disk, as binary vectors were rescored in :numref:`subsec_lm_emb_compress`.
 
-The graph wins at this size. HNSW returns 0.97 of the exact neighbours at
+The graph wins at this size. HNSW returns 0.97 of the exact neighbors at
 $\mathit{efSearch} = 32$ in 0.29 ms, and 0.998 at 256 in 1.6 ms, for 272
 bytes of links per vector and about 15 s of building with eight threads.
 
 Task recall drops far less, because it needs one relevant chunk among ten
-where recall against exact search counts all ten neighbours. IVF-Flat at 16
-probes misses 15% of the exact neighbours but only 0.02 of task recall (0.96
+where recall against exact search counts all ten neighbors. IVF-Flat at 16
+probes misses 15% of the exact neighbors but only 0.02 of task recall (0.96
 against 0.98 for the flat scan); IVF-PQ64 loses 0.06 (0.92, and 0.87 to 0.92
 over the seeds). Recall against exact search measures the index, and task
 recall what a user notices.
@@ -1762,7 +1766,7 @@ reaches, and IVF-PQ, with the smallest markers, flattens out at low recall.
 In the right panel most curves climb to within a few points of the flat
 scan's 0.98 at a fraction of its latency. The last cell picks, among the
 one-thread searches, the fastest that returns at least 0.95 of the exact
-neighbours, and sets it against the flat scan.
+neighbors, and sets it against the flat scan.
 
 ```{.python .input #retrieval-crossover}
 %%tab pytorch
@@ -1816,7 +1820,7 @@ time and has memory for the vectors, a graph is the right index. When
 questions arrive in batches and the vectors fit on a GPU, about ten million
 of them in 24 GB at float16, the exact scan is the right index: the GPU
 scanned all 1,000 timed questions at 0.005 ms each. It returned 0.9994 of
-the exact neighbours: it ranks by inner product and the exact search by
+the exact neighbors: it ranks by inner product and the exact search by
 distance, which break a few near ties differently, since the stored float16
 vectors are unit length only to about $2 \times 10^{-4}$. And when memory
 is the limit, IVF-PQ keeps a billion vectors in 64 GB of codes instead of
@@ -2062,7 +2066,7 @@ Reciprocal-rank fusion merges its list with the embedder's from ranks alone,
 and a cross-encoder that reads question and chunk together reorders the
 first 20, raising nDCG@10 by 0.05 for about 0.2 s per question. A large
 collection needs an approximate index. On 67,853 vectors a graph returned
-0.97 of the exact neighbours about 50 times faster than a one-thread scan.
+0.97 of the exact neighbors about 50 times faster than a one-thread scan.
 Product quantization, which reads distances from one table per question,
 stored 64 bytes per vector instead of 4,096 and lost far more recall
 against exact search than task recall. The next section asks which of the
@@ -2450,7 +2454,7 @@ $N = 67{,}853$: $1{,}024 + 16 \times 66 \approx 2{,}100$ instead of 67,853.
 Measured on one CPU thread: 0.43 ms against 15.3 ms.
 
 ::: {.d2l-note .warn}
-A neighbour across the border of an unprobed cell is never seen: recall
+A neighbor across the border of an unprobed cell is never seen: recall
 against exact search 0.85.
 :::
 :::
@@ -2494,7 +2498,7 @@ Error of the distance $|\sqrt{1.30} - \sqrt{2}| = 0.27 \le \|\mathbf{x} - \hat{\
 ::: {.slide title="HNSW Walks a Layered Graph; Its Memory Is Mostly the Vectors"}
 [Graphs]{.kicker}
 
-- Each vector links to near neighbours; a search walks toward the
+- Each vector links to near neighbors; a search walks toward the
   question.
 - Upper layers hold a shrinking random subset with long links; the walk
   crosses there and refines at the bottom.
@@ -2506,7 +2510,7 @@ Error of the distance $|\sqrt{1.30} - \sqrt{2}| = 0.27 \le \|\mathbf{x} - \hat{\
 *Source: Malkov and Yashunin (2020); built here with Faiss.*
 :::
 
-::: {.slide title="HNSW Reaches 0.97 of the Exact Neighbours About 50 Times Faster Than the Scan"}
+::: {.slide title="HNSW Reaches 0.97 of the Exact Neighbors About 50 Times Faster Than the Scan"}
 [The trade-off, 67,853 vectors]{.kicker}
 
 @!retrieval-tradeoff
@@ -2524,7 +2528,7 @@ dev Recall@10 of the book's questions.
 | IVF-Flat, 16 probes | 0.85 | 0.96 |
 | IVF-PQ, 64 bytes, 16 probes | 0.60 | 0.92 |
 
-Against exact search counts all ten neighbours; a reader needs one relevant
+Against exact search counts all ten neighbors; a reader needs one relevant
 chunk among ten.
 
 ::: {.d2l-note}
@@ -2557,7 +2561,7 @@ Bytes per vector: float32 4,096; HNSW about 4,370; IVF-PQ64 code 64.
 ::: {.d2l-note}
 **Answer.** Float32 needs 4 TB and the graph more, so IVF-PQ: 64 GB of
 codes plus ids. Rescore the best candidates with exact vectors from disk,
-since 64-byte codes found only 0.60 of the exact neighbours here.
+since 64-byte codes found only 0.60 of the exact neighbors here.
 :::
 :::
 :::
@@ -2570,7 +2574,7 @@ since 64-byte codes found only 0.60 of the exact neighbours here.
 - BM25 ranks identifier questions higher: nDCG@10 by 0.12.
 - RRF: nDCG@10 +0.07 over the embedder; rerank@20: +0.05 more, about
   0.2 s per question.
-- 67,853 vectors: HNSW 0.97 of the exact neighbours, about 50 times faster
+- 67,853 vectors: HNSW 0.97 of the exact neighbors, about 50 times faster
   than one thread's scan; IVF-PQ 64 bytes per vector at recall 0.60 against
   exact search, 0.92 task recall.
 

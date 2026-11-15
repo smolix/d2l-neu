@@ -111,10 +111,10 @@ RAG_JUDGE_V1 = {
     'retry': 'Reply with the JSON line only, in exactly the requested form.'}
 
 #@save
-# The judge of 19.5, chosen 2026-11-14 against frontier-model labels
-# (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights served
-# by vLLM over two 24 GB GPUs; the same open weights are served in BF16 on
-# OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
+# The judge of the RAG section, chosen 2026-11-14 against frontier-model
+# labels (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights
+# served by vLLM over two 24 GB GPUs; the same open weights are served in
+# BF16 on OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
 RAG_JUDGE_LOCAL = {'model': 'Qwen/Qwen3.8-27B-FP8',
                    'revision': 'c3a462cc3d38cf351f3b26cbd763469eeb74ef81',
                    'vllm': '0.33.0', 'thinking': True,

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:553d237b18b48c3e0caf5e09d8249cce3edd162b76137d01729e46bf74ca986f",
+    "d2l_lib_fingerprint": "sha256:654b2e49f1a048487f5931050bfe8dd937cba4ba3c39ddff49702c8b3fa01ff9",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -236,7 +236,7 @@
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-alignment-1.svg",
           "bytes": 464013,
-          "sha256": "sha256:5fedb1b90e28eddb12c16c0f339bc6e5f0468235be77762e3c462fa775df3e5a"
+          "sha256": "sha256:c77eacead998c7c48aa4f1c0f9c45fc425882d1f5708d9a6fff714d1d664b0a4"
         }
       ]
     },
@@ -246,7 +246,7 @@
       "outputs": []
     },
     "text-embeddings-compress": {
-      "code_fingerprint": "sha256:62dcbcc51b13bfc85f6fa59ecde73b717ce6b0f026e1c24f61925cf74aab3f56",
+      "code_fingerprint": "sha256:95d670280f256cd5eb24e7e89310532baf8cd988c996afe10c89d9173c638f94",
       "kind": "mixed",
       "outputs": [
         {
@@ -259,12 +259,12 @@
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-compress-1.svg",
           "bytes": 51293,
-          "sha256": "sha256:4b369fd3d917f057ccfd76a713fd24b13e3c895abe4621180fc2ed337403838b"
+          "sha256": "sha256:a3594b0b2a6ffcb0f7d378ed92de87e3d522dbf94856a286296b87c556a91016"
         }
       ]
     },
     "text-embeddings-compress-compare": {
-      "code_fingerprint": "sha256:fc58777c5eb1b934ec6b836b00d086f206810e1fdf8d2b6abbc46cac4de38d7f",
+      "code_fingerprint": "sha256:cee58d9d35c99a673608a483f61c03043f5c875cf31161a135033d2ee2e98640",
       "kind": "text",
       "outputs": [
         {
@@ -275,7 +275,7 @@
       ]
     },
     "text-embeddings-production": {
-      "code_fingerprint": "sha256:1cb844243b4acf0286fdde6707f36789d089e74c28d3019a9b62c482b4f90c4e",
+      "code_fingerprint": "sha256:43f0c0b271922421a0487f9de23e796a2fa47e1f78470da6fa22d99af33cbd7d",
       "kind": "text",
       "outputs": [
         {

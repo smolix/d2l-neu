@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f1bd95db097505c0dcd31b8feb49348fd06731572fcffa7d9b34d9913a1c93b5",
+    "d2l_lib_fingerprint": "sha256:712270a1f6f2ee5b99abeca1374e14dbeb47f0505d54a085de360089d780e812",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -281,7 +281,7 @@
           "mime": "image/svg+xml",
           "asset": "rag/rag-failure-plot-1.svg",
           "bytes": 64380,
-          "sha256": "sha256:4debc066243152870722250efa99bde09290bf7f703e101e50fa6fa7c7614994"
+          "sha256": "sha256:a773ab96ad4f5e3d2d1177e2f949f0617f431456822ee0a0abc1694afebbc5dc"
         }
       ]
     },
@@ -318,7 +318,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 527 ms (50 questions)\n"
+          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 525 ms (50 questions)\n"
         }
       ]
     }

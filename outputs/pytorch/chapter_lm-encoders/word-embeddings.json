@@ -66,7 +66,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6,470,962 nonzero counts of 323,892,009 (2.00%), 27,459,312 (word, context) pairs, 1.8 s\n      the the     141,058\n      the of      116,432\n      the in       69,654\n      the and      66,603\n      the to       56,474\n"
+          "text": "6,470,962 nonzero counts of 323,892,009 (2.00%), 27,459,312 (word, context) pairs, 1.7 s\n      the the     141,058\n      the of      116,432\n      the in       69,654\n      the and      66,603\n      the to       56,474\n"
         }
       ]
     },
@@ -120,17 +120,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1: loss 0.4569, 3.4 s\n"
+          "text": "epoch 1: loss 0.4569, 3.3 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2: loss 0.4091, 3.3 s\n"
+          "text": "epoch 2: loss 0.4091, 3.1 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3: loss 0.3911, 3.2 s\n"
+          "text": "epoch 3: loss 0.3911, 3.4 s\n"
         },
         {
           "type": "stream",
@@ -241,7 +241,7 @@
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-scatter-1.svg",
           "bytes": 240786,
-          "sha256": "sha256:e99a86dffcd618e13a47f53a90c571ba6e4f6d4c963d2cdc4917ca506c0338e4"
+          "sha256": "sha256:9a9e3f69f7697cf581737f4961b1acaa424c07815ee14adfbba7c98a6ae0b96a"
         }
       ]
     },
@@ -257,20 +257,20 @@
       ]
     },
     "word-embeddings-grid-plot": {
-      "code_fingerprint": "sha256:eff7acb99eef7e1b2a17ba111f3786bb2362b2b4ec0a6b5ca025ce04e9a89d0c",
+      "code_fingerprint": "sha256:f23ea18ccf091f600f26990261f6dfa3cc19659a5e18118fd0057ae4f4300266",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-grid-plot-1.svg",
-          "bytes": 58994,
-          "sha256": "sha256:77693c6e7eb7087eac91de35fec3dd28a9c923713cd692b8cf4f8580efaf09b4"
+          "bytes": 59098,
+          "sha256": "sha256:8481049bbac888f6538ad754e02e29ed5ddac8d8cbdab91230a76dc352761459"
         }
       ]
     },
     "word-embeddings-grid-compare": {
-      "code_fingerprint": "sha256:48b1bc1501aa94feb618886a476e5ddd0ab6e05bd9a5bb80c16238e6f1896ff4",
+      "code_fingerprint": "sha256:d169d8c9b16d1b333b5c68e14a0e9c1c8bc9dfc510c6327201640e029551c6e4",
       "kind": "text",
       "outputs": [
         {
@@ -281,12 +281,12 @@
       ]
     },
     "word-embeddings-neighbors-def": {
-      "code_fingerprint": "sha256:0d1ca53d6433ff5cd72f1995853bfcc56ff844738e11944f4e13814ead9f59f3",
+      "code_fingerprint": "sha256:e50a817f80375e6a8196540b89f81fe7d060c6aaa7ce8a14f62d2968f7493cd7",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-neighbors": {
-      "code_fingerprint": "sha256:fe1c29fb1e3863a9a99084c398276478f7aacfcd3de41be7703fed300f389242",
+      "code_fingerprint": "sha256:79c899836bcce9ecb74b7add066cd9ce7387f0521d03a8a116357072ffd2b5e1",
       "kind": "text",
       "outputs": [
         {
@@ -297,12 +297,12 @@
       ]
     },
     "word-embeddings-token-embedding": {
-      "code_fingerprint": "sha256:a256a42bf5f0f3f756e3ce6b92106cad7a0310a944f16b559f5c5f5d341015ac",
+      "code_fingerprint": "sha256:248b1c8dfa7c3d34e5640d4f85f6214b5484770b9a695fb4a9713a6715df8a6b",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-analogy": {
-      "code_fingerprint": "sha256:b42dd890c4eae8ecbcb952c75def0415b27ecf5a5036024449a5d5b0455a9bde",
+      "code_fingerprint": "sha256:cd5bbcf2ac854e41a42f122f3abe6a5bc69299d6563bb40c5845425a1f4753f4",
       "kind": "text",
       "outputs": [
         {
@@ -313,7 +313,7 @@
       ]
     },
     "word-embeddings-bias": {
-      "code_fingerprint": "sha256:aa77111339ba7d6e4b379b39aae9f0486901f4b1c6adb9eede5427629b454c3a",
+      "code_fingerprint": "sha256:64c743c668a00582133e7981d69b7c3e3460992e289299dfcddb21a432b840ff",
       "kind": "text",
       "outputs": [
         {
@@ -324,7 +324,7 @@
       ]
     },
     "word-embeddings-qwen-table": {
-      "code_fingerprint": "sha256:951aa143ef2023618531cacc41d7af1d799864735da31c4666f5204eed479092",
+      "code_fingerprint": "sha256:afefeec8d7684833f5c88abc3be47134f8282dfa4c2cb169bbbf6bea9aba857c",
       "kind": "text",
       "outputs": [
         {
@@ -335,7 +335,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "notebook: 91 s\n"
+          "text": "notebook: 90 s\n"
         }
       ]
     }

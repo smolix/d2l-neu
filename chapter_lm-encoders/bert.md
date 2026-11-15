@@ -680,10 +680,10 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
     warmup over the share warmup of the steps then linear decay, gradients
     clipped to norm 1, bf16 autocast on a GPU; each batch is padded to its
     longest sequence (with id 0: the attention mask hides it, so any id
-    serves); seed fixes the data order and dropout. Returns the
-    training losses, the eval accuracy and predictions (a label per
-    example, or per scored token), the training seconds and the peak GPU
-    memory in GiB."""
+    serves); seed fixes the data order (and dropout, if the model has
+    any). Returns the training losses, the eval accuracy and predictions
+    (a label per example, or per scored token), the training seconds and
+    the peak GPU memory in GiB."""
     device = torch.device(device or ('cuda' if torch.cuda.is_available()
                                      else 'cpu'))
     cuda = device.type == 'cuda'
@@ -705,7 +705,7 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
         return getattr(out, 'logits', out).float()
 
     model.to(device).train()
-    torch.manual_seed(seed)  # dropout
+    torch.manual_seed(seed)  # dropout, if the model has any
     order = torch.Generator().manual_seed(seed)
     steps = epochs * math.ceil(len(train) / batch_size)
     n_warm = max(1, round(warmup * steps))
@@ -1539,6 +1539,7 @@ for ax, task in zip(axes, ('mnli', 'sst2')):
                                         for i in range(3))},
         'seconds per 1,000 examples', f'{task} accuracy', xscale='log',
         reference=majority, axes=ax[1])
+    ax[1].set_xscale('log')  # standard log ticks, not one per cost
 for top, bottom in zip(*axes):  # the top row's legends serve both rows
     top.legend(fontsize='small')
     bottom.get_legend().remove()

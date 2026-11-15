@@ -1405,11 +1405,12 @@ lines = [MEM[(MEM.model == l) & MEM.format.str.startswith('float')]
          for l in MODELS]
 points = [MEM[(MEM.model == l) & MEM.format.str.startswith('binary +')]
           for l in MODELS]
+labels = list(MODELS) + [f'{l}, binary, rescored' for l in MODELS]
 d2l.plot([t.bytes.tolist() for t in lines + points],
          [t['recall@10'].tolist() for t in lines + points],
          'bytes per vector', 'Recall@10', xscale='log', figsize=(5, 3.5),
-         legend=list(MODELS) + [f'{l}, binary, rescored' for l in MODELS],
-         fmts=('C0-o', 'C1-s', 'C2-^', 'C0*', 'C1*', 'C2*'))
+         legend=labels, fmts=('C0-o', 'C1-s', 'C2-^', 'C0*', 'C1*', 'C2*'))
+d2l.plt.gca().legend(labels, loc='upper left', bbox_to_anchor=(1, 1));
 ```
 
 For Qwen3-Embedding, int8 costs nothing we can see: Recall@10 stays at

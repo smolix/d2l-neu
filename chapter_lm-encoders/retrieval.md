@@ -84,7 +84,7 @@ BM25_GRID = dict(k1=(0.9, 1.2, 1.5, 2.0), b=(0.4, 0.75, 0.9),
 LAMBDAS = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)  # dense weight
 STRESS_N = None  # all; 20_000 is the reduced path for small machines
 N_NQ_QUERIES, N_WARM, BUILD_THREADS = 1_000, 100, 8
-NLIST = 1024 if STRESS_N is None else 128  # IVF cells: about sqrt(N)
+NLIST = 1024 if STRESS_N is None else 128  # IVF cells: about sqrt(16 N)
 NPROBES = (1, 2, 4, 8, 16, 32, 64)
 PQ_MS, PQ_SEEDS = (64, 32), (0, 1, 2)  # sub-vectors; k-means seeds
 HNSW_M, EF_CONSTRUCTION, EF_SEARCHES = 32, 200, (16, 32, 64, 128, 256)
@@ -1427,7 +1427,7 @@ blocks' distortions.
 
 ```{.python .input #retrieval-pq-check}
 %%tab pytorch
-pq = d2l.ProductQuantizer(2, nbits=1)  # d = 4, M = 2, b = 1, set by hand
+pq = d2l.ProductQuantizer(2, nbits=1)  # m = 4, M = 2, K = 2, set by hand
 pq.codebooks = torch.tensor([[[1., 0.], [0., 1.]], [[1., 1.], [-1., 0.]]])
 x, y = torch.tensor([[0.9, 0.2, -0.8, 0.1]]), torch.tensor([1., 1., 0., 0.])
 code = pq.encode(x)
@@ -1435,7 +1435,7 @@ x_hat, table = pq.decode(code), pq.adc_table(y)
 adc_hand = table[torch.arange(2), code[0].long()].sum()  # two look-ups
 print(f'code {code[0].tolist()}, x_hat {x_hat[0].tolist()}')
 print(pd.DataFrame(table.numpy(), index=['j = 1', 'j = 2'],
-                   columns=['k = 0', 'k = 1']))
+                   columns=['i = 0', 'i = 1']))
 print(f'ADC {adc_hand:.2f}; |y - x_hat|^2 {((y - x_hat) ** 2).sum():.2f}; '
       f'|y - x|^2 {((y - x) ** 2).sum():.2f}; |d - d_A| '
       f'{abs((y - x).norm() - (y - x_hat).norm()):.3f} <= |x - x_hat| '
@@ -1717,7 +1717,8 @@ else:
 
 The inverted file does what the count predicts. At 16 probes it compares about
 $1{,}024 + 16 \times 66 \approx 2{,}100$ vectors instead of 67,853, 33 times
-fewer, and runs 36 times faster than the flat scan, 0.43 ms against 15.3 ms.
+fewer, and runs about 35 times faster than the flat scan, 0.43 ms against
+15.3 ms.
 It returns 0.85 of the exact neighbors (ours 0.845), 0.94 at 64 probes.
 
 Product quantization trades recall for memory. IVF-PQ stores 149 bytes per
@@ -1994,7 +1995,8 @@ class BookRetriever:
                                        instruction=d2l.BOOK_TASK)
                 stages['rerank'] = dict(zip(top, pr.tolist()))
                 order = np.argsort(-pr, kind='stable')
-                ranked = [(top[o], float(pr[o])) for o in order]
+                ranked = ([(top[o], float(pr[o])) for o in order]
+                          + ranked[rerank_k:])  # the rest as fused
             hits = []
             for r, (i, s) in enumerate(ranked[:k], start=1):
                 c = self.corpus.chunks[i]
@@ -2442,7 +2444,7 @@ document's mean difference at random; p is how often the total is as large.
 :::
 :::
 
-::: {.slide title="An Inverted File Scans 16 of 1,024 Cells: 33 Times Fewer Vectors, 36 Times Faster"}
+::: {.slide title="An Inverted File Scans 16 of 1,024 Cells: 33 Times Fewer Vectors, About 35 Times Faster"}
 [Inverted files]{.kicker}
 
 k-means cuts the space into $n_\text{list}$ cells; a question scans its

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3b5d674189ac5dac9f6c333e0d1221b051d52213b583c8955f2ade18859e9103",
+    "d2l_lib_fingerprint": "sha256:c37c4cd5aaa5286377135a6c13d94dcb801a9fc543ffdf98fce0255e95620953",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,23 +23,23 @@
       "outputs": []
     },
     "retrieval-config": {
-      "code_fingerprint": "sha256:43d086759dbbf59fb762394ef4967d202675eb360e795bd7af1c83c94dff7025",
+      "code_fingerprint": "sha256:0d133e8d4e5d900b8b8b950976eb8fefc6a709b666eb5ee2d80eab134362e171",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                              model      revision\nembedder  Qwen/Qwen3-Embedding-0.6B  97b0c614be4d\nreranker   Qwen/Qwen3-Reranker-0.6B  e61197ed4502\nGPU: True; regenerating: none\nAMD EPYC 7502 32-Core Processor, 64 cores, load 2.7\nGPU: NVIDIA GeForce RTX 4090, 0.4 of 24 GiB in use\nthreads: 8 for each Faiss build, one for each timed search\n"
+          "text": "                              model      revision\nembedder  Qwen/Qwen3-Embedding-0.6B  97b0c614be4d\nreranker   Qwen/Qwen3-Reranker-0.6B  e61197ed4502\nGPU: True; regenerating: none\nAMD EPYC 7502 32-Core Processor, 64 cores, load 2.6\nGPU: NVIDIA GeForce RTX 4090, 0.4 of 24 GiB in use\nthreads: 8 for each Faiss build, one for each timed search\n"
         }
       ]
     },
     "retrieval-data-hub": {
-      "code_fingerprint": "sha256:7b638f368c398f392d52e1e086c3285a63304dba4a2a387978bbb837458c8368",
+      "code_fingerprint": "sha256:c2e877ffd1768fb641246db121192d020487a1a40abd215cf6b12c120e0e6c2d",
       "kind": "text",
       "outputs": []
     },
     "retrieval-opening": {
-      "code_fingerprint": "sha256:1b7f9ce3d987c4b95922565a4fc1c8da7661dfc136f23d91a499068080d8cf02",
+      "code_fingerprint": "sha256:4a252f5e1d1341fd0e5fb6f3182adac53640c6fa8fdb0d0408f3cb75a960e77e",
       "kind": "text",
       "outputs": [
         {
@@ -55,12 +55,12 @@
       ]
     },
     "retrieval-book-corpus-def": {
-      "code_fingerprint": "sha256:e0ef47217d49de322a18403c030bdc714aed2a12fbf05a01a39ec7ec0415301c",
+      "code_fingerprint": "sha256:de639b309066154e00931390d46b9a008ce54ed71e8b04ad2003ac058232b0c4",
       "kind": "text",
       "outputs": []
     },
     "retrieval-corpus": {
-      "code_fingerprint": "sha256:dddcc8664ddff4c877697969132a601641945ca8f75facc583ba2013e16f8969",
+      "code_fingerprint": "sha256:5b933c452930c648341acb6938718c9544471f5130b93873d019f7eccf5b31eb",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "retrieval-chunking-demo": {
-      "code_fingerprint": "sha256:3b5c067b4ba92db3e25d4d8d4ac6646b6d71fd539c19feaa7962a3cba175ce15",
+      "code_fingerprint": "sha256:9882c0fb1706851f8cbe6993a79025d2130e130cfd320831d267978c1d3fe221",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "retrieval-metrics-demo": {
-      "code_fingerprint": "sha256:80f61325eeac70f9a8b26266ca85a359e243c55fed233da5d952a7097d0151f3",
+      "code_fingerprint": "sha256:6e515d39bfd552fd26d456e1ad2d52250c3294f4f190ead8da6d8e37b0b732b7",
       "kind": "text",
       "outputs": [
         {
@@ -93,17 +93,17 @@
       ]
     },
     "retrieval-bm25-tokenize": {
-      "code_fingerprint": "sha256:30dac86d9a7f3475f1ec9118e4b4c6415f3860b66da2610bfad046fb15580638",
+      "code_fingerprint": "sha256:1a7445c99ce6a69884cd4eb26557c37c6a29032995f46fa24f242d738f7e4704",
       "kind": "text",
       "outputs": []
     },
     "retrieval-bm25-def": {
-      "code_fingerprint": "sha256:7f3dbbdd9a72d9b02eec318b820bb20b6c51ad363a5e4c0492b84627f60ea348",
+      "code_fingerprint": "sha256:ebd7aecfe941cd6d803a9f0b17157bd9cef79045d3495f4b8c68035ff0f4c17a",
       "kind": "text",
       "outputs": []
     },
     "retrieval-bm25-oracle": {
-      "code_fingerprint": "sha256:b6112915951d0bf2f19548298ae7fa0b96ed0d553960ed7421e831da43e5af2c",
+      "code_fingerprint": "sha256:60121e538bf9e76375059904d79218fb8b1d54c2280ff8a76acd8ef9f7a1ce5b",
       "kind": "text",
       "outputs": [
         {
@@ -114,7 +114,7 @@
       ]
     },
     "retrieval-bm25-tune": {
-      "code_fingerprint": "sha256:9d6ee13ae88556986e9df86adbd87c0b0ac67ccbad903842e069b59e0c0c7e96",
+      "code_fingerprint": "sha256:34bc3a51ea78fa2b5ee71333756214a356a664c18b43f4c7b5367f63c1242dea",
       "kind": "text",
       "outputs": [
         {
@@ -125,18 +125,18 @@
       ]
     },
     "retrieval-bm25-dev": {
-      "code_fingerprint": "sha256:47fbf0b65bad0b29005dbf0aa521ca6fdd68596ca32153cebfe290b5b0fe5422",
+      "code_fingerprint": "sha256:ce9e06872c7c5424cf2b7457ee334c8c56f426e248dd9706f32dea1143c1e136",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1.76 ms per question, including tokenization\n"
+          "text": "1.75 ms per question, including tokenization\n"
         }
       ]
     },
     "retrieval-dense": {
-      "code_fingerprint": "sha256:c1a9e288aaf504284bc18937714bba00412c63a645e32fbb80a426ba30d17a79",
+      "code_fingerprint": "sha256:b7ebb6f0032ab431d3c75613e9d2e748971c680e5390fb5b342ebe6af85b1217",
       "kind": "text",
       "outputs": [
         {
@@ -152,28 +152,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "BM25: dev Recall@10 0.959 [0.932, 0.983], 1.76 ms per question\ndense: dev Recall@10 0.982 [0.966, 0.996], 0.89 ms per question\n"
+          "text": "BM25: dev Recall@10 0.959 [0.932, 0.983], 1.75 ms per question\ndense: dev Recall@10 0.982 [0.966, 0.996], 0.88 ms per question\n"
         }
       ]
     },
     "retrieval-dense-timing": {
-      "code_fingerprint": "sha256:a5e2bb1b797b504d726f5d54e15cc0639c1741e1e8fca6540f2a84e5554d8a72",
+      "code_fingerprint": "sha256:43d1ebe522ae03392ecbf0a9d90b46ec22ab4668078b91299de6233ef27588e3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "book      N   5,324, batch   1: 0.055 ms, 0.0553 ms per question\n     0.01 GFLOP,  10.4 MiB; achieved  197 GB/s,  0.20 TFLOP/s; roofline 0.0108 ms\nbook      N   5,324, batch 220: 0.123 ms, 0.0006 ms per question\n     2.40 GFLOP,  10.8 MiB; achieved   93 GB/s, 19.55 TFLOP/s; roofline 0.0145 ms\nsynthetic N 131,072, batch   1: 0.329 ms, 0.3287 ms per question\n     0.27 GFLOP, 256.0 MiB; achieved  817 GB/s,  0.82 TFLOP/s; roofline 0.2663 ms\nsynthetic N 131,072, batch 220: 0.677 ms, 0.0031 ms per question\n    59.06 GFLOP, 256.4 MiB; achieved  397 GB/s, 87.30 TFLOP/s; roofline 0.3575 ms\n"
+          "text": "book      N   5,324, batch   1: 0.055 ms, 0.0549 ms per question\n     0.01 GFLOP,  10.4 MiB; achieved  199 GB/s,  0.20 TFLOP/s; roofline 0.0108 ms\nbook      N   5,324, batch 220: 0.122 ms, 0.0006 ms per question\n     2.40 GFLOP,  10.8 MiB; achieved   93 GB/s, 19.69 TFLOP/s; roofline 0.0145 ms\nsynthetic N 131,072, batch   1: 0.329 ms, 0.3286 ms per question\n     0.27 GFLOP, 256.0 MiB; achieved  817 GB/s,  0.82 TFLOP/s; roofline 0.2663 ms\nsynthetic N 131,072, batch 220: 0.678 ms, 0.0031 ms per question\n    59.06 GFLOP, 256.4 MiB; achieved  397 GB/s, 87.14 TFLOP/s; roofline 0.3575 ms\n"
         }
       ]
     },
     "retrieval-rrf-def": {
-      "code_fingerprint": "sha256:a51d4ee23a07cff95f465fc0d10375bd57f244418433136261d41584f23b21c6",
+      "code_fingerprint": "sha256:4e5010595d50c39f878edf57ebe670ca51f637cbb5863938a49d32262a4a62b7",
       "kind": "text",
       "outputs": []
     },
     "retrieval-fusion": {
-      "code_fingerprint": "sha256:65a437a8c42cecc8127cfbd64878ee4783e1398d8c5067c5313eb510abc7ee67",
+      "code_fingerprint": "sha256:486ba591e21aaba09cf01219f694f093964434ed7402d79c2774597997dcf550",
       "kind": "text",
       "outputs": [
         {
@@ -184,12 +184,12 @@
       ]
     },
     "retrieval-rerank-def": {
-      "code_fingerprint": "sha256:f9160d47abfb41eef7f701d023288a705532c1599941c61e617cdc25d5ee3e68",
+      "code_fingerprint": "sha256:d872657b26d496bcadf9b1a5850a7c69e7f6ee430b53fa8eece7bc348d72084f",
       "kind": "text",
       "outputs": []
     },
     "retrieval-rerank": {
-      "code_fingerprint": "sha256:e55e1e44e07b94e2cbcbccb6466b2fa1eedd1b8596d8fcdd10de5fc2fe76ff83",
+      "code_fingerprint": "sha256:c3ff0ee8dda3083c56968b101275780534019e8be295dcec1a1e49fae8577006",
       "kind": "text",
       "outputs": [
         {
@@ -205,13 +205,13 @@
       ]
     },
     "retrieval-stack": {
-      "code_fingerprint": "sha256:fe5833ae4ca16784d7128b2eab61b7bb7efe4a46ada98b88f8057e348e98ea88",
+      "code_fingerprint": "sha256:9161cf5f7a77381ce79da75f044eaa4ee9fa72ccf60c85edffc46749f57019c2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                   recall@1              recall@5             recall@10\nBM25 (k1 1.2, b 0.75)  0.741 [0.670, 0.813]  0.955 [0.927, 0.979]  0.959 [0.932, 0.983]\nBM25                   0.759 [0.695, 0.823]  0.950 [0.923, 0.975]  0.959 [0.932, 0.983]\ndense                  0.668 [0.604, 0.727]  0.914 [0.878, 0.948]  0.982 [0.966, 0.996]\nRRF                    0.782 [0.736, 0.826]  0.968 [0.941, 0.991]  0.982 [0.957, 1.000]\nweighted               0.814 [0.767, 0.856]  0.964 [0.935, 0.987]  0.982 [0.957, 1.000]\nRRF + rerank@20        0.868 [0.821, 0.911]  0.982 [0.957, 1.000]  0.991 [0.977, 1.000]\nRRF + rerank@100       0.868 [0.821, 0.910]  0.982 [0.962, 0.996]  1.000 [1.000, 1.000]\n                                     mrr@10               ndcg@10 recall@100      ms\nBM25 (k1 1.2, b 0.75)  0.831 [0.783, 0.879]  0.817 [0.769, 0.862]      0.995     0.5\nBM25                   0.838 [0.793, 0.883]  0.822 [0.777, 0.863]      0.995     1.8\ndense                  0.772 [0.726, 0.815]  0.786 [0.746, 0.823]      1.000     0.9\nRRF                    0.858 [0.827, 0.887]  0.853 [0.820, 0.881]      1.000     2.7\nweighted               0.878 [0.846, 0.907]  0.870 [0.838, 0.897]      1.000     3.1\nRRF + rerank@20        0.918 [0.887, 0.945]  0.907 [0.878, 0.932]      1.000   223.6\nRRF + rerank@100       0.921 [0.893, 0.947]  0.906 [0.878, 0.929]      1.000  1137.5\n"
+          "text": "                                   recall@1              recall@5             recall@10\nBM25 (k1 1.2, b 0.75)  0.741 [0.670, 0.813]  0.955 [0.927, 0.979]  0.959 [0.932, 0.983]\nBM25                   0.759 [0.695, 0.823]  0.950 [0.923, 0.975]  0.959 [0.932, 0.983]\ndense                  0.668 [0.604, 0.727]  0.914 [0.878, 0.948]  0.982 [0.966, 0.996]\nRRF                    0.782 [0.736, 0.826]  0.968 [0.941, 0.991]  0.982 [0.957, 1.000]\nweighted               0.814 [0.767, 0.856]  0.964 [0.935, 0.987]  0.982 [0.957, 1.000]\nRRF + rerank@20        0.868 [0.821, 0.911]  0.982 [0.957, 1.000]  0.991 [0.977, 1.000]\nRRF + rerank@100       0.868 [0.821, 0.910]  0.982 [0.962, 0.996]  1.000 [1.000, 1.000]\n                                     mrr@10               ndcg@10 recall@100      ms\nBM25 (k1 1.2, b 0.75)  0.831 [0.783, 0.879]  0.817 [0.769, 0.862]      0.995     0.5\nBM25                   0.838 [0.793, 0.883]  0.822 [0.777, 0.863]      0.995     1.8\ndense                  0.772 [0.726, 0.815]  0.786 [0.746, 0.823]      1.000     0.9\nRRF                    0.858 [0.827, 0.887]  0.853 [0.820, 0.881]      1.000     2.7\nweighted               0.878 [0.846, 0.907]  0.870 [0.838, 0.897]      1.000     3.1\nRRF + rerank@20        0.918 [0.887, 0.945]  0.907 [0.878, 0.932]      1.000   223.6\nRRF + rerank@100       0.921 [0.893, 0.947]  0.906 [0.878, 0.929]      1.000  1137.4\n"
         },
         {
           "type": "stream",
@@ -223,28 +223,28 @@
           "mime": "image/svg+xml",
           "asset": "retrieval/retrieval-stack-1.svg",
           "bytes": 55415,
-          "sha256": "sha256:36b09837c1ac672cc98229cc1c3e4a88de471ecbbe41dbf88fceb96f094e698c"
+          "sha256": "sha256:de5c760221d690f7694bbeda92ecfd526a6e678e6f9b3994da72fc818618d85e"
         }
       ]
     },
     "retrieval-kmeans-ivf-def": {
-      "code_fingerprint": "sha256:6beef58cf0d065e00c6b0722176977d92e23a6ead302d478907487761cbb727e",
+      "code_fingerprint": "sha256:e138fca4f0b869c8cadfec6edef844171d8f7cc38d53f683e41035c1a6238094",
       "kind": "text",
       "outputs": []
     },
     "retrieval-pq-def": {
-      "code_fingerprint": "sha256:16e782dafafb00963640124d72fb4a85ad229d34d5671f01e3783db78fa9e54d",
+      "code_fingerprint": "sha256:8b135138947e7dfe13f85dc92dc41d0c89c8cb78ceb8fd0a1de80a6e3451fa81",
       "kind": "text",
       "outputs": []
     },
     "retrieval-pq-check": {
-      "code_fingerprint": "sha256:e89e2bbd7af937c1e9dd91a1cdcd75558135482563eda12b2a513aae78b612c3",
+      "code_fingerprint": "sha256:16bd602aa32328928fba28be33a1fc4730c1df7095c75349d96086b94d644439",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "code [0, 1], x_hat [1.0, 0.0, -1.0, 0.0]\n       k = 0  k = 1\nj = 1    1.0    1.0\nj = 2    2.0    1.0\nADC 2.00; |y - x_hat|^2 2.00; |y - x|^2 1.30; |d - d_A| 0.274 <= |x - x_hat| 0.316\n"
+          "text": "code [0, 1], x_hat [1.0, 0.0, -1.0, 0.0]\n       i = 0  i = 1\nj = 1    1.0    1.0\nj = 2    2.0    1.0\nADC 2.00; |y - x_hat|^2 2.00; |y - x|^2 1.30; |d - d_A| 0.274 <= |x - x_hat| 0.316\n"
         },
         {
           "type": "stream",
@@ -259,7 +259,7 @@
       ]
     },
     "retrieval-stress": {
-      "code_fingerprint": "sha256:2c665bbb8fafb32cea0f8b4abe5db7f36d53b8415a16bcdbb20c82b313fb852f",
+      "code_fingerprint": "sha256:f441c14c425f5e46084ced0799e5f10f9b5d4dccb65ac0ab92f771fb6a5a2f52",
       "kind": "text",
       "outputs": [
         {
@@ -270,52 +270,52 @@
       ]
     },
     "retrieval-ann": {
-      "code_fingerprint": "sha256:e937b526ddd8867a995cb3b0ca171dbaeeebdcce404e19828330dde4459f1fd1",
+      "code_fingerprint": "sha256:b2ab7e7777d59c84a851bd73a7a65a640affe4ef84252d2b145421fd0749a9ba",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "AMD EPYC 7502 32-Core Processor, 64 cores, load 5.1; threads: torch 8, Faiss 8\nGPU: NVIDIA GeForce RTX 4090, 1.3 of 24 GiB in use\n            family         knob  seed  recall  task rec.     p50     p95  code B  index B  build s\n              flat                  0  1.0000     0.9818 15.2580 15.7678    4096   4096.0      0.2\n          IVF-Flat     nprobe 1     0  0.4646     0.7091  0.1473  0.1676    4096   4165.9      3.3\n          IVF-Flat     nprobe 2     0  0.5962     0.7955  0.1663  0.1975    4096   4165.9      3.3\n          IVF-Flat     nprobe 4     0  0.7012     0.8773  0.2059  0.2545    4096   4165.9      3.3\n          IVF-Flat     nprobe 8     0  0.7777     0.9273  0.2754  0.3342    4096   4165.9      3.3\n          IVF-Flat    nprobe 16     0  0.8459     0.9636  0.4274  0.5271    4096   4165.9      3.3\n          IVF-Flat    nprobe 32     0  0.8985     0.9818  0.7575  0.8940    4096   4165.9      3.3\n          IVF-Flat    nprobe 64     0  0.9420     0.9773  1.4596  1.6493    4096   4165.9      3.3\n          IVF-PQ64     nprobe 1     0  0.3923     0.7091  0.2406  0.2848      64    149.4     30.8\n          IVF-PQ64     nprobe 2     0  0.4813     0.7818  0.2533  0.2642      64    149.4     30.8\n          IVF-PQ64     nprobe 4     0  0.5403     0.8636  0.2744  0.2889      64    149.4     30.8\n          IVF-PQ64     nprobe 8     0  0.5734     0.9000  0.3173  0.3366      64    149.4     30.8\n          IVF-PQ64    nprobe 16     0  0.5990     0.9227  0.3980  0.4324      64    149.4     30.8\n          IVF-PQ64    nprobe 32     0  0.6126     0.9318  0.5384  0.5850      64    149.4     30.8\n          IVF-PQ64    nprobe 64     0  0.6207     0.9318  0.8269  0.8878      64    149.4     30.8\n          IVF-PQ64    nprobe 16     1  0.5909     0.9000  0.3628  0.3825      64    149.4     30.0\n          IVF-PQ64    nprobe 16     2  0.5922     0.8682  0.3669  0.3927      64    149.4     30.3\n          IVF-PQ32     nprobe 1     0  0.3720     0.6864  0.1902  0.1968      32    117.4     27.1\n          IVF-PQ32     nprobe 2     0  0.4461     0.7636  0.1951  0.2023      32    117.4     27.1\n          IVF-PQ32     nprobe 4     0  0.4906     0.8318  0.2074  0.2180      32    117.4     27.1\n          IVF-PQ32     nprobe 8     0  0.5107     0.8500  0.2316  0.2433      32    117.4     27.1\n          IVF-PQ32    nprobe 16     0  0.5229     0.8636  0.2787  0.2955      32    117.4     27.1\n          IVF-PQ32    nprobe 32     0  0.5281     0.8636  0.3730  0.4071      32    117.4     27.1\n          IVF-PQ32    nprobe 64     0  0.5310     0.8636  0.5553  0.6028      32    117.4     27.1\n            HNSW32  efSearch 16     0  0.9422     0.9636  0.1765  0.2450    4096   4368.2     13.9\n            HNSW32  efSearch 32     0  0.9735     0.9818  0.2881  0.3753    4096   4368.2     13.9\n            HNSW32  efSearch 64     0  0.9882     0.9818  0.4899  0.6348    4096   4368.2     13.9\n            HNSW32 efSearch 128     0  0.9951     0.9818  0.8791  1.1184    4096   4368.2     13.9\n            HNSW32 efSearch 256     0  0.9981     0.9818  1.5725  1.9999    4096   4368.2     13.9\n   IVF-Flat (ours)    nprobe 16     0  0.8449     0.9545  2.6641  3.5269    4096   4165.8     99.8\n       PQ64 (ours)    all codes     0  0.6926     0.9091 23.2950 23.4082      64     79.5     63.9\nflat, GPU, batched 1000 at once     0  0.9994        NaN  0.0047     NaN    4096      NaN      NaN\nIVF-PQ64, nprobe 16, k-means seeds [0, 1, 2]: recall 0.591 to 0.599\n                    largest_recall_difference  median_p50_live_over_registered\nfamily                                                                        \nflat                                      0.0                            0.992\nIVF-Flat                                  0.0                            0.985\nIVF-PQ64                                  0.0                            1.026\nIVF-PQ32                                  0.0                            0.973\nHNSW32                                    0.0                            1.014\nIVF-Flat (ours)                           0.0                            1.030\nPQ64 (ours)                               0.0                            0.997\nflat, GPU, batched                        0.0                            0.995\n"
+          "text": "AMD EPYC 7502 32-Core Processor, 64 cores, load 5.1; threads: torch 8, Faiss 8\nGPU: NVIDIA GeForce RTX 4090, 1.3 of 24 GiB in use\n            family         knob  seed  recall  task rec.     p50     p95  code B  index B  build s\n              flat                  0  1.0000     0.9818 15.2930 16.4186    4096   4096.0      0.2\n          IVF-Flat     nprobe 1     0  0.4646     0.7091  0.1501  0.1696    4096   4165.9      3.2\n          IVF-Flat     nprobe 2     0  0.5962     0.7955  0.1717  0.2055    4096   4165.9      3.2\n          IVF-Flat     nprobe 4     0  0.7012     0.8773  0.2085  0.2603    4096   4165.9      3.2\n          IVF-Flat     nprobe 8     0  0.7777     0.9273  0.2911  0.3539    4096   4165.9      3.2\n          IVF-Flat    nprobe 16     0  0.8459     0.9636  0.4324  0.5320    4096   4165.9      3.2\n          IVF-Flat    nprobe 32     0  0.8985     0.9818  0.7684  0.9110    4096   4165.9      3.2\n          IVF-Flat    nprobe 64     0  0.9420     0.9773  1.4806  1.6745    4096   4165.9      3.2\n          IVF-PQ64     nprobe 1     0  0.3923     0.7091  0.2399  0.2540      64    149.4     30.8\n          IVF-PQ64     nprobe 2     0  0.4813     0.7818  0.2511  0.2621      64    149.4     30.8\n          IVF-PQ64     nprobe 4     0  0.5403     0.8636  0.2746  0.2896      64    149.4     30.8\n          IVF-PQ64     nprobe 8     0  0.5734     0.9000  0.3203  0.3415      64    149.4     30.8\n          IVF-PQ64    nprobe 16     0  0.5990     0.9227  0.3874  0.4201      64    149.4     30.8\n          IVF-PQ64    nprobe 32     0  0.6126     0.9318  0.5184  0.5582      64    149.4     30.8\n          IVF-PQ64    nprobe 64     0  0.6207     0.9318  0.8647  0.9455      64    149.4     30.8\n          IVF-PQ64    nprobe 16     1  0.5909     0.9000  0.3789  0.4030      64    149.4     30.6\n          IVF-PQ64    nprobe 16     2  0.5922     0.8682  0.3731  0.4030      64    149.4     31.1\n          IVF-PQ32     nprobe 1     0  0.3720     0.6864  0.1927  0.2015      32    117.4     30.7\n          IVF-PQ32     nprobe 2     0  0.4461     0.7636  0.2038  0.2130      32    117.4     30.7\n          IVF-PQ32     nprobe 4     0  0.4906     0.8318  0.2162  0.2268      32    117.4     30.7\n          IVF-PQ32     nprobe 8     0  0.5107     0.8500  0.2400  0.2510      32    117.4     30.7\n          IVF-PQ32    nprobe 16     0  0.5229     0.8636  0.2866  0.3029      32    117.4     30.7\n          IVF-PQ32    nprobe 32     0  0.5281     0.8636  0.3770  0.4097      32    117.4     30.7\n          IVF-PQ32    nprobe 64     0  0.5310     0.8636  0.5407  0.6096      32    117.4     30.7\n            HNSW32  efSearch 16     0  0.9422     0.9636  0.1743  0.2440    4096   4368.2     13.9\n            HNSW32  efSearch 32     0  0.9735     0.9818  0.2851  0.3752    4096   4368.2     13.9\n            HNSW32  efSearch 64     0  0.9882     0.9818  0.4889  0.6339    4096   4368.2     13.9\n            HNSW32 efSearch 128     0  0.9951     0.9818  0.8905  1.1378    4096   4368.2     13.9\n            HNSW32 efSearch 256     0  0.9981     0.9818  1.5487  1.9817    4096   4368.2     13.9\n   IVF-Flat (ours)    nprobe 16     0  0.8449     0.9545  2.3849  3.1267    4096   4165.8    103.0\n       PQ64 (ours)    all codes     0  0.6926     0.9091 23.1432 23.3401      64     79.5     63.6\nflat, GPU, batched 1000 at once     0  0.9994        NaN  0.0047     NaN    4096      NaN      NaN\nIVF-PQ64, nprobe 16, k-means seeds [0, 1, 2]: recall 0.591 to 0.599\n                    largest_recall_difference  median_p50_live_over_registered\nfamily                                                                        \nflat                                      0.0                            0.994\nIVF-Flat                                  0.0                            1.016\nIVF-PQ64                                  0.0                            1.027\nIVF-PQ32                                  0.0                            1.008\nHNSW32                                    0.0                            1.011\nIVF-Flat (ours)                           0.0                            0.922\nPQ64 (ours)                               0.0                            0.990\nflat, GPU, batched                        0.0                            0.995\n"
         }
       ]
     },
     "retrieval-tradeoff": {
-      "code_fingerprint": "sha256:8ece6278229f2dab9e7485283a99959f8d09888b3940c76ddc588b0487347aeb",
+      "code_fingerprint": "sha256:f2f9251f3b2c17b79fda3fedb90d5dba365aa736357e586801f8cfd5f4287cac",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "retrieval/retrieval-tradeoff-1.svg",
-          "bytes": 101034,
-          "sha256": "sha256:ddee63ab794e3678fe5c21350eb2cf8f3f96fdcc20c033166b719d2ec5a71ffa"
+          "bytes": 100616,
+          "sha256": "sha256:03e8519eff34d020f7abfe2ca3ecf6b5c8d574acaac3b8984fb4f823d6ddaa8c"
         }
       ]
     },
     "retrieval-crossover": {
-      "code_fingerprint": "sha256:216be8ff3beba3c1b1bbdd8cf484b716ca6ec682f8f37d5b445233989c3a6189",
+      "code_fingerprint": "sha256:e22ba9ea3813e076b19d32398b56346a6a8e46e329bec6e3bb9660fada1a83d4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HNSW32, efSearch 32: recall 0.974 at p50 0.288 ms; flat scan 15.26 ms, 53 times longer\nfastest configuration with recall >= 0.95 at N = 67,853: HNSW32, efSearch 32\n"
+          "text": "HNSW32, efSearch 32: recall 0.974 at p50 0.285 ms; flat scan 15.29 ms, 54 times longer\nfastest configuration with recall >= 0.95 at N = 67,853: HNSW32, efSearch 32\n"
         }
       ]
     },
     "retrieval-default-embedder": {
-      "code_fingerprint": "sha256:c0a416c157d7dbea6b95e07ef1f0bf226c0c2a76fdf980fe4855453be9b1665e",
+      "code_fingerprint": "sha256:7da7d1e79355284792a185f0be2beb06234570c6ed2c92258151137bc4b04891",
       "kind": "text",
       "outputs": []
     },
     "retrieval-retriever-def": {
-      "code_fingerprint": "sha256:d8d021f92ae698f45e60bbd3282484a856f6731bb5a650914eff091a0b1cc470",
+      "code_fingerprint": "sha256:1ba640acd1f8439833e7fe44a9ca7cc414e16e584ab43dbf422af4db02a6852c",
       "kind": "text",
       "outputs": []
     },
     "retrieval-retriever": {
-      "code_fingerprint": "sha256:3a19af475a0f3e593c11f836758983e966f711d52c13494ac67706ac00259a5b",
+      "code_fingerprint": "sha256:e2cb098ff1a41d0d92ffccf11f311afa639a5dc9a657e547d3b280100170b528",
       "kind": "text",
       "outputs": [
         {

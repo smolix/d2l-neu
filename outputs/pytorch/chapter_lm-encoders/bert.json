@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a6edaf23ee06f0138cde7a9cb756b63322cc3830bf8092df42874246a4154631",
+    "d2l_lib_fingerprint": "sha256:9fc6757ce3545c142a82246ca2cee4c4dc82b8f5a060d7004a7aca04822e05ba",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -140,17 +140,17 @@
       ]
     },
     "bert-finetune": {
-      "code_fingerprint": "sha256:638df987e5ecbd093929cd54ff3788f3058aa2003ad1113d3f22bbb5f8aa8d51",
+      "code_fingerprint": "sha256:2a033511819a43d8d1fd4ae6cf8ba5cca09d9dbaf7be49d8122f69d60b385e93",
       "kind": "text",
       "outputs": []
     },
     "bert-cost": {
-      "code_fingerprint": "sha256:e035bd91ddaa44286cbe26799cace4baa97171f4ab6c90723f5e26e1d5fee284",
+      "code_fingerprint": "sha256:e906240c758efd9a33ea70a5ceacfcc6fe521dddf488f87aea20ca2f974926a8",
       "kind": "text",
       "outputs": []
     },
     "bert-data": {
-      "code_fingerprint": "sha256:5ec6d8e748c95ccaa6867a681e59085111d48c5ca3ec1c5bc43b07e6d1ae1e4f",
+      "code_fingerprint": "sha256:0f6f02244f0a231158f292d70288bacc56537a4cb9128c3c3f4cc105a6128a52",
       "kind": "text",
       "outputs": [
         {
@@ -161,12 +161,12 @@
       ]
     },
     "bert-run-defs": {
-      "code_fingerprint": "sha256:2386f216dafd25d9e683e20754aa082a20b9da49f7ad0bc9f6d8596b6bbb24df",
+      "code_fingerprint": "sha256:e49dbbd29344c0c687b71cbc8ff86f5dc52601f9e51dd4bb1253f4ed1df7ee27",
       "kind": "text",
       "outputs": []
     },
     "bert-sweep": {
-      "code_fingerprint": "sha256:83e5ff7ef534a1bdef8c7f0726b8684ef925a3f561a80791ab9060bf78c8b6ec",
+      "code_fingerprint": "sha256:a83172162606d888d77017c31eb9b0095ea5ee1a461ff056caf32c7160cc43e0",
       "kind": "text",
       "outputs": [
         {
@@ -177,7 +177,7 @@
       ]
     },
     "bert-sweep-live": {
-      "code_fingerprint": "sha256:62cadc83fa4c3e9b852a35f4d9a699976d2c4f1b29b243a6bf447d4d8736d0ae",
+      "code_fingerprint": "sha256:058353e9732062c8ca3d6e85d21dfef009563d4028a7d218a6368a9d317df4ed",
       "kind": "text",
       "outputs": [
         {
@@ -188,7 +188,7 @@
       ]
     },
     "bert-ckpt-live": {
-      "code_fingerprint": "sha256:0be6adffefa35c21e612535bc9ab675a133b2a1c6f96d9deeaa760a2df76e30d",
+      "code_fingerprint": "sha256:da9132806197ef0fa23470dc277b5278a1f46d7fed535d43a8d3cae54756850b",
       "kind": "text",
       "outputs": [
         {
@@ -199,7 +199,7 @@
       ]
     },
     "bert-hypothesis-only": {
-      "code_fingerprint": "sha256:aca9dcd07a13a443e725fd1ce0a6f096f0576fe87f6526b87b41297c9544824d",
+      "code_fingerprint": "sha256:2e7992422d66fd1da7e7b43d5ca013de1fcc43b51c3f9c9ce4d7af034c2f01bf",
       "kind": "text",
       "outputs": [
         {
@@ -210,17 +210,17 @@
       ]
     },
     "bert-align": {
-      "code_fingerprint": "sha256:0c43f5911ff3d392efa3c784383b8a176598dbe7da37ec2ce7db45cbe3889918",
+      "code_fingerprint": "sha256:745d566d5ea4044614aa0260c741d7831666a929afd4bc50f254f6f73f39bc44",
       "kind": "text",
       "outputs": []
     },
     "bert-span-f1": {
-      "code_fingerprint": "sha256:41f5c251d2fcd3ef513377f127c9bd766a32ddbd4be6b9a63b10add55ae0c60e",
+      "code_fingerprint": "sha256:31114d5b7dd3e9e0bb1241fc7bfd3f75c088999c400c03fdda4cee790329219b",
       "kind": "text",
       "outputs": []
     },
     "bert-conll-data": {
-      "code_fingerprint": "sha256:1c1b477ba25207d48aebd4db6b6c0b65b4f9dc5181ef334231107febcfdc50dd",
+      "code_fingerprint": "sha256:62239db641f0d20cca2aefeba8640ef9abfef9818060fc56d3139ccaa1faeb93",
       "kind": "text",
       "outputs": [
         {
@@ -231,7 +231,7 @@
       ]
     },
     "bert-tagging": {
-      "code_fingerprint": "sha256:93ca8b39957738ce906cf0dcb378de8f409c6d3ea1b70e1f4db542067f3c54fc",
+      "code_fingerprint": "sha256:374e277bc6204e682642cbcad71d1f829eb7f4ea44e1e56a61bb4c355d664bf7",
       "kind": "text",
       "outputs": [
         {
@@ -247,7 +247,7 @@
       ]
     },
     "bert-decoder": {
-      "code_fingerprint": "sha256:8c4e2bc1a967d6e61b7d35853381576f59f5724de5a9a4bd4d9be27ca44864f2",
+      "code_fingerprint": "sha256:2a3cbd9ab91e7d93b7381bd19fb0091d71daf4184a7ecba480da1764678028af",
       "kind": "text",
       "outputs": [
         {
@@ -268,7 +268,7 @@
       ]
     },
     "bert-naive-bayes": {
-      "code_fingerprint": "sha256:0c14acadd61959e2bb44a6bf5d05f9ef72bbcdd31e0ee521b6af32e98315ab0e",
+      "code_fingerprint": "sha256:88622a85d70522fda4595d69b5f7fe3a599e2761a1e4e51421a1603da62a2b5b",
       "kind": "text",
       "outputs": [
         {
@@ -279,31 +279,31 @@
       ]
     },
     "bert-timing": {
-      "code_fingerprint": "sha256:6da1519bd7101f5b4fdbf4a0848ebcc36807736bdeab00bb9a6567e1a1538ed9",
+      "code_fingerprint": "sha256:bc4910a64f572be7ce2d4724638989bf2b369f17922e694f1f385084bb85664b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, registered\nencoder                40.3                 8.9               427.7                     432.2\ndecoder              1543.1              4349.8             46498.9                   48036.6\ndecoder / encoder: measured 109x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\n"
+          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, registered\nencoder                40.3                 8.9               431.5                     432.2\ndecoder              1543.1              4349.8             46611.3                   48036.6\ndecoder / encoder: measured 108x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\n"
         }
       ]
     },
     "bert-curve": {
-      "code_fingerprint": "sha256:5ad2fdc02e1707e41c4d0e36a3e2cb322b747b9a7e7ec7f277e7e59536b3f27e",
+      "code_fingerprint": "sha256:dbfdf52b68d94c152d384be655de2e5c69a5651c3522d0331761c724ce45ca0e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "bert/bert-curve-1.png",
-          "bytes": 84186,
-          "sha256": "sha256:5494ece0203c08d741bcec56a75e2a67aa3e1d87190e2a297af2a31c8cfdd9e5"
+          "bytes": 79540,
+          "sha256": "sha256:6d988b9ce0b13e76c09585c56b08a9221c9757de3969cf2c3f01024cb4ae91fb"
         }
       ]
     },
     "bert-crossing": {
-      "code_fingerprint": "sha256:342edb6a53d3d1629fe78bdcf0e4df0b0e37bcdd3caf7e02dede0117390f4298",
+      "code_fingerprint": "sha256:16ddefa8a310713e916ebc4061c6cdcd2de1cc2786879c8a0fae141e9fe839e8",
       "kind": "text",
       "outputs": [
         {

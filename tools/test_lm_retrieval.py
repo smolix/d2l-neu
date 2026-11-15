@@ -14,6 +14,7 @@ Qwen3-Reranker-0.6B card's reference code on 8 pairs (CPU float32, P(yes) to
 1e-4)."""
 import os
 import unittest
+import unittest.mock
 
 import numpy as np
 import torch
@@ -236,6 +237,20 @@ class Retriever(unittest.TestCase):
         r2 = d2l.BookRetriever(corpus, dense=None, bm25_params=dict(
             k1=0.9, b=0.4, split_identifiers=False))
         self.assertEqual(r2.bm25.k1, 0.9)
+
+    def test_rerank_keeps_the_rest(self):
+        # The reranker reorders the first rerank_k; the rest follow as fused
+        r = d2l.BookRetriever(toy_corpus(), dense=None, reranker='stub')
+        r._reranker = lambda: (None, None)
+        query = 'What does the key-value cache store?'
+        fused = [h.chunk_id for h in r.search(query, k=3)]
+        stub = lambda model, tok, q, docs, instruction=None: torch.tensor(
+            [0.1, 0.9])
+        with unittest.mock.patch.object(d2l, 'rerank_yes_no', stub):
+            hits = r.search(query, k=3, rerank_k=2)
+        self.assertEqual([h.chunk_id for h in hits],
+                         [fused[1], fused[0], fused[2]])
+        self.assertEqual([h.rank for h in hits], [1, 2, 3])
 
     def test_iterate_corpus(self):
         corpus = toy_corpus()

@@ -7320,10 +7320,10 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
     warmup over the share warmup of the steps then linear decay, gradients
     clipped to norm 1, bf16 autocast on a GPU; each batch is padded to its
     longest sequence (with id 0: the attention mask hides it, so any id
-    serves); seed fixes the data order and dropout. Returns the
-    training losses, the eval accuracy and predictions (a label per
-    example, or per scored token), the training seconds and the peak GPU
-    memory in GiB.
+    serves); seed fixes the data order (and dropout, if the model has
+    any). Returns the training losses, the eval accuracy and predictions
+    (a label per example, or per scored token), the training seconds and
+    the peak GPU memory in GiB.
 
     Defined in :numref:`sec_lm_bert`"""
     device = torch.device(device or ('cuda' if torch.cuda.is_available()
@@ -7347,7 +7347,7 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
         return getattr(out, 'logits', out).float()
 
     model.to(device).train()
-    torch.manual_seed(seed)  # dropout
+    torch.manual_seed(seed)  # dropout, if the model has any
     order = torch.Generator().manual_seed(seed)
     steps = epochs * math.ceil(len(train) / batch_size)
     n_warm = max(1, round(warmup * steps))
@@ -8148,7 +8148,8 @@ class BookRetriever:
                                        instruction=d2l.BOOK_TASK)
                 stages['rerank'] = dict(zip(top, pr.tolist()))
                 order = np.argsort(-pr, kind='stable')
-                ranked = [(top[o], float(pr[o])) for o in order]
+                ranked = ([(top[o], float(pr[o])) for o in order]
+                          + ranked[rerank_k:])  # the rest as fused
             hits = []
             for r, (i, s) in enumerate(ranked[:k], start=1):
                 c = self.corpus.chunks[i]
@@ -14809,10 +14810,10 @@ RAG_JUDGE_V1 = {
                   'nothing.'),
     'retry': 'Reply with the JSON line only, in exactly the requested form.'}
 
-# The judge of 19.5, chosen 2026-11-14 against frontier-model labels
-# (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights served
-# by vLLM over two 24 GB GPUs; the same open weights are served in BF16 on
-# OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
+# The judge of the RAG section, chosen 2026-11-14 against frontier-model
+# labels (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights
+# served by vLLM over two 24 GB GPUs; the same open weights are served in
+# BF16 on OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
 RAG_JUDGE_LOCAL = {'model': 'Qwen/Qwen3.8-27B-FP8',
                    'revision': 'c3a462cc3d38cf351f3b26cbd763469eeb74ef81',
                    'vllm': '0.33.0', 'thinking': True,

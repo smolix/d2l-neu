@@ -406,7 +406,7 @@ def sgns_loss(v, u, centers, contexts_negatives, labels, masks):
     return loss / masks.sum()
 ```
 ### The word2vec Recipe
-:label:`sec_word2vec_data`
+:label:`subsec_lm_word2vec_recipe`
 
 Three choices of the word2vec recipe decide which pairs the loss sees. The
 first is *subsampling*. Pairs with *the* dominate the counts, say little
@@ -999,15 +999,20 @@ for k, name in enumerate(SETS):  # seed 0 and its interval; all seeds
 fig, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 3))
 d2l.plot_intervals(list(methods), series, 'method', r'Spearman $\rho$',
                    axes=axes[0], marks={'seeds': ('x', seeds)})
-bands = {}
-for name in SETS:  # mean over seeds; the band spans them
+bands, styles = {}, []
+for k, name in enumerate(SETS):  # mean over seeds; the band spans them
     for sub in (True, False):
         rho = np.array([[r[name]['rho'] for r in runs(
             'SGNS', alpha=a, subsample=sub)] for a in ALPHAS])
         bands[f"{name}{'' if sub else ', no subsampling'}"] = (
             rho.mean(1), rho.min(1), rho.max(1))
+        styles.append((f'C{k}', '-' if sub else '--'))
 d2l.plot_intervals(ALPHAS, bands, r'noise exponent $\alpha$',
                    r'Spearman $\rho$', kind='band', axes=axes[1])
+for line, band, (color, style) in zip(axes[1].lines, axes[1].collections,
+                                      styles):  # hue: rating set, as left
+    line.set(color=color, linestyle=style)
+    band.set_color(color)
 for ax in axes:
     ax.legend(fontsize='small')
 d2l.plt.tight_layout()

@@ -2,9 +2,9 @@
 :label:`sec_bptt`
 
 The RNN language model of :numref:`sec_rnn-scratch` left us with two
-observations. Without gradient clipping, its training fell apart. With
-clipping it trained, but it learned to use no more than the last few tokens
-of its 32-token window. Both have the same origin. A recurrent
+observations. Without gradient clipping, most of its training runs fell
+apart. With clipping it trained, but it learned to use no more than the
+last few tokens of its 32-token window. Both have the same origin. A recurrent
 network applies the same weights at every time step, so a gradient that
 travels backward through the sequence is multiplied by a similar factor at
 each step. Over many steps these factors compound, the way interest
@@ -600,8 +600,9 @@ Backpropagation Through Time<br>**unrolled graphs · products of Jacobians · va
 - So $\partial h_t / \partial h_{t-k} = w_\textrm{h}^k$.
 - $w_\textrm{h} = 0.9$: $\;0.9^{40} \approx 0.015$.
   $\quad w_\textrm{h} = 1.1$: $\;1.1^{40} \approx 45$.
-- Our RNN language model failed to train without clipping, and with it
-  used only about three tokens of context. Both effects start here.
+- Without clipping, most runs of our RNN language model fell apart; with
+  it, the model used only about three tokens of context. Both effects
+  start here.
 
 ::: {.d2l-note .warn}
 Where do these factors come from in a real RNN, and which of them can we fix?

@@ -55,7 +55,6 @@ from d2l import torch as d2l
 ```{.python .input #rag-extras}
 %%tab pytorch
 import collections
-import hashlib
 import json
 import os
 import pandas as pd
@@ -65,7 +64,6 @@ import shutil
 import textwrap
 import time
 import transformers
-import warnings
 import zipfile
 ```
 
@@ -86,92 +84,34 @@ d2l.HF_REVISIONS['Qwen/Qwen3.5-9B'] = (
 
 Generating and judging every answer takes GPU hours, so a normal run
 replays the recorded answers and verdicts and generates a few again as a
-check; `D2L_RERUN` regenerates them. The next cell fixes the baseline
-(`BASE`) and the configurations that each change one stage of it
-(`CONFIGS`). It also fixes, for each kind of failure that
-:numref:`subsec_lm_rag_failures` sorts answers into, a repair (`FIXES`),
-written down before a single failure was counted.
+check; `D2L_RERUN` regenerates them. The library fixes the baseline
+(`d2l.RAG_BASE`) and the configurations that each change one stage of it
+(`d2l.RAG_CONFIGS`). It also fixes, for each kind of failure that
+:numref:`subsec_lm_rag_failures` sorts answers into, a repair
+(`d2l.RAG_FIXES`), written down before a single failure was counted. The
+next cell takes them, with the models and the run settings.
 
 ```{.python .input #rag-config}
 %%tab pytorch
-GEN, RERANKER = 'Qwen/Qwen3.5-9B', 'Qwen/Qwen3-Reranker-0.6B'
+GEN, RERANKER = d2l.RAG_GENERATOR, d2l.RAG_RERANKER
 EMB, JUDGE = d2l.DEFAULT_EMBEDDER, d2l.RAG_JUDGE_LOCAL
+REV = {GEN: d2l.HF_REVISIONS[GEN],
+       **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (EMB, RERANKER)}}
 GPU = torch.cuda.is_available()
-SMALL = not GPU  # the CPU path: two live answers, BM25-only coverage
 T0 = time.time()  # a judging run stops JUDGE_MINUTES after this
-ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
-    'rag-gen-base': ('lm-rag-gen-base-v1', 'lm-rag-gen-base.jsonl'),
-    'rag-gen-stages': ('lm-rag-gen-stages-v2', 'lm-rag-gen-stages.jsonl'),
-    'rag-gen-fix': ('lm-rag-gen-fix-v1', 'lm-rag-gen-fix.jsonl'),
-    'rag-judge': ('lm-rag-judge-v4', 'lm-rag-judge.jsonl'),
-    'rag-judge-cache': ('lm-rag-judge-cache-v4', 'lm-rag-judge-cache.zip'),
-    'rag-cards': ('lm-rag-cards-v1', 'lm-rag-cards.jsonl')}
-RERUN = d2l.lm_rerun(ARTIFACTS)
-if 'rag-judge-cache' in RERUN:  # the judge's cache is written with it
-    RERUN.add('rag-judge')
+ARTIFACTS, CONFIGS = d2l.RAG_ARTIFACTS, d2l.RAG_CONFIGS
+QA_KEY = 'lm-book-qa-v2'  # the question set
+RERUN = d2l._rag_rerun()  # D2L_RERUN, checked against the run order
 assert GPU or not RERUN - {'rag-cards'}, 'answers and judgments need GPUs'
-ORDER = ('run order, each result registered before the next: rag-gen-base; '
-         'rag-judge (until every answer is judged); rag-cards; '
-         'rag-gen-stages; rag-judge; rag-gen-fix; rag-judge')
-assert not ('rag-judge' in RERUN and RERUN & {'rag-gen-stages',
-                                              'rag-gen-fix'}), ORDER
-assert not ('rag-gen-fix' in RERUN and RERUN & {'rag-gen-base',
-                                                'rag-gen-stages'}), ORDER
-K, BUDGET, DEPTH = 5, 3000, 50  # passages; context tokens; ranking kept
-MAX_NEW, BATCH = 300, 8  # new tokens per answer; prompts per batch
+MAX_NEW = d2l.RAG_BASE['max_new_tokens']  # new tokens per answer
+BATCH, DEPTH = d2l.RAG_BASE['batch'], 50  # prompts per batch; ranking kept
 QUICK = False  # True: 80 stratified dev and test items (development only)
 assert not (QUICK and RERUN), 'QUICK results are never saved'
 N_LIVE = 8 if GPU else 2  # base answers generated again in a normal run
 JUDGE_MINUTES, CHUNK, CONCURRENCY = 50, 64, 8  # judging run; saves; flight
 RETRY_TOKENS = 6000  # the one re-judging of an answer left without verdict
-N_REPEAT, N_CARDS = 60, 50  # base answers judged twice; failure cards
+N_REPEAT = 60  # base answers judged twice
 CARD_GIB = 21.5  # estimates; measured peaks add 1-2 (23.6 GiB usable)
-BASE = dict(chunking='sections', context='retrieved', k=K, budget=BUDGET,
-            order='rank', rewrite=None, rerank_k=None, prompt='fixed',
-            verify=False, abstain_below=None, max_new_tokens=MAX_NEW,
-            batch=BATCH, shuffle=None)
-CONFIGS = {  # name: what changes against the baseline
-    'closed': dict(BASE, context='none'),  # no passages: closed book
-    'base': BASE,
-    'oracle': dict(BASE, context='gold'),  # the gold chunks only
-    'base-repeat': dict(BASE, shuffle=1),  # the same prompts, other batches
-    'fixed': dict(BASE, chunking='fixed', k=None, budget='base'),
-    'fixed-over': dict(BASE, chunking='fixed', k=None, budget='base',
-                       over=255),  # up to a window past the base's tokens
-    'rewrite-rerank': dict(BASE, rewrite='generator', rerank_k=50),
-    'reverse': dict(BASE, order='reverse'),
-    'budget-1500': dict(BASE, k=None, budget=1500),
-    'budget-6000': dict(BASE, k=None, budget=6000, batch=4)}
-STAGES = ['fixed', 'rewrite-rerank', 'reverse', 'budget-1500', 'budget-6000']
-CONTROLS = ['fixed-over']  # checks a stage's result; not a candidate
-FIXES = {  # failure class: its fix, written down before any class is counted
-    'not_retrieved': dict(BASE, rewrite='fuse'),  # the query's ranking too
-    'ranked_low': dict(BASE, rerank_k=100, k=8),
-    'ignored': dict(BASE, prompt='quote', order='edges', max_new_tokens=500),
-    'unsupported': dict(BASE, verify=True),
-    'false_answer': dict(BASE, abstain_below='train'),  # tuned on train
-    'false_abstain': dict(BASE, prompt='rule_after')}
-CONFIGS.update({f'fix-{c}': v for c, v in FIXES.items()})
-REV = {GEN: d2l.HF_REVISIONS[GEN],
-       **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (EMB, RERANKER)}}
-QA_KEY = 'lm-book-qa-v2'
-
-def settings(name):
-    """What a configuration's answers are made with (JSON); reading the
-    records checks it."""
-    return json.dumps(dict(
-        CONFIGS[name], generator=f'{GEN}@{REV[GEN]}', corpus=d2l.R3_VERSION,
-        embedder=f'{EMB}@{REV[EMB]}', reranker=f'{RERANKER}@{REV[RERANKER]}',
-        bm25=d2l.BookRetriever.BM25_PARAMS, qa=QA_KEY), sort_keys=True)
-
-def run_path(name):
-    """The file of name that this run regenerates, else the registered
-    one, else None (not registered yet)."""
-    key, file = ARTIFACTS[name]
-    if name in RERUN:
-        return os.path.join('..', 'data', 'lm', 'rerun', file)
-    return d2l.lm_registered(key)
-
 print(pd.DataFrame({'model': [GEN, EMB, RERANKER, JUDGE['model']],
                     'revision': [REV[GEN][:12], REV[EMB][:12],
                                  REV[RERANKER][:12], JUDGE['revision'][:12]]},
@@ -1044,103 +984,11 @@ batched generation with the plain decoding loop `d2l.generate` of
 RET = {'sections': d2l.BookRetriever(CORPUS, reranker=RERANKER),
        'fixed': d2l.BookRetriever(FIXED, reranker=RERANKER)}
 CHUNKS = {c['id']: c for R in RET.values() for c in R.corpus.chunks}
-_LOADED = {}
-
-def generator():
-    """The generator and its tokenizer, loaded on first use, on the first
-    GPU (never split over two visible cards)."""
-    if not _LOADED:
-        _LOADED['gen'] = d2l.load_hf(
-            GEN, REV[GEN], dtype=torch.bfloat16 if GPU else torch.float32,
-            device_map={'': 0} if GPU else 'auto')
-    return _LOADED['gen']
-
-def free_generator():
-    _LOADED.clear()
-    d2l.lm_free()
-
-def run_config(name, items, budgets=None, threshold=None):
-    """Answer records of configuration name on items, in item order;
-    budgets (qid: tokens) sets each question's budget for a configuration
-    whose budget is 'base'."""
-    c, items = CONFIGS[name], list(items)
-    assert (c['budget'] == 'base') == (budgets is not None), name
-    order = list(range(len(items)))
-    if c['shuffle'] is not None:  # other batches for the same prompts
-        random.Random(c['shuffle']).shuffle(order)
-    items = [items[i] for i in order]
-    if not (KEEP_GEN or c['rewrite']):  # retrieval without the generator
-        free_generator()
-    assert KEEP_GEN or not c['rewrite'], 'the rewriter needs the card too'
-    pipe = d2l.RAGPipeline(  # the generator joins when it is needed
-        RET[c['chunking']], *(generator() if c['rewrite'] else (None, None)),
-        k=c['k'], order=c['order'],
-        budget_tokens=BUDGET if c['budget'] == 'base' else c['budget'],
-        rewrite=c['rewrite'], rerank_k=c['rerank_k'], depth=DEPTH,
-        max_new_tokens=c['max_new_tokens'], prompt=c['prompt'],
-        verify=c['verify'], abstain_below=threshold)
-    if c['context'] == 'none':
-        ctx = [dict(query_used=None, ranked_ids=[], context=None)
-               for _ in items]
-    else:
-        ctx = pipe.prepare(items, None if budgets is None else
-                           [budgets[q['qid']] for q in items])
-    if c['context'] == 'gold':  # unanswerable items keep the retrieved
-        for p, q in zip(ctx, items):
-            if q['answerable']:
-                p['context'] = d2l.assemble_context(
-                    gold_context(q), BUDGET, k=c['k'])[0]
-    pipe.model, pipe.tokenizer = generator()
-    res = pipe.answer(items, batch_size=c['batch'], contexts=ctx)
-    recs = [dict(config=name, split=q['split'], settings=settings(name),
-                 **{k: v for k, v in r._asdict().items() if k != 'question'})
-            for q, r in zip(items, res)]
-    return [r for _, r in sorted(zip(order, recs), key=lambda t: t[0])]
-
-def gold_context(q):
-    """The chunks of the gold spans (not the alternatives), in span
-    order."""
-    ids = [i for s in q['gold_spans'] for i in CORPUS.span_to_chunk_ids(
-        s['doc_id'], s['char_start'], s['char_end'])]
-    return [CORPUS[i] for i in dict.fromkeys(ids)]
-
-def save_gens(name, recs):
-    d2l.lm_save_table(ARTIFACTS[name][1], pd.DataFrame(recs),
-                      on=['config', 'qid'], key=ARTIFACTS[name][0])
-
-def answer_key(r):
-    """What a verdict depends on: the answer, its context and citations
-    (a regenerated answer needs a new verdict)."""
-    return hashlib.sha1(json.dumps([r['answer'], list(r['context_ids']), [
-        int(n) for n in r['cited_ids']]]).encode()).hexdigest()[:16]
-
-def load_gens():
-    """Every answer made so far, one row per (configuration, question),
-    with the answer_sha its verdict must carry; each configuration's
-    settings are checked against this notebook's."""
-    df = d2l._rag_records([run_path(n) for n in ('rag-gen-base',
-                                                 'rag-gen-stages',
-                                                 'rag-gen-fix')])
-    for name, s in (df.groupby('config')['settings'] if len(df) else []):
-        assert (s == settings(name)).all(), f'{name}: other settings'
-    if len(df):  # by the current rule, not the one of the run that wrote it
-        df['abstained'] = [d2l._rag_abstained(a) for a in df.answer]
-    return df.assign(answer_sha=[answer_key(r)
-                                 for r in df.to_dict('records')])
-
-def run_configs(names, items, **kw):
-    """run_config for each name, with its minutes and peak memory."""
-    recs = []
-    for name in names:
-        t = time.time()
-        recs += run_config(name, items, **kw)
-        print(f'{name}: {(time.time() - t) / 60:.1f} min, {d2l.lm_peak()}')
-    return recs
-
 if 'rag-gen-base' in RERUN:
-    save_gens('rag-gen-base', run_configs(
-        ['closed', 'base', 'oracle', 'base-repeat'], DEV))
-GENS = load_gens()
+    d2l._rag_save_gens('rag-gen-base', d2l._rag_run_configs(
+        ['closed', 'base', 'oracle', 'base-repeat'], DEV, RET, KEEP_GEN,
+        DEPTH))
+GENS = d2l._rag_load_gens(RERUN)
 print(GENS.assign(context_tokens=[sum(CHUNKS[i]['n_tokens'] for i in c)
                                   for c in GENS.context_ids])
       .groupby(['split', 'config'], sort=False).agg(
@@ -1149,10 +997,10 @@ print(GENS.assign(context_tokens=[sum(CHUNKS[i]['n_tokens'] for i in c)
           new_tokens=('n_new_tokens', 'mean')).round(0).astype(int))
 
 LIVE = d2l.BookQA(list(DEV)[:N_LIVE], 'dev')  # the registered run's first
-live = run_config('base', LIVE)               # batch, generated again
+live = d2l._rag_run_config('base', LIVE, RET, KEEP_GEN, DEPTH)  # batch, rerun
 print(f'live generation: {d2l.lm_peak()}')
 ref = GENS[GENS.config == 'base'].set_index('qid')
-tok = generator()[1]  # no global name for the model: freeing it frees it
+tok = d2l._rag_generator()[1]  # only the tokenizer: freeing frees the model
 
 def prefix_share(a, b):
     """The share of tokens before the first difference of two texts."""
@@ -1166,7 +1014,7 @@ ctx = sum(r['context_ids'] == list(ref.context_ids[r['qid']]) for r in live)
 print(f'{N_LIVE} base answers generated again: {ctx} with the registered '
       f'context, {sum(s == 1 for s in same)} identical answers\n  tokens '
       f'agreeing before the first difference: {np.mean(same):.3f}')
-oracle = d2l.generate(*generator(), [d2l.rag_prompt(
+oracle = d2l.generate(*d2l._rag_generator(), [d2l.rag_prompt(
     q['question'], [CHUNKS[i] for i in r['context_ids']])
     for q, r in zip(LIVE, live)], chat=True, enable_thinking=False,
     max_new_tokens=MAX_NEW, batch_size=BATCH)
@@ -1179,7 +1027,7 @@ print(f'the same prompts through d2l.generate: {sum(s == 1 for s in same)} '
           'the two loops agree' if agree else
           'a padding or logits_to_keep bug'))
 assert agree, 'batched generation differs from the plain decoding loop'
-free_generator()  # the card goes to the retriever and the judge
+d2l._rag_free_generator()  # the card goes to the retriever and the judge
 ```
 
 Five section chunks hold about 1,700 tokens and never reach the budget,
@@ -1243,7 +1091,7 @@ def judge_records(client, recs, concurrency, backend, tokens=None):
                       [[passage(i) for i in r['context_ids']] for r in recs],
                       batch_size=concurrency, max_new_tokens=tokens)
     return [dict(config=r['config'], qid=r['qid'], concurrency=concurrency,
-                 backend=backend, answer_sha=answer_key(r),
+                 backend=backend, answer_sha=d2l._rag_answer_key(r),
                  max_new_tokens=tokens, **x) for r, x in zip(recs, v)]
 
 def no_verdict(v, rec):
@@ -1264,25 +1112,12 @@ def calibration_verdicts(cache, tokens=None, pairs=None, mode='replay',
                          [[passage(i) for i in p['context_ids']]
                           for p in pairs], max_new_tokens=tokens)
 
-def load_judgments(path):
-    """Judgment records, verdicts as True, False or None."""
-    df = d2l._rag_records([path], on=['config', 'qid', 'concurrency'])
-    for k in VERDICTS:
-        df[k] = [None if v is None or v != v else bool(v)
-                 for v in df.get(k, [])]
-    for k in ('backend', 'answer_sha'):
-        df[k] = df.get(k, [None] * len(df))
-    df['max_new_tokens'] = [  # rows from before the re-judging: the default
-        JUDGE['max_new_tokens'] if v is None or v != v else int(v)
-        for v in df.get('max_new_tokens', [None] * len(df))]
-    return df
-
 CAL_V0 = calibration_verdicts(os.path.join(  # as recorded at selection
     LABELS, 'api', 'judge-local-qwen38-27b-on.jsonl'))
 CAL_V = [dict(x) for x in CAL_V0]  # with the pairs judged again
-JUD_FILE = run_path('rag-judge')
+JUD_FILE = d2l._rag_run_path('rag-judge', RERUN)
 if 'rag-judge' in RERUN:
-    free_generator()
+    d2l._rag_free_generator()
     for R in RET.values():
         R.release()
     big = sum(torch.cuda.get_device_properties(i).total_memory > 22 * 2**30
@@ -1293,7 +1128,7 @@ if 'rag-judge' in RERUN:
     assert backend, ('judging needs vLLM (D2L_VLLM) and two 24 GB GPUs, '
                      'or OPENROUTER_API_KEY for the same model on OpenRouter')
     print(f'judge backend: {backend}')
-    old = load_judgments(JUD_FILE if os.path.exists(JUD_FILE) else
+    old = d2l._rag_load_judgments(JUD_FILE if os.path.exists(JUD_FILE) else
                          d2l.lm_registered(ARTIFACTS['rag-judge'][0]))
     key = dict(zip(zip(GENS.config, GENS.qid), GENS.answer_sha))
     rule = set(zip(GENS.config[GENS.abstained], GENS.qid[GENS.abstained]))
@@ -1375,7 +1210,7 @@ if 'rag-judge' in RERUN:
     d2l.lm_save_rerun(ARTIFACTS['rag-judge-cache'][1],
                       lambda p: d2l.lm_write_zip(p, members))
     print(f'rag-judge: {(time.time() - T0) / 60:.1f} min since the start')
-JUD = load_judgments(JUD_FILE)
+JUD = d2l._rag_load_judgments(JUD_FILE)
 judged = JUD[JUD.concurrency == CONCURRENCY].merge(  # on these answers
     GENS[['config', 'qid', 'answer_sha']], on=['config', 'qid',
                                                'answer_sha'])
@@ -1537,122 +1372,12 @@ answers will change?
 
 ```{.python .input #rag-baseline-report}
 %%tab pytorch
-CLUSTER = {q['qid']: (q['gold_spans'] or [{'doc_id': CORPUS[
-    q['anchor_ids'][0]]['doc_id']}])[0]['doc_id'] for q in ITEMS.values()}
-
-def signflip_p(d, cluster, n=10_000):
-    """Two-sided sign-flip p of the mean of per-document mean
-    differences."""
-    m = np.array([d[cluster == c].mean() for c in np.unique(cluster)])
-    flips = np.random.default_rng(0).choice([-1.0, 1.0], (n, len(m)))
-    return np.mean(np.abs(flips @ m) >= abs(m.sum()) - 1e-12)
-
-def ci(a, b=None, cluster=None):
-    """The bootstrap of the mean of per-question scores a (or of a - b,
-    paired), NaNs dropped, resampling documents when there are 30 or
-    more, else questions: (result or None, by documents, a, b,
-    cluster)."""
-    a = np.asarray(a, float)
-    b = None if b is None else np.asarray(b, float)
-    keep = ~np.isnan(a) & (True if b is None else ~np.isnan(b))
-    a, cluster = a[keep], np.asarray(cluster)[keep]
-    b = None if b is None else b[keep]
-    by_doc = len(set(cluster)) >= 30
-    if len(a) < 2:
-        return None, by_doc, a, b, cluster
-    with warnings.catch_warnings():  # few items: boot's * says so
-        warnings.simplefilter('ignore')
-        r = (d2l.bootstrap_ci(a, cluster=cluster if by_doc else None)
-             if b is None else d2l.paired_bootstrap(
-                 a, b, cluster=cluster if by_doc else None))
-    return r, by_doc, a, b, cluster
-
-def boot(a, b=None, cluster=None):
-    """Mean of per-question scores a (or of a - b, paired), NaNs dropped,
-    with a 95% interval that resamples documents, marked * below 100
-    questions; below 30 documents questions are resampled instead, marked
-    + (and a paired difference gets a document-level sign-flip p)."""
-    r, by_doc, a, b, cluster = ci(a, b, cluster)
-    if r is None:
-        return 'n/a'
-    f = '.3f' if b is None else '+.3f'
-    out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
-    if by_doc:
-        return out + ('' if len(a) >= 100 else '*')
-    if b is None:
-        return out + '+'
-    p = signflip_p(a - b, cluster)
-    return out + f'+ (sign-flip p {p:.3f})'
-
-def scores(config, split='dev'):
-    """One row per judged answer of a configuration on a split, with
-    per-question scores (NaN where a score does not apply, and accuracy NaN
-    where the judge gave no verdict: an unjudged answer is left out)."""
-    g = GENS[(GENS.config == config) & (GENS.split == split)]
-    j = JUD[JUD.concurrency == CONCURRENCY][['config', 'qid', 'answer_sha']
-                                            + VERDICTS]
-    df = g.merge(j, on=['config', 'qid', 'answer_sha']).sort_values(
-        'qid', ignore_index=True)
-    corpus = RET[CONFIGS[config]['chunking']].corpus
-    items = [ITEMS[q] for q in df.qid]
-    ans = np.array([q['answerable'] for q in items])
-    rel = [d2l.gold_chunk_ids(q, corpus) for q in items]
-    cm = d2l.citation_metrics(df.to_dict('records'), items, corpus)
-    has_ctx = df.context_ids.map(len).to_numpy() > 0
-    answered = has_ctx & ~df.abstained.to_numpy(bool)
-    flag = lambda col: np.array([np.nan if v is None else float(v)
-                                 for v in df[col]])
-    return pd.DataFrame({
-        'qid': df.qid, 'cluster': [CLUSTER[q] for q in df.qid],
-        'answerable': ans, 'type': [q['type'] for q in items],
-        'book_specific': ['general_knowledge' not in q['flags']
-                          for q in items],
-        'accuracy': flag('correct'),  # NaN: unjudged, left out
-        'faithful': np.where(answered, flag('faithful'), np.nan),
-        'supported': np.where(answered, flag('supported'), np.nan),
-        'cite_precision': np.where(ans, cm.precision, np.nan),
-        'cite_recall': np.where(ans, cm.recall, np.nan),
-        'abstained': df.abstained.astype(float),
-        'hit': np.where(ans, [float(bool(r & set(c))) for r, c in zip(
-            rel, df.context_ids)], np.nan),
-        'recall@5': np.where(ans & has_ctx, [float(bool(r & set(k[:K])))
-                                             for r, k in zip(
-                                                 rel, df.ranked_ids)], np.nan),
-        'cov@3000': np.where(ans & has_ctx, [float(d2l.cov_at_budget(
-            k, q, corpus, BUDGET)) for k, q in zip(df.ranked_ids, items)],
-            np.nan),
-        'answer': df.answer, 'n_prompt_tokens': df.n_prompt_tokens,
-        'n_new_tokens': df.n_new_tokens, 'latency_s': df.latency_s,
-        'record': df.to_dict('records'),
-        'verdicts': df[VERDICTS].to_dict('records')})
-
-def paired(a, b, col, mask=None):
-    """Paired difference a - b of a score on the questions both have."""
-    m = a.merge(b, on='qid', suffixes=('_a', '_b'))
-    if mask is not None:
-        m = m[mask(m)]
-    return boot(m[f'{col}_a'], m[f'{col}_b'], m.cluster_a)
-
-def ready(*configs, split='dev'):
-    """Whether every answer of each configuration on split carries a
-    verdict on that very answer (answer_sha); says which do not. Partial
-    or stale judgments are never reported: between judging runs a
-    configuration is left out, and a normal run stops on one."""
-    k = JUD[JUD.concurrency == CONCURRENCY]  # not judged: GENS may be new
-    j = set(zip(k.config, k.qid, k.answer_sha))
-    missing = {}
-    for c in configs:
-        g = GENS[(GENS.config == c) & (GENS.split == split)]
-        n = sum(k not in j for k in zip(g.config, g.qid, g.answer_sha))
-        if n or not len(g):
-            missing[c] = (f'{n} of {len(g)} answers lack a verdict' if len(g)
-                          else 'no answers')
-    if missing:
-        print(f'not ready on {split}: {missing}')
-        assert RERUN or all(m == 'no answers' for m in missing.values()), (
-            'registered answers without verdicts: register the judge run')
-    return not missing
-
+CLUSTER = d2l._rag_clusters(ITEMS.values(), CORPUS)  # qid: its document
+boot, paired = d2l._rag_boot, d2l._rag_paired  # 'mean [95% interval]'
+scores = lambda c, split='dev': d2l._rag_scores(  # per-question scores
+    c, split, GENS, JUD, RET, ITEMS, CLUSTER, CONCURRENCY)
+ready = lambda *c, split='dev': d2l._rag_ready(  # are all of c's verdicts in?
+    c, split, GENS, JUD, RERUN, CONCURRENCY)
 S = {c: scores(c) for c in ('closed', 'base', 'oracle', 'base-repeat')
      if ready(c)}
 METRICS = ['recall@5', 'cov@3000', 'accuracy', 'faithful', 'cite_precision',

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:686b70e6b977529d6b312bffdb0837b8d845a9737f7f7931e1d4d1d860a38fda",
+    "d2l_lib_fingerprint": "sha256:ef2fb3a19ad31c15ea07e475a213b74427551b985ef57f4e0bd7d146913b66e6",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -18,17 +18,17 @@
       "outputs": []
     },
     "rag-extras": {
-      "code_fingerprint": "sha256:e222da3199fa8653381240ca5e0a18fda4c8d702b4274a49584a9782b25f4b31",
+      "code_fingerprint": "sha256:7b229c1cf94673c97c96be4cc4424d6cd4bfd280fdfd2c8c622a1f5599b9756c",
       "kind": "text",
       "outputs": []
     },
     "rag-revisions": {
-      "code_fingerprint": "sha256:814eaf54c31b94e2d0cb59b638dfdd4a936ddf81308598ccae6c76642012091c",
+      "code_fingerprint": "sha256:b22b16606f708596f89e71ff04e730a29f6bbdd5165b7ad8b3aa9eedcc06fae7",
       "kind": "text",
       "outputs": []
     },
     "rag-config": {
-      "code_fingerprint": "sha256:d8d392378249a4e34b42837c48bb4a68c4d5d2208cb1595d0be828634fda4197",
+      "code_fingerprint": "sha256:53e09168606ee06513430f2830844f46f4d472fe28444ccf1ac2de32557b9ad3",
       "kind": "text",
       "outputs": [
         {
@@ -39,17 +39,17 @@
       ]
     },
     "rag-data-hub": {
-      "code_fingerprint": "sha256:3a4c9b43681512ed4e91ffa221110a4254a397dc7347cbc48464536d58fe365a",
+      "code_fingerprint": "sha256:9db2cb4f2168a67d99e89b87e462db8bd46415093eac0110b5291f89152924ab",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-def": {
-      "code_fingerprint": "sha256:8f3047109c1b5c57dc1455353ea474c1c51493b92cc58e30340433206a9f50d6",
+      "code_fingerprint": "sha256:7d35d75e9751feede11bb1793ac57a7dba90a87575af5dbe4e1be03e2cfc5b09",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-stats": {
-      "code_fingerprint": "sha256:e1b7cb88e920687326738c90ed17b93e6ed9aed69c763725528cf51923066544",
+      "code_fingerprint": "sha256:8a83ee70d011bd6209ab5ef97d407b76f312e6f77bcebd9456a36f063c6653ac",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "rag-qa-examples": {
-      "code_fingerprint": "sha256:0b7bbcc0356959cb211f04ff5a3204d12c724399ae92a6272d4e825bb9041dc1",
+      "code_fingerprint": "sha256:8b8ba6d65d33db67940ce63a636f4c327515f4c3e3ad16757eaf67e4cb8eb887",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "rag-qa-leakage": {
-      "code_fingerprint": "sha256:4741557db663f6e77b196dfe079cccdc312d4562a5426ff35de27341c333a166",
+      "code_fingerprint": "sha256:d5efa1255f4f76dad93a7474d40f31494e54d24d570720cdf88d6e90d38b8d6c",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "rag-qa-gold": {
-      "code_fingerprint": "sha256:17f1a8e3c4804b7510bb62e5febd72f1b876d14dc5153971dc105c9aac469669",
+      "code_fingerprint": "sha256:059d88048377203f3cc0a04624f7375c2c6705abe7da2cff4f443ed6da1b2b59",
       "kind": "text",
       "outputs": [
         {
@@ -93,27 +93,27 @@
       ]
     },
     "rag-stage-defs": {
-      "code_fingerprint": "sha256:f97998957bc2049c504518af931cf63c88032da18eea036fe27954a9ac2b7d91",
+      "code_fingerprint": "sha256:f9e70ff6569c9b8c2d735501a02c4c2770e6077882d6b4516440150c39dc15e9",
       "kind": "text",
       "outputs": []
     },
     "rag-prompt-defs": {
-      "code_fingerprint": "sha256:2704be23a35dfced279fa63178def0b7eaad1312e04f6a1408261c855501920d",
+      "code_fingerprint": "sha256:24726874c3eb2a0ebb71c3b164727b2cd8c8486227e5e5264a6003c295fcdcea",
       "kind": "text",
       "outputs": []
     },
     "rag-pipeline-def": {
-      "code_fingerprint": "sha256:c617138f9141fae416347effc4b1ebc85afe7b3d084aab6588ac7668339e6fa0",
+      "code_fingerprint": "sha256:a477293dfe669f41a328fd226645e281010c9d2bdbfed716de0fa720bfc7da49",
       "kind": "text",
       "outputs": []
     },
     "rag-judge-defs": {
-      "code_fingerprint": "sha256:1017d55ed60091d5a511ab0faaa0dfb908a3c03e87ba6b185430e27d09a11d94",
+      "code_fingerprint": "sha256:be26d636ddab090260784d072752278febd9d661f929d0f4e025ce55678f9d4d",
       "kind": "text",
       "outputs": []
     },
     "rag-memory": {
-      "code_fingerprint": "sha256:00d1baecf307b74f67b862e8954b021d8469e3f7a46b2cb424d076f0fb5f04f1",
+      "code_fingerprint": "sha256:55f72b7dfff3ac388c0792155a30d1f93af12d6dd1d947c64a0b80a1ada18ef8",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +124,7 @@
       ]
     },
     "rag-baseline": {
-      "code_fingerprint": "sha256:4f90ed72fc5567e6574460b8afe49f0a87ddc5e363606012b7b2e0df0ff43e10",
+      "code_fingerprint": "sha256:d6fa5e1677aef5683c46b30b690f879f82c3b9d61b098e28d5ac453eee1ee3f0",
       "kind": "text",
       "outputs": [
         {
@@ -155,7 +155,7 @@
       ]
     },
     "rag-judge": {
-      "code_fingerprint": "sha256:f8b3bead7c8d3542365ea9cb8f706afa53f3a45886dcc45908870f0a93a1c480",
+      "code_fingerprint": "sha256:50f5eaaf1ddef8102fccdd5f0308f84c2c7a4af120e524fa8385ebcffe1f1772",
       "kind": "text",
       "outputs": [
         {
@@ -166,7 +166,7 @@
       ]
     },
     "rag-judge-validation": {
-      "code_fingerprint": "sha256:751100f782d7fe35b272ce03df1c84152b49dde3e7cc2be45ef1e504f7490861",
+      "code_fingerprint": "sha256:9f524c2137a6a039004f1b88c3373698cff1f35ce22ca8817669a8077d295b34",
       "kind": "text",
       "outputs": [
         {
@@ -187,18 +187,18 @@
       ]
     },
     "rag-baseline-report": {
-      "code_fingerprint": "sha256:1fa96aeea96c79529ad6a53ceadb5dfb081ae9723cc27715a1d7f74823c73db4",
+      "code_fingerprint": "sha256:ef1a3729501734ef216fcd76eca4d50ad901db14c9bcba7ba1312589c11ab5c0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.941, 0.991]   0.968 [0.941, 0.991]\ncov@3000                                 n/a   0.982 [0.957, 1.000]   0.982 [0.957, 1.000]\naccuracy                0.300 [0.234, 0.363]   0.892 [0.849, 0.927]   0.921 [0.891, 0.948]\nfaithful                                 n/a   0.917 [0.876, 0.952]   0.892 [0.847, 0.934]\ncite_precision                           n/a   0.719 [0.667, 0.767]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.849 [0.803, 0.892]   0.914 [0.874, 0.950]\nsupported                                n/a   0.817 [0.767, 0.862]   0.824 [0.770, 0.878]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.900 [0.750, 1.000]+  0.850 [0.700, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.018 [0.004, 0.037]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 0, oracle 1, base-repeat 2\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.592 [+0.526, +0.655]\n     oracle - base                       all +0.029 [-0.016, +0.078]\n     oracle - base                answerable +0.037 [-0.013, +0.088]\n     base - closed book-specific, answerable +0.786 [+0.710, +0.858]\nbase-repeat - base  all (other batches only) -0.004 [-0.026, +0.018]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.903 [0.852, 0.948]\nbase accuracy, a relevant chunk in the context (213): 0.911 [0.866, 0.948]\nbase accuracy, no relevant chunk in the context (7): 0.286 [0.000, 0.571]+\n"
+          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.941, 0.991]   0.968 [0.941, 0.991]\ncov@3000                                 n/a   0.982 [0.957, 1.000]   0.982 [0.957, 1.000]\naccuracy                0.300 [0.234, 0.363]   0.892 [0.849, 0.927]   0.921 [0.891, 0.948]\nfaithful                                 n/a   0.917 [0.876, 0.952]   0.892 [0.847, 0.934]\ncite_precision                           n/a   0.719 [0.667, 0.767]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.849 [0.803, 0.892]   0.914 [0.874, 0.950]\nsupported                                n/a   0.817 [0.767, 0.862]   0.824 [0.770, 0.878]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.900 [0.750, 1.000]+  0.850 [0.700, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.018 [0.004, 0.037]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 0, oracle 1, base-repeat 2\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.592 [+0.526, +0.655]\n     oracle - base                       all +0.029 [-0.016, +0.078]\n     oracle - base                answerable +0.037 [-0.013, +0.088]\n     base - closed book-specific, answerable +0.786 [+0.710, +0.858]\nbase-repeat - base  all (other batches only) -0.004 [-0.026, +0.018]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.903 [0.852, 0.948]\nbase accuracy, a relevant chunk in the context (213): 0.911 [0.866, 0.948]\nbase accuracy, no relevant chunk in the context (7): 0.286 [0.000, 0.571]+\nbase accuracy, closed-book arm correct (62): 0.871 [0.774, 0.952]+\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "base accuracy, closed-book arm correct (62): 0.871 [0.774, 0.952]+\nbase accuracy, closed-book arm wrong (158): 0.899 [0.848, 0.944]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (query embeddings batched differently); with the same context 108 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
+          "text": "base accuracy, closed-book arm wrong (158): 0.899 [0.848, 0.944]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (query embeddings batched differently); with the same context 108 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
         }
       ]
     }

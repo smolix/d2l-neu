@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a8e771c6b301f5be2d8eec17a68ffd39ed510d5bc2192c77b3ded035e84a9beb",
+    "d2l_lib_fingerprint": "sha256:b2fc490ec010b5bc53db89c1f0290e5d41158977c2188c0f3393f40cf9a7da54",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -18,17 +18,17 @@
       "outputs": []
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-2": {
-      "code_fingerprint": "sha256:08f668d215a0cf939bb0b6da7c11b6253a6e3318050c2cbbb219444443aa26cc",
+      "code_fingerprint": "sha256:050b6482ebc72554769ca09e7af65ca38e4ae0e83b9d49ca212e4cd220620e5e",
       "kind": "text",
       "outputs": []
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-3": {
-      "code_fingerprint": "sha256:ac5afea9e2581d3d5c3861106a92c66f9c71c0b7e61d6b1b175caab9f4e4286d",
+      "code_fingerprint": "sha256:3bd4f6f07d21d9d12fd00ad4ba45e295db74941d2c43e25a5602b7318aae8473",
       "kind": "text",
       "outputs": []
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-4": {
-      "code_fingerprint": "sha256:1df4006346a0c4b30bff1f62a541ff80c8909174c84d4f22fc2894e0a05caed1",
+      "code_fingerprint": "sha256:54d9e85bd6075d5f5072d663bcfcf5ab3a676a1dca41f465290a0aa9b6a6c0d9",
       "kind": "text",
       "outputs": [
         {
@@ -38,13 +38,8 @@
         }
       ]
     },
-    "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-5": {
-      "code_fingerprint": "sha256:b8cdf78812ffcdb862ddcc568e405c531fbfa3d38529b2e3e7282092dad06bb3",
-      "kind": "text",
-      "outputs": []
-    },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-6": {
-      "code_fingerprint": "sha256:e7db80182f5135eaa043c0c50a9be2c1b3f9e2e36451d87a5f966dfaaadb90ef",
+      "code_fingerprint": "sha256:585525fb13baf5cb8803d2eff4592e2b81b6c00039c987dc58b88e2c3696036b",
       "kind": "text",
       "outputs": [
         {
@@ -55,7 +50,7 @@
       ]
     },
     "rag-coverage": {
-      "code_fingerprint": "sha256:38e4bc9076d2b13d9d58812bf40d423c8d1e5b67c5541103ffc7a506201d27ae",
+      "code_fingerprint": "sha256:515ec1f0cd7c009bd7a1e166005977caab9577e7d006058d7ff80b8816819cdb",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +71,7 @@
       ]
     },
     "rag-stages": {
-      "code_fingerprint": "sha256:dd48cfe9ec25de504f2bbbeddb7901ed4293357d714e83ff398e4aa5c0caa96a",
+      "code_fingerprint": "sha256:5b553e2bdf245a256b0e042d3e501fab0704cadd790a06505ac17219fda1fef4",
       "kind": "text",
       "outputs": [
         {
@@ -87,12 +82,12 @@
       ]
     },
     "rag-failures-failures-by-stage-1": {
-      "code_fingerprint": "sha256:39df9cfb85b968dbfc512f405f1573446f4bd61a4c992ef8abad43e8e2f7a9fd",
+      "code_fingerprint": "sha256:c6e02364794bedaacd79912fc1324ba512250d65afa1acc97c3007d2f8173d96",
       "kind": "text",
       "outputs": []
     },
     "rag-failures": {
-      "code_fingerprint": "sha256:490e4a104412bc674b6ecc633ae889e66af9ddf3fdc4b7ae1b8199cd04fb8e22",
+      "code_fingerprint": "sha256:0d1cfd518957383fc5547f32381ff2c74591331b1fff0f69196750043d86f7ce",
       "kind": "text",
       "outputs": [
         {
@@ -103,7 +98,7 @@
       ]
     },
     "rag-opening-item": {
-      "code_fingerprint": "sha256:7fdda39fd026a620c2892f00c3ecd00169a5441f60dfd128d2ff3302b42ea359",
+      "code_fingerprint": "sha256:71b12f3589af268e400c7cf81f3dcdb475812a55a008e0c399d3bf56ee2ba42b",
       "kind": "text",
       "outputs": [
         {
@@ -114,7 +109,7 @@
       ]
     },
     "rag-fix": {
-      "code_fingerprint": "sha256:b419db8049259f3a9ca4274b95c868e74b493646756da2be0017ed66a0e77cfe",
+      "code_fingerprint": "sha256:3928d29a363d85c2da895e87c4918dede1aed2140f42012dcade8d73be4afe0b",
       "kind": "text",
       "outputs": [
         {
@@ -130,7 +125,7 @@
       ]
     },
     "rag-failure-plot": {
-      "code_fingerprint": "sha256:7a1b9f8db50d900fccdb40a2afcc32ded1c48b61e37dd7fe43c27cf65c00e7f5",
+      "code_fingerprint": "sha256:b623795a0123dd2e084d832ec3eb318734579433e126a12ec94dd7d5e8e2853f",
       "kind": "asset",
       "outputs": [
         {
@@ -138,12 +133,12 @@
           "mime": "image/svg+xml",
           "asset": "rag-failures/rag-failure-plot-1.svg",
           "bytes": 64380,
-          "sha256": "sha256:f8730b596c8ccfa259978c8f3972b17f126dc682e553cb2d8305cedfc5b50069"
+          "sha256": "sha256:540911a118626696828ad2135bd78645692ead8db8d64a7994e1aad1793b584b"
         }
       ]
     },
     "rag-marginal": {
-      "code_fingerprint": "sha256:2d29d428c73fdaf2bf24150281b6c9a47fe521120b1e4b67290576a1af162d84",
+      "code_fingerprint": "sha256:fa82871048c3b7ab65996a82868963fd8db412465bbeab22cdc775f843ad6a75",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +149,7 @@
       ]
     },
     "rag-cost": {
-      "code_fingerprint": "sha256:e37647ec52cc684e4add65ce3e659ee751ecbe41dacccadecda1723e3252ca74",
+      "code_fingerprint": "sha256:1c06b17577e0afbf6d39ecb3d012e80bb2623a966bcd342ecf4dea1827d16a92",
       "kind": "text",
       "outputs": [
         {
@@ -175,7 +170,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one question at a time: retrieval 30 ms (50 questions), reranking 50 chunks 534 ms (50 questions)\n"
+          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 536 ms (50 questions)\n"
         }
       ]
     }

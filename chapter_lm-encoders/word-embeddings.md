@@ -1566,6 +1566,7 @@ windows of 5, vectors of 100 dimensions, $K = 5$ noise words.
 | | Text Embeddings from Contrastive Training |
 | finding | Sparse, Dense and Approximate Retrieval |
 | using what is found | Retrieval-Augmented Generation |
+| | Failures and Fixes in RAG |
 :::
 
 ::: {.col .narrow}

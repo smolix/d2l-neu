@@ -8667,7 +8667,9 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
     none in the context), 'false_abstain' (one in the context, yet the
     answer abstains), 'ignored' (faithful to the context, not correct) or
     'unsupported' (not faithful). 'unjudged' when the judge gave no
-    verdict that the class depends on: such an answer has no class."""
+    verdict that the class depends on: such an answer has no class.
+
+    Defined in :numref:`sec_lm_rag_fixes`"""
     r = result._asdict() if hasattr(result, '_asdict') else result
     true = lambda v: isinstance(v, (bool, np.bool_)) and bool(v)
     given = lambda v: isinstance(v, (bool, np.bool_))

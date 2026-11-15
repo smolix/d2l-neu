@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:864cb06e09e889ca74227b784cc6a247eccf1c261b2172fed9e049a8a10ec15f",
+    "d2l_lib_fingerprint": "sha256:686b70e6b977529d6b312bffdb0837b8d845a9737f7f7931e1d4d1d860a38fda",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -108,12 +108,12 @@
       "outputs": []
     },
     "rag-judge-defs": {
-      "code_fingerprint": "sha256:e79e5e688e8c10cb7ef6e5d3652130bd95ebf826aacb314bb4e30dce74e5dbfd",
+      "code_fingerprint": "sha256:1017d55ed60091d5a511ab0faaa0dfb908a3c03e87ba6b185430e27d09a11d94",
       "kind": "text",
       "outputs": []
     },
     "rag-memory": {
-      "code_fingerprint": "sha256:e419b4cce6a4f80891bdc42a7d8a38c9b4f078e50202f6a956cd81dbd971d309",
+      "code_fingerprint": "sha256:00d1baecf307b74f67b862e8954b021d8469e3f7a46b2cb424d076f0fb5f04f1",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +124,7 @@
       ]
     },
     "rag-baseline": {
-      "code_fingerprint": "sha256:c75e7e8911f86633369afe5d172757681460506fae7487a339b4cee829fc2ff3",
+      "code_fingerprint": "sha256:4f90ed72fc5567e6574460b8afe49f0a87ddc5e363606012b7b2e0df0ff43e10",
       "kind": "text",
       "outputs": [
         {
@@ -155,7 +155,7 @@
       ]
     },
     "rag-judge": {
-      "code_fingerprint": "sha256:976272a0de0f8f73d949b7d34eb501e1c7767ce6bd9d0633e09ad82ab9f14ef6",
+      "code_fingerprint": "sha256:f8b3bead7c8d3542365ea9cb8f706afa53f3a45886dcc45908870f0a93a1c480",
       "kind": "text",
       "outputs": [
         {
@@ -166,7 +166,7 @@
       ]
     },
     "rag-judge-validation": {
-      "code_fingerprint": "sha256:2ce2a2a48a8d53c65b9e9a705d48bbdcea4e4f3b5cfe43ec3c22fa017dd90703",
+      "code_fingerprint": "sha256:751100f782d7fe35b272ce03df1c84152b49dde3e7cc2be45ef1e504f7490861",
       "kind": "text",
       "outputs": [
         {
@@ -187,138 +187,18 @@
       ]
     },
     "rag-baseline-report": {
-      "code_fingerprint": "sha256:46b6f6acc319a8ab3ec7e97f83b54d9584bf4d2d92e28b95d80aaaf272f1ee76",
+      "code_fingerprint": "sha256:1fa96aeea96c79529ad6a53ceadb5dfb081ae9723cc27715a1d7f74823c73db4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.941, 0.991]   0.968 [0.941, 0.991]\ncov@3000                                 n/a   0.982 [0.957, 1.000]   0.982 [0.957, 1.000]\naccuracy                0.300 [0.234, 0.363]   0.892 [0.849, 0.927]   0.921 [0.891, 0.948]\nfaithful                                 n/a   0.917 [0.876, 0.952]   0.892 [0.847, 0.934]\ncite_precision                           n/a   0.719 [0.667, 0.767]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.849 [0.803, 0.892]   0.914 [0.874, 0.950]\nsupported                                n/a   0.817 [0.767, 0.862]   0.824 [0.770, 0.878]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.900 [0.750, 1.000]+  0.850 [0.700, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.018 [0.004, 0.037]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 0, oracle 1, base-repeat 2\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.592 [+0.526, +0.655]\n     oracle - base                       all +0.029 [-0.016, +0.078]\n     oracle - base                answerable +0.037 [-0.013, +0.088]\n     base - closed book-specific, answerable +0.786 [+0.710, +0.858]\nbase-repeat - base  all (other batches only) -0.004 [-0.026, +0.018]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.903 [0.852, 0.948]\nbase accuracy, a relevant chunk in the context (213): 0.911 [0.866, 0.948]\nbase accuracy, no relevant chunk in the context (7): 0.286 [0.000, 0.571]+\nbase accuracy, closed-book arm correct (62): 0.871 [0.774, 0.952]+\n"
+          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.941, 0.991]   0.968 [0.941, 0.991]\ncov@3000                                 n/a   0.982 [0.957, 1.000]   0.982 [0.957, 1.000]\naccuracy                0.300 [0.234, 0.363]   0.892 [0.849, 0.927]   0.921 [0.891, 0.948]\nfaithful                                 n/a   0.917 [0.876, 0.952]   0.892 [0.847, 0.934]\ncite_precision                           n/a   0.719 [0.667, 0.767]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.849 [0.803, 0.892]   0.914 [0.874, 0.950]\nsupported                                n/a   0.817 [0.767, 0.862]   0.824 [0.770, 0.878]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.900 [0.750, 1.000]+  0.850 [0.700, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.018 [0.004, 0.037]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 0, oracle 1, base-repeat 2\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.592 [+0.526, +0.655]\n     oracle - base                       all +0.029 [-0.016, +0.078]\n     oracle - base                answerable +0.037 [-0.013, +0.088]\n     base - closed book-specific, answerable +0.786 [+0.710, +0.858]\nbase-repeat - base  all (other batches only) -0.004 [-0.026, +0.018]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.903 [0.852, 0.948]\nbase accuracy, a relevant chunk in the context (213): 0.911 [0.866, 0.948]\nbase accuracy, no relevant chunk in the context (7): 0.286 [0.000, 0.571]+\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "base accuracy, closed-book arm wrong (158): 0.899 [0.848, 0.944]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (query embeddings batched differently); with the same context 108 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
-        }
-      ]
-    },
-    "rag-opening-item": {
-      "code_fingerprint": "sha256:5c3aa79a31f064a9707cf79fc89b0a8715fc66317d58e22e2ae03c373e8aa46e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "8 base answers qualify: dev-0008 (ignored), dev-0033 (unsupported), dev-0100 (ignored), dev-0133\n    (ignored), dev-0150 (ignored), dev-0152 (ignored), dev-0156 (ignored), dev-0209 (ignored)\n\ndev-0008 (single): In PyTorch, what happens to modules that are placed in a plain Python list\n    rather than in a registered container such as `nn.Sequential` or `nn.ModuleList`?\nreference: They stay unregistered, and no warning is given.\nkey facts: ['modules in a plain list stay unregistered', 'no warning is issued']\nfirst relevant chunk at rank 1; context:\n  [1] chapter_builders-guide/model-construction#012 (relevant)\n  [2] chapter_builders-guide/model-construction#004\n  [3] chapter_builders-guide/model-construction#005\n  [4] chapter_builders-guide/model-construction#001\n  [5] chapter_builders-guide/model-construction#002\nlast sentence of [1]: Modules in a plain list stay unregistered, without any warning.\nanswer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the forward pass may still execute if the code\n    explicitly loops over the list, the optimizer will not receive their parameters for gradient\n    updates [3]. This results in a \"partly registered\" model where only the weights of\n    registered outer layers change during training, causing the model to learn incorrectly or\n    fail on GPU devices [3].\nverdicts: {'correct': False, 'faithful': True, 'supported': True}\nclass: ignored, by the rule and by the second labeller\n"
-        }
-      ]
-    },
-    "rag-coverage": {
-      "code_fingerprint": "sha256:f8bd024c7c911e8a3fd147e3ff6c625ce149cdb941f20fbf523769a4d6e52ee9",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "220 answerable dev questions, hybrid retrieval\n                   sections          fixed 256/64         fixed - sections\ncov@T                                                                     \n1000   0.905 [0.866, 0.940]  0.836 [0.786, 0.882]  -0.068 [-0.114, -0.023]\n2000   0.968 [0.942, 0.990]  0.941 [0.915, 0.965]  -0.027 [-0.059, +0.005]\n3000   0.982 [0.957, 1.000]  0.973 [0.954, 0.990]  -0.009 [-0.035, +0.022]\n"
-        }
-      ]
-    },
-    "rag-stages": {
-      "code_fingerprint": "sha256:66c46354b6e4f0f29f875ed1e48a441646f32b33bbc51d02a01dd1d9da08bf5c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " configuration             accuracy             faithful       cite precision\n         fixed 0.817 [0.766, 0.862] 0.850 [0.794, 0.900] 0.645 [0.596, 0.690]\nrewrite-rerank 0.899 [0.858, 0.936] 0.913 [0.873, 0.951] 0.703 [0.663, 0.742]\n       reverse 0.904 [0.862, 0.938] 0.918 [0.880, 0.952] 0.758 [0.703, 0.811]\n   budget-1500 0.858 [0.816, 0.897] 0.897 [0.857, 0.935] 0.721 [0.670, 0.767]\n   budget-6000 0.900 [0.860, 0.935] 0.878 [0.824, 0.925] 0.706 [0.658, 0.752]\n    fixed-over 0.838 [0.789, 0.880] 0.874 [0.825, 0.919] 0.649 [0.601, 0.696]\n configuration         accuracy - base context tokens s per answer\n         fixed -0.075 [-0.116, -0.035]          1,578         1.11\nrewrite-rerank +0.004 [-0.028, +0.038]          1,716         1.87\n       reverse +0.008 [-0.020, +0.037]          1,697         1.14\n   budget-1500 -0.033 [-0.059, -0.005]          1,318         1.08\n   budget-6000 +0.008 [-0.029, +0.051]          5,806         2.59\n    fixed-over -0.054 [-0.086, -0.021]          1,833         1.15\nintervals excluding 0: ['fixed', 'budget-1500', 'fixed-over']\nthe largest dev gain: reverse\n"
-        }
-      ]
-    },
-    "rag-failures": {
-      "code_fingerprint": "sha256:cf150f606a04880f69f9d00386f94f1735b199419f266d17813ae1bad23a1015",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "26 of 240 judged base answers on dev are not correct (0 unjudged, left out)\n               count              share\nnot_retrieved    0.0  0.00 [0.00, 0.00]\nranked_low       5.0  0.19 [0.04, 0.35]\nignored         12.0  0.46 [0.27, 0.65]\nunsupported      6.0  0.23 [0.08, 0.38]\nfalse_answer     2.0  0.08 [0.00, 0.19]\nfalse_abstain    1.0  0.04 [0.00, 0.12]\nthe largest class: ignored (the intervals overlap, next unsupported)\nits fix, written down before counting: {'order': 'edges', 'prompt': 'quote', 'max_new_tokens': 500}\n\n[ignored] dev-0000 (single): On unified-memory machines, how does the book say large mixture-of-\n    experts models compare in fitting and decoding speed to dense models with about the same\n    total size?\n  answer: On unified-memory machines, large models fit but decode slowly due to the lower\n    bandwidth of system RAM compared to VRAM [1]. However, a mixture-of-experts (MoE) model runs\n    only a few of its expert networks for each token, so it reads only its active parameters\n    [1]. Consequently, an MoE model decode\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ignored] dev-0008 (single): In PyTorch, what happens to modules that are placed in a plain\n    Python list rather than in a registered container such as `nn.Sequential` or\n    `nn.ModuleList`?\n  answer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the fo\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ranked_low] dev-0014 (single): When the book trains its fully convolutional network for\n    semantic segmentation, on what basis is the accuracy computed?\n  answer: The provided passages do not contain information about the specific basis on which\n    accuracy is computed when training the fully convolutional network. While the text explains\n    that semantic segmentation involves classifying images at the pixel level [2] and that the\n    input image and label correspond o\n  relevant chunk in the context: False\n  verdicts: {'correct': False, 'faithful': True, 'supported': None}\n\n[unsupported] dev-0021 (single): What two weights make up the hand-designed vertical edge\n    detector that subtracts each pixel's right-hand neighbor in a grayscale image?\n  answer: The hand-designed vertical edge detector uses the weights $(1, -1)$ [1]. This kernel\n    subtracts the value of each pixel from its right-hand neighbor to detect edges [1].\n    Specifically, it computes the difference between horizontally adjacent pixels, where the\n    first weight is 1 and the second is -1 [3]\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\n[unsupported] dev-0033 (single): In the masked diffusion variational lower bound, what\n    coefficient multiplies the expectation of the summed negative log-likelihood over positions\n    that remain masked at step t?\n  answer: Under the linear schedule, the coefficient that multiplies the negative log-likelihood\n    is $1/t$ [2]. This weight $w_t$ is derived from the formula $(1 - \\bar{\\alpha}_t)/(1 -\n    \\bar{\\alpha}_t - (1 - \\bar{\\alpha}_{t-1}))$, which simplifies to $1/t$ when $\\bar{\\alpha}_t\n    = 1 - t/T$ [2]. The text explicitl\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\nthe agent (claude-opus-5.5) against the rule on 31 cards: agreement 0.58\nagent          correct  ignored  ranked_low  unsupported\nrule                                                    \ncorrect              5        0           0            0\nfalse_abstain        0        0           1            0\nfalse_answer         2        0           0            0\nignored              4        7           1            0\nranked_low           0        0           5            0\nunsupported          3        1           1            1\n"
-        }
-      ]
-    },
-    "rag-fix": {
-      "code_fingerprint": "sha256:cab6566f77dd8f3cc2ed954f3d8a43aacb88a2ca018731634a05ba46b8961766",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "test was read with the fix fix-ignored and the stage rewrite-rerank\nwith the verdicts as they stand now the largest dev gain is reverse;\n  test was read once, with rewrite-rerank, and is not read again\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "split  configuration         accuracy - base   cite precision - base\n  dev    fix-ignored -0.083 [-0.122, -0.045] -0.055 [-0.086, -0.025]\n  dev rewrite-rerank +0.004 [-0.028, +0.038] -0.021 [-0.052, +0.012]\n test    fix-ignored -0.075 [-0.121, -0.030] -0.027 [-0.075, +0.022]\n test rewrite-rerank -0.004 [-0.045, +0.037] -0.014 [-0.046, +0.016]\n               base  fix-ignored\ncls                             \nnot_retrieved     0            0\nranked_low        5            4\nignored          12           19\nunsupported       6            7\nfalse_answer      2           15\nfalse_abstain     1            1\ncorrect         214          194\nunjudged          0            0\n"
-        }
-      ]
-    },
-    "rag-failure-plot": {
-      "code_fingerprint": "sha256:22cbb1460beaf7d0efd46e172be795f4199e71944ec0f8b5c2f3e4ea0dc18f15",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "rag/rag-failure-plot-1.svg",
-          "bytes": 64380,
-          "sha256": "sha256:c609301a432e4d6d2198b5112aac873db54d49b48b8147009a236b0d7b141636"
-        }
-      ]
-    },
-    "rag-marginal": {
-      "code_fingerprint": "sha256:5f65bbcfe6bccb2b89252d1145deb1c95b2269ae7f1222b3fc30d8544e2f3d7f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "gradient of log p(y | x) - (posterior - prior): 5.6e-17\n k  p - p_k  bound\n 1   0.2218 0.3734\n 2   0.1346 0.2504\n 3   0.1079 0.1565\n 4   0.0462 0.0768\n 5   0.0278 0.0372\n 6   0.0175 0.0192\n 7   0.0044 0.0060\n 8   0.0000 0.0000\nthree documents, three tokens: p_S 0.0586, p_T 0.0696; one document: both 0.0556\ntwo documents, two tokens:\n  p_S = 0.6 * 0.9 * 0.2 + 0.4 * 0.1 * 0.8 = 0.140\n  p_T = (0.6 * 0.9 + 0.4 * 0.1)(0.6 * 0.2 + 0.4 * 0.8) = 0.2552\n"
-        }
-      ]
-    },
-    "rag-cost": {
-      "code_fingerprint": "sha256:65425d255956f4249aa05ba040d0a6e4abe1c4cbea65d8339bdffc3cd101df3b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "                prompt_tokens  new_tokens  s_per_answer\nconfig                                                 \nbase                  1933.44      110.41          1.28\nbase-repeat           1933.44      111.10          1.19\nclosed                  89.96      100.11          0.95\noracle                 627.81      101.93          0.96\nbudget-1500           1528.92      109.75          1.08\nbudget-6000           6336.41      114.88          2.59\nfixed                 1841.95      107.90          1.11\nfixed-over            2120.56      108.26          1.15\nreverse               1933.44      111.47          1.14\nrewrite-rerank        1952.95      112.00          1.87\nfix-ignored           1971.44      220.57          2.12\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen/Qwen3-Reranker-0.6B@e61197ed4502: Qwen3ForCausalLM, stop tokens [151645, 151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 527 ms (50 questions)\n"
+          "text": "base accuracy, closed-book arm correct (62): 0.871 [0.774, 0.952]+\nbase accuracy, closed-book arm wrong (158): 0.899 [0.848, 0.944]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (query embeddings batched differently); with the same context 108 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
         }
       ]
     }

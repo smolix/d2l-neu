@@ -1879,6 +1879,7 @@ Qwen3-1.7B on MNLI (pairs), SST-2 (sentiment) and CoNLL-2003 (names).
 | | Text Embeddings |
 | finding | Sparse, Dense and Approximate Retrieval |
 | using what is found | Retrieval-Augmented Generation |
+| | Failures and Fixes in RAG |
 :::
 
 ::: {.col .narrow}

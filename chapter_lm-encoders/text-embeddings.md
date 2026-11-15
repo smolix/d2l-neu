@@ -1712,6 +1712,7 @@ models, not by people; BM25 (word counting) as the floor.
 | | **Text Embeddings from Contrastive Training** |
 | finding | Sparse, Dense and Approximate Retrieval |
 | using | Retrieval-Augmented Generation |
+| | Failures and Fixes in RAG |
 :::
 
 ::: {.col .narrow}

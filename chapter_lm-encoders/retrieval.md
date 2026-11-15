@@ -2224,6 +2224,7 @@ and checked by language models, not people; 67,853 vectors for stress tests.
 | | Text Embeddings from Contrastive Training |
 | finding | **Sparse, Dense and Approximate Retrieval** |
 | using | Retrieval-Augmented Generation |
+| | Failures and Fixes in RAG |
 :::
 
 ::: {.col .narrow}

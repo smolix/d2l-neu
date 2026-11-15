@@ -1,0 +1,324 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-encoders/retrieval.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e54a58476cb3e8abf5f4223380ee88632a7f3cc2420f2b9d5351054db7823f6b",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "retrieval-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-extras": {
+      "code_fingerprint": "sha256:9fb39c9c0f0d9127f2eac53733154f139391800f3ec9294a7895f940453721d7",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-config": {
+      "code_fingerprint": "sha256:d13456465bc0af22739781d01717b96356888d1a784a132c72f726fb272f5cf3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                              model      revision\nembedder  Qwen/Qwen3-Embedding-0.6B  97b0c614be4d\nreranker   Qwen/Qwen3-Reranker-0.6B  e61197ed4502\nGPU: True; regenerating: none\n{'cpu': 'AMD EPYC 7502 32-Core Processor', 'cores': 64, 'load': 4.65625, 'torch_threads': 2, 'faiss_threads': 2, 'gpu': 'NVIDIA GeForce RTX 4090, 0.4 of 24 GiB in use'}\n"
+        }
+      ]
+    },
+    "retrieval-data-hub": {
+      "code_fingerprint": "sha256:12e33ed4c0dc27dce2d4713cf1d6e443d76cda3cd3c533d8515c4473fade6763",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-opening": {
+      "code_fingerprint": "sha256:2249fdae9ff9bda1ff1b39b9056a52a27a36284817070dc10d8961a116d9b26b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model, torch.bfloat16, cuda, attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "220 dev questions; Recall@10: BM25 0.959 [0.932, 0.983], dense 0.982 [0.966, 0.996]\nfound by exactly one: 0.059 [0.029, 0.091]\n\nidentifier question (dev-0211): In gradient descent, a finite-length step can be guaranteed only if the gradient does not change too quickly; for a twice-differentiable convex function, what is this property called and what quadratic inequality does it provide?\n  bm25: first relevant chunk at rank 3\n  dense: first relevant chunk at rank > 10\n\nquestion without an identifier (dev-0014): When the book trains its fully convolutional network for semantic segmentation, on what basis is the accuracy computed?\n  bm25: first relevant chunk at rank > 10\n  dense: first relevant chunk at rank 2\n"
+        }
+      ]
+    },
+    "retrieval-book-corpus-def": {
+      "code_fingerprint": "sha256:05ffb1d746c544f09bf702604efbfd0d5109fe07a430f2d162679121b1e77291",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-corpus": {
+      "code_fingerprint": "sha256:54ca93510a93b664a877c1961aef62518a2afdabc7bc2f28d66940fef7ef9ebd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "book commit 098bf463, corpus r3.1: 232 documents, 168 train, 32 dev, 32 test\nchunks: 7,166 fix256o0, 9,447 fix256o64, 5,324 sec512\nsec512 tokens per chunk, quantiles: {'0': 14, '0.1': 139, '0.5': 364, '0.9': 486, '0.99': 510, '1': 512}\n19 references to labels outside the corpus\n                                       directories  files\nreason                                                   \nAttic                                            4     22\nLanguage Models part (self-reference)           15    116\nfront matter                                     3      3\npart placeholder                                 5      5\nretiring NLP chapter                             2     20\n\nsec512:chapter_transformers/kv-cache#001\nGeneration and the KV Cache > From Recomputation to Caching\ncharacters 1607-3435, 496 tokens, prose\nA forward pass of a model with $N$ parameters over $t$ tokens costs about\n$2Nt$ floating-point operations, because every parameter takes part in one\nmultiplication and one addition per token. The attention scores add work\nthat grows with $t^2$ (Section \"The Cost of Attention\"). At the lengths\nwe run ...\n"
+        }
+      ]
+    },
+    "retrieval-chunking-demo": {
+      "code_fingerprint": "sha256:b6da9588df6aa2cd6d3e6cf7a843fdd21bd0389543eb2cee2f2e13cc2352af58",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sections: 2 chunks of 789 tokens\n  sec512:chapter_generative-adversarial-networks/index#000   chars   35-2284  459 tokens  'Almost every model in this b'\n  sec512:chapter_generative-adversarial-networks/index#001   chars 2320-3580  316 tokens  'These resources accompany pa'\nfixed, 256 tokens, 64 shared: 4 chunks of 789 tokens\n  fix256o64:chapter_generative-adversarial-networks/index#000 chars    0-1326  256 tokens  '# Generative Adversarial Net'\n  fix256o64:chapter_generative-adversarial-networks/index#001 chars  991-2214  256 tokens  ' (Chapter \"Diffusion Models\"'\n  fix256o64:chapter_generative-adversarial-networks/index#002 chars 1937-2958  256 tokens  ' ask for a bird, and check t'\n  fix256o64:chapter_generative-adversarial-networks/index#003 chars 2711-3581  213 tokens  \" the critic's decision surfa\"\n"
+        }
+      ]
+    },
+    "retrieval-metrics-demo": {
+      "code_fingerprint": "sha256:8eacc87471caa95110a4040661ba5c1188041503b4c1a083358dd0665f1d1404",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    Recall@1  Recall@5  MRR@10  nDCG@10                   trec_eval\nq0       0.0       1.0   0.333    0.500  0.000, 1.000, 0.333, 0.500\nq1       1.0       1.0   1.000    0.877  1.000, 1.000, 1.000, 0.877\nq2       0.0       0.0   0.000    0.000  0.000, 0.000, 0.000, 0.000\n"
+        }
+      ]
+    },
+    "retrieval-bm25-tokenize": {
+      "code_fingerprint": "sha256:4d88685d178cf3e54f370247a744ddb3c68c46adfb1272f7d7f0eae68becd552",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-bm25-def": {
+      "code_fingerprint": "sha256:ce515b09d2e72b0d69897a1312592072215b54a12eea4ffee574a8fff1e83914",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-bm25-oracle": {
+      "code_fingerprint": "sha256:b75961d7a50882cece97a134beb8ba6d8c29b0998f289498d9e4f492aac65c8f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rank-1 agreement 1.000 on 200 questions; largest relative score difference 4.1e-07\n"
+        }
+      ]
+    },
+    "retrieval-bm25-tune": {
+      "code_fingerprint": "sha256:36865938295eb4aa231d649bc7516d6af479e608406e5684bafc7a5c6820ea25",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Recall@10 of 5,614 training questions:\nb                       0.40   0.75   0.90\nsplit_identifiers k1                      \nFalse             0.9  0.920  0.930  0.932\n                  1.2  0.920  0.931  0.933\n                  1.5  0.919  0.930  0.932\n                  2.0  0.918  0.928  0.929\nTrue              0.9  0.919  0.930  0.932\n                  1.2  0.919  0.930  0.934\n                  1.5  0.918  0.928  0.933\n                  2.0  0.915  0.928  0.932\nchosen: {'k1': 1.2, 'b': 0.9, 'split_identifiers': True} (nDCG@10 0.799)\n"
+        }
+      ]
+    },
+    "retrieval-bm25-dev": {
+      "code_fingerprint": "sha256:3a94f4f921201e4b960472d89a6eca8c34faa891323c29c7cd8d43793b70211e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1.78 ms per question, including tokenization\n"
+        }
+      ]
+    },
+    "retrieval-dense": {
+      "code_fingerprint": "sha256:e4b94cc3ca51e8fcd624c0e2d482150aeaadd6cd0847aef9b886c1ae7737e9a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model, torch.bfloat16, cuda, attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk vectors sha1 03e7d5498e42; 64 chunks encoded again: min cosine 0.9998\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "BM25: dev Recall@10 0.959 [0.932, 0.983], 1.78 ms per question\ndense: dev Recall@10 0.982 [0.966, 0.996], 0.91 ms per question\n"
+        }
+      ]
+    },
+    "retrieval-dense-timing": {
+      "code_fingerprint": "sha256:8de386e4eea8e5a893ebf5a9cf56a36c8d41406dafb0c54ab652794bccb07000",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "book      N   5,324, batch   1: 0.056 ms, 0.0561 ms per question;  0.01 GFLOP,  10.4 MiB; achieved  195 GB/s,  0.19 TFLOP/s; roofline 0.0108 ms\nbook      N   5,324, batch 220: 0.123 ms, 0.0006 ms per question;  2.40 GFLOP,  10.8 MiB; achieved   92 GB/s, 19.52 TFLOP/s; roofline 0.0145 ms\nsynthetic N 131,072, batch   1: 0.331 ms, 0.3315 ms per question;  0.27 GFLOP, 256.0 MiB; achieved  810 GB/s,  0.81 TFLOP/s; roofline 0.2663 ms\nsynthetic N 131,072, batch 220: 0.699 ms, 0.0032 ms per question; 59.06 GFLOP, 256.4 MiB; achieved  385 GB/s, 84.47 TFLOP/s; roofline 0.3575 ms\n"
+        }
+      ]
+    },
+    "retrieval-rrf-def": {
+      "code_fingerprint": "sha256:bb00e04b826d22389a9d6a9cdd849ba040afa86cfd5b3b038346730e1f33df4d",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-fusion": {
+      "code_fingerprint": "sha256:a13b06c6a56558486e8adef664720780afbb7f84b7fe58aaa3996e2bd0170cd5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dense weight lambda = 0.7 (chosen on 5,614 training questions)\n                     Recall@10               nDCG@10 Recall@100\nBM25      0.959 [0.932, 0.983]  0.822 [0.777, 0.863]      0.995\ndense     0.982 [0.966, 0.996]  0.786 [0.746, 0.823]      1.000\nRRF       0.982 [0.957, 1.000]  0.853 [0.820, 0.881]      1.000\nweighted  0.982 [0.957, 1.000]  0.870 [0.838, 0.897]      1.000\nfound by exactly one of BM25 and dense: 0.059 [0.029, 0.091]; by either: 1.000 [1.000, 1.000]\n"
+        }
+      ]
+    },
+    "retrieval-rerank-def": {
+      "code_fingerprint": "sha256:7c39e18adec5e5a66af8a884e1faf05f0c5bca470a2ba843c7e53f4ba03706be",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-rerank": {
+      "code_fingerprint": "sha256:56b2005c50b5803114c682ae09f9568af26e8375539efbfcee42926a60ca0cb5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-Reranker-0.6B@e61197ed4502: Qwen3ForCausalLM, stop tokens [151645, 151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live fused top 100 as registered for 1.000 of the questions; registered P(yes) for 1.0000 of their chunks\nlive against registered P(yes), 4,400 pairs: 99th percentile of |difference| 0.0000, largest 0.0000\nreranking 20 chunks: 225 ms per question on cuda (live); 100 chunks: 1135 ms per question (registered: NVIDIA GeForce RTX 4090); scores of rerank@20: live, of rerank@100: registered\n"
+        }
+      ]
+    },
+    "retrieval-stack": {
+      "code_fingerprint": "sha256:9f0a3aef8bd2e2557099a530135e6c7bbee25a869ca06edba423fba2c469e971",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                   recall@1              recall@5             recall@10                mrr@10               ndcg@10 recall@100      ms\nBM25 (k1 1.2, b 0.75)  0.741 [0.670, 0.813]  0.955 [0.927, 0.979]  0.959 [0.932, 0.983]  0.831 [0.783, 0.879]  0.817 [0.769, 0.862]      0.995     0.6\nBM25                   0.759 [0.695, 0.823]  0.950 [0.923, 0.975]  0.959 [0.932, 0.983]  0.838 [0.793, 0.883]  0.822 [0.777, 0.863]      0.995     1.8\ndense                  0.668 [0.604, 0.727]  0.914 [0.878, 0.948]  0.982 [0.966, 0.996]  0.772 [0.726, 0.815]  0.786 [0.746, 0.823]      1.000     0.9\nRRF                    0.782 [0.736, 0.826]  0.968 [0.941, 0.991]  0.982 [0.957, 1.000]  0.858 [0.827, 0.887]  0.853 [0.820, 0.881]      1.000     2.8\nweighted               0.814 [0.767, 0.856]  0.964 [0.935, 0.987]  0.982 [0.957, 1.000]  0.878 [0.846, 0.907]  0.870 [0.838, 0.897]      1.000     3.1\nRRF + rerank@20        0.868 [0.821, 0.911]  0.982 [0.957, 1.000]  0.991 [0.977, 1.000]  0.918 [0.887, 0.945]  0.907 [0.878, 0.932]      1.000   228.1\nRRF + rerank@100       0.868 [0.821, 0.910]  0.982 [0.962, 0.996]  1.000 [1.000, 1.000]  0.921 [0.893, 0.947]  0.906 [0.878, 0.929]      1.000  1137.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                        difference    metric       questions                                              mean [95% CI]\n      BM25 - BM25 (k1 1.2, b 0.75) recall@10       all (220)                                    +0.000 [+0.000, +0.000]\n                      dense - BM25 recall@10       all (220)                                    +0.023 [-0.004, +0.053]\n                      dense - BM25 recall@10 identifier (80) -0.013 [-0.037, +0.000]* (sign-flip p 1.000, 28 documents)\n                      dense - BM25 recall@10     other (140)                                    +0.043 [+0.000, +0.092]\n                      dense - BM25   ndcg@10       all (220)                                    -0.035 [-0.084, +0.013]\n                      dense - BM25   ndcg@10 identifier (80) -0.117 [-0.184, -0.053]* (sign-flip p 0.001, 28 documents)\n                      dense - BM25   ndcg@10     other (140)                                    +0.011 [-0.049, +0.078]\n                        RRF - BM25 recall@10       all (220)                                    +0.023 [+0.000, +0.048]\n                        RRF - BM25   ndcg@10       all (220)                                    +0.031 [-0.002, +0.061]\n                       RRF - dense recall@10       all (220)                                    +0.000 [-0.023, +0.021]\n                       RRF - dense   ndcg@10       all (220)                                    +0.066 [+0.040, +0.091]\n                    weighted - RRF recall@10       all (220)                                    +0.000 [+0.000, +0.000]\n                    weighted - RRF   ndcg@10       all (220)                                    +0.018 [+0.003, +0.033]\n             RRF + rerank@20 - RRF   ndcg@10       all (220)                                    +0.054 [+0.027, +0.082]\n             RRF + rerank@20 - RRF recall@10       all (220)                                    +0.009 [+0.000, +0.024]\nRRF + rerank@100 - RRF + rerank@20   ndcg@10       all (220)                                    -0.001 [-0.009, +0.008]\nRRF + rerank@100 - RRF + rerank@20 recall@10       all (220)                                    +0.009 [+0.000, +0.023]\nthe better single retriever on dev is dense\n* fewer than 100 questions or 30 documents: the interval is unreliable; with fewer than 30 documents it resamples questions,\n  ignores their correlation within a document and is likely too narrow; the sign-flip p over the documents' mean differences decides\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "retrieval/retrieval-stack-1.svg",
+          "bytes": 55415,
+          "sha256": "sha256:df3a3610c3f1a748d865f1fdbed2be67c17b5795757765c20d4fd5fbc7820680"
+        }
+      ]
+    },
+    "retrieval-kmeans-ivf-def": {
+      "code_fingerprint": "sha256:be6ba22ab6d54828dccc0e494906942adddeb0caca3608497f2fdcd2d77b8257",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-pq-def": {
+      "code_fingerprint": "sha256:a708a4c147df67b8918cf931242445b49cc5eed75e901e44c045d15e3008fb13",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-pq-check": {
+      "code_fingerprint": "sha256:275f1bfe1e52c70b326387726bef73b6b744ad5334f77b0d8dfb8507561d08ed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "code [0, 1], x_hat [1.0, 0.0, -1.0, 0.0]\n       k = 0  k = 1\nj = 1    1.0    1.0\nj = 2    2.0    1.0\nADC 2.00; |y - x_hat|^2 2.00; |y - x|^2 1.30; |d - d_A| 0.274 <= |x - x_hat| 0.316\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(1) table against reconstruction distances: largest relative difference 2.3e-07\n(2) |d - d_A| <= |x - x_hat| on 100,000 pairs: 1.0000\n(3) mean of y^T e -0.0434, standard error 0.0417\n(4) Faiss codes with our codebooks equal ours for 1.0000 of the vectors\n(5) mean |e|^2 36.056 = sum of the 8 blocks' distortions 36.056 (4.50, 4.54, 4.53, 4.50, 4.50, 4.52, 4.50, 4.48)\n"
+        }
+      ]
+    },
+    "retrieval-stress": {
+      "code_fingerprint": "sha256:028d2d30d953fc97abfd931b0126c463afabb0858ec87f7ca67ac9284f2736e1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "67,853 vectors of 1024 coordinates (265 MiB in float32), 0.078 of them book chunks; 1,000 timed questions; book vectors differ from the chunk vectors by at most 0.0e+00\n"
+        }
+      ]
+    },
+    "retrieval-ann": {
+      "code_fingerprint": "sha256:10646661c4b367eaacd42ab2a0344bd5250d9e2d02d21c0d9c766219cf146a4b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'cpu': 'AMD EPYC 7502 32-Core Processor', 'cores': 64, 'load': 8.6328125, 'torch_threads': 8, 'faiss_threads': 8, 'gpu': 'NVIDIA GeForce RTX 4090, 1.3 of 24 GiB in use'}\n            family         knob  seed  recall  task_recall     p50     p95  code_bytes  index_bytes  build_s\n              flat                  0  1.0000       0.9818 15.3518 15.5581        4096    4096.0007   0.1626\n          IVF-Flat     nprobe 1     0  0.4646       0.7091  0.1488  0.1703        4096    4165.9373   3.0340\n          IVF-Flat     nprobe 2     0  0.5962       0.7955  0.1667  0.1941        4096    4165.9373   3.0340\n          IVF-Flat     nprobe 4     0  0.7012       0.8773  0.2055  0.2471        4096    4165.9373   3.0340\n          IVF-Flat     nprobe 8     0  0.7777       0.9273  0.2799  0.3395        4096    4165.9373   3.0340\n          IVF-Flat    nprobe 16     0  0.8459       0.9636  0.4300  0.5266        4096    4165.9373   3.0340\n          IVF-Flat    nprobe 32     0  0.8985       0.9818  0.7515  0.8849        4096    4165.9373   3.0340\n          IVF-Flat    nprobe 64     0  0.9420       0.9773  1.4479  1.6328        4096    4165.9373   3.0340\n          IVF-PQ64     nprobe 1     0  0.3923       0.7091  0.2379  0.2464          64     149.3916  29.9982\n          IVF-PQ64     nprobe 2     0  0.4813       0.7818  0.2483  0.2579          64     149.3916  29.9982\n          IVF-PQ64     nprobe 4     0  0.5403       0.8636  0.2672  0.2796          64     149.3916  29.9982\n          IVF-PQ64     nprobe 8     0  0.5734       0.9000  0.3029  0.3226          64     149.3916  29.9982\n          IVF-PQ64    nprobe 16     0  0.5990       0.9227  0.3701  0.4003          64     149.3916  29.9982\n          IVF-PQ64    nprobe 32     0  0.6126       0.9318  0.5055  0.5453          64     149.3916  29.9982\n          IVF-PQ64    nprobe 64     0  0.6207       0.9318  0.7892  0.8445          64     149.3916  29.9982\n          IVF-PQ64    nprobe 16     1  0.5909       0.9000  0.3643  0.3853          64     149.3916  29.6550\n          IVF-PQ64    nprobe 16     2  0.5922       0.8682  0.3721  0.3959          64     149.3916  30.1086\n          IVF-PQ32     nprobe 1     0  0.3720       0.6864  0.1901  0.2133          32     117.3916  26.4112\n          IVF-PQ32     nprobe 2     0  0.4461       0.7636  0.1958  0.2033          32     117.3916  26.4112\n          IVF-PQ32     nprobe 4     0  0.4906       0.8318  0.2066  0.2168          32     117.3916  26.4112\n          IVF-PQ32     nprobe 8     0  0.5107       0.8500  0.2283  0.2388          32     117.3916  26.4112\n          IVF-PQ32    nprobe 16     0  0.5229       0.8636  0.2719  0.2883          32     117.3916  26.4112\n          IVF-PQ32    nprobe 32     0  0.5281       0.8636  0.3480  0.3748          32     117.3916  26.4112\n          IVF-PQ32    nprobe 64     0  0.5310       0.8636  0.4950  0.5401          32     117.3916  26.4112\n            HNSW32  efSearch 16     0  0.9422       0.9636  0.1711  0.2375        4096    4368.1516  15.1598\n            HNSW32  efSearch 32     0  0.9735       0.9818  0.2743  0.3605        4096    4368.1516  15.1598\n            HNSW32  efSearch 64     0  0.9882       0.9818  0.4797  0.6212        4096    4368.1516  15.1598\n            HNSW32 efSearch 128     0  0.9951       0.9818  0.8593  1.0971        4096    4368.1516  15.1598\n            HNSW32 efSearch 256     0  0.9981       0.9818  1.5426  1.9787        4096    4368.1516  15.1598\n   IVF-Flat (ours)    nprobe 16     0  0.8449       0.9545  2.3556  3.1649        4096    4165.8146 101.8123\n       PQ64 (ours)    all codes     0  0.6926       0.9091 23.2114 23.3354          64      79.4536  59.4845\nflat, GPU, batched 1000 at once     0  0.9994          NaN  0.0047     NaN        4096          NaN      NaN\nIVF-PQ64, nprobe 16, k-means seeds [0, 1, 2]: recall 0.591 to 0.599\n                    largest_recall_difference  median_p50_live_over_registered\nfamily                                                                        \nflat                                      0.0                            0.998\nIVF-Flat                                  0.0                            0.996\nIVF-PQ64                                  0.0                            0.999\nIVF-PQ32                                  0.0                            0.959\nHNSW32                                    0.0                            0.991\nIVF-Flat (ours)                           0.0                            0.911\nPQ64 (ours)                               0.0                            0.993\nflat, GPU, batched                        0.0                            1.003\n"
+        }
+      ]
+    },
+    "retrieval-tradeoff": {
+      "code_fingerprint": "sha256:fbaa869ef1c9509c20723a3c58f6496134e8e76296cc06971c66808c4533d185",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "retrieval/retrieval-tradeoff-1.svg",
+          "bytes": 100610,
+          "sha256": "sha256:72eaba0f38ac165a219aced1d0ca32f7d5b5d832836ae08a5e9493fbf1f399cb"
+        }
+      ]
+    },
+    "retrieval-crossover": {
+      "code_fingerprint": "sha256:a9f06b7138422549a18bc21c6e1496032d2b83ee3c99f9397c36e6280625079a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "HNSW32, efSearch 32: recall 0.974 at p50 0.274 ms; flat scan 15.35 ms, 56 times longer\nfastest configuration with recall >= 0.95 at N = 67,853: HNSW32, efSearch 32\n"
+        }
+      ]
+    },
+    "retrieval-default-embedder": {
+      "code_fingerprint": "sha256:0655c2a22e01ab7028b42bcbbc1deb23da8f08d35c0c9417aa5d2eb3eb144693",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-retriever-def": {
+      "code_fingerprint": "sha256:7f0702e8a31aa488e1edfc521f177be9838edaab899ae6485e1a1c02eb6c10af",
+      "kind": "text",
+      "outputs": []
+    },
+    "retrieval-retriever": {
+      "code_fingerprint": "sha256:edc11990933fa2db93e518b03e7ce9716804030c9ec6fd3f95b38de1bdce589b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model, torch.bfloat16, cuda, attention sdpa\n1. sec512:chapter_transformers/kv-cache#031\n   Generation and the KV Cache > Summary\n   bm25 9.546, dense 0.581, rrf 0.031\n2. sec512:chapter_attention/multihead-attention#014\n   Multi-Head and Cross-Attention > Multi-Head Attention > Shared Keys and Values\n   bm25 8.874, dense 0.557, rrf 0.029\n3. sec512:chapter_transformers/kv-cache#010\n   Generation and the KV Cache > Memory and Bandwidth\n   bm25 8.596, dense 0.564, rrf 0.029\n4. sec512:chapter_transformers/scaling-laws#023\n   Scaling Laws > Configurations of Deployed Models\n   bm25 8.656, dense 0.563, rrf 0.029\n5. sec512:chapter_transformers/kv-cache#023\n   Generation and the KV Cache > Compressing the Cache Further > Low-Rank Keys and Values\n   bm25 11.334, dense 0.536, rrf 0.029\n"
+        }
+      ]
+    }
+  }
+}

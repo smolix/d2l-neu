@@ -8194,6 +8194,9 @@ d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
 d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
     d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
     '78065bff472577631de5d7cac287323e77427e7f')
+d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
+    '7c08b175e12fe3138742f46e14720df1ab45e277')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):

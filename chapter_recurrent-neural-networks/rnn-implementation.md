@@ -758,39 +758,65 @@ print(f'validation perplexity {ppl_plain:.1f}')
 ```
 
 How much of this result do we owe to clipping? We called it a crude
-device, so let us see what happens without it. We train a second copy of
+device, so let us see what happens without it. We train fresh copies of
 the plain model with the same settings, except that the gradients are not
-clipped, and print the highest validation perplexity of the run next to the
-final one.
+clipped. A single run could be a lucky or an unlucky draw, so we train
+three, each with its own random initialization and data order, and print
+the highest validation perplexity of each run next to its final one.
 
 ```{.python .input #rnn-implementation-a-plain-model-2}
 %%tab pytorch, mxnet, jax
-unclipped = RNNLMScratch(RNNScratch(num_inputs=64, num_hiddens=128),
-                         vocab_size=len(data.vocab), lr=4)
+def unclipped_model():
+    return RNNLMScratch(RNNScratch(num_inputs=64, num_hiddens=128),
+                        vocab_size=len(data.vocab), lr=4)
 ```
 
 ```{.python .input #rnn-implementation-a-plain-model-2}
 %%tab tensorflow
-with d2l.try_gpu():
-    unclipped = RNNLMScratch(RNNScratch(num_inputs=64, num_hiddens=128),
-                             vocab_size=len(data.vocab), lr=4)
+def unclipped_model():
+    with d2l.try_gpu():
+        return RNNLMScratch(RNNScratch(num_inputs=64, num_hiddens=128),
+                            vocab_size=len(data.vocab), lr=4)
 ```
 
 ```{.python .input #rnn-implementation-a-plain-model-3}
-trainer_unclipped = d2l.Trainer(max_epochs=10, num_gpus=1)  # No clipping
-trainer_unclipped.fit(unclipped, data)
-ppls = [math.exp(loss) for loss in trainer_unclipped.history['val_loss']]
-print(f'validation perplexity without clipping: highest {max(ppls):.0f}, '
-      f'final {ppls[-1]:.0f}')
+ppl_runs = []
+for run in range(3):  # Three unseeded runs, no clipping
+    trainer_unclipped = d2l.Trainer(max_epochs=10, num_gpus=1)
+    trainer_unclipped.board.display = False  # One plot for all runs below
+    trainer_unclipped.fit(unclipped_model(), data)
+    ppls = [math.exp(loss) for loss in trainer_unclipped.history['val_loss']]
+    ppl_runs.append(ppls)
+    print(f'run {run + 1}: highest {max(ppls):.3g}, final {ppls[-1]:.3g}')
+finals = [ppls[-1] for ppls in ppl_runs]
+print(f'{sum(f > 2 * ppl_plain for f in finals)} of 3 runs end above twice '
+      f'the clipped {ppl_plain:.3g}; finals from {min(finals):.3g} to '
+      f'{max(finals):.3g}')
 ```
 
-Without clipping, training is erratic. At some epoch the loss jumps
-instead of falling, as the argument for clipping warned, and the validation
-perplexity leaps into the hundreds or thousands, in some runs into the
-millions. Some runs recover part of the way and an occasional one never
-does, but every run ends at more than twice the perplexity of the clipped
-model, and most end far higher. Crude or not, clipping is what makes a
-learning rate of 4 usable.
+The validation perplexity after each epoch shows whether, when and how
+far each run jumps. We plot it on a logarithmic scale, with the clipped
+run for comparison.
+
+```{.python .input #rnn-implementation-a-plain-model-4}
+ppl_clipped = [math.exp(loss) for loss in trainer.history['val_loss']]
+d2l.plot(list(range(1, 11)), [ppl_clipped] + ppl_runs, 'epoch',
+         'validation perplexity', yscale='log',
+         legend=['clipped', 'run 1', 'run 2', 'run 3'],
+         legend_loc='outside', figsize=(5, 2.5))
+```
+
+Without clipping, training is erratic. At some epoch the loss jumps instead
+of falling, as the argument for clipping warned: the validation perplexity
+climbs, in some runs past the 1,027 of the untrained model, and then falls
+back only part of the way, if at all. These are the spikes in the plot,
+which the clipped curve does not have. Most runs end well above the clipped
+model: of 32 unclipped runs per framework outside the notebook, more than
+eight in ten ended at more than twice its perplexity. Now and then a run
+escapes the jumps and ends as low as the clipped one, so whether an
+unclipped run succeeds is a matter of chance. With clipping it is not:
+every clipped run ends at about 90 to 100. Crude or not, clipping is what
+makes a learning rate of 4 usable.
 
 A perplexity of about 90 to 100 may look poor next to the perplexity of
 about 6
@@ -1439,14 +1465,16 @@ a token and the previous state and returns logits and a new state of the
 same shape. The step is an embedding lookup, a tanh cell, and an output
 layer, and each framework's recurrent layer computes the same model as our
 tensor code. Training relies on two devices. Clipping the gradient norm
-bounds the change any one update makes, and without it training at our
-learning rate fails. Starting each window from a zero state truncates
-backpropagation at the window length. On *The Time Machine*, with a wide
-embedding and dropout, the RNN needs about 2.1 bits per byte, within a few
-hundredths of a Kneser–Ney trigram on the same text, and the average of the
-two models beats both. The loss by position shows why the RNN does no
-better: it uses only the last few tokens of its 32-token window. Greedy
-generation tends to fall into loops.
+bounds the change any one update makes. Without it, training at our
+learning rate is erratic: the perplexity jumps, in some runs past that of
+the untrained model, and most runs end well above the clipped one. Starting
+each window from a zero state truncates backpropagation at the window
+length. On *The Time Machine*, with a wide embedding and dropout, the RNN
+needs about 2.1 bits per byte, within a few hundredths of a Kneser–Ney
+trigram on the same text, and the average of the two models beats both. The
+loss by position shows why the RNN does no better: it uses only the last
+few tokens of its 32-token window. Greedy generation tends to fall into
+loops.
 
 ## Exercises
 
@@ -1456,7 +1484,7 @@ generation tends to fall into loops.
     1. Record the norm of the gradient before clipping at every update
        of the first epoch, and plot it. How often does clipping act, and
        when?
-    1. The unclipped run of this section failed at `lr=4`. Halve the
+    1. Most unclipped runs of this section jumped at `lr=4`. Halve the
        learning rate until three unclipped runs in a row train without a
        jump in the validation perplexity. How does their validation
        perplexity after ten epochs compare with that of the clipped run at
@@ -1787,17 +1815,26 @@ Plain model, $d = 64$: 222,915 parameters for 50,000 training tokens; the
 final training perplexity is less than half the validation perplexity.
 :::
 
-::: {.slide title="Without Clipping, the Same Model Ends at More Than Twice the Perplexity"}
+::: {.slide title="Without Clipping, Most Runs Jump and End Well Above the Clipped Model"}
 [Training]{.kicker}
 
-A second copy of the plain model, same learning rate 4, no clipping;
-highest and final validation perplexity of the run:
+Three fresh copies of the plain model, same learning rate 4, no clipping;
+highest and final validation perplexity of each run:
 
 @!rnn-implementation-a-plain-model-3
 
-- With clipping: about 90 to 100.
-- At some epoch the loss jumps instead of falling: into the hundreds or
-  thousands, in some runs the millions. Some runs never recover.
+- With clipping: about 90 to 100, run after run.
+- 32 unclipped runs per framework: more than 8 in 10 end above twice the
+  clipped perplexity. Now and then a run escapes and matches it.
+:::
+
+::: {.slide title="The Clipped Curve Falls; Most Unclipped Curves Spike"}
+[Training]{.kicker}
+
+@!rnn-implementation-a-plain-model-4
+
+- At some epoch the perplexity jumps, in some runs past the untrained
+  model's 1,027, and falls back only part of the way.
 
 ::: {.d2l-note}
 Clipping is what makes a learning rate of 4 usable.
@@ -1927,9 +1964,9 @@ so it never costs more than one bit above the better model.
 [Wrap-up]{.kicker}
 
 - One step: token and state in, 1,027 logits and a same-shaped state out.
-- Clipping to $\theta = 1$ bounds every update, and without it training at
-  learning rate 4 fails; a zero state per window truncates backpropagation
-  at 32 steps.
+- Clipping to $\theta = 1$ bounds every update; without it most runs at
+  learning rate 4 jump and end well above the clipped model. A zero state
+  per window truncates backpropagation at 32 steps.
 - Plain model about 2.3 to 2.4 bits per byte; $d = 512$ with dropout about
   2.1, level with Kneser–Ney; their average about 2.0.
 - Loss by position: the trained RNN uses about three tokens of context.

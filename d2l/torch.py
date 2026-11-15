@@ -8675,6 +8675,530 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
         return 'unjudged'
     return 'ignored' if true(judge_out['faithful']) else 'unsupported'
 
+d2l.DATA_HUB['lm-cc-warc-256m-v1'] = (  # pin only: URLs, sizes, SHA-256s
+    d2l.LM_DATA_URL + 'lm-cc-warc-256m-v1.pin.json',
+    '9444225da3dd569d00b801ad9ae1455431dc1b01')
+d2l.DATA_HUB['lid.176.ftz'] = (  # fastText, 176 languages, CC BY-SA 3.0
+    'https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz',
+    '86d1b630ba55a5040231eda9fe24a7befdc411f2')
+
+LM_DATA_SOURCES = {  # name: (kind, Hub repository, revision, licence)
+    'fineweb': ('dataset', 'HuggingFaceFW/fineweb',
+                '9bb295ddab0e05d785b879661af7260fed5140fc', 'odc-by'),
+    'fineweb-edu': ('dataset', 'HuggingFaceFW/fineweb-edu',
+                    '87f09149ef4734204d70ed1d046ddc9ca3f2b8f9', 'odc-by'),
+    'fineweb-2': ('dataset', 'HuggingFaceFW/fineweb-2',
+                  'af9c13333eb981300149d5ca60a8e9d659b276b9', 'odc-by'),
+    'edu-annotations': ('dataset', 'HuggingFaceFW/fineweb-edu-llama3-annotations',
+                        '72df4c92fb1b48beceb16016e8f695ec40a6c3a5', 'odc-by'),
+    'finemath': ('dataset', 'HuggingFaceTB/finemath',
+                 'e92b25a616738fe95dc186b64dfb19f9c8525594', 'odc-by'),
+    'codeparrot-clean': ('dataset', 'codeparrot/codeparrot-clean',
+                         '35a59fb025bc0a102f7d96eac09d145b896d487b', 'per-file'),
+    'belebele': ('dataset', 'facebook/belebele',
+                 '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2', 'cc-by-sa-4.0'),
+    'cosmopedia': ('dataset', 'HuggingFaceTB/cosmopedia',
+                   '0ae6ec63f91742bd2d1eaef4f02232c55d719385', 'apache-2.0'),
+    'mmlu': ('dataset', 'cais/mmlu',
+             'c30699e8356da336a370243923dbaf21066bb9fe', 'mit'),
+    'fineweb-edu-classifier': ('model', 'HuggingFaceFW/fineweb-edu-classifier',
+                               '284663cbb2dabf9bda30d8f8cc49601251ee1631',
+                               'apache-2.0')}
+
+WarcRecord = collections.namedtuple(
+    'WarcRecord', 'id type url date status mime offset length headers body')
+
+def iter_warc(source, n_bytes=None, types=('response',), *, stats=None):
+    """Yield the WARC records of the given types (None: all) from a local
+    path or a URL, reading only the first n_bytes (a Range request for a
+    URL). Each gzip member is decompressed on its own; offset and length
+    are the member's compressed byte range. A member cut off by the end of
+    the input is not yielded: it is counted in stats['truncated'], beside
+    one count per record type (stats is a dict the caller passes).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    for offset, length, raw in d2l._gzip_members(
+            d2l._warc_chunks(source, n_bytes)):
+        if raw is None:
+            if stats is not None:
+                stats['truncated'] = stats.get('truncated', 0) + 1
+            continue
+        rec = d2l._warc_parse(raw, offset, length)
+        if stats is not None:
+            stats[rec.type] = stats.get(rec.type, 0) + 1
+        if types is None or rec.type in types:
+            yield rec
+
+def fetch_warc_range(pin='lm-cc-warc-256m-v1', n_bytes=None, cache_dir=None,
+                     *, which='warc'):
+    """Local path of the pinned Common Crawl bytes: which='warc' gives the
+    first n_bytes of the pinned range (a multiple of the 16 MiB block; None
+    for the whole range), fetched with Range requests and checked block by
+    block against the pin's SHA-256s; which='wet' gives the whole WET file
+    of the same segment, checked as one file. With D2L_OFFLINE=1 only a
+    verified local copy is used. The bytes stay in cache_dir (default
+    ../data/lm/cc); they are never committed or uploaded.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import pathlib
+    with open(d2l.download_keyed(pin)) as f:
+        spec = json.load(f)
+    cache = pathlib.Path(cache_dir or os.path.join('..', 'data', 'lm', 'cc'))
+    cache.mkdir(parents=True, exist_ok=True)
+    offline = os.environ.get('D2L_OFFLINE') == '1'
+    if which == 'wet':
+        if n_bytes is not None:
+            raise ValueError('the WET file is fetched and checked whole')
+        return d2l._fetch_whole(spec['wet'], cache, offline)
+    if which != 'warc':
+        raise ValueError(f"which is 'warc' or 'wet', not {which!r}")
+    warc, block = spec['warc'], spec['warc']['block_bytes']
+    n_bytes = warc['n_bytes'] if n_bytes is None else n_bytes
+    if n_bytes % block or not 0 < n_bytes <= warc['n_bytes']:
+        raise ValueError(f'n_bytes must be a multiple of {block} up to '
+                         f'{warc["n_bytes"]}')
+    path = cache / f'{pin}.warc.gz'
+    have = d2l._verified_blocks(path, warc['block_sha256'], block,
+                                n_bytes // block)
+    if have * block < n_bytes:
+        if offline:
+            raise RuntimeError(
+                f'D2L_OFFLINE=1 and {path} holds {have} verified blocks of '
+                f'{n_bytes // block}: run once with network access, or fetch '
+                f'bytes 0-{n_bytes - 1} of {warc["url"]} into {path}')
+        d2l._fetch_blocks(warc, path, have, n_bytes // block)
+    return path
+
+Doc = collections.namedtuple(
+    'Doc', 'id url date text lang lang_score src log flags')
+
+def write_docs(path, docs):
+    """Write documents (Doc or dicts with Doc's fields) as gzip-compressed
+    JSON lines, keys sorted and no time stamp in the gzip header, so equal
+    documents give equal bytes.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    with open(path, 'wb') as raw, gzip.GzipFile(
+            filename='', mode='wb', fileobj=raw, mtime=0) as f:
+        for d in docs:
+            row = d._asdict() if hasattr(d, '_asdict') else dict(d)
+            f.write((json.dumps(row, ensure_ascii=False, sort_keys=True)
+                     + '\n').encode('utf-8'))
+
+def read_docs(path):
+    """The documents of a file written by write_docs, as a list of Doc
+    (fields missing from a row are None).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        rows = [json.loads(line) for line in f]
+    return [d2l.Doc(**{k: r.get(k) for k in d2l.Doc._fields}) for r in rows]
+
+def docs_hash(docs):
+    """SHA-256 over the sorted (id, SHA-256 of the text) pairs: the content
+    of a document set, independent of its order. Takes Doc-like objects,
+    dicts or (id, text) pairs.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    def pair(d):
+        if isinstance(d, dict):
+            return d['id'], d['text']
+        if hasattr(d, 'text'):
+            return d.id, d.text
+        return d[0], d[1]
+    keys = sorted((str(i), hashlib.sha256((t or '').encode('utf-8'))
+                   .hexdigest()) for i, t in map(pair, docs))
+    h = hashlib.sha256()
+    for i, t in keys:
+        h.update(f'{i}\t{t}\n'.encode('utf-8'))
+    return h.hexdigest()
+
+class CorpusManifest:
+    """The provenance of a corpus (schema d2l-corpus/1): its sources, the
+    stages that turned them into documents, and, once tokenized, the
+    tokenizer, the shard format and the splits. Each stage satisfies
+    n_in == n_out + sum(drops), a document being charged to the first rule
+    that drops it. The canonical JSON has sorted keys, no spaces, floats
+    rounded to 4 decimals and no absolute paths; sha256() hashes it.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    SCHEMA = 'd2l-corpus/1'
+
+    def __init__(self, name, sources=None, stages=None, tokenizer=None,
+                 format=None, splits=None):
+        self.name, self.tokenizer, self.format = name, tokenizer, format
+        self.sources, self.stages = list(sources or []), list(stages or [])
+        self.splits = splits
+
+    def add_source(self, id, uri, revision=None, license=None, n_docs=None,
+                   bytes=None, **extra):
+        self.sources.append(dict(id=id, uri=uri, revision=revision,
+                                 license=license, n_docs=n_docs,
+                                 bytes=bytes, **extra))
+        return self
+
+    def add_stage(self, name, params, n_in, n_out, drops, in_hash, out_hash,
+                  *, impl=None, version=None, tokens_out=None):
+        drops = {str(k): int(v) for k, v in (drops or {}).items()}
+        if n_in != n_out + sum(drops.values()):
+            raise ValueError(f'stage {name}: n_in {n_in} != n_out {n_out} '
+                             f'+ drops {sum(drops.values())}')
+        self.stages.append(dict(
+            name=name, impl=impl, version=version, params=params,
+            n_in=int(n_in), n_out=int(n_out), tokens_out=tokens_out,
+            drops=drops, in_hash=in_hash, out_hash=out_hash))
+        return self
+
+    def to_dict(self):
+        return dict(schema=self.SCHEMA, name=self.name, sources=self.sources,
+                    stages=self.stages, tokenizer=self.tokenizer,
+                    format=self.format, splits=self.splits)
+
+    def canonical_json(self):
+        def clean(x, where):
+            if isinstance(x, float):
+                if x != x or x in (float('inf'), float('-inf')):
+                    raise ValueError(f'{where}: {x} has no JSON form')
+                return round(x, 4)
+            if isinstance(x, (np.integer, np.floating, np.bool_)):
+                return clean(x.item(), where)
+            if isinstance(x, str) and (x.startswith('/') or
+                                       re.match(r'[A-Za-z]:\\', x)):
+                raise ValueError(f'{where}: absolute path {x!r}')
+            if isinstance(x, dict):
+                return {str(k): clean(v, f'{where}.{k}')
+                        for k, v in x.items()}
+            if isinstance(x, (list, tuple)):
+                return [clean(v, f'{where}[{i}]') for i, v in enumerate(x)]
+            return x
+        return json.dumps(clean(self.to_dict(), 'manifest'), sort_keys=True,
+                          separators=(',', ':'), ensure_ascii=False)
+
+    def sha256(self):
+        return hashlib.sha256(self.canonical_json().encode('utf-8')
+                              ).hexdigest()
+
+    def save(self, path):
+        """Write the canonical JSON, so the file's SHA-256 is sha256()."""
+        with open(path, 'wb') as f:
+            f.write(self.canonical_json().encode('utf-8'))
+        return path
+
+    @classmethod
+    def load(cls, path):
+        with open(path, encoding='utf-8') as f:
+            d = json.load(f)
+        if d.get('schema') != cls.SCHEMA:
+            raise ValueError(f'{path}: schema {d.get("schema")!r}, '
+                             f'expected {cls.SCHEMA}')
+        return cls(d['name'], d.get('sources'), d.get('stages'),
+                   d.get('tokenizer'), d.get('format'), d.get('splits'))
+
+    def to_card(self):
+        """A Markdown dataset card generated from the manifest alone."""
+        lines = [f'# Dataset card: {self.name}', '',
+                 f'Schema `{self.SCHEMA}`, manifest SHA-256 '
+                 f'`{self.sha256()[:16]}…`.', '', '## Sources', '',
+                 '| id | uri | revision | license | documents | bytes |',
+                 '|---|---|---|---|---|---|']
+        for s in self.sources:
+            lines.append('| ' + ' | '.join(str(s.get(k, '')) for k in (
+                'id', 'uri', 'revision', 'license', 'n_docs', 'bytes')) + ' |')
+        lines += ['', '## Processing stages', '',
+                  '| stage | implementation | in | out | dropped (reason: count) |',
+                  '|---|---|---|---|---|']
+        for s in self.stages:
+            impl = ' '.join(str(v) for v in (s.get('impl'), s.get('version'))
+                            if v)
+            drops = ', '.join(f'{k}: {v}' for k, v in s['drops'].items()
+                              ) or '—'
+            lines.append(f'| {s["name"]} | {impl or "—"} | {s["n_in"]} | '
+                         f'{s["n_out"]} | {drops} |')
+        if self.tokenizer:
+            lines += ['', '## Tokenizer', '', '```',
+                      json.dumps(self.tokenizer, sort_keys=True), '```']
+        if self.format:
+            lines += ['', '## Format', '', '```',
+                      json.dumps(self.format, sort_keys=True), '```']
+        if self.splits:
+            lines += ['', '## Splits', '', '| split | documents | tokens | shards |',
+                      '|---|---|---|---|']
+            for k, v in sorted(self.splits.items()):
+                lines.append(f'| {k} | {v.get("n_docs")} | {v.get("n_tokens")}'
+                             f' | {len(v.get("shards", []))} |')
+        return '\n'.join(lines) + '\n'
+
+def fwedu_bucket(doc_id):
+    """The bucket (0-255) of a FineWeb-Edu document: the first 32 bits of
+    the SHA-256 of its id string (as released, <urn:uuid:...>) mod 256.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    return int(hashlib.sha256(doc_id.encode('utf-8')).hexdigest()[:8],
+               16) % 256
+
+FWEDU_BUCKETS = {  # bucket ranges of the chapter's FineWeb-Edu splits
+    'val': range(0, 1),         # the reference model's validation set
+    'side': range(1, 8),        # side pool: 20.4's and 20.5's web training text
+    'side_val': range(8, 9),    # side validation
+    'train': range(9, 256)}     # the reference model's training shards
+
+def bpb_from_nll(sum_nll_nats, n_bytes):
+    """Bits per byte from a summed negative log-likelihood in nats and the
+    number of UTF-8 bytes the scored tokens stand for.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    return float(sum_nll_nats) / (math.log(2) * n_bytes)
+
+R2_SPLIT_REGEX = (r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+"""
+                  r"""|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)"""
+                  r"""|\s+""")
+
+def train_hf_bpe(texts, vocab_size, specials, regex=R2_SPLIT_REGEX,
+                 min_frequency=2):
+    """A byte-level BPE (Hugging Face tokenizers) trained on texts: NFC,
+    the split regex, bytes as 256 base symbols, the special tokens first
+    (ids 0, 1, ...), no BOS or EOS added on encode. Special-token strings
+    inside a text are encoded as text (encode_special_tokens is set; the
+    flag is not saved in tokenizer.json, so loaders set it again).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    from tokenizers import (Regex, Tokenizer, decoders, models, normalizers,
+                            pre_tokenizers, trainers)
+    tok = Tokenizer(models.BPE(dropout=None, byte_fallback=False,
+                               unk_token=None))
+    tok.normalizer = normalizers.NFC()
+    tok.pre_tokenizer = pre_tokenizers.Sequence([
+        pre_tokenizers.Split(Regex(regex), behavior='isolated', invert=False),
+        pre_tokenizers.ByteLevel(add_prefix_space=False, trim_offsets=False,
+                                 use_regex=False)])
+    tok.decoder = decoders.ByteLevel()
+    trainer = trainers.BpeTrainer(
+        vocab_size=vocab_size, min_frequency=min_frequency,
+        special_tokens=list(specials), show_progress=False,
+        initial_alphabet=pre_tokenizers.ByteLevel.alphabet())
+    tok.train_from_iterator(texts, trainer=trainer)
+    if tok.get_vocab_size() != vocab_size:
+        raise ValueError(f'trained {tok.get_vocab_size()} pieces, not '
+                         f'{vocab_size}: too little text for this vocabulary')
+    tok.encode_special_tokens = True
+    return tok
+
+R2_TOKENIZER_SHA256 = None  # SHA-256 of tokenizer.json; set when it is built
+
+def r2_tokenizer(raw=False):
+    """The reference tokenizer (artifact lm-r2-tokenizer-v1; its file is
+    checked against R2_TOKENIZER_SHA256): a Transformers
+    PreTrainedTokenizerFast with EOS <|endoftext|> = 0, pad <|pad|> = 1,
+    no BOS, and special-token strings in text encoded as text; raw=True
+    gives the tokenizers.Tokenizer itself.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if 'lm-r2-tokenizer-v1' not in d2l.DATA_HUB or not d2l.R2_TOKENIZER_SHA256:
+        raise KeyError('lm-r2-tokenizer-v1 is not registered yet: it is '
+                       'built by tools/build_r2_shards.py')
+    return d2l._r2_from_file(d2l.download_keyed('lm-r2-tokenizer-v1'),
+                             raw=raw, sha256=d2l.R2_TOKENIZER_SHA256)
+
+def write_shards(docs, tokenizer, out_dir, split, shard_tokens=100_000_000,
+                 eos_id=None, meta_fn=None, manifest=None, *, batch_docs=1000):
+    """Tokenize documents into shards out_dir/{split}-{k:05d}.bin|.idx|
+    .meta.parquet and return the split's manifest entry. docs yields
+    (doc_id, text) or (doc_id, text, meta); each document becomes its ids
+    and one EOS (eos_id, default the tokenizer's <|endoftext|>); special
+    strings in a text stay text, and a special id inside a document is an
+    error. A shard closes at the first document boundary at or after
+    shard_tokens; ids are uint16 for vocabularies up to 65,536, else uint32.
+    meta_fn(doc_id, text, meta) gives a document's extra meta columns
+    (default: meta itself). The entry is stored in manifest (a
+    CorpusManifest, created if None), which is saved as
+    out_dir/manifest.json.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    import itertools
+    os.makedirs(out_dir, exist_ok=True)
+    vocab, eos, special = d2l._tok_info(tokenizer)
+    eos = eos if eos_id is None else eos_id
+    if eos is None:
+        raise ValueError('the tokenizer has no <|endoftext|>: pass eos_id')
+    dtype = np.dtype('uint16' if vocab <= 2**16 else 'uint32')
+    special = np.array(sorted(special | {eos}), dtype=np.int64)
+    shards, w, docs = [], None, iter(docs)
+    while batch := list(itertools.islice(docs, batch_docs)):
+        batch = [(d[0], d[1], d[2] if len(d) > 2 else None) for d in batch]
+        for (doc_id, text, meta), ids in zip(
+                batch, d2l._doc_token_ids(tokenizer, [b[1] for b in batch])):
+            ids = np.asarray(ids, dtype=np.int64)
+            bad = np.isin(ids, special)
+            if bad.any():
+                raise ValueError(f'document {doc_id}: special id '
+                                 f'{int(ids[bad][0])} inside the text')
+            if w is None:
+                w = d2l._ShardWriter(out_dir, f'{split}-{len(shards):05d}',
+                                     dtype)
+            extra = meta_fn(doc_id, text, meta) if meta_fn else (meta or {})
+            w.add(doc_id, np.append(ids, eos).astype(dtype), extra)
+            if w.n_tokens >= shard_tokens:
+                shards.append(w.close())
+                w = None
+    if w is not None:
+        shards.append(w.close())
+    entry = dict(n_tokens=sum(s['n_tokens'] for s in shards),
+                 n_docs=sum(s['n_docs'] for s in shards), shards=shards)
+    manifest = manifest or d2l.CorpusManifest(os.path.basename(
+        os.path.normpath(out_dir)))
+    manifest.splits = dict(manifest.splits or {}, **{split: entry})
+    fmt = dict(dtype=dtype.name, eos_id=int(eos), endianness='little',
+               doc_end='eos', idx_dtype='uint32',
+               meta_required=['doc_id', 'n_tokens'])
+    if manifest.format not in (None, fmt):
+        raise ValueError(f'manifest format {manifest.format} != {fmt}')
+    manifest.format = fmt
+    manifest.tokenizer = manifest.tokenizer or dict(vocab_size=vocab)
+    manifest.save(os.path.join(out_dir, 'manifest.json'))
+    return entry
+
+class TokenShards:
+    """Read-only access to a shard set written by write_shards: documents
+    by global index, token ranges by global position, per-shard meta, and
+    verify(), which recomputes every file's SHA-256 and the EOS and offset
+    invariants. max_tokens keeps the smallest prefix of shards holding at
+    least that many tokens; fetch=True downloads missing files from the
+    manifest's url and checks sha1, then SHA-256.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    def __init__(self, root, split='train', fetch=False, max_tokens=None):
+        self.root, self.split, self.fetch = root, split, fetch
+        with open(os.path.join(root, 'manifest.json'), encoding='utf-8') as f:
+            self.manifest = json.load(f)
+        shards = self.manifest['splits'][split]['shards']
+        if max_tokens is not None:
+            total = np.cumsum([s['n_tokens'] for s in shards])
+            shards = shards[:int(np.searchsorted(total, max_tokens)) + 1]
+        self.shards = shards
+        fmt = self.manifest['format']
+        self.dtype, self.eos_id = np.dtype(fmt['dtype']), fmt['eos_id']
+        self.vocab_size = (self.manifest.get('tokenizer') or {}).get(
+            'vocab_size')
+        self._docs = np.cumsum([0] + [s['n_docs'] for s in shards])
+        self._toks = np.cumsum([0] + [s['n_tokens'] for s in shards])
+        self.n_docs, self.n_tokens = int(self._docs[-1]), int(self._toks[-1])
+        self.n_shards = len(shards)
+        self._mm, self._idx = {}, {}
+
+    def _path(self, k, ext):
+        s = self.shards[k]
+        path = os.path.join(self.root, s['file'] + d2l._SHARD_EXT[ext])
+        if not os.path.exists(path):
+            if not self.fetch or 'url' not in s:
+                raise FileNotFoundError(path)
+            d2l._fetch_shard_file(s, ext, path)
+        return path
+
+    def shard(self, k):
+        if k not in self._mm:
+            self._mm[k] = np.memmap(self._path(k, 'bin'), dtype=self.dtype,
+                                    mode='r')
+        return self._mm[k]
+
+    def offsets(self, k):
+        if k not in self._idx:
+            self._idx[k] = np.fromfile(self._path(k, 'idx'), dtype='<u4')
+        return self._idx[k]
+
+    def locate(self, i):
+        """(shard, document within it, offset of its first token there)."""
+        if not 0 <= i < self.n_docs:
+            raise IndexError(i)
+        k = int(np.searchsorted(self._docs, i, side='right')) - 1
+        j = i - int(self._docs[k])
+        return k, j, int(self.offsets(k)[j])
+
+    def locate_token(self, t):
+        """(shard, position within it) of global token position t."""
+        if not 0 <= t < self.n_tokens:
+            raise IndexError(t)
+        k = int(np.searchsorted(self._toks, t, side='right')) - 1
+        return k, t - int(self._toks[k])
+
+    def doc(self, i):
+        k, j, a = self.locate(i)
+        return np.asarray(self.shard(k)[a:self.offsets(k)[j + 1]],
+                          dtype=np.int32)
+
+    def iter_docs(self, start=0):
+        for i in range(start, self.n_docs):
+            yield i, self.doc(i)
+
+    def read(self, start, n):
+        """n tokens from global position start, across shard boundaries."""
+        if start < 0 or start + n > self.n_tokens:
+            raise IndexError((start, n))
+        out = []
+        while n > 0:
+            k, a = self.locate_token(start)
+            take = min(n, self.shards[k]['n_tokens'] - a)
+            out.append(np.asarray(self.shard(k)[a:a + take], dtype=np.int32))
+            start, n = start + take, n - take
+        return np.concatenate(out) if out else np.zeros(0, dtype=np.int32)
+
+    def meta(self, k):
+        return pd.read_parquet(self._path(k, 'meta'))
+
+    def verify(self):
+        """Recompute every file's SHA-256 and check that offsets start at 0,
+        increase and end at the shard's token count, that EOS ends every
+        document and occurs nowhere else, and that the meta rows match."""
+        for k, s in enumerate(self.shards):
+            for ext in d2l._SHARD_EXT:
+                path = self._path(k, ext)
+                if d2l._sha256_file(path) != s['sha256'][ext]:
+                    raise ValueError(f'{path}: SHA-256 differs from the '
+                                     'manifest')
+            ids, idx = self.shard(k), self.offsets(k)
+            name = s['file']
+            if (len(idx) != s['n_docs'] + 1 or idx[0] != 0
+                    or idx[-1] != len(ids) or len(ids) != s['n_tokens']
+                    or (np.diff(idx.astype(np.int64)) <= 0).any()):
+                raise ValueError(f'{name}.idx: offsets do not match the '
+                                 'shard')
+            if (np.asarray(ids[idx[1:].astype(np.int64) - 1]) != self.eos_id
+                    ).any() or int((ids == self.eos_id).sum()) != s['n_docs']:
+                raise ValueError(f'{name}.bin: EOS not exactly at the '
+                                 'document ends')
+            m = self.meta(k)
+            if len(m) != s['n_docs'] or (m['n_tokens'].to_numpy()
+                                         != np.diff(idx)).any():
+                raise ValueError(f'{name}.meta.parquet: rows do not match '
+                                 'the offsets')
+        return True
+
+def fwedu_shards(which='100m', fetch=True, max_tokens=None):
+    """The reference shards of FineWeb-Edu under the reference tokenizer:
+    which='val' (2^23 validation tokens), '100m' (train-00000, 10^8 tokens)
+    or '4b' (the 40 training shards, downloaded one by one when first read).
+    Each lives in ../data/lm/fwedu-r2-v1/<which>/.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    keys = {'val': 'lm-fwedu-val-v1', '100m': 'lm-fwedu-shards-100m-v1',
+            '4b': 'lm-fwedu-manifest-4b-v1'}
+    if which not in keys:
+        raise ValueError(f'which is one of {tuple(keys)}')
+    key = keys[which]
+    if key not in d2l.DATA_HUB:
+        raise KeyError(f'{key} is not registered yet: it is built by '
+                       'tools/build_r2_shards.py')
+    root = os.path.join('..', 'data', 'lm', 'fwedu-r2-v1', which)
+    os.makedirs(root, exist_ok=True)
+    path = d2l.download_keyed(key)
+    if which == '4b':
+        import shutil
+        shutil.copyfile(path, os.path.join(root, 'manifest.json'))
+    elif not os.path.exists(os.path.join(root, '.extracted-' + key)):
+        d2l.extract(path, root)
+        open(os.path.join(root, '.extracted-' + key), 'w').close()
+    return d2l.TokenShards(root, 'val' if which == 'val' else 'train',
+                           fetch=fetch, max_tokens=max_tokens)
+
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
 
@@ -15031,6 +15555,481 @@ d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
 
 d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
                            'c1816da3821ae9f43899be655002f6c723e91b88')
+
+def _warc_chunks(source, n_bytes=None, chunk=1 << 16):
+    """The first n_bytes (None: all) of a local file or URL in chunks of
+    64 KiB: small chunks keep zlib's copy of the unused input short.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    if str(source).startswith(('http://', 'https://')):
+        headers = {} if n_bytes is None else {
+            'Range': f'bytes=0-{n_bytes - 1}'}
+        with requests.get(str(source), headers=headers, stream=True,
+                          timeout=60) as r:
+            r.raise_for_status()
+            if n_bytes is not None and r.status_code != 206:
+                raise RuntimeError(f'{source}: the server ignored the Range')
+            yield from r.iter_content(chunk)
+        return
+    left = float('inf') if n_bytes is None else n_bytes
+    with open(source, 'rb') as f:
+        while left > 0:
+            b = f.read(int(min(chunk, left)))
+            if not b:
+                return
+            left -= len(b)
+            yield b
+
+def _gzip_members(chunks):
+    """(offset, length, data) of each gzip member in a byte stream, offset
+    and length in compressed bytes; a member cut off by the end of the
+    stream comes last, with data None.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import zlib
+    chunks = (c for c in chunks if c)
+    buf, offset = b'', 0
+    while True:
+        if not buf:
+            buf = next(chunks, None)
+            if buf is None:
+                return
+        d, out, used = zlib.decompressobj(31), [], 0
+        while True:
+            out.append(d.decompress(buf))
+            if d.eof:
+                used += len(buf) - len(d.unused_data)
+                buf = d.unused_data
+                break
+            used += len(buf)
+            buf = next(chunks, None)
+            if buf is None:
+                yield offset, used, None
+                return
+        yield offset, used, b''.join(out)
+        offset += used
+
+def _warc_parse(raw, offset, length):
+    """The WarcRecord in the decompressed bytes of one member. headers holds
+    the WARC header fields; for an HTTP request, response or revisit it also
+    holds headers['HTTP'], the HTTP header fields with lower-cased names,
+    and body is the HTTP payload, else the whole content block.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    head, _, rest = raw.partition(b'\r\n\r\n')
+    lines = head.split(b'\r\n')
+    if not lines[0].startswith(b'WARC/'):
+        raise ValueError(f'no WARC record at offset {offset}')
+    headers = {}
+    for line in lines[1:]:
+        k, _, v = line.decode('utf-8', 'replace').partition(':')
+        headers[k.strip()] = v.strip()
+    block = rest[:int(headers.get('Content-Length', len(rest)))]
+    kind = headers.get('WARC-Type')
+    ctype = headers.get('Content-Type', '')
+    status, mime, body = None, ctype.split(';')[0].strip().lower(), block
+    if (kind in ('response', 'request', 'revisit')
+            and ctype.startswith('application/http')):
+        http, _, body = block.partition(b'\r\n\r\n')
+        http = http.decode('iso-8859-1').split('\r\n')
+        fields = {}
+        for line in http[1:]:
+            k, _, v = line.partition(':')
+            k = k.strip().lower()
+            fields[k] = (fields[k] + ', ' if k in fields else '') + v.strip()
+        headers['HTTP'] = fields
+        mime = fields.get('content-type', '').split(';')[0].strip().lower()
+        parts = http[0].split()
+        if kind != 'request' and len(parts) > 1 and parts[1].isdigit():
+            status = int(parts[1])
+    return d2l.WarcRecord(headers.get('WARC-Record-ID'), kind,
+                          headers.get('WARC-Target-URI'),
+                          headers.get('WARC-Date'), status, mime or None,
+                          offset, length, headers, body)
+
+def _sha256_file(path, n_bytes=None):
+    """SHA-256 of the first n_bytes (None: all) of a file.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    h, left = hashlib.sha256(), float('inf') if n_bytes is None else n_bytes
+    with open(path, 'rb') as f:
+        while left > 0:
+            b = f.read(int(min(1 << 24, left)))
+            if not b:
+                break
+            h.update(b)
+            left -= len(b)
+    return h.hexdigest()
+
+def _verified_blocks(path, block_sha256, block, n_blocks):
+    """How many leading blocks of the file match the pinned SHA-256s (up to
+    n_blocks). The file is cut back to them, so a later fetch appends.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    if not path.exists():
+        return 0
+    good = 0
+    with open(path, 'rb') as f:
+        while good < n_blocks:
+            b = f.read(block)
+            if len(b) < block or (hashlib.sha256(b).hexdigest()
+                                  != block_sha256[good]):
+                break
+            good += 1
+    if path.stat().st_size > good * block and good < n_blocks:
+        with open(path, 'r+b') as f:
+            f.truncate(good * block)
+    return good
+
+def _fetch_blocks(warc, path, start, stop):
+    """Append blocks start..stop-1 of the pinned range to path, each one
+    checked against its SHA-256 before it is written.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    block = warc['block_bytes']
+    print(f'fetching bytes {start * block}-{stop * block - 1} of '
+          f'{warc["url"]}')
+    rng = f'bytes={start * block}-{stop * block - 1}'
+    with requests.get(warc['url'], headers={'Range': rng}, stream=True,
+                      timeout=60) as r, open(path, 'ab') as f:
+        r.raise_for_status()
+        if r.status_code != 206:
+            raise RuntimeError(f'{warc["url"]}: the server ignored the Range')
+        k, buf = start, bytearray()
+        for c in r.iter_content(1 << 20):
+            buf += c
+            while len(buf) >= block and k < stop:
+                got = hashlib.sha256(buf[:block]).hexdigest()
+                if got != warc['block_sha256'][k]:
+                    raise RuntimeError(f'block {k} of {warc["url"]}: '
+                                       f'SHA-256 {got}, the pin says '
+                                       f'{warc["block_sha256"][k]}')
+                f.write(buf[:block])
+                del buf[:block]
+                k += 1
+    if k != stop:
+        raise RuntimeError(f'{warc["url"]}: got {k - start} of '
+                           f'{stop - start} blocks')
+
+def _fetch_whole(spec, cache, offline):
+    """A whole file named in the pin, fetched once and checked by SHA-256.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    path = cache / spec['url'].rsplit('/', 1)[1]
+    if path.exists() and d2l._sha256_file(path) == spec['sha256']:
+        return path
+    if offline:
+        raise RuntimeError(f'D2L_OFFLINE=1 and no verified {path}: run once '
+                           f'with network access, or fetch {spec["url"]}')
+    print(f'fetching {spec["url"]}')
+    tmp = path.with_suffix(path.suffix + '.part')
+    with requests.get(spec['url'], stream=True, timeout=60) as r, \
+            open(tmp, 'wb') as f:
+        r.raise_for_status()
+        for c in r.iter_content(1 << 20):
+            f.write(c)
+    got = d2l._sha256_file(tmp)
+    if got != spec['sha256']:
+        tmp.unlink()
+        raise RuntimeError(f'{spec["url"]}: SHA-256 {got}, the pin says '
+                           f'{spec["sha256"]}')
+    tmp.replace(path)
+    return path
+
+_CC_PIN_SOURCE = dict(  # one archive file of the CC-MAIN-2025-05 crawl
+    crawl='CC-MAIN-2025-05',
+    warc_url='https://data.commoncrawl.org/crawl-data/CC-MAIN-2025-05/'
+             'segments/1736703361941.29/warc/'
+             'CC-MAIN-20250126135402-20250126165402-00000.warc.gz',
+    warc_size=1141586184, n_bytes=256 * 2**20, block_bytes=16 * 2**20,
+    wet_url='https://data.commoncrawl.org/crawl-data/CC-MAIN-2025-05/'
+            'segments/1736703361941.29/wet/'
+            'CC-MAIN-20250126135402-20250126165402-00000.warc.wet.gz',
+    wet_size=102325106)
+
+def _cc_pin(warc_path, wet_path, src=None):
+    """The pin of the crawl range from verified local copies: URLs, sizes,
+    the SHA-256 of the range, of each of its blocks and of the WET file.
+    It names Common Crawl bytes; it holds none.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    src = src or d2l._CC_PIN_SOURCE
+    n, block = src['n_bytes'], src['block_bytes']
+    if os.path.getsize(warc_path) < n:
+        raise ValueError(f'{warc_path} holds fewer than {n} bytes')
+    blocks = []
+    with open(warc_path, 'rb') as f:
+        for _ in range(n // block):
+            blocks.append(hashlib.sha256(f.read(block)).hexdigest())
+    if os.path.getsize(wet_path) != src['wet_size']:
+        raise ValueError(f'{wet_path} is not {src["wet_size"]} bytes')
+    _, cc, path = src['warc_url'].partition('commoncrawl.org/')
+    return dict(  # FineWeb's file_path column names the file this way
+        schema='d2l-cc-pin/1', crawl=src['crawl'],
+        fineweb_file_path='s3://commoncrawl/' + path if cc else None,
+        warc=dict(url=src['warc_url'], file_size=src['warc_size'],
+                  range=[0, n - 1], n_bytes=n,
+                  sha256=d2l._sha256_file(warc_path, n), block_bytes=block,
+                  block_sha256=blocks),
+        wet=dict(url=src['wet_url'], file_size=src['wet_size'],
+                 sha256=d2l._sha256_file(wet_path)))
+
+def _cc_pin_bytes(pin):
+    """The pin file's exact bytes: sorted keys, one space indent, newline.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    return (json.dumps(pin, sort_keys=True, indent=1) + '\n').encode('utf-8')
+
+_TLD_EXTRACT = []  # one tldextract instance per process, made on first use
+
+def registered_domain(url):
+    """The registered domain of a URL (example.co.uk for
+    a.b.example.co.uk), from tldextract's bundled public-suffix snapshot
+    (no network); the lower-cased host when there is none (an IP
+    address, localhost).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import urllib.parse
+    if not d2l._TLD_EXTRACT:
+        import tldextract
+        d2l._TLD_EXTRACT.append(tldextract.TLDExtract(
+            suffix_list_urls=(), cache_dir=None))
+    ext = d2l._TLD_EXTRACT[0](url)
+    dom = ext.top_domain_under_public_suffix
+    return (dom or urllib.parse.urlsplit(url).hostname or '').lower()
+
+_FWEDU_FILES = tuple(  # sample/10BT files read, in order; 005, 012, 013 are chapter 21's
+    f'sample/10BT/{k:03d}_00000.parquet' for k in (0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11))
+
+TokenPool = collections.namedtuple('TokenPool', 'ids meta')
+
+def load_pool(path_or_key, name=None):
+    """A token pool: a flat array of token ids (read-only memmap; every
+    document ends in EOS) and its meta dict. path_or_key is a DATA_HUB key
+    (a tar of <name>.bin files and their meta.json), a directory or a .bin
+    file. meta.json describes one pool, or maps each .bin file name to its
+    meta when a directory holds several (then name picks one).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    import pathlib
+    p = path_or_key
+    if isinstance(p, str) and p in d2l.DATA_HUB:
+        tar = d2l.download_keyed(p)
+        p = pathlib.Path(tar).with_suffix('')
+        if not (p / '.extracted').exists():
+            p.mkdir(exist_ok=True)
+            d2l.extract(tar, str(p))
+            (p / '.extracted').touch()
+    p = pathlib.Path(p)
+    if p.is_dir():
+        bins = sorted(b for b in p.glob('*.bin')
+                      if name is None or b.stem == name)
+        if len(bins) != 1:
+            raise ValueError(f'{p}: {len(bins)} pools match name={name!r} '
+                             f'({[b.stem for b in p.glob("*.bin")]})')
+        p = bins[0]
+    with open(p.parent / 'meta.json') as f:
+        meta = json.load(f)
+    meta = meta.get(p.name, meta)
+    ids = np.memmap(p, dtype=meta.get('dtype', 'uint16'), mode='r')
+    if 'n_tokens' in meta and len(ids) != meta['n_tokens']:
+        raise ValueError(f'{p}: {len(ids)} tokens, meta says '
+                         f'{meta["n_tokens"]}')
+    return d2l.TokenPool(ids, meta)
+
+def token_byte_lengths(tokenizer):
+    """np.ndarray of the UTF-8 bytes each token id stands for (0 for
+    special tokens): the denominator of bits per byte. Takes a Transformers
+    tokenizer, a tokenizers.Tokenizer or a tiktoken encoding.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    if hasattr(tokenizer, 'decode_single_token_bytes'):  # tiktoken
+        n = tokenizer.n_vocab
+        special = set(tokenizer.special_tokens_set)
+        out = np.zeros(n, dtype=np.int64)
+        for i in range(n):
+            try:
+                b = tokenizer.decode_single_token_bytes(i)
+            except KeyError:  # an unused id
+                continue
+            if b.decode('utf-8', 'replace') not in special:
+                out[i] = len(b)
+        return out
+    raw = getattr(tokenizer, 'backend_tokenizer', tokenizer)
+    vocab = raw.get_vocab(with_added_tokens=True)
+    special = {t.content for t in raw.get_added_tokens_decoder().values()
+               if t.special}
+    byte_level = 'ByteLevel' in raw.to_str()  # one character per byte
+    out = np.zeros(max(vocab.values()) + 1, dtype=np.int64)
+    for piece, i in vocab.items():
+        if piece in special:
+            continue
+        if byte_level:
+            out[i] = len(piece)
+        elif re.fullmatch(r'<0x[0-9A-Fa-f]{2}>', piece):  # byte fallback
+            out[i] = 1
+        else:  # SentencePiece-style: U+2581 marks a space
+            out[i] = len(piece.replace('▁', ' ').encode('utf-8'))
+    return out
+
+R2_SPECIALS = (['<|endoftext|>', '<|pad|>', '<|im_start|>', '<|im_end|>']
+               + [f'<|reserved_{i}|>' for i in range(4, 32)])
+
+def _r2_from_file(path, raw=False, sha256=None):
+    """A reference-format tokenizer.json, its bytes checked against sha256
+    (if given): the Transformers wrapper (EOS id 0, pad id 1, no BOS,
+    special strings in text kept as text), or with raw=True the
+    tokenizers.Tokenizer. A fresh object on every call.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    with open(path, 'rb') as f:
+        data = f.read()
+    if sha256 is not None and hashlib.sha256(data).hexdigest() != sha256:
+        raise ValueError(f'{path}: SHA-256 {hashlib.sha256(data).hexdigest()}'
+                         f', expected {sha256}')
+    from tokenizers import Tokenizer
+    tok = Tokenizer.from_str(data.decode('utf-8'))
+    tok.encode_special_tokens = True
+    if raw:
+        return tok
+    import transformers
+    return transformers.PreTrainedTokenizerFast(
+        tokenizer_object=tok, eos_token='<|endoftext|>', pad_token='<|pad|>',
+        split_special_tokens=True, model_max_length=4096)
+
+def _tok_info(tokenizer):
+    """(vocabulary size, <|endoftext|> id or None, ids of special tokens)
+    of a Transformers tokenizer, a tokenizers.Tokenizer or a tiktoken
+    encoding.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if hasattr(tokenizer, 'encode_ordinary'):  # tiktoken
+        return (tokenizer.n_vocab, d2l._lm_boundary_id(tokenizer),
+                {tokenizer.encode_single_token(s)
+                 for s in tokenizer.special_tokens_set})
+    if hasattr(tokenizer, 'all_special_ids'):  # Transformers
+        special = set(tokenizer.all_special_ids) | {
+            i for i, t in tokenizer.added_tokens_decoder.items() if t.special}
+        return len(tokenizer), d2l._lm_boundary_id(tokenizer), special
+    special = {i for i, t in tokenizer.get_added_tokens_decoder().items()
+               if t.special}
+    return (tokenizer.get_vocab_size(with_added_tokens=True),
+            tokenizer.token_to_id('<|endoftext|>'), special)
+
+def _doc_token_ids(tokenizer, texts):
+    """Token ids of each document text, no special tokens added, and a
+    special-token string inside a text (a page about <|endoftext|>)
+    encoded as ordinary text, for a Transformers tokenizer, a
+    tokenizers.Tokenizer or a tiktoken encoding.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    texts = [str(t) for t in texts]
+    if not texts:
+        return []
+    if hasattr(tokenizer, 'encode_ordinary_batch'):  # tiktoken
+        return tokenizer.encode_ordinary_batch(texts)
+    if hasattr(tokenizer, 'all_special_ids'):  # Transformers
+        return tokenizer(texts, add_special_tokens=False,
+                         split_special_tokens=True)['input_ids']
+    old = tokenizer.encode_special_tokens
+    tokenizer.encode_special_tokens = True
+    try:
+        return [e.ids for e in tokenizer.encode_batch(
+            texts, add_special_tokens=False)]
+    finally:
+        tokenizer.encode_special_tokens = old
+
+_SHARD_EXT = {'bin': '.bin', 'idx': '.idx', 'meta': '.meta.parquet'}
+
+FWEDU_META_COLUMNS = (  # (name, arrow type): the FineWeb-Edu meta columns, in order
+    ('url', 'string'), ('dump', 'string'), ('bucket', 'int16'),
+    ('edu_score', 'float32'), ('int_score', 'int8'), ('gpt2_tokens', 'int32'),
+    ('src_file', 'string'), ('src_row', 'int64'))
+
+def _meta_table(rows):
+    """The meta rows of one shard as a pyarrow Table: doc_id and n_tokens
+    first, then the FineWeb-Edu columns present, in their fixed order and
+    types, then any other column in order of first appearance.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    import pyarrow as pa
+    known = dict([('doc_id', 'string'), ('n_tokens', 'int32')]
+                 + list(d2l.FWEDU_META_COLUMNS))
+    seen = dict.fromkeys(k for r in rows for k in r)
+    cols = [c for c in known if c in seen] + [c for c in seen
+                                              if c not in known]
+    return pa.table({c: pa.array([r.get(c) for r in rows],
+                                  type=getattr(pa, known[c])()
+                                  if c in known else None) for c in cols})
+
+class _ShardWriter:
+    """One shard being written: ids appended to name.bin as they come,
+    offsets and meta rows kept until close() writes name.idx and
+    name.meta.parquet and returns the shard's manifest entry.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    def __init__(self, out_dir, name, dtype):
+        self.out_dir, self.name = out_dir, name
+        self.dtype = np.dtype(dtype).newbyteorder('<')
+        self.f = open(os.path.join(out_dir, name + '.bin'), 'wb')
+        self.offsets, self.rows, self.n_tokens = [0], [], 0
+
+    def add(self, doc_id, ids, extra):
+        self.f.write(np.asarray(ids, dtype=self.dtype).tobytes())
+        self.n_tokens += len(ids)
+        if self.n_tokens >= 2**32:
+            raise ValueError(f'{self.name}: offsets overflow uint32')
+        self.offsets.append(self.n_tokens)
+        self.rows.append(dict(doc_id=str(doc_id), n_tokens=len(ids),
+                              **(extra or {})))
+
+    def close(self):
+        import pyarrow.parquet as pq
+        self.f.close()
+        base = os.path.join(self.out_dir, self.name)
+        np.asarray(self.offsets, dtype='<u4').tofile(base + '.idx')
+        pq.write_table(d2l._meta_table(self.rows), base + '.meta.parquet',
+                       compression='zstd', compression_level=3,
+                       row_group_size=65536)
+        files = {k: base + e for k, e in d2l._SHARD_EXT.items()}
+        return dict(file=self.name, n_tokens=self.n_tokens,
+                    n_docs=len(self.rows),
+                    sha256={k: d2l._sha256_file(p) for k, p in files.items()},
+                    bytes={k: os.path.getsize(p) for k, p in files.items()})
+
+def _fetch_shard_file(shard, ext, path):
+    """Download one file of a shard from the manifest's url, checking its
+    sha1 and then its SHA-256 before it is moved into place.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    tmp = path + '.part'
+    with requests.get(shard['url'][ext], stream=True, timeout=60) as r, \
+            open(tmp, 'wb') as f:
+        r.raise_for_status()
+        for c in r.iter_content(1 << 20):
+            f.write(c)
+    with open(tmp, 'rb') as f:
+        sha1 = hashlib.sha1(f.read()).hexdigest()
+    if sha1 != shard['sha1'][ext] or (d2l._sha256_file(tmp)
+                                      != shard['sha256'][ext]):
+        os.remove(tmp)
+        raise ValueError(f'{shard["url"][ext]}: hash differs from the '
+                         'manifest')
+    os.replace(tmp, path)
+
+def normalize_url(url):
+    """A URL in the form the validation split deduplicates on: scheme and
+    host lower-cased, a leading www. removed, the fragment dropped, a
+    trailing / of the path removed, the query kept.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    import urllib.parse
+    p = urllib.parse.urlsplit(url.strip())
+    host = p.netloc.lower()
+    if host.startswith('www.'):
+        host = host[4:]
+    return urllib.parse.urlunsplit((p.scheme.lower(), host,
+                                    p.path.rstrip('/'), p.query, ''))
 
 
 ones_like = torch.ones_like

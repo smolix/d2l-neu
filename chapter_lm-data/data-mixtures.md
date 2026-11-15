@@ -40,3 +40,53 @@ when the section is written.
 - Code and documentation: [RegMix](https://github.com/sail-sg/regmix) and [DoReMi](https://github.com/sangmichaelxie/doremi) (the reference implementations); [Dolma 3 pool](https://huggingface.co/datasets/allenai/dolma3_pool) (the dataset card and its domain composition); [OLMo](https://github.com/allenai/OLMo) (the training code that consumed it).
 - Courses, tutorials and blogs: [Smol Training Playbook](https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook) (experiment planning and the mixture discussion); [CS336](https://cs336.stanford.edu/) (data mixing lecture and assignment A3's scaling-law fitting as the sibling exercise); [FineWeb blog post](https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1) (ablation discipline).
 -->
+
+<!-- Placeholder (stage 2, infra step): the cells below are the section's
+shared library, written before the section; the prose around them comes with
+the section. Cell ids follow the section specification. -->
+
+```{.python .input #data-mixtures-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #data-mixtures-extras}
+%%tab pytorch
+import hashlib
+```
+
+<!-- Placeholder (stage 2): the bucket rule splits FineWeb-Edu by a hash of each document's id, so a document's split never depends on the files read or their order. -->
+
+```{.python .input #data-mixtures-bucket-def}
+%%tab pytorch
+#@save
+def fwedu_bucket(doc_id):
+    """The bucket (0-255) of a FineWeb-Edu document: the first 32 bits of
+    the SHA-256 of its id string (as released, <urn:uuid:...>) mod 256."""
+    return int(hashlib.sha256(doc_id.encode('utf-8')).hexdigest()[:8],
+               16) % 256
+
+#@save
+FWEDU_BUCKETS = {  # bucket ranges of the chapter's FineWeb-Edu splits
+    'val': range(0, 1),         # the reference model's validation set
+    'side': range(1, 8),        # side pool: 20.4's and 20.5's web training text
+    'side_val': range(8, 9),    # side validation
+    'train': range(9, 256)}     # the reference model's training shards
+```
+
+<!-- Placeholder (stage 2): losses in bits per byte, so that domains and tokenizers with different bytes per token compare. -->
+
+```{.python .input #data-mixtures-proxy-defs}
+%%tab pytorch
+#@save
+def bpb_from_nll(sum_nll_nats, n_bytes):
+    """Bits per byte from a summed negative log-likelihood in nats and the
+    number of UTF-8 bytes the scored tokens stand for."""
+    return float(sum_nll_nats) / (math.log(2) * n_bytes)
+```
+

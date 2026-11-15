@@ -39,3 +39,309 @@ when the section is written.
 - Code and documentation: [Common Crawl, get started](https://commoncrawl.org/get-started) (access and record formats); [warcio](https://github.com/webrecorder/warcio) (the iterator oracle); [Trafilatura documentation](https://trafilatura.readthedocs.io/) (extraction options and its evaluation page); [fastText language identification](https://fasttext.cc/docs/en/language-identification.html) (the 176-language model and its licence); [Unicode Standard Annex 15](https://www.unicode.org/reports/tr15/) (NFC and NFKC, with test cases); [Datatrove](https://github.com/huggingface/datatrove) (readers and extraction stages); [Hugging Face dataset cards](https://huggingface.co/docs/hub/datasets-cards).
 - Courses, tutorials and blogs: [CS336](https://cs336.stanford.edu/) (data sources lecture and assignment A4); [FineWeb blog post](https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1) (the extraction ablation).
 -->
+
+<!-- Placeholder (stage 2, infra step): the cells below are the section's
+shared library, written before the section; the prose around them comes with
+the section. Cell ids follow the section specification. -->
+
+```{.python .input #crawl-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #crawl-extras}
+%%tab pytorch
+import collections
+import gzip
+import hashlib
+import json
+import os
+import re
+```
+
+<!-- Placeholder (stage 2): the pin of the crawl range and the language identifier; the chapter's other artifacts join this registry as they are built. -->
+
+```{.python .input #crawl-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-cc-warc-256m-v1'] = (  # pin only: URLs, sizes, SHA-256s
+    d2l.LM_DATA_URL + 'lm-cc-warc-256m-v1.pin.json',
+    '9444225da3dd569d00b801ad9ae1455431dc1b01')
+d2l.DATA_HUB['lid.176.ftz'] = (  # fastText, 176 languages, CC BY-SA 3.0
+    'https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz',
+    '86d1b630ba55a5040231eda9fe24a7befdc411f2')
+```
+
+<!-- Placeholder (stage 2): every external dataset and model the chapter reads, at a pinned revision, with its licence. -->
+
+```{.python .input #crawl-sources}
+%%tab pytorch
+#@save
+LM_DATA_SOURCES = {  # name: (kind, Hub repository, revision, licence)
+    'fineweb': ('dataset', 'HuggingFaceFW/fineweb',
+                '9bb295ddab0e05d785b879661af7260fed5140fc', 'odc-by'),
+    'fineweb-edu': ('dataset', 'HuggingFaceFW/fineweb-edu',
+                    '87f09149ef4734204d70ed1d046ddc9ca3f2b8f9', 'odc-by'),
+    'fineweb-2': ('dataset', 'HuggingFaceFW/fineweb-2',
+                  'af9c13333eb981300149d5ca60a8e9d659b276b9', 'odc-by'),
+    'edu-annotations': ('dataset', 'HuggingFaceFW/fineweb-edu-llama3-annotations',
+                        '72df4c92fb1b48beceb16016e8f695ec40a6c3a5', 'odc-by'),
+    'finemath': ('dataset', 'HuggingFaceTB/finemath',
+                 'e92b25a616738fe95dc186b64dfb19f9c8525594', 'odc-by'),
+    'codeparrot-clean': ('dataset', 'codeparrot/codeparrot-clean',
+                         '35a59fb025bc0a102f7d96eac09d145b896d487b', 'per-file'),
+    'belebele': ('dataset', 'facebook/belebele',
+                 '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2', 'cc-by-sa-4.0'),
+    'cosmopedia': ('dataset', 'HuggingFaceTB/cosmopedia',
+                   '0ae6ec63f91742bd2d1eaef4f02232c55d719385', 'apache-2.0'),
+    'mmlu': ('dataset', 'cais/mmlu',
+             'c30699e8356da336a370243923dbaf21066bb9fe', 'mit'),
+    'fineweb-edu-classifier': ('model', 'HuggingFaceFW/fineweb-edu-classifier',
+                               '284663cbb2dabf9bda30d8f8cc49601251ee1631',
+                               'apache-2.0')}
+```
+
+<!-- Placeholder (stage 2): a WARC file is a sequence of gzip members, one record each, so any byte prefix parses record by record; the last member of a cut-off prefix is incomplete and is dropped. -->
+
+```{.python .input #crawl-warc-def}
+%%tab pytorch
+#@save
+WarcRecord = collections.namedtuple(
+    'WarcRecord', 'id type url date status mime offset length headers body')
+
+#@save
+def iter_warc(source, n_bytes=None, types=('response',), *, stats=None):
+    """Yield the WARC records of the given types (None: all) from a local
+    path or a URL, reading only the first n_bytes (a Range request for a
+    URL). Each gzip member is decompressed on its own; offset and length
+    are the member's compressed byte range. A member cut off by the end of
+    the input is not yielded: it is counted in stats['truncated'], beside
+    one count per record type (stats is a dict the caller passes)."""
+    for offset, length, raw in d2l._gzip_members(
+            d2l._warc_chunks(source, n_bytes)):
+        if raw is None:
+            if stats is not None:
+                stats['truncated'] = stats.get('truncated', 0) + 1
+            continue
+        rec = d2l._warc_parse(raw, offset, length)
+        if stats is not None:
+            stats[rec.type] = stats.get(rec.type, 0) + 1
+        if types is None or rec.type in types:
+            yield rec
+```
+
+<!-- Placeholder (stage 2): the pinned range is fetched once, block by block, and every 16 MiB block is checked against the SHA-256 in the pin before it is kept. -->
+
+```{.python .input #crawl-fetch-def}
+%%tab pytorch
+#@save
+def fetch_warc_range(pin='lm-cc-warc-256m-v1', n_bytes=None, cache_dir=None,
+                     *, which='warc'):
+    """Local path of the pinned Common Crawl bytes: which='warc' gives the
+    first n_bytes of the pinned range (a multiple of the 16 MiB block; None
+    for the whole range), fetched with Range requests and checked block by
+    block against the pin's SHA-256s; which='wet' gives the whole WET file
+    of the same segment, checked as one file. With D2L_OFFLINE=1 only a
+    verified local copy is used. The bytes stay in cache_dir (default
+    ../data/lm/cc); they are never committed or uploaded."""
+    import pathlib
+    with open(d2l.download_keyed(pin)) as f:
+        spec = json.load(f)
+    cache = pathlib.Path(cache_dir or os.path.join('..', 'data', 'lm', 'cc'))
+    cache.mkdir(parents=True, exist_ok=True)
+    offline = os.environ.get('D2L_OFFLINE') == '1'
+    if which == 'wet':
+        if n_bytes is not None:
+            raise ValueError('the WET file is fetched and checked whole')
+        return d2l._fetch_whole(spec['wet'], cache, offline)
+    if which != 'warc':
+        raise ValueError(f"which is 'warc' or 'wet', not {which!r}")
+    warc, block = spec['warc'], spec['warc']['block_bytes']
+    n_bytes = warc['n_bytes'] if n_bytes is None else n_bytes
+    if n_bytes % block or not 0 < n_bytes <= warc['n_bytes']:
+        raise ValueError(f'n_bytes must be a multiple of {block} up to '
+                         f'{warc["n_bytes"]}')
+    path = cache / f'{pin}.warc.gz'
+    have = d2l._verified_blocks(path, warc['block_sha256'], block,
+                                n_bytes // block)
+    if have * block < n_bytes:
+        if offline:
+            raise RuntimeError(
+                f'D2L_OFFLINE=1 and {path} holds {have} verified blocks of '
+                f'{n_bytes // block}: run once with network access, or fetch '
+                f'bytes 0-{n_bytes - 1} of {warc["url"]} into {path}')
+        d2l._fetch_blocks(warc, path, have, n_bytes // block)
+    return path
+```
+
+<!-- Placeholder (stage 2): a document is a record with its provenance; the content hash of a set of documents does not depend on their order. -->
+
+```{.python .input #crawl-doc-def}
+%%tab pytorch
+#@save
+Doc = collections.namedtuple(
+    'Doc', 'id url date text lang lang_score src log flags')
+
+#@save
+def write_docs(path, docs):
+    """Write documents (Doc or dicts with Doc's fields) as gzip-compressed
+    JSON lines, keys sorted and no time stamp in the gzip header, so equal
+    documents give equal bytes."""
+    with open(path, 'wb') as raw, gzip.GzipFile(
+            filename='', mode='wb', fileobj=raw, mtime=0) as f:
+        for d in docs:
+            row = d._asdict() if hasattr(d, '_asdict') else dict(d)
+            f.write((json.dumps(row, ensure_ascii=False, sort_keys=True)
+                     + '\n').encode('utf-8'))
+
+#@save
+def read_docs(path):
+    """The documents of a file written by write_docs, as a list of Doc
+    (fields missing from a row are None)."""
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        rows = [json.loads(line) for line in f]
+    return [d2l.Doc(**{k: r.get(k) for k in d2l.Doc._fields}) for r in rows]
+
+#@save
+def docs_hash(docs):
+    """SHA-256 over the sorted (id, SHA-256 of the text) pairs: the content
+    of a document set, independent of its order. Takes Doc-like objects,
+    dicts or (id, text) pairs."""
+    def pair(d):
+        if isinstance(d, dict):
+            return d['id'], d['text']
+        if hasattr(d, 'text'):
+            return d.id, d.text
+        return d[0], d[1]
+    keys = sorted((str(i), hashlib.sha256((t or '').encode('utf-8'))
+                   .hexdigest()) for i, t in map(pair, docs))
+    h = hashlib.sha256()
+    for i, t in keys:
+        h.update(f'{i}\t{t}\n'.encode('utf-8'))
+    return h.hexdigest()
+```
+
+<!-- Placeholder (stage 2): the corpus manifest `d2l-corpus/1`; every stage satisfies n_in = n_out + sum(drops), and the canonical JSON (sorted keys, no time stamps, no absolute paths) is what the hash covers. -->
+
+```{.python .input #crawl-manifest-def}
+%%tab pytorch
+#@save
+class CorpusManifest:
+    """The provenance of a corpus (schema d2l-corpus/1): its sources, the
+    stages that turned them into documents, and, once tokenized, the
+    tokenizer, the shard format and the splits. Each stage satisfies
+    n_in == n_out + sum(drops), a document being charged to the first rule
+    that drops it. The canonical JSON has sorted keys, no spaces, floats
+    rounded to 4 decimals and no absolute paths; sha256() hashes it."""
+    SCHEMA = 'd2l-corpus/1'
+
+    def __init__(self, name, sources=None, stages=None, tokenizer=None,
+                 format=None, splits=None):
+        self.name, self.tokenizer, self.format = name, tokenizer, format
+        self.sources, self.stages = list(sources or []), list(stages or [])
+        self.splits = splits
+
+    def add_source(self, id, uri, revision=None, license=None, n_docs=None,
+                   bytes=None, **extra):
+        self.sources.append(dict(id=id, uri=uri, revision=revision,
+                                 license=license, n_docs=n_docs,
+                                 bytes=bytes, **extra))
+        return self
+
+    def add_stage(self, name, params, n_in, n_out, drops, in_hash, out_hash,
+                  *, impl=None, version=None, tokens_out=None):
+        drops = {str(k): int(v) for k, v in (drops or {}).items()}
+        if n_in != n_out + sum(drops.values()):
+            raise ValueError(f'stage {name}: n_in {n_in} != n_out {n_out} '
+                             f'+ drops {sum(drops.values())}')
+        self.stages.append(dict(
+            name=name, impl=impl, version=version, params=params,
+            n_in=int(n_in), n_out=int(n_out), tokens_out=tokens_out,
+            drops=drops, in_hash=in_hash, out_hash=out_hash))
+        return self
+
+    def to_dict(self):
+        return dict(schema=self.SCHEMA, name=self.name, sources=self.sources,
+                    stages=self.stages, tokenizer=self.tokenizer,
+                    format=self.format, splits=self.splits)
+
+    def canonical_json(self):
+        def clean(x, where):
+            if isinstance(x, float):
+                if x != x or x in (float('inf'), float('-inf')):
+                    raise ValueError(f'{where}: {x} has no JSON form')
+                return round(x, 4)
+            if isinstance(x, (np.integer, np.floating, np.bool_)):
+                return clean(x.item(), where)
+            if isinstance(x, str) and (x.startswith('/') or
+                                       re.match(r'[A-Za-z]:\\', x)):
+                raise ValueError(f'{where}: absolute path {x!r}')
+            if isinstance(x, dict):
+                return {str(k): clean(v, f'{where}.{k}')
+                        for k, v in x.items()}
+            if isinstance(x, (list, tuple)):
+                return [clean(v, f'{where}[{i}]') for i, v in enumerate(x)]
+            return x
+        return json.dumps(clean(self.to_dict(), 'manifest'), sort_keys=True,
+                          separators=(',', ':'), ensure_ascii=False)
+
+    def sha256(self):
+        return hashlib.sha256(self.canonical_json().encode('utf-8')
+                              ).hexdigest()
+
+    def save(self, path):
+        """Write the canonical JSON, so the file's SHA-256 is sha256()."""
+        with open(path, 'wb') as f:
+            f.write(self.canonical_json().encode('utf-8'))
+        return path
+
+    @classmethod
+    def load(cls, path):
+        with open(path, encoding='utf-8') as f:
+            d = json.load(f)
+        if d.get('schema') != cls.SCHEMA:
+            raise ValueError(f'{path}: schema {d.get("schema")!r}, '
+                             f'expected {cls.SCHEMA}')
+        return cls(d['name'], d.get('sources'), d.get('stages'),
+                   d.get('tokenizer'), d.get('format'), d.get('splits'))
+
+    def to_card(self):
+        """A Markdown dataset card generated from the manifest alone."""
+        lines = [f'# Dataset card: {self.name}', '',
+                 f'Schema `{self.SCHEMA}`, manifest SHA-256 '
+                 f'`{self.sha256()[:16]}…`.', '', '## Sources', '',
+                 '| id | uri | revision | license | documents | bytes |',
+                 '|---|---|---|---|---|---|']
+        for s in self.sources:
+            lines.append('| ' + ' | '.join(str(s.get(k, '')) for k in (
+                'id', 'uri', 'revision', 'license', 'n_docs', 'bytes')) + ' |')
+        lines += ['', '## Processing stages', '',
+                  '| stage | implementation | in | out | dropped (reason: count) |',
+                  '|---|---|---|---|---|']
+        for s in self.stages:
+            impl = ' '.join(str(v) for v in (s.get('impl'), s.get('version'))
+                            if v)
+            drops = ', '.join(f'{k}: {v}' for k, v in s['drops'].items()
+                              ) or '—'
+            lines.append(f'| {s["name"]} | {impl or "—"} | {s["n_in"]} | '
+                         f'{s["n_out"]} | {drops} |')
+        if self.tokenizer:
+            lines += ['', '## Tokenizer', '', '```',
+                      json.dumps(self.tokenizer, sort_keys=True), '```']
+        if self.format:
+            lines += ['', '## Format', '', '```',
+                      json.dumps(self.format, sort_keys=True), '```']
+        if self.splits:
+            lines += ['', '## Splits', '', '| split | documents | tokens | shards |',
+                      '|---|---|---|---|']
+            for k, v in sorted(self.splits.items()):
+                lines.append(f'| {k} | {v.get("n_docs")} | {v.get("n_tokens")}'
+                             f' | {len(v.get("shards", []))} |')
+        return '\n'.join(lines) + '\n'
+```
+

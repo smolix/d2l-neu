@@ -1,6 +1,16 @@
 # Retrieval-Augmented Generation
 :label:`sec_lm_rag`
 
+<!-- OPEN (author, 2026-11-14): judge calibration vs the new generator.
+The judge (Qwen3.8-27B, thinking on) was validated on lm-rag-judge-labels-v1, whose
+answers come from Qwen3-4B, the earlier generator. The generator is now Qwen3.5-9B.
+A stronger generator makes subtler mistakes, so re-check the judge on about 100 dev
+answers from the new generator, labelled by the same two frontier models (Claude
+Opus 5.5, Gemini 4 Argon). Cost: about $2 of OpenRouter calls. Deferred by the author
+until the Fable pass, which may change more. Ask Alex before making the call.
+Until then the text must say that the calibration labels were made on the earlier
+generator's answers. Details: scratch ch19/judge.md and AUTHOR_DECISIONS.md. -->
+
 <!-- Author brief, copied verbatim from the Language Models part plan
 (docs/llm/language_models_part_plan.md, "2.5 Retrieval-Augmented Generation · T1").
 Blueprint: docs/llm/blueprints/ch02_encoders.md section 2.5.

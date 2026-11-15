@@ -63,7 +63,7 @@ ENC, DEC = 'answerdotai/ModernBERT-base', 'Qwen/Qwen3-1.7B'
 GPU = torch.cuda.is_available()
 SMALL = not GPU  # the CPU path: registered results, shorter live checks
 ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
-    'bert-sweep': ('lm-enc-bert-sweep-v1', 'lm-enc-bert-sweep.json'),
+    'bert-sweep': ('lm-enc-bert-sweep-v2', 'lm-enc-bert-sweep.json'),
     'bert-ckpt': ('lm-enc-modernbert-mnli-v1', 'lm-enc-modernbert-mnli.zip'),
     'bert-tagging': ('lm-enc-bert-tagging-v1', 'lm-enc-bert-tagging.json'),
     'bert-decoder': ('lm-enc-bert-decoder-v1', 'lm-enc-bert-decoder.json')}
@@ -73,10 +73,11 @@ assert 'bert-ckpt' not in RERUN or 'bert-sweep' in RERUN, \
 RERUN |= {'bert-ckpt'} if 'bert-sweep' in RERUN else set()
 assert GPU or not RERUN, 'regenerating the results needs a GPU'
 N_MNLI, N_SST = (250, 1000, 4000, 16000), (100, 500, 2000, 8000)
-SEEDS, SHOTS, LRS = (0, 1, 2), (0, 4, 8), (2e-5, 5e-5, 8e-5)
+SEEDS, SHOTS, LRS = (0, 1, 2), (0, 4, 8), (2e-5, 5e-5, 8e-5, 1.5e-4)
 MAXLEN = {'mnli': 128, 'sst2': 64}
 N_EVAL = {'mnli': 2000, 'sst2': 872}  # validation items every model scores
 N_CARVE, N_HYP, EPOCHS, BATCH = 2000, 5000, 2, 32
+MIN_STEPS = 300  # optimizer steps of the smallest runs (more epochs)
 SIZES = {'mnli': N_MNLI, 'sst2': N_SST}
 LABELS = {'mnli': ('entailment', 'neutral', 'contradiction'),
           'sst2': ('negative', 'positive')}
@@ -91,7 +92,8 @@ N_POOL, MIN_WORDS = 1000, {'mnli': 1, 'sst2': 8}  # demonstrations: the pool
 CONFIG = {  # what each result is made with; reading one checks it
     'bert-sweep': dict(model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC],
                        sizes=SIZES, seeds=SEEDS, lrs=LRS, maxlen=MAXLEN,
-                       epochs=EPOCHS, batch=BATCH, n_carve=N_CARVE,
+                       epochs=EPOCHS, min_steps=MIN_STEPS, batch=BATCH,
+                       n_carve=N_CARVE,
                        n_hyp=N_HYP, head='pretrained dense and norm'),
     'bert-tagging': dict(model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC],
                          lr=TAG_LR, epochs=EPOCHS, batch=BATCH),
@@ -171,6 +173,9 @@ d2l.DATA_HUB['conll2003-labels'] = (
 d2l.DATA_HUB['lm-enc-bert-sweep-v1'] = (  # D2L_RERUN=bert-sweep, RTX 4090
     d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v1.json',
     '06440f0e5acbd7b91deb6b66f8402f8bea8d6155')
+d2l.DATA_HUB['lm-enc-bert-sweep-v2'] = (  # at least 300 steps per run
+    d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v2.json',
+    'e1ceabe56f1d40d2a71e3ef6a4ccb9dbc6d2d220')
 d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
     d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
     '36365804df9df70b812f52595ee6d092639285c1')
@@ -318,6 +323,20 @@ print(pd.Series({
     'vocabulary': c.vocab_size, 'classifier pooling': c.classifier_pooling,
     'parameters': f'{sum(p.numel() for p in encoder.parameters()):,}'}
                 ).to_string())
+BANK = {'river': 'The boat drifted to the bank of the river.',
+        'check': 'She paid the check in at the bank.',
+        'rate': 'The bank raised its interest rate.'}
+V = {}  # the vector of "bank" after the embedding layer and after the last
+for w, text in BANK.items():
+    x = tok(text, return_tensors='pt').to(dev)
+    i = x['input_ids'][0].tolist().index(tok.convert_tokens_to_ids('Ġbank'))
+    with torch.inference_mode():
+        h = encoder(**x, output_hidden_states=True).hidden_states
+    V[w] = (h[0][0, i], h[-1][0, i])
+for a, b in (('river', 'check'), ('river', 'rate'), ('check', 'rate')):
+    print(f'cos(bank, {a} / {b}): ' + ', '.join(
+        f'{name} {F.cosine_similarity(V[a][j], V[b][j], dim=0):.2f}'
+        for j, name in enumerate(('embedding layer', 'last layer'))))
 ```
 
 The tokenizer writes the pair as `[CLS] premise [SEP] hypothesis [SEP]`, as
@@ -332,8 +351,12 @@ separator alone marks where the hypothesis begins.
 
 The output has shape (1, 16, 768), one vector of 768 numbers per token.
 Unlike the word vectors of :numref:`sec_lm_word_embeddings`, these depend on
-the whole input. "Bank" beside a river and "bank" beside a teller get
-different vectors, and the encoder need not choose between the two senses.
+the whole input. The last lines of the cell show it for *bank* in three
+sentences. After the embedding layer its vector is the same in all three
+(cosine 1.00): the table holds one row per token. After the last layer the
+bank of a river and a bank that takes a check have a cosine of 0.68, while
+the two banks that deal in money have 0.85. The encoder need not choose
+between the two senses.
 Since the pair enters as one input, every layer also lets each token of the
 hypothesis attend to every token of the premise:
 the two texts are compared word by word before anything is pooled. An
@@ -651,10 +674,12 @@ examples with the cross-entropy loss, briefly and with small steps.
 decay 0.01 on the weight matrices, a learning rate that rises linearly over
 the first 10% of the steps and then falls linearly to zero, and gradients
 clipped at norm 1. Warmup and clipping protect the pretrained weights from
-the large gradients of a new layer that starts at random. We train two epochs
-in batches of 32 and choose the learning rate among $2 \times 10^{-5}$,
-$5 \times 10^{-5}$ and $8 \times 10^{-5}$ on 2,000 held-out training pairs,
-never on the validation items. Products run in bf16 with fp32 weights. Each
+the large gradients of a new layer that starts at random. We train in
+batches of 32 for two epochs, or for as many more as it takes to reach 300
+optimizer steps on a small training set (why the floor matters is measured
+below), and choose the learning rate among $2 \times 10^{-5}$,
+$5 \times 10^{-5}$, $8 \times 10^{-5}$ and $1.5 \times 10^{-4}$ on 2,000
+held-out training pairs, never on the validation items. Products run in bf16 with fp32 weights. Each
 batch is padded to its own longest example, not to the limit of 128 tokens,
 which would spend most of the arithmetic on pad tokens.
 
@@ -858,9 +883,15 @@ def pad(seqs):
     M = torch.tensor([[1] * len(s) + [0] * (T - len(s)) for s in seqs])
     return X.to(dev), M.to(dev)
 
+def n_epochs(n):
+    """EPOCHS passes over n examples, or more for at least MIN_STEPS
+    optimizer steps."""
+    return max(EPOCHS, math.ceil(MIN_STEPS / math.ceil(n / BATCH)))
+
 def finetune(task, train, ev, lr, seed):
     """A fresh copy of the encoder under the pretrained dense and norm
-    and a new final layer, initialized as in Transformers from seed."""
+    and a new final layer, initialized as in Transformers from seed, trained
+    for n_epochs(len(train)) epochs."""
     c = encoder.config
     model = d2l.PooledClassifier(copy.deepcopy(encoder), len(LABELS[task]),
                                  pooling=c.classifier_pooling)
@@ -870,8 +901,8 @@ def finetune(task, train, ev, lr, seed):
     nn.init.trunc_normal_(model.classifier.weight, std=std, a=-cut * std,
                           b=cut * std)
     nn.init.zeros_(model.classifier.bias)
-    return model, d2l.finetune_classifier(model, train, ev, lr, EPOCHS,
-                                          BATCH, seed)
+    return model, d2l.finetune_classifier(model, train, ev, lr,
+                                          n_epochs(len(train)), BATCH, seed)
 
 def predict(model, data, batch_size=64):
     with torch.inference_mode():
@@ -921,8 +952,9 @@ at what size does it clearly beat the majority rate of 0.363 on MNLI? The
 sweep fine-tunes a fresh encoder at every size with three seeds. A seed fixes
 the new layer's initial weights and the order of the batches; ModernBERT uses
 no dropout. The learning rate is chosen per task at the largest size. All
-four stored results of this section took about 27 minutes to compute on one
-RTX 4090.
+four stored results of this section took about half an hour to compute on
+one RTX 4090. Beside the grid the cell prints the grid of our first recipe,
+which trained two epochs at every size, however small.
 
 ```{.python .input #bert-sweep}
 %%tab pytorch
@@ -986,42 +1018,57 @@ runs = pd.DataFrame(SWEEP['runs'])
 grid = runs.groupby(['task', 'n']).acc.agg(['mean', 'min', 'max'])
 grid['range'] = grid['max'] - grid['min']
 print('learning rates:', {t: v['chosen'] for t, v in SWEEP['lr'].items()})
-print(grid[['mean', 'range']].round(3).to_string())
+with open(d2l.lm_registered('lm-enc-bert-sweep-v1')) as f:  # two epochs at
+    old = pd.DataFrame(json.load(f)['runs'])  # every size, the first recipe
+old = old.groupby(['task', 'n']).acc.agg(['mean', 'min', 'max'])
+grid['steps'] = [n_epochs(n) * math.ceil(n / BATCH) for _, n in grid.index]
+grid['2 epochs: steps'] = [EPOCHS * math.ceil(n / BATCH) for _, n in grid.index]
+grid['mean '], grid['range '] = old['mean'], old['max'] - old['min']
+print(grid[['steps', 'mean', 'range', '2 epochs: steps', 'mean ', 'range ']]
+      .to_string(float_format='{:.3f}'.format))
 for task in SIZES:  # the seed range at the smallest size against size steps
     g = grid.loc[task]
     print(f'{task}: seed range at n = {g.index[0]}: {g["range"].iloc[0]:.3f}; '
           f'median gain per size step: {np.median(np.diff(g["mean"])):.3f}')
 ```
 
-Both tasks chose the largest learning rate, $8 \times 10^{-5}$. SST-2 climbs
-as one would expect, from 0.58 with 100 sentences to 0.93 with 8,000. MNLI does not. With 250
-pairs the encoder reaches 0.376, hardly above the majority rate. With 1,000
-it averages 0.47, but its seeds lie 0.158 apart: some runs have begun to
-learn the task and others have not. From 4,000 pairs on it is a good
-classifier, at 0.75 and then 0.84, and at 16,000 its seeds agree to within
-0.003.
+Both tasks chose $8 \times 10^{-5}$, inside the grid. SST-2 climbs from 0.67
+with 100 sentences to 0.93 with 8,000. MNLI climbs from 0.44 with 250 pairs
+to 0.63 with 1,000, 0.76 with 4,000 and 0.84 with 16,000, where the seeds
+agree to within 0.003.
 
-With few labels, the seed moves accuracy as much as the next step up in data.
-From one size of the grid to the next, accuracy gains a median of 0.098 on
-MNLI and 0.114 on SST-2. The seeds lie 0.158 apart at 1,000 MNLI pairs and
-0.142 apart at 100 SST-2 sentences. :citet:`Dodge.Ilharco.Schwartz.ea.2020` found the same for
-BERT on four tasks of GLUE :cite:`Wang.Singh.Michael.ea.2019`, the benchmark suite on which BERT made its name:
-the seed alone moved validation scores about as much as newer methods claimed
-to gain. Two fine-tuning methods compared at a few hundred examples with one
-seed each may differ only in their seeds.
+The first recipe gave a different picture of the small sizes. Two epochs of
+250 pairs in batches of 32 are 16 optimizer steps, and of 1,000 pairs 64.
+With 250 pairs that recipe reached 0.376, hardly above the majority rate.
+With 1,000 it averaged 0.474, and its seeds lay 0.158 apart: some runs had
+begun to learn the task and others had not. With at least 300 steps the same
+pairs give 0.436 and 0.632, and the seeds at 1,000 pairs agree to within
+0.022. Most of what looked like seed noise was a run too short to finish
+learning. :citet:`Mosbach.Andriushchenko.Klakow.2021` traced much of the
+unstable fine-tuning of BERT on small datasets to optimization, with too few
+training steps as one cause, and found that training longer removed most of
+the failed runs.
 
-A small range is no comfort either. At 250 pairs the three seeds agree to
-within 0.046, but only because all three sit near the majority rate.
-Agreement among seeds shows that a result is reproducible. It does not show
-that the result is good.
+Where labels are fewest the seed still matters. From one size of the grid to
+the next, accuracy gains a median of 0.129 on MNLI and 0.055 on SST-2. On
+MNLI no seed range exceeds 0.031, but at 100 SST-2 sentences the seeds lie
+0.101 apart, more than a step up in data.
+:citet:`Dodge.Ilharco.Schwartz.ea.2020` found such spreads for BERT on four
+tasks of GLUE :cite:`Wang.Singh.Michael.ea.2019`, the benchmark suite on
+which BERT made its name: the seed alone moved validation scores about as
+much as newer methods claimed to gain. Two fine-tuning methods compared at a
+few hundred examples with one seed each may differ only in their seeds, or
+in how long they trained.
 
-The left end of the MNLI curve measures the recipe as well as the encoder.
-Two epochs of 250 pairs in batches of 32 are 16 optimizer steps, at a
-learning rate chosen for 16,000 pairs and at the top of the grid. A schedule
-and rate chosen for each size, with the present ones among the candidates,
-can be expected to raise the small sizes' accuracies (Exercise
-:exref:`ex_lm_bert-schedule`). The comparisons below are those of this
-recipe, and at small sizes it errs in the decoder's favor.
+A small range is no comfort either. Under the first recipe the seeds at 250
+MNLI pairs agreed to within 0.046, but only because all three sat near the
+majority rate. Agreement among seeds shows that a result is reproducible. It
+does not show that the result is good.
+
+One choice still favors the large sizes: the learning rate is chosen once
+per task, at the largest size. Choosing it for each size takes held-out
+labels, and a task with 250 labeled pairs has few to spare (Exercise
+:exref:`ex_lm_bert-schedule`).
 
 Two live checks tie the stored results to the code. The first retrains one
 cell of the grid, 1,000 MNLI pairs with seed 0.
@@ -1046,7 +1093,7 @@ del model
 d2l.lm_free()
 ```
 
-The live run reaches 0.529, as the stored run did, with the same prediction
+The live run reaches 0.645, as the stored run did, with the same prediction
 on all 2,000 items. The second check loads the stored classifier, whose
 weights were saved in bf16, and predicts the validation items. It stays
 loaded for the timing below.
@@ -1353,6 +1400,12 @@ for task in DATA:
                                 'CI high': b.ci[1]}
 print(pd.DataFrame(rows).T.rename_axis(['task', 'shots', 'draw']).round(3)
       .to_string())
+print('MNLI, 8 shots, the three draws together: gold (rows) and predicted')
+gold = np.tile(SWEEP['eval']['mnli']['label'], DRAWS[8])
+print(pd.crosstab(pd.Categorical(gold, range(3)).rename_categories(
+    LABELS['mnli']), pd.Categorical(np.concatenate(DECODER['pred']['mnli'][
+        '8']), range(3)).rename_categories(LABELS['mnli']),
+                  dropna=False).rename_axis(index=None, columns=None))
 m = LIVE['dec_items']
 live = classify('mnli', 8, DATA['mnli']['eval_df'].iloc[:m])
 reg = np.array(DECODER['scores'][:m])
@@ -1373,7 +1426,11 @@ reaches 0.40 without examples, a little above the majority rate, and 0.62 to
 0.946. Sentiment is everywhere in the text a decoder is pretrained on, so a
 few examples suffice to name the task. Which pairs MNLI calls entailment,
 neutral or contradiction is a convention of its annotators, and eight
-examples convey it only in part.
+examples convey it only in part. The confusion counts show which part. Over
+the three sets of examples the decoder calls 848 entailed pairs neutral and
+456 contradictions neutral, but takes an entailment for a contradiction, or
+the reverse, only 188 times: nearly all of its errors are about where
+"maybe" begins.
 
 ### Baselines on Word Counts
 
@@ -1507,7 +1564,7 @@ def decoder_band(task, k):
     b = d2l.bootstrap_ci(correct(preds[0], task), cluster=DATA[task]['cluster'])
     return b.mean, *b.ci
 
-_, axes = d2l.plt.subplots(2, 2, figsize=(8, 6.4))
+fig, axes = d2l.plt.subplots(2, 2, figsize=(8, 7))
 for ax, task in zip(axes, ('mnli', 'sst2')):
     acc = runs.query('task == @task').groupby('n').acc
     sizes, big = acc.mean().index.to_numpy(), acc.get_group(acc.mean().index[-1])
@@ -1538,10 +1595,14 @@ for ax, task in zip(axes, ('mnli', 'sst2')):
 for top, bottom in zip(*axes):  # the top row's legends serve both rows
     top.legend(fontsize='small')
     bottom.get_legend().remove()
+axes[0][0].get_legend().remove()  # the curves' legend goes below the plots
+fig.legend(*axes[0][0].get_legend_handles_labels(), loc='lower center',
+           ncol=3, fontsize='small')
+fig.subplots_adjust(bottom=0.16)
 ```
 
-On MNLI the encoder's curve climbs through the decoder's lines between 1,000
-and 4,000 pairs. On SST-2 it meets them only at the right edge. On the right,
+On MNLI the encoder's curve reaches the decoder's lines at 1,000 pairs and
+lies above them from 4,000. On SST-2 it meets them only at the right edge. On the right,
 the encoder sits two decades to the left of the 8-shot decoder, at equal or
 higher accuracy.
 
@@ -1596,16 +1657,14 @@ for task in ('mnli', 'sst2'):
     print(table.to_string(float_format=lambda v: f'{v:.3f}'))
 ```
 
-On MNLI the decoder leads at 250 pairs, by 0.255 (the nine intervals lie
-between 0.19 and 0.32). At 1,000 pairs it is still ahead in all nine
-pairings, by 0.16 on average with intervals from 0.06 to 0.30. The rule
-withholds a verdict there only because the seeds lie as far apart, 0.158, as
-the gap is wide. From 4,000 on the encoder leads, by 0.12 (the nine intervals
-lie between 0.02 and 0.20) and by 0.21 at 16,000 (between 0.17 and 0.25).
-With this recipe, the fine-tuned encoder passes the 8-shot decoder on MNLI
-once it has seen between 1,000 and 4,000 labeled pairs. On SST-2 the decoder
-leads up to 2,000 sentences, still by 0.046 there (the nine intervals lie
-between 0.006 and 0.088). At 8,000 the gap is within noise, $-0.009$ with
+On MNLI the decoder leads at 250 pairs, by 0.195 (the nine intervals lie
+between 0.14 and 0.25). At 1,000 pairs the two are level: the mean gap is
+0.001, and the nine intervals run from $-0.05$ to 0.05. From 4,000 on the
+encoder leads, by 0.13 (the nine intervals lie between 0.07 and 0.18) and by
+0.21 at 16,000 (between 0.17 and 0.25). The fine-tuned encoder draws level
+with the 8-shot decoder on MNLI at about 1,000 labeled pairs and passes it
+by 4,000. On SST-2 the decoder leads up to 2,000 sentences, still by 0.036
+there (the nine intervals lie between 0.001 and 0.071). At 8,000 the gap is within noise, $-0.009$ with
 intervals from $-0.037$ to 0.022: the encoder catches up on sentiment but
 does not pass.
 
@@ -1624,7 +1683,7 @@ decoder already knows. The cost per item does not: at every size the encoder lab
 | situation | prefer | because |
 |---|---|---|
 | no labels, or a few hundred | prompted decoder | at 250 MNLI pairs and at 100 to 2,000 SST-2 sentences the decoder was ahead |
-| thousands of labels for a fixed task | fine-tuned encoder | on MNLI it passed 8 shots from 4,000 pairs; on SST-2 it caught up at 8,000 |
+| thousands of labels for a fixed task | fine-tuned encoder | on MNLI it drew level with 8 shots at 1,000 pairs and passed them from 4,000; on SST-2 it caught up at 8,000 |
 | many items, high throughput | fine-tuned encoder | about a hundredth of the time per item |
 | a label set that changes often | prompted decoder | a new label is a new prompt, not a new training run |
 | a label for every word | fine-tuned encoder | one vector per token, read by a small head |
@@ -1645,12 +1704,13 @@ sides, and a small head, fine-tuned together with all of the encoder's
 weights, turns these vectors into a label for a sentence, for a pair of
 sentences read together, or for every word. Fine-tuned this way,
 ModernBERT-base reached 0.84 on MNLI with 16,000 pairs, 0.93 on SST-2 with
-8,000 sentences, and a span F1 of about 0.95 on CoNLL-2003. With few labels
-the seed moved accuracy as much as the next step up in data, and a model that
-never saw the premise still reached about 0.53 on MNLI against a majority
-rate of 0.36. Against Qwen3-1.7B with 8 solved examples, the encoder, trained
-for two epochs at every size, passed on MNLI between 1,000 and 4,000 labeled
-pairs and caught up on SST-2 at 8,000, at about a hundredth of the time per
+8,000 sentences, and a span F1 of about 0.95 on CoNLL-2003. Runs on small
+training sets need enough optimizer steps: with two epochs, seeds at 1,000
+MNLI pairs lay 0.16 apart, and with 300 steps they agreed to 0.02 at a far
+higher accuracy. A model that never saw the premise still reached about 0.53
+on MNLI against a majority rate of 0.36. Against Qwen3-1.7B with 8 solved
+examples, the encoder drew level on MNLI at 1,000 labeled pairs, passed it by
+4,000 and caught up on SST-2 at 8,000, at about a hundredth of the time per
 example. Prompting suits few labels and changing tasks; a fine-tuned encoder
 suits a fixed task with thousands of labels and many items to label.
 
@@ -1730,15 +1790,19 @@ suits a fixed task with thousands of labels and many items to label.
        different if you count annotators' time for the 4,000 labels?
    :exlabel:`ex_lm_bert-prefix`
 
-1. [code] **A schedule for small data.** The recipe trains two passes at
-   every size, so 250 MNLI pairs get 16 steps.
-    1. At 250 and 1,000 pairs, train with three seeds for a fixed number of
-       steps instead (try 300 and 1,000), choosing the learning rate on the
-       held-out pairs at that size.
-    1. Recompute the crossing with the 8-shot decoder. Does it move below
-       1,000 pairs?
-    1. Did the seed range at 1,000 pairs shrink? What does that say about the
-       source of the spread in the stored grid?
+1. [code] **A learning rate for each size.** The recipe chooses the
+   learning rate once per task, at the largest size, and trains at least 300
+   steps.
+    1. At 250 and 1,000 MNLI pairs, choose the learning rate from the grid
+       for that size: once on the 2,000 held-out pairs, and once on 50 pairs
+       carved from the training set itself, training on the rest.
+    1. Recompute the crossing with the 8-shot decoder for both choices. Does
+       the encoder pass the decoder at 1,000 pairs?
+    1. Train 1,000 pairs for 1,000 steps instead of 320. Does the accuracy
+       or the seed range change, and what does that say about the floor of
+       300 steps?
+    1. Which of the two choices of learning rate could a team with only 250
+       labels make? What does the other one cost them in labels?
    :exlabel:`ex_lm_bert-schedule`
 
 1. [code] **Extractive question answering.** Put a start logit and an end
@@ -1981,12 +2045,13 @@ the mean.
 :::
 :::
 
-::: {.slide title="Fine-Tuning Trains Every Weight, in Small Steps, for Two Epochs"}
+::: {.slide title="Fine-Tuning Trains Every Weight, in Small Steps, for at Least 300 of Them"}
 - AdamW, weight decay 0.01 on matrices.
 - Warmup over 10% of the steps, linear decay, clipping at norm 1: the new
   layer starts random.
-- Batch 32, two epochs; learning rate from $\{2, 5, 8\} \times 10^{-5}$ on
-  held-out training pairs. Chosen: $8 \times 10^{-5}$.
+- Batch 32, two epochs or at least 300 steps; learning rate from
+  $\{2, 5, 8, 15\} \times 10^{-5}$ on held-out training pairs. Chosen:
+  $8 \times 10^{-5}$.
 - bf16 products, fp32 weights; each batch padded to its own longest pair.
 - A seed fixes the new layer's initialization and the batch order (no
   dropout in ModernBERT).
@@ -1997,24 +2062,22 @@ the mean.
 :::
 :::
 
-::: {.slide title="With Few Labels, the Seed Moves Accuracy as Much as the Next Step Up in Data"}
+::: {.slide title="Too Few Optimizer Steps Look Like Seed Noise"}
 [Seeds and sample size]{.kicker}
 
 | MNLI pairs | 250 | 1,000 | 4,000 | 16,000 |
 |---|---|---|---|---|
-| mean of 3 seeds | 0.376 | 0.474 | 0.752 | 0.839 |
-| seed range | 0.046 | 0.158 | 0.102 | 0.003 |
+| two epochs: steps | 16 | 64 | 250 | 1,000 |
+| mean, seed range | 0.376, 0.046 | 0.474, 0.158 | 0.752, 0.102 | 0.839, 0.003 |
+| at least 300 steps | 304 | 320 | 375 | 1,000 |
+| mean, seed range | 0.436, 0.024 | 0.632, 0.022 | 0.761, 0.031 | 0.839, 0.003 |
 
-| SST-2 sentences | 100 | 500 | 2,000 | 8,000 |
-|---|---|---|---|---|
-| mean of 3 seeds | 0.583 | 0.782 | 0.895 | 0.932 |
-| seed range | 0.142 | 0.065 | 0.030 | 0.010 |
-
-- Median gain per size step: MNLI 0.098, SST-2 0.114. Seed range: 0.158 at
-  1,000 MNLI pairs, 0.142 at 100 SST-2 sentences.
-- At 250 pairs every seed is near the majority rate, 0.363: a small range, a
-  poor model.
-- Two epochs at every size: 250 pairs get 16 optimizer steps.
+- SST-2 with at least 300 steps: 0.665 at 100 sentences (seed range 0.101)
+  to 0.932 at 8,000.
+- Median gain per size step: MNLI 0.129, SST-2 0.055. At 100 SST-2
+  sentences the seed still moves accuracy more than a step up in data.
+- Two epochs at 250 pairs: every seed near the majority rate, 0.363, a
+  small range and a poor model.
 
 ::: {.d2l-note}
 Agreement among seeds shows that a result is reproducible, not that it is
@@ -2090,7 +2153,7 @@ $L$ tokens.
   it.
 :::
 
-::: {.slide title="The Encoder Passes 8 Shots on MNLI Between 1,000 and 4,000 Labels"}
+::: {.slide title="The Encoder Draws Level with 8 Shots on MNLI at 1,000 Labels and Passes by 4,000"}
 [Encoder or prompted decoder]{.kicker}
 
 ::: {.cols .vc}
@@ -2101,9 +2164,9 @@ $L$ tokens.
 ::: {.col}
 - Ahead = every seed × every set of examples agrees, and the gap exceeds
   both spreads.
-- MNLI, gap to 8 shots: $-0.26$ at 250; $-0.16$ at 1,000 (seed range
-  0.158: no verdict); $+0.12$ at 4,000; $+0.21$ at 16,000.
-- SST-2: $-0.046$ at 2,000; $-0.009$ at 8,000, within noise.
+- MNLI, gap to 8 shots: $-0.20$ at 250; $+0.00$ at 1,000 (intervals
+  $-0.05$ to 0.05: level); $+0.13$ at 4,000; $+0.21$ at 16,000.
+- SST-2: $-0.036$ at 2,000; $-0.009$ at 8,000, within noise.
 - 8 shots: MNLI 0.62 to 0.65, SST-2 0.935 to 0.946.
 :::
 :::
@@ -2135,12 +2198,11 @@ hundredth of the time per item.
 - 80/10/10 corruption keeps every position's vector about its own token.
 - ModernBERT-base: 0.84 on MNLI (16,000 pairs), 0.93 on SST-2 (8,000), span
   F1 about 0.95 on CoNLL-2003.
-- Seed range up to 0.158 at 1,000 pairs, against a median gain of 0.098 per
-  size step; a hypothesis-only model reaches 0.53 against a majority rate of
-  0.36.
-- Against 8-shot Qwen3-1.7B, two epochs per size: passes on MNLI between
-  1,000 and 4,000 labels, catches up on SST-2 at 8,000, at about a hundredth
-  of the time.
+- Too few steps look like seed noise: seed range 0.158 at 1,000 pairs with
+  two epochs, 0.022 with 300 steps. A hypothesis-only model reaches 0.53
+  against a majority rate of 0.36.
+- Against 8-shot Qwen3-1.7B: level on MNLI at 1,000 labels, ahead from
+  4,000, caught up on SST-2 at 8,000, at about a hundredth of the time.
 
 **Next:** one vector per text, for search without a head.
 :::

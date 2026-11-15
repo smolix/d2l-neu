@@ -694,21 +694,27 @@ for name, p in (('BM25 (k1 1.2, b 0.75)', dict(
                 ('BM25', BM25_BEST)):
     index = d2l.BM25Index(TOKENS[p['split_identifiers']], k1=p['k1'],
                           b=p['b'])
-    t0 = time.perf_counter()
-    S_BM25 = bm25_scores(index, [d2l.bm25_tokenize(
+    run = lambda: bm25_scores(index, [d2l.bm25_tokenize(
         q, p['split_identifiers']) for q in QUESTIONS])
+    S_BM25 = run()  # also the warm-up pass
     RANKED[name] = top_ids(S_BM25, DEPTH)
-    MS[name] = (time.perf_counter() - t0) / len(DEV) * 1e3
+    seconds = []
+    for _ in range(5):  # the median of five timed passes
+        t0 = time.perf_counter()
+        run()
+        seconds.append(time.perf_counter() - t0)
+    MS[name] = np.median(seconds) / len(DEV) * 1e3
 BM25 = index  # the chosen parameters; S_BM25 holds their dev scores
 assert np.allclose(S_BM25, [RET.bm25.scores(d2l.bm25_tokenize(
     q, BM25_BEST['split_identifiers'])) for q in QUESTIONS])
-print(f'{MS["BM25"]:.2f} ms per question, including tokenization')
+for name in RANKED:
+    print(f'{name}: {MS[name]:.2f} ms per question, including tokenization')
 ```
 
-BM25 answers a dev question in a millisecond or two on one CPU core,
-tokenization included. The two settings, 0.5 and 1.8 ms in one timed pass
-each, run the same code on matrices of the same shape, so the gap is not a
-cost of $b$.
+BM25 answers a dev question in about 0.2 ms on one CPU core, tokenization
+included, the median of five timed passes after a warm-up. The two settings
+take the same time: they run the same code on matrices of the same shape,
+and $b$ changes only the weights.
 
 Both choices of this subsection, which strings count as terms and how a
 count becomes a weight, were made by hand. Learned sparse retrieval keeps
@@ -1162,7 +1168,7 @@ model. On a technical book full of exact terms the two are within noise in
 Recall@10 and split by measure, and the BEIR benchmark
 :cite:`Thakur.Reimers.Ruckle.ea.2021` found dense retrievers trained on one collection often below
 BM25 on another. On such text the word index is a high floor. Keep it, and
-fuse instead of choosing: fusion costs a few milliseconds and covers both
+fuse instead of choosing: fusion costs about a millisecond and covers both
 kinds of failure.
 
 ## Approximate Nearest Neighbors
@@ -1717,7 +1723,7 @@ else:
 The inverted file does what the count predicts. At 16 probes it compares about
 $1{,}024 + 16 \times 66 \approx 2{,}100$ vectors instead of 67,853, 33 times
 fewer, and runs about 35 times faster than the flat scan, 0.43 ms against
-15.3 ms.
+15.7 ms.
 It returns 0.85 of the exact neighbors (ours 0.845), 0.94 at 64 probes.
 
 Product quantization trades recall for memory. IVF-PQ stores 149 bytes per
@@ -1733,8 +1739,8 @@ usual repair rescores the best hundred candidates with exact vectors kept on
 disk, as binary vectors were rescored in :numref:`subsec_lm_emb_compress`.
 
 The graph wins at this size. HNSW returns 0.97 of the exact neighbors at
-$\mathit{efSearch} = 32$ in 0.29 ms, and 0.998 at 256 in 1.6 ms, for 272
-bytes of links per vector and about 15 s of building with eight threads.
+$\mathit{efSearch} = 32$ in 0.28 ms, and 0.998 at 256 in 1.6 ms, for 272
+bytes of links per vector and about 16 s of building with eight threads.
 
 Task recall drops far less, because it needs one relevant chunk among ten
 where recall against exact search counts all ten neighbors. IVF-Flat at 16
@@ -1814,8 +1820,8 @@ else:
           f'crossover is not registered')
 ```
 
-HNSW answers in a median of 0.29 ms, about 50 times faster than the flat
-scan's 15 ms on the same thread. For a CPU that answers one question at a
+HNSW answers in a median of 0.28 ms, about 50 times faster than the flat
+scan's 16 ms on the same thread. For a CPU that answers one question at a
 time and has memory for the vectors, a graph is the right index. When
 questions arrive in batches and the vectors fit on a GPU, about ten million
 of them in 24 GB at float16, the exact scan is the right index: the GPU
@@ -2413,9 +2419,9 @@ its depth.
 
 | dev, 220 questions | Recall@1 | Recall@10 | nDCG@10 | ms |
 |---|---|---|---|---|
-| BM25 | 0.76 | 0.96 | 0.82 | 1 to 2 |
+| BM25 | 0.76 | 0.96 | 0.82 | about 0.2 |
 | embedder | 0.67 | 0.98 | 0.79 | about 1 |
-| RRF | 0.78 | 0.98 | 0.85 | about 3 |
+| RRF | 0.78 | 0.98 | 0.85 | about 1 |
 | RRF + rerank@20 | 0.87 | 0.99 | 0.91 | about 200 |
 | RRF + rerank@100 | 0.87 | 1.00 | 0.91 | about 1,100 |
 
@@ -2452,7 +2458,7 @@ $n_\text{probe}$ nearest cells:
 $$\text{vectors compared} = n_\text{list} + n_\text{probe}\,N / n_\text{list}$$
 
 $N = 67{,}853$: $1{,}024 + 16 \times 66 \approx 2{,}100$ instead of 67,853.
-Measured on one CPU thread: 0.43 ms against 15.3 ms.
+Measured on one CPU thread: 0.43 ms against 15.7 ms.
 
 ::: {.d2l-note .warn}
 A neighbor across the border of an unprobed cell is never seen: recall

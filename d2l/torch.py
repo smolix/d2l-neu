@@ -7197,6 +7197,9 @@ d2l.DATA_HUB['conll2003-labels'] = (
 d2l.DATA_HUB['lm-enc-bert-sweep-v1'] = (  # D2L_RERUN=bert-sweep, RTX 4090
     d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v1.json',
     '06440f0e5acbd7b91deb6b66f8402f8bea8d6155')
+d2l.DATA_HUB['lm-enc-bert-sweep-v2'] = (  # at least 300 steps per run
+    d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v2.json',
+    'e1ceabe56f1d40d2a71e3ef6a4ccb9dbc6d2d220')
 d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
     d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
     '36365804df9df70b812f52595ee6d092639285c1')
@@ -8198,6 +8201,9 @@ d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
 d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
     '7c08b175e12fe3138742f46e14720df1ab45e277')
+d2l.DATA_HUB['lm-rag-gen-stages-v2'] = (  # v1 and the control fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v2.jsonl',
+    'bfd5ba324efcc683b06ded6d96c04b56ca806cb0')
 d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
     d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
     'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
@@ -8222,6 +8228,12 @@ d2l.DATA_HUB['lm-rag-judge-v3'] = (  # v2, missing verdicts judged again
 d2l.DATA_HUB['lm-rag-judge-cache-v3'] = (  # v2 and those longer replies
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v3.zip',
     '8711571c3c94646d17215c522aec15d7a3cd269c')
+d2l.DATA_HUB['lm-rag-judge-v4'] = (  # v3 and the verdicts on fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-judge-v4.jsonl',
+    '0169be597e978728e6559cd191c91cb8e30281c5')
+d2l.DATA_HUB['lm-rag-judge-cache-v4'] = (  # v3 and those replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v4.zip',
+    'cf57712b285710ee87c0a7c56aab0600d13dac7a')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):

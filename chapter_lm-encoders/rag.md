@@ -102,10 +102,10 @@ SMALL = not GPU  # the CPU path: two live answers, BM25-only coverage
 T0 = time.time()  # a judging run stops JUDGE_MINUTES after this
 ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
     'rag-gen-base': ('lm-rag-gen-base-v1', 'lm-rag-gen-base.jsonl'),
-    'rag-gen-stages': ('lm-rag-gen-stages-v1', 'lm-rag-gen-stages.jsonl'),
+    'rag-gen-stages': ('lm-rag-gen-stages-v2', 'lm-rag-gen-stages.jsonl'),
     'rag-gen-fix': ('lm-rag-gen-fix-v1', 'lm-rag-gen-fix.jsonl'),
-    'rag-judge': ('lm-rag-judge-v3', 'lm-rag-judge.jsonl'),
-    'rag-judge-cache': ('lm-rag-judge-cache-v3', 'lm-rag-judge-cache.zip'),
+    'rag-judge': ('lm-rag-judge-v4', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v4', 'lm-rag-judge-cache.zip'),
     'rag-cards': ('lm-rag-cards-v1', 'lm-rag-cards.jsonl')}
 RERUN = d2l.lm_rerun(ARTIFACTS)
 if 'rag-judge-cache' in RERUN:  # the judge's cache is written with it
@@ -137,11 +137,14 @@ CONFIGS = {  # name: what changes against the baseline
     'oracle': dict(BASE, context='gold'),  # the gold chunks only
     'base-repeat': dict(BASE, shuffle=1),  # the same prompts, other batches
     'fixed': dict(BASE, chunking='fixed', k=None, budget='base'),
+    'fixed-over': dict(BASE, chunking='fixed', k=None, budget='base',
+                       over=255),  # up to a window past the base's tokens
     'rewrite-rerank': dict(BASE, rewrite='generator', rerank_k=50),
     'reverse': dict(BASE, order='reverse'),
     'budget-1500': dict(BASE, k=None, budget=1500),
     'budget-6000': dict(BASE, k=None, budget=6000, batch=4)}
 STAGES = ['fixed', 'rewrite-rerank', 'reverse', 'budget-1500', 'budget-6000']
+CONTROLS = ['fixed-over']  # checks a stage's result; not a candidate
 FIXES = {  # failure class: its fix, written down before any class is counted
     'not_retrieved': dict(BASE, rewrite='fuse'),  # the query's ranking too
     'ranked_low': dict(BASE, rerank_k=100, k=8),
@@ -213,6 +216,9 @@ d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
 d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
     '7c08b175e12fe3138742f46e14720df1ab45e277')
+d2l.DATA_HUB['lm-rag-gen-stages-v2'] = (  # v1 and the control fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v2.jsonl',
+    'bfd5ba324efcc683b06ded6d96c04b56ca806cb0')
 d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
     d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
     'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
@@ -237,6 +243,12 @@ d2l.DATA_HUB['lm-rag-judge-v3'] = (  # v2, missing verdicts judged again
 d2l.DATA_HUB['lm-rag-judge-cache-v3'] = (  # v2 and those longer replies
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v3.zip',
     '8711571c3c94646d17215c522aec15d7a3cd269c')
+d2l.DATA_HUB['lm-rag-judge-v4'] = (  # v3 and the verdicts on fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-judge-v4.jsonl',
+    '0169be597e978728e6559cd191c91cb8e30281c5')
+d2l.DATA_HUB['lm-rag-judge-cache-v4'] = (  # v3 and those replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v4.zip',
+    'cf57712b285710ee87c0a7c56aab0600d13dac7a')
 ```
 
 Each item holds
@@ -351,6 +363,12 @@ print(f'alternative spans: {sum(stats["s5_alt_spans"].values())} in '
 print('frontier verifier against the checker, per check (dev and test pool):')
 print(pd.DataFrame(MANIFEST['verifier_vs_checker']).T[['n', 'agree', 'kappa']]
       .astype(float).round(2))
+spend = MANIFEST['spend_usd']  # recorded by the build, per call
+print('API spend in US$ per model:\n' + pd.Series(spend['per_model']).round(2)
+      .to_string() + f'\n  total {sum(spend["per_model"].values()):.2f}; '
+      f'the verifier\'s check of dev and test: '
+      f'{spend["per_stage"]["s8-verify"]["calls"]} calls, '
+      f'{spend["per_stage"]["s8-verify"]["usd"]:.2f}')
 ```
 
 In `dev` and `test` the quotas are 120 questions answered by one passage,
@@ -1815,13 +1833,17 @@ if 'base' in S and LABEL:
     for n, c in enumerate(rec['context_ids'], 1):
         print(f'  [{n}] {c.split(":")[1]}' + (' (relevant)' if c in rel
                                                else ''))
+    n, c = next((n, c) for n, c in enumerate(rec['context_ids'], 1)
+                if c in rel)
+    last = re.split(r'(?<=[.!?])\s+', CHUNKS[c]['text'].strip())[-1]
+    print(wrap(f'last sentence of [{n}]: {last}'))
     print(wrap(f'answer: {rec["answer"]}'))
     print(f'verdicts: {row.verdicts}\nclass: {pick[0][1]}, by the rule and '
           'by the second labeller')
 ```
 
-The answering passage was ranked first, and its last sentence, quoted at the
-start of this section, holds the missing key fact. The answer cites passages
+The answering passage was ranked first, and its last sentence, printed above
+and quoted at the start of this section, holds the missing key fact. The answer cites passages
 two and three and leaves out that no warning is given. The passage was
 neither missing nor contradicted. It was ignored.
 
@@ -1879,8 +1901,12 @@ can use it. The next cell answers with five changes:
 - budgets of 1,500 and of 6,000 tokens, filled in rank order without the
   limit of five chunks.
 
-Which of them, would you guess, changes accuracy with a paired interval
-that excludes zero?
+A sixth arm is a control rather than a candidate. Packed as above, fixed
+windows get fewer context tokens than the baseline, so a loss could come
+from the missing tokens rather than from the cut. The control, `fixed-over`,
+packs windows until they pass the baseline's tokens by less than one window
+and so gets slightly more context than the baseline. Which of the changes,
+would you guess, moves accuracy with a paired interval that excludes zero?
 
 ```{.python .input #rag-stages}
 %%tab pytorch
@@ -1891,8 +1917,9 @@ def context_tokens(recs):
             for r in recs}
 
 if 'rag-gen-stages' in RERUN:
-    names = os.environ.get('D2L_RAG_STAGES', ','.join(STAGES)).split(',')
-    assert set(names) <= set(STAGES), names
+    names = os.environ.get('D2L_RAG_STAGES', ','.join(STAGES + CONTROLS))
+    names = names.split(',')
+    assert set(names) <= set(STAGES + CONTROLS), names
     path = run_path('rag-gen-stages')  # the other configurations are kept
     if not os.path.exists(path):  # from an earlier run, else registered
         path = d2l.lm_registered(ARTIFACTS['rag-gen-stages'][0])
@@ -1901,33 +1928,38 @@ if 'rag-gen-stages' in RERUN:
     tokens = context_tokens(GENS[(GENS.config == 'base') &
                                  (GENS.split == 'dev')].to_dict('records'))
     for name in names:
-        recs += run_configs([name], DEV, budgets=tokens if CONFIGS[name][
-            'budget'] == 'base' else None)
+        c = CONFIGS[name]
+        recs += run_configs([name], DEV, budgets={
+            q: t + c.get('over', 0) for q, t in tokens.items()}
+                            if c['budget'] == 'base' else None)
     save_gens('rag-gen-stages', recs)
     GENS = load_gens()
 rows, BEST = [], None
-for c in STAGES:
+for c in STAGES + CONTROLS:
     if not (ready('base', c) and 'base' in S):
         continue
     s = scores(c)
     d = s.merge(S['base'], on='qid', suffixes=('', '_b'))
     r = ci(d.accuracy, d.accuracy_b, d.cluster)[0]
+    tokens = context_tokens(GENS[(GENS.config == c) & (GENS.split == 'dev')]
+                            .to_dict('records'))
     rows.append({'configuration': c,
                  'accuracy': boot(s.accuracy, cluster=s.cluster),
                  'faithful': boot(s.faithful, cluster=s.cluster),
                  'cite precision': boot(s.cite_precision, cluster=s.cluster),
                  'accuracy - base': boot(d.accuracy, d.accuracy_b, d.cluster),
-                 'prompt tokens': f'{s.n_prompt_tokens.mean():,.0f}',
+                 'context tokens': f'{np.mean(list(tokens.values())):,.0f}',
                  's per answer': f'{s.latency_s.mean():.2f}',
                  'delta': r.mean, 'excludes 0': r.ci[0] > 0 or r.ci[1] < 0})
 if rows:
     T = pd.DataFrame(rows)
     for cols in (['accuracy', 'faithful', 'cite precision'],  # two tables:
-                 ['accuracy - base', 'prompt tokens', 's per answer']):
+                 ['accuracy - base', 'context tokens', 's per answer']):
         print(T[['configuration'] + cols].to_string(index=False))  # width
     print(f'intervals excluding 0: {list(T.configuration[T["excludes 0"]])}')
-if len(rows) == len(STAGES):  # the rule of the fix step, on every stage
-    BEST = T.configuration[T.delta.idxmax()]
+if sum(r['configuration'] in STAGES for r in rows) == len(STAGES):
+    stages = T[T.configuration.isin(STAGES)]  # the rule of the fix step
+    BEST = stages.configuration[stages.delta.idxmax()]
     print(f'the largest dev gain: {BEST}')
 ```
 
@@ -1938,8 +1970,11 @@ in 32 documents. The largest gains, from reversing the order and from the
 
 Two changes lowered accuracy. Fixed windows lost 0.08 [$-0.12$, $-0.04$],
 although at 2,000 tokens their coverage trails by only 0.03
-[$-0.06$, +0.01]. Similar coverage did not give similar answers, and chunks
-that follow the document's structure gave better ones. The 1,500-token
+[$-0.06$, +0.01]. They had 1,578 context tokens against the baseline's
+1,697, but the shortfall is not why they lost: the control, with 1,833
+tokens, still lost 0.05 [$-0.09$, $-0.02$]. Similar coverage did not give
+similar answers, and chunks that follow the document's structure gave
+better ones. The 1,500-token
 budget, about 1,300 context tokens against the baseline's 1,700,
 cost 0.03 [$-0.06$, $-0.01$]. The 6,000-token budget, about 5,800 context
 tokens, gained nothing measurable and doubled the time per answer, from
@@ -2794,11 +2829,12 @@ Batch alike, or count re-batching as noise.
 
 | change, 240 `dev` questions | accuracy − baseline | s per answer |
 |---|---|---|
-| fixed windows, equal tokens | $-0.08$ [$-0.12$, $-0.04$] | 1.11 |
+| fixed windows, 1,578 tokens (baseline 1,697) | $-0.08$ [$-0.12$, $-0.04$] | 1.11 |
 | rewrite + rerank top 50 | +0.00 [$-0.03$, +0.04] | 1.87 |
 | reverse order | +0.01 [$-0.02$, +0.04] | 1.14 |
 | budget 1,500, no limit of 5 chunks | $-0.03$ [$-0.06$, $-0.01$] | 1.08 |
 | budget 6,000, no limit of 5 chunks | +0.01 [$-0.03$, +0.05] | 2.59 |
+| control: fixed windows, 1,833 tokens | $-0.05$ [$-0.09$, $-0.02$] | 1.15 |
 
 ::: {.d2l-note}
 With 213 of 220 hits, retrieval-side changes had about 0.02 to gain.

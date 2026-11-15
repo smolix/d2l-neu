@@ -222,6 +222,11 @@ upper = scipy.sparse.triu(X).tocoo()
 for i in np.argsort(-upper.data)[:5]:
     a, b = (vocab.idx_to_token[j] for j in (upper.row[i], upper.col[i]))
     print(f'    {a:>5} {b:<5} {upper.data[i]:9,.0f}')
+row = np.asarray(X.sum(axis=1)).ravel()  # p(w) is row / X.sum()
+for a, b in (('the', 'of'), ('the', 'the'), ('prime', 'minister')):
+    i, j = vocab.token_to_idx[a], vocab.token_to_idx[b]
+    print(f'pmi({a}, {b}) = {np.log(X[i, j] * X.sum() / (row[i] * row[j])):.2f}'
+          f' from {X[i, j]:,.0f} pairs')
 ```
 The matrix has 6.5 million nonzero entries, 2.00% of its 324 million
 cells, holding 27 million (word, context) pairs. The largest counts pair
@@ -238,8 +243,11 @@ $$\textrm{pmi}(w, o) = \log \frac{p(w, o)}{p(w)\, p(o)}$$
 compares how often the pair occurs with how often it would occur if the
 two words were placed independently. It is positive for pairs that
 attract and negative for pairs that repel. By this measure *the* and *of*,
-the second-largest count, are only weakly associated, while *prime* and
-*minister*, which meet far less often, attract strongly. For the 98% of
+the second-largest count, are only weakly associated, with a pmi of 0.36,
+and *the* even repels itself ($-0.27$): two of them stand within five
+words of each other less often than their frequency predicts. *Prime*
+and *minister* meet in only 166 windows, but their pmi is 6.55: they occur
+together about 700 times as often as chance predicts. For the 98% of
 pairs that never occur, the pmi is $-\infty$, which no finite score can
 match.
 
@@ -1303,7 +1311,9 @@ We return to the table that opened the section. Qwen3-0.6B
 :numref:`sec_lm_d2l_checkpoint`, has a token table of 151,936 rows of
 width 1,024. Which share of its 596 million parameters does the table
 hold? The cell also prints the nearest neighbors of four words in the
-table and under SGNS, and the cosines of *bank* with *river* and *money*.
+table and under SGNS, the cosines of *bank* with *river* and *money*, and,
+for the opening question, the cosine of *doctor* and *physician* and the
+rank of *physician* among the neighbors of *doctor*.
 
 ```{.python .input #word-embeddings-qwen-table}
 %%tab pytorch
@@ -1338,6 +1348,15 @@ for o in ('river', 'money'):  # one vector for both senses of "bank"
     print(f'cos(bank, {o}): ' + ', '.join(
         f'{m} {F.cosine_similarity(E[ix["bank"]], E[ix[o]], dim=0):.2f}'
         for m, (E, ix) in index.items()))
+index['Qwen3 table'][1]['physician'], = tok.encode(' physician')  # one token
+for m, (E, ix) in index.items():  # the opening's question, in numbers
+    Z = F.normalize(E[:len(tok) if m == 'Qwen3 table' else None].float(),
+                    dim=1)  # the table's rows for real tokens
+    c = Z @ Z[ix['doctor']]
+    c[[ix['doctor']] + ([0] if m != 'Qwen3 table' else [])] = -math.inf
+    p = c[ix['physician']]  # index 0 of the word tables is <unk>
+    print(f'{m:12s} cos(doctor, physician) {p:.2f}; physician is neighbor '
+          f'{int((c > p).sum()) + 1:,} of {int(c.isfinite().sum()):,}')
 del model, table
 d2l.lm_free()
 print(f'notebook: {time.time() - TIC:.0f} s')
@@ -1368,11 +1387,14 @@ above, which work out its meaning from the context. Because it is tied,
 it also scores the token as the next one, and *doctor* and *Doctor* are
 predicted in the same places, so their rows end up close.
 
-This settles the question we started with, as far as nearest neighbors
-can: neither in the three tables we trained nor in the language model's
-is *physician* among the five nearest rows of *doctor*. On our slice
-*doctor* keeps the company of *Doctor Who*, and in the language model's
-table the company of its own spellings.
+Now we can answer the question we started with. In the GloVe-6B vectors,
+trained on six billion tokens, *physician* is the nearest row to *doctor*,
+at a cosine of 0.77. In Qwen's table it comes sixth (0.65), right after
+the five spellings of *doctor*. On our slice of three million words SGNS
+puts it 977th of about 18,000, at 0.44: *doctor* keeps the company of
+*Doctor Who* there, and a corpus that rarely uses the two words alike
+cannot teach that they are alike. Training does put synonyms next to each
+other, given enough text in which they keep the same company.
 
 The cosines of *bank* show what every table of this section shares. Under
 SGNS on our slice, *bank* is closer to *river* (0.53) than to *money*
@@ -1394,7 +1416,9 @@ slice of Wikipedia the trained scores followed it with a correlation of
 about 0.9. The truncated SVD of the positive PMI matrix computes such a
 factorization in closed form and matched skip-gram on human similarity
 ratings, while GloVe, which never sees the pairs that do not occur,
-trailed by about 0.3 on this small corpus. A fair comparison of word
+trailed by about 0.3 on this small corpus. Whether *physician* lands next
+to *doctor* depends on the text: it is the nearest row in GloVe vectors
+trained on six billion tokens and 977th on our slice. A fair comparison of word
 vectors states the covered pairs, the random floor and paired
 differences, and the analogy and bias tests need the same care. Every
 static table, word2vec's or a language model's, gives *bank* one vector
@@ -1564,8 +1588,9 @@ $X_{wo}$: how often word $o$ occurs within 5 positions of word $w$.
 $$\textrm{pmi}(w, o) = \log \frac{p(w, o)}{p(w)\, p(o)}$$
 
 $p(w, o)$: share of all pairs; $p(w)$, $p(o)$: its marginals. Positive when
-a pair occurs more often than independence predicts: *the*–*of* is only
-weakly associated, *prime*–*minister* strongly.
+a pair occurs more often than independence predicts: pmi(*the*, *of*) =
+0.36, pmi(*the*, *the*) = $-0.27$, pmi(*prime*, *minister*) = 6.55 from
+only 166 windows.
 
 ::: {.d2l-note}
 98% of the pairs never occur: their pmi is $-\infty$.
@@ -1810,8 +1835,8 @@ power, which beat 0 and 1 in every seed on WordSim353.
 | bank | ubs, winterthur, asset, swiss, banks | ubs, winterthur, merger, suisse, banks |
 
 ::: {.d2l-note}
-*Physician* has a row but is not among them: the slice's doctors come from
-*Doctor Who* and *The X-Files*.
+*Physician* is 977th of about 18,000 under SGNS: the slice's doctors come
+from *Doctor Who* and *The X-Files*.
 :::
 :::
 
@@ -1874,6 +1899,7 @@ file holds $596{,}049{,}920 + 155{,}582{,}464 = 751{,}632{,}384$.
 |---|---|---|---|
 | *bank*, *river* | 0.53 | 0.33 | 0.24 |
 | *bank*, *money* | 0.32 | 0.57 | 0.22 |
+| *doctor*, *physician* (rank) | 0.44 (977th) | 0.77 (1st) | 0.65 (6th) |
 
 ::: {.d2l-note}
 One row per word: the corpus decides where *bank* sits between its two
@@ -1893,6 +1919,8 @@ senses.
   about 0.3 there; the settings moved $\rho$ by up to 0.05.
 - Analogies need the query words excluded; removing a direction hides a
   bias from one probe.
+- Synonyms need text: *physician* is the nearest row to *doctor* in
+  GloVe-6B and 977th on the slice.
 - A static vector is one point per word, in a word2vec table and in a
   language model's.
 

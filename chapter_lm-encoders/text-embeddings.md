@@ -4,7 +4,7 @@
 In :numref:`sec_lm_bert` we fine-tuned an encoder one task at a time: a
 small head on top of its token vectors, trained on thousands of labeled
 examples, decided whether one sentence entails another. Search asks for
-something else. A reader of this book wants to know how the legacy
+something else. A reader of this book wants to know how the book's old
 `load_array` helper decides whether to shuffle its data, and somewhere among
 the thousands of passages of the book is the paragraph that says so. No
 label set describes that question. What we want is one vector per text,
@@ -12,14 +12,13 @@ computed once for every passage and once for every question, such that the
 passage that answers a question lies closest to it.
 
 ModernBERT, the encoder of :numref:`sec_lm_bert`, returns one vector of 768
-numbers for every token of a text. Every layer lets each token attend to all
-others in both directions, so each vector describes its token in the context
-of the whole text. The encoder was pretrained to fill in tokens hidden from
-it, and nothing in that objective asks for a vector of a whole text. The
-obvious way to get one anyway is to average the token vectors. Make a guess
-before reading on: if we average the vectors of every passage of the book
-and of a question about it, how often will the ten nearest passages include
-one that answers the question?
+numbers for every token, computed by attention in both directions (every
+third layer over the whole text, the others over 128 neighboring tokens). It
+was pretrained to fill in hidden tokens, and nothing in that objective asks
+for a vector of a whole text. The obvious way to get one anyway is to
+average the token vectors. Make a guess before reading on: if we average the
+vectors of every passage of the book and of a question about it, how often
+will the ten nearest passages include one that answers the question?
 
 The answer will be discouraging, and the repair has a history. In 2019,
 Reimers and Gurevych found that averaged BERT vectors judged the similarity
@@ -56,13 +55,13 @@ from sentence_transformers.sentence_transformer.losses import (
     MultipleNegativesRankingLoss)
 ```
 
-Besides the raw encoder, two pinned models appear: a released embedder,
-Qwen3-Embedding-0.6B, and Qwen3-Reranker-0.6B, which reads a question and a
-passage together and serves once as a second opinion. The trained models and
-their results come from one regeneration run (`D2L_RERUN=emb-train`, about
-13 minutes on one RTX 4090); a normal build reads them and checks them live.
-Without a GPU the notebook searches only the passages of the documents the
-questions ask about, an easier problem; the text quotes the GPU run.
+Besides the raw encoder, two pinned models appear: Qwen3-Embedding-0.6B, a
+released embedder, and Qwen3-Reranker-0.6B, which reads a question and a
+passage together. Training this section's models takes about 13 minutes
+on one RTX 4090 (`D2L_RERUN=emb-train`); a normal build downloads the
+checkpoints and their training records. Without a GPU the notebook searches
+only the passages of the documents the questions ask about, an easier
+problem; the text quotes the GPU run.
 
 ```{.python .input #text-embeddings-config}
 %%tab pytorch
@@ -117,7 +116,7 @@ print(f'query instruction: {INSTRUCT!r}')
 print(f'GPU: {GPU}; regenerating: {", ".join(sorted(RERUN)) or "none"}')
 ```
 
-The embedder and the reranker are pinned to commits.
+The next two cells pin the two models and register the downloads.
 
 ```{.python .input #text-embeddings-revisions}
 %%tab pytorch
@@ -127,9 +126,6 @@ d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Embedding-0.6B'] = (
 d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Reranker-0.6B'] = (
     'e61197ed45024b0ed8a2d74b80b4d909f1255473')
 ```
-
-The training pairs come from Natural Questions, downloaded at run time; the
-results and the two trained checkpoints are registered files of the book.
 
 ```{.python .input #text-embeddings-data-hub}
 %%tab pytorch
@@ -153,9 +149,8 @@ d2l.DATA_HUB['lm-enc-modernbert-embed-mrl-v1'] = (  # Matryoshka, bf16
 ## Pooled Encoder States as Text Vectors
 :label:`subsec_lm_emb_pooling`
 
-The encoder of :numref:`sec_lm_bert` kept one vector per token and trained
-a head per task on top of them. Here we want one vector per text and no head
-at all, so that the same vectors serve every question anyone might ask.
+Before any training we need a rule that turns the token vectors of a text
+into one vector, and a way to measure how well such vectors retrieve.
 
 ### Pooling and Normalization
 
@@ -234,12 +229,26 @@ def embed_texts(model, tokenizer, texts, pooling='mean', batch_size=64,
 
 ### Raw Vectors on the Book
 
-*Recall@k* is 1 if at least one passage that answers the question is among
-the first $k$ retrieved, and 0 otherwise; averaged over questions, it is the
-share of questions whose answer reaches a reader of the top $k$. *MRR@10* is
-the reciprocal rank of the first relevant passage, 0 beyond rank 10.
-*nDCG@10* also rewards placing several relevant passages early. The next
-section treats all three in full.
+The corpus is this book itself at a fixed commit, cut along its section
+boundaries into passages of at most 512 tokens of the Qwen3 tokenizer,
+without the Language Models part, so that a notebook cannot retrieve its
+own questions. :numref:`sec_lm_retrieval` builds it, and also our floor,
+BM25, which counts the question's words in each passage, weights rare words
+up, and involves no training. The questions are the answerable dev
+questions of the book's question set (:numref:`sec_lm_rag`). A language
+model drafted them from passages of the book and other language models
+checked them; no person wrote or verified them. A passage is relevant if it
+overlaps the span a question was written from, or a span that a model
+judged to answer it as well. Questions about one document are not
+independent, so our intervals resample documents.
+
+Our main measure is *Recall@k*: a question scores 1 if at least one
+relevant passage is among the first $k$ retrieved and 0 otherwise, and the
+average over questions is the share of questions whose answer reaches a
+reader of the top $k$. *nDCG@10* also looks at the order. A relevant
+passage at rank $r$ counts $1/\log_2(r + 1)$, and the sum over the first ten
+ranks is divided by its value for the best possible order, so nDCG@10 is 1
+when the relevant passages come first.
 
 ```{.python .input #text-embeddings-metrics-def}
 %%tab pytorch
@@ -268,18 +277,8 @@ def retrieval_metrics(ranked_ids, gold_ids, ks=(1, 5, 10, 100)):
     return {k: np.array(v) for k, v in out.items()}
 ```
 
-The corpus is this book itself at a fixed commit, cut along its section
-boundaries into passages of at most 512 tokens, without the Language Models
-part, so that a notebook cannot retrieve its own questions.
-:numref:`sec_lm_retrieval` builds it, and also our floor, BM25, which counts
-the question's words in each passage, weights rare words up, and involves no
-training. The questions are the answerable dev questions of the book's
-question set (:numref:`sec_lm_rag`). A language model drafted them from
-passages of the book and other language models checked them; no person
-wrote or verified them. A passage is relevant if it overlaps the span a
-question was written from, or a span that a model judged to answer it as
-well. Questions about one document are not independent, so our intervals
-resample documents.
+The next cell loads the corpus and the questions and ranks the passages
+with BM25.
 
 ```{.python .input #text-embeddings-book}
 %%tab pytorch
@@ -311,15 +310,15 @@ if SMALL:
           'the numbers in the text come from the GPU run over all chunks')
 ```
 
-The book has 5,324 passages; the 220 questions ask about 32 documents. BM25
-finds a relevant passage among its first ten for 0.96 of them
-[0.93, 0.98]. A question about a book uses the book's own terms,
-`load_array` or "unified memory", and BM25 rewards exactly such rare words.
+The book has 5,324 passages; the 220 questions ask about 32 documents.
+BM25's Recall@10 is 0.96 [0.93, 0.98]: it finds a relevant passage among its
+first ten for 96% of the questions. A question about a book uses the book's
+own terms, `load_array` or "unified memory", and BM25 rewards such rare
+words.
 
-Now the raw encoder, with CLS and mean pooling, and a third variant that
-subtracts the mean passage vector from both sides before normalizing. Each
-question is matched with the ten passages of highest cosine; for three
-questions we print the heading of the best passage and of the relevant one.
+Now the raw encoder, with CLS and mean pooling. Each question is matched
+with the ten passages of highest cosine; for three questions we print the
+heading of the best passage and of the relevant one.
 
 ```{.python .input #text-embeddings-opening}
 %%tab pytorch
@@ -355,13 +354,15 @@ del encoder
 d2l.lm_free()
 ```
 
-Mean pooling finds a relevant passage among the first ten for 0.06 of the
-questions [0.04, 0.10]. The question about unified-memory machines retrieves
-the start of a section on attention. The other two land in the right chapter
-but not on the passage: the page of utility functions instead of its
-training utilities, the introduction of the attention chapter instead of
-the subsection on saturating scores. The vectors know roughly where in the
-book a text lives and little about what it says. No passage was cut.
+Mean pooling's Recall@10 is 0.06 [0.04, 0.10]: a relevant passage among the
+first ten for 6% of the questions. The question about unified-memory
+machines retrieves the start of a section on attention. The other two land
+in the right chapter but not on the passage: the page of utility functions
+instead of its training utilities, the introduction of the attention
+chapter instead of the subsection on saturating scores. The vectors know
+roughly where in the book a text lives and little about what it says. No
+passage exceeded the encoder's limit of 1,024 of its own tokens, so
+truncation is not the cause.
 
 ### Anisotropy
 
@@ -386,8 +387,11 @@ $$
 Thus the mean cosine is the squared length of the mean vector, up to a term
 of order $1/n$. Vectors that point in many directions cancel in their mean;
 vectors that share a direction have a mean almost as long as each of them.
-The cell also defines `align_uniform`, for two quantities of
-:numref:`subsec_lm_emb_align_uniform`.
+If the vectors do share a direction, there is an obvious repair: subtract
+the mean passage vector from questions and passages alike before
+normalizing. The opening cell computed this *centered* variant as well. The
+next cell also defines `align_uniform`, which measures two quantities that
+we derive in :numref:`subsec_lm_emb_align_uniform`.
 
 ```{.python .input #text-embeddings-geometry-def}
 %%tab pytorch
@@ -420,8 +424,9 @@ def align_uniform(Zx, Zy, t=2.0, Zu=None):
     return float(((Zx - Zy) ** 2).sum(-1).mean()), float(uniformity)
 ```
 
-We measure anisotropy on 2,000 random passages for the three poolings and
-check :eqref:`eq_lm_anisotropy` in float64.
+We measure anisotropy on 2,000 random passages for CLS pooling, mean
+pooling and centered mean pooling, and check :eqref:`eq_lm_anisotropy` in
+float64.
 
 ```{.python .input #text-embeddings-anisotropy}
 %%tab pytorch
@@ -452,16 +457,20 @@ the raw space, how common the words of a text are moves its vector more than
 what the text means.
 
 CLS pooling fails completely: not one of the 220 questions finds a relevant
-passage. The masked-token loss scores only positions it hid, BERT-style
-corruption never hides a special token such as `[CLS]` (in a million
-tokens, :numref:`sec_lm_bert` found not one selected), and ModernBERT has no
-sentence-pair task.
-Nothing in its pretraining ever asked the final vector at the first position
-to describe the text.
+passage. The masked-token loss scores only the positions it hid, and the
+corruption rule of :numref:`sec_lm_bert` never hides a special token such
+as `[CLS]`. ModernBERT has no sentence-pair task either. Nothing in its
+pretraining ever asked the final vector at the first position to describe
+the text.
 
-Centering is the obvious repair. It removes the cone, anisotropy drops to
-0.001, and Recall@10 stays at 0.05. Anisotropy is a symptom; to cure the
-disease we have to tell the encoder what *close* should mean.
+Centering removes the cone: anisotropy drops to 0.001, and Recall@10 stays
+at 0.05. So the shared direction is not what hurts retrieval. What remains
+after centering is still an average of token states trained to predict
+hidden tokens, and the opening showed what such an average knows: roughly
+where in the book a text lives. Nothing in pretraining asked a question to
+lie near the passage that answers it. That relation has to be taught, with
+pairs of texts that belong together. The shared direction will return, as
+something the training has to shrink.
 
 ## Contrastive Training
 :label:`subsec_lm_emb_contrastive`
@@ -486,13 +495,13 @@ nothing: their vectors were computed anyway, for their own questions. The
 *temperature* $\tau$ divides the cosines; at $\tau = 0.05$ a cosine
 difference of 0.1 becomes a logit difference of 2.
 
-The loss is InfoNCE (:numref:`sec_mdl-infonce`), with the scaled cosine as
-critic. The appendix proves that it bounds the mutual information between
-question and passage from below, $I \geq \log B - \ell$, and that the bound
-never exceeds $\log B$. This ceiling is why batch size matters: with 64
-candidates the loss certifies at most $\log 64 \approx 4.16$ nats, and once
-the model finds the right passage among 64 nearly every time, the batch has
-little left to teach.
+The loss is InfoNCE :cite:`Oord.Li.Vinyals.2018`, which the mathematics
+appendix studies as an estimate of mutual information
+(:numref:`sec_mdl-infonce`). The appendix proves that the loss bounds the
+mutual information $I$ between question and passage from below,
+$I \geq \log B - \ell$, and that this bound never exceeds $\log B$. With 64
+candidates the loss can certify at most $\log 64 \approx 4.16$ nats, however
+good the model; a larger batch raises the ceiling.
 
 ```{.python .input #text-embeddings-infonce-def}
 %%tab pytorch
@@ -549,12 +558,15 @@ print(pd.DataFrame({'score gap': [0.1, 0.3], f'weight ratio at tau={TAU}':
                     np.exp(np.array([0.1, 0.3]) / TAU)}).round(1))
 ```
 
-Automatic differentiation agrees with the formula to $10^{-16}$. At $\tau = 0.05$, a negative
-0.1 closer to the question than another receives 7.4 times its push, and one
-0.3 closer receives 403 times. A low temperature spends nearly all of its
-gradient on the few negatives that look most like the answer, the *hard
-negatives*. That helps when they are true negatives and hurts when they are
-not.
+Automatic differentiation agrees with the formula to $10^{-16}$. At
+$\tau = 0.05$, a negative 0.1 closer to the question than another receives
+7.4 times its push, and one 0.3 closer receives 403 times. A low temperature
+spends nearly all of its gradient on the few negatives that look most like
+the answer, the *hard negatives*. That helps when they are true negatives
+and hurts when they are not. The same weights say when a batch stops
+teaching: once the right passage takes almost all of the softmax,
+$1 - p_{ii}$ and every $p_{ij}$ are near zero, and random negatives
+contribute almost nothing.
 
 ### Alignment and Uniformity
 :label:`subsec_lm_emb_align_uniform`
@@ -583,10 +595,24 @@ where $\mathbf{d}^+$ is the passage of question $\mathbf{q}$. The first term,
 the *alignment*, is the mean squared distance within positive pairs. The
 second, the *uniformity*, is the logarithm of a Gaussian kernel averaged
 over all passages, small when the passages keep their distance from every
-question. Contrastive training is these two forces and nothing else: pull
-pairs together, push everything apart. Wang and Isola measure uniformity
-with the logarithm outside both expectations and the kernel
-$e^{-t\|\mathbf{z} - \mathbf{z}'\|^2}$ at $t = 2$, as `align_uniform` does.
+question. In the large-batch limit the loss has only these two terms: one
+pulls pairs together, the other pushes all vectors apart.
+
+To measure uniformity on a trained model we use the version of Wang and
+Isola,
+
+$$
+\mathcal{U}_t = \log \mathbb{E}\, e^{-t\|\mathbf{z} - \mathbf{z}'\|^2},
+$$
+
+the logarithm of the same Gaussian kernel averaged over two independent
+passages $\mathbf{z}$ and $\mathbf{z}'$. Unlike the second term of
+:eqref:`eq_lm_align_uniform`, it needs only passage vectors, so it can be
+computed for any embedder, and its logarithm sits outside the average. Both
+fall as the vectors spread out. The loss's own kernel has
+$t = 1/(2\tau) = 10$; we use Wang and Isola's $t = 2$, so that our numbers
+compare with theirs. `align_uniform` computes the alignment and
+$\mathcal{U}_2$, over distinct pairs of passages.
 
 The smallest case shows the tension. Place four unit vectors on a circle,
 points 1 and 2 one positive pair and points 3 and 4 the other. A square
@@ -614,33 +640,36 @@ for name, deg in {'square': (0, 90, 180, 270),
 print(pd.DataFrame(rows).round(3).to_string(index=False))
 ```
 
-The square has the best uniformity, $-4.4$, and the worst alignment, 2.0,
-and InfoNCE punishes it hard, 18.6 nats above $\log 4$ at $\tau = 0.05$:
-for every question some negative lies closer than its partner. The collapse
-gives perfect alignment and the loss of a blind guess, $\log 4$. Two
-coincident pairs on opposite sides win at both temperatures, about $\log 2$
-below $\log 4$ (two candidates tie, because each question's own point is the
-passage of its partner). The temperature sets the price of a bad
-arrangement: at $\tau = 0.5$ the square costs 0.87 nats instead of 18.6.
+The square has the best uniformity, $\mathcal{U}_2 = -4.4$, and the worst
+alignment, 2.0, and InfoNCE punishes it hard, 18.6 nats above $\log 4$ at
+$\tau = 0.05$: for every question some negative lies closer than its
+partner. The collapse gives perfect alignment and the loss of a blind guess,
+$\log 4$. Two coincident pairs on opposite sides win at both temperatures.
+Each question then finds two passages at its own spot, its own and its
+partner's, so the softmax can at best split evenly between them: a loss of
+about $\log 2$, which is $\log 2$ below $\log 4$. The temperature sets how
+many nats a bad arrangement costs: at $\tau = 0.5$ the square costs 0.87
+nats instead of 18.6.
 
 The collapse is the extreme of anisotropy, and the loss rejects it. This
 holds in general.
 
 **Proposition.** *For unit vectors drawn from one distribution, with
 anisotropy $a$ (the mean cosine between two independent draws), the
-uniformity $\log \mathbb{E}\, e^{-t\|\mathbf{z} - \mathbf{z}'\|^2}$ is at
-least $-2t(1 - a)$.*
+uniformity $\mathcal{U}_t$ is at least $-2t(1 - a)$ for every $t > 0$.*
 
 **Proof.** The logarithm is concave, so $\log \mathbb{E}\, e^{X} \geq
 \mathbb{E}\, X$ by Jensen's inequality. Take $X = -t\|\mathbf{z} -
 \mathbf{z}'\|^2 = -t(2 - 2\mathbf{z}^\top \mathbf{z}')$, whose expectation
 is $-2t(1 - a)$. $\blacksquare$
 
-The uniformity is never above 0, its worst value, and while $a$ is near 1 it
-cannot go far below 0 either. Training that lowers it must shorten the mean
-vector: contrastive training removes anisotropy because it cannot do its job
-otherwise. The converse fails, as centering showed; that is what the
-alignment term is for.
+The uniformity $\mathcal{U}_t$ is never above 0, its worst value, and while
+$a$ is near 1 it cannot go far below 0 either. The same argument applies to
+the term of :eqref:`eq_lm_align_uniform`, with the mean cosine between
+questions and passages in place of $a$. Training that lowers it must shorten
+the mean vector: contrastive training reduces anisotropy because it cannot
+do its job otherwise. The converse fails, as centering showed; that is what
+the alignment term is for.
 
 ### Training on Question-Answer Pairs
 :label:`subsec_lm_emb_train`
@@ -653,14 +682,12 @@ mean-pooled vectors. Questions get the prefix `query: ` and passages
 lets one encoder treat the two sides differently. AdamW with warmup and
 linear decay, clipping at norm 1 and bf16 complete the recipe.
 
-One detail matters more than it looks. If two pairs in a batch share a
-passage, that passage is the positive of one question and a negative of the
-other, and the loss pushes the second question away from its own answer.
-`no_duplicate_batches` prevents such *false negatives*: a pair that would
-repeat a question or a passage already in the batch waits for a later batch.
-Mined hard negatives add one passage per pair to the candidates; Matryoshka
-dimensions (:numref:`subsec_lm_emb_compress`) average the loss over the
-leading 768, 512, 256, 128 and 64 coordinates.
+Duplicates need care. If two pairs in a batch share a passage, that passage
+is the positive of one question and a negative of the other, and the loss
+pushes the second question away from its own answer. Such a passage is a
+*false negative*. `no_duplicate_batches` prevents them within the training
+pairs: a pair that would repeat a question or a passage already in the
+batch waits for a later batch.
 
 ```{.python .input #text-embeddings-train-def}
 %%tab pytorch
@@ -768,11 +795,12 @@ def train_embedder(model, tokenizer, pairs, *, pooling='mean', tau=0.05,
 
 The pairs come from Natural Questions (Kwiatkowski et al., 2019): questions
 that people typed into a search engine, each with a Wikipedia passage that
-answers it. We train on 20,000 pairs chosen by one seeded permutation, which
-:numref:`sec_lm_retrieval` reuses. To choose the learning rate we hold out
-300 later pairs whose question and passage occur nowhere in training, so
-that the rate that best memorizes training passages gains nothing, and rank
-each held-out question among 5,000 unseen passages.
+answers it. We train on 20,000 pairs chosen by one seeded permutation. To
+choose the learning rate we hold out 300 later pairs whose question and
+passage occur nowhere in training, so that the rate that best memorizes
+training passages gains nothing. For each held-out question we rank 5,000
+unseen passages and score *MRR@10*, the reciprocal of the rank of its own
+passage, or 0 if that passage is not among the first ten.
 
 ```{.python .input #text-embeddings-nq}
 %%tab pytorch
@@ -797,10 +825,8 @@ print(f'{len(nq):,} pairs, {nq.answer.nunique():,} distinct passages\n'
 ```
 
 Of the 20,000 training pairs, 3,236 share their passage with another pair,
-the duplicates the sampler keeps apart. A few helpers serve the runs below:
-the raw encoder in fp32 for training, encoding with prefixes, the ten best
-book passages per dev question, the held-out score, mining, and bf16
-checkpoints.
+the duplicates the sampler keeps apart. The next cell holds helpers for
+encoding, ranking, scoring, mining and checkpoints.
 
 ```{.python .input #text-embeddings-run-defs}
 %%tab pytorch
@@ -879,7 +905,7 @@ def load_ckpt(path):
     return model.eval()
 ```
 
-The regeneration first tries three learning rates, each with a seed that
+The training run first tries three learning rates, each with a seed that
 no reported model uses, so that the reported models are not winners of a
 selection, and scores them on the held-out pairs. It then trains the chosen
 rate with seeds 0, 1 and 2, which shows how much Recall@10 moves from
@@ -926,20 +952,22 @@ if 'emb-train' in RERUN:
 
 Random in-batch negatives are mostly about something else entirely, and by
 :eqref:`eq_lm_infonce_grad` such easy negatives receive almost no gradient.
-*Hard negatives* are passages that the current model ranks high for a
-question although they are not its passage. We mine them with the seed-0
-model: for each training question it ranks the distinct training passages,
-its own left out, and one hard negative is drawn uniformly from ranks 11 to
-50.
+Hard negatives, passages that the current model ranks high for a question
+although they are not its passage, are the ones the gradient works on.
+Finding them by searching with the model itself is called *mining*. We mine
+with the seed-0 model: for each training question it ranks the distinct
+training passages, its own left out, and one hard negative is drawn
+uniformly from ranks 11 to 50.
 
 Why not from the top? A passage ranked first is often a correct answer that
 happens not to be the labeled one, and training against it pushes the
 question away from an answer. We measure how often. For 500 training
 questions we take one mined passage from each of four rank buckets and ask
-Qwen3-Reranker-0.6B, which reads question and passage together and answers
-yes or no (:numref:`sec_lm_retrieval` uses it to reorder results), whether
-the passage answers the question. A probability of yes above 0.5 marks it
-as probably relevant. These labels come from a model, not from people.
+Qwen3-Reranker-0.6B whether the passage answers the question. The reranker
+is a *cross-encoder* in the sense of :numref:`sec_lm_bert`: it reads
+question and passage together and answers yes or no. A probability of yes
+above 0.5 marks a passage as probably relevant. These labels come from a
+model, not from people.
 
 ```{.python .input #text-embeddings-mine}
 %%tab pytorch
@@ -962,9 +990,11 @@ if 'emb-train' in RERUN:
     d2l.lm_free()
 ```
 
-Two variants follow at the chosen rate, seed 0: one with the mined negative
+Two variants follow at the chosen rate, seed 0. One adds the mined negative
 as one more candidate per question, so that every question sees 128
-passages, and one with the Matryoshka loss, which is saved.
+passages. The other, the *Matryoshka* model, trains for vectors that can be
+shortened, with a loss defined in :numref:`subsec_lm_emb_compress`, and is
+saved.
 
 ```{.python .input #text-embeddings-train-variants}
 %%tab pytorch
@@ -982,9 +1012,9 @@ if 'emb-train' in RERUN:
     print(f'regenerated in {OUT["minutes"]:.1f} min; {d2l.lm_peak()}')
 ```
 
-A normal build starts here. It reads the learning-rate check with its
-intervals, a summary of every run, and the audit with intervals over the 500
-audited questions.
+The next cell reads what the training run recorded: the learning-rate
+check, a summary of each run, and the audit, with intervals over the
+held-out and the audited questions.
 
 ```{.python .input #text-embeddings-train-read}
 %%tab pytorch
@@ -1019,33 +1049,38 @@ The learning rate $10^{-4}$ won, with MRR@10 0.871 on the held-out pairs;
 $3 \times 10^{-5}$ came within noise of it (0.016 [$-0.007$, 0.039] behind)
 and $10^{-5}$ did not. One epoch, 313 steps, takes about a minute on one RTX
 4090. The loss falls from about 3.2 nats over the first ten steps to 0.05
-over the last ten. Against the ceiling of $\log 64 \approx 4.16$ nats, the
-model picks the right passage among 64 almost every time: after one epoch,
-random negatives have little left to teach.
+over the last ten. This is not memorization: in a single epoch every batch
+is new to the model, and the held-out pairs score 0.87. The model picks the
+right passage among 64 almost every time, so by the gradient weights above,
+random negatives had little left to teach by the end of the epoch.
 
 The audit shows why the top ranks are left alone. Among mined passages at
-ranks 1 to 5, the reranker calls 0.30 [0.26, 0.34] probably relevant: nearly
-a third of the "negatives" there are answers. The share falls with every
-bucket, to 0.10, 0.02 and 0.006, so mining from ranks 11 to 50 keeps false
-negatives to a few percent.
+ranks 1 to 5, the reranker calls 0.30 [0.26, 0.34] probably relevant: by its
+judgment nearly a third of the "negatives" there are answers. The share
+falls with every bucket, to 0.10, 0.02 and 0.006, so mining from ranks 11 to
+50 keeps false negatives, by the reranker's labels, to one or two percent.
+Whether the mined negative helps is measured with the other models below.
 
 ## Embedders Derived from Language Models
 :label:`subsec_lm_emb_llm`
 
-Our encoder saw 20,000 pairs, once. Deployed embedders are trained in two
-stages on far more. E5 (Wang et al., 2022) and Qwen3 Embedding (Zhang et al.,
-2025) first train on a large collection of weak pairs, such as titles with
-their articles (Qwen3 Embedding had a language model write many of its
-pairs), then on smaller curated sets with mined hard negatives. RocketQA (Qu
-et al., 2021) introduced the step our audit imitates: a model that reads
-question and passage together filters the mined negatives, so that false
-negatives are dropped rather than pushed away.
+Our encoder saw 20,000 pairs, once. Released embedders are trained on far
+more, in stages. E5 (Wang et al., 2022) first trains on a large collection
+of weak pairs gathered from the web, such as titles with their articles,
+then on smaller labeled sets with mined hard negatives. Qwen3-Embedding
+(Zhang et al., 2025) had a larger Qwen3 model write its weak pairs, then
+trained on labeled and filtered synthetic pairs with hard negatives, and
+finally averaged several of its checkpoints. RocketQA (Qu et al., 2021)
+introduced the step our audit imitates: a cross-encoder filters the mined
+negatives, so that false negatives are dropped rather than pushed away.
 
 ### Decoder Backbones and Instructions
 
 Qwen3-Embedding-0.6B starts from a pretrained decoder of the Qwen3 family
-and keeps its causal attention. Three conventions follow, and an embedder
-used against any of them runs without an error and returns worse vectors.
+and keeps its causal attention. Three conventions follow, and code that
+ignores any of them still runs without an error. The wrong pooling or
+padding reads the state of the wrong token. A missing instruction changes
+what the query vector encodes, in a direction that has to be measured.
 
 - **Last-token pooling.** Under causal attention only the last position has
   seen the whole text.
@@ -1053,25 +1088,22 @@ used against any of them runs without an error and returns worse vectors.
   of every row holds a real token.
 - **An instruction on the query side.** A question enters as
   `Instruct: {task}\nQuery:{query}`. Passages are encoded without it, so one
-  passage index serves many tasks. Our task reads "Given a question about
-  the book, retrieve passages that answer it."
+  passage index serves many tasks. Our task is the string `Given a question
+  about the book, retrieve passages that answer it`.
 
-Other routes from a decoder to an embedder change one thing each. LLM2Vec
-(BehnamGhader et al., 2024) removes the causal mask and adapts the decoder
-with masked next-token prediction. NV-Embed (Lee et al., 2024) also drops the
-mask and pools with a learned attention layer instead of the last token.
-E5-Mistral (Wang et al., 2024) fine-tunes a much larger decoder briefly on
-labeled pairs and on pairs a language model wrote, skipping the weak-pair
-stage.
+Other routes from a decoder differ in what they change. LLM2Vec
+(BehnamGhader et al., 2024) removes the causal mask, retrains the decoder
+to predict masked tokens with it, then trains contrastively. NV-Embed (Lee
+et al., 2024) also removes the mask and pools with a learned attention
+layer. E5-Mistral (Wang et al., 2024) skips the weak-pair stage and briefly
+fine-tunes a much larger decoder on labeled and generated pairs.
 
 ### Comparison on the Book
 
-Now all models answer the same 220 questions. The seed-0 and Matryoshka
-models are encoded live from their checkpoints; seeds 1 and 2 and the
-hard-negative model come from stored rankings; Qwen3-Embedding's passage
-vectors are those the next section's retriever serves. Before looking,
-place the contrastive model: will 20,000 generic pairs bring it closer to
-raw pooling or to BM25?
+Now all models answer the same 220 questions. Before looking, place the
+contrastive model: will 20,000 generic pairs bring it closer to raw pooling
+or to BM25? The cell also checks that the two saved checkpoints reproduce
+the rankings recorded at training time.
 
 ```{.python .input #text-embeddings-ladder}
 %%tab pytorch
@@ -1113,15 +1145,21 @@ for name in ('contrastive seed 0', 'Matryoshka'):  # live against stored
     assert SMALL or agree >= 0.98, f'{name}: checkpoint and results differ'
 ```
 
-Contrastive training turns the encoder into a retriever: Recall@10 rises
-from 0.06 to 0.76 for seed 0, and the three seeds span 0.73 to 0.78. It does
-not reach BM25, whose nDCG@10 interval, [0.78, 0.86], lies far above the
-contrastive model's, [0.47, 0.58]. Anisotropy falls from 0.94 to 0.52.
-Qwen3-Embedding finds a relevant passage among its first ten for 0.98 of the
-questions with its instruction and 0.995 without. The live models agree with
-their stored rankings on Recall@10 for at least 0.995 of the questions; their
-exact top-ten lists differ more often, because bf16 encodings on a GPU let
-near-tied passages swap places from run to run.
+Closer to BM25. Contrastive training turns the encoder into a retriever:
+Recall@10 rises from 0.06 to 0.76 for seed 0, the three seeds span 0.73 to
+0.78, and anisotropy falls from 0.94 to 0.52. The model does not reach
+BM25, which also orders its results better: BM25's nDCG@10 interval,
+[0.78, 0.86], lies far above the contrastive model's, [0.47, 0.58].
+Qwen3-Embedding finds a relevant passage among its first ten for 98% of the
+questions with its instruction and for 99.5% without, yet it puts one first
+less often than BM25 (Recall@1 0.67 against 0.76). The questions were
+drafted from the book's passages and reuse their words, which BM25
+rewards.
+
+Only about a third of the live checkpoints' top-ten lists match the stored
+ones exactly, because bf16 encodings on a GPU let near-tied passages swap
+places from run to run. Recall@10 agrees for at least 99.5% of the
+questions, so the stored runs and the live ones measure the same models.
 
 The next cell computes paired differences on the same questions, with
 intervals that resample documents, and marks whether each exceeds the range
@@ -1159,36 +1197,42 @@ gain = D[(D['from'] == best_raw) & (D['to'] == 'contrastive seed 0')].iloc[0]
 assert SMALL or gain.low > 0, 'no gain from contrastive training: a bug'
 ```
 
-Four results stand.
+Each difference is read against its interval and against the seed range.
 
 - Raw mean pooling retrieves far worse than counting words: BM25 is ahead
   by 0.90 [0.85, 0.93] in Recall@10.
 - Contrastive training on 20,000 pairs that never mention the book lifts
-  Recall@10 by 0.70 [0.64, 0.76] over raw mean pooling: tens of points, far
+  Recall@10 by 0.70 [0.64, 0.76] over raw mean pooling: 70 points, far
   beyond the seed range of 0.045.
 - One mined hard negative per question adds 0.032 [$-0.005$, 0.069]. The
   interval includes 0 and the gain is below the seed range, so at one seed
   per variant and 220 questions we cannot tell it from training noise.
 - Qwen3-Embedding with its instruction exceeds our seed-0 model by 0.22
-  [0.16, 0.28]. It was trained on far more pairs, which is the point of the
-  comparison.
+  [0.16, 0.28]. The gap bundles a larger backbone pretrained on far more
+  text, far more training pairs, many written by a language model, and
+  possibly the book itself; this comparison cannot separate them.
 
-Two remarks belong with the last result. The instruction did not help here:
-it changed Recall@10 by $-0.014$ [$-0.028$, 0.000]. Use the format of the
-model card, since the model was trained with it, but measure the gain on
-your own questions rather than assume it. And the released embedder may
-have read this book, which has been on the web for years, so its 0.98 is
-optimistic by an amount we cannot measure. Our contrastive model never saw
-the book, and its 0.76 is a clean measure of transfer.
+The instruction did not help here: it changed Recall@10 by $-0.014$
+[$-0.028$, 0.000]. Use the format of the model card, since the model was
+trained with it, but measure its effect on your own questions rather than
+assume it. We keep the instruction in what follows, since the difference
+lies within its interval and the card asks for it.
+
+The released embedder may also have read this book, which has been on the
+web for years, so its 0.98 is optimistic by an amount we cannot measure.
+Our training pairs never mention the book. ModernBERT's pretraining text
+:cite:`Warner.Chaffin.Clavie.ea.2024` may have included it, but the raw
+encoder's 0.06 shows that such exposure alone retrieves nothing; the 0.76
+measures what 20,000 generic pairs transfer.
 
 ### Geometry after Training
 
 Does training change the geometry as :eqref:`eq_lm_align_uniform` predicts?
 We measure alignment on all pairs of a dev question and one of its relevant
-passages, and uniformity on the 2,000 sampled passages. The plot projects
-the passage vectors onto the two directions along which each set varies
-most, without subtracting the mean, so that a shared direction stays visible
-as a long mean vector (the star).
+passages, and $\mathcal{U}_2$ on the 2,000 sampled passages. The plot
+projects the passage vectors onto the two directions along which they
+extend furthest, found by an SVD without subtracting the mean, so that a
+shared direction stays visible as a long mean vector (the star).
 
 ```{.python .input #text-embeddings-alignment}
 %%tab pytorch
@@ -1216,27 +1260,45 @@ for ax, name in zip(axes, ('raw mean', 'contrastive seed 0')):
     ax.set_aspect('equal')
 ```
 
-Training trades alignment for uniformity. Raw mean pooling has the smallest
-alignment, 0.19, but everything lies close to everything: since
-$\|\mathbf{z} - \mathbf{z}'\|^2 = 2 - 2\,\mathbf{z}^\top \mathbf{z}'$ for
-unit vectors, two random raw passages lie at squared distance
-$2 - 2 \times 0.94 = 0.12$ on average, closer to each other than a question
-to its answer. After training the pairs lie at 0.60, but random passages at
-$2 - 2 \times 0.52 \approx 0.96$; for Qwen3-Embedding the numbers are 0.61
-and $2 - 2 \times 0.28 \approx 1.43$. Retrieval depends on this ratio. The
-uniformity values, $-0.23$, $-1.82$ and $-2.78$, lie just above the bounds
+Training moved pairs apart: the alignment, the mean squared distance within
+pairs, grows from 0.19 for raw mean pooling to 0.60. That seems to
+contradict the pull of the alignment term, until we compare it with how far
+apart passages lie in general. For unit vectors
+$\|\mathbf{z} - \mathbf{z}'\|^2 = 2 - 2\,\mathbf{z}^\top \mathbf{z}'$, so
+two random passages lie at mean squared distance $2 - 2a$, with $a$ the
+anisotropy. The table sets the two distances side by side
+(:numref:`tab_lm_emb_distances`).
+
+:Mean squared distance between a question and its relevant passage (the alignment) and between two random passages ($2 - 2a$), and their ratio.
+:label:`tab_lm_emb_distances`
+
+| model | question to its passage | two random passages | ratio |
+|---|---|---|---|
+| raw mean pooling | 0.19 | $2 - 2 \times 0.940 = 0.12$ | 0.6 |
+| contrastive, seed 0 | 0.60 | $2 - 2 \times 0.522 \approx 0.96$ | 1.6 |
+| Qwen3-Embedding + instruction | 0.61 | $2 - 2 \times 0.283 \approx 1.43$ | 2.4 |
+
+Before training, a question lies farther from its own passage than two
+random passages lie from each other. Training moved everything apart, and
+unrelated passages much more than pairs: after training, two random passages
+lie 1.6 times as far apart as a question and its passage, and 2.4 times for
+Qwen3-Embedding. Retrieval depends on this ratio. The values of
+$\mathcal{U}_2$, $-0.23$, $-1.82$ and $-2.78$, lie just above the bounds
 $-4(1 - a)$ of the proposition, $-0.24$, $-1.91$ and $-2.87$: in all three
 spaces the shared direction limits the spread. In the plot the raw vectors
-form a thin arc around a mean vector of length 0.97, the trained vectors a
-much wider cap around one of length about $\sqrt{0.52} \approx 0.72$.
-Training has shortened the mean vector without removing it.
+form a thin arc around a mean vector of length 0.97, the trained ones a much
+wider cap around a mean of length about $\sqrt{0.52} \approx 0.72$. Training
+has shortened the mean vector without removing it.
 
 ## Smaller Vectors
 :label:`subsec_lm_emb_compress`
 
-A vector of 1,024 float32 numbers takes 4 KB. The book's passages need about
-22 MB; $10^8$ web passages need about 400 GB. We can keep fewer coordinates,
-or fewer bits per coordinate.
+So far every passage vector of Qwen3-Embedding has been stored as 1,024
+float32 numbers, 4 KB each. For the book that is about 22 MB, which no
+machine notices. An index of $10^8$ web passages would need about 400 GB,
+and an exact search reads all of it for every question. How much of the
+0.98 survives with fewer bytes? We can keep fewer coordinates, or fewer bits
+per coordinate.
 
 ### Truncation and Quantization
 
@@ -1252,21 +1314,28 @@ $$
 with $\ell^{(k)}$ the loss :eqref:`eq_lm_infonce` on the first $k$
 coordinates, renormalized, and $K$ a set of widths. Each prefix must then be
 an embedding on its own, as each doll of a Russian nesting set is a complete
-doll. Qwen3-Embedding was trained this way, down to 32 coordinates.
+doll. Qwen3-Embedding supports such prefixes: its model card allows any
+width from 32 to 1,024 coordinates.
 
-*Quantization* keeps all coordinates at lower precision. Int8 stores each in
-one byte, with one scale per coordinate from the corpus. Binary vectors keep
-the sign, and two of them are compared by their *Hamming distance*, the
-number of differing bits: one XOR and one population count per machine word.
-Why should signs preserve similarity? For a random direction $\mathbf{r}$,
-the signs of $\mathbf{r}^\top \mathbf{a}$ and $\mathbf{r}^\top \mathbf{b}$
+*Quantization* keeps all coordinates at lower precision. The simplest form,
+int8, stores each coordinate in one byte, with one scale per coordinate
+taken from the largest value in the corpus, a quarter of the float32 bytes.
+
+Binary vectors go further and keep only the sign of each coordinate, one
+bit. Two of them are compared by their *Hamming distance*, the number of
+differing bits: one XOR and one population count per machine word. Why
+should signs preserve similarity? For a random direction $\mathbf{r}$, the
+signs of $\mathbf{r}^\top \mathbf{a}$ and $\mathbf{r}^\top \mathbf{b}$
 differ with probability $\theta/\pi$, where $\theta$ is the angle between
-$\mathbf{a}$ and $\mathbf{b}$ (Charikar, 2002). The coordinates of an
-embedder are not random directions, but the idea carries over roughly.
+$\mathbf{a}$ and $\mathbf{b}$ (Charikar, 2002). An embedder's coordinates
+are not random directions, so the formula is not exact, but the sign
+agreement still falls as the angle grows.
+
 Hamming distance discards magnitude: a coordinate where the query is nearly
-0 counts as much as its largest one. *Rescoring* takes the top 100 passages
-by Hamming distance and reorders them by the dot product of the float query
-with the passages' signs; the passages stay at one bit per coordinate.
+0 counts as much as its largest one. *Rescoring* repairs this on the query
+side. It takes the top 100 passages by Hamming distance and reorders them by
+the dot product of the float query with the passages' signs, so the
+passages stay at one bit per coordinate.
 
 ```{.python .input #text-embeddings-compress-def}
 %%tab pytorch
@@ -1345,10 +1414,10 @@ d2l.plot([t.bytes.tolist() for t in lines + points],
 
 For Qwen3-Embedding, int8 costs nothing we can see: Recall@10 stays at
 0.982 at a quarter of the bytes. Binary vectors keep 0.955 by Hamming
-distance alone and 0.964 with rescoring, at 1/32 of the bytes. Truncation is
-gentle too: 0.900 at 128 of 1,024 coordinates, 0.841 at 64. Our two models
-behave alike under truncation; at 128 coordinates the Matryoshka model keeps
-0.659 and the plain one 0.686.
+distance alone and 0.964 with rescoring, at 1/32 of the bytes. Truncation
+costs more: 0.900 at 128 of 1,024 coordinates, 0.841 at 64. Our two models
+lose more to truncation. From full width to 128 coordinates the plain model
+falls from 0.764 to 0.686 and the Matryoshka model from 0.741 to 0.659.
 
 Which differences are real? Our two models are single seeds, so a
 difference between them is read against the seed range of the full-width
@@ -1371,14 +1440,18 @@ print(f'seed range of Recall@10 at full width (a proxy for the training '
 ```
 
 At 128 coordinates the Matryoshka model is not ahead: $-0.027$
-[$-0.075$, 0.017], within the seed range. On this book, at these widths, our
-plain model lost no more to truncation than the model trained for it.
-Matryoshka training aims at the smallest prefixes, where Kusupati et al.
-found its advantage to grow as the prefix shrinks; our sweep stops at 64,
-and an exercise extends it. Binary vectors with rescoring cost
-Qwen3-Embedding $-0.018$ [$-0.037$, 0.000] and the Matryoshka model
-$-0.018$ [$-0.055$, 0.017], intervals that reach 0; for the plain model the
-difference is $-0.045$ [$-0.085$, $-0.009$], a real loss. Even at 128 bytes per passage,
+[$-0.075$, 0.017], within the seed range. The two models stay within 0.03 of
+each other at every width we tried (0.686 against 0.659 at 128 coordinates,
+0.595 against 0.582 at 64). A plain contrastive model can be truncated
+without special training, at a cost that grows as the prefix shrinks, and
+down to 64 of 768 coordinates the Matryoshka loss did not reduce that cost.
+Kusupati et al. found its advantage to grow at smaller prefixes; exercise
+:exref:`ex_lm_emb-matryoshka` looks below 64 coordinates.
+
+Binary vectors with rescoring cost Qwen3-Embedding $-0.018$
+[$-0.037$, 0.000] and the Matryoshka model $-0.018$ [$-0.055$, 0.017],
+intervals that reach 0; for the plain model the difference is $-0.045$
+[$-0.085$, $-0.009$], a real loss. Even at 128 bytes per passage,
 Qwen3-Embedding (0.964) stays far ahead of our model at full precision.
 
 ## Using a Released Embedder
@@ -1388,12 +1461,11 @@ Qwen3-Embedding (0.964) stays far ahead of our model at full precision.
 
 In practice a released embedder is loaded through a library such as
 sentence-transformers, which reads its pooling, padding side,
-normalization and prompts from files in its repository. That is the reason
-to check that the library does what we derived. The cell asserts that the
-query prompt in the repository has our instruction format and that the
-pooling reads the last token, encodes 16 passages and 4 questions both ways,
-and compares the library's contrastive loss, `MultipleNegativesRankingLoss`
-at scale $1/\tau$, with `info_nce_loss`.
+normalization and prompts from files in its repository. Does it do what we
+derived? The cell checks the repository's query prompt and pooling, encodes
+16 passages and 4 questions both ways, and compares the library's
+contrastive loss, `MultipleNegativesRankingLoss` at scale $1/\tau$, with
+`info_nce_loss`.
 
 ```{.python .input #text-embeddings-production}
 %%tab pytorch
@@ -1430,10 +1502,10 @@ d2l.lm_free()
 
 The two encodings agree to a cosine of at least 0.998, the difference bf16
 arithmetic leaves, and the library's loss equals :eqref:`eq_lm_infonce` to
-$4 \times 10^{-6}$. The library adds the conventions, not a new method, and
-a model used with the wrong ones, mean pooling where the card says last
-token or a bare question where it expects an instruction, loads and runs
-without complaint.
+$4 \times 10^{-6}$. The library reads the conventions from the repository;
+the method is the one derived above. A model used with the wrong
+conventions, mean pooling where the card says last token or a bare question
+where it expects an instruction, loads and runs without complaint.
 
 ### Choosing an Embedder
 
@@ -1442,9 +1514,8 @@ Released embedders are ranked on MTEB, the Massive Text Embedding Benchmark
 languages. An average over tasks says little about one domain: a model can
 rise by clustering news well, and the training data of some models overlaps
 the benchmark's. The reliable way to choose is the one this section
-followed: a few hundred questions about your own documents with their
-relevant passages, a word-counting floor, and paired differences with
-intervals that resample documents. On the book it gives a clear answer: a
+followed: a few hundred questions about your own documents, a word-counting
+floor, and paired differences with intervals that resample documents. On the book it gives a clear answer: a
 released embedder, in int8, or as binary vectors with rescoring when memory
 is short, with BM25 beside it. Training on pairs from the domain is the next
 step only when such a set shows a gap, and then the training questions must
@@ -1461,17 +1532,20 @@ they miss.
 Averaging the token vectors of a pretrained encoder gives a poor text
 vector: on the book's questions, raw mean pooling put a relevant passage in
 the top ten for 6% of them, where counting words did so for 96%. Raw vectors
-share one direction: their mean cosine equals the squared length of their
-mean vector, 0.94, and centering removes that direction without improving
-retrieval. Contrastive training with in-batch negatives asks each question to
-pick its passage out of a batch. Its loss is InfoNCE, whose large-batch limit
-is an alignment term that pulls pairs together plus a uniformity term that,
-by Jensen's inequality, can only fall when the shared direction shrinks. On
-20,000 generic pairs this lifted the Recall@10 of ModernBERT by 70 points,
-and a mined hard negative per question did not move it beyond seed noise.
-The released decoder-based Qwen3-Embedding, trained on far more pairs and
-possibly on the book itself, added 22 more, and as binary vectors with
-rescoring it keeps nearly all of that at 1/32 of the bytes.
+share one direction, with a mean cosine of 0.94 that equals the squared
+length of their mean vector, but removing it does not help: pretraining
+never asked a question to lie near its answer. Contrastive training teaches
+that by asking each question to pick its passage out of a batch, with the
+InfoNCE loss, whose large-batch limit is an alignment term that pulls pairs
+together plus a uniformity term that can only fall as the shared direction
+shrinks. On 20,000 generic pairs this lifted the Recall@10 of ModernBERT by
+70 points, while one mined hard negative per question stayed within seed
+noise; mining needs an audit, since by a reranker's judgment a third of the
+top-five mined passages answer their question. The released Qwen3-Embedding,
+a decoder trained on far more pairs and possibly on the book itself, added
+22 more points and keeps nearly all of them as binary vectors at 1/32 of the
+bytes. Serving such vectors for millions of passages, and catching the
+questions they miss, still needs an index and a word index beside it.
 
 ## Exercises
 
@@ -1487,17 +1561,22 @@ rescoring it keeps nearly all of that at 1/32 of the bytes.
 
 1. **Uniformity from the denominator.** Derive :eqref:`eq_lm_align_uniform`
    with care.
-    1. For a finite batch, show that the expectation of
-       $\log \frac{1}{B}\sum_j e^{c_{ij}/\tau}$ over batches is at most
+    1. For a finite batch whose negatives are drawn independently from the
+       passages, show that the expectation over batches of
+       $\log \frac{1}{B - 1}\sum_{j \neq i} e^{c_{ij}/\tau}$ is at most
        $\log \mathbb{E}_{\mathbf{d}}\, e^{\mathbf{q}_i^\top \mathbf{d}/\tau}$.
+       Which way does the positive's own term push the finite-batch value?
        Does a small batch overstate or understate the uniformity term?
     1. Show that the uniformity of :eqref:`eq_lm_align_uniform`, with the
        logarithm inside the expectation over questions, is at most the
-       version of Wang and Isola with the logarithm outside, at the same
-       kernel width.
+       version with the logarithm outside, at the same kernel width, when
+       both expectations run over independent draws (a point may be drawn
+       twice).
     1. Evaluate both versions at $t = 1/(2\tau)$ for the three four-point
        configurations of :numref:`subsec_lm_emb_align_uniform`, and check
-       the InfoNCE column of the table.
+       the InfoNCE column of the table. Explain why `align_uniform`, which
+       averages over distinct pairs only, gives a value no higher than
+       either.
    :exlabel:`ex_lm_emb-uniformity`
 
 1. [code] **Temperature.** ● Train the contrastive model at
@@ -1551,6 +1630,18 @@ rescoring it keeps nearly all of that at 1/32 of the bytes.
     1. Does the adapted model close the gap to Qwen3-Embedding?
    :exlabel:`ex_lm_emb-adapt`
 
+1. [code] **Checking the reranker's labels.** The audit's labels come from
+   Qwen3-Reranker-0.6B, not from people. Mine again with the stored seed-0
+   checkpoint, draw 30 training questions, and take one passage from ranks
+   1 to 5 for each.
+    1. Label each passage by hand, relevant or not, before looking at the
+       reranker's probability of yes. Report your agreement with its label
+       (probability above 0.5), with an interval.
+    1. Which kinds of passage does the reranker call answers that you would
+       not, or the reverse? How would your labels change the choice of
+       ranks 11 to 50?
+   :exlabel:`ex_lm_emb-audit-labels`
+
 <!-- slides -->
 
 ::: {.slide}
@@ -1585,15 +1676,15 @@ vector per text.
 [Goals]{.kicker}
 
 - pool token vectors into one unit vector per text;
-- read anisotropy off the length of the mean vector;
-- derive the InfoNCE gradient and its large-batch limit, alignment plus
-  uniformity;
+- measure how strongly a set of vectors shares one direction;
+- derive the gradient of the contrastive loss and its limit for large
+  batches;
 - train an embedder on question-passage pairs and audit mined negatives;
 - choose a released embedder and a storage format by measurement.
 
 **Running example:** this book as 5,324 passages of at most 512 tokens;
 220 questions about 32 of its documents, written and checked by language
-models, not by people; BM25 as the floor.
+models, not by people; BM25 (word counting) as the floor.
 :::
 
 ::: {.slide title="One Vector per Text Is What Search Needs"}
@@ -1611,8 +1702,8 @@ models, not by people; BM25 as the floor.
 :::
 
 ::: {.col .narrow}
-- **Uses:** ModernBERT (one vector per token), cross-entropy, the InfoNCE
-  bound $I \geq \log B - \ell$.
+- **Uses:** ModernBERT (one vector per token), cross-entropy, mutual
+  information.
 - **Skips:** indexes for large corpora, encoder pretraining.
 :::
 :::
@@ -1631,26 +1722,28 @@ models, not by people; BM25 as the floor.
 - Scale to unit length: the dot product becomes the cosine. Unnormalized,
   long vectors rank high for every query.
 - Raw ModernBERT with CLS pooling: Recall@10 = 0.000. Its masked-token loss
-  never reads the first position.
+  never scores the first position.
 :::
 
 ::: {.slide title="Raw Vectors Share One Direction: Mean Cosine 0.94"}
 [Anisotropy]{.kicker}
 
-For unit vectors $\mathbf{z}_1, \ldots, \mathbf{z}_n$ with mean
-$\bar{\mathbf{z}}$, the mean cosine $\bar c$ of distinct pairs is
+Anisotropy: the mean cosine $\bar c$ of distinct pairs. For unit vectors
+$\mathbf{z}_1, \ldots, \mathbf{z}_n$ with mean $\bar{\mathbf{z}}$,
 
 $$\bar c = \frac{n\|\bar{\mathbf{z}}\|^2 - 1}{n - 1} \approx \|\bar{\mathbf{z}}\|^2.$$
 
 @!text-embeddings-anisotropy
 
+`ndcg_10`: Recall@10 weighted toward the top ranks.
+
 ::: {.d2l-note}
-Centering removes the cone (0.001) and leaves Recall@10 at 0.05.
-Anisotropy is a symptom, not the disease.
+Centering, subtracting the mean vector, removes the shared direction and
+leaves Recall@10 at 0.05: the shared direction is not the cause.
 :::
 :::
 
-::: {.slide title="Check: A Mean Cosine of 0.94. How Long Is the Mean Vector?"}
+::: {.slide title="Check: A Mean Cosine of 0.94. How Far Is a Passage from the Mean Direction?"}
 [Check]{.kicker}
 
 2,000 unit vectors of raw passages, mean cosine 0.94 between distinct
@@ -1658,10 +1751,9 @@ pairs. What is the angle between a typical vector and the mean direction?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $\|\bar{\mathbf{z}}\| \approx \sqrt{0.94} \approx 0.97$, and the mean
-of $\mathbf{z}_i^\top \bar{\mathbf{z}}/\|\bar{\mathbf{z}}\|$ is
-$\|\bar{\mathbf{z}}\|$: on average about 14 degrees. The passages fill a
-narrow cone.
+**Answer.** The mean of $\mathbf{z}_i^\top \bar{\mathbf{z}}/\|\bar{\mathbf{z}}\|$
+is $\|\bar{\mathbf{z}}\| \approx \sqrt{0.94} \approx 0.97$, the cosine of
+about 14 degrees: a typical angle. The passages fill a narrow cone.
 :::
 :::
 :::
@@ -1676,8 +1768,8 @@ $\tau$:
 $$\ell = -\frac{1}{B} \sum_{i=1}^{B} \log \frac{e^{c_{ii}/\tau}}{\sum_{j=1}^{B} e^{c_{ij}/\tau}}$$
 
 - A $B$-way cross-entropy: $B - 1$ negatives per question, already encoded.
-- Certifies $I \geq \log B - \ell$, never more than $\log B$: at $B = 64$,
-  4.16 nats.
+- Mutual information $I$ of question and passage: $I \geq \log B - \ell$,
+  a bound never above $\log B$. At $B = 64$, 4.16 nats.
 
 ::: {.d2l-note}
 Batch size is the number of negatives, and it caps what the loss can say.
@@ -1687,10 +1779,11 @@ Batch size is the number of negatives, and it caps what the loss can say.
 ::: {.slide title="A Negative 0.3 Closer Gets 403 Times the Push"}
 [Gradient]{.kicker}
 
-$$\frac{\partial \ell}{\partial c_{ij}} = \frac{p_{ij} - \delta_{ij}}{\tau B}, \qquad p_{ij} = \mathrm{softmax}_j(c_{ij}/\tau)$$
+$$\frac{\partial \ell}{\partial c_{ij}} = \frac{p_{ij} - \delta_{ij}}{\tau B}, \qquad p_{ij} = \mathrm{softmax}_j(c_{ij}/\tau), \qquad \delta_{ij} = [i = j]$$
 
 - Pull on the positive: $1 - p_{ii}$. Total push on the negatives: the same.
 - Two negatives $\Delta$ apart in cosine: weight ratio $e^{\Delta/\tau}$.
+- $p_{ii} \to 1$: every weight vanishes, and easy batches stop teaching.
 
 @!text-embeddings-infonce-grad
 
@@ -1711,12 +1804,15 @@ III. Unit vectors: $\mathbf{q}^\top \mathbf{d} = 1 - \tfrac12 \|\mathbf{q} - \ma
 
 $$\ell - \log B \to \underbrace{\frac{1}{2\tau}\mathbb{E}\|\mathbf{q} - \mathbf{d}^+\|^2}_{\text{alignment}} + \underbrace{\mathbb{E}_{\mathbf{q}} \log \mathbb{E}_{\mathbf{d}}\, e^{-\|\mathbf{q} - \mathbf{d}\|^2/(2\tau)}}_{\text{uniformity}}$$
 
-Pull pairs together, push everything apart.
+::: {.d2l-note}
+Only two terms remain: one pulls pairs together, one pushes all vectors
+apart.
+:::
 
 *Source: Wang and Isola (2020).*
 :::
 
-::: {.slide title="Four Points: Pairs Coincide, Pairs Spread Apart"}
+::: {.slide title="Four Points: Two Coincident Pairs on Opposite Sides Win"}
 [The smallest case]{.kicker}
 
 Pairs (1, 2) and (3, 4) on the unit circle; the four points are the whole
@@ -1724,23 +1820,29 @@ data, so the InfoNCE columns are the limit, computed with no approximation.
 
 @!text-embeddings-uniformity
 
-- Square: best spread, but a negative is closer than the partner.
+- Square: best spread, but a negative is closer than the partner: 18.6
+  nats above $\log 4$ at $\tau = 0.05$, 0.87 at 0.5.
 - All coincident: the loss of a blind guess, $\log 4$.
-- The temperature sets the price: 18.6 nats at $\tau = 0.05$, 0.87 at 0.5.
+
+::: {.d2l-note}
+Two coincident pairs: each question ties its passage with its partner's, a
+loss of $\log 2$, which is $\log 2$ below $\log 4$.
+:::
 :::
 
 ::: {.slide title="Uniformity Cannot Improve While the Vectors Share a Direction"}
 [Proposition]{.kicker}
 
+Measured on passages alone (Wang and Isola), for independent passages
+$\mathbf{z}, \mathbf{z}'$: $\mathcal{U}_t = \log \mathbb{E}\, e^{-t\|\mathbf{z} - \mathbf{z}'\|^2}$.
+The loss's own term has $t = 1/(2\tau)$; we measure at $t = 2$.
+
 Jensen, $\log \mathbb{E} e^X \geq \mathbb{E} X$, with anisotropy $a$:
 
-$$\log \mathbb{E}\, e^{-t\|\mathbf{z} - \mathbf{z}'\|^2} \;\geq\; -2t\,(1 - a)$$
+$$\mathcal{U}_t \;\geq\; -2t\,(1 - a)$$
 
-| passages ($t = 2$) | anisotropy $a$ | bound | measured |
-|---|---|---|---|
-| raw mean pooling | 0.94 | $-0.24$ | $-0.23$ |
-| contrastive, seed 0 | 0.52 | $-1.91$ | $-1.82$ |
-| Qwen3-Embedding | 0.28 | $-2.87$ | $-2.78$ |
+Raw mean pooling: $a = 0.94$, so $\mathcal{U}_2 \geq -0.24$; measured
+$-0.23$.
 
 ::: {.d2l-note}
 To spread the vectors, training must shorten the mean vector.
@@ -1770,46 +1872,20 @@ The bound: $I \geq \log B - \ell$.
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $\log 64 - 0.05 \approx 4.11$ nats, of at most 4.16. The model
-picks its passage among 64 nearly every time: random negatives have
-little left to teach. Harder negatives or larger batches would.
+picks its passage among 64 nearly every time, so $p_{ii} \approx 1$ and the
+gradient weights vanish. Harder negatives or larger batches give it more to
+learn from; whether that helps must be measured.
 :::
 :::
 :::
 
-::: {.slide title="Contrastive Training Adds 70 Points; a Released Embedder 22 More"}
-[Results on the book]{.kicker}
-
-| model | Recall@10 | nDCG@10 | anisotropy |
-|---|---|---|---|
-| BM25 | 0.96 | 0.82 | |
-| raw mean pooling | 0.06 | 0.04 | 0.94 |
-| contrastive, 3 seeds | 0.73 to 0.78 | 0.50 to 0.53 | 0.52 |
-| contrastive + 1 hard negative | 0.80 | 0.56 | |
-| Qwen3-Embedding + instruction | 0.98 | 0.79 | 0.28 |
-
-Paired, intervals over documents: raw $\to$ contrastive +0.70
-[0.64, 0.76]; contrastive $\to$ Qwen3-Embedding +0.22 [0.16, 0.28].
-
-::: {.d2l-note .warn}
-Qwen3-Embedding may have read this book on the web: its 0.98 is
-optimistic by an unknown amount.
-:::
-:::
-
-::: {.slide title="Training Shortens the Mean Vector and Widens the Cap"}
-[Geometry]{.kicker}
-
-@!text-embeddings-alignment
-
-Random passages vs a question and its answer (squared distance): raw
-0.12 vs 0.19; trained 0.96 vs 0.60.
-:::
-
-::: {.slide title="A Third of the Top-5 Negatives Answer the Question"}
+::: {.slide title="A Third of the Top-5 Mined Negatives Answer the Question"}
 [Hard negatives]{.kicker}
 
-Mined by the seed-0 model; 500 questions, one passage per bucket, judged
-by Qwen3-Reranker-0.6B (a model, not people):
+Hard negatives: passages the model ranks high that are not the labeled
+answer. Mined by the seed-0 model; 500 questions, one passage per bucket,
+judged by Qwen3-Reranker-0.6B, which reads question and passage together
+(a model, not people):
 
 | mined ranks | probably relevant |
 |---|---|
@@ -1819,26 +1895,28 @@ by Qwen3-Reranker-0.6B (a model, not people):
 | 31 to 50 | 0.006 |
 
 One negative from ranks 11 to 50: +0.032 [$-0.005$, 0.069] Recall@10,
-below the seed range 0.045.
+below the seed range 0.045 (three training seeds).
 
 ::: {.d2l-note .rule}
-Mine below the top ranks, audit with a cross-encoder, and compare gains
-with the seed range.
+Mine below the top ranks, audit with a model that reads question and
+passage together, and compare gains with the seed range.
 :::
 :::
 
 ::: {.slide title="A Decoder Embedder Reads Its Vector at the Last Token"}
 [Qwen3-Embedding-0.6B]{.kicker}
 
-- A Qwen3 decoder with causal attention, trained in two stages on far more
-  pairs: weak pairs first, then curated pairs with hard negatives.
+- A Qwen3 decoder with causal attention, trained on far more pairs: weak
+  pairs written by a larger Qwen3 model, then labeled pairs with hard
+  negatives, then an average of checkpoints.
 - **Last-token pooling**, **left padding**: every row ends in a real token.
 - **Query instruction**: `Instruct: {task}\nQuery:{query}`; passages bare.
 - On the book the instruction changed Recall@10 by $-0.014$
   [$-0.028$, 0.000].
 
 ::: {.d2l-note .warn}
-A wrong convention raises no error. It returns worse vectors.
+A wrong convention raises no error. Pooling and padding errors read the
+wrong token; the instruction's effect must be measured.
 :::
 :::
 
@@ -1854,6 +1932,40 @@ hidden state at position $T - 1$ of every row.
 padding token. Index the last real token through the attention mask, or
 pad on the left.
 :::
+:::
+:::
+
+::: {.slide title="Contrastive Training Adds 70 Points; a Released Embedder 22 More"}
+[Results on the book]{.kicker}
+
+| model | Recall@10 | nDCG@10 | anisotropy |
+|---|---|---|---|
+| BM25 | 0.96 | 0.82 | |
+| raw mean pooling | 0.06 | 0.04 | 0.94 |
+| contrastive, 3 seeds | 0.73 to 0.78 | 0.50 to 0.53 | 0.52 (seed 0) |
+| contrastive + 1 hard negative | 0.80 | 0.56 | |
+| Qwen3-Embedding + instruction | 0.98 | 0.79 | 0.28 |
+
+Paired, intervals over documents: raw $\to$ contrastive +0.70
+[0.64, 0.76]; contrastive $\to$ Qwen3-Embedding +0.22 [0.16, 0.28].
+
+::: {.d2l-note .warn}
+Qwen3-Embedding may have read this book on the web: its 0.98 is
+optimistic by an unknown amount.
+:::
+:::
+
+::: {.slide title="Training Spreads Random Passages Apart Faster Than Pairs"}
+[Geometry]{.kicker}
+
+Alignment: mean squared distance from a question to its passage.
+
+@!text-embeddings-alignment
+
+::: {.d2l-note}
+Two random passages lie at squared distance $2 - 2a$: 0.6 times the
+question-passage distance for raw vectors, 1.6 times after training, 2.4
+for Qwen3-Embedding.
 :::
 :::
 
@@ -1882,27 +1994,33 @@ Binary + rescoring minus float: $-0.018$ [$-0.037$, 0.000].
 | model | float | binary + rescoring |
 |---|---|---|
 | contrastive, plain | 0.764 | 0.718 |
+| contrastive, Matryoshka | 0.741 | 0.723 |
 | Qwen3-Embedding | 0.982 | 0.964 |
 
 ::: {.d2l-note}
-A model with more spare accuracy loses less to compression.
+Only the plain model lost beyond its interval, $-0.045$
+[$-0.085$, $-0.009$]; for the other two the interval reaches 0.
 :::
 :::
 
-::: {.slide title="Matryoshka Training Bought Nothing at 128 Coordinates Here"}
+::: {.slide title="Down to 64 Coordinates, Plain Truncation Matches Matryoshka Training"}
 [Truncation]{.kicker}
 
 $$\ell_{\textrm{MRL}} = \frac{1}{|K|}\sum_{k \in K} \ell^{(k)}, \qquad K = \{768, 512, 256, 128, 64\}$$
 
 $\ell^{(k)}$: InfoNCE on the first $k$ coordinates, renormalized.
 
-| at 128 of 768 coordinates | Recall@10 |
-|---|---|
-| plain contrastive, truncated | 0.686 |
-| Matryoshka-trained | 0.659 |
+| first $k$ of 768 coordinates | plain | Matryoshka |
+|---|---|---|
+| 768 | 0.764 | 0.741 |
+| 256 | 0.718 | 0.736 |
+| 128 | 0.686 | 0.659 |
+| 64 | 0.595 | 0.582 |
 
-Difference $-0.027$ [$-0.075$, 0.017], within the seed range. The method
-targets the smallest prefixes.
+::: {.d2l-note}
+At 128: $-0.027$ [$-0.075$, 0.017], within the seed range. A plain model's
+prefixes already retrieve.
+:::
 :::
 
 ::: {.slide title="A Leaderboard Average Does Not Choose Your Embedder"}
@@ -1921,23 +2039,33 @@ A library loads a model's pooling and prompts. Check them against the card.
 :::
 :::
 
+::: {.slide title="Check: A Hundred Million Passages as 1,024-Bit Vectors. How Many GB?"}
+[Check]{.kicker}
+
+Qwen3-Embedding, binary: one bit per coordinate, $10^8$ passages.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 1,024 bits are 128 bytes, and $128 \times 10^8$ bytes are
+12.8 GB, against 410 GB in float32. With rescoring, Recall@10 stays at
+0.964 of 0.982.
+:::
+:::
+:::
+
 ::: {.slide title="Recap"}
 [Recap]{.kicker}
 
 - Raw mean pooling: Recall@10 0.06; BM25 0.96. Mean cosine 0.94 =
-  squared length of the mean vector.
+  squared length of the mean vector; removing it does not help.
 - InfoNCE: $B - 1$ free negatives, a $\log B$ ceiling, gradient weights
   $e^{\Delta/\tau}$; large-batch limit = alignment + uniformity.
-- 20,000 pairs, one minute: +0.70 Recall@10. Hard negatives: within seed
-  noise. Top-5 mined passages: 0.30 are answers.
+- 20,000 pairs, one minute: +0.70 Recall@10. One hard negative: within
+  seed noise. The reranker calls 0.30 of the top-5 mined passages answers.
 - Qwen3-Embedding: 0.98, possibly having read the book; binary with
   rescoring 0.964 at 128 bytes.
-:::
 
-::: {.slide title="Next: Serving the Vectors"}
-[Next]{.kicker}
-
-A flat scan of 5,324 vectors is one matrix product. For millions of
-passages, and for questions about exact identifiers, we need an index and a
-word index beside it.
+**Next:** a flat scan is one matrix product for 5,324 passages. Millions of
+passages, and questions about exact identifiers, need an index and a word
+index beside it.
 :::

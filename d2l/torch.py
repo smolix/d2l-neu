@@ -8178,6 +8178,58 @@ def gold_chunk_ids(item, corpus, min_overlap=0.5, include_alt=True):
     return {i for s in spans for i in corpus.span_to_chunk_ids(
         s['doc_id'], s['char_start'], s['char_end'], min_overlap)}
 
+def cov_at_budget(ranked_chunk_ids, item, corpus, budget_tokens):
+    """Whether the chunks of corpus taken in rank order until the next one
+    would pass budget_tokens tokens cover at least half the characters of
+    one of the item's gold spans (or alternative spans).
+
+    Defined in :numref:`sec_lm_rag`"""
+    taken, used = collections.defaultdict(list), 0
+    for cid in ranked_chunk_ids:
+        c = corpus[cid]
+        if used + c['n_tokens'] > budget_tokens:
+            break
+        used += c['n_tokens']
+        taken[c['doc_id']].append((c['char_start'], c['char_end']))
+    for s in item['gold_spans'] + item.get('alt_spans', []):
+        a, b = s['char_start'], s['char_end']
+        covered = np.zeros(b - a, dtype=bool)
+        for lo, hi in taken.get(s['doc_id'], ()):
+            covered[max(lo, a) - a:max(min(hi, b) - a, 0)] = True
+        if b > a and covered.mean() >= 0.5:
+            return True
+    return False
+
+def assemble_context(hits, budget_tokens=3000, order='rank', dedup_cos=0.95,
+                     embed=None, k=None):
+    """The passages for the prompt: hits (chunk dicts with n_tokens, best
+    first) taken in rank order, skipping a near duplicate of one already
+    taken (cosine above dedup_cos between the unit vectors that embed(hits)
+    returns; no check without embed), until k are taken or the next would
+    pass budget_tokens; then ordered 'rank' (best first), 'reverse' (best
+    last, next to the question) or 'edges' (the best at both ends, the
+    weakest in the middle). Returns (passages, tokens used)."""
+    if order not in ('rank', 'reverse', 'edges'):
+        raise ValueError(f'unknown order {order!r}')
+    hits = list(hits)
+    V = (torch.as_tensor(embed(hits)).float()
+         if embed is not None and hits else None)
+    keep, used = [], 0
+    for i, h in enumerate(hits):
+        if (k is not None and len(keep) == k
+                or used + h['n_tokens'] > budget_tokens):
+            break
+        if V is not None and keep and (V[keep] @ V[i]).max() > dedup_cos:
+            continue  # a near duplicate of a passage already taken
+        keep.append(i)
+        used += h['n_tokens']
+    out = [hits[i] for i in keep]
+    if order == 'reverse':
+        out = out[::-1]
+    elif order == 'edges':  # ranks 1, 3, 5, ..., then ..., 4, 2
+        out = out[0::2] + out[1::2][::-1]
+    return out, used
+
 ABSTAIN = 'I cannot answer this from the provided passages.'
 
 def rag_prompt(question, hits, abstain=ABSTAIN):
@@ -8216,6 +8268,220 @@ def parse_citations(answer, n_chunks):
             if 1 <= n <= n_chunks and n not in out:
                 out.append(n)
     return out
+
+RAGResult = collections.namedtuple('RAGResult', [
+    'qid', 'question', 'query_used', 'ranked_ids', 'context_ids', 'answer',
+    'cited_ids', 'abstained', 'n_prompt_tokens', 'n_new_tokens',
+    'latency_s'])
+
+class RAGPipeline:
+    """Retrieval-augmented generation over the book corpus. The question,
+    or a query the generator writes (rewrite='generator'), goes to the
+    retriever; rewrite='fuse' adds the query's ranking to the question's
+    in RRF, hyde embeds a passage the generator writes on the dense side,
+    decompose fuses the rankings of up to two sub-questions. The reranker
+    may reorder the first rerank_k chunks; assemble_context packs at most
+    k of them (k=None: as many as fit) into budget_tokens; the generator
+    answers with the fixed grounded prompt (or a variant of a
+    pre-registered fix), greedily, in batches. verify drops sentences
+    whose citations the generator finds unsupportive; abstain_below
+    abstains when the reranker's best score for the context is lower.
+
+    Defined in :numref:`sec_lm_rag`"""
+    def __init__(self, retriever, model, tokenizer, k=5, budget_tokens=3000,
+                 order='rank', rewrite=None, hyde=False, decompose=False,
+                 rerank_k=None, max_new_tokens=300, *, depth=50,
+                 dedup_cos=0.95, prompt='fixed', verify=False,
+                 abstain_below=None):
+        if rewrite not in (None, 'generator', 'fuse'):
+            raise ValueError(f'unknown rewrite {rewrite!r}')
+        if (rerank_k or abstain_below is not None) and not retriever.reranker:
+            raise ValueError('reranking needs a retriever with a reranker')
+        self.retriever, self.model, self.tokenizer = (retriever, model,
+                                                      tokenizer)
+        self.k, self.budget_tokens, self.order = k, budget_tokens, order
+        self.rewrite, self.hyde, self.decompose = rewrite, hyde, decompose
+        self.rerank_k, self.max_new_tokens = rerank_k, max_new_tokens
+        self.depth, self.dedup_cos, self.prompt = depth, dedup_cos, prompt
+        self.verify, self.abstain_below = verify, abstain_below
+        self._dense = self._pos = None
+
+    def prepare(self, questions, budgets=None):
+        """Phases 1 and 2. Per question (a string or an item dict): the
+        query used, the first-stage ranking (depth chunk ids), the context
+        (chunk dicts in prompt order) and its tokens, the reranker's best
+        score (None without one) and whether to abstain unasked."""
+        R, t0 = self.retriever, time.time()
+        qs = [self._question(q) for q in questions]
+        query = qs  # phase 1: the generator writes queries
+        if self.rewrite:
+            query = self._write([d2l._rag_rewrite_prompt(q) for q in qs], 20)
+        dense = (self._write([d2l._rag_hyde_prompt(q) for q in qs], 120)
+                 if self.hyde else qs)
+        extra = [[r] if self.rewrite == 'fuse' else [] for r in query]
+        if self.decompose:
+            subs = self._write([d2l._rag_decompose_prompt(q) for q in qs], 60)
+            extra = [e + [l.strip() for l in s.splitlines() if l.strip()][:2]
+                     for e, s in zip(extra, subs)]
+        main = query if self.rewrite == 'generator' else qs
+        ids = lambda H: [[h.chunk_id for h in hs] for hs in H]
+        pool = max(100, self.depth, self.rerank_k or 0)  # phase 2
+        if not (self.hyde or any(extra)):  # the retriever's own fusion
+            ranked = ids(R.search_batch(main, k=pool))
+        else:  # BM25 of the question, dense of `dense`, more rankings: RRF
+            bm = ids(R.search_batch(main, k=pool, mode='bm25'))
+            de = (ids(R.search_batch(dense, k=pool, mode='dense'))
+                  if R.dense else [[] for _ in qs])
+            flat = [e for es in extra for e in es]
+            more = iter(ids(R.search_batch(flat, k=pool)) if flat else [])
+            ranked = [[i for i, _ in d2l.rrf_fuse(
+                [b, d] + [next(more) for _ in es], k=R.rrf_k)][:pool]
+                for b, d, es in zip(bm, de, extra)]
+        cand, top = ranked, [None] * len(qs)
+        if self.rerank_k:
+            rr = self._rerank(qs, [r[:self.rerank_k] for r in ranked])
+            cand = [[c for c, _ in r] for r in rr]
+            top = [r[0][1] if r else None for r in rr]
+        budgets = budgets or [self.budget_tokens] * len(qs)
+        embed = self._embed if self.dedup_cos and R.dense else None
+        out = []
+        for j in range(len(qs)):
+            ctx, used = d2l.assemble_context(
+                [R.corpus[c] for c in cand[j]], budgets[j], self.order,
+                self.dedup_cos, embed, self.k)
+            out.append(dict(query_used=query[j], context=ctx,
+                            ranked_ids=ranked[j][:self.depth],
+                            n_context_tokens=used, top_score=top[j],
+                            abstain=False))
+        if self.abstain_below is not None:
+            need = [j for j, o in enumerate(out)
+                    if o['top_score'] is None and o['context']]
+            rr = self._rerank([qs[j] for j in need], [
+                [c['id'] for c in out[j]['context']] for j in need])
+            for j, r in zip(need, rr):
+                out[j]['top_score'] = r[0][1]
+            for o in out:
+                o['abstain'] = (o['top_score'] is not None and
+                                o['top_score'] < self.abstain_below)
+        for o in out:
+            o['seconds'] = (time.time() - t0) / max(len(qs), 1)
+        return out
+
+    def answer(self, questions, batch_size=8, contexts=None):
+        """Phase 3 after prepare (or with the contexts given; a context of
+        None is the closed-book prompt): the retriever's models leave the
+        GPU, then batched greedy generation. One RAGResult per question."""
+        prep = self.prepare(questions) if contexts is None else contexts
+        self.retriever.release()
+        go = [j for j, p in enumerate(prep) if not p.get('abstain')]
+        gen = dict(zip(go, self._generate(
+            [d2l._rag_fix_prompt(self._question(questions[j]),
+                                 prep[j]['context'], self.prompt)
+             for j in go], self.max_new_tokens, batch_size) if go else []))
+        answers = {j: (d2l._rag_quoted_answer(g[0]) if self.prompt == 'quote'
+                       else g[0]) for j, g in gen.items()}
+        if self.verify:
+            answers = self._verified(answers, prep, batch_size)
+        out = []
+        for j, q in enumerate(questions):
+            ctx = prep[j]['context'] or []
+            text = answers.get(j, d2l.ABSTAIN)
+            _, n_prompt, n_new, secs = gen.get(j, ('', 0, 0, 0.0))
+            out.append(d2l.RAGResult(
+                q.get('qid') if isinstance(q, dict) else None,
+                self._question(q), prep[j].get('query_used'),
+                list(prep[j].get('ranked_ids') or []),
+                [c['id'] for c in ctx], text,
+                d2l.parse_citations(text, len(ctx)), d2l._rag_abstained(text),
+                n_prompt, n_new, round(prep[j].get('seconds', 0) + secs, 4)))
+        return out
+
+    @staticmethod
+    def _question(q):
+        return q['question'] if isinstance(q, dict) else q
+
+    def _generate(self, messages, max_new_tokens, batch_size):
+        """(text, prompt tokens, new tokens, seconds) per chat: greedy,
+        thinking off, left padding; Transformers' generate keeps only the
+        last position's logits at the prefill (logits_to_keep=1)."""
+        tok, model = self.tokenizer, self.model
+        texts = [tok.apply_chat_template(m, tokenize=False,
+                                         add_generation_prompt=True,
+                                         enable_thinking=False)
+                 for m in messages]
+        eos = model.generation_config.eos_token_id
+        eos = set(eos if isinstance(eos, (list, tuple)) else [eos])
+        out = []
+        for b in range(0, len(texts), batch_size):
+            enc = tok(texts[b:b + batch_size], return_tensors='pt',
+                      padding=True, padding_side='left',
+                      add_special_tokens=False).to(model.device)
+            t = time.time()
+            with torch.no_grad():
+                ids = model.generate(
+                    **enc, max_new_tokens=max_new_tokens, do_sample=False,
+                    temperature=None, top_p=None, top_k=None,
+                    pad_token_id=tok.pad_token_id)
+            secs = (time.time() - t) / len(enc['input_ids'])
+            new = ids[:, enc['input_ids'].shape[1]:].tolist()
+            for row, n_prompt in zip(new, enc['attention_mask'].sum(1)):
+                n = next((i + 1 for i, x in enumerate(row) if x in eos),
+                         len(row))
+                out.append((tok.decode(row[:n], skip_special_tokens=True)
+                            .strip(), int(n_prompt), n, secs))
+        return out
+
+    def _write(self, messages, max_new_tokens):
+        """The generator's short replies (queries, passages)."""
+        return [t for t, *_ in self._generate(messages, max_new_tokens, 8)]
+
+    def _rerank(self, queries, id_lists):
+        """Per query, (chunk id, P(yes)) pairs of its chunks, best first."""
+        R = self.retriever
+        if self._dense is None:
+            self._dense = dict(zip(R.corpus.ids, R.corpus.texts('dense')))
+        model, tok = R._reranker()
+        out = []
+        for q, ids in zip(queries, id_lists):
+            p = (d2l.rerank_yes_no(model, tok, q, [self._dense[i] for i in
+                                                   ids],
+                                   instruction=d2l.BOOK_TASK)
+                 if ids else np.zeros(0))
+            out.append([(ids[i], float(p[i]))
+                        for i in np.argsort(-p, kind='stable')])
+        return out
+
+    def _embed(self, hits):
+        """Unit vectors of chunk dicts, from the retriever's chunk vectors."""
+        R = self.retriever
+        if self._pos is None:
+            self._pos = {c: i for i, c in enumerate(R.corpus.ids)}
+        return R.chunk_vectors()[[self._pos[h['id']] for h in hits]].float(
+            ).cpu()
+
+    def _verified(self, answers, prep, batch_size):
+        """answers without the sentences whose cited passages the generator
+        says do not support them (P(yes) below P(no)); a sentence without
+        a citation goes too, and an answer left empty abstains."""
+        jobs, sents = [], {}
+        for j, a in answers.items():
+            ctx = prep[j]['context'] or []
+            sents[j] = re.split(r'(?<=[.!?])\s+', a.strip())
+            for i, s in enumerate(sents[j]):
+                cited = d2l.parse_citations(s, len(ctx))
+                if cited and not d2l._rag_abstained(a):
+                    jobs.append((j, i, d2l._rag_verify_prompt(
+                        s, [ctx[c - 1] for c in cited])))
+        keep = set()
+        if jobs:
+            lp = d2l.label_logprobs(self.model, self.tokenizer,
+                                    [m for *_, m in jobs], ['yes', 'no'],
+                                    chat=True, enable_thinking=False,
+                                    batch_size=batch_size)
+            keep = {(j, i) for (j, i, _), l in zip(jobs, lp) if l[0] > l[1]}
+        return {j: a if d2l._rag_abstained(a) else ' '.join(
+            s for i, s in enumerate(sents[j]) if (j, i) in keep) or d2l.ABSTAIN
+                for j, a in answers.items()}
 
 def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
               thinking=None, max_new_tokens=None):
@@ -8279,6 +8545,45 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
                 verdicts[i][k] = None if parsed is None else parsed[k]
         jobs = retry
     return verdicts[0] if single else verdicts
+
+def citation_metrics(results, items, corpus):
+    """Per item, from gold ids: precision (the share of the cited passages
+    that are relevant), recall (the share of the relevant passages in the
+    context that are cited) and n_cited; NaN where a share has nothing to
+    divide by. results are RAGResults or mappings with context_ids and
+    cited_ids (1-based passage numbers)."""
+    rows = []
+    for r, q in zip(results, items):
+        r = r._asdict() if hasattr(r, '_asdict') else r
+        rel, ctx = d2l.gold_chunk_ids(q, corpus), list(r['context_ids'])
+        cited = [ctx[n - 1] for n in r['cited_ids'] if 1 <= n <= len(ctx)]
+        found = [c for c in ctx if c in rel]
+        rows.append(dict(
+            qid=q['qid'], n_cited=len(cited),
+            precision=np.mean([c in rel for c in cited]) if cited else np.nan,
+            recall=np.mean([c in cited for c in found]) if found else np.nan))
+    return pd.DataFrame(rows)
+
+def classify_failure(result, item, judge_out, corpus, depth=50):
+    """The stage at which an answer failed: 'correct'; an unanswerable item
+    answered: 'false_answer'; an answerable one: 'not_retrieved' (no
+    relevant chunk in the first-stage top depth), 'ranked_low' (one there,
+    none in the context), 'false_abstain' (one in the context, yet the
+    answer abstains), 'ignored' (faithful to the context, not correct) or
+    'unsupported' (not faithful). A missing verdict counts as false."""
+    r = result._asdict() if hasattr(result, '_asdict') else result
+    true = lambda v: isinstance(v, (bool, np.bool_)) and bool(v)
+    if true(judge_out['correct']):
+        return 'correct'
+    if not item['answerable']:
+        return 'false_answer'
+    rel = d2l.gold_chunk_ids(item, corpus)
+    if not rel & set(r['context_ids']):
+        return ('ranked_low' if rel & set(list(r['ranked_ids'])[:depth])
+                else 'not_retrieved')
+    if d2l._rag_abstained(r['answer']):
+        return 'false_abstain'
+    return 'ignored' if true(judge_out['faithful']) else 'unsupported'
 
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
@@ -14485,9 +14790,14 @@ def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
     requests in flight) or a Transformers model with its tokenizer."""
     if hasattr(judge, 'achat'):  # an OpenAI-compatible endpoint
         import asyncio  # not in the d2l library preamble
-        out = asyncio.run(d2l.chat_batch(judge, [dict(
+        import concurrent.futures
+        batch = d2l.chat_batch(judge, [dict(
             messages=m, max_tokens=max_new_tokens, temperature=0, seed=0)
-            for m in messages], concurrency=batch_size))
+            for m in messages], concurrency=batch_size)
+        # A thread of its own: a notebook's kernel already runs an event
+        # loop, in which asyncio.run refuses to start
+        with concurrent.futures.ThreadPoolExecutor(1) as pool:
+            out = pool.submit(asyncio.run, batch).result()
         return [None if isinstance(r, BaseException)  # counts as malformed
                 or r.finish_reason == 'length'
                 else (r.text or '').split('</think>')[-1] for r in out]
@@ -14520,6 +14830,86 @@ def _rag_parse_json(text, keys):
         else:
             return out
     return None
+
+def _rag_rewrite_prompt(question):
+    """Chat messages asking for a short search query for a question.
+
+    Defined in :numref:`sec_lm_rag`"""
+    return [{'role': 'system', 'content': (
+                'You turn questions about the textbook Dive into Deep '
+                'Learning into search queries.')},
+            {'role': 'user', 'content': (
+                'Rewrite the question as a search query of at most 15 '
+                'words. Keep its technical terms, names and code '
+                f'identifiers. Reply with the query only.\n\nQuestion: '
+                f'{question}')}]
+
+def _rag_hyde_prompt(question):
+    """Chat messages asking for a hypothetical passage that answers a
+    question (HyDE: the dense side embeds the passage)."""
+    return [{'role': 'user', 'content': (
+        'Write a passage of at most 100 words from a deep learning '
+        'textbook that answers the question. Reply with the passage '
+        f'only.\n\nQuestion: {question}')}]
+
+def _rag_decompose_prompt(question):
+    """Chat messages asking to split a question into at most two
+    self-contained questions, one per line."""
+    return [{'role': 'user', 'content': (
+        'If the question asks about two things, write two self-contained '
+        'questions, one per line; otherwise repeat the question. Reply '
+        f'with the questions only.\n\nQuestion: {question}')}]
+
+def _rag_verify_prompt(sentence, passages):
+    """Chat messages asking whether the passages (chunk dicts) support
+    every fact of one sentence; the answer is read as P(yes)."""
+    text = '\n\n'.join(f'[{n}] {p["text"]}'
+                       for n, p in enumerate(passages, start=1))
+    return [{'role': 'user', 'content': (
+        f'Passages:\n{text}\n\nStatement: {sentence}\n\nDo the passages '
+        'support every fact in the statement? Answer yes or no.')}]
+
+def _rag_fix_prompt(question, hits, variant, abstain=None):
+    """The grounded prompt of rag_prompt changed by one pre-registered fix:
+    'quote' (copy the supporting sentences with their passage numbers,
+    then answer after 'Answer:') or 'rule_after' (the abstention rule
+    after the passages, in the user turn, instead of the system turn)."""
+    abstain = abstain or d2l.ABSTAIN
+    msgs = d2l.rag_prompt(question, hits, abstain)
+    if variant == 'quote':
+        msgs[1]['content'] = msgs[1]['content'].replace(
+            'Answer in at most four sentences.',
+            'First write "Quotes:" and copy the sentences of the passages '
+            'that answer the question, each followed by its passage number '
+            'such as [2]. Then write "Answer:" and answer in at most four '
+            'sentences, citing the passages.')
+    elif variant == 'rule_after':
+        rule = 'If the passages do not contain the answer, reply exactly: '
+        msgs[0]['content'] = msgs[0]['content'].replace(
+            rule + abstain, '').strip()
+        msgs[1]['content'] += f'\n{rule}{abstain}'
+    elif variant != 'fixed':
+        raise ValueError(f'unknown prompt variant {variant!r}')
+    return msgs
+
+def _rag_quoted_answer(text):
+    """The answer part of a 'quote, then answer' reply (all of it when the
+    reply has no 'Answer:')."""
+    head, sep, tail = text.rpartition('Answer:')
+    return tail.strip() if sep else text.strip()
+
+def _rag_records(paths, on=('config', 'qid')):
+    """The records of several JSON-lines run files (missing paths skipped)
+    as one DataFrame; the columns on identify a record and may not
+    repeat."""
+    frames = [d2l.read_jsonl(p) for p in paths if p and os.path.exists(p)]
+    df = (pd.concat(frames, ignore_index=True) if frames
+          else pd.DataFrame(columns=list(on)))
+    dup = df.duplicated(list(on))
+    if dup.any():
+        raise ValueError(f'{dup.sum()} records repeat {on}, e.g. '
+                         f'{df[dup].iloc[0][list(on)].tolist()}')
+    return df
 
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',

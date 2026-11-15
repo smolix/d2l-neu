@@ -16,7 +16,10 @@ they were fixed before the set was built), and the judge chosen on
 thinking on, FP8 weights served by vLLM over two 24 GB GPUs; its server
 `rag_judge_server`, its client `rag_judge_client` and `_rag_judge_replies`,
 which reads a verdict after the reasoning, from an endpoint or a
-Transformers model).
+Transformers model), and the plumbing of `RAGPipeline`: the prompts for
+query rewriting, HyDE, decomposition and sentence verification, the prompt
+variants of the pre-registered fixes, and the reader of the run files
+(`_rag_records`).
 
 Every block is tagged `%%tab pytorch`; a module-level import would join the
 `_preamble` shard and move the freshness fingerprint of every notebook in the
@@ -180,9 +183,14 @@ def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
     requests in flight) or a Transformers model with its tokenizer."""
     if hasattr(judge, 'achat'):  # an OpenAI-compatible endpoint
         import asyncio  # not in the d2l library preamble
-        out = asyncio.run(d2l.chat_batch(judge, [dict(
+        import concurrent.futures
+        batch = d2l.chat_batch(judge, [dict(
             messages=m, max_tokens=max_new_tokens, temperature=0, seed=0)
-            for m in messages], concurrency=batch_size))
+            for m in messages], concurrency=batch_size)
+        # A thread of its own: a notebook's kernel already runs an event
+        # loop, in which asyncio.run refuses to start
+        with concurrent.futures.ThreadPoolExecutor(1) as pool:
+            out = pool.submit(asyncio.run, batch).result()
         return [None if isinstance(r, BaseException)  # counts as malformed
                 or r.finish_reason == 'length'
                 else (r.text or '').split('</think>')[-1] for r in out]
@@ -215,4 +223,92 @@ def _rag_parse_json(text, keys):
         else:
             return out
     return None
+```
+
+The prompts with which `RAGPipeline` asks the generator for a search query
+(`rewrite`), a hypothetical passage (`hyde`) or sub-questions
+(`decompose`), the yes/no check of one cited sentence (`verify`), and the two
+prompt variants among the pre-registered fixes of :numref:`sec_lm_rag`:
+"quote, then answer" and the abstention rule placed after the passages.
+
+```{.python .input #rag-lib-pipeline}
+%%tab pytorch
+#@save
+def _rag_rewrite_prompt(question):
+    """Chat messages asking for a short search query for a question."""
+    return [{'role': 'system', 'content': (
+                'You turn questions about the textbook Dive into Deep '
+                'Learning into search queries.')},
+            {'role': 'user', 'content': (
+                'Rewrite the question as a search query of at most 15 '
+                'words. Keep its technical terms, names and code '
+                f'identifiers. Reply with the query only.\n\nQuestion: '
+                f'{question}')}]
+
+def _rag_hyde_prompt(question):
+    """Chat messages asking for a hypothetical passage that answers a
+    question (HyDE: the dense side embeds the passage)."""
+    return [{'role': 'user', 'content': (
+        'Write a passage of at most 100 words from a deep learning '
+        'textbook that answers the question. Reply with the passage '
+        f'only.\n\nQuestion: {question}')}]
+
+def _rag_decompose_prompt(question):
+    """Chat messages asking to split a question into at most two
+    self-contained questions, one per line."""
+    return [{'role': 'user', 'content': (
+        'If the question asks about two things, write two self-contained '
+        'questions, one per line; otherwise repeat the question. Reply '
+        f'with the questions only.\n\nQuestion: {question}')}]
+
+def _rag_verify_prompt(sentence, passages):
+    """Chat messages asking whether the passages (chunk dicts) support
+    every fact of one sentence; the answer is read as P(yes)."""
+    text = '\n\n'.join(f'[{n}] {p["text"]}'
+                       for n, p in enumerate(passages, start=1))
+    return [{'role': 'user', 'content': (
+        f'Passages:\n{text}\n\nStatement: {sentence}\n\nDo the passages '
+        'support every fact in the statement? Answer yes or no.')}]
+
+def _rag_fix_prompt(question, hits, variant, abstain=None):
+    """The grounded prompt of rag_prompt changed by one pre-registered fix:
+    'quote' (copy the supporting sentences with their passage numbers,
+    then answer after 'Answer:') or 'rule_after' (the abstention rule
+    after the passages, in the user turn, instead of the system turn)."""
+    abstain = abstain or d2l.ABSTAIN
+    msgs = d2l.rag_prompt(question, hits, abstain)
+    if variant == 'quote':
+        msgs[1]['content'] = msgs[1]['content'].replace(
+            'Answer in at most four sentences.',
+            'First write "Quotes:" and copy the sentences of the passages '
+            'that answer the question, each followed by its passage number '
+            'such as [2]. Then write "Answer:" and answer in at most four '
+            'sentences, citing the passages.')
+    elif variant == 'rule_after':
+        rule = 'If the passages do not contain the answer, reply exactly: '
+        msgs[0]['content'] = msgs[0]['content'].replace(
+            rule + abstain, '').strip()
+        msgs[1]['content'] += f'\n{rule}{abstain}'
+    elif variant != 'fixed':
+        raise ValueError(f'unknown prompt variant {variant!r}')
+    return msgs
+
+def _rag_quoted_answer(text):
+    """The answer part of a 'quote, then answer' reply (all of it when the
+    reply has no 'Answer:')."""
+    head, sep, tail = text.rpartition('Answer:')
+    return tail.strip() if sep else text.strip()
+
+def _rag_records(paths, on=('config', 'qid')):
+    """The records of several JSON-lines run files (missing paths skipped)
+    as one DataFrame; the columns on identify a record and may not
+    repeat."""
+    frames = [d2l.read_jsonl(p) for p in paths if p and os.path.exists(p)]
+    df = (pd.concat(frames, ignore_index=True) if frames
+          else pd.DataFrame(columns=list(on)))
+    dup = df.duplicated(list(on))
+    if dup.any():
+        raise ValueError(f'{dup.sum()} records repeat {on}, e.g. '
+                         f'{df[dup].iloc[0][list(on)].tolist()}')
+    return df
 ```

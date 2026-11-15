@@ -18,6 +18,9 @@ import tempfile
 import unittest
 import zipfile
 
+import numpy as np
+import torch
+
 from d2l import torch as d2l
 
 TEXT = {'chapter_a/one': 'A' * 100 + 'B' * 100,
@@ -280,6 +283,297 @@ class StubEndpointJudge(unittest.TestCase):
         self.assertEqual(seen[0]['enable_thinking'], True)
         self.assertEqual(seen[0]['max_new_tokens'], 3000)
         self.assertEqual(len(seen), 2)  # the cut-off reply is retried
+
+
+def tokened(tag, windows):
+    """corpus() with n_tokens (a tenth of the characters) on each chunk."""
+    c = corpus(tag, windows)
+    for ch in c.chunks:
+        ch['n_tokens'] = (ch['char_end'] - ch['char_start']) // 10
+    return c
+
+
+class StageDefs(unittest.TestCase):
+    def test_cov_at_budget(self):
+        c = tokened('fix', overlapping)  # 60-character windows, 6 tokens
+        q = dict(ITEM, alt_spans=[])
+        one = [i for i in c.ids if i.startswith('fix:chapter_a/one')]
+        # the span [110, 150) of chapter_a/one: window 2 covers [80, 140)
+        self.assertTrue(d2l.cov_at_budget(one[2:], q, c, 6))
+        self.assertFalse(d2l.cov_at_budget(one[2:], q, c, 5))  # none fits
+        self.assertFalse(d2l.cov_at_budget(one[:2], q, c, 100))
+        self.assertTrue(d2l.cov_at_budget(one[:2], ITEM, c, 100))  # alt
+        un = dict(ITEM, gold_spans=[], alt_spans=[], answerable=False)
+        self.assertFalse(d2l.cov_at_budget(c.ids, un, c, 10**6))
+
+    def test_assemble_context(self):
+        hits = [dict(id=f'c{i}', n_tokens=n) for i, n in
+                enumerate([300, 500, 400, 200, 100])]
+        out, used = d2l.assemble_context(hits, 1000)
+        self.assertEqual(([h['id'] for h in out], used), (['c0', 'c1'], 800))
+        out, used = d2l.assemble_context(hits, 10**4, k=3)
+        self.assertEqual([h['id'] for h in out], ['c0', 'c1', 'c2'])
+        for order, ids in (('reverse', ['c4', 'c3', 'c2', 'c1', 'c0']),
+                           ('edges', ['c0', 'c2', 'c4', 'c3', 'c1'])):
+            out, used = d2l.assemble_context(hits, 10**4, order)
+            self.assertEqual(([h['id'] for h in out], used), (ids, 1500))
+        V = torch.eye(5)
+        V[2] = V[0]  # c2 duplicates c0
+        out, used = d2l.assemble_context(hits, 10**4, embed=lambda h: V[
+            [int(x['id'][1:]) for x in h]])
+        self.assertEqual(([h['id'] for h in out], used),
+                         (['c0', 'c1', 'c3', 'c4'], 1100))
+        for budget in range(0, 1600, 50):  # never over the budget
+            self.assertLessEqual(d2l.assemble_context(hits, budget)[1], budget)
+        with self.assertRaises(ValueError):
+            d2l.assemble_context(hits, order='middle')
+
+
+class Metrics(unittest.TestCase):
+    def setUp(self):
+        self.c = tokened('t', halves)  # relevant to ITEM: one#000, one#001
+        self.q = dict(ITEM, alt_spans=[])  # (alt in one#000), two#000
+
+    def test_citation_metrics(self):
+        r = [dict(context_ids=['t:chapter_a/one#001', 't:chapter_b/three#000',
+                               't:chapter_a/two#000'], cited_ids=[1, 2]),
+             dict(context_ids=['t:chapter_b/three#000'], cited_ids=[]),
+             dict(context_ids=['t:chapter_a/two#000'], cited_ids=[1, 1, 7])]
+        m = d2l.citation_metrics(r, [self.q] * 3, self.c)
+        self.assertEqual(m.precision.tolist()[0], 0.5)
+        self.assertEqual(m.recall.tolist()[0], 0.5)
+        self.assertTrue(np.isnan(m.precision[1]) and np.isnan(m.recall[1]))
+        self.assertEqual((m.precision[2], m.recall[2], m.n_cited[2]),
+                         (1.0, 1.0, 2))
+
+    def test_classify_failure(self):
+        rel, other = 't:chapter_a/one#001', 't:chapter_b/three#000'
+        un = dict(self.q, answerable=False, gold_spans=[])
+        cases = [  # (item, ranked, context, answer, correct, faithful)
+            (self.q, [rel], [rel], 'A [1].', True, True, 'correct'),
+            (un, [other], [other], d2l.ABSTAIN, True, True, 'correct'),
+            (un, [other], [other], 'B [1].', False, None, 'false_answer'),
+            (self.q, [other], [other], 'C', False, True, 'not_retrieved'),
+            (self.q, [other, rel], [other], 'C', False, True, 'ranked_low'),
+            (self.q, [rel], [rel], d2l.ABSTAIN, False, True,
+             'false_abstain'),
+            (self.q, [rel], [rel], 'D [1].', False, True, 'ignored'),
+            (self.q, [rel], [rel], 'D [1].', np.False_, None, 'unsupported')]
+        for q, ranked, ctx, answer, correct, faithful, want in cases:
+            r = dict(ranked_ids=ranked, context_ids=ctx, answer=answer)
+            v = dict(correct=correct, faithful=faithful, supported=None)
+            self.assertEqual(d2l.classify_failure(r, q, v, self.c), want)
+        r = dict(ranked_ids=[other] * 50 + [rel], context_ids=[other],
+                 answer='E')  # the relevant chunk below the depth
+        self.assertEqual(d2l.classify_failure(r, self.q, dict(
+            correct=None, faithful=None), self.c, depth=50), 'not_retrieved')
+
+
+class PromptVariants(unittest.TestCase):
+    def test_fix_prompts(self):
+        hits = [dict(heading_path=['Ch'], text='alpha')]
+        fixed = d2l.rag_prompt('Q?', hits)
+        self.assertEqual(d2l._rag_fix_prompt('Q?', hits, 'fixed'), fixed)
+        quote = d2l._rag_fix_prompt('Q?', hits, 'quote')
+        self.assertEqual(quote[0], fixed[0])
+        self.assertIn('"Quotes:"', quote[1]['content'])
+        after = d2l._rag_fix_prompt('Q?', hits, 'rule_after')
+        self.assertNotIn(d2l.ABSTAIN, after[0]['content'])
+        self.assertTrue(after[1]['content'].endswith(d2l.ABSTAIN))
+        self.assertTrue(after[0]['content'].endswith('[2].'))
+        with self.assertRaises(ValueError):
+            d2l._rag_fix_prompt('Q?', hits, 'other')
+        self.assertEqual(d2l._rag_quoted_answer(
+            'Quotes: x [1]\nAnswer: It is y [1].'), 'It is y [1].')
+        self.assertEqual(d2l._rag_quoted_answer(' plain '), 'plain')
+
+    def test_records(self):
+        d = tempfile.mkdtemp()
+        a, b = os.path.join(d, 'a.jsonl'), os.path.join(d, 'b.jsonl')
+        d2l.write_jsonl(a, [dict(config='x', qid='q1', v=1)])
+        d2l.write_jsonl(b, [dict(config='y', qid='q1', v=2)])
+        df = d2l._rag_records([a, None, b, os.path.join(d, 'missing')])
+        self.assertEqual(len(df), 2)
+        self.assertEqual(list(d2l._rag_records([]).columns), ['config', 'qid'])
+        with self.assertRaises(ValueError):
+            d2l._rag_records([a, a])
+
+
+class JudgeInEventLoop(unittest.TestCase):
+    """Regression: a notebook's kernel runs an event loop, and rag_judge
+    with an endpoint judge used asyncio.run, which refuses to start
+    inside one."""
+    def test_running_loop(self):
+        import asyncio
+
+        class Stub:
+            async def achat(self, messages, **params):
+                return collections.namedtuple('R', 'text finish_reason')(
+                    '{"correct": true}', 'stop')
+        q = dict(question='Q', reference='R', key_facts=['f'],
+                 answerable=True)
+
+        async def main():
+            return d2l.rag_judge(Stub(), None, q, dict(answer='A'), [])
+        self.assertEqual(asyncio.run(main())['correct'], True)
+
+
+class StubRetriever:
+    """A retriever over a test corpus: a ranking per query by hashing,
+    every call logged."""
+    def __init__(self, c, log):
+        self.corpus, self.log, self.rrf_k = c, log, 60
+        self.dense, self.reranker = 'stub-embedder', 'stub-reranker'
+
+    def search_batch(self, queries, k=10, mode='hybrid', rerank_k=None):
+        self.log.append(('search', mode, tuple(queries)))
+        out = []
+        for q in queries:
+            ids = sorted(self.corpus.ids, key=lambda i: hashlib.sha1(
+                (q + i).encode()).hexdigest())[:k]
+            out.append([d2l.Hit(i, 1.0, n, '', [], {})
+                        for n, i in enumerate(ids, 1)])
+        return out
+
+    def release(self):
+        self.log.append(('release',))
+
+    def chunk_vectors(self):
+        return torch.eye(len(self.corpus))
+
+    def _reranker(self):
+        return None, None
+
+
+class Pipeline(unittest.TestCase):
+    """RAGPipeline with a stub retriever and a stub generator: the phase
+    order, prepare + answer(contexts=) equal to answer(), the query paths
+    of rewrite, hyde and decompose, reranking and abstention."""
+    REPLIES = {20: 'rewritten query', 120: 'a hypothetical passage',
+               60: 'first part?\nsecond part?\nthird part?'}
+
+    def pipe(self, **kw):
+        self.log = []
+        c = tokened('t', overlapping)
+        p = d2l.RAGPipeline(StubRetriever(c, self.log), None, None,
+                            budget_tokens=20, **kw)
+
+        def gen(messages, max_new_tokens, batch_size):
+            self.log.append(('generate', max_new_tokens))
+            return [(self.REPLIES.get(max_new_tokens, 'It is [1] and [2].'),
+                     100, 7, 0.0) for _ in messages]
+        p._generate = gen
+        return p
+
+    def test_phases_and_contexts(self):
+        p = self.pipe(rewrite='generator')
+        qs = [dict(qid='dev-1', question='What is A?'), 'What is B?']
+        res = p.answer(qs)
+        kinds = [e[0] for e in self.log]
+        self.assertEqual(kinds, ['generate', 'search', 'release', 'generate'])
+        self.assertEqual(self.log[0], ('generate', 20))
+        self.assertEqual(self.log[1][2], ('rewritten query',) * 2)
+        self.assertEqual((res[0].qid, res[1].qid), ('dev-1', None))
+        self.assertEqual(res[0].query_used, 'rewritten query')
+        self.assertEqual(res[0].cited_ids, [1, 2])
+        self.assertEqual(len(res[0].ranked_ids), len(p.retriever.corpus))
+        tokens = sum(p.retriever.corpus[i]['n_tokens']
+                     for i in res[0].context_ids)
+        self.assertLessEqual(tokens, 20)
+        again = p.answer(qs, contexts=p.prepare(qs))
+        strip = lambda r: r._replace(latency_s=0)
+        self.assertEqual([strip(r) for r in res], [strip(r) for r in again])
+        closed = p.answer(['Q?'], contexts=[dict(context=None)])[0]
+        self.assertEqual((closed.context_ids, closed.cited_ids), ([], []))
+
+    def test_query_paths(self):
+        p = self.pipe(hyde=True)
+        p.prepare(['Q?'])
+        self.assertIn(('search', 'bm25', ('Q?',)), self.log)
+        self.assertIn(('search', 'dense', ('a hypothetical passage',)),
+                      self.log)
+        p = self.pipe(decompose=True)
+        p.prepare(['Q?'])
+        self.assertIn(('search', 'hybrid', ('first part?', 'second part?')),
+                      self.log)
+        p = self.pipe(rewrite='fuse')
+        out = p.prepare(['Q?'])
+        self.assertIn(('search', 'hybrid', ('rewritten query',)), self.log)
+        self.assertEqual(out[0]['query_used'], 'rewritten query')
+        p = self.pipe()  # no extra ranking: the retriever's own fusion
+        p.prepare(['Q?'])
+        self.assertEqual(self.log, [('search', 'hybrid', ('Q?',))])
+        with self.assertRaises(ValueError):
+            self.pipe(rewrite='always')
+
+    def test_rerank_and_abstain(self):
+        old = d2l.rerank_yes_no
+        d2l.rerank_yes_no = lambda m, t, q, docs, instruction=None: (
+            np.linspace(0.9, 0.1, len(docs))[::-1])  # the last is best
+        try:
+            p = self.pipe(rerank_k=3, k=1)
+            out = p.prepare(['Q?'])[0]
+            first = p.retriever.search_batch(['Q?'], k=100)[0]
+            self.assertEqual(out['context'][0]['id'], first[2].chunk_id)
+            self.assertAlmostEqual(out['top_score'], 0.9)
+            p = self.pipe(abstain_below=0.95)
+            prep = p.prepare(['Q?'])
+            self.assertTrue(prep[0]['abstain'])
+            res = p.answer(['Q?'], contexts=prep)[0]
+            self.assertTrue(res.abstained)
+            self.assertNotIn(('generate', 300), self.log)
+        finally:
+            d2l.rerank_yes_no = old
+
+
+    def test_verify(self):
+        """verify: a sentence stays when P(yes) > P(no) for its cited
+        passages; one without a citation goes; an emptied answer abstains;
+        an abstention is not checked."""
+        seen = []
+
+        def lp(model, tok, prompts, labels, **kw):
+            seen.extend(prompts)
+            return torch.tensor([[-0.1, -2.0] if 'Keep' in m[0]['content']
+                                 else [-2.0, -0.1] for m in prompts])
+        old = d2l.label_logprobs
+        d2l.label_logprobs = lp
+        try:
+            p = self.pipe(verify=True)
+            ctx = [dict(text='alpha'), dict(text='beta')]
+            prep = {0: dict(context=ctx), 1: dict(context=ctx),
+                    2: dict(context=ctx)}
+            out = p._verified({0: 'Keep this [1]. Drop that [2]. No cite.',
+                               1: 'Drop it [1].', 2: d2l.ABSTAIN}, prep, 8)
+        finally:
+            d2l.label_logprobs = old
+        self.assertEqual(out, {0: 'Keep this [1].', 1: d2l.ABSTAIN,
+                               2: d2l.ABSTAIN})
+        self.assertEqual(len(seen), 3)  # two sentences of 0, one of 1
+        self.assertIn('[1] alpha', seen[0][0]['content'])
+        self.assertNotIn('beta', seen[0][0]['content'])
+
+
+@unittest.skipUnless(os.environ.get('D2L_TEST_NET') == '1',
+                     'network/model test: set D2L_TEST_NET=1')
+class PipelineGeneration(unittest.TestCase):
+    """The plan's oracle: the pipeline's batched Transformers generation
+    (left padding, logits of the last position at the prefill) gives the
+    same tokens as d2l.generate's own loop on Qwen3-0.6B (CPU, float32)."""
+    def test_against_generate(self):
+        model, tok = d2l.load_hf('Qwen/Qwen3-0.6B', dtype=torch.float32,
+                                 device_map='cpu')
+        p = d2l.RAGPipeline(StubRetriever(tokened('t', halves), []), model,
+                            tok)
+        msgs = [d2l.rag_prompt(q, None) for q in (
+            'What is a tensor?', 'Why does dropout help a network '
+            'generalize, and when does it hurt?', 'Define softmax.',
+            'How does the learning rate of minibatch stochastic gradient '
+            'descent interact with the batch size in practice?')]
+        ours = p._generate(msgs, 32, 4)
+        ref = d2l.generate(model, tok, msgs, max_new_tokens=32, chat=True,
+                           enable_thinking=False, batch_size=4)
+        self.assertEqual([o[0] for o in ours], [g.text.strip() for g in ref])
 
 
 class BuildBookQA(unittest.TestCase):

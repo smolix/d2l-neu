@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:0195909598080685812cdc1096df23e5ab974cbf8ba70855bc35018127fc5ac1",
+    "d2l_lib_fingerprint": "sha256:98c3eb234d08f12da9fb8bd52a90f0ade2dafb82f62bd2f92dfddeaef4a4e5aa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -81,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
           "bytes": 31016,
-          "sha256": "sha256:fc847cdbcd455633d8ae7cbe1abf7f676391d541a79234e5f769f6cc7eb1626c"
+          "sha256": "sha256:d7d3d2356dd28990d132c35f3a00a91c9f3a7bec3d2c73504e005f6afb9f896e"
         }
       ]
     }

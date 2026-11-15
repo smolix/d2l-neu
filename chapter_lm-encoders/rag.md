@@ -212,6 +212,9 @@ d2l.DATA_HUB['lm-book-qa-v2'] = (  # v1, closed-book flag by the 27B judge
 d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
     d2l.LM_DATA_URL + 'lm-rag-judge-labels-v1.zip',
     '2f10e6f4314644e7ebdf7ac7a8c1b3e7182f98d8')
+d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
+    d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
+    '78065bff472577631de5d7cac287323e77427e7f')
 ```
 
 <!-- Placeholder (stage 2): the six run artifacts of ARTIFACTS

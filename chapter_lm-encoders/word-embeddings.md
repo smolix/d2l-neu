@@ -113,6 +113,9 @@ d2l.DATA_HUB['simlex999'] = (
     'e87197824261f272ad1e9c02e32db3144bbeb0ca/data/'
     'train-00000-of-00001.parquet',
     'f3b074e2e08f83aa469f2d05c5b789b5ad2d3c49')
+d2l.DATA_HUB['lm-enc-we-grid-v1'] = (  # D2L_RERUN=we-grid, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-we-grid-v1.json',
+    '8c6bc0c598c8493fa407b3662f7a26472522169e')
 ```
 
 <!-- Placeholder (stage 2): pretrained GloVe vectors from the book's mirror, for the analogy and bias probes. Not yet `#@save`: the retiring word-similarity section registers the same two keys, and a second registration would change the library shard its notebook depends on; the marker is added when that section is deleted (the values are identical). -->

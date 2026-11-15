@@ -99,7 +99,7 @@ SIZES = {'mnli': N_MNLI, 'sst2': N_SST}
 LABELS = {'mnli': ('entailment', 'neutral', 'contradiction'),
           'sst2': ('negative', 'positive')}
 LIVE = (dict(n=250, items=200, dec_items=8, tag_train=1000, tag_items=500)
-        if SMALL else dict(n=1000, items=2000, dec_items=200,
+        if SMALL else dict(n=1000, items=2000, dec_items=2000,
                            tag_train=None, tag_items=None))  # None: all
 TAG_LR = 5e-5  # the tagger's learning rate, fixed (not tuned)
 VERBAL = {'mnli': ('yes', 'maybe', 'no'), 'sst2': ('negative', 'positive')}
@@ -184,6 +184,18 @@ d2l.DATA_HUB['conll2003-labels'] = (
     'https://huggingface.co/datasets/tner/conll2003/resolve/'
     'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/label.json',
     'd4fd1344c9af2613a3094dd2c84ff594e5215af0')
+d2l.DATA_HUB['lm-enc-bert-sweep-v1'] = (  # D2L_RERUN=bert-sweep, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v1.json',
+    '06440f0e5acbd7b91deb6b66f8402f8bea8d6155')
+d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
+    '36365804df9df70b812f52595ee6d092639285c1')
+d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # D2L_RERUN=bert-tagging
+    d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v1.json',
+    'f0f0f41d18ed997462891d0c6dece556ad57b680')
+d2l.DATA_HUB['lm-enc-bert-decoder-v1'] = (  # D2L_RERUN=bert-decoder
+    d2l.LM_DATA_URL + 'lm-enc-bert-decoder-v1.json',
+    '22b140629d3aa486a601068dce61b8a0f0301beb')
 ```
 
 <!-- Placeholder (stage 2): a pinned encoder with one of three heads; load_hf of the previous chapter loads causal models only. The load line names the weights the checkpoint has but the model does not use, and the new weights a head starts from at random. -->
@@ -936,11 +948,11 @@ assert abs(f1['f1'] - oracle) < 1e-9
 assert SMALL or abs(f1['f1'] - seeds_f1[0]) <= bound
 ```
 
-<!-- Placeholder (prose, ## Encoder or Prompted Decoder): the decoder labels the same validation items from k demonstrations (label-balanced sets from the training set's held-out end, nested: the 4 shots are the first 4 of the 8), each answer scored as the log-probability of its label word (d2l.score_choices). Which demonstrations are shown moves few-shot accuracy as a seed moves fine-tuning, so 8 shots are scored with three disjoint demonstration sets (4 shots with one: say so). The regeneration (D2L_RERUN=bert-decoder, about 20 minutes) scores every item at 0, 4 and 8 shots for both tasks; the normal build re-scores the first items at 8 shots and checks that every prediction whose registered margin is not a near tie is reproduced. -->
+<!-- Placeholder (prose, ## Encoder or Prompted Decoder): the decoder labels the same validation items from k demonstrations (label-balanced sets from the training set's held-out end, nested: the 4 shots are the first 4 of the 8), each answer scored as the log-probability of its label word (d2l.score_choices). Which demonstrations are shown moves few-shot accuracy as a seed moves fine-tuning, so 8 shots are scored with three disjoint demonstration sets (4 shots with one: say so). The regeneration (D2L_RERUN=bert-decoder, about 20 minutes) scores every item at 0, 4 and 8 shots for both tasks; the normal build re-scores the MNLI items at 8 shots and checks that every prediction whose registered margin is not a near tie is reproduced. On the GPU it scores all 2,000 items, so its batches are the registered run's and the scores repeat to the stored four decimals; scored in other batches, bf16 moves a margin by up to about half a nat per token (measured against fp32), so near ties are margins up to 0.5. -->
 
 ```{.python .input #bert-decoder}
 %%tab pytorch
-TIE = 0.05  # nats per token: score margins that bf16 batch drift may flip
+TIE = 0.5  # nats per token: margins bf16 moves when the batches differ
 
 def query(task, row):
     if task == 'mnli':

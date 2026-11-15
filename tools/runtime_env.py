@@ -415,6 +415,14 @@ NOTEBOOK_ENV = {
     ("pytorch", "chapter_lm-encoders/bert.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
+    # 19.1 and 19.3: the same X-HF-Warning as 18.6 (Qwen3-0.6B's table, the
+    # sentence-transformers check); errors still raise.
+    ("pytorch", "chapter_lm-encoders/word-embeddings.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
     # 19.5: Qwen3.5-9B generates with prompts of changing length within 1-2
     # GiB of a 24 GB card's limit; cached fixed-size blocks would not fit.
     ("pytorch", "chapter_lm-encoders/rag.ipynb"): {

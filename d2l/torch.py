@@ -7008,6 +7008,9 @@ d2l.DATA_HUB['simlex999'] = (
     'e87197824261f272ad1e9c02e32db3144bbeb0ca/data/'
     'train-00000-of-00001.parquet',
     'f3b074e2e08f83aa469f2d05c5b789b5ad2d3c49')
+d2l.DATA_HUB['lm-enc-we-grid-v1'] = (  # D2L_RERUN=we-grid, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-we-grid-v1.json',
+    '8c6bc0c598c8493fa407b3662f7a26472522169e')
 
 def cooccurrence_counts(corpus, vocab_size, window=5, weighting='uniform'):
     """Word-context counts within `window` positions as a symmetric
@@ -7191,6 +7194,18 @@ d2l.DATA_HUB['conll2003-labels'] = (
     'https://huggingface.co/datasets/tner/conll2003/resolve/'
     'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/label.json',
     'd4fd1344c9af2613a3094dd2c84ff594e5215af0')
+d2l.DATA_HUB['lm-enc-bert-sweep-v1'] = (  # D2L_RERUN=bert-sweep, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v1.json',
+    '06440f0e5acbd7b91deb6b66f8402f8bea8d6155')
+d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
+    '36365804df9df70b812f52595ee6d092639285c1')
+d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # D2L_RERUN=bert-tagging
+    d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v1.json',
+    'f0f0f41d18ed997462891d0c6dece556ad57b680')
+d2l.DATA_HUB['lm-enc-bert-decoder-v1'] = (  # D2L_RERUN=bert-decoder
+    d2l.LM_DATA_URL + 'lm-enc-bert-decoder-v1.json',
+    '22b140629d3aa486a601068dce61b8a0f0301beb')
 
 def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
                  dtype=torch.bfloat16, device=None, attn_implementation='sdpa',
@@ -7443,6 +7458,15 @@ d2l.DATA_HUB['nq-pairs'] = (
     'natural-questions/resolve/f9e894e1081e206e577b4eaa9ee6de2b06ae6f17/'
     'pair/train-00000-of-00001.parquet',
     '545c1495f10231652b59e67f7ab02e6d21252fd0')
+d2l.DATA_HUB['lm-enc-emb-results-v1'] = (  # D2L_RERUN=emb-train, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-emb-results-v1.json',
+    'd0bd19be14746bdb7216a190a20a8abaca4145d5')
+d2l.DATA_HUB['lm-enc-modernbert-embed-v1'] = (  # contrastive, seed 0, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-embed-v1.zip',
+    'f0de3203bde6008307a9782b45733085b02f89e2')
+d2l.DATA_HUB['lm-enc-modernbert-embed-mrl-v1'] = (  # Matryoshka, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-embed-mrl-v1.zip',
+    '17b1215b6d2e2ba5d8e7ef78621afe0894718095')
 
 def pool_hidden(hidden, attention_mask, mode):
     """One vector per sequence from hidden states (B, T, m): the first
@@ -7699,6 +7723,15 @@ d2l.DATA_HUB['lm-book-r3-v1'] = (  # book commit 098bf463, corpus r3.1
 d2l.DATA_HUB['lm-enc-r3-emb-qwen3emb06b-sec512-v1'] = (  # float16, dense view
     d2l.LM_DATA_URL + 'lm-enc-r3-emb-qwen3emb06b-sec512-v1.npy',
     '5bf63b97609399841b4fcd925734b98327634b91')
+d2l.DATA_HUB['lm-enc-r3-stress-emb-v1'] = (  # D2L_RERUN=ret-stress-emb
+    d2l.LM_DATA_URL + 'lm-enc-r3-stress-emb-v1.npz',
+    'f9fbf41eba47b50a034ee5d7f0a6fa33f28c26a1')
+d2l.DATA_HUB['lm-enc-ret-rerank-v1'] = (  # D2L_RERUN=ret-rerank
+    d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v1.json',
+    '93299ee93a052d3e21f4ed49d8b259400382dc81')
+d2l.DATA_HUB['lm-enc-ann-v1'] = (  # D2L_RERUN=ret-ann, AMD EPYC 7502
+    d2l.LM_DATA_URL + 'lm-enc-ann-v1.json',
+    'aadf07c143fa936ca556c105644c35052c30bf18')
 
 def book_corpus(chunking='sections', *, size=256, overlap=0, source='hub',
                 root=os.path.join('..', 'data', 'lm')):
@@ -8158,6 +8191,9 @@ d2l.DATA_HUB['lm-book-qa-v2'] = (  # v1, closed-book flag by the 27B judge
 d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
     d2l.LM_DATA_URL + 'lm-rag-judge-labels-v1.zip',
     '2f10e6f4314644e7ebdf7ac7a8c1b3e7182f98d8')
+d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
+    d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
+    '78065bff472577631de5d7cac287323e77427e7f')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):

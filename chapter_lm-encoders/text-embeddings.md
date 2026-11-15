@@ -145,6 +145,15 @@ d2l.DATA_HUB['nq-pairs'] = (
     'natural-questions/resolve/f9e894e1081e206e577b4eaa9ee6de2b06ae6f17/'
     'pair/train-00000-of-00001.parquet',
     '545c1495f10231652b59e67f7ab02e6d21252fd0')
+d2l.DATA_HUB['lm-enc-emb-results-v1'] = (  # D2L_RERUN=emb-train, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-emb-results-v1.json',
+    'd0bd19be14746bdb7216a190a20a8abaca4145d5')
+d2l.DATA_HUB['lm-enc-modernbert-embed-v1'] = (  # contrastive, seed 0, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-embed-v1.zip',
+    'f0de3203bde6008307a9782b45733085b02f89e2')
+d2l.DATA_HUB['lm-enc-modernbert-embed-mrl-v1'] = (  # Matryoshka, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-embed-mrl-v1.zip',
+    '17b1215b6d2e2ba5d8e7ef78621afe0894718095')
 ```
 
 <!-- Placeholder (prose, ## Pooled Encoder States as Text Vectors): the previous section kept one vector per token and trained a head per task; here one vector per text serves every task. Three ways to pool: the first token ([CLS]), the mean over the tokens the mask keeps, the last token (decoders); the mask decides, so left and right padding both work. -->

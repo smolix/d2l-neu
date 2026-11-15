@@ -184,6 +184,15 @@ d2l.DATA_HUB['lm-book-r3-v1'] = (  # book commit 098bf463, corpus r3.1
 d2l.DATA_HUB['lm-enc-r3-emb-qwen3emb06b-sec512-v1'] = (  # float16, dense view
     d2l.LM_DATA_URL + 'lm-enc-r3-emb-qwen3emb06b-sec512-v1.npy',
     '5bf63b97609399841b4fcd925734b98327634b91')
+d2l.DATA_HUB['lm-enc-r3-stress-emb-v1'] = (  # D2L_RERUN=ret-stress-emb
+    d2l.LM_DATA_URL + 'lm-enc-r3-stress-emb-v1.npz',
+    'f9fbf41eba47b50a034ee5d7f0a6fa33f28c26a1')
+d2l.DATA_HUB['lm-enc-ret-rerank-v1'] = (  # D2L_RERUN=ret-rerank
+    d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v1.json',
+    '93299ee93a052d3e21f4ed49d8b259400382dc81')
+d2l.DATA_HUB['lm-enc-ann-v1'] = (  # D2L_RERUN=ret-ann, AMD EPYC 7502
+    d2l.LM_DATA_URL + 'lm-enc-ann-v1.json',
+    'aadf07c143fa936ca556c105644c35052c30bf18')
 ```
 
 <!-- Placeholder (prose, opening): the retriever this section ends with, used before it is built: BM25 alone and the embedder alone on the 220 answerable dev questions; Recall@10 of each with document-clustered intervals, the share of questions exactly one of them finds (their errors differ), and one question of each kind (the first in the question set's order): an identifier question BM25 finds and the embedder misses, and a question without an identifier the other way round. -->

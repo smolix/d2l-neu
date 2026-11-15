@@ -1193,7 +1193,8 @@ $$
 
 vectors instead of $N$: the centroids, then the probed cells. What the index
 gives up is exactness: a neighbor just across the border of an unprobed
-cell is never seen. `kmeans` starts from k-means++ seeds, each new centroid
+cell is never seen (right of :numref:`fig_lm_ivf_pq`). `kmeans` starts
+from k-means++ seeds, each new centroid
 drawn with probability proportional to its squared distance from the nearest
 centroid chosen so far, and runs Lloyd's iterations; `IVFIndex` stores the
 vectors cell by cell and scans the probed cells exactly.
@@ -1293,7 +1294,8 @@ byte per block at $K = 256$, and the reconstruction $\hat{\mathbf{x}}$
 concatenates the chosen centroids. $M$ codebooks of $K$ entries name $K^M$
 reconstructions; this product of small codebooks gives the method its name.
 
-The smallest case can be done by hand. Take $m = 4$, $M = 2$ and $K = 2$,
+The smallest case can be done by hand (left of :numref:`fig_lm_ivf_pq`).
+Take $m = 4$, $M = 2$ and $K = 2$,
 with codebooks $\{(1, 0), (0, 1)\}$ for the first two coordinates and
 $\{(1, 1), (-1, 0)\}$ for the last two. For
 $\mathbf{x} = (0.9, 0.2, -0.8, 0.1)$ the first block is nearest to $(1, 0)$
@@ -1305,6 +1307,9 @@ second block, $(0, 0)$, at 2 and 1 from those of the second. With these four
 numbers in a table $T$, the squared distance from $\mathbf{y}$ to the code is
 $T_1[0] + T_2[1] = 1 + 1 = 2$, read off in two look-ups without decoding
 anything. The exact squared distance to $\mathbf{x}$ is 1.30.
+
+![Product quantization and the inverted file. Left: the hand case with $m = 4$, $M = 2$ and $K = 2$. Each block of $\mathbf{x}$ is replaced by the index of its nearest centroid (squared distances beside the centroids), so the code is $(0, 1)$. For the question $\mathbf{y}$, the table $T_j[i]$ holds the squared distance from each block of $\mathbf{y}$ to each centroid, and the distance to the code is the sum of the two entries the code selects. Right: k-means cuts the plane into $n_{\textrm{list}} = 8$ cells (centroids as diamonds); the question scans the points of its $n_{\textrm{probe}} = 2$ nearest cells (shaded) and misses its nearest point, which lies just across a border.](../img/mdl-lm-encoders-ivf-pq.svg)
+:label:`fig_lm_ivf_pq`
 
 The look-ups work in general, because a squared distance is a sum over
 coordinates and therefore over blocks. For a question $\mathbf{y}$, kept

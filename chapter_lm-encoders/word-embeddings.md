@@ -372,7 +372,7 @@ where $\sigma(s) = 1/(1 + e^{-s})$ is the sigmoid. The first term pushes
 the score of the real pair up, and the sum pushes the scores of the noise
 pairs down. A pair now costs $1 + K = 6$ inner products instead of 17,997.
 We call each scored pair of a center word with a context or noise word a
-*slot*. `sgns_loss` computes :eqref:`eq_lm_sgns_loss` as a binary
+*slot* (:numref:`fig_lm_sgns_pmi`). `sgns_loss` computes :eqref:`eq_lm_sgns_loss` as a binary
 cross-entropy and divides by the number of slots, $1 + K$ per observed
 pair, so it reports a loss per slot. At the start, when every score is
 zero, a slot costs $\log 2 \approx 0.693$.
@@ -384,12 +384,8 @@ vector the sum of the vectors of its character $n$-grams, so a word never
 seen in training still gets a vector from its pieces
 :cite:`Bojanowski.Grave.Joulin.ea.2017`.
 
-<!-- FIGURE pending (generator step, not in this commit): fig_lm_sgns_pmi,
-img/mdl-lm-encoders-sgns-pmi.svg. A window of 5 around a center word in a
-short sentence; the center table V and the context table U with the scored
-pairs; three noise words drawn from count^0.75; a small PMI matrix with the
-shifted entries that the optimum reproduces. Insert it here with a caption
-and :label:`fig_lm_sgns_pmi`, and cite it in the paragraph above. -->
+![Skip-gram with negative sampling. Every word within five positions of the center word *steam* is a context word. The pair (*steam*, *piston*) is scored by the inner product of the center vector $\mathbf{v}_w$, a row of $\mathbf{V}$, with the context vector $\mathbf{u}_o$, a row of $\mathbf{U}$. Its $K = 5$ noise words, drawn with probability proportional to $n(o)^{0.75}$, fill the other slots with target 0. Right: at the optimum with free scores, and noise drawn by frequency, the score of each pair of the toy corpus of :numref:`subsec_lm_sgns_pmi` is its pmi minus $\log K$.](../img/mdl-lm-encoders-sgns-pmi.svg)
+:label:`fig_lm_sgns_pmi`
 
 ```{.python .input #word-embeddings-sgns-loss}
 %%tab pytorch
@@ -628,7 +624,8 @@ The toy corpus has 40 tokens of four words, *ice*, *steam*, *solid* and
 *gas*. With a window of one word all 16 pairs occur. The cell minimizes
 the expected loss over one free score per pair by L-BFGS in float64, with
 noise by frequency and with $\alpha = 0.75$. In the first case each score
-should be the pmi of its pair minus $\log 5 \approx 1.609$.
+should be the pmi of its pair minus $\log 5 \approx 1.609$, the matrix on
+the right of :numref:`fig_lm_sgns_pmi`.
 
 ```{.python .input #word-embeddings-toy-pmi}
 %%tab pytorch

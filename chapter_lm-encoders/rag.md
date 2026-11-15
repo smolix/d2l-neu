@@ -479,7 +479,8 @@ means very different amounts of text under the two chunkings.
 :label:`subsec_lm_rag_pipeline`
 
 A pipeline over this set has five stages, and each can be measured without
-the stages after it (:numref:`tab_lm_rag_stages`). Retrieval and reranking
+the stages after it (:numref:`tab_lm_rag_stages` and
+:numref:`fig_lm_rag_stages`). Retrieval and reranking
 come from :numref:`sec_lm_retrieval`: BM25 and dense rankings fused by
 reciprocal ranks, optionally reordered by a cross-encoder reranker.
 
@@ -494,11 +495,8 @@ reciprocal ranks, optionally reordered by a cross-encoder reranker.
 | context assembly | which chunks enter the prompt, in what order, within a budget | coverage at the budget |
 | grounded generation | an answer with numbered citations, or the abstention sentence | accuracy, faithfulness, citations, abstentions |
 
-<!-- Placeholder (figure): ![The stages of a retrieval-augmented generator
-and the metric that measures each.](../img/mdl-lm-encoders-rag-stages.svg)
-:label:`fig_lm_rag_stages` (generator tools/gen_mdl_lm_encoders_figures.py,
-written in the figures step; when it lands, cite it beside
-tab_lm_rag_stages in the paragraph above). -->
+![The five stages of the retrieval-augmented generator, top to bottom, followed by the judge that grades its answers; beside each, the measurement that sees it on its own and the failure class that blames it. A wrong answer is blamed on the first stage that lost it: no relevant chunk among the first 50 is *not retrieved*; one there but not in the context is *ranked low*, which reranking and assembly share. The judge's verdicts on correctness and faithfulness give accuracy and faithfulness, and decide among the classes of the generation stage.](../img/mdl-lm-encoders-rag-stages.svg)
+:label:`fig_lm_rag_stages`
 
 ### Context Assembly and the Prompt
 
@@ -1964,7 +1962,8 @@ the cell prints, and `test` is not read again.
 If no single stage change helps on average, perhaps the 26 wrong answers of
 the baseline fail in different ways, each needing its own repair. To find
 out, `classify_failure` asks of each wrong answer the questions below, in
-pipeline order, and blames the first stage that lost the answer:
+pipeline order, and blames the first stage that lost the answer (right of
+:numref:`fig_lm_rag_stages`):
 
 1. An unanswerable question was answered: a *false answer*.
 2. No relevant chunk is among the first-stage top 50: *not retrieved*.

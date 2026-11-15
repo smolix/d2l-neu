@@ -587,7 +587,8 @@ class PooledClassifier(nn.Module):
 ```
 
 The same encoder serves all three tasks of this section. Only the input and
-the head change (:numref:`tab_lm_bert_heads`).
+the head change (:numref:`tab_lm_bert_heads` and
+:numref:`fig_lm_encoder_heads`).
 
 :One encoder, three heads. Every head starts with the dense layer, GELU and norm of the pretrained masked-token head.
 :label:`tab_lm_bert_heads`
@@ -598,14 +599,8 @@ the head change (:numref:`tab_lm_bert_heads`).
 | pair (MNLI) | `[CLS] premise [SEP] hypothesis [SEP]` | the mean over tokens | 3 logits |
 | tagging (CoNLL-2003) | `[CLS] sentence [SEP]` | each word's first token | 9 logits per word |
 
-<!-- Placeholder (figure): ![One encoder and three heads: a pooled
-sentence head (mean, dense, GELU, norm, linear), a pair read jointly as
-[CLS] premise [SEP] hypothesis [SEP] with no segment ids, and a tagging head
-that labels each word's first token with B- and I- tags and skips the
-others.](../img/mdl-lm-encoders-encoder-heads.svg)
-:label:`fig_lm_encoder_heads` (generator tools/gen_mdl_lm_encoders_figures.py,
-written in the figures step; when it lands, cite it beside
-tab_lm_bert_heads in the sentence above). -->
+![One pretrained encoder and three heads, each fine-tuned on its own task. A sentence (top) and a sentence pair (middle) are averaged over their tokens and passed through dense, GELU, norm and linear layers to two or three logits. The pair is read jointly; with no segment ids, the separator between the two texts is all that marks where the second begins. A tagging head (bottom) applies the same layers at every token; each word's label sits on its first token, and the other tokens, like the special ones, carry $-100$ and are not scored. Tokens are ModernBERT's; Ġ marks a token that starts with a space.](../img/mdl-lm-encoders-encoder-heads.svg)
+:label:`fig_lm_encoder_heads`
 
 We will fine-tune our own `PooledClassifier`, so we first check that it
 computes what the library computes. We load Transformers' sequence

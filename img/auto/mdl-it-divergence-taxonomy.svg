@@ -1179,8 +1179,8 @@ z
     </g>
    </g>
    <g id="text_13">
-    <!-- boxed = a metric, or (for JS and $d_{\mathrm{H}}^2$) the square root of one -->
-    <g style="fill: #15181c" transform="translate(52.159179 251.537937) scale(0.13 -0.13)">
+    <!-- boxed = a metric, or (for JS and $d_{\mathrm{H}}^2$) the square of one -->
+    <g style="fill: #15181c" transform="translate(64.964179 251.537937) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-33" d="M 90 0 
 L 1107 1626 
@@ -1382,17 +1382,12 @@ z
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(1835.220812 0.084203)"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(1869.920779 0.084203)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(1919.520739 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(1939.520724 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(1974.22069 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(2028.420641 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-2f" transform="translate(2082.620592 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(2116.420565 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(2136.42055 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-21" transform="translate(2190.620501 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(2219.820467 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(2239.820452 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-29" transform="translate(2294.020403 0.084203)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(2348.720354 0.084203)"/>
+     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(1939.520724 0.084203)"/>
+     <use xlink:href="#SourceSans3-Regular-21" transform="translate(1993.720675 0.084203)"/>
+     <use xlink:href="#SourceSans3-Regular-1" transform="translate(2022.920641 0.084203)"/>
+     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(2042.920626 0.084203)"/>
+     <use xlink:href="#SourceSans3-Regular-29" transform="translate(2097.120577 0.084203)"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(2151.820528 0.084203)"/>
     </g>
    </g>
   </g>

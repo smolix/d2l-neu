@@ -24,8 +24,8 @@ Ten figures, by section:
 no longer references them; see git history.)
 
 The encoder-decoder interface and the unrolled RNN encoder-decoder (teacher
-forcing) are also written here; the seq2seq section of the language-models
-part references them.
+forcing) are also written here; ``seq2seq.md`` (``sec_seq2seq``) in this
+chapter references them.
 
 The notebooks / prose reference the generated files with no drawing code (like
 the slide SVGs).  Figures that show a *computed* result (e.g. the
@@ -279,8 +279,8 @@ def fig_gru_cell():
 
 
 # =========================================================================== #
-# Encoder-decoder figures (referenced from the language-models part's        #
-# seq2seq section): the encoder-decoder interface, and the unrolled RNN      #
+# Encoder-decoder figures (referenced from ``seq2seq.md``, ``sec_seq2seq``,  #
+# in this chapter): the encoder-decoder interface, and the unrolled RNN      #
 # encoder-decoder with teacher forcing.                                      #
 #                                                                              #
 # ``_ed_box``/``_ed_arrow`` are this section's own box/arrow helpers -- they #

@@ -349,6 +349,7 @@ def fig_kraft_tree():
     ax.set_ylim(-5.55, 0.45)
     ax.axis("off")
     fl.save(fig, "mdl-it-kraft-tree")
+    _copy_to_auto("mdl-it-kraft-tree")
 
 
 # =========================================================================== #
@@ -386,7 +387,7 @@ def fig_divergence_taxonomy():
               color=GREEN, fontsize=14)
 
     # f-divergence-only members (density-ratio family); the two whose
-    # square root is a metric are boxed like the metrics.
+    # square root is a metric are boxed too.
     for y, s in zip((0.86, 0.45, 0.04), ("KL", "reverse KL", r"$\chi^2$")):
         fl.vlabel(ax, (-2.35, y), s, color=BLUE, fontsize=13)
     _metric_label(ax, (-2.35, -0.40), "JS", BLUE)
@@ -403,7 +404,7 @@ def fig_divergence_taxonomy():
     # Legend note distinguishing the metrics.
     fl.vlabel(ax, (0.0, -r - 0.78),
               r"boxed = a metric, or (for JS and $d_{\mathrm{H}}^2$) the "
-              "square root of one",
+              "square of one",
               color=INK, fontsize=13)
 
     fl.clean_axes(ax, lim=((-3.6, 3.6), (-r - 1.05, r + 0.62)), hide=True)
@@ -416,16 +417,16 @@ def fig_f_div_generators():
     convex, all zero at u = 1, very different penalties away from it.
 
     Output id ``mdl-it-f-div-generators``."""
-    fig, ax = plt.subplots(figsize=(6.8, 4.4))
+    fig, ax = plt.subplots(figsize=(5.6, 4.4))
 
     # Each generator is shifted by the multiple f'(1)(u - 1) that changes no
     # divergence, so every curve is >= 0 and tangent to the axis at u = 1.
     u = np.linspace(0.05, 3.0, 800)
     curves = [
-        (r"KL: $u\log u - u + 1$", u * np.log(u) - u + 1, BLUE),
-        (r"reverse KL: $-\log u + u - 1$", -np.log(u) + u - 1, ORANGE),
+        ("KL", u * np.log(u) - u + 1, BLUE),
+        ("reverse KL", -np.log(u) + u - 1, ORANGE),
         (r"Pearson $\chi^2$", (u - 1) ** 2, GREEN),
-        (r"squared Hellinger $d_{\mathrm{H}}^2$", (np.sqrt(u) - 1) ** 2, RED),
+        ("squared Hellinger", (np.sqrt(u) - 1) ** 2, RED),
         ("total variation", 0.5 * np.abs(u - 1), PURPLE),
         ("Jensen–Shannon",
          u / 2 * np.log(u) - (u + 1) / 2 * np.log((u + 1) / 2), GRAY),
@@ -433,7 +434,8 @@ def fig_f_div_generators():
     for name, y, col in curves:
         ax.plot(u, y, color=col, lw=2.0, label=name)
 
-    # Every normalized generator touches zero with zero slope at u = 1.
+    # Every shifted divergence function is zero at u = 1 (the smooth ones
+    # with zero slope; total variation has a corner there).
     ax.plot([1.0], [0.0], "o", color="black", ms=6, zorder=6)
     ax.annotate(r"$f(1) = 0,\ f'(1) = 0$", xy=(1.0, 0.0),
                 xytext=(1.55, -0.32), fontsize=13, ha="left", va="center",
@@ -441,13 +443,15 @@ def fig_f_div_generators():
 
     ax.axhline(0.0, color="black", lw=0.9, zorder=0)
     ax.set_xlabel(r"density ratio $u = p/q$")
-    ax.set_ylabel(r"normalized generator $f(u)$")
+    ax.set_ylabel(r"divergence function $f(u)$")
     ax.set_xlim(0.05, 3.0)
     ax.set_ylim(-0.5, 2.6)
     # Legend above the axes: inside, every placement sits on a curve (the
-    # steep reverse-KL/Pearson branches fill both top corners).
+    # steep reverse-KL/Pearson branches fill both top corners).  Names only,
+    # no formulas (the table has them), so the text stays legible when a
+    # slide shows the figure in half its width.
     ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2,
-              fontsize=12, handlelength=1.4, columnspacing=1.2,
+              fontsize=15, handlelength=1.2, columnspacing=1.2,
               frameon=False)
     fl.save(fig, "mdl-it-f-div-generators")
     _copy_to_auto("mdl-it-f-div-generators")
@@ -486,7 +490,7 @@ def fig_f_gan_tangent_bound():
     ax.text(-0.075, -u0, r"$-f^*(t)$", color=ORANGE, fontsize=14,
             ha="right", va="center", clip_on=False)
 
-    ax.text(0.16, 2.55, "$f$ = sup of its tangents\n(biconjugation)",
+    ax.text(0.16, 2.55, "$f$ = sup of its tangents",
             color=BLUE, fontsize=14, ha="left", va="center")
 
     ax.axhline(0.0, color=LIGHT, lw=0.9, zorder=0)
@@ -498,6 +502,7 @@ def fig_f_gan_tangent_bound():
               frameon=True, facecolor="white", edgecolor="none",
               framealpha=0.9)
     fl.save(fig, "mdl-it-f-gan-tangent-bound")
+    _copy_to_auto("mdl-it-f-gan-tangent-bound")
 
 
 def fig_tv_area():
@@ -735,6 +740,7 @@ def fig_score_field():
     ax.set_ylabel(r"$x_2$")
     fl.clean_axes(ax, lim=((-4.4, 4.4), (-3.6, 3.6)), hide=False)
     fl.save(fig, "mdl-it-score-field")
+    _copy_to_auto("mdl-it-score-field")
 
 
 # =========================================================================== #
@@ -888,7 +894,8 @@ def fig_capacity_rd():
     channel that always flips carries ln 2.  Right: the Gaussian
     rate-distortion function R(D) = 1/2 log(sigma_X^2 / D) with sigma_X^2 = 1,
     unbounded as D -> 0 and zero once D reaches the source variance."""
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.8),
+    FS_ANN = 15   # annotations stay legible when the slide shrinks the figure
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.4, 3.4),
                                    gridspec_kw=dict(wspace=0.32))
 
     # --- left: BSC capacity in nats ---
@@ -900,14 +907,14 @@ def fig_capacity_rd():
         cc = np.log(2) + dd * np.log(dd) + (1 - dd) * np.log(1 - dd)
         axa.plot(dd, cc, "o", color=BLUE, ms=6.5, zorder=6)
         axa.annotate(txt, (dd, cc), textcoords="offset points", xytext=off,
-                     color=INK, fontsize=13, ha="left", va="bottom")
+                     color=INK, fontsize=FS_ANN, ha="left", va="bottom")
     axa.plot([0.5], [0.0], "o", color=ORANGE, ms=6, zorder=5, clip_on=False)
-    axa.text(0.5, 0.03, "$C=0$", fontsize=13, color=INK, ha="center",
+    axa.text(0.5, 0.03, "$C=0$", fontsize=FS_ANN, color=INK, ha="center",
              va="bottom")
     axa.text(0.04, 0.715, "clean channel:\n$\\ln 2$", color=INK,
-             fontsize=13, ha="left", va="bottom")
+             fontsize=FS_ANN, ha="left", va="bottom")
     axa.text(0.96, 0.715, "always flipping:\nalso $\\ln 2$", color=INK,
-             fontsize=13, ha="right", va="bottom")
+             fontsize=FS_ANN, ha="right", va="bottom")
     axa.set_xlabel(r"flip probability $\delta$")
     axa.set_ylabel(r"capacity $C$ (nats per use)")
     axa.set_xlim(0, 1)
@@ -920,15 +927,15 @@ def fig_capacity_rd():
     axb.plot(D, R, color=BLUE, lw=2.6, zorder=4)
     axb.axvline(1.0, color=GRAY, lw=1.0, ls="--", zorder=2)
     axb.fill_between(D, 0, ytop, where=D >= 1.0, color=LIGHT, alpha=0.5, lw=0)
-    axb.text(0.16, 1.85, r"$R\to\infty$ as $D\to0$", color=INK, fontsize=13,
+    axb.text(0.16, 1.85, r"$R\to\infty$ as $D\to0$", color=INK, fontsize=FS_ANN,
              ha="left", va="center")
     r01 = 0.5 * np.log(10.0)
     axb.plot(0.1, r01, "o", color=ORANGE, ms=6.5, zorder=6)
     axb.annotate(r"$D=0.1$: $1.15$", (0.1, r01), textcoords="offset points",
-                 xytext=(10, 0), color=INK, fontsize=13, ha="left",
+                 xytext=(10, 0), color=INK, fontsize=FS_ANN, ha="left",
                  va="center")
     axb.text(1.225, 1.05, "$D\\geq\\sigma_X^2$:\n$R=0$",
-             color=INK, fontsize=13, ha="center", va="center")
+             color=INK, fontsize=FS_ANN, ha="center", va="center")
     axb.set_xlabel(r"allowed distortion $D$ (squared error, $\sigma_X^2=1$)")
     axb.set_ylabel(r"rate $R(D)$ (nats per sample)")
     axb.set_xlim(0.0, 1.45)

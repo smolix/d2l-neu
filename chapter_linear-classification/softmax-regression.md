@@ -381,9 +381,9 @@ the wrong distribution can only increase the average surprise,
 
 $$H(\mathbf{p}, \hat{\mathbf{p}}) \geq H(\mathbf{p}), \quad \textrm{with equality if and only if } \hat{\mathbf{p}} = \mathbf{p}.$$
 
-This is Gibbs' inequality, proved in :numref:`sec_mdl-information_theory`
-together with the interpretation of entropy as the length of the shortest
-code for the outcomes.
+This is Gibbs' inequality, proved in :numref:`sec_mdl-information_theory`.
+That the entropy is also the average length of the shortest code for the
+outcomes is shown in :numref:`sec_mdl-coding-compression`.
 
 Labels are often uncertain even when the features are known. A small,
 blurry photo may show a shirt with probability 0.6 and a T-shirt with

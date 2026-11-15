@@ -17,8 +17,6 @@ fingerprints of every consumer, are unchanged. In the Optimization chapter
 only an exercise of `batch-size.md` mentions `d2l.Timer`; the code that calls
 it lives in the Image Models part, the Attic and the Tools appendix:
   * `chapter_computer-vision/{image-augmentation,kaggle-cifar10,kaggle-dog,ssd}.md`
-  * `chapter_natural-language-processing-pretraining/{word2vec,bert}-pretraining.md`
-  * `chapter_natural-language-processing-applications/natural-language-inference-attention.md`
   * `chapter_recommender-systems/{mf,autorec,neumf}.md`
   * `chapter_appendix-tools-for-deep-learning/utils.md` (training helpers)
 The tensorflow/mxnet cell can be removed when those chapters drop their

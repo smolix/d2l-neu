@@ -25,33 +25,85 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "I(X;Y) = 0.830 nats, mean pmi over pairs = 0.827\nmean exp(pmi) over independent pairs = 0.997\n"
+          "text": "I(X;Y) = 0.830 nats, mean pmi over pairs = 0.832\nmean exp(pmi) over independent pairs = 1.000\n"
         }
       ]
     },
-    "mdl-mutual-information-the-curse-of-estimation": {
-      "code_fingerprint": "sha256:e6182595358a7fffb46355461b50c9af4f3f6922e5798c508fb82d5abdaa57b4",
-      "kind": "text",
-      "outputs": []
-    },
-    "mdl-mi-estimation-ksg-in-dimension": {
-      "code_fingerprint": "sha256:bd05abc7067236c774a62b84b726fdea691a7a72823cc6ace5bebcd66d06a549",
+    "mutual-information-gaussian-binned": {
+      "code_fingerprint": "sha256:ff3b975cf33235fadff2944ebd0729274101465736d8f1e67d6791cb2223e87b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  1: true I =   0.83, KSG =  0.83 nats\n"
+          "text": "pair        truth  b = 10  b = 40  b = 160\nrho = 0     0.000   0.000   0.003   0.034\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  4: true I =   3.32, KSG =  2.50 nats\n"
+          "text": "rho = 0.9   0.830   0.609   0.811   0.843\nrho = 0.99  1.959   1.092   1.779   1.951\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 16: true I =  13.29, KSG =  2.82 nats\n"
+          "text": "parabola    1.141   0.573   0.997   1.134\n"
+        }
+      ]
+    },
+    "mdl-mutual-information-mutual-information-as-nonlinear-correlation-2": {
+      "code_fingerprint": "sha256:817232f784261d571a6d3fdf3121c7dff01b9283f3033786c4d6662f97c31149",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true I = 0.830 nats; histograms with b = 40:\nx   : correlation 0.900, raw 0.815, ranks 0.814 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "x**3: correlation 0.698, raw 0.392, ranks 0.814 nats\n"
+        }
+      ]
+    },
+    "mdl-mutual-information-the-curse-of-estimation": {
+      "code_fingerprint": "sha256:2020fa55901c4608afbfc42b600ba9f87fa59072a679a22c9d0d01c233603596",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-mi-estimation-ksg-in-dimension": {
+      "code_fingerprint": "sha256:a43ebd351dbef701e0300803872396931187db01f58ffd073f7d89453a77a3f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " d  true I    KSG  mean strip count\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1    0.83   0.86              70.4\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2    1.66   1.61              50.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 4    3.32   2.53              31.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 8    6.64   2.84              25.9\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "16   13.29   2.82              25.7\n"
         },
         {
           "type": "stream",
@@ -61,78 +113,93 @@
       ]
     },
     "mutual-information-log-n-ceiling": {
-      "code_fingerprint": "sha256:9c252f3ddadae3aa2e58aaaf7d87d24536f8bb83135bdbf4ad3b10cfcf7cef23",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-mi-estimation/mutual-information-log-n-ceiling-1.svg",
-          "bytes": 33722,
-          "sha256": "sha256:7653c348af5ca970a925e686014498ecf0ea80d0b6427928c08addb82496fd5e"
-        }
-      ]
-    },
-    "mutual-information-perfect-critic-bounds": {
-      "code_fingerprint": "sha256:949f20e44c3787fea0bd816fe97eb3050c2f272651497cffe2ce53b76b620fe1",
+      "code_fingerprint": "sha256:4839de5e6efab0e653a8359d4bdc4256de553db325ab42bb7530dbd6697239ab",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  I  DV median [IQR]       NWJ median [IQR]      NWJ mean  InfoNCE median [IQR]\n0.5   0.49 [ 0.43,  0.57]   0.49 [ 0.42,  0.57]      0.49   0.49 [ 0.45,  0.53]\n"
+          "text": "I = 1:  N = 16: 0.89   N = 128: 0.98   N = 1024: 1.00\nI = 4:  N = 16: 2.56   N = 128: 3.67   N = 1024: 3.96\nI = 7:  N = 16: 2.76   N = 128: 4.75   N = 1024: 6.31\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-mi-estimation/mutual-information-log-n-ceiling-1.svg",
+          "bytes": 36236,
+          "sha256": "sha256:38c29a79aef215c5d8676df14036461853180847c804a09fe06217a2960d360d"
+        }
+      ]
+    },
+    "mutual-information-perfect-critic-bounds": {
+      "code_fingerprint": "sha256:f88ca67db98fd6f94778698d7277d8e16a9ee07da27df741fa1c732e08fcac8a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  I  DV median [IQR]       NWJ median [IQR]      NWJ mean  InfoNCE median [IQR]  <0.1   >=N\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1.0   1.02 [ 0.90,  1.15]   1.01 [ 0.90,  1.14]      1.02   0.99 [ 0.93,  1.05]\n2.0   2.05 [ 1.86,  2.24]   2.04 [ 1.86,  2.21]      2.01   1.95 [ 1.88,  2.00]\n"
+          "text": "0.5   0.51 [ 0.42,  0.60]   0.51 [ 0.41,  0.60]      0.50   0.50 [ 0.44,  0.54]    0%    0%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.0   3.08 [ 2.76,  3.41]   3.07 [ 2.72,  3.35]      3.02   2.88 [ 2.81,  2.93]\n"
+          "text": "1.0   1.01 [ 0.89,  1.13]   1.01 [ 0.88,  1.12]      1.00   0.99 [ 0.93,  1.04]    0%    0%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.0   4.16 [ 3.64,  4.74]   4.14 [ 3.60,  4.53]      3.96   3.68 [ 3.63,  3.74]\n"
+          "text": "2.0   2.06 [ 1.84,  2.25]   2.05 [ 1.82,  2.22]      2.01   1.93 [ 1.88,  1.99]    0%    0%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "5.0   5.54 [ 4.73,  8.88]   5.43 [ 4.68,  5.91]      5.07   4.27 [ 4.22,  4.31]\n"
+          "text": "3.0   3.07 [ 2.76,  3.41]   3.07 [ 2.74,  3.34]      3.01   2.88 [ 2.82,  2.94]    0%    1%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6.0  11.05 [ 6.50, 33.04]   6.92 [ 6.37,  7.03]      6.24   4.61 [ 4.57,  4.64]\n"
+          "text": "4.0   4.18 [ 3.65,  4.83]   4.17 [ 3.61,  4.59]      4.00   3.67 [ 3.62,  3.73]    5%    7%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "5.0   5.79 [ 4.65,  8.48]   5.51 [ 4.61,  5.94]      5.04   4.27 [ 4.22,  4.31]   32%   33%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "6.0  14.29 [ 6.52, 35.68]   6.95 [ 6.44,  7.03]      6.18   4.61 [ 4.57,  4.64]   66%   21%\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mi-estimation/mutual-information-perfect-critic-bounds-1.svg",
-          "bytes": 34321,
-          "sha256": "sha256:b5620a077f5fbae8085e035f6e4caecf909d9dce1bce22d68773e7a173ef3b4b"
+          "bytes": 34620,
+          "sha256": "sha256:9f2401738c479f94358863c583a4cf91ef815cf90d65842e1c257e19e2bae217"
         }
       ]
     },
     "mdl-mi-estimation-training-a-critic-1": {
-      "code_fingerprint": "sha256:c85aee05b1ab8673823ed92a59be1bddfc209587d1169c7e38eed2a3a8d425b6",
+      "code_fingerprint": "sha256:ff595629777b2acdd3f62f045f13f683562d1736d5bff5f00703fa6217716527",
       "kind": "text",
       "outputs": []
     },
     "mdl-mi-estimation-training-a-critic-2": {
-      "code_fingerprint": "sha256:3233e76913dfe211ef15a7471e2a6cbabc1c5d9fddd2f8fdef43f0797c5c096a",
+      "code_fingerprint": "sha256:75a7460e25c2039a294bd120c19338d925d46d8a1c6a117b52079cdf2c5155df",
       "kind": "text",
       "outputs": []
     },
     "mutual-information-infonce-train": {
-      "code_fingerprint": "sha256:59e4e733ac64434a9d92a7e62368a9075bea647fe627e7fcf3880fdc76766b71",
+      "code_fingerprint": "sha256:54730ede32d4e2d83f2d652c1fe4c1f3263e7aadab5cd41fcb7d88171ab59c0b",
       "kind": "text",
       "outputs": []
     },
     "mdl-mi-estimation-training-a-critic-3": {
-      "code_fingerprint": "sha256:54ebeb6d16067fa0dd3b9c3ae9f0fbd66e2fa62f145ed7944fad52f247a05327",
+      "code_fingerprint": "sha256:a255b9ed8675d78344b979745c3558e62a1cccb6e90385c43315e68b93684946",
       "kind": "text",
       "outputs": [
         {
@@ -143,22 +210,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   2   0.69     0.57    0.58\n"
+          "text": "   2   0.69     0.57    0.57\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   8   2.08     1.40    1.41\n"
+          "text": "   8   2.08     1.39    1.41\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  32   3.47     1.75    1.78\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 128   4.85     1.86    1.90\ntrue I(X;Y) = 1.96 nats\n"
+          "text": "  32   3.47     1.74    1.76\n 128   4.85     1.86    1.88\ntrue I(X;Y) = 1.96 nats\n"
         }
       ]
     }

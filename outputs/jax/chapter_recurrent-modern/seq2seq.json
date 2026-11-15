@@ -1,0 +1,216 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/seq2seq.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:7f215afbbbb6ad82334aeaff4f6250dc323c03a44c9b6764d325b8600bdd1a18",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "seq2seq-imports": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-decoder-models-for-sequence-transduction-1": {
+      "code_fingerprint": "sha256:a3d5dd00de2785dd5b31c65858497893ef2deccbb01ef7a22c6e31fc41ac57e8",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-abstraction-encoder": {
+      "code_fingerprint": "sha256:1c4110a613e3d784f8bf73907414b58fce1d2a92845f91725bde53e7261ebdfa",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-abstraction-decoder": {
+      "code_fingerprint": "sha256:0467c3e0229565303e3177381cd03528d0742130e624382ce130b46462bc4d68",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-abstraction-together": {
+      "code_fingerprint": "sha256:0cea75ac88fcef4bd62036799904358e592c8604737a543dff03db14531328c9",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng": {
+      "code_fingerprint": "sha256:27e185e7729b64f5bb7e77b9df0e7f5080f667be9e494a113ea3c8625ec97e1f",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng-encode": {
+      "code_fingerprint": "sha256:1ef9f7bf8180dbe62b556b723471a5eb5fd21a5b02998feb659f5cac55341923",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-vocab-shims": {
+      "code_fingerprint": "sha256:3429a65170b9c700c23a7ed776cc12746bcef64ca11c264404dfb661e3ef7b53",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng-batch": {
+      "code_fingerprint": "sha256:4ab66f26bae6839815e30da8843681a19c1f4fa92bb6071f291dde0ba58e6280",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "source: [[ 323 2137  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 451  753  304  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 323 1430  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  317  562 2800  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  763  338  918  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  317 1828 1996  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 5 4]\nshared vocabulary size: 4003\n"
+        }
+      ]
+    },
+    "seq2seq-length-hist-fn": {
+      "code_fingerprint": "sha256:1355a55ee01eb2299217f7114740f2f4948263e035a38e4011f2839025eee5cc",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-length-hist": {
+      "code_fingerprint": "sha256:009235879c582b4d803efa84a6811811b101615960fc70c63547fa9aaadff9af",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-length-hist-1.svg",
+          "bytes": 24467,
+          "sha256": "sha256:2cc506abd6118d699d96e16d3c8ca4d21177e2fdd70a13742d36e2610ca1518e"
+        }
+      ]
+    },
+    "seq2seq-encoder": {
+      "code_fingerprint": "sha256:fde97320de3e7e2855241a697fdf949ab196d103a4d7b38b4461f46dbf283707",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-check": {
+      "code_fingerprint": "sha256:ceb598064ff6dfeb6e5a994c89afadc31298f3389beefc13cce3fdf1679773fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "UserWarning: Explicitly requested dtype int64 requested in astype is not\navailable, and will be truncated to dtype int32. To enable more dtypes, set the\njax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment\nvariable. See https://github.com/jax-ml/jax#current-gotchas for more.\n"
+        }
+      ]
+    },
+    "seq2seq-decoder": {
+      "code_fingerprint": "sha256:06cbc7e5e5c58d0b24bceab35f6941291888370d3cf832aee64581c1ff4fb8f7",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder-check": {
+      "code_fingerprint": "sha256:5ed1679ecf45945ff3fe25518dea442f9251911121b7fa53dbbe4e7bafb8d428",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-model": {
+      "code_fingerprint": "sha256:228f985ed50c4555a959409c197b04de0a28d896cc997c0fd668fb516d25b126",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-loss": {
+      "code_fingerprint": "sha256:594236632f5263822c55bfb6f1d873193697f651bd5d0b9d9df311c420de9960",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-training": {
+      "code_fingerprint": "sha256:adf23a5a7a361b75a732091f4c040423b68854b216bd4462556b0c6bcfd84443",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-training-1.svg",
+          "bytes": 26240,
+          "sha256": "sha256:b832b2539fae36dff6f29770f0229ac0aa594ad3fc598a146d69de36f4fa6b24"
+        }
+      ]
+    },
+    "seq2seq-predict-step": {
+      "code_fingerprint": "sha256:1d80d833ef395d94307abef687a731444166af034931f0e713241f8e750b33b9",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-detok": {
+      "code_fingerprint": "sha256:6a5eff04b4a281d9ce59718f16869c45b6872fd54dd8792678357be9cbd2159b",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-greedy": {
+      "code_fingerprint": "sha256:5ce1ca18b9f108b5b438c8bacbcb685d9e2a04d9fd42b39eae0515dbeff00f2b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis chez moi .'\n"
+        }
+      ]
+    },
+    "seq2seq-chrf": {
+      "code_fingerprint": "sha256:d81347875e60fd1d4166c04c31ff1624abb6c67b3a6a28d3bccb311f1581ac55",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-chrf-eval": {
+      "code_fingerprint": "sha256:35df093bf0dbe63fdc80a7097f2d0be038e1d441a564a09785ff5e94dfca3b43",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
+        }
+      ]
+    },
+    "seq2seq-bleu": {
+      "code_fingerprint": "sha256:019d2e9835fb739186923c28e52e7b9637421478f4cebec09a14a5659ece01cd",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-step-fn": {
+      "code_fingerprint": "sha256:25043779ba5336d7353995fb624d9c49f3be6e9dadba6b7ddf45e1b80a359c79",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-beam": {
+      "code_fingerprint": "sha256:48457002e62071c20e92d3fc8202c06062a755f10fd175be9d10e235c0fd4628",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost .     k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i'm calm .   k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i'm home .   k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+        }
+      ]
+    },
+    "seq2seq-bottleneck": {
+      "code_fingerprint": "sha256:66cd03921630b26afe31577f22dc370120ecea04d52ee2e02bd384c2859b453b",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-bottleneck-plot": {
+      "code_fingerprint": "sha256:b688ad764356516fcf5b9a1e82ec257e690c4f996b10bead591b195c0b136cd9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
+          "bytes": 25993,
+          "sha256": "sha256:2bb1d59eb05204a9cfe7920d9078c1c1c92acbaefea6671cf6600a9c45d35334"
+        }
+      ]
+    }
+  }
+}

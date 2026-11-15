@@ -317,9 +317,12 @@ when that directory is missing.
   `docs/llm/language_models_part_plan.md`: each file holds its title, label
   and the plan entry as a hidden author brief) | **Image Models** (formerly
   "Computer Vision") = 32 | math appendix 33–38 | Tools 39 | **Attic** =
-  40 GP, 41 HPO, 42 RecSys, 43–44 the retired NLP Pretraining/Applications
-  chapters (GP leads the Attic: it is the Bayesian-optimization background
-  HPO builds on). The Attic moved to the very end, after Tools, on
+  40 GP, 41 HPO, 42 RecSys (GP leads the Attic: it is the
+  Bayesian-optimization background HPO builds on). The two NLP
+  Pretraining/Applications chapters were deleted on 2026-11-14 (PR #188):
+  ch. 19 (`chapter_lm-encoders`) replaces them, and their `seq2seq.md` moved
+  to ch. 12 as §12.2 with its labels (kept mainly for history; the ch. 12
+  pass will likely cut most of it). The Attic moved to the very end, after Tools, on
   2026-11-11; the PDFs number every chapter as the HTML does (no appendix
   lettering), on one 7×10 in, 10pt page (`gen_pdf.py`), and `make pdf-parts`
   cuts per-part PyTorch PDFs from the full book (`docs/build-system.md`

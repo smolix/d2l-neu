@@ -8209,6 +8209,12 @@ d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
 d2l.DATA_HUB['lm-rag-judge-cache-v1'] = (  # the judge's recorded replies
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v1.zip',
     '12402e3f6d7675bcd3f2667743607677129abd4e')
+d2l.DATA_HUB['lm-rag-judge-v2'] = (  # v1 and the verdicts on the fix run
+    d2l.LM_DATA_URL + 'lm-rag-judge-v2.jsonl',
+    '8e8ad8b9f63e000005e40f060c4e926e66c3312f')
+d2l.DATA_HUB['lm-rag-judge-cache-v2'] = (  # every recorded reply
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v2.zip',
+    '9b68fb8b52733e7909000165121512892f4b022c')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):

@@ -115,8 +115,8 @@ ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
     'rag-gen-base': ('lm-rag-gen-base-v1', 'lm-rag-gen-base.jsonl'),
     'rag-gen-stages': ('lm-rag-gen-stages-v1', 'lm-rag-gen-stages.jsonl'),
     'rag-gen-fix': ('lm-rag-gen-fix-v1', 'lm-rag-gen-fix.jsonl'),
-    'rag-judge': ('lm-rag-judge-v1', 'lm-rag-judge.jsonl'),
-    'rag-judge-cache': ('lm-rag-judge-cache-v1', 'lm-rag-judge-cache.zip'),
+    'rag-judge': ('lm-rag-judge-v2', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v2', 'lm-rag-judge-cache.zip'),
     'rag-cards': ('lm-rag-cards-v1', 'lm-rag-cards.jsonl')}
 RERUN = d2l.lm_rerun(ARTIFACTS)
 if 'rag-judge-cache' in RERUN:  # the judge's cache is written with it
@@ -230,6 +230,12 @@ d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
 d2l.DATA_HUB['lm-rag-judge-cache-v1'] = (  # the judge's recorded replies
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v1.zip',
     '12402e3f6d7675bcd3f2667743607677129abd4e')
+d2l.DATA_HUB['lm-rag-judge-v2'] = (  # v1 and the verdicts on the fix run
+    d2l.LM_DATA_URL + 'lm-rag-judge-v2.jsonl',
+    '8e8ad8b9f63e000005e40f060c4e926e66c3312f')
+d2l.DATA_HUB['lm-rag-judge-cache-v2'] = (  # every recorded reply
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v2.zip',
+    '9b68fb8b52733e7909000165121512892f4b022c')
 ```
 
 <!-- Placeholder (stage 2): the six run artifacts of ARTIFACTS

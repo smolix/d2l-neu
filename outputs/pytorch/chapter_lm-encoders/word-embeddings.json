@@ -60,23 +60,23 @@
       "outputs": []
     },
     "word-embeddings-counts": {
-      "code_fingerprint": "sha256:f7db13c7d958d7a2e048cd0d19591741525579ecb056f10ade2d89db008a3189",
+      "code_fingerprint": "sha256:a8fb638ec571d8e1f56c018b240d54dae8514df64a21e744f027897fe6945a74",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6,470,962 nonzero counts of 323,892,009 (2.00%), 27,459,312 (word, context) pairs, 1.7 s\n      the the     141,058\n      the of      116,432\n      the in       69,654\n      the and      66,603\n      the to       56,474\n"
+          "text": "6,470,962 nonzero counts of 323,892,009 (2.00%), 27,459,312 (word, context) pairs, 1.8 s\n      the the     141,058\n      the of      116,432\n      the in       69,654\n      the and      66,603\n      the to       56,474\npmi(the, of) = 0.36 from 116,432 pairs\npmi(the, the) = -0.27 from 141,058 pairs\npmi(prime, minister) = 6.55 from 166 pairs\n"
         }
       ]
     },
     "word-embeddings-spearman": {
-      "code_fingerprint": "sha256:f6cfec9f1f23aba4d28b85efba9d04dc4bb4554163ac788a1725355419ec5e27",
+      "code_fingerprint": "sha256:81eacc57e871ec82dbf8c0c852ede78de8fdc541528bacb5887b3906949dc1c1",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-similarity-data": {
-      "code_fingerprint": "sha256:da5824bdb121fa76519cd26a8d3ceffb281ba73db19e8e740910954351384dbe",
+      "code_fingerprint": "sha256:e39c2294ae8347560c650ee00295a9f40acdf6c3b26fdce29e4fc5d6e401305d",
       "kind": "text",
       "outputs": [
         {
@@ -87,7 +87,7 @@
       ]
     },
     "word-embeddings-floor": {
-      "code_fingerprint": "sha256:2b8371425bee3bcfc95c518aca7a21c8988e4ed3efe61ec7edadf56b98e2628d",
+      "code_fingerprint": "sha256:59bcfd503a1aa60b2606153d0fa6f9c4c38ffc867ae7733e33c2ee32a0dbfcd1",
       "kind": "text",
       "outputs": [
         {
@@ -98,12 +98,12 @@
       ]
     },
     "word-embeddings-sgns-loss": {
-      "code_fingerprint": "sha256:51f302d2a13fb9d368cb17c0ba8b71ccbcd5baa5044567ab945c28e0077cb62d",
+      "code_fingerprint": "sha256:07ae6e6672f2c8e8826edc6f119dabc9b00c1c8e67fd67d75e632094985881f2",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-sgns-data": {
-      "code_fingerprint": "sha256:31b643b7af4d1d3f073887d190a8b3cf3eb00f92f5da32ca8599cc1df20d11cc",
+      "code_fingerprint": "sha256:ce2df9bf67eb518b3be95d8863e9a50e0bbdbce4d0f4c2fcb0523517a0403fa1",
       "kind": "text",
       "outputs": [
         {
@@ -114,23 +114,23 @@
       ]
     },
     "word-embeddings-sgns-train": {
-      "code_fingerprint": "sha256:5fc9978aaa73293fe1f3f7186191c52e0b9b5b8ee7914d15b047e77d3ef859b6",
+      "code_fingerprint": "sha256:103a020c4a744534298d61beb984c792c6c99f2750fcc2b24887d4f434e3424a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1: loss 0.4569, 3.3 s\n"
+          "text": "epoch 1: loss 0.4569, 3.8 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2: loss 0.4091, 3.1 s\n"
+          "text": "epoch 2: loss 0.4091, 3.5 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3: loss 0.3911, 3.4 s\n"
+          "text": "epoch 3: loss 0.3911, 3.2 s\n"
         },
         {
           "type": "stream",
@@ -140,7 +140,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5: loss 0.3749, 3.1 s\n16 s\n"
+          "text": "epoch 5: loss 0.3749, 3.0 s\n17 s\n"
         },
         {
           "type": "stream",
@@ -155,7 +155,7 @@
       ]
     },
     "word-embeddings-toy-pmi": {
-      "code_fingerprint": "sha256:1cfa55bedc8b450bee732b9a30ac94ef81334258e5512db80118046da4677e08",
+      "code_fingerprint": "sha256:96f665d4b83e2587e9e9502f4ed46814083ac560c6b820a225391dfc777e38d9",
       "kind": "text",
       "outputs": [
         {
@@ -166,12 +166,12 @@
       ]
     },
     "word-embeddings-ppmi": {
-      "code_fingerprint": "sha256:36649a82a0c012f4140f048b6b9b414ffa77c5e2fcd80b7e5c948bd47e38b616",
+      "code_fingerprint": "sha256:0fd5fc89e6123b262ef06bf1ad12eceb5e37a1331e099857ec323bb8caa54a85",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-svd": {
-      "code_fingerprint": "sha256:0f2ce1062f085c99515cf4e785a5084135468cacd9293476d3403285e50c9690",
+      "code_fingerprint": "sha256:dc7ffb0e2586f8cff2144cc5a63de293763be18d0225523470e1d12ea74e6172",
       "kind": "text",
       "outputs": [
         {
@@ -192,7 +192,7 @@
       ]
     },
     "word-embeddings-glove": {
-      "code_fingerprint": "sha256:a56b3d77080b6ed335ee7e971f3b83f89a7542c485ef1fcabcb93372761206d1",
+      "code_fingerprint": "sha256:7052e063b9be3d9c62e18ee9c87c241908c7201a7fbf849d88470094bdde2f02",
       "kind": "text",
       "outputs": [
         {
@@ -228,7 +228,7 @@
       ]
     },
     "word-embeddings-scatter": {
-      "code_fingerprint": "sha256:6730d5ca0e0c9465820395b1b117d00162171b62bce7c7e4925e02e4c87d2faf",
+      "code_fingerprint": "sha256:3194118130c4c727d4e86f1d07c3e62745ba7372b1e68e7f5e6b79fd6e7e3025",
       "kind": "mixed",
       "outputs": [
         {
@@ -241,12 +241,12 @@
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-scatter-1.svg",
           "bytes": 240786,
-          "sha256": "sha256:9a9e3f69f7697cf581737f4961b1acaa424c07815ee14adfbba7c98a6ae0b96a"
+          "sha256": "sha256:656b3e3fb9c619520f6a12cee4b2fbcd3ac41160cea6fd2cd215ee690611ec24"
         }
       ]
     },
     "word-embeddings-grid": {
-      "code_fingerprint": "sha256:981bddecc92e56753c7c29b95672f335bff756515bb09a02a2292e84b0129203",
+      "code_fingerprint": "sha256:b8ea38fb3be8126f8b2dd3718143f086ae448a3f9b0db1d562af6da4a81b4edc",
       "kind": "text",
       "outputs": [
         {
@@ -257,7 +257,7 @@
       ]
     },
     "word-embeddings-grid-plot": {
-      "code_fingerprint": "sha256:f23ea18ccf091f600f26990261f6dfa3cc19659a5e18118fd0057ae4f4300266",
+      "code_fingerprint": "sha256:af8b7c6eade4be945e42c5906e1322c2fe28ae90c42e9cc5b808b17365355b86",
       "kind": "asset",
       "outputs": [
         {
@@ -265,12 +265,12 @@
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-grid-plot-1.svg",
           "bytes": 59098,
-          "sha256": "sha256:8481049bbac888f6538ad754e02e29ed5ddac8d8cbdab91230a76dc352761459"
+          "sha256": "sha256:327c624673e18f00d7da7ebb747e75cabc9a5a604fd5a93699d68626b3ef22a5"
         }
       ]
     },
     "word-embeddings-grid-compare": {
-      "code_fingerprint": "sha256:d169d8c9b16d1b333b5c68e14a0e9c1c8bc9dfc510c6327201640e029551c6e4",
+      "code_fingerprint": "sha256:a9d503286bd6372b1b5f89c5786ce1e59687e854c0d005a6093791c54c06042f",
       "kind": "text",
       "outputs": [
         {
@@ -281,12 +281,12 @@
       ]
     },
     "word-embeddings-neighbors-def": {
-      "code_fingerprint": "sha256:e50a817f80375e6a8196540b89f81fe7d060c6aaa7ce8a14f62d2968f7493cd7",
+      "code_fingerprint": "sha256:7dfb0c522a6f17f6299554afcf8bf9a170989b4e5dd7ced5e945e822f799c813",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-neighbors": {
-      "code_fingerprint": "sha256:79c899836bcce9ecb74b7add066cd9ce7387f0521d03a8a116357072ffd2b5e1",
+      "code_fingerprint": "sha256:70bc2d5e9110ab7c0ba522f45e53ba3eebd5e248a23b7443ba3a81096f6dad4b",
       "kind": "text",
       "outputs": [
         {
@@ -297,12 +297,12 @@
       ]
     },
     "word-embeddings-token-embedding": {
-      "code_fingerprint": "sha256:248b1c8dfa7c3d34e5640d4f85f6214b5484770b9a695fb4a9713a6715df8a6b",
+      "code_fingerprint": "sha256:3258678f8534dd2915be79e1dcf464014d1b9436600536a96144824a02bb6e23",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-analogy": {
-      "code_fingerprint": "sha256:cd5bbcf2ac854e41a42f122f3abe6a5bc69299d6563bb40c5845425a1f4753f4",
+      "code_fingerprint": "sha256:f798dc7a0db1b836b9be6ade186f145e83f189a9d70388dfe6cdd69f9cc9c4f5",
       "kind": "text",
       "outputs": [
         {
@@ -313,7 +313,7 @@
       ]
     },
     "word-embeddings-bias": {
-      "code_fingerprint": "sha256:64c743c668a00582133e7981d69b7c3e3460992e289299dfcddb21a432b840ff",
+      "code_fingerprint": "sha256:0c22c230f43df817787ba3c7121cd8690c10c21632e0b0b07f960b4fc4410355",
       "kind": "text",
       "outputs": [
         {
@@ -324,18 +324,18 @@
       ]
     },
     "word-embeddings-qwen-table": {
-      "code_fingerprint": "sha256:afefeec8d7684833f5c88abc3be47134f8282dfa4c2cb169bbbf6bea9aba857c",
+      "code_fingerprint": "sha256:fe83a99452ed823dceeee9f00b6d1d05fdd887ddae772342eacfe005a4015946",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "table (151936, 1024): 155,582,464 of 596,049,920 parameters (26.1%)\n  the checkpoint file holds 751,632,384 numbers\ntied: True; the output layer multiplies by the same table\ndoctor\n  Qwen3-0.6B table   ' doctors', ' Doctor', '医生', 'Doctor', 'doctor'\n  SGNS (this slice)  'vincent', 'amy', 'torchwood', 'tardis', 'utterson'\nbank\n  Qwen3-0.6B table   ' Bank', 'bank', 'Bank', '银行', '_bank'\n  SGNS (this slice)  'ubs', 'winterthur', 'asset', 'swiss', 'banks'\nriver\n  Qwen3-0.6B table   ' River', ' rivers', 'River', '河流', '河'\n  SGNS (this slice)  'missouri', 'upstream', 'confluence', 'headwaters', 'tributaries'\nmoney\n  Qwen3-0.6B table   ' Money', 'money', 'Money', '_money', ' MONEY'\n  SGNS (this slice)  'guaranteed', 'monetary', 'pay', 'rents', 'raise'\ncos(bank, river): SGNS 0.53, GloVe-6B 0.33, Qwen3 table 0.24\ncos(bank, money): SGNS 0.32, GloVe-6B 0.57, Qwen3 table 0.22\n"
+          "text": "table (151936, 1024): 155,582,464 of 596,049,920 parameters (26.1%)\n  the checkpoint file holds 751,632,384 numbers\ntied: True; the output layer multiplies by the same table\ndoctor\n  Qwen3-0.6B table   ' doctors', ' Doctor', '医生', 'Doctor', 'doctor'\n  SGNS (this slice)  'vincent', 'amy', 'torchwood', 'tardis', 'utterson'\nbank\n  Qwen3-0.6B table   ' Bank', 'bank', 'Bank', '银行', '_bank'\n  SGNS (this slice)  'ubs', 'winterthur', 'asset', 'swiss', 'banks'\nriver\n  Qwen3-0.6B table   ' River', ' rivers', 'River', '河流', '河'\n  SGNS (this slice)  'missouri', 'upstream', 'confluence', 'headwaters', 'tributaries'\nmoney\n  Qwen3-0.6B table   ' Money', 'money', 'Money', '_money', ' MONEY'\n  SGNS (this slice)  'guaranteed', 'monetary', 'pay', 'rents', 'raise'\ncos(bank, river): SGNS 0.53, GloVe-6B 0.33, Qwen3 table 0.24\ncos(bank, money): SGNS 0.32, GloVe-6B 0.57, Qwen3 table 0.22\nSGNS         cos(doctor, physician) 0.44; physician is neighbor 977 of 17,995\nGloVe-6B     cos(doctor, physician) 0.77; physician is neighbor 1 of 399,999\nQwen3 table  cos(doctor, physician) 0.65; physician is neighbor 6 of 151,668\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "notebook: 90 s\n"
+          "text": "notebook: 92 s\n"
         }
       ]
     }

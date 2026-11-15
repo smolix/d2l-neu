@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:712270a1f6f2ee5b99abeca1374e14dbeb47f0505d54a085de360089d780e812",
+    "d2l_lib_fingerprint": "sha256:864cb06e09e889ca74227b784cc6a247eccf1c261b2172fed9e049a8a10ec15f",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -28,7 +28,7 @@
       "outputs": []
     },
     "rag-config": {
-      "code_fingerprint": "sha256:53d82be4bf2b00f0899bc45b34889cb791ab33b4bc7d90d58cafaf1df3808bc7",
+      "code_fingerprint": "sha256:d8d392378249a4e34b42837c48bb4a68c4d5d2208cb1595d0be828634fda4197",
       "kind": "text",
       "outputs": [
         {
@@ -39,28 +39,28 @@
       ]
     },
     "rag-data-hub": {
-      "code_fingerprint": "sha256:26d8c07ec1c547dc84844a9c2e4ba7fbf8da38c020de55fd01a9f856c09ccd8f",
+      "code_fingerprint": "sha256:3a4c9b43681512ed4e91ffa221110a4254a397dc7347cbc48464536d58fe365a",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-def": {
-      "code_fingerprint": "sha256:509164d11fb83340074ba66e7b48834a02340ffd197a87bc66cd005115d02079",
+      "code_fingerprint": "sha256:8f3047109c1b5c57dc1455353ea474c1c51493b92cc58e30340433206a9f50d6",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-stats": {
-      "code_fingerprint": "sha256:1188b52a37a38acc4b1de1091cf01f00a47246fa31f02a1537307f1bb95e26c9",
+      "code_fingerprint": "sha256:e1b7cb88e920687326738c90ed17b93e6ed9aed69c763725528cf51923066544",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "              train  dev  test\ntype                          \nsingle         3251  120   120\nexplain        1093   40    40\nnumeric         460   20    20\ncode            582   20    20\nmultihop        228   20    20\nunanswerable    251   20    20\ntotal          5865  240   240\ndrafter: ['deepseek/deepseek-v4.1-flash-1017 (Novita)']\nchecker: ['qwen/qwen3.8-27b (DeepInfra)']\nevery dev and test item verified by anthropic/claude-opus-5.5-20260921\n                                train  dev  test\nanswerable                       5614  220   220\nbook-specific                    3618  160   170\nclosed-book correct (Qwen3-4B)   1197   38    45\nwith alternative spans              0   45    41\nidentifier                       2529   85    99\n                              single  explain  numeric  code  multihop  unanswerable\nevidence not verbatim             35       15        4     2         8             0\ncontext phrase                    56       24       19     5        20            13\nlexical copy                     983      316      215    30       176            68\nnear duplicate                    94       23       23    12         7             5\nchecker (Qwen3.8-27B)            146       44       72   133        24           165\na neighbour answers better         9        8        0     0         2             0\na neighbour contradicts            1        0        1     1         1             0\nunanswerable, but answered         0        0        0     0         0            42\nalternative in another split      71        8       17     4         4             0\nverifier (frontier)               22       13        4     6        11            11\nalternative spans: 410 in 252 candidates\nfrontier verifier against the checker, per check (dev and test pool):\n                         n  agree  kappa\nself_contained       587.0   0.92   0.23\nreference_supported  536.0   0.98   0.23\nkey_facts_complete   536.0   0.93   0.05\nunique_answer        536.0   0.96   0.00\ngeneral_knowledge    587.0   0.61   0.32\noverall_pass         536.0   0.84   0.12\n"
+          "text": "              train  dev  test\ntype                          \nsingle         3251  120   120\nexplain        1093   40    40\nnumeric         460   20    20\ncode            582   20    20\nmultihop        228   20    20\nunanswerable    251   20    20\ntotal          5865  240   240\ndrafter: ['deepseek/deepseek-v4.1-flash-1017 (Novita)']\nchecker: ['qwen/qwen3.8-27b (DeepInfra)']\nevery dev and test item verified by anthropic/claude-opus-5.5-20260921\n                                train  dev  test\nanswerable                       5614  220   220\nbook-specific                    3618  160   170\nclosed-book correct (Qwen3-4B)   1197   38    45\nwith alternative spans              0   45    41\nidentifier                       2529   85    99\n                              single  explain  numeric  code  multihop  unanswerable\nevidence not verbatim             35       15        4     2         8             0\ncontext phrase                    56       24       19     5        20            13\nlexical copy                     983      316      215    30       176            68\nnear duplicate                    94       23       23    12         7             5\nchecker (Qwen3.8-27B)            146       44       72   133        24           165\na neighbour answers better         9        8        0     0         2             0\na neighbour contradicts            1        0        1     1         1             0\nunanswerable, but answered         0        0        0     0         0            42\nalternative in another split      71        8       17     4         4             0\nverifier (frontier)               22       13        4     6        11            11\nalternative spans: 410 in 252 candidates\nfrontier verifier against the checker, per check (dev and test pool):\n                         n  agree  kappa\nself_contained       587.0   0.92   0.23\nreference_supported  536.0   0.98   0.23\nkey_facts_complete   536.0   0.93   0.05\nunique_answer        536.0   0.96   0.00\ngeneral_knowledge    587.0   0.61   0.32\noverall_pass         536.0   0.84   0.12\nAPI spend in US$ per model:\ndeepseek/deepseek-v4.1-flash-1017    4.93\nqwen/qwen3.8-27b                     3.02\nanthropic/claude-opus-5.5            7.06\n  total 15.02; the verifier's check of dev and test: 620 calls, 6.98\n"
         }
       ]
     },
     "rag-qa-examples": {
-      "code_fingerprint": "sha256:3212fbe9785d893e8050dc791cd69e3057fddf63429e64f3d215187d27045450",
+      "code_fingerprint": "sha256:0b7bbcc0356959cb211f04ff5a3204d12c724399ae92a6272d4e825bb9041dc1",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "rag-qa-leakage": {
-      "code_fingerprint": "sha256:6b4c14051b3a4134310cd970319a8b94639cf5cc3e3acd88c1cde3e09b2aa9db",
+      "code_fingerprint": "sha256:4741557db663f6e77b196dfe079cccdc312d4562a5426ff35de27341c333a166",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "rag-qa-gold": {
-      "code_fingerprint": "sha256:7add85ff7467a873e795899813b4d862bedbb266a2a0c57d8355249561fb4046",
+      "code_fingerprint": "sha256:17f1a8e3c4804b7510bb62e5febd72f1b876d14dc5153971dc105c9aac469669",
       "kind": "text",
       "outputs": [
         {
@@ -93,27 +93,27 @@
       ]
     },
     "rag-stage-defs": {
-      "code_fingerprint": "sha256:419f72a9af3b0ba9aa321c891d50ba82f2e6085151a1be67206819505fd1362f",
+      "code_fingerprint": "sha256:f97998957bc2049c504518af931cf63c88032da18eea036fe27954a9ac2b7d91",
       "kind": "text",
       "outputs": []
     },
     "rag-prompt-defs": {
-      "code_fingerprint": "sha256:e5dcc7ce9a302f49aacf603ce8f757a017ea02ad4277da7f6a588ee615a6b6da",
+      "code_fingerprint": "sha256:2704be23a35dfced279fa63178def0b7eaad1312e04f6a1408261c855501920d",
       "kind": "text",
       "outputs": []
     },
     "rag-pipeline-def": {
-      "code_fingerprint": "sha256:e3098d4b3487e3f08c0af414b30afa3446c3bfa6f1ca993d856ce01ed844e427",
+      "code_fingerprint": "sha256:c617138f9141fae416347effc4b1ebc85afe7b3d084aab6588ac7668339e6fa0",
       "kind": "text",
       "outputs": []
     },
     "rag-judge-defs": {
-      "code_fingerprint": "sha256:f84e635ceb04e9d6fe86b4f5599668c7b9e077362680a06e1cc1d43af0b87430",
+      "code_fingerprint": "sha256:e79e5e688e8c10cb7ef6e5d3652130bd95ebf826aacb314bb4e30dce74e5dbfd",
       "kind": "text",
       "outputs": []
     },
     "rag-memory": {
-      "code_fingerprint": "sha256:50c308be12ac7dfdf683ccf61c812119dc03fcd7f960c49328d745c0bd102b76",
+      "code_fingerprint": "sha256:e419b4cce6a4f80891bdc42a7d8a38c9b4f078e50202f6a956cd81dbd971d309",
       "kind": "text",
       "outputs": [
         {
@@ -124,13 +124,13 @@
       ]
     },
     "rag-baseline": {
-      "code_fingerprint": "sha256:ccd3385e9ded425473eeb020f8bbd0eb9b06dfe3278f0ad0c089f94099c8c945",
+      "code_fingerprint": "sha256:c75e7e8911f86633369afe5d172757681460506fae7487a339b4cee829fc2ff3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                      answers  context_tokens  prompt_tokens  new_tokens\nsplit config                                                            \ndev   base                240            1697           1933         110\n      base-repeat         240            1697           1933         111\n      closed              240               0             90         100\n      oracle              240             477            628         102\n      budget-1500         240            1318           1529         110\n      budget-6000         240            5806           6336         115\n      fixed               240            1578           1842         108\n      reverse             240            1697           1933         111\n      rewrite-rerank      240            1716           1953         112\ntest  base                240            1714           1951         107\ndev   fix-ignored         240            1697           1971         221\ntest  fix-ignored         240            1714           1989         221\n      rewrite-rerank      240            1702           1937         111\n"
+          "text": "                      answers  context_tokens  prompt_tokens  new_tokens\nsplit config                                                            \ndev   base                240            1697           1933         110\n      base-repeat         240            1697           1933         111\n      closed              240               0             90         100\n      oracle              240             477            628         102\n      budget-1500         240            1318           1529         110\n      budget-6000         240            5806           6336         115\n      fixed               240            1578           1842         108\n      fixed-over          240            1833           2121         108\n      reverse             240            1697           1933         111\n      rewrite-rerank      240            1716           1953         112\ntest  base                240            1714           1951         107\ndev   fix-ignored         240            1697           1971         221\ntest  fix-ignored         240            1714           1989         221\n      rewrite-rerank      240            1702           1937         111\n"
         },
         {
           "type": "stream",
@@ -155,18 +155,18 @@
       ]
     },
     "rag-judge": {
-      "code_fingerprint": "sha256:06279ea3a638d12aedc749d73338f8dffa9171a59f1744abb5a9e7fd7dd8f66b",
+      "code_fingerprint": "sha256:976272a0de0f8f73d949b7d34eb501e1c7767ce6bd9d0633e09ad82ab9f14ef6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "8 base judgments with 3,000 new tokens replayed from the judge cache: identical\n4 base judgments with 6,000 new tokens replayed from the judge cache: identical\n                answers  judged  judged again  unjudged\nconfig                                                 \nbase                480     480            17         0\nbase-repeat         240     240             8         2\nbudget-1500         240     240             8         0\nbudget-6000         240     240             8         1\nclosed              240     240             1         0\nfix-ignored         480     480            17         0\nfixed               240     240             8         0\noracle              240     240             9         1\nreverse             240     240            10         1\nrewrite-rerank      480     480            16         2\njudged again: with 6,000 new tokens, once\nunjudged: still no verdict on correctness (left out of accuracy)\n"
+          "text": "8 base judgments with 3,000 new tokens replayed from the judge cache: identical\n4 base judgments with 6,000 new tokens replayed from the judge cache: identical\n                answers  judged  judged again  unjudged\nconfig                                                 \nbase                480     480            17         0\nbase-repeat         240     240             8         2\nbudget-1500         240     240             8         0\nbudget-6000         240     240             8         1\nclosed              240     240             1         0\nfix-ignored         480     480            17         0\nfixed               240     240             8         0\nfixed-over          240     240             7         0\noracle              240     240             9         1\nreverse             240     240            10         1\nrewrite-rerank      480     480            16         2\njudged again: with 6,000 new tokens, once\nunjudged: still no verdict on correctness (left out of accuracy)\n"
         }
       ]
     },
     "rag-judge-validation": {
-      "code_fingerprint": "sha256:b961bca67b9044441b0a4a3b08e56b507c53beaee10bf10a1453e49d1db68cbe",
+      "code_fingerprint": "sha256:2ce2a2a48a8d53c65b9e9a705d48bbdcea4e4f3b5cfe43ec3c22fa017dd90703",
       "kind": "text",
       "outputs": [
         {
@@ -187,7 +187,7 @@
       ]
     },
     "rag-baseline-report": {
-      "code_fingerprint": "sha256:5b61f87bd0a3bdf5b56199cf8a0c34e3bae4d076d948ba105dc1125e093791d6",
+      "code_fingerprint": "sha256:46b6f6acc319a8ab3ec7e97f83b54d9584bf4d2d92e28b95d80aaaf272f1ee76",
       "kind": "text",
       "outputs": [
         {
@@ -203,18 +203,18 @@
       ]
     },
     "rag-opening-item": {
-      "code_fingerprint": "sha256:dfd6cc5eaac11c2a4ce00ece1b7f3054cf215f716991af517614e9c62003dd01",
+      "code_fingerprint": "sha256:5c3aa79a31f064a9707cf79fc89b0a8715fc66317d58e22e2ae03c373e8aa46e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "8 base answers qualify: dev-0008 (ignored), dev-0033 (unsupported), dev-0100 (ignored), dev-0133\n    (ignored), dev-0150 (ignored), dev-0152 (ignored), dev-0156 (ignored), dev-0209 (ignored)\n\ndev-0008 (single): In PyTorch, what happens to modules that are placed in a plain Python list\n    rather than in a registered container such as `nn.Sequential` or `nn.ModuleList`?\nreference: They stay unregistered, and no warning is given.\nkey facts: ['modules in a plain list stay unregistered', 'no warning is issued']\nfirst relevant chunk at rank 1; context:\n  [1] chapter_builders-guide/model-construction#012 (relevant)\n  [2] chapter_builders-guide/model-construction#004\n  [3] chapter_builders-guide/model-construction#005\n  [4] chapter_builders-guide/model-construction#001\n  [5] chapter_builders-guide/model-construction#002\nanswer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the forward pass may still execute if the code\n    explicitly loops over the list, the optimizer will not receive their parameters for gradient\n    updates [3]. This results in a \"partly registered\" model where only the weights of\n    registered outer layers change during training, causing the model to learn incorrectly or\n    fail on GPU devices [3].\nverdicts: {'correct': False, 'faithful': True, 'supported': True}\nclass: ignored, by the rule and by the second labeller\n"
+          "text": "8 base answers qualify: dev-0008 (ignored), dev-0033 (unsupported), dev-0100 (ignored), dev-0133\n    (ignored), dev-0150 (ignored), dev-0152 (ignored), dev-0156 (ignored), dev-0209 (ignored)\n\ndev-0008 (single): In PyTorch, what happens to modules that are placed in a plain Python list\n    rather than in a registered container such as `nn.Sequential` or `nn.ModuleList`?\nreference: They stay unregistered, and no warning is given.\nkey facts: ['modules in a plain list stay unregistered', 'no warning is issued']\nfirst relevant chunk at rank 1; context:\n  [1] chapter_builders-guide/model-construction#012 (relevant)\n  [2] chapter_builders-guide/model-construction#004\n  [3] chapter_builders-guide/model-construction#005\n  [4] chapter_builders-guide/model-construction#001\n  [5] chapter_builders-guide/model-construction#002\nlast sentence of [1]: Modules in a plain list stay unregistered, without any warning.\nanswer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the forward pass may still execute if the code\n    explicitly loops over the list, the optimizer will not receive their parameters for gradient\n    updates [3]. This results in a \"partly registered\" model where only the weights of\n    registered outer layers change during training, causing the model to learn incorrectly or\n    fail on GPU devices [3].\nverdicts: {'correct': False, 'faithful': True, 'supported': True}\nclass: ignored, by the rule and by the second labeller\n"
         }
       ]
     },
     "rag-coverage": {
-      "code_fingerprint": "sha256:74fda21813e79858255063f02f23b7a2f19bf6c53af922707eb404841c184108",
+      "code_fingerprint": "sha256:f8bd024c7c911e8a3fd147e3ff6c625ce149cdb941f20fbf523769a4d6e52ee9",
       "kind": "text",
       "outputs": [
         {
@@ -235,18 +235,18 @@
       ]
     },
     "rag-stages": {
-      "code_fingerprint": "sha256:556f63d35f3d14f0b73ec9be519db6cbd47fbc5d00cd88829ef1b97663faa78b",
+      "code_fingerprint": "sha256:66c46354b6e4f0f29f875ed1e48a441646f32b33bbc51d02a01dd1d9da08bf5c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " configuration             accuracy             faithful       cite precision\n         fixed 0.817 [0.766, 0.862] 0.850 [0.794, 0.900] 0.645 [0.596, 0.690]\nrewrite-rerank 0.899 [0.858, 0.936] 0.913 [0.873, 0.951] 0.703 [0.663, 0.742]\n       reverse 0.904 [0.862, 0.938] 0.918 [0.880, 0.952] 0.758 [0.703, 0.811]\n   budget-1500 0.858 [0.816, 0.897] 0.897 [0.857, 0.935] 0.721 [0.670, 0.767]\n   budget-6000 0.900 [0.860, 0.935] 0.878 [0.824, 0.925] 0.706 [0.658, 0.752]\n configuration         accuracy - base prompt tokens s per answer\n         fixed -0.075 [-0.116, -0.035]         1,842         1.11\nrewrite-rerank +0.004 [-0.028, +0.038]         1,953         1.87\n       reverse +0.008 [-0.020, +0.037]         1,933         1.14\n   budget-1500 -0.033 [-0.059, -0.005]         1,529         1.08\n   budget-6000 +0.008 [-0.029, +0.051]         6,336         2.59\nintervals excluding 0: ['fixed', 'budget-1500']\nthe largest dev gain: reverse\n"
+          "text": " configuration             accuracy             faithful       cite precision\n         fixed 0.817 [0.766, 0.862] 0.850 [0.794, 0.900] 0.645 [0.596, 0.690]\nrewrite-rerank 0.899 [0.858, 0.936] 0.913 [0.873, 0.951] 0.703 [0.663, 0.742]\n       reverse 0.904 [0.862, 0.938] 0.918 [0.880, 0.952] 0.758 [0.703, 0.811]\n   budget-1500 0.858 [0.816, 0.897] 0.897 [0.857, 0.935] 0.721 [0.670, 0.767]\n   budget-6000 0.900 [0.860, 0.935] 0.878 [0.824, 0.925] 0.706 [0.658, 0.752]\n    fixed-over 0.838 [0.789, 0.880] 0.874 [0.825, 0.919] 0.649 [0.601, 0.696]\n configuration         accuracy - base context tokens s per answer\n         fixed -0.075 [-0.116, -0.035]          1,578         1.11\nrewrite-rerank +0.004 [-0.028, +0.038]          1,716         1.87\n       reverse +0.008 [-0.020, +0.037]          1,697         1.14\n   budget-1500 -0.033 [-0.059, -0.005]          1,318         1.08\n   budget-6000 +0.008 [-0.029, +0.051]          5,806         2.59\n    fixed-over -0.054 [-0.086, -0.021]          1,833         1.15\nintervals excluding 0: ['fixed', 'budget-1500', 'fixed-over']\nthe largest dev gain: reverse\n"
         }
       ]
     },
     "rag-failures": {
-      "code_fingerprint": "sha256:8018c81d64cd3f40f2de5288e9f16ab4bec6cbbdfd22cdc7ba0a5e967cfaf07f",
+      "code_fingerprint": "sha256:cf150f606a04880f69f9d00386f94f1735b199419f266d17813ae1bad23a1015",
       "kind": "text",
       "outputs": [
         {
@@ -257,7 +257,7 @@
       ]
     },
     "rag-fix": {
-      "code_fingerprint": "sha256:94c85ba09ecd622f789ae5ba46c750c7a7b8b54451dd2c50f12c698ff3dc8475",
+      "code_fingerprint": "sha256:cab6566f77dd8f3cc2ed954f3d8a43aacb88a2ca018731634a05ba46b8961766",
       "kind": "text",
       "outputs": [
         {
@@ -273,7 +273,7 @@
       ]
     },
     "rag-failure-plot": {
-      "code_fingerprint": "sha256:c3bfbdbe3b93288641144291f8f938c9c30a7e3902f17644e4ab643ac9bc5bd6",
+      "code_fingerprint": "sha256:22cbb1460beaf7d0efd46e172be795f4199e71944ec0f8b5c2f3e4ea0dc18f15",
       "kind": "asset",
       "outputs": [
         {
@@ -281,12 +281,12 @@
           "mime": "image/svg+xml",
           "asset": "rag/rag-failure-plot-1.svg",
           "bytes": 64380,
-          "sha256": "sha256:a773ab96ad4f5e3d2d1177e2f949f0617f431456822ee0a0abc1694afebbc5dc"
+          "sha256": "sha256:c609301a432e4d6d2198b5112aac873db54d49b48b8147009a236b0d7b141636"
         }
       ]
     },
     "rag-marginal": {
-      "code_fingerprint": "sha256:6d6564ed6abdf20a0fc847d0652b3b8b2bbc257a3430a0e81d4c42bd09373205",
+      "code_fingerprint": "sha256:5f65bbcfe6bccb2b89252d1145deb1c95b2269ae7f1222b3fc30d8544e2f3d7f",
       "kind": "text",
       "outputs": [
         {
@@ -297,13 +297,13 @@
       ]
     },
     "rag-cost": {
-      "code_fingerprint": "sha256:d1b9ab8509d3fd4554a3982ec1dd1cd3541b9eb80ee74fe845601b26d80c4d5e",
+      "code_fingerprint": "sha256:65425d255956f4249aa05ba040d0a6e4abe1c4cbea65d8339bdffc3cd101df3b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                prompt_tokens  new_tokens  s_per_answer\nconfig                                                 \nbase                  1933.44      110.41          1.28\nbase-repeat           1933.44      111.10          1.19\nclosed                  89.96      100.11          0.95\noracle                 627.81      101.93          0.96\nbudget-1500           1528.92      109.75          1.08\nbudget-6000           6336.41      114.88          2.59\nfixed                 1841.95      107.90          1.11\nreverse               1933.44      111.47          1.14\nrewrite-rerank        1952.95      112.00          1.87\nfix-ignored           1971.44      220.57          2.12\n"
+          "text": "                prompt_tokens  new_tokens  s_per_answer\nconfig                                                 \nbase                  1933.44      110.41          1.28\nbase-repeat           1933.44      111.10          1.19\nclosed                  89.96      100.11          0.95\noracle                 627.81      101.93          0.96\nbudget-1500           1528.92      109.75          1.08\nbudget-6000           6336.41      114.88          2.59\nfixed                 1841.95      107.90          1.11\nfixed-over            2120.56      108.26          1.15\nreverse               1933.44      111.47          1.14\nrewrite-rerank        1952.95      112.00          1.87\nfix-ignored           1971.44      220.57          2.12\n"
         },
         {
           "type": "stream",
@@ -318,7 +318,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 525 ms (50 questions)\n"
+          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 527 ms (50 questions)\n"
         }
       ]
     }

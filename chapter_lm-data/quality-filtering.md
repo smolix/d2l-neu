@@ -1166,8 +1166,8 @@ for ax, metric in zip(axes, ('precision', 'recall', 'f1')):
     d2l.plot([c['rho'] for c in curves.values()],
              [c[metric] for c in curves.values()], 'retained fraction',
              metric if metric != 'f1' else 'F1', legend=list(curves)
-             if metric == 'precision' else None, xlim=[0, 0.4], axes=ax,
-             fmts=('-', '--', ':'), legend_loc='lower left')
+             if metric == 'recall' else None, xlim=[0, 0.4], axes=ax,
+             fmts=('-', '--', ':'), legend_loc='lower right')
     for i, m in enumerate(curves):  # each classifier's t*, chosen on val
         s = SCORES[m]['test'] >= T_STAR[m]
         v = dict(precision=y[s].mean(), recall=s[y].mean(),

@@ -638,3 +638,271 @@ def json_agreement(new, old):
                                          for k, v in a.items()),
                 max_diff=max(num, default=0.0))
 ```
+
+<!-- Quality filtering (:numref:`sec_lm_quality_filtering`): the statistics
+behind `heuristic_filters`, the agreement and interval helpers, the batching
+of `edu_label_scores`, the annotation sample and the released classifier.
+The label below sets the "Defined in" suffix of the blocks after it. -->
+:label:`sec_lm_quality_filtering`
+
+```{.python .input #crawl-lib-quality-rules}
+%%tab pytorch
+#@save
+# Word and punctuation tokens, close to NLTK's English word_tokenize (which
+# datatrove uses): a run of word characters joined by inner apostrophes,
+# hyphens, periods, commas, colons or slashes (don't, 1,000, 3.5, 10:30),
+# or a run of other non-space characters. A run of Han, kana or Thai
+# characters is one "word": the rules see unspaced scripts this way.
+_RULE_WORD = re.compile(r"\w+(?:[.,:/'’-]\w+)*|[^\w\s]+")
+# Terminal punctuation for FineWeb's line rule: the common marks of the
+# scripts in this chapter (datatrove 0.10.1 lists 159 code points)
+_TERMINAL_PUNCT = tuple('.!?。！？．｡؟।॥')
+_C4_POLICY = ('terms of use', 'privacy policy', 'cookie policy',
+              'uses cookies', 'use of cookies', 'use cookies')
+
+#@save
+def _rule_words(text):
+    """The word and punctuation tokens of text (see _RULE_WORD)."""
+    return d2l._RULE_WORD.findall(text)
+
+#@save
+def _rule_is_symbol(word):
+    """True if a token has no letter or digit (punctuation, symbols)."""
+    return not any(ch.isalnum() for ch in word)
+
+#@save
+def _rule_dups(items):
+    """(number, characters) of the items that repeat an earlier item."""
+    seen, n, chars = set(), 0, 0
+    for x in items:
+        if x in seen:
+            n, chars = n + 1, chars + len(x)
+        else:
+            seen.add(x)
+    return n, chars
+
+#@save
+def _rule_top_ngram(words, n):
+    """Characters covered by the most frequent word n-gram (joined by
+    spaces): its length times its count, as in Gopher's repetition rule."""
+    grams = collections.Counter(' '.join(words[i:i + n])
+                                for i in range(len(words) - n + 1))
+    if not grams:
+        return 0
+    gram, count = grams.most_common(1)[0]
+    return len(gram) * count
+
+#@save
+def _rule_dup_ngram(words, n):
+    """Characters in word n-grams (joined without spaces) that repeat an
+    earlier n-gram, skipping past each repeat, as in Gopher's rule."""
+    seen, chars, i = set(), 0, 0
+    while i < len(words) - n + 1:
+        gram = ''.join(words[i:i + n])
+        if gram in seen:
+            chars, i = chars + len(gram), i + n
+        else:
+            seen.add(gram)
+            i += 1
+    return chars
+
+#@save
+def _rule_c4(text, c):
+    """True if C4's document rules drop text: 'lorem ipsum' or a curly
+    brace on a line that survives the line rules, or fewer than
+    c['min_sentences'] sentences on those lines. As in FineWeb's run, a
+    line without terminal punctuation is not removed; sentences are split
+    at . ! ? followed by space (NLTK's punkt in datatrove)."""
+    sentences = 0
+    for line in text.splitlines():
+        line = line.strip()
+        words = line.split()
+        if any(len(w) > c['max_word_len'] for w in words):
+            continue
+        line = re.sub(r'\[\d*\]|\[edit\]|\[citation needed\]', '', line)
+        if len(words) < c['min_line_words']:
+            continue
+        low = line.lower()
+        if 'lorem ipsum' in low:
+            return True
+        if 'javascript' in low:
+            continue
+        if '{' in line:
+            return True
+        if any(p in low for p in d2l._C4_POLICY):
+            continue
+        sentences += len([s for s in re.split(r'(?<=[.!?])\s+', line)
+                          if s.strip()])
+    return sentences < c['min_sentences']
+```
+
+```{.python .input #crawl-lib-quality-stats}
+%%tab pytorch
+#@save
+def cohen_kappa(a, b):
+    """Cohen's kappa of two label arrays: agreement beyond what the two
+    marginal distributions give by chance; nan if chance agreement is 1."""
+    a, b = np.asarray(a), np.asarray(b)
+    labels = np.union1d(a, b)
+    po = np.mean(a == b)
+    pe = sum(np.mean(a == k) * np.mean(b == k) for k in labels)
+    return float((po - pe) / (1 - pe)) if pe < 1 else float('nan')
+
+#@save
+def quadratic_kappa(a, b, k=6):
+    """Quadratic-weighted kappa of two integer scores in 0..k-1: one minus
+    the observed mean squared disagreement over the one expected from the
+    marginals."""
+    a, b = np.asarray(a, dtype=int), np.asarray(b, dtype=int)
+    O = np.zeros((k, k))
+    np.add.at(O, (a, b), 1)
+    O /= O.sum()
+    E = np.outer(O.sum(1), O.sum(0))
+    W = (np.arange(k)[:, None] - np.arange(k)[None, :]) ** 2 / (k - 1) ** 2
+    return float(1 - (W * O).sum() / (W * E).sum())
+
+#@save
+def wilson_ci(k, n, z=1.96):
+    """Wilson score interval for a binomial proportion k / n."""
+    if n == 0:
+        return float('nan'), float('nan')
+    p, z2 = k / n, z * z
+    mid = (p + z2 / (2 * n)) / (1 + z2 / n)
+    half = z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n)
+    return mid - half, mid + half
+
+#@save
+def binary_f1(y, pred):
+    """F1 of boolean predictions against boolean labels (0 if none)."""
+    y, pred = np.asarray(y, dtype=bool), np.asarray(pred, dtype=bool)
+    tp = np.sum(y & pred)
+    return float(2 * tp / (y.sum() + pred.sum())) if tp else 0.0
+
+#@save
+def rank_auc(y, s):
+    """ROC AUC of scores s for boolean labels y (Mann-Whitney, ties at
+    half)."""
+    y, s = np.asarray(y, dtype=bool), np.asarray(s, dtype=float)
+    r = pd.Series(s).rank().to_numpy()  # average ranks for ties
+    n1, n0 = y.sum(), (~y).sum()
+    return float((r[y].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+
+#@save
+def _edu_batches(lengths, batch_size, max_batch_tokens):
+    """Batches of indices, longest first: at most batch_size rows and at
+    most max_batch_tokens tokens with left padding (rows times the first,
+    longest, row's length); a row longer than the cap is alone."""
+    order = sorted(range(len(lengths)), key=lambda i: (-lengths[i], i))
+    batches = []
+    for i in order:
+        b = batches[-1] if batches else None
+        if (b is None or len(b) == batch_size or
+                lengths[b[0]] * (len(b) + 1) > max_batch_tokens):
+            batches.append([i])
+        else:
+            b.append(i)
+    return batches
+```
+
+```{.python .input #crawl-lib-quality-data}
+%%tab pytorch
+#@save
+_EDU_ANNOT_ROWS = 467_424  # rows of the eight released files
+_EDU_ANNOT_SPLITS = (18_000, 2_000, 2_000)  # train, val, test
+
+#@save
+def _edu_annot_sample():
+    """The 22,000 annotation rows of lm-edu-annot-22k-v1 before labelling:
+    rows default_rng(0).permutation(467,424)[:22,000] of the eight released
+    files read in order; the first 18,000 are train, then 2,000 val and
+    2,000 test. Columns row, split, text, prompt (the labeller's input as
+    released), llama_score, url, dump; text and prompt as released."""
+    import huggingface_hub
+    import pyarrow.parquet as pq
+    _, repo, rev, _ = d2l.LM_DATA_SOURCES['edu-annotations']
+    perm = np.random.default_rng(0).permutation(d2l._EDU_ANNOT_ROWS)[:22_000]
+    split = np.repeat(['train', 'val', 'test'], d2l._EDU_ANNOT_SPLITS)
+    frames, start = [], 0
+    for k in range(8):
+        path = huggingface_hub.hf_hub_download(
+            repo, f'data/train-{k:05d}-of-00008.parquet', revision=rev,
+            repo_type='dataset')
+        f = pq.ParquetFile(path)
+        n = f.metadata.num_rows
+        pos = np.flatnonzero((perm >= start) & (perm < start + n))
+        t = f.read(columns=['text', 'prompt', 'score', 'metadata']).take(
+            perm[pos] - start).to_pandas()
+        frames.append(pd.DataFrame(dict(
+            pos=pos, row=perm[pos], split=split[pos], text=t.text,
+            prompt=t.prompt, llama_score=t.score.astype(int),
+            url=[m['url'] for m in t.metadata],
+            dump=[m['dump'] for m in t.metadata])))
+        start += n
+    assert start == d2l._EDU_ANNOT_ROWS, start
+    df = pd.concat(frames).sort_values('pos', ignore_index=True)
+    return df.drop(columns='pos')
+
+#@save
+def _stream_half(domain):
+    """The audit stream's half ('A' or 'B') of a registered domain: the
+    parity of the first 32 bits of its SHA-256, so the halves share no
+    domain (the bootstrap's cluster)."""
+    h = int(hashlib.sha256(domain.encode('utf-8')).hexdigest()[:8], 16)
+    return 'A' if h % 2 == 0 else 'B'
+
+#@save
+def _cctld(url):
+    """The last label of the host's public suffix with a dot ('.uk' for
+    example.co.uk, '.com'), from the same tldextract snapshot as
+    registered_domain; '' for an IP address."""
+    d2l.registered_domain('http://example.com')  # makes the extractor
+    suffix = d2l._TLD_EXTRACT[0](url).suffix
+    return '.' + suffix.rsplit('.', 1)[-1].lower() if suffix else ''
+
+#@save
+def released_edu_scores(texts, batch=64, device=None, dtype=None):
+    """Scores of the released FineWeb-Edu classifier (a regression head on
+    a frozen Snowflake arctic-embed-m encoder; Apache-2.0) at its pinned
+    revision: the first 512 tokens of each text, length-sorted batches,
+    float32 scores in input order. bf16 on a GPU, fp32 on the CPU."""
+    import transformers
+    _, repo, rev, _ = d2l.LM_DATA_SOURCES['fineweb-edu-classifier']
+    device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    dtype = dtype or (torch.bfloat16 if device == 'cuda' else torch.float32)
+    tok = transformers.AutoTokenizer.from_pretrained(repo, revision=rev)
+    model = transformers.AutoModelForSequenceClassification.from_pretrained(
+        repo, revision=rev, dtype=dtype).to(device).eval()
+    ids = tok(list(texts), truncation=True, max_length=512)['input_ids']
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out = np.empty(len(ids), dtype=np.float32)
+    for j in range(0, len(order), batch):
+        rows = order[j:j + batch]
+        enc = tok.pad({'input_ids': [ids[i] for i in rows]},
+                      return_tensors='pt').to(device)
+        with torch.inference_mode():
+            out[rows] = model(**enc).logits[:, 0].float().cpu().numpy()
+    del model
+    d2l.lm_free()
+    return out
+
+#@save
+def c0_documents(manifest='lm-c0-docs-v1', cache_dir=None):
+    """The c0 documents: the cached rebuild in cache_dir (default
+    ../data/lm/c0) if its ids and text hashes equal the manifest rows,
+    else rebuild_c0 (which writes that cache)."""
+    import pathlib
+    cache = pathlib.Path(cache_dir or os.path.join('..', 'data', 'lm', 'c0'))
+    path = (d2l.download_keyed(manifest) if manifest in d2l.DATA_HUB
+            else manifest)
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        want = {r['id']: r['text_sha256'] for r in map(json.loads, f)}
+    if (cache / 'c0-docs.jsonl.gz').exists():
+        docs = d2l.read_docs(cache / 'c0-docs.jsonl.gz')
+        got = {d.id: hashlib.sha256(d.text.encode('utf-8')).hexdigest()
+               for d in docs}
+        if got == want:
+            return docs
+    docs = d2l.rebuild_c0(manifest, cache_dir=cache)
+    assert not docs.mismatches, f'{len(docs.mismatches)} c0 rows drifted'
+    return docs
+```

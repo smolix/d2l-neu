@@ -9281,6 +9281,391 @@ def rebuild_c0(manifest='lm-c0-docs-v1', warc_path=None, *, cache_dir=None,
     d2l.write_docs(cache / 'c0-docs.jsonl.gz', docs)
     return docs
 
+GOPHER_CFG = {  # reason code: thresholds, in the order FineWeb applies them
+    # Gopher repetition (Rae et al., 2021, Table A1)
+    'gopher_dup_text': dict(para=0.3, para_chars=0.2, line=0.3,
+                            line_chars=0.2),
+    'gopher_top_ngram': dict(top={2: 0.2, 3: 0.18, 4: 0.16}),
+    'gopher_dup_ngram': dict(dup={5: 0.15, 6: 0.14, 7: 0.13, 8: 0.12,
+                                  9: 0.11, 10: 0.10}),
+    # Gopher quality
+    'gopher_words': dict(min=50, max=100_000),  # words with a letter or digit
+    'gopher_word_len': dict(min=3, max=10),     # their mean length
+    'gopher_symbols': dict(max=0.1),     # '#' or ellipses per token
+    'gopher_bullets': dict(max=0.9),     # lines starting with a bullet
+    'gopher_ellipsis': dict(max=0.3),    # lines ending with an ellipsis
+    'gopher_alpha': dict(min=0.8),       # tokens with a letter
+    'gopher_stop_words': dict(min=2, words=('the', 'be', 'to', 'of', 'and',
+                                            'that', 'have', 'with')),
+    # C4 (Raffel et al., 2020) as FineWeb ran it: no line-punctuation rule
+    'c4_quality': dict(min_sentences=5, min_line_words=3, max_word_len=1000),
+    # FineWeb's own rules (Penedo et al., 2024; datatrove 0.10.1 values)
+    'fw_line_punct': dict(min=0.12),     # lines ending in . ! ? (and CJK)
+    'fw_short_lines': dict(max=0.67, chars=30),
+    'fw_dup_chars': dict(max=0.01),      # characters in repeated lines
+    'fw_list_ratio': dict(max=0.3)}      # newlines per token
+
+def heuristic_filters(text, cfg=None):
+    """The reason codes of the rules in cfg (default GOPHER_CFG) that fire
+    on text, in cfg's order; an empty list keeps the document. Thresholds
+    and their direction follow datatrove's filters; words are word and
+    punctuation tokens (d2l._rule_words), so an unspaced script has few,
+    very long words.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    cfg = d2l.GOPHER_CFG if cfg is None else cfg
+    words = d2l._rule_words(text)
+    alnum = [w for w in words if not d2l._rule_is_symbol(w)]
+    n_tok, n_chr = max(len(words), 1), max(len(text), 1)
+    all_lines = text.splitlines() or ['']
+    lines = [l for l in text.split('\n') if l.strip()] or ['']
+    paras = re.split(r'\n{2,}', text.strip())
+    breaks = re.split(r'\n+', text)
+    stops = lambda c: len(set(words) & set(c['words']))
+    checks = {
+        'gopher_dup_text': lambda c: (
+            d2l._rule_dups(paras)[0] / len(paras) > c['para'] or
+            d2l._rule_dups(paras)[1] / n_chr > c['para_chars'] or
+            d2l._rule_dups(breaks)[0] / len(breaks) > c['line'] or
+            d2l._rule_dups(breaks)[1] / n_chr > c['line_chars']),
+        'gopher_top_ngram': lambda c: any(
+            d2l._rule_top_ngram(words, n) / n_chr > f
+            for n, f in c['top'].items()),
+        'gopher_dup_ngram': lambda c: any(
+            d2l._rule_dup_ngram(words, n) / n_chr > f
+            for n, f in c['dup'].items()),
+        'gopher_words': lambda c: not c['min'] <= len(alnum) <= c['max'],
+        'gopher_word_len': lambda c: bool(alnum) and not (
+            c['min'] <= np.mean([len(w) for w in alnum]) <= c['max']),
+        'gopher_symbols': lambda c: max(
+            text.count('#'), text.count('...') + text.count('…')
+        ) / n_tok > c['max'],
+        'gopher_bullets': lambda c: np.mean([
+            l.lstrip().startswith(('•', '-')) for l in all_lines]) > c['max'],
+        'gopher_ellipsis': lambda c: np.mean([
+            l.rstrip().endswith(('...', '…')) for l in all_lines]) > c['max'],
+        'gopher_alpha': lambda c: np.mean([
+            any(ch.isalpha() for ch in w) for w in words or ['']]) < c['min'],
+        'gopher_stop_words': lambda c: stops(c) < c['min'],
+        'c4_quality': lambda c: d2l._rule_c4(text, c),
+        'fw_line_punct': lambda c: np.mean([
+            l.endswith(d2l._TERMINAL_PUNCT) for l in lines]) < c['min'],
+        'fw_short_lines': lambda c: np.mean([
+            len(l) <= c['chars'] for l in lines]) > c['max'],
+        'fw_dup_chars': lambda c: d2l._rule_dups(lines)[1] / max(
+            len(text.replace('\n', '')), 1) > c['max'],
+        'fw_list_ratio': lambda c: text.count('\n') / n_tok > c['max']}
+    return [code for code, c in cfg.items() if checks[code](c)]
+
+_FIXTURE_BASE = (  # a plain paragraph that every rule keeps
+    'The river rises in the hills to the north and flows south through '
+    'the valley for about forty kilometres.\nFarmers along its banks have '
+    'used the water to irrigate their fields of wheat and barley for '
+    'centuries.\nIn spring the snow melts and the river floods the low '
+    'meadows, which is why the old villages stand on higher ground.\nToday '
+    'a small dam near the town holds back some of that water, and the lake '
+    'behind it is popular with anglers and families with children.\nThe '
+    'local museum has a fine exhibition that explains how the valley '
+    'changed over the last two hundred years.')
+
+QUALITY_FIXTURES = {  # reason code: a document that fires exactly that code
+    'keep': _FIXTURE_BASE,
+    'gopher_dup_text': '\n\n*\n\n'.join(_FIXTURE_BASE.split('\n')),
+    'gopher_top_ngram': _FIXTURE_BASE.replace(
+        'about forty kilometres.', 'about forty kilometres. ' +
+        'cheap flights cheap flights cheap flights cheap flights '
+        'cheap flights to the coast.'),
+    'gopher_dup_ngram': _FIXTURE_BASE.replace(
+        'centuries.', 'centuries. ' + ' '.join(
+            ['Each autumn they store the grain in wooden barns near the '
+             'mill.'] * 4)),
+    'gopher_words': (
+        'Rain fell on the hills overnight.\nThe river rose by morning.\n'
+        'Farmers moved their sheep uphill.\nSchools stayed open as usual.\nBy '
+        'noon the water began to drop.'),
+    'gopher_word_len': (
+        'Telecommunications infrastructure modernization necessitates '
+        'comprehensive interdisciplinary collaboration.\nInternationalization '
+        'requirements complicate straightforward implementation strategies '
+        'considerably.\nSophisticated electromechanical instrumentation '
+        'guarantees extraordinarily reproducible measurements.\nUnprecedented '
+        'computational capabilities revolutionized pharmaceutical development '
+        'methodologies.\nEnvironmental sustainability considerations '
+        'increasingly influence architectural decisionmaking.\nParliamentary '
+        'representatives overwhelmingly supported comprehensive '
+        'transportation legislation.\nMicroelectronics manufacturers '
+        'anticipate extraordinary semiconductor shortages throughout '
+        'Southeast Asia.\nThe '
+        'characteristically understated documentation and the '
+        'multidisciplinary acknowledgements impressed reviewers.'),
+    'gopher_symbols': _FIXTURE_BASE.replace(
+        'centuries.', 'centuries. ' + ' '.join(
+            '#' + t for t in ('farm wheat barley water valley river spring '
+                              'snow flood dam lake museum anglers families '
+                              'meadows villages hills history fishing').split()
+        ) + '.'),
+    'gopher_bullets': '\n'.join(
+        '- ' + s.strip() + '.' for s in _FIXTURE_BASE.split('.') if s.strip()),
+    'gopher_ellipsis': _FIXTURE_BASE.replace('.\n', ' and more...\n'),
+    'gopher_alpha': _FIXTURE_BASE.replace(
+        'centuries.', 'centuries. Yearly yields were ' +
+        ' '.join(str(v) for v in range(1903, 1990, 2)) + '.'),
+    'gopher_stop_words': (
+        'Fresh bread comes out from our ovens every morning at six.\nOur '
+        'bakers use stone mills for whole grain rye flour.\nCustomers love '
+        'almond croissants filled from pastry cream made in house.\nWe bake '
+        'wedding cakes for small or large parties on request.\nGluten free '
+        'loaves are available on Fridays at both shops.\nGift vouchers make '
+        'great presents for friends who enjoy good food.\nPlease ask staff '
+        'about seasonal specials before you order online.'),
+    'c4_quality': _FIXTURE_BASE.replace(
+        'centuries.', 'centuries. Lorem ipsum dolor sit amet, consectetur.'),
+    'fw_line_punct': _FIXTURE_BASE.replace('.\n', '\n').replace(
+        'years.', 'years'),
+    'fw_short_lines': (
+        'The river rises in the hills\nto the north and flows south\nthrough '
+        'the valley for about\nforty kilometres.\nFarmers along its banks '
+        'have\nused the water to irrigate\ntheir fields of wheat and\nbarley '
+        'for centuries.\nIn spring the snow melts and\nthe river floods the '
+        'low\nmeadows, which is why the\nold villages stand on higher\n'
+        'ground.\nToday a small dam near the\ntown holds back some of that\n'
+        'water, and the lake behind\nit is popular with anglers\nand '
+        'families with children.\nThe local museum has a fine\nexhibition '
+        'that explains how\nthe valley changed over the\nlast two hundred '
+        'years.'),
+    'fw_dup_chars': _FIXTURE_BASE + '\nRead more about the valley.\n'
+                    'Read more about the valley.',
+    'fw_list_ratio': (
+        'Blacksmiths tapestries fishermen\nOld town\nCathedrals architects '
+        'musicians\nWaterfalls farmhouses sculptors\nNew bridge\nCarpenters '
+        'woodcarvers gardeners\nStorytellers travellers lanterns.\nQuiet '
+        'lanes\nMonasteries shepherdess chestnuts\nInnkeepers fishermen '
+        'surveyors\nRiver mills\nTapestries musicians engineers\nArchitects '
+        'sculptors vineyards\nStone walls\nFarmhouses gardeners orchards.\n'
+        'Woodcarvers lanterns pilgrims\nOver the hills and\nTravellers '
+        'chestnuts blacksmiths\nShepherdess surveyors cathedrals\nGreen '
+        'fields\nFishermen engineers waterfalls\nMusicians vineyards '
+        'carpenters.\nBright mornings\nSculptors orchards storytellers\n'
+        'Gardeners pilgrims monasteries\nCold winters\nLanterns blacksmiths '
+        'innkeepers\nChestnuts cathedrals tapestries\nLong summers\nSurveyors '
+        'waterfalls architects.')}
+
+EDU_RUBRIC = (  # the released annotation prompt (HuggingFaceFW/fineweb-edu-
+    # llama3-annotations, ODC-By); the extract is the text's first 1,500
+    # characters (the released prompts hold such a cut)
+    'Below is an extract from a web page. Evaluate whether the page has a '
+    'high educational value and could be useful in an educational setting '
+    'for teaching from primary school to grade school levels using the '
+    'additive 5-point scoring system described below. Points are '
+    'accumulated based on the satisfaction of each criterion:\n\n'
+    '- Add 1 point if the extract provides some basic information relevant '
+    'to educational topics, even if it includes some irrelevant or '
+    'non-academic content like advertisements and promotional material.\n'
+    '- Add another point if the extract addresses certain elements '
+    'pertinent to education but does not align closely with educational '
+    'standards. It might mix educational content with non-educational '
+    'material, offering a superficial overview of potentially useful '
+    'topics, or presenting information in a disorganized manner and '
+    'incoherent writing style.\n'
+    '- Award a third point if the extract is appropriate for educational '
+    'use and introduces key concepts relevant to school curricula. It is '
+    'coherent though it may not be comprehensive or could include some '
+    'extraneous information. It may resemble an introductory section of a '
+    'textbook or a basic tutorial that is suitable for learning but has '
+    'notable limitations like treating concepts that are too complex for '
+    'grade school students. \n'
+    '- Grant a fourth point if the extract highly relevant and beneficial '
+    'for educational purposes for a level not higher than grade school, '
+    'exhibiting a clear and consistent writing style. It could be similar '
+    'to a chapter from a textbook or a tutorial, offering substantial '
+    'educational content, including exercises and solutions, with minimal '
+    'irrelevant information, and the concepts aren\'t too advanced for '
+    'grade school students. The content is coherent, focused, and valuable '
+    'for structured learning.\n'
+    '- Bestow a fifth point if the extract is outstanding in its '
+    'educational value, perfectly suited for teaching either at primary '
+    'school or grade school. It follows detailed reasoning, the writing '
+    'style is easy to follow and offers profound and thorough insights '
+    'into the subject matter, devoid of any non-educational or complex '
+    'content.\n\nThe extract:\n{extract}\n\nAfter examining the extract: \n'
+    '- Briefly justify your total score, up to 100 words.\n'
+    '- Conclude with the score using the format: “Educational score:  '
+    '<total points>”\n\nRemember to assess from the AI Assistant '
+    'perspective, utilizing web search knowledge as necessary. To evaluate '
+    'the response in alignment with this additive scoring model, we’ll '
+    'systematically attribute points based on the outlined criteria.')
+
+def edu_label_scores(model, tokenizer, prompts, batch_size=16, *,
+                     max_batch_tokens=24_576, prefix='Educational score: '):
+    """(len(prompts), 6) float64: the probabilities of the next tokens
+    '0' ... '5' after each prompt as a user turn of the chat template
+    (non-thinking), the assistant's answer started with prefix. Prompts are
+    sorted by length and left-padded into batches of at most batch_size
+    rows and max_batch_tokens tokens with padding (a longer prompt runs
+    alone); only the last position's logits are computed; rows come back
+    in input order. The prompt is tokenized as if the digit followed the
+    prefix, so a prefix ending in spaces splits as in the model's own text.
+    The six probabilities need not sum to one: the rest is what the model
+    puts on other tokens.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    digits = [tokenizer.encode(str(d), add_special_tokens=False)
+              for d in range(6)]
+    if any(len(t) != 1 for t in digits):
+        raise ValueError(f'the digits are not single tokens: {digits}')
+    digits = [t[0] for t in digits]
+    ids = []
+    for p in prompts:  # tokenized with a digit after the prefix, then cut:
+        # a prefix that ends in spaces tokenizes differently on its own
+        x = tokenizer(tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': p}], tokenize=False,
+            add_generation_prompt=True, enable_thinking=False) + prefix + '0',
+            add_special_tokens=False)['input_ids']
+        if x[-1] != digits[0]:
+            raise ValueError(f'the digit after {prefix!r} merges with it')
+        ids.append(x[:-1])
+    pad = tokenizer.pad_token_id
+    pad = tokenizer.eos_token_id if pad is None else pad
+    device = next(model.parameters()).device
+    out = np.empty((len(ids), 6))
+    for b in d2l._edu_batches([len(r) for r in ids], batch_size,
+                              max_batch_tokens):
+        T = len(ids[b[0]])
+        X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i] for i in b],
+                         device=device)
+        mask = torch.tensor([[0] * (T - len(ids[i])) + [1] * len(ids[i])
+                             for i in b], device=device)
+        pos = (mask.cumsum(-1) - 1).clamp(min=0)
+        with torch.inference_mode():
+            z = model(input_ids=X, attention_mask=mask, position_ids=pos,
+                      use_cache=False, logits_to_keep=1).logits[:, -1]
+            out[b] = z.float().log_softmax(-1)[:, digits].exp().cpu().numpy()
+    return out
+
+def embed_docs(texts, model_id='Qwen/Qwen3-Embedding-0.6B', max_len=512,
+               batch=64, pool='last', device=None):
+    """(len(texts), d) float16 unit vectors of documents under a frozen
+    embedder, in input order: d2l.load_encoder and d2l.embed_texts with
+    the model's padding side (left for last-token pooling), the first
+    max_len tokens, batches of similar length; bf16 on a GPU, fp32 on the
+    CPU.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    side = d2l._EMBEDDERS.get(model_id, {}).get(
+        'padding_side', 'left' if pool == 'last' else 'right')
+    model, tok = d2l.load_encoder(
+        model_id, dtype=torch.bfloat16 if device == 'cuda' else torch.float32,
+        device=device, padding_side=side)
+    Z = d2l.embed_texts(model, tok, list(texts), pooling=pool,
+                        batch_size=batch, max_len=max_len, padding_side=side)
+    del model
+    d2l.lm_free()
+    return Z.numpy().astype(np.float16)
+
+def fit_quality_head(X, y, kind='regression', epochs=200, lr=1e-3,
+                     weight_decay=0.0, seed=0):
+    """A linear head on fixed features, full-batch AdamW: kind='regression'
+    fits the score by squared error, kind='logistic' a 0/1 label by
+    logistic loss. Starts at zero weights and the best constant; returns
+    the nn.Linear and the loss per epoch.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    if kind not in ('regression', 'logistic'):
+        raise ValueError(f'kind is regression or logistic, not {kind!r}')
+    torch.manual_seed(seed)
+    X = torch.as_tensor(np.array(X, dtype=np.float32))
+    y = torch.as_tensor(np.array(y, dtype=np.float32))
+    head = nn.Linear(X.shape[1], 1)
+    with torch.no_grad():
+        head.weight.zero_()
+        m = y.mean()
+        head.bias.fill_(m if kind == 'regression' else
+                        torch.logit(m.clamp(1e-6, 1 - 1e-6)))
+    loss_fn = (nn.MSELoss() if kind == 'regression'
+               else nn.BCEWithLogitsLoss())
+    opt = torch.optim.AdamW(head.parameters(), lr=lr,
+                            weight_decay=weight_decay)
+    losses = []
+    for _ in range(epochs):
+        opt.zero_grad()
+        loss = loss_fn(head(X)[:, 0], y)
+        loss.backward()
+        opt.step()
+        losses.append(loss.item())
+    return head, losses
+
+class HashedBagClassifier(nn.Module):
+    """fastText's classifier: word n-grams of the lower-cased,
+    whitespace-split text, hashed into num_buckets rows (zlib.crc32) of an
+    embedding table, averaged, and mapped to num_outputs logits.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    def __init__(self, num_buckets=2**20, dim=64, ngrams=(1, 2),
+                 num_outputs=1):
+        super().__init__()
+        self.num_buckets, self.ngrams = num_buckets, tuple(ngrams)
+        self.bag = nn.EmbeddingBag(num_buckets, dim, mode='mean',
+                                   sparse=True)
+        self.out = nn.Linear(dim, num_outputs)
+        nn.init.uniform_(self.bag.weight, -1 / dim, 1 / dim)  # as fastText
+        nn.init.zeros_(self.out.weight)
+        nn.init.zeros_(self.out.bias)
+
+    def hash_ids(self, text):
+        import zlib
+        w = text.lower().split()
+        return [zlib.crc32(' '.join(w[i:i + n]).encode('utf-8'))
+                % self.num_buckets for n in self.ngrams
+                for i in range(len(w) - n + 1)]
+
+    def featurize(self, texts):
+        """(ids, offsets) of a batch of texts for nn.EmbeddingBag."""
+        ids = [self.hash_ids(t) for t in texts]
+        offsets = np.cumsum([0] + [len(x) for x in ids[:-1]])
+        return (torch.tensor([i for x in ids for i in x], dtype=torch.long),
+                torch.tensor(offsets, dtype=torch.long))
+
+    def forward(self, ids, offsets):
+        return self.out(self.bag(ids, offsets))
+
+def audit_removals(df, keep, by, ref=None, n_boot=2000, cluster=None,
+                   seed=0):
+    """Removal rate per group of df[by] with a 95% percentile bootstrap
+    interval, resampling whole clusters (df[cluster], e.g. the registered
+    domain; each row its own cluster if None) within each group; with ref,
+    the difference of each group's rate to ref's and its interval. keep is
+    a boolean array or a column name. Groups with fewer than 100 rows or
+    10 clusters are marked too_few.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    removed = ~np.asarray(df[keep] if isinstance(keep, str) else keep,
+                          dtype=bool)
+    groups = df[by].to_numpy()
+    clusters = (df[cluster].to_numpy() if cluster is not None
+                else np.arange(len(df)))
+    rng, reps, rows = np.random.default_rng(seed), {}, []
+    for g in sorted(set(groups)):
+        m = groups == g
+        cl = pd.factorize(clusters[m])[0]
+        G = cl.max() + 1
+        r = np.bincount(cl, removed[m], G)
+        n = np.bincount(cl, minlength=G)
+        draws = rng.integers(G, size=(n_boot, G))
+        reps[g] = r[draws].sum(1) / n[draws].sum(1)
+        lo, hi = np.quantile(reps[g], [0.025, 0.975])
+        rows.append(dict(group=g, n=int(m.sum()), n_clusters=int(G),
+                         removal=r.sum() / n.sum(), lo=lo, hi=hi))
+    out = pd.DataFrame(rows)
+    if ref is not None:
+        base = out.set_index('group').removal[ref]
+        out['diff'] = out.removal - base
+        d = np.array([np.quantile(reps[g] - reps[ref], [0.025, 0.975])
+                      for g in out.group])
+        out['diff_lo'], out['diff_hi'] = d[:, 0], d[:, 1]
+    out['too_few'] = (out.n < 100) | (out.n_clusters < 10)
+    return out
+
 def fwedu_bucket(doc_id):
     """The bucket (0-255) of a FineWeb-Edu document: the first 32 bits of
     the SHA-256 of its id string (as released, <urn:uuid:...>) mod 256.
@@ -16516,6 +16901,274 @@ def json_agreement(new, old):
     return dict(values=len(a), equal=sum(k in b and b[k] == v
                                          for k, v in a.items()),
                 max_diff=max(num, default=0.0))
+
+# Word and punctuation tokens, close to NLTK's English word_tokenize (which
+# datatrove uses): a run of word characters joined by inner apostrophes,
+# hyphens, periods, commas, colons or slashes (don't, 1,000, 3.5, 10:30),
+# or a run of other non-space characters. A run of Han, kana or Thai
+# characters is one "word": the rules see unspaced scripts this way.
+_RULE_WORD = re.compile(r"\w+(?:[.,:/'’-]\w+)*|[^\w\s]+")
+# Terminal punctuation for FineWeb's line rule: the common marks of the
+# scripts in this chapter (datatrove 0.10.1 lists 159 code points)
+_TERMINAL_PUNCT = tuple('.!?。！？．｡؟।॥')
+_C4_POLICY = ('terms of use', 'privacy policy', 'cookie policy',
+              'uses cookies', 'use of cookies', 'use cookies')
+
+def _rule_words(text):
+    """The word and punctuation tokens of text (see _RULE_WORD).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    return d2l._RULE_WORD.findall(text)
+
+def _rule_is_symbol(word):
+    """True if a token has no letter or digit (punctuation, symbols).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    return not any(ch.isalnum() for ch in word)
+
+def _rule_dups(items):
+    """(number, characters) of the items that repeat an earlier item.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    seen, n, chars = set(), 0, 0
+    for x in items:
+        if x in seen:
+            n, chars = n + 1, chars + len(x)
+        else:
+            seen.add(x)
+    return n, chars
+
+def _rule_top_ngram(words, n):
+    """Characters covered by the most frequent word n-gram (joined by
+    spaces): its length times its count, as in Gopher's repetition rule.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    grams = collections.Counter(' '.join(words[i:i + n])
+                                for i in range(len(words) - n + 1))
+    if not grams:
+        return 0
+    gram, count = grams.most_common(1)[0]
+    return len(gram) * count
+
+def _rule_dup_ngram(words, n):
+    """Characters in word n-grams (joined without spaces) that repeat an
+    earlier n-gram, skipping past each repeat, as in Gopher's rule.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    seen, chars, i = set(), 0, 0
+    while i < len(words) - n + 1:
+        gram = ''.join(words[i:i + n])
+        if gram in seen:
+            chars, i = chars + len(gram), i + n
+        else:
+            seen.add(gram)
+            i += 1
+    return chars
+
+def _rule_c4(text, c):
+    """True if C4's document rules drop text: 'lorem ipsum' or a curly
+    brace on a line that survives the line rules, or fewer than
+    c['min_sentences'] sentences on those lines. As in FineWeb's run, a
+    line without terminal punctuation is not removed; sentences are split
+    at . ! ? followed by space (NLTK's punkt in datatrove).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    sentences = 0
+    for line in text.splitlines():
+        line = line.strip()
+        words = line.split()
+        if any(len(w) > c['max_word_len'] for w in words):
+            continue
+        line = re.sub(r'\[\d*\]|\[edit\]|\[citation needed\]', '', line)
+        if len(words) < c['min_line_words']:
+            continue
+        low = line.lower()
+        if 'lorem ipsum' in low:
+            return True
+        if 'javascript' in low:
+            continue
+        if '{' in line:
+            return True
+        if any(p in low for p in d2l._C4_POLICY):
+            continue
+        sentences += len([s for s in re.split(r'(?<=[.!?])\s+', line)
+                          if s.strip()])
+    return sentences < c['min_sentences']
+
+def cohen_kappa(a, b):
+    """Cohen's kappa of two label arrays: agreement beyond what the two
+    marginal distributions give by chance; nan if chance agreement is 1.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    a, b = np.asarray(a), np.asarray(b)
+    labels = np.union1d(a, b)
+    po = np.mean(a == b)
+    pe = sum(np.mean(a == k) * np.mean(b == k) for k in labels)
+    return float((po - pe) / (1 - pe)) if pe < 1 else float('nan')
+
+def quadratic_kappa(a, b, k=6):
+    """Quadratic-weighted kappa of two integer scores in 0..k-1: one minus
+    the observed mean squared disagreement over the one expected from the
+    marginals.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    a, b = np.asarray(a, dtype=int), np.asarray(b, dtype=int)
+    O = np.zeros((k, k))
+    np.add.at(O, (a, b), 1)
+    O /= O.sum()
+    E = np.outer(O.sum(1), O.sum(0))
+    W = (np.arange(k)[:, None] - np.arange(k)[None, :]) ** 2 / (k - 1) ** 2
+    return float(1 - (W * O).sum() / (W * E).sum())
+
+def wilson_ci(k, n, z=1.96):
+    """Wilson score interval for a binomial proportion k / n.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    if n == 0:
+        return float('nan'), float('nan')
+    p, z2 = k / n, z * z
+    mid = (p + z2 / (2 * n)) / (1 + z2 / n)
+    half = z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n)
+    return mid - half, mid + half
+
+def binary_f1(y, pred):
+    """F1 of boolean predictions against boolean labels (0 if none).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    y, pred = np.asarray(y, dtype=bool), np.asarray(pred, dtype=bool)
+    tp = np.sum(y & pred)
+    return float(2 * tp / (y.sum() + pred.sum())) if tp else 0.0
+
+def rank_auc(y, s):
+    """ROC AUC of scores s for boolean labels y (Mann-Whitney, ties at
+    half).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    y, s = np.asarray(y, dtype=bool), np.asarray(s, dtype=float)
+    r = pd.Series(s).rank().to_numpy()  # average ranks for ties
+    n1, n0 = y.sum(), (~y).sum()
+    return float((r[y].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+
+def _edu_batches(lengths, batch_size, max_batch_tokens):
+    """Batches of indices, longest first: at most batch_size rows and at
+    most max_batch_tokens tokens with left padding (rows times the first,
+    longest, row's length); a row longer than the cap is alone.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    order = sorted(range(len(lengths)), key=lambda i: (-lengths[i], i))
+    batches = []
+    for i in order:
+        b = batches[-1] if batches else None
+        if (b is None or len(b) == batch_size or
+                lengths[b[0]] * (len(b) + 1) > max_batch_tokens):
+            batches.append([i])
+        else:
+            b.append(i)
+    return batches
+
+_EDU_ANNOT_ROWS = 467_424  # rows of the eight released files
+_EDU_ANNOT_SPLITS = (18_000, 2_000, 2_000)  # train, val, test
+
+def _edu_annot_sample():
+    """The 22,000 annotation rows of lm-edu-annot-22k-v1 before labelling:
+    rows default_rng(0).permutation(467,424)[:22,000] of the eight released
+    files read in order; the first 18,000 are train, then 2,000 val and
+    2,000 test. Columns row, split, text, prompt (the labeller's input as
+    released), llama_score, url, dump; text and prompt as released.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import huggingface_hub
+    import pyarrow.parquet as pq
+    _, repo, rev, _ = d2l.LM_DATA_SOURCES['edu-annotations']
+    perm = np.random.default_rng(0).permutation(d2l._EDU_ANNOT_ROWS)[:22_000]
+    split = np.repeat(['train', 'val', 'test'], d2l._EDU_ANNOT_SPLITS)
+    frames, start = [], 0
+    for k in range(8):
+        path = huggingface_hub.hf_hub_download(
+            repo, f'data/train-{k:05d}-of-00008.parquet', revision=rev,
+            repo_type='dataset')
+        f = pq.ParquetFile(path)
+        n = f.metadata.num_rows
+        pos = np.flatnonzero((perm >= start) & (perm < start + n))
+        t = f.read(columns=['text', 'prompt', 'score', 'metadata']).take(
+            perm[pos] - start).to_pandas()
+        frames.append(pd.DataFrame(dict(
+            pos=pos, row=perm[pos], split=split[pos], text=t.text,
+            prompt=t.prompt, llama_score=t.score.astype(int),
+            url=[m['url'] for m in t.metadata],
+            dump=[m['dump'] for m in t.metadata])))
+        start += n
+    assert start == d2l._EDU_ANNOT_ROWS, start
+    df = pd.concat(frames).sort_values('pos', ignore_index=True)
+    return df.drop(columns='pos')
+
+def _stream_half(domain):
+    """The audit stream's half ('A' or 'B') of a registered domain: the
+    parity of the first 32 bits of its SHA-256, so the halves share no
+    domain (the bootstrap's cluster).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    h = int(hashlib.sha256(domain.encode('utf-8')).hexdigest()[:8], 16)
+    return 'A' if h % 2 == 0 else 'B'
+
+def _cctld(url):
+    """The last label of the host's public suffix with a dot ('.uk' for
+    example.co.uk, '.com'), from the same tldextract snapshot as
+    registered_domain; '' for an IP address.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    d2l.registered_domain('http://example.com')  # makes the extractor
+    suffix = d2l._TLD_EXTRACT[0](url).suffix
+    return '.' + suffix.rsplit('.', 1)[-1].lower() if suffix else ''
+
+def released_edu_scores(texts, batch=64, device=None, dtype=None):
+    """Scores of the released FineWeb-Edu classifier (a regression head on
+    a frozen Snowflake arctic-embed-m encoder; Apache-2.0) at its pinned
+    revision: the first 512 tokens of each text, length-sorted batches,
+    float32 scores in input order. bf16 on a GPU, fp32 on the CPU.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import transformers
+    _, repo, rev, _ = d2l.LM_DATA_SOURCES['fineweb-edu-classifier']
+    device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    dtype = dtype or (torch.bfloat16 if device == 'cuda' else torch.float32)
+    tok = transformers.AutoTokenizer.from_pretrained(repo, revision=rev)
+    model = transformers.AutoModelForSequenceClassification.from_pretrained(
+        repo, revision=rev, dtype=dtype).to(device).eval()
+    ids = tok(list(texts), truncation=True, max_length=512)['input_ids']
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out = np.empty(len(ids), dtype=np.float32)
+    for j in range(0, len(order), batch):
+        rows = order[j:j + batch]
+        enc = tok.pad({'input_ids': [ids[i] for i in rows]},
+                      return_tensors='pt').to(device)
+        with torch.inference_mode():
+            out[rows] = model(**enc).logits[:, 0].float().cpu().numpy()
+    del model
+    d2l.lm_free()
+    return out
+
+def c0_documents(manifest='lm-c0-docs-v1', cache_dir=None):
+    """The c0 documents: the cached rebuild in cache_dir (default
+    ../data/lm/c0) if its ids and text hashes equal the manifest rows,
+    else rebuild_c0 (which writes that cache).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import pathlib
+    cache = pathlib.Path(cache_dir or os.path.join('..', 'data', 'lm', 'c0'))
+    path = (d2l.download_keyed(manifest) if manifest in d2l.DATA_HUB
+            else manifest)
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        want = {r['id']: r['text_sha256'] for r in map(json.loads, f)}
+    if (cache / 'c0-docs.jsonl.gz').exists():
+        docs = d2l.read_docs(cache / 'c0-docs.jsonl.gz')
+        got = {d.id: hashlib.sha256(d.text.encode('utf-8')).hexdigest()
+               for d in docs}
+        if got == want:
+            return docs
+    docs = d2l.rebuild_c0(manifest, cache_dir=cache)
+    assert not docs.mismatches, f'{len(docs.mismatches)} c0 rows drifted'
+    return docs
 
 _FWEDU_FILES = tuple(  # sample/10BT files read, in order; 005, 012, 013 are chapter 21's
     f'sample/10BT/{k:03d}_00000.parquet' for k in (0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11))

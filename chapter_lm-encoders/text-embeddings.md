@@ -20,8 +20,8 @@ average the token vectors. Make a guess before reading on: if we average the
 vectors of every passage of the book and of a question about it, how often
 will the ten nearest passages include one that answers the question?
 
-The answer will be discouraging, and the repair has a history. In 2019,
-Reimers and Gurevych found that averaged BERT vectors judged the similarity
+The answer will be discouraging, and the repair has a history.
+:citet:`Reimers.Gurevych.2019` found that averaged BERT vectors judged the similarity
 of two sentences worse than averaged GloVe word vectors
 (:numref:`sec_lm_word_embeddings`), and that training the encoder on pairs
 of related sentences fixed this. Their successors settled on the contrastive
@@ -451,8 +451,8 @@ Raw passage vectors share one direction: the mean cosine between two
 unrelated passages is 0.95 with CLS pooling and 0.94 with mean pooling (the
 formula reproduces it to six digits). The mean vector therefore has length
 about $\sqrt{0.94} \approx 0.97$, and every passage vector lies in a narrow
-cone around it. Ethayarajh (2019) found the same cone in the upper layers of
-BERT and GPT-2, and Li et al. (2020) traced its shape to word frequency: in
+cone around it. :citet:`Ethayarajh.2019` found the same cone in the upper layers of
+BERT and GPT-2, and :citet:`Li.Zhou.He.ea.2020` traced its shape to word frequency: in
 the raw space, how common the words of a text are moves its vector more than
 what the text means.
 
@@ -571,7 +571,7 @@ contribute almost nothing.
 ### Alignment and Uniformity
 :label:`subsec_lm_emb_align_uniform`
 
-What arrangement of vectors does the loss want? Wang and Isola (2020)
+What arrangement of vectors does the loss want? :citet:`Wang.Isola.2020`
 answered this by letting the batch grow. Subtract $\log B$ from the loss of
 one question and move the $B$ inside the logarithm:
 
@@ -678,7 +678,7 @@ The book's questions are what we test on, so we train on pairs from
 elsewhere and measure transfer. `train_embedder` minimizes
 :eqref:`eq_lm_infonce` over batches of question-passage pairs with
 mean-pooled vectors. Questions get the prefix `query: ` and passages
-`passage: `, the convention of the E5 embedders (Wang et al., 2022), which
+`passage: `, the convention of the E5 embedders :cite:`Wang.Yang.Huang.ea.2022`, which
 lets one encoder treat the two sides differently. AdamW with warmup and
 linear decay, clipping at norm 1 and bf16 complete the recipe.
 
@@ -793,7 +793,7 @@ def train_embedder(model, tokenizer, pairs, *, pooling='mean', tau=0.05,
                           if cuda else float('nan')))
 ```
 
-The pairs come from Natural Questions (Kwiatkowski et al., 2019): questions
+The pairs come from Natural Questions :cite:`Kwiatkowski.Palomaki.Redfield.ea.2019`: questions
 that people typed into a search engine, each with a Wikipedia passage that
 answers it. We train on 20,000 pairs chosen by one seeded permutation. To
 choose the learning rate we hold out 300 later pairs whose question and
@@ -1065,12 +1065,12 @@ Whether the mined negative helps is measured with the other models below.
 :label:`subsec_lm_emb_llm`
 
 Our encoder saw 20,000 pairs, once. Released embedders are trained on far
-more, in stages. E5 (Wang et al., 2022) first trains on a large collection
+more, in stages. E5 :cite:`Wang.Yang.Huang.ea.2022` first trains on a large collection
 of weak pairs gathered from the web, such as titles with their articles,
 then on smaller labeled sets with mined hard negatives. Qwen3-Embedding
-(Zhang et al., 2025) had a larger Qwen3 model write its weak pairs, then
+:cite:`Zhang.Li.Long.ea.2025` had a larger Qwen3 model write its weak pairs, then
 trained on labeled and filtered synthetic pairs with hard negatives, and
-finally averaged several of its checkpoints. RocketQA (Qu et al., 2021)
+finally averaged several of its checkpoints. RocketQA :cite:`Qu.Ding.Liu.ea.2021`
 introduced the step our audit imitates: a cross-encoder filters the mined
 negatives, so that false negatives are dropped rather than pushed away.
 
@@ -1092,10 +1092,10 @@ what the query vector encodes, in a direction that has to be measured.
   about the book, retrieve passages that answer it`.
 
 Other routes from a decoder differ in what they change. LLM2Vec
-(BehnamGhader et al., 2024) removes the causal mask, retrains the decoder
-to predict masked tokens with it, then trains contrastively. NV-Embed (Lee
-et al., 2024) also removes the mask and pools with a learned attention
-layer. E5-Mistral (Wang et al., 2024) skips the weak-pair stage and briefly
+:cite:`BehnamGhader.Adlakha.Mosbach.ea.2024` removes the causal mask, retrains the decoder
+to predict masked tokens with it, then trains contrastively. NV-Embed
+:cite:`Lee.Roy.Xu.ea.2025` also removes the mask and pools with a learned attention
+layer. E5-Mistral :cite:`Wang.Yang.Huang.ea.2024` skips the weak-pair stage and briefly
 fine-tunes a much larger decoder on labeled and generated pairs.
 
 ### Comparison on the Book
@@ -1305,7 +1305,7 @@ per coordinate.
 *Truncation* keeps the first $k$ coordinates and rescales them to unit
 length. In a model trained with the plain loss the first coordinates are no
 more important than the others. *Matryoshka representation learning*
-(Kusupati et al., 2022) makes them so by averaging the loss over prefixes,
+:cite:`Kusupati.Bhatt.Rege.ea.2022` makes them so by averaging the loss over prefixes,
 
 $$
 \ell_{\textrm{MRL}} = \frac{1}{|\mathcal{K}|} \sum_{k \in \mathcal{K}} \ell^{(k)},
@@ -1327,7 +1327,7 @@ differing bits: one XOR and one population count per machine word. Why
 should signs preserve similarity? For a random direction $\mathbf{r}$, the
 signs of $\mathbf{r}^\top \mathbf{a}$ and $\mathbf{r}^\top \mathbf{b}$
 differ with probability $\theta/\pi$, where $\theta$ is the angle between
-$\mathbf{a}$ and $\mathbf{b}$ (Charikar, 2002). An embedder's coordinates
+$\mathbf{a}$ and $\mathbf{b}$ :cite:`Charikar.2002`. An embedder's coordinates
 are not random directions, so the formula is not exact, but the sign
 agreement still falls as the angle grows.
 
@@ -1511,7 +1511,7 @@ where it expects an instruction, loads and runs without complaint.
 ### Choosing an Embedder
 
 Released embedders are ranked on MTEB, the Massive Text Embedding Benchmark
-(Muennighoff et al., 2023), which averages scores over many tasks and
+:cite:`Muennighoff.Tazi.Magne.ea.2023`, which averages scores over many tasks and
 languages. An average over tasks says little about one domain: a model can
 rise by clustering news well, and the training data of some models overlaps
 the benchmark's. The reliable way to choose is the one this section

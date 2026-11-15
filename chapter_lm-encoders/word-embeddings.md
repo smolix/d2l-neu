@@ -14,7 +14,7 @@ for a one at the word's index. One-hot vectors carry no similarity at all:
 any two different words are orthogonal, and *doctor* is as far from
 *physician* as from *banana*. Whatever similarity the rows hold, training
 put there. In the 1950s the linguists Zellig Harris and J. R. Firth
-proposed where it could come from: words that occur in similar contexts
+:cite:`Harris.1954,Firth.1957` proposed where it could come from: words that occur in similar contexts
 tend to mean similar things, or in Firth's phrase, "you shall know a word
 by the company it keeps". Physicians and doctors keep the same company.
 Both examine patients and write prescriptions.
@@ -245,10 +245,10 @@ match.
 
 ### Human Similarity Ratings
 
-*WordSim353* (Finkelstein et al., 2002) holds 353 word pairs rated by
+*WordSim353* :cite:`Finkelstein.Gabrilovich.Matias.ea.2002` holds 353 word pairs rated by
 people, and its
 ratings mix relatedness with similarity: *cup* and *coffee* score high.
-*SimLex-999* (Hill, Reichart and Korhonen, 2015) holds 999 pairs rated for
+*SimLex-999* :cite:`Hill.Reichart.Korhonen.2015` holds 999 pairs rated for
 similarity alone. *Clothes* and *closet*, which WordSim353 rates as
 closely related, score low there, since a closet is not a kind of
 clothing. For a table of vectors we compute the cosine of each pair and
@@ -875,8 +875,8 @@ not at it.
 :label:`subsec_lm_we_eval`
 
 We have three tables from one slice: skip-gram with negative sampling
-(SGNS), the SVD of positive PMI (SVD-PPMI) and GloVe. Which is best? Levy,
-Goldberg and Dagan (2015) argued that settings such as the noise exponent,
+(SGNS), the SVD of positive PMI (SVD-PPMI) and GloVe. Which is best?
+:citet:`Levy.Goldberg.Dagan.2015` argued that settings such as the noise exponent,
 which one method's recipe fixed and another's left out, move the results
 as much as the choice of method. We test this on our slice.
 
@@ -1232,19 +1232,19 @@ With the query words excluded, all five answers are right: *queen*,
 *japan*, *biggest*, *went* and *saw*. Without the exclusion, 2 of the 5
 answers are a query word: *king* for *man* : *woman* :: *king*, and *see*
 for *do* : *did* :: *see*. The famous analogy holds because the method
-forbids the answer *king*, as Linzen (2016) pointed out. An analogy
+forbids the answer *king*, as :citet:`Linzen.2016` pointed out. An analogy
 accuracy means little unless it says whether the inputs were excluded.
 
 ### Bias
 
 Word vectors record the associations of their text, including its
-stereotypes (Bolukbasi et al., 2016). A simple probe is a direction: the
+stereotypes :cite:`Bolukbasi.Chang.Zou.ea.2016`. A simple probe is a direction: the
 unit vector $\mathbf{g}$ along $\mathbf{he} - \mathbf{she}$, and the
 projection of each word's unit vector onto it. A simplified version of
 the repair that Bolukbasi et al. proposed removes the projection onto
 $\mathbf{g}$ from every word, so that no word leans either way.
 
-Gonen and Goldberg (2019) argued that this hides the bias rather than
+:citet:`Gonen.Goldberg.2019` argued that this hides the bias rather than
 removing it, and we can test the argument. After the removal, we find each
 profession's ten nearest neighbors and average their *original*
 projections. If the removal had erased the association, the new neighbors
@@ -1352,8 +1352,8 @@ than the model has.
 Nothing in such a table requires the categories to be words. A lookup is
 a one-hot vector times the table, so an embedding table is a linear layer
 on one-hot inputs, and any categorical variable with many values can have
-one: store numbers, product codes, postal codes or user ids. Guo and
-Berkhahn (2016) trained such *entity embeddings* with a network that
+one: store numbers, product codes, postal codes or user ids.
+:citet:`Guo.Berkhahn.2016` trained such *entity embeddings* with a network that
 predicts from tabular data, and categories that behave alike ended up
 with nearby rows, as words with similar company do. For a store, one row
 per value is what we want, since a store is the same store wherever it

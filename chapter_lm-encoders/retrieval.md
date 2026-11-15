@@ -546,8 +546,7 @@ the weight of a very common term from turning negative.
 
 The fraction is a simple curve standing in for a crude model, in which the
 count of a word follows one of two Poisson distributions depending on whether
-the document is about the word (Robertson and Zaragoza trace its origin in "The
-Probabilistic Relevance Framework: BM25 and Beyond"). That so simple a
+the document is about the word :cite:`Robertson.Zaragoza.2009`. That so simple a
 formula is still hard to beat says that on text like this book, a passage
 that answers a question usually shares the question's rarest words.
 
@@ -848,8 +847,7 @@ could make dense search over the book noticeably faster.
 ### Fusion
 
 Neither list contains the other, so we combine them. *Reciprocal-rank fusion*
-(RRF; Cormack, Clarke and Büttcher, "Reciprocal Rank Fusion Outperforms
-Condorcet and Individual Rank Learning Methods") ignores the scores and gives
+(RRF) :cite:`Cormack.Clarke.Buettcher.2009` ignores the scores and gives
 a chunk $d$ the score
 
 $$
@@ -952,8 +950,7 @@ cross-encoder, like the MNLI classifier of :numref:`sec_lm_bert`, reads
 question and chunk together as one input and scores the pair. Its
 attention can connect a word of the question with the sentence that answers
 it, at the cost of one forward pass per pair, so it can only reorder a short
-list that a bi-encoder found (Nogueira and Cho, "Passage Re-ranking with
-BERT").
+list that a bi-encoder found :cite:`Nogueira.Cho.2019`.
 
 Qwen3-Reranker-0.6B is a decoder used as a cross-encoder. Its prompt states an
 instruction, the question and the chunk, and asks for "yes" or "no". The score
@@ -1162,8 +1159,8 @@ All differences below are paired, on the same questions.
 
 "Dense retrieval beats BM25" is a claim about a corpus, a question set and a
 model. On a technical book full of exact terms the two are within noise in
-Recall@10 and split by measure, and the BEIR benchmark of Thakur and
-colleagues found dense retrievers trained on one collection often below
+Recall@10 and split by measure, and the BEIR benchmark
+:cite:`Thakur.Reimers.Ruckle.ea.2021` found dense retrievers trained on one collection often below
 BM25 on another. On such text the word index is a high floor. Keep it, and
 fuse instead of choosing: fusion costs a few milliseconds and covers both
 kinds of failure.
@@ -1280,8 +1277,7 @@ class IVFIndex:
 ### Product Quantization
 
 An inverted file still stores every vector in full, 4 KB in float32, the
-format in which Faiss holds vectors. Jégou, Douze and Schmid ("Product
-Quantization for Nearest Neighbor Search") store a short code instead and
+format in which Faiss holds vectors. :citet:`Jegou.Douze.Schmid.2011` store a short code instead and
 compute distances from the code without decoding it.
 
 Split $\mathbf{x} \in \mathbb{R}^m$ into $M$ blocks
@@ -1508,9 +1504,7 @@ dozen steps cross millions of vectors, as a short chain of acquaintances
 connects two strangers.
 
 A walk that starts far from the question needs many short steps.
-*Hierarchical navigable small-world graphs* (HNSW; Malkov and Yashunin,
-"Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical
-Navigable Small World Graphs") therefore add layers. Every vector is on the
+*Hierarchical navigable small-world graphs* (HNSW) :cite:`Malkov.Yashunin.2020` therefore add layers. Every vector is on the
 bottom layer, and a random subset that shrinks geometrically is also on the
 layers above, where the links are long. A search crosses the collection on
 the top layer and refines its answer at the bottom.

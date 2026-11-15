@@ -237,7 +237,7 @@ def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
 
 Which tasks should we measure? Sentiment is everywhere in the text a
 decoder is pretrained on. *Natural language inference* is not. In MNLI
-(Williams, Nangia and Bowman, 2018) each item pairs a *premise* with a
+:cite:`Williams.Nangia.Bowman.2018` each item pairs a *premise* with a
 *hypothesis*, labeled *entailment* if the premise implies the hypothesis,
 *contradiction* if it rules the hypothesis out, and *neutral* otherwise.
 Where one label ends and the next begins is a convention of the dataset's
@@ -759,7 +759,7 @@ def cost_per_example(n_params, n_tokens, n_embed=0):
 
 ### Data and Sentence Pairs
 
-The second task, SST-2 (Socher et al., 2013), holds sentences from movie
+The second task, SST-2 :cite:`Socher.Perelygin.Wu.ea.2013`, holds sentences from movie
 reviews labeled positive or negative. For MNLI, two details of the pair input
 matter. The separator is the only marker of the boundary, so a pipeline that
 drops it or swaps the texts gives the model an input it was not fine-tuned
@@ -1004,8 +1004,8 @@ classifier, at 0.75 and then 0.84, and at 16,000 its seeds agree to within
 With few labels, the seed moves accuracy as much as the next step up in data.
 From one size of the grid to the next, accuracy gains a median of 0.098 on
 MNLI and 0.114 on SST-2. The seeds lie 0.158 apart at 1,000 MNLI pairs and
-0.142 apart at 100 SST-2 sentences. Dodge et al. (2020) found the same for
-BERT on four tasks of GLUE, the benchmark suite on which BERT made its name:
+0.142 apart at 100 SST-2 sentences. :citet:`Dodge.Ilharco.Schwartz.ea.2020` found the same for
+BERT on four tasks of GLUE :cite:`Wang.Singh.Michael.ea.2019`, the benchmark suite on which BERT made its name:
 the seed alone moved validation scores about as much as newer methods claimed
 to gain. Two fine-tuning methods compared at a few hundred examples with one
 seed each may differ only in their seeds.
@@ -1078,7 +1078,7 @@ boundary.
 Is 0.84 on MNLI reading comprehension? A simple test removes the premise. A
 model that sees only the hypothesis cannot know whether it follows from a
 premise it never read, so it should score the majority rate, 0.363.
-Gururangan et al. (2018) ran this test on the inference datasets of the time
+:citet:`Gururangan.Swayamdipta.Levy.ea.2018` ran this test on the inference datasets of the time
 and found scores far above chance: annotators asked for a contradiction often
 wrote a negation such as "nobody" or "never", and those asked for a neutral
 hypothesis often added a detail that the premise did not mention. We fine-tune our encoder on 5,000 hypotheses
@@ -1111,7 +1111,7 @@ hypothesis-only baseline does not say how much of it is reading.
 ### Words and Sub-Word Tokens
 
 A pooled head averages the token vectors away. A token head classifies each
-of them. CoNLL-2003 (Tjong Kim Sang and De Meulder, 2003) marks every name
+of them. CoNLL-2003 :cite:`TjongKimSang.DeMeulder.2003` marks every name
 in a set of news sentences as a person (PER), a location (LOC), an
 organization (ORG) or miscellaneous (MISC). The copy we load uses the *IOB2*
 scheme: the first word of a name gets `B-` and its type, the other words of

@@ -233,7 +233,7 @@ partly because the longer prompts ran in smaller batches. Second, accepting
 a length is not using it. Models use the start and the end of a long
 context better than its middle :cite:`Liu.Lin.Hewitt.ea.2024`, and an
 exercise of :numref:`sec_lm_rag` measures this effect on the book. How much
-of its window a model actually uses, its effective context, we measure
+of its window a model actually uses, its effective context :cite:`Hsieh.Sun.Kriman.ea.2024`, we measure
 ourselves in :numref:`sec_lm_long_context`. Third, :citet:`Jin.Yoon.Han.ea.2025` find that for many long-context models
 the quality of answers first rises and then falls as more retrieved passages
 are added. They name retrieved hard negatives, passages that look relevant

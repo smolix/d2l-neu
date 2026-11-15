@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:6d4b2b43109542a1cb06fbcc92e2fe63ebf96c0a5e413d898033f609f4e98a7f",
+    "d2l_lib_fingerprint": "sha256:cd822054df31eed0d46b073d74943df49e54bf50e4b32f4e9ef99dbed3d0b427",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25694,
-          "sha256": "sha256:4e113589e254ece4dbed54d9bb72aac11a398bbd88620abb88534c1033cb8704"
+          "bytes": 25704,
+          "sha256": "sha256:a78279a7958e9c7982ea4ee9da851cfc91dbc1e3b16fd5b8f2c46ed11171f801"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 88.3\n"
+          "text": "validation perplexity 90.5\n"
         }
       ]
     },
@@ -114,17 +114,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 1: highest 8.92e+03, final 394\n"
+          "text": "run 1: highest 2.77e+03, final 267\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 2: highest 2.22e+03, final 296\n"
+          "text": "run 2: highest 2.29e+05, final 459\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 3: highest 4.84e+06, final 903\n3 of 3 runs end above twice the clipped 88.3; finals from 296 to 903\n"
+          "text": "run 3: highest 3.32e+46, final 1.14e+18\n3 of 3 runs end above twice the clipped 90.5; finals from 267 to 1.14e+18\n"
         }
       ]
     },
@@ -136,8 +136,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-plain-model-4-1.svg",
-          "bytes": 35417,
-          "sha256": "sha256:abe694338759715ac5289ddd54fe81626155b25ee6a2bd07c0825526da8437fa"
+          "bytes": 28859,
+          "sha256": "sha256:e30d77b375634dbf320e574c42b6346ef296e76082c7fcfe2a01b05b661bbcbf"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.33 bits per byte\n"
+          "text": "2.78 bytes/token, 2.34 bits per byte\n"
         }
       ]
     },
@@ -164,7 +164,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean change of an embedding row: 4.3% of its length\n"
+          "text": "mean change of an embedding row: 4.4% of its length\n"
         }
       ]
     },
@@ -181,8 +181,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-wider-embedding-with-dropout-2-1.svg",
-          "bytes": 23615,
-          "sha256": "sha256:815d9a424f4e722a61e627287e8fc564484c57a6f3035550826f3ba912dcef0e"
+          "bytes": 23604,
+          "sha256": "sha256:6c475987242da553f14a0090e76d41862bac8364cb096a3a227aa21e2f134fc2"
         }
       ]
     },
@@ -193,7 +193,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 60.2, 2.13 bits per byte\n"
+          "text": "validation perplexity 58.3, 2.11 bits per byte\n"
         }
       ]
     },
@@ -225,7 +225,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN: 2.12 bits per byte\nKN trigram: 2.09 bits per byte\nmixture: 2.03 bits per byte\nthe RNN is the more confident model on 51% of the tokens\n"
+          "text": "RNN: 2.10 bits per byte\nKN trigram: 2.09 bits per byte\nmixture: 2.02 bits per byte\nthe RNN is the more confident model on 52% of the tokens\n"
         }
       ]
     },
@@ -236,14 +236,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.29, 2.14, 2.13, 2.12, 2.12, 2.12]\n"
+          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.27, 2.13, 2.11, 2.11, 2.11, 2.1]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-comparison-with-kneser-ney-4-1.svg",
-          "bytes": 28425,
-          "sha256": "sha256:ffa0abc7ba4fb2d6dc1ed6f196eb10d174396f3da8b67ab292972da5c6dfeb08"
+          "bytes": 31345,
+          "sha256": "sha256:0f4af3d4ea576a9df59daa35d012ad635367e8121cd6919f290b9c9ca5b112fe"
         }
       ]
     },
@@ -259,7 +259,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller'\n"
+          "text": "'The Time Traveller, and the faint, and the faint, and the faint, and the\n    faint, and the faint, and the faint, and the faint, and the faint, and\n    the faint, and the faint'\n"
         }
       ]
     },
@@ -286,8 +286,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 23611,
-          "sha256": "sha256:08f8fc75c9ced45e8b68fc5dc5752d8443c5ca669acb3706b6a6cca32fa06910"
+          "bytes": 23610,
+          "sha256": "sha256:d2a7bb717fda5ff6ddce19650335efa78312f5edc3bf70e9ae4aa9c5ab8486c9"
         }
       ]
     },
@@ -298,7 +298,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 58.9, 'The Time Traveller, and I was a little\\nfrail. I had\n    a\\nfrail. I had a\\nfrail. I had a'\n"
+          "text": "perplexity 58.5, 'The Time Traveller, and I was the\\ndisappeared to me, and\n    I was the Time Traveller, and I was the Time Traveller, and I'\n"
         }
       ]
     }

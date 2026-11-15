@@ -178,9 +178,12 @@ def _rag_judge_messages(item, answer, context_texts, cited_ids):
 def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
                        batch_size):
     """The judge's replies to a list of chat messages, each the text after
-    its reasoning ('</think>'), or None when the reply was cut off at
-    max_new_tokens. judge is a d2l.ChatAPI (greedy, seed 0; batch_size
-    requests in flight) or a Transformers model with its tokenizer."""
+    its reasoning ('</think>'), None when the reply was cut off at
+    max_new_tokens, or the exception of a request that failed in transport
+    (an endpoint that refused, timed out or answered with an error after
+    the client's retries: no reply, so not a malformed one). judge is a
+    d2l.ChatAPI (greedy, seed 0; batch_size requests in flight) or a
+    Transformers model with its tokenizer."""
     if hasattr(judge, 'achat'):  # an OpenAI-compatible endpoint
         import asyncio  # not in the d2l library preamble
         import concurrent.futures
@@ -191,8 +194,8 @@ def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
         # loop, in which asyncio.run refuses to start
         with concurrent.futures.ThreadPoolExecutor(1) as pool:
             out = pool.submit(asyncio.run, batch).result()
-        return [None if isinstance(r, BaseException)  # counts as malformed
-                or r.finish_reason == 'length'
+        return [r if isinstance(r, BaseException)  # no reply at all
+                else None if r.finish_reason == 'length'
                 else (r.text or '').split('</think>')[-1] for r in out]
     gens = d2l.generate(judge, tokenizer, messages,
                         max_new_tokens=max_new_tokens, chat=True,

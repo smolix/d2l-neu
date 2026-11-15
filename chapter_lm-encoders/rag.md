@@ -40,7 +40,7 @@ when the section is written.
 -->
 
 <!-- Placeholder (prose, opening): start from the reader. The 19.4 retriever
-is wired to Qwen3-4B and asked a question about this book; the gold passage
+is wired to Qwen3.5-9B and asked a question about this book; the gold passage
 is retrieved and the answer is still wrong (the item printed by the
 opening-item cell below, after the baseline is measured). Was the passage
 ranked too low, ignored, or contradicted by a neighbouring chunk? The section
@@ -74,16 +74,28 @@ import warnings
 import zipfile
 ```
 
-<!-- Placeholder (prose): the models of the section (generator Qwen3-4B,
-the 19.4 embedder and reranker, the judge Qwen3.8-27B with thinking on), the
-regeneration switches (D2L_RERUN) and the registered results the normal run
-replays; the fixed settings of the baseline and the configurations changed
-one stage at a time, with the pre-registered fixes written down before any
-failure is counted. -->
+<!-- Placeholder (prose): the models of the section: the generator
+Qwen3.5-9B (thinking off, bf16; a hybrid of Gated DeltaNet and full-attention
+layers, so only one layer in four grows a KV cache; it takes a whole 24 GB
+card), the 19.4 embedder and reranker, the judge Qwen3.8-27B with thinking
+on. The generator is pinned like the models of chapter 18. -->
+
+```{.python .input #rag-revisions}
+%%tab pytorch
+#@save
+d2l.HF_REVISIONS['Qwen/Qwen3.5-9B'] = (
+    'c202236235762e1c871ad0ccb60c8ee5ba337b9a')
+```
+
+<!-- Placeholder (prose): the regeneration switches (D2L_RERUN), their
+order (each result registered before the next regeneration reads it) and
+the registered results the normal run replays; the fixed settings of the
+baseline and the configurations changed one stage at a time, with the
+pre-registered fixes written down before any failure is counted. -->
 
 ```{.python .input #rag-config}
 %%tab pytorch
-GEN, RERANKER = 'Qwen/Qwen3-4B', 'Qwen/Qwen3-Reranker-0.6B'
+GEN, RERANKER = 'Qwen/Qwen3.5-9B', 'Qwen/Qwen3-Reranker-0.6B'
 EMB, JUDGE = d2l.DEFAULT_EMBEDDER, d2l.RAG_JUDGE_LOCAL
 GPU = torch.cuda.is_available()
 SMALL = not GPU  # the CPU path: two live answers, BM25-only coverage
@@ -99,12 +111,21 @@ RERUN = d2l.lm_rerun(ARTIFACTS)
 if 'rag-judge-cache' in RERUN:  # the judge's cache is written with it
     RERUN.add('rag-judge')
 assert GPU or not RERUN - {'rag-cards'}, 'answers and judgments need GPUs'
+ORDER = ('run order, each result registered before the next: rag-gen-base; '
+         'rag-judge (until every answer is judged); rag-cards; '
+         'rag-gen-stages; rag-judge; rag-gen-fix; rag-judge')
+assert not ('rag-judge' in RERUN and RERUN & {'rag-gen-stages',
+                                              'rag-gen-fix'}), ORDER
+assert not ('rag-gen-fix' in RERUN and RERUN & {'rag-gen-base',
+                                                'rag-gen-stages'}), ORDER
 K, BUDGET, DEPTH = 5, 3000, 50  # passages; context tokens; ranking kept
 MAX_NEW, BATCH = 300, 8  # new tokens per answer; prompts per batch
 QUICK = False  # True: 80 stratified dev and test items (development only)
+assert not (QUICK and RERUN), 'QUICK results are never saved'
 N_LIVE = 8 if GPU else 2  # base answers generated again in a normal run
 JUDGE_MINUTES, CHUNK, CONCURRENCY = 50, 64, 8  # judging run; saves; flight
 N_REPEAT, N_CARDS = 60, 50  # base answers judged twice; failure cards
+CARD_GIB = 21.5  # estimates; measured peaks add 1-2 (23.6 GiB usable)
 BASE = dict(chunking='sections', context='retrieved', k=K, budget=BUDGET,
             order='rank', rewrite=None, rerank_k=None, prompt='fixed',
             verify=False, abstain_below=None, max_new_tokens=MAX_NEW,
@@ -250,7 +271,8 @@ print(f'drafter: {served("drafter")}; checker: {served("checker")}; '
 print(pd.DataFrame({s: {
     'answerable': sum(q['answerable'] for q in qa),
     'book-specific': sum('general_knowledge' not in q['flags'] for q in qa),
-    'closed-book correct': sum(bool(q['closed_book_correct']) for q in qa),
+    'closed-book correct (Qwen3-4B)': sum(bool(q['closed_book_correct'])
+                                          for q in qa),
     'with alternative spans': sum(bool(q['alt_spans']) for q in qa),
     'identifier': sum('identifier' in q['flags'] for q in qa)}
     for s, qa in QA.items()}))
@@ -728,7 +750,9 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
     first and its verdict is read after the reasoning; a reply cut off at
     max_new_tokens (default 3,000 with thinking, 64 without) counts as
     malformed. A verdict missing from the judge's JSON after one retry is
-    None."""
+    None. A request that fails in transport twice (the server is down, an
+    error status) is not a verdict: rag_judge raises, and a recording
+    client keeps the replies that did arrive."""
     single = isinstance(item, dict)
     items, results, contexts = (([item], [result], [context_texts])
                                 if single else (item, result, context_texts))
@@ -753,6 +777,7 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
             cited = r.get('cited_ids') or []
             jobs.append((i, keys, d2l._rag_judge_messages(
                 q, answer, ctx, cited)))
+    failed = []
     for attempt in range(2):  # one retry, with the malformed reply shown
         if not jobs:
             break
@@ -761,6 +786,12 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
             max_new_tokens, batch_size)
         retry = []
         for (i, keys, messages), reply in zip(jobs, replies):
+            if isinstance(reply, BaseException):  # no reply: ask again
+                if attempt == 0:
+                    retry.append((i, keys, messages))
+                else:
+                    failed.append(reply)
+                continue
             parsed = (None if reply is None else
                       d2l._rag_parse_json(reply, keys))
             if parsed is None and attempt == 0:
@@ -770,6 +801,9 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
             for k in keys:
                 verdicts[i][k] = None if parsed is None else parsed[k]
         jobs = retry
+    if failed:
+        raise RuntimeError(f'{len(failed)} judge requests failed twice, '
+                           f'first: {failed[0]!r}') from failed[0]
     return verdicts[0] if single else verdicts
 
 def citation_metrics(results, items, corpus):
@@ -812,11 +846,18 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
     return 'ignored' if true(judge_out['faithful']) else 'unsupported'
 ```
 
-<!-- Placeholder (prose): the memory pre-flight before any model is loaded:
-the generation phase (Qwen3-4B with the KV cache of eight 3,300-token
-prompts, or four of 6,300 for budget-6000), the retrieval phase (the
-generator idle, the embedder and the reranker at work) and the judge, which
-is too large for one card and gets two. -->
+<!-- Placeholder (prose): the memory pre-flight before any model is loaded.
+Qwen3.5-9B's bf16 weights alone take 16.7 GiB, so the generator gets a whole
+24 GB card, not a 15 GiB slot; its KV cache is small, because only the eight
+full-attention layers keep one, and the 24 Gated DeltaNet layers keep a fixed
+state. The rows: generation at eight 3,300-token prompts, and four of 6,300
+for budget-6000 (twelve and eight ran out of memory on an RTX 4090 when this
+section was written: measured peaks 21.7 and 22.4 GiB at eight and four,
+about 1-2 GiB above the estimate, which leaves out the allocator's slack);
+the retrieval phase with the generator idle on the card (measured 19.2
+GiB); and the judge, too large for one card, which gets two. When the
+retrieval phase does not fit, the generator leaves the card while the
+retriever works and comes back to answer. -->
 
 ```{.python .input #rag-memory}
 %%tab pytorch
@@ -826,35 +867,49 @@ CFG = {m: transformers.AutoConfig.from_pretrained(m, revision=r)
                     (JUDGE['model'], JUDGE['revision'])]}
 mem = lambda m, n, b, **kw: {k: v / 2**30 for k, v in d2l.config_memory(
     CFG[m], n, b, **kw).items()}
-g8, g4 = mem(GEN, 3300, 8), mem(GEN, 6300, 4)
+B6 = CONFIGS['budget-6000']['batch']
+g8, g4 = mem(GEN, 3300, BATCH), mem(GEN, 6300, B6)
 e, r = mem(EMB, 512, 16), mem(RERANKER, 1024, 16)
 j = mem(JUDGE['model'], 3500, 16)  # 16 sequences in flight on the server
 table = pd.DataFrame({  # GiB
-    'generation, 3,300 x 8': (g8['weights'], g8['kv_cache'],
-                              g8['activations']),
-    'generation, 6,300 x 4': (g4['weights'], g4['kv_cache'],
-                              g4['activations']),
+    f'generation, 3,300 x {BATCH}': (g8['weights'], g8['kv_cache'] +
+                                     g8['recurrent_state'],
+                                     g8['activations']),
+    f'generation, 6,300 x {B6}': (g4['weights'], g4['kv_cache'] +
+                                  g4['recurrent_state'], g4['activations']),
     'retrieval phase': (g8['weights'] + e['weights'] + r['weights'], 0.0,
                         max(e['activations'], r['activations'])),
     'judge, FP8 weights': (j['params'], j['kv_cache'] + j['recurrent_state'],
                            0.0)}, index=['weights', 'KV and state',
                                          'activations']).T
 table['total'] = table.sum(axis=1)
-table['limit'] = ['15 GiB'] * 3 + ['two GPUs, 2 x 24 GB']
+table['limit'] = ['one 24 GB GPU'] * 3 + ['two GPUs, 2 x 24 GB']
 print(table.to_string(float_format='{:.1f}'.format))
 print('GiB; the judge stores one byte per weight (FP8), split over two '
       'cards, and vLLM reserves 90% of each card for its weights, cache and '
       'activations')
-assert table.total.iloc[:3].max() < 15
+assert table.total.iloc[:2].max() < CARD_GIB  # generation fits one card
+KEEP_GEN = table.total.iloc[2] < CARD_GIB  # the generator idles on the card
+print('retrieval phase: the generator stays on the card' if KEEP_GEN else
+      'retrieval phase: the generator leaves the card and comes back')
 ```
 
 <!-- Placeholder (prose): the baseline (sections, hybrid retrieval, top 5,
 rank order, a 3,000-token budget, the fixed prompt) on the 240 dev questions,
 with the closed-book arm (no passages) as the floor, the oracle arm (the gold
 chunks only) as the ceiling, and the baseline once more in other batches.
-Answers are regenerated only with D2L_RERUN; the normal run replays them and
-generates eight again, then checks the pipeline's batched generation against
-the plain decoding loop of chapter 18 on the same prompts. -->
+Token budgets count the corpus's tokens (the Qwen3 tokenizer of the embedder
+and of 19.4's chunks); the generator, Qwen3.5-9B, has a tokenizer of its own,
+so the printed prompt tokens are its count, not the budget's. Answers are
+regenerated only with D2L_RERUN; the normal run replays them, generates the
+registered run's first batch again, then checks the pipeline's batched
+generation against the plain decoding loop of chapter 18 on the same prompts
+(they agree token for token; in float32 a left-padded batch changes the
+last-position logits of Qwen3.5-2B, the same architecture, by about 1e-4, so
+the padding is masked in the linear-attention layers too). In bf16 the logits move by about one
+rounding step (0.25 at a scale of 25) with the batch's padding, which flips
+near-ties: the same prompt batched with other prompts can give another greedy
+answer. -->
 
 ```{.python .input #rag-baseline}
 %%tab pytorch
@@ -864,10 +919,12 @@ CHUNKS = {c['id']: c for R in RET.values() for c in R.corpus.chunks}
 _LOADED = {}
 
 def generator():
-    """The generator and its tokenizer, loaded on first use."""
+    """The generator and its tokenizer, loaded on first use, on the first
+    GPU (never split over two visible cards)."""
     if not _LOADED:
-        _LOADED['gen'] = d2l.load_hf(GEN, REV[GEN], dtype=torch.bfloat16
-                                     if GPU else torch.float32)
+        _LOADED['gen'] = d2l.load_hf(
+            GEN, REV[GEN], dtype=torch.bfloat16 if GPU else torch.float32,
+            device_map={'': 0} if GPU else 'auto')
     return _LOADED['gen']
 
 def free_generator():
@@ -884,8 +941,12 @@ def run_config(name, items, budgets=None, threshold=None):
     if c['shuffle'] is not None:  # other batches for the same prompts
         random.Random(c['shuffle']).shuffle(order)
     items = [items[i] for i in order]
-    pipe = d2l.RAGPipeline(
-        RET[c['chunking']], *generator(), k=c['k'], order=c['order'],
+    if not (KEEP_GEN or c['rewrite']):  # retrieval without the generator
+        free_generator()
+    assert KEEP_GEN or not c['rewrite'], 'the rewriter needs the card too'
+    pipe = d2l.RAGPipeline(  # the generator joins when it is needed
+        RET[c['chunking']], *(generator() if c['rewrite'] else (None, None)),
+        k=c['k'], order=c['order'],
         budget_tokens=BUDGET if c['budget'] == 'base' else c['budget'],
         rewrite=c['rewrite'], rerank_k=c['rerank_k'], depth=DEPTH,
         max_new_tokens=c['max_new_tokens'], prompt=c['prompt'],
@@ -901,6 +962,7 @@ def run_config(name, items, budgets=None, threshold=None):
             if q['answerable']:
                 p['context'] = d2l.assemble_context(
                     gold_context(q), BUDGET, k=c['k'])[0]
+    pipe.model, pipe.tokenizer = generator()
     res = pipe.answer(items, batch_size=c['batch'], contexts=ctx)
     recs = [dict(config=name, split=q['split'], settings=settings(name),
                  **{k: v for k, v in r._asdict().items() if k != 'question'})
@@ -918,30 +980,48 @@ def save_gens(name, recs):
     d2l.lm_save_table(ARTIFACTS[name][1], pd.DataFrame(recs),
                       on=['config', 'qid'], key=ARTIFACTS[name][0])
 
+def answer_key(r):
+    """What a verdict depends on: the answer, its context and citations
+    (a regenerated answer needs a new verdict)."""
+    return hashlib.sha1(json.dumps([r['answer'], list(r['context_ids']), [
+        int(n) for n in r['cited_ids']]]).encode()).hexdigest()[:16]
+
 def load_gens():
-    """Every answer made so far, one row per (configuration, question);
-    each configuration's settings are checked against this notebook's."""
+    """Every answer made so far, one row per (configuration, question),
+    with the answer_sha its verdict must carry; each configuration's
+    settings are checked against this notebook's."""
     df = d2l._rag_records([run_path(n) for n in ('rag-gen-base',
                                                  'rag-gen-stages',
                                                  'rag-gen-fix')])
     for name, s in (df.groupby('config')['settings'] if len(df) else []):
         assert (s == settings(name)).all(), f'{name}: other settings'
-    return df
+    return df.assign(answer_sha=[answer_key(r)
+                                 for r in df.to_dict('records')])
+
+def run_configs(names, items, **kw):
+    """run_config for each name, with its minutes and peak memory."""
+    recs = []
+    for name in names:
+        t = time.time()
+        recs += run_config(name, items, **kw)
+        print(f'{name}: {(time.time() - t) / 60:.1f} min, {d2l.lm_peak()}')
+    return recs
 
 if 'rag-gen-base' in RERUN:
-    t = time.time()
-    save_gens('rag-gen-base', [r for name in ('closed', 'base', 'oracle',
-                                              'base-repeat')
-                               for r in run_config(name, DEV)])
-    print(f'rag-gen-base regenerated in {(time.time() - t) / 60:.1f} min')
+    save_gens('rag-gen-base', run_configs(
+        ['closed', 'base', 'oracle', 'base-repeat'], DEV))
 GENS = load_gens()
-print(GENS.groupby(['split', 'config'], sort=False).agg(
-    answers=('qid', 'size'), prompt_tokens=('n_prompt_tokens', 'mean'),
-    new_tokens=('n_new_tokens', 'mean')).round(0).astype(int))
+print(GENS.assign(context_tokens=[sum(CHUNKS[i]['n_tokens'] for i in c)
+                                  for c in GENS.context_ids])
+      .groupby(['split', 'config'], sort=False).agg(
+          answers=('qid', 'size'), context_tokens=('context_tokens', 'mean'),
+          prompt_tokens=('n_prompt_tokens', 'mean'),
+          new_tokens=('n_new_tokens', 'mean')).round(0).astype(int))
 
-LIVE = DEV.subset(N_LIVE, seed=0)  # generated again, then checked
-live = run_config('base', LIVE)
-ref = GENS[GENS.config == 'base'].set_index('qid').answer
+LIVE = d2l.BookQA(list(DEV)[:N_LIVE], 'dev')  # the registered run's first
+live = run_config('base', LIVE)               # batch, generated again
+print(f'live generation: {d2l.lm_peak()}')
+ref = GENS[GENS.config == 'base'].set_index('qid')
 tok = generator()[1]  # no global name for the model: freeing it frees it
 
 def prefix_share(a, b):
@@ -951,19 +1031,24 @@ def prefix_share(a, b):
              min(len(x), len(y)))
     return n / max(len(x), len(y), 1)
 
-same = [prefix_share(r['answer'], ref[r['qid']]) for r in live]
-print(f'{N_LIVE} base answers generated again: {sum(s == 1 for s in same)} '
-      f'identical to the registered run; tokens agreeing before the first '
-      f'difference: {np.mean(same):.3f}')
+same = [prefix_share(r['answer'], ref.answer[r['qid']]) for r in live]
+ctx = sum(r['context_ids'] == list(ref.context_ids[r['qid']]) for r in live)
+print(f'{N_LIVE} base answers generated again: {ctx} with the registered '
+      f'context, {sum(s == 1 for s in same)} identical answers; tokens '
+      f'agreeing before the first difference: {np.mean(same):.3f}')
 oracle = d2l.generate(*generator(), [d2l.rag_prompt(
     q['question'], [CHUNKS[i] for i in r['context_ids']])
     for q, r in zip(LIVE, live)], chat=True, enable_thinking=False,
     max_new_tokens=MAX_NEW, batch_size=BATCH)
 same = [prefix_share(r['answer'], g.text.strip())
         for r, g in zip(live, oracle)]
+agree = sum(s == 1 for s in same) >= N_LIVE - 1 and np.mean(same) >= 0.95
 print(f'the same prompts through d2l.generate: {sum(s == 1 for s in same)} '
       f'of {N_LIVE} identical; tokens agreeing before the first difference:'
-      f' {np.mean(same):.3f}')
+      f' {np.mean(same):.3f}: ' + ('the two loops agree' if agree else
+                                  'a padding or logits_to_keep bug'))
+assert agree, 'batched generation differs from the plain decoding loop'
+free_generator()  # the card goes to the retriever and the judge
 ```
 
 <!-- Placeholder (prose): judging. A regeneration starts the judge server
@@ -994,12 +1079,6 @@ def judge_client(backend, cache, mode='replay', url='http://127.0.0.1/v1'):
     return d2l.openrouter_api('qwen/qwen3.8-27b', 'deepinfra/bf16',
                               listing=listing, cache=cache, mode=mode,
                               cost_cap_usd=15.0, reasoning={'enabled': True})
-
-def answer_key(r):
-    """What a verdict depends on: the answer, its context and citations
-    (a regenerated answer needs a new verdict)."""
-    return hashlib.sha1(json.dumps([r['answer'], list(r['context_ids']), [
-        int(n) for n in r['cited_ids']]]).encode()).hexdigest()[:16]
 
 def judge_records(client, recs, concurrency, backend):
     """Judgment records of answer records (dicts)."""
@@ -1035,8 +1114,7 @@ if 'rag-judge' in RERUN:
     print(f'judge backend: {backend}')
     old = load_judgments(JUD_FILE if os.path.exists(JUD_FILE) else
                          d2l.lm_registered(ARTIFACTS['rag-judge'][0]))
-    key = {(r['config'], r['qid']): answer_key(r)
-           for r in GENS.to_dict('records')}
+    key = dict(zip(zip(GENS.config, GENS.qid), GENS.answer_sha))
     rows = [r for r in old.to_dict('records')  # verdicts on these answers
             if key.get((r['config'], r['qid'])) == r.get('answer_sha')]
     print(f'{len(old) - len(rows)} verdicts on answers no longer present')
@@ -1051,6 +1129,8 @@ if 'rag-judge' in RERUN:
         client = judge_client(backend, os.path.join(REC_DIR, 'judge.jsonl'),
                               'record', url)
         last = 0.0  # a chunk starts only if it should end within budget
+        # a request that fails twice raises: the chunks saved so far stay,
+        # the recorded replies too, and the next run resumes
         while todo and time.time() - T0 + last < 60 * JUDGE_MINUTES:
             t = time.time()
             rows += judge_records(client, todo[:CHUNK], CONCURRENCY, backend)
@@ -1087,12 +1167,14 @@ if 'rag-judge' in RERUN:
                       lambda p: d2l.lm_write_zip(p, members))
     print(f'rag-judge: {(time.time() - T0) / 60:.1f} min since the start')
 JUD = load_judgments(JUD_FILE)
+judged = JUD[JUD.concurrency == CONCURRENCY].merge(  # on these answers
+    GENS[['config', 'qid', 'answer_sha']], on=['config', 'qid',
+                                               'answer_sha'])
 cache = (REC_DIR if 'rag-judge' in RERUN else
          d2l.lm_registered(ARTIFACTS['rag-judge-cache'][0]) and
          d2l.api_unpack(ARTIFACTS['rag-judge-cache'][0]))
-if len(JUD) and cache:  # eight base judgments replayed from the cache
-    first = JUD[(JUD.config == 'base') & (JUD.concurrency == CONCURRENCY)
-                ].sort_values('qid').head(8)
+if len(judged) and cache:  # eight base judgments replayed from the cache
+    first = judged[judged.config == 'base'].sort_values('qid').head(8)
     recs = GENS.set_index(['config', 'qid']).loc[list(zip(
         first.config, first.qid))].reset_index().to_dict('records')
     again = pd.DataFrame(judge_records(
@@ -1102,7 +1184,6 @@ if len(JUD) and cache:  # eight base judgments replayed from the cache
     assert (again[VERDICTS].astype(str).values ==
             first[VERDICTS].astype(str).values).all()
     print('8 base judgments replayed from the judge cache: identical')
-judged = JUD[JUD.concurrency == CONCURRENCY]
 print(pd.DataFrame({
     'answers': GENS.groupby('config').size(),
     'judged': judged.groupby('config').size(),
@@ -1116,7 +1197,9 @@ identical to the recorded ones) against each frontier labeller and against
 their consensus, the labellers' agreement with each other, the old judge's
 row (the leniency the change fixed), and how often a verdict changes when the
 same answers are judged at another concurrency. These labels come from
-models, not from people. -->
+models, not from people, and they were made on the answers of the earlier
+generator, Qwen3-4B (re-labelling answers of Qwen3.5-9B is a paid call the
+author has not approved yet). -->
 
 ```{.python .input #rag-judge-validation}
 %%tab pytorch
@@ -1176,13 +1259,15 @@ print(f'the old judge (Qwen3.5-4B, thinking off) on correct: agreement '
       f'{oc["k_hi"]:.2f}]; it passes {old["calibration"]["false_correct"][0]}'
       f' of the {old["calibration"]["false_correct"][1]} answers the '
       'labellers call wrong')
-(acc, _, _), (_, klo, _) = agreement(*zip(*[
-    (x['correct'] is True, lab[p['qid']]['correct']) for p, x in zip(cal, v)
-    if lab[p['qid']]['correct'] is not None]))
-print(f'C0 on correct against the consensus: agreement {acc:.2f}, kappa '
-      f'interval from {klo:.2f}: ' + ('passes (>= 0.8, above 0.4)'
-      if acc >= 0.8 and klo > 0.4 else 'fails: judge-based claims carry '
-      'the agreement'))
+for k in ('correct', 'faithful'):  # the claims that rest on the judge
+    (acc, _, _), (_, klo, _) = agreement(*zip(*[
+        (x[k] is True, lab[p['qid']][k]) for p, x in zip(cal, v)
+        if lab[p['qid']][k] is not None]))
+    print(f'C0 on {k} against the consensus: agreement {acc:.2f}, kappa '
+          f'interval from {klo:.2f}: ' + ('passes (>= 0.8, above 0.4)'
+          if acc >= 0.8 and klo > 0.4 else 'fails: claims on it carry the '
+          'agreement'))
+print('the calibration answers come from the earlier generator, Qwen3-4B')
 if len(JUD) and 2 * CONCURRENCY in JUD.concurrency.values:
     both = JUD[JUD.config == 'base'].groupby('qid').filter(
         lambda g: g.concurrency.nunique() == 2)
@@ -1199,8 +1284,14 @@ retrieval recall and coverage, then accuracy, faithfulness, citation
 precision and recall, abstention on unanswerable and on answerable items;
 the floor (closed book) and the ceiling (oracle context) as paired
 differences; closed-book accuracy on book-specific items; accuracy with and
-without a relevant chunk in the context; and how many answers change when
-the same prompts are batched differently. -->
+without a relevant chunk in the context, and split by this section's own
+closed-book arm (the question set's closed_book_correct flag came from
+Qwen3-4B; name that model if the flag is mentioned at all); and the batching
+floor: base-repeat answers the same questions in other batches, so its
+accuracy difference to the baseline is what re-batching alone does, and how
+many answers change (counted where the context is unchanged, since the query
+embeddings are batched differently too). A stage change has to move
+accuracy by more than that. -->
 
 ```{.python .input #rag-baseline-report}
 %%tab pytorch
@@ -1236,26 +1327,25 @@ def ci(a, b=None, cluster=None):
 
 def boot(a, b=None, cluster=None):
     """Mean of per-question scores a (or of a - b, paired), NaNs dropped,
-    with a 95% interval that resamples documents; marked * below 100
-    questions or 30 documents, where questions are resampled instead
-    (and a paired difference gets a document-level sign-flip p)."""
+    with a 95% interval that resamples documents, marked * below 100
+    questions; below 30 documents questions are resampled instead, marked
+    + (and a paired difference gets a document-level sign-flip p)."""
     r, by_doc, a, b, cluster = ci(a, b, cluster)
     if r is None:
         return 'n/a'
     f = '.3f' if b is None else '+.3f'
     out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
-    if by_doc and len(a) >= 100:
-        return out
-    if by_doc or b is None:
-        return out + '*'
+    if by_doc:
+        return out + ('' if len(a) >= 100 else '*')
+    if b is None:
+        return out + '+'
     p = signflip_p(a - b, cluster)
-    return out + f'* (sign-flip p {p:.3f})'
+    return out + f'+ (sign-flip p {p:.3f})'
 
 def scores(config, split='dev'):
     """One row per judged answer of a configuration on a split, with
     per-question scores (NaN where a score does not apply)."""
     g = GENS[(GENS.config == config) & (GENS.split == split)]
-    g = g.assign(answer_sha=[answer_key(r) for r in g.to_dict('records')])
     j = JUD[JUD.concurrency == CONCURRENCY][['config', 'qid', 'answer_sha']
                                             + VERDICTS]
     df = g.merge(j, on=['config', 'qid', 'answer_sha']).sort_values(
@@ -1274,8 +1364,6 @@ def scores(config, split='dev'):
         'answerable': ans, 'type': [q['type'] for q in items],
         'book_specific': ['general_knowledge' not in q['flags']
                           for q in items],
-        'closed_book_correct': [bool(q['closed_book_correct'])
-                                for q in items],
         'accuracy': [float(v is not None and v == v and bool(v))
                      for v in df.correct],
         'faithful': np.where(answered, flag('faithful'), np.nan),
@@ -1304,12 +1392,23 @@ def paired(a, b, col, mask=None):
     return boot(m[f'{col}_a'], m[f'{col}_b'], m.cluster_a)
 
 def ready(*configs, split='dev'):
-    """Whether every configuration has judged answers on split; says
-    which do not."""
-    missing = [c for c in configs if not len(JUD) or not (
-        (JUD.config == c) & JUD.qid.str.startswith(split)).any()]
+    """Whether every answer of each configuration on split carries a
+    verdict on that very answer (answer_sha); says which do not. Partial
+    or stale judgments are never reported: between judging runs a
+    configuration is left out, and a normal run stops on one."""
+    k = JUD[JUD.concurrency == CONCURRENCY]  # not judged: GENS may be new
+    j = set(zip(k.config, k.qid, k.answer_sha))
+    missing = {}
+    for c in configs:
+        g = GENS[(GENS.config == c) & (GENS.split == split)]
+        n = sum(k not in j for k in zip(g.config, g.qid, g.answer_sha))
+        if n or not len(g):
+            missing[c] = (f'{n} of {len(g)} answers lack a verdict' if len(g)
+                          else 'no answers')
     if missing:
-        print(f'not judged yet on {split}: {", ".join(missing)}')
+        print(f'not ready on {split}: {missing}')
+        assert RERUN or all(m == 'no answers' for m in missing.values()), (
+            'registered answers without verdicts: register the judge run')
     return not missing
 
 S = {c: scores(c) for c in ('closed', 'base', 'oracle', 'base-repeat')
@@ -1335,7 +1434,9 @@ if len(S) == 4:
         ('oracle - base', 'answerable', paired(S['oracle'], B, 'accuracy',
                                                ans)),
         ('base - closed', 'book-specific, answerable',
-         paired(B, S['closed'], 'accuracy', spec))],
+         paired(B, S['closed'], 'accuracy', spec)),
+        ('base-repeat - base', 'all (other batches only)',
+         paired(S['base-repeat'], B, 'accuracy'))],
         columns=['difference', 'questions', 'accuracy [95% CI]'])
           .to_string(index=False))
     C = S['closed'][S['closed'].answerable & S['closed'].book_specific]
@@ -1343,19 +1444,27 @@ if len(S) == 4:
     print(f'book-specific answerable questions ({len(C)}): closed book '
           f'{boot(C.accuracy, cluster=C.cluster)}, '
           f'base {boot(Bs.accuracy, cluster=Bs.cluster)}')
-    A = B[B.answerable]
+    A = B[B.answerable].merge(S['closed'][['qid', 'accuracy']], on='qid',
+                              suffixes=('', '_closed'))
     for name, m in (('a relevant chunk in the context', A.hit == 1),
                     ('no relevant chunk in the context', A.hit == 0),
-                    ('closed-book correct (lm-book-qa-v2 flag)',
-                     A.closed_book_correct),
-                    ('closed-book wrong', ~A.closed_book_correct)):
+                    ('closed-book arm correct', A.accuracy_closed == 1),
+                    ('closed-book arm wrong', A.accuracy_closed == 0)):
         print(f'base accuracy, {name} ({m.sum()}): '
               f'{boot(A.accuracy[m], cluster=A.cluster[m])}')
-    rp = B.merge(S['base-repeat'], on='qid')
-    print(f'base and base-repeat (same prompts, other batches): '
-          f'{(rp.answer_x != rp.answer_y).sum()} of {len(rp)} answers differ')
-print('* fewer than 100 questions or 30 documents: questions resampled, an '
-      'interval that is likely too narrow')
+if {'base', 'base-repeat'} <= set(GENS.config):  # answers, not verdicts
+    b, r = (GENS[(GENS.config == c) & (GENS.split == 'dev')].set_index('qid')
+            for c in ('base', 'base-repeat'))
+    r = r.loc[b.index]
+    same_ctx = b.context_ids.map(tuple) == r.context_ids.map(tuple)
+    differ = b.answer != r.answer
+    print(f'base and base-repeat (same questions, other batches): '
+          f'{(~same_ctx).sum()} of {len(b)} contexts differ (query '
+          f'embeddings batched differently); with the same context '
+          f'{differ[same_ctx].sum()} of {same_ctx.sum()} answers differ')
+print('* fewer than 100 questions (documents resampled); + fewer than 30 '
+      'documents: questions resampled, an interval that is likely too '
+      'narrow')
 ```
 
 <!-- Placeholder (prose): the failure the opening asked about: a question
@@ -1365,8 +1474,10 @@ wrong. -->
 ```{.python .input #rag-opening-item}
 %%tab pytorch
 if 'base' in S:
-    B = S['base']
-    row = B[(B.hit == 1) & (B.accuracy == 0)].iloc[0]
+    B = S['base']  # judged wrong, not merely without a verdict
+    wrong = B.verdicts.map(lambda v: v['correct'] is not None
+                           and not bool(v['correct']))
+    row = B[(B.hit == 1) & wrong].iloc[0]
     q, rec = ITEMS[row.qid], row.record
     rel = d2l.gold_chunk_ids(q, CORPUS)
     rank = next(i for i, c in enumerate(rec['ranked_ids'], 1) if c in rel)
@@ -1408,8 +1519,10 @@ print(pd.DataFrame({T: {'sections': boot(COV['sec512', T], cluster=cl),
 ```
 
 <!-- Placeholder (prose): one stage at a time, each a paired difference
-against the baseline on the same questions: fixed windows given the tokens
-the baseline's context used; the generator's rewritten query with the
+against the baseline on the same questions: fixed windows given at most the
+tokens the baseline's context used (packing stops before the window that
+would pass them, so up to one window less; the printed prompt tokens show
+it); the generator's rewritten query with the
 reranker on the fused top 50; the context in reverse order; a smaller and a
 larger budget filled in rank order. Which changes move accuracy outside
 their paired intervals? -->
@@ -1433,10 +1546,8 @@ if 'rag-gen-stages' in RERUN:
     tokens = context_tokens(GENS[(GENS.config == 'base') &
                                  (GENS.split == 'dev')].to_dict('records'))
     for name in names:
-        t = time.time()
-        recs += run_config(name, DEV, budgets=tokens if CONFIGS[name][
+        recs += run_configs([name], DEV, budgets=tokens if CONFIGS[name][
             'budget'] == 'base' else None)
-        print(f'{name}: {(time.time() - t) / 60:.1f} min')
     save_gens('rag-gen-stages', recs)
     GENS = load_gens()
 rows, BEST = [], None
@@ -1457,9 +1568,10 @@ for c in STAGES:
 if rows:
     T = pd.DataFrame(rows)
     print(T.drop(columns=['delta', 'excludes 0']).to_string(index=False))
-    BEST = T.configuration[T.delta.idxmax()]  # the rule of the fix step
-    print(f'intervals excluding 0: {list(T.configuration[T["excludes 0"]])}'
-          f'; the largest dev gain: {BEST}')
+    print(f'intervals excluding 0: {list(T.configuration[T["excludes 0"]])}')
+if len(rows) == len(STAGES):  # the rule of the fix step, on every stage
+    BEST = T.configuration[T.delta.idxmax()]
+    print(f'the largest dev gain: {BEST}')
 ```
 
 <!-- Placeholder (prose, ## Failures by Stage): the taxonomy and the order
@@ -1554,7 +1666,12 @@ if ready('base'):
 <!-- Placeholder (prose): the fix of the largest class, applied by rule (no
 choice by hand) on dev, then a single read of test: the baseline, the fix
 and the stage change with the largest dev gain. The dev gain is optimistic,
-because the fix was chosen from dev failures; test is the confirmation. -->
+because the fix was chosen from dev failures; test is the confirmation. The
+cell prints the rule test was read with (fix, stage, threshold). Close of the
+## with one paragraph, "beyond these fixes": the families of RAG improvement
+this section does not measure (query transformation, iterative and adaptive
+retrieval, retrieval learned with reinforcement learning, context
+compression, structured indexes), pointing to sec_lm_encoders_fr. -->
 
 ```{.python .input #rag-fix}
 %%tab pytorch
@@ -1566,7 +1683,7 @@ def tune_threshold():
     un = [q for q in QA['train'] if not q['answerable']]
     an = d2l.BookQA([q for q in QA['train'] if q['answerable']],
                     'train').subset(len(un), seed=0)
-    pipe = d2l.RAGPipeline(RET['sections'], *generator(), k=K,
+    pipe = d2l.RAGPipeline(RET['sections'], None, None, k=K,  # retrieval
                            budget_tokens=BUDGET, depth=DEPTH,
                            abstain_below=0.0)
     s = np.array([p['top_score'] for p in pipe.prepare(un + list(an))])
@@ -1580,22 +1697,32 @@ def tune_threshold():
 
 if 'rag-gen-fix' in RERUN:
     assert FIX, 'the fix needs the judged base run (rag-judge)'
+    assert BEST, 'test is read once, with the best stage: judge every stage'
     t = time.time()
     thr = tune_threshold() if LARGEST == 'false_answer' else None
     recs = run_config(FIX, DEV, threshold=thr)
     base = run_config('base', TEST)  # the only reads of test in the chapter
     recs += base
-    for name in [FIX] + ([BEST] if BEST and CONFIGS[BEST] != CONFIGS[FIX]
-                         else []):
+    for name in [FIX] + ([BEST] if CONFIGS[BEST] != CONFIGS[FIX] else []):
         recs += run_config(name, TEST, budgets=context_tokens(base) if
                            CONFIGS[name]['budget'] == 'base' else None,
                            threshold=thr if name == FIX else None)
-    save_gens('rag-gen-fix', recs)
+    rule = json.dumps(dict(largest=LARGEST, fix=FIX, best=BEST,
+                           threshold=thr))  # what test was read with
+    save_gens('rag-gen-fix', [dict(r, rule=rule) for r in recs])
     GENS = load_gens()
-    print(f'rag-gen-fix regenerated in {(time.time() - t) / 60:.1f} min')
-ran = sorted(set(GENS.config[GENS.split == 'test']) - {'base', FIX})
-if ran and ran != [c for c in [BEST] if c and c != FIX]:
-    print(f'note: test was answered with {ran}, the rule now picks {BEST}')
+    print(f'rag-gen-fix regenerated in {(time.time() - t) / 60:.1f} min, '
+          f'{d2l.lm_peak()}')
+rules = set(GENS.rule.dropna()) if 'rule' in GENS else set()
+if rules:
+    RULE = json.loads(rules.pop())
+    print(f'test was read with the fix {RULE["fix"]} and the stage '
+          f'{RULE["best"]}' + ('' if RULE['threshold'] is None else
+                              f', abstaining below a reranker score of '
+                              f'{RULE["threshold"]:.3f} (tuned on train)'))
+    assert not rules and (RERUN or (RULE['fix'], RULE['best']) == (
+        FIX, BEST)), 'the rule now picks another fix or stage'
+
 if FIX and ready('base', FIX):
     rows = []
     for split in ('dev', 'test'):
@@ -1615,10 +1742,12 @@ if FIX and ready('base', FIX):
 ```
 
 <!-- Placeholder (prose): the plot below: on the left the share of dev
-questions in each failure class before and after the fix; on the right the
-stage waterfall of accuracy and citation precision on dev (closed book,
+questions in each failure class before and after the fix; on the right
+accuracy and citation precision on dev of four configurations (closed book,
 baseline, the best stage, the fix) with the test points of the baseline, the
-best stage and the fix. -->
+best stage and the fix. Not a cumulative chain: the best stage and the fix
+each change one thing in the baseline, and the fix does not include the best
+stage's change; the caption says so. -->
 
 ```{.python .input #rag-failure-plot}
 %%tab pytorch
@@ -1646,7 +1775,7 @@ if FIX and ready('closed', 'base', FIX):
         xs = [i for i, c in enumerate(steps) if c in test]
         marks['test'][1][label] = (xs, [test[steps[i]][m].mean()
                                         for i in xs])
-    d2l.plot_intervals(steps, waterfall, 'pipeline', 'dev score',
+    d2l.plot_intervals(steps, waterfall, 'configuration', 'dev score',
                        axes=axes[1], marks=marks)
 ```
 

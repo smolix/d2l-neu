@@ -274,6 +274,13 @@ FULL_CARD_NOTEBOOKS = {
     # encoder, the bf16 checkpoint, Qwen3-1.7B and score_choices' fp32 output
     # layer together (about 7 GiB), above one slot's headroom.
     "chapter_lm-encoders/bert.ipynb": 1,
+    # 19.5's generator is Qwen3.5-9B in bf16: 16.7 GiB of weights, measured
+    # peaks of 21.7 GiB (eight 3,300-token prompts) and 22.4 GiB (four of
+    # 6,300) on an RTX 4090. The normal build generates eight answers again,
+    # so it needs a whole card too. Its judging runs (D2L_RERUN=rag-judge)
+    # serve Qwen3.8-27B with vLLM over two whole cards and are launched by
+    # hand with CUDA_VISIBLE_DEVICES set, not through the scheduler.
+    "chapter_lm-encoders/rag.ipynb": 1,
 }
 
 # rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for
@@ -397,6 +404,11 @@ NOTEBOOK_ENV = {
     # its own longest pair) and the decoder's long prompts follow each other
     # in one process; expandable segments keep the cached blocks reusable.
     ("pytorch", "chapter_lm-encoders/bert.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    # 19.5: Qwen3.5-9B generates with prompts of changing length within 1-2
+    # GiB of a 24 GB card's limit; cached fixed-size blocks would not fit.
+    ("pytorch", "chapter_lm-encoders/rag.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
     ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): {

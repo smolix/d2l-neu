@@ -228,13 +228,17 @@ class StubEndpointJudge(unittest.TestCase):
     """rag_judge with a d2l.ChatAPI-like judge (an object with achat):
     thinking on by default, greedy requests with max_tokens 3,000 and
     seed 0, the verdict read after '</think>', a reply cut off at the
-    token limit and a failed request treated as malformed (one retry)."""
+    token limit treated as malformed (one retry with the reply shown), a
+    failed request asked again unchanged, and a request that fails twice
+    raised, never stored as a verdict."""
     def test_endpoint(self):
         R = collections.namedtuple('R', 'text finish_reason')
         script = {
             'A': [R('<think>long</think>{"correct": true}', 'stop')],
             'B': [R('', 'length'), R('{"correct": false}', 'stop')],
-            'C': [RuntimeError('503'), RuntimeError('503')]}
+            'C': [RuntimeError('503'), R('{"correct": true}', 'stop')],
+            'D': [RuntimeError('503'), ConnectionError('refused')],
+            'E': [R('{"correct": true}', 'stop')]}
         sent = []
 
         class Stub:
@@ -251,13 +255,19 @@ class StubEndpointJudge(unittest.TestCase):
         v = d2l.rag_judge(Stub(), None, [q, q, q],
                           [dict(answer=a) for a in 'ABC'], [[], [], []],
                           batch_size=2)
-        self.assertEqual([x['correct'] for x in v], [True, False, None])
+        self.assertEqual([x['correct'] for x in v], [True, False, True])
         self.assertEqual(len(sent), 5)  # three, then B and C again
         self.assertEqual(sent[0][1], dict(max_tokens=3000, temperature=0,
                                           seed=0))
         retry = [m for m, _ in sent[3:]]
         self.assertEqual(retry[0][-2], {'role': 'assistant', 'content': ''})
         self.assertEqual(retry[0][-1]['content'], d2l.RAG_JUDGE_V1['retry'])
+        self.assertEqual(retry[1], sent[2][0])  # C: the same request again
+        with self.assertRaisesRegex(RuntimeError, '1 judge requests failed '
+                                    "twice, first: ConnectionError"):
+            d2l.rag_judge(Stub(), None, [q, q], [dict(answer='E'),
+                                                 dict(answer='D')],
+                          [[], []])
 
     def test_model_thinking(self):
         """A Transformers judge with thinking=True: enable_thinking is

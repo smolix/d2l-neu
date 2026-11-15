@@ -1,54 +1,33 @@
 # Word Embeddings
 :label:`sec_lm_word_embeddings`
 
-<!-- Author brief, copied verbatim from the Language Models part plan
-(docs/llm/language_models_part_plan.md, "2.1 Word Embeddings · T1").
-Blueprint: docs/llm/blueprints/ch02_encoders.md section 2.1.
-The plan is a specification, not book text; this comment is replaced
-when the section is written.
+The language model of :numref:`sec_gpt` begins with a table that holds one
+row of numbers for every token in its vocabulary. Gradient descent filled
+that table along with everything else, and we never asked what its rows
+mean. Here is a question we could have asked. *Physician* and *doctor* are
+different tokens, and nothing in the training said that they are
+interchangeable. Do their rows end up close anyway?
 
-**Idea:** A word vector is a factorization of co-occurrence statistics.
-**Opening:** The reader has seen the token-embedding table of `sec_gpt` trained end to end and never asked what its rows mean. Two words that share contexts ("physician" and "doctor") sit near each other in that table. The section builds the simplest model whose rows are explained by counts, verifies the explanation numerically, and closes on the one thing a static vector cannot do: separate two meanings of one word.
-**Teaches:**
-- Skip-gram with negative sampling: the loss over center and context scores with K noise words, the 0.75-power noise distribution, subsampling of frequent words; the labels `subsec_negative-sampling` and `sec_word2vec_data` are defined here because `sec_mdl-mi-estimation` cites them.
-- CBOW (the context predicts the center word) and fastText's character n-grams (a word's vector is the sum of its n-gram vectors, so an unseen word still gets one; 3.2's quality classifier is a fastText model) in one sentence each.
-- The optimum as shifted pointwise mutual information, stated and checked numerically (the derivation is the exercise in `sec_mdl-mi-estimation`); truncated SVD of the positive PMI matrix as the closed-form counterpart; GloVe as weighted least squares on log co-occurrences, in one sentence with its one difference.
-- Analogies as a cosine query with the inputs excluded, and their caveats; bias as a description of the corpus, and why projection hides rather than removes it; tied input and output tables.
-- Static vectors against the input table of a language model: one point per word type, and what a contextual encoder adds (2.2).
-- Closing paragraph `subsec_lm_categorical_embeddings`: an embedding table for any categorical variable, the target of a pointer `sec_pandas` may add.
-**Derivation:** none (the shifted-PMI result is stated; its proof is `ex_mdl-mutual-information-negative-sampling-pmi`). The numerical check: on a 4-word toy corpus, compute the count matrix, the PMI shifted by log K, and the SGNS scores after convergence, and show they agree.
-**Notebook:**
-1. Build a word-level slice of WikiText-103 from the download `d2l.WikiText103` uses (whitespace tokens, minimum count 10), with `d2l.Vocab`; count co-occurrences in a window of 5 as a sparse matrix.
-2. Train SGNS with 5 negatives for 5 epochs (3 seeds), compute SVD of positive PMI at dimension 100, and train GloVe with the same window; evaluate Spearman correlation with human similarity judgments on the covered pairs of two similarity sets (coverage printed).
-3. Verify the shifted-PMI relation on the toy corpus of the derivation and, approximately, on the slice (scatter of SGNS scores against shifted PMI for frequent pairs).
-4. Inspect nearest neighbours of a few words in Qwen3-0.6B's token-embedding table (loaded through `d2l.load_qwen3`) and in the SGNS table; show one word with two meanings sharing one vector.
-5. Claim that survives noise: all three methods correlate with human judgments alike (within the pair bootstrap and the seed range), and the choice of noise exponent and subsampling moves the correlation by as much as the choice of method. No ordering is asserted.
-6. Reused pieces: `d2l.Vocab`, `d2l.WikiText103`'s download, `d2l.load_qwen3`; new `d2l.sgns_loss`, `d2l.ppmi`, `d2l.cooccurrence_counts`, `d2l.spearman_eval`, `d2l.nearest_neighbors`.
-**Figures:** `fig_lm_sgns_pmi` (the window, the center and context tables, the noise draws, and the PMI matrix that the optimum factorizes).
-**Restate / forward:** `subsec_mdl-pmi` (PMI measures how far a pair's co-occurrence exceeds independence); `sec_mdl-svd-low-rank` (the truncated SVD is the best low-rank approximation in Frobenius norm, `subsec_mdl-eckart-young`). Forward: 2.2 (one vector per token in context).
-**Exercises:** 5 to 7. Load-bearing: derive the effect of subsampling with threshold t on the expected count of a word of frequency f and on the PMI of pairs involving it (derive); measure analogy accuracy against dimension 25 to 300 with and without excluding the query words (measure); check numerically that the SGNS optimum with free scores on the toy corpus equals PMI minus log K (check); open: fit a 32-dimensional embedding table for a categorical column of a tabular dataset and compare with one-hot features under the same linear model.
-**Writer notes:**
-- The corpus is a word-level WikiText-103 slice, not Penn Treebank; the exercise owner is `sec_mdl-mi-estimation`, not `sec_mdl-mutual-information`; the closing paragraph `subsec_lm_categorical_embeddings` belongs to this section. `d2l.WikiText103` (defined in `chapter_optimization/adam.md`) yields byte-level data; 2.1 reads the same downloaded parquet as words. Cap the slice (a few million words) so SGNS trains in minutes on CPU; print the vocabulary size and the coverage of the similarity pairs, which is far better than PTB's (the blueprint measured 217 of 353 WordSim pairs covered under PTB's 6,719-type vocabulary).
-- Legacy names: `d2l.DATA_HUB['ptb']` moves to `lstm.md`; the retiring `read_ptb`, `load_data_ptb`, `get_negatives`, `batchify` helpers are not kept unless an exercise needs them; `d2l.TokenEmbedding` with the `glove.6b.50d` and `glove.6b.100d` keys stays for the analogy and bias cells; state dropped names in the migration note. `d2l.TokenEmbedding` is defined in the retiring `similarity-analogy.md`: define it in this section under the same name and signature so it survives the deletion. Hierarchical softmax (the retiring `approx-training.md`) is not carried over. Mine `docs/exercise-catalog/17-nlp-pretraining-a.md` for exercises.
-- The two labels: define `subsec_negative-sampling` on the `##` subsection that states the SGNS loss with K noise words and center and context scores, and `sec_word2vec_data` on the subsection that states the count^0.75 noise distribution, so `mdl-mi-estimation.md:1230-1247` resolves unchanged.
-- Pitfalls to state: evaluating the center table, the context table or their sum changes the numbers (state the choice); padded context positions must be masked out of the loss; subsampling per occurrence, not per type; SGNS "is" PMI factorization only at the optimum with free scores; pairs outside the vocabulary silently shrink the test set.
-- Data: `almogtavor/WordSim353` and `Yuti/SimLex-999` (both CC BY 4.0) downloaded at run time; pretrained GloVe-6B through the book's mirror.
-- Do not re-teach: PMI (`subsec_mdl-pmi`), the SVD (`sec_mdl-svd-low-rank`), the shifted-PMI proof (`sec_mdl-mi-estimation`).
-- Committed artifacts: the similarity result table as JSON for the freshness check; nothing else (T0-capable).
-- Optional: the preliminaries chapter may add a one-line pointer in `sec_pandas` to `subsec_lm_categorical_embeddings` (nothing breaks either way).
-**Sources:**
-- Papers: [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781) (skip-gram and CBOW); [Distributed Representations of Words and Phrases and their Compositionality](https://arxiv.org/abs/1310.4546) (negative sampling, subsampling, the 3/4 power); Levy and Goldberg, "Neural Word Embedding as Implicit Matrix Factorization" (NeurIPS 2014; cited by key `Levy.Goldberg.2014`: the shifted-PMI optimum); [GloVe: Global Vectors for Word Representation](https://aclanthology.org/D14-1162/) (weighted least squares on log counts); [Improving Distributional Similarity with Lessons Learned from Word Embeddings](https://aclanthology.org/Q15-1016/) (hyperparameters matter as much as the method: the notebook's thesis); [Man is to Computer Programmer as Woman is to Homemaker?](https://arxiv.org/abs/1607.06520) (bias in embeddings); [Entity Embeddings of Categorical Variables](https://arxiv.org/abs/1604.06737) (the closing paragraph).
-- Code and documentation: the [WikiText dataset card](https://huggingface.co/datasets/Salesforce/wikitext) (the `wikitext-103-raw-v1` parquet files that `d2l.WikiText103` downloads and 2.1 reads as words); the Qwen3-0.6B card for the tied table ([Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B)).
-- Courses, tutorials and blogs: [CS224N](https://web.stanford.edu/class/cs224n/) (word-vector lectures and assignment A1); Jay Alammar, [The Illustrated Word2vec](https://jalammar.github.io/illustrated-word2vec/).
--->
+Before training there is no reason why they should. If we encode each word
+as a *one-hot* vector, all zeros except for a one at the word's index, any
+two different words are orthogonal, and *doctor* is as far from
+*physician* as from *banana*. In the 1950s the linguists Zellig Harris and
+J. R. Firth proposed where similarity could come from instead: words that
+occur in similar contexts tend to mean similar things, or in Firth's
+phrase, "you shall know a word by the company it keeps". Physicians and
+doctors keep the same company. Both examine patients and write
+prescriptions.
 
-<!-- Placeholder (stage 2, cells step): the code cells of the section in the
-order of the section specification, with one-line placeholders where the
-prose goes. Headings and their labels come with the prose; the legacy labels
-`subsec_negative-sampling` and `sec_word2vec_data` are defined here only after
-the retiring NLP chapters (which still define them) are deleted. -->
-
-<!-- Placeholder (stage 2), opening: the token table of sec_gpt was trained end to end and nobody asked what its rows mean; one-hot vectors make every pair of words orthogonal; which statistic of a corpus does a word vector encode? -->
+This section asks which statistic of a corpus a learned word vector
+encodes, and whether we can check the answer. We train the skip-gram model
+of word2vec :cite:`Mikolov.Chen.Corrado.ea.2013,Mikolov.Sutskever.Chen.ea.2013`,
+which made word vectors cheap enough to train on billions of words, and
+show that its vectors factorize a matrix of co-occurrence statistics
+:cite:`Levy.Goldberg.2014`, exactly on a toy corpus and approximately on
+three million words of Wikipedia. Two methods that factorize the counts
+directly and a set of human similarity judgments tell us how much the
+choice of method matters. The section ends with what no such vector can
+do: give one word two meanings.
 
 ```{.python .input #word-embeddings-imports}
 %%tab pytorch
@@ -72,8 +51,9 @@ import time
 import transformers
 from safetensors import safe_open
 ```
-
-<!-- Placeholder (stage 2): the switches of the build (GPU, regeneration of the comparison grid) and the hyperparameters every method shares. -->
+The configuration cell sets the hyperparameters that every method
+shares: a window of five words on each side, vectors of 100 dimensions,
+and $K = 5$ noise words, whose role we meet with the model.
 
 ```{.python .input #word-embeddings-config}
 %%tab pytorch
@@ -93,8 +73,22 @@ SEEDS = (0, 1, 2)
 TIC = time.time()
 print(f'device {device}, RERUN={",".join(sorted(RERUN)) or False}')
 ```
+## Co-occurrence Counts
+:label:`subsec_lm_cooccurrence`
 
-<!-- Placeholder (stage 2), ## Co-occurrence Counts: the distributional hypothesis; the corpus is a word-level slice of WikiText-103, read from the file that d2l.WikiText103 downloads; two sets of word pairs with human similarity ratings. -->
+The idea that a word is known by its company is the *distributional
+hypothesis*. To use it we make "company" countable: we slide a window over
+a corpus and count how often each word occurs near each other word.
+
+### A Slice of WikiText-103
+
+Our corpus is the beginning of WikiText-103
+:cite:`Merity.Xiong.Bradbury.ea.2016`, a collection of Wikipedia articles
+that the site's editors rated good or featured. `d2l.WikiText103` reads the
+same file as bytes in :numref:`sec_adam`; here we read it as words. The
+registry cell pins the file, the two sets of similarity ratings introduced
+below, and the stored results of the comparison in
+:numref:`subsec_lm_we_eval`.
 
 ```{.python .input #word-embeddings-data-hub}
 %%tab pytorch
@@ -117,8 +111,8 @@ d2l.DATA_HUB['lm-enc-we-grid-v1'] = (  # D2L_RERUN=we-grid, RTX 4090
     d2l.LM_DATA_URL + 'lm-enc-we-grid-v1.json',
     '8c6bc0c598c8493fa407b3662f7a26472522169e')
 ```
-
-<!-- Placeholder (stage 2): pretrained GloVe vectors from the book's mirror, for the analogy and bias probes. Not yet `#@save`: the retiring word-similarity section registers the same two keys, and a second registration would change the library shard its notebook depends on; the marker is added when that section is deleted (the values are identical). -->
+A second registry cell points to pretrained GloVe vectors on the book's
+mirror, which we need only for the probes of analogies and bias.
 
 ```{.python .input #word-embeddings-glove-hub}
 %%tab pytorch
@@ -127,8 +121,11 @@ d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
 d2l.DATA_HUB['glove.6b.100d'] = (d2l.DATA_URL + 'glove.6B.100d.zip',
                                  'cd43bfb07e44e6f27cbcc7bc9ae3d80284fdaf5a')
 ```
-
-<!-- Placeholder (stage 2): the slice: headings dropped, lowercase, alphabetic whitespace tokens (one apostrophe allowed, as in "'s"), a break at each line end; words below the minimum count leave the stream. -->
+We drop headings, lowercase the text, split it at whitespace and keep the
+tokens made of letters, allowing one apostrophe as in *'s*. A line end
+becomes a break that no window crosses. Words seen fewer than ten times
+leave the stream, as in word2vec, because their rows would be trained on
+almost nothing.
 
 ```{.python .input #word-embeddings-slice}
 %%tab pytorch
@@ -161,8 +158,19 @@ print(f'{n:,} tokens in {len(lines):,} lines, '
       f'vocabulary {V:,} (count >= {MIN_COUNT}), {oov:.1%} of tokens '
       'outside it')
 ```
+Three million tokens use 85,598 different words, yet the vocabulary of
+words seen ten times or more has only 17,997 entries, and the words left
+out make up only 5.4% of the tokens. A frequency cutoff loses most word
+types and few tokens, which is Zipf's law of
+:numref:`subsec_natural-lang-stat` at work.
 
-<!-- Placeholder (stage 2): a window of WINDOW words on each side; the counts form a sparse symmetric matrix; pairs never cross a line break. PMI restated in one sentence (subsec_mdl-pmi). -->
+### The Count Matrix
+
+Let $X_{wo}$ be the number of times that word $o$ occurs within $W = 5$
+positions of word $w$. We call $w$ the *center* word and $o$ a *context*
+word. Every pair is counted from both ends, so $\mathbf{X}$ is symmetric.
+`cooccurrence_counts` builds it as a sparse matrix, one sparse addition per
+distance $d = 1, \ldots, W$, and leaves out pairs that straddle a break.
 
 ```{.python .input #word-embeddings-cooccurrence}
 %%tab pytorch
@@ -188,6 +196,7 @@ def cooccurrence_counts(corpus, vocab_size, window=5, weighting='uniform'):
             shape=(vocab_size, vocab_size))
     return X
 ```
+Before running the next cell, guess which pairs have the largest counts.
 
 ```{.python .input #word-embeddings-counts}
 %%tab pytorch
@@ -202,8 +211,36 @@ for i in np.argsort(-upper.data)[:5]:
     a, b = (vocab.idx_to_token[j] for j in (upper.row[i], upper.col[i]))
     print(f'    {a:>5} {b:<5} {upper.data[i]:9,.0f}')
 ```
+The matrix has 6.5 million nonzero entries, 2.00% of its 324 million
+cells, holding 27 million (word, context) pairs. The largest counts pair
+*the* with itself and with *of*, *in*, *and* and *to*. Raw counts mostly
+measure how frequent the two words are, not whether they belong together.
 
-<!-- Placeholder (stage 2), evaluating word vectors: Spearman correlation between cosine similarity and human ratings, on the pairs whose two words are in the vocabulary; a pair bootstrap gives the interval. -->
+Pointwise mutual information corrects for this (:numref:`subsec_mdl-pmi`).
+Write $p(w, o) = X_{wo} / \sum_{w', o'} X_{w'o'}$ for the share of all
+pairs that are $(w, o)$, and $p(w)$ and $p(o)$ for its row and column sums.
+Then
+
+$$\textrm{pmi}(w, o) = \log \frac{p(w, o)}{p(w)\, p(o)}$$
+
+compares how often the pair occurs with how often it would occur if the
+two words were placed independently. It is positive for pairs that
+attract and negative for pairs that repel. For the 98% of pairs that never
+occur, it is $-\infty$, a fact that will matter.
+
+### Human Similarity Ratings
+
+How will we know whether a table of word vectors is any good? The
+standard answer compares it with people. *WordSim353* holds 353 word
+pairs rated by people, and its ratings mix relatedness with similarity:
+*coffee* and *cup* score well. *SimLex-999* holds 999 pairs rated for
+similarity alone, which gives *coffee* and *cup* a low score. For a table
+of vectors we compute the cosine of each pair and the Spearman correlation
+$\rho$ between the cosines and the ratings. A rank correlation uses only
+the order of the two lists, so the scales of cosines and ratings do not
+matter. `spearman_eval` also resamples the pairs with replacement 2,000
+times and reports the central 95% of the resampled correlations, a *pair
+bootstrap* interval.
 
 ```{.python .input #word-embeddings-spearman}
 %%tab pytorch
@@ -241,8 +278,9 @@ def spearman_eval(embeddings, vocab, pairs, n_boot=2000, seed=0):
     return SpearmanResult(float(rho(cos, human)), tuple(map(float, ci)),
                           len(p), len(pairs), cos)
 ```
-
-<!-- Placeholder (stage 2): WordSim353 (Finkelstein et al., the combined mean ratings; relatedness and similarity mixed; the pair money/cash occurs twice, as in the original) and SimLex-999 (similarity only); how many pairs the slice's vocabulary covers. -->
+A pair with a word outside the vocabulary cannot be scored, and dropping
+it shrinks the test set without warning, so we count the pairs that
+remain.
 
 ```{.python .input #word-embeddings-similarity-data}
 %%tab pytorch
@@ -260,8 +298,15 @@ for name, df in SETS.items():
                         for w1, w2 in zip(df.word1, df.word2))
     print(f'{name}: {covered[name]} of {len(df)} pairs covered')
 ```
+The slice covers 295 of the 353 WordSim353 pairs and 865 of the 999
+SimLex-999 pairs. A correlation computed under another vocabulary is
+therefore a correlation on another test set.
 
-<!-- Placeholder (stage 2): the floor: random vectors of the same width correlate with the ratings only by chance. -->
+What do random vectors score? Zero on average, of course. For $n$ pairs
+without association a rank correlation has a standard deviation of about
+$1/\sqrt{n - 1}$: 0.058 for 295 pairs and 0.034 for 865. Twenty random
+tables should spread over about twice these amounts on either side of
+zero.
 
 ```{.python .input #word-embeddings-floor}
 %%tab pytorch
@@ -272,8 +317,58 @@ for name, r in floor.items():
     print(f'{name}: random vectors, rho mean {np.mean(r):+.3f}, '
           f'range [{min(r):+.3f}, {max(r):+.3f}] over 20 seeds')
 ```
+They do: from $-0.10$ to $+0.13$ on WordSim353 and from $-0.05$ to $+0.04$
+on SimLex-999. A method has to clear this floor before its correlation
+means anything; on WordSim353, a correlation of 0.1 means nothing.
 
-<!-- Placeholder (stage 2), ## Skip-Gram with Negative Sampling: the loss eq_lm_sgns_loss with center vector v_w, context vector u_o, score u_o^T v_w and K noise words; why the softmax over the vocabulary is avoided; CBOW and fastText in one sentence each; tied tables in one sentence. Padded slots are masked out of the loss. -->
+## Skip-Gram with Negative Sampling
+:label:`subsec_negative-sampling`
+
+The skip-gram model gives each word two vectors: a *center vector*
+$\mathbf{v}_w$, used when the word sits in the middle of a window, and a
+*context vector* $\mathbf{u}_o$, used when it is one of the neighbors. They
+are rows of two tables, $\mathbf{V}$ and $\mathbf{U}$. The model scores a
+pair by the inner product $s(w, o) = \mathbf{u}_o^\top \mathbf{v}_w$ and is
+trained to predict the context words of each center word.
+
+The obvious predictor is a softmax over the vocabulary, $p(o \mid w) =
+\exp(s(w, o)) / \sum_{o'} \exp(s(w, o'))$, whose normalizer needs a score
+for every word: 17,997 for every pair in our slice, millions for real
+vocabularies. *Negative sampling* replaces this one large classification
+by a few binary ones :cite:`Mikolov.Sutskever.Chen.ea.2013`. The model
+learns to tell the observed context word $o$ from $K$ noise words $o_1,
+\ldots, o_K$ drawn from a distribution $P$. For one observed pair the loss
+is
+
+$$\ell(w, o) = -\log \sigma\big(\mathbf{u}_o^\top \mathbf{v}_w\big) - \sum_{k=1}^{K} \log \sigma\big(-\mathbf{u}_{o_k}^\top \mathbf{v}_w\big),$$
+:eqlabel:`eq_lm_sgns_loss`
+
+where $\sigma(s) = 1/(1 + e^{-s})$ is the sigmoid. The first term pushes
+the score of the real pair up, and the sum pushes the scores of the noise
+pairs down. A pair now costs $1 + K = 6$ inner products instead of 17,997.
+`sgns_loss` computes :eqref:`eq_lm_sgns_loss` as a binary cross-entropy
+and divides by the number of scored slots, $1 + K$ per pair, so it reports
+a loss per slot. At the start, when every score is zero, a slot costs
+$\log 2 \approx 0.693$.
+
+Two relatives change one thing each. *CBOW*, the continuous bag of words,
+reverses the prediction: the mean of the context vectors predicts the
+center word :cite:`Mikolov.Chen.Corrado.ea.2013`. *fastText* makes a word's
+vector the sum of the vectors of its character $n$-grams, so a word never
+seen in training still gets a vector from its pieces
+:cite:`Bojanowski.Grave.Joulin.ea.2017`; the same library's linear text
+classifiers are a common filter for the pretraining data of language
+models. Unlike the GPT of :numref:`sec_gpt`, skip-gram does not tie its
+two tables. With one table, a word's score with itself would be
+$\|\mathbf{v}_w\|^2$, large for every word, although few words occur next
+to themselves.
+
+<!-- FIGURE pending (generator step, not in this commit): fig_lm_sgns_pmi,
+img/mdl-lm-encoders-sgns-pmi.svg. A window of 5 around a center word in a
+short sentence; the center table V and the context table U with the scored
+pairs; three noise words drawn from count^0.75; a small PMI matrix with the
+shifted entries that the optimum reproduces. Insert it here with a caption
+and :label:`fig_lm_sgns_pmi`, and cite it in the paragraph above. -->
 
 ```{.python .input #word-embeddings-sgns-loss}
 %%tab pytorch
@@ -289,8 +384,37 @@ def sgns_loss(v, u, centers, contexts_negatives, labels, masks):
         scores, labels.float(), weight=masks.float(), reduction='sum')
     return loss / masks.sum()
 ```
+### Subsampling and the Noise Distribution
+:label:`sec_word2vec_data`
 
-<!-- Placeholder (stage 2), ### Subsampling and the Noise Distribution: discard probability max(1 - sqrt(t/f(w)), 0) per occurrence; noise P_alpha(w) proportional to n(w)^alpha; a window size drawn per center; the batch layout, shown once. -->
+Three choices of the word2vec recipe decide which pairs the loss sees. The
+first is *subsampling*: each occurrence of a word with relative frequency
+$f(w)$ is discarded with probability
+
+$$\max\left(1 - \sqrt{t / f(w)},\, 0\right), \quad t = 10^{-4}.$$
+
+Words rarer than $t$ are always kept, and a word that makes up 1% of the
+text is kept with probability $\sqrt{10^{-4}/10^{-2}} = 0.1$. The decision
+is made per occurrence, so a frequent word stays in the vocabulary and
+loses most of its occurrences. The windows over the thinned stream then
+reach further.
+
+The second is the noise distribution, $P_\alpha(o) \propto
+n(o)^\alpha$, where $n(o)$ counts the occurrences of $o$ and $\alpha =
+0.75$. With $\alpha = 1$ noise words are drawn by frequency, with $\alpha
+= 0$ uniformly. The power in between flattens the frequencies: a word 100
+times as frequent as another is drawn only about 32 times as often.
+
+The third is the window. For each center word, word2vec draws a width $b$
+uniformly from $1, \ldots, W$ and uses the context words within $b$
+positions. A word at distance $d$ is then used with probability $(W - d +
+1)/W$, so the distances 1 to 5 carry the weights 1, 0.8, 0.6, 0.4 and 0.2.
+
+Centers have different numbers of context words, so a minibatch gives each
+center $2W = 10$ context slots, marks the empty ones in a mask, and draws
+$K$ noise words per slot. A masked slot and its noise words must not enter
+the loss, or the model learns to score padding. How many centers does one
+epoch have after subsampling?
 
 ```{.python .input #word-embeddings-sgns-data}
 %%tab pytorch
@@ -364,8 +488,20 @@ print(f'    noise words of slot {j} ({words[j]!r}):',
 print(f'    labels: {int(batch[2][0].sum())} ones, then zeros; masks keep '
       f'{int(batch[3][0].sum())} of {batch[3].shape[1]} slots')
 ```
+About half: 1,411,837 of the 2,838,873 word positions survive as centers,
+with 5.7 context words each on average, so subsampling halves the work of
+an epoch. A minibatch is a block of 1,024 rows of 60 entries: 10 context
+slots, then 5 noise words for each slot. In the printed row the drawn
+window was two words wide, so the mask keeps four context words and their
+20 noise words, 24 of 60 entries.
 
-<!-- Placeholder (stage 2), ### Training: two tables, Adam, a fresh subsample, fresh windows and fresh noise words in every epoch. The section evaluates the center table V; V + U is the other common choice. -->
+### Training
+
+Two tables of 17,997 rows and 100 columns hold $\mathbf{V}$ and
+$\mathbf{U}$, initialized as in word2vec, and Adam updates both. Every
+epoch draws a fresh subsample, fresh windows and fresh noise words. We
+evaluate the center table $\mathbf{V}$ and, for comparison, $\mathbf{V} +
+\mathbf{U}$.
 
 ```{.python .input #word-embeddings-sgns-train}
 %%tab pytorch
@@ -409,8 +545,57 @@ print(f'{time.time() - tic:.0f} s')
 report(sgns_v, 'SGNS V')
 report(sgns_v + sgns_u, 'SGNS V+U')
 ```
+The loss per slot falls from 0.457 to 0.375 in five epochs of about three
+seconds each on one GPU. The center vectors correlate with the ratings at
+$\rho = 0.56$ on WordSim353 (interval 0.48 to 0.64) and 0.18 on
+SimLex-999 (0.11 to 0.25), far above the random floor on both. The sum
+$\mathbf{V} + \mathbf{U}$ scores 0.58 and 0.20, inside these intervals.
+Which table counts as "the" word vector is a choice that changes the
+numbers, and we evaluate $\mathbf{V}$ throughout. Why the two rating sets
+differ by a factor of three we discuss with the comparison of methods.
 
-<!-- Placeholder (stage 2), ## What the Optimum Factorizes: with free scores the expected loss is minimized at s*(w, o) = pmi(w, o) - log K + log(p(o)/P(o)) (proof: ex_mdl-mutual-information-negative-sampling-pmi). A check on a toy corpus of four words, window 1. -->
+## The Shifted-PMI Optimum
+:label:`subsec_lm_sgns_pmi`
+
+What did the loss teach the scores? Suppose the vectors had enough
+dimensions for every score $s(w, o)$ to be chosen freely. Then the loss,
+averaged over the corpus, separates into one logistic regression per pair:
+the pair $(w, o)$ is a positive example $X_{wo}$ times and a noise pair
+about $K\, n_w\, P(o)$ times, where $n_w = \sum_o X_{wo}$. The best
+log-odds of such a regression is the logarithm of the ratio of the two
+counts. Written with the probabilities of the count matrix, the optimum
+is
+
+$$s^*(w, o) = \textrm{pmi}(w, o) - \log K + \log \frac{p(o)}{P(o)}.$$
+:eqlabel:`eq_lm_sgns_optimum`
+
+At its optimum, skip-gram scores a pair by its pointwise mutual
+information, shifted down by $\log K$. With noise drawn by frequency the
+last term vanishes, and the matrix of scores $\mathbf{V}\mathbf{U}^\top$
+(the center vectors are the rows of $\mathbf{V}$, the context vectors those
+of $\mathbf{U}$) factorizes the shifted PMI matrix
+:cite:`Levy.Goldberg.2014`. The proof is Exercise
+:exref:`ex_mdl-mutual-information-negative-sampling-pmi` of
+:numref:`sec_mdl-mi-estimation`. With $\alpha = 0.75$ the last term is an
+offset that depends on the context word alone. A rare word is drawn as
+noise more often than its frequency, $P(o) > p(o)$, so the offset lowers
+its scores. This counteracts the best-known weakness of PMI, which gives
+two rare words that meet once a very large value.
+
+The result holds only at the optimum with free scores. A table of 100
+columns cannot represent an arbitrary matrix of 17,997 rows, and for the
+98% of pairs with no count the optimum is $-\infty$. We therefore check
+the result twice: exactly on a corpus small enough to have free scores,
+and approximately on the slice.
+
+### A Toy Corpus
+
+The toy corpus has 40 tokens of four words, *ice*, *steam*, *solid* and
+*gas*, taken from a well-known example in the GloVe paper. With a window
+of one word all 16 pairs occur. The cell minimizes the expected loss over
+one free score per pair by L-BFGS in float64, with noise by frequency and
+with $\alpha = 0.75$. In the first case each score should be the pmi of
+its pair minus $\log 5 \approx 1.609$.
 
 ```{.python .input #word-embeddings-toy-pmi}
 %%tab pytorch
@@ -454,8 +639,35 @@ for alpha in (1.0, 0.75):
     assert err[1] < 1e-6  # the stated optimum, for either noise
 print('s* for alpha = 0.75:', show4(s), sep='\n')
 ```
+Both predictions hold to the precision of the optimizer. With $\alpha = 1$
+the scores equal $\textrm{pmi} - \log K$ to $10^{-7}$. With $\alpha = 0.75$
+they miss that target by 0.05 and match :eqref:`eq_lm_sgns_optimum`,
+offset included, to $4 \times 10^{-8}$; the offset is small because the
+four words have similar frequencies. Every optimal score is negative,
+since no pair of so small a vocabulary has a pmi above $\log 5$. The
+largest, $-0.81$, belongs to *steam* and *gas*, which occur together 13
+times.
 
-<!-- Placeholder (stage 2): the closed-form counterpart: truncated SVD of the positive PMI matrix (subsec_mdl-eckart-young), with the context distribution smoothed by the same 0.75 power. -->
+### Positive PMI and the Truncated SVD
+
+If skip-gram approximates a known matrix, why not compute the matrix and
+factorize it directly? The pmi of a pair that never occurs is $-\infty$,
+and almost all pairs never occur. The standard remedy is the *positive
+PMI*, $\max(\textrm{pmi}(w, o), 0)$, which keeps every missing pair at zero
+and the matrix sparse. It also drops the negative values, which say only
+that a pair is rarer than chance and which a small corpus estimates
+poorly. `ppmi` raises the context distribution to the power
+$\alpha$ before computing the pmi, the counterpart of the smoothed noise,
+and we use $\alpha = 0.75$ as for skip-gram.
+
+The best factorization of a given rank is known. By the Eckart--Young
+theorem, the truncated SVD that keeps the $k$ largest singular values is
+the best rank-$k$ approximation in the Frobenius norm, and its error is
+the square root of the sum of the squared singular values left out
+(:numref:`subsec_mdl-eckart-young`). As word vectors we take the left
+singular vectors scaled by the square roots of their singular values,
+splitting each singular value evenly between words and contexts, as
+$\mathbf{V}$ and $\mathbf{U}$ split the scores.
 
 ```{.python .input #word-embeddings-ppmi}
 %%tab pytorch
@@ -477,6 +689,9 @@ def ppmi(counts, alpha=1.0, shift=0.0):
     return scipy.sparse.csr_matrix(
         (pmi[keep], (C.row[keep], C.col[keep])), shape=C.shape)
 ```
+The cell computes the positive PMI of the slice and its rank-100 SVD, and
+checks the theorem on the block of the 2,000 most frequent words, where a
+full SVD is cheap.
 
 ```{.python .input #word-embeddings-svd}
 %%tab pytorch
@@ -502,8 +717,30 @@ print(f'||B - B_k||_F = {tail:.4f} (relative difference to the bound '
 assert rel < 1e-8
 report(svd_vecs, 'SVD-PPMI')
 ```
+Of the 6.5 million nonzero counts, 5.5 million have a positive pmi, and
+the SVD takes seconds. The residual matches the bound to a relative $1.7
+\times 10^{-15}$, which is rounding error. The SVD vectors correlate with
+the ratings at 0.57 on WordSim353 (interval 0.48 to 0.65) and 0.185 on
+SimLex-999 (0.12 to 0.25), close to skip-gram on both.
 
-<!-- Placeholder (stage 2): GloVe is weighted least squares on the log counts, w^T w~ + b + b~ ~ log X, over the nonzero counts only (its one difference: the zeros are never seen); AdaGrad as in the paper, 50 passes for fewer than 300 dimensions; present it as the paper's recipe, not tuned (there is no development split for word similarity, and the recipe was fixed before the grid). -->
+### GloVe
+
+GloVe :cite:`Pennington.Socher.Manning.2014` fits the logarithm of the
+counts directly, by weighted least squares. In our notation it minimizes
+
+$$\sum_{w, o:\, X_{wo} > 0} h(X_{wo}) \big(\mathbf{u}_o^\top \mathbf{v}_w + b_w + c_o - \log X_{wo}\big)^2, \qquad h(x) = \min\big((x / x_{\max})^{0.75},\, 1\big),$$
+:eqlabel:`eq_lm_glove`
+
+with biases $b_w$ and $c_o$ and $x_{\max} = 100$. The weight $h$ lets
+frequent pairs count more, up to a cap. The biases absorb $\log p(w)$ and
+$\log p(o)$, so the inner product again ends up close to a pmi. GloVe
+differs from the other two methods in one respect: its sum runs over the
+nonzero counts only. A pair that never occurs never enters its loss,
+whereas skip-gram meets such pairs among its noise words and the SVD fits
+the zeros of the positive PMI. We use the paper's recipe as published,
+with AdaGrad, 50 passes and the sum of the two tables as word vectors, and
+we do not tune it: word similarity has no development split, and tuning
+on the rated pairs would be tuning on the answers.
 
 ```{.python .input #word-embeddings-glove}
 %%tab pytorch
@@ -548,8 +785,23 @@ glove_vecs = train_glove(X, **GLOVE)
 print(f'{time.time() - tic:.0f} s')
 report(glove_vecs, 'GloVe')
 ```
+The loss falls from 0.0113 after 10 passes to 0.0056 after 50. The vectors
+correlate with the ratings at 0.29 on WordSim353 (interval 0.18 to 0.40)
+and 0.14 on SimLex-999 (0.08 to 0.21), well below the other two methods on
+WordSim353.
 
-<!-- Placeholder (stage 2): the trained SGNS scores against the shifted PMI of the 2,000 most frequent pairs, computed from the counts SGNS is shown: windows over the subsampled stream (which reach past deleted words) with a window size drawn per center (the average of the fixed-window counts); at 100 dimensions the relation is approximate. -->
+### Trained Scores and Shifted PMI
+
+How close did our skip-gram model come to :eqref:`eq_lm_sgns_optimum`? We
+compare its scores $\mathbf{u}_o^\top \mathbf{v}_w$ with the right-hand
+side for the 2,000 most frequent pairs. There is a trap: the right-hand
+side must use the counts that skip-gram saw, not the raw window counts.
+Subsampling removed most occurrences of frequent words and let windows
+reach past them, and the drawn widths weight distance $d$ by $(W - d +
+1)/W$, which is the average of the count matrices of the fixed windows of
+width 1 to 5. The cell rebuilds those counts over three subsampling draws.
+At the free-score optimum every point would lie on the dashed identity
+line.
 
 ```{.python .input #word-embeddings-scatter}
 %%tab pytorch
@@ -576,8 +828,32 @@ d2l.plot([target, lim], [score, lim],
          r'SGNS score $\mathbf{u}_o^\top \mathbf{v}_w$', fmts=('.', 'k--'),
          figsize=(3.5, 3.5))
 ```
+The points follow the line with a Pearson correlation of about 0.9 and a
+mean offset of 0.01. The cloud is narrow where the shifted pmi is negative
+and fans out among the strongly associated pairs, where 100 dimensions
+force a compromise. "Skip-gram is PMI factorization" is a statement about
+an optimum; a model trained for five epochs is near it for frequent pairs,
+not at it.
 
-<!-- Placeholder (stage 2), ## Evaluating Word Vectors: three methods, the noise exponent and subsampling, three seeds each; the grid is regenerated with D2L_RERUN=we-grid and read from the registered file otherwise, after checking that it was made with the current settings; the agreement line matches only on the device that made the grid (other devices draw other random numbers). -->
+## Evaluating Word Vectors
+:label:`subsec_lm_we_eval`
+
+We have three tables from one slice: skip-gram with negative sampling
+(SGNS), the SVD of positive PMI (SVD-PPMI) and GloVe. Which is best? Levy,
+Goldberg and Dagan (2015) argued that settings such as the noise exponent,
+which one method's recipe fixed and another's left out, move the results
+as much as the choice of method. We test this on our slice.
+
+### Methods and Settings
+
+The grid trains SGNS with noise exponents $\alpha \in \{0, 0.75, 1\}$, with
+and without subsampling, three seeds each; GloVe with three seeds; and
+SVD-PPMI with context exponents 1 and 0.75, which needs no seed. Each run
+stores $\rho$ with its interval and the cosine of every covered pair. The
+23 runs take about ten minutes on one GPU. A normal build reads the stored
+results, checks that they were made with the current settings, and
+compares the default SGNS run with the one trained above; on the device
+that made the grid the two agree to the last digit.
 
 ```{.python .input #word-embeddings-grid}
 %%tab pytorch
@@ -660,8 +936,14 @@ live = {name: d2l.spearman_eval(sgns_v, vocab, p, n_boot=0).rho
 print('this run vs the grid (SGNS defaults, seed 0): ' + '; '.join(
     f"{n} {live[n]:.3f} vs {default[n]['rho']:.3f}" for n in SETS))
 ```
-
-<!-- Placeholder (stage 2): left, each method at its default settings: seed 0 with its pair-bootstrap interval, the other seeds as crosses; right, rho against the noise exponent with and without subsampling, the band spanning the seeds. -->
+Every method clears the random floor on both sets: the lowest lower
+bounds, GloVe's 0.18 on WordSim353 and 0.08 on SimLex-999, lie above the
+largest random correlations, 0.13 and 0.04. On WordSim353, SGNS ranges from
+0.52 to 0.56 over its six settings, SVD-PPMI scores 0.57 and 0.585, and
+GloVe 0.29; on SimLex-999 all runs lie between 0.13 and 0.21. The plot
+shows each method at its default settings on the left, with the interval
+of seed 0 and the other seeds as crosses, and $\rho$ against the noise
+exponent on the right, with bands that span the seeds.
 
 ```{.python .input #word-embeddings-grid-plot}
 %%tab pytorch
@@ -691,8 +973,12 @@ for ax in axes:
     ax.legend(fontsize='small')
 d2l.plt.tight_layout()
 ```
-
-<!-- Placeholder (stage 2): paired differences of rho: both members of a comparison are evaluated on the same resampled pairs; the seed range says how much a difference moves from run to run. -->
+The intervals on the left are wide and overlap, but they answer the wrong
+question. Both members of a comparison are scored on the same pairs, and a
+pair that is hard for one table tends to be hard for the other. What we
+need is the interval of the difference, which the next cell obtains by
+scoring both members on the same resampled pairs. The seed range says how
+much a difference moves from run to run.
 
 ```{.python .input #word-embeddings-grid-compare}
 %%tab pytorch
@@ -744,8 +1030,40 @@ for kind in ('method', 'setting'):
     print(f'largest |delta rho| by {kind}: {abs(big.delta):.2f} '
           f'({big.comparison}, {big.set})')
 ```
+Three findings stand out. First, SGNS and SVD-PPMI are indistinguishable:
+their difference is $-0.01$ on WordSim353 (interval $-0.08$ to 0.05) and
+$-0.003$ on SimLex-999 ($-0.04$ to 0.04), as :eqref:`eq_lm_sgns_optimum`
+predicts for two factorizations of nearly the same matrix. Second, on this
+slice both exceed GloVe by about 0.3 on WordSim353; the difference from
+SGNS is 0.27 (interval 0.17 to 0.38, seeds 0.27 to 0.30). On SimLex-999 no
+difference between methods is detectable. Third, the claim we set out to
+test holds only in part. The method moved $\rho$ by up to 0.3, the noise
+exponent and subsampling by up to 0.05, but the 0.3 is GloVe's gap.
+Between SGNS and SVD-PPMI we detect no difference at all, while the noise
+exponent moves SGNS detectably: on WordSim353, 0.75 beats both 0 and 1 by
+0.01 to 0.04 in every seed. Subsampling changes $\rho$ by an amount whose
+sign flips between seeds, so its benefit here is speed.
 
-<!-- Placeholder (stage 2): nearest neighbours by cosine, under the three tables trained here. -->
+Why does GloVe trail? We did not tune it, and the one respect in which it
+differs is a likely cause. On three million words, 98% of the count matrix
+is zero, and GloVe is the only method that never sees the zeros, so
+nothing in its loss keeps apart two words that never meet. Exercise
+:exref:`ex_lm_we-glove-corpus` tests this explanation. The low scores on
+SimLex-999 have another cause: a window records which words appear
+together, which is relatedness, and SimLex-999 asks for the narrower
+relation of similarity. *Hot* and *cold* share their contexts and are not
+similar.
+
+For a corpus of your own, SVD-PPMI is a good first choice: it is
+deterministic, takes seconds and matched SGNS on both sets. SGNS streams
+over the text and scales to corpora whose count matrix would not fit in
+memory. Use the 0.75 power with either.
+
+### Nearest Neighbors
+
+A correlation summarizes a thousand pairs. The nearest neighbors of a
+word, the rows with the largest cosine to its row, show what a table
+learned about one word.
 
 ```{.python .input #word-embeddings-neighbors-def}
 %%tab pytorch
@@ -769,6 +1087,7 @@ def nearest_neighbors(E, vocab, word, k=5, exclude_self=True):
     top = torch.topk(cos, k)
     return [(name(int(j)), float(c)) for c, j in zip(top.values, top.indices)]
 ```
+Does *doctor* land next to *physician*, as the opening hoped?
 
 ```{.python .input #word-embeddings-neighbors}
 %%tab pytorch
@@ -778,8 +1097,20 @@ for w in ('doctor', 'chip', 'stock', 'bank'):  # a line per method
         t for t, _ in d2l.nearest_neighbors(E, vocab, w))
         for m, E in tables.items()))
 ```
+It does not. On this slice, a *doctor* is mostly the Doctor of *Doctor
+Who* (Amy, Torchwood, the TARDIS) or a character in *The X-Files*
+(Scully, Mulder, Skinner). *Stock* sits among financing and profits for
+SGNS and among film studios for SVD-PPMI, and *bank* among Swiss banks for
+all three methods. GloVe's lists are the noisiest, in line with its
+correlations. Nearest neighbors describe the corpus, not the language, and
+the articles of this slice include a good deal of television.
 
-<!-- Placeholder (stage 2), analogies and bias: pretrained GloVe vectors (6 billion tokens, 400,000 words) through the interface of the earlier edition. -->
+### Analogies
+
+Word vectors became famous for analogies: *king* $-$ *man* $+$ *woman*
+lies close to *queen*. We test this on the pretrained GloVe-6B vectors,
+which GloVe's authors trained on Wikipedia and newswire, loaded through
+the `TokenEmbedding` interface of the book's earlier edition.
 
 ```{.python .input #word-embeddings-token-embedding}
 %%tab pytorch
@@ -818,8 +1149,12 @@ class TokenEmbedding:
     def __len__(self):
         return len(self.idx_to_token)
 ```
-
-<!-- Placeholder (stage 2): 3CosAdd, argmax over x of cos(x, b - a + c), with and without the three query words excluded (Linzen 2016). -->
+For an analogy $a : b :: c : x$, the method called 3CosAdd answers with the
+word $x$ whose unit vector has the largest cosine with $\mathbf{b} -
+\mathbf{a} + \mathbf{c}$, all three normalized. If the offset $\mathbf{b}
+- \mathbf{a}$ is small compared with $\mathbf{c}$, the nearest word is $c$
+itself, so the standard evaluation excludes the query words from the
+answers. We run five analogies with and without that exclusion.
 
 ```{.python .input #word-embeddings-analogy}
 %%tab pytorch
@@ -845,8 +1180,25 @@ for a, b, c in QUERIES:
 print(f'{n_input} of {len(QUERIES)} answers are a query word when the '
       'query words are not excluded')
 ```
+With the query words excluded, all five answers are right: *queen*,
+*japan*, *biggest*, *went* and *saw*. Without the exclusion, 2 of the 5
+answers are a query word: *king* for *man* : *woman* :: *king*, and *see*
+for *do* : *did* :: *see*. The famous analogy holds because the method
+forbids the answer *king*, as Linzen (2016) pointed out. An analogy
+accuracy means little unless it says whether the inputs were excluded.
 
-<!-- Placeholder (stage 2): bias describes the corpus; removing the projection on a he - she direction zeroes that coordinate and leaves the neighbourhoods nearly as they were (Gonen and Goldberg 2019). -->
+### Bias
+
+Word vectors record the associations of their text, including its
+stereotypes (Bolukbasi et al., 2016). A simple probe is a direction: the
+unit vector $\mathbf{g}$ along $\mathbf{he} - \mathbf{she}$, and the
+projection of each word's unit vector onto it. A proposed repair removes
+the projection onto $\mathbf{g}$ from every word. Gonen and Goldberg (2019)
+argued that this hides the bias rather than removing it, and we can test
+the argument. After the removal, we find each profession's ten nearest
+neighbors and average their *original* projections. If the association had
+been erased, these averages would no longer track the profession's own
+original projection.
 
 ```{.python .input #word-embeddings-bias}
 %%tab pytorch
@@ -878,8 +1230,26 @@ print(f'median overlap of the top 10 neighbours: '
       f'original projection with its neighbours\' after removal: '
       f'{np.corrcoef(bias.before, bias.neighbours)[0, 1]:.2f}')
 ```
+Before the removal, *homemaker* ($-0.37$), *housekeeper* ($-0.32$) and
+*nurse* ($-0.28$) lean toward *she*, and *manager* ($+0.28$) and *captain*
+($+0.21$) toward *he*. These numbers describe how the corpus of GloVe-6B
+uses the words. After the removal every projection is zero by
+construction, and the neighborhoods barely change: the median profession
+keeps 9 of its 10 nearest neighbors, and *homemaker*, the word with the
+strongest lean, keeps 5. The new neighbors still lean the way the word
+did, with a correlation of about 0.9 over the 20 professions. The
+association is spread over many directions, and removing one of them hides
+it from one probe.
 
-<!-- Placeholder (stage 2), ## Static Vectors and a Language Model's Table: the input table of Qwen3-0.6B, one row per token, shared with the output layer; one vector per word type, so "bank" is one point for the river and the money. -->
+## Static Vectors and a Language Model's Table
+:label:`subsec_lm_static_vs_table`
+
+We return to the table that opened the section. Qwen3-0.6B
+:cite:`Yang.Li.Yang.ea.2025`, loaded with `d2l.load_qwen3` as in
+:numref:`sec_lm_d2l_checkpoint`, has a token table of 151,936 rows of
+width 1,024. Which share of its 596 million parameters does the table
+hold? The cell also prints the nearest neighbors of four words in the
+table and under SGNS, and the cosines of *bank* with *river* and *money*.
 
 ```{.python .input #word-embeddings-qwen-table}
 %%tab pytorch
@@ -919,4 +1289,526 @@ d2l.lm_free()
 print(f'notebook: {time.time() - TIC:.0f} s')
 ```
 
-<!-- Placeholder (stage 2), ### Embeddings for Categorical Variables: closing paragraph, no cell (entity embeddings, Guo and Berkhahn 2016). Then Summary and Exercises. -->
+The table holds 155,582,464 of the 596,049,920 parameters, 26.1%: a
+quarter of the model is a lookup table. It is tied, so the output layer
+multiplies by the same matrix, and the checkpoint file, which stores it
+for the input and again for the output, holds 751,632,384 numbers, more
+than the model has.
+
+Its neighbors are of a different kind. *Doctor* sits next to *doctors*,
+*Doctor*, the Chinese word for doctor, and itself without the leading
+space; *bank*, *river* and *money* sit next to their other spellings and
+capitalizations, and the first two next to their Chinese translations. The
+table does not record the company a word keeps, which the transformer
+layers above it compute from the context. It has to identify the token
+for those layers and, since it is tied, score it as a next token, and two
+spellings of one word are predicted in the same places.
+
+The cosines of *bank* show what every table of this section shares. Under
+SGNS on our slice, *bank* is closer to *river* (0.53) than to *money*
+(0.32), although its nearest neighbors are Swiss banks. In GloVe-6B the
+order is reversed (0.33 and 0.57), and in Qwen's table neither cosine is
+large (0.24 and 0.22). Each table places *bank* at one point, and its
+corpus decides where that point lies between the two senses.
+
+### Embeddings for Categorical Variables
+:label:`subsec_lm_categorical_embeddings`
+
+Nothing in an embedding table requires the categories to be words.
+Multiplying a one-hot vector by a matrix selects one row, so an embedding
+table is a linear layer on one-hot inputs, stored as a lookup. Any
+categorical variable with many values can have one: store numbers, product
+codes, postal codes or user ids. Guo and Berkhahn (2016) trained such
+*entity embeddings* with a network that predicts from tabular data, and
+categories that behave alike ended up with nearby rows, as words with
+similar company do. For a store, one row per value is what we want, since
+a store is the same store wherever it appears. For *bank* it is not. The
+bank of a river and the bank that keeps our money share one row in every
+table of this section; :numref:`sec_lm_bert` computes instead a vector for
+each token from the sentence around it.
+
+## Summary
+
+A word vector learned by skip-gram with negative sampling encodes how often
+words occur together. At the optimum with free scores, the score of a pair
+is its pointwise mutual information shifted down by $\log K$, plus an
+offset set by the noise distribution; a toy corpus confirmed this to
+$10^{-7}$, and on three million words of Wikipedia the trained scores
+followed it with a correlation of about 0.9. The truncated SVD of the
+positive PMI matrix computes such a factorization in closed form and
+matched skip-gram on two sets of human similarity ratings, while GloVe,
+which fits log counts on the nonzero pairs only, trailed by about 0.3 on
+WordSim353; the noise exponent and subsampling moved the correlation by up
+to 0.05. A fair comparison of word vectors states the covered pairs, an
+interval, paired differences and the random floor, and the probes need the
+same care: the famous analogy holds only when the query words are
+excluded, and removing a gender direction hides the bias from one probe
+while the neighborhoods keep it. Every static vector, including a row of
+the token table that holds a quarter of Qwen3-0.6B, is one point per word,
+so *bank* means the same next to a river and next to money.
+
+## Exercises
+
+1. **Subsampling and the optimum.** Each occurrence of a word $w$ of
+   relative frequency $f(w) > t$ is kept with probability $r_w =
+   \sqrt{t/f(w)}$; rarer words have $r_w = 1$.
+    1. Show that the expected number of kept occurrences of $w$ in a corpus
+       of $N$ tokens is $N\sqrt{t f(w)}$. Subsampling thus replaces a
+       frequency by the geometric mean of the frequency and $t$. What does
+       it do to the ratio of the counts of two frequent words?
+    1. Ignore that windows reach further after deletions, so that a pair
+       survives with probability $r_w r_o$, and keep the noise distribution
+       $P$ computed from the full counts, as the code does. Show that the
+       free-score optimum on the subsampled text is
+       $s^*(w, o) + \log r_o - \log \bar r_w$, where $\bar r_w = \sum_{o'}
+       r_{o'} X_{wo'} / \sum_{o'} X_{wo'}$. Why does the keep rate of the
+       center word cancel?
+    1. Which scores does subsampling lower the most, and how does its
+       effect compare with that of the noise exponent in
+       :eqref:`eq_lm_sgns_optimum`?
+    1. A pair at distance 6 in the original text can enter the counts that
+       skip-gram sees. Explain how, and say which pairs gain most from it.
+
+1. [code] **The optimum for other numbers of noise words.** Rerun the toy
+   check of :numref:`subsec_lm_sgns_pmi` with $K = 1$, 5 and 15.
+    1. Verify that the free-score optimum equals $\textrm{pmi} - \log K +
+       \log(p(o)/P(o))$ to $10^{-6}$ in every case. Which scores are
+       positive for $K = 1$?
+    1. Delete the pair *steam*–*gas* from the counts, setting both of its
+       entries to zero, and run the optimizer again. What happens to its
+       score as the iterations proceed, and how do positive PMI and GloVe
+       each avoid the problem?
+   :exlabel:`ex_lm_we-toy-k`
+
+1. [code] **Analogy accuracy and width.** ● Download the Google analogy set
+   `questions-words.txt` (Apache-2.0) and train SGNS on the slice with
+   `DIM` $\in \{25, 50, 100, 300\}$, three seeds each.
+    1. Report the number of covered questions and the 3CosAdd accuracy with
+       and without excluding the query words, with the seed range. At
+       which width does the difference between the two protocols shrink?
+    1. For the questions that fail only without the exclusion, which query
+       word is returned? Relate the answer to the length of $\mathbf{b} -
+       \mathbf{a}$ compared with that of $\mathbf{c}$.
+
+1. [code] **Center table, context table, or their sum.** Evaluate
+   $\mathbf{U}$, $\mathbf{V}$ and $\mathbf{V} + \mathbf{U}$ of the default
+   run on both rating sets, with paired intervals for the differences
+   computed as in :numref:`subsec_lm_we_eval`.
+    1. Which differences can you detect?
+    1. Explain why the choice matters for skip-gram and does not arise for
+       the tied table of Qwen3-0.6B.
+    1. With $\mathbf{V} + \mathbf{U}$, the cosine of two words contains
+       the terms $\mathbf{v}_w^\top \mathbf{u}_{w'}$. Use
+       :eqref:`eq_lm_sgns_optimum` to say what these terms measure.
+
+1. [code] **CBOW.** Implement CBOW: the mean of the context vectors of a
+   window predicts the center word, with $K$ noise words per window drawn
+   from the same distribution. Train it with the same budget of epochs and
+   the same noise distribution, and compare $\rho$ on both rating sets, with
+   paired intervals against SGNS, and the seconds per epoch. Which updates
+   does CBOW perform fewer of, and what does that predict for rare words?
+
+1. [code] **GloVe and the size of the corpus.** ● The explanation offered
+   for GloVe's gap in :numref:`subsec_lm_we_eval` makes a prediction.
+    1. Set `N_WORDS` to 30 million and measure the share of zero entries in
+       the count matrix of the most frequent 18,000 words.
+    1. Train GloVe with the paper's recipe and compute SVD-PPMI on the
+       larger slice, and compare their $\rho$ on WordSim353 with a paired
+       interval. Does the gap shrink as the share of zeros falls?
+    1. Train GloVe once more on the three-million-word slice with ten
+       times as many passes. Does a lower loss raise $\rho$? What does
+       the answer say about the cause of the gap?
+   :exlabel:`ex_lm_we-glove-corpus`
+
+1. [extended] **An embedding for a categorical column.** ●● Take the house
+   prices of :numref:`sec_kaggle_house` and one categorical column with
+   many values, such as the neighborhood.
+    1. Show that a table of width $d$ followed by a linear layer is a
+       linear function of the one-hot vector of rank at most $d$. Under a
+       linear model, when can it differ from one-hot features at all?
+    1. Fit the linear model of :numref:`sec_kaggle_house` with one-hot
+       features and with tables of width $d \in \{2, 4, 32\}$, and then
+       with a small MLP on top of each. Compare the $k$-fold validation
+       errors of that section over three seeds.
+    1. Plot the rows of the width-2 table, and say whether neighborhoods
+       with similar prices lie close together.
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §19.1]{.kicker}
+
+Word Embeddings<br>**co-occurrence counts · skip-gram with negative sampling · shifted PMI · SVD and GloVe · evaluation · a language model's table**
+:::
+:::
+
+::: {.slide title="One-Hot Vectors Make Every Pair of Words Orthogonal"}
+[The problem]{.kicker}
+
+- A vocabulary of 17,997 words: each word is a vector of length 17,997
+  with a single 1.
+- cos(*doctor*, *physician*) = cos(*doctor*, *banana*) = 0.
+- A language model starts with a learned table instead: one row per token.
+  Nothing in its training says which words are alike.
+
+::: {.d2l-note .warn}
+Which statistic of a text does a learned row encode, and can we check it?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- count co-occurrences and turn them into pointwise mutual information;
+- train skip-gram with negative sampling (SGNS) and explain its recipe;
+- state what SGNS converges to, and check it exactly on a toy corpus;
+- compute word vectors in closed form with an SVD;
+- compare word vectors fairly: coverage, intervals, paired differences;
+- say what a static vector cannot represent.
+
+**Running example:** the first 3 million words of WikiText-103 (Wikipedia),
+17,997 words that occur at least 10 times, windows of 5, vectors of 100
+dimensions, $K = 5$ noise words.
+:::
+
+::: {.slide title="Word Vectors Open the Chapter's First Movement"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| movement | section |
+|---|---|
+| vectors | **Word Embeddings** |
+| | Pretrained Encoders |
+| | Text Embeddings from Contrastive Training |
+| finding | Sparse, Dense and Approximate Retrieval |
+| using what is found | Retrieval-Augmented Generation |
+:::
+
+::: {.col .narrow}
+- **Uses:** the tied token table of a GPT; the truncated SVD.
+- **Skips:** hierarchical softmax, phrase vectors, vectors for many
+  languages.
+:::
+:::
+:::
+
+::: {.slide title="Raw Counts Measure Frequency; PMI Measures Association"}
+[Co-occurrence counts]{.kicker}
+
+$X_{wo}$: how often word $o$ occurs within 5 positions of word $w$.
+
+- 6.5 million nonzero counts, 2% of the 324 million cells.
+- Largest counts: *the*–*the* 141,058, *the*–*of* 116,432, *the*–*in*
+  69,654.
+
+$$\textrm{pmi}(w, o) = \log \frac{p(w, o)}{p(w)\, p(o)}$$
+
+$p(w, o)$: share of all pairs; $p(w)$, $p(o)$: its marginals. Positive when
+a pair occurs more often than independence predicts.
+
+::: {.d2l-note}
+98% of the pairs never occur: their pmi is $-\infty$.
+:::
+:::
+
+::: {.slide title="Negative Sampling Turns a 17,997-Way Softmax into Six Binary Decisions"}
+[Skip-gram with negative sampling]{.kicker}
+
+Center vector $\mathbf{v}_w$, context vector $\mathbf{u}_o$, score
+$\mathbf{u}_o^\top \mathbf{v}_w$; noise words $o_1, \ldots, o_K \sim P$:
+
+$$\ell(w, o) = -\log \sigma(\mathbf{u}_o^\top \mathbf{v}_w) - \sum_{k=1}^{K} \log \sigma(-\mathbf{u}_{o_k}^\top \mathbf{v}_w)$$
+
+- The softmax over the vocabulary needs 17,997 scores per pair. This loss
+  needs $1 + K = 6$.
+- CBOW: the mean context vector predicts the center. fastText: a word is
+  the sum of its character $n$-gram vectors.
+
+::: {.d2l-note}
+Separate tables: with one table a word would score $\|\mathbf{v}_w\|^2$
+with itself.
+:::
+:::
+
+::: {.slide title="Three Choices Decide Which Pairs the Loss Sees"}
+[The word2vec recipe]{.kicker}
+
+| choice | rule | effect |
+|---|---|---|
+| subsampling | drop each occurrence with prob. $\max(1 - \sqrt{t/f(w)}, 0)$, $t = 10^{-4}$ | frequent words thinned, windows reach further |
+| noise | $P(o) \propto n(o)^{0.75}$ | rare words drawn more often than their frequency |
+| window | width $b \sim \{1, \ldots, 5\}$ per center | distance $d$ weighted $(6 - d)/5$ |
+
+- A minibatch row: 10 context slots, 5 noise words per slot, 60 entries.
+- Empty slots and their noise words are masked out of the loss.
+:::
+
+::: {.slide title="Check: How Strong Are Subsampling and the 0.75 Power?"}
+[Check]{.kicker}
+
+A word makes up 1% of the text. With what probability is an occurrence
+kept? A word is 100 times more frequent than another. How much more often
+is it drawn as noise?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Kept with $\sqrt{10^{-4}/10^{-2}} = 0.1$. Drawn
+$100^{0.75} \approx 32$ times as often, not 100. On the slice, subsampling
+leaves 1.41 of 2.84 million positions as centers.
+:::
+:::
+:::
+
+::: {.slide title="Five Epochs Give Vectors That Correlate 0.56 with Human Ratings"}
+[Training]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@!word-embeddings-sgns-train
+:::
+
+::: {.col .narrow}
+- Loss per slot; it starts at $\log 2 = 0.693$.
+- $\rho$: Spearman correlation of cosines with ratings on the covered pairs
+  (295 of 353, 865 of 999), with a 95% pair-bootstrap interval.
+- Random vectors: $-0.10$ to $0.13$ and $-0.05$ to $0.04$.
+:::
+:::
+:::
+
+::: {.slide title="At the Free-Score Optimum, SGNS Scores Are Shifted PMI"}
+[The optimum]{.kicker}
+
+Each pair becomes its own logistic regression: $X_{wo}$ positives,
+$K\, n_w\, P(o)$ noise draws. The best log-odds is the log of their ratio:
+
+$$s^*(w, o) = \textrm{pmi}(w, o) - \log K + \log \frac{p(o)}{P(o)}$$
+
+- Noise by frequency ($P = p$): the score matrix $\mathbf{V}\mathbf{U}^\top$
+  factorizes $\textrm{pmi} - \log K$.
+- Power 0.75: rare context words get lower scores, against PMI's bias
+  toward rare pairs.
+
+::: {.d2l-note .warn}
+Only with free scores: 100 columns cannot hold every pmi, and no finite
+score reaches $-\infty$.
+:::
+
+[Levy and Goldberg, 2014]{.small}
+:::
+
+::: {.slide title="A Four-Word Corpus Confirms the Optimum to 10⁻⁷"}
+[A toy corpus]{.kicker}
+
+*ice, steam, solid, gas*: 40 tokens, window 1, $K = 5$, one free score per
+pair, L-BFGS in float64.
+
+| noise | max error against $\textrm{pmi} - \log K$ | against $s^*$ with the offset |
+|---|---|---|
+| $\alpha = 1$ | $1.0 \times 10^{-7}$ | $1.0 \times 10^{-7}$ |
+| $\alpha = 0.75$ | 0.05 | $4.3 \times 10^{-8}$ |
+
+- Every optimal score is negative: no pmi exceeds $\log 5 = 1.61$.
+- Largest: *steam*–*gas*, $-0.81$, with 13 co-occurrences.
+:::
+
+::: {.slide title="The SVD of Positive PMI Is the Closed-Form Counterpart"}
+[Factorizing the counts]{.kicker}
+
+- Positive PMI: $\max(\textrm{pmi}, 0)$. Missing pairs stay 0, so the
+  matrix stays sparse: 5.5 million positive entries.
+- Rank-100 truncated SVD, in seconds. Word vectors: left singular vectors
+  scaled by $\sqrt{\sigma_i}$.
+- Eckart–Young: the residual equals $\sqrt{\sum_{i > k} \sigma_i^2}$, here
+  to a relative $1.7 \times 10^{-15}$.
+
+| | WordSim353 | SimLex-999 |
+|---|---|---|
+| SGNS | 0.56 | 0.18 |
+| SVD-PPMI | 0.57 | 0.185 |
+:::
+
+::: {.slide title="GloVe Fits Log Counts, but Only Where a Count Is Nonzero"}
+[GloVe]{.kicker}
+
+$$\sum_{X_{wo} > 0} h(X_{wo}) \big(\mathbf{u}_o^\top \mathbf{v}_w + b_w + c_o - \log X_{wo}\big)^2$$
+
+- $h(x) = \min((x/100)^{0.75}, 1)$: frequent pairs count more, up to a cap.
+- Biases $b_w$, $c_o$ absorb $\log p(w)$, $\log p(o)$: the inner product
+  is again close to a pmi.
+- The paper's recipe, untuned: $\rho = 0.29$ and 0.14.
+
+::: {.d2l-note}
+A pair that never occurs never enters the loss: 98% of the pairs on this
+slice.
+:::
+:::
+
+::: {.slide title="Trained SGNS Scores Follow Shifted PMI, r ≈ 0.9"}
+::: {.cols .vc}
+::: {.col .narrow}
+@!word-embeddings-scatter
+:::
+
+::: {.col}
+- The 2,000 most frequent pairs; dashed: the free-score optimum.
+- Counts as SGNS saw them: the subsampled stream, and drawn window widths,
+  which average the fixed windows of width 1 to 5.
+- Tight below 0, wider among strongly associated pairs: 100 dimensions
+  force a compromise.
+:::
+:::
+:::
+
+::: {.slide title="Two Factorizations of One Matrix Agree; GloVe Trails on WordSim353"}
+[Evaluation]{.kicker}
+
+::: {.cols .vc}
+::: {.col .fig .big}
+@!word-embeddings-grid-plot
+:::
+
+::: {.col}
+- Left: each method at its defaults, seed 0 with its pair-bootstrap
+  interval; crosses: the other seeds.
+- Right: SGNS against the noise exponent, bands over 3 seeds.
+- Every lower bound clears the random floor (0.13 and 0.04).
+:::
+:::
+:::
+
+::: {.slide title="Check: Is SGNS Better than SVD-PPMI?"}
+[Check]{.kicker}
+
+On WordSim353, SGNS scores 0.562 and SVD-PPMI 0.574 on the same 295
+pairs. Unpaired intervals: 0.48 to 0.64 and 0.48 to 0.65. Is either
+better?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Score both on the same resampled pairs: the difference is
+$-0.01$, interval $-0.08$ to 0.05. No difference is detectable. Report
+"alike", not an order.
+:::
+:::
+:::
+
+::: {.slide title="The Method Moved ρ by up to 0.3, the Settings by up to 0.05"}
+[Paired differences]{.kicker}
+
+| comparison (WordSim353) | $\Delta\rho$ | interval | seeds |
+|---|---|---|---|
+| SGNS − SVD-PPMI | −0.01 | −0.08 to 0.05 | −0.02 to −0.01 |
+| SGNS − GloVe | 0.27 | 0.17 to 0.38 | 0.27 to 0.30 |
+| noise 0.75 − 0 | 0.035 | 0.003 to 0.067 | 0.01 to 0.04 |
+| subsampling on − off | 0.03 | −0.02 to 0.08 | −0.01 to 0.04 |
+
+- SimLex-999: no difference between methods or settings is detectable.
+- GloVe never sees the zeros; SimLex asks for similarity, windows record
+  relatedness.
+
+::: {.d2l-note .rule}
+SVD-PPMI: deterministic, seconds, as good as SGNS here. Use the 0.75 power
+for both.
+:::
+:::
+
+::: {.slide title="Neighbors Describe the Corpus: On Wikipedia a Doctor Travels in Time"}
+[Nearest neighbors]{.kicker}
+
+| word | SGNS | SVD-PPMI |
+|---|---|---|
+| doctor | vincent, amy, torchwood, tardis, utterson | scully, skinner, mulder, jackman, amy |
+| stock | enterprises, purchasing, financing, bankrupt, profits | pictures, shops, paramount, share, goldwyn |
+| bank | ubs, winterthur, asset, swiss, banks | ubs, winterthur, merger, suisse, banks |
+
+::: {.d2l-note}
+*Physician* is not among them: the slice's doctors come from *Doctor Who*
+and *The X-Files*.
+:::
+:::
+
+::: {.slide title="3CosAdd Finds Queen Only Because King Is Excluded"}
+[Analogies]{.kicker}
+
+$a : b :: c : x$ answered by $\arg\max_x \cos(\mathbf{x}, \mathbf{b} -
+\mathbf{a} + \mathbf{c})$, on GloVe-6B, 100 dimensions:
+
+@!word-embeddings-analogy
+
+::: {.d2l-note .rule}
+State whether the query words were excluded. Without it, the nearest word
+to $\mathbf{b} - \mathbf{a} + \mathbf{c}$ is often $c$ (Linzen, 2016).
+:::
+:::
+
+::: {.slide title="Removing the He–She Direction Hides the Bias from One Probe"}
+[Bias]{.kicker}
+
+Projection of 20 professions on the unit vector along
+$\mathbf{he} - \mathbf{she}$ in GloVe-6B, then that projection removed:
+
+| | homemaker | nurse | captain | manager |
+|---|---|---|---|---|
+| projection before | −0.37 | −0.28 | 0.21 | 0.28 |
+| top-10 neighbors kept | 5 | 9 | 8 | 8 |
+
+- After the removal every projection is 0; the median profession keeps 9
+  of 10 neighbors.
+- The new neighbors' original lean tracks the word's: correlation about 0.9.
+
+[Bolukbasi et al., 2016; Gonen and Goldberg, 2019]{.small}
+:::
+
+::: {.slide title="Check: How Much of Qwen3-0.6B Is Its Token Table?"}
+[Check]{.kicker}
+
+Qwen3-0.6B: 151,936 tokens of width 1,024, 596,049,920 parameters, output
+layer tied to the table. What share is the table? How many numbers does a
+file hold that stores the table for input and output separately?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $151{,}936 \times 1{,}024 = 155{,}582{,}464$, or 26.1%. The
+file holds $596{,}049{,}920 + 155{,}582{,}464 = 751{,}632{,}384$.
+:::
+:::
+:::
+
+::: {.slide title="A Language Model's Table Groups Spellings, and Bank Stays One Point"}
+[Static vectors]{.kicker}
+
+| word | nearest rows in Qwen3-0.6B's table |
+|---|---|
+| doctor | ' doctors', ' Doctor', '医生', 'Doctor', 'doctor' |
+| bank | ' Bank', 'bank', 'Bank', '银行', '_bank' |
+
+| cosine | SGNS (slice) | GloVe-6B | Qwen3 table |
+|---|---|---|---|
+| *bank*, *river* | 0.53 | 0.33 | 0.24 |
+| *bank*, *money* | 0.32 | 0.57 | 0.22 |
+
+::: {.d2l-note}
+One row per word: the corpus decides where *bank* sits between its two
+senses.
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+- Counts: 6.5 million nonzero, 2% of the matrix. PMI separates association
+  from frequency.
+- SGNS: $1 + K$ binary decisions per pair. Its free-score optimum is
+  $\textrm{pmi} - \log K$ plus a noise offset: exact to $10^{-7}$ on a toy
+  corpus, $r \approx 0.9$ on the slice.
+- SVD-PPMI matches SGNS (0.57 and 0.56 on WordSim353). GloVe trails by
+  about 0.3 there; the settings moved $\rho$ by up to 0.05.
+- Analogies need the query words excluded; removing a direction hides a
+  bias from one probe.
+- A static vector is one point per word, in a word2vec table and in a
+  language model's.
+
+**Next:** an encoder that gives each token a vector computed from its
+sentence.
+:::

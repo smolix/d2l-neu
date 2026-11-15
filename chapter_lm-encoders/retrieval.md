@@ -6,11 +6,11 @@ a passage answering a question about this book among the ten nearest for
 almost every question we asked. We found those passages in the simplest way
 there is: compare the question's vector with the vector of every passage. For
 one book that is a single matrix product. Would it work for a library? A
-hundred million web passages hold about 400 GB of vectors, and a full
-comparison reads all of it for every question. The vectors also have a blind
-spot that no speed repairs: a question that turns on an exact word, a
-function name or a rare term can lose to passages that merely discuss the
-same subject.
+hundred million web passages, at 1,024 coordinates of two bytes each, hold
+about 200 GB of vectors, and a full comparison reads all of them for every
+question. The vectors also have a blind spot that no speed repairs: a
+question that turns on an exact word, a function name or a rare term can
+lose to passages that merely discuss the same subject.
 
 Search engines met both problems long before neural networks. For the blind
 spot they had the word index, which lists for every word the passages that
@@ -19,11 +19,13 @@ default of the Lucene search library. For speed they gave up exactness: an
 *approximate nearest-neighbour* index looks at a small fraction of the
 vectors and accepts that it sometimes misses the nearest one.
 
-This section is about that trade. An index gives up a little recall for a lot
-of speed and memory, and BM25 is the floor that any dense index must beat. We
-build the word index, the exact dense scan, two ways to combine them, a
-reranker, and three approximate indexes, and measure what each gains and
-costs. The section ends with the retriever that the rest of this part calls.
+Both old answers still hold. A word index and a vector index fail on
+different questions, so a good retriever keeps both, merges their lists, and
+lets a slower model reorder the few passages at the top. And once a
+collection outgrows an exact scan, an approximate index gives up a little
+recall for a great deal of speed and memory. We build each piece, measure
+what it gains and what it costs, and end with the retriever that the rest of
+this part calls.
 
 ```{.python .input #retrieval-imports}
 %%tab pytorch
@@ -53,13 +55,11 @@ import warnings
 ```
 
 Two pinned models appear: the chapter's embedder, Qwen3-Embedding-0.6B, and
-Qwen3-Reranker-0.6B, which reads a question and a passage together. Four
-results come from regeneration runs (`D2L_RERUN` set to `ret-stress-emb`,
-`ret-rerank`, `ret-ann` or `ret-crossover`), and each records the settings it
-was made with, which reading it checks. Without a GPU the notebook embeds
-fewer training questions and reranks eight dev questions live; the text
-quotes the GPU run. Latencies depend on the machine and its load, so the cell
-prints both.
+Qwen3-Reranker-0.6B, which reads a question and a passage together. Results
+that take minutes of GPU time are stored with the settings that made them,
+which the notebook checks when it reads them back. Without a GPU the
+notebook embeds fewer training questions and reranks eight dev questions
+live; the text quotes the GPU run.
 
 ```{.python .input #retrieval-config}
 %%tab pytorch
@@ -168,9 +168,8 @@ print(f'threads: {BUILD_THREADS} for each Faiss build, one for each timed '
       'search')
 ```
 
-The book corpus is a snapshot of the book's sources at a named commit, built
-by `tools/build_r3.py`. The cell registers it, the embedder's vectors of its
-chunks, and three of the regenerated results.
+The next cell registers the book corpus, the embedder's vectors of its
+chunks and the stored results.
 
 ```{.python .input #retrieval-data-hub}
 %%tab pytorch
@@ -195,11 +194,10 @@ d2l.DATA_HUB['lm-enc-ann-v1'] = (  # D2L_RERUN=ret-ann, AMD EPYC 7502
 Before building anything, we run the retriever this section ends with in two
 of its modes, BM25 alone and the embedder alone, on the 220 answerable dev
 questions of the book's question set, and count how often a passage that
-answers the question is among the first ten chunks. Intervals resample whole
-documents, because questions about one document succeed or fail together. An
-*identifier question* is one whose question or reference answer contains
-something that looks like code, such as a dotted name or a call. Make a guess
-first: does the embedder find everything that BM25 finds?
+answers the question is among the first ten chunks. An *identifier
+question* is one whose question or reference answer contains something that
+looks like code, such as a dotted name or a call. The embedder has the
+higher Recall@10. Does it find everything that BM25 finds?
 
 ```{.python .input #retrieval-opening}
 %%tab pytorch
@@ -265,13 +263,13 @@ for kind, win, mask in (('identifier question', 'bm25', IDENT),
         print(f'  {m}: first relevant chunk at rank {rank or "> 10"}')
 ```
 
-It does not. The embedder finds a relevant chunk among its first ten for 0.98
-of the questions [0.97, 1.00], BM25 for 0.96 [0.93, 0.98], and for 6%
-[3%, 9%], 13 of the 220, exactly one of them succeeds. The identifier question
-owes its flag to code-like notation in its reference answer, a reminder that
-the rule is crude; BM25 finds its passage through the rare words they share,
-"twice-differentiable", "quadratic", "finite". The other question asks how
-accuracy is "computed" where its passage says "calculated based on
+It does not. The two are close in Recall@10, 0.96 for BM25 and 0.98 for the
+embedder, yet for 6% [3%, 9%] of the questions, 13 of the 220, exactly one
+of them succeeds. The identifier question shows how crude the flag is: its
+code-like notation sits in the reference answer, and the question itself is
+about mathematics. BM25 finds its passage through the words they share,
+"convex", "quadratic", "twice" and "differentiable". The other question asks
+how accuracy is "computed" where its passage says "calculated based on
 correctness ... for all the pixels", a paraphrase that the embedder sees
 through and a word count does not.
 
@@ -295,14 +293,13 @@ source file becomes one document under these cleaning rules:
 - slide decks, exercises and cells of little more than imports are cut;
 - cross-references become the titles they point to, and citations are
   removed, so a chunk reads as text;
-- mathematics stays in the text, and the view the word index reads drops it.
+- mathematics stays in the text, but is removed from the copy that the word
+  index reads.
 
-In the library, not shown, `clean_d2l_markdown` applies the rules,
-`chunk_sections` and `chunk_fixed` cut documents into chunks, `BookCorpus`
-holds the result, and `_emb_cache_key` and `_emb_cache_load` find cached chunk
-vectors. Documents, not chunks, are split into train, dev and test by a hash
-of their names, so no passage of a dev or test document sources a training
-question.
+Library functions that are not shown apply these rules and cut documents
+into chunks. Documents, not chunks, are split into train, dev and test by a
+hash of their names, so no passage of a dev or test document sources a
+training question.
 
 ```{.python .input #retrieval-book-corpus-def}
 %%tab pytorch
@@ -374,16 +371,20 @@ The corpus holds 232 documents, 168 for training and 32 each for dev and
 test. The default chunking makes 5,324 chunks of at most 512 tokens, median
 364. A chunk id such as `sec512:chapter_transformers/kv-cache#001` names the
 chunking, the document and the position, and stays fixed within a corpus
-version, so a stored result can name chunks without their text. A chunk is
-read in one of three *views*: `display`, a heading line and the text, for a
-language model that answers; `dense`, with code cells cut after 30 lines, for
-the embedder; and `sparse`, without mathematics, whose LaTeX would fill the
-word index with tokens such as `mathbf`.
+version, so a stored result can name chunks without their text.
+
+Each chunk is read in one of three *views*, copies of its text prepared for
+one reader: `display`, a heading line and the text, for a language model
+that answers; `dense`, with code cells cut after 30 lines, for the embedder;
+and `sparse`, without mathematics, whose LaTeX would fill the word index
+with tokens such as `mathbf`.
 
 How should a document be cut? *Section chunks* pack whole paragraphs, lists,
 equations and code cells under their heading, up to 512 tokens. *Fixed
 windows* take 256 tokens at a time, here 64 shared with the next window,
-wherever the boundary falls. We cut one chapter introduction both ways.
+wherever the boundary falls. This section retrieves section chunks; the
+windows are kept for :numref:`sec_lm_rag`, which compares how a language
+model answers from each. We cut one chapter introduction both ways.
 
 ```{.python .input #retrieval-chunking-demo}
 %%tab pytorch
@@ -405,19 +406,18 @@ assert [(c['char_start'], c['char_end']) for c in d2l.chunk_sections(
 ```
 
 The section chunker returns the introduction's text and its list of
-resources; the windows start in mid-sentence. Whether that hurts the answers
-of a language model is a question for :numref:`sec_lm_rag`.
+resources as two chunks. Three of the four windows begin in the middle of a
+sentence.
 
 ### Measuring Retrieval
 
-The questions come from the book's question set (:numref:`sec_lm_rag`): a
-language model drafted them from passages of the book and other language
-models checked them; no person wrote or verified them. The 5,614 answerable
-training questions ask about other documents than the 220 dev questions. A
-chunk is *relevant* to a question if it contains one of the question's gold
-spans, the passage the question was written from or another that a model
-judged to answer it as well. :numref:`tab_lm_ret_metrics` defines our three
-measures of a ranked list.
+The questions come from the book's question set (:numref:`sec_lm_rag`),
+drafted from passages of the book by one language model and checked by
+others; no person wrote or verified them. The 5,614 answerable training
+questions ask about other documents than the 220 dev questions. A chunk is
+*relevant* if it contains a gold span of the question, a passage that
+answers it. :numref:`tab_lm_ret_metrics` collects the three measures of a
+ranked list from :numref:`sec_lm_text_embeddings`.
 
 :Measures of a ranked list for one question; the reported value is the mean over questions. $r$ is the rank of the first relevant chunk, and $\mathrm{rel}_i$ is 1 if the chunk at rank $i$ is relevant and 0 otherwise.
 :label:`tab_lm_ret_metrics`
@@ -428,12 +428,10 @@ measures of a ranked list.
 | MRR@10 | $1/r$ if $r \le 10$, else 0 | the first relevant chunk near the top |
 | nDCG@10 | $\sum_{i \le 10} \mathrm{rel}_i / \log_2(i + 1)$, divided by its value for the best order | every relevant chunk near the top |
 
-MRR is the *mean reciprocal rank*, nDCG the *normalized discounted cumulative
-gain*. Our Recall@$k$ is what the `trec_eval` tool calls success@$k$, since one
-relevant chunk is all a reader needs. It matters most to a system that hands
-the first $k$ chunks to a language model, nDCG@10 to a reader who stops early.
-Recall@10 grows with the size of a chunk, so comparing it across chunkings
-rewards the longer ones; :numref:`sec_lm_rag` counts tokens read instead.
+Recall@$k$, which the `trec_eval` tool calls success@$k$, matters most to a
+system that hands the first $k$ chunks to a language model; nDCG@10 matters
+to a reader who stops early. Recall@10 also grows with the size of a chunk,
+so it cannot compare chunkings.
 
 A small example fixes the definitions. Question 0 has one relevant chunk, at
 rank 3: Recall@1 is 0, Recall@5 is 1, MRR is $1/3$ and nDCG@10 is
@@ -483,19 +481,16 @@ Write the index as a matrix $\mathbf{W}$ with one row for every term of the
 vocabulary and one column for every chunk, and $W_{td} > 0$ only if term $t$
 occurs in chunk $d$. Stored row by row as a sparse matrix, row $t$ lists the
 chunks that contain $t$; mapping words to chunks inverts what a chunk does,
-hence the name *inverted index*. If $\mathbf{c}$ counts the question's terms,
-the scores of all chunks are one sparse product, $\mathbf{c}^\top \mathbf{W}$,
-which touches only the rows of the question's terms: a question of ten words
-costs ten lists, however large the corpus.
+hence the name *inverted index*. If $\mathbf{n}$ counts how often each term
+occurs in the question, the scores of all chunks are one sparse product,
+$\mathbf{n}^\top \mathbf{W}$, which touches only the rows of the question's
+terms: a question of ten words costs ten lists, however large the corpus.
 
 What counts as a term needs care in a technical book. `bm25_tokenize` keeps
 lower-cased words and numbers, without stemming. An identifier such as
 `d2l.book_corpus` or `BookRetriever` is kept whole and also split at dots,
 underscores and capitals, into `d2l`, `book`, `corpus` and `book`,
-`retriever`, so a question that names part of it still matches. Learned
-sparse retrieval keeps this machinery but lets an encoder choose the terms and
-their weights, including words the chunk never uses
-(:numref:`sec_lm_encoders_fr`).
+`retriever`, so a question that names part of it still matches.
 
 ```{.python .input #retrieval-bm25-tokenize}
 %%tab pytorch
@@ -536,21 +531,22 @@ Here $\mathrm{tf}_{td}$ counts term $t$ in chunk $d$, $|d|$ is the length of
 the chunk and $\overline{|d|}$ the mean length, $N$ is the number of chunks
 and $\mathrm{df}_t$ the number that contain $t$; a chunk's score sums
 $W_{td}$ over the question's terms. For a chunk of average length the fraction
-is $\mathrm{tf}/(\mathrm{tf} + k_1)$: at $k_1 = 1.2$ one occurrence earns 0.45
-of the idf, two 0.63, five 0.81, and no number of repetitions more than the
-whole idf. The parameter $b$ scales $k_1$ with the length: at $b = 0.75$ a
-chunk twice the average length faces $1.2 \times 1.75 = 2.1$, and one
-occurrence earns 0.32. Among the book's 5,324 chunks, a term in one chunk has
-idf $\log(1 + 5323.5/1.5) \approx 8.2$, a term in half of them
-$\log 2 \approx 0.69$. The 1 inside the logarithm is Lucene's; the classical
-formula leaves it out and gives negative weight to terms in more than half of
-the documents.
+is $\mathrm{tf}/(\mathrm{tf} + k_1)$: at $k_1 = 1.2$ one occurrence
+contributes 0.45 of the idf, two 0.63, five 0.81, and no number of
+repetitions more than the whole idf. The parameter $b$ scales $k_1$ with the
+length: at $b = 0.75$ a chunk twice the average length faces
+$1.2 \times 1.75 = 2.1$, and one occurrence contributes 0.32. Among the
+book's 5,324 chunks, a term in one chunk has idf
+$\log(1 + 5323.5/1.5) \approx 8.2$, a term in half of them
+$\log 2 \approx 0.69$. The 1 inside the logarithm, Lucene's choice, keeps
+the weight of a very common term from turning negative.
 
 The fraction is a simple curve standing in for a crude model, in which the
 count of a word follows one of two Poisson distributions depending on whether
 the document is about the word (Robertson and Zaragoza trace its origin in "The
-Probabilistic Relevance Framework: BM25 and Beyond"). That it is still hard to
-beat says something about how much of relevance lies in the words.
+Probabilistic Relevance Framework: BM25 and Beyond"). That so simple a
+formula is still hard to beat says that on text like this book, a passage
+that answers a question usually shares the question's rarest words.
 
 ```{.python .input #retrieval-bm25-def}
 %%tab pytorch
@@ -596,10 +592,9 @@ class BM25Index:
         return ids, s[ids]
 ```
 
-A formula implemented from scratch should be checked against a trusted
-implementation. `bm25s` is a fast BM25 library whose `lucene` variant computes
-:eqref:`eq_lm_bm25`; we give it our tokens, so that only the scoring is
-compared, and score 200 training questions both ways.
+We check `BM25Index` against `bm25s`, a fast BM25 library whose `lucene`
+variant computes :eqref:`eq_lm_bm25`. We give it our tokens, so that only
+the scoring is compared, and score 200 training questions both ways.
 
 ```{.python .input #retrieval-bm25-oracle}
 %%tab pytorch
@@ -708,8 +703,15 @@ assert np.allclose(S_BM25, [RET.bm25.scores(d2l.bm25_tokenize(
 print(f'{MS["BM25"]:.2f} ms per question, including tokenization')
 ```
 
-BM25 answers a question in half a millisecond to two milliseconds on one CPU
-core, tokenization included.
+BM25 answers a dev question in a millisecond or two on one CPU core,
+tokenization included. The two settings, 0.5 and 1.8 ms in one timed pass
+each, run the same code on matrices of the same shape, so the gap is not a
+cost of $b$.
+
+Both choices of this subsection, which strings count as terms and how a
+count becomes a weight, were made by hand. Learned sparse retrieval keeps
+the inverted index but lets an encoder choose the terms and their weights,
+including words the chunk never uses (:numref:`sec_lm_encoders_fr`).
 
 ## Dense Retrieval, Fusion and Reranking
 :label:`subsec_lm_dense_hybrid`
@@ -783,11 +785,12 @@ for name in ('BM25', 'dense'):
 ```
 
 The re-encoded chunks agree with the stored vectors to a cosine of 0.9998.
-Dense retrieval takes 0.9 ms per question and finds more than BM25. How much
-of that is the scan? We time the scan alone, for one question and for all 220
-at once. The book's matrix, 11 MB, fits in the GPU's 72 MB second-level
-cache; a synthetic matrix of $2^{17}$ random unit vectors, 256 MiB, has to
-come from memory on every scan.
+With the 220 dev questions encoded in one batch, dense retrieval takes
+0.9 ms per question, and both retrievers reproduce the Recall@10 of the
+opening cell. How much of the 0.9 ms is the scan? We time the scan alone,
+for one question and for all 220 at once. The book's matrix, 11 MB, fits in
+the GPU's 72 MB second-level cache; a synthetic matrix of $2^{17}$ random
+unit vectors, 256 MiB, has to come from memory on every scan.
 
 ```{.python .input #retrieval-dense-timing}
 %%tab pytorch
@@ -833,27 +836,28 @@ On the book's matrix one question takes 0.055 ms, five times the roofline's
 memory bound never shows. The synthetic matrix behaves as the roofline
 predicts. One question reads it at about 820 GB/s, four-fifths of the card's
 bandwidth, in 0.33 ms against a bound of 0.27 ms, and a batch of 220 takes
-only twice as long, because each vector read serves all 220 questions. Either
-way the scan of the book costs well under a millisecond per question, and
-nearly all of the 0.9 ms above encodes the question. For a book, no index
-could make dense search noticeably faster.
+only twice as long, because each vector read serves all 220 questions. For
+the book, the scan costs well under a millisecond per question, and nearly
+all of the 0.9 ms above is the encoder's forward pass over the batch of
+questions; a question asked on its own pays a whole forward pass. No index
+could make dense search over the book noticeably faster.
 
 ### Fusion
 
 Neither list contains the other, so we combine them. *Reciprocal-rank fusion*
 (RRF; Cormack, Clarke and Büttcher, "Reciprocal Rank Fusion Outperforms
 Condorcet and Individual Rank Learning Methods") ignores the scores and gives
-a chunk $c$
+a chunk $d$ the score
 
 $$
-s(c) = \sum_{r} \frac{1}{k + \mathrm{rank}_r(c)},
+s(d) = \sum_{r} \frac{1}{k + \mathrm{rank}_r(d)},
 $$
 :eqlabel:`eq_lm_rrf`
 
-summed over the rankings $r$ that contain $c$, with $k = 60$. A chunk first in
+summed over the rankings $r$ that contain $d$, with $k = 60$. A chunk first in
 one list and third in the other scores $1/61 + 1/63 \approx 0.0323$, a chunk
 first in one list only $1/61 \approx 0.0164$: agreement beats a single first
-place. Rank 10 earns only 13% less than rank 1, so RRF is close to a vote
+place. Rank 10 scores only 13% less than rank 1, so RRF is close to a vote
 among the lists with a mild preference for early ranks. Needing ranks only, it
 fuses a BM25 score of 9 with a cosine of 0.6 without asking what either means.
 
@@ -928,10 +932,13 @@ print(f'found by exactly one of BM25 and dense: '
 ```
 
 The weight chosen is $\lambda = 0.7$, mostly dense. Both fusions keep the
-embedder's Recall@10 of 0.98 and rank better than either list alone: nDCG@10
-is 0.85 for RRF and 0.87 for the weighted sum, against 0.82 for BM25 and 0.79
-for the embedder. The oracle finds a relevant chunk for every question;
-fusion does too, but in its first 100 chunks, not its first ten.
+embedder's Recall@10 of 0.98 and rank better than the embedder: nDCG@10 is
+0.85 for RRF and 0.87 for the weighted sum, against 0.79 for the embedder and
+0.82 for BM25. The weighted sum ranks a little better, but only with a
+weight tuned on training questions. RRF needs none, which is why the
+retriever at the end of this section uses it. The oracle finds a relevant
+chunk for every question, and so does fusion, but in its first 100 chunks,
+not its first ten.
 
 ### Reranking
 
@@ -940,11 +947,9 @@ Both retrievers so far encode question and chunk separately. Such a
 but the vector of a chunk must anticipate every question anyone might ask. A
 *cross-encoder* reads question and chunk together and scores the pair. Its
 attention can connect a word of the question with the sentence that answers
-it, which makes it more accurate, at one forward pass per pair, so it can only
-reorder a short list that a bi-encoder found (Nogueira and Cho, "Passage
-Re-ranking with BERT"). Late interaction lies in between: it keeps one vector
-per token of every chunk and matches the two token by token at search time
-(:numref:`sec_lm_encoders_fr`).
+it, at the cost of one forward pass per pair, so it can only reorder a short
+list that a bi-encoder found (Nogueira and Cho, "Passage Re-ranking with
+BERT").
 
 Qwen3-Reranker-0.6B is a decoder used as a cross-encoder. Its prompt states an
 instruction, the question and the chunk, and asks for "yes" or "no". The score
@@ -954,7 +959,8 @@ $$
 P(\text{yes}) = \frac{e^{z_{\text{yes}}}}{e^{z_{\text{yes}}} + e^{z_{\text{no}}}},
 $$
 
-where $z_{\text{yes}}$ and $z_{\text{no}}$ are the logits of the two tokens.
+where $z_{\text{yes}}$ and $z_{\text{no}}$ are the logits of the two tokens:
+the probability of "yes" with every other answer ruled out.
 `rerank_yes_no` builds the prompt of the model card and cuts the chunk so the
 prompt fits into 1,024 tokens.
 
@@ -985,11 +991,10 @@ def rerank_yes_no(model, tokenizer, query, docs, instruction=None,
 
 The reranker reads each question with the embedder's instruction and each
 chunk in the dense view, inputs fixed before any dev number was seen. It
-reorders the first 20 fused chunks live and the first 100 from stored scores
-(`D2L_RERUN=ret-rerank` recomputes them). It only permutes the chunks it is
-given, so reranking the first 20 leaves Recall@20 and Recall@100 where they
-were; a reranker credited with more Recall@$k$ than its depth allows has been
-measured wrongly.
+reorders the first 20 fused chunks live and the first 100 from stored
+scores. It only permutes the chunks it is given, so reranking the first 20
+leaves Recall@20 and Recall@100 where they were. A table in which reranking
+the first 20 raises Recall@100 has measured something else.
 
 ```{.python .input #retrieval-rerank}
 %%tab pytorch
@@ -1056,9 +1061,15 @@ d2l.lm_free()
 ```
 
 Live and stored scores agree to the printed digits. Reranking 20 chunks takes
-about 0.2 s per question on the GPU, 100 chunks about 1.1 s.
+about 0.2 s per question on the GPU and 100 chunks about 1.1 s, against
+0.9 ms for the embedder.
 
-### The Stack on the Dev Questions
+Late interaction lies between the two designs. It stores one vector for
+every token of every chunk, computed before any question arrives, and
+matches them against the question's token vectors at search time
+(:numref:`sec_lm_encoders_fr`).
+
+### Comparing the Retrievers
 
 The next cell prints every retriever's measures with intervals over
 documents, the time per question, and the paired differences. The 80
@@ -1120,46 +1131,48 @@ for ax, k in zip(axes, ('recall@10', 'ndcg@10')):
                        f'dev {k}', axes=ax)
 ```
 
-The table supports four statements, each a paired difference on the same
-questions.
+All differences below are paired, on the same questions.
 
-- **Tuning BM25 changed nothing measurable.** Chosen and default parameters
-  give the same dev Recall@10, a difference of 0.000 [0.000, 0.000], and
-  nDCG@10 of 0.822 and 0.817: the tuning confirmed the defaults.
-- **The embedder finds more, and BM25 ranks better.** The embedder's Recall@10
-  is ahead by 0.023 [$-0.004$, 0.053] and its nDCG@10 behind by 0.035
-  [$-0.084$, 0.013]; its Recall@1 is 0.67 against BM25's 0.76. On the
-  identifier questions BM25 finds as many relevant chunks, within 0.013
-  (sign-flip p 1.0), and ranks them higher, ahead in nDCG@10 by 0.12
-  (sign-flip p 0.001). On the other 140 questions the embedder's Recall@10 is
-  ahead by 0.04 [0.00, 0.09], an interval that just reaches zero.
-- **Fusion keeps the better recall and improves the ranking.** RRF matches the
-  embedder's Recall@10, 0.000 [$-0.023$, 0.021]: on this corpus fusion costs
-  nothing in recall, and at 0.98 there is little to gain. In nDCG@10 it is
-  ahead of the embedder by 0.066 [0.040, 0.091] and of BM25 by 0.031
-  [$-0.002$, 0.061]. The tuned weighted sum adds 0.018 [0.003, 0.033] over RRF.
-- **Reranking the first 20 is the largest single step, and the first 100 add
+- **Tuning BM25 gained nothing on dev.** The chosen $b = 0.9$ and the
+  default 0.75 give the same dev Recall@10, a difference of 0.000 [0.000,
+  0.000], and nDCG@10 of 0.822 and 0.817.
+- **On identifier questions BM25 ranks better.** There the two find a
+  relevant chunk equally often, within 0.013 (sign-flip p 1.0), but BM25
+  puts it higher, ahead in nDCG@10 by 0.12 (sign-flip p 0.001).
+- **Over all questions the two are within noise.** The embedder's
+  Recall@10 differs by $+0.023$ [$-0.004$, 0.053] and its nDCG@10 by
+  $-0.035$ [$-0.084$, 0.013]. On the 140 questions without identifiers its
+  Recall@10 is ahead by 0.04 [0.00, 0.09], an interval that just reaches
+  zero.
+- **Fusion repairs the ranking.** RRF matches the embedder's Recall@10,
+  0.000 [$-0.023$, 0.021], so on this corpus it costs nothing in recall. It
+  ranks better than the embedder, by 0.066 [0.040, 0.091] in nDCG@10, and
+  puts a relevant chunk first for 0.78 of the questions, against 0.67 for
+  the embedder and 0.76 for BM25. The tuned weighted sum adds 0.018 [0.003,
+  0.033] in nDCG@10.
+- **Reranking the first 20 improves the ranking again, and the first 100 add
   nothing.** The reranker raises nDCG@10 by 0.054 [0.027, 0.082], about a
   third of the gap to a perfect ranking, and Recall@1 from 0.78 to 0.87.
   Reading 100 chunks changes nDCG@10 by $-0.001$ [$-0.009$, 0.008] and takes
   five times as long.
 
 "Dense retrieval beats BM25" is a claim about a corpus, a question set and a
-model. On a technical book full of exact terms, with a small embedder that may
-have read the book on the web (:numref:`sec_lm_text_embeddings`), the two are
-within noise in Recall@10 and split by measure; the BEIR benchmark of Thakur
-and colleagues found dense retrievers trained on one collection often below
-BM25 on another. Keep the word index, and fuse instead of choosing: fusion
-costs a few milliseconds and covers both kinds of failure.
+model. On a technical book full of exact terms the two are within noise in
+Recall@10 and split by measure, and the BEIR benchmark of Thakur and
+colleagues found dense retrievers trained on one collection often below
+BM25 on another. On such text the word index is a high floor. Keep it, and
+fuse instead of choosing: fusion costs a few milliseconds and covers both
+kinds of failure.
 
 ## Approximate Nearest Neighbours
 :label:`subsec_lm_ann`
 
-The book needs no index, but a collection a thousand times larger takes a
-thousand times longer to scan. Every approximate index looks at a small
-fraction of the vectors, chosen so that the nearest ones are likely among
-them, and accepts an occasional miss. We build two such indexes from scratch,
-use a third through the Faiss library, and measure all three on a larger
+For the book, the flat scan needs no help, but its cost grows with the
+collection. The synthetic matrix of 131,072 vectors already took 0.33 ms per
+question on the GPU; a hundred million vectors would take nearly a thousand
+times longer and would not fit on the card. We build two approximate
+indexes from scratch, use a third through Faiss, a C++ library of vector
+indexes with a Python interface, and measure all three on a larger
 collection.
 
 ### Inverted Files
@@ -1174,11 +1187,12 @@ $$
 n_{\text{list}} + n_{\text{probe}}\, \frac{N}{n_{\text{list}}}
 $$
 
-vectors instead of $N$. What the index gives up is exactness: a neighbour just
-across the border of an unprobed cell is never seen. `kmeans` starts from
-k-means++ seeds, each new centroid drawn with probability proportional to its
-squared distance from those chosen so far, and runs Lloyd's iterations;
-`IVFIndex` stores the vectors cell by cell and scans the probed cells exactly.
+vectors instead of $N$: the centroids, then the probed cells. What the index
+gives up is exactness: a neighbour just across the border of an unprobed
+cell is never seen. `kmeans` starts from k-means++ seeds, each new centroid
+drawn with probability proportional to its squared distance from the nearest
+centroid chosen so far, and runs Lloyd's iterations; `IVFIndex` stores the
+vectors cell by cell and scans the probed cells exactly.
 
 ```{.python .input #retrieval-kmeans-ivf-def}
 %%tab pytorch
@@ -1260,64 +1274,89 @@ class IVFIndex:
 
 ### Product Quantization
 
-An inverted file still stores every vector in full, 4 KB in float32. Jégou,
-Douze and Schmid ("Product Quantization for Nearest Neighbor Search") store a
-short code instead and compute distances from the code without decoding it.
+An inverted file still stores every vector in full, 4 KB in float32, the
+format in which Faiss holds vectors. Jégou, Douze and Schmid ("Product
+Quantization for Nearest Neighbor Search") store a short code instead and
+compute distances from the code without decoding it.
 
-Split $\mathbf{x} \in \mathbb{R}^d$ into $M$ sub-vectors
-$\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(M)}$ of $d/M$ coordinates. For each
-position $j$, learn a codebook of $2^b$ centroids
-$\mathbf{c}_{j,1}, \ldots, \mathbf{c}_{j,2^b}$ by k-means on the sub-vectors
-at that position, and replace $\mathbf{x}^{(j)}$ by the index $k_j$ of its
-nearest centroid. The code $(k_1, \ldots, k_M)$ takes $Mb$ bits, and the
-reconstruction $\hat{\mathbf{x}}$ concatenates the chosen centroids. $M$
-codebooks of $2^b$ entries name $2^{bM}$ reconstructions; this product of
-small codebooks gives the method its name.
+Split $\mathbf{x} \in \mathbb{R}^m$ into $M$ blocks
+$\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(M)}$ of $m/M$ coordinates each. For
+each position $j$, learn a codebook of $K$ centroids
+$\mathbf{c}_{j,0}, \ldots, \mathbf{c}_{j,K-1}$ by k-means on the blocks at
+that position, and replace $\mathbf{x}^{(j)}$ by the index $i_j$ of its
+nearest centroid. The code $(i_1, \ldots, i_M)$ takes $M \log_2 K$ bits, one
+byte per block at $K = 256$, and the reconstruction $\hat{\mathbf{x}}$
+concatenates the chosen centroids. $M$ codebooks of $K$ entries name $K^M$
+reconstructions; this product of small codebooks gives the method its name.
 
-For a question $\mathbf{y}$, kept exact, the squared distance to a code splits
-over the blocks, because it is a sum over coordinates:
+The smallest case can be done by hand. Take $m = 4$, $M = 2$ and $K = 2$,
+with codebooks $\{(1, 0), (0, 1)\}$ for the first two coordinates and
+$\{(1, 1), (-1, 0)\}$ for the last two. For
+$\mathbf{x} = (0.9, 0.2, -0.8, 0.1)$ the first block is nearest to $(1, 0)$
+(squared distance 0.05 against 1.45) and the second to $(-1, 0)$ (0.05
+against 4.05), so the code is $(0, 1)$ and $\hat{\mathbf{x}} = (1, 0, -1, 0)$.
+Now take the question $\mathbf{y} = (1, 1, 0, 0)$. Its first block, $(1, 1)$,
+lies at squared distance 1 from both centroids of the first codebook; its
+second block, $(0, 0)$, at 2 and 1 from those of the second. With these four
+numbers in a table $T$, the squared distance from $\mathbf{y}$ to the code is
+$T_1[0] + T_2[1] = 1 + 1 = 2$, read off in two look-ups without decoding
+anything. The exact squared distance to $\mathbf{x}$ is 1.30.
+
+The look-ups work in general, because a squared distance is a sum over
+coordinates and therefore over blocks. For a question $\mathbf{y}$, kept
+exact,
 
 $$
-\|\mathbf{y} - \hat{\mathbf{x}}\|^2 = \sum_{j=1}^{M} \big\|\mathbf{y}^{(j)} - \mathbf{c}_{j,k_j}\big\|^2 = \sum_{j=1}^{M} T_j[k_j].
+\|\mathbf{y} - \hat{\mathbf{x}}\|^2 = \sum_{j=1}^{M} \big\|\mathbf{y}^{(j)} - \mathbf{c}_{j,i_j}\big\|^2 = \sum_{j=1}^{M} T_j[i_j].
 $$
 :eqlabel:`eq_lm_adc`
 
-The table $T_j[k] = \|\mathbf{y}^{(j)} - \mathbf{c}_{j,k}\|^2$ has $M 2^b$
+The table $T_j[i] = \|\mathbf{y}^{(j)} - \mathbf{c}_{j,i}\|^2$ has $MK$
 entries and depends only on the question, so it is built once per question
-with $2^b d$ multiply-adds, the cost of 256 exact distances at $b = 8$; after
-that each code costs $M$ look-ups, whatever $d$ is. Only the stored vectors
-are quantized, hence *asymmetric distance computation*. At $d = 1{,}024$,
-$M = 64$ and $b = 8$ a code takes 64 bytes against 4,096 in float32, plus
-1 MiB of codebooks for the whole collection.
+with $Km$ multiply-adds, the cost of 256 exact distances at $K = 256$; after
+that each code costs $M$ look-ups, whatever $m$ is. Only the stored vectors
+are quantized, hence the name *asymmetric distance computation*. At
+$m = 1{,}024$, $M = 64$ and $K = 256$ a code takes 64 bytes against 4,096 in
+float32, plus 1 MiB of codebooks for the whole collection.
 
-How wrong is the distance? Write $\mathbf{e} = \mathbf{x} - \hat{\mathbf{x}}$.
-The triangle inequality bounds the error for every question at once,
+How wrong is the distance? Write $\mathbf{e} = \mathbf{x} - \hat{\mathbf{x}}$
+for the quantization error. The triangle inequality bounds the error for
+every question at once,
 
 $$
 \big|\, \|\mathbf{y} - \mathbf{x}\| - \|\mathbf{y} - \hat{\mathbf{x}}\| \,\big| \le \|\mathbf{e}\|,
 $$
 
-so a vector that is quantized well is ranked well. Like the distance,
-$\|\mathbf{e}\|^2$ is a sum over blocks, so the mean squared error of the
-quantizer is the sum of the distortions of its $M$ codebooks, each minimized
-by its own k-means. On average we can say more. Substituting
+so a vector that is quantized well is ranked well. In the hand case the
+error of the distance, $|\sqrt{1.30} - \sqrt{2}| = 0.27$, stays below
+$\|\mathbf{e}\| = \sqrt{0.10} = 0.32$. Like the distance, $\|\mathbf{e}\|^2$
+is a sum over blocks, so the mean squared error of the quantizer is the sum
+of the distortions of its $M$ codebooks, each minimized by its own k-means.
+
+On average we can say more. Substituting
 $\mathbf{y} - \mathbf{x} = (\mathbf{y} - \hat{\mathbf{x}}) - \mathbf{e}$ gives
 
 $$
 \|\mathbf{y} - \mathbf{x}\|^2 = \|\mathbf{y} - \hat{\mathbf{x}}\|^2 - 2\,(\mathbf{y} - \hat{\mathbf{x}})^\top \mathbf{e} + \|\mathbf{e}\|^2.
 $$
 
-At convergence each centroid is the mean of its cell, so $\mathbf{e}$ has mean
-zero in every cell, and for a question independent of $\mathbf{x}$ the middle
-term averages to zero: the asymmetric distance underestimates the squared
-distance by the mean distortion, on average and for every question alike.
+At convergence each centroid is the mean of its cell, so each block of
+$\mathbf{e}$ has mean zero in every cell of its codebook. For a question
+independent of $\mathbf{x}$ the middle term therefore averages to zero: the
+asymmetric distance underestimates the squared distance by the mean
+distortion, on average and for every question alike. A shift that is the
+same for every vector would leave the ranking alone. What reorders
+neighbours is that $\|\mathbf{e}\|$ differs from vector to vector, and the
+bound says by how much: two neighbours closer together than their
+quantization errors can swap places.
 
 A product quantizer compresses each vector as a low-rank approximation does
 (:numref:`sec_mdl-svd-low-rank`), but where a rank-$r$ approximation projects
 every vector onto one shared subspace, the quantizer picks for each block one
 of finitely many points: its reconstructions form a grid, not a subspace.
 `ProductQuantizer` fits one codebook per block and stores each index in a
-byte.
+byte. Its arguments follow Faiss: `m` is the number of blocks, our $M$, and
+`nbits` is $\log_2 K$.
 
 ```{.python .input #retrieval-pq-def}
 %%tab pytorch
@@ -1375,21 +1414,12 @@ class ProductQuantizer:
         return top.values, top.indices
 ```
 
-The smallest case can be done by hand. Take $d = 4$, $M = 2$, $b = 1$, with
-codebooks $\{(1, 0), (0, 1)\}$ for the first two coordinates and
-$\{(1, 1), (-1, 0)\}$ for the last two. For
-$\mathbf{x} = (0.9, 0.2, -0.8, 0.1)$ the first block is nearest to $(1, 0)$
-(squared distance 0.05 against 1.45) and the second to $(-1, 0)$ (0.05
-against 4.05), so the code is $(0, 1)$ and $\hat{\mathbf{x}} = (1, 0, -1, 0)$.
-For $\mathbf{y} = (1, 1, 0, 0)$ the table holds the squared distances of
-$(1, 1)$ to the first codebook, 1 and 1, and of $(0, 0)$ to the second, 2
-and 1, and the distance to the code is $T_1[0] + T_2[1] = 2$. The exact value
-is 1.30, and the error of the distance, $|\sqrt{1.30} - \sqrt{2}| = 0.27$,
-stays below $\|\mathbf{e}\| = \sqrt{0.10} = 0.32$. The cell checks this case,
-then the identities on 20,000 points from a mixture of 16 Gaussians in 64
-dimensions ($M = 8$, $b = 8$), including the mean of $\mathbf{y}^\top
-\mathbf{e}$ (over pairs drawn with replacement, so its standard error is
-slightly optimistic) and the codes Faiss assigns given our codebooks.
+The cell checks the hand case, then five claims on 20,000 points from a
+mixture of 16 Gaussians in 64 dimensions, with $M = 8$ and $K = 256$:
+(1) the table gives the distance to the reconstruction; (2) the bound
+holds; (3) $\mathbf{y}^\top \mathbf{e}$ averages to zero; (4) Faiss, given
+our codebooks, assigns our codes; (5) the distortion is the sum of the
+blocks' distortions.
 
 ```{.python .input #retrieval-pq-check}
 %%tab pytorch
@@ -1446,22 +1476,56 @@ assert same >= 0.999
 assert abs(err2.sum(1).mean() - blocks.sum()) < 1e-9 * blocks.sum()
 ```
 
-All checks hold: table and reconstruction distances agree to
-$2 \times 10^{-7}$ relative, the bound holds on every pair,
-$\mathbf{y}^\top \mathbf{e}$ averages $-0.043$ with a standard error of 0.042,
-Faiss assigns our codes to every vector, and the mean squared error, 36.06,
-is the sum of eight block distortions of about 4.5.
+All five hold. Table and reconstruction distances agree to
+$2 \times 10^{-7}$ relative, the bound holds on every pair, and
+$\mathbf{y}^\top \mathbf{e}$ averages $-0.043$ with a standard error of
+0.042. Faiss assigns our codes to every vector, and the mean squared error,
+36.06, is the sum of eight block distortions of about 4.5.
 
-### A Collection for Stress Tests
+The two indexes combine. *IVF-PQ* stores, in each cell of an inverted file,
+the codes of its vectors' offsets from the cell's centroid, which are shorter
+than the vectors themselves and so lose less to quantization. A question
+probes $n_{\text{probe}}$ cells as before and scores the codes of each with a
+table built for its own offset from that cell's centroid. Each vector then
+costs its code and an 8-byte id; the coarse centroids and the codebooks are
+shared by the whole collection.
+
+### Navigable Small-World Graphs
+
+The third index needs no cells. Link every vector to a few near neighbours
+and search by walking: start somewhere, move to whichever neighbour is closest
+to the question, and stop when none is closer. On a well-built graph a few
+dozen steps cross millions of vectors, as a short chain of acquaintances
+connects two strangers.
+
+A walk that starts far from the question needs many short steps.
+*Hierarchical navigable small-world graphs* (HNSW; Malkov and Yashunin,
+"Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical
+Navigable Small World Graphs") therefore add layers. Every vector is on the
+bottom layer, and a random subset that shrinks geometrically is also on the
+layers above, where the links are long. A search crosses the collection on
+the top layer and refines its answer at the bottom.
+
+Three knobs set the graph. Each vector keeps a fixed number of links per
+layer, 32 here (Faiss's parameter `M`), and twice that at the bottom. The
+builder keeps $\mathit{efConstruction}$ candidates while choosing links, and
+a search keeps $\mathit{efSearch}$ candidates at the bottom layer, the knob
+that trades recall for time. The links are 4-byte ids, so 64 of them add
+256 bytes per vector at the bottom layer, a little more with the layers
+above, next to the 4,096 bytes of the vector itself. A graph needs about as
+much memory as a flat index.
+
+### Measuring the Indexes
 
 To see an index at work we need more vectors than the book has. The stress
-collection adds to the book's chunk vectors about 62,500 passages from
-Natural Questions that the contrastive training of
-:numref:`sec_lm_text_embeddings` did not use, embedded by the same model, and
-1,000 of their questions as timed queries. The off-topic passages enlarge the
+collection adds to the book's chunk vectors about 62,500 Wikipedia passages
+from Natural Questions, the pairs of search questions and passages that
+:numref:`sec_lm_text_embeddings` trained on; they come from the pairs its
+contrastive training did not use. The same model embeds them, and 1,000 of
+their questions serve as timed queries. The off-topic passages enlarge the
 haystack without making the book's questions harder: the collection tests
 whether an index finds the exact nearest neighbours, not how hard retrieval
-is. `D2L_RERUN=ret-stress-emb` encodes it again in about five minutes.
+is.
 
 ```{.python .input #retrieval-stress}
 %%tab pytorch
@@ -1503,34 +1567,19 @@ print(f'{len(XS):,} vectors of {XS.shape[1]} coordinates '
 
 The collection holds 67,853 vectors, 265 MiB in float32.
 
-### Navigable Small-World Graphs
+For every index along its knob, the next cell measures two kinds of recall.
+*Recall against exact search* is the share of the exact ten nearest
+neighbours that the index returns for the 1,000 timed questions; it
+measures the index. *Task recall* is the Recall@10 of the 220 dev questions
+searched among all 67,853 vectors; it measures what a reader of the results
+sees. The cell also records the median (p50) and 95th-percentile latency of
+one-question searches on one CPU thread, and the bytes per vector.
 
-The third index needs no cells. Link every vector to a few near neighbours
-and search by walking: start somewhere, move to whichever neighbour is closest
-to the question, and stop when none is closer. On a well-built graph a few
-dozen steps cross millions of vectors, as a short chain of acquaintances
-connects two strangers. *Hierarchical navigable small-world graphs* (HNSW;
-Malkov and Yashunin, "Efficient and Robust Approximate Nearest Neighbor Search
-Using Hierarchical Navigable Small World Graphs") add layers: every vector is
-on the bottom layer, and a random subset that shrinks geometrically is also on
-the layers above, with long links, so a search crosses the collection at the
-top and refines at the bottom. Each vector has $M$ links per layer (twice that
-at the bottom); the builder keeps $\mathit{efConstruction}$ candidates while
-choosing links, and a search keeps $\mathit{efSearch}$ candidates at the
-bottom, the knob that trades recall for time. The memory is the vectors plus
-the links, at $M = 32$ about 256 bytes next to the 4,096 of a vector, so a
-graph needs about as much memory as a flat index; deleting a vector is
-expensive, because its neighbours must be relinked.
-
-For every index along its knob, the next cell measures *recall against exact
-search*, the share of the exact ten nearest neighbours returned for the timed
-questions; *task recall*, the Recall@10 of the dev questions searched in the
-stress collection; the median (p50) and 95th percentile latency of
-one-question searches on one CPU thread; and the bytes per vector. The
-inverted files have 1,024 cells; IVF-PQ keeps product-quantization codes in
-them, with $M = 64$ (three k-means seeds) or 32. The rows marked "ours" show
-the recall of `IVFIndex` and of `ProductQuantizer` scanning all codes; their
-latency is Python's overhead.
+The inverted files have 1,024 cells, close to $\sqrt{16 N}$, the count that
+minimizes the vectors compared at 16 probes (an exercise derives it). IVF-PQ
+stores 64-byte codes, built with three k-means seeds, and 32-byte ones. The
+rows marked "ours" give the recall of `IVFIndex` and of `ProductQuantizer`
+scanning all codes; their latency is Python's overhead.
 
 ```{.python .input #retrieval-ann}
 %%tab pytorch
@@ -1662,36 +1711,33 @@ else:
         median_p50_live_over_registered=('p50_ratio', 'median')).round(3))
 ```
 
-Four readings stand out.
-
 The inverted file does what the count predicts. At 16 probes it compares about
 $1{,}024 + 16 \times 66 \approx 2{,}100$ vectors instead of 67,853, 33 times
 fewer, and runs 36 times faster than the flat scan, 0.43 ms against 15.3 ms.
 It returns 0.85 of the exact neighbours (ours 0.845), 0.94 at 64 probes.
 
-Product quantization trades recall for memory. IVF-PQ stores 64 bytes of code
-per vector, 149 with ids, centroids and codebooks, 27 times less than the flat
-index, but its recall against exact search stalls near 0.6: 0.60 at 16 probes
-(0.591 to 0.599 over three k-means seeds), 0.62 at 64. Our `ProductQuantizer`
-reaches 0.69 with no cells at all, so the loss comes mostly from the codes,
-and halving them to 32 bytes loses more, 0.52 against 0.60, far beyond the
-seed range. Each code moves its distance by up to its quantization error,
-enough to reorder neighbours that lie close together; the usual repair
-rescores the best hundred candidates with exact vectors kept on disk, as
-binary vectors were rescored in :numref:`subsec_lm_emb_compress`.
+Product quantization trades recall for memory. IVF-PQ stores 149 bytes per
+vector: the 64-byte code, the 8-byte id and, spread over this collection,
+62 bytes of coarse centroids and 15 of codebooks. That is 27 times less than
+the flat index, but recall against exact search stalls near 0.6: 0.60 at 16
+probes (0.591 to 0.599 over three k-means seeds), 0.62 at 64. Our
+`ProductQuantizer` reaches 0.69 with no cells at all, so the loss comes
+mostly from the codes, and halving them to 32 bytes loses more, 0.52 against
+0.60, far beyond the seed range. These are the swaps the bound allowed:
+neighbours that lie closer together than their quantization errors. The
+usual repair rescores the best hundred candidates with exact vectors kept on
+disk, as binary vectors were rescored in :numref:`subsec_lm_emb_compress`.
 
 The graph wins at this size. HNSW returns 0.97 of the exact neighbours at
 $\mathit{efSearch} = 32$ in 0.29 ms, and 0.998 at 256 in 1.6 ms, for 272
-bytes of links per vector and 14 s of building with eight threads.
+bytes of links per vector and about 15 s of building with eight threads.
 
-Task recall tells a milder story, because it needs one relevant chunk among
-ten where recall against exact search counts all ten neighbours. IVF-Flat at
-16 probes misses 15% of the exact neighbours but only 0.02 of task recall
-(0.96 against 0.98 for the flat scan); IVF-PQ64 loses 0.06 (0.92, and 0.87 to
-0.92 over the seeds). The relevant chunk usually sits near the top of the
-exact list, where an approximate search is least likely to lose it. Recall
-against exact search measures the index, and task recall what a user
-notices.
+Task recall drops far less, because it needs one relevant chunk among ten
+where recall against exact search counts all ten neighbours. IVF-Flat at 16
+probes misses 15% of the exact neighbours but only 0.02 of task recall (0.96
+against 0.98 for the flat scan); IVF-PQ64 loses 0.06 (0.92, and 0.87 to 0.92
+over the seeds). Recall against exact search measures the index, and task
+recall what a user notices.
 
 ```{.python .input #retrieval-tradeoff}
 %%tab pytorch
@@ -1712,11 +1758,11 @@ for ax, col, label in zip(axes, ('recall', 'task_recall'), (
 ```
 
 In the left panel HNSW lies above every other curve at every latency it
-reaches, and IVF-PQ flattens out at low recall with the smallest markers; the
-flat scan is the single point at the top right. In the right panel most
-curves climb to within a few points of the flat scan's 0.98 at a fraction of
-its latency. Which index is fastest among those that return
-at least 0.95 of the exact neighbours?
+reaches, and IVF-PQ, with the smallest markers, flattens out at low recall.
+In the right panel most curves climb to within a few points of the flat
+scan's 0.98 at a fraction of its latency. The last cell picks, among the
+one-thread searches, the fastest that returns at least 0.95 of the exact
+neighbours, and sets it against the flat scan.
 
 ```{.python .input #retrieval-crossover}
 %%tab pytorch
@@ -1764,27 +1810,30 @@ else:
           f'crossover is not registered')
 ```
 
-HNSW, at a median of 0.29 ms, about 50 times faster than the flat scan's
-15 ms on the same thread. For a CPU that answers one question at a time and
-has memory for the vectors, a graph is the right index. When questions arrive
-in batches and the vectors fit on a GPU, about ten million of them in 24 GB
-at float16, the exact scan is: the GPU scanned all 1,000 timed questions at
-0.005 ms each and returned 0.9994 of the exact neighbours, bf16 rounding
-swapping a few near ties. And when memory is the limit, IVF-PQ keeps a
-billion vectors in 64 GB of codes instead of 4 TB.
+HNSW answers in a median of 0.29 ms, about 50 times faster than the flat
+scan's 15 ms on the same thread. For a CPU that answers one question at a
+time and has memory for the vectors, a graph is the right index. When
+questions arrive in batches and the vectors fit on a GPU, about ten million
+of them in 24 GB at float16, the exact scan is the right index: the GPU
+scanned all 1,000 timed questions at 0.005 ms each. It returned 0.9994 of
+the exact neighbours: it ranks by inner product and the exact search by
+distance, which break a few near ties differently, since the stored float16
+vectors are unit length only to about $2 \times 10^{-4}$. And when memory
+is the limit, IVF-PQ keeps a billion vectors in 64 GB of codes instead of
+4 TB of float32.
 
 ## The Book Retriever
 :label:`subsec_lm_book_retriever`
 
-Everything above now becomes the retriever that :numref:`sec_lm_rag` and
-later chapters call. BM25 runs over the sparse view with the parameters
-chosen on training questions, and the embedder scans the registered chunk
-vectors exactly, since at 5,324 chunks no index is faster. RRF with $k = 60$
-fuses the lists; it needs no tuned weight and came within 0.02 of the
-weighted sum in nDCG@10. The reranker is off unless the retriever is given one
-and a search sets `rerank_k`, since it makes a search nearly a hundred times
-slower. With `index='hnsw'` or `'ivfpq'` a Faiss index is built on first use.
-The embedder is one constant shared by the retriever and later chapters.
+Everything above now becomes the retriever that the rest of this part calls.
+BM25 runs over the sparse view with the parameters chosen on training
+questions. The embedder scans the registered chunk vectors exactly, because
+at 5,324 chunks no index is faster, and RRF with $k = 60$, which needs no
+tuned weight, fuses the two lists. The reranker is off unless the retriever
+is given one and a search sets `rerank_k`, as it adds about 0.2 s to every
+search. With `index='hnsw'` or `'ivfpq'` a Faiss index is built on first
+use. The embedder is one constant shared by the retriever and later
+chapters.
 
 ```{.python .input #retrieval-default-embedder}
 %%tab pytorch
@@ -1987,18 +2036,12 @@ for h in retriever.search('What does the key-value cache store per token?',
 retriever.release()
 ```
 
-All five chunks are about the cache, from the summary of its section to
-low-rank keys and values. Each hit shows why it is there: a BM25 score between
-8.6 and 11.3 and a cosine between 0.54 and 0.58, fused into RRF scores near
-0.03 that only chunks both lists rank high can reach.
-
-For retrieval over your own documents, these measurements suggest an order.
-Start with BM25: it needs no training, answers in about a millisecond, and on
-technical text it is a high floor. Add a released embedder and fuse the lists
-by rank. Rerank the first 20 or so candidates when the answer must be among
-the first few chunks. Reach for an approximate index only when the scan is too
-slow. And measure each choice on a few hundred questions about your own
-documents, tuned on training questions, with intervals over documents.
+All five chunks concern the cache: three come from its own section, one
+from the section on keys and values shared across heads, and one is a table
+of deployed models' attention and cache settings. Each hit carries a BM25
+score between 8.6 and 11.3 and a cosine between 0.54 and 0.58, fused into an
+RRF score near 0.03, which only a chunk that both lists rank high can reach:
+one list alone gives at most $1/61 \approx 0.016$.
 
 Retrieval now places a relevant chunk among the first ten for almost every
 dev question. That does not mean a language model answers them. Which chunks
@@ -2009,29 +2052,30 @@ measures each of its stages on its own.
 
 ## Summary
 
-A word index and an embedder fail on different questions: on the book's 220
-dev questions BM25 placed a relevant chunk among its first ten for 0.96 of
-them, Qwen3-Embedding-0.6B for 0.98, and 6% were found by exactly one. BM25
-weighs each word by its rarity, saturates repeated counts through $k_1$ and
-discounts long chunks through $b$, and on identifier questions it ranked
-relevant chunks higher than the embedder. Reciprocal-rank fusion combines
-the two lists from ranks alone, keeping the better recall and raising
-nDCG@10 by 0.07 over the embedder; a cross-encoder reranker over the first
-20 fused chunks adds 0.05 more at about 0.2 s per question. The exact scan
-is a matrix product, limited by memory at one question and well under a
-millisecond for the book. On 67,853 vectors, HNSW returned 0.97 of the exact
-neighbours about 50 times faster than a one-thread scan, and product
-quantization, which reads distances from one table per question, stored 64
-bytes per vector instead of 4,096 at a clear cost in recall, less of it in
-task recall than against exact search.
+A retriever has to find the few passages that answer a question, and do it
+fast in a collection of any size. A word index and a vector index fail on
+different questions: on the book's dev questions, exactly one of BM25 and
+Qwen3-Embedding-0.6B found a relevant chunk for 6% of them, and on
+identifier questions BM25 ranked relevant chunks higher. BM25 weighs each
+word by its rarity, saturates repeated counts and discounts long chunks.
+Reciprocal-rank fusion merges its list with the embedder's from ranks alone,
+and a cross-encoder that reads question and chunk together reorders the
+first 20, raising nDCG@10 by 0.05 for about 0.2 s per question. A large
+collection needs an approximate index. On 67,853 vectors a graph returned
+0.97 of the exact neighbours about 50 times faster than a one-thread scan.
+Product quantization, which reads distances from one table per question,
+stored 64 bytes per vector instead of 4,096 and lost far more recall
+against exact search than task recall. The next section asks which of the
+found chunks a language model should read.
 
 ## Exercises
 
 1. **Bytes and look-ups.** A collection of $10^6$ passages is embedded with
-   $d = 1{,}024$ coordinates.
+   $m = 1{,}024$ coordinates.
     1. Compare the memory per vector of float16 storage with that of a
-       product quantizer with $M = 64$ and $b = 8$, and with $M = 128$ and
-       $b = 4$. Include the codebooks, spread over the collection.
+       product quantizer with $M = 64$ blocks and $K = 256$ centroids per
+       codebook, and with $M = 128$ and $K = 16$. Include the codebooks,
+       spread over the collection.
     1. Count the operations of one question under asymmetric distance
        computation: building the table and scanning every code. Below which
        $N$ does building the table cost more than scanning?
@@ -2042,11 +2086,10 @@ task recall than against exact search.
 
 1. **Reciprocal-rank fusion by hand.** BM25 ranks three chunks $(a, b, c)$
    and the embedder ranks them $(c, a, b)$.
-    1. Compute the RRF scores with $k = 60$ and the fused order, and check
-       them with `d2l.rrf_fuse`.
     1. A chunk ranked $(1, 4)$ by the two lists competes with a chunk ranked
        $(2, 2)$. Which wins at $k = 0$, and which at $k = 60$? What does a
-       large $k$ reward?
+       large $k$ reward? Compute the fused order of $a$, $b$ and $c$ at both
+       values of $k$, and check it with `d2l.rrf_fuse`.
     1. Show that the order of RRF does not change when either retriever's
        scores are replaced by any strictly increasing function of them.
        Construct three chunks for which one outlying BM25 score changes the
@@ -2068,38 +2111,48 @@ task recall than against exact search.
        vectors a question actually compares.
    :exlabel:`ex_lm_ret-ivf-cells`
 
-1. **The bias of asymmetric distances.** Use the expansion of
-   $\|\mathbf{y} - \mathbf{x}\|^2$ in :numref:`subsec_lm_ann`.
-    1. Show that, at a fixed point of k-means and for a question independent
-       of $\mathbf{x}$, the mean of $\|\mathbf{y} - \mathbf{x}\|^2 -
-       \|\mathbf{y} - \hat{\mathbf{x}}\|^2$ over the data is the mean
-       distortion.
+1. **The bias of asymmetric distances.** The text showed that for a
+   question independent of the data, the asymmetric distance underestimates
+   the squared distance by the mean distortion.
+    1. Now let the question be one of the stored vectors, $\mathbf{y} =
+       \mathbf{x}$. What do the exact and the asymmetric distance give, and
+       which way is the error? Why does this matter when searching for
+       near-duplicates of stored passages?
     1. Quantize the question too, and compare the expected error of this
        symmetric distance with that of the asymmetric one.
-    1. Check both statements on the Gaussian mixture of the cell.
+    1. Check both answers on the Gaussian mixture of the check cell.
    :exlabel:`ex_lm_ret-adc-bias`
 
 1. [code] **The knobs of the graph.** ● For HNSW on the stress collection,
    measure recall against exact search and p50 latency for
-   $\mathit{efSearch} \in \{16, 32, 64, 128, 256, 512\}$ at
-   $M \in \{8, 16, 32, 64\}$, and record the build time and the bytes per
-   vector for each $M$. Which $M$ reaches a recall of 0.95 at the lowest
-   latency, and what does it cost in memory and build time?
+   $\mathit{efSearch} \in \{16, 32, 64, 128, 256, 512\}$ at 8, 16, 32 and 64
+   links per layer (Faiss's `M`), and record the build time and the bytes
+   per vector for each link count. Which reaches a recall of 0.95 at the
+   lowest latency, and what does it cost in memory and build time?
    :exlabel:`ex_lm_ret-hnsw`
 
-1. [code] **The switches of BM25.** Score the training questions with BM25
-   at the defaults $k_1 = 1.2$, $b = 0.75$ and at $b = 0.9$, each with and
-   without identifier splitting. Report paired differences in Recall@10 and
-   nDCG@10 with intervals over documents, on all training questions and on
-   the identifier questions alone. Which switch matters, and on which
-   questions?
+1. [code] **The switches of BM25.** On the training questions, splitting
+   identifiers changes Recall@10 by at most 0.003 in every cell of the grid.
+   Find the training questions whose first hit changes when splitting is
+   turned off, at $k_1 = 1.2$ and $b = 0.9$. How many are identifier
+   questions, and which way do they move? Explain from their tokens why the
+   average hides them.
    :exlabel:`ex_lm_ret-bm25-switches`
 
+1. [code] **Chunk size and recall.** Recall@10 grows with the size of a
+   chunk. Load the windows of 256 tokens without overlap,
+   `d2l.book_corpus('fixed', size=256, overlap=0)`, and measure BM25's
+   Recall@10 on the dev questions under these windows and under the section
+   chunks, together with the number of tokens a reader of the first ten
+   chunks would read. Which chunking "wins", and by which measure? Propose a
+   comparison that is fair to both.
+   :exlabel:`ex_lm_ret-chunk-size`
+
 1. [extended] **A row of your own.** ●● Do one of the following.
-    1. Add a retriever from the Further Reading notebook, learned sparse
-       or late interaction (:numref:`sec_lm_encoders_fr`), as a row of the
-       stack on the dev questions and as a point on the trade-off plot,
-       with its index size per chunk.
+    1. Add a learned sparse or a late-interaction retriever
+       (:numref:`sec_lm_encoders_fr` names released models and their code)
+       as a row of the comparison on the dev questions and as a point on the
+       trade-off plot, with its index size per chunk.
     1. Design an index for a collection $10^4$ times larger than the stress
        collection, with a budget of 100 ms per question and 16 GB of memory.
        Estimate its recall from the measurements of this section, and say
@@ -2130,7 +2183,8 @@ Sparse, Dense and Approximate Retrieval<br>**the book corpus · BM25 · the flat
 Exactly one of them succeeds on 6% of the questions [3%, 9%].
 
 ::: {.d2l-note .warn}
-And a flat scan of $10^8$ passages reads 400 GB of vectors per question.
+And a flat scan of $10^8$ passages reads 200 GB of float16 vectors per
+question.
 :::
 :::
 
@@ -2147,7 +2201,7 @@ And a flat scan of $10^8$ passages reads 400 GB of vectors per question.
 and checked by language models, not people; 67,853 vectors for stress tests.
 :::
 
-::: {.slide title="An Index Trades Recall for Speed and Memory; BM25 Is the Floor"}
+::: {.slide title="Two Indexes Find the Passages; an Approximate Index Makes Search Fast"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
@@ -2162,7 +2216,9 @@ and checked by language models, not people; 67,853 vectors for stress tests.
 :::
 
 ::: {.col .narrow}
-- **Uses:** unit-vector embeddings, cosine search, the roofline.
+- **What to retrieve:** a word index and a vector index, merged, then
+  reranked.
+- **How fast:** exact scan, or an approximate index.
 - **Skips:** training retrievers, learned sparse retrieval, late
   interaction.
 :::
@@ -2174,9 +2230,9 @@ and checked by language models, not people; 67,853 vectors for stress tests.
 
 | kept | left out |
 |---|---|
-| every chapter a reader opens, 232 documents | Language Models part: its notebooks hold the questions |
-| PyTorch tabs | slide decks, exercises, other tabs |
-| references as titles, math in text | citations, import-only cells |
+| the other chapters, 232 documents | Language Models part: its notebooks hold the questions |
+| PyTorch tabs | Attic, retiring NLP chapters, front matter |
+| references as titles, math in text | slide decks, exercises, citations, import-only cells |
 
 - Split by **document**, within each chapter: 168 train, 32 dev, 32 test.
 - Views: `display` for a generator, `dense` (long code cut) for the
@@ -2188,10 +2244,10 @@ and checked by language models, not people; 67,853 vectors for stress tests.
 
 The GAN chapter introduction, 789 tokens:
 
-| chunking | chunks | second chunk starts |
+| chunking | chunks (tokens) | where chunks start |
 |---|---|---|
-| sections, at most 512 tokens | 2 (459, 316 tokens) | "These resources accompany ..." |
-| windows of 256, 64 shared | 4 | " (Chapter "Diffusion Models" ..." |
+| sections, at most 512 tokens | 2 (459, 316) | at the text, at the resources list |
+| windows of 256, 64 shared | 4 (256, 256, 256, 213) | three of four mid-sentence |
 
 Whole book: 5,324 section chunks, median 364 tokens; 9,447 windows.
 
@@ -2237,7 +2293,7 @@ The second chunk sits at rank 4 instead of 2. `pytrec_eval` agrees.
 - $\mathbf{W}$: one row per term, one column per chunk; $W_{td} > 0$ only
   if term $t$ occurs in chunk $d$.
 - Row $t$ is the list of chunks containing $t$.
-- Question term counts $\mathbf{c}$: all scores $= \mathbf{c}^\top\mathbf{W}$,
+- Question term counts $\mathbf{n}$: all scores $= \mathbf{n}^\top\mathbf{W}$,
   touching only the question's rows.
 - Terms: lower-cased words and numbers; `BookRetriever` also gives `book`,
   `retriever`.
@@ -2252,19 +2308,23 @@ A question of ten words costs ten lists, however large the corpus.
 
 $$W_{td} = \mathrm{idf}(t)\,\frac{\mathrm{tf}_{td}}{\mathrm{tf}_{td} + k_1\big(1 - b + b\,|d|/\overline{|d|}\big)}, \quad \mathrm{idf}(t) = \log\Big(1 + \frac{N - \mathrm{df}_t + 0.5}{\mathrm{df}_t + 0.5}\Big)$$
 
-| occurrences, average chunk, $k_1 = 1.2$ | 1 | 2 | 5 | $\infty$ |
+$\mathrm{tf}_{td}$: count of $t$ in chunk $d$; $|d|$: its length;
+$\mathrm{df}_t$: chunks containing $t$; $N$: all chunks.
+
+| occurrences, $k_1 = 1.2$, $b = 0.75$ | 1 | 2 | 5 | $\infty$ |
 |---|---|---|---|---|
-| share of the idf | 0.45 | 0.63 | 0.81 | 1 |
+| share of the idf, average length | 0.45 | 0.63 | 0.81 | 1 |
+| share of the idf, twice the average | 0.32 | | | 1 |
 
 idf over 5,324 chunks: 8.2 for a term in one chunk, 0.69 for a term in
 half of them.
 :::
 
-::: {.slide title="Checked Against bm25s; Tuning on Training Questions Confirms the Defaults"}
+::: {.slide title="Tuning BM25 on Training Questions Gains Nothing on Dev"}
 [Check and tune]{.kicker}
 
-- Same first chunk as `bm25s` for 200 of 200 training questions; scores
-  agree to $4 \times 10^{-7}$.
+- Same first chunk as the `bm25s` library for 200 of 200 training
+  questions; scores agree to $4 \times 10^{-7}$.
 - Grid of 24 settings on 5,614 training questions: Recall@10 from 0.915 to
   0.934.
 - Chosen: $k_1 = 1.2$, $b = 0.9$, identifiers split.
@@ -2278,31 +2338,34 @@ Tune on training questions, never on the questions you report.
 ::: {.slide title="A Flat Scan Is One Matrix Product, Limited by Memory at Batch 1"}
 [The flat scan]{.kicker}
 
-$\mathbf{S} = \mathbf{Q}\mathbf{X}^\top$: $2NmB$ operations, $2Nm$ bytes
-read in float16. One question: one operation per byte, against a ridge of
-about 160 on an RTX 4090.
+$\mathbf{S} = \mathbf{Q}\mathbf{X}^\top$, $N$ chunks, $B$ questions,
+$m = 1{,}024$: $2NmB$ operations, $2Nm$ bytes read in float16. One question:
+one operation per byte. RTX 4090 ridge, where compute and memory take equal
+time: about 160 operations per byte.
 
 | matrix | batch | measured | roofline |
 |---|---|---|---|
-| book, 5,324 × 1,024, 11 MB | 1 | 0.055 ms | 0.011 ms |
-| synthetic, 256 MiB | 1 | 0.33 ms | 0.27 ms |
-| synthetic, 256 MiB | 220 | 0.68 ms | 0.36 ms |
+| book, $N = 5{,}324$, 11 MB | 1 | 0.055 ms | 0.011 ms |
+| synthetic, $N = 131{,}072$, 256 MiB | 1 | 0.33 ms | 0.27 ms |
+| synthetic, $N = 131{,}072$, 256 MiB | 220 | 0.68 ms | 0.36 ms |
 
 ::: {.d2l-note}
-For the book, encoding the question costs more than the scan.
+For the book, encoding the questions (0.9 ms each in a batch of 220) costs
+more than the scan.
 :::
 :::
 
 ::: {.slide title="Reciprocal-Rank Fusion Needs Ranks, Not Scores"}
 [Fusion]{.kicker}
 
-$$s(c) = \sum_r \frac{1}{k + \mathrm{rank}_r(c)}, \qquad k = 60$$
+$$s(d) = \sum_r \frac{1}{k + \mathrm{rank}_r(d)}, \qquad k = 60$$
 
 - First in one list, third in the other: $1/61 + 1/63 = 0.0323$.
 - First in one list only: $1/61 = 0.0164$.
-- Rank 10 earns 13% less than rank 1: close to a vote.
-- Score fusion must z-score each list first; the dense weight
-  $\lambda = 0.7$ was chosen on training questions.
+- Rank 10 scores 13% less than rank 1: close to a vote.
+- Score fusion must first z-score each list (subtract its mean, divide by
+  its standard deviation); the dense weight $\lambda = 0.7$ was chosen on
+  training questions.
 
 *Source: Cormack, Clarke and Büttcher (2009).*
 :::
@@ -2315,9 +2378,15 @@ $$s(c) = \sum_r \frac{1}{k + \mathrm{rank}_r(c)}, \qquad k = 60$$
 | reads | question and chunk apart | the pair together |
 | chunk work | once, before any question | once per question |
 | cost per question | one encoding, one scan | one forward pass per candidate |
+| ms per question, book | 0.9 (batched) | about 200 for 20, 1,100 for 100 |
 
 Qwen3-Reranker-0.6B: $P(\text{yes}) = e^{z_\text{yes}} / (e^{z_\text{yes}} + e^{z_\text{no}})$
 for "Does this chunk meet the query?"
+
+::: {.d2l-note}
+About 0.2 s per question for 20 chunks: affordable for a short list, not for
+the collection.
+:::
 :::
 
 ::: {.slide title="Check: We Rerank the First 20. What Happens to Recall@100?"}
@@ -2335,13 +2404,13 @@ its depth.
 :::
 
 ::: {.slide title="Fusion Improves the Ranking, Reranking 20 Improves It Again, 100 Adds Nothing"}
-[The stack]{.kicker}
+[The retrievers compared]{.kicker}
 
 | dev, 220 questions | Recall@1 | Recall@10 | nDCG@10 | ms |
 |---|---|---|---|---|
-| BM25 | 0.76 | 0.96 | 0.82 | 2 |
-| embedder | 0.67 | 0.98 | 0.79 | 1 |
-| RRF | 0.78 | 0.98 | 0.85 | 3 |
+| BM25 | 0.76 | 0.96 | 0.82 | 1 to 2 |
+| embedder | 0.67 | 0.98 | 0.79 | about 1 |
+| RRF | 0.78 | 0.98 | 0.85 | about 3 |
 | RRF + rerank@20 | 0.87 | 0.99 | 0.91 | about 200 |
 | RRF + rerank@100 | 0.87 | 1.00 | 0.91 | about 1,100 |
 
@@ -2352,14 +2421,17 @@ Paired nDCG@10: RRF − embedder +0.066 [0.040, 0.091]; rerank@20 − RRF
 ::: {.slide title="On Identifier Questions BM25 Ranks Relevant Chunks Higher"}
 [BM25 against the embedder]{.kicker}
 
+Identifier question: the question or its reference answer contains code,
+such as a dotted name or a call.
+
 | embedder − BM25 | Recall@10 | nDCG@10 |
 |---|---|---|
 | all, 220 | +0.023 [$-0.004$, 0.053] | $-0.035$ [$-0.084$, 0.013] |
 | identifier, 80 | $-0.013$, sign-flip p 1.0 | $-0.117$, sign-flip p 0.001 |
 | other, 140 | +0.043 [0.000, 0.092] | +0.011 [$-0.049$, 0.078] |
 
-Identifier questions come from 28 documents: a sign-flip test over
-documents decides.
+Identifier questions come from 28 documents. Sign-flip test: flip each
+document's mean difference at random; p is how often the total is as large.
 
 ::: {.d2l-note .warn}
 "Dense beats BM25" is a claim about a corpus, a question set and a model.
@@ -2386,25 +2458,26 @@ against exact search 0.85.
 ::: {.slide title="Product Quantization Stores 64 Bytes per Vector and Reads Distances from a Table"}
 [Derivation]{.kicker}
 
-I. Split $\mathbf{x} \in \mathbb{R}^d$ into $M$ blocks; replace block $j$
-by the index $k_j$ of its nearest of $2^b$ centroids $\mathbf{c}_{j,k}$.
+I. Split $\mathbf{x} \in \mathbb{R}^m$ into $M$ blocks; replace block $j$
+by the index $i_j$ of its nearest of $K$ centroids $\mathbf{c}_{j,i}$.
 
 II. A squared distance is a sum over coordinates, so for an exact question
 $\mathbf{y}$
 
-$$\|\mathbf{y} - \hat{\mathbf{x}}\|^2 = \sum_{j=1}^M T_j[k_j], \qquad T_j[k] = \|\mathbf{y}^{(j)} - \mathbf{c}_{j,k}\|^2$$
+$$\|\mathbf{y} - \hat{\mathbf{x}}\|^2 = \sum_{j=1}^M T_j[i_j], \qquad T_j[i] = \|\mathbf{y}^{(j)} - \mathbf{c}_{j,i}\|^2$$
 
-III. Table: $2^b d$ multiply-adds once per question; then $M$ look-ups per
+III. Table: $Km$ multiply-adds once per question; then $M$ look-ups per
 code.
 
-$d = 1{,}024$, $M = 64$, $b = 8$: 64 bytes instead of 4,096; codebooks
-1 MiB.
+$m = 1{,}024$, $M = 64$, $K = 256$: 64 bytes instead of 4,096; codebooks
+1 MiB. IVF-PQ: codes of offsets from the cell centroid, inside an
+inverted file.
 :::
 
 ::: {.slide title="By Hand: Two Look-Ups Give 2.0 Where the True Squared Distance Is 1.30"}
 [The smallest case]{.kicker}
 
-$d = 4$, $M = 2$, $b = 1$; codebooks $\{(1,0), (0,1)\}$ and
+$m = 4$, $M = 2$, $K = 2$; codebooks $\{(1,0), (0,1)\}$ and
 $\{(1,1), (-1,0)\}$; $\mathbf{x} = (0.9, 0.2, -0.8, 0.1)$,
 $\mathbf{y} = (1, 1, 0, 0)$.
 
@@ -2425,11 +2498,12 @@ Error of the distance $|\sqrt{1.30} - \sqrt{2}| = 0.27 \le \|\mathbf{x} - \hat{\
   question.
 - Upper layers hold a shrinking random subset with long links; the walk
   crosses there and refines at the bottom.
-- $M = 32$ links per layer, $\mathit{efConstruction} = 200$;
-  $\mathit{efSearch}$ trades recall for time.
+- 32 links per layer (Faiss's `M`), 64 at the bottom;
+  $\mathit{efConstruction} = 200$ candidates while building;
+  $\mathit{efSearch}$ candidates while searching trades recall for time.
 - Memory: 4,096 bytes of vector plus 272 of links per vector.
 
-*Source: Malkov and Yashunin (2016); built here with Faiss.*
+*Source: Malkov and Yashunin (2020); built here with Faiss.*
 :::
 
 ::: {.slide title="HNSW Reaches 0.97 of the Exact Neighbours About 50 Times Faster Than the Scan"}
@@ -2437,21 +2511,25 @@ Error of the distance $|\sqrt{1.30} - \sqrt{2}| = 0.27 \le \|\mathbf{x} - \hat{\
 
 @!retrieval-tradeoff
 
-Marker area: bytes per vector. Right panel: dev Recall@10, which drops
-less than recall against exact search.
+Marker area: bytes per vector. Left: recall against exact search. Right:
+dev Recall@10 of the book's questions.
 :::
 
-::: {.slide title="Check: A Billion Vectors and 128 GB of Memory. Which Index?"}
-[Check]{.kicker}
+::: {.slide title="Task Recall Drops Far Less Than Recall Against Exact Search"}
+[Which recall]{.kicker}
 
-Bytes per vector: float32 4,096; HNSW about 4,370; IVF-PQ64 code 64.
+| index, one CPU thread | against exact search | dev Recall@10 |
+|---|---|---|
+| flat scan | 1.00 | 0.98 |
+| IVF-Flat, 16 probes | 0.85 | 0.96 |
+| IVF-PQ, 64 bytes, 16 probes | 0.60 | 0.92 |
 
-::: {.fragment .fade-up}
+Against exact search counts all ten neighbours; a reader needs one relevant
+chunk among ten.
+
 ::: {.d2l-note}
-**Answer.** Float32 needs 4 TB and the graph more, so IVF-PQ: 64 GB of
-codes plus ids. Rescore the best candidates with exact vectors from disk,
-since 64-byte codes found only 0.60 of the exact neighbours here.
-:::
+Recall against exact search measures the index; task recall measures what a
+user notices.
 :::
 :::
 
@@ -2470,6 +2548,20 @@ since 64-byte codes found only 0.60 of the exact neighbours here.
 the cache.
 :::
 
+::: {.slide title="Check: A Billion Vectors and 128 GB of Memory. Which Index?"}
+[Check]{.kicker}
+
+Bytes per vector: float32 4,096; HNSW about 4,370; IVF-PQ64 code 64.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Float32 needs 4 TB and the graph more, so IVF-PQ: 64 GB of
+codes plus ids. Rescore the best candidates with exact vectors from disk,
+since 64-byte codes found only 0.60 of the exact neighbours here.
+:::
+:::
+:::
+
 ::: {.slide title="Recap"}
 [Recap]{.kicker}
 
@@ -2479,7 +2571,8 @@ the cache.
 - RRF: nDCG@10 +0.07 over the embedder; rerank@20: +0.05 more, about
   0.2 s per question.
 - 67,853 vectors: HNSW 0.97 of the exact neighbours, about 50 times faster
-  than one thread's scan; IVF-PQ 64 bytes per vector at recall 0.60.
+  than one thread's scan; IVF-PQ 64 bytes per vector at recall 0.60 against
+  exact search, 0.92 task recall.
 
 **Next:** which chunks a language model should read, and which stage failed
 when its answer is wrong.

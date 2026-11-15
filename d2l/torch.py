@@ -8200,6 +8200,12 @@ d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
 d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
     d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
     'dd66f91cc44070f7e2256c63d5e5caf912c4054e')
+d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
+    d2l.LM_DATA_URL + 'lm-rag-judge-v1.jsonl',
+    '8e128dbe149cf3f22b3d0979368c679c5d43c371')
+d2l.DATA_HUB['lm-rag-judge-cache-v1'] = (  # the judge's recorded replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v1.zip',
+    '12402e3f6d7675bcd3f2667743607677129abd4e')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):

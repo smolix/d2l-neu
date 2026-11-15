@@ -1,0 +1,289 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-encoders/text-embeddings.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:654b2e49f1a048487f5931050bfe8dd937cba4ba3c39ddff49702c8b3fa01ff9",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "text-embeddings-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-extras": {
+      "code_fingerprint": "sha256:4c38863696073ef012e075ab7f9f32bd0545112fd320a6f0735b9707cf51b589",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-config": {
+      "code_fingerprint": "sha256:b2e2cb0da0e9acfcadf9f841d4a4bded55c47f7f556c3a48cfeeb39616b48c55",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                model      revision\nencoder   answerdotai/ModernBERT-base  8949b909ec90\nembedder    Qwen/Qwen3-Embedding-0.6B  97b0c614be4d\nreranker     Qwen/Qwen3-Reranker-0.6B  e61197ed4502\nquery instruction: 'Instruct: {task}\\nQuery:{query}'\nGPU: True; regenerating: none\n"
+        }
+      ]
+    },
+    "text-embeddings-revisions": {
+      "code_fingerprint": "sha256:be5ada9b4a200bb18ec820a2c357ae6f0dba797c5a485809fac8a219da0f78a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-data-hub": {
+      "code_fingerprint": "sha256:4c8159a94013ff6fd1eb31a3a27d2d227a0f7aa8bf4b3306d8a8f8223656b066",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-pool-def": {
+      "code_fingerprint": "sha256:be912fa987032eaac1ddf4162efec13f3894f52c8f129335aba236004a776a4f",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-embed-def": {
+      "code_fingerprint": "sha256:afbcd6f93ac8bbfe831ba1ace78541b49e61f02cf8088f6ae5b625c88c5bd70b",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-metrics-def": {
+      "code_fingerprint": "sha256:2ca7ea55e314e31e8d48cb0a93893da06eb044720eea7a3adb9f60ddc6bb26d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-book": {
+      "code_fingerprint": "sha256:4a37542b4918308e12b9926cefa9e15f9e848b3544dd4a97ed7b0f7be6e1ab4a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "5,324 chunks of 232 documents; 220 questions from 32 documents, 1.35 relevant chunks each\nBM25: Recall@10 0.959 [0.932, 0.983], nDCG@10 0.822 [0.777, 0.863]\n"
+        }
+      ]
+    },
+    "text-embeddings-opening": {
+      "code_fingerprint": "sha256:2caf1249938e273402078d89bb3dd82d7e7d2280cdb06efb0c05f01cb9f20119",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Recall@10: raw mean 0.064 [0.035, 0.096], BM25 0.959 [0.932, 0.983]\n\nOn unified-memory machines, how does the book say large mixture-of-experts models compare in\n    fitting and decoding speed to dense models with about the same total size?\n  top 1: Attention > Queries, Keys, and Values\n  gold:  Tools for Deep Learning > Hardware > Unified-Memory Machines for Inference\n\nIn the book's legacy PyTorch helper `load_array`, how does the returned `DataLoader` decide\n    whether to shuffle the data?\n  top 1: Tools for Deep Learning > Utility Functions and Classes\n  gold:  Tools for Deep Learning > Utility Functions and Classes > Training Utilities\n\nWhen the softmax in attention saturates and the gradients reaching the scores shrink, which\n    other parts of the attention block still receive gradients?\n  top 1: Attention\n  gold:  Attention > Attention Scoring and Masking > Dot-Product Attention > Score Variance and\n    the $1/\\sqrt{d}$ Factor\n"
+        }
+      ]
+    },
+    "text-embeddings-geometry-def": {
+      "code_fingerprint": "sha256:97adfa776c9d76080e9b19a0d42b1df7f053192b992223689f65ace8766961aa",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-anisotropy": {
+      "code_fingerprint": "sha256:2d2cc9f8057ad4065ce72b12c4ea6d7fb1738cf2009dceeb0987de7d9891e29b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          pooling  anisotropy  recall_10  ndcg_10\n          raw CLS       0.948      0.000    0.000\n         raw mean       0.940      0.064    0.040\nraw centered mean       0.001      0.050    0.033\nmean cosine over all 1,999,000 pairs 0.939813, from the sum of the vectors 0.939813\n  squared length of the mean vector 0.939843\n"
+        }
+      ]
+    },
+    "text-embeddings-infonce-def": {
+      "code_fingerprint": "sha256:778fcc16f8ba691a2f5f9a201db20b1ffbd883cc2cf48e07c0c5b18f3f4a7137",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-infonce-grad": {
+      "code_fingerprint": "sha256:f8db4349036c0940316dc5b844ad940492d0da533f6aeab097cb82e306cec95b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest gradient error 1.1e-16; largest |pull - push| per query 2.2e-16\n   score gap  weight ratio at tau=0.05\n0        0.1                       7.4\n1        0.3                     403.4\n"
+        }
+      ]
+    },
+    "text-embeddings-uniformity": {
+      "code_fingerprint": "sha256:850d1547464216f9d91c223eadd9373dde18725439acfa45ecb475b8e8fcc3ea",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       configuration  alignment  uniformity  InfoNCE - log 4, tau=0.05  InfoNCE - log 4, tau=0.5\n              square        2.0      -4.396                     18.614                     0.868\ntwo coincident pairs        0.0      -1.098                     -0.693                    -0.675\n      all coincident        0.0       0.000                      0.000                     0.000\n"
+        }
+      ]
+    },
+    "text-embeddings-train-def": {
+      "code_fingerprint": "sha256:c600d033e8714aa057263ae40ef167c6d19e0bba8bd3af4f6b2e6e46619c5418",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-nq": {
+      "code_fingerprint": "sha256:9634e1db1faf93c5abaf1a9572d387cfda3345f366c2aa8165a8975cdaa139da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "100,231 pairs, 75,215 distinct passages\ntraining on 20,000 pairs with 18,163 distinct passages (3,236 pairs share theirs)\n300 unseen pairs held out for the learning rate, ranked among 5,000 unseen passages\n"
+        }
+      ]
+    },
+    "text-embeddings-run-defs": {
+      "code_fingerprint": "sha256:dae029baef0e5dcf9a01798f054977ccebd9be552237d6ac3bc06c0397cbd875",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-train": {
+      "code_fingerprint": "sha256:d967198c42722a97abd0dbc59d72236e9679d4bdda4f2346fc01d2e3c6c6cff4",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-mine": {
+      "code_fingerprint": "sha256:2355e1f2b2e82cd289d67c65db506ab85f16fceaecb271ce8dec73aebf468e8c",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-train-variants": {
+      "code_fingerprint": "sha256:3bfb70159307aedcb0bea213393024727e281c3c383a217fd356f008be000e95",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-train-read": {
+      "code_fingerprint": "sha256:6d7ba417d198e7b5e50cc3bb5d42d4baa147c86bf599a2d0a437640ab2d34ddd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    lr  MRR@10   low  high  chosen minus this  delta low  delta high\n 1e-05   0.809 0.770 0.847              0.062      0.029       0.095\n 3e-05   0.855 0.822 0.887              0.016     -0.007       0.039\n0.0001   0.871 0.841 0.900              0.000      0.000       0.000\nchosen lr: 0.0001\n                              seconds  peak_gib  steps  loss_first_10  \\\ncontrastive seed 0              59.94      9.39  313.0           3.19   \ncontrastive seed 1              59.36      9.67  313.0           3.25   \ncontrastive seed 2              59.53      9.67  313.0           3.24   \ncontrastive + hard negatives    96.62     15.58  313.0           4.00   \nMatryoshka                      58.83      9.39  313.0           3.44   \n\n                              loss_last_10  \ncontrastive seed 0                    0.05  \ncontrastive seed 1                    0.08  \ncontrastive seed 2                    0.06  \ncontrastive + hard negatives          0.10  \nMatryoshka                            0.08  \n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mined ranks  probably relevant   low  high\n        1-5              0.304 0.264 0.344\n       6-10              0.096 0.070 0.122\n      11-30              0.024 0.012 0.038\n      31-50              0.006 0.000 0.014\nfalls from bucket to bucket: True\n"
+        }
+      ]
+    },
+    "text-embeddings-ladder": {
+      "code_fingerprint": "sha256:aad215f292a1db47536b3dc7f6ccb476ee4846fbc2801490d5815de7ed46b674",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                              recall@1 recall@5 recall@10 mrr@10          ndcg@10 [CI] anisotropy\nBM25                             0.759    0.950     0.959  0.838  0.822 [0.777, 0.863]        n/a\nraw CLS                          0.000    0.000     0.000  0.000  0.000 [0.000, 0.000]      0.948\nraw mean                         0.036    0.055     0.064  0.043  0.040 [0.019, 0.067]      0.940\nraw centered mean                0.032    0.045     0.050  0.036  0.033 [0.012, 0.060]      0.001\ncontrastive seed 0               0.386    0.641     0.764  0.500  0.524 [0.469, 0.579]      0.522\nMatryoshka                       0.391    0.664     0.741  0.508  0.518 [0.458, 0.578]      0.566\nQwen3-Embedding                  0.700    0.927     0.995  0.798  0.805 [0.765, 0.841]      0.283\nQwen3-Embedding + instruction    0.668    0.914     0.982  0.772  0.786 [0.746, 0.823]      0.283\ncontrastive seed 1               0.409    0.641     0.777  0.513  0.528 [0.475, 0.582]        n/a\ncontrastive seed 2               0.359    0.618     0.732  0.474  0.495 [0.434, 0.557]        n/a\ncontrastive + hard negatives     0.423    0.695     0.795  0.542  0.557 [0.497, 0.617]        n/a\nlive contrastive seed 0 model against its stored ranking:\n  same top 10 for 0.327 of the questions, same Recall@10 for 0.995\nlive Matryoshka model against its stored ranking:\n  same top 10 for 0.318 of the questions, same Recall@10 for 1.000\n"
+        }
+      ]
+    },
+    "text-embeddings-ladder-compare": {
+      "code_fingerprint": "sha256:d6c885874afa7c24e42c52c0c4b3431182fed0d162f19abfebdb87b1cf1dacc0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "              from                            to  delta    low  high  excl. 0  beyond seeds\n          raw mean                          BM25  0.895  0.854 0.934     True          True\n          raw mean            contrastive seed 0  0.700  0.640 0.761     True          True\n raw centered mean            contrastive seed 0  0.714  0.656 0.771     True          True\ncontrastive seed 0  contrastive + hard negatives  0.032 -0.005 0.069    False         False\ncontrastive seed 0 Qwen3-Embedding + instruction  0.218  0.161 0.276     True          True\n   Qwen3-Embedding Qwen3-Embedding + instruction -0.014 -0.028 0.000    False         False\nRecall@10 of the three seeds: [0.764 0.777 0.732], range 0.045; best raw pooling: raw mean\n"
+        }
+      ]
+    },
+    "text-embeddings-alignment": {
+      "code_fingerprint": "sha256:9fce01de6ab2ffa7edbe4e4b20ab0dc72714c31e687823c1a376da3296956283",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "alignment over 298 (question, relevant chunk) pairs, uniformity over 2,000 chunks\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                               alignment  uniformity\nraw mean                           0.191      -0.234\ncontrastive seed 0                 0.596      -1.815\nQwen3-Embedding + instruction      0.606      -2.779\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "text-embeddings/text-embeddings-alignment-1.svg",
+          "bytes": 464013,
+          "sha256": "sha256:c77eacead998c7c48aa4f1c0f9c45fc425882d1f5708d9a6fff714d1d664b0a4"
+        }
+      ]
+    },
+    "text-embeddings-compress-def": {
+      "code_fingerprint": "sha256:7ecaf7771e35a8a7ccffac1169a79ecfc16b496387c1f963b156d00443bff6bc",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-embeddings-compress": {
+      "code_fingerprint": "sha256:95d670280f256cd5eb24e7e89310532baf8cd988c996afe10c89d9173c638f94",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          model                   format  bytes  recall@10  GB per 10^8 vectors\n    contrastive             float32, 768   3072      0.764                307.2\n    contrastive             float32, 512   2048      0.768                204.8\n    contrastive             float32, 256   1024      0.718                102.4\n    contrastive             float32, 128    512      0.686                 51.2\n    contrastive              float32, 64    256      0.595                 25.6\n    contrastive                int8, 768    768      0.759                 76.8\n    contrastive              binary, 768     96      0.668                  9.6\n    contrastive  binary + rescoring, 768     96      0.718                  9.6\n     Matryoshka             float32, 768   3072      0.741                307.2\n     Matryoshka             float32, 512   2048      0.759                204.8\n     Matryoshka             float32, 256   1024      0.736                102.4\n     Matryoshka             float32, 128    512      0.659                 51.2\n     Matryoshka              float32, 64    256      0.582                 25.6\n     Matryoshka                int8, 768    768      0.741                 76.8\n     Matryoshka              binary, 768     96      0.695                  9.6\n     Matryoshka  binary + rescoring, 768     96      0.723                  9.6\nQwen3-Embedding            float32, 1024   4096      0.982                409.6\nQwen3-Embedding             float32, 512   2048      0.968                204.8\nQwen3-Embedding             float32, 256   1024      0.927                102.4\nQwen3-Embedding             float32, 128    512      0.900                 51.2\nQwen3-Embedding              float32, 64    256      0.841                 25.6\nQwen3-Embedding               int8, 1024   1024      0.982                102.4\nQwen3-Embedding             binary, 1024    128      0.955                 12.8\nQwen3-Embedding binary + rescoring, 1024    128      0.964                 12.8\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "text-embeddings/text-embeddings-compress-1.svg",
+          "bytes": 51293,
+          "sha256": "sha256:a3594b0b2a6ffcb0f7d378ed92de87e3d522dbf94856a286296b87c556a91016"
+        }
+      ]
+    },
+    "text-embeddings-compress-compare": {
+      "code_fingerprint": "sha256:cee58d9d35c99a673608a483f61c03043f5c875cf31161a135033d2ee2e98640",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                 comparison  delta    low   high  CI excludes 0  beyond seed range\n         Matryoshka, 128 - contrastive, 128 -0.027 -0.075  0.017          False              False\n    contrastive: binary + rescoring - float -0.045 -0.085 -0.009           True               True\n     Matryoshka: binary + rescoring - float -0.018 -0.055  0.017          False              False\nQwen3-Embedding: binary + rescoring - float -0.018 -0.037  0.000          False              False\nseed range of Recall@10 at full width (a proxy for the training noise at 128 coordinates): 0.045\n"
+        }
+      ]
+    },
+    "text-embeddings-production": {
+      "code_fingerprint": "sha256:43f0c0b271922421a0487f9de23e796a2fa47e1f78470da6fa22d99af33cbd7d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "smallest cosine, sentence-transformers against embed_texts: 0.9983; |MNRL - InfoNCE| = 3.7e-06\n"
+        }
+      ]
+    }
+  }
+}

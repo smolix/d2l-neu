@@ -6994,6 +6994,1687 @@ def closed_loop_stats(results, c):
             'n_failed': len(results) - N, 'window': float(window),
             'n_window': int(done.sum())}
 
+d2l.DATA_HUB['wikitext-103-raw-train-0'] = (
+    'https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+    'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-103-raw-v1/'
+    'train-00000-of-00002.parquet',
+    '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
+d2l.DATA_HUB['wordsim353'] = (  # Finkelstein et al.'s combined ratings
+    'https://raw.githubusercontent.com/piskvorky/gensim/'
+    '37f90ec121eb7cd401448a947e80953e0c53ccdc/gensim/test/test_data/'
+    'wordsim353.tsv', '5207d1bb6dd863994fa4032f48f149bf28a5468e')
+d2l.DATA_HUB['simlex999'] = (
+    'https://huggingface.co/datasets/Yuti/SimLex-999/resolve/'
+    'e87197824261f272ad1e9c02e32db3144bbeb0ca/data/'
+    'train-00000-of-00001.parquet',
+    'f3b074e2e08f83aa469f2d05c5b789b5ad2d3c49')
+d2l.DATA_HUB['lm-enc-we-grid-v1'] = (  # D2L_RERUN=we-grid, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-we-grid-v1.json',
+    '8c6bc0c598c8493fa407b3662f7a26472522169e')
+
+def cooccurrence_counts(corpus, vocab_size, window=5, weighting='uniform'):
+    """Word-context counts within `window` positions as a symmetric
+    scipy.sparse.csr_matrix (float64). `corpus` is a 1-D array of word ids
+    with -1 at sentence breaks, which no pair crosses; `weighting` is
+    'uniform' (each pair counts 1) or 'harmonic' (1/distance).
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    import scipy.sparse
+    if weighting not in ('uniform', 'harmonic'):
+        raise ValueError(f'unknown weighting {weighting!r}')
+    corpus = np.asarray(corpus)
+    sentence = np.cumsum(corpus < 0)  # the sentence of each position
+    X = scipy.sparse.csr_matrix((vocab_size, vocab_size))
+    for d in range(1, window + 1):  # all pairs at distance d
+        a, b = corpus[:-d], corpus[d:]
+        ok = (a >= 0) & (b >= 0) & (sentence[:-d] == sentence[d:])
+        a, b = a[ok], b[ok]
+        w = 1.0 if weighting == 'uniform' else 1.0 / d
+        X = X + scipy.sparse.csr_matrix(  # duplicate entries are summed
+            (np.full(2 * len(a), w), (np.r_[a, b], np.r_[b, a])),
+            shape=(vocab_size, vocab_size))
+    return X
+
+SpearmanResult = collections.namedtuple(
+    'SpearmanResult', 'rho ci n_covered n_total cosines')
+
+def spearman_eval(embeddings, vocab, pairs, n_boot=2000, seed=0):
+    """Spearman correlation between the cosine similarities of embeddings
+    and the human scores of `pairs` (a DataFrame with columns word1, word2,
+    score), on the pairs whose two words `vocab` (a d2l.Vocab or a
+    TokenEmbedding) holds; `ci` is the 95% percentile interval of n_boot
+    resamples of those pairs (nan for n_boot=0), `cosines` their cosines.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    from scipy.stats import rankdata
+    idx = vocab.token_to_idx
+    covered = [w1 in idx and w2 in idx
+               for w1, w2 in zip(pairs.word1, pairs.word2)]
+    p = pairs[covered]
+    Z = F.normalize(torch.as_tensor(embeddings).float(), dim=1)
+    i = torch.tensor([idx[w] for w in p.word1], dtype=torch.long)
+    j = torch.tensor([idx[w] for w in p.word2], dtype=torch.long)
+    cos = (Z[i] * Z[j]).sum(1).double().numpy()
+    human = p.score.to_numpy(np.float64)
+
+    def rho(a, b):  # Pearson correlation of the ranks, along the last axis
+        a, b = rankdata(a, axis=-1), rankdata(b, axis=-1)
+        a, b = a - a.mean(-1, keepdims=True), b - b.mean(-1, keepdims=True)
+        return (a * b).sum(-1) / np.sqrt((a * a).sum(-1) * (b * b).sum(-1))
+
+    ci = (math.nan, math.nan)
+    if n_boot:
+        b = np.random.default_rng(seed).integers(0, len(p), (n_boot, len(p)))
+        ci = tuple(np.quantile(rho(cos[b], human[b]), [0.025, 0.975]))
+    return SpearmanResult(float(rho(cos, human)), tuple(map(float, ci)),
+                          len(p), len(pairs), cos)
+
+def sgns_loss(v, u, centers, contexts_negatives, labels, masks):
+    """Skip-gram with negative sampling: the binary cross-entropy of the
+    scores u_o^T v_w of each center (centers, shape (B,)) with its context
+    and noise words (contexts_negatives, (B, L)), labels 1 for a context
+    word and 0 for a noise word, averaged over the slots where masks is 1.
+    v and u are the center and the context tables (nn.Embedding).
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    scores = torch.einsum('bd,bld->bl', v(centers), u(contexts_negatives))
+    loss = F.binary_cross_entropy_with_logits(
+        scores, labels.float(), weight=masks.float(), reduction='sum')
+    return loss / masks.sum()
+
+def ppmi(counts, alpha=1.0, shift=0.0):
+    """Positive (shifted) PMI of a count matrix as a scipy.sparse.csr_matrix:
+    max(log(p(w, o) / (p(w) p_alpha(o))) - shift, 0), where p_alpha(o) is
+    proportional to n(o)^alpha over the contexts that occur.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    import scipy.sparse
+    C = scipy.sparse.coo_matrix(counts)
+    total = C.sum()
+    p_w = np.asarray(C.sum(1)).ravel() / total
+    n_o = np.asarray(C.sum(0)).ravel()
+    p_o = np.where(n_o > 0, n_o ** alpha, 0.0)
+    p_o = p_o / p_o.sum()
+    pmi = (np.log(C.data / total) - np.log(p_w[C.row])
+           - np.log(p_o[C.col]) - shift)
+    keep = pmi > 0
+    return scipy.sparse.csr_matrix(
+        (pmi[keep], (C.row[keep], C.col[keep])), shape=C.shape)
+
+def nearest_neighbors(E, vocab, word, k=5, exclude_self=True):
+    """The k rows of E nearest to word's row in cosine, as a list of
+    (token, cosine). vocab is a d2l.Vocab or a TokenEmbedding (whose
+    unknown token at index 0 is never returned), or a Hugging Face
+    tokenizer, for which word must be a single token.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    if hasattr(vocab, 'token_to_idx'):
+        i, skip = vocab.token_to_idx[word], [0]
+        name = lambda j: vocab.idx_to_token[j]
+    else:
+        ids = vocab.encode(word, add_special_tokens=False)
+        if len(ids) != 1:
+            raise ValueError(f'{word!r} is {len(ids)} tokens, not one')
+        i, skip, name = ids[0], [], lambda j: vocab.decode([j])
+    Z = F.normalize(torch.as_tensor(E)[:len(vocab)].float(), dim=1)
+    cos = Z @ Z[i]
+    cos[skip + ([i] if exclude_self else [])] = -math.inf
+    top = torch.topk(cos, k)
+    return [(name(int(j)), float(c)) for c, j in zip(top.values, top.indices)]
+
+class TokenEmbedding:
+    """Token Embedding.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    def __init__(self, embedding_name):
+        self.idx_to_token, self.idx_to_vec = self._load_embedding(
+            embedding_name)
+        self.unknown_idx = 0
+        self.token_to_idx = {token: idx for idx, token in
+                             enumerate(self.idx_to_token)}
+
+    def _load_embedding(self, embedding_name):
+        idx_to_token, idx_to_vec = ['<unk>'], []
+        data_dir = d2l.download_extract(embedding_name)
+        # GloVe website: https://nlp.stanford.edu/projects/glove/
+        # fastText website: https://fasttext.cc/
+        with open(os.path.join(data_dir, 'vec.txt'), 'r') as f:
+            for line in f:
+                elems = line.rstrip().split(' ')
+                token, elems = elems[0], [float(elem) for elem in elems[1:]]
+                # Skip header information, such as the top row in fastText
+                if len(elems) > 1:
+                    idx_to_token.append(token)
+                    idx_to_vec.append(elems)
+        idx_to_vec = [[0] * len(idx_to_vec[0])] + idx_to_vec
+        return idx_to_token, d2l.tensor(idx_to_vec)
+
+    def __getitem__(self, tokens):
+        indices = [self.token_to_idx.get(token, self.unknown_idx)
+                   for token in tokens]
+        vecs = self.idx_to_vec[d2l.tensor(indices)]
+        return vecs
+
+    def __len__(self):
+        return len(self.idx_to_token)
+
+HF_ENCODER_REVISIONS = {
+    'answerdotai/ModernBERT-base': '8949b909ec900327062f0ebf497f51aef5e6f0c8'}
+
+# Several of these files share a name: fetch them with d2l.download_keyed
+d2l.DATA_HUB['glue-mnli-train'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/mnli/'
+    'train-00000-of-00001.parquet',
+    '29c714bf5419e6a351ba0fc979f000dcc1ccf671')
+d2l.DATA_HUB['glue-mnli-validation-matched'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/mnli/'
+    'validation_matched-00000-of-00001.parquet',
+    '190b5f94bc4126d3747a817da7c0da9df619dfbc')
+d2l.DATA_HUB['glue-sst2-train'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2/'
+    'train-00000-of-00001.parquet',
+    '12cd5d3347611f133d19fd975afe391fa457553f')
+d2l.DATA_HUB['glue-sst2-validation'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2/'
+    'validation-00000-of-00001.parquet',
+    'bc4155c5b85fcdda2784ea3154a9cfd00bf2009a')
+d2l.DATA_HUB['conll2003-train'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/train.json',
+    '09a4703c703992a75087ece5b5eab2e0621b0590')
+d2l.DATA_HUB['conll2003-valid'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/valid.json',
+    '3f9256142388f6da88b2269541fab5b8dbfe49f0')
+d2l.DATA_HUB['conll2003-labels'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/label.json',
+    'd4fd1344c9af2613a3094dd2c84ff594e5215af0')
+d2l.DATA_HUB['lm-enc-bert-sweep-v1'] = (  # D2L_RERUN=bert-sweep, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v1.json',
+    '06440f0e5acbd7b91deb6b66f8402f8bea8d6155')
+d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
+    '36365804df9df70b812f52595ee6d092639285c1')
+d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # D2L_RERUN=bert-tagging
+    d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v1.json',
+    'f0f0f41d18ed997462891d0c6dece556ad57b680')
+d2l.DATA_HUB['lm-enc-bert-decoder-v1'] = (  # D2L_RERUN=bert-decoder
+    d2l.LM_DATA_URL + 'lm-enc-bert-decoder-v1.json',
+    '22b140629d3aa486a601068dce61b8a0f0301beb')
+
+def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
+                 dtype=torch.bfloat16, device=None, attn_implementation='sdpa',
+                 padding_side=None):
+    """A pinned encoder from the Hugging Face Hub and its tokenizer, in eval
+    mode: the bare model (head=None), or with a masked-token head ('mlm'), a
+    sequence classifier ('seq_cls') or a token classifier ('token_cls');
+    the pin comes from HF_ENCODER_REVISIONS, then HF_REVISIONS.
+
+    Defined in :numref:`sec_lm_bert`"""
+    import logging
+    import transformers
+    revision = revision or d2l.HF_ENCODER_REVISIONS.get(
+        model_id, d2l.HF_REVISIONS.get(model_id))
+    if revision is None:
+        raise KeyError(f'{model_id} is not pinned: pass revision=')
+    auto = {None: transformers.AutoModel,
+            'mlm': transformers.AutoModelForMaskedLM,
+            'seq_cls': transformers.AutoModelForSequenceClassification,
+            'token_cls': transformers.AutoModelForTokenClassification}[head]
+    device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    extra = {} if num_labels is None else {'num_labels': num_labels}
+    report = logging.getLogger('transformers.modeling_utils')
+    quiet = lambda record: 'LOAD REPORT' not in record.getMessage()
+    report.addFilter(quiet)  # its key table; the summary below replaces it
+    try:
+        model, info = auto.from_pretrained(
+            model_id, revision=revision, dtype=dtype, use_safetensors=True,
+            attn_implementation=attn_implementation, output_loading_info=True,
+            **extra)
+    finally:
+        report.removeFilter(quiet)
+    model = model.to(device)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        model_id, revision=revision)
+    if padding_side is not None:
+        tokenizer.padding_side = padding_side
+    model.revision = revision
+    print(f'{model_id}@{revision[:12]}: {type(model).__name__}\n    '
+          f'{dtype}, {device}, attention '
+          f'{model.config._attn_implementation}')
+    for what, keys in (('not used', info['unexpected_keys']),
+                       ('new, at random', info['missing_keys'])):
+        if keys:
+            print(f'    {what}: {", ".join(sorted(keys))}')
+    return model.eval(), tokenizer
+
+def mlm_corrupt(ids, mask_id, vocab_size, special_ids, p=0.15,
+                probs=(0.8, 0.1, 0.1), generator=None):
+    """BERT's masked-token corruption of ids: each token that is not in
+    special_ids is selected with probability p; a selected token becomes
+    mask_id with probability probs[0], a uniformly random token with
+    probs[1], and stays with probs[2]. Returns the corrupted ids and the
+    labels: the original id where selected, -100 (not scored) elsewhere.
+
+    Defined in :numref:`sec_lm_bert`"""
+    special = torch.isin(ids, torch.as_tensor(special_ids, device=ids.device))
+    u, v = (torch.rand(ids.shape, generator=generator, device=ids.device)
+            for _ in range(2))
+    selected = (u < p) & ~special
+    noise = torch.randint(vocab_size, ids.shape, generator=generator,
+                          device=ids.device)
+    out = torch.where(selected & (v < probs[0]), mask_id, ids)
+    out = torch.where(selected & (v >= probs[0]) & (v < probs[0] + probs[1]),
+                      noise, out)
+    return out, torch.where(selected, ids, -100)
+
+class PooledClassifier(nn.Module):
+    """A sentence or sentence-pair classifier on an encoder: the final
+    hidden states pooled (the mean over the attention mask, or the first
+    token), then dense, GELU, layer norm, dropout and a linear map to
+    num_labels logits. Biases and the norm follow the encoder's
+    configuration, as in Transformers' ModernBERT head.
+
+    Defined in :numref:`sec_lm_bert`"""
+    def __init__(self, encoder, num_labels, pooling='mean', dropout=0.0):
+        super().__init__()
+        if pooling not in ('mean', 'cls'):
+            raise ValueError(f'unknown pooling: {pooling!r}')
+        c = encoder.config
+        bias, d = getattr(c, 'classifier_bias', True), c.hidden_size
+        self.encoder, self.pooling = encoder, pooling
+        self.head = nn.Module()
+        self.head.dense = nn.Linear(d, d, bias=bias)
+        self.head.norm = nn.LayerNorm(d, eps=getattr(c, 'norm_eps', 1e-5),
+                                      bias=getattr(c, 'norm_bias', True))
+        self.drop = nn.Dropout(dropout)
+        self.classifier = nn.Linear(d, num_labels)
+        p = next(encoder.parameters())  # the head lives where the encoder is
+        self.head.to(p.device, p.dtype)
+        self.classifier.to(p.device, p.dtype)
+
+    def forward(self, input_ids, attention_mask):
+        H = self.encoder(input_ids=input_ids,
+                         attention_mask=attention_mask).last_hidden_state
+        if self.pooling == 'cls':
+            if not attention_mask[:, 0].all():
+                raise ValueError('cls pooling needs right padding')
+            h = H[:, 0]
+        else:  # padding positions do not count
+            m = attention_mask.unsqueeze(-1).to(H.dtype)
+            h = (H * m).sum(1) / m.sum(1)
+        h = self.head.norm(F.gelu(self.head.dense(h)))
+        return self.classifier(self.drop(h))
+
+def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
+                        warmup=0.1, device=None):
+    """Fine-tune model on train, a list of (input_ids, label) or, for token
+    tagging, (input_ids, labels) with a label per token (-100: not scored),
+    then predict eval. model(input_ids=, attention_mask=) returns logits or
+    an output with .logits. AdamW (weight decay 0.01 on matrices), linear
+    warmup over the share warmup of the steps then linear decay, gradients
+    clipped to norm 1, bf16 autocast on a GPU; each batch is padded to its
+    longest sequence (with id 0: the attention mask hides it, so any id
+    serves); seed fixes the data order (and dropout, if the model has
+    any). Returns the training losses, the eval accuracy and predictions
+    (a label per example, or per scored token), the training seconds and
+    the peak GPU memory in GiB.
+
+    Defined in :numref:`sec_lm_bert`"""
+    device = torch.device(device or ('cuda' if torch.cuda.is_available()
+                                     else 'cpu'))
+    cuda = device.type == 'cuda'
+
+    def batches(data, order):
+        for i in range(0, len(order), batch_size):
+            rows = [data[j] for j in order[i:i + batch_size]]
+            T = max(len(x) for x, _ in rows)
+            X = torch.tensor([x + [0] * (T - len(x)) for x, _ in rows])
+            M = torch.tensor([[1] * len(x) + [0] * (T - len(x))
+                              for x, _ in rows])
+            y = torch.tensor([y if isinstance(y, int) else
+                              y + [-100] * (T - len(y)) for _, y in rows])
+            yield X.to(device), M.to(device), y.to(device)
+
+    def logits(X, M):
+        with torch.autocast(device.type, torch.bfloat16, enabled=cuda):
+            out = model(input_ids=X, attention_mask=M)
+        return getattr(out, 'logits', out).float()
+
+    model.to(device).train()
+    torch.manual_seed(seed)  # dropout, if the model has any
+    order = torch.Generator().manual_seed(seed)
+    steps = epochs * math.ceil(len(train) / batch_size)
+    n_warm = max(1, round(warmup * steps))
+    params = [p for p in model.parameters() if p.requires_grad]
+    opt = torch.optim.AdamW([
+        {'params': [p for p in params if p.ndim >= 2], 'weight_decay': 0.01},
+        {'params': [p for p in params if p.ndim < 2], 'weight_decay': 0.0}],
+        lr=lr)
+    sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: (
+        (s + 1) / n_warm if s < n_warm else
+        max(0.0, (steps - s) / max(1, steps - n_warm))))
+    if cuda:
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
+    t0, losses = time.perf_counter(), []
+    for _ in range(epochs):
+        perm = torch.randperm(len(train), generator=order).tolist()
+        for X, M, y in batches(train, perm):
+            loss = F.cross_entropy(logits(X, M).flatten(0, -2), y.flatten(),
+                                   ignore_index=-100)
+            loss.backward()
+            nn.utils.clip_grad_norm_(params, 1.0)
+            opt.step()
+            sched.step()
+            opt.zero_grad(set_to_none=True)
+            losses.append(loss.detach())
+    if cuda:
+        torch.cuda.synchronize(device)
+    seconds = time.perf_counter() - t0
+    model.eval()
+    with torch.inference_mode():
+        out = [(logits(X, M).argmax(-1), y)
+               for X, M, y in batches(eval, range(len(eval)))]
+    hits = sum(((p == y) & (y != -100)).sum().item() for p, y in out)
+    total = sum((y != -100).sum().item() for _, y in out)
+    preds = [v for p, y in out for v in (p.tolist() if y.ndim == 1 else [
+        r[y_r != -100].tolist() for r, y_r in zip(p, y)])]
+    return dict(loss=torch.stack(losses).tolist(),
+                eval_acc=hits / total if total else float('nan'),
+                eval_pred=preds, seconds=seconds,
+                peak_gib=(torch.cuda.max_memory_allocated(device) / 2**30
+                          if cuda else float('nan')))
+
+def cost_per_example(n_params, n_tokens, n_embed=0):
+    """Forward FLOPs per example, 2 (n_params - n_embed) n_tokens: a
+    multiply and an add per weight and token, embedding lookups excluded.
+
+    Defined in :numref:`sec_lm_bert`"""
+    return 2 * (n_params - n_embed) * n_tokens
+
+def align_token_labels(word_ids, word_labels, scheme='first'):
+    """Token labels from word labels; word_ids gives each token's word
+    (None for a special token). scheme='first' labels the first sub-token
+    of each word and gives the others -100 (not scored); 'all' gives every
+    sub-token its word's label.
+
+    Defined in :numref:`sec_lm_bert`"""
+    if scheme not in ('first', 'all'):
+        raise ValueError(f'unknown scheme: {scheme!r}')
+    labels, prev = [], None
+    for w in word_ids:
+        first = w is not None and w != prev
+        labels.append(word_labels[w] if first or (
+            w is not None and scheme == 'all') else -100)
+        prev = w
+    return labels
+
+def span_f1(pred_tags, gold_tags, id2label):
+    """Entity-level precision, recall and F1 of IOB2 tag sequences (a list
+    of label ids per sentence), counted as conlleval and seqeval count
+    them: an entity starts at a B- tag, or at an I- tag after O or after
+    another type, and a predicted entity is correct if its type and both
+    ends match; per_type holds the three numbers per entity type.
+
+    Defined in :numref:`sec_lm_bert`"""
+    def entities(seqs):
+        found = set()
+        for s, seq in enumerate(seqs):
+            start, kind = None, None
+            for i, t in enumerate([id2label[t] for t in seq] + ['O']):
+                bio, _, typ = t.partition('-')
+                if start is not None and (bio != 'I' or typ != kind):
+                    found.add((kind, s, start, i))
+                    start = None
+                if bio == 'B' or (bio == 'I' and start is None):
+                    start, kind = i, typ
+        return found
+
+    def prf(pred, gold):
+        tp = len(pred & gold)
+        p = tp / len(pred) if pred else 0.0
+        r = tp / len(gold) if gold else 0.0
+        return dict(precision=p, recall=r, f1=2 * p * r / (p + r) if tp
+                    else 0.0)
+    pred, gold = entities(pred_tags), entities(gold_tags)
+    kinds = sorted({e[0] for e in pred | gold})
+    return dict(**prf(pred, gold), per_type={k: prf(
+        {e for e in pred if e[0] == k}, {e for e in gold if e[0] == k})
+        for k in kinds})
+
+d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Embedding-0.6B'] = (
+    '97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3')
+d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Reranker-0.6B'] = (
+    'e61197ed45024b0ed8a2d74b80b4d909f1255473')
+
+d2l.DATA_HUB['nq-pairs'] = (
+    'https://huggingface.co/datasets/sentence-transformers/'
+    'natural-questions/resolve/f9e894e1081e206e577b4eaa9ee6de2b06ae6f17/'
+    'pair/train-00000-of-00001.parquet',
+    '545c1495f10231652b59e67f7ab02e6d21252fd0')
+d2l.DATA_HUB['lm-enc-emb-results-v1'] = (  # D2L_RERUN=emb-train, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-emb-results-v1.json',
+    'd0bd19be14746bdb7216a190a20a8abaca4145d5')
+d2l.DATA_HUB['lm-enc-modernbert-embed-v1'] = (  # contrastive, seed 0, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-embed-v1.zip',
+    'f0de3203bde6008307a9782b45733085b02f89e2')
+d2l.DATA_HUB['lm-enc-modernbert-embed-mrl-v1'] = (  # Matryoshka, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-embed-mrl-v1.zip',
+    '17b1215b6d2e2ba5d8e7ef78621afe0894718095')
+
+def pool_hidden(hidden, attention_mask, mode):
+    """One vector per sequence from hidden states (B, T, m): the first
+    ('cls'), the mean ('mean') or the last ('last') of the positions the
+    mask keeps; left and right padding both work.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    mask = attention_mask.to(hidden.dtype)
+    if mode == 'mean':
+        return (hidden * mask[..., None]).sum(1) / mask.sum(1, keepdim=True)
+    rows = torch.arange(hidden.shape[0], device=hidden.device)
+    if mode == 'cls':
+        return hidden[rows, attention_mask.argmax(1)]
+    if mode == 'last':
+        T = attention_mask.shape[1]
+        return hidden[rows, T - 1 - attention_mask.flip(1).argmax(1)]
+    raise ValueError(f'unknown pooling {mode!r}')
+
+def embed_texts(model, tokenizer, texts, pooling='mean', batch_size=64,
+                max_len=512, normalize=True, prefix='', padding_side=None,
+                device=None):
+    """Vectors (N, m), float32 on the CPU, of prefix + text for each text:
+    pooled last hidden states of an encoder, unit length if normalize.
+    Batches hold texts of similar length; the output is in input order.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    device = device or next(model.parameters()).device
+    side = padding_side or tokenizer.padding_side
+    pad = tokenizer.pad_token_id
+    ids = tokenizer([prefix + t for t in texts], truncation=True,
+                    max_length=max_len)['input_ids']
+    full = tokenizer([prefix + t for t in texts])['input_ids']
+    n_cut = sum(len(a) < len(b) for a, b in zip(ids, full))
+    if n_cut:
+        print(f'{n_cut} of {len(texts)} texts truncated to {max_len} tokens')
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out = torch.empty(len(ids), model.config.hidden_size)
+    for j in range(0, len(order), batch_size):
+        rows = [ids[i] for i in order[j:j + batch_size]]
+        T = max(len(r) for r in rows)
+        fill = lambda r, v: ([v] * (T - len(r)) + r if side == 'left'
+                             else r + [v] * (T - len(r)))
+        X = torch.tensor([fill(r, pad) for r in rows], device=device)
+        mask = torch.tensor([fill([1] * len(r), 0) for r in rows],
+                            device=device)
+        with torch.inference_mode():
+            h = model(input_ids=X, attention_mask=mask).last_hidden_state
+            z = d2l.pool_hidden(h.float(), mask, pooling)
+            if normalize:
+                z = F.normalize(z, dim=-1)
+        out[order[j:j + batch_size]] = z.cpu()
+    return out
+
+def retrieval_metrics(ranked_ids, gold_ids, ks=(1, 5, 10, 100)):
+    """Per-query metrics of ranked lists against gold sets (binary
+    relevance): recall@k is 1 if a relevant id is among the first k (the
+    question is answerable from what was retrieved), mrr@10 the reciprocal
+    rank of the first relevant id within 10, ndcg@10 the discounted gain
+    over the ideal ordering. NaN for a query with an empty gold set.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    out = {f'recall@{k}': [] for k in ks} | {'mrr@10': [], 'ndcg@10': []}
+    for ranked, gold in zip(ranked_ids, gold_ids):
+        gold = set(gold)
+        if not gold:
+            for v in out.values():
+                v.append(np.nan)
+            continue
+        rel = np.array([i in gold for i in ranked], dtype=float)
+        for k in ks:
+            out[f'recall@{k}'].append(float(rel[:k].any()))
+        hits = np.flatnonzero(rel[:10])
+        out['mrr@10'].append(1 / (hits[0] + 1) if len(hits) else 0.0)
+        disc = 1 / np.log2(np.arange(2, 12))
+        idcg = disc[:min(len(gold), 10)].sum()
+        out['ndcg@10'].append((rel[:10] * disc[:len(rel[:10])]).sum() / idcg)
+    return {k: np.array(v) for k, v in out.items()}
+
+def anisotropy(Z, n_pairs=200_000, seed=0):
+    """Mean cosine similarity between distinct rows of Z, over n_pairs
+    random pairs, or over all pairs if n_pairs is None or covers them.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    Z = F.normalize(torch.as_tensor(Z, dtype=torch.float64), dim=-1)
+    n = len(Z)
+    if n_pairs is None or n_pairs >= n * (n - 1) // 2:
+        G = Z @ Z.T
+        return float((G.sum() - G.diagonal().sum()) / (n * (n - 1)))
+    rng = np.random.default_rng(seed)
+    i, j = rng.integers(n, size=n_pairs), rng.integers(n - 1, size=n_pairs)
+    j = j + (j >= i)  # a partner other than i, uniformly
+    return float((Z[i] * Z[j]).sum(-1).mean())
+
+def align_uniform(Zx, Zy, t=2.0, Zu=None):
+    """Wang and Isola's alignment, the mean squared distance between the
+    unit vectors of positive pairs (rows of Zx and Zy), and uniformity,
+    the log of the mean of exp(-t ||z - z'||^2) over the distinct pairs
+    of the rows of Zu, or of all rows of Zx and Zy if Zu is None.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    Zx, Zy = (F.normalize(torch.as_tensor(Z, dtype=torch.float64), dim=-1)
+              for Z in (Zx, Zy))
+    Zu = (torch.cat([Zx, Zy]) if Zu is None else F.normalize(
+        torch.as_tensor(Zu, dtype=torch.float64), dim=-1))
+    sq = torch.pdist(Zu) ** 2
+    uniformity = torch.logsumexp(-t * sq, 0) - math.log(len(sq))
+    return float(((Zx - Zy) ** 2).sum(-1).mean()), float(uniformity)
+
+def info_nce_loss(q, d, tau=0.05, hard_neg=None, symmetric=False):
+    """InfoNCE with in-batch negatives for unit vectors q, d (B, m), row i
+    of d the positive passage of query i: the cross-entropy of the scores
+    q_i . d_j / tau over all d_j, and over all hard_neg_j too if given.
+    symmetric averages in the passage-to-query direction (each d_i
+    against all q_j). Returns the loss and the share of queries whose
+    positive scores highest.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    S = q @ (d if hard_neg is None else torch.cat([d, hard_neg])).T / tau
+    labels = torch.arange(len(q), device=q.device)
+    loss = F.cross_entropy(S, labels)
+    if symmetric:
+        loss = (loss + F.cross_entropy(S[:, :len(q)].T, labels)) / 2
+    return loss, (S.argmax(1) == labels).float().mean()
+
+def no_duplicate_batches(queries, passages, batch_size, seed=0,
+                         negatives=None):
+    """Batches of indices into the pairs (queries[i], passages[i]), in a
+    seeded random order, none holding a query text twice or a passage text
+    twice (with negatives[i], an extra passage per pair, counted among the
+    passages): a duplicate would be a negative of its own query. A pair
+    that would repeat a text waits for a later batch.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    pending = collections.deque(
+        np.random.default_rng(seed).permutation(len(queries)).tolist())
+    batches = []
+    while pending:
+        batch, seen, waiting = [], set(), []
+        while pending and len(batch) < batch_size:
+            i = pending.popleft()
+            texts = {('q', queries[i]), ('p', passages[i])}
+            if negatives is not None:
+                texts.add(('p', negatives[i]))
+            if texts & seen:
+                waiting.append(i)
+            else:
+                batch.append(i)
+                seen |= texts
+        pending.extendleft(reversed(waiting))
+        batches.append(batch)
+    return batches
+
+def train_embedder(model, tokenizer, pairs, *, pooling='mean', tau=0.05,
+                   batch_size=64, lr=3e-5, steps=None, epochs=1,
+                   hard_negs=None, mrl_dims=None, q_prefix='query: ',
+                   d_prefix='passage: ', max_len_q=48, max_len_d=160,
+                   seed=0):
+    """Train an encoder in place on (query, passage) pairs: InfoNCE with
+    in-batch negatives at temperature tau, plus hard_negs[i] as one more
+    candidate per pair if given; with mrl_dims, the mean of the losses on
+    the leading mrl_dims coordinates (Matryoshka). Batches from
+    no_duplicate_batches; AdamW (weight decay 0.01 on matrices), linear
+    warmup over the first 10% of the steps then linear decay, gradients
+    clipped to norm 1, bf16 autocast on a GPU. Returns the loss per step,
+    the steps, the training seconds and the peak GPU memory in GiB."""
+    device = next(model.parameters()).device
+    cuda = device.type == 'cuda'
+    qs, ds = [q for q, _ in pairs], [d for _, d in pairs]
+    plan = [b for e in range(epochs) for b in d2l.no_duplicate_batches(
+        qs, ds, batch_size, seed + e, hard_negs)]
+    steps = steps or len(plan)
+
+    def embed(texts, prefix, max_len):  # pooled, not yet unit length
+        ids = tokenizer([prefix + t for t in texts], truncation=True,
+                        max_length=max_len)['input_ids']
+        T = max(map(len, ids))
+        X = torch.tensor([r + [tokenizer.pad_token_id] * (T - len(r))
+                          for r in ids], device=device)
+        M = torch.tensor([[1] * len(r) + [0] * (T - len(r)) for r in ids],
+                         device=device)
+        with torch.autocast(device.type, torch.bfloat16, enabled=cuda):
+            h = model(input_ids=X, attention_mask=M).last_hidden_state
+        return d2l.pool_hidden(h.float(), M, pooling)
+
+    def loss_fn(b):
+        q, d = embed([qs[i] for i in b], q_prefix, max_len_q), embed(
+            [ds[i] for i in b], d_prefix, max_len_d)
+        h = (None if hard_negs is None else
+             embed([hard_negs[i] for i in b], d_prefix, max_len_d))
+        cut = lambda Z, k: None if Z is None else F.normalize(Z[:, :k], dim=-1)
+        dims = mrl_dims or (q.shape[1],)
+        return sum(d2l.info_nce_loss(cut(q, k), cut(d, k), tau, cut(h, k))[0]
+                   for k in dims) / len(dims)
+
+    model.train()
+    torch.manual_seed(seed)
+    params = [p for p in model.parameters() if p.requires_grad]
+    opt = torch.optim.AdamW([
+        {'params': [p for p in params if p.ndim >= 2], 'weight_decay': 0.01},
+        {'params': [p for p in params if p.ndim < 2], 'weight_decay': 0.0}],
+        lr=lr)
+    n_warm = max(1, round(0.1 * steps))
+    sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: (
+        (s + 1) / n_warm if s < n_warm else
+        max(0.0, (steps - s) / max(1, steps - n_warm))))
+    if cuda:
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
+    t0, losses = time.perf_counter(), []
+    for s in range(steps):
+        loss = loss_fn(plan[s % len(plan)])
+        loss.backward()
+        nn.utils.clip_grad_norm_(params, 1.0)
+        opt.step()
+        sched.step()
+        opt.zero_grad(set_to_none=True)
+        losses.append(loss.detach())
+    if cuda:
+        torch.cuda.synchronize(device)
+    model.eval()
+    return dict(loss=torch.stack(losses).tolist(), steps=steps,
+                seconds=time.perf_counter() - t0,
+                peak_gib=(torch.cuda.max_memory_allocated(device) / 2**30
+                          if cuda else float('nan')))
+
+def truncate_embeddings(Z, dim):
+    """The first dim coordinates of each row of Z, rescaled to unit length.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    return F.normalize(Z[:, :dim], dim=-1)
+
+def binarize(Z):
+    """The signs of Z (N, m) as bits, eight per byte: uint8 (N, m / 8).
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    return np.packbits(np.asarray(Z) > 0, axis=1)
+
+def hamming_scores(Qbits, Dbits):
+    """The number of equal bits of each packed query and each packed
+    document (m minus their Hamming distance): int32 (nq, nd).
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    pop = np.unpackbits(np.arange(256, dtype=np.uint8)[:, None], axis=1).sum(
+        1, dtype=np.uint8)  # set bits per byte value
+    out = np.empty((len(Qbits), len(Dbits)), np.int32)
+    for i in range(0, len(Qbits), 16):
+        out[i:i + 16] = 8 * Qbits.shape[1] - pop[
+            Qbits[i:i + 16, None] ^ Dbits[None]].sum(-1, dtype=np.int32)
+    return out
+
+d2l.DATA_HUB['lm-book-r3-v1'] = (  # book commit 098bf463, corpus r3.1
+    d2l.LM_DATA_URL + 'lm-book-r3-v1.zip',
+    '0b7f11e044a4838139ac02dffb6e2d7eb32b48b8')
+d2l.DATA_HUB['lm-enc-r3-emb-qwen3emb06b-sec512-v1'] = (  # float16, dense view
+    d2l.LM_DATA_URL + 'lm-enc-r3-emb-qwen3emb06b-sec512-v1.npy',
+    '5bf63b97609399841b4fcd925734b98327634b91')
+d2l.DATA_HUB['lm-enc-r3-stress-emb-v1'] = (  # D2L_RERUN=ret-stress-emb
+    d2l.LM_DATA_URL + 'lm-enc-r3-stress-emb-v1.npz',
+    'f9fbf41eba47b50a034ee5d7f0a6fa33f28c26a1')
+d2l.DATA_HUB['lm-enc-ret-rerank-v1'] = (  # D2L_RERUN=ret-rerank
+    d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v1.json',
+    '93299ee93a052d3e21f4ed49d8b259400382dc81')
+d2l.DATA_HUB['lm-enc-ann-v1'] = (  # D2L_RERUN=ret-ann, AMD EPYC 7502
+    d2l.LM_DATA_URL + 'lm-enc-ann-v1.json',
+    'aadf07c143fa936ca556c105644c35052c30bf18')
+
+def book_corpus(chunking='sections', *, size=256, overlap=0, source='hub',
+                root=os.path.join('..', 'data', 'lm')):
+    """The book corpus (artifact lm-book-r3-v1) under one chunking:
+    'sections' (structure-aware, up to 512 tokens) or 'fixed' (windows of
+    size tokens sharing overlap tokens: 256 and 0 or 64 are shipped). With
+    source='local' it is rebuilt in memory from the git checkout named by
+    the environment variable D2L_BOOK_ROOT.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    tag = 'sec512' if chunking == 'sections' else f'fix{size}o{overlap}'
+    if tag not in ('sec512', 'fix256o0', 'fix256o64'):
+        raise ValueError(f'no shipped chunking {chunking!r} with size '
+                         f'{size} and overlap {overlap}')
+    if source == 'local':
+        import transformers
+        rev = d2l.HF_REVISIONS[d2l.R3_TOKENIZER]
+        tok = transformers.AutoTokenizer.from_pretrained(d2l.R3_TOKENIZER,
+                                                         revision=rev)
+        manifest, docs, chunks = d2l._r3_local(os.environ['D2L_BOOK_ROOT'],
+                                                tok, rev)
+        if 'lm-book-r3-v1' in d2l.DATA_HUB:  # what changed since the release
+            shipped = d2l._r3_read_zip(d2l.download_keyed(
+                'lm-book-r3-v1', root), ())[0]['files']
+            drift = sorted(set(shipped.items()) ^ set(
+                manifest['files'].items()))
+            if drift:
+                print(f'warning: {len({d for d, _ in drift})} files differ '
+                      f'from the registered corpus')
+        chunks = chunks[tag]
+    else:
+        path = d2l.download_keyed('lm-book-r3-v1', root)
+        manifest, docs, chunks = d2l._r3_read_zip(path, (tag,))
+        chunks = chunks[tag]
+    if manifest['corpus_version'] != d2l.R3_VERSION:
+        raise ValueError(
+            f'{manifest["corpus_version"]} is not corpus version '
+            f'{d2l.R3_VERSION}: delete {root}/lm-book-r3-v1 and download again')
+    return d2l.BookCorpus(manifest, docs, chunks, tag)
+
+def bm25_tokenize(text, split_identifiers=True):
+    """Lower-cased words and numbers of text; an identifier such as
+    d2l.book_corpus or BookRetriever also gives its parts (d2l, book,
+    corpus; book, retriever) when split_identifiers is set.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    out = []
+    for tok in re.findall(r'\w+(?:\.\w+)*', text):
+        out.append(tok.lower())
+        if not split_identifiers or re.fullmatch(r'[\d.]+', tok):
+            continue
+        parts = []
+        for p in re.split(r'[._]+', tok):
+            if re.search(r'[a-z][A-Z]|[A-Z][A-Z][a-z]', p):  # camelCase
+                parts += re.findall(r'[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+|\d+', p)
+            elif p:
+                parts.append(p)
+        if len(parts) > 1:
+            out += [p.lower() for p in parts]
+    return out
+
+class BM25Index:
+    """BM25 over tokenized documents: W[t, d] = idf(t) tf / (tf + k1 (1 - b
+    + b |d| / avgdl)) with Lucene's idf log(1 + (N - df + 0.5) / (df +
+    0.5)), stored as a sparse matrix; a query's scores are the sum of the
+    rows of its tokens.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, docs_tokens, k1=1.2, b=0.75, idf='lucene'):
+        from scipy import sparse
+        if idf != 'lucene':
+            raise ValueError("only idf='lucene' is implemented")
+        self.k1, self.b, self.vocab = k1, b, {}
+        rows, cols = [], []
+        for d, toks in enumerate(docs_tokens):
+            for t in toks:
+                rows.append(self.vocab.setdefault(t, len(self.vocab)))
+                cols.append(d)
+        N, V = len(docs_tokens), len(self.vocab)
+        tf = sparse.csr_matrix((np.ones(len(rows)), (rows, cols)),
+                               shape=(V, N))  # duplicates are summed
+        tf.sum_duplicates()
+        self.doc_len = np.array([len(t) for t in docs_tokens], dtype=float)
+        df = np.diff(tf.indptr)
+        self.idf = np.log1p((N - df + 0.5) / (df + 0.5))
+        norm = k1 * (1 - b + b * self.doc_len / self.doc_len.mean())
+        tf.data = (np.repeat(self.idf, df) * tf.data
+                   / (tf.data + norm[tf.indices]))
+        self.W = tf  # (vocabulary, documents)
+
+    def scores(self, query_tokens):
+        """BM25 score of every document (a repeated token counts twice)."""
+        ids = [self.vocab[t] for t in query_tokens if t in self.vocab]
+        if not ids:
+            return np.zeros(self.W.shape[1])
+        return np.asarray(self.W[ids].sum(axis=0)).ravel()
+
+    def search(self, query_tokens, k):
+        """Indices and scores of the k best documents, best first."""
+        s = self.scores(query_tokens)
+        ids = np.argsort(-s, kind='stable')[:k]
+        return ids, s[ids]
+
+def rrf_fuse(rankings, k=60, weights=None):
+    """Reciprocal-rank fusion: each id scores sum_r w_r / (k + rank_r) over
+    the rankings (lists of ids, best first) that contain it. Returns
+    [(id, score)], best first, ties in order of first appearance.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    weights = [1.0] * len(rankings) if weights is None else weights
+    score, first = {}, {}
+    for w, ranking in zip(weights, rankings):
+        for r, i in enumerate(ranking, start=1):
+            score[i] = score.get(i, 0.0) + w / (k + r)
+            first.setdefault(i, len(first))
+    return sorted(score.items(), key=lambda x: (-x[1], first[x[0]]))
+
+def rerank_yes_no(model, tokenizer, query, docs, instruction=None,
+                  batch_size=16, max_len=1024):
+    """P(yes) of a yes/no reranker (Qwen3-Reranker) that each document
+    meets the query: the model card's prompt with the document cut to fit
+    max_len tokens, scored by the normalized probability of 'yes' against
+    'no' as the next token.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    instruction = instruction or ('Given a web search query, retrieve '
+                                  'relevant passages that answer the query')
+    head = ('<|im_start|>system\nJudge whether the Document meets the '
+            'requirements based on the Query and the Instruct provided. '
+            'Note that the answer can only be "yes" or "no".<|im_end|>\n'
+            f'<|im_start|>user\n<Instruct>: {instruction}\n'
+            f'<Query>: {query}\n<Document>: ')
+    tail = '<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+    enc = lambda s: tokenizer(s, add_special_tokens=False)['input_ids']
+    room = max_len - len(enc(head)) - len(enc(tail))
+    prompts = [head + tokenizer.decode(enc(d)[:room]) + tail for d in docs]
+    lp = d2l.label_logprobs(model, tokenizer, prompts, ['yes', 'no'],
+                            sep='', batch_size=batch_size)
+    return torch.exp(lp[:, 0]).numpy()
+
+def kmeans(X, n_clusters, n_iter=20, seed=0):
+    """Lloyd's k-means of the rows of X from a seeded k-means++ start:
+    (centroids (n_clusters, d), assign (N,)) as tensors on X's device,
+    assign naming each row's nearest centroid. A cluster that loses all
+    its rows keeps its centroid.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    X = torch.as_tensor(X, dtype=torch.float32)
+    x2, gen = (X ** 2).sum(1), torch.Generator().manual_seed(seed)
+
+    def nearest(C):  # ||x||^2 is the same for every centroid: left out
+        c2 = (C ** 2).sum(1)
+        return torch.cat([(c2 - 2 * Xb @ C.T).argmin(1)
+                          for Xb in X.split(8192)])
+
+    def pick(d2):  # a row drawn with probability proportional to d2
+        w = d2.double().cpu().clamp(min=0)
+        if w.sum() == 0:
+            return torch.randint(len(X), (1,), generator=gen).item()
+        return torch.multinomial(w, 1, generator=gen).item()
+
+    C = [X[pick(torch.ones(len(X)))]]
+    d2 = x2 - 2 * X @ C[0] + C[0] @ C[0]
+    for _ in range(1, n_clusters):  # k-means++: far rows are likelier
+        C.append(X[pick(d2)])
+        d2 = torch.minimum(d2, x2 - 2 * X @ C[-1] + C[-1] @ C[-1])
+    C = torch.stack(C)
+    for _ in range(n_iter):
+        assign = nearest(C)
+        counts = torch.bincount(assign, minlength=n_clusters)
+        sums = torch.zeros_like(C).index_add_(0, assign, X)
+        keep = counts > 0
+        C[keep] = sums[keep] / counts[keep, None]
+    return C, nearest(C)
+
+class IVFIndex:
+    """Inverted file index: the k-means cells of the training vectors; a
+    query scans the vectors of its nprobe nearest cells exactly, by
+    squared Euclidean distance (for unit vectors, the cosine order).
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, nlist, nprobe=1):
+        self.nlist, self.nprobe = nlist, nprobe
+
+    def train(self, X, n_iter=20, seed=0):
+        self.centroids = d2l.kmeans(X, self.nlist, n_iter, seed)[0]
+
+    def _cells(self, X, n):
+        """The n nearest cells of each row of X."""
+        d = (self.centroids ** 2).sum(1) - 2 * X @ self.centroids.T
+        return d.topk(n, dim=1, largest=False).indices
+
+    def add(self, X):
+        """Store the rows of X (ids 0, 1, ...) grouped by cell."""
+        X = torch.as_tensor(X, dtype=torch.float32)
+        cell = self._cells(X, 1)[:, 0]
+        self.ids = torch.argsort(cell, stable=True)
+        self.X = X[self.ids]
+        sizes = torch.bincount(cell, minlength=self.nlist)
+        self.start = torch.cat([torch.zeros(1, dtype=torch.long),
+                                sizes.cumsum(0)])  # cell c: start[c:c + 2]
+
+    def search(self, Q, k):
+        """(distances, ids) of the k nearest stored rows per query, nearest
+        first, among the probed cells; id -1 where they hold fewer."""
+        Q = torch.as_tensor(Q, dtype=torch.float32)
+        D = torch.full((len(Q), k), torch.inf)
+        I = torch.full((len(Q), k), -1, dtype=torch.long)
+        for j, cells in enumerate(self._cells(Q, self.nprobe).tolist()):
+            rows = torch.cat([torch.arange(self.start[c], self.start[c + 1])
+                              for c in cells])
+            top = ((self.X[rows] - Q[j]) ** 2).sum(1).topk(
+                min(k, len(rows)), largest=False)
+            n = len(top.values)
+            D[j, :n], I[j, :n] = top.values, self.ids[rows[top.indices]]
+        return D, I
+
+class ProductQuantizer:
+    """Product quantization: a vector of d coordinates is cut into m
+    sub-vectors, each replaced by the index of the nearest of 2^nbits
+    centroids of its own k-means codebook (one byte per sub-vector here).
+    A query's squared distances to all codes are sums of m entries of a
+    table computed once per query: the asymmetric distance.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, m, nbits=8):
+        if not 1 <= nbits <= 8:
+            raise ValueError('codes are stored as one byte per sub-vector')
+        self.m, self.nbits = m, nbits
+
+    def _split(self, X):  # (..., d) -> (..., m, d / m)
+        X = torch.as_tensor(X, dtype=torch.float32)
+        if X.shape[-1] % self.m:
+            raise ValueError(f'{X.shape[-1]} coordinates in {self.m} parts')
+        return X.reshape(*X.shape[:-1], self.m, X.shape[-1] // self.m)
+
+    def fit(self, X, n_iter=20, seed=0):
+        S = self._split(X)
+        self.codebooks = torch.stack([d2l.kmeans(  # (m, 2^nbits, d / m)
+            S[:, j], 2 ** self.nbits, n_iter, seed)[0] for j in range(self.m)])
+        return self
+
+    def encode(self, X):
+        """Codes (N, m), uint8: the nearest centroid of each sub-vector."""
+        S, c2 = self._split(X), (self.codebooks ** 2).sum(-1)
+        return torch.cat([(c2 - 2 * torch.einsum(
+            'nmd,mkd->nmk', block, self.codebooks)).argmin(-1)
+                          for block in S.split(1024)]).to(torch.uint8)
+
+    def decode(self, codes):
+        """The reconstructions x-hat (N, d) of codes."""
+        codes = torch.as_tensor(codes).long()
+        return self.codebooks[torch.arange(self.m), codes].flatten(1)
+
+    def adc_table(self, q):
+        """(m, 2^nbits) squared distances of q's sub-vectors to the
+        centroids."""
+        return ((self._split(q)[:, None, :] - self.codebooks) ** 2).sum(-1)
+
+    def adc_search(self, q, codes, k):
+        """(distances, ids) of the k codes nearest to the query q, or to
+        each row of q, by m table look-ups per code."""
+        q = torch.as_tensor(q, dtype=torch.float32)
+        codes = torch.as_tensor(codes).long()  # a no-op if already int64
+        if q.ndim == 2:
+            out = [self.adc_search(row, codes, k) for row in q]
+            return tuple(torch.stack(t) for t in zip(*out))
+        d = self.adc_table(q)[torch.arange(self.m), codes].sum(1)
+        top = d.topk(min(k, len(d)), largest=False)
+        return top.values, top.indices
+
+# The embedder that the retriever, this chapter and later chapters use
+DEFAULT_EMBEDDER = 'Qwen/Qwen3-Embedding-0.6B'
+
+Hit = collections.namedtuple('Hit',
+                             'chunk_id score rank text heading_path scores')
+
+class BookRetriever:
+    """Hybrid retrieval over the book corpus: BM25 over the 'sparse' view
+    and a dense embedder over the 'dense' view, fused by reciprocal rank,
+    optionally reranked by a yes/no reranker (which reads the 'dense' view
+    with the embedder's instruction, BOOK_TASK). dense=None gives a
+    BM25-only retriever; index 'flat' scans all chunk vectors, 'hnsw' and
+    'ivfpq' build Faiss indexes on first use.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    # BM25 parameters chosen on the book's training questions
+    BM25_PARAMS = dict(k1=1.2, b=0.9, split_identifiers=True)
+
+    def __init__(self, corpus=None, dense=DEFAULT_EMBEDDER, index='flat',
+                 reranker=None, fusion='rrf', rrf_k=60, device=None,
+                 cache=True, bm25_params=None):
+        if fusion != 'rrf' or index not in ('flat', 'hnsw', 'ivfpq'):
+            raise ValueError(f'fusion {fusion!r} or index {index!r}')
+        self.corpus = d2l.book_corpus() if corpus is None else corpus
+        self.bm25_params = dict(self.BM25_PARAMS if bm25_params is None
+                                else bm25_params)
+        p = self.bm25_params
+        self.bm25 = d2l.BM25Index(
+            [d2l.bm25_tokenize(t, p['split_identifiers'])
+             for t in self.corpus.texts('sparse')], k1=p['k1'], b=p['b'])
+        self.dense, self.index, self.reranker = dense, index, reranker
+        self.rrf_k, self.cache = rrf_k, cache
+        self.device = device or ('cuda' if torch.cuda.is_available()
+                                 else 'cpu')
+        self._X = self._ann = self._enc = self._rr = self._texts = None
+
+    def _encoder(self):
+        if self._enc is None:
+            dtype = torch.bfloat16 if self.device != 'cpu' else torch.float32
+            self._enc = d2l.load_encoder(
+                self.dense, padding_side=d2l._EMBEDDERS[self.dense][
+                    'padding_side'], dtype=dtype, device=self.device)
+        return self._enc
+
+    def chunk_vectors(self):
+        """Unit vectors of the chunks (N, m), float16: the registered set
+        for this embedder if there is one, else the local cache, else
+        encoded now (and cached)."""
+        if self._X is None:
+            spec, c = d2l._EMBEDDERS[self.dense], self.corpus
+            rev = d2l.HF_ENCODER_REVISIONS[self.dense]
+            key = d2l._emb_cache_key(c.version, c.tag, 'dense', self.dense,
+                                     rev, 1024, spec['pooling'], '')
+            reg = d2l._R3_EMB_KEYS.get(self.dense)
+            X = (np.load(d2l.download_keyed(reg)) if c.tag == 'sec512'
+                 and reg in d2l.DATA_HUB else
+                 d2l._emb_cache_load(key) if self.cache else None)
+            if X is None:
+                model, tok = self._encoder()
+                X = d2l.embed_texts(model, tok, c.texts('dense'),
+                                    pooling=spec['pooling'], max_len=1024,
+                                    batch_size=16).half().numpy()
+                if self.cache:
+                    d2l._emb_cache_save(key, X)
+            assert X.shape[0] == len(c), 'chunk vectors do not match corpus'
+            self._X = torch.tensor(X, device=self.device)
+        return self._X
+
+    def _dense_search(self, queries, depth):
+        spec = d2l._EMBEDDERS[self.dense]
+        model, tok = self._encoder()
+        Q = d2l.embed_texts(model, tok, [spec['query_format'].format(
+            task=d2l.BOOK_TASK, query=q) for q in queries],
+            pooling=spec['pooling'], max_len=512)
+        X = self.chunk_vectors()
+        if self.index == 'flat':
+            S = (Q.to(X.device, X.dtype) @ X.T).float().cpu()
+            s, i = S.topk(min(depth, len(X)), dim=1)
+            return i.numpy(), s.numpy(), S.numpy()
+        if self._ann is None:
+            import faiss
+            Xf = np.ascontiguousarray(X.float().cpu().numpy())
+            m = Xf.shape[1]
+            if self.index == 'hnsw':
+                self._ann = faiss.IndexHNSWFlat(m, 32,
+                                                faiss.METRIC_INNER_PRODUCT)
+                self._ann.hnsw.efConstruction, self._ann.hnsw.efSearch = (
+                    200, 128)
+            else:
+                nlist = max(1, len(Xf) // 64)
+                self._ann = faiss.index_factory(
+                    m, f'IVF{nlist},PQ64', faiss.METRIC_INNER_PRODUCT)
+                if len(Xf) < 256 * 39:  # below what Faiss asks per codebook
+                    print(f'IVF-PQ: codebooks of 256 centroids trained on '
+                          f'{len(Xf):,} vectors')
+                    self._ann.pq.cp.min_points_per_centroid = 1
+                self._ann.train(Xf)
+                self._ann.nprobe = 16
+            self._ann.add(Xf)
+        s, i = self._ann.search(np.ascontiguousarray(Q.numpy()), depth)
+        keep = i >= 0  # Faiss pads with id -1 when it finds fewer
+        return [r[k] for r, k in zip(i, keep)], [
+            r[k] for r, k in zip(s, keep)], None
+
+    def search_batch(self, queries, k=10, mode='hybrid', rerank_k=None):
+        """search for each of several queries."""
+        if mode not in ('bm25', 'dense', 'hybrid'):
+            raise ValueError(f'mode {mode!r}')
+        if self.dense is None:
+            if mode == 'dense':
+                raise ValueError('a BM25-only retriever has no dense mode')
+            mode = 'bm25'
+        if rerank_k and not self.reranker:
+            raise ValueError('rerank_k needs a retriever with a reranker')
+        depth = max(100, k, rerank_k or 0)
+        p, ids = self.bm25_params, self.corpus.ids
+        bm25 = [self.bm25.scores(d2l.bm25_tokenize(q, p['split_identifiers']))
+                for q in queries]
+        if mode != 'bm25':
+            di, ds, dense_all = self._dense_search(queries, depth)
+        out = []
+        for j, q in enumerate(queries):
+            stages = {'bm25': bm25[j]}
+            bm_rank = np.argsort(-bm25[j], kind='stable')[:depth]
+            if mode == 'bm25':
+                ranked = [(int(i), float(bm25[j][i])) for i in bm_rank]
+            else:
+                dense_s = (dense_all[j] if dense_all is not None else
+                           dict(zip(di[j].tolist(), ds[j].tolist())))
+                stages['dense'] = dense_s
+                if mode == 'dense':
+                    ranked = list(zip(di[j].tolist(), ds[j].tolist()))
+                else:
+                    ranked = d2l.rrf_fuse([bm_rank.tolist(), di[j].tolist()],
+                                          k=self.rrf_k)[:depth]
+                    stages['rrf'] = dict(ranked)
+            if rerank_k:
+                if self._texts is None:
+                    self._texts = self.corpus.texts('dense')
+                top = [i for i, _ in ranked[:rerank_k]]
+                pr = d2l.rerank_yes_no(*self._reranker(), q,
+                                       [self._texts[i] for i in top],
+                                       instruction=d2l.BOOK_TASK)
+                stages['rerank'] = dict(zip(top, pr.tolist()))
+                order = np.argsort(-pr, kind='stable')
+                ranked = ([(top[o], float(pr[o])) for o in order]
+                          + ranked[rerank_k:])  # the rest as fused
+            hits = []
+            for r, (i, s) in enumerate(ranked[:k], start=1):
+                c = self.corpus.chunks[i]
+                hits.append(d2l.Hit(c['id'], s, r, c['text'],
+                                    c['heading_path'], {
+                    name: float(v[i]) if not isinstance(v, dict)
+                    else v.get(i) for name, v in stages.items()}))
+            out.append(hits)
+        return out
+
+    def search(self, query, k=10, mode='hybrid', rerank_k=None):
+        """The k best chunks for query as a list of Hit, best first; with
+        rerank_k, the reranker reorders the first rerank_k of the fused
+        ranking."""
+        return self.search_batch([query], k, mode, rerank_k)[0]
+
+    def _reranker(self):
+        if self._rr is None:
+            self._rr = d2l.load_hf(
+                self.reranker,
+                revision=d2l.HF_ENCODER_REVISIONS[self.reranker],
+                device_map={'': self.device})
+        return self._rr
+
+    def release(self):
+        """Free the GPU models (query encoder, reranker); a later search
+        loads them again."""
+        self._enc = self._rr = None
+        d2l.lm_free()
+
+d2l.DATA_HUB['lm-book-qa-v1'] = (  # corpus r3.1; 5,865 train, 240 dev, 240 test
+    d2l.LM_DATA_URL + 'lm-book-qa-v1.zip',
+    '3b8dba5ceae43c88274e52ce6ae7525884ea4168')
+d2l.DATA_HUB['lm-book-qa-api-cache-v1'] = (  # its drafts, checks, verdicts
+    d2l.LM_DATA_URL + 'lm-book-qa-api-cache-v1.zip',
+    '962322fd53b3573daeaa50a92d3f53f25a25572d')
+d2l.DATA_HUB['lm-book-qa-v2'] = (  # v1, closed-book flag by the 27B judge
+    d2l.LM_DATA_URL + 'lm-book-qa-v2.zip',
+    '65a524857b50dfdffa4e75f217b5af66256bd025')
+d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
+    d2l.LM_DATA_URL + 'lm-rag-judge-labels-v1.zip',
+    '2f10e6f4314644e7ebdf7ac7a8c1b3e7182f98d8')
+d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
+    d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
+    '78065bff472577631de5d7cac287323e77427e7f')
+d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
+    '7c08b175e12fe3138742f46e14720df1ab45e277')
+d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
+    d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
+    'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
+d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
+    d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
+    'dd66f91cc44070f7e2256c63d5e5caf912c4054e')
+d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
+    d2l.LM_DATA_URL + 'lm-rag-judge-v1.jsonl',
+    '8e128dbe149cf3f22b3d0979368c679c5d43c371')
+d2l.DATA_HUB['lm-rag-judge-cache-v1'] = (  # the judge's recorded replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v1.zip',
+    '12402e3f6d7675bcd3f2667743607677129abd4e')
+d2l.DATA_HUB['lm-rag-judge-v2'] = (  # v1 and the verdicts on the fix run
+    d2l.LM_DATA_URL + 'lm-rag-judge-v2.jsonl',
+    '8e8ad8b9f63e000005e40f060c4e926e66c3312f')
+d2l.DATA_HUB['lm-rag-judge-cache-v2'] = (  # every recorded reply
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v2.zip',
+    '9b68fb8b52733e7909000165121512892f4b022c')
+d2l.DATA_HUB['lm-rag-judge-v3'] = (  # v2, missing verdicts judged again
+    d2l.LM_DATA_URL + 'lm-rag-judge-v3.jsonl',  # with 6,000 new tokens
+    '28d257ee9b9545e7035917e6612d978faf8d259d')
+d2l.DATA_HUB['lm-rag-judge-cache-v3'] = (  # v2 and those longer replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v3.zip',
+    '8711571c3c94646d17215c522aec15d7a3cd269c')
+
+def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
+            root=os.path.join('..', 'data', 'lm')):
+    """The book's question set (artifact lm-book-qa-v2), one split: a
+    BookQA (a list of item dicts), optionally only answerable (or only
+    unanswerable) items, only some question types, and a stratified
+    sample of n items.
+
+    Defined in :numref:`sec_lm_rag`"""
+    items = d2l._book_qa_read(split, root)
+    if answerable is not None:
+        items = [q for q in items if q['answerable'] == answerable]
+    if types is not None:
+        items = [q for q in items if q['type'] in types]
+    qa = d2l.BookQA(items, split)
+    return qa if n is None else qa.subset(n, seed)
+
+def gold_chunk_ids(item, corpus, min_overlap=0.5, include_alt=True):
+    """Ids of the chunks of corpus relevant to a question: those that
+    overlap one of its gold spans (and, with include_alt, the passages
+    judged to answer it as well) by at least min_overlap of the span's or
+    of the chunk's characters."""
+    spans = item['gold_spans'] + (item.get('alt_spans', []) if include_alt
+                                  else [])
+    return {i for s in spans for i in corpus.span_to_chunk_ids(
+        s['doc_id'], s['char_start'], s['char_end'], min_overlap)}
+
+def cov_at_budget(ranked_chunk_ids, item, corpus, budget_tokens):
+    """Whether the chunks of corpus taken in rank order until the next one
+    would pass budget_tokens tokens cover at least half the characters of
+    one of the item's gold spans (or alternative spans).
+
+    Defined in :numref:`sec_lm_rag`"""
+    taken, used = collections.defaultdict(list), 0
+    for cid in ranked_chunk_ids:
+        c = corpus[cid]
+        if used + c['n_tokens'] > budget_tokens:
+            break
+        used += c['n_tokens']
+        taken[c['doc_id']].append((c['char_start'], c['char_end']))
+    for s in item['gold_spans'] + item.get('alt_spans', []):
+        a, b = s['char_start'], s['char_end']
+        covered = np.zeros(b - a, dtype=bool)
+        for lo, hi in taken.get(s['doc_id'], ()):
+            covered[max(lo, a) - a:max(min(hi, b) - a, 0)] = True
+        if b > a and covered.mean() >= 0.5:
+            return True
+    return False
+
+def assemble_context(hits, budget_tokens=3000, order='rank', dedup_cos=0.95,
+                     embed=None, k=None):
+    """The passages for the prompt: hits (chunk dicts with n_tokens, best
+    first) taken in rank order, skipping a near duplicate of one already
+    taken (cosine above dedup_cos between the unit vectors that embed(hits)
+    returns; no check without embed), until k are taken or the next would
+    pass budget_tokens; then ordered 'rank' (best first), 'reverse' (best
+    last, next to the question) or 'edges' (the best at both ends, the
+    weakest in the middle). Returns (passages, tokens used)."""
+    if order not in ('rank', 'reverse', 'edges'):
+        raise ValueError(f'unknown order {order!r}')
+    hits = list(hits)
+    V = (torch.as_tensor(embed(hits)).float()
+         if embed is not None and hits else None)
+    keep, used = [], 0
+    for i, h in enumerate(hits):
+        if (k is not None and len(keep) == k
+                or used + h['n_tokens'] > budget_tokens):
+            break
+        if V is not None and keep and (V[keep] @ V[i]).max() > dedup_cos:
+            continue  # a near duplicate of a passage already taken
+        keep.append(i)
+        used += h['n_tokens']
+    out = [hits[i] for i in keep]
+    if order == 'reverse':
+        out = out[::-1]
+    elif order == 'edges':  # ranks 1, 3, 5, ..., then ..., 4, 2
+        out = out[0::2] + out[1::2][::-1]
+    return out, used
+
+ABSTAIN = 'I cannot answer this from the provided passages.'
+
+def rag_prompt(question, hits, abstain=ABSTAIN):
+    """Chat messages asking for an answer from numbered passages (hits: Hit
+    records or dicts with heading_path and text), each statement citing
+    them as [n], or the abstention string; hits=None gives the closed-book
+    prompt (no passages, no citations).
+
+    Defined in :numref:`sec_lm_rag`"""
+    if hits is None:
+        system = ('You answer questions about the textbook Dive into Deep '
+                  'Learning. If you do not know the answer, reply exactly: '
+                  + abstain)
+        user = f'Question: {question}\nAnswer in at most four sentences.'
+    else:
+        system = ('You answer questions about the textbook Dive into Deep '
+                  'Learning using only the numbered passages. After each '
+                  'statement, cite the passage numbers that support it, for '
+                  'example [2]. If the passages do not contain the answer, '
+                  'reply exactly: ' + abstain)
+        get = lambda h, k: h[k] if isinstance(h, dict) else getattr(h, k)
+        passages = '\n\n'.join(
+            f'[{n}] {" > ".join(get(h, "heading_path"))}\n{get(h, "text")}'
+            for n, h in enumerate(hits, start=1))
+        user = (f'Passages:\n{passages}\n\nQuestion: {question}\n'
+                f'Answer in at most four sentences.')
+    return [{'role': 'system', 'content': system},
+            {'role': 'user', 'content': user}]
+
+def parse_citations(answer, n_chunks):
+    """The passage numbers an answer cites ([1], [1][3], [1, 3]), in order
+    of first mention, without numbers outside 1..n_chunks."""
+    out = []
+    for group in re.findall(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
+        for n in map(int, group.split(',')):
+            if 1 <= n <= n_chunks and n not in out:
+                out.append(n)
+    return out
+
+RAGResult = collections.namedtuple('RAGResult', [
+    'qid', 'question', 'query_used', 'ranked_ids', 'context_ids', 'answer',
+    'cited_ids', 'abstained', 'n_prompt_tokens', 'n_new_tokens',
+    'latency_s'])
+
+class RAGPipeline:
+    """Retrieval-augmented generation over the book corpus. The question,
+    or a query the generator writes (rewrite='generator'), goes to the
+    retriever; rewrite='fuse' adds the query's ranking to the question's
+    in RRF, hyde embeds a passage the generator writes on the dense side,
+    decompose fuses the rankings of up to two sub-questions. The reranker
+    may reorder the first rerank_k chunks; assemble_context packs at most
+    k of them (k=None: as many as fit) into budget_tokens; the generator
+    answers with the fixed grounded prompt (or a variant of a
+    pre-registered fix), greedily, in batches. verify drops sentences
+    whose citations the generator finds unsupportive; abstain_below
+    abstains when the reranker's best score for the context is lower.
+
+    Defined in :numref:`sec_lm_rag`"""
+    def __init__(self, retriever, model, tokenizer, k=5, budget_tokens=3000,
+                 order='rank', rewrite=None, hyde=False, decompose=False,
+                 rerank_k=None, max_new_tokens=300, *, depth=50,
+                 dedup_cos=0.95, prompt='fixed', verify=False,
+                 abstain_below=None):
+        if rewrite not in (None, 'generator', 'fuse'):
+            raise ValueError(f'unknown rewrite {rewrite!r}')
+        if (rerank_k or abstain_below is not None) and not retriever.reranker:
+            raise ValueError('reranking needs a retriever with a reranker')
+        self.retriever, self.model, self.tokenizer = (retriever, model,
+                                                      tokenizer)
+        self.k, self.budget_tokens, self.order = k, budget_tokens, order
+        self.rewrite, self.hyde, self.decompose = rewrite, hyde, decompose
+        self.rerank_k, self.max_new_tokens = rerank_k, max_new_tokens
+        self.depth, self.dedup_cos, self.prompt = depth, dedup_cos, prompt
+        self.verify, self.abstain_below = verify, abstain_below
+        self._dense = self._pos = None
+
+    def prepare(self, questions, budgets=None):
+        """Phases 1 and 2. Per question (a string or an item dict): the
+        query used, the first-stage ranking (depth chunk ids), the context
+        (chunk dicts in prompt order) and its tokens, the reranker's best
+        score (None without one) and whether to abstain unasked."""
+        R, t0 = self.retriever, time.time()
+        qs = [self._question(q) for q in questions]
+        query = qs  # phase 1: the generator writes queries
+        if self.rewrite:
+            query = self._write([d2l._rag_rewrite_prompt(q) for q in qs], 20)
+        dense = (self._write([d2l._rag_hyde_prompt(q) for q in qs], 120)
+                 if self.hyde else qs)
+        extra = [[r] if self.rewrite == 'fuse' else [] for r in query]
+        if self.decompose:
+            subs = self._write([d2l._rag_decompose_prompt(q) for q in qs], 60)
+            extra = [e + [l.strip() for l in s.splitlines() if l.strip()][:2]
+                     for e, s in zip(extra, subs)]
+        main = query if self.rewrite == 'generator' else qs
+        ids = lambda H: [[h.chunk_id for h in hs] for hs in H]
+        pool = max(100, self.depth, self.rerank_k or 0)  # phase 2
+        if not (self.hyde or any(extra)):  # the retriever's own fusion
+            ranked = ids(R.search_batch(main, k=pool))
+        else:  # BM25 of the question, dense of `dense`, more rankings: RRF
+            bm = ids(R.search_batch(main, k=pool, mode='bm25'))
+            de = (ids(R.search_batch(dense, k=pool, mode='dense'))
+                  if R.dense else [[] for _ in qs])
+            flat = [e for es in extra for e in es]
+            more = iter(ids(R.search_batch(flat, k=pool)) if flat else [])
+            ranked = [[i for i, _ in d2l.rrf_fuse(
+                [b, d] + [next(more) for _ in es], k=R.rrf_k)][:pool]
+                for b, d, es in zip(bm, de, extra)]
+        cand, top = ranked, [None] * len(qs)
+        if self.rerank_k:
+            rr = self._rerank(qs, [r[:self.rerank_k] for r in ranked])
+            cand = [[c for c, _ in r] for r in rr]
+            top = [r[0][1] if r else None for r in rr]
+        budgets = budgets or [self.budget_tokens] * len(qs)
+        embed = self._embed if self.dedup_cos and R.dense else None
+        out = []
+        for j in range(len(qs)):
+            ctx, used = d2l.assemble_context(
+                [R.corpus[c] for c in cand[j]], budgets[j], self.order,
+                self.dedup_cos, embed, self.k)
+            out.append(dict(query_used=query[j], context=ctx,
+                            ranked_ids=ranked[j][:self.depth],
+                            n_context_tokens=used, top_score=top[j],
+                            abstain=False))
+        if self.abstain_below is not None:
+            need = [j for j, o in enumerate(out)
+                    if o['top_score'] is None and o['context']]
+            rr = self._rerank([qs[j] for j in need], [
+                [c['id'] for c in out[j]['context']] for j in need])
+            for j, r in zip(need, rr):
+                out[j]['top_score'] = r[0][1]
+            for o in out:
+                o['abstain'] = (o['top_score'] is not None and
+                                o['top_score'] < self.abstain_below)
+        for o in out:
+            o['seconds'] = (time.time() - t0) / max(len(qs), 1)
+        return out
+
+    def answer(self, questions, batch_size=8, contexts=None):
+        """Phase 3 after prepare (or with the contexts given; a context of
+        None is the closed-book prompt): the retriever's models leave the
+        GPU, then batched greedy generation. One RAGResult per question."""
+        prep = self.prepare(questions) if contexts is None else contexts
+        self.retriever.release()
+        go = [j for j, p in enumerate(prep) if not p.get('abstain')]
+        gen = dict(zip(go, self._generate(
+            [d2l._rag_fix_prompt(self._question(questions[j]),
+                                 prep[j]['context'], self.prompt)
+             for j in go], self.max_new_tokens, batch_size) if go else []))
+        answers = {j: (d2l._rag_quoted_answer(g[0]) if self.prompt == 'quote'
+                       else g[0]) for j, g in gen.items()}
+        if self.verify:
+            answers = self._verified(answers, prep, batch_size)
+        out = []
+        for j, q in enumerate(questions):
+            ctx = prep[j]['context'] or []
+            text = answers.get(j, d2l.ABSTAIN)
+            _, n_prompt, n_new, secs = gen.get(j, ('', 0, 0, 0.0))
+            out.append(d2l.RAGResult(
+                q.get('qid') if isinstance(q, dict) else None,
+                self._question(q), prep[j].get('query_used'),
+                list(prep[j].get('ranked_ids') or []),
+                [c['id'] for c in ctx], text,
+                d2l.parse_citations(text, len(ctx)), d2l._rag_abstained(text),
+                n_prompt, n_new, round(prep[j].get('seconds', 0) + secs, 4)))
+        return out
+
+    @staticmethod
+    def _question(q):
+        return q['question'] if isinstance(q, dict) else q
+
+    def _generate(self, messages, max_new_tokens, batch_size):
+        """(text, prompt tokens, new tokens, seconds) per chat: greedy,
+        thinking off, left padding; Transformers' generate keeps only the
+        last position's logits at the prefill (logits_to_keep=1)."""
+        tok, model = self.tokenizer, self.model
+        texts = [tok.apply_chat_template(m, tokenize=False,
+                                         add_generation_prompt=True,
+                                         enable_thinking=False)
+                 for m in messages]
+        eos = model.generation_config.eos_token_id
+        eos = set(eos if isinstance(eos, (list, tuple)) else [eos])
+        out = []
+        for b in range(0, len(texts), batch_size):
+            enc = tok(texts[b:b + batch_size], return_tensors='pt',
+                      padding=True, padding_side='left',
+                      add_special_tokens=False).to(model.device)
+            t = time.time()
+            with torch.no_grad():
+                ids = model.generate(
+                    **enc, max_new_tokens=max_new_tokens, do_sample=False,
+                    temperature=None, top_p=None, top_k=None,
+                    pad_token_id=tok.pad_token_id)
+            secs = (time.time() - t) / len(enc['input_ids'])
+            new = ids[:, enc['input_ids'].shape[1]:].tolist()
+            for row, n_prompt in zip(new, enc['attention_mask'].sum(1)):
+                n = next((i + 1 for i, x in enumerate(row) if x in eos),
+                         len(row))
+                out.append((tok.decode(row[:n], skip_special_tokens=True)
+                            .strip(), int(n_prompt), n, secs))
+        return out
+
+    def _write(self, messages, max_new_tokens):
+        """The generator's short replies (queries, passages)."""
+        return [t for t, *_ in self._generate(messages, max_new_tokens, 8)]
+
+    def _rerank(self, queries, id_lists):
+        """Per query, (chunk id, P(yes)) pairs of its chunks, best first."""
+        R = self.retriever
+        if self._dense is None:
+            self._dense = dict(zip(R.corpus.ids, R.corpus.texts('dense')))
+        model, tok = R._reranker()
+        out = []
+        for q, ids in zip(queries, id_lists):
+            p = (d2l.rerank_yes_no(model, tok, q, [self._dense[i] for i in
+                                                   ids],
+                                   instruction=d2l.BOOK_TASK)
+                 if ids else np.zeros(0))
+            out.append([(ids[i], float(p[i]))
+                        for i in np.argsort(-p, kind='stable')])
+        return out
+
+    def _embed(self, hits):
+        """Unit vectors of chunk dicts, from the retriever's chunk vectors."""
+        R = self.retriever
+        if self._pos is None:
+            self._pos = {c: i for i, c in enumerate(R.corpus.ids)}
+        return R.chunk_vectors()[[self._pos[h['id']] for h in hits]].float(
+            ).cpu()
+
+    def _verified(self, answers, prep, batch_size):
+        """answers without the sentences whose cited passages the generator
+        says do not support them (P(yes) below P(no)); a sentence without
+        a citation goes too, and an answer left empty abstains."""
+        jobs, sents = [], {}
+        for j, a in answers.items():
+            ctx = prep[j]['context'] or []
+            sents[j] = re.split(r'(?<=[.!?])\s+', a.strip())
+            for i, s in enumerate(sents[j]):
+                cited = d2l.parse_citations(s, len(ctx))
+                if cited and not d2l._rag_abstained(a):
+                    jobs.append((j, i, d2l._rag_verify_prompt(
+                        s, [ctx[c - 1] for c in cited])))
+        keep = set()
+        if jobs:
+            lp = d2l.label_logprobs(self.model, self.tokenizer,
+                                    [m for *_, m in jobs], ['yes', 'no'],
+                                    chat=True, enable_thinking=False,
+                                    batch_size=batch_size)
+            keep = {(j, i) for (j, i, _), l in zip(jobs, lp) if l[0] > l[1]}
+        return {j: a if d2l._rag_abstained(a) else ' '.join(
+            s for i, s in enumerate(sents[j]) if (j, i) in keep) or d2l.ABSTAIN
+                for j, a in answers.items()}
+
+def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
+              thinking=None, max_new_tokens=None):
+    """The judge's verdicts on an answer: 'correct' (every key fact stated,
+    nothing contradicting the reference), 'faithful' (every statement
+    supported by the passages given) and 'supported' (the cited passages
+    alone support it). result is a RAGResult or a dict with answer and
+    cited_ids (1-based passage numbers). An abstention (the abstention
+    sentence in the answer, d2l._rag_abstained) is decided without the
+    judge: it is correct exactly for an unanswerable item.
+    Without passages only 'correct' is judged. item, result and
+    context_texts may also be lists (a list of verdicts comes back, judged
+    in batches). judge is a d2l.ChatAPI (tokenizer None; batch_size
+    requests in flight; its client sets the thinking switch, records and
+    replays) or a Transformers model with its tokenizer. With thinking
+    (default: on for a d2l.ChatAPI, off for a model) the judge reasons
+    first and its verdict is read after the reasoning; a reply cut off at
+    max_new_tokens (default 3,000 with thinking, 64 without) counts as
+    malformed. A verdict missing from the judge's JSON after one retry is
+    None. A request that fails in transport twice (the server is down, an
+    error status) is not a verdict: rag_judge raises, and a recording
+    client keeps the replies that did arrive.
+
+    Defined in :numref:`sec_lm_rag`"""
+    single = isinstance(item, dict)
+    items, results, contexts = (([item], [result], [context_texts])
+                                if single else (item, result, context_texts))
+    api = hasattr(judge, 'achat')
+    thinking = api if thinking is None else thinking
+    max_new_tokens = max_new_tokens or (3000 if thinking else 64)
+    verdicts, jobs = [], []
+    for i, (q, r, ctx) in enumerate(zip(items, results, contexts)):
+        r = r._asdict() if hasattr(r, '_asdict') else r
+        answer, ctx = r['answer'].strip(), list(ctx or [])
+        abstained = d2l._rag_abstained(answer)
+        v = {'correct': None, 'faithful': None, 'supported': None}
+        if abstained or not q['answerable']:
+            v['correct'] = abstained and not q['answerable']
+        if abstained:
+            v['faithful'] = True  # an abstention states nothing
+        verdicts.append(v)
+        keys = [] if abstained else [
+            k for k in ('correct', 'faithful', 'supported')
+            if v[k] is None and (k == 'correct' or ctx)]
+        if keys:
+            cited = r.get('cited_ids') or []
+            jobs.append((i, keys, d2l._rag_judge_messages(
+                q, answer, ctx, cited)))
+    failed = []
+    for attempt in range(2):  # one retry, with the malformed reply shown
+        if not jobs:
+            break
+        replies = d2l._rag_judge_replies(
+            judge, tokenizer, [m for _, _, m in jobs], thinking,
+            max_new_tokens, batch_size)
+        retry = []
+        for (i, keys, messages), reply in zip(jobs, replies):
+            if isinstance(reply, BaseException):  # no reply: ask again
+                if attempt == 0:
+                    retry.append((i, keys, messages))
+                else:
+                    failed.append(reply)
+                continue
+            parsed = (None if reply is None else
+                      d2l._rag_parse_json(reply, keys))
+            if parsed is None and attempt == 0:
+                retry.append((i, keys, messages + [
+                    {'role': 'assistant', 'content': reply or ''},
+                    {'role': 'user', 'content': d2l.RAG_JUDGE_V1['retry']}]))
+            for k in keys:
+                verdicts[i][k] = None if parsed is None else parsed[k]
+        jobs = retry
+    if failed:
+        raise RuntimeError(f'{len(failed)} judge requests failed twice, '
+                           f'first: {failed[0]!r}') from failed[0]
+    return verdicts[0] if single else verdicts
+
+def citation_metrics(results, items, corpus):
+    """Per item, from gold ids: precision (the share of the cited passages
+    that are relevant), recall (the share of the relevant passages in the
+    context that are cited) and n_cited; NaN where a share has nothing to
+    divide by. results are RAGResults or mappings with context_ids and
+    cited_ids (1-based passage numbers)."""
+    rows = []
+    for r, q in zip(results, items):
+        r = r._asdict() if hasattr(r, '_asdict') else r
+        rel, ctx = d2l.gold_chunk_ids(q, corpus), list(r['context_ids'])
+        cited = [ctx[n - 1] for n in r['cited_ids'] if 1 <= n <= len(ctx)]
+        found = [c for c in ctx if c in rel]
+        rows.append(dict(
+            qid=q['qid'], n_cited=len(cited),
+            precision=np.mean([c in rel for c in cited]) if cited else np.nan,
+            recall=np.mean([c in cited for c in found]) if found else np.nan))
+    return pd.DataFrame(rows)
+
+def classify_failure(result, item, judge_out, corpus, depth=50):
+    """The stage at which an answer failed: 'correct'; an unanswerable item
+    answered: 'false_answer'; an answerable one: 'not_retrieved' (no
+    relevant chunk in the first-stage top depth), 'ranked_low' (one there,
+    none in the context), 'false_abstain' (one in the context, yet the
+    answer abstains), 'ignored' (faithful to the context, not correct) or
+    'unsupported' (not faithful). 'unjudged' when the judge gave no
+    verdict that the class depends on: such an answer has no class."""
+    r = result._asdict() if hasattr(result, '_asdict') else result
+    true = lambda v: isinstance(v, (bool, np.bool_)) and bool(v)
+    given = lambda v: isinstance(v, (bool, np.bool_))
+    if not given(judge_out['correct']):
+        return 'unjudged'
+    if true(judge_out['correct']):
+        return 'correct'
+    if not item['answerable']:
+        return 'false_answer'
+    rel = d2l.gold_chunk_ids(item, corpus)
+    if not rel & set(r['context_ids']):
+        return ('ranked_low' if rel & set(list(r['ranked_ids'])[:depth])
+                else 'not_retrieved')
+    if d2l._rag_abstained(r['answer']):
+        return 'false_abstain'
+    if not given(judge_out.get('faithful')):
+        return 'unjudged'
+    return 'ignored' if true(judge_out['faithful']) else 'unsupported'
+
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
 
@@ -12308,6 +13989,1029 @@ def cost_of_half(cost, sw):
         return float(cost[0])
     (c0, c1), (s0, s1) = cost[j[0] - 1:j[0] + 1], sw[j[0] - 1:j[0] + 1]
     return float(c0 + (0.5 - s0) * (c1 - c0) / (s1 - s0))
+
+_R3_DIRECTIVES = ('numref', 'eqref', 'exref', 'ref', 'cite', 'citet', 'label',
+                  'eqlabel', 'exlabel', 'begin_tab', 'end_tab', 'width',
+                  'height', 'maxdepth')
+
+def _r3_caption_head(caption, width=80):
+    """The first sentence of a caption, on one line, at most width chars.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    text = ' '.join(caption.split())
+    head = re.split(r'(?<=[.:;])\s', text, maxsplit=1)[0].rstrip('.:;')
+    return head if len(head) <= width else head[:width - 3].rstrip() + '...'
+
+def _r3_label_titles(sources):
+    """Pass 1 of the reference rewriting: {label: (kind, title, doc_id)}
+    for every :label: in sources ({doc_id: raw markdown}); kind is
+    'Chapter', 'Section', 'Figure' or 'Table' by what the label follows."""
+    titles = {}
+    for doc_id, text in sources.items():
+        heading = None
+        for m in re.finditer(
+                r'^(#{1,6})\s+(.*)$|^\s*:label:`([^`]+)`', text, re.M):
+            if m.group(1):
+                heading = re.sub(r'\s*\{[^}]*\}\s*$', '', m.group(2)).strip()
+                continue
+            label, before = m.group(3), text[:m.start()].rstrip()
+            last = before.rsplit('\n', 1)[-1]
+            image = re.search(r'!\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\([^)\s]*\)'
+                              r'(\{[^}]*\})?\s*$', before[-2000:])
+            if last.startswith('#'):
+                kind = 'Chapter' if label.startswith('chap') else 'Section'
+                title = heading
+            elif image:
+                kind, title = 'Figure', image.group(1)
+            elif last.startswith(':') and not last.startswith(':label'):
+                kind, title = 'Table', last[1:]
+            else:
+                kind, title = 'Section', heading
+            titles.setdefault(label, (kind, title, doc_id))
+    raw = dict(titles)
+    for label, (kind, title, doc_id) in raw.items():  # titles as plain text
+        title = _r3_rewrite_refs(' '.join((title or '').split()), raw, [])
+        if kind in ('Figure', 'Table'):
+            title = _r3_caption_head(title)
+        titles[label] = (kind, title, doc_id)
+    return titles
+
+def _r3_rewrite_refs(line, label_titles, unresolved):
+    """Rewrite the reference directives of one prose line (rule 4); a
+    kind the text already names ('exercise :exref:', 'Table :numref:') is
+    not repeated."""
+    def sub(m):
+        name, arg = m.group(1), m.group(2)
+        before = re.search(r'(\w+)\s*$', m.string[:m.start()])
+        before = before.group(1).lower() if before else ''
+        if name not in _R3_DIRECTIVES:
+            raise ValueError(f'unknown directive :{name}: in {line!r}')
+        if name in ('cite', 'citet'):
+            return ''
+        if name in ('eqref', 'exref'):
+            kind = 'Equation' if name == 'eqref' else 'Exercise'
+            named = before in ('equation', 'equations', 'exercise',
+                               'exercises', 'problem', 'problems')
+            return '\x00' if named else kind
+        if name in ('numref', 'ref'):
+            hit = label_titles.get(arg.strip())
+            if hit is None:
+                unresolved.append(arg.strip())
+                return 'another section'
+            kind, title, _ = hit
+            named = before.rstrip('s') == kind.lower()
+            return (f'"{title}"' if name == 'ref' or named
+                    else f'{kind} "{title}"')
+        return ''  # label, eqlabel, exlabel, width, height inside a line
+    line = re.sub(r'^[ \t]*:(cite|citet):`[^`]*`', '\x01', line)  # join up
+    line = re.sub(r'[ \t]*(?<![\w`]):(cite|citet):`[^`]*`', '', line)
+    line = re.sub(r'(?<![\w`]):([a-z_]+):`([^`]*)`', sub, line)
+    return re.sub(r'[ \t]*\x00', '', line)  # a dropped reference
+
+def clean_d2l_markdown(text, framework='pytorch', keep_exercises=False,
+                       label_titles=None):
+    """One book source as plain text for retrieval, and its metadata: the
+    slide deck cut, framework tabs other than framework dropped, cells as
+    plain python fences, references rewritten as titles, citations and
+    markup removed, exercises dropped (rules 1-8 of the book corpus).
+    Returns (text, meta) with meta keys title, label, headings,
+    cell_ids, unresolved_refs, has_exercises."""
+    lines = text.split('\n')
+    for i, line in enumerate(lines):  # rule 1: cut the slide deck
+        if (line.strip() == '<!-- slides -->'
+                or re.match(r'^::: \{\.(slide|cover)', line)):
+            lines = lines[:i]
+            break
+    if label_titles is None:
+        label_titles = _r3_label_titles({None: '\n'.join(lines)})
+    meta = dict(title=None, label=None, headings=[], cell_ids=[],
+                unresolved_refs=[], has_exercises=False)
+    segs = []  # (kind, text): 'prose' lines, 'code' blocks, 'cell' blocks
+    tab_keep, in_comment, last_heading, i = None, False, None, 0
+    def emit(kind, s, cell_id=None):
+        if tab_keep is not False:
+            segs.append((kind, s, cell_id))
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        if in_comment:  # rule 5: HTML comments
+            if '-->' in line:
+                in_comment, line = False, line.split('-->', 1)[1]
+            else:
+                continue
+        while '<!--' in line:
+            head, tail = line.split('<!--', 1)
+            if '-->' in tail:
+                line = head + tail.split('-->', 1)[1]
+            else:
+                line, in_comment = head, True
+        fence = re.match(r'^(\s*)(`{3,}|~{3,})(.*)$', line)
+        if fence:  # rules 3 and 8: a fence and its body
+            mark, info, body = fence.group(2), fence.group(3).strip(), []
+            while i < len(lines) and not re.match(
+                    rf'^\s*{re.escape(mark[0])}{{{len(mark)},}}\s*$', lines[i]):
+                body.append(lines[i])
+                i += 1
+            if i == len(lines):
+                raise ValueError(f'unclosed fence {line!r}')
+            i += 1
+            if info == 'toc':
+                continue
+            if not info.startswith('{.python'):
+                emit('code', '\n'.join([line, *body, lines[i - 1]]))
+                continue
+            first = next((b for b in body if b.strip()), '')
+            tab = re.match(r'^\s*(?:%%tab|#@tab)\s+(.*)$', first)
+            if tab:
+                fws = {f.strip() for f in tab.group(1).split(',')}
+                if not fws & {framework, 'all'}:
+                    continue
+                body = body[body.index(first) + 1:]
+            code = [b for b in body if b.strip()]
+            imports = [b for b in code if re.match(  # and d2lbook's tabs
+                r'^\s*(import\s|from\s\S+\s+import\s|%matplotlib|'
+                r'%load_ext\s|tab\.interact_select\()', b)]
+            if not code or len(imports) >= 0.9 * len(code):
+                continue
+            cell_id = re.search(r'#([\w-]+)', info)
+            emit('cell', '```python\n' + '\n'.join(body).strip('\n')
+                 + '\n```', cell_id.group(1) if cell_id else None)
+            continue
+        if in_comment and not line.strip():
+            continue
+        tab = re.match(r'^\s*:begin_tab:`([^`]*)`\s*$', line)
+        if tab:  # rule 2: prose tabs
+            if tab_keep is not None:
+                raise ValueError('nested :begin_tab:')
+            fws = {f.strip() for f in tab.group(1).split(',')}
+            tab_keep = bool(fws & {framework, 'all'})
+            continue
+        if re.match(r'^\s*:end_tab:\s*$', line):
+            if tab_keep is None:
+                raise ValueError(':end_tab: without :begin_tab:')
+            tab_keep = None
+            continue
+        if re.match(r'^##\s+Exercises\s*$', line):  # rule 7
+            meta['has_exercises'] = True
+            if not keep_exercises:
+                break
+        label = re.match(r'^\s*:label:`([^`]+)`\s*$', line)
+        if label:  # attach a label to the heading it follows
+            prev = next((s for s in reversed(segs) if s[1].strip()), None)
+            if last_heading is not None and prev is not None and (
+                    prev[1] is last_heading[1]):
+                last_heading[0]['label'] = label.group(1)
+            continue
+        if re.match(r'^\s*:(eqlabel|exlabel|width|height):`[^`]*`\s*$', line):
+            continue
+        if (re.match(r'^\s*:::', line)
+                or re.match(r'^\s*\[Discussions\]\(', line)):
+            continue
+        caption = re.match(r'^:([^\s:`].*)$', line)
+        if caption and not re.match(r'^:[a-z_]+:`', line):  # table caption
+            line = 'Table: ' + caption.group(1)
+        line = _r3_rewrite_refs(line, label_titles, meta['unresolved_refs'])
+        if not line.strip() and tab_keep is not False:
+            segs.append(('prose', '', None))
+            continue
+        heading = re.match(r'^(#{1,6})\s+(.*?)\s*(\{[^}]*\})?\s*$', line)
+        line = line.rstrip()
+        if heading:  # without attributes such as {.unnumbered}
+            line = heading.group(1) + ' ' + heading.group(2)
+        if heading and tab_keep is not False:
+            h = dict(level=len(heading.group(1)), title=heading.group(2),
+                     label=None, char_start=None)
+            meta['headings'].append(h)
+            last_heading = (h, line)
+        emit('prose', line)
+    if tab_keep is not None:
+        raise ValueError('unclosed :begin_tab:')
+    if in_comment:
+        raise ValueError('unclosed HTML comment')
+    # Images become 'Figure: caption'; runs of blank lines collapse (rule 5)
+    out, prose = [], []
+    def flush():
+        s = '\n'.join(prose)
+        s = re.sub(r'!\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\([^)\s]*\)(\{[^}]*\})?',
+                   lambda m: 'Figure: ' + ' '.join(m.group(1).split()), s)
+        s = re.sub(r'\n\x01(?=[.,;:!?)])', '', s).replace('\x01', '')
+        s = re.sub(r'\n\s*\n(\s*\n)+', '\n\n', s)
+        if s.strip():
+            out.append(s.strip('\n'))
+        prose.clear()
+    for kind, s, cell_id in segs:
+        if kind == 'prose':
+            prose.append(s)
+            continue
+        flush()
+        out.append(('cell' if kind == 'cell' else 'code', s, cell_id))
+    flush()
+    text, parts = '', []
+    for part in out:  # prose, code and cells, one blank line apart
+        if parts:
+            text += '\n\n'
+        if isinstance(part, tuple):
+            if part[0] == 'cell':
+                meta['cell_ids'].append(dict(
+                    id=part[2], char_start=len(text),
+                    char_end=len(text) + len(part[1])))
+            text += part[1]
+        else:
+            text += part
+        parts.append(part)
+    text += '\n'
+    # Heading offsets in the cleaned text, in order, outside code fences
+    spans = [(c.start(), c.end()) for c in re.finditer(
+        r'^```.*?^```', text, re.M | re.S)]
+    found = [m for m in re.finditer(r'^(#{1,6})\s+(.*?)\s*$', text, re.M)
+             if not any(a <= m.start() < b for a, b in spans)]
+    if len(found) != len(meta['headings']):
+        raise ValueError('heading count changed during cleaning')
+    for h, m in zip(meta['headings'], found):
+        h['char_start'], h['title'] = m.start(), m.group(2)
+    h1 = next((h for h in meta['headings'] if h['level'] == 1), None)
+    if h1 is not None:
+        meta['title'], meta['label'] = h1['title'], h1['label']
+    return text, meta
+
+def _r3_sentences(text):
+    """Character spans (start, end) of the sentences of a prose text: a
+    sentence ends at '.', '!' or '?' followed by whitespace and an upper-case
+    letter, a digit, a dollar sign or a backtick.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    ends = [m.end() for m in re.finditer(
+        r'(?<=[.!?])["\')\]]?(?=\s+[A-Z0-9$`(])', text)]
+    starts = [0] + [len(text) - len(text[e:].lstrip()) for e in ends]
+    return [(s, e) for s, e in zip(starts, ends + [len(text)]) if e > s]
+
+def _r3_parse_blocks(text):
+    """The blocks of a cleaned document, as (kind, start, end) character
+    spans: 'heading', 'para', 'list', 'table', 'math' ($$ ... $$), 'code'
+    (a fence), 'quote'. Blocks are separated by blank lines; a fence or a
+    display-math block runs to its closing line; a heading line is a block
+    of its own."""
+    blocks, pos, n = [], 0, len(text)
+    line_starts = [0] + [m.end() for m in re.finditer('\n', text)]
+    lines = text.split('\n')
+    k = 0
+    while k < len(lines):
+        line, start = lines[k], line_starts[k]
+        if not line.strip():
+            k += 1
+            continue
+        fence = re.match(r'^\s*(`{3,}|~{3,})', line)
+        if fence or line.strip().startswith('$$'):
+            if fence:
+                close = rf'^\s*{re.escape(fence.group(1)[0])}{{{len(fence.group(1))},}}\s*$'
+            j = k + 1
+            if fence or line.strip() == '$$' or not (
+                    line.strip().endswith('$$') and len(line.strip()) > 2):
+                while j < len(lines) and not (
+                        re.match(close, lines[j]) if fence
+                        else lines[j].strip().endswith('$$')):
+                    j += 1
+                j += 1
+            end = line_starts[j - 1] + len(lines[j - 1]) if j <= len(
+                lines) else n
+            blocks.append(('code' if fence else 'math', start, end))
+            k = j
+            continue
+        if re.match(r'^#{1,6}\s', line):
+            blocks.append(('heading', start, start + len(line)))
+            k += 1
+            continue
+        j = k
+        while (j + 1 < len(lines) and lines[j + 1].strip()
+               and not re.match(r'^(#{1,6}\s|\s*(`{3,}|~{3,})|\s*\$\$)',
+                                lines[j + 1])):
+            j += 1
+        s = line.lstrip()
+        kind = ('table' if s.startswith('|') else 'quote' if s.startswith('>')
+                else 'list' if re.match(r'^([-*+]|\d+\.)\s', s) else 'para')
+        blocks.append((kind, start, line_starts[j] + len(lines[j])))
+        k = j + 1
+    return blocks
+
+def _r3_ntokens(tokenizer, text):
+    """Number of tokens of text, without special tokens.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    return len(tokenizer(text, add_special_tokens=False)['input_ids'])
+
+def _r3_split_block(text, kind, start, end, tokenizer, max_tokens):
+    """Split one block longer than max_tokens into pieces (code at blank
+    lines or def/class lines, math at line ends, prose at sentence ends,
+    a remainder at token windows), as (kind, start, end) spans."""
+    piece = text[start:end]
+    if kind == 'code':  # never right after the opening fence line
+        cuts = [m.start() for m in re.finditer(
+            r'\n(?=\s*\n)|\n(?=(def|class|@)\b)', piece)
+            if m.start() > piece.find('\n')]
+    elif kind in ('math', 'table', 'list'):
+        cuts = [m.start() for m in re.finditer(r'\n', piece)]
+    else:
+        cuts = [e for _, e in _r3_sentences(piece)][:-1]
+    bounds = [0] + sorted(set(cuts)) + [len(piece)]
+    units = [(start + a, start + b) for a, b in zip(bounds, bounds[1:])]
+    out, cur = [], None
+    for a, b in units:
+        if cur is not None and _r3_ntokens(
+                tokenizer, text[cur[0]:b]) <= max_tokens:
+            cur = (cur[0], b)
+            continue
+        if cur is not None:
+            out.append(cur)
+        cur = (a, b)
+        if _r3_ntokens(tokenizer, text[a:b]) > max_tokens:  # token windows
+            for w in chunk_fixed(dict(text=text[a:b]), tokenizer,
+                                 size=max_tokens, overlap=0):
+                out.append((a + w['char_start'], a + w['char_end']))
+            cur = None
+    if cur is not None:
+        out.append(cur)
+    return [(kind, a + len(text[a:b]) - len(text[a:b].lstrip()),
+             a + len(text[a:b].rstrip())) for a, b in out
+            if text[a:b].strip()]
+
+def _r3_chunk_record(doc, tag, k, strategy, start, end, tokenizer, path,
+                     section_label, kinds):
+    """One chunk dict of doc over doc['text'][start:end]."""
+    text = doc['text'][start:end]
+    cells = [c['id'] for c in doc.get('cell_ids', ())
+             if c['char_start'] < end and c['char_end'] > start]
+    body = set(kinds) - {'heading'}
+    kind = ('code' if body == {'code'} else 'table' if body == {'table'}
+            else 'mixed' if 'code' in body else 'prose')
+    return dict(id=f'{tag}:{doc["doc_id"]}#{k:03d}', doc_id=doc['doc_id'],
+                strategy=strategy, text=text, heading_path=list(path),
+                char_start=start, char_end=end,
+                n_tokens=_r3_ntokens(tokenizer, text), kind=kind,
+                cell_ids=[c for c in cells if c], section_label=section_label)
+
+def _r3_heading_path(doc, pos):
+    """(H1..H3 titles, deepest label) in force at character pos of doc."""
+    path, labels = {}, {}
+    for h in doc.get('headings', ()):
+        if h['char_start'] > pos:
+            break
+        if h['level'] <= 3:
+            path = {l: t for l, t in path.items() if l < h['level']}
+            labels = {l: t for l, t in labels.items() if l < h['level']}
+            path[h['level']] = h['title']
+            labels[h['level']] = h['label']
+    label = next((labels[l] for l in sorted(labels, reverse=True)
+                  if labels[l]), None)
+    return [path[l] for l in sorted(path)], label
+
+def chunk_sections(doc, tokenizer, max_tokens=512, min_tokens=64,
+                   tag='sec512'):
+    """Structure-aware chunks of a cleaned document (a dict with doc_id,
+    text, headings, cell_ids): the blocks under each H1-H3 heading packed
+    greedily up to max_tokens; a display-math block stays with the
+    paragraph before it and a following paragraph starting 'where', a code
+    cell with the paragraph before it when both fit; a section under
+    min_tokens merges into its neighbour under the same H2."""
+    text = doc['text']
+    size = lambda bl: sum(_r3_ntokens(tokenizer, text[a:b]) for _, a, b in bl)
+    units, h2 = [], 0  # [H2 count, path, label, heading block, blocks]
+    for kind, a, b in _r3_parse_blocks(text):
+        level = len(text[a:b]) - len(text[a:b].lstrip('#'))
+        if kind == 'heading' and level <= 3:
+            h2 += level <= 2
+            units.append([h2, *_r3_heading_path(doc, a), (kind, a, b), []])
+        elif units:
+            units[-1][4].append((kind, a, b))
+        else:
+            units.append([h2, *_r3_heading_path(doc, a), None, [(kind, a, b)]])
+    merged = []  # a small section joins its neighbour under the same H2
+    for u in units:
+        if merged and merged[-1][0] == u[0] and (
+                size(u[4]) < min_tokens or size(merged[-1][4]) < min_tokens):
+            merged[-1][4].extend([u[3]] + u[4])
+        else:
+            merged.append(u)
+    chunks = []
+    for _, path, label, _, ublocks in merged:
+        groups = []  # atomic runs of blocks
+        for kind, a, b in ublocks:
+            prev = groups[-1] if groups else None
+            glue = prev is not None and (
+                (kind == 'math' and prev[-1][0] in ('para', 'list', 'math'))
+                or (kind == 'para' and prev[-1][0] == 'math'
+                    and text[a:b].lstrip().lower().startswith('where'))
+                or (kind == 'code' and prev[-1][0] == 'para' and _r3_ntokens(
+                    tokenizer, text[prev[0][1]:b]) <= max_tokens))
+            if glue:
+                prev.append((kind, a, b))
+            else:
+                groups.append([(kind, a, b)])
+        pieces = []  # groups that fit, else their blocks, else block pieces
+        for g in groups:
+            if _r3_ntokens(tokenizer, text[g[0][1]:g[-1][2]]) <= max_tokens:
+                pieces.append(g)
+                continue
+            for kind, a, b in g:
+                if _r3_ntokens(tokenizer, text[a:b]) <= max_tokens:
+                    pieces.append([(kind, a, b)])
+                else:
+                    pieces.extend([p] for p in _r3_split_block(
+                        text, kind, a, b, tokenizer, max_tokens))
+        cur = []
+        for p in pieces:
+            if cur and _r3_ntokens(
+                    tokenizer, text[cur[0][1]:p[-1][2]]) > max_tokens:
+                chunks.append((cur, path, label))
+                cur = []
+            cur = cur + p
+        if cur:
+            chunks.append((cur, path, label))
+    out = []
+    for k, (bl, path, label) in enumerate(chunks):
+        a, b = bl[0][1], bl[-1][2]
+        out.append(_r3_chunk_record(doc, tag, k, 'sections', a, b, tokenizer,
+                                    path, label, [x[0] for x in bl]))
+    return out
+
+def chunk_fixed(doc, tokenizer, size=256, overlap=0, tag=None):
+    """Windows of size tokens with overlap tokens shared, over the token
+    stream of doc['text'], cut at character boundaries: a window ends at
+    its last token whose characters it does not share with the next token
+    (a byte-level token can hold part of a character)."""
+    text = doc['text']
+    enc = tokenizer(text, add_special_tokens=False,
+                    return_offsets_mapping=True)
+    offs = enc['offset_mapping']
+    n = len(offs)
+    shared = lambda j: j + 1 < n and offs[j][1] > offs[j + 1][0]
+    windows, i = [], 0
+    while i < n:
+        j = min(i + size, n) - 1
+        while j > i and shared(j):
+            j -= 1
+        windows.append((offs[i][0], offs[j][1]))
+        if j == n - 1:
+            break
+        nxt = max(j + 1 - overlap, i + 1)
+        while nxt < n and nxt > 0 and offs[nxt - 1][1] > offs[nxt][0]:
+            nxt += 1  # never start inside a character
+        i = nxt
+    if tag is None:
+        return [dict(char_start=a, char_end=b) for a, b in windows]
+    out, blocks = [], _r3_parse_blocks(text)
+    for k, (a, b) in enumerate(windows):
+        path, label = _r3_heading_path(doc, a)
+        kinds = [kind for kind, s, e in blocks if s < b and e > a]
+        out.append(_r3_chunk_record(doc, tag, k, 'fixed', a, b, tokenizer,
+                                    path, label, kinds))
+    return out
+
+_R3_EXCLUDED = {  # directory prefix: reason
+    'chapter_language-models': 'Language Models part (self-reference)',
+    'chapter_lm-': 'Language Models part (self-reference)',
+    'chapter_attic': 'Attic', 'chapter_gaussian-processes': 'Attic',
+    'chapter_hyperparameter-optimization': 'Attic',
+    'chapter_recommender-systems': 'Attic',
+    'chapter_natural-language-processing-pretraining': 'retiring NLP chapter',
+    'chapter_natural-language-processing-applications': 'retiring NLP chapter',
+    'chapter_preface': 'front matter', 'chapter_installation': 'front matter',
+    'chapter_notation': 'front matter', 'chapter_references': 'references'}
+_R3_SPLIT_SALT = 'r3-split-v1|'
+R3_TOKENIZER = 'Qwen/Qwen3-0.6B'
+R3_VERSION = 'r3.1'
+
+def _r3_quarto_files(quarto_yml):
+    """[(path without .md, part file or None)] of the chapter files that
+    _quarto.yml lists, in book order, part files included.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    files, part = [], None
+    for line in quarto_yml.split('\n'):
+        m = re.match(r'^\s*-\s+part:\s*(\S+)\.qmd\s*$', line)
+        if m:
+            part = m.group(1)
+            files.append((part, None))
+            continue
+        m = re.match(r'^\s*-\s+(chapter_\S+)\.qmd\s*$', line)
+        if m:
+            files.append((m.group(1), part))
+    return files
+
+def _r3_split_docs(doc_ids):
+    """{doc_id: 'train'|'dev'|'test'}: within each chapter directory the
+    files ordered by sha256 of a salted id; floor(0.15 n + 0.5) to dev, as
+    many to test, the rest to train; chapters of fewer than 4 files train."""
+    by_chapter = collections.defaultdict(list)
+    for d in doc_ids:
+        by_chapter[d.split('/')[0]].append(d)
+    split = {}
+    for docs in by_chapter.values():
+        docs = sorted(docs, key=lambda d: hashlib.sha256(
+            (_R3_SPLIT_SALT + d).encode()).hexdigest())
+        m = math.floor(0.15 * len(docs) + 0.5) if len(docs) >= 4 else 0
+        for i, d in enumerate(docs):
+            split[d] = 'dev' if i < m else 'test' if i < 2 * m else 'train'
+    return split
+
+def _r3_build(read, commit, tokenizer, revision):
+    """The book corpus from the sources at a commit: read(path) returns a
+    file's text at that commit. Returns (manifest, docs, chunkings), with
+    docs a list of document dicts and chunkings {tag: chunk list}."""
+    listed = _r3_quarto_files(read('_quarto.yml'))
+    parts = {p for p, _ in listed if _ is None}
+    included, excluded = [], collections.Counter()
+    for path, part in listed:
+        reason = next((r for pre, r in _R3_EXCLUDED.items()
+                       if path.startswith(pre)), None)
+        if part is None and reason is None:
+            reason = 'part placeholder'
+        if reason is None and path in parts:
+            reason = 'part placeholder'
+        if reason:
+            excluded[(path.split('/')[0], reason)] += 1
+        else:
+            included.append((path, part))
+    raw = {path: read(path + '.md') for path, _ in included}
+    titles = _r3_label_titles(raw)
+    part_titles = {p: re.search(r'^#\s+(.*?)\s*$', read(p + '.md'),
+                                re.M).group(1) for p in parts}
+    split = _r3_split_docs(raw)
+    docs, unresolved = [], collections.Counter()
+    for path, part in sorted(included):
+        text, meta = clean_d2l_markdown(raw[path], label_titles=titles)
+        unresolved.update(meta['unresolved_refs'])
+        docs.append(dict(
+            doc_id=path, title=meta['title'], label=meta['label'],
+            chapter=path.split('/')[0], part=part_titles[part], text=text,
+            headings=meta['headings'], cell_ids=meta['cell_ids'],
+            n_tokens=_r3_ntokens(tokenizer, text),
+            source_sha256=hashlib.sha256(raw[path].encode()).hexdigest(),
+            split=split[path]))
+    chapter_titles = {d['chapter']: d['title'] for d in docs
+                      if d['doc_id'].endswith('/index')}
+    for d in docs:
+        d['chapter_title'] = chapter_titles.get(d['chapter'], d['title'])
+    chunkings = {'sec512': [], 'fix256o0': [], 'fix256o64': []}
+    for d in docs:
+        chunkings['sec512'] += chunk_sections(d, tokenizer)
+        chunkings['fix256o0'] += chunk_fixed(d, tokenizer, 256, 0,
+                                             tag='fix256o0')
+        chunkings['fix256o64'] += chunk_fixed(d, tokenizer, 256, 64,
+                                              tag='fix256o64')
+    def quantiles(xs):
+        return {str(q): int(np.quantile(xs, q, method='nearest'))
+                for q in (0, 0.1, 0.5, 0.9, 0.99, 1)}
+    manifest = dict(
+        corpus_version=R3_VERSION, book_commit=commit,
+        builder_version='build_r3-1',
+        cleaning=dict(framework='pytorch', keep_exercises=False),
+        tokenizer=dict(id=R3_TOKENIZER, revision=revision),
+        included=dict(collections.Counter(p.split('/')[0]
+                                          for p, _ in included)),
+        excluded=[dict(directory=d, reason=r, files=n)
+                  for (d, r), n in sorted(excluded.items())],
+        files={d['doc_id']: d['source_sha256'] for d in docs},
+        doc_split={d['doc_id']: d['split'] for d in docs},
+        counts=dict(docs=len(docs), **{
+            f'docs_{s}': sum(d['split'] == s for d in docs)
+            for s in ('train', 'dev', 'test')},
+            chars=sum(len(d['text']) for d in docs),
+            tokens=sum(d['n_tokens'] for d in docs),
+            **{f'chunks_{t}': len(c) for t, c in chunkings.items()}),
+        token_quantiles={t: quantiles([c['n_tokens'] for c in cs])
+                         for t, cs in chunkings.items()},
+        unresolved_refs=dict(count=sum(unresolved.values()),
+                             labels=dict(sorted(unresolved.items()))),
+        chunking=dict(sec512=dict(strategy='sections', max_tokens=512,
+                                  min_tokens=64),
+                      fix256o0=dict(strategy='fixed', size=256, overlap=0),
+                      fix256o64=dict(strategy='fixed', size=256,
+                                     overlap=64)))
+    return manifest, docs, chunkings
+
+class BookCorpus:
+    """The book corpus under one chunking: chunks (a list of dicts in
+    document order), docs ({doc_id: dict}), the manifest, and views of the
+    chunk texts for a generator ('display'), a dense encoder ('dense') and
+    a word index ('sparse'). Iterating yields the chunks in order;
+    corpus[cid] looks a chunk up by its id.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, manifest, docs, chunks, tag):
+        self.manifest, self.tag = manifest, tag
+        self.version = manifest['corpus_version']
+        self.docs = {d['doc_id']: d for d in docs}
+        self.chunks = chunks
+        self.ids = [c['id'] for c in chunks]
+        self._index = {c['id']: i for i, c in enumerate(chunks)}
+        self._by_doc = collections.defaultdict(list)
+        for c in chunks:
+            self._by_doc[c['doc_id']].append(c)
+
+    def __len__(self):
+        return len(self.chunks)
+
+    def __iter__(self):
+        return iter(self.chunks)
+
+    def __getitem__(self, chunk_id):
+        return self.chunks[self._index[chunk_id]]
+
+    def header(self, chunk):
+        """'Chapter > Section > Subsection' of a chunk."""
+        doc = self.docs[chunk['doc_id']]
+        path = list(chunk['heading_path'])
+        if not path or path[0] != doc['chapter_title']:
+            path = [doc['chapter_title']] + path
+        return ' > '.join(path)
+
+    def texts(self, view='display', header=True):
+        """Chunk texts, in chunk order, for a view: 'display' (the text),
+        'dense' (code cells cut to their first 30 lines) or 'sparse' (math
+        removed)."""
+        out = []
+        for c in self.chunks:
+            t = c['text']
+            if view == 'dense':
+                t = re.sub(r'(^```python\n)(.*?)(^```)',
+                           lambda m: m.group(1) + _r3_cut_code(m.group(2))
+                           + m.group(3), t, flags=re.M | re.S)
+            elif view == 'sparse':
+                t = _r3_strip_math(t)
+            elif view != 'display':
+                raise ValueError(f'unknown view {view!r}')
+            out.append(self.header(c) + '\n' + t if header else t)
+        return out
+
+    def split_of(self, doc_id):
+        """'train', 'dev' or 'test' of a document."""
+        return self.manifest['doc_split'][doc_id]
+
+    def chunk_split(self, chunk_id):
+        """The split of the document a chunk comes from."""
+        return self.split_of(self[chunk_id]['doc_id'])
+
+    def span_to_chunk_ids(self, doc_id, start, end, min_overlap=0.5):
+        """Ids of the chunks of doc_id that overlap the character span
+        [start, end) by at least min_overlap of the span's or of the
+        chunk's characters."""
+        out = []
+        for c in self._by_doc.get(doc_id, ()):
+            ov = min(end, c['char_end']) - max(start, c['char_start'])
+            if ov > 0 and (ov >= min_overlap * (end - start) or
+                           ov >= min_overlap * (c['char_end'] -
+                                                c['char_start'])):
+                out.append(c['id'])
+        return out
+
+def _r3_cut_code(code, n_lines=30):
+    """The first n_lines lines of a code cell's body, '# ...' if cut."""
+    lines = code.split('\n')
+    return code if len(lines) <= n_lines + 1 else '\n'.join(
+        lines[:n_lines] + ['# ...', ''])
+
+def _r3_strip_math(text):
+    """text with $$...$$ and $...$ spans removed outside code fences."""
+    parts = re.split(r'(^```.*?^```)', text, flags=re.M | re.S)
+    for i in range(0, len(parts), 2):
+        s = re.sub(r'\$\$.*?\$\$', ' ', parts[i], flags=re.S)
+        parts[i] = re.sub(r'(?<!\\)\$[^$\n]+?(?<!\\)\$', ' ', s)
+    return ''.join(parts)
+
+def _r3_read_zip(path, tags=None):
+    """(manifest, docs, {tag: chunks}) from a corpus zip; tags (default
+    all) names the chunkings to read, () none and no documents."""
+    with zipfile.ZipFile(path) as z:
+        manifest = json.loads(z.read('manifest.json'))
+        read = lambda name: [json.loads(l) for l in gzip.decompress(
+            z.read(name)).decode('utf-8').splitlines()]
+        tags = manifest['chunking'] if tags is None else tags
+        docs = read('docs.jsonl.gz') if tags else []
+        chunks = {t: read(f'chunks_{t}.jsonl.gz') for t in tags}
+    return manifest, docs, chunks
+
+def _r3_local(root, tokenizer, revision):
+    """The book corpus rebuilt in memory from a checkout's HEAD."""
+    import subprocess
+    commit = subprocess.run(['git', '-C', root, 'rev-parse', 'HEAD'],
+                            capture_output=True, text=True,
+                            check=True).stdout.strip()
+    read = lambda p: subprocess.run(
+        ['git', '-C', root, 'show', f'{commit}:{p}'], capture_output=True,
+        check=True).stdout.decode('utf-8')
+    manifest, docs, chunks = _r3_build(read, commit, tokenizer, revision)
+    return manifest, docs, chunks
+
+# The released embedders: pooling, padding side and the query instruction
+# format of their model cards; documents get no prefix
+_EMBEDDERS = {
+    'Qwen/Qwen3-Embedding-0.6B': dict(
+        pooling='last', padding_side='left',
+        query_format='Instruct: {task}\nQuery:{query}')}
+BOOK_TASK = 'Given a question about the book, retrieve passages that answer it'
+# Registered chunk vectors (sec512 chunks, 'dense' view, float16) by embedder
+_R3_EMB_KEYS = {
+    'Qwen/Qwen3-Embedding-0.6B': 'lm-enc-r3-emb-qwen3emb06b-sec512-v1'}
+
+def _emb_cache_key(corpus_version, tag, view, model_id, revision, max_len,
+                   pooling, prefix):
+    """sha1 naming the chunk vectors of one corpus, view and encoder.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    return hashlib.sha1('|'.join(map(str, (
+        corpus_version, tag, view, model_id, revision, max_len, pooling,
+        prefix))).encode()).hexdigest()
+
+def _emb_cache_load(key, root=os.path.join('..', 'data', 'lm', 'cache')):
+    """Cached chunk vectors (an array) under key, or None."""
+    path = os.path.join(root, f'emb-{key}.npy')
+    return np.load(path) if os.path.exists(path) else None
+
+def _emb_cache_save(key, X, root=os.path.join('..', 'data', 'lm', 'cache')):
+    """Write chunk vectors under key; return the path."""
+    os.makedirs(root, exist_ok=True)
+    path = os.path.join(root, f'emb-{key}.npy')
+    np.save(path + '.tmp.npy', X)
+    os.replace(path + '.tmp.npy', path)
+    return path
+
+_BOOK_QA_LOADS = collections.Counter()  # loads per split in this process
+
+def _book_qa_read(split, root=os.path.join('..', 'data', 'lm')):
+    """The items of one split of the question set, as dicts; a second load
+    of the test split in one process prints a notice.
+
+    Defined in :numref:`sec_lm_rag`"""
+    if split not in ('train', 'dev', 'test'):
+        raise ValueError(f'unknown split {split!r}')
+    _BOOK_QA_LOADS[split] += 1
+    if split == 'test' and _BOOK_QA_LOADS[split] == 2:
+        print('notice: the test split is loaded a second time in this '
+              'process; decisions belong to train and dev')
+    path = d2l.download_keyed('lm-book-qa-v2', root)
+    with zipfile.ZipFile(path) as z:
+        name = next(n for n in z.namelist()
+                    if n.rsplit('/', 1)[-1] == f'qa_{split}.jsonl')
+        lines = z.read(name).decode('utf-8').splitlines()
+    return [json.loads(l) for l in lines if l.strip()]
+
+class BookQA(list):
+    """Items of the book's question set (dicts), from one split."""
+    def __init__(self, items, split):
+        super().__init__(items)
+        self.split = split
+
+    def stats(self):
+        """Items per question type, answerable and book-specific (no
+        general_knowledge flag)."""
+        df = pd.DataFrame([dict(type=q['type'], answerable=q['answerable'],
+                                book_specific='general_knowledge' not in
+                                q.get('flags', ())) for q in self])
+        if df.empty:
+            return df
+        out = df.groupby('type', sort=False).agg(
+            items=('type', 'size'), answerable=('answerable', 'sum'),
+            book_specific=('book_specific', 'sum'))
+        out.loc['total'] = out.sum()
+        return out
+
+    def subset(self, n, seed=0, stratify='type'):
+        """n items drawn without replacement, in proportion to the counts
+        of stratify (largest remainders), kept in their original order."""
+        rng = np.random.default_rng(seed)
+        groups = collections.defaultdict(list)
+        for i, q in enumerate(self):
+            groups[q[stratify] if stratify else None].append(i)
+        keys = sorted(groups, key=str)
+        quota = {g: n * len(groups[g]) / len(self) for g in keys}
+        take = {g: math.floor(quota[g]) for g in keys}
+        for g in sorted(keys, key=lambda g: take[g] - quota[g])[
+                :n - sum(take.values())]:
+            take[g] += 1
+        picked = sorted(i for g in keys for i in rng.choice(
+            groups[g], size=min(take[g], len(groups[g])), replace=False))
+        return BookQA([self[i] for i in picked], self.split)
+
+# The judge's prompt, version 1: frozen before the book's question set was
+# built (its closed-book flags use it); a change is RAG_JUDGE_V2 and a new
+# question-set version
+RAG_JUDGE_V1 = {
+    'system': ('You grade answers to questions about the textbook Dive into '
+               'Deep Learning. Reply with one line of JSON and nothing '
+               'else.'),
+    'correct': ('correct: true if the answer states every key fact (in any '
+                'wording) and says nothing that contradicts the reference '
+                'answer; otherwise false.'),
+    'faithful': ('faithful: true if every factual statement in the answer is '
+                 'supported by the passages given (ignore the reference '
+                 'answer for this); otherwise false.'),
+    'supported': ('supported: true if the cited passages alone support the '
+                  'answer; false if they do not, or if the answer cites '
+                  'nothing.'),
+    'retry': 'Reply with the JSON line only, in exactly the requested form.'}
+
+# The judge of the RAG section, chosen 2026-11-14 against frontier-model
+# labels (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights
+# served by vLLM over two 24 GB GPUs; the same open weights are served in
+# BF16 on OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
+RAG_JUDGE_LOCAL = {'model': 'Qwen/Qwen3.8-27B-FP8',
+                   'revision': 'c3a462cc3d38cf351f3b26cbd763469eeb74ef81',
+                   'vllm': '0.33.0', 'thinking': True,
+                   'max_new_tokens': 3000}
+
+def rag_judge_server(n_gpus=2, port=None, vllm=None):
+    """A d2l.LocalChatServer that serves the judge (RAG_JUDGE_LOCAL) with
+    vLLM, its layers split over n_gpus GPUs (pipeline parallel), from the
+    executable vllm (default: the environment variable D2L_VLLM, else
+    `vllm` on the PATH). vLLM lives in an environment of its own, since it
+    pins its own PyTorch.
+
+    Defined in :numref:`sec_lm_rag`"""
+    import shutil  # not in the d2l library preamble
+    exe = vllm or os.environ.get('D2L_VLLM') or shutil.which('vllm')
+    if exe is None:
+        raise RuntimeError('no vLLM: install it in its own environment and '
+                           'set D2L_VLLM to its vllm executable')
+    j = d2l.RAG_JUDGE_LOCAL
+    return d2l.LocalChatServer([
+        exe, 'serve', j['model'], '--revision', j['revision'],
+        '--pipeline-parallel-size', str(n_gpus), '--max-model-len', '16384',
+        '--max-num-seqs', '64', '--gpu-memory-utilization', '0.9',
+        '--limit-mm-per-prompt', '{"image": 0, "video": 0}', '--seed', '0',
+        '--host', '127.0.0.1', '--port', '{port}'], port=port)
+
+def rag_judge_client(url='http://127.0.0.1/v1', cache=None, mode='replay'):
+    """A d2l.ChatAPI for the judge served at url, thinking on; the request
+    hash keeps the host only, so a recorded cache replays with no server."""
+    return d2l.ChatAPI(url, d2l.RAG_JUDGE_LOCAL['model'], cache=cache,
+                       mode=mode, default_params={'extra_body': {
+                           'chat_template_kwargs': {'enable_thinking': True}}})
+
+def _rag_abstained(answer):
+    """Whether an answer abstains: it contains the abstention sentence
+    (case, whitespace, quotes, emphasis and the final period ignored),
+    alone or with an explanation of what the passages lack. Generators
+    asked to reply with the sentence alone often explain first.
+
+    Defined in :numref:`sec_lm_rag`"""
+    norm = lambda s: re.sub(r'[\s"\'*]+', ' ', s).strip().rstrip('.').lower()
+    return norm(d2l.ABSTAIN) in norm(answer)
+
+def _rag_judge_messages(item, answer, context_texts, cited_ids):
+    """The judge's chat messages (RAG_JUDGE_V1) for the verdicts it has to
+    give on one answer: 'correct' always, 'faithful' and 'supported' when
+    there are passages."""
+    p = d2l.RAG_JUDGE_V1
+    facts = '\n'.join(f'- {f}' for f in item['key_facts']) or '- (none)'
+    parts = [f'Question: {item["question"]}',
+             f'Reference answer: {item["reference"]}', f'Key facts:\n{facts}']
+    keys = ['correct']
+    if context_texts:
+        keys += ['faithful', 'supported']
+        parts.append('Passages given to the system:\n' + '\n\n'.join(
+            f'[{n}] {t}' for n, t in enumerate(context_texts, start=1)))
+        parts.append('Cited passages: ' + (', '.join(
+            f'[{n}]' for n in cited_ids) if cited_ids else 'none'))
+    form = json.dumps({k: True for k in keys})
+    parts += [f'Answer to grade: {answer}', 'Decide:\n' + '\n'.join(
+        p[k] for k in keys), f'Reply exactly in this form: {form}']
+    return [{'role': 'system', 'content': p['system']},
+            {'role': 'user', 'content': '\n\n'.join(parts)}]
+
+def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
+                       batch_size):
+    """The judge's replies to a list of chat messages, each the text after
+    its reasoning ('</think>'), None when the reply was cut off at
+    max_new_tokens, or the exception of a request that failed in transport
+    (an endpoint that refused, timed out or answered with an error after
+    the client's retries: no reply, so not a malformed one). judge is a
+    d2l.ChatAPI (greedy, seed 0; batch_size requests in flight) or a
+    Transformers model with its tokenizer."""
+    if hasattr(judge, 'achat'):  # an OpenAI-compatible endpoint
+        import asyncio  # not in the d2l library preamble
+        import concurrent.futures
+        batch = d2l.chat_batch(judge, [dict(
+            messages=m, max_tokens=max_new_tokens, temperature=0, seed=0)
+            for m in messages], concurrency=batch_size)
+        if hasattr(judge, '_run'):  # a d2l.ChatAPI: its private event loop,
+            out = judge._run(batch)  # the same for every batch, so its HTTP
+        else:                        # connections never outlive their loop
+            # A thread of its own: a notebook's kernel already runs an
+            # event loop, in which asyncio.run refuses to start
+            with concurrent.futures.ThreadPoolExecutor(1) as pool:
+                out = pool.submit(asyncio.run, batch).result()
+        return [r if isinstance(r, BaseException)  # no reply at all
+                else None if r.finish_reason == 'length'
+                else (r.text or '').split('</think>')[-1] for r in out]
+    gens = d2l.generate(judge, tokenizer, messages,
+                        max_new_tokens=max_new_tokens, chat=True,
+                        enable_thinking=thinking, batch_size=batch_size)
+    if not thinking:
+        return [g.text for g in gens]
+    return [None if g.finish_reason == 'length' and '</think>' not in g.text
+            else g.text.split('</think>')[-1] for g in gens]
+
+def _rag_parse_json(text, keys):
+    """{key: bool} from the first JSON object in a reply that has every
+    one of keys as a boolean (or 'yes'/'no', 'true'/'false'); None if
+    there is none."""
+    for m in re.finditer(r'\{[^{}]*\}', text):
+        try:
+            obj = json.loads(m.group(0))
+        except ValueError:
+            continue
+        out = {}
+        for k in keys:
+            v = obj.get(k)
+            if isinstance(v, str) and v.strip().lower() in (
+                    'yes', 'no', 'true', 'false'):
+                v = v.strip().lower() in ('yes', 'true')
+            if not isinstance(v, bool):
+                break
+            out[k] = v
+        else:
+            return out
+    return None
+
+def _rag_rewrite_prompt(question):
+    """Chat messages asking for a short search query for a question.
+
+    Defined in :numref:`sec_lm_rag`"""
+    return [{'role': 'system', 'content': (
+                'You turn questions about the textbook Dive into Deep '
+                'Learning into search queries.')},
+            {'role': 'user', 'content': (
+                'Rewrite the question as a search query of at most 15 '
+                'words. Keep its technical terms, names and code '
+                f'identifiers. Reply with the query only.\n\nQuestion: '
+                f'{question}')}]
+
+def _rag_hyde_prompt(question):
+    """Chat messages asking for a hypothetical passage that answers a
+    question (HyDE: the dense side embeds the passage)."""
+    return [{'role': 'user', 'content': (
+        'Write a passage of at most 100 words from a deep learning '
+        'textbook that answers the question. Reply with the passage '
+        f'only.\n\nQuestion: {question}')}]
+
+def _rag_decompose_prompt(question):
+    """Chat messages asking to split a question into at most two
+    self-contained questions, one per line."""
+    return [{'role': 'user', 'content': (
+        'If the question asks about two things, write two self-contained '
+        'questions, one per line; otherwise repeat the question. Reply '
+        f'with the questions only.\n\nQuestion: {question}')}]
+
+def _rag_verify_prompt(sentence, passages):
+    """Chat messages asking whether the passages (chunk dicts) support
+    every fact of one sentence; the answer is read as P(yes)."""
+    text = '\n\n'.join(f'[{n}] {p["text"]}'
+                       for n, p in enumerate(passages, start=1))
+    return [{'role': 'user', 'content': (
+        f'Passages:\n{text}\n\nStatement: {sentence}\n\nDo the passages '
+        'support every fact in the statement? Answer yes or no.')}]
+
+def _rag_fix_prompt(question, hits, variant, abstain=None):
+    """The grounded prompt of rag_prompt changed by one pre-registered fix:
+    'quote' (copy the supporting sentences with their passage numbers,
+    then answer after 'Answer:') or 'rule_after' (the abstention rule
+    after the passages, in the user turn, instead of the system turn)."""
+    abstain = abstain or d2l.ABSTAIN
+    msgs = d2l.rag_prompt(question, hits, abstain)
+    if variant == 'quote':
+        msgs[1]['content'] = msgs[1]['content'].replace(
+            'Answer in at most four sentences.',
+            'First write "Quotes:" and copy the sentences of the passages '
+            'that answer the question, each followed by its passage number '
+            'such as [2]. Then write "Answer:" and answer in at most four '
+            'sentences, citing the passages.')
+    elif variant == 'rule_after':
+        rule = 'If the passages do not contain the answer, reply exactly: '
+        msgs[0]['content'] = msgs[0]['content'].replace(
+            rule + abstain, '').strip()
+        msgs[1]['content'] += f'\n{rule}{abstain}'
+    elif variant != 'fixed':
+        raise ValueError(f'unknown prompt variant {variant!r}')
+    return msgs
+
+def _rag_quoted_answer(text):
+    """The answer part of a 'quote, then answer' reply (all of it when the
+    reply has no 'Answer:')."""
+    head, sep, tail = text.rpartition('Answer:')
+    return tail.strip() if sep else text.strip()
+
+def _rag_records(paths, on=('config', 'qid')):
+    """The records of several JSON-lines run files (missing paths skipped)
+    as one DataFrame; the columns on identify a record and may not
+    repeat."""
+    frames = [d2l.read_jsonl(p) for p in paths if p and os.path.exists(p)]
+    df = (pd.concat(frames, ignore_index=True) if frames
+          else pd.DataFrame(columns=list(on)))
+    dup = df.duplicated(list(on))
+    if dup.any():
+        raise ValueError(f'{dup.sum()} records repeat {on}, e.g. '
+                         f'{df[dup].iloc[0][list(on)].tolist()}')
+    return df
 
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',

@@ -79,6 +79,9 @@ GPU_ONLY_NOTEBOOKS = {
     "chapter_diffusion-models/latent-diffusion.ipynb",
     "chapter_diffusion-models/few-step.ipynb",
     "chapter_diffusion-models/discrete-diffusion.ipynb",
+    # 19.1 trains SGNS and GloVe on the GPU (a CPU run draws other random
+    # numbers, so the grid agreement line holds only on the GPU).
+    "chapter_lm-encoders/word-embeddings.ipynb",
 }
 
 # Per-framework thread-limiting env vars.
@@ -269,6 +272,18 @@ FULL_CARD_NOTEBOOKS = {
     # continuous batching sizes its KV pool from free memory. The notebook is
     # locked, so only `make rerun-locked` reaches this entry.
     "chapter_lm-pretrained/api.ipynb": 1,
+    # 19.2 times the fine-tuned encoder against 8-shot Qwen3-1.7B and stores
+    # the timings of its regeneration runs; the normal build holds the fp32
+    # encoder, the bf16 checkpoint, Qwen3-1.7B and score_choices' fp32 output
+    # layer together (about 7 GiB), above one slot's headroom.
+    "chapter_lm-encoders/bert.ipynb": 1,
+    # 19.5's generator is Qwen3.5-9B in bf16: 16.7 GiB of weights, measured
+    # peaks of 21.7 GiB (eight 3,300-token prompts) and 22.4 GiB (four of
+    # 6,300) on an RTX 4090. The normal build generates eight answers again,
+    # so it needs a whole card too. Its judging runs (D2L_RERUN=rag-judge)
+    # serve Qwen3.8-27B with vLLM over two whole cards and are launched by
+    # hand with CUDA_VISIBLE_DEVICES set, not through the scheduler.
+    "chapter_lm-encoders/rag.ipynb": 1,
 }
 
 # rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for
@@ -327,6 +342,9 @@ HEAVY_GPU_NOTEBOOKS = {
     ("pytorch", "chapter_lm-pretrained/scoring.ipynb"): 2,
     ("pytorch", "chapter_lm-pretrained/eval-suites.ipynb"): 2,
     ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): 2,
+    # 19.3 fine-tunes the encoder into an embedder (about 5-7 GiB) next to
+    # the released embedder and reranker.
+    ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): 2,
 }
 
 
@@ -390,6 +408,25 @@ NOTEBOOK_ENV = {
     # still raise.
     ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): {
         "HF_HUB_VERBOSITY": "error",
+    },
+    # 19.2: fine-tuning runs of changing batch shapes (each batch padded to
+    # its own longest pair) and the decoder's long prompts follow each other
+    # in one process; expandable segments keep the cached blocks reusable.
+    ("pytorch", "chapter_lm-encoders/bert.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    # 19.1 and 19.3: the same X-HF-Warning as 18.6 (Qwen3-0.6B's table, the
+    # sentence-transformers check); errors still raise.
+    ("pytorch", "chapter_lm-encoders/word-embeddings.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    # 19.5: Qwen3.5-9B generates with prompts of changing length within 1-2
+    # GiB of a 24 GB card's limit; cached fixed-size blocks would not fit.
+    ("pytorch", "chapter_lm-encoders/rag.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
 }
 

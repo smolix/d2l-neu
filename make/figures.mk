@@ -59,6 +59,11 @@ $(patsubst tools/%.py,.figstamps/%,$(wildcard tools/figstyle/remake_ch*.py)): \
 .figstamps/gen_mdl_lm_pretrained_figures: tools/figstyle/tokens.py \
     tools/figstyle/svg.py tools/figstyle/textmetrics.py tools/figstyle/mpl.py
 
+# ch. 19 (Encoders, Embeddings and Retrieval): matplotlib on the shared style of
+# gen_mdl_figures.py, plus figstyle.mpl primitives and measured text widths.
+.figstamps/gen_mdl_lm_encoders_figures: tools/figstyle/tokens.py \
+    tools/figstyle/textmetrics.py tools/figstyle/mpl.py
+
 .PHONY: figures
 figures: $(FIGURE_STAMPS)
 	@echo "Figures up to date (only changed generators ran). Verify: git diff --stat img/"

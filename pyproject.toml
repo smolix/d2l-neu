@@ -77,6 +77,15 @@ lm = [
     # without Triton the reference code runs.
     "flash-linear-attention==0.6.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "fla-core==0.6.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Chapter 19 (encoders, embeddings, retrieval): Faiss indexes (IVF, PQ,
+    # HNSW), and the oracles the library is checked against: bm25s (BM25),
+    # pytrec_eval (retrieval metrics), seqeval (span F1) and Sentence
+    # Transformers (embedder encode and the in-batch contrastive loss).
+    "faiss-cpu==1.15.1 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "bm25s==0.3.16 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "pytrec-eval-terrier==0.5.11 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "seqeval==1.2.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sentence-transformers==6.2.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "torch==2.11.0 ; sys_platform == 'darwin'",
     "torchvision==0.26.0 ; sys_platform == 'darwin'",
     "transformers[serving]==5.22.2 ; sys_platform == 'darwin'",
@@ -85,6 +94,11 @@ lm = [
     "openai==3.49.0 ; sys_platform == 'darwin'",
     "safetensors ; sys_platform == 'darwin'",
     "scikit-learn ; sys_platform == 'darwin'",
+    "faiss-cpu==1.15.1 ; sys_platform == 'darwin'",
+    "bm25s==0.3.16 ; sys_platform == 'darwin'",
+    "pytrec-eval-terrier==0.5.11 ; sys_platform == 'darwin'",
+    "seqeval==1.2.2 ; sys_platform == 'darwin'",
+    "sentence-transformers==6.2.0 ; sys_platform == 'darwin'",
 ]
 mxnet = [
     # Custom MXNet 2.0 wheel built against CUDA 13 with Blackwell (sm_120) SASS.

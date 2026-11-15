@@ -1987,9 +1987,11 @@ accuracy on hits stayed put, less than 240 questions can detect.
 Is a gain this small real? A rule fixed in advance carries the stage change
 with the largest `dev` gain to `test`, read once, to find out. Three changes
 lie within 0.004 of one another on `dev`, so which of them leads depends on
-a handful of verdicts. `test` was read with the rewrite and reranker, which
-led when it was read; on the final verdicts reversing the order leads, as
-the cell prints, and `test` is not read again.
+a handful of verdicts. `test` was read once, with the rewrite and reranker,
+the stage the rule picked when it ran. Since then, re-judging a few answers
+has put reversing the order in front, as the cell prints. We do not read
+`test` again: reading it again after a change made on `dev` is how a test
+set leaks into the results.
 
 ## Failures by Stage
 :label:`subsec_lm_rag_failures`

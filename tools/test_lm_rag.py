@@ -381,7 +381,11 @@ class Metrics(unittest.TestCase):
             (self.q, [rel], [rel], d2l.ABSTAIN, False, True,
              'false_abstain'),
             (self.q, [rel], [rel], 'D [1].', False, True, 'ignored'),
-            (self.q, [rel], [rel], 'D [1].', np.False_, None, 'unsupported')]
+            (self.q, [rel], [rel], 'D [1].', np.False_, False, 'unsupported'),
+            # a verdict the class needs is missing: no class at all
+            (self.q, [rel], [rel], 'D [1].', None, None, 'unjudged'),
+            (self.q, [other], [other], 'C', None, None, 'unjudged'),
+            (self.q, [rel], [rel], 'D [1].', False, None, 'unjudged')]
         for q, ranked, ctx, answer, correct, faithful, want in cases:
             r = dict(ranked_ids=ranked, context_ids=ctx, answer=answer)
             v = dict(correct=correct, faithful=faithful, supported=None)
@@ -389,7 +393,7 @@ class Metrics(unittest.TestCase):
         r = dict(ranked_ids=[other] * 50 + [rel], context_ids=[other],
                  answer='E')  # the relevant chunk below the depth
         self.assertEqual(d2l.classify_failure(r, self.q, dict(
-            correct=None, faithful=None), self.c, depth=50), 'not_retrieved')
+            correct=False, faithful=None), self.c, depth=50), 'not_retrieved')
 
 
 class PromptVariants(unittest.TestCase):
@@ -439,6 +443,22 @@ class JudgeInEventLoop(unittest.TestCase):
         async def main():
             return d2l.rag_judge(Stub(), None, q, dict(answer='A'), [])
         self.assertEqual(asyncio.run(main())['correct'], True)
+
+    def test_one_loop_for_every_batch(self):
+        """Regression: each batch on a fresh event loop left the client's
+        HTTP connections on closed loops ('Event loop is closed' noise)."""
+        fake = d2l.FakeChatServer(0.0, 4)
+        api = d2l.ChatAPI('http://127.0.0.1/v1', 'judge', mode='live',
+                          http_client=fake.transport())
+        q = dict(question='Q', reference='R', key_facts=['f'],
+                 answerable=True)
+        for _ in range(2):
+            d2l.rag_judge(api, None, [q, q], [dict(answer='A'),
+                                              dict(answer='B')], [[], []])
+        self.assertGreaterEqual(fake.n_requests, 4)
+        loops = list(api._sdks)
+        self.assertEqual(len(loops), 1)
+        self.assertFalse(loops[0].is_closed())
 
 
 class StubRetriever:

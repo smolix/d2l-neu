@@ -170,7 +170,16 @@ def machine():
 print(pd.DataFrame({'model': [EMB, RERANKER], 'revision': [
     REV[m][:12] for m in (EMB, RERANKER)]}, index=['embedder', 'reranker']))
 print(f'GPU: {GPU}; regenerating: {", ".join(sorted(RERUN)) or "none"}')
-print(machine())
+
+def show_machine(m, threads=True):
+    """Print machine() in two lines; threads: the counts set now."""
+    print(f'{m["cpu"]}, {m["cores"]} cores, load {m["load"]:.1f}' + (
+        f'; threads: torch {m["torch_threads"]}, Faiss {m["faiss_threads"]}'
+        if threads else '') + f'\nGPU: {m["gpu"]}')
+
+show_machine(machine(), threads=False)  # the counts are set where they run
+print(f'threads: {BUILD_THREADS} for each Faiss build, one for each timed '
+      'search')
 ```
 
 <!-- Placeholder (stage 2): the book corpus, a snapshot of the book's sources at a named commit (built by `tools/build_r3.py`); the chunk vectors of the chapter's embedder and the four results of this section's regeneration runs are added to this cell when they are registered. -->
@@ -253,7 +262,8 @@ for kind, win, mask in (('identifier question', 'bm25', IDENT),
     if i is None:
         print(f'\nno {kind} that {win} finds and {lose} misses')
         continue
-    print(f'\n{kind} ({DEV[i]["qid"]}): {QUESTIONS[i]}')
+    d2l.print_wrapped(f'\n{kind} ({DEV[i]["qid"]}): {QUESTIONS[i]}',
+                      width=96)
     for m in ('bm25', 'dense'):
         rank = next((h.rank for h in HITS[m][i] if h.chunk_id in GOLD[i]),
                     None)
@@ -314,7 +324,8 @@ print(f'book commit {m["book_commit"][:8]}, corpus {FULL.version}: '
           f'{m["counts"]["docs_" + s]} {s}' for s in ('train', 'dev', 'test')))
 print('chunks: ' + ', '.join(f'{m["counts"]["chunks_" + t]:,} {t}'
                              for t in m['chunking']))
-print('sec512 tokens per chunk, quantiles:', m['token_quantiles']['sec512'])
+print('sec512 tokens per chunk, quantiles:\n   ',
+      m['token_quantiles']['sec512'])
 print(f'{m["unresolved_refs"]["count"]} references to labels outside the '
       f'corpus')
 print(pd.DataFrame(m['excluded']).groupby('reason').agg(
@@ -340,7 +351,7 @@ for name, chunks in (
             doc, tok, size=256, overlap=64, tag='fix256o64'))):
     print(f'{name}: {len(chunks)} chunks of {doc["n_tokens"]} tokens')
     for c in chunks:
-        print(f'  {c["id"]:58s} chars {c["char_start"]:4d}-'
+        print(f'  {c["id"]}\n      chars {c["char_start"]:4d}-'
               f'{c["char_end"]:4d}  {c["n_tokens"]:3d} tokens  '
               f'{c["text"][:28]!r}')
 assert [(c['char_start'], c['char_end']) for c in d2l.chunk_sections(
@@ -617,7 +628,7 @@ for name, Xm in MATRICES.items():
         t = scan_seconds(Q_DEV[:B].to(Xm.device, Xm.dtype), Xm)
         flops, nbytes = 2 * len(Xm) * m * B, 2 * (len(Xm) + B) * m  # 16 bit
         line = (f'{name:9s} N {len(Xm):7,}, batch {B:3d}: {t * 1e3:.3f} ms, '
-                f'{t / B * 1e3:.4f} ms per question; {flops / 1e9:5.2f} '
+                f'{t / B * 1e3:.4f} ms per question\n    {flops / 1e9:5.2f} '
                 f'GFLOP, {nbytes / 2**20:5.1f} MiB; achieved '
                 f'{nbytes / t / 1e9:4.0f} GB/s, {flops / t / 1e12:5.2f} '
                 f'TFLOP/s')
@@ -764,7 +775,7 @@ cover = np.mean([c in REG['p_yes'][q['qid']] for i, q in enumerate(DEV)
 diff = np.array([abs(p - REG['p_yes'][qid][c]) for qid, ps in P0.items()
                  for c, p in ps.items() if c in REG['p_yes'][qid]])
 print(f'live fused top {D1} as registered for {same:.3f} of the questions;'
-      f' registered P(yes) for {cover:.4f} of their chunks')
+      f'\n  registered P(yes) for {cover:.4f} of their chunks')
 print(f'live against registered P(yes), {len(diff):,} pairs: 99th '
       f'percentile of |difference| {np.quantile(diff, 0.99):.4f}, largest '
       f'{diff.max():.4f}')
@@ -779,7 +790,7 @@ for depth in RR_DEPTHS:  # every row reorders the live fused lists
         sec0 if depth == D0 else REG['seconds_per_question'])
 print(f'reranking {D0} chunks: {sec0 * 1e3:.0f} ms per question on '
       f'{DEVICE} (live); {D1} chunks: '
-      f'{REG["seconds_per_question"] * 1e3:.0f} ms per question '
+      f'{REG["seconds_per_question"] * 1e3:.0f} ms per question\n  '
       f'(registered: {REG["machine"]["gpu"].split(",")[0]}); scores of '
       f'rerank@{D0}: {"live" if RR_LIVE is None else "registered"}, of '
       f'rerank@{D1}: registered')
@@ -795,9 +806,11 @@ R0, R1 = (f'RRF + rerank@{n}' for n in RR_DEPTHS)
 ORDER = ['BM25 (k1 1.2, b 0.75)', 'BM25', 'dense', 'RRF', 'weighted', R0, R1]
 M = {n: d2l.retrieval_metrics(RANKED[n], GOLD) for n in ORDER}
 KS = ('recall@1', 'recall@5', 'recall@10', 'mrr@10', 'ndcg@10')
-print(pd.DataFrame({n: {k: boot(M[n][k]) for k in KS} | {
+TAB = pd.DataFrame({n: {k: boot(M[n][k]) for k in KS} | {
     'recall@100': f'{M[n]["recall@100"].mean():.3f}',
-    'ms': f'{MS[n]:.1f}'} for n in ORDER}).T.to_string())
+    'ms': f'{MS[n]:.1f}'} for n in ORDER}).T
+print(TAB[list(KS[:3])].to_string())  # two tables: the page's width
+print(TAB[list(KS[3:]) + ['recall@100', 'ms']].to_string())
 better = max(('BM25', 'dense'), key=lambda n: M[n]['recall@10'].mean())
 DELTAS = [  # (row, against, metric, questions)
     ('BM25', 'BM25 (k1 1.2, b 0.75)', 'recall@10', 'all'),
@@ -815,12 +828,20 @@ for a, b, k, sub in DELTAS:
     rows.append({'difference': f'{a} - {b}', 'metric': k,
                  'questions': f'{sub} ({keep.sum()})', 'mean [95% CI]': boot(
                      M[a][k][keep], M[b][k][keep], CLUSTER[keep])})
-print(pd.DataFrame(rows).to_string(index=False))
+D = pd.DataFrame(rows)
+col = D['mean [95% CI]']  # the sign-flip note goes below the table
+D['mean [95% CI]'] = col.str.replace(r' \(.*\)$', '', regex=True)
+print(D.to_string(index=False))
+for line in [f'  {d}, {m}, {q}: {n}' for d, m, q, n in zip(
+        D.difference, D.metric, D.questions,
+        col.str.extract(r' \((.*)\)$')[0]) if isinstance(n, str)]:
+    print(line)
 print(f'the better single retriever on dev is {better}')
 print('* fewer than 100 questions or 30 documents: the interval is '
-      'unreliable; with fewer than 30 documents it resamples questions,\n'
-      '  ignores their correlation within a document and is likely too '
-      "narrow; the sign-flip p over the documents' mean differences decides")
+      'unreliable; with fewer\n  than 30 documents it resamples questions, '
+      'ignores their correlation within a\n  document and is likely too '
+      "narrow; the sign-flip p over the documents' mean\n  differences "
+      'decides')
 d2l.use_svg_display()
 _, axes = d2l.plt.subplots(1, 2, figsize=(8.5, 3.6), layout='constrained')
 for ax, k in zip(axes, ('recall@10', 'ndcg@10')):
@@ -1015,7 +1036,7 @@ print(f'(4) Faiss codes with our codebooks equal ours for {same:.4f} of '
 err2 = ((Xg - Xh) ** 2).double()  # (N, 64): squared error per coordinate
 blocks = err2.reshape(-1, 8, 8).sum(-1).mean(0)  # each block's distortion
 print(f'(5) mean |e|^2 {err2.sum(1).mean():.3f} = sum of the 8 blocks\' '
-      f'distortions {blocks.sum():.3f} ('
+      f'distortions {blocks.sum():.3f}\n    ('
       + ', '.join(f'{b:.2f}' for b in blocks) + ')')
 assert abs(adc_hand - 2.0) < 1e-6
 assert ((adc - exact).abs() / exact).max() < 1e-5
@@ -1061,7 +1082,7 @@ QD = Q_DEV.numpy()
 print(f'{len(XS):,} vectors of {XS.shape[1]} coordinates '
       f'({XS.nbytes / 2**20:,.0f} MiB in float32), '
       f'{np.mean(np.char.startswith(STRESS_IDS, "sec512:")):.3f} of them '
-      f'book chunks; {len(QS):,} timed questions; book vectors differ from '
+      f'book chunks;\n  {len(QS):,} timed questions; book vectors differ from '
       f'the chunk vectors by at most {book_diff:.1e}')
 ```
 
@@ -1171,8 +1192,11 @@ if GPU:  # every question at once: a batched point, not a batch-1 latency
                      p50=secs / len(QS) * 1e3, code_bytes=4 * d))
     del XG, QG
 TABLE = pd.DataFrame(ROWS)
-print(machine())
-print(TABLE.round(4).to_string(index=False))
+show_machine(machine())
+print(TABLE.round({'recall': 4, 'task_recall': 4, 'p50': 4, 'p95': 4,
+                   'index_bytes': 1, 'build_s': 1}).rename(columns={
+    'task_recall': 'task rec.', 'code_bytes': 'code B',
+    'index_bytes': 'index B', 'build_s': 'build s'}).to_string(index=False))
 seeds = TABLE[(TABLE.family == f'IVF-PQ{PQ_MS[0]}') & (TABLE.knob ==
                                                         'nprobe 16')]
 print(f'IVF-PQ{PQ_MS[0]}, nprobe 16, k-means seeds {list(seeds.seed)}: '

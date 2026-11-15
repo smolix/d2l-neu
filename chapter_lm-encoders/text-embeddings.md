@@ -306,9 +306,9 @@ for name, (Q, X) in ROWS.items():
 print(f'Recall@10: raw mean {ci(METRICS["raw mean"]["recall@10"])}, '
       f'BM25 {ci(METRICS["BM25"]["recall@10"])}')
 for i in range(3):  # the first three questions, top 1 against gold
-    print(f'\n{QUESTIONS[i]}\n  top 1: '
+    d2l.print_wrapped(f'\n{QUESTIONS[i]}\n  top 1: '
           f'{CORPUS.header(CORPUS[RANKED["raw mean"][i][0]])}\n  gold:  '
-          f'{CORPUS.header(CORPUS[min(GOLD[i])])}')
+          f'{CORPUS.header(CORPUS[min(GOLD[i])])}', width=96)
 del encoder
 d2l.lm_free()
 ```
@@ -362,7 +362,7 @@ n = len(Z)
 exact = d2l.anisotropy(Z, n_pairs=None)  # every pair
 identity = ((Z.sum(0) ** 2).sum() - n) / (n * (n - 1))
 print(f'mean cosine over all {n * (n - 1) // 2:,} pairs {exact:.6f}, from '
-      f'the sum of the vectors {identity:.6f}; squared length of the mean '
+      f'the sum of the vectors {identity:.6f}\n  squared length of the mean '
       f'vector {(Z.mean(0) ** 2).sum():.6f}')
 assert abs(exact - identity) < 1e-9
 ```
@@ -550,10 +550,10 @@ HELD = [(qtext[i], ptext[i]) for i in unseen[:N_HELD]]
 CANDS = list(dict.fromkeys([d for _, d in HELD] + [  # distinct passages
     ptext[i] for i in unseen[N_HELD:]]))[:N_CAND]
 shared = collections.Counter(d for _, d in PAIRS)
-print(f'{len(nq):,} pairs, {nq.answer.nunique():,} distinct passages; '
+print(f'{len(nq):,} pairs, {nq.answer.nunique():,} distinct passages\n'
       f'training on {len(PAIRS):,} pairs with {len(shared):,} distinct '
       f'passages ({sum(n for n in shared.values() if n > 1):,} pairs share '
-      f'theirs); {len(HELD)} unseen pairs held out for the learning rate, '
+      f'theirs)\n{len(HELD)} unseen pairs held out for the learning rate, '
       f'ranked among {len(CANDS):,} unseen passages')
 ```
 
@@ -772,17 +772,19 @@ RANKED |= {name: stored(EMB['runs'][name]) for name in (
     'contrastive + hard negatives')}
 METRICS |= {name: d2l.retrieval_metrics(r, GOLD, ks=(1, 5, 10))
             for name, r in RANKED.items()}
-print(pd.DataFrame({name: {k: m[k].mean() for k in m if k != 'ndcg@10'} | {
-    'ndcg@10 [CI]': ci(m['ndcg@10']), 'anisotropy': d2l.anisotropy(
-        ROWS[name][1][SAMPLE]) if name in ROWS else np.nan}
-                    for name, m in METRICS.items()}).T.round(3).to_string())
+aniso = {name: f'{d2l.anisotropy(ROWS[name][1][SAMPLE]):.3f}'
+         for name in ROWS}  # three decimals: the page's width
+print(pd.DataFrame({name: {k: f'{m[k].mean():.3f}' for k in m
+                          if k != 'ndcg@10'} | {
+    'ndcg@10 [CI]': ci(m['ndcg@10']), 'anisotropy': aniso.get(name, 'n/a')}
+                    for name, m in METRICS.items()}).T.to_string())
 for name in ('contrastive seed 0', 'Matryoshka'):  # live against stored
     reg = stored(EMB['runs'][name])
     same = np.mean([a == b for a, b in zip(RANKED[name], reg)])
     agree = np.mean(METRICS[name]['recall@10'] == d2l.retrieval_metrics(
         reg, GOLD, ks=(10,))['recall@10'])
-    print(f'live {name} model against its stored ranking: same top 10 for '
-          f'{same:.3f} of the questions, same Recall@10 for {agree:.3f}')
+    print(f'live {name} model against its stored ranking:\n  same top 10 '
+          f'for {same:.3f} of the questions, same Recall@10 for {agree:.3f}')
     assert SMALL or agree >= 0.98, f'{name}: checkpoint and results differ'
 ```
 
@@ -811,7 +813,9 @@ D = pd.DataFrame([delta(a, b) for a, b in dict.fromkeys((  # no repeats
     ('Qwen3-Embedding', 'Qwen3-Embedding + instruction')))])
 D['CI excludes 0'] = (D.low > 0) | (D.high < 0)
 D['beyond seed range'] = D.delta.abs() > seed_range
-print(D.round(3).to_string(index=False))
+print(D.round(3).rename(columns={'CI excludes 0': 'excl. 0',
+                                  'beyond seed range': 'beyond seeds'})
+      .to_string(index=False))
 print(f'Recall@10 of the three seeds: {np.round(seed_r10, 3)}, range '
       f'{seed_range:.3f}; best raw pooling: {best_raw}')
 gain = D[(D['from'] == best_raw) & (D['to'] == 'contrastive seed 0')].iloc[0]

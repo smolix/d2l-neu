@@ -192,10 +192,13 @@ def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
         batch = d2l.chat_batch(judge, [dict(
             messages=m, max_tokens=max_new_tokens, temperature=0, seed=0)
             for m in messages], concurrency=batch_size)
-        # A thread of its own: a notebook's kernel already runs an event
-        # loop, in which asyncio.run refuses to start
-        with concurrent.futures.ThreadPoolExecutor(1) as pool:
-            out = pool.submit(asyncio.run, batch).result()
+        if hasattr(judge, '_run'):  # a d2l.ChatAPI: its private event loop,
+            out = judge._run(batch)  # the same for every batch, so its HTTP
+        else:                        # connections never outlive their loop
+            # A thread of its own: a notebook's kernel already runs an
+            # event loop, in which asyncio.run refuses to start
+            with concurrent.futures.ThreadPoolExecutor(1) as pool:
+                out = pool.submit(asyncio.run, batch).result()
         return [r if isinstance(r, BaseException)  # no reply at all
                 else None if r.finish_reason == 'length'
                 else (r.text or '').split('</think>')[-1] for r in out]

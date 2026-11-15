@@ -238,7 +238,7 @@ def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
     if padding_side is not None:
         tokenizer.padding_side = padding_side
     model.revision = revision
-    print(f'{model_id}@{revision[:12]}: {type(model).__name__}, '
+    print(f'{model_id}@{revision[:12]}: {type(model).__name__}\n    '
           f'{dtype}, {device}, attention '
           f'{model.config._attn_implementation}')
     for what, keys in (('not used', info['unexpected_keys']),
@@ -267,9 +267,8 @@ else:
         'labelled examples': [n, 8], 'accuracy': [enc, dec],
         'ms per 1,000 examples': [sweep['timing']['mnli'],
                                   decoder['timing']['mnli']['8']]},
-        index=[f'{ENC.split("/")[1]}, fine-tuned (mean of {len(SEEDS)} '
-               f'seeds)', f'{DEC.split("/")[1]}, 8 shots in the prompt '
-               f'(mean of {DRAWS[8]} draws)']).round(
+        index=[f'{ENC.split("/")[1]}, fine-tuned ({len(SEEDS)} seeds)',
+               f'{DEC.split("/")[1]}, 8 shots ({DRAWS[8]} draws)']).round(
         {'accuracy': 3, 'ms per 1,000 examples': 0}).to_string())
 ```
 
@@ -281,7 +280,8 @@ encoder, tok = d2l.load_encoder(ENC, dtype=torch.float32)  # fp32: trained
 dev = next(encoder.parameters()).device
 pair = tok('A man plays a guitar on stage.', 'Someone is making music.',
            return_tensors='pt').to(dev)
-print(tok.convert_ids_to_tokens(pair['input_ids'][0].tolist()))
+d2l.print_wrapped(tok.convert_ids_to_tokens(pair['input_ids'][0].tolist()),
+                  width=96)
 print('fields:', list(pair))  # no token_type_ids
 with torch.inference_mode():
     H = encoder(**pair).last_hidden_state
@@ -313,7 +313,7 @@ X = tok(texts, padding=True, return_tensors='pt').to(dev)
 with torch.inference_mode():  # one masked position per text, in order
     P = mlm(**X).logits[X['input_ids'] == tok.mask_token_id].softmax(-1)
 for text, p, i in zip(texts, *P.topk(5)):
-    print(f'{text:58s}', ', '.join(
+    print(text + '\n   ', ', '.join(
         f'{tok.decode(j, clean_up_tokenization_spaces=False).strip()} {q:.2f}'
         for q, j in zip(p.tolist(), i.tolist())))
 MLM_HEAD = {k: v.detach().clone()  # dense and norm: the sentence head's start
@@ -608,15 +608,14 @@ DATA['mnli']['hyp_train'] = encode('mnli', train['mnli'].iloc[
     DATA['mnli']['perm'][:N_HYP]], hypothesis_only=True)
 DATA['mnli']['hyp_eval'] = encode('mnli', DATA['mnli']['eval_df'],
                                   hypothesis_only=True)
-print(pd.DataFrame.from_dict({task: {
+print(pd.DataFrame({task: {k: str(v) for k, v in {  # a column per task
     'largest subset': len(D['train']), 'carved (learning rate)':
     len(D['carve']), 'validation items': len(D['eval']),
     'cut at MAXLEN': sum(len(x) == MAXLEN[task] for x, _ in D['train']),
     'majority rate (validation)': D['eval_df'].label.value_counts(
         normalize=True).max().round(3), 'premises (validation)': 'n/a'
-    if D['cluster'] is None else len(set(D['cluster']))}
-    for task, D in DATA.items()},
-                             orient='index').to_string())
+    if D['cluster'] is None else len(set(D['cluster']))}.items()}
+    for task, D in DATA.items()}).to_string())
 ```
 
 <!-- Placeholder (prose, ## Fine-Tuning and Its Variance): helpers for the runs: a fresh copy of the pretrained encoder under the pretrained head's dense and norm and a new final layer (initialized as Transformers initializes it, from the seed), pooled as config.classifier_pooling says, prediction in batches padded to their own longest pair, a timer per 1,000 examples, and the fine-tuned classifier as a zip of bf16 weights. -->
@@ -771,7 +770,7 @@ live = np.array(r['eval_pred'])
 gap, bound = abs(np.mean(live == y) - np.mean(reg == y)), max(
     0.02, grid.loc[('mnli', n), 'range'])  # the registered seeds' spread
 print(f'n = {n}, seed 0, {k} items: accuracy {np.mean(live == y):.3f} live, '
-      f'{np.mean(reg == y):.3f} registered (bound on the difference '
+      f'{np.mean(reg == y):.3f} registered\n  (bound on the difference '
       f'{bound:.3f}); same prediction on {np.mean(live == reg):.3f}; '
       f'{r["seconds"]:.0f} s')
 assert SMALL or gap <= bound
@@ -792,8 +791,8 @@ trained = np.array(runs.query('task == "mnli" and seed == 0').sort_values(
 pred = np.array(predict(clf16, DATA['mnli']['eval'][:k]))
 agree = np.mean(pred == np.array(SWEEP['ckpt_pred'][:k]))
 print(f'registered checkpoint, {k} items: accuracy {np.mean(pred == y):.3f}; '
-      f'same prediction as when it was saved on {agree:.3f}, as its fp32 '
-      f'training run on {np.mean(pred == trained):.3f}; {d2l.lm_peak()}')
+      f'same prediction\n  as when it was saved on {agree:.3f}, as its fp32 '
+      f'training run on {np.mean(pred == trained):.3f}\n  {d2l.lm_peak()}')
 assert SMALL or agree >= 0.99
 ```
 
@@ -943,7 +942,7 @@ seeds_f1 = {x['seed']: x['f1'] for x in TAGGING['runs']}
 bound = max(0.01, np.ptp(list(seeds_f1.values())))  # the seeds' spread
 print(f'registered, {len(seeds_f1)} seeds: F1 {min(seeds_f1.values()):.3f} '
       f'to {max(seeds_f1.values()):.3f}, seed 0 {seeds_f1[0]:.4f} (bound on '
-      f'the live difference {bound:.3f}); {d2l.lm_peak()}')
+      f'the live difference {bound:.3f})\n  {d2l.lm_peak()}')
 assert abs(f1['f1'] - oracle) < 1e-9
 assert SMALL or abs(f1['f1'] - seeds_f1[0]) <= bound
 ```
@@ -1004,9 +1003,9 @@ top2 = np.sort(reg, -1)[:, -2:]
 clear = top2[:, 1] - top2[:, 0] > TIE  # not a near tie
 agree = np.mean(live.argmax(-1)[clear] == reg.argmax(-1)[clear])
 print(f'live, 8 shots, {m} MNLI items: largest score change '
-      f'{np.abs(live - reg).max():.4f} nats per token; {np.sum(~clear)} near '
-      f'ties (margin <= {TIE}); same prediction on {agree:.3f} of the others; '
-      f'{d2l.lm_peak()}')
+      f'{np.abs(live - reg).max():.4f} nats per token\n  {np.sum(~clear)} '
+      f'near ties (margin <= {TIE}); same prediction on {agree:.3f} of the '
+      f'others\n  {d2l.lm_peak()}')
 assert SMALL or agree == 1.0
 ```
 
@@ -1151,7 +1150,7 @@ def crossing(task):
 for task in ('mnli', 'sst2'):
     table, dec_range, n = crossing(task)
     print(f'{task}: the encoder passes 8 shots from n = '
-          f'{n or "none measured"} on; range over the {DRAWS[8]} '
+          f'{n or "none measured"} on\n  range over the {DRAWS[8]} '
           f'demonstration sets {dec_range:.3f}')
     print(table.to_string(float_format=lambda v: f'{v:.3f}'))
 ```

@@ -157,7 +157,7 @@ oov = np.mean(ids[ids >= 0] == vocab.unk)
 ids = ids[ids != vocab.unk]  # word ids, -1 at each line end
 counts = np.bincount(ids[ids >= 0], minlength=V)
 print(f'{n:,} tokens in {len(lines):,} lines, '
-      f'{len(collections.Counter(w for l in lines for w in l)):,} types; '
+      f'{len(collections.Counter(w for l in lines for w in l)):,} types\n'
       f'vocabulary {V:,} (count >= {MIN_COUNT}), {oov:.1%} of tokens '
       'outside it')
 ```
@@ -357,7 +357,7 @@ words = [vocab.idx_to_token[x] if m else '<pad>' for x, m in zip(
     batch[1][0].tolist(), batch[3][0].tolist())]
 j = batch[3][0, :2 * WINDOW].argmax().item()  # the first filled slot
 print(f'first row: center {vocab.idx_to_token[int(batch[0][0])]!r}')
-print('    context slots, offsets -5..-1 and +1..+5:',
+print('    context slots, offsets -5..-1 and +1..+5:\n       ',
       ' '.join(words[:2 * WINDOW]))
 print(f'    noise words of slot {j} ({words[j]!r}):',
       ' '.join(words[2 * WINDOW + j * K:2 * WINDOW + (j + 1) * K]))
@@ -650,7 +650,8 @@ for r in grid:
                 f"{r[name]['ci'][1]:.2f}]"
                 + (f'; seeds [{min(rho):.3f}, {max(rho):.3f}]'
                    if len(same) > 1 else ''))
-print(pd.DataFrame(summary).T.to_string())
+for name in SETS:  # one table per benchmark: the page's width
+    print(pd.DataFrame(summary).T[[name]].to_string())
 default = runs('SGNS', alpha=ALPHA, subsample=True)[0]
 live = {name: d2l.spearman_eval(sgns_v, vocab, p, n_boot=0).rho
         for name, p in SETS.items()}
@@ -772,9 +773,10 @@ def nearest_neighbors(E, vocab, word, k=5, exclude_self=True):
 ```{.python .input #word-embeddings-neighbors}
 %%tab pytorch
 tables = {'SGNS': sgns_v, 'SVD-PPMI': svd_vecs, 'GloVe': glove_vecs}
-print(pd.DataFrame({m: {w: ', '.join(t for t, _ in d2l.nearest_neighbors(
-    E, vocab, w)) for w in ('doctor', 'chip', 'stock', 'bank')}
-    for m, E in tables.items()}).to_string())
+for w in ('doctor', 'chip', 'stock', 'bank'):  # a line per method
+    print(w + ''.join(f'\n  {m:9s} ' + ', '.join(
+        t for t, _ in d2l.nearest_neighbors(E, vocab, w))
+        for m, E in tables.items()))
 ```
 
 <!-- Placeholder (stage 2), analogies and bias: pretrained GloVe vectors (6 billion tokens, 400,000 words) through the interface of the earlier edition. -->
@@ -872,7 +874,7 @@ bias = pd.DataFrame(rows).sort_values('before')
 print(bias.round(3).to_string(index=False))
 assert bias.after.abs().max() < 1e-6  # zero by construction
 print(f'median overlap of the top 10 neighbours: '
-      f'{bias.overlap.median():.0f} of 10; correlation of a profession\'s '
+      f'{bias.overlap.median():.0f} of 10\ncorrelation of a profession\'s '
       f'original projection with its neighbours\' after removal: '
       f'{np.corrcoef(bias.before, bias.neighbours)[0, 1]:.2f}')
 ```
@@ -893,7 +895,7 @@ for path in files:  # what the checkpoint stores, from the file headers
     with safe_open(path, 'pt') as f:
         n_file += sum(math.prod(f.get_slice(k).get_shape()) for k in f.keys())
 print(f'table {tuple(table.shape)}: {table.numel():,} of {n_params:,} '
-      f'parameters ({table.numel() / n_params:.1%}); the checkpoint file '
+      f'parameters ({table.numel() / n_params:.1%})\n  the checkpoint file '
       f'holds {n_file:,} numbers')
 tied = (model.hf_config['tie_word_embeddings']
         and not hasattr(model, 'lm_head'))
@@ -902,10 +904,9 @@ assert tied and abs(table.numel() / n_params - 0.261) < 5e-4
 words = ['doctor', 'bank', 'river', 'money']
 near = lambda E, v, w: ', '.join(repr(t) for t, _ in
                                  d2l.nearest_neighbors(E, v, w))
-print(pd.DataFrame({
-    'Qwen3-0.6B table': {w: near(table, tok, ' ' + w) for w in words},
-    'SGNS (this slice)': {w: near(sgns_v, vocab, w) for w in words}}
-    ).to_string())
+for w in words:  # a line per table
+    print(f'{w}\n  Qwen3-0.6B table   {near(table, tok, " " + w)}\n'
+          f'  SGNS (this slice)  {near(sgns_v, vocab, w)}')
 index = {'SGNS': (sgns_v, vocab.token_to_idx),
          'GloVe-6B': (Z6b, glove6b.token_to_idx),
          'Qwen3 table': (table, {w: tok.encode(' ' + w)[0] for w in words})}

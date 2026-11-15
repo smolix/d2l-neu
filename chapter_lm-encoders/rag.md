@@ -78,6 +78,7 @@ import pandas as pd
 import random
 import re
 import shutil
+import textwrap
 import time
 import transformers
 import warnings
@@ -115,8 +116,8 @@ ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
     'rag-gen-base': ('lm-rag-gen-base-v1', 'lm-rag-gen-base.jsonl'),
     'rag-gen-stages': ('lm-rag-gen-stages-v1', 'lm-rag-gen-stages.jsonl'),
     'rag-gen-fix': ('lm-rag-gen-fix-v1', 'lm-rag-gen-fix.jsonl'),
-    'rag-judge': ('lm-rag-judge-v2', 'lm-rag-judge.jsonl'),
-    'rag-judge-cache': ('lm-rag-judge-cache-v2', 'lm-rag-judge-cache.zip'),
+    'rag-judge': ('lm-rag-judge-v3', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v3', 'lm-rag-judge-cache.zip'),
     'rag-cards': ('lm-rag-cards-v1', 'lm-rag-cards.jsonl')}
 RERUN = d2l.lm_rerun(ARTIFACTS)
 if 'rag-judge-cache' in RERUN:  # the judge's cache is written with it
@@ -135,6 +136,7 @@ QUICK = False  # True: 80 stratified dev and test items (development only)
 assert not (QUICK and RERUN), 'QUICK results are never saved'
 N_LIVE = 8 if GPU else 2  # base answers generated again in a normal run
 JUDGE_MINUTES, CHUNK, CONCURRENCY = 50, 64, 8  # judging run; saves; flight
+RETRY_TOKENS = 6000  # the one re-judging of an answer left without verdict
 N_REPEAT, N_CARDS = 60, 50  # base answers judged twice; failure cards
 CARD_GIB = 21.5  # estimates; measured peaks add 1-2 (23.6 GiB usable)
 BASE = dict(chunking='sections', context='retrieved', k=K, budget=BUDGET,
@@ -236,6 +238,12 @@ d2l.DATA_HUB['lm-rag-judge-v2'] = (  # v1 and the verdicts on the fix run
 d2l.DATA_HUB['lm-rag-judge-cache-v2'] = (  # every recorded reply
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v2.zip',
     '9b68fb8b52733e7909000165121512892f4b022c')
+d2l.DATA_HUB['lm-rag-judge-v3'] = (  # v2, missing verdicts judged again
+    d2l.LM_DATA_URL + 'lm-rag-judge-v3.jsonl',  # with 6,000 new tokens
+    '28d257ee9b9545e7035917e6612d978faf8d259d')
+d2l.DATA_HUB['lm-rag-judge-cache-v3'] = (  # v2 and those longer replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v3.zip',
+    '8711571c3c94646d17215c522aec15d7a3cd269c')
 ```
 
 <!-- Placeholder (stage 2): the six run artifacts of ARTIFACTS
@@ -302,7 +310,7 @@ print(pd.DataFrame({s: qa.stats()['items'] for s, qa in QA.items()})
       .to_string())
 served = lambda role: sorted({f'{q[role]["served"]} ({q[role]["provider"]})'
                               for qa in QA.values() for q in qa})
-print(f'drafter: {served("drafter")}; checker: {served("checker")}; '
+print(f'drafter: {served("drafter")}\nchecker: {served("checker")}\n'
       f'every dev and test item verified by {VERIFIER}')
 print(pd.DataFrame({s: {
     'answerable': sum(q['answerable'] for q in qa),
@@ -347,10 +355,12 @@ def span_text(s, width=240):
 
 for t in MANIFEST['quota']:
     q = next(q for q in QA['dev'] if q['type'] == t)
-    print(f'[{t}] {q["qid"]}: {q["question"]}\n  reference: '
-          f'{q["reference"]}\n  key facts: {q["key_facts"]}')
-    for s in q['gold_spans']:
-        print(f'  gold span in {s["doc_id"]}: {span_text(s)}')
+    for line in (f'[{t}] {q["qid"]}: {q["question"]}',
+                 f'  reference: {q["reference"]}',
+                 f'  key facts: {q["key_facts"]}',
+                 *(f'  gold span in {s["doc_id"]}: {span_text(s)}'
+                   for s in q['gold_spans'])):
+        print(textwrap.fill(line, 96, subsequent_indent='    '))
 ```
 
 <!-- Placeholder (prose): splits by document, and what has to hold for that
@@ -410,9 +420,10 @@ print(f'\n{q["qid"]} ({q["type"]}): gold span(s) ' + ', '.join(
     for s in q['gold_spans']))
 for tag in ('sec512', 'fix256o64'):
     c = CHUNKINGS[tag]
-    print(f'  {tag}: ' + ', '.join(
+    d2l.print_wrapped(f'  {tag}: ' + ', '.join(
         f'{i.split("#")[-1]} [{c[i]["char_start"]}, {c[i]["char_end"]})'
-        for i in sorted(d2l.gold_chunk_ids(q, c, include_alt=False))))
+        for i in sorted(d2l.gold_chunk_ids(q, c, include_alt=False))),
+        width=96)
 ```
 
 <!-- Placeholder (prose, ## The Pipeline and Its Measurements): the stages
@@ -867,9 +878,13 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
     relevant chunk in the first-stage top depth), 'ranked_low' (one there,
     none in the context), 'false_abstain' (one in the context, yet the
     answer abstains), 'ignored' (faithful to the context, not correct) or
-    'unsupported' (not faithful). A missing verdict counts as false."""
+    'unsupported' (not faithful). 'unjudged' when the judge gave no
+    verdict that the class depends on: such an answer has no class."""
     r = result._asdict() if hasattr(result, '_asdict') else result
     true = lambda v: isinstance(v, (bool, np.bool_)) and bool(v)
+    given = lambda v: isinstance(v, (bool, np.bool_))
+    if not given(judge_out['correct']):
+        return 'unjudged'
     if true(judge_out['correct']):
         return 'correct'
     if not item['answerable']:
@@ -880,6 +895,8 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
                 else 'not_retrieved')
     if d2l._rag_abstained(r['answer']):
         return 'false_abstain'
+    if not given(judge_out.get('faithful')):
+        return 'unjudged'
     return 'ignored' if true(judge_out['faithful']) else 'unsupported'
 ```
 
@@ -923,7 +940,7 @@ table['total'] = table.sum(axis=1)
 table['limit'] = ['one 24 GB GPU'] * 3 + ['two GPUs, 2 x 24 GB']
 print(table.to_string(float_format='{:.1f}'.format))
 print('GiB; the judge stores one byte per weight (FP8), split over two '
-      'cards, and vLLM reserves 90% of each card for its weights, cache and '
+      'cards,\nand vLLM reserves 90% of each card for its weights, cache and '
       'activations')
 assert table.total.iloc[:2].max() < CARD_GIB  # generation fits one card
 KEEP_GEN = table.total.iloc[2] < CARD_GIB  # the generator idles on the card
@@ -1073,7 +1090,7 @@ def prefix_share(a, b):
 same = [prefix_share(r['answer'], ref.answer[r['qid']]) for r in live]
 ctx = sum(r['context_ids'] == list(ref.context_ids[r['qid']]) for r in live)
 print(f'{N_LIVE} base answers generated again: {ctx} with the registered '
-      f'context, {sum(s == 1 for s in same)} identical answers; tokens '
+      f'context, {sum(s == 1 for s in same)} identical answers\n  tokens '
       f'agreeing before the first difference: {np.mean(same):.3f}')
 oracle = d2l.generate(*generator(), [d2l.rag_prompt(
     q['question'], [CHUNKS[i] for i in r['context_ids']])
@@ -1083,9 +1100,10 @@ same = [prefix_share(r['answer'], g.text.strip())
         for r, g in zip(live, oracle)]
 agree = sum(s == 1 for s in same) >= N_LIVE - 1 and np.mean(same) >= 0.95
 print(f'the same prompts through d2l.generate: {sum(s == 1 for s in same)} '
-      f'of {N_LIVE} identical; tokens agreeing before the first difference:'
-      f' {np.mean(same):.3f}: ' + ('the two loops agree' if agree else
-                                  'a padding or logits_to_keep bug'))
+      f'of {N_LIVE} identical\n  tokens agreeing before the first '
+      f'difference: {np.mean(same):.3f}: ' + (
+          'the two loops agree' if agree else
+          'a padding or logits_to_keep bug'))
 assert agree, 'batched generation differs from the plain decoding loop'
 free_generator()  # the card goes to the retriever and the judge
 ```
@@ -1094,8 +1112,12 @@ free_generator()  # the card goes to the retriever and the judge
 (vLLM, two 24 GB GPUs; or, without them and with a key, the same open
 weights on OpenRouter) after the generator is freed, judges every answer
 that lacks a verdict in 50-minute runs, and judges 60 baseline answers a
-second time at another concurrency. The normal run replays the verdicts
-and re-judges eight from the recorded cache: no server, no GPU, no key. -->
+second time at another concurrency. A reply cut off or malformed twice
+leaves an answer without a verdict (about 3%); each such answer is judged
+once more with 6,000 new tokens, and one still without a verdict is
+unjudged: left out of accuracy and of the failure shares, its count
+printed, never counted as a failure. The normal run replays the verdicts
+and re-judges twelve from the recorded cache: no server, no GPU, no key. -->
 
 ```{.python .input #rag-judge}
 %%tab pytorch
@@ -1103,30 +1125,59 @@ LABELS = d2l.api_unpack('lm-rag-judge-labels-v1')
 REC_DIR = os.path.join('..', 'data', 'lm-api', 'record',
                        ARTIFACTS['rag-judge-cache'][0])
 VERDICTS = ['correct', 'faithful', 'supported']
+ANSWERS = {(r['config'], r['qid']): r for r in GENS.to_dict('records')}
+read = lambda f: [json.loads(l) for l in open(os.path.join(LABELS, f))]
+CAL = [p for p in read('pairs.jsonl') if p['set'] == 'calibration']
 
 def passage(cid):
     c = CHUNKS[cid]
     return ' > '.join(c['heading_path']) + '\n' + c['text']
 
-def judge_client(backend, cache, mode='replay', url='http://127.0.0.1/v1'):
+def judge_client(backend, cache, mode='replay', url='http://127.0.0.1/v1',
+                 timeout=120.0):
     """The judge through the local vLLM server or OpenRouter (same weights,
-    BF16), recording to or replaying from cache."""
+    BF16), recording to or replaying from cache; timeout: seconds a request
+    may take (not part of its hash)."""
     if backend == 'local':
-        return d2l.rag_judge_client(url, cache=cache, mode=mode)
-    with open(os.path.join(LABELS, 'listing.json')) as f:
-        listing = json.load(f)
-    return d2l.openrouter_api('qwen/qwen3.8-27b', 'deepinfra/bf16',
-                              listing=listing, cache=cache, mode=mode,
-                              cost_cap_usd=15.0, reasoning={'enabled': True})
+        client = d2l.rag_judge_client(url, cache=cache, mode=mode)
+    else:
+        with open(os.path.join(LABELS, 'listing.json')) as f:
+            listing = json.load(f)
+        client = d2l.openrouter_api(
+            'qwen/qwen3.8-27b', 'deepinfra/bf16', listing=listing,
+            cache=cache, mode=mode, cost_cap_usd=15.0,
+            reasoning={'enabled': True})
+    client.timeout = timeout
+    return client
 
-def judge_records(client, recs, concurrency, backend):
-    """Judgment records of answer records (dicts)."""
+def judge_records(client, recs, concurrency, backend, tokens=None):
+    """Judgment records of answer records (dicts); the judge may write
+    tokens new tokens (default JUDGE['max_new_tokens'])."""
+    tokens = tokens or JUDGE['max_new_tokens']
     v = d2l.rag_judge(client, None, [ITEMS[r['qid']] for r in recs], recs,
                       [[passage(i) for i in r['context_ids']] for r in recs],
-                      batch_size=concurrency)
+                      batch_size=concurrency, max_new_tokens=tokens)
     return [dict(config=r['config'], qid=r['qid'], concurrency=concurrency,
-                 backend=backend, answer_sha=answer_key(r), **x)
-            for r, x in zip(recs, v)]
+                 backend=backend, answer_sha=answer_key(r),
+                 max_new_tokens=tokens, **x) for r, x in zip(recs, v)]
+
+def no_verdict(v, rec):
+    """Whether the judge left out a verdict it was asked for on answer
+    record rec (its reply cut off or malformed, twice)."""
+    if d2l._rag_abstained(rec['answer']):
+        return False  # decided by rule
+    keys = VERDICTS if len(rec['context_ids']) else ['correct']
+    return any(v[k] is None for k in keys)
+
+def calibration_verdicts(cache, tokens=None, pairs=None, mode='replay',
+                         **kw):
+    """The judge's verdicts on calibration pairs (default: all), replayed
+    from cache or recorded to it (the local judge; kw: judge_client's)."""
+    pairs = CAL if pairs is None else pairs
+    return d2l.rag_judge(judge_client('local', cache, mode, **kw), None,
+                         [ITEMS[p['qid']] for p in pairs], pairs,
+                         [[passage(i) for i in p['context_ids']]
+                          for p in pairs], max_new_tokens=tokens)
 
 def load_judgments(path):
     """Judgment records, verdicts as True, False or None."""
@@ -1136,8 +1187,14 @@ def load_judgments(path):
                  for v in df.get(k, [])]
     for k in ('backend', 'answer_sha'):
         df[k] = df.get(k, [None] * len(df))
+    df['max_new_tokens'] = [  # rows from before the re-judging: the default
+        JUDGE['max_new_tokens'] if v is None or v != v else int(v)
+        for v in df.get('max_new_tokens', [None] * len(df))]
     return df
 
+CAL_V0 = calibration_verdicts(os.path.join(  # as recorded at selection
+    LABELS, 'api', 'judge-local-qwen38-27b-on.jsonl'))
+CAL_V = [dict(x) for x in CAL_V0]  # with the pairs judged again
 JUD_FILE = run_path('rag-judge')
 if 'rag-judge' in RERUN:
     free_generator()
@@ -1178,6 +1235,27 @@ if 'rag-judge' in RERUN:
             rows += judge_records(client, todo[:CHUNK], CONCURRENCY, backend)
             todo, last = todo[CHUNK:], time.time() - t
             d2l.write_jsonl(JUD_FILE, rows)  # a stopped run resumes here
+        # once every answer has a judgment: each answer left without a
+        # verdict is judged once more, with RETRY_TOKENS new tokens
+        redo = [ANSWERS[r['config'], r['qid']] for r in rows
+                if r['concurrency'] == CONCURRENCY and r['max_new_tokens'] <
+                RETRY_TOKENS and no_verdict(r, ANSWERS[r['config'], r['qid']])]
+        retry = judge_client(backend, os.path.join(  # the longer replies
+            REC_DIR, 'judge-retry.jsonl'), 'record', url, timeout=1200.0)
+        while (not todo and redo and
+               time.time() - T0 + last < 60 * JUDGE_MINUTES):
+            t = time.time()
+            new = {(r['config'], r['qid']): r for r in judge_records(
+                retry, redo[:CHUNK], CONCURRENCY, backend, RETRY_TOKENS)}
+            rows = [new.get((r['config'], r['qid']), r)
+                    if r['concurrency'] == CONCURRENCY else r for r in rows]
+            redo, last = redo[CHUNK:], time.time() - t
+            d2l.write_jsonl(JUD_FILE, rows)
+        if backend == 'local':  # the calibration pairs left without verdict
+            calibration_verdicts(os.path.join(  # recorded once (local judge)
+                REC_DIR, 'calibration-retry.jsonl'), RETRY_TOKENS, [
+                    p for p, x in zip(CAL, CAL_V0) if no_verdict(x, p)],
+                'record', url=url, timeout=1200.0)
         base = sorted(r['qid'] for r in rows if r['config'] == 'base' and
                       r['concurrency'] == CONCURRENCY and
                       r['qid'].startswith('dev'))
@@ -1195,8 +1273,10 @@ if 'rag-judge' in RERUN:
     finally:
         if server:
             server.stop()
-    print(f'{len(todo)} answers still to judge: run D2L_RERUN=rag-judge '
-          'again' if todo else 'every answer is judged')
+    left = len(todo) + len(redo)
+    print(f'{len(todo)} answers still to judge, {len(redo)} to judge again: '
+          'run D2L_RERUN=rag-judge again' if left else
+          'every answer is judged')
     d2l.lm_save_table(ARTIFACTS['rag-judge'][1], pd.DataFrame(rows),
                       on=['config', 'qid', 'concurrency'],
                       key=ARTIFACTS['rag-judge'][0])
@@ -1205,7 +1285,8 @@ if 'rag-judge' in RERUN:
     members['manifest.json'] = json.dumps(dict(
         judge=JUDGE, prompt='RAG_JUDGE_V1', backends=sorted(
             {r['backend'] for r in rows}), concurrency=CONCURRENCY,
-        repeat_concurrency=2 * CONCURRENCY, n=len(rows)), indent=1).encode()
+        repeat_concurrency=2 * CONCURRENCY, retry_tokens=RETRY_TOKENS,
+        n=len(rows)), indent=1).encode()
     d2l.lm_save_rerun(ARTIFACTS['rag-judge-cache'][1],
                       lambda p: d2l.lm_write_zip(p, members))
     print(f'rag-judge: {(time.time() - T0) / 60:.1f} min since the start')
@@ -1216,22 +1297,36 @@ judged = JUD[JUD.concurrency == CONCURRENCY].merge(  # on these answers
 cache = (REC_DIR if 'rag-judge' in RERUN else
          d2l.lm_registered(ARTIFACTS['rag-judge-cache'][0]) and
          d2l.api_unpack(ARTIFACTS['rag-judge-cache'][0]))
-if len(judged) and cache:  # eight base judgments replayed from the cache
-    first = judged[judged.config == 'base'].sort_values('qid').head(8)
-    recs = GENS.set_index(['config', 'qid']).loc[list(zip(
-        first.config, first.qid))].reset_index().to_dict('records')
+b = judged[judged.config == 'base'].sort_values('qid')
+for tokens, file, n in ((JUDGE['max_new_tokens'], 'judge.jsonl', 8),
+                        (RETRY_TOKENS, 'judge-retry.jsonl', 4)):
+    first = b[b.max_new_tokens == tokens].head(n)  # replayed from the cache
+    if not (cache and len(first)):
+        continue
+    recs = [ANSWERS[k] for k in zip(first.config, first.qid)]
     again = pd.DataFrame(judge_records(
-        judge_client(first.backend.iloc[0], os.path.join(cache,
-                                                         'judge.jsonl')),
-        recs, CONCURRENCY, first.backend.iloc[0]))
+        judge_client(first.backend.iloc[0], os.path.join(cache, file)),
+        recs, CONCURRENCY, first.backend.iloc[0], tokens))
     assert (again[VERDICTS].astype(str).values ==
             first[VERDICTS].astype(str).values).all()
-    print('8 base judgments replayed from the judge cache: identical')
+    print(f'{len(first)} base judgments with {tokens:,} new tokens replayed '
+          'from the judge cache: identical')
+retry = cache and os.path.join(cache, 'calibration-retry.jsonl')
+if retry and os.path.exists(retry):  # the calibration pairs judged again
+    redo = [i for i, (p, x) in enumerate(zip(CAL, CAL_V0))
+            if no_verdict(x, p)]
+    for i, x in zip(redo, calibration_verdicts(retry, RETRY_TOKENS,
+                                               [CAL[i] for i in redo])):
+        CAL_V[i] = x
 print(pd.DataFrame({
     'answers': GENS.groupby('config').size(),
     'judged': judged.groupby('config').size(),
-    'no verdict': judged.assign(none=judged.correct.isna()).groupby(
-        'config').none.sum()}).fillna(0).astype(int).T.to_string())
+    'judged again': judged.groupby('config').max_new_tokens.apply(
+        lambda t: (t == RETRY_TOKENS).sum()),
+    'unjudged': judged.assign(none=judged.correct.isna()).groupby(
+        'config').none.sum()}).fillna(0).astype(int).to_string())
+print(f'judged again: with {RETRY_TOKENS:,} new tokens, once\nunjudged: '
+      'still no verdict on correctness (left out of accuracy)')
 ```
 
 <!-- Placeholder (prose): the judge is checked before any accuracy is read:
@@ -1246,20 +1341,17 @@ author has not approved yet). -->
 
 ```{.python .input #rag-judge-validation}
 %%tab pytorch
-read = lambda f: [json.loads(l) for l in open(os.path.join(LABELS, f))]
-cal = [p for p in read('pairs.jsonl') if p['set'] == 'calibration']
+cal, v = CAL, CAL_V  # v: with the pairs judged again (rag-judge cell)
 lab = {r['qid']: r for r in read('dev_judge_labels.jsonl')}
 recorded = {r['qid']: r for r in read(
     os.path.join('candidates', 'qwen38-27b-local-on.jsonl'))}
-v = d2l.rag_judge(d2l.rag_judge_client(cache=os.path.join(
-    LABELS, 'api', 'judge-local-qwen38-27b-on.jsonl')), None,
-    [ITEMS[p['qid']] for p in cal], cal,
-    [[passage(i) for i in p['context_ids']] for p in cal])
 graded = [not d2l._rag_abstained(p['answer']) for p in cal]
-assert all(x[k] == recorded[p['qid']][k] for p, x, g in zip(cal, v, graded)
-           if g for k in VERDICTS)  # the judge's replies, replayed
+assert all(x[k] == recorded[p['qid']][k] for p, x, g in zip(
+    cal, CAL_V0, graded) if g for k in VERDICTS)  # the replies, replayed
+again = sum(no_verdict(x, p) for p, x in zip(cal, CAL_V0))
 print(f'{len(cal) - sum(graded)} of {len(cal)} calibration answers abstain '
-      '(decided by rule); the judge grades the others')
+      f'(decided by rule); the judge grades the others\n  {again} without a '
+      f'verdict judged again with {RETRY_TOKENS:,} new tokens')
 
 def kappa(a, b):
     """Cohen's kappa of two 0/1 arrays."""
@@ -1283,15 +1375,15 @@ rows = []
 for k in ('correct', 'faithful'):
     for who, field in (('frontier', f'{k}_frontier'),
                        ('second', f'{k}_second'), ('consensus', k)):
-        keep = [(x[k] is True, lab[p['qid']][field])
-                for p, x in zip(cal, v) if lab[p['qid']][field] is not None]
+        keep = [(x[k], lab[p['qid']][field]) for p, x in zip(cal, v)
+                if None not in (x[k], lab[p['qid']][field])]  # unjudged out
         (acc, alo, ahi), (kap, klo, khi) = agreement(*zip(*keep))
         rows.append({'verdict': k, 'against': who, 'pairs': len(keep),
                      'agreement': f'{acc:.2f} [{alo:.2f}, {ahi:.2f}]',
                      'kappa': f'{kap:.2f} [{klo:.2f}, {khi:.2f}]'})
 print(pd.DataFrame(rows).to_string(index=False))
-print(f'no verdict (counted as false): {sum(x["correct"] is None for x in v)}'
-      f' of {len(cal)} calibration pairs')
+print(f'unjudged (left out): {sum(x["correct"] is None for x in v)} of '
+      f'{len(cal)} calibration pairs')
 for k in ('correct', 'faithful'):
     pairs = [(lab[p['qid']][f'{k}_frontier'], lab[p['qid']][f'{k}_second'])
              for p in cal]
@@ -1302,27 +1394,31 @@ old = next(c for c in json.load(open(os.path.join(
 oc = old['calibration']['correct']
 print(f'the old judge (Qwen3.5-4B, thinking off) on correct: agreement '
       f'{oc["acc"]:.2f}, kappa {oc["kappa"]:.2f} [{oc["k_lo"]:.2f}, '
-      f'{oc["k_hi"]:.2f}]; it passes {old["calibration"]["false_correct"][0]}'
-      f' of the {old["calibration"]["false_correct"][1]} answers the '
-      'labellers call wrong')
+      f'{oc["k_hi"]:.2f}];\n  it passes '
+      f'{old["calibration"]["false_correct"][0]} of the '
+      f'{old["calibration"]["false_correct"][1]} answers the labellers call '
+      'wrong')
 for k in ('correct', 'faithful'):  # the claims that rest on the judge
     (acc, _, _), (_, klo, _) = agreement(*zip(*[
-        (x[k] is True, lab[p['qid']][k]) for p, x in zip(cal, v)
-        if lab[p['qid']][k] is not None]))
+        (x[k], lab[p['qid']][k]) for p, x in zip(cal, v)
+        if None not in (x[k], lab[p['qid']][k])]))
     print(f'C0 on {k} against the consensus: agreement {acc:.2f}, kappa '
-          f'interval from {klo:.2f}: ' + ('passes (>= 0.8, above 0.4)'
+          f'interval from {klo:.2f}\n  ' + ('passes (>= 0.8, above 0.4)'
           if acc >= 0.8 and klo > 0.4 else 'fails: claims on it carry the '
           'agreement'))
 print('the calibration answers come from the earlier generator, Qwen3-4B')
 if len(JUD) and 2 * CONCURRENCY in JUD.concurrency.values:
-    both = JUD[JUD.config == 'base'].groupby('qid').filter(
-        lambda g: g.concurrency.nunique() == 2)
+    J = JUD[JUD.config == 'base']
+    n16 = (J.concurrency == 2 * CONCURRENCY).sum()
+    both = J[J.max_new_tokens == JUDGE['max_new_tokens']].groupby(
+        'qid').filter(lambda g: g.concurrency.nunique() == 2)  # same budget
     changed = both.groupby('qid').apply(lambda g: (g[VERDICTS].astype(
         str).nunique() > 1).any(), include_groups=False)
     print(f'judged again at concurrency {2 * CONCURRENCY} (first run '
           f'{CONCURRENCY}): {changed.sum()} of {len(changed)} answers '
-          f'changed a verdict (of {N_REPEAT} drawn, the '
-          f'{N_REPEAT - len(changed)} abstentions are decided by rule)')
+          f'changed a verdict\n  (of {N_REPEAT} drawn, '
+          f'{N_REPEAT - n16} abstentions are decided by rule and '
+          f'{n16 - len(changed)} were judged again with more tokens)')
 ```
 
 <!-- Placeholder (prose): the baseline's measurements, each with an interval
@@ -1391,7 +1487,8 @@ def boot(a, b=None, cluster=None):
 
 def scores(config, split='dev'):
     """One row per judged answer of a configuration on a split, with
-    per-question scores (NaN where a score does not apply)."""
+    per-question scores (NaN where a score does not apply, and accuracy NaN
+    where the judge gave no verdict: an unjudged answer is left out)."""
     g = GENS[(GENS.config == config) & (GENS.split == split)]
     j = JUD[JUD.concurrency == CONCURRENCY][['config', 'qid', 'answer_sha']
                                             + VERDICTS]
@@ -1411,8 +1508,7 @@ def scores(config, split='dev'):
         'answerable': ans, 'type': [q['type'] for q in items],
         'book_specific': ['general_knowledge' not in q['flags']
                           for q in items],
-        'accuracy': [float(v is not None and v == v and bool(v))
-                     for v in df.correct],
+        'accuracy': flag('correct'),  # NaN: unjudged, left out
         'faithful': np.where(answered, flag('faithful'), np.nan),
         'supported': np.where(answered, flag('supported'), np.nan),
         'cite_precision': np.where(ans, cm.precision, np.nan),
@@ -1472,6 +1568,8 @@ if len(S) == 4:
         rows[c]['abstain, answerable'] = boot(
             s.abstained[s.answerable], cluster=s.cluster[s.answerable])
     print(pd.DataFrame(rows).to_string())
+    print('unjudged, left out of accuracy: ' + ', '.join(
+        f'{c} {S[c].accuracy.isna().sum()}' for c in S))
     B = S['base']
     ans = lambda m: m.answerable_a
     spec = lambda m: m.answerable_a & m.book_specific_a
@@ -1489,7 +1587,7 @@ if len(S) == 4:
     C = S['closed'][S['closed'].answerable & S['closed'].book_specific]
     Bs = B[B.answerable & B.book_specific]
     print(f'book-specific answerable questions ({len(C)}): closed book '
-          f'{boot(C.accuracy, cluster=C.cluster)}, '
+          f'{boot(C.accuracy, cluster=C.cluster)},\n  '
           f'base {boot(Bs.accuracy, cluster=Bs.cluster)}')
     A = B[B.answerable].merge(S['closed'][['qid', 'accuracy']], on='qid',
                               suffixes=('', '_closed'))
@@ -1506,34 +1604,52 @@ if {'base', 'base-repeat'} <= set(GENS.config):  # answers, not verdicts
     same_ctx = b.context_ids.map(tuple) == r.context_ids.map(tuple)
     differ = b.answer != r.answer
     print(f'base and base-repeat (same questions, other batches): '
-          f'{(~same_ctx).sum()} of {len(b)} contexts differ (query '
+          f'{(~same_ctx).sum()} of {len(b)} contexts differ\n  (query '
           f'embeddings batched differently); with the same context '
           f'{differ[same_ctx].sum()} of {same_ctx.sum()} answers differ')
-print('* fewer than 100 questions (documents resampled); + fewer than 30 '
+print('* fewer than 100 questions (documents resampled)\n+ fewer than 30 '
       'documents: questions resampled, an interval that is likely too '
       'narrow')
 ```
 
 <!-- Placeholder (prose): the failure the opening asked about: a question
 whose relevant chunk was in the context and whose answer was still judged
-wrong. -->
+wrong, chosen by the fixed rule in the cell (the second labeller's card
+agrees with the rule's class, so it is not a judge error). -->
 
 ```{.python .input #rag-opening-item}
 %%tab pytorch
-if 'base' in S:
-    B = S['base']  # judged wrong, not merely without a verdict
-    wrong = B.verdicts.map(lambda v: v['correct'] is not None
-                           and not bool(v['correct']))
-    row = B[(B.hit == 1) & wrong].iloc[0]
-    q, rec = ITEMS[row.qid], row.record
+# The rule: the first base dev answer (in qid order) with a relevant chunk
+# in its context that the judge called incorrect, and whose failure card
+# carries the same class from the second labeller as from the rule: a
+# failure of the pipeline that two graders agree on, not a judge error
+path = run_path('rag-cards')
+LABEL = {c['qid']: c['labeller']['label'] for c in (
+    d2l.read_jsonl(path).to_dict('records') if path else [])
+    if c.get('labeller')}
+if 'base' in S and LABEL:
+    B = S['base']
+    cls = [d2l.classify_failure(r, ITEMS[q], v, CORPUS, DEPTH)
+           for q, r, v in zip(B.qid, B.record, B.verdicts)]
+    pick = [(q, c) for q, c, h in zip(B.qid, cls, B.hit) if h == 1 and c in (
+        'ignored', 'unsupported', 'false_abstain') and LABEL.get(q) == c]
+    d2l.print_wrapped(f'{len(pick)} base answers qualify: ' + ', '.join(
+        f'{q} ({c})' for q, c in pick), width=96)
+    row = B.set_index('qid').loc[pick[0][0]]
+    q, rec = ITEMS[pick[0][0]], row.record
     rel = d2l.gold_chunk_ids(q, CORPUS)
     rank = next(i for i, c in enumerate(rec['ranked_ids'], 1) if c in rel)
-    print(f'{q["qid"]} ({q["type"]}): {q["question"]}\nreference: '
-          f'{q["reference"]}\nfirst relevant chunk at rank {rank}; context: '
-          + ', '.join(f'[{n}] {c.split(":")[1]}' + (' (relevant)' if c in rel
-                                                     else '')
-                      for n, c in enumerate(rec['context_ids'], 1)))
-    print(f'answer: {rec["answer"]}\nverdicts: {row.verdicts}')
+    wrap = lambda t: textwrap.fill(t, 96, subsequent_indent='    ')
+    print('\n' + wrap(f'{q["qid"]} ({q["type"]}): {q["question"]}'))
+    print(wrap(f'reference: {q["reference"]}'))
+    print(wrap(f'key facts: {q["key_facts"]}'))
+    print(f'first relevant chunk at rank {rank}; context:')
+    for n, c in enumerate(rec['context_ids'], 1):
+        print(f'  [{n}] {c.split(":")[1]}' + (' (relevant)' if c in rel
+                                               else ''))
+    print(wrap(f'answer: {rec["answer"]}'))
+    print(f'verdicts: {row.verdicts}\nclass: {pick[0][1]}, by the rule and '
+          'by the second labeller')
 ```
 
 <!-- Placeholder (prose, ## Changing One Stage at a Time): chunking first,
@@ -1614,7 +1730,9 @@ for c in STAGES:
                  'delta': r.mean, 'excludes 0': r.ci[0] > 0 or r.ci[1] < 0})
 if rows:
     T = pd.DataFrame(rows)
-    print(T.drop(columns=['delta', 'excludes 0']).to_string(index=False))
+    for cols in (['accuracy', 'faithful', 'cite precision'],  # two tables:
+                 ['accuracy - base', 'prompt tokens', 's per answer']):
+        print(T[['configuration'] + cols].to_string(index=False))  # width
     print(f'intervals excluding 0: {list(T.configuration[T["excludes 0"]])}')
 if len(rows) == len(STAGES):  # the rule of the fix step, on every stage
     BEST = T.configuration[T.delta.idxmax()]
@@ -1657,9 +1775,11 @@ def class_shares(cls):
 LARGEST = FIX = None
 if ready('base'):
     BC = classes('base')
-    fails = BC[BC.cls != 'correct']
+    fails = BC[~BC.cls.isin(['correct', 'unjudged'])]
     SH = class_shares(fails.cls)
-    print(f'{len(fails)} of {len(BC)} base answers on dev are not correct')
+    n_un = (BC.cls == 'unjudged').sum()
+    print(f'{len(fails)} of {len(BC) - n_un} judged base answers on dev are '
+          f'not correct ({n_un} unjudged, left out)')
     print(SH.assign(share=lambda d: d.apply(
         lambda r: f'{r.share:.2f} [{r.lo:.2f}, {r.hi:.2f}]', axis=1))
           [['count', 'share']].to_string())
@@ -1670,7 +1790,7 @@ if ready('base'):
     FIX = f'fix-{LARGEST}'
     print(f'the largest class: {LARGEST} ({"most failures: its interval "
           "lies above the next" if most else "the intervals overlap"}, '
-          f'next {nxt}); its fix, written down before counting: '
+          f'next {nxt})\nits fix, written down before counting: '
           f'{ {k: v for k, v in CONFIGS[FIX].items() if BASE[k] != v} }')
     rng = random.Random(0)
     sample = sorted(rng.sample(list(fails.qid), min(N_CARDS, len(fails))))
@@ -1686,9 +1806,12 @@ if ready('base'):
         for q in sample]
     for card in cards[:5]:
         hit = bool(set(card['relevant']) & set(card['context_ids']))
-        print(f'\n[{card["rule"]}] {card["qid"]} ({card["type"]}): '
-              f'{card["question"]}\n  answer: {card["answer"][:300]}\n  '
-              f'relevant chunk in the context: {hit}; verdicts: '
+        print('\n' + textwrap.fill(
+            f'[{card["rule"]}] {card["qid"]} ({card["type"]}): '
+            f'{card["question"]}', 96, subsequent_indent='    '))
+        print(textwrap.fill(f'answer: {card["answer"][:300]}', 96,
+                            initial_indent='  ', subsequent_indent='    '))
+        print(f'  relevant chunk in the context: {hit}\n  verdicts: '
               f'{card["verdicts"]}')
     if 'rag-cards' in RERUN:  # the agent's labels are added before upload
         d2l.lm_save_table(ARTIFACTS['rag-cards'][1], pd.DataFrame(cards),
@@ -1697,7 +1820,7 @@ if ready('base'):
     labelled = [c for c in (d2l.read_jsonl(path).to_dict('records')
                             if path else []) if c.get('labeller')]
     if labelled:
-        rule = dict(zip(fails.qid, fails.cls))
+        rule = dict(zip(BC.qid, BC.cls))  # by the current verdicts
         agent = pd.Series({c['qid']: c['labeller']['label']
                            for c in labelled})
         now = agent.index.map(rule)
@@ -1714,7 +1837,9 @@ if ready('base'):
 choice by hand) on dev, then a single read of test: the baseline, the fix
 and the stage change with the largest dev gain. The dev gain is optimistic,
 because the fix was chosen from dev failures; test is the confirmation. The
-cell prints the rule test was read with (fix, stage, threshold). Close of the
+cell prints the rule test was read with (fix, stage, threshold); when the
+re-judged verdicts moved the near-tie between stages on dev, it says so and
+test is not read again. Close of the
 ## with one paragraph, "beyond these fixes": the families of RAG improvement
 this section does not measure (query transformation, iterative and adaptive
 retrieval, retrieval learned with reinforcement learning, context
@@ -1767,8 +1892,13 @@ if rules:
           f'{RULE["best"]}' + ('' if RULE['threshold'] is None else
                               f', abstaining below a reranker score of '
                               f'{RULE["threshold"]:.3f} (tuned on train)'))
-    assert not rules and (RERUN or (RULE['fix'], RULE['best']) == (
-        FIX, BEST)), 'the rule now picks another fix or stage'
+    assert not rules and (RERUN or RULE['fix'] == FIX), (
+        'the rule now picks another fix')
+    if BEST != RULE['best']:  # stage deltas within noise: a tie can move
+        print(f'with the verdicts as they stand now the largest dev gain is '
+              f'{BEST};\n  test was read once, with {RULE["best"]}, and is '
+              'not read again')
+    BEST = RULE['best']  # the stage that test was read with
 
 if FIX and ready('base', FIX):
     rows = []
@@ -1783,9 +1913,10 @@ if FIX and ready('base', FIX):
                              a, b, 'cite_precision')})
     print(pd.DataFrame(rows).to_string(index=False))
     after = classes(FIX)
-    print(pd.DataFrame({'base': BC.cls.value_counts(), FIX: after.cls
-                        .value_counts()}).reindex(CLASSES + ['correct'])
-          .fillna(0).astype(int).T.to_string())
+    print(pd.DataFrame({'base': BC.cls.value_counts(),
+                        FIX: after.cls.value_counts()})
+          .reindex(CLASSES + ['correct', 'unjudged']).fillna(0).astype(int)
+          .to_string())
 ```
 
 <!-- Placeholder (prose): the plot below: on the left the share of dev
@@ -1803,7 +1934,7 @@ if FIX and ready('closed', 'base', FIX):
     _, axes = d2l.plt.subplots(1, 2, figsize=(9, 3.6), layout='constrained')
     series = {}
     for name, df in (('base', BC), ('fix', after)):
-        sh = class_shares(df.cls)
+        sh = class_shares(df.cls[df.cls != 'unjudged'])  # judged only
         series[name] = (sh.share, sh.lo, sh.hi)
     d2l.plot_intervals(CLASSES, series, 'failure class',
                        'share of dev questions', axes=axes[0])
@@ -1875,9 +2006,9 @@ print(f'three documents, three tokens: p_S {seq:.4f}, p_T {tok_:.4f}; '
       f'one document: both {one[0]:.4f}')
 pz = torch.tensor([0.6, 0.4], dtype=torch.float64)  # the case by hand
 P = torch.tensor([[0.9, 0.2], [0.1, 0.8]], dtype=torch.float64)
-print('two documents, two tokens: p_S = 0.6 * 0.9 * 0.2 + 0.4 * 0.1 * 0.8 '
-      '= {:.3f}; p_T = (0.6 * 0.9 + 0.4 * 0.1)(0.6 * 0.2 + 0.4 * 0.8) = '
-      '{:.4f}'.format(*p_seq_tok(pz, P)))
+print('two documents, two tokens:\n  p_S = 0.6 * 0.9 * 0.2 + 0.4 * 0.1 * '
+      '0.8 = {:.3f}\n  p_T = (0.6 * 0.9 + 0.4 * 0.1)(0.6 * 0.2 + 0.4 * 0.8) '
+      '= {:.4f}'.format(*p_seq_tok(pz, P)))
 ```
 
 <!-- Placeholder (prose): what each configuration costs: prompt and

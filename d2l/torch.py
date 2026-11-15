@@ -7244,7 +7244,7 @@ def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
     if padding_side is not None:
         tokenizer.padding_side = padding_side
     model.revision = revision
-    print(f'{model_id}@{revision[:12]}: {type(model).__name__}, '
+    print(f'{model_id}@{revision[:12]}: {type(model).__name__}\n    '
           f'{dtype}, {device}, attention '
           f'{model.config._attn_implementation}')
     for what, keys in (('not used', info['unexpected_keys']),
@@ -8215,6 +8215,12 @@ d2l.DATA_HUB['lm-rag-judge-v2'] = (  # v1 and the verdicts on the fix run
 d2l.DATA_HUB['lm-rag-judge-cache-v2'] = (  # every recorded reply
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v2.zip',
     '9b68fb8b52733e7909000165121512892f4b022c')
+d2l.DATA_HUB['lm-rag-judge-v3'] = (  # v2, missing verdicts judged again
+    d2l.LM_DATA_URL + 'lm-rag-judge-v3.jsonl',  # with 6,000 new tokens
+    '28d257ee9b9545e7035917e6612d978faf8d259d')
+d2l.DATA_HUB['lm-rag-judge-cache-v3'] = (  # v2 and those longer replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v3.zip',
+    '8711571c3c94646d17215c522aec15d7a3cd269c')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):
@@ -8647,9 +8653,13 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
     relevant chunk in the first-stage top depth), 'ranked_low' (one there,
     none in the context), 'false_abstain' (one in the context, yet the
     answer abstains), 'ignored' (faithful to the context, not correct) or
-    'unsupported' (not faithful). A missing verdict counts as false."""
+    'unsupported' (not faithful). 'unjudged' when the judge gave no
+    verdict that the class depends on: such an answer has no class."""
     r = result._asdict() if hasattr(result, '_asdict') else result
     true = lambda v: isinstance(v, (bool, np.bool_)) and bool(v)
+    given = lambda v: isinstance(v, (bool, np.bool_))
+    if not given(judge_out['correct']):
+        return 'unjudged'
     if true(judge_out['correct']):
         return 'correct'
     if not item['answerable']:
@@ -8660,6 +8670,8 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
                 else 'not_retrieved')
     if d2l._rag_abstained(r['answer']):
         return 'false_abstain'
+    if not given(judge_out.get('faithful')):
+        return 'unjudged'
     return 'ignored' if true(judge_out['faithful']) else 'unsupported'
 
 def train_batch_ch13(net, X, y, loss, trainer, devices):
@@ -14880,10 +14892,13 @@ def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
         batch = d2l.chat_batch(judge, [dict(
             messages=m, max_tokens=max_new_tokens, temperature=0, seed=0)
             for m in messages], concurrency=batch_size)
-        # A thread of its own: a notebook's kernel already runs an event
-        # loop, in which asyncio.run refuses to start
-        with concurrent.futures.ThreadPoolExecutor(1) as pool:
-            out = pool.submit(asyncio.run, batch).result()
+        if hasattr(judge, '_run'):  # a d2l.ChatAPI: its private event loop,
+            out = judge._run(batch)  # the same for every batch, so its HTTP
+        else:                        # connections never outlive their loop
+            # A thread of its own: a notebook's kernel already runs an
+            # event loop, in which asyncio.run refuses to start
+            with concurrent.futures.ThreadPoolExecutor(1) as pool:
+                out = pool.submit(asyncio.run, batch).result()
         return [r if isinstance(r, BaseException)  # no reply at all
                 else None if r.finish_reason == 'length'
                 else (r.text or '').split('</think>')[-1] for r in out]

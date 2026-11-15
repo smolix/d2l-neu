@@ -8769,6 +8769,316 @@ def fetch_warc_range(pin='lm-cc-warc-256m-v1', n_bytes=None, cache_dir=None,
         d2l._fetch_blocks(warc, path, have, n_bytes // block)
     return path
 
+NAIVE_BLOCK_TAGS = {'p', 'div', 'li', 'td', 'th', 'tr', 'pre', 'h1', 'h2',
+                    'h3', 'h4', 'h5', 'h6', 'section', 'article', 'main',
+                    'blockquote', 'ul', 'ol', 'table', 'header', 'footer',
+                    'nav', 'aside', 'form'}
+
+def naive_blocks(page):
+    """The text blocks of a page, split at block-level tags, as (text,
+    characters of link text) pairs; a <pre> block keeps its lines.
+    Comments, <head>, scripts and styles are removed first.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import html
+    page = re.sub(r'<!--.*?-->|<(head|script|style|noscript|template)\b'
+                  r'.*?</\1\s*>', ' ', page, flags=re.S | re.I)
+    blocks, parts, in_a, pre = [], [], 0, 0  # parts: (string, in a link)
+
+    def flush():
+        raw = ''.join(s for s, _ in parts)
+        text = ('\n'.join(l.rstrip() for l in raw.strip('\n').splitlines())
+                if pre else ' '.join(raw.split()))
+        links = sum(len(s.strip()) for s, link in parts if link)
+        if text:
+            blocks.append((text, min(links, len(text))))
+        parts.clear()
+
+    for m in re.finditer(r'<(/?)([A-Za-z][\w:-]*)[^>]*>|(<|[^<]+)', page):
+        close, tag, data = m.group(1), (m.group(2) or '').lower(), m.group(3)
+        if data is not None:
+            parts.append((html.unescape(data), in_a > 0))
+        elif tag in d2l.NAIVE_BLOCK_TAGS:
+            flush()  # a block tag, opening or closing, ends a block
+            pre = max(0, pre + (tag == 'pre') * (-1 if close else 1))
+        elif tag == 'a':
+            in_a = max(0, in_a + (-1 if close else 1))
+        elif tag == 'br':
+            parts.append(('\n', False))
+    flush()
+    return blocks
+
+def extract_text(html, method='trafilatura', url=None):
+    """The main text of a page, or None. 'naive': blocks with at least 40
+    characters of which at most a third is link text, plus their
+    neighbours within two blocks that have at least 15 characters and pass
+    the same link-density test; 'trafilatura' and 'resiliparse': the two
+    libraries' main-content extraction.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import logging
+    if method == 'naive':
+        blocks = d2l.naive_blocks(html)
+        dense = [len(t) >= 15 and l <= 0.33 * len(t) for t, l in blocks]
+        core = [i for i, (t, l) in enumerate(blocks)
+                if len(t) >= 40 and dense[i]]
+        keep = sorted({j for i in core for j in range(i - 2, i + 3)
+                       if 0 <= j < len(blocks) and dense[j]})
+        text = '\n'.join(blocks[j][0] for j in keep)
+    elif method == 'trafilatura':
+        import trafilatura
+        logging.getLogger('trafilatura').setLevel(logging.CRITICAL)
+        text = trafilatura.extract(html, url=url, include_tables=True,
+                                   favor_precision=False)
+    elif method == 'resiliparse':
+        from resiliparse.extract.html2text import extract_plain_text
+        text = extract_plain_text(html, main_content=True)
+    else:
+        raise ValueError(f'unknown method {method!r}')
+    return text if text and text.strip() else None
+
+NAIVE_FIXTURES = {  # name: (HTML, the naive extractor's expected output)
+    'article with sidebar': (
+        '<html><body><nav><a href="/">Home</a> <a href="/news">News</a> '
+        '<a href="/about">About us</a></nav><article><h1>Rain returns to '
+        'the valley</h1><p>After eleven dry months the first storm of the '
+        'season reached the valley on Tuesday night.</p><p>Farmers said '
+        'the rain came too late for the barley but in time for the '
+        'vines.</p></article><aside><ul><li><a href="/a">Most read: the '
+        'new bridge opens</a></li><li><a href="/b">Weather for the '
+        'weekend ahead</a></li></ul></aside></body></html>',
+        'Rain returns to the valley\nAfter eleven dry months the first '
+        'storm of the season reached the valley on Tuesday night.\nFarmers '
+        'said the rain came too late for the barley but in time for the '
+        'vines.'),
+    'forum': (
+        '<html><body><div class="post"><div class="user"><a href="/u/7">'
+        'mira_k</a></div><div class="msg">Has anyone managed to compile '
+        'the driver on the new kernel? It fails at the linking step for '
+        'me.</div></div><div class="post"><div class="user"><a href="/u/9">'
+        'ole</a></div><div class="msg">Yes, you need the headers package '
+        'for your exact kernel version, then rebuild.</div></div>'
+        '</body></html>',
+        'Has anyone managed to compile the driver on the new kernel? It '
+        'fails at the linking step for me.\nYes, you need the headers '
+        'package for your exact kernel version, then rebuild.'),
+    'table': (
+        '<html><body><p>Monthly rainfall at the station, in millimetres, '
+        'for the first quarter:</p><table><tr><th>Month</th><th>Rain</th>'
+        '</tr><tr><td>January</td><td>82</td></tr><tr><td>February</td>'
+        '<td>61</td></tr></table></body></html>',
+        'Monthly rainfall at the station, in millimetres, for the first '
+        'quarter:'),  # the cells are too short: the table is lost
+    'pre': (
+        '<html><body><p>The loop below sums the first hundred integers '
+        'and prints the result:</p><pre>total = 0\nfor i in range(100):\n'
+        '    total += i\nprint(total)</pre></body></html>',
+        'The loop below sums the first hundred integers and prints the '
+        'result:\ntotal = 0\nfor i in range(100):\n    total += i\n'
+        'print(total)'),
+    'empty': ('<html><head><title>x</title></head><body></body></html>',
+              None)}
+
+def structure_recall(html, text):
+    """Recall of a page's structural content in an extracted text: the
+    share of code lines, table cells and mathematics strings found in it,
+    the character-5-gram recall of the <p> text ('prose'), and a precision
+    proxy, the share of the text's characters on lines found in the page's
+    content elements. html is a page or its html_structure; a class absent
+    from the page gives None, and an empty text recalls nothing.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    s = html if isinstance(html, dict) else d2l.html_structure(html)
+    text = text or ''
+    flat, nows = d2l._ws(text), d2l._nows(text)
+    out = {}
+    out['code'] = (np.mean([l in flat for l in s['code']])
+                   if s['code'] else None)
+    for c in ('table', 'math'):
+        out[c] = np.mean([x in nows for x in s[c]]) if s[c] else None
+    grams = lambda t: {t[i:i + 5] for i in range(len(t) - 4)}
+    P = grams(s['prose'].replace('\n', ''))
+    out['prose'] = len(P & grams(nows)) / len(P) if P else None
+    lines = [d2l._nows(l) for l in text.splitlines()]
+    total = sum(map(len, lines))
+    out['precision'] = (sum(len(l) for l in lines if l in s['content'])
+                        / total if total else None)
+    return {k: (None if v is None else float(v)) for k, v in out.items()}
+
+_LID_MODEL = []  # the fastText model, loaded once per process
+
+def detect_lang(text, k=1):
+    """The top k (language, score) pairs of fastText's 176-language
+    identifier (lid.176.ftz) for a text; newlines become spaces first, as
+    fastText reads one line.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    if not d2l._LID_MODEL:
+        import fasttext
+        fasttext.FastText.eprint = lambda *args, **kwargs: None  # quiet load
+        d2l._LID_MODEL.append(fasttext.load_model(
+            str(d2l.download_keyed('lid.176.ftz'))))
+    labels, scores = d2l._LID_MODEL[0].predict(text.replace('\n', ' '), k=k)
+    return [(l.removeprefix('__label__'), min(float(s), 1.0))
+            for l, s in zip(labels, scores)]
+
+PII_PATTERNS = {
+    'email': re.compile(r'\b[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\.)+'
+                        r'[A-Za-z]{2,}\b'),
+    'ip': re.compile(r'(?<![\w.:])(?:(?:\d{1,3}\.){3}\d{1,3}|'
+                     r'(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|'
+                     r'(?:[0-9A-Fa-f]{1,4}:){1,6}:'
+                     r'(?:[0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})'
+                     r'(?![\w:]|\.\d)')}  # a sentence may end in a dot
+
+def scrub_pii(text):
+    """Replace email addresses by <EMAIL> and public IPv4 and IPv6
+    addresses by <IP> (an address must parse; private, loopback,
+    documentation and multicast ranges are kept); returns the text and
+    the counts.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import ipaddress
+    counts = {'email': 0, 'ip': 0}
+
+    def email(m):
+        counts['email'] += 1
+        return '<EMAIL>'
+
+    def ip(m):
+        try:
+            a = ipaddress.ip_address(m.group())
+            public = a.is_global and not a.is_multicast
+        except ValueError:
+            return m.group()
+        counts['ip'] += public
+        return '<IP>' if public else m.group()
+
+    text = d2l.PII_PATTERNS['email'].sub(email, text)
+    return d2l.PII_PATTERNS['ip'].sub(ip, text), counts
+
+PII_FIXTURE = [  # (string, kind it holds: 'email', 'ip' or None)
+    ('write to anna.berg@example.org for the slides', 'email'),
+    ('Contact: j.smith+news@mail.example.co.uk', 'email'),
+    ('send it to OPS@EXAMPLE.COM today', 'email'),
+    ('reach me at li_wei99@uni-example.edu.cn', 'email'),
+    ('Fragen an info@beispiel.de bitte', 'email'),
+    ('(maria.garcia@correo.example.es)', 'email'),
+    ('mailto:help-desk@example.net', 'email'),
+    ('cc: bob@sub.domain.example.io, alice@example.ai', 'email'),
+    ('Author: k.tanaka@example.jp', 'email'),
+    ('reply to noreply@notifications.example.com', 'email'),
+    ('email: first.last@company-example.com.', 'email'),
+    ('<a href="mailto:press@example.org">press</a>', 'email'),
+    ('orders: sales@shop.example.store', 'email'),
+    ('my address is pat_2001@example.travel', 'email'),
+    ('Ping x@example.dev if the build breaks', 'email'),
+    ('Webmaster - webmaster@example.museum', 'email'),
+    ('send CVs to jobs@example.careers', 'email'),
+    ('Report abuse: abuse@isp.example.net', 'email'),
+    ('questions -> q.and.a@forum.example.org', 'email'),
+    ('Kontakt: m.mueller@firma-beispiel.at', 'email'),
+    ('his email (tom.o@example.ie) was on the poster', 'email'),
+    ('chair: prof.chen@cs.example.edu', 'email'),
+    ('Email:support@example.com', 'email'),
+    ('a.b.c.d@example.co', 'email'),
+    ('Subscribe: list-request@lists.example.org', 'email'),
+    ('billing@example.biz handles refunds', 'email'),
+    ('user%host@example.com is an old relay form', 'email'),
+    ('Send photos to editor@news.example.com.au', 'email'),
+    ('Tel. 555-0100, mail: office@example.fr', 'email'),
+    ('Questions? Ask ivan.petrov@example.ru', 'email'),
+    ('server at 8.8.8.8 answered', 'ip'),
+    ('Client IP: 203.0.114.7', 'ip'),
+    ('ssh root@93.184.216.34', 'ip'),
+    ('blocked 45.33.32.156 after 5 tries', 'ip'),
+    ('origin=151.101.1.69;', 'ip'),
+    ('ping 1.1.1.1 -c 4', 'ip'),
+    ('from host 81.2.69.160 port 443', 'ip'),
+    ('X-Forwarded-For: 66.249.66.1', 'ip'),
+    ('the attack came from 185.220.101.4.', 'ip'),
+    ('[23.45.67.89]', 'ip'),
+    ('IP 104.16.132.229 resolved', 'ip'),
+    ('nameserver 9.9.9.9', 'ip'),
+    ('allowlist: 52.95.110.1', 'ip'),
+    ('log line 17.253.144.10 - - [26/Jan/2025]', 'ip'),
+    ('192.30.255.112 is listed', 'ip'),
+    ('visit http://200.147.67.142/index', 'ip'),
+    ('my VPS is 139.59.21.43', 'ip'),
+    ('peer: 77.88.55.60', 'ip'),
+    ('gateway (31.13.71.36)', 'ip'),
+    ('upstream 140.82.112.3', 'ip'),
+    ('AAAA 2a00:1450:4001:82a::200e', 'ip'),
+    ('v6: 2606:4700:4700::1111', 'ip'),
+    ('host 2620:fe::fe answers', 'ip'),
+    ('2a03:2880:f12f:83:face:b00c:0:25de', 'ip'),
+    ('from 2001:4860:4860::8888', 'ip'),
+    ('addr 2a01:4f8:c17:1234::1', 'ip'),
+    ('[2400:cb00:2048:1::c629:d7a2]', 'ip'),
+    ('client 2a02:6b8::2:242 connected', 'ip'),
+    ('route via 2600:1f18:6a3:4b00::12', 'ip'),
+    ('ns 2001:500:2f::f', 'ip'),
+    ('our router is at 192.168.1.1', None),
+    ('the cluster uses 10.0.0.0/8 internally', None),
+    ('localhost is 127.0.0.1', None),
+    ('documentation range 192.0.2.15', None),
+    ('link-local fe80::1ff:fe23:4567:890a', None),
+    ('test net 198.51.100.7', None),
+    ('private 172.16.254.3', None),
+    ('loopback ::1 only', None),
+    ('unique local fd12:3456:789a:1::1', None),
+    ('example 2001:db8::ff00:42:8329', None),
+    ('Upgrade to version 4.2.1.0 now', None),
+    ('Changelog for 1.2.3.4 (stable)', None),
+    ('build 5.15.0.91 of the kernel', None),
+    ('SNMP OID 1.3.6.1.4.1.2021', None),
+    ('section 3.4.1.2 of the standard', None),
+    ('ISBN 978-0-306-40615-7', None),
+    ('ISBN 0-306-40615-2 (paperback)', None),
+    ('phone +1 555 0100 222', None),
+    ('the score was 3.14.15.92 in the puzzle', None),
+    ('logo@2x.png in the assets folder', None),
+    ('icon@3x.webp for retina screens', None),
+    ('follow @d2l_ai for updates', None),
+    ('write to anna dot berg at example dot org', None),
+    ('the domain example.com hosts it', None),
+    ('price 1.299,00 EUR', None),
+    ('coordinates 52.5200, 13.4050', None),
+    ('date 2025.01.26', None),
+    ('time 13:54:02', None),
+    ('MAC 00:1A:2B:3C:4D:5E', None),
+    ('C++ uses std::vector<int>', None),
+    ('the ratio 16:9 screen', None),
+    ('PEP 8 says @decorator first', None),
+    ('the user name is root', None),
+    ('256.300.1.2 is not an address', None),
+    ('999.1.1.1 overflows', None),
+    ('vector 1:2:3 notation', None),
+    ('npm i pkg@1.2.3', None),
+    ('git@github.com:org/repo.git', None),
+    ('the hash a3f2:9c1e', None),
+    ('Bible verse John 3:16', None),
+    ('temperature 21.5 C', None),
+    ('a.b@c', None),
+    ('foo@bar', None),
+    ('10.10.10.10 on the lab switch', None),
+    ('the meeting is at 10.30', None),
+    ('patent US 7,654,321 B2', None),
+    ('IPv4 has 4.3 billion addresses', None),
+    ('the CIDR 0.0.0.0/0 means everything', None),
+    ('multicast 224.0.0.251 for mDNS', None),
+    ('broadcast 255.255.255.255', None),
+    ('shared address space 100.64.0.1', None),
+    ('benchmark range 198.18.0.1', None),
+    ('version v2.0.0.1-beta', None),
+    ('model 7.1.2.3 of the router firmware', None),
+    ('ISSN 0317-8471', None),
+    ('the regex \\d+@\\w+', None),
+    ('emoji :smile: in chat', None),
+    ('call 0800 123 4567 for help', None),
+    ('IBAN DE89 3704 0044 0532 0130 00', None),
+    ('ISBN-13 978.3.16.148410.0', None)]
+
 Doc = collections.namedtuple(
     'Doc', 'id url date text lang lang_score src log flags')
 
@@ -8927,6 +9237,49 @@ class CorpusManifest:
                 lines.append(f'| {k} | {v.get("n_docs")} | {v.get("n_tokens")}'
                              f' | {len(v.get("shards", []))} |')
         return '\n'.join(lines) + '\n'
+
+def rebuild_c0(manifest='lm-c0-docs-v1', warc_path=None, *, cache_dir=None,
+               workers=None):
+    """Rebuild the c0 documents from their manifest rows (a DATA_HUB key or
+    a path): each record is read from the verified WARC range by offset
+    and length and passed through the recorded stages again. A document is
+    kept only if its text hashes to the recorded text_sha256; the others
+    are listed in .mismatches (extractor drift), never kept. The texts are
+    written to cache_dir (default ../data/lm/c0), never uploaded.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import concurrent.futures
+    import multiprocessing
+    import pathlib
+    path = (d2l.download_keyed(manifest) if manifest in d2l.DATA_HUB
+            else manifest)
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        rows = [json.loads(line) for line in f]
+    warc_path = str(warc_path or d2l.fetch_warc_range())
+    d2l.download_keyed('lid.176.ftz')  # once, before the workers
+    with concurrent.futures.ProcessPoolExecutor(
+            workers or min(8, os.cpu_count()),
+            mp_context=multiprocessing.get_context('spawn')) as ex:
+        outs = list(ex.map(d2l._c0_rebuild_one,
+                           [(warc_path, r) for r in rows], chunksize=200))
+    docs = d2l.DocList()
+    docs.mismatches = []
+    for row, out in zip(rows, outs):
+        got = out['row']
+        if out['drop'] or got['text_sha256'] != row['text_sha256']:
+            docs.mismatches.append(dict(
+                id=row['id'], drop=out['drop'], recorded=row['text_sha256'],
+                rebuilt=got['text_sha256'],
+                versions=(row['extractor_version'],
+                          got['extractor_version'])))
+        else:
+            docs.append(d2l.Doc(row['id'], row['url'], row['date'],
+                                out['text'], row['lang'], row['lang_score'],
+                                row['src'], row['log'], None))
+    cache = pathlib.Path(cache_dir or os.path.join('..', 'data', 'lm', 'c0'))
+    cache.mkdir(parents=True, exist_ok=True)
+    d2l.write_docs(cache / 'c0-docs.jsonl.gz', docs)
+    return docs
 
 def fwedu_bucket(doc_id):
     """The bucket (0-255) of a FineWeb-Edu document: the first 32 bits of
@@ -15797,6 +16150,364 @@ def registered_domain(url):
     ext = d2l._TLD_EXTRACT[0](url)
     dom = ext.top_domain_under_public_suffix
     return (dom or urllib.parse.urlsplit(url).hostname or '').lower()
+
+_CHARSET_ALIASES = {  # WHATWG: these labels mean windows-1252 in a browser
+    'iso-8859-1': 'cp1252', 'iso8859-1': 'cp1252', 'latin1': 'cp1252',
+    'latin-1': 'cp1252', 'l1': 'cp1252', 'us-ascii': 'cp1252',
+    'ascii': 'cp1252'}
+
+def decode_body(body, headers):
+    """(text, charset, source) of an HTTP payload. The charset comes from
+    the first source that decodes it: the Content-Type header ('header'),
+    a <meta charset> or http-equiv tag in the first 4 KiB ('meta'),
+    charset_normalizer's detector ('detector'), else UTF-8 with
+    replacement characters ('fallback'). A declared charset is accepted if
+    it decodes strictly or with at most 0.1% replacement characters (the
+    U+FFFD count of a page is a symptom of a wrong or mixed encoding).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import codecs
+
+    def attempt(label):
+        label = label.strip().strip('"\'').lower()
+        try:
+            name = codecs.lookup(d2l._CHARSET_ALIASES.get(label, label)).name
+        except LookupError:
+            return None
+        try:
+            return body.decode(name), name
+        except UnicodeDecodeError:
+            text = body.decode(name, 'replace')
+            return (text, name) if text.count('�') <= 1e-3 * max(
+                len(text), 1) else None
+
+    http = headers.get('HTTP', {}) if headers else {}
+    m = re.search(r'charset\s*=\s*([^\s;,]+)', http.get('content-type', ''),
+                  re.I)
+    if m and (got := attempt(m.group(1))):
+        return got[0], got[1], 'header'
+    m = re.search(rb'<meta[^>]+charset\s*=\s*["\']?([\w.:-]+)', body[:4096],
+                  re.I)
+    if m and (got := attempt(m.group(1).decode('ascii', 'replace'))):
+        return got[0], got[1], 'meta'
+    from charset_normalizer import from_bytes
+    best = from_bytes(body).best()
+    if best is not None:
+        return str(best), codecs.lookup(best.encoding).name, 'detector'
+    return body.decode('utf-8', 'replace'), 'utf-8', 'fallback'
+
+def _ws(s):
+    """Whitespace runs collapsed to one space, ends stripped.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    return ' '.join(s.split())
+
+def _nows(s):
+    """All whitespace removed: inline tags split or join words differently
+    in every extractor, so short strings are compared without it.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    return re.sub(r'\s+', '', s)
+
+_CONTROL = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]')
+
+def _lxml_document(html):
+    """The lxml document of a page, or None: an XML declaration (which
+    lxml refuses in a str) and control characters are removed first.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import lxml.etree
+    import lxml.html
+    html = _CONTROL.sub(' ', re.sub(r'^\s*<\?xml[^>]*\?>', '', html))
+    try:
+        return lxml.html.document_fromstring(html)
+    except (ValueError, lxml.etree.ParserError):
+        return None
+
+_MATH_LOADERS = re.compile(r'mathjax|katex', re.I)
+
+_TEX_SPANS = re.compile(r'\\\((.+?)\\\)|\\\[(.+?)\\\]|\$\$(.+?)\$\$', re.S)
+
+def html_structure(html):
+    """The structural content of a page, read from its HTML alone (no
+    extractor involved): code lines of <pre>/<code> blocks with at least 3
+    lines of at least 3 characters; table cells (<td>/<th> without a
+    nested table, 3-200 characters); mathematics (MathML TeX annotations,
+    MathJax <script type="math/tex">, <img> alt text with a backslash, and
+    \\(..\\), \\[..\\], $$..$$ spans when the page loads MathJax or KaTeX);
+    the prose; and the content text behind the precision proxy (<p>,
+    <pre>, <table>, <li>, <h1>-<h6> outside <nav>, <header>, <footer>,
+    <aside> and <form>, a <li> only if under half of its text is link
+    text). Strings are whitespace-free except code lines (whitespace
+    collapsed). classes lists 'code', 'table', 'math' when present, and
+    'prose' for a page with none of them and at least 200 characters of
+    prose. Prose is the text of the <p> elements with at least 100
+    characters outside <nav>, <header>, <footer>, <aside> and <form>:
+    short paragraphs are mostly form messages, banners and captions.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    out = dict(code=[], table=[], math=[], prose='', content='',
+               classes=[])
+    root = _lxml_document(html)
+    if root is None:
+        return out
+    loads_math = any(_MATH_LOADERS.search(s.get('src') or '')
+                     for s in root.iter('script'))
+    for a in root.xpath('//*[local-name()="annotation"]'
+                        '[@encoding="application/x-tex"]'):
+        out['math'].append(_nows(a.text_content()))
+    for s in root.xpath('//script[starts-with(@type, "math/tex")]'):
+        out['math'].append(_nows(s.text_content()))
+    for img in root.iter('img'):
+        if '\\' in (img.get('alt') or ''):
+            out['math'].append(_nows(img.get('alt')))
+    for bad in root.xpath('//script|//style|//noscript|//template'):
+        bad.drop_tree()
+    if loads_math:
+        body = root.find('body')
+        for m in _TEX_SPANS.finditer(body.text_content() if body is not None
+                                     else ''):
+            out['math'].append(_nows(next(g for g in m.groups() if g)))
+    out['math'] = [m for m in out['math'] if len(m) >= 2]
+    for el in root.xpath('//pre|//code[not(ancestor::pre)]'):
+        lines = [_ws(l) for l in el.text_content().splitlines()]
+        lines = [l for l in lines if len(l) >= 3]
+        if len(lines) >= 3:
+            out['code'] += lines
+    for table in root.iter('table'):
+        cells = [_nows(' '.join(c.itertext()))
+                 for c in table.xpath('.//td[not(.//table)]|'
+                                      './/th[not(.//table)]')]
+        cells = [c for c in cells if 3 <= len(c) <= 200]
+        if len(cells) >= 4:
+            out['table'] += cells
+    outside = ('not(ancestor::nav or ancestor::header or ancestor::footer '
+               'or ancestor::aside or ancestor::form)')
+    paras = [_nows(' '.join(p.itertext()))
+             for p in root.xpath(f'//p[{outside}]')]
+    out['prose'] = '\n'.join(p for p in paras if len(p) >= 100)
+    content = []
+    for el in root.xpath(f'//*[self::p or self::pre or self::table or '
+                         f'self::li or self::h1 or self::h2 or self::h3 or '
+                         f'self::h4 or self::h5 or self::h6][{outside}]'):
+        text = _nows(' '.join(el.itertext()))
+        if el.tag == 'li':
+            links = sum(len(_nows(' '.join(a.itertext())))
+                        for a in el.iter('a'))
+            if links > 0.5 * len(text):
+                continue
+        content.append(text)
+    out['content'] = '\n'.join(content)
+    out['classes'] = [c for c in ('code', 'table', 'math') if out[c]]
+    if not out['classes'] and len(out['prose']) >= 200:
+        out['classes'] = ['prose']
+    return out
+
+def html_skeleton(html, n=25):
+    """The first n elements of a page's <body> as indented tag names, each
+    text node replaced by its character count: the page's shape without
+    its words (and without attributes).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    root = _lxml_document(html)
+    body = None if root is None else root.find('body')
+    lines = []
+
+    def walk(el, depth):
+        if len(lines) >= n or not isinstance(el.tag, str):
+            return
+        text = len((el.text or '').strip())
+        lines.append('  ' * depth + el.tag + (f'  [text: {text} chars]'
+                                              if text else ''))
+        for child in el:
+            walk(child, depth + 1)
+
+    if body is not None:
+        walk(body, 0)
+    return lines
+
+def char_ngram_f1(a, b, n=5):
+    """(precision, recall, F1) of the character n-grams of text a against
+    those of the reference b, as sets, after collapsing whitespace; 0.0
+    for an empty side.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    A, B = (set(s[i:i + n] for i in range(len(s) - n + 1))
+            for s in (_ws(a or ''), _ws(b or '')))
+    hit = len(A & B)
+    p, r = (hit / len(A) if A else 0.0), (hit / len(B) if B else 0.0)
+    return p, r, (2 * p * r / (p + r) if p + r else 0.0)
+
+_HOST_CLASSES = (  # first matching rule wins; tested on the host name
+    ('edu_gov', r'(\.edu|\.gov|\.mil|\.ac\.[a-z]{2}|\.edu\.[a-z]{2}|'
+                r'\.gov\.[a-z]{2})$'),
+    ('wiki', r'wiki'),
+    ('forum', r'forum|board|community|discuss|answers|stackexchange|'
+              r'stackoverflow|reddit'),
+    ('news', r'news|times|post|herald|tribune|journal|gazette|daily'),
+    ('blog', r'blog|wordpress|medium\.com|substack|tumblr'),
+    ('shop', r'shop|store|market|buy|cart|deals|amazon|ebay|etsy'))
+
+def host_class(url):
+    """A coarse class of the host (edu_gov, wiki, forum, news, blog, shop,
+    other) from the rules in _HOST_CLASSES, matched on the lower-cased
+    host name: a cheap grouping for removal audits, not a site type.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import urllib.parse
+    host = (urllib.parse.urlsplit(url).hostname or '').lower()
+    for name, rule in d2l._HOST_CLASSES:
+        if re.search(rule, host):
+            return name
+    return 'other'
+
+_ISO639_3TO1 = dict(  # CLD2's WET labels (ISO 639-3) to fastText's codes
+    eng='en', deu='de', fra='fr', spa='es', rus='ru', jpn='ja', zho='zh',
+    ita='it', por='pt', pol='pl', nld='nl', tur='tr', ces='cs', vie='vi',
+    ind='id', kor='ko', swe='sv', fas='fa', ara='ar', ukr='uk', hun='hu',
+    ell='el', dan='da', fin='fi', ron='ro', nor='no', nob='no', heb='he',
+    tha='th', hin='hi', bul='bg', slk='sk', cat='ca', hrv='hr', lit='lt',
+    slv='sl', srp='sr', est='et', lav='lv', msa='ms', ben='bn', tam='ta')
+
+def warc_record_at(path, offset, length):
+    """The WarcRecord stored in bytes offset..offset+length-1 of a local
+    WARC file: one gzip member, decompressed on its own.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import zlib
+    with open(path, 'rb') as f:
+        f.seek(offset)
+        raw = f.read(length)
+    d = zlib.decompressobj(31)
+    data = d.decompress(raw)
+    if not d.eof:
+        raise ValueError(f'{path}: no complete gzip member at {offset}')
+    return d2l._warc_parse(data, offset, length)
+
+def _c0_extract_one(record, extractor='trafilatura', lid_min=0.65):
+    """One response record through the c0 stages: status and MIME,
+    decode_body, extract_text, detect_lang, NFC, scrub_pii. Returns a dict
+    with the manifest row (no text), the final text, the extracted text
+    before NFC and PII ('raw'), the decoded HTML, the reason the record
+    was dropped (None if kept, else the first rule that fired: not_200,
+    not_html, empty, not_en, low_score) and the extraction time. The
+    section's extract cell and rebuild_c0 both call it, so a rebuild
+    repeats the build exactly.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import importlib.metadata
+    import time
+    import unicodedata
+    if not isinstance(record, d2l.WarcRecord):  # (path, offset, length)
+        record = d2l.warc_record_at(*record)
+    src = dict(warc=d2l._CC_PIN_SOURCE['warc_url'].partition(
+        'commoncrawl.org/')[2], offset=record.offset, length=record.length)
+    row = dict(id=record.id, url=record.url, date=record.date, src=src,
+               charset=None, charset_source=None, lang=None, lang_score=None,
+               extractor=extractor,
+               extractor_version=(importlib.metadata.version(extractor)
+                                  if extractor != 'naive' else 'd2l'),
+               n_chars=0, text_sha256=None, log=[])
+    out = dict(row=row, text=None, raw=None, html=None, drop=None, secs=0.0,
+               pii={'email': 0, 'ip': 0})
+    if record.status != 200:
+        out['drop'] = 'not_200'
+        return out
+    if record.mime != 'text/html':
+        out['drop'] = 'not_html'
+        return out
+    html, row['charset'], row['charset_source'] = d2l.decode_body(
+        record.body, record.headers)
+    out['html'] = html
+    row['log'].append(f'decode:{row["charset"]}/{row["charset_source"]}')
+    t = time.perf_counter()
+    raw = d2l.extract_text(html, method=extractor, url=record.url)
+    out['secs'] = time.perf_counter() - t
+    out['raw'] = raw
+    row['log'].append(f'extract:{extractor} {row["extractor_version"]}')
+    if not raw:
+        out['drop'] = 'empty'
+        return out
+    lang, score = d2l.detect_lang(raw)[0]
+    row['lang'], row['lang_score'] = lang, round(score, 4)
+    row['log'].append(f'lang:{lang} {row["lang_score"]:.4f}')
+    if lang != 'en':
+        out['drop'] = 'not_en'
+        return out
+    if score < lid_min:
+        out['drop'] = 'low_score'
+        return out
+    text = unicodedata.normalize('NFC', raw)
+    row['log'].append('nfc:' + ('changed' if text != raw else 'unchanged'))
+    text, out['pii'] = d2l.scrub_pii(text)
+    row['log'].append('pii:' + ','.join(f'{k}={v}'
+                                        for k, v in out['pii'].items()))
+    row['n_chars'] = len(text)
+    row['text_sha256'] = hashlib.sha256(text.encode('utf-8')).hexdigest()
+    out['text'] = text
+    return out
+
+def extract_page(job):
+    """The extract cell's worker for one HTML response job = (path, offset,
+    length): the c0 pipeline with trafilatura (_c0_extract_one), the
+    naive and Resiliparse extractions of the same decoded HTML with their
+    times, and html_structure. The decoded HTML stays in the worker.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import time
+    c0 = d2l._c0_extract_one(d2l.warc_record_at(*job))
+    html = c0.pop('html') or ''
+    texts, secs = {'trafilatura': c0.pop('raw')}, {'trafilatura': c0['secs']}
+    for m in ('naive', 'resiliparse'):
+        t = time.perf_counter()
+        texts[m] = d2l.extract_text(html, method=m)
+        secs[m] = time.perf_counter() - t
+    row = c0['row']
+    return dict(id=row['id'], url=row['url'], offset=job[1],
+                n_html=len(html), charset=row['charset'],
+                charset_source=row['charset_source'], texts=texts, secs=secs,
+                struct=d2l.html_structure(html), c0=c0)
+
+class DocList(list):
+    """A list of Doc with the rows that failed to rebuild in .mismatches.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    mismatches = ()
+
+def _c0_rebuild_one(job):
+    """rebuild_c0's worker: job = (path, manifest row).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    path, row = job
+    src = row['src']
+    out = d2l._c0_extract_one((path, src['offset'], src['length']),
+                              row['extractor'])
+    out.pop('html')
+    return out
+
+def json_agreement(new, old):
+    """How far two JSON-like results agree: the number of leaf values in
+    new, how many equal old's value at the same path, and the largest
+    absolute difference between numeric leaves present in both.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    def leaves(x, path=()):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                yield from leaves(v, path + (str(k),))
+        elif isinstance(x, (list, tuple)):
+            for i, v in enumerate(x):
+                yield from leaves(v, path + (i,))
+        else:
+            yield path, x
+    a, b = dict(leaves(new)), dict(leaves(old))
+    num = [max(v - b[k], b[k] - v)  # d2l.abs is torch.abs
+           for k, v in a.items() if k in b
+           and isinstance(v, (int, float)) and not isinstance(v, bool)
+           and isinstance(b[k], (int, float))]
+    return dict(values=len(a), equal=sum(k in b and b[k] == v
+                                         for k, v in a.items()),
+                max_diff=max(num, default=0.0))
 
 _FWEDU_FILES = tuple(  # sample/10BT files read, in order; 005, 012, 013 are chapter 21's
     f'sample/10BT/{k:03d}_00000.parquet' for k in (0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11))

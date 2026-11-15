@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""CPU tests for sec_lm_crawl (chapter_lm-data/crawl.md), the shared part
-written before the section: `iter_warc` against warcio on a synthetic
+"""CPU tests for sec_lm_crawl (chapter_lm-data/crawl.md and crawl-lib.md): `iter_warc` against warcio on a synthetic
 gzip-member WARC with a truncated tail (ids, types, offsets, lengths and
 bodies exact; the cut member counted), the HTTP header parse, a byte-prefix
 read; `fetch_warc_range` against a fixture pin with 1 KiB blocks (verified
@@ -362,6 +361,259 @@ class DomainTest(unittest.TestCase):
                  'https://www.bbc.co.uk/news': 'bbc.co.uk'}
         for url, dom in cases.items():
             self.assertEqual(d2l.registered_domain(url), dom, url)
+
+
+
+LID = [ROOT / 'data' / 'lm' / 'lid.176.ftz' / 'lid.176.ftz',
+       ROOT / 'data' / 'lm' / 'lid' / 'lid.176.ftz']
+
+
+class LidMixin:
+    """Runs a test from a temporary working directory whose ../data/lm
+    holds the local lid.176.ftz (skips without one; never downloads)."""
+    def setUp(self):
+        src = next((p for p in LID if p.exists()), None)
+        if src is None:
+            self.skipTest('lid.176.ftz is not in data/lm (run 20.1 once)')
+        self.tmp = tempfile.TemporaryDirectory()
+        t = pathlib.Path(self.tmp.name)
+        (t / 'data' / 'lm' / 'lid.176.ftz').mkdir(parents=True)
+        os.symlink(src, t / 'data' / 'lm' / 'lid.176.ftz' / 'lid.176.ftz')
+        self.work = t / 'work'
+        self.work.mkdir()
+        self.cwd = os.getcwd()
+        os.chdir(self.work)
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        self.tmp.cleanup()
+
+
+class DecodeTest(unittest.TestCase):
+    """The charset chain: header, then <meta>, then the detector, then
+    UTF-8 with replacement characters."""
+    def test_chain(self):
+        hdr = lambda cs: {'HTTP': {'content-type': f'text/html; charset={cs}'}}
+        text, cs, src = d2l.decode_body('café'.encode('cp1252'),
+                                        hdr('ISO-8859-1'))
+        self.assertEqual((text, cs, src), ('café', 'cp1252', 'header'))
+        body = b'<meta charset="shift_jis">' + 'テストです'.encode('shift_jis')
+        text, cs, src = d2l.decode_body(body, {})
+        self.assertEqual((cs, src), ('shift_jis', 'meta'))
+        self.assertTrue(text.endswith('テストです'))
+        ru = 'Москва — столица России, крупнейший город страны. ' * 5
+        text, cs, src = d2l.decode_body(ru.encode('cp1251'), {})
+        self.assertEqual((text, src), (ru, 'detector'))
+        self.assertEqual(d2l.decode_body(bytes(range(256)) * 4, {})[1:],
+                         ('utf-8', 'fallback'))
+
+    def test_declared_charset_rules(self):
+        hdr = {'HTTP': {'content-type': 'text/html; charset=utf-8'}}
+        # one bad byte in 3,000 is tolerated, with a U+FFFD
+        text, cs, src = d2l.decode_body(b'a' * 3000 + b'\xff', hdr)
+        self.assertEqual((cs, src, text.count('\ufffd')),
+                         ('utf-8', 'header', 1))
+        # too many bad bytes: the declared charset is not used
+        self.assertNotEqual(d2l.decode_body(b'a' * 30 + b'\xff', hdr)[2],
+                            'header')
+        bad = {'HTTP': {'content-type': 'text/html; charset=x-unknown'}}
+        self.assertNotEqual(d2l.decode_body(b'hello', bad)[2], 'header')
+
+
+class NaiveExtractorTest(unittest.TestCase):
+    def test_fixtures(self):
+        self.assertEqual(len(d2l.NAIVE_FIXTURES), 5)
+        for name, (page, want) in d2l.NAIVE_FIXTURES.items():
+            self.assertEqual(d2l.extract_text(page, method='naive'), want,
+                             name)
+
+    def test_blocks(self):
+        page = ('<p>a <a href="#">link text</a> and more</p><!-- x -->'
+                '<script>var s = "<p>no</p>";</script><pre>x = 1\n'
+                '  y = 2</pre><div>1 &lt; 2<br>next</div>')
+        self.assertEqual(d2l.naive_blocks(page), [
+            ('a link text and more', 9), ('x = 1\n  y = 2', 0),
+            ('1 < 2 next', 0)])
+
+    def test_unknown_method(self):
+        with self.assertRaises(ValueError):
+            d2l.extract_text('<p>x</p>', method='other')
+
+
+STRUCT_PAGE = (
+    '<html><head><script src="https://cdn.example/mathjax/tex.js"></script>'
+    '</head><body><nav><p>' + 'Menu entry text that is long enough. ' * 4
+    + '</p></nav><p>' + 'The article explains the method in detail. ' * 3
+    + '</p><pre>alpha = 1\nbeta = 2\ngamma = 3\ndelta = 4</pre>'
+    '<table><tr><td>Month</td><td>Rain</td></tr><tr><td>January</td>'
+    '<td>82 mm</td></tr></table><p>Short.</p>'
+    '<math><semantics><annotation encoding="application/x-tex">'
+    '\\frac{a}{b}</annotation></semantics></math>'
+    '<p>Inline \\(x^2 + y\\) here.</p></body></html>')
+
+
+class StructureTest(unittest.TestCase):
+    def test_structure(self):
+        s = d2l.html_structure(STRUCT_PAGE)
+        self.assertEqual(s['code'], ['alpha = 1', 'beta = 2', 'gamma = 3',
+                                     'delta = 4'])
+        self.assertEqual(s['table'], ['Month', 'Rain', 'January', '82mm'])
+        self.assertEqual(sorted(s['math']), ['\\frac{a}{b}', 'x^2+y'])
+        self.assertEqual(s['prose'], d2l._nows(
+            'The article explains the method in detail. ' * 3))
+        self.assertEqual(s['classes'], ['code', 'table', 'math'])
+        self.assertNotIn('Menu', s['content'])
+        self.assertEqual(d2l.html_structure('')['classes'], [])
+        self.assertEqual(d2l.html_structure('<p>\x00\x01 ok</p>')['prose'],
+                         '')
+
+    def test_recall(self):
+        art = 'The article explains the method in detail. ' * 3
+        text = (art.strip() + '\nalpha = 1\ngamma = 3\nJanuary 82 mm\n'
+                '\\frac{a}{b}\nMenu entry text')
+        r = d2l.structure_recall(STRUCT_PAGE, text)
+        self.assertEqual(r['code'], 0.5)
+        self.assertEqual(r['table'], 0.5)  # January, 82mm; not Month, Rain
+        self.assertEqual(r['math'], 0.5)
+        self.assertEqual(r['prose'], 1.0)
+        lines = [d2l._nows(l) for l in text.splitlines()]
+        miss = len('Menuentrytext') + len('\\frac{a}{b}')  # not in content
+        self.assertAlmostEqual(r['precision'],
+                               1 - miss / sum(map(len, lines)))
+        empty = d2l.structure_recall(STRUCT_PAGE, None)
+        self.assertEqual((empty['code'], empty['prose'], empty['precision']),
+                         (0.0, 0.0, None))
+        none = d2l.structure_recall('<p>tiny</p>', 'tiny')
+        self.assertEqual((none['code'], none['table'], none['math'],
+                          none['prose']), (None, None, None, None))
+
+    def test_skeleton_and_f1(self):
+        sk = d2l.html_skeleton('<html><body><div><p>four</p><p></p></div>'
+                               '</body></html>', n=3)
+        self.assertEqual(sk, ['body', '  div', '    p  [text: 4 chars]'])
+        xhtml = ('<?xml version="1.0" encoding="UTF-8"?>\n<html xmlns='
+                 '"http://www.w3.org/1999/xhtml"><body><p>' + 'word ' * 60
+                 + '</p></body></html>')
+        self.assertEqual(d2l.html_skeleton(xhtml), ['body',
+                                                    '  p  [text: 299 chars]'])
+        self.assertEqual(d2l.html_structure(xhtml)['classes'], ['prose'])
+        self.assertEqual(d2l.char_ngram_f1('abcdef', 'abcdef'),
+                         (1.0, 1.0, 1.0))
+        p, r, f = d2l.char_ngram_f1('abcdefg', 'abcdexx')  # 3 vs 3 grams
+        self.assertEqual((p, r), (1 / 3, 1 / 3))
+        self.assertEqual(d2l.char_ngram_f1(None, 'abcdef'), (0.0, 0.0, 0.0))
+
+    def test_host_class_and_agreement(self):
+        cases = {'https://www.mit.edu/x': 'edu_gov',
+                 'https://en.wikipedia.org/wiki/X': 'wiki',
+                 'https://forum.example.com/t/1': 'forum',
+                 'https://example.com/': 'other'}
+        for url, c in cases.items():
+            self.assertEqual(d2l.host_class(url), c, url)
+        a = d2l.json_agreement({'x': [1, 2.5], 'y': {'z': 'a'}},
+                               {'x': [1, 2.0], 'y': {'z': 'a'}})
+        self.assertEqual(a, dict(values=3, equal=2, max_diff=0.5))
+
+
+class PiiTest(unittest.TestCase):
+    def test_fixture(self):
+        fx = d2l.PII_FIXTURE
+        self.assertEqual((len(fx), sum(t is not None for _, t in fx)),
+                         (120, 60))
+        for s, kind in fx:
+            text, counts = d2l.scrub_pii(s)
+            if kind is not None:  # zero false negatives by construction
+                self.assertGreater(counts[kind], 0, s)
+                self.assertIn('<EMAIL>' if kind == 'email' else '<IP>', text)
+        fp = sorted(s for s, kind in fx
+                    if kind is None and any(d2l.scrub_pii(s)[1].values()))
+        self.assertEqual(fp, sorted(FALSE_POSITIVES))
+
+    def test_rules(self):
+        self.assertEqual(d2l.scrub_pii('a 192.168.1.1 b 8.8.8.8 c'),
+                         ('a 192.168.1.1 b <IP> c', {'email': 0, 'ip': 1}))
+        self.assertEqual(d2l.scrub_pii('x@example.org, y@example.org')[1],
+                         {'email': 2, 'ip': 0})
+        self.assertEqual(d2l.scrub_pii('999.1.1.1')[1]['ip'], 0)
+
+
+FALSE_POSITIVES = [  # what the rules wrongly scrub (the section prints them)
+    'Changelog for 1.2.3.4 (stable)', 'Upgrade to version 4.2.1.0 now',
+    'build 5.15.0.91 of the kernel', 'git@github.com:org/repo.git',
+    'icon@3x.webp for retina screens', 'logo@2x.png in the assets folder',
+    'model 7.1.2.3 of the router firmware', 'section 3.4.1.2 of the standard',
+    'the score was 3.14.15.92 in the puzzle']
+
+
+def fixture_warc(path):
+    """Four HTML responses (two English articles, one German, one 404)
+    written as gzip members; returns their records."""
+    en1 = ''.join(f'<p>Paragraph {i} of the first article describes how '
+                  f'rain returns to the valley after a long dry summer and '
+                  f'what the farmers expect from the harvest.</p>'
+                  for i in range(6))
+    en2 = ''.join(f'<p>Section {i}: the second article explains how to '
+                  f'repair a bicycle chain with simple tools, step by step, '
+                  f'and how to keep it clean afterwards.</p>' for i in range(6))
+    de = ''.join(f'<p>Abschnitt {i}: Der Artikel erklärt, wie man eine '
+                 f'Fahrradkette mit einfachem Werkzeug repariert und danach '
+                 f'sauber hält.</p>' for i in range(6))
+    recs = []
+    for i, (body, status) in enumerate([(en1, 200), (en2, 200), (de, 200),
+                                        ('<p>gone</p>', 404)]):
+        page = f'<html><body><article>{body}</article></body></html>'.encode()
+        http = (f'HTTP/1.1 {status} X\r\nContent-Type: text/html; '
+                f'charset=utf-8\r\n\r\n').encode() + page
+        recs.append(warc_record('response', f'<urn:uuid:{i}>', http,
+                                'application/http; msgtype=response',
+                                f'https://example.com/{i}'))
+    with open(path, 'wb') as f:
+        for r in recs:
+            f.write(gzip.compress(r, mtime=0))
+    return list(d2l.iter_warc(path))
+
+
+class C0Test(LidMixin, unittest.TestCase):
+    def test_detect_lang(self):
+        (lang, score), = d2l.detect_lang('The weather was cold so we '
+                                         'stayed inside\nall day long.')
+        self.assertEqual(lang, 'en')
+        self.assertTrue(0.65 < score <= 1.0)
+        self.assertEqual(len(d2l.detect_lang('Guten Tag', k=3)), 3)
+
+    def test_extract_one_and_rebuild(self):
+        warc = self.work / 'f.warc.gz'
+        recs = fixture_warc(warc)
+        outs = [d2l._c0_extract_one(r) for r in recs]
+        self.assertEqual([o['drop'] for o in outs],
+                         [None, None, 'not_en', 'not_200'])
+        again = d2l._c0_extract_one((str(warc), recs[0].offset,
+                                     recs[0].length))
+        self.assertEqual(again['row'], outs[0]['row'])
+        row = outs[0]['row']
+        self.assertEqual(row['text_sha256'], hashlib.sha256(
+            outs[0]['text'].encode()).hexdigest())
+        self.assertEqual(row['log'][0], 'decode:utf-8/header')
+        self.assertTrue(row['log'][-1].startswith('pii:'))
+        rows = [o['row'] for o in outs[:2]]
+        rows[1] = dict(rows[1], text_sha256='0' * 64)  # a drifted row
+        d2l.write_docs(self.work / 'rows.jsonl.gz', rows)
+        docs = d2l.rebuild_c0(str(self.work / 'rows.jsonl.gz'), warc,
+                              cache_dir=self.work / 'c0', workers=1)
+        self.assertEqual([d.id for d in docs], [rows[0]['id']])
+        self.assertEqual(docs[0].text, outs[0]['text'])
+        self.assertEqual([m['id'] for m in docs.mismatches], [rows[1]['id']])
+        self.assertTrue((self.work / 'c0' / 'c0-docs.jsonl.gz').exists())
+
+    def test_extract_page(self):
+        warc = self.work / 'f.warc.gz'
+        r = fixture_warc(warc)[0]
+        page = d2l.extract_page((str(warc), r.offset, r.length))
+        self.assertEqual(set(page['texts']),
+                         {'naive', 'trafilatura', 'resiliparse'})
+        self.assertEqual(page['struct']['classes'], ['prose'])
+        self.assertNotIn('html', page['c0'])
+        self.assertIsNone(page['c0']['drop'])
 
 
 if __name__ == '__main__':

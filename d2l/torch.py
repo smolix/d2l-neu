@@ -8140,6 +8140,9 @@ class BookRetriever:
         self._enc = self._rr = None
         d2l.lm_free()
 
+d2l.HF_REVISIONS['Qwen/Qwen3.5-9B'] = (
+    'c202236235762e1c871ad0ccb60c8ee5ba337b9a')
+
 d2l.DATA_HUB['lm-book-qa-v1'] = (  # corpus r3.1; 5,865 train, 240 dev, 240 test
     d2l.LM_DATA_URL + 'lm-book-qa-v1.zip',
     '3b8dba5ceae43c88274e52ce6ae7525884ea4168')
@@ -8500,7 +8503,9 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
     first and its verdict is read after the reasoning; a reply cut off at
     max_new_tokens (default 3,000 with thinking, 64 without) counts as
     malformed. A verdict missing from the judge's JSON after one retry is
-    None.
+    None. A request that fails in transport twice (the server is down, an
+    error status) is not a verdict: rag_judge raises, and a recording
+    client keeps the replies that did arrive.
 
     Defined in :numref:`sec_lm_rag`"""
     single = isinstance(item, dict)
@@ -8527,6 +8532,7 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
             cited = r.get('cited_ids') or []
             jobs.append((i, keys, d2l._rag_judge_messages(
                 q, answer, ctx, cited)))
+    failed = []
     for attempt in range(2):  # one retry, with the malformed reply shown
         if not jobs:
             break
@@ -8535,6 +8541,12 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
             max_new_tokens, batch_size)
         retry = []
         for (i, keys, messages), reply in zip(jobs, replies):
+            if isinstance(reply, BaseException):  # no reply: ask again
+                if attempt == 0:
+                    retry.append((i, keys, messages))
+                else:
+                    failed.append(reply)
+                continue
             parsed = (None if reply is None else
                       d2l._rag_parse_json(reply, keys))
             if parsed is None and attempt == 0:
@@ -8544,6 +8556,9 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
             for k in keys:
                 verdicts[i][k] = None if parsed is None else parsed[k]
         jobs = retry
+    if failed:
+        raise RuntimeError(f'{len(failed)} judge requests failed twice, '
+                           f'first: {failed[0]!r}') from failed[0]
     return verdicts[0] if single else verdicts
 
 def citation_metrics(results, items, corpus):
@@ -14785,9 +14800,12 @@ def _rag_judge_messages(item, answer, context_texts, cited_ids):
 def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
                        batch_size):
     """The judge's replies to a list of chat messages, each the text after
-    its reasoning ('</think>'), or None when the reply was cut off at
-    max_new_tokens. judge is a d2l.ChatAPI (greedy, seed 0; batch_size
-    requests in flight) or a Transformers model with its tokenizer."""
+    its reasoning ('</think>'), None when the reply was cut off at
+    max_new_tokens, or the exception of a request that failed in transport
+    (an endpoint that refused, timed out or answered with an error after
+    the client's retries: no reply, so not a malformed one). judge is a
+    d2l.ChatAPI (greedy, seed 0; batch_size requests in flight) or a
+    Transformers model with its tokenizer."""
     if hasattr(judge, 'achat'):  # an OpenAI-compatible endpoint
         import asyncio  # not in the d2l library preamble
         import concurrent.futures
@@ -14798,8 +14816,8 @@ def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
         # loop, in which asyncio.run refuses to start
         with concurrent.futures.ThreadPoolExecutor(1) as pool:
             out = pool.submit(asyncio.run, batch).result()
-        return [None if isinstance(r, BaseException)  # counts as malformed
-                or r.finish_reason == 'length'
+        return [r if isinstance(r, BaseException)  # no reply at all
+                else None if r.finish_reason == 'length'
                 else (r.text or '').split('</think>')[-1] for r in out]
     gens = d2l.generate(judge, tokenizer, messages,
                         max_new_tokens=max_new_tokens, chat=True,

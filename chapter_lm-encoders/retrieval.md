@@ -181,6 +181,9 @@ print(machine())
 d2l.DATA_HUB['lm-book-r3-v1'] = (  # book commit 098bf463, corpus r3.1
     d2l.LM_DATA_URL + 'lm-book-r3-v1.zip',
     '0b7f11e044a4838139ac02dffb6e2d7eb32b48b8')
+d2l.DATA_HUB['lm-enc-r3-emb-qwen3emb06b-sec512-v1'] = (  # float16, dense view
+    d2l.LM_DATA_URL + 'lm-enc-r3-emb-qwen3emb06b-sec512-v1.npy',
+    '5bf63b97609399841b4fcd925734b98327634b91')
 ```
 
 <!-- Placeholder (prose, opening): the retriever this section ends with, used before it is built: BM25 alone and the embedder alone on the 220 answerable dev questions; Recall@10 of each with document-clustered intervals, the share of questions exactly one of them finds (their errors differ), and one question of each kind (the first in the question set's order): an identifier question BM25 finds and the embedder misses, and a question without an identifier the other way round. -->

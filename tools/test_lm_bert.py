@@ -71,6 +71,15 @@ class Pooled(unittest.TestCase):
                 got = clf(X, M)
             torch.testing.assert_close(got, want, atol=1e-5, rtol=0)
 
+    def test_head_follows_encoder(self):
+        import transformers
+        for device, dtype in (('cpu', torch.bfloat16),
+                              ('meta', torch.float32)):
+            enc = transformers.ModernBertModel(tiny_config()).to(device, dtype)
+            clf = d2l.PooledClassifier(enc, 2)
+            for p in clf.parameters():
+                self.assertEqual((p.device.type, p.dtype), (device, dtype))
+
     def test_bad_pooling(self):
         import transformers
         enc = transformers.ModernBertModel(tiny_config())

@@ -7279,6 +7279,9 @@ class PooledClassifier(nn.Module):
                                       bias=getattr(c, 'norm_bias', True))
         self.drop = nn.Dropout(dropout)
         self.classifier = nn.Linear(d, num_labels)
+        p = next(encoder.parameters())  # the head lives where the encoder is
+        self.head.to(p.device, p.dtype)
+        self.classifier.to(p.device, p.dtype)
 
     def forward(self, input_ids, attention_mask):
         H = self.encoder(input_ids=input_ids,
@@ -7693,6 +7696,9 @@ def hamming_scores(Qbits, Dbits):
 d2l.DATA_HUB['lm-book-r3-v1'] = (  # book commit 098bf463, corpus r3.1
     d2l.LM_DATA_URL + 'lm-book-r3-v1.zip',
     '0b7f11e044a4838139ac02dffb6e2d7eb32b48b8')
+d2l.DATA_HUB['lm-enc-r3-emb-qwen3emb06b-sec512-v1'] = (  # float16, dense view
+    d2l.LM_DATA_URL + 'lm-enc-r3-emb-qwen3emb06b-sec512-v1.npy',
+    '5bf63b97609399841b4fcd925734b98327634b91')
 
 def book_corpus(chunking='sections', *, size=256, overlap=0, source='hub',
                 root=os.path.join('..', 'data', 'lm')):

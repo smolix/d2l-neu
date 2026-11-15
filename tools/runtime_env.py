@@ -79,6 +79,9 @@ GPU_ONLY_NOTEBOOKS = {
     "chapter_diffusion-models/latent-diffusion.ipynb",
     "chapter_diffusion-models/few-step.ipynb",
     "chapter_diffusion-models/discrete-diffusion.ipynb",
+    # 19.1 trains SGNS and GloVe on the GPU (a CPU run draws other random
+    # numbers, so the grid agreement line holds only on the GPU).
+    "chapter_lm-encoders/word-embeddings.ipynb",
 }
 
 # Per-framework thread-limiting env vars.
@@ -339,6 +342,9 @@ HEAVY_GPU_NOTEBOOKS = {
     ("pytorch", "chapter_lm-pretrained/scoring.ipynb"): 2,
     ("pytorch", "chapter_lm-pretrained/eval-suites.ipynb"): 2,
     ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): 2,
+    # 19.3 fine-tunes the encoder into an embedder (about 5-7 GiB) next to
+    # the released embedder and reranker.
+    ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): 2,
 }
 
 

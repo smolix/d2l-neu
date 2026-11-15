@@ -400,6 +400,9 @@ class PooledClassifier(nn.Module):
                                       bias=getattr(c, 'norm_bias', True))
         self.drop = nn.Dropout(dropout)
         self.classifier = nn.Linear(d, num_labels)
+        p = next(encoder.parameters())  # the head lives where the encoder is
+        self.head.to(p.device, p.dtype)
+        self.classifier.to(p.device, p.dtype)
 
     def forward(self, input_ids, attention_mask):
         H = self.encoder(input_ids=input_ids,

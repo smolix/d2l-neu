@@ -284,6 +284,10 @@ FULL_CARD_NOTEBOOKS = {
     # serve Qwen3.8-27B with vLLM over two whole cards and are launched by
     # hand with CUDA_VISIBLE_DEVICES set, not through the scheduler.
     "chapter_lm-encoders/rag.ipynb": 1,
+    # 19.6 reads the recorded answers in a normal build, but times retrieval
+    # and reranking for the text, and its regeneration runs
+    # (D2L_RERUN=rag-gen-stages, rag-gen-fix) load the same generator.
+    "chapter_lm-encoders/rag-failures.ipynb": 1,
 }
 
 # rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for
@@ -426,6 +430,9 @@ NOTEBOOK_ENV = {
     # 19.5: Qwen3.5-9B generates with prompts of changing length within 1-2
     # GiB of a 24 GB card's limit; cached fixed-size blocks would not fit.
     ("pytorch", "chapter_lm-encoders/rag.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    ("pytorch", "chapter_lm-encoders/rag-failures.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
 }

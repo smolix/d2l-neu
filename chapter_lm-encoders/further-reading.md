@@ -69,7 +69,7 @@ The single vector of Qwen3-Embedding-0.6B compresses a passage of hundreds of
 tokens into 1,024 numbers before any question is known. The reranker of
 :numref:`sec_lm_retrieval` avoids the compression by reading question and
 passage together, at the cost of a forward pass per pair: reranking 50
-chunks took about half a second per question in :numref:`sec_lm_rag`.
+chunks took about half a second per question in :numref:`sec_lm_rag_fixes`.
 ColBERT :cite:`Khattab.Zaharia.2020` sits between the two. It encodes every
 passage offline into one short vector per token,
 $\mathbf{v}_1, \ldots, \mathbf{v}_{L_d}$, encodes the question at query time
@@ -168,7 +168,7 @@ between 0.96 and 0.98, the bound is not what limits retrieval.
 
 ### Training for Retrieval-Augmented Generation
 
-In :numref:`sec_lm_rag` the generator and both retrievers stay frozen. The
+In :numref:`sec_lm_rag_fixes` the generator and both retrievers stay frozen. The
 marginalization derived there says what training would change. With
 $L_z = p(y \mid x, z)$ the probability that the generator gives the answer
 $y$ when it reads document $z$, the answer's probability is a mixture over
@@ -201,7 +201,7 @@ hundred steps.
 **Distractors.** RAFT :cite:`Zhang.Patil.Jain.ea.2024` fine-tunes the
 generator on questions shown with the relevant document among distractors,
 toward chain-of-thought answers that quote the relevant passage. It targets
-the `ignored` failures of :numref:`sec_lm_rag`, where a relevant passage was
+the `ignored` failures of :numref:`sec_lm_rag_fixes`, where a relevant passage was
 in the context and the answer missed it. The fix chosen in advance there
 asked Qwen3.5-9B, by prompt alone, to quote before answering, with the best
 passages at both ends. It lowered accuracy by 0.08 on dev and on test,
@@ -212,7 +212,7 @@ fine-tuning run per domain, with distractors drawn from one's own retriever.
 Its examples with distractors only still target the answer, which teaches
 answering from memory, not abstaining, so whether RAFT avoids the failure
 that our prompt created is a question for the procedure of
-:numref:`sec_lm_rag`.
+:numref:`sec_lm_rag_fixes`.
 
 **Reflection tokens.** Self-RAG :cite:`Asai.Wu.Wang.ea.2024` trains the
 generator to emit special tokens that decide whether to retrieve, judge
@@ -226,7 +226,7 @@ each answer costs several candidate generations.
 If a model can read a million tokens, why retrieve at all? Three findings
 argue against dropping retrieval. First, every question re-reads its whole
 context, and more context did not give better answers. In
-:numref:`sec_lm_rag`, a 6,000-token budget without the five-chunk limit gave
+:numref:`sec_lm_rag_fixes`, a 6,000-token budget without the five-chunk limit gave
 the generator about 3.4 times the baseline's context. Accuracy changed by
 $+0.01$ (interval $-0.03$ to $+0.05$), and the time per answer doubled,
 partly because the longer prompts ran in smaller batches. Second, accepting
@@ -252,7 +252,7 @@ that is larger than any window, has to be searched.
 ### Improving the Pipeline
 
 Each stage of :numref:`sec_lm_rag` can be improved, and the failure counts
-measured there say where to start. On the book, retrieval rarely failed. Of
+of :numref:`sec_lm_rag_fixes` say where to start. On the book, retrieval rarely failed. Of
 the 24 wrong answers to answerable dev questions, none lacked a relevant
 chunk in the ranking and 5 had it ranked too low to enter the context. The
 other 19 had a relevant passage in the context: in 12 the answer missed it,

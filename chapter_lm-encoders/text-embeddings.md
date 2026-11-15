@@ -547,7 +547,7 @@ q, d = (F.normalize(torch.randn(32, 16, generator=gen, dtype=torch.float64),
 loss, _ = d2l.info_nce_loss(q, d, TAU)
 loss.backward()
 P = torch.softmax(q @ d.T / TAU, dim=1).detach()
-G = (P - torch.eye(len(q), dtype=P.dtype)) / (TAU * len(q))  # dL/ds_ij
+G = (P - torch.eye(len(q), dtype=P.dtype)) / (TAU * len(q))  # dL/dc_ij
 err = max((q.grad - G @ d.detach()).abs().max().item(),
           (d.grad - G.T @ q.detach()).abs().max().item())
 pull_push = (G.sum(1)).abs().max().item()  # 1 - p_ii = sum_{j != i} p_ij
@@ -1379,7 +1379,7 @@ gen = torch.Generator().manual_seed(0)  # breaks ties of equal bit counts
 for label, name in MODELS.items():
     Q, X = ROWS[name]
     m = X.shape[1]
-    for dim in (m, 512, 256, 128, 64):
+    for dim in (m, 512, 256, 128, 64, 32, 16):
         R10[label, dim] = recall10(d2l.truncate_embeddings(Q, dim) @
                                    d2l.truncate_embeddings(X, dim).T)
         rows.append((label, f'float32, {dim}', 4 * dim, R10[label, dim]))
@@ -1416,9 +1416,11 @@ d2l.plt.gca().legend(labels, loc='upper left', bbox_to_anchor=(1, 1));
 For Qwen3-Embedding, int8 costs nothing we can see: Recall@10 stays at
 0.982 at a quarter of the bytes. Binary vectors keep 0.955 by Hamming
 distance alone and 0.964 with rescoring, at 1/32 of the bytes. Truncation
-costs more: 0.900 at 128 of 1,024 coordinates, 0.841 at 64. Our two models
+costs more: 0.900 at 128 of 1,024 coordinates, 0.841 at 64, and below that
+recall collapses, to 0.62 at 32 coordinates and 0.24 at 16. Our two models
 lose more to truncation. From full width to 128 coordinates the plain model
-falls from 0.764 to 0.686 and the Matryoshka model from 0.741 to 0.659.
+falls from 0.764 to 0.686 and the Matryoshka model from 0.741 to 0.659; at
+32 coordinates both are near 0.4, at 16 near 0.15.
 
 Which differences are real? Our two models are single seeds, so a
 difference between them is read against the seed range of the full-width
@@ -1426,33 +1428,37 @@ models as well as against its interval.
 
 ```{.python .input #text-embeddings-compress-compare}
 %%tab pytorch
-pairs = [('Matryoshka, 128 - contrastive, 128', R10['Matryoshka', 128],
-          R10['contrastive', 128])]
+pairs = [(f'Matryoshka - contrastive, {k}', R10['Matryoshka', k],
+           R10['contrastive', k]) for k in (128, 64, 32, 16)]
 pairs += [(f'{l}: binary + rescoring - float', R10[l, 'binary + rescoring'],
            R10[l, ROWS[n][1].shape[1]]) for l, n in MODELS.items()]
 C = pd.DataFrame([dict(comparison=c, delta=r.mean, low=r.ci[0], high=r.ci[1])
                   for c, r in ((c, d2l.paired_bootstrap(a, b, cluster=CLUSTER))
                                for c, a, b in pairs)])
 C['CI excludes 0'] = (C.low > 0) | (C.high < 0)
-C['beyond seed range'] = C.delta.abs() > seed_range
+C['beyond seed range'] = C.delta.abs() > seed_range + 1e-9  # a tie is not
 print(C.round(3).to_string(index=False))
 print(f'seed range of Recall@10 at full width (a proxy for the training '
-      f'noise at 128 coordinates): {seed_range:.3f}')
+      f'noise\n  at smaller widths): {seed_range:.3f}')
 ```
 
-At 128 coordinates the Matryoshka model is not ahead: $-0.027$
-[$-0.075$, 0.017], within the seed range. The two models stay within 0.03 of
-each other at every width we tried (0.686 against 0.659 at 128 coordinates,
-0.595 against 0.582 at 64). A plain contrastive model can be truncated
-without special training, at a cost that grows as the prefix shrinks, and
-down to 64 of 768 coordinates the Matryoshka loss did not reduce that cost.
-Kusupati et al. found its advantage to grow at smaller prefixes; exercise
-:exref:`ex_lm_emb-matryoshka` looks below 64 coordinates.
+The Matryoshka model is not ahead at any width we tried. At 128
+coordinates the difference is $-0.027$ [$-0.075$, 0.017], at 64 and at 32
+it is $-0.014$, and at 16, where its advantage should be largest, +0.018
+[$-0.023$, 0.064]: every interval contains zero, and every difference lies
+within the seed range. :citet:`Kusupati.Bhatt.Rege.ea.2022` found the
+advantage to grow as the prefix shrinks, and our widths of 32 and 16 lie
+below the shortest prefix it was trained on, 64. On the book's questions the
+advantage did not appear. A plain contrastive model can be truncated without
+special training, at a cost that grows as the prefix shrinks, and for this
+model and this task the Matryoshka loss did not reduce that cost. Exercise
+:exref:`ex_lm_emb-matryoshka` asks where it does.
 
 Binary vectors with rescoring cost Qwen3-Embedding $-0.018$
 [$-0.037$, 0.000] and the Matryoshka model $-0.018$ [$-0.055$, 0.017],
 intervals that reach 0; for the plain model the difference is $-0.045$
-[$-0.085$, $-0.009$], a real loss. Even at 128 bytes per passage,
+[$-0.085$, $-0.009$], an interval that excludes zero, though the loss is no
+larger than the seed range. Even at 128 bytes per passage,
 Qwen3-Embedding (0.964) stays far ahead of our model at full precision.
 
 ## Using a Released Embedder
@@ -1611,12 +1617,18 @@ questions they miss, still needs an index and a word index beside it.
        in each direction, and how does that weight change as $\tau$ falls?
    :exlabel:`ex_lm_emb-symmetric`
 
-1. [code] **Matryoshka at small widths.** Extend the truncation sweep of
-   :numref:`subsec_lm_emb_compress` to 32 and 16 coordinates for the plain
-   contrastive model, the Matryoshka model and Qwen3-Embedding; no training
-   is needed. Report paired differences between the Matryoshka and the plain
-   model at each width with intervals, and say at which width, if any, the
-   Matryoshka model pulls ahead by more than the seed range.
+1. [code] **Where Matryoshka training pays.** On the book the Matryoshka
+   model did not beat the truncated plain model at any width from 128 down
+   to 16 coordinates.
+    1. Repeat the truncation sweep on the distribution both models were
+       trained on: the 300 held-out NQ pairs, each question searched among
+       5,000 NQ passages that no training batch contained. Report paired
+       differences with intervals at 128, 64, 32 and 16 coordinates.
+    1. If the Matryoshka model pulls ahead there, propose a reason why the
+       advantage does not carry over to the book, and a measurement that
+       would test it.
+    1. Add 32 and 16 to the training prefixes $\mathcal{K}$ and train again.
+       Does the result on the book change?
    :exlabel:`ex_lm_emb-matryoshka`
 
 1. [extended] **Adapting to the book.** ●● Fine-tune the seed-0 contrastive
@@ -1700,6 +1712,7 @@ models, not by people; BM25 (word counting) as the floor.
 | | **Text Embeddings from Contrastive Training** |
 | finding | Sparse, Dense and Approximate Retrieval |
 | using | Retrieval-Augmented Generation |
+| | Failures and Fixes in RAG |
 :::
 
 ::: {.col .narrow}
@@ -2004,7 +2017,7 @@ Only the plain model lost beyond its interval, $-0.045$
 :::
 :::
 
-::: {.slide title="Down to 64 Coordinates, Plain Truncation Matches Matryoshka Training"}
+::: {.slide title="Down to 16 Coordinates, Plain Truncation Matches Matryoshka Training"}
 [Truncation]{.kicker}
 
 $$\ell_{\textrm{MRL}} = \frac{1}{|\mathcal{K}|}\sum_{k \in \mathcal{K}} \ell^{(k)}, \qquad \mathcal{K} = \{768, 512, 256, 128, 64\}$$
@@ -2017,10 +2030,12 @@ $\ell^{(k)}$: InfoNCE on the first $k$ coordinates, renormalized.
 | 256 | 0.718 | 0.736 |
 | 128 | 0.686 | 0.659 |
 | 64 | 0.595 | 0.582 |
+| 32 | 0.414 | 0.400 |
+| 16 | 0.141 | 0.159 |
 
 ::: {.d2l-note}
-At 128: $-0.027$ [$-0.075$, 0.017], within the seed range. A plain model's
-prefixes already retrieve.
+At 128: $-0.027$ [$-0.075$, 0.017]; at 16: +0.018 [$-0.023$, 0.064]. Every
+interval contains 0, even below the shortest trained prefix.
 :::
 :::
 

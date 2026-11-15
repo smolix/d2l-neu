@@ -107,7 +107,7 @@
       "outputs": []
     },
     "text-embeddings-infonce-grad": {
-      "code_fingerprint": "sha256:f8db4349036c0940316dc5b844ad940492d0da533f6aeab097cb82e306cec95b",
+      "code_fingerprint": "sha256:ec4417b02a34052e25ec2ffe3decac9f320f944b6dd288e87939d86f45d668db",
       "kind": "text",
       "outputs": [
         {
@@ -118,7 +118,7 @@
       ]
     },
     "text-embeddings-uniformity": {
-      "code_fingerprint": "sha256:850d1547464216f9d91c223eadd9373dde18725439acfa45ecb475b8e8fcc3ea",
+      "code_fingerprint": "sha256:ea9b536d5e3116ec5fd8822e99f8f7726024d3ab70f6e174dc34440d89f77519",
       "kind": "text",
       "outputs": [
         {
@@ -129,12 +129,12 @@
       ]
     },
     "text-embeddings-train-def": {
-      "code_fingerprint": "sha256:c600d033e8714aa057263ae40ef167c6d19e0bba8bd3af4f6b2e6e46619c5418",
+      "code_fingerprint": "sha256:3b5ea580384ab9524f4129dc97ba0c026b9bcc778647973d913a214eee7efb57",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-nq": {
-      "code_fingerprint": "sha256:9634e1db1faf93c5abaf1a9572d387cfda3345f366c2aa8165a8975cdaa139da",
+      "code_fingerprint": "sha256:8c2ecb524d5a7cdf03e78941557daabfcbd5886ac5390cbd735f0881ee0b4b7d",
       "kind": "text",
       "outputs": [
         {
@@ -145,27 +145,27 @@
       ]
     },
     "text-embeddings-run-defs": {
-      "code_fingerprint": "sha256:dae029baef0e5dcf9a01798f054977ccebd9be552237d6ac3bc06c0397cbd875",
+      "code_fingerprint": "sha256:10387a3c3e50f2aa0b0bdc9f02278ae3675657e714dde19c76131af7d524e265",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train": {
-      "code_fingerprint": "sha256:d967198c42722a97abd0dbc59d72236e9679d4bdda4f2346fc01d2e3c6c6cff4",
+      "code_fingerprint": "sha256:b41308a4982eb14d03e584ad094fd049770c6963503b1feb5b3cb61920e0e8a6",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-mine": {
-      "code_fingerprint": "sha256:2355e1f2b2e82cd289d67c65db506ab85f16fceaecb271ce8dec73aebf468e8c",
+      "code_fingerprint": "sha256:29b11390898e86e1a62970be18c7b0d088ef606824187c89692e335b673004ac",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train-variants": {
-      "code_fingerprint": "sha256:3bfb70159307aedcb0bea213393024727e281c3c383a217fd356f008be000e95",
+      "code_fingerprint": "sha256:c5f6f293415c4e6df1717e968cfe3565b1b354440d71f70417d71ccb70fb044e",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train-read": {
-      "code_fingerprint": "sha256:6d7ba417d198e7b5e50cc3bb5d42d4baa147c86bf599a2d0a437640ab2d34ddd",
+      "code_fingerprint": "sha256:7d39cd039d4653fc5442af905ad2eaa5bf4bd7a85a8b81fd10f6bc6cad7d30f1",
       "kind": "text",
       "outputs": [
         {
@@ -181,7 +181,7 @@
       ]
     },
     "text-embeddings-ladder": {
-      "code_fingerprint": "sha256:aad215f292a1db47536b3dc7f6ccb476ee4846fbc2801490d5815de7ed46b674",
+      "code_fingerprint": "sha256:a086cfe01b9803e7473233798bed5a5e39b3b57fc06b9ddec8690682adff85ac",
       "kind": "text",
       "outputs": [
         {
@@ -207,7 +207,7 @@
       ]
     },
     "text-embeddings-ladder-compare": {
-      "code_fingerprint": "sha256:d6c885874afa7c24e42c52c0c4b3431182fed0d162f19abfebdb87b1cf1dacc0",
+      "code_fingerprint": "sha256:e16b7afb6fcc460c63cfbcff3d524b958b73a66a8fba9b4fa06d2e923ea9443d",
       "kind": "text",
       "outputs": [
         {
@@ -218,7 +218,7 @@
       ]
     },
     "text-embeddings-alignment": {
-      "code_fingerprint": "sha256:9fce01de6ab2ffa7edbe4e4b20ab0dc72714c31e687823c1a376da3296956283",
+      "code_fingerprint": "sha256:388fb260f931e78b93b1d9efdccfbcab6739cd4a5b8cd18e2f927705e76aa103",
       "kind": "mixed",
       "outputs": [
         {
@@ -236,46 +236,46 @@
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-alignment-1.svg",
           "bytes": 464013,
-          "sha256": "sha256:c77eacead998c7c48aa4f1c0f9c45fc425882d1f5708d9a6fff714d1d664b0a4"
+          "sha256": "sha256:24afb40a9d1b01ad1fda9c4569db84608df58ea37703d95a6002eee758b74a0d"
         }
       ]
     },
     "text-embeddings-compress-def": {
-      "code_fingerprint": "sha256:7ecaf7771e35a8a7ccffac1169a79ecfc16b496387c1f963b156d00443bff6bc",
+      "code_fingerprint": "sha256:fb62c5fa956f13d43a427547acc9f58db950f659eec5bf42db7825ce91f83af9",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-compress": {
-      "code_fingerprint": "sha256:95d670280f256cd5eb24e7e89310532baf8cd988c996afe10c89d9173c638f94",
+      "code_fingerprint": "sha256:4f0ba34e82edc951a611f362ca1de63c0e1c72e510a9e4a80a46fbc2a75ffacf",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          model                   format  bytes  recall@10  GB per 10^8 vectors\n    contrastive             float32, 768   3072      0.764                307.2\n    contrastive             float32, 512   2048      0.768                204.8\n    contrastive             float32, 256   1024      0.718                102.4\n    contrastive             float32, 128    512      0.686                 51.2\n    contrastive              float32, 64    256      0.595                 25.6\n    contrastive                int8, 768    768      0.759                 76.8\n    contrastive              binary, 768     96      0.668                  9.6\n    contrastive  binary + rescoring, 768     96      0.718                  9.6\n     Matryoshka             float32, 768   3072      0.741                307.2\n     Matryoshka             float32, 512   2048      0.759                204.8\n     Matryoshka             float32, 256   1024      0.736                102.4\n     Matryoshka             float32, 128    512      0.659                 51.2\n     Matryoshka              float32, 64    256      0.582                 25.6\n     Matryoshka                int8, 768    768      0.741                 76.8\n     Matryoshka              binary, 768     96      0.695                  9.6\n     Matryoshka  binary + rescoring, 768     96      0.723                  9.6\nQwen3-Embedding            float32, 1024   4096      0.982                409.6\nQwen3-Embedding             float32, 512   2048      0.968                204.8\nQwen3-Embedding             float32, 256   1024      0.927                102.4\nQwen3-Embedding             float32, 128    512      0.900                 51.2\nQwen3-Embedding              float32, 64    256      0.841                 25.6\nQwen3-Embedding               int8, 1024   1024      0.982                102.4\nQwen3-Embedding             binary, 1024    128      0.955                 12.8\nQwen3-Embedding binary + rescoring, 1024    128      0.964                 12.8\n"
+          "text": "          model                   format  bytes  recall@10  GB per 10^8 vectors\n    contrastive             float32, 768   3072      0.764                307.2\n    contrastive             float32, 512   2048      0.768                204.8\n    contrastive             float32, 256   1024      0.718                102.4\n    contrastive             float32, 128    512      0.686                 51.2\n    contrastive              float32, 64    256      0.595                 25.6\n    contrastive              float32, 32    128      0.414                 12.8\n    contrastive              float32, 16     64      0.141                  6.4\n    contrastive                int8, 768    768      0.759                 76.8\n    contrastive              binary, 768     96      0.668                  9.6\n    contrastive  binary + rescoring, 768     96      0.718                  9.6\n     Matryoshka             float32, 768   3072      0.741                307.2\n     Matryoshka             float32, 512   2048      0.759                204.8\n     Matryoshka             float32, 256   1024      0.736                102.4\n     Matryoshka             float32, 128    512      0.659                 51.2\n     Matryoshka              float32, 64    256      0.582                 25.6\n     Matryoshka              float32, 32    128      0.400                 12.8\n     Matryoshka              float32, 16     64      0.159                  6.4\n     Matryoshka                int8, 768    768      0.741                 76.8\n     Matryoshka              binary, 768     96      0.695                  9.6\n     Matryoshka  binary + rescoring, 768     96      0.723                  9.6\nQwen3-Embedding            float32, 1024   4096      0.982                409.6\nQwen3-Embedding             float32, 512   2048      0.968                204.8\nQwen3-Embedding             float32, 256   1024      0.927                102.4\nQwen3-Embedding             float32, 128    512      0.900                 51.2\nQwen3-Embedding              float32, 64    256      0.841                 25.6\nQwen3-Embedding              float32, 32    128      0.623                 12.8\nQwen3-Embedding              float32, 16     64      0.241                  6.4\nQwen3-Embedding               int8, 1024   1024      0.982                102.4\nQwen3-Embedding             binary, 1024    128      0.955                 12.8\nQwen3-Embedding binary + rescoring, 1024    128      0.964                 12.8\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-compress-1.svg",
-          "bytes": 51293,
-          "sha256": "sha256:a3594b0b2a6ffcb0f7d378ed92de87e3d522dbf94856a286296b87c556a91016"
+          "bytes": 48985,
+          "sha256": "sha256:af9e2ebeba61b11d8b37423c22b95f2d4cfc5a12e55e9d426396e860724901c2"
         }
       ]
     },
     "text-embeddings-compress-compare": {
-      "code_fingerprint": "sha256:cee58d9d35c99a673608a483f61c03043f5c875cf31161a135033d2ee2e98640",
+      "code_fingerprint": "sha256:3ff64669e0a3c678a07c469c70dd1d2374a958edd15fa501286817824be3a34f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                 comparison  delta    low   high  CI excludes 0  beyond seed range\n         Matryoshka, 128 - contrastive, 128 -0.027 -0.075  0.017          False              False\n    contrastive: binary + rescoring - float -0.045 -0.085 -0.009           True               True\n     Matryoshka: binary + rescoring - float -0.018 -0.055  0.017          False              False\nQwen3-Embedding: binary + rescoring - float -0.018 -0.037  0.000          False              False\nseed range of Recall@10 at full width (a proxy for the training noise at 128 coordinates): 0.045\n"
+          "text": "                                 comparison  delta    low   high  CI excludes 0  beyond seed range\n              Matryoshka - contrastive, 128 -0.027 -0.075  0.017          False              False\n               Matryoshka - contrastive, 64 -0.014 -0.048  0.022          False              False\n               Matryoshka - contrastive, 32 -0.014 -0.072  0.041          False              False\n               Matryoshka - contrastive, 16  0.018 -0.023  0.064          False              False\n    contrastive: binary + rescoring - float -0.045 -0.085 -0.009           True              False\n     Matryoshka: binary + rescoring - float -0.018 -0.055  0.017          False              False\nQwen3-Embedding: binary + rescoring - float -0.018 -0.037  0.000          False              False\nseed range of Recall@10 at full width (a proxy for the training noise\n  at smaller widths): 0.045\n"
         }
       ]
     },
     "text-embeddings-production": {
-      "code_fingerprint": "sha256:43f0c0b271922421a0487f9de23e796a2fa47e1f78470da6fa22d99af33cbd7d",
+      "code_fingerprint": "sha256:20fa09ff2e843b481636971dd0749a0308ec9ded83412f9834c680b2a9ae4948",
       "kind": "text",
       "outputs": [
         {

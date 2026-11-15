@@ -31,7 +31,7 @@ training (:numref:`sec_lm_text_embeddings`). The second finds passages with
 a word index and a vector index together, and asks what an approximate index
 gives up for speed (:numref:`sec_lm_retrieval`). The third hands what was
 found to a generator and asks, when an answer comes back wrong, which stage
-failed (:numref:`sec_lm_rag`). Everything is measured on this book, cut into
+failed (:numref:`sec_lm_rag` and :numref:`sec_lm_rag_fixes`). Everything is measured on this book, cut into
 passages and paired with questions whose answers and sources we know.
 Language models, not people, drafted and checked those questions, and later
 chapters of this part reuse both.
@@ -139,7 +139,8 @@ then find the close ones fast.
 | | Pretrained Encoders | when does a fine-tuned encoder beat a prompt? |
 | | Text Embeddings from Contrastive Training | why do pooled states retrieve poorly until trained? |
 | finding | Sparse, Dense and Approximate Retrieval | what floor must vectors beat, and what does an index trade for speed? |
-| using what is found | Retrieval-Augmented Generation | where does the system fail, and how is the stage found? |
+| using what is found | Retrieval-Augmented Generation | how is each stage of the system measured? |
+| | Failures and Fixes in RAG | which stage lost each wrong answer, and does a fix chosen in advance help? |
 
 - **Uses:** transformers, cross-entropy, the evaluation tools of the
   previous chapter.

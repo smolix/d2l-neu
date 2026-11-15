@@ -92,7 +92,8 @@ on. The generator is pinned like the models of chapter 18. -->
 
 ```{.python .input #rag-revisions}
 %%tab pytorch
-#@save
+# Pinned in this notebook, not in the library: adding it to the saved
+# HF_REVISIONS would change the fingerprint of every chapter-18 notebook
 d2l.HF_REVISIONS['Qwen/Qwen3.5-9B'] = (
     'c202236235762e1c871ad0ccb60c8ee5ba337b9a')
 ```

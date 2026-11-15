@@ -8140,9 +8140,6 @@ class BookRetriever:
         self._enc = self._rr = None
         d2l.lm_free()
 
-d2l.HF_REVISIONS['Qwen/Qwen3.5-9B'] = (
-    'c202236235762e1c871ad0ccb60c8ee5ba337b9a')
-
 d2l.DATA_HUB['lm-book-qa-v1'] = (  # corpus r3.1; 5,865 train, 240 dev, 240 test
     d2l.LM_DATA_URL + 'lm-book-qa-v1.zip',
     '3b8dba5ceae43c88274e52ce6ae7525884ea4168')

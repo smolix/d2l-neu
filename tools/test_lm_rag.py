@@ -180,7 +180,16 @@ class Prompts(unittest.TestCase):
     def test_abstained(self):
         self.assertTrue(d2l._rag_abstained(' ' + d2l.ABSTAIN.upper()))
         self.assertTrue(d2l._rag_abstained(d2l.ABSTAIN[:-1]))
-        self.assertFalse(d2l._rag_abstained('It is 4. ' + d2l.ABSTAIN))
+        # with an explanation before or after (Qwen3.5-9B's habit)
+        self.assertTrue(d2l._rag_abstained(
+            'The passages do not say.\n\n**' + d2l.ABSTAIN + '**'))
+        self.assertTrue(d2l._rag_abstained(
+            d2l.ABSTAIN + ' The text mentions X [1] but not Y.'))
+        self.assertTrue(d2l._rag_abstained('Therefore, i cannot answer this '
+                                           'from the  provided passages'))
+        self.assertFalse(d2l._rag_abstained('It is 4 [1].'))
+        self.assertFalse(d2l._rag_abstained(
+            'I can answer this from the provided passages: 4 [1].'))
 
 
 class StubJudge(unittest.TestCase):

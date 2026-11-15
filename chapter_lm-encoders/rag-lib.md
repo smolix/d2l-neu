@@ -149,10 +149,12 @@ def rag_judge_client(url='http://127.0.0.1/v1', cache=None, mode='replay'):
 
 #@save
 def _rag_abstained(answer):
-    """Whether an answer is the abstention string (case, surrounding
-    whitespace and quotes, and a final period ignored)."""
-    norm = lambda s: s.strip().strip('"\'*').rstrip('.').strip().lower()
-    return norm(answer) == norm(d2l.ABSTAIN)
+    """Whether an answer abstains: it contains the abstention sentence
+    (case, whitespace, quotes, emphasis and the final period ignored),
+    alone or with an explanation of what the passages lack. Generators
+    asked to reply with the sentence alone often explain first."""
+    norm = lambda s: re.sub(r'[\s"\'*]+', ' ', s).strip().rstrip('.').lower()
+    return norm(d2l.ABSTAIN) in norm(answer)
 
 def _rag_judge_messages(item, answer, context_texts, cited_ids):
     """The judge's chat messages (RAG_JUDGE_V1) for the verdicts it has to

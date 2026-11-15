@@ -757,8 +757,9 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
     nothing contradicting the reference), 'faithful' (every statement
     supported by the passages given) and 'supported' (the cited passages
     alone support it). result is a RAGResult or a dict with answer and
-    cited_ids (1-based passage numbers). An abstention is decided by string
-    match, not by the judge: it is correct exactly for an unanswerable item.
+    cited_ids (1-based passage numbers). An abstention (the abstention
+    sentence in the answer, d2l._rag_abstained) is decided without the
+    judge: it is correct exactly for an unanswerable item.
     Without passages only 'correct' is judged. item, result and
     context_texts may also be lists (a list of verdicts comes back, judged
     in batches). judge is a d2l.ChatAPI (tokenizer None; batch_size
@@ -1013,6 +1014,8 @@ def load_gens():
                                                  'rag-gen-fix')])
     for name, s in (df.groupby('config')['settings'] if len(df) else []):
         assert (s == settings(name)).all(), f'{name}: other settings'
+    if len(df):  # by the current rule, not the one of the run that wrote it
+        df['abstained'] = [d2l._rag_abstained(a) for a in df.answer]
     return df.assign(answer_sha=[answer_key(r)
                                  for r in df.to_dict('records')])
 
@@ -1133,9 +1136,12 @@ if 'rag-judge' in RERUN:
     old = load_judgments(JUD_FILE if os.path.exists(JUD_FILE) else
                          d2l.lm_registered(ARTIFACTS['rag-judge'][0]))
     key = dict(zip(zip(GENS.config, GENS.qid), GENS.answer_sha))
+    rule = set(zip(GENS.config[GENS.abstained], GENS.qid[GENS.abstained]))
     rows = [r for r in old.to_dict('records')  # verdicts on these answers
             if key.get((r['config'], r['qid'])) == r.get('answer_sha')]
     print(f'{len(old) - len(rows)} verdicts on answers no longer present')
+    rows = [r for r in rows  # abstentions: decided again, by rule (no call)
+            if (r['config'], r['qid']) not in rule]
     done = {(r['config'], r['qid']) for r in rows
             if r['concurrency'] == CONCURRENCY}
     todo = [r for r in GENS.to_dict('records')
@@ -1230,8 +1236,11 @@ v = d2l.rag_judge(d2l.rag_judge_client(cache=os.path.join(
     LABELS, 'api', 'judge-local-qwen38-27b-on.jsonl')), None,
     [ITEMS[p['qid']] for p in cal], cal,
     [[passage(i) for i in p['context_ids']] for p in cal])
-assert all(x[k] == recorded[p['qid']][k] for p, x in zip(cal, v)
-           for k in VERDICTS)
+graded = [not d2l._rag_abstained(p['answer']) for p in cal]
+assert all(x[k] == recorded[p['qid']][k] for p, x, g in zip(cal, v, graded)
+           if g for k in VERDICTS)  # the judge's replies, replayed
+print(f'{len(cal) - sum(graded)} of {len(cal)} calibration answers abstain '
+      '(decided by rule); the judge grades the others')
 
 def kappa(a, b):
     """Cohen's kappa of two 0/1 arrays."""

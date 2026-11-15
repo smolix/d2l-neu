@@ -8535,8 +8535,9 @@ def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
     nothing contradicting the reference), 'faithful' (every statement
     supported by the passages given) and 'supported' (the cited passages
     alone support it). result is a RAGResult or a dict with answer and
-    cited_ids (1-based passage numbers). An abstention is decided by string
-    match, not by the judge: it is correct exactly for an unanswerable item.
+    cited_ids (1-based passage numbers). An abstention (the abstention
+    sentence in the answer, d2l._rag_abstained) is decided without the
+    judge: it is correct exactly for an unanswerable item.
     Without passages only 'correct' is judged. item, result and
     context_texts may also be lists (a list of verdicts comes back, judged
     in batches). judge is a d2l.ChatAPI (tokenizer None; batch_size
@@ -14816,12 +14817,14 @@ def rag_judge_client(url='http://127.0.0.1/v1', cache=None, mode='replay'):
                            'chat_template_kwargs': {'enable_thinking': True}}})
 
 def _rag_abstained(answer):
-    """Whether an answer is the abstention string (case, surrounding
-    whitespace and quotes, and a final period ignored).
+    """Whether an answer abstains: it contains the abstention sentence
+    (case, whitespace, quotes, emphasis and the final period ignored),
+    alone or with an explanation of what the passages lack. Generators
+    asked to reply with the sentence alone often explain first.
 
     Defined in :numref:`sec_lm_rag`"""
-    norm = lambda s: s.strip().strip('"\'*').rstrip('.').strip().lower()
-    return norm(answer) == norm(d2l.ABSTAIN)
+    norm = lambda s: re.sub(r'[\s"\'*]+', ' ', s).strip().rstrip('.').lower()
+    return norm(d2l.ABSTAIN) in norm(answer)
 
 def _rag_judge_messages(item, answer, context_texts, cited_ids):
     """The judge's chat messages (RAG_JUDGE_V1) for the verdicts it has to

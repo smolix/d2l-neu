@@ -1190,7 +1190,8 @@ if 'rag-judge' in RERUN:
                                                    'judge-rep16.jsonl'),
                              'record', url),
                 [r for r in GENS.to_dict('records') if r['config'] == 'base'
-                 and r['qid'] in pick], 2 * CONCURRENCY, backend)
+                 and r['qid'] in pick and not r['abstained']],  # by rule
+                2 * CONCURRENCY, backend)
     finally:
         if server:
             server.stop()
@@ -1320,7 +1321,8 @@ if len(JUD) and 2 * CONCURRENCY in JUD.concurrency.values:
         str).nunique() > 1).any(), include_groups=False)
     print(f'judged again at concurrency {2 * CONCURRENCY} (first run '
           f'{CONCURRENCY}): {changed.sum()} of {len(changed)} answers '
-          'changed a verdict')
+          f'changed a verdict (of {N_REPEAT} drawn, the '
+          f'{N_REPEAT - len(changed)} abstentions are decided by rule)')
 ```
 
 <!-- Placeholder (prose): the baseline's measurements, each with an interval

@@ -16239,14 +16239,16 @@ def html_structure(html):
     <pre>, <table>, <li>, <h1>-<h6> outside <nav>, <header>, <footer>,
     <aside> and <form>, a <li> only if under half of its text is link
     text). Strings are whitespace-free except code lines (whitespace
-    collapsed). classes lists 'code', 'table', 'math' when present, and
+    collapsed); text holds the same content elements with whitespace
+    collapsed, one per line, the input of a language identifier that no
+    extractor has touched. classes lists 'code', 'table', 'math' when present, and
     'prose' for a page with none of them and at least 200 characters of
     prose. Prose is the text of the <p> elements with at least 100
     characters outside <nav>, <header>, <footer>, <aside> and <form>:
     short paragraphs are mostly form messages, banners and captions.
 
     Defined in :numref:`sec_lm_crawl`"""
-    out = dict(code=[], table=[], math=[], prose='', content='',
+    out = dict(code=[], table=[], math=[], prose='', content='', text='',
                classes=[])
     root = _lxml_document(html)
     if root is None:
@@ -16290,14 +16292,15 @@ def html_structure(html):
     for el in root.xpath(f'//*[self::p or self::pre or self::table or '
                          f'self::li or self::h1 or self::h2 or self::h3 or '
                          f'self::h4 or self::h5 or self::h6][{outside}]'):
-        text = _nows(' '.join(el.itertext()))
+        text = _ws(' '.join(el.itertext()))
         if el.tag == 'li':
             links = sum(len(_nows(' '.join(a.itertext())))
                         for a in el.iter('a'))
-            if links > 0.5 * len(text):
+            if links > 0.5 * len(_nows(text)):
                 continue
         content.append(text)
-    out['content'] = '\n'.join(content)
+    out['content'] = '\n'.join(map(_nows, content))
+    out['text'] = '\n'.join(t for t in content if t)
     out['classes'] = [c for c in ('code', 'table', 'math') if out[c]]
     if not out['classes'] and len(out['prose']) >= 200:
         out['classes'] = ['prose']
@@ -16451,7 +16454,10 @@ def extract_page(job):
     """The extract cell's worker for one HTML response job = (path, offset,
     length): the c0 pipeline with trafilatura (_c0_extract_one), the
     naive and Resiliparse extractions of the same decoded HTML with their
-    times, and html_structure. The decoded HTML stays in the worker.
+    times, html_structure, and html_lang, the top (language, score) of
+    detect_lang on the structure's text ((None, 0.0) if it has none): a
+    label that depends on no extractor. The decoded HTML stays in the
+    worker.
 
     Defined in :numref:`sec_lm_crawl`"""
     import time
@@ -16462,11 +16468,13 @@ def extract_page(job):
         t = time.perf_counter()
         texts[m] = d2l.extract_text(html, method=m)
         secs[m] = time.perf_counter() - t
-    row = c0['row']
+    row, struct = c0['row'], d2l.html_structure(html)
+    lang, score = (d2l.detect_lang(struct['text'])[0] if struct['text']
+                   else (None, 0.0))
     return dict(id=row['id'], url=row['url'], offset=job[1],
                 n_html=len(html), charset=row['charset'],
                 charset_source=row['charset_source'], texts=texts, secs=secs,
-                struct=d2l.html_structure(html), c0=c0)
+                struct=struct, html_lang=(lang, round(score, 4)), c0=c0)
 
 class DocList(list):
     """A list of Doc with the rows that failed to rebuild in .mismatches.

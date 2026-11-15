@@ -463,6 +463,11 @@ class StructureTest(unittest.TestCase):
             'The article explains the method in detail. ' * 3))
         self.assertEqual(s['classes'], ['code', 'table', 'math'])
         self.assertNotIn('Menu', s['content'])
+        self.assertEqual([c for c in s['content'].split('\n') if c],
+                         [d2l._nows(t) for t in s['text'].split('\n')])
+        self.assertIn('The article explains the method in detail. The',
+                      s['text'])
+        self.assertNotIn('Menu', s['text'])
         self.assertEqual(d2l.html_structure('')['classes'], [])
         self.assertEqual(d2l.html_structure('<p>\x00\x01 ok</p>')['prose'],
                          '')
@@ -614,6 +619,8 @@ class C0Test(LidMixin, unittest.TestCase):
         self.assertEqual(page['struct']['classes'], ['prose'])
         self.assertNotIn('html', page['c0'])
         self.assertIsNone(page['c0']['drop'])
+        self.assertEqual(page['html_lang'][0], 'en')  # from the HTML alone
+        self.assertGreater(page['html_lang'][1], 0.65)
 
 
 if __name__ == '__main__':

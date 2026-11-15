@@ -242,7 +242,8 @@ def pick(records):
 
 found, where = pick(head), 'the first 4 MiB'
 if found is None:
-    found, where = pick(d2l.iter_warc(path)), 'the first 16 MiB block'
+    found, where = (pick(d2l.iter_warc(path, n_bytes=16 * 2**20)),
+                    'the first 16 MiB block')
 record, page, ours_text = found
 print(f'rule: first HTTP-200 text/html response with <pre> or <table>, >= 2,000 '
       f'characters of trafilatura text and a FineWeb row; found in {where}')
@@ -260,7 +261,9 @@ print(f'\n(2) WET text: {sum(map(len, lines)):,} characters in {len(lines)} '
       f'lines, {np.mean(short):.0%} of them under 30 characters, longest run '
       f'of short lines (a menu signature): {run}')
 fw = fineweb.loc[record.id, 'text']
-f1 = d2l.char_ngram_f1(ours_text, fw)[2]
+mask = lambda t: re.sub(r'\S+@\S+|\b(?:\d{1,3}\.){3}\d{1,3}\b', '<PII>',
+                        t or '')  # FineWeb replaced emails and IPv4s too
+f1 = d2l.char_ngram_f1(mask(ours_text), mask(fw))[2]
 print(f'\n(3) FineWeb text: {len(fw):,} characters; our trafilatura text: '
       f'{len(ours_text):,} characters, character-5-gram F1 against FineWeb {f1:.2f}')
 print(f'first 300 characters of FineWeb\'s text:\n  {fw[:300]!r}')
@@ -496,7 +499,7 @@ print(f'(WET has no conversion record for {len(pages) - len(wet):,} pages)')
 ### Code, Tables and Mathematics
 :label:`subsec_lm_crawl_structure`
 
-<!-- Prose: the metrics, defined from the HTML alone so that no extractor is the reference: code-line, table-cell and math recall, prose 5-gram recall, and a precision proxy for boilerplate. -->
+<!-- Prose: the metrics, defined from the HTML alone so that no extractor is the reference: code-line, table-cell and math recall, prose 5-gram recall, and a precision proxy for boilerplate. Say plainly that the definitions (a prose paragraph has at least 100 characters outside nav/header/footer/aside/form, a prose page at least 200 such characters, the precision proxy's content set) were set by looking at pages of this same sample, so they are not held out; the naive extractor's thresholds (40, a third, 15, two blocks) come from the plan. The precision proxy matches a line anywhere in the content text, so short menu lines can count as content: it flatters WET and the naive extractor, which only strengthens their low scores. -->
 
 ```{.python .input #crawl-metrics-def}
 %%tab pytorch
@@ -526,22 +529,24 @@ def structure_recall(html, text):
     return {k: (None if v is None else float(v)) for k, v in out.items()}
 ```
 
-<!-- Prose: the headline measurement: recall by page class and extractor, with intervals from a bootstrap over registered domains (one site's templated pages count once). -->
+<!-- Prose: the headline measurement: recall by page class and extractor, with intervals from a bootstrap over registered domains (one site's templated pages count once). The pages are chosen without any compared extractor (fastText on the HTML's content text, the same 0.65 threshold), and a missing or empty output scores 0 for every extractor; choosing them by language of trafilatura's text, as the c0 funnel does, would drop exactly the pages trafilatura fails on. Precision is compared on the pages where all four outputs are non-empty. -->
 
 ```{.python .input #crawl-recall}
 %%tab pytorch
-en = [p for p in pages if p['c0']['row']['lang'] == 'en'
-      and p['c0']['row']['lang_score'] >= LID_MIN]
+ev = [p for p in pages if p['html_lang'][0] == 'en'  # language of the HTML,
+      and p['html_lang'][1] >= LID_MIN]             # not of any extractor
 rows = []
-for p in en:
+for p in ev:
     dom = d2l.registered_domain(p['url'])
-    for m in EXTRACTORS:
-        if m != 'wet' or p['texts']['wet'] is not None:
-            rows.append(dict(id=p['id'], domain=dom, extractor=m,
-                             classes=p['struct']['classes'],
-                             **d2l.structure_recall(p['struct'],
-                                                    p['texts'][m])))
+    for m in EXTRACTORS:  # a missing or empty output recalls nothing
+        rows.append(dict(id=p['id'], domain=dom, extractor=m,
+                         classes=p['struct']['classes'],
+                         **d2l.structure_recall(p['struct'], p['texts'][m])))
 rec = pd.DataFrame(rows)
+in_c0 = sum(p['c0']['drop'] is None for p in ev)
+print(f'{len(ev):,} pages English by their HTML ({in_c0:,} of them in c0); '
+      'missing or empty output, scored 0: ' + ', '.join(
+          f'{m} {sum(not p["texts"][m] for p in ev)}' for m in EXTRACTORS))
 
 def interval(values, cluster, paired=None):
     """Mean with a 95% domain-clustered interval, or None (n too small)."""
@@ -575,9 +580,12 @@ for c in CLASSES:
                            hi=d.ci[1] if d else np.nan,
                            p=d.p_two_sided if d else np.nan))
 recall, deltas = pd.DataFrame(recall), pd.DataFrame(deltas)
+full = {p['id'] for p in ev  # pages where every extractor returned text
+        if all(p['texts'][m] and p['texts'][m].strip() for m in EXTRACTORS)}
 prec = []
 for m in EXTRACTORS:
-    v = rec[rec.extractor == m].dropna(subset=['precision'])
+    v = rec[(rec.extractor == m) & rec.id.isin(full)].dropna(
+        subset=['precision'])
     ci = interval(v.precision.to_numpy(), v.domain.to_numpy())
     prec.append(dict(extractor=m, n=len(v), mean=ci.mean, lo=ci.ci[0],
                      hi=ci.ci[1]))
@@ -603,30 +611,28 @@ fig.tight_layout()
 print(deltas.round(3).to_string(index=False))
 ```
 
-<!-- Prose: agreement with FineWeb's text for the same records, which comes from another trafilatura run with unrecorded settings; agreement, never accuracy. -->
+<!-- Prose: agreement with FineWeb's text for the same records; agreement, never accuracy. FineWeb's text comes from datatrove's Trafilatura step, whose defaults (checked in the datatrove 0.10.1 source) are favor_precision=True, deduplicate=True, include_comments=False; ours uses favor_precision=False and trafilatura's own defaults (comments kept), so even our trafilatura text is not FineWeb's. FineWeb then replaced emails and public IPv4 addresses by fixed placeholders (datatrove's PIIFormatter: email@example.com, firstname.lastname@example.org, six fixed IPs); both sides are masked alike before comparing, so a scrubbed address does not count as a lost line. A page that the WET file lacks counts as empty. -->
 
 ```{.python .input #crawl-fineweb-agree}
 %%tab pytorch
 by_id = {p['id']: p for p in pages}
-joined = [i for i in fineweb.index if i in by_id]
-how = 'record id'
-if len(joined) < 0.99 * len(fineweb):  # fallback, a weaker match
+in_range = fineweb[fineweb.url.isin(set(resp.url))]  # rows of the scanned part
+ref, how = in_range.text[in_range.index.isin(list(by_id))], 'record id'
+if len(ref) < 0.99 * len(in_range):  # fallback, a weaker match
     key = {(p['url'], p['c0']['row']['date']): p['id'] for p in pages}
-    joined = [key[(u, d)] for u, d in zip(fineweb.url, fineweb.date)
-              if (u, d) in key]
-    fineweb = fineweb.set_axis([key.get((u, d), i) for i, u, d in zip(
-        fineweb.index, fineweb.url, fineweb.date)])
+    ref = pd.Series({key[(u, d)]: t for u, d, t in zip(
+        in_range.url, in_range.date, in_range.text) if (u, d) in key})
     how = 'URL and date (weaker)'
-print(f'{len(joined):,} of {len(fineweb):,} FineWeb rows of this range '
+joined = sorted(ref.index)  # our record ids of the pages FineWeb kept
+print(f'{len(joined):,} of {len(in_range):,} FineWeb rows of this range '
       f'joined by {how}')
-agree = []
+agree, masked = [], {}
 for i in joined:
-    p, ref = by_id[i], fineweb.loc[i, 'text']
+    p = by_id[i]
     cls = p['struct']['classes'] or ['none']
-    for m in EXTRACTORS:
-        if p['texts'][m] is None and m == 'wet':
-            continue  # no WET record for this page
-        prec_, rec_, f1 = d2l.char_ngram_f1(p['texts'][m], ref)
+    for m in EXTRACTORS:  # a missing output (no WET record) is empty
+        masked[i, m] = mask(p['texts'][m])
+        prec_, rec_, f1 = d2l.char_ngram_f1(masked[i, m], mask(ref[i]))
         agree.append(dict(id=i, domain=d2l.registered_domain(p['url']),
                           extractor=m, cls=cls, f1=f1,
                           fineweb_only=1 - rec_, ours_only=1 - prec_))
@@ -643,14 +649,14 @@ split = (agree.explode('cls').groupby(['extractor', 'cls'])
          [['fineweb_only', 'ours_only']].mean().unstack('cls'))
 print('\nshare of 5-grams only in FineWeb / only in ours, by page class:')
 print(split.reindex(EXTRACTORS).round(2).to_string())
-print('\nlines FineWeb kept and an extractor lost (FineWeb\'s text, ODC-By):')
+print('\nlines FineWeb kept and an extractor lost (FineWeb\'s text, ODC-By; '
+      'addresses masked on both sides):')
 for m in ['naive', 'resiliparse', 'trafilatura']:
-    for i in sorted(joined):
-        p = by_id[i]
-        if not {'code', 'table'} & set(p['struct']['classes']):
+    for i in joined:
+        if not {'code', 'table'} & set(by_id[i]['struct']['classes']):
             continue
-        out = d2l._ws(p['texts'][m] or '')
-        lost = [l for l in fineweb.loc[i, 'text'].splitlines()
+        out = d2l._ws(masked[i, m])
+        lost = [l for l in mask(ref[i]).splitlines()
                 if len(l) >= 40 and d2l._ws(l) not in out]
         if lost:
             print(f'  {m}: {lost[0][:160]!r}')
@@ -703,7 +709,7 @@ print(conf.reindex(index=top, columns=top + ['other'], fill_value=0
 en_scores = pd.Series({i: s for i, (l, s) in lid.items() if l == 'en'})
 thresholds = np.round(np.arange(0.50, 0.91, 0.05), 2)
 kept_en = [(en_scores >= t).sum() for t in thresholds]
-in_fw = [en_scores[en_scores >= t].index.isin(fineweb.index).sum()
+in_fw = [en_scores[en_scores >= t].index.isin(joined).sum()
          for t in thresholds]
 d2l.plot(thresholds, [kept_en, in_fw], 'fastText threshold on "en"',
          'English documents', legend=['kept', 'kept and in FineWeb'],
@@ -729,6 +735,7 @@ for name, s in [
 
 ```{.python .input #crawl-unicode}
 %%tab pytorch
+en = [p for p in pages if p['c0']['drop'] is None]  # the c0 documents
 docs_en = [p['texts']['trafilatura'] for p in en]
 loss, changed = {}, {}
 for form in ('NFC', 'NFKC'):
@@ -802,7 +809,7 @@ def scrub_pii(text):
     return d2l.PII_PATTERNS['ip'].sub(ip, text), counts
 ```
 
-<!-- Prose: precision and recall per pattern on a fixture of 60 strings that hold personal data and 60 that do not; the false positives are the lesson. -->
+<!-- Prose: precision and recall per pattern on a fixture of 60 strings that hold personal data and 60 that do not; the false positives are the lesson. The fixture was written together with the rules (the sentence-final dot was added while writing it), so it specifies what the rules match and miss; its recall of 1.0 holds by construction and is never the scrubber's recall on web text. The c0 counts are rule matches, not checked by hand. -->
 
 ```{.python .input #crawl-pii}
 %%tab pytorch
@@ -951,8 +958,9 @@ n_ip = sum(c['ip'] > 0 for _, c in scrub)
 delta = sum(len(t.encode()) - len(unicodedata.normalize(
     'NFC', p['texts']['trafilatura']).encode())
             for (t, _), p in zip(scrub, en))
-print(f'c0 ({len(en):,} English documents): emails in {n_email}, public IP '
-      f'addresses in {n_ip}; {sum(c["email"] for _, c in scrub)} and '
+print(f'c0 ({len(en):,} English documents), rule matches (not checked by '
+      f'hand): emails in {n_email} documents, public IP addresses in {n_ip}; '
+      f'{sum(c["email"] for _, c in scrub)} and '
       f'{sum(c["ip"] for _, c in scrub)} replaced; UTF-8 bytes changed by '
       f'{delta:+,}')
 ```
@@ -1153,7 +1161,9 @@ m.add_source('cc-main-2025-05-00000', pin['warc']['url'],
 m.add_stage('extract', dict(rules=['not_200', 'not_html', 'empty'],
                             charset_chain=['header', 'meta', 'detector',
                                            'fallback'],
-                            include_tables=True, favor_precision=False),
+                            include_tables=True, favor_precision=False,
+                            versions={k: importlib.metadata.version(k) for k in
+                                      ('lxml', 'justext', 'charset-normalizer')}),
             len(resp), len(nonempty), dict(
                 not_200=int((resp.status != 200).sum()),
                 not_html=int(((resp.status == 200) &
@@ -1299,7 +1309,8 @@ results = rounded(dict(
     crawl_mib=CRAWL_MIB, lid_min=LID_MIN, records=stats,
     c0_manifest=m.to_dict(), recall=recall.to_dict('records'),
     paired=deltas.to_dict('records'), precision=prec.to_dict('records'),
-    fineweb=dict(joined=len(joined), rows=len(fineweb), how=how,
+    evaluation=dict(pages=len(ev), in_c0=in_c0, precision_pages=len(full)),
+    fineweb=dict(joined=len(joined), rows=len(in_range), how=how,
                  f1=summary.to_dict('records')),
     lid=dict(thresholds=thresholds.tolist(), kept=kept_en, in_fineweb=in_fw,
              confusion=conf.reindex(index=top, columns=top + ['other'],
@@ -1313,18 +1324,21 @@ else:
     with open(d2l.lm_artifact(R_KEY)) as f:
         reg = json.load(f)
     a = d2l.json_agreement(results, reg)
+    same = reg['c0_manifest'] == results['c0_manifest']
     print(f'against {R_KEY}: {a["equal"]}/{a["values"]} values equal, '
           f'largest numeric difference {a["max_diff"]:.2g}; manifest '
-          f'{"identical" if reg["c0_manifest"] == results["c0_manifest"] else "DIFFERS"}')
+          f'{"identical" if same else "DIFFERS"}')
+    assert same and a['equal'] == a['values']  # deterministic given the pins
 P_KEY, P_FILE = ARTIFACTS['pin']
-if 'pin' in RERUN:
-    full = d2l.fetch_warc_range()
-    d2l.lm_save_rerun(P_FILE, lambda f: pathlib.Path(f).write_bytes(
-        d2l._cc_pin_bytes(d2l._cc_pin(full, d2l.fetch_warc_range(
-            which='wet')))))
+if 'pin' in RERUN:  # a consistency check, not a new pin: fetch_warc_range
+    # verifies the bytes against the registered pin's block hashes, so this
+    # reproduces that pin or fails; a pin for another range starts from
+    # d2l._cc_pin on a download that nothing has verified yet
+    new_pin = d2l._cc_pin_bytes(d2l._cc_pin(
+        d2l.fetch_warc_range(), d2l.fetch_warc_range(which='wet')))
+    d2l.lm_save_rerun(P_FILE, lambda f: pathlib.Path(f).write_bytes(new_pin))
     with open(d2l.download_keyed(P_KEY), 'rb') as f:
-        same = f.read() == d2l._cc_pin_bytes(d2l._cc_pin(
-            full, d2l.fetch_warc_range(which='wet')))
+        same = f.read() == new_pin
     print(f'pin {"identical to" if same else "DIFFERS from"} {P_KEY}')
 ```
 

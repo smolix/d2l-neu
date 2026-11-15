@@ -237,6 +237,12 @@ class Retriever(unittest.TestCase):
             k1=0.9, b=0.4, split_identifiers=False))
         self.assertEqual(r2.bm25.k1, 0.9)
 
+    def test_iterate_corpus(self):
+        corpus = toy_corpus()
+        self.assertEqual([c['id'] for c in corpus], corpus.ids)
+        self.assertEqual(len(list(corpus)), len(corpus))
+        self.assertIs(corpus[corpus.ids[1]], list(corpus)[1])
+
     def test_span_to_chunk_ids(self):
         corpus = toy_corpus()
         c = corpus['sec512:chapter_a/one#000']

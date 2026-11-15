@@ -1505,7 +1505,7 @@ Budget ≈ 110 lines: `task_vector`, `merge_task_arithmetic` (20), `merge_ties` 
 #### Risks and open decisions
 
 - **Eval size.** 200-item evals make method differences hard to resolve; fallback: cache larger T2 evals as artifacts.
-- **Judge choice for book QA.** Scoring uses 2.5's `d2l.rag_judge` with the A2 judge (Qwen3.5-9B, bf16); on 100 items its errors are not negligible, so the 20-item manual rubric doubles as a judge-agreement check; open: switch to a larger cached judge if agreement is low.
+- **Judge choice for book QA.** Scoring uses 2.5's `d2l.rag_judge`. Chapter 19 (2.5) validated Qwen3.8-27B with thinking on (`d2l.RAG_JUDGE_LOCAL`, FP8 weights served by vLLM over two 24 GB cards through `d2l.rag_judge_server`/`d2l.rag_judge_client`, `tokenizer=None`; κ 0.72 on `correct` against frontier-model labels); the earlier plan's Qwen3.5-9B Transformers judge works with the same signature but defaults to thinking off and is not validated. `result` must be a `RAGResult` or a mapping with `answer`. The 20-item manual rubric doubles as a judge-agreement check.
 - **Tasks M and S are too different to interfere strongly**; if TIES/DARE show no gain, say so and keep the interference diagnostics; alternative pair (GSM8K and a second math-style task) as an exercise.
 - **mergekit on CPU with the pinned environment** may need its own env; fallback: the from-scratch merges only.
 - **SQL split leakage** (shared schemas): reported as a caveat; a schema-disjoint split is the stricter alternative.

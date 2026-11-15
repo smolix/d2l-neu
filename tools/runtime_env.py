@@ -400,6 +400,9 @@ NOTEBOOK_ENV = {
     # 137 columns) that huggingface_hub logs once per process; it depends on
     # the build box having no HF_TOKEN, so it is noise on the page. Errors
     # still raise.
+    ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
     # 19.2: fine-tuning runs of changing batch shapes (each batch padded to
     # its own longest pair) and the decoder's long prompts follow each other
     # in one process; expandable segments keep the cached blocks reusable.
@@ -410,9 +413,6 @@ NOTEBOOK_ENV = {
     # GiB of a 24 GB card's limit; cached fixed-size blocks would not fit.
     ("pytorch", "chapter_lm-encoders/rag.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
-    },
-    ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): {
-        "HF_HUB_VERBOSITY": "error",
     },
 }
 

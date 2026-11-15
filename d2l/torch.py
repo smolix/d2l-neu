@@ -8174,7 +8174,8 @@ def gold_chunk_ids(item, corpus, min_overlap=0.5, include_alt=True):
     overlap one of its gold spans (and, with include_alt, the passages
     judged to answer it as well) by at least min_overlap of the span's or
     of the chunk's characters."""
-    spans = item['gold_spans'] + (item['alt_spans'] if include_alt else [])
+    spans = item['gold_spans'] + (item.get('alt_spans', []) if include_alt
+                                  else [])
     return {i for s in spans for i in corpus.span_to_chunk_ids(
         s['doc_id'], s['char_start'], s['char_end'], min_overlap)}
 
@@ -14515,7 +14516,8 @@ class BookCorpus:
     """The book corpus under one chunking: chunks (a list of dicts in
     document order), docs ({doc_id: dict}), the manifest, and views of the
     chunk texts for a generator ('display'), a dense encoder ('dense') and
-    a word index ('sparse').
+    a word index ('sparse'). Iterating yields the chunks in order;
+    corpus[cid] looks a chunk up by its id.
 
     Defined in :numref:`sec_lm_retrieval`"""
     def __init__(self, manifest, docs, chunks, tag):
@@ -14531,6 +14533,9 @@ class BookCorpus:
 
     def __len__(self):
         return len(self.chunks)
+
+    def __iter__(self):
+        return iter(self.chunks)
 
     def __getitem__(self, chunk_id):
         return self.chunks[self._index[chunk_id]]

@@ -247,7 +247,8 @@ def gold_chunk_ids(item, corpus, min_overlap=0.5, include_alt=True):
     overlap one of its gold spans (and, with include_alt, the passages
     judged to answer it as well) by at least min_overlap of the span's or
     of the chunk's characters."""
-    spans = item['gold_spans'] + (item['alt_spans'] if include_alt else [])
+    spans = item['gold_spans'] + (item.get('alt_spans', []) if include_alt
+                                  else [])
     return {i for s in spans for i in corpus.span_to_chunk_ids(
         s['doc_id'], s['char_start'], s['char_end'], min_overlap)}
 ```

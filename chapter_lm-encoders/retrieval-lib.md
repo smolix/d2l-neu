@@ -645,7 +645,8 @@ class BookCorpus:
     """The book corpus under one chunking: chunks (a list of dicts in
     document order), docs ({doc_id: dict}), the manifest, and views of the
     chunk texts for a generator ('display'), a dense encoder ('dense') and
-    a word index ('sparse')."""
+    a word index ('sparse'). Iterating yields the chunks in order;
+    corpus[cid] looks a chunk up by its id."""
     def __init__(self, manifest, docs, chunks, tag):
         self.manifest, self.tag = manifest, tag
         self.version = manifest['corpus_version']
@@ -659,6 +660,9 @@ class BookCorpus:
 
     def __len__(self):
         return len(self.chunks)
+
+    def __iter__(self):
+        return iter(self.chunks)
 
     def __getitem__(self, chunk_id):
         return self.chunks[self._index[chunk_id]]

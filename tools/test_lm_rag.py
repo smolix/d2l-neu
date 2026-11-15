@@ -79,6 +79,10 @@ class Gold(unittest.TestCase):
                          {'fix256o64:chapter_a/two#000'})
         none = dict(ITEM, gold_spans=[], alt_spans=[])
         self.assertEqual(d2l.gold_chunk_ids(none, c), set())
+        # an item without alt_spans (synthesized by another chapter)
+        bare = {k: v for k, v in ITEM.items() if k != 'alt_spans'}
+        self.assertEqual(d2l.gold_chunk_ids(bare, c), {
+            'sec512:chapter_a/one#001', 'sec512:chapter_a/two#000'})
 
 
 def qa_zip(path):

@@ -1100,7 +1100,7 @@ emb = np.load(d2l.lm_artifact('lm-data-emb-qwen3emb-v1'))
 assert (emb['stream_ids'] == STREAM_S.id.to_numpy().astype(str)).all()
 sub = np.sort(np.random.default_rng(0).choice(len(STREAM_S), 4000,
                                               replace=False))
-X = emb['stream'][sub].astype(np.float32)
+X = emb['stream'][sub].astype(np.float64)  # k-means casts to float32
 X /= np.linalg.norm(X, axis=1, keepdims=True)
 _, assign = d2l.kmeans(X, 64, seed=0)
 assign = assign.numpy()

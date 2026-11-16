@@ -10,7 +10,9 @@ batch size 1); the stream-half rule.
 
 Gated (no network, the local HF cache only): Qwen3.5-4B's tokenizer maps the
 digits after both score prefixes to single tokens; the released annotation
-prompts are EDU_RUBRIC with the extract filled in."""
+prompts are EDU_RUBRIC with the extract filled in; the annotation sample's
+val and test rows lie in the released classifier's hold-out
+(lm-edu-holdout-v1, when downloaded)."""
 import glob
 import math
 import os
@@ -293,6 +295,34 @@ class LabelScoresTest(unittest.TestCase):
             self.assertTrue(prompt.startswith(pre) and prompt.endswith(suf))
             extract = prompt[len(pre):len(prompt) - len(suf)]
             self.assertTrue(text.startswith(extract.rstrip('.')[:1400]))
+
+
+HOLDOUT = os.path.join('..', 'data', 'lm', 'lm-edu-holdout-v1',
+                       'lm-edu-holdout-v1.json.gz')
+ALL_ANNOT = glob.glob(
+    f'{HF}/hub/datasets--HuggingFaceFW--fineweb-edu-llama3-annotations/'
+    'snapshots/*/data/train-0000[0-7]-of-00008.parquet')
+
+
+class AnnotSampleTest(unittest.TestCase):
+    @unittest.skipUnless(len(ALL_ANNOT) == 8 and os.path.exists(HOLDOUT),
+                         'annotation files or lm-edu-holdout-v1 not local')
+    def test_val_test_in_released_holdout(self):
+        import gzip
+        import json
+        with gzip.open(HOLDOUT, 'rt') as f:
+            hold = json.load(f)
+        self.assertEqual((hold['holdout_size'], hold['n_rows']),
+                         (46_867, 46_744))
+        df = d2l._edu_annot_sample()
+        self.assertEqual(df.split.tolist(), ['train'] * 18_000 +
+                         ['val'] * 2_000 + ['test'] * 2_000)
+        self.assertTrue(df.row.is_unique)
+        p = np.random.default_rng(0).permutation(d2l._EDU_ANNOT_ROWS)
+        np.testing.assert_array_equal(df.row[:18_000], p[:18_000])
+        h = np.isin(df.row, hold['rows'])
+        self.assertTrue(h[18_000:].all())  # out-of-sample for the released
+        self.assertLess(h[:18_000].mean(), 0.11)  # train: about 10%
 
 
 if __name__ == '__main__':

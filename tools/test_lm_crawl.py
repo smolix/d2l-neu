@@ -517,7 +517,14 @@ class StructureTest(unittest.TestCase):
             self.assertEqual(d2l.host_class(url), c, url)
         a = d2l.json_agreement({'x': [1, 2.5], 'y': {'z': 'a'}},
                                {'x': [1, 2.0], 'y': {'z': 'a'}})
-        self.assertEqual(a, dict(values=3, equal=2, max_diff=0.5))
+        self.assertEqual(a, dict(values=3, equal=2, max_diff=0.5,
+                                 mismatches=[], missing=[]))
+        a = d2l.json_agreement(  # strings, bools, None; one-sided paths
+            {'v': 'usable', 'b': True, 'n': None, 'x': 1, 'new': 2},
+            {'v': 'weak', 'b': False, 'n': [1], 'x': 1.0004, 'old': 3})
+        self.assertEqual(a['mismatches'], [('v',), ('b',)])
+        self.assertEqual(a['missing'], [('n', 0), ('n',), ('new',), ('old',)])
+        self.assertAlmostEqual(a['max_diff'], 0.0004)
 
 
 class PiiTest(unittest.TestCase):

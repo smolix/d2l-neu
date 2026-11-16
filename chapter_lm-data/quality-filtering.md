@@ -363,12 +363,14 @@ assert set(d2l.QUALITY_FIXTURES) - {'keep'} == set(d2l.GOPHER_CFG)
 %%tab pytorch
 PARITY_FILE = os.path.join('..', 'data', 'lm', 'datatrove-parity-v1.json')
 if 'quality-results' in RERUN:  # computed once by the sources builder
-    PARITY = (json.load(open(PARITY_FILE)) if os.path.exists(PARITY_FILE)
-              else None)
+    assert os.path.exists(PARITY_FILE), (
+        f'{PARITY_FILE} is missing: run tools/build_lm_data_sources.py '
+        'before regenerating quality-results')
+    PARITY = json.load(open(PARITY_FILE))
 else:
     PARITY = REG.get('parity') if REG else None
 R['parity'] = PARITY
-if PARITY is None:
+if PARITY is None:  # results registered before the table existed
     print('datatrove parity table pending (tools/build_lm_data_sources.py '
           f'writes {PARITY_FILE})')
 else:
@@ -621,14 +623,21 @@ else:
 ```{.python .input #quality-filtering-label-regen}
 %%tab pytorch
 ANNOT_FILE = os.path.join(RERUN_DIR, 'lm-edu-annot-22k-v1.parquet')
-LABEL_PARTS = {  # name: rows (in the order of the sampled permutation)
-    'edu-label-pilot': ('test', range(0, 2000)),
+LABEL_PARTS = {  # name: (splits, positions in the sample's order)
+    'edu-label-pilot': ('test', range(20000, 22000)),
     'edu-label-0': ('train', range(0, 9000)),
     'edu-label-1': ('train+val', range(9000, 20000))}
-SCORE_RE = re.compile(r'Educational score:( *)(\d)')  # the released format
+PROVENANCE = dict(labeller=f'{LABELLER}@{pins[LABELLER]}',
+                  score_prefix=SCORE_PREFIX, batch_tokens=LABEL_BATCH_TOKENS)
+# the released format "Educational score:  N", and the markdown forms that
+# instruction models write ("**Educational score:** 3", "...: **3**")
+SCORE_RE = re.compile(r'Educational score:([\s*]*)(\d)', re.IGNORECASE)
+MERGED = False  # whether this run wrote ANNOT_FILE
 
 def label_part(name, base, model, tok):
-    rows = base.iloc[list(LABEL_PARTS[name][1])]
+    splits, positions = LABEL_PARTS[name]
+    rows = base.iloc[list(positions)]
+    assert rows.split.isin(splits.split('+')).all(), f'{name}: other rows'
     t0 = time.time()
     P = d2l.edu_label_scores(model, tok, rows.prompt.tolist(),
                              max_batch_tokens=LABEL_BATCH_TOKENS,
@@ -636,25 +645,43 @@ def label_part(name, base, model, tok):
     print(f'{name}: {len(rows):,} rows in {time.time() - t0:.0f} s, '
           f'{d2l.lm_peak()}')
     part = pd.DataFrame(dict(row=rows.row.to_numpy(), qwen_probs=list(P)))
-    if name == 'edu-label-pilot':  # the protocol check: justify first
-        just = rows.head(200)
+    part = part.assign(**PROVENANCE)  # checked when the parts are merged
+    if name == 'edu-label-pilot':
+        # batching on the real labeller (left padding through its linear-
+        # attention layers): 32 prompts across the length range, one at a time
+        order = np.argsort(rows.prompt.str.len().to_numpy(), kind='stable')
+        pick = order[np.linspace(0, len(rows) - 1, 32).astype(int)]
+        one = d2l.edu_label_scores(model, tok, rows.prompt.iloc[pick].tolist(),
+                                   batch_size=1, prefix=SCORE_PREFIX)
+        dp = np.abs(one - P[pick]).max()
+        same = np.mean(one.argmax(1) == P[pick].argmax(1))
+        print(f'32 prompts batched and one at a time: largest |dp| {dp:.4f}, '
+              f'same label {same:.3f}')
+        assert dp <= 0.05, 'batched scores depend on the batch'
+        just = rows.head(200)  # the protocol check: justify first
         t0 = time.time()
         gens = d2l.generate(model, tok, [[{'role': 'user', 'content': p}]
                                          for p in just.prompt],
                             max_new_tokens=384, chat=True,
                             enable_thinking=False, batch_size=16)
         found = [SCORE_RE.search(g.text) for g in gens]
-        spaces = collections.Counter(len(m.group(1)) for m in found if m)
+        seps = collections.Counter(m.group(1) for m in found if m)
         print(f'200 justification-first answers in {time.time() - t0:.0f} '
-              f's; unparsable {sum(m is None for m in found)}; spaces '
-              f'before the digit: {dict(spaces)}')
+              f's; unparsable {sum(m is None for m in found)}; text between '
+              'the colon and the digit: ' + ', '.join(
+                  f'{k!r} {n}' for k, n in seps.most_common()))
+        pad = [None] * (len(part) - 200)
         part['qwen_just_score'] = pd.array(
-            [int(m.group(2)) if m else None for m in found] +
-            [None] * (len(part) - 200), dtype='Int64')
-        part['qwen_just_text'] = [g.text for g in gens] + [None] * (
-            len(part) - 200)
-    return d2l.lm_save_table(ARTIFACTS[name][1], part, on='row',
-                             key=LABEL_KEY)
+            [int(m.group(2)) if m else None for m in found] + pad,
+            dtype='Int64')
+        part['qwen_just_sep'] = [m.group(1) if m else None
+                                 for m in found] + pad
+        part['qwen_just_text'] = [g.text for g in gens] + pad
+    # a temporary name, then a rename: a part written by another process
+    # (the parts may run at once) is either absent or complete
+    path = d2l.lm_save_table(f'{name}.{os.getpid()}.tmp.parquet', part,
+                             on='row', key=LABEL_KEY)
+    os.replace(path, os.path.join(RERUN_DIR, ARTIFACTS[name][1]))
 
 if RERUN & set(LABEL_PARTS):
     base = d2l._edu_annot_sample()  # the 22,000 sampled rows, unlabelled
@@ -667,6 +694,8 @@ if RERUN & set(LABEL_PARTS):
     if all(map(os.path.exists, parts)):  # merge; the same bytes from any run
         lab = pd.concat([pd.read_parquet(p) for p in parts],
                         ignore_index=True)
+        for k, v in PROVENANCE.items():  # all parts under this protocol
+            assert (lab[k] == v).all(), f'a part has another {k}: rerun it'
         assert lab.row.is_unique and len(lab) == len(base)
         full = base.merge(lab, on='row', validate='1:1')
         P = np.stack(full.qwen_probs.to_numpy())
@@ -676,24 +705,30 @@ if RERUN & set(LABEL_PARTS):
         full.sort_values('row').to_parquet(tmp, index=False,
                                            compression='zstd')
         os.replace(tmp, ANNOT_FILE)
+        MERGED = True
         print(f'merged {len(full):,} rows into {ANNOT_FILE}, sha1 '
               f'{hashlib.sha1(open(ANNOT_FILE, "rb").read()).hexdigest()}')
 ```
 
-<!-- Prose: the author's check: does the small labeller reproduce the large one's judgments? Agreement with the released Llama-3-70B labels on all 22,000 rows, read against thresholds fixed before any label existed; the protocol check on 200 rows. -->
+<!-- Prose: the author's check: does the small labeller reproduce the large one's judgments? Agreement with the released Llama-3-70B labels on all 22,000 rows, read against thresholds fixed before any label existed; the protocol check on 200 rows. State the verdict rule as the cell applies it: "usable" if binary kappa >= 0.5 and QWK >= 0.6, "weak" if both clear their bound minus 0.1, else "poor" (the spec's "kappa in [0.4, 0.5) or QWK in [0.5, 0.6)" reads looser; the code needs both). -->
 
 ```{.python .input #quality-filtering-agreement}
 %%tab pytorch
 def load_annotations():
-    """The labelled rows: this run's merge, else the registered file, else
-    (a pilot run) the sample with the pilot's labels only."""
-    if RERUN & set(LABEL_PARTS) and os.path.exists(ANNOT_FILE):
+    """The labelled rows, sorted by row: this run's merge, else the
+    registered file, else (a pilot run) the sample with the pilot's labels
+    only."""
+    if MERGED:
+        print('labels: this run\'s merge')
         return pd.read_parquet(ANNOT_FILE)
     if LABEL_KEY in d2l.DATA_HUB:
+        print(f'labels: {LABEL_KEY}')
         return pd.read_parquet(d2l.lm_artifact(LABEL_KEY))
+    print('labels: the pilot\'s rows only')
     lab = pd.read_parquet(os.path.join(RERUN_DIR,
                                        ARTIFACTS['edu-label-pilot'][1]))
-    df = d2l._edu_annot_sample().merge(lab, on='row', how='left')
+    df = d2l._edu_annot_sample().sort_values('row', ignore_index=True)
+    df = df.merge(lab, on='row', how='left')
     P = np.stack([p if isinstance(p, np.ndarray) else np.full(6, np.nan)
                   for p in df.qwen_probs])
     df['qwen_score'] = pd.array(np.where(np.isnan(P[:, 0]), np.nan,
@@ -724,6 +759,7 @@ verdict = ('usable' if kb >= AGREE_MIN['kappa_bin'] and qwk >= AGREE_MIN['qwk']
 print(f'{len(lab):,} rows with both labels; probability on the six digits: '
       f'median {np.median(mass):.3f}, 1st percentile '
       f'{np.quantile(mass, 0.01):.3f}')
+assert np.median(mass) >= 0.9, 'the label is an argmax over little mass'
 print(f'exact agreement {np.mean(q == l):.3f}; quadratic-weighted kappa '
       f'{qwk:.3f}; binary (score >= {THRESH_LABEL}) kappa {kb:.3f} '
       f'[{kb_lo:.3f}, {kb_hi:.3f}]')
@@ -738,7 +774,13 @@ print(f'verdict against kappa >= {AGREE_MIN["kappa_bin"]} and QWK >= '
           '  (FLAG for the author: the small labeller does not reproduce '
           'the rubric)' if verdict == 'poor' else ''))
 
-just = lab[lab.qwen_just_score.notna()] if 'qwen_just_score' in lab else []
+just = []
+if 'qwen_just_text' in lab:  # the pilot's justification-first answers
+    n_gen = int(lab.qwen_just_text.notna().sum())
+    just = lab[lab.qwen_just_score.notna()]
+    print(f'{n_gen} justification-first answers, {n_gen - len(just)} '
+          'without a parsable score')
+    assert n_gen - len(just) <= 0.1 * n_gen, 'the score format changed'
 if len(just):
     jq = just.qwen_just_score.astype(int).to_numpy()
     dq = just.qwen_score.astype(int).to_numpy()
@@ -757,7 +799,8 @@ if len(just):
           f'digit probabilities, against Llama-3-70B): binary kappa '
           f'{d_kb:+.3f} [{kb_l:+.3f}, {kb_h:+.3f}], QWK {d_qwk:+.3f} '
           f'[{q_l:+.3f}, {q_h:+.3f}]')
-    R['protocol'] = dict(n=len(jq), d_kappa=[d_kb, kb_l, kb_h],
+    R['protocol'] = dict(n=len(jq), unparsable=n_gen - len(jq),
+                         d_kappa=[d_kb, kb_l, kb_h],
                          d_qwk=[d_qwk, q_l, q_h])
 R['agreement'] = dict(n=len(lab), exact=np.mean(q == l), qwk=qwk,
                       kappa_bin=[kb, kb_lo, kb_hi], verdict=verdict,
@@ -864,7 +907,11 @@ assert SMALL or min(cos_reg.min(), cos_st.min()) >= 0.999
 
 C0_EMB_CACHE = pathlib.Path('..', 'data', 'lm', 'c0', 'emb-qwen3emb-v1.npz')
 C0_SHA = [hashlib.sha256(d.text.encode('utf-8')).hexdigest() for d in C0]
+C0_EMB_KEY = f'{EMBEDDER}@{pins[EMBEDDER]} max_len={MAX_LEN} pool=last'
 cache = dict(np.load(C0_EMB_CACHE)) if C0_EMB_CACHE.exists() else {}
+if cache and str(cache.get('made_by', '')) != C0_EMB_KEY:
+    print(f'{C0_EMB_CACHE} was made by {cache.get("made_by")}: discarded')
+    cache = {}
 have = dict(zip(cache.get('sha256', []), cache.get('emb', [])))
 missing = [i for i, h in enumerate(C0_SHA) if h not in have]
 if missing and GPU:  # the c0 vectors: never hosted (rule P1), cached here
@@ -872,7 +919,7 @@ if missing and GPU:  # the c0 vectors: never hosted (rule P1), cached here
     Z = d2l.embed_docs([C0[i].text for i in missing], EMBEDDER, MAX_LEN)
     have.update(zip([C0_SHA[i] for i in missing], Z))
     np.savez(C0_EMB_CACHE, sha256=np.array(list(have)),
-             emb=np.stack(list(have.values())))
+             emb=np.stack(list(have.values())), made_by=np.array(C0_EMB_KEY))
     print(f'embedded {len(missing):,} c0 documents in '
           f'{time.time() - t0:.0f} s (cached in {C0_EMB_CACHE})')
     missing = []
@@ -952,15 +999,19 @@ class HashedBagClassifier(nn.Module):
         return self.out(self.bag(ids, offsets))
 ```
 
-<!-- Prose: the heads on the training labels, the hashed bag on the training texts, the released classifier's registered scores; each threshold t* chosen on the validation rows by the best F1, never on test. -->
+<!-- Prose: the heads on the training labels, the hashed bag on the training texts, the released classifier's registered scores; each threshold t* chosen on the validation rows by the best F1, never on test. The validation and test rows come from the released classifier's own hold-out (reproduced from its training code: datasets' stratified 90/10 split, seed 42, on the annotations as first uploaded; the hold-out gives the card's confusion matrix up to bf16 rounding, 90 counts in all against about 1,700 for other rows of the same classes; tools/build_lm_edu_holdout.py), so the comparison is out-of-sample for the released classifier too. Our training rows may overlap the released classifier's training rows, which is harmless. -->
 
 ```{.python .input #quality-filtering-heads}
 %%tab pytorch
-def best_threshold(y, s):
-    """The score threshold with the largest F1 (keep s >= t) on (y, s)."""
-    cand = np.unique(np.quantile(s, np.linspace(0.5, 0.995, 400)))
+def best_threshold(y, s, name=''):
+    """The score threshold with the largest F1 (keep s >= t) on (y, s),
+    among quantiles of s that keep 0.5% to 99% of the rows."""
+    cand = np.unique(np.quantile(s, np.linspace(0.01, 0.995, 400)))
     f1 = [d2l.binary_f1(y, s >= t) for t in cand]
-    return float(cand[int(np.argmax(f1))])
+    i = int(np.argmax(f1))
+    if i in (0, len(cand) - 1):
+        print(f'WARNING: {name} t* is at the edge of the search grid')
+    return float(cand[i])
 
 def train_bag(texts, y, epochs=15, lr=0.5, batch=32, seed=0):
     """SGD on the hashed bag, summed loss (a step per document, as
@@ -1019,7 +1070,7 @@ SCORES['hashed bag'] = {k: bag_scores(bag, SPLIT[k].text.tolist())
 bag_ms = 1e3 * (time.time() - t0) / len(ANNOT)
 SCORES['hashed bag']['stream'] = bag_scores(bag, S.text.tolist())
 SCORES['released'] = released
-T_STAR = {m: best_threshold(Y['val'] >= THRESH_LABEL, s['val'])
+T_STAR = {m: best_threshold(Y['val'] >= THRESH_LABEL, s['val'], m)
           for m, s in SCORES.items()}
 print('thresholds t* (best validation F1):',
       ', '.join(f'{m} {t:.3f}' for m, t in T_STAR.items()))
@@ -1057,21 +1108,25 @@ for m, s in SCORES.items():
         row['MAE'] = np.mean(np.abs(s['test'] - test[ref].to_numpy()))
     correct[m] = pred == (test[TRAIN_LABEL].to_numpy() >= THRESH_LABEL)
     rows.append(row)
+y = test[TRAIN_LABEL].to_numpy() >= THRESH_LABEL
+pred = {m: s['test'] >= T_STAR[m] for m, s in SCORES.items()}
+rng = np.random.default_rng(0)
+boot = {m: [] for m in pred} | {'diff': []}
+for _ in range(2000):  # resample rows, every classifier on the same rows
+    i = rng.integers(len(y), size=len(y))
+    for m, p in pred.items():
+        boot[m].append(d2l.binary_f1(y[i], p[i]))
+    boot['diff'].append(boot[MAIN][-1] - boot['released'][-1])
+for row in rows:  # each test F1 on the training labels with its interval
+    row['F1 lo'], row['F1 hi'] = np.quantile(boot[row['classifier']],
+                                             [0.025, 0.975])
 CLF = pd.DataFrame(rows)
 print(f'{len(test):,} test rows (parameters: the trained part; the heads '
-      f'also run the frozen {EMBEDDER})')
+      f'also run the frozen {EMBEDDER}; F1 lo/hi: bootstrap interval of '
+      f'F1 {TRAIN_LABEL})')
 print(CLF.round(3).to_string(index=False))
-
-y = test[TRAIN_LABEL].to_numpy() >= THRESH_LABEL
-a, b = SCORES[MAIN]['test'] >= T_STAR[MAIN], SCORES['released']['test'] >= \
-    T_STAR['released']
-rng = np.random.default_rng(0)
-boot = []
-for _ in range(2000):  # resample rows, both classifiers on the same rows
-    i = rng.integers(len(y), size=len(y))
-    boot.append(d2l.binary_f1(y[i], a[i]) - d2l.binary_f1(y[i], b[i]))
-d_f1 = d2l.binary_f1(y, a) - d2l.binary_f1(y, b)
-lo, hi = np.quantile(boot, [0.025, 0.975])
+d_f1 = d2l.binary_f1(y, pred[MAIN]) - d2l.binary_f1(y, pred['released'])
+lo, hi = np.quantile(boot['diff'], [0.025, 0.975])
 acc = d2l.paired_bootstrap(correct[MAIN], correct['released'])
 print(f'{MAIN} minus released, on {TRAIN_LABEL}: F1 {d_f1:+.3f} '
       f'[{lo:+.3f}, {hi:+.3f}] (paired bootstrap over rows); accuracy '
@@ -1083,7 +1138,7 @@ R['f1_diff'] = [d_f1, lo, hi]
 ### Label Noise and the F1 Ceiling
 :label:`subsec_lm_quality_ceiling`
 
-<!-- Prose: F1 of a threshold from prior, recall and retention, F1 = 2 pi TPR / (pi + rho) (eq_lm_quality_f1_retention, three lines); the ceiling of a perfect classifier of the true label under symmetric label noise eta (eq_lm_quality_f1_ceiling, short proof); the two labellers' disagreement read as an estimate of eta, under the stated assumption that both flip the true label independently with the same rate. -->
+<!-- Prose: F1 of a threshold from prior, recall and retention, F1 = 2 pi TPR / (pi + rho) (eq_lm_quality_f1_retention, three lines); the ceiling of a perfect classifier of the true label under symmetric label noise eta (eq_lm_quality_f1_ceiling, short proof); the two labellers' disagreement read as an estimate of eta, under the stated assumption that both flip the true label independently with the same rate. A head trained on one labeller can learn that labeller's systematic errors, which this assumption excludes: an F1 above the ceiling is evidence of correlated errors between the head and its labeller, not a bug. -->
 
 ```{.python .input #quality-filtering-ceiling}
 %%tab pytorch
@@ -1153,10 +1208,12 @@ R['ceiling'] = dict(identity_gap=gap, simulation=rows,
 %%tab pytorch
 fig, axes = d2l.plt.subplots(1, 3, figsize=(10, 3), sharey=True)
 y = test[TRAIN_LABEL].to_numpy() >= THRESH_LABEL
+rho_max = max(np.mean(SCORES[m]['test'] >= T_STAR[m]) for m in SCORES)
+xmax = min(1.0, max(0.4, rho_max + 0.1))  # every t* marker in view
 curves = {}
 for m in ('regression head', 'hashed bag', 'released'):
     s = SCORES[m]['test']
-    ts = np.quantile(s, np.linspace(0.3, 0.995, 120))
+    ts = np.quantile(s, np.linspace(0.01, 0.995, 120))
     pred = s[None] >= ts[:, None]
     tp = (pred & y).sum(1)
     curves[m] = dict(rho=pred.mean(1), precision=tp / np.maximum(
@@ -1166,7 +1223,7 @@ for ax, metric in zip(axes, ('precision', 'recall', 'f1')):
     d2l.plot([c['rho'] for c in curves.values()],
              [c[metric] for c in curves.values()], 'retained fraction',
              metric if metric != 'f1' else 'F1', legend=list(curves)
-             if metric == 'recall' else None, xlim=[0, 0.4], axes=ax,
+             if metric == 'recall' else None, xlim=[0, xmax], axes=ax,
              fmts=('-', '--', ':'), legend_loc='lower right')
     for i, m in enumerate(curves):  # each classifier's t*, chosen on val
         s = SCORES[m]['test'] >= T_STAR[m]
@@ -1234,7 +1291,7 @@ def audit_removals(df, keep, by, ref=None, n_boot=2000, cluster=None,
     return out
 ```
 
-<!-- Prose: three decisions on the stream (heuristics, our classifier at t*, both); the audit by country-code domain against .com and by host class against "other"; the same audit on each half of the stream, the halves split by registered domain so they share no cluster; the filter as a covariate shift keyed on a proxy label (one sentence restating :numref:`sec_environment-and-distribution-shift`); Gururangan et al. and Dodge et al. -->
+<!-- Prose: three decisions on the stream (heuristics, our classifier at t*, both); the audit by country-code domain against .com and by host class against "other"; the same audit on each half of the stream, the halves split by registered domain so they share no cluster; the filter as a covariate shift keyed on a proxy label (one sentence restating :numref:`sec_environment-and-distribution-shift`); Gururangan et al. and Dodge et al. Name what C4 tests: "the classifier contributes beyond the heuristics" is read from the classifier-alone arm (keep_clf), not from classifier-only removals or both minus heuristics; here these nearly coincide, because the rules remove few stream documents (the stream is FineWeb's output). -->
 
 ```{.python .input #quality-filtering-audit}
 %%tab pytorch
@@ -1348,7 +1405,10 @@ else:
     rubric_sha = hashlib.sha256(REMOVAL_RUBRIC.encode()).hexdigest()
     assert (labels.rubric_sha256 == rubric_sha).all(), 'another rubric'
     REVIEW = REVIEW.merge(labels[['id', 'label', 'rationale', 'labeller']],
-                          on='id', validate='1:1')
+                          on='id', how='left', validate='1:1')
+    assert REVIEW.label.notna().all(), (  # t* or the heads have changed
+        f'{REVIEW.label.isna().sum()} sampled documents have no label: '
+        'label the new sample and register it as the next version')
     rows = []
     for a, t in REVIEW.groupby('arm'):
         k = int((t.label == 'drop').sum())
@@ -1404,7 +1464,7 @@ for k, v in head_arrays.items():
     np.save(buf, v.astype(np.float32), allow_pickle=False)
     head_bytes[k] = buf.getvalue()
 head_sha = hashlib.sha256(b''.join(head_bytes[k] for k in sorted(
-    head_bytes))).hexdigest()
+    head_bytes))).hexdigest()  # of the registered file's exact weights
 if C0_EMB is not None:
     with torch.no_grad():
         c0_score = reg_head(torch.tensor(C0_EMB, dtype=torch.float32)
@@ -1418,9 +1478,10 @@ else:  # the CPU path: the scores of the registered flags
     live = d2l.embed_docs([d.text for d in C0[:8]], EMBEDDER, MAX_LEN)
     with torch.no_grad():
         s8 = reg_head(torch.tensor(live, dtype=torch.float32))[:, 0].numpy()
+    gap8 = np.abs(s8 - c0_score[:8]).max()
     print('live check on 8 c0 documents (CPU, fp32): largest score '
-          'difference to the registered flags '
-          f'{np.abs(s8 - c0_score[:8]).max():.3f}')
+          f'difference to the registered flags {gap8:.3f}')
+    assert gap8 <= 0.05, 'the registered flags come from other vectors'
 FLAG_ROWS = [dict(id=d.id, codes=C0_CODES[d.id],
                   edu_score=round(float(v), 3)) for d, v in zip(C0, c0_score)]
 kept = [d for d in C0 if not C0_CODES[d.id]]
@@ -1461,8 +1522,8 @@ elif C0_EMB is not None:  # GPU: live scores against the registered flags
           f'{"identical" if codes_same else "DIFFER"}; edu_score largest '
           f'difference {diff.max():.3f}; {flip} decisions '
           'flip (each within that difference of t*)')
-    assert codes_same and flip <= np.sum(np.abs(c0_score - T_STAR[MAIN])
-                                         <= diff.max())
+    assert codes_same and diff.max() <= 0.01  # bf16 tolerance (spec)
+    assert flip <= np.sum(np.abs(c0_score - T_STAR[MAIN]) <= diff.max())
 R['c1_manifest'] = m.to_dict()
 ```
 
@@ -1487,17 +1548,31 @@ if 'quality-results' in RERUN:
     d2l.lm_save_rerun(RES_FILE, lambda f: pathlib.Path(f).write_bytes(blob))
     d2l.lm_save_rerun(HEAD_FILE, lambda f: d2l.lm_write_zip(f, head_bytes))
 else:
+    def comparable(x):
+        """x without the perplexity results (GPU only) and the head's hash
+        (the weights' last bits depend on the CPU's thread count; they are
+        compared to 1e-5 below)."""
+        if isinstance(x, dict):
+            return {k: comparable(v) for k, v in x.items()
+                    if k not in ('ppl', 'head_sha256')}
+        return [comparable(v) for v in x] if isinstance(x, list) else x
     reg = json.load(open(d2l.lm_artifact(RES_KEY)))
-    live = {k: v for k, v in results.items() if k != 'ppl'}
-    a = d2l.json_agreement(live, reg)
-    same = reg['c1_manifest'] == results['c1_manifest']
+    live, old = comparable(results), comparable(reg)
+    a = d2l.json_agreement(live, old)
+    same = old['c1_manifest'] == live['c1_manifest']
     print(f'against {RES_KEY}: {a["equal"]}/{a["values"]} values equal, '
           f'largest numeric difference {a["max_diff"]:.2g}; c1 manifest '
           f'{"identical" if same else "DIFFERS"}')
+    ALLOWED = set()  # paths whose non-numeric values may differ: none
+    bad = [k for k in a['mismatches'] + a['missing'] if k not in ALLOWED]
+    for k in bad[:20]:
+        print('  differs or one-sided:', '/'.join(map(str, k)))
     head = dict(np.load(d2l.lm_artifact(HEAD_KEY)))
     w_gap = np.abs(head['weight'] - head_arrays['weight.npy']).max()
-    print(f'head weights against {HEAD_KEY}: largest difference {w_gap:.1e}')
-    assert same and a['max_diff'] <= 0.005 and w_gap < 1e-5
+    bits = reg['c1_manifest'] == results['c1_manifest']  # with the hash
+    print(f'head weights against {HEAD_KEY}: largest difference {w_gap:.1e}'
+          f' (bit-identical: {bits})')
+    assert same and not bad and a['max_diff'] <= 0.005 and w_gap < 1e-5
 ```
 
 ## Summary

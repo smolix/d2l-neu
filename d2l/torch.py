@@ -16880,8 +16880,10 @@ def _c0_rebuild_one(job):
 
 def json_agreement(new, old):
     """How far two JSON-like results agree: the number of leaf values in
-    new, how many equal old's value at the same path, and the largest
-    absolute difference between numeric leaves present in both.
+    new, how many equal old's value at the same path, the largest
+    absolute difference between numeric leaves present in both, the paths
+    of unequal non-numeric leaves (strings, booleans, None, or a number
+    against a non-number) and the paths present on one side only.
 
     Defined in :numref:`sec_lm_crawl`"""
     def leaves(x, path=()):
@@ -16893,14 +16895,17 @@ def json_agreement(new, old):
                 yield from leaves(v, path + (i,))
         else:
             yield path, x
+    def is_num(v):
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
     a, b = dict(leaves(new)), dict(leaves(old))
     num = [max(v - b[k], b[k] - v)  # d2l.abs is torch.abs
-           for k, v in a.items() if k in b
-           and isinstance(v, (int, float)) and not isinstance(v, bool)
-           and isinstance(b[k], (int, float))]
+           for k, v in a.items() if k in b and is_num(v) and is_num(b[k])]
+    other = [k for k, v in a.items() if k in b and b[k] != v
+             and not (is_num(v) and is_num(b[k]))]
     return dict(values=len(a), equal=sum(k in b and b[k] == v
                                          for k, v in a.items()),
-                max_diff=max(num, default=0.0))
+                max_diff=max(num, default=0.0), mismatches=other,
+                missing=sorted(set(a) ^ set(b), key=str))
 
 # Word and punctuation tokens, close to NLTK's English word_tokenize (which
 # datatrove uses): a run of word characters joined by inner apostrophes,
@@ -17069,18 +17074,36 @@ def _edu_batches(lengths, batch_size, max_batch_tokens):
 _EDU_ANNOT_ROWS = 467_424  # rows of the eight released files
 _EDU_ANNOT_SPLITS = (18_000, 2_000, 2_000)  # train, val, test
 
+# The rows of the released annotations that the released FineWeb-Edu
+# classifier did not train on (its card's hold-out of 46,867, reproduced
+# from its training code; 46,744 survive in the release):
+# tools/build_lm_edu_holdout.py
+d2l.DATA_HUB['lm-edu-holdout-v1'] = (
+    d2l.LM_DATA_URL + 'lm-edu-holdout-v1.json.gz',
+    'dc1759992f17805864e08da5c5dcce51928e1c03')
+
 def _edu_annot_sample():
-    """The 22,000 annotation rows of lm-edu-annot-22k-v1 before labelling:
-    rows default_rng(0).permutation(467,424)[:22,000] of the eight released
-    files read in order; the first 18,000 are train, then 2,000 val and
-    2,000 test. Columns row, split, text, prompt (the labeller's input as
-    released), llama_score, url, dump; text and prompt as released.
+    """The 22,000 annotation rows of lm-edu-annot-22k-v1 before labelling,
+    in the order of p = default_rng(0).permutation(467,424) over the rows
+    of the eight released files read in order: train is p[:18,000]; val and
+    test are the next 2,000 and 2,000 rows of p[18,000:] that lie in the
+    released classifier's hold-out (lm-edu-holdout-v1), so its scores on
+    them are out-of-sample. Columns row, split, text, prompt (the
+    labeller's input as released), llama_score, url, dump; text and prompt
+    as released.
 
     Defined in :numref:`sec_lm_quality_filtering`"""
     import huggingface_hub
     import pyarrow.parquet as pq
     _, repo, rev, _ = d2l.LM_DATA_SOURCES['edu-annotations']
-    perm = np.random.default_rng(0).permutation(d2l._EDU_ANNOT_ROWS)[:22_000]
+    with gzip.open(d2l.download_keyed('lm-edu-holdout-v1'), 'rt') as f:
+        hold = json.load(f)
+    assert hold['release_revision'] == rev, 'another annotation revision'
+    n_train, n_val, n_test = d2l._EDU_ANNOT_SPLITS
+    p = np.random.default_rng(0).permutation(d2l._EDU_ANNOT_ROWS)
+    rest = p[n_train:]
+    rest = rest[np.isin(rest, hold['rows'])][:n_val + n_test]
+    perm = np.concatenate([p[:n_train], rest])
     split = np.repeat(['train', 'val', 'test'], d2l._EDU_ANNOT_SPLITS)
     frames, start = [], 0
     for k in range(8):

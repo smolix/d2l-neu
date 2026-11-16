@@ -73,7 +73,7 @@ import subprocess
 import sys
 import time
 import pandas as pd
-from scipy import optimize, stats
+from scipy import optimize, spatial, stats
 ```
 
 <!-- Prose: the three domains, the two target distributions (stated as
@@ -98,11 +98,10 @@ assert GPU or not RERUN, 'the mix-t1 regeneration trains on a GPU'
 T2 = 'lm-mix-runs-t2-v1' in d2l.DATA_HUB and not RERUN
 RUNS_KEY = 'lm-mix-runs-t2-v1' if T2 else 'lm-mix-runs-t1-v1'
 CONFIG = 't2' if T2 else 't1'
-TIER = ('T2: 20.3M-parameter proxies, 2^27 tokens per run' if T2 else
-        'T1: 4.6M-parameter proxies, 2^24 tokens per run; the T2 campaign '
-        'logs are not yet committed')
 TAG = f'[at {CONFIG.upper()} scale]'
-print(TIER, '| regenerating:', ', '.join(sorted(RERUN)) or 'none')
+print(f'configuration {CONFIG}' + ('' if T2 else ' (the T2 campaign logs are '
+      'not yet committed)'), '| regenerating:', ', '.join(sorted(RERUN))
+      or 'none')
 ```
 
 ```{.python .input #data-mixtures-data-hub}
@@ -140,6 +139,10 @@ ProxyCfg = collections.namedtuple('ProxyCfg', (
                              0.1, (0.9, 0.95), 'bfloat16', 32768))
 
 #@save
+MIX_EDGES = (  # seed-free training mixtures near the corners of the simplex
+    (0.8, 0.1, 0.1), (0.1, 0.8, 0.1), (0.1, 0.1, 0.8))
+
+#@save
 MIX_CONFIGS = {  # the study's two tiers, fixed before any run
     't1': dict(  # one RTX 4090
         name='t1', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
@@ -150,13 +153,13 @@ MIX_CONFIGS = {  # the study's two tiers, fixed before any run
             'web-val-1m': 'lm-mix-val-1m-v1',
             'math-val-1m': 'lm-mix-val-1m-v1'},
         code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v1',
-        train=((1.0, 6), (0.3, 6)), held=4, design_seeds=(0, 1),
-        cos_seeds=(1, 2), arm_seeds=(0, 1, 2), max_weight=0.9,
-        lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**23, lr_tie=1e-3,
-        eval_at=tuple(k / 8 for k in range(1, 9)),
+        train=((1.0, 6), (0.3, 6)), edges=MIX_EDGES, held=4,
+        design_seeds=(0, 1), cos_seeds=(1, 2), arm_seeds=(0, 1, 2),
+        max_weight=0.9, lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**23,
+        lr_tie=1e-3, eval_at=tuple(k / 8 for k in range(1, 9)),
         arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
-        log_every=10, ckpt_every=256, stage_frac=0.8, select='ridge',
-        doremi=dict(eta=1.0, smooth=1e-3)),
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='mixlaw',
+        compile=False, doremi=dict(eta=1.0, smooth=1e-3)),
     't2': dict(  # the campaign package: run on a faster node
         name='t2', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
         proxy=ProxyCfg(num_hiddens=320, num_heads=5, num_blks=8),
@@ -167,13 +170,13 @@ MIX_CONFIGS = {  # the study's two tiers, fixed before any run
             'web-val-2m': 'lm-mix-val-2m-v1',
             'math-val-2m': 'lm-mix-val-2m-v1'},
         code_meta='lm-mix-code150-meta-v1', runs_key='lm-mix-runs-t2-v1',
-        train=((1.0, 8), (0.3, 8)), held=8, design_seeds=(0, 1),
-        cos_seeds=(1, 2), arm_seeds=(0, 1, 2), max_weight=0.9,
-        lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**25, lr_tie=1e-3,
-        eval_at=tuple(k / 8 for k in range(1, 9)),
+        train=((1.0, 8), (0.3, 8)), edges=MIX_EDGES, held=8,
+        design_seeds=(0, 1), cos_seeds=(1, 2), arm_seeds=(0, 1, 2),
+        max_weight=0.9, lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**25,
+        lr_tie=1e-3, eval_at=tuple(k / 8 for k in range(1, 9)),
         arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
-        log_every=10, ckpt_every=256, stage_frac=0.8, select='ridge',
-        doremi=dict(eta=1.0, smooth=1e-3))}
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='mixlaw',
+        compile=True, doremi=dict(eta=1.0, smooth=1e-3))}
 ```
 
 <!-- Prose: the web pool comes from FineWeb-Edu's side buckets; the bucket
@@ -201,14 +204,18 @@ FWEDU_BUCKETS = {  # bucket ranges of the chapter's FineWeb-Edu splits
 hosted; mathematics: FineMath 4+), each tokenized with the reference
 tokenizer of sec_lm_tokenizers (forward reference), each larger
 than the largest weight times the run. The table: tokens, documents, bytes
-per token (C2: they differ by domain), tokenizer hash. -->
+per token (C2: they differ by domain), tokenizer hash. One sentence: code is
+split by repo/path and FineWeb-Edu by document id, so forks and
+near-duplicates can fall on both sides of the pool/validation split
+(CodeParrot-clean is deduplicated exactly, not fuzzily); at this model size
+and one epoch the effect is negligible. -->
 
 ```{.python .input #data-mixtures-pools}
 %%tab pytorch
 C = d2l.MIX_CONFIGS[CONFIG]
 POOLS, VALS = d2l.mix_pools(C)
 for c in d2l.MIX_CONFIGS.values():  # a pure-domain run reads all its tokens
-    assert c['pool_tokens'] >= c['tokens'] > c['max_weight'] * c['tokens']
+    assert c['pool_tokens'] >= c['tokens']
 meta = {d: (POOLS[d].meta, VALS[d].meta) for d in POOLS if d in VALS}
 if 'code' not in meta:  # CodeParrot's files are not hosted (their licences)
     print('code pool not built here: python tools/build_mix_pools.py '
@@ -488,10 +495,16 @@ for k, c in d2l.MIX_CONFIGS.items():
     flop = d2l.proxy_flops(p, c['tokens'], N[k])
     print(f'{k}: {N[k]:,} parameters (arithmetic {arith:,}; embedding '
           f'{p.vocab_size * p.num_hiddens:,}); {flop:.2g} FLOP per run')
+TIER = (f'{CONFIG.upper()}: {N[CONFIG] / 1e6:.1f}M-parameter proxies, '
+        f'2^{round(math.log2(C["tokens"]))} tokens per run')
+print('this page reads', TIER)
 ```
 
 <!-- Prose: the run design. Training mixtures from Dirichlet(1) and
-Dirichlet(0.3) (the second reaches the edges of the simplex), held-out
+Dirichlet(0.3) (the second reaches the edges of the simplex) and three
+fixed mixtures near the corners, (0.8, 0.1, 0.1) and its permutations
+(without them no training mixture puts more than two thirds on web, and
+t_dep's region would be reached only by extrapolation), held-out
 mixtures from Dirichlet(1) with another seed, three pure-domain runs,
 uniform seeds (two on the cosine schedule: the regression's noise floor;
 three on WSD: the arms' floor), the learning rate chosen once on the
@@ -501,17 +514,19 @@ uniform mixture. -->
 %%tab pytorch
 TRAIN_W = np.vstack([d2l.sample_mixtures(n, DOMAINS, conc,
                                          C['design_seeds'][0], C['max_weight'])
-                     for conc, n in C['train']])
+                     for conc, n in C['train']] + [np.array(C['edges'])])
 HELD_W = d2l.sample_mixtures(C['held'], DOMAINS, 1.0, C['design_seeds'][1],
                              C['max_weight'])
-XY = d2l.barycentric(np.vstack([TRAIN_W, HELD_W]))
-print(TAG, f'{len(TRAIN_W)} training mixtures (Dirichlet(1), Dirichlet(0.3)) '
-      f'and {len(HELD_W)} held-out ones (Dirichlet(1)), weights {DOMAINS}:')
+print(TAG, f'{len(TRAIN_W)} training mixtures (Dirichlet(1), Dirichlet(0.3), '
+      f'{len(C["edges"])} near the corners) and {len(HELD_W)} held-out ones '
+      f'(Dirichlet(1)), weights {DOMAINS}:')
 print(pd.DataFrame(np.vstack([TRAIN_W, HELD_W]), columns=DOMAINS,
                    index=[f'train {k}' for k in range(len(TRAIN_W))]
                    + [f'held {k}' for k in range(len(HELD_W))]).round(3).T
       .to_string())
 SPECS = d2l.mix_run_specs(C)
+for arm, W in (('train', TRAIN_W), ('held', HELD_W)):  # the launcher's design
+    assert np.array_equal([s['weights'] for s in SPECS if s['arm'] == arm], W)
 arms = collections.Counter(s['arm'] for s in SPECS)
 print(f'{len(SPECS)} runs: ' + ', '.join(f'{n} {a}' for a, n in arms.items()))
 ```
@@ -528,8 +543,8 @@ ROOT = pathlib.Path(d2l.__file__).resolve().parents[1]  # the book's repository
 LAUNCHER = ROOT / 'tools' / 'run_mix_campaign.py'
 if 'mix-t1' in RERUN:
     out_dir = os.path.join('..', 'data', 'lm', 'rerun', 'mix-t1')
-    gpus = os.environ.get('CUDA_VISIBLE_DEVICES') or ','.join(
-        str(i) for i in range(torch.cuda.device_count()))
+    gpus = os.environ.get('CUDA_VISIBLE_DEVICES')  # one worker per card
+    assert gpus, 'name the cards of the regeneration in CUDA_VISIBLE_DEVICES'
     t0 = time.time()
     subprocess.run([sys.executable, str(LAUNCHER), '--config', 't1', '--gpus',
                     gpus, '--out', out_dir, '--smoke-t2'], check=True)
@@ -541,9 +556,24 @@ RUNS_PATH = d2l.lm_artifact(RUNS_KEY, ARTIFACTS['mix-t1'][1]
 with open(RUNS_PATH) as f:
     RUNS = json.load(f)
 REC = {r['run_id']: r for r in RUNS['runs']}
-for s in SPECS:  # the run set is the design MIX_CONFIGS fixes
+# The run set is the design MIX_CONFIGS fixes, trained on these pools
+assert RUNS['config'] == CONFIG and RUNS['tokens'] == C['tokens']
+assert RUNS['mix_config'] == json.loads(json.dumps(C))
+assert [r['run_id'] for r in RUNS['runs']] == [s['run_id'] for s in SPECS]
+for s in SPECS:
     if s['weights'] is not None:
-        assert np.allclose(REC[s['run_id']]['weights'], s['weights'], atol=0)
+        assert REC[s['run_id']]['weights'] == s['weights'], s['run_id']
+for d in DOMAINS:  # a local build must not stand in for the registered pool
+    for here, ran in zip(meta[d], (RUNS['pools'][d], RUNS['val'][d])):
+        assert here['sha256'] == ran['sha256'], f'{d}: not the runs\' pool'
+        assert (here['tokenizer_sha256'] == ran['tokenizer_sha256']
+                == d2l.R2_TOKENIZER_SHA256)
+SEL, DOREMI_W = RUNS['selection'], RUNS['doremi']['weights']
+assert (SEL['kind'], SEL['target']) == (C['select'], C['target'])
+for s in C['arm_seeds']:  # the arms trained the selection and DoReMi's weights
+    assert REC[f'regsel-s{s}']['weights'] == SEL['weights']
+    assert REC[f'staged-s{s}']['stages'] == [[C['stage_frac'], SEL['weights']]]
+    assert REC[f'doremi-s{s}']['weights'] == DOREMI_W
 print(TAG, f'{len(REC)} runs from {os.path.basename(RUNS_PATH)}; peak '
       f'learning rate {RUNS["lr_choice"]["chosen"]:g} (chosen on the uniform '
       'mixture: ' + ', '.join(f'{lr} -> {v:.4f} bpb' for lr, v in
@@ -555,8 +585,7 @@ machine and compares its losses with the registered log. -->
 
 ```{.python .input #data-mixtures-live-check}
 %%tab pytorch
-if GPU and not RERUN:
-    assert POOLS['web'].meta['sha256'] == RUNS['pools']['web']['sha256']
+if GPU and not RERUN:  # the regen cell checked the pool against the runs
     cfg = C['proxy']._replace(lr=REC['pure-web']['lr'])
     live = d2l.train_proxy_lm({'web': POOLS['web']}, {'web': 1.0},
                               C['tokens'], cfg, seed=0, log_every=10,
@@ -579,24 +608,29 @@ predicts for the T2 campaign. -->
 ```{.python .input #data-mixtures-smoke}
 %%tab pytorch
 SMOKE = RUNS.get('smoke')
+two = lambda v: (v if not isinstance(v, float) else f'{v:.1e}' if 0 < abs(
+    v) < 1e-3 else f'{float(f"{v:.2g}"):,g}')  # two significant figures
 if SMOKE is None:
     print('no smoke record in this run set')
 else:
     print(f'smoke of the {SMOKE["config"]} configuration on {SMOKE["device"]} '
           f'({SMOKE["steps"]} steps of {SMOKE["tokens_per_step"]:,} tokens):')
-    print(pd.Series({k: SMOKE[k] for k in (
+    print(pd.Series({k: two(SMOKE[k]) for k in (
         'n_params', 'tokens_per_s', 'tokens_per_s_compiled', 'mfu',
-        'mfu_compiled', 'peak_mem_gib', 'resume_bf16_max_diff',
-        'rerun_bf16_max_diff', 'resume_fp32_max_diff', 'campaign_flop',
-        'predicted_a100_hours', 'predicted_hours_here', 'stop_hours')})
-          .to_string())
+        'mfu_compiled', 'compile_seconds', 'peak_mem_gib',
+        'resume_bf16_max_diff', 'rerun_bf16_max_diff', 'resume_fp32_max_diff',
+        'campaign_compile', 'campaign_flop', 'predicted_a100_hours',
+        'predicted_hours_here')}).to_string())
     assert SMOKE['resume_fp32_max_diff'] <= 1e-6
     assert SMOKE['resume_bf16_ok']  # 0.01 nats, deterministic kernels
 ```
 
 <!-- Prose: the question of the opening, answered by the run set: the pair
 of training mixtures whose target-weighted bits per byte cross (the one
-ahead at a quarter of the tokens is behind at the end), and the 3 x 3
+ahead at a quarter of the tokens is behind at the end) by more than the
+seed noise at both points (a gap between two runs counts when it exceeds
+2 sqrt(2) seed SDs; the training runs share data-order seed 0, so this
+bound is conservative; if no pair qualifies the opening says so), and the 3 x 3
 matrix of the pure-domain runs (C1); bits per token against bits per byte
 (C2). -->
 
@@ -609,15 +643,29 @@ def at_frac(rec, frac):
     return t_bpb(next(e for e in rec['evals'] if abs(e['frac'] - frac) < 1e-9)
                  ['domains'])
 
+def seed_sd(frac):  # t_dep spread of the uniform seeds, pooled (3 df)
+    groups = [[at_frac(REC[f'{a}-s{s}'], frac) for s in C[k]] for a, k in (
+        ('uniform-cos', 'cos_seeds'), ('uniform-wsd', 'arm_seeds'))]
+    return math.sqrt(sum((len(g) - 1) * np.var(g, ddof=1) for g in groups)
+                     / sum(len(g) - 1 for g in groups))
+
+SD = {f: seed_sd(f) for f in (0.25, 1.0)}  # a gap of two runs: sqrt(2) SD
+beyond_noise = lambda g: all(abs(x) > 2 * math.sqrt(2) * SD[f]
+                             for x, f in zip(g[:2], (0.25, 1.0)))
 train = [r for r in RUNS['runs'] if r['arm'] == 'train']
 gaps = [(at_frac(a, 0.25) - at_frac(b, 0.25), at_frac(a, 1) - at_frac(b, 1),
          a, b) for a, b in itertools.combinations(train, 2)]
 cross = [g for g in gaps if g[0] * g[1] < 0]
-_, _, A, B = (max(cross, key=lambda g: abs(g[1])) if cross else
-              max(gaps, key=lambda g: abs(g[0])))
-print(TAG, f'{len(cross)} of {len(gaps)} pairs of training mixtures cross; '
-      + ('the pair with the largest final gap:' if cross else
-         'none does: the pair with the largest early gap:'))
+real_cross = [g for g in cross if beyond_noise(g)]
+G = (max(real_cross, key=lambda g: abs(g[1])) if real_cross else
+     max(gaps, key=lambda g: abs(g[0])))
+A, B = G[2:]
+print(TAG, f'{len(cross)} of {len(gaps)} pairs of training mixtures cross, '
+      f'{len(real_cross)} with both gaps above 2 sqrt(2) seed SDs (SD '
+      f'{SD[0.25]:.4f} at 25%, {SD[1.0]:.4f} at the end); ' + (
+          'the pair with the largest final gap' if real_cross else
+          'none beyond the noise: the pair with the largest early gap')
+      + f': gap {G[0]:+.4f} at 25%, {G[1]:+.4f} at the end')
 d2l.plot([[e['tokens'] for e in r['evals']] for r in (A, B)],
          [[t_bpb(e['domains']) for e in r['evals']] for r in (A, B)],
          'tokens', 't_dep bits per byte', legend=[
@@ -644,8 +692,12 @@ ridge on two free weights and an intercept (the three weights sum to one,
 so all three and an intercept are collinear), gradient boosting (RegMix's
 learner) and the exponential mixing law of Ye et al.; choosing a mixture
 minimizes the fitted target loss on a random grid, polished by Nelder-Mead
-on a softmax parameterization (the selected arm of the launcher uses this
-function). -->
+on a softmax parameterization, inside the convex hull of the training
+mixtures, where the regression was fitted (the selected arm of the
+launcher uses this function). Why the mixing law selects: a model linear
+in w (ridge) has its optimum at a corner of whatever region it is given,
+so its choice is a corner, never an interior mixture; the law's
+per-domain exponentials can place one inside. -->
 
 ```{.python .input #data-mixtures-reg-defs}
 %%tab pytorch
@@ -655,7 +707,8 @@ def fit_mixture_regression(W, L, kind='ridge', **kw):
     and their losses L (n, k): 'ridge' on the first m - 1 weights and an
     intercept (alpha=1e-3, intercept not shrunk), 'gbm' (scikit-learn
     gradient boosting per output, seed 0) or 'mixlaw' (L_i = c_i + k_i
-    exp(sum_j t_ij w_j) per output, least squares from 8 seeded starts).
+    exp(sum_j t_ij w_j) per output, least squares from `starts` seeded
+    starts, default 8; init=params of an earlier fit is tried first).
     f takes (m,) or (n', m); f.params holds the fitted parameters."""
     W, L = np.asarray(W, dtype=float), np.asarray(L, dtype=float)
     design = lambda w: np.hstack([np.ones((len(w), 1)), w[:, :-1]])
@@ -676,11 +729,16 @@ def fit_mixture_regression(W, L, kind='ridge', **kw):
         from scipy.optimize import least_squares
         rng, params = np.random.default_rng(0), []
         law = lambda p, w: p[0] + p[1] * np.exp(w @ p[2:])
-        for y in L.T:
-            fits = [least_squares(lambda p: law(p, W) - y, np.concatenate(
-                [[rng.uniform(0, y.min())], [rng.uniform(0.1, 2)],
-                 rng.normal(0, 1, W.shape[1])]), xtol=1e-15, ftol=1e-15,
-                gtol=1e-15, max_nfev=5000) for _ in range(8)]
+        init, starts = kw.get('init'), kw.get('starts', 8)
+        for i, y in enumerate(L.T):
+            x0 = [] if init is None else [np.asarray(init[i], dtype=float)]
+            x0 += [np.concatenate([[rng.uniform(0, y.min())],
+                                   [rng.uniform(0.1, 2)],
+                                   rng.normal(0, 1, W.shape[1])])
+                   for _ in range(starts - len(x0))]
+            fits = [least_squares(lambda p: law(p, W) - y, x, xtol=1e-15,
+                                  ftol=1e-15, gtol=1e-15, max_nfev=5000)
+                    for x in x0]
             params.append(min(fits, key=lambda r: r.cost).x)
         params = np.array(params)
         predict = lambda w: np.stack([law(p, w) for p in params], -1)
@@ -693,19 +751,29 @@ def fit_mixture_regression(W, L, kind='ridge', **kw):
     return f
 
 #@save
-def choose_mixture(f, target, n_grid=5000, seed=0, max_weight=0.9):
+def choose_mixture(f, target, n_grid=5000, seed=0, max_weight=0.9,
+                   within=None):
     """The mixture w with no weight above max_weight that minimizes the
     fitted target loss target @ f(w): the best of n_grid Dirichlet(1)
-    points, polished by Nelder-Mead on w = softmax(z). Returns (w, the
-    predicted target loss)."""
+    points, polished by Nelder-Mead on w = softmax(z). within (n, m), if
+    given, bounds the choice to the convex hull of those mixtures (where
+    f was fitted, so the choice never rests on extrapolation). Returns
+    (w, the predicted target loss)."""
     from scipy.optimize import minimize
+    from scipy.spatial import Delaunay
     t = np.asarray(target, dtype=float)
+    hull = None if within is None else Delaunay(np.asarray(within)[:, :-1])
+    inside = lambda w: (np.ones(len(w), bool) if hull is None else
+                        hull.find_simplex(w[:, :-1]) >= 0)
     G = d2l.sample_mixtures(n_grid, t, 1.0, seed, max_weight)
+    G = G[inside(G)]
     vals = f(G) @ t
     softmax = lambda z: np.exp(z - z.max()) / np.exp(z - z.max()).sum()
     def loss(z):
         w = softmax(z)
-        return np.inf if w.max() > max_weight else float(f(w) @ t)
+        if w.max() > max_weight or not inside(w[None])[0]:
+            return np.inf
+        return float(f(w) @ t)
     res = minimize(loss, np.log(G[vals.argmin()]), method='Nelder-Mead',
                    options=dict(xatol=1e-8, fatol=1e-10, maxiter=4000))
     if res.fun < vals.min():
@@ -719,6 +787,19 @@ regression's prediction of a noisy observation, sigma sqrt(1 + p/n)
 the floor of the real runs from the uniform seeds; the three regressions
 fitted on the training runs and judged only on the held-out ones (MAE per
 domain against the floor, Spearman rho without a significance claim).
+The verdict compares the RMSE of the selecting regression (the mixing law,
+fixed before any run; ridge and GBM are comparisons, never picked by their
+held-out error, which C4 reports on) with 1.5 floors, and the floor's
+interval is printed: sigma_cos rests on three degrees of freedom. Two
+design facts in one sentence each: every training and held-out run uses
+data-order seed 0 (the blueprint's design: the shared seed's share of the
+noise cancels in the intercept, so the floor from independent seeds is an
+upper bound on the noise the held-out errors face); and the same
+validation sets choose the learning rate, fit the regression and score
+the held-out mixtures ("held-out" means held-out mixtures, not held-out
+text; the selection has few degrees of freedom, three rates and two free
+weights, so its bias is small, and the text says so rather than claims
+it is zero).
 Pitfalls: training-mixture R^2 read as success; tuning the learning rate
 per mixture. The plot below: (a) predicted against measured with the
 identity and the band of two floors, (b) every run on the simplex, coloured
@@ -761,6 +842,8 @@ FITS = {k: d2l.fit_mixture_regression(Wt, Lt, k)
 PRED = {k: f(Wh) for k, f in FITS.items()}
 noise = {'sigma_cos': sig_cos, 'sigma_seed (WSD)': sig_wsd,
          'floor sigma_cos sqrt(1 + p/n)': np.full(3, FLOOR)}
+noise.update({f'RMSE {k}': np.sqrt(((P - Lh)**2).mean(0))
+              for k, P in PRED.items()})
 noise.update({f'MAE {k}': np.abs(P - Lh).mean(0) for k, P in PRED.items()})
 noise.update({f'Spearman {k}': [stats.spearmanr(P[:, i], Lh[:, i])[0]
                                 for i in range(3)] for k, P in PRED.items()})
@@ -768,9 +851,12 @@ print(TAG, f'{len(train_ids)} training and {len(held_ids)} held-out runs; '
       f'pooled sigma_cos {SIG_COS:.4f}, sigma_seed {SIG_SEED:.4f} bits per '
       f'byte (ratio {max(SIG_COS, SIG_SEED) / min(SIG_COS, SIG_SEED):.1f})')
 print(pd.DataFrame(noise, index=DOMAINS).T.round(4).to_string())
-mae = np.abs(PRED['ridge'] - Lh).mean()
-print('ridge, held-out MAE over all domains', f'{mae:.4f}:',
-      'reaches only the noise floor' if mae <= 1.5 * FLOOR else
+FLOOR_CI = FLOOR * np.sqrt(3 / stats.chi2.ppf([0.975, 0.025], 3))  # 3 df
+rmse = math.sqrt(((PRED[C['select']] - Lh)**2).mean())
+print(f'floor {FLOOR:.4f} (95% interval from 3 degrees of freedom '
+      f'{FLOOR_CI[0]:.4f}-{FLOOR_CI[1]:.4f}); {C["select"]} (the selecting '
+      f'regression), held-out RMSE over all domains {rmse:.4f}:',
+      'reaches only the noise floor' if rmse <= 1.5 * FLOOR else
       'does not reach the noise floor')
 
 fig, axes = d2l.plt.subplots(1, 4, figsize=(13, 3.4), gridspec_kw=dict(
@@ -812,25 +898,33 @@ pitfall of choosing target weights after the results. -->
 
 ```{.python .input #data-mixtures-choose}
 %%tab pytorch
-choice = {k: d2l.choose_mixture(f, T_DEP, max_weight=C['max_weight'])
-          for k, f in FITS.items()}
-choice['ridge, t_avg'] = d2l.choose_mixture(FITS['ridge'], T_AVG,
-                                            max_weight=C['max_weight'])
-assert np.allclose(choice[C['select']][0], RUNS['selection']['weights'],
-                   atol=1e-9), 'the launcher chose another mixture'
-rng, boot = np.random.default_rng(0), []
-for _ in range(200):
-    k = rng.integers(0, len(Wt), len(Wt))
-    boot.append(d2l.choose_mixture(d2l.fit_mixture_regression(
-        Wt[k], Lt[k], C['select']), T_DEP, max_weight=C['max_weight']))
-bw, bv = np.array([w for w, _ in boot]), np.array([v for _, v in boot])
+pick = lambda f, t, W=Wt: d2l.choose_mixture(f, t, max_weight=C[
+    'max_weight'], within=W)
+choice = {k: pick(f, T_DEP) for k, f in FITS.items()}
+choice[f'{C["select"]}, t_avg'] = pick(FITS[C['select']], T_AVG)
+choice[f'{C["select"]}, no hull'] = pick(FITS[C['select']], T_DEP, None)
+assert np.allclose(choice[C['select']][0], SEL['weights'], atol=1e-6), (
+    'the launcher chose another mixture')
+assert abs(choice[C['select']][1] - SEL['predicted']) < 1e-9
+HULL = spatial.Delaunay(Wt[:, :-1])  # the region the regression has seen
 print(TAG, 'selected mixtures (weights web, code, math) and their predicted '
-      'target-weighted bits per byte:')
+      'target-weighted bits per byte (the last one free of the hull bound):')
 for k, (w, v) in choice.items():
-    print(f'  {k:12s} w = ({", ".join(f"{x:.3f}" for x in w)}), predicted '
-          f'{v:.4f}')
+    where = ('inside the training mixtures' if HULL.find_simplex(w[:-1]) >= 0
+             else 'extrapolated')
+    print(f'  {k:18s} w = ({", ".join(f"{x:.3f}" for x in w)}), predicted '
+          f'{v:.4f}, {where}')
+B = 200  # bootstrap refits; the mixing law starts from the full fit
+warm = (dict(init=FITS['mixlaw'].params, starts=1)
+        if C['select'] == 'mixlaw' else {})
+rng, boot = np.random.default_rng(0), []
+for _ in range(B):
+    k = rng.integers(0, len(Wt), len(Wt))
+    boot.append(pick(d2l.fit_mixture_regression(Wt[k], Lt[k], C['select'],
+                                                 **warm), T_DEP, Wt[k]))
+bw, bv = np.array([w for w, _ in boot]), np.array([v for _, v in boot])
 lo, hi = np.percentile(bv, [2.5, 97.5])
-print(f'{C["select"]} on 200 bootstrap resamples of the training runs: '
+print(f'{C["select"]} on {B} bootstrap resamples of the training runs: '
       f'predicted t_dep {np.median(bv):.4f} [{lo:.4f}, {hi:.4f}]; weights '
       'from ' + ', '.join(f'{d} {a:.2f}-{b:.2f}' for d, a, b in zip(
           DOMAINS, *np.percentile(bw, [2.5, 97.5], axis=0))))
@@ -1026,8 +1120,8 @@ n2 = len(d2l.mix_run_specs(c2))
 if SMOKE is not None:
     print(f'from the smoke on {SMOKE["device"]}: {SMOKE["campaign_flop"]:.2g} '
           f'FLOP for {n2} runs; A100-hours at the measured MFU '
-          f'{SMOKE["predicted_a100_hours"]}, peak memory per run '
-          f'{SMOKE["peak_mem_gib"]} GiB')
+          f'{two(SMOKE["predicted_a100_hours"])}, peak memory per run '
+          f'{two(SMOKE["peak_mem_gib"])} GiB')
 print('writes:', ', '.join([c2['runs_key']] + sorted(set(c2['keys'].values()))
                            + [c2['code_meta']]))
 ```

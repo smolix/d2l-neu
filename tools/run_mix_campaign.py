@@ -19,9 +19,10 @@ One worker process per entry of --gpus (an id, or 'cpu') pulls runs from a
 file-locked queue in OUT; every run writes OUT/runs/<run_id>.json by an
 atomic rename and checkpoints every ckpt_every steps to OUT/ckpt/<id>.pt;
 --resume skips finished runs and resumes checkpoints. The launcher stops its
-workers at --max-hours (default: the campaign file's stop_hours for t2, else
-1 h); a later --resume continues. At the end it merges everything into
-OUT/lm-mix-runs-<config>-v1.json.
+workers at --max-hours (default for t2: the campaign file's stop_hours, else
+1.5 x the smoke's predicted GPU-hours on these cards / the number of
+workers; 1 h for the other configurations); a later --resume continues.
+At the end it merges everything into OUT/lm-mix-runs-<config>-v1.json.
 
 --smoke runs only the smoke of --config; --smoke-t2 runs the smoke of the t2
 configuration first (on the pools of --config) and then the campaign. The
@@ -199,7 +200,7 @@ def selection(d2l, c, q):
                       for r in runs])
         f = d2l.fit_mixture_regression(W, L, c['select'])
         w, pred = d2l.choose_mixture(f, c['targets'][c['target']],
-                                     max_weight=c['max_weight'])
+                                     max_weight=c['max_weight'], within=W)
         params = None if f.params is None else np.asarray(f.params).tolist()
         return dict(kind=c['select'], target=c['target'], weights=w.tolist(),
                     predicted=pred, train_runs=ids, params=params)
@@ -240,7 +241,8 @@ def run_one(d2l, c, q, spec, pools, vals, byte_len):
             log_every=c['log_every'], eval_at=spec['eval_at'],
             curve_windows=c['curve_windows'], byte_lengths=byte_len,
             ckpt=str(ckpt), ckpt_every=c['ckpt_every'],
-            resume=str(ckpt) if ckpt.exists() else None, device=device)
+            resume=str(ckpt) if ckpt.exists() else None,
+            compile=c.get('compile', False), device=device)
     record = d2l.campaign_record(spec, result, cfg)
     record.update(wall=time.time() - t0, device=(
         torch.cuda.get_device_name(0) if device.type == 'cuda' else 'cpu'))
@@ -324,15 +326,19 @@ class deterministic:
 
 
 def smoke_child(args):
-    """Train the smoke run with a checkpoint at half way, to be killed."""
+    """Train the smoke run to its half-way checkpoint, then go on training
+    (writing nothing more) until the parent kills it: the checkpoint the
+    parent resumes is always the step-half one, however fast the steps."""
     d2l = d2l_module()
     c, cfg, pools, steps = smoke_setup(d2l, args)
     per_step = cfg.batch * cfg.seq_len
+    run = lambda **kw: d2l.train_proxy_lm(
+        pools, uniform(c), c['tokens'], cfg, seed=0, log_every=1,
+        max_epochs=10**6, **kw)
     with deterministic():
-        d2l.train_proxy_lm(pools, uniform(c), c['tokens'], cfg, seed=0,
-                           log_every=1, max_epochs=10**6,
-                           stop_tokens=steps * per_step,
-                           ckpt=args.smoke_child, ckpt_every=steps // 2)
+        run(stop_tokens=steps // 2 * per_step, ckpt=args.smoke_child,
+            ckpt_every=steps // 2)
+        run(stop_tokens=steps * per_step, resume=args.smoke_child)
 
 
 def uniform(c):
@@ -379,6 +385,8 @@ def smoke(args):
     child.kill()
     child.wait()
     assert ckpt.exists(), 'the smoke child wrote no checkpoint'
+    assert torch.load(ckpt, map_location='cpu', weights_only=False)[
+        'step'] == half, 'the resume would not start half way'
     with deterministic():
         b = train(cfg, resume=str(ckpt))
     ld, lb = losses(d), losses(b)
@@ -401,17 +409,23 @@ def smoke(args):
     peak = peak_of(name)
     tps = rate(a)
     tps_c = rate(compiled) if compiled else None
-    best = max(tps, tps_c or 0)
+    # compilation time: the compiled run's first half beyond its steady rate
+    compile_s = (None if compiled is None else max(
+        0.0, compiled['log'][half - 1][3] - half * per_step / tps_c))
     t2 = configs(d2l)['t2']
+    use_c = bool(t2.get('compile')) and compiled is not None
+    run_tps = tps_c if use_c else tps  # the kernels the campaign runs
     with torch.device('meta'):
         n2 = d2l.num_params(d2l._proxy_model(t2['proxy']))
-    flop = 0.0
+    flop, n_compiled = 0.0, 0
     for s in d2l.mix_run_specs(t2):  # DoReMi: two more forward passes
         f = d2l.proxy_flops(t2['proxy'], s['tokens'], n2)
         flop += f * (10 / 6 if s['arm'] == 'doremi-weights' else 1)
+        n_compiled += use_c and s['arm'] != 'doremi-weights'
+    compile_h = n_compiled * (compile_s or 0.0) / 3600  # once per run
     mfu = lambda r: None if peak is None or r is None else r * per_token / peak
     pred_a100 = (None if peak is None else
-                 flop / (A100_PEAK * mfu(best)) / 3600)
+                 flop / (A100_PEAK * mfu(run_tps)) / 3600 + compile_h)
     record = dict(
         config=args.smoke_config, device=name, steps=steps, checkpoint=half,
         tokens_per_step=per_step, n_params=n, flop_per_token=per_token,
@@ -420,13 +434,15 @@ def smoke(args):
         peak_mem_gib=a['peak_mem'], resume_bf16_max_diff=diff16,
         rerun_bf16_max_diff=noise16, resume_bf16_ok=diff16 <= 0.01,
         resume_fp32_max_diff=diff32, campaign_runs=len(d2l.mix_run_specs(t2)),
-        campaign_flop=flop, predicted_a100_hours=pred_a100,
-        predicted_hours_here=flop / (best * per_token) / 3600,
-        stop_hours=None if pred_a100 is None else 1.5 * pred_a100,
+        campaign_flop=flop, campaign_compile=use_c, compile_seconds=compile_s,
+        compile_hours=compile_h, mfu_campaign=mfu(run_tps),
+        predicted_a100_hours=pred_a100,
+        predicted_hours_here=flop / (run_tps * per_token) / 3600 + compile_h,
         # trained: a twice, d, the child (about half), b, three fp32
         # parts, compiled
         smoke_flop=per_token * per_step * (5 * steps + 4 * half),
-        mfu_assumption='MFU measured here, assumed equal on an A100',
+        mfu_assumption='MFU measured here, assumed equal on an A100; '
+        'hours are GPU-hours of one card (compile time once per run)',
         pools=f'the {args.config} pools (the smoke stream may repeat them)',
         losses=[la[s] for s in sorted(la)])
     atomic_json(args.out / f'smoke-{args.smoke_config}.json', record)
@@ -459,6 +475,7 @@ def merge(d2l, c, args, specs, t_start):
     smoke_path = args.out / f'smoke-{"t2" if args.smoke_t2 else c["name"]}.json'
     merged = dict(
         schema='d2l-mix-runs/1', config=c['name'], cfg=c['proxy']._asdict(),
+        mix_config=json.loads(json.dumps(c)),
         tokens=c['tokens'], domains=list(D),
         targets={k: list(v) for k, v in c['targets'].items()},
         pools={d: {k: pools[d].meta[k] for k in keep} for d in D},
@@ -474,7 +491,19 @@ def merge(d2l, c, args, specs, t_start):
     print(f'merged {len(runs)} runs into {path}', flush=True)
 
 
-def default_hours(name, out):
+def device_name(gpu):
+    """nvidia-smi's name of a GPU id (without initializing CUDA here)."""
+    if gpu == 'cpu':
+        return 'cpu'
+    r = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,'
+                        'noheader', '-i', gpu], capture_output=True, text=True)
+    return r.stdout.strip() or None
+
+
+def default_hours(name, out, gpus):
+    """The wall-clock stop of a campaign: for t2 the campaign file's
+    stop_hours, else 1.5 x the smoke's predicted GPU-hours on this node's
+    cards divided by the number of workers; 1 h for the other configs."""
     if name != 't2':
         return 1.0
     try:
@@ -487,9 +516,17 @@ def default_hours(name, out):
     except (ImportError, OSError, StopIteration, KeyError):
         pass
     smoke_file = out / 'smoke-t2.json'
-    if smoke_file.exists() and read_json(smoke_file)['stop_hours']:
-        return read_json(smoke_file)['stop_hours']
-    return 8.0
+    if not smoke_file.exists():
+        return 8.0
+    sm, dev = read_json(smoke_file), device_name(gpus[0])
+    if dev == sm['device']:
+        hours = sm['predicted_hours_here']
+    elif dev and peak_of(dev) and sm.get('mfu_campaign'):
+        hours = (sm['campaign_flop'] / (peak_of(dev) * sm['mfu_campaign'])
+                 / 3600 + sm['compile_hours'])
+    else:
+        return 8.0
+    return 1.5 * hours / len(gpus)
 
 
 def spawn(args, extra, gpu, threads):
@@ -549,7 +586,7 @@ def main():
     gpus = args.gpus.split(',')
     args.out.mkdir(parents=True, exist_ok=True)
     t_start = time.time()
-    hours = args.max_hours or default_hours(args.config, args.out)
+    hours = args.max_hours or default_hours(args.config, args.out, gpus)
     if args.smoke or args.smoke_t2:
         name = args.config if args.smoke else 't2'
         p = spawn(args, ['--smoke-run', '--smoke-config', name], gpus[0],

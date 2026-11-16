@@ -43,6 +43,7 @@ import io
 import json
 import os
 import pathlib
+import shutil
 import sys
 import tarfile
 import tempfile
@@ -53,6 +54,8 @@ import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+# The fast local Hugging Face cache, never the NFS home's default
+os.environ.setdefault('HF_HOME', os.path.expanduser('~/.cache/hf-lm'))
 from d2l import torch as d2l  # noqa: E402
 
 PERMISSIVE = ('mit', 'apache-2.0', 'bsd-2-clause', 'bsd-3-clause', 'isc')
@@ -299,6 +302,11 @@ def main():
     args = ap.parse_args()
     domains = args.domains.split(',')
     tokens = args.tokens and tuple(int(x) for x in args.tokens.split(','))
+    cache = pathlib.Path(os.environ['HF_HOME'])
+    cache.mkdir(parents=True, exist_ok=True)
+    free = shutil.disk_usage(cache).free / 2**30
+    print(f'Hugging Face cache {cache}: {free:.0f} GiB free (source files: '
+          't1 about 3 GB, t2 about 21 GB, mostly FineWeb-Edu)', flush=True)
     built = build(args.config, args.out, args.tokenizer, domains, tokens)
     if args.check:
         with tempfile.TemporaryDirectory(dir=args.out) as tmp:

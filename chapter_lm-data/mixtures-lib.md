@@ -370,8 +370,9 @@ def barycentric(W):
 #@save
 def mix_run_specs(c):
     """The run design of a MIX_CONFIGS entry c, in launch order: the
-    learning-rate runs, the pure-domain runs, the training and held-out
-    mixtures, the uniform seeds (cosine and WSD), the DoReMi proxy and the
+    learning-rate runs, the pure-domain runs, the training mixtures (the
+    Dirichlet draws, then the fixed edges), the held-out mixtures, the
+    uniform seeds (cosine and WSD), the DoReMi proxy and the
     three arms. Each spec is a dict(run_id, arm, weights, stages, seed,
     schedule, tokens, eval_at, depends); weights of None are resolved when
     the run starts (the regression's choice, DoReMi's weights)."""
@@ -395,6 +396,8 @@ def mix_run_specs(c):
         train += [spec(f'train-a{conc:g}-{k:02d}'.replace('.', ''),
                        'train', list(w), **after_lr)
                   for k, w in enumerate(W)]
+    train += [spec(f'train-edge-{k:02d}', 'train', [float(x) for x in w],
+                   **after_lr) for k, w in enumerate(c.get('edges', ()))]
     runs += train
     W = d2l.sample_mixtures(c['held'], D, 1.0, c['design_seeds'][1],
                             c['max_weight'])

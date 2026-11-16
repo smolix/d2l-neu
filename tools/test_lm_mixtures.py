@@ -10,7 +10,9 @@ and the mixture sampler; the proxy stream (determinism, stratified domain
 counts, epochs, the pool guard, stages), train_proxy_lm (determinism,
 stop_tokens, checkpoint and resume across an epoch boundary), bits per byte
 of a uniform model through _proxy_eval; the D4 noise floor and the
-mixing-law recovery of fit_mixture_regression, choose_mixture; DoReMi's
+mixing-law recovery of fit_mixture_regression (and its warm start),
+choose_mixture (also bounded by the hull of the training mixtures), the run
+design with its fixed corner mixtures; DoReMi's
 closed-form step, the saddle of a toy game and the per-token clipping; and
 tools/run_mix_campaign.py on the test configuration 'tiny' (CPU): its smoke
 (kill and resume) and the first runs of a campaign."""
@@ -324,6 +326,32 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(gbm(Wn).shape, (50, 3))
         with self.assertRaises(ValueError):
             d2l.fit_mixture_regression(W, law(W), 'lasso')
+        # a warm start alone reproduces the fit
+        g = d2l.fit_mixture_regression(W, law(W), 'mixlaw', init=f.params,
+                                       starts=1)
+        self.assertLess(np.abs(g(Wn) - f(Wn)).max(), 1e-9)
+
+    def test_choice_within_the_hull(self):
+        from scipy.spatial import Delaunay
+        W = d2l.sample_mixtures(12, 'abc', 1.0, 0, 0.6)  # no weight above 0.6
+        lin = lambda w: np.atleast_2d(w) @ np.diag([1.0, 2.0, 3.0])
+        f = lambda w: lin(w) if np.ndim(w) == 2 else lin(w)[0]
+        t = np.array([1.0, 1.0, 1.0])
+        free, _ = d2l.choose_mixture(f, t)  # linear: the cap corner
+        self.assertAlmostEqual(free[0], 0.9, delta=1e-6)
+        w, v = d2l.choose_mixture(f, t, within=W)
+        self.assertGreaterEqual(Delaunay(W[:, :-1]).find_simplex(w[:-1]), 0)
+        best = min(float(f(x) @ t) for x in W)  # a linear optimum: a vertex
+        self.assertLessEqual(v, best + 1e-9)
+
+    def test_run_design(self):
+        for k, n in (('t1', 40), ('t2', 48)):
+            c = d2l.MIX_CONFIGS[k]
+            specs = d2l.mix_run_specs(c)
+            self.assertEqual(len(specs), n)
+            train = [s['weights'] for s in specs if s['arm'] == 'train']
+            self.assertEqual(train[-3:], [list(e) for e in d2l.MIX_EDGES])
+            self.assertEqual(len({s['run_id'] for s in specs}), n)
 
 
 class DoremiTest(unittest.TestCase):
@@ -407,7 +435,9 @@ class CampaignTest(unittest.TestCase):
             self.assertLessEqual(smoke['resume_fp32_max_diff'], 1e-6)
             self.assertTrue(smoke['resume_bf16_ok'])
             self.assertEqual(smoke['resume_bf16_max_diff'], 0.0)  # CPU
-            self.assertEqual(smoke['campaign_runs'], 45)
+            self.assertEqual(smoke['campaign_runs'], 48)
+            self.assertFalse(smoke['campaign_compile'])  # no compile on CPU
+            self.assertGreater(smoke['predicted_hours_here'], 0)
             runs = 'lr-5e-04,lr-1e-03,lr-2e-03,pure-web'
             r = subprocess.run(base + ['--runs', runs], env=env,
                                capture_output=True, text=True, timeout=900)

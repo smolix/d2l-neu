@@ -10008,6 +10008,9 @@ ProxyCfg = collections.namedtuple('ProxyCfg', (
     'vocab_size'), defaults=(1024, 64, 16, 1e-3, 0.02, 'cosine', 0.2, 0.1,
                              0.1, (0.9, 0.95), 'bfloat16', 32768))
 
+MIX_EDGES = (  # seed-free training mixtures near the corners of the simplex
+    (0.8, 0.1, 0.1), (0.1, 0.8, 0.1), (0.1, 0.1, 0.8))
+
 MIX_CONFIGS = {  # the study's two tiers, fixed before any run
     't1': dict(  # one RTX 4090
         name='t1', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
@@ -10018,13 +10021,13 @@ MIX_CONFIGS = {  # the study's two tiers, fixed before any run
             'web-val-1m': 'lm-mix-val-1m-v1',
             'math-val-1m': 'lm-mix-val-1m-v1'},
         code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v1',
-        train=((1.0, 6), (0.3, 6)), held=4, design_seeds=(0, 1),
-        cos_seeds=(1, 2), arm_seeds=(0, 1, 2), max_weight=0.9,
-        lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**23, lr_tie=1e-3,
-        eval_at=tuple(k / 8 for k in range(1, 9)),
+        train=((1.0, 6), (0.3, 6)), edges=MIX_EDGES, held=4,
+        design_seeds=(0, 1), cos_seeds=(1, 2), arm_seeds=(0, 1, 2),
+        max_weight=0.9, lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**23,
+        lr_tie=1e-3, eval_at=tuple(k / 8 for k in range(1, 9)),
         arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
-        log_every=10, ckpt_every=256, stage_frac=0.8, select='ridge',
-        doremi=dict(eta=1.0, smooth=1e-3)),
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='mixlaw',
+        compile=False, doremi=dict(eta=1.0, smooth=1e-3)),
     't2': dict(  # the campaign package: run on a faster node
         name='t2', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
         proxy=ProxyCfg(num_hiddens=320, num_heads=5, num_blks=8),
@@ -10035,13 +10038,13 @@ MIX_CONFIGS = {  # the study's two tiers, fixed before any run
             'web-val-2m': 'lm-mix-val-2m-v1',
             'math-val-2m': 'lm-mix-val-2m-v1'},
         code_meta='lm-mix-code150-meta-v1', runs_key='lm-mix-runs-t2-v1',
-        train=((1.0, 8), (0.3, 8)), held=8, design_seeds=(0, 1),
-        cos_seeds=(1, 2), arm_seeds=(0, 1, 2), max_weight=0.9,
-        lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**25, lr_tie=1e-3,
-        eval_at=tuple(k / 8 for k in range(1, 9)),
+        train=((1.0, 8), (0.3, 8)), edges=MIX_EDGES, held=8,
+        design_seeds=(0, 1), cos_seeds=(1, 2), arm_seeds=(0, 1, 2),
+        max_weight=0.9, lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**25,
+        lr_tie=1e-3, eval_at=tuple(k / 8 for k in range(1, 9)),
         arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
-        log_every=10, ckpt_every=256, stage_frac=0.8, select='ridge',
-        doremi=dict(eta=1.0, smooth=1e-3))}
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='mixlaw',
+        compile=True, doremi=dict(eta=1.0, smooth=1e-3))}
 
 def fwedu_bucket(doc_id):
     """The bucket (0-255) of a FineWeb-Edu document: the first 32 bits of
@@ -10181,7 +10184,8 @@ def fit_mixture_regression(W, L, kind='ridge', **kw):
     and their losses L (n, k): 'ridge' on the first m - 1 weights and an
     intercept (alpha=1e-3, intercept not shrunk), 'gbm' (scikit-learn
     gradient boosting per output, seed 0) or 'mixlaw' (L_i = c_i + k_i
-    exp(sum_j t_ij w_j) per output, least squares from 8 seeded starts).
+    exp(sum_j t_ij w_j) per output, least squares from `starts` seeded
+    starts, default 8; init=params of an earlier fit is tried first).
     f takes (m,) or (n', m); f.params holds the fitted parameters.
 
     Defined in :numref:`sec_lm_data_mixtures`"""
@@ -10204,11 +10208,16 @@ def fit_mixture_regression(W, L, kind='ridge', **kw):
         from scipy.optimize import least_squares
         rng, params = np.random.default_rng(0), []
         law = lambda p, w: p[0] + p[1] * np.exp(w @ p[2:])
-        for y in L.T:
-            fits = [least_squares(lambda p: law(p, W) - y, np.concatenate(
-                [[rng.uniform(0, y.min())], [rng.uniform(0.1, 2)],
-                 rng.normal(0, 1, W.shape[1])]), xtol=1e-15, ftol=1e-15,
-                gtol=1e-15, max_nfev=5000) for _ in range(8)]
+        init, starts = kw.get('init'), kw.get('starts', 8)
+        for i, y in enumerate(L.T):
+            x0 = [] if init is None else [np.asarray(init[i], dtype=float)]
+            x0 += [np.concatenate([[rng.uniform(0, y.min())],
+                                   [rng.uniform(0.1, 2)],
+                                   rng.normal(0, 1, W.shape[1])])
+                   for _ in range(starts - len(x0))]
+            fits = [least_squares(lambda p: law(p, W) - y, x, xtol=1e-15,
+                                  ftol=1e-15, gtol=1e-15, max_nfev=5000)
+                    for x in x0]
             params.append(min(fits, key=lambda r: r.cost).x)
         params = np.array(params)
         predict = lambda w: np.stack([law(p, w) for p in params], -1)
@@ -10220,21 +10229,31 @@ def fit_mixture_regression(W, L, kind='ridge', **kw):
     f.params = params
     return f
 
-def choose_mixture(f, target, n_grid=5000, seed=0, max_weight=0.9):
+def choose_mixture(f, target, n_grid=5000, seed=0, max_weight=0.9,
+                   within=None):
     """The mixture w with no weight above max_weight that minimizes the
     fitted target loss target @ f(w): the best of n_grid Dirichlet(1)
-    points, polished by Nelder-Mead on w = softmax(z). Returns (w, the
-    predicted target loss).
+    points, polished by Nelder-Mead on w = softmax(z). within (n, m), if
+    given, bounds the choice to the convex hull of those mixtures (where
+    f was fitted, so the choice never rests on extrapolation). Returns
+    (w, the predicted target loss).
 
     Defined in :numref:`sec_lm_data_mixtures`"""
     from scipy.optimize import minimize
+    from scipy.spatial import Delaunay
     t = np.asarray(target, dtype=float)
+    hull = None if within is None else Delaunay(np.asarray(within)[:, :-1])
+    inside = lambda w: (np.ones(len(w), bool) if hull is None else
+                        hull.find_simplex(w[:, :-1]) >= 0)
     G = d2l.sample_mixtures(n_grid, t, 1.0, seed, max_weight)
+    G = G[inside(G)]
     vals = f(G) @ t
     softmax = lambda z: np.exp(z - z.max()) / np.exp(z - z.max()).sum()
     def loss(z):
         w = softmax(z)
-        return np.inf if w.max() > max_weight else float(f(w) @ t)
+        if w.max() > max_weight or not inside(w[None])[0]:
+            return np.inf
+        return float(f(w) @ t)
     res = minimize(loss, np.log(G[vals.argmin()]), method='Nelder-Mead',
                    options=dict(xatol=1e-8, fatol=1e-10, maxiter=4000))
     if res.fun < vals.min():
@@ -18540,8 +18559,9 @@ def barycentric(W):
 
 def mix_run_specs(c):
     """The run design of a MIX_CONFIGS entry c, in launch order: the
-    learning-rate runs, the pure-domain runs, the training and held-out
-    mixtures, the uniform seeds (cosine and WSD), the DoReMi proxy and the
+    learning-rate runs, the pure-domain runs, the training mixtures (the
+    Dirichlet draws, then the fixed edges), the held-out mixtures, the
+    uniform seeds (cosine and WSD), the DoReMi proxy and the
     three arms. Each spec is a dict(run_id, arm, weights, stages, seed,
     schedule, tokens, eval_at, depends); weights of None are resolved when
     the run starts (the regression's choice, DoReMi's weights).
@@ -18567,6 +18587,8 @@ def mix_run_specs(c):
         train += [spec(f'train-a{conc:g}-{k:02d}'.replace('.', ''),
                        'train', list(w), **after_lr)
                   for k, w in enumerate(W)]
+    train += [spec(f'train-edge-{k:02d}', 'train', [float(x) for x in w],
+                   **after_lr) for k, w in enumerate(c.get('edges', ()))]
     runs += train
     W = d2l.sample_mixtures(c['held'], D, 1.0, c['design_seeds'][1],
                             c['max_weight'])

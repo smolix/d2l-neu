@@ -20,11 +20,12 @@ campaigns:
       - HuggingFaceFW/fineweb-edu sample/10BT @ 87f09149 (about 8 files for 150M bucket-1-7 tokens)
       - HuggingFaceTB/finemath finemath-4plus @ e92b25a6
       - codeparrot/codeparrot-clean @ 35a59fb0 (permissive licences only; built locally, never hosted)
-    runs: 42 proxy runs plus 3 learning-rate runs at 2^25 tokens (d2l.mix_run_specs)
-    flop: 8.8e17  # arithmetic (6ND + 12 L d T D per run); the smoke prints its own count
-    predicted_a100_hours: null  # smoke: FLOP / (312e12 x MFU measured on the 4090); arithmetic 3.1 at MFU 0.25, 5.2 at 0.15
-    memory_gib_per_run: null  # smoke peak; expected at most 8, two runs per 40 GB card
-    stop_hours: null  # 1.5 x predicted wall hours on the chosen node (--max-hours)
+    runs: 45 proxy runs (19 training mixtures, 3 of them the fixed corner mixtures MIX_EDGES) plus 3 learning-rate runs at 2^25 tokens (d2l.mix_run_specs)
+    flop: 9.6e17  # arithmetic (6ND + 12 L d T D per run, DoReMi's run x 10/6); the smoke prints its own count
+    compile: true  # MIX_CONFIGS['t2']['compile']: torch.compile, +11% tokens/s on the 4090; micro-batch 16 (32: +2% at twice the memory; 64 does not fit 24 GB)
+    predicted_a100_hours: null  # smoke: FLOP / (312e12 x MFU of the compiled run on the 4090) + compile time once per run; arithmetic 3.4 at MFU 0.25, 5.7 at 0.15
+    memory_gib_per_run: null  # smoke peak; expected at most 8.4, two runs per 40 GB card
+    stop_hours: null  # if null, the launcher stops at 1.5 x the smoke's predicted GPU-hours on the node's cards / the number of workers (--max-hours overrides)
     gpus: the runs are independent after the learning-rate choice; one worker per GPU
     outputs:
       - data/lm/rerun/mix-t2/lm-mix-runs-t2-v1.json -> lm-mix-runs-t2-v1

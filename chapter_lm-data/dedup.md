@@ -71,6 +71,8 @@ import itertools
 import json
 import os
 import pathlib
+import re
+import resource
 import sys
 import textwrap
 import time
@@ -89,7 +91,7 @@ TAU = 0.8          # a pair is a near-duplicate when its Jaccard is >= TAU
 R_GRID = (4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16)  # rows; b = K // r
 SEEDS = (0, 1, 2)  # hash seeds 0xD2 + s (seed 0 is the specification's)
 N_GRAM = 13        # word n-grams of the decontamination index (GPT-3)
-N_WORKERS = min(8, os.cpu_count())
+N_WORKERS = min(4, os.cpu_count())  # each spawned worker imports d2l
 PARAPHRASER = 'Qwen/Qwen3.5-4B'      # writes the paraphrased plants (GPU)
 EMBEDDER = 'Qwen/Qwen3-Embedding-0.6B'
 GPU = torch.cuda.is_available()
@@ -111,7 +113,8 @@ assert 'dedup-plants' not in RERUN or RERUN <= {'dedup-plants',
                                                 'dedup-pairs'}, (
     'regenerate dedup-plants (and dedup-pairs) first, then register them')
 PLANTS_PENDING = 'dedup-plants' in RERUN
-R, TIMES = {}, {}  # results (written or compared at the end); wall clocks
+R, TIMES, MEM = {}, {}, {}  # results (compared at the end); wall clocks
+# and memory sizes (depend on the machine and Python: never compared)
 ATTRIBUTION = ('Text: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 '
                '(ODC-By 1.0)')
 print(f'K={K}, TAU={TAU}, seeds {[hex(0xD2 + s) for s in SEEDS]}, '
@@ -315,7 +318,8 @@ d2l.plot((edges[:-1] + edges[1:]) / 2, counts, 'exact Jaccard of the pair',
 for name, j in (('random', J_rand), ('same-host', J_same)):
     print(f'{name:>9} pairs: median J {np.median(j):.3f}, 99th percentile '
           f'{np.percentile(j, 99):.3f}, J >= {TAU}: {np.sum(j >= TAU)}')
-R['jaccard'] = dict(median_shingles=np.median(sizes), mem_bytes=mem,
+MEM['shingle_sets'] = mem
+R['jaccard'] = dict(median_shingles=np.median(sizes),
                     random=np.percentile(J_rand, [50, 90, 99]).tolist(),
                     same_host=np.percentile(J_same, [50, 90, 99]).tolist(),
                     random_dup=int(np.sum(J_rand >= TAU)),
@@ -361,7 +365,7 @@ MINHASH_FIXTURE_SHA256 = (  # of their k = 128, seed 0xD2 signatures' bytes
     'b9b07bf416ce76f2b5cf1ae3d12fc617bdfa5bc7e464230c6bca1ada3bda0195')
 ```
 
-<!-- Prose: the estimator checked on sets of known Jaccard (bias within three standard errors, variance against J(1 - J)/k), against datasketch's MinHash as an oracle, and bit for bit against the fixture that assignment A3 grades with; the 95% half-width at J = 0.8 and k = 128 is 1.96 sqrt(0.8 x 0.2 / 128) = 0.069. -->
+<!-- Prose: the estimator checked on sets of known Jaccard (bias within three standard errors, variance against J(1 - J)/k), against datasketch's MinHash as an oracle, and bit for bit against a Python-integer version of the specification on the fixture that assignment A3 grades with (and the fixture's pinned hash); the 95% half-width at J = 0.8 and k = 128 is 1.96 sqrt(0.8 x 0.2 / 128) = 0.069. -->
 
 ```{.python .input #dedup-minhash-check}
 %%tab pytorch
@@ -393,13 +397,29 @@ assert D1.var_ratio.between(0.7, 1.3).all()
 print(f'95% half-width at J = 0.8, k = {K}: '
       f'{1.96 * math.sqrt(0.8 * 0.2 / K):.4f}')
 
+def reference(shingle_list, k=K, seed=0xD2):
+    """The specification in Python integers: no NumPy arithmetic."""
+    p = d2l.MINHASH_PRIME
+    a, c = np.random.default_rng(seed).integers(1, p, size=(2, k),
+                                                dtype=np.uint64)
+    xs = {int.from_bytes(hashlib.blake2b(s.encode('utf-8'), digest_size=8)
+                         .digest(), 'little') % p for s in shingle_list}
+    return [min((int(ai) * x + int(ci)) % p for x in xs)
+            for ai, ci in zip(a, c)]
+
 sigs = [d2l.minhash_signature(d2l.shingles(t), K)
         for t in d2l.MINHASH_FIXTURE]
+same = [s.tolist() == reference(d2l.shingles(t))
+        for s, t in zip(sigs, d2l.MINHASH_FIXTURE)]
+print(f'fixture: signatures equal to the Python-integer specification: '
+      f'{sum(same)} of {len(same)}')
+assert all(same), 'not bit-exact to the specification'
 fix = hashlib.sha256(b''.join(s.astype('<u8').tobytes() for s in sigs))
 print(f'fixture signatures: SHA-256 {fix.hexdigest()[:16]}…, pinned '
       f'{d2l.MINHASH_FIXTURE_SHA256[:16]}…')
-assert fix.hexdigest() == d2l.MINHASH_FIXTURE_SHA256, 'not bit-exact'
-R['minhash'] = dict(table=D1.to_dict('list'), fixture=fix.hexdigest())
+assert fix.hexdigest() == d2l.MINHASH_FIXTURE_SHA256, 'fixture changed'
+R['minhash'] = dict(table=D1.to_dict('list'), fixture=fix.hexdigest(),
+                    reference_equal=sum(same))
 ```
 
 ### Banding and the S-Curve
@@ -652,7 +672,7 @@ R['pairs'] = dict(n=len(PAIRS), by_op=PAIRS.op.value_counts().to_dict(),
                   labels=int(PAIRS.label.sum()))
 ```
 
-<!-- Prose: the measured S-curve: for every (b, r) of the grid, three hash seeds and every 0.05 bin of exact Jaccard, the share of pairs that became candidates against the expected share, the mean of scurve(J_i) over the bin's pairs (not the curve at the bin centre, which in a steep bin is off: at (9, 13) the curve rises from 0.40 to 0.69 across 0.80-0.85), with a Poisson-binomial 95% interval of the count; a departure beyond these intervals would mean a flawed hash. -->
+<!-- Prose: the measured S-curve: for every (b, r) of the grid, three hash seeds and every 0.05 bin of exact Jaccard, the share of pairs that became candidates against the expected share, the mean of scurve(J_i) over the bin's pairs (not the curve at the bin centre, which in a steep bin is off: at (9, 13) the curve rises from 0.40 to 0.69 across 0.80-0.85), with a Poisson-binomial 95% interval of the count; the claim is the pooled one: across all (setting, bin, seed) cells the share outside is about 5%, below the 0.999 binomial bound (a flawed hash would exceed it); not "95% of bins for every (b, r)" (one setting sits at 0.93), and the interval treats a bin's pairs as independent although the three copies of one base document share shingles. -->
 
 ```{.python .input #dedup-scurve-measure}
 %%tab pytorch
@@ -740,7 +760,7 @@ R['scurve_measure'] = dict(n_cells=n_cells, n_outside=n_out,
                            table=SC.round(6).to_dict('list'))
 ```
 
-<!-- Prose: choosing (b, r) on the training pairs by the weighted error count (false positives plus w_fn times false negatives, averaged over the three seeds) under w_fn = 1 and 5; precision, recall and F1 on the test pairs; FineWeb's (14, 8) on 112 rows and datasketch's choice as further rows; differences between the chosen r and its neighbours with a bootstrap over base documents (a document and its copies move together). -->
+<!-- Prose: choosing (b, r) on the training pairs by the weighted error count (false positives plus w_fn times false negatives, averaged over the three seeds) under w_fn = 1 and 5; precision, recall and F1 on the test pairs; FineWeb's (14, 8) on 112 rows and datasketch's choice as further rows; differences between the chosen r and its neighbours, and between the w_fn = 1 choice and the D3 optimum, with a bootstrap over base documents (a document and its copies move together); why the choice is not D3's (9, 13): D3's areas weigh every similarity in [0, 1] equally, while the pair set has many pairs near tau; the expected weighted error under the pairs' own J distribution has its least value exactly at the hashed choices (asserted), so the hashes behave as derived and the objective, not the sketch, moves the optimum; quote the F1 gap to (9, 13) from its interval, never "within the F1 interval". -->
 
 ```{.python .input #dedup-choose}
 %%tab pytorch
@@ -798,24 +818,47 @@ def f1_diff_ci(pa, pb, m, n_boot=2000, seed=0):
 def mean_decision(b, r):
     return np.mean([DECIDE[b, r, s] for s in SEEDS], axis=0)
 
+def compare(br, br2, w):
+    """F1(br) - F1(br2) and the weighted errors per pair that br saves
+    against br2, on the test pairs, with cluster-bootstrap intervals."""
+    pa, pb = mean_decision(*br), mean_decision(*br2)
+    d, (lo, hi) = f1_diff_ci(pa, pb, split['test'])
+    cost = lambda p: p * ~y + w * (1 - p) * y  # weighted errors per pair
+    eb = d2l.paired_bootstrap(cost(pb)[split['test']],
+                              cost(pa)[split['test']], n_boot=2000,
+                              cluster=cluster[split['test']])
+    print(f'test, w_fn = {w}: F1 of {br[0]} x {br[1]} minus {br2[0]} x '
+          f'{br2[1]}: {d:+.4f} [{lo:+.4f}, {hi:+.4f}]; weighted errors per '
+          f'pair saved: {eb.mean:+.4f} [{eb.ci[0]:+.4f}, {eb.ci[1]:+.4f}]')
+    return [d, lo, hi, eb.mean, *eb.ci]
+
 R['choose'] = dict(grid=GRID.round(6).to_dict('list'),
                    chosen={str(w): list(v) for w, v in CHOSEN.items()},
-                   d3=list(BR), steps=steps, boot={})
+                   d3=list(BR), steps=steps, boot={}, expected={})
 for w, (b, r) in CHOSEN.items():
     i = R_GRID.index(r)
     for r2 in R_GRID[max(i - 1, 0):i + 2]:
-        if r2 == r:
-            continue
-        pa, pb = mean_decision(b, r), mean_decision(K // r2, r2)
-        d, (lo, hi) = f1_diff_ci(pa, pb, split['test'])
-        cost = lambda p: p * ~y + w * (1 - p) * y  # weighted errors per pair
-        eb = d2l.paired_bootstrap(cost(pb)[split['test']],
-                                  cost(pa)[split['test']], n_boot=2000,
-                                  cluster=cluster[split['test']])
-        print(f'test, w_fn = {w}: F1 of {b} x {r} minus {K // r2} x {r2}: '
-              f'{d:+.4f} [{lo:+.4f}, {hi:+.4f}]; weighted errors per pair '
-              f'saved: {eb.mean:+.4f} [{eb.ci[0]:+.4f}, {eb.ci[1]:+.4f}]')
-        R['choose']['boot'][f'{w}:{r}-{r2}'] = [d, lo, hi, eb.mean, *eb.ci]
+        if r2 != r:
+            R['choose']['boot'][f'{w}:{r}-{r2}'] = compare(
+                (b, r), (K // r2, r2), w)
+R['choose']['boot']['1:chosen-d3'] = compare(CHOSEN[1], BR, 1)
+
+# D3 weighs similarities uniformly on [0, 1]; the expected weighted error
+# under the training pairs' own similarities is a sum over those pairs
+J_tr, y_tr = PAIRS.J.to_numpy()[split['train']], y[split['train']]
+for w in (1, 5):
+    exp_err = {}
+    for r in R_GRID:
+        p = d2l.scurve(J_tr, K // r, r)
+        exp_err[K // r, r] = float(np.sum(p * ~y_tr + w * (1 - p) * y_tr))
+    arg = min(exp_err, key=exp_err.get)
+    print(f'w_fn = {w}: expected weighted error on train under the pairs\' '
+          f'J: least at {arg} ({exp_err[arg]:.1f}); at the D3 optimum '
+          f'{BR}: {exp_err[BR]:.1f}; measured choice {CHOSEN[w]}')
+    assert arg == CHOSEN[w], 'the hashed choice departs from its expectation'
+    R['choose']['expected'][str(w)] = dict(argmin=list(arg),
+                                           at_argmin=exp_err[arg],
+                                           at_d3=exp_err[BR])
 
 tr, te = (GRID[(GRID.split == n) & (GRID.b == K // GRID.r)
                & GRID.r.isin(R_GRID)] for n in ('train', 'test'))
@@ -863,7 +906,7 @@ for br in (CHOSEN[1], (14, 8), (32, 4)):
 ## From Pairs to a Deduplicated Corpus
 :label:`subsec_lm_dedup_cluster`
 
-<!-- Prose: candidate pairs to clusters by union-find (A~B and B~C put A and C together even when A and C differ); the lowest index represents its cluster (deterministic; FineWeb keeps a random one); per-dump against global deduplication (FineWeb's finding, cited); near_dedup as the wrapper later chapters reuse. -->
+<!-- Prose: candidate pairs to clusters by union-find (A~B and B~C put A and C together even when A and C differ); the lowest index represents its cluster (deterministic; FineWeb keeps a random one); per-dump against global deduplication (FineWeb's finding, cited); near_dedup as the wrapper later chapters reuse; say once that the c1 report and the manifest use the setting chosen on train, while near_dedup's default is the D3 optimum (both counts printed). -->
 
 ```{.python .input #dedup-dedup-run}
 %%tab pytorch
@@ -883,18 +926,22 @@ R['dedup_run'] = dict(slice_kept=len(keep), slice_largest_bucket=rep[
     'largest'])
 
 # our own crawl after quality filtering (c1) has not been deduplicated:
-# clusters by size, with host counts and Jaccard ranges (no text, rule P1)
+# clusters by size, with host counts and Jaccard ranges (no text, rule P1),
+# at the setting chosen on the training pairs, which the manifest uses
 c1_text = [d.text for d in C1]
-c1_keep = d2l.near_dedup(c1_text, TAU)
 c1_sigs = [d2l.minhash_signature(d2l.shingles(t), K) for t in c1_text]
-c1_cand, c1_rep = d2l.lsh_candidates(c1_sigs, *BR)
+c1_cand, c1_rep = d2l.lsh_candidates(c1_sigs, *CHOSEN[1])
 c1_lab = d2l.union_find_clusters(len(C1), c1_cand)
-assert [i for i in range(len(C1)) if c1_lab[i] == i] == c1_keep
+c1_keep = [i for i in range(len(C1)) if c1_lab[i] == i]
+c1_keep_d3 = d2l.near_dedup(c1_text, TAU)  # its default (b, r): D3's
 c1_size = collections.Counter(c1_lab.tolist())
 multi = {c: k for c, k in c1_size.items() if k > 1}
-print(f'c1: {len(c1_keep):,} of {len(C1):,} kept; {len(multi)} clusters of '
-      f'two or more ({sum(multi.values())} documents); largest bucket '
+print(f'c1 at {CHOSEN[1]} (chosen on train; the manifest below): '
+      f'{len(c1_keep):,} of {len(C1):,} kept; {len(multi)} clusters of two '
+      f'or more ({sum(multi.values())} documents); largest bucket '
       f'{c1_rep["largest"]}, cut buckets: {c1_rep["cut"] or "none"}')
+print(f'c1 by near_dedup(threshold={TAU}) at its default {BR}: '
+      f'{len(c1_keep_d3):,} kept')
 largest = sorted(multi, key=lambda c: (-multi[c], C1[c].id))[:5]
 c1_sets = {}
 for c in largest:
@@ -905,7 +952,8 @@ for c in largest:
     hosts = {d2l._url_host(C1[i].url) for i in members}
     print(f'  {len(members):>3} documents on {len(hosts)} host(s), J to the '
           f'representative {min(Js):.2f}-{max(Js):.2f}')
-R['dedup_run'].update(c1_kept=len(c1_keep), c1_clusters=len(multi),
+R['dedup_run'].update(c1_kept=len(c1_keep), c1_kept_d3=len(c1_keep_d3),
+                      c1_clusters=len(multi),
                       c1_in_clusters=sum(multi.values()),
                       c1_largest=[multi[c] for c in largest])
 ```
@@ -1088,7 +1136,7 @@ R['semantic'] = SEM.round(6).to_dict('list')
 ## Decontamination
 :label:`subsec_lm_dedup_decontam`
 
-<!-- Prose: decontamination removes training text that overlaps evaluation items; GPT-3's 13-gram rule (confirm the wording in its contamination appendix) as an index of hashed word 13-grams (lowercased, punctuation and spacing dropped); what it misses by construction: paraphrases, translations, changed numbers and items shorter than 13 words; removing every overlapping document also deletes famous quotations, so look at the span; overlap is evidence of leakage, not of memorization (Carlini et al.: extraction grows with duplication; one paragraph, with the pointer to the memorization experiment only if its label resolves, else the papers); GSM-Symbolic's perturbed items as a contamination control. -->
+<!-- Prose: decontamination removes training text that overlaps evaluation items; GPT-3's 13-gram rule (confirm the wording in its contamination appendix) as an index of hashed word 13-grams (lowercased, punctuation and spacing dropped); what it misses by construction: paraphrases, translations, changed numbers and items shorter than 13 words; the reformatted form (case, spacing, punctuation, reordered options) is found by construction because the index normalizes exactly these and every plant's question has 13+ words, so its recall of 1 shows the normalization works, not robustness; removing every overlapping document also deletes famous quotations, so look at the span; overlap is evidence of leakage, not of memorization (Carlini et al.: extraction grows with duplication; one paragraph, with the pointer to the memorization experiment only if its label resolves, else the papers); GSM-Symbolic's perturbed items as a contamination control. -->
 
 ```{.python .input #dedup-index-def}
 %%tab pytorch
@@ -1135,6 +1183,7 @@ short = collections.Counter(it['benchmark'] for it in ITEMS
 qshort = collections.Counter(it['benchmark'] for it in ITEMS
                              if words(it['question']) < N_GRAM)
 n_items = collections.Counter(it['benchmark'] for it in ITEMS)
+assert dict(n_items) == dict(gsm8k=1319, arc=1172, mmlu=14042), n_items
 print(f'{len(ITEMS):,} test items ({dict(n_items)}), {len(INDEX.keys):,} '
       f'distinct {N_GRAM}-grams, built in {TIMES["index"]:.0f} s')
 for bench in n_items:
@@ -1184,15 +1233,23 @@ else:
                          ngram_fp=fp, n_controls=len(ctrl))
 ```
 
-<!-- Prose: a second detector: every document cut into 128-word windows (stride 64), each window's top cosine to any benchmark item under the registered Qwen3-Embedding vectors; the threshold is the 99th percentile of the controls' scores (a 1% false-positive budget); recall by form; vectors made once on a GPU, checked live on 8 windows and 8 items on the CPU. -->
+<!-- Prose: a second detector: every document cut into 128-word windows (stride 64), each window's top cosine to any benchmark item under the registered Qwen3-Embedding vectors; the threshold is the 99th percentile of the 1,000 controls of the plants file (a 1% false-positive budget), and the false positives are counted on 1,000 other untouched documents (held out, with a Wilson interval); recall by form, compared with the verbatim form's embedding recall (the ceiling), never with 1; a window holds a plant whole only if the plant has at most 65 words or happens to align, and even then shares it with 60+ host words, so recall is shown by that flag; vectors made once on a GPU, checked live on 8 windows and 8 items on the CPU. -->
 
 ```{.python .input #dedup-decontam-emb}
 %%tab pytorch
 EMB_KEY, EMB_FILE = ARTIFACTS['dedup-emb']
 LIVE_COS_MIN = 0.999  # CPU fp32 against the registered GPU vectors
+SIZE, STRIDE = 128, 64  # words per window, words between window starts
 if not PLANTS_PENDING:
+    # held-out controls: the threshold is set on the plants file's controls
+    # and its false positives are counted on 1,000 other untouched documents
+    used = {r['doc_id'] for r in PLANTS}
+    HOLDOUT = sorted((i for i in STREAM_S.id if i not in used), key=lambda
+                     i: hashlib.sha256(i.encode('utf-8')).hexdigest())[:1000]
     WIN = [(r['doc_id'], s, t) for r in PLANTS
-           for s, t in d2l.word_windows(DOCS[r['doc_id']])]
+           for s, t in d2l.word_windows(DOCS[r['doc_id']], SIZE, STRIDE)]
+    WIN += [(i, s, t) for i in HOLDOUT
+            for s, t in d2l.word_windows(TEXT[i], SIZE, STRIDE)]
     with open(PLANTS_PATH, 'rb') as f:
         plants_sha1 = hashlib.sha1(f.read()).hexdigest()
     if 'dedup-emb' in RERUN:
@@ -1203,7 +1260,7 @@ if not PLANTS_PENDING:
             win_doc=np.array([w[0] for w in WIN]),
             win_start=np.array([w[1] for w in WIN], dtype=np.int64),
             windows=d2l.embed_docs([w[2] for w in WIN], EMBEDDER),
-            plants_sha1=np.array(plants_sha1),
+            holdout_ids=np.array(HOLDOUT), plants_sha1=np.array(plants_sha1),
             made_by=np.array(f'{EMBEDDER}@'
                              f'{d2l.HF_ENCODER_REVISIONS[EMBEDDER]} '
                              'max_len=512 pool=last bf16'))
@@ -1222,34 +1279,51 @@ if not PLANTS_PENDING:
     assert E['item_ids'].tolist() == [it['item_id'] for it in ITEMS]
     assert E['win_doc'].tolist() == [w[0] for w in WIN]
     assert E['win_start'].tolist() == [w[1] for w in WIN]
+    assert E['holdout_ids'].tolist() == HOLDOUT
     assert str(E['plants_sha1']) == plants_sha1, 'vectors of other plants'
-    Iv = torch.tensor(E['items'], dtype=torch.float32)
-    Wv = torch.tensor(E['windows'], dtype=torch.float32)
-    top = torch.cat([(w @ Iv.T).max(dim=1).values for w in Wv.split(2048)])
-    win_doc = pd.Series(E['win_doc'])
-    doc_top = pd.Series(top.numpy()).groupby(win_doc.to_numpy()).max()
-    PL['emb_top'] = PL.doc_id.map(doc_top)
-    planted = PL[PL.form != 'control']
+    # float64 products: the same on any CPU and thread count up to rounding
+    Iv, Wv = E['items'].astype(np.float64), E['windows'].astype(np.float64)
+    top = np.concatenate([(w @ Iv.T).max(axis=1) for w in np.array_split(
+        Wv, max(1, len(Wv) // 2048))])  # each window's best item
+    doc_top = pd.Series(top).groupby(E['win_doc']).max()
     win_of = collections.defaultdict(list)
     for j, d in enumerate(E['win_doc'].tolist()):
         win_of[d].append(j)
-    own = [float((Wv[win_of[r.doc_id]] @ Iv[ITEM_POS[r.item_id]]).max())
-           for _, r in planted.iterrows()]  # best window, own item
-    PL.loc[planted.index, 'emb_own'] = own
-    ctrl = PL[PL.form == 'control']
-    THR = float(np.quantile(ctrl.emb_top, 0.99))
-    fp = int((ctrl.emb_top > THR).sum())
+    PL['emb_top'] = PL.doc_id.map(doc_top)
+    planted = PL[PL.form != 'control'].copy()
+    planted['emb_own'] = [  # the document's best window against its item
+        float((Wv[win_of[r.doc_id]] @ Iv[ITEM_POS[r.item_id]]).max())
+        for _, r in planted.iterrows()]
+    planted['words'] = [len(t.split()) for t in planted.text]
+    first = [len(DOCS[r.doc_id][:int(r.char_start)].split())
+             for _, r in planted.iterrows()]  # the plant's first word
+    planted['fits'] = [any(s <= w0 and w0 + n <= s + SIZE
+                           for s in E['win_start'][win_of[d]])
+                       for d, w0, n in zip(planted.doc_id, first,
+                                           planted.words)]
+    calib = PL[PL.form == 'control'].emb_top
+    THR = float(np.quantile(calib, 0.99))
+    held = doc_top.loc[HOLDOUT]
+    fp = int((held > THR).sum())
+    fp_lo, fp_hi = d2l.wilson_ci(fp, len(held))
+    planted['found'] = planted.emb_own > THR
     rows = []
-    for form, g in PL.loc[planted.index].groupby('form'):
-        k = int((g.emb_own > THR).sum())
+    for _, g in itertools.chain(
+            planted.groupby(['form', 'fits']),
+            ((k, g.assign(fits='all')) for k, g in planted.groupby('form'))):
+        k = int(g.found.sum())
         lo, hi = d2l.wilson_ci(k, len(g))
-        rows.append(dict(form=form, n=len(g), found=k, recall=k / len(g),
-                         lo=lo, hi=hi,
-                         ngram=g.ngram_found.mean()))
+        rows.append(dict(form=g.form.iloc[0], fits=g.fits.iloc[0], n=len(g),
+                         found=k, recall=k / len(g), lo=lo, hi=hi,
+                         median_words=g.words.median(),
+                         ngram=PL.loc[g.index].ngram_found.mean()))
     EMBT = pd.DataFrame(rows)
-    print(f'embedding detector: {len(WIN):,} windows; threshold {THR:.4f} '
-          f'(99th percentile of the controls), {fp} of {len(ctrl)} '
-          'controls above it')
+    print(f'embedding detector: {len(WIN):,} windows of {SIZE} words every '
+          f'{STRIDE}; threshold {THR:.4f} (99th percentile of the '
+          f'{len(calib):,} controls of the plants file); held-out controls '
+          f'above it: {fp} of {len(held):,} (Wilson 95% interval '
+          f'{fp_lo:.4f}-{fp_hi:.4f})')
+    print('recall by form; fits: some window holds the whole plant')
     print(EMBT.round(3).to_string(index=False))
 
     texts = [it['text'] for it in ITEMS[:8]] + [w[2] for w in WIN[:8]]
@@ -1261,8 +1335,10 @@ if not PLANTS_PENDING:
     print(f'live check, 8 items and 8 windows on the CPU: cosine to the '
           f'registered vectors min {cos.min():.4f}')
     assert cos.min() >= LIVE_COS_MIN
-    R['decontam'].update(emb=EMBT.round(6).to_dict('list'), emb_thr=THR,
-                         emb_fp=fp, n_windows=len(WIN))
+    R['decontam_emb'] = dict(
+        table=json.loads(EMBT.to_json(orient='records')), thr=THR,
+        n_calibrate=len(calib), n_holdout=len(held), fp=fp,
+        fp_ci=[fp_lo, fp_hi], n_windows=len(WIN), size=SIZE, stride=STRIDE)
 ```
 
 <!-- Prose: the planted test set: 100 items from each benchmark (seed 0; questions of at least 13 words), each in three forms: verbatim, reformatted by rule (lower case, spacing, punctuation, the options reversed) and paraphrased once by Qwen3.5-4B (non-thinking, greedy; prompt and revision stored per row), inserted at a sentence start of 900 distinct stream documents; 1,000 stream documents stay untouched as controls; detection is by n-grams and embeddings, so no model grades its own paraphrases; licences: GSM8K and MMLU MIT, ARC-Challenge CC BY-SA 4.0 (the file's card says so). -->
@@ -1289,6 +1365,7 @@ if PLANTS_PENDING:
         cut = sum(g.finish_reason == 'length' for g in gens)
         print(f'{len(gens)} paraphrases in {time.perf_counter() - t0:.0f} s,'
               f' {cut} cut at 256 tokens, {d2l.lm_peak()}')
+        assert cut == 0, 'a paraphrase was cut: raise max_new_tokens'
         return [g.text.strip() for g in gens]
 
     PLANTS = d2l.make_plants(ITEMS, STREAM_S, paraphrase, seed=0,
@@ -1307,6 +1384,27 @@ print(f'paraphrases written with this prompt and {PARAPHRASER}@'
       f'{d2l.HF_REVISIONS[PARAPHRASER][:8]}: {len(para) - stale} of '
       f'{len(para)}')
 assert stale == 0, 'the plants were made with another prompt or model'
+# what the paraphraser wrote, printed and never filtered on: 5-gram overlap
+# with the verbatim page (an echo is near 1), empty outputs, a lost answer
+# line, a changed set of numbers (GSM8K's answers depend on them)
+verb = PL0[PL0.form == 'verbatim'].set_index('item_id').text
+nums = lambda t: sorted(re.findall(r'\d+(?:\.\d+)?', t.replace(',', '')))
+rows = []
+for bench, g in para.groupby('benchmark'):
+    v = verb.loc[g.item_id].tolist()
+    J_vp = [d2l.jaccard_exact(d2l.shingles(a), d2l.shingles(b))
+            for a, b in zip(v, g.text)]
+    rows.append(dict(
+        benchmark=bench, n=len(g), J_median=np.median(J_vp),
+        J_max=max(J_vp), blank=int((g.text.str.strip() == '').sum()),
+        no_answer_line=sum(not re.search(r'(?im)^\s*answer\s*:', t)
+                           for t in g.text),
+        numbers_changed=sum(nums(a) != nums(b) for a, b in zip(v, g.text))))
+PCHK = pd.DataFrame(rows)
+print('\nparaphrases against their verbatim pages (5-gram Jaccard):')
+print(PCHK.round(3).to_string(index=False))
+assert PCHK.blank.sum() == 0, 'an empty paraphrase'
+R['plants'] = dict(check=json.loads(PCHK.to_json(orient='records')))
 first = PL0[PL0.benchmark == 'arc'].item_id.iloc[0]
 for _, r in PL0[PL0.item_id == first].iterrows():
     print(f'\n{r.form}:\n' + textwrap.indent(textwrap.shorten(
@@ -1317,7 +1415,7 @@ print('\nItem: ARC-Challenge test, allenai/ai2_arc (CC BY-SA 4.0)')
 ### The Version-1 Manifest
 :label:`subsec_lm_dedup_manifest`
 
-<!-- Prose: the teaching pipeline's last three stages on c1: exact duplicates by text hash, near-duplicates by MinHash at the chosen (b, r), decontamination by the 13-gram index (a document is charged to the benchmark of its first hit); the result is c2; the manifest lm-corpus-manifest-v1 records all nine stages from the crawl range on, and its hash is identical when the signatures are computed by one worker or four; the funnel of documents and tokens (the reference tokenizer); the dataset card generated from the manifest; lm-c2-docs-v1 holds keep and drop decisions with reason codes, no text. -->
+<!-- Prose: the teaching pipeline's last three stages on c1: exact duplicates by text hash, near-duplicates by MinHash at the chosen (b, r), decontamination by the 13-gram index (a document is charged to the benchmark of its first hit); the result is c2; the manifest lm-corpus-manifest-v1 records all nine stages from the crawl range on, and its hash is identical when the signatures are computed by one worker or four; the funnel of documents and tokens (the reference tokenizer; the lang_id, nfc and pii token counts are of the c0 text, which is the text after pii); the dataset card generated from the manifest; lm-c2-docs-v1 holds keep and drop decisions with reason codes, no text. -->
 
 ```{.python .input #dedup-c2}
 %%tab pytorch
@@ -1397,6 +1495,12 @@ print(f'manifest SHA-256 with 1 worker {MAN.sha256()[:16]}… '
       f'({TIMES["c2_1"]:.0f} s), with 4 workers {man4.sha256()[:16]}… '
       f'({TIMES["c2_4"]:.0f} s)')
 assert man4.sha256() == MAN.sha256() and rows4 == C2_ROWS
+assert [s['name'] for s in MAN.stages] == [
+    'extract', 'lang_id', 'nfc', 'pii', 'heuristics', 'edu_score',
+    'exact_dedup', 'minhash_dedup', 'decontam']
+if not c1_rep['cut']:  # the same clusters as the c1 report above
+    assert MAN.stages[-2]['n_out'] == len(c1_keep)
+# c0 holds the text after pii, so the first stages' counts are of that text
 tok_after = dict(lang_id=tokens(C0), nfc=tokens(C0), pii=tokens(C0),
                  heuristics=tokens(C1), edu_score=tokens(C1))
 def top_drops(drops, n=3):
@@ -1407,8 +1511,10 @@ def top_drops(drops, n=3):
 FUNNEL = pd.DataFrame([dict(
     stage=s['name'], n_in=s['n_in'], n_out=s['n_out'],
     tokens_out=s['tokens_out'] or tok_after.get(s['name']),
-    drops=top_drops(s['drops'])) for s in MAN.stages])
+    tokens_of='c0 text' if s['name'] in ('lang_id', 'nfc', 'pii') else
+    'output', drops=top_drops(s['drops'])) for s in MAN.stages])
 FUNNEL['tokens_out'] = FUNNEL.tokens_out.astype('Int64')
+FUNNEL.loc[FUNNEL.tokens_out.isna(), 'tokens_of'] = '—'
 print(FUNNEL.to_string(index=False))
 print('\n' + MAN.to_card())
 C2_KEY, C2_FILE = ARTIFACTS['dedup-c2']
@@ -1453,6 +1559,28 @@ def rounded(x):
         return None if x != x else round(x, 4)
     return x
 
+def loose_bad(new, old, path=()):
+    """The paths of results that depend on float32 arithmetic (k-means)
+    or on vector products where new and old differ by more than the
+    tolerance: 2 for a count, 1e-3 for the threshold, 0.01 for a rate."""
+    if isinstance(new, dict) and isinstance(old, dict):
+        keys = set(new) | set(old)
+        return [p for k in sorted(keys, key=str) for p in (loose_bad(
+            new.get(k), old.get(k), path + (k,)) if k in new and k in old
+            else [path + (k,)])]
+    if isinstance(new, list) and isinstance(old, list):
+        if len(new) != len(old):
+            return [path]
+        return [p for i, (u, v) in enumerate(zip(new, old))
+                for p in loose_bad(u, v, path + (i,))]
+    num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
+    if num(new) and num(old):
+        tol = (2 if isinstance(new, int) and isinstance(old, int) else
+               1e-3 if path[-1] == 'thr' else 0.01)
+        return [] if abs(new - old) <= tol else [path]
+    return [] if new == old else [path]
+
+LOOSE = ('semantic', 'decontam_emb')  # compared with loose_bad
 RES_KEY, RES_FILE = ARTIFACTS['dedup-results']
 if PLANTS_PENDING:
     print('a dedup-plants run: the results are written by the next run')
@@ -1463,14 +1591,25 @@ elif RERUN and RES_KEY not in d2l.DATA_HUB:
     print(f'{RES_KEY} is not registered yet: nothing to compare with')
 else:
     reg = json.load(open(d2l.lm_artifact(RES_KEY)))
-    a = d2l.json_agreement(rounded(R), reg)
+    live = rounded(R)
+    strict = lambda x: {k: v for k, v in x.items() if k not in LOOSE}
+    a = d2l.json_agreement(strict(live), strict(reg))
     bad = a['mismatches'] + a['missing']
+    loose = loose_bad({k: live.get(k) for k in LOOSE},
+                      {k: reg.get(k) for k in LOOSE})
     print(f'against {RES_KEY}: {a["equal"]}/{a["values"]} values equal, '
-          f'largest numeric difference {a["max_diff"]:.2g}')
-    for k in bad[:20]:
+          f'largest numeric difference {a["max_diff"]:.2g}; '
+          f'{", ".join(LOOSE)} within tolerance: {not loose}')
+    for k in (bad + loose)[:20]:
         print('  differs or one-sided:', '/'.join(map(str, k)))
-    assert not bad and a['max_diff'] <= 1e-9
+    assert not bad and not loose and a['max_diff'] <= 1e-9
+# the kernel's own peak; each of the N_WORKERS spawned workers adds its
+# own (a fresh Python that imports d2l), not visible in this number
+MEM['peak_rss'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
 print('wall clock (s): ' + ', '.join(f'{k} {v:.0f}' for k, v in TIMES.items()))
+print(f'memory: shingle sets {MEM["shingle_sets"] / 2**30:.2f} GiB; peak '
+      f'RSS of this process {MEM["peak_rss"] / 2**30:.1f} GiB, plus up to '
+      f'{N_WORKERS} workers')
 ```
 
 ## Summary

@@ -27,6 +27,11 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_mdl-information-theory/mdl-test-functions-transport.ipynb",
     "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
     "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
+    # 20.3: a normal build reads its GPU-made files (paraphrases, vectors)
+    # and computes everything else on the CPU (its live embedding check
+    # passes device='cpu'); "cuda" and "GPU" appear only in its regeneration
+    # path, which runs through the part-runner, not the scheduler.
+    "chapter_lm-data/dedup.ipynb",
 }
 
 # (framework, notebook) pairs listed in CPU_ONLY_NOTEBOOKS that nevertheless

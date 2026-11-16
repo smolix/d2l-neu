@@ -20,7 +20,7 @@ import torch
 
 from d2l import torch as d2l
 
-HF = os.environ.get('HF_HOME', os.path.expanduser('~/.cache/huggingface'))
+HF = os.environ.get('HF_HOME', '/home/smola/.cache/hf-lm')
 QWEN_SMALL = glob.glob(f'{HF}/hub/models--Qwen--Qwen3.5-0.8B/snapshots/'
                        f'{d2l.HF_REVISIONS["Qwen/Qwen3.5-0.8B"]}/'
                        'model.safetensors*')

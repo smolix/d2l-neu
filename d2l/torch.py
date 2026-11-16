@@ -10418,7 +10418,8 @@ def rephrase_docs(chunks, style, model_id='Qwen/Qwen3.5-2B',
     a prompt template with {text}, or a list of either, one per chunk.
     Non-thinking chat generation by model_id, or by model=(model,
     tokenizer) loaded once by the caller; backend='vllm' generates with
-    vLLM instead. Returns dict(index, src, out, n_out, finish) rows in
+    vLLM instead (model: a vllm.LLM; request i samples under seed + i).
+    Returns dict(index, src, out, n_out, finish) rows in
     input order; rows that ran out of tokens (finish 'length') are dropped
     and kept in .dropped. A reply with thinking text fails an assertion.
 
@@ -10433,12 +10434,15 @@ def rephrase_docs(chunks, style, model_id='Qwen/Qwen3.5-2B',
                                    temperature, top_p, seed, progress)
     elif backend == 'vllm':  # the serving path, if vLLM is installed
         from vllm import LLM, SamplingParams
-        llm = LLM(model_id, revision=d2l.HF_REVISIONS.get(model_id),
-                  seed=seed)
+        rev = d2l.HF_REVISIONS.get(model_id)
+        llm = model or LLM(model_id, revision=rev, tokenizer_revision=rev,
+                           dtype='bfloat16', seed=seed,
+                           gpu_memory_utilization=0.5)  # a shared card
         replies = llm.chat(
             [[{'role': 'user', 'content': p}] for p in prompts],
-            SamplingParams(temperature=temperature, top_p=top_p,
-                           max_tokens=max_new_tokens, seed=seed),
+            [SamplingParams(temperature=temperature, top_p=top_p,
+                            max_tokens=max_new_tokens, seed=seed + i)
+             for i in range(len(prompts))],
             chat_template_kwargs=dict(enable_thinking=False))
         outs = [(r.outputs[0].text.strip(), len(r.outputs[0].token_ids),
                  'length' if r.outputs[0].finish_reason == 'length'

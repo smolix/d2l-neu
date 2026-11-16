@@ -930,3 +930,423 @@ def c0_documents(manifest='lm-c0-docs-v1', cache_dir=None):
     assert not docs.mismatches, f'{len(docs.mismatches)} c0 rows drifted'
     return docs
 ```
+
+<!-- Deduplication and decontamination (:numref:`sec_lm_dedup`): the
+vectorized MinHash rows behind `minhash_signature` and their parallel
+driver, the perturbations behind `make_dup_pairs` (with the boilerplate
+blocks), the Poisson-binomial interval of the S-curve check, the benchmark
+items, the planted documents and the embedding windows of the
+decontamination detectors. The label below sets the "Defined in" suffix
+of the blocks after it. -->
+:label:`sec_lm_dedup`
+
+```{.python .input #crawl-lib-dedup-minhash}
+%%tab pytorch
+#@save
+_MINHASH_PARAMS = {}  # (k, seed) -> the rows' (a, c), drawn once
+
+#@save
+def _shingle_hashes(shingle_list):
+    """The 64-bit shingle hashes of the MinHash specification: blake2b with
+    an 8-byte digest of the UTF-8 shingle, read little-endian (uint64)."""
+    digests = b''.join(hashlib.blake2b(s.encode('utf-8'), digest_size=8)
+                       .digest() for s in shingle_list)
+    return np.frombuffer(digests, dtype='<u8').astype(np.uint64)
+
+#@save
+def _minhash_params(k, seed):
+    """The k rows' coefficients (a, c), each uint64 in [1, p), from
+    numpy.random.default_rng(seed) as the specification draws them."""
+    if (k, seed) not in d2l._MINHASH_PARAMS:
+        a, c = np.random.default_rng(seed).integers(
+            1, d2l.MINHASH_PRIME, size=(2, k), dtype=np.uint64)
+        d2l._MINHASH_PARAMS[k, seed] = (a, c)
+    return d2l._MINHASH_PARAMS[k, seed]
+
+#@save
+def _mulmod61(a, x):
+    """(a * x) mod p for p = 2^61 - 1 and uint64 arrays a, x < 2^61
+    (broadcast), exact. The product needs 122 bits, so both factors are
+    split into 32-bit halves, whose partial products fit in 64 bits, and
+    the high bits fold back because 2^61 = 1 (mod p)."""
+    p, m32 = np.uint64(d2l.MINHASH_PRIME), np.uint64(0xFFFFFFFF)
+    a_hi, a_lo = a >> np.uint64(32), a & m32
+    x_hi, x_lo = x >> np.uint64(32), x & m32
+    lo = a_lo * x_lo                     # < 2^64
+    mid = a_hi * x_lo + a_lo * x_hi      # < 2^62, weight 2^32
+    hi = a_hi * x_hi                     # < 2^58, weight 2^64 = 8 (mod p)
+    s = ((lo & p) + (lo >> np.uint64(61))
+         + ((mid & np.uint64((1 << 29) - 1)) << np.uint64(32))
+         + (mid >> np.uint64(29)) + (hi << np.uint64(3)))   # < 2^63
+    s = (s & p) + (s >> np.uint64(61))
+    return np.where(s >= p, s - p, s)
+
+#@save
+def _minhash_rows(x, a, c, chunk=4096):
+    """min over the hashes x (mod p already) of (a_i x + c_i) mod p for
+    each row i: the signature, computed chunk by chunk of shingles."""
+    p = np.uint64(d2l.MINHASH_PRIME)
+    sig = np.full(len(a), p, dtype=np.uint64)
+    for j in range(0, len(x), chunk):
+        v = d2l._mulmod61(a[:, None], x[None, j:j + chunk]) + c[:, None]
+        v = np.where(v >= p, v - p, v)
+        sig = np.minimum(sig, v.min(axis=1))
+    return sig
+
+#@save
+def _minhash_chunk(job):
+    """_minhash_texts' worker: job = (texts, k, seeds, ngram); one list of
+    signatures (None for fewer than ngram words) per seed."""
+    texts, k, seeds, ngram = job
+    out = {s: [] for s in seeds}
+    for t in texts:
+        sh = d2l.shingles(t, ngram)
+        x = (np.unique(d2l._shingle_hashes(sh)) % np.uint64(
+            d2l.MINHASH_PRIME)) if sh else None
+        for s in seeds:
+            out[s].append(None if x is None else
+                          d2l._minhash_rows(x, *d2l._minhash_params(k, s)))
+    return out
+
+#@save
+def _minhash_texts(texts, k=128, seeds=(0xD2,), ngram=5, workers=1):
+    """{seed: [signature or None per text]} for many texts, each text
+    shingled and hashed once for all seeds; with workers > 1 in separate
+    processes (chunks of 500 texts, results in input order, so the output
+    does not depend on workers)."""
+    import concurrent.futures
+    import multiprocessing
+    texts = [str(t) for t in texts]
+    jobs = [(texts[i:i + 500], k, tuple(seeds), ngram)
+            for i in range(0, len(texts), 500)]
+    if workers <= 1 or len(jobs) < 2:
+        outs = map(d2l._minhash_chunk, jobs)
+    else:
+        ex = concurrent.futures.ProcessPoolExecutor(
+            workers, mp_context=multiprocessing.get_context('spawn'))
+        with ex:
+            outs = list(ex.map(d2l._minhash_chunk, jobs))
+    res = {s: [] for s in seeds}
+    for out in outs:
+        for s in seeds:
+            res[s] += out[s]
+    return res
+
+#@save
+def _sig_matrix(sigs, k):
+    """Signatures (a list with None for empty documents) as a (n, k) uint64
+    array and the boolean mask of documents that have one."""
+    ok = np.array([s is not None for s in sigs])
+    S = np.zeros((len(sigs), k), dtype=np.uint64)
+    if ok.any():
+        S[ok] = np.stack([s for s in sigs if s is not None])
+    return S, ok
+
+#@save
+def _band_match(SA, SB, b, r):
+    """Per pair, whether the signature rows SA[i] and SB[i] agree in all r
+    rows of at least one of the first b bands: lsh_candidates' decision
+    for one known pair, vectorized (equal up to 8-byte key collisions)."""
+    eq = SA[:, :b * r] == SB[:, :b * r]
+    return eq.reshape(len(SA), b, r).all(axis=2).any(axis=1)
+```
+
+```{.python .input #crawl-lib-dedup-pairs}
+%%tab pytorch
+#@save
+DUP_BOILERPLATE = (  # 40 generic template blocks for the 'boiler' perturbation
+    'We use cookies to improve your experience on our site. By continuing '
+    'to browse you agree to our use of cookies. Learn more in our cookie '
+    'policy.',
+    'Subscribe to our newsletter and get the latest news, offers and '
+    'updates delivered straight to your inbox every week. You can '
+    'unsubscribe at any time.',
+    'Home | About Us | Services | Blog | Contact | Privacy Policy | Terms '
+    'and Conditions | Sitemap',
+    'Share this article: Facebook Twitter LinkedIn Pinterest Email Print',
+    'All rights reserved. No part of this website may be reproduced, '
+    'distributed or transmitted in any form without the prior written '
+    'permission of the publisher.',
+    'This post may contain affiliate links. If you buy something through '
+    'one of these links we may earn a small commission at no extra cost '
+    'to you.',
+    'Leave a Reply. Your email address will not be published. Required '
+    'fields are marked. Name Email Website Comment',
+    'Related posts: you might also like these articles from our archive, '
+    'chosen for readers who enjoyed this one.',
+    'Free shipping on all orders over fifty dollars. Easy returns within '
+    'thirty days. Secure checkout with all major cards.',
+    'Disclaimer: the information on this page is for general purposes only '
+    'and does not constitute professional advice. Consult a qualified '
+    'expert before acting on it.',
+    'Click here to download the free guide. Enter your name and email '
+    'address below and we will send it right away.',
+    'Posted in Uncategorized | Tagged news, updates, tips | Leave a comment',
+    'Previous article Next article Back to top',
+    'Skip to main content Search this site Menu Close menu Log in Register',
+    'Copyright the authors. Content on this site is licensed for personal '
+    'use only; please contact us for permission to republish.',
+    'Follow us on social media for daily updates, behind the scenes photos '
+    'and special announcements from our team.',
+    'Your cart is empty. Continue shopping or sign in to see items you '
+    'saved during an earlier visit.',
+    'This website uses analytics to understand how visitors use it. We do '
+    'not sell your personal data. Read our privacy notice for details.',
+    'Accept all cookies Reject non-essential cookies Manage preferences',
+    'Sign up for a free account to save your favourite pages, comment on '
+    'articles and receive personalised recommendations.',
+    'Advertisement. Continue reading below.',
+    'Was this page helpful? Yes No. Thank you for your feedback.',
+    'Terms of use: by accessing this site you accept these terms in full. '
+    'If you disagree with any part of them you must not use the site.',
+    'Contact us: send us a message using the form below and a member of '
+    'our team will get back to you within two working days.',
+    'Recent Posts Archives Categories Meta Log in Entries feed Comments feed',
+    'Print this page Email this page Bookmark this page',
+    'Last updated on the date shown above. Prices and availability are '
+    'subject to change without notice.',
+    'Join thousands of readers who already get our weekly digest. No spam, '
+    'we promise. Your details are safe with us.',
+    'You are here: Home > Articles > Current page',
+    'Read more Show less Load more comments',
+    'Our support team is available Monday to Friday from nine to five. '
+    'Call us or open a ticket in the help centre.',
+    'Images are for illustration purposes only and may not show the exact '
+    'product described on this page.',
+    'Tags: guide, how to, beginners, tips and tricks, frequently asked '
+    'questions',
+    'Download our app for a faster experience on your phone. Available for '
+    'all major platforms.',
+    'Please enable JavaScript in your browser to view this content and use '
+    'all the features of this site.',
+    'Rate this article: one star two stars three stars four stars five '
+    'stars. Average rating based on reader votes.',
+    'About the author: a writer and editor who covers everyday topics for '
+    'a general audience. Views expressed are their own.',
+    'Back to the list of all articles in this category.',
+    'Sponsored content. This article was produced in partnership with an '
+    'advertiser and reviewed by our editorial team.',
+    'Thank you for visiting. Come back soon for new articles every week.')
+
+#@save
+def _dup_vocab(texts):
+    """The substitution vocabulary of make_dup_pairs: the sorted distinct
+    lowercased \\w+ words of texts."""
+    import regex
+    return sorted({w for t in texts for w in regex.findall(r'\w+',
+                                                            t.lower())})
+
+#@save
+def _dup_perturb(text, op, params, vocab=None):
+    """A perturbed copy of text by op (sub, del, boiler, shuffle, trunc)
+    with params; every random choice comes from default_rng(params['seed'])."""
+    import regex
+    rng = np.random.default_rng(params['seed'])
+    if op in ('sub', 'del'):
+        pat = r'\w+' if op == 'sub' else r'\w+[^\S\n]*'
+        spans = [m.span() for m in regex.finditer(pat, text)]
+        m = max(1, round(params['rate'] * len(spans)))
+        pick = set(rng.choice(len(spans), m, replace=False).tolist())
+        if op == 'sub' and vocab is None:
+            raise ValueError("'sub' needs the substitution vocabulary")
+        out, at = [], 0
+        for i, (s, e) in enumerate(spans):
+            if i in pick:
+                out.append(text[at:s])
+                if op == 'sub':
+                    out.append(vocab[int(rng.integers(len(vocab)))])
+                at = e
+        return ''.join(out) + text[at:]
+    paras = text.split('\n')
+    if op == 'boiler':
+        words = []
+        for j in rng.permutation(len(d2l.DUP_BOILERPLATE)):
+            words += d2l.DUP_BOILERPLATE[j].split()
+            if len(words) >= params['words']:
+                break
+        paras.insert(int(rng.integers(len(paras) + 1)),
+                     ' '.join(words[:params['words']]))
+        return '\n'.join(paras)
+    if op == 'shuffle':
+        return '\n'.join(paras[i] for i in rng.permutation(len(paras)))
+    if op == 'trunc':
+        ends = [m.end() for m in regex.finditer(r'\w+', text)]
+        return text[:ends[max(1, round(params['frac'] * len(ends))) - 1]]
+    raise ValueError(f'unknown op {op!r}')
+
+#@save
+def _url_host(url):
+    """The lowercased host name of a URL ('' if it has none)."""
+    import urllib.parse
+    return (urllib.parse.urlsplit(url).hostname or '').lower()
+
+#@save
+def _pb_interval(p, level=0.95):
+    """Central interval (lo, hi) of a Poisson-binomial count, the number of
+    successes of independent trials with probabilities p: lo is the
+    smallest count with P(X <= lo) > (1 - level) / 2 and hi the smallest
+    with P(X <= hi) >= (1 + level) / 2, from the exact distribution."""
+    p = np.asarray(p, dtype=float)
+    ones, p = int(np.sum(p >= 1.0)), p[(p > 0.0) & (p < 1.0)]
+    pmf = np.ones(1)
+    for q in p:
+        pmf = np.append(pmf * (1 - q), 0.0) + np.append(0.0, pmf * q)
+    cdf = np.cumsum(pmf)
+    alpha = (1 - level) / 2
+    lo = int(np.searchsorted(cdf, alpha, side='right'))
+    hi = int(np.searchsorted(cdf, 1 - alpha - 1e-12))
+    return lo + ones, hi + ones
+```
+
+```{.python .input #crawl-lib-dedup-contam}
+%%tab pytorch
+#@save
+def benchmark_items():
+    """The test items of GSM8K (1,319), ARC-Challenge (1,172) and MMLU
+    (14,042) at their pinned files: dicts with item_id, benchmark,
+    question, choices (labels and texts, or None), gold (answer label or
+    final number) and text, the indexed form: question and gold answer
+    text."""
+    items = []
+    gsm = pd.read_parquet(d2l.download_keyed('gsm8k-test'))
+    for i, row in gsm.iterrows():
+        items.append(dict(item_id=f'gsm8k-{i}', benchmark='gsm8k',
+                          question=row.question.strip(), choices=None,
+                          gold=row.answer.split('####')[-1].strip(),
+                          text=row.question.strip() + '\n' + row.answer))
+    arc = pd.read_parquet(d2l.download_keyed('arc-challenge-test'))
+    for _, row in arc.iterrows():
+        labels = [str(x) for x in row.choices['label']]
+        texts = [str(x) for x in row.choices['text']]
+        gold = texts[labels.index(str(row.answerKey))]
+        items.append(dict(item_id=f'arc-{row.id}', benchmark='arc',
+                          question=row.question.strip(),
+                          choices=list(zip(labels, texts)),
+                          gold=str(row.answerKey),
+                          text=row.question.strip() + '\n' + gold))
+    rows = d2l._eval_load_rows(d2l.EVAL_TASKS['mmlu'], 'test')
+    for i, row in enumerate(rows):
+        texts = [str(x) for x in row['choices']]
+        items.append(dict(item_id=f'mmlu-{i}', benchmark='mmlu',
+                          question=row['question'].strip(),
+                          choices=list(zip('ABCD', texts)),
+                          gold='ABCD'[int(row['answer'])],
+                          text=row['question'].strip() + '\n'
+                          + texts[int(row['answer'])]))
+    return items
+
+#@save
+def _plant_text(item, form):
+    """A benchmark item as a page would show it: the question, the lettered
+    options (ARC, MMLU) and an answer line. form 'reformat' changes it by
+    rule: lower case, one space for every whitespace run, commas and
+    semicolons before a space dropped, a space before '?', the options in
+    reverse order with their letters reassigned."""
+    choices = item['choices'] or []
+    gold = item['gold']
+    if form == 'reformat' and choices:
+        old = dict(choices)[gold]
+        choices = [(lab, t) for (lab, _), (_, t) in zip(
+            choices, reversed(choices))]
+        gold = next(lab for lab, t in choices if t == old)
+    fmt = '({}) {}' if item['benchmark'] == 'arc' else '{}. {}'
+    lines = [item['question']] + [fmt.format(lab, t) for lab, t in choices]
+    text = '\n'.join(lines + [f'Answer: {gold}'])
+    if form == 'reformat':
+        text = re.sub(r'[,;](?=\s)', '', text.lower())
+        text = re.sub(r'\s+', ' ', text.replace('?', ' ?')).strip()
+    return text
+
+#@save
+def _sentence_starts(text):
+    """Positions where a sentence or a line starts (plant insertion points),
+    with 0 and len(text)."""
+    import regex
+    pos = {0, len(text)}
+    pos.update(m.end() for m in regex.finditer(r'(?<=[.!?])\s+|\n', text))
+    return sorted(pos)
+
+#@save
+def make_plants(items, stream, paraphrase, n_per=100, n_controls=1000,
+                seed=0, min_words=13, max_words=180, prompt_sha256=None,
+                model_revision=None):
+    """The planted decontamination test set: n_per items of each benchmark
+    (items whose question has at least min_words words and whose page form
+    at most max_words), each in three forms (verbatim, reformat,
+    paraphrase = paraphrase(list of verbatim texts) -> list of texts),
+    inserted at a sentence start of distinct stream documents (stream: a
+    DataFrame with id and text), plus n_controls untouched documents. One
+    row per document: doc_id, item_id, benchmark, form ('control' for the
+    controls), text (the planted text), char_start, char_end (its span in
+    the planted document), prompt_sha256, model_revision and source_hash
+    (SHA-256 of the document before planting). All choices from
+    default_rng(seed)."""
+    import regex
+    rng = np.random.default_rng(seed)
+    nwords = lambda t: len(regex.findall(r'\w+', t))
+    chosen = []
+    for bench in ('gsm8k', 'arc', 'mmlu'):
+        ok = [it for it in items if it['benchmark'] == bench and
+              nwords(it['question']) >= min_words and
+              nwords(d2l._plant_text(it, 'verbatim')) <= max_words]
+        chosen += [ok[i] for i in rng.choice(len(ok), n_per, replace=False)]
+    verbatim = [d2l._plant_text(it, 'verbatim') for it in chosen]
+    para = list(paraphrase(verbatim))
+    assert len(para) == len(chosen)
+    plants = []
+    for it, v, ph in zip(chosen, verbatim, para):
+        plants += [(it, 'verbatim', v),
+                   (it, 'reformat', d2l._plant_text(it, 'reformat')),
+                   (it, 'paraphrase', ph)]
+    order = rng.permutation(len(stream))
+    assert len(order) >= len(plants) + n_controls
+    rows = []
+    for k, i in enumerate(order[:len(plants) + n_controls]):
+        doc = stream.iloc[int(i)]
+        row = dict(doc_id=doc.id, item_id=None, benchmark=None,
+                   form='control', text=None, char_start=None, char_end=None,
+                   prompt_sha256=None, model_revision=None,
+                   source_hash=hashlib.sha256(doc.text.encode('utf-8'))
+                   .hexdigest())
+        if k < len(plants):
+            it, form, text = plants[k]
+            at = d2l._sentence_starts(doc.text)
+            pos = at[int(rng.integers(len(at)))]
+            row.update(item_id=it['item_id'], benchmark=it['benchmark'],
+                       form=form, text=text, char_start=pos + 1,
+                       char_end=pos + 1 + len(text))
+            if form == 'paraphrase':
+                row.update(prompt_sha256=prompt_sha256,
+                           model_revision=model_revision)
+        rows.append(row)
+    return rows
+
+#@save
+def contam_documents(plants, stream):
+    """The documents of the planted set, doc_id -> text: each planted text
+    inserted as its own line at char_start - 1 of the stream document
+    (document[:char_start - 1] + newline + text + newline + rest), the
+    controls unchanged; the source document's SHA-256 is checked."""
+    text = dict(zip(stream.id, stream.text))
+    out = {}
+    for row in plants:
+        t = text[row['doc_id']]
+        got = hashlib.sha256(t.encode('utf-8')).hexdigest()
+        assert got == row['source_hash'], f'{row["doc_id"]} changed'
+        if row['form'] != 'control':
+            at = row['char_start'] - 1
+            t = t[:at] + '\n' + row['text'] + '\n' + t[at:]
+            assert t[row['char_start']:row['char_end']] == row['text']
+        out[row['doc_id']] = t
+    return out
+
+#@save
+def word_windows(text, size=128, stride=64):
+    """Windows of size whitespace-separated words every stride words, the
+    last one ending at the text's end: [(first word index, text)]."""
+    words = text.split()
+    starts = list(range(0, max(len(words) - size, 0) + 1, stride))
+    if starts[-1] + size < len(words):
+        starts.append(len(words) - size)
+    return [(s, ' '.join(words[s:s + size])) for s in starts]
+```

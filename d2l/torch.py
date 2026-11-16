@@ -9666,6 +9666,337 @@ def audit_removals(df, keep, by, ref=None, n_boot=2000, cluster=None,
     out['too_few'] = (out.n < 100) | (out.n_clusters < 10)
     return out
 
+def shingles(text, n=5):
+    """The word n-grams of text as strings (the MinHash specification):
+    NFC, lowercase, the regex \\w+ tokens, n consecutive tokens joined by
+    one space. Empty if text has fewer than n words.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import unicodedata
+    import regex
+    words = regex.findall(r'\w+', unicodedata.normalize('NFC', text).lower())
+    return [' '.join(words[i:i + n]) for i in range(len(words) - n + 1)]
+
+def jaccard_exact(a, b):
+    """The resemblance |A & B| / |A | B| of two shingle collections taken
+    as sets; 0 if both are empty.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    a = a if isinstance(a, (set, frozenset)) else set(a)
+    b = b if isinstance(b, (set, frozenset)) else set(b)
+    inter = len(a & b)
+    union = len(a) + len(b) - inter
+    return inter / union if union else 0.0
+
+def containment(a, b):
+    """The containment |A & B| / |A| of A in B (Broder); 0 if A is empty.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    a = a if isinstance(a, (set, frozenset)) else set(a)
+    b = b if isinstance(b, (set, frozenset)) else set(b)
+    return len(a & b) / len(a) if a else 0.0
+
+MINHASH_PRIME = (1 << 61) - 1  # the Mersenne prime 2^61 - 1
+
+def minhash_signature(shingle_list, k=128, seed=0xD2):
+    """The MinHash signature, a (k,) uint64 array, of a shingle collection:
+    row i is the minimum over shingles of (a_i x + c_i) mod p, where x is
+    the shingle's blake2b hash (8 bytes, little-endian) mod p, p = 2^61 - 1
+    and (a, c) are drawn from numpy.random.default_rng(seed). None for an
+    empty collection (fewer words than the shingle size): such a document
+    never matches.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    if not shingle_list:
+        return None
+    x = np.unique(d2l._shingle_hashes(shingle_list)) % np.uint64(
+        d2l.MINHASH_PRIME)
+    a, c = d2l._minhash_params(k, seed)
+    return d2l._minhash_rows(x, a, c)  # exact mulmod: 32-bit halves
+
+MINHASH_FIXTURE = (  # five strings whose signatures assignment A3 pins
+    'The quick brown fox jumps over the lazy dog.',
+    'Deduplication keeps one copy of every document in the corpus.',
+    'Café crème: une boisson chaude, servie le matin avec du pain.',
+    'ONE two Three four FIVE six seven, eight; nine: ten!',
+    'Near-duplicate pages differ only by a date or a sidebar.')
+MINHASH_FIXTURE_SHA256 = (  # of their k = 128, seed 0xD2 signatures' bytes
+    'b9b07bf416ce76f2b5cf1ae3d12fc617bdfa5bc7e464230c6bca1ada3bda0195')
+
+def scurve(s, b, r):
+    """The probability that a pair of Jaccard s becomes a candidate under b
+    bands of r rows: 1 - (1 - s^r)^b.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    return 1 - (1 - np.asarray(s, dtype=float) ** r) ** b
+
+def _br_error(b, r, tau, w_fp=1.0, w_fn=1.0, n_grid=20_001):
+    """The weighted error areas of an S-curve against the step at tau:
+    w_fp times the area under P on [0, tau] (pairs below the threshold that
+    become candidates) plus w_fn times the area above P on [tau, 1]
+    (trapezoid rule on n_grid points).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    s = np.linspace(0, 1, n_grid)
+    P = d2l.scurve(s, b, r)
+    lo, hi = s <= tau, s >= tau
+    return (w_fp * np.trapezoid(P[lo], s[lo])
+            + w_fn * np.trapezoid(1 - P[hi], s[hi]))
+
+def best_br(k, tau, w_fp=1.0, w_fn=1.0):
+    """The (b, r) with b = k // r that minimizes the weighted error areas
+    of its S-curve against the step at tau (the smallest r on a tie).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    errors = {(k // r, r): d2l._br_error(k // r, r, tau, w_fp, w_fn)
+              for r in range(1, k + 1)}
+    return min(errors, key=errors.get)
+
+def lsh_candidates(sigs, b, r, *, max_bucket=1000, seed=0):
+    """Candidate pairs (i, j), i < j, of signatures (a sequence of arrays,
+    None for an empty document) that agree in all r rows of at least one of
+    b bands; the bucket key of band j is blake2b (8 bytes) of its rows'
+    bytes. A bucket with more than max_bucket members (templated pages) is
+    cut to max_bucket members drawn with default_rng((seed, j)). Returns
+    (set of pairs, report of bucket sizes and the cut buckets).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import itertools
+    pairs, sizes, cut = set(), collections.Counter(), []
+    rows = [i for i, s in enumerate(sigs) if s is not None]
+    for j in range(b):
+        buckets = collections.defaultdict(list)
+        for i in rows:
+            band = sigs[i][j * r:(j + 1) * r].astype('<u8')
+            buckets[hashlib.blake2b(band.tobytes(), digest_size=8)
+                    .digest()].append(i)
+        for members in buckets.values():
+            if len(members) < 2:
+                continue
+            sizes[len(members)] += 1
+            if max_bucket and len(members) > max_bucket:
+                cut.append((j, len(members)))
+                members = sorted(np.random.default_rng((seed, j)).choice(
+                    members, max_bucket, replace=False).tolist())
+            pairs.update(itertools.combinations(members, 2))
+    return pairs, dict(n_pairs=len(pairs), bucket_sizes=dict(sizes),
+                       largest=max(sizes, default=0), cut=cut)
+
+def union_find_clusters(n, pairs):
+    """Connected components of n items under pairs, by union-find (path
+    compression, union by size); each item's label is the smallest index
+    of its component, so the result does not depend on the pair order.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    parent, size = list(range(n)), [1] * n
+    def find(i):
+        root = i
+        while parent[root] != root:
+            root = parent[root]
+        while parent[i] != root:
+            parent[i], i = root, parent[i]
+        return root
+    for i, j in pairs:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            if size[ri] < size[rj]:
+                ri, rj = rj, ri
+            parent[rj] = ri
+            size[ri] += size[rj]
+    roots = np.array([find(i) for i in range(n)], dtype=np.int64)
+    low = np.full(n, n, dtype=np.int64)
+    np.minimum.at(low, roots, np.arange(n))
+    return low[roots]
+
+def near_dedup(texts, threshold=0.8, ngram=5, num_perm=128, seed=0, *,
+               workers=1):
+    """The indices of texts to keep after near-duplicate removal: MinHash
+    signatures (hash seed 0xD2 + seed), banding at best_br(num_perm,
+    threshold), union-find clusters; each cluster keeps its lowest index.
+    workers > 1 computes the signatures in separate processes.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    sigs = d2l._minhash_texts(texts, num_perm, (0xD2 + seed,), ngram,
+                              workers)[0xD2 + seed]
+    pairs, _ = d2l.lsh_candidates(sigs, *d2l.best_br(num_perm, threshold))
+    labels = d2l.union_find_clusters(len(sigs), pairs)
+    return [i for i in range(len(sigs)) if labels[i] == i]
+
+DUP_PAIRS_SPEC = dict(  # the labelled pair set lm-dedup-pairs-v1
+    n_base=2000, variants=3, min_words=50,
+    ops=('sub', 'del', 'boiler', 'shuffle', 'trunc'),
+    rates=(0.01, 0.02, 0.05, 0.1, 0.2, 0.3),  # of the words, sub and del
+    boiler_words=(20, 200), trunc=(0.3, 0.9),
+    n_neg_host=3000, n_neg_random=3000, ngram=5, tau=0.8)
+
+def pair_texts(row, texts, vocab=None):
+    """The two texts of a labelled pair: texts[a] and texts[b], or texts[a]
+    and its perturbed copy by row['op'] and row['params'] (vocab: the
+    substitution words, needed for 'sub').
+
+    Defined in :numref:`sec_lm_dedup`"""
+    a = texts[row['a']]
+    if row['b'] is not None:
+        return a, texts[row['b']]
+    return a, d2l._dup_perturb(a, row['op'], row['params'], vocab)
+
+def make_dup_pairs(docs, spec, seed=0):
+    """The labelled pairs of spec from docs (a DataFrame with id, url, text
+    and role 'stream' or 'host_pair'): spec['variants'] perturbed copies of
+    each of spec['n_base'] stream documents (the first of a seeded
+    permutation with at least spec['min_words'] words), pairs of different
+    documents of one host (neg_host) and random stream pairs (neg_random).
+    Each row: pair_id, a, b (None for a copy), op, params (with the copy's
+    seed), J, C (containment of the smaller shingle set in the larger),
+    label (J >= tau) and split (train or test by the SHA-256 of a).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import itertools
+    import regex
+    rng = np.random.default_rng(seed)
+    texts = dict(zip(docs.id, docs.text))
+    stream = docs.id[docs.role == 'stream'].tolist()
+    vocab = d2l._dup_vocab(texts[i] for i in stream)
+    long_enough = (stream[i] for i in rng.permutation(len(stream))
+                   if len(regex.findall(r'\w+', texts[stream[i]]))
+                   >= spec['min_words'])
+    todo = []
+    for a in itertools.islice(long_enough, spec['n_base']):
+        for _ in range(spec['variants']):
+            op = str(rng.choice(spec['ops']))
+            params = dict(seed=int(rng.integers(2**31)))
+            if op in ('sub', 'del'):
+                params['rate'] = float(rng.choice(spec['rates']))
+            elif op == 'boiler':
+                lo, hi = spec['boiler_words']
+                params['words'] = int(rng.integers(lo, hi + 1))
+            elif op == 'trunc':
+                params['frac'] = round(float(rng.uniform(*spec['trunc'])), 4)
+            todo.append((a, None, op, params))
+    hosts = docs[docs.role == 'host_pair'].assign(
+        host=[d2l._url_host(u) for u in docs.url[docs.role == 'host_pair']])
+    same = [p for ids in hosts.groupby('host').id.apply(list)
+            for p in itertools.combinations(ids, 2)]
+    for k in sorted(rng.choice(len(same), spec['n_neg_host'],
+                               replace=False).tolist()):
+        todo.append((*same[k], 'neg_host', {}))
+    seen = set()
+    while len(seen) < spec['n_neg_random']:
+        i, j = sorted(rng.choice(len(stream), 2, replace=False).tolist())
+        if (i, j) not in seen:
+            seen.add((i, j))
+            todo.append((stream[i], stream[j], 'neg_random', {}))
+    rows = []
+    for n, (a, b, op, params) in enumerate(todo):
+        row = dict(pair_id=f'p{n:05d}', a=a, b=b, op=op, params=params)
+        sa, sb = (set(d2l.shingles(t, spec['ngram']))
+                  for t in d2l.pair_texts(row, texts, vocab))
+        small, large = (sa, sb) if len(sa) <= len(sb) else (sb, sa)
+        J = d2l.jaccard_exact(sa, sb)
+        half = int(hashlib.sha256(a.encode('utf-8')).hexdigest(), 16) % 2
+        rows.append(dict(row, J=J, C=d2l.containment(small, large),
+                         label=bool(J >= spec['tau']),
+                         split=('train', 'test')[half]))
+    return rows
+
+def suffix_array(ids):
+    """The suffix array of an integer sequence by prefix doubling: sa[i] is
+    the start of the i-th smallest suffix (a suffix that is a prefix of
+    another sorts first). Ranks by the first 2^k tokens, sorted with
+    np.lexsort, until all ranks differ: O(n log^2 n).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    ids = np.asarray(ids, dtype=np.int64)
+    n = len(ids)
+    if n == 0:
+        return np.zeros(0, dtype=np.int64)
+    rank = np.unique(ids, return_inverse=True)[1].astype(np.int64)
+    k = 1
+    while True:
+        second = np.full(n, -1, dtype=np.int64)
+        second[:n - k] = rank[k:] if k < n else second[:0]
+        sa = np.lexsort((second, rank))
+        r1, r2 = rank[sa], second[sa]
+        new = np.empty(n, dtype=np.int64)
+        new[sa] = np.concatenate([[0], np.cumsum(
+            (r1[1:] != r1[:-1]) | (r2[1:] != r2[:-1]))])
+        rank = new
+        if rank[sa[-1]] == n - 1 or k >= n:
+            return sa
+        k *= 2
+
+def lcp_array(ids, sa):
+    """lcp[i] = the length of the longest common prefix of the suffixes
+    sa[i - 1] and sa[i] (lcp[0] = 0), by Kasai's algorithm in O(n).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    s, sa = [int(v) for v in ids], [int(v) for v in sa]
+    n = len(s)
+    rank = [0] * n
+    for i, p in enumerate(sa):
+        rank[p] = i
+    lcp, h = [0] * n, 0
+    for i in range(n):
+        if rank[i] > 0:
+            j = sa[rank[i] - 1]
+            while i + h < n and j + h < n and s[i + h] == s[j + h]:
+                h += 1
+            lcp[rank[i]] = h
+            h = max(h - 1, 0)
+        else:
+            h = 0
+    return np.array(lcp, dtype=np.int64)
+
+def repeated_spans(ids, sa, lcp, min_len):
+    """The maximal repeats of at least min_len tokens, as (start, length,
+    count): every interval of the suffix array whose suffixes share a
+    prefix of that length (found with a stack over lcp), kept if extending
+    it one token to the left would not keep all its occurrences equal.
+    start is the first position of an occurrence; longest first.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    n, out, stack = len(sa), [], [(0, 0)]  # (lcp value, left bound)
+    for i in range(1, n + 1):
+        cur, lb = (int(lcp[i]) if i < n else 0), i - 1
+        while cur < stack[-1][0]:
+            length, lb = stack.pop()
+            if length >= min_len:
+                occ = sa[lb:i]
+                left = {int(ids[p - 1]) if p > 0 else None for p in occ}
+                if len(left) > 1 or None in left:
+                    out.append((int(occ.min()), length, len(occ)))
+        if cur > stack[-1][0]:
+            stack.append((cur, lb))
+    return sorted(out, key=lambda t: (-t[1], -t[2], t[0]))
+
+class NgramIndex:
+    """Hashed word n-grams of indexed texts, for decontamination: a key is
+    blake2b (8 bytes) of n consecutive NFC-lowercased \\w+ words joined by
+    one space, so casing, punctuation and spacing do not matter.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    def __init__(self, n=13):
+        self.n, self.keys = n, {}
+
+    def _grams(self, text):
+        w = d2l.shingles(text, 1)  # the words, as the shingles see them
+        return {hashlib.blake2b(' '.join(w[i:i + self.n]).encode('utf-8'),
+                                digest_size=8).digest()
+                for i in range(len(w) - self.n + 1)}
+
+    def add(self, text, tag):
+        for g in self._grams(text):
+            self.keys.setdefault(g, set()).add(tag)
+        return self
+
+    def query(self, text):
+        """[(tag, number of the text's distinct n-grams in tag's text)],
+        most hits first."""
+        hits = collections.Counter()
+        for g in self._grams(text):
+            hits.update(self.keys.get(g, ()))
+        return sorted(hits.items(), key=lambda t: (-t[1], str(t[0])))
+
 def fwedu_bucket(doc_id):
     """The bucket (0-255) of a FineWeb-Edu document: the first 32 bits of
     the SHA-256 of its id string (as released, <urn:uuid:...>) mod 256.
@@ -17192,6 +17523,424 @@ def c0_documents(manifest='lm-c0-docs-v1', cache_dir=None):
     docs = d2l.rebuild_c0(manifest, cache_dir=cache)
     assert not docs.mismatches, f'{len(docs.mismatches)} c0 rows drifted'
     return docs
+
+_MINHASH_PARAMS = {}  # (k, seed) -> the rows' (a, c), drawn once
+
+def _shingle_hashes(shingle_list):
+    """The 64-bit shingle hashes of the MinHash specification: blake2b with
+    an 8-byte digest of the UTF-8 shingle, read little-endian (uint64).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    digests = b''.join(hashlib.blake2b(s.encode('utf-8'), digest_size=8)
+                       .digest() for s in shingle_list)
+    return np.frombuffer(digests, dtype='<u8').astype(np.uint64)
+
+def _minhash_params(k, seed):
+    """The k rows' coefficients (a, c), each uint64 in [1, p), from
+    numpy.random.default_rng(seed) as the specification draws them.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    if (k, seed) not in d2l._MINHASH_PARAMS:
+        a, c = np.random.default_rng(seed).integers(
+            1, d2l.MINHASH_PRIME, size=(2, k), dtype=np.uint64)
+        d2l._MINHASH_PARAMS[k, seed] = (a, c)
+    return d2l._MINHASH_PARAMS[k, seed]
+
+def _mulmod61(a, x):
+    """(a * x) mod p for p = 2^61 - 1 and uint64 arrays a, x < 2^61
+    (broadcast), exact. The product needs 122 bits, so both factors are
+    split into 32-bit halves, whose partial products fit in 64 bits, and
+    the high bits fold back because 2^61 = 1 (mod p).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    p, m32 = np.uint64(d2l.MINHASH_PRIME), np.uint64(0xFFFFFFFF)
+    a_hi, a_lo = a >> np.uint64(32), a & m32
+    x_hi, x_lo = x >> np.uint64(32), x & m32
+    lo = a_lo * x_lo                     # < 2^64
+    mid = a_hi * x_lo + a_lo * x_hi      # < 2^62, weight 2^32
+    hi = a_hi * x_hi                     # < 2^58, weight 2^64 = 8 (mod p)
+    s = ((lo & p) + (lo >> np.uint64(61))
+         + ((mid & np.uint64((1 << 29) - 1)) << np.uint64(32))
+         + (mid >> np.uint64(29)) + (hi << np.uint64(3)))   # < 2^63
+    s = (s & p) + (s >> np.uint64(61))
+    return np.where(s >= p, s - p, s)
+
+def _minhash_rows(x, a, c, chunk=4096):
+    """min over the hashes x (mod p already) of (a_i x + c_i) mod p for
+    each row i: the signature, computed chunk by chunk of shingles.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    p = np.uint64(d2l.MINHASH_PRIME)
+    sig = np.full(len(a), p, dtype=np.uint64)
+    for j in range(0, len(x), chunk):
+        v = d2l._mulmod61(a[:, None], x[None, j:j + chunk]) + c[:, None]
+        v = np.where(v >= p, v - p, v)
+        sig = np.minimum(sig, v.min(axis=1))
+    return sig
+
+def _minhash_chunk(job):
+    """_minhash_texts' worker: job = (texts, k, seeds, ngram); one list of
+    signatures (None for fewer than ngram words) per seed.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    texts, k, seeds, ngram = job
+    out = {s: [] for s in seeds}
+    for t in texts:
+        sh = d2l.shingles(t, ngram)
+        x = (np.unique(d2l._shingle_hashes(sh)) % np.uint64(
+            d2l.MINHASH_PRIME)) if sh else None
+        for s in seeds:
+            out[s].append(None if x is None else
+                          d2l._minhash_rows(x, *d2l._minhash_params(k, s)))
+    return out
+
+def _minhash_texts(texts, k=128, seeds=(0xD2,), ngram=5, workers=1):
+    """{seed: [signature or None per text]} for many texts, each text
+    shingled and hashed once for all seeds; with workers > 1 in separate
+    processes (chunks of 500 texts, results in input order, so the output
+    does not depend on workers).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import concurrent.futures
+    import multiprocessing
+    texts = [str(t) for t in texts]
+    jobs = [(texts[i:i + 500], k, tuple(seeds), ngram)
+            for i in range(0, len(texts), 500)]
+    if workers <= 1 or len(jobs) < 2:
+        outs = map(d2l._minhash_chunk, jobs)
+    else:
+        ex = concurrent.futures.ProcessPoolExecutor(
+            workers, mp_context=multiprocessing.get_context('spawn'))
+        with ex:
+            outs = list(ex.map(d2l._minhash_chunk, jobs))
+    res = {s: [] for s in seeds}
+    for out in outs:
+        for s in seeds:
+            res[s] += out[s]
+    return res
+
+def _sig_matrix(sigs, k):
+    """Signatures (a list with None for empty documents) as a (n, k) uint64
+    array and the boolean mask of documents that have one.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    ok = np.array([s is not None for s in sigs])
+    S = np.zeros((len(sigs), k), dtype=np.uint64)
+    if ok.any():
+        S[ok] = np.stack([s for s in sigs if s is not None])
+    return S, ok
+
+def _band_match(SA, SB, b, r):
+    """Per pair, whether the signature rows SA[i] and SB[i] agree in all r
+    rows of at least one of the first b bands: lsh_candidates' decision
+    for one known pair, vectorized (equal up to 8-byte key collisions).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    eq = SA[:, :b * r] == SB[:, :b * r]
+    return eq.reshape(len(SA), b, r).all(axis=2).any(axis=1)
+
+DUP_BOILERPLATE = (  # 40 generic template blocks for the 'boiler' perturbation
+    'We use cookies to improve your experience on our site. By continuing '
+    'to browse you agree to our use of cookies. Learn more in our cookie '
+    'policy.',
+    'Subscribe to our newsletter and get the latest news, offers and '
+    'updates delivered straight to your inbox every week. You can '
+    'unsubscribe at any time.',
+    'Home | About Us | Services | Blog | Contact | Privacy Policy | Terms '
+    'and Conditions | Sitemap',
+    'Share this article: Facebook Twitter LinkedIn Pinterest Email Print',
+    'All rights reserved. No part of this website may be reproduced, '
+    'distributed or transmitted in any form without the prior written '
+    'permission of the publisher.',
+    'This post may contain affiliate links. If you buy something through '
+    'one of these links we may earn a small commission at no extra cost '
+    'to you.',
+    'Leave a Reply. Your email address will not be published. Required '
+    'fields are marked. Name Email Website Comment',
+    'Related posts: you might also like these articles from our archive, '
+    'chosen for readers who enjoyed this one.',
+    'Free shipping on all orders over fifty dollars. Easy returns within '
+    'thirty days. Secure checkout with all major cards.',
+    'Disclaimer: the information on this page is for general purposes only '
+    'and does not constitute professional advice. Consult a qualified '
+    'expert before acting on it.',
+    'Click here to download the free guide. Enter your name and email '
+    'address below and we will send it right away.',
+    'Posted in Uncategorized | Tagged news, updates, tips | Leave a comment',
+    'Previous article Next article Back to top',
+    'Skip to main content Search this site Menu Close menu Log in Register',
+    'Copyright the authors. Content on this site is licensed for personal '
+    'use only; please contact us for permission to republish.',
+    'Follow us on social media for daily updates, behind the scenes photos '
+    'and special announcements from our team.',
+    'Your cart is empty. Continue shopping or sign in to see items you '
+    'saved during an earlier visit.',
+    'This website uses analytics to understand how visitors use it. We do '
+    'not sell your personal data. Read our privacy notice for details.',
+    'Accept all cookies Reject non-essential cookies Manage preferences',
+    'Sign up for a free account to save your favourite pages, comment on '
+    'articles and receive personalised recommendations.',
+    'Advertisement. Continue reading below.',
+    'Was this page helpful? Yes No. Thank you for your feedback.',
+    'Terms of use: by accessing this site you accept these terms in full. '
+    'If you disagree with any part of them you must not use the site.',
+    'Contact us: send us a message using the form below and a member of '
+    'our team will get back to you within two working days.',
+    'Recent Posts Archives Categories Meta Log in Entries feed Comments feed',
+    'Print this page Email this page Bookmark this page',
+    'Last updated on the date shown above. Prices and availability are '
+    'subject to change without notice.',
+    'Join thousands of readers who already get our weekly digest. No spam, '
+    'we promise. Your details are safe with us.',
+    'You are here: Home > Articles > Current page',
+    'Read more Show less Load more comments',
+    'Our support team is available Monday to Friday from nine to five. '
+    'Call us or open a ticket in the help centre.',
+    'Images are for illustration purposes only and may not show the exact '
+    'product described on this page.',
+    'Tags: guide, how to, beginners, tips and tricks, frequently asked '
+    'questions',
+    'Download our app for a faster experience on your phone. Available for '
+    'all major platforms.',
+    'Please enable JavaScript in your browser to view this content and use '
+    'all the features of this site.',
+    'Rate this article: one star two stars three stars four stars five '
+    'stars. Average rating based on reader votes.',
+    'About the author: a writer and editor who covers everyday topics for '
+    'a general audience. Views expressed are their own.',
+    'Back to the list of all articles in this category.',
+    'Sponsored content. This article was produced in partnership with an '
+    'advertiser and reviewed by our editorial team.',
+    'Thank you for visiting. Come back soon for new articles every week.')
+
+def _dup_vocab(texts):
+    """The substitution vocabulary of make_dup_pairs: the sorted distinct
+    lowercased \\w+ words of texts.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import regex
+    return sorted({w for t in texts for w in regex.findall(r'\w+',
+                                                            t.lower())})
+
+def _dup_perturb(text, op, params, vocab=None):
+    """A perturbed copy of text by op (sub, del, boiler, shuffle, trunc)
+    with params; every random choice comes from default_rng(params['seed']).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import regex
+    rng = np.random.default_rng(params['seed'])
+    if op in ('sub', 'del'):
+        pat = r'\w+' if op == 'sub' else r'\w+[^\S\n]*'
+        spans = [m.span() for m in regex.finditer(pat, text)]
+        m = max(1, round(params['rate'] * len(spans)))
+        pick = set(rng.choice(len(spans), m, replace=False).tolist())
+        if op == 'sub' and vocab is None:
+            raise ValueError("'sub' needs the substitution vocabulary")
+        out, at = [], 0
+        for i, (s, e) in enumerate(spans):
+            if i in pick:
+                out.append(text[at:s])
+                if op == 'sub':
+                    out.append(vocab[int(rng.integers(len(vocab)))])
+                at = e
+        return ''.join(out) + text[at:]
+    paras = text.split('\n')
+    if op == 'boiler':
+        words = []
+        for j in rng.permutation(len(d2l.DUP_BOILERPLATE)):
+            words += d2l.DUP_BOILERPLATE[j].split()
+            if len(words) >= params['words']:
+                break
+        paras.insert(int(rng.integers(len(paras) + 1)),
+                     ' '.join(words[:params['words']]))
+        return '\n'.join(paras)
+    if op == 'shuffle':
+        return '\n'.join(paras[i] for i in rng.permutation(len(paras)))
+    if op == 'trunc':
+        ends = [m.end() for m in regex.finditer(r'\w+', text)]
+        return text[:ends[max(1, round(params['frac'] * len(ends))) - 1]]
+    raise ValueError(f'unknown op {op!r}')
+
+def _url_host(url):
+    """The lowercased host name of a URL ('' if it has none).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import urllib.parse
+    return (urllib.parse.urlsplit(url).hostname or '').lower()
+
+def _pb_interval(p, level=0.95):
+    """Central interval (lo, hi) of a Poisson-binomial count, the number of
+    successes of independent trials with probabilities p: lo is the
+    smallest count with P(X <= lo) > (1 - level) / 2 and hi the smallest
+    with P(X <= hi) >= (1 + level) / 2, from the exact distribution.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    p = np.asarray(p, dtype=float)
+    ones, p = int(np.sum(p >= 1.0)), p[(p > 0.0) & (p < 1.0)]
+    pmf = np.ones(1)
+    for q in p:
+        pmf = np.append(pmf * (1 - q), 0.0) + np.append(0.0, pmf * q)
+    cdf = np.cumsum(pmf)
+    alpha = (1 - level) / 2
+    lo = int(np.searchsorted(cdf, alpha, side='right'))
+    hi = int(np.searchsorted(cdf, 1 - alpha - 1e-12))
+    return lo + ones, hi + ones
+
+def benchmark_items():
+    """The test items of GSM8K (1,319), ARC-Challenge (1,172) and MMLU
+    (14,042) at their pinned files: dicts with item_id, benchmark,
+    question, choices (labels and texts, or None), gold (answer label or
+    final number) and text, the indexed form: question and gold answer
+    text.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    items = []
+    gsm = pd.read_parquet(d2l.download_keyed('gsm8k-test'))
+    for i, row in gsm.iterrows():
+        items.append(dict(item_id=f'gsm8k-{i}', benchmark='gsm8k',
+                          question=row.question.strip(), choices=None,
+                          gold=row.answer.split('####')[-1].strip(),
+                          text=row.question.strip() + '\n' + row.answer))
+    arc = pd.read_parquet(d2l.download_keyed('arc-challenge-test'))
+    for _, row in arc.iterrows():
+        labels = [str(x) for x in row.choices['label']]
+        texts = [str(x) for x in row.choices['text']]
+        gold = texts[labels.index(str(row.answerKey))]
+        items.append(dict(item_id=f'arc-{row.id}', benchmark='arc',
+                          question=row.question.strip(),
+                          choices=list(zip(labels, texts)),
+                          gold=str(row.answerKey),
+                          text=row.question.strip() + '\n' + gold))
+    rows = d2l._eval_load_rows(d2l.EVAL_TASKS['mmlu'], 'test')
+    for i, row in enumerate(rows):
+        texts = [str(x) for x in row['choices']]
+        items.append(dict(item_id=f'mmlu-{i}', benchmark='mmlu',
+                          question=row['question'].strip(),
+                          choices=list(zip('ABCD', texts)),
+                          gold='ABCD'[int(row['answer'])],
+                          text=row['question'].strip() + '\n'
+                          + texts[int(row['answer'])]))
+    return items
+
+def _plant_text(item, form):
+    """A benchmark item as a page would show it: the question, the lettered
+    options (ARC, MMLU) and an answer line. form 'reformat' changes it by
+    rule: lower case, one space for every whitespace run, commas and
+    semicolons before a space dropped, a space before '?', the options in
+    reverse order with their letters reassigned.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    choices = item['choices'] or []
+    gold = item['gold']
+    if form == 'reformat' and choices:
+        old = dict(choices)[gold]
+        choices = [(lab, t) for (lab, _), (_, t) in zip(
+            choices, reversed(choices))]
+        gold = next(lab for lab, t in choices if t == old)
+    fmt = '({}) {}' if item['benchmark'] == 'arc' else '{}. {}'
+    lines = [item['question']] + [fmt.format(lab, t) for lab, t in choices]
+    text = '\n'.join(lines + [f'Answer: {gold}'])
+    if form == 'reformat':
+        text = re.sub(r'[,;](?=\s)', '', text.lower())
+        text = re.sub(r'\s+', ' ', text.replace('?', ' ?')).strip()
+    return text
+
+def _sentence_starts(text):
+    """Positions where a sentence or a line starts (plant insertion points),
+    with 0 and len(text).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import regex
+    pos = {0, len(text)}
+    pos.update(m.end() for m in regex.finditer(r'(?<=[.!?])\s+|\n', text))
+    return sorted(pos)
+
+def make_plants(items, stream, paraphrase, n_per=100, n_controls=1000,
+                seed=0, min_words=13, max_words=180, prompt_sha256=None,
+                model_revision=None):
+    """The planted decontamination test set: n_per items of each benchmark
+    (items whose question has at least min_words words and whose page form
+    at most max_words), each in three forms (verbatim, reformat,
+    paraphrase = paraphrase(list of verbatim texts) -> list of texts),
+    inserted at a sentence start of distinct stream documents (stream: a
+    DataFrame with id and text), plus n_controls untouched documents. One
+    row per document: doc_id, item_id, benchmark, form ('control' for the
+    controls), text (the planted text), char_start, char_end (its span in
+    the planted document), prompt_sha256, model_revision and source_hash
+    (SHA-256 of the document before planting). All choices from
+    default_rng(seed).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import regex
+    rng = np.random.default_rng(seed)
+    nwords = lambda t: len(regex.findall(r'\w+', t))
+    chosen = []
+    for bench in ('gsm8k', 'arc', 'mmlu'):
+        ok = [it for it in items if it['benchmark'] == bench and
+              nwords(it['question']) >= min_words and
+              nwords(d2l._plant_text(it, 'verbatim')) <= max_words]
+        chosen += [ok[i] for i in rng.choice(len(ok), n_per, replace=False)]
+    verbatim = [d2l._plant_text(it, 'verbatim') for it in chosen]
+    para = list(paraphrase(verbatim))
+    assert len(para) == len(chosen)
+    plants = []
+    for it, v, ph in zip(chosen, verbatim, para):
+        plants += [(it, 'verbatim', v),
+                   (it, 'reformat', d2l._plant_text(it, 'reformat')),
+                   (it, 'paraphrase', ph)]
+    order = rng.permutation(len(stream))
+    assert len(order) >= len(plants) + n_controls
+    rows = []
+    for k, i in enumerate(order[:len(plants) + n_controls]):
+        doc = stream.iloc[int(i)]
+        row = dict(doc_id=doc.id, item_id=None, benchmark=None,
+                   form='control', text=None, char_start=None, char_end=None,
+                   prompt_sha256=None, model_revision=None,
+                   source_hash=hashlib.sha256(doc.text.encode('utf-8'))
+                   .hexdigest())
+        if k < len(plants):
+            it, form, text = plants[k]
+            at = d2l._sentence_starts(doc.text)
+            pos = at[int(rng.integers(len(at)))]
+            row.update(item_id=it['item_id'], benchmark=it['benchmark'],
+                       form=form, text=text, char_start=pos + 1,
+                       char_end=pos + 1 + len(text))
+            if form == 'paraphrase':
+                row.update(prompt_sha256=prompt_sha256,
+                           model_revision=model_revision)
+        rows.append(row)
+    return rows
+
+def contam_documents(plants, stream):
+    """The documents of the planted set, doc_id -> text: each planted text
+    inserted as its own line at char_start - 1 of the stream document
+    (document[:char_start - 1] + newline + text + newline + rest), the
+    controls unchanged; the source document's SHA-256 is checked.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    text = dict(zip(stream.id, stream.text))
+    out = {}
+    for row in plants:
+        t = text[row['doc_id']]
+        got = hashlib.sha256(t.encode('utf-8')).hexdigest()
+        assert got == row['source_hash'], f'{row["doc_id"]} changed'
+        if row['form'] != 'control':
+            at = row['char_start'] - 1
+            t = t[:at] + '\n' + row['text'] + '\n' + t[at:]
+            assert t[row['char_start']:row['char_end']] == row['text']
+        out[row['doc_id']] = t
+    return out
+
+def word_windows(text, size=128, stride=64):
+    """Windows of size whitespace-separated words every stride words, the
+    last one ending at the text's end: [(first word index, text)].
+
+    Defined in :numref:`sec_lm_dedup`"""
+    words = text.split()
+    starts = list(range(0, max(len(words) - size, 0) + 1, stride))
+    if starts[-1] + size < len(words):
+        starts.append(len(words) - size)
+    return [(s, ' '.join(words[s:s + size])) for s in starts]
 
 _FWEDU_FILES = tuple(  # sample/10BT files read, in order; 005, 012, 013 are chapter 21's
     f'sample/10BT/{k:03d}_00000.parquet' for k in (0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11))

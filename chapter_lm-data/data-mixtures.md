@@ -41,9 +41,13 @@ when the section is written.
 - Courses, tutorials and blogs: [Smol Training Playbook](https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook) (experiment planning and the mixture discussion); [CS336](https://cs336.stanford.edu/) (data mixing lecture and assignment A3's scaling-law fitting as the sibling exercise); [FineWeb blog post](https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1) (ablation discipline).
 -->
 
-<!-- Placeholder (stage 2, infra step): the cells below are the section's
-shared library, written before the section; the prose around them comes with
-the section. Cell ids follow the section specification. -->
+<!-- Prose (stage 2): the opening. Two small runs with different weights on
+web, code and mathematics whose loss curves cross (the plot comes from the
+registered run set below); the reader cannot try every mixture at full
+scale; the section fits a model from weights to per-domain loss on small
+runs and closes on whether what they decide transfers. Every T1 number in
+the prose carries "at T1 scale" and the HTML comment mark
+"campaign: lm-mix-runs-t2-v1", so the post-campaign step finds it. -->
 
 ```{.python .input #data-mixtures-imports}
 %%tab pytorch
@@ -57,10 +61,123 @@ from d2l import torch as d2l
 
 ```{.python .input #data-mixtures-extras}
 %%tab pytorch
+import collections
+import gzip
 import hashlib
+import itertools
+import json
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import time
+import pandas as pd
+from scipy import optimize, stats
 ```
 
-<!-- Placeholder (stage 2): the bucket rule splits FineWeb-Edu by a hash of each document's id, so a document's split never depends on the files read or their order. -->
+<!-- Prose: the three domains, the two target distributions (stated as
+illustrative and fixed before any run), and what a regeneration does. -->
+
+```{.python .input #data-mixtures-config}
+%%tab pytorch
+#@save
+MIX_DOMAINS = ('web', 'code', 'math')
+
+#@save
+MIX_TARGETS = {  # target weights over MIX_DOMAINS, fixed before any run
+    't_avg': (1 / 3, 1 / 3, 1 / 3), 't_dep': (0.7, 0.15, 0.15)}
+
+DOMAINS = MIX_DOMAINS
+T_AVG, T_DEP = (np.array(MIX_TARGETS[k]) for k in ('t_avg', 't_dep'))
+ARTIFACTS = {'mix-t1': ('lm-mix-runs-t1-v1', 'lm-mix-runs-t1-v1.json')}
+RERUN = d2l.lm_rerun(ARTIFACTS)
+GPU = torch.cuda.is_available()
+assert GPU or not RERUN, 'the mix-t1 regeneration trains on a GPU'
+# The T2 campaign's logs replace the T1 run set once they are registered
+T2 = 'lm-mix-runs-t2-v1' in d2l.DATA_HUB and not RERUN
+RUNS_KEY = 'lm-mix-runs-t2-v1' if T2 else 'lm-mix-runs-t1-v1'
+CONFIG = 't2' if T2 else 't1'
+TIER = ('T2: 20.3M-parameter proxies, 2^27 tokens per run' if T2 else
+        'T1: 4.6M-parameter proxies, 2^24 tokens per run; the T2 campaign '
+        'logs are not yet committed')
+TAG = f'[at {CONFIG.upper()} scale]'
+print(TIER, '| regenerating:', ', '.join(sorted(RERUN)) or 'none')
+```
+
+```{.python .input #data-mixtures-data-hub}
+%%tab pytorch
+# Becomes a saved registry cell when the files are uploaded (W10).
+# The T2 keys lm-mix-web-150m-v1, lm-mix-math-150m-v1, lm-mix-val-2m-v1,
+# lm-mix-code150-meta-v1 and lm-mix-runs-t2-v1 are added after the campaign.
+MIX_KEYS = ('lm-mix-web-20m-v1', 'lm-mix-math-20m-v1', 'lm-mix-val-1m-v1',
+            'lm-mix-code-meta-v1', 'lm-mix-runs-t1-v1')
+UPSTREAM = ('lm-r2-tokenizer-v1',)
+for name, keys in (('this section', MIX_KEYS), ('upstream', UPSTREAM)):
+    print(f'{name}: registered', ', '.join(
+        k for k in keys if k in d2l.DATA_HUB) or 'none', '| pending:',
+          ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
+```
+
+## Domain Weights Are Hyperparameters
+:label:`subsec_lm_mix_weights`
+
+<!-- Prose: a mixture is a point on the simplex; each sequence draws its
+domain with probability w; the two objectives (average held-out bits per
+byte over domains, and the target-weighted sum with t_avg or t_dep); losses
+in bits per byte (`bpb_from_nll`; one sentence restating
+subsec_bits-per-byte), never per token; what to hold fixed when a gain is
+credited to the mixture (tokenizer, model, tokens, schedule, evaluation
+sets, data-order seed). The two tiers of the study follow. -->
+
+```{.python .input #data-mixtures-configs}
+%%tab pytorch
+#@save
+ProxyCfg = collections.namedtuple('ProxyCfg', (
+    'num_hiddens num_heads num_blks seq_len batch micro_batch lr '
+    'warmup_frac schedule decay_frac final_lr_frac weight_decay betas dtype '
+    'vocab_size'), defaults=(1024, 64, 16, 1e-3, 0.02, 'cosine', 0.2, 0.1,
+                             0.1, (0.9, 0.95), 'bfloat16', 32768))
+
+#@save
+MIX_CONFIGS = {  # the study's two tiers, fixed before any run
+    't1': dict(  # one RTX 4090
+        name='t1', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
+        proxy=ProxyCfg(num_hiddens=128, num_heads=2, num_blks=2),
+        tokens=2**24, pool='20m', val='1m', pool_tokens=20_000_000,
+        val_tokens=1_000_000, keys={
+            'web-20m': 'lm-mix-web-20m-v1', 'math-20m': 'lm-mix-math-20m-v1',
+            'web-val-1m': 'lm-mix-val-1m-v1',
+            'math-val-1m': 'lm-mix-val-1m-v1'},
+        code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v1',
+        train=((1.0, 6), (0.3, 6)), held=4, design_seeds=(0, 1),
+        cos_seeds=(1, 2), arm_seeds=(0, 1, 2), max_weight=0.9,
+        lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**23, lr_tie=1e-3,
+        eval_at=tuple(k / 8 for k in range(1, 9)),
+        arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='ridge',
+        doremi=dict(eta=1.0, smooth=1e-3)),
+    't2': dict(  # the campaign package: run on a faster node
+        name='t2', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
+        proxy=ProxyCfg(num_hiddens=320, num_heads=5, num_blks=8),
+        tokens=2**27, pool='150m', val='2m', pool_tokens=150_000_000,
+        val_tokens=2_000_000, keys={
+            'web-150m': 'lm-mix-web-150m-v1',
+            'math-150m': 'lm-mix-math-150m-v1',
+            'web-val-2m': 'lm-mix-val-2m-v1',
+            'math-val-2m': 'lm-mix-val-2m-v1'},
+        code_meta='lm-mix-code150-meta-v1', runs_key='lm-mix-runs-t2-v1',
+        train=((1.0, 8), (0.3, 8)), held=8, design_seeds=(0, 1),
+        cos_seeds=(1, 2), arm_seeds=(0, 1, 2), max_weight=0.9,
+        lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**25, lr_tie=1e-3,
+        eval_at=tuple(k / 8 for k in range(1, 9)),
+        arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='ridge',
+        doremi=dict(eta=1.0, smooth=1e-3))}
+```
+
+<!-- Prose: the web pool comes from FineWeb-Edu's side buckets; the bucket
+rule (one sentence: the bucket depends only on the document's id). -->
 
 ```{.python .input #data-mixtures-bucket-def}
 %%tab pytorch
@@ -79,7 +196,167 @@ FWEDU_BUCKETS = {  # bucket ranges of the chapter's FineWeb-Edu splits
     'train': range(9, 256)}     # the reference model's training shards
 ```
 
-<!-- Placeholder (stage 2): losses in bits per byte, so that domains and tokenizers with different bytes per token compare. -->
+<!-- Prose: the three pools (web: FineWeb-Edu buckets 1-7, validation bucket
+8; code: permissively licensed CodeParrot files, built locally and not
+hosted; mathematics: FineMath 4+), each tokenized with the reference
+tokenizer of sec_lm_tokenizers (forward reference), each larger
+than the largest weight times the run. The table: tokens, documents, bytes
+per token (C2: they differ by domain), tokenizer hash. -->
+
+```{.python .input #data-mixtures-pools}
+%%tab pytorch
+C = d2l.MIX_CONFIGS[CONFIG]
+POOLS, VALS = d2l.mix_pools(C)
+for c in d2l.MIX_CONFIGS.values():  # a pure-domain run reads all its tokens
+    assert c['pool_tokens'] >= c['tokens'] > c['max_weight'] * c['tokens']
+meta = {d: (POOLS[d].meta, VALS[d].meta) for d in POOLS if d in VALS}
+if 'code' not in meta:  # CodeParrot's files are not hosted (their licences)
+    print('code pool not built here: python tools/build_mix_pools.py '
+          f'--config {CONFIG}; its meta comes from {C["code_meta"]}')
+    tar = d2l.download_keyed(C['code_meta'])
+    root = pathlib.Path(tar).with_suffix('')
+    if not (root / 'meta.json').exists():
+        root.mkdir(exist_ok=True)
+        d2l.extract(tar, str(root))
+    with open(root / 'meta.json') as f:
+        m = json.load(f)
+    meta['code'] = (m[f'code-{C["pool"]}.bin'], m[f'code-val-{C["val"]}.bin'])
+POOL_TABLE = pd.DataFrame([dict(
+    domain=d, split=split, tokens=m['n_tokens'], documents=m['n_docs'],
+    bytes_per_token=m['n_bytes_scored'] / m['n_tokens'],
+    tokenizer=m['tokenizer_sha256'][:12], here=d in POOLS)
+    for d in DOMAINS for split, m in zip(('pool', 'val'), meta[d])])
+print(POOL_TABLE.round(3).to_string(index=False))
+assert POOL_TABLE.tokenizer.nunique() == 1, 'pools from different tokenizers'
+assert (POOL_TABLE[POOL_TABLE.split == 'pool'].tokens >= C['tokens']).all()
+for d, P in itertools.chain(POOLS.items(), VALS.items()):  # one EOS per doc
+    eos = P.meta['eos_id']
+    assert int((np.asarray(P.ids) == eos).sum()) == P.meta['n_docs'], d
+for P, side in ((POOLS['web'], 'side'), (VALS['web'], 'side_val')):
+    docs = pathlib.Path(P.ids.filename).with_suffix('.docs.jsonl.gz')
+    with gzip.open(docs, 'rt') as f:
+        ids = [json.loads(row)['doc_id'] for row in itertools.islice(f, 1000)]
+    assert all(d2l.fwedu_bucket(i) in d2l.FWEDU_BUCKETS[side] for i in ids)
+print('bucket rule: the first 1,000 web documents of the pool lie in '
+      'buckets 1-7, those of the validation set (up to 1,000) in bucket 8')
+```
+
+### Temperature Sampling and Repetition
+:label:`subsec_lm_mix_temperature`
+
+<!-- Prose: p_i proportional to n_i^alpha (alpha = 1 proportional, 0
+uniform; multilingual practice near 0.3); epochs per source
+e_i = p_i D / n_i (eq_lm_mix_epochs, three lines: the smallest
+sources repeat most for alpha < 1); the repeated-data law
+D' = U + U R* (1 - exp(-R/R*)) (restate sec_scaling-laws). The
+three library functions: -->
+
+```{.python .input #data-mixtures-mix-defs}
+%%tab pytorch
+#@save
+def temperature_weights(sizes, alpha):
+    """Sampling probabilities p_i proportional to n_i ** alpha: alpha = 1
+    samples in proportion to size, alpha = 0 uniformly. sizes is a dict or
+    a sequence; the result has the same form."""
+    n = np.array(list(sizes.values()) if isinstance(sizes, dict) else sizes,
+                 dtype=float)
+    p = np.exp(alpha * np.log(n) - (alpha * np.log(n)).max())
+    p = p / p.sum()
+    return dict(zip(sizes, p)) if isinstance(sizes, dict) else p
+
+#@save
+def effective_tokens(unique, epochs, r_star=15.4):
+    """Effective data D' = U + U R* (1 - exp(-R / R*)) of `epochs` passes
+    over `unique` tokens (R = epochs - 1 repeats): the data-constrained law
+    of Muennighoff et al. with their fitted R*. Less than one epoch counts
+    what was read."""
+    E = np.asarray(epochs, dtype=float)
+    R = np.maximum(E - 1, 0)
+    return unique * np.minimum(E, 1) + unique * r_star * (1 - np.exp(
+        -R / r_star))
+
+#@save
+def sample_mixtures(n, domains, concentration, seed, max_weight=0.9,
+                    min_weight=0.0):
+    """n mixtures over the domains, (n, m), drawn from the symmetric
+    Dirichlet(concentration) and kept only when every weight lies in
+    [min_weight, max_weight] (rejection), in the order drawn."""
+    rng, m, out = np.random.default_rng(seed), len(domains), []
+    while len(out) < n:
+        w = rng.dirichlet(np.full(m, concentration))
+        if min_weight <= w.min() and w.max() <= max_weight:
+            out.append(w)
+    return np.array(out)
+```
+
+<!-- Prose: the D1 check on three toy sources, then ten languages: the nine
+FineWeb-2 languages of 20.6 (document counts read 2026-10-28) and English
+from FineWeb, the English dataset FineWeb-2 extends (read 2026-11-16). -->
+
+```{.python .input #data-mixtures-temperature}
+%%tab pytorch
+n_toy, D_toy = np.array([1000, 100, 10]), 100_000  # D1 on three toy sources
+p = d2l.temperature_weights(n_toy, 0.3)
+e = p * D_toy / n_toy
+counts = np.random.default_rng(0).multinomial(D_toy, p)
+se = np.sqrt(D_toy * p * (1 - p)) / n_toy
+assert abs(p.sum() - 1) < 1e-12 and (np.abs(counts / n_toy - e) < 3 * se).all()
+assert e[2] > e[1] > e[0]
+print('D1 (alpha 0.3, sizes 1000/100/10): p =', p.round(4), '| epochs',
+      e.round(1), '| simulated', (counts / n_toy).round(1))
+FW_ROWS = {  # documents per language (FineWeb-2 configs; English: FineWeb)
+    'eng (FineWeb)': 25_886_364_489, 'rus_Cyrl': 699_118_293,
+    'cmn_Hani': 636_092_280, 'deu_Latn': 496_029_661,
+    'jpn_Jpan': 400_164_452, 'arb_Arab': 62_019_605,
+    'kor_Hang': 60_904_429, 'tha_Thai': 35_921_239,
+    'hin_Deva': 22_151_227, 'swh_Latn': 1_218_969}
+D_DOCS = 10**10  # documents drawn in all
+rows = {}
+for alpha in (1.0, 0.7, 0.3, 0.0):
+    p = d2l.temperature_weights(FW_ROWS, alpha)
+    for lang, n in FW_ROWS.items():
+        rows[lang, f'p (alpha {alpha:g})'] = p[lang]
+        rows[lang, f'epochs (alpha {alpha:g})'] = p[lang] * D_DOCS / n
+TEMP = pd.Series(rows).unstack()[[f'{k} (alpha {a:g})' for a in (
+    1.0, 0.7, 0.3, 0.0) for k in ('p', 'epochs')]].loc[list(FW_ROWS)]
+print(TEMP.to_string(float_format=lambda v: f'{v:.3g}'))
+print('read more than four times (the repeated-data limit below):',
+      {c.split()[-1][:-1]: list(TEMP.index[TEMP[c] > 4])
+       for c in TEMP.columns if c.startswith('epochs')})
+alphas = np.linspace(0, 1, 21)
+d2l.plot(alphas, [[d2l.temperature_weights(FW_ROWS, a)[lang] for a in alphas]
+                  for lang in FW_ROWS], 'alpha', 'sampling probability',
+         yscale='log', figsize=(5, 3.5))
+legend = d2l.plt.gca().legend(list(FW_ROWS), loc='center left',
+                              bbox_to_anchor=(1, 0.5))
+```
+
+<!-- Prose: four epochs keep about 93% of their nominal value under the fit;
+the saturation value; where U E overstates D' by 10%. -->
+
+```{.python .input #data-mixtures-repetition}
+%%tab pytorch
+U = 1e9
+four = float(d2l.effective_tokens(U, 4)) / (4 * U)
+limit = float(d2l.effective_tokens(U, 1001)) / (U * (1 + 15.4))
+E_10 = optimize.brentq(lambda E: E * U / d2l.effective_tokens(U, E) - 1.1,
+                       1.01, 50)
+assert abs(four - 0.932) < 0.005 and abs(limit - 1) < 1e-3
+print(f"D'(4 epochs) / (4U) = {four:.3f}; D'(R = 1000) / (U (1 + R*)) = "
+      f'{limit:.6f}; U E overstates D\' by 10% at E = {E_10:.2f} '
+      f'(R = {E_10 - 1:.2f})')
+```
+
+## Proxy Runs and Regression
+:label:`subsec_lm_mix_regmix`
+
+<!-- Prose: RegMix's recipe (sample many mixtures, train small models, fit a
+regression from mixture to loss, optimize it, train the optimum); the proxy
+and its training loop. Losses go out as summed NLL and bytes per domain, so
+they convert to bits per byte with `bpb_from_nll`. The stream: windows of
+seq_len + 1 tokens, epochs as fresh permutations, a stratified domain
+allocation, stages that switch weights; the pool-smaller-than-the-run
+guard. -->
 
 ```{.python .input #data-mixtures-proxy-defs}
 %%tab pytorch
@@ -88,5 +365,677 @@ def bpb_from_nll(sum_nll_nats, n_bytes):
     """Bits per byte from a summed negative log-likelihood in nats and the
     number of UTF-8 bytes the scored tokens stand for."""
     return float(sum_nll_nats) / (math.log(2) * n_bytes)
+
+#@save
+def train_proxy_lm(pools, weights, tokens, cfg, seed=0, eval_sets=None,
+                   stages=None, log_every=50, *, max_epochs=1,
+                   stop_tokens=None, eval_at=(0.25, 0.5, 0.75, 1.0),
+                   curve_windows=None, byte_lengths=None, ckpt=None,
+                   ckpt_every=256, resume=None, compile=False, device=None):
+    """Train a proxy d2l.GPT on `tokens` tokens of the mixture `weights`
+    ({domain: weight}) of token pools, switching to the weights of each
+    (fraction, weights) of `stages` at that fraction of the run. Returns
+    the log [step, tokens, loss, seconds], the evaluations at the
+    fractions eval_at (per domain of eval_sets, on the first curve_windows
+    windows), the final evaluation on all windows, the epochs each pool was
+    read, throughput, parameter count and peak memory. stop_tokens ends the
+    run early on the same schedule and stream; ckpt/resume save and restore
+    a checkpoint every ckpt_every steps."""
+    device = device or d2l.try_gpu()
+    stream = d2l._ProxyStream(pools, weights, tokens, cfg.seq_len, cfg.batch,
+                              seed, stages, max_epochs)
+    steps, per_step = stream.steps, cfg.batch * cfg.seq_len
+    stop = steps if stop_tokens is None else min(steps,
+                                                 stop_tokens // per_step)
+    model = d2l._proxy_model(cfg, seed).to(device)
+    opt = d2l._proxy_optimizer(model, cfg)
+    if eval_sets and byte_lengths is None:
+        byte_lengths = d2l.token_byte_lengths(d2l.r2_tokenizer())
+    evaluate = lambda n: {d: d2l._proxy_eval(model, getattr(v, 'ids', v), cfg,
+                                             byte_lengths, n)
+                          for d, v in (eval_sets or {}).items()}
+    key = d2l._proxy_fingerprint(weights, stages, tokens, seed, cfg)
+    start, out = 0, dict(log=[], evals=[], final=None, seconds=0.0)
+    if resume is not None:
+        start, out = d2l._proxy_load(resume, model, opt, key)
+    fwd = torch.compile(model) if compile else model
+    at = {max(1, round(f * steps)): f for f in eval_at}
+    if device.type == 'cuda':
+        torch.cuda.reset_peak_memory_stats(device)
+    seconds = seconds0 = out['seconds']
+    for step in range(start, stop):
+        t0 = time.perf_counter()
+        for g in opt.param_groups:
+            g['lr'] = cfg.lr * d2l._lr_at(step, steps, cfg)
+        X = torch.from_numpy(stream.batch(step)[0]).to(device)
+        loss = 0.0
+        for Xm in X.split(cfg.micro_batch):  # gradient accumulation
+            l = d2l._per_token_nll(fwd, Xm, cfg).mean() * len(Xm) / len(X)
+            l.backward()
+            loss = loss + l.detach()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        if ((step + 1) % log_every == 0 or step + 1 in at or step + 1 == stop
+                or ckpt and (step + 1) % ckpt_every == 0):
+            loss = float(loss)  # waits for the GPU, so the clock is right
+            seconds += time.perf_counter() - t0
+            out['log'].append([step + 1, (step + 1) * per_step, loss,
+                               round(seconds, 3)])
+        else:
+            seconds += time.perf_counter() - t0
+        if step + 1 in at and eval_sets:
+            out['evals'].append(dict(frac=at[step + 1], step=step + 1,
+                                     tokens=(step + 1) * per_step,
+                                     domains=evaluate(curve_windows)))
+        if ckpt and ((step + 1) % ckpt_every == 0 or step + 1 == stop):
+            out['seconds'] = seconds
+            d2l._proxy_save(ckpt, model, opt, step + 1, out, key)
+    if stop == steps and eval_sets:
+        out['final'] = evaluate(None)
+    out.update(steps=steps, stopped_at=stop, n_params=d2l.num_params(model),
+               epochs=stream.epochs, epoch_starts=stream.epoch_starts,
+               seconds=seconds, throughput=(stop - start) * per_step / max(
+                   seconds - seconds0, 1e-9),
+               peak_mem=(torch.cuda.max_memory_allocated(device) / 2**30
+                         if device.type == 'cuda' else None))
+    return out
 ```
 
+<!-- Prose: the checks below run on the CPU in fp32 with a 2-block, d = 32
+model: the stream is a function of (seed, weights, tokens); the stratified
+allocation holds every domain within one sequence of its share; a model
+that predicts every token with probability 1/32,768 scores 15 bits per
+token, so 15 / (bytes per token) bits per byte; and the parameter counts of
+the two tiers against their arithmetic. -->
+
+```{.python .input #data-mixtures-proxy-checks}
+%%tab pytorch
+tiny = d2l.ProxyCfg(32, 2, 2, seq_len=64, batch=8, micro_batch=4,
+                    dtype='float32')
+two = {d: POOLS[d] for d in ('web', 'math')}
+w2 = {'web': 0.7, 'math': 0.3}
+hashes = lambda s: [hashlib.sha256(s.batch(k)[0].tobytes()).hexdigest()
+                    for k in range(10)]
+streams = [d2l._ProxyStream(two, w2, 2**14, 64, 8, seed) for seed in (0, 0, 1)]
+assert hashes(streams[0]) == hashes(streams[1]) != hashes(streams[2])
+runs = [d2l.train_proxy_lm(two, w2, 20 * 8 * 64, tiny, seed=0, log_every=1,
+                           device=torch.device('cpu')) for _ in range(2)]
+assert abs(runs[0]['log'][19][2] - runs[1]['log'][19][2]) <= 1e-6
+s = d2l._ProxyStream(two, w2, 10**4 * 64, 64, 1, seed=0)  # 10^4 sequences
+web = np.cumsum(s.dom == 0)
+lag = np.abs(web - 0.7 * np.arange(1, len(web) + 1)).max()
+assert lag <= 1 and abs(web[-1] - 7000) <= 3 * math.sqrt(1e4 * 0.7 * 0.3)
+print(f'same (seed, weights, tokens): the same 10 batches and the same loss '
+      f'at step 20 ({runs[0]["log"][19][2]:.6f}); web share after 10^4 '
+      f'sequences {web[-1] / 1e4:.4f}, never more than {lag:.2f} sequences '
+      'from 0.7 n')
+uni = d2l._proxy_model(tiny._replace(dtype='float64')).double()
+nn.init.zeros_(uni.token_emb.weight)  # tied output: every logit is 0
+BYTE_LEN = d2l.token_byte_lengths(d2l.r2_tokenizer())
+r = d2l._proxy_eval(uni, VALS['web'].ids, tiny, BYTE_LEN, 32,
+                    torch.device('cpu'))
+assert abs(r['bpb'] / (15 * r['n_tokens'] / r['n_bytes']) - 1) < 1e-9
+print(f'uniform model: {r["bpb"]:.6f} bits per byte = 15 / '
+      f'{r["n_bytes"] / r["n_tokens"]:.4f} bytes per token')
+with torch.device('meta'):
+    N = {k: d2l.num_params(d2l._proxy_model(c['proxy']))
+         for k, c in d2l.MIX_CONFIGS.items()}
+for k, c in d2l.MIX_CONFIGS.items():
+    p = c['proxy']
+    arith = p.vocab_size * p.num_hiddens + 12 * p.num_blks * p.num_hiddens**2
+    assert abs(N[k] / arith - 1) < 0.005
+    flop = d2l.proxy_flops(p, c['tokens'], N[k])
+    print(f'{k}: {N[k]:,} parameters (arithmetic {arith:,}; embedding '
+          f'{p.vocab_size * p.num_hiddens:,}); {flop:.2g} FLOP per run')
+```
+
+<!-- Prose: the run design. Training mixtures from Dirichlet(1) and
+Dirichlet(0.3) (the second reaches the edges of the simplex), held-out
+mixtures from Dirichlet(1) with another seed, three pure-domain runs,
+uniform seeds (two on the cosine schedule: the regression's noise floor;
+three on WSD: the arms' floor), the learning rate chosen once on the
+uniform mixture. -->
+
+```{.python .input #data-mixtures-design}
+%%tab pytorch
+TRAIN_W = np.vstack([d2l.sample_mixtures(n, DOMAINS, conc,
+                                         C['design_seeds'][0], C['max_weight'])
+                     for conc, n in C['train']])
+HELD_W = d2l.sample_mixtures(C['held'], DOMAINS, 1.0, C['design_seeds'][1],
+                             C['max_weight'])
+XY = d2l.barycentric(np.vstack([TRAIN_W, HELD_W]))
+print(TAG, f'{len(TRAIN_W)} training mixtures (Dirichlet(1), Dirichlet(0.3)) '
+      f'and {len(HELD_W)} held-out ones (Dirichlet(1)), weights {DOMAINS}:')
+print(pd.DataFrame(np.vstack([TRAIN_W, HELD_W]), columns=DOMAINS,
+                   index=[f'train {k}' for k in range(len(TRAIN_W))]
+                   + [f'held {k}' for k in range(len(HELD_W))]).round(3).T
+      .to_string())
+SPECS = d2l.mix_run_specs(C)
+arms = collections.Counter(s['arm'] for s in SPECS)
+print(f'{len(SPECS)} runs: ' + ', '.join(f'{n} {a}' for a, n in arms.items()))
+```
+
+<!-- Prose: one regeneration writes the whole run set: the launcher
+tools/run_mix_campaign.py, which the T2 campaign uses as well, runs the
+learning-rate choice, the runs, the regression's choice of the selected
+mixture and DoReMi's weights, and, on the 4090, a short smoke run of the T2
+configuration. A normal build reads the registered result. -->
+
+```{.python .input #data-mixtures-regen}
+%%tab pytorch
+ROOT = pathlib.Path(d2l.__file__).resolve().parents[1]  # the book's repository
+LAUNCHER = ROOT / 'tools' / 'run_mix_campaign.py'
+if 'mix-t1' in RERUN:
+    out_dir = os.path.join('..', 'data', 'lm', 'rerun', 'mix-t1')
+    gpus = os.environ.get('CUDA_VISIBLE_DEVICES') or ','.join(
+        str(i) for i in range(torch.cuda.device_count()))
+    t0 = time.time()
+    subprocess.run([sys.executable, str(LAUNCHER), '--config', 't1', '--gpus',
+                    gpus, '--out', out_dir, '--smoke-t2'], check=True)
+    print(f'mix-t1: {(time.time() - t0) / 60:.1f} min wall clock')
+    d2l.lm_save_rerun(ARTIFACTS['mix-t1'][1], lambda p: shutil.copy(
+        os.path.join(out_dir, 'lm-mix-runs-t1-v1.json'), p))
+RUNS_PATH = d2l.lm_artifact(RUNS_KEY, ARTIFACTS['mix-t1'][1]
+                            if 'mix-t1' in RERUN else None)
+with open(RUNS_PATH) as f:
+    RUNS = json.load(f)
+REC = {r['run_id']: r for r in RUNS['runs']}
+for s in SPECS:  # the run set is the design MIX_CONFIGS fixes
+    if s['weights'] is not None:
+        assert np.allclose(REC[s['run_id']]['weights'], s['weights'], atol=0)
+print(TAG, f'{len(REC)} runs from {os.path.basename(RUNS_PATH)}; peak '
+      f'learning rate {RUNS["lr_choice"]["chosen"]:g} (chosen on the uniform '
+      'mixture: ' + ', '.join(f'{lr} -> {v:.4f} bpb' for lr, v in
+                               RUNS['lr_choice']['mean_bpb'].items()) + ')')
+```
+
+<!-- Prose: the live check retrains the start of the pure-web run on this
+machine and compares its losses with the registered log. -->
+
+```{.python .input #data-mixtures-live-check}
+%%tab pytorch
+if GPU and not RERUN:
+    assert POOLS['web'].meta['sha256'] == RUNS['pools']['web']['sha256']
+    cfg = C['proxy']._replace(lr=REC['pure-web']['lr'])
+    live = d2l.train_proxy_lm({'web': POOLS['web']}, {'web': 1.0},
+                              C['tokens'], cfg, seed=0, log_every=10,
+                              stop_tokens=2**20)
+    logged = {s: l for s, _, l, _ in REC['pure-web']['log']}
+    diff = max(abs(l - logged[s]) for s, _, l, _ in live['log'] if s % 10 == 0)
+    print(TAG, f'pure-web, steps 10-{live["log"][-1][0]}: largest difference '
+          f'from the registered losses {diff:.4f} nats (bf16; tolerance 0.02)')
+    assert diff <= 0.02
+else:
+    print('live check skipped:', 'no GPU' if not GPU else
+          'the regeneration above trained the same run')
+```
+
+<!-- Prose: what the smoke of the T2 configuration measured on the 4090
+(throughput with and without torch.compile, MFU against the card's dense
+bf16 peak, peak memory, the kill-and-resume check), and the A100 hours it
+predicts for the T2 campaign. -->
+
+```{.python .input #data-mixtures-smoke}
+%%tab pytorch
+SMOKE = RUNS.get('smoke')
+if SMOKE is None:
+    print('no smoke record in this run set')
+else:
+    print(f'smoke of the {SMOKE["config"]} configuration on {SMOKE["device"]} '
+          f'({SMOKE["steps"]} steps of {SMOKE["tokens_per_step"]:,} tokens):')
+    print(pd.Series({k: SMOKE[k] for k in (
+        'n_params', 'tokens_per_s', 'tokens_per_s_compiled', 'mfu',
+        'mfu_compiled', 'peak_mem_gib', 'resume_bf16_max_diff',
+        'rerun_bf16_max_diff', 'resume_fp32_max_diff', 'campaign_flop',
+        'predicted_a100_hours', 'predicted_hours_here', 'stop_hours')})
+          .to_string())
+    assert SMOKE['resume_fp32_max_diff'] <= 1e-6
+    assert SMOKE['resume_bf16_ok']  # 0.01 nats, deterministic kernels
+```
+
+<!-- Prose: the question of the opening, answered by the run set: the pair
+of training mixtures whose target-weighted bits per byte cross (the one
+ahead at a quarter of the tokens is behind at the end), and the 3 x 3
+matrix of the pure-domain runs (C1); bits per token against bits per byte
+(C2). -->
+
+```{.python .input #data-mixtures-opening-plot}
+%%tab pytorch
+def t_bpb(e, t=T_DEP):  # target-weighted bits per byte of one evaluation
+    return float(sum(w * e[d]['bpb'] for w, d in zip(t, DOMAINS)))
+
+def at_frac(rec, frac):
+    return t_bpb(next(e for e in rec['evals'] if abs(e['frac'] - frac) < 1e-9)
+                 ['domains'])
+
+train = [r for r in RUNS['runs'] if r['arm'] == 'train']
+gaps = [(at_frac(a, 0.25) - at_frac(b, 0.25), at_frac(a, 1) - at_frac(b, 1),
+         a, b) for a, b in itertools.combinations(train, 2)]
+cross = [g for g in gaps if g[0] * g[1] < 0]
+_, _, A, B = (max(cross, key=lambda g: abs(g[1])) if cross else
+              max(gaps, key=lambda g: abs(g[0])))
+print(TAG, f'{len(cross)} of {len(gaps)} pairs of training mixtures cross; '
+      + ('the pair with the largest final gap:' if cross else
+         'none does: the pair with the largest early gap:'))
+d2l.plot([[e['tokens'] for e in r['evals']] for r in (A, B)],
+         [[t_bpb(e['domains']) for e in r['evals']] for r in (A, B)],
+         'tokens', 't_dep bits per byte', legend=[
+             'w = (' + ', '.join(f'{x:.2f}' for x in r['weights']) + ')'
+             for r in (A, B)], figsize=(4.5, 3))
+MATRIX = pd.DataFrame([[REC[f'pure-{a}']['final'][b]['bpb'] for b in DOMAINS]
+                       for a in DOMAINS], columns=DOMAINS,
+                      index=[f'trained on {a}' for a in DOMAINS])
+print(TAG, 'bits per byte on each validation set (columns) of the '
+      'pure-domain runs (rows):')
+print(MATRIX.round(3).to_string())
+print('each proxy is best on its own domain:', all(
+    MATRIX.values[i, i] == MATRIX.values[:, i].min() for i in range(3)))
+u = REC['uniform-wsd-s0']['final']
+print(TAG, 'uniform mixture (WSD, seed 0) per domain:')
+print(pd.DataFrame({d: dict(
+    bytes_per_token=u[d]['n_bytes'] / u[d]['n_tokens'],
+    bits_per_token=u[d]['nll'] / u[d]['n_tokens'] / math.log(2),
+    bits_per_byte=u[d]['bpb']) for d in DOMAINS}).round(3).to_string())
+```
+
+<!-- Prose: three regressions from weights to per-domain bits per byte:
+ridge on two free weights and an intercept (the three weights sum to one,
+so all three and an intercept are collinear), gradient boosting (RegMix's
+learner) and the exponential mixing law of Ye et al.; choosing a mixture
+minimizes the fitted target loss on a random grid, polished by Nelder-Mead
+on a softmax parameterization (the selected arm of the launcher uses this
+function). -->
+
+```{.python .input #data-mixtures-reg-defs}
+%%tab pytorch
+#@save
+def fit_mixture_regression(W, L, kind='ridge', **kw):
+    """A predictor f(w) -> per-domain losses fitted on mixtures W (n, m)
+    and their losses L (n, k): 'ridge' on the first m - 1 weights and an
+    intercept (alpha=1e-3, intercept not shrunk), 'gbm' (scikit-learn
+    gradient boosting per output, seed 0) or 'mixlaw' (L_i = c_i + k_i
+    exp(sum_j t_ij w_j) per output, least squares from 8 seeded starts).
+    f takes (m,) or (n', m); f.params holds the fitted parameters."""
+    W, L = np.asarray(W, dtype=float), np.asarray(L, dtype=float)
+    design = lambda w: np.hstack([np.ones((len(w), 1)), w[:, :-1]])
+    if kind == 'ridge':
+        X = design(W)
+        P = kw.get('alpha', 1e-3) * np.eye(X.shape[1])
+        P[0, 0] = 0
+        params = np.linalg.solve(X.T @ X + P, X.T @ L)
+        predict = lambda w: design(w) @ params
+    elif kind == 'gbm':
+        from sklearn.ensemble import GradientBoostingRegressor
+        opts = dict(n_estimators=200, learning_rate=0.05, max_depth=2)
+        models = [GradientBoostingRegressor(random_state=0, **{**opts, **kw})
+                  .fit(W, L[:, i]) for i in range(L.shape[1])]
+        params = None
+        predict = lambda w: np.stack([g.predict(w) for g in models], -1)
+    elif kind == 'mixlaw':
+        from scipy.optimize import least_squares
+        rng, params = np.random.default_rng(0), []
+        law = lambda p, w: p[0] + p[1] * np.exp(w @ p[2:])
+        for y in L.T:
+            fits = [least_squares(lambda p: law(p, W) - y, np.concatenate(
+                [[rng.uniform(0, y.min())], [rng.uniform(0.1, 2)],
+                 rng.normal(0, 1, W.shape[1])]), xtol=1e-15, ftol=1e-15,
+                gtol=1e-15, max_nfev=5000) for _ in range(8)]
+            params.append(min(fits, key=lambda r: r.cost).x)
+        params = np.array(params)
+        predict = lambda w: np.stack([law(p, w) for p in params], -1)
+    else:
+        raise ValueError(f'unknown kind {kind!r}')
+    def f(w):
+        w = np.asarray(w, dtype=float)
+        return predict(w[None])[0] if w.ndim == 1 else predict(w)
+    f.params = params
+    return f
+
+#@save
+def choose_mixture(f, target, n_grid=5000, seed=0, max_weight=0.9):
+    """The mixture w with no weight above max_weight that minimizes the
+    fitted target loss target @ f(w): the best of n_grid Dirichlet(1)
+    points, polished by Nelder-Mead on w = softmax(z). Returns (w, the
+    predicted target loss)."""
+    from scipy.optimize import minimize
+    t = np.asarray(target, dtype=float)
+    G = d2l.sample_mixtures(n_grid, t, 1.0, seed, max_weight)
+    vals = f(G) @ t
+    softmax = lambda z: np.exp(z - z.max()) / np.exp(z - z.max()).sum()
+    def loss(z):
+        w = softmax(z)
+        return np.inf if w.max() > max_weight else float(f(w) @ t)
+    res = minimize(loss, np.log(G[vals.argmin()]), method='Nelder-Mead',
+                   options=dict(xatol=1e-8, fatol=1e-10, maxiter=4000))
+    if res.fun < vals.min():
+        return softmax(res.x), float(res.fun)
+    return G[vals.argmin()], float(vals.min())
+```
+
+<!-- Prose: how well can any regression do? The noise floor of a
+regression's prediction of a noisy observation, sigma sqrt(1 + p/n)
+(eq_lm_mix_floor, the short derivation), checked by simulation;
+the floor of the real runs from the uniform seeds; the three regressions
+fitted on the training runs and judged only on the held-out ones (MAE per
+domain against the floor, Spearman rho without a significance claim).
+Pitfalls: training-mixture R^2 read as success; tuning the learning rate
+per mixture. The plot below: (a) predicted against measured with the
+identity and the band of two floors, (b) every run on the simplex, coloured
+by its t_dep bits per byte, with the selected mixture as a star. -->
+
+```{.python .input #data-mixtures-regression}
+%%tab pytorch
+rng = np.random.default_rng(0)  # D4: n = 16 mixtures, linear truth
+Wd, Wn = d2l.sample_mixtures(16, DOMAINS, 1.0, 0), d2l.sample_mixtures(
+    200, DOMAINS, 1.0, 1)
+beta, sigma = np.array([1.2, -0.3, 0.2]), 0.02
+X, Xn = (np.hstack([np.ones((len(w), 1)), w[:, :2]]) for w in (Wd, Wn))
+err = np.zeros(len(Wn))
+for _ in range(5000):
+    f = d2l.fit_mixture_regression(Wd, (X @ beta + sigma * rng.normal(
+        size=16))[:, None], 'ridge', alpha=0.0)
+    err += (f(Wn)[:, 0] - Xn @ beta - sigma * rng.normal(size=len(Wn)))**2
+theory = sigma**2 * (1 + np.einsum('ij,jk,ik->i', Xn, np.linalg.inv(X.T @ X),
+                                   Xn))
+assert abs((err / 5000).mean() / theory.mean() - 1) < 0.03
+print(f'D4: mean squared error at new mixtures {(err / 5000).mean():.3e}, '
+      f'theory {theory.mean():.3e}; at the design points sigma^2 (1 + p/n) = '
+      f'{sigma**2 * (1 + 3 / 16):.3e}')
+
+final = lambda r: [REC[r]['final'][d]['bpb'] for d in DOMAINS]
+cos = np.array([final(f'uniform-cos-s{s}') for s in C['cos_seeds']])
+wsd = np.array([final(f'uniform-wsd-s{s}') for s in C['arm_seeds']])
+sig_cos, sig_wsd = cos.std(0, ddof=1), wsd.std(0, ddof=1)
+SIG_COS = math.sqrt((sig_cos**2).mean())  # pooled: 3 degrees of freedom
+SIG_SEED = math.sqrt((sig_wsd**2).mean())  # pooled: 6
+train_ids = [r['run_id'] for r in RUNS['runs'] if r['arm'] == 'train']
+held_ids = [r['run_id'] for r in RUNS['runs'] if r['arm'] == 'held']
+Wt, Lt = (np.array([REC[r]['weights'] for r in train_ids]),
+          np.array([final(r) for r in train_ids]))
+Wh, Lh = (np.array([REC[r]['weights'] for r in held_ids]),
+          np.array([final(r) for r in held_ids]))
+FLOOR = SIG_COS * math.sqrt(1 + 3 / len(train_ids))
+FITS = {k: d2l.fit_mixture_regression(Wt, Lt, k)
+        for k in ('ridge', 'gbm', 'mixlaw')}
+PRED = {k: f(Wh) for k, f in FITS.items()}
+noise = {'sigma_cos': sig_cos, 'sigma_seed (WSD)': sig_wsd,
+         'floor sigma_cos sqrt(1 + p/n)': np.full(3, FLOOR)}
+noise.update({f'MAE {k}': np.abs(P - Lh).mean(0) for k, P in PRED.items()})
+noise.update({f'Spearman {k}': [stats.spearmanr(P[:, i], Lh[:, i])[0]
+                                for i in range(3)] for k, P in PRED.items()})
+print(TAG, f'{len(train_ids)} training and {len(held_ids)} held-out runs; '
+      f'pooled sigma_cos {SIG_COS:.4f}, sigma_seed {SIG_SEED:.4f} bits per '
+      f'byte (ratio {max(SIG_COS, SIG_SEED) / min(SIG_COS, SIG_SEED):.1f})')
+print(pd.DataFrame(noise, index=DOMAINS).T.round(4).to_string())
+mae = np.abs(PRED['ridge'] - Lh).mean()
+print('ridge, held-out MAE over all domains', f'{mae:.4f}:',
+      'reaches only the noise floor' if mae <= 1.5 * FLOOR else
+      'does not reach the noise floor')
+
+fig, axes = d2l.plt.subplots(1, 4, figsize=(13, 3.4), gridspec_kw=dict(
+    width_ratios=(1, 1, 1, 1.5)))
+for i, (ax, d) in enumerate(zip(axes, DOMAINS)):  # (a) one panel per domain
+    lo, hi = Lh[:, i].min() - 3 * FLOOR, Lh[:, i].max() + 3 * FLOOR
+    d2l.plot([P[:, i] for P in PRED.values()] + [[lo, hi]],
+             [Lh[:, i]] * 3 + [[lo, hi]], f'predicted ({d})',
+             'measured bits per byte' if i == 0 else None,
+             legend=list(PRED) + ['identity'] if i == 0 else None,
+             fmts=('o', 's', '^', 'k-'), axes=ax)
+    ax.fill_between([lo, hi], [lo - 2 * FLOOR, hi - 2 * FLOOR],
+                    [lo + 2 * FLOOR, hi + 2 * FLOOR], color='0.85', zorder=0)
+ax2 = axes[3]  # (b) the simplex
+ids = train_ids + held_ids + [r['run_id'] for r in RUNS['runs']
+                              if r['arm'] in ('pure', 'uniform-cos')]
+pts = d2l.barycentric(np.array([REC[r]['weights'] for r in ids]))
+dots = ax2.scatter(*pts.T, c=[T_DEP @ final(r) for r in ids], cmap='viridis')
+ax2.plot(*d2l.barycentric(np.array([RUNS['selection']['weights']])).T, '*',
+         color='red', markersize=16, label='selected for t_dep')
+ax2.plot(*d2l.barycentric(np.vstack([np.eye(3), np.eye(3)[:1]])).T, 'k-',
+         linewidth=0.8)
+for (x, y), d in zip(d2l.barycentric(np.eye(3)), DOMAINS):
+    ax2.annotate(d, (x, y), xytext=(0, -14 if y == 0 else 6),
+                 textcoords='offset points', ha='center')
+ax2.set_aspect('equal')
+ax2.axis('off')
+ax2.legend(loc='upper left', fontsize='small')
+bar = fig.colorbar(dots, ax=ax2, label='t_dep bits per byte', shrink=0.8)
+fig.tight_layout()
+```
+
+## Choosing a Mixture
+:label:`subsec_lm_mix_choose`
+
+<!-- Prose: optimize the fitted function for t_dep (and t_avg); the
+interval from refitting on bootstrap resamples of the training runs; the
+pitfall of choosing target weights after the results. -->
+
+```{.python .input #data-mixtures-choose}
+%%tab pytorch
+choice = {k: d2l.choose_mixture(f, T_DEP, max_weight=C['max_weight'])
+          for k, f in FITS.items()}
+choice['ridge, t_avg'] = d2l.choose_mixture(FITS['ridge'], T_AVG,
+                                            max_weight=C['max_weight'])
+assert np.allclose(choice[C['select']][0], RUNS['selection']['weights'],
+                   atol=1e-9), 'the launcher chose another mixture'
+rng, boot = np.random.default_rng(0), []
+for _ in range(200):
+    k = rng.integers(0, len(Wt), len(Wt))
+    boot.append(d2l.choose_mixture(d2l.fit_mixture_regression(
+        Wt[k], Lt[k], C['select']), T_DEP, max_weight=C['max_weight']))
+bw, bv = np.array([w for w, _ in boot]), np.array([v for _, v in boot])
+print(TAG, 'selected mixtures (weights web, code, math) and their predicted '
+      'target-weighted bits per byte:')
+for k, (w, v) in choice.items():
+    print(f'  {k:12s} w = ({", ".join(f"{x:.3f}" for x in w)}), predicted '
+          f'{v:.4f}')
+lo, hi = np.percentile(bv, [2.5, 97.5])
+print(f'{C["select"]} on 200 bootstrap resamples of the training runs: '
+      f'predicted t_dep {np.median(bv):.4f} [{lo:.4f}, {hi:.4f}]; weights '
+      'from ' + ', '.join(f'{d} {a:.2f}-{b:.2f}' for d, a, b in zip(
+          DOMAINS, *np.percentile(bw, [2.5, 97.5], axis=0))))
+```
+
+<!-- Prose: DoReMi's one difference: it minimizes the worst-case excess loss
+over a reference model; its weight step is the closed-form maximizer of a
+KL-regularized objective (one display); the excess loss is clipped per
+token against the reference model on the same tokens. Our miniature
+follows the paper: the reference is the uniform-mixture proxy (the
+uniform-wsd-s0 run's final checkpoint). -->
+
+```{.python .input #data-mixtures-doremi-def}
+%%tab pytorch
+#@save
+def doremi_weights(ref_model, proxy_model, domain_batches, steps, cfg,
+                   eta=1.0, smooth=1e-3, *, lr=None):
+    """DoReMi's domain weights: train proxy_model on the alpha-weighted
+    domain losses while alpha follows each domain's excess loss over the
+    frozen ref_model (per token, clipped at 0) by multiplicative weights.
+    domain_batches(step) gives {domain: LongTensor (b, seq_len + 1)};
+    lr(step) is the learning rate (default cfg.lr). Returns the
+    step-averaged alpha and the per-step trace."""
+    opt, trace, alpha = d2l._proxy_optimizer(proxy_model, cfg), [], None
+    ref_model.eval()
+    for step in range(steps):
+        batches = domain_batches(step)
+        if alpha is None:
+            alpha = np.full(len(batches), 1 / len(batches))
+        excess = []
+        with torch.no_grad():  # both models on the same tokens
+            for X in batches.values():
+                nll = [torch.cat([d2l._per_token_nll(m, Xm, cfg) for Xm in
+                                  X.split(cfg.micro_batch)])
+                       for m in (proxy_model, ref_model)]
+                excess.append(d2l._doremi_excess(*nll))
+        alpha = d2l._doremi_step(alpha, excess, eta, smooth)
+        for g in opt.param_groups:
+            g['lr'] = cfg.lr if lr is None else lr(step)
+        for a, X in zip(alpha, batches.values()):  # step on sum_i alpha_i l_i
+            for Xm in X.split(cfg.micro_batch):
+                (a * d2l._per_token_nll(proxy_model, Xm, cfg).mean()
+                 * len(Xm) / len(X)).backward()
+        nn.utils.clip_grad_norm_(proxy_model.parameters(), 1.0)
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        trace.append(dict(alpha=alpha.tolist(), excess=excess))
+    return np.mean([t['alpha'] for t in trace], 0), trace
+```
+
+<!-- Prose: the D3 checks on a three-domain quadratic toy (the closed-form
+step against a numerical maximization; the averaged weights near the
+saddle's), the per-token clipping on a batch where clipping the domain mean
+would give no excess at all, and the weights of the registered run set. -->
+
+```{.python .input #data-mixtures-doremi}
+%%tab pytorch
+a_t, g, eta = np.array([0.5, 0.3, 0.2]), np.array([0.4, 1.0, -0.2]), 0.7
+softmax = lambda z: np.exp(z - z.max()) / np.exp(z - z.max()).sum()
+kl_obj = lambda z: -(softmax(z) @ g - np.sum(softmax(z) * np.log(
+    softmax(z) / a_t)) / eta)  # <alpha, g> - KL(alpha || alpha_t) / eta
+num = softmax(optimize.minimize(kl_obj, np.zeros(3), method='BFGS',
+                                options=dict(gtol=1e-12)).x)
+gap = np.abs(num - d2l._doremi_step(a_t, g, eta, 0.0)).max()
+assert gap < 1e-8
+c, theta, alpha, path = np.array([0.0, 1.0, 3.0]), 0.0, np.full(3, 1 / 3), []
+for _ in range(20000):  # l_i = (theta - c_i)^2, reference loss 0
+    alpha = d2l._doremi_step(alpha, (theta - c)**2, 0.05, 1e-3)
+    theta -= 0.01 * 2 * alpha @ (theta - c)
+    path.append(alpha)
+grid = np.linspace(-1, 4, 501)
+A_ub = -((grid[None] - c[:, None])**2).T  # max v s.t. sum_i a_i l_i >= v
+lp = optimize.linprog(np.r_[np.zeros(3), -1], A_ub=np.c_[A_ub, np.ones(
+    len(grid))], b_ub=np.zeros(len(grid)), A_eq=[[1, 1, 1, 0]], b_eq=[1],
+                      bounds=[(0, 1)] * 3 + [(None, None)])
+saddle = np.abs(np.mean(path, 0) - lp.x[:3]).max()
+assert saddle < 0.02
+print(f'D3: closed-form step = numerical maximizer to {gap:.1e}; averaged '
+      f'weights {np.mean(path, 0).round(3)} vs the saddle '
+      f'{lp.x[:3].round(3)} (largest gap {saddle:.3f})')
+torch.manual_seed(0)
+ref, prox = (d2l._proxy_model(tiny, seed) for seed in (0, 1))
+Xd = torch.randint(0, tiny.vocab_size, (2, tiny.seq_len + 1))
+with torch.no_grad():
+    lp_, lr_ = (d2l._per_token_nll(m, Xd, tiny) for m in (prox, ref))
+per_token = torch.clamp(lp_ - lr_, min=0).mean().item()
+per_domain = max((lp_ - lr_).mean().item(), 0.0)
+_, tr = d2l.doremi_weights(ref, prox, lambda k: {'d': Xd}, 1, tiny)
+assert abs(tr[0]['excess'][0] - per_token) < 1e-6
+assert abs(per_domain - per_token) > 1e-3  # domain-level clipping differs
+print(f'excess loss of a random batch: per token {per_token:.4f}, from the '
+      f'domain mean {per_domain:.4f}; doremi_weights used '
+      f'{tr[0]["excess"][0]:.4f}')
+DOREMI_W = np.array(RUNS['doremi']['weights'])
+steps = [0, len(RUNS['doremi']['trace']) // 4, len(RUNS['doremi']['trace'])
+         // 2, len(RUNS['doremi']['trace']) - 1]
+print(TAG, 'DoReMi weights (step average):', dict(zip(
+    DOMAINS, DOREMI_W.round(3).tolist())), '| alpha at steps', {
+    s + 1: np.round(RUNS['doremi']['trace'][s]['alpha'], 3).tolist()
+    for s in steps})
+```
+
+<!-- Prose: the four arms (uniform, regression-selected, DoReMi, staged),
+all on the WSD schedule with the same peak, three data-order seeds each,
+compared seed-paired with uniform; a difference counts only if all three
+share a sign and the mean exceeds two sigma_seed (C5, C6). The plot: three
+seed points and the mean per arm, the uniform mean and a band of two
+sigma_seed. -->
+
+```{.python .input #data-mixtures-arms}
+%%tab pytorch
+ARMS = ('uniform', 'regsel', 'doremi', 'staged')
+SEEDS = C['arm_seeds']
+T = {a: np.array([T_DEP @ final(f'{"uniform-wsd" if a == "uniform" else a}'
+                                f'-s{s}') for s in SEEDS]) for a in ARMS}
+sig_t = T['uniform'].std(ddof=1)  # sigma_seed of t_dep bits per byte
+rows = []
+for a in ARMS:
+    w = REC[f'{"uniform-wsd" if a == "uniform" else a}-s0']
+    d = T[a] - T['uniform']
+    real = a != 'uniform' and len(set(np.sign(d))) == 1 and abs(
+        d.mean()) > 2 * sig_t
+    rows.append(dict(arm=a, weights=np.round(w['weights'], 3).tolist(),
+                     stages=[(f, np.round(v, 3).tolist())
+                             for f, v in w['stages'] or []],
+                     t_dep_mean=T[a].mean(),
+                     diffs=np.round(d, 4).tolist(), real=real))
+ARM_TABLE = pd.DataFrame(rows)
+print(TAG, f'sigma_seed of t_dep bits per byte {sig_t:.4f} (3 uniform '
+      'seeds); differences seed-paired with uniform:')
+print(ARM_TABLE.round(4).to_string(index=False))
+ax = d2l.plot_intervals(
+    list(ARMS), {'mean': ([T[a].mean() for a in ARMS],) * 3}, 'arm',
+    't_dep bits per byte', reference=T['uniform'].mean(),
+    marks={'seeds': ('.', {'mean': (np.repeat(np.arange(4), len(SEEDS)),
+                                    np.concatenate([T[a] for a in ARMS]))})})
+band = ax.axhspan(T['uniform'].mean() - 2 * sig_t,
+                  T['uniform'].mean() + 2 * sig_t, color='0.85', zorder=0)
+```
+
+## Annealing and Curricula
+:label:`subsec_lm_mix_anneal`
+
+<!-- Prose: stable-then-decay (restate sec_scheduler): the staged
+arm reads the uniform mixture for 80% of its tokens and the selected one in
+the 20% decay; per-domain bits per byte of the staged and uniform arms
+(mean over the three seeds), with the stage boundary (C7); recency against
+capability; Dolma 3 / Olmo 3's mid-training mix and SmolLM2's stages as
+cases (numbers only as their cards state them). -->
+
+```{.python .input #data-mixtures-staged}
+%%tab pytorch
+curve = lambda a, d: np.mean([[e['domains'][d]['bpb'] for e in REC[
+    f'{a}-s{s}']['evals']] for s in SEEDS], 0)
+x = [e['tokens'] for e in REC['staged-s0']['evals']]
+staged = REC['staged-s0']
+n_steps, frac = staged['steps'], staged['stages'][0][0]
+start = n_steps - round((1 - frac) * n_steps)  # first step of the decay
+boundary = start * staged['tokens'] // n_steps
+fig, axes = d2l.plt.subplots(1, 3, figsize=(11, 3), sharex=True)
+for ax, d in zip(axes, DOMAINS):
+    d2l.plot(x, [curve('uniform-wsd', d), curve('staged', d)], 'tokens',
+             f'{d} bits per byte', legend=['uniform', 'staged'], axes=ax)
+    ax.axvline(boundary, color='black', linestyle=':', linewidth=1)
+fig.tight_layout()
+dec = [k for k, e in enumerate(REC['staged-s0']['evals'])
+       if e['step'] > start]  # evaluations inside the decay
+print(TAG, 'change of bits per byte during the decay, staged minus uniform '
+      f'(mean over {len(SEEDS)} seeds; staged weights '
+      f'{np.round(REC["staged-s0"]["stages"][0][1], 3).tolist()}):')
+print({d: round(float((curve('staged', d) - curve('uniform-wsd', d))[dec[-1]]
+                      - (curve('staged', d) - curve('uniform-wsd', d))
+                      [dec[0] - 1]), 4) for d in DOMAINS})
+```
+
+## What Transfers
+:label:`subsec_lm_mix_transfer`
+
+<!-- Prose: the limits of extrapolation (tokens per parameter, model size,
+tokenizer) in one paragraph; which statements this section makes at which
+scale (T1 now; the firm claims wait for the T2 logs); the T2 campaign
+package. Whether proxy rankings transfer to a larger model is not measured
+here (exercise). Forward to sec_lm_continued_pretraining only if
+the label resolves when the prose is written. -->
+
+```{.python .input #data-mixtures-t2-package}
+%%tab pytorch
+c2 = d2l.MIX_CONFIGS['t2']
+print('T2 campaign:', f'python tools/run_mix_campaign.py --config t2 '
+      '--gpus 0,1,2,3 --out ../data/lm/rerun/mix-t2 (a faster node)')
+print((ROOT / 'tools' / 'lm_campaigns.yaml').read_text().strip())
+n2 = len(d2l.mix_run_specs(c2))
+if SMOKE is not None:
+    print(f'from the smoke on {SMOKE["device"]}: {SMOKE["campaign_flop"]:.2g} '
+          f'FLOP for {n2} runs; A100-hours at the measured MFU '
+          f'{SMOKE["predicted_a100_hours"]}, peak memory per run '
+          f'{SMOKE["peak_mem_gib"]} GiB')
+print('writes:', ', '.join([c2['runs_key']] + sorted(set(c2['keys'].values()))
+                           + [c2['code_meta']]))
+```
+
+## Summary
+
+<!-- Prose (stage 2): 3-6 sentences, every T1 number with "at T1 scale". -->
+
+## Exercises
+
+<!-- Prose (stage 2): the six exercises of the specification (20.4 part 8). -->

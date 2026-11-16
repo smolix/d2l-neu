@@ -9997,6 +9997,52 @@ class NgramIndex:
             hits.update(self.keys.get(g, ()))
         return sorted(hits.items(), key=lambda t: (-t[1], str(t[0])))
 
+MIX_DOMAINS = ('web', 'code', 'math')
+
+MIX_TARGETS = {  # target weights over MIX_DOMAINS, fixed before any run
+    't_avg': (1 / 3, 1 / 3, 1 / 3), 't_dep': (0.7, 0.15, 0.15)}
+
+ProxyCfg = collections.namedtuple('ProxyCfg', (
+    'num_hiddens num_heads num_blks seq_len batch micro_batch lr '
+    'warmup_frac schedule decay_frac final_lr_frac weight_decay betas dtype '
+    'vocab_size'), defaults=(1024, 64, 16, 1e-3, 0.02, 'cosine', 0.2, 0.1,
+                             0.1, (0.9, 0.95), 'bfloat16', 32768))
+
+MIX_CONFIGS = {  # the study's two tiers, fixed before any run
+    't1': dict(  # one RTX 4090
+        name='t1', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
+        proxy=ProxyCfg(num_hiddens=128, num_heads=2, num_blks=2),
+        tokens=2**24, pool='20m', val='1m', pool_tokens=20_000_000,
+        val_tokens=1_000_000, keys={
+            'web-20m': 'lm-mix-web-20m-v1', 'math-20m': 'lm-mix-math-20m-v1',
+            'web-val-1m': 'lm-mix-val-1m-v1',
+            'math-val-1m': 'lm-mix-val-1m-v1'},
+        code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v1',
+        train=((1.0, 6), (0.3, 6)), held=4, design_seeds=(0, 1),
+        cos_seeds=(1, 2), arm_seeds=(0, 1, 2), max_weight=0.9,
+        lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**23, lr_tie=1e-3,
+        eval_at=tuple(k / 8 for k in range(1, 9)),
+        arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='ridge',
+        doremi=dict(eta=1.0, smooth=1e-3)),
+    't2': dict(  # the campaign package: run on a faster node
+        name='t2', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
+        proxy=ProxyCfg(num_hiddens=320, num_heads=5, num_blks=8),
+        tokens=2**27, pool='150m', val='2m', pool_tokens=150_000_000,
+        val_tokens=2_000_000, keys={
+            'web-150m': 'lm-mix-web-150m-v1',
+            'math-150m': 'lm-mix-math-150m-v1',
+            'web-val-2m': 'lm-mix-val-2m-v1',
+            'math-val-2m': 'lm-mix-val-2m-v1'},
+        code_meta='lm-mix-code150-meta-v1', runs_key='lm-mix-runs-t2-v1',
+        train=((1.0, 8), (0.3, 8)), held=8, design_seeds=(0, 1),
+        cos_seeds=(1, 2), arm_seeds=(0, 1, 2), max_weight=0.9,
+        lr_grid=(5e-4, 1e-3, 2e-3), lr_tokens=2**25, lr_tie=1e-3,
+        eval_at=tuple(k / 8 for k in range(1, 9)),
+        arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='ridge',
+        doremi=dict(eta=1.0, smooth=1e-3))}
+
 def fwedu_bucket(doc_id):
     """The bucket (0-255) of a FineWeb-Edu document: the first 32 bits of
     the SHA-256 of its id string (as released, <urn:uuid:...>) mod 256.
@@ -10011,12 +10057,225 @@ FWEDU_BUCKETS = {  # bucket ranges of the chapter's FineWeb-Edu splits
     'side_val': range(8, 9),    # side validation
     'train': range(9, 256)}     # the reference model's training shards
 
+def temperature_weights(sizes, alpha):
+    """Sampling probabilities p_i proportional to n_i ** alpha: alpha = 1
+    samples in proportion to size, alpha = 0 uniformly. sizes is a dict or
+    a sequence; the result has the same form.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    n = np.array(list(sizes.values()) if isinstance(sizes, dict) else sizes,
+                 dtype=float)
+    p = np.exp(alpha * np.log(n) - (alpha * np.log(n)).max())
+    p = p / p.sum()
+    return dict(zip(sizes, p)) if isinstance(sizes, dict) else p
+
+def effective_tokens(unique, epochs, r_star=15.4):
+    """Effective data D' = U + U R* (1 - exp(-R / R*)) of `epochs` passes
+    over `unique` tokens (R = epochs - 1 repeats): the data-constrained law
+    of Muennighoff et al. with their fitted R*. Less than one epoch counts
+    what was read.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    E = np.asarray(epochs, dtype=float)
+    R = np.maximum(E - 1, 0)
+    return unique * np.minimum(E, 1) + unique * r_star * (1 - np.exp(
+        -R / r_star))
+
+def sample_mixtures(n, domains, concentration, seed, max_weight=0.9,
+                    min_weight=0.0):
+    """n mixtures over the domains, (n, m), drawn from the symmetric
+    Dirichlet(concentration) and kept only when every weight lies in
+    [min_weight, max_weight] (rejection), in the order drawn.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    rng, m, out = np.random.default_rng(seed), len(domains), []
+    while len(out) < n:
+        w = rng.dirichlet(np.full(m, concentration))
+        if min_weight <= w.min() and w.max() <= max_weight:
+            out.append(w)
+    return np.array(out)
+
 def bpb_from_nll(sum_nll_nats, n_bytes):
     """Bits per byte from a summed negative log-likelihood in nats and the
     number of UTF-8 bytes the scored tokens stand for.
 
     Defined in :numref:`sec_lm_data_mixtures`"""
     return float(sum_nll_nats) / (math.log(2) * n_bytes)
+
+def train_proxy_lm(pools, weights, tokens, cfg, seed=0, eval_sets=None,
+                   stages=None, log_every=50, *, max_epochs=1,
+                   stop_tokens=None, eval_at=(0.25, 0.5, 0.75, 1.0),
+                   curve_windows=None, byte_lengths=None, ckpt=None,
+                   ckpt_every=256, resume=None, compile=False, device=None):
+    """Train a proxy d2l.GPT on `tokens` tokens of the mixture `weights`
+    ({domain: weight}) of token pools, switching to the weights of each
+    (fraction, weights) of `stages` at that fraction of the run. Returns
+    the log [step, tokens, loss, seconds], the evaluations at the
+    fractions eval_at (per domain of eval_sets, on the first curve_windows
+    windows), the final evaluation on all windows, the epochs each pool was
+    read, throughput, parameter count and peak memory. stop_tokens ends the
+    run early on the same schedule and stream; ckpt/resume save and restore
+    a checkpoint every ckpt_every steps."""
+    device = device or d2l.try_gpu()
+    stream = d2l._ProxyStream(pools, weights, tokens, cfg.seq_len, cfg.batch,
+                              seed, stages, max_epochs)
+    steps, per_step = stream.steps, cfg.batch * cfg.seq_len
+    stop = steps if stop_tokens is None else min(steps,
+                                                 stop_tokens // per_step)
+    model = d2l._proxy_model(cfg, seed).to(device)
+    opt = d2l._proxy_optimizer(model, cfg)
+    if eval_sets and byte_lengths is None:
+        byte_lengths = d2l.token_byte_lengths(d2l.r2_tokenizer())
+    evaluate = lambda n: {d: d2l._proxy_eval(model, getattr(v, 'ids', v), cfg,
+                                             byte_lengths, n)
+                          for d, v in (eval_sets or {}).items()}
+    key = d2l._proxy_fingerprint(weights, stages, tokens, seed, cfg)
+    start, out = 0, dict(log=[], evals=[], final=None, seconds=0.0)
+    if resume is not None:
+        start, out = d2l._proxy_load(resume, model, opt, key)
+    fwd = torch.compile(model) if compile else model
+    at = {max(1, round(f * steps)): f for f in eval_at}
+    if device.type == 'cuda':
+        torch.cuda.reset_peak_memory_stats(device)
+    seconds = seconds0 = out['seconds']
+    for step in range(start, stop):
+        t0 = time.perf_counter()
+        for g in opt.param_groups:
+            g['lr'] = cfg.lr * d2l._lr_at(step, steps, cfg)
+        X = torch.from_numpy(stream.batch(step)[0]).to(device)
+        loss = 0.0
+        for Xm in X.split(cfg.micro_batch):  # gradient accumulation
+            l = d2l._per_token_nll(fwd, Xm, cfg).mean() * len(Xm) / len(X)
+            l.backward()
+            loss = loss + l.detach()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        if ((step + 1) % log_every == 0 or step + 1 in at or step + 1 == stop
+                or ckpt and (step + 1) % ckpt_every == 0):
+            loss = float(loss)  # waits for the GPU, so the clock is right
+            seconds += time.perf_counter() - t0
+            out['log'].append([step + 1, (step + 1) * per_step, loss,
+                               round(seconds, 3)])
+        else:
+            seconds += time.perf_counter() - t0
+        if step + 1 in at and eval_sets:
+            out['evals'].append(dict(frac=at[step + 1], step=step + 1,
+                                     tokens=(step + 1) * per_step,
+                                     domains=evaluate(curve_windows)))
+        if ckpt and ((step + 1) % ckpt_every == 0 or step + 1 == stop):
+            out['seconds'] = seconds
+            d2l._proxy_save(ckpt, model, opt, step + 1, out, key)
+    if stop == steps and eval_sets:
+        out['final'] = evaluate(None)
+    out.update(steps=steps, stopped_at=stop, n_params=d2l.num_params(model),
+               epochs=stream.epochs, epoch_starts=stream.epoch_starts,
+               seconds=seconds, throughput=(stop - start) * per_step / max(
+                   seconds - seconds0, 1e-9),
+               peak_mem=(torch.cuda.max_memory_allocated(device) / 2**30
+                         if device.type == 'cuda' else None))
+    return out
+
+def fit_mixture_regression(W, L, kind='ridge', **kw):
+    """A predictor f(w) -> per-domain losses fitted on mixtures W (n, m)
+    and their losses L (n, k): 'ridge' on the first m - 1 weights and an
+    intercept (alpha=1e-3, intercept not shrunk), 'gbm' (scikit-learn
+    gradient boosting per output, seed 0) or 'mixlaw' (L_i = c_i + k_i
+    exp(sum_j t_ij w_j) per output, least squares from 8 seeded starts).
+    f takes (m,) or (n', m); f.params holds the fitted parameters.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    W, L = np.asarray(W, dtype=float), np.asarray(L, dtype=float)
+    design = lambda w: np.hstack([np.ones((len(w), 1)), w[:, :-1]])
+    if kind == 'ridge':
+        X = design(W)
+        P = kw.get('alpha', 1e-3) * np.eye(X.shape[1])
+        P[0, 0] = 0
+        params = np.linalg.solve(X.T @ X + P, X.T @ L)
+        predict = lambda w: design(w) @ params
+    elif kind == 'gbm':
+        from sklearn.ensemble import GradientBoostingRegressor
+        opts = dict(n_estimators=200, learning_rate=0.05, max_depth=2)
+        models = [GradientBoostingRegressor(random_state=0, **{**opts, **kw})
+                  .fit(W, L[:, i]) for i in range(L.shape[1])]
+        params = None
+        predict = lambda w: np.stack([g.predict(w) for g in models], -1)
+    elif kind == 'mixlaw':
+        from scipy.optimize import least_squares
+        rng, params = np.random.default_rng(0), []
+        law = lambda p, w: p[0] + p[1] * np.exp(w @ p[2:])
+        for y in L.T:
+            fits = [least_squares(lambda p: law(p, W) - y, np.concatenate(
+                [[rng.uniform(0, y.min())], [rng.uniform(0.1, 2)],
+                 rng.normal(0, 1, W.shape[1])]), xtol=1e-15, ftol=1e-15,
+                gtol=1e-15, max_nfev=5000) for _ in range(8)]
+            params.append(min(fits, key=lambda r: r.cost).x)
+        params = np.array(params)
+        predict = lambda w: np.stack([law(p, w) for p in params], -1)
+    else:
+        raise ValueError(f'unknown kind {kind!r}')
+    def f(w):
+        w = np.asarray(w, dtype=float)
+        return predict(w[None])[0] if w.ndim == 1 else predict(w)
+    f.params = params
+    return f
+
+def choose_mixture(f, target, n_grid=5000, seed=0, max_weight=0.9):
+    """The mixture w with no weight above max_weight that minimizes the
+    fitted target loss target @ f(w): the best of n_grid Dirichlet(1)
+    points, polished by Nelder-Mead on w = softmax(z). Returns (w, the
+    predicted target loss).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    from scipy.optimize import minimize
+    t = np.asarray(target, dtype=float)
+    G = d2l.sample_mixtures(n_grid, t, 1.0, seed, max_weight)
+    vals = f(G) @ t
+    softmax = lambda z: np.exp(z - z.max()) / np.exp(z - z.max()).sum()
+    def loss(z):
+        w = softmax(z)
+        return np.inf if w.max() > max_weight else float(f(w) @ t)
+    res = minimize(loss, np.log(G[vals.argmin()]), method='Nelder-Mead',
+                   options=dict(xatol=1e-8, fatol=1e-10, maxiter=4000))
+    if res.fun < vals.min():
+        return softmax(res.x), float(res.fun)
+    return G[vals.argmin()], float(vals.min())
+
+def doremi_weights(ref_model, proxy_model, domain_batches, steps, cfg,
+                   eta=1.0, smooth=1e-3, *, lr=None):
+    """DoReMi's domain weights: train proxy_model on the alpha-weighted
+    domain losses while alpha follows each domain's excess loss over the
+    frozen ref_model (per token, clipped at 0) by multiplicative weights.
+    domain_batches(step) gives {domain: LongTensor (b, seq_len + 1)};
+    lr(step) is the learning rate (default cfg.lr). Returns the
+    step-averaged alpha and the per-step trace.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    opt, trace, alpha = d2l._proxy_optimizer(proxy_model, cfg), [], None
+    ref_model.eval()
+    for step in range(steps):
+        batches = domain_batches(step)
+        if alpha is None:
+            alpha = np.full(len(batches), 1 / len(batches))
+        excess = []
+        with torch.no_grad():  # both models on the same tokens
+            for X in batches.values():
+                nll = [torch.cat([d2l._per_token_nll(m, Xm, cfg) for Xm in
+                                  X.split(cfg.micro_batch)])
+                       for m in (proxy_model, ref_model)]
+                excess.append(d2l._doremi_excess(*nll))
+        alpha = d2l._doremi_step(alpha, excess, eta, smooth)
+        for g in opt.param_groups:
+            g['lr'] = cfg.lr if lr is None else lr(step)
+        for a, X in zip(alpha, batches.values()):  # step on sum_i alpha_i l_i
+            for Xm in X.split(cfg.micro_batch):
+                (a * d2l._per_token_nll(proxy_model, Xm, cfg).mean()
+                 * len(Xm) / len(X)).backward()
+        nn.utils.clip_grad_norm_(proxy_model.parameters(), 1.0)
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        trace.append(dict(alpha=alpha.tolist(), excess=excess))
+    return np.mean([t['alpha'] for t in trace], 0), trace
 
 R2_SPLIT_REGEX = (r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+"""
                   r"""|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)"""
@@ -18015,6 +18274,348 @@ def token_byte_lengths(tokenizer):
         else:  # SentencePiece-style: U+2581 marks a space
             out[i] = len(piece.replace('▁', ' ').encode('utf-8'))
     return out
+
+def _stage_weights(weights, stages, names, steps):
+    """(steps, m) array: the mixture each step samples from. weights maps a
+    domain to its weight from step 0; stages lists (fraction, weights)
+    pairs, each in force from step steps - round((1 - fraction) * steps)
+    on (so a stage at 0.8 starts with the decay of a WSD schedule whose
+    decay_frac is 0.2).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    def vec(w):
+        v = np.array([float(w.get(d, 0.0)) for d in names])
+        bad = v.min() < 0 or math.fabs(v.sum() - 1) > 1e-9
+        if set(w) - set(names) or bad:
+            raise ValueError(f'weights {w} are not a mixture over {names}')
+        return v
+    out = np.tile(vec(weights), (steps, 1))
+    for frac, w in sorted(stages or []):
+        out[steps - round((1 - frac) * steps):] = vec(w)
+    return out
+
+def _proxy_alloc(step_weights, batch):
+    """Domain of every sequence, in allocation order: sequence s goes to
+    the domain whose count lags its target (the running sum of its
+    weights) the most, ties to the lower index, so after n sequences each
+    domain holds its target count to within one sequence. Also returns
+    each sequence's ordinal among its domain's sequences.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    m = step_weights.shape[1]
+    target, count = [0.0] * m, [0] * m
+    dom, ordinal = [], []
+    for w in step_weights.tolist():
+        for _ in range(batch):
+            for i in range(m):
+                target[i] += w[i]
+            i = max(range(m), key=lambda j: (target[j] - count[j], -j))
+            dom.append(i)
+            ordinal.append(count[i])
+            count[i] += 1
+    return np.array(dom, dtype=np.int64), np.array(ordinal, dtype=np.int64)
+
+class _ProxyStream:
+    """The training stream of a proxy run: the domain and the window of
+    every sequence of every batch. A pool of N tokens has (N - 1) //
+    seq_len windows of seq_len + 1 tokens starting at multiples of
+    seq_len; a domain reads its windows in epochs, each a fresh
+    permutation seeded by (seed, the domain's name, epoch); the sequences
+    of a batch are shuffled by (seed, step). The stream depends only on
+    (seed, weights, stages, tokens) and the pools, and batch(step) keeps no
+    state, so a resumed run reads exactly the batches it would have read.
+    A domain that needs more than max_epochs passes over its pool raises
+    before any batch is drawn.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    def __init__(self, pools, weights, tokens, seq_len, batch, seed=0,
+                 stages=None, max_epochs=1):
+        import zlib
+        self.names = list(pools)
+        self.ids = [getattr(pools[d], 'ids', pools[d]) for d in self.names]
+        self.seq_len, self.batch_size, self.seed = seq_len, batch, seed
+        self.steps = tokens // (batch * seq_len)
+        if self.steps < 1:
+            raise ValueError(f'{tokens} tokens make no batch of {batch} x '
+                             f'{seq_len}')
+        self.windows = [(len(ids) - 1) // seq_len for ids in self.ids]
+        self.weights = _stage_weights(weights, stages, self.names, self.steps)
+        dom, ordinal = _proxy_alloc(self.weights, batch)
+        for k in range(self.steps):  # shuffle the order within each batch
+            sl = slice(k * batch, (k + 1) * batch)
+            perm = np.random.default_rng([seed, 1, k]).permutation(batch)
+            dom[sl], ordinal[sl] = dom[sl][perm], ordinal[sl][perm]
+        self.dom, self.ordinal = dom, ordinal
+        counts = np.bincount(dom, minlength=len(self.names))
+        self.epochs, self.epoch_starts = {}, {}
+        for i, d in enumerate(self.names):
+            W = self.windows[i]
+            if counts[i] and (W == 0 or counts[i] > max_epochs * W):
+                raise ValueError(
+                    f'{d}: the run reads {counts[i]:,} windows, the pool '
+                    f'holds {W:,} (max_epochs={max_epochs}): the pool is '
+                    'smaller than the run needs')
+            self.epochs[d] = counts[i] / W if W else 0.0
+            rows = np.flatnonzero((dom == i) & (ordinal % max(W, 1) == 0))
+            self.epoch_starts[d] = sorted(int(r // batch) for r in rows)
+        self._salt = [zlib.crc32(d.encode()) for d in self.names]
+        self._perms = {}
+
+    def window(self, i, ordinal):
+        """Index of the window that domain i's ordinal-th sequence reads."""
+        epoch, pos = divmod(int(ordinal), self.windows[i])
+        if (i, epoch) not in self._perms:
+            self._perms[i, epoch] = np.random.default_rng(
+                [self.seed, 0, self._salt[i], epoch]).permutation(
+                self.windows[i])
+        return self._perms[i, epoch][pos]
+
+    def batch(self, step):
+        """Token windows of the step's batch, np.int64 (batch, seq_len +
+        1), and the domain index of each row."""
+        sl = slice(step * self.batch_size, (step + 1) * self.batch_size)
+        L, rows = self.seq_len, []
+        for i, o in zip(self.dom[sl], self.ordinal[sl]):
+            j = self.window(i, o)
+            rows.append(self.ids[i][j * L:j * L + L + 1])
+        return np.stack(rows).astype(np.int64), self.dom[sl]
+
+def _lr_at(step, steps, cfg):
+    """Learning-rate factor of a proxy run at step (0-based): a linear
+    warmup over warmup_frac of the steps, then a cosine to final_lr_frac
+    (schedule 'cosine') or a constant rate and a linear decay to
+    final_lr_frac over the last decay_frac of the steps ('wsd').
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    warm = max(1, round(cfg.warmup_frac * steps))
+    if step < warm:
+        return (step + 1) / warm
+    f = cfg.final_lr_frac
+    if cfg.schedule == 'cosine':
+        p = min((step - warm + 1) / max(steps - warm, 1), 1.0)
+        return f + (1 - f) * 0.5 * (1 + math.cos(math.pi * p))
+    if cfg.schedule == 'wsd':
+        start = steps - round(cfg.decay_frac * steps)
+        if step < start:
+            return 1.0
+        return 1 - (1 - f) * min((step - start + 1) / (steps - start), 1.0)
+    raise ValueError(f'unknown schedule {cfg.schedule!r}')
+
+def _proxy_model(cfg, seed=0):
+    """A fresh proxy d2l.GPT of the configuration (RoPE, RMSNorm, SwiGLU,
+    tied embeddings), initialized on the CPU from the seed, so its weights
+    do not depend on the device it then runs on.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    torch.manual_seed(seed)
+    return d2l.GPT(cfg.vocab_size, num_hiddens=cfg.num_hiddens,
+                   num_heads=cfg.num_heads, num_blks=cfg.num_blks,
+                   max_len=cfg.seq_len)
+
+def _proxy_optimizer(model, cfg):
+    """AdamW with the configuration's betas and weight decay on the weight
+    matrices only (not on embeddings, norms or biases), as d2l.LMOptimizer;
+    the learning rate is set before every step.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    named = list(model.named_parameters())
+    decay = [p for n, p in named if p.ndim == 2 and 'emb' not in n]
+    rest = [p for n, p in named if p.ndim != 2 or 'emb' in n]
+    return torch.optim.AdamW([{'params': decay,
+                               'weight_decay': cfg.weight_decay},
+                              {'params': rest, 'weight_decay': 0.0}],
+                             lr=cfg.lr, betas=tuple(cfg.betas))
+
+def _per_token_nll(model, X, cfg):
+    """Negative log-likelihood in nats of every next token of the windows
+    X (batch, seq_len + 1), (batch, seq_len), in float32 (or the float64 of
+    a float64 model); bf16 autocast if the configuration says so.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    with torch.autocast(X.device.type, dtype=torch.bfloat16,
+                        enabled=cfg.dtype == 'bfloat16'):
+        logits = model(X[:, :-1])
+    if logits.dtype != torch.float64:
+        logits = logits.float()
+    return F.cross_entropy(logits.flatten(0, 1), X[:, 1:].flatten(),
+                           reduction='none').view(X.shape[0], -1)
+
+@torch.no_grad()
+def _proxy_eval(model, ids, cfg, byte_lengths, n_windows=None, device=None):
+    """Summed NLL (nats), scored tokens, the UTF-8 bytes they stand for and
+    bits per byte of model on the windows of a validation pool (all of
+    them, or the first n_windows).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    device = device or next(model.parameters()).device
+    L = cfg.seq_len
+    n = (len(ids) - 1) // L
+    n = n if n_windows is None else min(n, n_windows)
+    nll, n_bytes, was_training = 0.0, 0, model.training
+    model.eval()
+    for a in range(0, n, cfg.micro_batch):
+        X = np.stack([ids[j * L:j * L + L + 1]
+                      for j in range(a, min(n, a + cfg.micro_batch))])
+        X = X.astype(np.int64)
+        n_bytes += int(byte_lengths[X[:, 1:]].sum())
+        nll += _per_token_nll(model, torch.from_numpy(X).to(device),
+                              cfg).double().sum().item()
+    model.train(was_training)
+    return dict(nll=nll, n_tokens=n * L, n_bytes=n_bytes,
+                bpb=d2l.bpb_from_nll(nll, n_bytes))
+
+def _proxy_fingerprint(weights, stages, tokens, seed, cfg):
+    """SHA-256 of what determines a proxy run, so a checkpoint is never
+    resumed into another run.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    spec = dict(weights=weights, stages=stages, tokens=tokens, seed=seed,
+                cfg=cfg._asdict())
+    return hashlib.sha256(json.dumps(spec, sort_keys=True,
+                                     default=list).encode()).hexdigest()
+
+def _proxy_save(path, model, opt, step, out, fingerprint):
+    """Write a checkpoint atomically (a temporary file, then a rename): the
+    model, the optimizer, the next step, the results so far and the RNG
+    states. The data stream needs no cursor: batch(step) is stateless.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    tmp = f'{path}.tmp'
+    torch.save(dict(model=model.state_dict(), opt=opt.state_dict(),
+                    step=step, out=out, fingerprint=fingerprint,
+                    rng=torch.get_rng_state(),
+                    cuda_rng=(torch.cuda.get_rng_state_all()
+                              if torch.cuda.is_available() else None)), tmp)
+    os.replace(tmp, path)
+
+def _proxy_load(path, model, opt, fingerprint):
+    """Restore a checkpoint into model and opt; returns (step, out).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    ck = torch.load(path, map_location='cpu', weights_only=False)
+    if ck['fingerprint'] != fingerprint:
+        raise ValueError(f'{path} belongs to another run')
+    model.load_state_dict(ck['model'])
+    opt.load_state_dict(ck['opt'])
+    torch.set_rng_state(ck['rng'])
+    if ck['cuda_rng'] is not None and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(ck['cuda_rng'])
+    return ck['step'], ck['out']
+
+def proxy_flops(cfg, tokens, n_params):
+    """Training FLOP of a proxy run: 6 N D for the parameters plus
+    12 L d T D for attention (the non-causal convention, which counts the
+    masked half of the score matrix too).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    return (6 * n_params * tokens
+            + 12 * cfg.num_blks * cfg.num_hiddens * cfg.seq_len * tokens)
+
+def _doremi_step(alpha, excess, eta, smooth):
+    """DoReMi's domain-weight update: alpha_i exp(eta excess_i),
+    normalized (the maximizer of <alpha, excess> - KL(alpha || alpha_t) /
+    eta on the simplex), then mixed with the uniform weights.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    a = np.log(np.asarray(alpha, float)) + eta * np.asarray(excess, float)
+    a = np.exp(a - a.max())
+    a = a / a.sum()
+    return (1 - smooth) * a + smooth / len(a)
+
+def _doremi_excess(nll_proxy, nll_ref):
+    """Per-domain excess loss of DoReMi: the mean over a domain's tokens of
+    max(loss of the proxy - loss of the reference, 0), clipped per token.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    return torch.clamp(nll_proxy - nll_ref, min=0).mean().item()
+
+def barycentric(W):
+    """2-D coordinates of three-domain mixtures (n, 3) in the triangle with
+    the first domain at (0, 0), the second at (1, 0) and the third at the
+    top.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    W = np.asarray(W, float)
+    return np.stack([W[:, 1] + 0.5 * W[:, 2], math.sqrt(3) / 2 * W[:, 2]], 1)
+
+def mix_run_specs(c):
+    """The run design of a MIX_CONFIGS entry c, in launch order: the
+    learning-rate runs, the pure-domain runs, the training and held-out
+    mixtures, the uniform seeds (cosine and WSD), the DoReMi proxy and the
+    three arms. Each spec is a dict(run_id, arm, weights, stages, seed,
+    schedule, tokens, eval_at, depends); weights of None are resolved when
+    the run starts (the regression's choice, DoReMi's weights).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    D = c['domains']
+    uniform = [1 / len(D)] * len(D)
+    def spec(run_id, arm, weights, seed=0, schedule='cosine', stages=None,
+             tokens=c['tokens'], eval_at=c['eval_at'], depends=()):
+        return dict(run_id=run_id, arm=arm, weights=weights, stages=stages,
+                    seed=seed, schedule=schedule, tokens=tokens,
+                    eval_at=list(eval_at), depends=list(depends))
+    lr_ids = [f'lr-{lr:.0e}' for lr in c['lr_grid']]
+    runs = [spec(i, 'lr', uniform, tokens=c['lr_tokens'], eval_at=(1.0,))
+            for i in lr_ids]
+    after_lr = dict(depends=lr_ids)
+    runs += [spec(f'pure-{d}', 'pure', list(np.eye(len(D))[k]), **after_lr)
+             for k, d in enumerate(D)]
+    train = []
+    for conc, n in c['train']:
+        W = d2l.sample_mixtures(n, D, conc, c['design_seeds'][0],
+                                c['max_weight'])
+        train += [spec(f'train-a{conc:g}-{k:02d}'.replace('.', ''),
+                       'train', list(w), **after_lr)
+                  for k, w in enumerate(W)]
+    runs += train
+    W = d2l.sample_mixtures(c['held'], D, 1.0, c['design_seeds'][1],
+                            c['max_weight'])
+    runs += [spec(f'held-{k:02d}', 'held', list(w), **after_lr)
+             for k, w in enumerate(W)]
+    runs += [spec(f'uniform-cos-s{s}', 'uniform-cos', uniform, seed=s,
+                  **after_lr) for s in c['cos_seeds']]
+    arm = dict(schedule='wsd', eval_at=c['arm_eval_at'])
+    runs += [spec(f'uniform-wsd-s{s}', 'uniform', uniform, seed=s, **arm,
+                  **after_lr) for s in c['arm_seeds']]
+    runs.append(spec('doremi-proxy', 'doremi-weights', uniform,
+                     depends=lr_ids + ['uniform-wsd-s0']))
+    picked = lr_ids + [r['run_id'] for r in train]
+    for s in c['arm_seeds']:
+        runs.append(spec(f'regsel-s{s}', 'regsel', None, seed=s, **arm,
+                         depends=picked))
+        runs.append(spec(f'doremi-s{s}', 'doremi', None, seed=s, **arm,
+                         depends=lr_ids + ['doremi-proxy']))
+        runs.append(spec(f'staged-s{s}', 'staged', uniform, seed=s, **arm,
+                         stages=None, depends=picked))
+    return runs
+
+def mix_pools(c, root=os.path.join('..', 'data', 'lm', 'mix')):
+    """(pools, val), each {domain: TokenPool}, of a MIX_CONFIGS entry c:
+    the files tools/build_mix_pools.py wrote under root/<name>/ where they
+    exist, else the registered keys of c['keys']. A domain with neither is
+    left out.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    out = ({}, {})
+    for k, size in enumerate((c['pool'], 'val-' + c['val'])):
+        for d in c['domains']:
+            name = f'{d}-{size}'
+            local = os.path.join(root, c['name'], name + '.bin')
+            if os.path.exists(local):
+                out[k][d] = d2l.load_pool(local)
+            elif c['keys'].get(name) in d2l.DATA_HUB:
+                out[k][d] = d2l.load_pool(c['keys'][name], name)
+    return out
+
+def campaign_record(spec, result, cfg):
+    """The JSON record a finished proxy run leaves in a campaign file: its
+    spec, its learning rate and train_proxy_lm's results, every array
+    turned into a list.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    rec = dict(spec, lr=cfg.lr, **result)
+    return json.loads(json.dumps(rec, default=lambda x: (
+        x.tolist() if hasattr(x, 'tolist') else float(x))))
 
 R2_SPECIALS = (['<|endoftext|>', '<|pad|>', '<|im_start|>', '<|im_end|>']
                + [f'<|reserved_{i}|>' for i in range(4, 32)])

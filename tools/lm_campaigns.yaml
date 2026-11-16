@@ -1,0 +1,38 @@
+# Compute campaigns of the Language Models part: runs that go beyond the
+# book's RTX 4090 server, packaged ready to launch (plan, "Compute
+# campaigns"). A campaign is run only after the author's go; its outputs are
+# then uploaded (make upload-data), registered in DATA_HUB and the section is
+# re-run. Fields left null are filled from the smoke run of the T1
+# regeneration (data-mixtures.md, mix-t1: OUT/smoke-t2.json).
+campaigns:
+  - id: 20.4-mixtures-t2
+    section: sec_lm_data_mixtures (chapter_lm-data/data-mixtures.md)
+    tier: T2
+    status: packaged, not run (author ruling 2026-11-14)
+    config: d2l.MIX_CONFIGS['t2'] (20.3M-parameter proxies, 2^27 tokens per run)
+    command: >-
+      python tools/build_mix_pools.py --config t2 --check --tar data/lm/mix/upload &&
+      python tools/run_mix_campaign.py --config t2 --gpus 0,1,2,3
+      --out data/lm/rerun/mix-t2
+    resume: python tools/run_mix_campaign.py --config t2 --gpus 0,1,2,3 --out data/lm/rerun/mix-t2 --resume
+    depends:
+      - lm-r2-tokenizer-v1
+      - HuggingFaceFW/fineweb-edu sample/10BT @ 87f09149 (about 8 files for 150M bucket-1-7 tokens)
+      - HuggingFaceTB/finemath finemath-4plus @ e92b25a6
+      - codeparrot/codeparrot-clean @ 35a59fb0 (permissive licences only; built locally, never hosted)
+    runs: 42 proxy runs plus 3 learning-rate runs at 2^25 tokens (d2l.mix_run_specs)
+    flop: 8.8e17  # arithmetic (6ND + 12 L d T D per run); the smoke prints its own count
+    predicted_a100_hours: null  # smoke: FLOP / (312e12 x MFU measured on the 4090); arithmetic 3.1 at MFU 0.25, 5.2 at 0.15
+    memory_gib_per_run: null  # smoke peak; expected at most 8, two runs per 40 GB card
+    stop_hours: null  # 1.5 x predicted wall hours on the chosen node (--max-hours)
+    gpus: the runs are independent after the learning-rate choice; one worker per GPU
+    outputs:
+      - data/lm/rerun/mix-t2/lm-mix-runs-t2-v1.json -> lm-mix-runs-t2-v1
+      - data/lm/mix/upload/lm-mix-web-150m-v1.tar -> lm-mix-web-150m-v1
+      - data/lm/mix/upload/lm-mix-math-150m-v1.tar -> lm-mix-math-150m-v1
+      - data/lm/mix/upload/lm-mix-val-2m-v1.tar -> lm-mix-val-2m-v1
+      - data/lm/mix/upload/lm-mix-code150-meta-v1.tar -> lm-mix-code150-meta-v1
+    after: >-
+      upload and register the five keys in data-mixtures.md's data-hub cell;
+      re-run the section (RUNS_KEY switches to lm-mix-runs-t2-v1 by itself);
+      rewrite every sentence marked "campaign: lm-mix-runs-t2-v1"

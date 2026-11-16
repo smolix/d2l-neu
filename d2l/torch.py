@@ -10296,6 +10296,220 @@ def doremi_weights(ref_model, proxy_model, domain_batches, steps, cfg,
         trace.append(dict(alpha=alpha.tolist(), excess=excess))
     return np.mean([t['alpha'] for t in trace], 0), trace
 
+REPHRASE_PROMPTS = {  # style -> user prompt; {text} is the source chunk
+    'wiki': (
+        'Rewrite the following text as a clear, well-organized passage in '
+        'the style of an encyclopedia article, in plain prose paragraphs '
+        'without Markdown, headings or lists. Preserve every fact, name and '
+        'number; add nothing that the text does not say. Reply with the '
+        'passage only.\n\nText:\n{text}'),
+    'qa': (
+        'Rewrite the following text as a conversation of questions and '
+        'answers in plain text without Markdown: each question on its own '
+        'line starting with "Question:", each answer on its own line '
+        'starting with "Answer:". Preserve every fact, name and number; add '
+        'nothing that the text does not say. Reply with the conversation '
+        'only.\n\nText:\n{text}')}
+
+def _token_pieces(tokenizer):
+    """The text of every token id decoded on its own, cached on the
+    tokenizer (a byte of a multi-byte character decodes to U+FFFD).
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    pieces = getattr(tokenizer, '_d2l_pieces', None)
+    if pieces is None:
+        pieces = tokenizer.batch_decode([[i] for i in range(len(tokenizer))])
+        tokenizer._d2l_pieces = pieces
+    return pieces
+
+def chunk_doc(token_ids, tokenizer, max_tokens=400):
+    """Split a document's token ids into chunks of at most max_tokens ids:
+    sentences end at a line break or at ., ? or ! (closing quotes and
+    brackets allowed) before white space; each chunk takes whole sentences
+    while they fit, and a sentence longer than max_tokens is cut into
+    pieces of max_tokens. The chunks concatenate to the document.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    ids, pieces = [int(t) for t in token_ids], d2l._token_pieces(tokenizer)
+    ends = []  # positions after which a sentence ends
+    for k, t in enumerate(ids):
+        p = pieces[t]
+        after = pieces[ids[k + 1]] if k + 1 < len(ids) else ' '
+        core = p.rstrip().rstrip('"\')]”’»')
+        if k + 1 == len(ids) or '\n' in p or (core[-1:] in ('.', '?', '!')
+                                              and (p[-1:].isspace() or
+                                                   after[:1].isspace())):
+            ends.append(k + 1)
+    chunks, cur, start = [], [], 0
+    for end in ends:
+        sentence, start = ids[start:end], end
+        if len(cur) + len(sentence) <= max_tokens:
+            cur += sentence
+            continue
+        if cur:
+            chunks.append(cur)
+        while len(sentence) > max_tokens:  # an over-long sentence
+            chunks.append(sentence[:max_tokens])
+            sentence = sentence[max_tokens:]
+        cur = sentence
+    return chunks + [cur] if cur else chunks
+
+def _synth_generate(model, tokenizer, prompts, max_new_tokens, batch,
+                    temperature, top_p, seed, progress=None):
+    """Generate a chat reply to every prompt (non-thinking template) in
+    batches of similar length with left padding; batch k samples under the
+    seed (seed, k). Returns (text, n_out, finish) per prompt in input
+    order: finish is 'stop' when the model ended its turn and 'length'
+    when max_new_tokens ran out first. progress: seconds between lines.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    import transformers
+    chat = [tokenizer.apply_chat_template(
+        [{'role': 'user', 'content': p}], tokenize=False,
+        add_generation_prompt=True, enable_thinking=False) for p in prompts]
+    ids = tokenizer(chat, add_special_tokens=False)['input_ids']
+    stop = model.generation_config.eos_token_id
+    stop = [stop] if isinstance(stop, int) else list(stop)
+    pad = (tokenizer.pad_token_id if tokenizer.pad_token_id is not None
+           else stop[0])
+    sample = temperature > 0
+    cfg = transformers.GenerationConfig(  # nothing from the model's config
+        max_new_tokens=max_new_tokens, do_sample=sample,
+        temperature=temperature if sample else None,
+        top_p=top_p if sample else None, top_k=0 if sample else None,
+        eos_token_id=stop, pad_token_id=pad)
+    device = next(model.parameters()).device
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out, t0, shown, n_new = [None] * len(ids), time.time(), time.time(), 0
+    for k, a in enumerate(range(0, len(order), batch)):
+        rows = order[a:a + batch]
+        T = max(len(ids[i]) for i in rows)
+        X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i] for i in rows],
+                         device=device)
+        mask = torch.tensor([[0] * (T - len(ids[i])) + [1] * len(ids[i])
+                             for i in rows], device=device)
+        torch.manual_seed(int(np.random.SeedSequence(
+            [seed, k]).generate_state(1)[0]))
+        with torch.inference_mode():
+            G = model.generate(input_ids=X, attention_mask=mask,
+                               generation_config=cfg)
+        for i, new in zip(rows, G[:, T:].tolist()):
+            n = next((j for j, t in enumerate(new) if t in stop), None)
+            new = new if n is None else new[:n]
+            out[i] = (tokenizer.decode(new).strip(), len(new),
+                      'length' if n is None else 'stop')
+            n_new += len(new)
+        if progress and time.time() - shown > progress:
+            shown = time.time()
+            print(f'  {a + len(rows):,} of {len(ids):,} prompts, '
+                  f'{n_new / (shown - t0):,.0f} new tokens/s')
+    return out
+
+class _SynthRows(list):
+    """The rows rephrase_docs keeps; .dropped holds the rows it dropped.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    dropped = ()
+
+def rephrase_docs(chunks, style, model_id='Qwen/Qwen3.5-2B',
+                  max_new_tokens=512, batch=32, temperature=0.7, top_p=0.9,
+                  seed=0, backend='hf', *, model=None, progress=None):
+    """Rewrite each text of chunks in a style: a key of REPHRASE_PROMPTS,
+    a prompt template with {text}, or a list of either, one per chunk.
+    Non-thinking chat generation by model_id, or by model=(model,
+    tokenizer) loaded once by the caller; backend='vllm' generates with
+    vLLM instead. Returns dict(index, src, out, n_out, finish) rows in
+    input order; rows that ran out of tokens (finish 'length') are dropped
+    and kept in .dropped. A reply with thinking text fails an assertion.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    styles = style if isinstance(style, (list, tuple)) else [style] * len(
+        chunks)
+    prompts = [d2l.REPHRASE_PROMPTS.get(s, s).format(text=c)
+               for s, c in zip(styles, chunks)]
+    if backend == 'hf':
+        m, tok = model or d2l.load_hf(model_id)
+        outs = d2l._synth_generate(m, tok, prompts, max_new_tokens, batch,
+                                   temperature, top_p, seed, progress)
+    elif backend == 'vllm':  # the serving path, if vLLM is installed
+        from vllm import LLM, SamplingParams
+        llm = LLM(model_id, revision=d2l.HF_REVISIONS.get(model_id),
+                  seed=seed)
+        replies = llm.chat(
+            [[{'role': 'user', 'content': p}] for p in prompts],
+            SamplingParams(temperature=temperature, top_p=top_p,
+                           max_tokens=max_new_tokens, seed=seed),
+            chat_template_kwargs=dict(enable_thinking=False))
+        outs = [(r.outputs[0].text.strip(), len(r.outputs[0].token_ids),
+                 'length' if r.outputs[0].finish_reason == 'length'
+                 else 'stop') for r in replies]
+    else:
+        raise ValueError(f'unknown backend {backend!r}')
+    rows = d2l._SynthRows()
+    rows.dropped = []
+    for i, (c, (text, n, finish)) in enumerate(zip(chunks, outs)):
+        assert '<think>' not in text and '</think>' not in text, (
+            f'chunk {i}: thinking text in the reply')
+        (rows.dropped if finish == 'length' else rows).append(dict(
+            index=i, src=c, out=text, n_out=n, finish=finish))
+    return rows
+
+def synth_metrics(src, out):
+    """Fidelity of a rewrite out of src: copy_rate, the Jaccard similarity
+    of their sets of character 5-grams (1 for a copy); num_fidelity, the
+    share of src's distinct digit strings (7, 1,300, 3.14) that are digit
+    strings of out (1 if src has none); len_ratio, len(out) / len(src) in
+    characters.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    grams = lambda t: {t[i:i + 5] for i in range(len(t) - 4)}
+    nums = lambda t: set(re.findall(r'\d+(?:[.,]\d+)*', t))
+    a, b, s = grams(src), grams(out), nums(src)
+    return dict(copy_rate=len(a & b) / len(a | b) if a | b else float(
+        src == out), num_fidelity=len(s & nums(out)) / len(s) if s else 1.0,
+                len_ratio=len(out) / max(len(src), 1))
+
+def distinct_n(texts, n=4):
+    """The share of distinct word n-grams among all word n-grams of texts
+    (NFC, lowercase, \\w+ words, as d2l.shingles); 0.0 without n-grams.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    grams = [g for t in texts for g in d2l.shingles(t, n)]
+    return len(set(grams)) / len(grams) if grams else 0.0
+
+def collapse_sim(n, generations, mode='replace', reps=1000, seed=0, mu=0.0,
+                 sigma=1.0):
+    """The Gaussian refit: generation 0 is N(mu, sigma^2); fit t (t >= 1)
+    fits (mu, sigma^2) by maximum likelihood to the n points just sampled
+    from fit t - 1 ('replace') or to all points sampled so far
+    ('accumulate'). Returns, per generation 0..generations over reps
+    repetitions, the mean of mu_t, its variance var_mu, the mean of
+    sigma_t^2 and the Monte-Carlo standard errors se_var_mu, se_sigma2.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    if mode not in ('replace', 'accumulate'):
+        raise ValueError(f'unknown mode {mode!r}')
+    rng = np.random.default_rng(seed)
+    M, S = np.zeros((generations + 1, reps)), np.zeros((generations + 1,
+                                                        reps))
+    M[0], S[0] = mu, sigma**2
+    total = np.zeros(reps), np.zeros(reps), 0  # sum, sum of squares, count
+    for t in range(1, generations + 1):
+        x = rng.normal(M[t - 1][:, None], np.sqrt(S[t - 1])[:, None],
+                       (reps, n))
+        s1, s2, k = x.sum(1), (x**2).sum(1), n
+        if mode == 'accumulate':
+            total = total[0] + s1, total[1] + s2, total[2] + n
+            s1, s2, k = total
+        M[t] = s1 / k
+        S[t] = np.maximum(s2 / k - M[t]**2, 0)
+    dev = M - M.mean(1, keepdims=True)
+    var = (dev**2).mean(1) * reps / (reps - 1)
+    m4 = (dev**4).mean(1)
+    return dict(mean=M.mean(1), var_mu=var, mean_sigma2=S.mean(1),
+                se_var_mu=np.sqrt(np.maximum(m4 - var**2, 0) / reps),
+                se_sigma2=S.std(1, ddof=1) / math.sqrt(reps))
+
 R2_SPLIT_REGEX = (r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+"""
                   r"""|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)"""
                   r"""|\s+""")

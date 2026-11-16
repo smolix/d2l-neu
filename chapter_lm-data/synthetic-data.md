@@ -39,3 +39,1349 @@ when the section is written.
 - Code and documentation: [Nemotron-CC-v2 dataset card](https://huggingface.co/datasets/nvidia/Nemotron-CC-v2) (the current rephrased crawl, its rephraser and its licence); [Cosmopedia](https://huggingface.co/datasets/HuggingFaceTB/cosmopedia) (generation prompts for the inspection set); [Qwen3.5-2B model card](https://huggingface.co/Qwen/Qwen3.5-2B) (the chat template's thinking switch); [vLLM](https://github.com/vllm-project/vllm) (the optional generation backend); [Datatrove](https://github.com/huggingface/datatrove).
 - Courses, tutorials and blogs: [Smol Training Playbook](https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook) (synthetic data and rephrasing discussion); [CS336](https://cs336.stanford.edu/) (synthetic data lecture).
 -->
+
+<!-- Prose (stage 2): the opening. A small model turns a messy web page
+into a clean encyclopedic paragraph that keeps every number (the cell below
+shows one live rephrase beside its source); the reader wants a million such
+paragraphs; the section measures, at an equal token budget, what rephrased
+text adds to and takes from the original, and closes on who may train on
+generated text at all. Every arm sentence carries "at T1 scale
+(8.1M-parameter proxies, 2^24 tokens)" (author ruling: 20.5 runs its
+proxy comparison at T1). -->
+
+```{.python .input #synthetic-data-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #synthetic-data-extras}
+%%tab pytorch
+import collections
+import gzip
+import hashlib
+import io
+import itertools
+import json
+import os
+import pathlib
+import re
+import tarfile
+import textwrap
+import time
+import pandas as pd
+from scipy import sparse
+```
+
+<!-- Prose: what the notebook computes, what runs on a GPU (the live
+rephrasings: Qwen3.5-2B in bf16), what a normal build reads from registered
+files (the rephrased corpus, the judge's verdicts, the fifteen proxy runs),
+and that D2L_RERUN names the regenerations. -->
+
+```{.python .input #synthetic-data-config}
+%%tab pytorch
+REPHRASER = 'Qwen/Qwen3.5-2B'  # writes the rephrasings (non-thinking)
+JUDGE = 'Qwen/Qwen3.5-4B'      # checks them: a different, larger model
+PROXY_SMALL = d2l.ProxyCfg(num_hiddens=192, num_heads=3, num_blks=4)
+TOKENS, U, VAL_U = 2**24, 2**21, 2**19  # per run; S1 and S2; validation
+SEEDS, EPOCHS = (0, 1, 2), 8  # data-order seeds; arm A's passes over S1
+CHUNK_TOKENS = 400            # the bound of chunk_doc
+FILTERS = dict(len_ratio=(0.5, 1.5), copy_rate=0.8, num_fidelity=1.0)
+SAMPLING = dict(temperature=0.7, top_p=0.9, seed=0)  # every rephrasing
+GPU = torch.cuda.is_available()
+SMALL = not GPU  # the CPU path: fewer, shorter live generations
+DTYPE = torch.bfloat16 if GPU else torch.float32
+N_LIVE = 4 if SMALL else 60          # live chunks per style
+LIVE_MAX_SRC = 100 if SMALL else CHUNK_TOKENS  # their longest source
+N_SAMPLES = 3 if SMALL else 9        # samples of one prompt (opening)
+OPEN_MAX_SRC = 200                   # the opening chunk's longest source
+NEW_TOKENS = 192 if SMALL else 512   # max_new_tokens of a live rephrase
+SEED_TOKENS = 96 if SMALL else 300   # max_new_tokens from a seed
+LIVE_BATCH, REGEN_BATCH, N_JUDGE = 32, 96, 60  # 96: a part in < 30 min
+REGEN_TOKENS = 512                   # max_new_tokens of the corpus
+EVAL_AT, LOG_EVERY, LIVE_TOKENS = (0.25, 0.5, 0.75, 1.0), 4, 2**20
+ARTIFACTS = {  # name: (registered key, file a regeneration writes)
+    'reph-s1': ('lm-rephrase-fwedu-5m-v1', 'reph-s1.jsonl.gz'),
+    'reph-s2': ('lm-rephrase-fwedu-5m-v1', 'reph-s2.jsonl.gz'),
+    'reph-val': ('lm-rephrase-fwedu-5m-v1', 'reph-val.jsonl.gz'),
+    'reph-judge': ('lm-data-synth-results-v1', 'reph-judge.json'),
+    'synth-arms': ('lm-data-synth-results-v1', 'synth-arms.json')}
+RERUN = d2l.lm_rerun(ARTIFACTS)
+assert GPU or not RERUN, 'the regenerations generate text and train on a GPU'
+RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
+with torch.device('meta'):
+    N_PARAMS = d2l.num_params(d2l._proxy_model(PROXY_SMALL))
+TIER = (f'at T1 scale ({N_PARAMS / 1e6:.1f}M-parameter proxies, '
+        f'2^{round(math.log2(TOKENS))} tokens per run)')
+TAG = f'[{TIER}]'
+print(f'proxy comparison {TIER.replace(" scale", "")}; GPU={GPU}, '
+      f'SMALL={SMALL}, regenerating: {", ".join(sorted(RERUN)) or "none"}')
+for m in (REPHRASER, JUDGE):
+    print(f'  {m}@{d2l.HF_REVISIONS[m][:8]}')
+```
+
+<!-- Prose: the registry; the rephrased corpus is FineWeb-Edu text (ODC-By)
+rewritten by an Apache-2.0 model, shipped as text with its attribution. -->
+
+<!-- Pending registrations (cells step, 2026-11-16): the two keys below join
+this cell as a `#@save` block once uploaded (W11 regenerations). Until then
+a normal build stops at the first cell that reads one, with a KeyError. -->
+
+```{.python .input #synthetic-data-data-hub}
+%%tab pytorch
+TAR_KEY, TAR_FILE = 'lm-rephrase-fwedu-5m-v1', 'lm-rephrase-fwedu-5m-v1.tar'
+RES_KEY = 'lm-data-synth-results-v1'
+UPSTREAM = ('lm-mix-web-20m-v1', 'lm-mix-val-1m-v1', 'lm-mix-runs-t1-v1',
+            'lm-r2-tokenizer-v1')
+for name, keys in (('this section', (TAR_KEY, RES_KEY)),
+                   ('upstream', UPSTREAM)):
+    print(f'{name}: registered', ', '.join(
+        k for k in keys if k in d2l.DATA_HUB) or 'none', '| pending:',
+          ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
+RESULTS = None  # the registered results: judge verdicts, runs, Cosmopedia
+
+def write_json(path, obj):
+    with open(path, 'w') as f:
+        json.dump(obj, f, sort_keys=True, default=float)
+
+if RES_KEY in d2l.DATA_HUB:
+    with open(d2l.lm_artifact(RES_KEY)) as f:
+        RESULTS = json.load(f)
+```
+
+<!-- Prose: the pipeline in four steps (chunk, prompt, generate, filter);
+the two prompts (WRAP's styles, each with "preserve every fact, name and
+number; add nothing"); chunks of at most 400 tokens cut at sentence ends;
+Transformers' batched generate rather than d2l.generate, because batching
+and per-row stopping need it (one sentence); the chat template's thinking
+switch (enable_thinking=False; restate sec_lm_hf_models in one clause). -->
+
+```{.python .input #synthetic-data-rephrase-defs}
+%%tab pytorch
+#@save
+REPHRASE_PROMPTS = {  # style -> user prompt; {text} is the source chunk
+    'wiki': (
+        'Rewrite the following text as a clear, well-organized passage in '
+        'the style of an encyclopedia article, in plain prose paragraphs '
+        'without Markdown, headings or lists. Preserve every fact, name and '
+        'number; add nothing that the text does not say. Reply with the '
+        'passage only.\n\nText:\n{text}'),
+    'qa': (
+        'Rewrite the following text as a conversation of questions and '
+        'answers in plain text without Markdown: each question on its own '
+        'line starting with "Question:", each answer on its own line '
+        'starting with "Answer:". Preserve every fact, name and number; add '
+        'nothing that the text does not say. Reply with the conversation '
+        'only.\n\nText:\n{text}')}
+
+#@save
+def _token_pieces(tokenizer):
+    """The text of every token id decoded on its own, cached on the
+    tokenizer (a byte of a multi-byte character decodes to U+FFFD)."""
+    pieces = getattr(tokenizer, '_d2l_pieces', None)
+    if pieces is None:
+        pieces = tokenizer.batch_decode([[i] for i in range(len(tokenizer))])
+        tokenizer._d2l_pieces = pieces
+    return pieces
+
+#@save
+def chunk_doc(token_ids, tokenizer, max_tokens=400):
+    """Split a document's token ids into chunks of at most max_tokens ids:
+    sentences end at a line break or at ., ? or ! (closing quotes and
+    brackets allowed) before white space; each chunk takes whole sentences
+    while they fit, and a sentence longer than max_tokens is cut into
+    pieces of max_tokens. The chunks concatenate to the document."""
+    ids, pieces = [int(t) for t in token_ids], d2l._token_pieces(tokenizer)
+    ends = []  # positions after which a sentence ends
+    for k, t in enumerate(ids):
+        p = pieces[t]
+        after = pieces[ids[k + 1]] if k + 1 < len(ids) else ' '
+        core = p.rstrip().rstrip('"\')]”’»')
+        if k + 1 == len(ids) or '\n' in p or (core[-1:] in ('.', '?', '!')
+                                              and (p[-1:].isspace() or
+                                                   after[:1].isspace())):
+            ends.append(k + 1)
+    chunks, cur, start = [], [], 0
+    for end in ends:
+        sentence, start = ids[start:end], end
+        if len(cur) + len(sentence) <= max_tokens:
+            cur += sentence
+            continue
+        if cur:
+            chunks.append(cur)
+        while len(sentence) > max_tokens:  # an over-long sentence
+            chunks.append(sentence[:max_tokens])
+            sentence = sentence[max_tokens:]
+        cur = sentence
+    return chunks + [cur] if cur else chunks
+
+#@save
+def _synth_generate(model, tokenizer, prompts, max_new_tokens, batch,
+                    temperature, top_p, seed, progress=None):
+    """Generate a chat reply to every prompt (non-thinking template) in
+    batches of similar length with left padding; batch k samples under the
+    seed (seed, k). Returns (text, n_out, finish) per prompt in input
+    order: finish is 'stop' when the model ended its turn and 'length'
+    when max_new_tokens ran out first. progress: seconds between lines."""
+    import transformers
+    chat = [tokenizer.apply_chat_template(
+        [{'role': 'user', 'content': p}], tokenize=False,
+        add_generation_prompt=True, enable_thinking=False) for p in prompts]
+    ids = tokenizer(chat, add_special_tokens=False)['input_ids']
+    stop = model.generation_config.eos_token_id
+    stop = [stop] if isinstance(stop, int) else list(stop)
+    pad = (tokenizer.pad_token_id if tokenizer.pad_token_id is not None
+           else stop[0])
+    sample = temperature > 0
+    cfg = transformers.GenerationConfig(  # nothing from the model's config
+        max_new_tokens=max_new_tokens, do_sample=sample,
+        temperature=temperature if sample else None,
+        top_p=top_p if sample else None, top_k=0 if sample else None,
+        eos_token_id=stop, pad_token_id=pad)
+    device = next(model.parameters()).device
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out, t0, shown, n_new = [None] * len(ids), time.time(), time.time(), 0
+    for k, a in enumerate(range(0, len(order), batch)):
+        rows = order[a:a + batch]
+        T = max(len(ids[i]) for i in rows)
+        X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i] for i in rows],
+                         device=device)
+        mask = torch.tensor([[0] * (T - len(ids[i])) + [1] * len(ids[i])
+                             for i in rows], device=device)
+        torch.manual_seed(int(np.random.SeedSequence(
+            [seed, k]).generate_state(1)[0]))
+        with torch.inference_mode():
+            G = model.generate(input_ids=X, attention_mask=mask,
+                               generation_config=cfg)
+        for i, new in zip(rows, G[:, T:].tolist()):
+            n = next((j for j, t in enumerate(new) if t in stop), None)
+            new = new if n is None else new[:n]
+            out[i] = (tokenizer.decode(new).strip(), len(new),
+                      'length' if n is None else 'stop')
+            n_new += len(new)
+        if progress and time.time() - shown > progress:
+            shown = time.time()
+            print(f'  {a + len(rows):,} of {len(ids):,} prompts, '
+                  f'{n_new / (shown - t0):,.0f} new tokens/s')
+    return out
+
+#@save
+class _SynthRows(list):
+    """The rows rephrase_docs keeps; .dropped holds the rows it dropped."""
+    dropped = ()
+
+#@save
+def rephrase_docs(chunks, style, model_id='Qwen/Qwen3.5-2B',
+                  max_new_tokens=512, batch=32, temperature=0.7, top_p=0.9,
+                  seed=0, backend='hf', *, model=None, progress=None):
+    """Rewrite each text of chunks in a style: a key of REPHRASE_PROMPTS,
+    a prompt template with {text}, or a list of either, one per chunk.
+    Non-thinking chat generation by model_id, or by model=(model,
+    tokenizer) loaded once by the caller; backend='vllm' generates with
+    vLLM instead. Returns dict(index, src, out, n_out, finish) rows in
+    input order; rows that ran out of tokens (finish 'length') are dropped
+    and kept in .dropped. A reply with thinking text fails an assertion."""
+    styles = style if isinstance(style, (list, tuple)) else [style] * len(
+        chunks)
+    prompts = [d2l.REPHRASE_PROMPTS.get(s, s).format(text=c)
+               for s, c in zip(styles, chunks)]
+    if backend == 'hf':
+        m, tok = model or d2l.load_hf(model_id)
+        outs = d2l._synth_generate(m, tok, prompts, max_new_tokens, batch,
+                                   temperature, top_p, seed, progress)
+    elif backend == 'vllm':  # the serving path, if vLLM is installed
+        from vllm import LLM, SamplingParams
+        llm = LLM(model_id, revision=d2l.HF_REVISIONS.get(model_id),
+                  seed=seed)
+        replies = llm.chat(
+            [[{'role': 'user', 'content': p}] for p in prompts],
+            SamplingParams(temperature=temperature, top_p=top_p,
+                           max_tokens=max_new_tokens, seed=seed),
+            chat_template_kwargs=dict(enable_thinking=False))
+        outs = [(r.outputs[0].text.strip(), len(r.outputs[0].token_ids),
+                 'length' if r.outputs[0].finish_reason == 'length'
+                 else 'stop') for r in replies]
+    else:
+        raise ValueError(f'unknown backend {backend!r}')
+    rows = d2l._SynthRows()
+    rows.dropped = []
+    for i, (c, (text, n, finish)) in enumerate(zip(chunks, outs)):
+        assert '<think>' not in text and '</think>' not in text, (
+            f'chunk {i}: thinking text in the reply')
+        (rows.dropped if finish == 'length' else rows).append(dict(
+            index=i, src=c, out=text, n_out=n, finish=finish))
+    return rows
+```
+
+<!-- Prose: three cheap fidelity measures: copy rate (character 5-gram
+Jaccard of source and rewrite: 1 for a copy), number fidelity (the share of
+the source's digit strings found in the rewrite), length ratio; and
+diversity as the share of distinct word 4-grams. -->
+
+```{.python .input #synthetic-data-metric-defs}
+%%tab pytorch
+#@save
+def synth_metrics(src, out):
+    """Fidelity of a rewrite out of src: copy_rate, the Jaccard similarity
+    of their sets of character 5-grams (1 for a copy); num_fidelity, the
+    share of src's distinct digit strings (7, 1,300, 3.14) that are digit
+    strings of out (1 if src has none); len_ratio, len(out) / len(src) in
+    characters."""
+    grams = lambda t: {t[i:i + 5] for i in range(len(t) - 4)}
+    nums = lambda t: set(re.findall(r'\d+(?:[.,]\d+)*', t))
+    a, b, s = grams(src), grams(out), nums(src)
+    return dict(copy_rate=len(a & b) / len(a | b) if a | b else float(
+        src == out), num_fidelity=len(s & nums(out)) / len(s) if s else 1.0,
+                len_ratio=len(out) / max(len(src), 1))
+
+#@save
+def distinct_n(texts, n=4):
+    """The share of distinct word n-grams among all word n-grams of texts
+    (NFC, lowercase, \\w+ words, as d2l.shingles); 0.0 without n-grams."""
+    grams = [g for t in texts for g in d2l.shingles(t, n)]
+    return len(set(grams)) / len(grams) if grams else 0.0
+```
+
+<!-- Prose: the opening's chunk (the first chunk of the first web-pool
+documents with three or more numbers and at most 200 tokens) beside its
+wiki-style rewrite, then the cheap failure: the same prompt sampled nine
+times at temperature 0.7, whose outputs share most of their 4-grams. The
+pool is 20.4's FineWeb-Edu web pool (side buckets 1-7), decoded with the
+reference tokenizer; S1, S2 and the validation chunks are fixed here. -->
+
+```{.python .input #synthetic-data-opening}
+%%tab pytorch
+ATTRIBUTION = ('Source text: FineWeb-Edu (HuggingFaceFW/fineweb-edu, '
+               f'sample-10BT, ODC-By 1.0); rewrites by {REPHRASER} '
+               '(Apache-2.0)')
+KEYS = d2l.MIX_CONFIGS['t1']['keys']
+WEB = d2l.load_pool(KEYS['web-20m'])
+VAL = d2l.load_pool(KEYS['web-val-1m'], 'web-val-1m')
+TOK = d2l.r2_tokenizer()
+EOS = WEB.meta['eos_id']
+for P in (WEB, VAL):  # the reference tokenizer made both pools
+    assert P.meta['tokenizer_sha256'] == d2l.R2_TOKENIZER_SHA256
+
+def documents(pool):
+    """(doc_id, token ids without the EOS) of every document of a pool."""
+    root = pathlib.Path(pool.ids.filename).parent
+    with gzip.open(root / pool.meta['docs'], 'rt') as f:
+        ids = [json.loads(line)['doc_id'] for line in f]
+    ends = np.flatnonzero(np.asarray(pool.ids) == EOS)
+    assert len(ends) == len(ids) == pool.meta['n_docs']
+    return [(i, pool.ids[a:b]) for i, a, b in zip(ids, np.r_[0, ends[:-1]
+                                                               + 1], ends)]
+
+def take_chunks(docs, budgets):
+    """Consecutive runs of the documents' chunks, in order, one run per
+    (split, budget): a run ends with the first chunk at which its chunks,
+    each with its EOS, hold more than budget tokens, so a pool of them
+    has budget // seq_len windows."""
+    runs, cur, n = {}, [], 0
+    for doc_id, ids in docs:
+        for c in d2l.chunk_doc(ids, TOK, CHUNK_TOKENS):
+            split, budget = budgets[len(runs)]
+            cur.append(dict(chunk_id=f'{split}-{len(cur):05d}',
+                            doc_id=doc_id, ids=c))
+            n += len(c) + 1
+            if n > budget:
+                runs[split], cur, n = cur, [], 0
+                if len(runs) == len(budgets):
+                    return runs
+    raise ValueError(f'fewer than {budgets} tokens in the pool')
+
+DOCS = documents(WEB)
+SPLITS = {**take_chunks(DOCS, [('S1', U), ('S2', U)]),
+          **take_chunks(documents(VAL), [('val', VAL_U)])}
+S1, S2, SV = SPLITS.values()
+N_DOCS = {k: len({c['doc_id'] for c in v}) for k, v in SPLITS.items()}
+print(pd.DataFrame([dict(split=k, pool='web val' if k == 'val' else 'web',
+                         documents=N_DOCS[k], chunks=len(v),
+                         tokens=sum(len(c['ids']) + 1 for c in v))
+                    for k, v in SPLITS.items()]).to_string(index=False))
+
+def side_by_side(a, b, width=46, head=('source', 'rewrite')):
+    """Two texts in two columns, lines broken at width characters."""
+    A, B = (textwrap.wrap(t.replace('\n', ' '), width) for t in (a, b))
+    print(f'{head[0]:{width}} | {head[1]}')
+    for x, y in itertools.zip_longest(A, B, fillvalue=''):
+        print(f'{x:{width}} | {y}')
+
+numbers = lambda t: set(re.findall(r'\d+(?:[.,]\d+)*', t))
+OPEN = next(c for c in S1 if len(c['ids']) <= OPEN_MAX_SRC and len(
+    numbers(TOK.decode(c['ids']))) >= 3)
+OPEN_SRC = TOK.decode(OPEN['ids'])
+GEN_MODEL = d2l.load_hf(REPHRASER, dtype=DTYPE)
+one = d2l.rephrase_docs([OPEN_SRC], 'wiki', model=GEN_MODEL,
+                        max_new_tokens=NEW_TOKENS, **SAMPLING)
+OPEN_ROW = (list(one) + one.dropped)[0]
+print(f'\n{OPEN["chunk_id"]} ({len(OPEN["ids"])} tokens), finish '
+      f'{OPEN_ROW["finish"]}:')
+side_by_side(OPEN_SRC, OPEN_ROW['out'])
+print({k: round(v, 3) for k, v in d2l.synth_metrics(
+    OPEN_SRC, OPEN_ROW['out']).items()})
+many = d2l.rephrase_docs([OPEN_SRC] * N_SAMPLES, 'wiki', model=GEN_MODEL,
+                         max_new_tokens=NEW_TOKENS, batch=N_SAMPLES,
+                         **SAMPLING)
+SAMPLES = [r['out'] for r in sorted(list(many) + many.dropped,
+                                    key=lambda r: r['index'])]
+print(f'\n{N_SAMPLES} samples of the same prompt at temperature '
+      f'{SAMPLING["temperature"]}: distinct 4-grams '
+      f'{d2l.distinct_n(SAMPLES, 4):.3f} (one sample alone: '
+      f'{d2l.distinct_n(SAMPLES[:1], 4):.3f}); their first words:')
+for s in SAMPLES[:3]:
+    print('  ', textwrap.shorten(s, 100))
+print(ATTRIBUTION)
+```
+
+## What Counts as Synthetic Data
+:label:`subsec_lm_synth_kinds`
+
+<!-- Prose: four uses of generated text (new documents from seeds,
+rephrasings of existing text, demonstrations for post-training, labels: the
+educational scores of sec_lm_quality_filtering are synthetic); this section
+covers the first two as pretraining data; the rule: judge generated data by
+its incremental effect on held-out data, not by fluency; Textbooks Are All
+You Need (a small code model on filtered web text plus generated textbooks
+and exercises) with its claims limited to its setting. No code. -->
+
+## Rephrasing the Web
+:label:`subsec_lm_synth_rephrase`
+
+<!-- Prose: WRAP's recipe (rephrase web chunks in styles with an instruction
+model, train on a 1:1 mix of real and rephrased text; its setting and
+headline quoted from the paper); Nemotron-CC-v2 (rephrasing at crawl scale,
+under the NVIDIA Data Agreement for Model Training: cited, never shipped)
+and FinePhrase (ODC-By; its reported cost reduction quoted with its
+setting); the pipeline chunk -> prompt -> generate -> filter; the filters
+are manifest parameters, not claims. First the chunker: -->
+
+```{.python .input #synthetic-data-chunk-check}
+%%tab pytorch
+rng = np.random.default_rng(0)
+lengths, full = [], 0
+for i in rng.choice(len(DOCS), 20, replace=False):
+    ids = DOCS[i][1].tolist()
+    chunks = d2l.chunk_doc(ids, TOK, CHUNK_TOKENS)
+    assert sum(chunks, []) == ids  # the chunks are the document
+    assert TOK.decode(sum(chunks, [])) == TOK.decode(ids)
+    lengths += [len(c) for c in chunks]
+    full += sum(len(c) == CHUNK_TOKENS for c in chunks)
+assert max(lengths) <= CHUNK_TOKENS
+assert all(len(c['ids']) <= CHUNK_TOKENS for v in SPLITS.values() for c in v)
+print(f'20 pool documents (seed 0) -> {len(lengths)} chunks, each the '
+      f'document\'s tokens in order; median {np.median(lengths):.0f} tokens, '
+      f'longest {max(lengths)}; {full} of exactly {CHUNK_TOKENS} (a cut '
+      'inside an over-long sentence, or a sentence that fit exactly)')
+```
+
+<!-- Prose: 60 chunks of S1 rewritten live in both styles (batch 32, 512 new
+tokens, temperature 0.7, top-p 0.9); rows that ran out of tokens are
+dropped and counted; the style table (prompt hash, kept, dropped, mean
+length ratio and copy rate, share with every number kept, share flagged by
+any filter); the histograms of copy rate and number fidelity with the flag
+thresholds; five examples including the worst number fidelity. -->
+
+```{.python .input #synthetic-data-live-120}
+%%tab pytorch
+pool = [c for c in S1 if len(c['ids']) <= LIVE_MAX_SRC]
+LIVE = [pool[i] for i in sorted(np.random.default_rng(0).choice(
+    len(pool), N_LIVE, replace=False))]
+texts, rows = [TOK.decode(c['ids']) for c in LIVE], []
+for style in d2l.REPHRASE_PROMPTS:
+    t0 = time.time()
+    got = d2l.rephrase_docs(texts, style, model=GEN_MODEL, batch=LIVE_BATCH,
+                            max_new_tokens=NEW_TOKENS, **SAMPLING)
+    print(f'{style}: {len(texts)} chunks in {time.time() - t0:.0f} s, '
+          f'{len(got.dropped)} dropped (out of tokens)')
+    rows += [dict(style=style, chunk_id=LIVE[r['index']]['chunk_id'],
+                  finish=r['finish'], n_out=r['n_out'], src=r['src'],
+                  out=r['out'], **d2l.synth_metrics(r['src'], r['out']))
+             for r in list(got) + got.dropped]
+print(d2l.lm_peak(), '| no thinking text in any of the', len(rows),
+      'replies (asserted)')
+LIVE_ROWS = pd.DataFrame(rows)
+
+def flags(df):
+    """The filters of FILTERS as boolean columns."""
+    lo, hi = FILTERS['len_ratio']
+    return pd.DataFrame(dict(
+        length=~df.len_ratio.between(lo, hi),
+        copy=df.copy_rate > FILTERS['copy_rate'],
+        numbers=df.num_fidelity < FILTERS['num_fidelity']), index=df.index)
+
+KEPT = LIVE_ROWS[LIVE_ROWS.finish == 'stop']
+F_LIVE = flags(KEPT)
+STYLE_TABLE = pd.DataFrame([dict(
+    style=s, prompt_sha256=hashlib.sha256(
+        d2l.REPHRASE_PROMPTS[s].encode()).hexdigest()[:12],
+    kept=int((g.finish == 'stop').sum()),
+    dropped=int((g.finish == 'length').sum()),
+    len_ratio=g[g.finish == 'stop'].len_ratio.mean(),
+    copy_rate=g[g.finish == 'stop'].copy_rate.mean(),
+    all_numbers=(g[g.finish == 'stop'].num_fidelity == 1).mean(),
+    flagged=F_LIVE.loc[g.index[g.finish == 'stop']].any(axis=1).mean())
+    for s, g in LIVE_ROWS.groupby('style', sort=False)])
+print(STYLE_TABLE.round(3).to_string(index=False))
+fig, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.6))
+for ax, col, thr, lab in zip(axes, ('copy_rate', 'num_fidelity'),
+                             (FILTERS['copy_rate'], FILTERS['num_fidelity']),
+                             ('copy rate', 'number fidelity')):
+    for style, g in KEPT.groupby('style', sort=False):
+        ax.hist(g[col], bins=np.linspace(0, 1, 21), alpha=0.6, label=style)
+    ax.axvline(thr, color='black', linestyle=':', linewidth=1)
+    ax.set_xlabel(lab)
+axes[0].set_ylabel('rewrites')
+axes[0].legend()
+fig.tight_layout()
+pick = {'worst number fidelity': KEPT.num_fidelity.idxmin(),
+        'highest copy rate': KEPT.copy_rate.idxmax(),
+        'lowest copy rate': KEPT.copy_rate.idxmin()}
+rest = [i for i in KEPT.index if i not in pick.values()]
+for k, i in enumerate(np.random.default_rng(1).choice(
+        rest, min(2, len(rest)), replace=False)):
+    pick[f'random {k + 1}'] = i
+for name, i in pick.items():
+    r = KEPT.loc[i]
+    print(f'\n{name}: {r.chunk_id}, {r["style"]}, copy {r.copy_rate:.2f}, '
+          f'numbers {r.num_fidelity:.2f}, length ratio {r.len_ratio:.2f}')
+    side_by_side(textwrap.shorten(r.src, 420), textwrap.shorten(r.out, 420))
+print(ATTRIBUTION)
+```
+
+### Generating from Seeds
+:label:`subsec_lm_synth_seeds`
+
+<!-- Prose: generation from seeds as rephrasing's relative (new content,
+not a rewrite); Cosmopedia's prompt knobs (seed text, format, audience),
+with three of its rows (Apache-2.0; generated by Mixtral-8x7B-Instruct, as
+its card says); nine generations from one seed under 3 formats x 3
+audiences against nine samples of one plain prompt, each cut to the same
+number of words: distinct 4-grams and the mean pairwise Jaccard of word
+5-gram sets (sec_lm_dedup's shingles). The nine rephrasings of the opening
+are the third row: a rewrite has less room than a generation. -->
+
+```{.python .input #synthetic-data-seeds}
+%%tab pytorch
+COSMO_FILES = {  # first file of each configuration, at the pinned revision
+    'web_samples_v2': 'data/web_samples_v2/train-00000-of-00118.parquet',
+    'stanford': 'data/stanford/train-00000-of-00013.parquet',
+    'stories': 'data/stories/train-00000-of-00043.parquet'}
+COSMO_ROWS = None if RESULTS is None else RESULTS['cosmopedia']
+if 'synth-arms' in RERUN:  # registered with the results of the runs
+    _, repo, rev, _ = d2l.LM_DATA_SOURCES['cosmopedia']
+    COSMO_ROWS = [dict(config=c, row=0, **{
+        col: d2l.lm_hub_rows(repo, path, rev, 0, 1, col)[0][0]
+        for col in ('format', 'audience', 'seed_data', 'text_token_length')},
+                       text=d2l.lm_hub_rows(repo, path, rev, 0, 1)[0][0][:400],
+                       prompt=d2l.lm_hub_rows(repo, path, rev, 0, 1,
+                                              'prompt')[0][0][:400])
+                  for c, path in COSMO_FILES.items()]
+if COSMO_ROWS is None:
+    print(f'Cosmopedia rows: registered with {RES_KEY} (pending)')
+else:
+    for r in COSMO_ROWS:
+        print(f'cosmopedia/{r["config"]} row {r["row"]}: format '
+              f'{r["format"]!r}, audience {r["audience"]!r}, seed data '
+              f'{r["seed_data"]!r}, {r["text_token_length"]} tokens:')
+        print('  ', repr(r['text'][:200]))
+    print('Cosmopedia (HuggingFaceTB/cosmopedia, Apache-2.0)')
+FORMATS = ('textbook section', 'blog post', 'short story')
+AUDIENCES = ('young children', 'high-school students', 'professionals')
+COSMO_STYLE = ('Write a {fmt} for {aud} about the topic of the extract '
+               'below. Use your own words and examples; do not copy the '
+               'extract.\n\nExtract:\n{{text}}')
+PLAIN = 'Write a text about the topic of the extract below.\n\n' \
+        'Extract:\n{text}'
+styled = [COSMO_STYLE.format(fmt=f, aud=a) for f in FORMATS
+          for a in AUDIENCES]
+outs = {}
+for name, style in (('one plain prompt', [PLAIN] * 9),
+                    ('3 formats x 3 audiences', styled)):
+    got = d2l.rephrase_docs([OPEN_SRC] * 9, style, model=GEN_MODEL, batch=9,
+                            max_new_tokens=SEED_TOKENS, **SAMPLING)
+    outs[name] = [r['out'] for r in sorted(list(got) + got.dropped,
+                                           key=lambda r: r['index'])]
+outs['rephrasings (opening)'] = SAMPLES
+K = min(len(d2l.shingles(t, 1)) for v in outs.values() for t in v)
+cut = {k: [' '.join(d2l.shingles(t, 1)[:K]) for t in v]
+       for k, v in outs.items()}
+
+def mean_jaccard(texts):
+    """Mean Jaccard similarity of the word 5-gram sets of all pairs."""
+    sets = [set(d2l.shingles(t, 5)) for t in texts]
+    return np.mean([d2l.jaccard_exact(a, b)
+                    for a, b in itertools.combinations(sets, 2)])
+
+DIVERSITY = pd.DataFrame([dict(setting=k, outputs=len(v),
+                               distinct_4=d2l.distinct_n(v, 4),
+                               jaccard_5=mean_jaccard(v))
+                          for k, v in cut.items()])
+print(f'\none seed ({OPEN["chunk_id"]}), every output cut to its first {K} '
+      f'words, temperature {SAMPLING["temperature"]}:')
+print(DIVERSITY.round(3).to_string(index=False))
+gain = DIVERSITY.distinct_4[1] - DIVERSITY.distinct_4[0]
+print('conditioning on format and audience', 'raises distinct 4-grams by '
+      f'{gain:.3f}' if gain >= 0.02 else
+      f'leaves distinct 4-grams about equal ({gain:+.3f})')
+for k in ('one plain prompt', '3 formats x 3 audiences'):
+    print(f'{k}, first output:', textwrap.shorten(outs[k][0], 160))
+```
+
+### Checking Generated Text
+:label:`subsec_lm_synth_checks`
+
+<!-- Prose: the registered corpus (lm-rephrase-fwedu-5m-v1: S1, S2 and the
+validation chunks with their wiki-style rewrites, generated once; how in
+the regeneration cell below); token counts of source and rewrite; drops by
+reason; the fidelity summary (C1: the share of rewrites that keep every
+number, quoted to 5 points); generators repeat themselves: the
+near-duplicate rate among rewrites against among sources with
+sec_lm_dedup's MinHash at (b, r) = (9, 13); a generator may reproduce
+benchmark items it was trained on: 13-gram hits against the index of
+sec_lm_dedup over GSM8K, ARC-Challenge and MMLU. -->
+
+```{.python .input #synthetic-data-corpus-checks}
+%%tab pytorch
+NAMES = {('S1', 'src'): 'train_src_S1', ('S1', 'reph'): 'train_reph_S1',
+         ('S2', 'src'): 'train_src_S2', ('S2', 'reph'): 'train_reph_S2',
+         ('val', 'src'): 'val_src', ('val', 'reph'): 'val_reph'}
+
+def open_corpus(tar):
+    """The extracted corpus: its folder, meta.json and rephrase.jsonl."""
+    root = pathlib.Path(tar).with_suffix('')
+    if not (root / '.extracted').exists():
+        root.mkdir(exist_ok=True)
+        d2l.extract(str(tar), str(root))
+        (root / '.extracted').touch()
+    with open(root / 'meta.json') as f:
+        meta = json.load(f)
+    with open(root / 'rephrase.jsonl', encoding='utf-8') as f:
+        rows = pd.DataFrame([json.loads(line) for line in f])
+    return root, meta, rows
+
+def chunk_tokens(texts):
+    """The token file of chunks: each chunk's ids, then the EOS."""
+    return np.array([t for ids in d2l._doc_token_ids(TOK, texts)
+                     for t in ids + [EOS]], dtype=np.uint16)
+
+def corpus_report(root, meta, rows):
+    """Checks and summaries of a rephrased corpus (asserts its files)."""
+    kept = rows[rows.kept]
+    assert not rows.out_text.str.contains('<think>|</think>').any()
+    assert (kept.finish == 'stop').all() and (rows[~rows.kept].finish
+                                              == 'length').all()
+    table = []
+    for (split, kind), name in NAMES.items():
+        P = d2l.load_pool(root, name)
+        ids = np.asarray(P.ids)
+        if kind == 'src':  # the chunks of this notebook's pools, exactly
+            want = np.array([t for c in SPLITS[split] for t in c['ids']
+                             + [EOS]], dtype=np.uint16)
+        else:  # the kept rewrites, tokenized as text
+            want = chunk_tokens(kept[kept.split == split].out_text.tolist())
+        assert np.array_equal(ids, want), name
+        assert int((ids < 32).sum()) == int((ids == EOS).sum()) == P.meta[
+            'n_docs']  # no special id inside a chunk
+        table.append(dict(file=name, chunks=P.meta['n_docs'],
+                          tokens=P.meta['n_tokens'],
+                          bytes=P.meta['n_bytes_nfc']))
+    print(pd.DataFrame(table).to_string(index=False))
+    for split in SPLITS:
+        src, reph = (meta[f'{NAMES[split, k]}.bin']['n_tokens']
+                     for k in ('src', 'reph'))
+        print(f'{split}: rewrites / sources = {reph / src:.3f} in tokens')
+    print('dropped (out of tokens):', rows[~rows.kept].groupby(
+        'split').size().reindex(list(SPLITS), fill_value=0).to_dict(),
+          f'of {len(rows):,} chunks')
+    fl = flags(kept)
+    print(pd.DataFrame([dict(
+        split=s, kept=len(g), copy_rate=g.copy_rate.mean(),
+        all_numbers=(g.num_fidelity == 1).mean(),
+        len_ratio_median=g.len_ratio.median(), **{
+            f'flag_{k}': fl.loc[g.index, k].mean() for k in fl})
+        for s, g in kept.groupby('split', sort=False)]).round(3).to_string(
+            index=False))
+    br = d2l.best_br(128, 0.8)
+    assert br == (9, 13)
+    dup = {}
+    for kind, texts in (('sources', rows.src_text), ('rewrites',
+                                                     kept.out_text)):
+        sh = [d2l.shingles(t, 5) for t in texts]
+        sigs = [d2l.minhash_signature(s) for s in sh]
+        pairs, _ = d2l.lsh_candidates(sigs, *br)
+        near = [(i, j) for i, j in pairs
+                if d2l.jaccard_exact(sh[i], sh[j]) >= 0.8]
+        dup[kind] = (len({i for p in near for i in p}) / len(texts),
+                     len(near))
+    print('near-duplicates (MinHash at (b, r) = (9, 13), verified Jaccard '
+          '>= 0.8): ' + '; '.join(f'{k} {r:.2%} of chunks ({n} pairs)'
+                                  for k, (r, n) in dup.items()))
+    index = d2l.NgramIndex(13)
+    for it in d2l.benchmark_items():
+        index.add(it['text'], it['benchmark'])
+    hits = {k: [index.query(t) for t in texts] for k, texts in (
+        ('sources', kept.src_text), ('rewrites', kept.out_text))}
+    new = [h for h, s in zip(hits['rewrites'], hits['sources'])
+           if h and not s]
+    print('13-gram hits on GSM8K, ARC-Challenge, MMLU: ' + ', '.join(
+        f'{k} {sum(map(bool, v))} chunks' for k, v in hits.items())
+          + f'; rewrites with a hit their source lacks: {len(new)} '
+          f'{collections.Counter(b for h in new for b, _ in h)}')
+    return dict(dup=dup, hits={k: sum(map(bool, v))
+                               for k, v in hits.items()})
+
+CORPUS = None  # (folder, meta, rows) of the rephrased corpus
+if TAR_KEY in d2l.DATA_HUB:
+    CORPUS = open_corpus(d2l.download_keyed(TAR_KEY))
+    REPORT = corpus_report(*CORPUS)
+    print(ATTRIBUTION)
+else:
+    print(f'{TAR_KEY} is not registered yet: the regeneration below writes '
+          'it')
+```
+
+<!-- Prose: how the corpus was made (D2L_RERUN=reph-s1, reph-s2, reph-val;
+about 22 minutes per training part and 6 for validation on one GPU at
+batch 96, measured in a pilot): S1 is the chunks of the first pool documents until 2^21 tokens,
+S2 the next 2^21, the validation chunks come from the side validation
+documents until 2^19; wiki style, seed 0; the parts write their rows
+separately, and the last one assembles the token files, the rows and the
+card into one archive. -->
+
+```{.python .input #synthetic-data-regen-rephrase}
+%%tab pytorch
+PARTS = {'reph-s1': 'S1', 'reph-s2': 'S2', 'reph-val': 'val'}
+GEN_ID = dict(model_id=REPHRASER, model_revision=d2l.HF_REVISIONS[REPHRASER],
+              style='wiki', prompt_sha256=hashlib.sha256(
+                  d2l.REPHRASE_PROMPTS['wiki'].encode()).hexdigest(),
+              max_new_tokens=REGEN_TOKENS, chunk_tokens=CHUNK_TOKENS,
+              **SAMPLING)
+for name in (n for n in PARTS if n in RERUN):
+    split = PARTS[name]
+    texts, t0 = [TOK.decode(c['ids']) for c in SPLITS[split]], time.time()
+    got = d2l.rephrase_docs(texts, 'wiki', model=GEN_MODEL,
+                            batch=REGEN_BATCH, max_new_tokens=REGEN_TOKENS,
+                            progress=60, **SAMPLING)
+    secs = time.time() - t0
+    part = sorted(list(got) + got.dropped, key=lambda r: r['index'])
+    recs = [dict(chunk_id=SPLITS[split][r['index']]['chunk_id'], split=split,
+                 src_doc_id=SPLITS[split][r['index']]['doc_id'],
+                 n_src=len(SPLITS[split][r['index']]['ids']),
+                 n_out=r['n_out'], finish=r['finish'],
+                 kept=r['finish'] == 'stop', src_text=r['src'],
+                 out_text=r['out'], **d2l.synth_metrics(r['src'], r['out']),
+                 **GEN_ID) for r in part]
+
+    def write_part(path, recs=recs):
+        with gzip.GzipFile(path, 'wb', mtime=0) as f:
+            f.write(''.join(json.dumps(r, sort_keys=True, ensure_ascii=False)
+                            + '\n' for r in recs).encode('utf-8'))
+
+    d2l.lm_save_rerun(ARTIFACTS[name][1], write_part)
+    print(f'{name}: {len(texts):,} chunks in {secs / 60:.1f} min, '
+          f'{sum(r["n_out"] for r in part) / secs:,.0f} new tokens/s, '
+          f'{len(got.dropped)} dropped; {d2l.lm_peak()}')
+del GEN_MODEL
+d2l.lm_free()
+
+def read_part(name):
+    with gzip.open(os.path.join(RERUN_DIR, ARTIFACTS[name][1]), 'rt',
+                   encoding='utf-8') as f:
+        return [json.loads(line) for line in f]
+
+def write_tar(path):
+    """The archive: six token files, meta.json, rephrase.jsonl, README.md;
+    byte-identical for identical contents."""
+    rows = [r for name in PARTS for r in read_part(name)]
+    members, meta = {}, {}
+    for (split, kind), name in NAMES.items():
+        part = [r for r in rows if r['split'] == split]
+        if kind == 'src':
+            for r, c in zip(part, SPLITS[split]):
+                assert r['chunk_id'] == c['chunk_id']
+            ids = np.array([t for c in SPLITS[split] for t in c['ids']
+                            + [EOS]], dtype=np.uint16)
+            texts = [r['src_text'] for r in part]
+        else:
+            texts = [r['out_text'] for r in part if r['kept']]
+            ids = chunk_tokens(texts)
+        data = ids.astype('<u2').tobytes()
+        members[f'{name}.bin'] = data
+        meta[f'{name}.bin'] = dict(
+            split=split, kind=kind, n_tokens=len(ids), n_docs=len(texts),
+            n_bytes_nfc=sum(len(t.encode('utf-8')) for t in texts),
+            dtype='uint16', eos_id=EOS, vocab_size=len(TOK),
+            tokenizer_sha256=d2l.R2_TOKENIZER_SHA256,
+            sha256=hashlib.sha256(data).hexdigest(),
+            source=WEB.meta['source'], revision=WEB.meta['revision'],
+            license='odc-by', generator=None if kind == 'src' else
+            f'{REPHRASER}@{d2l.HF_REVISIONS[REPHRASER]}')
+    members['meta.json'] = json.dumps(meta, indent=1, sort_keys=True).encode()
+    members['rephrase.jsonl'] = ''.join(
+        json.dumps(r, sort_keys=True, ensure_ascii=False) + '\n'
+        for r in rows).encode('utf-8')
+    members['README.md'] = (
+        f'# {TAR_KEY}\n\nFineWeb-Edu chunks (HuggingFaceFW/fineweb-edu, '
+        f'sample-10BT @ {WEB.meta["revision"][:12]}, ODC-By 1.0) and their '
+        f'wiki-style rewrites by {REPHRASER} @ '
+        f'{d2l.HF_REVISIONS[REPHRASER][:12]} (Apache-2.0), generated for '
+        'Dive into Deep Learning, sec_lm_synthetic_data. Rewrites are '
+        'synthetic text; their rights follow the source and the '
+        'generator.\n').encode()
+    with tarfile.open(path, 'w', format=tarfile.USTAR_FORMAT) as t:
+        for name, data in sorted(members.items()):
+            info = tarfile.TarInfo(name)
+            info.size, info.mtime, info.mode = len(data), 0, 0o644
+            t.addfile(info, io.BytesIO(data))
+
+TAR_BUILT = bool(RERUN & set(PARTS)) and all(os.path.exists(os.path.join(
+    RERUN_DIR, ARTIFACTS[n][1])) for n in PARTS)
+if TAR_BUILT:
+    tar = d2l.lm_save_rerun(TAR_FILE, write_tar)
+    CORPUS = open_corpus(tar)
+    REPORT = corpus_report(*CORPUS)
+elif RERUN & set(PARTS):
+    print('the archive is assembled once all three parts are written')
+```
+
+<!-- Prose: number fidelity misses changed entities and added claims; a
+judge (Qwen3.5-4B, non-thinking, greedy: a different model from the
+rephraser, so it does not grade its own writing) reads 60 (source, rewrite)
+pairs of S1 and answers "does the rewrite add a claim the source does not
+support?"; the verdict is the larger of the probabilities of "Yes" and "No"
+as the next token; the yes-rate with a Wilson interval, and the 2 x 2
+table against the number-fidelity flags (C1). How the verdicts were made:
+D2L_RERUN=reph-judge, about 3 minutes. -->
+
+```{.python .input #synthetic-data-judge}
+%%tab pytorch
+SYNTH_JUDGE_V1 = (
+    'Below are a source text and a rewrite of it.\n\nSource:\n{src}\n\n'
+    'Rewrite:\n{out}\n\nDoes the rewrite state any claim (a fact, name, '
+    'number, date or relation) that the source does not support? Answer '
+    'Yes or No.')
+JUDGE_SHA = hashlib.sha256(SYNTH_JUDGE_V1.encode()).hexdigest()
+if CORPUS is not None:
+    s1 = CORPUS[2]
+elif os.path.exists(os.path.join(RERUN_DIR, ARTIFACTS['reph-s1'][1])):
+    s1 = pd.DataFrame(read_part('reph-s1'))
+else:
+    s1 = None
+JUDGE_PART = None
+if s1 is not None:
+    s1 = s1[(s1.split == 'S1') & s1.kept].reset_index(drop=True)
+    PAIRS = s1.iloc[np.sort(np.random.default_rng(0).choice(
+        len(s1), min(N_JUDGE, len(s1)), replace=False))]
+
+def judge_yes(model, tokenizer, pairs, batch=8):
+    """P(Yes) among {Yes, No} as the judge's next token for every pair,
+    and the probability mass of the two answers."""
+    yes, no = (tokenizer.encode(w, add_special_tokens=False)[0]
+               for w in ('Yes', 'No'))
+    chat = [tokenizer.apply_chat_template([{'role': 'user', 'content':
+        SYNTH_JUDGE_V1.format(src=s, out=o)}], tokenize=False,
+        add_generation_prompt=True, enable_thinking=False)
+            for s, o in pairs]
+    ids = tokenizer(chat, add_special_tokens=False)['input_ids']
+    pad, dev = tokenizer.pad_token_id, next(model.parameters()).device
+    p_yes, mass = np.zeros(len(ids)), np.zeros(len(ids))
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    for a in range(0, len(order), batch):
+        rows = order[a:a + batch]
+        T = max(len(ids[i]) for i in rows)
+        X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i] for i in rows],
+                         device=dev)
+        M = (torch.arange(T, device=dev)[None] >= torch.tensor(
+            [T - len(ids[i]) for i in rows], device=dev)[:, None]).long()
+        with torch.inference_mode():
+            p = model(input_ids=X, attention_mask=M, logits_to_keep=1
+                      ).logits[:, -1].float().softmax(-1)
+        p_yes[rows] = (p[:, yes] / (p[:, yes] + p[:, no])).cpu().numpy()
+        mass[rows] = (p[:, yes] + p[:, no]).cpu().numpy()
+    return p_yes, mass
+
+if 'reph-judge' in RERUN:
+    assert s1 is not None, 'the judge reads the S1 rewrites: reph-s1 first'
+    jm, jt = d2l.load_hf(JUDGE, dtype=DTYPE)
+    t0 = time.time()
+    p_yes, mass = judge_yes(jm, jt, list(zip(PAIRS.src_text,
+                                              PAIRS.out_text)))
+    print(f'judged {len(PAIRS)} pairs in {time.time() - t0:.0f} s, '
+          f'{d2l.lm_peak()}')
+    del jm
+    d2l.lm_free()
+    JUDGE_PART = dict(model=JUDGE, revision=d2l.HF_REVISIONS[JUDGE],
+                      prompt_sha256=JUDGE_SHA, seed=0,
+                      chunk_ids=PAIRS.chunk_id.tolist(),
+                      p_yes=p_yes.tolist(), mass=mass.tolist())
+    d2l.lm_save_rerun(ARTIFACTS['reph-judge'][1],
+                      lambda p: write_json(p, JUDGE_PART))
+elif RESULTS is not None:
+    JUDGE_PART = RESULTS['judge']
+elif os.path.exists(os.path.join(RERUN_DIR, ARTIFACTS['reph-judge'][1])):
+    with open(os.path.join(RERUN_DIR, ARTIFACTS['reph-judge'][1])) as f:
+        JUDGE_PART = json.load(f)
+if JUDGE_PART is None or s1 is None:
+    print(f'judge verdicts: registered with {RES_KEY} (pending)')
+else:
+    assert JUDGE_PART['chunk_ids'] == PAIRS.chunk_id.tolist()
+    assert JUDGE_PART['prompt_sha256'] == JUDGE_SHA
+    says = np.array(JUDGE_PART['p_yes']) > 0.5
+    k, n = int(says.sum()), len(says)
+    lo, hi = d2l.wilson_ci(k, n)
+    lost = (PAIRS.num_fidelity < 1).to_numpy()
+    print(f'{JUDGE} on {n} S1 pairs (seed 0): adds a claim in {k} '
+          f'({k / n:.0%}, Wilson 95% [{lo:.0%}, {hi:.0%}]); the two answers '
+          f'hold at least {min(JUDGE_PART["mass"]):.2f} of the next-token '
+          'probability')
+    print(pd.crosstab(pd.Series(says, name='judge: adds a claim'),
+                      pd.Series(lost, name='a number lost')).to_string())
+    print(f'agreement with the number flags: {(says == lost).mean():.0%}')
+```
+
+## Equal Budgets and Fair Accounting
+:label:`subsec_lm_synth_arms`
+
+<!-- Prose: five arms at 2^24 trained tokens (A real S1 repeated 8 epochs;
+B S1 and its rewrites, 4 + 4; C rewrites only, 8; D fresh real, one epoch;
+E S1 and the rewrites of other chunks S2, 4 + 4); the effective-token
+bounds fix B's possible gain before any run (eq_lm_synth_bounds:
+D'(U, 8) <= D'_B <= D'(2U, 4), restating subsec_lm_mix_temperature's law;
+6.62U and 7.45U, about 12%; the same bounds with the measured size of the
+rewrites). -->
+
+```{.python .input #synthetic-data-bounds}
+%%tab pytorch
+lo, hi = float(d2l.effective_tokens(1, 8)), 2 * float(
+    d2l.effective_tokens(1, 4))
+assert abs(lo - 6.62) < 0.01 and abs(hi - 7.45) < 0.01
+print(f"D'(U, 8) = {lo:.3f} U <= D'_B <= D'(2U, 4) = {hi:.3f} U: B can gain "
+      f'at most {hi / lo - 1:.1%} effective tokens over A')
+if CORPUS is not None:
+    m = CORPUS[1]
+    u_s, u_r = (m[f'{NAMES["S1", k]}.bin']['n_tokens'] for k in ('src',
+                                                                  'reph'))
+    lo_m = float(d2l.effective_tokens(u_s, TOKENS / u_s))
+    hi_m = float(d2l.effective_tokens(u_s, TOKENS / 2 / u_s)
+                 + d2l.effective_tokens(u_r, TOKENS / 2 / u_r))
+    print(f'measured: S1 {u_s:,} tokens, its rewrites {u_r:,}; in units of '
+          f"S1: D'_A = {lo_m / u_s:.2f}, the upper bound for B "
+          f'{hi_m / u_s:.2f} ({hi_m / lo_m - 1:.1%})')
+```
+
+<!-- Prose: the arms as inputs of train_proxy_lm (pools and weights); the
+stream reads a pool's windows in epochs, one after another, each a fresh
+permutation (sec_lm_data_mixtures), which is what the bounds assume;
+rephrasing changes length, so the arms are equal in trained tokens, not in
+epochs; the table: unique tokens, windows per epoch, epochs read and
+effective tokens per pool. -->
+
+```{.python .input #synthetic-data-arms-build}
+%%tab pytorch
+ARM_DESC = {'A': 'real S1, repeated', 'B': 'S1 + rewrites of S1',
+            'C': 'rewrites of S1 only', 'D': 'fresh real text',
+            'E': 'S1 + rewrites of S2'}
+ROOT = CORPUS[0]
+POOL = {n: d2l.load_pool(ROOT, n) for n in (
+    'train_src_S1', 'train_reph_S1', 'train_reph_S2', 'val_reph')}
+FRESH = d2l.TokenPool(WEB.ids[:TOKENS + 1], dict(WEB.meta,
+                                                   n_tokens=TOKENS + 1))
+S1P, R1P, R2P = (POOL[n] for n in ('train_src_S1', 'train_reph_S1',
+                                   'train_reph_S2'))
+ARM_POOLS = {'A': {'real': S1P}, 'B': {'real': S1P, 'reph': R1P},
+             'C': {'reph': R1P}, 'D': {'real': FRESH},
+             'E': {'real': S1P, 'reph': R2P}}
+ARM_WEIGHTS = {a: {d: 1 / len(p) for d in p} for a, p in ARM_POOLS.items()}
+cfg, rows, MAX_EPOCHS = PROXY_SMALL, [], {}
+for a, pools in ARM_POOLS.items():
+    s = d2l._ProxyStream(pools, ARM_WEIGHTS[a], TOKENS, cfg.seq_len,
+                         cfg.batch, 0, None, max_epochs=10**6)
+    assert s.steps * cfg.batch * cfg.seq_len == TOKENS  # equal budgets
+    MAX_EPOCHS[a] = math.ceil(max(s.epochs.values()) - 1e-9)
+    assert MAX_EPOCHS[a] <= 2 * EPOCHS, f'{a}: a pool is far too short'
+    for d, P in pools.items():
+        n = len(P.ids)
+        rows.append(dict(arm=a, arm_is=ARM_DESC[a], pool=d,
+                         unique_tokens=n, windows=s.windows[s.names.index(d)],
+                         epochs=s.epochs[d],
+                         effective=float(d2l.effective_tokens(n, s.epochs[
+                             d]))))
+ARM_BUILD = pd.DataFrame(rows)
+steps = TOKENS // (cfg.batch * cfg.seq_len)
+print(f'{TAG} {TOKENS:,} trained tokens per arm ({steps} steps of '
+      f'{cfg.batch} x {cfg.seq_len}):')
+print(ARM_BUILD.round(3).to_string(index=False))
+assert abs(ARM_BUILD.epochs[0] - EPOCHS) < 0.01  # A reads S1 eight times
+```
+
+<!-- Prose: three data-order seeds per arm, the peak learning rate chosen in
+sec_lm_data_mixtures's T1 runs, cosine schedule; bits per byte on real
+validation (the side validation set of the web pool) and on rephrased
+validation (the rewrites of the validation chunks) at a quarter, half,
+three quarters and the end. A normal build reads the registered runs and
+retrains the start of arm A as a live check (D2L_RERUN=synth-arms trains
+the fifteen runs, about 10 minutes on one GPU). -->
+
+```{.python .input #synthetic-data-arms-run}
+%%tab pytorch
+with open(d2l.lm_artifact('lm-mix-runs-t1-v1')) as f:
+    LR = json.load(f)['lr_choice']['chosen']
+CFG = PROXY_SMALL._replace(lr=LR)
+EVAL_SETS = {'real': VAL, 'reph': POOL['val_reph']}
+BYTE_LEN = d2l.token_byte_lengths(TOK)
+CONFIG = json.loads(json.dumps(dict(
+    proxy=CFG._asdict(), tokens=TOKENS, U=U, val_U=VAL_U, seeds=SEEDS,
+    eval_at=EVAL_AT, log_every=LOG_EVERY, weights=ARM_WEIGHTS,
+    max_epochs=MAX_EPOCHS, lr_from='lm-mix-runs-t1-v1')))
+CORPUS_SHA = {k: v['sha256'] for k, v in CORPUS[1].items()}
+
+def run_arm(arm, seed, **kw):
+    return d2l.train_proxy_lm(
+        ARM_POOLS[arm], ARM_WEIGHTS[arm], TOKENS, CFG, seed=seed,
+        eval_sets=EVAL_SETS, log_every=LOG_EVERY,
+        max_epochs=MAX_EPOCHS[arm], eval_at=EVAL_AT, byte_lengths=BYTE_LEN,
+        **kw)
+
+if 'synth-arms' in RERUN:
+    assert JUDGE_PART is not None, 'the results file holds the verdicts: ' \
+        'reph-judge first'
+    assert COSMO_ROWS is not None
+    runs, t0 = [], time.time()
+    for arm in ARM_POOLS:
+        for seed in SEEDS:
+            out = run_arm(arm, seed)
+            runs.append(dict(run_id=f'{arm}-s{seed}', arm=arm, seed=seed,
+                             **out))
+            print(f'{arm}-s{seed}: real {out["final"]["real"]["bpb"]:.4f}, '
+                  f'rephrased {out["final"]["reph"]["bpb"]:.4f} bits per '
+                  f'byte, {out["throughput"]:,.0f} tokens/s, '
+                  f'{(time.time() - t0) / 60:.1f} min in all')
+    res = dict(schema='d2l-synth-results/1', tier=TIER, config=CONFIG,
+               corpus=CORPUS_SHA, pools=dict(web=WEB.meta['sha256'],
+                                             val=VAL.meta['sha256']),
+               runs=runs, judge=JUDGE_PART, cosmopedia=COSMO_ROWS,
+               environment=dict(torch=torch.__version__, device=(
+                   torch.cuda.get_device_name() if torch.cuda.is_available()
+                   else 'cpu')))
+    d2l.lm_save_rerun(ARTIFACTS['synth-arms'][1],
+                      lambda p: write_json(p, res))
+RES_PATH = d2l.lm_artifact(RES_KEY, ARTIFACTS['synth-arms'][1]
+                           if 'synth-arms' in RERUN else None)
+with open(RES_PATH) as f:
+    RESULTS = json.load(f)
+assert RESULTS['config'] == CONFIG, 'the runs had another configuration'
+assert RESULTS['corpus'] == CORPUS_SHA and RESULTS['pools'] == dict(
+    web=WEB.meta['sha256'], val=VAL.meta['sha256'])
+REC = {r['run_id']: r for r in RESULTS['runs']}
+assert list(REC) == [f'{a}-s{s}' for a in ARM_POOLS for s in SEEDS]
+if GPU and not RERUN:
+    live = run_arm('A', 0, stop_tokens=LIVE_TOKENS)
+    logged = {s: l for s, _, l, _ in REC['A-s0']['log']}
+    diff = max(abs(l - logged[s]) for s, _, l, _ in live['log'])
+    print(TAG, f'arm A, seed 0, steps {LOG_EVERY}-{live["log"][-1][0]}: '
+          f'largest difference from the registered losses {diff:.4f} nats '
+          '(bf16; tolerance 0.02)')
+    assert diff <= 0.02
+else:
+    print('live check skipped:', 'no GPU' if not GPU else
+          'this run regenerates')
+```
+
+<!-- Prose: the result (fig_lm_rephrase_tradeoff, computed: the plot below):
+bits per byte on real and on rephrased validation per arm, the three seed
+points and the mean, a band of two pooled seed SDs around arm A (10 degrees
+of freedom); the curves of A, B and D on real validation with A's epoch
+boundaries. A difference counts only if all three seed-paired differences
+share a sign and their mean exceeds two pooled SDs; otherwise "no
+difference detected at this scale" (C3-C5; the 12% bound is why a null
+result for B is expected). Restate sec_environment-and-distribution-shift
+in one sentence: training on a model's outputs moves the training
+distribution toward the generator's, which is how C can win on rephrased
+validation and lose on real. -->
+
+```{.python .input #synthetic-data-arms-analysis}
+%%tab pytorch
+ARMS = list(ARM_POOLS)
+BPB = {v: {a: np.array([REC[f'{a}-s{s}']['final'][v]['bpb'] for s in SEEDS])
+           for a in ARMS} for v in EVAL_SETS}
+SIGMA = {v: math.sqrt(np.mean([b[a].var(ddof=1) for a in ARMS]))
+         for v, b in BPB.items()}  # pooled within-arm seed SD, 10 df
+
+def verdict(x, y, v):
+    """Seed-paired y - x on validation set v, and whether it is real."""
+    d = BPB[v][y] - BPB[v][x]
+    real = len(set(np.sign(d))) == 1 and abs(d.mean()) > 2 * SIGMA[v]
+    return d, real
+
+rows = []  # (x, y, validation set, claim, the sign of y - x it claims)
+for x, y, v, claim, sign in (
+        ('A', 'B', 'real', 'C3: B beats A', -1),
+        ('B', 'E', 'real', 'C5: E beats B', -1),
+        ('A', 'C', 'real', 'C4: C loses to A', 1),
+        ('A', 'C', 'reph', 'C4: C wins on rewrites', -1)):
+    d, real = verdict(x, y, v)
+    rows.append(dict(claim=claim, difference=f'{y} - {x}', val=v,
+                     diffs=np.round(d, 4).tolist(), mean=d.mean(),
+                     real=real, holds=real and np.sign(d.mean()) == sign))
+VERDICTS = pd.DataFrame(rows)
+print(TAG, 'pooled seed SD of bits per byte: real '
+      f'{SIGMA["real"]:.4f}, rephrased {SIGMA["reph"]:.4f} (10 df)')
+print(VERDICTS.round(4).to_string(index=False))
+for _, r in VERDICTS.iterrows():
+    print(f'  {r.claim}: ' + ('holds' if r.holds else
+                              'no difference detected at this scale'
+                              if not r.real else 'the opposite holds'))
+best = min(ARMS, key=lambda a: BPB['real'][a].mean())
+print('lowest real-validation bits per byte: arm', best, '(D, fresh text, '
+      'is the reference bound)' if best == 'D' else
+      '(not D: a bug to look for, not a result)')
+fig, axes = d2l.plt.subplots(1, 3, figsize=(11, 3))
+for ax, v, name in zip(axes, EVAL_SETS, ('real validation',
+                                         'rephrased validation')):
+    m = [BPB[v][a].mean() for a in ARMS]
+    d2l.plot_intervals(ARMS, {'mean': (m, m, m)}, 'arm',
+                       f'{name}, bits per byte', axes=ax,
+                       reference=BPB[v]['A'].mean(), marks={'seeds': (
+                           '.', {'mean': (np.repeat(np.arange(len(ARMS)),
+                                                    len(SEEDS)),
+                                          np.concatenate([BPB[v][a] for a
+                                                          in ARMS]))})})
+    ax.axhspan(BPB[v]['A'].mean() - 2 * SIGMA[v],
+               BPB[v]['A'].mean() + 2 * SIGMA[v], color='0.85', zorder=0)
+curve = lambda a: np.mean([[e['domains']['real']['bpb'] for e in REC[
+    f'{a}-s{s}']['evals']] for s in SEEDS], 0)
+x = [e['tokens'] for e in REC['A-s0']['evals']]
+d2l.plot(x, [curve(a) for a in 'ABD'], 'tokens',
+         'real validation, bits per byte', legend=[
+             f'{a}: {ARM_DESC[a]}' for a in 'ABD'], axes=axes[2])
+per_step = CFG.batch * CFG.seq_len
+for s in REC['A-s0']['epoch_starts']['real'][1:]:  # A's repeats begin
+    axes[2].axvline(s * per_step, color='black', linestyle=':', linewidth=1)
+fig.tight_layout()
+ARM_TABLE = pd.DataFrame([dict(
+    arm=a, arm_is=ARM_DESC[a],
+    unique_tokens=int(ARM_BUILD[ARM_BUILD.arm == a].unique_tokens.sum()),
+    effective=ARM_BUILD[ARM_BUILD.arm == a].effective.sum(),
+    real=BPB['real'][a].mean(), real_seeds=np.round(BPB['real'][a], 4)
+    .tolist(), reph=BPB['reph'][a].mean(),
+    reph_seeds=np.round(BPB['reph'][a], 4).tolist()) for a in ARMS])
+print(TAG, 'bits per byte (mean and the three seeds):')
+print(ARM_TABLE.round(4).to_string(index=False))
+```
+
+## Recursive Training and Collapse
+:label:`subsec_lm_synth_collapse`
+
+<!-- Prose: a model trained on its predecessor's output (the curse of
+recursion); the Gaussian refit (eq_lm_synth_collapse: replace mode
+E[sigma_T^2] = q^T sigma^2 and Var(mu_T) = sigma^2 (1 - q^T) with
+q = (n - 1)/n; accumulate mode Var(mu_T) -> (pi^2/6) sigma^2 / n, bounded),
+a short derivation; the simulator below fits by maximum likelihood. -->
+
+```{.python .input #synthetic-data-collapse-def}
+%%tab pytorch
+#@save
+def collapse_sim(n, generations, mode='replace', reps=1000, seed=0, mu=0.0,
+                 sigma=1.0):
+    """The Gaussian refit: generation 0 is N(mu, sigma^2); fit t (t >= 1)
+    fits (mu, sigma^2) by maximum likelihood to the n points just sampled
+    from fit t - 1 ('replace') or to all points sampled so far
+    ('accumulate'). Returns, per generation 0..generations over reps
+    repetitions, the mean of mu_t, its variance var_mu, the mean of
+    sigma_t^2 and the Monte-Carlo standard errors se_var_mu, se_sigma2."""
+    if mode not in ('replace', 'accumulate'):
+        raise ValueError(f'unknown mode {mode!r}')
+    rng = np.random.default_rng(seed)
+    M, S = np.zeros((generations + 1, reps)), np.zeros((generations + 1,
+                                                        reps))
+    M[0], S[0] = mu, sigma**2
+    total = np.zeros(reps), np.zeros(reps), 0  # sum, sum of squares, count
+    for t in range(1, generations + 1):
+        x = rng.normal(M[t - 1][:, None], np.sqrt(S[t - 1])[:, None],
+                       (reps, n))
+        s1, s2, k = x.sum(1), (x**2).sum(1), n
+        if mode == 'accumulate':
+            total = total[0] + s1, total[1] + s2, total[2] + n
+            s1, s2, k = total
+        M[t] = s1 / k
+        S[t] = np.maximum(s2 / k - M[t]**2, 0)
+    dev = M - M.mean(1, keepdims=True)
+    var = (dev**2).mean(1) * reps / (reps - 1)
+    m4 = (dev**4).mean(1)
+    return dict(mean=M.mean(1), var_mu=var, mean_sigma2=S.mean(1),
+                se_var_mu=np.sqrt(np.maximum(m4 - var**2, 0) / reps),
+                se_sigma2=S.std(1, ddof=1) / math.sqrt(reps))
+```
+
+<!-- Prose: the closed forms within three Monte-Carlo standard errors at
+n = 100, 20 generations, 1,000 repetitions; a discrete toy on 200,000 words
+of the web pool: a bigram model over the 20,000 most frequent words plus
+<unk>, refitted for 10 generations on its own samples (replace) or on all
+samples so far (accumulate): the word types the fitted model can still
+emit, the share of the originally rarest 10% of types among them, and their
+probability mass (a resampled set keeps its mass in expectation: the tail
+is lost type by type, not by a falling share); a mechanism under a stated
+protocol (each generation sees only model output), not a forecast: real
+pipelines mix in fresh data and filter. -->
+
+```{.python .input #synthetic-data-collapse}
+%%tab pytorch
+n, T, reps = 100, 20, 1000
+SIM = {mode: d2l.collapse_sim(n, T, mode, reps, seed=0)
+       for mode in ('replace', 'accumulate')}
+q, t = (n - 1) / n, np.arange(T + 1)
+r, acc = SIM['replace'], SIM['accumulate']
+z_s = abs(r['mean_sigma2'][T] - q**T) / r['se_sigma2'][T]
+z_m = abs(r['var_mu'][T] - (1 - q**T)) / r['se_var_mu'][T]
+partial = np.r_[0, np.cumsum(1 / np.arange(1, T + 1)**2)] / n
+bound = math.pi**2 / 6 / n
+assert z_s < 3 and z_m < 3
+assert acc['var_mu'][T] < bound + 3 * acc['se_var_mu'][T]
+print(f'replace, T = {T}: E[sigma^2] {r["mean_sigma2"][T]:.4f} (closed form '
+      f'q^T = {q**T:.4f}, {z_s:.1f} SE), Var(mu) {r["var_mu"][T]:.4f} '
+      f'(1 - q^T = {1 - q**T:.4f}, {z_m:.1f} SE)')
+print(f'accumulate, T = {T}: E[sigma^2] {acc["mean_sigma2"][T]:.4f}, '
+      f'Var(mu) {acc["var_mu"][T]:.5f} (sum of 1/t^2 over n: '
+      f'{partial[T]:.5f}; the bound pi^2 / (6n) = {bound:.5f})')
+
+def corpus_words(n_words):
+    words = []
+    for _, ids in DOCS:
+        words += d2l.shingles(TOK.decode(ids), 1)
+        if len(words) >= n_words:
+            return words[:n_words]
+
+WORDS = corpus_words(200_000)
+counts = collections.Counter(WORDS)
+VOCAB = {w: i for i, (w, _) in enumerate(counts.most_common(20_000))}
+V = len(VOCAB) + 1  # the last id is <unk>
+seq0 = np.array([VOCAB.get(w, V - 1) for w in WORDS])
+freq0 = np.bincount(seq0, minlength=V)[:V - 1]
+TAIL = np.argsort(freq0, kind='stable')[:len(freq0) // 10]  # rarest 10%
+
+def bigram_counts(seq):
+    return sparse.csr_matrix((np.ones(len(seq) - 1), (seq[:-1], seq[1:])),
+                             shape=(V, V))
+
+def sample_bigram(C, uni, size, rng, length=200):
+    """size words from the bigram counts C: chains of length words, each
+    started from the unigram counts uni (also used after a dead end)."""
+    C = C.tocsr()
+    cum, start = np.cumsum(C.data), np.r_[0.0, np.cumsum(C.data)][C.indptr]
+    rows = np.asarray(C.sum(1)).ravel()
+    p_uni = uni / uni.sum()
+    w = rng.choice(V, size // length, p=p_uni)
+    out = [w]
+    for _ in range(length - 1):
+        dead = rows[w] == 0
+        j = np.searchsorted(cum, start[w[~dead]] + rng.random(
+            (~dead).sum()) * rows[w[~dead]], side='right')
+        w = w.copy()
+        w[~dead] = C.indices[j]
+        w[dead] = rng.choice(V, dead.sum(), p=p_uni)
+        out.append(w)
+    return np.stack(out, 1).ravel()
+
+TOY = {}
+for mode in ('replace', 'accumulate'):
+    rng, seq = np.random.default_rng(0), seq0
+    C, uni = bigram_counts(seq0), np.bincount(seq0, minlength=V).astype(float)
+    stats = []
+    for g in range(11):  # the model fitted at generation g
+        stats.append(dict(generation=g, types=int((uni[:-1] > 0).sum()),
+                          tail_alive=(uni[TAIL] > 0).mean(),
+                          tail_mass=uni[TAIL].sum() / uni.sum()))
+        seq = sample_bigram(C, uni, len(seq0), rng)
+        c, u = bigram_counts(seq), np.bincount(seq, minlength=V)
+        C, uni = (c, u.astype(float)) if mode == 'replace' else (C + c,
+                                                                 uni + u)
+    TOY[mode] = pd.DataFrame(stats)
+print(f'bigram toy: {len(WORDS):,} words, {V - 1:,} types plus <unk>; the '
+      f'rarest 10% ({len(TAIL):,} types) hold '
+      f'{np.isin(seq0, TAIL).mean():.2%} of the words. Per generation: types '
+      'the model can still emit, the share of the rarest types still among '
+      'them, and their probability mass:')
+print(pd.concat({m: d.set_index('generation') for m, d in TOY.items()},
+                axis=1).iloc[[0, 1, 2, 5, 10]].round(5).to_string())
+fig, axes = d2l.plt.subplots(1, 2, figsize=(10, 3.6))
+g = t[1:]  # the fitted generations (Var(mu) is 0 at generation 0)
+d2l.plot(g, [r['mean_sigma2'][1:], q**g, acc['mean_sigma2'][1:],
+             r['var_mu'][1:], 1 - q**g, acc['var_mu'][1:]], 'generation',
+         'variance', fmts=('C0-', 'C0:', 'C1-', 'C2-', 'C2:', 'C3-'),
+         yscale='log', axes=axes[0])
+axes[0].axhline(bound, color='black', linestyle='--', linewidth=0.8)
+axes[0].legend([r'$E[\hat\sigma^2]$, replace', '$q^t$',
+                r'$E[\hat\sigma^2]$, accumulate', r'Var$(\hat\mu)$, replace',
+                '$1 - q^t$', r'Var$(\hat\mu)$, accumulate',
+                r'$\pi^2 / (6n)$'], loc='upper center', ncol=3, fontsize=8,
+               bbox_to_anchor=(0.5, -0.22))
+d2l.plot(TOY['replace'].generation, [TOY[m].types for m in TOY],
+         'generation', 'word types the model emits', legend=list(TOY),
+         axes=axes[1])
+fig.tight_layout()
+```
+
+## Licences and Disclosure
+:label:`subsec_lm_synth_rights`
+
+<!-- Prose: the rights of a generated token follow its source text (a
+rewrite does not remove the source's licence) and its generator (Qwen3.5:
+Apache-2.0; some model licences restrict how outputs may be used, some API
+terms restrict training competing models: the terms check of sec_lm_api
+before an API model writes training data); descriptive, not legal advice
+(said once); the manifest stage `rephrase` (generator id and revision,
+prompt hash, seed, source ids, filters, drops by reason) and the dataset
+card's line on the synthetic share. Forward to sec_lm_instruction_data only
+if the label resolves when the prose is written. -->
+
+```{.python .input #synthetic-data-manifest}
+%%tab pytorch
+_, meta, rows = CORPUS
+MAN = d2l.CorpusManifest(TAR_KEY)
+read = {c['doc_id'] for v in SPLITS.values() for c in v}  # source documents
+MAN.add_source('fineweb-edu', 'hf://datasets/HuggingFaceFW/fineweb-edu/'
+               'sample/10BT', revision=WEB.meta['revision'],
+               license='odc-by', n_docs=len(read),
+               bytes=sum(meta[f'{NAMES[s, "src"]}.bin']['n_bytes_nfc']
+                         for s in SPLITS))
+kept = rows[rows.kept]
+fl = flags(kept)
+MAN.add_stage(
+    'rephrase', dict(generator=f'{REPHRASER}@{d2l.HF_REVISIONS[REPHRASER]}',
+                     style='wiki', prompt_sha256=GEN_ID['prompt_sha256'],
+                     seed=SAMPLING['seed'],
+                     temperature=SAMPLING['temperature'],
+                     top_p=SAMPLING['top_p'], max_new_tokens=REGEN_TOKENS,
+                     chunk_tokens=CHUNK_TOKENS, splits={s: dict(
+                         documents=N_DOCS[s], chunks=len(SPLITS[s]))
+                         for s in SPLITS},
+                     flags={k: int(fl[k].sum()) for k in fl},
+                     filters=FILTERS, order='length'),
+    n_in=len(rows), n_out=len(kept),
+    drops={'length': int((~rows.kept).sum())},
+    in_hash=d2l.docs_hash(list(zip(rows.chunk_id, rows.src_text))),
+    out_hash=d2l.docs_hash(list(zip(kept.chunk_id, kept.out_text))),
+    impl='d2l.rephrase_docs', tokens_out=sum(
+        meta[f'{NAMES[s, "reph"]}.bin']['n_tokens'] for s in SPLITS))
+print(json.dumps(MAN.stages[-1], indent=1, sort_keys=True))
+synth = sum(m['n_tokens'] for m in meta.values() if m['kind'] == 'reph')
+share = synth / sum(m['n_tokens'] for m in meta.values())
+print(MAN.to_card() + f'\nContains synthetic text: {share:.0%} of its '
+      f'tokens were written by {REPHRASER} from the FineWeb-Edu sources '
+      'above.')
+```
+
+## Summary
+
+<!-- Prose (stage 2): 3-6 sentences; every arm result "at T1 scale
+(8.1M-parameter proxies, 2^24 tokens)". -->
+
+## Exercises
+
+<!-- Prose (stage 2): the seven exercises of the specification (20.5 part
+8). -->

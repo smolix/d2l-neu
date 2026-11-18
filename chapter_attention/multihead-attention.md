@@ -1045,7 +1045,7 @@ GPT-2-small layer: $d = 768$, 12 heads of width 64.
 | **Self-Attention and Multiple Heads** | **a sequence reads itself; several heads** |
 | Positional Information | where a token sits |
 | The Cost of Attention | quadratic cost, fused kernels |
-| Windowed and Linear Attention | what linear cost gives up |
+| Windowed and Linear Attention | linear cost, and what it gives up |
 | Attention Circuits | what trained heads compute |
 :::
 

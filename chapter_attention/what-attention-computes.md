@@ -1099,13 +1099,11 @@ exactly.
 
 The opposite case, a sharp map with little effect, is common in trained
 language models. Many of their heads put most of their attention on the
-first token of the sequence, whatever that token is
-:cite:`Xiao.Tian.Chen.ea.2024`.
-The softmax forces every row of weights to sum to one, so a head with
-nothing to retrieve must put its weight somewhere, and the first token,
-visible to every query, becomes the place. This *attention sink* has a
-value vector of small norm, so the weight placed on it adds almost nothing
-to the stream :cite:`Gu.Pang.Du.ea.2025`. Read alone, the map says the
+first token of the sequence, whatever that token is, the attention sink of
+:numref:`subsec_cross-attention-alignment`. A head with nothing to retrieve
+must put its weight somewhere, and the first token, visible to every query,
+becomes the place. The sink has a value vector of small norm, so the weight
+placed on it adds almost nothing to the stream :cite:`Gu.Pang.Du.ea.2025`. Read alone, the map says the
 first token matters most. Read with the OV circuit, it says the head is
 mostly idle.
 
@@ -1457,8 +1455,8 @@ heads per block, trained on repeated random tokens from 64.
 |---|---|
 | Queries, Keys, and Values | attention as a soft lookup |
 | Attention Scoring and Masking | scaled dot products, masks |
-| Self-Attention and Multiple Heads | a sequence queries itself; heads |
-| Positional Information | where a token sits; RoPE |
+| Self-Attention and Multiple Heads | a sequence reads itself; several heads |
+| Positional Information | where a token sits |
 | The Cost of Attention | quadratic cost, fused kernels |
 | Windowed and Linear Attention | linear cost, and what it gives up |
 | **Attention Circuits** | **what trained heads compute** |
@@ -1730,7 +1728,9 @@ A sharp map can come from a head with nothing to do.
 [Xiao et al., 2024; Gu et al., 2025]{.small}
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="Two Blocks Learn Induction; Only Ablation Shows Which Heads Matter"}
+[Wrap-up]{.kicker}
+
 - A head is a QK circuit (where) and an OV circuit (what), each of rank at
   most $d_h = 32$ here.
 - One layer: bigrams and skip-trigrams. Induction needs two: a

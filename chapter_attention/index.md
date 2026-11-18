@@ -12,15 +12,14 @@ instead, and read only what the current prediction needs?
 Attention does this. It keeps a representation of every position, scores
 the current query against a key at every position, turns the scores into
 weights, and returns the weighted average of the values stored there. The
-*query* says what a position looks for, a *key* what a position offers,
-and a *value* what it hands back. A weighted average, unlike a hard choice
-of one match, is differentiable, so gradient descent can learn what to
-look for. A layer runs several such lookups side by side, called *heads*.
-The idea became known through machine translation, where a network had to
-translate from one vector summarizing the source sentence. Attention let
-it consult every source word instead :cite:`Bahdanau.Cho.Bengio.2014`. The
-Transformer then made attention the only operation that mixes positions
-:cite:`Vaswani.Shazeer.Parmar.ea.2017`.
+*query* says what a position looks for, a *key* what it offers, and a
+*value* what it hands back. A weighted average, unlike a hard choice, is
+differentiable, so gradient descent can learn what to look for. A layer
+runs several such lookups side by side, called *heads*. The idea became
+known through machine translation, where it let a network consult every
+source word instead of one vector summarizing the sentence
+:cite:`Bahdanau.Cho.Bengio.2014`. The Transformer then made attention the
+only operation that mixes positions :cite:`Vaswani.Shazeer.Parmar.ea.2017`.
 
 Reading every position raises problems that recurrent networks never had.
 A weighted average ignores the order of its inputs. Scoring all pairs of
@@ -28,22 +27,21 @@ positions costs time and memory that grow with the square of the length.
 And a map of attention weights shows where a head looks, not what it
 computes.
 
-The first two sections build the layer: a lookup in a two-record table,
-then a learned score with masks. The third lets a sentence query itself.
-This *self-attention* (:numref:`sec_multihead-attention`) is the layer a
-transformer stacks. The rest of the chapter takes the three problems, and
-they are not equally settled. Order has a standard answer. Cost still
-shapes new architectures and takes two sections: exact attention without
-stored scores, then cheaper variants that read only recent keys or, as
-*linear attention*, return to a state of fixed size, the very thing
-attention set out to avoid. What a trained head computes is understood in
-detail only in small models, and the last section takes one apart.
+The first three sections build the layer: a lookup in a table of two
+records, a learned score with masks, and a sentence that queries itself.
+This *self-attention* (:numref:`sec_multihead-attention`) is the
+layer a transformer stacks. The three problems are not equally settled.
+Order has a standard answer. Cost still shapes new architectures, and two
+sections take it on: exact attention without stored scores, then cheaper
+variants that read only recent keys or, as *linear attention*, return to a
+state of fixed size, the very thing attention set out to avoid. What a
+trained head computes is understood in detail only in small models, and the
+last section takes one apart.
 
-A reader heading for the transformer of :numref:`chap_transformers` needs
-the first four sections and the opening of the last, on the *residual
-stream*, one running vector per position that every layer adds to. The
-sections on cost can wait until :numref:`sec_kv-cache` and
-:numref:`chap_modern_rnn` build on them.
+A reader heading for :numref:`chap_transformers` needs the first four
+sections and the opening of the last, on the *residual stream* that every
+layer writes into. The sections on cost can wait until
+:numref:`sec_kv-cache` and :numref:`chap_modern_rnn` need them.
 
 ```toc
 :maxdepth: 2

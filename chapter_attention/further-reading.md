@@ -70,10 +70,11 @@ that started the field.
 The softmax forces every row of weights to sum to one, so a query that
 finds nothing relevant must still put its weight somewhere. Under a causal
 mask the first token is the one key that every query can see, and trained
-models often park the weight there (:numref:`sec_what-attention-computes`).
-A cache that evicts old tokens must therefore keep this *attention sink*,
-as :numref:`subsec_kv-cache-sinks` measures. Why would a trained model want
-such a place at all? :citet:`Sun.Chen.Kolter.ea.2024` find that sinks
+models often park the weight there, the attention sink of
+:numref:`subsec_cross-attention-alignment` and
+:numref:`sec_what-attention-computes`. A cache that evicts old tokens must
+therefore keep the sink, as :numref:`subsec_kv-cache-sinks` measures. Why
+would a trained model want such a place at all? :citet:`Sun.Chen.Kolter.ea.2024` find that sinks
 coincide with a few activations in the residual stream that are orders of
 magnitude larger than the rest and act as fixed biases.
 :citet:`Barbero.Arroyo.Gu.ea.2025` give a reason for having one: a head

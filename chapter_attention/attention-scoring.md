@@ -766,11 +766,11 @@ softmax must spend all of its probability mass, even when no key deserves
 any.
 
 Trained language models often send such leftover weight to the first token
-of the sequence, which then acts as a *sink* for attention that has nowhere
-useful to go :cite:`Xiao.Tian.Chen.ea.2024`. A large weight on a sink says
-that no key was relevant, not that the sink is. An attention map shows
-where the softmax put its mass, which is not always where the information
-came from.
+of the sequence, which then acts as an *attention sink*, a place for weight
+that has nowhere useful to go :cite:`Xiao.Tian.Chen.ea.2024`. A large weight
+on a sink says that no key was relevant, not that the sink is. An attention
+map shows where the softmax put its mass, which is not always where the
+information came from.
 
 This layer does not know where a token sits. If "translation" were spelled
 backward, every letter of "attention" would retrieve the same mixture, and
@@ -1220,11 +1220,11 @@ $n = 1{,}024$.
 | section | adds |
 |---|---|
 | Queries, Keys, and Values | attention as a soft lookup |
-| **Attention Scoring and Masking** | **learned scores, masks, the batched layer** |
+| **Attention Scoring and Masking** | **scaled dot products, masks** |
 | Self-Attention and Multiple Heads | a sequence reads itself; several heads |
 | Positional Information | where a token sits |
-| The Cost of Attention | quadratic cost, computed exactly |
-| Windowed and Linear Attention | what linear cost gives up |
+| The Cost of Attention | quadratic cost, fused kernels |
+| Windowed and Linear Attention | linear cost, and what it gives up |
 | Attention Circuits | what trained heads compute |
 :::
 
@@ -1530,7 +1530,9 @@ the same token gets the same weight, as with the letters of
 :::
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="Scaled Scores and Boolean Masks Make Attention a Trainable Layer"}
+[Wrap-up]{.kicker}
+
 - Score $\mathbf{q}^\top\mathbf{k}/\sqrt{d}$: the Gaussian kernel without
   the norms; at $d = 64$ the factor turns a ±8 score into ±1.
 - Unscaled scores of random vectors saturate the softmax: about 0.2 nats

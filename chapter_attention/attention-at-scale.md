@@ -87,15 +87,15 @@ operations per score, the term $O(Hn^2)$. The counts in this section are per
 layer and in terms of the model width $d$; the measurements run one head at
 a time and use $d_h$.
 
-Which term matters depends on the context. Setting $4n^2d = 8nd^2$ gives
-the crossover: the quadratic part dominates as soon as $n > 2d$. GPT-2
-small, with $d = 768$ and contexts of 1,024 tokens, sits below the
-crossover, so its projections still cost more than its scores. A model with
-$d = 4096$ at $n = 131{,}072$ sits far beyond it. There $n/2d = 16$, so an
-attention layer does sixteen times as much score-and-mix work as projection
-work. The rule $n > 2d$ is worth remembering because it needs only two
-numbers that every model description states. It compares attention with its
-own projections, though. :numref:`chap_transformers` adds to every layer a
+Which term matters depends on the context. As
+:numref:`sec_multihead-attention` found, the quadratic part dominates once
+$n > 2d$. GPT-2 small, with $d = 768$ and contexts of 1,024 tokens, sits
+below the crossover, so its projections still cost more than its scores. A model
+with $d = 4096$ at $n = 131{,}072$ sits far beyond it. There $n/2d = 16$, so
+an attention layer does sixteen times as much score-and-mix work as projection
+work. The rule $n > 2d$ is worth remembering because it needs only two numbers
+that every model description states. It compares attention with its own
+projections, though. :numref:`chap_transformers` adds to every layer a
 feed-forward network that typically costs twice as much as the projections,
 which moves the crossover for a whole transformer layer to about $n = 6d$.
 
@@ -759,7 +759,7 @@ of 1,024 tokens, and the same head at 8,192 tokens.
 | Self-Attention and Multiple Heads | a sequence reads itself; several heads |
 | Positional Information | where a token sits |
 | **The Cost of Attention** | **quadratic cost, fused kernels** |
-| Windowed and Linear Attention | fewer scores, at a price |
+| Windowed and Linear Attention | linear cost, and what it gives up |
 | Attention Circuits | what trained heads compute |
 :::
 

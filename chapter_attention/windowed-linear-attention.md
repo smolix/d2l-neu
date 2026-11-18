@@ -7,11 +7,9 @@ before it, a hundred thousand of them or more. Does the last word of the
 book really need every word of the first chapter? Usually it does not: what
 a token needs is mostly nearby. Sometimes it does, because the answer is a
 name that appeared once, early on. The fused kernel of
-:numref:`sec_attention-at-scale` treats every token as the hard case. It
-removed the stored score matrix but none of the scores, so doubling the context
-still quadruples the arithmetic, and the keys and values kept for
-generation still grow with every token. The score matrix is gone; the
-arithmetic and the cache remain.
+:numref:`sec_attention-at-scale` treats every token as the hard case. The
+score matrix is gone, but the arithmetic and the cache of past keys and
+values remain, and both still grow with the context.
 
 The question became pressing around 2019 and 2020, when the first
 transformers for long documents ran out of memory. Of the many remedies
@@ -140,9 +138,8 @@ small number of hops.
 More recent models interleave windowed layers with a few layers of full
 attention, called *global* layers. A global layer connects every pair in
 one hop again, and the windowed layers keep both the arithmetic and the
-memory of generation small. A model that generates text keeps the keys and
-values of all past tokens so that it need not recompute them
-(:numref:`sec_multihead-attention`). This store is the *KV cache*, built in
+memory of generation small. That memory is the store of past keys and
+values met in :numref:`subsec_kv-head-sharing`, the *KV cache* of
 :numref:`sec_kv-cache`, and a windowed layer needs only the last $w$ of its
 entries. Gemma 3 follows every five windowed layers of width 1,024 with one
 global layer :cite:`Gemma.Team.2025`.
@@ -929,16 +926,27 @@ Running example: one head of width $d_h = 64$, as in GPT-2 small.
 :::
 
 ::: {.slide title="This Deck Covers Cheaper Attention, Not Learned Sparsity"}
-[Scope]{.kicker}
+[Where this fits]{.kicker}
 
-| Chapter 10 | |
-|:--|:--|
-| queries, keys, values · scoring and masks · self-attention and heads · positions · cost of attention | done |
-| **windowed and linear attention** | **here** |
-| attention circuits | next |
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Queries, Keys, and Values | attention as a soft lookup |
+| Attention Scoring and Masking | scaled dot products, masks |
+| Self-Attention and Multiple Heads | a sequence reads itself; several heads |
+| Positional Information | where a token sits |
+| The Cost of Attention | quadratic cost, fused kernels |
+| **Windowed and Linear Attention** | **linear cost, and what it gives up** |
+| Attention Circuits | what trained heads compute |
+:::
 
-Skipped: sparsity chosen from content, random-feature approximations of
-softmax, gated recurrences (the state space chapter).
+::: {.col .narrow}
+- **Uses:** masks, fused kernels, the recurrent state of an RNN.
+- **Skips:** sparsity chosen from content, random-feature approximations
+  of softmax, gated recurrences (the state space chapter).
+:::
+:::
 :::
 
 ::: {.slide title="Two Routes Below n²: Score Fewer Pairs, or Factorize the Score"}
@@ -1211,8 +1219,8 @@ Scaling the query does not sharpen linear attention, and it recalls poorly.
 [Arora et al. 2024; Yang et al. 2024; MiniMax 2025]{.small}
 :::
 
-::: {.slide title="Recap"}
-[Recap]{.kicker}
+::: {.slide title="Windows and Linear Attention Trade Reach and Sharpness for Linear Cost"}
+[Wrap-up]{.kicker}
 
 - Window: $O(nw)$ work, reach $1 + L(w - 1)$; Gemma 3 keeps about a
   quarter of the cache at 8K.

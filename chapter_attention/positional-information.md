@@ -1363,10 +1363,10 @@ two blocks of four heads of width 32), trained at context 128, tested at
 |---|---|
 | Queries, Keys, and Values | attention as a soft lookup |
 | Attention Scoring and Masking | scaled dot products, masks |
-| Self-Attention and Multiple Heads | a sequence attends to itself |
-| **Positional Information** | **where a token stands** |
-| The Cost of Attention | quadratic cost, exact fast kernels |
-| Windowed and Linear Attention | cheaper attention, what it gives up |
+| Self-Attention and Multiple Heads | a sequence reads itself; several heads |
+| **Positional Information** | **where a token sits** |
+| The Cost of Attention | quadratic cost, fused kernels |
+| Windowed and Linear Attention | linear cost, and what it gives up |
 | Attention Circuits | what trained heads compute |
 :::
 

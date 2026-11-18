@@ -135,7 +135,7 @@ attention layer serves inputs of every length, and it reads all of them
 directly rather than a compressed summary. What grows instead is memory. A
 recurrent network keeps one state, while attention keeps a key and a value
 for every position it may need to read. Each layer of GPT-2 small runs
-twelve such lookups side by side, the *heads* of the chapter introduction,
+twelve such lookups side by side, the heads of the chapter introduction,
 and the keys and values of one head have 64 entries each. After 1,024
 tokens one head holds $2 \times 1{,}024 \times 64 = 131{,}072$ numbers, and
 the twelve heads of one layer hold about 1.6 million, where the recurrent
@@ -551,14 +551,14 @@ lookup; each GPT-2 layer runs twelve side by side.
 
 ::: {.cols .vc}
 ::: {.col}
-| deck | adds |
+| section | adds |
 |---|---|
 | **Queries, Keys, and Values** | **attention as a soft lookup** |
-| Attention Scoring and Masking | learned dot-product scores, masks |
-| Self-Attention and Multiple Heads | a sequence querying itself; several heads |
+| Attention Scoring and Masking | scaled dot products, masks |
+| Self-Attention and Multiple Heads | a sequence reads itself; several heads |
 | Positional Information | where a token sits |
-| The Cost of Attention | quadratic cost; exact attention in tiles |
-| Windowed and Linear Attention | cheaper attention, and what it gives up |
+| The Cost of Attention | quadratic cost, fused kernels |
+| Windowed and Linear Attention | linear cost, and what it gives up |
 | Attention Circuits | what trained heads compute |
 :::
 

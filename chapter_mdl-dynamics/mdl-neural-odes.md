@@ -48,30 +48,41 @@ $\mathcal{L}$ is a loss, $\mathbf{a}(t)$ the adjoint and $p_t$ the density.
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2}
 #@tab mxnet
+import math
+import numpy as np
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import numpy as np
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2}
 #@tab pytorch
+import math
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2}
 #@tab tensorflow
+import math
 import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2}
 #@tab jax
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 The adjoint and density checks reuse the spiral field $\mathbf A$ and the starting
@@ -80,24 +91,39 @@ tools from there: the matrix exponential $e^{\mathbf Bs}=\mathbf Ve^{\boldsymbol
 the eigendecomposition $\mathbf B=\mathbf V\boldsymbol\Lambda \mathbf V^{-1}$, and the classical fourth-order
 Runge--Kutta solver (RK4).
 
+<!-- WRITER: the cell below now defines rng (the notebook's one generator,
+unseeded), A, x0, expm_eig(C, s) (generic matrix renamed B -> C), and three
+solver tools: euler_step(f, x, h) and rk4_step(f, x, h), one step each, and
+solve(step, f, x, T, N), N steps of size T/N (T < 0 runs the field backward).
+Forward Euler is from sec_mdl-euler-runge-kutta as well as RK4. Every later cell
+(training in four frameworks, the trace integral) integrates through solve(). -->
+
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-1}
+rng = np.random.default_rng()
 A = np.array([[-0.5, -1.0], [1.0, -0.5]])      # spiral sink: eigenvalues -0.5 +- i
 x0 = np.array([2.0, 0.0])
 
-def expm_eig(B, s):
-    """e^{Bs} via the eigendecomposition B = V diag(mu) V^{-1}."""
-    mu, V = np.linalg.eig(B)
+def expm_eig(C, s):
+    """e^{Cs} via the eigendecomposition C = V diag(mu) V^{-1}."""
+    mu, V = np.linalg.eig(C)
     return (V @ np.diag(np.exp(mu * s)) @ np.linalg.inv(V)).real
 
-def rk4(f, x, T, n):
-    """n classical RK4 steps of dx/dt = f(x) from time 0 to time T."""
-    h = T / n
-    for _ in range(n):
-        k1 = f(x)
-        k2 = f(x + h / 2 * k1)
-        k3 = f(x + h / 2 * k2)
-        k4 = f(x + h * k3)
-        x = x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+def euler_step(f, x, h):
+    """One forward-Euler step of size h for dx/dt = f(x)."""
+    return x + h * f(x)
+
+def rk4_step(f, x, h):
+    """One classical Runge-Kutta step of size h for dx/dt = f(x)."""
+    k1 = f(x)
+    k2 = f(x + h / 2 * k1)
+    k3 = f(x + h / 2 * k2)
+    k4 = f(x + h * k3)
+    return x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+def solve(step, f, x, T, N):
+    """N steps of size T/N from time 0 to time T; T < 0 runs the field backward."""
+    for _ in range(N):
+        x = step(f, x, T / N)
     return x
 ```
 
@@ -247,134 +273,154 @@ the endpoints, the solver takes $N=10$ Euler steps of size $h=0.1$, and Adam
 (:numref:`sec_mdl-adaptive-stochastic-methods`) runs $401$ full-batch
 iterations at learning rate $0.05$, lowered to $0.005$ from iteration $300$.
 
-```{.python .input #odes-solvers-neural-ode-train}
-#@tab pytorch
+<!-- WRITER: the training now runs twice per tab from one shared initialization
+(seed drawn in the shared cell, `solvers = {'Euler': euler_step, 'RK4': rk4_step}`):
+once through 10 Euler steps (as before) and once through 10 RK4 steps (four field
+evaluations per step, so four times the work per training step). Same field,
+loss, Adam schedule and 401 iterations for both. -->
+
+```{.python .input #mdl-neural-odes-training-through-the-solver-2}
 angle = np.linspace(0, 2 * np.pi, 64, endpoint=False)
 X0_ring = np.stack([np.cos(angle), np.sin(angle)], axis=1)            # circle
 X1_ring = np.stack([1.5 + 1.2 * np.cos(angle), 0.4 * np.sin(angle)], axis=1)
+solvers = {'Euler': euler_step, 'RK4': rk4_step}
+seed = int(rng.integers(2**31))                # one initialization for both solvers
+```
+
+```{.python .input #odes-solvers-neural-ode-train}
+#@tab pytorch
 X, Y = torch.tensor(X0_ring).float(), torch.tensor(X1_ring).float()
-net = torch.nn.Sequential(torch.nn.Linear(2, 32), torch.nn.Tanh(),
-                          torch.nn.Linear(32, 2))
-for layer in net[::2]:                         # Glorot-uniform weights, zero biases
-    torch.nn.init.xavier_uniform_(layer.weight)
-    torch.nn.init.zeros_(layer.bias)
 
-def flow(X, N=10, h=0.1, sign=1.0):
-    """N Euler steps of size h; sign=-1 integrates the field backward."""
-    for _ in range(N):                         # one Euler step = one residual block
-        X = X + sign * h * net(X)
-    return X
+def train(name, step):
+    """Fit the field through 10 steps of one solver, from the shared seed."""
+    torch.manual_seed(seed)
+    net = nn.Sequential(nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 2))
+    for layer in net[::2]:                     # Glorot-uniform weights, zero biases
+        nn.init.xavier_uniform_(layer.weight)
+        nn.init.zeros_(layer.bias)
+    opt = torch.optim.Adam(net.parameters(), lr=0.05)
+    sched = torch.optim.lr_scheduler.MultiStepLR(opt, [300], 0.1)  # 0.005 from 300
+    losses = []
+    for it in range(401):
+        loss = ((solve(step, net, X, 1.0, 10) - Y) ** 2).mean()
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        sched.step()
+        if it % 200 == 0:
+            losses.append(loss.item())
+    print(f'{name}-trained: loss', ', '.join(f'{l:.1e}' for l in losses),
+          'at iterations 0, 200, 400')
+    return net
 
-opt = torch.optim.Adam(net.parameters(), lr=0.05)
-sched = torch.optim.lr_scheduler.MultiStepLR(opt, [300], 0.1)  # 0.005 from 300
-for it in range(401):
-    loss = ((flow(X) - Y) ** 2).mean()
-    opt.zero_grad()
-    loss.backward()
-    opt.step()
-    sched.step()
-    if it % 200 == 0:
-        print(f'iter {it:3d}  loss {loss.item():.1e}')
+trained = {name: train(name, step) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab mxnet
-angle = np.linspace(0, 2 * np.pi, 64, endpoint=False)
-X0_ring = np.stack([np.cos(angle), np.sin(angle)], axis=1)            # circle
-X1_ring = np.stack([1.5 + 1.2 * np.cos(angle), 0.4 * np.sin(angle)], axis=1)
 X, Y = mnp.array(X0_ring, dtype='float32'), mnp.array(X1_ring, dtype='float32')
-net = nn.HybridSequential()
-net.add(nn.Dense(32, activation='tanh'), nn.Dense(2))
-net.initialize(init.Xavier())                  # Glorot-uniform weights, zero biases
-net.hybridize()
 
-def flow(X, N=10, h=0.1, sign=1.0):
-    """N Euler steps of size h; sign=-1 integrates the field backward."""
-    for _ in range(N):                         # one Euler step = one residual block
-        X = X + sign * h * net(X)
-    return X
+def train(name, step):
+    """Fit the field through 10 steps of one solver, from the shared seed."""
+    npx.random.seed(seed)
+    net = nn.HybridSequential()
+    net.add(nn.Dense(32, activation='tanh'), nn.Dense(2))
+    net.initialize(init.Xavier())              # Glorot-uniform weights, zero biases
+    net.hybridize()
+    trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': 0.05})
+    losses = []
+    for it in range(401):
+        if it == 300:
+            trainer.set_learning_rate(0.005)   # tenfold smaller for the last 100
+        with autograd.record():
+            loss = ((solve(step, net, X, 1.0, 10) - Y) ** 2).mean()
+        loss.backward()
+        trainer.step(1)
+        if it % 200 == 0:
+            losses.append(float(loss))
+    print(f'{name}-trained: loss', ', '.join(f'{l:.1e}' for l in losses),
+          'at iterations 0, 200, 400')
+    return net
 
-trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': 0.05})
-for it in range(401):
-    if it == 300:
-        trainer.set_learning_rate(0.005)       # tenfold smaller for the last 100
-    with autograd.record():
-        loss = ((flow(X) - Y) ** 2).mean()
-    loss.backward()
-    trainer.step(1)
-    if it % 200 == 0:
-        print(f'iter {it:3d}  loss {float(loss):.1e}')
+trained = {name: train(name, step) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab tensorflow
-angle = np.linspace(0, 2 * np.pi, 64, endpoint=False)
-X0_ring = np.stack([np.cos(angle), np.sin(angle)], axis=1)            # circle
-X1_ring = np.stack([1.5 + 1.2 * np.cos(angle), 0.4 * np.sin(angle)], axis=1)
 X, Y = tf.constant(X0_ring, tf.float32), tf.constant(X1_ring, tf.float32)
-net = tf.keras.Sequential([tf.keras.layers.Dense(32, activation='tanh'),
-                           tf.keras.layers.Dense(2)])  # Glorot-uniform, zero biases
 
-def flow(X, N=10, h=0.1, sign=1.0):
-    """N Euler steps of size h; sign=-1 integrates the field backward."""
-    for _ in range(N):                         # one Euler step = one residual block
-        X = X + sign * h * net(X)
-    return X
+def train(name, step):
+    """Fit the field through 10 steps of one solver, from the shared seed."""
+    tf.keras.utils.set_random_seed(seed)
+    net = tf.keras.Sequential([tf.keras.layers.Dense(32, activation='tanh'),
+                               tf.keras.layers.Dense(2)])  # Glorot-uniform, zero biases
+    lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay([300], [0.05, 0.005])
+    opt = tf.keras.optimizers.Adam(learning_rate=lr)  # 0.005 after iteration 300
 
-lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay([300], [0.05, 0.005])
-opt = tf.keras.optimizers.Adam(learning_rate=lr)  # 0.005 after iteration 300
+    @tf.function
+    def train_step():
+        with tf.GradientTape() as tape:
+            loss = tf.reduce_mean((solve(step, net, X, 1.0, 10) - Y) ** 2)
+        opt.apply_gradients(zip(tape.gradient(loss, net.trainable_variables),
+                                net.trainable_variables))
+        return loss
 
-@tf.function
-def train_step():
-    with tf.GradientTape() as tape:
-        loss = tf.reduce_mean((flow(X) - Y) ** 2)
-    opt.apply_gradients(zip(tape.gradient(loss, net.trainable_variables),
-                            net.trainable_variables))
-    return loss
+    losses = []
+    for it in range(401):
+        loss = train_step()
+        if it % 200 == 0:
+            losses.append(float(loss))
+    print(f'{name}-trained: loss', ', '.join(f'{l:.1e}' for l in losses),
+          'at iterations 0, 200, 400')
+    return tf.function(net)                    # a compiled field evaluates faster
 
-for it in range(401):
-    loss = train_step()
-    if it % 200 == 0:
-        print(f'iter {it:3d}  loss {float(loss):.1e}')
+trained = {name: train(name, step) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab jax
-angle = np.linspace(0, 2 * np.pi, 64, endpoint=False)
-X0_ring = np.stack([np.cos(angle), np.sin(angle)], axis=1)            # circle
-X1_ring = np.stack([1.5 + 1.2 * np.cos(angle), 0.4 * np.sin(angle)], axis=1)
 X, Y = jnp.array(X0_ring), jnp.array(X1_ring)
-k1, k2 = jax.random.split(jax.random.key(np.random.randint(2**31)))
+k1, k2 = jax.random.split(jax.random.key(seed))
 glorot = jax.nn.initializers.glorot_uniform()  # Glorot-uniform weights, zero biases
-params = {'W1': glorot(k1, (2, 32)), 'b1': jnp.zeros(32),
-          'W2': glorot(k2, (32, 2)), 'b2': jnp.zeros(2)}
+params0 = {'W1': glorot(k1, (2, 32)), 'b1': jnp.zeros(32),
+           'W2': glorot(k2, (32, 2)), 'b2': jnp.zeros(2)}
+opt = optax.adam(optax.piecewise_constant_schedule(0.05, {300: 0.1}))
 
 def net(params, X):
     return jnp.tanh(X @ params['W1'] + params['b1']) @ params['W2'] + params['b2']
 
-def flow(params, X, N=10, h=0.1, sign=1.0):
-    """N Euler steps of size h; sign=-1 integrates the field backward."""
-    step = lambda i, X: X + sign * h * net(params, X)  # one residual block
-    return jax.lax.fori_loop(0, N, step, X)
+def flow(params, step, X, T, N):
+    """solve() as a fori_loop: N steps of size T/N along the field net(params)."""
+    f = lambda x: net(params, x)
+    return jax.lax.fori_loop(0, N, lambda n, X: step(f, X, T / N), X)
 
-opt = optax.adam(optax.piecewise_constant_schedule(0.05, {300: 0.1}))
-opt_state = opt.init(params)
-
-@jax.jit
-def train_step(params, opt_state):
+@jax.jit(static_argnames='step')
+def train_step(params, opt_state, step):
     loss, grads = jax.value_and_grad(
-        lambda p: ((flow(p, X) - Y) ** 2).mean())(params)
+        lambda p: ((flow(p, step, X, 1.0, 10) - Y) ** 2).mean())(params)
     updates, opt_state = opt.update(grads, opt_state)
     return optax.apply_updates(params, updates), opt_state, loss
 
-for it in range(401):
-    params, opt_state, loss = train_step(params, opt_state)
-    if it % 200 == 0:
-        print(f'iter {it:3d}  loss {float(loss):.1e}')
+def train(name, step):
+    """Fit the field through 10 steps of one solver, from the shared params0."""
+    params, opt_state, losses = params0, opt.init(params0), []
+    for it in range(401):
+        params, opt_state, loss = train_step(params, opt_state, step)
+        if it % 200 == 0:
+            losses.append(float(loss))
+    print(f'{name}-trained: loss', ', '.join(f'{l:.1e}' for l in losses),
+          'at iterations 0, 200, 400')
+    return params
+
+trained = {name: train(name, step) for name, step in solvers.items()}
 ```
 
 The loss falls from order one to well below $10^{-4}$, typically a few times
 $10^{-6}$.
+
+<!-- WRITER: final losses (iteration 400) in 22 development runs, both arms,
+four tabs: 6.8e-7 to 8.4e-6 ("of order 10^-6"); iteration 0: 1.1 to 1.8. In each
+run the two arms end within a factor of 1.5 of each other. -->
 
 Two tests tell a flow from a ten-step program. First, integrate the trained field with $N=100$ and $N=1000$ steps
 ($Nh=1$ throughout); the larger $N$, the closer the computed map is to the
@@ -386,48 +432,59 @@ and measure how far the round trip lands from where it started.
 
 ```{.python .input #mdl-neural-odes-training-through-the-solver-1}
 #@tab pytorch
+dist = lambda P, Q: torch.linalg.vector_norm(P - Q, dim=1).mean().item()
+print('   N   Euler-trained   RK4-trained   Euler round trip')
 with torch.inference_mode():
-    for n in (10, 100, 1000):
-        fwd = flow(X, n, 1 / n)
-        back = flow(fwd, n, 1 / n, sign=-1.0)
-        err = torch.linalg.vector_norm(fwd - Y, dim=1).mean()
-        trip = torch.linalg.vector_norm(back - X, dim=1).mean()
-        print(f'N = {n:4d}: endpoint error {err:.1e}, '
-              f'forward-backward round trip {trip:.1e}')
+    for N in (10, 100, 1000):
+        err = [dist(solve(solvers[k], trained[k], X, 1.0, N), Y) for k in solvers]
+        fwd = solve(euler_step, trained['Euler'], X, 1.0, N)
+        back = solve(euler_step, trained['Euler'], fwd, -1.0, N)
+        print(f'{N:4d}   {err[0]:13.1e}   {err[1]:11.1e}   {dist(back, X):16.1e}')
 ```
 
 ```{.python .input #mdl-neural-odes-training-through-the-solver-1}
 #@tab mxnet
-for n in (10, 100, 1000):
-    fwd = flow(X, n, 1 / n)
-    back = flow(fwd, n, 1 / n, sign=-1.0)
-    err = mnp.sqrt(((fwd - Y) ** 2).sum(axis=1)).mean()
-    trip = mnp.sqrt(((back - X) ** 2).sum(axis=1)).mean()
-    print(f'N = {n:4d}: endpoint error {float(err):.1e}, '
-          f'forward-backward round trip {float(trip):.1e}')
+dist = lambda P, Q: float(mnp.sqrt(((P - Q) ** 2).sum(axis=1)).mean())
+print('   N   Euler-trained   RK4-trained   Euler round trip')
+for N in (10, 100, 1000):
+    err = [dist(solve(solvers[k], trained[k], X, 1.0, N), Y) for k in solvers]
+    fwd = solve(euler_step, trained['Euler'], X, 1.0, N)
+    back = solve(euler_step, trained['Euler'], fwd, -1.0, N)
+    print(f'{N:4d}   {err[0]:13.1e}   {err[1]:11.1e}   {dist(back, X):16.1e}')
 ```
 
 ```{.python .input #mdl-neural-odes-training-through-the-solver-1}
 #@tab tensorflow
-for n in (10, 100, 1000):
-    fwd = flow(X, n, 1 / n)
-    back = flow(fwd, n, 1 / n, sign=-1.0)
-    err = tf.reduce_mean(tf.norm(fwd - Y, axis=1))
-    trip = tf.reduce_mean(tf.norm(back - X, axis=1))
-    print(f'N = {n:4d}: endpoint error {float(err):.1e}, '
-          f'forward-backward round trip {float(trip):.1e}')
+dist = lambda P, Q: float(tf.reduce_mean(tf.norm(P - Q, axis=1)))
+print('   N   Euler-trained   RK4-trained   Euler round trip')
+for N in (10, 100, 1000):
+    err = [dist(solve(solvers[k], trained[k], X, 1.0, N), Y) for k in solvers]
+    fwd = solve(euler_step, trained['Euler'], X, 1.0, N)
+    back = solve(euler_step, trained['Euler'], fwd, -1.0, N)
+    print(f'{N:4d}   {err[0]:13.1e}   {err[1]:11.1e}   {dist(back, X):16.1e}')
 ```
 
 ```{.python .input #mdl-neural-odes-training-through-the-solver-1}
 #@tab jax
-for n in (10, 100, 1000):
-    fwd = flow(params, X, n, 1 / n)
-    back = flow(params, fwd, n, 1 / n, sign=-1.0)
-    err = jnp.linalg.norm(fwd - Y, axis=1).mean()
-    trip = jnp.linalg.norm(back - X, axis=1).mean()
-    print(f'N = {n:4d}: endpoint error {float(err):.1e}, '
-          f'forward-backward round trip {float(trip):.1e}')
+dist = lambda P, Q: float(jnp.linalg.norm(P - Q, axis=1).mean())
+print('   N   Euler-trained   RK4-trained   Euler round trip')
+for N in (10, 100, 1000):
+    err = [dist(flow(trained[k], solvers[k], X, 1.0, N), Y) for k in solvers]
+    fwd = flow(trained['Euler'], euler_step, X, 1.0, N)
+    back = flow(trained['Euler'], euler_step, fwd, -1.0, N)
+    print(f'{N:4d}   {err[0]:13.1e}   {err[1]:11.1e}   {dist(back, X):16.1e}')
 ```
+
+<!-- WRITER: the cell above prints one table: per N (10, 100, 1000; Nh = 1),
+the endpoint error of the Euler-trained field integrated with Euler, of the
+RK4-trained field integrated with RK4, and the Euler arm's forward-backward round
+trip. 22 development runs, four tabs (3 notebook runs per tab, plus 10 runs of
+the same code): Euler-trained 1.1e-3 to 3.5e-3 at N = 10, 1.7e-2 to 1.8e-2 at
+100, 1.9e-2 at 1000 in every run; RK4-trained the same value at all three N
+within each run (equal to the two printed digits in all 22 runs), 1.1e-3 to
+3.7e-3 across runs; Euler round trip 5.4e-2 to 5.6e-2, 5.5e-3 to 5.7e-3,
+5.5e-4 to 5.7e-4. At N = 10 the two arms are equally accurate. So: the field trained through RK4 is fitted to its flow, and its step
+count is free after training. -->
 
 At the training step count the endpoints lie within $0.01$ of their
 targets, typically a few thousandths. With finer steps the endpoint error
@@ -652,29 +709,44 @@ The cell writes the backward sweep :eqref:`eq_mdl-ode-discrete-adjoint` by
 hand and tests it against central finite differences on the same program,
 for $T=2$ and $N=1000$ steps.
 
-```{.python .input #odes-solvers-adjoint-check}
-def loss_and_grad_unrolled(A, x0, T, n):
-    """L = ||x_n||^2 / 2 through n unrolled Euler steps; dL/dA by hand-written
+```{.python .input #mdl-neural-odes-backpropagation-as-the-discrete-adjoint-1}
+def loss_and_grad_unrolled(A, x0, T, N):
+    """L = ||x_N||^2 / 2 through N unrolled Euler steps; dL/dA by hand-written
     reverse mode, the discrete adjoint."""
-    h, xs = T / n, [x0]
-    for k in range(n):
+    h, xs = T / N, [x0]
+    for n in range(N):
         xs.append(xs[-1] + h * (A @ xs[-1]))   # forward sweep, tape the states
-    a, gA = xs[-1].copy(), np.zeros_like(A)    # a_n = dL/dx_n = x_n
-    for k in range(n - 1, -1, -1):             # backward sweep: one VJP per step
-        gA += h * np.outer(a, xs[k])           # dL/dA += h a_{k+1} x_k^T
-        a = a + h * (A.T @ a)                  # a_k = (I + hA)^T a_{k+1}
+    a, gA = xs[-1].copy(), np.zeros_like(A)    # a_N = dL/dx_N = x_N
+    for n in range(N - 1, -1, -1):             # backward sweep: one VJP per step
+        gA += h * np.outer(a, xs[n])           # dL/dA += h a_{n+1} x_n^T
+        a = a + h * (A.T @ a)                  # a_n = (I + hA)^T a_{n+1}
     return 0.5 * xs[-1] @ xs[-1], gA
 
-T, n = 2.0, 1000
-_, g_disc = loss_and_grad_unrolled(A, x0, T, n)
-g_fd = np.zeros_like(A)                        # central finite differences
-for i in range(2):
-    for j in range(2):
-        E = np.zeros_like(A); E[i, j] = 1e-5
-        g_fd[i, j] = (loss_and_grad_unrolled(A + E, x0, T, n)[0]
-                      - loss_and_grad_unrolled(A - E, x0, T, n)[0]) / 2e-5
-print(f'discrete adjoint vs finite differences: {np.abs(g_disc - g_fd).max():.1e}')
+T = 2.0
+loss = lambda A: loss_and_grad_unrolled(A, x0, T, 1000)[0]
+g_fd = np.array([(loss(A + 1e-5 * E) - loss(A - 1e-5 * E)) / 2e-5
+                 for E in np.eye(4).reshape(4, 2, 2)]).reshape(2, 2)
+gap_fd = np.abs(loss_and_grad_unrolled(A, x0, T, 1000)[1] - g_fd).max()
+print(f'N =  1000: |backward sweep - central differences| = {gap_fd:.1e}')
+n_quad = 2000                                  # continuous adjoint, trapezoid rule
+ts = np.linspace(0.0, T, n_quad + 1)
+xT = expm_eig(A, T) @ x0
+AX = np.stack([np.outer(expm_eig(A.T, T - s) @ xT, expm_eig(A, s) @ x0)
+               for s in ts])                   # a(s) x(s)^T
+g_cont = (T / n_quad) * (AX[1:-1].sum(axis=0) + 0.5 * (AX[0] + AX[-1]))
+for N in (100, 1000, 10000):
+    gap = np.abs(loss_and_grad_unrolled(A, x0, T, N)[1] - g_cont).max()
+    print(f'N = {N:5d}: |discrete - continuous adjoint|     = {gap:.1e}')
 ```
+
+<!-- WRITER: #odes-solvers-adjoint-check is merged into the cell above (its id
+retires). One cell now defines loss_and_grad_unrolled, checks it against central
+differences at N = 1000 (first output line, 1.2e-10 in the store, "the sweep is
+coded correctly") and then prints the gaps to the continuous adjoint at
+N = 100, 1000, 10000 (2.9e-02, 2.8e-03, 2.8e-04). The paragraph between the two
+former cells (left below, unchanged) needs to become one lead-in before the
+cell and one reading after it. Step count N, step index n (code: `for n in
+range(N)`, a_n). -->
 
 The two agree to about $10^{-10}$, the accuracy of the finite differences
 themselves, so the sweep is coded correctly. The distance that matters is
@@ -682,18 +754,6 @@ the one to the gradient of the exact flow. For it we evaluate the continuous
 adjoint integral by the trapezoid rule on $2000$ intervals, with
 $\mathbf{a}$ and $\mathbf{x}$ from the matrix exponential, and compare it
 with the discrete adjoint for three step counts.
-
-```{.python .input #mdl-neural-odes-backpropagation-as-the-discrete-adjoint-1}
-n_quad = 2000                                  # continuous adjoint, trapezoid rule
-ts = np.linspace(0.0, T, n_quad + 1)
-xT = expm_eig(A, T) @ x0
-F = np.stack([np.outer(expm_eig(A.T, T - s) @ xT, expm_eig(A, s) @ x0)
-              for s in ts])                    # a(s) x(s)^T
-g_cont = (T / n_quad) * (F[1:-1].sum(axis=0) + 0.5 * (F[0] + F[-1]))
-for n_steps in (100, 1000, 10000):
-    gap = np.abs(loss_and_grad_unrolled(A, x0, T, n_steps)[1] - g_cont).max()
-    print(f'n = {n_steps:5d} Euler steps: |discrete - continuous adjoint| = {gap:.1e}')
-```
 
 The gap falls from $2.9\times10^{-2}$ to $2.8\times10^{-3}$ to
 $2.8\times10^{-4}$, tenfold per tenfold $N$, as in the scalar case.
@@ -883,18 +943,13 @@ $e^{t\mathbf K}$ is orthogonal. The cell evaluates this Gaussian at the transpor
 points of four random samples and compares with
 $\log p_0(\mathbf{x}_0)-t\operatorname{tr}\mathbf A$.
 
-```{.python .input #odes-solvers-cnf-trace}
-t = 1.5
-X0s = np.random.randn(4, 2)                    # four samples from p_0 = N(0, I)
-Et = expm_eig(A, t)
-Xts = X0s @ Et.T                               # flow each sample to time t
-Sig = Et @ Et.T                                # x(t) ~ N(0, E_t E_t^T)
-logp0 = -0.5 * (X0s ** 2).sum(axis=1) - np.log(2 * np.pi)
-logpt = (-0.5 * np.einsum('ki,ij,kj->k', Xts, np.linalg.inv(Sig), Xts)
-         - 0.5 * np.log(np.linalg.det(Sig)) - np.log(2 * np.pi))
-print('log p_t(x(t)), Gaussian formula :', logpt.round(6))
-print('log p_0(x_0) - t tr(A)          :', (logp0 - t * np.trace(A)).round(6))
-```
+<!-- WRITER: #odes-solvers-cnf-trace (the Gaussian formula against
+log p_0 - t tr A for the spiral at t = 1.5) is cut: a linear field with a
+constant trace, it could not fail. The paragraph before this note ("The cell
+evaluates this Gaussian ...") and the first sentence after it ("The two rows
+agree in every printed digit ...") describe the cut cell; the hand value
+e^{-1.5} = 0.2231 stays in the paragraph on eq_mdl-ode-jacobi. Lead straight
+into the nonlinear field. -->
 
 The two rows agree in every printed digit, as :eqref:`eq_mdl-ode-jacobi`
 says they must; with a constant trace there was little to go wrong. A
@@ -919,24 +974,30 @@ compares the integral with $\log|\det D\Phi_T|$, computed from central finite
 differences of the flow map itself.
 
 ```{.python .input #mdl-neural-odes-checking-the-trace-integral-1}
-H = 8
-W1, b1 = np.random.randn(H, 2), np.random.randn(H)
-W2 = np.random.randn(2, H) / np.sqrt(H)
+n_hidden = 8
+W1, b1 = rng.standard_normal((n_hidden, 2)), rng.standard_normal(n_hidden)
+W2 = rng.standard_normal((2, n_hidden)) / np.sqrt(n_hidden)
 field = lambda x: W2 @ np.tanh(W1 @ x + b1)
 trJ = lambda x: np.sum((1 - np.tanh(W1 @ x + b1) ** 2)
                        * np.einsum('ij,ji->i', W1, W2))
 aug = lambda z: np.append(field(z[:2]), trJ(z[:2]))  # d/dt (x, int tr J)
-xa, n = np.random.randn(2), 200
-zT = rk4(aug, np.append(xa, 0.0), 1.0, n)
+xa, N = rng.standard_normal(2), 200
+zT = solve(rk4_step, aug, np.append(xa, 0.0), 1.0, N)
 D = np.zeros((2, 2))                           # D Phi_1 by central differences
 for j in range(2):
     e = np.zeros(2); e[j] = 1e-5
-    D[:, j] = (rk4(field, xa + e, 1.0, n) - rk4(field, xa - e, 1.0, n)) / 2e-5
+    D[:, j] = (solve(rk4_step, field, xa + e, 1.0, N)
+               - solve(rk4_step, field, xa - e, 1.0, N)) / 2e-5
 logdet = np.log(abs(np.linalg.det(D)))
 print(f'tr J at x(0) {trJ(xa):+.3f}, at x(1) {trJ(zT[:2]):+.3f}')
 print(f'trace integral {zT[2]:+.6f}  log|det D Phi| {logdet:+.6f}  '
       f'gap {abs(zT[2] - logdet):.1e}')
 ```
+
+<!-- WRITER: 12 development runs (four tabs): gap 8.7e-12 to 6.1e-11 (the store
+of 2026-11-12 has up to 1.6e-9): "to nine digits or better" holds. The cell is
+unchanged apart from names (n_hidden for the hidden units, N = 200 RK4 steps
+through solve(rk4_step, ...)) and the notebook's rng. -->
 
 The trace generally takes different values at the two ends of the path,
 yet the integral and the log-determinant agree to about $10^{-10}$, the
@@ -988,63 +1049,136 @@ It does not say how fast, and that is what we measure. We take a
 one-hidden-layer field in $d=50$ with $64$ hidden units, compute its exact
 trace from the formula above, and draw $m=10^5$ Rademacher probes.
 
+<!-- WRITER: the experiment is redesigned (NODE-14). The field is now
+f(x) = W2 tanh(W1 x + b1) - x in d = 50 with 64 hidden units: the tanh part of
+before plus a pull toward the origin, so that its trace is close to -50 in every
+draw. m = 1000 Rademacher probes (was 10^5). The first cell (NumPy) draws the
+weights, the point x, the exact trace of the tanh part `tr_tanh` and the probes
+`E`; it prints nothing. The second (per framework) estimates the trace by
+reverse-mode VJPs for the field with the pull and for the tanh part alone, and
+prints exact trace, mean of the 1000 probes with its standard error, and the
+standard deviation of one probe. A third cell (NumPy, new) integrates the trace
+along one Euler trajectory and compares a probe held for the whole solve with a
+fresh probe per step. Numbers are in the notes after the cells. -->
+
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-1}
-d, H, m = 50, 64, 100_000
-W1, b1 = np.random.randn(H, d) / np.sqrt(d), 0.1 * np.random.randn(H)
-W2 = np.random.randn(d, H) / np.sqrt(H)
-x = np.random.randn(d)
+d, n_hidden, m = 50, 64, 1000
+W1 = rng.standard_normal((n_hidden, d)) / np.sqrt(d)
+b1 = 0.1 * rng.standard_normal(n_hidden)
+W2 = rng.standard_normal((d, n_hidden)) / np.sqrt(n_hidden)
+x = rng.standard_normal(d)
 s = 1 - np.tanh(W1 @ x + b1) ** 2
-tr_exact = np.sum(s * np.einsum('ij,ji->i', W1, W2))
-E = np.random.choice([-1.0, 1.0], size=(m, d))  # Rademacher probes, one per row
-print(f'exact trace {tr_exact:.4f}')
+tr_tanh = np.sum(s * np.einsum('ij,ji->i', W1, W2))  # trace of W2 diag(s) W1
+E = rng.choice([-1.0, 1.0], size=(m, d))         # Rademacher probes, one per row
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab pytorch
 W1t, b1t, W2t = (torch.tensor(w) for w in (W1, b1, W2))
-field = lambda x: W2t @ torch.tanh(W1t @ x + b1t)
-_, vjp = torch.func.vjp(field, torch.tensor(x))  # reverse mode at x
-rows = torch.func.vmap(vjp)(torch.tensor(E))[0]  # row k: eps_k^T J
-est = (rows * torch.tensor(E)).sum(dim=1)        # eps_k^T J eps_k
-print(f'Hutchinson {est.mean():.4f} +- {est.std() / m ** 0.5:.4f} '
-      f'({m} probes, one VJP each)')
+tanh_part = lambda x: W2t @ torch.tanh(W1t @ x + b1t)
+for name, field, tr in (('with the pull', lambda x: tanh_part(x) - x, tr_tanh - d),
+                        ('without', tanh_part, tr_tanh)):
+    _, vjp = torch.func.vjp(field, torch.tensor(x))  # reverse mode at x
+    rows = torch.func.vmap(vjp)(torch.tensor(E))[0]  # row k: eps_k^T J
+    est = (rows * torch.tensor(E)).sum(dim=1)        # eps_k^T J eps_k
+    print(f'{name:13s}: exact {tr:+6.2f}, mean of {m} probes {est.mean():+6.2f} '
+          f'+- {est.std() / m ** 0.5:.2f}, one probe sd {est.std():.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab mxnet
 xs = mnp.array(np.tile(x, (m, 1)))             # m copies of x, one per probe
-xs.attach_grad()
-with autograd.record():
-    ys = mnp.tanh(xs @ mnp.array(W1).T + mnp.array(b1)) @ mnp.array(W2).T
-ys.backward(mnp.array(E))                      # seed the backward pass with the probes
-est = (xs.grad * mnp.array(E)).sum(axis=1)     # row k of xs.grad: eps_k^T J
-print(f'Hutchinson {float(est.mean()):.4f} +- '
-      f'{float(est.std()) / m ** 0.5:.4f} ({m} probes, one VJP each)')
+W1m, b1m, W2m = (mnp.array(w) for w in (W1, b1, W2))
+tanh_part = lambda xs: mnp.tanh(xs @ W1m.T + b1m) @ W2m.T
+for name, field, tr in (('with the pull', lambda xs: tanh_part(xs) - xs, tr_tanh - d),
+                        ('without', tanh_part, tr_tanh)):
+    xs.attach_grad()
+    with autograd.record():
+        ys = field(xs)
+    ys.backward(mnp.array(E))                  # seed the backward pass with the probes
+    est = (xs.grad * mnp.array(E)).sum(axis=1) # row k of xs.grad: eps_k^T J
+    mean, sd = float(est.mean()), float(est.std())
+    print(f'{name:13s}: exact {tr:+6.2f}, mean of {m} probes {mean:+6.2f} '
+          f'+- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab tensorflow
 xs = tf.constant(np.tile(x, (m, 1)))           # m copies of x, one per probe
-with tf.GradientTape() as tape:
-    tape.watch(xs)
-    ys = tf.tanh(xs @ W1.T + b1) @ W2.T
-rows = tape.gradient(ys, xs, output_gradients=tf.constant(E))  # eps_k^T J
-est = tf.reduce_sum(rows * E, axis=1)
-print(f'Hutchinson {float(tf.reduce_mean(est)):.4f} +- '
-      f'{float(tf.math.reduce_std(est)) / m ** 0.5:.4f} '
-      f'({m} probes, one VJP each)')
+tanh_part = lambda xs: tf.tanh(xs @ W1.T + b1) @ W2.T
+for name, field, tr in (('with the pull', lambda xs: tanh_part(xs) - xs, tr_tanh - d),
+                        ('without', tanh_part, tr_tanh)):
+    with tf.GradientTape() as tape:
+        tape.watch(xs)
+        ys = field(xs)
+    rows = tape.gradient(ys, xs, output_gradients=tf.constant(E))  # eps_k^T J
+    est = tf.reduce_sum(rows * E, axis=1)      # eps_k^T J eps_k
+    mean, sd = float(tf.reduce_mean(est)), float(tf.math.reduce_std(est))
+    print(f'{name:13s}: exact {tr:+6.2f}, mean of {m} probes {mean:+6.2f} '
+          f'+- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab jax
 W1j, b1j, W2j = (jnp.array(w) for w in (W1, b1, W2))
-field = lambda x: W2j @ jnp.tanh(W1j @ x + b1j)
-_, vjp = jax.vjp(field, jnp.array(x))          # reverse mode at x
-rows = jax.vmap(vjp)(jnp.array(E))[0]          # row k: eps_k^T J
-est = (rows * E).sum(axis=1)                   # eps_k^T J eps_k
-print(f'Hutchinson {float(est.mean()):.4f} +- '
-      f'{float(est.std()) / m ** 0.5:.4f} ({m} probes, one VJP each)')
+tanh_part = lambda x: W2j @ jnp.tanh(W1j @ x + b1j)
+for name, field, tr in (('with the pull', lambda x: tanh_part(x) - x, tr_tanh - d),
+                        ('without', tanh_part, tr_tanh)):
+    _, vjp = jax.vjp(field, jnp.array(x))      # reverse mode at x
+    rows = jax.vmap(vjp)(jnp.array(E))[0]      # row k: eps_k^T J
+    est = (rows * E).sum(axis=1)               # eps_k^T J eps_k
+    mean, sd = float(est.mean()), float(est.std())
+    print(f'{name:13s}: exact {tr:+6.2f}, mean of {m} probes {mean:+6.2f} '
+          f'+- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
+
+<!-- WRITER: the cell above, 15 development runs (four tabs): exact trace with
+the pull -49.0 to -51.5, without it -1.5 to +1.0 (either sign; "of order one");
+mean of 1000 probes within 0.35 of the exact trace (standard error 0.13 to
+0.17); one-probe standard deviation 4.2 to 5.5, and identical with and without
+the pull in every run, to every printed digit (for Rademacher probes
+eps^T(-I)eps = -d exactly, so the diagonal adds nothing to the noise). A
+tenth of the trace with the pull; several times the trace without it. -->
+
+The trace integral of a CNF adds one such estimate per solver step. Whether the
+probe is held for the whole solve or drawn afresh at every step changes the
+noise of the integral, and the next cell measures both along one Euler
+trajectory of the field with the pull, from the same $\mathbf x$, with $N=10$,
+$100$ and $1000$ steps and $200$ repetitions, using the explicit product
+$\boldsymbol\epsilon^\top\mathbf J\boldsymbol\epsilon
+=\big((\boldsymbol\epsilon^\top\mathbf W_2)\odot\mathbf s\big)\,\mathbf W_1\boldsymbol\epsilon
+-\boldsymbol\epsilon^\top\boldsymbol\epsilon$.
+<!-- WRITER: the paragraph just above is a placeholder lead-in written by the
+coder for the new cell; rewrite freely. -->
+
+```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-3}
+field = lambda x: W2 @ np.tanh(W1 @ x + b1) - x
+diag_W1W2 = np.einsum('ij,ji->i', W1, W2)
+for N in (10, 100, 1000):
+    h, xs = 1 / N, [x]
+    for _ in range(N - 1):                     # Euler trajectory x_0, ..., x_{N-1}
+        xs.append(xs[-1] + h * field(xs[-1]))
+    S = 1 - np.tanh(np.array(xs) @ W1.T + b1) ** 2  # s at every step, (N, n_hidden)
+    exact = h * (S @ diag_W1W2).sum() - d      # h * sum_n tr J(x_n)
+    held = np.broadcast_to(rng.choice([-1.0, 1.0], (200, 1, d)), (200, N, d))
+    fresh = rng.choice([-1.0, 1.0], (200, N, d))
+    row = f'N = {N:4d}: exact {exact:+.2f}'
+    for name, P in (('held probe', held), ('fresh probes', fresh)):
+        est = h * np.einsum('rnh,nh,rnh->r', P @ W2, S, P @ W1.T) - d  # eps^T eps = d
+        row += f' | {name} {est.mean():+.2f}, sd {est.std():.2f}'
+    print(row)
+```
+
+<!-- WRITER: the cell above, 15 development runs (four tabs): exact integral
+-48.7 to -51.5 (close to the trace at x, the same for the three N to 0.03);
+held probe: mean within 1 of the exact value (200 repetitions, standard error
+about 0.4), standard deviation 4.6 to 6.0 at every N, not falling with N; fresh
+probes: mean within 0.3, 0.07, 0.02 of it, standard deviation 1.5 to 1.9 at
+N = 10, 0.50 to 0.67 at N = 100, 0.16 to 0.19 at N = 1000, i.e. the one-probe
+noise over sqrt(N). Unbiased either way. The paragraphs below
+("The average lies within ..." with "a few tenths in size", "Our random field
+is a hard case ...", "Subtracting x ... would move the trace to about -50") are
+now false or done by the cells: rewrite them as the reading of the two tables. -->
 
 The average lies within a few standard errors of the exact trace. But read
 the output again: $10^5$ probes locate the trace only to about $0.015$, when
@@ -1115,6 +1249,14 @@ but with noise that training averages out and a single likelihood does not.
     1. Retrain with $N=1$ and with $N=2$, and repeat (a). Which of the three
        trained fields comes closest to its own time-one flow?
    :exlabel:`ex_mdl-odes-solvers-step-count-transfer`
+<!-- WRITER (exercise): the trained fields are now `trained['Euler']` and
+`trained['RK4']` (PyTorch, TensorFlow, MXNet: integrate with
+`solve(step, trained[k], X, 1.0, N)`; JAX: `flow(trained[k], step, X, 1.0, N)`);
+there is no `flow(X, N, h)` any more, and the backward integration of part (c)
+is `solve(euler_step, trained['Euler'], Y, -1.0, N)`. The training cell takes
+the solver step as an argument (`train(name, step)`), so part (d) and the
+worklist's new parts (Heun, training at N = 100) need only a new step function
+or a changed step count. -->
 
 1. [code] **What a flow cannot represent.** ● Two trajectories of a field
    with Lipschitz constant $L$ satisfy
@@ -1201,6 +1343,8 @@ but with noise that training averages out and a single likelihood does not.
        what is the longest segment duration for which the error of (a)
        stays below $10^{-8}$?
    :exlabel:`ex_mdl-odes-solvers-backward-reconstruction`
+<!-- WRITER (exercise): part (b) says "with `rk4` and 2000 steps"; the
+notebook now has `solve(rk4_step, f, x, T, 2000)` instead of `rk4`. -->
 
 1. **Log-determinant of a residual step.** ● The instantaneous change of
    variables :eqref:`eq_mdl-ode-instant-cov` is a limit of infinitesimal
@@ -1259,6 +1403,11 @@ but with noise that training averages out and a single likelihood does not.
        with $d$ when the diagonal entries share one sign, and when their
        signs are random?
    :exlabel:`ex_mdl-odes-solvers-hutchinson-variance`
+<!-- WRITER (exercise): part (b) still works with the redesigned cells (the
+`-1` cell defines W1, b1, W2, x, s and E for d = 50; the Jacobian of the field
+with the pull is W2 diag(s) W1 - I). The next cell now prints the one-probe
+standard deviation directly, for m = 1000, and for the field with and without
+the pull. -->
 
 1. [code] **Discrete and continuous adjoints.** ●● Backpropagation through
    a solver differentiates the executed program, whereas a solver applied to
@@ -1348,6 +1497,9 @@ but with noise that training averages out and a single likelihood does not.
        its weights, since the Hutchinson cells reuse the names) and compare
        $\log|\det \mathbf M(1)|$ with the two numbers that cell prints.
    :exlabel:`ex_mdl-neural-odes-liouville`
+<!-- WRITER (exercise): part (d) still holds (the trace cell keeps its weights
+under W1, b1, W2, and the Hutchinson cells reuse the names); it integrates
+with `solve(rk4_step, ...)` and N = 200 steps. -->
 
 [Discussions](https://d2l.discourse.group/t/36868)
 
@@ -1534,7 +1686,9 @@ $$\dot{\mathbf a}=-\Big(\frac{\partial\mathbf f}{\partial\mathbf x}\Big)^{\!\top
 Spiral, $\mathcal L=\tfrac12\|\mathbf x(T)\|^2$, $T=2$, $1000$ steps: a hand-written
 backward sweep against finite differences.
 
-@!odes-solvers-adjoint-check
+<!-- WRITER (slides): the cell #odes-solvers-adjoint-check is merged into
+#mdl-neural-odes-backpropagation-as-the-discrete-adjoint-1 (shown on the next
+slide); its first output line is the finite-difference check. -->
 :::
 
 ::: {.slide title="The Two Gradients Differentiate Different Objects and Agree to $O(h)$"}
@@ -1593,10 +1747,8 @@ $\det e^{\mathbf At}=e^{t\operatorname{tr}\mathbf A}$, $0.2231$ at $t=1.5$.
 ::: {.slide title="The Trace Integral Equals $\log\lvert\det D\Phi\rvert$ Even When the Trace Varies"}
 [Checking the trace integral]{.kicker}
 
-Spiral, four samples from $\mathcal N(\mathbf 0,\mathbf I)$ at $t=1.5$: Gaussian formula
-against $\log p_0-t\operatorname{tr}\mathbf A$:
-
-@!odes-solvers-cnf-trace
+<!-- WRITER (slides): #odes-solvers-cnf-trace (spiral, Gaussian formula) is
+cut; this slide keeps only the nonlinear field. -->
 
 Tanh field $\mathbf W_2\tanh(\mathbf W_1\mathbf x+\mathbf b_1)$, $8$ units: RK4 on $(\mathbf x,\int\operatorname{tr}\mathbf J)$
 against finite differences of $\Phi_1$:
@@ -1614,6 +1766,9 @@ $\mathbb{E}[\boldsymbol\epsilon^\top \mathbf J\boldsymbol\epsilon]=\operatorname
 - Tanh field: $\boldsymbol\epsilon^\top \mathbf J=((\boldsymbol\epsilon^\top \mathbf W_2)\odot\mathbf s)\mathbf W_1$, $\mathbf s=1-\tanh^2(\cdot)$.
 
 $d=50$, $64$ hidden units, $10^5$ Rademacher probes:
+<!-- WRITER (slides): now the field W2 tanh(W1 x + b1) - x, d = 50, 64 hidden
+units, 1000 probes, with and without the pull; the held-against-fresh cell is
+new and has no slide yet. -->
 
 @!mdl-neural-odes-the-hutchinson-trace-estimator-1
 

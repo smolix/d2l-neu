@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b2fc490ec010b5bc53db89c1f0290e5d41158977c2188c0f3393f40cf9a7da54",
+    "d2l_lib_fingerprint": "sha256:c88890d6c303b5d24a88322d591ec30114236fc8e218a9339ec7040abfe310d9",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,12 +23,12 @@
       "outputs": []
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-3": {
-      "code_fingerprint": "sha256:3bd4f6f07d21d9d12fd00ad4ba45e295db74941d2c43e25a5602b7318aae8473",
+      "code_fingerprint": "sha256:5fec3365a44fb518dc7e32fff388dfee1ead9aa6f27834913ecff0387ad514f2",
       "kind": "text",
       "outputs": []
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-4": {
-      "code_fingerprint": "sha256:54d9e85bd6075d5f5072d663bcfcf5ab3a676a1dca41f465290a0aa9b6a6c0d9",
+      "code_fingerprint": "sha256:43d49bb067ad027388d4fac220ecb3d08b62eae27ff9629114843596a83c5af4",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-6": {
-      "code_fingerprint": "sha256:585525fb13baf5cb8803d2eff4592e2b81b6c00039c987dc58b88e2c3696036b",
+      "code_fingerprint": "sha256:fccc81e454890352060b3c38c31e0c47018f55027ad01e0832057407b9266adc",
       "kind": "text",
       "outputs": [
         {
@@ -50,7 +50,7 @@
       ]
     },
     "rag-coverage": {
-      "code_fingerprint": "sha256:515ec1f0cd7c009bd7a1e166005977caab9577e7d006058d7ff80b8816819cdb",
+      "code_fingerprint": "sha256:93ad783d956fc9107dfd0e95ff45e5a18523f476093fabad16cdcb11e48ffd90",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "rag-stages": {
-      "code_fingerprint": "sha256:5b553e2bdf245a256b0e042d3e501fab0704cadd790a06505ac17219fda1fef4",
+      "code_fingerprint": "sha256:35d6c465d1d8b67a477e61776c2c25a9a54edc35eaec2a78fae6bf886a6e07fd",
       "kind": "text",
       "outputs": [
         {
@@ -82,12 +82,12 @@
       ]
     },
     "rag-failures-failures-by-stage-1": {
-      "code_fingerprint": "sha256:c6e02364794bedaacd79912fc1324ba512250d65afa1acc97c3007d2f8173d96",
+      "code_fingerprint": "sha256:ffab7027649f31dffacbbfb1b266a30f86bd6acb55b86ce16943bc422e083dd0",
       "kind": "text",
       "outputs": []
     },
     "rag-failures": {
-      "code_fingerprint": "sha256:0d1cfd518957383fc5547f32381ff2c74591331b1fff0f69196750043d86f7ce",
+      "code_fingerprint": "sha256:be86ded6fba11aa628d4d1820d2aa433a7f39642c573187db1feb91e2677c2b9",
       "kind": "text",
       "outputs": [
         {
@@ -98,18 +98,18 @@
       ]
     },
     "rag-opening-item": {
-      "code_fingerprint": "sha256:71b12f3589af268e400c7cf81f3dcdb475812a55a008e0c399d3bf56ee2ba42b",
+      "code_fingerprint": "sha256:ff96fa424839896ba5664d8d6b6ba7a85741e0b552e6ca5b6be5cc9091545ce7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "8 base answers qualify: dev-0008 (ignored), dev-0033 (unsupported), dev-0100 (ignored), dev-0133\n    (ignored), dev-0150 (ignored), dev-0152 (ignored), dev-0156 (ignored), dev-0209 (ignored)\n\ndev-0008 (single): In PyTorch, what happens to modules that are placed in a plain Python list\n    rather than in a registered container such as `nn.Sequential` or `nn.ModuleList`?\nreference: They stay unregistered, and no warning is given.\nkey facts: ['modules in a plain list stay unregistered', 'no warning is issued']\nfirst relevant chunk at rank 1; context:\n  [1] chapter_builders-guide/model-construction#012 (relevant)\n  [2] chapter_builders-guide/model-construction#004\n  [3] chapter_builders-guide/model-construction#005\n  [4] chapter_builders-guide/model-construction#001\n  [5] chapter_builders-guide/model-construction#002\nlast sentence of [1]: Modules in a plain list stay unregistered, without any warning.\nanswer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the forward pass may still execute if the code\n    explicitly loops over the list, the optimizer will not receive their parameters for gradient\n    updates [3]. This results in a \"partly registered\" model where only the weights of\n    registered outer layers change during training, causing the model to learn incorrectly or\n    fail on GPU devices [3].\nverdicts: {'correct': False, 'faithful': True, 'supported': True}\nclass: ignored, by the rule and by the second labeller\n"
+          "text": "8 base answers qualify: dev-0008 (ignored), dev-0033 (unsupported), dev-0100 (ignored), dev-0133\n    (ignored), dev-0150 (ignored), dev-0152 (ignored), dev-0156 (ignored), dev-0209 (ignored)\n\ndev-0008 (single): In PyTorch, what happens to modules that are placed in a plain Python list\n    rather than in a registered container such as `nn.Sequential` or `nn.ModuleList`?\nreference: They stay unregistered, and no warning is given.\nkey facts: ['modules in a plain list stay unregistered', 'no warning is issued']\nfirst relevant chunk at rank 1; context:\n  [1] chapter_builders-guide/model-construction#012 (relevant)\n  [2] chapter_builders-guide/model-construction#004\n  [3] chapter_builders-guide/model-construction#005\n  [4] chapter_builders-guide/model-construction#001\n  [5] chapter_builders-guide/model-construction#002\nlast sentence of [1]: Modules in a plain list stay unregistered, without any warning.\nanswer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the forward pass may still execute if the code\n    explicitly loops over the list, the optimizer will not receive their parameters for gradient\n    updates [3]. This results in a \"partly registered\" model where only the weights of\n    registered outer layers change during training, causing the model to learn incorrectly or\n    fail on GPU devices [3].\nverdicts: {'correct': False, 'faithful': True, 'supported': True}\nclass: ignored, by the rule and by the second labeler\n"
         }
       ]
     },
     "rag-fix": {
-      "code_fingerprint": "sha256:3928d29a363d85c2da895e87c4918dede1aed2140f42012dcade8d73be4afe0b",
+      "code_fingerprint": "sha256:be3e283adc6ba0712f00559b5683cb384acf888e3e8c06867dd0f8e53f9f1827",
       "kind": "text",
       "outputs": [
         {
@@ -125,7 +125,7 @@
       ]
     },
     "rag-failure-plot": {
-      "code_fingerprint": "sha256:b623795a0123dd2e084d832ec3eb318734579433e126a12ec94dd7d5e8e2853f",
+      "code_fingerprint": "sha256:ce38700a975dc0a09caa7ce12c5c6a27f047a1f3af91b406f99aaa9e0b56aad2",
       "kind": "asset",
       "outputs": [
         {
@@ -133,12 +133,12 @@
           "mime": "image/svg+xml",
           "asset": "rag-failures/rag-failure-plot-1.svg",
           "bytes": 64380,
-          "sha256": "sha256:540911a118626696828ad2135bd78645692ead8db8d64a7994e1aad1793b584b"
+          "sha256": "sha256:e430c7f3a99071d5e6ff29c6399c40131c5c62c0075bca921bf8c20855403601"
         }
       ]
     },
     "rag-marginal": {
-      "code_fingerprint": "sha256:fa82871048c3b7ab65996a82868963fd8db412465bbeab22cdc775f843ad6a75",
+      "code_fingerprint": "sha256:0c01acbede43f957268ec39f01a8f50409005d50950d6c17348e9ba37ef34f95",
       "kind": "text",
       "outputs": [
         {
@@ -149,7 +149,7 @@
       ]
     },
     "rag-cost": {
-      "code_fingerprint": "sha256:1c06b17577e0afbf6d39ecb3d012e80bb2623a966bcd342ecf4dea1827d16a92",
+      "code_fingerprint": "sha256:1d1ef5b4c94d9961343b47ca662599d5e6a26f32280152db9251b6c9fd7ce4c2",
       "kind": "text",
       "outputs": [
         {

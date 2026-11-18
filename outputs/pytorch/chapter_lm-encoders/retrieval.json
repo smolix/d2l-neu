@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c37c4cd5aaa5286377135a6c13d94dcb801a9fc543ffdf98fce0255e95620953",
+    "d2l_lib_fingerprint": "sha256:d4db5ecd443b60425fd016bea6013c82dc0b558c5bde870e6fe8df3b38e9132c",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -29,7 +29,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                              model      revision\nembedder  Qwen/Qwen3-Embedding-0.6B  97b0c614be4d\nreranker   Qwen/Qwen3-Reranker-0.6B  e61197ed4502\nGPU: True; regenerating: none\nAMD EPYC 7502 32-Core Processor, 64 cores, load 3.2\nGPU: NVIDIA GeForce RTX 4090, 0.4 of 24 GiB in use\nthreads: 8 for each Faiss build, one for each timed search\n"
+          "text": "                              model      revision\nembedder  Qwen/Qwen3-Embedding-0.6B  97b0c614be4d\nreranker   Qwen/Qwen3-Reranker-0.6B  e61197ed4502\nGPU: True; regenerating: none\nAMD EPYC 7502 32-Core Processor, 64 cores, load 4.0\nGPU: NVIDIA GeForce RTX 4090, 0.4 of 24 GiB in use\nthreads: 8 for each Faiss build, one for each timed search\n"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "BM25 (k1 1.2, b 0.75): 0.16 ms per question, including tokenization\nBM25: 0.17 ms per question, including tokenization\n"
+          "text": "BM25 (k1 1.2, b 0.75): 0.17 ms per question, including tokenization\nBM25: 0.17 ms per question, including tokenization\n"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "BM25: dev Recall@10 0.959 [0.932, 0.983], 0.17 ms per question\ndense: dev Recall@10 0.982 [0.966, 0.996], 0.88 ms per question\n"
+          "text": "BM25: dev Recall@10 0.959 [0.932, 0.983], 0.17 ms per question\ndense: dev Recall@10 0.982 [0.966, 0.996], 0.89 ms per question\n"
         }
       ]
     },
@@ -163,7 +163,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "book      N   5,324, batch   1: 0.054 ms, 0.0543 ms per question\n     0.01 GFLOP,  10.4 MiB; achieved  201 GB/s,  0.20 TFLOP/s; roofline 0.0108 ms\nbook      N   5,324, batch 220: 0.122 ms, 0.0006 ms per question\n     2.40 GFLOP,  10.8 MiB; achieved   93 GB/s, 19.64 TFLOP/s; roofline 0.0145 ms\nsynthetic N 131,072, batch   1: 0.329 ms, 0.3286 ms per question\n     0.27 GFLOP, 256.0 MiB; achieved  817 GB/s,  0.82 TFLOP/s; roofline 0.2663 ms\nsynthetic N 131,072, batch 220: 0.678 ms, 0.0031 ms per question\n    59.06 GFLOP, 256.4 MiB; achieved  396 GB/s, 87.04 TFLOP/s; roofline 0.3575 ms\n"
+          "text": "book      N   5,324, batch   1: 0.055 ms, 0.0552 ms per question\n     0.01 GFLOP,  10.4 MiB; achieved  198 GB/s,  0.20 TFLOP/s; roofline 0.0108 ms\nbook      N   5,324, batch 220: 0.124 ms, 0.0006 ms per question\n     2.40 GFLOP,  10.8 MiB; achieved   91 GB/s, 19.28 TFLOP/s; roofline 0.0145 ms\nsynthetic N 131,072, batch   1: 0.331 ms, 0.3309 ms per question\n     0.27 GFLOP, 256.0 MiB; achieved  811 GB/s,  0.81 TFLOP/s; roofline 0.2663 ms\nsynthetic N 131,072, batch 220: 0.695 ms, 0.0032 ms per question\n    59.06 GFLOP, 256.4 MiB; achieved  387 GB/s, 84.99 TFLOP/s; roofline 0.3575 ms\n"
         }
       ]
     },
@@ -200,7 +200,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live fused top 100 as registered for 1.000 of the questions;\n  registered P(yes) for 1.0000 of their chunks\nlive against registered P(yes), 4,400 pairs: 99th percentile of |difference| 0.0000, largest 0.0000\nreranking 20 chunks: 221 ms per question on cuda (live); 100 chunks: 1135 ms per question\n  (registered: NVIDIA GeForce RTX 4090); scores of rerank@20: live, of rerank@100: registered\n"
+          "text": "live fused top 100 as registered for 1.000 of the questions;\n  registered P(yes) for 1.0000 of their chunks\nlive against registered P(yes), 4,400 pairs: 99th percentile of |difference| 0.0000, largest 0.0000\nreranking 20 chunks: 224 ms per question on cuda (live); 100 chunks: 1135 ms per question\n  (registered: NVIDIA GeForce RTX 4090); scores of rerank@20: live, of rerank@100: registered\n"
         }
       ]
     },
@@ -211,7 +211,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                   recall@1              recall@5             recall@10\nBM25 (k1 1.2, b 0.75)  0.741 [0.670, 0.813]  0.955 [0.927, 0.979]  0.959 [0.932, 0.983]\nBM25                   0.759 [0.695, 0.823]  0.950 [0.923, 0.975]  0.959 [0.932, 0.983]\ndense                  0.668 [0.604, 0.727]  0.914 [0.878, 0.948]  0.982 [0.966, 0.996]\nRRF                    0.782 [0.736, 0.826]  0.968 [0.941, 0.991]  0.982 [0.957, 1.000]\nweighted               0.814 [0.767, 0.856]  0.964 [0.935, 0.987]  0.982 [0.957, 1.000]\nRRF + rerank@20        0.868 [0.821, 0.911]  0.982 [0.957, 1.000]  0.991 [0.977, 1.000]\nRRF + rerank@100       0.868 [0.821, 0.910]  0.982 [0.962, 0.996]  1.000 [1.000, 1.000]\n                                     mrr@10               ndcg@10 recall@100      ms\nBM25 (k1 1.2, b 0.75)  0.831 [0.783, 0.879]  0.817 [0.769, 0.862]      0.995     0.2\nBM25                   0.838 [0.793, 0.883]  0.822 [0.777, 0.863]      0.995     0.2\ndense                  0.772 [0.726, 0.815]  0.786 [0.746, 0.823]      1.000     0.9\nRRF                    0.858 [0.827, 0.887]  0.853 [0.820, 0.881]      1.000     1.1\nweighted               0.878 [0.846, 0.907]  0.870 [0.838, 0.897]      1.000     1.5\nRRF + rerank@20        0.918 [0.887, 0.945]  0.907 [0.878, 0.932]      1.000   222.1\nRRF + rerank@100       0.921 [0.893, 0.947]  0.906 [0.878, 0.929]      1.000  1135.9\n"
+          "text": "                                   recall@1              recall@5             recall@10\nBM25 (k1 1.2, b 0.75)  0.741 [0.670, 0.813]  0.955 [0.927, 0.979]  0.959 [0.932, 0.983]\nBM25                   0.759 [0.695, 0.823]  0.950 [0.923, 0.975]  0.959 [0.932, 0.983]\ndense                  0.668 [0.604, 0.727]  0.914 [0.878, 0.948]  0.982 [0.966, 0.996]\nRRF                    0.782 [0.736, 0.826]  0.968 [0.941, 0.991]  0.982 [0.957, 1.000]\nweighted               0.814 [0.767, 0.856]  0.964 [0.935, 0.987]  0.982 [0.957, 1.000]\nRRF + rerank@20        0.868 [0.821, 0.911]  0.982 [0.957, 1.000]  0.991 [0.977, 1.000]\nRRF + rerank@100       0.868 [0.821, 0.910]  0.982 [0.962, 0.996]  1.000 [1.000, 1.000]\n                                     mrr@10               ndcg@10 recall@100      ms\nBM25 (k1 1.2, b 0.75)  0.831 [0.783, 0.879]  0.817 [0.769, 0.862]      0.995     0.2\nBM25                   0.838 [0.793, 0.883]  0.822 [0.777, 0.863]      0.995     0.2\ndense                  0.772 [0.726, 0.815]  0.786 [0.746, 0.823]      1.000     0.9\nRRF                    0.858 [0.827, 0.887]  0.853 [0.820, 0.881]      1.000     1.1\nweighted               0.878 [0.846, 0.907]  0.870 [0.838, 0.897]      1.000     1.5\nRRF + rerank@20        0.918 [0.887, 0.945]  0.907 [0.878, 0.932]      1.000   225.1\nRRF + rerank@100       0.921 [0.893, 0.947]  0.906 [0.878, 0.929]      1.000  1135.9\n"
         },
         {
           "type": "stream",
@@ -223,7 +223,7 @@
           "mime": "image/svg+xml",
           "asset": "retrieval/retrieval-stack-1.svg",
           "bytes": 55415,
-          "sha256": "sha256:481f7a84b678a00580a157c128025a3dcc970248c3a69f1d627e7b06fd5b2a17"
+          "sha256": "sha256:e9ac467ff53419a5fe9ed7cb88003cd3ae2c39e04600bda87dfc9e4c29cdde5f"
         }
       ]
     },
@@ -276,7 +276,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "AMD EPYC 7502 32-Core Processor, 64 cores, load 10.4; threads: torch 8, Faiss 8\nGPU: NVIDIA GeForce RTX 4090, 1.3 of 24 GiB in use\n            family         knob  seed  recall  task rec.     p50     p95  code B  index B  build s\n              flat                  0  1.0000     0.9818 15.6744 16.4209    4096   4096.0      0.2\n          IVF-Flat     nprobe 1     0  0.4646     0.7091  0.1474  0.1673    4096   4165.9      3.1\n          IVF-Flat     nprobe 2     0  0.5962     0.7955  0.1677  0.1956    4096   4165.9      3.1\n          IVF-Flat     nprobe 4     0  0.7012     0.8773  0.2107  0.2598    4096   4165.9      3.1\n          IVF-Flat     nprobe 8     0  0.7777     0.9273  0.2947  0.3606    4096   4165.9      3.1\n          IVF-Flat    nprobe 16     0  0.8459     0.9636  0.4300  0.5343    4096   4165.9      3.1\n          IVF-Flat    nprobe 32     0  0.8985     0.9818  0.7889  0.9632    4096   4165.9      3.1\n          IVF-Flat    nprobe 64     0  0.9420     0.9773  1.4727  1.6688    4096   4165.9      3.1\n          IVF-PQ64     nprobe 1     0  0.3923     0.7091  0.2425  0.2555      64    149.4     31.1\n          IVF-PQ64     nprobe 2     0  0.4813     0.7818  0.2475  0.2583      64    149.4     31.1\n          IVF-PQ64     nprobe 4     0  0.5403     0.8636  0.2668  0.2788      64    149.4     31.1\n          IVF-PQ64     nprobe 8     0  0.5734     0.9000  0.3029  0.3488      64    149.4     31.1\n          IVF-PQ64    nprobe 16     0  0.5990     0.9227  0.3931  0.5926      64    149.4     31.1\n          IVF-PQ64    nprobe 32     0  0.6126     0.9318  0.5184  0.6382      64    149.4     31.1\n          IVF-PQ64    nprobe 64     0  0.6207     0.9318  0.8190  0.9260      64    149.4     31.1\n          IVF-PQ64    nprobe 16     1  0.5909     0.9000  0.3674  0.3900      64    149.4     31.5\n          IVF-PQ64    nprobe 16     2  0.5922     0.8682  0.3683  0.3926      64    149.4     30.7\n          IVF-PQ32     nprobe 1     0  0.3720     0.6864  0.1921  0.2407      32    117.4     29.1\n          IVF-PQ32     nprobe 2     0  0.4461     0.7636  0.1952  0.2036      32    117.4     29.1\n          IVF-PQ32     nprobe 4     0  0.4906     0.8318  0.2064  0.2168      32    117.4     29.1\n          IVF-PQ32     nprobe 8     0  0.5107     0.8500  0.2239  0.2379      32    117.4     29.1\n          IVF-PQ32    nprobe 16     0  0.5229     0.8636  0.2631  0.2795      32    117.4     29.1\n          IVF-PQ32    nprobe 32     0  0.5281     0.8636  0.3530  0.3786      32    117.4     29.1\n          IVF-PQ32    nprobe 64     0  0.5310     0.8636  0.4964  0.5476      32    117.4     29.1\n            HNSW32  efSearch 16     0  0.9422     0.9636  0.1725  0.2387    4096   4368.2     16.7\n            HNSW32  efSearch 32     0  0.9735     0.9818  0.2807  0.3747    4096   4368.2     16.7\n            HNSW32  efSearch 64     0  0.9882     0.9818  0.4899  0.6339    4096   4368.2     16.7\n            HNSW32 efSearch 128     0  0.9951     0.9818  0.8797  1.1288    4096   4368.2     16.7\n            HNSW32 efSearch 256     0  0.9981     0.9818  1.5596  2.0138    4096   4368.2     16.7\n   IVF-Flat (ours)    nprobe 16     0  0.8449     0.9545  2.3440  2.9856    4096   4165.8    105.4\n       PQ64 (ours)    all codes     0  0.6926     0.9091 23.2529 23.3811      64     79.5     63.9\nflat, GPU, batched 1000 at once     0  0.9994        NaN  0.0047     NaN    4096      NaN      NaN\nIVF-PQ64, nprobe 16, k-means seeds [0, 1, 2]: recall 0.591 to 0.599\n                    largest_recall_difference  median_p50_live_over_registered\nfamily                                                                        \nflat                                      0.0                            1.019\nIVF-Flat                                  0.0                            1.007\nIVF-PQ64                                  0.0                            1.000\nIVF-PQ32                                  0.0                            0.955\nHNSW32                                    0.0                            1.002\nIVF-Flat (ours)                           0.0                            0.906\nPQ64 (ours)                               0.0                            0.995\nflat, GPU, batched                        0.0                            0.996\n"
+          "text": "AMD EPYC 7502 32-Core Processor, 64 cores, load 5.8; threads: torch 8, Faiss 8\nGPU: NVIDIA GeForce RTX 4090, 1.3 of 24 GiB in use\n            family         knob  seed  recall  task rec.     p50     p95  code B  index B  build s\n              flat                  0  1.0000     0.9818 15.5394 16.6258    4096   4096.0      0.2\n          IVF-Flat     nprobe 1     0  0.4646     0.7091  0.1494  0.1702    4096   4165.9      3.1\n          IVF-Flat     nprobe 2     0  0.5962     0.7955  0.1713  0.2056    4096   4165.9      3.1\n          IVF-Flat     nprobe 4     0  0.7012     0.8773  0.2076  0.2485    4096   4165.9      3.1\n          IVF-Flat     nprobe 8     0  0.7777     0.9273  0.2793  0.3392    4096   4165.9      3.1\n          IVF-Flat    nprobe 16     0  0.8459     0.9636  0.4411  0.5424    4096   4165.9      3.1\n          IVF-Flat    nprobe 32     0  0.8985     0.9818  0.7890  0.9320    4096   4165.9      3.1\n          IVF-Flat    nprobe 64     0  0.9420     0.9773  1.6052  1.7984    4096   4165.9      3.1\n          IVF-PQ64     nprobe 1     0  0.3923     0.7091  0.2398  0.2645      64    149.4     31.2\n          IVF-PQ64     nprobe 2     0  0.4813     0.7818  0.2509  0.2671      64    149.4     31.2\n          IVF-PQ64     nprobe 4     0  0.5403     0.8636  0.2722  0.2893      64    149.4     31.2\n          IVF-PQ64     nprobe 8     0  0.5734     0.9000  0.3108  0.3314      64    149.4     31.2\n          IVF-PQ64    nprobe 16     0  0.5990     0.9227  0.3888  0.4188      64    149.4     31.2\n          IVF-PQ64    nprobe 32     0  0.6126     0.9318  0.5242  0.5739      64    149.4     31.2\n          IVF-PQ64    nprobe 64     0  0.6207     0.9318  0.8118  0.8830      64    149.4     31.2\n          IVF-PQ64    nprobe 16     1  0.5909     0.9000  0.3682  0.3916      64    149.4     30.7\n          IVF-PQ64    nprobe 16     2  0.5922     0.8682  0.3757  0.4066      64    149.4     31.7\n          IVF-PQ32     nprobe 1     0  0.3720     0.6864  0.1910  0.2031      32    117.4     30.8\n          IVF-PQ32     nprobe 2     0  0.4461     0.7636  0.1968  0.2095      32    117.4     30.8\n          IVF-PQ32     nprobe 4     0  0.4906     0.8318  0.2081  0.2179      32    117.4     30.8\n          IVF-PQ32     nprobe 8     0  0.5107     0.8500  0.2332  0.2465      32    117.4     30.8\n          IVF-PQ32    nprobe 16     0  0.5229     0.8636  0.2808  0.3000      32    117.4     30.8\n          IVF-PQ32    nprobe 32     0  0.5281     0.8636  0.3706  0.3947      32    117.4     30.8\n          IVF-PQ32    nprobe 64     0  0.5310     0.8636  0.5460  0.5919      32    117.4     30.8\n            HNSW32  efSearch 16     0  0.9422     0.9636  0.1770  0.2457    4096   4368.2     13.9\n            HNSW32  efSearch 32     0  0.9735     0.9818  0.2870  0.3739    4096   4368.2     13.9\n            HNSW32  efSearch 64     0  0.9882     0.9818  0.4867  0.6293    4096   4368.2     13.9\n            HNSW32 efSearch 128     0  0.9951     0.9818  0.8770  1.1168    4096   4368.2     13.9\n            HNSW32 efSearch 256     0  0.9981     0.9818  1.5570  1.9901    4096   4368.2     13.9\n   IVF-Flat (ours)    nprobe 16     0  0.8449     0.9545  2.3403  3.1957    4096   4165.8     96.1\n       PQ64 (ours)    all codes     0  0.6926     0.9091 23.2711 23.4002      64     79.5     63.3\nflat, GPU, batched 1000 at once     0  0.9994        NaN  0.0047     NaN    4096      NaN      NaN\nIVF-PQ64, nprobe 16, k-means seeds [0, 1, 2]: recall 0.591 to 0.599\n                    largest_recall_difference  median_p50_live_over_registered\nfamily                                                                        \nflat                                      0.0                            1.010\nIVF-Flat                                  0.0                            1.015\nIVF-PQ64                                  0.0                            1.017\nIVF-PQ32                                  0.0                            0.980\nHNSW32                                    0.0                            1.011\nIVF-Flat (ours)                           0.0                            0.905\nPQ64 (ours)                               0.0                            0.996\nflat, GPU, batched                        0.0                            1.003\n"
         }
       ]
     },
@@ -288,8 +288,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "retrieval/retrieval-tradeoff-1.svg",
-          "bytes": 100632,
-          "sha256": "sha256:2f1cad08676830299db404d47076260052262ada00e798367027ec1395d557ad"
+          "bytes": 100623,
+          "sha256": "sha256:d66fd571c47084f8f22c06ddee515cbb32df154aa509d124357aeb8ca8c09efd"
         }
       ]
     },
@@ -300,7 +300,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HNSW32, efSearch 32: recall 0.974 at p50 0.281 ms; flat scan 15.67 ms, 56 times longer\nfastest configuration with recall >= 0.95 at N = 67,853: HNSW32, efSearch 32\n"
+          "text": "HNSW32, efSearch 32: recall 0.974 at p50 0.287 ms; flat scan 15.54 ms, 54 times longer\nfastest configuration with recall >= 0.95 at N = 67,853: HNSW32, efSearch 32\n"
         }
       ]
     },
@@ -315,13 +315,13 @@
       "outputs": []
     },
     "retrieval-retriever": {
-      "code_fingerprint": "sha256:f902f0c77963c72f7108f2eaa0c660fcd76104adebf1175e727f32bbd4e6ac23",
+      "code_fingerprint": "sha256:0b437bae3c0718f6dfb5680134f7d7ba111d2dbaf8c7f4d2d2e5bc7fe165a957",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n1. sec512:chapter_transformers/kv-cache#031\n   Generation and the KV Cache > Summary\n   bm25 9.546, dense 0.581, rrf 0.031\n2. sec512:chapter_attention/multihead-attention#014\n   Multi-Head and Cross-Attention > Multi-Head Attention > Shared Keys and Values\n   bm25 8.874, dense 0.557, rrf 0.029\n3. sec512:chapter_transformers/kv-cache#010\n   Generation and the KV Cache > Memory and Bandwidth\n   bm25 8.596, dense 0.564, rrf 0.029\n4. sec512:chapter_transformers/scaling-laws#023\n   Scaling Laws > Configurations of Deployed Models\n   bm25 8.656, dense 0.563, rrf 0.029\n5. sec512:chapter_transformers/kv-cache#023\n   Generation and the KV Cache > Compressing the Cache Further > Low-Rank Keys and Values\n   bm25 11.334, dense 0.536, rrf 0.029\n"
+          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n1. sec512:chapter_appendix-tools-for-deep-learning/utils#018\n   Utility Functions and Classes > Training Utilities\n   bm25 25.147, dense 0.706, rrf 0.033\n2. sec512:chapter_builders-guide/reproducibility-inspection#004\n   Reproducibility and Inspection > Seeds and Random Number Generators > Data Loader Workers\n   bm25 14.687, dense 0.579, rrf 0.031\n3. sec512:chapter_linear-classification/image-classification-dataset#003\n   Image Classification Data > Reading Minibatches\n   bm25 13.594, dense 0.571, rrf 0.031\n4. sec512:chapter_linear-regression/oo-design#009\n   Object-Oriented Design for Implementation > Data > A Loader for Every Epoch\n   bm25 12.412, dense 0.715, rrf 0.031\n5. sec512:chapter_computer-vision/semantic-segmentation-and-dataset#009\n   Semantic Segmentation and the Dataset > The Pascal VOC2012 Semantic Segmentation Dataset >\n    Putting It All Together\n   bm25 14.812, dense 0.495, rrf 0.030\n2 relevant chunks; rank of the first: BM25 1, embedder 2, fusion 1\n"
         }
       ]
     }

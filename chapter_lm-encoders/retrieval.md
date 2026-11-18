@@ -2036,14 +2036,28 @@ class BookRetriever:
 We ask the retriever, with its defaults, a question about a chapter far from
 this one.
 
+<!-- WRITER: retrieval-retriever now asks the load_array question of the
+chapter introduction (dev-0001) instead of the KV-cache question, and prints
+the rank of the first relevant chunk under BM25, the embedder and RRF. The
+two paragraphs after the cell describe the old KV-cache hits; rewrite them
+from the new output (the code report, code.md, gives the values). -->
+
 ```{.python .input #retrieval-retriever}
 %%tab pytorch
 retriever = BookRetriever()
-for h in retriever.search('What does the key-value cache store per token?',
-                          k=5):
-    print(f'{h.rank}. {h.chunk_id}\n   {" > ".join(h.heading_path)}\n   '
-          + ', '.join(f'{k} {v:.3f}' for k, v in h.scores.items()
-                      if v is not None))
+item = next(q for q in DEV if q['qid'] == 'dev-0001')  # the introduction's
+for h in retriever.search(item['question'], k=5):      # load_array question
+    d2l.print_wrapped(f'{h.rank}. {h.chunk_id}\n   '
+                      f'{" > ".join(h.heading_path)}\n   ' + ', '.join(
+                          f'{k} {v:.3f}' for k, v in h.scores.items()
+                          if v is not None), width=96)
+gold = d2l.gold_chunk_ids(item, retriever.corpus)
+first = {name: next((h.rank for h in retriever.search(
+    item['question'], k=100, mode=mode) if h.chunk_id in gold), 'beyond 100')
+         for name, mode in (('BM25', 'bm25'), ('embedder', 'dense'),
+                            ('fusion', 'hybrid'))}
+print(f'{len(gold)} relevant chunks; rank of the first: ' + ', '.join(
+    f'{name} {r}' for name, r in first.items()))
 retriever.release()
 ```
 

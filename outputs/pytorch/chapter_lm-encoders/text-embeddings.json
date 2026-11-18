@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:654b2e49f1a048487f5931050bfe8dd937cba4ba3c39ddff49702c8b3fa01ff9",
+    "d2l_lib_fingerprint": "sha256:2614adf54025b4638c7b17d2cdf618cde8fbd22ab901d034298a770febf00450",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -236,7 +236,7 @@
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-alignment-1.svg",
           "bytes": 464013,
-          "sha256": "sha256:24afb40a9d1b01ad1fda9c4569db84608df58ea37703d95a6002eee758b74a0d"
+          "sha256": "sha256:01ea1e520a47897091c1c458e59e39ac921f1c1d980b36e34b9261241f281f5a"
         }
       ]
     },
@@ -259,7 +259,7 @@
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-compress-1.svg",
           "bytes": 48985,
-          "sha256": "sha256:af9e2ebeba61b11d8b37423c22b95f2d4cfc5a12e55e9d426396e860724901c2"
+          "sha256": "sha256:bd8cc04fe936dda406619fb05f2a38d67e656f6a4de8ac0f6613ca313e01f809"
         }
       ]
     },
@@ -274,8 +274,39 @@
         }
       ]
     },
+    "text-embeddings-compress-nq": {
+      "code_fingerprint": "sha256:316f9b1bb4497142b30db3a7cf86b8a9d6ae2fdda5f708dde043f069b319ce13",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1629 of 5000 texts truncated to 160 tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1629 of 5000 texts truncated to 160 tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NQ, 300 held-out questions among 5,000 passages: Recall@10\n width  contrastive  Matryoshka  delta    low  high  CI excludes 0\n   768        0.980       0.973 -0.007 -0.023 0.010          False\n   128        0.957       0.957  0.000 -0.023 0.023          False\n    64        0.907       0.920  0.013 -0.013 0.040          False\n    32        0.757       0.833  0.077  0.040 0.117           True\n    16        0.513       0.620  0.107  0.060 0.153           True\n"
+        }
+      ]
+    },
     "text-embeddings-production": {
-      "code_fingerprint": "sha256:20fa09ff2e843b481636971dd0749a0308ec9ded83412f9834c680b2a9ae4948",
+      "code_fingerprint": "sha256:e9068890fda6f64e17ee838a6c78672134dcf4c4578cfd6353f128d549a1b9ae",
       "kind": "text",
       "outputs": [
         {

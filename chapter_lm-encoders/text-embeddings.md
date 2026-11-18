@@ -1461,6 +1461,45 @@ intervals that reach 0; for the plain model the difference is $-0.045$
 larger than the seed range. Even at 128 bytes per passage,
 Qwen3-Embedding (0.964) stays far ahead of our model at full precision.
 
+<!-- WRITER: new cell text-embeddings-compress-nq (code step, 2026-11-18):
+the same truncation comparison on the task both checkpoints were trained
+for, the 300 held-out NQ pairs among 5,000 unseen passages. The values are in
+the code report (code.md) and claims.md. The paragraph "The Matryoshka model
+is not ahead at any width we tried ... Exercise ... asks where it does" and
+part 1 of exercise ex_lm_emb-matryoshka (which asks for exactly this sweep)
+must follow the new output. -->
+
+```{.python .input #text-embeddings-compress-nq}
+%%tab pytorch
+# In domain: Recall@10 of the 300 held-out NQ questions among the 5,000
+# unseen NQ passages, both checkpoints truncated to the same widths
+NQ_GOLD = [[CANDS.index(d)] for _, d in HELD]
+NQ_R10 = {}
+for label, key in (('contrastive', 'emb-ckpt'),
+                   ('Matryoshka', 'emb-ckpt-mrl')):
+    model = load_ckpt(result_path(key))
+    Q = encode(model, [q for q, _ in HELD], 'nq_query', PREFIX['query'])
+    X = encode(model, CANDS, 'nq_passage', PREFIX['passage'])
+    del model
+    d2l.lm_free()
+    for k in (Q.shape[1], 128, 64, 32, 16):
+        S = d2l.truncate_embeddings(Q, k) @ d2l.truncate_embeddings(X, k).T
+        NQ_R10[label, k] = d2l.retrieval_metrics(
+            S.topk(10).indices.tolist(), NQ_GOLD, ks=(10,))['recall@10']
+rows = []
+for k in (Q.shape[1], 128, 64, 32, 16):  # questions resampled: one each
+    r = d2l.paired_bootstrap(NQ_R10['Matryoshka', k],
+                             NQ_R10['contrastive', k])
+    rows.append({'width': k, 'contrastive': NQ_R10['contrastive', k].mean(),
+                 'Matryoshka': NQ_R10['Matryoshka', k].mean(),
+                 'delta': r.mean, 'low': r.ci[0], 'high': r.ci[1]})
+NQ_C = pd.DataFrame(rows)
+NQ_C['CI excludes 0'] = (NQ_C.low > 0) | (NQ_C.high < 0)
+print(f'NQ, {len(HELD)} held-out questions among {len(CANDS):,} passages: '
+      'Recall@10')
+print(NQ_C.round(3).to_string(index=False))
+```
+
 ## Using a Released Embedder
 :label:`subsec_lm_emb_practice`
 

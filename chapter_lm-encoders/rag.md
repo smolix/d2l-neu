@@ -111,7 +111,7 @@ N_LIVE = 8 if GPU else 2  # base answers generated again in a normal run
 JUDGE_MINUTES, CHUNK, CONCURRENCY = 50, 64, 8  # judging run; saves; flight
 RETRY_TOKENS = 6000  # the one re-judging of an answer left without verdict
 N_REPEAT = 60  # base answers judged twice
-CARD_GIB = 21.5  # estimates; measured peaks add 1-2 (23.6 GiB usable)
+CARD_GIB = 21.5  # estimates; measured peaks add 0.4-1.5 (23.6 GiB usable)
 print(pd.DataFrame({'model': [GEN, EMB, RERANKER, JUDGE['model']],
                     'revision': [REV[GEN][:12], REV[EMB][:12],
                                  REV[RERANKER][:12], JUDGE['revision'][:12]]},
@@ -1314,7 +1314,7 @@ print(f'unjudged (left out): {sum(x["correct"] is None for x in v)} of '
 for k in ('correct', 'faithful'):
     pairs = [(lab[p['qid']][f'{k}_frontier'], lab[p['qid']][f'{k}_second'])
              for p in cal]
-    print(f'the two labellers on {k}: kappa '
+    print(f'the two labelers on {k}: kappa '
           f'{kappa(*zip(*[t for t in pairs if None not in t])):.2f}')
 old = next(c for c in json.load(open(os.path.join(
     LABELS, 'candidates', 'table.json'))) if c['name'] == 'qwen35-4b-off')
@@ -1323,7 +1323,7 @@ print(f'the old judge (Qwen3.5-4B, thinking off) on correct: agreement '
       f'{oc["acc"]:.2f}, kappa {oc["kappa"]:.2f} [{oc["k_lo"]:.2f}, '
       f'{oc["k_hi"]:.2f}];\n  it passes '
       f'{old["calibration"]["false_correct"][0]} of the '
-      f'{old["calibration"]["false_correct"][1]} answers the labellers call '
+      f'{old["calibration"]["false_correct"][1]} answers the labelers call '
       'wrong')
 for k in ('correct', 'faithful'):  # the claims that rest on the judge
     (acc, _, _), (_, klo, _) = agreement(*zip(*[
@@ -1358,6 +1358,35 @@ judge it replaced, a 4B model with thinking off, passed 14 of the 21 answers
 that both labelers call wrong.
 
 ### The Baseline Report
+
+<!-- WRITER: new cell rag-load-array (code step, 2026-11-18). It prints the
+recorded closed-book and baseline answers to the load_array question of the
+chapter introduction (dev-0001) with the judge's verdicts. Measured (replay):
+closed book, no passages: says the DataLoader shuffles according to a
+`shuffle` argument, never names `is_train`; judge: correct False. Baseline,
+five passages (the first is the relevant utils chunk): "`is_train` ... is
+passed directly to the DataLoader constructor as the `shuffle` parameter";
+judge: correct True, faithful True, supported False (the answer cites no
+passage). The cell needs a lead-in sentence and one sentence after it. -->
+
+```{.python .input #rag-load-array}
+%%tab pytorch
+# The question of the chapter's introduction, about load_array (dev-0001),
+# answered without passages and by the baseline, with the judge's verdicts
+item = ITEMS['dev-0001']
+wrap = lambda t, first='': textwrap.fill(t, 96, initial_indent=first,
+                                         subsequent_indent='    ')
+print(wrap(f'question: {item["question"]}'))
+print(wrap(f'reference: {item["reference"]}'))
+for c in ('closed', 'base'):
+    rec = ANSWERS[c, item['qid']]
+    jv = judged[(judged.config == c) & (judged.qid == item['qid'])]
+    verdicts = ', '.join(f'{k} {jv[k].iloc[0]}' for k in VERDICTS
+                         if len(jv) and pd.notna(jv[k].iloc[0]))
+    print(f'\n{c}, {len(rec["context_ids"])} passages; judge: '
+          f'{verdicts or "no verdict"}')
+    print(wrap(rec['answer'], '    '))
+```
 
 Each 95% interval of the report comes from a bootstrap that resamples
 documents, since questions drafted from one document share its difficulty

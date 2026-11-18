@@ -66,7 +66,7 @@ BATCH = BASE['batch']  # prompts per batch
 QUICK = False  # True: 80 stratified dev and test items (development only)
 assert not (QUICK and RERUN), 'QUICK results are never saved'
 CONCURRENCY, N_CARDS = 8, 50  # requests in flight when judged; cards
-CARD_GIB = 21.5  # estimates; measured peaks add 1-2 (23.6 GiB usable)
+CARD_GIB = 21.5  # estimates; measured peaks add 0.4-1.5 (23.6 GiB usable)
 ```
 
 ```{.python .input #rag-failures-failures-and-fixes-in-retrieval-augmented-generation-4}
@@ -414,7 +414,7 @@ if ready('base'):
         print(pd.crosstab(pd.Series(now, name='rule'),
                           pd.Series(agent.values, name='agent')))
     else:
-        print('\nthe cards carry no labeller labels yet')
+        print('\nthe cards carry no labels of a second labeler yet')
 ```
 
 Of the 26 failures, 12 are ignored, 6 unsupported, 5 ranked low, 2 false
@@ -443,7 +443,7 @@ example is unlikely, though not certain, to be a judge error.
 %%tab pytorch
 # The rule: the first base dev answer (in qid order) with a relevant chunk
 # in its context that the judge called incorrect, and whose failure card
-# carries the same class from the second labeller as from the rule: a
+# carries the same class from the second labeler as from the rule: a
 # failure of the pipeline that two graders agree on, not a judge error
 path = d2l._rag_run_path('rag-cards', RERUN)
 LABEL = {c['qid']: c['labeller']['label'] for c in (
@@ -475,7 +475,7 @@ if 'base' in S and LABEL:
     print(wrap(f'last sentence of [{n}]: {last}'))
     print(wrap(f'answer: {rec["answer"]}'))
     print(f'verdicts: {row.verdicts}\nclass: {pick[0][1]}, by the rule and '
-          'by the second labeller')
+          'by the second labeler')
 ```
 
 The answering passage was ranked first, and its last sentence, printed

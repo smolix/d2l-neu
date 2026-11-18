@@ -270,7 +270,7 @@ else:
     dec = np.mean([np.mean(np.array(p) == y)  # over demonstration draws
                    for p in decoder['pred']['mnli']['8']])
     print(pd.DataFrame({
-        'labelled examples': [n, 8], 'accuracy': [enc, dec],
+        'labeled examples': [n, 8], 'accuracy': [enc, dec],
         'ms per 1,000 examples': [sweep['timing']['mnli'],
                                   decoder['timing']['mnli']['8']]},
         index=[f'{ENC.split("/")[1]}, fine-tuned ({len(SEEDS)} seeds)',
@@ -1577,7 +1577,7 @@ for ax, task in zip(axes, ('mnli', 'sst2')):
     series['naive Bayes'] = ([NB[task, n] for n in sizes],) * 3
     majority = np.bincount(SWEEP['eval'][task]['label']).max() / len(
         SWEEP['eval'][task]['label'])
-    d2l.plot_intervals(sizes, series, 'labelled examples', f'{task} accuracy',
+    d2l.plot_intervals(sizes, series, 'labeled examples', f'{task} accuracy',
                        kind='band', xscale='log', reference=majority,
                        axes=ax[0])
     sec = [SWEEP['timing'][task] / 1e3] + [DECODER['timing'][task][str(

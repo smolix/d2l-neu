@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:44d770138772aefd99a03c160510d708e81124a53297f9199ad43d31d4dee80d",
+    "d2l_lib_fingerprint": "sha256:5e5b18552e6fd1786e0740976d5fd05382b448cf84d31d0a9a0d3f6ead9baae0",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -66,7 +66,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6,470,962 nonzero counts of 323,892,009 (2.00%), 27,459,312 (word, context) pairs, 1.8 s\n      the the     141,058\n      the of      116,432\n      the in       69,654\n      the and      66,603\n      the to       56,474\npmi(the, of) = 0.36 from 116,432 pairs\npmi(the, the) = -0.27 from 141,058 pairs\npmi(prime, minister) = 6.55 from 166 pairs\n"
+          "text": "6,470,962 nonzero counts of 323,892,009 (2.00%), 27,459,312 (word, context) pairs, 1.7 s\n      the the     141,058\n      the of      116,432\n      the in       69,654\n      the and      66,603\n      the to       56,474\npmi(the, of) = 0.36 from 116,432 pairs\npmi(the, the) = -0.27 from 141,058 pairs\npmi(prime, minister) = 6.55 from 166 pairs\n"
         }
       ]
     },
@@ -120,27 +120,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1: loss 0.4569, 3.8 s\n"
+          "text": "epoch 1: loss 0.4569, 4.0 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2: loss 0.4091, 3.5 s\n"
+          "text": "epoch 2: loss 0.4091, 3.9 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3: loss 0.3911, 3.2 s\n"
+          "text": "epoch 3: loss 0.3911, 3.7 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4: loss 0.3813, 3.1 s\n"
+          "text": "epoch 4: loss 0.3813, 3.6 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5: loss 0.3749, 3.0 s\n17 s\n"
+          "text": "epoch 5: loss 0.3749, 3.7 s\n19 s\n"
         },
         {
           "type": "stream",
@@ -218,7 +218,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50: loss 0.0056\n12 s\n"
+          "text": "epoch 50: loss 0.0056\n15 s\n"
         },
         {
           "type": "stream",
@@ -241,7 +241,7 @@
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-scatter-1.svg",
           "bytes": 240786,
-          "sha256": "sha256:656b3e3fb9c619520f6a12cee4b2fbcd3ac41160cea6fd2cd215ee690611ec24"
+          "sha256": "sha256:e4f7cf477601e1b1352ec3ceb75a15a23990f4d21d7ae9626f3bed63eff33dcb"
         }
       ]
     },
@@ -265,7 +265,7 @@
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-grid-plot-1.svg",
           "bytes": 59098,
-          "sha256": "sha256:327c624673e18f00d7da7ebb747e75cabc9a5a604fd5a93699d68626b3ef22a5"
+          "sha256": "sha256:a8cdb2d3fcf1c478ace8c24b2bbd9906e8776906b551b1d4a2fa8d968bb2b767"
         }
       ]
     },
@@ -335,7 +335,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "notebook: 92 s\n"
+          "text": "notebook: 97 s\n"
         }
       ]
     }

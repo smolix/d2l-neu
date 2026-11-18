@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4f23adfcf4ba87578712e47fe677313046f0232c852210c4cc44a150b76a548d",
+    "d2l_lib_fingerprint": "sha256:c04d28f3b06fb3ffd9b6bbdcc8d4b7f18e94dce72cb296057f42273b4ca4fd83",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -49,18 +49,18 @@
       "outputs": []
     },
     "bert-opening": {
-      "code_fingerprint": "sha256:8bde4d9373bf360d5cbb8609e29b399f4383fe328248190738880563b27d9fb3",
+      "code_fingerprint": "sha256:8e74380c69b12aea69cea3fe15813a96d7f1dca8551092460e6d0387d6db1e3b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                       labelled examples  accuracy  ms per 1,000 examples\nModernBERT-base, fine-tuned (3 seeds)              16000     0.839                  446.0\nQwen3-1.7B, 8 shots (3 draws)                          8     0.631                48037.0\n"
+          "text": "                                       labeled examples  accuracy  ms per 1,000 examples\nModernBERT-base, fine-tuned (3 seeds)             16000     0.839                  446.0\nQwen3-1.7B, 8 shots (3 draws)                         8     0.631                48037.0\n"
         }
       ]
     },
     "bert-raw": {
-      "code_fingerprint": "sha256:18824bc3687d3497b43df78f733c3c9087014aabec06948279dd84181bee93e2",
+      "code_fingerprint": "sha256:8f976f1f4ba5a2f5527175399b63fbe4e1cf3c993e3bc03b1c7017071d6bfd33",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +76,7 @@
       ]
     },
     "bert-mlm-fill": {
-      "code_fingerprint": "sha256:067d780b19035f81963cb0217d8a60f5df4dc4cf70c96d0f9d00b26e7b97ce68",
+      "code_fingerprint": "sha256:c786a59c5fa8ad1fb51842d254ca4aa8d7602d1969d882ce8896e5736eeaf4d9",
       "kind": "text",
       "outputs": [
         {
@@ -87,12 +87,12 @@
       ]
     },
     "bert-mlm-corrupt": {
-      "code_fingerprint": "sha256:9cb1f8ed91bcde75dcf07803b3196c81ab37b858ae70d6df7f5f607e9ed094b5",
+      "code_fingerprint": "sha256:cf119ed60e3c4f943c558867f2f094e9b34f3e7310d0794219bc0391fda92400",
       "kind": "text",
       "outputs": []
     },
     "bert-mlm-stats": {
-      "code_fingerprint": "sha256:eabe6fb083fa6caad2890f9cccbb4a072b54059f9fa6da024256875e5df3639f",
+      "code_fingerprint": "sha256:4b75e2519afa7d1bc54034787dda7152f84549588804df84d0ddaabd67043464",
       "kind": "text",
       "outputs": [
         {
@@ -103,7 +103,7 @@
       ]
     },
     "bert-attention-cost": {
-      "code_fingerprint": "sha256:e4b416d265ef65e104f0385e08bbf055f87644c9122d2dff59dbc4ec492a1566",
+      "code_fingerprint": "sha256:10654c9c91229b7f0071f8d9f92fa1f983b6268a7c4adf56bb3856aa6c0a290e",
       "kind": "text",
       "outputs": [
         {
@@ -119,12 +119,12 @@
       ]
     },
     "bert-pooled-classifier": {
-      "code_fingerprint": "sha256:2e16a5dc6537e25e69d1b63159d0da607a3519cfd95fc22039f8db5ce9a1f787",
+      "code_fingerprint": "sha256:61b3b0206c73792f7274a48cafcf3e254f535fa551cfee86843ca42e33df67fd",
       "kind": "text",
       "outputs": []
     },
     "bert-head-check": {
-      "code_fingerprint": "sha256:6d2eb185fe8820a7e723ad62b3bf845f8f1308e8260929a463d8963ad00b01e4",
+      "code_fingerprint": "sha256:f409675fc8cb6a704a3f840795ffc508ccde193b8378f007b5da7c1d753845c2",
       "kind": "text",
       "outputs": [
         {
@@ -140,17 +140,17 @@
       ]
     },
     "bert-finetune": {
-      "code_fingerprint": "sha256:bc897456a59a0b9cb1b9fee216fcfa02f20d5a4c23198ad21cbbee25135ffe29",
+      "code_fingerprint": "sha256:c9250626e952f475873891471862d4eacf590e984901b567f4836bc14a46595c",
       "kind": "text",
       "outputs": []
     },
     "bert-cost": {
-      "code_fingerprint": "sha256:9b6d300d5b4f500a003626d135162e21684384865115821243807cfe2873d331",
+      "code_fingerprint": "sha256:fbdb74d69980c20014c33de888c268a0b40992d28777b2f952f3a02e62c32238",
       "kind": "text",
       "outputs": []
     },
     "bert-data": {
-      "code_fingerprint": "sha256:56115662c94f25d4cc03ef784a9b3855804c38a9b8bf6f2620091ab727c5cd0a",
+      "code_fingerprint": "sha256:5db786e5d90d0d7edfca8e01b8da508fb9b15326b8e0fdf20b2df2cb7124baaf",
       "kind": "text",
       "outputs": [
         {
@@ -161,12 +161,12 @@
       ]
     },
     "bert-run-defs": {
-      "code_fingerprint": "sha256:4e5845563fab693d06444070d468ad9064d52b52df9e6b09b62478f3d6fa8214",
+      "code_fingerprint": "sha256:612d9df973ca3f13165046bbbf3106f5907837d5af4b93d1b87012d7fc117a5e",
       "kind": "text",
       "outputs": []
     },
     "bert-sweep": {
-      "code_fingerprint": "sha256:68b839944373853c255725be0a610ebebfb4de6902dd7a53567fab263fa6a6db",
+      "code_fingerprint": "sha256:07f7f771e69463dfff2ce09100264d4d341b962d9a74043fcc3efb16074dbfaf",
       "kind": "text",
       "outputs": [
         {
@@ -177,18 +177,18 @@
       ]
     },
     "bert-sweep-live": {
-      "code_fingerprint": "sha256:4171a043dd110ec9d49cfc65d24fb62b66f6b28a7acc69dcac8e742151cf3d72",
+      "code_fingerprint": "sha256:ae0d7dd07e596cc997cc63e8e57767af414b279c038025efc8adf7854b3e84d0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n = 1000, seed 0, 2000 items: accuracy 0.645 live, 0.645 registered\n  (bound on the difference 0.022); same prediction on 1.000; 28 s\n"
+          "text": "n = 1000, seed 0, 2000 items: accuracy 0.645 live, 0.645 registered\n  (bound on the difference 0.022); same prediction on 1.000; 26 s\n"
         }
       ]
     },
     "bert-ckpt-live": {
-      "code_fingerprint": "sha256:dd1e5e55c52b090e1d4f3597ed81d489ec78588b4820d7682717080fddf6a44b",
+      "code_fingerprint": "sha256:ad55d848c9d4847e6e6fb04b11ae378564153a1ed880eec044cc6779b611927e",
       "kind": "text",
       "outputs": [
         {
@@ -199,7 +199,7 @@
       ]
     },
     "bert-hypothesis-only": {
-      "code_fingerprint": "sha256:9d58f87fa1c0c5da2489a92e6adab0ed4dc729b519f7b8db455ad749fbfa2c95",
+      "code_fingerprint": "sha256:87da6d5aacf5351f0074129f429c8adf6d4279b509ff68a9194018c4097a4c1c",
       "kind": "text",
       "outputs": [
         {
@@ -210,17 +210,17 @@
       ]
     },
     "bert-align": {
-      "code_fingerprint": "sha256:e477351b4ea6e1d6132f7d312831b6704f218eb1c8ffef05c7d9daa81d9947ab",
+      "code_fingerprint": "sha256:1bc7d6f63bcc965778f43ea88500bfdc377c6828eb3e84f10d1ae4f7fc3230a3",
       "kind": "text",
       "outputs": []
     },
     "bert-span-f1": {
-      "code_fingerprint": "sha256:3a831f2ef75a81315da203879f8d7773c976691561b6daf8ba0cec63b93e4413",
+      "code_fingerprint": "sha256:1f973e8b6737915592a3b2b449a5b0a6cf9d5a432ccba9e334973a372a800016",
       "kind": "text",
       "outputs": []
     },
     "bert-conll-data": {
-      "code_fingerprint": "sha256:f5c6514659a273441699dbd0eaf7d78bebd625ca6966d068c1e51f64e9819237",
+      "code_fingerprint": "sha256:f6782e22c127365467a5b379a3213b9edb8a94f27651f35f37f20a0c22b83c73",
       "kind": "text",
       "outputs": [
         {
@@ -231,7 +231,7 @@
       ]
     },
     "bert-tagging": {
-      "code_fingerprint": "sha256:81fd7f9d8eff5bea0e88ca78b74b0dd48c41485dc8a4e430d3c26e24087f4e57",
+      "code_fingerprint": "sha256:9dfc792a7dd67dac91e1f73daefc2ae990e6664fbc598b7749f9414c769ac5d1",
       "kind": "text",
       "outputs": [
         {
@@ -247,7 +247,7 @@
       ]
     },
     "bert-decoder": {
-      "code_fingerprint": "sha256:aa10b748f833da9911c2c844bacc589b211816b0bd6e8a61f3b31685fee6ff5f",
+      "code_fingerprint": "sha256:89ee80c02f29300487a6e76ede4f42086da5f7ca997c0101e31e12e2089c8586",
       "kind": "text",
       "outputs": [
         {
@@ -268,7 +268,7 @@
       ]
     },
     "bert-naive-bayes": {
-      "code_fingerprint": "sha256:f0fc0e8cbf6a472413ed2d6235c044581f0f0f937a3af14b05f42ff8b6956ffe",
+      "code_fingerprint": "sha256:fbac78d255df47a2c8fec7e340fc61923aafa23622bc2d0d1653925d27f18d75",
       "kind": "text",
       "outputs": [
         {
@@ -279,31 +279,31 @@
       ]
     },
     "bert-timing": {
-      "code_fingerprint": "sha256:0af1c500de96f9973130a62d561c5b3e503eeb3cc7577159fb13aa5b768a255e",
+      "code_fingerprint": "sha256:a0369a6522bd0385a50050bc9d6427b072ca28393a2391ef86bd493558537eeb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, registered\nencoder                40.3                 8.9               432.3                     445.9\ndecoder              1543.1              4349.8             46555.0                   48036.6\ndecoder / encoder: measured 108x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\n"
+          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, registered\nencoder                40.3                 8.9               428.4                     445.9\ndecoder              1543.1              4349.8             47392.5                   48036.6\ndecoder / encoder: measured 111x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\n"
         }
       ]
     },
     "bert-curve": {
-      "code_fingerprint": "sha256:ccdeb17f093a86ba81c9784e48b641c60fffd21080ffad1dc969f8c78217bb05",
+      "code_fingerprint": "sha256:d1d4c0f48d3cd7d42be801a3f7b0f38841fb6fc2e1b116d3494f6a0b79558d69",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "bert/bert-curve-1.png",
-          "bytes": 77209,
-          "sha256": "sha256:8f6a00a608a9a44e8d004f9377e78a5ac202e0683a7d5b30ba7c91d3b903a8a0"
+          "bytes": 77193,
+          "sha256": "sha256:2f080be844512c14acf5ffe11a95946c19c21d422674be8eb590ba7c0b750356"
         }
       ]
     },
     "bert-crossing": {
-      "code_fingerprint": "sha256:706b95c0a4b6cbccb43a8c47b399c579e061e235cf5545fede1ed1878c624868",
+      "code_fingerprint": "sha256:d4c9c16f379bc318362a71cb5fed6e9d791ba94e2e6bc61c5e71a076db38d7f5",
       "kind": "text",
       "outputs": [
         {

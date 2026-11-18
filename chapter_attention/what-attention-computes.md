@@ -133,59 +133,7 @@ two weight matrices to expose a head axis gives the circuits of every head
 at once. The function `circuits` forms them for one block, and the cell
 below prints those of head 0 in block 1 of a freshly initialized model.
 
-```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
-%%tab pytorch
-def circuits(model, blk):
-    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
-    W_qkv = model.blks[blk]['qkv'].weight           # (3D, D): W_q; W_k; W_v
-    W_o = model.blks[blk]['proj'].weight            # (D, D): heads in columns
-    H, D = model.num_heads, W_o.shape[0]
-    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
-    W_QK = W_q.mT @ W_k
-    W_OV = W_o.reshape(D, H, D // H).transpose(0, 1) @ W_v
-    return W_QK, W_OV
-
-model = d2l.TinyCharLM(vocab_size=64, pos='rope')
-W_QK, W_OV = circuits(model, 0)
-for name, M in (('W_QK', W_QK[0]), ('W_OV', W_OV[0])):
-    print(f'{name}: shape {tuple(M.shape)}, '
-          f'rank {torch.linalg.matrix_rank(M).item()}')
-```
-
-```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
-%%tab jax
-def circuits(model, blk):
-    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
-    W_qkv = model.blks[blk]['qkv'].kernel[...].T    # (3D, D): W_q; W_k; W_v
-    W_o = model.blks[blk]['proj'].kernel[...].T     # (D, D): heads in columns
-    H, D = model.num_heads, W_o.shape[0]
-    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
-    W_QK = W_q.mT @ W_k
-    W_OV = W_o.reshape(D, H, D // H).swapaxes(0, 1) @ W_v
-    return W_QK, W_OV
-
-model = d2l.TinyCharLM(vocab_size=64, pos='rope',
-                       rngs=nnx.Rngs(d2l.get_key()))
-W_QK, W_OV = circuits(model, 0)
-for name, M in (('W_QK', W_QK[0]), ('W_OV', W_OV[0])):
-    print(f'{name}: shape {tuple(M.shape)}, '
-          f'rank {jnp.linalg.matrix_rank(M)}')
-```
-
-:begin_tab:`pytorch`
-`nn.Linear` stores its weight with shape (output, input), the orientation
-of the column-vector equations above. The rows of `qkv.weight` therefore
-stack $\mathbf{W}_q$, $\mathbf{W}_k$, and $\mathbf{W}_v$, and the columns of
-`proj.weight` split by head.
-:end_tab:
-
-:begin_tab:`jax`
-`nnx.Linear` stores its kernel with shape (input, output), the transpose of
-the column-vector equations above. `circuits` therefore transposes both
-kernels first. The rows of the transposed `qkv.kernel` then stack
-$\mathbf{W}_q$, $\mathbf{W}_k$, and $\mathbf{W}_v$, and the columns of the
-transposed `proj.kernel` split by head.
-:end_tab:
+<!-- WRITER: the cell that printed the shape and rank of W_QK and W_OV of a fresh model is cut (CIRC-5), and the two tab notes on weight orientation are now code comments in the copy-matrix cell (`what-attention-computes-the-circuit-is-in-the-weights`), where `circuits` is now defined. FALSE now: "The function `circuits` forms them for one block, and the cell below prints those of head 0 in block 1 of a freshly initialized model" (circuits is introduced with the copy matrix) and the next sentence "Both circuits are 128 x 128 and have rank 32, the head width" (no cell prints it; keep the rank bound as a statement, B1). -->
 
 Both circuits are $128 \times 128$ and have rank 32, the head width.
 Rotary embeddings add position to the QK circuit and nowhere else. RoPE
@@ -467,32 +415,49 @@ With variable pattern lengths, we train two models for 5,000 steps each: a
 two-block model, the smallest that can express induction, and a one-block
 control. Both are then evaluated on the same fresh batch.
 
+<!-- WRITER: the cell now trains three two-block models and the one-block control (5,000 steps each) and prints, per run, the first-copy loss, the later-copy loss, the later-copy accuracy, and the first step at which the later-copy loss falls below 1 nat; `model_two` is the first run whatever it shows, and everything below analyzes it. Rewrite this lead-in. -->
+
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-1}
 %%tab pytorch
-model_two = d2l.TinyCharLM(vocab_size=64, num_blks=2, pos='rope')
-hist_two = train_repeat(model_two, 5000, Lmin=16, Lmax=32)
-model_one = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope')
-hist_one = train_repeat(model_one, 5000, Lmin=16, Lmax=32)
+def drop_step(hist, eval_every=50):
+    """First step at which the later-copy loss is below 1 nat, or None."""
+    return next((eval_every * (k + 1) for k, (_, rep) in enumerate(hist)
+                 if rep < 1), None)
+
+runs = []  # (blocks, model, history): three two-block runs, one control
+for num_blks in (2, 2, 2, 1):
+    model = d2l.TinyCharLM(vocab_size=64, num_blks=num_blks, pos='rope')
+    runs.append((num_blks, model, train_repeat(model, 5000, 16, 32)))
+_, model_two, hist_two = runs[0]   # The first run is the one analyzed
+_, model_one, hist_one = runs[3]
 x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
-for name, model in (('2 blocks', model_two), ('1 block', model_one)):
+print('blocks  first copy  later copies  accuracy  below 1 nat at step')
+for num_blks, model, hist in runs:
     first, rep, acc = eval_copy(model, x, L)
-    print(f'{name}: first copy {first:.2f}, later copies {rep:.2f}, '
-          f'accuracy {acc:.2f}')
+    print(f'{num_blks:6d}{first:12.2f}{rep:14.2f}{acc:10.2f}'
+          f'{drop_step(hist) or "never":>21}')
 ```
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-1}
 %%tab jax
-model_two = d2l.TinyCharLM(vocab_size=64, num_blks=2, pos='rope',
+def drop_step(hist, eval_every=50):
+    """First step at which the later-copy loss is below 1 nat, or None."""
+    return next((eval_every * (k + 1) for k, (_, rep) in enumerate(hist)
+                 if rep < 1), None)
+
+runs = []  # (blocks, model, history): three two-block runs, one control
+for num_blks in (2, 2, 2, 1):
+    model = d2l.TinyCharLM(vocab_size=64, num_blks=num_blks, pos='rope',
                            rngs=nnx.Rngs(d2l.get_key()))
-hist_two = train_repeat(model_two, 5000, Lmin=16, Lmax=32)
-model_one = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope',
-                           rngs=nnx.Rngs(d2l.get_key()))
-hist_one = train_repeat(model_one, 5000, Lmin=16, Lmax=32)
+    runs.append((num_blks, model, train_repeat(model, 5000, 16, 32)))
+_, model_two, hist_two = runs[0]   # The first run is the one analyzed
+_, model_one, hist_one = runs[3]
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
-for name, model in (('2 blocks', model_two), ('1 block', model_one)):
+print('blocks  first copy  later copies  accuracy  below 1 nat at step')
+for num_blks, model, hist in runs:
     first, rep, acc = eval_copy(model, x, L)
-    print(f'{name}: first copy {first:.2f}, later copies {rep:.2f}, '
-          f'accuracy {acc:.2f}')
+    print(f'{num_blks:6d}{first:12.2f}{rep:14.2f}{acc:10.2f}'
+          f'{drop_step(hist) or "never":>21}')
 ```
 
 The results agree with the composition argument. The two-block model
@@ -506,6 +471,8 @@ above the chance loss of $\log 64 \approx 4.16$ nats. A model that
 expects repetition assigns some probability to the context's tokens, and
 that probability is wasted whenever a newly sampled token does not repeat.
 The training curves show when the gap opens.
+
+<!-- WRITER: numbers for the paragraph above, from six direct executions of the new cell (18 two-block runs, 9 per tab; GPU; not captured): two-block later-copy loss 0.14-0.74 (PyTorch 0.14-0.74, JAX 0.20-0.41), accuracy 0.83-0.97; one block 3.28-3.61 nats, accuracy 0.10-0.13; first copy 4.25-4.48 for all models. Step at which the later-copy loss first falls below 1 nat: 1,450-3,000 over the 18 runs (PyTorch 1,450-2,850, JAX 1,650-3,000); within the three runs of one execution the spread was 250 to 1,300 steps. FALSE now: "an occasional run stalls near one nat" (no run of 18 ended above 0.74); read the printed three runs instead. "a few tenths of a nat", "about nine in ten" and "fewer than one in five" hold. -->
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-2}
 %%tab pytorch, jax
@@ -521,7 +488,8 @@ For a long stretch of training, the later-copy curve of the two-block model
 stays at or slightly above that of the one-block model. It then drops by several nats, most of
 the way within a few hundred steps and sometimes in two stages, as the
 computation the model performs changes abruptly. The point at which the drop
-happens varies from run to run by up to a thousand steps. Larger language
+happens varies from run to run by up to a thousand steps.
+<!-- WRITER: "varies from run to run by up to a thousand steps": now printed by the cell above (last column); range 1,450-3,000 over 18 runs, 250-1,300 within one execution's three runs. Quote the printed spread. CIRC-7: in both final-run figures the first-copy loss of the two-block model rises from about 4.3 to 4.6-4.75 while its later-copy loss drops, and the drop comes in two stages (near steps 1,750 and 2,200). --> Larger language
 models show a similar abrupt change in their training loss, and it coincides
 with the formation of induction heads :cite:`Olsson.Elhage.Nanda.ea.2022`.
 
@@ -651,24 +619,40 @@ retrieve.
 
 ```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
 %%tab pytorch
+def circuits(model, blk):
+    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
+    # nn.Linear stores its weight as (output, input), the orientation of the
+    # column-vector equations, so no transpose is needed
+    W_qkv = model.blks[blk]['qkv'].weight           # (3D, D): W_q; W_k; W_v
+    W_o = model.blks[blk]['proj'].weight            # (D, D): heads in columns
+    H, D = model.num_heads, W_o.shape[0]
+    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
+    W_QK = W_q.mT @ W_k
+    W_OV = W_o.reshape(D, H, D // H).transpose(0, 1) @ W_v
+    return W_QK, W_OV
+
 @torch.inference_mode()
-def copy_matrix(model, blk, X):
+def copy_matrix(model, blk, X=None):
     """C[a, b] = e_b^T W_OV h_a: W_OV summed over the heads of blk, h_a the
-    mean stream vector entering blk at the positions of token a in X."""
-    E = model.token_emb.weight
-    S = model.stream(X, blk)[0]                # The stream entering blk
-    h = torch.zeros_like(E).index_add_(0, X.flatten(), S.flatten(0, 1))
-    h = h / torch.bincount(X.flatten(), minlength=len(E))[:, None]
+    mean stream vector entering blk at the positions of token a in X, or the
+    embedding e_a if X is None."""
+    E = h = model.token_emb.weight
+    if X is not None:
+        S = model.stream(X, blk)[0]            # The stream entering blk
+        h = torch.zeros_like(E).index_add_(0, X.flatten(), S.flatten(0, 1))
+        h = h / torch.bincount(X.flatten(), minlength=len(E))[:, None]
     W_OV = circuits(model, blk)[1].sum(0)
     return h @ W_OV.T @ E.T
 
 x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
-for name, model, blk in (('2 blocks, block 2', model_two, 1),
-                         ('1 block', model_one, 0)):
-    C = copy_matrix(model, blk, x)
+cases = (('2 blocks, block 2, mean stream', model_two, 1, x),
+         ('2 blocks, block 2, embeddings', model_two, 1, None),
+         ('1 block, mean stream', model_one, 0, x))
+print('rows whose largest entry is the diagonal (chance 1/64)')
+for name, model, blk, X in cases:
+    C = copy_matrix(model, blk, X)
     frac = (C.argmax(-1) == torch.arange(len(C), device=C.device)).float()
-    print(f'{name}: rows whose largest entry is the diagonal '
-          f'{frac.mean():.2f} (chance 1/64)')
+    print(f'{name:<32}{frac.mean():.2f}')
 d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None].cpu(),
                   xlabel='logit boosted', ylabel='token attended to',
                   figsize=(3.6, 3.6), cmap='Blues')
@@ -676,23 +660,39 @@ d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None].cpu(),
 
 ```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
 %%tab jax
-def copy_matrix(model, blk, X):
+def circuits(model, blk):
+    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
+    # nnx.Linear stores its kernel as (input, output), the transpose of the
+    # column-vector equations, so both kernels are transposed first
+    W_qkv = model.blks[blk]['qkv'].kernel[...].T    # (3D, D): W_q; W_k; W_v
+    W_o = model.blks[blk]['proj'].kernel[...].T     # (D, D): heads in columns
+    H, D = model.num_heads, W_o.shape[0]
+    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
+    W_QK = W_q.mT @ W_k
+    W_OV = W_o.reshape(D, H, D // H).swapaxes(0, 1) @ W_v
+    return W_QK, W_OV
+
+def copy_matrix(model, blk, X=None):
     """C[a, b] = e_b^T W_OV h_a: W_OV summed over the heads of blk, h_a the
-    mean stream vector entering blk at the positions of token a in X."""
-    E = model.token_emb.embedding[...]
-    S = model.stream(X, blk)[0]                # The stream entering blk
-    h = jnp.zeros_like(E).at[X.flatten()].add(S.reshape(-1, E.shape[1]))
-    h = h / jnp.bincount(X.flatten(), length=len(E))[:, None]
+    mean stream vector entering blk at the positions of token a in X, or the
+    embedding e_a if X is None."""
+    E = h = model.token_emb.embedding[...]
+    if X is not None:
+        S = model.stream(X, blk)[0]            # The stream entering blk
+        h = jnp.zeros_like(E).at[X.flatten()].add(S.reshape(-1, E.shape[1]))
+        h = h / jnp.bincount(X.flatten(), length=len(E))[:, None]
     W_OV = circuits(model, blk)[1].sum(0)
     return h @ W_OV.T @ E.T
 
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
-for name, model, blk in (('2 blocks, block 2', model_two, 1),
-                         ('1 block', model_one, 0)):
-    C = copy_matrix(model, blk, x)
+cases = (('2 blocks, block 2, mean stream', model_two, 1, x),
+         ('2 blocks, block 2, embeddings', model_two, 1, None),
+         ('1 block, mean stream', model_one, 0, x))
+print('rows whose largest entry is the diagonal (chance 1/64)')
+for name, model, blk, X in cases:
+    C = copy_matrix(model, blk, X)
     frac = (C.argmax(-1) == jnp.arange(len(C))).mean()
-    print(f'{name}: rows whose largest entry is the diagonal '
-          f'{frac:.2f} (chance 1/64)')
+    print(f'{name:<32}{frac:.2f}')
 d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None],
                   xlabel='logit boosted', ylabel='token attended to',
                   figsize=(3.6, 3.6), cmap='Blues')
@@ -715,6 +715,8 @@ tells its copying heads where to look (Exercise
 circuit into block 2's QK circuit). Neither the attention pattern nor the
 copy matrix shows that the model needs these heads. That is a separate
 question.
+
+<!-- WRITER: CIRC-10. The cell now also prints the count with the raw embeddings e_a in place of the mean stream (second line). Six direct executions, model_two (mean stream / embeddings / one-block control): PyTorch 0.80/0.58/0.88, 1.00/0.95/1.00, 1.00/0.66/0.81; JAX 0.97/0.80/0.97, 1.00/0.88/1.00, 1.00/0.41/1.00. So the raw-embedding count is below the mean-stream count in every run, by 0.05 to 0.59, and varies widely (0.41-0.95) while the mean-stream count stays at 0.80-1.00 (1.00 in four of six). "varies widely from run to run" now reads the printed line; the block-1 transformed-copy explanation becomes "a likely reason", tested by Exercise 6 (mean ablation). `circuits` is now defined in this cell, with the weight-orientation notes as comments. -->
 
 ### Head Ablation
 :label:`subsec_head-ablation`
@@ -816,6 +818,8 @@ not give. To predict later copies, the model needs all of block 1, the
 previous-token heads and the heads that copy the current token, and the
 induction heads of block 2.
 
+<!-- WRITER: ablation numbers vary with the run (cell unchanged). Six direct executions, model_two (removed: block-1 previous-token heads / block-1 all other heads, later-copy loss): PyTorch 3.99/2.61 (prev heads [1,2,3], one other head; accuracy 0.08/0.45), 4.14/4.23, 3.96/4.43; JAX 3.41/4.04 and 3.73/4.08 (one previous-token head, so "all other heads" removes three of four), 4.17/4.95 (two previous-token heads). "Removing the other heads of block 1 breaks it about as badly" failed in one of six runs (2.61 nats, accuracy 0.45); qualify it. Block 2 top 1/2/3/4: PyTorch 1.91/3.19/3.89/4.20, 0.68/2.00/3.61/4.30, 0.66/1.78/2.59/4.26; JAX 2.82/5.16/5.57/4.18, 0.63/4.87/5.98/4.18, 0.71/1.52/2.53/4.26 (JAX not monotone at four heads in two of three runs). With all four removed the loss lies above the one-block model in every run (4.18-4.30 vs 3.27-3.60). Removing the strongest alone: accuracy 0.42-0.90 (intact 0.88-0.95). -->
+
 ## In-Context Learning
 
 ### Generalization to Unseen Patterns
@@ -864,6 +868,50 @@ successors, a match on a single token is ambiguous, and our two-block
 circuit matches on exactly one preceding token. Disambiguating would
 require matching a longer prefix, through more block-1 heads at fixed
 offsets or through more layers.
+<!-- WRITER: CIRC-11. FALSE after the new cell below: "our two-block circuit matches on exactly one preceding token" and "about 0.9 in a typical run". State the ceiling E[1/K] = (1-(1-p)^L)/(Lp) = 0.839 for p = 1/64, L = 24 (the cell prints 0.84 empirically), and claim only that errors concentrate on repeated tokens and that the model resolves some of them by a mechanism the section has not traced. Six direct executions (18 two-block runs): share unique 0.69-0.71, repeated 0.29-0.31; single-token match on repeated tokens 0.47; accuracy on unique 0.93-1.00, on repeated 0.64-0.99 (above 0.47 in every run; below the unique accuracy in every run), all 0.84-1.00. One PyTorch run reached 0.99 on repeated tokens, so some runs resolve the ambiguity almost fully. -->
+
+A match on the current token alone cannot tell apart the successors of a
+token that occurs more than once in its pattern. The cell below splits the
+targets after the restart by whether the current token is unique in its
+pattern or repeated. For each part it prints the share of the targets, the
+accuracy that a match on the current token alone would reach (one over the
+number of occurrences of the token in the pattern, averaged), and the
+accuracy of each of the three two-block runs.
+
+```{.python .input #what-attention-computes-generalization-to-unseen-patterns-1}
+%%tab pytorch
+x, L = repeated_batch(512, 64, 64, 24, 24, d2l.try_gpu())
+pattern = x[:, :24]
+K = (pattern[:, :, None] == pattern[:, None, :]).sum(-1)  # Count in pattern
+K = K[:, torch.arange(24, 63) % 24]      # Of the current token, i >= 24
+parts = (K == 1, K > 1, K > 0)           # Unique, repeated, all
+rows = {'share of targets': [p.float().mean() for p in parts],
+        'single-token match': [(1 / K[p]).mean() for p in parts]}
+for r, (_, model, _) in enumerate(runs[:3]):  # The two-block runs
+    with torch.inference_mode():
+        hit = (model(x[:, :-1]).argmax(-1) == x[:, 1:])[:, 24:]
+    rows[f'run {r + 1} accuracy'] = [hit[p].float().mean() for p in parts]
+print(f'{"current token":<18}   unique repeated      all')
+for name, row in rows.items():
+    print(f'{name:<18}' + ''.join(f'{v:9.2f}' for v in row))
+```
+
+```{.python .input #what-attention-computes-generalization-to-unseen-patterns-1}
+%%tab jax
+x, L = repeated_batch(d2l.get_key(), 512, 64, 64, 24, 24)
+pattern = x[:, :24]
+K = (pattern[:, :, None] == pattern[:, None, :]).sum(-1)  # Count in pattern
+K = K[:, jnp.arange(24, 63) % 24]        # Of the current token, i >= 24
+parts = (K == 1, K > 1, K > 0)           # Unique, repeated, all
+rows = {'share of targets': [p.mean() for p in parts],
+        'single-token match': [(1 / K[p]).mean() for p in parts]}
+for r, (_, model, _) in enumerate(runs[:3]):  # The two-block runs
+    hit = (model(x[:, :-1]).argmax(-1) == x[:, 1:])[:, 24:]
+    rows[f'run {r + 1} accuracy'] = [hit[p].mean() for p in parts]
+print(f'{"current token":<18}   unique repeated      all')
+for name, row in rows.items():
+    print(f'{name:<18}' + ''.join(f'{v:9.2f}' for v in row))
+```
 
 ### Induction Heads in Larger Models
 :label:`subsec_induction-larger-models`
@@ -922,55 +970,7 @@ $\eta \sum_i (\mathbf{x}_q^\top \mathbf{x}_i)\, y_i$, which is
 value is zero. The function `gd_head` builds the tokens and runs this head,
 and the cell compares its output with the prediction of one gradient step.
 
-```{.python .input #what-attention-computes-in-context-regression}
-%%tab pytorch
-def gd_head(X, y, x_q, eta):
-    """Softmax-free head on tokens [x_i; y_i] and the query token [x_q; 0]."""
-    p = X.shape[-1]
-    z_q = torch.cat((x_q, torch.zeros_like(x_q[..., :1])), -1)
-    Z = torch.cat((torch.cat((X, y[..., None]), -1), z_q[..., None, :]), -2)
-    W_Q = W_K = torch.eye(p, p + 1)        # Queries and keys read x
-    W_V = torch.eye(p + 1)[p:]             # Values read y
-    Q, K, V = Z @ W_Q.T, Z @ W_K.T, Z @ W_V.T
-    return eta * (Q[..., -1:, :] @ K.mT @ V)[..., 0, 0]  # At the query
-
-n, p, eta = 32, 8, 0.1
-X, w, x_q = torch.randn(n, p), torch.randn(p), torch.randn(p)
-y = X @ w                              # Context labels
-w_1 = eta * X.T @ y                    # One gradient step from w = 0
-print(f'one gradient step: {x_q @ w_1:.4f}, '
-      f'attention head: {gd_head(X, y, x_q, eta):.4f}')
-```
-
-```{.python .input #what-attention-computes-in-context-regression}
-%%tab jax
-def gd_head(X, y, x_q, eta):
-    """Softmax-free head on tokens [x_i; y_i] and the query token [x_q; 0]."""
-    p = X.shape[-1]
-    z_q = jnp.concatenate((x_q, jnp.zeros_like(x_q[..., :1])), -1)
-    Z = jnp.concatenate((jnp.concatenate((X, y[..., None]), -1),
-                         z_q[..., None, :]), -2)
-    W_Q = W_K = jnp.eye(p, p + 1)          # Queries and keys read x
-    W_V = jnp.eye(p + 1)[p:]               # Values read y
-    Q, K, V = Z @ W_Q.T, Z @ W_K.T, Z @ W_V.T
-    return eta * (Q[..., -1:, :] @ K.mT @ V)[..., 0, 0]  # At the query
-
-n, p, eta = 32, 8, 0.1
-k_X, k_w, k_q = jax.random.split(d2l.get_key(), 3)
-X, w = jax.random.normal(k_X, (n, p)), jax.random.normal(k_w, (p,))
-x_q = jax.random.normal(k_q, (p,))
-with jax.default_matmul_precision('highest'):  # Full fp32 for a check
-    y = X @ w                          # Context labels
-    w_1 = eta * X.T @ y                # One gradient step from w = 0
-    print(f'one gradient step: {x_q @ w_1:.4f}, '
-          f'attention head: {gd_head(X, y, x_q, eta):.4f}')
-```
-
-:begin_tab:`jax`
-On a GPU, JAX multiplies float32 matrices in the reduced-precision TF32 format by
-default, which is enough for training but blurs an exactness check in the
-fourth digit; the `with` block asks for full float32 precision.
-:end_tab:
+<!-- WRITER: both in-context-regression cells (`gd_head` check and the error by context length) and the JAX TF32 tab note are cut (author decision 5, CIRC-14); this subsection becomes the exercise "A head that takes a gradient step" (B7) and the sentences that describe the cells below are now false. Old store for the exercise: relative error PT 0.802, 0.096, 0.008; JX 1.036, 0.092, 0.009 for n = 10, 100, 1000 against the prediction (p+1)/n = 0.9, 0.09, 0.009. The label subsec_in-context-regression is cited by chapter_lm-pretrained/prompting.md:1871 (structure section 5). -->
 
 The two predictions agree to rounding error. The head's weights contain no
 information about $\mathbf{w}$. The rule comes from the examples in its
@@ -980,27 +980,6 @@ inputs the average $\frac{1}{n}\sum_i \mathbf{x}_i \mathbf{x}_i^\top$
 tends to the identity as $n$ grows. A longer context should therefore give
 a better prediction, with the same weights. The cell measures the error
 relative to the variance of the label, averaged over 500 sequences.
-
-```{.python .input #what-attention-computes-in-context-regression-1}
-%%tab pytorch
-for n in (10, 100, 1000):
-    X = torch.randn(500, n, p)
-    w, x_q = torch.randn(500, p), torch.randn(500, p)
-    y, y_q = (X @ w[..., None])[..., 0], (x_q * w).sum(-1)
-    err = ((gd_head(X, y, x_q, 1 / n) - y_q) ** 2).mean() / (y_q ** 2).mean()
-    print(f'{n:4d} examples in context: relative squared error {err:.3f}')
-```
-
-```{.python .input #what-attention-computes-in-context-regression-1}
-%%tab jax
-for n in (10, 100, 1000):
-    k_X, k_w, k_q = jax.random.split(d2l.get_key(), 3)
-    X = jax.random.normal(k_X, (500, n, p))
-    w, x_q = jax.random.normal(k_w, (500, p)), jax.random.normal(k_q, (500, p))
-    y, y_q = (X @ w[..., None])[..., 0], (x_q * w).sum(-1)
-    err = ((gd_head(X, y, x_q, 1 / n) - y_q) ** 2).mean() / (y_q ** 2).mean()
-    print(f'{n:4d} examples in context: relative squared error {err:.3f}')
-```
 
 The error falls about tenfold for every tenfold increase of $n$. The head
 learns the regression from its context, and more examples teach it more.
@@ -1430,10 +1409,8 @@ $$s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}} \mathbf{h}_j}{\sqrt{
 
 - Only the products are identifiable: $\mathbf{R}\mathbf{W}_q$ with
   $\mathbf{R}^{-\top}\mathbf{W}_k$ computes the same scores (without RoPE).
-- Both are $d \times d$ with rank at most $d_h = d/H$:
-
-@!what-attention-computes-where-and-what-the-qk-and-ov-circuits
-
+- Both are $d \times d$ with rank at most $d_h = d/H$: here
+  $128 \times 128$, rank 32.
 - RoPE puts the rotation $\mathbf{R}_{j-i}$ inside the QK circuit; the OV
   circuit ignores position.
 :::
@@ -1607,28 +1584,12 @@ underestimates how much a group of heads matters.
 - No weight update: the circuit binds tokens to successors in context.
 :::
 
-::: {.slide title="A Softmax-Free Head Takes One Gradient Step"}
-Context $(\mathbf{x}_i, y_i)$, query $\mathbf{x}_q$; one gradient step on
-$\frac{1}{2}\sum_i (y_i - \mathbf{w}^\top\mathbf{x}_i)^2$ from
-$\mathbf{w} = \mathbf{0}$:
+::: {.slide title="Errors Sit on Tokens That Repeat Inside Their Pattern"}
+<!-- WRITER: placeholder slide for the ambiguity split (B8); write the bullets from the printout (single-token ceiling about 0.84; accuracy on unique and repeated current tokens; the model beats the ceiling on repeated tokens by a mechanism not traced). -->
+Period 24, targets after the restart, split by whether the current token
+occurs once or more than once in its pattern:
 
-$$\hat{y}_q = \eta \sum_i y_i\, \mathbf{x}_i^\top \mathbf{x}_q$$
-
-Tokens $[\mathbf{x}_i; y_i]$ and $[\mathbf{x}_q; 0]$; queries and keys read
-$\mathbf{x}$, values read $y$, no softmax:
-
-@!what-attention-computes-in-context-regression
-:::
-
-::: {.slide title="More Context Gives Better Predictions, With the Same Weights"}
-With $\eta = 1/n$, $\mathbf{w}_1 = \frac{1}{n}\sum_i \mathbf{x}_i
-\mathbf{x}_i^\top \mathbf{w} \to \mathbf{w}$ as $n$ grows:
-
-@!what-attention-computes-in-context-regression-1
-
-- The error falls about tenfold per tenfold more examples.
-- Trained linear-attention models learn this solution (von Oswald et al.,
-  2023); whether large pretrained models do is disputed.
+@!what-attention-computes-generalization-to-unseen-patterns-1
 :::
 
 ::: {.slide title="Attention Maps Locate Candidates; Interventions Test Them"}

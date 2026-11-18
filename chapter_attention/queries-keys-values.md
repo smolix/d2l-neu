@@ -255,7 +255,7 @@ estimates = [nadaraya_watson(x_train, y_train, x_val, s)[0] for s in sigmas]
 d2l.plot([x_val] * 4 + [x_train], estimates + [y_val, y_train], 'x', 'y',
          legend=[rf'$\sigma$ = {s:g}' for s in sigmas] + ['truth'],
          fmts=('-', 'm--', 'g-.', 'k:', 'C7o'), ylim=(-2.5, 9),
-         figsize=(5, 3))
+         figsize=(5, 3), legend_loc='upper left')
 ```
 
 The bandwidth decides the fit. With $\sigma = 0.1$ the estimate chases the
@@ -310,8 +310,8 @@ w_narrow, w_wide = (nadaraya_watson(x_train, y_train, x_val, s)[1]
                     for s in (0.1, 2.0))
 # show_heatmaps takes (rows of panels, columns of panels, queries, keys)
 d2l.show_heatmaps(d2l.stack([w_narrow, w_wide])[None],
-                  xlabel='Training inputs (keys)',
-                  ylabel='Test inputs (queries)',
+                  xlabel='training inputs (keys)',
+                  ylabel='test inputs (queries)',
                   titles=[r'$\sigma$ = 0.1', r'$\sigma$ = 2'],
                   figsize=(7, 3), cbar='each')
 ```

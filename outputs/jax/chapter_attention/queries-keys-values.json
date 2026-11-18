@@ -24,28 +24,28 @@
       "outputs": []
     },
     "queries-keys-values-nadaraya-watson-regression-1": {
-      "code_fingerprint": "sha256:7f18202e2ff2381dc81f370f926a67e91a399be0fe8c4e6d83da544dab937111",
+      "code_fingerprint": "sha256:bae17869cd1fc8a385cf54b4cb4486219926ec6370c86d5f7de65890051bbced",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-1-1.svg",
-          "bytes": 31081,
-          "sha256": "sha256:7934d534255818444db1208fead362ed7f8005762460f6b0a85c7da1d5148132"
+          "bytes": 31025,
+          "sha256": "sha256:50c8313b593857ac8bad5ffcbadeaeb00ea9d30a21a444965b7a1bc0ddff4631"
         }
       ]
     },
     "queries-keys-values-nadaraya-watson-regression-in-action-3": {
-      "code_fingerprint": "sha256:28e13f298c94438938c49de3183dd1a94aa7b8df0bbeaa66dc4700102e31546a",
+      "code_fingerprint": "sha256:5000513d9b70dce8303065744ae8173c88bc198770ca20c9a29904069f5a1659",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-3-1.svg",
-          "bytes": 42150,
-          "sha256": "sha256:7cd342175e87796cc702468ccb0ca8a4b63d091cbfb1271aebb705ac2d62ffba"
+          "bytes": 41804,
+          "sha256": "sha256:f8d2f238ea636228e40a6942bb308f98d296a7b1f5e017c21ceef81bea771435"
         }
       ]
     }

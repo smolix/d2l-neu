@@ -14,12 +14,12 @@
       "outputs": []
     },
     "attention-at-scale-counting-memory-1": {
-      "code_fingerprint": "sha256:3675404ff46cb9ffa57cbd4b685836c92ea0943c87160319cfdb911c188b583a",
+      "code_fingerprint": "sha256:5376f0e4ca450f5bc52a0d7559818451fb53f9820ea169eb2247c1741b19b845",
       "kind": "text",
       "outputs": []
     },
     "attention-at-scale-counting-memory-3": {
-      "code_fingerprint": "sha256:480787cded9e786c7a959bb3b870752db341d97cad91b7caa220e6587022908b",
+      "code_fingerprint": "sha256:905ba419fd1de282be9a229bb9f0bbd7f13e3d9b6a5b44df2ff3a8b74c949cdf",
       "kind": "text",
       "outputs": [
         {
@@ -45,23 +45,23 @@
       ]
     },
     "attention-at-scale-counting-memory-2": {
-      "code_fingerprint": "sha256:44001e6137b6fa384bc546d115c80ec26cfbac53f3e2a2bb595845abceb8c883",
+      "code_fingerprint": "sha256:8b3ec98b4c08738d404ac06448137e840c04d880001a298981bfb937a5fc835c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  2048: 0.15 ms/call\nn =  4096: 0.24 ms/call\nn =  8192: 1.20 ms/call\nn = 16384: 4.66 ms/call\n"
+          "text": "n =  2048: 0.15 ms/call\nn =  4096: 0.25 ms/call\nn =  8192: 1.21 ms/call\nn = 16384: 4.66 ms/call\n"
         }
       ]
     },
     "attention-at-scale-a-chunked-implementation-1": {
-      "code_fingerprint": "sha256:e2be0b8a42acd87f492d75222dc4b03f760cb81613430bbffe2185079cb0588d",
+      "code_fingerprint": "sha256:92241089e1cbb0281227160aa4dd64105f8fab307657be57f0dff95c725ca38d",
       "kind": "text",
       "outputs": []
     },
     "attention-at-scale-a-chunked-implementation-2": {
-      "code_fingerprint": "sha256:ed4a096543c17d43f80ed9066e5367eef9f7d3a703f2a6a8b5ee65586f844da6",
+      "code_fingerprint": "sha256:e66845937b652870178f0c0b5e9662b66160e0cf4e6024b02b19be2934dc4e4e",
       "kind": "text",
       "outputs": [
         {
@@ -72,31 +72,41 @@
       ]
     },
     "attention-at-scale-a-chunked-implementation-3": {
-      "code_fingerprint": "sha256:236d2863737bac2363a35792e83ca0e8dc30cc881f1289e2dcd80708ee4ddbf4",
-      "kind": "asset",
+      "code_fingerprint": "sha256:c8126cae67816e4a0b2c649643e58be9590f9a16f718803cec56383b4bd6b6e6",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 16,384: full matrix 2048.0 MiB, chunked   36.4 MiB\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-a-chunked-implementation-3-1.svg",
           "bytes": 31532,
-          "sha256": "sha256:2955ec98751de170ae07a90d7ededd0092c5a0d66816cb91852c560e6c804bfd"
+          "sha256": "sha256:eb80d6d70ca13b6e9c0fa198e239366cc8907f152e242a3525a10aff3d35f584"
         }
       ]
     },
     "attention-at-scale-the-bottleneck-is-memory-traffic": {
-      "code_fingerprint": "sha256:4c6ed8bf9cbd79d4812f63f6d3b9730a649168412a338ec2bec8914c39c9a516",
+      "code_fingerprint": "sha256:a78e23e84fed610ffe5cbb7b659cc88fb409fa94ffc903e9fafcb766982f8ed4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive:   9.31 ms, XLA temp  4096.0 MiB\n"
+          "text": "         naive:   9.32 ms, XLA temp  4096.0 MiB\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fused:   1.33 ms, XLA temp    48.0 MiB\n"
+          "text": "         fused:   1.29 ms, XLA temp    48.0 MiB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fused, no mask:   1.79 ms, XLA temp    48.0 MiB\n"
         }
       ]
     }

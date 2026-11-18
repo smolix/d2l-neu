@@ -141,7 +141,7 @@ much temporary memory the compiled function reserves.
 ```{.python .input #attention-at-scale-counting-memory-1}
 %%tab pytorch
 def attention(Q, K, V):
-    """softmax(Q K^T / sqrt(d)) V through the full score matrix."""
+    """softmax(Q K^T / sqrt(d_h)) V through the full score matrix."""
     scores = Q @ K.transpose(-2, -1) / math.sqrt(Q.shape[-1])
     return torch.softmax(scores, dim=-1) @ V
 ```
@@ -149,7 +149,7 @@ def attention(Q, K, V):
 ```{.python .input #attention-at-scale-counting-memory-1}
 %%tab jax
 def attention(Q, K, V):
-    """softmax(Q K^T / sqrt(d)) V through the full score matrix."""
+    """softmax(Q K^T / sqrt(d_h)) V through the full score matrix."""
     scores = Q @ K.swapaxes(-2, -1) / math.sqrt(Q.shape[-1])
     return jax.nn.softmax(scores, axis=-1) @ V
 ```
@@ -306,7 +306,7 @@ def causal_attention(Q, K, V):
 
 def chunked_attention(Q, K, V, chunk_size=512):
     """Exact causal attention, one n-by-chunk_size block at a time."""
-    n, d = Q.shape
+    n, d_h = Q.shape
     m = torch.full((n, 1), torch.finfo(Q.dtype).min, device=Q.device)
     s = torch.zeros(n, 1, device=Q.device)
     O = torch.zeros(n, V.shape[-1], device=Q.device)
@@ -314,7 +314,7 @@ def chunked_attention(Q, K, V, chunk_size=512):
     for start in range(0, n, chunk_size):
         Kc, Vc = K[start:start + chunk_size], V[start:start + chunk_size]
         pos_k = torch.arange(start, start + Kc.shape[0], device=Q.device)
-        scores = Q @ Kc.T / math.sqrt(d)
+        scores = Q @ Kc.T / math.sqrt(d_h)
         scores.masked_fill_(pos_k[None, :] > pos_q, torch.finfo(Q.dtype).min)
         m_new = torch.maximum(m, scores.max(dim=-1, keepdim=True).values)
         scale = torch.exp(m - m_new)                  # Rescale the past
@@ -336,14 +336,14 @@ def causal_attention(Q, K, V):
 
 def chunked_attention(Q, K, V, chunk_size=512):
     """Exact causal attention, one n-by-chunk_size block at a time."""
-    (n, d), d_v = Q.shape, V.shape[-1]
+    (n, d_h), d_v = Q.shape, V.shape[-1]
     assert n % chunk_size == 0, 'lax.scan needs equal-sized blocks'
     pos_q = jnp.arange(n)[:, None]
     def block(carry, chunk):
         m, s, O = carry
         Kc, Vc, start = chunk
         pos_k = start + jnp.arange(chunk_size)
-        scores = Q @ Kc.T / math.sqrt(d)
+        scores = Q @ Kc.T / math.sqrt(d_h)
         scores = jnp.where(pos_k[None, :] > pos_q,
                            jnp.finfo(scores.dtype).min, scores)
         m_new = jnp.maximum(m, scores.max(axis=-1, keepdims=True))
@@ -354,7 +354,7 @@ def chunked_attention(Q, K, V, chunk_size=512):
         return (m_new, s, O), None
     init = (jnp.full((n, 1), jnp.finfo(Q.dtype).min), jnp.zeros((n, 1)),
             jnp.zeros((n, d_v)))
-    chunks = (K.reshape(-1, chunk_size, d), V.reshape(-1, chunk_size, d_v),
+    chunks = (K.reshape(-1, chunk_size, d_h), V.reshape(-1, chunk_size, d_v),
               jnp.arange(0, n, chunk_size))           # Blocks, their starts
     (m, s, O), _ = jax.lax.scan(block, init, chunks)
     return O / s
@@ -397,6 +397,8 @@ for n in lengths:
     Q = torch.randn(n, d_h, device=d2l.try_gpu())
     mems[0].append(d2l.peak_memory(causal_attention, Q, Q, Q) / 2**20)
     mems[1].append(d2l.peak_memory(chunked_attention, Q, Q, Q) / 2**20)
+print(f'n = {n:,}: full matrix {mems[0][-1]:6.1f} MiB, '
+      f'chunked {mems[1][-1]:6.1f} MiB')
 d2l.plot(lengths, mems, 'sequence length n', 'peak memory (MiB)',
          legend=['full matrix', 'chunked'], xscale='log', yscale='log')
 ```
@@ -408,6 +410,8 @@ for n in lengths:
     Q = jax.random.normal(d2l.get_key(), (n, d_h))
     mems[0].append(d2l.peak_memory(causal_attention, Q, Q, Q) / 2**20)
     mems[1].append(d2l.peak_memory(chunked_attention, Q, Q, Q) / 2**20)
+print(f'n = {n:,}: full matrix {mems[0][-1]:6.1f} MiB, '
+      f'chunked {mems[1][-1]:6.1f} MiB')
 d2l.plot(lengths, mems, 'sequence length n', 'XLA temp memory (MiB)',
          legend=['full matrix', 'chunked'], xscale='log', yscale='log')
 ```
@@ -483,36 +487,42 @@ $2 \cdot 8 \cdot 8192 \cdot 64$ numbers of two bytes, or 16 MiB.
 
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab pytorch
-def fused_attention(Q, K, V):
-    """Causal attention in PyTorch's fused FlashAttention kernel."""
+def fused_attention(Q, K, V, is_causal=True):
+    """Attention in PyTorch's fused FlashAttention kernel."""
     with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
-        return F.scaled_dot_product_attention(Q, K, V, is_causal=True)
+        return F.scaled_dot_product_attention(Q, K, V, is_causal=is_causal)
 
 B, H, n = 2, 8, 8192
 X = torch.randn(B, H, n, d_h, device=d2l.try_gpu(), dtype=torch.float16)
-for name, f in [('naive', causal_attention), ('fused', fused_attention)]:
+# The unmasked kernel computes every tile: it shows what skipping saves
+for name, f in [('naive', causal_attention), ('fused', fused_attention),
+                ('fused, no mask',
+                 lambda Q, K, V: fused_attention(Q, K, V, is_causal=False))]:
     t = d2l.Benchmark(lambda: f(X, X, X)).time
     mem = d2l.peak_memory(f, X, X, X)
-    print(f'{name}: {t*1e3:6.2f} ms, peak memory {mem/2**20:7.1f} MiB')
+    print(f'{name:>14}: {t*1e3:6.2f} ms, peak memory {mem/2**20:7.1f} MiB')
 ```
 
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab jax
-def fused_attention(Q, K, V):
-    """Causal attention in the fused cuDNN kernel."""
+def fused_attention(Q, K, V, is_causal=True):
+    """Attention in the fused cuDNN kernel."""
     # The kernel takes (batch, length, heads, width): swap axes 1 and 2
     Q, K, V = (A.swapaxes(1, 2) for A in (Q, K, V))
-    O = jax.nn.dot_product_attention(Q, K, V, is_causal=True,
+    O = jax.nn.dot_product_attention(Q, K, V, is_causal=is_causal,
                                      implementation='cudnn')
     return O.swapaxes(1, 2)
 
 B, H, n = 2, 8, 8192
 X = jax.random.normal(d2l.get_key(), (B, H, n, d_h), dtype=jnp.float16)
-for name, f in [('naive', causal_attention), ('fused', fused_attention)]:
+# The unmasked kernel computes every tile: it shows what skipping saves
+for name, f in [('naive', causal_attention), ('fused', fused_attention),
+                ('fused, no mask',
+                 lambda Q, K, V: fused_attention(Q, K, V, is_causal=False))]:
     f_jit = jax.jit(f)
     t = d2l.Benchmark(lambda: f_jit(X, X, X)).time
     mem = d2l.peak_memory(f, X, X, X)
-    print(f'{name}: {t*1e3:6.2f} ms, XLA temp {mem/2**20:7.1f} MiB')
+    print(f'{name:>14}: {t*1e3:6.2f} ms, XLA temp {mem/2**20:7.1f} MiB')
 ```
 
 The prediction holds: about 4 GiB of scratch memory for the naive

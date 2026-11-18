@@ -269,7 +269,7 @@ gives in floating point.
 ds = [2**k for k in range(2, 10)]
 entropies = [[entropy(softmax_weights(d, 1.0)) for d in ds],
              [entropy(softmax_weights(d, 1 / math.sqrt(d))) for d in ds]]
-d2l.plot(ds, entropies, 'dimension d', 'entropy (nats)',
+d2l.plot(ds, entropies, 'width d', 'entropy (nats)',
          legend=['unscaled', 'scaled by 1/sqrt(d)'], xscale='log')
 ```
 
@@ -532,7 +532,7 @@ padding = padding_mask(torch.tensor([6, 3]), n)  # (batch, 1, key)
 causal = causal_mask(n)                          # (query, key)
 mask = padding & causal                          # (batch, query, key)
 weights = masked_softmax(torch.zeros(2, n, n), mask)  # Equal scores
-d2l.show_heatmaps(weights[None], xlabel='Keys', ylabel='Queries',
+d2l.show_heatmaps(weights[None], xlabel='keys', ylabel='queries',
                   titles=['valid length 6', 'valid length 3'],
                   figsize=(5, 2.5))
 ```
@@ -544,7 +544,7 @@ padding = padding_mask(jnp.array([6, 3]), n)  # (batch, 1, key)
 causal = causal_mask(n)                       # (query, key)
 mask = padding & causal                       # (batch, query, key)
 weights = masked_softmax(jnp.zeros((2, n, n)), mask)  # Equal scores
-d2l.show_heatmaps(weights[None], xlabel='Keys', ylabel='Queries',
+d2l.show_heatmaps(weights[None], xlabel='keys', ylabel='queries',
                   titles=['valid length 6', 'valid length 3'],
                   figsize=(5, 2.5))
 ```
@@ -569,8 +569,8 @@ lengths $3$, $2$, and $1$:
 doc = torch.tensor([0, 0, 0, 1, 1, 2])  # Document of each position
 same_doc = doc[:, None] == doc[None, :]
 packed = same_doc & causal_mask(6)
-d2l.show_heatmaps(packed.float()[None, None], xlabel='Keys',
-                  ylabel='Queries', cbar=False)
+d2l.show_heatmaps(packed.float()[None, None], xlabel='keys',
+                  ylabel='queries', cbar=False)
 ```
 
 ```{.python .input #attention-scoring-composing-masks-1}
@@ -578,8 +578,8 @@ d2l.show_heatmaps(packed.float()[None, None], xlabel='Keys',
 doc = jnp.array([0, 0, 0, 1, 1, 2])  # Document of each position
 same_doc = doc[:, None] == doc[None, :]
 packed = same_doc & causal_mask(6)
-d2l.show_heatmaps(packed.astype(jnp.float32)[None, None], xlabel='Keys',
-                  ylabel='Queries', cbar=False)
+d2l.show_heatmaps(packed.astype(jnp.float32)[None, None], xlabel='keys',
+                  ylabel='queries', cbar=False)
 ```
 
 The composite mask is block diagonal, with one causal triangle per
@@ -907,28 +907,40 @@ position.
 ```{.python .input #attention-scoring-attention-as-learned-alignment-3}
 %%tab pytorch
 X, Y = align_data(1000)
-for run in range(1, 4):
-    model = train_aligner()
+
+def evaluate_aligner(model, X, Y, name):
     with torch.inference_mode():
         accuracy = (model(X).argmax(-1) == Y).float().mean()
     weights = model.attention.attention_weights  # (1000, 8, 8)
     largest = (weights.argmax(-1) == perm).float().mean()
     on_perm = weights[:, torch.arange(8), perm].mean()
-    print(f'run {run}: accuracy {accuracy:.3f}, largest weight on pi(j) '
+    print(f'{name:>9}: accuracy {accuracy:.3f}, largest weight on pi(j) '
           f'{largest:.3f}, mean weight on pi(j) {on_perm:.3f}')
+
+untrained = ToyAligner()
+evaluate_aligner(untrained, X, Y, 'untrained')
+for run in range(1, 4):
+    model = train_aligner()
+    evaluate_aligner(model, X, Y, f'run {run}')
 ```
 
 ```{.python .input #attention-scoring-attention-as-learned-alignment-3}
 %%tab jax
 X, Y = align_data(d2l.get_key(), 1000)
-for run in range(1, 4):
-    model = train_aligner()
+
+def evaluate_aligner(model, X, Y, name):
     accuracy = (model(X).argmax(-1) == Y).mean()
     weights = model.attention.attention_weights  # (1000, 8, 8)
     largest = (weights.argmax(-1) == perm).mean()
     on_perm = weights[:, jnp.arange(8), perm].mean()
-    print(f'run {run}: accuracy {accuracy:.3f}, largest weight on pi(j) '
+    print(f'{name:>9}: accuracy {accuracy:.3f}, largest weight on pi(j) '
           f'{largest:.3f}, mean weight on pi(j) {on_perm:.3f}')
+
+untrained = ToyAligner(rngs=nnx.Rngs(d2l.get_key()))
+evaluate_aligner(untrained, X, Y, 'untrained')
+for run in range(1, 4):
+    model = train_aligner()
+    evaluate_aligner(model, X, Y, f'run {run}')
 ```
 
 All three runs print $1.000$ for the accuracy and for the fraction of
@@ -940,8 +952,10 @@ included:
 ```{.python .input #attention-scoring-attention-as-learned-alignment-4}
 %%tab pytorch, jax
 letters = 'abcdefghijklmnop'  # One letter per token id
-d2l.show_heatmaps(model.attention.attention_weights[:1][None],
-                  xlabel='source', ylabel='target', figsize=(3, 3),
+maps = d2l.stack([untrained.attention.attention_weights[0],
+                  model.attention.attention_weights[0]])
+d2l.show_heatmaps(maps[None], xlabel='source', ylabel='target',
+                  titles=['untrained', 'trained'], figsize=(5.5, 3),
                   cmap='Blues', xticklabels=[letters[int(i)] for i in X[0]],
                   yticklabels=[letters[int(i)] for i in Y[0]])
 ```

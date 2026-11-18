@@ -27,12 +27,13 @@ this section is what each of them gives up. The other remedies are collected
 in :numref:`sec_attention-further-reading`.
 
 We take windows first. They need one more mask beyond those of
-:numref:`sec_attention-scoring-functions`, and counting the tiles that a
-fused kernel can skip predicts how much they save. We then derive linear
-attention, implement it in three equivalent forms, and test it on what
-softmax attention does best: putting nearly all of a query's weight on one
-key. Finally we time the window against dense attention and say which
-mechanism to use. The cells that call fused kernels expect a CUDA GPU.
+:numref:`sec_attention-scoring-functions`, counting the tiles that a fused
+kernel can skip predicts how much they save, and a timing against dense
+attention tests the prediction. We then derive linear attention, implement
+it in three equivalent forms, and test it on what softmax attention does
+best: putting nearly all of a query's weight on one key. Finally we say
+which mechanism to use. The cells that call fused kernels expect a CUDA
+GPU.
 
 ```{.python .input #windowed-linear-attention-windowed-and-linear-attention-1}
 %%tab pytorch
@@ -176,7 +177,7 @@ no block before it; that index arithmetic can be skimmed.
 %%tab pytorch
 def windowed_attention(Q, K, V, w):
     """Causal sliding-window attention in O(nw) time and memory."""
-    n, d = Q.shape
+    n, d_h = Q.shape
     assert n % w == 0, 'blocks must tile the sequence exactly'
     Qb, Kb, Vb = (X.reshape(n // w, w, -1) for X in (Q, K, V))
     # Each query block attends to its own key block and the one before it
@@ -186,7 +187,7 @@ def windowed_attention(Q, K, V, w):
     j = torch.arange(-w, w, device=Q.device)[None, :]  # Key offset from it
     first = torch.arange(n // w, device=Q.device)[:, None, None] == 0
     mask = (j <= i) & (i - j < w) & ~(first & (j < 0))  # No keys before 0
-    scores = Qb @ Kb.transpose(-1, -2) / math.sqrt(d)
+    scores = Qb @ Kb.transpose(-1, -2) / math.sqrt(d_h)
     return (d2l.masked_softmax(scores, mask) @ Vb).reshape(n, -1)
 ```
 
@@ -194,7 +195,7 @@ def windowed_attention(Q, K, V, w):
 %%tab jax
 def windowed_attention(Q, K, V, w):
     """Causal sliding-window attention in O(nw) time and memory."""
-    n, d = Q.shape
+    n, d_h = Q.shape
     assert n % w == 0, 'blocks must tile the sequence exactly'
     Qb, Kb, Vb = (X.reshape(n // w, w, -1) for X in (Q, K, V))
     # Each query block attends to its own key block and the one before it
@@ -205,7 +206,7 @@ def windowed_attention(Q, K, V, w):
     j = jnp.arange(-w, w)[None, :]                     # Key offset from it
     first = jnp.arange(n // w)[:, None, None] == 0
     mask = (j <= i) & (i - j < w) & ~(first & (j < 0))  # No keys before 0
-    scores = Qb @ Kb.swapaxes(-1, -2) / math.sqrt(d)
+    scores = Qb @ Kb.swapaxes(-1, -2) / math.sqrt(d_h)
     return (d2l.masked_softmax(scores, mask) @ Vb).reshape(n, -1)
 ```
 
@@ -259,8 +260,8 @@ n, w, d_h = 2048, 128, 64
 Q, K, V = (torch.randn(n, d_h, device=d2l.try_gpu()) for _ in range(3))
 reference = d2l.masked_softmax(Q @ K.T / math.sqrt(d_h),
                                window_mask(n, w, Q.device)) @ V
-# FlexAttention takes the band as a rule on positions and evaluates it once
-# per tile; torch.compile turns it into a kernel that visits only kept tiles
+# create_block_mask evaluates the band at every position and records which
+# tiles are empty, full or cut by it; compiled, the kernel skips the empty ones
 band = lambda batch, head, q, k: (k <= q) & (q - k < w)
 block_mask = create_block_mask(band, None, None, n, n, device=Q.device)
 fused = torch.compile(flex_attention)(Q[None, None], K[None, None],
@@ -308,9 +309,93 @@ applies the rule entry by entry only in the tiles the mask cuts through.
 `local_window_size=(w - 1, 0)` lets each query see $w - 1$ earlier keys and
 none after it, which together with `is_causal=True` is the band of
 `window_mask`. The check runs XLA's default implementation in float32; the
-timing at the end of the section uses the cuDNN kernel, which needs 16-bit
-inputs.
+timing below uses the cuDNN kernel, which needs 16-bit inputs.
 :end_tab:
+
+### Windowed and Dense Kernels Compared
+
+How much time does a window save in practice? The tile count predicts it
+before we run anything. With tiles of 128 and $T = n/128$ rows of tiles, a
+causal kernel visits $T(T + 1)/2$ tiles. A
+window of 128 visits $2T - 1$: the diagonal tile and its left neighbor in
+each row, and only the diagonal tile in the first row. If time were
+proportional to tiles, the window would be faster than dense causal
+attention by the ratio $T(T + 1)/(2(2T - 1))$, which grows like $T/4$: 1.4
+at 512 tokens, 64 at 32,768.
+
+For the ratio to measure tiles and nothing else, both arms must run in the
+same kernel. Each framework below times dense causal attention and the
+window $w = 128$ in one fused kernel, on one sequence with 32 heads of
+width 64, in bfloat16, the precision in which attention is usually trained.
+The cell prints the measured speedup next to the tile-count prediction and
+plots both times on log--log axes.
+
+```{.python .input #attention-at-scale-the-price-of-attention-measured}
+%%tab pytorch
+flex = torch.compile(flex_attention)
+w = b = 128  # Window width; tile size of the kernel
+masks = {'dense causal': lambda batch, head, q, k: k <= q,
+         f'window (w={w})': lambda batch, head, q, k: (k <= q) & (q - k < w)}
+H, lengths = 32, [512, 1024, 2048, 4096, 8192, 16384, 32768]
+times = {name: [] for name in masks}
+for n in lengths:
+    X = torch.randn(1, H, n, d_h, device=d2l.try_gpu(), dtype=torch.bfloat16)
+    for name, rule in masks.items():
+        block_mask = create_block_mask(rule, None, None, n, n, device=X.device)
+        times[name].append(d2l.Benchmark(
+            lambda: flex(X, X, X, block_mask=block_mask)).time * 1e3)
+    T = n // b  # Rows of b x b tiles; causal T(T+1)/2, window 2T - 1
+    dense, window = (t[-1] for t in times.values())
+    print(f'n = {n:6,}: window {dense / window:4.1f}x faster, '
+          f'tile count predicts {T * (T + 1) / 2 / (2 * T - 1):4.1f}x')
+d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
+         legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
+```
+
+```{.python .input #attention-at-scale-the-price-of-attention-measured}
+%%tab jax
+# cuDNN takes (batch, length, heads, width); it skips the tiles outside the
+# band only together with is_causal=True
+w = b = 128  # Window width; tile size of the kernel
+masks = {'dense causal': {},
+         f'window (w={w})': {'local_window_size': (w - 1, 0)}}
+kernels = {name: jax.jit(lambda X, kw=kw: jax.nn.dot_product_attention(
+    X, X, X, is_causal=True, implementation='cudnn', **kw))
+    for name, kw in masks.items()}
+H, lengths = 32, [512, 1024, 2048, 4096, 8192, 16384, 32768]
+times = {name: [] for name in masks}
+for n in lengths:
+    X = jax.random.normal(d2l.get_key(), (1, n, H, d_h), dtype=jnp.bfloat16)
+    for name, f in kernels.items():
+        times[name].append(d2l.Benchmark(lambda: f(X)).time * 1e3)
+    T = n // b  # Rows of b x b tiles; causal T(T+1)/2, window 2T - 1
+    dense, window = (t[-1] for t in times.values())
+    print(f'n = {n:6,}: window {dense / window:4.1f}x faster, '
+          f'tile count predicts {T * (T + 1) / 2 / (2 * T - 1):4.1f}x')
+d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
+         legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
+```
+
+The prediction holds in shape and falls short in size. In our measurement,
+up to about a thousand tokens the two kernels take the same time: a fixed
+cost per call dominates, and there are few tiles to skip. (With more
+sequences or heads per call, that fixed cost would be shared, and the
+window would start to save time at shorter lengths.) From a few thousand
+tokens on, the time of dense attention grows three to four times with
+every doubling of $n$, approaching the fourfold growth of its tile count, while
+the time of the window about doubles. At 32,768 tokens the window is more
+than thirty times faster, though short of 64.
+
+Most of the shortfall has a simple cause. A tile that lies entirely inside
+the mask is computed without masking; a tile that straddles the edge of the
+mask must apply it entry by entry, which costs more. Of the causal kernel's
+tiles, only the $T$ on the diagonal straddle the edge, and all the others
+lie inside the mask. Every tile the band visits straddles an edge. A
+window's tiles are all of the expensive kind.
+
+The figure measures cost alone. The window computes a different function
+from dense attention, and what it loses (the hops of
+:numref:`subsec_attn-receptive-field`) does not show up in milliseconds.
 
 ## Linear Attention
 
@@ -418,13 +503,13 @@ def phi(X):
 def linear_attention_parallel(Q, K, V, eps=1e-6):
     """Training form: all outputs at once via cumulative sums."""
     Qp, Kp = phi(Q), phi(K)
-    S = torch.cumsum(Kp[:, :, None] * V[:, None, :], dim=0)  # (n, d, d_v)
-    z = torch.cumsum(Kp, dim=0)                              # (n, d)
+    S = torch.cumsum(Kp[:, :, None] * V[:, None, :], dim=0)  # (n, d_h, d_v)
+    z = torch.cumsum(Kp, dim=0)                              # (n, d_h)
     den = (Qp * z).sum(-1, keepdim=True) + eps
     return (Qp[:, :, None] * S).sum(1) / den
 
 def linear_attention_recurrent(Q, K, V, eps=1e-6):
-    """Generation form: a (d, d_v) state, updated token by token."""
+    """Generation form: a (d_h, d_v) state, updated token by token."""
     Qp, Kp = phi(Q), phi(K)
     S = torch.zeros(Q.shape[-1], V.shape[-1], device=Q.device)
     z = torch.zeros(Q.shape[-1], device=Q.device)
@@ -444,13 +529,13 @@ def phi(X):
 def linear_attention_parallel(Q, K, V, eps=1e-6):
     """Training form: all outputs at once via cumulative sums."""
     Qp, Kp = phi(Q), phi(K)
-    S = jnp.cumsum(Kp[:, :, None] * V[:, None, :], axis=0)  # (n, d, d_v)
-    z = jnp.cumsum(Kp, axis=0)                              # (n, d)
+    S = jnp.cumsum(Kp[:, :, None] * V[:, None, :], axis=0)  # (n, d_h, d_v)
+    z = jnp.cumsum(Kp, axis=0)                              # (n, d_h)
     den = (Qp * z).sum(-1, keepdims=True) + eps
     return (Qp[:, :, None] * S).sum(1) / den
 
 def linear_attention_recurrent(Q, K, V, eps=1e-6):
-    """Generation form: a (d, d_v) state, updated token by token."""
+    """Generation form: a (d_h, d_v) state, updated token by token."""
     Qp, Kp = phi(Q), phi(K)
     def step(carry, qkv):
         S, z = carry
@@ -506,13 +591,13 @@ stored.
 %%tab pytorch
 def linear_attention_chunked(Q, K, V, c=64, eps=1e-6):
     """Training form in chunks: quadratic within, recurrent across."""
-    n, d = Q.shape
+    n, d_h = Q.shape
     assert n % c == 0, 'chunks must tile the sequence exactly'
-    Qp, Kp = phi(Q).reshape(n // c, c, d), phi(K).reshape(n // c, c, d)
+    Qp, Kp = phi(Q).reshape(n // c, c, d_h), phi(K).reshape(n // c, c, d_h)
     Vc = V.reshape(n // c, c, -1)
     # The state each chunk starts from: sums over all earlier chunks
-    S = torch.cumsum(Kp.transpose(-1, -2) @ Vc, dim=0)   # (n/c, d, d_v)
-    z = torch.cumsum(Kp.sum(1), dim=0)                   # (n/c, d)
+    S = torch.cumsum(Kp.transpose(-1, -2) @ Vc, dim=0)   # (n/c, d_h, d_v)
+    z = torch.cumsum(Kp.sum(1), dim=0)                   # (n/c, d_h)
     S = torch.cat([torch.zeros_like(S[:1]), S[:-1]])
     z = torch.cat([torch.zeros_like(z[:1]), z[:-1]])
     A = torch.tril(Qp @ Kp.transpose(-1, -2))            # (n/c, c, c)
@@ -525,13 +610,13 @@ def linear_attention_chunked(Q, K, V, c=64, eps=1e-6):
 %%tab jax
 def linear_attention_chunked(Q, K, V, c=64, eps=1e-6):
     """Training form in chunks: quadratic within, recurrent across."""
-    n, d = Q.shape
+    n, d_h = Q.shape
     assert n % c == 0, 'chunks must tile the sequence exactly'
-    Qp, Kp = phi(Q).reshape(n // c, c, d), phi(K).reshape(n // c, c, d)
+    Qp, Kp = phi(Q).reshape(n // c, c, d_h), phi(K).reshape(n // c, c, d_h)
     Vc = V.reshape(n // c, c, -1)
     # The state each chunk starts from: sums over all earlier chunks
-    S = jnp.cumsum(Kp.swapaxes(-1, -2) @ Vc, axis=0)     # (n/c, d, d_v)
-    z = jnp.cumsum(Kp.sum(1), axis=0)                    # (n/c, d)
+    S = jnp.cumsum(Kp.swapaxes(-1, -2) @ Vc, axis=0)     # (n/c, d_h, d_v)
+    z = jnp.cumsum(Kp.sum(1), axis=0)                    # (n/c, d_h)
     S = jnp.concatenate([jnp.zeros_like(S[:1]), S[:-1]])
     z = jnp.concatenate([jnp.zeros_like(z[:1]), z[:-1]])
     A = jnp.tril(Qp @ Kp.swapaxes(-1, -2))               # (n/c, c, c)
@@ -612,8 +697,9 @@ uniform weights would be $1/8 = 0.125$.
 
 ```{.python .input #windowed-linear-attention-sharpening}
 %%tab pytorch
-Q, K = torch.randn(1000, d_h), torch.randn(8, d_h)  # 8 keys: uniform is 0.125
-for beta in (1, 4, 16):  # Scale the queries up
+Q = torch.randn(1000, d_h, device=d2l.try_gpu())
+K = torch.randn(8, d_h, device=d2l.try_gpu())
+for beta in (1, 4, 16):  # Scale the queries up; 8 keys: uniform is 0.125
     soft = torch.softmax(beta * Q @ K.T / math.sqrt(d_h), dim=-1)
     lin = phi(beta * Q) @ phi(K).T
     lin = lin / lin.sum(-1, keepdim=True)
@@ -645,93 +731,6 @@ linear attention lacks is the one dial that sharpens every comparison at
 once.
 
 ## Choosing a Mechanism
-
-### Windowed and Dense Kernels Compared
-
-Before choosing, we should know how much time a window saves in practice.
-The tile count predicts it before we run anything. With tiles of 128 and
-$T = n/128$ rows of tiles, a causal kernel visits $T(T + 1)/2$ tiles. A
-window of 128 visits $2T - 1$: the diagonal tile and its left neighbor in
-each row, and only the diagonal tile in the first row. If time were
-proportional to tiles, the window would be faster than dense causal
-attention by the ratio $T(T + 1)/(2(2T - 1))$, which grows like $T/4$: 1.4
-at 512 tokens, 64 at 32,768.
-
-For the ratio to measure tiles and nothing else, both arms must run in the
-same kernel. Each framework below times dense causal attention and the
-window $w = 128$ in one fused kernel, on one sequence with 32 heads of
-width 64, in bfloat16, the precision in which attention is usually trained.
-The cell prints the measured speedup next to the tile-count prediction and
-plots both times on log--log axes.
-
-```{.python .input #attention-at-scale-the-price-of-attention-measured}
-%%tab pytorch
-flex = torch.compile(flex_attention)
-w = b = 128  # Window width; tile size of the kernel
-masks = {'dense causal': lambda batch, head, q, k: k <= q,
-         f'window (w={w})': lambda batch, head, q, k: (k <= q) & (q - k < w)}
-H, lengths = 32, [512, 1024, 2048, 4096, 8192, 16384, 32768]
-times = {name: [] for name in masks}
-for n in lengths:
-    X = torch.randn(1, H, n, d_h, device=d2l.try_gpu(), dtype=torch.bfloat16)
-    for name, rule in masks.items():
-        block_mask = create_block_mask(rule, None, None, n, n, device=X.device)
-        times[name].append(d2l.Benchmark(
-            lambda: flex(X, X, X, block_mask=block_mask)).time * 1e3)
-    T = n // b  # Rows of b x b tiles; causal T(T+1)/2, window 2T - 1
-    dense, window = (t[-1] for t in times.values())
-    print(f'n = {n:6,}: window {dense / window:4.1f}x faster, '
-          f'tile count predicts {T * (T + 1) / 2 / (2 * T - 1):4.1f}x')
-d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
-         legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
-```
-
-```{.python .input #attention-at-scale-the-price-of-attention-measured}
-%%tab jax
-# cuDNN takes (batch, length, heads, width); it skips the tiles outside the
-# band only together with is_causal=True
-w = b = 128  # Window width; tile size of the kernel
-masks = {'dense causal': {},
-         f'window (w={w})': {'local_window_size': (w - 1, 0)}}
-kernels = {name: jax.jit(lambda X, kw=kw: jax.nn.dot_product_attention(
-    X, X, X, is_causal=True, implementation='cudnn', **kw))
-    for name, kw in masks.items()}
-H, lengths = 32, [512, 1024, 2048, 4096, 8192, 16384, 32768]
-times = {name: [] for name in masks}
-for n in lengths:
-    X = jax.random.normal(d2l.get_key(), (1, n, H, d_h), dtype=jnp.bfloat16)
-    for name, f in kernels.items():
-        times[name].append(d2l.Benchmark(lambda: f(X)).time * 1e3)
-    T = n // b  # Rows of b x b tiles; causal T(T+1)/2, window 2T - 1
-    dense, window = (t[-1] for t in times.values())
-    print(f'n = {n:6,}: window {dense / window:4.1f}x faster, '
-          f'tile count predicts {T * (T + 1) / 2 / (2 * T - 1):4.1f}x')
-d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
-         legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
-```
-
-The prediction holds in shape and falls short in size. In our measurement,
-up to about a thousand tokens the two kernels take the same time: a fixed
-cost per call dominates, and there are few tiles to skip. (With more
-sequences or heads per call, that fixed cost would be shared, and the
-window would start to save time at shorter lengths.) From a few thousand
-tokens on, the time of dense attention grows three to four times with
-every doubling of $n$, approaching the fourfold growth of its tile count, while
-the time of the window about doubles. At 32,768 tokens the window is more
-than thirty times faster, though short of 64.
-
-Most of the shortfall has a simple cause. A tile that lies entirely inside
-the mask is computed without masking; a tile that straddles the edge of the
-mask must apply it entry by entry, which costs more. Of the causal kernel's
-tiles, only the $T$ on the diagonal straddle the edge, and all the others
-lie inside the mask. Every tile the band visits straddles an edge. A
-window's tiles are all of the expensive kind.
-
-The figure measures cost alone. The window computes a different function
-from dense attention, and what it loses (the hops of
-:numref:`subsec_attn-receptive-field`) does not show up in milliseconds.
-
-### The Default and Its Alternatives
 
 Which of these should a model use? Exact attention in a fused kernel is the
 default. It computes the right function, and on short sequences a window
@@ -1064,6 +1063,44 @@ mask records which tiles to skip. JAX: `local_window_size=(w - 1, 0)` with
 `is_causal=True`.
 :::
 
+::: {.slide title="The Window Is More Than 30× Faster at 32K Tokens, Short of the Tiles' 64"}
+[Measured]{.kicker}
+
+@!attention-at-scale-the-price-of-attention-measured
+
+Both arms in one fused kernel; one sequence, 32 heads of width 64, bfloat16.
+:::
+
+::: {.slide title="Every Tile the Band Visits Is a Masked Tile"}
+[Measured]{.kicker}
+
+| | tiles visited | tiles on the mask's edge |
+|:--|--:|:--|
+| dense causal | $T(T+1)/2$ | only the $T$ diagonal tiles |
+| window, $w = b$ | $2T - 1$ | all of them |
+
+- Short sequences: a fixed cost per call, no saving.
+- Long sequences: dense 3–4× per doubling of $n$, window about 2×.
+
+::: {.d2l-note}
+Tile counts predict the shape; masked tiles explain most of the shortfall.
+:::
+:::
+
+::: {.slide title="Check: A Window Narrower than a Tile"}
+[Check]{.kicker}
+
+At $n = 32{,}768$ with tiles of 128, a window of $w = 64$ replaces
+$w = 128$. Does the kernel get faster?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** No. Each row of tiles still visits its diagonal tile and its
+left neighbor, 511 tiles in all, and every one straddles the mask's edge.
+:::
+:::
+:::
+
 ::: {.slide title="Moving the Brackets Removes the n × n Matrix"}
 [Linear attention]{.kicker}
 
@@ -1155,30 +1192,6 @@ factor 16 cancels exactly between numerator and normalizer.
 :::
 :::
 
-::: {.slide title="The Window Is More Than 30× Faster at 32K Tokens, Short of the Tiles' 64"}
-[Measured]{.kicker}
-
-@!attention-at-scale-the-price-of-attention-measured
-
-Both arms in one fused kernel; one sequence, 32 heads of width 64, bfloat16.
-:::
-
-::: {.slide title="Every Tile the Band Visits Is a Masked Tile"}
-[Measured]{.kicker}
-
-| | tiles visited | tiles on the mask's edge |
-|:--|--:|:--|
-| dense causal | $T(T+1)/2$ | only the $T$ diagonal tiles |
-| window, $w = b$ | $2T - 1$ | all of them |
-
-- Short sequences: a fixed cost per call, no saving.
-- Long sequences: dense 3–4× per doubling of $n$, window about 2×.
-
-::: {.d2l-note}
-Tile counts predict the shape; masked tiles explain most of the shortfall.
-:::
-:::
-
 ::: {.slide title="Default to Exact Fused Attention; Interleave Windows for Long Contexts"}
 [Choice]{.kicker}
 
@@ -1196,20 +1209,6 @@ Scaling the query does not sharpen linear attention, and it recalls poorly.
 :::
 
 [Arora et al. 2024; Yang et al. 2024; MiniMax 2025]{.small}
-:::
-
-::: {.slide title="Check: A Window Narrower than a Tile"}
-[Check]{.kicker}
-
-At $n = 32{,}768$ with tiles of 128, a window of $w = 64$ replaces
-$w = 128$. Does the kernel get faster?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** No. Each row of tiles still visits its diagonal tile and its
-left neighbor, 511 tiles in all, and every one straddles the mask's edge.
-:::
-:::
 :::
 
 ::: {.slide title="Recap"}

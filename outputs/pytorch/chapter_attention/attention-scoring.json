@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:71e33333c662d72536a41ae7c1868cbba72c153aab96dfc98aa0e83cf1aebd01",
+    "d2l_lib_fingerprint": "sha256:bae9a38cf3b7f13b94fef6f6592fb910315861e60c08491766d8f62650e63fc8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,61 +19,61 @@
       "outputs": []
     },
     "attention-scoring-score-variance-and-the-1-sqrt-d-factor-1": {
-      "code_fingerprint": "sha256:a5e3a456733337a0fd57b69422e42ce52c5488f2e7ec46d08cfe01a122209c19",
+      "code_fingerprint": "sha256:67cbf28234006833754d93f9853099842317682d20c5973e9ed3ff4e90876c6c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-score-variance-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25281,
-          "sha256": "sha256:dbf3735100199822829c07d70537e9c27ed79c119f6bafac3dbad1088cc1bbef"
+          "bytes": 24974,
+          "sha256": "sha256:6c2da540b3d324afba2addecc6ae3e020fb6013548b4e318e9f5c4c0d16b7542"
         }
       ]
     },
     "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2": {
-      "code_fingerprint": "sha256:578eeb25479217c7843bf125cd827e2da97c44d25f6e4a0c1499f238a02d4f0f",
+      "code_fingerprint": "sha256:bddcb11da975a456513f730e6a50151a9fbc45557638db19203895c452b9ba37",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      entropy (nats)    largest weight     Jacobian norm\n  d   unscaled scaled   unscaled scaled   unscaled scaled\n  4      2.791  3.701      0.277  0.105      0.260  0.180\n"
+          "text": "      entropy (nats)    largest weight     Jacobian norm\n  d   unscaled scaled   unscaled scaled   unscaled scaled\n  4      2.782  3.701      0.285  0.105      0.256  0.180\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 16      1.387  3.686      0.574  0.108      0.297  0.183\n"
+          "text": " 16      1.388  3.691      0.578  0.105      0.295  0.182\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 64      0.582  3.682      0.791  0.108      0.211  0.184\n"
+          "text": " 64      0.584  3.682      0.791  0.108      0.209  0.184\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "128      0.393  3.687      0.852  0.106      0.165  0.183\n"
+          "text": "128      0.372  3.683      0.862  0.107      0.158  0.184\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "512      0.195  3.684      0.921  0.108      0.100  0.184\n"
+          "text": "512      0.182  3.681      0.926  0.108      0.094  0.184\n"
         }
       ]
     },
     "attention-scoring-the-masked-softmax-operation-1": {
-      "code_fingerprint": "sha256:06bc51e7c1286a0149fe2ad55045406dd337a4c077430e6950cd16cc65654c21",
+      "code_fingerprint": "sha256:9b51ad14ae6ac01a2f3eb04cac2e5e5100637babaf55360eb3d321b26608c123",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-masked-softmax-operation-4": {
-      "code_fingerprint": "sha256:984b6320b47d84cc978f8a4454c9a97a7d72eb28b22d805b230b541f69700ef5",
+      "code_fingerprint": "sha256:2180ca7090e4de416b2dae7418eb108c3a27651e829f03ec2df8dfeba9a5464e",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-masked-softmax-operation-2": {
-      "code_fingerprint": "sha256:e7b3433a568721c00cf62b0d21251abaabc73466bd6e56e5eb624d739a86acbf",
+      "code_fingerprint": "sha256:1fd8650bda0d327dd946564579f64c5853197fec1f714d9eac927f3f05afd499",
       "kind": "text",
       "outputs": [
         {
@@ -83,43 +83,43 @@
       ]
     },
     "attention-scoring-causal-masking": {
-      "code_fingerprint": "sha256:574549fe5df6a502b4eea5cfeab7cd9de291222392f70754c81b0b8f3a593796",
+      "code_fingerprint": "sha256:9bae57c40164231cbee35b0d3565a205d0de770edb1a424e661c595a79d8aa83",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-composing-masks": {
-      "code_fingerprint": "sha256:c3fe92dfdce393a43b8a07b3f5329307f8919610b82ad9e51bffb8c463d0f571",
+      "code_fingerprint": "sha256:1829f6470990dc125cea370607e9133003093c5f7504cfd6f6a2c7837a33daa9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
-          "bytes": 27441,
-          "sha256": "sha256:60377c0fcc738c39ae3dd5dff5b0e8ae49edf6ebedc18e85f3d775dc6b954be4"
+          "bytes": 27424,
+          "sha256": "sha256:817c1e50b0a4ef93aee9f8403864a92063ad15e75f3e52af8892153391aa124f"
         }
       ]
     },
     "attention-scoring-composing-masks-1": {
-      "code_fingerprint": "sha256:22d26fb72b45a6db758d87eb6bfc91f23a4db4e8fcd4010de97781f93550ddb9",
+      "code_fingerprint": "sha256:f9ef5e09edfe46ceef6526d42932f09bc815d157836fcf2428a19768555541b0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1-1.svg",
-          "bytes": 13718,
-          "sha256": "sha256:a2db95fefd76fa7b11b0f354311c791f3d47726c0853a288a3fe2e3674bbd55b"
+          "bytes": 13728,
+          "sha256": "sha256:cf64844a1d2474979be79b6bef1d1d37c6c021e5f5b867bbec98c9e0a19417d5"
         }
       ]
     },
     "attention-scoring-the-dotproductattention-class-1": {
-      "code_fingerprint": "sha256:f27f2db0d4794db222b33cf1c6077db41c2c48176276e68f08415443ebce5529",
+      "code_fingerprint": "sha256:8935dfb334c8bada862d161d5c5e29b50ec3b2d0b752dfb38c3a8a6eb281199e",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-2": {
-      "code_fingerprint": "sha256:84308b88aeef39127031943e7938cdca2c5f91c28412986828a47ee9618c8199",
+      "code_fingerprint": "sha256:87b4d64481f6218de34882e0cd8c1218ecbc2e6da5da118cf59dee9c1c1d8884",
       "kind": "text",
       "outputs": [
         {
@@ -130,49 +130,59 @@
       ]
     },
     "multihead-attention-an-alignment-you-can-read": {
-      "code_fingerprint": "sha256:adf4211713bc874a6baab16f24769c0c7995299c5399c650b91196e8bbb4d855",
+      "code_fingerprint": "sha256:1d3f74bef6f967b5bd9df59f4b1fdead468a5641c391f7057b7a960f499e2fae",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/multihead-attention-an-alignment-you-can-read-1.svg",
-          "bytes": 24173,
-          "sha256": "sha256:e0b78266886aaf7ad6563bb3f034b84e402d548398bb1e67cd2f54710b0762d3"
+          "bytes": 24106,
+          "sha256": "sha256:c6f34db26bbcc752bc9f8f73b3760a63595271a4d834044e1993683c83b6a90a"
         }
       ]
     },
     "attention-scoring-attention-as-learned-alignment-1": {
-      "code_fingerprint": "sha256:7254427519f2770f34fe16477c6fb4561863ff8176a01246733a076959ac89ea",
+      "code_fingerprint": "sha256:a6af92ad1133b353b77d97150a0339ea23a67d40787d874b68d1b93ed366f77c",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-attention-as-learned-alignment-2": {
-      "code_fingerprint": "sha256:db644fe4d53e4233b56c68dae8e4696f640a08ed40f0b60e974938cb1ce65824",
+      "code_fingerprint": "sha256:30a62e47df01d2ad494c25e04dea51545ee9f92d7998a02b6195ffabcaf82f1e",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-attention-as-learned-alignment-3": {
-      "code_fingerprint": "sha256:d75d84e17cb5043f2278436ffbcaf94dfc44a13f061449da1406a71f58bd533d",
+      "code_fingerprint": "sha256:c8ceeb5b617242c5e86f0a5f81f598331da010847706bf300cf240dc64c7867a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 1: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\nrun 2: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\nrun 3: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\n"
+          "text": "untrained: accuracy 0.272, largest weight on pi(j) 0.161, mean weight on pi(j) 0.132\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    run 1: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    run 2: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 0.999\n    run 3: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\n"
         }
       ]
     },
     "attention-scoring-attention-as-learned-alignment-4": {
-      "code_fingerprint": "sha256:5e803dccfc3c1660cbf89fdaabf12fea018091de632ef8db0ae1ec6b13a65e4e",
+      "code_fingerprint": "sha256:1a805b59ae11adbe5cd44f000a78171a4d1c500fa3bb20981927640d42a8b3a6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-attention-as-learned-alignment-4-1.svg",
-          "bytes": 21499,
-          "sha256": "sha256:5a74793baeea2e83a8a7a9a7f69c80f595ba6e739c4fc946f45763d72b63bd7b"
+          "bytes": 30852,
+          "sha256": "sha256:a392a5548ebbc5e10330fd593496b808bced1c94241b68d66fbdbf9b02708922"
         }
       ]
     }

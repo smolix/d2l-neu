@@ -24,28 +24,28 @@
       "outputs": []
     },
     "queries-keys-values-nadaraya-watson-regression-1": {
-      "code_fingerprint": "sha256:6901da4f72d96a6d137ddf3483fd79f64964c78283fea1fd16d1bd31ec9fceb0",
+      "code_fingerprint": "sha256:e636c8a3674e65df2d7fa8311c3717130df616f3c0093fc6d564abc5c998ca79",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-1-1.svg",
-          "bytes": 31090,
-          "sha256": "sha256:d35b278e499fc36f15c9d7aaf9f5d6a7eb0fc9ecdc86c58acc8c1a63f0871cd4"
+          "bytes": 31043,
+          "sha256": "sha256:0c439d4bc77e73e526ddd33f3dd27b412a73e67464ba80ac29ddeb0979e5e39c"
         }
       ]
     },
     "queries-keys-values-nadaraya-watson-regression-in-action-3": {
-      "code_fingerprint": "sha256:b9b05eecb79d7c3ae2e200945242b6cc0c0d3e7d6eb49c77723041c8b7960ee4",
+      "code_fingerprint": "sha256:b1b6db3153ef9de0d1a5e51e106ebecaefb424ccef29373c245f7cc4a3a2c977",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-3-1.svg",
-          "bytes": 42057,
-          "sha256": "sha256:5077f65f7ed5de07a1b0eb19cc825688203a6f220596fabd873050643227f9df"
+          "bytes": 42067,
+          "sha256": "sha256:a1d8ff85ff72ac97e2d9fc596fdcc91527dac768201bc5b6969ba52a9850d33e"
         }
       ]
     }

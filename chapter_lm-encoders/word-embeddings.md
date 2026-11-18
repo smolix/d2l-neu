@@ -1057,8 +1057,12 @@ and of SVD-PPMI lies between 0.52 and 0.59, and GloVe sits alone at 0.29.
 On SimLex-999 all runs lie between 0.13 and 0.21. Even GloVe's lower
 interval ends, 0.18 and 0.08, clear the random floor. The plot shows each
 method at its default settings on the left, with the interval of seed 0
-and each seed as a cross, and $\rho$ against the noise exponent on the
-right, with bands that span the seeds.
+and each seed as a cross. The right panel zooms in on skip-gram. It shows
+how far $\rho$ moves when the noise exponent changes, measured from the
+default run, $\alpha = 0.75$ with subsampling, whose mean over the seeds
+sits on the dashed zero line. Solid lines keep subsampling and dashed
+lines drop it; each line is a mean over the three seeds, and its band
+spans them.
 
 ```{.python .input #word-embeddings-grid-plot}
 %%tab pytorch
@@ -1167,14 +1171,17 @@ differ by 0.01 on WordSim353 and by less on SimLex-999, with intervals
 that straddle zero. This is what :eqref:`eq_lm_sgns_optimum` leads us to
 expect of two factorizations of closely related matrices.
 
-The 0.75 power helps skip-gram on WordSim353, a little. There it beats
-noise by frequency by two to four hundredths in every seed, with an
-interval that excludes zero, and beats uniform noise by a similar amount,
-at the edge of detection. On SimLex-999 it does not help: uniform noise
-is ahead by one to two hundredths in every seed, again at the edge of
-detection. Subsampling changes $\rho$ by an amount whose sign flips
-between seeds, too little for three seeds to show. On this slice its
-benefit is speed: an epoch has half as many centers.
+The 0.75 power helps skip-gram on WordSim353, a little. On the right of
+the plot the WordSim353 line peaks at 0.75 and drops by about three
+hundredths toward either end. In the table, 0.75 beats noise by frequency
+by two to four hundredths in every seed, with an interval that excludes
+zero, and beats uniform noise by a similar amount, at the edge of
+detection. On SimLex-999 it does not help: that line slopes gently
+downward from $\alpha = 0$, and uniform noise is ahead by one to two
+hundredths in every seed, again at the edge of detection. Subsampling
+changes $\rho$ by an amount whose sign flips between seeds, too little
+for three seeds to show. On this slice its benefit is speed: an epoch
+has half as many centers.
 
 The large gap is GloVe's alone. Both factorizations exceed it by about
 0.3 on WordSim353, in every seed. On SimLex-999, where all three methods
@@ -1207,6 +1214,16 @@ print('Spearman rho on each half of the covered pairs, split at the median '
       'count of the rarer word')
 print(pd.DataFrame(rows).round(2).to_string())
 ```
+
+On WordSim353 GloVe trails in both halves: 0.21 against 0.53 and 0.54
+on the pairs of rarer words, 0.40 against 0.61 on the frequent ones. The
+gap is wider among rare words, about 0.3 against 0.2, in the direction
+the second part of the argument predicts, although with half of the
+pairs on each side that difference is rough. What matters more is that a
+gap remains among frequent words. Rarity is not the whole story: the
+pairs that never enter the loss cost GloVe on frequent words too. On
+SimLex-999, where every method scores low, the halves differ by a few
+hundredths.
 
 It is not the optimizer. In runs not shown here, more passes, smaller
 minibatches, other learning rates and the paper's distance-weighted
@@ -1266,15 +1283,15 @@ for w in ('doctor', 'chip', 'stock', 'bank'):  # a line per method
 print('on the slice: ' + n_of('physician'))
 ```
 
-It does not. *Physician* is itself a rare word on the slice, seen only a
-few dozen times, and a *doctor* there is mostly the Doctor of *Doctor
+It does not. *Physician* occurs only 38 times on the slice, against 205
+for *doctor*, and a *doctor* there is mostly the Doctor of *Doctor
 Who* (Amy, Torchwood, the TARDIS) or a character in *The X-Files*
-(Scully, Mulder, Skinner). *Chip* is rarer still and has many senses,
-and its lists look like noise for every method. *Stock* shows something more
-interesting. Under SGNS its neighbors come from finance (*enterprises*,
-*financing*, *bankrupt*, *profits*), under SVD-PPMI mostly from Hollywood
-(*pictures*, *paramount*, *goldwyn*): one word, two senses, and the
-method decides which one wins its row. *Bank* sits among Swiss banks for
+(Scully, Mulder, Skinner). *Chip*, with 30 occurrences and many senses,
+gets lists that look like noise for every method. *Stock* shows
+something more interesting. Under SGNS its neighbors come from finance
+(*enterprises*, *financing*, *bankrupt*, *profits*), under SVD-PPMI
+mostly from Hollywood (*pictures*, *paramount*, *goldwyn*): one word,
+two senses, and the method decides which one wins its row. *Bank* sits among Swiss banks for
 all three methods. GloVe's lists are the noisiest overall, in line with
 its correlations. Nearest neighbors describe the corpus, not the
 language, and the articles of this slice include a good deal of
@@ -1935,10 +1952,10 @@ slice.
 
 @!word-embeddings-grid-plot
 
-- Left: each method at its defaults, seed 0 with its interval over
-  resampled pairs; crosses: each of the 3 seeds.
-- Right: SGNS against the noise exponent $\alpha$, bands over 3 seeds.
-- Every lower bound clears the random floor (0.13 and 0.04).
+- Left: defaults, seed 0 with its interval, crosses for 3 seeds. Every
+  interval clears the random floor.
+- Right: SGNS, $\rho$ less its value at $\alpha = 0.75$; mean and range
+  of 3 seeds.
 :::
 
 ::: {.slide title="Check: Is SGNS Better than SVD-PPMI?"}
@@ -1967,7 +1984,8 @@ $-0.01$, interval $-0.08$ to 0.05. No difference is detectable. Report
 | noise 0.75 − 1 | 0.04 | 0.01 to 0.06 | 0.02 to 0.04 |
 | subsampling on − off | 0.03 | −0.02 to 0.08 | −0.01 to 0.04 |
 
-- GloVe never sees the 98% of pairs that do not occur. Not the
+- GloVe never sees the 98% of pairs that do not occur. It trails by
+  about 0.3 on pairs of rarer words, 0.2 on frequent ones. Not the
   optimizer; more text narrows the gap.
 - SimLex-999: no difference between methods is detectable; for the noise
   exponent, uniform noise is slightly ahead, at the edge of detection.
@@ -1991,8 +2009,9 @@ power, which beat 1 in every seed on WordSim353 (not on SimLex-999).
   senses.
 
 ::: {.d2l-note}
-*Physician* is 977th of about 18,000 under SGNS: it is rare on the
-slice, and the slice's doctors come from *Doctor Who* and *The X-Files*.
+*Physician* is 977th of about 18,000 under SGNS: it occurs 38 times on
+the slice (*doctor* 205), and the slice's doctors come from *Doctor Who*
+and *The X-Files*.
 :::
 :::
 

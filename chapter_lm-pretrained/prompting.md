@@ -323,9 +323,9 @@ def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
 Every later number passes through this function, so we check it on four 4-shot
 prompts. The cell compares it with the full softmax over the whole vocabulary,
 computed in fp32 from the same hidden state and renormalized over the labels,
-and then with the same quantity from the model's own bf16 logits. Finally it
-compares one padded batch with scoring the prompts one at a time. (In the
-output, `reader` is our function and `screen` the tolerance of the last test.)
+and then with the same quantity from the model's own bf16 logits. It goes on
+to compare one padded batch with scoring the prompts one at a time, and ends
+by printing the read-out that we have just predicted.
 
 ```{.python .input #prompting-reader-check}
 %%tab pytorch
@@ -373,6 +373,9 @@ bf16, and the shape of a batch changes how a matrix product is rounded, as
 noise favors no label, whereas every tie on the grid goes to the label listed
 first. A tenth of a nat is the noise floor of every log-probability in this
 section.
+
+The last line holds no surprise, which is the point of it. Behind four solved
+headlines the read-out gives Sports all but a thousandth of the probability.
 
 The definition :eqref:`eq_lm_label_reader` hides one quantity. The full softmax
 gives the four label tokens together some share of the probability, and we call
@@ -452,20 +455,23 @@ class name `Sci/Tech`, which is three tokens, and this is why our fourth label
 word is `Tech`.
 
 Averaged over these four 4-shot prompts, the labels hold about a third of the
-probability after `Topic:`. The average can hide how the prompts differ, and
-nothing obliges the model to use our word for a topic: a trade treaty can be
-filed under Politics as well as under World. Exercise
-:exref:`ex_lm_prompting-mass` looks at each prompt.
+probability after `Topic:`. The average describes none of them. For the cup
+final the labels hold 0.89, and for the trade treaty, the oil price and the
+quantum chip between 0.11 and 0.16. Nothing obliges the model to use our word
+for a topic: a trade treaty can be filed under Politics as well as under
+World. Exercise :exref:`ex_lm_prompting-mass` asks which tokens hold the rest.
 
-When is a read-out the model's answer? We start with a hard case on purpose: a
-zero-shot prompt, our cup-final headline after a line that names the four
-labels. The case that works, a prompt with demonstrations, is measured on 200
-headlines in :numref:`subsec_lm_num_demos`. The next cell prints the read-out
-of the zero-shot prompt and its label mass for four pairings of model and
-prompt. The instruct model receives the prompt through its chat template and
-as plain text, the base model through the template with the empty think block
-and with the template's default ending. In the code, `chat_multi` is the
-layout of :numref:`subsec_lm_formats` that makes chat messages of a prompt.
+When is a read-out the model's answer? We have just seen a case that works.
+Behind four demonstrations the read-out of the cup final is Sports, the labels
+hold 0.89 of the probability, and Sports is what the model wrote in the
+opening. :numref:`subsec_lm_num_demos` measures such prompts on 200 headlines.
+We now take a hard case on purpose: a zero-shot prompt, our cup-final headline
+after a line that names the four labels. The next cell prints the read-out of
+this prompt and its label mass for four pairings of model and prompt. The
+instruct model receives the prompt through its chat template and as plain
+text, the base model through the template with the empty think block and with
+the template's default ending. In the code, `chat_multi` is the layout of
+:numref:`subsec_lm_formats` that makes chat messages of a prompt.
 
 ```{.python .input #prompting-template-mismatch}
 %%tab pytorch
@@ -518,9 +524,10 @@ the labels hold a good share of the probability, the read-out names the label
 that the model writes, with or without decoration around it, and here it is
 the wrong one.
 
-We return to this stubborn World in :numref:`subsec_lm_label_mass`. For now we
-keep two questions apart. Whether a read-out is the model's answer, the label
-mass tells us. Whether the answer is right, only the true labels can tell.
+We return to this stubborn World in :numref:`subsec_lm_label_mass`, where it
+turns out to be the work of our own sentence. For now we keep two questions
+apart. Whether a read-out is the model's answer, the label mass tells us.
+Whether the answer is right, only the true labels can tell.
 
 ## Few-Shot Prompting
 
@@ -1069,9 +1076,10 @@ In this table and in all later ones, `diff` is the difference in accuracy from
 the reference of the row, here $k = 0$ of the same curve. The columns `lo` and
 `hi` are the ends of its interval, and `draws` counts the draws that agree
 with its sign. Beyond eight demonstrations the last column compares with
-$k = 8$ as well. The second table reads the free generations of the base
-model, where a reply counts as a label if its first line is one of the four
-label words.
+$k = 8$ as well. Under the table the cell prints one row draw by draw, the
+instruct model in the plain layout at $k = 4$, for a reason that will become
+clear. The second table reads the free generations of the base model, where a
+reply counts as a label if its first line is one of the four label words.
 
 The tables are long, and we say before each which rows to read first: here,
 those at $k = 4$ and $k = 8$ of each curve. In the text we quote accuracies as
@@ -1136,16 +1144,19 @@ probability. Generation asks whether the model names a label at all. What the
 demonstrations teach first is the form of the answer.
 
 The instruct model is less tidy. In the plain layout it starts about where the
-base model does, and its row at $k = 4$ deserves a second look. Four of the
-five draws gain from their demonstrations there, and yet the mean does not
-move. In the fifth draw the 4-shot prompt collapses onto two of the four
-labels (Exercise :exref:`ex_lm_prompting-draws`), and a prompt that predicts
-two labels of four cannot score above one half. A mean over five draws can be
-the work of one of them. The same draw supplies most of the 11 points by which
-the gain of the instruct model falls short of the base model's in the line
-between the tables. In the other four draws the shortfall is about five
-points. At eight demonstrations the gain is 9 points, with an interval from 3
-to 15, in all five draws.
+base model does, and its row at $k = 4$ deserves a second look, because the
+mean does not move. The two lines under the table say why. Four of the five
+draws score between 0.73 and 0.765, a gain of five points and more over the
+0.68 without demonstrations. Draw 0 scores 0.39. With its four demonstrations
+the model calls 123 headlines World and 77 Tech, and not one Sports or
+Business, and a prompt that predicts two labels of four cannot score above one
+half. A mean over five draws can be the work of one of them. The same draw
+supplies most of the 11 points by which the gain of the instruct model falls
+short of the base model's, in the last line before the second table. In the
+other four draws the shortfall is about five points. At eight demonstrations
+the gain is 9 points, with an interval from 3 to 15, in all five draws.
+Exercise :exref:`ex_lm_prompting-draws` follows the unlucky draw from one
+demonstration to sixteen.
 
 In the chat layout the instruct model starts at 0.275, which is the World
 answer of :numref:`subsec_lm_label_reader` at the scale of the test set. One
@@ -1220,14 +1231,14 @@ the five draws can know how often the next draw collapses (Exercise
 :exref:`ex_lm_prompting-draws`). A conclusion needs more draws, and a
 comparison that changes one thing.
 
-Does the wording of the line matter? The zero-shot rows hold for one
-particular line, so we vary it: no line, `SYSTEM`, and `SYSTEM` with its
-labels reversed. The first table follows the instruct model in the chat layout
-over $k$ and adds the most frequently predicted label and its share of the
-predictions, which is 0.25 for a predictor without preference. The second
-applies the three lines to both models in the plain layout at $k = 0$. Read
-the rows at $k = 0$ first, and leave the block without a line aside for the
-moment.
+Does the order of the labels in the line matter? The zero-shot rows hold for
+one particular line, so we vary it, at first only a little: no line, `SYSTEM`,
+and `SYSTEM` with its labels reversed. The first table follows the instruct
+model in the chat layout over $k$ and adds the most frequently predicted label
+and its share of the predictions, which is 0.25 for a predictor without
+preference. The second applies the three lines to both models in the plain
+layout at $k = 0$. Read the rows at $k = 0$ first, and leave the block without
+a line aside for the moment.
 
 ```{.python .input #prompting-instruction-lines}
 %%tab pytorch
@@ -1280,9 +1291,9 @@ read-outs have served as baselines throughout, and one block of the last table
 has gone without comment, the chat layout without any line, whose accuracies
 look respectable. The next table computes the label mass over the 200 test
 items for the read-outs we have used. For prompts with demonstrations it uses
-draw 0 only, and its accuracy column is that of draw 0, so those entries
-differ from the five-draw means above. Read the three rows without an
-instruction and without demonstrations first.
+draw 0 only and prints their accuracy in a column of its own,
+`accuracy (draw 0)`, so those entries differ from the five-draw means above.
+Read the three rows without an instruction and without demonstrations first.
 
 ```{.python .input #prompting-label-mass}
 %%tab pytorch
@@ -1343,15 +1354,21 @@ accuracy again once a line or demonstrations have raised the mass.
 Why World? We can say what the cause is not. It is not our read-out, since the
 model writes World when it generates. It is not the place of the word in the
 list, since World keeps most of the predictions when it is named last. It is
-not the chat template, since the plain layout shows the same preference. What
-it is, we do not know. We tried one sentence in two versions, with thinking
-switched off, and the finding reaches no further: an instruction that reads
-sensibly to us made this checkpoint worse than no instruction at all. Whoever
-writes a system line should measure what it does.
+not the chat template, since the plain layout shows the same preference. Two
+things remain, and we chose both of them: the sentence itself, and the switch
+that kept the model from thinking before it answers.
 
-<!-- CODE CHANGE 2026-11-18 (pass2/code-requests.md, 18.3): the cell below
-measures other wordings of the line and the line with thinking on; the
-paragraph above needs rewriting around its output. -->
+The next cell tries both on the instruct model in the chat layout, without
+demonstrations. It words the line in three more ways: as a question, as a
+request to classify the headline into one of four topics, and as that request
+followed by "Answer with the topic only." Every version names the four labels
+in the same order, and the label is read from the next token as before. The
+three new sentences are the only ones that we tried, and the table shows each
+of them. Then the cell returns to the line that failed, switches thinking on
+and lets the model write up to 1,024 tokens. The label is taken from what
+follows the think block, by the rule for generated replies of
+:numref:`subsec_lm_grid`: the first line must be one of the four label words.
+Each row is compared with `SYSTEM`, thinking off, on the same 200 items.
 
 ```{.python .input #prompting-world-wordings}
 %%tab pytorch
@@ -1396,6 +1413,38 @@ del inst, replies  # not needed below
 gc.collect()
 torch.cuda.empty_cache()
 ```
+
+The collapse needs both: this sentence, and a model that is not allowed to
+think. Put as a question, the line does no better. It scores 0.31, with World
+in 85.5% of the predictions, and the difference of 3.5 points has an interval
+that includes zero. Told to classify, the same model scores 0.605, and 0.635
+when it is also asked for the topic only. These are 33 and 36 points above our
+line, and neither interval reaches below 25. The largest change needs no new
+sentence at all. With thinking on, the line that failed scores 0.70, about 42
+points more, and no label is preferred any longer: the most frequent one takes
+little more than a quarter of the replies that name a label. The 0.70 is a
+lower bound, since about one reply in six names no label by our rule and
+counts as wrong.
+
+So the practice of telling a chat model its labels stands. It works when the
+line states the task as a classification, and it works when the model may
+reason before it answers. What failed was one sentence, read by a model that
+had to commit itself with its next token. Why "Name the topic" and "Which
+topic" send this checkpoint to World while "Classify" does not, four sentences
+cannot tell us.
+
+The repair is not complete, and it is not free. Under both lines that say
+"Classify", World still takes 44.5% of the predictions, nearly twice its share
+of the items, and accuracies of 0.6 to 0.64 lie in the range of the
+preferences that this model showed without any line, 0.575 in the chat layout
+and 0.68 in plain text. Thinking costs a median of nearly 300 generated tokens
+for each headline, where the read-out generates none. Note also that the cell
+prints no label mass for the new lines, so by our own rule we do not yet know
+whether their read-outs are the model's answers (Exercise
+:exref:`ex_lm_prompting-wording`).
+
+Of four sentences that any of us might have written, two failed. Whoever
+writes a system line should measure what it does.
 
 ## Sensitivity to the Demonstrations
 
@@ -1903,8 +1952,8 @@ else:
 
 With the 16 demonstrations of draw 0 the probe reaches 0.565 and reproduces
 its stored predictions. The plot puts the probe beside the three in-context
-curves, and the table compares the in-context accuracy of the base model with
-the probe at equal numbers of labeled examples.
+curves, and the table after it compares the in-context accuracy of the base
+model with the probe at equal numbers of labeled examples.
 
 ```{.python .input #prompting-icl-vs-probe-plot}
 %%tab pytorch
@@ -2008,13 +2057,14 @@ to everything that went in: the checkpoint, the template and its thinking
 switch, the instruction line, the demonstrations, their number and order, the
 label words, and the way the answer is read. A report should state all of
 them, average over draws and orders, and compare models only under the same
-prompt. We have varied all of these but the last. Apart from one comparison
-with free generation, every number in this section came from one next token,
+prompt. We have varied all of these but the last. Apart from two comparisons
+with generated replies, every number in this section came from one next token,
 restricted to four words that we knew in advance, with the model's thinking
 switched off. Most tasks have no answers of that kind: their options are whole
 sentences, or the answer is generated, or the model is meant to reason before
-it replies. How the way of reading an answer changes a score is the question
-of :numref:`sec_lm_scoring`.
+it replies. The one time that we let a model reason, its accuracy rose from
+0.275 to 0.70. How the way of reading an answer changes a score is the
+question of :numref:`sec_lm_scoring`.
 
 ## Summary
 
@@ -2025,11 +2075,12 @@ the label mass says whether that read-out is the model's answer or only its
 preference among words it would not write. On two checkpoints of 1.7
 billion parameters, four tokens of an empty think block took the base model
 from 0.77 to chance, and one instruction line was worth eight demonstrations to
-one checkpoint and misled its sibling. The demonstrations taught the form of
-the answer first, changed one prediction in eight through their order alone,
-and mostly failed to overrule the meaning of the label words. At equal labeled
-data, in-context learning beat a plain linear probe up to 64 examples, at many
-times the tokens per query.
+one checkpoint and misled its sibling. The sibling recovered once the line
+said "Classify", or once it was allowed to think. The demonstrations taught
+the form of the answer first, changed one prediction in eight through their
+order alone, and mostly failed to overrule the meaning of the label words. At
+equal labeled data, in-context learning beat a plain linear probe up to 64
+examples, at many times the tokens per query.
 
 ## Exercises
 
@@ -2067,15 +2118,18 @@ times the tokens per query.
 
 1. [code] **Draw by draw.** The tables of this section average over five
    draws. All parts run on the stored grid, without a GPU.
+    1. In :numref:`subsec_lm_num_demos`, draw 0 of the instruct model
+       predicted two labels of four at $k = 4$. The prompts of a draw
+       are nested, so follow this draw in the plain layout from $k = 1$
+       to $k = 16$, and tabulate its accuracy and its predicted labels.
+       At which $k$ does the first label disappear, and at which $k$ has
+       the prompt recovered? The base model reads the same
+       demonstrations. Does it stumble at the same $k$?
     1. For both models in the plain layout, compute the gain from
-       $k = 0$ to $k = 4$ separately for each draw. Which draw supplies
-       most of the mean difference of $-0.11$ between the two gains?
-       Tabulate the labels that the instruct model predicts with the
-       4-shot prompt of that draw. Which two labels are left, and what
-       is the highest accuracy that such a prompt can reach on this test
-       set?
-    1. Recompute the difference of the gains, with its paired interval,
-       without that draw.
+       $k = 0$ to $k = 4$ separately for each draw. Recompute the
+       difference of the two gains, with its paired interval, without
+       draw 0. How much of the mean difference of $-0.11$ was the work
+       of this one draw?
     1. The intervals of `compare` resample items and keep the five draws
        fixed. Write a bootstrap that first resamples the draws with
        replacement and then the items. Apply it to the comparison of the
@@ -2090,10 +2144,11 @@ times the tokens per query.
 1. [code] **Where the mass goes.** The label mass says how much of the
    probability the labels hold. It does not say what holds the rest.
     1. For the four 4-shot prompts of :numref:`subsec_lm_label_reader`,
-       print the ten most probable next tokens of the base model after
-       `Topic:`. Which tokens hold the probability that the four labels
-       lack, prompt by prompt? Would other label words have collected
-       more?
+       the labels hold 0.89 of the probability after the cup final and
+       at most 0.16 after the other three headlines. Print the ten most
+       probable next tokens of the base model after `Topic:` for each
+       prompt. Which tokens hold the probability that the four labels
+       lack? Would other label words have collected more?
     1. Print the same list for the instruct model in the chat layout,
        for the four headlines without demonstrations, with the `SYSTEM`
        line and without it. How do the replies begin that do not begin
@@ -2103,6 +2158,23 @@ times the tokens per query.
        prompts was below 1%. What does the model begin to write? Leave
        the empty think block out of the end of the prompt and compare.
    :exlabel:`ex_lm_prompting-mass`
+
+1. [code] **The wording of the line.** ● The cell that rewords the
+   instruction line in :numref:`subsec_lm_label_mass` leaves three
+   questions open. It deletes the instruct model when it is done, so
+   work before that point.
+    1. Compute the label mass over the 200 test items for each of the
+       four wordings, as the table of label masses does for `SYSTEM`.
+       Which of the read-outs are the model's answers?
+    1. Reverse the order of the labels in the line that says
+       "Classify". With `SYSTEM`, reversing them took the share of
+       World from 97.5% to 73%. What happens to its share of 44.5%, and
+       to accuracy? Give paired intervals.
+    1. With thinking on, about one reply in six names no label by the
+       rule. Read these replies. What do they write in place of a
+       label word, and how many would a more lenient rule count as
+       right? Why must such a rule be fixed before the replies are read?
+   :exlabel:`ex_lm_prompting-wording`
 
 1. [code] **Copying, position by position.** The experiment of
    :numref:`subsec_lm_icl_copying` averages the loss over each copy and
@@ -2286,6 +2358,8 @@ $$p(y \mid x) = \frac{\exp(z_{t_y})}{\sum_{y'} \exp(z_{t_{y'}})}$$
   over the labels. This is the **read-out**.
 - **Label mass:** the probability that the full softmax gives to the label
   tokens together. The formula divides it out.
+- Four solved headlines, then the cup final: Sports 0.999, on a label mass
+  of 0.89.
 
 ::: {.d2l-note}
 A renormalized distribution sums to one however little probability it
@@ -2303,8 +2377,8 @@ started from.
 
 - A token carries its leading space: no id is shared between the two kinds
   of prompt.
-- Prompt ends in `Topic:`: label mass 0.32 (mean of four prompts). We type
-  the space ourselves: 0.000.
+- Prompt ends in `Topic:`: label mass 0.89 for the cup final, 0.11 to
+  0.16 for three other headlines. We type the space ourselves: 0.000.
 - The dataset's class name `Sci/Tech` is three tokens, so the label word
   is `Tech`.
 :::
@@ -2427,7 +2501,30 @@ No demonstrations, plain layout, accuracy of the read-out:
 - Instruct, chat layout: 0.275 or 0.37 by label order. `World` is 97.5% or
   73% of its predictions.
 - Why `World`? Not the read-out (the model writes it), not the place in
-  the list, not the template. The cause is unknown.
+  the list, not the template. That leaves the sentence, and thinking.
+:::
+
+::: {.slide title="Reworded or Allowed to Think, the Instruct Model Classifies Again"}
+Instruct model, chat layout, no demonstrations; "…" stands for "World,
+Sports, Business or Tech".
+
+| instruction line | thinking | accuracy | most predicted |
+|-----------------------------------------------|-------|-------|------------|
+| "Name the topic of each news headline: …" | off | 0.275 | World, 97.5% |
+| "Which topic does this news headline belong to: …?" | off | 0.31 | World, 85.5% |
+| "Classify the news headline into one of four topics: …" | off | 0.605 | World, 44.5% |
+| the same, then "Answer with the topic only." | off | 0.635 | World, 44.5% |
+| "Name the topic of each news headline: …" | on | 0.70 | Business, 27% |
+
+- Off: the label is the next token. On: the first line of the reply after
+  the think block.
+- "Classify": +33 and +36 points. Thinking: +42, at a median of nearly
+  300 generated tokens.
+
+::: {.d2l-note .rule}
+Telling a chat model its labels works. One sentence broke it: measure
+what a system line does.
+:::
 :::
 
 ::: {.slide title="Label Mass Says Whose Answer a Read-Out Is, Not Whether It Is Right"}
@@ -2570,18 +2667,20 @@ identified.
 ::: {.slide title="The Prompt Beats a Plain Probe at Every Size up to 64 Examples"}
 [Prompt or probe]{.kicker}
 
-A **probe** is a linear classifier on features of a frozen model: here, on
-the mean last hidden state of the base model for the headline alone.
+::: {.cols .vc}
+::: {.col .fig}
+@!prompting-icl-vs-probe-plot
+:::
 
-| labeled examples | 4 | 8 | 16 | 32 | 64 |
-|---|---|---|---|---|---|
-| prompt, accuracy | 0.76 | 0.75 | 0.75 | 0.75 | 0.79 |
-| prompt minus probe | 0.365 | 0.265 | 0.17 | 0.07 | 0.07 |
-
-- The prompt leads in all 5 draws at every size. At 64 the interval of its
-  lead is 0.03 to 0.11.
-- With 256 examples the probe reaches 0.76, the accuracy of the 8-shot
-  prompt.
+::: {.col}
+- **Probe**: a linear classifier on the frozen base model's mean hidden
+  state for the headline alone.
+- Lines: means of 5 draws. Bands: their range.
+- Prompt (blue) minus probe (red): 0.365 at 4 examples, 0.17 at 16, 0.07
+  at 64 (interval 0.03 to 0.11).
+- At 256 examples the probe reaches 0.76, as the 8-shot prompt does.
+:::
+:::
 
 ::: {.d2l-note}
 The prompt starts from what the model knows about the word Sports. The
@@ -2629,7 +2728,8 @@ tokens per query, not hundreds.
   label mass. With little mass it is a preference, not an answer.
 - Four demonstrations: +10 points in the read-out, 0 to 0.655 exact match
   in generation. One instruction line: +10 points for the base model,
-  $-37$ for the instruct model.
+  $-37$ for the instruct model, until the line says "Classify" or the
+  model may think.
 - Order flips one prediction in eight. Word meaning beats eight
   consistent examples. Calibration balances a one-shot prompt.
 - The prompt beats a plain probe up to 64 labeled examples, at 30 times

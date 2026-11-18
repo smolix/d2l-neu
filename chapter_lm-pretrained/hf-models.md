@@ -1759,7 +1759,9 @@ token nothing can be skipped, and the plain kernel is faster. The
 attention on a prompt and `sdpa` on a single token.
 
 If the mask were the whole cost, the reference code would need $n^2$ bytes
-more than the fused kernel. We prefill four prompt lengths both ways.
+more than the fused kernel. We prefill four prompt lengths both ways, and
+the cell ends by dividing the difference between the two peaks by $n^2$
+bytes. A ratio of 1 is the mask and nothing else.
 
 ```{.python .input #hf-models-gemma-compare}
 %%tab pytorch
@@ -1774,13 +1776,14 @@ if GPU:
           + ', '.join(f'{v / n**2:.2f} at {n:,}' for n, v in excess.items()))
 ```
 
-Up to 16,384 tokens the prediction holds. The peak of the reference exceeds
-that of the fused run by 0.015 GiB at 4,096 tokens and by 0.25 GiB at
-16,384, which is $n^2$ bytes both times. At 32,768 tokens the excess is 1.15
-GiB, 15% more than the mask. At 65,536 tokens the fused prefill peaks at 7.7
-GiB above the weights, and the reference runs out of memory on the 24 GB of
-this GPU. The mask by itself does not explain that failure, since 4 GiB of
-mask next to 7.7 GiB of prefill and 8.6 GiB of weights would still fit.
+Up to 16,384 tokens the prediction holds. The ratio is 0.96 at 4,096
+tokens, where the mask is only 16 MiB and the shortfall less than 1 MiB, and
+1.00 at 16,384, where the mask is 0.25 GiB. At 32,768 tokens it is 1.15: the
+reference needs 15% more than the mask. At 65,536 tokens the fused prefill
+peaks at 7.7 GiB above the weights, and the reference runs out of memory on
+the 24 GB of this GPU. The mask by itself does not explain that failure,
+since 4 GiB of mask next to 7.7 GiB of prefill and 8.6 GiB of weights would
+still fit.
 
 The rest is in how the kernel uses the mask. On every call, PyTorch's fused
 attention turns a Boolean mask into an additive one in the dtype of the
@@ -1886,11 +1889,11 @@ Read the last column of the two tables first. One step of Qwen3.5-2B reads
 3.8 GB, which takes a little over 4 ms at the measured bandwidth, and one
 step of Gemma 4 E2B reads 4.6 GB, or 5 ms. If the bound decided, the models
 would write about 240 and 200 tokens per second. The wall times are far from
-it: about 26 ms for Qwen3.5-2B, six times its bound, and about 45 ms for
-Gemma 4 E2B, nine times its bound. The quartiles lie within about a
+it: about 26 ms for Qwen3.5-2B, six times its bound, and 45 to 49 ms for
+Gemma 4 E2B, nine to ten times its bound. The quartiles lie within about a
 millisecond of the median, so the gap is no accident of timing. The column
 `busy` says where the time is not. The GPU works for about 6 ms of Qwen's 26
-and for 10 to 20 ms of Gemma's 45, and waits for the rest.
+and for 10 to 20 ms of Gemma's 45 to 49, and waits for the rest.
 
 The lists under the tables carry the compiler's names for kernels. Only two
 of them matter here: `gemvx` multiplies a matrix by a vector, and `fmha` is
@@ -1934,15 +1937,15 @@ if GPU:
         assert at[m]['matmul_ms'] <= 2 * weights_ms
 ```
 
-*The host sets the pace.* The GPU is busy for about a quarter of a step, and
-for up to about 40% of Gemma's at 16,384 tokens. For the rest of the step, a
-GPU that can draw 450 watts waits for one CPU core to work its way through
-Python. A step launches about 1,500 kernels for Qwen3.5-2B and about 3,200
-for Gemma 4 E2B, and the wall time divided by the launches is about 15 µs
-for both (14 to 18). That is the cost of issuing one operation from Python
-(:numref:`subsec_comp-overhead`), with the library's own Python around it.
-Gemma's steps take longer because they launch twice as many kernels, and the
-size of the model has little to do with it.
+*The host sets the pace.* The GPU is busy for a fifth to a quarter of a
+step, and for up to about 40% of Gemma's at 16,384 tokens. For the rest of
+the step, a GPU that can draw 450 watts waits for one CPU core to work its
+way through Python. A step launches about 1,500 kernels for Qwen3.5-2B and
+about 3,200 for Gemma 4 E2B, and the wall time divided by the launches is
+about 15 µs for both (14 to 18). That is the cost of issuing one operation
+from Python (:numref:`subsec_comp-overhead`), with the library's own Python
+around it. Gemma's steps take longer because they launch twice as many
+kernels, and the size of the model has little to do with it.
 
 This also explains the 30 ms per token of the cached `generate` that looked
 suspicious earlier. The cache removed most of the GPU's work, and the GPU's
@@ -2041,13 +2044,16 @@ for ax, panel, ylabel, xlim, ylim, solid, styles in (  # both axes log
                  axes=ax, legend_loc='upper left')
 ```
 
-On the left, the measured points lie on the lines derived from the
+Both panels have logarithmic axes, so equal distances on them are equal
+ratios. On the left, the measured points lie on the lines derived from the
 configuration. The hybrid starts nearly flat, just above its 18.8 MiB of
 state, and crosses below its dashed all-attention line at 536 tokens. On the
 right, the three curves of each model keep one order at every context: the
 dotted bound $R(n) / \beta$ lies below the dashed GPU time, and the GPU time
-far below the solid wall time. For Qwen3.5-2B the two lower curves, at 4 and
-6 ms, nearly coincide at this scale.
+below the solid wall time. For Qwen3.5-2B all three are level, at about 4, 6
+and 26 ms, and the widest gap is the one between the GPU and the clock. Only
+one curve of the panel bends. Gemma's GPU time doubles towards 16,384
+tokens, and the wall time above it does not notice.
 
 Everything in this section ran on modeling code that we did not write and
 have not read. Qwen3, the family before Qwen3.5, has attention in every
@@ -2069,8 +2075,9 @@ prefill, the largest term for a long prompt, we could only estimate, and
 only for the kernels in use. With fused kernels and an allocator that does
 not fragment, the GPU confirmed the memory to within a few percent. For the
 speed of writing the configuration gives only a bound, 4 to 5 ms per token
-here. The eager loop of Transformers takes 26 to 45 ms, because the host
-spends about 15 µs on each of thousands of kernel launches.
+here. The eager loop of Transformers takes 26 ms for Qwen3.5-2B and 45 to
+49 ms for Gemma 4 E2B, because the host spends about 15 µs on each of
+thousands of kernel launches.
 
 ## Exercises
 
@@ -2187,12 +2194,14 @@ spends about 15 µs on each of thousands of kernel launches.
        causal rule as a Boolean mask of shape $(n, n)$. Measure the peak
        memory of each call and fit the difference to $c_2 n^2 + c_1 n$
        bytes. Is $c_2$ the two bytes per pair of the text?
-    1. Inside `d2l.reference_kernels`, measure the peak memory of a Gemma 4
-       E2B prefill at 8,192, 16,384 and 32,768 tokens, and subtract the
-       peak of the fused run. The text says that the peak is reached in a
-       double-wide MLP at the shorter lengths and in the attention of a
-       sliding layer at the longest. Check this with forward hooks that
-       record the peak memory inside each attention module and each MLP.
+    1. For a prefill of Gemma 4 E2B, the comparison in the text prints the
+       reference's peak minus the fused one as 1.00 $n^2$ bytes at 16,384
+       tokens and as 1.15 $n^2$ at 32,768. The text explains the step by
+       the place of the peak: a double-wide MLP at the shorter length, the
+       attention of a sliding layer at the longer. Check this inside
+       `d2l.reference_kernels` with forward hooks that record the peak
+       memory within each attention module and each MLP, at 16,384, 24,576
+       and 32,768 tokens. On which side of the step does 24,576 fall?
     1. Predict the longest prompt that the reference code can prefill on a
        GPU with 24 GB, then find it by a search in steps of 4,096 tokens.
 
@@ -2508,10 +2517,17 @@ of 15 GiB? And for Gemma 4 E2B, with 8.621 GiB and 0.467 GiB?
 :::
 
 ::: {.slide title="A Window Mask Takes n² Bytes; Flex Attention Compiles It Away"}
-@!hf-models-gemma-compare
+Gemma 4 E2B, peak memory of a prefill above the weights, in GiB:
 
-- Reference: a mask tensor, one byte per pair of positions: 0.25 GiB at
-  16,384 tokens, 4 GiB at 65,536.
+| prompt tokens $n$ | fused | reference | difference / $n^2$ bytes | fused is faster by |
+|---|---|---|---|---|
+| 4,096 | 0.48 | 0.49 | 0.96 | 1.3× |
+| 16,384 | 1.9 | 2.2 | 1.00 | 1.9× |
+| 32,768 | 3.8 | 5.0 | 1.15 | 2.5× |
+| 65,536 | 7.7 | out of memory | | |
+
+- Reference: a mask tensor, one byte per pair of positions. Up to 16,384
+  tokens the difference is the mask alone.
 - In each call the attention kernel adds a copy at 2 bytes per pair:
   $3n^2$ bytes, 12 GiB at 65,536 tokens. Out of memory on 24 GB.
 - Flex attention: the mask is a function inside the kernel; empty tiles
@@ -2540,8 +2556,9 @@ multiplied; cache read; state $S$ read and written; $\beta$ bandwidth.
 
 ::: {.col}
 - Left: the measured points lie on the derived lines.
-- Right: wall time (solid), GPU (the *device*) busy (dashed), bytes read /
-  $\beta$ (dotted). Qwen3.5-2B: about 26, 6 and 4 ms.
+- Right, on a log scale: wall time (solid), GPU (the *device*) busy
+  (dashed), bytes read / $\beta$ (dotted). Qwen3.5-2B: about 26, 6 and
+  4 ms.
 - *Eager*: Python on the host issues every operation, about 1,500 and
   3,200 launches per step, some 15 µs each.
 :::

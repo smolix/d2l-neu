@@ -7123,9 +7123,12 @@ d2l.DATA_HUB['lm-enc-bert-sweep-v2'] = (  # at least 300 steps per run
 d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
     d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
     '36365804df9df70b812f52595ee6d092639285c1')
-d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # D2L_RERUN=bert-tagging
+d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # sentences alone, lr 5e-5
     d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v1.json',
     'f0f0f41d18ed997462891d0c6dece556ad57b680')
+d2l.DATA_HUB['lm-enc-bert-tagging-v2'] = (  # D2L_RERUN=bert-tagging
+    d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v2.json',
+    'f527097b8650ace236226a4cda001fd99b5fce79')
 d2l.DATA_HUB['lm-enc-bert-decoder-v1'] = (  # D2L_RERUN=bert-decoder
     d2l.LM_DATA_URL + 'lm-enc-bert-decoder-v1.json',
     '22b140629d3aa486a601068dce61b8a0f0301beb')

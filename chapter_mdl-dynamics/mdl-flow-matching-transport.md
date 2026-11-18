@@ -253,105 +253,7 @@ zero. Denoising score matching has the same structure, with the score of the
 noising kernel as the per-sample quantity and the marginal score as its
 posterior mean.
 
-### Example: Two Points in One Dimension
-:label:`subsec_mdl-fm-two-point`
-
-Every object of the last two subsections has a closed form for the two-point
-data set of the opening, and the closed form shows the failure that
-:numref:`sec_mdl-rectified-flow` repairs. The data are $x_0 = \pm a$ with
-probability $\tfrac12$ each, with $a = 2$: the two modes of the chapter's running mixture with
-their width removed. The noise is $\epsilon \sim \mathcal{N}(0, 1)$, drawn
-independently of $x_0$. The simplest blob is a point sliding along a line,
-$x_t = (1 - t)\, x_0 + t\, \epsilon$, with velocity
-$\dot{x}_t = \epsilon - x_0$.
-
-Take the data point as the conditioning variable, $\mathbf{z} = x_0$. Given
-$x_0$, the position $x_t$ is $\mathcal{N}((1 - t)\, x_0, t^2)$, a positive
-density for $t > 0$, so the proposition applies. Eliminating
-$\epsilon = (x - (1 - t)\, x_0)/t$ expresses the velocity as a function of
-the current position, $u_t(x \mid x_0) = (x - x_0)/t$. Run backward in time,
-the particle heads for its data point at the speed that arrives exactly at
-$t = 0$.
-
-To average this velocity we need the posterior of $x_0$ at a point $x$. The
-posterior odds of $+a$ against $-a$ at $x$ are the ratio of the two Gaussian
-densities. In the exponent the terms $x^2$ and $(1 - t)^2 a^2$ cancel and
-only the cross term survives, so the odds are
-$\exp\big(2 (1 - t)\, a x / t^2\big)$ and the posterior mean is
-$\mathbb{E}[x_0 \mid x_t = x] = a \tanh\big((1 - t)\, a x / t^2\big)$. The
-marginal velocity is therefore
-
-$$
-u_t(x) = \frac{x - a \tanh\!\big(\frac{(1 - t)\, a x}{t^2}\big)}{t}.
-$$
-:eqlabel:`eq_mdl-two-point-velocity`
-
-Run backward in time, the cloud at $x$ heads for the average of the two
-targets, weighted by how plausible each is from $x$, at the speed that
-arrives on time. At $(t, x) = (0.5, 0.5)$ the velocity is $-2.86$; at
-$(0.7, -1)$ it is $0.97$.
-Three properties can be read off :eqref:`eq_mdl-two-point-velocity`, and
-:numref:`fig_mdl-dyn-two-point-flow` draws them.
-
-* **At $t = 1$ the field is $u_1(x) = x$.** The noise sample carries no
-  information about its target, so the posterior mean is the data mean $0$.
-  One Euler step from $t = 1$ to $t = 0$, $x \mapsto x - u_1(x)$, sends
-  *every* sample to $0$. This holds for any data under independent pairing:
-  $\mathbf{u}_1(\mathbf{x}) = \mathbb{E}[\boldsymbol{\epsilon} - \mathbf{x}_0 \mid \boldsymbol{\epsilon} = \mathbf{x}] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$,
-  so one step of the exact field lands on the data mean.
-* **The origin first attracts, then repels.** As $t$ falls, a sampler moves
-  against $u_t$, so a positive slope at the origin pulls particles toward
-  it and a negative slope pushes them away. The slope is
-  $\partial_x u_t(0) = \big(1 - (1 - t)\, a^2/t^2\big)/t$: $+0.56$ at
-  $t = 0.9$, zero at $t^* = 2\sqrt{2} - 2 \approx 0.83$ (the root of
-  $(1 - t)\, a^2 = t^2$), $-0.31$ at $t = 0.8$ and $-14$ at $t = 0.5$.
-  Particles near $0$ drift toward $0$ until $t$ falls to $t^*$ and leave for
-  a mode only later, so the flow chooses a mode late. Far from the origin the
-  $\tanh$ saturates and $u_t \approx (x \mp a)/t$, the conditional velocity
-  itself.
-* **The floor $C$ is finite although the conditional velocity is
-  unbounded.** Here
-  $C = \mathbb{E}_t \mathbb{E}_x \textrm{Var}(x_0 \mid x_t)/t^2$
-  with $\textrm{Var}(x_0 \mid x_t = x) = a^2 \operatorname{sech}^2\big((1 - t)\, a x/t^2\big)$,
-  which is tiny except near the origin, where little mass remains as
-  $t \to 0$ (:exref:`ex_mdl-flow-matching-transport-late-decisions`).
-
-![Two data points at $\pm 2$ and standard Gaussian noise with independent pairing; sampling runs from the noise at $t=1$ (right) to the data at $t=0$ (left). (a) Trajectories of the exact marginal flow over the one-standard-deviation bands of the two conditional blobs: until $t$ falls to $t^*=0.83$ every trajectory moves toward $0$, and those that start near $0$ leave for a mode only below $t\approx 0.6$. (b) The velocity $u_t(x)$ is $x$ at $t=1$, its slope at the origin turns negative and steep as $t$ falls, and it tends to $(x\mp 2)/t$ away from the origin.](../img/mdl-dyn-two-point-flow.svg)
-:label:`fig_mdl-dyn-two-point-flow`
-
-The cell compares the closed form with a direct posterior average at three
-points, takes the slope at the origin by a finite difference, and applies
-one Euler step of the exact field to $\epsilon = \pm 1$.
-
-```{.python .input #mdl-flow-matching-transport-example-two-points-in-one-dimension}
-a = 2.0                                       # data at -a and +a, noise N(0, 1)
-def u_two_point(x, t):                        # closed form of the marginal velocity
-    return (x - a * np.tanh((1 - t) * a * x / t**2)) / t
-
-def u_posterior(x, t):                        # posterior average of (x - x0)/t
-    x0 = np.array([-a, a])
-    w = np.exp(-(x - (1 - t) * x0)**2 / (2 * t**2))   # likelihood of x given x0
-    return (x - (w * x0).sum() / w.sum()) / t
-
-points = [(0.5, 0.5), (0.7, -1.0), (0.2, 0.1)]
-print('closed form - posterior average:',
-      max(abs(u_two_point(x, t) - u_posterior(x, t)) for t, x in points))
-ts = np.array([0.9, 0.8, 0.5])
-print('slope at the origin at t = 0.9, 0.8, 0.5:',
-      ((u_two_point(1e-6, ts) - u_two_point(-1e-6, ts)) / 2e-6).round(2),
-      '   t* =', round(2 * np.sqrt(2) - 2, 4))
-eps = np.array([-1.0, 1.0])
-print('one Euler step from t = 1 to 0 from', eps, 'lands at', eps - u_two_point(eps, 1.0))
-```
-
-The numbers are those of the formula, and one Euler step from either start
-lands on $0$, the data mean. This is the limit of the construction. The
-conditional paths are straight, but the marginal flow is curved, and one
-step collapses every sample onto the mean. How to pair noise with data so
-that the flow comes out straight is the subject of
-:numref:`sec_mdl-rectified-flow`. Before that, we settle how the velocity is
-related to the score of the previous section.
-
+<!-- WRITER: this subsection moved here from after the two-point example (FMT-4); it now needs an introduction as the first family of paths, e.g. "The Gaussian paths of the previous section are probability paths of this kind, and on them the velocity is not a new object". The check cell #mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function is cut; its check becomes a part of the target-conditioning exercise. -->
 ### Score, Noise, and Velocity
 :label:`sec_mdl-score-velocity-dictionary`
 
@@ -469,33 +371,108 @@ network trained on any row defines all of them. Which row is easiest to learn
 is a separate question, about the variance of the training targets at the two
 ends of the path (:exref:`ex_mdl-flow-matching-transport-target-conditioning`).
 
-As a check of the algebra, the cell computes the velocity of the running
-mixture (components at $\pm 2$ with variance $0.25$) at $t = 0.4$ on the
-cosine path twice: from the posterior mean, and from
-:eqref:`eq_mdl-score-velocity` with the analytic score.
-
-```{.python .input #mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function}
-t = 0.4                                       # one fixed time, cosine schedule
-alpha, sigma = np.cos(np.pi * t / 2), np.sin(np.pi * t / 2)
-dalpha, dsigma = -np.pi / 2 * sigma, np.pi / 2 * alpha
-grid = np.linspace(-4.0, 4.0, 201)
-means, var0 = np.array([-2.0, 2.0]), 0.25     # the running mixture
-vart = alpha**2 * var0 + sigma**2             # noised component variance
-w = np.stack([np.exp(-(grid - alpha * m)**2 / (2 * vart)) for m in means])
-w /= w.sum(0)                                 # posterior mode responsibilities
-x0_hat = (w * np.stack([m + alpha * var0 / vart * (grid - alpha * m)
-                        for m in means])).sum(0)          # E[x_0 | x_t]
-u_posterior = dalpha * x0_hat + dsigma / sigma * (grid - alpha * x0_hat)
-score = (w * np.stack([(alpha * m - grid) / vart for m in means])).sum(0)
-u_dictionary = (dalpha / alpha) * grid \
-    - (sigma * dsigma - sigma**2 * dalpha / alpha) * score
-print(f'max |u_posterior - u_dictionary| on [-4, 4]: '
-      f'{np.abs(u_posterior - u_dictionary).max():.1e}')
-```
-
-The two routes agree to rounding error. A noise predictor is therefore also
+A noise predictor is therefore also
 a velocity field: the samplers of this section apply to it after the
 conversion of :numref:`tab_mdl-score-noise-velocity`.
+
+### Example: Two Points in One Dimension
+:label:`subsec_mdl-fm-two-point`
+
+<!-- WRITER: after the FMT-4 move, "the last two subsections" are the CFM theorem and "Score, Noise, and Velocity"; the objects meant are those of "Probability Paths and Velocity Fields" and the CFM theorem. -->
+Every object of the last two subsections has a closed form for the two-point
+data set of the opening, and the closed form shows the failure that
+:numref:`sec_mdl-rectified-flow` repairs. The data are $x_0 = \pm a$ with
+probability $\tfrac12$ each, with $a = 2$: the two modes of the chapter's running mixture with
+their width removed. The noise is $\epsilon \sim \mathcal{N}(0, 1)$, drawn
+independently of $x_0$. The simplest blob is a point sliding along a line,
+$x_t = (1 - t)\, x_0 + t\, \epsilon$, with velocity
+$\dot{x}_t = \epsilon - x_0$.
+
+Take the data point as the conditioning variable, $\mathbf{z} = x_0$. Given
+$x_0$, the position $x_t$ is $\mathcal{N}((1 - t)\, x_0, t^2)$, a positive
+density for $t > 0$, so the proposition applies. Eliminating
+$\epsilon = (x - (1 - t)\, x_0)/t$ expresses the velocity as a function of
+the current position, $u_t(x \mid x_0) = (x - x_0)/t$. Run backward in time,
+the particle heads for its data point at the speed that arrives exactly at
+$t = 0$.
+
+To average this velocity we need the posterior of $x_0$ at a point $x$. The
+posterior odds of $+a$ against $-a$ at $x$ are the ratio of the two Gaussian
+densities. In the exponent the terms $x^2$ and $(1 - t)^2 a^2$ cancel and
+only the cross term survives, so the odds are
+$\exp\big(2 (1 - t)\, a x / t^2\big)$ and the posterior mean is
+$\mathbb{E}[x_0 \mid x_t = x] = a \tanh\big((1 - t)\, a x / t^2\big)$. The
+marginal velocity is therefore
+
+$$
+u_t(x) = \frac{x - a \tanh\!\big(\frac{(1 - t)\, a x}{t^2}\big)}{t}.
+$$
+:eqlabel:`eq_mdl-two-point-velocity`
+
+Run backward in time, the cloud at $x$ heads for the average of the two
+targets, weighted by how plausible each is from $x$, at the speed that
+arrives on time. At $(t, x) = (0.5, 0.5)$ the velocity is $-2.86$; at
+$(0.7, -1)$ it is $0.97$.
+Three properties can be read off :eqref:`eq_mdl-two-point-velocity`, and
+:numref:`fig_mdl-dyn-two-point-flow` draws them.
+
+* **At $t = 1$ the field is $u_1(x) = x$.** The noise sample carries no
+  information about its target, so the posterior mean is the data mean $0$.
+  One Euler step from $t = 1$ to $t = 0$, $x \mapsto x - u_1(x)$, sends
+  *every* sample to $0$. This holds for any data under independent pairing:
+  $\mathbf{u}_1(\mathbf{x}) = \mathbb{E}[\boldsymbol{\epsilon} - \mathbf{x}_0 \mid \boldsymbol{\epsilon} = \mathbf{x}] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$,
+  so one step of the exact field lands on the data mean.
+* **The origin first attracts, then repels.** As $t$ falls, a sampler moves
+  against $u_t$, so a positive slope at the origin pulls particles toward
+  it and a negative slope pushes them away. The slope is
+  $\partial_x u_t(0) = \big(1 - (1 - t)\, a^2/t^2\big)/t$: $+0.56$ at
+  $t = 0.9$, zero at $t^* = 2\sqrt{2} - 2 \approx 0.83$ (the root of
+  $(1 - t)\, a^2 = t^2$), $-0.31$ at $t = 0.8$ and $-14$ at $t = 0.5$.
+  Particles near $0$ drift toward $0$ until $t$ falls to $t^*$ and leave for
+  a mode only later, so the flow chooses a mode late. Far from the origin the
+  $\tanh$ saturates and $u_t \approx (x \mp a)/t$, the conditional velocity
+  itself.
+* **The floor $C$ is finite although the conditional velocity is
+  unbounded.** Here
+  $C = \mathbb{E}_t \mathbb{E}_x \textrm{Var}(x_0 \mid x_t)/t^2$
+  with $\textrm{Var}(x_0 \mid x_t = x) = a^2 \operatorname{sech}^2\big((1 - t)\, a x/t^2\big)$,
+  which is tiny except near the origin, where little mass remains as
+  $t \to 0$ (:exref:`ex_mdl-flow-matching-transport-late-decisions`).
+
+![Two data points at $\pm 2$ and standard Gaussian noise with independent pairing; sampling runs from the noise at $t=1$ (right) to the data at $t=0$ (left). (a) Trajectories of the exact marginal flow over the one-standard-deviation bands of the two conditional blobs: until $t$ falls to $t^*=0.83$ every trajectory moves toward $0$, and those that start near $0$ leave for a mode only below $t\approx 0.6$. (b) The velocity $u_t(x)$ is $x$ at $t=1$, its slope at the origin turns negative and steep as $t$ falls, and it tends to $(x\mp 2)/t$ away from the origin.](../img/mdl-dyn-two-point-flow.svg)
+:label:`fig_mdl-dyn-two-point-flow`
+
+The cell compares the closed form with a direct posterior average at three
+points, takes the slope at the origin by a finite difference, and applies
+one Euler step of the exact field to $\epsilon = \pm 1$.
+
+```{.python .input #mdl-flow-matching-transport-example-two-points-in-one-dimension}
+a = 2.0                                       # data at -a and +a, noise N(0, 1)
+def u_two_point(x, t):                        # closed form of the marginal velocity
+    return (x - a * np.tanh((1 - t) * a * x / t**2)) / t
+
+def u_posterior(x, t):                        # posterior average of (x - x0)/t
+    x0 = np.array([-a, a])
+    w = np.exp(-(x - (1 - t) * x0)**2 / (2 * t**2))   # likelihood of x given x0
+    return (x - (w * x0).sum() / w.sum()) / t
+
+points = [(0.5, 0.5), (0.7, -1.0), (0.2, 0.1)]
+print('closed form - posterior average:',
+      max(abs(u_two_point(x, t) - u_posterior(x, t)) for t, x in points))
+ts = np.array([0.9, 0.8, 0.5])
+print('slope at the origin at t = 0.9, 0.8, 0.5:',
+      ((u_two_point(1e-6, ts) - u_two_point(-1e-6, ts)) / 2e-6).round(2),
+      '   t* =', round(2 * np.sqrt(2) - 2, 4))
+eps = np.array([-1.0, 1.0])
+print('one Euler step from t = 1 to 0 from', eps, 'lands at', eps - u_two_point(eps, 1.0))
+```
+
+The numbers are those of the formula, and one Euler step from either start
+lands on $0$, the data mean. This is the limit of the construction. The
+conditional paths are straight, but the marginal flow is curved, and one
+step collapses every sample onto the mean. How to pair noise with data so
+that the flow comes out straight is the subject of
+:numref:`sec_mdl-rectified-flow`.
 
 ## Rectified Flow
 :label:`sec_mdl-rectified-flow`
@@ -996,7 +973,7 @@ network with `train_rf` on these fixed pairs.
 
 ```{.python .input #mdl-score-matching-diffusion-flow-one-reflow-round-measured}
 #@tab mxnet
-eps_pairs = np.random.standard_normal((8192, 2))     # noise endpoints, kept
+eps_pairs = rng.standard_normal((8192, 2))            # noise endpoints, kept
 x0_pairs = euler_path(net, eps_pairs, 32)[-1]         # the model's own endpoints
 X0, Eps = mnp.array(x0_pairs), mnp.array(eps_pairs)
 def model_pairs(n):                                   # the same pairs, never re-paired
@@ -1009,7 +986,7 @@ print(f'reflow loss, mean of the last 500 batches: {plateau2:.4f}')
 
 ```{.python .input #mdl-score-matching-diffusion-flow-one-reflow-round-measured}
 #@tab pytorch
-eps_pairs = np.random.standard_normal((8192, 2))     # noise endpoints, kept
+eps_pairs = rng.standard_normal((8192, 2))            # noise endpoints, kept
 x0_pairs = euler_path(net, eps_pairs, 32)[-1]         # the model's own endpoints
 X0, Eps = (torch.tensor(p, dtype=torch.float32) for p in (x0_pairs, eps_pairs))
 def model_pairs(n):                                   # the same pairs, never re-paired
@@ -1022,7 +999,7 @@ print(f'reflow loss, mean of the last 500 batches: {plateau2:.4f}')
 
 ```{.python .input #mdl-score-matching-diffusion-flow-one-reflow-round-measured}
 #@tab tensorflow
-eps_pairs = np.random.standard_normal((8192, 2))     # noise endpoints, kept
+eps_pairs = rng.standard_normal((8192, 2))            # noise endpoints, kept
 x0_pairs = euler_path(net, eps_pairs, 32)[-1]         # the model's own endpoints
 X0, Eps = (tf.constant(p, tf.float32) for p in (x0_pairs, eps_pairs))
 def model_pairs(n):                                   # the same pairs, never re-paired
@@ -1035,7 +1012,7 @@ print(f'reflow loss, mean of the last 500 batches: {plateau2:.4f}')
 
 ```{.python .input #mdl-score-matching-diffusion-flow-one-reflow-round-measured}
 #@tab jax
-eps_pairs = np.random.standard_normal((8192, 2))     # noise endpoints, kept
+eps_pairs = rng.standard_normal((8192, 2))            # noise endpoints, kept
 x0_pairs = euler_path(net, eps_pairs, 32)[-1]         # the model's own endpoints
 X0, Eps = jnp.asarray(x0_pairs, jnp.float32), jnp.asarray(eps_pairs, jnp.float32)
 def model_pairs(key, n):                              # the same pairs, never re-paired
@@ -1057,12 +1034,19 @@ cost that the proposition bounds.
 for K in (1, 2, 32):
     e1 = energy_distance(euler_path(net, z_eval, K)[-1], held_out)
     e2 = energy_distance(euler_path(net2, z_eval, K)[-1], held_out)
-    print(f'{K:2d} Euler step(s): energy distance  original {e1:.3f}  reflowed {e2:.3f}')
-x0_indep = moons[np.random.randint(0, len(moons), len(eps_pairs))]
+    print(f'{K:2d} Euler step(s): squared energy distance  original {e1:.3f}'
+          f'  reflowed {e2:.3f}')
+x0_indep = moons[rng.integers(0, len(moons), len(eps_pairs))]
 print(f'mean squared pair length: independent {np.mean(np.sum((eps_pairs - x0_indep)**2, 1)):.2f}'
       f', reflowed {np.mean(np.sum((eps_pairs - x0_pairs)**2, 1)):.2f}')
 ```
 
+<!-- WRITER: "more than a hundred times below" fails in some runs. 12 direct
+runs (training cells unchanged): reflowed one step 0.002-0.009, equal to the
+original's 32-step score to the printed digit or one unit of the third decimal
+in every run; original one step 0.648-0.717; ratio 73 to 350. Pair lengths
+3.93-4.06 against 0.26-0.28; chord gap 0.241-0.248 against 0.008-0.016; reflow
+loss 0.0014-0.0053. -->
 One Euler step of the reflowed model scores the same as thirty-two steps of
 the original, usually a few thousandths, and more than a hundred times below
 the original's single step. The reflowed network was trained to reproduce the
@@ -1187,17 +1171,18 @@ the two pairing costs by sorting samples.
 
 ```{.python .input #mdl-flow-matching-transport-couplings-and-the-wasserstein-distance}
 n = 200_000
-x0, eps = 2 * np.random.standard_normal(n), np.random.standard_normal(n)
+x0, eps = 2 * rng.standard_normal(n), rng.standard_normal(n)
 print(f'data N(0,4), noise N(0,1): independent pairing {np.mean((eps - x0)**2):.2f}, '
       f'sorted pairing {np.mean((np.sort(eps) - np.sort(x0))**2):.3f}')
-t = np.linspace(0, 1, 100_001)
-def kinetic_energy(s):                       # marginals N(0, s_t^2): u_t(x) = (s'/s) x
+
+def kinetic_energy(s, t):                    # marginals N(0, s_t^2): u_t(x) = (s'/s) x
     return np.sum(np.diff(s)**2 / np.diff(t))  # the integral of (ds/dt)^2
 
+t = np.linspace(0, 1, 100_001)
 for name, s in [('sorted, straight', 2 - t),
                 ('independent, straight', np.sqrt(4 * (1 - t)**2 + t**2)),
                 ('cosine path', np.sqrt(1 + 3 * np.cos(np.pi * t / 2)**2))]:
-    print(f'{name:22s} kinetic energy {kinetic_energy(s):.3f}')
+    print(f'{name:22s} kinetic energy {kinetic_energy(s, t):.3f}')
 ```
 
 The sorted straight flow attains $W_2^2 = 1$. The straight segments of the
@@ -1344,7 +1329,7 @@ def solve(q, ts, heun=False):                           # steps along grid ts
     return q
 grids = {'uniform': lambda K: np.linspace(1, 0, K + 1),     # equal steps in t
          'squared': lambda K: np.linspace(1, 0, K + 1)**2}  # dense near t = 0
-z = np.random.default_rng(0).standard_normal(8000)
+z = rng.standard_normal(8000)
 ref = solve(z, grids['uniform'](800), heun=True)        # fine reference
 nfes = [10, 20, 40, 80]                                 # Heun: n // 2 steps
 errs = {f'{m}, {g}': [np.abs(solve(z, grid(n // k), k == 2) - ref).mean()
@@ -1366,6 +1351,50 @@ every budget, and at $10$ evaluations its error, about $0.03$, is below
 Euler's on either grid. Euler moves the other way: the squared grid more
 than doubles its error. On this field, where the steps go matters more than
 the order of the solver.
+
+<!-- WRITER: new cell, read by the mechanism paragraph below. It carries the
+error of each coarse step to t = 0 along the exact flow (to first order: the
+step's local error times the gain dx(0)/dx(t) of a fine 400-step Heun path) and
+prints the share |sum_k c_k| / sum_k |c_k| that survives in the endpoint, per
+row and budget (10, 20, 40, 80), plus the share of the path length covered by
+t = 0.5. Measured, 12 direct runs (3 per tab, unseeded): Euler uniform
+0.11-0.12 at every budget; Heun uniform 0.58-0.59, 0.65-0.66, 0.70-0.71,
+0.72-0.73; Euler squared 0.30, 0.32, 0.34, 0.35; Heun squared 0.25, 0.35-0.36,
+0.40-0.41, 0.42; path share 0.09 in every run. So: about an eighth for Euler on
+equal steps, more than half (rising toward three quarters) for Heun on equal
+steps, about a third for Euler on the squared grid, a quarter to two fifths for
+Heun there. The paragraph should quote only these. The error table above now
+uses the unseeded rng: its third digit moves (Euler uniform 10 NFE
+0.0423-0.0443; Heun uniform 0.0786-0.0819; Heun squared 10 NFE 0.0334-0.0343);
+Heun's uniform-grid ratios per doubling are about 2.9, 3.3, 3.7. -->
+To see how much of the step errors cancels, the next cell carries the error
+$c_k$ of the $k$-th coarse step to $t = 0$ along the exact flow and prints the
+share $|\sum_k c_k| / \sum_k |c_k|$ that survives in the endpoint.
+
+```{.python .input #mdl-flow-matching-transport-solver-order-at-equal-cost-1}
+def exact_path(q, ts):                  # fine Heun path, and the gain dx(0)/dx(t)
+    qs = [np.stack([q, q + 1e-6])]      # the path and a close neighbor
+    for t1, t2 in zip(ts[:-1], ts[1:]):
+        qs.append(solve(qs[-1], [t1, t2], heun=True))
+    qs = np.array(qs)
+    return qs[:, 0], (qs[-1, 1] - qs[-1, 0]) / (qs[:, 1] - qs[:, 0])
+
+def surviving(ts, qs, gain, steps, heun):     # |sum_k c_k| / sum_k |c_k|
+    j = np.arange(0, len(ts), (len(ts) - 1) // steps)    # coarse nodes
+    c = np.array([gain[b] * (solve(qs[a], ts[[a, b]], heun) - qs[b])
+                  for a, b in zip(j[:-1], j[1:])])      # step error, carried to 0
+    return np.abs(c.sum(0)).mean() / np.abs(c).sum(0).mean()
+
+paths = {g: exact_path(z, grid(400)) for g, grid in grids.items()}   # 400 fine steps
+print(f'{"surviving share":16s}' + ''.join(f'{n:8d}' for n in nfes))
+for g, (qs, gain) in paths.items():
+    for m, k in (('Euler', 1), ('Heun', 2)):
+        print(f'{m + ", " + g:16s}' + ''.join(
+            f'{surviving(grids[g](400), qs, gain, n // k, k == 2):8.2f}' for n in nfes))
+d = np.abs(np.diff(paths['uniform'][0], axis=0))    # |fine step| along each path
+share = (d[:200].sum(0) / d.sum(0)).mean()           # first 200 steps: t from 1 to 0.5
+print(f'share of the path length covered by t = 0.5: {share:.2f}')
+```
 
 Two properties of the field account for the table. By $t = 0.5$ the paths
 have covered less than a tenth of their length, because for most of that
@@ -1786,9 +1815,7 @@ $$\mathbf u_t(\mathbf x)=\frac{\dot\alpha_t}{\alpha_t}\mathbf x-\Big(\sigma_t\do
 
 - If $\alpha_t^2+\sigma_t^2=1$: $\mathbf u_t=\frac{\dot\alpha_t}{\alpha_t}(\mathbf x+\nabla\log p_t)$,
   the probability-flow velocity.
-- Two routes on the running mixture, no model fitted:
-
-@!mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function
+<!-- WRITER: the check cell shown here was cut (FMT-4); this slide moves before the two-point slides, as the body did. -->
 :::
 
 ::: {.slide title="Straight Segments That Cross Produce a Curved Flow"}
@@ -1933,6 +1960,7 @@ Exact-score probability-flow ODE of the running mixture; mean endpoint error:
 | $t=u^2$, Euler | 0.11 | 0.05 | 0.026 |
 | $t=u^2$, Heun | 0.03 | 0.014 | 0.005 |
 
+<!-- WRITER: the bullet below is false for Heun on t = u^2 (surviving share 0.25-0.42, Euler uniform 0.11-0.12, Heun uniform 0.58-0.73, Euler squared 0.30-0.35); new cell #mdl-flow-matching-transport-solver-order-at-equal-cost-1 prints the shares. -->
 - Step errors of opposite sign cancel: Euler's on uniform steps, Heun's on $t=u^2$.
 :::
 

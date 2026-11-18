@@ -416,9 +416,15 @@ d2l.plot(lengths, mems, 'sequence length n', 'XLA temp memory (MiB)',
          legend=['full matrix', 'chunked'], xscale='log', yscale='log')
 ```
 
-At $n = 16{,}384$ the full-matrix implementation needs about 2 GiB of
-scratch memory. The chunked one needs more than an order of magnitude less,
-and the gap doubles with every further doubling of $n$.
+At $n = 16{,}384$ the full-matrix implementation needs 2 GiB of scratch
+memory or a little more, the score matrix of our count. The chunked one, as
+the printed line shows, needs more than an order of magnitude less, and the
+gap doubles with every further doubling of $n$.
+
+:begin_tab:`pytorch`
+The full-matrix line exceeds 2 GiB by about 256 MiB: the reference also
+holds its boolean causal mask, one byte for each of the $n^2$ pairs.
+:end_tab:
 
 ### Memory Traffic and Fused Kernels
 
@@ -483,7 +489,10 @@ heads of width 64 in half precision at $n = 8192$. The memory can be
 predicted before running. The naive reference holds two $n \times n$
 half-precision buffers for each of the 16 heads, $16 \cdot 4n^2$ bytes
 $= 4$ GiB, while the fused kernel needs little beyond its output,
-$2 \cdot 8 \cdot 8192 \cdot 64$ numbers of two bytes, or 16 MiB.
+$2 \cdot 8 \cdot 8192 \cdot 64$ numbers of two bytes, or 16 MiB. A third
+run switches the mask off. The fused kernel then computes every tile, as
+the naive reference does, and the comparison separates what skipping tiles
+saves from what the schedule saves.
 
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab pytorch
@@ -527,18 +536,23 @@ for name, f in [('naive', causal_attention), ('fused', fused_attention),
 
 The prediction holds: about 4 GiB of scratch memory for the naive
 reference, and for the fused kernel a small multiple of its 16 MiB output.
-The fused kernel is also several times faster. Part of the gap has a simple
-cause: a causal kernel skips the tiles above the diagonal, about half of
-them, which accounts for a factor of two at most.
+The fused kernel is also several times faster. One might suspect the mask
+of doing the work, since a causal kernel skips the tiles above the
+diagonal, about half of them. The third line settles this. Skipping saves
+about a factor of 1.5, not the full two: the causal kernel does half the
+arithmetic but at a lower rate. And without the mask, computing exactly as
+many scores as the naive reference, the fused kernel is still several times
+faster. The tiles explain a little of the gap.
 
-The rest is traffic, and the hardware numbers above show it. The causal
-arithmetic of the fused kernel, about $1.4 \times 10^{11}$ operations, would
-take 0.8 ms at the card's 16-bit peak, and the measured time is not far
-above that. The kernel runs at more than half of peak, so its arithmetic
-sets its pace. The naive reference moves 2 GiB with every pass over its 16
-score matrices, about 2.4 ms per pass, and its measured time is that of
-about four passes or more; its arithmetic would fill less than a fifth of
-that time at peak. Naive attention spends most of its time writing and
+The rest is traffic, and the hardware numbers above show it. Without the
+mask the fused kernel performs
+$4 \cdot 16 \cdot n^2 \cdot 64 \approx 2.7 \times 10^{11}$ operations, which
+would take 1.7 ms at the card's 16-bit peak, and the measured time is close
+to that. Its arithmetic sets its pace;
+memory hardly enters. The naive reference moves 2 GiB with every pass over
+its 16 score matrices, about 2.4 ms per pass, and its measured time is that
+of about four passes or more, while the same arithmetic would fill less
+than a fifth of it. Naive attention spends most of its time writing and
 reading a matrix that it never needed to keep.
 
 :begin_tab:`pytorch`
@@ -942,10 +956,10 @@ $2 \cdot 8 \cdot 8192 \cdot 64 \cdot 2$ B $= 16$ MiB.
 
 @!attention-at-scale-the-bottleneck-is-memory-traffic
 
-- Fused: $1.4 \times 10^{11}$ causal FLOPs, 0.8 ms at 165 TFLOP/s; above
-  half of peak.
+- Fused, no mask: $2.7 \times 10^{11}$ FLOPs, 1.7 ms at 165 TFLOP/s;
+  measured close to that.
 - Naive: 2 GiB per pass over the scores, 2.4 ms; about four passes or more.
-- Skipped tiles above the diagonal: a factor of two at most.
+- Skipping the tiles above the diagonal: about 1.5×, not 2×.
 
 ::: {.d2l-note}
 Naive attention spends most of its time moving a matrix it never needed to

@@ -102,11 +102,13 @@ not: first the encoder, then the encoder--decoder.
 
 ### A Bidirectional Encoder
 
-The encoder differs from the `CharLM` of :numref:`sec_transformer-block`
-in one respect: its blocks receive no mask, so every token attends to
-every token. Attention is permutation equivariant
-(:numref:`sec_positional-information`), so the model must still supply
-positions, and the learned position table stays.
+The encoder differs from the GPT of :numref:`sec_gpt` in two respects.
+Its blocks receive no mask unless one is passed, so every token attends
+to every token. And since `d2l.TransformerBlock` applies no RoPE, the
+positions enter through a learned table added to the token embeddings;
+RoPE would work as well. Attention is permutation equivariant
+(:numref:`sec_positional-information`), so some position signal is
+needed.
 
 ```{.python .input #encoders-decoders-a-bidirectional-encoder-in-a-dozen-lines}
 %%tab pytorch
@@ -179,7 +181,7 @@ are the masked bytes, and $-100$ at every other position; `d2l.train_steps`
 of :numref:`sec_test_models` leaves positions with this label out of the
 cross-entropy, so it trains on :eqref:`eq_mlm`, averaged over the masked
 positions. `MaskedLM` adds an output head, tied to the embedding as in
-:numref:`sec_transformer-block`.
+:numref:`sec_gpt`.
 
 ```{.python .input #encoders-decoders-the-masked-token-objective}
 %%tab pytorch

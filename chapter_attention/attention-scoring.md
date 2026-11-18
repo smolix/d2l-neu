@@ -121,7 +121,7 @@ nats, and a one-hot distribution has entropy $0$.
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1}
 %%tab pytorch
-def softmax_weights(d, scale, num_keys=64, num_queries=256):
+def softmax_weights(d, scale, num_keys=64, num_queries=2048):
     """Log-weights of random queries over random keys, scores scaled."""
     q = torch.randn(num_queries, d)
     keys = torch.randn(num_queries, num_keys, d)
@@ -130,6 +130,9 @@ def softmax_weights(d, scale, num_keys=64, num_queries=256):
 
 def entropy(log_alpha):
     return -(log_alpha.exp() * log_alpha).sum(-1).mean().item()
+
+def largest_weight(log_alpha):
+    return log_alpha.exp().max(-1).values.mean().item()
 
 def jacobian_norm(log_alpha):
     """Mean Frobenius norm of the Jacobian diag(alpha) - alpha alpha^T."""
@@ -140,7 +143,7 @@ def jacobian_norm(log_alpha):
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1}
 %%tab jax
-def softmax_weights(d, scale, num_keys=64, num_queries=256):
+def softmax_weights(d, scale, num_keys=64, num_queries=2048):
     """Log-weights of random queries over random keys, scores scaled."""
     q = jax.random.normal(d2l.get_key(), (num_queries, d))
     keys = jax.random.normal(d2l.get_key(), (num_queries, num_keys, d))
@@ -149,6 +152,9 @@ def softmax_weights(d, scale, num_keys=64, num_queries=256):
 
 def entropy(log_alpha):
     return float(-(jnp.exp(log_alpha) * log_alpha).sum(-1).mean())
+
+def largest_weight(log_alpha):
+    return float(jnp.exp(log_alpha).max(-1).mean())
 
 def jacobian_norm(log_alpha):
     """Mean Frobenius norm of the Jacobian diag(alpha) - alpha alpha^T."""
@@ -180,13 +186,24 @@ what this does to the gradient that reaches the scores:
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2}
 %%tab pytorch, jax
-for d in (4, 64, 512):
-    unscaled = jacobian_norm(softmax_weights(d, 1.0))
-    scaled = jacobian_norm(softmax_weights(d, 1 / math.sqrt(d)))
-    print(f'd = {d:3d}: Jacobian norm {unscaled:.3f} (unscaled), '
-          f'{scaled:.3f} (scaled)')
+print('      entropy (nats)    largest weight     Jacobian norm')
+print('  d' + '   unscaled scaled' * 3)
+for d in (4, 16, 64, 128, 512):
+    stats = [(entropy(la), largest_weight(la), jacobian_norm(la))
+             for la in (softmax_weights(d, 1.0),
+                        softmax_weights(d, 1 / math.sqrt(d)))]
+    print(f'{d:3d}' + ''.join(f'   {u:8.3f} {s:6.3f}'
+                              for u, s in zip(*stats)))
 ```
 
+<!-- WRITER: the cell (id kept) now prints a table for d = 4, 16, 64, 128, 512 (2,048 random queries,
+64 keys each): entropy, mean largest weight, Jacobian norm, unscaled and scaled. Dev runs (PyTorch, 5 repeats;
+JAX agrees; the notebook runs of both tabs fall in these ranges): scaled entropy 3.68-3.72 at every d; unscaled entropy 2.8, 1.4, 0.55-0.60, 0.37-0.39, 0.18-0.19;
+unscaled largest weight 0.27, 0.58, 0.78-0.80, 0.85-0.86, 0.92-0.93 (scaled about 0.11 at every d); Jacobian
+norm scaled 0.178-0.184 at every d; unscaled 0.256-0.259, 0.288-0.297 (the rise), 0.207-0.222, 0.161-0.168,
+0.090-0.096. So the unscaled norm rises from d = 4 to d = 16, crosses the scaled value between d = 64 and
+d = 128, and is about half of it at d = 512. The 80% and 90% of the paragraph before the cell are now printed
+(0.80 at 64, 0.93 at 512); quote the table, and move the reading of the largest weight after the cell. -->
 With scaling, the norm is the same at every dimension. Without it, the
 norm first *rises*: at small $d$ the unscaled weights concentrate on a few
 keys, and the Jacobian is largest when two keys share the weight (an
@@ -310,29 +327,18 @@ We try both on a minibatch of two sequences with two queries and four
 keys each, and with valid lengths $2$ and $3$. The weights beyond the
 valid length should be zero, and each row should still sum to $1$.
 
+<!-- WRITER: the demo now runs on equal scores (zeros), so the reader can predict the output before the
+cell: rows (1/2, 1/2, 0, 0) for the first sequence and (1/3, 1/3, 1/3, 0) for the second; say so in the
+sentence above. The per-query-length cell (-3) is cut; its shape note stays in padding_mask's comment. -->
+
 ```{.python .input #attention-scoring-the-masked-softmax-operation-2}
 %%tab pytorch
-masked_softmax(torch.rand(2, 2, 4), padding_mask(torch.tensor([2, 3]), 4))
+masked_softmax(torch.zeros(2, 2, 4), padding_mask(torch.tensor([2, 3]), 4))
 ```
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-2}
 %%tab jax
-masked_softmax(jax.random.uniform(d2l.get_key(), (2, 2, 4)),
-               padding_mask(jnp.array([2, 3]), 4))
-```
-
-With one valid length per query, each row is cut at its own length:
-
-```{.python .input #attention-scoring-the-masked-softmax-operation-3}
-%%tab pytorch
-masked_softmax(torch.rand(2, 2, 4),
-               padding_mask(torch.tensor([[1, 3], [2, 4]]), 4))
-```
-
-```{.python .input #attention-scoring-the-masked-softmax-operation-3}
-%%tab jax
-masked_softmax(jax.random.uniform(d2l.get_key(), (2, 2, 4)),
-               padding_mask(jnp.array([[1, 3], [2, 4]]), 4))
+masked_softmax(jnp.zeros((2, 2, 4)), padding_mask(jnp.array([2, 3]), 4))
 ```
 
 ### Causal Masking
@@ -372,22 +378,9 @@ def causal_mask(num_queries, num_keys=None):  #@save
     return j <= i + (num_keys - num_queries)
 ```
 
-On six random scores, the masked weights form a lower triangle:
-
-```{.python .input #attention-scoring-causal-masking-1}
-%%tab pytorch
-scores = torch.randn(1, 6, 6)
-d2l.show_heatmaps(masked_softmax(scores, causal_mask(6))[None],
-                  xlabel='Keys', ylabel='Queries')
-```
-
-```{.python .input #attention-scoring-causal-masking-1}
-%%tab jax
-scores = jax.random.normal(d2l.get_key(), (1, 6, 6))
-d2l.show_heatmaps(masked_softmax(scores, causal_mask(6))[None],
-                  xlabel='Keys', ylabel='Queries')
-```
-
+<!-- WRITER: the random causal heatmap (causal-masking-1) is cut. The causal triangle is now shown by the
+composite-mask cell below on equal scores (the valid-length-6 panel: row i holds 1/(i+1) on keys 0..i).
+The next paragraph reads the cut heatmap; fold it into the reading of the composite cell. -->
 The first query attends only to itself, and each later query spreads its
 weight over itself and its predecessors. The triangle lets a model train
 on all positions of a sequence in parallel without showing any position
@@ -417,7 +410,7 @@ n = 6
 padding = padding_mask(torch.tensor([6, 3]), n)  # (batch, 1, key)
 causal = causal_mask(n)                          # (query, key)
 mask = padding & causal                          # (batch, query, key)
-weights = masked_softmax(torch.randn(2, n, n), mask)
+weights = masked_softmax(torch.zeros(2, n, n), mask)  # Equal scores
 d2l.show_heatmaps(weights[None], xlabel='Keys', ylabel='Queries',
                   titles=['valid length 6', 'valid length 3'],
                   figsize=(5, 2.5))
@@ -429,12 +422,15 @@ n = 6
 padding = padding_mask(jnp.array([6, 3]), n)  # (batch, 1, key)
 causal = causal_mask(n)                       # (query, key)
 mask = padding & causal                       # (batch, query, key)
-weights = masked_softmax(jax.random.normal(d2l.get_key(), (2, n, n)), mask)
+weights = masked_softmax(jnp.zeros((2, n, n)), mask)  # Equal scores
 d2l.show_heatmaps(weights[None], xlabel='Keys', ylabel='Queries',
                   titles=['valid length 6', 'valid length 3'],
                   figsize=(5, 2.5))
 ```
 
+<!-- WRITER: the composite cell now uses equal scores (zeros): in the valid-length-6 panel row i holds
+1/(i+1) on keys 0..i; in the valid-length-3 panel row i holds 1/min(i+1, 3) on keys 0..min(i, 2), so rows
+3 to 5 equal row 2 (1/3 each on the first three keys). State the prediction before the cell. -->
 The first sequence shows the plain causal triangle. The second has valid
 length $3$, so every row stops at the third key. Composition makes empty
 rows more likely. Masks that each leave every query a key can still have
@@ -472,52 +468,10 @@ document.
 
 ## Batched Attention
 
-### Batch Matrix Multiplication
-:label:`subsec_batch_dot`
-
-Attention is computed on minibatches of queries, keys, and values, so we
-need to multiply batches of matrices with each other. Consider two
-batches of $n$ matrices each,
-
-$$
-\mathbf{Q} = [\mathbf{Q}_1, \mathbf{Q}_2, \ldots, \mathbf{Q}_n]  \in \mathbb{R}^{n \times a \times b}, \qquad
-\mathbf{K} = [\mathbf{K}_1, \mathbf{K}_2, \ldots, \mathbf{K}_n]  \in \mathbb{R}^{n \times b \times c}.
-$$
-
-The *batch matrix multiplication* (BMM) computes one matrix product per
-batch element,
-
-$$\textrm{BMM}(\mathbf{Q}, \mathbf{K}) = [\mathbf{Q}_1 \mathbf{K}_1, \mathbf{Q}_2 \mathbf{K}_2, \ldots, \mathbf{Q}_n \mathbf{K}_n] \in \mathbb{R}^{n \times a \times c}.$$
-:eqlabel:`eq_batch-matrix-mul`
-
-The `@` operator computes it. It batches over any number of leading
-axes, which the attention layers of the next sections use for their extra
-axis of heads.
-
-```{.python .input #attention-scoring-batch-matrix-multiplication}
-%%tab pytorch
-Q = torch.ones((2, 3, 4))
-K = torch.ones((2, 4, 6))
-d2l.check_shape(Q @ K, (2, 3, 6))
-```
-
-```{.python .input #attention-scoring-batch-matrix-multiplication}
-%%tab jax
-Q = jnp.ones((2, 3, 4))
-K = jnp.ones((2, 4, 6))
-d2l.check_shape(Q @ K, (2, 3, 6))
-```
-
-:begin_tab:`pytorch`
-`torch.bmm(Q, K)` computes the same product for arrays with exactly one
-batch axis. The `@` operator, short for `torch.matmul`, also accepts any
-number of leading axes and broadcasts them.
-:end_tab:
-
-:begin_tab:`jax`
-The `@` operator is short for `jnp.matmul`, which treats every axis before
-the last two as a batch axis and broadcasts them.
-:end_tab:
+<!-- WRITER: the "Batch Matrix Multiplication" subsection, its display (eq_batch-matrix-mul, label
+subsec_batch_dot; no reference outside this file) and its shape-check cell are cut. One sentence in the class
+subsection says that @ multiplies the last two axes and carries the leading ones (batch, later heads).
+Rename this heading "Attention for a Minibatch". -->
 
 ### The DotProductAttention Class
 :label:`subsec_dot-product-attention-class`
@@ -548,9 +502,7 @@ with the square of the context length, which is the subject of
 Queries and keys must have the same width $d$. That is no restriction in
 practice, because the queries and keys of a network are computed from its
 inputs by learned linear maps, which can map to any common width
-(:numref:`sec_multihead-attention`). On a minibatch,
-:eqref:`eq_softmax_QK_V` uses the batch matrix multiplication
-:eqref:`eq_batch-matrix-mul` twice. The class applies dropout to the
+(:numref:`sec_multihead-attention`). The class applies dropout to the
 attention weights as a regularizer and keeps the weights of its last call
 in `attention_weights` for inspection.
 
@@ -622,45 +574,96 @@ been used. The record therefore keeps its previous value under `jit`, and
 we call the module outside `jit` when we want to look at its weights.
 :end_tab:
 
-We test the class on a minibatch of two sequences, each with one query of
-width $2$ and ten key--value pairs with values of width $4$, and with
-valid lengths $2$ and $6$. Evaluation mode switches dropout off. The
-output has one row of width $4$ per query.
+<!-- WRITER: the class test (id kept) now runs the three-token worked example through the class with
+dropout 0 and prints the weights and the output; write the example out in the text first (score, scale,
+softmax, sum), then the cell reproduces it. The example: d = 4 (so sqrt(d) = 2), two queries
+q1 = (2, 2, 0, 0), q2 = (0, 0, 2, 0); keys k1 = (1, 1, 0, 0), k2 = (0, 0, 1, 1), k3 = (0, 0, 1, -1); values
+v1 = (1, 0), v2 = (0, 1), v3 = (1, 1). Raw scores: q1 (4, 0, 0), q2 (0, 2, 2); scaled: (2, 0, 0) and (0, 1, 1).
+Weights: q1 e^2/(e^2 + 2) = 0.787 and 1/(e^2 + 2) = 0.107 twice; q2 1/(1 + 2e) = 0.155, e/(1 + 2e) = 0.422
+twice. Outputs: q1 (0.787 + 0.107, 0.107 + 0.107) = (0.893, 0.213); q2 (0.155 + 0.422, 0.422 + 0.422) =
+(0.578, 0.845). Query 1 singles out key 1; query 2 splits its weight between the two keys it matches
+equally. The cell prints exactly these numbers in both tabs. The heatmap cell (-class-3) is cut. -->
+We run the class on two queries, three keys, and three values with
+dropout $0$, and print the weights and the output.
 
 ```{.python .input #attention-scoring-the-dotproductattention-class-2}
-%%tab pytorch
-queries = torch.randn(2, 1, 2)
-keys = torch.randn(2, 10, 2)
-values = torch.randn(2, 10, 4)
-mask = padding_mask(torch.tensor([2, 6]), 10)
-
-attention = DotProductAttention(dropout=0.5)
-attention.eval()
-d2l.check_shape(attention(queries, keys, values, mask), (2, 1, 4))
-```
-
-```{.python .input #attention-scoring-the-dotproductattention-class-2}
-%%tab jax
-queries = jax.random.normal(d2l.get_key(), (2, 1, 2))
-keys = jax.random.normal(d2l.get_key(), (2, 10, 2))
-values = jax.random.normal(d2l.get_key(), (2, 10, 4))
-mask = padding_mask(jnp.array([2, 6]), 10)
-
-attention = DotProductAttention(dropout=0.5,
-                                rngs=nnx.Rngs(d2l.get_key()))
-attention.eval()
-d2l.check_shape(attention(queries, keys, values, mask), (2, 1, 4))
-```
-
-The stored weights confirm the mask. Each row holds the weights of one
-sequence's query, and they vanish beyond the second and the sixth key,
-respectively.
-
-```{.python .input #attention-scoring-the-dotproductattention-class-3}
 %%tab pytorch, jax
-d2l.show_heatmaps(attention.attention_weights.reshape((1, 1, 2, 10)),
-                  xlabel='Keys', ylabel='Sequences', figsize=(4, 1.6))
+queries = d2l.tensor([[[2.0, 2, 0, 0], [0, 0, 2, 0]]])           # (1, 2, 4)
+keys = d2l.tensor([[[1.0, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, -1]]])  # (1, 3, 4)
+values = d2l.tensor([[[1.0, 0], [0, 1], [1, 1]]])                   # (1, 3, 2)
+attention = DotProductAttention()
+output = attention(queries, keys, values)
+print('weights:', np.asarray(attention.attention_weights[0]).round(3))
+print('output: ', np.asarray(output[0]).round(3))
 ```
+
+### Matching the Letters of Two Words
+:label:`subsec_cross-attention-alignment`
+
+<!-- WRITER: moved here from multihead-attention.md with its id and label (the giving step removes it
+there). The class is the local DotProductAttention. Rewrite per worklist B8: prediction first
+(sqrt(32) = 5.7 for a match, near zero otherwise), the three patterns (drop "This is the averaging of the
+copy-both task on a small scale"; two identical keys split the weight because content cannot tell them
+apart, which is why position must enter), the sink remark in two sentences, the permutation remark pointing
+to the positional section rather than to the multihead exercise. -->
+To see cross-attention at work, give every letter of the alphabet a random
+embedding of width 32, and let the letters of one word query the letters of
+another through plain scaled dot-product attention, with no learned
+projections. Matching letters share an embedding, so their scaled score is
+close to $\sqrt{32} \approx 5.7$, while unrelated pairs score near zero. The
+softmax turns this gap into an alignment we can read.
+
+```{.python .input #multihead-attention-an-alignment-you-can-read}
+%%tab pytorch
+words = 'attention', 'translation'
+letters = sorted(set(''.join(words)))
+emb = torch.randn(len(letters), 32)
+queries, keys = (emb[[letters.index(c) for c in w]][None] for w in words)
+attention = DotProductAttention()
+attention(queries, keys, keys)
+d2l.show_heatmaps(attention.attention_weights[None], xlabel='keys',
+                  ylabel='queries', figsize=(4, 3.5), cmap='Blues',
+                  xticklabels=words[1], yticklabels=words[0])
+```
+
+```{.python .input #multihead-attention-an-alignment-you-can-read}
+%%tab jax
+words = 'attention', 'translation'
+letters = sorted(set(''.join(words)))
+emb = jax.random.normal(d2l.get_key(), (len(letters), 32))
+queries, keys = (emb[jnp.array([letters.index(c) for c in w])][None]
+                 for w in words)
+attention = DotProductAttention()
+attention(queries, keys, keys)
+d2l.show_heatmaps(attention.attention_weights[None], xlabel='keys',
+                  ylabel='queries', figsize=(4, 3.5), cmap='Blues',
+                  xticklabels=words[1], yticklabels=words[0])
+```
+
+The map reads row by row. The queries are the letters of "attention", the
+keys the letters of "translation". Three patterns appear. The `i` and `o`
+queries find their single partners and attend sharply. The `a`, `t`, and `n`
+queries find *two* copies each and split their weight between them, because
+a head cannot tell identical keys apart. This is the averaging of the
+copy-both task on a small scale. The `e` query, whose letter does not occur in
+"translation", has no partner. Its weight goes to keys that resemble it only
+by chance, and none of them receives the near-certain weight of a real match;
+the softmax must distribute all of its probability mass even when no key
+matches.
+Trained models show all three patterns. Language models often handle the
+third case by sending the leftover weight to the first token of the
+sequence, which then acts as a sink for attention that has nowhere useful to
+go :cite:`Xiao.Tian.Chen.ea.2024`. A row without a match, or a large weight
+on such a token, therefore says that no key is relevant, not that the
+favored key is, which is one reason why attention maps must be read with
+care as explanations.
+
+None of the layers in this section knows where a token sits. Permuting the
+keys and values together leaves every output unchanged (Exercise
+:exref:`ex_multihead-permuting-the-source`). If "translation" were spelled
+backward, every letter of "attention" would retrieve the same mixture, and
+only the columns of the map would change places.
+:numref:`sec_positional-information` adds positional information.
 
 ## Attention as Learned Alignment
 :label:`subsec_learned-alignment`
@@ -680,12 +683,161 @@ weighted sum, a fresh one for every output token, entered the next
 prediction. The paper's title called this "jointly learning to align and
 translate". The learned weights resembled the soft word alignments of
 classical statistical translation: mostly monotone along the diagonal,
-with departures where the two languages order words differently, as
-sketched in :numref:`fig_alignment`. Nothing in the training objective
-asked for alignments. They emerged because they help to translate.
+with departures where the two languages order words differently.
+Nothing in the training objective asked for alignments. They emerged
+because they help to translate.
 
-![Soft alignment between an English sentence and its French translation, in the style of a learned attention map (darker cells indicate larger weight; schematic). The alignment is mostly monotone, but "black cat" maps to "chat noir" with the order reversed, and both "était" and "assis" draw on "sat".](../img/mdl-attention-alignment.svg)
-:label:`fig_alignment`
+<!-- WRITER: fig_alignment (schematic) is cut and replaced by the trained toy alignment below (worklist
+A9/B9). Bahdanau in three sentences (previous decoder state as the query; no motive for the additive
+score), then this experiment. Model: source sequences of 8 tokens drawn uniformly from 16; the target at
+output position j is the source token at perm[j], perm = (0, 1, 2, 4, 3, 5, 6, 7) (identity with one
+swapped neighbor pair, the "black cat"/"chat noir" crossing); one learned query per output position (width
+16); keys = W_k applied to [one-hot token; one-hot position]; values = one-hot tokens, so the output of
+each query is a distribution over the vocabulary; loss = -log of the target token's entry; Adam, lr 0.05,
+100 steps of 128 fresh sequences; 3 runs per tab. Dev runs, both tabs, every run: accuracy 1.000 on 1,000
+fresh sequences; the largest weight of every output position sits on perm[j] (1.000); mean weight on
+perm[j] 0.999 to 1.000. From a trace (PyTorch, 3 runs, not printed by the cell): at initialization
+the weight on perm[j] is 0.12-0.14 (uniform is 0.125), after 10 steps 0.50-0.57 with the largest weight
+already on perm[j] everywhere, after 20 steps 0.95. The heatmap shows one sequence, letters standing for
+the token ids, source along the columns and target along the rows: a diagonal with the two swapped rows. -->
+We train such a model. Each source sequence holds $8$ tokens drawn from a
+vocabulary of $16$, and the target at output position $j$ is the source
+token at position $\pi(j)$ of a fixed permutation $\pi$ that swaps one
+pair of neighbors. Each output position has one learned query; the keys
+are a learned linear map of the one-hot token and the one-hot position of
+each source token; the values are the one-hot tokens, so each output is a
+distribution over the vocabulary.
+
+```{.python .input #attention-scoring-attention-as-learned-alignment-1}
+%%tab pytorch
+class ToyAligner(nn.Module):
+    """One learned query per output position; keys from token and position."""
+    def __init__(self, seq_len=8, vocab_size=16, d=16):
+        super().__init__()
+        self.vocab_size, n_in = vocab_size, vocab_size + seq_len
+        self.queries = nn.Parameter(torch.randn(seq_len, d))
+        self.W_k = nn.Parameter(torch.randn(n_in, d) / math.sqrt(n_in))
+        self.attention = DotProductAttention()
+
+    def forward(self, X):
+        # X: (batch, seq_len) token ids; the values are their one-hot vectors
+        tokens = F.one_hot(X, self.vocab_size).float()
+        positions = torch.eye(X.shape[1]).expand(len(X), -1, -1)
+        keys = torch.cat((tokens, positions), -1) @ self.W_k
+        # The queries broadcast over the batch: (batch, seq_len, vocab_size)
+        return self.attention(self.queries, keys, tokens)
+```
+
+```{.python .input #attention-scoring-attention-as-learned-alignment-1}
+%%tab jax
+class ToyAligner(nnx.Module):
+    """One learned query per output position; keys from token and position."""
+    def __init__(self, seq_len=8, vocab_size=16, d=16, *, rngs):
+        self.vocab_size, n_in = vocab_size, vocab_size + seq_len
+        self.queries = nnx.Param(jax.random.normal(rngs.params(), (seq_len, d)))
+        self.W_k = nnx.Param(jax.random.normal(rngs.params(), (n_in, d))
+                             / math.sqrt(n_in))
+        self.attention = DotProductAttention()
+
+    def __call__(self, X):
+        # X: (batch, seq_len) token ids; the values are their one-hot vectors
+        tokens = jax.nn.one_hot(X, self.vocab_size)
+        n = X.shape[1]
+        positions = jnp.broadcast_to(jnp.eye(n), (len(X), n, n))
+        keys = jnp.concatenate((tokens, positions), -1) @ self.W_k
+        # The queries broadcast over the batch: (batch, seq_len, vocab_size)
+        return self.attention(self.queries, keys, tokens)
+```
+
+The loss is the negative logarithm of the probability that the output
+gives the target token. Every step draws a fresh minibatch.
+
+```{.python .input #attention-scoring-attention-as-learned-alignment-2}
+%%tab pytorch
+perm = torch.tensor([0, 1, 2, 4, 3, 5, 6, 7])  # Output j copies source perm[j]
+
+def align_data(n, seq_len=8, vocab_size=16):
+    X = torch.randint(0, vocab_size, (n, seq_len))
+    return X, X[:, perm]
+
+def train_aligner(num_steps=100):
+    model = ToyAligner()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.05)
+    for _ in range(num_steps):
+        X, Y = align_data(128)
+        loss = -model(X).gather(-1, Y[..., None]).log().mean()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    return model
+```
+
+```{.python .input #attention-scoring-attention-as-learned-alignment-2}
+%%tab jax
+perm = jnp.array([0, 1, 2, 4, 3, 5, 6, 7])  # Output j copies source perm[j]
+
+def align_data(key, n, seq_len=8, vocab_size=16):
+    X = jax.random.randint(key, (n, seq_len), 0, vocab_size)
+    return X, X[:, perm]
+
+@nnx.jit
+def align_step(model, optimizer, key):
+    X, Y = align_data(key, 128)
+    loss = lambda model: -jnp.log(
+        jnp.take_along_axis(model(X), Y[..., None], -1)).mean()
+    optimizer.update(model, nnx.grad(loss)(model))
+
+def train_aligner(num_steps=100):
+    model = ToyAligner(rngs=nnx.Rngs(d2l.get_key()))
+    optimizer = nnx.Optimizer(model, optax.adam(0.05), wrt=nnx.Param)
+    for key in jax.random.split(d2l.get_key(), num_steps):
+        align_step(model, optimizer, key)
+    return model
+```
+
+We train three models and evaluate each on $1{,}000$ fresh sequences: the
+accuracy of the most probable token, the fraction of output positions $j$
+whose largest weight falls on source position $\pi(j)$, and the mean
+weight on that position.
+
+```{.python .input #attention-scoring-attention-as-learned-alignment-3}
+%%tab pytorch
+X, Y = align_data(1000)
+for run in range(3):
+    model = train_aligner()
+    with torch.inference_mode():
+        accuracy = (model(X).argmax(-1) == Y).float().mean()
+    weights = model.attention.attention_weights  # (1000, 8, 8)
+    largest = (weights.argmax(-1) == perm).float().mean()
+    on_perm = weights[:, torch.arange(8), perm].mean()
+    print(f'run {run}: accuracy {accuracy:.3f}, largest weight on pi(j) '
+          f'{largest:.3f}, mean weight on pi(j) {on_perm:.3f}')
+```
+
+```{.python .input #attention-scoring-attention-as-learned-alignment-3}
+%%tab jax
+X, Y = align_data(d2l.get_key(), 1000)
+for run in range(3):
+    model = train_aligner()
+    accuracy = (model(X).argmax(-1) == Y).mean()
+    weights = model.attention.attention_weights  # (1000, 8, 8)
+    largest = (weights.argmax(-1) == perm).mean()
+    on_perm = weights[:, jnp.arange(8), perm].mean()
+    print(f'run {run}: accuracy {accuracy:.3f}, largest weight on pi(j) '
+          f'{largest:.3f}, mean weight on pi(j) {on_perm:.3f}')
+```
+
+The weights of the last model on the first test sequence, with a letter
+for each token id, show the permutation, crossing included:
+
+```{.python .input #attention-scoring-attention-as-learned-alignment-4}
+%%tab pytorch, jax
+letters = 'abcdefghijklmnop'  # One letter per token id
+d2l.show_heatmaps(model.attention.attention_weights[:1][None],
+                  xlabel='source', ylabel='target', figsize=(3, 3),
+                  cmap='Blues', xticklabels=[letters[int(i)] for i in X[0]],
+                  yticklabels=[letters[int(i)] for i in Y[0]])
+```
 
 One detail differed from the score we chose above. The decoder state and
 the encoder states had different widths, so instead of a dot product,
@@ -700,49 +852,17 @@ Here $\mathbf{q} \in \mathbb{R}^{d_q}$ and $\mathbf{k} \in
 are $\mathbf{W}_q \in \mathbb{R}^{r \times d_q}$, $\mathbf{W}_k \in
 \mathbb{R}^{r \times d_k}$, and $\mathbf{w}_v \in \mathbb{R}^{r}$ for a
 hidden width $r$. The two projections map queries and keys into a shared
-$r$-dimensional space, and $\mathbf{w}_v$ reads a score off their sum. We
-score three queries of width $20$ against six keys of width $2$, widths
-that no dot product could pair.
+$r$-dimensional space, and $\mathbf{w}_v$ reads a score off their sum.
 
-```{.python .input #attention-scoring-from-alignment-to-attention}
-%%tab pytorch
-queries, keys = torch.randn(3, 20), torch.randn(6, 2)
-r = 8  # Hidden width
-W_q = torch.randn(r, 20) / math.sqrt(20)
-W_k = torch.randn(r, 2) / math.sqrt(2)
-w_v = torch.randn(r) / math.sqrt(r)
-features = torch.tanh((queries @ W_q.T)[:, None, :]
-                      + (keys @ W_k.T)[None, :, :])
-scores = features @ w_v
-d2l.check_shape(scores, (3, 6))
-F.softmax(scores, dim=-1)
-```
-
-```{.python .input #attention-scoring-from-alignment-to-attention}
-%%tab jax
-queries = jax.random.normal(d2l.get_key(), (3, 20))
-keys = jax.random.normal(d2l.get_key(), (6, 2))
-r = 8  # Hidden width
-normal = lambda *shape: jax.random.normal(d2l.get_key(), shape)
-W_q = normal(r, 20) / math.sqrt(20)
-W_k = normal(r, 2) / math.sqrt(2)
-w_v = normal(r) / math.sqrt(r)
-features = jnp.tanh((queries @ W_q.T)[:, None, :]
-                    + (keys @ W_k.T)[None, :, :])
-scores = features @ w_v
-d2l.check_shape(scores, (3, 6))
-jax.nn.softmax(scores, axis=-1)
-```
-
-Each row is a distribution over the six keys. The intermediate array
-`features` has shape $3 \times 6 \times 8$, one hidden vector per
-query--key pair, and this array is why the dot product replaced the
-additive score. All dot products of queries and keys form one matrix
-multiplication, which accelerators execute fast, while the additive score
-needs an $n \times m \times r$ array of hidden activations. The dot
-product can still use a learned metric. Projecting queries and keys with
-learned matrices first leaves a score that runs at the speed of matrix
-multiplication. This is the form attention takes in the Transformer,
+<!-- WRITER: the additive cell (from-alignment-to-attention, random matrices, shape check) is cut, with its
+reading. The facts to keep go to the foil paragraph under "Dot-Product Attention" (worklist B2): all dot
+products of queries and keys form one matrix multiplication, while the additive score needs an n x m x r
+array of hidden activations; at a small initialization the additive weights barely depend on the query
+(Exercise 7 shows it). Exercise 7(c) cited this cell's code; it must now state W_q, W_k, w_v and the tanh
+features itself. -->
+The dot product can still use a learned metric. Projecting queries and
+keys with learned matrices first leaves a score that runs at the speed of
+matrix multiplication. This is the form attention takes in the Transformer,
 whose authors dropped the recurrent networks altogether and kept attention
 as the only operation that relates positions
 :cite:`Vaswani.Shazeer.Parmar.ea.2017`.
@@ -801,7 +921,7 @@ dot product because the dot product is a matrix multiplication.
        when it is uniform over $m$ keys, and evaluate the uniform case for
        $m = 64$. Show that the squared norm is close to $\sum_i \alpha_i^2$
        when every weight is small, and use this to explain why the scaled
-       norms printed for $d \in \{4, 64, 512\}$ exceed the uniform value.
+       norms printed for $d \in \{4, 16, 64, 128, 512\}$ exceed the uniform value.
     1. Compute the norm for weights spread uniformly over $k$ of the $m$
        keys, find the $k$ that maximizes it, and confirm by sampling random
        weight vectors that none exceeds this maximum. Use the result to
@@ -847,6 +967,8 @@ dot product because the dot product is a matrix multiplication.
        for a row in which every key is excluded by both masks and for a row
        in which every key is excluded but some keys by only one mask.
 
+<!-- WRITER: Exercise 5 (to be cut per worklist B13) cites the old class-test inputs (10 keys, valid
+lengths 2 and 6), which the cell no longer uses. -->
 1. [code] **Attention dropout.** `DotProductAttention` applies dropout with
    rate $p$ to the attention weights, and the weights it exposes for
    visualization are those before dropout. Dropout multiplies each kept
@@ -894,6 +1016,7 @@ dot product because the dot product is a matrix multiplication.
        terms through which the weights depend on the query, and state how
        this dependence scales when $\mathbf{W}_q$ and $\mathbf{W}_k$ are
        both multiplied by a small factor $\epsilon$.
+    <!-- WRITER: the additive cell this part cited is cut; state W_q, W_k, w_v and the tanh features here. -->
     1. Multiply `W_q` and `W_k` in the code of
        :numref:`subsec_learned-alignment` by $\epsilon \in \{1, 0.3, 0.1,
        0.03\}$, and measure the largest difference between the weight rows
@@ -903,7 +1026,9 @@ dot product because the dot product is a matrix multiplication.
 
 1. [extended] **A learned alignment.** ●
    :citet:`Bahdanau.Cho.Bengio.2014` observed that attention weights trained
-   only for translation behave like alignments (:numref:`fig_alignment`).
+   only for translation behave like alignments.
+   <!-- WRITER: part (a) is now the body experiment of subsec_learned-alignment; recast as "Alignment
+   variants" on the body's model (old (b), (c), (d)). fig_alignment is retired. -->
    The same effect appears in a toy model without recurrent networks. Draw
    source sequences of $8$ tokens uniformly from a vocabulary of $16$, and
    let the target at output position $j$ be the source token at position
@@ -1013,7 +1138,7 @@ $$a(\mathbf{q}, \mathbf{k}) = \mathbf{q}^\top \mathbf{k} / \sqrt{d}$$
 :::
 
 ::: {.slide title="Unscaled Scores Collapse the Softmax Entropy"}
-256 random queries, 64 keys each; entropy of the weights:
+2,048 random queries, 64 keys each; entropy of the weights:
 
 @!attention-scoring-score-variance-and-the-1-sqrt-d-factor-1
 
@@ -1096,7 +1221,9 @@ Two sequences, two queries, four keys; valid lengths 2 and 3:
 :::
 
 ::: {.slide title="A Causal Mask Is a Lower Triangle"}
-@!attention-scoring-causal-masking-1
+<!-- WRITER: the random causal heatmap is cut; this slide now shows the composite cell on equal scores
+(left panel: row i holds 1/(i+1); right panel: valid length 3, rows stop at the third key). -->
+@!attention-scoring-composing-masks
 
 - Query $i$ sees keys $j \le i$: $n(n-1)/2$ of $n^2$ pairs excluded.
 - With fewer queries than keys (a cache), the queries are the last
@@ -1186,9 +1313,12 @@ for 8 times the context.
 :::
 
 ::: {.slide title="DotProductAttention Keeps Its Weights for Inspection"}
-Batch of 2, one query each, 10 keys, valid lengths 2 and 6:
+<!-- WRITER: replaces the cut heatmap of random inputs with the three-token worked example (d = 4, scaled
+scores (2, 0, 0) and (0, 1, 1); weights (0.787, 0.107, 0.107) and (0.155, 0.422, 0.422); outputs
+(0.893, 0.213) and (0.578, 0.845)); add a check slide before it per worklist B14. -->
+Two queries, three keys and values, $d = 4$, dropout 0:
 
-@!attention-scoring-the-dotproductattention-class-3
+@attention-scoring-the-dotproductattention-class-2
 
 - The layer: scores, masked softmax, dropout on the weights, weighted sum.
 - `attention_weights` holds the weights of the last call.
@@ -1201,7 +1331,9 @@ An RNN encoder squeezed each source sentence into one vector; quality fell
 with sentence length. Bahdanau, Cho, and Bengio let the decoder state
 query all encoder states, a fresh weighted sum per output word.
 
-![The learned weights resembled soft word alignments.](../img/mdl-attention-alignment.svg){width=34%}
+<!-- WRITER: the schematic figure is retired; the slide shows the trained toy alignment (one learned query
+per output position, a permutation with one swapped pair; every run puts the largest weight on pi(j)). -->
+@!attention-scoring-attention-as-learned-alignment-4
 :::
 
 ::: {.slide title="Additive Attention Scores Vectors of Different Widths"}

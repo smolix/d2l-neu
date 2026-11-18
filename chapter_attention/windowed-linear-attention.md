@@ -315,13 +315,11 @@ timing below uses the cuDNN kernel, which needs 16-bit inputs.
 ### Windowed and Dense Kernels Compared
 
 How much time does a window save in practice? The tile count predicts it
-before we run anything. With tiles of 128 and $T = n/128$ rows of tiles, a
-causal kernel visits $T(T + 1)/2$ tiles. A
-window of 128 visits $2T - 1$: the diagonal tile and its left neighbor in
-each row, and only the diagonal tile in the first row. If time were
-proportional to tiles, the window would be faster than dense causal
-attention by the ratio $T(T + 1)/(2(2T - 1))$, which grows like $T/4$: 1.4
-at 512 tokens, 64 at 32,768.
+before we run anything. With $T = n/128$ rows of tiles, a causal kernel
+visits $T(T + 1)/2$ tiles and a window of 128 visits $2T - 1$, two per row
+except the first. If time were proportional to tiles, the window would be
+faster than dense causal attention by the ratio $T(T + 1)/(2(2T - 1))$,
+which grows like $T/4$: 1.4 at 512 tokens, 64 at 32,768.
 
 For the ratio to measure tiles and nothing else, both arms must run in the
 same kernel. Each framework below times dense causal attention and the
@@ -386,12 +384,11 @@ every doubling of $n$, approaching the fourfold growth of its tile count, while
 the time of the window about doubles. At 32,768 tokens the window is more
 than thirty times faster, though short of 64.
 
-Most of the shortfall has a simple cause. A tile that lies entirely inside
-the mask is computed without masking; a tile that straddles the edge of the
-mask must apply it entry by entry, which costs more. Of the causal kernel's
-tiles, only the $T$ on the diagonal straddle the edge, and all the others
-lie inside the mask. Every tile the band visits straddles an edge. A
-window's tiles are all of the expensive kind.
+Most of the shortfall has a simple cause, the difference between tiles that
+we met when counting them: a tile on the edge of the mask is masked entry
+by entry and costs more than a tile inside it. Of the causal kernel's
+tiles, only the $T$ on the diagonal lie on the edge. Every tile the band
+visits does. A window's tiles are all of the expensive kind.
 
 The figure measures cost alone. The window computes a different function
 from dense attention, and what it loses (the hops of

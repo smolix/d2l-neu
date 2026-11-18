@@ -1156,11 +1156,11 @@ own gradients.
 ::: {.slide title="Adam Replaces the Single Rate by One Rate per Coordinate"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | Two Test Models · Momentum · **Adam** · AdamW · Muon |
-| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · Practice |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · **Adam** · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
 
 - **Uses:** the valley and its ceiling $\eta < 2/\textrm{curvature}$;
   momentum $\beta$ and its window of $1/(1-\beta)$ steps; `TinyLM`.
@@ -1214,7 +1214,7 @@ $\eta = 2$: budget $15$ (gradient descent diverges)
 [Per-coordinate learning rates]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig}
+::: {.col}
 @!adam-rmsprop-forgetting-on-purpose-1
 :::
 
@@ -1224,9 +1224,9 @@ $$\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1-\beta_2)\, \mathbf{g}_t^2$$
 replaces $\mathbf{s}_t$ in AdaGrad.
 
 - $\beta_2 = 0.9$: a window of 10 steps.
-- No decay by construction: close to the minimum after 20 steps.
-- Step 1 is too long: $\mathbf{v}_1 = 0.1\,\mathbf{g}_1^2$, so each
-  coordinate moves $\eta/\sqrt{0.1} \approx 3.2\,\eta$.
+- No decay by construction: near the minimum after 20 steps.
+- Step 1 too long: $\mathbf{v}_1 = 0.1\,\mathbf{g}_1^2$, a move of
+  $\eta/\sqrt{0.1} \approx 3.2\,\eta$.
 :::
 :::
 :::
@@ -1372,35 +1372,42 @@ framework's.
   promises.
 :::
 
-::: {.slide title="The Gradients of TinyLM Differ 15- to 40-Fold in Size, the Steps of Adam 2-Fold"}
+::: {.slide title="TinyLM's Gradients Differ up to 40-Fold in Size, Adam's Steps 2-Fold"}
 [Adam on a language model]{.kicker}
 
-RMS gradient per kind of parameter, which is the step of SGD per unit of
-$\eta$, and RMS of Adam's step 501 over $\eta$. `qkv`, `proj`: attention
-matrices; `mlp`: MLP matrices; `head`: output layer.
+RMS gradient per kind of parameter (SGD's step per unit of $\eta$) and RMS
+of Adam's step 501 over $\eta$. `qkv`, `proj`: attention; `mlp`: MLP;
+`head`: output layer.
 
 @!adam-gradient-scales-in-a-network-2
 
 ::: {.d2l-note}
 A fifth of $\eta$, not $\eta$: minibatch gradients disagree, and the scale
-still remembers the larger early gradients. Pure noise alone gives
+remembers the larger early gradients. Pure noise gives
 $\sqrt{(1-\beta_1)/(1+\beta_1)}\,\eta \approx 0.23\,\eta$.
 :::
 :::
 
-::: {.slide title="Adam Trains over a Tenfold Range of Rates; SGD Has One, Next to Divergence"}
+::: {.slide title="Adam Trains over a Tenfold Range of Rates, SGD at One Rate"}
 [Adam on a language model]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+@!adam-the-race-on-the-language-model-2
+:::
+
+::: {.col}
 `TinyLM`, 2,000 steps at a constant rate, three seeds, SGD with momentum
 $0.9$; `inf`: diverged. *Usable*: mean final loss within $0.15$ nats of
 the best rate's.
 
-@!adam-the-race-on-the-language-model-2
-
-- Usable: Adam from $0.001$ to $0.01$; SGD at $0.3$ alone.
+- Usable: Adam from $0.001$ to $0.01$; SGD at $0.3$ alone, next to
+  divergence at $0.5$.
 - Best rates 100-fold apart: Adam at $\eta$ steps like SGD with momentum
   at $0.1\,\eta/\textrm{scale}$.
 - Adam at $0.03$ stalls near $2.8$ and stays finite.
+:::
+:::
 :::
 
 ::: {.slide title="Adam Reaches a Loss of 1.8 in Half to Seven Tenths of SGD's Steps"}

@@ -986,7 +986,7 @@ between two seeds.
        step turns the update into normalized gradient descent with step
        size $\eta\theta$. Our runs use momentum, with velocity
        $\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t$, update
-       $\mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t$, and
+       $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta \mathbf{v}_t$, and
        $\beta = 0.9$. Bound the length of one of their updates when
        clipping fires on every step. Explain why neither case is the same
        as training at a lower learning rate.
@@ -1132,11 +1132,11 @@ byte of Wikipedia text) under SGD at a diverging rate; then a `TinyLM` of
 ::: {.slide title="Practice Assembles the Chapter into One Configured Run"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | Two Test Models · Momentum · Adam · AdamW · Muon |
-| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · **Practice** |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · **Practice** |
 
 - **Uses:** SGD's diverging rates on `TinyLM`; Adam's two averages; the
   noise ball; warmup and cosine decay; the gradient-noise scale.

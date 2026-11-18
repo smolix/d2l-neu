@@ -248,7 +248,7 @@ multiply its number of steps by 10,000 to do the same. In return, each of
 its steps costs one per-example gradient where gradient descent needs $n$,
 and a training loss rarely needs to be minimized to many digits. For deep
 networks the two conditions are a guide rather than a recipe, since a run
-has a fixed budget of steps and cannot wait for a rate of $1/t$.
+has a fixed number of steps and cannot wait for a rate of $1/t$.
 :numref:`sec_scheduler` develops the schedules that are used there.
 
 ## Minibatches

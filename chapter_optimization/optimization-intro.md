@@ -422,9 +422,9 @@ iterates stay.
 
 Last, the valley gave us a ceiling for the learning rate and a best
 value, but on a quadratic whose curvatures we chose ourselves. Nobody
-tells us the curvatures of a network's loss. What limits the step on a
-general function, and what would the ideal step be if the curvature could
-be measured?
+tells us the curvatures of a network's loss. We still have to find out
+what limits the step on a general function, and what the ideal step would
+be if the curvature could be measured.
 
 ## Summary
 

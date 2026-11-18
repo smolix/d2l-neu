@@ -1223,11 +1223,11 @@ What is the best step for a matrix, taken as a matrix?
 ::: {.slide title="Muon Is the Chapter's Third Answer to the Question of Direction"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | Two Test Models · Momentum · Adam · AdamW · **Muon** |
-| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · Practice |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · **Muon** |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
 
 - **Uses:** Nesterov momentum, Adam as a sign method, decoupled weight
   decay, the spectral norm.

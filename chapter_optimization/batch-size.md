@@ -764,7 +764,7 @@ one, multiplied by the factor that the rule predicts.
 
 ### Sweeps at Two Batch Sizes
 
-We run the test on the CNN and give every run the same budget of 12,800
+We run the test on the CNN and let every run process the same 12,800
 examples, a fifth of the training set, so that a batch $k$ times larger
 takes $k$ times fewer steps. The runs at one batch size share their
 initialization and the order of their images, and differ in the learning
@@ -1255,11 +1255,11 @@ on Fashion-MNIST (0.4 million parameters).
 ::: {.slide title="Batch Size Sets the Noise That Each Step Carries"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | Two Test Models · Momentum · Adam · AdamW · Muon |
-| how the step changes over a run, with batch size and width | Schedules · **Batch Size** · Scaling Up · Practice |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · **Batch Size** · Scaling Up · Practice |
 
 - **Uses:** gradient noise falls as $1/b$; the descent bound with
   curvature $L$; Adam's update.

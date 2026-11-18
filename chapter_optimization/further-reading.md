@@ -4,8 +4,8 @@
 A chapter that teaches one representative of each idea leaves a good deal
 out. Ours took one valley, one stochastic method, one adaptive method, one
 matrix optimizer, and one rule each for schedules, batch size, and width.
-You may ask what lies next to each of them. This section answers, and it
-is not meant to be read from top to bottom.
+What lies next to each of them? This section answers, and it is not meant
+to be read from top to bottom.
 
 If you follow only three threads, take these. To see what the loss of a
 network looks like beyond a valley, read about connected and flat minima
@@ -21,9 +21,8 @@ entries on Muon describe a field that changed from month to month while we
 wrote: read them for the ideas, and expect the numbers to have moved.
 
 Each entry says which problem it addresses and what it changes relative to
-the chapter, and each can be read without the others. Resources for what
-the chapter itself teaches are in its introduction
-(:numref:`chap_optimization`), theory texts in the appendix
+the chapter. Resources for what the chapter itself teaches are in its
+introduction (:numref:`chap_optimization`), theory texts in the appendix
 (:numref:`sec_mdl-optimization-further-reading`), automated hyperparameter
 search in :numref:`chap_hyperopt`, and ways to shrink the memory of an
 optimizer in :numref:`sec_performance-further-reading`. Nothing else in
@@ -39,8 +38,8 @@ loss along one or two random directions in the space of weights. Such
 plots mislead unless each direction is rescaled to the weights it
 perturbs. A ReLU network computes the same function after one layer is
 multiplied by $c > 0$ and the next by $1/c$, yet a perturbation of a given
-size is large against the layer that shrank. The same minimum looks sharp
-in one network and flat in its rescaled twin.
+size is large against the layer that shrank, and the same minimum looks
+sharp in one network and flat in its rescaled twin.
 
 :citet:`Li.Xu.Taylor.ea.2018` therefore rescale a direction piece by
 piece: in a convolutional network, each filter of the direction gets the
@@ -87,11 +86,10 @@ authors report better test accuracy for image classifiers. A step costs
 two gradients, though, so the baseline to beat is a plain run of twice the
 length.
 
-The premise itself is disputed. A ReLU network computes the same function
-after one layer is multiplied by $c > 0$ and the next by $1/c$.
-:citet:`Dinh.Pascanu.Bengio.ea.2017` used this rescaling to make a minimum
-arbitrarily sharp without changing the function it computes, so that
-sharpness, unlike generalization, depends on how the function is
+The premise itself is disputed. With the rescaling of layers that misled
+the plots above, :citet:`Dinh.Pascanu.Bengio.ea.2017` made a minimum
+arbitrarily sharp without changing the function that the network computes.
+Sharpness, unlike generalization, depends on how the function is
 parametrized.
 
 ## Classical Methods
@@ -126,26 +124,22 @@ so training does without it.
 A *trust-region method* bounds the length of the step instead. It
 minimizes a quadratic model of the loss inside a ball and adjusts the
 radius by how well the model predicted the decrease. The ball makes
-negative curvature harmless. Where the model curves downward it has no
-minimum, and the Newton step of :numref:`sec_gd` went to its highest point
-instead. Inside a ball the model always has a lowest point, on the
-boundary if need be. The appendix treats both methods
+negative curvature harmless: inside it the model always has a lowest
+point, on the boundary if need be, where the Newton step of
+:numref:`sec_gd` ran to a maximum. The appendix treats both methods
 (:numref:`subsec_mdl-gd-smoothness` and :numref:`subsec_mdl-trust-region`).
-
 The trust region left a trace in the chapter. The steepest step of
-:numref:`sec_muon` minimizes a linear model of the loss inside a ball: a
-trust-region step with the simplest of models and a radius fixed in
-advance, the learning rate. :citet:`Kovalev.2025` analyzes Muon in this
-way.
+:numref:`sec_muon` minimizes a linear model of the loss inside a ball, the
+simplest of models with a radius fixed in advance, the learning rate, and
+:citet:`Kovalev.2025` analyzes Muon in this way.
 
 ### Newton Steps Without the Hessian
 :label:`subsec_optimization-fr-hessian-free`
 
 :numref:`sec_gd` remarked that Newton's method needs only products of the
-Hessian with vectors, each about as costly as two gradients. It is out of
-reach for networks all the same: a single step needs many such products,
-and curvature estimated on a minibatch is unreliable. Two serious attempts
-were made nevertheless.
+Hessian with vectors, and that it is out of reach for networks all the
+same: a single step needs many such products, and curvature estimated on a
+minibatch is unreliable. Two serious attempts were made nevertheless.
 
 Hessian-free optimization :cite:`Martens.2010` finds the Newton step by a
 few iterations of *conjugate gradients*, a solver for linear systems that
@@ -167,21 +161,16 @@ from the sizes of gradients. We know it as Adam (:numref:`sec_adam`).
 :numref:`sec_sgd` quoted a single rate: on a loss that curves upward in
 every direction, learning rates that decay as $c/t$ bring the expected
 squared distance to the minimum down as $1/t$. Without that curvature less
-can be promised. On a convex loss with bounded gradients, SGD with a
-learning rate of order $1/\sqrt{T}$ comes within order $1/\sqrt{T}$ of the
-minimal loss after $T$ steps, if its iterates are averaged. Half the error
-costs four times the steps, and no method that sees only stochastic
-gradients does better in the worst case :cite:`Nemirovski.Yudin.1983`.
+can be promised. On a convex loss the error of SGD falls as $1/\sqrt{T}$
+over $T$ steps at best, so half the error costs four times the steps
+:cite:`Nemirovski.Yudin.1983`. On the nonconvex loss of a network only a
+small gradient can be promised, not a minimum :cite:`Ghadimi.Lan.2013`,
+and a saddle point satisfies that promise as well as a minimum does. The
+appendix has the statements and their proofs
+(:numref:`subsec_mdl-fixed-budget-rates` and
+:numref:`subsec_mdl-nonconvex-sgd`).
 
-Neither rate applies to a network, whose loss is not convex. There only a
-small gradient can be promised, not a minimum. On a smooth loss the
-expected squared norm of the gradient, at an iterate picked at random from
-the run, also falls as $1/\sqrt{T}$ :cite:`Ghadimi.Lan.2013`, and a saddle
-point satisfies this promise as well as a minimum does. The appendix
-proves the two upper bounds (:numref:`subsec_mdl-fixed-budget-rates` and
-:numref:`subsec_mdl-nonconvex-sgd`) and quotes the lower bound.
-
-Averaging has a second, finer use: where the loss does curve upward, the
+Averaging has a second, finer use. Where the loss does curve upward, the
 average of the iterates under slowly decaying learning rates attains the
 best possible asymptotic error, constant included
 :cite:`Polyak.Juditsky.1992`. The weight averaging of
@@ -231,16 +220,15 @@ these have to be inverted.
 SOAP :cite:`Vyas.Morwani.Zhao.ea.2024` joins the two families by running
 Adam in the basis of eigenvectors of Shampoo's two matrices. In the
 matched-tuning study that :numref:`sec_muon` quotes
-:cite:`Wen.Hall.Ma.ea.2025`, SOAP, with Shampoo's matrices and Adam's
-averages to remember, and Muon, with a momentum buffer alone, are both
-among the fastest methods. How much a matrix optimizer has to remember is
-not settled.
+:cite:`Wen.Hall.Ma.ea.2025`, SOAP and Muon are both among the fastest
+methods, the one with Shampoo's matrices and Adam's averages to remember,
+the other with a momentum buffer alone. How much a matrix optimizer has to
+remember is not settled.
 
 ### Muon's Lead over AdamW
 
-The matched-tuning study that :numref:`sec_muon` quoted found Muon ahead
-of AdamW in steps, by a margin that shrank as the models grew
-:cite:`Wen.Hall.Ma.ea.2025`. Where does the lead come from?
+That study found Muon ahead of AdamW in steps, by a margin that shrank as
+the models grew. Where does the lead come from?
 :citet:`Wang.Zhang.Li.ea.2025` find it concentrated in the value and
 output projections of attention and in the MLP weights. In their model of
 such a matrix, a linear memory that stores pairs of an input and its
@@ -256,9 +244,9 @@ count of steps at one batch size does not show. Muon stays efficient in
 its use of data at batch sizes well beyond the critical batch size of
 AdamW, the size above which most of the extra work of a larger batch saves
 nothing (:numref:`sec_batch_size`). Neither finding answers the question
-of scale. The matched study ends at a little over a billion parameters.
-Far larger models have been trained with Muon, but we know of no matched
-comparison at their size.
+of scale. The matched study ends at a little over a billion parameters,
+and for the far larger models that have been trained with Muon we know of
+no matched comparison.
 
 ### A Norm for Every Layer
 
@@ -278,19 +266,14 @@ decay nothing bounds them, which is what the long runs of
 
 Newton--Schulz, the iteration with which Muon orthogonalizes, adds about
 an eighth to the arithmetic of the forward and backward passes on
-`TinyLM`, the small language model of this chapter
-(:numref:`subsec_tinylm`). At the batch sizes of large runs it adds under
-one percent (:numref:`subsec_muon-newton-schulz`). Work on its cost is
-therefore work on the last few percent. Polar Express
+`TinyLM`, and under one percent at the batch sizes of large runs
+(:numref:`subsec_muon-newton-schulz`). Work on its cost is therefore work
+on the last few percent. Polar Express
 :cite:`Amsel.Persson.Musco.ea.2026`, the third curve of
 :numref:`fig_opt_ns_maps`, comes closer to an exact orthogonalization in
-the same number of steps. It uses a different quintic at each step, chosen
-for the interval that the singular values can still occupy. An earlier
-heuristic search :cite:`Cesista.You.Jordan.2025` announces the size of
-such gains in its title: one to two percent in efficiency. Gram
-Newton--Schulz :cite:`Zhang.Amsel.Chen.ea.2026` saves arithmetic instead.
-For a matrix with fewer rows than columns it iterates on the small
-symmetric matrix of the inner products of the rows.
+the same number of steps, with a different quintic at each step. An
+earlier search for better coefficients :cite:`Cesista.You.Jordan.2025`
+announces the size of such gains in its title: one to two percent.
 
 One cost is of another kind. The weights of a large model are split, or
 *sharded*, across many devices. AdamW updates every entry on its own, so
@@ -306,11 +289,11 @@ How much accuracy may be given up? In theory little: with $q$
 Newton--Schulz steps Muon converges at the rate of exact orthogonalization
 up to a factor that approaches one doubly exponentially fast in $q$
 :cite:`Kim.Oh.2026`. The theorem speaks of the rate, though, and not of
-the length of the step that five iterations deliver. On `TinyLM` we
-measured about nine tenths of the norm of the exact answer in the middle
-of a run, and little more than half for some matrices of a new network
-(:numref:`sec_muon`). The inexact iteration thus acts as a smaller
-learning rate during the first steps.
+the length of the step. On `TinyLM` five steps delivered about nine tenths
+of the norm of the exact answer in the middle of a run, and little more
+than half for some matrices of a new network (:numref:`sec_muon`). During
+the first steps the inexact iteration thus acts as a smaller learning
+rate.
 
 ## Schedules, Averages, and Batches
 
@@ -318,14 +301,13 @@ learning rate during the first steps.
 
 Cosine decay (:numref:`subsec_scheduler-decay-shapes`) was proposed
 together with periodic restarts :cite:`Loshchilov.Hutter.2016`: at the end
-of each cosine wave the learning rate jumps back to its peak. The restarts
-were meant to give a run a good model to show at any time. Each wave ends
-with a decayed model, so one run yields several finished models. Huang et
-al. (2017) made a method of this under the name *snapshot ensembles*: save
-the model at the end of each wave and average the predictions of the saved
-models. Predictions, not weights. After a jump back to the peak rate the
-next wave need not end in the basin of the last, and on the straight line
-between two basins the loss rises
+of each cosine wave the learning rate jumps back to its peak. Each wave
+ends with a decayed model, so one run yields several finished models.
+:citet:`Huang.Li.Pleiss.ea.2017` made a method of this under the name
+*snapshot ensembles*: save the model at the end of each wave and average
+the predictions of the saved models. Predictions, not weights. After a
+jump back to the peak rate the next wave need not end in the basin of the
+last, and on the straight line between two basins the loss rises
 (:numref:`subsec_optimization-fr-connected-minima`). Today the cosine wave
 is in general use and the restarts are not. Warmup–stable–decay
 (:numref:`subsec_scheduler-branching`) gets its several models without
@@ -368,16 +350,15 @@ conditions. They are the first thing to check when a large change of the
 batch size goes wrong.
 
 The same section saw the noise scale, the batch size at which a minibatch
-gradient holds as much noise as signal, grow during a run. A batch that
-is wasteful early in a run can then be useful later.
-:citet:`Zhang.Morwani.Vyas.ea.2024` found that the critical batch size,
-above which most of the extra work of a larger batch saves nothing, grows
-with the data a run has seen and hardly at all with the size of the model.
-:citet:`Merrill.Arora.Groeneveld.ea.2025` measure it without a noise
-estimate. From a checkpoint they branch short runs at larger batch sizes,
-and they double the batch whenever the larger batch still makes the same
-progress per example. The batch then ramps up over the run, much as the
-learning rate does in a warmup.
+gradient holds as much noise as signal, grow during a run, so that a batch
+which is wasteful early can be useful later.
+:citet:`Zhang.Morwani.Vyas.ea.2024` found that the critical batch size
+grows with the data a run has seen and hardly at all with the size of the
+model. :citet:`Merrill.Arora.Groeneveld.ea.2025` measure it without a
+noise estimate. From a checkpoint they branch short runs at larger batch
+sizes, and they double the batch whenever the larger batch still makes the
+same progress per example. The batch then ramps up over the run, much as
+the learning rate does in a warmup.
 
 ## Large Runs and Benchmarks
 
@@ -391,11 +372,11 @@ transformers: the hyperparameters were tuned once, on a proxy of about 40
 million parameters, and transferred to the larger models. DeepSeek
 :cite:`Bi.Chen.Chen.ea.2024` took the second way, with the fitted power
 laws that :numref:`sec_scaling` quoted. The third case is less satisfying.
-Meta reports that Llama 4
-:cite:`Meta.2025` was trained with per-layer learning rates and
-initialization scales that transfer across width, depth, batch size, and
-training length. Unfortunately the method is not published. Transfer in
-production now extends beyond width, the one direction the chapter covers.
+Meta reports that Llama 4 :cite:`Meta.2025` was trained with per-layer
+learning rates and initialization scales that transfer across width,
+depth, batch size, and training length. Unfortunately the method is not
+published. Transfer in production now extends beyond width, the one
+direction the chapter covers.
 
 ### Benchmarks and Their Protocols
 :label:`subsec_optimization-fr-benchmarks`
@@ -412,7 +393,7 @@ the old optimizers matched them. This is the protocol of
 Organized benchmarks fix the protocol in advance, and still they disagree.
 AlgoPerf :cite:`Dahl.Schneider.Nado.ea.2023` measures the time to reach a
 target on a fixed set of workloads, with hyperparameters either tuned
-within a fixed budget of trials or set by the method itself. In its first
+within a fixed number of trials or set by the method itself. In its first
 competition :cite:`Kasimbeg.Schneider.Eschenhagen.ea.2025`, distributed
 Shampoo won the tuned track and schedule-free AdamW the self-tuning track.
 In a matched-tuning study of language models
@@ -425,20 +406,18 @@ hardware in the least wall-clock time. Muon's first record there cut the
 time by about a fifth. Four comparisons, and no two favor the same method.
 
 The speedrun also shows what becomes of a benchmark that fixes too little.
-Its headline time has since fallen far further, from changes to the
-optimizer, the architecture, and the systems together, so it is a record
-of engineering rather than a benchmark of optimizers. Its optimization
-track :cite:`Jordan.2026` is the repair. It fixes model, data, and batch,
-counts the steps to a target loss, and accepts an entry only if its runs
-lie below the target with statistical significance.
+Its record has since fallen much further, through changes to the
+optimizer, the architecture, and the systems together, so it measures
+engineering rather than optimizers. Its optimization track
+:cite:`Jordan.2026` is the repair. It fixes model, data, and batch, counts
+the steps to a target loss, and accepts an entry only if its runs lie
+below the target with statistical significance.
 
-The track has already repeated what happened to LARS. An orthogonalized
-update moves every singular direction equally far. In a matrix with more
-rows than columns it still moves some output units, the rows, much farther
-than others. NorMuon :cite:`Li.Liu.Liang.ea.2026` applies Adam's remedy
-one level up: it keeps a running average of the squared update per row and
-divides each row by its root. Its authors report a gain over Muon. On the
-track a retuned plain Muon needs as many steps as NorMuon.
+The track has already repeated what happened to LARS. NorMuon
+:cite:`Li.Liu.Liang.ea.2026` divides each row of Muon's update by the root
+of a running average of its squares, so that all output units of a layer
+move equally far, and its authors report a gain over Muon. On the track a
+retuned plain Muon needs as many steps as NorMuon.
 
 Read a ranking together with its protocol: who tuned the baseline, at what
 model size (:numref:`sec_muon`), and whether the learning rate had decayed

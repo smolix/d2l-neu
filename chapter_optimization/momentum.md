@@ -716,9 +716,10 @@ The practical advice is short. We recommend leaving $\beta$ at $0.9$ and
 thinking in terms of the effective step $\eta/(1-\beta)$, the one
 quantity that keeps its meaning when $\beta$ changes. When you add
 momentum to a run that worked without it, start at the same effective
-step, a tenth of the old learning rate, and sweep upward from there. If noise limits the run, the best rate will stay where
-you started, as it did for the CNN. If curvature limits it, the best rate
-will move up, as it did for softmax regression. Expect to save steps where
+step, a tenth of the old learning rate, and sweep upward from there. If
+noise limits the run, the best rate will stay where you started, as it did
+for the CNN. If curvature limits it, the best rate will move up, as it did
+for softmax regression. Expect to save steps where
 the gradient is accurate and the curvature uneven, as in the full-batch
 run, and expect no saving where small minibatches set the pace. In that
 case momentum does no harm either, and since one rarely knows in advance
@@ -937,11 +938,11 @@ batch and at 32 images per batch.
 ::: {.slide title="Momentum Answers Curvature without Measuring It"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | Two Test Models · **Momentum** · Adam · AdamW · Muon |
-| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · Practice |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · **Momentum** · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
 
 - **Uses:** gradient descent on the valley and its ceiling
   $\eta\lambda < 2$ ($\lambda$: curvature); the noise of minibatch SGD;
@@ -1239,14 +1240,19 @@ The velocity is corrected before the overshoot, not one step after it.
 ::: {.slide title="The Look-Ahead Damps the Ringing"}
 [Nesterov momentum]{.kicker}
 
-Same $\eta = 0.3$, $\beta = 0.8$ as the underdamped heavy-ball run:
-
+::: {.cols .vc}
+::: {.col}
 @!momentum-nesterov-momentum-1
+:::
 
-- $x_2$ after 20 steps: below $10^{-4}$ in size, against $-0.25$ for heavy
-  ball. Overshoot along $x_1$: about 0.7, against more than 1.
-- Libraries store the look-ahead point as the parameters:
-  `nesterov=True`, off by default.
+::: {.col}
+Same $\eta = 0.3$, $\beta = 0.8$ as the underdamped heavy-ball run.
+
+- After 20 steps $|x_2| < 10^{-4}$ (heavy ball: $-0.25$).
+- Overshoot along $x_1$: about 0.7 (heavy ball: more than 1).
+- Libraries store the look-ahead point: `nesterov=True`, off by default.
+:::
+:::
 :::
 
 ::: {.slide title="Choose β = 0.9 and Tune the Effective Step"}

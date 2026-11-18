@@ -1000,11 +1000,11 @@ Fashion-MNIST, $n = 128$ to $8{,}192$, 400 Adam steps, two seeds.
 ::: {.slide title="Scaling Up Moves the Learning Rate with the Model"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | Two Test Models · Momentum · Adam · AdamW · Muon |
-| how the step changes over a run, with batch size and width | Schedules · Batch Size · **Scaling Up** · Practice |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · **Scaling Up** · Practice |
 
 - **Uses:** Adam's first step is $\eta$ times the sign of the gradient;
   the spectral norm and Muon's update; AdamW's settled relative step.

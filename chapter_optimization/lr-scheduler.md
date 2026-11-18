@@ -1,8 +1,8 @@
 # Schedules
 :label:`sec_scheduler`
 
-Every learning rate in this chapter has kept one value from the first step
-of a run to the last, and twice a run refused to finish because of it. On
+So far a learning rate has been a single number, chosen before a run and
+never touched again, and twice a run refused to finish because of it. On
 the valley, SGD stopped short of the minimum and wandered in a noise ball
 around it. Halving the rate halved the squared radius of the ball, but it
 also doubled the number of steps needed to get there (:numref:`sec_sgd`).
@@ -596,10 +596,11 @@ warmup, a linear ramp over the first five epochs.
 
 Their optimizer was SGD with momentum, whose first step is not normalized,
 so Adam's first steps cannot be the whole explanation. The other part is
-curvature. Under gradient descent the sharpness of the loss, its largest
-curvature, settles near $2/\eta$ (:numref:`subsec_gd-edge-of-stability`). A
-rate that is raised gradually therefore presses the sharpness down a little
-at a time, and the run arrives at its peak in a region flat enough for it.
+curvature, and we have met it. Under gradient descent the sharpness of the
+loss, its largest curvature, cannot stay above $2/\eta$, so a rate that
+rises gradually lowers this ceiling a little at a time, and the run reaches
+its peak in a region flat enough for it
+(:numref:`subsec_gd-edge-of-stability`).
 :citet:`Kalra.Barkeshli.2024` find that warmup acts in this way under Adam
 as well, where the curvature that counts is that of the problem after Adam
 has rescaled every coordinate. We did not measure it. That sharpness is
@@ -633,8 +634,10 @@ The late decay has no such defect. With a warmup in front it is the
 *warmup–stable–decay* (WSD) schedule :cite:`Hu.Tu.Han.ea.2024`: it warms
 up, holds the peak rate for most of the run, and decays only in a short
 final phase, typically the last 10–20% of the steps. We call the long
-stretch at the peak rate the *plateau*. Every checkpoint of the plateau
-can start a decay, so the decision how long to train can be made late.
+stretch at the peak rate the *plateau*. It is a plateau of the learning
+rate and not of the loss, which keeps falling on it. Every checkpoint of
+the plateau can start a decay, so the decision how long to train can be
+made late.
 
 ### The River Valley
 
@@ -979,11 +982,11 @@ parameters, predicts the next byte of Wikipedia text).
 ::: {.slide title="Schedules Set the Size of the Step over a Run"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | Two Test Models · Momentum · Adam · AdamW · Muon |
-| how the step changes over a run, with batch size and width | **Schedules** · Batch Size · Scaling Up · Practice |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | **Schedules** · Batch Size · Scaling Up · Practice |
 
 - **Uses:** the noise ball of constant-rate SGD; Adam's rate as a step
   length; `TinyLM`.

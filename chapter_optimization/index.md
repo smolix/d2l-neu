@@ -20,33 +20,32 @@ step that is safe along the sharpest one barely moves along the flattest.
 And the gradient of a network is only an estimate, so every step is
 slightly wrong.
 
-What can an optimizer do about them? A step is a vector, so it has a
-direction and a length, and it is computed from a sample, so it carries
-noise. That makes three decisions: the *direction* of a step, its size
-over the run, and the noise level. The first answers the curvature, the
-last the noise; the step size must serve both. The direction gets the most
-room, because the gradient, it turns out, is rarely the best one: in a
-narrow valley it points mostly across, hardly along.
+What can an optimizer do about them? A step has a direction and a length,
+and it is computed from a sample. That makes three decisions: the
+*direction* of a step, its size over the run, and the noise it carries.
+The first answers the curvature, the last the noise; the step size must
+serve both. The direction gets the most room, because the gradient, it
+turns out, is rarely the best one: in a narrow valley it points mostly
+across, hardly along.
 
-We take the two problems first on an example we can solve exactly, then on
-small networks where we can only measure. The example is a valley that
-curves twenty times more sharply across than along. It gives us a ceiling
-for the learning rate, a step count that no learning rate improves on, and
-the cloud in which a noisy run stalls. The networks are the image
-classifier `FashionCNN` and the language model `TinyLM`
-(:numref:`sec_test_models`). `TinyLM` is a transformer
-(:numref:`chap_transformers`), but to an optimizer it is only parameters
-and their gradients. On both we take the recipe apart: momentum and Adam
-for the direction, warmup and decay for the step size, the batch size for
-the noise. That is the core of the chapter, and :numref:`sec_practice`
-assembles it into a run that we get to do only once.
+We meet both problems first on an example that we can solve by hand, a
+valley that curves twenty times more sharply across than along. After that
+we can only measure, on two small networks (:numref:`sec_test_models`): the
+image classifier `FashionCNN` and the language model `TinyLM`, a
+transformer (:numref:`chap_transformers`) that to an optimizer is only
+parameters and their gradients. On both we take the recipe apart: momentum
+and Adam for the direction, warmup and decay for the step size, the batch
+size for the noise. That is the core of the chapter, and
+:numref:`sec_practice` assembles it into a run that we get to do only once.
 
 If you know gradients, eigenvalues and minibatch SGD
 (:numref:`subsec_linear-regression-minibatch-sgd`), you know enough. The
 chapter proves what is short and measures the rest; longer proofs are in
-the mathematical appendix (:numref:`chap_mdl-optimization`), which this
-chapter does not require. On a first reading Muon (:numref:`sec_muon`), a
-recent optimizer built for weight matrices, and wider models
+the mathematical appendix (:numref:`chap_mdl-optimization`), which it does
+not require. It stays on one device and leaves the classical methods that
+deep learning rarely uses, such as quasi-Newton methods and line search,
+to its last section. On a first reading Muon, a recent optimizer for
+weight matrices (:numref:`sec_muon`), and wider models
 (:numref:`sec_scaling`) can wait.
 
 ```toc
@@ -72,11 +71,10 @@ further-reading
 Start with Goh's article for the valley, Bernstein's note for Muon and the
 Tuning Playbook for practice. Each entry names the section it goes with,
 and all are free online except where noted. Topics that the chapter does
-not teach, such as quasi-Newton methods, line search and variance
-reduction, are collected in :numref:`sec_optimization-further-reading`.
-Training on many devices is the subject of :numref:`chap_performance`, and
-texts on the theory are listed with the appendix
-(:numref:`chap_mdl-optimization`).
+not teach, from quasi-Newton methods to benchmarks of optimizers, are
+collected in :numref:`sec_optimization-further-reading`. Training on many
+devices is the subject of :numref:`chap_performance`, and texts on the
+theory are listed with the appendix (:numref:`chap_mdl-optimization`).
 
 **Books**
 
@@ -165,8 +163,9 @@ run, and the noise it carries.
 - **Assumes:** gradients, eigenvalues of a symmetric matrix, minibatch SGD.
 - **Method:** predict a number, then run. Short proofs are given; longer
   ones are in the mathematics appendix, which is optional.
-- **Leaves out:** quasi-Newton and Hessian-free methods, line search,
-  variance reduction, training on many devices.
+- **Leaves out:** quasi-Newton methods, line search, variance reduction
+  (classical methods that deep learning rarely uses); training on many
+  devices.
 - **Place:** opens the Advanced part. `TinyLM`, its data and its training
   loop return in the chapters on attention, transformers, state space
   models and performance.
@@ -175,7 +174,7 @@ run, and the noise it carries.
 ::: {.slide title="From a Valley We Can Solve to Networks We Can Only Measure"}
 [Chapter map]{.kicker}
 
-| part | sections | measured on |
+| part | decks | measured on |
 |---|---|---|
 | **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch Gradient Descent | the valley; a 25-parameter network; linear regression on 1,500 airfoil measurements |
 | **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon | the valley, then `TinyLM` (470,784 parameters) and `FashionCNN` (421,642) |
@@ -183,6 +182,7 @@ run, and the noise it carries.
 
 ::: {.d2l-note}
 The core: Momentum, Adam, AdamW, Schedules and Batch Size. Muon and
-Scaling Up can be left for a second pass.
+Scaling Up can be left for a second pass. Every later deck shows this map
+with its own place marked.
 :::
 :::

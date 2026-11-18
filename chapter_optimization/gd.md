@@ -9,11 +9,10 @@ For a quadratic we know where it is. On the valley of
 :numref:`sec_optimization-intro` the ceiling was 2 divided by the largest
 curvature, or $0.5$, and even the best learning rate below it needed 47
 steps. But a quadratic has the same curvature everywhere, and we had
-chosen it ourselves. The loss of a
-network curves gently in one region and sharply in the next, and nobody
-tells us its curvature in advance. We were left with two questions. What
-limits the step on such a function? And what would the ideal step be if
-the curvature could be measured?
+chosen it ourselves. The loss of a network curves gently in one region and
+sharply in the next, and nobody tells us its curvature in advance. We were
+left with two questions. What limits the step on such a function? And what
+would the ideal step be if the curvature could be measured?
 
 The answer to the first is the number we already have, 2 over the
 curvature, and most of this section is about what that number means once
@@ -891,17 +890,11 @@ the curvature of each direction.
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
+| part | decks |
 |---|---|
-| Landscapes | uneven curvature, the valley |
-| **Gradient Descent** | **step size against curvature** |
-| Stochastic and Minibatch GD | sampled gradients, the noise ball |
-| Two Test Models | a language model and a CNN to measure on |
-| Momentum | averaging gradients over steps |
-| Adam, AdamW | a step size per coordinate, weight decay |
-| Muon | a step for a whole weight matrix |
-| Schedules | warmup and decay |
-| Batch Size, Scaling Up, Practice | larger batches, wider models, a recipe |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · **Gradient Descent** · Stochastic and Minibatch Gradient Descent |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
 :::
 
 ::: {.col .narrow}

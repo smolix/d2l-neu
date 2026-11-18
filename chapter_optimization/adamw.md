@@ -418,7 +418,7 @@ $1 - \eta\lambda$ in the place of $\beta$, applied to the steps instead of
 the gradients. Its window, $1/(\eta\lambda)$ steps, is the *timescale* of
 the decay. Weight decay under AdamW is a rule for forgetting: the weights
 remember about their last $1/(\eta\lambda)$ steps. This reading of AdamW
-is due to Wang and Aitchison (2025).
+is due to :citet:`Wang.Aitchison.2025`.
 
 For $\eta = 0.003$ and $\lambda = 0.1$ the timescale is
 $1/0.0003 = 3{,}333$ steps. Our run lasted 1,000 steps, or 0.3 timescales.
@@ -655,9 +655,9 @@ rate. A published "weight decay 0.1", however, is nearly always the
 library's $\lambda$.
 
 The third rule is that the best timescale is a fraction of the length of
-training, so a longer run needs a longer timescale. Wang and Aitchison
-found that the best timescale, counted in passes over the data, stays
-roughly constant as models and datasets grow. For the single pass of
+training, so a longer run needs a longer timescale.
+:citet:`Wang.Aitchison.2025` found that the best timescale, counted in
+passes over the data, stays roughly constant as models and datasets grow. For the single pass of
 language-model pretraining, :citet:`Bergsma.Dey.Gosal.ea.2025b` found that
 the best fraction falls slowly as the data grow relative to the model,
 roughly as the inverse square root of the number of training tokens per
@@ -923,14 +923,14 @@ of Adam double the memory that weights and gradients take.
 
 1. **Activations and optimizer state.** Extend the count of
    :numref:`subsec_adamw-memory` to the rest of a training step.
-    1. For `TinyLM` with batch size $B$ and windows of $L$ bytes, estimate
+    1. For `TinyLM` with batch size $b$ and windows of $L$ bytes, estimate
        the memory of the activations that must be kept for the backward
        pass, in 32-bit floating point. Count, per block, the outputs of
        the two normalizations, the inputs and outputs of the attention
        layer, and the hidden layer of the MLP. At what batch size do the
        activations overtake the optimizer state?
     1. Count the floating-point operations of one AdamW update per
-       parameter and compare them with the roughly $6BL$ operations per
+       parameter and compare them with the roughly $6bL$ operations per
        parameter of a forward and backward pass over one batch. At which
        batch size would the optimizer step cost one percent of a training
        step?
@@ -987,11 +987,11 @@ timescale 3,333 steps.
 ::: {.slide title="AdamW Completes the Optimizer of the Modern Recipe"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | Two Test Models · Momentum · Adam · **AdamW** · Muon |
-| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · Practice |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · **AdamW** · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
 
 - **Uses:** Adam's update, leaky averages with window $1/(1-\beta)$, the
   noise ball of constant-step SGD.

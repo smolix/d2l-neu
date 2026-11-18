@@ -935,7 +935,8 @@ curvature. A step is stable only below the ceiling $2/\lambda_{\max}$ set by
 the largest curvature (:numref:`subsec_mdl-quadratic-model`). Right after
 initialization that curvature can be large and change quickly, so a step
 that is stable later in training may be unstable at first.
-:numref:`sec_scheduler` measures this in a real model.
+:numref:`subsec_scheduler-warmup` takes up both mechanisms on a real model,
+where it measures the size of the first steps.
 
 ## Structured Preconditioners
 :label:`subsec_mdl-preconditioning-ladder`

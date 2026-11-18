@@ -177,6 +177,7 @@ book:
         - chapter_attention/multihead-attention.qmd
         - chapter_attention/positional-information.qmd
         - chapter_attention/attention-at-scale.qmd
+        - chapter_attention/windowed-linear-attention.qmd
         - chapter_attention/what-attention-computes.qmd
         - chapter_attention/further-reading.qmd
         - chapter_transformers/index.qmd

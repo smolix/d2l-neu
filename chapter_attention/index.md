@@ -38,6 +38,7 @@ blind to order learns where each token stands, and what happens beyond the
 length it was trained on. :numref:`sec_attention-at-scale` asks how to cut
 the cost of scoring all pairs of positions: by exact attention in less
 memory, by a window of recent keys, or by a recurrence of linear cost.
+<!-- WRITER: the split moved windows and linear attention out of sec_attention-at-scale into the new section sec_windowed-linear-attention (10.6, after attention-at-scale in the toc); this sentence and the route need the new section (worklist Section 0, B2). -->
 :numref:`sec_what-attention-computes` asks what trained heads compute, and
 which experiments can tell.
 
@@ -54,6 +55,7 @@ attention-scoring
 multihead-attention
 positional-information
 attention-at-scale
+windowed-linear-attention
 what-attention-computes
 further-reading
 ```

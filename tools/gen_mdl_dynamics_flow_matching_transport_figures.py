@@ -17,8 +17,8 @@ Writes ``img/mdl-dyn-two-point-flow.svg`` and
 ``img/mdl-dyn-couplings-energy.svg``.  Every curve is computed: the two-point
 trajectories integrate the closed-form marginal velocity with RK4 from the
 noise at t = 1 down to the data at t = 0, the
-couplings use the exact deciles of the two Gaussians, and the rotation arcs are
-exact quarter circles.
+couplings use the exact deciles of the two Gaussians, the rotation arcs are
+exact quarter circles, and the quarter-turn chords join their ends.
 """
 
 from __future__ import annotations
@@ -146,8 +146,10 @@ def fig_two_point_flow():
 def fig_couplings_energy():
     """(a) Independent pairing of the deciles of N(0, 4) data (t = 0) with
     those of N(0, 1) noise (t = 1): segments cross.  (b) Sorted pairing
-    x0 = 2 eps: no crossings, cost W_2^2 = 1.  (c) Quarter rotation of a standard Gaussian cloud: no
-    crossings, endpoint law = start law, kinetic energy pi^2 / 2."""
+    x0 = 2 eps: no crossings, cost W_2^2 = 1.  (c) A standard Gaussian cloud
+    and its quarter turn R: the chords of the pairing x0 -> R x0 (solid) never
+    cross and cost 4; the arcs of the rotating flow (faint) have kinetic
+    energy pi^2 / 2; the endpoint law equals the start law, so W_2^2 = 0."""
     fig, axes = plt.subplots(1, 3, figsize=(12.0, 4.0),
                              gridspec_kw=dict(wspace=0.22))
     probs = (np.arange(10) + 0.5) / 10
@@ -198,12 +200,15 @@ def fig_couplings_energy():
         for phi in phis:
             ang = np.deg2rad(phi) + s
             px, py = r * np.cos(ang), r * np.sin(ang)
-            ax.plot(px[:-8], py[:-8], color=GREEN, lw=2.4, zorder=3)
-            fl.arrow(ax, (px[-10], py[-10]), (px[-1], py[-1]), color=GREEN,
-                     lw=0.0, mut=20)
+            # faint: the arc of the rotating flow; solid: the chord of the
+            # quarter-turn pairing, from x0 to R x0
+            ax.plot(px, py, color=GREEN, lw=1.6, alpha=0.35, ls="--", zorder=2)
+            p0, p1 = np.array([px[0], py[0]]), np.array([px[-1], py[-1]])
+            ax.plot(*zip(p0, p1 - 0.1 * (p1 - p0)), color=GREEN, lw=2.4, zorder=3)
+            fl.arrow(ax, p1 - 0.15 * (p1 - p0), p1, color=GREEN, lw=0.0, mut=20)
             ax.plot([px[0]], [py[0]], "o", color=GREEN, ms=5, zorder=4)
     fl.axis_cross(ax, (-2.8, 2.8), (-2.8, 2.8), color="black", lw=0.9)
-    ax.text(0.0, 3.25, r"rotation: energy $\pi^2/2$, $W_2^2=0$",
+    ax.text(0.0, 3.25, r"chords: cost $4$; arcs: $\pi^2/2$; $W_2^2=0$",
             fontsize=14, color=INK, ha="center", va="center", zorder=6)
     ax.set_xlim(-2.9, 2.9)
     ax.set_ylim(-2.9, 3.6)

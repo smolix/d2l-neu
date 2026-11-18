@@ -13,47 +13,37 @@
       "kind": "text",
       "outputs": []
     },
-    "mdl-fokker-planck-probability-flow-the-fokker-planck-equation-and-probability-flow-1": {
-      "code_fingerprint": "sha256:a9f726c865a6fb7fd0719c72998648655909acd7018585a59536625f3d231652",
-      "kind": "text",
-      "outputs": []
-    },
     "fokker-planck-cloud-marginals": {
-      "code_fingerprint": "sha256:4e7f69dcc38b1e3142a973bd630137db46c3fe304673f3157b5a6b889fe8ce20",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:ff53b37cb0edd14f8dec66da63e02e7e56ae31573549b3dc277ac0fe7c0093c4",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t=0.1: mean 1.811 (exact 1.810), std 0.426 (exact 0.426)\nt=0.5: mean 1.213 (exact 1.213), std 0.795 (exact 0.795)\nt=2.0: mean 0.268 (exact 0.271), std 0.998 (exact 0.991)\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
-          "bytes": 75162,
-          "sha256": "sha256:4bc0b651e9e5540ba9a03eb9f1d516b1dbc2c79b4f30fb929070ab4b1f6da7d9"
+          "bytes": 75253,
+          "sha256": "sha256:2f64d0eb2d90c61f76ca4a9435b8cf63854bec38d8e5a978e6171c6c986c5876"
         }
       ]
     },
     "fokker-planck-mixture-setup": {
-      "code_fingerprint": "sha256:1834b88f66547d7813666649bfa61987d15b8f9e00c87fe237f0e24f5b3be5b7",
+      "code_fingerprint": "sha256:f975891073aa81fc43a4e5460fd67b66946d87f3e8999faaf77603eef3115f9b",
       "kind": "text",
       "outputs": []
     },
     "fokker-planck-ou-residual": {
-      "code_fingerprint": "sha256:e8a46e2696e8ebcf3197e4e829c275fca5eaf2c5d5d6b2b22ff2534cf90138c4",
+      "code_fingerprint": "sha256:30f74ae28c51b2142f53d527f88ee91106306253af04f4f0befe8f83c6fe9bb2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.25: max|residual| = 4.4e-06, max|dp/dt| = 4.4e-01\nt=1.0: max|residual| = 6.3e-07, max|dp/dt| = 1.7e-01\nt=3.0: max|residual| = 1.2e-06, max|dp/dt| = 3.2e-03\n"
+          "text": "t=0.25: max|dp/dt| = 4.4e-01; max|residual| at 4001, 8001 points: 4.4e-06, 1.1e-06 (ratio 4.0)\nt=1.0: max|dp/dt| = 1.7e-01; max|residual| at 4001, 8001 points: 6.3e-07, 1.6e-07 (ratio 4.0)\nt=3.0: max|dp/dt| = 3.2e-03; max|residual| at 4001, 8001 points: 1.2e-06, 3.0e-07 (ratio 4.0)\n"
         }
       ]
     },
     "fokker-planck-mixture-score": {
-      "code_fingerprint": "sha256:afd0364a6ea880e93549ada9260b0b94895f1aeb34bb6fc34ca3937fc8aa2660",
+      "code_fingerprint": "sha256:b81f68f5f5ccce65f73607f2eaf0fbfad0a10c2813b51c5269070d161cef2a21",
       "kind": "mixed",
       "outputs": [
         {
@@ -66,70 +56,70 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 27036,
-          "sha256": "sha256:bd61655b9660d3760480bcd29d3d87935faf4ae4132fa239a973ee697aa8a4fb"
+          "sha256": "sha256:d7193bb5647862e143f5a2b2b891e9e8d970da13c237c1f38c543911db7737ce"
         }
       ]
     },
     "fokker-planck-diffusion-identity": {
-      "code_fingerprint": "sha256:15a757994766d28a13853db403cdf2e5e8edbb5a73b6706237e26cc820345540",
+      "code_fingerprint": "sha256:578d729b76da81c9b02be52438fecd252b43d3a4da8894fe20cb644bafda7a99",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "identity: max|lhs - rhs| = 1.1e-07 (max|lhs| = 0.07)\nstd at t=3.0: Brownian 1.992, flow 2.008, exact 2.000\nmax|x_ode - 2 z| = 6.2e-06\n"
+          "text": "std at t=3.0: Brownian 2.009, flow 2.000, exact 2.000\nmax|x_ode - 2 z| = 5.4e-06\n"
         }
       ]
     },
     "fokker-planck-pf-ode-overlay": {
-      "code_fingerprint": "sha256:baba3f086d944a0756fcc62b8bf4d3800d58b793d697b891975c5cf5faf46c02",
+      "code_fingerprint": "sha256:c5725cb9dd1f2eb8f5c87ccead3ed22226e84065c7b70c4005f9dc5d4aad60eb",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "95% band for n = 20000: 0.0096\nt=0.25: KS(SDE) = 0.0068, KS(ODE) = 0.0052\nt=1.00: KS(SDE) = 0.0036, KS(ODE) = 0.0052\nt=3.00: KS(SDE) = 0.0039, KS(ODE) = 0.0052\n"
+          "text": "95% band for n = 20000: 0.0096\nt=0.25: KS(SDE) = 0.0055, KS(ODE) = 0.0046\nt=1.00: KS(SDE) = 0.0052, KS(ODE) = 0.0046\nt=3.00: KS(SDE) = 0.0063, KS(ODE) = 0.0046\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
-          "bytes": 58349,
-          "sha256": "sha256:ac97a5231947ecb5e02bd7a247a1c854d11f7682ce5669f65826824cd9008c63"
+          "bytes": 56823,
+          "sha256": "sha256:e78e5986a89d8d62197b8e84394d724c0447e224ab1cd553b4c579dd28bd2644"
         }
       ]
     },
     "fokker-planck-reverse-sde": {
-      "code_fingerprint": "sha256:8daf9634fc5bc54c3b837bb088d01de31b75461bf80c71b79fdae89cd7c8531c",
+      "code_fingerprint": "sha256:ea02d2d61acdd4cc99dec4146edc269a49bda8f62f9a29b27222dcb76b86a992",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max|p_T - N(0,1)| at T=3: 0.0016 (peak 0.40)\n"
+          "text": "max|p_T - N(0,1)| at T=3: 0.0145 (peak 0.40)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mass on the left: 0.495 (target 0.5)\nmeans -1.998, +1.998 (targets -2, +2)\nwidths 0.505, 0.500 (target 0.5)\nKS to the exact p_0: 0.0079\n"
+          "text": "mass on the left: 0.799 (data 0.800)\nmeans -1.997, +1.990 (data -2, +2)\nwidths 0.505, 0.504 (data 0.5)\nKS to the exact p_0: sampler 0.0054, exact sample 0.0071\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
-          "bytes": 42976,
-          "sha256": "sha256:181d622a232d967261c500071c2481fffbb0d99c39d921091bd9deb921968316"
+          "bytes": 44764,
+          "sha256": "sha256:053b8d38710a96d62bac92639daedfcc118d2dc43b8af28dac6806a1de62e393"
         }
       ]
     },
     "mdl-fokker-planck-probability-flow-reverse-time-sampling-1": {
-      "code_fingerprint": "sha256:fe6693986cc4bf4723d5dadc518cca8c3f22a18cea2f0dc668b89a1da763f8d9",
+      "code_fingerprint": "sha256:e43440888ede608bc8b34b3c22689d70b068c04dcf81b5bf3f52048f7513436e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 300 steps: width 0.5096 (target 0.5)\n 600 steps: width 0.5047 (target 0.5)\n1200 steps: width 0.5024 (target 0.5)\n2400 steps: width 0.5012 (target 0.5)\n"
+          "text": "           300 uniform steps: width excess 0.0096\n           600 uniform steps: width excess 0.0047\n          1200 uniform steps: width excess 0.0024\n          2400 uniform steps: width excess 0.0012\n          1500 uniform steps: width excess 0.0019\n1500 steps, 1000 on t <= 0.5: width excess 0.0006\n"
         }
       ]
     }

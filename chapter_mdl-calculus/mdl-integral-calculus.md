@@ -480,6 +480,9 @@ identity reads $\mathbb{E}[g'(Z)]=\mathbb{E}[Z\,g(Z)]$, Stein's identity for
 the standard normal. Shifting a derivative from an unknown factor onto a
 known one is also the step that makes score matching work
 (:numref:`sec_mdl-score-matching-diffusion-flow`, :cite:`Hyvarinen.2005`).
+In $\mathbb{R}^d$ the rule moves a divergence instead of a derivative, and
+:numref:`sec_mdl-dyn-vector-calculus` introduces the divergence, the
+Laplacian and that form of the rule where they are first needed.
 
 ### Substitution
 

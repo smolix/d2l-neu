@@ -780,10 +780,11 @@ sharpening that the experiment measured.
 The tilted densities are in general not the noised versions of any clean
 distribution. A density obtained by adding Gaussian noise of variance
 $\sigma_t^2$ cannot curve more sharply than the noise itself: no eigenvalue
-of $-\nabla^2 \log p_t$ exceeds $1/\sigma_t^2$. Raising a probability to a
-power $\gamma > 1$ can break this bound, and on the mixture of the appendix
-it does so at most noise levels for our scales
-(:numref:`sec_mdl-ddim-guidance`, exercise
+of $-\nabla^2 \log p_t$ exceeds $1/\sigma_t^2$
+(:numref:`sec_mdl-denoising-score-matching` has the proof). Raising a
+probability to a power $\gamma > 1$ can break this bound, and on the mixture
+of the appendix it does so at most noise levels for our scales
+(:numref:`sec_mdl-ddim-guidance`, Exercise
 :exref:`ex_mdl-score-matching-diffusion-flow-guided-marginals`). The guided
 sampler therefore follows fields that no data distribution generates. Two
 remedies keep most of the gain in agreement at a smaller loss of variety:

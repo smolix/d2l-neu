@@ -7,97 +7,111 @@ Euler's method (:numref:`sec_mdl-euler-runge-kutta`). If a residual network
 what do we gain by taking the equation itself as the model, and what does it
 cost?
 
-Generative modelling gives one answer. A normalizing flow is a network that
-can be inverted, so that every output comes from exactly one input. The
-density of its outputs then follows from the change-of-variables formula,
-which asks for the determinant of the network's Jacobian at every sample, a
-matrix with $3072$ rows for a small colour image of $32\times32$ pixels.
-Discrete flows avoid this cost by restricting the form of their layers. A
-flow in continuous time avoids it differently: the determinant turns into a
-trace, and the trace can be estimated with one backward pass.
+Generative modelling gives one answer. Maximum likelihood needs the density
+of what a model produces. A normalizing flow is a network that can be
+inverted, so that this density follows from the change-of-variables formula.
+The formula asks for the determinant of the network's Jacobian at every
+sample, a matrix with $3072$ rows for a colour image of $32\times32$ pixels.
+In continuous time the determinant turns into a trace, and the trace can be
+estimated with one backward pass.
 
-The model is a differential equation
-$\dot{\mathbf{x}}=\mathbf{f}_{\boldsymbol\theta}(\mathbf{x},t)$ whose
-solution at a final time is the output, a *Neural ODE*
-:cite:`Chen.Rubanova.Bettencourt.ea.2018`. Training it and computing its
-density each come down to integrating one more equation alongside the state.
-For training, that equation is the *adjoint* equation, which optimal control
-developed in the 1950s to ask how the cost of a trajectory changes with its
-controls :cite:`Pontryagin.Boltyanskii.Gamkrelidze.ea.1962`. For the density,
-it is an integral of the trace of the Jacobian, and a model that computes it
-is a *continuous normalizing flow* :cite:`Grathwohl.Chen.Bettencourt.ea.2018`.
-Compared with a fixed residual stack, the model gains an invertible map, a
-computable density, and a step count that is no longer part of the model. It
-loses the ability to reverse order on the line, and each gain has a catch
-that this section measures: a trained field is tied to the solver it was
-trained with, the memory-free gradient drifts, and the cheap trace is noisy.
+A *Neural ODE* :cite:`Chen.Rubanova.Bettencourt.ea.2018` takes the equation
+itself as the model: a differential equation
+$\dot{\mathbf{x}}=\mathbf{f}_{\boldsymbol\theta}(\mathbf{x},t)$ whose field
+is a network and whose solution at a final time is the output. Training it
+and computing its density each come down to integrating one more equation
+beside the state. For training it is the *adjoint* equation, which optimal
+control developed in the 1950s to ask how the cost of a trajectory changes
+with its controls :cite:`Pontryagin.Boltyanskii.Gamkrelidze.ea.1962`. For
+the density it is an integral of the Jacobian's trace.
 
-We train such a model through a solver, derive the adjoint and compare it
-with backpropagation, and then follow a density along a flow. Three results
-are worth remembering: the adjoint equations, the fact that backpropagation
-through a solver discretizes them, and the instantaneous change of variables
-:eqref:`eq_mdl-ode-instant-cov`. A reader who wants only the last, on which
-the likelihoods of diffusion models rest, can go straight to
-:numref:`sec_mdl-continuous-normalizing-flows`. Order preservation and the
-subsection on memory and drift can be skipped on a first reading.
-Notation: the field
-$\mathbf{f}_{\boldsymbol\theta}$ has parameters $\boldsymbol\theta$ and
-Jacobian $\mathbf J=\partial\mathbf{f}/\partial\mathbf{x}$, $\Phi_t$ is its flow
-map, a solver takes $N$ steps of size $h$ to the horizon $T=Nh$,
-$\mathcal{L}$ is a loss, $\mathbf{a}(t)$ the adjoint and $p_t$ the density.
+Compared with a residual stack, the model gains an invertible map, a step
+count that is no longer part of the model, a gradient that needs no stored
+activations, and a computable density. Each gain has a catch, and this
+section measures all four: a flow on the line cannot swap two points, a
+trained field is tied to its solver, the gradient computed without stored
+states drifts, and the cheap trace is noisy.
+
+We train such a model through a solver, derive the adjoint, and follow a
+density along the flow. The results to carry away are the adjoint equations
+and the trace rule :eqref:`eq_mdl-ode-instant-cov`, on which the likelihoods
+of diffusion models rest; a reader who wants only the second can begin at
+:numref:`sec_mdl-continuous-normalizing-flows`. Nothing later builds on the
+subsection on memory and drift.
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2}
 #@tab mxnet
+import math
+import numpy as np
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import numpy as np
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2}
 #@tab pytorch
+import math
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2}
 #@tab tensorflow
+import math
 import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2}
 #@tab jax
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
-The adjoint and density checks reuse the spiral field $\mathbf A$ and the starting
-point $\mathbf{x}_0$ of :numref:`sec_mdl-odes-solvers`, together with two
-tools from there: the matrix exponential $e^{\mathbf Bs}=\mathbf Ve^{\boldsymbol\Lambda s}\mathbf V^{-1}$ from
-the eigendecomposition $\mathbf B=\mathbf V\boldsymbol\Lambda \mathbf V^{-1}$, and the classical fourth-order
-Runge--Kutta solver (RK4).
+The cells below train through the Euler and RK4 steps of
+:numref:`sec_mdl-euler-runge-kutta`: the loop `solve` takes $N$ of them, of
+size $T/N$, and a negative $T$ runs the field backward. The check of the
+adjoint, further down, uses the spiral $\mathbf A$, its start
+$\mathbf{x}_0$ and the matrix exponential
+$e^{\mathbf Cs}=\mathbf Ve^{\boldsymbol\Lambda s}\mathbf V^{-1}$ of
+:numref:`sec_mdl-odes-solvers`.
 
 ```{.python .input #mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-1}
+rng = np.random.default_rng()
 A = np.array([[-0.5, -1.0], [1.0, -0.5]])      # spiral sink: eigenvalues -0.5 +- i
 x0 = np.array([2.0, 0.0])
 
-def expm_eig(B, s):
-    """e^{Bs} via the eigendecomposition B = V diag(mu) V^{-1}."""
-    mu, V = np.linalg.eig(B)
+def expm_eig(C, s):
+    """e^{Cs} via the eigendecomposition C = V diag(mu) V^{-1}."""
+    mu, V = np.linalg.eig(C)
     return (V @ np.diag(np.exp(mu * s)) @ np.linalg.inv(V)).real
 
-def rk4(f, x, T, n):
-    """n classical RK4 steps of dx/dt = f(x) from time 0 to time T."""
-    h = T / n
-    for _ in range(n):
-        k1 = f(x)
-        k2 = f(x + h / 2 * k1)
-        k3 = f(x + h / 2 * k2)
-        k4 = f(x + h * k3)
-        x = x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+def euler_step(f, x, h):
+    """One forward-Euler step of size h for dx/dt = f(x)."""
+    return x + h * f(x)
+
+def rk4_step(f, x, h):
+    """One classical Runge-Kutta step of size h for dx/dt = f(x)."""
+    k1 = f(x)
+    k2 = f(x + h / 2 * k1)
+    k3 = f(x + h / 2 * k2)
+    k4 = f(x + h * k3)
+    return x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+def solve(step, f, x, T, N):
+    """N steps of size T/N from time 0 to time T; T < 0 runs the field backward."""
+    for _ in range(N):
+        x = step(f, x, T / N)
     return x
 ```
 
@@ -109,10 +123,8 @@ time.
 
 ### From Residual Blocks to a Continuous Model
 
-A residual blockWe start from the network we already have, a stack of residual blocks, and
-ask which continuous model it approximates. A residual block
-:cite:`He.Zhang.Ren.ea.2016` and a forward-Euler step of the ODE
-$\dot{\mathbf{x}}=\mathbf{f}(\mathbf{x},t)$ read
+Set a residual block :cite:`He.Zhang.Ren.ea.2016` beside a forward-Euler
+step of the ODE $\dot{\mathbf{x}}=\mathbf{f}(\mathbf{x},t)$:
 
 $$
 \mathbf{x}_{l+1}=\mathbf{x}_l+\mathbf{f}_{\boldsymbol\theta_l}(\mathbf{x}_l)
@@ -126,15 +138,18 @@ two updates are the same formula. A ResNet whose blocks have different
 weights is therefore a time-dependent field sampled at the layer times and
 integrated by Euler's method with unit steps
 (:numref:`fig_mdl-dyn-resnet-as-euler` draws the case in which all blocks
-share one field).
+share one field). Its horizon is its depth: ten blocks integrate the field
+to time $10$.
 
 ![Left: a stack of residual blocks that share one field, each adding the learned branch to an identity skip. Right: the same updates read as forward-Euler steps of size $h=1$, beside the exact flow of the same field, from which they drift.](../img/mdl-dyn-resnet-as-euler.svg)
 :label:`fig_mdl-dyn-resnet-as-euler`
 
-To take the limit, keep one parameter vector $\boldsymbol\theta$ for all
-times and let the steps shrink. (The field may still depend on $t$; a ResNet
-with distinct blocks is a field that varies in time.) With $N$ steps of size
-$h=T/N$ at the times $t_n=nh$,
+To take the limit, fix the horizon $T$, keep one parameter vector
+$\boldsymbol\theta$ for all times, and let the steps shrink. In the language
+of layers, the network grows deeper while each layer corrects less. (The
+field may still depend on $t$: the network takes $t$ as an input, and that
+is how one parameter vector serves blocks that differ.) With $N$ steps of
+size $h=T/N$ at the times $t_n=nh$,
 
 $$
 \mathbf{x}_{n+1}=\mathbf{x}_n+h\,\mathbf{f}_{\boldsymbol\theta}(\mathbf{x}_n,t_n),
@@ -144,7 +159,7 @@ $$
 $$
 :eqlabel:`eq_mdl-ode-neural-ode`
 
-The convergence follows from Euler's global error bound in
+The convergence is Euler's error bound from
 :numref:`sec_mdl-euler-runge-kutta`: for a smooth field that is Lipschitz in
 $\mathbf{x}$, the Euler iterate after $N$ steps is within $O(h)$ of the exact
 solution. The **Neural ODE** is the limit object: the model whose output is
@@ -158,11 +173,10 @@ The exact map and the computed map can differ in kind, not only in accuracy.
 The field $\dot{x}=-x$ has the exact flow $\Phi_t(x)=e^{-t}x$, a bijection of
 $\mathbb{R}$ for every $t$. One Euler step with $h=1$ computes
 $x+1\cdot(-x)=0$ and maps every input to zero. The exact map, by contrast,
-is always invertible when the field is continuous in $t$ and globally
-Lipschitz in $\mathbf{x}$: the reversed path $\mathbf{y}(s)=\mathbf{x}(T-s)$
-solves $\dot{\mathbf{y}}=-\mathbf{f}(\mathbf{y},T-s)$, whose field is again
-Lipschitz, so it is the only solution from $\mathbf{x}(T)$
-(:numref:`sec_mdl-ode-existence-uniqueness`) and it recovers the start.
+is a bijection whenever the field is continuous in $t$ and globally
+Lipschitz in $\mathbf{x}$: running the field backward from $\mathbf{x}(T)$
+is again a problem with exactly one solution, and that solution leads back
+to the start (:numref:`sec_mdl-ode-existence-uniqueness`).
 
 ### Order Preservation on the Line
 :label:`subsec_mdl-flow-order`
@@ -172,6 +186,9 @@ least as expressive as the residual stack it came from? On the real line it
 is not, and a picture shows why. In the $(t,x)$ plane, trajectories
 of a Lipschitz field never cross. Two trajectories that swapped $-1$ and $1$
 would have to meet on the way (panel (a) of :numref:`fig_mdl-dyn-flow-order`).
+
+![(a) On the line, trajectories of a Lipschitz field never cross (here $\dot x=-x$), so the time-$T$ map preserves order; the dashed pair that swaps $-1$ and $1$ would need two solutions through one point. (b) The residual step $x+f(x)$ with $f(x)=-2x$ swaps the points in one step: it is an Euler step with $hL=2$, not a flow. (c) One extra dimension removes the obstruction: the rotation by $\pi$ carries $(x,0)$ to $(-x,0)$ along half circles that pass without meeting (colours as in (b)).](../img/mdl-dyn-flow-order.svg)
+:label:`fig_mdl-dyn-flow-order`
 
 **Proposition (flows on $\mathbb{R}$ preserve order).** *Let $f(x,t)$ be
 continuous in $t$ and globally Lipschitz in $x$, and write $\Phi_t(x)$ for
@@ -194,10 +211,11 @@ As a consequence, no Neural ODE on $\mathbb{R}$ realizes $x\mapsto-x$: that
 map sends $-1$ to $1$ and $1$ to $-1$, which reverses their order.
 
 The residual block $x+f(x)$ with $f(x)=-2x$ does realize it, in one step
-(panel (b) of :numref:`fig_mdl-dyn-flow-order`). That block is the Euler step with $h=1$
-of $\dot{x}=-2x$, whose exact flow $e^{-2t}x$ never reverses order. The two
-statements agree because one Euler step $x+hf(x)$ of a field with Lipschitz
-constant $L$ is guaranteed to be increasing when $hL<1$: for $x>y$,
+(panel (b) of :numref:`fig_mdl-dyn-flow-order`). That block is the Euler
+step with $h=1$ of $\dot{x}=-2x$, whose exact flow $e^{-2t}x$ never reverses
+order. The two statements agree because one Euler step $x+hf(x)$ of a field
+with Lipschitz constant $L$ is guaranteed to be increasing when $hL<1$: for
+$x>y$,
 
 $$
 \big(x+hf(x)\big)-\big(y+hf(y)\big)\;\ge\;(x-y)-hL\,(x-y)\;=\;(1-hL)(x-y),
@@ -206,11 +224,12 @@ $$
 which is positive when $hL<1$. Here $hL=2$, so the step may reverse order.
 A finite step is not a flow, and the proposition does not constrain it.
 
-One more dimension removes the obstruction. Let
-$\mathbf K=\left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$, which
-satisfies $\mathbf K^2=-\mathbf{I}$, so that the exponential series splits into
-$e^{s\mathbf K}=\cos s\,\mathbf{I}+\sin s\,\mathbf K$, the rotation by the angle $s$. The
-field $\dot{\mathbf{x}}=\pi \mathbf K\mathbf{x}$ has the time-one map
+One more dimension removes the obstruction. The rotation field
+$\dot{\mathbf{x}}=\mathbf K\mathbf{x}$ of :numref:`sec_mdl-odes-solvers`,
+with $\mathbf K=\left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$,
+has the flow $e^{s\mathbf K}=\cos s\,\mathbf{I}+\sin s\,\mathbf K$, which
+turns the plane by the angle $s$. Run $\pi$ times as fast, as
+$\dot{\mathbf{x}}=\pi \mathbf K\mathbf{x}$, it has the time-one map
 
 $$
 \Phi_1=e^{\pi \mathbf K}=\cos\pi\,\mathbf{I}+\sin\pi\,\mathbf K=-\mathbf{I}.
@@ -224,9 +243,6 @@ flow runs in the plane, and the first coordinate is read out. A flow is a
 continuous rearrangement of space, and on a line there is no room for two
 points to pass.
 
-![(a) On the line, trajectories of a Lipschitz field never cross (here $\dot x=-x$), so the time-$T$ map preserves order; the dashed pair that swaps $-1$ and $1$ would need two solutions through one point. (b) The residual step $x+f(x)$ with $f(x)=-2x$ swaps the points in one step: it is an Euler step with $hL=2$, not a flow. (c) One extra dimension removes the obstruction: the rotation by $\pi$ carries $(x,0)$ to $(-x,0)$ along half circles that pass without meeting (colours as in (b)).](../img/mdl-dyn-flow-order.svg)
-:label:`fig_mdl-dyn-flow-order`
-
 ### Training Through the Solver
 
 The forward pass of a Neural ODE is a loop of $N$ solver steps. The direct
@@ -236,241 +252,277 @@ through the unrolled steps. With Euler as the solver the program is a ResNet
 of $N$ blocks that share one set of weights, so ordinary automatic
 differentiation trains it.
 
-The task is deliberately easy: carry $64$ points of the unit circle to the
-matching points of the ellipse centred at $(1.5,0)$ with semi-axes $1.2$ and
-$0.4$, a stretch and a shift. The exact flow of the affine field
+Let us try this on a task that is deliberately easy: carry $64$ points of
+the unit circle to the matching points of the ellipse centred at $(1.5,0)$
+with semi-axes $1.2$ and $0.4$, a stretch and a shift. The exact flow of the
+affine field
 $\dot{\mathbf{x}}=\mathrm{diag}(\ln1.2,\ln0.4)\,\mathbf{x}+\mathbf{c}$ does
-this without error for a suitable $\mathbf{c}$. The question is whether
-training finds a flow or only a ten-step program. The field has
-one hidden layer of $32$ tanh units, the loss is the mean squared error at
-the endpoints, the solver takes $N=10$ Euler steps of size $h=0.1$, and Adam
-(:numref:`sec_mdl-adaptive-stochastic-methods`) runs $401$ full-batch
-iterations at learning rate $0.05$, lowered to $0.005$ from iteration $300$.
+this without error for a suitable $\mathbf{c}$, so whatever error we find
+will not be for want of a solution. Will the trained field still reach the
+targets when it is integrated accurately, or only with the ten steps it was
+trained with? In the first case training has found a flow, in the second
+only a ten-step program.
 
-```{.python .input #odes-solvers-neural-ode-train}
-#@tab pytorch
+The field has one hidden layer of $32$ tanh units, the loss is the mean
+squared error at the endpoints, and Adam
+(:numref:`sec_mdl-adaptive-stochastic-methods`) runs full-batch iterations
+$0$ to $400$ at learning rate $0.05$, lowered to $0.005$ for the last
+hundred. We train twice from the same initial weights: once through $N=10$
+Euler steps of size $h=0.1$, and once through ten steps of RK4, which
+evaluates the field four times per step.
+
+```{.python .input #mdl-neural-odes-training-through-the-solver-2}
 angle = np.linspace(0, 2 * np.pi, 64, endpoint=False)
 X0_ring = np.stack([np.cos(angle), np.sin(angle)], axis=1)            # circle
 X1_ring = np.stack([1.5 + 1.2 * np.cos(angle), 0.4 * np.sin(angle)], axis=1)
+solvers = {'Euler': euler_step, 'RK4': rk4_step}
+seed = int(rng.integers(2**31))                # one initialization for both solvers
+```
+
+```{.python .input #odes-solvers-neural-ode-train}
+#@tab pytorch
 X, Y = torch.tensor(X0_ring).float(), torch.tensor(X1_ring).float()
-net = torch.nn.Sequential(torch.nn.Linear(2, 32), torch.nn.Tanh(),
-                          torch.nn.Linear(32, 2))
-for layer in net[::2]:                         # Glorot-uniform weights, zero biases
-    torch.nn.init.xavier_uniform_(layer.weight)
-    torch.nn.init.zeros_(layer.bias)
 
-def flow(X, N=10, h=0.1, sign=1.0):
-    """N Euler steps of size h; sign=-1 integrates the field backward."""
-    for _ in range(N):                         # one Euler step = one residual block
-        X = X + sign * h * net(X)
-    return X
+def train(name, step, seed):
+    """Fit the field through 10 steps of one solver, from the given seed."""
+    torch.manual_seed(seed)
+    net = nn.Sequential(nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 2))
+    for layer in net[::2]:                     # Glorot-uniform weights, zero biases
+        nn.init.xavier_uniform_(layer.weight)
+        nn.init.zeros_(layer.bias)
+    opt = torch.optim.Adam(net.parameters(), lr=0.05)
+    sched = torch.optim.lr_scheduler.MultiStepLR(opt, [300], 0.1)  # 0.005 from 300
+    losses = []
+    for it in range(401):
+        loss = ((solve(step, net, X, 1.0, 10) - Y) ** 2).mean()
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        sched.step()
+        if it % 200 == 0:
+            losses.append(loss.item())
+    print(f'{name}-trained: loss', ', '.join(f'{l:.1e}' for l in losses),
+          'at iterations 0, 200, 400')
+    return net
 
-opt = torch.optim.Adam(net.parameters(), lr=0.05)
-sched = torch.optim.lr_scheduler.MultiStepLR(opt, [300], 0.1)  # 0.005 from 300
-for it in range(401):
-    loss = ((flow(X) - Y) ** 2).mean()
-    opt.zero_grad()
-    loss.backward()
-    opt.step()
-    sched.step()
-    if it % 200 == 0:
-        print(f'iter {it:3d}  loss {loss.item():.1e}')
+trained = {name: train(name, step, seed) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab mxnet
-angle = np.linspace(0, 2 * np.pi, 64, endpoint=False)
-X0_ring = np.stack([np.cos(angle), np.sin(angle)], axis=1)            # circle
-X1_ring = np.stack([1.5 + 1.2 * np.cos(angle), 0.4 * np.sin(angle)], axis=1)
 X, Y = mnp.array(X0_ring, dtype='float32'), mnp.array(X1_ring, dtype='float32')
-net = nn.HybridSequential()
-net.add(nn.Dense(32, activation='tanh'), nn.Dense(2))
-net.initialize(init.Xavier())                  # Glorot-uniform weights, zero biases
-net.hybridize()
 
-def flow(X, N=10, h=0.1, sign=1.0):
-    """N Euler steps of size h; sign=-1 integrates the field backward."""
-    for _ in range(N):                         # one Euler step = one residual block
-        X = X + sign * h * net(X)
-    return X
+def train(name, step, seed):
+    """Fit the field through 10 steps of one solver, from the given seed."""
+    npx.random.seed(seed)
+    net = nn.HybridSequential()
+    net.add(nn.Dense(32, activation='tanh'), nn.Dense(2))
+    net.initialize(init.Xavier())              # Glorot-uniform weights, zero biases
+    net.hybridize()
+    trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': 0.05})
+    losses = []
+    for it in range(401):
+        if it == 300:
+            trainer.set_learning_rate(0.005)   # tenfold smaller for the last 100
+        with autograd.record():
+            loss = ((solve(step, net, X, 1.0, 10) - Y) ** 2).mean()
+        loss.backward()
+        trainer.step(1)
+        if it % 200 == 0:
+            losses.append(float(loss))
+    print(f'{name}-trained: loss', ', '.join(f'{l:.1e}' for l in losses),
+          'at iterations 0, 200, 400')
+    return net
 
-trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': 0.05})
-for it in range(401):
-    if it == 300:
-        trainer.set_learning_rate(0.005)       # tenfold smaller for the last 100
-    with autograd.record():
-        loss = ((flow(X) - Y) ** 2).mean()
-    loss.backward()
-    trainer.step(1)
-    if it % 200 == 0:
-        print(f'iter {it:3d}  loss {float(loss):.1e}')
+trained = {name: train(name, step, seed) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab tensorflow
-angle = np.linspace(0, 2 * np.pi, 64, endpoint=False)
-X0_ring = np.stack([np.cos(angle), np.sin(angle)], axis=1)            # circle
-X1_ring = np.stack([1.5 + 1.2 * np.cos(angle), 0.4 * np.sin(angle)], axis=1)
 X, Y = tf.constant(X0_ring, tf.float32), tf.constant(X1_ring, tf.float32)
-net = tf.keras.Sequential([tf.keras.layers.Dense(32, activation='tanh'),
-                           tf.keras.layers.Dense(2)])  # Glorot-uniform, zero biases
 
-def flow(X, N=10, h=0.1, sign=1.0):
-    """N Euler steps of size h; sign=-1 integrates the field backward."""
-    for _ in range(N):                         # one Euler step = one residual block
-        X = X + sign * h * net(X)
-    return X
+def train(name, step, seed):
+    """Fit the field through 10 steps of one solver, from the given seed."""
+    tf.keras.utils.set_random_seed(seed)
+    net = tf.keras.Sequential([tf.keras.layers.Dense(32, activation='tanh'),
+                               tf.keras.layers.Dense(2)])  # Glorot-uniform, zero biases
+    lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay([299], [0.05, 0.005])
+    opt = tf.keras.optimizers.Adam(learning_rate=lr)  # 0.005 from iteration 300
 
-lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay([300], [0.05, 0.005])
-opt = tf.keras.optimizers.Adam(learning_rate=lr)  # 0.005 after iteration 300
+    @tf.function
+    def train_step():
+        with tf.GradientTape() as tape:
+            loss = tf.reduce_mean((solve(step, net, X, 1.0, 10) - Y) ** 2)
+        opt.apply_gradients(zip(tape.gradient(loss, net.trainable_variables),
+                                net.trainable_variables))
+        return loss
 
-@tf.function
-def train_step():
-    with tf.GradientTape() as tape:
-        loss = tf.reduce_mean((flow(X) - Y) ** 2)
-    opt.apply_gradients(zip(tape.gradient(loss, net.trainable_variables),
-                            net.trainable_variables))
-    return loss
+    losses = []
+    for it in range(401):
+        loss = train_step()
+        if it % 200 == 0:
+            losses.append(float(loss))
+    print(f'{name}-trained: loss', ', '.join(f'{l:.1e}' for l in losses),
+          'at iterations 0, 200, 400')
+    return tf.function(net)                    # a compiled field evaluates faster
 
-for it in range(401):
-    loss = train_step()
-    if it % 200 == 0:
-        print(f'iter {it:3d}  loss {float(loss):.1e}')
+trained = {name: train(name, step, seed) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab jax
-angle = np.linspace(0, 2 * np.pi, 64, endpoint=False)
-X0_ring = np.stack([np.cos(angle), np.sin(angle)], axis=1)            # circle
-X1_ring = np.stack([1.5 + 1.2 * np.cos(angle), 0.4 * np.sin(angle)], axis=1)
 X, Y = jnp.array(X0_ring), jnp.array(X1_ring)
-k1, k2 = jax.random.split(jax.random.key(np.random.randint(2**31)))
+k1, k2 = jax.random.split(jax.random.key(seed))
 glorot = jax.nn.initializers.glorot_uniform()  # Glorot-uniform weights, zero biases
-params = {'W1': glorot(k1, (2, 32)), 'b1': jnp.zeros(32),
-          'W2': glorot(k2, (32, 2)), 'b2': jnp.zeros(2)}
+params0 = {'W1': glorot(k1, (2, 32)), 'b1': jnp.zeros(32),
+           'W2': glorot(k2, (32, 2)), 'b2': jnp.zeros(2)}
+opt = optax.adam(optax.piecewise_constant_schedule(0.05, {300: 0.1}))
 
 def net(params, X):
     return jnp.tanh(X @ params['W1'] + params['b1']) @ params['W2'] + params['b2']
 
-def flow(params, X, N=10, h=0.1, sign=1.0):
-    """N Euler steps of size h; sign=-1 integrates the field backward."""
-    step = lambda i, X: X + sign * h * net(params, X)  # one residual block
-    return jax.lax.fori_loop(0, N, step, X)
+def flow(params, step, X, T, N):
+    """solve() as a fori_loop: N steps of size T/N along the field net(params)."""
+    f = lambda x: net(params, x)
+    return jax.lax.fori_loop(0, N, lambda n, X: step(f, X, T / N), X)
 
-opt = optax.adam(optax.piecewise_constant_schedule(0.05, {300: 0.1}))
-opt_state = opt.init(params)
-
-@jax.jit
-def train_step(params, opt_state):
+@jax.jit(static_argnames='step')
+def train_step(params, opt_state, step):
     loss, grads = jax.value_and_grad(
-        lambda p: ((flow(p, X) - Y) ** 2).mean())(params)
+        lambda p: ((flow(p, step, X, 1.0, 10) - Y) ** 2).mean())(params)
     updates, opt_state = opt.update(grads, opt_state)
     return optax.apply_updates(params, updates), opt_state, loss
 
-for it in range(401):
-    params, opt_state, loss = train_step(params, opt_state)
-    if it % 200 == 0:
-        print(f'iter {it:3d}  loss {float(loss):.1e}')
+def train(name, step):
+    """Fit the field through 10 steps of one solver, from the shared params0."""
+    params, opt_state, losses = params0, opt.init(params0), []
+    for it in range(401):
+        params, opt_state, loss = train_step(params, opt_state, step)
+        if it % 200 == 0:
+            losses.append(float(loss))
+    print(f'{name}-trained: loss', ', '.join(f'{l:.1e}' for l in losses),
+          'at iterations 0, 200, 400')
+    return params
+
+trained = {name: train(name, step) for name, step in solvers.items()}
 ```
 
-The loss falls from order one to well below $10^{-4}$, typically a few times
-$10^{-6}$.
+Both losses fall from order one to below $10^{-5}$. Judged by the loss they
+were trained on, the two fields are equally good.
 
-Two tests tell a flow from a ten-step program. First, integrate the trained field with $N=100$ and $N=1000$ steps
-($Nh=1$ throughout); the larger $N$, the closer the computed map is to the
-exact time-one flow of the field. Before running the cell, guess what this
-does to the endpoint error. Second, integrate forward $N$ steps and
-then backward $N$ steps with
-$\mathbf{x}\leftarrow\mathbf{x}-h\,\mathbf{f}_{\boldsymbol\theta}(\mathbf{x})$,
-and measure how far the round trip lands from where it started.
+Two tests follow. The first puts our question directly: integrate each
+trained field with its own solver at $N=100$ and $N=1000$ steps ($Nh=1$
+throughout). The larger $N$, the closer the computed map is to the exact
+time-one flow of the field. Before running the cell, guess what this does to
+the two endpoint errors. The second test is about invertibility, the first
+gain on our list. Take the Euler-trained field forward $N$ steps and then
+backward $N$ steps, and measure how far the round trip lands from where it
+started. An exact flow would return every point to its start.
 
 ```{.python .input #mdl-neural-odes-training-through-the-solver-1}
 #@tab pytorch
+dist = lambda P, Q: torch.linalg.vector_norm(P - Q, dim=1).mean().item()
+print('   N   Euler-trained   RK4-trained   Euler round trip')
 with torch.inference_mode():
-    for n in (10, 100, 1000):
-        fwd = flow(X, n, 1 / n)
-        back = flow(fwd, n, 1 / n, sign=-1.0)
-        err = torch.linalg.vector_norm(fwd - Y, dim=1).mean()
-        trip = torch.linalg.vector_norm(back - X, dim=1).mean()
-        print(f'N = {n:4d}: endpoint error {err:.1e}, '
-              f'forward-backward round trip {trip:.1e}')
+    for N in (10, 100, 1000):
+        err = [dist(solve(solvers[k], trained[k], X, 1.0, N), Y) for k in solvers]
+        fwd = solve(euler_step, trained['Euler'], X, 1.0, N)
+        back = solve(euler_step, trained['Euler'], fwd, -1.0, N)
+        print(f'{N:4d}   {err[0]:13.1e}   {err[1]:11.1e}   {dist(back, X):16.1e}')
 ```
 
 ```{.python .input #mdl-neural-odes-training-through-the-solver-1}
 #@tab mxnet
-for n in (10, 100, 1000):
-    fwd = flow(X, n, 1 / n)
-    back = flow(fwd, n, 1 / n, sign=-1.0)
-    err = mnp.sqrt(((fwd - Y) ** 2).sum(axis=1)).mean()
-    trip = mnp.sqrt(((back - X) ** 2).sum(axis=1)).mean()
-    print(f'N = {n:4d}: endpoint error {float(err):.1e}, '
-          f'forward-backward round trip {float(trip):.1e}')
+dist = lambda P, Q: float(mnp.sqrt(((P - Q) ** 2).sum(axis=1)).mean())
+print('   N   Euler-trained   RK4-trained   Euler round trip')
+for N in (10, 100, 1000):
+    err = [dist(solve(solvers[k], trained[k], X, 1.0, N), Y) for k in solvers]
+    fwd = solve(euler_step, trained['Euler'], X, 1.0, N)
+    back = solve(euler_step, trained['Euler'], fwd, -1.0, N)
+    print(f'{N:4d}   {err[0]:13.1e}   {err[1]:11.1e}   {dist(back, X):16.1e}')
 ```
 
 ```{.python .input #mdl-neural-odes-training-through-the-solver-1}
 #@tab tensorflow
-for n in (10, 100, 1000):
-    fwd = flow(X, n, 1 / n)
-    back = flow(fwd, n, 1 / n, sign=-1.0)
-    err = tf.reduce_mean(tf.norm(fwd - Y, axis=1))
-    trip = tf.reduce_mean(tf.norm(back - X, axis=1))
-    print(f'N = {n:4d}: endpoint error {float(err):.1e}, '
-          f'forward-backward round trip {float(trip):.1e}')
+dist = lambda P, Q: float(tf.reduce_mean(tf.norm(P - Q, axis=1)))
+print('   N   Euler-trained   RK4-trained   Euler round trip')
+for N in (10, 100, 1000):
+    err = [dist(solve(solvers[k], trained[k], X, 1.0, N), Y) for k in solvers]
+    fwd = solve(euler_step, trained['Euler'], X, 1.0, N)
+    back = solve(euler_step, trained['Euler'], fwd, -1.0, N)
+    print(f'{N:4d}   {err[0]:13.1e}   {err[1]:11.1e}   {dist(back, X):16.1e}')
 ```
 
 ```{.python .input #mdl-neural-odes-training-through-the-solver-1}
 #@tab jax
-for n in (10, 100, 1000):
-    fwd = flow(params, X, n, 1 / n)
-    back = flow(params, fwd, n, 1 / n, sign=-1.0)
-    err = jnp.linalg.norm(fwd - Y, axis=1).mean()
-    trip = jnp.linalg.norm(back - X, axis=1).mean()
-    print(f'N = {n:4d}: endpoint error {float(err):.1e}, '
-          f'forward-backward round trip {float(trip):.1e}')
+dist = lambda P, Q: float(jnp.linalg.norm(P - Q, axis=1).mean())
+print('   N   Euler-trained   RK4-trained   Euler round trip')
+for N in (10, 100, 1000):
+    err = [dist(flow(trained[k], solvers[k], X, 1.0, N), Y) for k in solvers]
+    fwd = flow(trained['Euler'], euler_step, X, 1.0, N)
+    back = flow(trained['Euler'], euler_step, fwd, -1.0, N)
+    print(f'{N:4d}   {err[0]:13.1e}   {err[1]:11.1e}   {dist(back, X):16.1e}')
 ```
 
-At the training step count the endpoints lie within $0.01$ of their
-targets, typically a few thousandths. With finer steps the endpoint error
-*rises* to about $0.02$ and then stops changing. Training fitted the ten-step program. The exact
-time-one flow of the same field, which $N=1000$ approximates, lands about
-$0.02$ from the targets, under $2\%$ of the ellipse's long semi-axis. The
-field defines a flow close to its ten-step program, not equal to it.
-For the step count to be free after training, the field must be fitted to
-the flow and not to one program: by training through a finer or
-higher-order solver, or by a regression that involves no solver at all,
-which is how :numref:`sec_mdl-score-matching-diffusion-flow` and
-:numref:`sec_mdl-flow-matching-transport` learn their fields.
+Take the round trip first, in the last column. It misses its start by about
+$0.055$ at $N=10$, $0.0055$ at $N=100$ and $0.00055$ at $N=1000$, tenfold
+less per tenfold more steps. Each pair of a forward and a backward Euler step
+leaves a residual of order $h^2$, and $N$ of them add up to $O(h)$, Euler's
+order. Running the field backward undoes the exact flow. It undoes the
+Euler program only in the limit $h\to0$. An Euler program with $hL<1$ does
+have an inverse, since each of its steps is then a bijection (Exercise
+:exref:`ex_mdl-odes-solvers-residual-logdet`). But that inverse is made of
+implicit steps, not of Euler steps with $-h$.
 
-The round trip misses its start by about $0.055$ at $N=10$, $0.0056$ at
-$N=100$ and $0.00056$ at $N=1000$, tenfold less per tenfold more steps. Each
-pair of forward and backward Euler steps leaves a residual of order $h^2$,
-and $N$ of them add up to $O(h)$, Euler's order. The exact flow is
-invertible, whereas the numerical map becomes invertible only in the limit
-$h\to0$.
+Now the endpoint errors. At the training step count both fields land within
+a few thousandths of their targets. Surprisingly, finer steps make the
+Euler-trained field worse: its error *rises* to about $0.02$ and then stops
+changing. Training fitted the ten-step program. The exact time-one flow of
+that field, which $N=1000$ approximates, lands $0.02$ from the targets,
+under $2\%$ of the ellipse's long semi-axis: the field defines a flow close
+to its ten-step program, not equal to it.
+
+The RK4-trained field prints the same error at ten, a hundred and a
+thousand steps. Ten RK4 steps already compute the flow of so smooth a field
+to the digits shown, so fitting the program fitted the flow, and the step
+count is free after training. A field trained through a crude solver is a
+program; a field trained through an accurate one is a flow.
+
+The accuracy has to be supplied in every iteration, however. Training
+through RK4 evaluates the field forty times per iteration and backpropagates
+through all forty evaluations; training through Euler, ten times. A hundred
+Euler steps or a second-order solver would change the count and nothing else
+(Exercise :exref:`ex_mdl-odes-solvers-step-count-transfer`). The alternative is to
+take the solver out of training altogether: fit the field by regression onto
+targets that are known in closed form, at one field evaluation per example,
+so that what is fitted is a flow from the start. This is how
+:numref:`sec_mdl-score-matching-diffusion-flow` and
+:numref:`sec_mdl-flow-matching-transport` learn their fields.
 
 ## The Adjoint Method
 :label:`sec_mdl-adjoint-method`
 
-Backpropagation through $N$ solver steps gives the gradient of the
-$N$-step program. The adjoint method differentiates the exact flow instead,
-by integrating one linear ODE backward in time. It is first of all what
-backpropagation through a solver converges to as the steps shrink. It is
-also an alternative implementation: backpropagation stores the $N$
-intermediate states, whereas the adjoint ODE can recompute them on the way
-back, at a loss of stability that the last subsection quantifies. Its central object is the
+Training gave us the gradient of the ten-step program, and the program and
+the flow turned out to be different maps. Are their gradients different too?
+And can the gradient of the flow be computed at all, when no finite program
+computes the flow?
+
+It can, by an idea that reverse-mode differentiation already contains.
+Reverse mode carries the derivative of the loss with respect to a layer's
+activations backward from layer to layer;
+:numref:`subsec_mdl-backpropagation` called it the adjoint of a node. The
+adjoint method carries the same quantity backward through time, with one
+node $\mathbf{x}(t)$ for every instant. Its central object is the
 *adjoint state* $\mathbf{a}(t)=\partial\mathcal{L}/\partial\mathbf{x}(t)$,
-the gradient of the loss with respect to the state at time $t$. This is the
-adjoint $\bar a$ of :eqref:`eq_mdl-adjoint`, the total derivative of the
-output with respect to a node, with one node $\mathbf{x}(t)$ for every
-instant: reverse mode carries it from layer to layer
-(:numref:`sec_mdl-matrix-calculus-autodiff`), and here it is carried
-through time.
+the gradient of the loss with respect to the state at time $t$, and it
+turns out to obey a linear differential equation of its own.
 
 ### The Scalar Case
 
 Before the general statement we work one example to the end, an example in
-which every quantity has a closed form. Take $\dot{x}=\theta x$ with $x(0)=x_0$ and the
-loss $\mathcal{L}=\tfrac12x(T)^2$ on the endpoint. Directly,
+which every quantity has a closed form. Take $\dot{x}=\theta x$ with
+$x(0)=x_0$ and the loss $\mathcal{L}=\tfrac12x(T)^2$ on the endpoint.
+Directly,
 $x(T)=e^{\theta T}x_0$, so $\partial x(T)/\partial\theta=T\,x(T)$ and
 
 $$
@@ -484,9 +536,10 @@ the state at time $t$ grows to $e^{\theta(T-t)}\delta$ by time $T$ and
 changes the loss by $x(T)\,e^{\theta(T-t)}\delta$, so
 $a(t)=e^{\theta(T-t)}x(T)$. This adjoint solves the ODE $\dot{a}=-\theta a$
 backward from the final value $a(T)=x(T)$, which is the derivative of the
-loss $\ell(x)=\tfrac12x^2$ at $x(T)$. A change of $\theta$ pushes the
-trajectory at the rate $\partial f/\partial\theta=x$, and the adjoint
-converts each push into a change of the loss. Summing over time,
+loss $\ell(x)=\tfrac12x^2$ at $x(T)$. A change $\delta\theta$ of the
+parameter alters the velocity by $x(t)\,\delta\theta$ at every instant,
+since $\partial f/\partial\theta=x$, and the adjoint converts each of these
+nudges into a change of the loss. Summing over time,
 
 $$
 \int_0^T a(t)\,\frac{\partial f}{\partial\theta}\,dt
@@ -586,50 +639,55 @@ The backward ODE is linear in $\mathbf{a}$, with the transposed Jacobian as
 its matrix. Each of its steps computes
 $\mathbf{a}^\top\partial\mathbf{f}/\partial\mathbf{x}$, one vector--Jacobian
 product, which costs one reverse-mode pass through $\mathbf{f}$
-(:numref:`sec_mdl-matrix-calculus-autodiff`). (A ReLU field is only
-piecewise $C^1$, so the proposition does not cover it, although autograd
-still differentiates the unrolled solver piece by piece. Smooth activations
-such as tanh or GELU satisfy the hypothesis.)
+(:numref:`sec_mdl-matrix-calculus-autodiff`). The same pass returns
+$(\partial\mathbf{f}/\partial\boldsymbol\theta)^\top\mathbf{a}$, the
+integrand of the parameter gradient, however many parameters there are. (A
+ReLU field is only piecewise $C^1$, so the proposition does not cover it,
+although automatic differentiation still differentiates the unrolled solver
+piece by piece. Smooth activations such as tanh or GELU satisfy the
+hypothesis.)
 
 ### Backpropagation as the Discrete Adjoint
 
 Backpropagation through the Euler program can now be set beside the adjoint
-ODE, line by line. Differentiate the program
-$\mathbf{x}_{k+1}=\mathbf{x}_k+h\,\mathbf{f}(\mathbf{x}_k,\boldsymbol\theta)$
-by the chain rule, with $\mathbf{a}_k=\partial\mathcal{L}/\partial\mathbf{x}_k$.
-The Jacobian of one step is $\mathbf{I}+h\mathbf J(\mathbf{x}_k)$, so
+ODE, line by line. To keep the formulas short, let the field be autonomous
+and write $\mathbf J=\partial\mathbf{f}/\partial\mathbf{x}$ for its
+Jacobian. Differentiate the program
+$\mathbf{x}_{n+1}=\mathbf{x}_n+h\,\mathbf{f}(\mathbf{x}_n,\boldsymbol\theta)$
+by the chain rule, with $\mathbf{a}_n=\partial\mathcal{L}/\partial\mathbf{x}_n$.
+The Jacobian of one step is $\mathbf{I}+h\mathbf J(\mathbf{x}_n)$, so
 
 $$
-\mathbf{a}_k=\big(\mathbf{I}+h\mathbf J(\mathbf{x}_k)\big)^{\!\top}\mathbf{a}_{k+1},
+\mathbf{a}_n=\big(\mathbf{I}+h\mathbf J(\mathbf{x}_n)\big)^{\!\top}\mathbf{a}_{n+1},
 \qquad
 \mathbf{a}_N=\nabla\ell(\mathbf{x}_N),
 \qquad
 \frac{\partial\mathcal{L}}{\partial\boldsymbol\theta}
-=\sum_{k=0}^{N-1}h\left(\frac{\partial\mathbf{f}}{\partial\boldsymbol\theta}(\mathbf{x}_k)\right)^{\!\top}\mathbf{a}_{k+1}.
+=\sum_{n=0}^{N-1}h\left(\frac{\partial\mathbf{f}}{\partial\boldsymbol\theta}(\mathbf{x}_n)\right)^{\!\top}\mathbf{a}_{n+1}.
 $$
 :eqlabel:`eq_mdl-ode-discrete-adjoint`
 
 Compare this with one explicit Euler step of the adjoint ODE
-:eqref:`eq_mdl-ode-adjoint` from $t_{k+1}$ back to $t_k$:
+:eqref:`eq_mdl-ode-adjoint` from $t_{n+1}$ back to $t_n$:
 
 $$
-\mathbf{a}_k=\mathbf{a}_{k+1}+h\,\mathbf J(\mathbf{x}_{k+1})^\top\mathbf{a}_{k+1}.
+\mathbf{a}_n=\mathbf{a}_{n+1}+h\,\mathbf J(\mathbf{x}_{n+1})^\top\mathbf{a}_{n+1}.
 $$
 
 The two updates differ only in where the Jacobian is evaluated: at the start
-$\mathbf{x}_k$ of the forward step or at its end $\mathbf{x}_{k+1}$. The sum in
+$\mathbf{x}_n$ of the forward step or at its end $\mathbf{x}_{n+1}$. The sum in
 :eqref:`eq_mdl-ode-discrete-adjoint` is a rectangle rule for the integral
 :eqref:`eq_mdl-ode-adjoint-grad`. So backpropagation through a solver is a
 *discrete adjoint*, and a solver applied to the adjoint ODE is the
 *continuous adjoint*, discretized. The literature calls the two routes
-discretize-then-optimize and optimize-then-discretize :cite:`Kidger.2022`.
-The first is the exact gradient of the program, the second approximates the
-gradient of the flow, and for Euler they differ at first order in $h$.
- Of
-everything in this subsection, this is the statement to keep.
+discretize-then-optimize, which is the "discretize, then differentiate" of
+our training run, and optimize-then-discretize :cite:`Kidger.2022`. The
+first is the exact gradient of the program, the second approximates the
+gradient of the flow, and for Euler the two gradients differ at first order
+in $h$. Of everything in this subsection, this is the statement to keep.
 
-The scalar example shows both at once. For $\dot{x}=\theta x$ the Euler
-program is $x_N=(1+h\theta)^Nx_0$, so
+The scalar example shows both gradients at once. For $\dot{x}=\theta x$
+the Euler program is $x_N=(1+h\theta)^Nx_0$, so
 $\partial x_N/\partial\theta=Nh(1+h\theta)^{N-1}x_0=T\,x_N/(1+h\theta)$ and
 the discrete adjoint gives
 $\partial\mathcal{L}/\partial\theta=T\,x_N^2/(1+h\theta)$. With
@@ -640,6 +698,11 @@ $0.0148$ shrink tenfold per tenfold $N$.
 The spiral field of :numref:`sec_mdl-odes-solvers`, $\dot{\mathbf{x}}=\mathbf A\mathbf{x}$
 with $\mathbf A=\left(\begin{smallmatrix}-0.5&-1\\1&-0.5\end{smallmatrix}\right)$,
 gives the same check in two dimensions with every ingredient in closed form.
+For a linear field the Jacobian is $\mathbf A$ at every point, so the two
+recursions displayed above are one and the same. What is left to measure is
+the error that both have against the flow, where the states, the adjoint
+and the sum are all Euler's.
+
 Take $\boldsymbol\theta$ to be the entries of $\mathbf A$ and
 $\mathcal{L}=\tfrac12\|\mathbf{x}(T)\|^2$. The trajectory is
 $e^{\mathbf At}\mathbf{x}_0$, the adjoint is
@@ -648,99 +711,106 @@ $\dot{\mathbf{a}}=-\mathbf A^\top\mathbf{a}$), and since
 $\partial\mathbf{f}/\partial A_{ij}=x_j\mathbf{e}_i$, the gradient
 :eqref:`eq_mdl-ode-adjoint-grad` becomes
 $\partial\mathcal{L}/\partial \mathbf A=\int_0^T\mathbf{a}(t)\,\mathbf{x}(t)^\top dt$.
+
 The cell writes the backward sweep :eqref:`eq_mdl-ode-discrete-adjoint` by
-hand and tests it against central finite differences on the same program,
-for $T=2$ and $N=1000$ steps.
-
-```{.python .input #odes-solvers-adjoint-check}
-def loss_and_grad_unrolled(A, x0, T, n):
-    """L = ||x_n||^2 / 2 through n unrolled Euler steps; dL/dA by hand-written
-    reverse mode, the discrete adjoint."""
-    h, xs = T / n, [x0]
-    for k in range(n):
-        xs.append(xs[-1] + h * (A @ xs[-1]))   # forward sweep, tape the states
-    a, gA = xs[-1].copy(), np.zeros_like(A)    # a_n = dL/dx_n = x_n
-    for k in range(n - 1, -1, -1):             # backward sweep: one VJP per step
-        gA += h * np.outer(a, xs[k])           # dL/dA += h a_{k+1} x_k^T
-        a = a + h * (A.T @ a)                  # a_k = (I + hA)^T a_{k+1}
-    return 0.5 * xs[-1] @ xs[-1], gA
-
-T, n = 2.0, 1000
-_, g_disc = loss_and_grad_unrolled(A, x0, T, n)
-g_fd = np.zeros_like(A)                        # central finite differences
-for i in range(2):
-    for j in range(2):
-        E = np.zeros_like(A); E[i, j] = 1e-5
-        g_fd[i, j] = (loss_and_grad_unrolled(A + E, x0, T, n)[0]
-                      - loss_and_grad_unrolled(A - E, x0, T, n)[0]) / 2e-5
-print(f'discrete adjoint vs finite differences: {np.abs(g_disc - g_fd).max():.1e}')
-```
-
-The two agree to about $10^{-10}$, the accuracy of the finite differences
-themselves, so the sweep is coded correctly. The distance that matters is
-the one to the gradient of the exact flow. For it we evaluate the continuous
-adjoint integral by the trapezoid rule on $2000$ intervals, with
-$\mathbf{a}$ and $\mathbf{x}$ from the matrix exponential, and compare it
-with the discrete adjoint for three step counts.
+hand, for $T=2$. Its first line of output tests the sweep against central
+finite differences of the same program at $N=1000$ steps, which tells us
+only that the sweep is coded correctly. The distance that matters is the
+one to the gradient of the exact flow. For it the cell evaluates the
+continuous adjoint integral by the trapezoid rule on $2000$ intervals, with
+$\mathbf{a}$ and $\mathbf{x}$ from the matrix exponential, and compares it
+with the discrete adjoint at three step counts.
 
 ```{.python .input #mdl-neural-odes-backpropagation-as-the-discrete-adjoint-1}
+def loss_and_grad_unrolled(A, x0, T, N):
+    """L = ||x_N||^2 / 2 through N unrolled Euler steps; dL/dA by hand-written
+    reverse mode, the discrete adjoint."""
+    h, xs = T / N, [x0]
+    for _ in range(N):
+        xs.append(xs[-1] + h * (A @ xs[-1]))   # forward sweep, tape the states
+    a, gA = xs[-1].copy(), np.zeros_like(A)    # a_N = dL/dx_N = x_N
+    for n in range(N - 1, -1, -1):             # backward sweep: one VJP per step
+        gA += h * np.outer(a, xs[n])           # dL/dA += h a_{n+1} x_n^T
+        a = a + h * (A.T @ a)                  # a_n = (I + hA)^T a_{n+1}
+    return 0.5 * xs[-1] @ xs[-1], gA
+
+T = 2.0
+loss = lambda A: loss_and_grad_unrolled(A, x0, T, 1000)[0]
+g_fd = np.array([(loss(A + 1e-5 * E) - loss(A - 1e-5 * E)) / 2e-5
+                 for E in np.eye(4).reshape(4, 2, 2)]).reshape(2, 2)
+gap_fd = np.abs(loss_and_grad_unrolled(A, x0, T, 1000)[1] - g_fd).max()
+print(f'N =  1000: |backward sweep - central differences| = {gap_fd:.1e}')
 n_quad = 2000                                  # continuous adjoint, trapezoid rule
 ts = np.linspace(0.0, T, n_quad + 1)
 xT = expm_eig(A, T) @ x0
-F = np.stack([np.outer(expm_eig(A.T, T - s) @ xT, expm_eig(A, s) @ x0)
-              for s in ts])                    # a(s) x(s)^T
-g_cont = (T / n_quad) * (F[1:-1].sum(axis=0) + 0.5 * (F[0] + F[-1]))
-for n_steps in (100, 1000, 10000):
-    gap = np.abs(loss_and_grad_unrolled(A, x0, T, n_steps)[1] - g_cont).max()
-    print(f'n = {n_steps:5d} Euler steps: |discrete - continuous adjoint| = {gap:.1e}')
+AX = np.stack([np.outer(expm_eig(A.T, T - s) @ xT, expm_eig(A, s) @ x0)
+               for s in ts])                   # a(s) x(s)^T
+g_cont = (T / n_quad) * (AX[1:-1].sum(axis=0) + 0.5 * (AX[0] + AX[-1]))
+for N in (100, 1000, 10000):
+    gap = np.abs(loss_and_grad_unrolled(A, x0, T, N)[1] - g_cont).max()
+    print(f'N = {N:5d}: |discrete - continuous adjoint|     = {gap:.1e}')
 ```
 
-The gap falls from $2.9\times10^{-2}$ to $2.8\times10^{-3}$ to
-$2.8\times10^{-4}$, tenfold per tenfold $N$, as in the scalar case.
+The sweep matches the finite differences to about $10^{-10}$, the accuracy
+of the differences themselves. Its gap to the gradient of the flow falls
+from $2.9\times10^{-2}$ to $2.8\times10^{-3}$ to $2.8\times10^{-4}$, tenfold
+per tenfold $N$, as in the scalar case.
 
 ### Memory and Drift
 
 The adjoint ODE needs $\mathbf{x}(t)$ at every backward step, because the
 Jacobian is evaluated there. There are two ways to supply it. Store the
-forward states, which costs memory proportional to $N$, or re-integrate
-$\dot{\mathbf{x}}=\mathbf{f}$ backward from $\mathbf{x}(T)$ alongside
-$\mathbf{a}$, which keeps the memory constant in $N$ at the cost of one more
-field evaluation per step. The smallest case shows that the second option
-amplifies errors.
+forward states, as backpropagation does, which costs memory proportional to
+$N$. Or re-integrate $\dot{\mathbf{x}}=\mathbf{f}$ backward from
+$\mathbf{x}(T)$ alongside $\mathbf{a}$, which keeps the memory constant in
+$N$ at the cost of one more field evaluation per step. The second option
+sounds too good, and the smallest case shows why: it amplifies errors.
 
 For $\dot{x}=-\lambda x$ with $\lambda>0$, the backward integration solves
 $\dot{x}=+\lambda x$. An absolute error $\delta$ in the stored $x(T)$
-therefore becomes $e^{\lambda T}\delta$ by the time it reaches $t=0$. Take
-$\lambda=50$, the fast decay rate of the stiff example of
-:numref:`sec_mdl-stiffness-implicit`, as one direction of a state whose
-coordinates are of size one, and not along a coordinate axis. Each stored
-coordinate is rounded at about $10^{-16}$ in double precision, and the
-rounding has a component of that size along the fast direction, so
-$\delta=10^{-16}$. The reconstructed start is then off by
-$2.7\times10^{-11}$ at $T=0.25$, by $7\times10^{-6}$ at $T=0.5$ and by
-$5\times10^{5}$ at $T=1$, larger than the state itself
-(:exref:`ex_mdl-odes-solvers-backward-reconstruction` measures this growth).
+therefore becomes $e^{\lambda T}\delta$ by the time it reaches $t=0$.
+
+How large is $\delta$? Picture a state with two modes. One decays at the rate
+$\lambda=50$, the fast rate of the stiff example of
+:numref:`sec_mdl-stiffness-implicit`, and the other hardly moves. Let the
+fast mode point along a diagonal, so that every coordinate contains some of
+it. By time $T$ the fast mode has died out, the coordinates that are stored
+are of size one, and double precision rounds each of them at about
+$10^{-16}$. Rounding knows nothing of modes: part of the error lies along
+the fast direction, so $\delta\approx10^{-16}$. The reconstructed start is
+then off by $2.7\times10^{-11}$ at $T=0.25$, by $7\times10^{-6}$ at $T=0.5$
+and by $5\times10^{5}$ at $T=1$, larger than the state itself. A double
+carries about sixteen digits, and a factor of $e^{50}\approx5\times10^{21}$
+is five digits more than it has. Exercise
+:exref:`ex_mdl-odes-solvers-backward-reconstruction` measures this growth.
 
 For the spiral, whose eigenvalues have real part $-0.5$, the factor over
 $T=2$ is only $e$. A strongly contracting forward flow is a strongly
 expanding backward one, so re-integration saves memory at the cost of drift.
-For stiff fields *checkpointing* is the sturdier choice: it stores the state
-only at a few checkpoints and recomputes the states in between.
+For stiff fields *checkpointing* (:numref:`subsec_mdl-checkpointing`) is the
+sturdier choice. It stores the state only at a few checkpoints and
+recomputes the states in between forward from the checkpoint before them, so
+nothing is ever integrated against the flow. With a checkpoint every
+$\sqrt N$ steps the backward sweep holds about $2\sqrt N$ states, $63$
+instead of $1000$ for $N=1000$, at the cost of one extra forward pass.
+
+That makes three routes to a gradient. Which would we use? Backpropagation
+through the solver, with checkpoints when memory is short: it returns the
+exact gradient of the program that is actually run. The continuous adjoint
+is what that gradient converges to, and the formula to reason with.
+Re-integrating the state is a last resort, for fields that are not stiff.
 
 ## Continuous Normalizing Flows
 :label:`sec_mdl-continuous-normalizing-flows`
 
-A Neural ODE moves points. A generative model must also say how probable
-each output is, so we now follow a density along the flow.
+A Neural ODE moves points. A generative model trained by maximum likelihood
+must also say how probable each of its outputs is, so we now follow a
+density along the flow.
 
 ### Density Along a Flow
 
 Pushing samples through a flow turns it into a generator: draw
-$\mathbf{x}(0)$ from a simple density $p_0$ and integrate. (The generators
-of :numref:`sec_mdl-score-matching-diffusion-flow` and
-:numref:`sec_mdl-flow-matching-transport` run such a flow backward in time,
-from noise at the final time to data at $t = 0$; the density formulas below
-hold in either direction.) Training such a
+$\mathbf{x}(0)$ from a simple density $p_0$ and integrate. Training such a
 generator by maximum likelihood needs the density of what comes out. A
 *normalizing flow* is an invertible network trained in this way, and its
 density follows from the change-of-variables formula of
@@ -754,12 +824,12 @@ $$
 :eqlabel:`eq_mdl-ode-discrete-cov`
 
 The log-density drops by the logarithm of the factor by which $\mathbf{g}$
-stretches volume near $\mathbf{x}$. A flow built from many layers needs one
-log-determinant per layer and sample. A general determinant costs $O(d^3)$
-operations, about $2\times10^{10}$ for the $d=3072$ of a $32\times32$ colour
-image. Discrete flows therefore
-restrict their layers to triangular Jacobians, whose determinant is the
-product of the diagonal, or to identity-plus-low-rank Jacobians, such as
+stretches volume near $\mathbf{x}$. A normalizing flow built from many
+layers needs one log-determinant per layer and sample. A general determinant
+costs $O(d^3)$ operations, about $2\times10^{10}$ for the $d=3072$ of a
+$32\times32$ colour image. Discrete flows therefore restrict their layers to
+triangular Jacobians, whose determinant is the product of the diagonal, or
+to identity-plus-low-rank Jacobians, such as
 $\det(\mathbf{I}+\mathbf{u}\mathbf{v}^\top)=1+\mathbf{v}^\top\mathbf{u}$.
 Both determinants cost $O(d)$.
 
@@ -771,28 +841,36 @@ $\log p_t(x(t))=\log p_0(x_0)-\theta t$ and
 $\tfrac{d}{dt}\log p_t(x(t))=-\theta$. The number $\theta$ is the
 $1\times1$ Jacobian of the field, and therefore also its trace.
 
-The spiral is the running example in two dimensions. Since
-$\mathbf A=-\tfrac12\mathbf{I}+\mathbf K$ and $\mathbf{I}$ commutes with $\mathbf K$,
-$e^{\mathbf At}=e^{-t/2}e^{t\mathbf K}$, a rotation followed by a shrink by $e^{-t/2}$. A disc
-is carried to a disc of $e^{-t/2}$ times its radius, so its area is
-multiplied by $e^{-t}$, and the density along each trajectory rises by
-$e^{t}$. Here $\operatorname{tr}\mathbf A=-1$, so the rate of change of the
-log-density is again minus the trace. :numref:`fig_mdl-dyn-divergence-volume`
-draws this beside a field that preserves area and one that expands it.
+The spiral is the running example in two dimensions. Its flow
+$e^{\mathbf At}=e^{-t/2}e^{t\mathbf K}$ is a rotation followed by a shrink
+by $e^{-t/2}$ (:numref:`sec_mdl-odes-solvers`). A disc is carried to a disc
+of $e^{-t/2}$ times its radius, so its area is multiplied by $e^{-t}$, and
+the density along each trajectory rises by $e^{t}$. Here
+$\operatorname{tr}\mathbf A=-1$, so the rate of change of the log-density is
+again minus the trace. :numref:`fig_mdl-dyn-divergence-volume` draws this
+beside a field that preserves area and one that expands it: the darkest
+disc of the spiral, at $t=1.2$, has $e^{-1.2}\approx0.30$ of the area of the
+lightest.
 
 ![A disc of samples carried by the exact flows of three linear fields, shown at $t=0$, $0.6$ and $1.2$ (darker is later); the dotted line is the path of the centre. The density along a trajectory changes by the factor $e^{-t\operatorname{tr}\mathbf A}$: it rises where the flow contracts (left, the spiral), stays constant under the area-preserving saddle although the shape changes (middle), and falls where the flow expands (right).](../img/mdl-dyn-divergence-volume.svg)
 :label:`fig_mdl-dyn-divergence-volume`
 
-The general case needs one fact about determinants: over a short step the
-flow map is close to the identity, and the determinant of a matrix close to
-the identity is governed by its trace.
+### The Instantaneous Change of Variables
+
+Both examples were linear, and in both the log-density changed at the rate
+minus the trace. The general case needs one fact about determinants: over a
+short step the flow map is close to the identity, and the determinant of a
+matrix close to the identity is governed by its trace.
 
 **Lemma.** *For any square matrix $\mathbf J$,
 $\det(\mathbf{I}+h\mathbf J)=1+h\operatorname{tr}\mathbf J+O(h^2)$.*
 
-**Proof.** In the Leibniz expansion of the determinant, any permutation other
-than the identity uses at least two off-diagonal entries, each of size
-$O(h)$, so it contributes $O(h^2)$. The identity permutation contributes
+**Proof.** The permutation formula
+(:numref:`subsec_mdl-determinant-general`) writes the determinant as a
+signed sum, over all permutations, of products with one entry from every
+row and every column. Any permutation other than the identity picks at
+least two off-diagonal entries, each of size $O(h)$, so it contributes
+$O(h^2)$. The identity permutation contributes
 $\prod_i(1+hJ_{ii})=1+h\sum_iJ_{ii}+O(h^2)$. $\blacksquare$
 
 **Proposition (instantaneous change of variables).** *Let
@@ -834,8 +912,14 @@ $$
 using $\log(1+u)=u+O(u^2)$. Subtract $\log p_t(\mathbf{x}(t))$, divide by
 $h$, and let $h\to0$. $\blacksquare$
 
-The trace of the Jacobian is the *divergence* of the field, the local rate at
-which the flow expands volume. Where the field spreads samples apart
+The hypotheses look heavier than they are. They ask only that every flow map
+be a smooth bijection, which a field with smooth Lipschitz activations such
+as tanh provides. The content of the proposition is the one line with the
+trace.
+
+The trace of the Jacobian is the *divergence* $\nabla\cdot\mathbf{f}$ of
+the field, the local rate at which the flow expands volume. Where the field
+spreads samples apart
 ($\operatorname{tr}\mathbf J>0$) the log-density along each trajectory falls,
 and where it compresses them, it rises. Integrating
 :eqref:`eq_mdl-ode-instant-cov` along a trajectory gives
@@ -847,59 +931,44 @@ $$
 :eqlabel:`eq_mdl-ode-cnf-likelihood`
 
 The per-layer sum of log-determinants of a discrete flow has become an
-integral of traces. A model that computes it, by integrating the augmented
-state $(\mathbf{x},\log p)$ with any ODE solver, is a **continuous
-normalizing flow** (CNF). It needs no restriction on the architecture of
-$\mathbf{f}$. To evaluate the density of a given point $\mathbf{x}(T)$,
-integrate the field backward from it to $\mathbf{x}(0)$, accumulate the
-trace on the way, and read off $p_0$ there. Likelihoods of diffusion models
-are computed in this way (:numref:`sec_diffusion-design-space`).
+integral of traces. A model that computes it, by integrating the pair
+$(\mathbf{x},\log p)$ with any ODE solver, is a **continuous normalizing
+flow** (CNF) :cite:`Chen.Rubanova.Bettencourt.ea.2018`. It needs no
+restriction on the architecture of $\mathbf{f}$. To evaluate the density of
+a given point $\mathbf{x}(T)$, integrate the field backward from it to
+$\mathbf{x}(0)$, accumulate the trace on the way, and read off $p_0$ there.
+Likelihoods of diffusion models are computed in this way
+(:numref:`sec_diffusion-design-space`). Nothing in the formula prefers a
+direction of time: the generators of
+:numref:`sec_mdl-score-matching-diffusion-flow` and
+:numref:`sec_mdl-flow-matching-transport` put the noise at the final time
+and the data at $t=0$, and the same formula serves them.
 
 For a linear field the trace integral is $t\operatorname{tr}\mathbf A$, and
 :eqref:`eq_mdl-ode-cnf-likelihood` compared with
 :eqref:`eq_mdl-ode-discrete-cov` for the map $e^{\mathbf At}$ says
-$\log\det e^{\mathbf At}=t\operatorname{tr}\mathbf A$. This identity also
-follows in one line from the eigendecomposition $\mathbf A=\mathbf V\boldsymbol\Lambda \mathbf V^{-1}$:
+$\log\det e^{\mathbf At}=t\operatorname{tr}\mathbf A$. For a diagonalizable
+$\mathbf A=\mathbf V\boldsymbol\Lambda \mathbf V^{-1}$ the identity also
+follows in one line from the eigenvalues,
 
 $$
-\det e^{\mathbf At}=\det\big(\mathbf Ve^{\boldsymbol\Lambda t}\mathbf V^{-1}\big)=\prod_je^{\Lambda_{jj}t}=e^{t\operatorname{tr}\mathbf A}
+\det e^{\mathbf At}=\det\big(\mathbf Ve^{\boldsymbol\Lambda t}\mathbf V^{-1}\big)=\prod_je^{\Lambda_{jj}t}=e^{t\operatorname{tr}\mathbf A},
 $$
 :eqlabel:`eq_mdl-ode-jacobi`
 
-for diagonalizable $\mathbf A$, and for every $\mathbf A$ by continuity, since
-diagonalizable matrices are dense. For the spiral both sides equal
-$e^{-1.5}=0.2231$ at $t=1.5$. The proposition follows individual
-trajectories. Stated for the whole density at once instead of along one
-trajectory, the same law is the continuity equation of fluid mechanics,
-which :numref:`sec_mdl-fokker-planck-probability-flow` derives together with
-the term that noise adds.
+and the comparison of the two formulas gives it for every $\mathbf A$.
+
+The proposition follows one trajectory at a time. Stated for the whole
+density at once, the same law is the continuity equation of fluid
+mechanics, which :numref:`sec_mdl-fokker-planck-probability-flow` derives
+together with the term that noise adds.
 
 ### Checking the Trace Integral
 
-For the spiral the proposition can be compared with a closed form. Start from $p_0=\mathcal{N}(\mathbf{0},\mathbf{I})$;
-a linear map sends it to $p_t=\mathcal{N}(\mathbf{0},e^{\mathbf At}e^{\mathbf A^\top t})$,
-which for the spiral is $\mathcal{N}(\mathbf{0},e^{-t}\mathbf{I})$ because
-$e^{t\mathbf K}$ is orthogonal. The cell evaluates this Gaussian at the transported
-points of four random samples and compares with
-$\log p_0(\mathbf{x}_0)-t\operatorname{tr}\mathbf A$.
-
-```{.python .input #odes-solvers-cnf-trace}
-t = 1.5
-X0s = np.random.randn(4, 2)                    # four samples from p_0 = N(0, I)
-Et = expm_eig(A, t)
-Xts = X0s @ Et.T                               # flow each sample to time t
-Sig = Et @ Et.T                                # x(t) ~ N(0, E_t E_t^T)
-logp0 = -0.5 * (X0s ** 2).sum(axis=1) - np.log(2 * np.pi)
-logpt = (-0.5 * np.einsum('ki,ij,kj->k', Xts, np.linalg.inv(Sig), Xts)
-         - 0.5 * np.log(np.linalg.det(Sig)) - np.log(2 * np.pi))
-print('log p_t(x(t)), Gaussian formula :', logpt.round(6))
-print('log p_0(x_0) - t tr(A)          :', (logp0 - t * np.trace(A)).round(6))
-```
-
-The two rows agree in every printed digit, as :eqref:`eq_mdl-ode-jacobi`
-says they must; with a constant trace there was little to go wrong. A
-nonlinear field is the real test, because its trace
-changes along the path. Take the planar field
+A linear field is a weak test of the proposition: its trace is constant,
+and the integral is just $t\operatorname{tr}\mathbf A$. A nonlinear field
+is a real one, because its trace changes along the path. Take the planar
+field
 $\mathbf{f}(\mathbf{x})=\mathbf W_2\tanh(\mathbf W_1\mathbf{x}+\mathbf{b}_1)$ with $8$ hidden
 units and random weights. Its Jacobian and trace are explicit:
 
@@ -913,35 +982,44 @@ $$
 
 using the cyclic property
 $\operatorname{tr}\big(\mathbf W_2\,\mathrm{diag}(\mathbf{s})\,\mathbf W_1\big)=\operatorname{tr}\big(\mathrm{diag}(\mathbf{s})\,\mathbf W_1\mathbf W_2\big)$.
-The cell integrates the augmented
-state $(\mathbf{x},\int\operatorname{tr}\mathbf J\,dt)$ with RK4 to $T=1$ and
-compares the integral with $\log|\det D\Phi_T|$, computed from central finite
+The cell integrates the pair
+$(\mathbf{x},\int\operatorname{tr}\mathbf J\,dt)$ with RK4 to $T=1$ and
+keeps the path. It prints the smallest and the largest trace met on the
+way, and then compares the integral with $\log|\det D\Phi_T|$, where the
+Jacobian $D\Phi_T$ of the flow map is computed from central finite
 differences of the flow map itself.
 
 ```{.python .input #mdl-neural-odes-checking-the-trace-integral-1}
-H = 8
-W1, b1 = np.random.randn(H, 2), np.random.randn(H)
-W2 = np.random.randn(2, H) / np.sqrt(H)
+n_hidden = 8
+W1, b1 = rng.standard_normal((n_hidden, 2)), rng.standard_normal(n_hidden)
+W2 = rng.standard_normal((2, n_hidden)) / np.sqrt(n_hidden)
 field = lambda x: W2 @ np.tanh(W1 @ x + b1)
 trJ = lambda x: np.sum((1 - np.tanh(W1 @ x + b1) ** 2)
                        * np.einsum('ij,ji->i', W1, W2))
 aug = lambda z: np.append(field(z[:2]), trJ(z[:2]))  # d/dt (x, int tr J)
-xa, n = np.random.randn(2), 200
-zT = rk4(aug, np.append(xa, 0.0), 1.0, n)
+xa, N = rng.standard_normal(2), 200
+zs = [np.append(xa, 0.0)]                      # RK4 path of (x, int tr J)
+for _ in range(N):
+    zs.append(rk4_step(aug, zs[-1], 1.0 / N))
+zT, tr_path = zs[-1], [trJ(z[:2]) for z in zs]
 D = np.zeros((2, 2))                           # D Phi_1 by central differences
 for j in range(2):
     e = np.zeros(2); e[j] = 1e-5
-    D[:, j] = (rk4(field, xa + e, 1.0, n) - rk4(field, xa - e, 1.0, n)) / 2e-5
+    D[:, j] = (solve(rk4_step, field, xa + e, 1.0, N)
+               - solve(rk4_step, field, xa - e, 1.0, N)) / 2e-5
 logdet = np.log(abs(np.linalg.det(D)))
-print(f'tr J at x(0) {trJ(xa):+.3f}, at x(1) {trJ(zT[:2]):+.3f}')
+print(f'tr J along the path: from {min(tr_path):+.3f} to {max(tr_path):+.3f}')
 print(f'trace integral {zT[2]:+.6f}  log|det D Phi| {logdet:+.6f}  '
       f'gap {abs(zT[2] - logdet):.1e}')
 ```
 
-The trace generally takes different values at the two ends of the path,
-yet the integral and the log-determinant agree to about $10^{-10}$, the
-accuracy of the solver and of the finite differences. Nothing in the
-proposition used linearity.
+The trace does move: the first line gives the interval that it covers along
+the path. How wide the interval is depends on the draw of the weights. A
+tenth or more is typical, and in some draws the interval contains zero, so
+that the flow expands area on one stretch of the path and compresses it on
+another. Yet the integral and the log-determinant agree to eight digits or
+better, the accuracy of the solver and of the finite differences. Nothing in
+the proposition used linearity.
 
 ### The Hutchinson Trace Estimator
 
@@ -980,148 +1058,249 @@ $$
 $$
 
 and it costs about as much as evaluating $\mathbf{f}$. A CNF evaluates one
-such product with every evaluation of the field, so the likelihood costs one additional backward
-pass per field evaluation (FFJORD, :cite:`Grathwohl.Chen.Bettencourt.ea.2018`).
+such product with every evaluation of the field, so the likelihood costs one
+additional backward pass per field evaluation. This is the method that
+:citet:`Grathwohl.Chen.Bettencourt.ea.2018` named FFJORD.
 
 The proposition says that the average over probes converges to the trace.
-It does not say how fast, and that is what we measure. We take a
-one-hidden-layer field in $d=50$ with $64$ hidden units, compute its exact
-trace from the formula above, and draw $m=10^5$ Rademacher probes.
+It does not say how fast, and for a single probe that is the whole question.
+With $\mathbf S=(\mathbf J+\mathbf J^\top)/2$, one Rademacher probe has
+variance $2\sum_{i\ne j}S_{ij}^2$ and one Gaussian probe
+$2\sum_{i,j}S_{ij}^2$, the same sum with the diagonal included
+(Exercise :exref:`ex_mdl-odes-solvers-hutchinson-variance`). The trace sees
+only the diagonal of $\mathbf J$, and the noise of a Rademacher probe only
+what lies off it.
+
+Let us try the estimator on a field in $d=50$ whose trace we can predict: a
+random one-hidden-layer part with $64$ tanh units and a pull toward the
+origin,
+$\mathbf{f}(\mathbf{x})=\mathbf W_2\tanh(\mathbf W_1\mathbf{x}+\mathbf{b}_1)-\mathbf{x}$.
+Its Jacobian is
+$\mathbf W_2\,\mathrm{diag}(\mathbf{s})\,\mathbf W_1-\mathbf{I}$, so the
+pull contributes $-50$ to the trace and the random part a number of order
+one. The pull also adds $-\boldsymbol\epsilon^\top\boldsymbol\epsilon$ to
+every estimate. For a Rademacher probe this is $-50$ exactly, and all the
+noise comes from the random part. For a Gaussian probe
+$\boldsymbol\epsilon^\top\boldsymbol\epsilon$ is itself random, and the two
+variance formulas say what that costs. They differ by the diagonal term
+$2\sum_iS_{ii}^2$, and here every $S_{ii}=J_{ii}$ is close to $-1$, so the
+variance of a Gaussian probe should exceed that of a Rademacher probe by
+about $2\cdot50=100$. The cell draws $m=1000$ probes of each kind and
+computes each $\boldsymbol\epsilon^\top\mathbf J$ by reverse mode.
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-1}
-d, H, m = 50, 64, 100_000
-W1, b1 = np.random.randn(H, d) / np.sqrt(d), 0.1 * np.random.randn(H)
-W2 = np.random.randn(d, H) / np.sqrt(H)
-x = np.random.randn(d)
+d, n_hidden, m = 50, 64, 1000
+W1 = rng.standard_normal((n_hidden, d)) / np.sqrt(d)
+b1 = 0.1 * rng.standard_normal(n_hidden)
+W2 = rng.standard_normal((d, n_hidden)) / np.sqrt(n_hidden)
+x = rng.standard_normal(d)
 s = 1 - np.tanh(W1 @ x + b1) ** 2
-tr_exact = np.sum(s * np.einsum('ij,ji->i', W1, W2))
-E = np.random.choice([-1.0, 1.0], size=(m, d))  # Rademacher probes, one per row
-print(f'exact trace {tr_exact:.4f}')
+tr_tanh = np.sum(s * np.einsum('ij,ji->i', W1, W2))  # trace of W2 diag(s) W1
+E = rng.choice([-1.0, 1.0], size=(m, d))         # Rademacher probes, one per row
+E_gauss = rng.standard_normal((m, d))            # Gaussian probes, one per row
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab pytorch
 W1t, b1t, W2t = (torch.tensor(w) for w in (W1, b1, W2))
-field = lambda x: W2t @ torch.tanh(W1t @ x + b1t)
-_, vjp = torch.func.vjp(field, torch.tensor(x))  # reverse mode at x
-rows = torch.func.vmap(vjp)(torch.tensor(E))[0]  # row k: eps_k^T J
-est = (rows * torch.tensor(E)).sum(dim=1)        # eps_k^T J eps_k
-print(f'Hutchinson {est.mean():.4f} +- {est.std() / m ** 0.5:.4f} '
-      f'({m} probes, one VJP each)')
+field = lambda x: W2t @ torch.tanh(W1t @ x + b1t) - x
+_, vjp = torch.func.vjp(field, torch.tensor(x))      # reverse mode at x
+for name, P in (('Rademacher', E), ('Gaussian', E_gauss)):
+    P = torch.tensor(P)
+    rows = torch.func.vmap(vjp)(P)[0]                # row k: eps_k^T J
+    est = (rows * P).sum(dim=1)                      # eps_k^T J eps_k
+    sd = est.std(correction=0)
+    print(f'{name:10s}: exact {tr_tanh - d:+6.2f}, mean of {m} probes '
+          f'{est.mean():+6.2f} +- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab mxnet
 xs = mnp.array(np.tile(x, (m, 1)))             # m copies of x, one per probe
-xs.attach_grad()
-with autograd.record():
-    ys = mnp.tanh(xs @ mnp.array(W1).T + mnp.array(b1)) @ mnp.array(W2).T
-ys.backward(mnp.array(E))                      # seed the backward pass with the probes
-est = (xs.grad * mnp.array(E)).sum(axis=1)     # row k of xs.grad: eps_k^T J
-print(f'Hutchinson {float(est.mean()):.4f} +- '
-      f'{float(est.std()) / m ** 0.5:.4f} ({m} probes, one VJP each)')
+W1m, b1m, W2m = (mnp.array(w) for w in (W1, b1, W2))
+field = lambda xs: mnp.tanh(xs @ W1m.T + b1m) @ W2m.T - xs
+for name, P in (('Rademacher', E), ('Gaussian', E_gauss)):
+    P = mnp.array(P)
+    xs.attach_grad()
+    with autograd.record():
+        ys = field(xs)
+    ys.backward(P)                             # seed the backward pass with the probes
+    est = (xs.grad * P).sum(axis=1)            # row k of xs.grad: eps_k^T J
+    mean, sd = float(est.mean()), float(est.std())
+    print(f'{name:10s}: exact {tr_tanh - d:+6.2f}, mean of {m} probes '
+          f'{mean:+6.2f} +- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab tensorflow
 xs = tf.constant(np.tile(x, (m, 1)))           # m copies of x, one per probe
-with tf.GradientTape() as tape:
-    tape.watch(xs)
-    ys = tf.tanh(xs @ W1.T + b1) @ W2.T
-rows = tape.gradient(ys, xs, output_gradients=tf.constant(E))  # eps_k^T J
-est = tf.reduce_sum(rows * E, axis=1)
-print(f'Hutchinson {float(tf.reduce_mean(est)):.4f} +- '
-      f'{float(tf.math.reduce_std(est)) / m ** 0.5:.4f} '
-      f'({m} probes, one VJP each)')
+field = lambda xs: tf.tanh(xs @ W1.T + b1) @ W2.T - xs
+for name, P in (('Rademacher', E), ('Gaussian', E_gauss)):
+    with tf.GradientTape() as tape:
+        tape.watch(xs)
+        ys = field(xs)
+    rows = tape.gradient(ys, xs, output_gradients=tf.constant(P))  # eps_k^T J
+    est = tf.reduce_sum(rows * P, axis=1)      # eps_k^T J eps_k
+    mean, sd = float(tf.reduce_mean(est)), float(tf.math.reduce_std(est))
+    print(f'{name:10s}: exact {tr_tanh - d:+6.2f}, mean of {m} probes '
+          f'{mean:+6.2f} +- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab jax
 W1j, b1j, W2j = (jnp.array(w) for w in (W1, b1, W2))
-field = lambda x: W2j @ jnp.tanh(W1j @ x + b1j)
+field = lambda x: W2j @ jnp.tanh(W1j @ x + b1j) - x
 _, vjp = jax.vjp(field, jnp.array(x))          # reverse mode at x
-rows = jax.vmap(vjp)(jnp.array(E))[0]          # row k: eps_k^T J
-est = (rows * E).sum(axis=1)                   # eps_k^T J eps_k
-print(f'Hutchinson {float(est.mean()):.4f} +- '
-      f'{float(est.std()) / m ** 0.5:.4f} ({m} probes, one VJP each)')
+for name, P in (('Rademacher', E), ('Gaussian', E_gauss)):
+    rows = jax.vmap(vjp)(jnp.array(P))[0]      # row k: eps_k^T J
+    est = (rows * P).sum(axis=1)               # eps_k^T J eps_k
+    mean, sd = float(est.mean()), float(est.std())
+    print(f'{name:10s}: exact {tr_tanh - d:+6.2f}, mean of {m} probes '
+          f'{mean:+6.2f} +- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
-The average lies within a few standard errors of the exact trace. But read
-the output again: $10^5$ probes locate the trace only to about $0.015$, when
-$50$ passes would have given it exactly. The standard error implies a
-standard deviation of about $4$ to $5$ for one probe, many times the trace,
-which is typically a few tenths in size. For Rademacher probes one probe has
-variance $2\sum_{i\ne j}S_{ij}^2$ with
-$\mathbf S=(\mathbf J+\mathbf J^\top)/2$: the off-diagonal entries set the
-noise, and the trace sees only the diagonal. Our random field is a hard
-case, because its diagonal entries have random signs and nearly cancel.
-Subtracting $\mathbf{x}$ from the field, a pull toward the origin, would
-move the trace to about $-50$ and leave the noise unchanged, a relative
-error of a tenth per probe.
+Both averages lie within a few of their standard errors of the exact
+trace, as unbiased estimates should. One Rademacher probe has a standard
+deviation of about $5$, a tenth of the trace: a single backward pass locates
+the trace to ten percent, where the exact value takes $50$ passes. One
+Gaussian probe has a standard deviation of about $11$, and $11^2-5^2=96$,
+close to the predicted $100$. Rademacher probes are never the noisier kind,
+and here they are much the quieter.
 
-Why, then, does a CNF train with one probe per step? The estimate is
-unbiased and enters the log-likelihood linearly, so the estimated
-log-likelihood and its gradient are unbiased as well. A stochastic gradient
-asks for nothing more (:numref:`sec_mdl-stochastic-gradient-methods`): the
-noise of the probes is averaged over minibatches and iterations, as the
-noise of the minibatch itself is.
-What one probe cannot give is the likelihood of a single point. For that,
-average many probes or compute the exact trace.
+The ten percent belongs to this field, not to the estimator. Without the
+pull every Rademacher estimate would shift by exactly $+50$: the standard
+deviation would still be $5$, the trace would be of order one, and a single
+probe would say next to nothing about it. Which of the two cases a model in
+high dimension resembles is the subject of Exercise
+:exref:`ex_mdl-odes-solvers-hutchinson-variance`.
 
-The dynamics of this section were deterministic throughout. A diffusion
-model adds fresh noise at every step, and increments that scale like
-$\sqrt{h}$ break the Taylor expansions this section relied on.
-:numref:`sec_mdl-sdes` asks how to integrate such an equation.
+A likelihood needs more than one trace. It needs the integral
+$\int_0^T\operatorname{tr}\mathbf J\,dt$ along a trajectory, one estimate
+per solver step, and the probes can be supplied in two ways: one probe held
+for the whole solve, or a fresh one at every step. What should we expect? A
+held probe sees the sum $\sum_nh\,\mathbf J(\mathbf x_n)$ as one matrix and
+estimates its trace once, so its noise is that of a single estimate whatever
+$N$ is. Fresh probes make independent errors, each weighted by $h=1/N$, so
+the noise of their sum falls like $1/\sqrt N$. The next cell follows one
+Euler trajectory of the same field to $T=1$ with $N=10$, $100$ and $1000$
+steps and repeats each policy $200$ times with Rademacher probes, taking
+$\boldsymbol\epsilon^\top\mathbf J$ from the explicit product above.
+
+```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-3}
+field = lambda x: W2 @ np.tanh(W1 @ x + b1) - x
+diag_W1W2 = np.einsum('ij,ji->i', W1, W2)
+for N in (10, 100, 1000):
+    h, xs = 1 / N, [x]
+    for _ in range(N - 1):                     # Euler trajectory x_0, ..., x_{N-1}
+        xs.append(xs[-1] + h * field(xs[-1]))
+    S = 1 - np.tanh(np.array(xs) @ W1.T + b1) ** 2  # s at every step, (N, n_hidden)
+    exact = h * (S @ diag_W1W2).sum() - d      # h * sum_n tr J(x_n)
+    held = np.broadcast_to(rng.choice([-1.0, 1.0], (200, 1, d)), (200, N, d))
+    fresh = rng.choice([-1.0, 1.0], (200, N, d))
+    row = f'N = {N:4d}: exact {exact:+.2f}'
+    for name, P in (('held probe', held), ('fresh probes', fresh)):
+        est = h * np.einsum('rnh,nh,rnh->r', P @ W2, S, P @ W1.T) - d  # eps^T eps = d
+        row += f' | {name} {est.mean():+.2f}, sd {est.std():.2f}'
+    print(row)
+```
+
+The exact integral is again close to $-50$, and the means of both policies
+agree with it to within sampling error: the estimate is unbiased either way.
+The spreads are as predicted. A held probe has a standard deviation of about
+$5$ to $6$ at every $N$. Fresh probes come to between $1.5$ and $1.8$ at
+$N=10$, about $0.5$ to $0.6$ at $N=100$ and just under $0.2$ at $N=1000$:
+in each row, the held value divided by $\sqrt N$.
+
+Fresh probes are about thirty times quieter at $N=1000$ and cost the same.
+Why would anyone hold the probe? Because a held probe leaves the solver an
+ordinary differential equation. With $\boldsymbol\epsilon$ fixed, the
+estimate $\boldsymbol\epsilon^\top\mathbf J(\mathbf{x})\boldsymbol\epsilon$
+is a deterministic function of the state, so any solver applies, an adaptive
+one can control its error, and the adjoint equations give the gradient. With
+a fresh probe at every evaluation the right-hand side is noise, and a solver
+that compares two evaluations to judge its step would be comparing two
+random draws. Our cell could use fresh probes because its Euler steps were
+fixed in advance. FFJORD holds the probe, and keeps the noise.
+
+Training can live with that noise, because training never needs an accurate
+likelihood, only an unbiased one. The estimate enters the log-likelihood
+linearly, so the estimated log-likelihood and its gradient are unbiased too,
+and a stochastic gradient asks for nothing more
+(:numref:`sec_mdl-stochastic-gradient-methods`). The noise of the probes is
+averaged over the minibatch and over iterations, as the noise of the
+minibatch itself is. What one held probe cannot give is the likelihood of a
+single point. An error of $5$ in a log-likelihood is a factor of
+$e^5\approx150$ in the density, so for that one averages many probes, draws
+fresh ones along a fixed grid of steps, or computes the exact trace.
+
+The only noise in this section sat in our probes. The trajectories
+themselves were deterministic. A diffusion model adds fresh noise to the
+state at every step, and increments that scale like $\sqrt{h}$ break the
+Taylor expansions this section relied on. Integrating such an equation takes
+a calculus of its own (:numref:`sec_mdl-sdes`).
 
 ## Summary
 
-A residual block is an Euler step, and one field with shrinking steps
-gives a Neural ODE. Its exact flow is invertible and, on $\mathbb{R}$,
-order-preserving, so the map $x\mapsto-x$ needs a second dimension. A field
-trained through ten Euler steps fits the ten-step program, not the flow. The
-gradient of a loss on $\mathbf{x}(T)$ is the integral of
+A residual block is an Euler step, and one field with shrinking steps gives
+a Neural ODE, whose exact flow is invertible and whose step count is left to
+a solver. Both gains have limits: on $\mathbb{R}$ a flow preserves order, so
+$x\mapsto-x$ needs a second dimension, and a field trained through ten Euler
+steps fits the ten-step program, where one trained through RK4 fits the flow
+at four times the field evaluations. The gradient of a loss on
+$\mathbf{x}(T)$ is the integral of
 $(\partial\mathbf{f}/\partial\boldsymbol\theta)^\top\mathbf{a}$ along the
 trajectory, where the adjoint $\mathbf{a}$ solves a linear ODE backward from
-$\nabla\ell(\mathbf{x}(T))$. Backpropagation through Euler is exact for the
-program and within $O(h)$ of the gradient of the flow. Re-integrating the
-state backward saves memory but amplifies a stored error by $e^{\lambda T}$
-for a mode that decays at rate $\lambda$. Along a trajectory
-$\tfrac{d}{dt}\log p_t=-\operatorname{tr}\mathbf J$. Hutchinson's estimator
-obtains the trace from one vector--Jacobian product per probe, without bias
-but with noise that training averages out and a single likelihood does not.
+$\nabla\ell(\mathbf{x}(T))$; backpropagation through Euler is exact for the
+program and within $O(h)$ of this gradient. Re-integrating the state
+backward saves memory but amplifies a stored error by $e^{\lambda T}$ for a
+mode that decays at rate $\lambda$. Along a trajectory
+$\tfrac{d}{dt}\log p_t=-\operatorname{tr}\mathbf J$, a trace where a
+discrete flow needs a determinant. Hutchinson's estimator obtains the trace
+from one vector--Jacobian product per probe, without bias but with noise
+that training averages out and a single likelihood does not.
 
 ## Exercises
 
-1. [code] **The learned field at other step counts.** The
-   `#odes-solvers-neural-ode-train` cell trains the field with $N=10$ Euler
-   steps of size $h=0.1$, and the text found that the endpoint error rises
-   from a few thousandths to about $0.02$ when the same field is integrated
-   with $N=100$ or $N=1000$ steps.
-    1. Evaluate the trained `flow` with $N=1$, $2$ and $5$ steps ($Nh=1$).
-       Why is the error at $N=1$ large although ten steps of the same field
-       are accurate to a few thousandths? Which map does one Euler step of
-       the trained field compute?
-    1. What does the error at $N=1000$ measure? Name the two maps whose
-       distance it is, and explain why it does not shrink as $N$ grows
-       further.
-    1. Integrate the trained field backward from the targets `Y` with
-       $N=10$, $100$ and $1000$ steps of
-       $\mathbf{x}\leftarrow\mathbf{x}-h\,\mathbf{f}_{\boldsymbol\theta}(\mathbf{x})$
+1. [code] **The learned field at other step counts.** The training cell
+   fits one field through ten Euler steps and one through ten RK4 steps, and
+   the text found that only the second is fitted to its flow. The function
+   `train` takes the solver step as an argument, so the variants below need
+   only a new step function or a changed step count.
+    1. Evaluate the Euler-trained field with $N=1$, $2$ and $5$ Euler steps
+       ($Nh=1$), as the evaluation cell does for larger $N$. Why is the
+       error at $N=1$ large although ten steps of the same field are
+       accurate to a few thousandths or better? Which map does one Euler
+       step of the trained field compute?
+    1. Integrate the Euler-trained field backward from the targets `Y` with
+       $N=10$, $100$ and $1000$ Euler steps (a negative horizon does this)
        and compare the result with `X`. The forward--backward round trip of
        the text went to zero like $1/N$; this error settles at a few
-       hundredths. Why? *Hint: at large $N$ the backward integration applies the exact
-       inverse flow to the ellipse, not to the ten-step image of the
-       circle.*
-    1. Retrain with $N=1$ and with $N=2$, and repeat (a). Which of the three
-       trained fields comes closest to its own time-one flow?
+       hundredths. Why? *Hint: at large $N$ the backward integration applies
+       the exact inverse flow to the ellipse, not to the ten-step image of
+       the circle.*
+    1. Write a step function for Heun's method,
+       $\mathbf{x}+\tfrac h2\big[\mathbf{f}(\mathbf{x})+\mathbf{f}(\mathbf{x}+h\mathbf{f}(\mathbf{x}))\big]$,
+       and train a third field through ten Heun steps from the same seed.
+       Evaluate it with Heun's method at $N=10$, $100$ and $1000$. Does its
+       error rise like that of the Euler-trained field or stay put like
+       that of the RK4-trained one? Heun evaluates the field twice per step.
+       What does the result say about how accurate the training solver has
+       to be for this task?
+    1. Train a field through $N=100$ Euler steps of size $0.01$ and
+       evaluate it with Euler at $N=10$, $100$ and $1000$. Where is its
+       error small now, and how much does it change between $N=100$ and
+       $N=1000$? Count the field evaluations per training iteration for
+       this run, the Heun run and the RK4 run. Which is the cheapest way to
+       a field whose step count is free?
    :exlabel:`ex_mdl-odes-solvers-step-count-transfer`
 
 1. [code] **What a flow cannot represent.** ● Two trajectories of a field
    with Lipschitz constant $L$ satisfy
    $e^{-Lt}\|\mathbf{x}-\mathbf{y}\|\le\|\Phi_t(\mathbf{x})-\Phi_t(\mathbf{y})\|\le e^{Lt}\|\mathbf{x}-\mathbf{y}\|$
-   (:exref:`ex_mdl-odes-solvers-trajectory-separation`), and
-   :numref:`subsec_mdl-flow-order` showed that no flow on $\mathbb{R}$
-   reverses order :cite:`Dupont.Doucet.Teh.2019`.
+   (Exercise :exref:`ex_mdl-odes-solvers-trajectory-separation` of
+   :numref:`sec_mdl-odes-solvers`), and :numref:`subsec_mdl-flow-order`
+   showed that no flow on $\mathbb{R}$ reverses order
+   :cite:`Dupont.Doucet.Teh.2019`.
     1. Let $d=1$. Use the lower bound to give a second proof that $\Phi_T$
        is strictly increasing, and show that
        $\Phi_T(1)-\Phi_T(-1)\ge2e^{-LT}$. Which of the two statements, order
@@ -1133,19 +1312,20 @@ but with noise that training averages out and a single likelihood does not.
        only if $LT\ge\ln2.5\approx0.92$, whereas the long axis, stretched from
        $2$ to $2.4$, gives only $LT\ge\ln1.2$. A one-hidden-layer tanh field
        has $L\le\|\mathbf W_2\|_2\|\mathbf W_1\|_2$ because $\tanh$ is $1$-Lipschitz.
-       Compute this bound for the trained field and check the inequality.
+       Compute this bound for the RK4-trained field and check the
+       inequality.
     1. Embed $\mathbb{R}$ in $\mathbb{R}^2$ as $x\mapsto(x,0)$. Show that
-       every linear field $\dot{\mathbf{x}}=\mathbf B\mathbf{x}$ whose time-one map
-       sends $(x,0)$ to $(-x,0)$ for every $x$ has $e^{\mathbf B}=-\mathbf{I}$.
-       *Hint: an eigenvalue $-1$ of $e^{\mathbf B}$ comes from an eigenvalue $\mu$ of
-       $\mathbf B$ with $e^{\mu}=-1$, which is not real.* Find such a field whose
+       every linear field $\dot{\mathbf{x}}=\mathbf C\mathbf{x}$ whose time-one map
+       sends $(x,0)$ to $(-x,0)$ for every $x$ has $e^{\mathbf C}=-\mathbf{I}$.
+       *Hint: an eigenvalue $-1$ of $e^{\mathbf C}$ comes from an eigenvalue $\mu$ of
+       $\mathbf C$ with $e^{\mu}=-1$, which is not real.* Find such a field whose
        trajectories are ellipses rather than circles.
     1. Change the training cell to fit the map $x\mapsto-x$ on $64$ evenly
        spaced points of $[-1,1]$ with a field of input and output dimension
-       $1$ and $N=10$ steps. What does the trained model output, and why does
-       the loss settle at a value you can predict before training? Repeat
-       with a field of dimension $2$, inputs $(x,0)$, and the loss on the
-       first coordinate.
+       $1$ and $N=10$ Euler steps. What does the trained model output, and
+       why does the loss settle at a value you can predict before training?
+       Repeat with a field of dimension $2$, inputs $(x,0)$, and the loss on
+       the first coordinate.
     1. Train the one-dimensional model once more with $N=1$ and $h=1$, and
        evaluate it with $N=1$ and with $N=100$ steps of size $h=0.01$.
        Relate the two results to the proposition and to the condition
@@ -1171,7 +1351,7 @@ but with noise that training averages out and a single likelihood does not.
     1. :citet:`Finlay.Jacobsen.Nurbekyan.ea.2020` instead append a
        coordinate $E$ with $\dot{E} = \ell$ and $E(0) = 0$ to the state, and
        add $E(T)$ to the endpoint loss. Apply :eqref:`eq_mdl-ode-adjoint` to
-       the augmented state and show that it reproduces (a).
+       the extended state $(\mathbf{x},E)$ and show that it reproduces (a).
     1. For the kinetic energy, $\ell = \|\mathbf{f}\|^2$. Write
        $\nabla_{\mathbf{x}}\ell$ as a vector--Jacobian product. How many
        reverse-mode passes through $\mathbf{f}$ does one step of the adjoint
@@ -1180,29 +1360,31 @@ but with noise that training averages out and a single likelihood does not.
 
 1. [code] **Reconstructing the trajectory backward.** ● The continuous
    adjoint can avoid storing the forward states by integrating
-   $\mathbf{x}(t)$ backward from $\mathbf{x}(T)$ alongside $\mathbf{a}(t)$,
-   and :numref:`sec_mdl-adjoint-method` quoted the resulting drift
-   $e^{\lambda T}\delta$.
-    1. For $\dot{x}=-\lambda x$ with $\lambda>0$, an error $\delta$ in the
-       stored $x(T)$ causes an error in the reconstructed $x(0)$. Derive it.
+   $\mathbf{x}(t)$ backward from $\mathbf{x}(T)$ alongside $\mathbf{a}(t)$.
+   :numref:`sec_mdl-adjoint-method` found that a mode which decays at the
+   rate $\lambda$ then amplifies an error $\delta$ in the stored
+   $\mathbf{x}(T)$ to $e^{\lambda T}\delta$.
     1. Let $\mathbf R$ be the rotation by $0.6$ radians and
-       $\mathbf B=\mathbf R\,\mathrm{diag}(-50,-1)\,\mathbf R^\top$. Integrate
-       $\dot{\mathbf{x}}=\mathbf B\mathbf{x}$ from $(1,1)$ to time $T$ with `rk4` and
-       $2000$ steps, then integrate the field $-\mathbf B\mathbf{x}$ from the result
-       for the same time. Report the reconstruction error for
-       $T=0.25$, $0.5$, $1$ and $2$, and compare its growth with (a), taking
-       $\delta$ to be the double-precision rounding error $\approx10^{-16}$.
-       Repeat with $\mathrm{diag}(-50,-1)$ itself. Why does the diagonal
-       matrix reconstruct far more accurately?
+       $\mathbf C=\mathbf R\,\mathrm{diag}(-50,-1)\,\mathbf R^\top$. Integrate
+       $\dot{\mathbf{x}}=\mathbf C\mathbf{x}$ from $(1,1)$ to time $T$ with
+       $2000$ RK4 steps (`solve` with `rk4_step`), then integrate backward
+       from the result for the same time, with a negative horizon. Report
+       the reconstruction error for $T=0.25$, $0.5$, $1$ and $2$, and
+       compare its growth with $e^{50T}\delta$. Which $\delta$ fits? Why is
+       it nearer $10^{-17}$ than the $10^{-16}$ of the text? *Hint: how
+       large are the coordinates of $\mathbf{x}(T)$?*
+    1. Repeat with $\mathrm{diag}(-50,-1)$ itself. From $T=0.5$ on it
+       reconstructs the start far more accurately than $\mathbf C$ does.
+       Why?
     1. Activation checkpointing (:numref:`subsec_activation_checkpointing`)
        stores the state at the start of each segment of the trajectory. A
        hybrid scheme reconstructs the states within a segment by integrating
-       backward from the checkpoint at its end. For the matrix $\mathbf B$ of (b),
-       what is the longest segment duration for which the error of (a)
-       stays below $10^{-8}$?
+       backward from the checkpoint at its end. For the matrix $\mathbf C$
+       of (a), what is the longest segment duration for which the drift
+       $e^{50T}\delta$ with $\delta=10^{-16}$ stays below $10^{-8}$?
    :exlabel:`ex_mdl-odes-solvers-backward-reconstruction`
 
-1. **Log-determinant of a residual step.** ● The instantaneous change of
+1. **Log-determinant of a residual step.** ●● The instantaneous change of
    variables :eqref:`eq_mdl-ode-instant-cov` is a limit of infinitesimal
    steps. A finite residual step
    $F(\mathbf{x})=\mathbf{x}+\mathbf{g}(\mathbf{x})$ needs its exact
@@ -1234,7 +1416,7 @@ but with noise that training averages out and a single likelihood does not.
        $\operatorname{tr}(\mathbf J_{\mathbf{g}}^k)$ by
        $\boldsymbol{\epsilon}^\top \mathbf J_{\mathbf{g}}^k\boldsymbol{\epsilon}$.
        How many vector--Jacobian products per probe does the series
-       truncated after $n$ terms cost?
+       truncated after $K$ terms cost?
    :exlabel:`ex_mdl-odes-solvers-residual-logdet`
 
 1. [code] **Variance of the Hutchinson estimator.** ● The estimator
@@ -1246,18 +1428,23 @@ but with noise that training averages out and a single likelihood does not.
        $\boldsymbol{\epsilon}^\top \mathbf M\boldsymbol{\epsilon}$ is $2\|\mathbf S\|_F^2$
        for Gaussian probes and $2\sum_{i\neq j}S_{ij}^2$ for Rademacher
        probes. For which matrices is a single Rademacher probe exact?
-    1. Form the Jacobian $\mathbf J=\mathbf W_2\,\mathrm{diag}(\mathbf{s})\,\mathbf W_1$ of the field
-       in the `#mdl-neural-odes-the-hutchinson-trace-estimator-1` cell
-       explicitly (it is $50\times50$), evaluate both variances, and compare
-       the Rademacher value with $m$ times the square of the standard error
-       that the next cell printed. How many probes does each distribution
-       need for a standard error of $0.01$?
+    1. Form the Jacobian
+       $\mathbf J=\mathbf W_2\,\mathrm{diag}(\mathbf{s})\,\mathbf W_1-\mathbf{I}$
+       of the field with the pull explicitly, from the weights and the point
+       of the Hutchinson experiment (it is $50\times50$). Evaluate both
+       variances and compare their square roots with the two one-probe
+       standard deviations that the experiment printed. How many probes does
+       each distribution need for a standard error of $0.01$?
     1. In a CNF, $\mathbf M$ is the Jacobian $\partial\mathbf{f}/\partial\mathbf{x}$
        in dimension $d$. Suppose that all entries have comparable magnitude.
        How does the relative standard error
        $\sqrt{\textrm{Var}}/|\operatorname{tr}\mathbf M|$ of one probe scale
        with $d$ when the diagonal entries share one sign, and when their
        signs are random?
+    1. In training, each of the $B$ points of a minibatch has its own
+       trajectory and its own held probe. How does the noise of the average
+       log-likelihood depend on $B$? For which $B$ does it match the noise
+       that one point has with fresh probes at $N=100$ steps?
    :exlabel:`ex_mdl-odes-solvers-hutchinson-variance`
 
 1. [code] **Discrete and continuous adjoints.** ●● Backpropagation through
@@ -1266,35 +1453,38 @@ but with noise that training averages out and a single likelihood does not.
    the exact flow :cite:`Kidger.2022`. Compare the two recursions step by
    step for an autonomous field with Jacobian
    $\mathbf J(\mathbf{x})=\partial\mathbf{f}/\partial\mathbf{x}$ and forward states
-   $\mathbf{x}_k$.
+   $\mathbf{x}_n$.
     1. For forward Euler, the discrete adjoint
        :eqref:`eq_mdl-ode-discrete-adjoint` computes
-       $\mathbf{a}_k=(\mathbf{I}+h\mathbf J(\mathbf{x}_k))^\top\mathbf{a}_{k+1}$,
-       whereas an explicit Euler step of the adjoint ODE from $t_{k+1}$ back
-       to $t_k$ computes
-       $\mathbf{a}_k=\mathbf{a}_{k+1}+h\mathbf J(\mathbf{x}_{k+1})^\top\mathbf{a}_{k+1}$.
+       $\mathbf{a}_n=(\mathbf{I}+h\mathbf J(\mathbf{x}_n))^\top\mathbf{a}_{n+1}$,
+       whereas an explicit Euler step of the adjoint ODE from $t_{n+1}$ back
+       to $t_n$ computes
+       $\mathbf{a}_n=\mathbf{a}_{n+1}+h\mathbf J(\mathbf{x}_{n+1})^\top\mathbf{a}_{n+1}$.
        Bound the difference of the two updates for a smooth $\mathbf{f}$.
-       For a linear field the two coincide; what then produces the gap that
-       the `#mdl-neural-odes-backpropagation-as-the-discrete-adjoint-1` cell
-       prints? For the scalar program $x_N=(1+h\theta)^Nx_0$ the text found
-       the gradient $T\,x_N^2/(1+h\theta)$; show that this is what the
-       recursion computes.
+       For a linear field the two coincide, and the text said that the gap
+       to the gradient of the flow is then Euler's own error. Make this
+       precise for the scalar program $x_N=(1+h\theta)^Nx_0$: show that the
+       recursion computes the gradient $T\,x_N^2/(1+h\theta)$ that the text
+       found, and that this equals
+       $T\,x(T)^2\big(1-h\theta(1+\theta T)\big)+O(h^2)$.
     1. Differentiate one Heun step
-       $\mathbf{x}_{k+1}=\mathbf{x}_k+\tfrac{h}{2}\big[\mathbf{f}(\mathbf{x}_k)+\mathbf{f}(\mathbf{u}_k)\big]$
-       with $\mathbf{u}_k=\mathbf{x}_k+h\mathbf{f}(\mathbf{x}_k)$ to obtain
+       $\mathbf{x}_{n+1}=\mathbf{x}_n+\tfrac{h}{2}\big[\mathbf{f}(\mathbf{x}_n)+\mathbf{f}(\mathbf{u}_n)\big]$
+       with $\mathbf{u}_n=\mathbf{x}_n+h\mathbf{f}(\mathbf{x}_n)$ to obtain
        its discrete adjoint recursion. Show that this recursion is a Heun
-       step of the adjoint ODE from $t_{k+1}$ to $t_k$ in which
-       $\mathbf J(\mathbf{x}_{k+1})$ is replaced by $\mathbf J(\mathbf{u}_k)$. At which order
+       step of the adjoint ODE from $t_{n+1}$ to $t_n$ in which
+       $\mathbf J(\mathbf{x}_{n+1})$ is replaced by $\mathbf J(\mathbf{u}_n)$. At which order
        in $h$ do the two updates differ?
     1. For a linear field $\mathbf{f}(\mathbf{x})=\mathbf A\mathbf{x}$, one RK4 step
        multiplies the state by $R(h\mathbf A)$, where
-       $R(z)=1+z+z^2/2+z^3/6+z^4/24$ is the RK4 stability polynomial
-       (:exref:`ex_mdl-odes-solvers-rotating-modes`). Show that the discrete
+       $R(z)=1+z+z^2/2+z^3/6+z^4/24$ is the stability function of RK4
+       (:numref:`sec_mdl-euler-runge-kutta`; Exercise
+       :exref:`ex_mdl-odes-solvers-rotating-modes` there studies it on the
+       imaginary axis). Show that the discrete
        adjoint of RK4 is an RK4 step of the adjoint ODE.
     1. Replace the Euler step of `loss_and_grad_unrolled` by an RK4 step,
        and compute the gradient of the unrolled loss by central finite
        differences instead of a hand-written backward sweep. Measure its gap
-       to the continuous-adjoint gradient `g_cont` for $n=5$, $10$, $20$,
+       to the continuous-adjoint gradient `g_cont` for $N=5$, $10$, $20$,
        $40$ and $80$ steps. The trapezoid rule that computes `g_cont` uses
        `n_quad = 2000` intervals and is accurate only to about $10^{-7}$, so
        refine it first. Which slope do you measure? Which order does the
@@ -1304,7 +1494,7 @@ but with noise that training averages out and a single likelihood does not.
 1. **Checkpointing arithmetic.** ● A forward pass of $N$ Euler steps is
    differentiated by the discrete adjoint
    :eqref:`eq_mdl-ode-discrete-adjoint`, whose backward sweep needs
-   $\mathbf{x}_k$ at step $k$.
+   $\mathbf{x}_n$ at step $n$.
     1. Storing every state holds $N$ states and recomputes nothing. Suppose
        instead that only every $k$-th state is stored as a checkpoint, and
        that when the backward sweep enters a segment of $k$ steps, the
@@ -1313,8 +1503,8 @@ but with noise that training averages out and a single likelihood does not.
        and how many extra forward steps are computed in total?
     1. Minimize the peak over $k$. Show that the minimum is near
        $k=\sqrt N$, and that the extra work is about one forward pass
-       whatever $k$ is. For $N=1000$, compare the peak with the $1000$
-       states of full storage.
+       whatever $k$ is. Check the $63$ states that the text quoted for
+       $N=1000$.
     1. Recursive checkpointing applies the same idea inside each segment and
        holds $O(\log N)$ states at the cost of $O(\log N)$ forward passes
        :cite:`Griewank.1992`. Compare it with the continuous adjoint, whose
@@ -1343,10 +1533,12 @@ but with noise that training averages out and a single likelihood does not.
        change of variables :eqref:`eq_mdl-ode-discrete-cov` applied to the
        bijection $\Phi_T$. For a linear field the result is the
        formula :eqref:`eq_mdl-ode-jacobi`.
-    1. Integrate $\dot{\mathbf M}=\mathbf J\mathbf M$ with RK4 alongside the $8$-unit tanh field of
-       the `#mdl-neural-odes-checking-the-trace-integral-1` cell (re-create
-       its weights, since the Hutchinson cells reuse the names) and compare
-       $\log|\det \mathbf M(1)|$ with the two numbers that cell prints.
+    1. Integrate $\dot{\mathbf M}=\mathbf J\mathbf M$ with RK4 alongside the
+       $8$-unit tanh field of :numref:`sec_mdl-continuous-normalizing-flows`,
+       in the cell that checks the trace integral (before the Hutchinson
+       experiment reuses the names of its weights), and compare
+       $\log|\det \mathbf M(1)|$ with the trace integral and the
+       log-determinant that cell prints.
    :exlabel:`ex_mdl-neural-odes-liouville`
 
 [Discussions](https://d2l.discourse.group/t/36868)
@@ -1355,7 +1547,7 @@ but with noise that training averages out and a single likelihood does not.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §29.2]{.kicker}
+[Dive into Deep Learning · §38.3]{.kicker}
 
 What do we gain by taking the ODE itself as the model?<br>**Neural ODEs · adjoints · continuous normalizing flows**
 :::
@@ -1364,36 +1556,43 @@ What do we gain by taking the ODE itself as the model?<br>**Neural ODEs · adjoi
 ::: {.slide title="A Density on 32×32 Colour Images Needs a 3072×3072 Determinant"}
 [The problem]{.kicker}
 
-An invertible network $\mathbf g$ (a normalizing flow) has the density
+An invertible network $\mathbf g$ (a normalizing flow) with Jacobian $\mathbf J_{\mathbf g}$ has the density
 $$\log p_{\textrm{out}}(\mathbf g(\mathbf x))=\log p_{\textrm{in}}(\mathbf x)-\log\left|\det \mathbf J_{\mathbf g}(\mathbf x)\right|.$$
 
+- Maximum likelihood needs this density at every sample.
 - $d=3\cdot32\cdot32=3072$: one determinant costs $\approx\tfrac23d^3\approx2\times10^{10}$ operations.
-- That is $\approx3000\times$ one layer of width $1024$ ($2\cdot3072\cdot1024$).
-- A residual block $\mathbf x+\mathbf f(\mathbf x)$ is an Euler step. In continuous time the
-  determinant becomes a **trace**, estimated with one backward pass.
+- A dense layer $3072\to1024$ costs $2\cdot3072\cdot1024\approx6\times10^6$: one determinant costs $3000$ of them.
+
+::: {.d2l-note}
+A residual block $\mathbf x+\mathbf f(\mathbf x)$ is an Euler step. In continuous time
+the determinant becomes a **trace**, estimated with one backward pass.
+:::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- write a ResNet as an Euler program and train it as a Neural ODE;
+- write a ResNet as an Euler program and say when a trained field is a flow;
 - derive the adjoint ODE and see backpropagation as a discretization of it;
 - decide between storing states and re-integrating them, from $e^{\lambda T}$;
-- compute $\tfrac{d}{dt}\log p=-\operatorname{tr}\mathbf J$ and estimate a trace with one VJP.
+- compute $\tfrac{d}{dt}\log p=-\operatorname{tr}\mathbf J$ and estimate a trace with one backward pass.
 
 **Running examples:** the spiral $\mathbf A=-\tfrac12\mathbf I+\mathbf K$,
 $\mathbf K=\left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$, eigenvalues
 $-0.5\pm\mathrm i$; a $32$-unit tanh field that maps the unit circle to an ellipse.
+
+**The idea:** when the equation is the model, training and density each cost one more equation integrated beside the state.
 :::
 
-::: {.slide title="From Exact Motion to Learned Motion"}
+::: {.slide title="From Given Fields to a Learned One"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 | section | adds |
 |---|---|
-| ODEs and Solvers | exact motion and its numerical steps |
+| Ordinary Differential Equations | exact motion: uniqueness, eigenvalues |
+| Numerical Solvers | steps: their order and stability |
 | **Neural ODEs** | **a learned field, its gradient, its density** |
 | Stochastic Differential Equations | noise, Itô calculus, the OU process |
 | Fokker–Planck and Probability Flow | how the density moves; the score |
@@ -1402,7 +1601,7 @@ $-0.5\pm\mathrm i$; a $32$-unit tanh field that maps the unit circle to an ellip
 :::
 
 ::: {.col .narrow}
-- **Uses:** Euler, RK4, $e^{\mathbf At}$, Picard–Lindelöf, reverse-mode AD.
+- **Uses:** Euler, RK4, $e^{\mathbf At}$, one trajectory per point, reverse-mode differentiation.
 - **Skips:** noise, adaptive solvers, latent ODEs.
 :::
 :::
@@ -1413,71 +1612,85 @@ $-0.5\pm\mathrm i$; a $32$-unit tanh field that maps the unit circle to an ellip
 
 ::: {.cols .vc}
 ::: {.col}
-- $\mathbf x_{l+1}=\mathbf x_l+\mathbf f_{\boldsymbol\theta_l}(\mathbf x_l)$ is $\mathbf x_{n+1}=\mathbf x_n+h\,\mathbf f(\mathbf x_n,t_n)$ at $h=1$.
-- Exact and numerical maps differ in kind: $\dot x=-x$ has the bijection
+- Block $l$: $\mathbf x_{l+1}=\mathbf x_l+\mathbf f_{\boldsymbol\theta_l}(\mathbf x_l)$. Euler on $\dot{\mathbf x}=\mathbf f(\mathbf x,t)$: $\mathbf x_{n+1}=\mathbf x_n+h\,\mathbf f(\mathbf x_n,t_n)$. Equal at $h=1$.
+- Exact and computed maps differ in kind: $\dot x=-x$ has the bijection
   $e^{-t}x$; one Euler step with $h=1$ sends every $x$ to $0$.
 :::
 
 ::: {.col .fig .big}
-@fig:mdl-dyn-resnet-as-euler
+![](../img/mdl-dyn-resnet-as-euler.svg)
 :::
 :::
 :::
 
-::: {.slide title="Sharing One Field and Shrinking the Step Gives a Neural ODE"}
+::: {.slide title="One Field and Shrinking Steps Give a Neural ODE"}
 [Definition]{.kicker}
 
-$N$ steps of size $h=T/N$ with one field $\mathbf f_{\boldsymbol\theta}$:
+$N$ steps of size $h=T/N$ with one field $\mathbf f_{\boldsymbol\theta}$ (parameters $\boldsymbol\theta$):
 $$\mathbf x_{n+1}=\mathbf x_n+h\,\mathbf f_{\boldsymbol\theta}(\mathbf x_n,t_n)
 \;\xrightarrow{N\to\infty}\;
 \mathbf x(T)=\mathbf x_0+\int_0^T\mathbf f_{\boldsymbol\theta}(\mathbf x(t),t)\,dt.$$
 
-- Parameters define the field; the solver is chosen afterwards.
-- Gains: the exact map is **invertible** (run the field backward), its
-  **density** is computable, and the **step count** is a dial set after training.
+- The parameters define the field; the solver is chosen afterwards.
+- Gains: an **invertible** map, a **step count** outside the model, a gradient **without stored states**, a computable **density**.
+
+::: {.d2l-note .warn}
+Four catches: order on the line, a field tied to its solver, drift, a noisy trace.
+:::
 :::
 
 ::: {.slide title="No Flow on the Line Can Reverse Order"}
-[A limit]{.kicker}
+[First catch]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-- If $x<y$ but $\Phi_T(x)\ge\Phi_T(y)$, the paths meet at some $s$; uniqueness backward from $s$ gives $x=y$.
-- Euler step: $(x+hf(x))-(y+hf(y))\ge(1-hL)(x-y)$; $f=-2x$ has $hL=2$.
-- In 2-D, $e^{\pi \mathbf K}=-\mathbf I$ sends $(x,0)$ to $(-x,0)$ along half circles.
-:::
+![](../img/mdl-dyn-flow-order.svg){width=74%}
 
-::: {.col .fig .big}
-@fig:mdl-dyn-flow-order
-:::
-:::
+- **(a)** Paths never cross: a swap of $-1$ and $1$ needs two solutions through one point.
+- **(b)** An Euler step is guaranteed increasing if $hL<1$ ($L$: Lipschitz constant of $f$); here $hL=2$.
+- **(c)** In the plane, $e^{\pi \mathbf K}=-\mathbf I$ carries $(x,0)$ to $(-x,0)$.
 :::
 
-::: {.slide title="Ten Shared-Weight Euler Steps Learn the Circle-to-Ellipse Map"}
+::: {.slide title="One Field Is Trained Twice: Through Ten Euler Steps and Ten RK4 Steps"}
 [Training through the solver]{.kicker}
 
-Field: one hidden layer of $32$ tanh units. Target: $64$ circle points to the
-ellipse centred at $(1.5,0)$, semi-axes $1.2$ and $0.4$. $N=10$, $h=0.1$,
-Adam at $0.05$ then $0.005$, backpropagation through the unrolled steps.
+Field: $32$ tanh units. Task: $64$ circle points to the ellipse centred at
+$(1.5,0)$ with semi-axes $1.2$, $0.4$. Loss: mean squared endpoint error, by
+backpropagation through the unrolled steps ($h=0.1$).
 
 @!odes-solvers-neural-ode-train
 
 ::: {.d2l-note}
-The program is a ResNet of ten blocks that share one set of weights.
+Same initial weights, losses of the same size at the end. An affine field
+solves the task exactly, so any error is training's.
 :::
 :::
 
-::: {.slide title="The Field Defines a Flow Close to, Not Equal to, Its Ten-Step Program"}
+::: {.slide title="The Euler-Trained Field Is a Program, the RK4-Trained Field a Flow"}
 [Flow or program?]{.kicker}
 
-Same field, $Nh=1$: endpoint error, and forward $N$ steps then backward $N$
-steps with $\mathbf x\leftarrow\mathbf x-h\,\mathbf f_{\boldsymbol\theta}(\mathbf x)$.
+A **program** is right only at the step count it was trained with, a **flow**
+at every step count. Each field with its own solver at $N$ steps, $Nh=1$;
+last column: Euler forward $N$ steps, then backward.
 
 @!mdl-neural-odes-training-through-the-solver-1
 
 ::: {.d2l-note}
-Training fitted the ten-step program; the exact flow lands $0.02$ away. The
-round trip falls tenfold per tenfold $N$: Euler's $O(h)$.
+Euler-trained: the error **rises** to $0.02$. RK4-trained: unchanged. Round
+trip: first order in $h$.
+:::
+:::
+
+::: {.slide title="A Flow Costs Field Evaluations in Every Training Iteration"}
+[Second catch]{.kicker}
+
+| training route | field evaluations per iteration | error when $N$ grows |
+|---|---|---|
+| $10$ Euler steps | $10$ | rises to $0.02$ |
+| $10$ RK4 steps | $40$ | unchanged |
+| regression on the field, no solver | $1$ per example | no step count in training |
+
+::: {.d2l-note .rule}
+A field trained through a crude solver is a program. Score matching and flow
+matching fit the field directly, without a solver.
 :::
 :::
 
@@ -1485,28 +1698,32 @@ round trip falls tenfold per tenfold $N$: Euler's $O(h)$.
 [Check]{.kicker}
 
 At $N=10{,}000$ steps, how far does the forward–backward round trip land from
-its start? Which map is invertible: the exact flow or the ten-step Euler map?
+its start? Which round trip returns to its start: the exact flow's, or the
+Euler program's?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** About $6\times10^{-5}$, another factor of ten. The exact flow is
-invertible for a Lipschitz field; the Euler map only in the limit $h\to0$.
+**Answer.** Between $5\times10^{-5}$ and $6\times10^{-5}$, another factor of
+ten. The exact flow's: $\Phi_{-T}$ inverts $\Phi_T$. Euler steps with $-h$
+invert Euler steps with $+h$ only in the limit $h\to0$.
 :::
 :::
 :::
 
 ::: {.slide title="The Scalar Adjoint: $x$ Grows, $a$ Shrinks, $a\,x$ Is Flat"}
-[The adjoint method]{.kicker}
+[A case solved by hand]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$\dot x=\theta x$, $\mathcal L=\tfrac12x(T)^2$. I: directly $\partial\mathcal L/\partial\theta=Tx(T)^2$.
-II: $a(t)=\partial\mathcal L/\partial x(t)=e^{\theta(T-t)}x(T)$, run backward.
-III: $\int_0^Ta\,x\,dt=Tx(T)^2$; at $\theta=T=x_0=1$, $\boxed{e^2=7.39}$.
+$\dot x=\theta x$, loss $\mathcal L=\tfrac12x(T)^2$.
+
+- **I.** Directly: $\partial\mathcal L/\partial\theta=Tx(T)^2$.
+- **II.** Adjoint $a(t)=\partial\mathcal L/\partial x(t)=e^{\theta(T-t)}x(T)$.
+- **III.** $\partial f/\partial\theta=x$, so $\int_0^Ta\,x\,dt=Tx(T)^2$; at $\theta=T=x_0=1$: $\boxed{e^2=7.39}$.
 :::
 
 ::: {.col .fig .big}
-@fig:mdl-dyn-adjoint-timeline
+![](../img/mdl-dyn-adjoint-timeline.svg)
 :::
 :::
 :::
@@ -1520,41 +1737,56 @@ $$\dot{\mathbf a}=-\Big(\frac{\partial\mathbf f}{\partial\mathbf x}\Big)^{\!\top
 \mathbf a(T)=\nabla\ell(\mathbf x(T)),\qquad
 \frac{\partial\mathcal L}{\partial\boldsymbol\theta}=\int_0^T\Big(\frac{\partial\mathbf f}{\partial\boldsymbol\theta}\Big)^{\!\top}\mathbf a\,dt.$$
 
-- Why: $\tfrac{d}{dt}(\mathbf a^\top\delta\mathbf x)=\mathbf a^\top\tfrac{\partial\mathbf f}{\partial\boldsymbol\theta}\delta\boldsymbol\theta$; the state terms cancel.
+- Why: for a perturbation $\delta\boldsymbol\theta$ and its effect $\delta\mathbf x$, $\tfrac{d}{dt}(\mathbf a^\top\delta\mathbf x)=\mathbf a^\top\tfrac{\partial\mathbf f}{\partial\boldsymbol\theta}\delta\boldsymbol\theta$; the state terms cancel.
 - Each backward step is one vector–Jacobian product.
 :::
 
 ::: {.slide title="Backpropagation Through Euler Is the Discrete Adjoint"}
 [Discrete adjoint]{.kicker}
 
+With $\mathbf a_n=\partial\mathcal L/\partial\mathbf x_n$ and $\mathbf J=\partial\mathbf f/\partial\mathbf x$:
+
 | backprop through the program | Euler step of the adjoint ODE |
 |---|---|
-| $\mathbf a_k=(\mathbf I+h\mathbf J(\mathbf x_k))^\top\mathbf a_{k+1}$ | $\mathbf a_k=\mathbf a_{k+1}+h\mathbf J(\mathbf x_{k+1})^\top\mathbf a_{k+1}$ |
+| $\mathbf a_n=(\mathbf I+h\mathbf J(\mathbf x_n))^\top\mathbf a_{n+1}$ | $\mathbf a_n=\mathbf a_{n+1}+h\mathbf J(\mathbf x_{n+1})^\top\mathbf a_{n+1}$ |
 
-Spiral, $\mathcal L=\tfrac12\|\mathbf x(T)\|^2$, $T=2$, $1000$ steps: a hand-written
-backward sweep against finite differences.
+Scalar case, $x_N=(1+h\theta)^Nx_0$: the program's gradient is $Tx_N^2/(1+h\theta)$.
 
-@!odes-solvers-adjoint-check
+| $N$ | $10$ | $100$ | $1000$ | flow |
+|---|---|---|---|---|
+| gradient | $6.12$ | $7.24$ | $7.37$ | $e^2=7.39$ |
+
+::: {.d2l-note .rule}
+Exact for the program; first order in $h$ from the flow.
+:::
 :::
 
-::: {.slide title="The Two Gradients Differentiate Different Objects and Agree to $O(h)$"}
+::: {.slide title="On the Spiral the Two Gradients Differ by $O(h)$"}
 [Discrete vs continuous]{.kicker}
 
-Discrete adjoint (the program) against the continuous adjoint (the exact flow),
+$\dot{\mathbf x}=\mathbf A\mathbf x$, $\mathcal L=\tfrac12\|\mathbf x(T)\|^2$, $T=2$. A hand-written backward
+sweep against finite differences, then against
 $\partial\mathcal L/\partial \mathbf A=\int_0^T\mathbf a\,\mathbf x^\top dt$:
 
 @!mdl-neural-odes-backpropagation-as-the-discrete-adjoint-1
 
-Scalar case: $Tx_N^2/(1+h\theta)=6.12,\ 7.24,\ 7.37$ at $N=10,100,1000$, against $e^2=7.39$.
+::: {.d2l-note}
+The sweep is the program's exact gradient; its gap to the flow's gradient
+falls tenfold per tenfold $N$.
+:::
 :::
 
 ::: {.slide title="Re-Integrating Backward Saves Memory and Amplifies Errors by $e^{\lambda T}$"}
-[Memory and drift]{.kicker}
+[Third catch]{.kicker}
 
 - Store all $N$ states, or re-integrate $\mathbf x$ backward next to $\mathbf a$ (constant memory).
 - $\dot x=-\lambda x$ run backward is $\dot x=+\lambda x$: an error $\delta$ in $x(T)$ grows to $e^{\lambda T}\delta$.
 - $\lambda=50$, $\delta=10^{-16}$: $2.7\times10^{-11}$ at $T=0.25$, $5\times10^{5}$ at $T=1$.
-- Checkpoints every $k=\sqrt N$ steps: $63$ states instead of $1000$, one extra forward pass.
+- Checkpoints every $\sqrt N$ steps: $63$ states instead of $1000$, one extra forward pass.
+
+::: {.d2l-note .rule}
+Default: backpropagate through the solver, with checkpoints when memory is short.
+:::
 :::
 
 ::: {.slide title="Check: How Much Drift?"}
@@ -1574,62 +1806,96 @@ is $e^{0.5\cdot2}=e$, so the error stays near $3\times10^{-16}$.
 ::: {.slide title="A Flow Changes Log-Density at the Rate $-\operatorname{tr}\mathbf J$"}
 [Instantaneous change of variables]{.kicker}
 
-- 1-D: $\dot x=\theta x$ stretches by $e^{\theta t}$, so $\log p_t(x(t))=\log p_0(x_0)-\theta t$.
-- Lemma: $\det(\mathbf I+h\mathbf J)=1+h\operatorname{tr}\mathbf J+O(h^2)$ (off-diagonal terms are $O(h^2)$).
-- One short step of the flow has Jacobian $\mathbf I+h\mathbf J+o(h)$, hence
-$$\frac{d}{dt}\log p_t(\mathbf x(t))=-\operatorname{tr}\mathbf J,\qquad
+$p_t$: density of $\mathbf x(t)$; $\mathbf J=\partial\mathbf f/\partial\mathbf x$.
+
+- **I.** 1-D: $\dot x=\theta x$ stretches by $e^{\theta t}$, so $\log p_t(x(t))=\log p_0(x_0)-\theta t$.
+- **II.** $\det(\mathbf I+h\mathbf J)=1+h\operatorname{tr}\mathbf J+O(h^2)$: off-diagonal terms are $O(h^2)$.
+- **III.** One short step of the flow has Jacobian $\mathbf I+h\mathbf J+o(h)$, hence
+
+$$\boxed{\frac{d}{dt}\log p_t(\mathbf x(t))=-\operatorname{tr}\mathbf J},\qquad
 \log p_T(\mathbf x(T))=\log p_0(\mathbf x(0))-\int_0^T\operatorname{tr}\mathbf J\,dt.$$
 :::
 
 ::: {.slide title="The Spiral Shrinks Area by $e^{-t}$ and Raises Density by $e^{t}$"}
 [Divergence as volume change]{.kicker}
 
-@fig:mdl-dyn-divergence-volume
+![](../img/mdl-dyn-divergence-volume.svg){width=86%}
 
-$e^{\mathbf At}=e^{-t/2}\times$rotation, $\operatorname{tr}\mathbf A=-1$; Jacobi:
-$\det e^{\mathbf At}=e^{t\operatorname{tr}\mathbf A}$, $0.2231$ at $t=1.5$.
+$e^{\mathbf At}=e^{-t/2}\times$rotation and $\operatorname{tr}\mathbf A=-1$:
+$\det e^{\mathbf At}=e^{t\operatorname{tr}\mathbf A}$, which is $e^{-1.2}\approx0.30$ at $t=1.2$, the darkest disc.
 :::
 
 ::: {.slide title="The Trace Integral Equals $\log\lvert\det D\Phi\rvert$ Even When the Trace Varies"}
 [Checking the trace integral]{.kicker}
 
-Spiral, four samples from $\mathcal N(\mathbf 0,\mathbf I)$ at $t=1.5$: Gaussian formula
-against $\log p_0-t\operatorname{tr}\mathbf A$:
-
-@!odes-solvers-cnf-trace
-
-Tanh field $\mathbf W_2\tanh(\mathbf W_1\mathbf x+\mathbf b_1)$, $8$ units: RK4 on $(\mathbf x,\int\operatorname{tr}\mathbf J)$
-against finite differences of $\Phi_1$:
+Tanh field $\mathbf W_2\tanh(\mathbf W_1\mathbf x+\mathbf b_1)$, $8$ units, random weights. RK4
+on $(\mathbf x,\int\operatorname{tr}\mathbf J\,dt)$ against finite differences of the
+time-one map $\Phi_1$:
 
 @!mdl-neural-odes-checking-the-trace-integral-1
+
+::: {.d2l-note}
+The trace varies along the path (first line); the integral and the
+log-determinant agree to eight digits or better.
+:::
 :::
 
-::: {.slide title="Hutchinson Estimates the Trace from One VJP per Probe"}
+::: {.slide title="Hutchinson Estimates the Trace from One Backward Pass per Probe"}
 [The Hutchinson estimator]{.kicker}
 
-$\mathbb{E}[\boldsymbol\epsilon\boldsymbol\epsilon^\top]=\mathbf I$ gives
+A random probe $\boldsymbol\epsilon$ with $\mathbb{E}[\boldsymbol\epsilon\boldsymbol\epsilon^\top]=\mathbf I$ gives
 $\mathbb{E}[\boldsymbol\epsilon^\top \mathbf J\boldsymbol\epsilon]=\operatorname{tr}(\mathbf J\,\mathbb{E}[\boldsymbol\epsilon\boldsymbol\epsilon^\top])=\operatorname{tr}\mathbf J$.
 
 - $\boldsymbol\epsilon^\top \mathbf J$ is one reverse-mode pass seeded with $\boldsymbol\epsilon$; $\mathbf J$ is never formed.
-- Tanh field: $\boldsymbol\epsilon^\top \mathbf J=((\boldsymbol\epsilon^\top \mathbf W_2)\odot\mathbf s)\mathbf W_1$, $\mathbf s=1-\tanh^2(\cdot)$.
+- Variance of one probe, $\mathbf S=(\mathbf J+\mathbf J^\top)/2$:
 
-$d=50$, $64$ hidden units, $10^5$ Rademacher probes:
-
-@!mdl-neural-odes-the-hutchinson-trace-estimator-1
-
-@!mdl-neural-odes-the-hutchinson-trace-estimator-2
+| probe | entries | variance |
+|---|---|---|
+| Rademacher | $\pm1$ | $2\sum_{i\ne j}S_{ij}^2$ |
+| Gaussian | $\mathcal N(0,1)$ | $2\sum_{i,j}S_{ij}^2$ |
 :::
 
-::: {.slide title="Check: Sign and Cost"}
+::: {.slide title="One Rademacher Probe Finds a Trace of $-50$ to Ten Percent"}
+[One probe at a point]{.kicker}
+
+$\mathbf f(\mathbf x)=\mathbf W_2\tanh(\mathbf W_1\mathbf x+\mathbf b_1)-\mathbf x$, $d=50$: the pull $-\mathbf x$ puts
+$-50$ on the trace. The exact trace takes $50$ backward passes. $1000$ probes of each kind:
+
+@!mdl-neural-odes-the-hutchinson-trace-estimator-2
+
+::: {.d2l-note}
+Rademacher noise is off-diagonal only. Gaussian probes add
+$2\sum_iJ_{ii}^2\approx100$: $11^2-5^2=96$.
+:::
+:::
+
+::: {.slide title="A Held Probe Keeps Its Noise; Fresh Probes Average It Like $1/\sqrt N$"}
+[Fourth catch]{.kicker}
+
+$\int_0^1\operatorname{tr}\mathbf J\,dt$ along $N$ Euler steps, $200$ repetitions: one probe held
+for the solve, or a fresh probe per step.
+
+@!mdl-neural-odes-the-hutchinson-trace-estimator-3
+
+::: {.d2l-note .rule}
+Held: the solver sees a deterministic ODE, so adaptive steps and the adjoint
+apply. Unbiased either way, which is all a stochastic gradient needs. One
+point's likelihood needs many probes or the exact trace.
+:::
+:::
+
+::: {.slide title="Check: Sign and Minibatches"}
 [Check]{.kicker}
 
 For the spiral, is $\tfrac{d}{dt}\log p_t(\mathbf x(t))$ positive or negative, and
-how large? What does one Hutchinson probe cost?
+how large? With one held probe per point, how does the noise of the mean
+log-likelihood of $B$ points scale?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $-\operatorname{tr}\mathbf A=+1$: the contracting flow concentrates
-probability. One probe costs one backward pass through $\mathbf f$.
+probability. The noise falls like $1/\sqrt B$; $B=100$ points match $100$
+fresh probes on one point.
 :::
 :::
 :::
@@ -1637,12 +1903,12 @@ probability. One probe costs one backward pass through $\mathbf f$.
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- A ResNet is an Euler program; the trained field's flow lands $0.02$ from its
-  ten-step program, and round trips shrink like $O(h)$.
+- A ResNet is an Euler program. Trained through ten Euler steps, a field's
+  flow lands $0.02$ from its program; trained through RK4, flow and program agree.
 - On $\mathbb R$ flows preserve order: $x\mapsto-x$ needs a second dimension.
-- Backprop through Euler matches finite differences to $10^{-10}$; it is within $O(h)$ of the continuous adjoint.
+- Backprop through Euler is exact for the program and within $O(h)$ of the adjoint gradient ($6.12$ against $e^2=7.39$ at $N=10$).
 - Re-integration drifts by $e^{\lambda T}$: $5\times10^5$ for $\lambda=50$, $T=1$.
-- $\tfrac{d}{dt}\log p=-\operatorname{tr}\mathbf J$, estimated with one VJP per probe.
+- $\tfrac{d}{dt}\log p=-\operatorname{tr}\mathbf J$; one probe is unbiased, with noise of about $5$ on a trace of $-50$.
 
 **Next:** fresh noise at every step, with increments of size $\sqrt h$.
 :::

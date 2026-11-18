@@ -138,7 +138,11 @@ to the identity plus terms that pass through one branch or through both. The
 same holds for any number of blocks, so the gradient of the loss reaches
 every block through the chain of identity terms, without passing through the
 convolutions of the blocks above it. A plain network has no such term: the
-gradient reaches a layer only through all the layers above it.
+gradient reaches a layer only through all the layers above it. Such a stack,
+$\mathbf{x}_{l+1} = \mathbf{x}_l + g_l(\mathbf{x}_l)$, is also Euler's method
+for solving a differential equation $\dot{\mathbf{x}} = g(\mathbf{x}, t)$ in
+steps of length one, with the blocks as the velocity at successive times, a
+reading that :numref:`sec_mdl-neural-odes-cnf` develops.
 
 ResNet itself is not quite this clean. Two things remain on the identity
 path: the ReLU after each addition, which blocks the gradient wherever the

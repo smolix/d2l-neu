@@ -646,7 +646,9 @@ $$
 
 The state decays by $e^{\Delta\lambda}$ over the step, and the input, which
 enters continuously during the step, contributes $\int_0^\Delta
-e^{\lambda\tau}\,d\tau = \bar{b}$ times its value. For $\lambda = -1$ the
+e^{\lambda\tau}\,d\tau = \bar{b}$ times its value
+(:numref:`subsec_mdl-ode-driven-linear` derives the step, also for a full
+matrix $\mathbf{A}$). For $\lambda = -1$ the
 two coefficients are $\bar{a}$ and $1 - \bar{a}$, so the update reads
 $h_t = \bar{a}\, h_{t-1} + (1 - \bar{a})\, x_t$: the blend of the GRU,
 with $\bar{a}$ in the role of the update gate. The step size decides the
@@ -1117,7 +1119,9 @@ the next section lets the dynamics depend on the input.
    ways to turn :eqref:`eq_ssm_scalar` into a recurrence. The forward Euler
    rule uses $\bar{a} = 1 + \Delta\lambda$, the backward Euler rule
    $\bar{a} = 1/(1 - \Delta\lambda)$, and the bilinear rule $\bar{a} = (1 +
-   \Delta\lambda/2)/(1 - \Delta\lambda/2)$.
+   \Delta\lambda/2)/(1 - \Delta\lambda/2)$
+   (:numref:`sec_mdl-stiffness-implicit` studies the two Euler rules as
+   solvers of a differential equation).
     1. For each rule, find the step sizes $\Delta$ for which every
        $\lambda < 0$ gives $|\bar{a}| < 1$. Which rule can make a stable
        continuous system unstable?

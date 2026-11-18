@@ -100,12 +100,10 @@ assert GPU or not RERUN, 'regenerating the artifacts needs a GPU'
 # interrupted one from its cache (keyed by run settings, not by code)
 RESUME = os.environ.get('D2L_RERUN_RESUME', '0') == '1'
 CACHE = os.path.join('..', 'data', 'lm', 'rerun', 'eval-cache')
-# The declared cuts serve the 60-minute hard limit of a regeneration run
-# (its target is 30 min). They apply in order, chosen from wall clock
-# alone, only if the uncut run would not finish within 60 min: SMALL >= 1
-# judges 150 prompts instead of 300 and 200 human-labelled pairs instead
-# of 400; SMALL = 2 also keeps two GSM-Symbolic instances per template
-# instead of four. The uncut D2L_RERUN=1 run took 30.6 min, so SMALL = 0.
+# SMALL shortens a regeneration: 1 judges 150 prompts instead of 300 and
+# 200 human-labeled pairs instead of 400; 2 also keeps two GSM-Symbolic
+# instances per template instead of four. The full one takes about half an
+# hour on one GPU.
 SMALL = 0
 N_DOLLY, N_HUMAN = (70, 200) if SMALL >= 1 else (220, 400)
 N_INSTANCES = 2 if SMALL >= 2 else 4
@@ -426,7 +424,7 @@ print(f'width paired / unpaired: {half_paired / half_unpaired:.2f}; '
 moved = [abs(r0.ci[k] - r1.ci[k]) * len(a) for k in (0, 1)]  # in items
 print(f'seed 1 against seed 0: endpoints moved by {moved[0]:.0f} and '
       f'{moved[1]:.0f} items in {len(a)}')
-assert max(moved) / (2 * half_paired * len(a)) < 0.03, 'C3: raise n_boot'
+assert max(moved) / (2 * half_paired * len(a)) < 0.03, 'raise n_boot'
 
 def sign_flip_p(d, n=10**4, seed=0):
     """Two-sided sign-flip p-value of the mean of d: under no difference,
@@ -609,8 +607,8 @@ DEFF_D = pool_table.DEFF.iloc[-1]
 print(f"{len(set(problem))} problems by {n_samples} samples, scored with "
       "d2l.extract_answer(text, 'gsm8k') == gold")
 print(pool_table.round(3).to_string())
-print('C2: sqrt(DEFF) > 1.5 for both models:',
-      bool((np.sqrt(pool_table.DEFF.iloc[:2]) > 1.5).all()))
+print('standard error more than 1.5 times as large with clusters, both '
+      'models:', bool((np.sqrt(pool_table.DEFF.iloc[:2]) > 1.5).all()))
 ```
 
 Both models solve a little over 40% of the samples. Resampling problems makes
@@ -724,7 +722,11 @@ d2l.plot([n_items] * 3 + [np.minimum(need, 1e4).to_numpy()],  # at the edge
          'MDE (accuracy points)', xscale='log', yscale='log',
          fmts=('-', '--', '-.', 'o'), figsize=(4.5, 3.2))
 d2l.plt.gca().legend(list(sds) + ['ARC pairs'], loc='lower center', ncol=2,
-                     bbox_to_anchor=(0.5, 1), frameon=False)  # above
+                     bbox_to_anchor=(0.5, 1), frameon=False);  # above
+```
+
+```{.python .input #eval-suites-mde-table}
+%%tab pytorch
 for name, s in sds.items():
     print(f'MDE at 500 items, {name}: {min_detectable_effect(s, 500):.3f}')
 print(pd.DataFrame({'pair': gaps.pair, '|diff|': gaps['diff'].abs().round(3),
@@ -1288,7 +1290,7 @@ def cross_check(model_id, per_item, pred, dll, bound):
     diff = ref[ref.correct != ours.score.reindex(ref.index)]
     ratio = diff.margin / (dll * diff.inv_chars)  # below 1: within drift
     assert len(diff) <= bound and (ratio < 1).all(), (
-        'C12: a disagreement beyond the batch drift (norm, prompt or subset)')
+        'a disagreement beyond the batch drift (norm, prompt or subset)')
     return len(diff), float(ratio.max()) if len(diff) else 0.0
 ```
 
@@ -2019,7 +2021,7 @@ print(pd.DataFrame(agree_rows, columns=[
         index=False, float_format='{:.2f}'.format))
 mass_ab = np.median(jh[['mass1', 'mass2']].to_numpy())
 print(f'median probability on the tokens A and B: {mass_ab:.3f}')
-assert mass_ab > 0.5, 'C5c: the judge does not answer with A or B'
+assert mass_ab > 0.5, 'the judge does not answer with A or B'
 ```
 
 Four things can be read from this table. The first is that the tokens A and B
@@ -2066,10 +2068,11 @@ for s in STRATA:  # paired: the same expert votes, clustered by question
                              d.question_id)
         gpt4_rows.append((name, s, len(d), f'{r.mean:+.3f}', interval(r),
                           pvalue(r.p_two_sided, r.n_boot),
+                          f'{min_detectable_effect(se=r.se):.3f}',
                           d.question_id.nunique()))
 print('agreement minus GPT-4\'s, on the same votes:')
 print(pd.DataFrame(gpt4_rows, columns=[
-    'judge', 'stratum', 'votes', 'diff', '95% CI', 'p', 'questions']
+    'judge', 'stratum', 'votes', 'diff', '95% CI', 'p', 'MDE', 'questions']
     ).to_string(index=False))
 dd = jh[(jh.consistent != 'tie') & (jh.gpt4 != 'tie')]
 same = bootstrap_ci(dd.consistent == dd.gpt4, 2000, dd.question_id)
@@ -2156,7 +2159,7 @@ print(jp.groupby('arm').agg(pairs=('l1', 'size'), consistent=(
         3).to_string())
 mass_ab = np.median(jp[['mass1', 'mass2']].to_numpy())
 print(f'median probability on the tokens A and B: {mass_ab:.3f}')
-assert mass_ab > 0.5, 'C5c: the judge does not answer with A or B'
+assert mass_ab > 0.5, 'the judge does not answer with A or B'
 ```
 
 Three quarters of the verdicts on the six pairs are consistent, and the two
@@ -2183,6 +2186,11 @@ for name, r in bias_rows.items():
     print(f'{name}: {show(r)}')
 q1, q2, q3 = np.quantile(P.bias, [0.25, 0.5, 0.75])
 print(f'position bias: median {q2:.3f}, IQR [{q1:.3f}, {q3:.3f}]')
+tied = P[P.delta.abs() < 0.25]  # nearly tied once the orders are combined
+shown_first = np.r_[tied.l1 > 0, tied.l2 > 0].mean()
+print(f'{len(tied)} pairs with |delta| < 0.25 (nearly tied): one order '
+      'alone prefers')  # l1, l2: the log-odds of the answer in slot 1
+print(f'  the answer shown first in {shown_first:.2f} of their readings')
 
 def prompt_weights(prompt_ids, n_boot=2000, seed=0):
     """Bootstrap weights (n_boot, rows): how often each row's prompt is
@@ -2210,10 +2218,14 @@ lo, hi = np.quantile(tls_slope(adv1, adv2, prompt_weights(prompt)),
 intercept = adv2.mean() - slope * adv1.mean()
 print(f'total-least-squares slope {slope:.3f} [{lo:.3f}, {hi:.3f}], '
       f'intercept {intercept:.3f}')
+```
+
+```{.python .input #eval-suites-position-bias-plot}
+%%tab pytorch
 ends = np.array([min(adv1.min(), adv2.min()), max(adv1.max(), adv2.max())])
 span = np.array([adv1.min(), adv1.max()])  # the fit over the data's range
 d2l.plot([adv1, ends, span], [adv2, ends, intercept + slope * span],
-         'log-odds, A shown first', 'minus log-odds, B shown first',
+         'log-odds, a shown first', 'minus log-odds, b shown first',
          legend=['answer pairs', 'no position bias', 'total least squares'],
          fmts=('.', '-', '--'), figsize=(4, 4))
 ```
@@ -2249,9 +2261,10 @@ length.
 ```{.python .input #eval-suites-verbosity}
 %%tab pytorch
 pad = jp[jp.arm == 'pad']
+r_pad = bootstrap_ci(pad.delta)
 print(f'(a) padded minus plain, {len(pad)} prompts, median '
       f'{(pad.words_a - pad.words_b).median():.0f} words added: delta '
-      f'{show(bootstrap_ci(pad.delta))}')
+      f'{show(r_pad)}, MDE {min_detectable_effect(se=r_pad.se):.3f}')
 print(f"    consistent verdicts: for the padded answer "
       f"{(pad.verdict == 'a').mean():.3f}, for the plain one "
       f"{(pad.verdict == 'b').mean():.3f}")
@@ -2278,12 +2291,9 @@ lo, hi = np.quantile(wls(log_ratio, delta, K,
                          prompt_weights(obs.prompt_id))[0], [0.025, 0.975])
 print(f'(b) slope of delta on log(words_a / words_b): {len_slope:.3f} '
       f'[{lo:.3f}, {hi:.3f}]')
-win = obs.verdict.map({'a': 1.0, 'tie': 0.5, 'b': 0.0})
 sigmoid = lambda v: 1 / (1 + np.exp(-v))
-print(pd.DataFrame({  # the last two on one scale: sigma of a mean delta
-    'pairs': np.bincount(pair_idx), 'win rate (a)': win.groupby(
-        pair_idx).mean(),
-    'mean log ratio': pd.Series(log_ratio).groupby(pair_idx).mean(),
+print(pd.DataFrame({  # both on one scale: sigma of a mean delta
+    'pairs': np.bincount(pair_idx),
     'σ(mean delta)': sigmoid(pd.Series(delta).groupby(pair_idx).mean()),
     'σ(intercept)': sigmoid(icept)}).set_axis(pair_names).round(
         3).to_string())
@@ -2449,7 +2459,8 @@ r_diff = paired_bootstrap(s1, s0)
 print('win rate of Qwen3.5-2B over Qwen3-1.7B:')
 print(f'  answer seed 0 {show(bootstrap_ci(s0))}, seed 1 '
       f'{show(bootstrap_ci(s1))}')
-print(f'seed 1 minus seed 0: {show(r_diff)}, p {r_diff.p_two_sided:.3f}')
+print(f'seed 1 minus seed 0: {show(r_diff)}, p {r_diff.p_two_sided:.3f}, '
+      f'MDE {min_detectable_effect(se=r_diff.se):.3f}')
 ```
 
 The verdict survives a second draw. The win rate of Qwen3.5-2B is 0.62 with
@@ -2601,15 +2612,14 @@ print(f"the harness's gsm8k_cot ({cot_task.shots} written chains of thought"
 print(f'  stop {list(cot_task.stop)}, {cot_task.max_new_tokens} new tokens):'
       f' {show(alt)}')
 print(f'gsm8k_cot minus this protocol, paired: {show(r_alt)}, p '
-      f'{pvalue(r_alt.p_two_sided, r_alt.n_boot)}')
+      f'{pvalue(r_alt.p_two_sided, r_alt.n_boot)}, MDE '
+      f'{min_detectable_effect(se=r_alt.se):.3f}')
 inside = [rr.ci[0] <= published['value'] <= rr.ci[1] for rr in (r, alt)]
 print(f"published: {published['value']:.4f}, {published['setting']};")
 print(f"  {'inside' if inside[0] else 'outside'} this protocol's interval, "
       f"{'inside' if inside[1] else 'outside'} gsm8k_cot's")
-if RERUN:  # the regeneration's wall clock, against the 30-min target
-    minutes = (time.time() - TIC) / 60
-    print(f'regeneration took {minutes:.1f} min (target 30, hard limit 60)'
-          + ('; over the target' if minutes > 30 else ''))
+if RERUN:  # the regeneration's wall clock
+    print(f'regeneration took {(time.time() - TIC) / 60:.1f} min')
 ```
 
 Under the protocol of the harness the model scores 0.61, with an interval from

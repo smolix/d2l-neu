@@ -820,6 +820,19 @@ d2l.plot(list(range(L - 1)), [KL[n][:, 0] for n in KL] + [
          fmts=('C0-', 'C1-', 'C0:', 'C0:', 'C1:', 'C1:'))
 ```
 
+<!-- CODE CHANGE 2026-11-18 (pass2/code-requests.md, 18.6): the cell below
+prints the numbers behind the two panels; the text may quote them. -->
+
+```{.python .input #interpretability-lens-numbers}
+%%tab pytorch
+print('at blocks 0, 14 and 26:')  # the two panels in numbers
+for name in LENSES:
+    print(f'  {name}: median rank ' + ', '.join(
+        f'{np.median(ranks[name][:, l]):.0f}' for l in (0, 14, 26))
+          + '; KL to final ' + ', '.join(
+              f'{KL[name][l, 0]:.2f}' for l in (0, 14, 26)) + ' nats')
+```
+
 The left panel shows the median rank of the correct city (solid) and its
 quartiles (dashed), on a logarithmic axis with rank 1 at the top. Below
 block 20 the tuned lens ranks the city far better than the logit lens, and
@@ -1253,6 +1266,10 @@ if FULL is not None:
     print('full run: handover', FULL['patching']['handover'])
     for kind in KINDS:
         print(f'  {kind}: {d2l.block_runs(FULL["patching"][kind], CLASSES)}')
+```
+
+```{.python .input #interpretability-patch-map-plot}
+%%tab pytorch
 d2l.show_heatmaps(torch.tensor(mean).clamp(min=0)[None], 'position', 'block',
                   titles=list(KINDS), figsize=(7, 4.5), xticklabels=CLASSES)
 for ax in d2l.plt.gcf().axes[:len(KINDS)]:  # the names read vertically
@@ -1446,6 +1463,35 @@ for what, cols, bs in (('both subject classes', [0, SUBJ_LAST],
           f'NE exact {e.mean():.2f}, AtP {a.mean():.2f} (block means)')
 if FULL is not None:
     print('full run:', json.dumps(FULL['atp spearman'], indent=1))
+
+def ne_path(site, cls, fractions):
+    """Mean NE over pairs with the stream at site, at the positions of
+    the classes cls, moved a fraction t from its clean toward its corrupted
+    value, for each t in fractions."""
+    out = torch.empty(len(fractions), len(pairs))
+    for g in groups:
+        with torch.no_grad(), d2l.intervene(model, record=[site]) as ctx:
+            model(g['X'].to(dev), logits_to_keep=1)
+        a, a_x = ctx.cache[site][0], g['acts'][site]
+        M = masks(g['cls'], [cls])[0].to(dev)[None, :, None]
+        for j, t in enumerate(fractions):
+            with torch.no_grad(), d2l.intervene(model, {site: lambda x: (
+                    torch.where(M, a + t * (a_x - a), x))}):
+                z = model(g['X'].to(dev), logits_to_keep=1)[:, -1]
+            out[j, g['idx']] = (z.gather(1, g['ab'].to(dev)) @ torch.tensor(
+                [1.0, -1.0], device=dev)).cpu()
+    return ((m_clean[None] - out) / gap[None]).mean(1)
+
+t = np.linspace(0, 1, 9)  # block 10: halfway to the handover
+path = ne_path(('resid_post', 10), (0, SUBJ_LAST), t)
+print('resid_post, block 10, both subject classes moved a fraction t of the '
+      'way\nto the corrupted stream:')
+print('  t   ' + ''.join(f'{a:6.3f}' for a in t))
+print('  NE  ' + ''.join(f'{v:6.2f}' for v in path.tolist()))
+```
+
+```{.python .input #interpretability-atp-agreement-plot}
+%%tab pytorch
 ends = [min(exact.min(), approx.min()), max(exact.max(), approx.max())]
 d2l.plot([exact[k].ravel() for k in range(3)] + [ends],
          [approx[k].ravel() for k in range(3)] + [ends], 'exact NE',
@@ -2425,7 +2471,8 @@ print(f'  random ({len(RANDOM)} draws): at most '
           f'{min(cost_of(n, a) for n in RANDOM):.2f}-'
           f'{max(cost_of(n, a) for n in RANDOM):.2f} at alpha {a:.3g}'
           for a in GRID[RANDOM[0]][i:i + 2]))
-print(f'prefix: switched {switched("prefix", 0.0):.2f}')
+print(f'prefix: switched {switched("prefix", 0.0):.2f} '
+      f'(cost {cost_of("prefix", 0.0):.2f})')
 RESULTS['steering_prompts.csv'] = pd.DataFrame(
     [(n, a, i, h) for (n, a), (hs, _) in runs.items()
      for i, h in enumerate(hs)],
@@ -2539,6 +2586,15 @@ peak = {n: len(frac[n]) - 1 - int(np.argmax(frac[n][::-1]))
 env = {n: d2l.frontier_envelope(cost[n], frac[n]) for n in INFORMED}
 past = [np.concatenate([v[n][peak[n] + 1:] for n in INFORMED])
         for v in (cost, frac)]  # past the peak: the output breaks down
+RESULTS['summary.json'] = json.dumps(SUMMARY, indent=1, default=float,
+                                     ensure_ascii=False).encode()
+if 'results' in RERUN:  # the CPU path's numbers are never published
+    d2l.lm_save_rerun('lm-interp-results.zip',
+                      lambda p: d2l.lm_write_zip(p, RESULTS))
+```
+
+```{.python .input #interpretability-frontier-plot}
+%%tab pytorch
 d2l.plot([env[n][0] for n in INFORMED]
          + [np.mean([cost[n] for n in RANDOM], 0), [ce_p[:, 0].mean()],
             past[0]] + [cost[n][:peak[n] + 1] for n in INFORMED] + [[CAP, CAP]],
@@ -2554,12 +2610,7 @@ d2l.plot([env[n][0] for n in INFORMED]
 ax = d2l.plt.gca()
 ax.set_xscale('symlog', linthresh=0.01)  # linear up to 0.01 nats, then log
 ax.set_xlim(min(0, *(c.min() for c in cost.values())),
-            2 * max(c.max() for c in cost.values()))
-RESULTS['summary.json'] = json.dumps(SUMMARY, indent=1, default=float,
-                                     ensure_ascii=False).encode()
-if 'results' in RERUN:  # the CPU path's numbers are never published
-    d2l.lm_save_rerun('lm-interp-results.zip',
-                      lambda p: d2l.lm_write_zip(p, RESULTS))
+            2 * max(c.max() for c in cost.values()));
 ```
 
 The first result is that the question "does steering work within the cap?"
@@ -2648,6 +2699,14 @@ for name, (fn, prefix, renorm) in conditions.items():
     print(f'--- {name} (cost without Han: {renorm:+.3f} nats per token)')
     for s, g in zip(samples, gens):
         print_folded(f'...{s[-30:]}|{g.text}'.replace('\n', ' '))
+print('--- past the peak: the Eiffel prompt, the next and the largest alpha')
+for n in INFORMED:
+    for i in sorted({peak[n] + 1, len(GRID[n]) - 1} - {len(GRID[n])}):
+        with steering(steer(GRID[n][i] * n_bar * directions[n])):
+            g, = d2l.generate(model, tok, [eiffel], max_new_tokens=48)
+        print(f'{n}, alpha {GRID[n][i]:.3g} (switched {frac[n][i]:.2f}, '
+              f'cost {cost[n][i]:.2f}):')
+        print_folded(f'    ...{eiffel[-30:]}|{g.text}'.replace('\n', ' '))
 ```
 
 None of the three web prompts switches to Chinese under any intervention,

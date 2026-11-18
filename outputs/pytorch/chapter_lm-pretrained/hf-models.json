@@ -77,7 +77,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-0.6B-Base     da87bfb608c1  apache-2.0    1.19 GB\nQwen/Qwen3-1.7B          70d244cc86cc  apache-2.0    4.06 GB\n"
+          "text": "Qwen/Qwen3-0.6B-Base     da87bfb608c1  apache-2.0    1.19 GB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-1.7B          70d244cc86cc  apache-2.0    4.06 GB\n"
         },
         {
           "type": "stream",
@@ -87,7 +92,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3-4B            1cfa9a720891  apache-2.0    8.04 GB\nQwen/Qwen3-8B            b968826d9c46  apache-2.0   16.38 GB\n"
+          "text": "Qwen/Qwen3-4B            1cfa9a720891  apache-2.0    8.04 GB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-8B            b968826d9c46  apache-2.0   16.38 GB\n"
         },
         {
           "type": "stream",
@@ -97,7 +107,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen/Qwen3.5-0.8B-Base   dc7cdfe2ee41  apache-2.0    1.75 GB\nQwen/Qwen3.5-2B          15852e8c1636  apache-2.0    4.55 GB\n"
+          "text": "Qwen/Qwen3.5-0.8B-Base   dc7cdfe2ee41  apache-2.0    1.75 GB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3.5-2B          15852e8c1636  apache-2.0    4.55 GB\n"
         },
         {
           "type": "stream",
@@ -198,22 +213,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "argmax loop without a cache: 1.36 s for 32 tokens after 1,024 prompt tokens\n"
+          "text": "argmax loop without a cache: 1.29 s for 32 tokens after 1,024 prompt tokens\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "generate with a cache: 0.89 s for 32 tokens after 1,024 prompt tokens\n"
+          "text": "generate with a cache: 0.90 s for 32 tokens after 1,024 prompt tokens\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "argmax loop without a cache: 8.97 s for 32 tokens after 8,192 prompt tokens\n"
+          "text": "argmax loop without a cache: 8.95 s for 32 tokens after 8,192 prompt tokens\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "generate with a cache: 1.18 s for 32 tokens after 8,192 prompt tokens\n"
+          "text": "generate with a cache: 1.13 s for 32 tokens after 8,192 prompt tokens\n"
         }
       ]
     },
@@ -293,7 +308,7 @@
       ]
     },
     "hf-models-bandwidth": {
-      "code_fingerprint": "sha256:72d4ebfeb10b547ef5245d62097cb040b8d152e23e80bea600efcde4c5888145",
+      "code_fingerprint": "sha256:dedb38878d0bea43ab64680b62aae3a6cab97aa73db3f72f0a81d098a22b0396",
       "kind": "text",
       "outputs": [
         {
@@ -304,12 +319,12 @@
       ]
     },
     "hf-models-cache-bytes": {
-      "code_fingerprint": "sha256:99f1533fb3274e747d9ae9c14da3456fd4df9c684a80716b5bfe4931096a5e28",
+      "code_fingerprint": "sha256:e65b464421f830d3218f8387e5b2fe6fb8b17ed6b2e632232e102bdc92628c25",
       "kind": "text",
       "outputs": []
     },
     "hf-models-run-qwen": {
-      "code_fingerprint": "sha256:009e8630d0d1d529523f5d6f3ef703e8c6301ce5456a6eabfef8326bd707772c",
+      "code_fingerprint": "sha256:29ca32d337a4b6d2285875fb0cdd6a9a76837e722bdece020412a4dff0e28a8f",
       "kind": "text",
       "outputs": [
         {
@@ -325,7 +340,7 @@
       ]
     },
     "hf-models-qwen-capacity": {
-      "code_fingerprint": "sha256:1c38b3af81af2ae46e28c2baeb1dd4b52c9ffc24e649b9aaddb4a58e7ed8df3e",
+      "code_fingerprint": "sha256:f5d9e87c6e0d0fcb3a0c45143ab333596d2d4f740dc18d5553b0e3b22fa5fdbd",
       "kind": "text",
       "outputs": [
         {
@@ -341,7 +356,7 @@
       ]
     },
     "hf-models-kernel-compare": {
-      "code_fingerprint": "sha256:50ca0d8c5f7cb5d413da7475425422ec1ecf7acf2251e9a5a2de283721450825",
+      "code_fingerprint": "sha256:dd6b7889905580439c1eed7ef075edb360290210378b2d5161130a01b7e7e85f",
       "kind": "text",
       "outputs": [
         {
@@ -352,12 +367,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    n       kernels  formula  peak  prefill_s  decode_ms  top-1 agree  max |diff|\n 4096         fused    0.355 0.349      0.120      25.68                         \n 4096     reference    0.355 0.530      0.239      29.66         0.97       0.281\n 4096 ref., batch 2                                              0.98       0.250\n16384         fused    1.363 1.340      0.588                                    \n16384     reference    1.363 2.060      1.100                    0.98       0.625\n65536         fused    5.394 5.306      2.865                                    \n65536     reference    5.394 8.185      5.885                    1.00       0.438\n"
+          "text": "    n       kernels  formula  peak  prefill_s  decode_ms  top-1 agree  max |diff|\n 4096         fused    0.355 0.349      0.120      26.58                         \n 4096     reference    0.355 0.530      0.225      30.01         0.97       0.281\n 4096 ref., batch 2                                              0.98       0.250\n16384         fused    1.363 1.340      0.587                                    \n16384     reference    1.363 2.060      1.111                    0.98       0.625\n65536         fused    5.394 5.306      2.859                                    \n65536     reference    5.394 8.185      5.880                    1.00       0.438\n"
         }
       ]
     },
     "hf-models-load-gemma": {
-      "code_fingerprint": "sha256:d37e063c5188048ab41745578cd718c562fcf9530d28fade127123b63668cf86",
+      "code_fingerprint": "sha256:21a9fdb3fb4a03b13bef567f1e3432875c76b65a3c22b9e890eac8197c41230b",
       "kind": "text",
       "outputs": [
         {
@@ -383,7 +398,7 @@
       ]
     },
     "hf-models-run-gemma": {
-      "code_fingerprint": "sha256:71d327b74c009f71965d5f199eff28f0ffa43753f2d263f17efcaa10c4862340",
+      "code_fingerprint": "sha256:9f1b169390667faac0a685da2e47fc7510f42e4063e41720db269bd20c692ee7",
       "kind": "text",
       "outputs": [
         {
@@ -404,58 +419,58 @@
       ]
     },
     "hf-models-gemma-compare": {
-      "code_fingerprint": "sha256:a6290a6685416f24b8786e437d3bbf4b3fa621dd3ca013ba6f2cc7ece112fde3",
+      "code_fingerprint": "sha256:96e4ac84ecb35692cabe2108a453aee966df5749eae9eb34ceeb0ea16125261c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    n       kernels  formula          peak  prefill_s  decode_ms  top-1 agree  max |diff|\n 4096         fused    0.467         0.479      0.166      46.97                         \n 4096     reference    0.467         0.494      0.217      47.79         1.00       1.250\n 4096 ref., batch 2                                                      1.00       1.062\n16384         fused    1.868         1.915      0.967                                    \n16384     reference    1.868         2.164      1.812                    0.95       1.500\n32768         fused    3.735         3.831      2.353                                    \n32768     reference    3.735         4.985      5.832                    0.98       1.188\n65536         fused    7.469         7.666      6.305                                    \n65536     reference    7.469 out of memory                                               \n"
+          "text": "    n       kernels  formula          peak  prefill_s  decode_ms  top-1 agree  max |diff|\n 4096         fused    0.467         0.479      0.165      45.53                         \n 4096     reference    0.467         0.494      0.211      45.20         1.00       1.250\n 4096 ref., batch 2                                                      1.00       1.062\n16384         fused    1.868         1.915      0.965                                    \n16384     reference    1.868         2.164      1.807                    0.95       1.500\n32768         fused    3.735         3.831      2.348                                    \n32768     reference    3.735         4.985      5.806                    0.98       1.188\n65536         fused    7.469         7.666      6.285                                    \n65536     reference    7.469 out of memory                                               \nreference peak minus fused peak, in units of n^2 bytes:\n  0.96 at 4,096, 1.00 at 16,384, 1.15 at 32,768\n"
         }
       ]
     },
     "hf-models-bytes-read": {
-      "code_fingerprint": "sha256:22cf0ec99f29c744c7b9b0b46dae9da264878e96186b55ab20a21eeddec62697",
+      "code_fingerprint": "sha256:e2967aabec8267e3fbbe98a91e42f2f3eeb78d77ce514d3c608ff7504e5a6588",
       "kind": "text",
       "outputs": []
     },
     "hf-models-profile-compare": {
-      "code_fingerprint": "sha256:a529f779d4e0ab8912adb286f72b70a4b3f3f67499ac8968bdac9d74c66f3276",
+      "code_fingerprint": "sha256:35d64fbc0fd320caa86788c241dad5e2f6c65e46d6c38c523aad0e8a16cc8683",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen3.5-2B, ms per decode step:\n    n  wall    q1    q3  busy  matmul  launches  R/beta sheet  R/beta meas.\n  256 26.04 25.97 26.78  6.12    4.31      1490          3.81          4.14\n 1024 26.39 26.19 26.80  6.25    4.35      1490          3.82          4.15\n 4096 25.68 25.52 26.34  6.36    4.34      1490          3.85          4.19\n16384 25.70 25.54 25.84  6.73    4.35      1490          4.00          4.35\nkernels with the most device time at 1,024 tokens:\n  4.35 ms  70%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  0.33 ms   5%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.17 ms   3%  reduce_kernel<512, 1, ReduceOp<float, MeanOps<float,\n  0.14 ms   2%  vectorized_elementwise_kernel<4, CUDAFunctorOnSelf_a\nkernels with the most device time at 16,384 tokens:\n  4.35 ms  65%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  0.35 ms   5%  CatArrayBatchedCopy_vectorized<OpaqueType<2u>, unsig\n  0.35 ms   5%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.16 ms   2%  reduce_kernel<512, 1, ReduceOp<float, MeanOps<float,\nGemma 4 E2B, ms per decode step:\n    n  wall    q1    q3  busy  matmul  launches  R/beta sheet  R/beta meas.\n  256 45.13 44.56 46.31  9.72    5.46      3113          4.57          4.97\n 1024 45.79 45.55 46.14 11.09    5.50      3180          4.59          4.99\n 4096 45.88 45.63 46.42 12.61    5.49      3181          4.63          5.04\n16384 46.15 45.70 46.57 19.79    5.57      3179          4.81          5.23\nkernels with the most device time at 1,024 tokens:\n  4.22 ms  38%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  1.54 ms  14%  fmha_cutlassF_bf16_aligned_32x128_gmem_sm80\n  0.98 ms   9%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.89 ms   8%  gemvx::kernel<int, int, __nv_bfloat16, float, float,\nkernels with the most device time at 16,384 tokens:\n 10.24 ms  52%  fmha_cutlassF_bf16_aligned_32x128_gmem_sm80\n  4.26 ms  22%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  0.94 ms   5%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.89 ms   4%  gemvx::kernel<int, int, __nv_bfloat16, float, float,\n"
+          "text": "Qwen3.5-2B, ms per decode step:\n    n  wall    q1    q3  busy  matmul  launches  R/beta sheet  R/beta meas.\n  256 25.52 25.48 25.54  6.11    4.31      1491          3.81          4.14\n 1024 25.56 25.55 25.57  6.25    4.34      1491          3.82          4.15\n 4096 25.54 25.50 25.60  6.35    4.34      1491          3.85          4.19\n16384 25.69 25.62 25.81  6.72    4.35      1491          4.00          4.35\nkernels with the most device time at 1,024 tokens:\n  4.34 ms  70%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  0.33 ms   5%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.17 ms   3%  reduce_kernel<512, 1, ReduceOp<float, MeanOps<float,\n  0.14 ms   2%  vectorized_elementwise_kernel<4, CUDAFunctorOnSelf_a\nkernels with the most device time at 16,384 tokens:\n  4.35 ms  65%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  0.35 ms   5%  CatArrayBatchedCopy_vectorized<OpaqueType<2u>, unsig\n  0.35 ms   5%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.16 ms   2%  reduce_kernel<512, 1, ReduceOp<float, MeanOps<float,\nGemma 4 E2B, ms per decode step:\n    n  wall    q1    q3  busy  matmul  launches  R/beta sheet  R/beta meas.\n  256 47.68 47.62 47.73  9.70    5.46      3113          4.57          4.97\n 1024 48.77 48.73 48.81 10.80    5.47      3180          4.59          4.99\n 4096 48.73 48.66 48.78 12.59    5.49      3180          4.63          5.04\n16384 45.95 45.81 46.04 19.75    5.57      3180          4.81          5.23\nkernels with the most device time at 1,024 tokens:\n  4.20 ms  39%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  1.46 ms  14%  fmha_cutlassF_bf16_aligned_32x128_gmem_sm80\n  0.94 ms   9%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.89 ms   8%  gemvx::kernel<int, int, __nv_bfloat16, float, float,\nkernels with the most device time at 16,384 tokens:\n 10.20 ms  52%  fmha_cutlassF_bf16_aligned_32x128_gmem_sm80\n  4.26 ms  22%  gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16\n  0.94 ms   5%  unrolled_elementwise_kernel<direct_copy_kernel_cuda\n  0.89 ms   5%  gemvx::kernel<int, int, __nv_bfloat16, float, float,\n"
         }
       ]
     },
     "hf-models-ratios": {
-      "code_fingerprint": "sha256:170a988689d290dc08bc195e28b551e914672aa28605a405468894149b468cce",
+      "code_fingerprint": "sha256:bd0746b70b47c1a1a6d9fc80e911e8399a5d936d7d9086a560b1e8184a950ce0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Qwen3.5-2B: device busy 24%-26% of the step, 17.2-17.7 us of wall time per launch\n    16,384 / 256 tokens: wall 0.99, busy 1.10, bytes read 1.05\nGemma 4 E2B: device busy 22%-43% of the step, 14.4-14.5 us of wall time per launch\n    16,384 / 256 tokens: wall 1.02, busy 2.04, bytes read 1.05\nmatrix products Gemma/Qwen: 1.27 (bytes read 1.20, bytes held 2.46)\nQwen3.5-2B: matrix products 4.35 ms, weights read at measured bandwidth 4.09 ms\nGemma 4 E2B: matrix products 5.50 ms, weights read at measured bandwidth 4.96 ms\n"
+          "text": "Qwen3.5-2B: device busy 24%-26% of the step, 17.1-17.2 us of wall time per launch\n    16,384 / 256 tokens: wall 1.01, busy 1.10, bytes read 1.05\nGemma 4 E2B: device busy 20%-43% of the step, 14.5-15.3 us of wall time per launch\n    16,384 / 256 tokens: wall 0.96, busy 2.04, bytes read 1.05\nmatrix products Gemma/Qwen: 1.26 (bytes read 1.20, bytes held 2.46)\nQwen3.5-2B: matrix products 4.34 ms, weights read at measured bandwidth 4.09 ms\nGemma 4 E2B: matrix products 5.47 ms, weights read at measured bandwidth 4.96 ms\n"
         }
       ]
     },
     "hf-models-save-table": {
-      "code_fingerprint": "sha256:ddfe6d268f5967337207f42ed43ea05d8c59614908d9baca49e1118543b16ac7",
+      "code_fingerprint": "sha256:fab28df4e29090b445a9baad7c6543c0b3a3989d83198b6080c05795768c981a",
       "kind": "text",
       "outputs": []
     },
     "hf-models-plot": {
-      "code_fingerprint": "sha256:70927294b351c60ec72ba986a8a458f0709b52eaa041e71aec84a162417938f7",
+      "code_fingerprint": "sha256:b048bdec0657f214e3e0de5daf8615f2ed1c62e59bc4d3e09fac5972d6a4edf7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hf-models/hf-models-plot-1.svg",
-          "bytes": 71066,
-          "sha256": "sha256:e12b055db67e7500adcf57fd977b6eb5fc6a3a231c90af6a567882dd031674b1"
+          "bytes": 72400,
+          "sha256": "sha256:c66b61eaa085384470f77edc56eb7b7d30c84c1fe960521d9d2f12652c8d5ce4"
         }
       ]
     }

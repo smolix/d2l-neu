@@ -344,16 +344,18 @@ for prompt, ids, lp in zip(prompts, label_ids, one):
         ref = renorm(h.float() @ W.T, ids)
         ref16 = renorm(base.lm_head(h), ids)  # the model's own logits
     err, err16 = ((lp - r).abs().max().item() for r in (ref, ref16))
-    print(f'reader vs full softmax: {err:.1e} nats (from its own logits: '
+    print(f'read-out vs full softmax: {err:.1e} nats (from its own logits: '
           f'{err16:.1e})')
     assert err <= 1e-4
 del W
 batched = d2l.label_logprobs(base, tok, prompts, NATURAL, batch_size=4)
-screen = 1e-4 if SMALL else 0.25  # a mask or position bug costs whole nats
+tol = 1e-4 if SMALL else 0.25  # a mask or position bug costs whole nats
 for e in (batched - one).abs().max(-1).values.tolist():
-    print(f'batched vs one at a time: {e:.1e} nats (screen {screen:.1e})')
-    assert e <= screen
+    print(f'batched vs one at a time: {e:.1e} nats (tolerance {tol:.1e})')
+    assert e <= tol
 assert torch.equal(batched.argmax(-1), one.argmax(-1))  # same predictions
+print(f'4-shot read-out for {QUERY!r}:\n  ' + ', '.join(
+    f'{w} {p:.3f}' for w, p in zip(NATURAL, one[0].exp().tolist())))
 ```
 
 The first comparison agrees to within $10^{-5}$ nats. On paper the two are one
@@ -423,10 +425,12 @@ print(pd.DataFrame({
     }).to_string(index=False))
 assert not set(after_colon) & set(after_newline)
 spaced = [p + ' ' for p in prompts]  # the space typed into the prompt
-mass = [label_mass(base, tok, texts, [ids] * len(texts)).mean()
+mass = [label_mass(base, tok, texts, [ids] * len(texts))
         for texts, ids in ((prompts, after_colon), (spaced, after_newline))]
-print(f'label mass after "Topic:": {mass[0]:.3f}; after "Topic: ", read '
-      f'at the bare words: {mass[1]:.3f}')
+print('label mass after "Topic:", per prompt: '
+      + ', '.join(f'{m:.3f}' for m in mass[0])
+      + f'; mean {mass[0].mean():.3f}')
+print(f'after "Topic: ", read at the bare words: mean {mass[1].mean():.3f}')
 for texts, words in ((spaced, NATURAL),
                      (prompts, ['World', 'Sports', 'Business', 'Sci/Tech'])):
     try:
@@ -1089,6 +1093,13 @@ for name, c in curves.items():
                      **({'vs k = 8': show(compare(acc, eight))} if k > 8
                         else {})})
 print_table(rows)
+p4 = pred(model='instruct', k=4)  # instruct, plain, k = 4: (draws, items)
+acc4 = (p4 == GOLD).mean(1)
+print('instruct, plain, k = 4, accuracy per draw: '
+      + ', '.join(f'{a:.3f}' for a in acc4))
+worst = int(acc4.argmin())
+print(f'  predicted labels in draw {worst}: ' + ', '.join(
+    f'{w} {c}' for w, c in zip(NATURAL, np.bincount(p4[worst], minlength=4))))
 gain = lambda m: correct(model=m, k=4) - correct(model=m, k=0)
 print('gain from k = 0 to 4, plain, instruct minus base:',
       show(compare(gain('instruct'), gain('base'))))
@@ -1297,12 +1308,9 @@ for model, layout, k, instr in MASS:  # (model, layout, k, line)
            'instruction': INSTR[instr], 'mean mass': mass.mean(),
            'median mass': np.median(mass)}
     if not SMALL:  # the grid's accuracy for the same condition
-        row['accuracy'] = correct(**cond).mean()
+        row['accuracy (draw 0)' if k else 'accuracy'] = correct(**cond).mean()
     rows.append(row)
 print_table(rows)
-del inst  # not needed below
-gc.collect()
-torch.cuda.empty_cache()
 ```
 
 Without an instruction line and without demonstrations, the four labels hold
@@ -1340,6 +1348,54 @@ it is, we do not know. We tried one sentence in two versions, with thinking
 switched off, and the finding reaches no further: an instruction that reads
 sensibly to us made this checkpoint worse than no instruction at all. Whoever
 writes a system line should measure what it does.
+
+<!-- CODE CHANGE 2026-11-18 (pass2/code-requests.md, 18.3): the cell below
+measures other wordings of the line and the line with thinking on; the
+paragraph above needs rewriting around its output. -->
+
+```{.python .input #prompting-world-wordings}
+%%tab pytorch
+WORDINGS = {  # the instruction line in other words, all naming four labels
+    'SYSTEM': SYSTEM,
+    'which topic': 'Which topic does this news headline belong to: World, '
+                   'Sports, Business or Tech?',
+    'classify': 'Classify the news headline into one of four topics: '
+                'World, Sports, Business or Tech.',
+    'classify, topic only': 'Classify the news headline into one of four '
+                            'topics: World, Sports, Business or Tech. '
+                            'Answer with the topic only.'}
+sel = np.arange(len(ITEMS)) if not SMALL else np.arange(0, len(ITEMS), 25)
+titles, gold = list(TEST_TITLES[ITEMS][sel]), GOLD[sel]
+chats = {name: [d2l.fewshot_prompt([], x, 'chat_multi', system=line)
+                for x in titles] for name, line in WORDINGS.items()}
+preds = {(name, 'off, read-out'): d2l.label_logprobs(
+             inst, tok_i, c, NATURAL, batch_size=32, chat=True
+         ).argmax(-1).numpy() for name, c in chats.items()}
+replies = d2l.generate(inst, tok_i, chats['SYSTEM'], max_new_tokens=1024,
+                       chat=True, enable_thinking=True, batch_size=50)
+preds['SYSTEM', 'on, generated'] = np.array(  # the answer after </think>
+    [answer(g.text.split('</think>')[-1]) for g in replies])
+ref = (preds['SYSTEM', 'off, read-out'] == gold) * 1.0
+rows = []
+for (name, thinking), p in preds.items():
+    acc = (p == gold) * 1.0
+    label, top_share = top(p[p >= 0])
+    rows.append({'instruction': name, 'thinking': thinking,
+                 'accuracy': acc.mean(), 'top label': label,
+                 'top share': top_share, **(compare(acc[None], ref[None])
+                 if name != 'SYSTEM' or thinking[:2] == 'on' else {})})
+print(f'instruct, chat layout, k = 0, {len(sel)} items; '
+      'each row against SYSTEM with thinking off')
+print_table(pd.DataFrame(rows).drop(columns='draws'))
+p = preds['SYSTEM', 'on, generated']
+cut = sum(g.finish_reason == 'length' for g in replies)
+length = np.median([len(g.token_ids) for g in replies])
+print(f'thinking on: {(p < 0).sum()} replies name no label by the rule, '
+      f'{cut} reach 1,024 tokens,\n  median length {length:.0f} tokens')
+del inst, replies  # not needed below
+gc.collect()
+torch.cuda.empty_cache()
+```
 
 ## Sensitivity to the Demonstrations
 
@@ -1797,12 +1853,12 @@ def features(model, tokenizer, titles, batch_size=64):
 
 def probe_accuracy(X_train, y_train, X_test, y_test):
     """Accuracy and log-probabilities of a logistic-regression probe on
-    standardized features (L2, C = 1) fit to the labelled examples."""
+    standardized features (L2, C = 1) fit to the labeled examples."""
     scale = StandardScaler().fit(X_train)
     probe = LogisticRegression(C=1.0, max_iter=2000).fit(
         scale.transform(X_train), y_train)
     logp = probe.predict_log_proba(scale.transform(X_test))
-    assert logp.shape[1] == 4, 'every class needs a labelled example'
+    assert logp.shape[1] == 4, 'every class needs a labeled example'
     return (logp.argmax(1) == y_test).mean(), logp
 ```
 
@@ -1861,7 +1917,7 @@ acc = [np.array([correct(**c, k=k).mean(1) for k in ks])  # (k, draws)
        for ks, c in series.values()]
 at = lambda ks: np.log2(np.maximum(ks, 0.5))  # a log2 axis, 0 at the left
 d2l.plot([at(ks) for ks, _ in series.values()], [a.mean(1) for a in acc],
-         'labelled examples', 'accuracy', legend=list(series),
+         'labeled examples', 'accuracy', legend=list(series),
          ylim=(0.25, 0.85), fmts=[f'C{i}-o' for i in range(4)],
          figsize=(5, 3.2))
 ticks = sorted(set(K_BASE + K_PROBE))
@@ -1872,10 +1928,14 @@ for i in (0, 3):  # the range over draws: base ICL and the probe
                     alpha=0.15, lw=0)
 ax.set_xticks(at(ticks), [str(k) for k in ticks])
 ax.legend(list(series), loc='lower center', bbox_to_anchor=(0.5, 1.0),
-          ncol=2)  # above the axes, clear of the curves
+          ncol=2);  # above the axes, clear of the curves
+```
+
+```{.python .input #prompting-icl-vs-probe-table}
+%%tab pytorch
 rows = [{'examples': k, **compare(correct(k=k), correct(
     exp='probe', layout='none', k=k))} for k in K_PROBE[:-1]]
-print('ICL (base, plain) minus probe, at equal labelled data')
+print('ICL (base, plain) minus probe, at equal labeled data')
 print_table(rows)
 print(f'probe at 256: '
       f'{correct(exp="probe", layout="none", k=256).mean():.3f}')

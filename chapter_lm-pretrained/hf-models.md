@@ -1402,7 +1402,7 @@ time.
 %%tab pytorch
 BETA_DATASHEET = 1.0e12  # bytes/s, RTX 4090
 if GPU:
-    x = torch.randn(256 * 1024 * 1024, device=d2l.try_gpu())  # 1 GB fp32
+    x = torch.randn(256 * 1024 * 1024, device=d2l.try_gpu())  # 1 GiB fp32
     beta = 2 * x.nbytes / d2l.Benchmark(lambda: x * 2.0).time
     del x
     print(f'measured {beta / 1e12:.2f} TB/s '
@@ -1654,7 +1654,7 @@ if GPU:
     del model, prompt, reply, ref, ours
     gc.collect()
     torch.cuda.empty_cache()
-    left = torch.cuda.memory_allocated()  # a stray reference keeps 3.8 GB
+    left = torch.cuda.memory_allocated()  # a stray reference keeps 3.5 GiB
     print(f'allocated after freeing Qwen: {left / MiB:.0f} MiB')
     assert left < GiB
     gemma, gemma_tok = load_hf(GEMMA)
@@ -1767,6 +1767,11 @@ if GPU:
     gemma_compare = d2l.hf_compare_kernels(
         gemma, configs[GEMMA], gemma_ids, (4096, 16384, 32768, 65536))
     print(gemma_compare.to_string(index=False, na_rep=''))
+    peaks = gemma_compare.pivot(index='n', columns='kernels', values='peak')
+    fits = peaks.reference.map(lambda v: not isinstance(v, str))
+    excess = (peaks.reference[fits] - peaks.fused[fits]) * GiB  # bytes
+    print('reference peak minus fused peak, in units of n^2 bytes:\n  '
+          + ', '.join(f'{v / n**2:.2f} at {n:,}' for n, v in excess.items()))
 ```
 
 Up to 16,384 tokens the prediction holds. The peak of the reference exceeds
@@ -2018,22 +2023,22 @@ for m, c in configs.items():
                                         ('r_over_beta_measured_ms', ':'))}
 # The solid curves of both models, then the first model's other curves: a
 # legend of four names the models by colour and the rest by line style
-_, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 3.2))
+_, axes = d2l.plt.subplots(1, 2, figsize=(6.2, 3.2), layout='constrained')
 color = {QWEN: 'C0', GEMMA: 'C1'}
-for ax, panel, ylabel, yscale, xlim, ylim, loc, solid, styles in (
-        (axes[0], 'mem', 'cache + state (MiB)', 'log', None, (2, 2e5),
-         'upper left', 'formula', {'--': 'all attention', 'o': 'measured'}),
-        (axes[1], 'time', 'ms per decode step', 'linear', (128, 32768),
-         (0, 95), 'upper left', 'wall',
-         {'--': 'device busy', ':': 'bytes read / β'})):
+for ax, panel, ylabel, xlim, ylim, solid, styles in (  # both axes log
+        (axes[0], 'mem', 'cache + state (MiB)', None, (2, 2e5), 'formula',
+         {'--': 'all attention', 'o': 'measured'}),
+        (axes[1], 'time', 'ms per decode step', (128, 32768), (3, 800),
+         'wall', {'--': 'device busy', ':': 'bytes read / β'})):
     keys = ([(QWEN, '-'), (GEMMA, '-')] + [(QWEN, s) for s in styles]
             + [(GEMMA, s) for s in styles])
     X, Y = zip(*(curves[panel][k] for k in keys))
-    d2l.plot(list(X), list(Y), 'context (tokens)', ylabel,
-             [f'{NAMES[QWEN]} {solid}', f'{NAMES[GEMMA]} {solid}',
-              *styles.values()], xlim=xlim, ylim=ylim, xscale='log',
-             yscale=yscale, fmts=[color[m] + s for m, s in keys], axes=ax,
-             legend_loc=loc)
+    with d2l.plt.rc_context({'legend.fontsize': 'small'}):
+        d2l.plot(list(X), list(Y), 'context (tokens)', ylabel,
+                 [f'{NAMES[QWEN]} {solid}', f'{NAMES[GEMMA]} {solid}',
+                  *styles.values()], xlim=xlim, ylim=ylim, xscale='log',
+                 yscale='log', fmts=[color[m] + s for m, s in keys],
+                 axes=ax, legend_loc='upper left')
 ```
 
 On the left, the measured points lie on the lines derived from the

@@ -702,7 +702,7 @@ def fig_chat_template():
     fs = T.FS_SMALL
     pitch = 60.0
     y = 30.0
-    f.text(0, 0, "CHAT LAYOUT", size=T.FS_TINY, color=T.INK,
+    f.text(0, 0, "RENDERED CONVERSATION", size=T.FS_TINY, color=T.INK,
            anchor="start", tracking=T.LETTERSPACE_CAPS)
     exts = []
     for r, toks in enumerate(CHAT_ROWS):
@@ -734,7 +734,7 @@ def fig_chat_template():
     f.leader(sx - 6, y3, nx + w + 4, y3)
     # plain layout
     y4 = yb + 76
-    f.text(0, y4 - 30, "PLAIN LAYOUT", size=T.FS_TINY, color=T.INK,
+    f.text(0, y4 - 30, "PLAIN TEXT", size=T.FS_TINY, color=T.INK,
            anchor="start", tracking=T.LETTERSPACE_CAPS)
     x = 0.0
     f.text(x + 10, y4, "…", size=T.FS_LABEL)
@@ -869,7 +869,7 @@ def fig_scoring_conventions():
 def fig_benchmark_lifecycle():
     """POINT: a benchmark separates models, is climbed, saturates below a
     label-error ceiling and is replaced; a fresh test set follows at an
-    offset (shift), and overfitting shows only on an i.i.d. private split."""
+    offset (shift), and overfitting to the public items widens the gap."""
     import matplotlib
     matplotlib.use("svg")
     import matplotlib.pyplot as plt
@@ -926,7 +926,7 @@ def fig_benchmark_lifecycle():
                                 mutation_scale=8))
     ax.text(5.35, (public[i5] + fresh[i5]) / 2, "distribution shift",
             ha="left", va="center", color=T.INK, **kw)
-    ax.text(4.35, 52, "overfitting, visible only\non an i.i.d. private split",
+    ax.text(4.35, 52, "fresh test set, with overfitting\nto the public items as well",
             ha="left", va="top", color=T.RED.dark, **kw)
     ax.text(8.15, 22, "replacement\nbenchmark", ha="left", va="top",
             color=T.ORANGE.dark, **kw)
@@ -1150,7 +1150,7 @@ def fig_sae_splice():
     f.arrow(fx0 - 20, y_add - 40, SX + 9, y_add - 7, stroke=HIGH.base,
             sw=T.SW_BOX, dash=T.DASH_SOFT)
     # annotations
-    f.text(fx0 - 12, y_add - 44, [Span("steer: add "), Span("α", "i"),
+    f.text(fx0 - 12, y_add - 44, [Span("steer: add a multiple of "),
                                   Span("w", "b"), Span("j", "i", script=-1)],
            size=fs, anchor="start")
     math_text(f, 84, y_dec + 22, [Span("reconstruct: splice "), "XHAT"],
@@ -1167,12 +1167,13 @@ def fig_sae_splice():
          "x-hat, which is spliced into the stream, with the error x minus "
          "x-hat kept or dropped as a dashed side branch. Annotations: "
          "reconstruct (splice x-hat), ablate (clamp feature z_j to 0), steer "
-         "(add alpha times the decoder column w_j).")
+         "(add a multiple of the decoder column w_j).")
 # --------------------------------------------------------------------------- #
 # 18.7  fig_lm_api_lost                                                       #
 # --------------------------------------------------------------------------- #
 
-# 2 available, 1 depends on the provider or server, 0 withheld by the protocol.
+# 2 available, 1 depends on the provider or server, 0 not available to the
+# client.
 # Columns: weights in the book's code, local server, open weights via a
 # router, closed model via a router.  These state what each kind of endpoint
 # can offer, not what one probe found.
@@ -1228,7 +1229,7 @@ def fig_api_lost():
     ly = y0 + len(API_ROWS) * pitch + 12
     lx = 0.0
     for lev, txt in ((2, "available"), (1, "depends on the provider or server"),
-                     (0, "withheld by the protocol")):
+                     (0, "not available to the client")):
         _avail(f, lx + 8, ly, lev)
         lx = f.text(lx + 22, ly, txt, size=fs, anchor="start")[2] + 26
     save(f, "api-lost",
@@ -1239,8 +1240,8 @@ def fig_api_lost():
          "prompt and chat template; sampler beyond temperature and top-p; "
          "seed and batching control; token counts from usage; structured "
          "output; many samples. Filled circles mark available, half circles "
-         "depends on the provider or server, open circles withheld by the "
-         "protocol.")
+         "depends on the provider or server, open circles not available to "
+         "the client.")
 
 # --------------------------------------------------------------------------- #
 # Registry                                                                    #

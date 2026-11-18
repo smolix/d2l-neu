@@ -1120,13 +1120,13 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
     blocks = lambda L, R: (L.double() - R).abs().mean(-1).reshape(
         16, 16).mean(1).cpu().numpy()
     exact = torch.arange(4096, dtype=torch.float64)[:, None] * inv64
-    angles = {'reference': None,  # the port's default, qwen3_rope_tables
+    angles = {'transformers': None,  # the port's default, qwen3_rope_tables
               'book': d2l.rope_tables(4096, 128, base=1e6),
               'exact': (exact.cos().float(), exact.sin().float())}
     L_ours = {name: logits(ours32, X, logits_to_keep=256, tables=None
                            if t is None else tuple(u.to(device) for u in t))
               for name, t in angles.items()}
-    L_hf = cached_logits(hf32, X, 256)
+    L_hf = logits(hf32, X, logits_to_keep=256)  # one pass, as the port
     L64 = cached_logits(hf64, X, 256, chunk=512)  # Transformers: fp32 angles
     rotary, hf64.model.rotary_emb = hf64.model.rotary_emb, ExactRotary()
     L64_exact = cached_logits(hf64, X, 256, chunk=512)
@@ -1135,12 +1135,12 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
     e_hf = [blocks(L_hf, R).mean() for R in refs]
     print(f'long prompt: e_HF {e_hf[0]:.1e} against the reference, '
           f'{e_hf[1]:.1e} against it with exact angles')
-    print(f'{"port angles":12}{"ratio, reference":28}'
-          'ratio, reference with exact angles')
+    print(f'{"port angles":14}{"ratio, fp64":28}'
+          'ratio, fp64 with exact angles')
     for name, L in L_ours.items():
         rules = [port_rule(blocks(L, R), blocks(L_hf, R)) for R in refs]
-        print(f'{name:12}{rule_text(rules[0]):28}{rule_text(rules[1])}')
-        if name == 'reference':
+        print(f'{name:14}{rule_text(rules[0]):28}{rule_text(rules[1])}')
+        if name == 'transformers':
             assert rules[0].verdict == 'passes'
     del L_ours, L_hf, L64, L64_exact
 ```
@@ -1217,7 +1217,7 @@ print('ratio with the port in batches of ' + ', '.join(
 hf16.set_attn_implementation('sdpa')  # Transformers' default attention
 e16_sdpa = np.concatenate([mean_abs(logits(hf16, X), logits(hf64, X))
                            for X in ids.split(4)])
-hf16.set_attn_implementation('eager')  # back to the yardstick above
+hf16.set_attn_implementation('eager')  # eager again, as in e16_hf
 print(f'Transformers bf16 with SDPA attention: e_HF {e16_sdpa.mean():.2e}, '
       f'ratio {rule_text(port_rule(e16_ours, e16_sdpa))}')
 if not SMALL:
@@ -1582,14 +1582,12 @@ little, which does not matter for a demonstration.
 
 ```{.python .input #d2l-checkpoint-chat}
 %%tab pytorch
-config = ours16.generation_config  # temperature, top-k, top-p of the repo
 questions = ['What does a key-value cache store, in one sentence?',
              'Name two differences between a base model and a chat model.']
-for q, g in zip(questions, generate(
+for q, g in zip(questions, generate(  # the card's settings without thinking
         ours16, tok, questions, 32 if SMALL else 128, chat=True,
-        enable_thinking=False, strategy='sample',
-        temperature=config.temperature, k=config.top_k, p=config.top_p,
-        seed=0)):
+        enable_thinking=False, strategy='sample', temperature=0.7, k=20,
+        p=0.8, seed=0)):
     print(q)
     for line in g.text.splitlines():  # the reply, wrapped
         if line.strip():
@@ -1803,10 +1801,14 @@ for k, m in median.items():
 
 def ratio_range(e_ours, e_hf):
     """Port over Transformers, medians over prompts: its range over every
-    layer and point, and the layers where it leaves [0.5, 2]."""
+    layer and point, and the layers where it falls below 0.5 or rises
+    above 2."""
     r = np.median(e_ours, -1) / np.median(e_hf, -1)
-    out = sorted(set(np.nonzero((r < 0.5) | (r > 2))[0].tolist()))
-    return f'{r.min():.2f} to {r.max():.2f}, outside [0.5, 2]: {out}'
+    low = sorted(set(np.nonzero(r < 0.5)[0].tolist()))
+    high = sorted(set(np.nonzero(r > 2)[0].tolist()))
+    return (f'{r.min():.2f} to {r.max():.2f}'
+            + (f', below 0.5 at layers {low}' if low else '')
+            + (f', above 2 at layers {high}' if high else ''))
 
 print('port / Transformers (eager) over every layer and point')
 for bits, name in ((32, 'fp32'), (16, 'bf16')):
@@ -1958,6 +1960,10 @@ for name, f in found.items():
     print(f'{name:26}{there:14}{times:>9}  ' + ''.join(
         f'{f"{r.ratio:.2g} {r.verdict}":15}' for r in f['rules'])
         + f'{f["top1"]:>5}')
+same = {name: first_divergence(f['errors'], err['hf32']) == f['where']
+        for name, f in found.items()}  # the floor a porter has
+print('the same first divergence with Transformers fp32 as the floor: '
+      f'{sum(same.values())} of {len(same)}')
 b4 = found['B4 layers in string order']
 exact = np.array_equal(b4['errors'][:2], found['clean']['errors'][:2])
 print(f'B4: blocks 0 and 1 bitwise equal to the clean port: {exact}')
@@ -2074,20 +2080,27 @@ right, on one scale.
 %%tab pytorch
 resid_post = lambda e: np.median(e[:, 3], -1)  # median over prompts
 precision = [resid_post(err[k]) for k in ('ours32', 'hf32', 'ours16', 'hf16')]
+# right: the clean port in fp32 (from the bug cell) and in bf16, then B1-B5
 porting = [resid_post(f['errors']) for f in found.values()]
-names = [name.split()[0] for name in found]  # clean, B1, ..., B5
+porting.insert(1, precision[2])
+names = ['clean fp32', 'clean bf16'] + [name.split()[0] for name in found][1:]
 ylim = (min(map(min, precision + porting)) / 2,  # one scale for both
         max(map(max, precision + porting)) * 2)
-_, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.6), sharey=True)
-with d2l.plt.rc_context({'legend.fontsize': 'x-small'}):
+# black and grey: a correct implementation in fp32 and bf16, in both panels
+_, axes = d2l.plt.subplots(1, 2, figsize=(6.4, 3), sharey=True)
+left = ['port fp32', 'Transformers fp32', 'port bf16', 'Transformers bf16']
+with d2l.plt.rc_context({'legend.fontsize': 'small'}):
     d2l.plot(np.arange(len(floor)), precision, 'layer', 'relative error',
-             ['port fp32', 'Transformers fp32', 'port bf16',
-              'Transformers bf16'], ylim=ylim, yscale='log',
-             fmts=('C0-', 'C0--', 'C1-', 'C1--'), axes=axes[0])
+             left, ylim=ylim, yscale='log',
+             fmts=('k-', 'k--', 'C7-', 'C7--'), axes=axes[0])
     d2l.plot(np.arange(len(floor)), porting, 'layer', None, names,
              ylim=ylim, yscale='log',
-             fmts=('C7--', 'C0-', 'C1-', 'C2-', 'C3-', 'C4-'), axes=axes[1])
-    axes[1].legend(names, ncol=3, loc='center', bbox_to_anchor=(0.58, 0.27))
+             fmts=('k-', 'C7-', 'C0-', 'C1-', 'C2-', 'C3-', 'C4-'),
+             axes=axes[1])
+    for ax, labels, ncol in ((axes[0], left, 2), (axes[1], names, 4)):
+        ax.legend(labels, ncol=ncol, loc='lower center', frameon=False,
+                  bbox_to_anchor=(0.5, 1), columnspacing=0.7,
+                  handlelength=1.3)  # above the panel, clear of the curves
 ```
 
 On the left, the port (solid) and Transformers with eager attention (dashed)

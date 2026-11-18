@@ -644,6 +644,32 @@ and per character, and PMI. Which is the right one? Each can be defended, and
 they are different rules. The least a report can do is to say which one it
 used.
 
+<!-- CODE CHANGE 2026-11-18 (pass2/code-requests.md, 18.4): the cell below
+scores the plants question under the four rules and the letter format; the
+text needs a sentence before it and a reading after it. -->
+
+```{.python .input #scoring-plants-rules}
+%%tab pytorch
+prompt, choices = d2l.format_mc(question, options)  # the plants, cloze
+c = d2l.score_choices(base32, tok32, [prompt], [choices], batch_size=1,
+                      return_components=True)
+u = d2l.score_choices(base32, tok32, ['Answer:'], [choices], batch_size=1,
+                      return_components=True)  # after the bare prompt
+ll, n_tok, n_chr = (v[0].numpy() for v in (c.ll, c.n_tokens, c.n_chars))
+rules = {'sum': ll, 'per token': ll / n_tok, 'per char': ll / n_chr,
+         'PMI': ll - u.ll[0].numpy()}
+letter_prompt, letters = d2l.format_mc(question, options, 'letter')
+rules['letter'] = d2l.score_choices(base32, tok32, [letter_prompt],
+                                    [letters], 'sum', batch_size=1)[0]
+rules['letter'] = rules['letter'].log_softmax(-1).numpy()  # over 4 letters
+print(f'{BASES[0]}, fp32, log-probabilities in nats')
+print(pd.DataFrame({'tokens': n_tok, 'chars': n_chr, **rules},
+                   index=options).round(3).to_string())
+print(textwrap.fill('picked: ' + ', '.join(
+    f'{r} {options[v.argmax()]!r}' for r, v in rules.items()), 79,
+    subsequent_indent='    '))
+```
+
 ### Agreement with a Reference Harness
 
 A convention serves its purpose only if two implementations of it return the
@@ -2221,6 +2247,13 @@ print(pd.DataFrame({
               for c in PAIR_CONVS},
     'ahead': ahead}).to_string())
 print('ranking flips:', len(set(ahead.values()) - {'neither'}) == 2)
+both = np.ones(len(ARC), bool)  # both direct replies commit to a letter
+for m in PAIR:
+    both &= gen_column(m, 'direct', 'letter').notna().to_numpy()
+sub = [CORRECT[m, 'gen-direct'][both] for m in PAIR]
+print(f'gen-direct on the {both.sum()} items where both replies commit: '
+      f'{sub[0].mean():.3f} and {sub[1].mean():.3f},\n    difference '
+      f'{show(boot(sub[1], sub[0]))}')
 wrong = {}  # mean bpb of an item's wrong options
 for m in PAIR:
     b = BPB_OPT[m].copy()
@@ -2316,6 +2349,14 @@ for base, post in zip(BASES, PAIR):
     print(f'    {post[5:]} - {base[5:]}: {show(e)}')
     print('        (' + verdict(e, drift, ('post-trained gains more',
                                           'base gains more')) + ')')
+points = lambda e: (f'{100 * e[0]:+.1f} '  # in accuracy points
+                   f'[{100 * e[1]:+.1f}, {100 * e[2]:+.1f}]')
+print('normalized cloze rule minus cloze-sum, accuracy points:')
+print(pd.DataFrame({c: {SHORT[m]: points(boot(CORRECT[m, c],
+                                              CORRECT[m, 'cloze-sum']))
+                        for m in MODELS}
+                    for c in ('cloze-token', 'cloze-char', 'cloze-PMI')}
+                   ).to_string())
 ```
 
 Qwen3.5-0.8B gains about 12 points more from the letter format than
@@ -2343,14 +2384,18 @@ for m in ARMS['reasoning'][0]:
     col = lambda arm, c: gen_column(m, arm, c).iloc[:n]
     cut = {arm: (col(arm, 'finish_reason') == 'length').mean()
            for arm in ARMS}
-    binds = [arm for arm in ARMS if cut[arm] > 0.3]  # spec: over 30%
+    binds = [arm for arm in ARMS if cut[arm] > 0.3]  # cuts over 30%: binds
     d = paired(CORRECT[m, 'gen-reasoning'], CORRECT[m, 'gen-direct'])
+    r, g = (CORRECT[m, f'gen-{arm}'][:n] for arm in ('reasoning', 'direct'))
     both = (col('reasoning', 'letter').notna() &
             col('direct', 'letter').notna()).to_numpy()  # both committed
     differ = (col('reasoning', 'letter') != col('direct', 'letter'))[both]
     acc = [col(arm, 'correct')[both].astype(float).mean() for arm in ARMS]
     tokens = [col(arm, 'n_tokens').mean() for arm in ARMS]
     print(f'{m[5:]}, first {n} items: reasoning - direct {show(d)}')
+    only = [int(((a == 1) & (b == 0)).sum()) for a, b in ((r, g), (g, r))]
+    print(f'    accuracy {r.mean():.2f} and {g.mean():.2f}; right only with '
+          f'reasoning {only[0]}, only directly {only[1]}')
     print('    (' + (f'{" and ".join(binds)} budget binds: no direction'
                      if binds else verdict(d, 0, ('reasoning ahead',
                                                   'direct ahead'), n))

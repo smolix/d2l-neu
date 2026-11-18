@@ -124,11 +124,11 @@ class TransformerEncoder(nn.Module):
             for _ in range(num_blks)])
         self.norm = nn.RMSNorm(num_hiddens, eps=1e-5)
 
-    def forward(self, X):
+    def forward(self, X, mask=None):
         H = self.token_emb(X) + self.pos_emb(
             torch.arange(X.shape[1], device=X.device))
         for blk in self.blks:
-            H = blk(H)  # no mask: every token attends to every token
+            H = blk(H, mask)  # by default no mask: all tokens see all
         return self.norm(H)
 ```
 
@@ -148,10 +148,10 @@ class TransformerEncoder(nnx.Module):
             for _ in range(num_blks)])
         self.norm = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
 
-    def __call__(self, X):
+    def __call__(self, X, mask=None):
         H = self.token_emb(X) + self.pos_emb(jnp.arange(X.shape[1]))
         for blk in self.blks:
-            H = blk(H)  # no mask: every token attends to every token
+            H = blk(H, mask)  # by default no mask: all tokens see all
         return self.norm(H)
 ```
 
@@ -196,7 +196,13 @@ class MaskedBytes:
         self.data = data
 
     def train_dataloader(self):
-        for X, _ in self.data.train_dataloader():
+        return self.masked(self.data.train_dataloader())
+
+    def val_dataloader(self):
+        return self.masked(self.data.val_dataloader())
+
+    def masked(self, batches):
+        for X, _ in batches:
             Xm, mask = mask_tokens(X)
             yield Xm, torch.where(mask, X, -100)
 
@@ -233,8 +239,14 @@ class MaskedBytes:
         self.data = data
 
     def train_dataloader(self):
+        return self.masked(self.data.train_dataloader())
+
+    def val_dataloader(self):
+        return self.masked(self.data.val_dataloader())
+
+    def masked(self, batches):
         key = d2l.get_key()
-        for X, _ in self.data.train_dataloader():
+        for X, _ in batches:
             key, sub = jax.random.split(key)
             Xm, mask = mask_tokens(jnp.asarray(X), sub)
             yield Xm, jnp.where(mask, X, -100)
@@ -273,57 +285,162 @@ by position measures what context from the second side contributes.
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-1}
 %%tab pytorch
-model.eval()
-num_steps = data.num_steps  # Window length: 64 positions
-pos_loss = torch.zeros(num_steps, device=device)
-pos_cnt = torch.zeros(num_steps, device=device)
-correct = torch.zeros((), device=device)
-with torch.no_grad():
-    for X, _ in data.val_dataloader():
-        X = X.to(device)
-        Xm, mask = mask_tokens(X)
-        logits = model(Xm)
-        loss = F.cross_entropy(logits.transpose(1, 2), X, reduction='none')
-        pos_loss += (loss * mask).sum(0)
-        pos_cnt += mask.sum(0)
-        correct += ((logits.argmax(-1) == X) & mask).sum()
-print(f'masked accuracy {correct / pos_cnt.sum():.2f}')
-pos_loss = (pos_loss / pos_cnt).cpu()
-print(f'loss at position 0: {pos_loss[0]:.2f}, at position '
-      f'{num_steps - 1}: {pos_loss[-1]:.2f}, interior mean: '
-      f'{pos_loss[num_steps // 4:-num_steps // 4].mean():.2f}')
-d2l.plot(torch.arange(num_steps), pos_loss, 'position in the window',
-         'masked loss')
+def loss_by_position(model, batches):
+    """Mean loss at each window position over the labels that are not -100,
+    and the fraction of those labels predicted exactly."""
+    device = next(model.parameters()).device
+    model.eval()
+    total = count = correct = 0
+    with torch.no_grad():
+        for X, Y in batches:
+            X, Y = X.to(device), Y.to(device)
+            logits, scored = model(X), Y != -100
+            total += F.cross_entropy(logits.transpose(1, 2), Y,
+                                     reduction='none').sum(0)  # 0 at -100
+            count += scored.sum(0)
+            correct += ((logits.argmax(-1) == Y) & scored).sum()
+    return (total / count).cpu(), float(correct / count.sum())
+
+def show(losses):
+    return ' '.join(f'{float(v):.2f}' for v in losses)
+
+masked = MaskedBytes(data)
+pos_loss, accuracy = loss_by_position(model, masked.val_dataloader())
+interior = slice(16, 48)  # positions 16 to 47 of the 64
+print(f'masked accuracy {accuracy:.2f}')
+print(f'loss at positions 0-3: {show(pos_loss[:4])}; 60-63: '
+      f'{show(pos_loss[-4:])}; interior mean {pos_loss[interior].mean():.2f}')
 ```
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-1}
 %%tab jax
-model.eval()
-
 @nnx.jit
-def mlm_eval(model, Xm, X):
-    logits = model(Xm)
-    losses = optax.softmax_cross_entropy_with_integer_labels(logits, X)
-    return losses, logits.argmax(-1)
+def scored_losses(model, X, Y):
+    logits = model(X)
+    losses = optax.softmax_cross_entropy_with_integer_labels(
+        logits, jnp.maximum(Y, 0))
+    return losses, logits.argmax(-1) == Y
 
-num_steps = data.num_steps  # Window length: 64 positions
-pos_loss, pos_cnt, correct = jnp.zeros(num_steps), jnp.zeros(num_steps), 0
-key = d2l.get_key()
-for X, _ in data.val_dataloader():
-    X = jnp.asarray(X)
-    key, sub = jax.random.split(key)
-    Xm, mask = mask_tokens(X, sub)
-    loss, pred = mlm_eval(model, Xm, X)
-    pos_loss += (loss * mask).sum(0)
-    pos_cnt += mask.sum(0)
-    correct += ((pred == X) & mask).sum()
-print(f'masked accuracy {correct / pos_cnt.sum():.2f}')
-pos_loss = pos_loss / pos_cnt
-print(f'loss at position 0: {pos_loss[0]:.2f}, at position '
-      f'{num_steps - 1}: {pos_loss[-1]:.2f}, interior mean: '
-      f'{pos_loss[num_steps // 4:-num_steps // 4].mean():.2f}')
-d2l.plot(jnp.arange(num_steps), pos_loss, 'position in the window',
-         'masked loss')
+def loss_by_position(model, batches):
+    """Mean loss at each window position over the labels that are not -100,
+    and the fraction of those labels predicted exactly."""
+    model.eval()
+    total = count = correct = 0
+    for X, Y in batches:
+        Y = jnp.asarray(Y)
+        losses, hit = scored_losses(model, jnp.asarray(X), Y)
+        scored = Y != -100
+        total += (losses * scored).sum(0)
+        count += scored.sum(0)
+        correct += (hit & scored).sum()
+    return total / count, float(correct / count.sum())
+
+def show(losses):
+    return ' '.join(f'{float(v):.2f}' for v in losses)
+
+masked = MaskedBytes(data)
+pos_loss, accuracy = loss_by_position(model, masked.val_dataloader())
+interior = slice(16, 48)  # positions 16 to 47 of the 64
+print(f'masked accuracy {accuracy:.2f}')
+print(f'loss at positions 0-3: {show(pos_loss[:4])}; 60-63: '
+      f'{show(pos_loss[-4:])}; interior mean {pos_loss[interior].mean():.2f}')
+```
+
+<!-- WRITER: new cell encoders-decoders-a-causal-control (both tabs). Development and notebook
+runs, 2026-11-18, 2,000 steps, constant AdamW 1e-3 as in the main cell. Interior (positions 16-47)
+of the bidirectional masked model: 1.44 to 1.79 over 22 runs (21 of them 1.44 to 1.64); the same
+encoder with a causal mask in every block, trained on the same masked objective: 2.07 to 2.14 over
+20 runs. So at matched training the second side is worth about 0.6 nats (0.3 to 0.7 in every pair
+of runs; the two-sided loss is about 30% lower). Position 63, which sees only its left side in both
+models: 2.33 to 2.51 bidirectional against 2.06 to 2.17 causal, so the bidirectional model's edge
+is a case it rarely trains on (one position in 64, under 2,000 steps) and not the worth of one
+side. The next-byte model (same encoder, causal mask, every position scored, all 64 positions of a
+window give a loss against about 10 for the masked objective) reaches 1.42 to 1.48 on its interior:
+about the same as or below the two-sided masked model; do not claim it beats it (the difference is
+within the masked model's range). Where the spread comes from: every masked run sits at the unigram
+level (about 3.1) until roughly step 500 and leaves it between steps 500 and 1,000 (printed 3.1 at
+step 500 in the main cell); the run that leaves late ends high. The causal masked model leaves
+earlier (2.5 at step 500, since an early position attends to few keys) but learns slowly
+afterwards. Tried and dropped: the chapter's LMOptimizer recipe (warmup 100, cosine, lr 2e-3) for
+all three arms; the plateau stayed and the causal masked arm got worse (2.11 to 2.36). Masked-model
+profile: about 2.4 at position 0, 1.7 to 1.9 at position 1, interior level by position 2 or 3;
+symmetric at the right edge. Fill-in cell in the final runs: "known as _he" gives 't' 0.69
+(PyTorch) and 0.95 (JAX); the first line ("gam_arus") puts ' ' or 'p' first, never the true 'm'
+first; read it as a plausible-word guess. -->
+
+The edges could cost more because one side of context is worth less, or
+because the model rarely trains on them: under random masking an interior
+byte almost always has visible neighbours on both sides, while position 0
+never has a left neighbour. A matched control separates the two. We give
+the same encoder a causal mask in every block and train it on the same
+masked objective for the same 2,000 steps, so that every masked byte sees
+only its left side. A third model uses the causal encoder as a language
+model: it predicts every next byte, so all 64 positions of a window add to
+its loss rather than about 10. We train the bidirectional model once more
+and the causal masked model twice, which gives each comparison a run-to-
+run range.
+
+```{.python .input #encoders-decoders-a-causal-control}
+%%tab pytorch
+class LeftOnlyLM(MaskedLM):
+    """MaskedLM with a causal mask in every block: one side of context."""
+    def forward(self, X):
+        mask = d2l.causal_mask(X.shape[1], device=X.device)
+        return F.linear(self.encoder(X, mask), self.encoder.token_emb.weight)
+
+def trained(lm_class, batches):
+    lm = lm_class(TransformerEncoder(len(data.vocab) + 1)).to(device)
+    d2l.train_steps(lm, batches, torch.optim.AdamW(
+        lm.parameters(), lr=1e-3, weight_decay=0.0), 2000)
+    return lm
+
+arms = {  # each run is the loss at each position of the window
+    'both sides, masked': [pos_loss, loss_by_position(
+        trained(MaskedLM, masked), masked.val_dataloader())[0]],
+    'left side, masked': [loss_by_position(
+        trained(LeftOnlyLM, masked), masked.val_dataloader())[0]
+        for _ in range(2)],
+    'left side, next byte': [loss_by_position(
+        trained(LeftOnlyLM, data), data.val_dataloader())[0]]}
+for name, runs in arms.items():
+    print(f'{name:21s} interior ' + show(p[interior].mean() for p in runs)
+          + '; position 63 ' + show(p[-1] for p in runs))
+# Next byte: the loss at position t is that of predicting byte t + 1
+d2l.plot([torch.arange(64)] * 2 + [torch.arange(1, 65)],
+         [runs[0] for runs in arms.values()], 'position in the window',
+         'loss', legend=list(arms))
+```
+
+```{.python .input #encoders-decoders-a-causal-control}
+%%tab jax
+class LeftOnlyLM(MaskedLM):
+    """MaskedLM with a causal mask in every block: one side of context."""
+    def __call__(self, X):
+        mask = d2l.causal_mask(X.shape[1])
+        return self.encoder.token_emb.attend(self.encoder(X, mask))
+
+def trained(lm_class, batches):
+    lm = lm_class(TransformerEncoder(len(data.vocab) + 1,
+                                    rngs=nnx.Rngs(d2l.get_key())))
+    d2l.train_steps(lm, batches, nnx.Optimizer(
+        lm, optax.adamw(1e-3, weight_decay=0.0), wrt=nnx.Param), 2000)
+    return lm
+
+arms = {  # each run is the loss at each position of the window
+    'both sides, masked': [pos_loss, loss_by_position(
+        trained(MaskedLM, masked), masked.val_dataloader())[0]],
+    'left side, masked': [loss_by_position(
+        trained(LeftOnlyLM, masked), masked.val_dataloader())[0]
+        for _ in range(2)],
+    'left side, next byte': [loss_by_position(
+        trained(LeftOnlyLM, data), data.val_dataloader())[0]]}
+for name, runs in arms.items():
+    print(f'{name:21s} interior ' + show(p[interior].mean() for p in runs)
+          + '; position 63 ' + show(p[-1] for p in runs))
+# Next byte: the loss at position t is that of predicting byte t + 1
+d2l.plot([jnp.arange(64)] * 2 + [jnp.arange(1, 65)],
+         [runs[0] for runs in arms.values()], 'position in the window',
+         'loss', legend=list(arms))
 ```
 
 The profile is flat across the interior and rises by about half or more at
@@ -568,6 +685,258 @@ class EncoderDecoder(nnx.Module):
         return self.decode(dec_in, self.encoder(src))
 ```
 
+### Training and Decoding
+
+One encoder block, one decoder block, and a few hundred steps on freshly
+sampled batches suffice. Over 300 steps of 128 strings the model reads
+about half a million source characters and never sees a string twice. The
+optimizer is `d2l.LMOptimizer` of :numref:`sec_gpt`, with its gradient
+clipping but without warmup or weight decay. Once the loss is near zero,
+Adam at a constant learning rate makes it jump now and then, to tenths of
+a nat or more, for about twenty steps. A jump near the end of the run
+leaves a model that fails on many strings. The cosine decay of the
+learning rate to zero prevents this.
+
+```{.python .input #encoders-decoders-training-and-decoding-1}
+%%tab pytorch
+def train_reversal(model, num_steps=300):
+    """Train on fresh batches of 128 strings; return the loss of each step."""
+    optimizer = d2l.LMOptimizer(model, lr=1e-3, num_steps=num_steps,
+                                warmup=0, weight_decay=0.0)
+    losses = []
+    for step in range(num_steps):
+        src, dec_in, tgt = sample_batch(128, device)
+        logits = model(src, dec_in)
+        loss = F.cross_entropy(logits.flatten(0, 1), tgt.flatten())
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        losses.append(loss.detach())  # Stays on the device
+    return torch.stack(losses).tolist()  # One transfer at the end
+
+seq2seq = EncoderDecoder(V + 1).to(device)
+losses = train_reversal(seq2seq)
+print('loss at step 25/50/100/200/300: ' + '/'.join(
+    f'{sum(losses[k-10:k]) / 10:.3f}' for k in (25, 50, 100, 200, 300)))
+```
+
+```{.python .input #encoders-decoders-training-and-decoding-1}
+%%tab jax
+@nnx.jit
+def s2s_step(model, optimizer, src, dec_in, tgt):
+    def loss_fn(model):
+        logits = model(src, dec_in)
+        return optax.softmax_cross_entropy_with_integer_labels(
+            logits.reshape(-1, logits.shape[-1]), tgt.reshape(-1)).mean()
+    loss, grads = nnx.value_and_grad(loss_fn)(model)
+    optimizer.update(model, grads)
+    return loss
+
+def train_reversal(model, num_steps=300):
+    """Train on fresh batches of 128 strings; return the loss of each step."""
+    optimizer = d2l.LMOptimizer(model, lr=1e-3, num_steps=num_steps,
+                                warmup=0, weight_decay=0.0)
+    key, losses = d2l.get_key(), []
+    for step in range(num_steps):
+        key, sub = jax.random.split(key)
+        src, dec_in, tgt = sample_batch(128, sub)
+        losses.append(s2s_step(model, optimizer, src, dec_in, tgt))
+    return jax.device_get(losses)  # One transfer at the end
+
+seq2seq = EncoderDecoder(V + 1, rngs=nnx.Rngs(d2l.get_key()))
+losses = train_reversal(seq2seq)
+print('loss at step 25/50/100/200/300: ' + '/'.join(
+    f'{sum(losses[k-10:k]) / 10:.3f}' for k in (25, 50, 100, 200, 300)))
+```
+
+Decoding runs the encoder once and the decoder autoregressively: feed
+`<bos>`, take the argmax, append, repeat. On a thousand fresh strings the
+model reverses essentially every one exactly.
+
+```{.python .input #encoders-decoders-training-and-decoding-2}
+%%tab pytorch
+def reverse(model, src):
+    """Greedy decoding: the encoder runs once, the decoder once per token."""
+    model.eval()
+    with torch.no_grad():
+        enc = model.encoder(src)
+        out = torch.full((len(src), T + 1), BOS, device=src.device)
+        for t in range(T):
+            logits = model.decode(out[:, :t + 1], enc)
+            out[:, t + 1] = logits[:, -1].argmax(-1)
+    return out[:, 1:]
+
+src, _, tgt = sample_batch(1000, device)
+pred = reverse(seq2seq, src)
+print(f'exact match on 1000 fresh strings: '
+      f'{(pred == tgt).all(-1).float().mean():.3f}')
+print(f'source {to_str(src[0])!r} -> predicted {to_str(pred[0])!r}')
+```
+
+```{.python .input #encoders-decoders-training-and-decoding-2}
+%%tab jax
+@nnx.jit
+def next_token(model, enc, buf, t):
+    return model.decode(buf, enc)[:, t].argmax(-1)
+
+def reverse(model, src):
+    """Greedy decoding: the encoder runs once, the decoder once per token."""
+    model.eval()
+    enc = model.encoder(src)
+    buf = jnp.full((len(src), T + 1), BOS)
+    for t in range(T):
+        buf = buf.at[:, t + 1].set(next_token(model, enc, buf, t))
+    return buf[:, 1:]
+
+src, _, tgt = sample_batch(1000, d2l.get_key())
+pred = reverse(seq2seq, src)
+print(f'exact match on 1000 fresh strings: '
+      f'{(pred == tgt).all(-1).mean():.3f}')
+print(f'source {to_str(src[0])!r} -> predicted {to_str(pred[0])!r}')
+```
+
+:begin_tab:`jax`
+As in `generate` of :numref:`sec_gpt`, the decode loop writes into a
+buffer of fixed size, overwritten left to right. Every shape stays static,
+so the jitted step compiles once. The causal mask hides the
+not-yet-written positions from every query at or before $t$.
+:end_tab:
+
+### Reading the Alignment
+:label:`subsec_reading-alignment`
+
+A low loss shows that the model reverses strings, but not how. Because the
+task dictates which source position each target position needs, we can
+check whether cross-attention finds it. We run a batch through the model,
+read the cross-attention weights of the decoder block, of shape (batch,
+heads, target positions, source positions), and compare each target
+position's attention with that alignment. A single run could be typical
+or not, so we train the model six times, the run above included, and
+six times more with an encoder that keeps only its embeddings and
+positions and has no self-attention block. For each run we print the exact
+match and the fraction of rows whose largest head-averaged weight falls on
+the true source position, and we plot one string's map from the least
+aligned run of each.
+
+<!-- WRITER: the cell is redesigned (structure 3.5 item 7; fallback (a) is kept as the second arm).
+Six runs per arm, the main seq2seq is run 1 of the "with" arm; the heat map shows one string's
+head-averaged map from the least aligned run of each arm (stated in the code and in the panel
+title, which carries its hit rate). All runs 2026-11-18, 300 steps, both tabs agree. Every run
+reverses: exact match 0.999 or 1.000 in all 90 runs. Encoder WITH self-attention: rows on the true
+source position vary from run to run, 0% to 100% (PyTorch 28 runs, 7 at 99% or more, others 8% to
+92%; JAX 22 runs, 9 at 99% or more, others 0% to 94%). The final direct notebook runs printed
+PyTorch 43 100 18 61 50 92 and JAX 94 47 100 20 100 19; the least aligned PyTorch map (33% in an
+earlier run) is a scatter of single bright cells off the anti-diagonal: each target position still
+reads one source column, but not the one it copies. Encoder WITHOUT self-attention: 100% in every
+run (40 of 40), and it learns faster (loss about 0.3 at step 25 against about 2.0). The stored 100%
+(PyTorch) and 0% (JAX) were single draws of one distribution, not a framework difference. A six-run
+arm shows no partial run with probability about 0.1%. The composition of old exercise 4 part 3
+(head-averaged cross-attention times head-averaged encoder self-attention) did not resolve the
+partial runs: 0.53 to 0.90 where cross alone was 0.08 to 0.83, and it lowered exact runs (1.00 to
+0.90); the residual stream keeps each letter at its own position beside the moved one, and
+averaging heads blurs which head moved which letter. Composition therefore stays in the exercise.
+Lesson for the prose: the map is the anti-diagonal whenever only cross-attention can carry the
+alignment; with an encoder that can move letters first, a single map can mislead although every run
+reverses (sec_what-attention-computes). Fix the figure reference (the prediction is in
+subsec_reversal-task). Delete the conditional paragraph below. -->
+
+```{.python .input #encoders-decoders-reading-the-alignment}
+%%tab pytorch
+def reversal_model(self_attention=True):
+    model = EncoderDecoder(V + 1).to(device)
+    if not self_attention:  # the encoder keeps embeddings and positions
+        model.encoder = TransformerEncoder(V + 1, num_blks=0).to(device)
+    train_reversal(model)
+    return model
+
+def alignment(model):
+    """Exact match on 1000 fresh strings; the head-averaged cross-attention
+    of 256 strings, and how often its largest weight in a row falls on the
+    true source position."""
+    src, _, tgt = sample_batch(1000, device)
+    match = (reverse(model, src) == tgt).all(-1).float().mean()
+    with torch.no_grad():
+        src, dec_in, _ = sample_batch(256, device)
+        model(src, dec_in)
+    maps = model.blks[0].cross_attention.attention_weights.mean(1)
+    want = torch.arange(T - 1, -1, -1, device=device)  # row t: column T-1-t
+    return match, (maps.argmax(-1) == want).float().mean(), maps[0].cpu()
+
+encoders = {'with': [seq2seq] + [reversal_model() for _ in range(5)],
+            'without': [reversal_model(False) for _ in range(6)]}
+maps, titles = [], []
+for name, models in encoders.items():
+    runs = [alignment(m) for m in models]
+    print(f'encoder {name} self-attention, six runs')
+    print('  exact match:', ' '.join(f'{m:.3f}' for m, _, _ in runs))
+    print('  rows on the true source position:',
+          ' '.join(f'{100 * h:.0f}%' for _, h, _ in runs))
+    _, hit, least = min(runs, key=lambda run: run[1])  # the least aligned
+    maps.append(least)
+    titles.append(f'{name}: {100 * hit:.0f}% of rows')
+d2l.show_heatmaps(torch.stack(maps)[None], xlabel='source position',
+                  ylabel='target position', titles=titles, figsize=(6, 3),
+                  cmap='Blues')
+```
+
+```{.python .input #encoders-decoders-reading-the-alignment}
+%%tab jax
+def reversal_model(self_attention=True):
+    model = EncoderDecoder(V + 1, rngs=nnx.Rngs(d2l.get_key()))
+    if not self_attention:  # the encoder keeps embeddings and positions
+        model.encoder = TransformerEncoder(V + 1, num_blks=0,
+                                           rngs=nnx.Rngs(d2l.get_key()))
+    train_reversal(model)
+    return model
+
+def alignment(model):
+    """Exact match on 1000 fresh strings; the head-averaged cross-attention
+    of 256 strings, and how often its largest weight in a row falls on the
+    true source position."""
+    src, _, tgt = sample_batch(1000, d2l.get_key())
+    match = (reverse(model, src) == tgt).all(-1).mean()
+    src, dec_in, _ = sample_batch(256, d2l.get_key())
+    model(src, dec_in)
+    maps = model.blks[0].cross_attention.attention_weights.mean(1)
+    want = jnp.arange(T - 1, -1, -1)  # row t: column T-1-t
+    return match, (maps.argmax(-1) == want).mean(), maps[0]
+
+encoders = {'with': [seq2seq] + [reversal_model() for _ in range(5)],
+            'without': [reversal_model(False) for _ in range(6)]}
+maps, titles = [], []
+for name, models in encoders.items():
+    runs = [alignment(m) for m in models]
+    print(f'encoder {name} self-attention, six runs')
+    print('  exact match:', ' '.join(f'{m:.3f}' for m, _, _ in runs))
+    print('  rows on the true source position:',
+          ' '.join(f'{100 * h:.0f}%' for _, h, _ in runs))
+    _, hit, least = min(runs, key=lambda run: run[1])  # the least aligned
+    maps.append(least)
+    titles.append(f'{name}: {100 * hit:.0f}% of rows')
+d2l.show_heatmaps(jnp.stack(maps)[None], xlabel='source position',
+                  ylabel='target position', titles=titles, figsize=(6, 3),
+                  cmap='Blues')
+```
+
+Whether the maps show the anti-diagonal predicted by the third panel of
+:numref:`fig_three-wirings` depends on the run. In some runs they do:
+averaged over heads, the argmax lands on the true source position in
+almost every row, with most of the softmax mass concentrated there. In
+others it lands there in only about half of the rows or fewer, even in
+none, although the model still reverses essentially every string. The last line of the output
+shows what all runs share. Each target position reads mainly from one
+source column, the same for most strings and in many runs for nearly all,
+so the decoder does retrieve by position, as the task requires. But the encoder has a position table of its own, and its
+self-attention can move every letter to another position before the
+decoder reads it. Any such rearrangement, undone by the cross-attention,
+reverses the string just as well, and training settles on one of them at
+random. The alignment is then split between two attention layers, and the
+cross-attention map shows only the second half. As
+:numref:`sec_what-attention-computes` showed, an attention map says where a
+head looks, not what it computes. Even in this one-block model a single
+map can mislead, and with more depth and more heads the maps spread out
+further, as exercise :exref:`ex_encdec-depth-heads` shows.
+
 ### Assembling the Masks
 :label:`subsec_encdec-masks`
 
@@ -623,219 +992,7 @@ In the three grids of sequence 0 (source length 3 of 5, target length 3
 of 4), the encoder square and the cross rectangle both blank the same two
 padded source columns, and the decoder triangle loses its last column to
 target padding. These grids are what an encoder--decoder assembles for
-every padded batch it trains on. To see the model consume them, we pass
-`dec_self` and `cross` to a fresh `DecoderBlock` on random inputs of width
-16 and print the cross-attention weights of sequence 0 in one head, in
-percent:
-
-```{.python .input #encoders-decoders-assembling-the-masks-1}
-%%tab pytorch
-blk = DecoderBlock(16, num_heads=2)
-X, enc = torch.randn(B, T_dec, 16), torch.randn(B, S, 16)
-with torch.no_grad():
-    blk(X, enc, dec_self, cross)
-weights = blk.cross_attention.attention_weights[0, 0]  # (queries, keys)
-print((100 * weights).round().int().numpy())
-```
-
-```{.python .input #encoders-decoders-assembling-the-masks-1}
-%%tab jax
-blk = DecoderBlock(16, num_heads=2, rngs=nnx.Rngs(d2l.get_key()))
-X = jax.random.normal(d2l.get_key(), (B, T_dec, 16))
-enc = jax.random.normal(d2l.get_key(), (B, S, 16))
-blk(X, enc, dec_self, cross)
-weights = blk.cross_attention.attention_weights[0, 0]  # (queries, keys)
-print((100 * weights).round().astype(int))
-```
-
-Each row spreads its weight over the three real source positions, and the
-two padded columns receive exactly zero. None of this arises in the
-reversal model: `sample_batch` produces no padding, so the decoder keeps its
-default causal mask and the cross-attention runs unmasked.
-
-### Training and Decoding
-
-One encoder block, one decoder block, and a few hundred steps on freshly
-sampled batches suffice. Over 600 steps of 128 strings the model reads
-about a million source characters and never sees a string twice. The
-optimizer is `d2l.LMOptimizer` of :numref:`sec_gpt`, with its gradient
-clipping but without warmup or weight decay. Once the loss is near zero,
-Adam at a constant learning rate makes it jump now and then, to tenths of
-a nat or more, for about twenty steps. A jump near the end of the run
-leaves a model that fails on many strings. The cosine decay of the
-learning rate to zero prevents this.
-
-```{.python .input #encoders-decoders-training-and-decoding-1}
-%%tab pytorch
-seq2seq = EncoderDecoder(V + 1).to(device)
-optimizer = d2l.LMOptimizer(seq2seq, lr=1e-3, num_steps=600, warmup=0,
-                            weight_decay=0.0)
-losses = []
-for step in range(600):
-    src, dec_in, tgt = sample_batch(128, device)
-    logits = seq2seq(src, dec_in)
-    loss = F.cross_entropy(logits.flatten(0, 1), tgt.flatten())
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    losses.append(loss.detach())  # Stays on the device
-losses = torch.stack(losses).tolist()  # One transfer at the end
-print('loss at step 100/200/400/600: ' + '/'.join(
-    f'{sum(losses[k-20:k]) / 20:.3f}' for k in (100, 200, 400, 600)))
-```
-
-```{.python .input #encoders-decoders-training-and-decoding-1}
-%%tab jax
-seq2seq = EncoderDecoder(V + 1, rngs=nnx.Rngs(d2l.get_key()))
-optimizer = d2l.LMOptimizer(seq2seq, lr=1e-3, num_steps=600, warmup=0,
-                            weight_decay=0.0)
-
-@nnx.jit
-def s2s_step(model, optimizer, src, dec_in, tgt):
-    def loss_fn(model):
-        logits = model(src, dec_in)
-        return optax.softmax_cross_entropy_with_integer_labels(
-            logits.reshape(-1, logits.shape[-1]), tgt.reshape(-1)).mean()
-    loss, grads = nnx.value_and_grad(loss_fn)(model)
-    optimizer.update(model, grads)
-    return loss
-
-key, losses = d2l.get_key(), []
-for step in range(600):
-    key, sub = jax.random.split(key)
-    src, dec_in, tgt = sample_batch(128, sub)
-    losses.append(s2s_step(seq2seq, optimizer, src, dec_in, tgt))
-losses = jax.device_get(losses)  # One transfer at the end
-print('loss at step 100/200/400/600: ' + '/'.join(
-    f'{sum(losses[k-20:k]) / 20:.3f}' for k in (100, 200, 400, 600)))
-```
-
-Decoding runs the encoder once and the decoder autoregressively: feed
-`<bos>`, take the argmax, append, repeat. On a thousand fresh strings the
-model reverses essentially every one exactly.
-
-```{.python .input #encoders-decoders-training-and-decoding-2}
-%%tab pytorch
-seq2seq.eval()
-with torch.no_grad():
-    src, _, tgt = sample_batch(1000, device)
-    enc = seq2seq.encoder(src)  # the encoder runs once
-    out = torch.full((1000, T + 1), BOS, device=device)
-    for t in range(T):
-        logits = seq2seq.decode(out[:, :t + 1], enc)
-        out[:, t + 1] = logits[:, -1].argmax(-1)
-pred = out[:, 1:]
-print(f'exact match on 1000 fresh strings: '
-      f'{(pred == tgt).all(-1).float().mean():.3f}')
-print(f'source {to_str(src[0])!r} -> predicted {to_str(pred[0])!r}')
-```
-
-```{.python .input #encoders-decoders-training-and-decoding-2}
-%%tab jax
-seq2seq.eval()
-
-@nnx.jit
-def next_token(model, enc, buf, t):
-    return model.decode(buf, enc)[:, t].argmax(-1)
-
-src, _, tgt = sample_batch(1000, d2l.get_key())
-enc = seq2seq.encoder(src)  # the encoder runs once
-buf = jnp.full((1000, T + 1), BOS)
-for t in range(T):
-    buf = buf.at[:, t + 1].set(next_token(seq2seq, enc, buf, t))
-pred = buf[:, 1:]
-print(f'exact match on 1000 fresh strings: '
-      f'{(pred == tgt).all(-1).mean():.3f}')
-print(f'source {to_str(src[0])!r} -> predicted {to_str(pred[0])!r}')
-```
-
-:begin_tab:`jax`
-As in `generate` of :numref:`sec_gpt`, the decode loop writes into a
-buffer of fixed size, overwritten left to right. Every shape stays static,
-so the jitted step compiles once. The causal mask hides the
-not-yet-written positions from every query at or before $t$.
-:end_tab:
-
-### Reading the Alignment
-:label:`subsec_reading-alignment`
-
-A low loss shows that the model reverses strings, but not how. Because the
-task dictates which source position each target position needs, we can
-check whether cross-attention finds it. We run a batch through the model,
-read the cross-attention weights of the decoder block, of shape (batch,
-heads, target positions, source positions), and compare each target
-position's attention with that alignment. Besides the
-head average we report how much weight each head puts on the true source
-position, and we plot the average next to the head that puts the most
-weight there.
-
-```{.python .input #encoders-decoders-reading-the-alignment}
-%%tab pytorch
-with torch.no_grad():
-    src, dec_in, tgt = sample_batch(64, device)
-    seq2seq(src, dec_in)
-w = seq2seq.blks[0].cross_attention.attention_weights  # (64, 4, T, T)
-want = torch.arange(T - 1, -1, -1, device=device)  # row t -> column T-1-t
-avg = w.mean(1)                                     # average over heads
-cols = avg.argmax(-1)                  # the source column each row reads
-hit = (cols == want).float().mean()
-same = (cols == cols[0]).float().mean()  # as in the first string
-on_target = w[..., torch.arange(T), want].mean((0, 2))  # one per head
-print(f'head average: argmax on the true source position in '
-      f'{100 * hit:.0f}% of rows, mean weight there {on_target.mean():.2f}')
-print('weight on the true position, per head:',
-      ' '.join(f'{v:.2f}' for v in on_target))
-print(f'argmax in the same column for every string: {100 * same:.0f}% '
-      'of rows')
-h = int(on_target.argmax())
-d2l.show_heatmaps(torch.stack([avg[0], w[0, h]]).cpu()[None],
-                  xlabel='source position', ylabel='target position',
-                  titles=['head average', f'head {h}'], figsize=(6, 3),
-                  cmap='Blues')
-```
-
-```{.python .input #encoders-decoders-reading-the-alignment}
-%%tab jax
-src, dec_in, tgt = sample_batch(64, d2l.get_key())
-seq2seq(src, dec_in)
-w = seq2seq.blks[0].cross_attention.attention_weights  # (64, 4, T, T)
-want = jnp.arange(T - 1, -1, -1)                   # row t -> column T-1-t
-avg = w.mean(1)                                    # average over heads
-cols = avg.argmax(-1)                  # the source column each row reads
-hit = (cols == want).mean()
-same = (cols == cols[0]).mean()        # as in the first string
-on_target = w[..., jnp.arange(T), want].mean((0, 2))  # one per head
-print(f'head average: argmax on the true source position in '
-      f'{100 * hit:.0f}% of rows, mean weight there {on_target.mean():.2f}')
-print('weight on the true position, per head:',
-      ' '.join(f'{v:.2f}' for v in on_target))
-print(f'argmax in the same column for every string: {100 * same:.0f}% '
-      'of rows')
-h = int(on_target.argmax())
-d2l.show_heatmaps(jnp.stack([avg[0], w[0, h]])[None],
-                  xlabel='source position', ylabel='target position',
-                  titles=['head average', f'head {h}'], figsize=(6, 3),
-                  cmap='Blues')
-```
-
-Whether the maps show the anti-diagonal predicted by the third panel of
-:numref:`fig_three-wirings` depends on the run. In some runs they do:
-averaged over heads, the argmax lands on the true source position in
-almost every row, with most of the softmax mass concentrated there. In
-others it lands there in only about half of the rows or fewer, even in
-none, although the model still reverses essentially every string. The last line of the output
-shows what all runs share. Each target position reads mainly from one
-source column, the same for most strings and in many runs for nearly all,
-so the decoder does retrieve by position, as the task requires. But the encoder has a position table of its own, and its
-self-attention can move every letter to another position before the
-decoder reads it. Any such rearrangement, undone by the cross-attention,
-reverses the string just as well, and training settles on one of them at
-random. The alignment is then split between two attention layers, and the
-cross-attention map shows only the second half. As
-:numref:`sec_what-attention-computes` showed, an attention map says where a
-head looks, not what it computes. Even in this one-block model a single
-map can mislead, and with more depth and more heads the maps spread out
-further, as exercise :exref:`ex_encdec-depth-heads` shows.
+every padded batch it trains on.
 
 ## Cross-Attention as Interface
 
@@ -910,28 +1067,8 @@ class PerceiverEncoder(nnx.Module):
         return self.norm(Z)
 ```
 
-We read a sequence of 4,096 random feature vectors into $M = 64$ latents:
-
-```{.python .input #encoders-decoders-learned-queries-1}
-%%tab pytorch
-perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256).to(device)
-perceiver.eval()
-X = torch.randn(1, 4096, 256, device=device)
-print('input', tuple(X.shape), '-> latent summary',
-      tuple(perceiver(X).shape))
-```
-
-```{.python .input #encoders-decoders-learned-queries-1}
-%%tab jax
-perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256,
-                             rngs=nnx.Rngs(d2l.get_key()))
-perceiver.eval()
-X = jax.random.normal(d2l.get_key(), (1, 4096, 256))
-print('input', X.shape, '-> latent summary', perceiver(X).shape)
-```
-
-Whatever the input length, the output is $M = 64$ vectors. The input here
-is a raw feature sequence rather than token embeddings, because the
+Whatever the input length, the output is $M$ vectors. The input can be
+a raw feature sequence rather than token embeddings, because the
 encoder does not depend on what the input is: text, audio frames, image
 pixels, or a concatenation of all three.
 
@@ -956,6 +1093,8 @@ time of further calls.
 
 ```{.python .input #encoders-decoders-the-cost-curve}
 %%tab pytorch
+perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256).to(device)
+perceiver.eval()
 # The comparison: the same two blocks over the full input, O(N^2)
 full = nn.Sequential(*[d2l.TransformerBlock(256, num_heads=4)
                        for _ in range(2)]).to(device).eval()
@@ -975,8 +1114,10 @@ d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
 
 ```{.python .input #encoders-decoders-the-cost-curve}
 %%tab jax
-# The comparison: the same two blocks over the full input, O(N^2)
 rngs = nnx.Rngs(d2l.get_key())
+perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256, rngs=rngs)
+perceiver.eval()
+# The comparison: the same two blocks over the full input, O(N^2)
 full = nnx.Sequential(*[d2l.TransformerBlock(256, num_heads=4, rngs=rngs)
                         for _ in range(2)])
 full.eval()
@@ -993,6 +1134,18 @@ d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
          xscale='log', yscale='log',
          legend=['self-attention encoder', 'perceiver encoder'])
 ```
+
+<!-- WRITER: direct runs 2026-11-18 on an unshared card (the cell now builds the Perceiver itself;
+the shape cell is gone). PyTorch, three repeats agree within 0.1 ms: self-attention 1.0, 1.4, 4.4,
+16.1 ms (ratios 1.5, 3.0, 3.7), Perceiver 1.43 to 1.52 ms at every N; in the notebook run 1.9, 1.8,
+4.4, 15.9 against 2.7, 2.5, 2.7, 1.5. JAX: 0.22, 0.62, 2.71, 9.89 ms (ratios 2.8, 4.4, 3.65)
+against 0.19, 0.22, 0.16, 0.24. The stored 48 ms (PyTorch, N = 8192) came from a card shared with
+other notebooks; tools/runtime_env.py now gives this notebook a whole card. The flat Perceiver time
+is the fixed cost of launching its kernels (two blocks over 64 latents are microseconds of
+arithmetic), not O(M^2) work; at N = 1024 the two encoders are comparable for the same reason. The
+last doubling is 3.6 to 3.7 in both tabs: "approaching four". Gap at N = 8192: about 11 (PyTorch)
+and 40 (JAX). N = 16384 was tried and dropped: 17 GB peak in PyTorch, since the attention modules
+keep their weights. -->
 
 Each doubling of $N$ eventually multiplies the self-attention encoder's
 time by about four, the signature of an $N^2$ term taking over. The
@@ -1014,6 +1167,12 @@ cost of attention from the length of the input.
 
 ## Summary
 
+<!-- WRITER: "about a third less loss than positions with only left context" no longer matches the
+section: at matched training the two-sided interior is 1.44 to 1.79 against 2.07 to 2.14 for the
+left-only masked model, about 0.6 nats or 30% lower. The reversal sentence should say that every
+run reverses, that the map is the anti-diagonal in every run whose encoder has no self-attention,
+and in only some runs when it has. -->
+
 A transformer block supports encoder-only, decoder-only, and
 encoder--decoder architectures. Removing the causal mask produces an encoder
 that represents each token using context from both directions. In our
@@ -1031,6 +1190,13 @@ encoder--decoders for translation and speech, and decoder-only models for
 general autoregressive generation.
 
 ## Exercises
+
+<!-- WRITER: keep part 3 of exercise 4 (depth, heads, and readable maps). The body no longer
+composes the maps: in development runs the head-averaged composition recovered only part of the
+alignment (0.53 to 0.90 of rows where cross-attention alone gave 0.08 to 0.83) and lowered runs
+that were already exact, so the body shows the controlled pair instead (encoder with and without
+self-attention). The exercise question "When does the residual stream make this tracing fail?" now
+has a measured answer to aim at. -->
 
 1. **Prefix language model.** A *prefix language model* wires a single
    stack in a fourth way. The first $m$ positions, which hold the source,
@@ -1216,8 +1382,8 @@ Encoders, decoders, and cross-attention<br>
 
 - Fill the gap in `known as _he European`: the left context allows many
   words, the right context (`he European`) fixes the letter.
-- Measured on Wikipedia text: a masked byte costs about **half again** as
-  much with one side of context as with both sides.
+- Measured on Wikipedia bytes, same encoder and training: a masked byte
+  costs about **2.1 nats** with one side of context, **1.5** with both.
 - Translation and speech recognition read a whole input before they write
   a single output token.
 
@@ -1236,7 +1402,8 @@ separate input, and to read inputs too long for $N^2$ attention?
   second side of context is worth;
 - build a decoder block with cross-attention and compose its masks;
 - check a learned cross-attention map against a known alignment;
-- estimate the cost of reading $N$ inputs with $M$ learned queries.
+- estimate the cost of reading $N$ inputs with $M$ learned queries;
+- choose a wiring for a task.
 
 **Running example:** GPT-2 small is the decoder-only wiring; we build the
 other two at small scale.
@@ -1251,11 +1418,12 @@ other two at small scale.
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
-| Generation and the KV Cache | reuse keys and values while sampling |
+| The KV Cache | reuse keys and values while sampling |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | **Encoders, Decoders, and Cross-Attention** | **the other two wirings** |
 | Vision Transformer | images as token sequences |
-| Mixture of Experts | more parameters per FLOP |
 | Scaling Laws | loss against parameters, data, compute |
+| Mixture of Experts | more parameters per FLOP |
 :::
 
 ::: {.col .narrow}
@@ -1276,10 +1444,10 @@ these two choices separate BERT, GPT, and the 2017 translation model.
 
 ::: {.slide title="An Encoder Is a Stack of Blocks with No Mask" only="pytorch"}
 ```{.python #encoders-decoders-exercises-1}
-def forward(self, X):                     # X: (batch, n) token ids
+def forward(self, X, mask=None):          # X: (batch, n) token ids
     H = self.token_emb(X) + self.pos_emb(torch.arange(X.shape[1]))
     for blk in self.blks:                 # d2l.TransformerBlock
-        H = blk(H)                        # no mask: all see all
+        H = blk(H, mask)                  # default: all see all
     return self.norm(H)                   # (batch, n, d)
 ```
 
@@ -1289,10 +1457,10 @@ Positions still need a table: attention ignores order.
 
 ::: {.slide title="An Encoder Is a Stack of Blocks with No Mask" only="jax"}
 ```{.python #encoders-decoders-exercises-2}
-def __call__(self, X):                    # X: (batch, n) token ids
+def __call__(self, X, mask=None):         # X: (batch, n) token ids
     H = self.token_emb(X) + self.pos_emb(jnp.arange(X.shape[1]))
     for blk in self.blks:                 # d2l.TransformerBlock
-        H = blk(H)                        # no mask: all see all
+        H = blk(H, mask)                  # default: all see all
     return self.norm(H)                   # (batch, n, d)
 ```
 
@@ -1312,15 +1480,27 @@ Bytes of WikiText-103, windows of 64, 2,000 steps; unigram entropy 3.17
 nats.
 :::
 
-::: {.slide title="Both Sides of Context Cut the Loss by a Third"}
-Positions 0 and 63 of a window see one side only; position 63 sees what
-a causal model sees.
+::: {.slide title="The Loss Is Flat Inside the Window and Jumps at Its Edges"}
+Position 0 sees only its right side, position 63 only its left; 15% of
+all bytes are masked.
 
 @!encoders-decoders-what-the-second-side-is-worth-1
 
 ::: {.d2l-note .rule}
-The edges cost about 1.5 times the interior; the two edges cost about the
-same.
+The edges cost about 2.4 nats, the interior about 1.5; two or three bytes
+of the missing side bring the loss back to the interior level.
+:::
+:::
+
+::: {.slide title="Against a Causal Model on the Same Bytes, the Second Side Is Worth About 0.6 Nats"}
+Same encoder, objective, and 2,000 steps; only the attention mask differs.
+
+@!encoders-decoders-a-causal-control
+
+::: {.d2l-note .rule}
+Left-only training brings position 63 to about 2.1: the two-sided model's
+2.4 there is a case it rarely trains on. Next-byte training scores all 64
+positions and reaches about 1.4.
 :::
 :::
 
@@ -1404,6 +1584,29 @@ def __call__(self, X, enc, mask=None, cross_mask=None):
 Keys and values come from `enc`, the encoder output.
 :::
 
+::: {.slide title="300 Steps Reverse Essentially Every Fresh String"}
+One encoder block, one decoder block, batches of 128 fresh strings,
+cosine decay to zero:
+
+@!encoders-decoders-training-and-decoding-1
+
+Greedy decoding: the encoder runs once, the decoder once per token.
+
+@!encoders-decoders-training-and-decoding-2
+:::
+
+::: {.slide title="The Map Is the Anti-Diagonal Only When Cross-Attention Must Carry the Alignment"}
+Six runs each; "rows" counts target positions whose largest head-averaged
+weight is on the true source position.
+
+@!encoders-decoders-reading-the-alignment
+
+::: {.d2l-note .warn}
+Every run reverses. With self-attention the encoder can move letters
+first, and the map then shows only the second half of the alignment.
+:::
+:::
+
 ::: {.slide title="Three Masks from Two Primitives"}
 A padded batch, source lengths (3, 5), target lengths (3, 4):
 
@@ -1412,9 +1615,10 @@ A padded batch, source lengths (3, 5), target lengths (3, 4):
 - encoder self: source padding · decoder self: causal ∧ target padding ·
   cross: source padding.
 
-Cross-attention weights of sequence 0, in percent:
-
-@!encoders-decoders-assembling-the-masks-1
+::: {.d2l-note .rule}
+Masks combine by logical AND and broadcast over heads; the same boolean
+arrays feed the fused attention kernels.
+:::
 :::
 
 ::: {.slide title="Check: Which Mask Does Cross-Attention Need?"}
@@ -1430,24 +1634,6 @@ from its own future; every real source token is known before decoding
 starts, but padded source positions must receive zero weight.
 :::
 :::
-:::
-
-::: {.slide title="600 Steps Reverse Nearly Every String"}
-One encoder block, one decoder block, batches of 128 fresh strings:
-
-@!encoders-decoders-training-and-decoding-1
-
-Greedy decoding: the encoder runs once, the decoder once per token.
-
-@!encoders-decoders-training-and-decoding-2
-:::
-
-::: {.slide title="The Map Is the Anti-Diagonal or a Rearrangement of It"}
-@!encoders-decoders-reading-the-alignment
-
-Each row reads mainly one source column, the same for most strings. If
-the encoder has moved the letters first, the map shows a rearrangement of
-the anti-diagonal.
 :::
 
 ::: {.slide title="Learned Queries Read N Inputs at Cost O(MN)"}
@@ -1467,9 +1653,8 @@ def forward(self, X):                     # X: (batch, N, d)
     return self.norm(Z)                   # (batch, M, d)
 ```
 
-@!encoders-decoders-learned-queries-1
-
-Output queries can set the output shape too (Perceiver IO).
+Whatever $N$, the output is $M$ vectors. Output queries can set the
+output shape too (Perceiver IO).
 :::
 
 ::: {.slide title="A Perceiver Is Latents Plus One Cross-Attention" only="jax"}
@@ -1483,9 +1668,8 @@ def __call__(self, X):                    # X: (batch, N, d)
     return self.norm(Z)                   # (batch, M, d)
 ```
 
-@!encoders-decoders-learned-queries-1
-
-Output queries can set the output shape too (Perceiver IO).
+Whatever $N$, the output is $M$ vectors. Output queries can set the
+output shape too (Perceiver IO).
 :::
 
 ::: {.slide title="Check: Count the Scores"}
@@ -1504,12 +1688,25 @@ $M^2 = 4{,}096$ per latent layer.
 :::
 :::
 
-::: {.slide title="Doubling N Quadruples Self-Attention Time"}
+::: {.slide title="Self-Attention Time Approaches 4× per Doubling; the Perceiver's Stays Flat"}
 @!encoders-decoders-the-cost-curve
 
-Self-attention: about $4\times$ per doubling. The Perceiver grows far more
-slowly and is over an order of magnitude faster at $N = 8192$; at
-$N = 1024$ the two are comparable.
+At small $N$ both encoders pay mostly the fixed cost of launching their
+kernels. From $N = 4096$ to $8192$ self-attention grows about $3.6\times$;
+at $N = 8192$ the Perceiver is over $10\times$ faster.
+:::
+
+::: {.slide title="Decoder-Only Is the Default for Text Today"}
+| wiring | outputs | at inference | default for |
+|---|---|---|---|
+| encoder | a vector per token, or pooled | one pass | embeddings for retrieval, classification |
+| encoder--decoder | a sequence from a separate input | source encoded once; its keys and values reused | speech recognition (Whisper) |
+| decoder | a continuation of the prompt | prompt cached once, then a token per step | translation, summarization, chat: source in the prompt |
+
+::: {.d2l-note .rule}
+Next-token training scores every position, masked training about 15%; one
+decoder stack serves pretraining and every task.
+:::
 :::
 
 ::: {.slide title="Wrap-up"}
@@ -1517,13 +1714,15 @@ $N = 1024$ the two are comparable.
 
 - One block, three wirings: no mask, causal mask, or both joined by
   cross-attention.
-- Masked prediction trains the encoder; a masked byte costs about a third
-  less with both sides of context than with one.
-- On reversal, the encoder--decoder reverses nearly every fresh string;
-  its cross-attention reads by position, along the anti-diagonal or a
-  rearrangement of it made by the encoder.
+- Masked prediction trains the encoder; with the same training a masked
+  byte costs about 1.5 nats with both sides of context, 2.1 with one.
+- On reversal, every run of the encoder--decoder reverses essentially
+  every fresh string; its cross-attention map is the anti-diagonal whenever the encoder
+  cannot move letters first.
 - $M$ learned queries read $N$ inputs at $O(MN)$; at $N = 8192$ the
   Perceiver is over $10\times$ faster than full self-attention.
+- Decoder-only is the default for text; encoders serve embeddings,
+  encoder--decoders inputs of another kind, such as speech.
 
 **Next:** the Vision Transformer, the encoder-only wiring over image
 patches.

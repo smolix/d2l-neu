@@ -169,8 +169,8 @@ copies that each one replaces.
 | `Benchmark(f, warmup, repeats)`, which waits for the device before and after timing (PyTorch also takes `devices=`), and `peak_memory(f, *args)` | ch. 5, asynchronous execution in `gpus-devices-memory` | about ten timers with conflicting semantics in ch. 10–13 |
 | `num_params`, `param_bytes` | ch. 5 `parameters-state-memory` | about twenty inline counts |
 | `EMA` (PyTorch `AveragedModel`, JAX `optax.ema`) | ch. 7 `training-recipes` | three designs, about twelve copies |
-| `lm_perplexity(model, batches)` | ch. 9 `adam`, next to `train_steps` | five `val_ppl`s that disagree across tabs |
-| Shared test models (`TinyLM`, `FashionCNN`) with identical initialization in both tabs; a step-based training loop `train_steps(model, data, optimizer, num_steps, *, stop=None)` on the mean cross-entropy, with labels `-100` left out; the readers `final_loss`, `evaluate_accuracy` and `lr_sweep` | ch. 9 `adam`, section "TinyLM and FashionCNN" (`subsec_tinylm`) | about eleven training loops and eleven evaluators per framework in ch. 9–17 |
+| `lm_perplexity(model, batches)` | ch. 9 `test-models`, next to `train_steps` | five `val_ppl`s that disagree across tabs |
+| Shared test models (`TinyLM`, `FashionCNN`) with identical initialization in both tabs; a step-based training loop `train_steps(model, data, optimizer, num_steps, *, stop=None)` on the mean cross-entropy, with labels `-100` left out; the readers `final_loss`, `smooth`, `steps_to_reach`, `evaluate_accuracy` and `lr_sweep` | ch. 9 `test-models`, "Two Test Models" (`sec_test_models`) | about eleven training loops and eleven evaluators per framework in ch. 9–17 |
 | One 4-D multi-head attention, `causal_mask`, `padding_mask`, `rope` | ch. 10 | two attention APIs, five `rope`s, five decoder variants |
 
 The Advanced chapters use the `Trainer` where epochs and a `DataModule` fit

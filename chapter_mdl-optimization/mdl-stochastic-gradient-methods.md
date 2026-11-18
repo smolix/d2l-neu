@@ -106,7 +106,7 @@ change with $k$. In the analysis, a fresh minibatch is drawn at every step
 and its $b$ indices are independent and uniform on $\{1, \ldots, n\}$, that
 is, drawn with replacement. Training loops usually shuffle the data and draw
 without replacement, which multiplies the variance below by $(n-b)/(n-1)$, a
-factor close to one when $b \ll n$ (:numref:`sec_sgd` derives it).
+factor close to one when $b \ll n$ (:numref:`sec_sgd` states it).
 
 ### Unbiasedness and the $1/b$ Law
 

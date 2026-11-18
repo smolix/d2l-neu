@@ -298,7 +298,7 @@ print(x)
 ```
 
 Each row repeats its first $L$ tokens. Training uses `d2l.train_steps` from
-:numref:`sec_adam`, which takes a fixed number of optimizer steps on the
+:numref:`sec_test_models`, which takes a fixed number of optimizer steps on the
 mean next-token cross-entropy, here with Adam at learning rate $10^{-3}$. A
 small data module supplies it with an endless stream of fresh 64-token
 minibatches, so the model never sees the same pattern twice. Every 50

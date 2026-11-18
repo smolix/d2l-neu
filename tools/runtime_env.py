@@ -326,6 +326,10 @@ HEAVY_GPU_NOTEBOOKS = {
     # (f32[500,64,64,64] activations) and OOMs/fails XLA autotuning at the
     # 1-slot (~7.5 GiB) arena, deterministically on both attempts.
     ("jax", "chapter_generative-adversarial-networks/dcgan.ipynb"): 2,
+    # 9.12's throughput cell takes one gradient of a four-block TinyLM at a
+    # batch of 1,024 windows: XLA asks for one 5.75 GiB buffer, which a
+    # 1-slot (~7.5 GiB) arena cannot hold after training. Run exclusive.
+    ("jax", "chapter_optimization/practice.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/ssd.ipynb"): 2,
     # fine-tuning: ResNet18 features at 224×224, batch=128, XLA-fused
     # train step allocates ~9.9 GiB in one go and OOMs the 8 GB budget.

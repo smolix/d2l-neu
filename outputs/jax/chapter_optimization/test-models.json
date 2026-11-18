@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/test-models.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:8756e3475ae4b93fee24bfd2e1fc4d7c37e57df968a9ec9bf6536f3097c6e14e",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "test-models-two-test-models-1": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "test-models-two-test-models-2": {
+      "code_fingerprint": "sha256:2da35024f2592e5f4b6f10ba65782b88d93eac00bde7cbc2f99f3aa1f1538288",
+      "kind": "text",
+      "outputs": []
+    },
+    "adam-the-language-model-1": {
+      "code_fingerprint": "sha256:1ec604f888955b765f04e18f907c35637c4d25dcd9fd76ec1f48c36f20288ed0",
+      "kind": "text",
+      "outputs": []
+    },
+    "adam-a-tiny-language-model-1": {
+      "code_fingerprint": "sha256:66ae17f4e1d1c1d977da10c54ee4576969669a70cbf6c38850d7b587788386a1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "269,630,498 training bytes, 1,144,248 validation bytes\n = Valkyria Chronicles III =\n Senjō no Valkyria 3 : Unrecorded Chronicles ( Japanese : 戦場のヴァルキュリア3 ,\nlit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria\nChronicles III outside Japan , is a tactical role @-@ playing video game\ndeveloped by Sega and Media.Vis\n"
+        }
+      ]
+    },
+    "adam-a-tiny-language-model-2": {
+      "code_fingerprint": "sha256:6e880fd5ed9f8a71b3e357502bfbceef6811c40715f96d6e253d59e311df7667",
+      "kind": "text",
+      "outputs": []
+    },
+    "adam-a-tiny-language-model-3": {
+      "code_fingerprint": "sha256:e06048d851a077b36f2b9b2dcdca016c316873ef6b72c062e83d6142a57ceac8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "parameter              shape            count\nblks.0.mlp1.bias       (512,)             512\nblks.0.mlp1.kernel     (128, 512)       65536\nblks.0.mlp2.bias       (128,)             128\nblks.0.mlp2.kernel     (512, 128)       65536\nblks.0.norm1.bias      (128,)             128\nblks.0.norm1.scale     (128,)             128\nblks.0.norm2.bias      (128,)             128\nblks.0.norm2.scale     (128,)             128\nblks.0.proj.bias       (128,)             128\nblks.0.proj.kernel     (128, 128)       16384\nblks.0.qkv.bias        (384,)             384\nblks.0.qkv.kernel      (128, 384)       49152\nblks.1.mlp1.bias       (512,)             512\nblks.1.mlp1.kernel     (128, 512)       65536\nblks.1.mlp2.bias       (128,)             128\nblks.1.mlp2.kernel     (512, 128)       65536\nblks.1.norm1.bias      (128,)             128\nblks.1.norm1.scale     (128,)             128\nblks.1.norm2.bias      (128,)             128\nblks.1.norm2.scale     (128,)             128\nblks.1.proj.bias       (128,)             128\nblks.1.proj.kernel     (128, 128)       16384\nblks.1.qkv.bias        (384,)             384\nblks.1.qkv.kernel      (128, 384)       49152\nhead.bias              (256,)             256\nhead.kernel            (128, 256)       32768\nnorm.bias              (128,)             128\nnorm.scale             (128,)             128\npos_emb.embedding      (64, 128)         8192\ntoken_emb.embedding    (256, 128)       32768\n                           embeddings   40960\n                             matrices  425984\n                              vectors    3840\n                                total  470784\n"
+        }
+      ]
+    },
+    "adam-the-same-race-on-a-cnn-1": {
+      "code_fingerprint": "sha256:8d7c82e94ca39b9cd00e9f91037c9d34bde0e87f6fad3fae3e8c29ad0f6bd084",
+      "kind": "text",
+      "outputs": []
+    },
+    "test-models-the-image-classifier-1": {
+      "code_fingerprint": "sha256:a9af4337480fdeb4298f5a5914e483f9aefff0559719e9dcd39198b2ddab6e04",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "421,642 parameters\n"
+        }
+      ]
+    },
+    "adam-the-image-classifier-1": {
+      "code_fingerprint": "sha256:424f90f2226342f0eacca139f9849e6122e9119b08636035eb72f9c1df35db7d",
+      "kind": "text",
+      "outputs": []
+    },
+    "adam-a-tiny-language-model-4": {
+      "code_fingerprint": "sha256:1f7e8251709899c19505003896234809ca96dc267b7863574f38f6339fd237fd",
+      "kind": "text",
+      "outputs": []
+    },
+    "adam-training-for-a-fixed-number-of-steps-1": {
+      "code_fingerprint": "sha256:0f8d20ecb1c69358fc38c231582daa9a67549100c9228dd377712b6df41cbc6b",
+      "kind": "text",
+      "outputs": []
+    },
+    "adam-a-tiny-language-model-5": {
+      "code_fingerprint": "sha256:efbbc008e18135a7559bb0d4691c939f38f249ccd23a53233e11a7cfa6942a9d",
+      "kind": "text",
+      "outputs": []
+    },
+    "adam-the-race-on-the-language-model-1": {
+      "code_fingerprint": "sha256:9df61fbab03b02855616f9450748dbdc9b6103ccbe2938157bcc0ec2fa2ad54a",
+      "kind": "text",
+      "outputs": []
+    },
+    "test-models-a-first-run-with-minibatch-sgd-1": {
+      "code_fingerprint": "sha256:283667d8b8e30379aa61c7bb1c883b2f6bc2b3c21760f1aa69ee0c6009e49a02",
+      "kind": "text",
+      "outputs": []
+    },
+    "test-models-a-first-run-with-minibatch-sgd-2": {
+      "code_fingerprint": "sha256:490ee409e242dc162543db1bdc0bec6b4e7ce8ff069dc1ec6d205f79053c0342",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.1: final loss 2.484\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.5: final loss 2.127\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 2.5: final loss inf\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "test-models/test-models-a-first-run-with-minibatch-sgd-2-1.svg",
+          "bytes": 91156,
+          "sha256": "sha256:d2e50146e317bf7903b6a9da36fbb8c8544e9890e95fee127fa50c6479157896"
+        }
+      ]
+    },
+    "test-models-a-first-run-with-minibatch-sgd-3": {
+      "code_fingerprint": "sha256:7cebd7ba1f1964a569a065ef91b3b4678b27fd6c67d9b76f3a6f2e58c6ca6e6b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.3: final loss 0.222, test accuracy 0.896\n"
+        }
+      ]
+    },
+    "test-models-comparing-two-runs-1": {
+      "code_fingerprint": "sha256:8f6d656fafa588ce152a605bc946a82c5aa0d0358ca8b7edcf5a88cd99d19ca8",
+      "kind": "text",
+      "outputs": []
+    },
+    "test-models-comparing-two-runs-2": {
+      "code_fingerprint": "sha256:298a2563c86ee1aaaba626adc4497b7513e36729ae8bb93e016b19e0089b6867",
+      "kind": "text",
+      "outputs": []
+    },
+    "test-models-comparing-two-runs-3": {
+      "code_fingerprint": "sha256:d15760ffc208e78a4d3871a837a5e36ea8402bcbba7f0fa63dbb842caba98c75",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "TinyLM, training loss      1.586 1.586 1.595 1.586 1.582   range 0.013\nTinyLM, validation loss    1.565 1.565 1.566 1.563 1.565   range 0.003\nFashionCNN, training loss  0.227 0.231 0.228 0.224 0.224   range 0.007\nFashionCNN, test accuracy  0.902 0.896 0.901 0.901 0.901   range 0.006\n"
+        }
+      ]
+    }
+  }
+}

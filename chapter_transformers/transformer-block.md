@@ -698,7 +698,7 @@ articles introduced in :numref:`subsec_tinylm`. Both runs use the same
 model size, optimizer, learning rate, and budget of 600 steps. Only the
 `act` flag differs, and the parameter counts match to a tenth of a percent. Each line
 reports the validation loss after 200, 400, and 600 steps, measured on the
-held-out articles with `d2l.lm_perplexity` (:numref:`sec_adam`), whose
+held-out articles with `d2l.lm_perplexity` (:numref:`sec_test_models`), whose
 logarithm is the mean loss in nats per byte.
 
 Two shorthands keep the experiment the same in both frameworks: `charlm`

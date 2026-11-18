@@ -617,7 +617,7 @@ $\eta < 2/\lambda_{\max}$. On a network this is not enough, because the
 Hessian changes along the run. Under full-batch gradient descent the
 sharpness typically rises until it reaches about $2/\eta$ and then stays
 there, while the loss keeps falling over the run but rises on many single
-steps :cite:`Cohen.Kaur.Li.ea.2021`. :numref:`sec_optimization-intro` runs
+steps :cite:`Cohen.Kaur.Li.ea.2021`. :numref:`subsec_gd-edge-of-stability` runs
 the experiment on a small $\tanh$ network and discusses it. Here we ask
 only how much of it the quadratic model explains.
 
@@ -1129,7 +1129,7 @@ minimum (:numref:`sec_mdl-convexity`), and what noisy gradients cost
        and only if $0 < \eta\lambda < 2 + 2\beta$. Derive the corresponding
        interval for Nesterov's update :eqref:`eq_mdl-opt-nesterov`.
     1. Modify the edge-of-stability experiment of
-       :numref:`sec_optimization-intro` (cell
+       :numref:`subsec_gd-edge-of-stability` (cell
        `#optimization-intro-the-edge-of-stability-1`) to train with heavy ball and with Nesterov's update for
        $\beta \in \{0.25, 0.5\}$, choosing for each run a step size whose
        predicted threshold lies between $5$ and $12$. Track the sharpness

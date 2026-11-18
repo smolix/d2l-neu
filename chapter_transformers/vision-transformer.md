@@ -113,14 +113,15 @@ class PatchEmbedding(nnx.Module):  #@save
         return X.reshape(X.shape[0], -1, X.shape[-1])
 ```
 
+<!-- WRITER: the shape check now uses one channel, as the model does (VIT-2): "four $96 \times 96$ grayscale images". -->
 A minibatch of four $96 \times 96$ color images, cut into $16 \times 16$
 patches, should become four sequences of 36 tokens of width 512:
 
 ```{.python .input #vision-transformer-patches-as-tokens-2}
 %%tab pytorch
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
-patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
-X = torch.zeros(batch_size, 3, img_size, img_size)
+patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens, num_channels=1)
+X = torch.zeros(batch_size, 1, img_size, img_size)
 d2l.check_shape(patch_emb(X),
                 (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
@@ -128,9 +129,9 @@ d2l.check_shape(patch_emb(X),
 ```{.python .input #vision-transformer-patches-as-tokens-2}
 %%tab jax
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
-patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens,
+patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens, num_channels=1,
                            rngs=nnx.Rngs(d2l.get_key()))
-X = jnp.zeros((batch_size, img_size, img_size, 3))
+X = jnp.zeros((batch_size, img_size, img_size, 1))
 d2l.check_shape(patch_emb(X),
                 (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
@@ -203,23 +204,9 @@ class ViTBlock(d2l.TransformerBlock):  #@save
                 d2l.Linear(mlp_num_hiddens, num_hiddens, rngs=rngs)))
 ```
 
+<!-- WRITER: the ViTBlock shape-check cell is cut (structure 3.6 item 2; the first run's parameter count is the check). The sentence "As with every transformer block, the output shape equals the input shape, so the blocks can be stacked" lost its cell; fold it into the paragraph above or drop it. -->
 As with every transformer block, the output shape equals the input shape,
-so the blocks can be stacked:
-
-```{.python .input #vision-transformer-the-vision-transformer-block-2}
-%%tab pytorch
-X = torch.ones(2, 100, 24)
-encoder_blk = ViTBlock(24, 48, 8, 0.5)
-encoder_blk.eval()
-d2l.check_shape(encoder_blk(X), X.shape)
-```
-
-```{.python .input #vision-transformer-the-vision-transformer-block-2}
-%%tab jax
-X = jnp.ones((2, 100, 24))
-encoder_blk = ViTBlock(24, 48, 8, 0.5, rngs=nnx.Rngs(d2l.get_key()))
-d2l.check_shape(nnx.view(encoder_blk, deterministic=True)(X), X.shape)
-```
+so the blocks can be stacked.
 
 ### The Class Token and Position Embeddings
 
@@ -414,12 +401,16 @@ hparams = dict(img_size=96, patch_size=16, num_hiddens=512,
 
 ```{.python .input #vision-transformer-a-first-run-3}
 %%tab pytorch
-model = ViT(**hparams, lr=3e-4)
+vit = lambda: ViT(**hparams, lr=3e-4)  # A fresh model at the tuned rate
+model = vit()
+pos_init = model.pos_embedding[0, 1:].detach().clone()  # The initial noise
 ```
 
 ```{.python .input #vision-transformer-a-first-run-3}
 %%tab jax
-model = ViT(**hparams, lr=3e-4, rngs=nnx.Rngs(d2l.get_key()))
+vit = lambda: ViT(**hparams, lr=3e-4, rngs=nnx.Rngs(d2l.get_key()))
+model = vit()  # A fresh model at the tuned rate
+pos_init = model.pos_embedding[0, 1:]  # The initial noise, a new array
 ```
 
 ```{.python .input #vision-transformer-a-first-run-2}
@@ -436,8 +427,92 @@ The ViT reaches a validation accuracy of about 90%. Before we ask whether
 that is good for a model of its size, we look at what it has learned about
 the position of its patches.
 
-### Grid Structure in the Learned Embeddings
+### Does the ViT Use Position?
 :label:`subsec_vit-pos-grid`
+
+<!-- WRITER: new subsection opening (structure 3.6 item 5, VIT-7/VIT-8). The direct test of whether the trained model uses the layout is functional: rearrange the $16 \times 16$ blocks of every validation image by one fixed random permutation of the 36 grid cells (the model's positions are untouched, only the content moves) and measure the accuracy. `shuffle_patches` does the rearrangement; five permutations give a range. -->
+
+```{.python .input #vision-transformer-does-the-vit-use-position-1}
+%%tab pytorch
+def shuffle_patches(X, perm, p=16):
+    """Move the p x p blocks of images X: block perm[k] goes to grid cell k."""
+    n, c, h, w = X.shape
+    B = X.reshape(n, c, h // p, p, w // p, p).transpose(3, 4)  # Grid of blocks
+    B = B.reshape(n, c, -1, p, p)[:, :, perm]  # Blocks in raster order, moved
+    B = B.reshape(n, c, h // p, w // p, p, p).transpose(3, 4)
+    return B.reshape(X.shape)
+
+def shuffled_accuracy(model, data, perm):
+    """Validation accuracy on images whose blocks are moved by perm."""
+    return d2l.evaluate_accuracy(model, ((shuffle_patches(X, perm), y)
+                                         for X, y in data.val_dataloader()))
+```
+
+```{.python .input #vision-transformer-does-the-vit-use-position-1}
+%%tab jax
+def shuffle_patches(X, perm, p=16):
+    """Move the p x p blocks of images X: block perm[k] goes to grid cell k."""
+    n, h, w, c = X.shape
+    B = X.reshape(n, h // p, p, w // p, p, c).swapaxes(2, 3)  # Grid of blocks
+    B = B.reshape(n, -1, p, p, c)[:, perm]  # Blocks in raster order, moved
+    B = B.reshape(n, h // p, w // p, p, p, c).swapaxes(2, 3)
+    return B.reshape(X.shape)
+
+def shuffled_accuracy(model, data, perm):
+    """Validation accuracy on images whose blocks are moved by perm."""
+    return d2l.evaluate_accuracy(model, ((shuffle_patches(X, perm), y)
+                                         for X, y in data.val_dataloader()))
+```
+
+```{.python .input #vision-transformer-does-the-vit-use-position-2}
+%%tab pytorch, jax
+rng = np.random.default_rng(0)
+perms = [rng.permutation(36) for _ in range(5)]  # Five fixed shuffles
+accs = [shuffled_accuracy(model, data, perm) for perm in perms]
+print(f'trained ViT: {vit_acc:.3f} as is, '
+      f'{min(accs):.2f} to {max(accs):.2f} with its patches shuffled')
+```
+
+<!-- WRITER: read the shuffle numbers here (dev runs, three trained models per tab, and the final direct run of the notebook: 0.887 to 0.893 as is, 0.20 to 0.48 under the five shuffles; final run 0.889 as is, 0.20 to 0.42 PyTorch, 0.21 to 0.44 JAX; the shuffled accuracy varies by model and by permutation, so quote "below one half", not a digit). Then the second arm: a model that never sees a position at all. Its table is zero and stays zero during training (PyTorch: no gradient, so AdamW skips it; JAX: a plain `nnx.Variable` instead of an `nnx.Param`, and the trainer differentiates and updates Params only). By the proposition of `subsec_pos-ignores-order` its logits do not change under any shuffle, a prediction the reader can make before the cell prints it. Each arm is trained twice from fresh weights (the first run counts as one), so each has a run-to-run range. -->
+
+```{.python .input #vision-transformer-does-the-vit-use-position-3}
+%%tab pytorch
+def zero_positions(model):
+    """Set the position table to zero and keep it out of training."""
+    model.pos_embedding.data.zero_()
+    model.pos_embedding.requires_grad_(False)  # No gradient: AdamW skips it
+    return model
+```
+
+```{.python .input #vision-transformer-does-the-vit-use-position-3}
+%%tab jax
+def zero_positions(model):
+    """Set the position table to zero and keep it out of training."""
+    # The trainer differentiates and updates nnx.Param only; a plain
+    # Variable stays as it is
+    model.pos_embedding = nnx.Variable(jnp.zeros_like(model.pos_embedding))
+    return model
+```
+
+```{.python .input #vision-transformer-does-the-vit-use-position-4}
+%%tab pytorch, jax
+def final_accuracy(model, data):
+    """Validation accuracy after the ten epochs of the first run."""
+    trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+    trainer.board.display = False  # No progress plot for the repeats
+    trainer.fit(model, data)
+    return trainer.history['val_acc'][-1]
+
+learned_runs = [vit_acc, final_accuracy(vit(), data)]
+zero_model = zero_positions(vit())
+zero_runs = [final_accuracy(zero_model, data),
+             final_accuracy(zero_positions(vit()), data)]
+print('learned positions:', ', '.join(f'{a:.3f}' for a in learned_runs))
+print('zero positions:   ', ', '.join(f'{a:.3f}' for a in zero_runs),
+      f'(shuffled: {shuffled_accuracy(zero_model, data, perms[0]):.3f})')
+```
+
+<!-- WRITER: read the two arms (final direct run: learned 0.889, 0.893 PyTorch and 0.889, 0.892 JAX; zero 0.875, 0.875 PyTorch and 0.875, 0.876 JAX, shuffled 0.875 in both. Dev runs, three per arm and tab: learned 0.890 to 0.891 PyTorch, 0.887 to 0.892 JAX; zero 0.873 to 0.875 PyTorch, 0.874 to 0.876 JAX. Over all runs the gap is 1.2 to 1.8 points, at least twice the widest range within an arm (0.5 points) and in most pairs five to ten times it; the zero model's shuffled accuracy equals its unshuffled one to the printed digit). The lesson for the prose: shuffling the patches costs the trained ViT 40 to 65 points, so it does use the layout; but a model that never knew the layout loses only about 1.5 points, so at this scale most of the accuracy comes from what the patches contain, not where they sit. The grid curve below is now the second, shorter look. -->
 
 The position embeddings started as noise, and nothing in the training
 signal ever names a row or a column. In fully trained ViTs they reflect the
@@ -476,9 +551,15 @@ S = d2l.sinusoidal_encoding(6, 256)      # 1-D codes of the 6 rows/columns
 rows, cols = torch.meshgrid(torch.arange(6), torch.arange(6), indexing='ij')
 fixed = torch.cat((S[rows.flatten()], S[cols.flatten()]), 1)  # (36, 512)
 learned = model.pos_embedding[0, 1:].detach().cpu()  # Drop the cls slot
-d2l.plot(list(range(1, 6)), [grid_similarity(learned), grid_similarity(fixed)],
-         'grid distance', 'mean cosine similarity',
-         legend=['learned', '2-D sinusoidal'])
+noise = torch.randn(36, 512)
+curves = {'learned': grid_similarity(learned),
+          'learned - initial': grid_similarity(learned - pos_init),
+          '2-D sinusoidal': grid_similarity(fixed),
+          'random': grid_similarity(noise)}
+for name, curve in curves.items():
+    print(f'{name:>17}:', '  '.join(f'{c:+.2f}' for c in curve))
+d2l.plot(list(range(1, 6)), list(curves.values())[:3], 'grid distance',
+         'mean cosine similarity', legend=list(curves)[:3])
 ```
 
 ```{.python .input #vision-transformer-do-the-position-embeddings-discover-the-grid}
@@ -497,11 +578,18 @@ S = d2l.sinusoidal_encoding(6, 256)      # 1-D codes of the 6 rows/columns
 rows, cols = jnp.meshgrid(jnp.arange(6), jnp.arange(6), indexing='ij')
 fixed = jnp.concatenate((S[rows.flatten()], S[cols.flatten()]), 1)  # (36, 512)
 learned = model.pos_embedding[0, 1:]     # Drop the cls slot
-d2l.plot(list(range(1, 6)), [grid_similarity(learned), grid_similarity(fixed)],
-         'grid distance', 'mean cosine similarity',
-         legend=['learned', '2-D sinusoidal'])
+noise = jax.random.normal(d2l.get_key(), (36, 512))
+curves = {'learned': grid_similarity(learned),
+          'learned - initial': grid_similarity(learned - pos_init),
+          '2-D sinusoidal': grid_similarity(fixed),
+          'random': grid_similarity(noise)}
+for name, curve in curves.items():
+    print(f'{name:>17}:', '  '.join(f'{c:+.2f}' for c in curve))
+d2l.plot(list(range(1, 6)), list(curves.values())[:3], 'grid distance',
+         'mean cosine similarity', legend=list(curves)[:3])
 ```
 
+<!-- WRITER: the cell now prints four curves (values at grid distance 1 to 5) and plots the first three. Dev runs, three per tab: learned +0.04 to +0.06, -0.06 to -0.08, -0.04 to -0.06, -0.04 to -0.06, +0.03 to +0.06; learned - initial +0.09 to +0.12, -0.08 to -0.10, -0.06 to -0.08, -0.03 to -0.07, +0.12 to +0.17 (the update at full scale: neighbors moved alike by about a tenth, and the opposite-edge pairs at distance 5 moved alike even more, the border patches that mostly see background); 2-D sinusoidal +0.76, +0.21, -0.30, -0.46, -0.36; random flat at -0.03 (within about 0.01). Delete "only a trace", "an exercise tests whether the small dip is more than chance" and "teach the ViT little about its own geometry"; what the model knows is read from the shuffle test above, not from these cosines. -->
 The fixed code's curve falls from about 0.76 for neighboring patches to
 between $-0.3$ and $-0.5$ at distances 3 to 5, because by construction
 patches in nearby rows and columns get similar codes. The learned
@@ -626,6 +714,7 @@ d2l.plot(list(range(1, 11)), [vit_history['val_acc'], cnn_history['val_acc']],
          'epoch', 'validation accuracy', legend=['ViT', 'CNN'])
 ```
 
+<!-- WRITER: the sentence "the position embeddings of :numref:`subsec_vit-pos-grid` show how much of the spatial layout the ViT has inferred" is replaced by the shuffle numbers (VIT-10, structure 3.6 item 6). Yardstick for this comparison: the two ViT runs of `learned_runs` differ by 0.3 to 0.4 points (final run 0.889/0.893 PyTorch, 0.889/0.892 JAX; all runs 0.887 to 0.893), against a gap of about 5 points (CNN 0.94 in both tabs). -->
 At the same parameter count, data, recipe, and number of epochs, and at
 about the same computational cost, the CNN reaches about 94%, four to
 five points ahead of the ViT. The experiment measures the two models under one
@@ -892,7 +981,7 @@ or reverse such gaps.
 [Dive into Deep Learning · §12.5]{.kicker}
 
 Vision transformer<br>
-**patches as tokens · class token and position embeddings · registers · a matched comparison with a CNN**
+**patches as tokens · class token and position embeddings · does it use position? · a matched comparison with a CNN**
 :::
 :::
 
@@ -917,7 +1006,8 @@ How do we turn an image into a short sequence, and what does the model lose?
 
 - turn an image into tokens with one strided convolution;
 - count the tokens, parameters, and FLOPs of a ViT;
-- explain the class token, the position embeddings, and register tokens;
+- explain the class token and the position embeddings, and test whether a
+  trained ViT uses the layout of its patches;
 - train a ViT with AdamW, warmup, and cosine decay;
 - read a ViT-versus-CNN comparison matched in parameters, FLOPs, data,
   and recipe.
@@ -935,11 +1025,12 @@ patches, a 6.5M-parameter ViT against a 6.5M-parameter CNN.
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
-| Generation and the KV Cache | reuse keys and values while sampling |
+| The KV Cache | reuse keys and values while sampling |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | **Vision Transformer** | **images as token sequences** |
-| Mixture of Experts | more parameters per FLOP |
 | Scaling Laws | loss against parameters, data, compute |
+| Mixture of Experts | more parameters per FLOP |
 :::
 
 ::: {.col .narrow}
@@ -1071,17 +1162,6 @@ rearrangement of its patches look the same to the head.
 With the learned table, the grid must be discovered from data.
 :::
 
-::: {.slide title="Large ViTs Take Over Background Patches; Registers Give Them Storage"}
-- ViT-Large and above, trained long: about 2% of patch tokens get output
-  norms about 10× the rest and bright spots in attention maps.
-- They hold global, not local, information: storage for computation.
-- The vision counterpart of attention sinks in language models.
-- **Registers:** a few extra learned tokens, discarded at the output. One
-  removes the artifacts; four improve dense tasks at under 2% extra FLOPs.
-
-[Darcet et al., ICLR 2024]{.small}
-:::
-
 ::: {.slide title="A Transformer Needs AdamW: SGD Costs ViT-Base Seven Points"}
 DeiT on ImageNet, everything else equal: AdamW 81.8%, SGD 74.5%.
 
@@ -1101,14 +1181,30 @@ Our recipe (both models):
 @!vision-transformer-a-first-run-2
 :::
 
-::: {.slide title="The Learned Embeddings Show Only a Trace of the Grid"}
-Mean cosine similarity of centered position embeddings, by grid distance
-(max of row and column offset):
+::: {.slide title="Shuffling Patches Drops 89% Below 50%; Training Without Positions Costs 1.5 Points"}
+Move the $16 \times 16$ blocks of each test image by a fixed random
+permutation:
+
+@!vision-transformer-does-the-vit-use-position-2
+
+Train ViTs whose position table stays zero, two runs per arm:
+
+@!vision-transformer-does-the-vit-use-position-4
+
+::: {.d2l-note}
+The trained ViT uses the layout, yet a ViT blind to it ends only about 1.5
+points lower: most of the accuracy comes from what the patches contain.
+:::
+:::
+
+::: {.slide title="Training Makes Neighboring Embeddings a Tenth More Alike: Small, Far Beyond Chance"}
+Mean cosine of centered position embeddings by grid distance (max of row
+and column offset):
 
 @!vision-transformer-do-the-position-embeddings-discover-the-grid
 
-The fixed 2-D code falls from 0.76 to about $-0.4$; the learned one stays
-near zero, a little higher for neighbors and for opposite edges.
+Random vectors stay flat at $-0.03$; the fixed 2-D code falls from 0.76 to
+about $-0.4$.
 :::
 
 ::: {.slide title="Check: What Would Random Embeddings Give?"}
@@ -1167,13 +1263,14 @@ parameters, and the forward FLOPs?
 ::: {.slide title="Wrap-up"}
 - ViT = strided-convolution patchify, the pre-norm encoder, a head on the
   class token; only tokenization and readout are new.
-- Learned position embeddings start as noise; after ten epochs they show
-  only a trace of the $6 \times 6$ grid, which a 2-D sinusoidal code
-  builds in.
-- Large ViTs need register tokens as internal storage.
+- Shuffling the patches drops the trained ViT from about 89% to between
+  20% and 50%; a ViT trained with no position information reaches about
+  87.5%.
+- The learned position embeddings make neighbors about 0.1 more alike, far
+  beyond chance and far below a 2-D sinusoidal code.
 - Matched in parameters, FLOPs, data, and recipe, the CNN leads on
   Fashion-MNIST by four to five points; smaller patches and more data move
   the ranking.
 
-**Next:** Mixture of Experts, more parameters per FLOP.
+**Next:** Scaling Laws, sizing a model before the run.
 :::

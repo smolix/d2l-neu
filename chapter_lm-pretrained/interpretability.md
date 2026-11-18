@@ -820,8 +820,9 @@ d2l.plot(list(range(L - 1)), [KL[n][:, 0] for n in KL] + [
          fmts=('C0-', 'C1-', 'C0:', 'C0:', 'C1:', 'C1:'))
 ```
 
-<!-- CODE CHANGE 2026-11-18 (pass2/code-requests.md, 18.6): the cell below
-prints the numbers behind the two panels; the text may quote them. -->
+A logarithmic axis is hard to read to within a factor of two, so the next
+cell prints three points of each curve: the first block, the middle of the
+network, and the last block but one.
 
 ```{.python .input #interpretability-lens-numbers}
 %%tab pytorch
@@ -836,16 +837,22 @@ for name in LENSES:
 The left panel shows the median rank of the correct city (solid) and its
 quartiles (dashed), on a logarithmic axis with rank 1 at the top. Below
 block 20 the tuned lens ranks the city far better than the logit lens, and
-still far from well. Its translators have removed what was a matter of
-coordinates. What remains, we suspect, is computation that has not happened
-yet, and :numref:`subsec_lm_patching` will put the suspicion to a test. The
-right panel shows the KL divergence in nats. Its 95% intervals over
+still far from well. At block 14 the median rank is 260 under the tuned
+lens and about 18,000 under the logit lens. Neither is a rank at which
+anybody would say that the lens reads the city. The translators of the
+tuned lens have removed what was a matter of coordinates. What remains, we
+suspect, is computation that has not happened yet, and
+:numref:`subsec_lm_patching` will put the suspicion to a test.
+
+The right panel shows the KL divergence in nats. Its 95% intervals over
 documents, the dotted lines, are so narrow that they hide behind the
-curves. The tuned lens is closer to the final distribution at every block.
-It has to be: it was trained to minimize this very quantity, and with zero
-weights it is the logit lens. The gap between the two curves is therefore
-no finding. Part of it is the scale error of the logit lens that we
-computed above. Ranks, on the left, do not see the scale.
+curves. The tuned lens is closer to the final distribution at every block:
+3.4 nats against 11 at block 0, 2.1 against 6.1 at block 14, and 0.2
+against 0.4 one block before the end. It has to be closer. It was trained
+to minimize this very quantity, and with zero weights it is the logit lens.
+The gap between the two curves is therefore no finding. Part of it is the
+scale error of the logit lens that we computed above. Ranks, on the left,
+do not see the scale.
 
 Both lenses are read-outs of activations. They show at which depth an
 answer can be decoded. They are silent on which component put it there, and
@@ -1218,13 +1225,14 @@ plain reason: the two positions are not a complete cut. At block 20 the
 rest of the effect still sits on the earlier tokens of the subject and at
 " in".
 
-The next cell draws the map, and the picture is the thing to look at first.
-The lines printed above it are the numbers that the following paragraphs
-quote. They begin with the entries of the map (the printout calls them
-cells) whose effect is reliably large: the lower end of a 95% bootstrap
-interval over cities exceeds a threshold. The threshold is 0.5 for the
-stream and for attention, and 0.1 for the MLPs, of which no single one was
-expected to carry much. The remaining lines are explained as we use them.
+The next two cells give the map, first in numbers and then as a picture.
+Look at the picture first. The printed lines are the numbers that the
+paragraphs below the picture quote. They begin with the entries of the map
+(the printout calls them cells) whose effect is reliably large: the lower
+end of a 95% bootstrap interval over cities exceeds a threshold. The
+threshold is 0.5 for the stream and for attention, and 0.1 for the MLPs, of
+which no single one was expected to carry much. The remaining lines are
+explained as we use them.
 
 ```{.python .input #interpretability-patch-map}
 %%tab pytorch
@@ -1430,7 +1438,9 @@ the rank correlation between estimated and exact effects. It is taken over
 the entries whose exact effect exceeds 0.05 in absolute value, since among
 entries near zero the order is noise. Our bar was set in advance: the two
 maps agree if the lower end of the interval of the pooled correlation is at
-least 0.6.
+least 0.6. At its end the cell also walks from the clean stream to the
+corrupted one in eight equal steps, at one block. We shall need that walk
+to explain the verdict. The cell after it plots one map against the other.
 
 ```{.python .input #interpretability-atp-agreement}
 %%tab pytorch
@@ -1502,7 +1512,7 @@ d2l.plot([exact[k].ravel() for k in range(3)] + [ends],
 The estimate fails that test by a wide margin. The pooled correlation is
 0.42, with an interval of 0.17 to 0.56, and no kind of site does better.
 The intervals for attention, which rests on 14 entries, and for the MLPs
-include zero. The remaining lines show where the error lies. In blocks 21
+include zero. The next three lines show where the error lies. In blocks 21
 to 27 the mean absolute error is 0.05, and at the final position from block
 20 on the estimate is low but close, 0.62 against 0.75. Below the handover
 it collapses. The two subject classes together have an exact effect of
@@ -1515,19 +1525,29 @@ somewhat below it, belong to the final position in the upper blocks. The
 cloud at the lower right, large exact effects with estimates near zero, is
 the subject below the handover.
 
-Why there? The two numbers hold the answer. The estimate follows the
-tangent of $g$ at the clean value, and the tangent accounts for a tenth of
-the drop. The rest must come further along the segment between the two
-landmarks, where $g$ is far steeper than at its clean end. This is the gate
-of our small example again: a small step away from the Eiffel Tower still
-leaves the model with the Eiffel Tower. The gradient says what a small
-change of the activation would do, and it says so correctly: not much.
-Replacing one landmark by another is not a small change.
+Why there? The estimate follows the tangent of $g$ at the clean value, and
+the tangent accounts for a tenth of the drop. The rest must come further
+along the segment between the two landmarks, and the last lines of the
+printout go and look. After block 10, halfway up to the handover, the cell
+moves the stream at the tokens of the subject a fraction $t$ of the way
+from its clean to its corrupted value and measures the NE. On a straight
+line an eighth of the way would cost an eighth of the effect, 0.12. It
+costs 0.02, and a quarter of the way costs 0.09. Then the curve turns
+steep. Between three eighths and five eighths the NE rises from 0.25 to
+0.71, almost half of the whole effect in a quarter of the way, and towards
+the corrupted end it flattens again, at 0.97.
 
+This is the gate of our small example, drawn by the model itself. A small
+step away from the Eiffel Tower still leaves the model with the Eiffel
+Tower. The gradient says what a small change of the activation would do,
+and it says so correctly: not much. Replacing one landmark by another is
+not a small change.
+
+The walk shows the shape of $g$ and not the mechanism behind it.
 :citet:`Kramar.Lieberum.Shah.ea.2024` study such misses and name two main
 sources, a saturated attention softmax and the cancellation of a direct
-effect by indirect ones. Which mechanism flattens $g$ at the subject, our
-three passes cannot say.
+effect by indirect ones. Which of them flattens $g$ at the subject, neither
+our three passes nor the nine points of the walk can say.
 
 In practice the estimate serves as a screen. Where it reports an effect, an
 exact patch confirms and measures it at little cost. Where it reports none,
@@ -2501,9 +2521,10 @@ at a smaller strength is no advantage, since it does its damage at a
 smaller strength as well. A strength alone says little, then, and from here
 on we compare the two directions by cost.
 
-Third, the prefix switches 1 prompt in 100. A base model continues the
-document in front of it, and an instruction placed before an English
-document is one more sentence that the document then ignores.
+Third, the prefix switches 1 prompt in 100. Its cost is small, 0.05 nats
+per token, and so is its effect. A base model continues the document in
+front of it, and an instruction placed before an English document is one
+more sentence that the document then ignores.
 :citet:`Wu.Arora.Geiger.ea.2025` found prompting ahead of every steering
 method that they tried, on models trained to follow instructions. Our
 prefix does not test their claim. Exercise
@@ -2637,7 +2658,7 @@ have the other sign. The reversal does not depend on it.
 
 The last lines of the printout add nothing new. Below the cap no random
 direction switches a prompt, and the prefix, with its one prompt, is no
-better than either direction at its cost.
+better than either direction at its cost of 0.05 nats.
 
 In the plot, the lines are the two frontiers, the markers on them the
 single strengths, and the dashed line is the cap. The cost axis is
@@ -2646,18 +2667,16 @@ a linear axis, cannot be compared by eye. Both curves do rise to nearly all
 prompts, far to the right of the cap.
 
 The gray points are strengths beyond the best one of each direction. There
-the fraction falls again, in two different ways. Pushed harder, the feature
-makes the model repeat one Chinese phrase and then print rows of brackets,
-which the 30% rule no longer counts. The difference of means loses its
-Chinese first. The model goes back to English, in loops (the leftmost gray
-point, at the bottom of the plot), and only at still larger strengths does
-its text break down as well. The cell does not print these continuations.
-One call of `run` at such a strength shows them.
+the fraction falls again, at the largest strengths to zero. More of a
+direction that stands for Chinese does not give more Chinese. What it gives
+instead is best seen in the text that the model writes.
 
-Finally, what does a steered model write? The cell takes each direction at
-its largest strength below the cap, where 29% and 17% of the prompts
+So, finally, what does a steered model write? The cell takes each direction
+at its largest strength below the cap, where 29% and 17% of the prompts
 switch. It prints the continuations of three of the prompts and of the
-Eiffel prompt, with the collateral cost of each setting.
+Eiffel prompt, with the collateral cost of each setting. Then it goes to
+the gray points and prints the Eiffel prompt at two of them for each
+direction: the first strength past the peak, and the largest, $\alpha = 2$.
 
 ```{.python .input #interpretability-steer-samples}
 %%tab pytorch
@@ -2725,6 +2744,27 @@ the sentence turns after "324米 high" into a school exercise that asks for
 the unit of the 324, and then into another exercise altogether. Two
 directions of almost the same cost produce very different text, and no
 number on the frontier shows it.
+
+The last four continuations belong to the gray points. One step past its
+peak, at $\alpha = 0.71$, the feature still switches 80% of the prompts,
+and its Eiffel Tower is Chinese from the first token on: the tower stands
+in the center of Paris (巴黎), rises into the clouds, and is made of iron.
+The city has survived. The engineer has not: he is now a Henry Edgar Edgar.
+The difference of means, one step past its peak at $\alpha = 0.35$,
+still switches 65% of the prompts. To this one it replies with a
+multiple-choice question, "A. Paris B. London C. Berlin D.莫斯科" (the
+last is Moscow). It gives A as the answer and starts on a second question,
+in which Chinese characters stand inside English words. It is the school
+exercise again. The prose is gone, and the answer is still Paris.
+
+At $\alpha = 2$ the two directions meet. Both print rows of brackets,
+full-width ones under the feature and plain ones under the difference of
+means, and no prompt counts as switched. The cost does not keep track of
+this decline. The difference of means costs 9.1 nats one step past its peak
+and 6.8 nats at $\alpha = 2$, and in the plot the gray points at the bottom
+reach as far left as about 1 nat. Past the peak, neither axis of the
+frontier orders the strengths any more, and only the text shows what has
+happened.
 
 ### Levels of Evidence
 :label:`subsec_lm_interp_evidence`
@@ -2839,8 +2879,9 @@ its cost and with a random direction as the floor.
        in blocks 0 to 19. A site can be overwritten and recorded with its
        gradient in the same `d2l.intervene` context. How close does the
        estimate come to the exact effect of 0.98, and how many passes does
-       it take? Print the logit difference at the 8 points as well. Where
-       on the segment does it fall?
+       it take? Which of the 8 points contribute most to the mean? Compare
+       with the walk that the section printed for block 10. Then repeat the
+       walk at blocks 2 and 18. Does the curve keep its shape?
    :exlabel:`ex_lm_interp_atp`
 
 1. **Shrinkage.** Let the columns of $\mathbf{W}$ be orthonormal.
@@ -3124,24 +3165,27 @@ On the model the two effects add within 0.02. It took one more run to know.
 :::
 
 ::: {.slide title="Recall Moves from the Subject to the Final Position at Block 20"}
-40 pairs of landmarks. Patched: the stream, the attention output and the
-MLP output of each block, at 8 classes of positions (the earlier subject
-tokens, the last subject token, each of the 6 tokens after it).
+::: {.cols .vc}
+::: {.col}
+40 pairs of landmarks, one site patched at a time. Panels: the stream, the
+attention output, the MLP output. Color: mean NE.
 
-| mean NE of the stream | subject tokens together | final position |
-|---|---|---|
-| blocks 0 to 19 | 0.98 | |
-| block 20 alone | | 0.55 |
-| blocks 20 to 27 | | 0.75 |
-
-- Attention output, final position, block 20: 0.42 (0.38 to 0.47). The
-  next largest layer has 0.14.
-- No band of MLPs at mid-depth: one MLP is patched while 27 others still
-  see the clean subject.
+- **Stream:** the subject up to block 19 (its tokens together 0.98), the
+  final position from block 20 (0.75).
+- **Attention:** block 20, final position, 0.42 (0.38 to 0.47). Next
+  largest: 0.14.
+- **MLPs:** no band. One is patched while 27 others still see the clean
+  subject.
 
 ::: {.d2l-note}
 One attention layer carries the largest share across: three times any
 other, and well under half of the whole.
+:::
+:::
+
+::: {.col .fig}
+@!interpretability-patch-map-plot
+:::
 :::
 :::
 
@@ -3163,10 +3207,11 @@ sufficient.
 :::
 
 ::: {.slide title="Three Passes Estimate Every Patch, and Miss the Largest Ones"}
-$g(\mathbf{v})$: LD of the clean run with the site set to $\mathbf{v}$,
-which is $\mathbf{v}^{\mathrm{c}}$ in the clean run and
-$\mathbf{v}^{\mathrm{x}}$ in the corrupted run. The tangent at the clean
-value gives
+::: {.cols .vc}
+::: {.col}
+$g(\mathbf{v})$: LD of the clean run with the site set to $\mathbf{v}$
+(clean value $\mathbf{v}^{\mathrm{c}}$, corrupted
+$\mathbf{v}^{\mathrm{x}}$). Its tangent at the clean value gives
 
 $$\mathrm{PE} \approx -(\mathbf{v}^{\mathrm{x}} - \mathbf{v}^{\mathrm{c}})^\top \nabla g(\mathbf{v}^{\mathrm{c}})$$
 
@@ -3175,10 +3220,34 @@ $$\mathrm{PE} \approx -(\mathbf{v}^{\mathrm{x}} - \mathbf{v}^{\mathrm{c}})^\top 
 | subject, blocks 0 to 19 | 0.98 | 0.10 |
 | final position, blocks 20 to 27 | 0.75 | 0.62 |
 
-- 3 passes against 672 per pair, about 20 times faster. Rank correlation
-  with the exact map: 0.42 (0.17 to 0.56). The bar set in advance was 0.6.
-- A gate $1 / (1 + e^{-v})$, open at 6 and shut at $-6$: effect 0.995,
-  estimate 0.03. Flat where it stands, steep on the way.
+- 3 passes, not 672 per pair: about 20 times faster.
+- Rank correlation of the two maps: 0.42 (0.17 to 0.56). The bar set in
+  advance was 0.6.
+
+::: {.d2l-note}
+The cloud at the lower right is the subject below block 20.
+:::
+:::
+
+::: {.col .fig}
+@!interpretability-atp-agreement-plot
+:::
+:::
+:::
+
+::: {.slide title="The Effect Is Flat at the Clean Run and Steep on the Way"}
+- **By hand:** a gate $g(v) = 1 / (1 + e^{-v})$, open at the clean value
+  6 and shut at the corrupted value $-6$. Effect 0.995. Slope at 6:
+  0.0025. Estimate $12 \times 0.0025 = 0.03$.
+- **On the model:** the stream at the subject after block 10, moved a
+  fraction $t$ of the way to its corrupted value.
+
+| $t$ | 0 | 1/8 | 1/4 | 3/8 | 1/2 | 5/8 | 3/4 | 7/8 | 1 |
+|---|---|---|---|---|---|---|---|---|---|
+| NE | 0.00 | 0.02 | 0.09 | 0.25 | 0.47 | 0.71 | 0.86 | 0.94 | 0.97 |
+
+- A straight line would give 0.12 at $t = 1/8$. The gradient at the clean
+  run sees only the flat start.
 
 ::: {.d2l-note .rule}
 A screen, not a verdict: a zero from the estimate rules nothing out.
@@ -3316,22 +3385,45 @@ after block 14. $\alpha$: strength, a fraction of that norm.
 :::
 
 ::: {.slide title="The Switch Is a Cliff: 29% to 52% within a 6% Step of Strength"}
-Feature, $\alpha$ from 0.157 to 0.167: 29% to 52% of prompts switched,
-cost 0.25 to 0.62 nats. The cap falls on the cliff.
+::: {.cols .vc}
+::: {.col}
+- Feature, $\alpha$ from 0.157 to 0.167: 29% to 52% of prompts switched,
+  cost 0.25 to 0.62 nats. The cap (dashed) falls on the cliff.
+- Random directions: 0 of 100 at any strength, at 0.35 to 0.41 nats for
+  $\alpha = 0.7$.
+- The sentence before the prompt: 1 of 100, at 0.05 nats.
+- Gray: past its peak a direction switches fewer prompts. At
+  $\alpha = 2$ both print rows of brackets.
+:::
 
+::: {.col .fig}
+@!interpretability-frontier-plot
+:::
+:::
+
+::: {.d2l-note}
+**Frontier** (the lines): the largest share switched at a given cost or
+less. The cost axis is logarithmic above 0.01 nats.
+:::
+:::
+
+::: {.slide title="The Far Better Detector Is No Better at Steering"}
 | | feature | difference of means |
 |---|---|---|
+| AUC as a detector of Chinese tokens | 0.70 | 0.97 |
 | switched at the cap (interpolated), plain cost | 45% | 37% |
 | the same, cost without Han tokens | 65% | 54% |
 | cost of switching half, plain | 0.6 nats | 0.9 nats |
-| area under switched against plain cost, 0 to the cap (at most 0.5) | 0.124 | 0.099 |
+| area under the frontier, plain cost from 0 to the cap (at most 0.5) | 0.124 | 0.099 |
 
-- Random directions: 0 of 100 at any strength, at 0.35 to 0.41 nats for
-  $\alpha = 0.7$. The sentence before the prompt: 1 of 100.
-- Paired difference of the areas: 0.025 (0.001 to 0.052).
+- Paired difference of the areas: 0.025 (0.001 to 0.052). One hundred
+  prompts barely resolve it.
+- Which cost? Half of the prompts switch within the cap only when the
+  probability moved to Chinese tokens is not charged.
 
 ::: {.d2l-note}
-The far better detector is no better at steering.
+The direction that best separates two sets of activations need not be the
+best one for moving the model between them.
 :::
 :::
 

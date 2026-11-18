@@ -264,11 +264,12 @@ text.
 The two losses teach more. Fixed windows lost 0.08. They had a little less
 context than the baseline, about 1,600 tokens against 1,700, but the
 control rules the token count out: with about 1,800 tokens, windows still
-lost 0.05. Nor can coverage account for the loss. At budgets near the
-windows' own, their coverage trails by 0.03 to 0.07. A question that drops
-out of coverage falls at worst from the accuracy on hits to the accuracy on
-misses, about 0.6 lower, so such a gap could cost at most about 0.02 to
-0.04. What is left is the cut itself, and coverage is blind to it: it
+lost 0.05. Coverage accounts for at most about half of the loss. At
+budgets near the windows' own, their coverage trails by 0.03 to 0.07. A
+question that drops out of coverage falls at worst from the accuracy on
+hits to the accuracy on misses, about 0.6 lower, so such a gap could cost
+at most about 0.02 to 0.04. The rest is the cut itself, and coverage is
+blind to it: it
 counts half a gold span as found, and a window can hold that half and cut
 off the key fact in the other (Exercise :exref:`ex_lm_rag-whole-span`).
 Chunks that follow the document's structure keep a paragraph whole, and

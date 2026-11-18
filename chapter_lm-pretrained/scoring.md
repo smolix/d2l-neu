@@ -1030,7 +1030,7 @@ for text, r in (tpb[BASES[0][5:]] / tpb[BASES[1][5:]]).items():
 ```
 
 Below the loader's reports, the first line says that this run reproduces the
-six registered rows to about ten decimal places. Now the table. Consider
+six registered rows to about four decimal places. Now the table. Consider
 first the two rows of Qwen3-0.6B-Base for prose and for code. Its perplexity
 on code is 3.4, a third of its 10.5 on prose, which seems to say that code is
 three times easier. But code takes 0.36 tokens per byte and prose 0.26, so on

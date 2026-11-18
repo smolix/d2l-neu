@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:654b2e49f1a048487f5931050bfe8dd937cba4ba3c39ddff49702c8b3fa01ff9",
+    "d2l_lib_fingerprint": "sha256:2614adf54025b4638c7b17d2cdf618cde8fbd22ab901d034298a770febf00450",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,7 +23,7 @@
       "outputs": []
     },
     "text-embeddings-config": {
-      "code_fingerprint": "sha256:b2e2cb0da0e9acfcadf9f841d4a4bded55c47f7f556c3a48cfeeb39616b48c55",
+      "code_fingerprint": "sha256:ab575b46952a6134cbc08342f0eb3e1356beb2a8307e5bfab3f5d3909afa4edf",
       "kind": "text",
       "outputs": [
         {
@@ -34,32 +34,32 @@
       ]
     },
     "text-embeddings-revisions": {
-      "code_fingerprint": "sha256:be5ada9b4a200bb18ec820a2c357ae6f0dba797c5a485809fac8a219da0f78a8",
+      "code_fingerprint": "sha256:1a34720364c2481892bdb1ee478906ab1ec4130ea688af4317a0fb002beb9f2d",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-data-hub": {
-      "code_fingerprint": "sha256:4c8159a94013ff6fd1eb31a3a27d2d227a0f7aa8bf4b3306d8a8f8223656b066",
+      "code_fingerprint": "sha256:884fc85ddcee4d99d00182a37702cea3fd75523db6ad01df1db758e9e3af892c",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-pool-def": {
-      "code_fingerprint": "sha256:be912fa987032eaac1ddf4162efec13f3894f52c8f129335aba236004a776a4f",
+      "code_fingerprint": "sha256:4fbc6bec8ada5f91a35fd7b33b1bbee70ae54a6ee28e69052c57b32f6f2dcbd0",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-embed-def": {
-      "code_fingerprint": "sha256:afbcd6f93ac8bbfe831ba1ace78541b49e61f02cf8088f6ae5b625c88c5bd70b",
+      "code_fingerprint": "sha256:6fc6d24af1544d245a2e7887b11c0c0545ee5dcd9b04eebaaa42b9302b38c4a9",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-metrics-def": {
-      "code_fingerprint": "sha256:2ca7ea55e314e31e8d48cb0a93893da06eb044720eea7a3adb9f60ddc6bb26d8",
+      "code_fingerprint": "sha256:5ab8aed6cbf5ffe2425a7849cb79cefedfbceb127f91537b36de4dc2967bf68a",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-book": {
-      "code_fingerprint": "sha256:4a37542b4918308e12b9926cefa9e15f9e848b3544dd4a97ed7b0f7be6e1ab4a",
+      "code_fingerprint": "sha256:8fa14d1164a6264792c08915de81031461c63f88a0274bab836918536ad4e0d5",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     "text-embeddings-opening": {
-      "code_fingerprint": "sha256:2caf1249938e273402078d89bb3dd82d7e7d2280cdb06efb0c05f01cb9f20119",
+      "code_fingerprint": "sha256:9131cc2acba95161211fde73ac8c1186d6eaf1a5af93100aff94da2957518dec",
       "kind": "text",
       "outputs": [
         {
@@ -81,17 +81,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Recall@10: raw mean 0.064 [0.035, 0.096], BM25 0.959 [0.932, 0.983]\n\nOn unified-memory machines, how does the book say large mixture-of-experts models compare in\n    fitting and decoding speed to dense models with about the same total size?\n  top 1: Attention > Queries, Keys, and Values\n  gold:  Tools for Deep Learning > Hardware > Unified-Memory Machines for Inference\n\nIn the book's legacy PyTorch helper `load_array`, how does the returned `DataLoader` decide\n    whether to shuffle the data?\n  top 1: Tools for Deep Learning > Utility Functions and Classes\n  gold:  Tools for Deep Learning > Utility Functions and Classes > Training Utilities\n\nWhen the softmax in attention saturates and the gradients reaching the scores shrink, which\n    other parts of the attention block still receive gradients?\n  top 1: Attention\n  gold:  Attention > Attention Scoring and Masking > Dot-Product Attention > Score Variance and\n    the $1/\\sqrt{d}$ Factor\n"
+          "text": "Recall@10: raw mean 0.064 [0.035, 0.096], BM25 0.959 [0.932, 0.983]\ndistinct passages at rank 1 for the 220 questions: raw mean 73, BM25 210\n\nOn unified-memory machines, how does the book say large mixture-of-experts models compare in\n    fitting and decoding speed to dense models with about the same total size?\n  top 1: Attention > Queries, Keys, and Values\n  gold:  Tools for Deep Learning > Hardware > Unified-Memory Machines for Inference\n\nIn the book's legacy PyTorch helper `load_array`, how does the returned `DataLoader` decide\n    whether to shuffle the data?\n  top 1: Tools for Deep Learning > Utility Functions and Classes\n  gold:  Tools for Deep Learning > Utility Functions and Classes > Training Utilities\n\nWhen the softmax in attention saturates and the gradients reaching the scores shrink, which\n    other parts of the attention block still receive gradients?\n  top 1: Attention\n  gold:  Attention > Attention Scoring and Masking > Dot-Product Attention > Score Variance and\n    the $1/\\sqrt{d}$ Factor\n"
         }
       ]
     },
     "text-embeddings-geometry-def": {
-      "code_fingerprint": "sha256:97adfa776c9d76080e9b19a0d42b1df7f053192b992223689f65ace8766961aa",
+      "code_fingerprint": "sha256:a78080a52fb71739496b1016613d372424b053ed2ff771468a381284e39c39d5",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-anisotropy": {
-      "code_fingerprint": "sha256:2d2cc9f8057ad4065ce72b12c4ea6d7fb1738cf2009dceeb0987de7d9891e29b",
+      "code_fingerprint": "sha256:cfd7d698ce10735140e706f6a002db847198a4eed0dc666327cddc412e17c7e0",
       "kind": "text",
       "outputs": [
         {
@@ -102,12 +102,12 @@
       ]
     },
     "text-embeddings-infonce-def": {
-      "code_fingerprint": "sha256:778fcc16f8ba691a2f5f9a201db20b1ffbd883cc2cf48e07c0c5b18f3f4a7137",
+      "code_fingerprint": "sha256:827f650cf861d29822425e4dae9651045dbf06b61388e977294a80f006d08411",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-infonce-grad": {
-      "code_fingerprint": "sha256:ec4417b02a34052e25ec2ffe3decac9f320f944b6dd288e87939d86f45d668db",
+      "code_fingerprint": "sha256:c77e719fabae6714addf106ca6b8193393b99947d40c7d9d6566d1554d2b28ca",
       "kind": "text",
       "outputs": [
         {
@@ -118,23 +118,23 @@
       ]
     },
     "text-embeddings-uniformity": {
-      "code_fingerprint": "sha256:ea9b536d5e3116ec5fd8822e99f8f7726024d3ab70f6e174dc34440d89f77519",
+      "code_fingerprint": "sha256:ea6297916c87051c7c28527c1bc79d38f51ed22fc20a505c0cdd245940009c6c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "       configuration  alignment  uniformity  InfoNCE - log 4, tau=0.05  InfoNCE - log 4, tau=0.5\n              square        2.0      -4.396                     18.614                     0.868\ntwo coincident pairs        0.0      -1.098                     -0.693                    -0.675\n      all coincident        0.0       0.000                      0.000                     0.000\n"
+          "text": "InfoNCE - log 4 in the last two columns, at two temperatures\n       configuration  alignment  uniformity  tau 0.05  tau 0.5\n              square        2.0      -4.396    18.614    0.868\ntwo coincident pairs        0.0      -1.098    -0.693   -0.675\n      all coincident        0.0       0.000     0.000    0.000\n"
         }
       ]
     },
     "text-embeddings-train-def": {
-      "code_fingerprint": "sha256:3b5ea580384ab9524f4129dc97ba0c026b9bcc778647973d913a214eee7efb57",
+      "code_fingerprint": "sha256:15e569ad14e7d24f440b11add019f37a039c783e8cfd43c5cb6028eec1ec8a7c",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-nq": {
-      "code_fingerprint": "sha256:8c2ecb524d5a7cdf03e78941557daabfcbd5886ac5390cbd735f0881ee0b4b7d",
+      "code_fingerprint": "sha256:ee1aca497200db2d1ed5b2d754e5cc13d855af57044351ea565d7e382d9fe7bd",
       "kind": "text",
       "outputs": [
         {
@@ -145,27 +145,27 @@
       ]
     },
     "text-embeddings-run-defs": {
-      "code_fingerprint": "sha256:10387a3c3e50f2aa0b0bdc9f02278ae3675657e714dde19c76131af7d524e265",
+      "code_fingerprint": "sha256:65d1959c3d3f0542749239f477b82af267583381d694f92785e0fb1afcff5953",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train": {
-      "code_fingerprint": "sha256:b41308a4982eb14d03e584ad094fd049770c6963503b1feb5b3cb61920e0e8a6",
+      "code_fingerprint": "sha256:082405c98035f50e79ab7e60f94466446eb0bda8343454f13b847279df81a3bc",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-mine": {
-      "code_fingerprint": "sha256:29b11390898e86e1a62970be18c7b0d088ef606824187c89692e335b673004ac",
+      "code_fingerprint": "sha256:b2db0b9e944c2009ed210b4956e1619a6e502e75f319e9611abca2840847290c",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train-variants": {
-      "code_fingerprint": "sha256:c5f6f293415c4e6df1717e968cfe3565b1b354440d71f70417d71ccb70fb044e",
+      "code_fingerprint": "sha256:4a18f90aba0113cb0fe64fe913c113f0505b840b7c0a8ba8991cbaa0d56f5b0d",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train-read": {
-      "code_fingerprint": "sha256:7d39cd039d4653fc5442af905ad2eaa5bf4bd7a85a8b81fd10f6bc6cad7d30f1",
+      "code_fingerprint": "sha256:c6f88f56ae2fbc41f914b00ac31bb4bcfcc2449a7620d4333267ddd0d966c18e",
       "kind": "text",
       "outputs": [
         {
@@ -181,7 +181,7 @@
       ]
     },
     "text-embeddings-ladder": {
-      "code_fingerprint": "sha256:a086cfe01b9803e7473233798bed5a5e39b3b57fc06b9ddec8690682adff85ac",
+      "code_fingerprint": "sha256:3cd1cc29a1f60dbcc972552234d786524e79e26114abe8773b960a4859f85e89",
       "kind": "text",
       "outputs": [
         {
@@ -202,23 +202,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                              recall@1 recall@5 recall@10 mrr@10          ndcg@10 [CI] anisotropy\nBM25                             0.759    0.950     0.959  0.838  0.822 [0.777, 0.863]        n/a\nraw CLS                          0.000    0.000     0.000  0.000  0.000 [0.000, 0.000]      0.948\nraw mean                         0.036    0.055     0.064  0.043  0.040 [0.019, 0.067]      0.940\nraw centered mean                0.032    0.045     0.050  0.036  0.033 [0.012, 0.060]      0.001\ncontrastive seed 0               0.386    0.641     0.764  0.500  0.524 [0.469, 0.579]      0.522\nMatryoshka                       0.391    0.664     0.741  0.508  0.518 [0.458, 0.578]      0.566\nQwen3-Embedding                  0.700    0.927     0.995  0.798  0.805 [0.765, 0.841]      0.283\nQwen3-Embedding + instruction    0.668    0.914     0.982  0.772  0.786 [0.746, 0.823]      0.283\ncontrastive seed 1               0.409    0.641     0.777  0.513  0.528 [0.475, 0.582]        n/a\ncontrastive seed 2               0.359    0.618     0.732  0.474  0.495 [0.434, 0.557]        n/a\ncontrastive + hard negatives     0.423    0.695     0.795  0.542  0.557 [0.497, 0.617]        n/a\nlive contrastive seed 0 model against its stored ranking:\n  same top 10 for 0.327 of the questions, same Recall@10 for 0.995\nlive Matryoshka model against its stored ranking:\n  same top 10 for 0.318 of the questions, same Recall@10 for 1.000\n"
+          "text": "                              recall@1 recall@5 recall@10 mrr@10          ndcg@10 [CI] anisotropy\nBM25                             0.759    0.950     0.959  0.838  0.822 [0.777, 0.863]        n/a\nraw CLS                          0.000    0.000     0.000  0.000  0.000 [0.000, 0.000]      0.948\nraw mean                         0.036    0.055     0.064  0.043  0.040 [0.019, 0.067]      0.940\nraw centered mean                0.032    0.045     0.050  0.036  0.033 [0.012, 0.060]      0.001\ncontrastive seed 0               0.386    0.641     0.764  0.500  0.524 [0.469, 0.579]      0.522\nMatryoshka                       0.391    0.664     0.741  0.508  0.518 [0.458, 0.578]      0.566\nQwen3-Embedding                  0.700    0.927     0.995  0.798  0.805 [0.765, 0.841]      0.283\nQwen3-Embedding + instruction    0.668    0.914     0.982  0.772  0.786 [0.746, 0.823]      0.283\nQwen3-Embedding + card task      0.705    0.945     0.991  0.805  0.813 [0.774, 0.848]      0.283\ncontrastive seed 1               0.409    0.641     0.777  0.513  0.528 [0.475, 0.582]        n/a\ncontrastive seed 2               0.359    0.618     0.732  0.474  0.495 [0.434, 0.557]        n/a\ncontrastive + hard negatives     0.423    0.695     0.795  0.542  0.557 [0.497, 0.617]        n/a\ndistinct passages at rank 1: BM25 210, raw mean 73, contrastive seed 0 188, Qwen3-Embedding 208\nlive contrastive seed 0 model against its stored ranking:\n  same top 10 for 0.327 of the questions, same Recall@10 for 0.995\nlive Matryoshka model against its stored ranking:\n  same top 10 for 0.318 of the questions, same Recall@10 for 1.000\n"
         }
       ]
     },
     "text-embeddings-ladder-compare": {
-      "code_fingerprint": "sha256:e16b7afb6fcc460c63cfbcff3d524b958b73a66a8fba9b4fa06d2e923ea9443d",
+      "code_fingerprint": "sha256:36c79dd767394c9fd35f3a79ea855c539483ebc99543dea8041be5e9b5aef625",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "              from                            to  delta    low  high  excl. 0  beyond seeds\n          raw mean                          BM25  0.895  0.854 0.934     True          True\n          raw mean            contrastive seed 0  0.700  0.640 0.761     True          True\n raw centered mean            contrastive seed 0  0.714  0.656 0.771     True          True\ncontrastive seed 0  contrastive + hard negatives  0.032 -0.005 0.069    False         False\ncontrastive seed 0 Qwen3-Embedding + instruction  0.218  0.161 0.276     True          True\n   Qwen3-Embedding Qwen3-Embedding + instruction -0.014 -0.028 0.000    False         False\nRecall@10 of the three seeds: [0.764 0.777 0.732], range 0.045; best raw pooling: raw mean\n"
+          "text": "              from                            to  delta    low  high  excl. 0  beyond seeds\n          raw mean                          BM25  0.895  0.854 0.934     True          True\n          raw mean            contrastive seed 0  0.700  0.640 0.761     True          True\n raw centered mean            contrastive seed 0  0.714  0.656 0.771     True          True\ncontrastive seed 0  contrastive + hard negatives  0.032 -0.005 0.069    False         False\ncontrastive seed 0 Qwen3-Embedding + instruction  0.218  0.161 0.276     True          True\n   Qwen3-Embedding Qwen3-Embedding + instruction -0.014 -0.028 0.000    False         False\nRecall@10 of the three seeds: [0.764 0.777 0.732], range 0.045; best raw pooling: raw mean\n\npaired differences, to - from, on three measures:\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                          recall@1                   mrr@10                recall@10\nQwen3 - BM25               -0.059 [-0.132, +0.015]  -0.040 [-0.091, +0.011]  +0.036 [+0.013, +0.063]\nQwen3 + instr. - BM25      -0.091 [-0.175, -0.010]  -0.065 [-0.124, -0.010]  +0.023 [-0.004, +0.053]\nQwen3 + instr. - Qwen3     -0.032 [-0.068, +0.000]  -0.026 [-0.048, -0.004]  -0.014 [-0.028, +0.000]\nQwen3 + card task - Qwen3  +0.005 [-0.025, +0.034]  +0.007 [-0.012, +0.027]  -0.005 [-0.015, +0.000]\n"
         }
       ]
     },
     "text-embeddings-alignment": {
-      "code_fingerprint": "sha256:388fb260f931e78b93b1d9efdccfbcab6739cd4a5b8cd18e2f927705e76aa103",
+      "code_fingerprint": "sha256:a7851f4cf7a27a397438357e972b4a05dc73c6949253d0657615a7cd227557ca",
       "kind": "mixed",
       "outputs": [
         {
@@ -236,17 +241,17 @@
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-alignment-1.svg",
           "bytes": 464013,
-          "sha256": "sha256:24afb40a9d1b01ad1fda9c4569db84608df58ea37703d95a6002eee758b74a0d"
+          "sha256": "sha256:447b821be3da79bc570150afecab6e2c3513d6d1e854ac6acf73a9cb0ef67057"
         }
       ]
     },
     "text-embeddings-compress-def": {
-      "code_fingerprint": "sha256:fb62c5fa956f13d43a427547acc9f58db950f659eec5bf42db7825ce91f83af9",
+      "code_fingerprint": "sha256:5ec9a81ac044de4a6e916f17579bc2ff1fe49fb2cfa72dd61d5ed972f3ed0156",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-compress": {
-      "code_fingerprint": "sha256:4f0ba34e82edc951a611f362ca1de63c0e1c72e510a9e4a80a46fbc2a75ffacf",
+      "code_fingerprint": "sha256:d4c035124da2d3ea953ca45be71f5f2784178fdb39d35c60fb18ad260788e314",
       "kind": "mixed",
       "outputs": [
         {
@@ -259,23 +264,85 @@
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-compress-1.svg",
           "bytes": 48985,
-          "sha256": "sha256:af9e2ebeba61b11d8b37423c22b95f2d4cfc5a12e55e9d426396e860724901c2"
+          "sha256": "sha256:cacc5d668d6f81776a8e918a3170a9ef62050be98646981f50b43ffb40e553b3"
         }
       ]
     },
     "text-embeddings-compress-compare": {
-      "code_fingerprint": "sha256:3ff64669e0a3c678a07c469c70dd1d2374a958edd15fa501286817824be3a34f",
+      "code_fingerprint": "sha256:83ae8628b6e32a676804776d4e896cb71c9c1032590e3b5311cfc306b658c1f3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                 comparison  delta    low   high  CI excludes 0  beyond seed range\n              Matryoshka - contrastive, 128 -0.027 -0.075  0.017          False              False\n               Matryoshka - contrastive, 64 -0.014 -0.048  0.022          False              False\n               Matryoshka - contrastive, 32 -0.014 -0.072  0.041          False              False\n               Matryoshka - contrastive, 16  0.018 -0.023  0.064          False              False\n    contrastive: binary + rescoring - float -0.045 -0.085 -0.009           True              False\n     Matryoshka: binary + rescoring - float -0.018 -0.055  0.017          False              False\nQwen3-Embedding: binary + rescoring - float -0.018 -0.037  0.000          False              False\nseed range of Recall@10 at full width (a proxy for the training noise\n  at smaller widths): 0.045\n"
+          "text": "                                 comparison  delta    low   high  CI excludes 0 beyond seed range\n              Matryoshka - contrastive, 128 -0.027 -0.075  0.017          False             False\n               Matryoshka - contrastive, 64 -0.014 -0.048  0.022          False             False\n               Matryoshka - contrastive, 32 -0.014 -0.072  0.041          False             False\n               Matryoshka - contrastive, 16  0.018 -0.023  0.064          False             False\n    contrastive: binary + rescoring - float -0.045 -0.085 -0.009           True                  \n     Matryoshka: binary + rescoring - float -0.018 -0.055  0.017          False                  \nQwen3-Embedding: binary + rescoring - float -0.018 -0.037  0.000          False                  \nseed range of Recall@10 at full width (a proxy for the training noise\n  at smaller widths): 0.045\n"
+        }
+      ]
+    },
+    "text-embeddings-compress-nq": {
+      "code_fingerprint": "sha256:2bd607645f78b7d27b08849cb3a5220913d2d75eaf977d713a8e5213d87b79ce",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1629 of 5000 texts truncated to 160 tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1629 of 5000 texts truncated to 160 tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NQ, 300 held-out questions among 5,000 passages: Recall@10\n width  contrastive  Matryoshka  delta    low  high  CI excludes 0\n   768        0.980       0.973 -0.007 -0.023 0.010          False\n   128        0.957       0.957  0.000 -0.023 0.023          False\n    64        0.907       0.920  0.013 -0.013 0.040          False\n    32        0.757       0.833  0.077  0.040 0.117           True\n    16        0.513       0.620  0.107  0.060 0.153           True\n"
+        }
+      ]
+    },
+    "text-embeddings-compress-160": {
+      "code_fingerprint": "sha256:ec4e2b5873963a1aaccafaf4d4701107e37c4a3caf30af015c55f3da42124d70",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4824 of 5324 texts truncated to 160 tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.bfloat16, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4824 of 5324 texts truncated to 160 tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the book, passages cut to 160 tokens: Recall@10\n width  contrastive  Matryoshka  delta    low  high  CI excludes 0\n   768        0.650       0.691  0.041  0.000 0.081          False\n   128        0.605       0.614  0.009 -0.043 0.059          False\n    64        0.518       0.536  0.018 -0.026 0.065          False\n    32        0.373       0.391  0.018 -0.026 0.065          False\n    16        0.182       0.200  0.018 -0.029 0.064          False\n"
         }
       ]
     },
     "text-embeddings-production": {
-      "code_fingerprint": "sha256:20fa09ff2e843b481636971dd0749a0308ec9ded83412f9834c680b2a9ae4948",
+      "code_fingerprint": "sha256:dae9c9a8ab5cfa081ef012253941db9655aa4594a784e7f7137037cae2f960c6",
       "kind": "text",
       "outputs": [
         {

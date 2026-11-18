@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4f23adfcf4ba87578712e47fe677313046f0232c852210c4cc44a150b76a548d",
+    "d2l_lib_fingerprint": "sha256:c04d28f3b06fb3ffd9b6bbdcc8d4b7f18e94dce72cb296057f42273b4ca4fd83",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,7 +23,7 @@
       "outputs": []
     },
     "bert-config": {
-      "code_fingerprint": "sha256:416e0ebaffc84b99351a134c24be3fa868c1477d6251032e0c7fea27a495dfbe",
+      "code_fingerprint": "sha256:87b22748a92c0b922a1878c4a9345f5fd3f0e58e1f2130128571a116142ee5e8",
       "kind": "text",
       "outputs": [
         {
@@ -34,33 +34,33 @@
       ]
     },
     "bert-revisions": {
-      "code_fingerprint": "sha256:294737fc1581e3959e76d0d30967104f208cd0acd3217b8d26629cc17fbcddc1",
+      "code_fingerprint": "sha256:006df9810a6da71293f09fc41d8c446696e9cbf6c74391e82d372042746d87f9",
       "kind": "text",
       "outputs": []
     },
     "bert-data-hub": {
-      "code_fingerprint": "sha256:e447fed7ffff06dd6b70a87f3ef57717fb13ccbec550d95f769e03a9df3873cf",
+      "code_fingerprint": "sha256:d9327aad60c46c07a7cd8a4cbca6ba0ee4c099c947fa5cf133ebbbb62b4a5200",
       "kind": "text",
       "outputs": []
     },
     "bert-load-encoder": {
-      "code_fingerprint": "sha256:05fc3080428edf736888c11a6000e4e78d6d5dee44aa0397118d8ac046e54525",
+      "code_fingerprint": "sha256:4a1c12b6c90e5b763e6ac56666e48379839f9eabee72bbb3b78bb05571a457ae",
       "kind": "text",
       "outputs": []
     },
     "bert-opening": {
-      "code_fingerprint": "sha256:8bde4d9373bf360d5cbb8609e29b399f4383fe328248190738880563b27d9fb3",
+      "code_fingerprint": "sha256:965cf855e228cf48fbae77104b144e359df39b0b9664a9b3aa60a78b0a337ed4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                       labelled examples  accuracy  ms per 1,000 examples\nModernBERT-base, fine-tuned (3 seeds)              16000     0.839                  446.0\nQwen3-1.7B, 8 shots (3 draws)                          8     0.631                48037.0\n"
+          "text": "                                       labeled examples  accuracy  ms per 1,000 examples\nModernBERT-base, fine-tuned (3 seeds)             16000     0.839                  446.0\nQwen3-1.7B, 8 shots (3 draws)                         8     0.631                48037.0\n"
         }
       ]
     },
     "bert-raw": {
-      "code_fingerprint": "sha256:18824bc3687d3497b43df78f733c3c9087014aabec06948279dd84181bee93e2",
+      "code_fingerprint": "sha256:8c1f228a03c5abf26b664982e7518d628c6cbf58e2f8395b18ae48abe88a79de",
       "kind": "text",
       "outputs": [
         {
@@ -71,12 +71,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hidden states: (1, 16, 768)\nembedding modules: ['tok_embeddings', 'norm', 'drop']\nlayers                                         22\nwidth                                         768\nheads                                          12\nGeGLU width                                  1152\npositions                                    8192\nglobal attention every                          3\nlocal window                                  128\nRoPE theta (global, local)    (160000.0, 10000.0)\nvocabulary                                  50368\nclassifier pooling                           mean\nparameters                            149,014,272\ncos(bank, river / check): embedding layer 1.00, last layer 0.68\ncos(bank, river / rate): embedding layer 1.00, last layer 0.65\ncos(bank, check / rate): embedding layer 1.00, last layer 0.85\n"
+          "text": "hidden states: (1, 16, 768)\nembedding modules: ['tok_embeddings', 'norm', 'drop']\nlayers                             22\nwidth                             768\nheads                              12\npositions                        8192\nglobal attention every              3\nlocal window                      128\nvocabulary                      50368\nclassifier pooling               mean\nparameters                149,014,272\ncos(bank, river / bank, shore): embedding layer 1.00, last layer 0.81\ncos(bank, check / bank, rate): embedding layer 1.00, last layer 0.85\ncos(bank, river / bank, check): embedding layer 1.00, last layer 0.68\ncos(bank, river / bank, rate): embedding layer 1.00, last layer 0.65\ncos(bank, shore / bank, check): embedding layer 1.00, last layer 0.72\ncos(bank, river / the, river): embedding layer 0.01, last layer 0.32\n"
         }
       ]
     },
     "bert-mlm-fill": {
-      "code_fingerprint": "sha256:067d780b19035f81963cb0217d8a60f5df4dc4cf70c96d0f9d00b26e7b97ce68",
+      "code_fingerprint": "sha256:2be81681f0687a2f40ea56a5486ba20b60ea015fc0d7a1e04abab8bfd6ffb3a4",
       "kind": "text",
       "outputs": [
         {
@@ -87,12 +87,12 @@
       ]
     },
     "bert-mlm-corrupt": {
-      "code_fingerprint": "sha256:9cb1f8ed91bcde75dcf07803b3196c81ab37b858ae70d6df7f5f607e9ed094b5",
+      "code_fingerprint": "sha256:7a5349fc7436f2f3088beea813ca8db7ab2944ca0d347a457fdf51da82c7c08c",
       "kind": "text",
       "outputs": []
     },
     "bert-mlm-stats": {
-      "code_fingerprint": "sha256:eabe6fb083fa6caad2890f9cccbb4a072b54059f9fa6da024256875e5df3639f",
+      "code_fingerprint": "sha256:137e2ffded61c3330e0f4516829c3ede1d0d07e634cb872d5a45367d0269fcf9",
       "kind": "text",
       "outputs": [
         {
@@ -103,7 +103,7 @@
       ]
     },
     "bert-attention-cost": {
-      "code_fingerprint": "sha256:e4b416d265ef65e104f0385e08bbf055f87644c9122d2dff59dbc4ec492a1566",
+      "code_fingerprint": "sha256:e178efd79c2059d1802ea18d65dc98d41b7bca1650ecca3c39ac424fd7b21a6a",
       "kind": "text",
       "outputs": [
         {
@@ -119,12 +119,12 @@
       ]
     },
     "bert-pooled-classifier": {
-      "code_fingerprint": "sha256:2e16a5dc6537e25e69d1b63159d0da607a3519cfd95fc22039f8db5ce9a1f787",
+      "code_fingerprint": "sha256:16245a0103805afb6713ee20b309a7a33cdb9d1f75760289c25795be5a30deaa",
       "kind": "text",
       "outputs": []
     },
     "bert-head-check": {
-      "code_fingerprint": "sha256:6d2eb185fe8820a7e723ad62b3bf845f8f1308e8260929a463d8963ad00b01e4",
+      "code_fingerprint": "sha256:d22e9df7163fabd55c7bf93933fcbd9fe1896d44f11d28cdcc8ca961673e14f2",
       "kind": "text",
       "outputs": [
         {
@@ -140,17 +140,12 @@
       ]
     },
     "bert-finetune": {
-      "code_fingerprint": "sha256:bc897456a59a0b9cb1b9fee216fcfa02f20d5a4c23198ad21cbbee25135ffe29",
-      "kind": "text",
-      "outputs": []
-    },
-    "bert-cost": {
-      "code_fingerprint": "sha256:9b6d300d5b4f500a003626d135162e21684384865115821243807cfe2873d331",
+      "code_fingerprint": "sha256:2a74949cb6eac1c91286a29b7780f39bfae0be83afc7741d0496cd4ff1a119b7",
       "kind": "text",
       "outputs": []
     },
     "bert-data": {
-      "code_fingerprint": "sha256:56115662c94f25d4cc03ef784a9b3855804c38a9b8bf6f2620091ab727c5cd0a",
+      "code_fingerprint": "sha256:f3c7ad99bb526805982c861e425827202744b52f2150cb1c309e1ff9bd440e14",
       "kind": "text",
       "outputs": [
         {
@@ -161,45 +156,45 @@
       ]
     },
     "bert-run-defs": {
-      "code_fingerprint": "sha256:4e5845563fab693d06444070d468ad9064d52b52df9e6b09b62478f3d6fa8214",
+      "code_fingerprint": "sha256:6ba3055d003d3073ba8fd88b2e1197fd63eb983cce881a4ee015a2da66de1f3e",
       "kind": "text",
       "outputs": []
     },
     "bert-sweep": {
-      "code_fingerprint": "sha256:68b839944373853c255725be0a610ebebfb4de6902dd7a53567fab263fa6a6db",
+      "code_fingerprint": "sha256:3c1ee9dee4e5c7864e7b085c0c09cc06499729a760c039e1b09ee584eb0b5d3d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learning rates: {'mnli': 8e-05, 'sst2': 8e-05}\n            steps  mean  range  2 epochs: steps  mean   range \ntask n                                                        \nmnli 250      304 0.436  0.024               16  0.376   0.046\n     1000     320 0.632  0.022               64  0.474   0.158\n     4000     375 0.761  0.031              250  0.752   0.102\n     16000   1000 0.839  0.003             1000  0.839   0.003\nsst2 100      300 0.665  0.101                8  0.583   0.142\n     500      304 0.849  0.025               32  0.782   0.065\n     2000     315 0.905  0.017              126  0.895   0.030\n     8000     500 0.932  0.010              500  0.932   0.010\nmnli: seed range at n = 250: 0.024; median gain per size step: 0.129\nsst2: seed range at n = 100: 0.101; median gain per size step: 0.055\n"
+          "text": "learning rates: {'mnli': 8e-05, 'sst2': 8e-05}\n            steps  mean  range  2 epochs: steps  mean   range \ntask n                                                        \nmnli 250      304 0.436  0.024               16  0.376   0.046\n     1000     320 0.632  0.022               64  0.474   0.158\n     4000     375 0.761  0.031              250  0.752   0.102\n     16000   1000 0.839  0.003             1000  0.839   0.003\nsst2 100      300 0.665  0.101                8  0.583   0.142\n     500      304 0.849  0.025               32  0.782   0.065\n     2000     315 0.905  0.017              126  0.895   0.030\n     8000     500 0.932  0.010              500  0.932   0.010\nmnli: seed range at n = 250: 0.024\n  gain from each size to the next: 0.196, 0.129, 0.077 (median 0.129)\nsst2: seed range at n = 100: 0.101\n  gain from each size to the next: 0.184, 0.055, 0.027 (median 0.055)\n"
         }
       ]
     },
     "bert-sweep-live": {
-      "code_fingerprint": "sha256:4171a043dd110ec9d49cfc65d24fb62b66f6b28a7acc69dcac8e742151cf3d72",
+      "code_fingerprint": "sha256:69a9591697118d059563aba335d4a58a59a66ef032293eded6338d7e79df6152",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n = 1000, seed 0, 2000 items: accuracy 0.645 live, 0.645 registered\n  (bound on the difference 0.022); same prediction on 1.000; 28 s\n"
+          "text": "n = 1000, seed 0, 2000 items: accuracy 0.645 live, 0.645 stored\n  (bound on the difference 0.022); same prediction on 1.000; 26 s\n"
         }
       ]
     },
     "bert-ckpt-live": {
-      "code_fingerprint": "sha256:dd1e5e55c52b090e1d4f3597ed81d489ec78588b4820d7682717080fddf6a44b",
+      "code_fingerprint": "sha256:373598624c4cb88482e6c68b8306b7f14196a9d3c2164abbf8cd26dbf861bc5f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "registered checkpoint, 2000 items: accuracy 0.838; same prediction\n  as when it was saved on 1.000, as its fp32 training run on 0.996\n  peak 4.8 GiB (5.0 GiB reserved)\n"
+          "text": "stored checkpoint, 2000 items: accuracy 0.838; same prediction\n  as when it was saved on 1.000, as its fp32 training run on 0.996\n  peak 4.8 GiB (5.0 GiB reserved)\n"
         }
       ]
     },
     "bert-hypothesis-only": {
-      "code_fingerprint": "sha256:9d58f87fa1c0c5da2489a92e6adab0ed4dc729b519f7b8db455ad749fbfa2c95",
+      "code_fingerprint": "sha256:d722376efdb7650cdeeba4aabcfab9e77b6c6a466b39421b6110c436dc5cee78",
       "kind": "text",
       "outputs": [
         {
@@ -210,17 +205,12 @@
       ]
     },
     "bert-align": {
-      "code_fingerprint": "sha256:e477351b4ea6e1d6132f7d312831b6704f218eb1c8ffef05c7d9daa81d9947ab",
-      "kind": "text",
-      "outputs": []
-    },
-    "bert-span-f1": {
-      "code_fingerprint": "sha256:3a831f2ef75a81315da203879f8d7773c976691561b6daf8ba0cec63b93e4413",
+      "code_fingerprint": "sha256:1d035be689941e1841d85c1a1527865185fcbbe0c0f8653f633d4ff604df8d52",
       "kind": "text",
       "outputs": []
     },
     "bert-conll-data": {
-      "code_fingerprint": "sha256:f5c6514659a273441699dbd0eaf7d78bebd625ca6966d068c1e51f64e9819237",
+      "code_fingerprint": "sha256:2c1839ae9b80ad4d315139d7337df747c8a5b6d5cc45936b27f65f301207632e",
       "kind": "text",
       "outputs": [
         {
@@ -230,8 +220,13 @@
         }
       ]
     },
+    "bert-span-f1": {
+      "code_fingerprint": "sha256:cfecb9b335f31b282d10a4dd6941048b8542409adef747d81de25424920386d9",
+      "kind": "text",
+      "outputs": []
+    },
     "bert-tagging": {
-      "code_fingerprint": "sha256:81fd7f9d8eff5bea0e88ca78b74b0dd48c41485dc8a4e430d3c26e24087f4e57",
+      "code_fingerprint": "sha256:8c727b26fa85b4eb5ea65823e0815fe594650a520b428c4c6b5bc2b88fd09ea3",
       "kind": "text",
       "outputs": [
         {
@@ -242,12 +237,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live, seed 0, 3250 sentences: precision 0.939, recall 0.951, F1 0.9450; seqeval F1 0.9450\n             LOC   MISC    ORG    PER\nprecision  0.974  0.852  0.912  0.969\nrecall     0.973  0.898  0.925  0.975\nf1         0.973  0.874  0.919  0.972\nregistered, 3 seeds: F1 0.945 to 0.951, seed 0 0.9450 (bound on the live difference 0.010)\n  peak 5.7 GiB (5.8 GiB reserved)\n"
+          "text": "live, seed 0, 3250 sentences: precision 0.939, recall 0.951, F1 0.9450; seqeval F1 0.9450\n             LOC   MISC    ORG    PER\nprecision  0.974  0.852  0.912  0.969\nrecall     0.973  0.898  0.925  0.975\nf1         0.973  0.874  0.919  0.972\nthe 1341 gold ORG names, as tagged: ORG 1241, boundaries missed 45, MISC 22, LOC 19, PER 14\n  Kent as LOC: By stumps Kent had reached 108 for three .\n  Lancashire as PER: Hove : Sussex 363 -LPR- W. Athey 111 , V. Drakes 52 ; I. Austin 4-37 -RPR-\n    , Lancashire 197-8 -LPR- W. Hegg 54 -RPR-\n  NFL as MISC: NFL AMERICAN FOOTBALL-RANDALL CUNNINGHAM RETIRES .\nstored, 3 seeds: F1 0.945 to 0.951, seed 0 0.9450 (bound on the live difference 0.010)\n  peak 5.7 GiB (5.8 GiB reserved)\n"
         }
       ]
     },
     "bert-decoder": {
-      "code_fingerprint": "sha256:aa10b748f833da9911c2c844bacc589b211816b0bd6e8a61f3b31685fee6ff5f",
+      "code_fingerprint": "sha256:bcdbe649d7b40bc268055a94c6aba1fc7ec00ce0a472f332aaa20546c8028a6f",
       "kind": "text",
       "outputs": [
         {
@@ -268,7 +263,7 @@
       ]
     },
     "bert-naive-bayes": {
-      "code_fingerprint": "sha256:f0fc0e8cbf6a472413ed2d6235c044581f0f0f937a3af14b05f42ff8b6956ffe",
+      "code_fingerprint": "sha256:2c8076efd434ababfbdf36fd04694927d13961b493310c7b27bb57dfc8e4a6d6",
       "kind": "text",
       "outputs": [
         {
@@ -278,32 +273,37 @@
         }
       ]
     },
+    "bert-cost": {
+      "code_fingerprint": "sha256:c3b005bc849a152fadd32549a6020503ba79a2f9d6f51171c3ac57ecd0dd3215",
+      "kind": "text",
+      "outputs": []
+    },
     "bert-timing": {
-      "code_fingerprint": "sha256:0af1c500de96f9973130a62d561c5b3e503eeb3cc7577159fb13aa5b768a255e",
+      "code_fingerprint": "sha256:15342d5e3eb82ecf0753f05c5aab74317b3f06f37dc994d762071666d0dbed58",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, registered\nencoder                40.3                 8.9               432.3                     445.9\ndecoder              1543.1              4349.8             46555.0                   48036.6\ndecoder / encoder: measured 108x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\n"
+          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, stored\nencoder                40.3                 8.9               431.7                 445.9\ndecoder              1543.1              4349.8             47335.2               48036.6\ndecoder / encoder: measured 110x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\nencoder: the batch is padded to 87 tokens, 2.2x the tokens counted per pair\ndecoder, the query alone with one label word: 49 tokens, FLOPs 16x the encoder\nstored, mnli: encoder 446, decoder 48,037 ms per 1,000; decoder / encoder 108x\nstored, sst2: encoder 426, decoder 12,410 ms per 1,000; decoder / encoder 29x\n"
         }
       ]
     },
     "bert-curve": {
-      "code_fingerprint": "sha256:ccdeb17f093a86ba81c9784e48b641c60fffd21080ffad1dc969f8c78217bb05",
+      "code_fingerprint": "sha256:87589ec67132ca0f761d2ac3dd5b7ef1b9d3e32ad2ba9cc61282d7d25b6d4de9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "bert/bert-curve-1.png",
-          "bytes": 77209,
-          "sha256": "sha256:8f6a00a608a9a44e8d004f9377e78a5ac202e0683a7d5b30ba7c91d3b903a8a0"
+          "bytes": 84932,
+          "sha256": "sha256:9b21617cb6ebbb6fcc7f78fec15224f039367a2184101bacc32fe86b7a22a135"
         }
       ]
     },
     "bert-crossing": {
-      "code_fingerprint": "sha256:706b95c0a4b6cbccb43a8c47b399c579e061e235cf5545fede1ed1878c624868",
+      "code_fingerprint": "sha256:a1c642d31bb48bed913b6edde1ecc00f995e48075b9fb05cb9d91034ed9033d4",
       "kind": "text",
       "outputs": [
         {

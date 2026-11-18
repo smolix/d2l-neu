@@ -1006,7 +1006,7 @@ happens not to be the labeled one, and training against it pushes the
 question away from an answer. We measure how often. For 500 training
 questions we take one mined passage from each of four rank buckets and ask
 Qwen3-Reranker-0.6B whether the passage answers the question. The reranker
-is a *cross-encoder* in the sense of :numref:`sec_lm_bert`: it reads
+is a cross-encoder in the sense of :numref:`sec_lm_bert`: it reads
 question and passage together and answers yes or no. A probability of yes
 above 0.5 marks a passage as probably relevant. These labels come from a
 model, not from people.
@@ -1146,7 +1146,8 @@ what the query vector encodes, in a direction that has to be measured.
 Last-token pooling is not the only way out of causal attention. Some
 recipes remove the causal mask instead and fine-tune the decoder with
 attention in both directions, so that every position sees the whole text
-:cite:`BehnamGhader.Adlakha.Mosbach.ea.2024,Lee.Roy.Xu.ea.2025`.
+:cite:`BehnamGhader.Adlakha.Mosbach.ea.2024,Lee.Roy.Xu.ea.2025`;
+:numref:`sec_lm_encoders_fr` says what each recipe changes.
 
 ### Comparison on the Book
 

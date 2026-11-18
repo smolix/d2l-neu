@@ -119,7 +119,7 @@ if S:
 
 Before we generate a single answer, we already know roughly how much a
 change on the retrieval side can gain. Accuracy on the answerable
-questions is a mixture of the accuracy on *hits*, the questions whose
+questions is a mixture of the accuracy on hits, the questions whose
 context holds a relevant chunk, and the accuracy on misses
 (:numref:`sec_lm_rag`). The baseline has 213 hits among 220 answerable
 questions, so a perfect retriever could add about 0.02, well inside the
@@ -133,11 +133,11 @@ not bound them.
 Chunking comes first, because it can be measured before any answer is
 generated. Section chunks follow the book's headings and paragraphs. Fixed
 windows of 256 tokens, overlapping by 64, are cut without regard to the
-text. Which of the two covers more? *Coverage at a budget* of $T$ tokens,
-`cov@T`, is the share of answerable questions whose first chunks, taken in
-rank order up to $T$ tokens, hold at least half of a gold span. It fixes
-the amount of text, which Recall@$k$ does not: five section chunks hold
-more text than five windows.
+text. Which of the two covers more? Recall@$k$ cannot compare them fairly,
+since five section chunks hold more text than five windows. Coverage at a budget of $T$
+tokens, the `cov@T` of :numref:`subsec_lm_rag_pipeline`, fixes the amount of
+text instead: it is the share of answerable questions whose first chunks,
+taken in rank order up to $T$ tokens, hold at least half of a gold span.
 
 ```{.python .input #rag-coverage}
 %%tab pytorch
@@ -170,7 +170,7 @@ tokens both find room, and the gap shrinks to 0.01, well within noise.
 
 Coverage says that the gold text is in the context, not that the generator
 uses it. For that we must generate. Each configuration that answers the
-questions is an *arm* of the experiment, as in :numref:`sec_lm_rag`. The
+questions is an arm of the experiment, as in :numref:`sec_lm_rag`. The
 baseline fuses the BM25 and dense rankings by reciprocal ranks and passes
 the first five section chunks, best first, with no reranker. The next cell
 answers the 240 `dev` questions with five arms that change it:
@@ -378,8 +378,8 @@ a failure, which is to invent a fix for it.
 The next cell counts the classes with intervals and prints five *failure
 cards*, records of a failure with its question, answer, ranking and
 verdicts. The judge's three verdicts are those of :numref:`sec_lm_rag`: an
-answer is *correct* if it states every key fact, *faithful* if the passages
-support every statement in it, and *supported* if the passages it cites
+answer is correct if it states every key fact, faithful if the passages
+support every statement in it, and supported if the passages it cites
 suffice on their own. Claude Opus 5.5 also read each card and labeled its
 class, and the cell compares these labels, again a model's, with the
 rule's.

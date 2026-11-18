@@ -414,13 +414,12 @@ sentence.
 ### Measuring Retrieval
 
 The questions and the measures are those of
-:numref:`sec_lm_text_embeddings`. Its relevance rule needs one more detail
-here, because chunks and the spans that answer a question differ in
-length. A chunk is *relevant* if it covers at least half of an answering
-span, or if at least half of the chunk lies inside one; the answering
-spans are the one the question was drafted from and any other judged to
-answer it. :numref:`tab_lm_ret_metrics` collects the measures for
-reference.
+:numref:`sec_lm_text_embeddings`, and so is the rule that decides relevance,
+with chunks in place of passages: a chunk is relevant if it covers at least
+half of an answering span, or if at least half of the chunk lies inside one.
+Because the rule works both ways, it treats a short chunk inside a long span
+and a long chunk around a short span alike. :numref:`tab_lm_ret_metrics`
+collects the measures for reference.
 
 :Measures of a ranked list for one question; the reported value is the mean over questions. $r$ is the rank of the first relevant chunk, and $\mathrm{rel}_i$ is 1 if the chunk at rank $i$ is relevant and 0 otherwise.
 :label:`tab_lm_ret_metrics`

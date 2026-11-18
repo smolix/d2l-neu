@@ -123,7 +123,7 @@ To measure a RAG system we need questions whose answers we know, and we need
 to know where in the corpus each answer is written. Public benchmarks give
 the first but not the second for our corpus, and any of them may have been
 in the training data of every model we use. So we build a set over the
-book: we know its content, every answerable question has a *gold span*, the
+book: we know its content, every answerable question has a gold span, the
 stretch of book text that answers it, and we decide how it is split. The
 recorded model responses the set was built from are published with it
 (`lm-book-qa-api-cache-v1`), so its construction can be checked without any

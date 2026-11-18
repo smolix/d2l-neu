@@ -2160,23 +2160,14 @@ thousands of kernel launches.
        4 sequences of 32,768 tokens. How many fit a budget of 15 GiB, and
        how many a GPU with 24 GB?
     1. Load the model with `d2l.load_hf` and prefill the largest number of
-       such sequences that your prediction allows on a GPU with 24 GB. If
-       the run fails, reduce the batch. Compare the parameters, the cache
-       and the peak, measured as in :numref:`subsec_lm_hf_measured`, with
-       your prediction. Which term did the prediction miss, and what in the
-       head fields of the first part explains it?
-   <!-- WRITER: config_memory now counts the queries and keys that
-   Transformers repeats to the value heads when linear_num_value_heads >
-   linear_num_key_heads (Qwen3.5-4B: 16 key, 32 value heads), so the
-   prediction no longer misses a term. Measured 2026-11-18 on an RTX 4090
-   (23.52 GiB reported), fused kernels, bf16: peak above the weights / formula
-   = 0.673 / 0.670 GiB (4,096 tokens), 2.547 / 2.533 (16,384), 5.047 / 5.018
-   (32,768), 10.093 / 10.035 (two of 32,768): ratio 1.005 to 1.006. For three
-   sequences of 32,768 the formula gives 22.89 GiB in total, which the device
-   seems to hold, and the prefill runs out of memory; two fit. The last
-   question of this part needs a new form (for example: the formula's total
-   for three sequences against the device's memory; what else claims memory
-   on the card that the formula does not count?). -->
+       such sequences that your prediction allows on a GPU with 24 GB.
+       Compare the parameters, the cache and the peak above the weights,
+       measured as in :numref:`subsec_lm_hf_measured`, with your
+       prediction. If the largest batch runs out of memory although the
+       formula's total stays below the memory the device reports, find out
+       what holds the difference: which memory on the card belongs to no
+       tensor of the model, and how much room should a prediction leave
+       for it?
 
 1. [code] **Batched decoding of a hybrid.** A decode step of $B$ sequences
    reads the weights once and the cache and state of every sequence

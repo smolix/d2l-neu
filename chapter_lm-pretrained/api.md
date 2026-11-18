@@ -18,20 +18,30 @@ network and receive text. What can we still measure about a model that we
 cannot hold, and how do we keep those measurements as trustworthy as the
 earlier ones?
 
-A client can observe three things about a hosted model: a protocol, a price
-and limits. The protocol is the *chat-completions* request, which OpenAI
+A hosted model shows its client three things: a protocol, a price and
+limits. The protocol is the *chat-completions* request, which OpenAI
 introduced with its chat models in 2023 and which nearly every company that
-hosts models, and every local server, has since adopted. The client is the
-measuring instrument, and the theory it needs is old: queueing theory, which
-telephone engineers developed to decide how many lines an exchange needs.
-Later chapters call hosted models to write questions and training data, so
-every number from a service needs a date, the name of the company that
-served it, a cost and a record that the book can replay.
+hosts models, and every local server, has since adopted. The price is
+charged per token, for what we send and for what comes back. The limits are
+of two kinds: a service refuses requests that arrive too fast, and it cannot
+return most of what we read from our own models.
 
-We reuse the prompt builder of :numref:`sec_lm_prompting`, the answer
-extractor and the GSM8K problems of :numref:`sec_lm_scoring`, and the paired
-tests of :numref:`sec_lm_eval_suites`. At the end we ask which of this
-chapter's instruments survive behind an API.
+A service says little about itself, so whatever we learn about it we must
+time and count from outside. The client becomes the measuring instrument.
+Its first question, how many requests to send at once, is older than the
+computer: telephone engineers developed queueing theory to decide how many
+lines an exchange needs. And since a service changes without notice and
+cannot be run again, each of its numbers needs a date, the name of the
+company that served it, a cost, and a stored copy of the response.
+
+We read the protocol, build the client, and run three numbered
+experiments. Experiment 1 asks how many requests a server can usefully hold
+at once, Experiment 2 which model to use and at what price, and Experiment 3
+whether the same request returns the same reply. They reuse the prompt
+builder of :numref:`sec_lm_prompting`, the answer extractor and the GSM8K
+problems of :numref:`sec_lm_scoring`, and the paired comparison of
+:numref:`sec_lm_eval_suites`. At the end we ask which measurements of this
+chapter can still be made through an API.
 
 ```{.python .input #api-imports}
 %%tab pytorch
@@ -72,11 +82,12 @@ from transformers.cli.serving.chat_completion import (
 Open weights are hosted by many companies at once, each of which sells
 access by the token. We call such a company a *provider*. A *router* is a
 service that puts one address and one account in front of many providers and
-forwards each request to one of them. We use the router OpenRouter, and for
-each model we *pin* one provider, so that every request for that model is
-served by the same company.
+forwards each request to one of them. We use the router OpenRouter.
+Providers differ in their prices and in the precision at which they serve
+the same weights, so for each model we *pin* one provider: every request for
+that model is served by the same company.
 
-Calling a service costs money, and a service does not answer the same way
+Calling a service costs money, and a service need not answer the same way
 twice. The outputs on this page are therefore a recording. We sent every
 request once, on 13 November 2026, and stored the responses, and the cells
 below replay them without touching the network
@@ -84,9 +95,9 @@ below replay them without touching the network
 make your own recording. Most of the next cell configures that machinery,
 and only its four model names matter now. DeepSeek-V4.1-Flash is the model
 that the code and the tables call the *flagship*. Qwen3.8-27B is a much
-smaller open-weight model, gpt-5-nano a closed model that appears in one
-test only, and Qwen3-4B the model that will run behind a server on our own
-GPU.
+smaller open-weight model. The third, gpt-5-nano, is a *closed* model: its
+weights are not published, and it appears in one test only. Qwen3-4B is the
+model that will run behind a server on our own GPU.
 
 ```{.python .input #api-config}
 %%tab pytorch
@@ -129,12 +140,13 @@ print(f'mode {API_MODE}, cost cap {COST_CAP_USD} USD, local server '
       f'{"live" if LOCAL_LIVE else "replayed"}')
 ```
 
-The cell reports that it replays. What does a router know about its
-providers? For each of them its listing gives the context length, the
-prices and the request fields that the provider says it supports, and for
-most of them the precision of the served weights. The next cell prints the
-rows of our three pinned providers from a snapshot that was taken during
-the recording.
+The cell reports that it replays. Two tables come before the first request,
+and the first of them answers a question: what does a router know about its
+providers? It publishes a *listing*, a table with one row for each provider
+of a model. A row gives the context length, the prices and the request
+fields that the provider says it supports, and most rows give the precision
+of the served weights. The next cell prints the rows of our three pinned
+providers from a snapshot that was taken during the recording.
 
 ```{.python .input #api-listing}
 %%tab pytorch
@@ -160,10 +172,14 @@ print(pd.DataFrame(rows).to_string(index=False))
 ```
 
 Prices are in dollars per million tokens, and a generated token costs four
-to nine times as much as a prompt token. The column `cached` is a much lower
-price for prompt tokens that the provider has kept from an earlier request.
-The last four columns are claims, which we shall test. All of these numbers
-are dated, since a listing changes without notice.
+to nine times as much as a prompt token. The ratio has a reason that we know
+from decoding: the whole prompt passes through the model in one parallel
+step, while every generated token needs a step of its own. The column
+`cached` is a much lower price for prompt tokens at the start of a request
+that repeat the start of an earlier one. The provider has kept the keys and
+values of that prefix, the key-value cache again, and need not compute them
+a second time. The last four columns are claims, which we shall test. All of
+these numbers are dated, since a listing changes without notice.
 
 The suffix `fp8` in the provider column says that both pinned providers
 serve 8-bit weights. For Qwen3.8-27B that is half the precision of the
@@ -198,23 +214,44 @@ print(pd.DataFrame(rows).round(1).to_string(index=False))
 At four bits per weight the flagship still needs 382 GB, and its release,
 with part of the weights in eight bits, needs more. Only the server with
 eight 80 GB cards can hold it, and that is before a byte is spent on the
-key-value cache. Qwen3-4B fits a 24 GB card in bf16, which makes it our
-local model.
+key-value cache. Qwen3.8-27B is another matter. At four bits it would fit
+our 24 GB card, and we could indeed have run it ourselves. We call it
+through a provider all the same, because Experiment 2 needs a second hosted
+model, at a second company, to compare prices. Qwen3-4B fits the card in
+bf16, which makes it our local model.
 
 ### Requests and Responses
 
-A chat-completions request is a JSON object sent by HTTP `POST`. Its field
-`messages` holds the conversation as a list of roles and contents, the
-structure that we passed to a chat template in :numref:`sec_lm_prompting`.
-Here the server applies the template, so the client never sees the tokens
-that the model reads. Most other fields are the parameters of the sampler of
-:numref:`sec_decoding`: `temperature`, `top_p`, `max_tokens`, `stop` and
-`seed`. A few fields request extras. `logprobs` asks for the
-log-probabilities of the generated tokens, `response_format` for output that
-follows a JSON schema, and `stream` for the reply in pieces, called chunks,
-as it is generated.
+A chat-completions request is a JSON object sent by HTTP `POST`. The first
+request of this section reads as follows, apart from two fields that only
+the router understands and to which we shall come.
 
-We send the flagship the first GSM8K test problem of
+```json
+{"model": "deepseek/deepseek-v4.1-flash-1017",
+ "messages": [{"role": "user",
+               "content": "Carmen has $100, Samantha has $25 more ..."}],
+ "temperature": 0,
+ "seed": 0,
+ "max_tokens": 512}
+```
+
+The field `messages` holds the conversation as a list of roles and contents,
+the structure that we passed to a chat template in
+:numref:`sec_lm_prompting`. Here the server applies the template, so the
+client never sees the tokens that the model reads. Most other fields set the
+sampler of :numref:`sec_decoding`. The fields `temperature` and `top_p`
+shape the distribution from which a token is drawn, `max_tokens` bounds the
+length of the reply, `stop` lists strings at which the reply ends, and
+`seed` asks for a draw that can be repeated. Newer servers also accept the
+bound on the length under the name `max_completion_tokens`.
+
+A few fields request extras. `logprobs` asks for the log-probabilities of
+the generated tokens, `response_format` for output that follows a JSON
+schema, `n` for several alternative replies to one request, and `stream` for
+the reply in pieces, called chunks, as it is generated.
+
+The question in this request is the first of our GSM8K test problems, the
+grade-school word problems with a number as the answer that we scored in
 :numref:`sec_lm_scoring`. The client that the next cell creates may spend
 the fraction `share` of the recording's cost cap, and it switches off a
 feature called reasoning, to which we come in a moment.
@@ -244,23 +281,43 @@ print(f'{u["cost"]:.6f} USD billed, {d2l.api_cost(u, flagship.price):.6f} '
       f'USD from the listing')
 ```
 
-The response carries more than text. The field `finish_reason` says why
+The cell prints the text of the reply and a few numbers from the response,
+which is again a JSON object. Abridged to the fields that we use, it reads
+
+```json
+{"model": "deepseek/deepseek-v4.1-flash-1017",
+ "provider": "Novita",
+ "choices": [{"finish_reason": "stop",
+              "message": {"role": "assistant",
+                          "content": "Let's break it down ..."}}],
+ "usage": {"prompt_tokens": 36, "completion_tokens": 118,
+           "cost": 0.000084}}
+```
+
+The reply sits in a list called `choices`, which has one entry unless the
+request asked for more with `n`. The most important part is the `usage`
+block: 36 prompt tokens, 118 completion tokens and, an addition of this
+router, the cost in dollars. The client cannot check these counts itself. It
+never sees the rendered prompt, and for a closed model it has no tokenizer
+either. With the released tokenizer of an open model we could count our own
+words, and we still would not know what the server wrote around them. The
+`usage` block is therefore the only record of what was processed and the
+basis of the bill, here less than a hundredth of a cent.
+
+The other fields are quickly told. The field `finish_reason` says why
 generation ended: `stop` at the end-of-sequence token, `length` at
 `max_tokens`. The field `model` names the model that served the request, and
-the router adds the provider. (The field `system_fingerprint`, meant to
-identify the serving configuration, came back empty throughout.) The most
-important part is the `usage` block: 36 prompt tokens and 118 completion
-tokens. The client cannot count these itself, since it has neither the
-provider's tokenizer nor the rendered prompt. The `usage` block is therefore
-the only record of what was processed and the basis of the bill, here less
-than a hundredth of a cent. The answer, 400, is correct.
+the router adds the provider. A field `system_fingerprint` is meant to
+identify the serving configuration, and it came back empty in every response
+of our recording. The answer, 400, is correct.
 
-Many current models can *reason* before they answer: they first generate
-text for their own use and then the reply. The protocol bills this text as
-completion tokens and counts it against `max_tokens`, which sets a trap.
-Qwen3.8-27B reasons by default. We send it the test problem with the longest
-reference solution and a budget of 64 tokens, and then again with reasoning
-switched off and a budget of 1,024.
+In :numref:`sec_lm_scoring` we let Qwen3 think before it answered, inside a
+think block that we could read and count. Many hosted models *reason* in the
+same way, and a service treats that text as output: it bills it as
+completion tokens and counts it against `max_tokens`. This sets a trap.
+Qwen3.8-27B reasons unless it is told not to. Of our 100 test problems we
+send it the one with the longest reference solution, with a budget of 64
+tokens, and then again with reasoning switched off and a budget of 1,024.
 
 ```{.python .input #api-reasoning-trap}
 %%tab pytorch
@@ -288,20 +345,29 @@ assert answer.finish_reason == 'stop', 'thinking off did not finish either'
 ```
 
 The first reply is empty. All 64 completion tokens were reasoning tokens,
-and the budget ran out before the answer began. An empty reply that ends
-with `length` and has as many reasoning tokens as completion tokens is the
-signature of this failure. With reasoning off the model writes 871 tokens
-and ends on the correct answer. (The cell prints the last line of that
-reply and not an extracted answer. The reply uses `####` for its headings,
-which would mislead the extractor of :numref:`sec_lm_scoring`.) The three
-numbered experiments of this section all run with reasoning off, and each
-asserts that no response contains reasoning.
+and the budget ran out before the answer began. The response does return the
+reasoning, 258 characters of it in a field of its own, but no answer. An
+empty reply that ends with `length` and has as many reasoning tokens as
+completion tokens is the signature of this failure. With reasoning off the
+model writes 871 tokens and ends on the correct answer.
 
-Services that reason usually provide a dial as well, on OpenRouter the
-field `reasoning` with an `effort` of `low`, `medium` or `high`. We try it
-on the flagship, with the five problems that have the longest reference
-solutions. The fifteen requests go out together through `d2l.chat_batch`,
-a helper that :numref:`subsec_lm_api_client` shows, and the word `await` in
+The cell prints the last line of that reply and not an extracted answer, for
+a reason that is worth knowing. The reply uses `####` for its Markdown
+headings, and the extractor of :numref:`sec_lm_scoring`, which takes the
+first number after the last `####`, would have returned 96,000, a number
+under the last such heading. The extractor expects a format, and this
+request showed the model none.
+
+The three numbered experiments of this section all run with reasoning off,
+so that every arm answers in the same mode and every token that we pay for
+is one that we can read. Each of them asserts that no response contains
+reasoning.
+
+Services that reason usually provide a dial as well, on OpenRouter the field
+`reasoning` with an `effort` of `low`, `medium` or `high`. We try it on the
+flagship, with the five of our 100 problems that have the longest reference
+solutions. The fifteen requests go out together through `d2l.chat_batch`, a
+helper that :numref:`subsec_lm_api_client` shows, and the word `await` in
 front of it waits until all of them have returned.
 
 ```{.python .input #api-effort}
@@ -335,30 +401,41 @@ for i, j in ((0, 1), (1, 2), (0, 2)):  # paired, problem by problem
 
 The dial is a request, and the model decides what to make of it. At `high`
 the flagship spent more reasoning tokens than at either other setting on
-each of the five problems: in the median about one and a half times as
-many, at a third more cost than `low`. The settings `low` and `medium` could
+each of the five problems: in the median about one and a half times as many,
+at nearly 40% more cost than `low`. The settings `low` and `medium` could
 not be told apart. Their medians lie within a few tokens of each other, and
 `low` spent more than `medium` on three of the five problems. The response
-has the same fields at every setting. Five problems make an anecdote, and
-the cell says nothing about accuracy.
+has the same fields at every setting, and only the token counts in `usage`
+show what the dial did. Five problems make an anecdote, of course, and the
+cell says nothing about accuracy.
 
 ### Endpoints and Their Fields
 
-Providers, routers and local servers all accept the protocol. One client
-class therefore reaches every model of this section, and to move from one
-endpoint to another it changes two strings, the base URL and the model name.
+Providers, routers and local servers all accept the protocol. An address at
+which a server accepts it is called an *endpoint*. The router's is
+`https://openrouter.ai/api/v1`, its *base URL*, to which the client appends
+a path: `/chat/completions` for a request, `/models` for the list of models
+that the endpoint offers. One client class therefore reaches every model of
+this section, and to move from one endpoint to another it changes two
+strings, the base URL and the model name.
 
 Our local endpoint is `transformers serve`, the server that comes with the
 Transformers library. We start it with *continuous batching*: the server
 does not wait for a batch to finish, and admits a new request into the
-running batch between two decoding steps. One flag deserves attention now,
-because it will set the capacity that we measure in Experiment 1:
-`--cb-max-memory-percent 0.2` gives the server's key-value cache at most a
-fifth of the card's free memory. (Earlier sections used models of the newer
-Qwen3.5 family. The server runs Qwen3-4B because Transformers' continuous
-batching rejects the linear-attention layers of Qwen3.5 and would serve such
-a model one request at a time. :numref:`chap_lm_serving` treats serving
-engines in their own right.)
+running batch between two decoding steps. It serves Qwen3-4B and not a model
+of the newer Qwen3.5 family that earlier sections used. Transformers'
+continuous batching has no cache for the linear-attention layers of Qwen3.5,
+and the server would run such a model one request at a time. Programs that
+serve models are called serving engines, and :numref:`chap_lm_serving`
+treats them in their own right. Here the server is only an object to
+measure.
+
+One flag deserves attention now: `--cb-max-memory-percent 0.2` gives the
+server's key-value cache at most a fifth of the card's free memory. Left to
+itself the server would claim most of that memory. A fifth leaves the card
+room to spare, and it has a consequence that we shall meet again. A server
+can decode only as many sequences at once as its cache has room for, so this
+budget bounds the capacity that Experiment 1 will measure.
 
 ```{.python .input #api-local-start}
 %%tab pytorch
@@ -400,14 +477,16 @@ That every endpoint accepts a request does not mean that every endpoint does
 the same thing with it. We make the router refuse what it can: we forbid
 fallbacks to other providers and set `require_parameters`, so that a request
 fails unless the pinned provider lists every field in it. That still leaves
-the provider that lists a field and ignores it. The only defence is to test
+the provider that lists a field and ignores it. The only defense is to test
 each field by its effect.
 
 The next cell writes out two such *detection rules*. The field `seed` is
-honoured if two requests with seed 7, sampled at temperature 1, return the
-same text and a third with seed 8 returns a different one. The field
-`stop=['5']` is honoured if a request to count from 1 to 10 returns a 4 and
-no 5. The rules in the library follow the same pattern.
+honoured if two requests with seed 7 return the same text and a third with
+seed 8 returns a different one. The three requests sample at temperature 1
+wherever the endpoint accepts a temperature, because at temperature 0
+nothing is drawn and a seed has nothing to fix. The field `stop=['5']` is
+honoured if a request to count from 1 to 10 returns a 4 and no 5. The rules
+in the library follow the same pattern.
 
 ```{.python .input #api-probe}
 %%tab pytorch
@@ -448,10 +527,15 @@ if API_MODE != 'replay':  # replay reads the committed table
         rules={'seed': seed_honoured, 'stop': stop_honoured})
 ```
 
-In the table of verdicts, *rejected* means an error status, *ignored* that
+The table of verdicts has one column per endpoint, named by its model:
+`flagship` is DeepSeek-V4.1-Flash at Novita, `Qwen3.8-27B` is served by
+Parasail, `gpt-5-nano` by OpenAI, and `local` is our own server. Three
+verdicts fill most cells. *Rejected* means an error status, *ignored* that
 the request succeeded and the rule failed, and *honoured* that the rule
-held. For the local server the last column adds whether the Transformers
-source declares the field unused.
+held. Two more mark half-answers: *partial*, where the endpoint did part of
+what the field asked, and *inconsistent*, where the response contradicts
+itself. Most rows are named by the field that they send, and we explain the
+others as we come to them.
 
 ```{.python .input #api-probe-table}
 %%tab pytorch
@@ -476,34 +560,59 @@ LOCAL_BATCHES = batching.status != 'serialized'
 print(f'local server: {batching.status} ({batching.evidence})')
 ```
 
-Read the `seed` row first. All three hosted endpoints list `seed`, and all
-three ignored it. Novita lists log-probabilities and returned them for only
-part of the reply. No endpoint returned two choices for `n=2`, and none
-returned the log-probabilities of a prompt.
+Read the `seed` row first. All three hosted endpoints list `seed`, and none
+of the three returned the same text for the same seed. The rule cannot tell
+whether a provider dropped the seed or applied it to logits that differ from
+one request to the next, which Experiment 3 will show they do. For a client
+the two come to the same thing.
 
-The three rejections in the closed model's column are of two kinds. The
-router itself refused `logprobs` and `stop`: the listing of this model
-lacks both fields, and we had set `require_parameters`. The switch that
-turns reasoning off reached OpenAI, which rejected it, since this model
-always reasons. Under a cap of 16 completion tokens its `usage` then
-reported more reasoning tokens than completion tokens. Our statement that
-reasoning tokens are counted inside completion tokens is therefore limited
-to the endpoints of our experiments.
+The flagship's provider lists log-probabilities and returned them for only
+part of the reply. No endpoint returned two choices for `n=2`. The row
+`prompt log-probabilities` sends two fields that are not in the protocol and
+that some servers add, and no endpoint answered them with the
+log-probabilities of a prompt.
 
-The last row sends four requests at once. Where the endpoint batches them,
-the latency hardly changes. Parasail answered some of the four with the
-status 429, "too many requests".
+Now read down the column `local`. Our own server is the least obliging of
+the four: it honours the seed and the thinking switch, and it ignores
+`stop`, `logprobs`, `response_format`, `n=2` and the token cap. Having the
+weights on our own card is no help as long as we speak to them through a
+server that somebody else wrote. What a field does is decided by the program
+that answers.
 
-The local column agrees with the Transformers source in all rows but two.
-The server ignores `stop`, which the source does not declare unused: it
-hands the field to a generation setting that its continuous-batching path
-never reads. And `stream usage` is honoured although the source declares
-`stream_options` unused, because this server sends `usage` with the last
-chunk of every stream, asked or not. A declaration in the source is a claim,
-like a row in a listing. (The row `/v1/models` reads *ignored* because the
-server lists its cached models by branch name, and we fetched Qwen3-4B by
-commit.) Such a table is a snapshot of a single day. It cost us less than a
-cent, and it is worth making before any experiment that relies on a field.
+The remaining rows need less attention. The row `thinking switch` turns
+reasoning on and off, and `stream usage` asks a streamed reply to end with
+its `usage` block. The row `/v1/models` asks the endpoint to list its
+models. It reads *ignored* for the local server, which builds its list from
+the branches in the Hugging Face cache, where a model that was downloaded at
+a pinned commit, like ours, has none. The server serves a model that it does
+not list. The last row sends four requests at once. It reads *batched* if
+the slowest of them took less than twice as long as a single request, and
+*rate-limited* if the endpoint answered with the status 429, "too many
+requests". Three endpoints batched the four requests. The provider of
+Qwen3.8-27B answered with 429s, and the client retried until every request
+had succeeded.
+
+Two columns hold details that a first reading can skip. All three rejections
+in the column of the closed model came from the router. It refused
+`logprobs` and `stop` because the listing of this model lacks both fields
+and we had set `require_parameters`, and it refused the switch that turns
+reasoning off because it marks reasoning as mandatory for this model. The
+*inconsistent* in the same column is stranger. Under a cap of 16 completion
+tokens the `usage` block reported more reasoning tokens than completion
+tokens. Our statement that reasoning tokens are counted inside completion
+tokens is therefore limited to the endpoints of our experiments.
+
+The last column compares the local server with its own source code, which
+keeps a list of request fields that the server accepts and does not act on.
+The server agrees with that list in all rows but two. It ignores `stop`,
+which is not on the list, and it honours `stream usage` although
+`stream_options` is on it, because it sends `usage` with the last chunk of
+every stream, asked or not. A declaration in the source is a claim, like a
+row in a listing.
+
+A table like this one is a snapshot of a single day, and it is cheap. The
+two open-weight columns cost less than a cent together. Make one before any
+experiment that relies on a field.
 
 ## A Measuring Client
 :label:`subsec_lm_api_client`
@@ -520,8 +629,10 @@ Every field that can change the response must be in the hash: the host, the
 model, the messages, the sampling and format fields, and the routing fields,
 since a different provider is a different service. If one is missing, the
 cache silently returns a stale answer to a changed question. Nothing secret
-may be in the hash, which excludes the headers with the API key, and nothing
-that leaves the response unchanged, such as the choice of streaming.
+may be in the hash, which excludes the headers with the API key. The key has
+a second reason to stay out: with it, a reader who has another key, or none
+at all, would miss every entry. Nor does the hash hold anything that leaves
+the response unchanged, such as the choice of streaming.
 
 ```{.python .input #api-request-hash}
 %%tab pytorch
@@ -571,20 +682,21 @@ for name, (u, p, replica) in variants.items():
 ```
 
 Streaming and a different API key leave the hash unchanged. A replica
-number, a seed and a provider each change it. The client uses the cache in
-one of three modes. In mode `replay` a miss raises an error, so a page that
-replays can never reach the network. Mode `record` sends only what is
-missing, and mode `live` always sends. A replay returns one recorded draw
-from the service. It makes this page reproducible, and it does not make the
-service deterministic, as we shall see.
+number, a seed and a provider each change it.
+
+The client uses the cache in one of three modes. In mode `replay` a miss
+raises an error, so a page that replays can never reach the network. Mode
+`record` sends only what is missing, and mode `live` always sends. A replay
+returns one recorded draw from the service. It makes this page reproducible,
+and it does not make the service deterministic, as we shall see.
 
 The second idea is that cost is arithmetic on `usage`. A provider charges
 per token at up to three rates, in dollars per million tokens:
 $r_\textrm{in}$ for prompt tokens, $r_\textrm{out}$ for completion tokens,
-and a lower rate $r_\textrm{cache}$ for prompt tokens that it has kept from
-an earlier request with the same beginning, its *prompt cache*. A response
-with $n_\textrm{in}$ prompt tokens, of which $n_\textrm{cache}$ were cached,
-and $n_\textrm{out}$ completion tokens costs
+and the lower rate $r_\textrm{cache}$ for the prompt tokens of a prefix that
+is still in its *prompt cache* from an earlier request. A response with
+$n_\textrm{in}$ prompt tokens, of which $n_\textrm{cache}$ were cached, and
+$n_\textrm{out}$ completion tokens costs
 
 $$
 \frac{(n_\textrm{in} - n_\textrm{cache})\, r_\textrm{in}
@@ -594,7 +706,10 @@ $$
 :eqlabel:`eq_lm_api_cost`
 
 dollars. Reasoning tokens need no term of their own, because they are part
-of $n_\textrm{out}$.
+of $n_\textrm{out}$. For the first response of this section, with 36 prompt
+tokens, none of them cached, and 118 completion tokens, Novita's rates of
+0.165 and 0.66 dollars per million tokens give 0.000084 dollars, the amount
+that the router billed.
 
 ```{.python .input #api-price}
 %%tab pytorch
@@ -618,10 +733,11 @@ def api_cost(usage, price):
     return ((p - c) * price.input + c * cached + o * price.output) / price.per
 ```
 
-At Novita's rates, 1,000 prompt tokens and 300 completion tokens should cost
-$0.000165 + 0.000198 = 0.000363$ dollars. The next cell checks this, and
-then asks the listing for the prices of a second provider at two hours of
-the same day.
+Round numbers are easier to check by hand. At the same rates, a response
+with 1,000 prompt tokens and 300 completion tokens should cost
+$0.000165 + 0.000198 = 0.000363$ dollars. The next cell checks this. It then
+asks the listing what a second provider, DeepSeek itself, charges for the
+same model at 02:00 and at 12:00 UTC of one Thursday.
 
 ```{.python .input #api-cost-example}
 %%tab pytorch
@@ -640,9 +756,10 @@ for hour in (2, 12):  # a Thursday, inside and outside a peak window
           f'{price.output:.3f} out')
 ```
 
-On a weekday, DeepSeek's own endpoint for the same model lists twice its
-noon price at two in the morning, UTC. A cost therefore needs the hour of
-the request as well as the day.
+At two in the morning, UTC, DeepSeek's own endpoint lists twice its noon
+price. That hour is ten in the morning in Beijing, and the listing doubles
+the price for the working hours of a Chinese weekday. A cost therefore needs
+the hour of the request as well as the day.
 
 Since the cost of a request can be bounded before it is sent, the client
 also enforces a budget. Before each live call it reserves the worst case,
@@ -658,11 +775,12 @@ should retry these failures, but not a malformed request or a bad key (the
 statuses 400 and 401), which would fail forever. How long should it wait?
 
 The standard answer is *exponential backoff*: after the failed attempt $a$,
-counted from 0, wait at most $d_a = \min(d_{\max}, b\,2^a)$ for a base $b$
-and a cap $d_{\max}$. But consider many clients that fail at the same
-moment. If each of them waits $d_a$, they all return together and fail
-together again. *Full jitter* :cite:`Brooker.2015` breaks the tie: each
-client sleeps for a time drawn uniformly from $[0, d_a]$.
+counted from 0, wait for the time $d_a = \min(d_{\max}, b\,2^a)$, with a
+base $b$ and a cap $d_{\max}$. Every failure doubles the wait. But consider
+many clients that fail at the same moment. If each of them waits $d_a$,
+they all return together and fail together again. *Full jitter*
+:cite:`Brooker.2015` breaks the tie: each client sleeps for a time drawn
+uniformly from $[0, d_a]$.
 
 ```{.python .input #api-backoff}
 %%tab pytorch
@@ -676,9 +794,12 @@ def backoff_delay(attempt, base=1.0, cap=60.0, rng=None, retry_after=None):
 ```
 
 A uniform draw from $[0, d_a]$ has mean $d_a/2$. Suppose that each attempt
-fails independently with probability $p$. The client sleeps after attempt
-$a$ only if the attempts $0, \ldots, a$ all failed, which has probability
-$p^{a+1}$. With at most $K$ retries the expected total sleep is therefore
+fails independently with probability $p$. This is the bold assumption of the
+calculation, since a provider that has just rejected a request will probably
+reject the next one as well, and we shall drop it shortly. The client sleeps
+after attempt $a$ only if the attempts $0, \ldots, a$ all failed, which has
+probability $p^{a+1}$. With at most $K$ retries the expected total sleep is
+therefore
 
 $$
 \mathbb{E}[S] = \sum_{a=0}^{K-1} p^{a+1}\, \frac{d_a}{2}.
@@ -743,12 +864,19 @@ async def achat(self, messages, *, replica=0, stream=False, **params):
                         n_retries, n_429, reserved)
 ```
 
-Two details matter for measurement. A `Retry-After` header is a floor under
-the jittered sleep. And the client counts every 429 itself: the OpenAI SDK
-that carries the requests would by default retry twice on its own and hide
-those failures, so its retries are switched off. The function `chat_batch`
-sends a list of requests with a bound on how many are in flight, and it
-returns the results in the order of the requests.
+The loop treats a `Retry-After` header as a floor under the jittered sleep,
+and it counts every 429 itself. That takes a precaution. The client sends
+its requests through the OpenAI Python package, which by default retries
+twice on its own and would hide those failures from us, so its retries are
+switched off.
+
+The function `chat_batch` sends a list of requests with a bound on how many
+are in flight, and it returns the results in the order of the requests. Its
+few lines are the mechanism of all three experiments. The semaphore holds
+`concurrency` permits. A request takes one before it is sent and gives it
+back when its response has arrived, and at that moment the next request
+starts. The call to `asyncio.gather` starts all requests and waits until the
+last of them has returned.
 
 ```{.python .input #api-chat-batch}
 %%tab pytorch
@@ -826,10 +954,11 @@ print(f'E[S] = {formula:.4f} s; simulated {draws.mean():.4f} '
 
 The simulation agrees with the formula. Jitter halves the mean sleep, which
 is welcome, but that is not why it exists. The reason shows only when many
-clients fail together. In the last simulation 64 clients send at the same
-instant to a server that admits ten requests in any window of one second
-and rejects the rest, once with the fixed waits $d_a$ and once with full
-jitter.
+clients fail together. Their failures are then anything but independent, so
+we leave the formula and simulate. In the last simulation 64 clients send at
+the same instant to a server that admits ten requests in any window of one
+second and rejects the rest, once with the fixed waits $d_a$ and once with
+full jitter.
 
 ```{.python .input #api-retry-storm}
 %%tab pytorch
@@ -868,9 +997,9 @@ Without jitter the clients return in lockstep. Each wave gets ten of them
 through, and the last four finish after 63 s, the sum of the six waits
 above. With full jitter all clients are done after about 15 s in the median
 run, and after about half a minute in the slowest of 200. The number of
-attempts hardly differs. What jitter changes is when the retries arrive:
-spread over the interval, they find the windows that synchronized clients
-leave empty.
+attempts hardly differs: jitter saves about ten of 238, on nearly every
+seed. What jitter changes is when the retries arrive: spread over the
+interval, they find the windows that synchronized clients leave empty.
 
 ## Concurrency and Throughput
 :label:`subsec_lm_api_concurrency`
@@ -891,13 +1020,14 @@ minutes, holds ten customers on average. The law assumes nothing about how
 requests arrive or how long each one takes.
 
 Our client runs a *closed loop*: it keeps $c$ requests in flight and sends a
-new one the moment one returns. Then $L = c$ is not measured but set, and
-the law ties together the two quantities that we do measure, the throughput
-$X$ in requests per second and the latency $W$ in seconds: $XW = c$. A
-server has two regimes. Lightly loaded, it answers each request in its
-unloaded latency $W_0$, so that $X = c/W_0$ grows in proportion to $c$. But
-a server also has a capacity $X_{\max}$, and once the throughput has reached
-it, the law leaves the latency no choice: $W = c/X_{\max}$. Together,
+new one the moment one returns, which is what `chat_batch` does with
+`concurrency=c`. Then $L = c$ is not measured but set, and the law ties
+together the two quantities that we do measure, the throughput $X$ in
+requests per second and the latency $W$ in seconds: $XW = c$. A server has
+two regimes. Lightly loaded, it answers each request in its unloaded latency
+$W_0$, so that $X = c/W_0$ grows in proportion to $c$. But a server also has
+a capacity $X_{\max}$, and once the throughput has reached it, the law
+leaves the latency no choice: $W = c/X_{\max}$. Together,
 
 $$
 X(c) = \min\left(\frac{c}{W_0},\, X_{\max}\right), \qquad
@@ -919,17 +1049,17 @@ $(N - c)$-th of the $N$ completions. For streamed replies it also reports
 the *time to first token*, the delay between sending a request and receiving
 the first token of its reply.
 
-Two further numbers check the measurement and not the server. The first,
-`little`, is the ratio $XW/c$. We set $L = c$ and the law always holds, so
-only the way we measure can move this ratio away from 1. The window may be
-too short to be steady. Or the latencies vary so much that the requests
-wholly inside the window, the only ones that $W$ averages, are not
-representative: short requests fit inside more easily, and the ratio falls
-below 1. The second number, `sustained`, is the mean number of requests in
-flight divided by $c$. It falls below 1 when slots of the loop stand empty,
-because a request failed or because the client was slow to send the next
-one, and then $L = c$ did not hold. Check that both are near 1, and then
-read $X$ and $W$.
+Two further numbers check the measurement and not the server. A first
+reading may take them on trust, since both stay close to 1 in all our runs.
+The first, `little`, is the ratio $XW/c$. We set $L = c$ and the law always
+holds, so only the way we measure can move this ratio away from 1. The
+window may be too short to be steady. Or the latencies vary so much that the
+requests wholly inside the window, the only ones that $W$ averages, are the
+short ones, and the ratio falls below 1. The second number, `sustained`, is
+the mean number of requests in flight divided by $c$. It falls below 1 when
+slots of the loop stand empty, because a request failed or the client was
+slow to send the next one. Check that both are near 1, and then read $X$ and
+$W$.
 
 ```{.python .input #api-closed-loop}
 %%tab pytorch
@@ -1070,9 +1200,11 @@ Besides $X$ and $W$, the table gives the throughput in completion tokens per
 second (`X_tokens`) and the median and the 90th percentile of the time to
 first token. The column `in decode` applies Little's law a second time, to a
 part of the server. A request first waits for its first token and then
-decodes. The mean decoding time is $W$ minus the mean time to first token,
-and $X$ times this time is the mean number of requests that are decoding at
-once.
+decodes. Requests enter the decoding stage at the rate $X$ and stay in it
+for $W$ minus the time to first token, so the product of the two is the mean
+number of requests that are decoding at once. The table is large. Read one
+pass at a time: follow `X_tokens` down the levels, then `W`, and then the
+three columns `ttft_p50`, `ttft_p90` and `in decode`.
 
 ```{.python .input #api-sweep-local}
 %%tab pytorch
@@ -1099,32 +1231,39 @@ Alone, a request takes about 2.7 s for its 64 tokens, or 24 tokens per
 second. Up to 16 requests in flight the throughput nearly doubles with every
 doubling of $c$, while the latency creeps up to about 3.1 s. Between 32 and
 64 the curve bends. At 128 the server delivers no more than at 64, about 12
-requests or 750 to 800 tokens per second, and the latency has doubled to
-more than 10 s. The two passes agree closely, and both ratios stay within a
-few percent of 1. The ratio `little` falls furthest below it at $c = 128$,
-where short requests are favoured in the way that we described.
+requests or 750 to 800 tokens per second, at twice the latency. The two
+passes agree closely, and both check ratios stay within a few percent of 1.
+The ratio `little` falls furthest below 1 at $c = 128$, where the requests
+that fit wholly inside the window are the faster ones.
 
-The last columns show what happens inside the server. At $c = 32$ about 28
-requests are decoding at once, and nine in ten receive their first token
-within about half a second: the server takes in every request as it
-arrives. At 64 about 46 are decoding, and the slowest tenth of the requests
-wait more than 3.5 s for a first token. At 128 no more are decoding than at
-64, and now the median request waits almost 8 s before its reply begins.
-The server admits about 45 sequences into its batch and queues the rest.
+The columns `ttft_p50`, `ttft_p90` and `in decode` show what happens inside
+the server. At $c = 32$ about 28 requests are decoding at once, and nine in
+ten receive their first token within about half a second: the server takes
+in every request as it arrives. At 64 about 46 are decoding, and the slowest
+tenth of the requests wait more than 3.5 s for a first token. At 128 no more
+are decoding than at 64, and now the median request waits almost 8 s before
+its reply begins. The server admits about 45 sequences into its batch and
+queues the rest.
 
-This is the capacity of the server as we started it, with a fifth of the
-card's free memory for its key-value cache. It is not the capacity of the
-GPU. Nor had batching stopped helping: with 64 requests in flight, each
-decoding sequence still receives its 64 tokens in about 3.7 s, against 2.6 s
-when it is alone.
+This is a limit of admission, and it belongs to the server as we started it,
+not to the GPU. By the sizing rule in the Transformers source, a fifth of
+the free memory of our card comes to a cache of fewer than 50 blocks of 256
+tokens, and each of our short requests occupies one block. The GPU itself
+could have taken more. Dividing `in decode` by $X$ gives the time that a
+sequence spends decoding: with 64 requests in flight it receives its 64
+tokens in about 3.7 s, against 2.6 s when it is alone. A batch of 46 slows
+each sequence by less than half, so batching had not stopped helping when
+the cache was full.
 
 It remains to fit the two parameters of :eqref:`eq_lm_littles_law`. For each
 pass we take $W_0$ as the latency at $c = 1$ and $X_{\max}$ as the largest
 throughput observed. As a check that does not rest on the model we also
 compute the *efficiency* $E(c) = X W_0 / c$, the fraction of the linear
-speedup that level $c$ achieves. We call a level past the knee when $E$
-stays below 0.7 from there on, and we claim a knee only if both passes put
-it at the same level.
+speedup that level $c$ achieves. We say that a level is past the knee if $E$
+stays below 0.7 from that level on, and we claim a knee only if both passes
+put it at the same level. The threshold is a convention. In the model of
+:eqref:`eq_lm_littles_law` the efficiency is $\min(1, c^*/c)$, so a value
+below 0.7 means a level more than 1.4 times the knee.
 
 ```{.python .input #api-sweep-fit}
 %%tab pytorch
@@ -1165,23 +1304,31 @@ d2l.plot([t.c.to_numpy() for t in passes] + [grid],
          fmts=('o', 's', '-'), axes=axes[1])
 ```
 
-Both passes give $W_0 \approx 2.7$ s and $X_{\max} \approx 12$ requests per
-second, so the two straight lines of :eqref:`eq_lm_littles_law` meet at
+Both passes give $W_0 \approx 2.7$ s and $X_{\max} \approx 12.4$ requests
+per second, so the two straight lines of :eqref:`eq_lm_littles_law` meet at
 $c^* \approx 33$. The efficiency rule names $c = 64$, again in both passes.
 The two statements agree: the corner lies just above 32, and 64 is the first
-level of our grid that is clearly past it. The plot shows the two passes
-with the fitted curves, the throughput in tokens per second on the left and
-the mean latency on the right. The fit is good at both ends and too sharp in
-the middle: at $c = 32$ the server delivers about 550 tokens per second
-where the model promises more than 750. Real servers round the corner.
+level of our grid that is clearly past it.
 
-What should a client of this server do? The server decodes up to about 45
-sequences at once, so raising $c$ from 32 to 64 still adds more than 40% to
-the throughput, while the mean latency grows from about 3.6 s to 5.2 s.
-Beyond 64 nothing is gained. At 128 the throughput is no higher, the latency
-has doubled, and half of the requests wait almost 8 s for their first token.
-A client that wants throughput keeps about 64 requests in flight, and one
-that wants short waits stays near 32.
+But did the server not decode 45 sequences at once? It did, and 33 and 45
+are one capacity, computed with two different times. The model assumes that
+a request in a full batch is as fast as a request alone. It is not: a
+sequence in the full batch decodes for about 3.7 s, and 12.4 requests per
+second times 3.7 s gives the 46 sequences of the table, where 12.4 times the
+unloaded 2.7 s gave 33. The latency starts to grow long before the cache is
+full.
+
+The plot shows the two passes with the fitted curves, the throughput in
+tokens per second on the left and the mean latency on the right. The fit is
+good at both ends and too sharp in the middle: at $c = 32$ the server
+delivers about 550 tokens per second where the model promises more than 750.
+Real servers round the corner.
+
+What should a client of this server do? Raising $c$ from 32 to 64 still adds
+more than 40% to the throughput, while the mean latency grows from about
+3.6 s to 5.2 s. Beyond 64 nothing is gained but waiting. A client that wants
+throughput keeps about 64 requests in flight, and one that wants short waits
+stays near 32.
 
 Does a hosted provider have a knee as well? Surely, but one client will not
 find it. We run three levels of the same loop against the flagship.
@@ -1202,13 +1349,16 @@ show(hosted_sweep)
 ```
 
 The throughput at 32 requests in flight is about 30 times that at 1, the
-latency stays at about 1.4 s, and no level drew a 429. We are far below this
-provider's knee, so the 21 requests per second are a lower bound on its
-capacity and nothing more. Most of the 1.4 s is the wait for the first
-token, about 1 s, which is why a time to first token should be reported
-apart from the latency of a whole response. One more caution for anyone who
-times a stream: chunks are not tokens. A provider may pack several tokens
-into one chunk, so a token rate must come from `usage`.
+latency stays at about 1.4 s, and no level drew a 429. The check ratio
+`little` drops to about 0.95 at the two higher levels. Hosted latencies vary
+more than local ones, so the requests wholly inside the window are the
+shorter ones, the effect that we described. We are far below this provider's
+knee, so the 21 requests per second are a lower bound on its capacity and
+nothing more. Most of the 1.4 s is the wait for the first token, about 1 s,
+which is why a time to first token should be reported apart from the latency
+of a whole response. One more caution for anyone who times a stream: chunks
+are not tokens. A provider may pack several tokens into one chunk, so a
+token rate must come from `usage`.
 
 ## Accuracy, Cost and Reproducibility
 :label:`subsec_lm_api_repro`
@@ -1221,12 +1371,14 @@ model, at what price? We take the 100 GSM8K test problems of
 with four worked examples as alternating user and assistant turns, built by
 `d2l.fewshot_prompt` of :numref:`sec_lm_prompting`, followed by the
 question. We decode at temperature 0 with seed 0, at most 512 tokens and
-reasoning off. Each example ends on a line of the form `#### answer`, the
-format that `d2l.extract_answer` looks for first. Where a reply has no such
-line, the extractor falls back on the last number in it. The prompt, the
-decoding settings and the extractor are the same for every arm. What
-differs is the model, and that includes how well it follows the format of
-its examples.
+reasoning off.
+
+Each example ends on a line of the form `#### answer`, the format that
+`d2l.extract_answer` looks for first. Where a reply has no such line, the
+extractor falls back on the last number in it. One model, sent the 100
+requests once, is an *arm* of the experiment. The prompt, the decoding
+settings and the extractor are the same for every arm. What differs is the
+model, and that includes how well it follows the format of its examples.
 
 ```{.python .input #api-gsm8k-setup}
 %%tab pytorch
@@ -1288,9 +1440,20 @@ print(gsm.to_string(formatters={
 The flagship solves 97 of the 100 problems in both replicas, Qwen3.8-27B
 solves 94, and the local Qwen3-4B 83, each with a bootstrap interval several
 points wide. The flagship is also the fastest, at about a second and a half
-per problem in the median. (Not every reply copied the format of the
-examples. Many end on a boxed or a bold number, those of the local model
-most often, and the extractor's fallback reads them.)
+per problem in the median.
+
+The reasoning trap taught us to ask how a reply ended before we count it as
+wrong. The table does not say, so we looked in the recorded responses. Three
+hosted replies ran into the limit of 512 tokens and count as errors: one of
+the flagship's first run, on a problem that its second run solved in about
+100 tokens, and two of Qwen3.8-27B's, among them the problem that this model
+solved earlier in this section with a budget of 1,024. These replies ran out
+of budget, which is not the same as wrong arithmetic. Three of them are too
+few to change any verdict below.
+
+Not every reply copied the format of its examples. Many end on a boxed or a
+bold number, those of the local model most often, and for these the fallback
+of the extractor finds the answer.
 
 Note the token columns. The same messages are 462 prompt tokens for one
 model and 566 for another, since each has its own tokenizer and template,
@@ -1334,11 +1497,13 @@ print(cost.to_string(na_rep='-', formatters={
 A hundred problems cost less than a cent on the flagship and about five
 cents on Qwen3.8-27B. Per correct answer the smaller model is about six
 times as expensive as billed and still almost four times at list prices,
-while the accuracies differ by three points. Three things add up. Parasail's
-price for output tokens is more than three times Novita's. Qwen3.8-27B
-writes longer replies. And Novita billed about three quarters of the
-flagship's prompt tokens, the four examples that open every request, at its
-cached rate, while Parasail cached nothing.
+while the accuracies differ by three points. Part of the gap is the price
+list: Parasail's price for output tokens is more than three times Novita's.
+Part is the model, since Qwen3.8-27B writes longer replies. The rest is a
+discount. Novita billed about three quarters of the flagship's prompt
+tokens, the four examples that open every request, at its cached rate.
+Parasail's row in the listing shows a cached price too, and in our run it
+cached nothing.
 
 The size of a model is a poor guide to its price. Here the model with about
 27 times the parameters is the cheaper one per correct answer. One reason
@@ -1350,11 +1515,24 @@ hold, and much less about the computation that a token costs.
 
 The local model gets its price from the GPU. It needs about 1.3 GPU-seconds
 per correct answer with eight requests in flight, which is 0.37 GPU-hours
-for 1,000 correct answers. Suppose that the card rents for one dollar an
-hour. The 1,000 answers then cost 37 cents, four times the flagship's bill
-of 9 cents, and they come from the least accurate of the three models.
-Exercise :exref:`ex_lm_api_break_even` works out the rental prices at which
-the comparison turns, and what a busier server changes.
+for 1,000 correct answers. In November 2026 an RTX 4090, the 24 GB card that
+we used, rented for 0.30 to 0.50 dollars an hour
+(:numref:`tab_cloud_prices`), so the 1,000 answers cost between 10 and 20
+cents. That is more than the flagship's 9 cents, and it is the price of the
+least accurate of the three models. A small model on a card of our own is
+not automatically the cheap option.
+
+Its price depends on how busy we keep the card. With eight requests in
+flight, the server of Experiment 1 delivered less than a quarter of the
+tokens per second that it reached with 64. If this experiment could fill the
+server as well as that one did, the same 1,000 answers would cost 2 to 4
+cents, less than half the flagship's price. This is an estimate and not a
+measurement: we did not run that arm, and the longer prompts of this
+experiment take more of the cache per request. Either way, what a local
+answer costs is decided by how full we keep the server, and here that moves
+the price from well below the flagship's to twice as much. Exercise
+:exref:`ex_lm_api_break_even` derives the rental prices at which the
+comparison turns.
 
 Are these differences real at 100 problems? Three tools come from
 :numref:`sec_lm_eval_suites`. All arms answered the same problems, so we
@@ -1366,18 +1544,22 @@ the first arm solved the problem) and the column `c` (only the second; this
 smallest true difference that a sample of this size would detect with 80%
 power.
 
-Two tools are new, and both answer to the small sample. With a handful of
-discordant problems no normal approximation can be trusted, so we use the
-exact *McNemar test*. If two arms were equally accurate, each discordant
-problem would fall to either side with probability one half, and the test
-computes the binomial probability of a split at least as uneven as the one
-observed. Moreover, three comparisons on the same 100 problems give chance
-three opportunities. *Holm's method* adjusts for that: it multiplies the
-smallest of the three $p$-values by three and the next by two. A difference
-counts as resolved only if its adjusted $p$-value is below 0.05 and its
-interval excludes zero. The fourth row is the noise floor, replica 0
-against replica 1. Read `difference`, the interval and the counts `b` and
-`c` first, and the verdict last.
+Two tools are new, and both are needed because the sample is small. With a
+handful of discordant problems no normal approximation can be trusted, so we
+use the exact *McNemar test*. If two arms were equally accurate, each
+discordant problem would fall to either side with probability one half, and
+the test computes the binomial probability of a split at least as uneven as
+the one observed. Moreover, three comparisons on the same 100 problems give
+chance three opportunities. *Holm's method* adjusts for that: it multiplies
+the smallest of the three $p$-values by three and the next by two.
+
+A difference counts as resolved only if its adjusted $p$-value is below 0.05
+and its interval excludes zero. We ask for both because the test and the
+bootstrap interval are two different approximations, which can disagree on
+so few discordant problems, and we believe a difference only when neither
+objects. The fourth row is the noise floor, replica 0 against replica 1.
+Read `difference`, the interval and the counts `b` and `c` first, and the
+verdict last.
 
 ```{.python .input #api-gsm8k-compare}
 %%tab pytorch
@@ -1421,30 +1603,40 @@ print(compare.to_string(index=False, na_rep='', formatters={
 ```
 
 The two replicas of the flagship differ on two problems, one in each
-direction: identical requests at temperature 0 with a seed did not give
-identical outcomes. Against this floor, a difference of 0.00 with an
-interval of $[-0.03, 0.03]$, the three points between the flagship and
-Qwen3.8-27B are unresolved. Five discordant problems split four to one, the
-interval $[-0.01, 0.08]$ includes zero, and the minimum detectable effect is
-about six points. We cannot say from this experiment which of the two models
-is more accurate, and the comparison rests on the price of a correct answer.
+direction: identical requests at temperature 0 did not give identical
+outcomes. One of the two is the reply that the limit of 512 tokens cut short
+in the first run. Against this floor, a difference of 0.00 with an interval
+of $[-0.03, 0.03]$, the three points between the flagship and Qwen3.8-27B
+are unresolved. Five discordant problems split four to one, the interval
+$[-0.01, 0.08]$ includes zero, and the minimum detectable effect is about
+six points. In fact no split of five problems could have passed the test,
+since even five to none has a $p$-value of $2/32 \approx 0.06$. We cannot
+say from this experiment which of the two models is more accurate, and the
+comparison rests on the price of a correct answer.
 
-Both hosted models are resolved from the local one, by 14 points
-$[0.07, 0.22]$ and by 11 points $[0.05, 0.18]$. One caution carries over
-from :numref:`sec_lm_eval_suites`. GSM8K has been public for years and may
-be in the training data of every one of these models, so the scores order
-the models on these 100 problems and say nothing absolute about their
+Both differences to the local model are resolved, 14 points $[0.07, 0.22]$
+and 11 points $[0.05, 0.18]$. One caution carries over from
+:numref:`subsec_lm_eval_contamination`. GSM8K has been public for years and
+may be in the training data of every one of these models, so the scores
+order the models on these 100 problems and say nothing absolute about their
 arithmetic.
 
 ### Determinism and Model Identity
 
 The two replicas raise a question that Experiment 3 asks directly. We send
 the same request many times, at temperature 0 and with a fixed seed, and
-count the different replies. The requests are the 4-shot prompts of the
-three problems with the longest reference solutions. The flagship receives
-each of them 20 times. The local server receives each of them five times in
-sequence with nothing else running, and five more times while eight other
-clients keep it busy.
+count the different replies. The field test found that the flagship's
+provider gives no repeatable draw for a seed. At temperature 0 that should
+not matter, since nothing is drawn: the model emits the token with the
+largest logit. What the experiment asks is whether the largest logit itself
+is stable.
+
+The requests are the 4-shot prompts of three problems, those of our 100 with
+the longest reference solutions. Long solutions make long replies, and every
+token of a reply is one more place where two candidates can nearly tie. The
+flagship receives each request 20 times. The local server receives each of
+them five times in sequence with nothing else running, and five more times
+while eight other clients keep it busy.
 
 ```{.python .input #api-determinism}
 %%tab pytorch
@@ -1512,27 +1704,35 @@ print(pd.DataFrame(rows).to_string(index=False, na_rep='-', formatters={
 
 Twenty identical requests to the flagship return five to seven different
 texts. They part ways within the first hundred characters, on one problem at
-the very first, and all reach the same final answer. The surprise is the
-local server, where we chose the seed and nothing else was running: on two
-of the three problems the five replies are not all equal either. Here the
-cause is the cache. Continuous batching shares the stored keys and values of
-a common prompt prefix between requests. The first request computes the
-prompt, and the later ones reuse its cached blocks, along a different
-numerical path. (We checked this cause. A field of Transformers'
-`ContinuousBatchingConfig`, which `transformers serve` does not expose,
-switches prefix sharing off, and then the five replies agree.)
+the very first, and all reach the same final answer.
+
+How can a model that draws nothing give different replies? The mechanism is
+the one that moved our own scores with the batch size in
+:numref:`subsec_lm_nondeterminism`. Floating-point addition is not
+associative, so the same sum taken in a different order differs in its last
+bits. A serving engine batches whatever requests happen to be in flight, and
+its kernels choose the order of their reductions by the shape of the batch.
+The logits of our request therefore depend on who else is being served
+:cite:`He.2025`. The smallest change flips a near-tie between two tokens,
+and from that token on the texts diverge. The seed is beside the point.
+
+The surprise is the local server, where we chose the seed and nothing else
+was running: on two of the three problems the five replies are not all equal
+either. No other client changed the batch here. What changed the order of
+the sums is the cache. Continuous batching shares the stored keys and values
+of a common prompt prefix between requests. The first request computes the
+prompt, and the later ones reuse its cached blocks, which is another
+sequence of operations with other last bits. We checked this cause. A field
+of Transformers' `ContinuousBatchingConfig`, which `transformers serve` does
+not expose, switches prefix sharing off, and then the five replies agree.
 
 Under load every reply is different, and now the answers differ too: two
-distinct answers on one problem and three on another.
-
-The mechanism is that of :numref:`subsec_deterministic_arithmetic`.
-Floating-point addition is not associative, so the same sum taken in a
-different order differs in its last bits. A serving engine batches whatever
-requests happen to be in flight, and its kernels choose the order of their
-reductions by the shape of the batch. The logits of our request therefore
-depend on who else is being served :cite:`He.2025`. At temperature 0 nothing
-is sampled, and the seed is beside the point: the smallest change flips a
-near-tie between two tokens, and from that token on the texts diverge.
+distinct answers on one problem and three on another. Whether a problem
+counts as solved then depends on what else the server was doing at the time.
+This reaches back to Experiment 2, whose local arm ran with eight requests
+in flight. Its score of 83 is one draw. The gaps of 11 and 14 points to the
+hosted models are far above any floor that we saw, but we measured that
+floor for the flagship only.
 
 A seed promises reproducibility only for a sampler and kernels that we
 control, and behind an API we control neither.
@@ -1550,13 +1750,15 @@ load. An experiment that does not pin its provider may therefore compare a
 model with a differently quantized copy of itself.
 
 Whether a provider serves the weights that it names is a statistical
-question that a client can ask. :citet:`Gao.Liang.Guestrin.2025` compare
-samples from an endpoint with samples from the released weights by a
-two-sample test, and found commercial endpoints whose outputs differed.
+question that a client can ask. :citet:`Gao.Liang.Guestrin.2025` compared
+samples from 31 commercial endpoints with samples from the released weights
+by a two-sample test, and for 11 of them the two distributions differed.
 :citet:`Cai.Shi.Zhao.ea.2025` show that such tests are hard to make reliable
-against a provider that wants to hide a substitution. Our client therefore
-records the served model and the provider with every response. The local
-server has done its work and is stopped.
+against a provider that wants to hide a substitution. Our client does the
+least that can be done, and records the served model and the provider with
+every response.
+
+That ends the experiments, and the local server is stopped.
 
 ```{.python .input #api-local-stop}
 %%tab pytorch
@@ -1613,14 +1815,20 @@ print(manifest.drop(columns=['usage cost', 'listing cost']).to_string(
     index=False, formatters={'USD': '{:.6f}'.format}))
 ```
 
-The whole recording made 5,184 live calls, most of them to our own server,
-and cost about ten cents. Each arm was served by one provider under one
-model identifier, as the pins demanded. The seven 429s all came from
-Parasail, and the client retried through them. The cost computed from the
-listing equals the cost that the router reported, to four digits. The
-router bills by its listing, then, and `d2l.api_cost` computes
-:eqref:`eq_lm_api_cost` as the router does. A provider's own invoice is not
-part of this check.
+The committed recording, about 740 paid requests, cost about ten cents. The
+cost computed from the listing equals the cost that the router reported, to
+four digits. The router bills by its listing, then, and `d2l.api_cost`
+computes :eqref:`eq_lm_api_cost` as the router does. A provider's own
+invoice is not part of this check. Each arm was served by one provider under
+one model identifier, as the pins demanded.
+
+The remaining numbers are for a reader who audits the recording. The clients
+of this page made 4,950 live calls, most of them to our own server. The
+committed recording holds 5,184, since it also contains the background load
+of Experiment 3 and the field test of the local server. It leaves out the
+test of the closed model. The seven 429s all came from Parasail. The column
+`failed` counts failed attempts and not failed requests: the client retried
+each of the seven, and no request was lost.
 
 ## Limits of a Hosted Model
 :label:`subsec_lm_api_lost`
@@ -1629,77 +1837,87 @@ Everything that the three experiments measured came through the protocol.
 Two kinds of limit remain: what we may do with the replies, and what no
 reply contains.
 
-### Terms of Use as an Engineering Input
+### Licenses and Terms of Service
 
 The first limit is not technical. A prompt that is sent to a service leaves
 our machine, and the reply comes back under somebody's terms. Two documents
-govern every call: the licence of the weights, and the terms of service of
-whoever runs them. :numref:`tab_lm_api_terms` records what we read before we
-stored the recorded responses with the book's data.
+govern every call: the license of the weights, and the terms of service of
+whoever runs them. :numref:`tab_lm_api_terms` records what these documents
+say about the responses that we stored with the book's data.
 
-:Licences and terms of service behind the recorded responses, as read on 14 November 2026. Terms change; the dates are those printed on the documents.
+:Licenses and terms of service behind the recorded responses. We read the licenses on 14 November 2026 and the terms of service on 18 November 2026. Terms change; the dates in the table are those printed on the documents.
 :label:`tab_lm_api_terms`
 
 | Document | What it says | Consequence here |
 |---|---|---|
-| MIT licence of the DeepSeek-V4.1-Flash weights | use, copying and redistribution permitted with the notice | responses stored with attribution |
-| Apache-2.0 licence of the Qwen3.8-27B and Qwen3-4B weights | use and redistribution permitted with the notice | responses stored with attribution |
-| OpenRouter terms of service (updated 31 August 2026) | inputs are not stored unless the account opts in to prompt logging; the user agrees to the terms that apply to each model, and rights in an output follow those terms | the router adds no rights of its own, so we read the licence of each model and the terms of its provider |
+| MIT license of the DeepSeek-V4.1-Flash weights | use, copying and redistribution permitted with the notice | responses stored with attribution |
+| Apache-2.0 license of the Qwen3.8-27B and Qwen3-4B weights | use and redistribution permitted with the notice | responses stored with attribution |
+| OpenRouter terms of service (updated 31 August 2026) | inputs are not stored unless the account opts in to prompt logging; the user agrees to the terms that apply to each model, and rights in an output follow those terms | the router adds no rights of its own, so we read the license of each model and the terms of its provider |
+| Novita terms of service (updated 5 August 2026) | by default, customer content is not used to train Novita's models and is not kept once the output is delivered; we found no clause on training with outputs or on publishing measurements | responses stored for replay |
 | Parasail terms of service (dated 10 November 2025) | customer content is not used to train Parasail's models; the customer owns inputs and outputs; content available through the platform may not be used to train or develop machine learning models; performance information about the platform may not be disclosed publicly | responses stored for replay only, never used as training data |
 
-The table has no row for Novita, whose terms we could not obtain in readable
-form on that date, and none for the closed model, whose replies are not in
-the book's data at all: we kept only the verdicts of the field test.
+The table has no row for the closed model, whose replies are not in the
+book's data at all: we kept only the verdicts of the field test.
 
-The Parasail row shows why the second document matters even when the first
-is permissive. Apache-2.0 would let us train on the outputs of Qwen3.8-27B.
+The two provider rows differ, and that is the reason to read them. The
+Parasail row shows why the second document matters even when the first is
+permissive. Apache-2.0 would let us train on the outputs of Qwen3.8-27B.
 Whether the service that produced them allows the same is a separate
-question, and the clause in the table suggests that it does not. The last
-clause of the row is easy to overlook, and it concerns measurements like
-ours: the customer may not "publicly disclose to any third party any
-performance information or analysis relating to the Platform". The latency
-and the rate limits of a named provider are performance information.
-Whoever plans to publish such numbers should look for a clause of this kind
-first, and should find out how it applies to requests that reach the
-provider through a router's account.
+question, and the clause in the table suggests that it does not.
+
+The last clause of that row is easy to overlook, and it concerns
+measurements like ours: the customer may not "publicly disclose to any third
+party any performance information or analysis relating to the Platform". The
+latency and the rate limits of a named provider are performance information,
+and this section prints both for Parasail. We read the clause only after the
+recording had been made, which is the wrong order. Our requests reached
+Parasail through the router's account and not through one of our own, and
+how the clause applies to such requests is for the provider to say. Whoever
+plans to publish numbers of this kind should look for such a clause before
+the first request, and ask.
 
 Later chapters let hosted models write questions and training examples.
-Before any of them does, both documents are read and the answer is recorded
-with the data. And whatever the terms say, a prompt is disclosed to the
-provider the moment it is sent, so we send only public data, here the
-questions of GSM8K.
+Before any of them does, we read both documents and record the answer with
+the data. And whatever the terms say, a prompt is disclosed to the provider
+the moment it is sent, so we send only public data, here the questions of
+GSM8K.
 
 ### Quantities the Protocol Withholds
 
-The other limits are technical. We can now go through the instruments of
-this chapter and ask which of them survive. :numref:`fig_lm_api_lost` does
-so for four kinds of endpoint, from weights that run in the book's own code
-to a closed model behind a router.
+The other limits are technical. Let us go back through the chapter and ask,
+method by method, what a client can still obtain. :numref:`fig_lm_api_lost`
+does so for four kinds of endpoint, from weights that run in the book's own
+code to a closed model behind a router.
 
-![What each kind of endpoint lets a client measure. The rows are the instruments of this chapter. A filled circle marks what is available, a half circle what depends on the provider or the server, and an open circle what the protocol withholds.](../img/mdl-lm-pretrained-api-lost.svg)
+![What each kind of endpoint gives a client. The rows are the quantities and controls that the methods of this chapter relied on. A filled circle marks what is available, a half circle what depends on the provider or the server, and an open circle what a client does not get.](../img/mdl-lm-pretrained-api-lost.svg)
 :label:`fig_lm_api_lost`
 
-The chat-completions protocol has no field for the log-probabilities of a
-prompt. None of the four endpoints that we tested returned them, although
-some servers add such a field of their own. Scoring answer options, cloze
-scoring and bits per byte (:numref:`sec_lm_scoring`) all need these
-log-probabilities, so behind an API an evaluation falls back on generating
-text and extracting an answer, as in Experiment 2. Log-probabilities of
-generated tokens come only where the provider returns them, and our test of
-request fields found one provider that returned them for part of a reply.
+Start with the log-probabilities. The chat-completions protocol has no field
+for the log-probabilities of a prompt. None of the four endpoints that we
+tested returned them, although some servers add such a field of their own.
+Scoring answer options, cloze scoring and bits per byte
+(:numref:`sec_lm_scoring`) all need these log-probabilities, so behind an
+API an evaluation falls back on generating text and extracting an answer, as
+in Experiment 2. Log-probabilities of generated tokens come only where the
+provider returns them, and our field test found one provider that returned
+them for part of a reply.
+
 Weights and activations are gone, and with them everything of
 :numref:`sec_lm_interpretability`: one cannot patch an activation that one
 cannot read. The prompt is rendered on the server, and the sampler is
-whatever subset of fields the provider honours. Batching is the provider's
-business, which is why Experiment 3 came out as it did.
+whatever subset of fields the provider honours. The row on seeds and
+batching needs a remark. The protocol does have a `seed` field, and the
+figure still shows an open circle for the hosted models, because no hosted
+endpoint returned a repeatable draw for it. For the batch there is no field
+at all. It is the provider's business, which is why Experiment 3 came out as
+it did.
 
 What survives is text, the `usage` block, structured output where the
 provider enforces a schema, and as many samples as one is willing to pay
-for. (The last row of the figure means repeated requests, since no endpoint
-honoured `n=2`.) That is enough for accuracy with error bars, cost, latency
-and throughput, the measurements of this section. It is not enough to check
-a port layer by layer, to score a given continuation, or to test a claim
-about a mechanism.
+for, drawn by repeated requests, since no endpoint honoured `n=2`. That is
+enough for accuracy with error bars, cost, latency and throughput, the
+measurements of this section. It is not enough to check a port layer by
+layer, to score a given continuation, or to test a claim about a mechanism.
 
 For those we need the weights, and so the rest of this part works with
 models that we hold. The first thing that we shall ask of them is something
@@ -1710,33 +1928,43 @@ that retrieves documents needs. That is the subject of
 ## Summary
 
 A hosted model is a service that a client can measure. The chat-completions
-protocol returns text and a `usage` block. From `usage` and a dated price
-follow the cost of a response and the price of a correct answer, which
-separated two hosted models that accuracy on 100 problems could not. A
-client that stores every response under a hash of everything that can change
-it makes such measurements replayable. The service itself is not
-deterministic: identical requests at temperature 0 returned different texts
-from a hosted endpoint and from our own server. Little's law, $XW = c$ in a
-closed loop, turns two timestamps per request into throughput, latency and
-the knee beyond which more concurrency only adds waiting. The protocol has
-no place for the log-probabilities of a prompt, for activations or for
+protocol returns text and a `usage` block, and a client that stores every
+response under a hash of everything that can change it makes its
+measurements replayable. Little's law, $XW = c$ in a closed loop, turns two
+timestamps per request into throughput, latency and the knee beyond which
+more concurrency only adds waiting. From `usage` and a dated price follow
+the cost of a response and the price of a correct answer, which separated
+two hosted models that accuracy on 100 problems could not. The service
+itself is not deterministic: identical requests at temperature 0 returned
+different texts from a hosted endpoint and from our own server. The protocol
+has no place for the log-probabilities of a prompt, for activations or for
 weights, so scoring by likelihood, layer-wise checks and interventions
 cannot be done through it.
 
 ## Exercises
 
-1. **The closed loop beyond the knee.** Consider the model of a closed
-   loop in :eqref:`eq_lm_littles_law`.
-    1. From $XW = c$ and $X = X_{\max}$, derive $W(c)$ for $c > c^*$. What
-       is the latency at $c = 2c^*$ for $W_0 = 2$ s and $X_{\max} = 8$
-       requests per second?
-    1. Show that the efficiency $E(c) = X W_0 / c$ equals
-       $\min(1, c^*/c)$. At which $c$ does it cross 0.7? With levels at the
-       powers of two and $c^* = 33$, which is the first level whose
-       efficiency is below 0.7?
-    1. Compute $E(32)$ for both passes of Experiment 1 from the printed
-       table. The model predicts a value close to 1. Which of its two
-       assumptions fails below the knee, and which column shows it?
+1. **A detection rule of your own.** The field test trusted a request field
+   only after a rule had seen its effect.
+    1. Write a detection rule for `max_tokens` in the style of
+       `seed_honoured`. Which request does it send, and which parts of the
+       response does it compare?
+    1. Describe two responses that a careless rule would wrongly call
+       honoured: one from a reply that is short of its own accord, and one
+       like that of the closed model in the field test, whose `usage`
+       reported more reasoning tokens than completion tokens under its cap.
+       Change your rule so that it excludes both.
+    1. Write a rule for `top_p`. Why does it need a control request, as the
+       rule for `seed` needed the request with seed 8?
+
+1. [code] **The contents of the request hash.** The demonstration in the
+   text settled five changes to a request. Consider three more: the order
+   of the keys in its parameters, `max_tokens`, and the port of the base
+   URL.
+    1. For each change, decide whether the hash must change, and give the
+       reason in one sentence. Verify your answers with `d2l.request_hash`.
+    1. The hash contains the hostname and not the port. Describe an
+       experiment that this choice makes possible, and a situation in which
+       it would return a wrong cache entry.
 
 1. [code] **Equal jitter.** Equal jitter sleeps for
    $d_a/2 + U$ with $U$ uniform on $[0, d_a/2]$.
@@ -1747,31 +1975,21 @@ cannot be done through it.
        the number of attempts of the three schedules over 200 seeds.
        Explain the order of the finish times from the first sub-problem.
 
-1. **The price of a local correct answer.** Experiment 2 reports the
-   dollars per 1,000 correct answers of the two hosted models and the
-   GPU-seconds per correct answer of the local model.
-    1. For each hosted model, derive the rental price per GPU-hour below
-       which the local model costs less per correct answer. Compare the
-       two prices with the rental prices of :numref:`sec_cloud_instances`.
-    1. The local figure was measured with eight requests in flight. Use the
-       table of Experiment 1 to estimate how the break-even prices change
-       when the server runs with 64 requests in flight, and state the
-       assumption that your estimate makes about the length of the replies.
-    1. Name two things that the comparison leaves out, one in favour of
-       the hosted models and one in favour of the local model.
-   :exlabel:`ex_lm_api_break_even`
-
-1. [code] **The contents of the request hash.** Consider eight changes to
-   a request: the order of the keys in its parameters, `seed`,
-   `max_tokens`, the API key, `stream`, the pinned provider, the port of
-   the base URL, and `replica`.
-    1. For each change, decide whether the hash must change, and give the
-       reason in one sentence.
-    1. Verify your answers with `d2l.request_hash` by constructing pairs of
-       requests that collide and pairs that do not.
-    1. The hash contains the hostname and not the port. Describe an
-       experiment that this choice makes possible, and a situation in which
-       it would return a wrong cache entry.
+1. **The closed loop beyond the knee.** Consider the model of a closed
+   loop in :eqref:`eq_lm_littles_law`.
+    1. Show that the efficiency $E(c) = X W_0 / c$ equals
+       $\min(1, c^*/c)$. At which $c$ does it cross 0.7? With levels at the
+       powers of two and $c^* = 33$, which is the first level whose
+       efficiency is below 0.7?
+    1. Compute $E(32)$ for both passes of Experiment 1 from the printed
+       table. The model predicts a value close to 1. Which of its two
+       assumptions fails below the knee, and which column shows it?
+    1. Our client keeps the number of requests in flight fixed. In an
+       *open loop*, requests arrive at a rate $\lambda$ that does not
+       depend on the server. What does Little's law say about the number
+       of requests inside the server when $\lambda < X_{\max}$? What
+       happens when $\lambda > X_{\max}$, and why can a closed loop never
+       show it?
 
 1. [code] **Chunks and tokens.** The caches of Experiment 1
    (`rec.cache('lm-api-sweep-v1', arm)` for the arms `'local'` and
@@ -1785,6 +2003,33 @@ cannot be done through it.
        first content token divided by the completion tokens, and the median
        gap between chunks. Explain the difference on the hosted endpoint
        from the distribution of the gaps.
+
+1. **The price of a local correct answer.** Experiment 2 reports the
+   dollars per 1,000 correct answers of the two hosted models and the
+   GPU-seconds per correct answer of the local model.
+    1. For each hosted model, derive the rental price per GPU-hour below
+       which the local model costs less per correct answer. On which side
+       of these two prices do the 0.30 to 0.50 dollars of the text fall?
+    1. The local figure was measured with eight requests in flight, and
+       the text estimates 2 to 4 cents per 1,000 correct answers for a full
+       server. Derive this estimate from the table of Experiment 1, and
+       state the assumption that it makes about the length of the prompts
+       and the replies. How do the two break-even prices change?
+    1. Name two things that the comparison leaves out, one in favor of
+       the hosted models and one in favor of the local model.
+   :exlabel:`ex_lm_api_break_even`
+
+1. **The exact McNemar test by hand.** If two arms are equally accurate,
+   each discordant problem falls to either side with probability one half.
+    1. With five discordant problems, compute the two-sided $p$-value of
+       every possible split. Which splits reach $p < 0.05$?
+    1. How many discordant problems must an experiment collect before a
+       split with all of them on one side reaches $p < 0.05$? How many
+       before that split survives Holm's factor of three?
+    1. The flagship and Qwen3.8-27B disagreed on 5 of 100 problems.
+       Explain from the first two parts why a benchmark that both models
+       nearly solve cannot separate them at this size, and say what you
+       would change: the number of problems, or the problems.
 
 1. [code] **Replicas needed to see non-determinism.** Use the 20 replies
    per problem of the flagship in Experiment 3
@@ -1800,10 +2045,11 @@ cannot be done through it.
        repetitions?
 
 1. [code] **Prompt caching, measured.** This exercise makes live calls
-   that cost a few cents. Build a prefix of about 2,000 tokens that five
+   that cost about a cent. Build a prefix of about 2,000 tokens that five
    requests share, and give each request its own short question. Send the
-   five requests to a provider that lists a cached price, wait five
-   minutes, and send them again with new replica numbers.
+   five requests to a provider that lists a cached price. Send them again at
+   once with new replica numbers, and a third time five minutes later. The
+   delay tests how long the provider keeps a prefix.
     1. From `usage`, report the fraction of prompt tokens that were cached
        in each round.
     1. Compute the saving with `d2l.api_cost`, and compare it with the
@@ -1811,11 +2057,11 @@ cannot be done through it.
        billed at the full rate, and why?
 
 1. [code] **One set of weights at two precisions.** ● This exercise makes
-   live calls that cost about 0.2 dollars. The listing names providers that
-   serve the flagship's weights in a 4-bit format and others that serve
-   them in an 8-bit format. The release already stores the larger part of
-   the weights in 4 bits, so the two labels describe a smaller difference
-   than they suggest.
+   live calls that cost about five cents. The listing names providers that
+   serve the flagship's weights in a 4-bit format and others that serve them
+   in an 8-bit format. The release already stores the larger part of the
+   weights in 4 bits, so the two labels describe a smaller difference than
+   they suggest.
     1. Run Experiment 2 for the flagship through one provider of each kind,
        with two replicas each, and test the difference in accuracy with the
        exact McNemar test. Compare it with the replica noise floor of each
@@ -1836,7 +2082,7 @@ Models behind an API<br>
 :::
 :::
 
-::: {.slide title="The Flagship Needs 382 GB at Four Bits; One Card Has 24 GB"}
+::: {.slide title="DeepSeek-V4.1-Flash Needs 382 GB at Four Bits; One Card Has 24 GB"}
 [The problem]{.kicker}
 
 | weights | parameters | bf16 | fp8 | 4 bits | fits |
@@ -1856,13 +2102,12 @@ The model is a service. **What can a client measure, and what is withheld?**
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- read a chat-completions request and response, and compute the cost of a
-  response from its usage block;
+- read a chat-completions request and response, compute the cost of a
+  response from its usage block, and name what the protocol withholds;
 - key a replay cache so that a recorded measurement can be repeated;
 - choose a retry schedule and compute its expected wait;
 - find the capacity and the knee of a server with Little's law;
-- decide whether an accuracy gap is resolved, and price a correct answer;
-- name what the chat protocol withholds.
+- decide whether an accuracy gap is resolved, and price a correct answer.
 
 **Idea:** a hosted model is a service with a protocol, a price and limits,
 and the client is the measuring instrument. **Running example:**
@@ -1890,13 +2135,45 @@ RTX 4090, 100 GSM8K problems.
 :::
 :::
 
+::: {.slide title="One Model, Many Providers: Pin One and Use a Dated Id"}
+- **Provider:** a company that hosts the weights and sells access per token.
+- **Router:** one address and one account in front of many providers. Its
+  **listing** has a row per provider: prices, supported fields, precision.
+- **Pin:** name one provider and forbid fallbacks.
+
+| model, by dated id | pinned provider | in | out | cached in |
+|---|---|---|---|---|
+| DeepSeek-V4.1-Flash-1017, the **flagship** | Novita, fp8 | 0.165 | 0.66 | 0.0033 |
+| Qwen3.8-27B | Parasail, fp8 | 0.24 | 2.20 | 0.05 |
+| gpt-5-nano, closed | OpenAI | 0.05 | 0.40 | 0.005 |
+
+[Dollars per million tokens, listing of 13 November 2026. The same weights are served at 4 to 16 bits, and an undated alias can be re-pointed.]{.small}
+:::
+
+::: {.slide title="A Request Carries the Messages and the Sampler's Parameters"}
+| field | meaning |
+|---|---|
+| `messages` | the conversation: a list of roles and contents |
+| `temperature`, `top_p` | scale the logits; keep the most probable tokens |
+| `max_tokens`, `stop` | bound the reply; strings that end it |
+| `seed` | ask for a reproducible draw |
+| `logprobs`, `top_logprobs` | log-probabilities of generated tokens |
+| `response_format` | output that follows a JSON schema |
+| `stream` | the reply in chunks, as generated |
+
+::: {.d2l-note}
+**A field is a request.** The provider may honour it, ignore it or reject
+it, and only a test shows which.
+:::
+:::
+
 ::: {.slide title="A Response Is Text plus a Served Model, a Provider and a Usage Block"}
 One GSM8K word problem to the flagship, question only:
 
 | in the response | value |
 |---|---|
 | text | a worked solution ending in the correct answer |
-| `finish_reason` | `stop` |
+| `finish_reason` | `stop`: the model ended. `length`: it reached `max_tokens` |
 | `usage` | 36 prompt tokens, 118 completion tokens |
 | served model, provider | `deepseek/deepseek-v4.1-flash-1017`, Novita |
 | latency, cost | about 1.5 s, 0.000084 dollars |
@@ -1907,40 +2184,26 @@ The server applies the chat template, so the client never sees tokens:
 :::
 :::
 
-::: {.slide title="Request Fields Are the Sampler's Parameters"}
-| field | meaning |
-|---|---|
-| `temperature`, `top_p` | scale the logits; keep the most probable tokens |
-| `max_tokens`, `stop` | bound the reply; strings that end it |
-| `seed` | ask for a reproducible draw |
-| `logprobs`, `top_logprobs` | log-probabilities of generated tokens |
-| `response_format` | output that follows a JSON schema |
-| `stream` | the reply in chunks, as generated |
-
-::: {.d2l-note}
-The server renders the prompt. **The client never sees the tokens**, so
-`usage` is its only token count.
-:::
-:::
-
 ::: {.slide title="Hidden Reasoning Spends the Output Budget"}
-Qwen3.8-27B, reasoning on by default, `max_tokens=64`:
+**Reasoning:** text that a model generates for its own use before the
+reply. Qwen3.8-27B reasons by default. One hard problem, sent twice:
 
 | | content | finish | completion tokens | reasoning tokens |
 |---|---|---|---|---|
-| reasoning on, 64 tokens | empty | `length` | 64 | 64 |
-| reasoning off, 1,024 tokens | correct answer | `stop` | 871 | 0 |
+| reasoning on, `max_tokens=64` | empty | `length` | 64 | 64 |
+| reasoning off, `max_tokens=1024` | correct answer | `stop` | 871 | 0 |
 
 ::: {.d2l-note .warn}
-Reasoning tokens are generated, billed as completion tokens and counted
-against `max_tokens`. **Empty content + `length` + reasoning = completion**
-is the signature.
+Reasoning tokens are billed as completion tokens and counted against
+`max_tokens`. **Empty content + `length` + reasoning = completion** is the
+signature.
 :::
 :::
 
 ::: {.slide title="A Listed Field Is a Claim; a Detection Rule Tests It"}
-Rule for `seed`: seeds 7, 7, 8 at temperature 1. Honoured if the first two
-texts agree and the third differs.
+Rule for `seed`: three sampled requests with seeds 7, 7, 8. **Honoured** if
+the first two texts agree and the third differs, **ignored** if not,
+**rejected** on an error status, **partial** if only part was done.
 
 | field | flagship | Qwen3.8-27B | closed model | local server |
 |---|---|---|---|---|
@@ -1950,10 +2213,10 @@ texts agree and the third differs.
 | `n=2` | ignored | ignored | ignored | ignored |
 | prompt log-probabilities | ignored | ignored | ignored | rejected |
 
-All three hosted endpoints list `seed`. The router refused `logprobs` and
-`stop` for the closed model, whose listing lacks them.
+All three hosted endpoints list `seed`; none returned a repeatable draw.
+Our own server ignores more fields than any provider.
 
-[Recorded 13 November 2026; one request field per test]{.small}
+[Recorded 13 November 2026; one request field per test. The router refused `logprobs` and `stop` for the closed model, whose listing lacks them.]{.small}
 :::
 
 ::: {.slide title="Check: An Empty Reply"}
@@ -1971,13 +2234,16 @@ did it cost?
 :::
 :::
 
-::: {.slide title="A Replay Cache Keys on Everything That Changes the Response, and Nothing Secret"}
+::: {.slide title="A Replay Cache Keys on What Changes the Response, Nothing Secret"}
 @!api-hash-demo
 
-- In the hash: host, model, messages, sampling and routing fields, and a
-  client-side `replica`.
-- Not in it: `stream`, timeout, headers (the API key).
-- Modes: `replay` (a miss is an error), `record`, `live`.
+Lines 1 to 3 agree: `stream` and the API key are outside the hash. Lines 4
+to 6 each differ.
+
+- In the hash: host, model, messages, sampling and routing fields, and
+  `replica`, a client-side number that tells identical requests apart.
+- Modes: `replay` (a miss is an error), `record` (send what is missing),
+  `live`.
 :::
 
 ::: {.slide title="Cost Is Arithmetic on Usage and a Dated Price"}
@@ -1987,20 +2253,28 @@ $n$: prompt, cached and completion tokens from `usage`. $r$: dollars per
 million tokens. Reasoning tokens are inside $n_\textrm{out}$.
 
 @!api-cost-example
+
+Same model, same weekday: twice the listed price at 02:00 UTC, mid-morning
+in Beijing. **A cost needs the hour.**
+
+[Whole recording: 5,184 calls, about 0.10 dollars; cost from the listing / cost billed = 1.0000]{.small}
 :::
 
 ::: {.slide title="Full Jitter Sleeps a Uniform Time up to the Exponential Bound"}
+Retry timeouts, 429 (too many requests) and 5xx (server errors). Never
+retry 400 (malformed request) or 401 (bad key): they fail forever.
+
 @-api-backoff
 
 Bound after failed attempt $a$: $d_a = \min(\textrm{cap}, \textrm{base}
-\cdot 2^a)$; mean sleep $d_a/2$. Failure probability $p$, at most $K$
-retries:
+\cdot 2^a)$; mean sleep $d_a/2$. With failure probability $p$ and at most
+$K$ retries, the expected total sleep is
+$\mathbb{E}[S] = \sum_{a=0}^{K-1} p^{a+1} d_a/2$.
 
-$$\mathbb{E}[S] = \sum_{a=0}^{K-1} p^{a+1}\, \frac{d_a}{2}$$
-
-Base 1 s, six failures in a row: 31.5 s on average, 63 s unjittered.
-$p = 0.3$, $K = 6$: 0.36 s per request. Backoff is cheap while failure is
-the exception.
+::: {.d2l-note}
+Base 1 s, $p = 0.3$, $K = 6$: 0.36 s per request. **Backoff is cheap while
+failure is the exception.**
+:::
 :::
 
 ::: {.slide title="Jitter Ends a Retry Storm in about 15 s instead of 63 s"}
@@ -2009,15 +2283,15 @@ the exception.
 @!api-retry-storm
 
 - Fixed waits: the clients return in lockstep, ten get through per wave.
-- The number of attempts is nearly the same. Jitter changes when the
+- Jitter saves only about ten attempts of 238. What it changes is when the
   retries arrive.
 :::
 
-::: {.slide title="In a Closed Loop, Throughput Grows with Concurrency, Then Stops at Capacity"}
+::: {.slide title="In a Closed Loop, Throughput Grows with Concurrency up to Capacity"}
 - Little's law: requests inside $L$ = throughput $X$ × time inside $W$.
 - Closed loop with $c$ requests in flight: $L = c$, so $XW = c$.
 - Light load: $W = W_0$, so $X = c/W_0$. At capacity: $X = X_{\max}$, so
-  $W = c/X_{\max}$.
+  $W = c/X_{\max}$. The two meet at the **knee** $c^*$.
 
 $$X(c) = \min\left(\frac{c}{W_0}, X_{\max}\right), \qquad c^* = X_{\max} W_0$$
 
@@ -2054,12 +2328,12 @@ flight?
 ::: {.slide title="The Lines Meet just above 32 in Flight; Throughput Rises until 64"}
 @!api-sweep-fit
 
-Qwen3-4B, one RTX 4090, 64 tokens per reply, two shuffled passes.
-Efficiency: $E(c) = X W_0 / c$. At $c = 32$ the fit is too sharp: 550
-tokens per second against a promised 750.
+Qwen3-4B, one RTX 4090, 64 tokens per reply, two shuffled passes. Knee
+rule: efficiency $E(c) = X W_0 / c$ below 0.7 from that level on. At
+$c = 32$ the fit is too sharp: 550 tokens/s against a promised 750.
 :::
 
-::: {.slide title="The Server Decodes about 45 Sequences; Further Requests Wait for a Slot"}
+::: {.slide title="The Server Decodes about 45 Sequences at Once; the Rest Wait"}
 | requests in flight $c$ | 16 | 32 | 64 | 128 |
 |---|---|---|---|---|
 | decoding at once, $X(W - \textrm{TTFT})$ | 15 | 28 | 46 | 42 |
@@ -2069,71 +2343,87 @@ tokens per second against a promised 750.
 
 ::: {.d2l-note}
 32 → 64 in flight: over 40% more throughput. 64 → 128: none, only waiting.
-This is the capacity at the cache budget we set, **not the GPU's**.
+An admission limit of the server as we started it, with a small cache, **not
+the GPU's capacity**.
 :::
+
+The fit's $c^* \approx 33$ assumes the unloaded 2.7 s. A sequence in the
+full batch decodes for 3.7 s: $12.4/\textrm{s} \times 3.7$ s $= 46$.
 
 Hosted flagship: $X(32)/X(1) \approx 30$ at a flat 1.4 s. One client does
 not find a large provider's knee.
 :::
 
 ::: {.slide title="Three Points of Accuracy Are Unresolved at 100 Problems"}
+100 GSM8K test problems, four worked examples in the prompt, temperature 0,
+reasoning off, 8 requests in flight.
+
 | arm | accuracy | 95% interval |
 |---|---|---|
-| flagship, replicas 0 and 1 | 0.97 | 0.93 to 1.00 |
+| flagship, run twice (replicas 0 and 1) | 0.97 | 0.93 to 1.00 |
 | Qwen3.8-27B | 0.94 | 0.89 to 0.98 |
 | Qwen3-4B, local | 0.83 | 0.75 to 0.90 |
 
-- Flagship − Qwen3.8-27B: 0.03, interval −0.01 to 0.08, discordant 4 to 1,
-  minimum detectable effect 0.06.
+- **Noise floor:** the two flagship replicas differ on 2 problems.
+- Flagship − Qwen3.8-27B: 0.03, paired interval −0.01 to 0.08. The
+  **discordant** problems, solved by one arm only, split 4 to 1.
+- **Minimum detectable effect** at 100 problems, 80% power: 0.06.
 - Both hosted models − local: resolved (14 and 11 points).
-- Noise floor: the two replicas differ on 2 problems.
+
+[Three hosted replies were cut at the limit of 512 tokens and count as wrong.]{.small}
 :::
 
 ::: {.slide title="The Price of a Correct Answer Differs Four- to Sixfold"}
-@!api-gsm8k-cost
+| arm | dollars per 1,000 correct | at list price | GPU-s per correct |
+|---|---|---|---|
+| flagship (763 B parameters) | 0.09 | 0.15 | |
+| Qwen3.8-27B | 0.55 | 0.55 | |
+| Qwen3-4B, local | | | 1.3 |
 
-- Output price 0.66 against 2.20; shorter replies; three quarters of the
-  flagship's prompt tokens billed at the cached rate.
+- Why: output at 0.66 against 2.20 dollars per million tokens; shorter
+  replies; three quarters of the flagship's prompt tokens at the **cached
+  rate**, a discount for a prompt prefix the provider has kept.
 - The model with 27 times the parameters is the cheaper one: a sparse
   mixture of experts, most of its parameters idle on any one token.
-- Local, at 1 dollar per GPU-hour: 0.37 dollars per 1,000 correct.
+- Local: 0.37 GPU-hours per 1,000 correct, 10 to 20 cents at 0.30 to 0.50
+  dollars an hour. On a full server about 2 to 4 cents (an estimate).
 :::
 
 ::: {.slide title="Temperature 0 and a Seed Do Not Make a Service Deterministic"}
-@!api-determinism-table
+Three prompts, each sent many times with identical settings:
 
-- Kernels pick their reduction order by batch shape; float addition is not
-  associative; a near-tie flips.
-- Local, alone: later requests reuse the cached prompt of the first, along
-  a different numerical path.
-- A replay returns one recorded draw.
-:::
+| condition | replies per prompt | distinct texts | distinct answers |
+|---|---|---|---|
+| flagship, hosted | 20 | 5 to 7 | 1 |
+| local server, nothing else running | 5 | 1 to 2 | 1 |
+| local server, 8 other clients | 5 | 5 | 1 to 3 |
 
-::: {.slide title="A Model Id Is Not a Version: Pin the Provider, Record What Served You"}
-- A dated snapshot id names one release; an alias can be re-pointed.
-- One set of weights, many providers, 4-bit to 16-bit formats; a router
-  balances over them by default.
-- Pin one provider, forbid fallbacks, store served model and provider with
-  every response.
+- Float addition is not associative, and kernels pick their summation order
+  by the shape of the batch. A near-tie between two tokens flips.
+- Local, alone: later requests reuse the cached prompt of the first. Other
+  operations, other last bits.
 
 ::: {.d2l-note}
-This recording: 5,184 calls, about 0.10 dollars, one provider and one served
-id per arm; listing cost / billed cost = 1.0000.
+The batch is whoever else is being served. **A seed fixes the sampler, not
+the arithmetic.**
 :::
 :::
 
-::: {.slide title="An API Withholds What This Chapter's Instruments Need"}
-![](../img/mdl-lm-pretrained-api-lost.svg){height=430px}
+::: {.slide title="An API Withholds What This Chapter's Measurements Need"}
+![](../img/mdl-lm-pretrained-api-lost.svg){height=390px}
 
-Prompts leave the machine, and two documents govern the replies: the licence
-of the weights and the provider's terms of service.
+Prompts leave the machine, and two documents govern the replies: the license
+of the weights and the provider's terms of service. One provider's terms
+forbid publishing performance numbers: read both before measuring.
 :::
 
-::: {.slide title="Check: Which Instruments Survive behind a Closed API?"}
+::: {.slide title="Check: Which Measurements Survive behind a Closed API?"}
 [Check]{.kicker}
 
-Four measurements: bits per byte of a held-out text, accuracy with a paired
-interval, activation patching, the price of a correct answer.
+Four measurements: bits per byte of a held-out text (its negative
+log-likelihood under the model), accuracy with a paired interval, activation
+patching (overwrite an activation and watch the output), the price of a
+correct answer.
 
 ::: {.fragment .fade-up}
 - Bits per byte: no. It needs log-probabilities of a given text.

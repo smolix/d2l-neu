@@ -282,16 +282,23 @@ rng = np.random.default_rng()
 T_bm, n_bm, n_paths = 1.0, 500, 20000
 dt_bm = T_bm / n_bm
 dW_bm = np.sqrt(dt_bm) * rng.standard_normal((n_paths, n_bm))
-W_bm = np.concatenate([np.zeros((n_paths, 1)), np.cumsum(dW_bm, axis=1)],
-                      axis=1)
-for t in [0.25, 0.5, 1.0]:
-    k = round(t / dt_bm)
-    print(f'Var(W_t) at t={t:.2f}: {W_bm[:, k].var():.4f}   (theory: {t:.2f})')
-inside = np.abs(W_bm[:, -1]) < 2 * np.sqrt(T_bm)
-print(f'fraction inside +-2 sqrt(t) at t=1: {inside.mean():.3f}'
+W_bm = np.cumsum(dW_bm, axis=1)              # W at t = dt, 2 dt, ..., 1
+band = 2 * np.sqrt(dt_bm * np.arange(1, n_bm + 1))  # 2 sqrt(t) on the grid
+inside = np.abs(W_bm) < band
+print(f'inside +-2 sqrt(t) at t = 1:   {inside[:, -1].mean():.3f}'
       '   (Gaussian: 0.954)')
+print(f'inside at all {n_bm} grid times: {inside.all(axis=1).mean():.3f}')
 ```
 
+<!-- WRITER: #sdes-brownian-paths no longer prints variances. It prints two
+fractions: inside +-2 sqrt(t) at t = 1, 0.953-0.957 over 24 development runs
+(Gaussian 0.954; standard error 0.0015), and inside the band at all 500 grid
+times, 0.534-0.550 (standard error 0.0035). The second number depends on the
+grid: on every 10th point (50 times) it is about 0.70, on 500 times about
+0.54; it keeps falling as the grid refines (for the continuous path it is 0,
+since near t = 0 a path leaves +-2 sqrt(t) infinitely often), so keep "on this
+grid". Delete the variance sentence and the covariance lead-in/read-out
+(worklist 4.5 B3). -->
 The variances equal $t$ up to the Monte Carlo standard error
 $t\sqrt{2/20000}$, or $1\%$ of $t$, as they must for sums of such steps: the
 printout tests the code, not the theory. About $95\%$ of the paths lie inside
@@ -300,15 +307,9 @@ fewer paths, about half on this grid, stay inside the envelope over the whole
 interval. The same ensemble gives the covariance, as the average of
 $W_s W_t$ over a grid of time pairs.
 
-```{.python .input #sdes-brownian-covariance}
-ts = np.array([0.1, 0.25, 0.5, 0.75, 1.0])
-idx = np.round(ts / dt_bm).astype(int)
-emp = W_bm[:, idx].T @ W_bm[:, idx] / n_paths   # E[W_s W_t]; means are zero
-print('empirical E[W_s W_t]:')
-print(emp.round(3))
-print('max |empirical - min(s,t)| = '
-      f'{np.abs(emp - np.minimum.outer(ts, ts)).max():.4f}')
-```
+<!-- WRITER: cell #sdes-brownian-covariance is cut (id retired). The lead-in
+sentence above ("The same ensemble gives the covariance ...") and the read-out
+below describe it and must go. -->
 
 Each row is constant to the right of the diagonal, up to a sampling error of
 about $0.01$: what happens after time $s$ adds nothing to the covariance with
@@ -528,13 +529,10 @@ $$
 A sample of $20{,}000$ left-endpoint sums on the same $1000$-step grid shows
 the size of the fluctuations.
 
-```{.python .input #sdes-isometry-check}
-dW_iso = np.sqrt(dt_lr) * rng.standard_normal((20000, n_lr))
-W_iso = np.cumsum(dW_iso, axis=1) - dW_iso    # W at the left end of each step
-I_iso = np.sum(W_iso * dW_iso, axis=1)        # 20,000 draws of int_0^1 W dW
-print(f'mean {I_iso.mean():.4f}   (theory 0)')
-print(f'variance {I_iso.var():.4f}   (theory 1/2)')
-```
+<!-- WRITER: cell #sdes-isometry-check is cut (id retired). The lead-in
+above ("A sample of 20,000 left-endpoint sums ...") and the read-out below
+("Mean and variance agree ...") describe it; keep only the forward pointer
+that Ito's lemma gives the same 1/2 without sampling (worklist 4.5 B4). -->
 
 Mean and variance agree with $0$ and $\tfrac12$ within their standard errors,
 $0.005$ and $0.013$; the second is larger than for a Gaussian because the
@@ -942,16 +940,10 @@ This is the first sign of a discretization error, and
 The cloud saved at $t = 4$, after four relaxation times, can be compared
 with the kernel quantile by quantile.
 
-```{.python .input #sdes-ou-stationary}
-X_4 = X_ou_snap[4.0]
-z = np.array([-1.96, -0.674, 0.0, 0.674, 1.96])  # N(0, 1) quantiles
-q_sim = np.percentile(X_4, [2.5, 25, 50, 75, 97.5])
-print('simulated quantiles at t=4:', q_sim.round(2))
-print('N(2 e^-4, 1) quantiles:    ', (2 * np.exp(-4) + z).round(2))
-a = 1 - theta_ou * h_ou                       # the recurrence's decay factor
-print(f'variance {X_4.var():.4f}   (stationary 1, '
-      f'recurrence fixed point {g_ou**2 * h_ou / (1 - a**2):.4f})')
-```
+<!-- WRITER: cell #sdes-ou-stationary is cut (id retired). The lead-in
+above ("The cloud saved at t = 4 ...") and the read-out below ("The five
+quantiles agree ...") describe it; the subsection ends on v_infinity = 1.005
+and the pointer to sec_mdl-sde-strong-weak (worklist 4.5 B5). -->
 
 The five quantiles agree with those of the Gaussian within a few hundredths,
 and the residual mean $2e^{-4} = 0.037$ is still visible in the median. The
@@ -1019,23 +1011,11 @@ $a^n X_0$, where $a = 1 - \theta h$ and
 $s_n^2 = g^2 h (1 - a^{2n})/(1 - a^2)$, so its own moments are known as well
 (columns `rec`).
 
-```{.python .input #sdes-vp-normalization}
-X_vp = rng.choice([-1.0, 1.0], size=50000)  # unit variance, far from Gaussian
-X_vp_snap = {0: X_vp}
-for k in range(1, 301):
-    xi = rng.standard_normal(X_vp.size)
-    X_vp = a * X_vp + g_ou * np.sqrt(h_ou) * xi
-    if k in (25, 100, 300):
-        X_vp_snap[k] = X_vp
-print(f'{"t":>4} {"Var":>6} {"rec":>6} {"E X^4":>6} {"rec":>6}'
-      f' {"3-2abar^2":>9}')
-for k, X in X_vp_snap.items():
-    s2 = g_ou**2 * h_ou * (1 - a**(2 * k)) / (1 - a**2)  # noise variance so far
-    m4_rec = a**(4 * k) + 6 * a**(2 * k) * s2 + 3 * s2**2
-    abar = np.exp(-2 * theta_ou * k * h_ou)
-    print(f'{k * h_ou:4.2f} {X.var():6.3f} {a**(2 * k) + s2:6.3f} '
-          f'{np.mean(X**4):6.3f} {m4_rec:6.3f} {3 - 2 * abar**2:9.3f}')
-```
+<!-- WRITER: cell #sdes-vp-normalization is cut (id retired); the variable
+`a` it used is gone too. Delete from "The cell below runs the recurrence from
+50,000 such points" through the read-out below ("The variance stays at 1 ...
+the same discretization error as before"). The values 2.264, 2.963, 3.000 of
+3 - 2 abar_t^2 are hand values and stay (worklist 4.5 B6). -->
 
 The variance stays at $1$ within sampling error while the fourth moment
 climbs from $1$ to about $3$. The recurrence's own values sit slightly above
@@ -1129,13 +1109,10 @@ def euler_maruyama(f, g, x0, t, dW):
 A quick test of the helper: with the noise switched off it must reproduce
 forward Euler on $\dot{x} = -x$.
 
-```{.python .input #sdes-euler-check}
-t_ode = np.linspace(0, 2.0, 201)
-X_ode = euler_maruyama(lambda x, s: -x, lambda x, s: 0.0,
-                       np.ones(1), t_ode, np.zeros((1, 200)))
-print('g = 0 recovers Euler on dx/dt = -x: '
-      f'max |X_t - e^(-t)| = {np.abs(X_ode[0] - np.exp(-t_ode)).max():.5f}')
-```
+<!-- WRITER: cell #sdes-euler-check is cut (id retired). Delete the lead-in
+above ("A quick test of the helper ...") and the read-out below; move "With the
+noise switched on, 'error' itself needs a definition, and there are two." to
+the end of the helper's paragraph (worklist 4.5 B7). -->
 
 The error is the Euler error at $h = 10^{-2}$, which is largest near $t = 1$,
 where it equals $e^{-1} - 0.99^{100}$. With the noise switched on, "error"
@@ -1482,6 +1459,7 @@ for multiplicative noise, and weak order $1$ for both.
        $\mathbb{E}[X_t^4] = 3 + \bar{\alpha}_t^2\left(\mathbb{E}[X_0^4] - 3\right)$.
        Specialize to Rademacher data $X_0 = \pm 1$ to obtain the prediction
        $3 - 2\bar{\alpha}_t^2$ that `#sdes-vp-normalization` prints.
+       <!-- WRITER: that cell is cut; say "the prediction of the text". -->
     1. The excess kurtosis $\mathbb{E}[X^4]/\textrm{Var}(X)^2 - 3$ is
        zero for every Gaussian. At what rate in $t$ does it decay for
        $X_t$? Compare this rate with the rate at which the conditional mean
@@ -1717,7 +1695,8 @@ Simulate with $\Delta W=\sqrt{\Delta t}\,\xi$, $\xi\sim\mathcal N(0,1)$.
 
 $s\le t$: $\mathbb{E}[W_sW_t]=\mathbb{E}[W_s^2]+\mathbb{E}[W_s]\,\mathbb{E}[W_t-W_s]=s$. $\blacksquare$ Simulated, $t\in\{0.1,\dots,1\}$:
 
-@!sdes-brownian-covariance
+<!-- WRITER: slide placeholder @!sdes-brownian-covariance removed (cell cut);
+"Simulated, t in {0.1, ..., 1}:" now leads nowhere. -->
 
 ::: {.d2l-note}
 $W_t$ is $W_s$ plus something new and uncorrelated with it.
@@ -1779,7 +1758,8 @@ $$\mathbb{E}\Big[\Big(\int_0^t H\,dW\Big)^2\Big]=\int_0^t\mathbb{E}[H_s^2]\,ds.$
 
 Instance: $\textrm{Var}\int_0^1W\,dW=\int_0^1s\,ds=\tfrac12$. Over $20{,}000$ paths:
 
-@!sdes-isometry-check
+<!-- WRITER: slide placeholder @!sdes-isometry-check removed (cell cut);
+"Over 20,000 paths:" now leads nowhere. -->
 :::
 
 ::: {.slide title="An SDE Is an ODE Plus an Itô Integral"}
@@ -1891,7 +1871,8 @@ With $\bar\alpha_t=e^{-2\theta t}$: $X_t=\sqrt{\bar\alpha_t}\,X_0+\sqrt{1-\bar\a
 $\textrm{Var}(X_t)=\bar\alpha_t+(1-\bar\alpha_t)=1$.
 Data $\pm1$: $\mathbb{E}[X_t^4]=3-2\bar\alpha_t^2$ climbs from $1$ to $3$.
 
-@!sdes-vp-normalization
+<!-- WRITER: slide placeholder @!sdes-vp-normalization removed (cell cut);
+the slide keeps its derivation; the recurrence table is gone. -->
 :::
 
 ::: {.slide title="Euler–Maruyama Is Euler Plus a √Δt Kick"}

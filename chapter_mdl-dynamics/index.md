@@ -46,6 +46,7 @@ conditional expectation, and no measure theory.
 :maxdepth: 2
 
 mdl-odes-solvers
+mdl-numerical-solvers
 mdl-neural-odes
 mdl-sdes
 mdl-fokker-planck-probability-flow
@@ -53,6 +54,48 @@ mdl-score-matching-diffusion-flow
 mdl-flow-matching-transport
 further-reading
 ```
+
+## Notation {.unnumbered}
+
+The chapter uses the symbols of :numref:`tab_mdl-dyn-notation`. Each section
+restates the ones it needs.
+
+<!-- WRITER: worklist 4.1 (B) 1: add rows for $\mathbf B$, $\mathbf u(t)$, $\bar{\mathbf A}$, $\bar{\mathbf B}$ (driven equation, ODEs); $N$ steps indexed by $n$ (Numerical solvers); $\psi$, the scalar field of the vector-calculus preliminaries (Fokker--Planck); $\lambda$ with both meanings (eigenvalue in ODEs and Numerical solvers; noise scale of the reverse family in Fokker--Planck); $\bar\sigma_t$, $\bar{\mathbf x}_t$ (DDIM coordinates, Score matching). The "First used in" column already names the two sections of the split. -->
+
+:Notation for the dynamics chapter. The later rows belong to later sections, which define them where they are first used.
+:label:`tab_mdl-dyn-notation`
+
+| Symbol | Meaning | First used in |
+|---|---|---|
+| $\mathbf x(t)\in\mathbb R^d$, $\dot{\mathbf x}$ | state, its time derivative | ODEs |
+| $\mathbf f(\mathbf x,t)$ | vector field of an ODE; drift of an SDE | ODEs; SDEs |
+| $\Phi_t$ | flow map, $\Phi_t(\mathbf x_0)=\mathbf x(t)$ | ODEs |
+| $L$ | Lipschitz constant of $\mathbf f$ | ODEs |
+| $\mathbf A$; $\lambda_j=a_j+\mathrm i\,b_j$; $\mathbf V,\boldsymbol\Lambda$ | linear field; its eigenvalues; eigenvectors and their diagonal | ODEs |
+| $\mathbf K$ | rotation generator $\left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$ | ODEs |
+| $\mathbf J$ | Jacobian of $\mathbf f$ | ODEs |
+| $h$, $t_n=nh$, $\mathbf x_n$ | step size, time grid, numerical iterate | Numerical solvers |
+| $R(z)$, $z=h\lambda$ | stability function of a solver | Numerical solvers |
+| $\varepsilon_n$ | global error $\lVert\mathbf x_n-\mathbf x(t_n)\rVert$ | Numerical solvers |
+| $\mathcal L$, $\eta$, $\mathbf H$ | loss, learning rate, Hessian | Numerical solvers |
+| $c$; $T$ | damping coefficient; time horizon | ODEs |
+| $\boldsymbol\theta$ | network parameters | Neural ODEs |
+| $\mathbf a(t)$ | adjoint state | Neural ODEs |
+| $p_t$ | density of the state at time $t$ | Neural ODEs |
+| $\mathbf W_t$ | Brownian motion | SDEs |
+| $g(t)$; $\mathbf G$ | diffusion coefficient; noise matrix | SDEs |
+| $\theta$, $g$ | OU rate and noise amplitude, $dX=-\theta X\,dt+g\,dW$ | SDEs |
+| $\alpha_t$, $\sigma_t$ | mean coefficient and standard deviation of $\mathbf X_t$ given $\mathbf X_0$ | SDEs |
+| $\mathbf x_0$; $\boldsymbol\epsilon$ | data endpoint at $t=0$; noise endpoint at the final time, $t=1$ from flow matching on | SDEs |
+| $\mathbf s_t=\nabla\log p_t$; $\mathbf s_{\boldsymbol\theta}$ | score; learned score | Fokker--Planck |
+| $\mathbf u_t$; $\mathbf u_{\boldsymbol\theta}$ | true (probability-flow) velocity; learned velocity | Fokker--Planck |
+| $\mathbf j$ | probability current | Fokker--Planck |
+| $\bar t=T-t$ | reversed clock | Fokker--Planck |
+| $w_k$, $r_k(\mathbf x)$, $v_k$ | mixture weights, responsibilities, component variances | Fokker--Planck |
+| $\beta_t$, $\bar\alpha_t$ | DDPM noise schedule | Score matching |
+| $w(t)$; $\gamma$ | loss weighting over noise levels; guidance scale | Score matching |
+| $\pi$ | coupling | Flow matching |
+| $\mathrm i$, $\mathbf I$, $D_{\textrm{KL}}$ | imaginary unit (upright), identity, KL divergence | throughout |
 
 ## Resources and Further Reading {.unnumbered}
 

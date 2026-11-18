@@ -476,11 +476,11 @@ the decoders of the previous chapter, which do everything by writing text.
 
 ModernBERT stands in RoBERTa's line. It keeps BERT's bidirectional
 attention, special tokens and masked-token objective, drops next-sentence
-prediction, and rebuilds the block along the lines of recent decoders. Most
-of the configuration printed with the token vectors describes that block
-(the gated feed-forward layer GeGLU, the rotary positions of
-:numref:`subsec_pos-rope`, the absence of bias terms) and can be forgotten
-here. Two of its lines matter. The classification head pools by the mean,
+prediction, and rebuilds the block along the lines of recent decoders. The
+details of that block (the gated feed-forward layer GeGLU, the rotary
+positions of :numref:`subsec_pos-rope`, the absence of bias terms) can be
+forgotten here. Two lines of the configuration printed with the token
+vectors matter. The classification head pools by the mean,
 which our own head will have to respect. And an input may have 8,192 tokens,
 sixteen times BERT's 512, which is affordable only because of the way
 ModernBERT arranges its attention.
@@ -2178,7 +2178,7 @@ it. Per second the decoder computes four to five times as much.
 
 ::: {.slide title="The Encoder Draws Level with 8 Shots on MNLI at 1,000 Labels and Leads from 4,000"}
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col .fig}
 @!bert-curve
 :::
 

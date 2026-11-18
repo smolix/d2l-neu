@@ -532,9 +532,9 @@ print(f'    labels: {int(batch[2][r].sum())} ones, then zeros; masks keep '
 Subsampling removes half of the positions: 1.4 of the 2.8 million survive
 as centers. A minibatch is a block of 1,024 rows of 60 entries, 10
 context slots followed by 5 noise words for each slot. In the printed
-row the drawn window was two words wide, so the mask keeps four context
-words and their 20 noise words, 24 of 60 entries. Its center, *bl*, is
-what the cleaning leaves of a road name, "BL I-69".
+row, centered on *years*, the drawn window was one word wide, so the mask
+keeps two context words, *era* and *francis*, and their 10 noise words: 12
+of 60 entries.
 
 ### Training
 

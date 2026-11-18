@@ -70,7 +70,7 @@ retrieval-augmented pipeline, are collected in :numref:`sec_lm_encoders_fr`.
 
 - Jay Alammar's [The Illustrated Word2vec](https://jalammar.github.io/illustrated-word2vec/) draws the sliding window and the negative samples of skip-gram, a picture to read beside :numref:`sec_lm_word_embeddings`.
 - His [The Illustrated BERT](https://jalammar.github.io/illustrated-bert/) draws the input layout and the task heads of a masked-token encoder, as :numref:`sec_lm_bert` uses them.
-- The [ModernBERT announcement](https://huggingface.co/blog/modernbert) by the model's authors explains the design choices that :numref:`sec_lm_bert` describes: alternating local and global attention, unpadding and long inputs.
+- The [ModernBERT announcement](https://huggingface.co/blog/modernbert) by the model's authors explains the design of the encoder that :numref:`sec_lm_bert` uses, including two choices the section leaves out: unpadding and its attention kernels.
 
 **Libraries and their documentation**
 

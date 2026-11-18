@@ -353,14 +353,21 @@ alone marks where the hypothesis begins.
 Sixteen tokens went in, and sixteen vectors of 768 numbers came out. Unlike
 the word vectors of :numref:`sec_lm_word_embeddings`, these depend on the
 whole input. The last lines of the output show it for *bank*, the word on
-which that section ended, in three sentences. After the embedding layer its
-vector is the same in all three (cosine 1.00), since the table holds one row
-per token. After the last layer the bank of a river has a cosine of 0.68 and
-0.65 with the two banks that deal in money, and those two have 0.85 with
-each other. Read these as an ordering, since the cell compares no unrelated
-words that would show how low a cosine can go. The encoder did not have to
-choose between the senses of the word. The sentence told it which one was
-meant.
+which that section ended, in four sentences: two put the bank beside water
+and two put it in charge of money. After the embedding layer its vector is
+the same in all four (cosine 1.00), since the table holds one row per token.
+After the last layer the four vectors have moved apart, and they have moved
+apart by sense. The two banks by the water have a cosine of 0.81 and the two
+banks that deal in money 0.85, while every pair across the senses lies
+between 0.65 and 0.72.
+
+How low can a cosine go in this space? The last line gives a floor: *bank*
+against *the* in the river sentence, a word that shares nothing with it but
+the sentence, has 0.32. So at the last layer the scale runs from about 0.3
+to 1. The senses are not far apart on it, but they are cleanly separated:
+each same-sense pair lies above every cross-sense pair. The encoder did
+not have to choose between the senses of the word. The sentence told it
+which one was meant.
 
 The pair also entered as one input. In every layer each token of the
 hypothesis can therefore attend to every token of the premise, so the two
@@ -1364,6 +1371,18 @@ events and titles 0.87. All of this comes from a small head on one vector
 per token, fine-tuned together with the encoder. Nobody wrote a rule about
 capital letters or a list of cities.
 
+What goes wrong with organizations? The cell follows each of the 1,341 gold
+organizations of the validation set. The tagger finds about 1,240 of them,
+and of the hundred it misses, nearly half have no predicted name with the
+same two ends: the name was cut too short or too long, or not tagged at all.
+The other half are given another type, and the printed examples
+show why. In the sports pages a county is also a cricket club, and in "By
+stumps Kent had reached 108 for three" Kent is a team, not a place. In a
+scorecard *Lancashire 197-8* sits among players' names that are also followed
+by scores, and the tagger calls it a person. A headline in capital letters,
+"NFL AMERICAN FOOTBALL-RANDALL CUNNINGHAM RETIRES", gives little context of
+any kind. These are errors that a reader new to cricket would make too.
+
 ## Encoder or Prompted Decoder
 :label:`subsec_lm_encoder_vs_decoder`
 
@@ -1590,20 +1609,23 @@ through about 13 times the weights (2.8 against 0.22 GFLOPs per token).
 Together that makes close to 500 times the encoder's operations per example.
 The clock shows only about 100 times, under half a second against about 48
 seconds per thousand items. Per second the decoder computes four to five
-times as much as the encoder. Part of that is padding, which the token count
-leaves out: the encoder's batch is padded to its longest pair. The rest
-comes from the small matrix products of short pairs, which leave the GPU
-partly idle, while the decoder's long prompts fill it.
+times as much as the encoder. Padding, which the token count leaves out,
+accounts for a factor of about two. The encoder's batch is padded to 87
+tokens, its longest pair, 2.2 times the 40 tokens counted per pair, and the
+encoder computes every padded position. The rest comes from the small matrix
+products of short pairs, which leave the GPU partly idle, while the
+decoder's long prompts fill it.
 
-How much of the hundredth belongs to decoders, and how much to the way we
+How much of the factor of 100 belongs to decoders, and how much to the way we
 ran this one? Two parts are ours. The three label words are single tokens,
 so one pass over the prompt could score all three. And a server that
 computes the keys and values of the shared solved examples once reads them
 once (Exercise :exref:`ex_lm_bert-prefix`). What remains is the query: the
-premise and hypothesis with a question around them, more tokens than the
-pair the encoder reads, each passing through 13 times the weights. A
-hundredth is the factor we measured; more than 13 is the factor that
-caching cannot remove. On SST-2, with shorter prompts and two label words,
+premise and hypothesis with a question around them, plus one label word. The
+output counts it at 49 tokens against the 40 of the encoder's pair, each
+passing through 13 times the weights, which comes to 16 times the encoder's
+operations. The factor we measured is about 100; the factor that caching
+cannot remove is 16. On SST-2, with shorter prompts and two label words,
 the stored timings put the decoder at about 30 times the encoder. A
 fine-tuned decoder would also run 13 times the weights per token, and it
 would give up what makes prompting attractive: no training run when the
@@ -1618,8 +1640,9 @@ panels measure both models against labeled examples. The bands span the
 encoder's seeds and the decoder's three sets of 8 solved examples; at 0 and
 4 shots they are the interval of one set. The dashed line is the majority
 rate. On the left, look for the size at which the encoder's curve rises
-through the 8-shot band. On the right, the decoder's three points are 0, 4
-and 8 shots, from left to right.
+through the 8-shot band. On the right, each decoder point is labeled with
+its number of shots, and the encoder's point is the run on the largest
+training set.
 
 ```{.python .input #bert-curve}
 %%tab pytorch
@@ -1749,7 +1772,7 @@ lead. On a task the decoder largely knew before it saw an example, eight
 thousand labels only bring the encoder level. Where the line runs depends on
 how much of the task the decoder already knows. The cost does not: at every
 size the encoder labels an MNLI pair in about a hundredth of the time our
-decoder took, and with less than a thirteenth of the operations even of a
+decoder took, and with about a sixteenth of the operations even of a
 decoder that caches its examples.
 
 ### Choice by Situation
@@ -1763,7 +1786,7 @@ decoder that caches its examples.
 |---|---|---|
 | no labels, or a few hundred | prompted decoder | at 250 MNLI pairs and at 100 to 2,000 SST-2 sentences the decoder was ahead |
 | thousands of labels for a fixed task | fine-tuned encoder | on MNLI it drew level with 8 shots at 1,000 pairs and led from 4,000; on SST-2 it caught up at 8,000 |
-| many items, high throughput | fine-tuned encoder | a hundredth of our decoder's time per MNLI pair; under a thirteenth of the operations even with the examples cached |
+| many items, high throughput | fine-tuned encoder | a hundredth of our decoder's time per MNLI pair; about a sixteenth of the operations even with the examples cached |
 | a label set that changes often | prompted decoder | a new label is a new prompt, not a new training run |
 | a label for every word | fine-tuned encoder | one vector per token, read by a small head |
 | an answer that must be written or explained | decoder | an encoder head outputs one of a fixed set of labels |
@@ -1789,8 +1812,8 @@ sides, and a small head, fine-tuned with all of the encoder's weights, turns
 these vectors into a label per sentence, per pair or per word. Against
 Qwen3-1.7B with 8 solved examples, ModernBERT-base drew level on inference
 at about 1,000 labeled pairs and led from 4,000. It took a hundredth of the
-time per pair as we ran the decoder, and it would take less than a
-thirteenth of the operations even if the decoder cached its examples. On
+time per pair as we ran the decoder, and it would take about a sixteenth
+of the operations even if the decoder cached its examples. On
 sentiment, which the decoder largely knew already, it only caught up. Two
 cautions go with such numbers: a fine-tuning run on few examples needs
 enough optimizer steps before its seeds mean anything, and a model that
@@ -1862,9 +1885,13 @@ fixed task with thousands of labels and many items.
    reads three copies of a prompt whose first part, the solved examples, is
    the same for every item.
     1. With the shared prefix cached and the three single-token label words
-       scored from one pass, how many tokens does each item still cost?
-       Measure the length of the prefix and of a query, and recompute the
-       ratio of :eqref:`eq_lm_bert_flops` against the encoder.
+       scored from one pass, each item still costs its query and one label
+       word, 49 tokens and 16 times the encoder's operations. Measure the
+       length of the prefix and check that three copies of prefix, query
+       and label word give the 1,543 tokens counted per item. Then count
+       the encoder's padding as well, 87 tokens per pair in its batch of 32:
+       what does the ratio of :eqref:`eq_lm_bert_flops` become, and how
+       could the encoder's pairs be batched to bring it back toward 16?
     1. Qwen3-1.7B stores keys and values for 8 heads of width 128 in each of
        28 layers, $2 \cdot 28 \cdot 8 \cdot 128$ numbers of two bytes per
        token (:numref:`subsec_lm_icl_vs_probe`). How much memory does the
@@ -1987,15 +2014,15 @@ Qwen3-1.7B on MNLI (pairs), SST-2 (sentiment) and CoNLL-2003 (names).
   with a space). No segment ids: the separator alone marks the second text.
 - Output (1, 16, 768). The texts are read together, a **cross-encoder**.
 
-| cosine between two vectors of "bank" | embedding layer | last layer |
+| cosine between two vectors, four sentences | embedding layer | last layer |
 |---|---|---|
-| river bank, bank that takes a check | 1.00 | 0.68 |
-| river bank, bank that sets a rate | 1.00 | 0.65 |
-| the two banks that deal in money | 1.00 | 0.85 |
+| "bank", same sense (two by the water; two of money) | 1.00 | 0.81, 0.85 |
+| "bank", other senses (three pairs) | 1.00 | 0.65 to 0.72 |
+| "bank" and "the" in one sentence: the floor | 0.01 | 0.32 |
 
 ::: {.d2l-note}
 A table of word vectors gives "bank" one point. The encoder gives it one per
-sentence.
+sentence, and every same-sense pair lies above every cross-sense pair.
 :::
 :::
 
@@ -2197,6 +2224,8 @@ Report an inference score beside a hypothesis-only baseline.
   both ends match.
 - Precision 0.94, recall 0.95, span F1 about 0.95, equal to `seqeval`'s.
 - By type: LOC 0.97, PER 0.97, ORG 0.92, MISC 0.87.
+- Missed organizations: nearly half with wrong ends, the rest another type
+  (a county cricket club, "Kent had reached 108", read as a place).
 
 ::: {.d2l-note}
 Nobody wrote a rule about capital letters or a list of cities.
@@ -2236,7 +2265,8 @@ answer is read by appending each of the three label words `yes`, `maybe`,
 **Answer.** Three copies of the prompt: 1,543 tokens measured, about 38
 times the encoder's 40. Most of them are the same solved examples, read
 again for every item. The label words are single tokens: with the examples
-cached and one pass per item, only the query is left.
+cached and one pass per item, only the query is left, 49 tokens with its
+label word.
 :::
 :::
 :::
@@ -2255,14 +2285,14 @@ $T$ tokens.
 | GFLOPs | 8.9 | 4,350 | close to 500 |
 | seconds per 1,000, measured | about 0.4 | about 48 | about 100 |
 
-- The clock gap: the encoder also computes its padding, and short pairs in
-  batches of 32 leave the GPU partly idle.
-- With the examples cached, the query alone remains: longer than the pair,
-  at 13 times the weights per token.
+- The clock gap: the encoder's batch is padded to 87 tokens, 2.2 times the
+  40 counted; short pairs in batches of 32 leave the GPU partly idle.
+- With the examples cached, the query and one label word remain: 49 tokens
+  at 13 times the weights per token, 16 times the encoder's operations.
 
 ::: {.d2l-note}
-A hundredth as run here; more than 13 times the operations is what caching
-cannot remove. SST-2: about 30 times on the clock.
+A hundredth as run here; 16 times the operations is what caching cannot
+remove. SST-2: about 30 times on the clock.
 :::
 :::
 
@@ -2298,7 +2328,7 @@ Case A: 50 labeled support messages, and new topics every month. Case B:
 **Answer.** A: prompt a decoder. With a few hundred labels or fewer the
 decoder was ahead, and a new topic is a new prompt. B: fine-tune an
 encoder. From 4,000 MNLI pairs it led the 8-shot prompt, at a hundredth of
-the time per pair as run here, and under a thirteenth of the operations
+the time per pair as run here, and about a sixteenth of the operations
 even with a cached prompt.
 :::
 :::
@@ -2314,8 +2344,8 @@ even with a cached prompt.
 - Hypothesis only: 0.53 on MNLI; majority rate 0.36.
 - Against 8-shot Qwen3-1.7B: level on MNLI at 1,000 labels, ahead from
   4,000; level on SST-2 only at 8,000.
-- Cost per MNLI pair: a hundredth of the time as run here; under a
-  thirteenth of the operations even with the examples cached.
+- Cost per MNLI pair: a hundredth of the time as run here; about a
+  sixteenth of the operations even with the examples cached.
 
 **Next:** one vector per text, for search without labels.
 :::

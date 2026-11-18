@@ -51,7 +51,7 @@ def fig_one_head_averages() -> None:
         ax.text(p, w + 0.04, lab, ha="center", va="bottom", fontsize=15,
                 color="black")
     ax.text(1.5, -0.24,
-            r"$\mathbf{W}_o\,(\alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2)$:"
+            r"$(\alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2)\,\mathbf{W}_o$:"
             "\none mixture",
             ha="center", va="top", fontsize=14, color="black")
 
@@ -65,7 +65,7 @@ def fig_one_head_averages() -> None:
     ax.text(2 + 0.14, w_head2[1] + 0.04, "head 2", ha="center",
             va="bottom", fontsize=13, color=fl.T.GREEN.dark)
     ax.text(1.5, -0.24,
-            r"$\mathbf{W}_o\,[\mathbf{z}_1;\, \mathbf{z}_2]$:"
+            r"$[\mathbf{z}_1,\, \mathbf{z}_2]\,\mathbf{W}_o$:"
             "\ntwo mixtures, both values recovered",
             ha="center", va="top", fontsize=14, color="black")
 

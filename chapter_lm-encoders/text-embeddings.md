@@ -385,11 +385,14 @@ question on saturating attention lands on the introduction of the attention
 chapter, not on the subsection about score variance and the $1/\sqrt{d}$
 factor. The question about unified-memory machines, which the chapter on
 tools answers, lands on the opening of a section on attention. All three
-top passages open a page or a section. At best the vectors know roughly
-where in the book a text lives; at worst, as for the third question, not
-even that. They know little about what it says. No passage reached the cap
-of 1,024 ModernBERT tokens at which we encode passages (the model accepts
-8,192), so truncation is not the cause.
+top passages open a page or a section, and the three are not exceptions.
+BM25 sends the 220 questions to 210 different first passages; the averaged
+vectors send them to only 73, so a few broad passages collect the first
+rank of many questions that have little in common. At best the vectors know
+roughly where in the book a text lives; at worst, as for the unified-memory
+question, not even that. They know little about what it says. No passage
+reached the cap of 1,024 ModernBERT tokens at which we encode passages (the
+model accepts 8,192), so truncation is not the cause.
 
 ### Anisotropy
 
@@ -1199,22 +1202,24 @@ for name in ('contrastive seed 0', 'Matryoshka'):  # live against stored
 Most of the way. Contrastive training turns the encoder into a retriever:
 Recall@10 rises from 0.06 to 0.76 for seed 0, the three seeds span 0.73 to
 0.78, and anisotropy falls from 0.94 to 0.52, as the proposition says it
-must. The model still trails BM25, and by more in the order of its results
-than in what it finds: its nDCG@10 is about 0.52, BM25's 0.82, with
+must. The first ranks spread out as well: the 220 questions now land on 188
+different first passages, against 73 before training. The model still
+trails BM25, and by more in the order of its results than in what it finds: its nDCG@10 is about 0.52, BM25's 0.82, with
 intervals far apart. The saved checkpoints reproduce the recorded
 Recall@10 for at least 99.5% of the questions, although bf16 rounding lets
 near-tied passages swap places.
 
 Qwen3-Embedding finds a relevant passage among its first ten for 98% of the
-questions. It does not, however, put one first more often than BM25:
-Recall@1 is 0.76 for BM25, against 0.67 for Qwen3-Embedding with its
-instruction and 0.70 without. On questions that repeat the rare words of
-their passages, counting those words remains a strong way to pick the top
-passage.
+questions or more, in each of the three ways we pose the query. At the first
+rank it is no better than BM25: Recall@1 is 0.76 for BM25, against about
+0.70 for Qwen3-Embedding without an instruction or with the model card's
+task, and 0.67 with ours.
 
 The next cell computes paired differences on the same questions, with
 intervals that resample documents, and marks whether each exceeds the range
-of the three seeds.
+of the three seeds. A second table compares Qwen3-Embedding with BM25, and
+the three forms of the query with each other, on one measure of finding and
+two of order.
 
 ```{.python .input #text-embeddings-ladder-compare}
 %%tab pytorch
@@ -1284,16 +1289,34 @@ than harder ones. Settling the question takes several seeds of the variant
 and a control with one random extra negative per question; we have not run
 them.
 
-Finally, the instruction did not help. Recall@10 changed by $-0.014$, with
-an interval that reaches zero, and every order measure came out lower with
-the instruction: Recall@1 by 3 points, MRR@10 and nDCG@10 by 2 to 3. This
-runs against the model card, which reports gains of 1% to 5% from
-instructions and recommends writing one for the task at hand. The format is
-the card's, as the library check below confirms, so the suspect is our
-wording of the task. The wording of an instruction is a parameter like any
-other, and it has to be chosen on questions other than those it is
+Finally, the instruction we wrote for the book made Qwen3-Embedding worse.
+Every measure of order came out lower with it: MRR@10 by about 0.03, with an
+interval that excludes zero, Recall@1 by 3 points and nDCG@10 by 2.
+Recall@10 moved by $-0.014$, an interval that reaches zero. This runs
+against the model card, which reports gains of 1% to 5% from instructions
+and recommends writing one for the task at hand.
+
+Is the fault in instructions as such, or in ours? The format is the card's, as the library
+check below confirms, and the last row of the second table answers the
+question. The card's own task, a sentence about web search queries in the
+same format, is level with no instruction on all three measures, every
+interval containing zero. So the damage comes from our wording, not from
+the instruction format. The card's task brings no gain here either; on
+questions that copy their passages' rare words there may be little left for
+an instruction to add. The wording of an instruction is a parameter like
+any other, and it has to be chosen on questions other than those it is
 evaluated on; Exercise :exref:`ex_lm_emb-instruction` does this with the
-training questions. The rest of the chapter keeps our wording.
+training questions. The rest of the chapter keeps our wording, at the cost
+just measured.
+
+The second table also settles the comparison with BM25. Without an
+instruction, Qwen3-Embedding finds a relevant passage within ten for about
+4 points more of the questions than BM25, an interval from 1 to 6 points,
+and the two cannot be told apart at the first rank or by MRR@10. With our
+instruction, BM25 puts a relevant passage first more often: by 9 points of
+Recall@1 and by 0.065 in MRR@10, both intervals excluding zero. On questions
+that repeat the rare words of their passages, counting those words remains
+a strong way to pick the top passage.
 
 ### Geometry after Training
 
@@ -1577,17 +1600,14 @@ of 0.83 against 0.76, and at 16 it keeps 0.62 against 0.51: gains of about
 prefix it was trained on. The code is not at fault. On the book the same
 comparison gave $-0.01$ and $+0.02$, with intervals that exclude gains of
 that size. The loss works on the distribution it was trained on, and on
-this book its advantage did not carry over. We do not know why; Exercise
-:exref:`ex_lm_emb-matryoshka` suggests how to find out. In practice, then:
-down to 64 of its 768 coordinates, a plain contrastive model truncates as
-well as a Matryoshka one in both settings. Below that, Matryoshka training
-is what keeps recall on data like its training data, and whether it helps
-on other data has to be measured on one's own questions.
+this book its advantage did not carry over.
 
-One difference between the two settings is length: training cut the NQ
-passages to 160 tokens, and the book's chunks run to 512. The next cell
-cuts the book's passages to 160 tokens and compares the two checkpoints
-again.
+Why not? The two settings differ in several ways, and the easiest to test
+is length. Training cut every Natural Questions passage to 160 tokens,
+while the book's passages, cut at 512 tokens of the Qwen3 tokenizer, are
+encoded whole. Perhaps a short prefix never learned to summarize a long
+text. The next cell cuts the book's passages to their first 160 tokens and
+compares the two checkpoints again.
 
 ```{.python .input #text-embeddings-compress-160}
 %%tab pytorch
@@ -1614,6 +1634,21 @@ C160['CI excludes 0'] = (C160.low > 0) | (C160.high < 0)
 print(f'the book, passages cut to {MAX_LEN["nq_passage"]} tokens: Recall@10')
 print(C160.round(3).to_string(index=False))
 ```
+
+The cut reaches 4,824 of the 5,324 passages and costs both models recall
+at full width, since some answers lie past the first 160 tokens. The gap we
+were looking for does not appear. At 32 and 16 coordinates the Matryoshka
+model is ahead by about 2 points, with intervals that contain zero and stop
+short of the 8 and 11 points it gained on Natural Questions. Length is ruled
+out. What remains is the material itself: questions about deep learning
+that share rare words with their passages, against the general-knowledge
+questions of Natural Questions. Which part of that difference matters we do
+not know; Exercise :exref:`ex_lm_emb-matryoshka` proposes the next test.
+
+In practice, then: down to 64 of its 768 coordinates, a plain contrastive
+model truncates as well as a Matryoshka one in both settings. Below that, Matryoshka training is what keeps recall
+on data like its training data, and whether it helps on other data has to
+be measured on one's own questions.
 
 ## Using a Released Embedder
 :label:`subsec_lm_emb_practice`
@@ -1709,7 +1744,9 @@ and kept nearly all of its recall at one bit per coordinate. Mined
 negatives must come from below the top ranks, where a reranker judged
 nearly a third of them to be answers. Every other choice, from the wording
 of an instruction to the width of a vector, had to be measured on our own
-questions, and the instruction we wrote did not help.
+questions: the instruction we wrote lowered the first ranks, while the
+model card's own wording cost nothing, and Matryoshka training kept its
+advantage on its own data but not on the book.
 
 ## Exercises
 
@@ -1738,7 +1775,7 @@ questions, and the instruction we wrote did not help.
        twice).
     1. Evaluate both versions at $t = 1/(2\tau)$ for the three four-point
        configurations of :numref:`subsec_lm_emb_align_uniform`, and check
-       the InfoNCE column of the table. Explain why `align_uniform`, which
+       the two InfoNCE columns of the table. Explain why `align_uniform`, which
        averages over distinct pairs only, gives a value no higher than
        either for these configurations, in which every point sees the same
        distances. Construct a set of points for which it is higher than the
@@ -1772,7 +1809,8 @@ questions, and the instruction we wrote did not help.
    :exlabel:`ex_lm_emb-padding`
 
 1. [code] **Choosing an instruction.** ● The instruction we wrote lowered
-   Qwen3-Embedding's order measures on the dev questions.
+   Qwen3-Embedding's order measures on the dev questions, and the model
+   card's default task left them level with no instruction.
     1. Take 200 answerable questions from `d2l.book_qa('train')` and search
        the whole book for each. Compare MRR@10 without an instruction, with
        our task, with the model card's default task (the string
@@ -1795,17 +1833,17 @@ questions, and the instruction we wrote did not help.
 1. [code] **Why Matryoshka training did not carry over.** On held-out
    Natural Questions pairs the Matryoshka model kept about 8 and 11 points
    more Recall@10 than the truncated plain model at 32 and 16 coordinates;
-   on the book it kept none.
-    1. One difference between the two settings is length: training passages
-       were cut at 160 tokens, while book passages are encoded whole (none
-       reaches our cap of 1,024 tokens). Encode the book's passages cut to
-       their first 160 tokens with both checkpoints and
-       repeat the comparison at 32 and 16 coordinates. Both models lose
-       recall, since some answers lie past the cut; does the gap between
-       them return?
-    1. Another difference is the questions, which share rare words with
-       their passages. Propose a measurement on the stored checkpoints that
-       tests this explanation, and run it.
+   on the book it kept none, even with the book's passages cut to the 160
+   tokens of training.
+    1. The questions differ: the book's share rare words with their
+       passages. Propose a measurement on the stored checkpoints that tests
+       whether this explains the missing gain, and run it. The rewritten
+       questions of Exercise :exref:`ex_lm_emb-other-words` are one
+       starting point.
+    1. Cutting the passages to 160 tokens cost both models recall at full
+       width. Find the dev questions that lose their relevant passage to
+       the cut, and check whether the gold span of each lies past the first
+       160 tokens of that passage.
     1. Add 32 and 16 to the training prefixes $\mathcal{K}$ and train again.
        What changes on Natural Questions at those widths, and on the book?
    :exlabel:`ex_lm_emb-matryoshka`
@@ -1869,7 +1907,8 @@ among the ten nearest?
 
 "How does the book's `load_array` helper decide whether to shuffle?"
 Averaged vectors land on the page of utility functions, one heading above
-the answer.
+the answer. The 220 questions share 73 different first passages; under
+BM25, 210.
 
 ::: {.d2l-note .warn}
 An encoder gives one vector per token. Nothing trained it to give one
@@ -2119,9 +2158,7 @@ passage together, and compare gains with the seed range.
   negatives, then a merge of checkpoints.
 - **Last-token pooling**, **left padding**: every row ends in a real token.
 - **Query instruction**: `Instruct: {task}\nQuery:{query}`; passages bare.
-- Our instruction for the book lowered Recall@1 from 0.70 to 0.67 and did
-  not raise Recall@10. The card reports +1 to 5%: choose the wording on
-  training questions.
+  The task is free text.
 
 ::: {.d2l-note .warn}
 A wrong convention raises no error. Pooling and padding errors read the
@@ -2161,6 +2198,26 @@ contrastive $\to$ Qwen3-Embedding +0.22.
 ::: {.d2l-note .warn}
 The questions borrow their passages' rare words: no embedder here beats
 BM25 at rank 1. Qwen3-Embedding may also have read this book on the web.
+:::
+:::
+
+::: {.slide title="Our Instruction Lowers the First Ranks; the Card's Costs Nothing"}
+[Instructions]{.kicker}
+
+Qwen3-Embedding, 220 book questions. Change against no instruction, paired,
+intervals over documents. Our task: questions about the book; the card's:
+web search queries.
+
+| task in the instruction | Recall@1 | MRR@10 | Recall@10 |
+|---|---|---|---|
+| our task | $-0.032$ [$-0.068$, 0.000] | $-0.026$ [$-0.048$, $-0.004$] | $-0.014$ [$-0.028$, 0.000] |
+| the card's task | +0.005 [$-0.025$, +0.034] | +0.007 [$-0.012$, +0.027] | $-0.005$ [$-0.015$, 0.000] |
+
+The card reports +1 to 5% from instructions. Here neither wording gains.
+
+::: {.d2l-note .rule}
+An instruction's wording is a parameter: choose it on training questions,
+never on the questions you report.
 :::
 :::
 
@@ -2233,7 +2290,8 @@ renormalized, over $k \in \{768, 512, 256, 128, 64\}$.
 
 ::: {.d2l-note}
 On held-out Natural Questions: +8 and +11 points at 32 and 16, intervals
-excluding 0. On the book: within noise.
+excluding 0. On the book: within noise, even with its passages cut to the
+160 tokens of training. Length is not the cause.
 :::
 :::
 
@@ -2245,8 +2303,10 @@ excluding 0. On the book: within noise.
   written by people who have not just read the answer, and a BM25 floor.
 - Compare with paired differences, intervals over documents, and the seed
   range.
-- On the book the embedder finds slightly more, BM25 puts the answer first
-  at least as often: keep both, the embedder in int8 or binary + rescoring.
+- On the book the embedder finds more within ten (+0.04 Recall@10 without
+  an instruction, interval excludes 0). At rank 1 the two are level, and
+  BM25 leads once our instruction is added. Keep both, the embedder in int8
+  or binary + rescoring.
 
 ::: {.d2l-note .rule}
 A library loads a model's pooling and prompts. Check them against the card.
@@ -2277,6 +2337,7 @@ Qwen3-Embedding, binary: one bit per coordinate, $10^8$ passages.
 - 20,000 pairs, one minute: +0.70 Recall@10. A reranker calls 30% of the
   top-5 mined passages answers: mine below them.
 - Qwen3-Embedding: 0.98, possibly having read the book; 0.96 at 128 bytes.
+  Our instruction wording cost MRR@10 0.03; the card's cost nothing.
 
 **Next:** a flat scan is one matrix product for 5,324 passages. Millions of
 passages, and questions about exact identifiers, need an index and a word

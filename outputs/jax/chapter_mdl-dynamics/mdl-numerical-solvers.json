@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-dynamics/mdl-numerical-solvers.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:71f23eff288cdfc510d64d9e0a5b0d7d2805ef58e06c7cbbebe8caa44317c605",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-numerical-solvers-imports": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-numerical-solvers-runge-kutta-methods-2": {
+      "code_fingerprint": "sha256:5aff0406b8c0cd4f1e577e427170e3fd7ed41157138d7cf5fd8f600e1de1b77c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-numerical-solvers-runge-kutta-methods-1": {
+      "code_fingerprint": "sha256:002f0d07ee58cdcc6d1092753983f12b6b200d80e1038e2e47dadef60782ddf9",
+      "kind": "text",
+      "outputs": []
+    },
+    "odes-solvers-euler-rk4-order": {
+      "code_fingerprint": "sha256:7fe2fe73e29c3e55d462ffb71206f559e8924119c352a5aac1a94d24b0d90024",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "measured slope, Euler: 1.040\nmeasured slope, RK4  : 4.022\nerror at 512 steps: Euler 3.6e-03, RK4 5.0e-12\nRK4 with 128 steps (the same 512 evaluations): 1.3e-09\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-numerical-solvers/odes-solvers-euler-rk4-order-1.svg",
+          "bytes": 33102,
+          "sha256": "sha256:692730447711c009f52ad4988f6f8cc9455a9ff4805ae81e764b9c3827df67b0"
+        }
+      ]
+    },
+    "odes-solvers-stiffness-sweep": {
+      "code_fingerprint": "sha256:1da04d0aeba84750f70ac1de3664dbb8bbee60bbb9fcd5cea58dad8a320ae658",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact at T = 1: fast 1.9e-22, slow 0.3679\n    h   fwd fast  fwd slow   bwd fast  bwd slow\n 0.10    1.0e+06    0.3487    1.7e-08    0.3855\n 0.05    3.3e+03    0.3585    1.3e-11    0.3769\n 0.04   -1.0e+00    0.3604    1.2e-12    0.3751\n 0.02    0.0e+00    0.3642    8.9e-16    0.3715\n 0.01    7.9e-31    0.3660    2.5e-18    0.3697\n"
+        }
+      ]
+    },
+    "mdl-odes-solvers-gradient-descent-is-a-solver": {
+      "code_fingerprint": "sha256:182e85a7a1ca70ee33654bab5d581631ebb0e0df8b1145f5f561afaa572487bd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "solver            eta  steep factor  flat factor   ||x_100||\nforward Euler    0.19        -0.900        0.810     2.7e-05\nforward Euler    0.21        -1.100        0.790     1.4e+04\nRK4              0.27         0.879        0.763     2.5e-06\nRK4              0.29         1.187        0.748     2.8e+07\nbackward Euler   0.25         0.286        0.800     2.0e-10\nbackward Euler  25.00         0.004        0.038    3.2e-142\n"
+        }
+      ]
+    }
+  }
+}

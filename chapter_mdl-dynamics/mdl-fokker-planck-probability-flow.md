@@ -1204,7 +1204,7 @@ above the 0.0096 band in about half the notebook runs, so "usually below 0.01"
 is false. After lib-review finding 4 the cell no longer prints the asymptotic
 band; it prints the KS distance of an exact sample of the same size drawn in
 the same run (sample_p0 with the uneven weights) beside the sampler's, so the
-reader sees the sampler's excess directly. The sampler's KS distance it contains the width bias (about 0.002 in the CDF) and the start
+reader can compare the two. The sampler's KS distance contains the width bias (about 0.002 in the CDF) and the start
 mismatch (about 0.003 of mass at x = 0) on top of the sampling error. The next
 paragraph ("The fraction on the left tells us less ...") is false now and is
 replaced by the reading of this run (worklist 4.6 B5). In the width-bias

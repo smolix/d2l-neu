@@ -1182,8 +1182,9 @@ left, right = x[x < 0], x[x >= 0]
 print(f'mass on the left: {len(left) / n:.3f} (data 0.800)')
 print(f'means {left.mean():+.3f}, {right.mean():+.3f} (data -2, +2)')
 print(f'widths {left.std():.3f}, {right.std():.3f} (data 0.5)')
-print(f'KS to the exact p_0: {ks_exact(x, 0.0, **uneven):.4f} '
-      f'(95% band {1.36 / np.sqrt(n):.4f})')
+x_ref = sample_p0(n, rng, **uneven)     # an exact sample of the same size
+print(f'KS to the exact p_0: sampler {ks_exact(x, 0.0, **uneven):.4f}, '
+      f'exact sample {ks_exact(x_ref, 0.0, **uneven):.4f}')
 d2l.set_figsize((5.5, 3))
 d2l.plt.hist(x, bins=80, density=True, alpha=0.4, color='C1',
              label='reverse-SDE samples')
@@ -1200,7 +1201,10 @@ fifths". Means: left -2.003 to -1.990, right +1.981 to +2.010 (within 0.02
 still holds). Widths: heavy (left) mode 0.499 to 0.513, light (right) mode
 0.495 to 0.518 (only ~4,000 samples). KS to the exact p_0: 0.004 to 0.015,
 above the 0.0096 band in about half the notebook runs, so "usually below 0.01"
-is false; it contains the width bias (about 0.002 in the CDF) and the start
+is false. After lib-review finding 4 the cell no longer prints the asymptotic
+band; it prints the KS distance of an exact sample of the same size drawn in
+the same run (sample_p0 with the uneven weights) beside the sampler's, so the
+reader sees the sampler's excess directly. The sampler's KS distance it contains the width bias (about 0.002 in the CDF) and the start
 mismatch (about 0.003 of mass at x = 0) on top of the sampling error. The next
 paragraph ("The fraction on the left tells us less ...") is false now and is
 replaced by the reading of this run (worklist 4.6 B5). In the width-bias

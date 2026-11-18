@@ -464,8 +464,8 @@ n, sigma = 4096, 0.5
 x = rng.normal(4.0 * rng.integers(0, 2, n) - 2.0, 0.5)         # x ~ p, the mixture
 def mixture_score(q, var, means=(-2.0, 2.0), ws=(0.5, 0.5)):   # analytic score, any level
     logw = np.stack([np.log(w) - (q - mu)**2 / (2 * var) for mu, w in zip(means, ws)])
-    w = np.exp(logw - logw.max(0))                              # responsibilities, stable softmax
-    return (w * np.stack([(mu - q) / var for mu in means])).sum(0) / w.sum(0)
+    r = np.exp(logw - logw.max(0))                              # responsibilities, stable softmax
+    return (r * np.stack([(mu - q) / var for mu in means])).sum(0) / r.sum(0)
 xx = np.repeat(x, 4)                                            # four noisy copies per point
 eps = rng.standard_normal(xx.size)
 xt, y = xx + sigma * eps, -eps / sigma                          # the (input, target) pairs
@@ -607,7 +607,10 @@ NumPy runs; see the code report): broad start P(X > 0) 0.47 to 0.49 against the
 truth 0.2; E[X^2] 4.22 to 4.28 against 4.25 (the weights do not change it); crossed
 from -2: 0.004 to 0.008; crossed from +2: 0.019 to 0.025. The ratio of the two
 crossing fractions is about 4 = 0.8/0.2,
-the balance of flows that equilibrium requires (w_L k_LR = w_R k_RL). -->
+the balance of flows that equilibrium requires (w_L k_LR = w_R k_RL).
+After lib-review nit 10 the printed label is "end on the other side": the
+fraction that ends across the valley after 2,000 steps, not the fraction that
+ever crossed; the prose should use the same reading. -->
 
 ```{.python .input #score-matching-diffusion-flow-langevin}
 def langevin(q, h, steps, var=0.25, ws=(0.8, 0.2)):   # var: component variance of p
@@ -621,7 +624,7 @@ print(f'broad start: P(X > 0) = {(warm > 0).mean():.3f}, '
 for start, w in ((-2.0, 0.8), (2.0, 0.2)):              # every chain in one mode
     q = langevin(np.full(10000, start), 0.01, 2000)
     print(f'all chains at {start:+.0f} (weight {w}): '
-          f'{(np.sign(q) != np.sign(start)).mean():.3f} crossed')
+          f'{(np.sign(q) != np.sign(start)).mean():.3f} end on the other side')
 ```
 
 <!-- WRITER: "About one chain in a hundred" is now about one in two hundred from the
@@ -1147,11 +1150,11 @@ ws = (0.8, 0.2)                                         # the right mode is the 
 def draw(size):                                         # standardized modes +-m, weights ws
     return rng.normal(np.where(rng.random(size) < ws[0], -m, m), np.sqrt(v0))
 x_pairs = np.repeat(draw(4096), 4)                      # four noisy copies per clean point
-def fit_eps(a):                                         # ridge least squares for eps at one level
+def fit_eps(a, x_pairs):                                # ridge least squares for eps at one level
     e = rng.standard_normal(x_pairs.size)
     F = features(np.sqrt(4.25) * (np.sqrt(a) * x_pairs + np.sqrt(1 - a) * e))
     return np.linalg.solve(F.T @ F + 1e-6 * e.size * np.eye(17), F.T @ e)
-coef = {a: fit_eps(a) for a in alpha_bar[strides(50)[:-1]]}   # the levels DDIM visits
+coef = {a: fit_eps(a, x_pairs) for a in alpha_bar[strides(50)[:-1]]}   # the levels DDIM visits
 x_exact = ddim(z, 50, lambda q, a: eps_hat(q, a, ws))
 x_fit = ddim(z, 50, lambda q, a: features(np.sqrt(4.25) * q) @ coef[a])
 x_true = draw(8000)

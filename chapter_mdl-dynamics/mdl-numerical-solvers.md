@@ -264,22 +264,11 @@ their difference as an estimate of the local error :cite:`Dormand.Prince.1980`;
 :exref:`ex_mdl-odes-solvers-adaptive-steps` builds the simplest such
 controller.
 
-On log--log axes, $\textrm{error} \approx C h^p$ is a line of slope $p$, so
-the measured slopes should be $1$ and $4$. We test this on the spiral
-$\dot{\mathbf x}=\mathbf A\mathbf x$ of :numref:`fig_mdl-dyn-ode-field`, whose
-eigenvalues are $-0.5\pm\mathrm i$ and whose exact endpoint
-$e^{\mathbf AT}\mathbf x_0$ at $T=2$ the matrix-exponential cell computed,
-halving the step six times.
-<!-- WRITER: the matrix-exponential cell is in another notebook now. The setup cell below takes the endpoint
-from the closed form of :numref:`sec_mdl-odes-solvers`, x(2) = e^{-1}(2 cos 2, 2 sin 2) = (-0.3062, 0.6690). -->
+<!-- WRITER: lib-review finding 7: the definitions of `euler` and `rk4` moved
+out of the order-study cell into this cell of their own, the section's teaching
+code. It needs a one-sentence lead-in (the two update rules above, in code). -->
 
-```{.python .input #mdl-numerical-solvers-runge-kutta-methods-1}
-A = np.array([[-0.5, -1.0], [1.0, -0.5]])      # the spiral, eigenvalues -0.5 +- i
-x0, T = np.array([2.0, 0.0]), 2.0
-x_true = np.exp(-1) * np.array([2 * np.cos(2), 2 * np.sin(2)])  # e^{AT} x0
-```
-
-```{.python .input #odes-solvers-euler-rk4-order}
+```{.python .input #mdl-numerical-solvers-runge-kutta-methods-2}
 def euler(f, x0, T, n):
     """Forward Euler: n steps of size h = T/n."""
     x, h = np.asarray(x0, dtype=float), T / n
@@ -297,7 +286,24 @@ def rk4(f, x0, T, n):
         k4 = f(x + h * k3)
         x = x + (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
     return x
+```
 
+On log--log axes, $\textrm{error} \approx C h^p$ is a line of slope $p$, so
+the measured slopes should be $1$ and $4$. We test this on the spiral
+$\dot{\mathbf x}=\mathbf A\mathbf x$ of :numref:`fig_mdl-dyn-ode-field`, whose
+eigenvalues are $-0.5\pm\mathrm i$ and whose exact endpoint
+$e^{\mathbf AT}\mathbf x_0$ at $T=2$ the matrix-exponential cell computed,
+halving the step six times.
+<!-- WRITER: the matrix-exponential cell is in another notebook now. The setup cell below takes the endpoint
+from the closed form of :numref:`sec_mdl-odes-solvers`, x(2) = e^{-1}(2 cos 2, 2 sin 2) = (-0.3062, 0.6690). -->
+
+```{.python .input #mdl-numerical-solvers-runge-kutta-methods-1}
+A = np.array([[-0.5, -1.0], [1.0, -0.5]])      # the spiral, eigenvalues -0.5 +- i
+x0, T = np.array([2.0, 0.0]), 2.0
+x_true = np.exp(-1) * np.array([2 * np.cos(2), 2 * np.sin(2)])  # e^{AT} x0
+```
+
+```{.python .input #odes-solvers-euler-rk4-order}
 f = lambda x: A @ x                            # the spiral field
 ns = 2 ** np.arange(3, 10)                     # 8, 16, ..., 512 steps
 hs = T / ns

@@ -442,6 +442,11 @@ Three properties can be read off :eqref:`eq_mdl-two-point-velocity`, and
 ![Two data points at $\pm 2$ and standard Gaussian noise with independent pairing; sampling runs from the noise at $t=1$ (right) to the data at $t=0$ (left). (a) Trajectories of the exact marginal flow over the one-standard-deviation bands of the two conditional blobs: until $t$ falls to $t^*=0.83$ every trajectory moves toward $0$, and those that start near $0$ leave for a mode only below $t\approx 0.6$. (b) The velocity $u_t(x)$ is $x$ at $t=1$, its slope at the origin turns negative and steep as $t$ falls, and it tends to $(x\mp 2)/t$ away from the origin.](../img/mdl-dyn-two-point-flow.svg)
 :label:`fig_mdl-dyn-two-point-flow`
 
+<!-- WRITER: lib-review finding 5: the closed-form-against-posterior-average
+check (a rounding-level print, 4e-16) is cut from the cell below, with
+`u_posterior`; the cell now prints only the slope line and the one-step line.
+Drop the clause about the posterior-average comparison here and in the
+read-out ("The numbers are those of the formula" may stay for the slope). -->
 The cell compares the closed form with a direct posterior average at three
 points, takes the slope at the origin by a finite difference, and applies
 one Euler step of the exact field to $\epsilon = \pm 1$.
@@ -451,14 +456,6 @@ a = 2.0                                       # data at -a and +a, noise N(0, 1)
 def u_two_point(x, t):                        # closed form of the marginal velocity
     return (x - a * np.tanh((1 - t) * a * x / t**2)) / t
 
-def u_posterior(x, t):                        # posterior average of (x - x0)/t
-    x0 = np.array([-a, a])
-    w = np.exp(-(x - (1 - t) * x0)**2 / (2 * t**2))   # likelihood of x given x0
-    return (x - (w * x0).sum() / w.sum()) / t
-
-points = [(0.5, 0.5), (0.7, -1.0), (0.2, 0.1)]
-print('closed form - posterior average:',
-      max(abs(u_two_point(x, t) - u_posterior(x, t)) for t, x in points))
 ts = np.array([0.9, 0.8, 0.5])
 print('slope at the origin at t = 0.9, 0.8, 0.5:',
       ((u_two_point(1e-6, ts) - u_two_point(-1e-6, ts)) / 2e-6).round(2),
@@ -733,7 +730,7 @@ def train_rf(sample_pairs, steps=4000, tail=500):
         loss, grads = jax.value_and_grad(loss_fn)(params, key)
         updates, state = opt.update(grads, state)
         return (optax.apply_updates(params, updates), state), loss
-    k_init, k_steps = jax.random.split(jax.random.key(np.random.randint(2**31)))
+    k_init, k_steps = jax.random.split(jax.random.key(int(rng.integers(2**31))))
     params = make_params(k_init)
     (params, _), losses = jax.lax.scan(step, (params, opt.init(params)),
                                        jax.random.split(k_steps, steps))

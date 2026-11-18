@@ -291,8 +291,8 @@ seed = int(rng.integers(2**31))                # one initialization for both sol
 #@tab pytorch
 X, Y = torch.tensor(X0_ring).float(), torch.tensor(X1_ring).float()
 
-def train(name, step):
-    """Fit the field through 10 steps of one solver, from the shared seed."""
+def train(name, step, seed):
+    """Fit the field through 10 steps of one solver, from the given seed."""
     torch.manual_seed(seed)
     net = nn.Sequential(nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 2))
     for layer in net[::2]:                     # Glorot-uniform weights, zero biases
@@ -313,15 +313,15 @@ def train(name, step):
           'at iterations 0, 200, 400')
     return net
 
-trained = {name: train(name, step) for name, step in solvers.items()}
+trained = {name: train(name, step, seed) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab mxnet
 X, Y = mnp.array(X0_ring, dtype='float32'), mnp.array(X1_ring, dtype='float32')
 
-def train(name, step):
-    """Fit the field through 10 steps of one solver, from the shared seed."""
+def train(name, step, seed):
+    """Fit the field through 10 steps of one solver, from the given seed."""
     npx.random.seed(seed)
     net = nn.HybridSequential()
     net.add(nn.Dense(32, activation='tanh'), nn.Dense(2))
@@ -342,15 +342,15 @@ def train(name, step):
           'at iterations 0, 200, 400')
     return net
 
-trained = {name: train(name, step) for name, step in solvers.items()}
+trained = {name: train(name, step, seed) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab tensorflow
 X, Y = tf.constant(X0_ring, tf.float32), tf.constant(X1_ring, tf.float32)
 
-def train(name, step):
-    """Fit the field through 10 steps of one solver, from the shared seed."""
+def train(name, step, seed):
+    """Fit the field through 10 steps of one solver, from the given seed."""
     tf.keras.utils.set_random_seed(seed)
     net = tf.keras.Sequential([tf.keras.layers.Dense(32, activation='tanh'),
                                tf.keras.layers.Dense(2)])  # Glorot-uniform, zero biases
@@ -374,7 +374,7 @@ def train(name, step):
           'at iterations 0, 200, 400')
     return tf.function(net)                    # a compiled field evaluates faster
 
-trained = {name: train(name, step) for name, step in solvers.items()}
+trained = {name: train(name, step, seed) for name, step in solvers.items()}
 ```
 
 ```{.python .input #odes-solvers-neural-ode-train}
@@ -714,7 +714,7 @@ def loss_and_grad_unrolled(A, x0, T, N):
     """L = ||x_N||^2 / 2 through N unrolled Euler steps; dL/dA by hand-written
     reverse mode, the discrete adjoint."""
     h, xs = T / N, [x0]
-    for n in range(N):
+    for _ in range(N):
         xs.append(xs[-1] + h * (A @ xs[-1]))   # forward sweep, tape the states
     a, gA = xs[-1].copy(), np.zeros_like(A)    # a_N = dL/dx_N = x_N
     for n in range(N - 1, -1, -1):             # backward sweep: one VJP per step
@@ -1070,75 +1070,78 @@ x = rng.standard_normal(d)
 s = 1 - np.tanh(W1 @ x + b1) ** 2
 tr_tanh = np.sum(s * np.einsum('ij,ji->i', W1, W2))  # trace of W2 diag(s) W1
 E = rng.choice([-1.0, 1.0], size=(m, d))         # Rademacher probes, one per row
+E_gauss = rng.standard_normal((m, d))            # Gaussian probes, one per row
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab pytorch
 W1t, b1t, W2t = (torch.tensor(w) for w in (W1, b1, W2))
-tanh_part = lambda x: W2t @ torch.tanh(W1t @ x + b1t)
-for name, field, tr in (('with the pull', lambda x: tanh_part(x) - x, tr_tanh - d),
-                        ('without', tanh_part, tr_tanh)):
-    _, vjp = torch.func.vjp(field, torch.tensor(x))  # reverse mode at x
-    rows = torch.func.vmap(vjp)(torch.tensor(E))[0]  # row k: eps_k^T J
-    est = (rows * torch.tensor(E)).sum(dim=1)        # eps_k^T J eps_k
-    print(f'{name:13s}: exact {tr:+6.2f}, mean of {m} probes {est.mean():+6.2f} '
-          f'+- {est.std() / m ** 0.5:.2f}, one probe sd {est.std():.2f}')
+field = lambda x: W2t @ torch.tanh(W1t @ x + b1t) - x
+_, vjp = torch.func.vjp(field, torch.tensor(x))      # reverse mode at x
+for name, P in (('Rademacher', E), ('Gaussian', E_gauss)):
+    P = torch.tensor(P)
+    rows = torch.func.vmap(vjp)(P)[0]                # row k: eps_k^T J
+    est = (rows * P).sum(dim=1)                      # eps_k^T J eps_k
+    sd = est.std(correction=0)
+    print(f'{name:10s}: exact {tr_tanh - d:+6.2f}, mean of {m} probes '
+          f'{est.mean():+6.2f} +- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab mxnet
 xs = mnp.array(np.tile(x, (m, 1)))             # m copies of x, one per probe
 W1m, b1m, W2m = (mnp.array(w) for w in (W1, b1, W2))
-tanh_part = lambda xs: mnp.tanh(xs @ W1m.T + b1m) @ W2m.T
-for name, field, tr in (('with the pull', lambda xs: tanh_part(xs) - xs, tr_tanh - d),
-                        ('without', tanh_part, tr_tanh)):
+field = lambda xs: mnp.tanh(xs @ W1m.T + b1m) @ W2m.T - xs
+for name, P in (('Rademacher', E), ('Gaussian', E_gauss)):
+    P = mnp.array(P)
     xs.attach_grad()
     with autograd.record():
         ys = field(xs)
-    ys.backward(mnp.array(E))                  # seed the backward pass with the probes
-    est = (xs.grad * mnp.array(E)).sum(axis=1) # row k of xs.grad: eps_k^T J
+    ys.backward(P)                             # seed the backward pass with the probes
+    est = (xs.grad * P).sum(axis=1)            # row k of xs.grad: eps_k^T J
     mean, sd = float(est.mean()), float(est.std())
-    print(f'{name:13s}: exact {tr:+6.2f}, mean of {m} probes {mean:+6.2f} '
-          f'+- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
+    print(f'{name:10s}: exact {tr_tanh - d:+6.2f}, mean of {m} probes '
+          f'{mean:+6.2f} +- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab tensorflow
 xs = tf.constant(np.tile(x, (m, 1)))           # m copies of x, one per probe
-tanh_part = lambda xs: tf.tanh(xs @ W1.T + b1) @ W2.T
-for name, field, tr in (('with the pull', lambda xs: tanh_part(xs) - xs, tr_tanh - d),
-                        ('without', tanh_part, tr_tanh)):
+field = lambda xs: tf.tanh(xs @ W1.T + b1) @ W2.T - xs
+for name, P in (('Rademacher', E), ('Gaussian', E_gauss)):
     with tf.GradientTape() as tape:
         tape.watch(xs)
         ys = field(xs)
-    rows = tape.gradient(ys, xs, output_gradients=tf.constant(E))  # eps_k^T J
-    est = tf.reduce_sum(rows * E, axis=1)      # eps_k^T J eps_k
+    rows = tape.gradient(ys, xs, output_gradients=tf.constant(P))  # eps_k^T J
+    est = tf.reduce_sum(rows * P, axis=1)      # eps_k^T J eps_k
     mean, sd = float(tf.reduce_mean(est)), float(tf.math.reduce_std(est))
-    print(f'{name:13s}: exact {tr:+6.2f}, mean of {m} probes {mean:+6.2f} '
-          f'+- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
+    print(f'{name:10s}: exact {tr_tanh - d:+6.2f}, mean of {m} probes '
+          f'{mean:+6.2f} +- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab jax
 W1j, b1j, W2j = (jnp.array(w) for w in (W1, b1, W2))
-tanh_part = lambda x: W2j @ jnp.tanh(W1j @ x + b1j)
-for name, field, tr in (('with the pull', lambda x: tanh_part(x) - x, tr_tanh - d),
-                        ('without', tanh_part, tr_tanh)):
-    _, vjp = jax.vjp(field, jnp.array(x))      # reverse mode at x
-    rows = jax.vmap(vjp)(jnp.array(E))[0]      # row k: eps_k^T J
-    est = (rows * E).sum(axis=1)               # eps_k^T J eps_k
+field = lambda x: W2j @ jnp.tanh(W1j @ x + b1j) - x
+_, vjp = jax.vjp(field, jnp.array(x))          # reverse mode at x
+for name, P in (('Rademacher', E), ('Gaussian', E_gauss)):
+    rows = jax.vmap(vjp)(jnp.array(P))[0]      # row k: eps_k^T J
+    est = (rows * P).sum(axis=1)               # eps_k^T J eps_k
     mean, sd = float(est.mean()), float(est.std())
-    print(f'{name:13s}: exact {tr:+6.2f}, mean of {m} probes {mean:+6.2f} '
-          f'+- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
+    print(f'{name:10s}: exact {tr_tanh - d:+6.2f}, mean of {m} probes '
+          f'{mean:+6.2f} +- {sd / m ** 0.5:.2f}, one probe sd {sd:.2f}')
 ```
 
-<!-- WRITER: the cell above, 15 development runs (four tabs): exact trace with
-the pull -49.0 to -51.5, without it -1.5 to +1.0 (either sign; "of order one");
-mean of 1000 probes within 0.35 of the exact trace (standard error 0.13 to
-0.17); one-probe standard deviation 4.2 to 5.5, and identical with and without
-the pull in every run, to every printed digit (for Rademacher probes
-eps^T(-I)eps = -d exactly, so the diagonal adds nothing to the noise). A
-tenth of the trace with the pull; several times the trace without it. -->
+<!-- WRITER: the cell above (changed after lib-review finding 2) now compares
+two probe distributions on the field with the pull, not the field with and
+without the pull: for Rademacher probes eps^T(-I)eps = -d exactly, so that
+second row could not differ from the first. Rows: Rademacher and Gaussian, both
+m = 1000 on the same field; exact trace -49 to -51.5 (the tanh part alone is of
+order one, either sign). Rademacher one-probe sd about 4 to 5.5 (the
+off-diagonal entries only); Gaussian about 11 (adds 2 sum_i J_ii^2, about
+2d = 100 to the variance, because the diagonal is near -1). The prose point
+"the off-diagonal entries set the noise; Rademacher probes see the diagonal
+exactly" is now measured. Values per tab: claims.md. -->
 
 The trace integral of a CNF adds one such estimate per solver step. Whether the
 probe is held for the whole solve or drawn afresh at every step changes the
@@ -1254,7 +1257,8 @@ but with noise that training averages out and a single likelihood does not.
 `solve(step, trained[k], X, 1.0, N)`; JAX: `flow(trained[k], step, X, 1.0, N)`);
 there is no `flow(X, N, h)` any more, and the backward integration of part (c)
 is `solve(euler_step, trained['Euler'], Y, -1.0, N)`. The training cell takes
-the solver step as an argument (`train(name, step)`), so part (d) and the
+the solver step and the seed as arguments (`train(name, step, seed)`; JAX
+`train(name, step)` from the shared `params0`), so part (d) and the
 worklist's new parts (Heun, training at N = 100) need only a new step function
 or a changed step count. -->
 
@@ -1406,8 +1410,8 @@ notebook now has `solve(rk4_step, f, x, T, 2000)` instead of `rk4`. -->
 <!-- WRITER (exercise): part (b) still works with the redesigned cells (the
 `-1` cell defines W1, b1, W2, x, s and E for d = 50; the Jacobian of the field
 with the pull is W2 diag(s) W1 - I). The next cell now prints the one-probe
-standard deviation directly, for m = 1000, and for the field with and without
-the pull. -->
+standard deviation directly, for m = 1000, for Rademacher and for Gaussian
+probes on the field with the pull. -->
 
 1. [code] **Discrete and continuous adjoints.** ●● Backpropagation through
    a solver differentiates the executed program, whereas a solver applied to
@@ -1767,7 +1771,7 @@ $\mathbb{E}[\boldsymbol\epsilon^\top \mathbf J\boldsymbol\epsilon]=\operatorname
 
 $d=50$, $64$ hidden units, $10^5$ Rademacher probes:
 <!-- WRITER (slides): now the field W2 tanh(W1 x + b1) - x, d = 50, 64 hidden
-units, 1000 probes, with and without the pull; the held-against-fresh cell is
+units, 1000 probes, Rademacher against Gaussian; the held-against-fresh cell is
 new and has no slide yet. -->
 
 @!mdl-neural-odes-the-hutchinson-trace-estimator-1

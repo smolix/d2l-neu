@@ -287,15 +287,18 @@ band = 2 * np.sqrt(dt_bm * np.arange(1, n_bm + 1))  # 2 sqrt(t) on the grid
 inside = np.abs(W_bm) < band
 print(f'inside +-2 sqrt(t) at t = 1:   {inside[:, -1].mean():.3f}'
       '   (Gaussian: 0.954)')
-print(f'inside at all {n_bm} grid times: {inside.all(axis=1).mean():.3f}')
+for stride in (10, 1):                       # same paths, coarse then fine grid
+    print(f'inside at all {n_bm // stride} grid times: '
+          f'{inside[:, stride - 1::stride].all(axis=1).mean():.3f}')
 ```
 
 <!-- WRITER: #sdes-brownian-paths no longer prints variances. It prints two
 fractions: inside +-2 sqrt(t) at t = 1, 0.953-0.957 over 24 development runs
-(Gaussian 0.954; standard error 0.0015), and inside the band at all 500 grid
-times, 0.534-0.550 (standard error 0.0035). The second number depends on the
-grid: on every 10th point (50 times) it is about 0.70, on 500 times about
-0.54; it keeps falling as the grid refines (for the continuous path it is 0,
+(Gaussian 0.954; standard error 0.0015), and inside the band at all grid
+times, on two grids from the same paths (lib-review finding 1): every 10th
+point (50 times), about 0.70, and all 500 times, 0.534-0.550 (standard error
+0.0035). The fall from 0.70 to 0.54 is the lesson: it keeps falling as the
+grid refines (for the continuous path it is 0,
 since near t = 0 a path leaves +-2 sqrt(t) infinitely often), so keep "on this
 grid". Delete the variance sentence and the covariance lead-in/read-out
 (worklist 4.5 B3). -->

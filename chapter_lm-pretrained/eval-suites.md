@@ -571,7 +571,7 @@ reference. It computes every interval twice: without clusters, in the column
 with them. The squared ratio of the two standard errors estimates the design
 effect, printed as `DEFF`, and $(\textrm{DEFF} - 1)/(m - 1)$ is the
 correlation that this value implies. The last line of the output confirms
-that clustering widens the interval of either model by more than half.
+that clusters raise the standard error of either model by more than half.
 
 ```{.python .input #eval-suites-cluster-pool}
 %%tab pytorch
@@ -725,6 +725,9 @@ d2l.plt.gca().legend(list(sds) + ['ARC pairs'], loc='lower center', ncol=2,
                      bbox_to_anchor=(0.5, 1), frameon=False);  # above
 ```
 
+The numbers behind the plot come next: the MDE of each design at 500 items,
+and for every pair the number of items at which its dot sits.
+
 ```{.python .input #eval-suites-mde-table}
 %%tab pytorch
 for name, s in sds.items():
@@ -753,9 +756,9 @@ evidence.
 Note also the row of Qwen3.5-0.8B and Qwen3-0.6B-Base. The paired interval of
 this pair excluded zero at 500 items, yet the table asks for 625. This is the
 difference between 1.96 and 2.80 once more: our experiment found the gap, and
-a repetition with fresh questions might well miss it. The tables of the
-development suite and of the contamination test below print the MDE beside
-the interval. "No significant difference" is a statement about the
+a repetition with fresh questions might well miss it. From here on, every
+difference that this section reports with an interval is printed with its
+MDE as well. "No significant difference" is a statement about the
 experiment, and the MDE says how strong a statement it is.
 
 ## Benchmarks, Suites and Contamination
@@ -2087,11 +2090,14 @@ matter of which pairs each judge chose to decide. Our judge is not
 distinguishable from GPT-4 on these votes, and the two give the same verdict
 on 95% of the pairs that both decide.
 
-This is not yet a licence to trust the judge. The intervals on the hard pairs
-are wide, and a deficit of ten points is still inside them. And these
-judgments have been public since 2023, so a judge released later may have
-been trained on them, which is the contamination problem of
-:numref:`subsec_lm_eval_contamination` in a new place. Agreement with people is behavioral evidence in the sense of
+This is not yet a licence to trust the judge. The column `MDE` says how
+little the hard pairs can show: about ten points for the consistent verdicts
+and twelve for the forced ones. A deficit of ten points is thus the smallest
+that the comparison would reliably find, and the two intervals reach down to
+deficits of 11 and 14 points. And these judgments have been public since
+2023, so a judge released later may have been trained on them, which is the
+contamination problem of :numref:`subsec_lm_eval_contamination` in a new
+place. Agreement with people is behavioral evidence in the sense of
 :numref:`tab_induction-evidence`: it shows that the judge is useful on
 questions like these, and it identifies nothing about how the judge decides.
 
@@ -2168,7 +2174,8 @@ padded arm is to be expected, since its two answers are the same answer, one
 of them padded. We look at position first. The cell also fits the slope that
 tests the additive model. Both readings are noisy, and an ordinary regression
 of one on the other would be biased toward a flatter line, so the fit is by
-total least squares, which treats the two axes alike.
+total least squares, which treats the two axes alike. A second cell plots
+the two readings of every pair against each other.
 
 ```{.python .input #eval-suites-position-bias}
 %%tab pytorch
@@ -2232,23 +2239,28 @@ d2l.plot([adv1, ends, span], [adv2, ends, intercept + slope * span],
 
 The mean position bias is 0.71 in log-odds, with an interval from 0.64 to
 0.79. Shown two answers of equal quality, this judge puts about two thirds of
-its probability on the first, since $\sigma(0.71) = 0.67$. The consequences
-for single readings are large. Had we judged each pair in one order only, the
-winner would differ from the debiased one in 14% of the pairs for one order
-and in 10% for the other. The two shares add up to the 24% of inconsistent
-verdicts, as they must: when the two orders name different winners, the
-debiased winner sides with one of them.
+its probability on the first, since $\sigma(0.71) = 0.67$. Two thirds is a
+probability, and a verdict is a choice. The output counts 129 pairs that are
+nearly tied once the two orders are combined, with $|\Delta| < 0.25$. In a
+single reading of such a pair the judge prefers the answer shown first almost
+four times in five. Of two close answers, a single reading mostly names
+whichever stands first.
 
-The plot shows the two readings of each pair against each other. Its axes
-write A and B for our answers $a$ and $b$. Without a position bias the points
-would scatter around the diagonal. They lie below it, by about $2\beta$, and
-parallel to it, which is the more important fact: the fitted slope is 1.00,
-with an interval from 0.96 to 1.04. The additive model holds for this judge,
-and $\Delta$ is a fair summary of a pair. This does not make the bias small or
-uniform. Its quartiles over the pairs are 0.13 and 1.25, so for a quarter of
-the pairs the first slot is worth more than 1.25 in log-odds. What the slope
-shows is that the bias does not grow or shrink with $\Delta$, and the model
-needs no more than that.
+The consequences reach beyond the near-ties. Had we judged each pair in one
+order only, the winner would differ from the debiased one in 14% of the pairs
+for one order and in 10% for the other. The two shares add up to the 24% of
+inconsistent verdicts, as they must: when the two orders name different
+winners, the debiased winner sides with one of them.
+
+The plot shows the two readings of each pair against each other. Without a
+position bias the points would scatter around the diagonal. They lie below
+it, by about $2\beta$, and parallel to it, which is the more important fact:
+the fitted slope is 1.00, with an interval from 0.96 to 1.04. The additive
+model holds for this judge, and $\Delta$ is a fair summary of a pair. This
+does not make the bias small or uniform. Its quartiles over the pairs are
+0.13 and 1.25, so for a quarter of the pairs the first slot is worth more
+than 1.25 in log-odds. What the slope shows is that the bias does not grow or
+shrink with $\Delta$, and the model needs no more than that.
 
 For length we have two measurements. The intervention compares each answer
 with its padded copy, so that nothing but the padding differs. The observation
@@ -2300,13 +2312,13 @@ print(pd.DataFrame({  # both on one scale: sigma of a mean delta
 ```
 
 The intervention is unambiguous. The padded answer loses, by $\Delta = -0.79$
-with an interval from $-0.86$ to $-0.72$, and it wins a consistent verdict in
-fewer than 1% of the prompts, against 45% for the plain copy. The judge
-penalizes this filler. We should be careful about what that shows. The
-paragraph adds about 54 words that say nothing, so it changes the quality of
-an answer along with its length, and the result is that this judge does not
-reward empty padding. It does not follow that the judge ignores length when
-length comes with content.
+with an interval from $-0.86$ to $-0.72$, an effect eight times the MDE of
+this arm. It wins a consistent verdict in fewer than 1% of the prompts,
+against 45% for the plain copy. The judge penalizes this filler. We should be
+careful about what that shows. The paragraph adds about 54 words that say
+nothing, so it changes the quality of an answer along with its length, and
+the result is that this judge does not reward empty padding. It does not
+follow that the judge ignores length when length comes with content.
 
 On that question the observed slope is our only evidence, and it is weak: 0.3
 per unit of the log ratio, with an interval from slightly below zero to 0.7.
@@ -2315,13 +2327,12 @@ this sample size. Even a clear slope would have been hard to read, because a
 longer answer is often a more complete one, and this confounding is the reason
 for running the intervention at all.
 
-In the table only the last two columns matter. They put the mean $\Delta$ of
-each pair of models on the scale of a probability, as measured and after an
-adjustment to answers of equal length. The adjustment moves no pair by more
-than four points, and the pair of Qwen3-1.7B and Qwen3.5-2B by two.
-Other automatic judges have been found to favor long answers
-:cite:`Dubois.Galambosi.Liang.ea.2024`, so a length bias has to be measured
-for the judge and the rubric at hand.
+The table puts the mean $\Delta$ of each pair of models on the scale of a
+probability, as measured and after an adjustment to answers of equal length.
+The adjustment moves no pair by more than four points, and the pair of
+Qwen3-1.7B and Qwen3.5-2B by two. Other automatic judges have been found to
+favor long answers :cite:`Dubois.Galambosi.Liang.ea.2024`, so a length bias
+has to be measured for the judge and the rubric at hand.
 
 A third bias is out of our reach. A judge may prefer text that resembles its
 own :cite:`Panickssery.Bowman.Feng.2024`, and ours shares a family with two of
@@ -2466,10 +2477,11 @@ print(f'seed 1 minus seed 0: {show(r_diff)}, p {r_diff.p_two_sided:.3f}, '
 The verdict survives a second draw. The win rate of Qwen3.5-2B is 0.62 with
 the first seed and 0.66 with the second, and both intervals lie clear of one
 half. How much a redraw moves the win rate is less certain. The difference of
-four points has an interval from $-1$ to $+9$ points, so an effect of the
-answer seed is not detectable at this sample size, and the interval allows
-anything from none to about nine points. A report of a judged comparison
-should therefore say that each answer was a single draw.
+four points has an interval from $-1$ to $+9$ points and an MDE of about 6.5
+points. An effect of the answer seed is thus not detectable at this sample
+size, and the interval allows anything from none to about nine points. A
+report of a judged comparison should therefore say that each answer was a
+single draw.
 
 Everything measured in this part comes back when a model is no longer ranked
 by a judge but trained against one: a reward model is a judge whose biases
@@ -2624,17 +2636,17 @@ if RERUN:  # the regeneration's wall clock
 
 Under the protocol of the harness the model scores 0.61, with an interval from
 0.59 to 0.64, and the published value lies inside it. The paired difference
-between the two protocols is 10 points, with an interval from 8 to 13. The
-published number is thus reproduced under the chain-of-thought protocol of the
-harness and not under ours. The two protocols differ in the number of
-demonstrations, in their wording, in the stop string and in the token limit,
-and together these choices move the score by about ten points, for the same
-weights and the same questions. We have not identified the protocol of the
-authors, who speak of four demonstrations where the harness has eight. We
-have shown that a standard protocol exists under which their number is
-reproduced, and that a reader who is given the number without its protocol
-cannot know what it means to within ten points. Recall that the section began
-with gains of two.
+between the two protocols is 10 points, with an interval from 8 to 13 and an
+MDE of under 4 points. The published number is thus reproduced under the
+chain-of-thought protocol of the harness and not under ours. The two
+protocols differ in the number of demonstrations, in their wording, in the
+stop string and in the token limit, and together these choices move the score
+by about ten points, for the same weights and the same questions. We have not
+identified the protocol of the authors, who speak of four demonstrations
+where the harness has eight. We have shown that a standard protocol exists
+under which their number is reproduced, and that a reader who is given the
+number without its protocol cannot know what it means to within ten points.
+Recall that the section began with gains of two.
 
 Even a score with its full protocol attached says what a model does on a
 population of questions. It does not say how the model arrives at an answer,
@@ -2999,13 +3011,17 @@ deviation of the differences per item. DEFF: design effect.
 - A true difference of 1.96 standard errors is found in half of all
   experiments, one of 2.80 (1.96 + 0.84) in four of five.
 
-::: {.cols}
-::: {.col}
 | design, 500 items | MDE |
 |---|---|
 | two independent samples | 8.5 points |
 | paired | 6.5 points |
 | paired, clusters of 8 | 10 points |
+:::
+
+::: {.slide title="A Gap of Two Points Needs 1,400 to 2,100 Paired Items"}
+::: {.cols .vc}
+::: {.col .fig .big}
+@!eval-suites-mde-plot
 :::
 
 ::: {.col}
@@ -3015,6 +3031,11 @@ deviation of the differences per item. DEFF: design effect.
 | 4 points | 600 to 1,000 |
 | 2 to 3.5 points | 1,400 to 2,100 |
 | 1.4 points | 7,600 |
+
+- Lines: the MDE of the three designs. Each falls as $1/\sqrt{n}$.
+- Dots: the ten pairs of checkpoints, each at its gap and at the number
+  of items whose MDE equals that gap.
+- Six of the ten dots lie to the right of our 500 questions.
 :::
 :::
 :::
@@ -3195,7 +3216,7 @@ experts prefer one of the two models in over 80% of their votes.
 - Hard pairs, our judge: interval 0.66 to 0.80, clear of 0.85 to 0.93 on
   easy pairs.
 - Paired with GPT-4 on the same votes, hard pairs: $-0.03$, interval
-  $-0.11$ to $+0.03$. Same verdict on 95% of pairs.
+  $-0.11$ to $+0.03$, MDE 10 points. Same verdict on 95% of pairs.
 
 ::: {.d2l-note .rule}
 Validate a judge on hard pairs, and compare judges on the same votes.
@@ -3213,12 +3234,30 @@ Four answerers, 6 pairs, 300 prompts: 1,800 answer pairs in both orders.
 | verdicts consistent in both orders | 0.76 | 0.73 to 0.78 |
 | winner changes if only order 1 is read | 0.14 | 0.13 to 0.16 |
 | winner changes if only order 2 is read | 0.10 | 0.09 to 0.12 |
-| slope of $-l_2$ against $l_1$ | 1.00 | 0.96 to 1.04 |
 
 - $\sigma(0.71) = 0.67$: at equal quality, two thirds of the probability
   go to the first slot.
-- Slope 1: the bias does not change with $\Delta$, so $\Delta$ is a fair
-  summary of a pair.
+- As a choice: in the 129 pairs with $|\Delta| < 0.25$, a single reading
+  prefers the answer shown first 78% of the time.
+:::
+
+::: {.slide title="The Position Bias Does Not Grow with the Preference: Slope 1.00"}
+::: {.cols .vc}
+::: {.col .fig}
+@!eval-suites-position-bias-plot
+:::
+
+::: {.col}
+- One dot per answer pair. Both axes measure the advantage of answer
+  $a$: $l_1$ with $a$ shown first, $-l_2$ with $b$ shown first.
+- No bias: the diagonal. The dots lie $2\beta \approx 1.4$ below it.
+- A judge that speaks up more in one order, $l_1 = \beta + c_1\Delta$
+  and $l_2 = \beta - c_2\Delta$, gives the slope $c_2/c_1$.
+- Fitted slope: 1.00, interval 0.96 to 1.04. $\Delta$ is a fair summary
+  of a pair.
+- The bias still varies: quartiles 0.13 and 1.25.
+:::
+:::
 :::
 
 ::: {.slide title="The Judge Penalizes Empty Padding; No Length Effect Is Detectable"}
@@ -3229,7 +3268,8 @@ Four answerers, 6 pairs, 300 prompts: 1,800 answer pairs in both orders.
 | **intervention:** $\Delta$ of an answer with 54 words of filler against the same answer without, 289 prompts | $-0.79$ | $-0.86$ to $-0.72$ |
 | **observation:** slope of $\Delta$ on the log ratio of word counts, 1,711 pairs | 0.30 | $-0.05$ to 0.67 |
 
-- The padded copy wins under 1% of the prompts, the plain copy 45%.
+- The padded copy wins under 1% of the prompts, the plain copy 45%. The
+  effect is eight times its MDE.
 - The observed slope is confounded: a longer answer is often a more
   complete one.
 - Adjusting for length moves no pair of models by more than 4 points.

@@ -1233,112 +1233,6 @@ def get_airfoil(batch_size=10, n=1500):
                                             batch_size=None)
     return data_iter, data.shape[1]-1
 
-class Timer:
-    """Record multiple running times.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
-
-    def start(self):
-        """Start the timer."""
-        self.tik = time.perf_counter()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.perf_counter() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
-
-def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
-               ylim=None):
-    """Call step(X, y) on every minibatch; about every 200 examples, record
-    full_loss() and the training time so far, and plot the loss in the range
-    ylim. Return the history.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    # Wait until the device has finished (CUDA runs asynchronously)
-    wait = torch.cuda.synchronize if torch.cuda.is_available() else (
-        lambda: None)
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=ylim)
-    history = {'examples': [], 'loss': []}
-    n, i, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            step(X, y)
-            n, i = n + len(X), i + 1
-            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = float(full_loss())
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(i / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
-
-def train_with_rule(trainer_fn, states, hyperparams, data_iter,
-                    feature_dim, num_epochs=2, plot=True,
-                    ylim=(0.22, 0.35)):
-    """Train linear regression with an update rule; return its history. The
-    default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
-    w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
-                     device=Xs.device, requires_grad=True)
-    b = torch.zeros(1, device=Xs.device, requires_grad=True)
-    loss = lambda X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-
-    def step(X, y):
-        loss(X, y).backward()
-        trainer_fn([w, b], states, hyperparams)
-
-    loss(Xs, ys).backward()  # Warm-up, then clear the gradients
-    w.grad, b.grad = None, None
-    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
-                          plot, ylim=ylim)
-
-def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                         plot=True, ylim=(0.22, 0.35)):
-    """Train linear regression with a torch.optim optimizer class; return
-    its history. The default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
-    net = nn.Linear(Xs.shape[1], 1).to(Xs.device)
-    nn.init.normal_(net.weight, std=0.01)
-    nn.init.zeros_(net.bias)
-    optimizer = trainer_fn(net.parameters(), **hyperparams)
-    loss = lambda X, y: d2l.squared_loss(net(X), y).mean()
-
-    def step(X, y):
-        optimizer.zero_grad()
-        loss(X, y).backward()
-        optimizer.step()
-
-    loss(Xs, ys).backward()  # Warm-up; zero_grad clears it
-    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
-                          plot, ylim=ylim)
-
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
 
@@ -1415,6 +1309,37 @@ class TinyLM(nn.Module):
             H = H + blk['mlp'](blk['norm2'](H))
         return self.head(self.norm(H))
 
+class FashionCNN(nn.Module):
+    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, X):
+        X = F.max_pool2d(F.relu(self.conv1(X)), 2)
+        X = F.max_pool2d(F.relu(self.conv2(X)), 2)
+        return self.fc2(F.relu(self.fc1(X.flatten(1))))
+
+def evaluate_accuracy(model, batches):
+    """Fraction of the examples in batches that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    device = next(model.parameters()).device
+    training, correct, total = model.training, 0, 0
+    model.eval()  # Dropout off, batch norm on running statistics
+    with torch.inference_mode():
+        for X, y in batches:
+            y_hat = model(X.to(device)).argmax(dim=1)
+            correct += (y_hat == y.to(device)).sum()
+            total += len(y)
+    model.train(training)
+    return float(correct) / total
+
 def train_steps(model, data, optimizer, num_steps, *, stop=None):
     """Minimize the mean cross-entropy of the logits model(X) for the labels
     Y over the minibatches (X, Y) of data, leaving out the labels -100, for
@@ -1470,36 +1395,15 @@ def smooth(losses, k=25):
     return [sum(losses[i:i + k]) / k
             for i in range(0, len(losses) - k + 1, k)]
 
-class FashionCNN(nn.Module):
-    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+def steps_to_reach(losses, target, k=25):
+    """First step at which the smoothed losses reach target; None if they
+    never do.
 
     Defined in :numref:`sec_adam`"""
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
-        self.fc2 = nn.Linear(128, 10)
-
-    def forward(self, X):
-        X = F.max_pool2d(F.relu(self.conv1(X)), 2)
-        X = F.max_pool2d(F.relu(self.conv2(X)), 2)
-        return self.fc2(F.relu(self.fc1(X.flatten(1))))
-
-def evaluate_accuracy(model, batches):
-    """Fraction of the examples in batches that model classifies correctly.
-
-    Defined in :numref:`sec_adam`"""
-    device = next(model.parameters()).device
-    training, correct, total = model.training, 0, 0
-    model.eval()  # Dropout off, batch norm on running statistics
-    with torch.inference_mode():
-        for X, y in batches:
-            y_hat = model(X.to(device)).argmax(dim=1)
-            correct += (y_hat == y.to(device)).sum()
-            total += len(y)
-    model.train(training)
-    return float(correct) / total
+    for i, v in enumerate(smooth(losses, k)):
+        if v <= target:
+            return k * (i + 1)
+    return None
 
 def lr_sweep(make_model, make_optimizer, data, lrs, seed,
              num_steps=2000, *, evaluate=None, metric='score', every=None,
@@ -1526,23 +1430,34 @@ def lr_sweep(make_model, make_optimizer, data, lrs, seed,
             print(line)
     return curves, scores
 
-def lenet_bn():
-    """LeNet with ReLU, max-pooling, batch normalization, Xavier weights.
+def ce_loss(model, X, Y):
+    """Mean cross-entropy of the logits model(X) for the labels Y.
 
-    Defined in :numref:`sec_scheduler`"""
-    net = nn.Sequential(
-        nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.BatchNorm2d(6),
-        nn.ReLU(), nn.MaxPool2d(kernel_size=2, stride=2),
-        nn.Conv2d(6, 16, kernel_size=5), nn.BatchNorm2d(16), nn.ReLU(),
-        nn.MaxPool2d(kernel_size=2, stride=2), nn.Flatten(),
-        nn.Linear(16 * 5 * 5, 120), nn.BatchNorm1d(120), nn.ReLU(),
-        nn.Linear(120, 84), nn.BatchNorm1d(84), nn.ReLU(),
-        nn.Linear(84, 10))
-    for m in net.modules():  # Xavier weights, zero biases
-        if isinstance(m, (nn.Conv2d, nn.Linear)):
-            nn.init.xavier_uniform_(m.weight)
-            nn.init.zeros_(m.bias)
-    return net
+    Defined in :numref:`sec_batch_size`"""
+    logits = model(X)
+    return F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
+                           Y.reshape(-1))
+
+def grad_sq_norm(model, X, Y):
+    """Squared norm of the gradient of ce_loss over all parameters.
+
+    Defined in :numref:`sec_batch_size`"""
+    grads = torch.autograd.grad(ce_loss(model, X, Y),
+                                list(model.parameters()))
+    return sum((g ** 2).sum() for g in grads)
+
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+    """Gradient-noise scale from the mean squared gradient norms of m
+    minibatches of size b_small and m // 8 of size b_big from sample(b).
+
+    Defined in :numref:`sec_batch_size`"""
+    def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
+        return torch.stack([grad_sq_norm(model, *sample(b))
+                            for _ in range(m)]).mean()
+    n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
+    tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
+    sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
+    return (tr_sigma / sq_norm).item()
 
 def masked_softmax(X, mask=None):
     """Softmax over the last axis with zero weight where mask is False.
@@ -6333,6 +6248,35 @@ class GRU(d2l.RNN):
         self.save_hyperparameters()
         self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
                           dropout=dropout)
+
+class Timer:
+    """Record multiple running times.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.perf_counter()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.perf_counter() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
 
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',

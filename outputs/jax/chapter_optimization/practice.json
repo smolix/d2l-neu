@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:86a1e01a989e8dc3e5870c04ee93a277978ed613d4856acebef8cccd32153e98",
+    "d2l_lib_fingerprint": "sha256:d8d128c2bb9fc527365e5f90946b54d7b8f47b3a89e1d221b25730605e2d64e0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,85 +14,243 @@
       "outputs": []
     },
     "practice-gradient-clipping-1": {
-      "code_fingerprint": "sha256:b539aec772438a19def1980f2779a666df262d92d720162e6a28c70cd7188dd9",
+      "code_fingerprint": "sha256:d1b8a62d5afa2e61ff6f582af9fc65b66b6cd9ccb177f41c97811fedfecd4972",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-1": {
-      "code_fingerprint": "sha256:7c576e76cccf2b932f04a0e0ea579f01cec845fbee3f4c068542335f7d690a34",
+      "code_fingerprint": "sha256:be45171bf7a5d49adf497ac223ed11b76fd9d4f8009ba1f5a531cc60efd68b13",
       "kind": "text",
       "outputs": []
     },
-    "practice-a-nan-averted-4": {
-      "code_fingerprint": "sha256:ee3efa1a0f5edd327d89767f6298b2a75f58bfa77235e9a85093617e3ea97ce5",
+    "practice-preventing-a-numerical-failure-1": {
+      "code_fingerprint": "sha256:100436c648e3414cf8cda9ae1538e8143be7dcd1228963a524ce839737832af7",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-2": {
-      "code_fingerprint": "sha256:4249efd8e3e6e3c957b492a73dc7148f2affdf1618f0ffd40c5d3d194abd692b",
+      "code_fingerprint": "sha256:70497fbc22961d435d43f6c0ea8a7d7d5568f68e876f1603cce6f10cfc142fe8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unclipped: final loss nan\n"
+          "text": "  lr  clip at  final loss  steps clipped  last  median norm  largest / median\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1: final loss 1.612\n"
+          "text": "   1      inf         inf\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped 17 of 2000 steps, the last at step 20; median gradient norm 0.25\n"
+          "text": "   1        1       1.640             15    16         0.25               1.9\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.3      inf       1.659\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   3        1     178.329           1999  1999        41.46               5.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   1      inf         inf\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   1        1       1.609             14    15         0.26               1.6\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.3      inf       1.654\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   3        1     183.021           2000  1999        41.36               1.5\n"
         }
       ]
     },
     "practice-a-nan-averted-3": {
-      "code_fingerprint": "sha256:d92020ceee390cf3317409a1b718b0573fa769c687719d6eac255f3594bc84eb",
+      "code_fingerprint": "sha256:c8cc50a0dadacc7883916a067603159a7ca54a678f08e72e7c006d48ac4ec9a9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 24677,
-          "sha256": "sha256:846a07a8f149fe2a2d69f431d5d876c348b5343f4b6179de93f44ad271e1c211"
+          "bytes": 31463,
+          "sha256": "sha256:46b35afb0323bd3457edb5d3007d74791845c94a46246da3a7f6bb8dc3692989"
         }
       ]
     },
     "practice-weight-averaging-1": {
-      "code_fingerprint": "sha256:a7282b32084a405b77cedb8d63ccff7538a038c1e53c1c9370bcd746ac98597d",
+      "code_fingerprint": "sha256:70f675bee9266a4751b29acda3022585709cdb9d1af5aaf08baf6267481871ca",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-4": {
-      "code_fingerprint": "sha256:8d9164c79675eedccfe01916dce126f6d681ebee1bbe417d4427684d7c2b696b",
+      "code_fingerprint": "sha256:f659d3ec8b9f07102e525cbb8c3ad8b2894b8ca7630fbc0ed8535b8ea13441db",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-averaging-at-a-constant-learning-rate-1": {
+      "code_fingerprint": "sha256:99d721a83c4ca75969d266e16217901ac825d8217bcb168113ea410f5044a5a5",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-2": {
-      "code_fingerprint": "sha256:175f105f8be00cf08eb81aa00c72a63df6427b802ec5cde3c031d19e4ed4a824",
+      "code_fingerprint": "sha256:f98482d3a24422fdea9f31776d999c20e03aa8bca2609f22781e1669a710a2c0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.882, last five epochs 0.880 to 0.892\nEMA: final test accuracy 0.910, last five epochs 0.901 to 0.910\n"
+          "text": "test accuracy    live, last five epochs  live, final  EMA, final\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "constant rate            0.889 to 0.908        0.889       0.911\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine decay             0.907 to 0.912        0.911       0.908\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "constant rate            0.856 to 0.910        0.909       0.915\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine decay             0.910 to 0.914        0.913       0.909\n"
         }
       ]
     },
     "practice-weight-averaging-3": {
-      "code_fingerprint": "sha256:6d419cca66151a84dcce4423634fd8cb8817cdb195e86106f36443f0e3f16989",
+      "code_fingerprint": "sha256:b9634482c2d906c4eceafd55cc3337359a322f9669da1d8e8adb7fb5aba35153",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24007,
-          "sha256": "sha256:9851651edb389db61924c09b58f9f179a706bb8e64402424ee08948c35daa4f6"
+          "bytes": 31672,
+          "sha256": "sha256:c8f1da30b14eeddf1e5e104102f587610e541ccbfac2f50db99d17682c76398a"
+        }
+      ]
+    },
+    "practice-a-worked-configuration-1": {
+      "code_fingerprint": "sha256:0f94a3142a99aa54ff5bdc6bf250281dc218bee2d26a9839f7f57f0688ecd0e2",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-a-worked-configuration-2": {
+      "code_fingerprint": "sha256:81674f8028fd91ded09e121aa35ebb71237bd8b344759bef402b49d369c7280f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3,307,264 parameters\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "batch    32:   3.7 ms per gradient,   8673 sequences per second\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "batch    64:   3.9 ms per gradient,  16574 sequences per second\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "batch   128:   4.9 ms per gradient,  26256 sequences per second\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "batch   256:  10.2 ms per gradient,  25163 sequences per second\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "batch   512:  22.4 ms per gradient,  22873 sequences per second\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "batch  1024:  47.7 ms per gradient,  21463 sequences per second\n"
+        }
+      ]
+    },
+    "practice-a-worked-configuration-3": {
+      "code_fingerprint": "sha256:95dc42318d07c15f6dc36488963ecdd77f95367b01024704baacf11c9727b6ab",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-a-worked-configuration-4": {
+      "code_fingerprint": "sha256:b741e4ed7f7ae849dd0932d8d04eb6043e04701c9d080edd601f45fbf33cfdd8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "noise scale at initialization: 2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.001: loss 1.877 after 300 steps, 2% of the steps clipped\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.003: loss 1.714 after 300 steps, 3% of the steps clipped\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.01: loss 2.511 after 300 steps, 6% of the steps clipped\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "peak rate 0.003; noise scale after its 300 steps: 174\n"
+        }
+      ]
+    },
+    "practice-a-worked-configuration-5": {
+      "code_fingerprint": "sha256:a19755a910fdc28967eaa519bd691404b9ce335d0a19a63e1d57c3b220d107f0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation loss  configured  its EMA  clipped  baseline    gap\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed 1                1.245    1.245     0.5%     1.303  0.059\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed 2                1.245    1.246     0.5%     1.303  0.057\nspread between the seeds: configured 0.001, baseline 0.001\n"
         }
       ]
     }

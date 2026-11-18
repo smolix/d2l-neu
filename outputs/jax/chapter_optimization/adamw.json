@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/adamw.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:45a2352400e4fcf75075c7abe574dab3463e57cb483f3b1572f63b28b64bb4d2",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "adamw-1": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-adamw-from-scratch-1": {
+      "code_fingerprint": "sha256:4aa53139e39c82f15577b38b3ef73da3ceda3560f1939526cc5a5d242ad3ed94",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-adamw-from-scratch-2": {
+      "code_fingerprint": "sha256:c3124c9844f8b032a148af4e42ead5d2be5ac2919167f26ebf5abc343032ee0f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest difference after 100 steps: 0.0e+00\n"
+        }
+      ]
+    },
+    "adamw-coupled-and-decoupled-decay-compared-1": {
+      "code_fingerprint": "sha256:cf012de80cd9a270878e49f47da471bbea3c218d4e6573eef8ecee958fba3e85",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-coupled-and-decoupled-decay-compared-2": {
+      "code_fingerprint": "sha256:564a326f3bd498116794f3de8a7ff0c7a19fcaa9bd2e16104c763929b7bf42ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-one-number-two-meanings": {
+      "code_fingerprint": "sha256:8af15c4db7cd4d93d7b21b39ea842f1d9f1b545bd1b9d35d30a461bddb50b50b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "no decay   final loss 1.724, RMS of the weight matrices 0.0447 -> 0.1089\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Adam + ℓ2  final loss 3.168, RMS of the weight matrices 0.0447 -> 0.0027\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "AdamW      final loss 1.728, RMS of the weight matrices 0.0447 -> 0.0973\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adamw/adamw-one-number-two-meanings-1.svg",
+          "bytes": 29967,
+          "sha256": "sha256:f40c4d45463237a393eb552496048507e287f3185aa72f766e1b8772f13fdebb"
+        }
+      ]
+    },
+    "adam-coupled-and-decoupled-decay-compared-2": {
+      "code_fingerprint": "sha256:b67a5b65cf3ea6846800694988d894fded34854a70b6a923f485093781b3ae35",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "entropy of the byte frequencies: 3.17\n"
+        }
+      ]
+    },
+    "adamw-the-timescale-of-decay-1": {
+      "code_fingerprint": "sha256:1cc66b670216d28c83ef2f1efda335a1b72faf992bc5dd5c938bf8924e12665c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "λ         0   250   500   750  1000  1250  1500  1750  2000 predicted  ratio  validation loss\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "0     0.045 0.068 0.084 0.098 0.109 0.119 0.127 0.135 0.142         -      -  1.563 1.566\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.1   0.045 0.065 0.079 0.090 0.098 0.104 0.109 0.113 0.116     0.122   0.95  1.568 1.576\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.5   0.045 0.056 0.064 0.070 0.073 0.075 0.076 0.076 0.076     0.055   1.38  1.669 1.669\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1     0.045 0.048 0.053 0.054 0.054 0.054 0.054 0.054 0.054     0.039   1.38  1.832 1.816\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adamw/adamw-the-timescale-of-decay-1-1.svg",
+          "bytes": 30379,
+          "sha256": "sha256:f3cbc6a681b64534890271b407fdec8c0e1ec0059001e8f67242b8c95164d003"
+        }
+      ]
+    },
+    "adamw-what-not-to-decay-1": {
+      "code_fingerprint": "sha256:5a244846bdd178eb533eadb6b9ccc8aa467481faf77f6ababff462a6221674dd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "decayed: 425984 of 470784 parameters\n"
+        }
+      ]
+    }
+  }
+}

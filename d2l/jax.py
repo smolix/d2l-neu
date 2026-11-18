@@ -1310,117 +1310,6 @@ def get_airfoil(batch_size=10, n=1500):
         batch_size, is_train=True)
     return data_iter, data.shape[1]-1
 
-class Timer:
-    """Record multiple running times.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
-
-    def start(self):
-        """Start the timer."""
-        self.tik = time.perf_counter()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.perf_counter() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
-
-def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
-               ylim=None):
-    """Call step(X, y) on every minibatch; about every 200 examples, record
-    full_loss() and the training time so far, and plot the loss in the range
-    ylim. Return the history.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=ylim)
-    history = {'examples': [], 'loss': []}
-    n, i, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            out = step(X, y)
-            n, i = n + len(X), i + 1
-            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                jax.block_until_ready(out)  # Wait for the queued steps
-                timer.stop()
-                l = float(full_loss())
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(i / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
-
-def train_with_rule(trainer_fn, states, hyperparams, data_iter,
-                    feature_dim, num_epochs=2, plot=True,
-                    ylim=(0.22, 0.35)):
-    """Train linear regression with an update rule; return its history. The
-    default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    w = 0.01 * jax.random.normal(d2l.get_key(), (feature_dim, 1))
-    b = jnp.zeros(1)
-    loss = lambda w, b, X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-    grad_fn = jax.jit(jax.grad(loss, argnums=(0, 1)))
-    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
-    full_loss = jax.jit(lambda w, b: loss(w, b, Xs, ys))
-
-    def step(X, y):
-        nonlocal w, b, states
-        grads = grad_fn(w, b, X, y)
-        (w, b), states = trainer_fn([w, b], list(grads), states, hyperparams)
-        return w, b
-
-    X, y = next(iter(data_iter))  # One step on the side compiles everything
-    trainer_fn([w, b], list(grad_fn(w, b, X, y)), states, hyperparams)
-    full_loss(w, b)
-    return d2l.record_run(step, lambda: full_loss(w, b), data_iter,
-                          num_epochs, plot, ylim=ylim)
-
-def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                         plot=True, ylim=(0.22, 0.35)):
-    """Train linear regression with an optax optimizer factory; return its
-    history. The default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
-    net = nnx.Linear(Xs.shape[1], 1,
-                     kernel_init=nnx.initializers.normal(0.01),
-                     rngs=nnx.Rngs(d2l.get_key()))
-    optimizer = nnx.Optimizer(net, trainer_fn(**hyperparams), wrt=nnx.Param)
-    loss = lambda net, X, y: d2l.squared_loss(net(X), y).mean()
-
-    @nnx.jit
-    def step_fn(net, optimizer, X, y):
-        l, grads = nnx.value_and_grad(loss)(net, X, y)
-        optimizer.update(net, grads)
-        return l
-
-    full_loss = nnx.jit(lambda net: loss(net, Xs, ys))
-    X, y = next(iter(data_iter))  # One step on copies compiles everything
-    step_fn(nnx.clone(net), nnx.clone(optimizer), X, y)
-    full_loss(net)
-    return d2l.record_run(lambda X, y: step_fn(net, optimizer, X, y),
-                          lambda: full_loss(net), data_iter, num_epochs, plot,
-                          ylim=ylim)
-
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
 
@@ -1504,6 +1393,48 @@ class TinyLM(nnx.Module):
                                             approximate=False))
         return self.head(self.norm(H))
 
+class FashionCNN(nnx.Module):
+    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self, *, rngs):
+        def init(fan_in):  # Weights and biases ~ U(-a, a), a = 1/sqrt(fan_in)
+            a = 1 / math.sqrt(fan_in)
+            f = lambda key, shape, dtype: jax.random.uniform(
+                key, shape, dtype, -a, a)
+            return dict(kernel_init=f, bias_init=f, rngs=rngs)
+        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), **init(9))
+        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), **init(9 * 32))
+        self.fc1 = nnx.Linear(64 * 7 * 7, 128, **init(64 * 7 * 7))
+        self.fc2 = nnx.Linear(128, 10, **init(128))
+
+    def __call__(self, X):
+        X = nnx.max_pool(nnx.relu(self.conv1(X)), window_shape=(2, 2),
+                         strides=(2, 2))
+        X = nnx.max_pool(nnx.relu(self.conv2(X)), window_shape=(2, 2),
+                         strides=(2, 2))
+        return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
+
+@nnx.jit
+def num_correct(model, X, y):
+    """Number of examples in (X, y) that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    return (model(X).argmax(axis=1) == y).sum()
+
+def evaluate_accuracy(model, batches):
+    """Fraction of the examples in batches that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    # A view with dropout off and batch norm on running statistics
+    model = nnx.view(model, deterministic=True, use_running_average=True,
+                     raise_if_not_found=False)
+    correct, total = 0, 0
+    for X, y in batches:
+        correct += num_correct(model, jnp.asarray(X), jnp.asarray(y))
+        total += len(y)
+    return float(correct) / total
+
 @nnx.jit
 def _cross_entropy_step(model, optimizer, X, Y):
     """One optimizer step on the mean cross-entropy of the logits model(X)
@@ -1577,47 +1508,15 @@ def smooth(losses, k=25):
     return [sum(losses[i:i + k]) / k
             for i in range(0, len(losses) - k + 1, k)]
 
-class FashionCNN(nnx.Module):
-    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+def steps_to_reach(losses, target, k=25):
+    """First step at which the smoothed losses reach target; None if they
+    never do.
 
     Defined in :numref:`sec_adam`"""
-    def __init__(self, *, rngs):
-        def init(fan_in):  # Weights and biases ~ U(-a, a), a = 1/sqrt(fan_in)
-            a = 1 / math.sqrt(fan_in)
-            f = lambda key, shape, dtype: jax.random.uniform(
-                key, shape, dtype, -a, a)
-            return dict(kernel_init=f, bias_init=f, rngs=rngs)
-        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), **init(9))
-        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), **init(9 * 32))
-        self.fc1 = nnx.Linear(64 * 7 * 7, 128, **init(64 * 7 * 7))
-        self.fc2 = nnx.Linear(128, 10, **init(128))
-
-    def __call__(self, X):
-        X = nnx.max_pool(nnx.relu(self.conv1(X)), window_shape=(2, 2),
-                         strides=(2, 2))
-        X = nnx.max_pool(nnx.relu(self.conv2(X)), window_shape=(2, 2),
-                         strides=(2, 2))
-        return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
-
-@nnx.jit
-def num_correct(model, X, y):
-    """Number of examples in (X, y) that model classifies correctly.
-
-    Defined in :numref:`sec_adam`"""
-    return (model(X).argmax(axis=1) == y).sum()
-
-def evaluate_accuracy(model, batches):
-    """Fraction of the examples in batches that model classifies correctly.
-
-    Defined in :numref:`sec_adam`"""
-    # A view with dropout off and batch norm on running statistics
-    model = nnx.view(model, deterministic=True, use_running_average=True,
-                     raise_if_not_found=False)
-    correct, total = 0, 0
-    for X, y in batches:
-        correct += num_correct(model, jnp.asarray(X), jnp.asarray(y))
-        total += len(y)
-    return float(correct) / total
+    for i, v in enumerate(smooth(losses, k)):
+        if v <= target:
+            return k * (i + 1)
+    return None
 
 def lr_sweep(make_model, make_tx, data, lrs, seed,
              num_steps=2000, *, evaluate=None, metric='score', every=None,
@@ -1644,24 +1543,34 @@ def lr_sweep(make_model, make_tx, data, lrs, seed,
             print(line)
     return curves, scores
 
-def lenet_bn(rngs):
-    """LeNet with ReLU, max-pooling, batch normalization, Xavier weights.
+def ce_loss(model, X, Y):
+    """Mean cross-entropy of the logits model(X) for the labels Y.
 
-    Defined in :numref:`sec_scheduler`"""
-    xavier = dict(kernel_init=nnx.initializers.xavier_uniform(),
-                  rngs=rngs)  # Biases start at zero by default
-    bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
-                                 rngs=rngs)
-    pool = lambda x: nnx.max_pool(x, window_shape=(2, 2), strides=(2, 2))
-    flatten = lambda x: x.reshape((x.shape[0], -1))
-    return nnx.Sequential(
-        nnx.Conv(1, 6, kernel_size=(5, 5), padding=2, **xavier), bn(6),
-        nnx.relu, pool,
-        nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID', **xavier),
-        bn(16), nnx.relu, pool, flatten,
-        nnx.Linear(16 * 5 * 5, 120, **xavier), bn(120), nnx.relu,
-        nnx.Linear(120, 84, **xavier), bn(84), nnx.relu,
-        nnx.Linear(84, 10, **xavier))
+    Defined in :numref:`sec_batch_size`"""
+    logits = model(X)
+    return optax.softmax_cross_entropy_with_integer_labels(
+        logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
+
+@nnx.jit
+def grad_sq_norm(model, X, Y):
+    """Squared norm of the gradient of ce_loss over all parameters.
+
+    Defined in :numref:`sec_batch_size`"""
+    grads = nnx.grad(ce_loss)(model, X, Y)
+    return sum((g ** 2).sum() for g in jax.tree.leaves(grads))
+
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+    """Gradient-noise scale from the mean squared gradient norms of m
+    minibatches of size b_small and m // 8 of size b_big from sample(b).
+
+    Defined in :numref:`sec_batch_size`"""
+    def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
+        return jnp.stack([grad_sq_norm(model, *sample(b))
+                          for _ in range(m)]).mean()
+    n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
+    tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
+    sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
+    return float(tr_sigma / sq_norm)
 
 def masked_softmax(X, mask=None):
     """Softmax over the last axis with zero weight where mask is False.
@@ -6152,6 +6061,35 @@ class GRU(d2l.RNN):
             if i < self.num_layers - 1:
                 outputs = self.dropouts[i](outputs)
         return outputs, new_state
+
+class Timer:
+    """Record multiple running times.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.perf_counter()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.perf_counter() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
 
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',

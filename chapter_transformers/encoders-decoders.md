@@ -176,7 +176,7 @@ the causal mask provides. We train this objective in miniature on
 :numref:`subsec_tinylm`. In each window 15% of the bytes are masked, and
 `<mask>` gets one extra embedding row after the 256 byte values. The labels
 are the masked bytes, and $-100$ at every other position; `d2l.train_steps`
-of :numref:`sec_adam` leaves positions with this label out of the
+of :numref:`sec_test_models` leaves positions with this label out of the
 cross-entropy, so it trains on :eqref:`eq_mlm`, averaged over the masked
 positions. `MaskedLM` adds an output head, tied to the embedding as in
 :numref:`sec_transformer-block`.

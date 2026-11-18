@@ -1,7 +1,38 @@
 # Windowed and Linear Attention
 :label:`sec_windowed-linear-attention`
 
-<!-- WRITER: opening from the reader (worklist 6.B1). Section :numref:`sec_attention-at-scale` ended with exact attention that no longer stores the score matrix but still computes all $n^2$ scores; to go below that, a model must score fewer pairs or change the score so that the sum over keys can be done before the query arrives. What does each give up? The cells below need a CUDA GPU. -->
+Let us hand a language model a whole novel and ask it a question about the
+ending. Every attention layer compares each new token with every token
+before it, a hundred thousand of them or more. Does the last word of the
+book really need every word of the first chapter? Usually it does not: what
+a token needs is mostly nearby. Sometimes it does, because the answer is a
+name that appeared once, early on. The fused kernel of
+:numref:`sec_attention-at-scale` treats every token as the hard case. It
+removed the stored score matrix but none of the scores, so doubling the context
+still quadruples the arithmetic, and the keys and values kept for
+generation still grow with every token. The score matrix is gone; the
+arithmetic and the cache remain.
+
+The question became pressing around 2019 and 2020, when the first
+transformers for long documents ran out of memory. Of the many remedies
+proposed then, two simple ones survive, in some form, in the models of
+today. The first scores fewer pairs: each query looks only at its most
+recent keys, a *sliding window*
+:cite:`child2019generating,beltagy2020longformer`. The second changes the
+score so that the sum over keys can be computed before any query arrives,
+and attention becomes a recurrent network whose state is a matrix
+:cite:`Katharopoulos.Vyas.Pappas.ea.2020`. Both make the cost linear in
+$n$. Neither computes what dense attention computes, and the question of
+this section is what each of them gives up. The other remedies are collected
+in :numref:`sec_attention-further-reading`.
+
+We take windows first. They need one more mask beyond those of
+:numref:`sec_attention-scoring-functions`, and counting the tiles that a
+fused kernel can skip predicts how much they save. We then derive linear
+attention, implement it in three equivalent forms, and test it on what
+softmax attention does best: putting nearly all of a query's weight on one
+key. Finally we time the window against dense attention and say which
+mechanism to use. The cells that call fused kernels expect a CUDA GPU.
 
 ```{.python .input #windowed-linear-attention-windowed-and-linear-attention-1}
 %%tab pytorch
@@ -29,16 +60,22 @@ from d2l import jax as d2l
 from torch.nn.attention.flex_attention import create_block_mask, flex_attention
 ```
 
-## Windowed and Sparse Attention
+## Sliding-Window Attention
 
-### Sliding-Window Attention
+### The Band Mask
 
-FlashAttention removes the $n^2$ *memory*, but every query still scores
-every key, so the arithmetic remains quadratic. To reduce it too, we must
-decide that some query--key pairs are not worth scoring. The simplest
-useful rule is locality: each query attends only to the $w$ most recent
-positions. With the masks of :numref:`sec_attention-scoring-functions`, the
-causal mask becomes a band: causal, and at most $w - 1$ positions back.
+The simplest way to score fewer pairs is locality: each query attends only
+to the $w$ most recent positions, itself included. With the masks of
+:numref:`sec_attention-scoring-functions` this is one more condition joined
+by AND. A key $j$ is allowed for query $i$ if it is not in the future,
+$j \le i$, and not too far in the past, $i - j < w$. The causal triangle
+becomes a band of width $w$ along the diagonal.
+
+A small case shows the saving. On 12 positions the causal mask keeps 78 of
+the 144 pairs. A window of $w = 4$ keeps 42: query 7, for instance, reads
+keys 4, 5, 6 and 7, and the first three queries read what little precedes
+them. For large $n$ the band holds about $nw$ pairs where the triangle
+holds $n^2/2$, and the mask itself is one line of code.
 
 ```{.python .input #attention-at-scale-attention-through-a-window}
 %%tab pytorch
@@ -56,67 +93,84 @@ def window_mask(n, w):
     return d2l.causal_mask(n) & (i[:, None] - i[None, :] < w)
 ```
 
-<!-- WRITER: the random band heatmap cell (attention-at-scale-sliding-window-attention-1) is cut (worklist 6.A2); the mask figure of :numref:`sec_attention-scoring-functions` shows the band. The lead sentence "With a window of 4, each row of random scores keeps its weight on the query's own position and the three before it:" went with it. -->
+A window is a bet that what a token needs is nearby. For most tokens of a
+text the bet is good. It is lost exactly where it hurts, on the name
+introduced three pages earlier.
 
 ### Receptive Field Growth with Depth
 :label:`subsec_attn-receptive-field`
 
 A window of width $w$ excludes direct interactions beyond $w$ tokens, but
-depth increases the receptive field as in CNNs (:numref:`chap_cnn`). A query
-in layer 2 attends to keys that are themselves layer-1 outputs, each of
-which already summarizes its own window. Information therefore hops up to
-$w-1$ positions per layer, and after $L$ layers a token's receptive field
-spans $1 + L(w-1)$ positions. We can compute this directly. The band mask,
-read as an adjacency matrix, composes across layers by boolean matrix
-multiplication, and its $L$-th power says which positions can influence
-which through $L$ layers.
+depth widens the receptive field, as it does in a stack of convolutions
+(:numref:`chap_cnn`). A query in layer 2 attends to keys that are
+themselves layer-1 outputs, each of which already summarizes its own
+window. Information therefore travels up to $w - 1$ positions per layer,
+and after $L$ layers a token's receptive field spans
 
-<!-- WRITER: the receptive-field cell (attention-at-scale-depth-restores-the-reach) is cut (COST-12; it printed 8, 15, 29 = the formula). The two sentences before this marker ("We can compute this directly. The band mask, read as an adjacency matrix, ...") and "The count matches the formula, and the heatmaps show the band widening layer by layer." below refer to it; per worklist 6.B2 its space goes to the caveat that reach is not use. -->
+$$1 + L(w - 1)$$
 
-The count matches the formula, and the heatmaps show the band widening layer
-by layer. Mistral 7B uses this growth: it attends through a window of 4096 in
-each of its 32 layers, for a reach beyond a hundred thousand tokens
-:cite:`Jiang.Sablayrolles.Mensch.ea.2023`. :numref:`tab_cnn-rnn-attn`
-describes what is given up. A stack of windows has path length
-$O(n/w)$ instead of $O(1)$, so with $w$ in the thousands
-it assumes that few dependencies need more than a small number of hops.
+positions. With $w = 4$, one layer reaches 4 positions, two layers 7, and
+four layers 13. Mistral 7B attends through a window of 4,096 in each of its
+32 layers :cite:`Jiang.Sablayrolles.Mensch.ea.2023`, so on paper its last
+layer reaches $1 + 32 \cdot 4095 = 131{,}041$ positions.
 
-More recent models therefore interleave windowed layers with a few layers of
-full attention, called *global* layers. Gemma 3 follows every five windowed
-layers of width 1024 with one global layer :cite:`Gemma.Team.2025`, and
-gpt-oss alternates global layers with windows of 128 tokens
-:cite:`OpenAI.2025`. The global layers restore the $O(1)$ path
-length. The windowed layers keep both the arithmetic and the memory of
-generation small: a model that generates text caches the keys and values of
-past tokens (:numref:`sec_multihead-attention`), and a windowed layer needs
-to keep only the last $w$ of them. With $r$ windowed layers per global
-layer, the cache shrinks to
+Reach is not use. Full self-attention connects any two positions in one
+layer (:numref:`sec_multihead-attention`); a stack of windows needs about
+$n/w$ hops, one per layer. A fact that must travel 100,000 tokens through
+Mistral's windows has to be relayed by at least 25 of its 32 layers, each
+carrying it almost the full width of its window. At every hop the fact is
+one entry of a weighted average over thousands of positions, and it must
+win enough weight at each hop to arrive at all.
+
+How much weight does it keep? Let us take the simplest case, layers that
+average their window with equal weights. With $w = 4$ and four layers, the
+farthest token the last layer can reach, 12 positions back, arrives through
+a single path of four hops, each of which gives it a quarter: its weight is
+$(1/4)^4 = 1/256$. One global layer averaging the same 13 positions would
+give it $1/13$, twenty times more. Near the edge of its reach, a stack of
+windows that merely averages passes on very little; a distant fact arrives
+only if every hop on its path puts most of its weight on it.
+Nothing in the architecture guarantees that training finds such a relay. A
+stack of windows therefore assumes that few dependencies need more than a
+small number of hops.
+
+### Global Layers
+
+More recent models interleave windowed layers with a few layers of full
+attention, called *global* layers. A global layer connects every pair in
+one hop again, and the windowed layers keep both the arithmetic and the
+memory of generation small. A model that generates text keeps the keys and
+values of all past tokens so that it need not recompute them
+(:numref:`sec_multihead-attention`). This store is the *KV cache*, and a
+windowed layer needs only the last $w$ of its entries. Gemma 3 follows
+every five windowed layers of width 1,024 with one global layer
+:cite:`Gemma.Team.2025`.
+
+How much cache does that save? With $r$ windowed layers per global layer,
+each windowed layer caches $\min(n, w)$ positions and the global layer all
+$n$, against $(r + 1)n$ positions for global layers throughout. The cache
+therefore shrinks to the fraction
 
 $$
 \frac{r \min(n, w) + n}{(r + 1)\, n}
 $$
 
-of the cache of a stack of global layers only: each of the $r$ windowed
-layers caches $\min(n, w)$ positions and the global layer all $n$, against
-$(r+1)n$ positions for global layers throughout. For Gemma 3's $r = 5$ and
-$w = 1024$, this is about a quarter at $n = 8192$, and it approaches $1/6$
-as the context grows.
+of the all-global cache. Once $n$ is much larger than $w$, only the global
+layers count, and the fraction tends to $1/(r + 1)$. For Gemma 3's $r = 5$
+and $w = 1024$, it is about a quarter at $n = 8192$ and approaches $1/6$ as
+the context grows.
 
-Llama 4 also drops the positional encoding from its global layers, which
-then work like the NoPE of :numref:`sec_positional-information`. It keeps
-the rotary encoding only in its local layers, which attend within chunks of
-the sequence and therefore see only short offsets :cite:`Meta.2025`. The aim
-is a model that runs at contexts longer than those it was trained on.
-
-### A Linear-Cost Implementation
+### Tiles in a Fused Kernel
 
 The mask defines the result, but by itself it saves no work. A masked
 softmax over a band still scores all $n^2$ pairs and then discards most of
-them. The efficient implementation processes the sequence
-in blocks of $w$ queries. A query can attend only to keys in its own block
-and in the block before it, so each block scores a $w \times 2w$ tile. The
-total work is $2nw$ scores instead of $n^2$, which is linear in $n$ for fixed
-$w$.
+them. An implementation that saves work must never form the excluded
+scores. One way is to process the sequence in blocks of $w$ queries. A
+query can attend only to keys in its own block and in the block before it,
+so each block of queries needs a $w \times 2w$ block of scores. The total
+is $2nw$ scores instead of $n^2$, linear in $n$ for fixed $w$. The function
+below does exactly this. Its only fiddly part is the first block, which has
+no block before it; that index arithmetic can be skimmed.
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-1}
 %%tab pytorch
@@ -156,11 +210,14 @@ def windowed_attention(Q, K, V, w):
 ```
 
 A fused kernel cannot skip single scores. It computes in tiles of
-$b \times b$ scores held in on-chip memory, and it can skip a tile only if
-the mask excludes all of it. Tiles inside the mask are computed without
-masking, and only tiles that straddle its edge apply the mask entry by
-entry. The cost of a mask in a fused kernel is therefore the fraction of
-tiles it touches. We count it for tiles of $b = 128$, the usual size.
+$b \times b$ scores held in the small fast memory next to the arithmetic
+units, and it can skip a tile only if the mask excludes all of it. Tiles
+inside the mask are computed without masking, and only tiles that straddle
+its edge apply the mask entry by entry. `windowed_attention` is this scheme
+done by hand, with tiles of size $w$: each block of queries visits the tile
+on the diagonal and the one to its left. The cost of a mask in a fused
+kernel is therefore the fraction of tiles it touches. We count it at
+$n = 2048$ for tiles of $b = 128$, a common size.
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-3}
 %%tab pytorch
@@ -190,9 +247,11 @@ A causal mask touches just over half of the tiles, and a window of 128
 touches about one in eight: the diagonal tile and its left neighbor in each
 row of tiles. A windowed fused kernel therefore costs time proportional to
 $nw$, rounded up to whole tiles, and narrowing the window below the tile
-size saves nothing more. Fused kernels take the window as part of their
-interface, and we check that their output equals that of
-`windowed_attention`:
+size saves nothing more.
+
+Fused kernels take the window as an argument. We check the fused kernel of
+each framework, together with the blocked `windowed_attention`, against the
+masked definition.
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-2}
 %%tab pytorch
@@ -231,48 +290,67 @@ with jax.default_matmul_precision('highest'):
               f'{float(jnp.abs(O - reference).max()):.2e}')
 ```
 
-<!-- WRITER: the two equivalence checks are now one cell (id -2, after the tile count; -4 deleted): it prints two deviations, blocked and fused kernel, both against the mask definition (one sentence, structural 3). "The blocked version should agree with the mask-based definition." above the old -2 is removed; the sentence "Fused kernels take the window as part of their interface, and we check that their output equals that of `windowed_attention`:" now leads this cell. The PyTorch print of BlockMask sparsity is gone (it equals 100% minus the window's 12.1% from tiles_visited). The FlexAttention compile requirement is now a code comment (COST-11); the two tab notes below go to at most two sentences each (6.B3). The JAX fused-kernel exactness check runs XLA's implementation (float32); `implementation='cudnn'` raises "Q must be fp16/bf16/fp8..." in float32, so cuDNN appears only in the timing cell. -->
+Both agree with the definition to within float32 rounding, below
+$10^{-6}$.
 
 :begin_tab:`pytorch`
-FlexAttention :cite:`Dong.Feng.Guessous.ea.2025` makes this tile map the
-interface to a fused kernel. The user writes the mask as a function of the
-query and key positions, here the band, and `create_block_mask` evaluates it
-once per tile. The resulting `BlockMask` is the tile map counted above, and
-its sparsity is the percentage of tiles skipped. `flex_attention` with this
-block mask equals `windowed_attention`. Under `torch.compile`, as here, it
-generates a kernel in the style of FlashAttention that visits only the kept
-tiles; called without compilation, it would compute the full score
-matrix. Every mask built from the pieces of
-:numref:`sec_attention-scoring-functions` (windows, packed documents,
-prefixes) then runs at the speed of a fused kernel.
+FlexAttention :cite:`Dong.Feng.Guessous.ea.2025` takes the mask as a
+Python function of the query and key positions. `create_block_mask`
+evaluates it at every query--key pair, once, before the kernel runs, and
+condenses the result into a `BlockMask` that records for each tile whether
+the mask excludes all of it, allows all of it, or cuts through it: the tile
+map counted above. Compiled with `torch.compile`, `flex_attention` becomes
+a kernel in the style of FlashAttention that skips the excluded tiles and
+applies the rule entry by entry only in the tiles the mask cuts through.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.nn.dot_product_attention` takes the window as an argument:
 `local_window_size=(w - 1, 0)` lets each query see $w - 1$ earlier keys and
-none after it, and with `is_causal=True` this is the band of `window_mask`.
-The output equals that of `windowed_attention`. XLA's default
-implementation applies the window as a mask over the full score matrix;
-`implementation='cudnn'` passes it to the fused kernel as a parameter
-instead.
+none after it, which together with `is_causal=True` is the band of
+`window_mask`. The check runs XLA's default implementation in float32; the
+timing at the end of the section uses the cuDNN kernel, which needs 16-bit
+inputs.
 :end_tab:
 
-Fixed windows decide by position what may be attended, before the content is
-seen. Natively sparse attention instead learns which blocks of keys each
-query visits, at the same block granularity, and runs as a fused kernel
-that visits only the chosen blocks :cite:`Yuan.Gao.Dai.ea.2025`.
-
-## Linear Attention in Recurrent Form
+## Linear Attention
 
 ### Kernelizing the Score
 
-The third approach changes the softmax itself. Attention pooling with a
-fixed kernel (:numref:`sec_queries-keys-values`) weights each value in
-proportion to a similarity kernel, and the exponentiated dot product
-$\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d})$ is one kernel among many. Suppose
-we choose instead a kernel that *factorizes*,
-$k(\mathbf{q}, \mathbf{k}) = \phi(\mathbf{q})^\top \phi(\mathbf{k})$ for
-some elementwise feature map $\phi$. Causal attention with this kernel is
+The second way keeps every key and changes the score. In
+:numref:`sec_queries-keys-values`, attention pooling weighted each value in
+proportion to a similarity kernel $K(\mathbf{q}, \mathbf{k})$ of query and
+key, normalized over the keys. Softmax attention is the case
+$K(\mathbf{q}, \mathbf{k}) = \exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h})$,
+with $d_h$ the width of a head. Nothing in the recipe requires the
+exponential. Suppose instead that the kernel *factorizes* into features of
+the query and features of the key,
+$K(\mathbf{q}, \mathbf{k}) = \phi(\mathbf{q})^\top \phi(\mathbf{k})$ for
+some feature map $\phi$. What changes?
+
+Let us start without the causal mask, where the answer takes one line.
+Stack the features of the $n$ queries and of the $n$ keys as the rows of
+$\phi(\mathbf{Q})$ and $\phi(\mathbf{K})$, and the values as the rows of
+$\mathbf{V}$, an $n \times d_v$ matrix with $d_v$ the width of a value.
+Leaving out the normalization for a moment, the outputs are
+
+$$
+\bigl(\phi(\mathbf{Q})\,\phi(\mathbf{K})^\top\bigr)\,\mathbf{V}
+= \phi(\mathbf{Q})\,\bigl(\phi(\mathbf{K})^\top \mathbf{V}\bigr).
+$$
+
+The two sides differ only in where the brackets go, and matrix products are
+associative. The left side forms the $n \times n$ matrix of kernel values,
+as softmax attention must. The right side first forms a $d_h \times d_v$
+matrix, once, and multiplies the features of every query by it: about
+$2 n d_h d_v$ multiply-adds instead of $n^2 (d_h + d_v)$. The normalizer
+works the same way, with a column of ones in place of $\mathbf{V}$. Softmax
+cannot do this, because the exponential sits between $\mathbf{q}$ and
+$\mathbf{k}$ and keeps them from separating.
+
+The causal mask lets query $t$ use only the keys $s \le t$, so one sum over
+all keys becomes a running sum. We write the output for query $t$ as a row
+vector $\mathbf{o}_t^\top$, one row of the output matrix. With a factorized
+kernel, causal attention reads
 
 $$
 \mathbf{o}_t^\top
@@ -288,17 +366,25 @@ $$
 $$
 :eqlabel:`eq_linear-attn`
 
-Because the query enters linearly, it factors out of the sum. The
-remaining terms, $\mathbf{S}_t$ and $\mathbf{z}_t$, do not depend on the
-query. Reordering the sums therefore removes the explicit pairwise
-interaction and its quadratic cost. Instead of $t$ scores, each query needs
-one matrix-vector product against a running summary
-:cite:`Katharopoulos.Vyas.Pappas.ea.2020`. Following that paper, we take
-$\phi(x) = \mathrm{elu}(x) + 1$, which keeps features positive so that the
-normalizer is positive. Positive is not the same as large: when training
-drives a query or key component far below zero, $\mathrm{elu}(x) + 1 =
-e^x$ underflows. The code therefore adds $\epsilon = 10^{-6}$ to the
-normalizer, as the implementation of that paper does.
+The second equality is the whole idea. The factor $\phi(\mathbf{q}_t)^\top$
+is the same in every term, so it moves out of both sums, and what remains,
+$\mathbf{S}_t$ and $\mathbf{z}_t$, does not depend on the query at all.
+Instead of $t$ scores, each query needs one product of a vector with a
+matrix that summarizes everything before it. This is *linear attention*,
+named and analyzed by :citet:`Katharopoulos.Vyas.Pappas.ea.2020`.
+
+Which feature map? It must keep every kernel value positive; otherwise the
+weights are no longer those of an average, and the normalizer can vanish.
+Following Katharopoulos et al., we apply $\phi(x) = \mathrm{elu}(x) + 1$
+elementwise, where the exponential linear unit is $\mathrm{elu}(x) = x$ for
+$x > 0$ and $e^x - 1$ otherwise. On the positive side $\phi(x) = x + 1$, on
+the negative side $\phi(x) = e^x$: a ReLU shifted up by one, with the corner
+rounded off, and positive everywhere. Positive is not the same as bounded
+away from zero. For a component below about $-17$, $\mathrm{elu}(x) + 1$
+rounds to zero in single precision, so the code adds $\epsilon = 10^{-6}$
+to the normalizer, as the implementation of that paper does. This is
+numerical hygiene. It changes no result in this section and can be
+forgotten once the code runs.
 
 The sums in :eqref:`eq_linear-attn` satisfy the recurrences
 
@@ -309,17 +395,20 @@ $$
 $$
 :eqlabel:`eq_linear-attn-recurrence`
 
-which define a fixed-size state of $d \times d_v$ numbers. The state is
-updated by an outer-product write as each token arrives, then read by the
-query. Linear attention is a recurrent network whose hidden state is a
-matrix. The state acts as an associative memory, with $\phi(\mathbf{k}_t)$
-the address and $\mathbf{v}_t$ the content.
-:citet:`Schlag.Irie.Schmidhuber.2021` showed that this layer is the fast
-weight programmer of the early 1990s. The same computation has two
-implementations. The *parallel* form for training computes all states at
-once with cumulative sums. The *recurrent* form for generation carries
-$(\mathbf{S}, \mathbf{z})$ forward one token at a time, in constant memory,
-like every RNN in :numref:`chap_rnn`.
+which define a state of fixed size, $d_h \times d_v$ numbers for
+$\mathbf{S}$ and $d_h$ for $\mathbf{z}$. Each arriving token writes its
+value into the state as an outer product, and each query reads from it.
+Linear attention is a recurrent network whose hidden state is a matrix. The
+state acts as an associative memory, with $\phi(\mathbf{k}_t)$ the address
+and $\mathbf{v}_t$ the content. The idea is older than the transformer:
+:citet:`Schlag.Irie.Schmidhuber.2021` showed that this layer is a fast
+weight programmer of the early 1990s, a network that rewrites the weights
+of another network as it reads. The same computation has two
+implementations. The *parallel* form computes all states at once with
+cumulative sums, the natural form for training on whole sequences. The
+*recurrent* form carries $(\mathbf{S}, \mathbf{z})$ forward one token at a
+time in constant memory, as generation requires, like every RNN of
+:numref:`chap_rnn`.
 
 ```{.python .input #attention-at-scale-kernelizing-the-score-1}
 %%tab pytorch
@@ -374,21 +463,23 @@ def linear_attention_recurrent(Q, K, V, eps=1e-6):
     return outputs
 ```
 
-<!-- WRITER: the check of the parallel and recurrent forms (kernelizing-the-score-2) moved below the chunked form, merged with the chunked check (worklist 6.A4); the lead "Equations ... should agree up to floating-point rounding." went with it. The paragraphs on the 16 KiB state and "The state $\mathbf{S}_t$ is a lossy summary." moved below that check, followed by the new sharpening cell. -->
-
 ### Chunked Computation
 
 Neither form suits a GPU during training. The parallel form stores the state
-at every position, $n$ matrices of $d \times d_v$ numbers: 256 MiB for one
-head at $n = 16{,}384$ in fp32, more than the score matrix it replaces until
-$n$ exceeds $d\, d_v = 4096$. The recurrent form stores one state but takes
-$n$ sequential steps of matrix--vector work, which leaves the matrix units
-of a GPU idle. Practical kernels divide the sequence into chunks of $c$
-positions, as online softmax divided the keys :cite:`Yang.Wang.Shen.ea.2024`.
-Inside a chunk, the outputs come from the quadratic form, a causally masked
-$c \times c$ matrix of kernel values. Across chunks, the state carries the
-sum over all earlier chunks. For a chunk that starts at position $t_0$, with
-$\mathbf{S}$ and $\mathbf{z}$ the sums over all positions before $t_0$,
+at every position, $n$ matrices of $d_h \times d_v$ numbers: for one head
+with $d_h = d_v = 64$ at $n = 16{,}384$, that is 256 MiB in fp32. At this
+length the states take a quarter of the memory of the score matrix they
+replace, but the states grow as $n d_h d_v$ and the score matrix as $n^2$,
+so for $n$ below $d_h d_v = 4096$ the states are the larger of the two.
+The recurrent form stores one state but takes $n$ sequential steps of
+matrix--vector work, which leaves the matrix units of a GPU idle. Practical
+kernels divide the sequence into chunks of $c$ positions
+:cite:`Yang.Wang.Shen.ea.2024`, much as online softmax divided the keys
+into blocks. Inside a chunk, the outputs come from the quadratic form, a
+causally masked $c \times c$ matrix of kernel values. Across chunks, the
+state carries the sum over all earlier chunks. For a chunk that starts at
+position $t_0$, with $\mathbf{S}$ and $\mathbf{z}$ the sums over all
+positions before $t_0$,
 
 $$
 \mathbf{o}_t^\top = \frac{\phi(\mathbf{q}_t)^\top \mathbf{S}
@@ -399,12 +490,17 @@ $$
 $$
 :eqlabel:`eq_linear-attn-chunked`
 
-The first term of the numerator reads the memory of the earlier chunks, and
-the second attends within the chunk. Both are matrix products. For each
-chunk, a $c \times d$ by $d \times c$ product gives the kernel values, and
-the state advances by a $d \times c$ by $c \times d_v$ product. The total
-work is $O(ncd + nd\,d_v)$, linear in $n$, and only one state per
-chunk is stored.
+This equation is the one step of the section that may take a second
+reading. It is the recurrent and the parallel form glued together at the
+chunk boundaries. The first term of the numerator reads the memory of the
+earlier chunks, as the recurrent form would, and the second attends within
+the chunk, as the parallel form would. Both are matrix products. For each
+chunk, a $c \times d_h$ by $d_h \times c$ product gives the kernel values,
+a $c \times c$ by $c \times d_v$ product mixes the values, and the state
+advances by a $d_h \times c$ by $c \times d_v$ product. The total work is
+$O(nc(d_h + d_v) + n d_h d_v)$, linear in $n$; with $c = 64$, as in the
+code, the two terms are of the same order. Only one state per chunk is
+stored.
 
 ```{.python .input #attention-at-scale-chunked-computation-1}
 %%tab pytorch
@@ -444,9 +540,9 @@ def linear_attention_chunked(Q, K, V, c=64, eps=1e-6):
     return (num / den).reshape(n, -1)
 ```
 
-The parallel, recurrent and chunked forms sum the same terms in three
-orders, so they should agree up to floating-point rounding.
-<!-- WRITER: placeholder lead for the merged check (kernelizing-the-score-2, now here; chunked-computation-2 deleted). One sentence (structural 3); it prints two deviations against the recurrent form and the state size. -->
+The parallel, recurrent and chunked forms add the same terms in three
+orders, so they should agree up to rounding. The check also prints the size
+of the recurrent state for one head of width 64.
 
 ```{.python .input #attention-at-scale-kernelizing-the-score-2}
 %%tab pytorch
@@ -476,23 +572,43 @@ print(f'recurrent state: {d_h}x{d_h} + {d_h} floats '
       f'= {(d_h * d_h + d_h) * 4 / 1024:.0f} KiB at any sequence length')
 ```
 
-The three forms agree to floating-point rounding. They differ only in what
-they keep in memory and in how much of the work is matrix products.
+The three forms agree to within $4 \times 10^{-7}$; they differ only in what
+they keep in memory and in how much of the work is matrix products. At
+generation time this layer carries 16 KiB of state, whatever the context
+length. A softmax head of the same width caches the key and the value of
+every past token, $2 d_h \cdot 4 = 512$ bytes per token in fp32. Its cache
+outgrows the linear-attention state at the 33rd token, reaches 4 MiB at
+$n = 8192$, and keeps growing with every generated token.
 
-At generation time this linear-attention layer with $d_h=64$ carries
-16 KiB of state, whatever the context length. A softmax head instead caches
-every past key and value, $2nd_h\cdot4$ bytes in fp32, or about 4 MiB at
-$n=8192$. Its cache grows linearly with the generated sequence, whereas the
-recurrent state stays fixed.
+### Capacity and Sharpness
 
-The state $\mathbf{S}_t$ is a lossy summary. It holds $d \times d_v$ numbers
-however many tokens it has absorbed, so as the context grows the writes
-interfere, and retrieving one particular value becomes approximate. Softmax
-attention keeps every key and can put nearly all of a query's weight on one
-of them. A kernel with positive features such as $\mathrm{elu} + 1$ cannot
-become nearly one-hot in the same way: scaling up a query sharpens the
-softmax without limit but leaves the normalized weights of this kernel almost
-unchanged (Exercise :exref:`ex_attention-at-scale-feature-map`).
+What does linear attention give up for its constant memory? The state
+$\mathbf{S}_t$ is a lossy summary. It holds $d_h \times d_v$ numbers however
+many tokens it has absorbed, so as the context grows the writes interfere,
+and retrieving one particular value becomes approximate. Positive features
+make the interference unavoidable. Since $\phi(\mathbf{q})^\top
+\phi(\mathbf{k}_s) > 0$ for every key, every read picks up a share of every
+value ever written. A query can single out one key only if the features of
+that key overlap little with those of all the others, and for features that
+are never negative, little overlap means nearly disjoint supports. $d_h$
+features leave room for at most about $d_h$ such keys, while a long context
+holds thousands. Softmax attention keeps every key separately and has no
+such limit.
+
+The second loss is sharpness, and it appears even with eight keys and
+plenty of room in the state. Softmax attention has a temperature.
+Multiplying a query by a factor $\beta$ multiplies every score by $\beta$,
+and the exponential turns a gap $\Delta$ between two scores into a ratio
+$e^{\beta \Delta}$ of weights, which grows without bound: a large enough
+query puts nearly all of its weight on its best key. Linear attention has
+no such dial. For large $\beta$, the negative components of
+$\beta\mathbf{q}$ give $e^{\beta x} \approx 0$ and the positive ones
+$\beta x + 1 \approx \beta x$, so $\phi(\beta\mathbf{q})$ is close to
+$\beta\,\mathrm{relu}(\mathbf{q})$, and the factor $\beta$ cancels between
+numerator and normalizer. We should therefore see softmax weights approach
+one-hot as the queries grow, and linear-attention weights that hardly move.
+The test uses 1,000 random queries and 8 random keys of width 64, so that
+uniform weights would be $1/8 = 0.125$.
 
 ```{.python .input #windowed-linear-attention-sharpening}
 %%tab pytorch
@@ -517,41 +633,36 @@ for beta in (1, 4, 16):  # Scale the queries up; 8 keys: uniform is 0.125
           f'{soft.max(-1).mean():.2f}, elu+1 {lin.max(-1).mean():.2f}')
 ```
 
-<!-- WRITER: new sharpening cell (COST-15). 1000 random queries, 8 random keys of width 64; mean over queries of the largest weight in the row. Measured (both tabs, three draws each in dev): softmax 0.36-0.37 at x1, 0.76-0.77 at x4, 0.94 at x16; elu+1 0.14-0.15 at x1, 0.15 at x4 and x16 (uniform 0.125). Softmax sharpens toward one key; the elu+1 weights barely move. The paragraph above ends with the claim and an exercise pointer; it now rests on this cell. Why: for large beta, phi(beta q) -> beta relu(q) + const, so the normalized weights tend to a fixed limit. -->
+The largest softmax weight goes from about a third to about three quarters
+to more than nine tenths. The largest $\mathrm{elu} + 1$ weight stays
+between 0.14 and 0.16, barely above uniform. Multiplied by sixteen, a query
+makes softmax nearly certain of its answer and leaves linear attention
+about as undecided as before. (Exercise
+:exref:`ex_attention-at-scale-feature-map` asks the same of other feature
+maps.) Peaked weights are still possible through key features that barely
+overlap, but only for the few keys that the capacity argument allows. What
+linear attention lacks is the one dial that sharpens every comparison at
+once.
 
-### Linear Attention in Practice
+## Choosing a Mechanism
 
-Plain kernelized attention of this kind did not replace softmax attention in
-language models. At equal size it models language less well, and it is
-weakest on tasks that must recall one particular earlier token
-:cite:`Arora.Eyuboglu.Zhang.ea.2024,Yang.Wang.Shen.ea.2024`. Two changes
-made the recurrent form competitive. First, the state learns to forget: a
-decay computed from each input multiplies $\mathbf{S}_{t-1}$ before the new
-write, so that old content fades when new content needs the room
-(Exercise :exref:`ex_attention-at-scale-decaying-state` works out the case
-of a constant decay).
-Second, models keep a few softmax layers for recall. MiniMax-01, for
-instance, places one softmax attention layer after every seven
-linear-attention layers :cite:`MiniMax.2025`. A recurrence with a
-fixed-size state that is updated linearly, as in
-:eqref:`eq_linear-attn-recurrence`, is a *linear state space model*.
-:numref:`sec_ssm` develops these models and their input-dependent decay from
-this starting point, and :numref:`sec_matrix-state` extends
-`linear_attention_chunked` to a state that decays.
+### Windowed and Dense Kernels Compared
 
-## Measured Running Time
+Before choosing, we should know how much time a window saves in practice.
+The tile count predicts it before we run anything. With tiles of 128 and
+$T = n/128$ rows of tiles, a causal kernel visits $T(T + 1)/2$ tiles. A
+window of 128 visits $2T - 1$: the diagonal tile and its left neighbor in
+each row, and only the diagonal tile in the first row. If time were
+proportional to tiles, the window would be faster than dense causal
+attention by the ratio $T(T + 1)/(2(2T - 1))$, which grows like $T/4$: 1.4
+at 512 tokens, 64 at 32,768.
 
-We now time the three strategies of this section on equal terms, as the
-sequence grows from 512 to 32,768 tokens: dense causal attention in the
-fused kernel, windowed attention with $w = 128$, and chunked linear
-attention. All three process 32 heads of width 64 at once, for instance a
-minibatch of 4 sequences with 8 heads each. They run in bfloat16, the
-precision in which attention is trained, and `vmap` maps the one-head
-functions of this section over the heads. Enough work per call keeps the
-fixed cost of launching kernels from hiding the growth with $n$. The
-milliseconds depend on the GPU, but the slopes on the log--log plot follow
-from the operation counts.
-<!-- WRITER: the timing is redesigned (COST-17; worklist 6.A6). Both arms run in ONE fused kernel family per tab: PyTorch `flex_attention` under `torch.compile` with a causal and with a band BlockMask; JAX `jax.nn.dot_product_attention(..., implementation='cudnn', is_causal=True)` without and with `local_window_size=(127, 0)`. Linear attention is no longer timed (its teaching implementation says little about a tuned kernel). 32 heads of width 64, bfloat16, 512 to 32,768 tokens. No vmap. State the prediction before the cell: a causal kernel visits T(T+1)/2 tiles of 128 x 128, a window of 128 visits 2T - 1 (the diagonal tile and its left neighbor in each row, one in the first), so the speedup should approach (T+1)/4 for T = n/128 tile rows, 64 at 32,768 tokens. The cell prints, per length, the measured speedup and this tile-count prediction. Measured (dev, two executions per tab, see the report): dense time grows about fourfold per doubling from 4,096 tokens on and the window's about twofold from 8,192 on; at 512-1,024 tokens both take about 0.1 ms and the speedup is about 1 (prediction 1.4-2.4); at 32,768 tokens the window is 30 to 55 times faster than dense (prediction 64.4). The shortfall: every tile the band visits straddles an edge of the mask (both are partial tiles), so it pays for masking entry by entry and for a fixed cost per row of tiles; in the causal kernel nearly every visited tile is interior. Quote only "about fourfold"/"about twofold", "several tens of times at 32,768 tokens", and "below the tile prediction"; no per-framework numbers in shared prose. The sentences on vmap, "Enough work per call keeps the fixed cost of launching kernels from hiding the growth with $n$" (delete, COST-17) and "three strategies" are now false. -->
+For the ratio to measure tiles and nothing else, both arms must run in the
+same kernel. Each framework below times dense causal attention and the
+window $w = 128$ in one fused kernel, on one sequence with 32 heads of
+width 64, in bfloat16, the precision in which attention is usually trained.
+The cell prints the measured speedup next to the tile-count prediction and
+plots both times on log--log axes.
 
 ```{.python .input #attention-at-scale-the-price-of-attention-measured}
 %%tab pytorch
@@ -599,22 +710,68 @@ d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
          legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
 ```
 
-<!-- WRITER: the reading paragraph below and the two tab notes that explained away tab differences are obsolete (the tab notes are deleted, worklist 6.A6). Linear attention is no longer in the figure; "linear attention is also faster during generation ..." as the last word goes (6.B6). The new reading is one shared paragraph from the printed speedups (see the marker above the cell), followed by the closing judgment (6.B6). The TinyCharLM quality cell (6.A7) was NOT added: its dev-time acceptance test failed (the dense model does not read the 64-byte copy; numbers in the report), so Exercise 9 stays whole and the ending rests on the sharpening cell and the reach caveat. -->
+The prediction holds in shape and falls short in size. In our measurement,
+up to about a thousand tokens the two kernels take the same time: a fixed
+cost per call dominates, and there are few tiles to skip. (With more
+sequences or heads per call, that fixed cost would be shared, and the
+window would start to save time at shorter lengths.) From a few thousand
+tokens on, the time of dense attention grows three to four times with
+every doubling of $n$, approaching the fourfold growth of its tile count, while
+the time of the window about doubles. At 32,768 tokens the window is more
+than thirty times faster, though short of 64.
 
-At short lengths all three take well under a millisecond, and fixed
-per-call costs rather than the operation counts decide which is fastest. At
-long lengths the time of dense attention grows about fourfold with every
-doubling of $n$, while the times of the windowed and the chunked linear
-mechanisms grow about twofold. At 32,768 tokens each of them therefore
-needs well under half the time of dense attention, and the gap widens with
-every further doubling. Dense attention remains the default at moderate
-lengths, where it is exact and fast. At long contexts the mechanisms of
-linear cost are faster, and linear attention is also faster during
-generation, where its state stays the size of one matrix.
+Most of the shortfall has a simple cause. A tile that lies entirely inside
+the mask is computed without masking; a tile that straddles the edge of the
+mask must apply it entry by entry, which costs more. Of the causal kernel's
+tiles, only the $T$ on the diagonal straddle the edge, and all the others
+lie inside the mask. Every tile the band visits straddles an edge. A
+window's tiles are all of the expensive kind.
+
+The figure measures cost alone. The window computes a different function
+from dense attention, and what it loses (the hops of
+:numref:`subsec_attn-receptive-field`) does not show up in milliseconds.
+
+### The Default and Its Alternatives
+
+Which of these should a model use? Exact attention in a fused kernel is the
+default. It computes the right function, and on short sequences a window
+saves little time. Windows are the remedy that most released long-context
+models adopt, and they adopt it in combination: windowed layers in most of
+the stack save arithmetic in proportion to the tiles they skip and cache in
+proportion to $w/n$, while a few global layers keep a one-hop path between
+any two positions.
+
+Plain linear attention is not used as derived here. At equal size it models
+language less well, and it is weakest on tasks that must recall one
+particular earlier token
+:cite:`Arora.Eyuboglu.Zhang.ea.2024,Yang.Wang.Shen.ea.2024`, just as its
+lossy state and blunt weights suggest. Two changes brought it close to
+softmax attention on language-modeling benchmarks. The state learns to
+forget: a decay computed from each input multiplies $\mathbf{S}_{t-1}$
+before the new write, so that old content fades when new content needs the
+room (Exercise :exref:`ex_attention-at-scale-decaying-state` works out a
+constant decay). And models keep a few softmax layers for recall;
+MiniMax-01 places one after every seven linear-attention layers
+:cite:`MiniMax.2025`. Whether a fixed-size state can be taught to forget
+and to write selectively enough to compete with a cache that keeps
+everything is the question of :numref:`chap_modern_rnn`, where gated
+descendants of this recurrence become linear state space models.
 
 ## Summary
 
-<!-- WRITER: three or four sentences for this section (worklist 6.B7): windows, tiles, linear attention as a recurrence with a lossy matrix state, and the measured cost. -->
+To go below the $n^2$ cost of exact attention, a model must either score
+fewer pairs or change the score. A sliding window keeps each query's $w$
+most recent keys; a stack of $L$ windows reaches $1 + L(w - 1)$ positions
+but relays distant facts through many hops, so released models interleave
+a few global layers. A fused kernel saves work only in whole tiles, and the
+tile count predicts the measured speedup in shape, though not fully in
+size, because every tile of a band is masked entry by entry. A kernel that
+factorizes, $\phi(\mathbf{q})^\top\phi(\mathbf{k})$, turns attention into
+a recurrent network with a $d_h \times d_v$ matrix state, computed in
+chunks for training and step by step for generation. That state has
+constant size but is a lossy summary, and its weights do not sharpen when
+the query grows, which is why exact attention in a fused kernel remains the
+default.
 
 ## Exercises
 
@@ -622,20 +779,16 @@ generation, where its state stays the size of one matrix.
    $b \times b$ scores and skips a tile only if the mask excludes all of it.
    Let $T = n/b$.
     1. Show that a causal mask leaves $T(T+1)/2$ of the $T^2$ tiles, and
-       that a window of width $w$, a multiple of $b$, leaves about
-       $T(w/b + 1)$. Check both counts with `tiles_visited`. Below which
-       width does narrowing the window stop saving tiles?
+       that a window of width $w = kb$, for a whole number $k < T$, leaves
+       $T(k + 1) - k(k + 1)/2$. Check both counts with `tiles_visited`.
+       How does the count change when $w$ is not a multiple of $b$?
     1. Several documents are packed into one sequence of $n = 2048$ tokens,
-       and the mask combines causality with "same document" as in
-       :numref:`sec_attention-scoring-functions`, using `tiles_visited` and
-       $b = 128$. Compare four documents of 512 tokens with documents of
-       1,000, 600, 300, and 148 tokens. Explain why documents whose
-       boundaries do not fall on tile boundaries cost more tiles.
-    1. A kernel that receives the mask as an $n \times n$ boolean tensor
-       must read it from memory. Compare the size of that tensor at
-       $n = 32{,}768$ with the size of $\mathbf{Q}$, $\mathbf{K}$, and
-       $\mathbf{V}$ for 8 heads of width 64 in bfloat16, and explain why
-       FlexAttention evaluates the mask as a rule, once per tile.
+       and the mask combines causality with "same document" as in the
+       masks of :numref:`sec_attention-scoring-functions`. Using
+       `tiles_visited` with $b = 128$, compare four documents of 512 tokens
+       with documents of 1,000, 600, 300, and 148 tokens. Explain why
+       documents whose boundaries do not fall on tile boundaries cost more
+       tiles.
 
 1. [code] **The feature map.** The feature map $\phi(x) =
    \mathrm{elu}(x) + 1$ in `phi` is one choice among many. Compare it with
@@ -652,33 +805,34 @@ generation, where its state stays the size of one matrix.
        undefined row? Derive the probability of this event for row $t$
        when all entries are independent standard normal, and evaluate it
        for $t = 1$ at width $64$ and at width $4$.
-    1. Multiply the queries by $\beta \in \{1, 4, 16\}$, and recompute the
-       mean row entropy for the three maps and for the softmax weights.
-       Explain from a property of each $\phi$ which maps cannot sharpen
-       their weights in this way, and what this implies for approximating
-       a softmax row that is nearly one-hot.
+    1. The section scaled the queries by $\beta \in \{1, 4, 16\}$ and
+       watched the largest weight. Do the same for the ReLU and exponential
+       maps, measuring the mean row entropy instead. Derive, for each of
+       the three maps, the limit of the normalized weights as
+       $\beta \to \infty$, and explain why none of them becomes one-hot
+       where softmax does.
    :exlabel:`ex_attention-at-scale-feature-map`
 
-1. **An exact feature map.** ● The softmax kernel $\kappa(\mathbf{q},
-   \mathbf{k}) = \exp(\mathbf{q}^\top \mathbf{k} / \sqrt{d})$ also
+1. **An exact feature map.** ● The softmax kernel $K(\mathbf{q},
+   \mathbf{k}) = \exp(\mathbf{q}^\top \mathbf{k} / \sqrt{d_h})$ also
    factorizes, but only with infinitely many features.
-    1. Expand $\kappa$ in its Taylor series, and show that the degree-$p$
+    1. Expand $K$ in its Taylor series, and show that the degree-$p$
        term equals $\phi_p(\mathbf{q})^\top \phi_p(\mathbf{k})$ for a
-       feature map $\phi_p$ of dimension $d^p$ built from the $p$-fold
+       feature map $\phi_p$ of dimension $d_h^p$ built from the $p$-fold
        tensor product of its argument.
     1. Truncate the series after degree $2$. Show that the truncated kernel
        is positive for every pair of $\mathbf{q}$ and $\mathbf{k}$, so the
        normalizer of :eqref:`eq_linear-attn` cannot vanish, and give the
        dimension of the feature map that concatenates $\phi_0$, $\phi_1$,
-       and $\phi_2$. For $d = 64$ and values of width $64$, compute the
+       and $\phi_2$. For $d_h = 64$ and values of width $64$, compute the
        size of the state $(\mathbf{S}, \mathbf{z})$ in single precision and
        the length $n$ at which the key--value cache of a softmax head
        reaches the same size. A truncation of this kind is the feature map
        of Based :cite:`Arora.Eyuboglu.Zhang.ea.2024`.
     1. Take as given that the $n \times n$ matrix with entries
-       $\kappa(\mathbf{x}_i, \mathbf{x}_j)$ is positive definite for
+       $K(\mathbf{x}_i, \mathbf{x}_j)$ is positive definite for
        distinct $\mathbf{x}_1, \ldots, \mathbf{x}_n$. Show that no feature
-       map of dimension $D < n$ reproduces $\kappa$ exactly on these points
+       map of dimension $D < n$ reproduces $K$ exactly on these points
        when queries and keys coincide.
 
 1. [extended] **Attention variants in a language model.** ● Whether the
@@ -689,9 +843,9 @@ generation, where its state stays the size of one matrix.
     1. Subclass `TinyCharLM` and override `attend` twice: once with a
        causal band mask of width $w$ in place of the causal mask, and once
        with the causal linear-attention weights of :eqref:`eq_linear-attn`
-       for $\phi(x) = \mathrm{elu}(x) + 1$, computed explicitly as a
-       $T \times T$ matrix so that the method still returns its weights.
-       Add $\epsilon = 10^{-6}$ to the normalizer, as in
+       for $\phi(x) = \mathrm{elu}(x) + 1$, computed explicitly as a full
+       weight matrix over the context so that the method still returns its
+       weights. Add $\epsilon = 10^{-6}$ to the normalizer, as in
        `linear_attention_parallel`; without it, a row whose features
        underflow divides zero by zero and training ends in NaN.
     1. Train dense attention, windows of width $w \in \{4, 16, 64\}$, and
@@ -711,7 +865,6 @@ generation, where its state stays the size of one matrix.
        exploit the repetition, and how does the answer relate to the reach
        of the windowed models and to the fixed-size state of linear
        attention?
-   <!-- WRITER: exercise 4 updated (lib review 5): part 1 now tells readers to add eps = 1e-6 (the section's three forms carry it too; dev: without it the linear arm diverged to NaN in one run of three in both frameworks); part 3 re-posed because at the protocol's budget the dense two-block model barely reads the copy (dev second-minus-first-half loss -0.004 to -0.020 nats). Dev numbers, both tabs, converged runs: validation perplexity at 128 dense 9.5-10.1, window w = 16 8.3-9.3, linear 11.2-11.5. -->
 
 1. [code] **A decaying state.** ● Give the state of
    :eqref:`eq_linear-attn-recurrence` a scalar decay $\gamma \in (0, 1)$,
@@ -751,91 +904,213 @@ Windowed and Linear Attention<br>
 :::
 :::
 
-<!-- WRITER: the deck below is the second half of the old attention-at-scale deck, moved as it was. It needs an opener with a number, goals, map, the sharpening check, the redesigned timing, what each mechanism gives up, and a closer and recap (worklist 6.B9). -->
+::: {.slide title="Exact Fused Attention Still Visits 32,896 Tiles at 32K Tokens"}
+[The problem]{.kicker}
 
-::: {.slide title="A Sliding Window Turns the Causal Mask into a Band"}
+A fused kernel no longer stores the $n \times n$ score matrix, but it still
+computes every score, in tiles of $128 \times 128$.
+
+| $n = 32{,}768$ tokens, $T = 256$ rows of tiles | tiles visited |
+|:--|--:|
+| dense causal: $T(T+1)/2$ | 32,896 |
+| window of the last 128 keys: $2T - 1$ | 511 |
+
+::: {.d2l-note}
+The score matrix is gone; the arithmetic and the cache remain.
+:::
+:::
+
+::: {.slide title="Goals: Two Routes Below n², and What Each Gives Up"}
+[Goals]{.kicker}
+
+- compute the **reach** of stacked windows and the **cache** they save;
+- **count tiles** and predict a fused kernel's speedup;
+- derive **linear attention** as a recurrence;
+- show why scaling the query **does not sharpen** it;
+- **choose** a mechanism.
+
+Running example: one head of width $d_h = 64$, as in GPT-2 small.
+:::
+
+::: {.slide title="This Deck Covers Cheaper Attention, Not Learned Sparsity"}
+[Scope]{.kicker}
+
+| Chapter 10 | |
+|:--|:--|
+| queries, keys, values · scoring and masks · self-attention and heads · positions · cost of attention | done |
+| **windowed and linear attention** | **here** |
+| attention circuits | next |
+
+Skipped: sparsity chosen from content, random-feature approximations of
+softmax, gated recurrences (the state space chapter).
+:::
+
+::: {.slide title="Two Routes Below n²: Score Fewer Pairs, or Factorize the Score"}
+[Idea]{.kicker}
+
+| route | change | cost | gives up |
+|:--|:--|:--|:--|
+| sliding window | each query sees its $w$ latest keys | $O(nw)$ | direct long-range paths |
+| linear attention | $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h}) \to \phi(\mathbf{q})^\top\phi(\mathbf{k})$ | $O(n)$, fixed state | sharp recall |
+
+$n$: sequence length; $\phi$: a feature map.
+:::
+
+::: {.slide title="A Sliding Window Turns the Causal Triangle into a Band"}
 [Windows]{.kicker}
 
-Each query attends to its $w$ most recent positions:
-`causal_mask(n) & (i - j < w)`.
+Query $i$ may read key $j$ if $j \le i$ and $i - j < w$:
 
-$2nw$ scores instead of $n^2$: linear in $n$ for fixed $w$.
+@attention-at-scale-attention-through-a-window
+
+12 positions: causal keeps 78 of 144 pairs, a window of $w = 4$ keeps 42.
+Large $n$: about $nw$ pairs instead of $n^2/2$.
 :::
 
 ::: {.slide title="Depth Restores the Reach: 1 + L(w − 1) Positions"}
 [Windows]{.kicker}
 
+Each layer moves information up to $w - 1$ positions back.
+
 | layers $L$ | 1 | 2 | 4 | 32 |
 |:--|--:|--:|--:|--:|
-| reach $1 + L(w-1)$, $w = 8$ | 8 | 15 | 29 | 225 |
+| reach $1 + L(w-1)$, $w = 4$ | 4 | 7 | 13 | 97 |
+| reach, $w = 4096$ (Mistral 7B) | 4,096 | 8,191 | 16,381 | 131,041 |
 
-Mistral 7B: $w = 4096$ in 32 layers reaches beyond 100,000 tokens, but
-the path length is $O(n/w)$ instead of $O(1)$.
+[Jiang et al. 2023]{.small}
 :::
 
-::: {.slide title="Global Layers Keep Direct Paths; Windows Shrink the Cache"}
+::: {.slide title="Reach Is Not Use: Averaging Windows Pass On 1/256"}
 [Windows]{.kicker}
 
-$r$ windowed layers per global layer: KV cache relative to all-global
-$= \dfrac{r\min(n, w) + n}{(r+1)\,n}$.
+- Full attention: any two positions in **one** layer.
+- Windows: about $n/w$ hops; 100,000 tokens at $w = 4096$ need at least
+  25 of Mistral's 32 layers.
+- Equal-weight windows, $w = 4$, 4 layers: the token 12 back gets
+  $(1/4)^4 = 1/256$; one global layer gives it $1/13$.
+
+::: {.d2l-note}
+A distant fact arrives only if every hop puts most of its weight on it.
+:::
+:::
+
+::: {.slide title="Global Layers Keep One-Hop Paths; Windows Shrink the Cache"}
+[Windows]{.kicker}
+
+$r$ windowed layers per global layer; KV cache relative to all-global:
+$$\frac{r\min(n, w) + n}{(r+1)\,n} \;\to\; \frac{1}{r+1}$$
 
 | Gemma 3: $r = 5$, $w = 1024$ | 8K | 32K | 128K |
 |:--|--:|--:|--:|
 | cache vs. all-global | 0.27 | 0.19 | 0.17 |
 
-Global layers restore $O(1)$ paths; Llama 4 also drops RoPE there
-(as in NoPE).
-
-[Gemma Team 2025; OpenAI 2025; Meta 2025]{.small}
+[Gemma Team 2025]{.small}
 :::
 
-::: {.slide title="A Fused Kernel Skips Work Only in Whole Tiles"}
-[Windows]{.kicker}
-
-Blocked windowed attention matches the masked definition:
-
-@!attention-at-scale-a-linear-cost-implementation-2
-
-Tiles of $128 \times 128$ scores at $n = 2048$: causal touches about half,
-a window of 128 about one in eight.
-
-::: {.d2l-note}
-FlexAttention: write the mask as a rule on positions; it is evaluated once
-per tile and compiled into a fused kernel.
-:::
-:::
-
-::: {.slide title="Check: Tiles for a Narrower Window"}
+::: {.slide title="Check: Reach and Cache of a 24-Layer Model"}
 [Check]{.kicker}
 
-Tiles of $b = 128$, $n = 2048$. A window of $w = 128$ touches 31 of the 256
-tiles. How many does a window of $w = 32$ touch? Of $w = 512$?
+24 layers, windows of $w = 512$. How far back does the last layer reach?
+With one global layer after every three windowed ones, what fraction of
+the cache remains at $n = 4096$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $w = 32$: still 31, the diagonal tile and its left neighbor in
-each row; narrowing below a tile saves nothing. $w = 512$: up to 5 tiles
-per row, $16 \cdot 5 - 10 = 70$.
+**Answer.** $1 + 24 \cdot 511 = 12{,}265$ positions.
+$(3 \cdot 512 + 4096)/(4 \cdot 4096) \approx 0.34$, tending to $1/4$.
 :::
 :::
 :::
 
-::: {.slide title="A Factorized Kernel Turns Attention into a Recurrence"}
+::: {.slide title="A Fused Kernel Skips Work Only in Whole Tiles"}
+[Tiles]{.kicker}
+
+Tiles of $b \times b = 128 \times 128$ scores at $n = 2048$:
+
+@!attention-at-scale-a-linear-cost-implementation-3
+
+- A tile is skipped only if the mask excludes **all** of it.
+- Window: the diagonal tile and its left neighbor per row.
+
+::: {.d2l-note}
+Time grows as $nw$, rounded up to whole tiles.
+:::
+:::
+
+::: {.slide title="Check: Tiles for a Narrower and a Wider Window"}
+[Check]{.kicker}
+
+$b = 128$, $n = 2048$, so 16 rows of tiles. A window of $w = 128$ touches 31
+of the 256 tiles. How many does $w = 32$ touch? And $w = 512$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $w = 32$: still 31; narrowing below a tile saves nothing.
+$w = 512$: up to 5 tiles per row, $16 \cdot 5 - 10 = 70$.
+:::
+:::
+:::
+
+::: {.slide title="Fused Kernels Take the Window as an Argument and Match the Mask"}
+[Tiles]{.kicker}
+
+Blocked `windowed_attention` and a fused window kernel, against the masked
+softmax definition:
+
+@!attention-at-scale-a-linear-cost-implementation-2
+
+PyTorch: FlexAttention takes the band as a rule on positions; its block
+mask records which tiles to skip. JAX: `local_window_size=(w - 1, 0)` with
+`is_causal=True`.
+:::
+
+::: {.slide title="Moving the Brackets Removes the n × n Matrix"}
 [Linear attention]{.kicker}
 
-Replace $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d})$ by
-$\phi(\mathbf{q})^\top\phi(\mathbf{k})$, with $\phi = \mathrm{elu} + 1 > 0$.
-The query factors out of the sum:
+Replace $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h})$ by
+$\phi(\mathbf{q})^\top\phi(\mathbf{k})$. Without a mask, up to the
+normalization:
+
+$$\bigl(\phi(\mathbf{Q})\,\phi(\mathbf{K})^\top\bigr)\mathbf{V}
+= \phi(\mathbf{Q})\bigl(\phi(\mathbf{K})^\top\mathbf{V}\bigr)$$
+
+Left: an $n \times n$ matrix. Right: a $d_h \times d_v$ matrix, formed once
+($d_v$: width of a value).
+
+::: {.d2l-note}
+Same product, other brackets: $n^2$ becomes $n$.
+:::
+
+[Katharopoulos et al. 2020]{.small}
+:::
+
+::: {.slide title="Causal Linear Attention Is an RNN with a Matrix State"}
+[Linear attention]{.kicker}
+
+$\phi = \mathrm{elu} + 1 > 0$, with $\mathrm{elu}(x) = x$ for $x > 0$ and
+$e^x - 1$ otherwise. The query factors out of the running sums:
 
 $$\mathbf{o}_t^\top = \frac{\phi(\mathbf{q}_t)^\top \mathbf{S}_t}{\phi(\mathbf{q}_t)^\top \mathbf{z}_t}$$
 $$\mathbf{S}_t = \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top, \qquad \mathbf{z}_t = \mathbf{z}_{t-1} + \phi(\mathbf{k}_t)$$
 
 ::: {.d2l-note}
-A recurrent network with a $d \times d_v$ matrix state: write by outer
-products, read with the query.
+State $\mathbf{S}$: a $d_h \times d_v$ matrix, written by outer products,
+read with the query.
+:::
 :::
 
-[Katharopoulos et al. 2020]{.small}
+::: {.slide title="Three Forms, One Function: Parallel, Recurrent, Chunked"}
+[Linear attention]{.kicker}
+
+| form | stores | work | used for |
+|:--|:--|:--|:--|
+| parallel (cumulative sums) | $n$ states | elementwise products, a cumulative sum | short training sequences |
+| recurrent | one state | $n$ sequential steps | generation |
+| chunked, chunks of $c$ | one state per chunk | matrix products | training |
+
+Chunked: a causally masked $c \times c$ product within a chunk, the carried
+state $\mathbf{S}$ across chunks. Parallel at $n = 16{,}384$, one head:
+256 MiB of states.
 :::
 
 ::: {.slide title="The State Stays 16 KiB While a KV Cache Grows"}
@@ -843,54 +1118,109 @@ products, read with the query.
 
 @!attention-at-scale-kernelizing-the-score-2
 
-- Parallel and chunked forms agree with the recurrent form.
-- One head, $d_h = 64$: 16 KiB of state at any length; a softmax KV cache
-  is 4 MiB at 8,192 tokens.
-- Lossy: the state cannot hold every token, and positive features cannot
-  become nearly one-hot.
-:::
-
-::: {.slide title="Chunks Turn Linear Attention into Matrix Products"}
-[Linear attention]{.kicker}
-
-Chunks of $c$ positions:
-
-- **inside a chunk:** a causally masked $c \times c$ matrix of kernel
-  values;
-- **across chunks:** carry $\mathbf{S}$ and $\mathbf{z}$, one update per
-  chunk.
-
-Work $O(ncd + nd\,d_v)$, all matrix products; one state per chunk.
-
-The same terms in a third order: the result matches the recurrent form.
-:::
-
-::: {.slide title="Practical Linear Attention Adds a Decay and a Few Softmax Layers"}
-[Linear attention]{.kicker}
-
-- Plain linear attention models language less well and fails at recalling
-  one particular token.
-- **Forgetting:** an input-dependent decay multiplies $\mathbf{S}_{t-1}$
-  before each write.
-- **Hybrids:** MiniMax-01 places one softmax layer after every seven
-  linear-attention layers.
+- The three forms agree to within $4 \times 10^{-7}$.
+- A softmax head of width 64 caches 512 bytes per token: larger than the
+  state from the 33rd token, 4 MiB at 8,192.
 
 ::: {.d2l-note}
-A linear recurrence with a fixed-size state is a state space model.
+The price of constant size: features are positive, so every read mixes in
+every write.
+:::
+:::
+
+::: {.slide title="Scaling the Query Sharpens Softmax but Not elu + 1"}
+[Linear attention]{.kicker}
+
+1,000 random queries, 8 random keys (uniform weight 0.125), queries
+multiplied by $\beta$:
+
+@!windowed-linear-attention-sharpening
+
+- Softmax: weight ratios $e^{\beta\Delta}$ grow without bound.
+- $\phi(\beta\mathbf{q}) \approx \beta\,\mathrm{relu}(\mathbf{q})$: $\beta$
+  cancels in the normalization.
+:::
+
+::: {.slide title="Check: The ReLU Feature Map"}
+[Check]{.kicker}
+
+Take $\phi(x) = \mathrm{relu}(x)$. What happens to the linear-attention
+weights of a query when it is multiplied by 16?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Nothing. $\phi(16\mathbf{q}) = 16\,\phi(\mathbf{q})$, and the
+factor 16 cancels exactly between numerator and normalizer.
+:::
+:::
+:::
+
+::: {.slide title="The Window Is More Than 30× Faster at 32K Tokens, Short of the Tiles' 64"}
+[Measured]{.kicker}
+
+@!attention-at-scale-the-price-of-attention-measured
+
+Both arms in one fused kernel; one sequence, 32 heads of width 64, bfloat16.
+:::
+
+::: {.slide title="Every Tile the Band Visits Is a Masked Tile"}
+[Measured]{.kicker}
+
+| | tiles visited | tiles on the mask's edge |
+|:--|--:|:--|
+| dense causal | $T(T+1)/2$ | only the $T$ diagonal tiles |
+| window, $w = b$ | $2T - 1$ | all of them |
+
+- Short sequences: a fixed cost per call, no saving.
+- Long sequences: dense 3–4× per doubling of $n$, window about 2×.
+
+::: {.d2l-note}
+Tile counts predict the shape; masked tiles explain most of the shortfall.
+:::
+:::
+
+::: {.slide title="Default to Exact Fused Attention; Interleave Windows for Long Contexts"}
+[Choice]{.kicker}
+
+| mechanism | cost | cache | used |
+|:--|:--|:--|:--|
+| exact, fused kernel | $n^2$ time | all keys | the default |
+| windows + few global layers | mostly $nw$ | mostly $w$ keys | long-context models |
+| plain linear attention | $n$ | one matrix | not as is |
+
+- Linear attention improved by a decay that depends on the input, plus a
+  few softmax layers (MiniMax-01: one in eight).
+
+::: {.d2l-note}
+Scaling the query does not sharpen linear attention, and it recalls poorly.
 :::
 
 [Arora et al. 2024; Yang et al. 2024; MiniMax 2025]{.small}
 :::
 
-<!-- WRITER: the timing slide below shows the redesigned cell (dense causal against window w = 128 in one fused kernel per tab, no linear attention; prints speedup against the tile-count prediction). Its title and text ("Windowed and Linear as n", "windowed and chunked linear about 2x", "well under half") are out of date. Code step deck fixes: the random band heatmap (cut) is gone from the first window slide; the reach slide shows the formula as a table in place of the cut receptive-field cell; the chunk slide no longer embeds the deleted chunked-computation-2 (the merged check kernelizing-the-score-2 on the 16 KiB slide prints both deviations). The new sharpening cell `windowed-linear-attention-sharpening` has no slide yet (6.B9). -->
+::: {.slide title="Check: A Window Narrower than a Tile"}
+[Check]{.kicker}
 
-::: {.slide title="Dense Time Grows as n², Windowed and Linear as n"}
-[Measured]{.kicker}
+At $n = 32{,}768$ with tiles of 128, a window of $w = 64$ replaces
+$w = 128$. Does the kernel get faster?
 
-@!attention-at-scale-the-price-of-attention-measured
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** No. Each row of tiles still visits its diagonal tile and its
+left neighbor, 511 tiles in all, and every one straddles the mask's edge.
+:::
+:::
+:::
 
-32 heads of width 64, bfloat16. At long lengths dense grows about 4× per
-doubling of $n$, windowed and chunked linear about 2×; at 32,768 tokens
-both need well under half of dense's time. Short lengths measure launch
-costs, not arithmetic.
+::: {.slide title="Recap"}
+[Recap]{.kicker}
+
+- Window: $O(nw)$ work, reach $1 + L(w - 1)$; Gemma 3 keeps about a
+  quarter of the cache at 8K.
+- Tiles at 2,048 tokens: causal about half, window about one in eight.
+- Linear attention: 16 KiB of state per head; a larger query does not
+  sharpen its weights.
+- At 32K tokens the window is more than 30× faster, short of the tiles' 64.
+
+Next: what a trained head computes.
 :::

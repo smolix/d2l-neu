@@ -80,10 +80,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #mdl-fokker-planck-probability-flow-the-fokker-planck-equation-and-probability-flow-1}
-from scipy.special import erf
-```
-
 ## From Paths to Densities
 :label:`sec_mdl-paths-to-densities`
 
@@ -153,14 +149,16 @@ grid = np.linspace(-3.5, 4.5, 400)
 d2l.set_figsize((6, 2.5))
 for (t, cloud), c in zip(snaps.items(), ('C0', 'C1', 'C2')):
     m, v = ou_mean_var(2.0, t)
-    print(f't={t}: mean {cloud.mean():.3f} (exact {m:.3f}), '
-          f'std {cloud.std():.3f} (exact {np.sqrt(v):.3f})')
     d2l.plt.hist(cloud, bins=80, density=True, alpha=0.35, color=c)
     d2l.plt.plot(grid, np.exp(-(grid - m)**2 / (2 * v)) / np.sqrt(2 * np.pi * v),
                  color=c, label=f't = {t}')
 d2l.plt.xlabel('x'); d2l.plt.ylabel('density'); d2l.plt.legend();
 ```
 
+<!-- WRITER: the cell no longer prints means and standard deviations (the
+moment table belongs to the SDE section's OU-cloud cell). The next sentence
+quotes printed moments; read the agreement off the histogram and cite
+eq_mdl-sde-ou-kernel for the moments instead (worklist 4.6 B2). -->
 At every snapshot the cloud's mean and standard deviation agree with
 $2e^{-t}$ and $\sqrt{1-e^{-2t}}$ to a few thousandths, the size of the Monte
 Carlo error (for the mean at $t=0.5$ it is $0.80/\sqrt{10^5}\approx0.0025$).
@@ -484,6 +482,7 @@ the exercises can change them.
 
 ```{.python .input #fokker-planck-mixture-setup}
 ws, mus, v0s = np.array([0.5, 0.5]), np.array([-2.0, 2.0]), np.array([0.25, 0.25])
+erf = np.vectorize(math.erf)            # the error function, on arrays
 
 def mixture_params(t, mus=mus, v0s=v0s, theta=theta, g=g):
     """Means and variances of the OU-evolved components (moment ODEs)."""
@@ -513,16 +512,21 @@ are evaluated on a grid at $t=0.25$, $1$ and $3$, with $\partial_t$ by a
 centered difference in time and the $x$-derivatives by `np.gradient`.
 
 ```{.python .input #fokker-planck-ou-residual}
-xs = np.linspace(-5.0, 5.0, 4001)
-dx, eps = xs[1] - xs[0], 1e-5
-for t in (0.25, 1.0, 3.0):
+def fp_residual(t, points, eps=1e-5):
+    """Largest Fokker--Planck residual on a grid of `points`, and max|dp/dt|."""
+    xs = np.linspace(-5.0, 5.0, points)
+    dx = xs[1] - xs[0]
     dpdt = (p_t(xs, t + eps) - p_t(xs, t - eps)) / (2 * eps)
     p = p_t(xs, t)
     rhs = (np.gradient(theta * xs * p, dx)                 # -d/dx(f p)
            + 0.5 * g**2 * np.gradient(np.gradient(p, dx), dx))
     res = (dpdt - rhs)[5:-5]            # trim the one-sided edge stencils
-    print(f't={t}: max|residual| = {np.abs(res).max():.1e}, '
-          f'max|dp/dt| = {np.abs(dpdt).max():.1e}')
+    return np.abs(res).max(), np.abs(dpdt).max()
+
+for t in (0.25, 1.0, 3.0):
+    (r1, dpdt), (r2, _) = fp_residual(t, 4001), fp_residual(t, 8001)
+    print(f't={t}: max|dp/dt| = {dpdt:.1e}; max|residual| at 4001, 8001 points: '
+          f'{r1:.1e}, {r2:.1e} (ratio {r1 / r2:.1f})')
 ```
 
 The residual is three to five orders of magnitude below $\partial_tp$ at each
@@ -831,13 +835,13 @@ $\dot x=x/(2(1+t))$ with Heun steps (:numref:`sec_mdl-odes-solvers`). It also
 evaluates both sides of :eqref:`eq_mdl-dyn-diffusion-as-transport` by finite
 differences.
 
-```{.python .input #fokker-planck-diffusion-identity}
-p = gauss(xs, 0.0, 2.0)                 # a heat-equation Gaussian, g = 1
-lhs = 0.5 * np.gradient(np.gradient(p, dx), dx)
-rhs = np.gradient(p * 0.5 * np.gradient(np.log(p), dx), dx)
-print(f'identity: max|lhs - rhs| = {np.abs(lhs - rhs)[5:-5].max():.1e} '
-      f'(max|lhs| = {np.abs(lhs).max():.2f})')
+<!-- WRITER: the cell no longer evaluates the two sides of
+eq_mdl-dyn-diffusion-as-transport (the finite-difference identity print is
+gone); drop "It also evaluates both sides ..." here and, after the cell, "The
+identity holds to finite-difference precision, ...". Heun's method now lives
+in sec_mdl-euler-runge-kutta (worklist 4.6 B4). -->
 
+```{.python .input #fokker-planck-diffusion-identity}
 def heat_velocity(x, t, v0=1.0, g=1.0):  # u_t = -(1/2) g^2 score = g^2 x / (2 v_t)
     return g**2 * x / (2 * (v0 + g**2 * t))
 
@@ -1159,26 +1163,54 @@ an ordinary forward SDE that Euler--Maruyama can integrate. The cell first
 measures how far $p_T$ is from $\mathcal N(0,1)$, then compares the generated
 modes with the targets $\pm2$ and width $0.5$.
 
+<!-- WRITER: the cell now samples the mixture with weights (0.8, 0.2) (passed
+as `uneven = dict(ws=...)` to p_t, score_t and ks_exact); the start is still
+N(0,1), symmetric. Say so in this lead-in; the targets are now mass 0.8 on the
+left, means -2 and +2, width 0.5. -->
+
 ```{.python .input #fokker-planck-reverse-sde}
-print(f'max|p_T - N(0,1)| at T=3: {np.abs(p_t(gs, 3.0) - gauss(gs, 0.0, 1.0)).max():.4f}'
-      f' (peak {p_t(gs, 3.0).max():.2f})')
+uneven = dict(ws=np.array([0.8, 0.2]))  # four fifths of the data on the left
+pT = p_t(gs, 3.0, **uneven)
+print(f'max|p_T - N(0,1)| at T=3: {np.abs(pT - gauss(gs, 0.0, 1.0)).max():.4f} '
+      f'(peak {pT.max():.2f})')
 x = rng.standard_normal(n)              # N(0, 1) stands in for p_T
 for k in range(steps):                  # reversed clock: t_bar = k dt
     t = T - k * dt                      # forward time
-    x += (theta * x + g**2 * score_t(x, t)) * dt \
+    x += (theta * x + g**2 * score_t(x, t, **uneven)) * dt \
          + g * np.sqrt(dt) * rng.standard_normal(n)
 left, right = x[x < 0], x[x >= 0]
-print(f'mass on the left: {len(left) / n:.3f} (target 0.5)')
-print(f'means {left.mean():+.3f}, {right.mean():+.3f} (targets -2, +2)')
-print(f'widths {left.std():.3f}, {right.std():.3f} (target 0.5)')
-print(f'KS to the exact p_0: {ks_exact(x, 0.0):.4f}')
+print(f'mass on the left: {len(left) / n:.3f} (data 0.800)')
+print(f'means {left.mean():+.3f}, {right.mean():+.3f} (data -2, +2)')
+print(f'widths {left.std():.3f}, {right.std():.3f} (data 0.5)')
+print(f'KS to the exact p_0: {ks_exact(x, 0.0, **uneven):.4f} '
+      f'(95% band {1.36 / np.sqrt(n):.4f})')
 d2l.set_figsize((5.5, 3))
 d2l.plt.hist(x, bins=80, density=True, alpha=0.4, color='C1',
              label='reverse-SDE samples')
-d2l.plt.plot(gs, p_t(gs, 0.0), 'k', lw=1, label='data density $p_0$')
+d2l.plt.plot(gs, p_t(gs, 0.0, **uneven), 'k', lw=1, label='data density $p_0$')
 d2l.plt.xlabel('x'); d2l.plt.ylabel('density'); d2l.plt.legend();
 ```
 
+<!-- WRITER: new measured facts (13 notebook runs in four tabs, 20 replica runs;
+see reports/code-mdl-fokker-planck-probability-flow.md). Terminal mismatch
+max|p_T - N(0,1)| = 0.0145 against peak 0.40 (deterministic; p_T now has mean
+-0.06), no longer 0.0016. Mass on the left 0.791 to 0.804 (expected 0.797 from
+a 10^6-sample run; 0.8005 when started from the exact p_T): "about 0.80, four
+fifths". Means: left -2.003 to -1.990, right +1.981 to +2.010 (within 0.02
+still holds). Widths: heavy (left) mode 0.499 to 0.513, light (right) mode
+0.495 to 0.518 (only ~4,000 samples). KS to the exact p_0: 0.004 to 0.015,
+above the 0.0096 band in about half the notebook runs, so "usually below 0.01"
+is false; it contains the width bias (about 0.002 in the CDF) and the start
+mismatch (about 0.003 of mass at x = 0) on top of the sampling error. The next
+paragraph ("The fraction on the left tells us less ...") is false now and is
+replaced by the reading of this run (worklist 4.6 B5). In the width-bias
+paragraph, "from 10,000 samples, 0.5/sqrt(2*10^4) = 0.0035" becomes: heavy
+mode ~16,000 samples, 0.5/sqrt(3.2*10^4) = 0.0028; light mode ~4,000,
+0.5/sqrt(8,000) = 0.0056. The width-bias cell now prints the excess directly
+(not the width) for 300/600/1200/2400/1500 uniform steps and the crowded
+1,500-step grid: 0.0096, 0.0047, 0.0024, 0.0012, 0.0019, 0.0006 (exact
+recursion, identical in every tab), so "nearly nine tenths" (0.0047 -> 0.0006)
+and "six tenths" (0.0047 -> 0.0019) are read off the output. -->
 The terminal mismatch $\max_x|p_T-\mathcal N(0,1)|$ is $0.0016$ against a peak
 of $0.40$, so starting from Gaussian noise is justified. The reverse SDE
 recovers modes at $\pm2$ to within about $0.02$. Its widths scatter around
@@ -1206,19 +1238,24 @@ $V\leftarrow(1+\kappa_t\Delta t)^2V+g^2\Delta t$. Starting from the exact
 $p_T$, the only error left is the discretization.
 
 ```{.python .input #mdl-fokker-planck-probability-flow-reverse-time-sampling-1}
-def em_reverse_width(steps, T=3.0, mu=2.0, v0=0.25):
-    """Exact output width of reverse Euler--Maruyama on data N(mu, v0)."""
-    dt, mu, v0 = T / steps, np.array([mu]), np.array([v0])
-    (m,), (V,) = mixture_params(T, mu, v0)          # start from the exact p_T
-    for k in range(steps):
-        (mt,), (vt,) = mixture_params(T - k * dt, mu, v0)
+def em_reverse_width(ts, mu=2.0, v0=0.25):
+    """Exact output width of reverse Euler--Maruyama on data N(mu, v0),
+    stepping down the time grid ts = (0, t_1, ..., T) from T to 0."""
+    mu, v0 = np.array([mu]), np.array([v0])
+    (m,), (V,) = mixture_params(ts[-1], mu, v0)     # start from the exact p_T
+    for t, dt in zip(ts[:0:-1], np.diff(ts)[::-1]):
+        (mt,), (vt,) = mixture_params(t, mu, v0)
         kappa = theta - g**2 / vt       # slope of the reverse drift in x
         m, V = (m + dt * (kappa * m + g**2 * mt / vt),
                 (1 + kappa * dt)**2 * V + g**2 * dt)
     return np.sqrt(V)
 
-for steps in (300, 600, 1200, 2400):
-    print(f'{steps:4d} steps: width {em_reverse_width(steps):.4f} (target 0.5)')
+grids = {f'{N} uniform steps': np.linspace(0, T, N + 1)
+         for N in (300, 600, 1200, 2400, 1500)}
+grids['1500 steps, 1000 on t <= 0.5'] = np.concatenate(
+    [np.linspace(0, 0.5, 1001), np.linspace(0.5, T, 501)[1:]])
+for name, ts in grids.items():
+    print(f'{name:>28}: width excess {em_reverse_width(ts) - 0.5:.4f}')
 ```
 
 The width excess over $0.5$ is $0.0096$, $0.0047$, $0.0024$ and $0.0012$: it

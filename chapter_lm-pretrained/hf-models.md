@@ -963,7 +963,8 @@ def config_params(config, include_vision=False, include_mtp=False,
     c, t = _hf_text_config(config)
     if (t.get('num_experts') or t.get('n_routed_experts')
             or t.get('enable_moe_block')):
-        raise NotImplementedError('use d2l.config_stats (14.1)')
+        raise NotImplementedError(
+            'mixture-of-experts layouts are not counted here')
     known = ('qwen3', 'qwen3_5_text', 'gemma4_text')  # QK norms, no biases
     if (t['model_type'] not in known or t.get('attention_bias')
             or t.get('mlp_bias')):
@@ -1250,8 +1251,11 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
             state += H_v * d_k * d_v * state_bytes + C * conv_taps * conv_bytes
             # Chunked kernel (64 tokens): the convolved q, k, v and their
             # copy, normalized q, k, w, u, new values, output, output gate,
-            # one d_k x d_v state per chunk and a 64 x 64 block per chunk
-            mixer = max(mixer, 2 * C + 3 * K + 4 * V
+            # one d_k x d_v state per chunk and a 64 x 64 block per chunk;
+            # with more value heads than key heads, q and k are first
+            # repeated to the value heads, two more tensors of H_v d_k
+            repeat = 2 * H_v * d_k if H_v > t['linear_num_key_heads'] else 0
+            mixer = max(mixer, 2 * C + 3 * K + 4 * V + repeat
                         + H_v * (d_k * d_v // 64 + 64))
             continue
         # Q (and gate), K, V, normalized and rotated Q and K, output (gated)
@@ -1889,11 +1893,11 @@ Read the last column of the two tables first. One step of Qwen3.5-2B reads
 3.8 GB, which takes a little over 4 ms at the measured bandwidth, and one
 step of Gemma 4 E2B reads 4.6 GB, or 5 ms. If the bound decided, the models
 would write about 240 and 200 tokens per second. The wall times are far from
-it: about 26 ms for Qwen3.5-2B, six times its bound, and 45 to 49 ms for
-Gemma 4 E2B, nine to ten times its bound. The quartiles lie within about a
-millisecond of the median, so the gap is no accident of timing. The column
+it: about 26 ms for Qwen3.5-2B, six times its bound, and 44 to 49 ms for
+Gemma 4 E2B, about nine times its bound. The quartiles lie within two
+milliseconds of the median, so the gap is no accident of timing. The column
 `busy` says where the time is not. The GPU works for about 6 ms of Qwen's 26
-and for 10 to 20 ms of Gemma's 45 to 49, and waits for the rest.
+and for 10 to 20 ms of Gemma's 44 to 49, and waits for the rest.
 
 The lists under the tables carry the compiler's names for kernels. Only two
 of them matter here: `gemvx` multiplies a matrix by a vector, and `fmha` is
@@ -2075,7 +2079,7 @@ prefill, the largest term for a long prompt, we could only estimate, and
 only for the kernels in use. With fused kernels and an allocator that does
 not fragment, the GPU confirmed the memory to within a few percent. For the
 speed of writing the configuration gives only a bound, 4 to 5 ms per token
-here. The eager loop of Transformers takes 26 ms for Qwen3.5-2B and 45 to
+here. The eager loop of Transformers takes 26 ms for Qwen3.5-2B and 44 to
 49 ms for Gemma 4 E2B, because the host spends about 15 µs on each of
 thousands of kernel launches.
 
@@ -2161,6 +2165,18 @@ thousands of kernel launches.
        and the peak, measured as in :numref:`subsec_lm_hf_measured`, with
        your prediction. Which term did the prediction miss, and what in the
        head fields of the first part explains it?
+   <!-- WRITER: config_memory now counts the queries and keys that
+   Transformers repeats to the value heads when linear_num_value_heads >
+   linear_num_key_heads (Qwen3.5-4B: 16 key, 32 value heads), so the
+   prediction no longer misses a term. Measured 2026-11-18 on an RTX 4090
+   (23.52 GiB reported), fused kernels, bf16: peak above the weights / formula
+   = 0.673 / 0.670 GiB (4,096 tokens), 2.547 / 2.533 (16,384), 5.047 / 5.018
+   (32,768), 10.093 / 10.035 (two of 32,768): ratio 1.005 to 1.006. For three
+   sequences of 32,768 the formula gives 22.89 GiB in total, which the device
+   seems to hold, and the prefill runs out of memory; two fit. The last
+   question of this part needs a new form (for example: the formula's total
+   for three sequences against the device's memory; what else claims memory
+   on the card that the formula does not count?). -->
 
 1. [code] **Batched decoding of a hybrid.** A decode step of $B$ sequences
    reads the weights once and the cache and state of every sequence

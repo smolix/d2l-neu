@@ -4630,7 +4630,8 @@ def config_params(config, include_vision=False, include_mtp=False,
     c, t = _hf_text_config(config)
     if (t.get('num_experts') or t.get('n_routed_experts')
             or t.get('enable_moe_block')):
-        raise NotImplementedError('use d2l.config_stats (14.1)')
+        raise NotImplementedError(
+            'mixture-of-experts layouts are not counted here')
     known = ('qwen3', 'qwen3_5_text', 'gemma4_text')  # QK norms, no biases
     if (t['model_type'] not in known or t.get('attention_bias')
             or t.get('mlp_bias')):
@@ -4730,8 +4731,11 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
             state += H_v * d_k * d_v * state_bytes + C * conv_taps * conv_bytes
             # Chunked kernel (64 tokens): the convolved q, k, v and their
             # copy, normalized q, k, w, u, new values, output, output gate,
-            # one d_k x d_v state per chunk and a 64 x 64 block per chunk
-            mixer = max(mixer, 2 * C + 3 * K + 4 * V
+            # one d_k x d_v state per chunk and a 64 x 64 block per chunk;
+            # with more value heads than key heads, q and k are first
+            # repeated to the value heads, two more tensors of H_v d_k
+            repeat = 2 * H_v * d_k if H_v > t['linear_num_key_heads'] else 0
+            mixer = max(mixer, 2 * C + 3 * K + 4 * V + repeat
                         + H_v * (d_k * d_v // 64 + 64))
             continue
         # Q (and gate), K, V, normalized and rotated Q and K, output (gated)
@@ -4990,8 +4994,8 @@ def qwen3_gpt_kwargs(cfg):
         raise NotImplementedError('qwen3_moe: expert layers are not ported')
     if kind and kind.startswith('qwen3_5'):
         raise NotImplementedError(
-            f'{kind}: its Gated DeltaNet layers are ported in '
-            'sec_lm_hybrids_at_scale')
+            f'{kind}: Qwen3GPT has no Gated DeltaNet layers; '
+            'load this model with d2l.load_hf')
     if kind != 'qwen3':
         raise ValueError(f'not a Qwen3 configuration: {kind!r}')
     rope = c.get('rope_parameters') or {}  # where Transformers 5 keeps theta
@@ -5115,7 +5119,8 @@ def truncated_probs(logits, temperature=1.0, k=None, p=None, min_p=None):
     """Rows of logits (batch, vocab) -> the temperature-scaled distribution
     truncated by top-k, top-p and min-p and renormalized; ties in rank go
     to the smaller token id. As in Transformers and vLLM (and unlike
-    sec_decoding's sample_next), top-p measures mass within the top k.
+    sample_next of the book's section on decoding), top-p measures mass
+    within the top k.
 
     Defined in :numref:`sec_lm_d2l_checkpoint`"""
     probs = F.softmax(logits.float() / temperature, -1)

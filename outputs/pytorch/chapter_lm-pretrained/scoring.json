@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d8695decbee45ff973b9840101b19886333d62b08b1e698348734396a912462e",
+    "d2l_lib_fingerprint": "sha256:167181a854183ddf67716bc807ba653f57350ec4f7d1b009ee0275efdeeb0360",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -203,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6 of 6 rows in lm-bpb-v3; max |bpb difference| 4.8e-11\nQwen3-0.6B-Base: boundary token 151643, output layer of 151,936 rows\nQwen3.5-0.8B-Base: boundary token 248044, output layer of 248,320 rows\n                                       T        B    tpb  ppl_tok    bpb\ntext           model                                                    \nwikitext-2     Qwen3-0.6B-Base    298938  1287656  0.232   11.180  0.809\nheld-out prose Qwen3-0.6B-Base     17641    68148  0.259   10.527  0.879\nheld-out code  Qwen3-0.6B-Base     20425    56401  0.362    3.406  0.640\nwikitext-2     Qwen3.5-0.8B-Base  297053  1287656  0.231   11.695  0.818\nheld-out prose Qwen3.5-0.8B-Base   17881    68148  0.262   10.074  0.874\nheld-out code  Qwen3.5-0.8B-Base   21351    56401  0.379    3.634  0.705\ntokens per byte, Qwen3 over Qwen3.5:\n    held-out code: 0.957\n    held-out prose: 0.987\n    wikitext-2: 1.006\n"
+          "text": "6 of 6 rows in lm-bpb-v3; max |bpb difference| 5.4e-05\nQwen3-0.6B-Base: boundary token 151643, output layer of 151,936 rows\nQwen3.5-0.8B-Base: boundary token 248044, output layer of 248,320 rows\n                                       T        B    tpb  ppl_tok    bpb\ntext           model                                                    \nwikitext-2     Qwen3-0.6B-Base    298938  1287656  0.232   11.180  0.809\nheld-out prose Qwen3-0.6B-Base     17641    68148  0.259   10.527  0.879\nheld-out code  Qwen3-0.6B-Base     20425    56401  0.362    3.406  0.640\nwikitext-2     Qwen3.5-0.8B-Base  297053  1287656  0.231   11.695  0.818\nheld-out prose Qwen3.5-0.8B-Base   17881    68148  0.262   10.074  0.874\nheld-out code  Qwen3.5-0.8B-Base   21351    56401  0.379    3.634  0.705\ntokens per byte, Qwen3 over Qwen3.5:\n    held-out code: 0.957\n    held-out prose: 0.987\n    wikitext-2: 1.006\n"
         }
       ]
     },
@@ -318,7 +318,7 @@
           "mime": "image/svg+xml",
           "asset": "scoring/scoring-passk-figure-1.svg",
           "bytes": 28588,
-          "sha256": "sha256:c27bea8052944141accb09250169e7c6d20bc77acc09100ba3b191c1c790318c"
+          "sha256": "sha256:4457d359d3cbbd3cdf730b619e58a4139007681653fafba96d77f431c4bb70d3"
         }
       ]
     },
@@ -508,12 +508,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "drift of the contrasts, batch 8 vs 1: 0.014\npair, difference of (letter-0 - cloze-sum):\n    0.116 [0.054, 0.178] (Qwen3.5-0.8B gains more)\nletter-0 - cloze-sum:\n    Qwen3-0.6B-Base: 0.274 [0.218, 0.332] (letter-0 ahead)\n    Qwen3-0.6B: 0.208 [0.148, 0.266] (letter-0 ahead)\n    Qwen3.5-0.8B-Base: 0.336 [0.282, 0.390] (letter-0 ahead)\n    Qwen3.5-0.8B: 0.324 [0.270, 0.378] (letter-0 ahead)\n"
+          "text": "drift of the contrasts, batch 8 vs 1: 0.014\npair, difference of (letter-0 - cloze-sum):\n    0.116 [0.054, 0.178] (Qwen3.5-0.8B gains more)\nletter-0 - cloze-sum:\n    Qwen3-0.6B-Base: 0.274 [0.218, 0.332] (letter-0 ahead)\n    Qwen3-0.6B: 0.208 [0.148, 0.266] (letter-0 ahead)\n    Qwen3.5-0.8B-Base: 0.336 [0.282, 0.390] (letter-0 ahead)\n    Qwen3.5-0.8B: 0.324 [0.270, 0.378] (letter-0 ahead)\n    Qwen3-1.7B: 0.332 [0.280, 0.384] (letter-0 ahead)\npost-trained - base, difference of (letter-0 - cloze-sum):\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    Qwen3-1.7B: 0.332 [0.280, 0.384] (letter-0 ahead)\npost-trained - base, difference of (letter-0 - cloze-sum):\n    Qwen3-0.6B - Qwen3-0.6B-Base: -0.066 [-0.126, -0.006]\n        (not resolved at 500 items)\n    Qwen3.5-0.8B - Qwen3.5-0.8B-Base: -0.012 [-0.056, 0.032]\n        (not resolved at 500 items)\nnormalized cloze rule minus cloze-sum, accuracy points:\n"
+          "text": "    Qwen3-0.6B - Qwen3-0.6B-Base: -0.066 [-0.126, -0.006]\n        (not resolved at 500 items)\n    Qwen3.5-0.8B - Qwen3.5-0.8B-Base: -0.012 [-0.056, 0.032]\n        (not resolved at 500 items)\nnormalized cloze rule minus cloze-sum, accuracy points:\n"
         },
         {
           "type": "stream",
@@ -564,7 +564,7 @@
           "mime": "image/svg+xml",
           "asset": "scoring/scoring-flip-figure-1.svg",
           "bytes": 79842,
-          "sha256": "sha256:895e0ee3b90edcee6315e79316ab9c3b5e28f7353430d7ba17b4d40cd8d0344c"
+          "sha256": "sha256:ca555738907e312051716711a19959d9fbc9f5aa70b7f9d6e94d733b44d98700"
         }
       ]
     }

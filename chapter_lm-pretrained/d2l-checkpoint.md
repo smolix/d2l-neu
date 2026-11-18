@@ -501,8 +501,8 @@ def qwen3_gpt_kwargs(cfg):
         raise NotImplementedError('qwen3_moe: expert layers are not ported')
     if kind and kind.startswith('qwen3_5'):
         raise NotImplementedError(
-            f'{kind}: its Gated DeltaNet layers are ported in '
-            'sec_lm_hybrids_at_scale')
+            f'{kind}: Qwen3GPT has no Gated DeltaNet layers; '
+            'load this model with d2l.load_hf')
     if kind != 'qwen3':
         raise ValueError(f'not a Qwen3 configuration: {kind!r}')
     rope = c.get('rope_parameters') or {}  # where Transformers 5 keeps theta
@@ -1283,7 +1283,8 @@ def truncated_probs(logits, temperature=1.0, k=None, p=None, min_p=None):
     """Rows of logits (batch, vocab) -> the temperature-scaled distribution
     truncated by top-k, top-p and min-p and renormalized; ties in rank go
     to the smaller token id. As in Transformers and vLLM (and unlike
-    sec_decoding's sample_next), top-p measures mass within the top k."""
+    sample_next of the book's section on decoding), top-p measures mass
+    within the top k."""
     probs = F.softmax(logits.float() / temperature, -1)
     ranked, order = torch.sort(probs, dim=-1, descending=True, stable=True)
     keep = torch.full_like(order[:, :1], probs.shape[-1])  # tokens kept

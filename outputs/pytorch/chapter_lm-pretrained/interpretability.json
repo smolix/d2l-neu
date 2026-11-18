@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:477c85cbe387d490b7a71f54093a09732f52ce25436eff4f68b517e10e129089",
+    "d2l_lib_fingerprint": "sha256:a55f48002a339729b73e783403630109dcea9b4d08f4e84fc0ba5f271a2ec5c7",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -147,7 +147,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-lens-kl-1.svg",
           "bytes": 61615,
-          "sha256": "sha256:83f0761fe82308cdc234ec70a356633983e9c5c36ac9c494ec4098625a0e7f53"
+          "sha256": "sha256:57d42484bd4c1ed40cddca881e745db5b55c52f73dcdb7bc3037bb6030179614"
         }
       ]
     },
@@ -242,7 +242,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-patch-map-plot-1.svg",
           "bytes": 55449,
-          "sha256": "sha256:03819b4f2766a89acf0c34bf237925692d629a782e6d80563d6936bab9f8cf01"
+          "sha256": "sha256:4da0589671d3dc10ffc4fcd3f0818637519baebcba3a7257b2afbaa4e90d9959"
         }
       ]
     },
@@ -253,7 +253,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.36 s for 672 forwards per pair; AtP: 0.54 s for 3 passes; ratio 19\n"
+          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.50 s for 672 forwards per pair; AtP: 0.52 s for 3 passes; ratio 20\n"
         }
       ]
     },
@@ -282,7 +282,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-atp-agreement-plot-1.svg",
           "bytes": 113291,
-          "sha256": "sha256:01bf5354a660fdcda496a02cbacad758330e0236f54cb493a6626f504e52a70e"
+          "sha256": "sha256:bcbf549b3db28d618b176553f97f476ffab70401fb68b30325ba22b98ccf0ab6"
         }
       ]
     },
@@ -455,7 +455,7 @@
           "mime": "image/svg+xml",
           "asset": "interpretability/interpretability-frontier-plot-1.svg",
           "bytes": 51617,
-          "sha256": "sha256:40dd008d9c36306d12162852849f64a5a5864a3fdc2ab4641be3602049558083"
+          "sha256": "sha256:4eaf856e8f5d0dc0ba5cdc7cfa55757f5cf441e908306bf65e2cb1dbdf05b006"
         }
       ]
     },

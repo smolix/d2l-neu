@@ -549,10 +549,10 @@ class TestKwargs(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, 'qwen3_moe'):
             d2l.qwen3_gpt_kwargs({**raw, 'model_type': 'qwen3_moe'})
         with self.assertRaisesRegex(NotImplementedError,
-                                    'sec_lm_hybrids_at_scale'):
+                                    'Gated DeltaNet'):
             d2l.qwen3_gpt_kwargs(fixture_config('Qwen/Qwen3.5-2B'))
         with self.assertRaisesRegex(NotImplementedError,
-                                    'sec_lm_hybrids_at_scale'):
+                                    'Gated DeltaNet'):
             d2l.qwen3_gpt_kwargs({**raw, 'model_type': 'qwen3_5_text'})
 
 

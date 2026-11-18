@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:86875de62f514db4df5469f887c1d734d5e0a095d96e5c12229a5d4e67715319",
+    "d2l_lib_fingerprint": "sha256:957bb86214ba3b8765499520901f825184f9fafb16710c71f555330d0f5e3382",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -111,7 +111,7 @@
           "mime": "image/svg+xml",
           "asset": "eval-suites/eval-suites-mde-plot-1.svg",
           "bytes": 39007,
-          "sha256": "sha256:01cd03e8d9de8dba0fad212f7934e76d87fc1d6a4e195463fd395e312e2cce2b"
+          "sha256": "sha256:fbaa25fa855f27dc7120ada3d8ee31c76666762cb328b0647fd6b296d2bec45e"
         }
       ]
     },
@@ -380,7 +380,7 @@
           "mime": "image/svg+xml",
           "asset": "eval-suites/eval-suites-position-bias-plot-1.svg",
           "bytes": 223211,
-          "sha256": "sha256:be8730730bea57bfea796ca13483982d884d04f6e6ab7e32379b5d915f6a57af"
+          "sha256": "sha256:1bd71835b575928df289f1bad7cfbb63ba59b9b42001483d83adf11dae4bfb69"
         }
       ]
     },

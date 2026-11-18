@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:69e1699bcb935b8607477e9b9774faad24cf04987b41e5c1acac4e15b83f64e4",
+    "d2l_lib_fingerprint": "sha256:f06a0e07c5b9b22b0c68739ccd08533f2e6f7bcd2568b4e0abfb9f9a5ff531d6",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -76,12 +76,12 @@
       ]
     },
     "d2l-checkpoint-gpt-kwargs": {
-      "code_fingerprint": "sha256:2c5aed0b67da7e34a65d3de95007b81433af3d56d52c0fe378ae8d5b3c37324b",
+      "code_fingerprint": "sha256:6c7107c97fe0404fc56a0d0ec50f9ea50a921f00ea6b347836d658443938ee34",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-param-count": {
-      "code_fingerprint": "sha256:8dc506d0f58d2557eb863cf8310a14775682acb1fab52dd96bb92dd601198301",
+      "code_fingerprint": "sha256:35332a3837bcde7f0d23fc0c52cdad774d73b29ac79cbd8c5ed549721f19fdf7",
       "kind": "text",
       "outputs": [
         {
@@ -97,7 +97,7 @@
       ]
     },
     "d2l-checkpoint-rope-permutation": {
-      "code_fingerprint": "sha256:359ad361b4fb632d92fdc1f301bf5ecce340aafe457d5694909939a9e93761ad",
+      "code_fingerprint": "sha256:4c9846a954f9b9ea84db75006fd94712828dc35aad004a14f092caee1bacf223",
       "kind": "text",
       "outputs": [
         {
@@ -108,17 +108,17 @@
       ]
     },
     "d2l-checkpoint-map-load": {
-      "code_fingerprint": "sha256:2322c198a9dcc7e18752c7cbc5260bfc24b8716a219df5eb0a5bd0400cac08e8",
+      "code_fingerprint": "sha256:f8c3a38ed3d276dce48ca1a43c069c62a867d661dff2f28d8c8c8eab330edf24",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-load-qwen3": {
-      "code_fingerprint": "sha256:1f59ff2ff6b6b5fd599470621fb12ad84a10abaab68be4f7166505bc2eb5afd1",
+      "code_fingerprint": "sha256:625b3baa33c2ee0dea7aee78f8afb66a9d2add064601400d2e1104434c30572c",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-strict-accounting": {
-      "code_fingerprint": "sha256:584144b1c2be5a6597a1e39a1676cea7bafb40583958b77d76fbe74193fe623f",
+      "code_fingerprint": "sha256:e7a9a59abc2e6a8f6dd66b5a794bbb1c43215d0a6c20b630ee4d77d6cc889ee1",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +134,7 @@
       ]
     },
     "d2l-checkpoint-load-models": {
-      "code_fingerprint": "sha256:c5b450708012830be6618bd0f08799d388506eabc7587c222db30f2f5d9b28fc",
+      "code_fingerprint": "sha256:761be416b7b517acd78c0b5869aef6df56e215663e061cca8303a7ac29466b90",
       "kind": "text",
       "outputs": [
         {
@@ -150,17 +150,17 @@
       ]
     },
     "d2l-checkpoint-ratio-interval": {
-      "code_fingerprint": "sha256:a74b4889285610a12798c3b485fe11f21b79f6f6464e59576a13b373a1f61739",
+      "code_fingerprint": "sha256:3de1ea507a15d30d9dd7697dff725f0bdd50ef739786fad4fea3c6d3fb9b4a23",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-read-logits": {
-      "code_fingerprint": "sha256:7b56f383d9268f5027a8953750bc75ca3b9b7e66270f2a963ecd4e7009f690d2",
+      "code_fingerprint": "sha256:bfbc4597df7748ae90b83b6a88e2bdfb77ec3368dee641ae4603428a23382d9f",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-fp32-check": {
-      "code_fingerprint": "sha256:7f9a6e4c604e47797aa83c18dcf9037e9f82b4afb7f79b6ee18f8bdc2190b57e",
+      "code_fingerprint": "sha256:7471390fa92875651573c6ab736a42a9ea5eeb150c7a208dcaea6bb677ec0610",
       "kind": "text",
       "outputs": [
         {
@@ -186,7 +186,7 @@
       ]
     },
     "d2l-checkpoint-long-prompt": {
-      "code_fingerprint": "sha256:1b186ced538669835ac52c3cfcd3836f9ab5dfe468b4fc06a7ef038263e2de86",
+      "code_fingerprint": "sha256:56248672628565ecaeba3191bd96f3985737285426920b299296e3befe8ca8d4",
       "kind": "text",
       "outputs": [
         {
@@ -202,7 +202,7 @@
       ]
     },
     "d2l-checkpoint-bf16-check": {
-      "code_fingerprint": "sha256:be17cad2066ed6387e0e022a6adb9fafa02f71c3f384990b7ecac5345c29d61e",
+      "code_fingerprint": "sha256:5ebde1c1812442730d5ffad938baebaf4ae178c434adcb02bc6ad76642b1545f",
       "kind": "text",
       "outputs": [
         {
@@ -228,32 +228,32 @@
       ]
     },
     "d2l-checkpoint-sampler": {
-      "code_fingerprint": "sha256:357c16081583d93c5459ab9f49bb9195a5aa6a70d971192eb61daba279d19067",
+      "code_fingerprint": "sha256:630fc375abf28ac99abfc9008cbd0fa84989c49a25757ffcbcdf2a55202332d9",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate-paths": {
-      "code_fingerprint": "sha256:f99b66edab311efa93f2d595aef0746a1045ee9bf729787acbc4da1b7f2e12c3",
+      "code_fingerprint": "sha256:8812869d566da3967e0faacc191e01358850a9e626fde9cc066de95650ade280",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate-hf": {
-      "code_fingerprint": "sha256:9433ee0ed7f7af10d3aadf08820924556857f27dbb86e4473eef1e4bb9253156",
+      "code_fingerprint": "sha256:74e2391866cb33380db5811a0f3665df9004d8ed0619df7289aac74424d26667",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-finish": {
-      "code_fingerprint": "sha256:88611a1a12d143923ea1612da7f62c08831d2a332b01e964bfb0b5595813bdc9",
+      "code_fingerprint": "sha256:8cede5100064d8215c67230ff32e57bfc1069562869f2a22ba7fe88831fd2125",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate": {
-      "code_fingerprint": "sha256:f96b212c4df0b02625d8dbe900e82805a820e72b2b5c843dcc5d51ef365f37b0",
+      "code_fingerprint": "sha256:b8a09d42e19e6cbf88366d60bc33b4e4e63b2965c808d4e67825a106439ab271",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-greedy": {
-      "code_fingerprint": "sha256:da51603eda1f8c1d6ae56e41d6c931a806b15f9f796e1b367566b9cd28232399",
+      "code_fingerprint": "sha256:5e3dddbb6166edb423e89ac0f174455b5d50417a178715a337f7faf12fcbe05f",
       "kind": "text",
       "outputs": [
         {
@@ -274,7 +274,7 @@
       ]
     },
     "d2l-checkpoint-chat": {
-      "code_fingerprint": "sha256:68fbb0ddaf44b05b61d64affef9988b6f198b2e657aeb14f0dc9e8dfafb1c526",
+      "code_fingerprint": "sha256:26d60e965ae01a7b3fd25b07937907b7d8a23339b91e5faf4fc732b356448284",
       "kind": "text",
       "outputs": [
         {
@@ -285,7 +285,7 @@
       ]
     },
     "d2l-checkpoint-ladder": {
-      "code_fingerprint": "sha256:9230f19505ccd95d9666eeac102158182813aff13207d3c929b18c091463ba23",
+      "code_fingerprint": "sha256:c8610827c0329c6fef85684a7b06216ac36dae92b228c53503e041eebf241257",
       "kind": "text",
       "outputs": [
         {
@@ -311,12 +311,12 @@
       ]
     },
     "d2l-checkpoint-hooks": {
-      "code_fingerprint": "sha256:efdcc51c2674b7f494fd488f231f105c03516933a92905236116f8b3439acf4c",
+      "code_fingerprint": "sha256:05a0873587bb30b36db4a64bf052703faf5e2b406b02d9e01cd62831758e77e8",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-layer-errors": {
-      "code_fingerprint": "sha256:24915f484371eaf6c1faa7ac7d766402ccc474f5169bf56fad4750915f326983",
+      "code_fingerprint": "sha256:2c4110315bda56557a666cc746f3b22fe0879fa3ef605c8832540cc84dafdb3e",
       "kind": "text",
       "outputs": [
         {
@@ -342,12 +342,12 @@
       ]
     },
     "d2l-checkpoint-bug-states": {
-      "code_fingerprint": "sha256:e46ffaefedbda5d02bf7cbf327641c6415be94fb9bf75e01e314b648c69e7c6b",
+      "code_fingerprint": "sha256:3218991a05fd07984fdb1a40583991a4fe01b65e01011b91e2f3df19313ce7f4",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-bugs": {
-      "code_fingerprint": "sha256:b0f94a9de5ecfcc7aff6056718d5a88a4d871cc2a6bf821922c68a4d2ed22a2b",
+      "code_fingerprint": "sha256:89eda6dabe473fc7dafe7b7efc5adae8d7c74cb9aea5c86a6ae9070fa4116693",
       "kind": "text",
       "outputs": [
         {
@@ -358,7 +358,7 @@
       ]
     },
     "d2l-checkpoint-b5": {
-      "code_fingerprint": "sha256:ec017770c36b1975cf95fc16a8ca95fee3c4a797d04fa9dd6cd94d2f95fb4e07",
+      "code_fingerprint": "sha256:09fcd9db766c001aaed08cd58f57de23e046d1127bbfc4fa31f4f5ed70186227",
       "kind": "text",
       "outputs": [
         {
@@ -369,7 +369,7 @@
       ]
     },
     "d2l-checkpoint-divergence-plot": {
-      "code_fingerprint": "sha256:a4c89fa522b50f6305619d2afcbca240cd1e771cc001d73e6a993ae47fb1d954",
+      "code_fingerprint": "sha256:a8be91544f35221eea0af8a2bc4bab09e99ce9d08efeb2c78e885a8ab3cc9c8a",
       "kind": "asset",
       "outputs": [
         {
@@ -377,7 +377,7 @@
           "mime": "image/svg+xml",
           "asset": "d2l-checkpoint/d2l-checkpoint-divergence-plot-1.svg",
           "bytes": 45855,
-          "sha256": "sha256:e97572d40eea702fe41c0a841a42149580fa43358a231350815f174c7e42ea48"
+          "sha256": "sha256:8ee30e2eb3b93e1a0dda2bb1e5c380f6dec20026747173323f19b98765dd7d4f"
         }
       ]
     }

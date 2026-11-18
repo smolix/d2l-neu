@@ -319,17 +319,25 @@ print(pd.Series({
     'parameters': f'{sum(p.numel() for p in encoder.parameters()):,}'}
                 ).to_string())
 BANK = {'river': 'The boat drifted to the bank of the river.',
+        'shore': 'We sat on the grassy bank and watched the water.',
         'check': 'She paid the check in at the bank.',
         'rate': 'The bank raised its interest rate.'}
-V = {}  # the vector of "bank" after the embedding layer and after the last
+V = {}  # a word's vector after the embedding layer and after the last
 for w, text in BANK.items():
     x = tok(text, return_tensors='pt').to(dev)
-    i = x['input_ids'][0].tolist().index(tok.convert_tokens_to_ids('Ġbank'))
+    ids = x['input_ids'][0].tolist()
     with torch.inference_mode():
         h = encoder(**x, output_hidden_states=True).hidden_states
-    V[w] = (h[0][0, i], h[-1][0, i])
-for a, b in (('river', 'check'), ('river', 'rate'), ('check', 'rate')):
-    print(f'cos(bank, {a} / {b}): ' + ', '.join(
+    for word in ('bank', 'the') if w == 'river' else ('bank',):
+        i = ids.index(tok.convert_tokens_to_ids('Ġ' + word))
+        V[w, word] = (h[0][0, i], h[-1][0, i])
+for a, b in ((('river', 'bank'), ('shore', 'bank')),  # same sense
+             (('check', 'bank'), ('rate', 'bank')),
+             (('river', 'bank'), ('check', 'bank')),  # other senses
+             (('river', 'bank'), ('rate', 'bank')),
+             (('shore', 'bank'), ('check', 'bank')),
+             (('river', 'bank'), ('river', 'the'))):  # an unrelated word
+    print(f'cos({a[1]}, {a[0]} / {b[1]}, {b[0]}): ' + ', '.join(
         f'{name} {F.cosine_similarity(V[a][j], V[b][j], dim=0):.2f}'
         for j, name in enumerate(('embedding layer', 'last layer'))))
 ```
@@ -1165,8 +1173,7 @@ first word of a name gets `B-` and its type, the other words of the name get
 There is one complication. Labels belong to words, and the tokenizer may
 split a word into several tokens. The usual rule, and ours, gives the word's
 label to its first token and $-100$ to the rest, so the loss skips them and
-the prediction for a word is read at its first token. A split name from the
-training set will show the rule at work in a moment.
+the prediction for a word is read at its first token.
 
 ```{.python .input #bert-align}
 %%tab pytorch
@@ -1186,6 +1193,45 @@ def align_token_labels(word_ids, word_labels, scheme='first'):
         prev = w
     return labels
 ```
+
+CoNLL-2003 comes as lists of words with their tags. We join the words with
+spaces, tokenize the text, and map every token to its word through the
+characters it covers. The tokenizer's own notion of a word would not do: it
+splits at punctuation, so "U.S." would count as four words.
+
+```{.python .input #bert-conll-data}
+%%tab pytorch
+conll = {s: d2l.read_jsonl(d2l.download_keyed(f'conll2003-{s}'))
+         for s in ('train', 'valid')}
+with open(d2l.download_keyed('conll2003-labels')) as f:
+    id2label = {i: name for name, i in json.load(f).items()}
+
+def encode_words(words, tags):
+    """Token ids of the words joined by spaces, each token's word (through
+    its character offsets), and the aligned token labels."""
+    word_of_char = np.repeat(np.arange(len(words)), [len(w) + 1 for w in words])
+    enc = tok(' '.join(words), return_offsets_mapping=True)
+    word_ids = [None if s == e else int(word_of_char[e - 1])
+                for s, e in enc['offset_mapping']]
+    return enc['input_ids'], word_ids, d2l.align_token_labels(word_ids, tags)
+
+TAGGED = {s: [encode_words(w, t) for w, t in zip(df.tokens, df.tags)]
+          for s, df in conll.items()}
+assert all(sum(l != -100 for l in labels) == len(t) for s, df in conll.items()
+           for (_, _, labels), t in zip(TAGGED[s], df.tags))  # a label per word
+print({s: len(v) for s, v in TAGGED.items()}, 'sentences')
+i = next(i for i, (x, w, _) in enumerate(TAGGED['train'])  # a word split up
+         if len(x) < 14 and len(set(w)) < len(w) - 1)
+x, w, labels = TAGGED['train'][i]
+print(pd.DataFrame({'token': tok.convert_ids_to_tokens(x),
+                    'word': ['-' if v is None else v for v in w],
+                    'label': [id2label.get(l, '-') for l in labels]}
+                   ).T.to_string(header=False))
+```
+
+The training set has 14,041 sentences and the validation set 3,250. In the
+example, "Blackburn" becomes `ĠBlack`, which carries `I-PER`, and `burn`,
+which is not scored.
 
 ### Span F1
 
@@ -1234,45 +1280,6 @@ def span_f1(pred_tags, gold_tags, id2label):
         for k in kinds})
 ```
 
-CoNLL-2003 comes as lists of words with their tags. We join the words with
-spaces, tokenize the text, and map every token to its word through the
-characters it covers. The tokenizer's own notion of a word would not do: it
-splits at punctuation, so "U.S." would count as four words.
-
-```{.python .input #bert-conll-data}
-%%tab pytorch
-conll = {s: d2l.read_jsonl(d2l.download_keyed(f'conll2003-{s}'))
-         for s in ('train', 'valid')}
-with open(d2l.download_keyed('conll2003-labels')) as f:
-    id2label = {i: name for name, i in json.load(f).items()}
-
-def encode_words(words, tags):
-    """Token ids of the words joined by spaces, each token's word (through
-    its character offsets), and the aligned token labels."""
-    word_of_char = np.repeat(np.arange(len(words)), [len(w) + 1 for w in words])
-    enc = tok(' '.join(words), return_offsets_mapping=True)
-    word_ids = [None if s == e else int(word_of_char[e - 1])
-                for s, e in enc['offset_mapping']]
-    return enc['input_ids'], word_ids, d2l.align_token_labels(word_ids, tags)
-
-TAGGED = {s: [encode_words(w, t) for w, t in zip(df.tokens, df.tags)]
-          for s, df in conll.items()}
-assert all(sum(l != -100 for l in labels) == len(t) for s, df in conll.items()
-           for (_, _, labels), t in zip(TAGGED[s], df.tags))  # a label per word
-print({s: len(v) for s, v in TAGGED.items()}, 'sentences')
-i = next(i for i, (x, w, _) in enumerate(TAGGED['train'])  # a word split up
-         if len(x) < 14 and len(set(w)) < len(w) - 1)
-x, w, labels = TAGGED['train'][i]
-print(pd.DataFrame({'token': tok.convert_ids_to_tokens(x),
-                    'word': ['-' if v is None else v for v in w],
-                    'label': [id2label.get(l, '-') for l in labels]}
-                   ).T.to_string(header=False))
-```
-
-The training set has 14,041 sentences and the validation set 3,250. In the
-example, "Blackburn" becomes `ĠBlack`, which carries `I-PER`, and `burn`,
-which is not scored.
-
 ### The Token Head
 
 Transformers' token classifier applies the sentence head's dense layer, GELU
@@ -1315,6 +1322,31 @@ oracle = seqeval_f1(names(gold), names(r['eval_pred']))
 print(f'live, seed 0, {len(gold)} sentences: precision {f1["precision"]:.3f}, '
       f'recall {f1["recall"]:.3f}, F1 {f1["f1"]:.4f}; seqeval F1 {oracle:.4f}')
 print(pd.DataFrame(f1['per_type']).round(3).to_string())
+
+def names_of(tags):
+    """(start, end, type) of each name in one sentence, as span_f1 counts."""
+    out, start, kind = [], None, None
+    for i, t in enumerate([id2label[t] for t in tags] + ['O']):
+        bio, _, typ = t.partition('-')
+        if start is not None and (bio != 'I' or typ != kind):
+            out.append((start, i, kind))
+            start = None
+        if bio == 'B' or (bio == 'I' and start is None):
+            start, kind = i, typ
+    return out
+
+words, found, other = conll['valid'].tokens.tolist(), [], []
+for s, (g, p) in enumerate(zip(gold, r['eval_pred'])):
+    pred = {(a, b): k for a, b, k in names_of(p)}
+    for a, b, k in names_of(g):
+        if k == 'ORG':  # each gold organization: what the tagger made of it
+            found.append(pred.get((a, b), 'boundaries missed'))
+            if found[-1] not in ('ORG', 'boundaries missed'):
+                other.append((' '.join(words[s][a:b]), found[-1], s))
+print(f'the {len(found)} gold ORG names, as tagged: ' + ', '.join(
+    f'{k} {n}' for k, n in pd.Series(found).value_counts().items()))
+for name, k, s in other[:3]:  # the first three tagged as another type
+    d2l.print_wrapped(f'  {name} as {k}: {" ".join(words[s])}', width=96)
 seeds_f1 = {x['seed']: x['f1'] for x in TAGGING['runs']}
 bound = max(0.01, np.ptp(list(seeds_f1.values())))  # the seeds' spread
 print(f'stored, {len(seeds_f1)} seeds: F1 {min(seeds_f1.values()):.3f} '
@@ -1532,6 +1564,18 @@ print(f'decoder / encoder: measured {ms["decoder"] / ms["encoder"]:.0f}x, '
       f'FLOPs {flops["decoder"] / flops["encoder"]:.0f}x; '
       f'{torch.cuda.get_device_name() if GPU else "CPU"}, attention '
       f'{clf16.encoder.config._attn_implementation}')
+n_pad = X[0].shape[1]  # the encoder computes every padded position
+q_only = np.mean([len(dtok(d2l.fewshot_prompt([], query('mnli', r),
+                                                fmt=FMT['mnli']) + ' '
+                           + VERBAL['mnli'][r.label])['input_ids'])
+                  for r in items.itertuples()])  # 0 shots, one label word
+print(f'encoder: the batch is padded to {n_pad} tokens, '
+      f'{n_pad / tokens["encoder"]:.1f}x the tokens counted per pair')
+q_flops = d2l.cost_per_example(sum(p.numel() for p in dec.parameters()),
+                               q_only,
+                               dec.get_input_embeddings().weight.numel())
+print(f'decoder, the query alone with one label word: {q_only:.0f} tokens, '
+      f'FLOPs {q_flops / flops["encoder"]:.0f}x the encoder')
 for task in DATA:  # the stored timings of both tasks, 8 shots
     e, d = SWEEP['timing'][task], DECODER['timing'][task]['8']
     print(f'stored, {task}: encoder {e:,.0f}, decoder {d:,.0f} ms per 1,000; '
@@ -1594,6 +1638,7 @@ def decoder_band(task, k):
 
 fig, axes = d2l.plt.subplots(2, 2, figsize=(8, 7))
 for ax, task in zip(axes, ('mnli', 'sst2')):
+    ylabel = {'mnli': 'MNLI', 'sst2': 'SST-2'}[task] + ' accuracy'
     acc = runs.query('task == @task').groupby('n').acc
     sizes, big = acc.mean().index.to_numpy(), acc.get_group(acc.mean().index[-1])
     dec_acc = {k: decoder_band(task, k) for k in SHOTS}
@@ -1605,20 +1650,26 @@ for ax, task in zip(axes, ('mnli', 'sst2')):
     series['naive Bayes'] = ([NB[task, n] for n in sizes],) * 3
     majority = np.bincount(SWEEP['eval'][task]['label']).max() / len(
         SWEEP['eval'][task]['label'])
-    d2l.plot_intervals(sizes, series, 'labeled examples', f'{task} accuracy',
+    d2l.plot_intervals(sizes, series, 'labeled examples', ylabel,
                        kind='band', xscale='log', reference=majority,
                        axes=ax[0])
     sec = [SWEEP['timing'][task] / 1e3] + [DECODER['timing'][task][str(
         k)] / 1e3 for k in SHOTS]  # x: one cost per model
     none = [np.nan] * len(SHOTS)
     d2l.plot_intervals(sec, {
-        f'encoder, n = {sizes[-1]:,}': ([big.mean(), *none],
+        'encoder, largest training set': ([big.mean(), *none],
                                        [big.min(), *none], [big.max(), *none]),
         'decoder, 0, 4, 8 shots': tuple([np.nan] + [b[i] for b in
                                                     dec_acc.values()]
                                         for i in range(3))},
-        'seconds per 1,000 examples', f'{task} accuracy', xscale='log',
+        'seconds per 1,000 examples', ylabel, xscale='log',
         reference=majority, axes=ax[1])
+    for x, k, (y, _, _) in zip(sec[1:], SHOTS, dec_acc.values()):
+        left = k == SHOTS[1]  # the middle point's label clears the last
+        ax[1].annotate(f'{k} shots', (x, y), xytext=(-7 if left else 7, -4),
+                       textcoords='offset points', fontsize='small',
+                       ha='right' if left else 'left')
+    ax[1].set_xlim(right=3 * max(sec))  # room for the last label
     ax[1].set_xscale('log')  # standard log ticks, not one per cost
 for top, bottom in zip(*axes):  # the top row's legends serve both rows
     top.legend(fontsize='small')

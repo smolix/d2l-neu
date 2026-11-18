@@ -72,7 +72,7 @@ EMB_QWEN, RERANKER = 'Qwen/Qwen3-Embedding-0.6B', 'Qwen/Qwen3-Reranker-0.6B'
 GPU = torch.cuda.is_available()
 SMALL = not GPU  # the CPU path: the chunks of the dev documents only
 DTYPE = torch.bfloat16 if GPU else torch.float32
-ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
+ARTIFACTS = {  # name: (stored key, the file a regeneration writes)
     'emb-train': ('lm-enc-emb-results-v1', 'lm-enc-emb-results.json'),
     'emb-ckpt': ('lm-enc-modernbert-embed-v1', 'lm-enc-modernbert-embed.zip'),
     'emb-ckpt-mrl': ('lm-enc-modernbert-embed-mrl-v1',
@@ -90,6 +90,8 @@ MAX_LEN = {'chunk': 1024, 'query': 128, 'nq_query': 48, 'nq_passage': 160}
 PREFIX = {'query': 'query: ', 'passage': 'passage: '}  # E5's convention
 QWEN = d2l._EMBEDDERS[EMB_QWEN]  # pooling, padding side, query format
 INSTRUCT = QWEN['query_format']  # from the model card
+CARD_TASK = ('Given a web search query, retrieve relevant passages that '
+             'answer the query')  # the model card's default task
 CONFIG = dict(  # what the results are made with; reading them checks it
     model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC], corpus=d2l.R3_VERSION,
     pairs=N_PAIRS, held=N_HELD, cands=N_CAND, batch=B, tau=TAU, lrs=LRS,
@@ -99,7 +101,7 @@ CONFIG = dict(  # what the results are made with; reading them checks it
     reranker=RERANKER, reranker_revision=d2l.HF_ENCODER_REVISIONS[RERANKER])
 
 def result_path(name):
-    """The file this run regenerates for name, else the registered one."""
+    """The file this run regenerates for name, else the stored one."""
     key, file = ARTIFACTS[name]
     return d2l.lm_artifact(key, file if name in RERUN else None)
 
@@ -361,6 +363,9 @@ for name, (Q, X) in ROWS.items():
     METRICS[name] = d2l.retrieval_metrics(RANKED[name], GOLD, ks=(1, 5, 10))
 print(f'Recall@10: raw mean {ci(METRICS["raw mean"]["recall@10"])}, '
       f'BM25 {ci(METRICS["BM25"]["recall@10"])}')
+top1 = lambda name: len({r[0] for r in RANKED[name]})  # distinct passages
+print(f'distinct passages at rank 1 for the {len(QUESTIONS)} questions: '
+      f'raw mean {top1("raw mean")}, BM25 {top1("BM25")}')
 for i in range(3):  # the first three questions, top 1 against gold
     d2l.print_wrapped(f'\n{QUESTIONS[i]}\n  top 1: '
           f'{CORPUS.header(CORPUS[RANKED["raw mean"][i][0]])}\n  gold:  '
@@ -663,8 +668,9 @@ for name, deg in {'square': (0, 90, 180, 270),
     row = dict(configuration=name, alignment=align, uniformity=unif)
     for tau in (0.05, 0.5):  # every point a query; its partner the positive
         loss, _ = d2l.info_nce_loss(Z, Z[[1, 0, 3, 2]], tau)
-        row[f'InfoNCE - log 4, tau={tau}'] = loss.item() - math.log(4)
+        row[f'tau {tau}'] = loss.item() - math.log(4)
     rows.append(row)
+print('InfoNCE - log 4 in the last two columns, at two temperatures')
 print(pd.DataFrame(rows).round(3).to_string(index=False))
 ```
 
@@ -1159,10 +1165,12 @@ emb, emb_tok = d2l.load_encoder(EMB_QWEN, dtype=DTYPE,
                                 padding_side=QWEN['padding_side'])
 X5 = d2l.BookRetriever(FULL, dense=EMB_QWEN).chunk_vectors().float().cpu()[
     [FULL_INDEX[c] for c in CORPUS.ids]]
-for name, fmt in (('Qwen3-Embedding', '{query}'),
-                  ('Qwen3-Embedding + instruction', INSTRUCT)):
+for name, fmt, task in (
+        ('Qwen3-Embedding', '{query}', None),
+        ('Qwen3-Embedding + instruction', INSTRUCT, d2l.BOOK_TASK),
+        ('Qwen3-Embedding + card task', INSTRUCT, CARD_TASK)):
     ROWS[name] = (d2l.embed_texts(emb, emb_tok, [fmt.format(
-        task=d2l.BOOK_TASK, query=q) for q in QUESTIONS], QWEN['pooling'],
+        task=task, query=q) for q in QUESTIONS], QWEN['pooling'],
                                   max_len=MAX_LEN['query']), X5)
 RANKED |= {name: top10(Q @ X.T) for name, (Q, X) in ROWS.items()}
 RANKED |= {name: stored(EMB['runs'][name]) for name in (
@@ -1176,6 +1184,8 @@ print(pd.DataFrame({name: {k: f'{m[k].mean():.3f}' for k in m
                           if k != 'ndcg@10'} | {
     'ndcg@10 [CI]': ci(m['ndcg@10']), 'anisotropy': aniso.get(name, 'n/a')}
                     for name, m in METRICS.items()}).T.to_string())
+print('distinct passages at rank 1: ' + ', '.join(f'{n} {top1(n)}' for n in (
+    'BM25', 'raw mean', 'contrastive seed 0', 'Qwen3-Embedding')))
 for name in ('contrastive seed 0', 'Matryoshka'):  # live against stored
     reg = stored(EMB['runs'][name])
     same = np.mean([a == b for a, b in zip(RANKED[name], reg)])
@@ -1234,6 +1244,16 @@ print(D.round(3).rename(columns={'CI excludes 0': 'excl. 0',
       .to_string(index=False))
 print(f'Recall@10 of the three seeds: {np.round(seed_r10, 3)}, range '
       f'{seed_range:.3f}; best raw pooling: {best_raw}')
+fmt = lambda d: f'{d["delta"]:+.3f} [{d["low"]:+.3f}, {d["high"]:+.3f}]'
+print('\npaired differences, to - from, on three measures:')
+print(pd.DataFrame({f'{t} - {f}'.replace('Qwen3-Embedding', 'Qwen3')
+                    .replace('instruction', 'instr.'): {
+    m: fmt(delta(f, t, m)) for m in ('recall@1', 'mrr@10', 'recall@10')}
+    for f, t in (('BM25', 'Qwen3-Embedding'),
+                 ('BM25', 'Qwen3-Embedding + instruction'),
+                 ('Qwen3-Embedding', 'Qwen3-Embedding + instruction'),
+                 ('Qwen3-Embedding', 'Qwen3-Embedding + card task'))}).T
+      .to_string())
 gain = D[(D['from'] == best_raw) & (D['to'] == 'contrastive seed 0')].iloc[0]
 assert SMALL or gain.low > 0, 'no gain from contrastive training: a bug'
 ```
@@ -1493,7 +1513,9 @@ C = pd.DataFrame([dict(comparison=c, delta=r.mean, low=r.ci[0], high=r.ci[1])
                   for c, r in ((c, d2l.paired_bootstrap(a, b, cluster=CLUSTER))
                                for c, a, b in pairs)])
 C['CI excludes 0'] = (C.low > 0) | (C.high < 0)
-C['beyond seed range'] = C.delta.abs() > seed_range + 1e-9  # a tie is not
+C['beyond seed range'] = [  # a tie is not; one model's two formats: no
+    '' if 'binary' in c else d > seed_range + 1e-9  # training noise
+    for c, d in zip(C.comparison, C.delta.abs())]
 print(C.round(3).to_string(index=False))
 print(f'seed range of Recall@10 at full width (a proxy for the training '
       f'noise\n  at smaller widths): {seed_range:.3f}')
@@ -1562,6 +1584,37 @@ well as a Matryoshka one in both settings. Below that, Matryoshka training
 is what keeps recall on data like its training data, and whether it helps
 on other data has to be measured on one's own questions.
 
+One difference between the two settings is length: training cut the NQ
+passages to 160 tokens, and the book's chunks run to 512. The next cell
+cuts the book's passages to 160 tokens and compares the two checkpoints
+again.
+
+```{.python .input #text-embeddings-compress-160}
+%%tab pytorch
+R160 = {}  # the book's questions; its passages cut to 160 tokens
+for label, key in (('contrastive', 'emb-ckpt'),
+                   ('Matryoshka', 'emb-ckpt-mrl')):
+    model = load_ckpt(result_path(key))
+    Q = encode(model, QUESTIONS, 'query', PREFIX['query'])
+    X = encode(model, CHUNKS, 'nq_passage', PREFIX['passage'])
+    del model
+    d2l.lm_free()
+    for k in (Q.shape[1], 128, 64, 32, 16):
+        R160[label, k] = recall10(d2l.truncate_embeddings(Q, k) @
+                                  d2l.truncate_embeddings(X, k).T)
+rows = []
+for k in (Q.shape[1], 128, 64, 32, 16):
+    r = d2l.paired_bootstrap(R160['Matryoshka', k], R160['contrastive', k],
+                             cluster=CLUSTER)
+    rows.append({'width': k, 'contrastive': R160['contrastive', k].mean(),
+                 'Matryoshka': R160['Matryoshka', k].mean(), 'delta': r.mean,
+                 'low': r.ci[0], 'high': r.ci[1]})
+C160 = pd.DataFrame(rows)
+C160['CI excludes 0'] = (C160.low > 0) | (C160.high < 0)
+print(f'the book, passages cut to {MAX_LEN["nq_passage"]} tokens: Recall@10')
+print(C160.round(3).to_string(index=False))
+```
+
 ## Using a Released Embedder
 :label:`subsec_lm_emb_practice`
 
@@ -1582,9 +1635,7 @@ st = SentenceTransformer(
     EMB_QWEN, revision=d2l.HF_ENCODER_REVISIONS[EMB_QWEN],
     device='cuda' if GPU else 'cpu', model_kwargs={'dtype': DTYPE},
     processor_kwargs={'padding_side': QWEN['padding_side']})
-card_task = ('Given a web search query, retrieve relevant passages that '
-             'answer the query')  # the model's own query prompt
-assert st.prompts['query'] == INSTRUCT.format(task=card_task, query='')
+assert st.prompts['query'] == INSTRUCT.format(task=CARD_TASK, query='')
 assert st[1].pooling_mode == 'lasttoken' and QWEN['pooling'] == 'last'
 prompt = INSTRUCT.format(task=d2l.BOOK_TASK, query='')
 ours = torch.cat([d2l.embed_texts(emb, emb_tok, CHUNKS[:16], QWEN['pooling'],
@@ -1725,7 +1776,7 @@ questions, and the instruction we wrote did not help.
     1. Take 200 answerable questions from `d2l.book_qa('train')` and search
        the whole book for each. Compare MRR@10 without an instruction, with
        our task, with the model card's default task (the string
-       `card_task` in the library check) and with two wordings of your own,
+       `CARD_TASK` of the setup cell) and with two wordings of your own,
        using paired, document-clustered intervals.
     1. Choose the best wording on these training questions alone, then
        evaluate it once on the dev questions. Does its advantage survive?

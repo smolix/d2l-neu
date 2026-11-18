@@ -60,7 +60,7 @@
       ]
     },
     "bert-raw": {
-      "code_fingerprint": "sha256:72d0b37fce84c77c2f1c2c8a688851ea9d9120fcbde569601ce92394518ef23b",
+      "code_fingerprint": "sha256:8c1f228a03c5abf26b664982e7518d628c6cbf58e2f8395b18ae48abe88a79de",
       "kind": "text",
       "outputs": [
         {
@@ -71,12 +71,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hidden states: (1, 16, 768)\nembedding modules: ['tok_embeddings', 'norm', 'drop']\nlayers                             22\nwidth                             768\nheads                              12\npositions                        8192\nglobal attention every              3\nlocal window                      128\nvocabulary                      50368\nclassifier pooling               mean\nparameters                149,014,272\ncos(bank, river / check): embedding layer 1.00, last layer 0.68\ncos(bank, river / rate): embedding layer 1.00, last layer 0.65\ncos(bank, check / rate): embedding layer 1.00, last layer 0.85\n"
+          "text": "hidden states: (1, 16, 768)\nembedding modules: ['tok_embeddings', 'norm', 'drop']\nlayers                             22\nwidth                             768\nheads                              12\npositions                        8192\nglobal attention every              3\nlocal window                      128\nvocabulary                      50368\nclassifier pooling               mean\nparameters                149,014,272\ncos(bank, river / bank, shore): embedding layer 1.00, last layer 0.81\ncos(bank, check / bank, rate): embedding layer 1.00, last layer 0.85\ncos(bank, river / bank, check): embedding layer 1.00, last layer 0.68\ncos(bank, river / bank, rate): embedding layer 1.00, last layer 0.65\ncos(bank, shore / bank, check): embedding layer 1.00, last layer 0.72\ncos(bank, river / the, river): embedding layer 0.01, last layer 0.32\n"
         }
       ]
     },
     "bert-mlm-fill": {
-      "code_fingerprint": "sha256:88d0879854ab25e4c107cf9229876315a3a0c2de133a75d7a367fe35fc5131c3",
+      "code_fingerprint": "sha256:2be81681f0687a2f40ea56a5486ba20b60ea015fc0d7a1e04abab8bfd6ffb3a4",
       "kind": "text",
       "outputs": [
         {
@@ -87,12 +87,12 @@
       ]
     },
     "bert-mlm-corrupt": {
-      "code_fingerprint": "sha256:a463b0e4c005ec13efb8dcb5641378e9421972aa583ddd6ad7191df49cf651cd",
+      "code_fingerprint": "sha256:7a5349fc7436f2f3088beea813ca8db7ab2944ca0d347a457fdf51da82c7c08c",
       "kind": "text",
       "outputs": []
     },
     "bert-mlm-stats": {
-      "code_fingerprint": "sha256:69d59c865e3cbace8fcd3b9b436b51a218ee23d9d34adc48142b84e12c58ab03",
+      "code_fingerprint": "sha256:137e2ffded61c3330e0f4516829c3ede1d0d07e634cb872d5a45367d0269fcf9",
       "kind": "text",
       "outputs": [
         {
@@ -103,7 +103,7 @@
       ]
     },
     "bert-attention-cost": {
-      "code_fingerprint": "sha256:7e3da0eaea73b3c820a4e59509f7cc21a32c87b1acf1c7e3a01ef11179dfdc34",
+      "code_fingerprint": "sha256:e178efd79c2059d1802ea18d65dc98d41b7bca1650ecca3c39ac424fd7b21a6a",
       "kind": "text",
       "outputs": [
         {
@@ -119,12 +119,12 @@
       ]
     },
     "bert-pooled-classifier": {
-      "code_fingerprint": "sha256:127ceafadc11a8452bde392b16731bf2155045834d10763cb3b7f388f21b085f",
+      "code_fingerprint": "sha256:16245a0103805afb6713ee20b309a7a33cdb9d1f75760289c25795be5a30deaa",
       "kind": "text",
       "outputs": []
     },
     "bert-head-check": {
-      "code_fingerprint": "sha256:944ed9a8051c3687ad943b692f2793f28f1863417bfbc6b8cfecf66bc438baa2",
+      "code_fingerprint": "sha256:d22e9df7163fabd55c7bf93933fcbd9fe1896d44f11d28cdcc8ca961673e14f2",
       "kind": "text",
       "outputs": [
         {
@@ -140,12 +140,12 @@
       ]
     },
     "bert-finetune": {
-      "code_fingerprint": "sha256:0b366629b6372e64deddc29d023494fa8d4415baea9b31126060593366cef8b5",
+      "code_fingerprint": "sha256:2a74949cb6eac1c91286a29b7780f39bfae0be83afc7741d0496cd4ff1a119b7",
       "kind": "text",
       "outputs": []
     },
     "bert-data": {
-      "code_fingerprint": "sha256:63d5c937daae1382f12db733bde9b6631564e7a9e2312ac8d1340182af0a0b39",
+      "code_fingerprint": "sha256:f3c7ad99bb526805982c861e425827202744b52f2150cb1c309e1ff9bd440e14",
       "kind": "text",
       "outputs": [
         {
@@ -156,12 +156,12 @@
       ]
     },
     "bert-run-defs": {
-      "code_fingerprint": "sha256:e8947d3af3d0ebbbf45b0578d569623996835ed12182fe8fe5e00dd67535e9b8",
+      "code_fingerprint": "sha256:6ba3055d003d3073ba8fd88b2e1197fd63eb983cce881a4ee015a2da66de1f3e",
       "kind": "text",
       "outputs": []
     },
     "bert-sweep": {
-      "code_fingerprint": "sha256:d1b5b48d91b6e2e250f5fde9416c3590f7839e280dfedef47e41be5643668aca",
+      "code_fingerprint": "sha256:3c1ee9dee4e5c7864e7b085c0c09cc06499729a760c039e1b09ee584eb0b5d3d",
       "kind": "text",
       "outputs": [
         {
@@ -172,7 +172,7 @@
       ]
     },
     "bert-sweep-live": {
-      "code_fingerprint": "sha256:14ec4fcaf9828023cb897a139f48591d784522d834417a0a1c11afc71c336779",
+      "code_fingerprint": "sha256:69a9591697118d059563aba335d4a58a59a66ef032293eded6338d7e79df6152",
       "kind": "text",
       "outputs": [
         {
@@ -183,7 +183,7 @@
       ]
     },
     "bert-ckpt-live": {
-      "code_fingerprint": "sha256:57e1e1ae32df80425191d23603d036bfb347ad086ab73708994058bfad4784d3",
+      "code_fingerprint": "sha256:373598624c4cb88482e6c68b8306b7f14196a9d3c2164abbf8cd26dbf861bc5f",
       "kind": "text",
       "outputs": [
         {
@@ -194,7 +194,7 @@
       ]
     },
     "bert-hypothesis-only": {
-      "code_fingerprint": "sha256:c8c4182e8457007f050aca776499a348229111b04d8f7cf082bacf5a32bf4c6e",
+      "code_fingerprint": "sha256:d722376efdb7650cdeeba4aabcfab9e77b6c6a466b39421b6110c436dc5cee78",
       "kind": "text",
       "outputs": [
         {
@@ -205,17 +205,12 @@
       ]
     },
     "bert-align": {
-      "code_fingerprint": "sha256:87b10e8633c08dcce0a1bfb26fd548f232881d9d8074c6ce74a6c62cca9237cd",
-      "kind": "text",
-      "outputs": []
-    },
-    "bert-span-f1": {
-      "code_fingerprint": "sha256:fb5d7c355c1c1b2cc471ac99dd3e22bed84a218432eb0d5b8bc83daa4a6650b0",
+      "code_fingerprint": "sha256:1d035be689941e1841d85c1a1527865185fcbbe0c0f8653f633d4ff604df8d52",
       "kind": "text",
       "outputs": []
     },
     "bert-conll-data": {
-      "code_fingerprint": "sha256:20dcc4f8ba49ca79009b2d1b260f3b11e6425a2581e40b1df7ad352f1cc70582",
+      "code_fingerprint": "sha256:2c1839ae9b80ad4d315139d7337df747c8a5b6d5cc45936b27f65f301207632e",
       "kind": "text",
       "outputs": [
         {
@@ -225,8 +220,13 @@
         }
       ]
     },
+    "bert-span-f1": {
+      "code_fingerprint": "sha256:cfecb9b335f31b282d10a4dd6941048b8542409adef747d81de25424920386d9",
+      "kind": "text",
+      "outputs": []
+    },
     "bert-tagging": {
-      "code_fingerprint": "sha256:fbb915780d4a82190453b7ba116efde5ef74622c32c08d62a02334437e34dd6d",
+      "code_fingerprint": "sha256:8c727b26fa85b4eb5ea65823e0815fe594650a520b428c4c6b5bc2b88fd09ea3",
       "kind": "text",
       "outputs": [
         {
@@ -237,12 +237,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live, seed 0, 3250 sentences: precision 0.939, recall 0.951, F1 0.9450; seqeval F1 0.9450\n             LOC   MISC    ORG    PER\nprecision  0.974  0.852  0.912  0.969\nrecall     0.973  0.898  0.925  0.975\nf1         0.973  0.874  0.919  0.972\nstored, 3 seeds: F1 0.945 to 0.951, seed 0 0.9450 (bound on the live difference 0.010)\n  peak 5.7 GiB (5.8 GiB reserved)\n"
+          "text": "live, seed 0, 3250 sentences: precision 0.939, recall 0.951, F1 0.9450; seqeval F1 0.9450\n             LOC   MISC    ORG    PER\nprecision  0.974  0.852  0.912  0.969\nrecall     0.973  0.898  0.925  0.975\nf1         0.973  0.874  0.919  0.972\nthe 1341 gold ORG names, as tagged: ORG 1241, boundaries missed 45, MISC 22, LOC 19, PER 14\n  Kent as LOC: By stumps Kent had reached 108 for three .\n  Lancashire as PER: Hove : Sussex 363 -LPR- W. Athey 111 , V. Drakes 52 ; I. Austin 4-37 -RPR-\n    , Lancashire 197-8 -LPR- W. Hegg 54 -RPR-\n  NFL as MISC: NFL AMERICAN FOOTBALL-RANDALL CUNNINGHAM RETIRES .\nstored, 3 seeds: F1 0.945 to 0.951, seed 0 0.9450 (bound on the live difference 0.010)\n  peak 5.7 GiB (5.8 GiB reserved)\n"
         }
       ]
     },
     "bert-decoder": {
-      "code_fingerprint": "sha256:4cb8b6dc1b10bda049ffcc7797165fe4acfe7ff1d30e1c53b660ecdebcbc4774",
+      "code_fingerprint": "sha256:bcdbe649d7b40bc268055a94c6aba1fc7ec00ce0a472f332aaa20546c8028a6f",
       "kind": "text",
       "outputs": [
         {
@@ -263,7 +263,7 @@
       ]
     },
     "bert-naive-bayes": {
-      "code_fingerprint": "sha256:58ff8677b198e98fa630741feb1877775471fbdcc55924dc747b5fbbe3651a00",
+      "code_fingerprint": "sha256:2c8076efd434ababfbdf36fd04694927d13961b493310c7b27bb57dfc8e4a6d6",
       "kind": "text",
       "outputs": [
         {
@@ -274,36 +274,36 @@
       ]
     },
     "bert-cost": {
-      "code_fingerprint": "sha256:a3f574bc296aa98e49204f0f0a037219b832b75b518af5792873912dc9c91abb",
+      "code_fingerprint": "sha256:c3b005bc849a152fadd32549a6020503ba79a2f9d6f51171c3ac57ecd0dd3215",
       "kind": "text",
       "outputs": []
     },
     "bert-timing": {
-      "code_fingerprint": "sha256:bec970ecdac1876e8f49c3a7c2405fa783656fa3c7146eb8ee8a77868bae4e2a",
+      "code_fingerprint": "sha256:15342d5e3eb82ecf0753f05c5aab74317b3f06f37dc994d762071666d0dbed58",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, stored\nencoder                40.3                 8.9               432.9                 445.9\ndecoder              1543.1              4349.8             47366.4               48036.6\ndecoder / encoder: measured 109x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\nstored, mnli: encoder 446, decoder 48,037 ms per 1,000; decoder / encoder 108x\nstored, sst2: encoder 426, decoder 12,410 ms per 1,000; decoder / encoder 29x\n"
+          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, stored\nencoder                40.3                 8.9               431.7                 445.9\ndecoder              1543.1              4349.8             47335.2               48036.6\ndecoder / encoder: measured 110x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\nencoder: the batch is padded to 87 tokens, 2.2x the tokens counted per pair\ndecoder, the query alone with one label word: 49 tokens, FLOPs 16x the encoder\nstored, mnli: encoder 446, decoder 48,037 ms per 1,000; decoder / encoder 108x\nstored, sst2: encoder 426, decoder 12,410 ms per 1,000; decoder / encoder 29x\n"
         }
       ]
     },
     "bert-curve": {
-      "code_fingerprint": "sha256:383c58e95a90fc8026943caf49bd84d2e60a81f94778600d1f30ed8c826e452b",
+      "code_fingerprint": "sha256:87589ec67132ca0f761d2ac3dd5b7ef1b9d3e32ad2ba9cc61282d7d25b6d4de9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "bert/bert-curve-1.png",
-          "bytes": 77193,
-          "sha256": "sha256:2f080be844512c14acf5ffe11a95946c19c21d422674be8eb590ba7c0b750356"
+          "bytes": 84932,
+          "sha256": "sha256:9b21617cb6ebbb6fcc7f78fec15224f039367a2184101bacc32fe86b7a22a135"
         }
       ]
     },
     "bert-crossing": {
-      "code_fingerprint": "sha256:64f6ee9d1442c6f90d0097ec98a3c5d5d246c5234ff22679f18d382e35abbd0d",
+      "code_fingerprint": "sha256:a1c642d31bb48bed913b6edde1ecc00f995e48075b9fb05cb9d91034ed9033d4",
       "kind": "text",
       "outputs": [
         {

@@ -985,6 +985,11 @@ B6 = CONFIGS['budget-6000']['batch']
 g8, g4 = mem(GEN, 3300, BATCH), mem(GEN, 6300, B6)
 e, r = mem(EMB, 512, 16), mem(RERANKER, 1024, 16)
 j = mem(JUDGE['model'], 3500, 16)  # 16 sequences in flight on the server
+jc = CFG[JUDGE['model']]  # FP8 except the modules the checkpoint keeps
+keep = jc.quantization_config['modules_to_not_convert']  # in bf16
+jt = getattr(jc, 'text_config', jc)
+emb = sum(m in keep for m in ('model.embed_tokens', 'lm_head')) * (
+    jt.vocab_size * jt.hidden_size * 2 / 2**30)  # GiB, two bytes per weight
 table = pd.DataFrame({  # GiB
     f'generation, 3,300 x {BATCH}': (g8['weights'], g8['kv_cache'] +
                                      g8['recurrent_state'],
@@ -993,15 +998,16 @@ table = pd.DataFrame({  # GiB
                                   g4['recurrent_state'], g4['activations']),
     'retrieval phase': (g8['weights'] + e['weights'] + r['weights'], 0.0,
                         max(e['activations'], r['activations'])),
-    'judge, FP8 weights': (j['params'], j['kv_cache'] + j['recurrent_state'],
-                           0.0)}, index=['weights', 'KV and state',
-                                         'activations']).T
+    'judge, FP8 weights': (j['params'] + emb / 2, j['kv_cache'] +
+                           j['recurrent_state'], 0.0)},
+    index=['weights', 'KV and state', 'activations']).T
 table['total'] = table.sum(axis=1)
 table['limit'] = ['one 24 GB GPU'] * 3 + ['two GPUs, 2 x 24 GB']
 print(table.to_string(float_format='{:.1f}'.format))
-print('GiB; the judge stores one byte per weight (FP8), split over two '
-      'cards,\nand vLLM reserves 90% of each card for its weights, cache and '
-      'activations')
+print(f'GiB; the judge stores one byte per weight (FP8), except its input '
+      f'and output\nembeddings, which stay in bf16 ({emb:.1f} GiB of the '
+      f'{table.weights.iloc[-1]:.1f}); its weights are split over\ntwo cards, '
+      f'and vLLM reserves 90% of each card for weights, cache and activations')
 assert table.total.iloc[:2].max() < CARD_GIB  # generation fits one card
 KEEP_GEN = table.total.iloc[2] < CARD_GIB  # the generator idles on the card
 print('retrieval phase: the generator stays on the card' if KEEP_GEN else
@@ -1034,15 +1040,18 @@ if 'rag-gen-base' in RERUN:
     d2l._rag_save_gens('rag-gen-base', d2l._rag_run_configs(
         ['closed', 'base', 'oracle', 'base-repeat'], DEV, RET, KEEP_GEN,
         DEPTH))
-GENS = d2l._rag_load_gens(RERUN)
-print(GENS.assign(context_tokens=[sum(CHUNKS[i]['n_tokens'] for i in c)
-                                  for c in GENS.context_ids])
-      .groupby(['split', 'config'], sort=False).agg(
+GENS = d2l._rag_load_gens(RERUN)  # every arm of this section and the next
+ARMS = ['closed', 'base', 'oracle', 'base-repeat']  # this section's arms
+G = GENS[(GENS.split == 'dev') & GENS.config.isin(ARMS)]
+print(G.assign(context_tokens=[sum(CHUNKS[i]['n_tokens'] for i in c)
+                               for c in G.context_ids])
+      .groupby('config').agg(
           answers=('qid', 'size'), context_tokens=('context_tokens', 'mean'),
           prompt_tokens=('n_prompt_tokens', 'mean'),
-          new_tokens=('n_new_tokens', 'mean')).round(0).astype(int))
+          new_tokens=('n_new_tokens', 'mean')).reindex(ARMS).round(0)
+      .astype(int))
 
-LIVE = d2l.BookQA(list(DEV)[:N_LIVE], 'dev')  # the registered run's first
+LIVE = d2l.BookQA(list(DEV)[:N_LIVE], 'dev')  # the recorded run's first
 live = d2l._rag_run_config('base', LIVE, RET, KEEP_GEN, DEPTH)  # batch, rerun
 print(f'live generation: {d2l.lm_peak()}')
 ref = GENS[GENS.config == 'base'].set_index('qid')
@@ -1057,7 +1066,7 @@ def prefix_share(a, b):
 
 same = [prefix_share(r['answer'], ref.answer[r['qid']]) for r in live]
 ctx = sum(r['context_ids'] == list(ref.context_ids[r['qid']]) for r in live)
-print(f'{N_LIVE} base answers generated again: {ctx} with the registered '
+print(f'{N_LIVE} base answers generated again: {ctx} with the recorded '
       f'context, {sum(s == 1 for s in same)} identical answers\n  tokens '
       f'agreeing before the first difference: {np.mean(same):.3f}')
 oracle = d2l.generate(*d2l._rag_generator(), [d2l.rag_prompt(
@@ -1290,13 +1299,14 @@ if retry and os.path.exists(retry):  # the calibration pairs judged again
     for i, x in zip(redo, calibration_verdicts(retry, RETRY_TOKENS,
                                                [CAL[i] for i in redo])):
         CAL_V[i] = x
+here = judged.merge(G[['config', 'qid']])  # this section's dev arms
 print(pd.DataFrame({
-    'answers': GENS.groupby('config').size(),
-    'judged': judged.groupby('config').size(),
-    'judged again': judged.groupby('config').max_new_tokens.apply(
+    'answers': G.groupby('config').size(),
+    'judged': here.groupby('config').size(),
+    'judged again': here.groupby('config').max_new_tokens.apply(
         lambda t: (t == RETRY_TOKENS).sum()),
-    'unjudged': judged.assign(none=judged.correct.isna()).groupby(
-        'config').none.sum()}).fillna(0).astype(int).to_string())
+    'unjudged': here.assign(none=here.correct.isna()).groupby(
+        'config').none.sum()}).reindex(ARMS).fillna(0).astype(int).to_string())
 print(f'judged again: with {RETRY_TOKENS:,} new tokens, once\nunjudged: '
       'still no verdict on correctness (left out of accuracy)')
 ```
@@ -1330,9 +1340,13 @@ graded = [not d2l._rag_abstained(p['answer']) for p in cal]
 assert all(x[k] == recorded[p['qid']][k] for p, x, g in zip(
     cal, CAL_V0, graded) if g for k in VERDICTS)  # the replies, replayed
 again = sum(no_verdict(x, p) for p, x in zip(cal, CAL_V0))
-print(f'{len(cal) - sum(graded)} of {len(cal)} calibration answers abstain '
-      f'(decided by rule); the judge grades the others\n  {again} without a '
-      f'verdict judged again with {RETRY_TOKENS:,} new tokens')
+unans = [not ITEMS[p['qid']]['answerable'] for p in cal]
+by_rule = sum(not g or u for g, u in zip(graded, unans))  # as rag_judge does
+print(f'{by_rule} of {len(cal)} calibration answers are decided by rule on '
+      f'correct ({len(cal) - sum(graded)} abstain,\n  '
+      f'{sum(g and u for g, u in zip(graded, unans))} answer an unanswerable '
+      f'question); {again} without a verdict judged again with '
+      f'{RETRY_TOKENS:,} new tokens')
 
 def kappa(a, b):
     """Cohen's kappa of two 0/1 arrays."""
@@ -1383,10 +1397,11 @@ for k in ('correct', 'faithful'):  # the claims that rest on the judge
     (acc, _, _), (_, klo, _) = agreement(*zip(*[
         (x[k], lab[p['qid']][k]) for p, x in zip(cal, v)
         if None not in (x[k], lab[p['qid']][k])]))
-    print(f'C0 on {k} against the consensus: agreement {acc:.2f}, kappa '
-          f'interval from {klo:.2f}\n  ' + ('passes (>= 0.8, above 0.4)'
-          if acc >= 0.8 and klo > 0.4 else 'fails: claims on it carry the '
-          'agreement'))
+    print(f'judge against the consensus on {k}: agreement {acc:.2f}, kappa '
+          f'interval from {klo:.2f}:\n  ' + (
+              'accepted (agreement >= 0.8, kappa interval above 0.4)'
+              if acc >= 0.8 and klo > 0.4 else 'not accepted: claims that '
+              'rest on it carry the agreement'))
 print('the calibration answers come from the earlier generator, Qwen3-4B')
 if len(JUD) and 2 * CONCURRENCY in JUD.concurrency.values:
     J = JUD[JUD.config == 'base']
@@ -1488,6 +1503,8 @@ METRICS = ['recall@5', 'cov@3000', 'accuracy', 'faithful', 'cite_precision',
 if len(S) == 4:
     rows = {c: {m: boot(S[c][m], cluster=S[c].cluster) for m in METRICS}
             for c in ('closed', 'base', 'oracle')}
+    for m in ('recall@5', 'cov@3000'):  # the oracle bypasses retrieval
+        rows['oracle'][m] = 'n/a'
     for c in rows:
         s = S[c]
         rows[c]['abstain, unanswerable'] = boot(
@@ -1511,6 +1528,7 @@ if len(S) == 4:
          paired(S['base-repeat'], B, 'accuracy'))],
         columns=['difference', 'questions', 'accuracy [95% CI]'])
           .to_string(index=False))
+    print(f'oracle - base on faithful: {paired(S["oracle"], B, "faithful")}')
     C = S['closed'][S['closed'].answerable & S['closed'].book_specific]
     Bs = B[B.answerable & B.book_specific]
     print(f'book-specific answerable questions ({len(C)}): closed book '
@@ -1531,9 +1549,10 @@ if {'base', 'base-repeat'} <= set(GENS.config):  # answers, not verdicts
     same_ctx = b.context_ids.map(tuple) == r.context_ids.map(tuple)
     differ = b.answer != r.answer
     print(f'base and base-repeat (same questions, other batches): '
-          f'{(~same_ctx).sum()} of {len(b)} contexts differ\n  (query '
-          f'embeddings batched differently); with the same context '
-          f'{differ[same_ctx].sum()} of {same_ctx.sum()} answers differ')
+          f'{(~same_ctx).sum()} of {len(b)} contexts differ\n  (the query '
+          f'embeddings were batched differently too);\n  with the same '
+          f'context {differ[same_ctx].sum()} of {same_ctx.sum()} answers '
+          f'differ')
 print('* fewer than 100 questions (documents resampled)\n+ fewer than 30 '
       'documents: questions resampled, an interval that is likely too '
       'narrow')

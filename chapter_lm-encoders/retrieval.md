@@ -66,11 +66,10 @@ EMB, RERANKER = d2l.DEFAULT_EMBEDDER, 'Qwen/Qwen3-Reranker-0.6B'
 GPU = torch.cuda.is_available()
 SMALL = not GPU  # the CPU path: fewer questions embedded and reranked live
 DTYPE, DEVICE = (torch.bfloat16, 'cuda') if GPU else (torch.float32, 'cpu')
-ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
+ARTIFACTS = {  # name: (stored key, the file a regeneration writes)
     'ret-stress-emb': ('lm-enc-r3-stress-emb-v1', 'lm-enc-r3-stress-emb.npz'),
     'ret-rerank': ('lm-enc-ret-rerank-v1', 'lm-enc-ret-rerank.json'),
-    'ret-ann': ('lm-enc-ann-v1', 'lm-enc-ann.json'),
-    'ret-crossover': ('lm-enc-ret-crossover-v1', 'lm-enc-ret-crossover.json')}
+    'ret-ann': ('lm-enc-ann-v1', 'lm-enc-ann.json')}
 RERUN = d2l.lm_rerun(ARTIFACTS)
 assert GPU or not RERUN & {'ret-stress-emb', 'ret-rerank'}, \
     'encoding and reranking for a regeneration need a GPU'
@@ -104,16 +103,12 @@ CONFIG = {  # what each result is made with; reading it checks this
     'ret-ann': dict(stress=ARTIFACTS['ret-stress-emb'][0], n=STRESS_N,
                     nlist=NLIST, nprobes=NPROBES, pq_ms=PQ_MS, seeds=PQ_SEEDS,
                     hnsw=(HNSW_M, EF_CONSTRUCTION), ef=EF_SEARCHES,
-                    queries=N_NQ_QUERIES, threads=BUILD_THREADS),
-    'ret-crossover': dict(stress=ARTIFACTS['ret-stress-emb'][0], n=10**6,
-                          noise='median nearest-neighbour distance',
-                          hnsw=(HNSW_M, EF_CONSTRUCTION),
-                          threads=BUILD_THREADS)}
+                    queries=N_NQ_QUERIES, threads=BUILD_THREADS)}
 # The chunk vectors (ret-stress-emb, ret-rerank) and the dev questions
 # (ret-rerank) these results depend on are added as sha1s once loaded.
 
 def result_path(name):
-    """The file this run regenerates for name, else the registered one."""
+    """The file this run regenerates for name, else the stored one."""
     key, file = ARTIFACTS[name]
     return d2l.lm_artifact(key, file if name in RERUN else None)
 
@@ -165,6 +160,36 @@ def show_machine(m, threads=True):
 show_machine(machine(), threads=False)  # the counts are set where they run
 print(f'threads: {BUILD_THREADS} for each Faiss build, one for each timed '
       'search')
+
+def signflip_p(d, cluster, n=10_000):
+    """Two-sided sign-flip p-value of the mean of the per-document mean
+    differences: each document's mean keeps or flips its sign at random."""
+    m = np.array([d[cluster == c].mean() for c in np.unique(cluster)])
+    flips = np.random.default_rng(0).choice([-1.0, 1.0], (n, len(m)))
+    return np.mean(np.abs(flips @ m) >= abs(m.sum()) - 1e-12)
+
+def boot(a, b=None, cluster=None):
+    """Mean of per-question scores a (or of a - b, paired) with its 95%
+    interval, documents resampled. Marked *: fewer than 100 questions or
+    30 documents; with fewer than 30 documents, questions are resampled (an
+    interval that ignores the documents' correlation: likely too narrow),
+    and a paired difference gets a document-level sign-flip p. cluster:
+    each question's document, by default that of the dev questions."""
+    cluster = CLUSTER if cluster is None else cluster
+    by_doc = len(set(cluster)) >= 30
+    with warnings.catch_warnings():  # few items: the * and the note say so
+        warnings.simplefilter('ignore')
+        r = (d2l.bootstrap_ci(a, cluster=cluster if by_doc else None)
+             if b is None else d2l.paired_bootstrap(
+                 a, b, cluster=cluster if by_doc else None))
+    f = '.3f' if b is None else '+.3f'
+    out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
+    if by_doc and len(a) >= 100:
+        return out
+    if by_doc or b is None:
+        return out + '*'
+    p = signflip_p(np.asarray(a, float) - np.asarray(b, float), cluster)
+    return out + f'* (sign-flip p {p:.3f}, {len(set(cluster))} documents)'
 ```
 
 ```{.python .input #retrieval-data-hub}
@@ -208,34 +233,6 @@ GOLD = [d2l.gold_chunk_ids(q, FULL) for q in DEV]
 CLUSTER = np.array([q['gold_spans'][0]['doc_id'] for q in DEV])
 IDENT = np.array(['identifier' in q['flags'] for q in DEV])
 
-def signflip_p(d, cluster, n=10_000):
-    """Two-sided sign-flip p-value of the mean of the per-document mean
-    differences: each document's mean keeps or flips its sign at random."""
-    m = np.array([d[cluster == c].mean() for c in np.unique(cluster)])
-    flips = np.random.default_rng(0).choice([-1.0, 1.0], (n, len(m)))
-    return np.mean(np.abs(flips @ m) >= abs(m.sum()) - 1e-12)
-
-def boot(a, b=None, cluster=CLUSTER):
-    """Mean of per-question scores a (or of a - b, paired) with its 95%
-    interval, documents resampled. Marked *: fewer than 100 questions or
-    30 documents; with fewer than 30 documents, questions are resampled (an
-    interval that ignores the documents' correlation: likely too narrow),
-    and a paired difference gets a document-level sign-flip p."""
-    by_doc = len(set(cluster)) >= 30
-    with warnings.catch_warnings():  # few items: the * and the note say so
-        warnings.simplefilter('ignore')
-        r = (d2l.bootstrap_ci(a, cluster=cluster if by_doc else None)
-             if b is None else d2l.paired_bootstrap(
-                 a, b, cluster=cluster if by_doc else None))
-    f = '.3f' if b is None else '+.3f'
-    out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
-    if by_doc and len(a) >= 100:
-        return out
-    if by_doc or b is None:
-        return out + '*'
-    p = signflip_p(np.asarray(a, float) - np.asarray(b, float), cluster)
-    return out + f'* (sign-flip p {p:.3f}, {len(set(cluster))} documents)'
-
 HITS = {m: RET.search_batch(QUESTIONS, k=10, mode=m)
         for m in ('bm25', 'dense')}
 FOUND = {m: d2l.retrieval_metrics([[h.chunk_id for h in hits] for hits in H],
@@ -245,17 +242,15 @@ RET.release()  # the query encoder leaves the GPU; the chunk vectors stay
 print(f'{len(DEV)} dev questions; Recall@10: BM25 {boot(FOUND["bm25"])}, '
       f'dense {boot(FOUND["dense"])}')
 print(f'found by exactly one: '
-      f'{boot((FOUND["bm25"] != FOUND["dense"]).astype(float))}')
-for kind, win, mask in (('identifier question', 'bm25', IDENT),
-                        ('question without an identifier', 'dense', ~IDENT)):
-    lose = 'dense' if win == 'bm25' else 'bm25'
-    i = next((i for i in np.flatnonzero(mask)
-              if FOUND[win][i] > FOUND[lose][i]), None)  # the first one
-    if i is None:
-        print(f'\nno {kind} that {win} finds and {lose} misses')
-        continue
-    d2l.print_wrapped(f'\n{kind} ({DEV[i]["qid"]}): {QUESTIONS[i]}',
-                      width=96)
+      f'{boot((FOUND["bm25"] != FOUND["dense"]).astype(float))}; BM25 alone '
+      f'{(FOUND["bm25"] > FOUND["dense"]).sum():.0f}, dense alone '
+      f'{(FOUND["dense"] > FOUND["bm25"]).sum():.0f}')
+for win, lose in (('bm25', 'dense'), ('dense', 'bm25')):
+    i = next(i for i in range(len(DEV))
+             if FOUND[win][i] > FOUND[lose][i])  # the first one
+    d2l.print_wrapped(f'\nfound by {win} alone ({DEV[i]["qid"]}'
+                      f'{", identifier" if IDENT[i] else ""}): '
+                      f'{QUESTIONS[i]}', width=96)
     for m in ('bm25', 'dense'):
         rank = next((h.rank for h in HITS[m][i] if h.chunk_id in GOLD[i]),
                     None)
@@ -717,7 +712,9 @@ BM25 = index  # the chosen parameters; S_BM25 holds their dev scores
 assert np.allclose(S_BM25, [RET.bm25.scores(d2l.bm25_tokenize(
     q, BM25_BEST['split_identifiers'])) for q in QUESTIONS])
 for name in RANKED:
-    print(f'{name}: {MS[name]:.2f} ms per question, including tokenization')
+    r10 = d2l.retrieval_metrics(RANKED[name], GOLD, ks=(10,))['recall@10']
+    print(f'{name}: dev Recall@10 {boot(r10)}, {MS[name]:.2f} ms per '
+          f'question with tokenization')
 ```
 
 BM25 answers a dev question in about 0.2 ms on one CPU core, tokenization
@@ -1054,12 +1051,10 @@ cover = np.mean([c in REG['p_yes'][q['qid']] for i, q in enumerate(DEV)
                  for c in RANKED['RRF'][i][:D1]])
 diff = np.array([abs(p - REG['p_yes'][qid][c]) for qid, ps in P0.items()
                  for c, p in ps.items() if c in REG['p_yes'][qid]])
-print(f'live fused top {D1} as registered for {same:.3f} of the questions;'
-      f'\n  registered P(yes) for {cover:.4f} of their chunks')
-print(f'live against registered P(yes), {len(diff):,} pairs: 99th '
-      f'percentile of |difference| {np.quantile(diff, 0.99):.4f}, largest '
+print(f'live against stored: same fused top {D1} for {same:.3f} of the '
+      f'questions; P(yes) of {len(diff):,} pairs\n  differ by at most '
       f'{diff.max():.4f}')
-assert cover >= (0.99 if GPU else 0.9), 'registered for other fused lists'
+assert cover >= (0.99 if GPU else 0.9), 'stored for other fused lists'
 assert not GPU or np.quantile(diff, 0.99) <= 0.02, 'P(yes) disagree'
 for depth in RR_DEPTHS:  # every row reorders the live fused lists
     scores = P0 if depth == D0 and RR_LIVE is None else REG['p_yes']
@@ -1069,11 +1064,9 @@ for depth in RR_DEPTHS:  # every row reorders the live fused lists
     MS[f'RRF + rerank@{depth}'] = MS['RRF'] + 1e3 * (
         sec0 if depth == D0 else REG['seconds_per_question'])
 print(f'reranking {D0} chunks: {sec0 * 1e3:.0f} ms per question on '
-      f'{DEVICE} (live); {D1} chunks: '
-      f'{REG["seconds_per_question"] * 1e3:.0f} ms per question\n  '
-      f'(registered: {REG["machine"]["gpu"].split(",")[0]}); scores of '
-      f'rerank@{D0}: {"live" if RR_LIVE is None else "registered"}, of '
-      f'rerank@{D1}: registered')
+      f'{DEVICE} (live' + ('' if RR_LIVE is None else '; scores stored') + ')')
+print(f'reranking {D1} chunks: {REG["seconds_per_question"] * 1e3:.0f} ms '
+      f'per question (stored, {REG["machine"]["gpu"].split(",")[0]})')
 del reranker
 d2l.lm_free()
 ```
@@ -1486,9 +1479,10 @@ Y, X0, X1 = Yg.double()[qi], Xg.double()[xi], Xh.double()[xi]
 gap = ((Y - X0).norm(dim=1) - (Y - X1).norm(dim=1)).abs()
 print(f'(2) |d - d_A| <= |x - x_hat| on {len(qi):,} pairs: '
       f'{(gap <= (X0 - X1).norm(dim=1) + 1e-9).float().mean():.4f}')
-cross = (Y * (X0 - X1)).sum(1)
-print(f'(3) mean of y^T e {cross.mean():.4f}, standard error '
-      f'{cross.std() / len(cross) ** 0.5:.4f}')
+se = lambda v: v.std() / len(v) ** 0.5  # standard error of a mean
+cross, own = (Y * (X0 - X1)).sum(1), (X1 * (X0 - X1)).sum(1)
+print(f'(3) mean (standard error) of y^T e {cross.mean():.4f} '
+      f'({se(cross):.4f}), of x_hat^T e {own.mean():.4f} ({se(own):.4f})')
 fpq = faiss.IndexPQ(64, 8, 8)
 faiss.copy_array_to_vector(pq.codebooks.numpy().ravel(), fpq.pq.centroids)
 fpq.is_trained = True
@@ -1503,7 +1497,7 @@ print(f'(5) mean |e|^2 {err2.sum(1).mean():.3f} = sum of the 8 blocks\' '
 assert abs(adc_hand - 2.0) < 1e-6
 assert ((adc - exact).abs() / exact).max() < 1e-5
 assert bool((gap <= (X0 - X1).norm(dim=1) + 1e-9).all())
-assert abs(cross.mean()) < 3 * cross.std() / len(cross) ** 0.5
+assert abs(cross.mean()) < 3 * se(cross) and abs(own.mean()) < 3 * se(own)
 assert same >= 0.999
 assert abs(err2.sum(1).mean() - blocks.sum()) < 1e-9 * blocks.sum()
 ```
@@ -1744,7 +1738,7 @@ if 'ret-ann' in RERUN:
     write_result('ret-ann', rows=json.loads(TABLE.to_json(orient='records')))
 reg = read_result('ret-ann', strict=False)
 if reg is None:  # e.g. the reduced path, STRESS_N set
-    print(f'the registered table was made with other settings than these '
+    print(f'the stored table was made with other settings than these '
           f'(N = {len(XS):,}, {NLIST} cells): no comparison')
 else:
     reg = pd.DataFrame(reg['rows'])
@@ -1754,7 +1748,7 @@ else:
     both['p50_ratio'] = both.p50 / both.p50_reg
     print(both.groupby('family', sort=False).agg(
         largest_recall_difference=('recall_diff', 'max'),
-        median_p50_live_over_registered=('p50_ratio', 'median')).round(3))
+        median_p50_live_over_stored=('p50_ratio', 'median')).round(3))
 ```
 
 The inverted file does what the count predicts. At 16 probes it compares
@@ -1780,6 +1774,32 @@ The usual repair rescores the best hundred candidates with exact vectors
 kept on disk. (The rescoring of binary vectors in
 :numref:`subsec_lm_emb_compress` was a cheaper cousin: it used the exact
 question but kept the passages at one bit.)
+
+Why do residual codes lose here? The next cell takes the cell structure away
+as a cause of misses: it probes every cell, so that only the coding
+differs, for several numbers of cells. It prints recall against exact
+search, the mean squared error of the codes, and the share of each
+question's ten exact neighbors that lie in the cell of the nearest one.
+
+```{.python .input #retrieval-ivfpq-cells}
+%%tab pytorch
+cells_rows = []
+for nlist in [1] + [n for n in (16, 64, 256) if n < NLIST] + [NLIST]:
+    key = f'PQ{PQ_MS[0]}' if nlist == 1 else f'IVF{nlist},PQ{PQ_MS[0]}'
+    index, t = build(key, XS)
+    if nlist > 1:  # every cell probed: the coding is all that differs
+        faiss.extract_index_ivf(index).nprobe = nlist
+        cell = faiss.extract_index_ivf(index).quantizer.search(XS, 1)[1][:, 0]
+    else:
+        cell = np.zeros(len(XS), dtype=int)
+    err = ((XS - index.sa_decode(index.sa_encode(XS))) ** 2).sum(1).mean()
+    cells_rows.append({'cells': nlist, 'vectors per cell': len(XS) // nlist,
+                       'recall': overlap(index.search(QS, 10)[1], TRUE),
+                       'mean |e|^2': err, 'top 10 in the cell of the 1st':
+                       (cell[TRUE] == cell[TRUE[:, :1]]).mean()})
+print(f'PQ{PQ_MS[0]} codes; residual codes in every cell, all cells probed')
+print(pd.DataFrame(cells_rows).round(3).to_string(index=False))
+```
 
 The graph wins at this size. HNSW returns 0.97 of the exact neighbors at
 $\mathit{efSearch} = 32$ in about 0.3 ms, and 0.998 at 256 in 1.6 ms, for
@@ -1830,38 +1850,9 @@ for _, r in hnsw.iterrows():  # the fastest HNSW search with recall >= 0.95
 if hnsw.empty:
     print(f'no HNSW{HNSW_M} search reaches recall 0.95' if STRESS_N is None
           else 'no HNSW graph on the reduced path')
-if good.iloc[0].family != 'flat':
-    print(f'fastest configuration with recall >= 0.95 at N = {len(XS):,}: '
-          f'{good.iloc[0].family}, {good.iloc[0].knob}')
-elif 'ret-crossover' in RERUN:  # synthetic: a million noisy copies
-    rng, n = np.random.default_rng(0), CONFIG['ret-crossover']['n']
-    nn = exact.search(XS[:2_000], 2)[0][:, 1]  # squared, nearest other row
-    noise = float(np.sqrt(np.median(nn)))  # copies as far apart as neighbours
-    big = XS[np.arange(n) % len(XS)] + noise / d ** 0.5 * rng.standard_normal(
-        (n, d), dtype=np.float32)
-    big /= np.linalg.norm(big, axis=1, keepdims=True)
-    flat_big, t_flat = build('Flat', big)
-    true_big, rows = flat_big.search(QS, 10)[1], []
-    hnsw_big, t_hnsw = build(f'HNSW{HNSW_M}', big)
-    for name, index, knob, t in [('flat', flat_big, '', t_flat)] + [
-            (f'HNSW{HNSW_M}', hnsw_big, ef, t_hnsw) for ef in EF_SEARCHES]:
-        if knob:
-            index.hnsw.efSearch = knob
-        search = lambda Q: index.search(Q, 10)
-        p50, p95 = latency(search, QS)
-        rows.append(dict(family=name, knob=knob and f'efSearch {knob}',
-                         recall=overlap(search(QS)[1], true_big), p50=p50,
-                         p95=p95, build_s=t))
-    write_result('ret-crossover', n=n, noise=noise, rows=rows)
-    print(f'synthetic: {n:,} copies of the stress vectors, noise of norm '
-          f'{noise:.3f} (the median nearest-neighbour distance)')
-    print(pd.DataFrame(rows).round(4).to_string(index=False))
-elif ARTIFACTS['ret-crossover'][0] in d2l.DATA_HUB:
-    print('synthetic, 10^6 noisy copies of the stress vectors:')
-    print(pd.DataFrame(read_result('ret-crossover')['rows']).round(4))
-else:
-    print(f'the flat scan is the fastest at N = {len(XS):,}; the synthetic '
-          f'crossover is not registered')
+print(f'fastest configuration with recall >= 0.95 at N = {len(XS):,}: '
+      f'{good.iloc[0].family}' + (f', {good.iloc[0].knob}'
+                                 if good.iloc[0].knob else ''))
 ```
 
 The cell picks HNSW at $\mathit{efSearch} = 32$, about 50 times faster than

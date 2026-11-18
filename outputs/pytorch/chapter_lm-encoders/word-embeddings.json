@@ -60,23 +60,34 @@
       "outputs": []
     },
     "word-embeddings-counts": {
-      "code_fingerprint": "sha256:a8fb638ec571d8e1f56c018b240d54dae8514df64a21e744f027897fe6945a74",
+      "code_fingerprint": "sha256:f7db13c7d958d7a2e048cd0d19591741525579ecb056f10ade2d89db008a3189",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6,470,962 nonzero counts of 323,892,009 (2.00%), 27,459,312 (word, context) pairs, 1.7 s\n      the the     141,058\n      the of      116,432\n      the in       69,654\n      the and      66,603\n      the to       56,474\npmi(the, of) = 0.36 from 116,432 pairs\npmi(the, the) = -0.27 from 141,058 pairs\npmi(prime, minister) = 6.55 from 166 pairs\n"
+          "text": "6,470,962 nonzero counts of 323,892,009 (2.00%), 27,459,312 (word, context) pairs, 1.7 s\n      the the     141,058\n      the of      116,432\n      the in       69,654\n      the and      66,603\n      the to       56,474\n"
+        }
+      ]
+    },
+    "word-embeddings-pmi": {
+      "code_fingerprint": "sha256:ddd7bb5e7559fa203cf4c84dd6dfca73e7eaccc69be12a0b595dfb94ea41174b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pmi(the, of) = 0.36 from 116,432 pairs\npmi(the, the) = -0.27 from 141,058 pairs\npmi(prime, minister) = 6.55 from 166 pairs\n"
         }
       ]
     },
     "word-embeddings-spearman": {
-      "code_fingerprint": "sha256:81eacc57e871ec82dbf8c0c852ede78de8fdc541528bacb5887b3906949dc1c1",
+      "code_fingerprint": "sha256:02fabe73f378074e4f70a8db6a68256fa7cba4e1ab11f8bf23517a8ba502dfb7",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-similarity-data": {
-      "code_fingerprint": "sha256:e39c2294ae8347560c650ee00295a9f40acdf6c3b26fdce29e4fc5d6e401305d",
+      "code_fingerprint": "sha256:b556ba03d96c06f062c64dbe5ef2401b55165c834890180f4e38ca95295bb8e8",
       "kind": "text",
       "outputs": [
         {
@@ -87,7 +98,7 @@
       ]
     },
     "word-embeddings-floor": {
-      "code_fingerprint": "sha256:59bcfd503a1aa60b2606153d0fa6f9c4c38ffc867ae7733e33c2ee32a0dbfcd1",
+      "code_fingerprint": "sha256:df265ef969f418fad067f53cf789335b038960762e901bc7a0e0ba1c9ecb281d",
       "kind": "text",
       "outputs": [
         {
@@ -98,28 +109,23 @@
       ]
     },
     "word-embeddings-sgns-loss": {
-      "code_fingerprint": "sha256:07ae6e6672f2c8e8826edc6f119dabc9b00c1c8e67fd67d75e632094985881f2",
+      "code_fingerprint": "sha256:992ddd7a43e3e9be1a254cd129c9957b90b064e547558b2aedb9270d01491899",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-sgns-data": {
-      "code_fingerprint": "sha256:46beb23761cbefb7bb224a80bba1944f47c94f810e317b432d9fe8a759328ef9",
+      "code_fingerprint": "sha256:cc3d4d490d337b4ebcef8570574dcb8f04a6a661b717ac8ce08b21ea3d270933",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one epoch: 1,411,837 of 2,838,873 positions are centers (5.7 context words each)\n           centers: (1024,)\ncontexts_negatives: (1024, 60)\n            labels: (1024, 60)\n             masks: (1024, 60)\nrow 1: center 'years'\n    context slots, offsets -5..-1 and +1..+5:\n        <pad> <pad> <pad> <pad> era francis <pad> <pad> <pad> <pad>\n    noise words of slot 4 ('era'): available the married some settlement\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "    labels: 10 ones, then zeros; masks keep 12 of 60 slots\n"
+          "text": "one epoch: 1,411,837 of 2,838,873 positions are centers (5.7 context words each)\n           centers: (1024,)\ncontexts_negatives: (1024, 60)\n            labels: (1024, 60)\n             masks: (1024, 60)\nrow 1: center 'years'\n    context slots, offsets -5..-1 and +1..+5:\n        <pad> <pad> <pad> <pad> era francis <pad> <pad> <pad> <pad>\n    noise words of slot 4 ('era'): available the married some settlement\n    labels: 10 ones, then zeros; masks keep 12 of 60 slots\n"
         }
       ]
     },
     "word-embeddings-sgns-train": {
-      "code_fingerprint": "sha256:d287366942ef21550227ae5a0f426675056dbef534340e694494a0d837e86c8e",
+      "code_fingerprint": "sha256:509b0583daae5629a7b10d68bc1ec5f690713138c9ba4e4c6e778404632747dd",
       "kind": "text",
       "outputs": [
         {
@@ -130,22 +136,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2: loss 0.4091, 3.3 s\n"
+          "text": "epoch 2: loss 0.4091, 3.1 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3: loss 0.3911, 3.2 s\n"
+          "text": "epoch 3: loss 0.3911, 3.1 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4: loss 0.3813, 3.3 s\n"
+          "text": "epoch 4: loss 0.3813, 3.1 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5: loss 0.3749, 3.2 s\n16 s\n"
+          "text": "epoch 5: loss 0.3749, 3.1 s\n16 s\n"
         },
         {
           "type": "stream",
@@ -160,7 +166,7 @@
       ]
     },
     "word-embeddings-toy-pmi": {
-      "code_fingerprint": "sha256:cb91462104c460d59222fdb59dd70d8215e6808a4d2842bf7a59c1f01af77fc3",
+      "code_fingerprint": "sha256:c8db7a0f76b78f418a587f1d1d1d31342d39fdec0bc3f3f9480699f15da2369c",
       "kind": "text",
       "outputs": [
         {
@@ -171,12 +177,12 @@
       ]
     },
     "word-embeddings-ppmi": {
-      "code_fingerprint": "sha256:2b0248e8b0eef24843d657cb0aa789eebc268b7b2388a1141f607d5f8c4b1bbc",
+      "code_fingerprint": "sha256:00113e3aca03e615286d27a84a641765f477e7f52eee79a6d2dfafd786234bfe",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-svd": {
-      "code_fingerprint": "sha256:cc98820dbfea7ef552bf7cea93f9633258a1895f66ccd0579ef4b062b16150e4",
+      "code_fingerprint": "sha256:6910165603dfdf7c427cfd559fd0cc486dbe60ce1cd4d92130b894672691efd0",
       "kind": "text",
       "outputs": [
         {
@@ -197,7 +203,7 @@
       ]
     },
     "word-embeddings-glove": {
-      "code_fingerprint": "sha256:53127142e4544b65060d5df2bc6f773014a8b948a92c57139bb211229c20194e",
+      "code_fingerprint": "sha256:b91e7311c4df570152ec63f02ddce96f421d8ac5473582c41be79ad9a697ca93",
       "kind": "text",
       "outputs": [
         {
@@ -223,7 +229,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50: loss 0.0056\n13 s\n"
+          "text": "epoch 50: loss 0.0056\n15 s\n"
         },
         {
           "type": "stream",
@@ -233,7 +239,7 @@
       ]
     },
     "word-embeddings-scatter": {
-      "code_fingerprint": "sha256:fa4e296ab93f0ce3085b34d3b176ace6894dbae613475794897211216ecbfb4b",
+      "code_fingerprint": "sha256:cbd314f8fb0597135ceb27100900affd32073f62cbd57c53e6fac0a33f4b0a18",
       "kind": "mixed",
       "outputs": [
         {
@@ -245,13 +251,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-scatter-1.svg",
-          "bytes": 240786,
-          "sha256": "sha256:d2859c2dbf6ee22b54403a885927195407fbe03a67983a88b22383f45e9d5165"
+          "bytes": 241463,
+          "sha256": "sha256:604d3a068ab2d65773878a792727337cbb65dda32e734c28f5786c735c3e5765"
         }
       ]
     },
     "word-embeddings-grid": {
-      "code_fingerprint": "sha256:1025ffecebab28c9fe2bc8db98ebec68e13c8872d82ed365d4847d1271360ea5",
+      "code_fingerprint": "sha256:2205819abeb1b5d0597edb4c453c86df4ab06954810370d926fab35064faca10",
       "kind": "text",
       "outputs": [
         {
@@ -262,20 +268,20 @@
       ]
     },
     "word-embeddings-grid-plot": {
-      "code_fingerprint": "sha256:c01927ae573b55a9ca6fb0ef2256198048fb77446dbb149c881a92841d52a479",
+      "code_fingerprint": "sha256:a05b3a87d060c310086ac0a98e7e102c9baf98d706b79d527ca0d3e59e5adc28",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-grid-plot-1.svg",
-          "bytes": 59147,
-          "sha256": "sha256:497455cbcf7b8df54a752a0efba57a28e147cd66b2062e200f3ae0362b02e2ba"
+          "bytes": 63564,
+          "sha256": "sha256:6933099963f8d8bea559671ab714c2c21811ee287ecae174ea5ae4232ac7472b"
         }
       ]
     },
     "word-embeddings-grid-compare": {
-      "code_fingerprint": "sha256:7097611937ccad9ba77420dae2a55d44bb870df8bc6db598fa69ef507ac42e4f",
+      "code_fingerprint": "sha256:e469db1cbc94e280cb70878303fb372e0555f08a56e9ef4911d486d12be96ede",
       "kind": "text",
       "outputs": [
         {
@@ -285,29 +291,40 @@
         }
       ]
     },
-    "word-embeddings-neighbors-def": {
-      "code_fingerprint": "sha256:7b584122620b4441c1cff6d430ad25f71b609cff2b57f76646849ead056378bf",
-      "kind": "text",
-      "outputs": []
-    },
-    "word-embeddings-neighbors": {
-      "code_fingerprint": "sha256:9898a483cb5be1276f4ebd2f648d1a55adf96439469dfe2e7eb2d538c14a1bd5",
+    "word-embeddings-grid-rare": {
+      "code_fingerprint": "sha256:b36ff3a4eb7daed837f816afe8833538343839e8d1a1a162cd28d4f1ef01c02e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "doctor\n  SGNS      vincent, amy, torchwood, tardis, utterson\n  SVD-PPMI  scully, skinner, mulder, jackman, amy\n  GloVe     sailor, vincent, snowy, patient, comedian\nchip\n  SGNS      breakfast, trailer, monthly, trucks, toy\n  SVD-PPMI  yamaha, publishing, publishers, monthly, halo\n  GloVe     jetport, kitkehahkis, timing, transaction, recapture\nstock\n  SGNS      enterprises, purchasing, financing, bankrupt, profits\n  SVD-PPMI  pictures, shops, paramount, share, goldwyn\n  GloVe     footage, sarajevo, melody, lifted, revenues\nbank\n  SGNS      ubs, winterthur, asset, swiss, banks\n  SVD-PPMI  ubs, winterthur, merger, suisse, banks\n  GloVe     swiss, switzerland, corporation, ubs, merger\n"
+          "text": "Spearman rho on each half of the covered pairs, split at the median count of the rarer word\n         WordSim353               SimLex-999              \n          rare half frequent half  rare half frequent half\nSGNS           0.53          0.61       0.15          0.21\nSVD-PPMI       0.54          0.61       0.18          0.21\nGloVe          0.21          0.40       0.11          0.20\n"
+        }
+      ]
+    },
+    "word-embeddings-neighbors-def": {
+      "code_fingerprint": "sha256:7d55b58c10b5d9b8819516f1093df1987267bb48d50b4a9e9141121e42785a01",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embeddings-neighbors": {
+      "code_fingerprint": "sha256:c7a5594ad95d98a86e34a27e509edb01644ae2994e5c742ed4ffbae687d9249e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "doctor (205 times)\n  SGNS      vincent, amy, torchwood, tardis, utterson\n  SVD-PPMI  scully, skinner, mulder, jackman, amy\n  GloVe     sailor, vincent, snowy, patient, comedian\nchip (30 times)\n  SGNS      breakfast, trailer, monthly, trucks, toy\n  SVD-PPMI  yamaha, publishing, publishers, monthly, halo\n  GloVe     jetport, kitkehahkis, timing, transaction, recapture\nstock (74 times)\n  SGNS      enterprises, purchasing, financing, bankrupt, profits\n  SVD-PPMI  pictures, shops, paramount, share, goldwyn\n  GloVe     footage, sarajevo, melody, lifted, revenues\nbank (452 times)\n  SGNS      ubs, winterthur, asset, swiss, banks\n  SVD-PPMI  ubs, winterthur, merger, suisse, banks\n  GloVe     swiss, switzerland, corporation, ubs, merger\non the slice: physician (38 times)\n"
         }
       ]
     },
     "word-embeddings-token-embedding": {
-      "code_fingerprint": "sha256:86d37d645b49a67c1efa9d52f6fc9fe5e6993bb6d9343c26bc0ce787b7888ecd",
+      "code_fingerprint": "sha256:2ce6bf5cf9debf2d6525774e9b6e2de52a9cfbdad11f3e440ca6a6d3d269c686",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-analogy": {
-      "code_fingerprint": "sha256:ea9a33173ed4fb532db9ce4e1e916e0b3625d99b7adf8ef0344fd7ab537d9dc0",
+      "code_fingerprint": "sha256:77b0bc2adf9b206cdeda6ee1d7d9c373dba28dab19864b15f6ff9c0292bece5d",
       "kind": "text",
       "outputs": [
         {
@@ -318,18 +335,18 @@
       ]
     },
     "word-embeddings-bias": {
-      "code_fingerprint": "sha256:7874ee6a4410788b2b3ab6adc861a3703f1f982aded9b4611d03719898533926",
+      "code_fingerprint": "sha256:88edb938085c8fef7e5fee06bcf7201759369966b63ffbd9642d0785457a6a75",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        word  before  after  overlap  neighbours\n   homemaker  -0.367    0.0        5      -0.108\n housekeeper  -0.321   -0.0        7      -0.237\n      dancer  -0.295   -0.0        9      -0.191\n       nurse  -0.278   -0.0        9      -0.063\n hairdresser  -0.270   -0.0        6      -0.092\nreceptionist  -0.268   -0.0        9      -0.145\n       nanny  -0.255   -0.0        7      -0.235\n   librarian  -0.100    0.0        9       0.047\n     teacher  -0.070    0.0        9       0.030\n     surgeon   0.014    0.0        9      -0.046\n   carpenter   0.018    0.0        9       0.020\n  programmer   0.062    0.0       10       0.049\n   scientist   0.082   -0.0       10       0.051\n    mechanic   0.118    0.0        9       0.025\n    engineer   0.162    0.0        9       0.103\n philosopher   0.172   -0.0        9       0.097\n   secretary   0.182   -0.0        9       0.196\n   architect   0.193    0.0        9       0.045\n     captain   0.210   -0.0        8       0.104\n     manager   0.284    0.0        8       0.174\nmedian overlap of the top 10 neighbours: 9 of 10\ncorrelation of a profession's original projection with its neighbours' after removal: 0.89\n"
+          "text": "        word  before  after  overlap  neighbors\n   homemaker  -0.367    0.0        5     -0.108\n housekeeper  -0.321   -0.0        7     -0.237\n      dancer  -0.295   -0.0        9     -0.191\n       nurse  -0.278   -0.0        9     -0.063\n hairdresser  -0.270   -0.0        6     -0.092\nreceptionist  -0.268   -0.0        9     -0.145\n       nanny  -0.255   -0.0        7     -0.235\n   librarian  -0.100    0.0        9      0.047\n     teacher  -0.070    0.0        9      0.030\n     surgeon   0.014    0.0        9     -0.046\n   carpenter   0.018    0.0        9      0.020\n  programmer   0.062    0.0       10      0.049\n   scientist   0.082   -0.0       10      0.051\n    mechanic   0.118    0.0        9      0.025\n    engineer   0.162    0.0        9      0.103\n philosopher   0.172   -0.0        9      0.097\n   secretary   0.182   -0.0        9      0.196\n   architect   0.193    0.0        9      0.045\n     captain   0.210   -0.0        8      0.104\n     manager   0.284    0.0        8      0.174\nmedian overlap of the top 10 neighbors: 9 of 10\ncorrelation of a profession's original projection with its neighbors' after removal: 0.89\n"
         }
       ]
     },
     "word-embeddings-qwen-table": {
-      "code_fingerprint": "sha256:c30277ab74f7aa78df3300e4d87c548822bc2346f9e581dd090ee0ddf8e71084",
+      "code_fingerprint": "sha256:080adf5bc88d712fbcd3a9343da1bc35d381789b6f990881115949aa422adaf9",
       "kind": "text",
       "outputs": [
         {
@@ -340,7 +357,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "notebook: 92 s\n"
+          "text": "notebook: 94 s\n"
         }
       ]
     }

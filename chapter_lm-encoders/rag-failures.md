@@ -410,17 +410,27 @@ def class_shares(cls):
                   *(r.ci if r else (np.nan, np.nan)))
     return pd.DataFrame(out, index=['count', 'share', 'lo', 'hi']).T
 
+def cites_relevant(row):
+    """Whether an answer cites a passage that holds a gold span."""
+    ctx, gold = row.record['context_ids'], d2l.gold_chunk_ids(ITEMS[row.qid],
+                                                              CORPUS)
+    return any(ctx[int(n) - 1] in gold for n in row.record['cited_ids']
+               if 0 < int(n) <= len(ctx))  # citations count from 1
+
 LARGEST = FIX = None
 if ready('base'):
     BC = classes('base')
     fails = BC[~BC.cls.isin(['correct', 'unjudged'])]
     SH = class_shares(fails.cls)
+    SH['cites a relevant passage'] = [
+        sum(cites_relevant(r) for r in fails[fails.cls == c].itertuples())
+        for c in CLASSES]
     n_un = (BC.cls == 'unjudged').sum()
     print(f'{len(fails)} of {len(BC) - n_un} judged base answers on dev are '
           f'not correct ({n_un} unjudged, left out)')
-    print(SH.assign(share=lambda d: d.apply(
+    print(SH.assign(count=SH['count'].astype(int), share=lambda d: d.apply(
         lambda r: f'{r.share:.2f} [{r.lo:.2f}, {r.hi:.2f}]', axis=1))
-          [['count', 'share']].to_string())
+          [['count', 'share', 'cites a relevant passage']].to_string())
     LARGEST = max(CLASSES, key=lambda c: SH.loc[c, 'count'])  # ties: order
     nxt = max((c for c in CLASSES if c != LARGEST),
               key=lambda c: SH.loc[c, 'count'])
@@ -467,6 +477,12 @@ if ready('base'):
               f'{np.mean(agent.values == now.values):.2f}')
         print(pd.crosstab(pd.Series(now, name='rule'),
                           pd.Series(agent.values, name='agent')))
+        f = now != 'correct'  # the cards of failures
+        a, r = agent.values[f], now.values[f]
+        print(f'on the {f.sum()} failures: the agent agrees with the rule on '
+              f'{(a == r).sum()},\n  calls {(a == "correct").sum()} correct '
+              f'and blames another stage on '
+              f'{((a != r) & (a != "correct")).sum()}')
     else:
         print('\nthe cards carry no labels of a second labeler yet')
 ```
@@ -631,6 +647,20 @@ if FIX and ready('base', FIX):
                          'cite precision - base': paired(
                              a, b, 'cite_precision')})
     print(pd.DataFrame(rows).to_string(index=False))
+    arms = ['base'] + ([BEST] if BEST and BEST != FIX else []) + [FIX]
+    print('accuracy:\n' + pd.DataFrame({split: {c: boot(
+        scores(c, split).accuracy, cluster=scores(c, split).cluster)
+        for c in arms if ready(c, split=split)} for split in ('dev', 'test')}
+                                       ).to_string())
+    b, f = (scores(c).set_index('qid') for c in ('base', FIX))
+    lost = b.index[b.answerable & (b.accuracy == 1) & (f.accuracy[b.index] == 0)]
+    q = min(lost)  # the first answerable dev question the fix lost
+    print(f'\n{len(lost)} answerable dev questions right in base, wrong '
+          f'with the fix; the first:')
+    d2l.print_wrapped(f'{q}: {ITEMS[q]["question"]}', width=96)
+    for name, s in (('base', b), (FIX, f)):
+        print(textwrap.fill(f'{name}: {s.answer[q][:300].rstrip()} ...', 96,
+                            initial_indent='  ', subsequent_indent='    '))
     after = classes(FIX)
     print(pd.DataFrame({'base': BC.cls.value_counts(),
                         FIX: after.cls.value_counts()})
@@ -686,18 +716,14 @@ compared with the baseline, not with each other.
 %%tab pytorch
 if FIX and ready('closed', 'base', FIX):
     d2l.use_svg_display()
-    _, axes = d2l.plt.subplots(1, 2, figsize=(9, 3.6), layout='constrained')
-    series = {}
-    for name, df in (('base', BC), ('fix', after)):
-        sh = class_shares(df.cls[df.cls != 'unjudged'])  # judged only
-        series[name] = (sh.share, sh.lo, sh.hi)
-    d2l.plot_intervals(CLASSES, series, 'failure class',
-                       'share of dev questions', axes=axes[0])
     steps = ['closed', 'base'] + ([BEST] if BEST and BEST != FIX else []
                                   ) + [FIX]
     dev = {c: scores(c) for c in steps}
     test = {c: scores(c, 'test') for c in steps[1:] if ready(c, split='test')}
-    waterfall, marks = {}, {'test': ('x', {})}
+    series, waterfall, marks = {}, {}, {'test': ('x', {})}
+    for name, df in (('base', BC), ('fix', after)):
+        sh = class_shares(df.cls[df.cls != 'unjudged'])  # judged only
+        series[name] = (sh.share, sh.lo, sh.hi)
     for m, label in (('accuracy', 'accuracy'),
                      ('cite_precision', 'citation precision')):
         est = [ci(dev[c][m], cluster=dev[c].cluster)[0] for c in steps]
@@ -708,8 +734,14 @@ if FIX and ready('closed', 'base', FIX):
         xs = [i for i, c in enumerate(steps) if c in test]
         marks['test'][1][label] = (xs, [test[steps[i]][m].mean()
                                         for i in xs])
-    d2l.plot_intervals(steps, waterfall, 'configuration', 'dev score',
-                       axes=axes[1], marks=marks)
+    with d2l.plt.rc_context({'font.size': 14}):  # legible on a slide
+        _, axes = d2l.plt.subplots(1, 2, figsize=(10, 4.4),
+                                   layout='constrained')
+        d2l.plot_intervals([c.replace('_', ' ') for c in CLASSES], series,
+                           'failure class', 'share of dev questions',
+                           axes=axes[0])
+        d2l.plot_intervals(steps, waterfall, 'configuration', 'dev score',
+                           axes=axes[1], marks=marks)
 ```
 
 Beyond these fixes lies a large literature that this section does not

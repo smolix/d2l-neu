@@ -210,8 +210,7 @@ def cooccurrence_counts(corpus, vocab_size, window=5, weighting='uniform'):
 ```
 
 Which pairs of words have the largest counts? The question is worth a
-guess before reading the output. Its last three lines anticipate a
-measure that we define right after it.
+guess before reading the output.
 
 ```{.python .input #word-embeddings-counts}
 %%tab pytorch
@@ -225,11 +224,6 @@ upper = scipy.sparse.triu(X).tocoo()
 for i in np.argsort(-upper.data)[:5]:
     a, b = (vocab.idx_to_token[j] for j in (upper.row[i], upper.col[i]))
     print(f'    {a:>5} {b:<5} {upper.data[i]:9,.0f}')
-row = np.asarray(X.sum(axis=1)).ravel()  # p(w) is row / X.sum()
-for a, b in (('the', 'of'), ('the', 'the'), ('prime', 'minister')):
-    i, j = vocab.token_to_idx[a], vocab.token_to_idx[b]
-    print(f'pmi({a}, {b}) = {np.log(X[i, j] * X.sum() / (row[i] * row[j])):.2f}'
-          f' from {X[i, j]:,.0f} pairs')
 ```
 
 *The* wins, paired with itself and with four other function words: *of*,
@@ -247,8 +241,18 @@ Then
 
 $$\textrm{pmi}(w, o) = \log \frac{p(w, o)}{p(w)\, p(o)}$$
 
-is positive for pairs that attract and negative for pairs that repel. By
-this measure *the* and *of*, the second-largest count, are only weakly
+is positive for pairs that attract and negative for pairs that repel.
+
+```{.python .input #word-embeddings-pmi}
+%%tab pytorch
+row = np.asarray(X.sum(axis=1)).ravel()  # p(w) is row / X.sum()
+for a, b in (('the', 'of'), ('the', 'the'), ('prime', 'minister')):
+    i, j = vocab.token_to_idx[a], vocab.token_to_idx[b]
+    print(f'pmi({a}, {b}) = {np.log(X[i, j] * X.sum() / (row[i] * row[j])):.2f}'
+          f' from {X[i, j]:,.0f} pairs')
+```
+
+By this measure *the* and *of*, the second-largest count, are only weakly
 associated, with a pmi of 0.36, and *the* even repels itself ($-0.27$):
 two of them stand within five words of each other less often than their
 frequency predicts. *Prime* and *minister* meet in only 166 windows, but
@@ -933,7 +937,7 @@ target = pmi_top - np.log(K) + np.log(n_ctx[o] / N / P[o])
 score = (sgns_v[w] * sgns_u[o]).sum(1).numpy()
 print(f'Pearson r = {np.corrcoef(target, score)[0, 1]:.2f} over {len(top)} '
       f'pairs; mean score - target {np.mean(score - target):+.2f}')
-lim = [min(target.min(), score.min()), max(target.max(), score.max())]
+lim = [target.min(), target.max()]  # the diagonal, over the targets
 d2l.plot([target, lim], [score, lim],
          r'$\mathrm{pmi}(w, o) - \log K + \log(p(o) / P(o))$',
          r'SGNS score $\mathbf{u}_o^\top \mathbf{v}_w$', fmts=('.', 'k--'),
@@ -1069,26 +1073,32 @@ for k, name in enumerate(SETS):  # seed 0 and its interval; all seeds
                    for i, rs in enumerate(methods.values()) for r in rs])
     seeds[name] = (xs, ys)
 with d2l.plt.rc_context({'font.size': 12}):  # legible on a slide
-    fig, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 3.2))
+    fig, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 3.8))
     d2l.plot_intervals(list(methods), series, 'method', r'Spearman $\rho$',
                        axes=axes[0], marks={'seeds': ('x', seeds)})
     bands, styles = {}, []
-    for k, name in enumerate(SETS):  # mean over seeds; the band spans them
+    for k, name in enumerate(SETS):  # mean over seeds; the band spans them;
+        # each set's rho less that of the setting used, at 0 on the plot
         for sub in (True, False):
             rho = np.array([[r[name]['rho'] for r in runs(
-                'SGNS', alpha=a, subsample=sub)] for a in ALPHAS])
+                'SGNS', alpha=a, subsample=sub)] for a in ALPHAS]) - np.mean(
+                    [r[name]['rho'] for r in runs('SGNS', alpha=ALPHA,
+                                                  subsample=True)])
             bands[f"{name}{'' if sub else ', no subsampling'}"] = (
                 rho.mean(1), rho.min(1), rho.max(1))
             styles.append((f'C{k}', '-' if sub else '--'))
     d2l.plot_intervals(ALPHAS, bands, r'noise exponent $\alpha$',
-                       r'Spearman $\rho$', kind='band', axes=axes[1])
+                       rf'$\rho - \rho(\alpha = {ALPHA})$', kind='band',
+                       reference=0.0, axes=axes[1])
     for line, band, (color, style) in zip(axes[1].lines, axes[1].collections,
                                           styles):  # hue: rating set, as left
         line.set(color=color, linestyle=style)
         band.set_color(color)
-    for ax in axes:
-        ax.legend(fontsize='small')
-    d2l.plt.tight_layout()
+    axes[0].legend(fontsize='small')
+    axes[1].get_legend().remove()  # below the figure: the bands fill it
+    fig.legend(*axes[1].get_legend_handles_labels(), loc='lower center',
+               ncol=2, fontsize='small')
+    d2l.plt.tight_layout(rect=(0, 0.15, 1, 1))
 ```
 
 Is SGNS better than SVD-PPMI? On the left their intervals overlap almost
@@ -1176,8 +1186,29 @@ noise exponent, has a detectable effect. For GloVe it fails.
 Why does GloVe trail? Its loss never sees a pair that does not occur, and
 on three million words that is 98% of the pairs. Nothing in the loss
 pushes down the score of a word with a context it never meets, and a rare
-word, with few nonzero counts, is held in place by few terms at all. It
-is not the optimizer. In runs not shown here, more passes, smaller
+word, with few nonzero counts, is held in place by few terms at all. The
+next cell splits the covered pairs of each rating set at the median count
+of their rarer word and scores the seed-0 tables on each half.
+
+```{.python .input #word-embeddings-grid-rare}
+%%tab pytorch
+idx, rows = vocab.token_to_idx, {}
+for name, p in SETS.items():
+    p = p[[w1 in idx and w2 in idx for w1, w2 in zip(p.word1, p.word2)]]
+    rarer = np.minimum(*(counts[[idx[w] for w in col]]
+                         for col in (p.word1, p.word2)))
+    rare = rarer < np.median(rarer)  # the pairs of rarer words
+    for method, rs in methods.items():  # seed 0 of the grid-plot settings
+        cos = np.array(rs[0][name]['cosines'])
+        for half, m in (('rare half', rare), ('frequent half', ~rare)):
+            rows.setdefault((name, half), {})[method] = rank_corr(
+                cos[m], p.score.to_numpy()[m])
+print('Spearman rho on each half of the covered pairs, split at the median '
+      'count of the rarer word')
+print(pd.DataFrame(rows).round(2).to_string())
+```
+
+It is not the optimizer. In runs not shown here, more passes, smaller
 minibatches, other learning rates and the paper's distance-weighted
 counts all left GloVe far behind the other two methods. More text narrows
 the gap, and Exercise :exref:`ex_lm_we-glove-corpus` measures by how
@@ -1227,10 +1258,12 @@ Does *doctor* land next to *physician*, as the opening hoped?
 ```{.python .input #word-embeddings-neighbors}
 %%tab pytorch
 tables = {'SGNS': sgns_v, 'SVD-PPMI': svd_vecs, 'GloVe': glove_vecs}
+n_of = lambda w: f'{w} ({counts[vocab.token_to_idx[w]]:,} times)'
 for w in ('doctor', 'chip', 'stock', 'bank'):  # a line per method
-    print(w + ''.join(f'\n  {m:9s} ' + ', '.join(
+    print(n_of(w) + ''.join(f'\n  {m:9s} ' + ', '.join(
         t for t, _ in d2l.nearest_neighbors(E, vocab, w))
         for m, E in tables.items()))
+print('on the slice: ' + n_of('physician'))
 ```
 
 It does not. *Physician* is itself a rare word on the slice, seen only a
@@ -1372,15 +1405,15 @@ for w in PROFESSIONS:
     rows.append(dict(word=w, before=float(lean[i]),
                      after=float(Z_hidden[i] @ g),
                      overlap=len(set(near[0]) & set(near[1])),
-                     # the original lean of its neighbours after removal
-                     neighbours=float(lean[near[1]].mean())))
+                     # the original lean of its neighbors after removal
+                     neighbors=float(lean[near[1]].mean())))
 bias = pd.DataFrame(rows).sort_values('before')
 print(bias.round(3).to_string(index=False))
 assert bias.after.abs().max() < 1e-6  # zero by construction
-print(f'median overlap of the top 10 neighbours: '
+print(f'median overlap of the top 10 neighbors: '
       f'{bias.overlap.median():.0f} of 10\ncorrelation of a profession\'s '
-      f'original projection with its neighbours\' after removal: '
-      f'{np.corrcoef(bias.before, bias.neighbours)[0, 1]:.2f}')
+      f'original projection with its neighbors\' after removal: '
+      f'{np.corrcoef(bias.before, bias.neighbors)[0, 1]:.2f}')
 ```
 
 Before the removal, *homemaker* ($-0.37$) and *nurse* ($-0.28$) lean

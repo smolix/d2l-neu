@@ -1,27 +1,31 @@
 # Practice
 :label:`sec_practice`
 
-Every experiment in this chapter so far ran in seconds or minutes. We could
-sweep a learning rate over four values, repeat a comparison, and restart
-a run that went wrong. A large training run allows none of this. A sweep
-over four learning rates costs four times the run itself, so most
-hyperparameters are set once and never tuned on the model that matters. A
-single oversized update can undo days of progress. PaLM, a language model
-with 540 billion parameters trained on 6,144 TPU chips, saw its loss spike
-about twenty times along the way, although gradient clipping was enabled
-:cite:`chowdhery2022palm`. And the checkpoint at the end is one draw from a
-noisy trajectory, yet it is the one that ships. This section asks how to
-set up, protect and finish a run that can be done only once.
+We have been spoiled. Every run in this chapter took a minute or two. When a
+learning rate looked wrong we tried four others, when a comparison was close
+we repeated it with new seeds, and when a loss blew up we started again. The
+runs you care about will not be that cheap. Once training takes a day on the
+one GPU you have, a sweep over four learning rates costs four days, so most
+settings are fixed once and never tuned on the model that matters. A single
+oversized update can undo hours of progress. And the weights at the end are
+one draw from a noisy trajectory, yet they are the ones that ship.
 
-We follow such a run through its life, using the methods of the earlier
-sections on models small enough to train here. We first ask how a
-configuration is chosen when the target cannot be tuned, and read the
-settings that four recent reports disclose. We then protect the run against
-rare oversized updates with gradient clipping, and ask what to do when a
-spike gets through anyway. Next we reduce the noise in the final weights by
-averaging them. Finally we turn to the question behind every comparison in
-this chapter: what does it take to show that one optimizer is better than
-another?
+The largest runs show these problems most plainly. PaLM, a language model
+with 540 billion parameters trained on 6,144 TPU chips, saw its loss spike
+about twenty times, although gradient clipping was enabled
+:cite:`chowdhery2022palm`. But the problems do not wait for a data center.
+They begin with the first run that you cannot afford to repeat fifty times,
+which on a single GPU is a run of a few hours.
+
+How do we guard, finish and configure a run that we get to do once? Very
+little, it turns out, has to be decided on the long run itself. A guard
+catches the rare step that would ruin it, an average of its weights takes
+the luck out of where it stops, and its settings come from short runs of
+the same model. We take the three in this order. Gradient clipping and
+weight averaging are tools that the chapter has not taught yet. The
+configuration comes last because it uses everything that the chapter has
+taught: we take a `TinyLM` that no section has trained and decide its batch
+size, its optimizer, its learning rate and its schedule.
 
 ```{.python .input #practice}
 %%tab pytorch
@@ -49,119 +53,50 @@ from d2l import jax as d2l
 import random
 ```
 
-## Choosing a Configuration
-
-A run too large to tune directly takes its hyperparameters from two
-sources. The first is smaller proxies. :numref:`sec_scaling` showed that
-under a suitable parametrization the best learning rate of a narrow model
-stays the best as the width grows, so most of the sweeping can happen on
-models that cost a fraction of the target. The second is precedent: the
-settings that worked for earlier runs of the same kind.
-
-### Reported Configurations
-
-Some of that precedent is public. :numref:`tab_practice_recipes` collects
-the optimizer configurations disclosed by four prominent pretraining reports
-from 2024 to
-2026. Each entry is what a team reported shipping, usually without an
-ablation, and a dash means that the report does not say.
-
-:What four pretraining reports disclose about their optimizer configuration.
-A dash means the report does not say. Batch sizes are quoted the way each
-report quotes them (tokens or sequences).
-:label:`tab_practice_recipes`
-
-| run | optimizer | $\beta_1, \beta_2$ | peak LR and schedule | warmup | clip | weight decay | batch size |
-|:--|:--|:--|:--|:--|:--|:--|:--|
-| Llama 3 405B :cite:`Grattafiori.Dubey.Jauhri.ea.2024` | AdamW | — | $8{\times}10^{-5}$, cosine to $8{\times}10^{-7}$ | 8k steps | — | — | ramp 4M $\to$ 8M $\to$ 16M tokens |
-| DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024` | AdamW | 0.9, 0.95 | $2.2{\times}10^{-4}$, constant to 10T tokens, cosine to $2.2{\times}10^{-5}$ | 2k steps | 1.0 | 0.1 | ramp 3,072 $\to$ 15,360 seqs over 469B tokens |
-| OLMo 2 7B :cite:`OLMo.2025` | AdamW | 0.9, 0.95 | $3{\times}10^{-4}$, cosine to 10% of peak | 2k steps | 1.0 | 0.1, embeddings exempt | 1,024 seqs, fixed |
-| Kimi K2 :cite:`Kimi.Team.2025` | MuonClip | — | $2{\times}10^{-4}$, constant to 10T tokens, cosine to $2{\times}10^{-5}$ | 500 steps | — | 0.1 | 67M tokens, fixed |
-
-Three of the four runs use AdamW. The fourth, Kimi K2, applies Muon to its
-hidden weight matrices and AdamW to everything else, the split of
-:numref:`sec_muon`. The two reports that disclose the moment coefficients
-both choose $(\beta_1, \beta_2) = (0.9, 0.95)$. With $\beta_2 = 0.95$,
-Adam's average of the squared gradients reaches back about
-$1/(1-\beta_2) = 20$ steps instead of the thousand steps of the default
-$\beta_2 = 0.999$, so it adapts quickly when the scale of the gradients
-changes. Three of the four decay the weights with $\lambda = 0.1$, and
-the two that report clipping clip the global gradient norm at 1. All four
-warm up and later decay the learning rate, either along a cosine from the
-start or after a long phase at a constant rate, the warmup–stable–decay
-shape of :numref:`sec_scheduler`. Two ramp the batch size up during
-training, and two keep it fixed. Every report sets its own peak learning
-rate, and the four values span almost a factor of four, from
-$8 \times 10^{-5}$ for the dense 405-billion-parameter model to
-$3 \times 10^{-4}$ for the 7-billion one. The dashes record missing
-evidence, not implied defaults, and even the complete rows fall short of
-what a reproduction would need.
-
-### Tuning Budgets
-
-The settings that recur in the table are a defensible starting point for a
-new run of the same kind, because each was chosen by a team that could
-test it at scale. They are not proven optima, because the reports
-rarely ablate them. How far to depart from them depends on how many runs
-the budget allows.
-
-With a handful of runs, keep the recurring settings and use every run to
-tune the peak learning rate. It is the setting that each report chose for
-itself, and in the sweeps of this chapter a factor of three in the learning
-rate separated the best run from a diverging one. With tens of runs, add
-the weight decay and the schedule, and tune jointly only what is coupled.
-In AdamW each step multiplies the weights by $1 - \eta\lambda$
-(:numref:`sec_adamw`), so the learning rate $\eta$ and the weight decay
-$\lambda$ set the shrinkage of the
-weights through their product. A joint grid should therefore vary the
-product $\eta\lambda$ and also move along lines on which the product is
-constant. With more runs than that, the tuning becomes a study of its own,
-and the protocol of :numref:`subsec_practice-tuning` applies.
-
 ## Gradient Clipping
 
-The clipping column of :numref:`tab_practice_recipes` guards against a
-failure that this chapter has already met. In :numref:`sec_adam`, SGD with
-momentum trained a small transformer best at the learning rate $\eta = 0.3$
-and diverged at $\eta = 1$, one point higher on the grid. Global-norm
-clipping, introduced in :numref:`sec_rnn-scratch` to tame exploding RNN
-gradients, treats the gradients of all parameters as one long vector
-$\mathbf{g}$ and shrinks this vector whenever its length exceeds a
-threshold $\theta$:
+In :numref:`sec_adam`, SGD with momentum had a single usable learning rate
+on `TinyLM`. It trained best at $\eta = 0.3$, most runs at $0.5$ diverged,
+and at $\eta = 1$ all of them did. :numref:`sec_test_models` showed how such
+a run dies: fast, within its first handful of steps. This leaves a question
+that the sweep could not answer. Is $\eta = 1$ too large for this model, or
+only for its first steps?
+
+Gradient clipping can tell the two apart, because it shortens the steps that
+are too long and leaves all others alone. We met it in
+:numref:`sec_rnn-scratch`, where it held the exploding gradients of a
+recurrent network in check and where we called it a rather crude device. It
+treats the gradients of all parameters as one long vector $\mathbf{g}$ and
+rescales this vector whenever its length exceeds a threshold $\theta$:
 
 $$
 \mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \mathbf{g}.
 $$
 :eqlabel:`eq_practice_clip`
 
-A gradient shorter than $\theta$ passes unchanged, and a longer one keeps
-its direction and is scaled to length $\theta$. At $\theta = 1$, a gradient
-of norm 5 is multiplied by 0.2. Because the norm is taken over all
-parameters at once, clipping preserves the relative sizes of the gradients
-of different layers and shrinks only the step as a whole.
+A gradient shorter than $\theta$ passes unchanged. A longer one keeps its
+direction and is cut to length $\theta$, so at $\theta = 1$ a gradient of
+norm 5 is multiplied by 0.2. Because the norm is taken over all parameters
+at once, every layer is scaled by the same factor: clipping preserves the
+relative sizes of the gradients of different layers and shrinks only the
+step as a whole. Under plain SGD, whose step is $\eta$ times the gradient,
+it is a cap on the length of a step: none is longer than $\eta\theta$.
+Momentum raises the cap without removing it (Exercise
+:exref:`ex_practice-clipping-regimes`). Crude it is: it knows nothing about
+curvature and only refuses to follow a gradient beyond a fixed distance. At
+the start of a run, we will see, that refusal is what counts.
 
 :begin_tab:`pytorch`
-`clip_grad_norm_` rescales the gradients in place and returns the norm it
-measured before clipping. The wrapper below calls it between `backward` and
-`step`. It keeps the returned norms on the device, so that recording them
-adds no synchronization with the host, and we read them once after
-training.
+`clip_grad_norm_` rescales the gradients in place and returns the norm that
+it measured before clipping. `Clipped` calls it before every step of the
+optimizer it wraps and keeps the norms.
 :end_tab:
 
 :begin_tab:`jax`
-In Optax, clipping is a gradient transformation like any other, so
-`optax.chain` places it in front of an optimizer, and the chained
-transformation drops into `nnx.Optimizer` like a plain one.
-:end_tab:
-
-<!-- WRITER: the JAX `record_norms` transformation moved into the JAX cell below from its own cell after the data cell (PRAC-8), and `clipped` now records the norm before clipping on every step, as the PyTorch `Clipped` does (it takes the number of steps to record). The JAX tab note that explained `record_norms` moved up with it and follows; merge the two JAX notes into one or two sentences. -->
-
-:begin_tab:`jax`
-An Optax transformation is a pair of pure functions, `init` and `update`,
-so a quantity that must persist from step to step lives in the
-transformation's state. `record_norms` passes the gradients through
-unchanged and writes each step's global norm into an array of fixed length
-in its state.
+In Optax, clipping is a gradient transformation, and `optax.chain` places
+it in front of the optimizer. `record_norms` is a second transformation,
+which passes the gradients through unchanged and stores the norm of every
+step in its state.
 :end_tab:
 
 ```{.python .input #practice-gradient-clipping-1}
@@ -201,28 +136,27 @@ def clipped(tx, num_steps, max_norm=1.0):
                        optax.clip_by_global_norm(max_norm), tx)
 ```
 
-### Preventing a Numerical Failure
+### Clipping a Divergent Run
 :label:`subsec_practice-nan`
 
-We now rerun SGD at the divergent point of that sweep, $\eta = 1$, with
-and without clipping. The model is `TinyLM`, the decoder-only transformer
-of :numref:`subsec_tinylm`: two blocks, about 0.47 million parameters,
-trained to predict the next byte of WikiText-103, a corpus of Wikipedia
-articles, from the 64 bytes before it. The library function `d2l.train_steps`
-trains it for a fixed number of steps on minibatches of 64 sequences and
-returns the training loss of every step. Both runs start from the same
-initial weights and use SGD with momentum 0.9 at $\eta = 1$ for 2,000
-steps; they differ only in the clipping. To see how often and when clipping
-intervenes, we also record the global gradient norm before clipping at
-every step.
+We rerun SGD with momentum 0.9 on `TinyLM`, the two-block transformer of
+:numref:`subsec_tinylm`, for the usual 2,000 steps. The first two settings
+run $\eta = 1$, the rate at which every run of :numref:`sec_adam` diverged,
+without clipping and clipped at $\theta = 1$. This is the threshold of the
+large published runs that we meet below, and the experiment will tell us
+whether it suits our model. The third setting is $\eta = 0.3$ without
+clipping, the best rate of that sweep. The fourth, $\eta = 3$ clipped at
+$\theta = 1$, asks how far clipping can be pushed. Each setting is trained
+from two seeds, and within a seed all four start from the same initial
+weights. In `run`, an infinite threshold switches clipping off.
 
-<!-- WRITER: the experiment is now four settings of SGD with momentum 0.9, each run twice (two seeds; within a seed every setting starts from the same initialization, and in PyTorch from the same minibatch order): lr 1 unclipped, lr 1 clipped at 1, lr 0.3 unclipped (the best rate of the SGD grid in :numref:`sec_adam`), and lr 3 clipped at 1. A threshold of infinity is no clipping (`clip_grad_norm_` and `clip_by_global_norm` then leave the gradient unchanged), so one function serves every run. For each clipped run the table prints the number of clipped steps, the last clipped step, the median gradient norm, and the largest norm after step 100 divided by the median (PRAC-12). Measured (development and two notebook runs, PyTorch / JAX):
-- lr 1 unclipped: inf in every run (the loss leaves the plot within about 15 steps).
-- lr 1 clipped at 1: trains in every run, 50 runs in all. Final loss 1.610 to 1.654 (PyTorch, 37 runs; median 1.620) and 1.608 to 1.615 (JAX, 13 runs). (PyTorch's spread is wider; enabling or disabling TF32 matmuls in PyTorch does not change it, 8 runs each; the medians differ by 0.008, below the spread of :numref:`sec_test_models`, and the lesson is the same in both tabs.) Clipping acts on 11 to 18 of 2,000 steps, the last at step 10 to 17, never after step 100; median norm 0.25 to 0.26, so the threshold 1 is about four times the typical norm.
-- lr 0.3 unclipped: 1.647 to 1.703 (PyTorch) and 1.652 to 1.683 (JAX). In every one of the 26 paired runs (13 per tab) the clipped run at lr 1 ended below the unclipped run at 0.3 of the same seed, by 0.01 to 0.08 nats (median about 0.045). The difference is consistent but not larger than the spread of independent runs (0.04 to 0.06), so state it as "at least as low as the best unclipped rate", not as a margin. Not printed, probed: clipped at lr 0.5, 1.615 to 1.662 (12 runs), also always trains, while unclipped 0.5 diverged in 16 of 18 runs in :numref:`sec_adam`. The firm lesson: clipping moves SGD's edge of stability from between 0.3 and 0.5 up to between 1 and 3 on this model, because the edge was set by the first few steps (PRAC-11).
-- lr 3 clipped at 1: clipping acts on all 2,000 steps (a brake, not a guard), median norm 22 to 43, and the run fails anyway: final loss 88 to 207 in every run, far above the uniform guess ln 256 = 5.5. Clipping does not rescue a rate three times above the new edge (author ruling 3, "what it does not fix"). The plot shows its loss climbing within the first 20 steps.
-- Largest gradient norm after step 100 over the median: 1.5 to 2.1 in every run at lr 1 (clipped) and 0.3; nothing like a heavy tail on this model with minibatches of 64 full windows, so "gradient noise in language models is heavy-tailed" must be stated as what large runs report (:cite:`Zhang.Karimireddy.Veit.ea.2020`), not as what this run shows (PRAC-12). (For lr 3 the ratio is meaningless: the norms grow with the failing run.)
-- Plot: first 50 steps of the first seed, all four settings, log scale; the unclipped lr 1 run falls for two to three steps and then climbs (PRAC-10: "after the first few steps"). -->
+What do the two answers to our question predict? If $\eta = 1$ is too large
+only for the first steps, where a fresh network has its largest gradients,
+clipping should act on those steps and then fall silent, and the run should
+train. If it is too large throughout, clipping will act all along. The table
+therefore prints, for every clipped run, the number of steps that clipping
+changed, the last such step, the median gradient norm, and the largest norm
+after step 100 divided by the median.
 
 ```{.python .input #practice-a-nan-averted-1}
 %%tab pytorch, jax
@@ -276,9 +210,21 @@ for seed in seeds:
         print(line)
 ```
 
-The unclipped run ends with a loss of `nan`, "not a number", the value that
-floating-point arithmetic produces once a computation has overflowed. The
-instability occurs early, so we plot the first 50 steps on a log scale.
+Without clipping, both runs at $\eta = 1$ end as `inf`. With it, both train,
+to a loss of $1.61$ to $1.64$. In each seed that is a few hundredths of a
+nat below the run at $\eta = 0.3$. We claim no more than a tie, since two
+runs of SGD at one rate differed by as much in :numref:`sec_adam`.
+
+What the table does settle is our question. Clipping changed a few dozen of
+the 2,000 steps at most, the last of them before step 50, and then fell
+silent. It had no occasion to speak again. The median gradient norm of the
+clipped runs at $\eta = 1$ is about a quarter of the threshold, and after
+step 100 the largest norm is about twice the median, roughly half the
+threshold. The rate $\eta = 1$ was too large for the first steps of the run
+and for nothing else.
+
+What do those first steps look like? Divergence is fast, so we plot the
+first 50 steps of the first seed on a logarithmic scale.
 
 ```{.python .input #practice-a-nan-averted-3}
 %%tab pytorch, jax
@@ -289,118 +235,145 @@ d2l.plot(list(range(1, 51)),
          legend_loc='outside')
 ```
 
-The first step lowers the loss, and from the second on the unclipped run
-feeds on itself. An oversized step moves the parameters to where the loss
-is steeper, the gradient there is larger, and momentum carries the excess
-into the following steps. The loss grows by several orders of magnitude
-and overflows within about twenty steps. The clipped run, at the same
-learning rate, trains normally, to a final loss comparable with that of the
-best SGD run in :numref:`sec_adam`, which used a learning rate about three
-times smaller.
+The unclipped run at $\eta = 1$ falls for a step or two and then feeds on
+itself. An oversized step moves the parameters to where the loss is steeper,
+the gradient there is larger, and momentum carries the excess into the
+following steps. The loss grows by several orders of magnitude and leaves
+the plot within about twenty steps. On this scale the clipped run at the
+same rate can hardly be told from the run at $\eta = 0.3$. The dotted
+curve belongs to the run at $\eta = 3$, to which we return below.
 
-### Clipping Frequency
+The table and the plot change how the sweep of :numref:`sec_adam` should be
+read. Its diverging grid points did not mark a rate at which the model
+cannot be trained. They marked the rate that the first few dozen steps
+cannot survive, and a cap on those steps moved the limit of SGD from about
+$0.5$ to somewhere between 1 and 3. When a grid point of your own sweep
+diverges, ask when it diverged. A run that dies in its first twenty steps
+has told you about its start. About the two thousand steps that it never
+took, it has told you nothing.
 
-The printed counts show how little clipping did to achieve this, and when
-it did it. The median gradient norm of the clipped run is about a quarter
-of the threshold, and clipping changed the update on a few dozen at most
-of the 2,000 steps, all of them within the first forty. These are
-the steps on which the freshly initialized network has its largest
-gradients. Once they are past, the clipped run trains at $\eta = 1$ with
-clipping idle for the rest of the 2,000 steps. Here clipping did the job of
-a warmup, and an adaptive one. It shortened exactly those first steps that
-were too long, until the parameters reached a region where the full step is
-safe, and it needed no schedule to tell it when to stop. Every run in
-:numref:`tab_practice_recipes` warms up as well, and the exercises compare
-the two remedies.
+### Guard and Brake
 
-Used this way, clipping is a *guard*: it leaves nearly every update alone
-and rescales only the rare oversized ones. In long runs the same guard has
-a second job. Gradient noise in language models is heavy-tailed, so long
-after the start an occasional minibatch produces a gradient many times
-longer than typical ones, and under noise of this kind clipped SGD provably
-converges where plain SGD can fail :cite:`Zhang.Karimireddy.Veit.ea.2020`.
+Here clipping did the job of a warmup, and an adaptive one. It shortened
+exactly those first steps that were too long, the steps on which a fresh
+network has its largest gradients, until the parameters reached a region
+where the full step is safe, and it needed no schedule to tell it when to
+stop. Exercise :exref:`ex_practice-clipping-regimes` sets it beside the
+ramp of :numref:`subsec_scheduler-warmup`, which works by the clock.
 
-A guard works only if the threshold lies above the gradient norms of a
-stable run, so that it fires rarely. If clipping fires on most steps, it
-rescales nearly every update and thereby changes the update rule itself.
-The learning rate and the threshold then act together on the length of the
-step, and they have to be tuned together
-:cite:`Godbole.Dahl.Gilmer.ea.2023`.
+Used in this way, clipping is a *guard*: it leaves nearly every update alone
+and rescales only the rare oversized one. The last setting shows the other
+regime. At $\eta = 3$ clipping acts on practically every step, for as long
+as the loss is finite, and the run fails all the same. Its loss, the dotted
+curve of the plot, climbs from the start and ends far above the $5.5$ nats
+of a model that guesses its bytes uniformly. When every gradient is cut to
+length $\theta$, the length of a step no longer depends on the size of the
+gradient. That is a different algorithm from SGD, run here at a step that
+is too long everywhere. In this regime clipping is a *brake*, and a brake
+that is on for the whole journey is a sign that the speed was chosen
+wrongly. Clipping repairs steps that are too long for a moment. It does not
+repair a learning rate that is too large throughout.
+
+To set the threshold, measure. Record the gradient norm of a run that
+trains, as we did, and put $\theta$ a few times above its median; ours was
+four times above. From then on, log the fraction of clipped steps in every
+run. A guard clips a few percent of the steps at most, and most of them
+early. If clipping fires on most steps, the learning rate and the threshold
+act together on the length of the step :cite:`Godbole.Dahl.Gilmer.ea.2023`,
+and the first thing to try is a smaller learning rate.
+
+In long runs a guard is credited with a second job. The gradient noise of
+language models is reported to be heavy-tailed, and under such noise
+clipped SGD converges where plain SGD can fail
+:cite:`Zhang.Karimireddy.Veit.ea.2020`. Our run shows no such tail, and we
+pass the finding on as theirs. The last column of our table is the way to
+check it on a model of your own.
 
 ### Clipping and Adam
 
-Clipping protects Adam in a different way. Adam keeps two leaky averages
-(:numref:`sec_adam`): $\mathbf{m}$ of the gradients, with weight
+Under Adam the cap on the step is already there. Adam keeps two leaky
+averages (:numref:`sec_adam`): $\mathbf{m}$ of the gradients, with weight
 $1 - \beta_1$ on each new gradient, and $\mathbf{v}$ of their squares, with
 weight $1 - \beta_2$. Suppose a gradient coordinate $g$ arrives that dwarfs
 every earlier one. After this step $m \approx (1 - \beta_1) g$ and
-$v \approx (1 - \beta_2) g^2$, so the update of that coordinate is about
+$v \approx (1 - \beta_2) g^2$. The coordinate therefore moves by about
 $\eta (1 - \beta_1)/\sqrt{1 - \beta_2}$, or $3.2\,\eta$ at the defaults
-$\beta_1 = 0.9$ and $\beta_2 = 0.999$, however large $g$ is. Adam's update
-is thus already bounded in each coordinate, and clipping, which scales $g$
-before either average sees it, changes this one step little as long as the
-clipped gradient still dominates. What clipping protects is Adam's state.
-Without it, the huge $g^2$ stays in $v$ and fades only by the factor
-$\beta_2$ per step, with a time constant of $1/(1 - \beta_2) = 1{,}000$
-steps. A spike a hundred times the typical gradient keeps $v$ above its
-usual level for more than two thousand steps, and throughout that time the
-inflated denominator $\sqrt{v}$ suppresses the updates of the coordinate.
-Clipping is therefore no substitute for lowering a learning rate that is
-too large for Adam, but it keeps one bad minibatch from silencing a
-parameter for thousands of steps. With the $\beta_2 = 0.95$ of
-:numref:`tab_practice_recipes`, both effects shrink: the time constant
-falls to 20 steps, and the bound on the step falls to
-$0.1/\sqrt{0.05} \approx 0.45$ times $\eta$.
+$\beta_1 = 0.9$ and $\beta_2 = 0.999$, however large $g$ is. Clipping $g$
+changes this one step little, as long as the clipped gradient still
+dominates. For the same reason clipping cannot stand in for a lower
+learning rate under Adam: a step whose length ignores the size of the
+gradient is not shortened by shrinking the gradient.
+
+What clipping protects is Adam's state. Let a minibatch whose gradient is a
+hundred times as long as the typical one pass unclipped. Its square adds
+$(1 - \beta_2) \cdot 100^2 = 10$ times the usual value to $v$. Now $v$
+stands at 11 times its usual level, every step is divided by $\sqrt{11}$,
+and the model moves at 30% of its usual pace. The excess fades only by the
+factor $\beta_2$ per step: $10 \cdot 0.999^t$ falls below 1 after about
+2,300 steps, and the steps are then still at 70%. One bad minibatch has
+slowed the model for thousands of steps. Clipped at four times the median
+norm, as in our runs, the same gradient adds $0.001 \cdot 4^2$, less than
+2%. Since the norm is global, this protection extends only to spikes that
+lift the norm of the whole gradient above $\theta$.
+
+With $\beta_2 = 0.95$, the choice of the large runs in
+:numref:`tab_practice_recipes` below, the damage is deeper and much
+shorter. The bound on a single step falls to
+$0.1/\sqrt{0.05} \approx 0.45$ times $\eta$, but an unclipped spike enters
+$v$ with fifty times the weight. The same gradient adds
+$0.05 \cdot 100^2 = 500$ times the usual value, cuts the steps to less than
+a twentieth of their size, and is forgotten within about 120 steps.
 
 ### Loss Spikes and Recovery
+:label:`subsec_practice-spikes`
 
-Clipping does not prevent every failure. The PaLM run quoted at the start of
-this section had clipping enabled, and its loss still spiked about twenty
-times, at irregular intervals and sometimes late in training, while smaller
-models trained the same way did not spike. Other guards act on the loss
-rather than on the gradient. PaLM added a *z-loss*, the penalty
-$10^{-4} \log^2 Z$ on the softmax normalizer $Z = \sum_j \exp(o_j)$ of the
-output logits $o_j$. The cross-entropy does not change when the same
-constant is added to every logit, so nothing in it stops the logits from
-drifting as a whole toward large values, where they lose precision in
-bfloat16. The z-loss keeps $\log Z$ close to zero and with it the overall
-level of the logits. PaLM used it throughout training, and the spikes came
-anyway :cite:`chowdhery2022palm`.
+Clipping does not prevent every failure, as the twenty spikes of PaLM
+showed. They came at irregular intervals, sometimes late in training, and
+smaller models trained in the same way had none. A second precaution was on
+throughout, a small penalty that keeps the output logits from drifting as a
+whole (the *z-loss* of Exercise :exref:`ex_practice-logit-drift`), and it
+did not prevent them either :cite:`chowdhery2022palm`.
 
-When a spike does occur, the remedy is operational. The PaLM team
-restarted from a checkpoint about 100 steps before each spike and skipped
-the 200 to 500 minibatches seen around it, after which the loss did not
-spike again at that point. The skipped data was not bad in itself: the same
-minibatches, replayed from a different, earlier checkpoint, caused no
-spike. The spikes came from a particular combination of data and parameter
-state :cite:`chowdhery2022palm`. Recovery of this kind needs checkpoints
-frequent enough that a rewind costs hours rather than days, and each
-checkpoint must hold everything needed to resume: the model and optimizer
-state, the step count that drives the schedule, and the position in the
-data stream.
+The remedy was operational. The PaLM team restarted from a checkpoint about
+100 steps before each spike and skipped the 200 to 500 minibatches seen
+around it, after which the loss did not spike again at that point. The
+skipped data was not bad in itself: replayed from a different, earlier
+checkpoint, the same minibatches caused no spike. It took a particular
+combination of data and parameter state, and why that combination, the
+report does not say. We can still prepare for a failure that we cannot
+explain. Checkpoints must be frequent enough that a rewind costs hours and
+not days, and each must hold everything needed to resume: the model, the
+optimizer state with Adam's two averages (:numref:`subsec_adamw-memory`),
+the step count that drives the schedule, and the position in the data
+stream.
 
 ## Weight Averaging
 :label:`subsec_practice-weight-averaging`
 
-The last checkpoint of a run is one draw. At a constant learning rate, SGD
-does not settle at a point: its iterates keep fluctuating in a region
-around a minimum, the noise ball of :numref:`sec_sgd`, whose size grows
-with the learning rate and with the variance of the gradient noise. A
-schedule shrinks this region by decaying the learning rate
-(:numref:`sec_scheduler`). Averaging the iterates reduces the noise in a
-different way, without touching the learning rate. When the fluctuations
-around the center of the region are only weakly correlated, they partly
-cancel in the mean.
+Suppose the run has survived. Which weights do we keep? The last ones are
+the obvious answer, and they are one draw. At a constant learning rate SGD
+does not settle at a point: its iterates keep fluctuating in the noise ball
+of :numref:`sec_sgd`. A schedule shrinks the ball by decaying the rate
+(:numref:`sec_scheduler`). Averaging leaves the learning rate alone:
+fluctuations around the center of the ball cancel in a mean.
+
+They cancel only if the averaged iterates are different draws, and
+successive iterates are anything but. On the valley of the earlier
+sections, a coordinate with curvature $c$ keeps the fraction $1 - \eta c$
+of its position at every step and needs about $1/(\eta c)$ steps to forget
+where it was. (This $c$ is the $\lambda$ of :numref:`sec_sgd`; here
+$\lambda$ will be the weight decay.) Along the flat direction, where
+$c = 0.2$, that is 50 steps at $\eta = 0.1$. An average of the last ten
+iterates is then an average of ten copies of nearly the same point. A
+useful window holds many such stretches, which makes it hundreds or
+thousands of steps long.
 
 ### The Exponential Moving Average
 
-Stochastic weight averaging takes an equal-weight average of checkpoints
-from the tail of training :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`. The
-exponential moving average (EMA) that :numref:`sec_training_recipes` added
-to the standard training recipe weights recent iterates more heavily and
-needs no choice of where the tail starts. It keeps a running average
-$\bar{\mathbf{x}}_t$ of the weights $\mathbf{x}_t$, written here with the
-decay $\alpha$ because $\beta$ already denotes momentum:
+The recipe of :numref:`sec_training_recipes` evaluated an exponential moving
+average (EMA) of its weights in place of the weights themselves. An EMA
+keeps a running average $\bar{\mathbf{x}}_t$ of the weights $\mathbf{x}_t$.
+We write its decay as $\alpha$, because $\beta$ already denotes momentum:
 
 $$
 \bar{\mathbf{x}}_t = \alpha\, \bar{\mathbf{x}}_{t-1} + (1 - \alpha)\, \mathbf{x}_t.
@@ -408,26 +381,21 @@ $$
 :eqlabel:`eq_practice_ema`
 
 This is the leaky average that momentum applies to gradients and Adam to
-squared gradients, now applied to the weights themselves. The weights of
-$k$ steps ago enter with weight $(1 - \alpha)\alpha^k$, so the average
-reaches back about $1/(1 - \alpha)$ steps. Training never sees
-$\bar{\mathbf{x}}_t$; only evaluation uses it. Its cost is one more copy of
-the parameters in memory.
+squared gradients, now applied to the weights themselves, and it reaches
+back about $1/(1 - \alpha)$ steps. Training never sees
+$\bar{\mathbf{x}}_t$. It goes on updating $\mathbf{x}_t$, which we call the
+*live* weights, and only evaluation uses the average. The cost is one more
+copy of the parameters in memory.
 
 ### Averaging at a Constant Learning Rate
 
-We test the average on the convolutional network `d2l.lenet_bn` of
-:numref:`sec_scheduler`: a LeNet with ReLU activations, max-pooling, and
-batch normalization after every hidden layer, initialized with Xavier
-weights and zero biases, and trained on Fashion-MNIST in minibatches of 256
-images. `d2l.evaluate_accuracy` of :numref:`sec_test_models` measures its test
-accuracy. At the constant learning rate $\eta = 0.3$, the baseline of that
-section, its test accuracy gains little after about ten epochs and then
-moves up and down from epoch to epoch. Alongside the live weights we keep
-an EMA with $\alpha = 0.999$, whose window of about 1,000 steps spans
-roughly four epochs of 235 steps each.
-
-<!-- WRITER: the experiment moved from `lenet_bn` (removed from the library by the Schedules step) to `FashionCNN` with plain SGD at 0.3, the baseline of :numref:`sec_test_models`. `FashionCNN` has no batch normalization, so the paragraph on averaging batch-normalization statistics and `use_buffers=True` are gone (keep the advice to recompute the statistics after averaging saved checkpoints, in one sentence where averaged checkpoints are discussed, PRAC-20). The average now starts after epoch 5 (PRAC-18), so the lag paragraph shrinks to a sentence. A cosine decay of the same length (15 epochs, from the same initialization, warmup 0) runs next to the constant rate (PRAC-19), and both keep an EMA. Two seeds. Measured, ten paired runs over both tabs (three development seeds and two notebook runs of two seeds per tab), test accuracy: constant rate, live weights: the last five epochs scatter over 1 to 5 points within a run (overall 0.859 to 0.917), and the final epoch lands anywhere in that range (0.859 to 0.916); constant rate, EMA: final 0.911 to 0.915, rising steadily over the last five epochs; cosine decay, final live weights: 0.908 to 0.914. EMA at the constant rate minus the decayed run's final weights: +0.001 to +0.006 in all ten runs, smaller than the spread of either setting, so state "matches", not "beats". The EMA ends above the final live weights of the same run in 9 of 10 runs (by up to 5 points); in one run the last live epoch landed at 0.916 against the EMA's 0.914, so the firm statement is about the scatter of the live weights, not about one final value. The EMA of the cosine run (also from epoch 5) ends at or up to 0.3 points below that run's final live weights: after a decay the average only lags. The window of alpha = 0.999 is about 1,000 steps, a little over four epochs of 235 steps; the average covers epochs 6 to 15. -->
+`TinyLM` would be a poor test of the average. Its runs end short of steps,
+with the loss still falling (:numref:`sec_test_models`), and there is no
+noise ball to average over. We turn to `FashionCNN`, the image classifier
+of the same section, trained as there with plain SGD at the constant rate
+$0.3$ on minibatches of 256 images, now for 15 epochs of 235 steps.
+Alongside the live weights the run keeps an EMA with $\alpha = 0.999$, whose
+window of 1,000 steps spans a little over four epochs.
 
 ```{.python .input #practice-weight-averaging-1}
 %%tab pytorch, jax
@@ -436,23 +404,34 @@ num_epochs, num_batches = 15, len(fashion.train_dataloader())
 test_acc = lambda model: d2l.evaluate_accuracy(model, fashion.val_dataloader())
 ```
 
-<!-- WRITER: the two tab notes below describe the new cells (PyTorch: `AveragedModel` updated from an optimizer step hook that is registered when averaging starts; JAX: the EMA kept by an Optax transformation chained after the optimizer). Shorten to a sentence each. -->
+When should the average start? One that begins at the first step spends its
+first epochs remembering the initialization: after one epoch of 235 steps
+the initial weights would still carry the weight
+$0.999^{235} \approx 0.79$. This is lag, not the bias toward zero that Adam
+corrects (:numref:`sec_adam`). The average starts as a copy of the weights,
+so its coefficients already sum to one, and there is nothing to correct. The
+cure for lag is to start late, though not so late that the copy it starts
+from has no time to fade. We start after epoch 5, which leaves ten epochs,
+more than two windows.
+
+For comparison, a second run lowers the same rate to zero along a cosine
+over the same 15 epochs, from the same initial weights. If averaging and
+decay remove the same noise, the average of the constant-rate run should end
+where the decayed run ends. `warmup_cosine(peak, warmup, num_steps)` is a
+linear ramp over `warmup` steps, none here, followed by the cosine decay of
+:numref:`sec_scheduler`. Both schedules are run from two seeds, and the
+table prints test accuracies.
 
 :begin_tab:`pytorch`
-`AveragedModel` keeps a copy of the network. The first call of its method
-`update_parameters` copies the live weights into it, and with
-`get_ema_multi_avg_fn` every later call blends them in as in
-:eqref:`eq_practice_ema`. `register_step_post_hook` makes the optimizer
-call a function after every step; we use it to advance the learning-rate
-schedule and, from epoch 5 on, to update the average.
+`AveragedModel` holds the averaged copy. A hook that the optimizer calls
+after every step advances the schedule and, from epoch 5 on, updates the
+average, whose first update copies the live weights.
 :end_tab:
 
 :begin_tab:`jax`
-`ema_of_weights` is an Optax transformation placed after the optimizer in
-the chain: it passes the updates through unchanged, applies them to a copy
-of the parameters, and blends the result into an average in its state with
-`optax.incremental_update`, which computes :eqref:`eq_practice_ema` for
-every array. `averaged` writes that average into a copy of the model.
+`ema_of_weights` is an Optax transformation chained behind the optimizer.
+It keeps the average in its state, and `averaged` writes that average into
+a copy of the model.
 :end_tab:
 
 ```{.python .input #practice-weight-averaging-4}
@@ -557,123 +536,102 @@ d2l.plot(list(range(1, num_epochs + 1)), [live, avg, decayed], 'epoch',
                  'cosine decay, live weights'], legend_loc='outside')
 ```
 
-Two features of the curves matter. First, the average needs its window to
-fill before it is useful. For the first few epochs it trails the live
-weights by a wide margin, because it still gives much weight to iterates
-near the initialization: after one epoch of 235 steps, the initial weights
-still carry the weight $0.999^{235} \approx 0.79$. This is lag, not the bias
-toward zero that Adam corrects (:numref:`sec_adam`). The average starts at
-the initial weights, so its coefficients already sum to one, and there is
-nothing to correct. Practical EMAs therefore start averaging late in
-training or let $\alpha$ grow from a small value over the first steps.
+Read the first column first. At the constant rate the live weights do not
+hold still: within the last five epochs their accuracy ranges over two to
+six points, and the final value is whichever point of that range the last
+epoch happens to produce. The EMA of the same run ends a little above 91%
+every time, at the top of that range or above it. In the plot, of the first
+seed, it trails the live weights for two or three epochs while its window
+fills, and then runs smoothly along the upper edge of the live curve. The
+live curve shows the noise ball directly: each epoch evaluates a different
+point in it, while the EMA evaluates close to its center.
 
-Second, once the window has filled, the EMA curve is smooth and runs along
-the top of the live curve. Over the last five epochs the live accuracy
-jumps up and down, in some runs by several points, while the EMA's rises
-steadily, by about one to two points, and ends at its highest value. The live curve shows the noise ball
-directly: each epoch evaluates a different point in it, while the EMA
-evaluates close to its center.
+The decayed run ends at about 91% as well, within about half a point of the
+averaged one. Two runs of one setting differ by a point on `FashionCNN`
+(:numref:`sec_test_models`), so this is a tie, and it is the tie that the
+noise ball predicted. The cosine rows also show where averaging ends. After
+a decay to zero the EMA does not improve on the final weights. In each of
+our runs it ends a little behind the final weights of the same run, by a
+few tenths of a point at most. The decay has already removed the noise, and
+what is left of the average is its lag.
 
 ### Averaging and Decay
 
-At a constant learning rate, the averaged weights reach about the final
-accuracy of the decayed schedules of :numref:`sec_scheduler`, roughly 91%.
-Decay and averaging get there by different routes. Decay reduces the noise
-injected into future iterates and so changes the trajectory, while
-averaging leaves the trajectory alone and reduces the noise in the
-parameters we evaluate. The noise-ball argument also predicts a limit. Once
-a schedule has decayed the learning rate to nearly zero, the iterates
-barely move, and their average lies close to the last iterate. Averaging is
-therefore most useful when no decay is planned, or when a decayed endpoint
-is expensive to reach, as for the checkpoints evaluated during a long run
-whose final length is not yet fixed. Large runs average checkpoints even
-after decay, where the gain is smaller: the released Llama 3 model is the
-average of checkpoints from the final phase of training, during which the
-learning rate was annealed to zero
-:cite:`Grattafiori.Dubey.Jauhri.ea.2024`. When you average a few saved
-checkpoints instead of keeping a running EMA, the batch-normalization
-statistics belong to none of the averaged weights. Recompute them with a
-pass over the training data before trusting the result.
+Decay and averaging thus reach the same accuracy by different routes. Decay
+reduces the noise injected into future iterates and so changes the
+trajectory. Averaging leaves the trajectory alone and reduces the noise in
+the parameters that we evaluate.
 
-## Comparing Optimizers
-:label:`subsec_practice-tuning`
-
-Every comparison in this chapter rests on a tuning protocol, and the
-protocol is part of the result.
-
-### Scientific and Nuisance Hyperparameters
-
-The Deep Learning Tuning Playbook
-:cite:`Godbole.Dahl.Gilmer.ea.2023` sorts the hyperparameters of an
-experiment into three classes. *Scientific* hyperparameters are the ones
-the question is about. *Nuisance* hyperparameters must be re-optimized for
-every value of the scientific ones before the comparison means anything.
-*Fixed* hyperparameters are held constant, and each of them limits the
-claim. A comparison says something about its scientific hyperparameters
-only after the nuisance hyperparameters have been retuned in each arm. The
-most common violation is also the simplest. The learning rate is almost
-always a nuisance hyperparameter, and a single shared learning rate favors
-whichever method happens to prefer it.
-
-The optimizer races of :numref:`sec_adam` and :numref:`sec_muon` followed
-this protocol. The optimizer was the scientific hyperparameter. The
-learning rate was the nuisance, retuned for each optimizer on a grid of
-four or five values spaced by factors of about three. The number of steps,
-the batch size, the model, and the absence of a schedule were fixed and
-stated, and every conclusion holds for that protocol only. At larger scale
-the same design has more nuisance dimensions (the peak learning rate, the decay
-horizon, the warmup, and the weight decay), replaces coarse grids by
-quasi-random search, and separates a broad exploration from a narrow final
-sweep.
-
-### Tuning Effort and the Verdict
-
-The protocol can decide the verdict. :citet:`Schmidt.Schneider.Hennig.2021`
-benchmarked fifteen optimizers on a range of problems and found that trying
-several optimizers at their default settings works about as well as tuning
-a single one extensively. Defaults encode much accumulated tuning, and a
-comparison without per-arm tuning measures how much effort went into each
-arm rather than the algorithms. :citet:`Wen.Hall.Ma.ea.2025` retuned ten
-optimizers for language-model pretraining, each with its own tuning budget,
-and found that published speedups of about $2\times$ over AdamW shrink to
-about $1.4\times$ at 100 million parameters and toward $1.1\times$ at 1.2
-billion.
-
-### Experiment Records
-
-A comparison is only as good as its record. For every run, log the full
-configuration, including the hyperparameters you consider fixed, the code
-version, the random seed, and the one thing you changed. Change one factor
-at a time to estimate its effect, and use a factorial design when the
-interaction between factors is the question. Repeat the decisive runs with
-new random seeds: a difference smaller than the spread between seeds is not
-a result. Keep the runs that diverged, since the edge of a sweep where runs
-fail marks the stability boundary, as the divergent grid point of
-:numref:`sec_adam` did for SGD. And write the conclusion next to the curves
-while the experiment is fresh. A directory of loss curves without sentences
-becomes unreadable within weeks.
-
-### The Chapter's Three Decisions
-
-The methods of this chapter settle three decisions: the direction of an
-update (the gradient, its sign, or an orthogonalized version of it), the
-size of the step over time (warmup, decay, and the shape of the schedule),
-and the handling of gradient noise (the batch size, momentum, and
-averaging). Every row of :numref:`tab_practice_recipes` is one coordinated
-choice of all three. When a run misbehaves, the first question is which
-of the three decisions failed. This chapter has left open where the updates
-run once a model no longer fits on one device, and how the optimizer state
-is divided among many devices. That is the subject of
-:numref:`chap_performance`.
+When is an average the tool, then? When no decay is planned, or when a
+model is needed before the decay has happened. In the warmup–stable–decay
+runs of :numref:`sec_scheduler`, a checkpoint of the constant phase became
+a finished model only through a *branch*, a copy of the run that decays its
+rate over a few hundred further steps. The EMA at that checkpoint can be
+evaluated without them. After a full decay the average adds little, but it
+also costs little, and large runs take it anyway. The released Llama 3
+model is an average of checkpoints from the final phase of training, during
+which the learning rate was annealed to zero
+:cite:`Grattafiori.Dubey.Jauhri.ea.2024`. Checkpoints that are averaged
+must lie far enough apart to be different draws.
 
 ## A Worked Configuration
 
-<!-- WRITER: NEW subsection (structure 12.3), the chapter's ending; it replaces "Choosing a Configuration", "Comparing Optimizers" and "The Chapter's Three Decisions" (move the table of reported configurations here as the precedent). The cells configure a TinyLM the chapter has not tuned, four blocks of width 256 with four heads (3,307,264 parameters), from nothing to a finished 3,000-step run, every step from an earlier section. Measured in development (PyTorch, JAX; RTX 4090, shared GPU):
-(1) Batch size from the device: throughput, sequences per second, levels off at a batch of 256 in both tabs (PyTorch about 17,500 to 19,300 at 256 and 18,900 to 19,100 at 512 and 1,024; one gradient takes about 12 to 15 ms up to 256 and doubles with each doubling beyond; JAX 20,700 to 25,000 at 256 and less at 512 and 1,024; one gradient 4 to 8 ms up to 128, 10 to 12 ms at 256). Small batches are launch-bound, so their time per gradient is noisy on a shared GPU; the knee is stable. We train at 256. The noise scale (:numref:`sec_batch_size`, `d2l.noise_scale`) is 2 at initialization in every run and 55 to 205 after 300 steps at the chosen rate (ten runs over both tabs; repeated measurements of one model agree within 3%), and 400 to 580 after 1,500 steps (probe): the batch of 256 is at or above the noise scale for the first few hundred steps and below it for most of the run, the growth that :numref:`sec_batch_size` measured.
-(2) AdamW with (0.9, 0.95), weight decay 0.1 on the matrices only (:numref:`subsec_adamw-what-not-to-decay`), clipping at 1 with the fraction of clipped steps logged, an EMA of the weights (alpha = 0.995, a window of 200 steps). `train` takes the schedule and the threshold; the baseline is the same function with a constant rate, still clipped at 1 (review fix 2026-11-14, so that only the schedule differs; its EMA is not used).
-(3) Three 300-step runs at constant rates 1e-3, 3e-3, 1e-2 (one seed per notebook run): 1.862 to 1.894, 1.717 to 1.757, 2.463 to 2.508 (eight sweeps over both tabs). 1e-2 stalls in every sweep, so 3e-3 is both the largest stable rate and the best; `peak` is the grid point with the lowest 300-step loss. Probed: 3e-4 and 3e-2 are worse (2.19 to 2.20, 2.57 to 2.62). Clipping acts on 2 to 7% of the steps of these short runs, all early. The choice holds at full length: constant rates for 3,000 steps end at 1.336 / 1.340 (1e-3), 1.322 / 1.324 (3e-3), 2.442 / 2.477 (1e-2) (training loss, one seed per tab).
-(4) Warmup over 2% of the steps (60), then a cosine to zero, at the peak 3e-3 (`warmup_cosine`, defined with the averaging cells).
-(5) Final runs, validation loss in nats per byte, 14 seeds over both tabs (development and two notebook runs): configured 1.242 to 1.254; baseline, the same AdamW at the constant 3e-3 without warmup or averaging (development: also unclipped), 1.299 to 1.310 (store of 2026-11-14, clipped at 1 like the configured run: 1.302 to 1.303); gap per seed 0.048 to 0.065, against a spread between the two seeds of one notebook run of 0.000 to 0.008 for either setting: the gap is six to ten times the spread. Clipping acts on 0.5 to 0.7% of the steps, all in the first 100. The two arms now differ only in the schedule (warmup plus cosine against constant), so the gap is the schedule's, and most of it the decay (the warmup touches only the first 60 steps; :numref:`sec_scheduler` measured the decay alone). The throughput cell draws each batch before the clock starts, so it times the gradient alone. The EMA after the cosine decay equals the final weights to within 0.001 in every run: after a full decay there is nothing left to average, as "Averaging and Decay" predicts. Probed: an EMA with a 1,000-step window (alpha = 0.999 from step 0) ends 0.025 above the final weights, because it reaches back into steps the decay had not finished. The average earns its keep on a run stopped before its decay ends, or at a constant rate (the FashionCNN cell). Run time: about 3 minutes per tab for the whole subsection. -->
+We can now do what the chapter has been preparing: take a model that nobody
+has tuned and decide everything. The model is a `TinyLM` with four blocks of
+width 256 and four attention heads. It has 3.3 million parameters, seven
+times as many as the `TinyLM` of the earlier sections, and no section has
+trained it. The run that we pretend we cannot repeat lasts 3,000 steps. It
+takes a minute or two here; imagine a week. Whatever we want to know, we
+must learn from much shorter runs.
+
+### Reported Configurations
+
+A new run need not start from nothing, because others have trained models of
+the same kind and written down what they used.
+:numref:`tab_practice_recipes` collects the optimizer settings disclosed for
+four large pretraining runs of 2024 and 2025.
+
+:What four pretraining runs disclose about their optimizer configuration
+(for OLMo 2, the moment coefficients are from its released training
+configuration). A dash means that we found no statement. Batch sizes are
+quoted as each report quotes them, in tokens or sequences.
+:label:`tab_practice_recipes`
+
+| run | optimizer | $\beta_1, \beta_2$ | peak LR and schedule | warmup | clip | weight decay | batch size |
+|:--|:--|:--|:--|:--|:--|:--|:--|
+| Llama 3 405B :cite:`Grattafiori.Dubey.Jauhri.ea.2024` | AdamW | — | $8{\times}10^{-5}$, cosine to $8{\times}10^{-7}$ | 8k steps | — | — | ramp 4M $\to$ 8M $\to$ 16M tokens |
+| DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024` | AdamW | 0.9, 0.95 | $2.2{\times}10^{-4}$, constant to 10T tokens, cosine to $2.2{\times}10^{-5}$ | 2k steps | 1.0 | 0.1 | ramp 3,072 $\to$ 15,360 seqs over 469B tokens |
+| OLMo 2 7B :cite:`OLMo.2025` | AdamW | 0.9, 0.95 | $3{\times}10^{-4}$, cosine toward 10% of peak over 5T tokens, cut at 4T | 2k steps | 1.0 | 0.1, embeddings exempt | 1,024 seqs, fixed |
+| Kimi K2 :cite:`Kimi.Team.2025` | MuonClip | — | $2{\times}10^{-4}$, constant to 10T tokens, cosine to $2{\times}10^{-5}$ | 500 steps | — | 0.1 | 67M tokens, fixed |
+
+Wherever a row speaks, it says much the same: AdamW with
+$(\beta_1, \beta_2) = (0.9, 0.95)$, weight decay $0.1$, clipping at a global
+norm of 1, a warmup, and a later decay along a cosine. Only the optimizer
+of Kimi K2 departs. MuonClip is the Muon of :numref:`sec_muon`, together
+with the cap on attention scores described there. Of the shared settings,
+$\beta_2$ needs a word, because until now every Adam of this chapter ran at
+the default $0.999$. At $0.95$, Adam's average of the squared gradients
+reaches back about $1/(1-\beta_2) = 20$ steps instead of a thousand, so it
+follows a change in the scale of the gradients quickly and, as we saw,
+forgets a spike quickly. What varies is the peak learning rate, which every
+team set for itself. The smallest belongs to the widest model, Llama 3 405B,
+which is the direction in which :numref:`sec_scaling` saw the best rate
+drift. These settings are a defensible start, because each was chosen by a
+team that could test it at scale. They are not proven optima, because the
+reports rarely ablate them. The dashes record missing evidence, not implied
+defaults.
+
+### Batch Size
+
+The first decision is the batch size, because the learning rate depends on
+it. The procedure of :numref:`sec_batch_size` gives the batch a floor and a
+ceiling. The floor is the batch that fills the device: below it a step
+reads fewer examples and is hardly any faster. The ceiling is the *noise
+scale*, the batch size at which the noise in a minibatch gradient is as
+large as the gradient itself. Far above it, extra examples save few steps.
+To find the floor, we time one gradient of the model at batch sizes from 32
+to 1,024 sequences. `tiny_lm` builds the model, and `sample_lm(b)` draws
+`b` windows of text.
 
 ```{.python .input #practice-a-worked-configuration-1}
 %%tab pytorch
@@ -714,6 +672,29 @@ for b in [32, 64, 128, 256, 512, 1024]:
     print(f'batch {b:5d}: {1000 * t:5.1f} ms per gradient, '
           f'{b / t:6.0f} sequences per second')
 ```
+
+From 32 to 128 sequences the batch quadruples and the time of a gradient
+grows far less, because the device has capacity to spare. From 256 on, the
+time doubles with every doubling of the batch, and the number of sequences
+per second no longer rises. Somewhere between 128 and 256 sequences the
+device fills up. We take 256 as the floor, the first of our batch sizes at
+which it is certainly full. The ceiling must wait for the short runs below,
+because the noise scale changes as a model trains.
+
+### Optimizer and Precautions
+
+For the optimizer we follow the table: AdamW with
+$(\beta_1, \beta_2) = (0.9, 0.95)$ and $\lambda = 0.1$, the decay applied to
+the weight matrices only (:numref:`subsec_adamw-what-not-to-decay`), and
+gradients clipped at a global norm of 1. Two of these settings we adopt with
+our eyes open. The decay can do little in a run of this length: at learning
+rates of a few thousandths its timescale $1/(\eta\lambda)$ is thousands of
+steps (:numref:`sec_adamw`), as long as the run itself. We keep it because
+the run stands in for a long one. And whether a threshold of 1 is a guard on
+this model we do not know yet, so `train` returns the fraction of clipped
+steps. It also keeps an EMA of the weights with $\alpha = 0.995$. The window
+of 200 steps is short on purpose: the run will end with a decay, and a long
+window would reach back to weights that the decay has since improved on.
 
 ```{.python .input #practice-a-worked-configuration-3}
 %%tab pytorch
@@ -761,6 +742,21 @@ def train(seed, schedule, num_steps, max_norm=1.0, alpha=0.995):
     return losses, model, averaged(model, optimizer), float(clip_rate)
 ```
 
+### Peak Learning Rate
+
+What remains is the setting that every report chose for itself, and our
+whole tuning budget goes to it: three runs of 300 steps at constant rates a
+factor of three apart. A tenth of the final run is long enough to tell the
+three cases of :numref:`sec_test_models` apart, a rate that is too low, one
+that trains and one that is too high. Which three rates? On the small
+`TinyLM` the usable rates of Adam spanned a factor of ten around the best
+one, $0.003$ (:numref:`sec_adam`), and a wider model prefers the same rate
+or a smaller one (:numref:`sec_scaling`). The grid $0.001$, $0.003$, $0.01$
+should therefore contain the best rate and show the edge above it. (With no
+smaller relative to consult, start from the wider grid of
+:numref:`sec_adam`.) The cell also prints the noise scale, at
+initialization and for the model trained at the rate it chose.
+
 ```{.python .input #practice-a-worked-configuration-4}
 %%tab pytorch, jax
 data.batch_size = 256  # Where the throughput levels off
@@ -776,6 +772,111 @@ peak = min(short, key=lambda lr: short[lr][0])
 print(f'peak rate {peak:g}; noise scale after its 300 steps: '
       f'{d2l.noise_scale(short[peak][1], sample_lm, b_small=8, b_big=256):.0f}')
 ```
+
+The three runs show the three cases, in the form that Adam gives them. At
+$0.001$ the run trains, slowly. At $0.01$ it stalls
+near $2.5$ nats, since under Adam a rate that is too high shows as a stalled
+loss and not as `inf` (:numref:`sec_adam`). This run was clipped more often
+than the other two and stalled all the same: clipping does not rescue Adam
+from a learning rate that is too large. The rate $0.003$ is the best by
+about a tenth of a nat or more, and we take it as the peak. It lies a
+factor of three below the first rate that stalls, at the near end of the
+factor of three to ten that :numref:`subsec_scheduler-warmup` gave as a
+rule of thumb. In all three runs clipping acted on a few percent of the
+steps, the share of a guard. The threshold of the published runs suits
+this model too.
+
+The sweep took 900 steps, less than a third of the run it prepares, and it
+cut two corners. It ran from a cold start, where
+:numref:`subsec_scheduler-warmup` advised sweeping behind the ramp. A cold
+sweep is the stricter test. What it may miss is a higher rate that only a
+ramp rescues, and in that section such a rate still ended more than a
+tenth of a nat behind the best one. The bolder corner is the assumption
+that the best constant rate of 300 steps is the right peak for 3,000 steps
+that end in a decay. Short runs flatter large rates, which are the fastest
+off the mark: had the lowest loss sat at the top of our grid, we would have
+extended the grid before believing it. Exercise
+:exref:`ex_practice-worked-configuration` tests the assumption.
+
+Three runs tune one number. With tens of runs, add the weight decay, and
+search over the rate and the product $\eta\lambda$, which sets the
+timescale of the decay (:numref:`sec_adamw`).
+
+The noise scale settles the batch size. It is about 2 sequences at
+initialization and of the order of a hundred after 300 steps. Our floor of
+256 sequences is already at or above this ceiling, so we stay at the floor.
+A larger batch would spend its extra examples on averaging noise that is
+already smaller than the gradient.
+
+### Schedule
+
+Two decisions remain, and :numref:`sec_scheduler` prepared both. The first
+is the warmup: a linear ramp over the first 60 steps, 2% of the run, where
+one to a few percent is customary. It gives up the budget of 30 steps at
+the peak, the *budget* of a schedule being the sum of its learning rates,
+which sets how far the weights can travel. Does this run need a ramp at
+all? The sweep trained at $0.003$ from a cold start, so perhaps not. But
+one seed is thin evidence and the ramp is cheap.
+
+The second is the decay. In that section a late decay, which holds the
+peak and falls linearly over the last fifth of the run, beat the constant
+rate where the cosine only tied with it. Its main merit, that the length of
+a run can be decided late, counts for nothing here, since our length is
+fixed. We take the cosine, the shape of all four rows of
+:numref:`tab_practice_recipes`, and we take it to zero, where that section
+found that a schedule should end. Whether the late decay would have ended
+lower on this model is the first question of Exercise
+:exref:`ex_practice-worked-configuration`.
+
+### Logs and Records
+
+One more decision comes before the run, and it is easily forgotten: what
+the run writes down. Besides the loss, a long run should log four curves,
+each of which separates failures that look alike in the loss. The gradient
+norm before clipping tells a rough start from a spike in mid-run. The share
+of clipped steps tells a guard from a brake. The learning rate shows
+whether a drop of the loss was the schedule's doing. And the size of an
+update relative to the weights exposes a cold start: in
+:numref:`subsec_scheduler-warmup` the first step of a stalled run changed
+the weights by two thirds of their size. :numref:`tab_practice_symptoms`
+reads the failures of this chapter off these curves. Our own `train`
+returns only the losses and the share of clipped steps, which is enough
+for two minutes.
+
+:Reading the log of a run: the failures of this chapter and what to try
+first.
+:label:`tab_practice_symptoms`
+
+| in the log | reading | first remedy |
+|:--|:--|:--|
+| the loss leaves in the first steps, gradient norms climbing | steps too long for the initialization | a warmup or clipping |
+| the loss stalls high under Adam; the first updates were a large fraction of the weights | a start too rough | a warmup |
+| the loss stalls high under Adam behind a warmup | a rate too large throughout | one grid point down |
+| clipping acts on most steps | a brake, not a guard | a lower rate, then a look at the threshold |
+| the loss has stopped falling and jitters | the noise level of the current rate | decay, or average |
+| the loss is smooth and still falling at the end | a slow run | a higher rate or more steps |
+
+The records of a project outlive its runs. For every run, write down the
+full configuration, including the settings you consider fixed, the code
+version, the seed, and the one thing you changed. Keep the runs that
+diverged and note when they diverged; we have seen what that one number is
+worth. Give every arm of a comparison a tuning of its own. When ten
+optimizers were retuned alike, the speedups over AdamW claimed for the new
+ones, up to a factor of two, shrank to tens of percent
+:cite:`Wen.Hall.Ma.ea.2025`, and our own Muon, with a grid for each arm,
+ended level with AdamW (:numref:`sec_muon`). And write the conclusion next
+to the curves while the experiment is fresh. A directory of loss curves
+without sentences becomes unreadable within weeks.
+
+### The Final Run
+
+Now the run itself. Here we drop the pretence for a moment, since our week
+is really two minutes: the cell does the run twice, because a difference
+counts only against the spread between two runs of one setting
+(:numref:`sec_test_models`). For each of two seeds it trains the configured
+run and a baseline that differs in the schedule alone, the same AdamW with
+the same clipping at the constant rate $0.003$. The table prints validation
+losses in nats per byte.
 
 ```{.python .input #practice-a-worked-configuration-5}
 %%tab pytorch, jax
@@ -797,77 +898,108 @@ print(f'spread between the seeds: configured {abs(c1 - c2):.3f}, '
       f'baseline {abs(b1 - b2):.3f}')
 ```
 
+The configured run ends at a validation loss of about $1.25$, the baseline
+at $1.30$. The gap of $0.05$ to $0.06$ nats is many times the difference
+between two seeds of one setting, which stays under a hundredth, and it
+meets the $0.05$ that :numref:`sec_test_models` asks for. Nothing but the
+schedule differs, and the ramp touches 60 steps of 3,000 at a rate that
+trains without one, so most of the gap must be the decay's.
+
+This should surprise you a little, because in :numref:`sec_scheduler` the
+cosine decay only tied with the constant rate. Between that run and this
+one nearly everything has changed: the model is seven times as large, the
+batch four times, the run half as long again, and $\beta_2$, the weight
+decay and the clipping are new. Our table cannot say which change turned a
+tie into a result, and we will not guess. It says enough for the decision
+at hand. On this run the cosine decay was worth $0.05$ nats, where its
+earlier tie would have told us to expect nothing. The best peak rate
+carried over from the small model to the large one. The worth of a decay
+did not.
+
+What did the rest of the configuration do? For one setting the table
+answers. The EMA agrees with the final weights to within a thousandth of a
+nat, because after a decay to zero there is nothing left to average. For
+the others it is silent. Clipping acted on fewer than 1% of the steps,
+which shows a guard and not whether the guard was needed: at the start of
+this section a few dozen clipped steps of 2,000 were the difference between
+`inf` and a trained model. The ramp and the weight decay have no run
+without them to be compared with. So two settings are known to have done
+work: the peak rate, where a factor of three changed the loss of the sweep
+by a tenth of a nat or more, and the decay. The others are precautions, and
+Exercise :exref:`ex_practice-worked-configuration` finds out which of them
+this run needed. On a run that we could repeat, we would find out and drop
+the idle ones. On a run that we cannot repeat they stay.
+
+Our procedure tuned one number by eye, on one GPU, and both limits are soon
+reached. With several numbers to tune and dozens of runs to spend, the
+search is better left to an algorithm (:numref:`chap_hyperopt`). And once a
+model or its batch no longer fits on one device, a step is spread over many,
+together with the optimizer state, which takes as much memory as the weights
+and their gradients (:numref:`subsec_adamw-memory`). This chapter asked
+which step to take. What a step costs, in seconds and in bytes, is the
+question of :numref:`chap_performance`.
+
 ## Summary
 
-A large training run is configured once, guarded against rare failures, and
-judged by its final weights. Recent pretraining reports disclose recurring
-settings (AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$, weight decay 0.1,
-clipping at 1, warmup and a later decay) that make a defensible start, and
-with a small budget the peak learning rate is the setting to tune.
-Global-norm clipping with a threshold above the typical gradient norm
-fires only on the first few steps, where the gradients of the fresh
-initialization are largest. Yet it turns a diverging `TinyLM` run at
-$\eta = 1$ into a stable one, acting as an automatic warmup, and in long
-runs it also catches the rare oversized gradients of heavy-tailed noise.
-Spikes that get through are handled by rewinding to a checkpoint and
-skipping the data seen around them. An exponential moving average of the
-weights reduces the noise in the
-evaluated parameters without changing the learning rate, and at a constant
-rate it reaches the accuracy of a decayed schedule. A comparison of
-optimizers is evidence only when each arm's nuisance hyperparameters were
-retuned and the protocol is stated.
+A run that cannot be repeated is guarded, finished with an average or a
+decay, and configured from short runs of the same model. Global-norm
+clipping caps the length of a step. At $\theta = 1$ it acted on a few dozen
+steps, all of them before step 50, and that let SGD train `TinyLM` at a
+rate where every unclipped run diverged; at three times that rate it acted
+on practically every step and the run failed. Under Adam, whose step is
+bounded anyway, clipping protects the average of the squared gradients from
+a spike that would otherwise shorten the steps for thousands of steps. An
+exponential moving average of the weights removes the noise of a constant
+learning rate from the parameters that are evaluated. On `FashionCNN` it
+matched a cosine-decayed run at about 91%, and after a full decay it added
+nothing. For a new model we took the batch size from the device, the
+optimizer settings from published runs, and the peak learning rate from
+three runs a tenth as long as the final one. Warmup and cosine decay then
+lowered the validation loss by $0.05$ nats, against less than $0.01$
+between two seeds.
 
 ## Exercises
 
-<!-- WRITER: Exercise 4 needs updating to the new cell: the EMA now starts after epoch 5 (so the weight on the initial weights in part 1 becomes the weight on the epoch-5 weights after 10 epochs, about 2,350 steps), and part 3 (EMA on a cosine-decayed run) is now done in the text: the cell prints it, and the EMA ends at or 0.1 to 0.3 points below the decayed run's final live weights (lag after decay). Replace part 3, e.g. by starting the average at epoch 1 or 10, or by an equal-weight tail average. -->
-
-1. **The decay timescale.** The horizon of :numref:`subsec_wd-at-scale` is
-   $\tau = B/(\eta\lambda D)$ epochs for batch size $B$ and dataset size
-   $D$, both in tokens. The DeepSeek-V3 and OLMo 2 reports in
-   :numref:`tab_practice_recipes` use sequences of 4,096 tokens and
-   training sets of about 14.8 trillion and 4 trillion tokens.
+1. **The decay timescale.** The timescale of weight decay in
+   :numref:`subsec_wd-at-scale` is $1/(\eta\lambda)$ steps, which for a
+   batch of $B$ tokens and a dataset of $D$ tokens is
+   $\tau = B/(\eta\lambda D)$ passes over the data. The DeepSeek-V3 and
+   OLMo 2 runs of :numref:`tab_practice_recipes` use sequences of 4,096
+   tokens and training sets of about 14.8 trillion and 4 trillion tokens.
     1. Compute $\tau$ for both rows at their peak learning rates, taking
        for DeepSeek-V3 its final batch size of 15,360 sequences. What
-       fraction of each dataset does the averaging horizon span?
+       fraction of each dataset do the weights remember?
     1. Following :citet:`Bergsma.Dey.Gosal.ea.2025b`, what should happen to
-       $\lambda$ if the batch size were doubled and $\tau$ is to be
-       preserved, and what if instead the dataset were doubled?
+       $\lambda$ if the batch size were doubled at an unchanged learning
+       rate and $\tau$ is to be preserved, and what if instead the dataset
+       were doubled?
 
-1. [code] **Clipping regimes.** The demonstration in
+1. [code] **Clipping regimes.** The experiment of
    :numref:`subsec_practice-nan` clips at $\theta = 1$.
-    1. Implement global-norm clipping :eqref:`eq_practice_clip` yourself as
-       a function that rescales the gradients by
-       $\min(1, \theta / (\|\mathbf{g}\|_2 + 10^{-6}))$ and returns the
-       norm before clipping. Check on one minibatch that it returns the
-       same norm as the library function and clipped gradients that agree
-       with the library's to about $10^{-6}$.
-    1. Sweep $\theta \in \{0.01, 0.1, 0.5, 1, 4, \infty\}$ on the divergent
-       run, recording the final loss and the fraction of steps on which
-       clipping changed the update. Classify each threshold as a guard
-       (fires rarely), a brake (fires on most steps), or absent, and relate
-       each class to whether the run diverges and to its final loss.
+   :exlabel:`ex_practice-clipping-regimes`
+    1. Sweep $\theta \in \{0.01, 0.1, 0.5, 1, 4, \infty\}$ at $\eta = 1$
+       with `run`, recording the final loss and the fraction of steps that
+       clipping changed. Classify each threshold as a guard (fires
+       rarely), a brake (fires on most steps), or absent, and relate each
+       class to whether the run diverges and to its final loss.
     1. Show that for SGD without momentum, clipping that fires on every
        step turns the update into normalized gradient descent with step
-       size $\eta\theta$. The divergent run uses momentum, with velocity
+       size $\eta\theta$. Our runs use momentum, with velocity
        $\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t$, update
        $\mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t$, and
-       $\beta = 0.9$. Bound the length of one of its updates when clipping
-       fires on every step. Explain why neither case is the same as
-       training at a lower learning rate.
-    1. In the demonstration, clipping fired only on the first steps. Remove
-       it and instead warm the learning rate up linearly from 0 to
-       $\eta = 1$, once over the first 20 steps and once over the first 100
-       steps. Does each run survive? Compare the warmup lengths with the
-       last step on which clipping fired, and explain what the two remedies
-       have in common and how they differ.
+       $\beta = 0.9$. Bound the length of one of their updates when
+       clipping fires on every step. Explain why neither case is the same
+       as training at a lower learning rate.
+    1. Remove the clipping and instead warm the learning rate up linearly
+       from 0 to $\eta = 1$, once over the first 20 steps and once over the
+       first 100 steps. Does each run survive? Compare the two lengths with
+       the last step on which clipping fired, and explain what the two
+       remedies have in common and how they differ.
 
-    *Adapted from Stanford CS336,
-    [Assignment 1](https://github.com/stanford-cs336/spring2024-assignment1-basics),
-    Problem gradient_clipping.*
-
-1. **Logit drift.** The z-loss of PaLM :cite:`chowdhery2022palm` adds
-   $10^{-4} \log^2 Z$ to the cross-entropy, where $Z = \sum_j \exp(o_j)$
-   is the softmax normalizer of the output logits $\mathbf{o}$.
+1. **Logit drift.** To the cross-entropy of its output logits $\mathbf{o}$,
+   PaLM :cite:`chowdhery2022palm` adds the *z-loss* $10^{-4} \log^2 Z$,
+   where $Z = \sum_j \exp(o_j)$ is the normalizer of the softmax.
+   :exlabel:`ex_practice-logit-drift`
     1. Show that adding the same constant $c$ to every logit leaves the
        cross-entropy unchanged, and compute how the shift changes $\log Z$
        and the z-loss.
@@ -877,183 +1009,142 @@ retuned and the protocol is stated.
        of the cross-entropy alone has no component along the all-ones
        vector, and explain what this implies for the overall level of the
        logits during training.
+    1. A model with 256 outputs has all logits equal to zero. Compute
+       $\log Z$ and the z-loss. Which shift of the logits removes the
+       penalty, and what does it do to the predicted probabilities?
 
-1. [code] **The averaging window.** Sweep the EMA decay
-   $\alpha \in \{0.9, 0.99, 0.999, 0.9999\}$ in the demonstration of
-   :numref:`subsec_practice-weight-averaging` and plot the EMA's test
-   accuracy per epoch for each value.
-    1. Express each averaging window $1/(1-\alpha)$ in epochs. Derive the
-       total weight that the EMA still places on the initial weights after
-       the $T \approx 3{,}500$ steps of the 15-epoch run, and evaluate it
-       for each $\alpha$.
+1. [code] **The averaging window.** Sweep the decay
+   $\alpha \in \{0.9, 0.99, 0.999, 0.9999\}$ of the EMA in the
+   constant-rate run of :numref:`subsec_practice-weight-averaging`, and
+   plot the test accuracy of the EMA per epoch for each value.
+   :exlabel:`ex_practice-averaging-window`
+    1. Express each averaging window $1/(1-\alpha)$ in epochs. The average
+       starts as a copy of the weights after epoch 5. Derive the weight
+       that it still places on this copy at the end of the run, about
+       2,350 steps later, and evaluate it for each $\alpha$.
     1. Use these numbers to explain the curves at the two ends of the
        sweep.
-    1. Add the EMA with $\alpha = 0.999$ to a run whose learning rate
-       decays to zero along the cosine schedule of :numref:`sec_scheduler`.
-       Does the average still improve on the final live weights? Explain
-       the answer with the noise ball.
+    1. With $\alpha = 0.999$, start the average at the first step
+       (`start=0`) and after epoch 10 (`start=10`). Predict from the
+       window how each curve will differ from the one in the text, and
+       check.
 
-1. [code] **A ten-run budget.** Using AdamW on `TinyLM`, reach a training
-   loss of 1.1 in as few steps as you can, tuning only the learning rate,
-   with a budget of ten runs. A run reaches the target at the first step
-   at which the mean of its last 100 training losses falls below 1.1. Cap
-   each run at 2,000 steps. Keep the log that
-   :numref:`subsec_practice-tuning` asks for: for every run, the learning
-   rate, the steps taken, the final loss, and the one-sentence conclusion
-   you drew before launching the next run. Report the log, not just the
-   winning configuration.
+1. [code] **The worked configuration, taken apart.** ● `train` takes the
+   schedule, the number of steps, the threshold and the decay of the EMA as
+   arguments. Use two seeds for every setting, and count a difference only
+   if it is several times the spread between them.
+   :exlabel:`ex_practice-worked-configuration`
+    1. Replace the cosine by the late decay of :numref:`sec_scheduler`: hold
+       the peak rate for the first four fifths of the run and then decay
+       linearly to zero, with the same 60-step ramp. Which shape ends
+       lower?
+    1. Run the configured schedule without the ramp, and once more without
+       clipping (`max_norm=math.inf`). Which of the two precautions does
+       the validation loss notice?
+    1. Run the configured schedule with its peak one grid point lower and
+       one higher, at $0.001$ and at $0.01$. Did 300 steps at a constant
+       rate choose the right peak for the run of 3,000 steps? Does the
+       ramp rescue the rate that stalled from a cold start?
+    1. The last cell of the section discards the EMA of the baseline.
+       Evaluate it. How much of the gap of $0.05$ nats does an average of
+       the constant-rate run close, with a window of 200 steps and with
+       one of 1,000 steps ($\alpha = 0.999$)? Then stop the configured run
+       after 1,500 of its 3,000 steps, with the schedule still planned for
+       3,000, and compare the weights with their EMA at both windows. When
+       does the average help, and when does it hurt?
+
+1. [code] **A ten-run budget.** ● At a constant learning rate, the best
+   Adam runs of :numref:`sec_adam` needed 650 to 800 steps to bring the
+   training loss of the two-block `TinyLM` to 1.8, as `d2l.steps_to_reach`
+   counts them. With a budget of ten runs of at most 1,000 steps each, on
+   the same model and batch size, get there in as few steps as you can. You
+   may use any optimizer, schedule and precaution of this chapter. Before
+   you start, write down which setting you expect to matter most. Keep the
+   records that this section asks for: for every run the configuration, the
+   steps taken, and the one-sentence conclusion that you drew before
+   launching the next run. Report these records, not just the winning
+   configuration.
 
 1. **Defaults against a small budget.**
    :citet:`Schmidt.Schneider.Hennig.2021` found that trying several
-   optimizers at default settings works about as well as tuning a single
-   one. Test this on `TinyLM` with runs that :numref:`sec_adam` and
-   :numref:`sec_muon` already made under the same protocol. As the default
-   runs, take SGD with momentum $0.9$ at $\eta = 0.1$, Adam at
-   $\eta = 10^{-3}$, and the Muon/AdamW hybrid at $\eta = 10^{-3}$, the
-   rate that RMS matching makes comparable to Adam's default.
-    1. Compare the best of the three default runs with the best point of
-       each of the four grids: SGD and Adam in :numref:`sec_adam`, AdamW
-       and the Muon/AdamW hybrid in :numref:`sec_muon`. Which optimizers,
-       tuned alone, beat the best default run, and by how much in final
-       loss?
-    1. Given a fixed budget of four runs on an unfamiliar problem, which
-       strategy would you choose, and on what does the answer depend?
-
-1. [code] **Batch size and the tuned rate.** ● Rebuild `data` with a batch
-   size of 256 instead of 64. At both batch sizes, train AdamW without
-   weight decay on `TinyLM` from the same initialization at a constant
-   learning rate, sweeping
-   $\eta \in \{0.5, 1, 2, 4, 8, 16, 32\} \times 10^{-3}$. Give both batch
-   sizes the same number of training sequences: 2,000 steps at batch size
-   64 and 500 steps at batch size 256.
-    1. Where does the optimum move? Compare the shift with the two rules of
-       :numref:`sec_batch_size`, the square-root rule $\eta \propto \sqrt{b}$
-       and the linear rule $\eta \propto b$.
-    1. What would you have concluded about AdamW at batch size 256 had you
-       reused the batch-64 learning rate without retuning?
+   optimizers at their default settings works about as well as tuning a
+   single one. Test this on `TinyLM` with the final training losses that
+   :numref:`sec_adam` and :numref:`sec_muon` print. (The runs of
+   :numref:`sec_muon` add weight decay on the matrices; otherwise the
+   protocol is the same.) As the default runs, take SGD with momentum $0.9$
+   at $\eta = 0.1$, Adam at $\eta = 10^{-3}$, and the hybrid of Muon and
+   AdamW at $\eta = 10^{-3}$, whose update :numref:`sec_muon` scaled to the
+   size of an AdamW step. Compare the best of the three default runs with
+   the best point of each of the four grids: SGD and Adam in
+   :numref:`sec_adam`, AdamW and the hybrid in :numref:`sec_muon`. Which
+   optimizers, tuned alone, beat the best default run, and is the margin a
+   result by the rule of :numref:`sec_test_models`? How many runs did each
+   of the two strategies spend?
 
 [Discussions](https://d2l.discourse.group/t/36767)
 
 <!-- slides -->
 
-<!-- WRITER: slide material changed by the code step. `@!practice-a-nan-averted-2` now prints a table of four settings over two seeds (lr 1 unclipped / clipped at 1, lr 0.3 unclipped, lr 3 clipped at 1); `@!practice-a-nan-averted-3` plots all four over the first 50 steps. `@!practice-weight-averaging-3` now shows FashionCNN (no LeNet-BN): constant rate live and EMA (from epoch 5) against a cosine decay of the same length; `@!practice-weight-averaging-2` prints both schedules for two seeds. The new worked configuration has outputs at `practice-a-worked-configuration-2` (throughput per batch size), `-4` (noise scale, 300-step grid, chosen peak) and `-5` (final runs: configured, its EMA, clip rate, baseline, gap, spread), for the closing slide sequence. Kicker "LeNet-BN, Fashion-MNIST, η = 0.3" and the recap's "reaches a decayed schedule's accuracy" need the new numbers (see the WRITER notes in the body). -->
-
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §9.12]{.kicker}
 
-Optimization in Practice<br>
-**configurations · gradient clipping · weight averaging · fair comparisons**
+Practice<br>
+**gradient clipping · weight averaging · a worked configuration**
 :::
 :::
 
-::: {.slide title="A Large Run Gets One Shot"}
+::: {.slide title="PaLM's Loss Spiked about 20 Times with Gradient Clipping On"}
 [The problem]{.kicker}
 
-- PaLM (540B parameters, 6,144 TPU chips): the loss spiked **about 20
-  times**, with gradient clipping on.
-- A four-point learning-rate sweep at that scale costs **four runs**.
-- The final checkpoint is one draw from a noisy trajectory, and it ships.
+A run that takes a day on one GPU:
+
+- **Guard:** one oversized update can undo hours. PaLM, 540 billion
+  parameters on 6,144 TPU chips: about 20 loss spikes, with clipping
+  enabled.
+- **Finish:** the final weights are one draw from a noisy trajectory.
+- **Configure:** a sweep over four learning rates costs four days.
 
 ::: {.d2l-note .warn}
-Every run in this chapter so far could be swept, repeated, or restarted.
-A large run cannot.
+How do we guard, finish and configure a run that we get to do once?
 :::
 
-Source: Chowdhery et al. (2022).
+[Chowdhery et al., 2022]{.small}
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- read a disclosed configuration and spend a small tuning budget on it;
-- clip the global gradient norm, tell a guard from a brake, and say
-  why clipping protects Adam's state rather than its step;
-- recover from a loss spike by rewinding and skipping data;
-- average weights with an EMA and choose its window;
-- design an optimizer comparison that survives scrutiny.
+- set a clipping threshold and tell a guard from a brake;
+- compute how long a gradient spike stays in Adam's state;
+- recover from a loss spike;
+- choose the window and the start of a weight average;
+- configure a new model: batch size, optimizer, peak rate, schedule.
 
-**Running example:** `TinyLM` with SGD at $\eta = 1$, the rate that
-diverged in the Adam deck; then a LeNet with batch normalization at a
-constant rate.
+**Idea:** the settings of a long run come from short runs of the same
+model; a guard and an average cover what short runs cannot foresee.
+
+**Running example:** `TinyLM` (transformer, 0.47 million parameters, next
+byte of Wikipedia text) under SGD at a diverging rate; then a `TinyLM` of
+3.3 million parameters, configured from nothing.
 :::
 
-::: {.slide title="The Last Section Puts the Chapter's Tools on a Long Run"}
+::: {.slide title="Practice Assembles the Chapter into One Configured Run"}
 [Where this fits]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
+| movement | sections |
 |---|---|
-| Landscapes | curvature and noise slow training |
-| Gradient Descent | step size against curvature |
-| Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
-| Momentum | averaging over time |
-| Adam and AdamW | a step size per coordinate, decoupled decay |
-| Schedules | warmup and decay |
-| Muon | orthogonalized updates for matrices |
-| Batch Size | how many examples per step |
-| Scaling Up | learning rates across widths |
-| **Practice** | **clipping, averaging, fair comparisons** |
+| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| which direction to step in, on two small networks | Two Test Models · Momentum · Adam · AdamW · Muon |
+| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · **Practice** |
+
+- **Uses:** SGD's diverging rates on `TinyLM`; Adam's two averages; the
+  noise ball; warmup and cosine decay; the gradient-noise scale.
+- **Skips:** automated hyperparameter search; training on several
+  devices.
 :::
 
-::: {.col .narrow}
-- **Uses:** `TinyLM`, momentum, Adam's moments, the noise ball,
-  warmup and decay.
-- **Skips:** attention-specific guards; distributed optimizer state.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Configurations]{.dtitle}
-
-[what large runs disclose]{.dsub}
-:::
-:::
-
-::: {.slide title="Four Reports Agree on Most Settings and Differ on the Peak Rate"}
-[Configurations]{.kicker}
-
-| run | optimizer | $\beta_1,\beta_2$ | peak LR | warmup | clip | wd |
-|:--|:--|:--|:--|:--|:--|:--|
-| Llama 3 405B | AdamW | — | $8{\times}10^{-5}$ | 8k | — | — |
-| DeepSeek-V3 | AdamW | 0.9, 0.95 | $2.2{\times}10^{-4}$ | 2k | 1.0 | 0.1 |
-| OLMo 2 7B | AdamW | 0.9, 0.95 | $3{\times}10^{-4}$ | 2k | 1.0 | 0.1 |
-| Kimi K2 | Muon + AdamW | — | $2{\times}10^{-4}$ | 500 | — | 0.1 |
-
-- All four warm up, then decay: cosine, or constant first and decay late.
-- A dash is missing evidence, not an implied default.
-:::
-
-::: {.slide title="With a Few Runs, Keep the Recurring Settings and Sweep the Peak Rate"}
-[Configurations]{.kicker}
-
-- **A handful of runs:** recurring settings; every run on the peak
-  learning rate, which each report sets for itself.
-- **Tens of runs:** add weight decay and schedule.
-- **Coupled pairs together:** AdamW multiplies the weights by
-  $1-\eta\lambda$ per step, so vary the product $\eta\lambda$ and move
-  along constant products.
-
-$\beta_2 = 0.95$: Adam's second moment reaches back $1/(1-\beta_2) = 20$
-steps instead of 1,000.
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Gradient Clipping]{.dtitle}
-
-[a guard against rare oversized updates]{.dsub}
-:::
-:::
-
-::: {.slide title="Global-Norm Clipping Keeps the Direction and Caps the Length"}
+::: {.slide title="Global-Norm Clipping Caps the Step and Keeps Its Direction"}
 [Gradient clipping]{.kicker}
 
 All gradients as one vector $\mathbf{g}$, threshold $\theta$:
@@ -1062,112 +1153,161 @@ $$\mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \m
 
 - $\|\mathbf{g}\|_2 = 5$, $\theta = 1$: multiply by 0.2.
 - One norm over all layers: their relative sizes are kept.
-- PyTorch: `clip_grad_norm_` between `backward` and `step`. Optax:
-  `clip_by_global_norm` chained before the optimizer.
+- Plain SGD with learning rate $\eta$: no step is longer than
+  $\eta\theta$.
+:::
+
+::: {.slide title="Two Readings of a Diverging Rate Predict Different Clip Counts"}
+[Gradient clipping]{.kicker}
+
+SGD with momentum 0.9 on `TinyLM`: best at $\eta = 0.3$, every run
+diverges at $\eta = 1$.
+
+| if $\eta = 1$ is too large | clipping at $\theta = 1$ acts | and the run |
+|:--|:--|:--|
+| for the first steps only | early, then never | trains at $\eta = 1$ |
+| throughout | on most steps | is no longer SGD at $\eta = 1$ |
+
+**Test:** $\eta = 1$ unclipped and clipped at $\theta = 1$, $\eta = 0.3$
+unclipped, $\eta = 3$ clipped; two seeds, 2,000 steps; count the clipped
+steps.
 :::
 
 ::: {.slide title="At η = 1, Clipping Separates Divergence from Training"}
-[Gradient clipping · TinyLM, SGD with momentum 0.9]{.kicker}
+[Gradient clipping · TinyLM, first 50 steps]{.kicker}
 
 @!practice-a-nan-averted-3
 
-- Unclipped: from the second step on, the loss grows by several orders
-  of magnitude and overflows within about 20 steps.
-- Clipped, same initial weights: final loss near the best SGD run at
-  about a third of this rate.
+- Unclipped: the loss falls for a step or two, then grows by orders of
+  magnitude and is gone within about 20 steps.
+- Clipped at 1: hard to tell from $\eta = 0.3$ on this scale.
 :::
 
-::: {.slide title="Clipping Fired Only on the First Few Steps"}
+::: {.slide title="Clipping Changed a Few Dozen Early Steps, Then Fell Silent" layout="tight"}
 [Gradient clipping]{.kicker}
 
 @!practice-a-nan-averted-2
 
-- A few dozen firings at most, all within the first 40 steps, where
-  the fresh initialization has its largest gradients: an **automatic
-  warmup**.
-- Afterwards a **guard**, idle at $\eta = 1$; in long runs it also
-  catches the heavy tail of the gradient noise.
-- Fires on most steps? Then it is a **brake** that changes the update
-  rule: tune $\eta$ and $\theta$ together.
+[`last`: last clipped step. `largest / median`: after step 100.]{.small}
+
+::: {.d2l-note}
+$\eta = 1$ was too large for the first 50 steps only, and SGD's limit
+moved from about 0.5 to between 1 and 3. When a run of a sweep diverges,
+ask when.
+:::
 :::
 
-::: {.slide title="Check: Does Clipping Shrink an Adam Step?"}
+::: {.slide title="A Guard Fires Rarely; a Brake Fires Always and Changes the Algorithm"}
+[Gradient clipping]{.kicker}
+
+| | guard ($\eta = 1$) | brake ($\eta = 3$) |
+|:--|:--|:--|
+| clipped steps | a few dozen of 2,000 | practically all |
+| gradient norm | median $\theta/4$ | tens of $\theta$ |
+| update | SGD, a few steps shortened | fixed length: normalized descent |
+| run | trains | fails |
+
+- **Threshold:** a few times the median norm of a run that trains. Log
+  the share of clipped steps.
+- **Fires on most steps:** lower $\eta$ first.
+:::
+
+::: {.slide title="Check: Does Clipping Shorten an Adam Step?"}
 [Check]{.kicker}
 
-One gradient coordinate $g$ arrives that dwarfs all earlier ones.
-Adam: $m \leftarrow \beta_1 m + (1-\beta_1) g$,
-$v \leftarrow \beta_2 v + (1-\beta_2) g^2$, step $\eta\, m/\sqrt{v}$.
-How long is the step, and what does clipping change?
+One gradient coordinate $g$ arrives that dwarfs all earlier ones. Adam:
+$m \leftarrow \beta_1 m + (1-\beta_1) g$,
+$v \leftarrow \beta_2 v + (1-\beta_2) g^2$, step $\eta\, m/\sqrt{v}$, with
+$\beta_1 = 0.9$, $\beta_2 = 0.999$. How long is the step?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $m/\sqrt{v} \approx (1-\beta_1)/\sqrt{1-\beta_2} \approx 3.2$
-for any $g$: the step is already bounded. Unclipped, $g^2$ inflates $v$,
-which decays with a time constant of $1/(1-\beta_2) = 1{,}000$ steps, and
-silences the coordinate. Clipping protects the state.
+**Answer.** $m/\sqrt{v} \approx (1-\beta_1)/\sqrt{1-\beta_2} =
+0.1/\sqrt{0.001} \approx 3.2$ for any $g$. The step is bounded at
+$3.2\,\eta$, and clipping $g$ barely changes it. So clipping does not
+rescue Adam from a learning rate that is too large.
 :::
 :::
+:::
+
+::: {.slide title="Clipping Protects Adam's State: a 100× Spike Stays in v for 2,300 Steps"}
+[Gradient clipping]{.kicker}
+
+An unclipped gradient 100 times the typical one, $\beta_2 = 0.999$:
+
+- $v$ gains $(1-\beta_2) \cdot 100^2 = 10$ times its usual value: the
+  steps shrink to $1/\sqrt{11} \approx 30\%$;
+- $10 \cdot 0.999^t < 1$ only after $t \approx 2{,}300$ steps, and the
+  steps are still at 70%;
+- clipped at 4 times the median norm: $v$ gains $0.001 \cdot 4^2$, under
+  2%.
+
+$\beta_2 = 0.95$: $v$ gains 500 times, the steps fall below 5%, and the
+spike is forgotten within about 120 steps.
 :::
 
 ::: {.slide title="When a Spike Gets Through, Rewind and Skip"}
 [Gradient clipping]{.kicker}
 
 - PaLM: restart about **100 steps** before the spike, skip **200–500
-  minibatches**; the spike does not recur.
-- The same minibatches from another checkpoint: no spike. Data and
-  state together cause it.
-- A guard on the loss: **z-loss** $10^{-4}\log^2 Z$ keeps the softmax
-  normalizer $\log Z$ near 0. PaLM used it throughout; the spikes came
-  anyway.
-- A checkpoint must hold model, optimizer state, step count, and data
-  position.
+  minibatches**. No spike there again.
+- Same minibatches, earlier checkpoint: no spike. Data and parameter
+  state cause it together; the report gives no further cause.
+- A penalty on drifting logits (z-loss) was on throughout and did not
+  prevent the spikes.
 
-Source: Chowdhery et al. (2022).
+::: {.d2l-note}
+A checkpoint holds model, optimizer state, step count and data position.
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Weight Averaging]{.dtitle}
-
-[less noise without a smaller step]{.dsub}
-:::
+[Chowdhery et al., 2022]{.small}
 :::
 
-::: {.slide title="An EMA of the Weights Averages Over the Noise Ball"}
+::: {.slide title="An Average Needs Iterates That Are Different Draws"}
 [Weight averaging]{.kicker}
 
-$$\bar{\mathbf{x}}_t = \alpha\, \bar{\mathbf{x}}_{t-1} + (1-\alpha)\, \mathbf{x}_t$$
+Which weights do we keep? The last ones are one draw from the *noise
+ball*, in which the weights fluctuate at a constant rate.
 
-- At a constant rate, SGD's iterates $\mathbf{x}_t$ keep fluctuating
-  around a minimum; weakly correlated fluctuations cancel in the mean.
-- Window $1/(1-\alpha)$: $\alpha = 0.999$ gives 1,000 steps, about four
-  epochs of 235 steps.
-- Training never sees $\bar{\mathbf{x}}_t$. Cost: one copy of the
-  parameters.
+Exponential moving average (EMA) of the weights $\mathbf{x}_t$, decay
+$\alpha$:
+
+$$\bar{\mathbf{x}}_t = \alpha\, \bar{\mathbf{x}}_{t-1} + (1-\alpha)\, \mathbf{x}_t,
+\qquad \textrm{window} \approx \frac{1}{1-\alpha}\ \textrm{steps}$$
+
+- Valley, curvature $c = 0.2$, learning rate $\eta = 0.1$: a coordinate
+  forgets its position in $1/(\eta c) = 50$ steps.
+- So the window is long: $\alpha = 0.999$, 1,000 steps.
 :::
 
-::: {.slide title="At a Constant Rate, the EMA Is Steadier Than the Live Weights"}
-[Weight averaging · LeNet-BN, Fashion-MNIST, η = 0.3]{.kicker}
+::: {.slide title="At a Constant Rate the EMA Is Steadier Than the Live Weights"}
+[Weight averaging · CNN on Fashion-MNIST, SGD, η = 0.3, 235 steps per epoch]{.kicker}
 
 @!practice-weight-averaging-3
 
-- Early lag: after one epoch the initial weights still carry
-  $0.999^{235} \approx 0.79$.
-- Late: the EMA runs along the top of the live curve, ending near 91%.
+- EMA ($\alpha = 0.999$) started after epoch 5. From step 0, the
+  initialization would still weigh $0.999^{235} \approx 0.79$ after one
+  epoch.
+- Each epoch the live weights, the ones that training updates, show one
+  point of the noise ball.
 :::
 
-::: {.slide title="Decay Changes the Trajectory; Averaging Changes What We Evaluate"}
+::: {.slide title="The EMA Matches a Decayed Run; after a Decay It Adds Nothing" layout="tight"}
 [Weight averaging]{.kicker}
 
-- Constant rate plus EMA reaches the accuracy of a decayed schedule.
-- Decay shrinks the noise injected into later steps; averaging leaves
-  the trajectory alone and removes noise from the evaluated weights.
-- After full decay the iterates barely move: little left to average.
-- Averaged saved checkpoints: recompute the batch-norm statistics.
-- Llama 3 released an average of checkpoints from its final, annealed
-  phase.
+Two seeds per schedule, test accuracy:
+
+@!practice-weight-averaging-2
+
+- Constant rate, live: two to six points of scatter. EMA: a little above
+  91%.
+- Cosine decay to zero: about 91% as well. A tie.
+- EMA of the decayed run: a few tenths of a point behind at most.
+
+::: {.d2l-note}
+Use an EMA when no decay is planned, or for a model needed before the
+decay.
+:::
 :::
 
 ::: {.slide title="Check: When Does an EMA Not Help?"}
@@ -1178,62 +1318,134 @@ the last iterate.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** (1) After the schedule has decayed $\eta$ to nearly zero:
-the iterates barely move, so their average is the last one. (2) While
-the weights still improve faster than the window: the average lags
-behind, as in the first epochs above.
+**Answer.** (1) After the schedule has decayed the rate to nearly zero:
+the weights barely move, and the average only lags. (2) While the weights
+improve faster than the window follows: start the average late.
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
+::: {.slide title="Four Large Runs Agree on Most Settings and Differ on the Peak Rate"}
+[A worked configuration]{.kicker}
 
-[Fair Comparisons]{.dtitle}
+| run | optimizer | $\beta_1,\beta_2$ | peak rate | warmup | clip | weight decay |
+|:--|:--|:--|:--|:--|:--|:--|
+| Llama 3 405B | AdamW | — | $8{\times}10^{-5}$ | 8k | — | — |
+| DeepSeek-V3 | AdamW | 0.9, 0.95 | $2.2{\times}10^{-4}$ | 2k | 1.0 | 0.1 |
+| OLMo 2 7B | AdamW | 0.9, 0.95 | $3{\times}10^{-4}$ | 2k | 1.0 | 0.1 |
+| Kimi K2 | MuonClip | — | $2{\times}10^{-4}$ | 500 | — | 0.1 |
 
-[the protocol is part of the result]{.dsub}
-:::
-:::
+- All four warm up and later lower the rate along a cosine.
+- The widest model has the smallest peak rate.
+- MuonClip: Muon with a cap on attention scores. A dash is missing
+  evidence, not a default.
 
-::: {.slide title="A Comparison Must Retune Its Nuisance Hyperparameters in Every Arm"}
-[Fair comparisons]{.kicker}
-
-- **Scientific:** what the question is about (the optimizer).
-- **Nuisance:** retuned for each scientific value (the learning rate).
-- **Fixed:** held constant, and each one limits the claim.
-- The optimizer races of the Adam and Muon sections: a four- or
-  five-point learning-rate grid per optimizer, spaced by about 3×; steps,
-  batch, model fixed.
-
-::: {.d2l-note .warn}
-One shared learning rate favors whichever method happens to prefer it.
-:::
+[Grattafiori et al., 2024; Liu et al., 2024; OLMo Team, 2025; Kimi Team, 2025]{.small}
 :::
 
-::: {.slide title="Untuned Comparisons Measure Effort, Not Algorithms"}
-[Fair comparisons]{.kicker}
+::: {.slide title="A New Model Is Configured from Short Runs, One Decision at a Time"}
+[A worked configuration · TinyLM, 4 blocks, width 256, 3.3M parameters]{.kicker}
 
-- 15 optimizers, many problems: several at defaults ≈ one heavily
-  tuned (Schmidt et al., 2021).
-- 10 optimizers, matched tuning: claimed 2× over AdamW shrinks to about
-  1.4× at 100M parameters, toward 1.1× at 1.2B (Wen et al., 2025).
-- Log configuration, code version, seed, the one change; keep diverged
-  runs; repeat decisive runs with new seeds.
+The run we pretend we cannot repeat: 3,000 steps.
+
+| decision | choice | source |
+|:--|:--|:--|
+| batch size | fills the device, not above the noise scale | Batch Size |
+| optimizer | AdamW (0.9, 0.95), weight decay 0.1 on matrices | published runs, AdamW |
+| precautions | clip at 1, log the clip rate; EMA, window 200 | this deck |
+| peak rate | best of three 300-step runs, 3× apart | Two Test Models, Adam |
+| schedule | 60-step warmup (2%), cosine to zero | Schedules, published runs |
+| verdict | two seeds: gap against spread | Two Test Models |
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="The Device Is Full by 256 Sequences" layout="tight"}
+[A worked configuration]{.kicker}
+
+Time of one gradient of the 3.3M-parameter model:
+
+@!practice-a-worked-configuration-2
+
+- 32 to 128: four times the batch, far less than four times the time.
+- From 256: the time doubles with the batch, and the sequences per second
+  stop rising.
+- 256 is the floor for the batch. The ceiling is the *noise scale*: the
+  batch at which gradient noise equals the gradient.
+:::
+
+::: {.slide title="Three Runs of 300 Steps Pick the Peak Rate" layout="tight"}
+[A worked configuration]{.kicker}
+
+@!practice-a-worked-configuration-4
+
+- 0.001: slow. 0.01: stalls near 2.5, though clipped most often. 0.003:
+  best, a factor of 3 below the first rate that stalls.
+- Noise scale: 2 sequences, then of the order of 100. The floor of 256
+  is at or above it: stay at 256.
+- Cost: 900 steps, under a third of the final run.
+
+[Cold start, constant rate. Bold assumption: the best rate of 300 constant steps is the right peak for 3,000 decayed ones.]{.small}
+:::
+
+::: {.slide title="Four Logged Curves Tell the Failures of a Run Apart" layout="tight"}
+[A worked configuration]{.kicker}
+
+Log the gradient norm before clipping, the share of clipped steps, the
+learning rate, and the update size relative to the weights.
+
+| in the log | reading | first remedy |
+|:--|:--|:--|
+| loss leaves in the first steps, norms climb | steps too long for the start | warmup or clipping |
+| loss stalls under Adam, first updates large against the weights | start too rough | warmup |
+| loss stalls under Adam behind a warmup | rate too large throughout | one grid point down |
+| clipping acts on most steps | a brake, not a guard | lower rate |
+| loss flat and jittery | noise of the current rate | decay or average |
+| loss smooth, still falling | slow | higher rate, more steps |
+:::
+
+::: {.slide title="The Schedule Lowers the Loss by 0.05 Nats, Many Times the Seed Spread" layout="tight"}
+[A worked configuration]{.kicker}
+
+Configured: 60-step warmup, cosine to zero. Baseline: the same AdamW and
+clipping at a constant 0.003.
+
+@!practice-a-worked-configuration-5
+
+- EMA = final weights: nothing left to average after a decay to zero.
+- Clipped under 1% of the steps: a guard. Whether the run needed it, the
+  table cannot say.
+- Known to have done work: the peak rate and the decay.
+:::
+
+::: {.slide title="Check: Diagnose a Stalled Run"}
+[Check]{.kicker}
+
+AdamW at a rate of 0.01 on the 3.3M-parameter `TinyLM`: the loss stalls
+near 2.5 without diverging, and clipping at 1 fires more often than at
+lower rates. What do you change?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Not the threshold: Adam moves a coordinate by about $\eta$
+whatever the size of its gradient, so tighter clipping does not shorten
+the step. Lower the rate by a grid point: 0.003 trains.
+:::
+:::
+:::
+
+::: {.slide title="A Long Run Is Configured Short, Guarded, and Finished with an Average or a Decay"}
 [Wrap-up]{.kicker}
 
-- **Configure:** recurring settings (AdamW, 0.9/0.95, wd 0.1, clip 1,
-  warmup then decay); a small budget goes to the peak rate.
-- **Guard:** clipping at 1 fired only on the first few steps, acting as
-  a warmup, and saved `TinyLM` at $\eta = 1$; spikes that get through:
-  rewind and skip.
-- **Average:** an EMA ($\alpha = 0.999$) at a constant rate reaches a
-  decayed schedule's accuracy.
-- **Compare:** retune nuisances per arm; a gap below the seed spread is
-  no result.
+- **Guard:** clipping at $\theta = 1$ changed a few dozen early steps and
+  let SGD train `TinyLM` at $\eta = 1$; at $\eta = 3$ it fired on
+  practically every step and the run failed.
+- **Adam:** step bounded at $3.2\,\eta$; an unclipped 100× spike stays
+  in $v$ for 2,300 steps (120 at $\beta_2 = 0.95$).
+- **Finish:** EMA at a constant rate = cosine decay, about 91% for the
+  CNN on Fashion-MNIST.
+- **Configure:** batch 256 from the device; peak 0.003 from three 300-step
+  runs; warmup and cosine: 0.05 nats below the constant rate, seed spread
+  under 0.01.
 
-**Next chapter:** attention, the mechanism inside `TinyLM`.
+**Still open:** what a step costs, in seconds and in bytes. **Next
+chapter:** attention, the mechanism inside `TinyLM`.
 :::

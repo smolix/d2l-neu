@@ -2,45 +2,39 @@
 :label:`sec_mdl-euler-runge-kutta`
 
 Anyone who has trained a network has seen a run blow up because the learning
-rate was too large.
-It is tempting to blame the loss surface, with its sharp valleys and its
-plateaus. Yet the same thing happens on the simplest loss there is. Gradient
-descent on the bowl $\mathcal L(x)=25x^2$ takes the step
+rate was too large. It is tempting to blame the loss surface, with its sharp
+valleys and its plateaus. Yet the same thing happens on the simplest loss
+there is. Gradient descent on the bowl $\mathcal L(x)=25x^2$ takes the step
 $x\leftarrow x-\eta\cdot 50x$, and for every learning rate above $\eta=0.04$
 the iterates grow without bound, although the bowl has a single minimum and
 nothing about it is difficult. If the loss is not the problem, what is?
 
 The answer comes from an older subject. Gradient descent is a step-by-step
 solution of the differential equation $\dot x=-50x$, which says: move downhill
-at a speed proportional to the slope. Its exact solution
+at a speed proportional to the slope. This is the decay equation solved in
+:numref:`sec_mdl-odes-solvers`, fifty times faster, and its exact solution
 $x(t)=e^{-50t}x_0$ decays to zero from every start. Euler proposed in 1768 to
 solve such an equation by following the arrow for a short time $h$ and then
 reading it again, and the learning rate plays the role of $h$. One step
 multiplies $x$ by $1-50h$. With $h=0.01$ the factor is $0.5$, and the computed
-solution decays like the true one. With $h=0.05$ it is $-1.5$, and the
-computed solution flips sign and grows. The equation is stable; the steps are
-not. The idea of this section is that the eigenvalues of a differential
-equation decide both how its exact motion behaves and how large a step can
-follow it.
+solution decays like the true one. With $h=0.05$ it is $-1.5$, where the
+exact factor is $e^{-2.5}=0.08$, and the computed solution flips sign and
+grows. The equation is stable; the steps are not. In the previous section
+the eigenvalues of an equation gave its exact motion. Here the same
+eigenvalues decide how large a step can follow that motion.
 
-Deep learning meets this gap between an equation and its steps in three
-places. Gradient descent (:numref:`sec_gd`) is the first. A residual network
-(:numref:`sec_resnet`) adds a small update to its input at every layer, which
-is one such step. Diffusion and flow-matching models
-(:numref:`sec_diffusion-samplers`) generate an image by following a learned
-velocity field from noise to data, one network evaluation per step, so the
-number of steps is the cost of a sample.
+Deep learning meets this gap between an equation and its steps wherever it
+takes steps: in gradient descent (:numref:`sec_gd`), in the layers of a
+residual network (:numref:`sec_resnet`), and in the samplers of diffusion
+and flow-matching models (:numref:`sec_diffusion-samplers`). A sampler evaluates a network once or
+twice in every step, so the number of steps sets the cost of an image.
 
-<!-- WRITER: the opening moved here from the old combined section. Add the clause that ties it to the decay
-equation solved in :numref:`sec_mdl-odes-solvers`; "The idea of this section" now refers to this section only. -->
-
-Few differential equations have a closed-form solution, so in practice we
-compute: follow the field for a short time $h$, read it again, and repeat.
-How far does such a step-by-step solution drift from the true one, how can it
-drift less for the same work, and when do the steps become unstable although
-the equation is not? The answers are an error law $O(h^p)$ and a region of
-stable steps, both read from one polynomial. At the end, gradient descent
-turns out to be the simplest of these solvers.
+Three questions decide what a step-by-step solution is worth. How far does
+it stray from the true one? How can it stray less for the same work? And how
+long may a step be before the errors grow instead of dying out? It turns out
+that one object answers all three: the factor by which a step multiplies the
+solution, which for Euler on the bowl was $1-50h$. At the end we return to
+gradient descent and ask what a better solver would do for training.
 
 ```{.python .input #mdl-numerical-solvers-imports}
 #@tab mxnet
@@ -83,10 +77,10 @@ from d2l import jax as d2l
 
 ## Forward Euler
 
-Over one short step, the integral form
-:eqref:`eq_mdl-ode-integral-form` can be approximated by holding the velocity
-at its value at the start of the step. Let us first see what this does on an
-equation whose answer we know.
+A trajectory is its start plus the velocity accumulated on the way. Over a
+short step, Euler's proposal is the crudest one possible: pretend that the
+velocity keeps the value it has at the start. Let us first see what this
+does on an equation whose answer we know.
 
 Take $\dot x=x$ from $x_0=1$ to $T=1$, where the answer is $e=2.718$. Divide
 the interval into $n$ steps of length $h=1/n$, and in each step move with the
@@ -100,13 +94,20 @@ times a year:
 | error | 0.718 | 0.468 | 0.277 | 0.153 | 0.080 | 0.041 | 0.0037 |
 
 The ratios of consecutive errors are $1.53,1.69,1.82,1.90,1.95$: doubling the
-number of steps comes closer and closer to halving the error. For large $n$
-the error is about $e/(2n)=1.36\,h$, because
-$(1+1/n)^n=\exp\bigl(n\log(1+1/n)\bigr)=\exp\bigl(1-\tfrac1{2n}+\cdots\bigr)\approx e\,(1-\tfrac1{2n})$.
+number of steps comes closer and closer to halving the error. Even daily
+compounding falls more than a third of a cent short of $e$ dollars.
+
+We have met this slow limit before. The compounding
+$(\mathbf I+t\mathbf A/n)^n$ of :numref:`sec_mdl-odes-solvers` was Euler's
+method before it had a name: $n$ steps of length $t/n$ along a linear field.
+The expansion found there,
+$(1+\lambda t/n)^n\approx e^{\lambda t}\bigl(1-\tfrac{(\lambda t)^2}{2n}\bigr)$,
+gives the dollar's error with $\lambda t=1$. It is about $e/(2n)=1.36\,h$.
 Error proportional to $h$ is what we will call order one.
 
-For a general field, with step size $h$ and grid $t_n = nh$, **forward Euler**
-is
+For a general field $\mathbf f(\mathbf x,t)$, with step size $h$ and grid
+$t_n = nh$, where $n$ from here on counts the steps taken so far,
+**forward Euler** is
 
 $$
 \mathbf{x}_{n+1} = \mathbf{x}_n + h\, \mathbf{f}(\mathbf{x}_n, t_n) .
@@ -124,16 +125,21 @@ $$
 \|\mathbf{r}_n\| \le \tfrac{M h^2}{2}.
 $$
 
-A per-step error of order $h^2$ does not give a final error of order $h^2$:
-reaching a fixed horizon $T$ takes $T/h$ steps, the per-step errors
-accumulate, and each step may amplify the error already made. One power of
-$h$ is lost, and the proof is short.
+The remainder $\mathbf r_n$ is the **local error**: what one step loses when
+it starts on the true solution. What we want to know is the **global
+error**, the distance from the true solution after all the steps to a fixed
+horizon $T$. A local error of order $h^2$ does not give a global error of
+order $h^2$. Reaching $T$ takes $T/h$ steps, their local errors accumulate,
+and each step may amplify the error already made. One power of $h$ is lost.
+The proof is short, and its structure matters more than its constant.
 
 **Proposition (Euler converges at order 1).** *Let $\mathbf{f}$ be
-$L$-Lipschitz in $\mathbf{x}$, and let the solution of
-:eqref:`eq_mdl-ode-ivp` on $[0, T]$ satisfy
-$\|\ddot{\mathbf{x}}(t)\| \le M$. Then the Euler iterates
-:eqref:`eq_mdl-ode-euler-update` obey*
+$L$-Lipschitz in $\mathbf{x}$, that is
+$\|\mathbf f(\mathbf x,t)-\mathbf f(\mathbf y,t)\|\le L\|\mathbf x-\mathbf y\|$
+for all $\mathbf x$, $\mathbf y$ and $t$, and let the solution of
+$\dot{\mathbf x}=\mathbf f(\mathbf x,t)$ from $\mathbf x(0)=\mathbf x_0$
+satisfy $\|\ddot{\mathbf{x}}(t)\| \le M$ on $[0, T]$. Then the Euler iterates
+:eqref:`eq_mdl-ode-euler-update` from the same start obey*
 
 $$
 \max_{n \le T/h} \|\mathbf{x}_n - \mathbf{x}(t_n)\|
@@ -171,6 +177,14 @@ error of order $h^p$ after $T/h$ steps, inflated by the factor $e^{LT}$ that
 measures how strongly the dynamics amplify old mistakes. A method with global
 error of order $h^p$ has **order** $p$; Euler has order $1$.
 
+The factor $e^{LT}$ is the crude part. The constant $L$ records how steep the
+field is and not which way it leans, so the bound cannot tell a field that
+drives trajectories apart from one that pulls them together. For the bowl's
+equation $\dot x=-50x$ on $[0,1]$ the factor is $e^{50}\approx5\times10^{21}$,
+useless at any step a computer could take, although small steps follow the
+decay well. A field that contracts needs an analysis of its own, and we come
+to it after raising the order.
+
 ## Runge--Kutta Methods
 
 Euler commits to the slope at the start of the step while the trajectory
@@ -181,10 +195,14 @@ shows one step of size $h=1$ on $\dot x=x$ from $x=1$.
 ![One step of size $h=1$ on $\dot x=x$ from $x=1$. (a) Euler follows the starting slope and lands at $2$. (b) The midpoint method takes a half step only to measure the slope there, $1.5$, and lands at $2.5$. (c) RK4 measures four slopes, $1$, $1.5$, $1.75$ and $2.75$, averages them with weights $\tfrac16(1,2,2,1)$ and lands at $2.708$; the exact value is $e=2.718$.](../img/mdl-dyn-solver-geometry.svg)
 :label:`fig_mdl-dyn-solver-geometry`
 
+### Midpoint, Heun and RK4
+
 The simplest improvement, the **midpoint method**, takes half an Euler step
-only to measure the slope there, and then takes the real step with that slope:
-$\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{f}\!\left(\mathbf{x}_n + \tfrac{h}{2}\mathbf{f}(\mathbf{x}_n)\right)$
-(autonomous notation). One Taylor line in one dimension shows why it helps:
+only to measure the slope there, and then takes the real step with that
+slope. Writing $\mathbf f(\mathbf x)$ for a field that does not depend on
+time, it is
+$\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{f}\!\left(\mathbf{x}_n + \tfrac{h}{2}\mathbf{f}(\mathbf{x}_n)\right)$.
+One Taylor line in one dimension shows why it helps:
 
 $$
 x + h f\!\left(x + \tfrac{h}{2} f(x)\right)
@@ -194,14 +212,25 @@ $$
 The true expansion is $x(t+h) = x + h\dot{x} + \tfrac{h^2}{2}\ddot{x} + O(h^3)$
 with $\ddot{x} = \tfrac{d}{dt} f(x(t)) = f' f$, so the $h^2$ term is now
 right instead of missing. The local error is $O(h^3)$ and the global order
-$2$, for two field evaluations per step. **Heun's method** takes a full trial
-Euler step and averages the slopes at its two ends,
-$\mathbf{x}_{n+1} = \mathbf{x}_n + \tfrac{h}{2}\left[\mathbf{f}(\mathbf{x}_n) + \mathbf{f}\!\left(\mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_n)\right)\right]$,
-with the same order and the same two evaluations. Many diffusion samplers use
-this two-stage method (:numref:`sec_diffusion-samplers`).
+$2$, for two field evaluations per step.
+
+The midpoint method spends its first evaluation on a half step. **Heun's
+method** takes a full trial Euler step instead and averages the slopes at the
+two ends of the step:
+
+$$
+\mathbf{x}_{n+1} = \mathbf{x}_n + \tfrac{h}{2}\Bigl[\mathbf{f}(\mathbf{x}_n) + \mathbf{f}\bigl(\mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_n)\bigr)\Bigr] .
+$$
+:eqlabel:`eq_mdl-ode-heun-update`
+
+If the midpoint method is the midpoint rule for an integral, this is the
+trapezoid rule. The same Taylor line gives it the same order $2$, at the same
+two evaluations. Heun's method is the one to remember of the two, because
+many diffusion samplers use it (:numref:`sec_diffusion-samplers`).
 
 Four slope measurements give the standard general-purpose method of
-scientific computing, **classical Runge--Kutta (RK4)**:
+scientific computing, **classical Runge--Kutta (RK4)**, which goes back to
+Kutta in 1901:
 
 $$
 \begin{aligned}
@@ -215,19 +244,25 @@ $$
 :eqlabel:`eq_mdl-ode-rk4-update`
 
 The update averages four slope measurements, weighting the two at the
-midpoint twice. These weights are Simpson's rule,
+midpoint twice. These are the weights of Simpson's rule,
 $\int_a^b g \approx \tfrac{b-a}{6}\bigl(g(a) + 4g(\tfrac{a+b}{2}) + g(b)\bigr)$,
-which integrates cubics exactly, with the midpoint value split between two
+which integrates cubics exactly, with the midpoint's share split between two
 measurements.
 
-Why order $4$? On a linear field the answer takes one computation. Each method
-applied to the scalar test equation $\dot y=\lambda y$ multiplies $y$ by a
-fixed function of $z=h\lambda$ per step, and we can compare that function
-with the exact factor $e^z$.
+### The Stability Function
 
-**Proposition (stability functions).** *On $\dot y=\lambda y$, with
-$\lambda$ real or complex and $z=h\lambda$, one step of each method multiplies
-$y$ by its **stability function** $R(z)$:*
+Why order $4$? On a linear field the answer takes one computation. Consider
+the scalar equation $\dot y=\lambda y$, with $\lambda$ real or complex. It is
+known as the *test equation*, and it stands for every linear field at once:
+each mode of $\dot{\mathbf x}=\mathbf A\mathbf x$ obeys it, with $\lambda$ an
+eigenvalue of $\mathbf A$ (:numref:`sec_mdl-odes-solvers`). Its true solution
+gains the factor $e^{h\lambda}$ over a time $h$. Each method multiplies $y$
+by a fixed function of $z=h\lambda$ per step, and we can compare that
+function with $e^z$.
+
+**Proposition (stability functions).** *On the test equation, with
+$z=h\lambda$, one step of each method multiplies $y$ by its **stability
+function** $R(z)$:*
 
 $$
 R_{\textrm{Euler}}(z)=1+z,
@@ -238,10 +273,10 @@ R_{\textrm{RK4}}(z)=1+z+\frac{z^2}{2}+\frac{z^3}{6}+\frac{z^4}{24}.
 $$
 :eqlabel:`eq_mdl-ode-stability-function`
 
-**Proof.** For RK4 the four measurements are $\mathbf k_1=\lambda y$,
-$\mathbf k_2=\lambda y(1+\tfrac z2)$,
-$\mathbf k_3=\lambda y(1+\tfrac z2+\tfrac{z^2}4)$ and
-$\mathbf k_4=\lambda y(1+z+\tfrac{z^2}2+\tfrac{z^3}4)$, each obtained by
+**Proof.** For RK4 the four measurements are $k_1=\lambda y$,
+$k_2=\lambda y(1+\tfrac z2)$,
+$k_3=\lambda y(1+\tfrac z2+\tfrac{z^2}4)$ and
+$k_4=\lambda y(1+z+\tfrac{z^2}2+\tfrac{z^3}4)$, each obtained by
 substituting the previous one. The update is
 $y+\tfrac z6\left(6+3z+z^2+\tfrac{z^3}4\right)y$, which is the stated
 polynomial times $y$. For Euler, $y+zy$. For the midpoint method,
@@ -253,20 +288,17 @@ method's order. For RK4, $e^z-R_{\textrm{RK4}}(z)=z^5/120+O(z^6)$, so on this
 equation one step errs by $O(h^5)$ and $T/h$ steps by $O(h^4)$. For nonlinear
 fields that are four times continuously differentiable and Lipschitz in
 $\mathbf x$, a longer Taylor match gives the same orders: midpoint and Heun
-have order $2$, RK4 order $4$ :cite:`Hairer.Norsett.Wanner.1993`; we do not
-prove this. The stability function returns when we ask which steps are
-stable.
+have order $2$, RK4 order $4$ :cite:`Hairer.Norsett.Wanner.1993`. We do not
+prove this; the expansion of four nested evaluations fills pages and teaches
+little. The stability function is the object to keep from this section. How
+closely it follows $e^z$ near $z=0$ is the accuracy of a method, and how
+large it becomes far from zero will decide which steps are stable.
 
-Practical solvers also choose the step size as they go. An *embedded pair*
-such as Dormand--Prince
-computes solutions of orders $4$ and $5$ from the same evaluations and uses
-their difference as an estimate of the local error :cite:`Dormand.Prince.1980`;
-:exref:`ex_mdl-odes-solvers-adaptive-steps` builds the simplest such
-controller.
+### Order at Equal Cost
 
-<!-- WRITER: lib-review finding 7: the definitions of `euler` and `rk4` moved
-out of the order-study cell into this cell of their own, the section's teaching
-code. It needs a one-sentence lead-in (the two update rules above, in code). -->
+It remains to measure the orders, and to compare the methods at the same
+number of field evaluations. In code the two ends of the family take a few
+lines each, for a field `f` that does not depend on time.
 
 ```{.python .input #mdl-numerical-solvers-runge-kutta-methods-2}
 def euler(f, x0, T, n):
@@ -291,17 +323,29 @@ def rk4(f, x0, T, n):
 On log--log axes, $\textrm{error} \approx C h^p$ is a line of slope $p$, so
 the measured slopes should be $1$ and $4$. We test this on the spiral
 $\dot{\mathbf x}=\mathbf A\mathbf x$ of :numref:`fig_mdl-dyn-ode-field`, whose
-eigenvalues are $-0.5\pm\mathrm i$ and whose exact endpoint
-$e^{\mathbf AT}\mathbf x_0$ at $T=2$ the matrix-exponential cell computed,
-halving the step six times.
-<!-- WRITER: the matrix-exponential cell is in another notebook now. The setup cell below takes the endpoint
-from the closed form of :numref:`sec_mdl-odes-solvers`, x(2) = e^{-1}(2 cos 2, 2 sin 2) = (-0.3062, 0.6690). -->
+eigenvalues are $-0.5\pm\mathrm i$. A point on it loses length at rate
+$\tfrac12$ while it turns at unit speed, so from $\mathbf x_0=(2,0)$ the exact
+state at $T=2$ is $e^{-1}(2\cos 2,\,2\sin 2)=(-0.306,\,0.669)$, of length
+$0.736$ (:numref:`sec_mdl-odes-solvers`).
 
 ```{.python .input #mdl-numerical-solvers-runge-kutta-methods-1}
 A = np.array([[-0.5, -1.0], [1.0, -0.5]])      # the spiral, eigenvalues -0.5 +- i
 x0, T = np.array([2.0, 0.0]), 2.0
 x_true = np.exp(-1) * np.array([2 * np.cos(2), 2 * np.sin(2)])  # e^{AT} x0
 ```
+
+On a linear field we can predict the constants as well as the slopes. On
+the spiral a step of either solver is a rotation combined with a rescaling,
+as the exact motion is. A solver whose factor is off by some fraction in
+each mode is therefore off by the same fraction of the length $0.736$ of the
+true endpoint. For Euler the fraction is the one found for the compounding,
+$|\lambda T|^2/(2n)$. Here $|\lambda T|^2=5$, so Euler should miss by $2.5/n$
+of the length, that is by $1.84/n$.
+
+For RK4 the fraction comes from the stability function. One step is off by
+the fraction $|z|^5/120$, with $|z|=|\lambda T|/n=\sqrt5/n$, and the errors
+of $n$ steps add. The sum is $5^{5/2}/(120\,n^4)$ of the length, or
+$0.343/n^4$. The cell halves the step six times, from $8$ steps to $512$.
 
 ```{.python .input #odes-solvers-euler-rk4-order}
 f = lambda x: A @ x                            # the spiral field
@@ -320,81 +364,99 @@ d2l.plot(hs, [err_eu, err_rk, err_eu[-1] * (hs / hs[-1]),
          legend=['Euler', 'RK4', 'slope 1', 'slope 4'])
 ```
 
-The fitted slopes are $1.04$ and $4.02$. What the slopes do not show is the
-cost. A method of order $p$ reaches error $\varepsilon$ with a number of
-steps proportional to $\varepsilon^{-1/p}$, so a high order pays even at four
-evaluations per step: at $512$ steps Euler is off by $3.6\times10^{-3}$, and
-with the same $512$ field evaluations, that is $128$ steps, RK4 reaches
-$1.3\times10^{-9}$, six orders of magnitude below.
+The fitted slopes are $1.04$ and $4.02$, a little above $1$ and $4$ because
+the fit includes steps as coarse as $h=0.25$, where the next terms of the
+expansions still count. At $512$ steps the errors are $3.6\times10^{-3}$ and
+$5.0\times10^{-12}$, which is what $1.84/n$ and $0.343/n^4$ predict. The
+slopes hide the cost, though. RK4 reads the field four times per step, so a
+fair comparison gives it a quarter of the steps. With the same $512$ field
+evaluations, that is $128$ steps, RK4 reaches $1.3\times10^{-9}$, six orders
+of magnitude below Euler. To match that, Euler's law $1.84/n$ asks for more
+than a billion steps. In general a method of order $p$ needs a number of
+steps proportional to $\varepsilon^{-1/p}$ for an error $\varepsilon$.
+
+Practical solvers also choose the step size as they go. An *embedded pair*
+such as Dormand--Prince computes solutions of orders $4$ and $5$ from the
+same evaluations and takes their difference as an estimate of the local
+error :cite:`Dormand.Prince.1980`. The solver then shortens the step where
+the estimate is large and lengthens it where the estimate is small. Exercise
+:exref:`ex_mdl-odes-solvers-adaptive-steps` builds the simplest such
+controller.
 
 ## Stiffness and Implicit Methods
 :label:`sec_mdl-stiffness-implicit`
 
 Order measures how accurate a step is when it is small. Stability asks a
 different question: whether the errors of many steps die out or compound. For
-explicit methods such as Euler and RK4, stability caps the step size, however
-little accuracy we need.
+Euler and RK4 the answer caps the step size, however little accuracy we need.
 
 The smallest system that shows the problem has two decoupled modes,
 $\dot{\mathbf x}=\mathrm{diag}(-50,-1)\,\mathbf x$ from $(1,1)$, followed to
-$T=1$. The fast mode has decayed to $e^{-50}\approx10^{-22}$; the slow one is
-at $e^{-1}=0.368$. After $t\approx0.1$ only the slow mode is left, and steps
-of $h=0.1$ would follow it well. Yet the fast coordinate is the opening's
-equation $\dot x=-50x$, and Euler multiplies it by $1-50h$ at every step for
-as long as we integrate. A system is **stiff** when some Jacobian eigenvalues
-have large negative real parts compared with the rate at which the solution
-of interest varies: a mode that is long gone still sets the step.
+$T=1$. By then the fast mode has decayed to $e^{-50}\approx10^{-22}$ and the
+slow one stands at $e^{-1}=0.368$. After $t\approx0.1$ only the slow mode is
+left, and steps of $h=0.1$ would follow it well. Yet the fast coordinate is
+the opening's equation $\dot x=-50x$, and Euler multiplies it by $1-50h$ at
+every step for as long as we integrate. A system is **stiff** when some
+Jacobian eigenvalues have large negative real parts compared with the rate
+at which the solution of interest varies: a mode that is long gone still
+sets the step.
 
-To see which steps are allowed, and what a remedy looks like, we use the test
-equation $\dot y=\lambda y$ with complex $\lambda$, whose solution decays if
-and only if $\operatorname{Re}\lambda<0$.
-
-**Proposition (Euler and backward Euler on the test equation).** *Let
-$z=h\lambda$. Forward Euler gives $y_n=(1+z)^ny_0$, which decays if and only
-if $|1+z|<1$; for real $\lambda<0$ this is*
+Which steps are allowed? The stability function answers. On the test
+equation $\dot y=\lambda y$, whose solution decays if and only if
+$\operatorname{Re}\lambda<0$, a method turns $y_0$ into $R(z)^ny_0$ after $n$
+steps. The computed mode therefore decays if and only if $|R(z)|<1$. For
+forward Euler this reads $|1+z|<1$, and for a real $\lambda<0$ it is
+$-2<h\lambda<0$, or
 
 $$
 h < \frac{2}{|\lambda|} .
 $$
 
-*Backward Euler,
-$\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_{n+1}, t_{n+1})$,
-gives $y_n=(1-z)^{-n}y_0$, which decays for every $h>0$ whenever
-$\operatorname{Re}\lambda<0$.*
+For the bowl, $2/|\lambda|=2/50=0.04$ is the learning rate above which the
+iterates of the opening grew.
 
-**Proof.** Forward Euler: $y_{n+1}=y_n+h\lambda y_n=(1+z)y_n$; iterate. For
-real $z<0$ the condition $|1+z|<1$ reads $-2<z<0$. Backward Euler:
-$y_{n+1}=y_n+h\lambda y_{n+1}$, so $y_{n+1}=y_n/(1-z)$, and
+Below the limit we also get what the error bound of Euler's method lacked,
+an analysis for a field that contracts. A step now multiplies the error
+already made by $|1+h\lambda|<1$, where the general proof could only bound
+this factor by $1+hL$. For $h\le1/|\lambda|$ the geometric sum of that proof
+stays below $1/(h|\lambda|)$, and the bound becomes $Mh/(2|\lambda|)$: the
+old bound without its exponential. For the bowl's equation from $x_0=1$,
+where $M=2500$, that is $25\,h$, within a factor of three of the true error.
+
+### Backward Euler
+
+A shorter step is one way out. The other looks odd at first: take Euler's
+step with the slope at the *end* of the step,
+
+$$
+\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_{n+1}, t_{n+1}) .
+$$
+
+This is **backward Euler**. The unknown $\mathbf x_{n+1}$ stands on both
+sides, a nuisance we postpone until we have seen what the method achieves.
+
+**Proposition (backward Euler is stable at every step).** *On the test
+equation with $\operatorname{Re}\lambda<0$, backward Euler has the stability
+function $R(z)=1/(1-z)$, and $|R(z)|<1$ for every step $h>0$.*
+
+**Proof.** One step is $y_{n+1}=y_n+h\lambda y_{n+1}$, so
+$y_{n+1}=y_n/(1-z)$, and
 $|1-z|\ge\operatorname{Re}(1-z)=1-\operatorname{Re}z>1$ when
 $\operatorname{Re}z<0$. $\blacksquare$
 
-Backward Euler evaluates the field at the end of the step, which is not yet
-known, so each step is an equation to solve. That is the meaning of
-*implicit*. The price is a linear solve per step when the field is linear and
-a few Newton iterations otherwise
-(:exref:`ex_mdl-odes-solvers-stiff-newton`), and it is worth paying when the
-stability limit, not accuracy, would set the step of an explicit method.
+The reason can be seen without the algebra. Forward Euler extrapolates with
+the slope at the point where it stands, and on a steep mode that slope, held
+for a long step, carries it far past zero. Backward Euler asks for the point
+whose own slope leads back to where we are. A point that has almost decayed
+has almost no slope, so no step is long enough to overshoot.
 
-A plot of the $z$ plane shows all methods at once. The **stability region**
-of a method is the set $\{z:|R(z)|<1\}$ where its update decays; for backward
-Euler $R(z)=1/(1-z)$. A method is **A-stable** if its region contains the
-whole open left half-plane $\operatorname{Re}z<0$: it makes every decaying
-mode decay, whatever the step :cite:`Dahlquist.1963`. Backward Euler is
-A-stable, since its region is everything outside the closed unit disc around
-$+1$. No explicit Runge--Kutta method is A-stable, because its $R$ is a
-polynomial (:exref:`ex_mdl-odes-solvers-rotating-modes`).
-
-:numref:`fig_mdl-dyn-stability-regions` marks the examples. The opening's
-step $h=0.05$ on $\dot x=-50x$ is the point $z=-2.5$, outside Euler's disc,
-and $h=0.01$ is $z=-0.5$, inside. The spiral, with $\lambda=-0.5\pm\mathrm i$,
-gives $|1+z|^2=(1-h/2)^2+h^2$, which is below $1$ if and only if $h<0.8$; at
-$h=0.8$ its two points $-0.4\pm0.8\,\mathrm i$ lie on the circle. The
-exact step $e^{z}$ of :numref:`subsec_mdl-ode-driven-linear` has modulus below
-one on the whole left half-plane, which is the behaviour backward Euler
-imitates and forward Euler does not.
-
-![Stability regions in the complex plane of $z = h\lambda$ for the test equation $\dot{y} = \lambda y$; a decaying mode sits in the left half-plane. Forward Euler decays only inside the disc $\lvert 1 + z \rvert < 1$, whose real slice is $-2 < h\lambda < 0$; RK4 enlarges it to a lobed region reaching $\approx -2.79$ on the real axis; backward Euler is stable everywhere except the disc around $+1$, in particular on the entire left half-plane, which is A-stability. The marked points are the opening's $h=0.05$ step, its $h=0.01$ step, and the spiral's largest stable Euler step.](../img/mdl-dyn-stability-regions.svg)
-:label:`fig_mdl-dyn-stability-regions`
+Now for the nuisance: the field is evaluated at a point that is not yet
+known, so each step is an equation to solve, a linear system when the field
+is linear and a few Newton iterations otherwise (Exercise
+:exref:`ex_mdl-odes-solvers-stiff-newton`). Such methods are called
+*implicit*; Euler and RK4, which compute the new state by a formula, are
+*explicit*. An implicit step is worth its solve when stability, not accuracy,
+would set the step of an explicit method.
 
 We now run both methods on the two-mode system at five step sizes, backward
 Euler with one linear solve per step. The reader can predict the first row:
@@ -423,28 +485,66 @@ for n in [10, 20, 25, 50, 100]:
 At $h=0.1$ both methods have the slow mode within about $5\%$ of the truth
 ($0.349$ and $0.386$ against $0.368$), accurate enough for many purposes.
 Forward Euler nonetheless returns $4^{10}\approx10^6$ for the fast component,
-whose true value is $10^{-22}$. At $h=0.04$ the factor is $-1$, and the fast
-component flips sign at every step and never shrinks. Forward Euler needs
-$h<0.04$, and at $h=0.02$ its slow mode is five times more accurate than the
-$5\%$ we were content with.
+whose true value is $10^{-22}$. At $h=0.05$ its factor is the opening's
+$-1.5$, applied twenty times. At $h=0.04$ the factor is $-1$, and the fast
+component flips sign at every step and never shrinks. (The zero in the row
+$h=0.02$ is exact: there $1-50h=0$, and one step removes the fast mode.)
+Forward Euler needs $h<0.04$, a step at which its slow mode is already within
+about $2\%$. We asked for $5\%$, and stability made us compute $2\%$.
 
 Backward Euler is stable at every step size. Its slow-mode error is the
 $O(h)$ error of a first-order method, so stability does not bring accuracy.
-In practice, explicit adaptive solvers are the default, and implicit methods
-are used when the field is stiff, which a learned reverse-time field can be.
+
+### Stability Regions
+
+Forward Euler has a step-size limit and backward Euler has none. Where do
+other methods stand? A plot of the $z$ plane shows all of them at once. The
+**stability region** of a method is the set $\{z:|R(z)|<1\}$ where its update
+decays. A method is **A-stable** if its region contains the whole open left
+half-plane $\operatorname{Re}z<0$: it makes every decaying mode decay,
+whatever the step :cite:`Dahlquist.1963`. Backward Euler is A-stable, since
+its region is everything outside the closed unit disc around $+1$.
+
+:numref:`fig_mdl-dyn-stability-regions` marks the examples. The opening's
+step $h=0.05$ on $\dot x=-50x$ is the point $z=-2.5$, outside Euler's disc,
+and $h=0.01$ is $z=-0.5$, inside. The spiral, with $\lambda=-0.5\pm\mathrm i$,
+gives $|1+z|^2=(1-h/2)^2+h^2$, which is below $1$ if and only if $h<0.8$; at
+$h=0.8$ its two points $-0.4\pm0.8\,\mathrm i$ lie on the circle. A pure
+rotation puts $z$ on the imaginary axis, which touches Euler's disc only at
+the origin, so forward Euler makes an undamped oscillation grow at every
+step size (Exercises :exref:`ex_mdl-odes-solvers-rotating-modes` and
+:exref:`ex_mdl-odes-solvers-symplectic-euler`). The exact step $e^{z}$ of
+:numref:`subsec_mdl-ode-driven-linear` has modulus below one on the whole
+left half-plane, which is the behaviour backward Euler imitates and forward
+Euler does not.
+
+![Stability regions in the complex plane of $z = h\lambda$ for the test equation $\dot{y} = \lambda y$; a decaying mode sits in the left half-plane. Forward Euler decays only inside the disc $\lvert 1 + z \rvert < 1$, whose real slice is $-2 < h\lambda < 0$; RK4 enlarges it to a lobed region reaching $\approx -2.79$ on the real axis; backward Euler is stable everywhere except the disc around $+1$, in particular on the entire left half-plane, which is A-stability. The marked points are the opening's $h=0.05$ step, its $h=0.01$ step, and the spiral at $h=0.8$, on the edge of Euler's disc.](../img/mdl-dyn-stability-regions.svg)
+:label:`fig_mdl-dyn-stability-regions`
+
+No explicit Runge--Kutta method is A-stable, however many stages it has. Its
+$R$ is a polynomial (Exercise :exref:`ex_mdl-odes-solvers-rotating-modes`),
+and a polynomial other than a constant grows without bound as $z$ runs out
+along the negative real axis. Higher order therefore does not cure
+stiffness. RK4's region ends on the real axis at $z=-2.79$, the negative
+root of $R_{\textrm{RK4}}(z)=1$. On the bowl's equation it allows
+$h<2.79/50=0.056$ where Euler allows $0.04$, and it reads the field four
+times per step. This is why implicit methods are kept for stiff fields,
+while explicit ones are the default everywhere else. The stiff field that
+readers of this book meet most often is the gradient of a loss whose
+curvature is large in some directions and small in others.
 
 ## Gradient Descent as a Solver
 :label:`sec_mdl-gd-as-solver`
 
 The opening treated one coordinate. With several, the same factor appears
-once per eigenvalue of the Hessian. Infinitesimal descent on a loss
-$\mathcal L$ is the **gradient flow**
+once per eigenvalue of the Hessian. Moving downhill continuously on a loss
+$\mathcal L$, always along the negative gradient, is the **gradient flow**
 
 $$
 \dot{\mathbf{x}} = -\nabla \mathcal L(\mathbf{x}),
 $$
 
-a field whose fixed points are the critical points of $\mathcal L$ and along
+a field that vanishes at the critical points of $\mathcal L$ and along
 whose trajectories the loss only falls:
 $\tfrac{d}{dt}\mathcal L(\mathbf{x}(t)) = \nabla \mathcal L^\top \dot{\mathbf{x}} = -\|\nabla \mathcal L\|^2 \le 0$.
 Gradient descent with learning rate $\eta$,
@@ -453,9 +553,13 @@ is forward Euler :eqref:`eq_mdl-ode-euler-update` on this flow with $h = \eta$.
 
 :numref:`sec_mdl-gradient-based-optimization` derives the learning-rate
 ceiling $\eta<2/\lambda_{\max}(\mathbf H)$ on a quadratic with Hessian
-$\mathbf H$ and studies the speed below it. We do not repeat that analysis.
-What the solver view adds is where the ceiling comes from. Near a minimum
-the flow linearizes, eigenvector by eigenvector, onto the test equation:
+$\mathbf H$ and studies the speed below it. We do not repeat the study of
+the speed. The ceiling we derive once more, in three arrows, because the
+route is what the solver view adds. Write
+$\boldsymbol\delta=\mathbf x-\mathbf x^\star$ for the displacement from a
+minimum $\mathbf x^\star$ with Hessian $\mathbf H$. Near the minimum the flow
+linearizes, and each eigenvalue $\lambda_i$ of $\mathbf H$ becomes a
+decaying mode with rate $-\lambda_i$, a copy of the test equation:
 
 $$
 \begin{aligned}
@@ -470,18 +574,24 @@ $$
 $$
 
 The learning-rate ceiling is thus the boundary of Euler's stability disc,
-reached by the stiffest mode at $z=-\eta\lambda_{\max}=-2$. The cell reruns
-the sweep of :numref:`sec_mdl-gradient-based-optimization` on
-$\mathbf H=\mathrm{diag}(10,1)$ from $(1,1)$ for 100 steps, and each row can
-be read in :numref:`fig_mdl-dyn-stability-regions`.
+reached by the steepest mode at $z=-\eta\lambda_{\max}=-2$.
 
-<!-- WRITER: the cell no longer reruns the sweep of sec_mdl-gradient-based-optimization (cite it, do not
-rerun it). New content: gradient flow dx/dt = -H x on H = diag(10, 1) from (1, 1), 100 steps of size eta,
-three solvers, reusing this notebook's euler, rk4 and backward_euler_linear (backward Euler on the
-gradient flow is the proximal-point step x_{k+1} = (I + eta H)^{-1} x_k). Per row it prints the factor of
-the steep and of the flat mode (the diagonal of one step's matrix, i.e. R(-eta*10) and R(-eta*1)) and
-||x_100||. Rows: forward Euler eta 0.19, 0.21; RK4 0.27, 0.29; backward Euler 0.25, 25. The rows can
-still be read in fig_mdl-dyn-stability-regions (steep mode at z = -1.9, -2.1, -2.7, -2.9, -2.5, -250). -->
+If this reading is right, the ceiling comes from Euler's method, and another
+solver must have another ceiling. Let us test this prediction on the valley
+on which :numref:`sec_mdl-gradient-based-optimization` sweeps the learning
+rate, $\mathcal L(\mathbf x)=\tfrac12\mathbf x^\top\mathbf H\mathbf x$ with
+$\mathbf H=\mathrm{diag}(10,1)$ (that section lists the flat coordinate
+first). Its gradient flow $\dot{\mathbf x}=-\mathbf H\mathbf x$ has a steep
+mode with rate $-10$ and a flat one with rate $-1$. From $(1,1)$ we take
+$100$ steps of size $\eta$ with three solvers. Forward Euler is gradient descent, with its ceiling at
+$2/10=0.2$. RK4 reads the gradient four times per step, and since its region
+reaches $-2.79$ on the real axis (:numref:`fig_mdl-dyn-stability-regions`),
+its ceiling should be $0.279$. Backward Euler,
+$\mathbf x_{k+1}=(\mathbf I+\eta\mathbf H)^{-1}\mathbf x_k$, should have none.
+For each run the cell prints the factors by which one step multiplies the two
+modes, $R(-10\eta)$ and $R(-\eta)$, and the length of the iterate after the
+$100$ steps. The factors are measured, by applying one step to the identity
+matrix.
 
 ```{.python .input #mdl-odes-solvers-gradient-descent-is-a-solver}
 H = np.diag([10.0, 1.0])                       # Hessian of L(x) = x^T H x / 2
@@ -498,118 +608,106 @@ for name, eta in [('forward Euler', 0.19), ('forward Euler', 0.21), ('RK4', 0.27
     print(f'{name:<15}{eta:6.2f}{steep:14.3f}{flat:13.3f}{np.linalg.norm(x_100):12.1e}')
 ```
 
-<!-- WRITER: the paragraph below reads the old sweep (the eta = 0.201 row, factor -1.01, flat
-coordinate 1e-10) and is false now. Printed (deterministic NumPy, identical in all four tabs):
-  solver            eta  steep factor  flat factor   ||x_100||
-  forward Euler    0.19        -0.900        0.810     2.7e-05
-  forward Euler    0.21        -1.100        0.790     1.4e+04
-  RK4              0.27         0.879        0.763     2.5e-06
-  RK4              0.29         1.187        0.748     2.8e+07
-  backward Euler   0.25         0.286        0.800     2.0e-10
-  backward Euler  25.00         0.004        0.038    3.2e-142
-Readings: forward Euler's ceiling 2/lambda_max = 0.2 is the edge of its disc (steep factor -0.9 converges,
--1.1 diverges, oscillating in sign). RK4 moves the ceiling to 2.785/lambda_max = 0.2785, but each step
-costs four gradients: 0.0696 of flow time per gradient against Euler's 0.2, a loss per gradient. RK4's
-steep factor leaves the region through +1 (1.187, monotone growth, no sign flip), since RK4's R(z) = 1
-at z = -2.785 on the real axis (R(z) - 1 = z(1 + z/2 + z^2/6 + z^3/24)). Backward Euler converges at
-every eta, faster as eta grows (steep 1/(1 + 10 eta), flat 1/(1 + eta)); at eta = 25 the norm is at
-3e-142, i.e. effectively zero: the step nears the exact minimizer. The ceiling belongs to the solver, not
-to the loss. Do not quote 3.2e-142 to its digits; "below 1e-140" or "effectively zero". -->
+Each solver has its own ceiling, where its stability region ends. Forward
+Euler converges at $\eta=0.19$, with a steep factor of $-0.9$, and diverges
+at $\eta=0.21$, with $-1.1$. RK4 still converges at $\eta=0.27$ and diverges
+at $0.29$. Backward Euler converges at $\eta=0.25$, above the ceiling of
+gradient descent, and at $\eta=25$, far above both, where its factors are
+$0.004$ and $0.038$ and a hundred steps leave nothing measurable of the
+iterate. The opening asked what the problem is, if it is not the loss. The
+answer is that the ceiling is a quotient. The loss supplies its denominator,
+$\lambda_{\max}$, and the solver supplies its numerator, which is $2$ for
+forward Euler and $2.79$ for RK4. Backward Euler has no ceiling at all.
 
-This is the table of the stiff system with $\eta$ in place of $h$. At
-$\eta=0.201$ the steep mode sits at $z=-2.01$, just outside the disc: its
-factor is $-1.01$, and after 100 steps the iterate has grown past its start
-while the flat coordinate is about $10^{-10}$. Stability fixes $\eta$ through
-$\lambda_{\max}$, and $\lambda_{\min}$ then sets the speed, so the condition
-number of the Hessian is the stiffness of the gradient flow. A diverging
-learning rate is a solver instability.
+Should we then train with RK4? No. Its ceiling is $1.4$ times higher and its
+step takes four gradients, so each gradient advances the flow by at most
+$0.07$, against $0.2$ for gradient descent. The extra gradients serve to
+follow the path of the gradient flow more closely, and an optimizer has no
+use for the path. It wants the place where the path ends. Nor is leaving the
+path only an error. To second order in $\eta$ the iterates of gradient
+descent follow the flow of a modified loss that penalizes large gradients,
+so the error that Euler makes as a solver acts as a regularizer (Exercise
+:exref:`ex_mdl-odes-solvers-implicit-gradient-regularization`).
 
-Two more readings are left to the exercises. The $O(\eta^2)$ error of each explicit step has a meaning too: to that
-order gradient descent follows the flow of a modified loss that penalizes
-large gradients
-(:exref:`ex_mdl-odes-solvers-implicit-gradient-regularization`). Polyak's
-heavy-ball momentum discretizes the second-order equation
-$m\ddot{\mathbf x}+c\dot{\mathbf x}=-\nabla\mathcal L(\mathbf x)$ of a ball
-with mass and friction :cite:`Polyak.1964`
-(:exref:`ex_mdl-odes-solvers-heavy-ball-ode`).
+The two methods also fail differently. Euler's steep factor leaves the
+stable range through $-1$, and the iterate jumps across the valley floor to
+land higher each time. RK4's factor is positive on the whole real axis and
+leaves through $+1$: at $\eta=0.29$ it is $1.187$, and the iterate walks
+away from the minimum without once changing sign. The zigzag, too, belongs
+to Euler's method. Momentum, the usual remedy for it, solves a different
+equation: Polyak's heavy ball discretizes
+$m\ddot{\mathbf x}+c\dot{\mathbf x}=-\nabla\mathcal L(\mathbf x)$, the motion
+of a ball with mass and friction :cite:`Polyak.1964` (Exercise
+:exref:`ex_mdl-odes-solvers-heavy-ball-ode`).
 
-Every field in this section was given to us. The next section,
-:numref:`sec_mdl-neural-odes-cnf`, defines a model whose layers are Euler
-steps of a field that is *learned*, and asks how such a model is trained and
-what it does to a probability density.
+Backward Euler only improves as the step grows, since its factors
+$1/(1+\eta\lambda_i)$ shrink. The catch is the solve. Its step
+$\mathbf x_{k+1}=\mathbf x_k-\eta\nabla\mathcal L(\mathbf x_{k+1})$ says that
+the gradient of
+$\mathcal L(\mathbf x)+\tfrac1{2\eta}\|\mathbf x-\mathbf x_k\|^2$ vanishes at
+$\mathbf x_{k+1}$, which for a convex loss makes it the proximal step
+$\mathrm{prox}_{\eta\mathcal L}(\mathbf x_k)$ of
+:numref:`subsec_mdl-proximal-operators`, applied to the loss itself. On our
+quadratic that is one linear system, and Exercise
+:exref:`ex_mdl-numerical-solvers-proximal-step` counts what it costs to
+solve it by gradient steps. On a network it is an optimization problem of
+its own at every step, and for large $\eta$ it is the problem we set out to
+solve.
+
+The valley is the stiff system of :numref:`sec_mdl-stiffness-implicit` in a
+milder form, with rates $10$ and $1$ in place of $50$ and $1$, and $\eta$ in
+place of $h$. At any $\eta<0.2$ the flat factor $1-\eta$ of gradient descent
+stays above $0.8$ (the table prints $0.81$ at $\eta=0.19$), so the flat
+direction loses less than a fifth of its length per step, however well the
+steep one does. In general it loses less than the fraction
+$2\lambda_{\min}/\lambda_{\max}$, which is a five-hundredth for a condition
+number of $1000$. Stability fixes $\eta$ through $\lambda_{\max}$, and
+$\lambda_{\min}$ then sets the speed, so the condition number of the Hessian
+is the stiffness of the gradient flow. A diverging learning rate is a solver
+instability.
+
+We knew the eigenvalues of every field in this section before we took the
+first step, because we had written the field down ourselves. A field that is
+a network comes with no such list. :numref:`sec_mdl-neural-odes-cnf` takes a
+learned field as the model itself, with layers for Euler steps, and asks how
+such a model is trained and what it does to a probability density.
 
 ## Summary
 
-*Numerical solvers.* A numerical solver turns a local error $O(h^{p+1})$
-into a global error $O(h^p)$, with $p=1$ for Euler and $p=4$ for RK4. Forward
-Euler is stable only for $|1+h\lambda|<1$ and backward Euler on the whole
-left half-plane, and a system is stiff when a decayed fast mode still sets
-the step. Gradient descent is forward Euler on
-$\dot{\mathbf x}=-\nabla\mathcal L$, so $\eta<2/\lambda_{\max}(\mathbf H)$ is
-a solver stability bound and ill-conditioning is stiffness.
+A numerical solver replaces a trajectory by steps, and two properties judge
+it. Its order $p$ says how fast the error falls with the step: a local error
+$O(h^{p+1})$ accumulates to a global error $O(h^p)$, with $p=1$ for Euler and
+$p=4$ for RK4. Its stability region says which steps do not blow up: forward
+Euler needs $|1+h\lambda|<1$, backward Euler is stable on the whole left
+half-plane and solves an equation at every step, and a system is stiff when
+a fast mode that has long decayed still sets the step. On a linear field
+both properties are read from the stability function $R(h\lambda)$, the
+factor by which one step multiplies a mode. Gradient descent is forward
+Euler on $\dot{\mathbf x}=-\nabla\mathcal L$, so its ceiling
+$\eta<2/\lambda_{\max}(\mathbf H)$ is the edge of Euler's region, and
+ill-conditioning is stiffness.
 
 ## Exercises
 
-1. **Rotating modes.** The stiffness proposition treats a single decaying
-   mode. A complex eigenvalue $\lambda$ enters through $z = h\lambda$, the
-   coordinate of :numref:`fig_mdl-dyn-stability-regions`.
-    1. For the spiral field of :numref:`fig_mdl-dyn-ode-field`, with
-       eigenvalues $-0.5 \pm \mathrm i$, find the largest step size for which
-       forward Euler decays.
-    1. For the rotational field
-       $\dot{\mathbf{x}} = \left(\begin{smallmatrix}0&-b\\b&0\end{smallmatrix}\right)\mathbf{x}$,
-       show that forward Euler multiplies $\|\mathbf{x}\|$ by
-       $\sqrt{1 + h^2 b^2}$ per step and that backward Euler divides it by the
-       same factor. By which factor does each method change $\|\mathbf{x}\|$
-       over one revolution, that is $2\pi/(hb)$ steps, when $hb = 0.1$?
-    1. The stability function of RK4 is the last formula in
-       :eqref:`eq_mdl-ode-stability-function`, and its square modulus on the
-       imaginary axis decides rotation. Show that
-       $|R(\mathrm iy)|^2 = 1 - y^6/72 + y^8/576$ for real $y$, and find the
-       range of $hb$ for which RK4 does not amplify the rotation.
-    1. An explicit Runge--Kutta method with $s$ stages computes
-       $\mathbf{k}_i = \mathbf{f}\big(\mathbf{x}_n + h\sum_{j<i} a_{ij}\mathbf{k}_j\big)$
-       for $i = 1, \ldots, s$ and
-       $\mathbf{x}_{n+1} = \mathbf{x}_n + h\sum_{i} b_i\mathbf{k}_i$, as RK4
-       does in :eqref:`eq_mdl-ode-rk4-update`. Show that its stability
-       function is a polynomial in $z$ of degree at most $s$. Why does this
-       rule out A-stability for explicit methods?
-   :exlabel:`ex_mdl-odes-solvers-rotating-modes`
+1. [code] **Order on a nonlinear field.** The text measured the orders on a
+   linear field, where they follow from the stability function. Here only
+   the Taylor argument explains them (the exercise is adapted from
+   Exercise 2.10 of :citet:`Sarkka.Solin.2019`). Implement Heun's method
+   :eqref:`eq_mdl-ode-heun-update` beside the text's `euler` and `rk4`. Take the damped pendulum
+   $\dot\phi=\omega$, $\dot\omega=-\sin\phi-c\,\omega$ of
+   :numref:`subsec_mdl-ode-linearization` with $c=0.5$ and integrate it from
+   $(\phi,\omega)=(2.5,0)$ to $T=5$ with $n=16,32,\ldots,1024$ steps, using
+   `rk4` with $2^{16}$ steps as the reference. Plot the endpoint errors
+   against $h$ on log--log axes and fit the slopes. Which method reaches an
+   error of $10^{-6}$ with the fewest field evaluations? Then set $c=0$ and
+   integrate to $T=50$ at $h=0.1$, plotting the energy
+   $\tfrac12\omega^2+(1-\cos\phi)$ of each method against time. Which methods
+   drift, and in which direction?
+   :exlabel:`ex_mdl-odes-solvers-nonlinear-order`
 
-1. **Heavy ball as a discretized ODE.** Heavy-ball momentum
-   $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\nabla \mathcal L(\mathbf{x}_k) + \beta(\mathbf{x}_k - \mathbf{x}_{k-1})$
-   discretizes the equation
-   $m\ddot{\mathbf{x}} + c\dot{\mathbf{x}} = -\nabla \mathcal L(\mathbf{x})$
-   of a ball with mass $m$ and friction $c$.
-    1. Replace $\ddot{\mathbf{x}}(t_k)$ by the central difference
-       $(\mathbf{x}_{k+1} - 2\mathbf{x}_k + \mathbf{x}_{k-1})/h^2$ and
-       $\dot{\mathbf{x}}(t_k)$ by the backward difference
-       $(\mathbf{x}_k - \mathbf{x}_{k-1})/h$. Show that the result is the
-       heavy-ball update, and express $\eta$ and $\beta$ through $m$, $c$,
-       and $h$.
-    1. For $\mathcal L(x) = \tfrac{\lambda}{2}x^2$ the ODE is a damped
-       oscillator, critically damped at $c = 2\sqrt{m\lambda}$. Express this
-       condition through $\eta$, $\beta$, and $\lambda$. The heavy-ball
-       recurrence is critically damped when its characteristic polynomial
-       $z^2 - (1 + \beta - \eta\lambda)z + \beta$ has a double root. Find the
-       corresponding $\beta$ and compare the two conditions for small
-       $\eta\lambda$.
-    1. The heavy-ball recurrence on this quadratic converges if and only if
-       $0 < \eta\lambda < 2(1 + \beta)$ for $0 \le \beta < 1$ (exercise
-       :exref:`ex_mdl-gradient-based-optimization-edge-of-stability-momentum`a
-       of :numref:`sec_mdl-gradient-based-optimization` asks for the proof).
-       Translate the condition into one on $h$, $m$, $c$, and $\lambda$. The
-       ODE decays for every $\lambda > 0$, but its discretization does not.
-       What is the largest stable step $h$ as $c \to 0$, in terms of the
-       angular frequency $\sqrt{\lambda/m}$ of the oscillator? Which
-       eigenvalue of the Hessian of an ill-conditioned quadratic sets the
-       step limit?
-   :exlabel:`ex_mdl-odes-solvers-heavy-ball-ode`
-
-1. [code] **Adaptive step size.** ● The embedded pairs of
-   :numref:`sec_mdl-euler-runge-kutta` estimate the local error from two
-   methods of different order. The simplest pair uses the stages
-   $\mathbf{k}_1 = \mathbf{f}(\mathbf{x})$ and
+1. [code] **Adaptive step size.** ● An embedded pair estimates the local
+   error from two methods of different order. The simplest pair uses the
+   stages $\mathbf{k}_1 = \mathbf{f}(\mathbf{x})$ and
    $\mathbf{k}_2 = \mathbf{f}(\mathbf{x} + h\mathbf{k}_1)$ of Heun's method:
    the Euler value $\mathbf{x} + h\mathbf{k}_1$ and the Heun value
    $\mathbf{x} + \tfrac{h}{2}(\mathbf{k}_1 + \mathbf{k}_2)$ differ by
@@ -634,6 +732,101 @@ a solver stability bound and ill-conditioning is stiffness.
        Explain this value with Heun's stability function
        $1 + z + z^2/2$ from :eqref:`eq_mdl-ode-stability-function`.
    :exlabel:`ex_mdl-odes-solvers-adaptive-steps`
+
+1. **Rotating modes.** ● The stiff example has real eigenvalues. A complex
+   eigenvalue $\lambda$ enters through $z = h\lambda$, the coordinate of
+   :numref:`fig_mdl-dyn-stability-regions`, and its imaginary part can decide
+   whether a step is stable.
+    1. For the spiral field of :numref:`fig_mdl-dyn-ode-field`, with
+       eigenvalues $-0.5 \pm \mathrm i$, the text found that forward Euler
+       decays for $h < 0.8$. Find the largest such step for Heun's method
+       from its stability function in :eqref:`eq_mdl-ode-stability-function`
+       (the condition is a cubic in $h$; solve it numerically), and for RK4.
+       Heun's method reads the field twice per step and RK4 four times.
+       Which of the three methods covers the most time per field evaluation
+       without growing?
+    1. For the rotational field
+       $\dot{\mathbf{x}} = \left(\begin{smallmatrix}0&-b\\b&0\end{smallmatrix}\right)\mathbf{x}$,
+       show that forward Euler multiplies $\|\mathbf{x}\|$ by
+       $\sqrt{1 + h^2 b^2}$ per step and that backward Euler divides it by the
+       same factor. By which factor does each method change $\|\mathbf{x}\|$
+       over one revolution, that is $2\pi/(hb)$ steps, when $hb = 0.1$?
+    1. The stability function of RK4 is the last formula in
+       :eqref:`eq_mdl-ode-stability-function`, and its square modulus on the
+       imaginary axis decides rotation. Show that
+       $|R(\mathrm iy)|^2 = 1 - y^6/72 + y^8/576$ for real $y$, and find the
+       range of $hb$ for which RK4 does not amplify the rotation.
+    1. An explicit Runge--Kutta method with $s$ stages computes
+       $\mathbf{k}_i = \mathbf{f}\big(\mathbf{x}_n + h\sum_{j<i} a_{ij}\mathbf{k}_j\big)$
+       for $i = 1, \ldots, s$ and
+       $\mathbf{x}_{n+1} = \mathbf{x}_n + h\sum_{i} b_i\mathbf{k}_i$, as RK4
+       does in :eqref:`eq_mdl-ode-rk4-update`. Show that its stability
+       function is a polynomial in $z$ of degree at most $s$. Why does this
+       rule out A-stability for explicit methods?
+   :exlabel:`ex_mdl-odes-solvers-rotating-modes`
+
+1. [code] **Implicit steps on a stiff nonlinear field.** ● The text's stiff
+   system is linear and diagonal, so each backward-Euler step was one linear
+   solve. Take instead the damped pendulum
+   $\dot\phi=\omega$, $\dot\omega=-\sin\phi-c\,\omega$ of
+   :numref:`subsec_mdl-ode-linearization` with the heavy damping $c=50$, from
+   $(\phi,\omega)=(1,0)$ to $T=2$.
+    1. Compute the eigenvalues of its Jacobian
+       $\mathbf J(\phi,\omega)=\left(\begin{smallmatrix}0&1\\-\cos\phi&-c\end{smallmatrix}\right)$
+       at the bottom, $(0,0)$, and the step-size limits of forward Euler and
+       RK4 that they imply.
+    1. Show that after the fast transient the motion nearly satisfies
+       $\dot\phi=-\sin\phi/c$, and compute $\phi(2)$ from this
+       one-dimensional equation.
+    1. One backward-Euler step solves
+       $\mathbf g(\mathbf y)=\mathbf y-\mathbf x_n-h\mathbf f(\mathbf y)=\mathbf 0$
+       for $\mathbf y=\mathbf x_{n+1}$. Write Newton's iteration
+       $\mathbf y\leftarrow\mathbf y-(\mathbf I-h\mathbf J(\mathbf y))^{-1}\mathbf g(\mathbf y)$
+       for it, and implement backward Euler with three Newton iterations per
+       step, started from $\mathbf x_n$.
+    1. Run forward Euler, RK4 and backward Euler with $n=20$, $33$, $36$ and
+       $100$ equal steps ($h=0.1$, $0.061$, $0.056$ and $0.02$), against a
+       reference computed with `rk4` and $2^{16}$ steps. Which runs blow up,
+       and do the limits of part a predict them? Then find for each method
+       the smallest $n$ with an endpoint error below $10^{-4}$, and count
+       the field and Jacobian evaluations it takes. For which method does
+       accuracy set $n$, and for which does stability?
+   :exlabel:`ex_mdl-odes-solvers-stiff-newton`
+
+1. [code] **Symplectic Euler and splitting.** ● The harmonic oscillator
+   $\dot q=p$, $\dot p=-q$ conserves $q^2+p^2$. Forward Euler spirals out of
+   its circular orbits and backward Euler spirals in. The *symplectic Euler*
+   update advances $q$ with the old $p$ and then $p$ with the new $q$:
+   $q_{n+1}=q_n+hp_n$, $p_{n+1}=p_n-hq_{n+1}$.
+    1. Write the update as a matrix $\mathbf S_h$ acting on $(q,p)$ and show
+       that $\det\mathbf S_h=1$ for every $h$, so the update preserves area as
+       the exact flow does, while forward Euler's matrix has determinant
+       $1+h^2$.
+    1. Show that the eigenvalues of $\mathbf S_h$ are distinct and lie on the
+       unit circle if and only if $0<h<2$. What happens at $h=2$ and for
+       $h>2$?
+    1. Show that $q^2+p^2+hqp$ is conserved exactly by the update. What does
+       its level set through $(1,0)$ look like, and how far from the origin
+       can the computed orbit get at $h=0.5$ and at $h=1$? (Hint: the axes of
+       the quadratic form have lengths in the ratio
+       $\sqrt{(2+h)/(2-h)}$.)
+    1. Integrate from $(1,0)$ to $T=200$ with forward Euler, backward Euler
+       and symplectic Euler at $h=0.1$ and $h=1$, and report the largest and
+       smallest $\|(q,p)\|$ along each run.
+    1. The update is the exact flow of $\dot q=p$ with $p$ frozen, for time
+       $h$, followed by the exact flow of $\dot p=-q$ with $q$ frozen. Write
+       the two generators $\mathbf P$ and $\mathbf Q$, whose sum is the
+       oscillator's matrix, compute $e^{h\mathbf P}$, $e^{h\mathbf Q}$ and
+       $e^{h(\mathbf P+\mathbf Q)}$, and show that
+       $e^{h\mathbf Q}e^{h\mathbf P}=\mathbf S_h$ differs from
+       $e^{h(\mathbf P+\mathbf Q)}$ by terms of order $h^2$. The spiral's
+       closed form in :numref:`sec_mdl-odes-solvers` split an exponential
+       without any error. Which property that it used fails here? The
+       symmetric splitting
+       $e^{h\mathbf Q/2}e^{h\mathbf P}e^{h\mathbf Q/2}$ is the *leapfrog*
+       integrator of Hamiltonian Monte Carlo :cite:`Neal.2011`; what is its
+       order?
+   :exlabel:`ex_mdl-odes-solvers-symplectic-euler`
 
 1. [code] **Implicit gradient regularization.** ●● Gradient descent is
    forward Euler on the gradient flow (:numref:`sec_mdl-gd-as-solver`), so
@@ -677,73 +870,57 @@ a solver stability bound and ill-conditioning is stiffness.
        $\eta$.
    :exlabel:`ex_mdl-odes-solvers-implicit-gradient-regularization`
 
-1. [code] **Symplectic Euler and splitting.** The harmonic oscillator
-   $\dot q=p$, $\dot p=-q$ conserves $q^2+p^2$. Forward Euler spirals out of
-   its circular orbits and backward Euler spirals in. The *symplectic Euler*
-   update advances $q$ with the old $p$ and then $p$ with the new $q$:
-   $q_{n+1}=q_n+hp_n$, $p_{n+1}=p_n-hq_{n+1}$.
-    1. Write the update as a matrix $\mathbf S_h$ acting on $(q,p)$ and show
-       that $\det\mathbf S_h=1$ for every $h$, so the update preserves area as
-       the exact flow does, while forward Euler's matrix has determinant
-       $1+h^2$.
-    1. Show that the eigenvalues of $\mathbf S_h$ are distinct and lie on the
-       unit circle if and only if $0<h<2$. What happens at $h=2$ and for
-       $h>2$?
-    1. Show that $q^2+p^2+hqp$ is conserved exactly by the update. What does
-       its level set through $(1,0)$ look like, and how far from the origin
-       can the computed orbit get at $h=0.5$ and at $h=1$? (Hint: the axes of
-       the quadratic form have lengths in the ratio
-       $\sqrt{(2+h)/(2-h)}$.)
-    1. Integrate from $(1,0)$ to $T=200$ with forward Euler, backward Euler
-       and symplectic Euler at $h=0.1$ and $h=1$, and report the largest and
-       smallest $\|(q,p)\|$ along each run.
-    1. The update is the exact flow of $\dot q=p$ with $p$ frozen, for time
-       $h$, followed by the exact flow of $\dot p=-q$ with $q$ frozen. Write
-       the two generators $\mathbf P$ and $\mathbf Q$, whose sum is the
-       oscillator's matrix, compute $e^{h\mathbf P}$, $e^{h\mathbf Q}$ and
-       $e^{h(\mathbf P+\mathbf Q)}$, and show that
-       $e^{h\mathbf Q}e^{h\mathbf P}=\mathbf S_h$ differs from
-       $e^{h(\mathbf P+\mathbf Q)}$ by terms of order $h^2$. Which property
-       used for the spiral's closed form fails here? The symmetric splitting
-       $e^{h\mathbf Q/2}e^{h\mathbf P}e^{h\mathbf Q/2}$ is the *leapfrog*
-       integrator of Hamiltonian Monte Carlo :cite:`Neal.2011`; what is its
-       order?
-   :exlabel:`ex_mdl-odes-solvers-symplectic-euler`
+1. **Heavy ball as a discretized ODE.** ● Heavy-ball momentum
+   $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\nabla \mathcal L(\mathbf{x}_k) + \beta(\mathbf{x}_k - \mathbf{x}_{k-1})$
+   discretizes the equation
+   $m\ddot{\mathbf{x}} + c\dot{\mathbf{x}} = -\nabla \mathcal L(\mathbf{x})$
+   of a ball with mass $m$ and friction $c$.
+    1. Replace $\ddot{\mathbf{x}}(t_k)$ by the central difference
+       $(\mathbf{x}_{k+1} - 2\mathbf{x}_k + \mathbf{x}_{k-1})/h^2$ and
+       $\dot{\mathbf{x}}(t_k)$ by the backward difference
+       $(\mathbf{x}_k - \mathbf{x}_{k-1})/h$. Show that the result is the
+       heavy-ball update, and express $\eta$ and $\beta$ through $m$, $c$,
+       and $h$.
+    1. For $\mathcal L(x) = \tfrac{\lambda}{2}x^2$ the ODE is a damped
+       oscillator, critically damped at $c = 2\sqrt{m\lambda}$. Express this
+       condition through $\eta$, $\beta$, and $\lambda$. The heavy-ball
+       recurrence is critically damped when its characteristic polynomial
+       $z^2 - (1 + \beta - \eta\lambda)z + \beta$ has a double root. Find the
+       corresponding $\beta$ and compare the two conditions for small
+       $\eta\lambda$.
+    1. The heavy-ball recurrence on this quadratic converges if and only if
+       $0 < \eta\lambda < 2(1 + \beta)$ for $0 \le \beta < 1$ (Exercise
+       :exref:`ex_mdl-gradient-based-optimization-edge-of-stability-momentum`a
+       of :numref:`sec_mdl-gradient-based-optimization` asks for the proof).
+       Translate the condition into one on $h$, $m$, $c$, and $\lambda$. The
+       ODE decays for every $\lambda > 0$, but its discretization does not.
+       What is the largest stable step $h$ as $c \to 0$, in terms of the
+       angular frequency $\sqrt{\lambda/m}$ of the oscillator? Which
+       eigenvalue of the Hessian of an ill-conditioned quadratic sets the
+       step limit?
+   :exlabel:`ex_mdl-odes-solvers-heavy-ball-ode`
 
-1. [code] **Order on a nonlinear field.** The text measured the orders on a
-   linear field, where they follow from the stability function. Here only
-   the Taylor argument explains them (the exercise is adapted from
-   :citet:`Sarkka.Solin.2019`). Implement Heun's method beside the
-   text's `euler` and `rk4`. Integrate the damped pendulum with $c=0.5$ from
-   $(\phi,\omega)=(2.5,0)$ to $T=5$ with $n=16,32,\ldots,1024$ steps, using
-   `rk4` with $2^{16}$ steps as the reference. Plot the endpoint errors
-   against $h$ on log--log axes and fit the slopes. Which method reaches an
-   error of $10^{-6}$ with the fewest field evaluations? Then set $c=0$ and
-   integrate to $T=50$ at $h=0.1$, plotting the energy
-   $\tfrac12\omega^2+(1-\cos\phi)$ of each method against time. Which methods
-   drift, and in which direction?
-   :exlabel:`ex_mdl-odes-solvers-nonlinear-order`
-
-1. [code] **Implicit steps on a stiff nonlinear field.** ● The text's stiff
-   system is linear and diagonal, so each backward-Euler step was one linear
-   solve. Take instead the heavily damped pendulum, $c=50$, from
-   $(\phi,\omega)=(1,0)$ to $T=2$.
-    1. Compute the Jacobian eigenvalues at the bottom and the step-size limits
-       of forward Euler and RK4 that they imply.
-    1. Show that after the fast transient the motion nearly satisfies
-       $\dot\phi=-\sin\phi/c$, and compute $\phi(2)$ from this
-       one-dimensional equation.
-    1. One backward-Euler step solves
-       $\mathbf g(\mathbf y)=\mathbf y-\mathbf x_n-h\mathbf f(\mathbf y)=\mathbf 0$
-       for $\mathbf y=\mathbf x_{n+1}$. Write Newton's iteration
-       $\mathbf y\leftarrow\mathbf y-(\mathbf I-h\mathbf J(\mathbf y))^{-1}\mathbf g(\mathbf y)$
-       for it, and implement backward Euler with three Newton iterations per
-       step, started from $\mathbf x_n$.
-    1. Run forward Euler, RK4 and backward Euler at $h=0.1$, $0.06$, $0.055$
-       and $0.02$, against a reference computed with `rk4` and $2^{16}$
-       steps. Count the field and Jacobian evaluations each method needs for
-       an endpoint error below $10^{-4}$. Which method wins, and why?
-   :exlabel:`ex_mdl-odes-solvers-stiff-newton`
+1. [code] **The cost of an implicit step.** ● Backward Euler on the gradient
+   flow is $\mathbf x_{k+1}=\mathbf x_k-\eta\nabla\mathcal L(\mathbf x_{k+1})$
+   (:numref:`sec_mdl-gd-as-solver`).
+    1. Show that $\mathbf x_{k+1}$ is a stationary point of
+       $g(\mathbf x)=\mathcal L(\mathbf x)+\tfrac1{2\eta}\|\mathbf x-\mathbf x_k\|^2$,
+       and that for a convex loss
+       $\mathcal L(\mathbf x_{k+1})\le\mathcal L(\mathbf x_k)-\tfrac1{2\eta}\|\mathbf x_{k+1}-\mathbf x_k\|^2$
+       for every $\eta>0$.
+    1. For a quadratic loss with Hessian $\mathbf H$, find the Hessian of $g$
+       and its condition number as a function of $\eta$. What are its limits
+       as $\eta\to0$ and as $\eta\to\infty$?
+    1. Solve the inner problem approximately by $m$ steps of gradient descent
+       on $g$ with step size $1/(\lambda_{\max}(\mathbf H)+1/\eta)$, started
+       at $\mathbf x_k$. Show that $m=1$ is gradient descent on $\mathcal L$
+       with the learning rate $\eta/(1+\eta\lambda_{\max})$, which stays
+       below $1/\lambda_{\max}$ for every $\eta$.
+    1. On $\mathbf H=\mathrm{diag}(10,1)$ from $(1,1)$, count the gradients
+       this method needs to reach $\|\mathbf x\|<10^{-6}$ for
+       $\eta=0.25, 2.5, 25$ and $m=1, 5, 20$, and compare with gradient
+       descent at $\eta=2/11$. Where did the stiffness go?
+   :exlabel:`ex_mdl-numerical-solvers-proximal-step`
 
 <!-- COORDINATOR: this page needs its own forum topic (tools/create_forum_topics.py); add the [Discussions](...) line here. -->
 
@@ -753,7 +930,7 @@ a solver stability bound and ill-conditioning is stiffness.
 ::: {.cover}
 [Dive into Deep Learning · §38.2]{.kicker}
 
-Following a field step by step<br>**Numerical solvers**
+Following a field step by step<br>**order of accuracy · stability and stiffness · gradient descent as a solver**
 :::
 :::
 
@@ -765,38 +942,61 @@ Following a field step by step<br>**Numerical solvers**
 - $h=0.01$: factor $0.5$, decays. $h=0.05$: factor $-1.5$, flips sign and grows.
 
 ::: {.d2l-note .warn}
-The equation decays from every start. The steps need not.
+The equation is stable; the steps are not.
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- choose a step and an order from the error law $O(h^p)$;
-- recognize a stiff system and know when to take implicit steps;
-- read a diverging learning rate as a solver instability.
+- predict a solver's error from its order $p$: error $\approx C\,h^p$;
+- compute the largest stable step from the eigenvalues of a field;
+- recognize a stiff system and decide when an implicit step is worth its solve;
+- say what another solver does to the learning-rate ceiling.
 
-**Running examples:** $\dot x=-50x$; the spiral $\mathbf A=\left(\begin{smallmatrix}-0.5&-1\\1&-0.5\end{smallmatrix}\right)$, eigenvalues $-0.5\pm\mathrm i$.
+**Running examples:** the bowl's equation $\dot x=-50x$; the spiral $\dot{\mathbf x}=\mathbf A\mathbf x$, $\mathbf A=\left(\begin{smallmatrix}-0.5&-1\\1&-0.5\end{smallmatrix}\right)$, eigenvalues $-0.5\pm\mathrm i$.
 
-**The idea:** eigenvalues decide the motion and the step that can follow it.
+**The idea:** one function of $z=h\lambda$, the factor $R(z)$ of a single step, gives a solver's accuracy and its stability.
 :::
 
-<!-- WRITER: the "Where this fits" slide of the old deck lists one combined ODE section; give this deck its own version. -->
+::: {.slide title="Exact Motion First, Steps Second"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Ordinary Differential Equations | exact motion: uniqueness, eigenvalues |
+| **Numerical Solvers** | **steps: their order and stability** |
+| Neural ODEs | a learned field, its gradient, its density |
+| Stochastic Differential Equations | noise, Itô calculus, the OU process |
+| Fokker–Planck and Probability Flow | how the density moves; the score |
+| Score Matching and Diffusion | learning the score, sampling with it |
+| Flow Matching and Transport | learning a velocity; straight paths |
+:::
+
+::: {.col .narrow}
+- **Uses:** the solution $e^{\lambda t}$ of $\dot y=\lambda y$, Taylor expansion, eigenvalues.
+- **Skips:** multistep methods, step-size control, the order proof for nonlinear fields.
+:::
+:::
+:::
 
 ::: {.slide}
 ::: {.divider}
 [01]{.dnum}
 
-[Numerical solvers]{.dtitle}
+[Accuracy]{.dtitle}
 
-[accuracy, order, stability, stiffness]{.dsub}
+[Euler, Runge–Kutta, and the order of a method]{.dsub}
 :::
 :::
 
 ::: {.slide title="Euler on dx/dt = x Is Compound Interest: (1 + 1/n)ⁿ → e"}
 [Forward Euler]{.kicker}
 
-$\mathbf x_{n+1}=\mathbf x_n+h\,\mathbf f(\mathbf x_n)$: the left-endpoint sum of $\int\mathbf f$.
+$\mathbf x_{n+1}=\mathbf x_n+h\,\mathbf f(\mathbf x_n)$: follow the arrow $\mathbf f$ for a time $h$, then read it again.
+On $\dot x=x$ from $1$ to $T=1$ with $h=1/n$:
 
 | $n$ | 1 | 2 | 4 | 8 | 16 | 32 |
 |---|---|---|---|---|---|---|
@@ -811,12 +1011,13 @@ Doubling $n$ about halves the error: error $\approx e/(2n)=1.36\,h$. Order one.
 ::: {.slide title="Euler's Global Error, I: Each Step Amplifies by 1 + hL and Adds Mh²/2"}
 [Derivation]{.kicker}
 
-Let $\varepsilon_n=\|\mathbf x_n-\mathbf x(t_n)\|$, $\|\ddot{\mathbf x}\|\le M$, $\mathbf f$ $L$-Lipschitz.
+Error $\varepsilon_n=\|\mathbf x_n-\mathbf x(t_n)\|$ at $t_n=nh$, up to a horizon $T$. Assume $\|\ddot{\mathbf x}\|\le M$ and
+$\|\mathbf f(\mathbf x)-\mathbf f(\mathbf y)\|\le L\|\mathbf x-\mathbf y\|$.
 
 $$\varepsilon_{n+1}\le\underbrace{(1+hL)\,\varepsilon_n}_{\text{old error, propagated}}+\underbrace{Mh^2/2}_{\text{new Taylor remainder}}$$
 
 ::: {.d2l-note .rule}
-Local error $O(h^2)$, but $T/h$ steps of it.
+The local error is $O(h^2)$, and there are $T/h$ steps of it.
 :::
 :::
 
@@ -825,8 +1026,9 @@ Local error $O(h^2)$, but $T/h$ steps of it.
 
 $$\varepsilon_n\le\frac{Mh^2}{2}\sum_{j<n}(1+hL)^j=\frac{Mh}{2L}\big((1+hL)^n-1\big)\le\boxed{\frac{Mh}{2L}\left(e^{LT}-1\right)}$$
 
-- Local $O(h^{p+1})$ becomes global $O(h^p)$.
+- Local $O(h^{p+1})$ becomes global $O(h^p)$: a method of **order** $p$.
 - $\dot x=x$ on $[0,1]$: bound $2.3\,h$, truth $1.36\,h$.
+- $\dot x=-50x$: $e^{LT}=e^{50}$. The bound cannot see that a field contracts.
 :::
 
 ::: {.slide title="Runge–Kutta Measures the Slope Inside the Step"}
@@ -835,23 +1037,64 @@ $$\varepsilon_n\le\frac{Mh^2}{2}\sum_{j<n}(1+hL)^j=\frac{Mh}{2L}\big((1+hL)^n-1\
 ![](../img/mdl-dyn-solver-geometry.svg)
 
 One step $h=1$ on $\dot x=x$: Euler $2$, midpoint $2.5$, RK4 $2.708$, exact $2.718$.
-RK4 weights the four slopes $\tfrac16(1,2,2,1)$.
+
+::: {.d2l-note .rule}
+Euler commits to the starting slope while the trajectory curves away from it.
+:::
 :::
 
-::: {.slide title="One RK4 Step Multiplies by the Taylor Polynomial of e^z"}
-[Order]{.kicker}
+::: {.slide title="Two Slopes Give Order 2, Four Slopes Give Order 4"}
+[The methods]{.kicker}
+
+**Midpoint:** $\mathbf x_{n+1}=\mathbf x_n+h\,\mathbf f\bigl(\mathbf x_n+\tfrac h2\mathbf f(\mathbf x_n)\bigr)$
+
+**Heun:** $\mathbf x_{n+1}=\mathbf x_n+\tfrac h2\bigl[\mathbf f(\mathbf x_n)+\mathbf f\bigl(\mathbf x_n+h\,\mathbf f(\mathbf x_n)\bigr)\bigr]$
+
+**RK4:**
+
+$$\begin{aligned}
+\mathbf k_1&=\mathbf f(\mathbf x_n), & \mathbf k_2&=\mathbf f(\mathbf x_n+\tfrac h2\mathbf k_1), \\
+\mathbf k_3&=\mathbf f(\mathbf x_n+\tfrac h2\mathbf k_2), & \mathbf k_4&=\mathbf f(\mathbf x_n+h\,\mathbf k_3), \\
+\mathbf x_{n+1}&=\mathbf x_n+\tfrac h6(\mathbf k_1+2\mathbf k_2+2\mathbf k_3+\mathbf k_4)
+\end{aligned}$$
+
+::: {.d2l-note .rule}
+The midpoint rule, the trapezoid rule and Simpson's rule, each applied to the slope $\mathbf f$.
+:::
+:::
+
+::: {.slide title="One Step Multiplies a Mode by R(z), a Function of z = hλ"}
+[Stability function]{.kicker}
+
+A mode of a linear field $\dot{\mathbf x}=\mathbf A\mathbf x$ obeys $\dot y=\lambda y$, with $\lambda$ an eigenvalue of $\mathbf A$. Exact factor over a time $h$: $e^z$, $z=h\lambda$. One step of a solver multiplies $y$ by $R(z)$:
+
+| method | $R(z)$ | $e^z-R(z)\approx$ | order |
+|---|---|---|---|
+| Euler | $1+z$ | $z^2/2$ | 1 |
+| midpoint, Heun | $1+z+\tfrac{z^2}2$ | $z^3/6$ | 2 |
+| RK4 | $1+z+\tfrac{z^2}2+\tfrac{z^3}6+\tfrac{z^4}{24}$ | $z^5/120$ | 4 |
+
+::: {.d2l-note .rule}
+Here $R$ is the Taylor polynomial of $e^z$, cut at the order $p$: local error $h^{p+1}$, global $h^p$.
+:::
+:::
+
+::: {.slide title="At Equal Work RK4 Beats Euler by Six Orders of Magnitude"}
+[Order, measured]{.kicker}
 
 ::: {.cols .vc}
-::: {.col}
-On $\dot y=\lambda y$, $z=h\lambda$:
+::: {.col .narrow}
+Spiral, $\lambda=-0.5\pm\mathrm i$, from $(2,0)$ to $T=2$ in $n$ steps. $|\lambda T|^2=5$; the endpoint has length $0.736$.
 
-- Euler $R=1+z$;
-- RK4 $R=1+z+\tfrac{z^2}2+\tfrac{z^3}6+\tfrac{z^4}{24}$;
-- $e^z-R=z^5/120$: local $h^5$, global $h^4$.
-- Spiral, same 512 evaluations: Euler $3.6\times10^{-3}$, RK4 $1.3\times10^{-9}$.
+Predicted from $R$:
+
+- Euler: $\tfrac{5}{2n}\cdot0.736=1.84/n$
+- RK4: $\tfrac{5^{5/2}}{120\,n^4}\cdot0.736=0.343/n^4$
+
+512 evaluations each: $3.6\times10^{-3}$ against $1.3\times10^{-9}$.
 :::
 
-::: {.col .fig .narrow}
+::: {.col}
 @!odes-solvers-euler-rk4-order
 :::
 :::
@@ -861,16 +1104,71 @@ On $\dot y=\lambda y$, $z=h\lambda$:
 [Check]{.kicker}
 
 Halve $h$. By what factor does RK4's error fall? Euler's?
-What is the largest stable Euler step for the spiral, eigenvalues $-0.5\pm\mathrm i$?
+With error $1.84/n$, how many Euler steps match RK4's $1.3\times10^{-9}$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** RK4: $2^4=16$. Euler: $2$. Spiral: $|1+h\lambda|^2=(1-h/2)^2+h^2<1$ iff $h<0.8$.
+**Answer.** RK4: $2^4=16$. Euler: $2$. Euler needs $n=1.84/(1.3\times10^{-9})\approx1.4$ billion steps, against RK4's 128.
 :::
 :::
 :::
 
-::: {.slide title="Backward Euler Is Stable on the Whole Left Half-Plane"}
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Stability]{.dtitle}
+
+[stiffness, implicit steps, stability regions]{.dsub}
+:::
+:::
+
+::: {.slide title="Stiffness: A Mode That Is Already Gone Still Sets the Step"}
+[Stiffness]{.kicker}
+
+$\dot{\mathbf x}=\mathrm{diag}(-50,-1)\,\mathbf x$ from $(1,1)$ to $T=1$.
+
+- Exact: fast mode $e^{-50}\approx10^{-22}$, slow mode $e^{-1}=0.368$.
+- After $t\approx0.1$ only the slow mode is left; $h=0.1$ would follow it.
+- Euler still multiplies the fast coordinate by $1-50h$: $-4$ at $h=0.1$.
+
+::: {.d2l-note .warn}
+**Stiff:** some eigenvalues have large negative real parts compared with the rate of the solution we want.
+:::
+:::
+
+::: {.slide title="Forward Euler Needs a Short Step; Backward Euler Does Not"}
+[Test equation]{.kicker}
+
+On $\dot y=\lambda y$ with $\operatorname{Re}\lambda<0$ and $z=h\lambda$: $y_n=R(z)^n\,y_0$ decays iff $|R(z)|<1$.
+
+**Forward Euler:** $R(z)=1+z$
+
+- decays iff $|1+z|<1$; for real $\lambda$ this is $h<2/|\lambda|$.
+
+**Backward Euler:** $y_{n+1}=y_n+h\lambda\,y_{n+1}$, so $R(z)=1/(1-z)$
+
+- $|1-z|\ge1-\operatorname{Re}z>1$: decays for every $h$.
+- The slope is read where the step lands, and a point that has nearly decayed has almost none.
+
+::: {.d2l-note .rule}
+Backward Euler is *implicit*: the new state stands on both sides, and each step is an equation to solve.
+:::
+:::
+
+::: {.slide title="At h = 0.1 Both Slow Modes Are 5% Off, and Forward Euler's Fast Mode Is 10⁶"}
+[Stiffness, measured]{.kicker}
+
+$\dot{\mathbf x}=\mathrm{diag}(-50,-1)\,\mathbf x$ from $(1,1)$ to $T=1$; forward and backward Euler:
+
+@!odes-solvers-stiffness-sweep
+
+::: {.d2l-note .rule}
+Forward Euler needs $h<0.04$, where its slow mode is within $2\%$ although $5\%$ would do. Backward Euler is stable at every $h$, with a first-order error.
+:::
+:::
+
+::: {.slide title="Only Backward Euler Is Stable on the Whole Left Half-Plane"}
 [Stability regions]{.kicker}
 
 ::: {.cols .vc}
@@ -879,50 +1177,92 @@ What is the largest stable Euler step for the spiral, eigenvalues $-0.5\pm\mathr
 :::
 
 ::: {.col}
-- Forward Euler: stable inside $|1+z|<1$.
-- Backward Euler: $y_{n+1}=y_n/(1-z)$.
-- **A-stable**: $|R(z)|\le1$ whenever $\operatorname{Re}z\le0$.
-- Cost: one equation solve per step.
-:::
-:::
-:::
-
-::: {.slide title="Stiffness: A Mode That Is Already Gone Still Sets the Step"}
-[Stiffness]{.kicker}
-
-$\dot{\mathbf x}=\mathrm{diag}(-50,-1)\,\mathbf x$ from $(1,1)$ to $T=1$; forward and backward Euler:
-
-@!odes-solvers-stiffness-sweep
-
-At $h=0.1$ both slow values are within $5\%$; forward Euler's fast value is $10^6$ for a true $10^{-22}$.
-:::
-
-<!-- WRITER (slides): the cell under this slide now prints the three-solver table (forward Euler 0.19/0.21,
-RK4 0.27/0.29, backward Euler 0.25/25; see the WRITER note after the cell in the body). The slide's
-claim per slide-guide: "The learning-rate ceiling belongs to the solver". The table is 7 lines of
-under 70 columns. -->
-::: {.slide title="Gradient Descent Is Forward Euler on the Gradient Flow"}
-[Training as dynamics]{.kicker}
-
-$\dot{\boldsymbol\delta}=-\mathbf H\boldsymbol\delta\ \to\ \boldsymbol\delta_{k+1}=(\mathbf I-\eta\mathbf H)\boldsymbol\delta_k\ \Rightarrow\ \eta<2/\lambda_{\max}$; here $\mathbf H=\mathrm{diag}(10,1)$:
-
-@!mdl-odes-solvers-gradient-descent-is-a-solver
+- **Region:** the $z=h\lambda$ with $|R(z)|<1$.
+- Forward Euler: the disc $|1+z|<1$. RK4: larger, to $-2.79$ on the real axis.
+- Backward Euler: all but the disc around $+1$.
+- **A-stable:** the region contains all of $\operatorname{Re}z<0$.
 
 ::: {.d2l-note .rule}
-$\lambda_{\max}$ sets stability, $\lambda_{\min}$ sets speed: ill-conditioning is stiffness.
+Explicit: $R$ is a polynomial, unbounded as $z\to-\infty$. Higher order does not cure stiffness.
+:::
+:::
 :::
 :::
 
 ::: {.slide title="Check: Step Limits for dx/dt = −50x"}
 [Check]{.kicker}
 
-Largest stable forward-Euler step? With RK4, whose real stability limit is $z\approx-2.785$?
-Why does backward Euler at $h=0.1$ give $0.386$ for the slow mode $e^{-1}=0.368$?
+Largest stable forward-Euler step? With RK4, whose real stability limit is $z\approx-2.79$?
+Why does forward Euler's fast mode print exactly $0$ at $h=0.02$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $2/50=0.04$; $2.785/50\approx0.056$. Stable is not accurate:
-the $5\%$ is the $O(h)$ error of a first-order method, $(1+h)^{-10}$ against $e^{-1}$.
+**Answer.** $2/50=0.04$; $2.79/50\approx0.056$. At $h=0.02$ the factor $1-50h$ is zero: one step removes the mode.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Gradient descent as a solver]{.dtitle}
+
+[whose ceiling is the learning-rate ceiling?]{.dsub}
+:::
+:::
+
+::: {.slide title="Gradient Descent Is Forward Euler on the Gradient Flow"}
+[Training as dynamics]{.kicker}
+
+Gradient flow $\dot{\mathbf x}=-\nabla\mathcal L(\mathbf x)$; Euler with $h=\eta$ is $\mathbf x_{k+1}=\mathbf x_k-\eta\nabla\mathcal L(\mathbf x_k)$.
+
+Near a minimum with Hessian $\mathbf H$, the displacement $\boldsymbol\delta$ obeys
+
+$$\dot{\boldsymbol\delta}=-\mathbf H\boldsymbol\delta\ \xrightarrow{\text{Euler}}\ \boldsymbol\delta_{k+1}=(\mathbf I-\eta\mathbf H)\,\boldsymbol\delta_k\ \xrightarrow{\text{stability}}\ \eta<\frac{2}{\lambda_{\max}(\mathbf H)}$$
+
+::: {.d2l-note .rule}
+The learning-rate ceiling is the edge of Euler's disc, reached by the steepest mode at $z=-\eta\lambda_{\max}=-2$.
+:::
+:::
+
+::: {.slide title="The Loss Supplies λmax; Each Solver Supplies Its Own Numerator"}
+[Three solvers, one valley]{.kicker}
+
+$\mathbf H=\mathrm{diag}(10,1)$, start $(1,1)$, 100 steps of size $\eta$ on $\dot{\mathbf x}=-\mathbf H\mathbf x$; measured factors $R(-10\eta)$ and $R(-\eta)$ of one step:
+
+@!mdl-odes-solvers-gradient-descent-is-a-solver
+
+::: {.d2l-note .rule}
+Ceilings: forward Euler $2/10=0.2$; RK4 $2.79/10=0.279$; backward Euler none.
+:::
+:::
+
+::: {.slide title="An Optimizer Wants the End of the Path, Not the Path"}
+[Which solver to train with]{.kicker}
+
+| solver | ceiling on $\eta$ | one step takes | flow time per gradient |
+|---|---|---|---|
+| forward Euler | $0.2$ | 1 gradient | $0.2$ |
+| RK4 | $0.279$ | 4 gradients | $0.07$ |
+| backward Euler | none | a minimization | n/a |
+
+On a convex loss backward Euler's step minimizes $\mathcal L(\mathbf x)+\tfrac1{2\eta}\lVert\mathbf x-\mathbf x_k\rVert^2$: for large $\eta$, the original problem.
+
+::: {.d2l-note .rule}
+$\lambda_{\max}$ sets the step; the flat mode then loses less than $2\lambda_{\min}/\lambda_{\max}$ per step, here a fifth. Ill-conditioning is stiffness, and a diverging learning rate is a solver instability.
+:::
+:::
+
+::: {.slide title="Check: How RK4 Diverges"}
+[Check]{.kicker}
+
+Gradient descent above its ceiling zigzags across the valley with growing amplitude.
+RK4 at $\eta=0.29$ also diverges. Does it zigzag?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** No. Its steep factor is $R(-2.9)=+1.187$: RK4's $R$ is positive on the real axis, so the iterate grows without changing sign. Euler's $R=1+z$ leaves through $-1$.
 :::
 :::
 :::
@@ -930,10 +1270,10 @@ the $5\%$ is the $O(h)$ error of a first-order method, $(1+h)^{-10}$ against $e^
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- $\dot x=-50x$: Euler factor $1-50h$, $-1.5$ at $h=0.05$.
-- Euler $(1+1/n)^n$, slope $1$; RK4 slope $4$.
-- Stiff: forward Euler $10^6$ at $h=0.1$, backward Euler $0.386$.
-- Gradient descent: $\eta<2/\lambda_{\max}(\mathbf H)$.
+- Bowl, $\dot x=-50x$: Euler's factor $1-50h$ is $-1.5$ at $h=0.05$; stable iff $h<0.04$.
+- Spiral, 512 evaluations: Euler $3.6\times10^{-3}$ (order 1), RK4 $1.3\times10^{-9}$ (order 4).
+- Stiff $\mathrm{diag}(-50,-1)$, $h=0.1$: forward Euler $10^6$, backward Euler stable; both $5\%$ off on the slow mode.
+- Valley $\mathrm{diag}(10,1)$: ceilings $0.2$ (Euler), $0.279$ (RK4), none (backward Euler).
 
 **Next:** a model whose layers are Euler steps of a learned field.
 :::

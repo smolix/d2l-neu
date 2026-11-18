@@ -1,14 +1,13 @@
 # Flow Matching and Optimal Transport
 :label:`sec_mdl-flow-matching-transport`
 
-The previous section learned the score of noised data by least squares and
-turned it into samples, with a reverse chain of a thousand small steps or a
-few dozen deterministic strides, each of which evaluates the score once. So
-many steps are needed because the paths from noise to data curve, and a
-solver can follow a curved path only in short pieces. Those paths were fixed
-by the noising process, which we chose for its Gaussian kernels, not for easy
-integration. Could we choose the path from noise to data ourselves, and
-choose one along which a solver can take long steps?
+The samplers of the previous section call the score once per step, a
+thousand times for the reverse chain and a few dozen for its deterministic
+strides. They need so many steps because the paths from noise to data curve,
+and a solver can follow a curved path only in short pieces. Nobody designed
+those paths. They came with the noising process. Could we choose the path
+from noise to data ourselves, and choose one along which a solver can take
+long steps?
 
 Picture two data points at $-2$ and $+2$ and a cloud of Gaussian noise that
 must end on them. If every particle moved in a straight line at constant
@@ -18,27 +17,24 @@ Particles bound for different points pass through the same place, and the
 field there can point only one way.
 
 Flow matching :cite:`Lipman.Chen.BenHamu.ea.2022` and rectified flow
-:cite:`Liu.Gong.Liu.2022` prescribe the path and learn only the velocity that
-moves mass along it. The argument is the one we used for the score: the
-velocity of the cloud at a point is the average of the velocities of the
-per-sample paths through that point, and least squares learns averages.
+:cite:`Liu.Gong.Liu.2022` do choose: they prescribe the path and learn only
+the velocity that moves mass along it. Which paths are cheapest is a much
+older question, the problem of *optimal transport*. Gaspard Monge asked it
+in 1781 about moving a pile of earth into a hole, and under squared distance
+the cheapest motion turns out to be the one we just wished for, every
+particle on a straight line at constant speed
+:cite:`Benamou.Brenier.2000`.
 
-Which paths are cheapest is a much older question. In 1781 Gaspard Monge
-asked how to move a pile of earth into a hole with the least total effort,
-and :citet:`Benamou.Brenier.2000` showed that under squared distance the
-cheapest motion carries every particle along a straight line at constant
-speed. A sample costs one network call per solver step, so these are the
-paths we want.
-
-Three results carry the section. The velocity of the cloud is a posterior
-mean, so one regression trains it (:numref:`sec_mdl-flow-matching`).
-Re-pairing noise with the endpoints of a flow never raises the cost of
-transport (:numref:`subsec_mdl-reflow`). And the least kinetic energy of any
-flow between two laws is their squared Wasserstein distance
-(:numref:`sec_mdl-ot-connection`). The dictionary between score, noise and
-velocity (:numref:`sec_mdl-score-velocity-dictionary`) and the solver
-comparison (:numref:`sec_mdl-sampling-learned-dynamics`) can be skipped on a
-first reading.
+One regression trains the velocity of any path assembled from simple pieces,
+because that velocity is an average over particles and least squares learns
+averages (:numref:`sec_mdl-flow-matching`). Straight pieces still give a
+curved flow. Re-pairing noise with data straightens it
+(:numref:`sec_mdl-rectified-flow`), and optimal transport says what the
+re-pairing aims at (:numref:`sec_mdl-ot-connection`). Two parts can wait
+for a second reading: the conversions between score, noise and velocity
+that follow the definition of the Gaussian path in
+:numref:`sec_mdl-score-velocity-dictionary`, and the solver comparison of
+:numref:`sec_mdl-sampling-learned-dynamics`.
 
 ::: {.callout-important title="One clock"}
 Time runs as in the previous section, from the data at $t = 0$ to the noise,
@@ -57,17 +53,11 @@ $\mathbf{x}_0$, and flip the sign of every velocity.
 ![One clock and the papers' clock. This book (top) puts the data at $t = 0$ and the noise at $t = 1$, noises the data forward in time, and samples by integrating a score or a velocity from $1$ to $0$. The flow-matching papers (bottom) put the noise at $0$ and the data at $1$ and sample forward. The endpoint densities are the same; the substitution $t \mapsto 1 - t$ converts one clock into the other and flips the sign of every velocity.](../img/mdl-dyn-time-conventions.svg)
 :label:`fig_mdl-dyn-time-conventions`
 
-The data are $\mathbf{x}_0 \sim p_0$, the noise is
-$\boldsymbol{\epsilon} \sim p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$, and
-$p_t$ is a path of densities between them. Statements about couplings hold
-for any two endpoint laws, so there we write the pair as
-$(\mathbf{x}_0, \mathbf{x}_1)$. A
-conditioning variable $\mathbf{z}$ labels per-sample paths; the velocity of
-one of them is $\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$, the velocity of
-the whole cloud is $\mathbf{u}_t(\mathbf{x})$, and a network
-$\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ learns it. The running
-examples are the two points at $\pm 2$, where everything has a closed form,
-and the two-moons data set in the plane, where we train a network.
+The data are $\mathbf{x}_0 \sim p_0$, and $p_t$ is a path of densities from
+$p_0$ to the noise $p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$. A sample
+from the noise end has two names: $\boldsymbol{\epsilon}$ when it is
+Gaussian noise, as in the previous section, and $\mathbf{x}_1$ in statements
+about pairings, which hold for any two endpoint laws.
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport}
 #@tab mxnet
@@ -133,12 +123,14 @@ $$
 Then, for a Lipschitz field, integrating
 $\dot{\mathbf{x}} = \mathbf{u}_t(\mathbf{x})$ from a sample of $p_1$ at
 $t = 1$ down to $t = 0$ yields a sample of $p_t$ at every time, and of the
-data at $t = 0$. If a network $\mathbf{u}_{\boldsymbol{\theta}}$ approximates
+data at $t = 0$. Note the direction. The field points the way the noising
+goes, from data toward noise, and a sampler steps against it. If a network
+$\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ approximates
 $\mathbf{u}_t$, generation is an ODE solve from noise. Such a model is a
 continuous normalizing flow (:numref:`sec_mdl-continuous-normalizing-flows`)
 run backward in time: its flow map from $t = 1$ to $t = 0$ is the
-generator. Flow matching trains it without
-simulating the ODE. The natural objective is the **flow-matching loss**
+generator. Flow matching trains it without solving the ODE even once. The
+natural objective is the **flow-matching loss**
 
 $$
 \mathcal{L}_{\mathrm{FM}}(\boldsymbol{\theta})
@@ -148,17 +140,23 @@ $$
 :eqlabel:`eq_mdl-fm-loss`
 
 It is the mean squared error of the network against the true velocity,
-averaged over time and over the cloud. It regresses on a field we cannot
-evaluate, because $\mathbf{u}_t$ depends on the whole data distribution.
+averaged over time and over the cloud. As it stands it is of no use, because
+it regresses on a field we cannot evaluate: $\mathbf{u}_t$ depends on the
+whole data distribution.
 
-We therefore build the path out of pieces we can write down. A conditioning
-variable $\mathbf{z}$ is a data point, or a pair of a noise point and a data
-point. For each of its values, pick a small moving blob
-$p_t(\mathbf{x} \mid \mathbf{z})$ that sits on $\mathbf{z}$ at $t = 0$ and
-has spread into noise by $t = 1$, with a velocity
-$\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$ that we know in closed form. With $\mathbf{z} \sim q$, the path is the mixture
-$p_t(\mathbf{x}) = \int p_t(\mathbf{x} \mid \mathbf{z})\, q(\mathbf{z})\, d\mathbf{z}$.
-Which velocity moves the mixture?
+We therefore build the path out of pieces we can write down. Let a
+conditioning variable $\mathbf{z}$, drawn from a law $q$, be a data point,
+or a pair of a noise point and a data point. For each value of $\mathbf{z}$,
+pick a small moving blob $p_t(\mathbf{x} \mid \mathbf{z})$ that sits on the
+data point at $t = 0$ and ends in the noise at $t = 1$: spread over all of
+it if $\mathbf{z}$ is a data point, on its own noise point if $\mathbf{z}$
+is a pair. Each blob comes with a velocity
+$\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$ that we know in closed form. The
+path is the mixture of the blobs,
+$p_t(\mathbf{x}) = \int p_t(\mathbf{x} \mid \mathbf{z})\, q(\mathbf{z})\, d\mathbf{z}$,
+and we write $\mathbf{x}_t$ for a particle of it: draw $\mathbf{z}$ from
+$q$, then a point of its blob at time $t$. Which velocity moves the mixture?
+Everything in this section rests on the answer.
 
 **Proposition (the marginal velocity is a posterior mean).** *Suppose that
 for each $\mathbf{z}$ the density $p_t(\cdot \mid \mathbf{z})$ is positive and
@@ -244,24 +242,36 @@ and $C = \mathbb{E}\| Y - \mathbf{u}_t(\mathbf{x}) \|^2$, which does not
 involve $\boldsymbol{\theta}$. $\blacksquare$
 
 The proof is one line because the lemma does the work, and the theorem needs
-no hypothesis on the path beyond a square-integrable target. It is the
-proposition that guarantees that the trained field carries $p_1$ to $p_0$
-when integrated from $t = 1$ to $t = 0$. The constant $C$ is the conditional
+no hypothesis on the path beyond a square-integrable target. It says only
+that the regression has the right minimizer. That this minimizer carries
+$p_1$ to $p_0$, when integrated from $t = 1$ to $t = 0$, is what the
+proposition before it guarantees. The constant $C$ is the conditional
 variance of the target. It measures how much the per-sample velocities
 through a point disagree, so the CFM loss of a perfect field equals $C$, not
-zero. Denoising score matching has the same structure, with the score of the
-noising kernel as the per-sample quantity and the marginal score as its
-posterior mean.
+zero. We call $C$ the *floor* of the loss. Denoising score matching has the
+same structure, with the score of the noising kernel as the per-sample
+quantity and the marginal score as its posterior mean.
 
-<!-- WRITER: this subsection moved here from after the two-point example (FMT-4); it now needs an introduction as the first family of paths, e.g. "The Gaussian paths of the previous section are probability paths of this kind, and on them the velocity is not a new object". The check cell #mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function is cut; its check becomes a part of the target-conditioning exercise. -->
+No solver appears in this loss, and no trajectory is integrated during
+training. The model of :numref:`sec_mdl-neural-odes` that was trained
+through ten Euler steps hit its targets with ten steps and missed them when
+it was integrated more finely: it had fitted a program of ten steps. What
+this regression fits is a field, and the number of steps is chosen
+afterwards.
+
 ### Score, Noise, and Velocity
 :label:`sec_mdl-score-velocity-dictionary`
 
-Suppose a network has been trained to predict the noise, as diffusion models
-are. Do we need a second training run to obtain a velocity? We do not. On a
-Gaussian path the score, the noise, the clean point and the velocity are
-affine functions of one posterior mean, so each determines the others.
-Condition on a data point and take the path
+The marginal-velocity proposition asks for blobs with known velocities, and
+so far we have named none. The first family is one we already own. The
+Gaussian paths of the previous section are probability paths of this kind,
+and on them the velocity is not a new object. Suppose a network has been
+trained to predict the noise, as diffusion models are. Do we need a second
+training run to obtain a velocity? We do not. The score, the noise, the
+clean point and the velocity are affine functions of one posterior mean, and
+a network that has learned the noise has learned the other three.
+
+Condition on a data point, $\mathbf{z} = \mathbf{x}_0$, and take the path
 
 $$
 \mathbf{x}_t = \alpha_t\, \mathbf{x}_0 + \sigma_t\, \boldsymbol{\epsilon},
@@ -272,24 +282,27 @@ $$
 with smooth coefficients $(\alpha_t, \sigma_t)$, $(\alpha_0, \sigma_0) = (1, 0)$
 and $(\alpha_1, \sigma_1) = (0, 1)$. The blob around $\alpha_t \mathbf{x}_0$
 has width $\sigma_t$: at $t = 0$ it is the data point, at $t = 1$ the noise.
-This is the noising kernel of the previous section, with the horizon set
-to $1$.
+This is the noising kernel of the previous section, with the noise end
+placed at $t = 1$.
 
-The smallest case is Gaussian data $x_0 \sim \mathcal{N}(0, s_0^2)$ in one
-dimension on the cosine path $\alpha_t = \cos\frac{\pi t}{2}$,
-$\sigma_t = \sin\frac{\pi t}{2}$. The marginal is $\mathcal{N}(0, s_t^2)$ with
+Let us start with the smallest case, Gaussian data
+$x_0 \sim \mathcal{N}(0, s_0^2)$ in one dimension on the cosine path
+$\alpha_t = \cos\frac{\pi t}{2}$, $\sigma_t = \sin\frac{\pi t}{2}$. The
+marginal is $\mathcal{N}(0, s_t^2)$ with
 $s_t^2 = \alpha_t^2 s_0^2 + \sigma_t^2$, the score is $-x/s_t^2$, and the
 velocity is $u_t(x) = (\dot{s}_t/s_t)\, x$: a Gaussian cloud only stretches
-or shrinks (:exref:`ex_mdl-flow-matching-transport-kinetic-energy`). With
-$s_0 = 2$ at $t = \tfrac12$ we get $s_t^2 = 2.5$, and a particle at $x$ moves
-with velocity $-0.94\, x$: run from $t = 1$ to $0$, the cloud stretches from
-width $1$ to width $2$. With $s_0 = 1$ every $p_t$ is the standard Gaussian
-and the cloud never moves: $u \equiv 0$.
+or shrinks (Exercise :exref:`ex_mdl-flow-matching-transport-kinetic-energy`).
+With $s_0 = 2$ at $t = \tfrac12$ we get $s_t^2 = 2.5$, and a particle at $x$
+has velocity $-0.94\, x$. The field points inward because noising shrinks
+this cloud, from width $2$ at $t = 0$ to width $1$ at $t = 1$. A sampler
+runs against it and stretches the cloud back to width $2$. With $s_0 = 1$
+every $p_t$ is the standard Gaussian and the cloud never moves:
+$u \equiv 0$.
 
 **Proposition (score–velocity identity).** *For the Gaussian path
 :eqref:`eq_mdl-gaussian-path`, at any $t$ with $\alpha_t, \sigma_t > 0$ and on
-$\{p_t > 0\}$, the marginal velocity and the marginal score determine each
-other:*
+$\{p_t > 0\}$, the marginal velocity is an affine function of the marginal
+score:*
 
 $$
 \mathbf{u}_t(\mathbf{x})
@@ -300,7 +313,12 @@ $$
 :eqlabel:`eq_mdl-score-velocity`
 
 The velocity is a multiple of the position plus a multiple of the score, and
-the schedule alone fixes both multiples.
+the schedule alone fixes both multiples. The data enter only through the
+score. The bracket in front of the score equals
+$\sigma_t^2\, \frac{d}{dt} \log(\sigma_t/\alpha_t)$, which is positive
+whenever the ratio of noise to signal is growing, as it is on every path we
+use. The identity can then be solved for the score, and each field
+determines the other.
 
 **Proof.** We show that both sides are affine in one posterior mean,
 $\hat{\mathbf{x}}_0 = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$.
@@ -332,7 +350,8 @@ Substituting this $\hat{\mathbf{x}}_0$ into the velocity and collecting the
 $\mathbf{x}$ and $\nabla \log p_t$ terms gives :eqref:`eq_mdl-score-velocity`.
 $\blacksquare$
 
-On a variance-preserving path, $\alpha_t^2 + \sigma_t^2 = 1$, so
+Two special cases are worth writing out. On a variance-preserving path,
+$\alpha_t^2 + \sigma_t^2 = 1$, so
 $\sigma_t \dot{\sigma}_t = -\alpha_t \dot{\alpha}_t$ and the coefficient of
 the score collapses to $\dot{\alpha}_t/\alpha_t$:
 $\mathbf{u}_t(\mathbf{x}) = \frac{\dot{\alpha}_t}{\alpha_t}\big(\mathbf{x} + \nabla \log p_t(\mathbf{x})\big)$.
@@ -343,14 +362,16 @@ $-\tfrac12 \beta(t) \big(\mathbf{x} + \nabla \log p_t(\mathbf{x})\big)$.
 This is the probability-flow velocity
 $\mathbf{f} - \tfrac12 g^2 \nabla \log p_t$ of
 :eqref:`eq_mdl-dyn-pf-velocity` with $\mathbf{f} = -\tfrac12 \beta\, \mathbf{x}$
-and $g^2 = \beta$: on this path the flow-matching velocity and the
-probability-flow ODE are the same field on the same clock.
-On the straight path $\alpha_t = 1 - t$, $\sigma_t = t$ the identity reads
-$\mathbf{u}_t(\mathbf{x}) = -\big(\mathbf{x} + t\, \nabla \log p_t(\mathbf{x})\big)/(1 - t)$.
-For the Gaussian example, $\nabla \log p_t = -x/s_t^2$ turns the
-variance-preserving form into
+and $g^2 = \beta$. On this path the flow-matching velocity and the
+probability-flow ODE are the same field on the same clock. The cosine path
+of the Gaussian example is variance-preserving too, so we can check the
+form on it: $\nabla \log p_t = -x/s_t^2$ gives
 $\frac{\dot\alpha_t}{\alpha_t}(1 - 1/s_t^2)\, x = \alpha_t \dot{\alpha}_t (s_0^2 - 1)\, x / s_t^2$,
 the stretching rate $\dot{s}_t/s_t$ found above.
+
+On the straight path $\alpha_t = 1 - t$, $\sigma_t = t$, which the rest of
+the section uses, the identity reads
+$\mathbf{u}_t(\mathbf{x}) = -\big(\mathbf{x} + t\, \nabla \log p_t(\mathbf{x})\big)/(1 - t)$.
 
 The same posterior mean underlies the targets that networks are trained on in
 practice (:numref:`tab_mdl-score-noise-velocity`).
@@ -369,28 +390,30 @@ practice (:numref:`tab_mdl-score-noise-velocity`).
 Each row is a $t$-dependent affine function of the same posterior mean, so a
 network trained on any row defines all of them. Which row is easiest to learn
 is a separate question, about the variance of the training targets at the two
-ends of the path (:exref:`ex_mdl-flow-matching-transport-target-conditioning`).
-
-A noise predictor is therefore also
-a velocity field: the samplers of this section apply to it after the
-conversion of :numref:`tab_mdl-score-noise-velocity`.
+ends of the path (Exercise
+:exref:`ex_mdl-flow-matching-transport-target-conditioning`). A noise
+predictor is therefore also a velocity field: the samplers of this section
+apply to it after the conversion of
+:numref:`tab_mdl-score-noise-velocity`.
 
 ### Example: Two Points in One Dimension
 :label:`subsec_mdl-fm-two-point`
 
-<!-- WRITER: after the FMT-4 move, "the last two subsections" are the CFM theorem and "Score, Noise, and Velocity"; the objects meant are those of "Probability Paths and Velocity Fields" and the CFM theorem. -->
-Every object of the last two subsections has a closed form for the two-point
-data set of the opening, and the closed form shows the failure that
-:numref:`sec_mdl-rectified-flow` repairs. The data are $x_0 = \pm a$ with
-probability $\tfrac12$ each, with $a = 2$: the two modes of the chapter's running mixture with
-their width removed. The noise is $\epsilon \sim \mathcal{N}(0, 1)$, drawn
-independently of $x_0$. The simplest blob is a point sliding along a line,
-$x_t = (1 - t)\, x_0 + t\, \epsilon$, with velocity
-$\dot{x}_t = \epsilon - x_0$.
+Before choosing among paths we work one case to the end. For the two-point
+data set of the opening every object so far has a closed form, and the
+closed form shows the failure that :numref:`sec_mdl-rectified-flow`
+repairs. The data are $x_0 = \pm a$ with probability $\tfrac12$ each, with
+$a = 2$: the two modes of the chapter's running mixture with their width
+removed. The noise is $\epsilon \sim \mathcal{N}(0, 1)$, drawn
+independently of $x_0$. We take the Gaussian path with $\alpha_t = 1 - t$
+and $\sigma_t = t$, which joins each data point to its noise point by a
+straight line at constant speed: $x_t = (1 - t)\, x_0 + t\, \epsilon$, with
+velocity $\dot{x}_t = \epsilon - x_0$.
 
 Take the data point as the conditioning variable, $\mathbf{z} = x_0$. Given
 $x_0$, the position $x_t$ is $\mathcal{N}((1 - t)\, x_0, t^2)$, a positive
-density for $t > 0$, so the proposition applies. Eliminating
+density for $t > 0$, so the marginal-velocity proposition applies.
+Eliminating
 $\epsilon = (x - (1 - t)\, x_0)/t$ expresses the velocity as a function of
 the current position, $u_t(x \mid x_0) = (x - x_0)/t$. Run backward in time,
 the particle heads for its data point at the speed that arrives exactly at
@@ -414,7 +437,7 @@ targets, weighted by how plausible each is from $x$, at the speed that
 arrives on time. At $(t, x) = (0.5, 0.5)$ the velocity is $-2.86$; at
 $(0.7, -1)$ it is $0.97$.
 Three properties can be read off :eqref:`eq_mdl-two-point-velocity`, and
-:numref:`fig_mdl-dyn-two-point-flow` draws them.
+:numref:`fig_mdl-dyn-two-point-flow` draws the first two.
 
 * **At $t = 1$ the field is $u_1(x) = x$.** The noise sample carries no
   information about its target, so the posterior mean is the data mean $0$.
@@ -432,33 +455,29 @@ Three properties can be read off :eqref:`eq_mdl-two-point-velocity`, and
   a mode only later, so the flow chooses a mode late. Far from the origin the
   $\tanh$ saturates and $u_t \approx (x \mp a)/t$, the conditional velocity
   itself.
-* **The floor $C$ is finite although the conditional velocity is
-  unbounded.** Here
-  $C = \mathbb{E}_t \mathbb{E}_x \textrm{Var}(x_0 \mid x_t)/t^2$
-  with $\textrm{Var}(x_0 \mid x_t = x) = a^2 \operatorname{sech}^2\big((1 - t)\, a x/t^2\big)$,
-  which is tiny except near the origin, where little mass remains as
-  $t \to 0$ (:exref:`ex_mdl-flow-matching-transport-late-decisions`).
+* **The floor is collected near the noise.** The target $\epsilon - x_0$ has
+  mean square $a^2 + 1 = 5$. Of this,
+  $C = \mathbb{E}_t \mathbb{E}_x \textrm{Var}(x_0 \mid x_t)/t^2 \approx 2.0$
+  is floor, with
+  $\textrm{Var}(x_0 \mid x_t = x) = a^2 \operatorname{sech}^2\big((1 - t)\, a x/t^2\big)$,
+  and the remaining $3.0$ is the mean square of the marginal velocity.
+  Nearly all of $C$ comes from $t > 0.5$, where the two blobs overlap and a
+  position does not tell which point its particle is bound for. Below
+  $t = 0.4$ it does, and only about a thousandth of the floor is collected
+  there, although the conditional velocity $(x - x_0)/t$ grows without bound
+  (Exercise :exref:`ex_mdl-flow-matching-transport-late-decisions`).
 
 ![Two data points at $\pm 2$ and standard Gaussian noise with independent pairing; sampling runs from the noise at $t=1$ (right) to the data at $t=0$ (left). (a) Trajectories of the exact marginal flow over the one-standard-deviation bands of the two conditional blobs: until $t$ falls to $t^*=0.83$ every trajectory moves toward $0$, and those that start near $0$ leave for a mode only below $t\approx 0.6$. (b) The velocity $u_t(x)$ is $x$ at $t=1$, its slope at the origin turns negative and steep as $t$ falls, and it tends to $(x\mp 2)/t$ away from the origin.](../img/mdl-dyn-two-point-flow.svg)
 :label:`fig_mdl-dyn-two-point-flow`
 
-<!-- WRITER: lib-review finding 5: the closed-form-against-posterior-average
-check (a rounding-level print, 4e-16) is cut from the cell below, with
-`u_posterior`; the cell now prints only the slope line and the one-step line.
-Drop the clause about the posterior-average comparison here and in the
-read-out ("The numbers are those of the formula" may stay for the slope). -->
-The cell compares the closed form with a direct posterior average at three
-points, takes the slope at the origin by a finite difference, and applies
-one Euler step of the exact field to $\epsilon = \pm 1$.
-
-<!-- WRITER (code step): the cell no longer applies one step to eps = +-1 (that
-landing point is 0 by tanh 0 = 0 and could not fail). It integrates the exact
-field from t = 1 to 0 with K = 1, 2, 4, 8 equal Euler steps, starting from the
-whole N(0, 1) law (a fine grid weighted by the Gaussian density, so the numbers
-are deterministic), and prints for each K the mass that lands within 0.1 of a
-data point +-2 and the mean |x|. K = 1: mass 0, mean |x| 0 (every sample on the
-mean); see reports/code-requests.md for the other rows. Lead-in and read-out
-must change to match. -->
+The cell takes the slope at the origin by a finite difference at the three
+times of the second property. It then puts the first property to the test,
+and asks what more steps would do. It integrates the exact field from
+$t = 1$ to $t = 0$ with $1$, $2$, $4$ and $8$ equal Euler steps, starting
+from the whole noise law, and prints how much of the mass lands within $0.1$
+of a data point, together with the mean of $|x|$ at the end. The noise law is
+a fine grid of starting points weighted by the Gaussian density, so nothing
+in the output is random.
 
 ```{.python .input #mdl-flow-matching-transport-example-two-points-in-one-dimension}
 a = 2.0                                       # data at -a and +a, noise N(0, 1)
@@ -479,11 +498,20 @@ for K in (1, 2, 4, 8):                        # K equal Euler steps from t = 1 t
           f'mean |x| {w @ abs(x):.2f}')
 ```
 
-The numbers are those of the formula, and one Euler step from either start
-lands on $0$, the data mean. This is the limit of the construction. The
-conditional paths are straight, but the marginal flow is curved, and one
-step collapses every sample onto the mean. How to pair noise with data so
-that the flow comes out straight is the subject of
+The slopes are those of the formula. After one Euler step no mass at all
+lies near a data point, and the mean of $|x|$ is $0$: every sample sits on
+the data mean. So the wish of the opening fails at its first test. Every
+conditional path is straight, yet the marginal flow is curved, and the one
+long step we hoped to take collapses every sample onto the mean.
+
+More steps repair the damage quickly. Two bring a little over a third of the
+mass to a data point, four all but about one percent of it, and eight
+practically all. So few suffice because the last step of any grid lands on
+the posterior mean $a \tanh(\cdot)$, which is $\pm a$ wherever the earlier
+steps have moved a particle far enough from the origin (Exercise
+:exref:`ex_mdl-flow-matching-transport-late-decisions`). But steps are what
+we set out to save. How to pair noise with data so that the flow comes out
+straight, and one step is enough, is the subject of
 :numref:`sec_mdl-rectified-flow`.
 
 ## Rectified Flow
@@ -517,40 +545,47 @@ $$
 :eqlabel:`eq_mdl-rf-loss`
 
 Training draws data and noise, interpolates between them, and regresses on
-the difference. With Gaussian noise we could condition on $\mathbf{x}_0$
-alone, as in the two-point example, and the proposition would apply.
-Conditioning on the pair is what lets us change the pairing later, and it has
-a price: given $\mathbf{z}$, a point sliding along a line has no density, so
-the proposition does not apply as stated. Its conclusion still holds, by the
-same computation applied to the expectation
+the difference. That is the whole algorithm. Its name looks ahead:
+*rectified* means straightened, and straight is what the flow becomes once
+the pairing has been repaired. The flow of independent pairs, as we just
+saw, is not.
+
+One technical point has to be settled. With Gaussian noise we could
+condition on $\mathbf{x}_0$ alone, as in the two-point example, and the
+marginal-velocity proposition would apply. Conditioning on the pair is what
+lets us change the pairing later, but given the pair, a point sliding along
+a line has no density, so the proposition does not apply as stated. Its
+conclusion still holds, by the same computation applied to the expectation
 $\mathbb{E}\,\varphi(\mathbf{x}_t)$ of a smooth test function $\varphi$
-(:exref:`ex_mdl-flow-matching-transport-reflow-fixed-points`).
+(Exercise :exref:`ex_mdl-flow-matching-transport-reflow-fixed-points`).
 
-Although every conditional path is straight, the marginal flow is not
-(:numref:`fig_mdl-dyn-fm-paths`). Two segments that cross at $(\mathbf{x}, t)$
-feed the posterior mean :eqref:`eq_mdl-marginal-velocity` two different
-directions. A function has one value at each point, so the field averages
-them. An ODE whose field is Lipschitz in $\mathbf{x}$ has exactly one
-trajectory through each point (:numref:`sec_mdl-ode-existence-uniqueness`),
-so two trajectories of the learned flow can never meet. Where the segments
-cross, the trajectories bend away from each other instead.
+Why does the flow bend? Two segments that cross at $(\mathbf{x}, t)$ feed
+the posterior mean :eqref:`eq_mdl-marginal-velocity` two different
+directions (:numref:`fig_mdl-dyn-fm-paths`). A function has one value at
+each point, so the field averages them. An ODE whose field is Lipschitz in
+$\mathbf{x}$ has exactly one trajectory through each point
+(:numref:`sec_mdl-ode-existence-uniqueness`), so two trajectories of the
+learned flow can never meet. Where the segments cross, the trajectories bend
+away from each other instead.
 
-![Three data–noise pairs in one dimension joined by straight segments (dashed), two pairs of which cross (×). Where segments cross, the marginal velocity averages their directions, so the trajectories of its flow (solid), run from the noise at $t = 1$ to the data at $t = 0$, bend and never meet. Each trajectory ends on a different data point than its own segment, in sorted order: in one dimension the flow's pairing is the sorted one, which is the optimal-transport coupling.](../img/mdl-dyn-fm-paths.svg)
+![Three data–noise pairs in one dimension joined by straight segments (dashed), two pairs of which cross (×). Where segments cross, the marginal velocity averages their directions, so the trajectories of its flow (solid), run from the noise at $t = 1$ to the data at $t = 0$, bend and never meet. Each trajectory ends on a different data point than its own segment, and the trajectories arrive in the order in which they started.](../img/mdl-dyn-fm-paths.svg)
 :label:`fig_mdl-dyn-fm-paths`
 
 The goal is a field whose trajectories are straight lines traversed at
 constant speed. Such a field is constant along each trajectory, so one Euler
-step of any length is exact. The independent pairing is far from this limit,
-as the two-point example already showed. The bend comes from the pairing and
-not from the loss, because every conditional path is already a straight line.
+step of any length is exact. The independent pairing is far from this limit.
+The loss is minimized by the right field and the pieces are as straight as
+pieces can be, so the one thing left to change is which noise point is
+joined to which data point.
 
 ### Example: Two Moons
 
-The two moons are two interleaved crescents in the plane. One Euler step of
-the exact field would collapse the noise onto their mean, and we can count
-how many steps a trained field needs instead. We score samples by the
-**squared energy distance** :cite:`Szekely.Rizzo.2013` between laws $P$ and
-$Q$ with finite first moments,
+The two points had a formula, and the formula said that one step fails. How
+many steps does a trained network need, on data that have no formula? We
+take the two moons, two interleaved crescents in the plane, train a small
+network on them, and count. To count we need a score for samples, and we use
+the **squared energy distance** :cite:`Szekely.Rizzo.2013` between laws $P$
+and $Q$ with finite first moments,
 
 $$
 \mathcal{E}^2(P, Q) = 2\, \mathbb{E}\|X - Y\| - \mathbb{E}\|X - X'\| - \mathbb{E}\|Y - Y'\|,
@@ -558,15 +593,17 @@ $$
 
 where $X, X' \sim P$ and $Y, Y' \sim Q$ are independent. It compares the
 mean distance between a point of $P$ and a point of $Q$ with the mean
-distances within each law. It is the squared MMD of
-:numref:`sec_mdl-ipm-mmd` with the kernel
-$k(\mathbf{x}, \mathbf{y}) = \|\mathbf{x}\| + \|\mathbf{y}\| - \|\mathbf{x} - \mathbf{y}\|$,
-and it is zero only if $P = Q$. We estimate it from two samples by the
-unbiased U-statistic, and every score quoted below is this squared distance.
+distances within each law. Székely and Rizzo call this expression itself
+the energy distance; we call it squared because its square root is the
+metric. It is a squared MMD (:numref:`sec_mdl-ipm-mmd`), and it is zero only
+if $P = Q$. We estimate it from two samples by the unbiased U-statistic, and
+every score quoted below is this squared distance.
 
 The cell builds the data, standardized to zero mean and unit variance per
 coordinate, a held-out sample of $2{,}048$ points, and one noise array
-`z_eval` that every later comparison reuses.
+`z_eval` that every later comparison reuses. It then scores two references
+against the held-out sample: a fresh sample of the data, and a point mass at
+the data mean, which is what one Euler step of the exact field produces.
 
 ```{.python .input #score-matching-diffusion-flow-two-moons}
 def two_moons(n, rng, noise=0.07):
@@ -595,9 +632,8 @@ print(f'point mass at the data mean vs held-out: '
 ```
 
 Two samples of the same law score within a few thousandths of zero, which
-is the resolution of the metric at this sample size. A point mass at the data
-mean, which is what one Euler step of the exact field produces, scores about
-$0.9$.
+is the resolution of the metric at this sample size. The point mass scores
+about $0.9$.
 
 The model is a small tanh network that takes $(\mathbf{x}, t)$ and returns a
 velocity; `field` evaluates it. The function `train_rf` takes a sampler of
@@ -754,16 +790,17 @@ def train_rf(sample_pairs, steps=4000, tail=500):
 
 The first run pairs noise and data independently. By the CFM theorem its
 loss cannot reach zero, and where it stops measures how much the segments
-cross.
-
-<!-- WRITER (code step): new NumPy cell below computes that floor from the
-training set, as the paragraph describes (4,000 draws of (t, x0, eps), every
-training point weighted by its posterior probability given x_t), and prints it
-per coordinate (1.36 to 1.38 in the four tabs, about 1.37). "it comes to
-about 1.38 per coordinate (Exercise
-...)" and "a few hundredths above the floor" after the training cell should
-read this print; exercise "Crossing segments and the floor", part (c), no
-longer needs to ask for the number itself, only for its profile in t. -->
+cross. The floor $C$ is the conditional variance of
+$\boldsymbol{\epsilon} - \mathbf{x}_0$ given $\mathbf{x}_t$, averaged over
+$t$. Can we know it before we train? For a finite data set we can, without
+any network. Given $\mathbf{x}_t$, the posterior of $\mathbf{x}_0$ puts on
+each training point $\mathbf{x}_0'$ a weight proportional to
+$\exp\big(-\|\mathbf{x}_t - (1 - t)\, \mathbf{x}_0'\|^2 / 2t^2\big)$. The
+target is $\boldsymbol{\epsilon} - \mathbf{x}_0 = (\mathbf{x}_t - \mathbf{x}_0)/t$,
+so its conditional variance is the posterior variance of $\mathbf{x}_0$
+divided by $t^2$. The function `pairing_floor` averages this quantity over
+$4{,}000$ draws of $(t, \mathbf{x}_0, \boldsymbol{\epsilon})$ and halves it,
+because `train_rf` reports its loss per coordinate.
 
 ```{.python .input #mdl-flow-matching-transport-example-two-moons-2}
 def pairing_floor(data, rng, m=4000, chunk=500):
@@ -784,6 +821,12 @@ def pairing_floor(data, rng, m=4000, chunk=500):
 
 print(f'floor of the independent pairing, per coordinate: {pairing_floor(moons, rng):.2f}')
 ```
+
+The floor is about $1.37$ per coordinate, and the estimate moves in the
+second decimal from one draw to the next (Exercise
+:exref:`ex_mdl-flow-matching-transport-crossing-floor` asks at which times
+it is collected). A perfect network would stop there. Ours has two hidden
+layers and $4{,}000$ steps to get close.
 
 ```{.python .input #mdl-flow-matching-transport-example-two-moons-1}
 #@tab mxnet
@@ -828,15 +871,16 @@ net, plateau = train_rf(independent_pairs)
 print(f'CFM loss, mean of the last 500 batches: {plateau:.2f}')
 ```
 
-The loss settles at about $1.4$ per coordinate and cannot go much lower. The
-floor $C$ is the conditional variance of
-$\boldsymbol{\epsilon} - \mathbf{x}_0$ given $\mathbf{x}_t$, averaged over
-$t$. For this data set it can be computed by weighting every training point
-by its posterior probability given $\mathbf{x}_t$; it is $1.38$ per
-coordinate (:exref:`ex_mdl-flow-matching-transport-crossing-floor`), and the
-network sits a few hundredths above it. A loss of $1.4$ therefore does not
-mean a poor fit. Almost all of it is the disagreement of crossing segments,
-which no network can remove.
+The loss settles at about $1.4$ per coordinate, a few hundredths above the
+floor. A loss of $1.4$ therefore does not mean a poor fit. Almost all of it
+is the disagreement of crossing segments, which no network can remove. By
+the CFM theorem only the excess over the floor is error of the field.
+
+Those few hundredths are not as small as they look, though. The target has
+mean square $2$ per coordinate, one each from the noise and the standardized
+data, and $1.37$ of it is floor. The field itself therefore has a mean
+square of only about $0.6$, and its error is of the order of a tenth of
+that. We shall meet this error again in the samples.
 
 Sampling integrates $\dot{\mathbf{x}} = \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$
 from $t = 1$ down to $0$ with Euler's method
@@ -895,7 +939,7 @@ def euler_path(params, z, steps):
 
 One step of the exact field would give the point mass that scored $0.9$. For
 the trained field, the cell integrates the noise array `z_eval` with
-$K = 1, 2, \ldots, 64$ steps and plots the squared energy distance to the
+$K = 1, 2, 4, \ldots, 64$ steps and plots the squared energy distance to the
 held-out data on log–log axes.
 
 ```{.python .input #score-matching-diffusion-flow-steps-quality}
@@ -908,19 +952,19 @@ d2l.plot(steps_list, eds, 'Euler steps', 'squared energy distance',
 
 One step scores about $0.7$, the same order as the point mass at the mean
 ($0.9$): the network has learned, imperfectly, the collapse that the exact
-field performs at $t = 1$. Two steps score about $0.15$, four
-about $0.04$, eight about $0.01$, and from sixteen steps on the score levels
-off, usually at a few thousandths and never much above $0.01$. The decline is Euler's
-discretization error. The level that remains is the error of the trained
-field; it varies with the training run and is often as small as the metric
-can resolve with $2{,}048$ points. The samples show the same progression.
+field performs at $t = 1$. Two steps score about $0.16$, four about $0.04$,
+eight $0.01$ to $0.02$, and from sixteen steps on the score levels off,
+usually at a few thousandths and never much above $0.01$. The decline is
+Euler's discretization error. The level that remains is the error of the
+trained field; it varies with the training run and is often as small as the
+metric can resolve with $2{,}048$ points. More steps help, as they should
+for a field fitted without a solver; the field trained through ten Euler
+steps in :numref:`sec_mdl-neural-odes` got worse when its steps were
+refined.
 
-<!-- WRITER (code step): the figure has a fifth panel, the held-out data. Next
-to it the samples of 8 and 32 steps are visibly more diffuse than the data in
-all four tabs (two broad crescents; in JAX and MXNet hard to make out), so "eight
-the two moons" overstates them: they are blurred moons, which the energy distance
-of a few thousandths does not show. See reports/code-requests.md (training
-recipe note for the coordinator). -->
+A score is one number, and it is worth looking at what it summarizes. The
+next cell draws the samples of $1$, $2$, $8$ and $32$ steps, and beside them
+the held-out data.
 
 ```{.python .input #score-matching-diffusion-flow-cfm-panels}
 panels = [(f'{K} Euler step(s)', euler_path(net, z_eval, K)[-1]) for K in (1, 2, 8, 32)]
@@ -930,10 +974,22 @@ for ax, (title, s) in zip(axes, panels + [('held-out data', held_out)]):
              xlim=(-2.5, 2.5), ylim=(-2.5, 2.5), axes=ax)
 ```
 
-One step gives a blob around the mean, two a bent ellipse, eight
-recognizable moons, and thirty-two sharp ones. The curvature that the
-independent pairing builds into the flow costs sixteen to thirty-two network
-calls per sample.
+One step gives a blob around the mean and two a slanted band. Eight steps
+spread the cloud over the region of the two moons, and to the eye thirty-two
+add little to eight, although the score still tells them apart. Now set
+either beside the data in the last panel. The data are two thin crescents.
+The samples are thick and smeared, and their two crescents run into each
+other. More steps do not sharpen them, so the blur belongs to the field and
+not to the solver: it is what the few hundredths between the loss and its
+floor look like.
+
+The score hardly registers this blur. It compares mean distances between
+points, so it reports where the mass lies long before it reports how sharp
+the edges are, and a score at the resolution of the metric does not certify
+samples as sharp as the data. What more steps do remove is the solver's
+error, and by the score that takes sixteen to thirty-two network calls per
+sample. This is the cost of the curvature that the independent pairing
+builds into the flow.
 
 ### Reflow
 :label:`subsec_mdl-reflow`
@@ -944,12 +1000,19 @@ point $\boldsymbol{\epsilon}$ with the endpoint
 $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ at which it arrives.
 Trajectories of one flow never cross, so these pairs cross far less than
 independent ones. Retraining the same architecture on the new pairs is
-called **reflow** :cite:`Liu.Gong.Liu.2022`. It keeps both endpoint
-distributions and does not increase the cost of transport, for every convex
-cost function.
+called **reflow** :cite:`Liu.Gong.Liu.2022`.
+
+Does re-pairing do any harm? It could spoil the endpoint laws, or pair
+points that lie farther apart than before. It does neither. How far a
+pairing moves its points is measured by its *transport cost*
+$\mathbb{E}\, c(\mathbf{x}_1 - \mathbf{x}_0)$, the mean over the pairs of a
+convex function $c$ of the displacement, such as its squared length. In the
+statement capitals denote random paths: $\mathbf{X}_t$ is the straight
+segment of a pair, and $\mathbf{Z}_t$ the trajectory of the flow that starts
+from the same noise point.
 
 **Proposition (reflow keeps the marginals and lowers the transport cost).**
-*Let $(\mathbf{X}_0, \mathbf{X}_1) \sim \pi$ have finite second moments, let $\mathbf{X}_t = (1 - t) \mathbf{X}_0 + t \mathbf{X}_1$,
+*Let the pair $(\mathbf{X}_0, \mathbf{X}_1)$ of a data point and a noise point have finite second moments, let $\mathbf{X}_t = (1 - t) \mathbf{X}_0 + t \mathbf{X}_1$,
 let $\mathbf{u}_t$ be the marginal velocity of this straight path, and let
 $\mathbf{Z}_t$ solve $\dot{\mathbf{Z}}_t = \mathbf{u}_t(\mathbf{Z}_t)$ backward in time from the noise end,
 $\mathbf{Z}_1 = \mathbf{X}_1$. Assume that
@@ -967,7 +1030,7 @@ $$
 **Proof.** (i) The law of $\mathbf{X}_t$ satisfies the continuity equation with
 $\mathbf{u}_t$, by the marginal-velocity proposition with
 $\mathbf{z} = (\mathbf{X}_0, \mathbf{X}_1)$ in the weak form that covers point masses
-(:exref:`ex_mdl-flow-matching-transport-reflow-fixed-points`). The law of
+(Exercise :exref:`ex_mdl-flow-matching-transport-reflow-fixed-points`). The law of
 $\mathbf{Z}_t$ satisfies it too, because $\mathbf{Z}_t$ moves with the field $\mathbf{u}_t$.
 Both equal $p_1$ at $t = 1$, and two solutions of the continuity equation
 with such a field that agree at one time agree at every time. This
@@ -993,24 +1056,25 @@ $\blacksquare$
 
 With $c = \|\cdot\|^2$ the last step loses exactly the conditional variance,
 so the cost falls at least by the floor of the old pairing:
-$\mathbb{E}\|\mathbf{Z}_1 - \mathbf{Z}_0\|^2 \le \mathbb{E}\|\mathbf{X}_1 - \mathbf{X}_0\|^2 - C$. Re-pairing
-helps only where segments cross, because there the conditional velocity
-is not a function of $(\mathbf{x}_t, t)$.
+$\mathbb{E}\|\mathbf{Z}_1 - \mathbf{Z}_0\|^2 \le \mathbb{E}\|\mathbf{X}_1 - \mathbf{X}_0\|^2 - C$.
+The floor $C$, a nuisance in training, is the saving that one round of
+reflow guarantees. Where no segments cross, the floor is zero and re-pairing
+has nothing to gain.
 
 The hypotheses are stronger than our examples allow. For the two points, and
 for any finite training set paired independently with Gaussian noise, the
 marginal field is Lipschitz on $[\delta, 1]$ for each $\delta > 0$ but not
 up to $t = 0$: the slope $-14$ of the two-point field at $t = 0.5$ grows
-without bound as $t \to 0$. The proof then gives (i) for every
-$t \ge \delta$ and (ii) for the displacement from $t = 1$ to $t = \delta$,
-divided by $1 - \delta$. Letting $\delta \to 0$ is a further step that we do
-not prove, and the examples that follow go beyond the proposition in this
-sense.
+without bound as $t \to 0$. The proof then covers the flow down to time
+$\delta$ only: it gives (i) for $t \ge \delta$, and (ii) in the form
+$\mathbb{E}\, c\big((\mathbf{Z}_1 - \mathbf{Z}_\delta)/(1 - \delta)\big) \le \mathbb{E}\, c(\mathbf{X}_1 - \mathbf{X}_0)$.
+The limit $\delta \to 0$ we do not prove, and in this sense the examples
+that follow go beyond the proposition.
 
 For the two points the conclusion can be verified directly. A flow in one
 dimension preserves order, so one round pairs each noise point $\epsilon$
-with $a \operatorname{sign}(\epsilon)$
-(:exref:`ex_mdl-flow-matching-transport-reflow-two-points`). This pairing
+with $a \operatorname{sign}(\epsilon)$ (Exercise
+:exref:`ex_mdl-flow-matching-transport-reflow-two-points`). This pairing
 costs $a^2 - 2a\sqrt{2/\pi} + 1 = 1.81$ against $a^2 + 1 = 5$ for the
 independent one, and its segments never cross, so the second round has
 $C = 0$ and its field is integrated exactly by one Euler step.
@@ -1071,12 +1135,19 @@ net2, plateau2 = train_rf(model_pairs)
 print(f'reflow loss, mean of the last 500 batches: {plateau2:.4f}')
 ```
 
-The reflow loss settles at a few thousandths instead of $1.4$, so the new
-segments almost never cross. A field without crossings is nearly constant
-along its trajectories, and then a few Euler steps should do. The next cell
-samples from both models with $1$, $2$ and $32$ steps from the same noise
-array, and prints the mean squared length of the old and the new pairs, the
-cost that the proposition bounds.
+The reflow loss settles at a few thousandths or less, where the first loss
+stopped at $1.4$, so the new segments almost never cross. A field without
+crossings is nearly constant along its trajectories, and then a few Euler
+steps should do. The next cell samples from both models with $1$, $2$ and
+$32$ steps from the same noise array.
+
+It also prints the mean squared length of the old and the new pairs, the
+cost that the proposition bounds. The old pairs cost $4$: noise and
+standardized data each have unit variance in each of two coordinates, and
+for independent draws the variances add. The floor of the independent
+pairing, summed over the two coordinates, is twice the value printed above,
+about $2.75$. For the exact marginal flow the proposition therefore promises
+new pairs that cost at most about $1.25$.
 
 ```{.python .input #mdl-flow-matching-transport-reflow-1}
 for K in (1, 2, 32):
@@ -1089,26 +1160,16 @@ print(f'mean squared pair length: independent {np.mean(np.sum((eps_pairs - x0_in
       f', reflowed {np.mean(np.sum((eps_pairs - x0_pairs)**2, 1)):.2f}')
 ```
 
-<!-- WRITER: "more than a hundred times below" fails in some runs. 12 direct
-runs (training cells unchanged): reflowed one step 0.002-0.009, equal to the
-original's 32-step score to the printed digit or one unit of the third decimal
-in every run; original one step 0.648-0.717; ratio 73 to 350. Pair lengths
-3.93-4.06 against 0.26-0.28; chord gap 0.241-0.248 against 0.008-0.016; reflow
-loss 0.0014-0.0053. -->
 One Euler step of the reflowed model scores the same as thirty-two steps of
-the original, usually a few thousandths, and more than a hundred times below
-the original's single step. The reflowed network was trained to reproduce the
-original's $32$-step endpoints, so matching their quality in one step is the
-best it can do. It inherits the first model's error.
+the original: a few thousandths or less, where the original's single step
+scored about $0.7$. It could not have done better. The reflowed network was
+trained to reproduce the original's $32$-step endpoints, so it inherits the
+first model's error along with its samples.
 
-The mean squared length of the pairs drops from $4$ to about $0.3$. For the
-exact marginal flow the proposition guarantees a drop at least to
-$4 - 2.76 = 1.24$, since the floor of the independent pairing is
-$2 \times 1.38 = 2.76$ summed over the two coordinates. The measured drop is
-far larger than the bound requires, because the first step of the proof,
-Jensen's inequality for the time average, is far from tight on the curved
-trajectories of the first flow. (The bound is stated for the exact marginal
-flow, which the trained network and its $32$ Euler steps only approximate.)
+The mean squared length of the pairs drops from $4$ to about $0.3$, far
+below the $1.25$ that the bound guarantees. The slack is in the first step of
+the proof: Jensen's inequality for the time average is far from tight on the
+curved trajectories of the first flow.
 
 Straightness can be measured as well, by the mean distance of each $32$-step
 trajectory from the chord joining its two ends.
@@ -1122,25 +1183,25 @@ print(f'mean distance from the chord: original {chord_gap(euler_path(net, z_eval
       f', reflowed {chord_gap(euler_path(net2, z_eval, 32)):.3f}')
 ```
 
-The original trajectories wander about a quarter of a unit from their chords,
-first toward the mean as the two-point example predicts and then out to the
-moons. The reflowed ones stay about a hundredth from theirs, which is why one
-step suffices. Reflow straightens a flow, but it does not make it optimal.
-In more than one dimension a flow can be straight and crossing-free and
-still move mass farther than it must.
+The original trajectories wander about a quarter of a unit from their
+chords. They set out toward the mean, where a single Euler step left them,
+and turn out to the moons only later. The reflowed ones stay about a
+hundredth from theirs, which is why one step suffices. Reflow straightens a
+flow, but it does not make it optimal. In more than one dimension a flow can
+be straight and crossing-free and still move mass farther than it must.
 
 ## Optimal Transport and Straightness
 :label:`sec_mdl-ot-connection`
 
 ### Couplings and the Wasserstein Distance
 
-Reflow lowered the transport cost. Which pairing is cheapest, and is its flow
-straight? We restate the vocabulary of :numref:`sec_mdl-optimal-transport`.
-A **coupling**
-$\pi$ of $p_0$ and $p_1$ is a joint law of pairs with these marginals, a plan
-that says how much mass travels from each source point to each target point.
-The **2-Wasserstein distance** is the cost of the cheapest plan under squared
-distance,
+Reflow lowered the transport cost. How low can it go, and is the flow of the
+cheapest pairing straight? We restate the vocabulary of
+:numref:`sec_mdl-optimal-transport`. A
+**coupling** $\pi$ of $p_0$ and $p_1$ is a joint law of pairs with these
+marginals, a plan that says how much mass travels from each source point to
+each target point. The **2-Wasserstein distance** is the cost of the
+cheapest plan under squared distance,
 
 $$
 W_2^2(p_0, p_1) = \min_{\pi \in \Pi(p_0, p_1)}\ \mathbb{E}_{(\mathbf{x}_0, \mathbf{x}_1) \sim \pi}
@@ -1148,13 +1209,19 @@ W_2^2(p_0, p_1) = \min_{\pi \in \Pi(p_0, p_1)}\ \mathbb{E}_{(\mathbf{x}_0, \math
 $$
 :eqlabel:`eq_mdl-w2`
 
-where $\Pi(p_0, p_1)$ is the set of couplings. The distance is the least
-mean squared distance by which the mass must move. When one of the two laws
-has a density and both have finite second moments, the optimal plan is
-unique and is a map from the law with the density. For us that law is the
-noise $p_1$, and the map is $\mathbf{x}_0 = \nabla \psi(\mathbf{x}_1)$ for a
-convex function $\psi$. This is Brenier's theorem :cite:`Brenier.1991`. The
-data need no density, and the two points and the two moons have none.
+where $\Pi(p_0, p_1)$ is the set of couplings. So $W_2^2$ is the least mean
+squared displacement that turns one law into the other.
+
+What does the cheapest plan look like? When one of the two laws has a
+density and both have finite second moments, it is unique and it does not
+split mass: it is a map from the law with the density. For us that law is
+the noise $p_1$, and the map from noise to data is the gradient of a convex
+function, the *Brenier map*. This is Brenier's theorem
+:cite:`Brenier.1991`, which we cite without proof. The data need no density:
+the two points have none, and neither has a finite training set such as our
+$8{,}192$ moons. On a line the theorem is easy to picture. The derivative of
+a convex function of one variable never decreases, so the optimal map keeps
+the points in order.
 
 The smallest case is a Gaussian in one dimension, with data
 $\mathcal{N}(m, s^2)$, $s > 0$, and noise $\mathcal{N}(0, 1)$. The sorted
@@ -1163,7 +1230,7 @@ costs $\mathbb{E}(m + s\epsilon - \epsilon)^2 = m^2 + (s - 1)^2$. The
 independent pairing costs $\mathbb{E}(\epsilon - x_0)^2 = m^2 + 1 + s^2$. In
 one dimension the sorted pairing is optimal for every convex cost: if two
 pairs cross, swapping their targets does not increase the cost
-(:exref:`ex_mdl-flow-matching-transport-one-dimensional-ot`). Hence
+(Exercise :exref:`ex_mdl-flow-matching-transport-one-dimensional-ot`). Hence
 
 $$
 W_2^2\big(\mathcal{N}(0, 1), \mathcal{N}(m, s^2)\big) = m^2 + (s - 1)^2 .
@@ -1172,14 +1239,15 @@ $$
 
 The distance separates the cost of shifting the mean from the cost of
 stretching the width. Between $\mathcal{N}(0, 4)$ and $\mathcal{N}(0, 1)$ it
-is $1$, against $5$ for independent pairs: the independent pairing spends four
+is $1$, against $5$ for independent pairs (panels (a) and (b) of
+:numref:`fig_mdl-dyn-couplings-energy`): the independent pairing spends four
 fifths of its cost moving mass past other mass.
 
 This explains where the trajectories of :numref:`fig_mdl-dyn-fm-paths` end.
 In one dimension the trajectories of a flow cannot cross, so a flow preserves
 order, and the order-preserving pairing is the optimal one. On a line, one
 round of reflow therefore reaches optimal transport
-(:exref:`ex_mdl-flow-matching-transport-reflow-two-points`).
+(Exercise :exref:`ex_mdl-flow-matching-transport-reflow-two-points`).
 
 In two dimensions, freedom from crossings is not enough. Rotate a standard
 Gaussian cloud about the origin by a quarter turn in unit time, with the
@@ -1187,12 +1255,9 @@ field that assigns to the point $(\xi_1, \xi_2)$ the velocity
 $\tfrac{\pi}{2}\, (-\xi_2, \xi_1)$. No two
 trajectories cross, and the cloud ends where it started, so
 $W_2^2(p_0, p_1) = 0$. Yet every particle moves, at speed
-$\tfrac{\pi}{2}\|\mathbf{x}\|$. The cost of a whole flow, not only of its
-endpoints, is its **kinetic energy**
-$\int_0^1 \mathbb{E}\|\mathbf{u}_t(\mathbf{x}_t)\|^2\, dt$, the mean squared
-speed of the particles integrated over time. For the rotation it is
-$(\pi/2)^2\, \mathbb{E}\|\mathbf{x}\|^2 = \pi^2/2 \approx 4.9$
-(:numref:`fig_mdl-dyn-couplings-energy`).
+$\tfrac{\pi}{2}\|\mathbf{x}\|$. It is a carousel: everyone travels, and the
+crowd as a whole goes nowhere (panel (c) of
+:numref:`fig_mdl-dyn-couplings-energy`).
 
 Straightening the arcs does not cure this. Pair each $\mathbf{x}_0$ with its
 quarter turn $\mathbf{R}\mathbf{x}_0$ and join the two by a segment. The
@@ -1201,21 +1266,43 @@ because that matrix is invertible for every $t$, and each is traversed at
 constant speed. So $C = 0$ and reflow leaves the pairing unchanged, yet it
 costs $\mathbb{E}\|\mathbf{R}\mathbf{x}_0 - \mathbf{x}_0\|^2 = 4$ against
 $W_2^2 = 0$. On a line, crossings are the only way to waste motion. In the
-plane a pairing can be straight, crossing-free and still wrong.
+plane a pairing can be straight, crossing-free and still wrong. Brenier's
+theorem says what this one lacks. An optimal map is the gradient of a convex
+function, and a quarter turn is not the gradient of anything: the derivative
+of a gradient is a symmetric matrix, and $\mathbf{R}$ is not symmetric.
 
-![Three ways to move a Gaussian. (a) Independent pairing of data $\mathcal{N}(0,4)$ at $t=0$ with noise $\mathcal{N}(0,1)$ at $t=1$, drawn for the ten deciles: segments cross, and the mean squared displacement is $5$. (b) The sorted pairing $x_0=2\epsilon$ never crosses and costs $1$, the squared Wasserstein distance. (c) A quarter rotation of a standard Gaussian cloud in two dimensions ends where it started, so $W_2^2=0$, yet its kinetic energy is $\pi^2/2$: in two dimensions a crossing-free flow need not be optimal.](../img/mdl-dyn-couplings-energy.svg)
+![Three ways to move a Gaussian. (a) Independent pairing of data $\mathcal{N}(0,4)$ at $t=0$ with noise $\mathcal{N}(0,1)$ at $t=1$, drawn for ten equally spaced quantile levels ($0.05, 0.15, \ldots, 0.95$): segments cross, and the mean squared displacement is $5$. (b) The sorted pairing $x_0=2\epsilon$ never crosses and costs $1$, the squared Wasserstein distance. (c) A standard Gaussian cloud in the plane, turned by a quarter. The arcs of the rotation (dashed) have kinetic energy $\pi^2/2$. The chords that pair each point with its quarter turn (arrows) are straight, never cross and cost $4$. The cloud ends where it started, so $W_2^2=0$: in two dimensions a straight, crossing-free pairing need not be optimal.](../img/mdl-dyn-couplings-energy.svg)
 :label:`fig_mdl-dyn-couplings-energy`
+
+A pairing records only where each particle ends. How should the motion in
+between be charged? Consider one particle that travels from $\mathbf{x}_1$
+to $\mathbf{x}_0$ in unit time along some path $\mathbf{x}_t$. By Jensen's
+inequality for the time average,
+
+$$
+\int_0^1 \|\dot{\mathbf{x}}_t\|^2\, dt
+\;\ge\; \Big\| \int_0^1 \dot{\mathbf{x}}_t\, dt \Big\|^2
+= \|\mathbf{x}_1 - \mathbf{x}_0\|^2,
+$$
+
+with equality only if the velocity is constant. The integral of the squared
+speed is smallest on the straight line at constant speed, and it charges for
+every detour and every change of pace. Its mean over the particles is the
+**kinetic energy** of a flow,
+$\int_0^1 \mathbb{E}\|\mathbf{u}_t(\mathbf{x}_t)\|^2\, dt$. The carousel has
+kinetic energy $(\pi/2)^2\, \mathbb{E}\|\mathbf{x}\|^2 = \pi^2/2 \approx 4.9$,
+all of it wasted.
 
 Kinetic energy also ranks flows with the same endpoints. Take three flows
 between data $\mathcal{N}(0, 4)$ and noise $\mathcal{N}(0, 1)$: the straight
 flow of the sorted pairing, the marginal flow of straight segments under the
 independent pairing, and the cosine path of
-:numref:`sec_mdl-score-velocity-dictionary`. The first must be cheapest, but
-which of the other two comes second? All
-three have Gaussian marginals $\mathcal{N}(0, s_t^2)$, so their velocity is
+:numref:`sec_mdl-score-velocity-dictionary`. Which is cheapest, and does a
+flow assembled from straight segments beat one that is not? All three have
+Gaussian marginals $\mathcal{N}(0, s_t^2)$, so their velocity is
 $(\dot{s}_t/s_t)\, x$ and the kinetic energy is $\int_0^1 \dot{s}_t^2\, dt$
-(:exref:`ex_mdl-flow-matching-transport-kinetic-energy`). The cell also checks
-the two pairing costs by sorting samples.
+(Exercise :exref:`ex_mdl-flow-matching-transport-kinetic-energy`). The cell
+first checks the two pairing costs, $5$ and $1$, by sorting samples.
 
 ```{.python .input #mdl-flow-matching-transport-couplings-and-the-wasserstein-distance}
 n = 200_000
@@ -1233,30 +1320,33 @@ for name, s in [('sorted, straight', 2 - t),
     print(f'{name:22s} kinetic energy {kinetic_energy(s, t):.3f}')
 ```
 
-The sorted straight flow attains $W_2^2 = 1$. The straight segments of the
+The sorted straight flow is cheapest, and its kinetic energy is $W_2^2 = 1$.
+The surprise is the order of the other two. The straight segments of the
 independent pairing produce a marginal flow that costs $1.86$, more than the
-cosine path's $1.23$. Its width $s_t^2 = 4(1 - t)^2 + t^2$ first shrinks, as
-$t$ falls from $1$ to $0.8$, and then grows, so its particles move inward and
-back out.
-Straight conditional segments under the wrong pairing do not make a straight
-flow.
+cosine path's $1.23$. Its variance $s_t^2 = 4(1 - t)^2 + t^2$ first shrinks,
+as $t$ falls from $1$ to $0.8$, and then grows, so its particles move inward
+and back out. Straight conditional segments under the wrong pairing do not
+make a straight flow.
 
 ### The Benamou–Brenier Theorem
 
-The cheapest of the three flows reached $W_2^2$. This is a general fact, and
-it connects the static problem :eqref:`eq_mdl-w2`, which pairs endpoints, to
-the objects that flow matching trains, which are flows.
+The cheapest of the three flows cost exactly $W_2^2$, the cost of the
+cheapest pairing. This is no accident of Gaussians. The cheapest flow
+between two laws always costs what the cheapest pairing costs, and it is the
+flow that carries each pair of that pairing along its segment at constant
+speed. This is the deepest fact of the section. It connects the static
+problem :eqref:`eq_mdl-w2`, which pairs endpoints, to the objects that flow
+matching trains, which are flows.
 
-**Theorem (Benamou–Brenier).** *Let one endpoint law, here the noise $p_1$,
-have a density, let $p_0$ and $p_1$ have finite second moments, and call a pair $(p_t, \mathbf{u}_t)$
-admissible if $\mathbf{u}_t$ is continuously differentiable and Lipschitz in
+**Theorem (Benamou–Brenier).** *Let $p_0$ and $p_1$ have finite second
+moments, and let one of them, here the noise $p_1$, have a density. Call a
+pair $(p_t, \mathbf{u}_t)$ admissible if $\mathbf{u}_t$ is continuously differentiable and Lipschitz in
 $\mathbf{x}$ with a constant independent of $t$, and the pair satisfies the
 continuity equation with the endpoints $p_0$ and $p_1$.
 (i) Every admissible pair has kinetic energy at least $W_2^2(p_0, p_1)$.
-(ii) If the marginal velocity of the straight interpolation of an optimal
-coupling is admissible (for example, when the Brenier map is a smooth
-diffeomorphism whose derivative and inverse derivative are bounded), that
-flow has kinetic energy $W_2^2$, and then, with the minimum over admissible
+(ii) Join the pairs of an optimal coupling by straight segments. If the
+marginal velocity of this path is admissible, its kinetic energy is
+$W_2^2(p_0, p_1)$, so that, with the minimum over admissible
 pairs,* :cite:`Benamou.Brenier.2000`
 
 $$
@@ -1265,22 +1355,21 @@ W_2^2(p_0, p_1)
 $$
 :eqlabel:`eq_mdl-benamou-brenier`
 
-The squared Wasserstein distance is the least kinetic energy of any flow
-between $p_0$ and $p_1$. Without the condition in (ii) the equality still
-holds, with the minimum taken over weak solutions of the continuity equation
-with square-integrable velocity. We do not prove this general form, and our
-examples need it: the optimal field for the two points has slope $1/t$ and
-is not admissible.
+The condition in (ii) is met, for example, when the Brenier map is a smooth
+diffeomorphism whose derivative and inverse derivative are bounded. Without
+it the equality still holds, with the minimum taken over weak solutions of
+the continuity equation with square-integrable velocity. We do not prove
+this general form, and our examples need it: the optimal field for the two
+points has slope $1/t$ and is not admissible.
 
-**Proof.** The proof sandwiches the kinetic energy between $W_2^2$ from
-below and from above. Step II is the lower bound (i), and step III gives
-(ii).
+**Proof.** We bound the least kinetic energy by $W_2^2$ from below and from
+above. Step II is the lower bound (i), and step III gives (ii).
 
-I. *Every flow defines a coupling.* Let $\mathbf{X}_t$ solve
-$\dot{\mathbf{X}}_t = \mathbf{u}_t(\mathbf{X}_t)$ backward in time from
-$\mathbf{X}_1 \sim p_1$.
-By the uniqueness fact used in the reflow proposition, $\mathbf{X}_t \sim p_t$
-for every $t$, so $(\mathbf{X}_0, \mathbf{X}_1)$ is a coupling of $p_0$ and
+I. *Every flow defines a coupling.* Let $\mathbf{Z}_t$ solve
+$\dot{\mathbf{Z}}_t = \mathbf{u}_t(\mathbf{Z}_t)$ backward in time from
+$\mathbf{Z}_1 \sim p_1$.
+By the uniqueness fact used in the reflow proposition, $\mathbf{Z}_t \sim p_t$
+for every $t$, so $(\mathbf{Z}_0, \mathbf{Z}_1)$ is a coupling of $p_0$ and
 $p_1$.
 
 II. *Lower bound.* The cost of this coupling is at least $W_2^2$, and
@@ -1288,9 +1377,9 @@ Jensen's inequality for the time average bounds it by the kinetic energy:
 
 $$
 W_2^2(p_0, p_1)
-\le \mathbb{E} \left\| \mathbf{X}_1 - \mathbf{X}_0 \right\|^2
-= \mathbb{E} \left\| \int_0^1 \mathbf{u}_t(\mathbf{X}_t)\, dt \right\|^2
-\le \int_0^1 \mathbb{E} \left\| \mathbf{u}_t(\mathbf{X}_t) \right\|^2 dt
+\le \mathbb{E} \left\| \mathbf{Z}_1 - \mathbf{Z}_0 \right\|^2
+= \mathbb{E} \left\| \int_0^1 \mathbf{u}_t(\mathbf{Z}_t)\, dt \right\|^2
+\le \int_0^1 \mathbb{E} \left\| \mathbf{u}_t(\mathbf{Z}_t) \right\|^2 dt
 = \int_0^1\!\! \int \|\mathbf{u}_t\|^2\, p_t\, d\mathbf{x}\, dt .
 $$
 
@@ -1309,42 +1398,47 @@ $$
 
 The two bounds meet. $\blacksquare$
 
-When the field that flow matching would learn on an optimal coupling is
-admissible, it is the minimizer. Since the lower bound also applies to it,
-the inequality in III is an equality, so the conditional variance is zero:
-the segments of an optimal coupling do not cross. Jensen's inequality in II
-is tight only if each particle moves at constant velocity, so every
-minimizer moves its particles along straight lines at constant speed. A
-straight constant-speed flow attains $W_2^2$ only if, in addition, its
-pairing is optimal, which the quarter-turn pairing is not
-(:exref:`ex_mdl-flow-matching-transport-reflow-fixed-points`).
+What does the theorem say about the model? Train rectified flow on an
+optimal pairing and the wish of the opening is granted: the floor is zero,
+the exact field is constant along each trajectory, and one Euler step of
+length one integrates it without error. Both properties are cases of
+equality in the proof, whose two inequalities we met in the reflow
+proposition. When the flow of an optimal coupling is admissible it attains
+the lower bound, so the inequality in III is an equality for it and the
+conditional variance is zero: the segments of an optimal coupling do not
+cross. Jensen's inequality in II is tight only if each particle moves at
+constant velocity, so every minimizer moves its particles along straight
+lines at constant speed. The converse fails, as the quarter turn showed. A
+flow can be straight, free of crossings and exact in one step without being
+cheapest; it attains $W_2^2$ only if its pairing is optimal as well
+(Exercise :exref:`ex_mdl-flow-matching-transport-reflow-fixed-points`).
 
-### Approximate Optimal Couplings
-
-The theorem names the target, an optimal coupling, and practice has two
-approximations to it. Reflow re-pairs by the model. A *minibatch
-optimal-transport* pairing
+An optimal coupling is the target, then, and practice has two approximations
+to it. Reflow re-pairs by the model. A *minibatch optimal-transport* pairing
 :cite:`Tong.Fatras.Malkin.ea.2023,Pooladian.BenHamu.DomingoEnrich.ea.2023`
-needs no trained model: it re-pairs each batch of $256$ noise and data points
-by the assignment of least total squared distance before the training step.
-:exref:`ex_mdl-flow-matching-transport-minibatch-ot` trains the two moons
-with this pairing. The loss plateau falls from $1.4$ to about $0.06$ per
-coordinate, and one Euler step already scores a few thousandths. Neither
-method finds the optimal coupling of the marginals: a batch plan depends on
-the batch, and reflow inherits the errors of the first model.
+needs no trained model: before each training step it re-pairs the batch of
+$256$ noise and data points by the assignment of least total squared
+distance. Exercise :exref:`ex_mdl-flow-matching-transport-minibatch-ot`
+trains the two moons with this pairing and measures what it does to the loss
+plateau, to the one-step score and to the length of the pairs. Neither
+method finds the optimal coupling of the two laws. A batch plan depends on
+the batch. Reflow stops at any pairing without crossings, optimal or not, as
+the quarter turn showed, and it inherits the errors of the first model
+besides.
 
 ## Sampling with a Learned Field
 :label:`sec_mdl-sampling-learned-dynamics`
 
-A learned velocity is integrated as it is, and a learned score through the
-probability-flow ODE or the reverse SDE :eqref:`eq_mdl-score-samplers`. On a
-variance-preserving path the velocity and the probability-flow ODE are the
-same field, by the score–velocity identity. In every case a sample costs
-one field evaluation per solver stage, and the question is how to spend a
-budget of them. :numref:`sec_diffusion-samplers` answers it for image
-models. We keep one experiment, on a field with no learning error.
-
-### Solver Order at Equal Cost
+Straightening the flow is one way to save network calls. The other is to use
+the calls better: a solver of higher order, or steps placed where the path
+moves. This is open to a learned score as well as to a learned velocity,
+because the probability-flow ODE of
+:numref:`sec_mdl-score-based-generative-modeling` turns a score into a
+velocity field, and on a variance-preserving path into the very field that
+flow matching would learn. A sample costs one field evaluation per solver
+stage, and the question is how to use a budget of them. We run one
+experiment, on a field with no learning error, so that every error in it is
+the solver's.
 
 Heun's method is second order but evaluates the field twice per step. Is it
 worth two evaluations? We take the probability-flow ODE with the *exact*
@@ -1353,10 +1447,12 @@ under the variance-preserving schedule with $\beta(t)$ rising linearly from
 $0.1$ to $20$. The cell integrates from $t = 1$ to $t = 0$ with Euler and
 with Heun's method (:numref:`sec_mdl-euler-runge-kutta`), and compares the
 endpoints of $8{,}000$ starting points with a Heun solution of $800$ steps.
-Both methods get the same budgets of $10$ to $80$ evaluations, spent on two
-grids of times: equal steps in $t$, and the *squared* grid $t_k = u_k^2$
-with $u_k$ equally spaced from $1$ to $0$, whose steps shrink toward the
-data end $t = 0$.
+Both methods get the same budgets of $10$ to $80$ field evaluations (the
+row NFE of the printed table, for "number of function evaluations"), spent
+on two grids of times: equal steps in $t$, and the *squared* grid
+$t_k = (1 - k/K)^2$ for $k = 0, \ldots, K$, whose steps shrink toward the
+data end $t = 0$. Heun's error falls like the square of the step and Euler's
+like the step, so with enough evaluations Heun must win. Are ten enough?
 
 ```{.python .input #score-matching-diffusion-flow-euler-vs-heun}
 bmin, bmax = 0.1, 20.0
@@ -1392,32 +1488,25 @@ d2l.plot(nfes, list(errs.values()), 'field evaluations', 'mean endpoint error',
 
 On the uniform grid the orders show in the rates. Each doubling of the
 budget divides Euler's error by about two and Heun's by a factor that grows
-toward four ($2.8$, $3.3$, $3.6$). At equal cost, though, Heun loses at $10$
-evaluations (about $0.08$ against Euler's $0.04$) and at $20$ ($0.028$
-against $0.02$), and leads only from $40$. On the squared grid Heun wins at
-every budget, and at $10$ evaluations its error, about $0.03$, is below
-Euler's on either grid. Euler moves the other way: the squared grid more
-than doubles its error. On this field, where the steps go matters more than
-the order of the solver.
+from about three toward four. At equal cost, though, Heun loses at $10$
+evaluations (about $0.08$ against Euler's $0.04$) and at $20$ (nearly
+$0.03$ against $0.02$), and leads only from $40$. On the squared grid Heun
+wins at every budget, and at $10$ evaluations its error, about $0.03$, is
+below Euler's on either grid. Euler moves the other way: the squared grid
+more than doubles its error. On this field, at small budgets, the grid
+decides which solver wins.
 
-<!-- WRITER: new cell, read by the mechanism paragraph below. It carries the
-error of each coarse step to t = 0 along the exact flow (to first order: the
-step's local error times the gain dx(0)/dx(t) of a fine 400-step Heun path) and
-prints the share |sum_k c_k| / sum_k |c_k| that survives in the endpoint, per
-row and budget (10, 20, 40, 80), plus the share of the path length covered by
-t = 0.5. Measured, 12 direct runs (3 per tab, unseeded): Euler uniform
-0.11-0.12 at every budget; Heun uniform 0.58-0.59, 0.65-0.66, 0.70-0.71,
-0.72-0.73; Euler squared 0.30, 0.32, 0.34, 0.35; Heun squared 0.25, 0.35-0.36,
-0.40-0.41, 0.42; path share 0.09 in every run. So: about an eighth for Euler on
-equal steps, more than half (rising toward three quarters) for Heun on equal
-steps, about a third for Euler on the squared grid, a quarter to two fifths for
-Heun there. The paragraph should quote only these. The error table above now
-uses the unseeded rng: its third digit moves (Euler uniform 10 NFE
-0.0423-0.0443; Heun uniform 0.0786-0.0819; Heun squared 10 NFE 0.0334-0.0343);
-Heun's uniform-grid ratios per doubling are about 2.9, 3.3, 3.7. -->
-To see how much of the step errors cancels, the next cell carries the error
-$c_k$ of the $k$-th coarse step to $t = 0$ along the exact flow and prints the
-share $|\sum_k c_k| / \sum_k |c_k|$ that survives in the endpoint.
+How can a first-order method beat a second-order one? The endpoint error is
+a sum of signed step errors, and signed errors can cancel. The next cell
+measures how much. It takes the error of the $k$-th coarse step, started
+from a point of the exact path, and multiplies it by the sensitivity of the
+endpoint to a displacement at that time, read off a neighboring trajectory
+of the exact flow. The product $c_k$ is the step's contribution to the
+endpoint error, to first order. The cell prints two tables: the share
+$|\sum_k c_k| / \sum_k |c_k|$ that survives the summation, and the total
+$\sum_k |c_k|$ before any cancellation, averaged over the starting points.
+Its last line says how much of each path's length lies between $t = 1$ and
+$t = 0.5$.
 
 ```{.python .input #mdl-flow-matching-transport-solver-order-at-equal-cost-1}
 def exact_path(q, ts):                  # fine Heun path, and the gain dx(0)/dx(t)
@@ -1446,54 +1535,65 @@ share = (d[:200].sum(0) / d.sum(0)).mean()           # first 200 steps: t from 1
 print(f'share of the path length covered by t = 0.5: {share:.2f}')
 ```
 
-Two properties of the field account for the table. By $t = 0.5$ the paths
-have covered less than a tenth of their length, because for most of that
-time the noised law is close to $\mathcal{N}(0, 1)$, whose score cancels the
-drift. Equal steps in $t$ spend half the budget there. And the endpoint
-error is a sum of signed step errors, so a grid changes how they cancel as
-well as how large they are. On equal steps Euler falls short while the paths
-speed up and overshoots while they slow down, and the two cancel to about an
-eighth of their total size, whereas more than half of Heun's step errors
-survive. On the squared grid about a third of each survives.
+By $t = 0.5$ the paths have covered less than a tenth of their length,
+because for most of that time the noised law is close to $\mathcal{N}(0, 1)$,
+whose score cancels the drift. Equal steps in $t$ use half the budget on
+that tenth, which is the reason for trying a crowded grid at all.
 
-Diffusion samplers crowd their steps toward the data in the same way, and
-choose how much by measurement :cite:`Karras.Aittala.Aila.ea.2022`. The grid
-and the solver are chosen together, and the best grid depends on the
-schedule and on the data (:numref:`sec_diffusion-samplers`).
+The shares explain Euler's lead. On equal steps only about an eighth of
+Euler's step errors survives in the endpoint, at every budget, against more
+than half of Heun's. Before cancellation Euler's step errors are the larger
+ones: its totals in the second table are more than twice Heun's at every
+budget. Had as large a share of them survived, Euler would have lost
+everywhere. Its lead is cancellation, a property of this field on this grid
+and not of the method. The squared grid takes it away: about a third of
+Euler's step errors survives there, and a quarter to two fifths of Heun's.
 
-### Comparison of Model Families
-:label:`sec_mdl-unifying-table`
+Surprisingly, this is nearly all that the squared grid changes. The totals
+hardly notice the grid. For Heun at $10$ evaluations the total is $0.13$ on
+equal steps and $0.125$ on the squared grid, and the two stay within a few
+percent of each other at every budget. Euler's total is even smaller on the
+squared grid, by about a seventh at $10$ evaluations and a tenth at $80$,
+and yet its endpoint error more than doubles. So crowding the steps made the
+step errors only a little smaller in total. What it changed is how much of
+them cancels, to Heun's gain and Euler's loss. The squared grid is cruder
+than it looks: its step at time $t$ is about $2\sqrt{t}$ times the equal
+step, shorter below $t = 1/4$ and longer above.
 
-The methods of this section and the previous one differ in the path they
-fix, the quantity they regress on, and the solver they sample with;
-:numref:`tab_diffusion_models` sets them side by side. What they share is
-the regression. Each fits a conditional mean of a per-sample quantity that
-is known in closed form, and samples with a solver from this chapter.
+Samplers for image models crowd their steps toward the data as well, and
+they tune how much by measurement :cite:`Karras.Aittala.Aila.ea.2022`, as
+:numref:`sec_diffusion-samplers` describes. Our tables show why they
+have to measure: a comparison of solvers on one grid is a statement about
+that grid.
 
-What remains open is the pairing of noise with data. Independent pairs make
-the flow curve, and reflow and batch re-pairing straighten it on the two
-moons. No known method finds the optimal pairing cheaply in high dimension,
-and the number of steps a learned field needs is still found by trial.
-:numref:`chap_diffusion` takes up both questions for images.
+Two questions stay open. Nobody knows how to find the optimal pairing
+cheaply in high dimension; reflow and batch re-pairing only approach it.
+And the question the chapter began with, how few steps a model can take, is
+still answered by trial for each new field: the number of steps and their
+placement are tuned, not derived. :numref:`chap_diffusion` takes up both
+questions for images.
 
 ## Summary
 
-A probability path from noise to data can be chosen freely. The velocity
-that realizes it is the posterior mean of the velocities of per-sample paths,
-so conditional flow matching trains it by least squares, with the same
-gradients as the intractable marginal loss. On a Gaussian path the velocity
-and the score are affine in one posterior mean, so one network can be read as
-either. On straight conditional paths the marginal flow bends wherever
-segments cross. Reflow re-pairs noise with the model's own endpoints, does
-not increase the transport cost, and straightens the flow: one Euler step of
-the reflowed two-moons model matches thirty-two steps of the original. The
-squared Wasserstein distance is the least kinetic energy of any flow between
-the endpoints, attained by straight constant-speed motion under an optimal
-pairing; a pairing can be straight and crossing-free without being optimal.
-Sampling is numerical integration, and the time grid matters as much as the
-solver: on the exact field of the running mixture Heun's method loses to
-Euler below about $40$ evaluations on a uniform grid, and wins at every
-budget on a grid crowded toward the data.
+The path from noise to data can be chosen. The velocity that realizes it is
+the posterior mean of the velocities of per-sample paths, so conditional
+flow matching trains it by least squares, with a loss floor $C$ that
+measures how much those paths disagree. Every model of this section and the
+previous one is trained this way: it fits a conditional mean of a per-sample
+quantity that is known in closed form, and it samples with a solver. On a
+Gaussian path the score, the noise and the velocity are affine in one
+posterior mean, so one network can be read as any of them. Straight
+conditional paths give a curved flow wherever segments cross; reflow
+re-pairs noise with the flow's own endpoints, does not increase the
+transport cost, and on the two moons lets one Euler step match thirty-two.
+The cost cannot fall below the squared Wasserstein distance, the least
+kinetic energy of any flow between the endpoints, which straight
+constant-speed motion attains only under an optimal pairing. How many steps
+a field needs also depends on where they are placed, because the grid
+decides how much of the step errors cancels. On the exact field of the
+running mixture, Heun's method loses to Euler below about $40$ evaluations
+on a uniform grid and wins at every budget on a grid crowded toward the
+data.
 
 ## Exercises
 
@@ -1510,18 +1610,16 @@ budget on a grid crowded toward the data.
        $\boldsymbol{\epsilon} - \mathbf{x}_0$ given $\mathbf{x}_t$, summed over
        coordinates, at $t = 0$ and at $t = 1$. The training cell prints the
        loss per coordinate; which number should it be compared with?
-    1. Compute the floor numerically. Draw $(t, \mathbf{x}_0, \boldsymbol{\epsilon})$,
-       form $\mathbf{x}_t$, weight every training point $\mathbf{x}_0'$ by
-       $\exp\big(-\|\mathbf{x}_t - (1 - t)\mathbf{x}_0'\|^2 / 2t^2\big)$, and
-       average the posterior variance of $\mathbf{x}_0$, divided by
-       $t^2$, over a few thousand draws. Compare the result with the
-       printed plateau. At which $t$ is the per-$t$ floor largest, and why
-       does it fall toward both ends?
-    1. The reflow loss settles at a few thousandths. What does this say about
-       crossings among the segments from
+    1. The function `pairing_floor` averages the floor over $t$. Change it
+       to report the floor separately for each tenth of $[0, 1]$. At which
+       $t$ is the floor largest, and why does it fall toward both ends?
+       Compare the first and the last tenth with part (b). One end falls
+       short of it. What do the thinness of the crescents and the finite
+       number of training points have to do with that?
+    1. The reflow loss settles at a few thousandths or less. What does this
+       say about crossings among the segments from
        $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ to $\boldsymbol{\epsilon}$,
-       allowing for the approximation
-       error of the network?
+       allowing for the approximation error of the network?
    :exlabel:`ex_mdl-flow-matching-transport-crossing-floor`
 
 1. **Stochastic interpolants.** ● :citet:`Albergo.Boffi.VandenEijnden.2023`
@@ -1552,9 +1650,13 @@ budget on a grid crowded toward the data.
    :exlabel:`ex_mdl-score-matching-diffusion-flow-stochastic-interpolants`
 
 1. **Late decisions.** Take the two-point example with data $\pm a$.
-    1. Derive :eqref:`eq_mdl-two-point-velocity` from the posterior over
-       $x_0$, and show that the terms in $x^2$ cancel in the log-odds.
-    1. Show that $\partial_x u_t(0) = \big(1 - (1 - t)\, a^2/t^2\big)/t$
+    1. Give the point $+a$ the weight $w$ and the point $-a$ the weight
+       $1 - w$. Repeat the derivation of :eqref:`eq_mdl-two-point-velocity`
+       and show that the posterior mean becomes
+       $a \tanh\big((1 - t)\, a x/t^2 + \tfrac12 \log\tfrac{w}{1 - w}\big)$.
+       Where does one Euler step from $t = 1$ to $t = 0$ land now?
+    1. For equal weights, show that
+       $\partial_x u_t(0) = \big(1 - (1 - t)\, a^2/t^2\big)/t$
        and that, as $t$ falls, the origin turns from attracting to repelling
        at $t^* = \tfrac12\big(\sqrt{a^4 + 4a^2} - a^2\big)$, which is
        $2\sqrt{2} - 2 \approx 0.83$ for $a = 2$. How does $t^*$ behave as
@@ -1564,20 +1666,16 @@ budget on a grid crowded toward the data.
        exactly on $\pm a$ from any point where the $\tanh$ is saturated.
        Which part of the flow, then, limits a fixed-step solver, and at which
        times?
-    1. Show that
-       $C = \mathbb{E}_t \mathbb{E}_x \textrm{Var}(x_0 \mid x_t)/t^2$
-       is finite although the conditional velocity $(x - x_0)/t$ is
-       unbounded. Use
-       $\textrm{Var}(x_0 \mid x_t = x) = a^2 \operatorname{sech}^2\big((1 - t)\, a x/t^2\big)$
-       and the fact that the density of $x_t$ near $0$ is of order
-       $e^{-(1 - t)^2 a^2/2t^2}/t$.
+    1. The floor is
+       $C = \mathbb{E}_t \mathbb{E}_x \textrm{Var}(x_0 \mid x_t)/t^2$ with
+       $\textrm{Var}(x_0 \mid x_t = x) = a^2 \operatorname{sech}^2\big((1 - t)\, a x/t^2\big)$.
+       Show that $C \le a^2 + 1$. Then explain why the times near $t = 0$
+       contribute almost nothing to $C$ although the conditional velocity
+       $(x - x_0)/t$ is unbounded there. Use the fact that the density of
+       $x_t$ near $0$ is of order $e^{-(1 - t)^2 a^2/2t^2}/t$.
    :exlabel:`ex_mdl-flow-matching-transport-late-decisions`
 
 1. [code] **Optimal transport in one dimension.**
-    1. For data $\mathcal{N}(m, s^2)$ with $s > 0$ and noise
-       $\mathcal{N}(0, 1)$, show that the sorted pairing is
-       $x_0 = m + s\epsilon$ and costs $m^2 + (s - 1)^2$, while the
-       independent pairing costs $m^2 + 1 + s^2$.
     1. Prove that in one dimension the sorted pairing minimizes
        $\mathbb{E}\, c(x_1 - x_0)$ for every convex $c$. Suppose two pairs
        $(x_0, x_1)$ and $(x_0', x_1')$ cross: $x_0 < x_0'$ but $x_1 > x_1'$.
@@ -1590,32 +1688,34 @@ budget on a grid crowded toward the data.
        carrying $p_1$ to $p_0$, with $p_1$ a density, induces the sorted
        pairing. Conclude that in one
        dimension every such flow has an optimal pairing.
-    1. Check (a) by sorting $10^5$ samples for $(m, s) = (0, 2)$ and
-       $(1, 2)$.
+    1. Sorting computes $W_2^2$ on a line even where no formula does.
+       Estimate it between $\mathcal{N}(0, 1)$ and the mixture
+       $\tfrac12 \mathcal{N}(-2, 0.25) + \tfrac12 \mathcal{N}(2, 0.25)$ from
+       $10^5$ sorted samples of each, and compare it with the cost $5.25$ of
+       the independent pairing. Why is it smaller than the $1.81$ of the
+       two points at $\pm 2$?
    :exlabel:`ex_mdl-flow-matching-transport-one-dimensional-ot`
 
-1. [code] **Kinetic energy of Gaussian paths.**
+1. **Kinetic energy of Gaussian paths.**
     1. Show that if $p_t = \mathcal{N}(0, s_t^2)$ in one dimension, the
        velocity $u_t(x) = (\dot{s}_t/s_t)\, x$ satisfies the continuity
        equation, and that its kinetic energy is $\int_0^1 \dot{s}_t^2\, dt$.
        Why does a Gaussian cloud need no other velocity?
-    1. For data $\mathcal{N}(0, 4)$ and noise $\mathcal{N}(0, 1)$, find
-       $s_t$ for (i) the
-       straight flow of the sorted pairing, (ii) the marginal flow of
-       straight segments under the independent pairing, and (iii) the cosine
-       path. Compute the three kinetic energies in closed form or by
-       quadrature, and order them against $W_2^2 = 1$.
-    1. Explain why (ii) costs more than (iii) although its conditional
-       segments are straight. Sketch $s_t$ for both.
-    1. Repeat (ii) for data $\mathcal{N}(0, 1)$. Show that
-       the independent pairing has kinetic energy about $0.43$ although
-       $W_2^2 = 0$. Which pairing costs nothing, and what is its flow?
+    1. For data $\mathcal{N}(0, 4)$ and noise $\mathcal{N}(0, 1)$, write
+       down $s_t$ for the three flows of the cell: the straight flow of the
+       sorted pairing, the marginal flow of straight segments under the
+       independent pairing, and the cosine path. Show that the first two
+       kinetic energies are exactly $1$ and $5 - \pi$.
+    1. Repeat the independent pairing for data $\mathcal{N}(0, 1)$. Show
+       that its marginal flow has kinetic energy $2 - \pi/2 \approx 0.43$
+       although $W_2^2 = 0$. Which pairing costs nothing, and what is its
+       flow?
    :exlabel:`ex_mdl-flow-matching-transport-kinetic-energy`
 
 1. [code] **One reflow round on two points.** Take data $\pm a$, noise
    $\mathcal{N}(0, 1)$, the independent pairing, and the marginal flow
    :eqref:`eq_mdl-two-point-velocity` of the two-point example.
-    1. Using part (c) of
+    1. Using part (b) of Exercise
        :exref:`ex_mdl-flow-matching-transport-one-dimensional-ot`, show that
        the flow map from $t = 1$ to $t = 0$ is
        $\epsilon \mapsto a \operatorname{sign}(\epsilon)$, so one reflow
@@ -1627,10 +1727,13 @@ budget on a grid crowded toward the data.
        never cross, so that the floor of the second round is $C = 0$, and
        write down its field. Is one Euler step of it exact?
     1. Integrate the closed-form field with RK4 from $20{,}000$ Gaussian
-       draws at $t = 1$ down to $t = 10^{-3}$ (the velocity grows like
-       $1/t$, so stop short of $0$), and check the endpoints and the cost.
-    1. The floor of the independent pairing is $C \approx 2.03$ for $a = 2$
-       (compute it). Check the bound
+       draws at $t = 1$ down to $t = 10^{-3}$ (the slope of the field grows
+       like $1/t$, so stop short of $0$), and check the endpoints and the
+       cost.
+    1. The floor of the independent pairing is $C \approx 2.03$ for $a = 2$.
+       Compute it by quadrature from the formula in part (d) of Exercise
+       :exref:`ex_mdl-flow-matching-transport-late-decisions`, and find the
+       time above which $99\%$ of it is collected. Check the bound
        $\mathbb{E}\|\mathbf{Z}_1 - \mathbf{Z}_0\|^2 \le \mathbb{E}\|\mathbf{X}_1 - \mathbf{X}_0\|^2 - C$ of the
        reflow proposition. How much slack does it leave here?
    :exlabel:`ex_mdl-flow-matching-transport-reflow-two-points`
@@ -1640,8 +1743,8 @@ budget on a grid crowded toward the data.
    data points and re-pairs them by the assignment of least total squared
    distance (`scipy.optimize.linear_sum_assignment` on the $256 \times 256$
    cost matrix), and train with `train_rf`.
-    1. Report the loss plateau, the energy distance at $1$, $2$, $8$ and
-       $32$ steps, and the mean squared pair length before and after
+    1. Report the loss plateau, the squared energy distance at $1$, $2$,
+       $8$ and $32$ steps, and the mean squared pair length before and after
        re-pairing. Compare with the independent pairing and with reflow.
     1. Show that a re-paired noise point is still a standard Gaussian draw
        and a re-paired data point is still a draw from the data, so the
@@ -1659,8 +1762,8 @@ budget on a grid crowded toward the data.
        targets in :numref:`tab_mdl-score-noise-velocity`: the conditional
        score $-\epsilon/\sigma_t$, the noise $\epsilon$, the clean point
        $x_0$, the velocity $\dot{\alpha}_t x_0 + \dot{\sigma}_t \epsilon$,
-       and the $v$-target $\alpha_t \epsilon - \sigma_t x_0$. Which blow up,
-       and at which end of the path?
+       and the $\mathbf{v}$-target $\alpha_t \epsilon - \sigma_t x_0$.
+       Which blow up, and at which end of the path?
     1. A network trained on the noise outputs $\hat{\epsilon}$ with error
        $\delta$. Show that the implied clean point
        $(x - \sigma_t \hat{\epsilon})/\alpha_t$ carries the error
@@ -1672,6 +1775,16 @@ budget on a grid crowded toward the data.
        and that the velocity implied by a noise prediction carries the error
        $\pi\delta/(2\alpha_t)$. Which parameterizations keep the error bounded
        at both ends?
+    1. The conversions of :numref:`tab_mdl-score-noise-velocity` hold for
+       any data. Check :eqref:`eq_mdl-score-velocity` numerically on the
+       mixture $\tfrac12 \mathcal{N}(-2, 0.25) + \tfrac12 \mathcal{N}(2, 0.25)$
+       on the cosine path at $t = 0.4$. On a grid of points $x$, compute the
+       marginal velocity once as the posterior mean of
+       $\dot{\alpha}_t x_0 + \dot{\sigma}_t \epsilon$, weighting each
+       component by its posterior probability, and once from the score of
+       the noised mixture. The two should agree to rounding error. Which
+       numbers in the computation change when the mixture weights become
+       $0.8$ and $0.2$, and which do not?
    :exlabel:`ex_mdl-flow-matching-transport-target-conditioning`
 
 1. **Reflow preserves marginals and can stall.**
@@ -1694,8 +1807,10 @@ budget on a grid crowded toward the data.
        $(1 - t) \pm \mathrm{i}\, t$), so that $C = 0$ and reflow changes
        nothing, while the cost is
        $\mathbb{E}\|\mathbf{R}\mathbf{x}_0 - \mathbf{x}_0\|^2 = 4$ against
-       $W_2^2 = 0$. Which property beyond being straight and crossing-free
-       does optimality need?
+       $W_2^2 = 0$. For which matrices $\mathbf{A}$ is the linear map
+       $\mathbf{x} \mapsto \mathbf{A}\mathbf{x}$ the gradient of a convex
+       function, and hence an optimal pairing of
+       $\mathcal{N}(\mathbf{0}, \mathbf{I})$ with its image?
    :exlabel:`ex_mdl-flow-matching-transport-reflow-fixed-points`
 
 1. [code] **A stochastic sampler for a flow-matching model.** ●
@@ -1712,8 +1827,9 @@ budget on a grid crowded toward the data.
        therefore defines a family of stochastic samplers.
     1. Implement the sampler with Euler–Maruyama for the trained two-moons
        field, with $g \in \{0, \tfrac12, 1\}$ and $K \in \{8, 32, 128\}$
-       steps. Stop at $t = 1/K$, because the score grows like $1/t$, and
-       report the energy distance of each run. Which $g$
+       steps. Evaluate the score at $t = 1, 1 - 1/K, \ldots, 1/K$ only,
+       because it is singular at $t = 0$, and report the squared energy
+       distance of each run. Which $g$
        needs the fewest steps for a given quality, and does noise help at
        $K = 8$?
     1. Repeat for the reflowed field. Explain, from the straightness of its
@@ -1727,23 +1843,20 @@ budget on a grid crowded toward the data.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §29.6]{.kicker}
+[Dive into Deep Learning · §38.7]{.kicker}
 
-Can we choose the path from noise to data, and choose it straight?<br>**paths · velocities · reflow · couplings · solvers**
+Can we choose the path from noise to data, and choose it straight?<br>**paths · velocities · reflow · couplings**
 :::
 :::
 
 ::: {.slide title="Score Samplers Take Many Steps Because Their Paths Curve"}
 [The problem]{.kicker}
 
-- A diffusion sampler: a reverse chain of $1000$ steps, or a few dozen
-  deterministic strides; every step is one network call.
-- The path was fixed by the noising process, not chosen for easy
-  integration, and it curves.
-- A particle moving in a straight line at constant speed is integrated
-  exactly by **one** Euler step of any length.
-- Two data points at $\pm2$, Gaussian noise: particles bound for different
-  points pass through the same place, and a field has one value there.
+- A diffusion sampler calls its network once per step: $1000$ steps for the
+  reverse chain, a few dozen for deterministic strides.
+- Nobody designed its paths. The noising process fixed them, and they curve.
+- A particle on a straight line at constant speed is integrated exactly by
+  **one** Euler step.
 
 ::: {.d2l-note .rule}
 Choose the path; learn only the velocity that moves mass along it.
@@ -1754,15 +1867,17 @@ Choose the path; learn only the velocity that moves mass along it.
 [Goals]{.kicker}
 
 - compute the velocity of a chosen path as a posterior mean;
-- prove that per-pair regression has the gradients of the marginal loss;
-- convert a score into a velocity and back;
+- show that per-pair regression has the gradients of the marginal loss;
+- convert a score or a noise prediction into a velocity;
 - explain why straight segments give a curved flow, and what re-pairing does;
-- compute $W_2$ between Gaussians on a line; prove $W_2^2$ is the least
-  kinetic energy;
-- pick a solver and a time grid for a budget of network calls.
+- compute $W_2$ between Gaussians on a line, and bound the kinetic energy of
+  every flow by it.
 
 **Running examples:** two points at $\pm2$ (closed form); two moons in the
 plane (trained network).
+
+**The idea:** the path is ours to choose, and the pairing of noise with data
+decides how straight the flow is.
 :::
 
 ::: {.slide title="Flow Matching Chooses the Path That Diffusion Inherited"}
@@ -1772,7 +1887,8 @@ plane (trained network).
 ::: {.col}
 | section | adds |
 |---|---|
-| ODEs and Solvers | exact motion and its numerical steps |
+| Ordinary Differential Equations | exact motion: uniqueness, eigenvalues |
+| Numerical Solvers | steps: their order and stability |
 | Neural ODEs | a learned field, its gradient, its density |
 | Stochastic Differential Equations | noise, Itô calculus, the OU process |
 | Fokker–Planck and Probability Flow | how the density moves; the score |
@@ -1781,9 +1897,9 @@ plane (trained network).
 :::
 
 ::: {.col .narrow}
-- **Uses:** $\partial_tp_t+\nabla\cdot(p_t\mathbf u_t)=0$; least squares fits
-  $\mathbb{E}[Y\mid X]$.
-- **Skips:** images, distillation, discrete diffusion.
+- **Uses:** the continuity equation; least squares fits
+  $\mathbb{E}[Y\mid X]$; Euler and Heun.
+- **Skips:** images, guidance, few-step distillation.
 :::
 :::
 :::
@@ -1799,17 +1915,38 @@ $(\mathbf x_0,\mathbf x_1)$ our $(\boldsymbol\epsilon,\mathbf x_0)$, their
 $\mathbf u$ our $-\mathbf u$.
 :::
 
+::: {.slide title="A Velocity Field That Moves the Density Along the Path Is a Generator"}
+[Flow matching]{.kicker}
+
+A path of densities $p_t$ from the data $p_0$ to the noise
+$p_1=\mathcal N(\mathbf 0,\mathbf I)$. A field $\mathbf u_t$ *realizes* it
+if mass is conserved:
+
+$$\partial_tp_t+\nabla\cdot(p_t\,\mathbf u_t)=0$$
+
+- Then $\dot{\mathbf x}=\mathbf u_t(\mathbf x)$, solved from
+  $\mathbf x(1)\sim p_1$ down to $t=0$, ends on $\mathbf x(0)\sim p_0$.
+- The natural loss
+  $\mathcal L_{\mathrm{FM}}=\mathbb{E}_{t,\,\mathbf x\sim p_t}\|\mathbf u_{\boldsymbol\theta}(\mathbf x,t)-\mathbf u_t(\mathbf x)\|^2$
+  is useless: $\mathbf u_t$ depends on the whole data law.
+
+::: {.d2l-note .rule}
+Build the path from pieces whose velocities we know.
+:::
+:::
+
 ::: {.slide title="The Velocity of the Cloud Is the Posterior Mean of Per-Sample Velocities"}
 [Marginal velocity]{.kicker}
 
-Blobs $p_t(\mathbf x\mid\mathbf z)$ with known velocities
+Label $\mathbf z\sim q$ (a data point, or a data–noise pair). Blobs
+$p_t(\mathbf x\mid\mathbf z)$ with known velocities
 $\mathbf u_t(\mathbf x\mid\mathbf z)$; path $p_t=\int p_t(\cdot\mid\mathbf z)\,q(\mathbf z)\,d\mathbf z$.
 
 $$\mathbf u_t(\mathbf x)=\mathbb{E}\big[\mathbf u_t(\mathbf x\mid\mathbf z)\,\big|\,\mathbf x_t=\mathbf x\big]$$
 
-- I. Differentiate the mixture under the integral.
-- II. Substitute each blob's continuity equation.
-- III. Multiply and divide by $p_t(\mathbf x)$: the flux is $p_t\mathbf u_t$.
+- **I.** Differentiate the mixture under the integral.
+- **II.** Substitute each blob's continuity equation.
+- **III.** Multiply and divide by $p_t(\mathbf x)$: the flux is $p_t\mathbf u_t$.
 
 ::: {.d2l-note .rule}
 Where one blob passes, its velocity; where several pass, their average.
@@ -1826,9 +1963,32 @@ $$\mathcal L_{\mathrm{CFM}}=\mathbb{E}\,\|\mathbf u_{\boldsymbol\theta}(\mathbf 
 
 - $X=(\mathbf x,t)$, $Y=\mathbf u_t(\mathbf x\mid\mathbf z)$: same gradients, same minimizer.
 - The floor $C$ is the disagreement of per-sample velocities through a point.
+- No solver in the loss: the number of steps is chosen afterwards.
 
 ::: {.d2l-note .rule}
 A perfect field still has loss $C$, not $0$.
+:::
+:::
+
+::: {.slide title="On a Gaussian Path a Noise Predictor Is Already a Velocity Field"}
+[Score, noise, and velocity]{.kicker}
+
+Path $\mathbf x_t=\alpha_t\mathbf x_0+\sigma_t\boldsymbol\epsilon$ with
+$(\alpha_0,\sigma_0)=(1,0)$, $(\alpha_1,\sigma_1)=(0,1)$. Score, noise and
+velocity are affine in $\hat{\mathbf x}_0=\mathbb{E}[\mathbf x_0\mid\mathbf x_t=\mathbf x]$;
+eliminate it:
+
+$$\mathbf u_t(\mathbf x)=\frac{\dot\alpha_t}{\alpha_t}\mathbf x-\Big(\sigma_t\dot\sigma_t-\sigma_t^2\frac{\dot\alpha_t}{\alpha_t}\Big)\nabla\log p_t(\mathbf x),\qquad\hat{\boldsymbol\epsilon}=-\sigma_t\nabla\log p_t$$
+
+- If $\alpha_t^2+\sigma_t^2=1$: $\mathbf u_t=\frac{\dot\alpha_t}{\alpha_t}(\mathbf x+\nabla\log p_t)$,
+  the probability-flow velocity.
+- Data $\mathcal N(0,4)$, $\alpha_t=\cos\frac{\pi t}2$, $\sigma_t=\sin\frac{\pi t}2$,
+  $t=\tfrac12$: $p_t=\mathcal N(0,2.5)$, and the identity gives
+  $u_t(x)=-0.94\,x$, the rate $\dot s_t/s_t$ at which the cloud's width
+  $s_t$ changes.
+
+::: {.d2l-note .rule}
+The schedule fixes both multiples; no second training run is needed.
 :::
 :::
 
@@ -1837,6 +1997,7 @@ A perfect field still has loss $C$, not $0$.
 
 ![](../img/mdl-dyn-two-point-flow.svg){width=88%}
 
+Path $x_t=(1-t)x_0+t\epsilon$, independent pairs.
 $u_t(x)=\big(x-2\tanh\frac{2(1-t)x}{t^2}\big)/t$: $u_1=x$; as $t$ falls, the
 origin stops attracting at $t^*=2\sqrt2-2\approx0.83$.
 :::
@@ -1849,73 +2010,90 @@ Independent pairing, any data, one step from $t=1$ to $t=0$ from noise $\boldsym
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** At the data mean: $\mathbf u_1(\mathbf x)=\mathbb{E}[\boldsymbol\epsilon-\mathbf x_0\mid\boldsymbol\epsilon=\mathbf x]=\mathbf x-\mathbb{E}\mathbf x_0$.
-For the two points every sample lands on $0$:
+For the two points one step puts every sample on $0$ (first row); a few
+more steps reach the points:
 :::
 
 @!mdl-flow-matching-transport-example-two-points-in-one-dimension
 :::
 :::
 
-::: {.slide title="Velocity and Score Are Affine in One Posterior Mean"}
-[Score, noise, and velocity]{.kicker}
-
-Gaussian path $\mathbf x_t=\alpha_t\mathbf x_0+\sigma_t\boldsymbol\epsilon$:
-
-$$\mathbf u_t(\mathbf x)=\frac{\dot\alpha_t}{\alpha_t}\mathbf x-\Big(\sigma_t\dot\sigma_t-\sigma_t^2\frac{\dot\alpha_t}{\alpha_t}\Big)\nabla\log p_t(\mathbf x)$$
-
-- If $\alpha_t^2+\sigma_t^2=1$: $\mathbf u_t=\frac{\dot\alpha_t}{\alpha_t}(\mathbf x+\nabla\log p_t)$,
-  the probability-flow velocity.
-<!-- WRITER: the check cell shown here was cut (FMT-4); this slide moves before the two-point slides, as the body did. -->
-:::
-
 ::: {.slide title="Straight Segments That Cross Produce a Curved Flow"}
 [Rectified flow]{.kicker}
 
 Pairs $(\mathbf x_0,\boldsymbol\epsilon)$, path $(1-t)\mathbf x_0+t\boldsymbol\epsilon$,
-target $\boldsymbol\epsilon-\mathbf x_0$.
+regression target $\boldsymbol\epsilon-\mathbf x_0$.
 
-![](../img/mdl-dyn-fm-paths.svg){width=62%}
+![](../img/mdl-dyn-fm-paths.svg){width=60%}
 
 - A field has one value per point, so it averages crossing directions.
 - A Lipschitz ODE has one trajectory per point, so the flow bends.
 :::
 
-::: {.slide title="Two Moons: The Loss Settles at the Floor 1.4, Not at Zero"}
+::: {.slide title="Two Moons: The Loss Stops at 1.4, Just Above Its Floor"}
 [Training]{.kicker}
 
-$3\to64\to64\to2$ tanh network, Glorot init, Adam with cosine decay,
-$4{,}000$ steps of $256$ independent pairs:
+Data: two interleaved crescents in the plane, $8{,}192$ points, standardized.
+The floor $C$, from the posterior variance of $\mathbf x_0$ over the training
+points:
+
+@!mdl-flow-matching-transport-example-two-moons-2
+
+A small tanh network, $4{,}000$ steps of $256$ independent pairs; loss per
+coordinate:
 
 @!mdl-flow-matching-transport-example-two-moons-1
 
-- The floor from posterior variances: $1.38$ per coordinate.
-- The rest of the loss is the disagreement of crossing segments.
+- Almost all of the loss is the disagreement of crossing segments, which no
+  network can remove.
+- The excess over the floor, a few hundredths, is the error of the field.
 :::
 
-::: {.slide title="One Step Gives the Mean; Thirty-Two Give the Moons"}
+::: {.slide title="More Euler Steps Help Until Only the Network's Error Is Left"}
+[Sampling]{.kicker}
+
+Score: squared energy distance
+$2\,\mathbb{E}\|X-Y\|-\mathbb{E}\|X-X'\|-\mathbb{E}\|Y-Y'\|$ to held-out data
+($0$ for equal laws; about $0.9$ for a point mass at the data mean).
+
+@!score-matching-diffusion-flow-steps-quality
+
+One step: about $0.7$. Two: $0.16$. Eight: $0.01$ to $0.02$. Level from
+sixteen on.
+:::
+
+::: {.slide title="One Step Gives the Mean; Eight Give Blurred Moons"}
 [Sampling]{.kicker}
 
 @!score-matching-diffusion-flow-cfm-panels
 
-Squared energy distance to held-out data: about $0.7$ at $1$ step,
-about $0.15$ at $2$, $0.01$ at $8$, about $0.01$ or less from $16$ on.
+Last panel: held-out data. More steps do not sharpen the samples, so the
+blur is the field's error, the excess of the loss over its floor. The energy
+distance hardly registers it.
+
+::: {.d2l-note .rule}
+The curvature that independent pairs build in costs sixteen to thirty-two
+network calls per sample.
+:::
 :::
 
 ::: {.slide title="Reflow Does Not Increase the Transport Cost"}
 [Reflow]{.kicker}
 
-$\mathbf{X}_t=(1-t)\mathbf{X}_0+t\mathbf{X}_1$, marginal velocity $\mathbf u_t$; run
-$\dot{\mathbf{Z}}_t=\mathbf u_t(\mathbf{Z}_t)$ back from the noise $\mathbf{Z}_1=\mathbf{X}_1$ and pair it with $\mathbf{Z}_0$. For convex $c$:
+**Reflow:** pair each noise point with the endpoint of its trajectory, then
+retrain. Old pairs $\mathbf{X}_t=(1-t)\mathbf{X}_0+t\mathbf{X}_1$, velocity
+$\mathbf u_t$; flow $\mathbf{Z}_t$ from the same noise. For convex $c$:
 
-$$\mathbb{E}\,c(\mathbf{Z}_1-\mathbf{Z}_0)\le\int_0^1\mathbb{E}\,c(\mathbf u_t(\mathbf{Z}_t))\,dt=\int_0^1\mathbb{E}\,c\big(\mathbb{E}[\mathbf{X}_1-\mathbf{X}_0\mid\mathbf{X}_t]\big)dt\le\mathbb{E}\,c(\mathbf{X}_1-\mathbf{X}_0)$$
+$$\begin{aligned}\mathbb{E}\,c(\mathbf{Z}_1-\mathbf{Z}_0)&\le\int_0^1\mathbb{E}\,c(\mathbf u_t(\mathbf{Z}_t))\,dt\\&=\int_0^1\mathbb{E}\,c\big(\mathbb{E}[\mathbf{X}_1-\mathbf{X}_0\mid\mathbf{X}_t]\big)dt\le\mathbb{E}\,c(\mathbf{X}_1-\mathbf{X}_0)\end{aligned}$$
 
-- I. Jensen for the time average.
-- II. $\mathbf{Z}_t\sim\mathbf{X}_t$: both laws solve one continuity equation.
-- III. Conditional Jensen.
+- **I.** Jensen over time. **II.** $\mathbf{Z}_t\sim\mathbf{X}_t$: one
+  continuity equation. **III.** Conditional Jensen.
 
 ::: {.d2l-note .rule}
 With $c=\|\cdot\|^2$ the cost falls by at least the floor $C$.
 :::
+
+[Assumes $\mathbf u_t$ Lipschitz in $\mathbf x$, uniformly in $t$; for data with atoms, only on $[\delta,1]$.]{.small}
 :::
 
 ::: {.slide title="After One Reflow Round, One Step Matches Thirty-Two"}
@@ -1925,7 +2103,8 @@ $8{,}192$ noise points paired with their $32$-step endpoints, then retrained:
 
 @!mdl-flow-matching-transport-reflow-1
 
-- Reflow loss: a few thousandths instead of $1.4$.
+- Reflow loss: a few thousandths or less, where the first loss stopped at $1.4$.
+- Pair cost: $4$ before; the bound allows about $1.25$; measured about $0.3$.
 - Distance of trajectories from their chords: $0.25\to0.01$.
 :::
 
@@ -1939,47 +2118,54 @@ line preserves order.
 ::: {.d2l-note}
 **Answer.** $C=0$. The new pairing is $\epsilon\mapsto2\operatorname{sign}(\epsilon)$,
 its segments never cross, and it costs $5-4\sqrt{2/\pi}=1.81$ against $5$.
+One Euler step is then exact.
 :::
 :::
 :::
 
-::: {.slide title="On a Line Sorting Is Optimal; in the Plane, Crossing-Free Is Not"}
+::: {.slide title="In the Plane a Pairing Can Be Straight, Crossing-Free and Wrong"}
 [Couplings]{.kicker}
 
 ![](../img/mdl-dyn-couplings-energy.svg){width=92%}
 
-- Data $\mathcal N(m,s^2)$, noise $\mathcal N(0,1)$: $W_2^2=m^2+(s-1)^2$; independent pairs cost $m^2+1+s^2$.
-- Rotation by a quarter turn: no crossings, $W_2^2=0$, kinetic energy $\pi^2/2$.
+- $W_2^2$: least $\mathbb{E}\|\mathbf x_1-\mathbf x_0\|^2$ over pairings of data ($t=0$) with noise ($t=1$). On a line sorting attains it: $m^2+(s-1)^2$ for data $\mathcal N(m,s^2)$.
+- Right: a quarter turn of $\mathcal N(\mathbf 0,\mathbf I)$. Chords never cross and cost $4$, yet $W_2^2=0$: a rotation is not the gradient of a convex function.
 :::
 
 ::: {.slide title="Every Flow Costs at Least W₂²"}
 [Benamou–Brenier, lower bound]{.kicker}
 
-Kinetic energy $\int_0^1\mathbb{E}\|\mathbf u_t(\mathbf X_t)\|^2dt$ of a
-flow between $p_0$ and $p_1$, Lipschitz field:
+Kinetic energy $\int_0^1\mathbb{E}\|\mathbf u_t(\mathbf Z_t)\|^2dt$ of an
+admissible flow $\mathbf Z_t$ between $p_0$ and $p_1$: mean squared speed,
+summed over time.
 
-- I. Its endpoints $(\mathbf X_0,\mathbf X_1)$ are a coupling of $p_0,p_1$.
-- II. Jensen for the time average:
+- **I.** Its endpoints $(\mathbf Z_0,\mathbf Z_1)$ are a coupling of $p_0,p_1$.
+- **II.** Jensen for the time average:
 
-$$W_2^2\le\mathbb{E}\|\mathbf X_1-\mathbf X_0\|^2=\mathbb{E}\Big\|\int_0^1\mathbf u_t(\mathbf X_t)\,dt\Big\|^2\le\int_0^1\mathbb{E}\|\mathbf u_t(\mathbf X_t)\|^2dt$$
+$$W_2^2\le\mathbb{E}\|\mathbf Z_1-\mathbf Z_0\|^2=\mathbb{E}\Big\|\int_0^1\mathbf u_t(\mathbf Z_t)\,dt\Big\|^2\le\int_0^1\mathbb{E}\|\mathbf u_t(\mathbf Z_t)\|^2dt$$
 
 Equality in II iff every particle moves at constant velocity.
+
+[Admissible: $\mathbf u_t$ is $C^1$ and Lipschitz in $\mathbf x$, uniformly in $t$, and $(p_t,\mathbf u_t)$ solves the continuity equation from $p_0$ to $p_1$.]{.small}
 :::
 
 ::: {.slide title="The Optimal Pairing, Joined by Straight Lines, Costs Exactly W₂²"}
 [Benamou–Brenier, upper bound]{.kicker}
 
-- III. Optimal coupling $\pi^\star$, straight path $\mathbf X_t$, velocity
+- **III.** Optimal coupling $\pi^\star$, straight path $\mathbf X_t$, velocity
   $\mathbf u_t=\mathbb{E}[\mathbf X_1-\mathbf X_0\mid\mathbf X_t]$:
 
 $$\int_0^1\mathbb{E}\big\|\mathbb{E}[\mathbf X_1-\mathbf X_0\mid\mathbf X_t]\big\|^2dt\le\mathbb{E}_{\pi^\star}\|\mathbf X_1-\mathbf X_0\|^2=W_2^2$$
 
 ::: {.d2l-note .rule}
-$W_2^2=\min\int_0^1\!\int\|\mathbf u_t\|^2p_t$: the least kinetic energy of any
-flow, attained by straight constant-speed motion under an optimal pairing.
+If this field is admissible, $W_2^2=\min\int_0^1\!\int\|\mathbf u_t\|^2p_t$ over
+admissible flows: straight constant-speed motion under an optimal pairing.
 :::
 
-Since the lower bound applies too, the segments of $\pi^\star$ do not cross.
+Then III is an equality too: the segments of $\pi^\star$ do not cross, the
+floor is $0$, and one Euler step is exact.
+
+[In general the minimum is over weak solutions of the continuity equation (cited, not proved); the two-point optimum, with slope $1/t$, needs it.]{.small}
 :::
 
 ::: {.slide title="Check: Three Flows Between N(0, 4) and N(0, 1)"}
@@ -1998,50 +2184,56 @@ the cosine path costs $1.23$.
 :::
 :::
 
-::: {.slide title="Where the Steps Go Matters More Than Solver Order"}
-[Solver order]{.kicker}
+::: {.slide title="On This Field the Grid Decides Which Solver Wins at Small Budgets"}
+[Solver order at equal cost]{.kicker}
 
-Exact-score probability-flow ODE of the running mixture; mean endpoint error:
+Exact-score probability-flow ODE of $\tfrac12\mathcal N(-2,0.25)+\tfrac12\mathcal N(2,0.25)$;
+mean endpoint error against field evaluations (Heun: two per step):
 
-| grid, solver | 10 NFE | 20 NFE | 40 NFE |
+| grid, solver | 10 | 20 | 40 |
 |:--|--:|--:|--:|
-| uniform, Euler | 0.04 | 0.02 | 0.010 |
-| uniform, Heun | 0.08 | 0.028 | 0.008 |
-| $t=u^2$, Euler | 0.11 | 0.05 | 0.026 |
-| $t=u^2$, Heun | 0.03 | 0.014 | 0.005 |
+| equal steps, Euler | 0.04 | 0.02 | 0.010 |
+| equal steps, Heun | 0.08 | 0.03 | 0.009 |
+| squared grid, Euler | 0.11 | 0.05 | 0.03 |
+| squared grid, Heun | 0.03 | 0.015 | 0.005 |
 
-<!-- WRITER: the bullet below is false for Heun on t = u^2 (surviving share 0.25-0.42, Euler uniform 0.11-0.12, Heun uniform 0.58-0.73, Euler squared 0.30-0.35); new cell #mdl-flow-matching-transport-solver-order-at-equal-cost-1 prints the shares. -->
-- Step errors of opposite sign cancel: Euler's on uniform steps, Heun's on $t=u^2$.
+- Equal steps: Heun loses below $40$ evaluations.
+- Squared grid $t_k=(1-k/K)^2$, crowded toward the data: Heun wins at every
+  budget.
 :::
 
-::: {.slide title="Five Model Families, One Regression"}
-[Comparison]{.kicker}
+::: {.slide title="Check: Why Does First-Order Euler Lead on Equal Steps?"}
+[Check]{.kicker}
 
-| family | learns | samples with |
-|:--|:--|:--|
-| DDPM | noise $\boldsymbol\epsilon_{\boldsymbol\theta}$ | reverse chain |
-| score SDE | score $\mathbf s_{\boldsymbol\theta}$ | reverse SDE |
-| probability-flow ODE | the same score | ODE solver |
-| DDIM | the same noise | deterministic strides |
-| flow matching | velocity $\mathbf u_{\boldsymbol\theta}$ | ODE solver |
+The endpoint error is a sum of signed step errors $c_k$. Which share
+$|\sum_kc_k|/\sum_k|c_k|$ survives?
 
-::: {.d2l-note .rule}
-Each regresses on a closed-form per-sample quantity and samples with a solver.
+::: {.fragment .fade-up}
+@!mdl-flow-matching-transport-solver-order-at-equal-cost-1
+
+::: {.d2l-note}
+**Answer.** Cancellation: an eighth of Euler's step errors survives on equal
+steps, more than half of Heun's. On the squared grid the shares are a third
+and a quarter to two fifths; the totals $\sum_k|c_k|$ change by a seventh at
+most.
+:::
 :::
 :::
 
 ::: {.slide title="Choose the Path, Learn the Velocity, Pair Well"}
-[Wrap-up]{.kicker}
+[Recap]{.kicker}
 
-- Marginal velocity = posterior mean; CFM = FM $+\,C$; floor $1.38$ per
-  coordinate on the moons.
+- Marginal velocity = posterior mean; CFM = FM $+\,C$. On the moons the
+  floor is about $1.37$ per coordinate, the loss $1.4$.
 - Velocity and score are affine in $\hat{\mathbf x}_0$: one network serves both.
-- Independent pairs: one step about $0.7$, thirty-two steps about $0.01$ or less.
+- Independent pairs: $0.7$ at one step, a few thousandths or less at
+  thirty-two, still blurred.
 - Reflow: one step matches thirty-two; pair cost $4\to0.3$.
-- $W_2^2(\mathcal N(0,1),\mathcal N(0,4))=1$ against $5$; $W_2^2$ = least kinetic energy.
-- Equal cost: on a uniform grid Heun beats Euler only from about $40$
-  evaluations; on a grid crowded toward the data it wins at every budget.
+- $W_2^2(\mathcal N(0,1),\mathcal N(0,4))=1$ against $5$; $W_2^2$ is the least
+  kinetic energy; the quarter-turn pairing costs $4$ where $W_2^2=0$.
+- Exact field, equal cost: Heun beats Euler from $40$ evaluations on equal
+  steps, at every budget on crowded steps.
 
-**Next:** finding good pairings cheaply in high dimension, and guidance and
-distillation for images, in the diffusion chapter.
+**Next:** the diffusion chapter, on pairings, guidance and few-step
+generators for images.
 :::

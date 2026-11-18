@@ -218,10 +218,8 @@ passage that answers the question is among the first ten.
 `d2l.BookRetriever`, the retriever this section ends with, is already in
 the library and supplies both; `d2l.book_qa` loads the questions and
 `d2l.gold_chunk_ids` marks the chunks that answer each
-(:numref:`sec_lm_rag` shows both). An *identifier question* is one whose
-question or reference answer contains code, such as a dotted name or a
-call. Counted over all questions, the two retrievers come out close. Do
-they succeed on the same questions?
+(:numref:`sec_lm_rag` shows both). Counted over all questions, the two
+retrievers come out close. Do they succeed on the same questions?
 
 ```{.python .input #retrieval-opening}
 %%tab pytorch
@@ -259,15 +257,22 @@ for win, lose in (('bm25', 'dense'), ('dense', 'bm25')):
 
 They do not. The embedder succeeds on 0.98 of the questions and BM25 on
 0.96, a gap within the noise of 220 questions, yet on 13 of the 220, about
-6%, exactly one of the two succeeds. The first printed question is a poor
-specimen of its kind. It carries the identifier flag only because the
-flag's rule reads the $f(x)$ of a formula in its reference answer as a
-function call; it asks about mathematics, and BM25 finds its passage
-through the words they share, "convex", "quadratic" and "differentiable".
-A cleaner identifier question waits at the end of the section. The second
-asks how accuracy is "computed" where its passage says "calculated based on
-correctness ... for all the pixels", a paraphrase that the embedder sees
-through and a word count does not.
+6%, exactly one of the two succeeds: BM25 alone on 4, the embedder alone
+on 9. The cell prints the first question of each kind.
+
+The first asks about the verifier task of the reinforcement-learning
+chapter, and its passage repeats the question's own words: the verifier
+task, the arithmetic prompts, a baseline that "must be per prompt". BM25
+counts those words and ranks the passage second. The embedder reads the
+question as being about the verifier task, which it is, and fills its first
+ten places with passages that describe that task; the passage that answers,
+a subsection on rewards compared within a group of responses, comes after
+them. The second question asks how accuracy is "computed" where its passage
+says "calculated based on correctness ... for all the pixels", a paraphrase
+that the embedder sees through and a word count does not. One retriever
+matches words and the other matches topics, and each is fooled where the
+other is not. The question that names a function, the case that worried
+us above, waits at the end of the section.
 
 ## The Book as a Corpus
 :label:`subsec_lm_book_corpus`
@@ -686,9 +691,9 @@ $b = 0.4$ to 0.9, and splitting identifiers moves no entry by as much as
 0.004. The rule chooses $k_1 = 1.2$ and $b = 0.9$ with splitting, a stronger
 length normalization than the default, for chunks that run from 14 tokens to
 512. A grid this flat leaves little room, and we should not expect the choice
-to show on dev; the comparison of all retrievers below will check. The next
-cell ranks the dev questions under the chosen and the default parameters,
-keeping 100 chunks per question for fusion, and times BM25.
+to show on dev. The next cell ranks the dev questions under the chosen and
+the default parameters, keeping 100 chunks per question for fusion, and
+times BM25.
 
 ```{.python .input #retrieval-bm25-dev}
 %%tab pytorch
@@ -717,8 +722,10 @@ for name in RANKED:
           f'question with tokenization')
 ```
 
-BM25 answers a dev question in about 0.2 ms on one CPU core, tokenization
-included, under either setting.
+The tuning changes nothing that the dev questions can see: both settings
+put a relevant chunk among the first ten for 0.96 of them. BM25 answers a
+dev question in about 0.2 ms on one CPU core, tokenization included, under
+either setting.
 
 Both choices of this subsection, which strings count as terms and how a
 count becomes a weight, were made by hand. Learned sparse retrieval keeps
@@ -842,7 +849,7 @@ for name, Xm in MATRICES.items():
 del MATRICES
 ```
 
-For the book the scan is negligible. One question takes 0.055 ms, mostly
+For the book the scan is negligible. One question takes about 0.05 ms, mostly
 the fixed cost of launching the kernels and waiting for them, and all 220
 together about 0.1 ms. Nearly all of the 0.9 ms above is the encoder's
 forward pass over the questions, and no index could make dense search over
@@ -1071,8 +1078,8 @@ del reranker
 d2l.lm_free()
 ```
 
-Reranking 20 chunks takes about 0.2 s per question on the GPU, and 100
-chunks about 1.1 s. That makes the reranker the expensive stage by far:
+Reranking 20 chunks takes about a quarter of a second per question on the
+GPU, and 100 chunks about 1.1 s. That makes the reranker the expensive stage by far:
 BM25, the embedder and fusion together took about a millisecond per
 question, with the questions encoded in one batch. The stored scores match
 a live run to the printed digits.
@@ -1085,7 +1092,9 @@ vectors at search time (:numref:`sec_lm_encoders_fr`).
 
 The next cell prints every retriever's measures with intervals over
 documents, the time per question, and paired differences on the same
-questions. The 80 identifier questions come from only 28 documents, too few
+questions. It also splits the questions in two. An *identifier question* is
+one whose question or reference answer contains code, such as a dotted name
+or a call; 80 of the 220 are. They come from only 28 documents, too few
 to resample, so for them a sign-flip test decides: it flips the sign of each
 document's mean difference at random and asks how often the total lies as
 far from zero as the observed one.
@@ -1159,8 +1168,9 @@ fusion's nDCG@10, a third of the remaining distance to a perfect ranking,
 and lifts that 78% to 87%. The plot shows the same: the retrievers differ
 little in Recall@10 (left) and more in nDCG@10 (right).
 
-Two changes gained nothing, and both had no room to gain. Tuning BM25 left
-dev Recall@10 where it was, as the flat grid predicted. Reranking
+Two changes gained nothing, and both had no room to gain. Tuning BM25 did
+not change dev Recall@10 on a single question, as the flat grid predicted.
+Reranking
 100 chunks instead of 20 did not move nDCG@10 and took five times as long,
 because for all but two questions the first 20 fused chunks already hold a
 relevant one.
@@ -1442,7 +1452,8 @@ The cell checks the hand case, then five claims on 20,000 points from a
 mixture of 16 Gaussians in 64 dimensions, synthetic data whose structure we
 know and small enough to check pair by pair, with $M = 8$ and $K = 256$:
 (1) the table gives the distance to the reconstruction; (2) the bound
-holds; (3) $\mathbf{y}^\top \mathbf{e}$ averages to zero; (4) Faiss, given
+holds; (3) $\mathbf{y}^\top \mathbf{e}$ and $\hat{\mathbf{x}}^\top \mathbf{e}$
+average to zero; (4) Faiss, given
 our codebooks, assigns our codes; (5) the distortion is the sum of the
 blocks' distortions.
 
@@ -1503,9 +1514,9 @@ assert abs(err2.sum(1).mean() - blocks.sum()) < 1e-9 * blocks.sum()
 ```
 
 All five hold. Table and reconstruction distances agree to
-$2 \times 10^{-7}$ relative, the bound holds on every pair, and the mean of
-$\mathbf{y}^\top \mathbf{e}$ lies about one standard error from zero, where
-noise alone would put it. Faiss assigns our codes to every vector. The mean
+$2 \times 10^{-7}$ relative, the bound holds on every pair, and the means
+of $\mathbf{y}^\top \mathbf{e}$ and $\hat{\mathbf{x}}^\top \mathbf{e}$ lie
+within about one standard error of zero, where noise alone would put them. Faiss assigns our codes to every vector. The mean
 squared error, about 36, is the sum of eight block distortions of about
 4.5; set against 64, the mean squared distance of a point from its own
 Gaussian's center, it says that the codes keep the cluster and lose much of
@@ -1525,7 +1536,7 @@ Plain codes give close vectors this sharing wherever they lie. Offsets give
 it only to neighbors in the same cell; two neighbors on either side of a
 border are coded from different centroids, and their errors are
 independent. Which effect wins depends on how many cells a question's
-neighbors are spread over; an exercise measures both.
+neighbors are spread over, and we will measure both.
 
 ### Navigable Small-World Graphs
 
@@ -1763,23 +1774,23 @@ Product quantization trades recall for memory. IVF-PQ stores 149 bytes per
 vector: the 64-byte code, the 8-byte id and, spread over this collection,
 62 bytes of coarse centroids and 15 of codebooks. That is 27 times less than
 the flat index, but recall against exact search stalls near 0.6: 0.59 to
-0.60 at 16 probes across three k-means seeds, and only 0.62 at 64. Our
-`ProductQuantizer`, which codes the vectors themselves and scans every
-code, reaches 0.69, more than IVF-PQ at any number of probes. Here, with
-about 66 vectors per cell, the cost of coding offsets outweighs their
-smaller error. Codes of 32 bytes lose clearly more (0.52 against about
-0.6, well outside the spread of the seeds). These are the swaps the bound
-allowed: neighbors that lie closer together than their quantization errors.
-The usual repair rescores the best hundred candidates with exact vectors
-kept on disk. (The rescoring of binary vectors in
-:numref:`subsec_lm_emb_compress` was a cheaper cousin: it used the exact
-question but kept the passages at one bit.)
+0.60 at 16 probes across three k-means seeds, and only 0.62 at 64. Codes of
+32 bytes lose clearly more (0.52 against about 0.6, well outside the spread
+of the seeds). These are the swaps the bound allowed: neighbors that lie
+closer together than their quantization errors. One row does not fit,
+though. Our `ProductQuantizer`, which codes the vectors themselves and
+scans every code, reaches 0.69, more than IVF-PQ at any number of probes,
+although IVF-PQ codes the shorter offsets and should make the smaller
+errors.
 
-Why do residual codes lose here? The next cell takes the cell structure away
-as a cause of misses: it probes every cell, so that only the coding
-differs, for several numbers of cells. It prints recall against exact
-search, the mean squared error of the codes, and the share of each
-question's ten exact neighbors that lie in the cell of the nearest one.
+Is the probing to blame, or the coding? Sixty-four probes still stop at
+0.62, which already points at the coding. The next cell settles it. It
+builds IVF-PQ with 64-byte codes for 1 to 1,024 cells and probes every
+cell, so that no neighbor is missed for lying in an unprobed cell; one
+cell is plain product quantization. For each it prints recall against
+exact search, the mean squared error $\|\mathbf{e}\|^2$ of the codes, and
+the share of each question's ten exact neighbors that lie in the cell of
+the nearest one.
 
 ```{.python .input #retrieval-ivfpq-cells}
 %%tab pytorch
@@ -1801,8 +1812,27 @@ print(f'PQ{PQ_MS[0]} codes; residual codes in every cell, all cells probed')
 print(pd.DataFrame(cells_rows).round(3).to_string(index=False))
 ```
 
+The offsets keep their promise: as the cells shrink, the mean squared error
+of the codes falls from 0.41 to 0.30. Recall moves the other way, from 0.70
+with one cell to 0.63 with 1,024, although every cell is probed. The last
+column explains it. With one cell, every pair of neighbors is coded the
+same way, and two close vectors that share a block's code share its
+reconstruction: in that block their comparison errs by no more than their
+own small difference. At 1,024 cells only about half of a question's ten
+exact neighbors lie in the cell of the nearest one. The other half are
+coded against other centroids, and their errors become independent. A
+smaller error helps little once it stops being shared. Probing
+all 1,024 cells lifts recall only to 0.63, from 0.62 at 64 probes: what
+IVF-PQ loses against plain codes on this collection is lost in the coding,
+not in the probing.
+
+Whatever the codes lose, the usual repair rescores the best hundred
+candidates with exact vectors kept on disk. (The rescoring of binary
+vectors in :numref:`subsec_lm_emb_compress` was a cheaper cousin: it used
+the exact question but kept the passages at one bit.)
+
 The graph wins at this size. HNSW returns 0.97 of the exact neighbors at
-$\mathit{efSearch} = 32$ in about 0.3 ms, and 0.998 at 256 in 1.6 ms, for
+$\mathit{efSearch} = 32$ in about 0.3 ms, and 0.998 at 256 in about 1.5 ms, for
 272 bytes per vector beyond the vector itself, nearly all of it links, and
 about 15 s of building with eight threads.
 
@@ -1876,8 +1906,8 @@ BM25 runs over the sparse view with the parameters chosen on training
 questions. The embedder scans the stored chunk vectors exactly, because
 at 5,324 chunks no index is faster, and RRF with $k = 60$, which needs no
 tuned weight, fuses the two lists. The reranker is off unless the retriever
-is given one and a search sets `rerank_k`, as it adds about 0.2 s to every
-search. With `index='hnsw'` or `'ivfpq'` a Faiss index is built on first
+is given one and a search sets `rerank_k`, as it adds about a quarter of a
+second to every search. With `index='hnsw'` or `'ivfpq'` a Faiss index is built on first
 use. The embedder is one constant shared by the retriever and later
 chapters.
 
@@ -2122,13 +2152,16 @@ the book, exactly one of the two succeeded on about 6% of the questions.
 On questions that involve code, BM25 ranked the relevant chunk higher.
 Reciprocal-rank fusion merges the two lists from their ranks alone, and a
 cross-encoder that reads question and chunk together reorders the top of
-the merged list into the best ranking we measured, for about 0.2 s per
-question. When a collection outgrows the
+the merged list into the best ranking we measured, for about a quarter of a
+second per question. When a collection outgrows the
 exact scan, an approximate index gives up exactness. An inverted file scans
 a few cells, product quantization stores a few bytes per vector and reads
 distances from a table, and a layered graph walks to the neighbors, about
-50 times faster than a one-thread scan in our measurements. Recall against
-exact search overstates what a reader loses.
+50 times faster than a one-thread scan in our measurements. Coding each
+vector's offset from its cell's centroid makes the errors smaller and still
+finds fewer neighbors, because close vectors in different cells no longer
+share their errors. Recall against exact search overstates what a reader
+loses.
 
 ## Exercises
 
@@ -2172,12 +2205,14 @@ exact search overstates what a reader loses.
        question tend to probe, and does that raise or lower the expected
        cost? Measure the cell sizes of the stress index and the number of
        vectors a question actually compares.
-    1. Build IVF-PQ with 64-byte codes on the stress collection with 1, 64
-       and 1,024 cells, and probe all cells, so that only the codes lose
-       neighbors. How do recall against exact search and the mean squared
-       quantization error change with the number of cells? Explain both
-       trends, and measure how many of a question's ten nearest neighbors
-       share a cell.
+    1. The text blamed the low recall of IVF-PQ on neighbors that are coded
+       against different centroids. Test the explanation: Faiss can code
+       the vectors themselves inside the cells (set `by_residual = False`
+       on the index returned by `faiss.extract_index_ivf` before training).
+       At 1,024 cells, measure recall against exact search with both
+       codings at 16 probes and with every cell probed. Predict the result
+       first. Which coding wins, by how much, and does it fit the
+       explanation?
    :exlabel:`ex_lm_ret-ivf-cells`
 
 1. **The bias of asymmetric distances.** The text showed that for a
@@ -2254,7 +2289,12 @@ Sparse, Dense and Approximate Retrieval<br>**the book corpus · BM25 · the flat
 | Qwen3-Embedding-0.6B: one vector per text | 0.98 |
 | either of the two | 1.00 |
 
-Exactly one of the two succeeds on 13 of the 220 questions, about 6%.
+Exactly one of the two succeeds on 13 of the 220 questions, about 6%: BM25
+alone on 4, the embedder alone on 9.
+
+- BM25 alone: the passage repeats the question's words; the embedder
+  ranks ten other passages on the same topic above it.
+- Embedder alone: the question says "computed", the passage "calculated".
 
 ::: {.d2l-note .warn}
 And a flat scan of $10^8$ passages reads 200 GB of float16 vectors per
@@ -2399,7 +2439,7 @@ chunk and 0.69 for a term in half of them.
 - Grid of 24 settings on 5,614 training questions: Recall@10 from 0.915 to
   0.934.
 - Chosen: $k_1 = 1.2$, $b = 0.9$, identifiers split.
-- Dev Recall@10: the same under both settings.
+- Dev Recall@10: 0.96 under both settings, the same on every question.
 
 ::: {.d2l-note .rule}
 Tune on training questions, never on the questions you report. A flat grid
@@ -2417,7 +2457,7 @@ time: about 160 operations per byte.
 
 | matrix | batch | measured | roofline |
 |---|---|---|---|
-| book, $N = 5{,}324$, 11 MB | 1 | 0.055 ms | 0.011 ms |
+| book, $N = 5{,}324$, 11 MB | 1 | 0.05 ms | 0.011 ms |
 | synthetic, $N = 131{,}072$, 256 MiB | 1 | 0.33 ms | 0.27 ms |
 | synthetic, $N = 131{,}072$, 256 MiB | 220 | 0.7 ms | 0.36 ms |
 
@@ -2454,13 +2494,13 @@ near-optimal but not critical.*
 | reads | question and chunk apart | the pair together |
 | chunk work | once, before any question | once per question |
 | cost per question | one encoding, one scan | one forward pass per candidate |
-| ms per question, book | 0.9 (batched) | about 200 for 20, 1,100 for 100 |
+| ms per question, book | 0.9 (batched) | about 250 for 20, 1,100 for 100 |
 
 Qwen3-Reranker-0.6B: $P(\text{yes}) = e^{z_\text{yes}} / (e^{z_\text{yes}} + e^{z_\text{no}})$
 for "Does this chunk meet the query?"
 
 ::: {.d2l-note}
-About 0.2 s per question for 20 chunks: affordable for a short list, not for
+About a quarter of a second per question for 20 chunks: affordable for a short list, not for
 the collection.
 :::
 :::
@@ -2487,7 +2527,7 @@ its depth.
 | BM25 | 0.76 | 0.96 | 0.82 | about 0.2 |
 | embedder | 0.67 | 0.98 | 0.79 | about 1 |
 | RRF | 0.78 | 0.98 | 0.85 | about 1 |
-| RRF + rerank@20 | 0.87 | 0.99 | 0.91 | about 200 |
+| RRF + rerank@20 | 0.87 | 0.99 | 0.91 | about 250 |
 | RRF + rerank@100 | 0.87 | 1.00 | 0.91 | about 1,100 |
 
 Paired on the same questions: fusion ranks better than the embedder
@@ -2578,6 +2618,21 @@ the distance $|\sqrt{1.30} - \sqrt{2}| = 0.27 \le \|\mathbf{x} - \hat{\mathbf{x}
 :::
 :::
 
+::: {.slide title="Coding Offsets Within Cells Lowers the Error and Still Loses Neighbors"}
+[IVF-PQ, every cell probed]{.kicker}
+
+@!retrieval-ivfpq-cells
+
+- More cells: shorter offsets, mean squared error 0.41 → 0.30.
+- Yet recall against exact search falls 0.70 → 0.63: at 1,024 cells only
+  half of the ten nearest share the cell of the first.
+
+::: {.d2l-note}
+Close vectors with the same code share their error; across a border the
+errors are independent. The loss is in the coding, not the probing.
+:::
+:::
+
 ::: {.slide title="HNSW Walks a Layered Graph; Its Memory Is Mostly the Vectors"}
 [Graphs]{.kicker}
 
@@ -2661,10 +2716,12 @@ since 64-byte codes found only about 0.6 of the exact neighbors here.
 - BM25 ranks identifier questions higher: nDCG@10 by 0.12. The `load_array`
   question: BM25 first, embedder second, fusion first.
 - RRF: nDCG@10 +0.07 over the embedder, at least BM25's ranking;
-  rerank@20: +0.05 more, about 0.2 s per question.
+  rerank@20: +0.05 more, about a quarter of a second per question.
 - 67,853 vectors: HNSW 0.97 of the exact neighbors, about 50 times faster
   than one thread's scan; IVF-PQ 64 bytes per vector at recall about 0.6
   against exact search, task recall 0.87 to 0.92 across k-means seeds.
+- Offsets coded in more cells: smaller errors (0.41 → 0.30), fewer
+  neighbors found (0.70 → 0.63).
 
 **Next:** which chunks a language model should read, and which stage failed
 when its answer is wrong.

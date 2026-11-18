@@ -1788,8 +1788,8 @@ class TinyCharLM(nnx.Module):
         H = self.token_emb(X)
         if self.pos == 'learned':
             H = H + self.pos_emb(jnp.arange(X.shape[1]))
-        if self.pos == 'sinusoidal':  # Scale tokens up to the table
-            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+        if self.pos == 'sinusoidal':  # Table scaled down; tokens as in every arm
+            H = H + self.P[:X.shape[1]] / math.sqrt(H.shape[-1])
         return H
 
     def alibi(self, T):

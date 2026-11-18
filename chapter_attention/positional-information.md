@@ -164,16 +164,11 @@ d2l.plot(jnp.arange(60), P[:, 6:10].T, xlabel='position',
 
 Adjacent column pairs share a frequency (one sine, one cosine), and the
 frequency falls as the column index grows. This is a continuous version of
-binary counting. In the binary representations below, the
+binary counting. When we count in binary, the
 lowest bit flips every number, the next every two numbers, the next every
 four. Fast dimensions distinguish neighboring positions, whereas slow
 dimensions distinguish broader regions.
-
-```{.python .input #positional-information-sinusoidal-encodings-2}
-%%tab pytorch, jax
-for i in range(8):
-    print(f'{i} in binary is {i:>03b}')
-```
+<!-- WRITER: the binary-print cell (sinusoidal-encodings-2) is cut (POS-4); "In the binary representations below" became "When we count in binary"; fold into the one-sentence analogy (B3). -->
 
 The heatmap of the whole table shows the same structure in continuous form.
 Each row is a unique multi-frequency fingerprint of its position. Unlike
@@ -441,6 +436,7 @@ attributes, `rope_base` and `rope_scale`, so that they can be changed after
 training. The method `stream` runs the residual stream through the blocks
 and also returns the attention weights of each block, which
 :numref:`sec_what-attention-computes` inspects.
+<!-- WRITER: "The positional scheme is the one constructor argument that the experiment varies" is no longer exact: the experiment also trains a zero-block baseline (num_blks=0, pos='none'). After the embed fix the scheme is the only difference between the five arms (token embeddings and tied head identical in all of them). -->
 
 ```{.python .input #positional-information-an-attention-only-language-model}
 %%tab pytorch
@@ -535,6 +531,7 @@ token embeddings are multiplied by $\sqrt{d}$ before the table is added, as
 in the original transformer. Without this factor the table, whose entries
 have magnitude about $0.7$, would outweigh embeddings that start with
 entries of about $0.02$ by a factor of 35. With it, the factor is about 3.
+<!-- WRITER: FALSE after the #@save fix (POS-11): `embed` now divides the sinusoidal table by sqrt(d) (H + P/sqrt(d)) and leaves the token embeddings as in every other arm, so token embeddings and the tied output head are identical in all five arms. Table entries about 0.7/sqrt(128) = 0.06 against token entries about 0.02: the table keeps about three times the token scale, as before. Rewrite this paragraph (B6); the original transformer's sqrt(d) on the tokens can be mentioned as what we do NOT do and why (tied head: scaling the tokens would scale the logits too). -->
 
 ```{.python .input #positional-information-an-attention-only-language-model-1}
 %%tab pytorch
@@ -544,8 +541,8 @@ def embed(self, X):
     H = self.token_emb(X)
     if self.pos == 'learned':
         H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-    if self.pos == 'sinusoidal':  # Scale tokens up to the table
-        H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+    if self.pos == 'sinusoidal':  # Table scaled down; tokens as in every arm
+        H = H + self.P[:X.shape[1]] / math.sqrt(H.shape[-1])
     return H
 ```
 
@@ -557,8 +554,8 @@ def embed(self, X):
     H = self.token_emb(X)
     if self.pos == 'learned':
         H = H + self.pos_emb(jnp.arange(X.shape[1]))
-    if self.pos == 'sinusoidal':  # Scale tokens up to the table
-        H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+    if self.pos == 'sinusoidal':  # Table scaled down; tokens as in every arm
+        H = H + self.P[:X.shape[1]] / math.sqrt(H.shape[-1])
     return H
 ```
 
@@ -633,6 +630,7 @@ faster than `nnx.Embed`.
 ### The Experiment
 :label:`subsec_pos-experiment`
 
+<!-- WRITER: the cell now trains THREE models per scheme (a loop in the cell, ranges from these repeats) plus one zero-block baseline `TinyCharLM(..., num_blks=0, pos='none')` (token embedding and tied head only: a bigram model). `models` holds the first run of each scheme, `runs[pos]` all three, `baseline` the zero-block model. Numbers in the report code-positional-information.md. Also B6: `d2l.train_steps` is in :numref:`sec_test_models`, not `sec_adam`. -->
 We train one model per scheme on `d2l.WikiText103`, the bytes of Wikipedia
 articles that :numref:`subsec_tinylm` introduced. Each model trains at
 context length 128 for 3000 steps of `d2l.train_steps`, the fixed-step training
@@ -646,29 +644,45 @@ gradients.
 %%tab pytorch
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 schemes = ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
-models = {}
+
+def train_tiny(**kwargs):
+    """A TinyCharLM after 3000 steps, and its final training loss."""
+    model = TinyCharLM(len(data.vocab), **kwargs)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
+                                  weight_decay=0.0)
+    return model, d2l.final_loss(d2l.train_steps(model, data, optimizer,
+                                                 3000))
+
+runs = {}  # Three independently initialized models per scheme
 for pos in schemes:
-    model = TinyCharLM(len(data.vocab), pos=pos)
-    losses = d2l.train_steps(model, data,
-                          torch.optim.AdamW(model.parameters(), lr=1e-3,
-                                            weight_decay=0.0), 3000)
-    models[pos] = model
-    print(f'{pos:>10}: final training loss {d2l.final_loss(losses):.2f}')
+    trained = [train_tiny(pos=pos) for _ in range(3)]
+    runs[pos] = [model for model, _ in trained]
+    print(f'{pos:>10}: final training loss '
+          + ', '.join(f'{loss:.2f}' for _, loss in trained))
+models = {pos: ms[0] for pos, ms in runs.items()}  # The first run of each
 ```
 
 ```{.python .input #positional-information-the-experiment-1}
 %%tab jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 schemes = ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
-models = {}
-for pos in schemes:
-    model = TinyCharLM(len(data.vocab), pos=pos,
+
+def train_tiny(**kwargs):
+    """A TinyCharLM after 3000 steps, and its final training loss."""
+    model = TinyCharLM(len(data.vocab), **kwargs,
                        rngs=nnx.Rngs(d2l.get_key()))
     optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
                               wrt=nnx.Param)
-    losses = d2l.train_steps(model, data, optimizer, 3000)
-    models[pos] = model
-    print(f'{pos:>10}: final training loss {d2l.final_loss(losses):.2f}')
+    return model, d2l.final_loss(d2l.train_steps(model, data, optimizer,
+                                                 3000))
+
+runs = {}  # Three independently initialized models per scheme
+for pos in schemes:
+    trained = [train_tiny(pos=pos) for _ in range(3)]
+    runs[pos] = [model for model, _ in trained]
+    print(f'{pos:>10}: final training loss '
+          + ', '.join(f'{loss:.2f}' for _, loss in trained))
+models = {pos: ms[0] for pos, ms in runs.items()}  # The first run of each
 ```
 
 Every model was trained on length-128 sequences. We evaluate validation
@@ -682,6 +696,7 @@ the context available to each prediction changes. `d2l.lm_perplexity`
 converts it to a perplexity once at the end.
 
 The table lists the perplexity of each model at the three context lengths.
+<!-- WRITER: the table now prints num_bytes (the "1.1 million bytes" above; read the printed value), per scheme the mean and (min-max) over the three runs at 128/256/512, and a "no blocks" baseline row. The reading below must follow the reading rules of B7 (no in-range ranking unless the ranges separate; the sinusoidal row changed with the confound fix). -->
 
 ```{.python .input #positional-information-the-experiment-3}
 %%tab pytorch, jax
@@ -695,13 +710,42 @@ for n in contexts:  # The same bytes, regrouped into windows of n
     Xn, Yn = X.reshape(-1, n), Y.reshape(-1, n)
     eval_sets[n] = [(Xn[i:i + batch], Yn[i:i + batch])
                     for i in range(0, len(Xn), batch)]
-ppls = {pos: [d2l.lm_perplexity(models[pos], eval_sets[n]) for n in contexts]
-        for pos in schemes}
-print(f'{"context":>10}: ' + ''.join(f'{n:>8}' for n in contexts))
-for pos in schemes:
-    print(f'{pos:>10}: ' + ''.join(f'{p:8.1f}' for p in ppls[pos]))
+
+def perplexities(model):
+    return [d2l.lm_perplexity(model, eval_sets[n]) for n in contexts]
+
+def mean_range(values):
+    """Mean and (min-max) of the runs, one column of the table."""
+    return f'{np.mean(values):5.1f} ({min(values):.1f}-{max(values):.1f})'
+
+ppls = {pos: [perplexities(model) for model in ms] for pos, ms in runs.items()}
+print(f'{num_bytes:,} validation bytes, mean (min-max) of three runs')
+print(f'{"context":>10}: ' + ''.join(f'{n:>18}' for n in contexts))
+for pos in schemes:  # zip(*...) turns runs x contexts into contexts x runs
+    print(f'{pos:>10}: '
+          + ''.join(f'{mean_range(col):>18}' for col in zip(*ppls[pos])))
 ```
 
+For calibration we also need the perplexity of a model that predicts each
+byte from the previous byte alone. Counting the byte pairs of the training
+split gives this bigram model in closed form; we evaluate it on the same
+validation bytes.
+
+```{.python .input #positional-information-byte-bigram-baseline}
+%%tab pytorch, jax
+V = len(data.vocab)
+counts = np.ones((V, V))  # Byte pair counts, plus one for unseen pairs
+for s in range(0, len(data.train) - 1, 10**7):  # Chunks of 10^7 bytes
+    a = data.train[s:s + 10**7 + 1].astype(np.int64)
+    counts += np.bincount(a[:-1] * V + a[1:], minlength=V * V).reshape(V, V)
+bigram = counts / counts.sum(1, keepdims=True)  # P(next byte | this byte)
+x, y = np.asarray(X).reshape(-1), np.asarray(Y).reshape(-1)
+print(f'byte bigram: perplexity {np.exp(-np.log(bigram[x, y]).mean()):.1f}')
+```
+
+<!-- WRITER: [structure correction] the zero-block baseline of the worklist (TinyCharLM(num_blks=0, pos='none')) is NOT a bigram model: with the tied head its logit for byte y after byte x is e_x . e_y, symmetric in x and y, and it reached perplexity 20.6 in both tabs (training loss 3.03; unigram 23.9), far above a true bigram. It was replaced by this counted bigram, 11.6 on the same bytes (same in both tabs; smoothing 1, 0.1 or 0.01 gives 11.63 each). Reading: NoPE (11.6-11.8) sits at bigram level; learned, sinusoidal and ALiBi (9.4-10.3) are about 15% below it; RoPE (7.1-7.4) far below. The placeholder lead paragraph above is functional. -->
+
+<!-- WRITER: FALSE after the confound fix. New reading (both tabs, three runs each; full table in the report): at 128 RoPE is lowest, 7.3 (7.1-7.4), separated from all others; learned, sinusoidal and ALiBi overlap at 9.4-10.3 (no ranking among them); NoPE 11.6-11.8, at the level of the counted byte bigram (11.6). At 512: learned about 2x (PT 22.6 (21.1-25.3), JX 18.3 (16.1-21.5)), sinusoidal about 1.5-1.7x (PT 14.9 (14.7-15.0), JX 16.5 (14.5-20.4)) -- so not "a factor of two or more" for sinusoidal --, RoPE 3.5-4.5x with wide ranges (PT 26.5 (22.4-32.3), JX 31.8 (20.0-47.4)); ALiBi and NoPE flat. Final training losses: RoPE 1.98-2.02, learned/sinusoidal/ALiBi 2.25-2.35, NoPE 2.45-2.47. -->
 At the training length, every explicit scheme gives a lower perplexity than
 NoPE, and the sinusoidal table and RoPE give the lowest. Beyond the training
 length the schemes split into two groups. The learned table, the
@@ -721,6 +765,98 @@ does not mean that a model *uses* the longer context.
 ALiBi's steep heads hardly look past the training window at all, as
 Exercise :exref:`ex_positional-information-where-extrapolation-fails`
 measures.
+
+For every head of the trained ALiBi model we measure, on 16 validation
+windows of 512 bytes, the share of its attention weight that lands on keys
+128 or more positions back, averaged over the queries at positions 128 to
+511. The first row gives the share that the bias alone would assign if all
+content scores were equal.
+
+```{.python .input #positional-information-alibi-weight-beyond-the-window}
+%%tab pytorch
+alibi_model, T = models['alibi'], max(contexts)
+device = next(alibi_model.parameters()).device
+X_eval = eval_sets[T][0][0].to(device)  # 16 windows of 512 bytes
+i = torch.arange(T, device=device)
+far = i[:, None] - i[None, :] >= train_len  # Offsets never trained on
+
+def far_weight(weights):
+    """Per head: mean weight on far keys, over queries from train_len on."""
+    return (weights * far).sum(-1)[..., train_len:].mean((0, -1)).tolist()
+
+with torch.inference_mode():
+    maps = alibi_model.attention_weights(X_eval)
+    bias_only = d2l.masked_softmax(alibi_model.alibi(T, device)[None],
+                                   d2l.causal_mask(T, device=device))
+print(f'{"head":>10}: ' + ''.join(f'{h:>9}' for h in range(1, 5)))
+for name, weights in [('bias alone', bias_only)] + [
+        (f'block {b}', w) for b, w in enumerate(maps, 1)]:
+    print(f'{name:>10}: ' + ''.join(f'{w:9.3f}' for w in far_weight(weights)))
+```
+
+```{.python .input #positional-information-alibi-weight-beyond-the-window}
+%%tab jax
+alibi_model, T = models['alibi'], max(contexts)
+X_eval = eval_sets[T][0][0]  # 16 windows of 512 bytes
+i = jnp.arange(T)
+far = i[:, None] - i[None, :] >= train_len  # Offsets never trained on
+
+def far_weight(weights):
+    """Per head: mean weight on far keys, over queries from train_len on."""
+    return (weights * far).sum(-1)[..., train_len:].mean((0, -1)).tolist()
+
+maps = alibi_model.attention_weights(X_eval)
+bias_only = d2l.masked_softmax(alibi_model.alibi(T)[None], d2l.causal_mask(T))
+print(f'{"head":>10}: ' + ''.join(f'{h:>9}' for h in range(1, 5)))
+for name, weights in [('bias alone', bias_only)] + [
+        (f'block {b}', w) for b, w in enumerate(maps, 1)]:
+    print(f'{name:>10}: ' + ''.join(f'{w:9.3f}' for w in far_weight(weights)))
+```
+
+Weight on far keys is not yet use of them. We therefore evaluate each of the
+three ALiBi models at context 512 once more with every key 128 or more
+positions back removed, by a bias of $-\infty$ on those offsets.
+
+```{.python .input #positional-information-alibi-without-far-keys}
+%%tab pytorch
+class WindowedALiBi(TinyCharLM):
+    """ALiBi whose queries see only the train_len most recent keys."""
+    def alibi(self, T, device):
+        i = torch.arange(T, device=device)
+        return super().alibi(T, device).masked_fill(
+            i[:, None] - i[None, :] >= train_len, -math.inf)
+
+full, windowed = [], []
+for model in runs['alibi']:
+    model_w = WindowedALiBi(len(data.vocab), pos='alibi').to(device)
+    model_w.load_state_dict(model.state_dict())  # Same trained weights
+    full.append(d2l.lm_perplexity(model, eval_sets[T]))
+    windowed.append(d2l.lm_perplexity(model_w, eval_sets[T]))
+for name, ppl in ('all keys', full), (f'keys < {train_len} back', windowed):
+    print(f'{name:>16}: perplexity at {T} {mean_range(ppl)}')
+```
+
+```{.python .input #positional-information-alibi-without-far-keys}
+%%tab jax
+class WindowedALiBi(TinyCharLM):
+    """ALiBi whose queries see only the train_len most recent keys."""
+    def alibi(self, T):
+        i = jnp.arange(T)
+        return jnp.where(i[:, None] - i[None, :] >= train_len, -jnp.inf,
+                         super().alibi(T))
+
+full, windowed = [], []
+for model in runs['alibi']:
+    model_w = WindowedALiBi(len(data.vocab), pos='alibi',
+                            rngs=nnx.Rngs(d2l.get_key()))
+    nnx.update(model_w, nnx.state(model))  # Same trained weights
+    full.append(d2l.lm_perplexity(model, eval_sets[T]))
+    windowed.append(d2l.lm_perplexity(model_w, eval_sets[T]))
+for name, ppl in ('all keys', full), (f'keys < {train_len} back', windowed):
+    print(f'{name:>16}: perplexity at {T} {mean_range(ppl)}')
+```
+
+<!-- WRITER: NEW cells (A5, from Exercise 4(d)); both lead paragraphs above are functional placeholders. Read the printed numbers into the single ALiBi account of B5/B7 (POS-14) and cut Exercise 4(d), now in the text. [structure correction] The worklist's account "its steep heads give keys beyond the training window negligible weight, so nothing new is read" holds for heads 1 and 2 only: in both tabs heads 1-2 put 1e-14 and 3e-4 of their weight on keys >= 128 back, but heads 3-4 put 0.11-0.12 and 0.39-0.41 there, in both blocks, matching what the bias alone gives with equal content scores (0.11, 0.40). The model does read far keys; they do not help: masking every key >= 128 back leaves perplexity at 512 unchanged (notebook runs: PT 9.8 (9.8-10.0) both ways, JAX 10.0 (9.9-10.1) both ways; dev run PT 9.77 vs 9.76). So "a flat curve does not mean the model uses the longer context" now has its number. Also: ALiBi at 512 (9.9) is no lower than at 128 (10.0): the extra context brings no gain. -->
 
 ### Extending a Trained Model's Context
 :label:`subsec_pos-context-extension`
@@ -771,11 +907,15 @@ ones = torch.ones(d_head // 2)
 shrink = train_len / max(contexts)  # Longest context into the trained one
 factors = {'unscaled': ones, 'all pairs': ones * shrink,
            'slow pairs': torch.where(slow, ones * shrink, ones)}
-for name, factor in factors.items():
-    rope_model.rope_scale.copy_(factor)
-    ppl = [d2l.lm_perplexity(rope_model, eval_sets[n]) for n in contexts]
-    print(f'{name:>10}: ' + ''.join(f'{p:8.1f}' for p in ppl))
-rope_model.rope_scale.copy_(ones);
+print(f'{"context":>10}: ' + ''.join(f'{n:>18}' for n in contexts))
+for name, factor in factors.items():  # Each of the three trained RoPE runs
+    ppl = []
+    for rope_model in runs['rope']:
+        rope_model.rope_scale.copy_(factor)
+        ppl.append(perplexities(rope_model))
+        rope_model.rope_scale.copy_(ones)
+    print(f'{name:>10}: ' + ''.join(f'{mean_range(col):>18}'
+                                    for col in zip(*ppl)))
 ```
 
 ```{.python .input #positional-information-extending-a-trained-model-s-context}
@@ -791,13 +931,18 @@ ones = jnp.ones(d_head // 2)
 shrink = train_len / max(contexts)  # Longest context into the trained one
 factors = {'unscaled': ones, 'all pairs': ones * shrink,
            'slow pairs': jnp.where(slow, ones * shrink, ones)}
-for name, factor in factors.items():
-    rope_model.rope_scale[...] = factor
-    ppl = [d2l.lm_perplexity(rope_model, eval_sets[n]) for n in contexts]
-    print(f'{name:>10}: ' + ''.join(f'{p:8.1f}' for p in ppl))
-rope_model.rope_scale[...] = ones
+print(f'{"context":>10}: ' + ''.join(f'{n:>18}' for n in contexts))
+for name, factor in factors.items():  # Each of the three trained RoPE runs
+    ppl = []
+    for rope_model in runs['rope']:
+        rope_model.rope_scale[...] = factor
+        ppl.append(perplexities(rope_model))
+        rope_model.rope_scale[...] = ones
+    print(f'{name:>10}: ' + ''.join(f'{mean_range(col):>18}'
+                                    for col in zip(*ppl)))
 ```
 
+<!-- WRITER: the cell now rescales each of the three RoPE runs and prints mean (min-max); numbers in the report (first notebook run: PT unscaled 7.3 (7.1-7.4) / 11.4 / 26.5 (22.4-32.3); all pairs 39.2 (37.0-43.6) at 128 and about the same at 256 and 512, i.e. worse than unscaled at 512 in PT and overlapping in JAX (35.3 (26.1-46.5) vs 31.8 (20.0-47.4)); slow pairs 7.9 (7.7-8.0) / 8.2 / 8.4 (8.2-8.8) PT, 7.8 (7.5-8.2) / 8.2 / 8.6 (8.1-9.4) JAX). POS-15: slow-pair rescaling costs about half a point at 128 (7.8-7.9 vs 7.3), larger than the run-to-run range; at 512 it is about 15% above the unscaled 128 level; "close to its level at the training length" goes. Note: slow-pair RoPE at 512 (8.4-8.6) is below ALiBi at 512 (9.7-9.9). -->
 Rescaling only the slow pairs brings the perplexity at context 512 far
 below that of the unscaled model, and close to its level at the training
 length. The uniform factor fails on this model. It compresses the fast
@@ -1265,6 +1410,7 @@ the base?
   `'none'`.
 - Sinusoidal: tokens scaled by $\sqrt{d}$ before the table is added, as in
   the original transformer.
+<!-- WRITER: FALSE after the embed fix: the table is divided by sqrt(d); tokens are the same in every arm. -->
 - RoPE: base and per-pair angle factors stored as `rope_base`,
   `rope_scale`.
 :::
@@ -1325,6 +1471,7 @@ In range, every explicit scheme beats NoPE; sinusoidal and RoPE are
 lowest. At 512, learned, sinusoidal, and RoPE degrade; ALiBi and NoPE stay
 flat.
 :::
+<!-- WRITER: "one run per scheme" and the note are FALSE now (three runs, mean and min-max; RoPE alone lowest in range; NoPE at bigram level, cell positional-information-byte-bigram-baseline); the table is 66 characters wide; check overflow. Add the ALiBi weight slide (cells positional-information-alibi-weight-beyond-the-window and -alibi-without-far-keys). -->
 :::
 
 ::: {.slide title="Each Scheme Holds or Fails Beyond 128 for Its Own Reason"}
@@ -1335,6 +1482,7 @@ flat.
 - **RoPE:** at offsets beyond 127 the slow pairs reach unseen angles.
 - **ALiBi:** the bias depends only on distance, and the steep heads see a
   short window anyway.
+<!-- WRITER: per the new ALiBi cells: heads 3-4 do put 11% and 40% of their weight beyond 128, but removing those keys leaves perplexity at 512 unchanged. -->
 - **NoPE:** no table and no angles to run out of; flat, from a weaker
   start.
 
@@ -1379,6 +1527,7 @@ The trained RoPE model, angle factors changed, no weight updated:
 
 @!positional-information-extending-a-trained-model-s-context
 
+<!-- WRITER: the cell now prints mean (min-max) over three RoPE runs; quote the cost of slow-pair rescaling at 128 (about 7.9 vs 7.3). -->
 ::: {.d2l-note}
 Rescaling all pairs blurs neighbors and costs already at the training
 length; leaving the fast pairs alone keeps them apart. A short fine-tune at the new length

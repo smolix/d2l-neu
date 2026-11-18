@@ -312,7 +312,8 @@ when that directory is missing.
   14 RL, 15 Deep RL (the RL chapter was split in two, 2026-07), 16 GANs
   (rebuilt 2026-08: closed-form objectives, relativistic/R3GAN, gradient
   penalties, six sections; PyTorch+JAX only), 17 Diffusion Models
-  (placeholder) | **Language Models** = 18–31 (14 skeleton chapters
+  (eight sections plus further reading; it cites the math appendix's
+  ch. 38 Dynamics for the long derivations) | **Language Models** = 18–31 (14 skeleton chapters
   `chapter_lm-*`, generated 2026-11 from the plan in
   `docs/llm/language_models_part_plan.md`: each file holds its title, label
   and the plan entry as a hidden author brief) | **Image Models** (formerly
@@ -341,8 +342,9 @@ when that directory is missing.
   `math-for-deep-learning-appendix`) is now the **default math appendix**: a
   single part of 6 numbered chapters under `chapter_mdl-*` — **33** Linear
   Algebra, **34** Calculus, **35** Optimization, **36** Probability & Statistical
-  Learning, **37** Information Theory, **38** Dynamics (Tools for Deep Learning is
-  now **39**) — with `mdl-`-prefixed labels. All six chapters are now fully
+  Learning, **37** Information Theory, **38** Dynamics (seven sections since
+  the 2026-11 split of ODEs and solvers into §38.1 Ordinary Differential
+  Equations and §38.2 Numerical Solvers; Tools for Deep Learning is now **39**) — with `mdl-`-prefixed labels. All six chapters are now fully
   written; the appendix gained two new sections (`mdl-adaptive-stochastic-methods`
   = §35.4, `mdl-concentration-generalization` = §36.7) and the probability
   chapter was reordered (naive Bayes moved to the end, §36.9). The branch `math-appendix-polish` carries a

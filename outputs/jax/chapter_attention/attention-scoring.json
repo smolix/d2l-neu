@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-score-variance-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25849,
-          "sha256": "sha256:db574ccee5e7dc447780287dd096f24df6b3e20686f73eed333708990270c0cc"
+          "bytes": 25280,
+          "sha256": "sha256:9681ba93ac952d6dce67a38536b495cc8a33ffce5556c63b808dda22f58efe86"
         }
       ]
     },
@@ -43,27 +43,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4      2.828  3.706      0.272  0.104      0.255  0.179\n"
+          "text": "  4      2.802  3.695      0.276  0.108      0.256  0.180\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 16      1.404  3.687      0.569  0.108      0.296  0.183\n"
+          "text": " 16      1.375  3.688      0.578  0.107      0.294  0.183\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 64      0.562  3.683      0.800  0.108      0.203  0.184\n"
+          "text": " 64      0.576  3.682      0.796  0.107      0.208  0.184\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "128      0.393  3.689      0.853  0.107      0.163  0.183\n"
+          "text": "128      0.388  3.685      0.853  0.108      0.165  0.184\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "512      0.179  3.687      0.930  0.107      0.090  0.183\n"
+          "text": "512      0.173  3.686      0.933  0.107      0.087  0.183\n"
         }
       ]
     },
@@ -101,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
           "bytes": 27441,
-          "sha256": "sha256:379d4446b8decb51fafb5d28ae25caa6bbb28cd654e93bec23a793f28cc9ad97"
+          "sha256": "sha256:ff1ce5842ac1c15fb59c2d1c7a26b12ea335fade39c12fd6ee876bad6171d330"
         }
       ]
     },
@@ -114,7 +114,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1-1.svg",
           "bytes": 13718,
-          "sha256": "sha256:be1eb3b3b57eb918cded3916457b493e91365d370623d9ee4ddc98665f5403a2"
+          "sha256": "sha256:278cb532e4c3b0adda18672faf72d4f53fd02e7da87df63f49de592ce478ff97"
         }
       ]
     },
@@ -142,8 +142,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/multihead-attention-an-alignment-you-can-read-1.svg",
-          "bytes": 24126,
-          "sha256": "sha256:c485e24a6bb7150426866fd50e35201187472d256bc2b7d3f0c8559c47656f0a"
+          "bytes": 24062,
+          "sha256": "sha256:dd6aae3a84f29731408fe76a24e782bee03f2a4c6fe1cce988c28259638adfe7"
         }
       ]
     },
@@ -158,36 +158,36 @@
       "outputs": []
     },
     "attention-scoring-attention-as-learned-alignment-3": {
-      "code_fingerprint": "sha256:46be3865cb58a609d8cdeaab2a0fda2842014ffe8579419a664b38127bc97102",
+      "code_fingerprint": "sha256:264982cffb065a3dcc7f734382ba254fe374d04dd9e0d21c0cdf56ff3cb45fb2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 0: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 0.999\n"
+          "text": "run 1: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 1: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 0.999\n"
+          "text": "run 2: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 2: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 0.999\n"
+          "text": "run 3: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 0.999\n"
         }
       ]
     },
     "attention-scoring-attention-as-learned-alignment-4": {
-      "code_fingerprint": "sha256:3783f0394de4ec8bf0d964a3591fd491b6046ebe09e9d322a94febdc795f42a8",
+      "code_fingerprint": "sha256:81d0cca3b47a0f7bec16c46513511360ae73cd7fde3458ec3da56281ea5b0690",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-attention-as-learned-alignment-4-1.svg",
-          "bytes": 21181,
-          "sha256": "sha256:f90d4996ab3f8def19cfb634be0878c66fc1efaa50c1b78af9e302e73589176c"
+          "bytes": 21082,
+          "sha256": "sha256:d2298d317925d225a2e87cbddc963cf6a45cb1101aee40d0aee02bfa9e733d1f"
         }
       ]
     }

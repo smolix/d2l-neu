@@ -806,7 +806,7 @@ weight on that position.
 ```{.python .input #attention-scoring-attention-as-learned-alignment-3}
 %%tab pytorch
 X, Y = align_data(1000)
-for run in range(3):
+for run in range(1, 4):
     model = train_aligner()
     with torch.inference_mode():
         accuracy = (model(X).argmax(-1) == Y).float().mean()
@@ -820,7 +820,7 @@ for run in range(3):
 ```{.python .input #attention-scoring-attention-as-learned-alignment-3}
 %%tab jax
 X, Y = align_data(d2l.get_key(), 1000)
-for run in range(3):
+for run in range(1, 4):
     model = train_aligner()
     accuracy = (model(X).argmax(-1) == Y).mean()
     weights = model.attention.attention_weights  # (1000, 8, 8)

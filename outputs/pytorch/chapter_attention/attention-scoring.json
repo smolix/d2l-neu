@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-score-variance-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25279,
-          "sha256": "sha256:4aa0b6cb8b793fc6ffdb1cf76fb6856cec531aa98a6f4ad8bdbfe6cc6c84e7bb"
+          "bytes": 25281,
+          "sha256": "sha256:dbf3735100199822829c07d70537e9c27ed79c119f6bafac3dbad1088cc1bbef"
         }
       ]
     },
@@ -38,27 +38,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      entropy (nats)    largest weight     Jacobian norm\n  d   unscaled scaled   unscaled scaled   unscaled scaled\n  4      2.807  3.708      0.272  0.104      0.261  0.179\n"
+          "text": "      entropy (nats)    largest weight     Jacobian norm\n  d   unscaled scaled   unscaled scaled   unscaled scaled\n  4      2.791  3.701      0.277  0.105      0.260  0.180\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 16      1.397  3.681      0.575  0.109      0.297  0.184\n"
+          "text": " 16      1.387  3.686      0.574  0.108      0.297  0.183\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 64      0.568  3.689      0.796  0.106      0.208  0.183\n"
+          "text": " 64      0.582  3.682      0.791  0.108      0.211  0.184\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "128      0.390  3.689      0.853  0.106      0.164  0.183\n"
+          "text": "128      0.393  3.687      0.852  0.106      0.165  0.183\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "512      0.180  3.685      0.928  0.108      0.091  0.183\n"
+          "text": "512      0.195  3.684      0.921  0.108      0.100  0.184\n"
         }
       ]
     },
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
           "bytes": 27441,
-          "sha256": "sha256:dd185f49eef5eda08568944d1daf46c3233dc4daf24aa0ea0110aefb9550a796"
+          "sha256": "sha256:60377c0fcc738c39ae3dd5dff5b0e8ae49edf6ebedc18e85f3d775dc6b954be4"
         }
       ]
     },
@@ -109,7 +109,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1-1.svg",
           "bytes": 13718,
-          "sha256": "sha256:3e084ca0aef21f7f5551569be88d0f587933410bdf1eb439e4a235d58c58bdcd"
+          "sha256": "sha256:a2db95fefd76fa7b11b0f354311c791f3d47726c0853a288a3fe2e3674bbd55b"
         }
       ]
     },
@@ -137,8 +137,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/multihead-attention-an-alignment-you-can-read-1.svg",
-          "bytes": 24209,
-          "sha256": "sha256:e15e6596ef27d7064f525c570b4de0462ac52c22351c587243cd3b30d9462c16"
+          "bytes": 24173,
+          "sha256": "sha256:e0b78266886aaf7ad6563bb3f034b84e402d548398bb1e67cd2f54710b0762d3"
         }
       ]
     },
@@ -153,26 +153,26 @@
       "outputs": []
     },
     "attention-scoring-attention-as-learned-alignment-3": {
-      "code_fingerprint": "sha256:c8a796296d019a8737add83736429a75a616e0fa1c7701f03d9050a0ceb7881c",
+      "code_fingerprint": "sha256:d75d84e17cb5043f2278436ffbcaf94dfc44a13f061449da1406a71f58bd533d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 0: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 0.999\nrun 1: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\nrun 2: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\n"
+          "text": "run 1: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\nrun 2: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\nrun 3: accuracy 1.000, largest weight on pi(j) 1.000, mean weight on pi(j) 1.000\n"
         }
       ]
     },
     "attention-scoring-attention-as-learned-alignment-4": {
-      "code_fingerprint": "sha256:f1b0d18f4aa4938a3ce97f54324e1236342c7969552a14f2899ccd301d6b4b43",
+      "code_fingerprint": "sha256:5e803dccfc3c1660cbf89fdaabf12fea018091de632ef8db0ae1ec6b13a65e4e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-attention-as-learned-alignment-4-1.svg",
-          "bytes": 21022,
-          "sha256": "sha256:f9b0d013ce0f371729f1462945656677c64e68641a1ea8cc09853fff1234a6ca"
+          "bytes": 21499,
+          "sha256": "sha256:5a74793baeea2e83a8a7a9a7f69c80f595ba6e739c4fc946f45763d72b63bd7b"
         }
       ]
     }

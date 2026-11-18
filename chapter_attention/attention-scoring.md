@@ -300,7 +300,7 @@ wide the vectors are. The entropy sits about half a nat below uniform,
 close to $\log 64 - \tfrac{1}{2} \approx 3.66$, a value Exercise
 :exref:`ex_attention-scoring-entropy-of-random-scores` derives. Without the
 factor, the weights sharpen from the width alone. At $d = 64$ the entropy
-is about $0.58$ nats, fewer than two keys' worth, and the largest weight
+is about $0.6$ nats, fewer than two keys' worth, and the largest weight
 takes about $0.8$ of the total. At $d = 512$ the entropy is down to about
 $0.2$ nats, barely more than one key, and the largest weight is above
 $0.9$: the query has, in effect, picked its key before anything has been
@@ -796,17 +796,17 @@ departures where the two languages order words differently. Nothing in the
 training objective asked for alignments. They emerged because they help to
 translate.
 
-We can reproduce the effect in a model small enough to train in seconds.
-Each source sequence holds $8$ tokens drawn from a vocabulary of $16$, and
-the target at output position $j$ is the source token at position $\pi(j)$
-of a fixed permutation $\pi$. The permutation keeps every position except
-two neighbors, which it swaps, the way an adjective and its noun change
-places between "black cat" and "chat noir". In place of a decoder state,
-each output position has one learned query, which knows which output it
-serves but nothing about the source. The keys are a learned linear map of
-the one-hot token and the one-hot position of each source token. The values
-are the one-hot tokens, so each output is a distribution over the
-vocabulary.
+We can watch an alignment form in a model small enough to train in
+seconds. Each source sequence holds $8$ tokens drawn from a vocabulary of
+$16$, and the target at output position $j$ is the source token at
+position $\pi(j)$ of a fixed permutation $\pi$. The permutation keeps
+every position except two neighbors, which it swaps, the way an adjective
+and its noun change places between "black cat" and "chat noir". In place
+of a decoder state, each output position has one learned query, which
+knows which output it serves but nothing about the source. The keys are a
+learned linear map of the one-hot token and the one-hot position of each
+source token. The values are the one-hot tokens, so each output is a
+distribution over the vocabulary.
 
 ```{.python .input #attention-scoring-attention-as-learned-alignment-1}
 %%tab pytorch
@@ -898,11 +898,12 @@ def train_aligner(num_steps=100):
     return model
 ```
 
-Three models, trained from different random starts, are each evaluated on
-the same $1{,}000$ fresh sequences. The cell prints the accuracy of the
-most probable token, the fraction of output positions $j$ whose largest
-weight falls on source position $\pi(j)$, and the mean weight on that
-position.
+Before we train anything, it helps to know what a model that has learned
+nothing scores. The cell first evaluates one untrained model, then three
+models trained from different random starts, all on the same $1{,}000$
+fresh sequences. For each it prints the accuracy of the most probable
+token, the fraction of output positions $j$ whose largest weight falls on
+source position $\pi(j)$, and the mean weight on that position.
 
 ```{.python .input #attention-scoring-attention-as-learned-alignment-3}
 %%tab pytorch
@@ -943,11 +944,16 @@ for run in range(1, 4):
     evaluate_aligner(model, X, Y, f'run {run}')
 ```
 
-All three runs print $1.000$ for the accuracy and for the fraction of
-positions whose largest weight falls on $\pi(j)$, and a mean weight of
-$0.999$ or more there. The weights of the last model on the first test
-sequence, with a letter for each token id, show the permutation, crossing
-included:
+The untrained model gets about a fifth to a quarter of the tokens right.
+That is already better than the $1/16$ of a blind guess, because every
+output is a mixture of source tokens, so the right one is always among the
+candidates. Its mean weight on $\pi(j)$ sits near $1/8$, which is what a
+query that spreads its weight evenly over eight positions would give.
+After a hundred steps all three runs print $1.000$ for the accuracy and
+for the fraction of positions whose largest weight falls on $\pi(j)$, and
+a mean weight of $0.999$ or more there. The weights of the untrained model and of the last
+trained one on the first test sequence, with a letter for each token id,
+show the difference:
 
 ```{.python .input #attention-scoring-attention-as-learned-alignment-4}
 %%tab pytorch, jax
@@ -960,9 +966,10 @@ d2l.show_heatmaps(maps[None], xlabel='source', ylabel='target',
                   yticklabels=[letters[int(i)] for i in Y[0]])
 ```
 
-The map is the permutation matrix of $\pi$: a diagonal with one crossing.
-When the source repeats a token, as random sources of this length usually
-do, every target row still picks a single source position, which the
+The untrained map spreads each row over all eight positions, with no
+structure to speak of. The trained map is the permutation matrix of $\pi$:
+a diagonal with one crossing. When the source repeats a token, as random
+sources of this length usually do, every target row still picks a single source position, which the
 letters of "attention" could not do. The keys carry the position, so the
 query of an output can ask for a place in the source rather than for any
 copy of a token.
@@ -1502,8 +1509,9 @@ Queries: one learned vector per output. Keys: $\mathbf{W}_k$ applied to
 
 @!attention-scoring-attention-as-learned-alignment-4
 
-- Three runs: accuracy 1.000; the largest weight on $\pi(j)$ in 1.000 of
-  the positions.
+- Untrained: a fifth to a quarter of the tokens right, about $1/8$ of the
+  weight on $\pi(j)$. Trained, three runs: accuracy 1.000, the largest
+  weight on $\pi(j)$ at every position.
 - Repeated tokens are told apart: the keys carry the position.
 :::
 

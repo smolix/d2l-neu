@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate the new illustrative figure of "Ordinary Differential Equations and
-Numerical Solvers" (``chapter_mdl-dynamics/mdl-odes-solvers.md``) in the
-chapter's shared house style.
+"""Generate the solver-geometry figure of "Numerical Solvers"
+(``chapter_mdl-dynamics/mdl-numerical-solvers.md``) in the chapter's shared
+house style.
 
 The shared style lives in ``gen_mdl_figures.py``; importing it applies the
 ``plt.rcParams`` (fixed ``svg.hashsalt`` and ``metadata={'Date': None}`` in

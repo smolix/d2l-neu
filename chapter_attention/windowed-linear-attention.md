@@ -27,7 +27,7 @@ this section is what each of them gives up. The other remedies are collected
 in :numref:`sec_attention-further-reading`.
 
 We take windows first. They need one more mask beyond those of
-:numref:`sec_attention-scoring-functions`, counting the tiles that a fused
+:numref:`sec_attention-scoring-functions`; counting the tiles that a fused
 kernel can skip predicts how much they save, and a timing against dense
 attention tests the prediction. We then derive linear attention, implement
 it in three equivalent forms, and test it on what softmax attention does
@@ -899,7 +899,7 @@ default.
 [Dive into Deep Learning · §10.6]{.kicker}
 
 Windowed and Linear Attention<br>
-**sliding windows · tiles · linear attention · measured cost**
+**sliding windows · tiles · measured cost · linear attention**
 :::
 :::
 

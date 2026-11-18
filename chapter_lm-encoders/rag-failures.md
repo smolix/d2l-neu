@@ -1,28 +1,35 @@
 # Failures and Fixes in Retrieval-Augmented Generation
 :label:`sec_lm_rag_fixes`
 
-A reader who has built the pipeline of :numref:`sec_lm_rag` holds a
-baseline that answers 0.89 of the `dev` questions, with a retriever that
-puts a relevant passage into the context for 213 of the 220 answerable
-ones. Twenty-six answers are still wrong, among them the one that opened
-that section: the passage that answers was ranked first, and the answer left
-out its key fact. What should change? Another chunking, a rewritten query,
-more context, or the generator, which no change to retrieval can reach?
+Suppose you have built the pipeline of :numref:`sec_lm_rag` and are looking
+at the 26 `dev` questions it gets wrong. The natural impulse is to start
+fixing. Most people who build such systems have a favorite repair: smaller
+chunks, a rewritten query, more passages in the prompt, a sterner
+instruction to the generator. Each is plausible, and each has a paper that
+reports a gain. Yet this baseline already puts a relevant chunk into the
+context for 213 of the 220 answerable questions, and the wrong answer that
+opened :numref:`sec_lm_rag` had its passage ranked first. Which of the
+favorites can help a system like that, and how would we know?
 
-The idea of this section is to let measurements, not intuition, pick the
-change. We change one stage at a time and compare with the baseline on the
-same questions, sort the wrong answers by the first stage that lost them,
-and test the repair of the largest class, written down before any failure
-was counted, on `test`, read once. A short derivation then shows how the
-original RAG model makes retrieval part of a probabilistic model whose
-retriever can learn from the generator. The section ends on the question
-that longer context windows keep raising: is retrieval needed at all when
-whole chapters fit into the prompt?
+In this section the measurements choose. We change one stage at a time and
+compare with the baseline on the same questions. We sort the wrong answers
+by the first stage that lost them. And we test the repair of the largest
+class, written down before any failure was counted, on the 240 `test`
+questions, read once. None of this is new: medicine has run its clinical
+trials this way for decades, with a control measured on the same patients
+and an analysis fixed before the data come in. Here the procedure will
+matter more than any of the repairs. A short derivation then asks whether
+the answers alone could teach the retriever which passages the generator
+can use. The section ends on the question that longer context windows keep
+raising: is retrieval needed at all when whole chapters fit into the
+prompt?
 
 The first cells load what :numref:`sec_lm_rag` built: its configurations,
-the corpus with its two retrievers, and the recorded answers and verdicts.
-The helpers that score answers with paired intervals come from the library,
-as there.
+the corpus with its two retrievers, the recorded answers with the judge's
+verdicts, and the library's helpers for paired intervals. They hold no new
+idea, and a first reading can skip to :numref:`subsec_lm_rag_stages`. As
+there, a normal run replays the recorded answers and verdicts, and
+`D2L_RERUN` regenerates them.
 
 ```{.python .input #rag-failures-failures-and-fixes-in-retrieval-augmented-generation-1}
 %%tab pytorch
@@ -110,11 +117,27 @@ if S:
 ## Changing One Stage at a Time
 :label:`subsec_lm_rag_stages`
 
-We change one stage at a time and compare with the baseline on the same
-questions. Chunking comes first, and it can be measured before any answer
-is generated: section chunks follow the book's headings and paragraphs,
-fixed windows of 256 tokens overlapping by 64 do not. Which covers more at
-equal budgets?
+Before we generate a single answer, we already know roughly how much a
+change on the retrieval side can gain. Accuracy on the answerable
+questions is a mixture of the accuracy on *hits*, the questions whose
+context holds a relevant chunk, and the accuracy on misses
+(:numref:`sec_lm_rag`). The baseline has 213 hits among 220 answerable
+questions, so a perfect retriever could add about 0.02, well inside the
+paired intervals of about $\pm 0.03$ that 240 questions give. Retrieval has
+almost no room left on this book, because the questions were drafted from
+its passages and reuse their words (:numref:`sec_lm_text_embeddings`); on
+a harder collection the balance can reverse. Changes to the order or the
+length of the context act on how the generator reads, and the mixture does
+not bound them.
+
+Chunking comes first, because it can be measured before any answer is
+generated. Section chunks follow the book's headings and paragraphs. Fixed
+windows of 256 tokens, overlapping by 64, are cut without regard to the
+text. Which of the two covers more? *Coverage at a budget* of $T$ tokens,
+`cov@T`, is the share of answerable questions whose first chunks, taken in
+rank order up to $T$ tokens, hold at least half of a gold span. It fixes
+the amount of text, which Recall@$k$ does not: five section chunks hold
+more text than five windows.
 
 ```{.python .input #rag-coverage}
 %%tab pytorch
@@ -139,33 +162,41 @@ print(pd.DataFrame({T: {'sections': boot(COV['sec512', T], cluster=cl),
       .to_string())
 ```
 
-At 1,000 tokens section chunks cover 0.91 of the questions and windows
-0.84, a difference of $-0.07$ [$-0.11$, $-0.02$]. A section holds a span
-whole where a window may cut it, and overlapping windows repeat text. By
-3,000 tokens both find room, and the difference shrinks to $-0.01$
-[$-0.04$, +0.02].
+Section chunks cover more when the budget is tight: 0.91 of the questions
+at 1,000 tokens against 0.84 for windows, a gap of 0.07 whose interval
+excludes zero. A section holds a span whole where a window may cut it, and
+overlapping windows spend part of the budget on text they repeat. By 3,000
+tokens both find room, and the gap shrinks to 0.01, well within noise.
 
 Coverage says that the gold text is in the context, not that the generator
-can use it. The next cell answers with five changes:
+uses it. For that we must generate. Each configuration that answers the
+questions is an *arm* of the experiment, as in :numref:`sec_lm_rag`. The
+baseline fuses the BM25 and dense rankings by reciprocal ranks and passes
+the first five section chunks, best first, with no reranker. The next cell
+answers the 240 `dev` questions with five arms that change it:
 
-- fixed windows, each question getting at most the tokens of its baseline
-  context (packing stops before the window that would pass them, so the
-  windows get slightly fewer);
+- fixed windows instead of section chunks, each question getting at most
+  the tokens of its baseline context;
 - the question rewritten by the generator as a search query, with the
-  reranker, which reads the original question, reordering the fused top 50;
-  the two go together because the reranker decides which of the rewrite's
-  candidates reach the context, and so guards against a rewrite that drifts
-  from the question;
-- the baseline context in reverse order;
-- budgets of 1,500 and of 6,000 tokens, filled in rank order without the
-  limit of five chunks.
+  reranker reordering the fused top 50;
+- the baseline context in reverse order, the best chunk next to the
+  question;
+- a budget of 1,500 tokens, filled in rank order without the limit of five
+  chunks;
+- the same with a budget of 6,000 tokens.
 
-A sixth arm is a control rather than a candidate. Packed as above, fixed
-windows get fewer context tokens than the baseline, so a loss could come
-from the missing tokens rather than from the cut. The control, `fixed-over`,
-packs windows until they pass the baseline's tokens by less than one window
-and so gets slightly more context than the baseline. Which of the changes,
-would you guess, moves accuracy with a paired interval that excludes zero?
+The second arm bends the rule of one change at a time, and on purpose. A
+rewritten query can drift from the question, so it is tested together with
+a guard: the reranker reads the original question and reorders what the
+rewrite found. The arm therefore adds two stages to the baseline, and its
+result belongs to the pair.
+
+A sixth arm is a control rather than a candidate. Packing stops before the
+window that would pass the baseline's tokens, so fixed windows get slightly
+fewer context tokens than the baseline, and a loss could come from the
+missing tokens rather than from the cut. The control, `fixed-over`, packs
+windows until they pass the baseline's tokens by less than one window, and
+so gets slightly more context than the baseline.
 
 ```{.python .input #rag-stages}
 %%tab pytorch
@@ -223,44 +254,52 @@ if sum(r['configuration'] in STAGES for r in rows) == len(STAGES):
     print(f'the largest dev gain: {BEST}')
 ```
 
-None raised accuracy with an interval that excludes zero, at 240 questions
-in 32 documents. The largest gains, from reversing the order and from the
-6,000-token budget, were both +0.01, with intervals of [$-0.02$, +0.04] and
-[$-0.03$, +0.05].
+No change raised accuracy measurably. The largest gains, from reversing the
+order and from the 6,000-token budget, are about +0.01, with intervals that
+reach down to $-0.02$ and $-0.03$. On the retrieval side this is what the
+mixture predicted. On the generator's side it is a finding: the generator
+did not read measurably better for a different order or for three times the
+text.
 
-Two changes lowered accuracy. Fixed windows lost 0.08 [$-0.12$, $-0.04$],
-although at 2,000 tokens their coverage trails by only 0.03
-[$-0.06$, +0.01]. They had 1,578 context tokens against the baseline's
-1,697, but the shortfall is not why they lost: the control, with 1,833
-tokens, still lost 0.05 [$-0.09$, $-0.02$]. Similar coverage did not give
-similar answers, and chunks that follow the document's structure gave
-better ones. The 1,500-token
-budget, about 1,300 context tokens against the baseline's 1,700,
-cost 0.03 [$-0.06$, $-0.01$]. The 6,000-token budget, about 5,800 context
-tokens, gained nothing measurable and doubled the time per answer, from
-about 1.3 s to 2.6 s, partly because its longer prompts run in batches of
-four instead of eight. None of this should surprise us after
-:eqref:`eq_lm_rag_hit`. Retrieval already brings a relevant chunk for 213
-of 220 questions, so changes on its side had about 0.02 to gain if the
-accuracy on hits stayed put, less than 240 questions can detect.
+The two losses teach more. Fixed windows lost 0.08. They had a little less
+context than the baseline, about 1,600 tokens against 1,700, but the
+control rules the token count out: with about 1,800 tokens, windows still
+lost 0.05. Nor can coverage account for the loss. At budgets near the
+windows' own, their coverage trails by 0.03 to 0.07. A question that drops
+out of coverage falls at worst from the accuracy on hits to the accuracy on
+misses, about 0.6 lower, so such a gap could cost at most about 0.02 to
+0.04. What is left is the cut itself, and coverage is blind to it: it
+counts half a gold span as found, and a window can hold that half and cut
+off the key fact in the other (Exercise :exref:`ex_lm_rag-whole-span`).
+Chunks that follow the document's structure keep a paragraph whole, and
+they gave better answers.
 
-Is a gain this small real? A rule fixed in advance carries the stage change
-with the largest `dev` gain to `test`, read once, to find out. Three changes
-lie within 0.004 of one another on `dev`, so which of them leads depends on
-a handful of verdicts. `test` was read once, with the rewrite and reranker,
-the stage the rule picked when it ran. Since then, re-judging a few answers
-has put reversing the order in front, as the cell prints. We do not read
-`test` again: reading it again after a change made on `dev` is how a test
-set leaks into the results.
+Less context costs accuracy where coverage falls. The 1,500-token budget,
+about 1,300 context tokens, lost 0.03, and coverage drops from 0.97 at
+2,000 tokens to 0.91 at 1,000. More context, by contrast, did nothing for
+accuracy: the 6,000-token budget, about 5,800 context tokens, gained
+nothing measurable and doubled the time per answer.
+
+A rule fixed in advance carries the stage change with the largest `dev`
+gain to `test`, read once, to see whether a gain this small survives fresh
+questions. The cell's last line names reversing the order, which ties with
+the 6,000-token budget, one verdict ahead of the rewrite with reranking; a
+tie goes to the change listed first. Yet `test` was read with the rewrite.
+When the rule ran, a few answers still had no verdict, because the
+judge's reply had been cut off or garbled, and those answers counted as
+wrong. :numref:`sec_lm_rag` judged
+each of them once more, with twice the room, and that moved the rewrite
+with reranking from a three-way tie at the top to one verdict behind. We
+read `test` with the fix and with the rewrite, at the end of the next
+subsection.
 
 ## Failures by Stage
 :label:`subsec_lm_rag_failures`
 
-If no single stage change helps on average, perhaps the 26 wrong answers of
-the baseline fail in different ways, each needing its own repair. To find
-out, `classify_failure` asks of each wrong answer the questions below, in
-pipeline order, and blames the first stage that lost the answer (right of
-:numref:`fig_lm_rag_stages`):
+No change helped on average. Perhaps the 26 wrong answers fail in different
+ways, each needing its own repair, and an average over them hides that. To
+find out, `classify_failure` asks six questions of each wrong answer, in
+pipeline order, and blames the first stage that lost the answer:
 
 1. An unanswerable question was answered: a *false answer*.
 2. No relevant chunk is among the first-stage top 50: *not retrieved*.
@@ -268,10 +307,17 @@ pipeline order, and blames the first stage that lost the answer (right of
 4. A relevant chunk is in the context and the answer abstains: a *false
    abstention*.
 5. A relevant chunk is in the context and the answer, faithful to the
-   passages, is incorrect: *ignored*. The generator used the passages, but
-   not the one that answers.
+   passages, is incorrect: *ignored*. The answer stays within the passages
+   and still misses a key fact that one of them holds; usually it even
+   cites that passage.
 6. A relevant chunk is in the context and the answer is not faithful:
    *unsupported*.
+
+The order matters more than the names: the first question that holds
+decides, so every wrong answer gets exactly one class. The names, in turn,
+describe what the answer did, not why; *ignored* says that the fact was
+there and did not make it into the answer, which is all the rule can see.
+:numref:`fig_lm_rag_stages` places each class beside its stage.
 
 ```{.python .input #rag-failures-failures-by-stage-1}
 %%tab pytorch
@@ -313,9 +359,9 @@ class was counted.
 
 | class | stage | fix written down in advance |
 |---|---|---|
-| not retrieved | first-stage retrieval | add the rewritten question as a third ranking to the fusion |
+| not retrieved | first-stage retrieval | fuse a third ranking, for the rewritten question, with the BM25 and dense rankings |
 | ranked low | reranking, assembly | rerank the top 100 and pass eight chunks |
-| ignored | generation | quote the supporting sentences, then answer; best passages at both ends |
+| ignored | generation | quote the supporting sentences, then answer; best passages at both ends; room for 500 new tokens |
 | unsupported | generation | drop each sentence that its cited passages do not support, as the generator judges |
 | false answer | generation | abstain below a reranker score tuned on `train` |
 | false abstention | generation | state the abstention rule after the passages |
@@ -325,11 +371,18 @@ fitted to them, and its gain on the same questions is optimistic, like any
 choice made on test data. With the remedies fixed in advance, the data
 decide only which class is largest, and the notebook takes that decision by
 rule. Experimental science calls this *pre-registration*: the analysis is
-written down before the data are seen. The cell counts the classes with
-intervals and prints five *failure cards*, records of a failure with its
-question, answer, ranking and verdicts. Claude Opus 5.5 also read each card
-and labeled its class, and the cell compares these labels, again a
-model's, with the rule's.
+written down before the data are seen. It is the hard discipline of this
+section, because it forbids the one thing we most want to do after reading
+a failure, which is to invent a fix for it.
+
+The next cell counts the classes with intervals and prints five *failure
+cards*, records of a failure with its question, answer, ranking and
+verdicts. The judge's three verdicts are those of :numref:`sec_lm_rag`: an
+answer is *correct* if it states every key fact, *faithful* if the passages
+support every statement in it, and *supported* if the passages it cites
+suffice on their own. Claude Opus 5.5 also read each card and labeled its
+class, and the cell compares these labels, again a model's, with the
+rule's.
 
 ```{.python .input #rag-failures}
 %%tab pytorch
@@ -417,27 +470,36 @@ if ready('base'):
         print('\nthe cards carry no labels of a second labeler yet')
 ```
 
-Of the 26 failures, 12 are ignored, 6 unsupported, 5 ranked low, 2 false
-answers and 1 a false abstention; none failed at first-stage retrieval.
-Ignored is the largest class, 0.46 [0.27, 0.65] of the failures, but its
-interval overlaps that of unsupported, 0.23 [0.08, 0.38], so 26 failures
-cannot tell which of the two is larger.
+None of the 26 failures happened at first-stage retrieval, which is what
+the hit rate led us to expect. Ignored is the largest class, 12 failures or
+0.46 of them, but its interval, [0.27, 0.65], overlaps that of unsupported,
+6 failures and [0.08, 0.38]. Twenty-six failures are a small sample to
+divide six ways, and they cannot say which of the two classes is larger.
 
-The 31 cards cover all 26 failures and five answers that the judge counts
-as correct after its re-judging; the labeler calls those five correct
-too, the first row of the table. On the 26 failures, labeler and rule
-agree on 13. Of the 13 disagreements, 9 are answers that the labeler calls
-correct and our grading does not. In seven the judge insists on a key fact
-the labeler lets pass. In two, unanswerable questions were declined in
-words other than the abstention sentence, which the string rule counts as
-answers. Only four disagreements concern the stage. Rule and labeler disagree about whether an answer
-is wrong far more often than about where it went wrong.
+How far can we trust the classes? The cards were drawn from the failures
+of the first verdicts, so there are 31 of them: the 26 failures above, and
+five answers that had no verdict then and that the judge, asked again,
+called correct. The labeler calls those five correct too. The printed
+agreement, 0.58, counts all 31 cards; on the 26 failures the labeler agrees
+with the rule on 13, half of them. Nine of the 13 disagreements are answers
+that the labeler calls correct and our grading does not. In seven the
+judge insists on a key fact that the labeler lets pass. In two,
+unanswerable questions were declined in words other than the abstention
+sentence of :numref:`sec_lm_rag`, "I cannot answer this from the provided
+passages", which is the only reply our grading counts as declining.
+Only four disagreements concern the stage.
 
-Now back to the answer that opened :numref:`sec_lm_rag`. It was picked by a
-fixed rule: the first `dev` answer, by question id, whose context held a
-relevant chunk, that the judge called incorrect, and whose card the labeler
-gave the same class as the rule. With two graders required to agree, the
-example is unlikely, though not certain, to be a judge error.
+Rule and labeler disagree about whether an answer is wrong more than twice
+as often as about where it went wrong. Once two graders agree that an
+answer is wrong, the stage is the easier question. One caveat matters for
+what comes next. The class the rule is about to pick is also the most
+disputed one: the labeler calls 4 of the 12 ignored answers correct.
+
+Let us return to the answer that opened :numref:`sec_lm_rag`. It was picked
+by a fixed rule: the first `dev` answer, by question id, whose context held
+a relevant chunk, that the judge called incorrect, and whose card the
+labeler gave the same class as the rule. With two graders required to
+agree, the example is unlikely, though not certain, to be a judge error.
 
 ```{.python .input #rag-opening-item}
 %%tab pytorch
@@ -482,11 +544,22 @@ The answering passage was ranked first, and its last sentence, printed
 above and quoted at the start of :numref:`sec_lm_rag`, holds the missing key
 fact. The answer cites passages two and three and leaves out that no warning
 is given. The passage was neither missing nor contradicted. It was ignored.
+And the missing fact is the one a user needs most: nothing tells you that
+part of your model is not training.
 
-The rule picks the ignored class and its fix: the generator quotes the
-sentences that support its answer, with their passage numbers, and then
-answers, with the best passages at both ends and room for 500 new tokens.
-The cell applies it to `dev` and then reads `test` once.
+The rule takes the class with the most failures, ignored, although 26
+failures cannot rank it above unsupported; a rule fixed in advance decides
+anyway, which is what it is for. Its fix asks the generator to quote the
+sentences that support its answer, with their passage numbers, and only
+then to answer. Quoting first should make the generator look at every
+passage before it writes. The fix is one idea in three settings: the
+quotes need room, so it allows 500 new tokens instead of 300, and it puts
+the best passages at both ends of the context, which language models use
+better than its middle :cite:`Liu.Lin.Hewitt.ea.2024`. Its result
+therefore belongs to the bundle, not to quoting alone; Exercise
+:exref:`ex_lm_rag-split-fix` takes the bundle apart. The cell applies the
+fix to `dev` and then reads `test` once, with the fix and with the rewrite
+and reranking.
 
 ```{.python .input #rag-fix}
 %%tab pytorch
@@ -564,34 +637,49 @@ if FIX and ready('base', FIX):
           .to_string())
 ```
 
-The fix failed. It lowered accuracy by 0.08 [$-0.12$, $-0.05$] on `dev` and
-by 0.08 [$-0.12$, $-0.03$] on `test`. On `dev` it got 20 fewer answers
-right. Ignored answers, the class it aimed at, did not become rarer but rose
-from 12 to 19. False answers rose from 2 to 15: on the unanswerable
-questions the abstentions fell from 18 of 20 to 5. In most of the other 15
-the model said in its own words that the passages do not give the answer,
-instead of writing the abstention sentence, and the rest answered anyway.
+The fix failed. It lowered accuracy by 0.08 on `dev` and by 0.08 on `test`,
+and both intervals exclude zero. On `dev` it got 20 fewer answers right,
+and most of the loss came from the unanswerable questions: false answers
+rose from 2 to 15, as the abstentions fell from 18 of 20 to 5. In about
+half of the other 15 the model said in its own words that the passages do
+not give the answer, instead of writing the abstention sentence, and the
+rest answered anyway.
 
 Is that a failure of the model or of our grading? The prompt asks for the
 abstention sentence word for word, and any system that acts on it, by
 showing a fallback for instance, breaks when the sentence is missing. The
-quoting format broke that agreement between prompt and grader, so a fix's
-prompt and the scoring rule have to be tested together. Even without the
-false answers, though, the fix did not shrink the class it aimed at. A
-change aimed at one class created another.
+quoting format broke that agreement between prompt and grader. A change
+aimed at one class created another, and a fix's prompt and its scoring rule
+have to be tested together.
+
+Even without the false answers, the fix did not shrink the class it aimed
+at: ignored answers rose from 12 to 19. The replies were not cut off; they
+average about 220 new tokens, well below the limit of 500. Where the fix
+lost an answerable question that the baseline got right, the two replies
+read side by side make the same points, the fix's more loosely, with a key
+fact of the baseline's answer left out or blurred. Quoting first did not
+make the answer that follows the quotes more complete.
 
 The `dev` result could have been optimistic, since the fix was chosen from
 `dev` failures; it lost there anyway, and `test` agrees. Nor do we now
 search for a better fix: one found by looking at these results would need a
-fresh test set to be believed. The stage change, too, does nothing on
-`test`: $-0.004$, with an interval from $-0.05$ to +0.04.
+fresh test set to be believed. A plausible repair, chosen by a careful
+procedure before any failure was counted, made the system worse, and no
+reading of the failures beforehand predicted it.
 
-The plot shows the same results at a glance. On the left are the shares of
-`dev` questions in each failure class before and after the fix. On the
-right are the accuracy and citation precision on `dev` of the closed book,
-the baseline, the stage change and the fix, with the `test` points as
-crosses. The last two each change one thing in the baseline; they are not
-steps of a chain.
+The stage change fared no better. On `test` the rewrite with reranking
+changed accuracy by $-0.004$, with an interval from $-0.05$ to +0.04. A rule
+that picks the largest of three near-equal numbers picks noise, and `test`
+says so. We do not read `test` again for the change that leads now: a test
+set read again after every change made on `dev` becomes development data.
+
+The plot shows these results at a glance. On the left, the fix moves
+failures into the ignored and false-answer classes. On the right are the
+accuracy and citation precision on `dev` of the closed book (the arm
+without passages), the baseline, the rewrite with reranking and the fix.
+The crosses are `test`, and each lies inside its `dev` interval: `test`
+agrees with `dev` for every arm it was read with. Both candidates are
+compared with the baseline, not with each other.
 
 ```{.python .input #rag-failure-plot}
 %%tab pytorch
@@ -626,24 +714,28 @@ if FIX and ready('closed', 'base', FIX):
 Beyond these fixes lies a large literature that this section does not
 measure, from transforming the query and retrieving again during generation
 to retrieval learned with reinforcement learning, compressed contexts and
-structured indexes (:numref:`sec_lm_encoders_fr`). Whichever we try, the
-procedure of this section decides whether it helps: one change at a time, a
-paired interval, and a test set read once.
+structured indexes (:numref:`sec_lm_encoders_fr`). Each of these methods
+can be judged with the procedure of this section.
 
 ## Marginalizing over Retrieved Documents
 :label:`subsec_lm_rag_marginal`
 
-Our largest failure class lives in the generator: it is handed the right
-passage and does not use it. Could the generator teach the retriever which
-passages it can use? Our pipeline treats retrieval as preprocessing:
-passages are chosen, concatenated and read. The model that gave RAG its
-name :cite:`Lewis.Perez.Piktus.ea.2020` treats the retrieved document as a
-hidden variable instead, which makes the system a probabilistic model whose
-query encoder and generator can be trained together. Let $x$ be
-the question, $y = (y_1, \ldots, y_n)$ the answer and $z$ a document. The
-retriever gives each document a score $s_z$ and the probability
-$p(z \mid x) = \mathrm{softmax}(\mathbf{s})_z$, and the generator reads one
-document at a time. *RAG-Sequence* draws one document for the whole answer:
+A dense retriever is trained on pairs of a question and a relevant passage,
+with a contrastive loss (:numref:`sec_lm_text_embeddings`). Nobody tells it
+whether the generator can use the passages it finds. Could the answers
+alone teach it that? Our pipeline cannot even ask, because it treats
+retrieval as preprocessing: passages are chosen, concatenated and read. The
+model that gave RAG its name :cite:`Lewis.Perez.Piktus.ea.2020` treats the
+retrieved document as a hidden variable instead, which makes the system a
+probabilistic model whose query encoder and generator can be trained
+together. This is the only proof in our two sections on RAG. It is short,
+and its last line answers the question just asked.
+
+Let $x$ be the question, $y = (y_1, \ldots, y_n)$ the answer and $z$ a
+document. The retriever gives each document a score $s_z$ and the
+probability $p(z \mid x) = \mathrm{softmax}(\mathbf{s})_z$, and the
+generator reads one document at a time. *RAG-Sequence* draws one document
+for the whole answer:
 
 $$p_S(y \mid x) = \sum_z p(z \mid x) \prod_{t=1}^{n} p(y_t \mid x, z, y_{<t}).$$
 :eqlabel:`eq_lm_rag_seq`
@@ -672,10 +764,13 @@ combines passages too, through attention over their concatenation, with one
 long prompt instead of one short pass per document.
 
 The sum over the corpus is too large, so it runs over the $k$ documents of
-largest $p(z \mid x)$, the retrieved set $\mathcal{K}$. What does that drop? Write
-$L_z = p(y \mid x, z)$, $p_S^{(k)}$ for the sum restricted to $\mathcal{K}$, and
-$m_k = \sum_{z \in \mathcal{K}} p(z \mid x)$ for the retriever's mass on $\mathcal{K}$. The
-dropped terms are nonnegative and each $L_z$ is at most $\max_z L_z$, so
+largest $p(z \mid x)$, the retrieved set $\mathcal{K}$. What does that drop?
+Write $L_z = p(y \mid x, z)$, $p_S^{(k)}$ for the sum restricted to
+$\mathcal{K}$, and $m_k = \sum_{z \in \mathcal{K}} p(z \mid x)$ for the
+retriever's mass on $\mathcal{K}$. (Implementations usually renormalize
+$p(z \mid x)$ over $\mathcal{K}$; Exercise :exref:`ex_lm_rag-topk` shows
+that the bound below survives.) The dropped terms are nonnegative and each
+$L_z$ is at most $\max_z L_z$, so
 
 $$0 \le p_S - p_S^{(k)} = \sum_{z \notin \mathcal{K}} p(z \mid x)\, L_z \le (1 - m_k) \max_z L_z.$$
 :eqlabel:`eq_lm_rag_topk`
@@ -699,13 +794,19 @@ $$\frac{\partial \log p_S(y \mid x)}{\partial s_z} = p(z \mid x, y) - p(z \mid x
 $s_z$ is $e^{s_z} L_z / \sum_{z'} e^{s_{z'}} L_{z'}$, the posterior; that of
 the second is $e^{s_z} / \sum_{z'} e^{s_{z'}}$, the prior. $\blacksquare$
 
-The retriever raises the score of a document that explains the answer
-better than it expected and lowers the others, with no label saying which
-document was relevant. If the generator ignores the documents, $L_z$ is the
-same for all, the posterior equals the prior, and the retriever learns
-nothing. That qualifies the answer to our question: the retriever's signal
-is only as good as the generator's use of the passages, and a passage the
-generator ignores teaches the retriever nothing about it.
+Let us read the result. Since the posterior is $p(z \mid x)\, L_z / p_S$,
+the gradient is $p(z \mid x)(L_z / p_S - 1)$: a document's score rises
+when it explains the answer better than the documents do on average,
+weighted by the retriever's probabilities, and falls when it explains it
+worse. No label says which document was relevant. That is a great deal to
+learn from answers alone. But it is
+learned through the generator's eyes. If the generator ignores every
+document, $L_z$ is the same for all, the posterior equals the prior, and
+the retriever learns nothing. If it ignores one relevant passage while
+others explain the answer well, the ignored passage falls below the
+average, and its score falls. So the answer to our question is a
+qualified yes: the retriever learns which passages the generator uses,
+and those are not always the relevant ones.
 
 The form is general. Take any marginal likelihood over a latent choice $z$,
 and differentiate its logarithm with respect to the parameters of
@@ -760,14 +861,16 @@ print('two documents, two tokens:\n  p_S = 0.6 * 0.9 * 0.2 + 0.4 * 0.1 * '
       '= {:.4f}'.format(*p_seq_tok(pz, P)))
 ```
 
-The gradient matches posterior minus prior to $6 \times 10^{-17}$, every
-truncation error lies below its bound (at $k = 5$, 0.028 against 0.037),
-and the case by hand gives 0.140 and 0.2552.
+The gradient matches posterior minus prior to rounding error, below
+$10^{-16}$; every truncation error lies at or below its bound (at $k = 5$,
+0.028 against 0.037); and the case by hand gives 0.140 and 0.2552.
+
+## Cost and Long Context
 
 Our pipeline concatenates instead of marginalizing, and every passage adds
-prompt tokens that the generator must read. What does that cost? The last
-cell reports the tokens and seconds per answer of each configuration and
-times retrieval and reranking, one question at a time.
+prompt tokens that the generator must read. What does each stage cost in
+time? The last cell reports the tokens and seconds per answer of each
+configuration, then times retrieval and reranking one question at a time.
 
 ```{.python .input #rag-cost}
 %%tab pytorch
@@ -795,34 +898,48 @@ print(f'one question at a time: retrieval {1000 * t_ret:.0f} ms '
 ```
 
 First-stage retrieval is cheap, about 30 ms per question. Reranking 50
-chunks is not: about half a second, some 40% of the time of a baseline
-answer. Generation takes the rest and grows with the prompt, from about
-1.1 s per answer at 1,500 prompt tokens and 1.3 s at the baseline's 1,900 to
-2.6 s at 6,300 tokens in batches of four.
+chunks is not: about half a second, some 40% of the time the generator
+spends on a baseline answer. It is easy to forget that the reranker, a
+model of 0.6 billion parameters, reads 50 pairs of question and chunk for
+every question. The baseline does without it, and the stage experiment gave
+no reason to add it.
 
-That leaves the question raised by longer context windows. If the generator
-can read 6,000 tokens, why not whole chapters, and no retrieval? On this set
-a budget of 6,000 tokens, 3.4 times the baseline's context, gained nothing
-measurable at twice the time, and the oracle of :numref:`sec_lm_rag` shows
-that the generator, given the right passage, still misses about one
-question in twelve. The agents of :numref:`chap_lm_agents` take a third
-path, retrieving when they decide that they need to. Whether whole chapters in the context would beat
-retrieval on the multi-passage questions, at equal cost, we leave open; it
-is an experiment for the exercises.
+The prompt is the context plus the instructions and the question, about
+240 tokens more. Generation time barely moves between 1,500 and 1,900
+prompt tokens, about 1.1 to 1.3 s per answer; prompts of the baseline's own
+length, batched differently, already span that range. At 6,300 tokens it
+doubles, to 2.6 s, partly because such long prompts run in batches of four
+instead of eight. Quoting before answering doubles the new tokens, to about 220,
+and raises the time to about 2.1 s.
+
+That leaves the question that longer context windows keep raising. If the
+generator can read 6,000 tokens, why not whole chapters, and no retrieval at
+all? On this set three times the baseline's context gained nothing
+measurable, and the oracle of :numref:`sec_lm_rag` shows that the
+generator, given only the right passages, still misses about one question
+in twelve. More text does not cure a generator that ignores what it
+already has. The agents of :numref:`chap_lm_agents` take a third path
+and retrieve only when they decide that they need to. Whether whole chapters, at equal cost, would beat
+retrieval on the questions that need several passages remains open.
+Exercise :exref:`ex_lm_rag-long-context` sets up the experiment.
 
 ## Summary
 
-Changing one stage of the baseline at a time, with paired intervals on the
-same questions, found no change that raised accuracy and two that lowered
-it: fixed windows instead of section chunks, even with more context tokens,
-and a smaller budget. Sorting the 26 wrong answers by the first stage that
-lost them made passages ignored the largest class. Its fix, written down
-before any failure was counted, lowered accuracy by 0.08 on `dev` and on
-`test`, mostly by creating false answers: a change aimed at one class can
-create another. The original RAG model marginalizes over retrieved documents
-instead of concatenating them, and its retriever learns from the generator
-through the posterior minus the prior. Whether whole documents in a long
-context can replace retrieval remains open.
+One accuracy number does not say what to fix in a retrieval-augmented
+generator, and a favorite fix is a guess; this section let measurements
+choose. Changing one stage at a time, with paired intervals on the same
+questions, raised accuracy measurably nowhere: retrieval had no room, as the
+share of hits predicted, and the generator did not read better for another
+order or for more text. Fixed windows and a smaller budget lowered it.
+Sorting the wrong answers by the first stage that lost them made the
+largest class the answers that miss a fact their own context holds. The
+fix for that class, written down in advance, lowered accuracy by 0.08 on
+`dev` and on `test`, mostly by creating false answers: a change aimed at
+one class can create another. The original RAG model marginalizes over
+retrieved documents, and its retriever learns the posterior minus the
+prior: the passages the generator uses, which are not always the ones that
+are relevant. Whether whole chapters in a long context can replace
+retrieval remains open.
 
 ## Exercises
 
@@ -834,10 +951,15 @@ context can replace retrieval remains open.
        $z^*$. Show that the expectation of $1 - m_k$ over questions equals
        the probability that $z^*$ is not in the top $k$, one minus
        Recall@$k$.
-    1. With Recall@5 = 0.97 from :numref:`sec_lm_rag`, what would the bound
-       promise for RAG-Sequence over five documents if the retriever were
-       calibrated? Why is a softmax over BM25 or dense scores rarely
+    1. The baseline's five chunks hold a relevant one for 213 of the 220
+       answerable questions, so Recall@5 $\approx 0.97$. What would the
+       bound promise for RAG-Sequence over five documents if the retriever
+       were calibrated? Why is a softmax over BM25 or dense scores rarely
        calibrated in this sense, and how would you calibrate it on `train`?
+    1. Implementations usually renormalize the retriever's probabilities
+       over $\mathcal{K}$ and use $p_S^{(k)} / m_k$. Show that the error
+       $p_S - p_S^{(k)} / m_k$ can take either sign, and that its absolute
+       value obeys the same bound.
    :exlabel:`ex_lm_rag-topk`
 
 1. [extended] **Long context against retrieval.** ●● Put whole chapters into
@@ -866,6 +988,66 @@ context can replace retrieval remains open.
        them can a greedy decoder evaluate one token at a time?
    :exlabel:`ex_lm_rag-marginals`
 
+1. [code] **The fix under a tolerant grader.** Most of the fix's loss came
+   from unanswerable questions, where any reply other than the abstention
+   sentence counts as an answer. Use the recorded answers in `GENS`; no
+   generation and no judge are needed.
+    1. Read the replies of `fix-ignored` to the 20 unanswerable `dev`
+       questions and write a tolerant rule that also counts a reply that
+       declines in other words as an abstention. Check the rule against
+       your reading of every reply.
+    1. Re-score `base` and `fix-ignored` on these 20 questions with the
+       tolerant rule. Does the fix still lose there?
+    1. Apply the rule to the baseline's answers to the answerable questions.
+       How many replies that the judge graded would it now call
+       abstentions, and what does that say about loosening a grader after
+       seeing a fix's replies?
+    1. Read the fix's ignored answers to questions that the baseline got
+       right. Do they decline in other words, or answer and miss a key
+       fact? Which of the fix's two failures does the tolerant rule
+       explain, and which does it leave?
+   :exlabel:`ex_lm_rag-tolerant`
+
+1. [code] **Splitting the fix.** The fix of the ignored class changed three
+   settings at once.
+    1. Define three arms that each change one of them: the quoting prompt
+       alone (`dict(d2l.RAG_BASE, prompt='quote')`), the order with the best
+       passages at both ends alone, and room for 500 new tokens alone.
+       Before you run them, predict which carries the loss.
+    1. Generate the three arms on `dev`, judge them with the local judge, and
+       report each paired difference with the baseline and each arm's
+       failure classes. Without two GPUs for the judge, compare the
+       abstentions on the unanswerable questions, which need no judge.
+    1. Do the three effects add up to the bundle's? What does the answer say
+       about writing a fix down in advance as a bundle, and why may these
+       results not be read on `test`?
+   :exlabel:`ex_lm_rag-split-fix`
+
+1. **Failure counts from two graders.** The labeler called 9 of the 26
+   failures correct.
+    1. From the table of rule against labeler printed in
+       :numref:`subsec_lm_rag_failures`, recount the classes with those nine
+       answers taken as correct. Does the largest class change?
+    1. With the bootstrap of the failure cell, or with the normal
+       approximation to a binomial share, compute an interval for the share
+       of the largest class among the remaining failures. Can the classes
+       now be ranked?
+    1. What would it take to decide which grader is right on the nine, and
+       why would asking a third model not settle it?
+   :exlabel:`ex_lm_rag-two-graders`
+
+1. [code] **Coverage of the whole span.** Coverage counts a question as
+   covered when its chunks hold half of a gold span.
+    1. Write a variant of `d2l.cov_at_budget` that requires a whole gold
+       span, and recompute the coverage of section chunks and fixed windows
+       at 1,000, 2,000 and 3,000 tokens. (Without a GPU, use BM25 rankings
+       for both.)
+    1. Does the gap between windows and sections grow, and does it now come
+       closer to the windows' loss in accuracy?
+    1. Gold spans can cross a section boundary too. How often do they, and
+       what would you change in the chunker?
+   :exlabel:`ex_lm_rag-whole-span`
+
 1. [code] **A smaller generator.** Replace Qwen3.5-9B by Qwen3.5-4B of the
    same family and keep everything else fixed.
     1. Before you run it, predict which failure class grows most and whether
@@ -883,38 +1065,37 @@ context can replace retrieval remains open.
 ::: {.cover}
 [Dive into Deep Learning · §19.6]{.kicker}
 
-Failures and Fixes in Retrieval-Augmented Generation<br>**one change at a time · failures by stage · a fix chosen in advance · marginalizing over documents**
+Failures and Fixes in Retrieval-Augmented Generation<br>**one change at a time · failures by stage · a fix chosen in advance · marginalizing over documents · cost**
 :::
 :::
 
-::: {.slide title="26 Wrong Answers: Which Stage Lost Each One?"}
+::: {.slide title="26 Answers Are Wrong, Though Retrieval Finds the Passage for 213 of 220"}
 [The problem]{.kicker}
 
-- The baseline answers 0.89 of 240 `dev` questions; a relevant passage
-  reaches the context for 213 of 220 answerable ones.
-- Still 26 answers are wrong. One cites [2] and [3] and misses the fact
-  that passage [1], ranked first, states.
-- Another chunking? A rewritten query? More context? Or the generator?
+- Baseline: 0.89 of 240 `dev` questions about this book.
+- 19 of its 24 errors on answerable questions had the passage in context.
+- Favorite repairs: smaller chunks, query rewrites, more context.
+- `dev` (240 questions) chooses; `test` (240 more) is read once.
 
 ::: {.d2l-note .warn}
-Each stage needs a different repair, and one accuracy number does not say
-which.
+Which repair can help such a system, and how would we know?
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- change one stage at a time and read the paired interval;
-- compare chunkings at equal tokens, with a control for the token count;
-- blame each failure on a stage, and test a fix chosen in advance;
+- predict a perfect retriever's gain from the share of hits;
+- change one stage at a time, read a paired interval;
+- blame each wrong answer on the first stage that lost it;
+- test a fix written down in advance, once;
 - derive RAG-Sequence, RAG-Token and the retriever's gradient.
 
-**Running example:** the baseline of the previous section on 240 `dev`
-questions; Qwen3.5-9B answers, Qwen3.8-27B judges; `test` read once.
+**Running example:** 240 `dev` questions; Qwen3.5-9B answers,
+Qwen3.8-27B judges.
 :::
 
-::: {.slide title="Measured Stages Become Changed Stages"}
+::: {.slide title="Locating Failures Comes Before Fixing Them"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
@@ -923,67 +1104,107 @@ questions; Qwen3.5-9B answers, Qwen3.8-27B judges; `test` read once.
 |---|---|
 | vectors | Word Embeddings |
 | | Pretrained Encoders |
-| | Text Embeddings from Contrastive Training |
+| | Text Embeddings |
 | finding | Sparse, Dense and Approximate Retrieval |
-| using | Retrieval-Augmented Generation |
+| using what is found | Retrieval-Augmented Generation |
 | | **Failures and Fixes in RAG** |
 :::
 
 ::: {.col .narrow}
-- **Uses:** the question set, judge, baseline and paired bootstrap of the
+- **Uses:** the question set, judge, baseline and paired intervals of the
   previous section.
-- **Skips:** running joint training of retriever and generator (derived,
-  not run); retrieval inside agent loops.
+- **Skips:** training retriever and generator together (derived, not run);
+  retrieval inside agent loops.
 :::
+:::
+:::
+
+::: {.slide title="With 213 of 220 Hits, a Perfect Retriever Could Add About 0.02"}
+[A prediction before any run]{.kicker}
+
+$$\text{accuracy} = h\, a_1 + (1 - h)\, a_0$$
+
+- *Hit*: the context holds a relevant chunk. $h$: share of hits, 213/220.
+- $a_1 = 0.91$ on hits, $a_0 = 0.29$ on misses.
+- Perfect retriever, $a_1$ unchanged:
+  $(1 - h)(a_1 - a_0) \approx 0.032 \times 0.63 \approx 0.02$.
+
+::: {.d2l-note}
+Inside the $\pm 0.03$ that 240 questions resolve: retrieval has no room
+here.
 :::
 :::
 
 ::: {.slide title="Section Chunks Cover More Than Fixed Windows at Small Budgets"}
 [Chunking at equal tokens]{.kicker}
 
-| `cov@T`, 220 questions | sections | fixed 256/64 | fixed − sections |
+| budget $T$, 220 questions | sections | fixed 256/64 | fixed − sections |
 |---|---|---|---|
 | 1,000 tokens | 0.91 | 0.84 | $-0.07$ [$-0.11$, $-0.02$] |
 | 2,000 tokens | 0.97 | 0.94 | $-0.03$ [$-0.06$, +0.01] |
 | 3,000 tokens | 0.98 | 0.97 | $-0.01$ [$-0.04$, +0.02] |
 
-- Fixed windows: 256 tokens, overlap 64. Sections: at most 512, cut at
-  headings.
-- Recall@$k$ would mislead: five sections hold more text than five
-  windows.
+`cov@T`: the first chunks, up to $T$ tokens, hold half a gold span.
+
+::: {.d2l-note}
+Compare chunkings at equal tokens, not equal $k$: five sections hold more
+text than five windows.
+:::
 :::
 
 ::: {.slide title="No Stage Change Raised Accuracy; Two Lowered It"}
 [One change at a time]{.kicker}
 
-| change, 240 `dev` questions | accuracy − baseline | s per answer |
-|---|---|---|
-| fixed windows, 1,578 tokens (baseline 1,697) | $-0.08$ [$-0.12$, $-0.04$] | 1.11 |
-| rewrite + rerank top 50 | +0.00 [$-0.03$, +0.04] | 1.87 |
-| reverse order | +0.01 [$-0.02$, +0.04] | 1.14 |
-| budget 1,500, no limit of 5 chunks | $-0.03$ [$-0.06$, $-0.01$] | 1.08 |
-| budget 6,000, no limit of 5 chunks | +0.01 [$-0.03$, +0.05] | 2.59 |
-| control: fixed windows, 1,833 tokens | $-0.05$ [$-0.09$, $-0.02$] | 1.15 |
+| change, 240 `dev` questions | context tokens | accuracy − baseline | interval excludes 0 |
+|---|---|---|---|
+| baseline: 5 section chunks, no reranker | 1,700 | | |
+| fixed windows | 1,600 | $-0.08$ | yes |
+| rewrite + rerank top 50 (two changes) | 1,700 | +0.00 | no |
+| reverse order | 1,700 | +0.01 | no |
+| budget 1,500, no 5-chunk limit | 1,300 | $-0.03$ | yes |
+| budget 6,000, no 5-chunk limit | 5,800 | +0.01 | no |
+
+Baseline ranking: BM25 and dense, fused by reciprocal ranks.
 
 ::: {.d2l-note}
-With 213 of 220 hits, retrieval-side changes had about 0.02 to gain.
+As predicted for retrieval; and three times the text did not help the
+generator either.
 :::
 :::
 
-::: {.slide title="Six Failure Classes, Checked in Pipeline Order"}
+::: {.slide title="The Cut, Not the Token Count, Cost Fixed Windows Their Accuracy"}
+[A control]{.kicker}
+
+| arm | context tokens | accuracy − baseline |
+|---|---|---|
+| fixed windows, up to the baseline's tokens | 1,600 | $-0.08$ |
+| control: windows just past the baseline's tokens | 1,800 | $-0.05$ |
+
+- Coverage near these budgets trails by 0.03 to 0.07: worth at most
+  0.02 to 0.04 of accuracy.
+- Coverage counts half a span; a window can cut off the key fact.
+
+::: {.d2l-note}
+Chunks that follow the text's structure give better answers.
+:::
+:::
+
+::: {.slide title="Each Wrong Answer Is Blamed on the First Stage That Lost It"}
 [Failures by stage]{.kicker}
 
-| class | test (first that holds) | of 26 |
+| class | condition, checked in this order | of 26 |
 |---|---|---|
 | false answer | unanswerable, yet answered | 2 |
 | not retrieved | no relevant chunk in the top 50 | 0 |
 | ranked low | in the top 50, not in the context | 5 |
 | false abstention | in the context, answer abstains | 1 |
-| ignored | in the context, faithful, incorrect | 12 |
+| ignored | in the context, faithful, misses a key fact | 12 |
 | unsupported | in the context, not faithful | 6 |
 
-Ignored 0.46 [0.27, 0.65] and unsupported 0.23 [0.08, 0.38]: the intervals
-overlap.
+::: {.d2l-note}
+Ignored 0.46 [0.27, 0.65], unsupported 0.23 [0.08, 0.38]: 26 failures
+cannot rank the two.
+:::
 :::
 
 ::: {.slide title="Fixes Are Written Down Before Any Failure Is Counted"}
@@ -993,13 +1214,60 @@ overlap.
 |---|---|
 | not retrieved | rewritten query as a third ranking |
 | ranked low | rerank the top 100, pass 8 chunks |
-| ignored | quote the support, then answer; best at both ends |
+| ignored | quote, then answer; best passages at both ends; 500 new tokens |
 | unsupported | drop sentences their citations do not support |
 | false answer | abstain below a reranker score tuned on `train` |
 | false abstention | abstention rule after the passages |
 
-A model labeler agrees with the rule on 13 of the 26 failures; 9 of the
-13 disagreements are about *whether* an answer is wrong.
+::: {.d2l-note}
+A rule picks the largest class, ignored, and carries the largest stage
+gain to `test`, read once.
+:::
+:::
+
+::: {.slide title="Check: Three Changes Lie Within One Verdict on Dev. What Will Test Show?"}
+[Check]{.kicker}
+
+Reverse order, budget 6,000, rewrite + rerank: +0.00 to +0.01 each on
+`dev`, within one verdict of 240. The rule carried rewrite + rerank to
+`test`.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $-0.004$, interval $-0.05$ to +0.04. Picking the largest of
+near-equal numbers picks noise.
+:::
+:::
+:::
+
+::: {.slide title="Two Graders Disagree More Often About Whether an Answer Is Wrong Than About Where"}
+[A second labeler]{.kicker}
+
+Claude Opus 5.5 labeled the cards of the 26 failures.
+
+| the labeler | failures |
+|---|---|
+| agrees with the rule | 13 |
+| calls the answer correct | 9 |
+| blames another stage | 4 |
+
+Of the 9: in 7 the judge insists on a key fact; 2 unanswerable questions
+were declined in other words. Most disputed class: ignored, 4 of 12.
+:::
+
+::: {.slide title="The Answering Passage Was Ranked First, and the Answer Ignored It"}
+[One failure]{.kicker}
+
+**Q.** What happens to PyTorch modules kept in a plain Python list?
+
+- Passage [1] ends: "Modules in a plain list stay unregistered, without any
+  warning."
+- The answer cites [2] and [3] and never says that nothing warns.
+
+::: {.d2l-note}
+Neither missing nor contradicted. Ignored, say the rule and the labeler;
+and the missing fact is the one a user needs.
+:::
 :::
 
 ::: {.slide title="The Fix Chosen in Advance Failed on Dev and on Test"}
@@ -1010,18 +1278,55 @@ A model labeler agrees with the rule on 13 of the 26 failures; 9 of the
 | `dev` | $-0.08$ [$-0.12$, $-0.05$] |
 | `test`, read once | $-0.08$ [$-0.12$, $-0.03$] |
 
-- Ignored: 12 → 19. False answers: 2 → 15.
-- Abstentions on unanswerable questions: 18 → 5 of 20. Most replies
-  declined in their own words, without the abstention sentence.
+- 20 fewer correct answers on `dev`.
+- Chosen from `dev` failures, so `dev` could have flattered it. It lost
+  there anyway, and `test` agrees.
+- One idea in three settings: the loss belongs to the bundle.
+:::
+
+::: {.slide title="A Change Aimed at One Class Created Another"}
+[Where the failures went]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| `dev` answers | baseline | fix |
+|---|---|---|
+| correct | 214 | 194 |
+| ranked low | 5 | 4 |
+| ignored | 12 | 19 |
+| unsupported | 6 | 7 |
+| false answer | 2 | 15 |
+| false abstention | 1 | 1 |
+:::
+
+::: {.col}
+Abstentions on the 20 unanswerable questions: 18 → 5. About half of the
+other 15 declined in the model's own words, not with "I cannot answer
+this from the provided passages."
+:::
+:::
 
 ::: {.d2l-note .rule}
-A change aimed at one class can create another. Test a fix's prompt and
-the scoring rule together, and do not search for a better fix on the same
-data.
+Test a prompt with its scoring rule. Never search for a better fix on the
+same data.
 :::
 :::
 
-::: {.slide title="RAG-Sequence Picks One Document per Answer; RAG-Token One per Token"}
+::: {.slide title="The Original RAG Treats the Retrieved Document as a Hidden Variable"}
+[From pipeline to model]{.kicker}
+
+- Our pipeline: retrieve, concatenate, read. The retriever is never told
+  whether the generator could use a passage.
+- RAG: the generator reads one document $z$ at a time; the answer's
+  probability sums over documents, weighted by the retriever's
+  $p(z \mid x)$.
+
+::: {.d2l-note}
+Then the answers alone give the retriever a gradient.
+:::
+:::
+
+::: {.slide title="Check: Which Is Larger, RAG-Sequence or RAG-Token?"}
 [Two marginalizations]{.kicker}
 
 Question $x$, answer $y_1 \ldots y_n$, document $z$ with retriever
@@ -1032,7 +1337,7 @@ $$p_S = \sum_z p(z \mid x) \prod_t p(y_t \mid x, z, y_{<t})$$
 $$p_T = \prod_t \sum_z p(z \mid x)\, p(y_t \mid x, z, y_{<t})$$
 
 Two documents, $p(z \mid x) = (0.6, 0.4)$; token probabilities
-$(0.9, 0.2)$ and $(0.1, 0.8)$. Which is larger?
+$(0.9, 0.2)$ and $(0.1, 0.8)$.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
@@ -1042,20 +1347,35 @@ answer, and only RAG-Token combines the halves.
 :::
 :::
 
-::: {.slide title="The Retriever Learns Posterior Minus Prior; Truncation Loses the Mass Outside"}
-[Training signal]{.kicker}
+::: {.slide title="Keeping the Top k Documents Loses at Most the Mass Outside Them"}
+[Truncation]{.kicker}
 
-With $L_z = p(y \mid x, z)$ and $p(z \mid x) = \mathrm{softmax}(\mathbf{s})_z$:
-
-$$\frac{\partial \log p_S}{\partial s_z} = \underbrace{\frac{p(z \mid x) L_z}{p_S}}_{\text{posterior}} - \underbrace{p(z \mid x)}_{\text{prior}}$$
-
-Keep the top $k$, with retriever mass $m_k$ on them:
+$L_z = p(y \mid x, z)$; $\mathcal{K}$: the $k$ documents of largest
+$p(z \mid x)$; $m_k$: their total probability.
 
 $$0 \le p_S - p_S^{(k)} \le (1 - m_k) \max_z L_z$$
 
+- Eight random documents, $k = 5$: lost 0.028, bound 0.037.
+
 ::: {.d2l-note}
-A generator that ignores documents ($L_z$ constant) teaches the retriever
-nothing.
+A peaked retriever loses little; one that spreads its mass can lose much,
+however good its ranking.
+:::
+:::
+
+::: {.slide title="The Retriever Learns What the Generator Uses, Not What Is Relevant"}
+[Training signal]{.kicker}
+
+With $p(z \mid x) = \mathrm{softmax}(\mathbf{s})_z$:
+
+$$\frac{\partial \log p_S}{\partial s_z} = \underbrace{\frac{p(z \mid x) L_z}{p_S}}_{\text{posterior}} - \underbrace{p(z \mid x)}_{\text{prior}}$$
+
+- Score rises if $L_z > p_S$, the average; falls otherwise. No relevance
+  label needed. Checked against autograd to within $10^{-16}$.
+
+::: {.d2l-note}
+Generator ignores every document: no signal. Ignores one relevant passage
+that others outdo: that passage is pushed down.
 :::
 :::
 
@@ -1065,30 +1385,50 @@ nothing.
 | per question | prompt tokens | seconds |
 |---|---|---|
 | retrieval | | 0.03 |
-| rerank 50 chunks | | 0.53 |
+| rerank 50 chunks (not in the baseline) | | 0.5 |
 | closed book | 90 | 0.95 |
-| baseline | 1,933 | 1.28 |
-| budget 6,000 | 6,336 | 2.59 |
-| fix: quote, then answer | 1,971 | 2.12 |
+| baseline | 1,900 | 1.3 |
+| budget 6,000 | 6,300 | 2.6 |
+| fix: quote, then answer | 2,000 | 2.1 |
 
-Qwen3.5-9B on one RTX 4090, batches of 8 (4 at 6,000 tokens).
+Qwen3.5-9B on one RTX 4090, batches of 8 (4 at 6,000 tokens); retrieval
+and reranking one question at a time.
+:::
+
+::: {.slide title="Check: With 70% Hits, What Could a Perfect Retriever Add?"}
+[Check]{.kicker}
+
+Another collection: a relevant chunk reaches the context for 70% of the
+questions; accuracy 0.9 on hits, 0.2 on misses.
+
+$$\text{accuracy} = h\, a_1 + (1 - h)\, a_0$$
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $0.3 \times 0.7 = 0.21$, ten times our 0.02. There, fix
+retrieval first.
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
 [Recap]{.kicker}
 
-- One change at a time, paired on the same 240 questions.
-- No stage change helped; fixed windows $-0.08$, budget 1,500 $-0.03$.
-- Largest class ignored; its fix lost 0.08 on `dev` and on `test`.
-- A change aimed at one class can create another.
-- $p_S$, $p_T$; gradient = posterior − prior.
+- 213 of 220 hits: about 0.02 to gain; no stage change helped measurably.
+- Fixed windows $-0.08$, and $-0.05$ even with more tokens than the
+  baseline: the cut costs accuracy. Budget 1,500: $-0.03$.
+- Largest class: ignored, 12 of 26; graders differ more on whether than
+  on where.
+- The fix chosen in advance lost 0.08 on `dev` and on `test`.
+- Gradient = posterior − prior: the retriever learns what the generator
+  uses.
 :::
 
-::: {.slide title="Next: Whole Chapters in Context, or Retrieval on Demand"}
+::: {.slide title="Next: Whole Chapters in the Context, or Retrieval on Demand"}
 [Next]{.kicker}
 
-A 6,000-token budget, 3.4 times the baseline's context, gained nothing at
-twice the time. Would whole chapters in a 32,000-token context beat
-retrieval on multi-passage questions? Agents take a third path: they
+Three times the context gained nothing measurable at twice the time.
+Would whole chapters in a 32,000-token context beat retrieval on
+questions that need several passages? Agents take a third path: they
 retrieve when they decide they need to.
 :::

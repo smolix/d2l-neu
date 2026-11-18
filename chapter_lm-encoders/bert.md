@@ -24,6 +24,20 @@ section we load a released encoder, fine-tune it for three tasks, and
 measure on the same items when it beats a prompted decoder, and at what
 cost.
 
+Which tasks should we measure? We take one that a decoder has in effect
+already met, and one whose rules it must pick up from its examples.
+Sentiment is everywhere in the text a decoder is pretrained on: SST-2
+:cite:`Socher.Perelygin.Wu.ea.2013` holds sentences from movie reviews
+labeled positive or negative. *Natural language inference* is not. In MNLI
+:cite:`Williams.Nangia.Bowman.2018` each item pairs a *premise* with a
+*hypothesis*, labeled *entailment* if the premise implies the hypothesis,
+*contradiction* if it rules the hypothesis out, and *neutral* otherwise.
+Where one label ends and the next begins is a convention of the dataset's
+annotators. Sorting messages by topic lies between the two. The third task,
+CoNLL-2003 :cite:`TjongKimSang.DeMeulder.2003`, marks every name in a set of
+news sentences with its type. It needs a label per word, which a prompt can
+produce only by writing the tagged sentence out again.
+
 ```{.python .input #bert-imports}
 %%tab pytorch
 import math
@@ -53,9 +67,9 @@ The encoder is ModernBERT-base :cite:`Warner.Chaffin.Clavie.ea.2024`,
 released in 2024, and the decoder is Qwen3-1.7B, the instruct model of
 :numref:`sec_lm_prompting`. The next four cells are setup and can be
 skimmed. As in the previous chapter, the expensive results were computed
-once and stored, here in about half an hour on one RTX 4090. Running the
-notebook reads them and repeats one piece of each live, and the environment
-variable `D2L_RERUN` names the results to recompute.
+once and stored, here in about half an hour on one RTX 4090. A run of the
+notebook reads them and recomputes a small piece of each as a check. The
+environment variable `D2L_RERUN` names results to recompute in full.
 
 ```{.python .input #bert-config}
 %%tab pytorch
@@ -237,17 +251,6 @@ def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
     return model.eval(), tokenizer
 ```
 
-Which tasks should we measure? We take one that a decoder has in effect
-already met, and one whose rules it must pick up from its examples.
-Sentiment is everywhere in the text a decoder is pretrained on. *Natural
-language inference* is not. In MNLI :cite:`Williams.Nangia.Bowman.2018` each
-item pairs a *premise* with a *hypothesis*, labeled *entailment* if the
-premise implies the hypothesis, *contradiction* if it rules the hypothesis
-out, and *neutral* otherwise. Where one label ends and the next begins is a
-convention of the dataset's annotators. Sorting messages by topic lies
-between the two. A third task, tagging every name in a sentence with its
-type, needs a label per word, which a prompt handles badly.
-
 Let us look at the answer first, on MNLI. The encoder, fine-tuned on 16,000
 labeled pairs, meets Qwen3-1.7B, prompted with 8 solved pairs, on the same
 2,000 validation pairs. Accuracies are means over three training seeds and
@@ -332,23 +335,24 @@ for a, b in (('river', 'check'), ('river', 'rate'), ('check', 'rate')):
 ```
 
 The tokenizer writes the pair as `[CLS] premise [SEP] hypothesis [SEP]`, as
-BERT did. `[SEP]` is a separator that closes each text. `[CLS]` is a special
-token at the start, whose final vector BERT trained on a second objective,
-*next-sentence prediction*: did the second text follow the first in the
-source? BERT also added a *segment embedding*, a learned vector that marked
-each token as part of the first or the second text (`token_type_ids`).
-ModernBERT has none. Its tokenizer returns only token ids and an attention
-mask, so the separator alone marks where the hypothesis begins.
+BERT did (`Ġ` marks a token that begins with a space). `[SEP]` is a
+separator that closes each text, and `[CLS]` is a special token at the
+start. BERT also marked each token as part of the first or the second text
+with a learned *segment embedding* (`token_type_ids`). ModernBERT has none:
+its tokenizer returns only token ids and an attention mask, so the separator
+alone marks where the hypothesis begins.
 
 Sixteen tokens went in, and sixteen vectors of 768 numbers came out. Unlike
 the word vectors of :numref:`sec_lm_word_embeddings`, these depend on the
-whole input, and the last lines of the output show it for the word on which
-that section ended. *Bank* occurs in three sentences. After the embedding
-layer its vector is the same in all three (cosine 1.00), since the table
-holds one row per token. After the last layer the bank of a river has a
-cosine of 0.68 and 0.65 with the two banks that deal in money, and those two
-have 0.85 with each other. The encoder did not have to choose between the
-senses of the word. The sentence told it which one was meant.
+whole input. The last lines of the output show it for *bank*, the word on
+which that section ended, in three sentences. After the embedding layer its
+vector is the same in all three (cosine 1.00), since the table holds one row
+per token. After the last layer the bank of a river has a cosine of 0.68 and
+0.65 with the two banks that deal in money, and those two have 0.85 with
+each other. Read these as an ordering, since the cell compares no unrelated
+words that would show how low a cosine can go. The encoder did not have to
+choose between the senses of the word. The sentence told it which one was
+meant.
 
 The pair also entered as one input. In every layer each token of the
 hypothesis can therefore attend to every token of the premise, so the two
@@ -397,13 +401,13 @@ In :numref:`sec_transformer` every selected byte became the mask symbol.
 BERT also selects 15% of the tokens for prediction, but it replaces only 80%
 of them by `[MASK]`, replaces 10% by a random token and leaves 10%
 unchanged. The loss is computed at all selected positions. Why not mask them
-all? There are two reasons. `[MASK]` never occurs in the text the encoder is
-later fine-tuned on. And a model asked only about positions that show
-`[MASK]` would have no reason to keep, anywhere else, a vector that
-describes the token standing there, although those are the vectors that
-fine-tuning reads. When any ordinary-looking token may be asked about, the
-model must keep a good guess of the true token everywhere. `mlm_corrupt`
-implements the rule and never selects a special token.
+all? BERT gave two reasons. First, `[MASK]` never occurs in the text the
+encoder is later fine-tuned on. Second, if only `[MASK]` positions were ever
+scored, nothing in the loss would ask the vector at any other position to
+describe its own token, yet those are the vectors that fine-tuning reads.
+When any ordinary-looking token may be asked about, the model must keep a
+good guess of the true token everywhere. `mlm_corrupt` implements the rule
+and never selects a special token.
 
 ```{.python .input #bert-mlm-corrupt}
 %%tab pytorch
@@ -453,37 +457,37 @@ assert not (sel & special).any() and all(abs(shares[k] - v) < 2e-3 for k, v
 The counts match the rule to within a fraction of a percent. So 12% of all
 tokens show `[MASK]`, and only 1.5% are random tokens that the model must
 recognize as wrong. The proportions are BERT's and are not sacred:
-ModernBERT was pretrained with 30% of its tokens selected. What matters is
-that all three cases occur.
+ModernBERT was pretrained with 30% of its tokens selected. Nor do the two
+reasons weigh as much as they sound. In BERT's own ablation, fine-tuning
+turned out "surprisingly robust" to the mix; masking every selected token
+hurt mainly when the token vectors were used without fine-tuning, as fixed
+features for tagging names :cite:`Devlin.Chang.Lee.ea.2018`.
 
 ### Successors of BERT
 
-Three successors of BERT are worth knowing, each for what it changed
-(:numref:`tab_lm_bert_relatives`).
-
-:Three successors of BERT and what each changed.
-:label:`tab_lm_bert_relatives`
-
-| model | what it changes |
-|---|---|
-| RoBERTa :cite:`Liu.Ott.Goyal.ea.2019` | drops next-sentence prediction, draws new masks each time a sequence is read (as calling `mlm_corrupt` once per batch does), and trains longer on far more text |
-| ELECTRA :cite:`clark2019electra` | a small generator fills the masked positions with plausible tokens, and the encoder predicts for *every* token whether it was replaced, so every position supplies a training signal, not 15% |
-| T5 :cite:`raffel2020exploring` | an encoder--decoder: whole spans are masked, the decoder writes the missing spans, and every task, classification included, becomes text in and text out |
-
-RoBERTa showed that BERT had been undertrained rather than misdesigned.
-ELECTRA gets more learning out of each token of compute. T5 points toward
-the decoders of the previous chapter, which do everything by writing text.
+BERT had a second pretraining objective, *next-sentence prediction*, read
+from the final vector of `[CLS]`: did the second text follow the first in
+the source? Its successors dropped it. RoBERTa
+:cite:`Liu.Ott.Goyal.ea.2019` also drew new masks each time a sequence was
+read (as calling `mlm_corrupt` once per batch does) and trained longer on
+far more text. RoBERTa showed that BERT had been undertrained rather than
+misdesigned. Two others changed the objective. In ELECTRA
+:cite:`clark2019electra` the encoder judges, at every token, whether a small
+generator replaced it, so every position supplies a training signal and not
+15%. T5 :cite:`raffel2020exploring` has a decoder write out masked spans and
+turns every task into text in and text out, a step toward the decoders of
+the previous chapter.
 
 ModernBERT stands in RoBERTa's line. It keeps BERT's bidirectional
-attention, special tokens and masked-token objective, drops next-sentence
+attention, special tokens and masked-token objective, has no next-sentence
 prediction, and rebuilds the block along the lines of recent decoders. The
 details of that block (the gated feed-forward layer GeGLU, the rotary
 positions of :numref:`subsec_pos-rope`, the absence of bias terms) can be
 forgotten here. Two lines of the configuration printed with the token
-vectors matter. The classification head pools by the mean,
-which our own head will have to respect. And an input may have 8,192 tokens,
-sixteen times BERT's 512, which is affordable only because of the way
-ModernBERT arranges its attention.
+vectors matter. The classification head pools by the mean, which our own
+head will have to respect. And an input may have 8,192 tokens, sixteen
+times BERT's 512. The way ModernBERT arranges its attention makes such long
+inputs cheaper, and by how much is easy to count.
 
 ### Alternating Attention
 
@@ -545,9 +549,11 @@ objective had trained. ModernBERT averages the final vectors over the
 tokens, leaving out padding. Its configuration records the choice
 (`classifier_pooling: mean`) and Transformers' sequence classifier follows
 that field, so read it rather than assume `[CLS]`. Which pooling is better
-cannot be settled by argument. The dense layer and norm that start the head
-come from the masked-token head, which saw one token's vector at a time, and
-neither pooling is what they were fitted to (Exercise
+cannot be settled by argument. The dense layer and norm that start our head
+come from the masked-token head, which was trained on the vector of one
+token at a time. A mean over tokens is as new to them as the vector of
+`[CLS]`, which that head never scored, so neither pooling starts with an
+advantage and only an experiment can decide (Exercise
 :exref:`ex_lm_bert-pooling`).
 
 Let $\mathbf{h}_1, \ldots, \mathbf{h}_T$ be the final vectors of the $T$
@@ -562,9 +568,9 @@ $$
 That is a mean, a dense layer $\mathbf{W}_\textrm{d}$ of size
 $768 \times 768$, a GELU, a layer norm, and a linear map with bias
 $\mathbf{b}_\textrm{c}$ to the logits. (The dropout layer before the last
-map is idle, since ModernBERT sets all its dropout rates to zero.)
-`PooledClassifier` computes this, with first-token pooling as an option that
-needs the padding on the right. Its submodules carry the names of
+map is idle: its rate is zero here, as are all of ModernBERT's dropout
+rates.) `PooledClassifier` computes this, with first-token pooling as an
+option that needs the padding on the right. Its submodules carry the names of
 Transformers' `ModernBertForSequenceClassification`, so loading that model's
 weights into ours is a matter of renaming.
 
@@ -677,10 +683,11 @@ Warmup and clipping protect the pretrained weights from the large gradients
 of a new layer that starts at random.
 
 We train in batches of 32 for two epochs, or for as many more as it takes to
-reach 300 optimizer steps on a small training set; why that floor matters is
-measured below. The learning rate is chosen among $2 \times 10^{-5}$,
-$5 \times 10^{-5}$, $8 \times 10^{-5}$ and $1.5 \times 10^{-4}$ on 2,000
-held-out training pairs, never on the validation items. Matrix products run
+reach 300 optimizer steps on a small training set. For 100 sentences that is
+75 passes over the data. Why the floor matters is measured below. The
+learning rate is chosen among $2 \times 10^{-5}$, $5 \times 10^{-5}$,
+$8 \times 10^{-5}$ and $1.5 \times 10^{-4}$ on 2,000 held-out training
+pairs, never on the validation items. Matrix products run
 in bf16 while the weights stay in fp32. Each batch is padded to its own
 longest example and not to the limit of 128 tokens, which would spend most
 of the arithmetic on padding.
@@ -774,11 +781,10 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
 
 ### Data and Sentence Pairs
 
-The second task, SST-2 :cite:`Socher.Perelygin.Wu.ea.2013`, holds sentences
-from movie reviews labeled positive or negative. For MNLI, two details of
-the pair input matter, and neither raises an error when it is wrong. The
-separator is the only marker of the boundary, so a pipeline that drops it or
-swaps the texts gives the model an input it was not fine-tuned on. And a
+Two details of the MNLI pair input matter, and neither raises an error when
+it is wrong. The separator is the only marker of the boundary, so a pipeline
+that drops it or swaps the texts gives the model an input it was not
+fine-tuned on. And a
 pair over 128 tokens is cut from the end of the premise
 (`truncation='only_first'`). Cut from the end of the pair, it could lose the
 "not" that decides the label.
@@ -938,9 +944,10 @@ How many labeled pairs does the encoder need? The sweep fine-tunes a fresh
 encoder at four sizes per task, each with three seeds. A seed fixes the new
 layer's initial weights and the order of the batches, and nothing else,
 since ModernBERT uses no dropout. Beside this grid the cell prints a second
-one, which follows the common default of a fixed number of epochs, here two
-at every size. In batches of 32, two epochs of 250 pairs are 16 optimizer
-steps. What can a model with a new random layer learn in 16 steps?
+one, read from an earlier stored run of the same code that trained for two
+epochs at every size, the common default of a fixed number of epochs. In
+batches of 32, two epochs of 250 pairs are 16 optimizer steps. What can a
+model with a new random layer learn in 16 steps?
 
 ```{.python .input #bert-sweep}
 %%tab pytorch
@@ -1041,8 +1048,10 @@ that training for more steps removed most of the failed runs.
 
 Where labels are fewest the seed still matters. On MNLI the seeds never lie
 more than about 0.03 apart, against a median gain of 0.13 from one size to
-the next. At 100 SST-2 sentences, however, they lie 0.10 apart, nearly twice
-the median gain between sizes on that task.
+the next. At 100 SST-2 sentences, however, they lie 0.10 apart. That is more
+than the gain from 500 to 2,000 sentences, though only about half the gain
+from 100 to 500. How much of this range is the seed itself, and how much
+comes from 75 passes over a hundred sentences, the sweep cannot separate.
 :citet:`Dodge.Ilharco.Schwartz.ea.2020` found such spreads for BERT on four
 standard tasks: the seed alone moved validation scores about as much as
 newer methods claimed to gain. Two fine-tuning methods compared at a few
@@ -1134,7 +1143,7 @@ print(pd.DataFrame(rows).T.round(3).to_string())
 
 The majority rate is not what we get. All three seeds reach about 0.53, some
 0.17 above it, and every interval starts at 0.50 or above. The model gets
-more than half of the pairs right after reading half of each. The full
+more than half of the pairs right without ever reading a premise. The full
 model's 0.84 can therefore mix two skills, comparing the two texts and
 recognizing how annotators phrased each label, and its accuracy alone cannot
 separate them. Of the results of this section, this is the one to remember
@@ -1147,16 +1156,17 @@ hypothesis-only baseline does not say how much of it is reading.
 ### Words and Sub-Word Tokens
 
 A pooled head averages the token vectors away. A token head classifies each
-of them, which is what a label per word needs. CoNLL-2003
-:cite:`TjongKimSang.DeMeulder.2003` marks every name in a set of news
-sentences as a person (PER), a location (LOC), an organization (ORG) or
-miscellaneous (MISC). The copy we load uses the *IOB2* scheme: the first
-word of a name gets `B-` and its type, the other words of the name get `I-`
-and the type, and all other words get `O`, nine tags in all. There is one
-complication. Labels belong to words, and the tokenizer may split a word
-into several tokens. The usual rule, and ours, gives the word's label to its
-first token and $-100$ to the rest, so the loss skips them and the
-prediction for a word is read at its first token.
+of them, which is what a label per word needs. CoNLL-2003 marks every name
+in its news sentences as a person (PER), a location (LOC), an organization
+(ORG) or miscellaneous (MISC). The copy we load uses the *IOB2* scheme: the
+first word of a name gets `B-` and its type, the other words of the name get
+`I-` and the type, and all other words get `O`, nine tags in all.
+
+There is one complication. Labels belong to words, and the tokenizer may
+split a word into several tokens. The usual rule, and ours, gives the word's
+label to its first token and $-100$ to the rest, so the loss skips them and
+the prediction for a word is read at its first token. A split name from the
+training set will show the rule at work in a moment.
 
 ```{.python .input #bert-align}
 %%tab pytorch
@@ -1317,11 +1327,10 @@ assert SMALL or abs(f1['f1'] - seeds_f1[0]) <= bound
 The tagger finds 95% of the names, 94% of the names it predicts are right,
 and its span F1 of about 0.95 equals `seqeval`'s. The three stored seeds lie
 within 0.01 of one another. Locations and persons are nearly solved, at
-0.97. Organizations reach 0.92; many of them, sports clubs above all, carry
-the name of a city. The catch-all MISC of nationalities, events and titles
-reaches 0.87. All of this comes from a small head on one vector per token,
-fine-tuned together with the encoder. Nobody wrote a rule about capital
-letters or a list of cities.
+0.97. Organizations reach 0.92, and the catch-all MISC of nationalities,
+events and titles 0.87. All of this comes from a small head on one vector
+per token, fine-tuned together with the encoder. Nobody wrote a rule about
+capital letters or a list of cities.
 
 ## Encoder or Prompted Decoder
 :label:`subsec_lm_encoder_vs_decoder`
@@ -1335,12 +1344,6 @@ prompt. As in :numref:`sec_lm_scoring`, each label word (`yes`, `maybe` or
 in turn, and the word with the highest log-probability per token wins. The
 choice of examples moves few-shot accuracy much as a seed moves fine-tuning,
 so 8 shots are scored with three disjoint sets of examples.
-
-The cell also scores the MNLI items again, live. In bf16 a score depends
-slightly on the other items in the batch (:numref:`sec_lm_scoring`). The
-check therefore sets aside *near ties*, items whose two best labels differ
-by at most 0.5 nats per token, and requires every other prediction to
-repeat.
 
 ```{.python .input #bert-decoder}
 %%tab pytorch
@@ -1408,18 +1411,26 @@ print(f'live, 8 shots, {m} MNLI items: largest score change '
 assert SMALL or agree == 1.0
 ```
 
-Every prediction outside the 124 near ties repeats. On SST-2 the decoder
-starts at 0.71 without examples and reaches about 0.94 with four or eight.
-Sentiment is everywhere in the text a decoder is pretrained on, so a few
-examples suffice to name the task. On MNLI it reaches 0.40 without examples,
-a little above the majority rate, and 0.62 to 0.65 with four or eight, where
-eight are no better than four. Which pairs MNLI calls entailment, neutral or
-contradiction is a convention of its annotators, and eight examples convey
-it only in part. The confusion counts show which part. Over the three sets
-of examples the decoder calls about 850 entailed pairs neutral and about 450
-contradictions neutral. It takes an entailment for a contradiction, or the
-reverse, fewer than 200 times: nearly all of its errors are about where
-"maybe" begins.
+On SST-2 the decoder starts at 0.71 without examples and reaches about 0.94
+with four or eight. It met this task all through pretraining, and a few
+examples suffice to tell it which task is meant. On MNLI it reaches 0.40
+without examples, a little above the majority rate, and 0.62 to 0.65 with
+four or eight, where eight are no better than four. Which pairs MNLI calls
+entailment, neutral or contradiction is a convention of its annotators, and
+eight examples convey it only in part. The confusion counts show which part.
+Over the three sets of examples the decoder calls about 850 entailed pairs
+and about 450 contradictions neutral, and it calls about 300 neutral pairs
+entailed and about 400 contradictions. It takes an entailment for a
+contradiction, or the reverse, fewer than 200 times: nearly all of its
+errors are about where "maybe" begins.
+
+The last lines check the stored scores by scoring the 8-shot MNLI items
+again, live. In bf16 a score depends slightly on the other items in the
+batch (:numref:`sec_lm_scoring`), so the check sets aside *near ties*, items
+whose two best labels differ by at most 0.5 nats per token, and requires
+every other prediction to repeat. On a GPU the live batches are the stored
+ones, and no score moves by more than 0.0001 nats per token, the rounding of
+the stored values. Every prediction outside the 124 near ties repeats.
 
 ### Baselines on Word Counts
 
@@ -1427,11 +1438,7 @@ Is pretraining needed at all? The classical floor is naive Bayes on word
 counts (:numref:`sec_mdl-naive_bayes`), which treats the words of a text as
 independent once the class is known, so that training is counting and
 prediction is multiplying. A pair becomes two bags of words, with premise
-and hypothesis words kept apart by a prefix. (Before transformers, the usual
-learned sentence classifier slid a one-dimensional convolution over the word
-vectors of a sentence and kept each filter's maximum over the positions, a
-detector of telling phrases wherever they occur :cite:`Kim.2014`. We do not
-train one here.)
+and hypothesis words kept apart by a prefix.
 
 ```{.python .input #bert-naive-bayes}
 %%tab pytorch
@@ -1476,10 +1483,11 @@ $$
 :eqlabel:`eq_lm_bert_flops`
 
 floating-point operations on an example of $T$ tokens. Embedding lookups are
-not products, and attention's $T^2$ term is small at a few hundred tokens.
-The cost thus grows with the weights each token passes through and with the
-number of tokens read. `cost_per_example` evaluates
-:eqref:`eq_lm_bert_flops`.
+not products. The decoder's output layer, which shares the embedding table,
+is applied only at the few positions that are scored. And attention's $T^2$
+term is small at a few hundred tokens. The cost thus grows with the weights
+each token passes through and with the number of tokens read.
+`cost_per_example` evaluates :eqref:`eq_lm_bert_flops`.
 
 ```{.python .input #bert-cost}
 %%tab pytorch
@@ -1536,22 +1544,38 @@ The estimate is a product of two factors. The decoder reads 1,543 tokens per
 item against the encoder's 40, about 38 times as many, and each token passes
 through about 13 times the weights (2.8 against 0.22 GFLOPs per token).
 Together that makes close to 500 times the encoder's operations per example.
-The clock shows only about 100 times, under half a second against about 47
-seconds per thousand items. Neither number is wrong. Per second the decoder
-does compute four to five times as much as the encoder, because batches of
-32 short pairs give the encoder small matrix products that leave the GPU
-partly idle, while the decoder's long prompts fill it. Most of the decoder's
-cost goes to reading the same solved examples again. A server that computes
-their keys and values once and reuses them removes most of it (Exercise
-:exref:`ex_lm_bert-prefix`).
+The clock shows only about 100 times, under half a second against about 48
+seconds per thousand items. Per second the decoder computes four to five
+times as much as the encoder. Part of that is padding, which the token count
+leaves out: the encoder's batch is padded to its longest pair. The rest
+comes from the small matrix products of short pairs, which leave the GPU
+partly idle, while the decoder's long prompts fill it.
+
+How much of the hundredth belongs to decoders, and how much to the way we
+ran this one? Two parts are ours. The three label words are single tokens,
+so one pass over the prompt could score all three. And a server that
+computes the keys and values of the shared solved examples once reads them
+once (Exercise :exref:`ex_lm_bert-prefix`). What remains is the query: the
+premise and hypothesis with a question around them, more tokens than the
+pair the encoder reads, each passing through 13 times the weights. A
+hundredth is the factor we measured; more than 13 is the factor that
+caching cannot remove. On SST-2, with shorter prompts and two label words,
+the stored timings put the decoder at about 30 times the encoder. A
+fine-tuned decoder would also run 13 times the weights per token, and it
+would give up what makes prompting attractive: no training run when the
+task changes.
 
 ### Learning Curves and Crossing Points
 
 The plot shows accuracy against labeled examples (left) and against seconds
-per thousand examples (right), both on log scales, MNLI on top. The bands
-span the encoder's seeds and the decoder's three sets of 8 solved examples;
-at 0 and 4 shots they are the interval of one set. The dashed line is the
-majority rate.
+per thousand examples (right), both on log scales, MNLI on top. Labels cost
+annotators' time that eight solved examples do not, which is why the left
+panels measure both models against labeled examples. The bands span the
+encoder's seeds and the decoder's three sets of 8 solved examples; at 0 and
+4 shots they are the interval of one set. The dashed line is the majority
+rate. On the left, look for the size at which the encoder's curve rises
+through the 8-shot band. On the right, the decoder's three points are 0, 4
+and 8 shots, from left to right.
 
 ```{.python .input #bert-curve}
 %%tab pytorch
@@ -1610,11 +1634,9 @@ decoder, by two decades on MNLI and by more than one on SST-2, at equal or
 higher accuracy. The panels on the left need more care.
 
 Where does the encoder pass the decoder? A crossing read off a plot is
-easily the crossing we hoped for, so we use a rule that was fixed before the
-runs. We call the encoder ahead at a size only if no choice of seed and no
-choice of solved examples reverses the comparison, and the gap exceeds
-either kind of spread. The rule pairs each of the three seeds with each of
-the three sets of examples. For each pairing the cell computes the paired
+easily the crossing we hoped for, so we use a strict rule instead of the
+eye. The rule pairs each of the three seeds with each of the three sets of
+examples. For each pairing the cell computes the paired
 bootstrap interval of the difference in accuracy, which scores both models
 on the same resampled items (by premise on MNLI), so that the difficulty
 they share cancels. A size is *passed* when
@@ -1673,11 +1695,11 @@ This is the answer to the question we began with, and it comes in two
 versions. On a task whose conventions eight examples cannot convey, the
 encoder needs about a thousand labels to draw level and a few thousand to
 lead. On a task the decoder largely knew before it saw an example, eight
-thousand labels only bring the encoder level. And labels cost annotators'
-time that eight solved examples do not, which is why the plot measures both
-models against labeled examples. Where the line runs depends on how much of
-the task the decoder already knows. The cost does not: at every size the
-encoder labels an MNLI pair in about a hundredth of the decoder's time.
+thousand labels only bring the encoder level. Where the line runs depends on
+how much of the task the decoder already knows. The cost does not: at every
+size the encoder labels an MNLI pair in about a hundredth of the time our
+decoder took, and with less than a thirteenth of the operations even of a
+decoder that caches its examples.
 
 ### Choice by Situation
 
@@ -1690,17 +1712,22 @@ encoder labels an MNLI pair in about a hundredth of the decoder's time.
 |---|---|---|
 | no labels, or a few hundred | prompted decoder | at 250 MNLI pairs and at 100 to 2,000 SST-2 sentences the decoder was ahead |
 | thousands of labels for a fixed task | fine-tuned encoder | on MNLI it drew level with 8 shots at 1,000 pairs and led from 4,000; on SST-2 it caught up at 8,000 |
-| many items, high throughput | fine-tuned encoder | about a hundredth of the decoder's time per MNLI pair |
+| many items, high throughput | fine-tuned encoder | a hundredth of our decoder's time per MNLI pair; under a thirteenth of the operations even with the examples cached |
 | a label set that changes often | prompted decoder | a new label is a new prompt, not a new training run |
 | a label for every word | fine-tuned encoder | one vector per token, read by a small head |
 | an answer that must be written or explained | decoder | an encoder head outputs one of a fixed set of labels |
 
+The support team of the opening, with thousands of labeled messages for a
+fixed set of topics and ten thousand new ones an hour, belongs in the second
+and third rows. If its topics changed every month, it would belong in the
+fourth.
+
 Each task in this section got a model of its own, trained on its own labels.
 Search needs something else. A question must be compared with millions of
-passages, far too many to pair with each one in a cross-encoder, and there
-are no labels to fine-tune on. It needs one vector per text, computed once,
-that serves every question. Whether this encoder can supply such a vector is
-the subject of :numref:`sec_lm_text_embeddings`.
+passages, far too many to pair with each one in a cross-encoder, and no
+label set describes the questions it will be asked. It needs one vector
+per text, computed once, that serves every question. Whether this encoder
+can supply such a vector is the subject of :numref:`sec_lm_text_embeddings`.
 
 ## Summary
 
@@ -1710,11 +1737,13 @@ A masked-token encoder computes one vector per token from the text on both
 sides, and a small head, fine-tuned with all of the encoder's weights, turns
 these vectors into a label per sentence, per pair or per word. Against
 Qwen3-1.7B with 8 solved examples, ModernBERT-base drew level on inference
-at about 1,000 labeled pairs and led from 4,000, at about a hundredth of the
-time per pair. On sentiment, which the decoder largely knew already, it only
-caught up. Two cautions go with such numbers: a fine-tuning run on few
-examples needs enough optimizer steps before its seeds mean anything, and a
-model that never reads the premise labels more than half of MNLI correctly.
+at about 1,000 labeled pairs and led from 4,000. It took a hundredth of the
+time per pair as we ran the decoder, and it would take less than a
+thirteenth of the operations even if the decoder cached its examples. On
+sentiment, which the decoder largely knew already, it only caught up. Two
+cautions go with such numbers: a fine-tuning run on few examples needs
+enough optimizer steps before its seeds mean anything, and a model that
+never reads the premise labels more than half of MNLI correctly.
 Prompting suits few labels and changing tasks, and a fine-tuned encoder a
 fixed task with thousands of labels and many items.
 
@@ -1727,8 +1756,9 @@ fixed task with thousands of labels and many items.
     1. Fit the peak as a linear function of the batch size. Compare the
        intercept with the 16 bytes per parameter of the weights, gradients and
        AdamW moments, and the slope with an estimate of the activations kept
-       per sequence: how many vectors of width 768 or 1,152 per token and
-       layer does the slope correspond to?
+       per sequence: how many vectors of width 768 or 1,152 (the width of
+       ModernBERT's gated feed-forward layer) per token and layer does the
+       slope correspond to?
     1. Predict the largest batch that fits on a 24 GB card, and check it.
     1. Under autocast most saved activations are bf16 (layer norms run and
        save in fp32). How large would the slope be if all were kept in fp32,
@@ -1780,9 +1810,10 @@ fixed task with thousands of labels and many items.
 1. **Prefix caching and break-even.** The 8-shot decoder of this section
    reads three copies of a prompt whose first part, the solved examples, is
    the same for every item.
-    1. With the shared prefix cached, how many tokens does each item still
-       cost? Measure the length of the prefix and of a query, and recompute
-       the ratio of :eqref:`eq_lm_bert_flops` against the encoder.
+    1. With the shared prefix cached and the three single-token label words
+       scored from one pass, how many tokens does each item still cost?
+       Measure the length of the prefix and of a query, and recompute the
+       ratio of :eqref:`eq_lm_bert_flops` against the encoder.
     1. Qwen3-1.7B stores keys and values for 8 heads of width 128 in each of
        28 layers, $2 \cdot 28 \cdot 8 \cdot 128$ numbers of two bytes per
        token (:numref:`subsec_lm_icl_vs_probe`). How much memory does the
@@ -1816,10 +1847,11 @@ fixed task with thousands of labels and many items.
    and fine-tune for one epoch on 10,000 questions of SQuAD v1.1, whose
    answers are spans of the context. Predict the span with the highest sum of
    start and end logits whose end does not precede its start, and report
-   exact match and token-level F1 on its validation set. Collect the failed
-   questions whose answer is a name, and run the tagger of
-   :numref:`subsec_lm_bert_tagging` over their contexts. Does it mark the
-   answer as a name?
+   exact match and token-level F1 on its validation set. Then run the tagger
+   of :numref:`subsec_lm_bert_tagging` over the contexts of the questions
+   whose answer is a name. Are the failed questions more often those whose
+   answer the tagger misses, and what would that suggest about what the two
+   heads read from the same token vectors?
 
 1. [code] **A CRF on the token head.** The token head predicts each word's
    tag on its own, so it may output `I-ORG` after `B-PER`. Add a linear-chain
@@ -1839,7 +1871,7 @@ Pretrained Encoders<br>**masked tokens · ModernBERT · three heads · seeds · 
 :::
 :::
 
-::: {.slide title="A Fine-Tuned Encoder Labels MNLI Better Than a Prompt, in a Hundredth of the Time"}
+::: {.slide title="A Fine-Tuned Encoder Labels MNLI Better Than a Prompt, and Far Faster"}
 [The problem]{.kicker}
 
 MNLI: does a premise entail, contradict, or leave open a hypothesis? The
@@ -1872,7 +1904,7 @@ from 8. How many labels does the encoder need before it passes the prompt?
 Qwen3-1.7B on MNLI (pairs), SST-2 (sentiment) and CoNLL-2003 (names).
 :::
 
-::: {.slide title="Labeling a Stream of Text Is an Encoder's Job"}
+::: {.slide title="With Thousands of Labels and a Stream of Items, a Fine-Tuned Encoder Takes Over"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
@@ -1936,7 +1968,7 @@ every task gets a new head.
 ::: {.slide title="BERT Scores 15% of Tokens, and Only 80% of Those Show [MASK]"}
 | of the selected 15% | becomes | why |
 |---|---|---|
-| 80% | `[MASK]` | the prediction task |
+| 80% | `[MASK]` | the gap-filling the head is built for |
 | 10% | a random token | a visible token may be wrong |
 | 10% | itself | a visible token may be scored |
 
@@ -1944,24 +1976,22 @@ Counted on a million token ids: 15% selected; of those 80% `[MASK]`, 10%
 random, 10% kept; special tokens never. So 12% of all tokens show `[MASK]`.
 
 ::: {.d2l-note}
-`[MASK]` never occurs in fine-tuning text. Every position must keep a guess
-of its own token, because any of them may be asked.
+`[MASK]` never occurs in fine-tuning text, and any position may be asked
+about its own token. Yet in BERT's ablation fine-tuning was "surprisingly
+robust" to the mix.
 :::
 :::
 
-::: {.slide title="Three Successors Changed the Training, the Objective, the Architecture"}
-| model | the change |
-|---|---|
-| RoBERTa | no next-sentence prediction; new masks each time a text is read; longer training on far more text |
-| ELECTRA | a small generator replaces tokens; the encoder says for **every** token whether it was replaced |
-| T5 | encoder--decoder; masked spans are written by the decoder; every task is text to text |
-
-- RoBERTa: BERT was undertrained, not misdesigned.
-- ELECTRA: a training signal at every position, not 15%.
-- T5: the step toward decoders that do everything by writing text.
-
-Next-sentence prediction: BERT's second objective, on the `[CLS]` vector;
-did text B follow text A?
+::: {.slide title="BERT's Successors Trained Longer or Changed the Objective"}
+- **Next-sentence prediction:** BERT's second objective, on the `[CLS]`
+  vector: did text B follow text A? The successors dropped it.
+- **RoBERTa:** new masks each time a text is read; longer training on far
+  more text. BERT was undertrained, not misdesigned.
+- **ELECTRA:** a small generator replaces tokens; the encoder says for
+  **every** token whether it was replaced, a training signal at every
+  position, not 15%.
+- **T5:** masked spans written by a decoder; every task is text to text, a
+  step toward decoders that do everything by writing text.
 :::
 
 ::: {.slide title="ModernBERT Keeps BERT's Objective and Rebuilds the Block"}
@@ -2110,6 +2140,8 @@ Report an inference score beside a hypothesis-only baseline.
 |---|---|---|---|---|---|
 | label | not scored | `B-PER` | `I-PER` | not scored | not scored |
 
+- IOB2: `B-` the first word of a name, `I-` a later word, `O` no name; four
+  types (PER, LOC, ORG, MISC), 9 tags.
 - A word's tag goes to its first token. A name counts only if its type and
   both ends match.
 - Precision 0.94, recall 0.95, span F1 about 0.95, equal to `seqeval`'s.
@@ -2125,14 +2157,15 @@ Nobody wrote a rule about capital letters or a list of cities.
 
 Qwen3-1.7B, accuracy by the number of solved examples in the prompt:
 
-| task (majority rate) | 0 | 4 | 8 (three sets) | naive Bayes, all labels |
+| task (majority rate) | 0 | 4 | 8 (three sets) | naive Bayes, 8,000 / 16,000 labels |
 |---|---|---|---|---|
 | SST-2 (0.51) | 0.71 | 0.93 | 0.93 to 0.95 | 0.78 |
 | MNLI (0.36) | 0.40 | 0.65 | 0.62 to 0.65 | 0.42 |
 
 - MNLI errors over the three sets: entailed called neutral about 850 times,
-  contradiction called neutral about 450, entailment and contradiction
-  confused fewer than 200.
+  contradiction called neutral about 450, neutral called entailment about
+  300 and contradiction about 400; entailment and contradiction confused
+  fewer than 200 times.
 - Word counts carry sentiment and little entailment.
 
 ::: {.d2l-note}
@@ -2151,7 +2184,8 @@ answer is read by appending each of the three label words `yes`, `maybe`,
 ::: {.d2l-note}
 **Answer.** Three copies of the prompt: 1,543 tokens measured, about 38
 times the encoder's 40. Most of them are the same solved examples, read
-again for every item.
+again for every item. The label words are single tokens: with the examples
+cached and one pass per item, only the query is left.
 :::
 :::
 :::
@@ -2168,21 +2202,26 @@ $T$ tokens.
 | tokens | 40 | 1,543 | 38 |
 | GFLOPs per token | 0.22 | 2.8 | 13 |
 | GFLOPs | 8.9 | 4,350 | close to 500 |
-| seconds per 1,000, measured | about 0.4 | about 47 | about 100 |
+| seconds per 1,000, measured | about 0.4 | about 48 | about 100 |
+
+- The clock gap: the encoder also computes its padding, and short pairs in
+  batches of 32 leave the GPU partly idle.
+- With the examples cached, the query alone remains: longer than the pair,
+  at 13 times the weights per token.
 
 ::: {.d2l-note}
-Short pairs in batches of 32 leave the GPU partly idle; long prompts fill
-it. Per second the decoder computes four to five times as much.
+A hundredth as run here; more than 13 times the operations is what caching
+cannot remove. SST-2: about 30 times on the clock.
 :::
 :::
 
 ::: {.slide title="The Encoder Draws Level with 8 Shots on MNLI at 1,000 Labels and Leads from 4,000"}
 ::: {.cols .vc}
-::: {.col .fig}
+::: {.col .fig .big}
 @!bert-curve
 :::
 
-::: {.col}
+::: {.col .narrow}
 - Ahead = every seed × every set of examples agrees, and the gap exceeds
   both spreads.
 - MNLI, gap to 8 shots: $-0.20$ at 250; zero at 1,000; $+0.13$ at 4,000;
@@ -2207,8 +2246,9 @@ Case A: 50 labeled support messages, and new topics every month. Case B:
 ::: {.d2l-note}
 **Answer.** A: prompt a decoder. With a few hundred labels or fewer the
 decoder was ahead, and a new topic is a new prompt. B: fine-tune an
-encoder. From 4,000 MNLI pairs it led the 8-shot prompt, at about a
-hundredth of the time per pair.
+encoder. From 4,000 MNLI pairs it led the 8-shot prompt, at a hundredth of
+the time per pair as run here, and under a thirteenth of the operations
+even with a cached prompt.
 :::
 :::
 :::
@@ -2222,7 +2262,9 @@ hundredth of the time per pair.
   with 320, at 1,000 MNLI pairs.
 - Hypothesis only: 0.53 on MNLI; majority rate 0.36.
 - Against 8-shot Qwen3-1.7B: level on MNLI at 1,000 labels, ahead from
-  4,000; level on SST-2 only at 8,000; a hundredth of the time per MNLI pair.
+  4,000; level on SST-2 only at 8,000.
+- Cost per MNLI pair: a hundredth of the time as run here; under a
+  thirteenth of the operations even with the examples cached.
 
 **Next:** one vector per text, for search without labels.
 :::

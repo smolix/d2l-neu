@@ -588,7 +588,9 @@ without changing the result: it processes keys in blocks and carries a
 running maximum, normalizer and output, rescaling them whenever the maximum
 grows. FlashAttention runs this schedule on tiles that stay in the GPU's
 fast memory, which makes exact attention several times faster and linear in
-memory, but leaves the $n^2$ arithmetic for the next section.
+memory. Most of the speed comes from the traffic it saves; skipping the
+masked tiles adds a factor of about 1.5. The $n^2$ arithmetic remains, and
+the next section takes it on.
 
 ## Exercises
 

@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "source": "chapter_attention/windowed-linear-attention.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:c2ad7d4f6fd19a60a748d47133923e0aa8b6c1c68f1545e3f6c59285f8141cea",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "windowed-linear-attention-windowed-and-linear-attention-1": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "windowed-linear-attention-windowed-and-linear-attention-2": {
+      "code_fingerprint": "sha256:cbda2afd3b6817615a2f0587389c7b608562a53afcc89f4e573a5c6653157ff0",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-attention-through-a-window": {
+      "code_fingerprint": "sha256:86cd125bda8a5271ed9290053ecc2913b7dd87afc11590b393a38763e5a5f52b",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-a-linear-cost-implementation-1": {
+      "code_fingerprint": "sha256:e93d663ce07deea11110d53d57f3f86c0fe44b6c65f86eb76a512a789bcc2241",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-a-linear-cost-implementation-3": {
+      "code_fingerprint": "sha256:8c3167070fd1785a89d2a797b22e1b0ad538f186032865c477cb4096451ba7a6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "causal:  53.1% of tiles\nwindow:  12.1% of tiles\n"
+        }
+      ]
+    },
+    "attention-at-scale-a-linear-cost-implementation-2": {
+      "code_fingerprint": "sha256:4c1957a64b6ee2ded3a53c9c02fac83445da229f2640ba07346fc6c4d36671a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     blocked: maximum deviation 4.17e-07\nfused kernel: maximum deviation 4.77e-07\n"
+        }
+      ]
+    },
+    "attention-at-scale-kernelizing-the-score-1": {
+      "code_fingerprint": "sha256:9bbb65c6f68a158049a8e9618f59650290f3c5a86cdaa86ed19374f9868e2ce1",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-chunked-computation-1": {
+      "code_fingerprint": "sha256:c05f45ad1f407806e61a1ee85434e807026f07efdcfea5b5bc6d773c782a88d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-kernelizing-the-score-2": {
+      "code_fingerprint": "sha256:cd8fab4276e9614ce4cec59c1c1b6acbae0a750af243f9f207b0b39328dfe6b7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "parallel: maximum deviation 3.58e-07\n chunked: maximum deviation 2.38e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
+        }
+      ]
+    },
+    "windowed-linear-attention-sharpening": {
+      "code_fingerprint": "sha256:a879136617b4d8e7ec66c78ef7555369dd6daff4b96fade98a283784932741ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "queries x1 : mean largest weight, softmax 0.34, elu+1 0.14\nqueries x4 : mean largest weight, softmax 0.74, elu+1 0.15\nqueries x16: mean largest weight, softmax 0.93, elu+1 0.15\n"
+        }
+      ]
+    },
+    "attention-at-scale-the-price-of-attention-measured": {
+      "code_fingerprint": "sha256:807f5e7114c9be7b13ff4df6b7c5bb477ed0d97f68f671bf0ee4165fc02e0966",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =    512: window  1.0x faster, tile count predicts  1.4x\nn =  1,024: window  1.0x faster, tile count predicts  2.4x\nn =  2,048: window  1.6x faster, tile count predicts  4.4x\nn =  4,096: window  5.1x faster, tile count predicts  8.4x\nn =  8,192: window 12.9x faster, tile count predicts 16.4x\nn = 16,384: window 23.9x faster, tile count predicts 32.4x\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 32,768: window 47.1x faster, tile count predicts 64.4x\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "windowed-linear-attention/attention-at-scale-the-price-of-attention-measured-1.svg",
+          "bytes": 31989,
+          "sha256": "sha256:91aa2a611070073904c46235a9f5609eb575db1b8e8f1eaf70df9e3f46ab49ba"
+        }
+      ]
+    }
+  }
+}

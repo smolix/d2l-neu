@@ -14,7 +14,8 @@ uses these symbols at import time). It holds the library code that
   `max_new_tokens`, the end tokens and the stop strings), `_lm_prompt_ids`
   (chat template or BOS, then token ids), `_lm_generators` (one random
   stream per call or per prompt), `_lm_bos_ids` and `_lm_unwrap` (the model
-  inside a `torch.compile` or PEFT wrapper; also used by 18.4 and 18.5);
+  inside a `torch.compile` or PEFT wrapper; also used by
+  :numref:`sec_lm_scoring` and :numref:`sec_lm_eval_suites`);
 - the registry entry of the fp64 logit reference of assignment A1
   (`lm-qwen3-0p6b-logit-ref-v1`), which no notebook of the book reads.
 

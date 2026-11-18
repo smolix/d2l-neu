@@ -367,83 +367,14 @@ def init_weights(self, rngs):
                 m.bias[...] = jnp.zeros(m.bias.shape)
 ```
 
-A shape check confirms one logit per vocabulary entry at every position,
-and the standard deviations of two matrices of the first block confirm the
-initialization:
-
-```{.python .input #gpt-from-blocks-to-a-language-model-2}
-%%tab pytorch
-model = GPT(vocab_size=256)
-X = torch.zeros(2, 16, dtype=torch.long)
-d2l.check_shape(model(X), (2, 16, 256))
-attention = model.blks[0].attention
-print(f'{d2l.num_params(model) / 1e6:.2f}M parameters; initial std: '
-      f'W_qkv {attention.W_qkv.weight.std():.4f}, '
-      f'W_o {attention.W_o.weight.std():.4f}')
-```
-
-```{.python .input #gpt-from-blocks-to-a-language-model-2}
-%%tab jax
-model = GPT(vocab_size=256, rngs=nnx.Rngs(d2l.get_key()))
-X = jnp.zeros((2, 16), dtype=jnp.int32)
-d2l.check_shape(model(X), (2, 16, 256))
-attention = model.blks[0].attention
-print(f'{d2l.num_params(model) / 1e6:.2f}M parameters; initial std: '
-      f'W_qkv {attention.W_qkv.kernel[...].std():.4f}, '
-      f'W_o {attention.W_o.kernel[...].std():.4f}')
-```
-
-The output projection starts with a standard deviation of
-$0.02/\sqrt{12} \approx 0.0058$ for the six blocks, the other matrices
-with $0.02$. A forward pass through untrained stacks of increasing depth
-tests the argument for this scaling. We feed random tokens and measure the
-mean square of the stream after the last block, once with every matrix at
-$0.02$ and once with the scaled writing matrices:
-
-```{.python .input #gpt-from-blocks-to-a-language-model-3}
-%%tab pytorch
-def stream_ms(num_blks, scaled):
-    """Mean square of the stream after the last block, for random tokens."""
-    net = GPT(vocab_size=256, num_blks=num_blks)
-    if not scaled:  # Undo the depth scaling of W_o and W_2
-        for name, p in net.named_parameters():
-            if name.endswith(('W_o.weight', 'W_2.weight')):
-                nn.init.normal_(p, std=0.02)
-    with torch.no_grad():
-        H = net.token_emb(torch.randint(0, 256, (8, 128)))
-        for blk in net.blks:
-            H = blk(H)
-    return H.square().mean().item()
-
-for scaled in (False, True):
-    print(f'scaled={scaled}: mean square after 8/16/32 blocks: ' + '/'.join(
-        f'{stream_ms(L, scaled):.4f}' for L in (8, 16, 32)))
-```
-
-```{.python .input #gpt-from-blocks-to-a-language-model-3}
-%%tab jax
-def stream_ms(num_blks, scaled):
-    """Mean square of the stream after the last block, for random tokens."""
-    net = GPT(vocab_size=256, num_blks=num_blks, rngs=nnx.Rngs(d2l.get_key()))
-    if not scaled:  # Undo the depth scaling of W_o and W_2
-        for path, m in nnx.iter_graph(net):
-            if path and path[-1] in ('W_o', 'W_2'):
-                m.kernel[...] = 0.02 * jax.random.normal(d2l.get_key(),
-                                                         m.kernel.shape)
-    H = net.token_emb(jax.random.randint(d2l.get_key(), (8, 128), 0, 256))
-    for blk in net.blks:
-        H = blk(H)
-    return float(jnp.mean(H ** 2))
-
-for scaled in (False, True):
-    print(f'scaled={scaled}: mean square after 8/16/32 blocks: ' + '/'.join(
-        f'{stream_ms(L, scaled):.4f}' for L in (8, 16, 32)))
-```
-
-The embedding alone has a mean square of $0.02^2 = 0.0004$. Without the
-scaling, the mean square of the stream about doubles with each doubling of
-the depth, as a sum of $2L$ comparable terms should. With the scaling, it
-barely grows from 8 blocks to 32.
+<!-- WRITER: the depth-scaling cell (stream mean square at 8/16/32 blocks)
+and the shape/std check are gone (decision 15). The parameter count and the
+loss of a fresh model are now printed by cell
+gpt-from-blocks-to-a-language-model-2 in "The Objective" below (4.79M; fresh
+loss 5.53 to 5.66 nats against log 256 = 5.55 over six dev draws, both tabs).
+The initialization paragraphs above need the GPT-7 ending (rule, rationale in
+the block section's terms, OLMo 2, "cheap and common; at six blocks it
+changes little"). -->
 
 The parameter count follows from the block. Attention holds
 four $d \times d$ matrices, $\mathbf{W}_q$, $\mathbf{W}_k$,
@@ -491,6 +422,58 @@ all of them sit in the blocks; GPT-2's vocabulary of 50,257 tokens would put
 the model. And because each token is one byte, the loss in nats per byte
 divided by $\log 2$ is the number of bits per byte of
 :numref:`subsec_bits-per-byte`, which does not depend on the tokenizer.
+
+The experiments of this section build their models through the shorthand
+`gpt`, which constructs a `GPT` with fresh random weights.
+
+```{.python .input #gpt-training-the-model-3}
+%%tab pytorch
+def gpt(*args, **kwargs):  # A fresh model, on the GPU
+    return GPT(*args, **kwargs).to(d2l.try_gpu())
+```
+
+```{.python .input #gpt-training-the-model-3}
+%%tab jax
+def gpt(*args, **kwargs):  # Fresh random weights for every model
+    return GPT(*args, **kwargs, rngs=nnx.Rngs(d2l.get_key()))
+```
+
+### The Objective
+:label:`subsec_gpt-objective`
+
+<!-- WRITER: write the objective here (display eq_gpt-loss: the mean over
+the b x T positions of -log p(x_{t+1} | x_0, ..., x_t), positions from 0),
+tied to the lobster of the opening. The cell below cuts the window of the
+training text that starts at "the European lobster" (it occurs once, in
+the article on Homarinus capensis) with data.windows, the function the
+loader uses; Y is X shifted by one byte. Then the 5 x 5 causal mask: row t
+is query t, a 1 marks a key it may see. Then one clause: d2l.train_steps
+minimizes exactly this loss (labels -100 aside). -->
+
+```{.python .input #gpt-the-objective}
+%%tab pytorch, jax
+start = data.train.tobytes().find(b'the European lobster')
+X, Y = data.windows(data.train, [start])  # One window and its targets
+print('X[0]:', repr(data.vocab.decode(X[0, :24].tolist())))
+print('Y[0]:', repr(data.vocab.decode(Y[0, :24].tolist())))
+print(np.asarray(d2l.causal_mask(5)).astype(int))
+```
+
+<!-- WRITER: a fresh model must start near the loss of a uniform guess,
+log 256 = 5.55 nats per byte; a wrong initialization or head would show
+here. Measured 5.53 to 5.75 over ten draws in both tabs (final direct runs:
+5.61 PyTorch, 5.63 JAX): about 0.05 to 0.2 above log 256, because the
+initial logits are not all zero (std about 0.02 * sqrt(256) = 0.32 after
+the final RMSNorm, so about 0.32^2 / 2 = 0.05 nats on average). The cell
+also prints the parameter count, 4.79M. -->
+
+```{.python .input #gpt-from-blocks-to-a-language-model-2}
+%%tab pytorch, jax
+model = gpt(len(data.vocab), max_len=128)
+loss = math.log(d2l.lm_perplexity(model, [next(data.val_dataloader())]))
+print(f'{d2l.num_params(model) / 1e6:.2f}M parameters; loss before '
+      f'training {loss:.2f} nats per byte, log 256 = {math.log(256):.2f}')
+```
 
 ### The Training Recipe
 
@@ -596,45 +579,24 @@ training loss is the mean over those 50 steps. The validation loss is the
 mean cross-entropy per byte on the validation windows, which is the
 logarithm of `d2l.lm_perplexity` (:numref:`sec_test_models`).
 
-The experiments of this section build their models and plain optimizers
-through two shorthands: `gpt` constructs a `GPT` with fresh random weights,
-and `adamw` returns AdamW without weight decay.
-
-```{.python .input #gpt-training-the-model-3}
-%%tab pytorch
-gpt = GPT
-
-def adamw(model, lr):
-    """Plain AdamW without weight decay."""
-    return torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.0)
-```
-
-```{.python .input #gpt-training-the-model-3}
-%%tab jax
-def gpt(*args, **kwargs):  # Fresh random weights for every model
-    return GPT(*args, **kwargs, rngs=nnx.Rngs(d2l.get_key()))
-
-def adamw(model, lr):
-    """Plain AdamW without weight decay."""
-    return nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.0),
-                         wrt=nnx.Param)
-```
-
 ```{.python .input #gpt-training-the-modern-configuration}
 %%tab pytorch, jax
-model = gpt(len(data.vocab))
+model = gpt(len(data.vocab), max_len=128)
 num_steps, every = 1000, 50
 optimizer = LMOptimizer(model, lr=2e-3, num_steps=num_steps, warmup=100)
-steps, train_curve, val_curve = [], [], []
+steps, train_curve, val_curve, timer = [], [], [], d2l.Timer()
 for step in range(every, num_steps + 1, every):
+    timer.start()
     losses = d2l.train_steps(model, data, optimizer, every)
+    timer.stop()  # Training time only, without the validation passes
     steps.append(step)
     train_curve.append(sum(losses) / every)
     val_curve.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
 d2l.plot(steps, [train_curve, val_curve], 'step', 'loss (nats)',
          legend=['train', 'validation'], fmts=('-', '--'))
 print(f'step {num_steps}: train {train_curve[-1]:.2f}, '
-      f'validation {val_curve[-1]:.2f} nats per byte')
+      f'validation {val_curve[-1]:.2f} nats per byte; '
+      f'{timer.sum():.0f} s of training')
 ```
 
 The two curves fall together, and the validation loss never turns upward.
@@ -670,28 +632,140 @@ nats, close to the loss at initialization. The unigram level is 3.17 nats
 and the bigram level 2.45. The trained model ends about a nat below the
 bigram level, so it uses much more of the context than the previous byte.
 
-### Training Compute
+### Run-to-Run Spread
+:label:`subsec_gpt-run-to-run`
 
-A rough count of operations places this run among larger ones. In the
-forward pass, every parameter takes part in one multiplication and one
-addition per token, so a model with $N$ parameters performs about $2N$
-floating-point operations per token. The backward pass takes about twice
-as many. Training on $D$ tokens therefore takes about
+<!-- WRITER: the chapter's yardstick. The main run is the first of three
+runs of the default model; the cell trains it twice more with the same
+recipe, and the GELU twin (act='gelu', 4,787,456 against 4,788,992
+parameters) three times, from fresh random weights each (no seed chosen).
+Measured (final direct runs): default 1.341, 1.342, 1.349, range 0.008
+(PyTorch) and 1.341, 1.342, 1.342, range 0.002 (JAX); over all seventeen
+default runs of development 1.339 to 1.349. GELU 1.403, 1.400, 1.401
+(PyTorch) and 1.405, 1.405, 1.403 (JAX); all GELU runs 1.397 to 1.406. SwiGLU ends ahead by about
+0.06 nats at 1,000 steps, ten times either range: under the
+trained-comparison standard the text may say so (Shazeer 2020 reports
+about 0.04 nats at T5 scale, a different model, data and metric). Read the
+yardstick as "about 0.01 nats". train_lm also returns the milliseconds per
+training step after a 50-step warm-up (which in JAX includes the
+compilation); the next cell prints them. -->
 
-$$C \approx 6ND$$
-:eqlabel:`eq_gpt-six-nd`
+```{.python .input #gpt-run-to-run-spread}
+%%tab pytorch, jax
+def train_lm(model, data, lr=2e-3, num_steps=1000):
+    """Train with the recipe of the main run; return milliseconds per step."""
+    optimizer = LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
+    # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
+    bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
+                          warmup=1, repeats=num_steps // 50 - 1)
+    return 1000 * bench.time / 50
 
-operations, ignoring the attention scores, which are small at short
-contexts. Our run, with $N = 4.8$ million and $D = 8.2$ million, comes to
-about $2 \times 10^{14}$. One pass of GPT-2 small, with 124 million
-parameters, over roughly ten billion tokens of WebText comes to about
-$7 \times 10^{18}$. The same pass of GPT-2 XL, with 1.5 billion parameters,
-comes to about $10^{20}$, and the largest current training runs exceed
-$10^{25}$. Across
-these eleven orders of magnitude, the model definition hardly changes: an
-embedding, a stack of blocks, a causal mask, and a head. What changes is
-the system around it, from data pipelines to fused kernels and the parallel
-hardware of :numref:`chap_performance`.
+runs = {'swiglu': [val_curve[-1]], 'gelu': []}  # The main run comes first
+times = {'swiglu': [], 'gelu': []}  # Milliseconds per step
+for act, repeats in (('swiglu', 2), ('gelu', 3)):
+    for _ in range(repeats):
+        net = gpt(len(data.vocab), act=act, max_len=128)
+        times[act].append(train_lm(net, data))
+        runs[act].append(math.log(d2l.lm_perplexity(net,
+                                                    data.val_dataloader())))
+    print(f'{act:>6} ({d2l.num_params(net):,} parameters): validation '
+          + ', '.join(f'{v:.3f}' for v in runs[act])
+          + f'; mean {np.mean(runs[act]):.3f}, range {np.ptp(runs[act]):.3f}')
+```
+
+### Against a Recurrent Network
+:label:`subsec_gpt-rnn-baseline`
+
+<!-- WRITER: the Basics model, d2l.RNNLM over d2l.RNN (the plain tanh
+network of sec_rnn-concise, library classes unchanged), with 1,920 hidden
+units and a 256-wide embedding: 4.74M parameters against the GPT's 4.79M.
+Same bytes, windows, 1,000 steps and LMOptimizer recipe; three peak rates,
+two runs each; loss_by_position is one pass over the validation windows,
+and its mean is the validation loss. Measured (direct runs, then all
+development runs in brackets):
+- 1e-3: 1.461, 1.468 (PyTorch); 1.457, 1.459 (JAX) [1.454 to 1.468 in
+  ten runs: stable]. 2e-3: 1.469, 1.515 (PyTorch); 1.441, 1.466 (JAX)
+  [1.407 to 1.531 in sixteen runs: erratic, the plain RNN sits near its
+  stability edge at the GPT's rate]. 4e-3: 1.604, 1.648 / 1.601, 1.684
+  [1.52 to 1.68; 8e-3 fails at 2.31]. The best of six lands at 1.41 to
+  1.46.
+- Every RNN run (lowest ever 1.407) ends above every GPT run (highest
+  1.349): the GPT is ahead by at least about 0.06 nats, and by about 0.1
+  against a typical RNN run; both far outside the yardstick.
+- Loss by position, 0/1/4/16/64/127: GPT 2.47, 2.16, 1.50, 1.34-1.35,
+  1.33, 1.31; best RNN 2.49-2.54, 2.15-2.16, 1.54-1.55, 1.43-1.45,
+  1.43-1.45, 1.42-1.44. Both start near the bigram level (2.45) at
+  position 0 and agree for the first few bytes; the RNN stops improving
+  after about 16 bytes, the GPT keeps falling to position 127, so the gap
+  grows from about 0.04 at position 4 to about 0.1 at 127.
+- Time per step: PyTorch GPT 27 ms, RNN 11 ms; JAX GPT 10.7 ms, RNN
+  11.0 ms.
+  Shared statement true in both tabs: at 128 bytes the RNN is no slower
+  per step. PyTorch tab note: the GPT step is bound by launching its many
+  small operations from Python (27.5 ms per step at batch 16, 27.7 at 64,
+  29.2 at 128; profiler: about 28 ms CPU against 14 ms GPU per step),
+  while cuDNN runs the whole recurrence in a few kernels. JAX tab note:
+  each step compiles to fused kernels. No cross-framework comparison.
+- Hand-off: gated recurrence (chapter 12). -->
+
+```{.python .input #gpt-against-a-recurrent-network-1}
+%%tab pytorch
+def rnnlm(vocab_size, num_hiddens):  # The tanh RNN LM of the Basics
+    return d2l.RNNLM(d2l.RNN(256, num_hiddens), vocab_size).to(d2l.try_gpu())
+
+@torch.inference_mode()
+def loss_by_position(model, data):
+    """Mean validation loss in nats at each position of the window."""
+    device = next(model.parameters()).device
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        logits = model(X.to(device))  # (batch, T, V)
+        total += F.cross_entropy(logits.transpose(1, 2), Y.to(device),
+                                 reduction='none').sum(0)
+        count += len(X)
+    return (total / count).tolist()
+```
+
+```{.python .input #gpt-against-a-recurrent-network-1}
+%%tab jax
+def rnnlm(vocab_size, num_hiddens):  # The tanh RNN LM of the Basics
+    rngs = nnx.Rngs(d2l.get_key())
+    return d2l.RNNLM(d2l.RNN(256, num_hiddens, rngs=rngs), vocab_size,
+                     rngs=rngs)
+
+@nnx.jit
+def position_loss_sum(model, X, Y):
+    """Loss in nats at each position, summed over the batch."""
+    return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum(0)
+
+def loss_by_position(model, data):
+    """Mean validation loss in nats at each position of the window."""
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        total += position_loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
+        count += len(X)
+    return (total / count).tolist()
+```
+
+```{.python .input #gpt-against-a-recurrent-network}
+%%tab pytorch, jax
+rnn_runs = []  # (validation loss, model, ms per step) of every run
+for lr in (1e-3, 2e-3, 4e-3):
+    for _ in range(2):
+        rnn = rnnlm(len(data.vocab), 1920)
+        ms = train_lm(rnn, data, lr=lr)
+        rnn_runs.append((np.mean(loss_by_position(rnn, data)), rnn, ms))
+    print(f'RNN ({d2l.num_params(rnn):,} parameters), peak rate {lr:g}: '
+          'validation ' + ', '.join(f'{r[0]:.3f}' for r in rnn_runs[-2:]))
+best = min(rnn_runs, key=lambda run: run[0])
+positions = (0, 1, 4, 16, 64, 127)
+print('validation loss at positions', ', '.join(map(str, positions)))
+for name, net, ms in (('GPT', model, np.mean(times['swiglu'])),
+                      ('best RNN', *best[1:])):
+    loss = loss_by_position(net, data)
+    print(f'{name:>8}: ' + ' '.join(f'{loss[t]:.2f}' for t in positions)
+          + f'; {ms:.1f} ms per training step')
+```
 
 ### Normalization Placement in Training
 :label:`subsec_gpt-norm-placement`
@@ -702,25 +776,49 @@ original transformer did (post-norm). Its argument came from initialization
 alone. Post-norm rescales the whole stream after every addition. In a deep
 stack at initialization, this drives the tokens toward their average and
 leaves the query and key projections with tiny gradients. We now test the
-placement in training, with the model and data as above. Two runs differ
-only in `pre_norm`. Both take 800 steps of plain AdamW at a constant
-learning rate of $10^{-3}$, without warmup, a setting in which
-pre-norm trains without trouble. A third run repeats the post-norm model
-with a warmup. It uses `LMOptimizer` with the same peak rate, a warmup over
-the first 400 steps, half the run, and the cosine decay that follows, but
-without weight decay or clipping.
+placement in training, with the model and data as above. Two arms differ
+only in `pre_norm`. Both take 800 steps of AdamW at a constant learning
+rate of $10^{-3}$, without warmup, a setting in which pre-norm trains
+without trouble. A third arm repeats the post-norm model with a warmup: the
+rate rises linearly over the first 400 steps and then stays at the same
+$10^{-3}$, so it differs from the second arm only in the warmup. All three
+use `LMOptimizer` without weight decay or clipping, and each arm runs
+twice.
+
+<!-- WRITER: the arms are now: pre-norm and post-norm at a constant 1e-3
+without warmup, and post-norm with a 400-step linear warmup to 1e-3 and then
+the same constant rate, so the third arm differs from the second only in
+the warmup. All three use LMOptimizer without weight decay or clipping
+(num_steps=10**9 keeps the cosine flat), two runs each. Measured, loss at
+800 over all direct and development runs: pre-norm 1.50 to 1.58;
+post-norm 3.17 to 3.18 always; post-norm with warmup 1.54 to 1.56. With the
+warmup, post-norm ends inside the spread of the pre-norm runs: level. The
+warmup arm trails early (about 1.9 against 1.8 at step 400) because its
+rate is lower. Opening: restate the block section's collapse with its
+scope (it needs large weights; with GPT's N(0, 0.02^2) and W_o scaled by
+1/sqrt(12) a fresh six-block post-norm stack keeps its tokens distinct:
+spread 0.95 to 0.96 at step 0 in the mechanism cell). Delete "at most part
+of the explanation", "The third run confirms this" and the exercise
+deferral. -->
 
 ```{.python .input #gpt-breaking-it-with-one-flag}
 %%tab pytorch, jax
-for pre_norm, warmup in ((True, False), (False, False), (False, True)):
-    ablation = gpt(len(data.vocab), pre_norm=pre_norm)
-    optimizer = (LMOptimizer(ablation, lr=1e-3, num_steps=800, warmup=400,
-                             weight_decay=0.0, max_norm=math.inf)
-                 if warmup else adamw(ablation, lr=1e-3))
-    losses = d2l.train_steps(ablation, data, optimizer, 800)
-    print(f'pre_norm={pre_norm}, warmup={warmup}: loss at step '
-          '100/200/400/800: ' + '/'.join(f'{sum(losses[k-50:k]) / 50:.2f}'
-                                         for k in (100, 200, 400, 800)))
+arms = {'pre-norm': (True, 0), 'post-norm': (False, 0),
+        'post-norm, warmup': (False, 400)}  # (pre_norm, warmup steps)
+
+def placement_run(vocab_size, pre_norm, warmup):
+    """A fresh model, and AdamW at a constant 1e-3 after the warmup."""
+    net = gpt(vocab_size, pre_norm=pre_norm, max_len=128)
+    # A cosine over 10^9 steps stays flat; no weight decay, no clipping
+    return net, LMOptimizer(net, lr=1e-3, num_steps=10**9, warmup=warmup,
+                            weight_decay=0.0, max_norm=math.inf)
+
+for name, arm in arms.items():
+    for _ in range(2):  # Two runs per arm
+        net, optimizer = placement_run(len(data.vocab), *arm)
+        losses = d2l.train_steps(net, data, optimizer, 800)
+        print(f'{name:>17}: loss at step 100/200/400/800: ' + '/'.join(
+            f'{sum(losses[k - 50:k]) / 50:.2f}' for k in (100, 200, 400, 800)))
 ```
 
 The pre-norm model trains normally. The post-norm model without warmup
@@ -742,6 +840,123 @@ long, half the run, and an exercise asks how short it can be. GPT-2 already plac
 the normalization at the input of each sublayer and added one after the
 last block :cite:`Radford.Wu.Child.ea.2019`, the arrangement that `GPT`
 uses by default.
+
+<!-- WRITER: the mechanism cells below record, every 10 steps over the
+first 200 of each arm, on one fixed batch of validation windows: the token
+spread after the last block (the quantity of subsec_signal-propagation) and
+the gradient norms of the first and the last block; a plot of the spread
+and a table at steps 0, 10, 20, 40, 60, 100, 140, 200. Same picture in both
+tabs and in every development run:
+- All three arms first collapse: by step 10 to 20 the spread falls from
+  about 0.95 (post-norm) or 0.5 to 0.57 (pre-norm) to 0.01 to 0.03, and the
+  loss on the batch sits near 3.14, the unigram level: predicting the byte
+  frequencies is the first thing every arm learns, and it makes the last
+  block's output the same for every token.
+- Pre-norm recovers by step 40 to 60 (spread about 0.5, then 0.7 to 0.8);
+  its first block's gradient stays at 0.02 or more.
+- Post-norm without warmup collapses completely (spread 0.000 from step 20
+  to 40 on) and its first block's gradient is 0.000 from then on, while the
+  last block's stays at 0.04 to 0.09: the stream above the first block no
+  longer depends on the input, so nothing below the top can learn, and it
+  never recovers.
+- Post-norm with warmup collapses later (step 40 to 60, while its rate is
+  still small) and less: spread about 0.03, first-block gradient 0.002 to
+  0.02, small but not zero; it recovers between steps 100 and 200 (spread
+  0.56 to 0.64 at 140 in four runs, 0.05 in one; about 0.7 at 200).
+So the collapse that Xavier weights produce at initialization in the block
+section is produced here by the first updates; the warmup keeps it partial,
+and the residual path of pre-norm keeps the input in the stream. Keep the
+bigram argument and the unigram reading; the Xiong et al. citation can
+stay as the published account of the warmup. -->
+
+```{.python .input #gpt-placement-mechanism-1}
+%%tab pytorch
+def probe(model, X, Y):
+    """Token spread after the last block, and the gradient norms of the
+    first and the last block, on the batch (X, Y)."""
+    device, norm = next(model.parameters()).device, torch.linalg.vector_norm
+    X, Y = X.to(device), Y.to(device)
+    H = model.token_emb(X)
+    tables = d2l.rope_tables(X.shape[1], model.head_width, device=device)
+    for blk in model.blks:
+        H = blk(H, tables=tables)
+    logits = F.linear(model.norm(H), model.token_emb.weight)
+    model.zero_grad()
+    F.cross_entropy(logits.flatten(0, 1), Y.flatten()).backward()
+    grad_norm = lambda blk: norm(torch.cat([p.grad.flatten()
+                                            for p in blk.parameters()]))
+    spread = norm(H - H.mean(1, keepdim=True)) / norm(H)
+    return [spread.item(), grad_norm(model.blks[0]).item(),
+            grad_norm(model.blks[-1]).item()]
+```
+
+```{.python .input #gpt-placement-mechanism-1}
+%%tab jax
+@nnx.jit
+def probe(model, X, Y):
+    """Token spread after the last block, and the gradient norms of the
+    first and the last block, on the batch (X, Y)."""
+    def loss_fn(model):
+        H = model.token_emb(X)
+        tables = d2l.rope_tables(X.shape[1], model.head_width)
+        for blk in model.blks:
+            H = blk(H, tables=tables)
+        logits = model.token_emb.attend(model.norm(H))
+        return optax.softmax_cross_entropy_with_integer_labels(
+            logits, Y).mean(), H
+    (_, H), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
+    spread = jnp.linalg.norm(H - H.mean(1, keepdims=True)) / jnp.linalg.norm(H)
+    return jnp.stack([spread, optax.global_norm(grads['blks'][0]),
+                      optax.global_norm(grads['blks'][len(model.blks) - 1])])
+```
+
+```{.python .input #gpt-placement-mechanism}
+%%tab pytorch, jax
+X, Y = next(data.val_dataloader())  # One fixed batch of validation windows
+records = {}  # Per arm and probe: spread, gradient of first and last block
+for name, arm in arms.items():
+    net, optimizer = placement_run(len(data.vocab), *arm)
+    records[name] = [probe(net, X, Y)]
+    for _ in range(20):  # Probe every 10 steps
+        d2l.train_steps(net, data, optimizer, 10)
+        records[name].append(probe(net, X, Y))
+steps = list(range(0, 201, 10))
+d2l.plot(steps, [[float(r[0]) for r in rs] for rs in records.values()],
+         'step', 'token spread after the last block', legend=list(records))
+```
+
+```{.python .input #gpt-placement-mechanism-2}
+%%tab pytorch, jax
+cols = (0, 1, 2, 4, 6, 10, 14, 20)  # Steps 0, 10, 20, 40, ..., 200
+print(f'{"step":>29}' + ''.join(f'{steps[k]:6d}' for k in cols))
+for name, rs in records.items():
+    for i, quantity in enumerate(('spread', 'grad first', 'grad last')):
+        print(f'{name:>17} {quantity:>11}'
+              + ''.join(f'{float(rs[k][i]):6.3f}' for k in cols))
+```
+
+### Training Compute
+
+A rough count of operations places this run among larger ones. In the
+forward pass, every parameter takes part in one multiplication and one
+addition per token, so a model with $N$ parameters performs about $2N$
+floating-point operations per token. The backward pass takes about twice
+as many. Training on $D$ tokens therefore takes about $C \approx 6ND$
+operations, ignoring the attention scores, which are small at short
+contexts. Our run, with $N = 4.8$ million and $D = 8.2$ million, comes to
+about $2 \times 10^{14}$. One pass of GPT-2 small, with 124 million
+parameters, over roughly ten billion tokens of WebText comes to about
+$7 \times 10^{18}$. The same pass of GPT-2 XL, with 1.5 billion parameters,
+comes to about $10^{20}$, and the largest current training runs exceed
+$10^{25}$. Across
+these eleven orders of magnitude, the model definition hardly changes: an
+embedding, a stack of blocks, a causal mask, and a head. What changes is
+the system around it, from data pipelines to fused kernels and the parallel
+hardware of :numref:`chap_performance`.
+
+<!-- WRITER: the main run's training time is now printed: 25 s (PyTorch),
+25 to 26 s (JAX, including the compilation in the first 50 steps). At 2e14
+operations in 25 s the run computes about 8 TFLOP/s. -->
 
 ## Sampling from the Model
 :label:`subsec_gpt-sampling`
@@ -836,6 +1051,11 @@ short the text. Once the buffer is full, each step samples from the logits at
 its last position, then drops the oldest token and writes the new one at
 the end, so the model conditions on the last `max_len` tokens.
 :end_tab:
+
+<!-- WRITER: model now has max_len=128 (GPT-15): PyTorch crops the context
+to the last 128 bytes, JAX keeps a (1, 128) buffer; the 19-byte prefix plus
+120 bytes exceeds 128, so the last 11 bytes are sampled from a sliding
+window of 128, never beyond the training length. -->
 
 We sample 120 bytes after the prefix "The history of the " at three
 settings: the model's own distribution, a sharpened and truncated one, and
@@ -1107,7 +1327,7 @@ the same class through a map of parameter names.
        the default `TransformerBlock`, which `GPT` builds with its default
        flags. Use it to count the parameters of `GPT(vocab_size=256)`, with
        $d = 256$ and six blocks, and check the total against the count
-       printed in :numref:`subsec_gpt-blocks-to-lm`. What fraction of the
+       printed in :numref:`subsec_gpt-objective`. What fraction of the
        parameters sits in the embedding tables of each of the two models?
     1. Without tying, the output head would be a separate $V \times d$
        matrix. How many parameters would GPT-2 then have? A product of a
@@ -1118,17 +1338,35 @@ the same class through a map of parameter names.
        where the attention scores are negligible, and compare it with the
        share of the parameters that the shared table holds.
 
-1. [code] **Unmasked attention.** In `GPT`, the flag `is_causal=True` of
-   the attention call in `CausalAttention` is the only mechanism that keeps
-   position $t$ from attending to later positions.
+1. [code] **Masks.** In `GPT`, the flag `is_causal=True` of the attention
+   call in `CausalAttention` is the only mechanism that keeps a position from
+   attending to later positions: the query at position $t = 0, \ldots, T - 1$
+   sees the keys at positions $0, \ldots, t$.
+    1. Show by induction over the blocks that the logits of `GPT` at
+       position $t$ depend only on the tokens at positions $0, \ldots, t$.
+       Which step of the induction fails if only the first block is causal
+       and the other blocks attend to every position?
     1. Take one validation window of 128 bytes and replace its byte at
        position 64 by a different one. For every position,
        compute the largest absolute change of the logits of the trained
        `model`, and plot the change against position.
     1. Subclass `GPT` with a nested `CausalAttention` whose attention call
-       passes `is_causal=False`. Train it as in
-       :numref:`subsec_gpt-training`, with `LMOptimizer` set up for 1,000
-       steps, but stop after 200 steps. Compare its training and
+       passes the boolean mask
+       `torch.ones(T, T, dtype=torch.bool).tril(shift)` (PyTorch) or
+       `jnp.tril(jnp.ones((T, T), bool), shift)` (JAX) instead of the
+       causal flag, so that the query at position $t$ sees the keys at
+       positions $0, \ldots, t + s$, where $s$ is the value of `shift`.
+       For $s = -1$ the query at position 0 sees no key; set its
+       attention output to zero. For $s = 1$ and for $s = -1$, predict the
+       positions whose logits depend on the token at position $j$ in a
+       stack of $L$ blocks, and check your predictions on freshly
+       initialized models with `num_blks` $\in \{1, 2, 4\}$: change the
+       token at position 16 of a sequence of 32 random tokens, and find the
+       positions whose logits change. Which of the two settings can be
+       trained as a next-token predictor?
+    1. Remove the mask altogether (`is_causal=False`). Train the unmasked
+       model as in :numref:`subsec_gpt-training`, with `LMOptimizer` set up
+       for 1,000 steps, but stop after 200 steps. Compare its training and
        validation losses with those that the training of `model` recorded
        at step 200, and explain the numbers.
     1. Sample 100 bytes from the unmasked model with the prefix
@@ -1150,19 +1388,15 @@ the same class through a map of parameter names.
        choices matter now, and why would you expect clipping and warmup to
        matter more at a high learning rate than at a low one?
 
-1. [code] **How slow a warmup post-norm needs.** The third run of
+1. [code] **How slow a warmup post-norm needs.** The third arm of
    :numref:`subsec_gpt-norm-placement` warms the post-norm model up over
-   400 of its 800 steps.
-    1. Repeat it with warmups of 100, 200, and 300 steps at the peak rate
-       $10^{-3}$, and with a warmup of 100 steps at $5 \times 10^{-4}$.
-       Which runs leave the unigram level? Run each setting three times.
+   400 steps and then holds the learning rate at $10^{-3}$.
+    1. Repeat it with warmups of 100, 200, and 300 steps to the same rate,
+       and with a warmup of 100 steps to $5 \times 10^{-4}$. Which runs
+       leave the unigram level? Run each setting three times.
     1. Do your results depend on the length of the warmup, on the peak
        rate, or on the slope at which the rate rises? Design one more run
        that separates two of these explanations.
-    1. Track the token spread of :numref:`subsec_signal-propagation` at
-       the last block during the first 100 steps of a run that stalls and
-       of one that trains. Does the stalled run lose the distinction
-       between its tokens, and if so, when?
 
 1. [code] **Memorizing a novel.** :numref:`subsec_gpt-training` trains on
    WikiText-103 so that the model almost never reads the same passage
@@ -1287,6 +1521,36 @@ the same class through a map of parameter names.
        as many bytes as the byte-level run. Which of the three effects
        explains the differences you found?
 
+1. [extended] **Learning-rate sensitivity.** ●
+   :citet:`Wortsman.Liu.Xiao.ea.2024` reproduce the growth of attention
+   logits reported for large training runs (:numref:`subsec_qk-norm`) in
+   small models trained at high learning rates, and find that QK-norm
+   removes it. They summarize the final loss $\ell(\eta)$ as a function of
+   the learning rate $\eta$ by the *learning-rate sensitivity*
+   $$\mathbb{E}_{\eta}\big[\min(\ell(\eta), \ell_0) - \ell^*\big],$$
+   where $\ell_0$ is the loss at initialization, $\ell^*$ is the best final
+   loss over the learning rates tried, and the average runs over learning
+   rates spanning three orders of magnitude.
+    1. Subclass `GPT` with a nested `CausalAttention` whose `qkv` passes
+       the queries and the keys of every head through their own RMSNorm,
+       over the head width and before the rotation, as QK-norm does. Train
+       `GPT(len(data.vocab))` with and without QK-norm for 1,000 steps with
+       `LMOptimizer` at each peak learning rate in
+       $\{10^{-4}, 10^{-3.5}, \ldots, 10^{-1}\}$, otherwise as in the
+       training of :numref:`subsec_gpt-training`.
+    1. Every 100 steps, record the training loss and the largest absolute
+       attention logit on a fixed batch, computed from the queries and keys
+       that `qkv` returns. Plot the final loss against $\eta$ for both
+       models, and compute the learning-rate sensitivity of each curve.
+       At which rates do the two models differ by more than the run-to-run
+       spread of :numref:`subsec_gpt-run-to-run`?
+    1. For every learning rate at which the model without QK-norm ends
+       worse than the model with it, decide from the recorded attention
+       logits whether attention-logit growth explains the gap. If it does
+       not, record the largest absolute output logit of both models at the
+       same steps, and decide whether its growth explains the gap.
+   :exlabel:`ex_gpt-qk-norm-sensitivity`
+
 [Discussions](https://d2l.discourse.group/t/36775)
 
 <!-- slides -->
@@ -1296,7 +1560,7 @@ the same class through a map of parameter names.
 [Dive into Deep Learning · §12.2]{.kicker}
 
 A GPT from Scratch<br>
-**embedding, causal blocks, and a tied head · GPT-2 initialization · a training recipe · normalization placement · sampling · loading GPT-2**
+**embedding, causal blocks, and a tied head · the objective · a training recipe · a yardstick and a recurrent baseline · normalization placement · sampling · loading GPT-2**
 :::
 :::
 
@@ -1321,12 +1585,13 @@ How do we turn the transformer block into a model that meets both?
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- assemble a GPT from an embedding, causal blocks, and a tied head;
-- count its parameters ($12d^2$ per block) and its training cost ($6ND$);
+- assemble a GPT from an embedding, causal blocks, and a tied head, and
+  write its loss;
 - initialize it as GPT-2 does, and say why the residual projections are
   scaled by $1/\sqrt{2L}$;
-- train it with the recipe of the optimization chapter and read the two
-  loss curves against count-based baselines;
+- train it with the recipe of the optimization chapter and read the loss
+  against count-based baselines, a run-to-run yardstick, and an RNN;
+- say why post-norm stalls without warmup, and what pre-norm buys;
 - sample with temperature and top-$k$, and load the released GPT-2.
 
 **Running example:** GPT-2 small (124M parameters), and our 4.8M-parameter
@@ -1342,16 +1607,17 @@ byte-level model.
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
 | **A GPT from Scratch** | **a trained language model; GPT-2 loaded** |
-| Generation and the KV Cache | reuse keys and values while sampling |
+| The KV Cache | reuse keys and values while sampling |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
-| Mixture of Experts | more parameters per FLOP |
 | Scaling Laws | loss against parameters, data, compute |
+| Mixture of Experts | more parameters per FLOP |
 :::
 
 ::: {.col .narrow}
 - **Uses:** the block's defaults (pre-norm, RMSNorm, SwiGLU), RoPE,
-  AdamW and schedules, byte tokens, perplexity.
+  AdamW and schedules, byte tokens, perplexity, the RNN of the Basics.
 - **Skips:** fast generation (next section), training at scale.
 :::
 :::
@@ -1372,16 +1638,14 @@ byte-level model.
 :::
 :::
 
-::: {.slide title="A Causal Mask Lets One Pass Train Every Position"}
-Query $t$ may attend to keys $1, \ldots, t$ only:
+::: {.slide title="The Loss Averages −log p over Every Position of Every Window"}
+$$\mathcal{L} = -\frac{1}{bT} \sum_{i=1}^{b} \sum_{t=0}^{T-1}
+\log p\big(x^{(i)}_{t+1} \mid x^{(i)}_0, \ldots, x^{(i)}_t\big)$$
 
-$$\begin{pmatrix} 1 & 0 & 0 & 0 \\ 1 & 1 & 0 & 0 \\ 1 & 1 & 1 & 0 \\ 1 & 1 & 1 & 1 \end{pmatrix}
-\quad \textrm{(rows: queries, columns: keys)}$$
+@!gpt-the-objective
 
-- The logits at position $t$ depend on $x_1, \ldots, x_t$ only, so the
-  target $x_{t+1}$ never leaks.
-- Fused kernels take the mask as a flag (`is_causal=True`) and never store
-  the $n \times n$ score matrix.
+- $Y$ is $X$ shifted by one byte; the causal mask (rows: queries,
+  columns: keys) lets query $t$ see keys $0, \ldots, t$ only.
 :::
 
 ::: {.slide title="Positions Enter as a Table or as a Rotation"}
@@ -1397,7 +1661,7 @@ outputs permute the same way.
   tables once per forward pass and hands them to every block.
 :::
 
-::: {.slide title="The Forward Pass Fits in Ten Lines" only="pytorch"}
+::: {.slide title="The Forward Pass Fits in About Ten Lines" only="pytorch"}
 ```{.python #gpt-exercises-1}
 def forward(self, X):                   # X: (batch, T) token ids
     H, tables = self.token_emb(X), None # (batch, T, d)
@@ -1414,7 +1678,7 @@ def forward(self, X):                   # X: (batch, T) token ids
 Output: (batch, T, V), the next-token logits at every position.
 :::
 
-::: {.slide title="The Forward Pass Fits in Nine Lines" only="jax"}
+::: {.slide title="The Forward Pass Fits in About Ten Lines" only="jax"}
 ```{.python #gpt-exercises-2}
 def __call__(self, X):                  # X: (batch, T) token ids
     H, tables = self.token_emb(X), None # (batch, T, d)
@@ -1438,26 +1702,11 @@ Output: (batch, T, V), the next-token logits at every position.
   amount, so the mean square of the stream grows $\propto 2L$.
 - Scaling each writer by $1/\sqrt{2L}$: all $2L$ branches together
   $\approx$ one unscaled branch, whatever the depth.
-- Measured from 8 to 16 to 32 blocks: unscaled, it doubles each time;
-  scaled, it barely grows.
 
 | model | branches $2L$ | std of $\mathbf{W}_o$, $\mathbf{W}_2$ |
 |:--|--:|--:|
 | ours, 6 blocks | 12 | 0.0058 |
 | GPT-2 small, 12 blocks | 24 | 0.0041 |
-:::
-
-::: {.slide title="Each Block Holds 12d² Parameters"}
-Attention: $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v, \mathbf{W}_o$ =
-$4d^2$. FFN: $2 \cdot d \cdot 4d$ (GELU) or $3 \cdot d \cdot 8d/3$
-(SwiGLU) = $8d^2$.
-
-| | $d$ | blocks | $12d^2 \times$ blocks | token table | total |
-|:--|--:|--:|--:|--:|--:|
-| ours | 256 | 6 | 4.7M | 0.066M | 4.79M |
-| GPT-2 small | 768 | 12 | 85M | 38.6M | 124.4M |
-
-GPT-2 adds 0.8M for 1,024 learned positions. Untied, it would have 163M.
 :::
 
 ::: {.slide title="Check: How Large Is GPT-2 Medium?"}
@@ -1499,20 +1748,66 @@ $$\eta_t = \eta \cdot \begin{cases} t/t_w, & t < t_w \\ \tfrac12\left(1 + \cos\l
 - **Clipping** at global norm 1. No dropout.
 :::
 
-::: {.slide title="Training and Validation Loss Fall Together"}
+::: {.slide title="Training and Validation Loss Fall Together, Far Below Count Models"}
 @!gpt-training-the-modern-configuration
 
-Almost every window is new text: little to memorize, so the validation loss
-tracks the training loss.
+- Almost every window is new text: little to memorize, so the validation
+  loss tracks the training loss.
+- Count models on the same bytes: **unigram** (byte frequencies) 3.17
+  nats, **bigram** (previous byte) 2.45; a uniform guess $\log 256 = 5.55$.
 :::
 
-::: {.slide title="Count Models Set the Reference Levels"}
-@!gpt-training-the-model-4
+::: {.slide title="Three Runs of One Model Agree Within About 0.01 Nats"}
+[The yardstick]{.kicker}
 
-- **Unigram**: byte frequencies, no context.
-- **Bigram**: the previous byte only.
-- The GPT ends far below both: it uses much more than the previous
-  byte.
+@!gpt-run-to-run-spread
+
+- Same recipe, fresh random weights each time.
+- A difference smaller than this spread cannot be read from one run; a
+  GELU feed-forward network of the same size ends about 0.06 nats behind
+  SwiGLU, several times the spread.
+:::
+
+::: {.slide title="The Basics RNN on the Same Bytes Stops Gaining After About 16 Bytes"}
+A tanh RNN with 1,920 hidden units: same bytes, steps, and recipe.
+
+@!gpt-against-a-recurrent-network
+
+- Both start at the bigram level at position 0 and agree for a few bytes.
+- The GPT keeps gaining to position 127; the RNN levels off.
+:::
+
+::: {.slide title="Post-Norm Stalls at the Unigram Level Unless It Warms Up"}
+AdamW at a constant $10^{-3}$, two runs per arm; the third arm first warms
+up over 400 steps:
+
+@!gpt-breaking-it-with-one-flag
+
+- Unigram loss: predictions that ignore the input, even the current byte.
+- With the warmup, post-norm ends level with pre-norm.
+:::
+
+::: {.slide title="Check: Does This GPT Collapse at Initialization?"}
+[Check]{.kicker}
+
+A post-norm block multiplies the ratio of common to distinct energy of the
+tokens by about $1 + g^4$, where $g^2 = d\,\sigma^2$ for weights of
+standard deviation $\sigma$. Xavier ($g = 1$) collapses 32 blocks. What
+about our six blocks at $\sigma = 0.02$, $d = 256$?
+
+. . .
+
+- $g^2 = 256 \cdot 0.02^2 \approx 0.10$, so $1 + g^4 \approx 1.01$ per
+  block: after six blocks the tokens stay distinct (spread 0.95 at step 0).
+- The stall must come from training, not from initialization.
+:::
+
+::: {.slide title="Every Arm First Learns the Unigram; Post-Norm Without Warmup Never Recovers"}
+@!gpt-placement-mechanism
+
+- Spread $\to 0$: every token gives the same output, the byte frequencies.
+- Post-norm, no warmup: the first block's gradient drops to zero.
+- Warmup keeps the collapse partial; pre-norm's residual path keeps the input.
 :::
 
 ::: {.slide title="Training Costs About 6ND Operations"}
@@ -1529,51 +1824,12 @@ about twice that.
 The model definition hardly changes across 11 orders of magnitude.
 :::
 
-::: {.slide title="Post-Norm Without Warmup Sticks at the Unigram Level"}
-Plain AdamW at a constant $10^{-3}$ for 800 steps, pre-norm and
-post-norm; then post-norm with a 400-step warmup:
-
-@!gpt-breaking-it-with-one-flag
-
-A loss at the unigram entropy means predictions that ignore the input,
-even the current byte.
-:::
-
-::: {.slide title="Check: Is Starved Attention the Whole Story?"}
-[Check]{.kicker}
-
-At initialization, post-norm gives the query and key projections tiny
-gradients. Suppose attention learned nothing at all. Which loss could the
-post-norm model still reach?
-
-. . .
-
-- The FFNs act on the current byte, so the bigram level is within
-  reach.
-- The plateau sits at the unigram level instead: starved attention is at
-  most part of the explanation.
-- Xiong et al. (2020): post-norm's gradients near the output are large
-  at initialization; with a warmup, the third run trains.
-:::
-
 ::: {.slide title="Temperature Sharpens or Flattens; Top-k Cuts the Tail"}
-$$p_v = \frac{\exp(z_v/\tau)}{\sum_u \exp(z_u/\tau)}$$
+$p_v \propto \exp(z_v/\tau)$: for logits $(2, 1, 0)$, $p = (0.87, 0.12,
+0.02)$ at $\tau = 0.5$, $(0.67, 0.24, 0.09)$ at $\tau = 1$, $(0.51, 0.31,
+0.19)$ at $\tau = 2$. Top-$k$ keeps the $k$ largest logits.
 
-| logits $(2, 1, 0)$ | $p$ |
-|:--|:--|
-| $\tau = 0.5$ | $(0.87, 0.12, 0.02)$ |
-| $\tau = 1$ | $(0.67, 0.24, 0.09)$ |
-| $\tau = 2$ | $(0.51, 0.31, 0.19)$ |
-
-- $\tau \to 0$: greedy decoding. Top-$k$: keep the $k$ largest logits,
-  set the rest to $-\infty$.
-:::
-
-::: {.slide title="Lower Temperature Plays Safe, Higher Temperature Scrambles"}
 @!gpt-sampling-from-the-model-2
-
-$\tau = 1$: the model's own distribution. $\tau = 0.7$, $k = 8$: safer,
-frequent words, mostly spelled correctly. $\tau = 2$: close to random bytes.
 :::
 
 ::: {.slide title="Naive Generation Redoes the Whole Context for Every Token" only="pytorch"}
@@ -1589,15 +1845,15 @@ frequent words, mostly spelled correctly. $\tau = 2$: close to random bytes.
 ::: {.slide title="Naive Generation Redoes the Whole Context for Every Token" only="jax"}
 `generate` runs the full forward pass for each new token.
 
-- A buffer of fixed shape $(1, 1{,}024)$: one compilation, but every token
-  costs a pass over all 1,024 positions, however short the text.
-- $T$ tokens cost $1{,}024\,T$ position computations, where computing
-  each position once would cost $T$.
+- A buffer of fixed shape $(1, n)$, $n$ = `max_len`: one compilation, but
+  every token costs a pass over all $n$ positions, however short the text.
+- $T$ tokens cost $nT$ position computations, where computing each
+  position once would cost $T$.
 - The keys and values of earlier positions never change. Caching them is
   the next section.
 :::
 
-::: {.slide title="GPT-2 Small Is Our Class with Five Settings"}
+::: {.slide title="GPT-2 Small Is Our Class with Other Settings"}
 ```{.python #gpt-exercises-3}
 gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12,
            num_blks=12, max_len=1024, pos='learned', norm='layer',
@@ -1659,13 +1915,12 @@ continues the prompt coherently.
 [Wrap-up]{.kicker}
 
 - GPT = embedding $\mathbf{E}$ + $L$ causal blocks + final norm +
-  $\mathbf{E}$ again; positions as a table or a rotation.
-- $12d^2$ per block: 4.7M for ours, 85M of GPT-2 small's 124M; training
-  costs about $6ND$.
-- GPT-2 initialization: $0.02$, and $0.02/\sqrt{2L}$ on the stream
-  writers.
-- On text it has almost never read before, validation follows training;
-  post-norm without warmup stalls at the unigram level.
+  $\mathbf{E}$ again; the loss averages $-\log p$ over all $bT$ positions.
+- Ours: 4.8M parameters, about 1.34 nats per byte after 1,000 steps;
+  three runs agree within about 0.01; the Basics RNN ends behind and stops
+  gaining after about 16 bytes of context.
+- Post-norm without warmup collapses to the unigram level in its first
+  steps; with warmup it ends level with pre-norm.
 - Temperature and top-$k$ reshape sampling; GPT-2 loads with a name map.
 
 **Next:** generation recomputes the whole context for every token; the KV

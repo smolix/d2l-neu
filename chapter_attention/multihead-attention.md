@@ -1,28 +1,32 @@
-# Multi-Head and Cross-Attention
+# Self-Attention and Multiple Heads
 :label:`sec_multihead-attention`
 
-The attention layer of :numref:`sec_attention-scoring-functions` gives each
-query one set of weights over the keys and returns one weighted average of
-the values. That suffices when a query needs one thing from its context.
-Often it needs several. In the sentence "Alice gave Bob the book", the verb
-*gave* needs three other words: who gave, who received, and what was given.
-A single weighted average mixes their three value vectors into one vector of
-the same width. How can one query read several positions
-at once without blending what it reads?
+Every attention layer we have built so far has had two sides: the queries
+came from one place, the keys and values from another, as when the letters
+of "attention" queried those of "translation". A language model has no
+second sequence. All it has is the text it has read so far, so its queries
+must come from that text too.
 
-We make the question precise with a small task: one query must report the
-values stored at two positions. Any single set of attention weights,
-however it is chosen, loses half of the target's variance on this task.
-*Multi-head attention*
-:cite:`Vaswani.Shazeer.Parmar.ea.2017` gives each query several sets of
-weights, each computed in a learned projection of its own, and combines the
-resulting averages linearly. With the usual choice of head width it has the
-same number of parameters and the same leading FLOP count as one wide head,
-and a layer built this way learns to solve the two-value task. The heads do
-not all need their own keys and values. Sharing them within groups of heads
-keeps the extra weightings and shrinks the memory that text generation needs.
-The section ends with self-attention and cross-attention, which are the same
-operation applied to different inputs.
+Consider the sentence "Alice gave Bob the book". To make sense of *gave*,
+a reader needs three other words: who gave, who received, and what was
+given. If every word emits a query, a key, and a value, then *gave* can
+put its question to the other words of its own sentence and collect what
+it needs. This arrangement is called
+*self-attention*. The idea of a sequence attending to itself goes back to
+:citet:`Cheng.Dong.Lapata.2016` and :citet:`Lin.Feng.Santos.ea.2017`. In
+2017 the Transformer of :citet:`Vaswani.Shazeer.Parmar.ea.2017` gave it the
+query--key--value form used today and showed that a stack built around such
+layers, with attention as its only way of mixing positions, translated
+better than the best recurrent and convolutional models of the day. Nearly
+every language model since has been built the same way.
+
+We start with the simplest case: one self-attention layer on this sentence,
+with maps small enough to follow by hand. The worked example then raises
+the question of the section. *Gave* needs three words, and the layer gives
+it one set of weights and one blended vector. How can one query read
+several positions without blending what it reads? A small task makes the
+question precise, and its answer is to run several copies of the layer,
+each with maps of its own, side by side.
 
 ```{.python .input #multihead-attention-multi-head-and-cross-attention}
 %%tab pytorch
@@ -47,31 +51,61 @@ from d2l import jax as d2l
 
 ## Self-Attention
 
-<!-- WRITER: NEW subsection (worklist 3.B2; structure 3.3 step 1). To write: (a) one head with the three
-maps W_q, W_k, W_v and the three roles (a token asks, is found, is read); eq_self-attention moves here in
-single-head form softmax(X W_q (X W_k)^T / sqrt(d_h)) X W_v, with the citation
-Lin.Feng.Santos.ea.2017,Vaswani.Shazeer.Parmar.ea.2017 (both now in the old "Self-Attention" subsection
-further down); (b) the worked sentence with the numbers below; (c) the causal row; (d) the output has the
-shape of the input, so layers stack; (e) fig_self-attention; (f) the comparison with recurrence and
-convolution, moved here from attention-at-scale.md ("CNNs, RNNs, and Self-Attention": prose,
-fig_cnn-rnn-self-attention and tab_cnn-rnn-attn, labels unchanged; no cell involved).
-Facts the cells print, identical in both tabs (hand-set, no randomness):
-X = [role one-hot (person, action, thing, function word) | word one-hot], 5 x 9. W_q and W_k read the
-role part only (rows person, action, thing, function word): queries person (1,-1), action (1,1), thing
-(1,-1), function word (0,0); keys person (1,1), action (1,-1), thing (1,1), function word (0,0). W_v reads
-the word part as the identity, so each value is the indicator of its word (d_v = 5) and the output of a
-token is its row of weights read as amounts of each word. d_h = 2, scale 1/sqrt(2).
-Row of gave: dot products 2, 0, 2, 0, 2; scores 1.41, 0, 1.41, 0, 1.41; weights 0.29, 0.07, 0.29, 0.07,
-0.29 (exact e^1.414/(3 e^1.414 + 2) = 0.287 and 1/(3 e^1.414 + 2) = 0.070); output of gave the same five
-numbers. Row of "the": query (0,0), weights 0.2 everywhere. Rows of the nouns (heatmap): 0.51 on gave,
-0.12 on each other token. Causal row of gave: 0.80 on Alice, 0.20 on gave. The figure computes its numbers
-from the same matrices (tools/gen_mdl_attention_a9.py). The sentences below are functional placeholders. -->
-We run one head of self-attention on the sentence "Alice gave Bob the book".
-Each token's embedding has two parts: its role (person, action, thing,
-function word), which the query and key maps read, and an indicator of the
-word itself, which the value map reads. The maps are set by hand, with
-$d_h = 2$: the query of the verb seeks nouns, the queries of the nouns seek
-the verb, and the query of "the" seeks nothing.
+In self-attention every token plays three roles. It asks: as a *query*, it
+looks for the tokens it needs. It is found: as a *key*, it advertises what
+it offers to the queries of others. And it is read: as a *value*, it hands
+over its content once it has been selected. One vector could play all three
+roles, as the letter embeddings did in
+:numref:`sec_attention-scoring-functions`, but it would play them badly,
+because what a verb looks for is not what a verb offers. The layer
+therefore computes three linear maps of each input.
+
+Let the $n$ tokens of a sequence be the rows of $\mathbf{X} \in
+\mathbb{R}^{n \times d}$. Learned matrices $\mathbf{W}_q, \mathbf{W}_k \in
+\mathbb{R}^{d \times d_h}$ and $\mathbf{W}_v \in \mathbb{R}^{d \times d_v}$
+give the queries $\mathbf{X}\mathbf{W}_q$, the keys $\mathbf{X}\mathbf{W}_k$,
+and the values $\mathbf{X}\mathbf{W}_v$, and scaled dot-product attention
+does the rest:
+
+$$
+\mathrm{softmax}\left(\frac{(\mathbf{X}\mathbf{W}_q)(\mathbf{X}\mathbf{W}_k)^\top}{\sqrt{d_h}}\right)\mathbf{X}\mathbf{W}_v \in \mathbb{R}^{n \times d_v}.
+$$
+:eqlabel:`eq_self-attention`
+
+Row $i$ of the result is the new representation of token $i$: an average
+of the values of all $n$ tokens, weighted by how well the query of token $i$
+matches each key. Nothing in the computation is new. It is the attention of
+:numref:`sec_attention-scoring-functions`, with the queries, keys, and
+values all drawn from the same sequence. Three maps and one softmax of this
+kind make up one attention *head*, and $d_h$ is its width.
+
+### One Head on One Sentence
+
+Learned maps are hard to read, so let us set the maps by hand and check
+every number. Each token's input has two parts: a one-hot code of its role
+(person, action, thing, or function word), and a one-hot code of the word
+itself, nine numbers in all. The query and key maps read only the role, and
+they map it to $d_h = 2$ numbers:
+
+| role | query | key |
+|:--|:--|:--|
+| person (Alice, Bob) | $(1, -1)$ | $(1, 1)$ |
+| action (*gave*) | $(1, 1)$ | $(1, -1)$ |
+| thing (book) | $(1, -1)$ | $(1, 1)$ |
+| function word ("the") | $(0, 0)$ | $(0, 0)$ |
+
+The query of the verb points along the keys of the nouns, the queries of
+the nouns point along the key of the verb, and "the" neither asks nor is
+found. People and things get the same maps because this head treats every
+noun alike; telling them apart would take a second head. The value map
+reads only the word part and copies it. Each value therefore marks its
+word, and the output of a token can be read as amounts of each word.
+
+Real embeddings, of course, come with no role code. A trained layer has to
+find directions of this kind among hundreds of coordinates, and
+:numref:`sec_what-attention-computes` looks at what trained heads actually
+find. Here we hand the layer its roles so that nothing stands between us
+and the arithmetic.
 
 ```{.python .input #multihead-attention-self-attention}
 %%tab pytorch, jax
@@ -90,10 +124,21 @@ W_v = d2l.concat((d2l.zeros((4, 5)), d2l.eye(5)))
 Q, K, V = X @ W_q, X @ W_k, X @ W_v  # (5, 2), (5, 2), (5, 5)
 ```
 
-The attention layer of :numref:`sec_attention-scoring-functions` runs on
-these queries, keys, and values. We print the scores and weights of *gave*,
-the weights of "the", and the output of *gave*, then the weights of *gave*
-under a causal mask, and draw all 25 weights.
+Before running the layer, we can predict the row of *gave*. Its query
+$(1, 1)$ has dot product 2 with the key $(1, 1)$ of each noun and 0 with
+the keys of *gave* and "the". Divided by $\sqrt{2}$, the scores are $1.41$
+and $0$. The softmax gives each noun the weight $e^{1.41}/(3e^{1.41} + 2)
+\approx 0.29$ and each of the other two tokens $1/(3e^{1.41} + 2) \approx
+0.07$. :numref:`fig_self-attention` lays out the computation, from the
+query of *gave* to its output.
+
+![One head of self-attention on "Alice gave Bob the book", with the hand-set maps of the code above ($d_h = 2$). Every token emits a query, a key, and a value. The query of *gave*, $(1, 1)$, is scored against every key by $\mathbf{q} \cdot \mathbf{k}/\sqrt{2}$; the softmax turns the scores $1.41$ and $0$ into weights $0.29$ and $0.07$; the output of *gave* is the weighted sum of the values, which mark the five words.](../img/mdl-attention-self-attention.svg)
+:label:`fig_self-attention`
+
+The cell runs `d2l.DotProductAttention` on these queries, keys, and
+values. It prints the scores and weights of *gave*, the weights of "the",
+and the output of *gave*, then the weights of *gave* under a causal mask,
+and it draws all 25 weights.
 
 ```{.python .input #multihead-attention-self-attention-1}
 %%tab pytorch, jax
@@ -113,39 +158,75 @@ d2l.show_heatmaps(weights[None, None], xlabel='keys', ylabel='queries',
                   xticklabels=tokens, yticklabels=tokens)
 ```
 
-The query of *gave* scores $1.41$ against Alice, Bob, and book and $0$
-against itself and "the", so its weights are $0.29$ on each noun and $0.07$
-on the other two tokens. Each value marks its word, so the output of *gave*
-is this row: one blend in which Alice and Bob appear in equal amounts. The
-query of "the" is zero and spreads its weight evenly, $0.2$ on every token.
-Under a causal mask *gave* sees only Alice and itself, with weights $0.80$
-and $0.20$. :numref:`fig_self-attention` draws the row of *gave*.
+The printed row matches the prediction. Since each value marks its word,
+the output of *gave* is that same row: equal parts Alice, Bob, and book,
+with a little of *gave* and "the". The query of "the" is zero, so all its
+scores are equal and its weight spreads evenly, $0.2$ on every token. A
+query that asks for nothing receives the average of everything. The third
+kind of row belongs to the nouns. A noun's query scores $1.41$ on the verb
+and $0$ elsewhere, so the verb gets $e^{1.41}/(e^{1.41} + 4) \approx 0.51$
+and every other token about $0.12$: the dark cells of the heatmap.
 
-![One head of self-attention on "Alice gave Bob the book", with the hand-set maps of the code above ($d_h = 2$). Every token emits a query, a key, and a value. The query of *gave*, $(1, 1)$, is scored against every key by $\mathbf{q} \cdot \mathbf{k}/\sqrt{2}$; the softmax turns the scores $1.41$ and $0$ into weights $0.29$ and $0.07$; the output of *gave* is the weighted sum of the values, which mark the five words.](../img/mdl-attention-self-attention.svg)
-:label:`fig_self-attention`
+A language model may not read ahead. Under the causal mask of
+:numref:`sec_attention-scoring-functions`, each token sees only itself and
+the tokens before it, so *gave* is left with Alice and itself. The scores
+do not change. The softmax renormalizes the two that remain, $1.41$ and
+$0$, into the weights $0.80$ and $0.20$ that the cell prints.
 
-## A One-Mixture Bottleneck with Position-Only Keys
+### Separate Maps for Queries and Keys
+
+Why does the layer need two maps where one might seem to do? Suppose a
+single map $\mathbf{W}$ produced both the queries and the keys, so that
+token $i$ had one vector $\mathbf{u}_i = \mathbf{x}_i\mathbf{W}$ for both
+roles. The scores $s_{ij} = \mathbf{u}_i \cdot \mathbf{u}_j/\sqrt{d_h}$
+would then be symmetric, with token $i$ scoring token $j$ exactly as $j$
+scores $i$, and by the Cauchy--Schwarz inequality $s_{ij} \le
+\sqrt{s_{ii}\, s_{jj}}$. A token could seek another only as strongly as the
+two, on geometric average, seek themselves. Our sentence shows what that
+costs. Had we used the queries of our table as keys too, the query $(1, 1)$
+of the verb would have dot product 2 with itself and 0 with every noun: the
+verb would look for verbs. Separate maps let what a token asks for differ
+from what it offers.
+
+The value map splits the work once more. In our example the roles decide
+who is read, and the word identities decide what is handed over. The output
+has one row per token, the same shape as the input. A second
+self-attention layer can therefore read the output of the first, and a
+third the output of the second. The transformers of the next chapter are
+such a stack, with other layers in between.
+
+## Limits of a Single Head
 :label:`subsec_one-mixture-bottleneck`
 
-To measure what one weighting per query cannot express, we need a task
-whose answer we know and whose best single-head solution we can compute.
-Consider the following task. Two source positions hold value vectors
-$\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^c$, drawn independently at random
-for every example. Their keys mark only the *positions*, not the content. A
-query must report **both** values: the target is the concatenation
-$\mathbf{t} = [\mathbf{v}_1; \mathbf{v}_2] \in \mathbb{R}^{2c}$.
+Let us return to the row of *gave*. It is one set of weights, and the
+output is one weighted sum. In our example the values were indicators, one
+coordinate per word, so the sum still records which words were read. Real
+values are dense vectors of a fixed width. A weighted sum of three of them
+is a single vector of that width, from which the three cannot in general be
+recovered. Is this a limit of one head, or only of our hand-set weights? To
+find out we need a task whose answer we know and whose best single-head
+solution we can compute.
 
-For this query a single head can only produce softmax weights
-$(\alpha_1, \alpha_2)$ with $\alpha_1 + \alpha_2 = 1$, the mixture
-$\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2$, and then a
-linear readout $\mathbf{W}_o \mathbf{m}$. Since the keys are fixed position
-markers, the weights cannot depend on the values. Whatever the head learns,
-it applies the *same* mixture to every example. How well can it do?
+Here is one. Two source positions hold value vectors $\mathbf{v}_1,
+\mathbf{v}_2 \in \mathbb{R}^{d_v}$, drawn independently from a standard
+Gaussian for every example. Their keys mark only the positions, not the
+content. A single query must report both values: the target is the
+concatenation $\mathbf{t} = [\mathbf{v}_1; \mathbf{v}_2] \in
+\mathbb{R}^{2d_v}$. We call this the *copy-both task*. It is artificial on
+purpose: *gave* asking for two words at once, with everything stripped
+away except the one thing a single head might fail at.
+
+One head can produce only weights $(\alpha_1, \alpha_2)$ with $\alpha_1 +
+\alpha_2 = 1$, the mixture $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2
+\mathbf{v}_2$, and then a linear readout of $\mathbf{m}$. Since the keys
+mark positions only, the weights cannot depend on the values. Whatever the
+head learns, it applies the *same* weights to every example. How well can
+it do?
 
 **Proposition.** Consider one attention head with two fixed, position-only
-keys, independent standard Gaussian values in $\mathbb{R}^c$, no residual
-path, and a linear readout. For the copy-both task, the best achievable
-relative squared error is $1/2$ for every softmax pair
+keys, independent standard Gaussian values in $\mathbb{R}^{d_v}$, no
+residual path, and a linear readout. On the copy-both task, the best
+achievable relative squared error is $1/2$ for every softmax pair
 $(\alpha_1,\alpha_2)$.
 
 **Proof.** Given the mixture $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2
@@ -160,20 +241,24 @@ coordinate. The relative squared error is therefore $1/2$, however the head
 splits its attention.
 $\blacksquare$
 
-The weights cannot remove the error because the readout receives a single
-mixture of the two values, whatever they are. We check the bound, and what a
-second head changes, by fitting the best linear readout by least squares,
-with values of width $c = 8$. One head supplies one mixture, here with
-weights $(0.7, 0.3)$; two heads supply two mixtures, whose outputs are
-concatenated before the readout. The code reports the norm of the readout's
-error divided by the norm of the target. This relative error is the square
-root of the relative squared error, so the bound reads
-$\sqrt{1/2} \approx 0.707$.
-<!-- WRITER: the code now names the value width d_v (N, d_v = 10000, 8), per worklist 3.B10; the prose
-still writes c here and in the proposition. Cells -1 and -2 are merged into -1 (MHA-5): one single-head
-row (0.7, 0.3) against sqrt(1/2), then the two two-head rows. Printed over three dev runs per tab: one
-head 0.706-0.708 against sqrt(1/2) = 0.707; two heads 1.0e-06 to 1.5e-06 (PyTorch) and 5.1e-07 to
-5.9e-07 (JAX), for the one-hot and the soft (0.88, 0.12) pair alike: the rounding error of the solver. -->
+The weights move the error between $\mathbf{v}_1$ and $\mathbf{v}_2$; they
+cannot remove it. Counting shows why: the readout receives one mixture,
+$d_v$ numbers, and must produce $2d_v$. Call one set of weights for one
+query a *weighting*. A layer that solves the task needs several different
+weightings for the same query, and it needs room in its output for every
+value they retrieve. Neither suffices alone. A single head as wide as the
+whole layer has room but one weighting, and when heads come to share their
+values we will meet the opposite failure, several weightings and too little
+room. Exercise :exref:`ex_multihead-what-the-bound-counts` turns the
+counting into a proof.
+
+We check the bound, and what a second head changes, by fitting the best
+linear readout by least squares, with values of width $d_v = 8$. One head
+supplies one mixture, here with weights $(0.7, 0.3)$. Two hand-built heads
+supply two mixtures, whose outputs are concatenated before the readout. The
+code reports the norm of the readout's error divided by the norm of the
+target. This relative error is the square root of the relative squared
+error, so the bound reads $\sqrt{1/2} \approx 0.707$.
 
 ```{.python .input #multihead-attention-one-head-must-average-1}
 %%tab pytorch
@@ -223,111 +308,167 @@ for a in (1.0, 0.88):
           f'relative error {readout_error(M2, target):.1e}')
 ```
 
-The single head stays at about $0.71$, as the proposition predicts. Two
-heads bring the error down to the rounding error of the least-squares
-solver, and the second row does so with *soft* weights $(0.88, 0.12)$. The
-heads need different weightings, not one-hot ones. They supply two mixtures,
-the readout inverts the $2 \times 2$ mixing matrix, and both values come back
-exactly. The inversion is well conditioned as long as the two weightings
-differ appreciably. Exercise :exref:`ex_multihead-nearly-identical-heads`
-follows what happens as they approach each other.
-:numref:`fig_one-head-averages` summarizes the two cases.
+The single head lands on the bound, at about $0.71$. Two heads bring the
+error down to the rounding error of the least-squares solver, and the
+second pair does so with *soft* weights $(0.88, 0.12)$. The heads need
+different weightings, not one-hot ones. They supply two mixtures, the
+readout inverts the $2 \times 2$ mixing matrix, and both values come back.
+The inversion is well conditioned as long as the two weightings differ
+appreciably; Exercise :exref:`ex_multihead-nearly-identical-heads` follows
+what happens as they approach each other. :numref:`fig_one-head-averages`
+summarizes the two cases.
 
 ![One weighting per query against two. A single head serves the copy-both task with one softmax weighting, so its output blends the two requested values. Two heads with different weightings supply two mixtures, from which a linear readout recovers both values.](../img/mdl-attention-one-head-averages.svg)
 :label:`fig_one-head-averages`
-
-The bound needs less than this proof used, and it does not depend on the
-softmax. It holds whenever a linear readout receives one vector of $c$ numbers
-per query and must produce $2c$ independent ones. No vector of $c$ numbers
-computed from the values does better, not even a mixture whose weights depend
-on the values (Exercise :exref:`ex_multihead-what-the-bound-counts`).
-Content-dependent keys, more layers, or a residual connection therefore leave
-the bound in place as long as the readout is linear and receives $c$ numbers.
-Two heads lift it because they hand the readout $2c$ numbers. A layer that
-solves the task must do two things: compute several different weightings
-for one query, and leave room in its output for every value it retrieves.
 
 ## Multi-Head Attention
 
 ### Projected Heads
 
-Rather than hand-design the heads, we learn them. Given a query
-$\mathbf{q} \in \mathbb{R}^{d}$ and key--value pairs $(\mathbf{k}_1,
-\mathbf{v}_1), \ldots, (\mathbf{k}_m, \mathbf{v}_m)$ with $\mathbf{k}_j,
-\mathbf{v}_j \in \mathbb{R}^{d}$, head $i$ ($i = 1, \ldots, H$) first projects
-them into its own subspace of width $d_h$ and then runs ordinary scaled
-dot-product attention $f$ from :numref:`sec_attention-scoring-functions`:
+Rather than build the heads by hand, we learn them. A *multi-head* layer
+runs $H$ heads side by side, each with its own three maps, and combines
+their outputs with one more learned matrix
+:cite:`Vaswani.Shazeer.Parmar.ea.2017`. Head $i$ computes
 
 $$
-\mathbf{z}_i = f\big(\mathbf W_i^{(q)}\mathbf q,\; (\mathbf W_i^{(k)}\mathbf k_1, \mathbf W_i^{(v)}\mathbf v_1), \ldots, (\mathbf W_i^{(k)}\mathbf k_m, \mathbf W_i^{(v)}\mathbf v_m)\big) \in \mathbb R^{d_h},
+\mathbf{Z}_i = \mathrm{softmax}\left(\frac{(\mathbf{X}\mathbf{W}_i^{(q)})(\mathbf{X}\mathbf{W}_i^{(k)})^\top}{\sqrt{d_h}}\right)\mathbf{X}\mathbf{W}_i^{(v)} \in \mathbb{R}^{n \times d_h}, \qquad i = 1, \ldots, H,
 $$
 :eqlabel:`eq_multihead-head`
 
-with learnable $\mathbf W_i^{(q)}, \mathbf W_i^{(k)}, \mathbf W_i^{(v)} \in
-\mathbb R^{d_h \times d}$. Each head scores with its own projected queries
-and keys, so it weights the keys by its own notion of relevance, and it
-moves its own projection of the values. These are the separate
-mixtures of the construction above, now learned. The layer's output is a
-learned linear recombination of the concatenated heads:
+with $\mathbf{W}_i^{(q)}, \mathbf{W}_i^{(k)}, \mathbf{W}_i^{(v)} \in
+\mathbb{R}^{d \times d_h}$. This is :eqref:`eq_self-attention` with a head
+index, and with values of the same width $d_h$ as queries and keys. Each
+head scores with its own projected queries and keys, so it weights the
+tokens by its own notion of relevance, and it moves its own projection of
+the values. These are the separate mixtures of the construction above, now
+learned. The only other new part is the output, a learned linear
+recombination of the heads placed side by side:
 
 $$
-\mathbf W_o \begin{bmatrix}\mathbf z_1\\\vdots\\\mathbf z_H\end{bmatrix} \in \mathbb{R}^{d}, \qquad \mathbf W_o \in \mathbb R^{d \times H d_h}.
+[\mathbf{Z}_1, \ldots, \mathbf{Z}_H]\, \mathbf{W}_o \in \mathbb{R}^{n \times d}, \qquad \mathbf{W}_o \in \mathbb{R}^{H d_h \times d}.
 $$
 :eqlabel:`eq_multihead-output`
 
-The output has width $d$ whatever the number of heads, so a layer of width
-$d$ returns at most $d$ numbers per query. In the copy-both task it can return
-both values only if $2c \le d$. :numref:`fig_multi-head-attention` shows the
-layout.
+The output projection $\mathbf{W}_o$ is the linear readout of the
+proposition, now part of the layer. As before, $d$ is the width of the
+model, the width of every token's vector between layers, and $d_h$ is the
+width of one head. The output has width $d$ whatever the number of heads,
+so a layer of width $d$ returns at most $d$ numbers per query. On the
+copy-both task it can return both values only if $2d_v \le d$.
+:numref:`fig_multi-head-attention` shows the layout.
 
 ![Multi-head attention. Every head reads the same queries, keys, and values, projects them into its own subspace, and attends there; the head outputs are concatenated and recombined by one output projection.](../img/mdl-attention-multi-head.svg)
 :label:`fig_multi-head-attention`
 
 ### Parameter and FLOP Counts
 
-The standard choice of head width makes the heads together no more expensive
-than one wide head. Set $d_h = d/H$, so that the $H$ heads produce
-$H d_h = d$ numbers per token, as many as a single head of width $d$. For
-self-attention, write the inputs of a sequence of length $n$ as
-$\mathbf{Q},\mathbf{K},\mathbf{V}\in\mathbb{R}^{n\times d}$. Each of the four
-learned projections is then a $d\times d$ matrix, and each head receives
-matrices of shape $n\times d_h$. Counting one multiply--add as two FLOPs, the
-layer costs
+The standard choice of head width makes the heads together no more
+expensive than one wide head. Set $d_h = d/H$, so that the $H$ heads
+produce $H d_h = d$ numbers per token, as many as a single head of width
+$d$. The $H$ query matrices $\mathbf{W}_i^{(q)}$, placed side by side, then
+form one $d \times d$ matrix, and so do the key, value, and output
+matrices. For self-attention on $n$ tokens, counting one multiply--add as
+two FLOPs, the layer costs
 
 $$
 \underbrace{8nd^2}_{\textrm{projections}} \;+\; \underbrace{4n^2 d}_{\textrm{scores and mixing}} \quad \textrm{FLOPs,} \qquad 4d^2 \ \textrm{parameters.}
 $$
 :eqlabel:`eq_multihead-flops`
 
-Neither count depends on $H$. The four projection matrices are $d \times d$
-however their outputs are sliced into heads, and each head's score and mixing
-products shrink by the same factor $H$ by which their number grows. The
-number of heads changes the representation, not the leading operation count.
-Running time is not quite constant, because more heads mean more and
-smaller matrix products and softmaxes, which run less efficiently (Exercise
-:exref:`ex_multihead-narrow-heads`d). What does change with $H$ is the
-attention map. Each query now has $H$ distributions over the $n$ keys
-instead of one.
+For one layer of GPT-2 small, with $d = 768$ and its full context of
+$n = 1{,}024$ tokens, that comes to 4.8 GFLOP for the projections, 3.2 GFLOP
+for the scores and mixing, and 2.4 million parameters. Neither count
+depends on $H$. The four projection matrices are $d \times d$ however their
+outputs are sliced into heads, and each head's score and mixing products
+shrink by the same factor $H$ by which their number grows. The number of
+heads changes the representation, not the leading operation count.
+Running time is not quite constant, though. With $H$ heads come $H n^2$
+attention weights, each exponentiated, normalized, and stored, a cost the
+count leaves out, and the heads' matrix products are smaller and run less
+efficiently (Exercise :exref:`ex_multihead-narrow-heads`d). What does
+change with $H$ is the attention map: each query now has $H$ sets of
+weights over the $n$ keys instead of one.
+
+If heads cost so little, why not take $H = d$, one head per coordinate?
+Because a narrow head cannot point. With $d_h = 1$ every query and key is a
+single number, the score $q k_j$ rises or falls monotonically with $k_j$,
+and a query can concentrate its weight only on the largest key or on the
+smallest (Exercise :exref:`ex_multihead-narrow-heads`). With two
+coordinates the keys can sit on a circle, and then every query can single
+out a key of its own choosing. Practice settles far above that. GPT-2 small
+runs 12 heads of width 64, and its larger siblings keep the width at 64 and
+add heads.
+
+### Comparison with Convolution and Recurrence
+
+Self-attention is the third layer in this book that maps a sequence of $n$
+vectors to another sequence of $n$ vectors. The other two are the
+one-dimensional convolution of :numref:`chap_cnn` and the recurrent layer
+of :numref:`sec_rnn`. :numref:`fig_cnn-rnn-self-attention` draws the three
+as graphs over five tokens. Two properties of these graphs matter beyond
+the amount of arithmetic. The number of *sequential steps* says how much of
+the work must wait for earlier work, and so how much of it a GPU can do at
+once. The *path length* between two positions counts how many layer
+applications a signal passes through on its way from one to the other.
+
+![Sequence-layer connectivity for five tokens. Highlighted edges show how the inputs reach the third output in one layer: a convolution with kernel size $k = 3$ sees its neighbors, a recurrence passes information step by step along the chain, and self-attention connects every position directly. Below each panel are the path length between distant tokens and whether the outputs are computed in parallel.](../img/mdl-attention-cnn-rnn-self-attention.svg)
+:label:`fig_cnn-rnn-self-attention`
+
+A convolution with kernel size $k$ computes all positions at once, but each
+layer widens its view by only $k - 1$ positions, so two tokens $n$ apart
+are connected only through a stack of about $n/k$ layers. A recurrent layer
+takes $n$ steps one after the other, and a signal from the first token
+reaches the last through $n$ applications of the cell. In training, its
+gradient is multiplied by $n$ Jacobians on the way back and tends to vanish
+or explode (:numref:`sec_bptt`). Self-attention computes all outputs at
+once and connects every pair of positions directly.
+:numref:`tab_cnn-rnn-attn` collects the counts for layers of width $d$,
+with the four projections of self-attention in its first term.
+
+:Per-layer cost of mapping $n$ tokens of dimension $d$ to $n$ tokens of dimension $d$.
+:label:`tab_cnn-rnn-attn`
+
+| layer type | complexity | sequential operations | maximum path length |
+|:--|:--|:--|:--|
+| convolution (kernel $k$) | $O(knd^2)$ | $O(1)$ | $O(n/k)$ |
+| recurrence | $O(nd^2)$ | $O(n)$ | $O(n)$ |
+| self-attention | $O(nd^2+n^2d)$ | $O(1)$ | $O(1)$ |
+
+Self-attention wins the last two columns. The first is where it pays: on
+top of the projections comes the term $n^2 d$, one score for every pair of
+tokens. By :eqref:`eq_multihead-flops` that term overtakes the projections once
+$4n^2 d > 8nd^2$, that is, once the sequence is longer than twice the
+width. For GPT-2 small that happens at 1,536 tokens, just beyond the 1,024
+it reads. A short path, moreover, makes a long-range dependency reachable,
+not learned. Whether training finds it is a separate question.
 
 ### Implementation
 
-The choice $d_h = d/H$ also gives the standard implementation. We compute
-one query projection of width $d$ and reshape its output into $H$ heads of
-width $d_h$, with the heads as an explicit axis: queries, keys, and values
-become tensors of shape (batch, $H$, length, $d_h$). The scaled dot-product
-attention of :numref:`sec_attention-scoring-functions` works over any
-leading axes, so it runs all heads of all sequences in one batched matrix
-product, with no loop over heads. A mask of shape (batch, queries, keys)
-receives a head axis of size one and so applies to every head. The argument
-`num_kv_heads` lets groups of heads share keys and values. We return to it in
-:numref:`subsec_kv-head-sharing`; until then it equals the number of heads.
+The implementation rests on one idea: a head is just one more batch axis.
+Because $d_h = d/H$, we can compute one query projection of width $d$ and
+reshape its output into $H$ heads of width $d_h$. Queries, keys, and values
+then become tensors of shape (batch, $H$, length, $d_h$). The scaled
+dot-product attention of :numref:`sec_attention-scoring-functions` works
+over any leading axes, so it runs all heads of all sequences in one batched
+matrix product, with no loop over heads. A mask of shape (batch, queries,
+keys) gets a head axis of size one and so applies to every head. The class
+takes queries, keys, and values as three arguments, each with its own
+projection; self-attention simply passes the same sequence three times.
+
+The projections have no biases by default. A bias on the keys adds the same
+amount to every score of a query, which the softmax ignores, and biases on
+the values and on the output only shift the output by a constant. A bias on
+the queries does change the weights, and dropping it is a convention rather
+than a necessity: Llama and many later language models leave all four
+biases out. The argument `num_kv_heads` lets groups of heads share keys and
+values. It is the subject of :numref:`subsec_kv-head-sharing`, and until
+then it equals the number of heads.
 
 :begin_tab:`jax`
-The `Linear` class draws its weights and biases uniformly from
-$(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$, where $n_\textrm{in}$ is
-the input width, instead of Flax's default of LeCun-normal weights and zero
-biases. The attention and transformer models of this and the next chapter use
-this initialization throughout.
+`Linear` is `nnx.Linear` with weights and biases drawn uniformly from
+$(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$ for input width
+$n_\textrm{in}$; the attention and transformer models of this and the next
+chapter use it throughout.
 :end_tab:
 
 ```{.python .input #multihead-attention-linear-init}
@@ -466,24 +607,26 @@ def merge_heads(self, X):
     return X.swapaxes(1, 2).reshape(X.shape[0], X.shape[2], -1)
 ```
 
-<!-- WRITER: the parameter-count cell (implementation-4) and its paragraph are cut (worklist 3.A3);
-the trained copy-both cell below prints d2l.num_params for every layer (1,024 at d = 16 for every H). -->
-
 ### Learned Heads on the Copy-Both Task
 :label:`subsec_copy-both-learned`
 
-We now return to the task of :numref:`subsec_one-mixture-bottleneck` with
-the layer itself instead of hand-built mixtures. A layer of width $d = 16$
-receives one query and two key--value pairs. The keys are the standard basis
-vectors $\mathbf{e}_1$ and $\mathbf{e}_2$, so they mark position only, and the
-query is $\mathbf{e}_3$ in every example. The values carry the content:
-$\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^8$, drawn afresh for every example
-and padded with zeros to width 16. The target $[\mathbf{v}_1; \mathbf{v}_2]$
-is the layer's entire output, so the output has room for exactly two values
-($2c = d$). The data function draws a minibatch, and the training function
-fits a layer with Adam on the squared error, drawing a fresh minibatch at
-every step. The evaluation function returns the relative error on 10,000
-fresh examples and the weight that each head gives to the first position.
+We now return to the copy-both task with the layer itself instead of
+hand-built mixtures. A layer of width $d = 16$ receives one query and two
+key--value pairs. The keys are the standard basis vectors $\mathbf{e}_1$
+and $\mathbf{e}_2$, so they mark position only, and the query is
+$\mathbf{e}_3$ in every example. The values carry the content:
+$\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^{8}$, drawn afresh for every
+example and padded with zeros to width 16. So $d_v = 8$ is the width of
+the content a value carries, while each head projects the padded values to
+its own width $d_h = 16/H$. The target $[\mathbf{v}_1; \mathbf{v}_2]$ is
+the layer's entire output, so the output has room for exactly two values
+($2d_v = d$).
+
+Three functions do the work. The data function draws a minibatch. The
+training function fits a layer with Adam on the squared error, drawing a
+fresh minibatch at every step. The evaluation function returns the
+relative error on 10,000 fresh examples, together with the weight that
+each head gives to the first position.
 
 ```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-1}
 %%tab pytorch
@@ -550,10 +693,12 @@ def evaluate_copy_both(model, n=10000):
     return float(err), model.attention_weights[0, :, 0, 0].tolist()
 ```
 
-We train layers with one, two, and four heads, twice each, and print for
-every run the parameter count, the relative error, and the weight that each
-head gives to the first position (its weight on the second is one minus
-that).
+We train layers with one, two, and four heads, twice each, so that we can
+see whether an outcome depends on the run. The proposition predicts that
+one head stays at $0.71$, while two heads have what the task needs. The
+cell prints, for every run, the parameter count, the relative
+error, and the weight that each head gives to the first position (its
+weight on the second is one minus that).
 
 ```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-2}
 %%tab pytorch, jax
@@ -565,75 +710,60 @@ for num_heads in (1, 2, 4):
         print(f'{num_heads}  {run:3d}  {d2l.num_params(model):10d}  '
               f'{err:<#8.2g} ' + ' '.join(f'{a:.2f}' for a in alpha_1))
 ```
-<!-- WRITER: MHA-6 and FR-2 (worklist 3.B5). Measured (three notebook runs per tab, each with two runs
-per H, plus five standalone repeats per tab): H = 1 error 0.71 in every run, weight on v_1 between 0.36
-and 0.64; H = 2 and H = 4 error 9.6e-08 to 1.6e-07, the rounding error of single precision (not "more
-than two orders of magnitude"); with H = 2 one head puts 0.81-0.98 on v_1 and the other 0.01-0.21; with
-H = 4 the four heads repeat the two weightings (e.g. 0.86 0.92 0.06 0.10: two heads near each end), often
-with one softer head (0.27-0.37 or 0.72-0.76 on v_1). 1,024 parameters for every H. Ranges hold in both
-tabs. -->
 
-With one head the relative error stays near $\sqrt{1/2} \approx 0.71$, the
-bound of the proposition: all 16 outputs of a single head are linear
-functions of the 8 numbers in one mixture $\alpha_1\mathbf{v}_1 +
-\alpha_2\mathbf{v}_2$. With two or four heads the error falls by more
-than two orders of magnitude, and the layer returns both values almost
-exactly. The printed weights show how. The heads learn at least two clearly
-different weightings of the two positions, and these need not be one-hot. As
-in the hand-built construction, two different mixtures are all that the
-output projection needs.
+Every layer has 1,024 parameters, four $16 \times 16$ matrices, whatever
+its number of heads. One head stays at $0.71$ in every run, the bound of
+the proposition: all 16 outputs of a single head are linear functions of
+the 8 numbers in one mixture. Its weight on the first position ends near
+one half, close to where it started. Every split is equally bad, so
+training has little reason to move it. With two or four heads the error
+falls to about $10^{-7}$, the rounding error of single precision, and the
+layer returns both values.
+
+How do the heads manage it? In every run one head puts more than 0.8 of its
+weight on the first position and another less than 0.2, and some heads stay
+soft. Two different mixtures are all that the output projection needs, just
+as in the hand-built construction. And the two extra heads of the four-head
+layer? They add nothing the task requires; their weightings repeat those of
+the other two or lie between them. A word of caution belongs here. The task
+shows what one head cannot do. It does not show that trained language
+models divide the work among their heads this way.
 
 ### Shared Keys and Values
 :label:`subsec_kv-head-sharing`
 
 In the copy-both layer the heads had to differ in how they weight the
-positions, and that difference can come from their query projections alone.
-Their keys could have been the same, and so could their values, as long as
-the shared value heads together still carry all $c$ coordinates of each
-value. With two heads of width $d/2 = c$, a single key--value head suffices.
-With four heads of width $d/4$, a single shared value head would carry only
-half of each value, and the bound of
-:numref:`subsec_one-mixture-bottleneck` returns (Exercise
-:exref:`ex_multihead-sharing-keys-and-values`).
+positions, and that difference can come from their query projections
+alone. Their keys could have been shared, and so could their values, as
+long as the shared value heads together carry all $d_v$ coordinates of a
+value. Sharing of this kind has a name. *Grouped-query attention* keeps $H$
+query heads but computes only $H_\textrm{kv}$ key--value heads, each shared
+by a group of $H/H_\textrm{kv}$ consecutive query heads
+:cite:`Ainslie.Lee-Thorp.Jong.ea.2023`; with $H_\textrm{kv} = 1$ it is
+*multi-query attention* :cite:`Shazeer.2019`.
 
-Sharing matters when a model generates text one token at a time. The model
-stores the keys and values of all earlier tokens, in every layer and every
-head, so that it need not recompute them, and it reads all of them again for
-each new token. :numref:`sec_kv-cache` builds this *KV cache* and measures its cost. For GPT-2 small, with 12 layers of 12
-heads of width 64, the cache holds $2 \cdot 12 \cdot 12 \cdot 64 = 18{,}432$
-numbers per token, or 36 KiB in 16-bit floats, so a context of 1,024 tokens
-occupies 36 MiB per sequence.
+Why share at all? A model that generates text one token at a time stores
+the keys and values of all earlier tokens so that it need not recompute
+them, and sharing shrinks that store by the factor $H/H_\textrm{kv}$.
+:numref:`sec_kv-cache` builds the store, measures what sharing saves, and
+reports how much quality large models give up. In `MultiHeadAttention`,
+`num_kv_heads` sets $H_\textrm{kv}$: `W_k` and `W_v` produce $H_\textrm{kv}$
+heads, and the forward pass copies each of them for the query heads of its
+group. Copying is the simplest correct code, and what it costs is
+temporary memory inside one forward pass. The keys and values that a model
+stores for generation, which are what sharing shrinks, hold each shared
+head once.
 
-*Grouped-query attention* (GQA) keeps $H$ query heads but computes only
-$H_\textrm{kv}$ key--value heads, each shared by a group of $H/H_\textrm{kv}$
-consecutive query heads :cite:`Ainslie.Lee-Thorp.Jong.ea.2023`. Counting from
-zero, query head $i$ reads key--value head
-$g(i) = \lfloor i H_\textrm{kv} / H \rfloor$:
-
-$$
-\mathbf{z}_i = f\big(\mathbf W_i^{(q)}\mathbf q,\; (\mathbf W_{g(i)}^{(k)}\mathbf k_1, \mathbf W_{g(i)}^{(v)}\mathbf v_1), \ldots, (\mathbf W_{g(i)}^{(k)}\mathbf k_m, \mathbf W_{g(i)}^{(v)}\mathbf v_m)\big).
-$$
-:eqlabel:`eq_gqa-head`
-
-Each head still computes its own weights, from its own queries, but the
-heads of a group read the same keys and mix the same values. With
-$H_\textrm{kv} = H$ this is multi-head attention; with $H_\textrm{kv} = 1$
-all heads share one key head and one value head, which is *multi-query
-attention* (MQA) :cite:`Shazeer.2019`. The key and value projections shrink
-from $d \times d$ to $H_\textrm{kv} d_h \times d$, and the cache per token
-shrinks by the factor $H/H_\textrm{kv}$. The score and mixing FLOPs do not
-change, because every query head still scores every key.
-
-In `MultiHeadAttention`, `num_kv_heads` sets $H_\textrm{kv}$: `W_k` and `W_v`
-produce $H_\textrm{kv}$ heads, and the forward pass repeats each of them for
-the query heads of its group. A grouped layer is therefore a multi-head layer
-whose key and value projections are tied within each group.
-
-The first paragraph of this subsection makes a prediction that the copy-both
-task can test. With $d = 16$ and values of width 8, the layouts
-$(H, H_\textrm{kv}) = (2, 1)$ and $(4, 2)$ give the shared value heads
-$H_\textrm{kv} d_h = 8$ coordinates, as many as a value has, while $(4, 1)$
-leaves one shared value head of width 4. We train each layout twice.
+What does the proposition predict? The shared value heads have
+$H_\textrm{kv} d_h$ coordinates between them, and these must hold the $d_v$
+coordinates of a value's content, so the room condition reads
+$H_\textrm{kv} d_h \ge d_v$. With $d = 16$ and $d_v = 8$, the layouts
+$(H, H_\textrm{kv}) = (2, 1)$ and $(4, 2)$ give the shared value heads 8
+coordinates, as many as a value has, and should solve the task. The layout $(4, 1)$ has four query
+heads, and so four weightings, but a single value head of width 4. Every
+head then reads the same 4-dimensional projection of each value, the
+readout can recover at most 8 of the 16 target numbers, and the error
+should return to $\sqrt{1/2} \approx 0.71$. We train each layout twice.
 
 ```{.python .input #multihead-attention-sharing-keys-and-values}
 %%tab pytorch, jax
@@ -647,102 +777,79 @@ for num_heads, num_kv_heads in ((2, 1), (4, 2), (4, 1)):
               + ' '.join(f'{a:.2f}' for a in alpha_1))
 ```
 
-The two layouts whose value heads have room for a value solve the task, to
-the same rounding error as the full layers, with 768 parameters instead of
-1,024. The layout with one value head of width 4 stays at $0.71$, the error
-of a single head, although its four heads learn different weightings.
-<!-- WRITER: replaces the weight-copy cell (MHA-11, worklist 3.A5/B6). Measured (three notebook runs
-per tab with two runs per layout, plus five standalone repeats per tab): (2,1) and (4,2) error 9.7e-08 to
-1.4e-07, 768 parameters; (4,1) error 0.71 in every run, 640 parameters, and its four heads always cover
-both positions (e.g. 0.95 0.84 0.03 0.08), so the failure is room, not weightings: one value head of
-width 4 hands the readout a 4-dimensional projection of each value, 8 of the 16 target numbers. Cut below: the
-paper paragraph (Ainslie et al., DeepSeek, gpt-oss) and the MLA sentence (MHA-12; chapter 11 owns them);
-the GPT-2 cache arithmetic above (18,432 numbers, 36 KiB, 36 MiB); eq_gqa-head is optional. -->
+The prediction holds in every run. The two layouts whose value heads have
+room solve the task to the same rounding error as the full layers, with 768
+parameters instead of 1,024. The layout $(4, 1)$, with 640 parameters,
+stays at $0.71$, although its four heads learn clearly different
+weightings. It fails for lack of room, not for lack of weightings. Heads
+may share what they read, then, as long as what they share is wide enough
+to hold what they retrieve.
 
-Sharing keys and values lowers quality somewhat, and by how much depends on
-how the model was trained. Ainslie et al. converted a trained T5-XXL model to 8
-key--value groups and continued pretraining for 5% of the original steps.
-Averaged over summarization, translation, and question answering, its score
-fell from 47.2 to 47.1, and inference time per sample fell from 1.51 s to
-0.28 s; with a single key--value head the score was 46.6
-:cite:`Ainslie.Lee-Thorp.Jong.ea.2023`. DeepSeek-AI trained 7B-parameter
-models from scratch with each layout, at equal parameter count, and measured
-larger gaps: MMLU accuracy 45.2 with full heads, 41.2 with 8 groups, and 37.9
-with one key--value head :cite:`DeepSeek-AI.2024`. Most large open models
-nevertheless use grouped-query attention; gpt-oss, for example, has 64 query
-heads and 8 key--value heads :cite:`OpenAI.2025`. The reason is the cache. Its
-size bounds the minibatch and the context that fit in memory, and reading it
-dominates the time per generated token. DeepSeek-V2's multi-head latent
-attention goes further. Per token and layer it caches one low-dimensional
-vector, from which the keys and values of all heads are reconstructed, plus a
-small key shared by all heads that carries the token's position
-:cite:`DeepSeek-AI.2024`.
+## Cross-Attention
 
-## Self-Attention and Cross-Attention
+Self-attention takes its queries, keys, and values from one sequence. In
+*cross-attention* the queries come from one sequence $\mathbf{A}$ and the
+keys and values from another sequence $\mathbf{B}$. The output has one row
+for each token of $\mathbf{A}$ and gathers its content from $\mathbf{B}$.
+The layer is the same; only its arguments differ, which is why
+`MultiHeadAttention` takes three of them. We have used cross-attention all
+along without the name: the letters of "attention" querying those of
+"translation" and the alignment model of
+:numref:`sec_attention-scoring-functions` were cross-attention, and so was
+the copy-both layer above, whose one query read two stored key--value pairs.
 
-`MultiHeadAttention` takes three sequence arguments: queries, keys, and values.
-Self-attention and cross-attention differ only in where these arguments come
-from.
+Cross-attention is how one model reads the output of another. In the
+original encoder--decoder Transformer, each position of the translation
+queries the encoded source sentence. In vision--language models such as
+Flamingo :cite:`alayrac2022flamingo`, text tokens query features of an
+image. A language model that only continues text has no second sequence and
+uses self-attention alone.
 
-### Self-Attention
-
-In *self-attention* :cite:`Lin.Feng.Santos.ea.2017,Vaswani.Shazeer.Parmar.ea.2017`,
-one sequence supplies all three arguments. Every token emits a query against
-every token's key, and each output position is a mixture of values from the
-same sequence. Given inputs $\mathbf{x}_1, \ldots, \mathbf{x}_n \in
-\mathbb{R}^d$, the layer returns an equally long sequence $\mathbf{y}_1,
-\ldots, \mathbf{y}_n$ with
-
-$$
-\mathbf{y}_i = f\big(\mathbf{x}_i,\; (\mathbf{x}_1, \mathbf{x}_1), \ldots, (\mathbf{x}_n, \mathbf{x}_n)\big) \in \mathbb{R}^d,
-$$
-:eqlabel:`eq_self-attention`
-
-where $f$ is now multi-head attention. Each token's new representation
-combines information from the whole sequence in a single step. Since the
-output has the shape of the input, such layers can be stacked, which is how
-transformers are built.
-
-<!-- WRITER: the shape check on tensors of ones (one-sequence-querying-itself) is cut (MHA-13);
-self-attention is now taught at the top of the section with the worked sentence. -->
-
-### Cross-Attention
-
-In *cross-attention*, the queries come from a sequence $\mathbf{A}$, while
-the keys and values come from a sequence $\mathbf{B}$. The output has the
-length of $\mathbf{A}$ and gathers information from $\mathbf{B}$. This is the
-wiring of the original encoder--decoder transformer, where each position of
-the translation queries the source sentence; of vision--language models such
-as Flamingo :cite:`alayrac2022flamingo`, where text tokens query features
-of an image; and of the alignment models that
-introduced learned attention (:numref:`sec_attention-scoring-functions`).
-All of them call the same function with different arguments.
-
-<!-- WRITER: the cross-attention shape check (one-sequence-querying-another) is cut (MHA-13);
-structure 3.3 step 6: two paragraphs, no cell. -->
-
-<!-- WRITER: the letters subsection (subsec_cross-attention-alignment, cell
-multihead-attention-an-alignment-you-can-read) and the closing paragraph on permutations moved to
-attention-scoring.md (its code step copied them; this removes them here). New closing per structure 3.3:
-two heads can separate the persons from the thing, but no weighting computed from content tells Alice
-from Bob; swap them and the output at gave does not change (hands over to "dog bites man"). -->
+Let us return once more to *gave*. Two heads could give it one weighting
+for the people and another for the book. No weighting computed from
+content, however, can tell the giver from the receiver: swap the two names,
+"Bob gave Alice the book", and the output at *gave* does not change. To
+know who gave and who received, attention needs what it has ignored so
+far, the order of the words.
 
 ## Summary
 
-A single attention head gives each query one distribution over the keys and
-hence one mixture of the values. On the copy-both task, where a query needs
-two values, its relative squared error is $1/2$ for every choice of weights.
-Multi-head attention computes $H$ weightings in learned projections of width
-$d_h = d/H$ and recombines their outputs linearly. Its parameter and leading
-FLOP counts do not depend on $H$, and a layer with two heads learns to solve
-the copy-both task whenever the two values fit into its output. Grouped-query
-attention lets groups of query heads share keys and values, which shrinks the
-memory that generation needs by the factor $H/H_\textrm{kv}$ at a quality cost
-that depends on the training setup. Self-attention draws queries, keys, and
-values from one sequence; cross-attention draws the queries from one sequence
-and the keys and values from another.
+Self-attention lets every token of a sequence query every other token:
+three learned maps turn each token into a query, a key, and a value, and
+the output for a token is the softmax-weighted average of the values.
+The layer connects any two positions in one step and computes all positions
+at once, at a cost quadratic in the length. One head gives each query one
+set of weights and so one mixture of the values: when a query needs two
+values, the best linear readout of that mixture loses half of the target's
+variance, whatever the weights. Multi-head attention runs $H$ heads of
+width $d_h = d/H$ in learned projections and recombines them, with
+parameter and leading FLOP counts that do not depend on $H$, and a trained
+layer with two heads returns both values to rounding error. Heads may share
+keys and values, which shrinks the keys and values stored during generation
+by the factor $H/H_\textrm{kv}$, as long as the shared value heads have room for
+what is retrieved. Cross-attention is the same layer with queries from one
+sequence and keys and values from another.
 
 ## Exercises
+
+1. **Self-attention by hand.** Three tokens have the inputs
+   $\mathbf{x}_1 = (1, 0)$, $\mathbf{x}_2 = (0, 1)$, and $\mathbf{x}_3 =
+   (1, 1)$. One head of width $d_h = 2$ uses
+   $\mathbf{W}_q = \sqrt{2}\,\mathbf{I}$, the swap
+   $\mathbf{W}_k = \left(\begin{smallmatrix} 0 & 1 \\ 1 & 0
+   \end{smallmatrix}\right)$, and $\mathbf{W}_v = \mathbf{I}$, so that the
+   factor $\sqrt{2}$ cancels the scale $1/\sqrt{d_h}$.
+    1. Compute the queries, keys, and values, the $3 \times 3$ matrix of
+       scaled scores, the weights, and the three outputs, each to two
+       decimals. Which token does the first token attend to least, and why?
+    1. Apply a causal mask and recompute. Which rows change, and why does
+       the last row stay as it was?
+    1. Replace $\mathbf{W}_k$ by the identity, so that each key points the
+       same way as the query of its token. Recompute the weights of the
+       first token. Why can no key of the same length as $\mathbf{x}_1$
+       score higher than the first token's own key, and why does the key of
+       the third token score as high anyway?
+    1. Check your numbers with `d2l.DotProductAttention`.
 
 1. [code] **Narrow heads.** With $d_h = d/H$, the leading count of
    :eqref:`eq_multihead-flops` does not depend on $H$, so the number of heads
@@ -798,13 +905,6 @@ and the keys and values from another.
     1. Now let a padding mask mark only the first $\ell$ rows of
        $\mathbf{B}$ as valid. Which permutations leave the output unchanged
        when the mask stays fixed?
-    1. Self-attention without positional information is permutation
-       equivariant: permuting the rows of its input permutes the rows of
-       its output in the same way. A translation decoder cross-attends to
-       the output of an encoder built from such self-attention layers.
-       Show that the decoder's outputs are identical for the source
-       sentences "dog bites man" and "man bites dog", and state where word
-       order must enter the model for cross-attention to use it.
    :exlabel:`ex_multihead-permuting-the-source`
 
 1. [code] **Nonlinear readouts.** ● For Gaussian values, the proof of the
@@ -816,7 +916,7 @@ and the keys and values from another.
        mixture $\mathbf{m} = a\,\mathbf{v}_1 + (1 - a)\,\mathbf{v}_2$
        formed from `V1` and `V2`, for $a = 0.5$ and $a = 0.7$. Compare its
        relative error on held-out samples with that of the linear readout.
-    1. Now draw the values uniformly from $\{-1, +1\}^c$. For $a = 0.5$,
+    1. Now draw the values uniformly from $\{-1, +1\}^{d_v}$. For $a = 0.5$,
        compute $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}]$ coordinate by
        coordinate, show that it is again linear in $\mathbf{m}$, and
        conclude that the error stays at $\sqrt{1/2}$ for every readout.
@@ -835,14 +935,9 @@ and the keys and values from another.
     1. Add independent Gaussian noise of standard deviation $\sigma = 0.01$
        to both mixtures and measure the error with `readout_error` for
        $\epsilon \in \{0.4, 0.1, 0.03, 0.01, 0.003, 0.001\}$. Plot the
-       error against $\epsilon$ on logarithmic axes and read off the slope
-       where the curve is straight.
-    1. Rewrite the two noisy mixtures as noisy observations of
-       $\mathbf{v}_1 + \mathbf{v}_2$ and of $\mathbf{v}_1 - \mathbf{v}_2$.
-       Use this to explain the slope, to locate the $\epsilon$ below which
-       the second head stops helping, and to predict how that point moves
-       with $\sigma$. Check the prediction by repeating the sweep at
-       $\sigma = 0.001$, extended down to $\epsilon = 10^{-5}$.
+       error against $\epsilon$ on logarithmic axes, read off the slope
+       where the curve is straight, and explain it with the condition
+       number from (a).
     1. Every head of a freshly initialized layer weights the two positions
        of the copy-both task close to $(0.5, 0.5)$. Modify
        `train_copy_both` to record the relative error and the weights of
@@ -856,23 +951,25 @@ and the keys and values from another.
 1. **What the bound counts.** ● The proposition of
    :numref:`subsec_one-mixture-bottleneck` fixes the softmax weights, but
    its error bound rests on a weaker fact: the readout receives a single
-   vector $\mathbf{m} \in \mathbb{R}^c$ and must produce the target
-   $\mathbf{t} \in \mathbb{R}^{2c}$.
-    1. Let $\mathbf{m} \in \mathbb{R}^c$ be any function of $\mathbf{v}_1$
-       and $\mathbf{v}_2$, including a mixture whose weights depend on the
-       values, and let $\mathbf{W}_o \in \mathbb{R}^{2c \times c}$ be any
-       matrix. Show that
-       $$\mathbb{E}\,\|\mathbf{W}_o \mathbf{m} - \mathbf{t}\|^2 \geq \tfrac{1}{2}\, \mathbb{E}\,\|\mathbf{t}\|^2.$$
+   vector $\mathbf{m} \in \mathbb{R}^{d_v}$ and must produce the target
+   $\mathbf{t} \in \mathbb{R}^{2d_v}$.
+    1. Let $\mathbf{m} \in \mathbb{R}^{d_v}$ be any function of
+       $\mathbf{v}_1$ and $\mathbf{v}_2$, including a mixture whose weights
+       depend on the values, and let $\mathbf{W}_o \in \mathbb{R}^{d_v
+       \times 2d_v}$ be any matrix. Show that
+       $$\mathbb{E}\,\|\mathbf{m}\mathbf{W}_o - \mathbf{t}\|^2 \geq \tfrac{1}{2}\, \mathbb{E}\,\|\mathbf{t}\|^2.$$
+       Conclude that content-dependent keys, more layers, or a residual
+       connection leave the bound in place as long as the readout is linear
+       and receives $d_v$ numbers.
     1. A layer of width $d$ with two heads of width $d_h = d/2$ receives the
-       values $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^c$ padded with zeros
-       to width $d$. Find the largest $c$ for which it can solve the task
-       exactly. Give the attention weights of each head, value projections
-       $\mathbf{W}_i^{(v)}$, and an output projection $\mathbf{W}_o$ that
-       do so, and compare your weights with those printed in the
-       experiment of :numref:`subsec_copy-both-learned`.
+       values $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^{d/2}$ padded with
+       zeros to width $d$. Give the attention weights of each head, value
+       projections $\mathbf{W}_i^{(v)}$, and an output projection
+       $\mathbf{W}_o$ that solve the task exactly. Compare your weights with
+       those printed in :numref:`subsec_copy-both-learned`.
     1. Generalize the proposition to $k$ source positions with independent
        standard Gaussian values $\mathbf{v}_1, \ldots, \mathbf{v}_k \in
-       \mathbb{R}^c$ and the target $[\mathbf{v}_1; \ldots;
+       \mathbb{R}^{d_v}$ and the target $[\mathbf{v}_1; \ldots;
        \mathbf{v}_k]$. Each of $H$ heads applies fixed weights to the
        values, the weights of head $i$ form row $i$ of a matrix
        $\mathbf{A} \in \mathbb{R}^{H \times k}$, and a linear readout sees
@@ -882,99 +979,18 @@ and the keys and values from another.
        $\operatorname{rank}(\mathbf{A}) = \min(H, k)$.
    :exlabel:`ex_multihead-what-the-bound-counts`
 
-1. [code] **Sharing keys and values on the copy-both task.** ●
-    1. Argue that a layer of width $d$ with two query heads and a single
-       key--value head ($H_\textrm{kv} = 1$) can still solve the copy-both
-       task for values of width $c \le d/2$. Which of its parameters must
-       differ between the two heads?
-    1. Now let the layer have $H$ query heads of width $d_h = d/H$ and
-       $H_\textrm{kv} < H$ key--value heads. Use the counting of Exercise
+1. [code] **Sharing keys and values on the copy-both task.** ● Let a layer
+   of width $d$ have $H$ query heads of width $d_h = d/H$ and
+   $H_\textrm{kv} < H$ key--value heads.
+    1. Use the counting of Exercise
        :exref:`ex_multihead-what-the-bound-counts` to show that it can solve
-       the task only if $H_\textrm{kv} d_h \ge c$, and that this condition
+       the task only if $H_\textrm{kv} d_h \ge d_v$, and that this condition
        suffices.
-    1. Add an argument `num_kv_heads` to `train_copy_both`. For $d = 16$ and
-       $c = 8$, predict which of the layouts $(H, H_\textrm{kv}) = (2, 1)$,
-       $(4, 2)$, and $(4, 1)$ solve the task, then train them and compare
-       their relative errors with those of the full layers in the experiment
-       of :numref:`subsec_copy-both-learned`.
-    1. Ainslie et al. convert a trained multi-head model into a grouped one
-       by averaging the key and value projections within each group and
-       then training for a short while
-       :cite:`Ainslie.Lee-Thorp.Jong.ea.2023`. Train a 4-head layer, convert
-       it to $H_\textrm{kv} = 2$ by averaging, and record the relative error
-       right after the conversion and every 10 steps over 200 further
-       training steps. Do the same when you keep the first head of each
-       group instead of the average. Repeat both conversions over at least
-       three runs. Which difference between them holds in every run, and
-       which does not?
-    1. For a model with $L$ layers, $H$ query heads of width $d_h$, and
-       $H_\textrm{kv}$ key--value heads, write the cache size in bytes for a
-       context of $n$ tokens stored in 16-bit floats. Evaluate it for
-       GPT-2 small ($L = H = 12$, $d_h = 64$) at $n = 1024$ with
-       $H_\textrm{kv} \in \{12, 4, 1\}$, and for a model with 32 layers, 32
-       query heads, and 8 key--value heads of width 128 at $n = 32{,}768$.
+    1. Train a layer with `train_copy_both(2, 1)`, in which two query heads
+       share one key--value head. Find the parameters that differ between
+       the two heads and those they share, and explain from the copy-both
+       task why the difference must lie where you found it.
    :exlabel:`ex_multihead-sharing-keys-and-values`
-
-1. [code] **Averages under key noise.** ● Let $m = 4$ keys
-   $\mathbf{k}_i \in \mathbb{R}^8$ be drawn as $\mathbf{k}_i \sim
-   \mathcal{N}(\boldsymbol{\mu}_i, \boldsymbol{\Sigma}_i)$ with orthonormal
-   means $\boldsymbol{\mu}_i$, let the values $\mathbf{v}_1, \ldots,
-   \mathbf{v}_4$ be the standard basis vectors of $\mathbb{R}^4$, and let
-   the score be $\mathbf{q}^\top \mathbf{k}_i$. When every covariance is
-   $\beta \mathbf{I}$ with vanishingly small $\beta$, the keys are nearly
-   orthonormal, so by Exercise
-   :exref:`ex_queries-keys-values-average-two-values`a
-   of :numref:`sec_queries-keys-values` the query
-   $s\,(\boldsymbol{\mu}_a + \boldsymbol{\mu}_b)$ with a large scale $s$
-   returns an output $\mathbf{o}$ close to $\tfrac{1}{2}(\mathbf{v}_a +
-   \mathbf{v}_b)$.
-    1. Now let $\boldsymbol{\Sigma}_a = \beta \mathbf{I} + \tfrac{1}{2}
-       \boldsymbol{\mu}_a \boldsymbol{\mu}_a^\top$, so that
-       $\mathbf{k}_a \approx (1 + \gamma)\, \boldsymbol{\mu}_a$ with
-       $\gamma \sim \mathcal{N}(0, \tfrac{1}{2})$, and leave the other
-       covariances at $\beta \mathbf{I}$. Each draw of the keys then gives
-       $\mathbf{k}_a$ and $\mathbf{k}_b$ different norms, the case of
-       Exercise
-       :exref:`ex_queries-keys-values-average-two-values`c
-       of :numref:`sec_queries-keys-values`: as $\beta \to 0$, the weights
-       on $\mathbf{k}_a$ and $\mathbf{k}_b$ stand in the ratio
-       $e^{s\gamma}$, and the other two weights are negligible at large
-       $s$. Derive from this the probability, over resamples of the keys,
-       that $\|\mathbf{o} - \tfrac{1}{2}(\mathbf{v}_a + \mathbf{v}_b)\|$
-       exceeds $0.1$, and evaluate it for $s = 10$ and $s = 100$. What
-       does the probability tend to as $s \to \infty$?
-    1. Replace the single query by two queries $\mathbf{q}_1$ and
-       $\mathbf{q}_2$, each with its own softmax and output
-       $\mathbf{o}_1$ or $\mathbf{o}_2$, and return $\tfrac{1}{2}
-       (\mathbf{o}_1 + \mathbf{o}_2)$. Choose the queries so that the
-       output tends to $\tfrac{1}{2}(\mathbf{v}_a + \mathbf{v}_b)$ as
-       $s \to \infty$ for most values of $\gamma$, and identify the values
-       of $\gamma$ for which it does not.
-    1. Simulate three settings: isotropic covariances with the query
-       $s\,(\boldsymbol{\mu}_a + \boldsymbol{\mu}_b)$, the anisotropic
-       $\mathbf{k}_a$ with that query, and the anisotropic $\mathbf{k}_a$
-       with the two queries. Use $\beta = 10^{-4}$,
-       $s \in \{10, 100\}$, and $1000$ resamples of the keys. Report the
-       median of $\|\mathbf{o} - \tfrac{1}{2}(\mathbf{v}_a +
-       \mathbf{v}_b)\|$ and the fraction of resamples on which it exceeds
-       $0.1$. Compare that fraction for the anisotropic $\mathbf{k}_a$ and
-       the single query with the probability from (a). Explain why raising
-       $s$ from $10$ to $100$ hurts the single query even when the
-       covariances are isotropic.
-    1. Repeat the two single-query settings with the query
-       $-s \sum_{i \notin \{a, b\}} \boldsymbol{\mu}_i$, which lowers the
-       scores of the other keys instead of raising those of $\mathbf{k}_a$
-       and $\mathbf{k}_b$. Show that its output does not depend on
-       $\gamma$, and determine which failure of the query
-       $s\,(\boldsymbol{\mu}_a + \boldsymbol{\mu}_b)$ remains. Explain why
-       the two queries avoid it.
-
-    *Adapted from Stanford CS224N,
-    [Assignment 4](https://web.stanford.edu/class/cs224n/assignments_w25/a4.pdf),
-    Problem 1(c) and 1(d).*
-
-<!-- WRITER: Exercise 7(c) is now the body's cell (multihead-attention-sharing-keys-and-values) and
-train_copy_both already has num_kv_heads; cut 7(c), and 7(d), 7(e) and Exercise 8 per worklist 3.B11. -->
 
 [Discussions](https://d2l.discourse.group/t/36770)
 
@@ -984,41 +1000,40 @@ train_copy_both already has num_kv_heads; cut 7(c), and 7(d), 7(e) and Exercise 
 ::: {.cover}
 [Dive into Deep Learning · §10.3]{.kicker}
 
-Multi-Head and Cross-Attention<br>
-**one-mixture bottleneck · projected heads · shared keys and values · self- and cross-attention**
+Self-Attention and Multiple Heads<br>
+**a sentence reads itself · what one head cannot do · heads in subspaces · shared keys and values**
 :::
 :::
 
-::: {.slide title="One Softmax Average Loses Half of Two Requested Values"}
+::: {.slide title="One Head Hands 'gave' One Vector for Three Words"}
 [The problem]{.kicker}
 
-Two positions hold random values $\mathbf{v}_1, \mathbf{v}_2 \in
-\mathbb{R}^c$; their keys mark positions only. One query must return
-**both**: target $\mathbf{t} = [\mathbf{v}_1; \mathbf{v}_2]$.
+- *gave* needs three other words: who gave, who received, what was given.
+- Self-attention: every word sends a query to the keys of its own
+  sentence.
+- One head returns **one** weighted average of the values: in GPT-2
+  small, 64 numbers per token, whatever it read.
 
-- A head returns $\alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2$: one mixture.
-- Best linear readout: relative squared error $1/2$, for **every**
-  $(\alpha_1, \alpha_2)$.
-
-::: {.d2l-note}
-How can one query retrieve several things at once, at no extra cost?
+::: {.d2l-note .warn}
+Can one query read several positions without blending what it reads?
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- prove the one-head bound and say what lifts it;
+- compute one head of self-attention by hand, with and without a causal
+  mask;
+- prove that one set of weights loses half of two requested values;
 - write multi-head attention and count its FLOPs and parameters;
-- implement it with heads as an explicit tensor axis;
-- size the key-value cache and shrink it by sharing keys and values;
+- predict when heads may share keys and values;
 - tell self-attention from cross-attention by their inputs.
 
-**Running example:** one attention layer of GPT-2 small: $d = 768$, 12
-heads of width 64, 12 layers, contexts of 1,024 tokens.
+**Running example:** "Alice gave Bob the book" with $d_h = 2$, then a
+GPT-2-small layer: $d = 768$, 12 heads of width 64.
 :::
 
-::: {.slide title="Multi-Head Attention Gives Each Query Several Weightings"}
+::: {.slide title="Self-Attention Is the Layer the Rest of the Book Is Built From"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
@@ -1027,35 +1042,109 @@ heads of width 64, 12 layers, contexts of 1,024 tokens.
 |---|---|
 | Queries, Keys, and Values | attention as a soft lookup |
 | Attention Scoring and Masking | scaled dot products, masks |
-| **Multi-Head and Cross-Attention** | **several heads, shared keys and values** |
+| **Self-Attention and Multiple Heads** | **a sequence reads itself; several heads** |
 | Positional Information | where a token sits |
 | The Cost of Attention | quadratic cost, fused kernels |
+| Windowed and Linear Attention | what linear cost gives up |
 | Attention Circuits | what trained heads compute |
 :::
 
 ::: {.col .narrow}
-- **Uses:** scaled dot-product attention, padding masks, least squares.
-- **Skips:** the KV cache in full (next chapter), latent KV compression.
+- **Uses:** scaled dot-product attention, causal masks, least squares.
+- **Skips:** word order (next deck); the key-value cache itself (next
+  chapter).
 :::
 :::
 :::
 
-::: {.slide title="One Head Gives gave One Blend of Alice, Bob and the Book"}
+::: {.slide title="A Token Asks, Is Found, and Is Read: Three Maps"}
 [Self-attention]{.kicker}
 
-<!-- WRITER: placeholder slide for the new cell and figure (worklist 3.B12: the deck opens on the
-sentence; add the hand-computation check and the causal row). -->
+- **query** $\mathbf{x}\mathbf{W}_q$: what the token looks for
+- **key** $\mathbf{x}\mathbf{W}_k$: what it offers to other queries
+- **value** $\mathbf{x}\mathbf{W}_v$: what it hands over once chosen
+
+$$\mathrm{softmax}\left(\frac{(\mathbf{X}\mathbf{W}_q)(\mathbf{X}\mathbf{W}_k)^\top}{\sqrt{d_h}}\right)\mathbf{X}\mathbf{W}_v$$
+
+$\mathbf{X}$: the $n$ tokens as rows; $d_h$: width of queries and keys.
+
+::: {.d2l-note}
+One sequence supplies the queries, the keys, and the values.
+:::
+:::
+
+::: {.slide title="Check: Predict the Weights of 'gave'"}
+[Check]{.kicker}
+
+Hand-set maps, $d_h = 2$, score $\mathbf{q} \cdot \mathbf{k}/\sqrt{2}$:
+
+| token | role | query | key |
+|:--|:--|:--|:--|
+| Alice, Bob | person | $(1, -1)$ | $(1, 1)$ |
+| gave | action | $(1, 1)$ | $(1, -1)$ |
+| book | thing | $(1, -1)$ | $(1, 1)$ |
+| the | function word | $(0, 0)$ | $(0, 0)$ |
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Scores $2/\sqrt{2} \approx 1.41$ on the three nouns, $0$ on
+*gave* and "the". Weights $e^{1.41}/(3e^{1.41}+2) \approx 0.29$ each and
+$\approx 0.07$ for the other two.
+:::
+:::
+:::
+
+::: {.slide title="'Gave' Reads Equal Parts Alice, Bob, and Book"}
+[Self-attention]{.kicker}
 
 ![](../img/mdl-attention-self-attention.svg){width=88%}
 
-@!multihead-attention-self-attention-1
+::: {.d2l-note}
+Alice and Bob get the same weight: this head cannot say who gave and who
+received.
+:::
 :::
 
-::: {.slide title="Any Single Head Has Relative Squared Error at Best 1/2"}
-[The one-mixture bound]{.kicker}
+::: {.slide title="The Layer Reproduces the Hand Computation; a Causal Mask Leaves 0.80 and 0.20"}
+[Self-attention]{.kicker}
 
-Mixture $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2$,
-values standard Gaussian. Best estimate is linear:
+@!multihead-attention-self-attention-1
+
+- Causal mask: the same scores, renormalized over Alice and *gave*.
+:::
+
+::: {.slide title="Separate Query and Key Maps Let a Token Seek What It Is Not"}
+[Self-attention]{.kicker}
+
+One shared map $\mathbf{u}_i = \mathbf{x}_i\mathbf{W}$ for queries and keys:
+
+- scores symmetric, and $s_{ij} \le \sqrt{s_{ii}\, s_{jj}}$
+  (Cauchy–Schwarz): no score exceeds the geometric mean of the two
+  self-scores;
+- the verb's $(1, 1)$ would have dot product 2 with itself and 0 with
+  every noun.
+
+::: {.d2l-note}
+What a token asks for must be free to differ from what it offers.
+:::
+:::
+
+::: {.slide title="One Head Returns One Mixture of Two Requested Values"}
+[Limits of a single head]{.kicker}
+
+**Copy-both task:** two positions hold random $\mathbf{v}_1,
+\mathbf{v}_2 \in \mathbb{R}^{d_v}$; keys mark positions only; one query
+must return $\mathbf{t} = [\mathbf{v}_1; \mathbf{v}_2]$.
+
+- One head: weights $\alpha_1 + \alpha_2 = 1$, the same for every example.
+- It hands the readout $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2
+  \mathbf{v}_2$: $d_v$ numbers for a $2d_v$-number target.
+:::
+
+::: {.slide title="Any Single Head Has Relative Squared Error at Least 1/2"}
+[Limits of a single head]{.kicker}
+
+Values standard Gaussian. The best estimate is linear:
 
 $$\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}] = \frac{\alpha_1}{\alpha_1^2 + \alpha_2^2}\,\mathbf{m}.$$
 
@@ -1070,38 +1159,41 @@ cannot remove it.
 :::
 :::
 
-::: {.slide title="One Mixture Stays at the Bound; Two Mixtures Recover Both Values"}
-[The one-mixture bound]{.kicker}
+::: {.slide title="A Solver Needs Several Weightings and Room for Every Value"}
+[Limits of a single head]{.kicker}
+
+![](../img/mdl-attention-one-head-averages.svg){width=70%}
+
+1. **Weightings:** several different weightings for one query.
+2. **Room:** output space for every value retrieved.
+
+Neither suffices alone: one head as wide as the layer has room but one
+weighting.
+:::
+
+::: {.slide title="One Mixture Stays at 0.71; Two Mixtures Reach Rounding Error"}
+[Limits of a single head]{.kicker}
 
 @!multihead-attention-one-head-must-average-1
 
-- Values of width 8, 10,000 examples, best linear readout.
-- One head: relative error $\approx \sqrt{1/2}$. Two heads: the readout
-  inverts the $2 \times 2$ mixing matrix.
+- Values of width 8, 10,000 examples, best linear readout by least
+  squares.
+- Relative error $= \sqrt{\textrm{relative squared error}}$: the bound is
+  $\sqrt{1/2} \approx 0.707$.
 - Soft weights $(0.88, 0.12)$ work as well as one-hot ones.
-:::
-
-::: {.slide title="Two Weightings Instead of One"}
-[The one-mixture bound]{.kicker}
-
-![](../img/mdl-attention-one-head-averages.svg){width=78%}
-
-The readout needs $2c$ numbers per query, not just a better choice of
-weights.
 :::
 
 ::: {.slide title="Check: Does a Residual Connection Lift the Bound?"}
 [Check]{.kicker}
 
-Add the query to the head's output, or stack a second attention layer, and
-keep the linear readout of $c$ numbers. Can the error drop below $1/2$?
+Add the query to the head's output and keep a linear readout of $d_v$
+numbers. Can the error drop below $1/2$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No. The query is the same in every example, so it carries no
-information about the values, and any vector of $c$ numbers read out linearly
-leaves error $1/2$. Only more numbers (more heads, a wider output) or a
-nonlinear readout of an injective encoding help.
+**Answer.** No. The query is the same in every example and carries nothing
+about the values, and any $d_v$ numbers read out linearly leave error
+$1/2$. Only more numbers (more heads, a wider output) help.
 :::
 :::
 :::
@@ -1109,11 +1201,11 @@ nonlinear readout of an injective encoding help.
 ::: {.slide title="Each Head Attends in Its Own Projection"}
 [Multi-head attention]{.kicker}
 
-$$\mathbf{z}_i = f\big(\mathbf W_i^{(q)}\mathbf q, (\mathbf W_i^{(k)}\mathbf k_j, \mathbf W_i^{(v)}\mathbf v_j)_{j=1}^{m}\big) \in \mathbb{R}^{d_h}, \qquad \textrm{output} = \mathbf W_o [\mathbf z_1; \ldots; \mathbf z_H].$$
+$$\mathbf{Z}_i = \mathrm{softmax}\left(\frac{(\mathbf{X}\mathbf{W}_i^{(q)})(\mathbf{X}\mathbf{W}_i^{(k)})^\top}{\sqrt{d_h}}\right)\mathbf{X}\mathbf{W}_i^{(v)}, \qquad \textrm{output} = [\mathbf{Z}_1, \ldots, \mathbf{Z}_H]\,\mathbf{W}_o$$
 
 ![](../img/mdl-attention-multi-head.svg){width=36%}
 
-$H$ heads, $f$ = scaled dot-product attention; all heads read the same inputs.
+New: the head index $i$ and the output projection $\mathbf{W}_o$.
 :::
 
 ::: {.slide title="Heads Change the Attention Map, Not the Cost"}
@@ -1127,88 +1219,78 @@ GPT-2 small layer, $n = 1024$: 4.8 GFLOP projections, 3.2 GFLOP scores
 and mixing, 2.4M parameters, for 1 head or 12.
 
 ::: {.d2l-note}
-More heads: more, smaller matrix products. Same count, slightly lower
-kernel efficiency.
+Why not $H = d$? A head of width 1 can point only at the largest or the
+smallest key.
+:::
+:::
+
+::: {.slide title="Self-Attention Shortens Every Path to One Step and Pays a Quadratic Cost"}
+[Multi-head attention]{.kicker}
+
+![](../img/mdl-attention-cnn-rnn-self-attention.svg){width=56%}
+
+$n$ tokens of width $d$, kernel size $k$:
+
+| layer | cost | sequential | path |
+|:--|:--|:--|:--|
+| convolution | $knd^2$ | $1$ | $n/k$ |
+| recurrence | $nd^2$ | $n$ | $n$ |
+| self-attention | $nd^2 + n^2 d$ | $1$ | $1$ |
+
+::: {.d2l-note}
+Wins path and parallelism; the $n^2 d$ term overtakes the projections once
+$n > 2d$ (GPT-2 small: 1,536 tokens).
 :::
 :::
 
 ::: {.slide title="Heads Are One More Tensor Axis"}
-[Implementation]{.kicker}
+[Multi-head attention]{.kicker}
 
 ![](../img/mdl-attention-head-split.svg){width=92%}
 
 - `split_heads`: reshape to `(batch, n, H, d_h)`, move the head axis
   forward; `merge_heads` undoes both.
 - Attention runs over the last two axes: all heads in one batched product.
-- A `(batch, queries, keys)` mask gets a head axis of size 1.
 :::
 
-::: {.slide title="A Learned Layer Faces the Copy-Both Task"}
-[Learned heads]{.kicker}
-
-- Width $d = 16$; keys $\mathbf{e}_1, \mathbf{e}_2$ (position only);
-  query $\mathbf{e}_3$.
-- Values $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^8$, fresh per example,
-  zero-padded to 16.
-- Target $[\mathbf{v}_1; \mathbf{v}_2]$ = the whole output: room for
-  exactly two values.
-- Adam, learning rate 0.01, 2,000 steps of 256 fresh examples.
-
-::: {.d2l-note}
-Prediction: one head stays at $\sqrt{1/2}$; two heads can reach zero.
-:::
-:::
-
-::: {.slide title="One Head Stays at 0.71; Two Heads Drive the Error to Near Zero"}
-[Learned heads]{.kicker}
+::: {.slide title="A Trained Layer: One Head Stays at 0.71, Two Heads Reach Rounding Error"}
+[Multi-head attention]{.kicker}
 
 @!multihead-attention-learned-heads-on-the-copy-both-task-2
 
-- Two runs per $H$; 1,024 parameters for every $H$.
-- The heads learn at least two different weightings of the two positions.
-- Weightings are often soft: different mixtures suffice.
+- $d = 16$, keys $\mathbf{e}_1, \mathbf{e}_2$, query $\mathbf{e}_3$,
+  values of width 8: room for exactly two.
+- One head: weight on $\mathbf{v}_1$ ends near one half; every split is
+  equally bad.
+- Every run of $H \ge 2$: one head above 0.8 on $\mathbf{v}_1$, one below
+  0.2.
 :::
 
-::: {.slide title="Check: Must Every Head Have Its Own Keys and Values?"}
+::: {.slide title="Heads May Share Keys and Values"}
+[Shared keys and values]{.kicker}
+
+![](../img/mdl-transformers-gqa.svg){width=72%}
+
+- $H$ query heads read $H_\textrm{kv}$ key-value heads: grouped-query
+  attention; $H_\textrm{kv} = 1$: multi-query.
+- Generation stores past keys and values: $H/H_\textrm{kv}$ times less.
+  GPT-2 small, 16-bit, all 12 layers, 12 → 4 key-value heads: 36 → 12 KiB
+  per token.
+:::
+
+::: {.slide title="Check: Which Layouts Solve Copy-Both?"}
 [Check]{.kicker}
 
-Two query heads share **one** key head and **one** value head. Can the
-layer still solve copy-both with $c = d/2$?
+$d = 16$, $d_v = 8$, $d_h = d/H$. Which of $(H, H_\textrm{kv}) = (2, 1)$,
+$(4, 2)$, $(4, 1)$ can return both values?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Yes. The heads weight the positions differently through their
-own query projections, and the shared value head is $d/2 = c$ wide, so it
-carries every value coordinate. With four heads of width $d/4$, one shared
-value head carries half of each value: the bound returns.
+**Answer.** Room requires $H_\textrm{kv} d_h \ge d_v$. $(2, 1)$ and $(4, 2)$
+give 8 shared value coordinates and succeed; $(4, 1)$ gives 4: four
+weightings, no room, error back to $0.71$.
 :::
 :::
-:::
-
-::: {.slide title="Generation Rereads Every Cached Key and Value"}
-[Shared keys and values]{.kicker}
-
-A model generating token by token stores the keys and values of all earlier
-tokens: per token, $2 \cdot L \cdot H_\textrm{kv} \cdot d_h$ numbers.
-
-| GPT-2 small, 16-bit | per token | 1,024 tokens |
-|---|--:|--:|
-| 12 key-value heads | 36 KiB | 36 MiB |
-| 4 key-value heads | 12 KiB | 12 MiB |
-| 1 key-value head | 3 KiB | 3 MiB |
-
-Every new token reads the whole cache.
-:::
-
-::: {.slide title="Grouped-Query Attention Shares Keys and Values within Groups"}
-[Shared keys and values]{.kicker}
-
-$$\mathbf{z}_i = f\big(\mathbf W_i^{(q)}\mathbf q, (\mathbf W_{g(i)}^{(k)}\mathbf k_j, \mathbf W_{g(i)}^{(v)}\mathbf v_j)_{j=1}^{m}\big), \qquad g(i) = \lfloor i H_\textrm{kv}/H \rfloor$$
-
-![](../img/mdl-transformers-gqa.svg){width=80%}
-
-$H_\textrm{kv} = H$: multi-head; $1 < H_\textrm{kv} < H$: grouped-query
-(GQA); $H_\textrm{kv} = 1$: multi-query (MQA).
 :::
 
 ::: {.slide title="Sharing Works While the Shared Value Heads Have Room"}
@@ -1216,54 +1298,51 @@ $H_\textrm{kv} = H$: multi-head; $1 < H_\textrm{kv} < H$: grouped-query
 
 @!multihead-attention-sharing-keys-and-values
 
-- Prediction: $H_\textrm{kv} d_h \ge 8$ solves the task; $(4, 1)$ has one
-  value head of width 4 and returns to $\sqrt{1/2}$.
-- $(2, 1)$ and $(4, 2)$: rounding error with 768 parameters; $(4, 1)$: 0.71.
-:::
-
-::: {.slide title="Sharing Costs Little after Uptraining, More from Scratch"}
-[Shared keys and values]{.kicker}
-
-| setting | full heads | 8 groups | 1 key-value head |
-|---|--:|--:|--:|
-| T5-XXL, uptrained 5%: avg. score | 47.2 | 47.1 | 46.6 |
-| T5-XXL: inference s/sample | 1.51 | 0.28 | 0.24 |
-| 7B from scratch: MMLU | 45.2 | 41.2 | 37.9 |
-
-Most large open models use GQA anyway (gpt-oss: 64 query heads, 8
-key-value heads): the cache bounds minibatch and context, and reading it
-dominates the time per token.
-
-[Ainslie et al. 2023; DeepSeek-AI 2024; OpenAI 2025]{.small}
+- $(2, 1)$, $(4, 2)$: rounding error with 768 parameters instead of 1,024.
+- $(4, 1)$: 640 parameters, $0.71$, though its heads weight the positions
+  differently.
 :::
 
 ::: {.slide title="Self- and Cross-Attention Differ Only in Their Inputs"}
-[Self- and cross-attention]{.kicker}
+[Cross-attention]{.kicker}
 
-- **Self-attention:** `attention(X, X, X)`. One sequence queries itself;
+- **Self-attention:** `attention(X, X, X)`. One sequence reads itself;
   output shape = input shape, so layers stack.
 - **Cross-attention:** `attention(A, B, B)`. Sequence A asks, sequence B
   answers; output length = length of A.
 
-Translation decoders, some vision–language models, and the first alignment
-models all use cross-attention.
+Translation decoders and vision–language models read another sequence
+this way.
+
+::: {.d2l-note}
+Cross-attention is how one model reads the output of another.
+:::
 :::
 
-<!-- WRITER: the two letters slides ("Letters of 'attention' Query Letters of 'translation'",
-"Unique, Repeated, and Missing Keys Give Three Patterns") were removed with the cell; they belong in the
-deck of attention-scoring.md (worklist 3.B12, section 2 deck); their text is in git history before this
-commit. -->
+::: {.slide title="Check: Swap Alice and Bob"}
+[Check]{.kicker}
 
-::: {.slide title="Several Weightings per Query, Shared Keys, One Code Path"}
+"Bob gave Alice the book." Does the output of *gave* change, with one head
+or with several?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** No. The weights depend on content only; swapping two tokens
+swaps their values and their weights together. Content cannot tell the
+giver from the receiver.
+:::
+:::
+:::
+
+::: {.slide title="Several Weightings per Query, Room for What They Read"}
 [Wrap-up]{.kicker}
 
-- One head, one mixture: relative squared error $1/2$ on copy-both, for any
-  weights.
-- $H$ projected heads, $d_h = d/H$: $8nd^2 + 4n^2d$ FLOPs and $4d^2$
-  parameters for every $H$; two learned heads solve copy-both.
-- GQA/MQA share keys and values within groups: GPT-2 small's 36 KiB per
-  token drop to 12 KiB with 4 key-value heads.
-- Self- and cross-attention: the same layer, different inputs.
+- One head on the sentence: *gave* gets $0.29$ on each noun, a blend.
+- One head, one mixture: relative squared error $1/2$ on copy-both, for
+  any weights.
+- $H$ heads of width $d/H$: $8nd^2 + 4n^2d$ FLOPs, $4d^2$ parameters for
+  every $H$; two trained heads reach rounding error.
+- Shared keys and values: safe while $H_\textrm{kv} d_h \ge d_v$.
 
 **Next:** attention ignores order; positional information restores it.
 :::

@@ -103,44 +103,49 @@
       "outputs": []
     },
     "word-embeddings-sgns-data": {
-      "code_fingerprint": "sha256:ce2df9bf67eb518b3be95d8863e9a50e0bbdbce4d0f4c2fcb0523517a0403fa1",
+      "code_fingerprint": "sha256:46beb23761cbefb7bb224a80bba1944f47c94f810e317b432d9fe8a759328ef9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one epoch: 1,411,837 of 2,838,873 positions are centers (5.7 context words each)\n           centers: (1024,)\ncontexts_negatives: (1024, 60)\n            labels: (1024, 60)\n             masks: (1024, 60)\nfirst row: center 'bl'\n    context slots, offsets -5..-1 and +1..+5:\n        <pad> <pad> <pad> final interchange i bl <pad> <pad> <pad>\n    noise words of slot 3 ('final'): released refused power scattering the\n    labels: 10 ones, then zeros; masks keep 24 of 60 slots\n"
+          "text": "one epoch: 1,411,837 of 2,838,873 positions are centers (5.7 context words each)\n           centers: (1024,)\ncontexts_negatives: (1024, 60)\n            labels: (1024, 60)\n             masks: (1024, 60)\nrow 1: center 'years'\n    context slots, offsets -5..-1 and +1..+5:\n        <pad> <pad> <pad> <pad> era francis <pad> <pad> <pad> <pad>\n    noise words of slot 4 ('era'): available the married some settlement\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    labels: 10 ones, then zeros; masks keep 12 of 60 slots\n"
         }
       ]
     },
     "word-embeddings-sgns-train": {
-      "code_fingerprint": "sha256:103a020c4a744534298d61beb984c792c6c99f2750fcc2b24887d4f434e3424a",
+      "code_fingerprint": "sha256:d287366942ef21550227ae5a0f426675056dbef534340e694494a0d837e86c8e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1: loss 0.4569, 4.0 s\n"
+          "text": "epoch 1: loss 0.4569, 3.4 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2: loss 0.4091, 3.9 s\n"
+          "text": "epoch 2: loss 0.4091, 3.3 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3: loss 0.3911, 3.7 s\n"
+          "text": "epoch 3: loss 0.3911, 3.2 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4: loss 0.3813, 3.6 s\n"
+          "text": "epoch 4: loss 0.3813, 3.3 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5: loss 0.3749, 3.7 s\n19 s\n"
+          "text": "epoch 5: loss 0.3749, 3.2 s\n16 s\n"
         },
         {
           "type": "stream",
@@ -155,23 +160,23 @@
       ]
     },
     "word-embeddings-toy-pmi": {
-      "code_fingerprint": "sha256:96f665d4b83e2587e9e9502f4ed46814083ac560c6b820a225391dfc777e38d9",
+      "code_fingerprint": "sha256:cb91462104c460d59222fdb59dd70d8215e6808a4d2842bf7a59c1f01af77fc3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "counts (window 1):\n       ice  steam  solid  gas\nice      4      4      7    2\nsteam    4      2      5   13\nsolid    7      5      2    3\ngas      2     13      3    2\nalpha = 1.0: max |s* - (pmi - log K)| = 1.0e-07, max |s* - (pmi - log K + log(p/P))| = 1.0e-07\nalpha = 0.75: max |s* - (pmi - log K)| = 5.0e-02, max |s* - (pmi - log K + log(p/P))| = 4.3e-08\ns* for alpha = 0.75:\n         ice  steam  solid    gas\nice   -1.569 -1.828 -1.010 -2.384\nsteam -1.914 -2.866 -1.691 -0.857\nsolid -1.010 -1.605 -2.262 -1.979\ngas   -2.425 -0.812 -2.019 -2.547\n"
+          "text": "counts (window 1):\n       ice  steam  solid  gas\nice      4      4      7    2\nsteam    4      2      5   13\nsolid    7      5      2    3\ngas      2     13      3    2\nalpha = 1.0: max |s* - (pmi - log K)| = 1.0e-07, max |s* - (pmi - log K + log(p/P))| = 1.0e-07\nalpha = 0.75: max |s* - (pmi - log K)| = 5.0e-02, max |s* - (pmi - log K + log(p/P))| = 4.3e-08\ns* for alpha = 1.0:\n         ice  steam  solid    gas\nice   -1.533 -1.878 -0.973 -2.389\nsteam -1.878 -2.916 -1.655 -0.862\nsolid -0.973 -1.655 -2.226 -1.983\ngas   -2.389 -0.862 -1.983 -2.551\ns* for alpha = 0.75:\n         ice  steam  solid    gas\nice   -1.569 -1.828 -1.010 -2.384\nsteam -1.914 -2.866 -1.691 -0.857\nsolid -1.010 -1.605 -2.262 -1.979\ngas   -2.425 -0.812 -2.019 -2.547\n"
         }
       ]
     },
     "word-embeddings-ppmi": {
-      "code_fingerprint": "sha256:0fd5fc89e6123b262ef06bf1ad12eceb5e37a1331e099857ec323bb8caa54a85",
+      "code_fingerprint": "sha256:2b0248e8b0eef24843d657cb0aa789eebc268b7b2388a1141f607d5f8c4b1bbc",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-svd": {
-      "code_fingerprint": "sha256:dc7ffb0e2586f8cff2144cc5a63de293763be18d0225523470e1d12ea74e6172",
+      "code_fingerprint": "sha256:cc98820dbfea7ef552bf7cea93f9633258a1895f66ccd0579ef4b062b16150e4",
       "kind": "text",
       "outputs": [
         {
@@ -192,7 +197,7 @@
       ]
     },
     "word-embeddings-glove": {
-      "code_fingerprint": "sha256:7052e063b9be3d9c62e18ee9c87c241908c7201a7fbf849d88470094bdde2f02",
+      "code_fingerprint": "sha256:53127142e4544b65060d5df2bc6f773014a8b948a92c57139bb211229c20194e",
       "kind": "text",
       "outputs": [
         {
@@ -218,7 +223,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50: loss 0.0056\n15 s\n"
+          "text": "epoch 50: loss 0.0056\n13 s\n"
         },
         {
           "type": "stream",
@@ -228,7 +233,7 @@
       ]
     },
     "word-embeddings-scatter": {
-      "code_fingerprint": "sha256:3194118130c4c727d4e86f1d07c3e62745ba7372b1e68e7f5e6b79fd6e7e3025",
+      "code_fingerprint": "sha256:fa4e296ab93f0ce3085b34d3b176ace6894dbae613475794897211216ecbfb4b",
       "kind": "mixed",
       "outputs": [
         {
@@ -241,12 +246,12 @@
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-scatter-1.svg",
           "bytes": 240786,
-          "sha256": "sha256:e4f7cf477601e1b1352ec3ceb75a15a23990f4d21d7ae9626f3bed63eff33dcb"
+          "sha256": "sha256:d2859c2dbf6ee22b54403a885927195407fbe03a67983a88b22383f45e9d5165"
         }
       ]
     },
     "word-embeddings-grid": {
-      "code_fingerprint": "sha256:b8ea38fb3be8126f8b2dd3718143f086ae448a3f9b0db1d562af6da4a81b4edc",
+      "code_fingerprint": "sha256:1025ffecebab28c9fe2bc8db98ebec68e13c8872d82ed365d4847d1271360ea5",
       "kind": "text",
       "outputs": [
         {
@@ -257,20 +262,20 @@
       ]
     },
     "word-embeddings-grid-plot": {
-      "code_fingerprint": "sha256:af8b7c6eade4be945e42c5906e1322c2fe28ae90c42e9cc5b808b17365355b86",
+      "code_fingerprint": "sha256:c01927ae573b55a9ca6fb0ef2256198048fb77446dbb149c881a92841d52a479",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word-embeddings/word-embeddings-grid-plot-1.svg",
-          "bytes": 59098,
-          "sha256": "sha256:a8cdb2d3fcf1c478ace8c24b2bbd9906e8776906b551b1d4a2fa8d968bb2b767"
+          "bytes": 59147,
+          "sha256": "sha256:497455cbcf7b8df54a752a0efba57a28e147cd66b2062e200f3ae0362b02e2ba"
         }
       ]
     },
     "word-embeddings-grid-compare": {
-      "code_fingerprint": "sha256:a9d503286bd6372b1b5f89c5786ce1e59687e854c0d005a6093791c54c06042f",
+      "code_fingerprint": "sha256:7097611937ccad9ba77420dae2a55d44bb870df8bc6db598fa69ef507ac42e4f",
       "kind": "text",
       "outputs": [
         {
@@ -281,12 +286,12 @@
       ]
     },
     "word-embeddings-neighbors-def": {
-      "code_fingerprint": "sha256:7dfb0c522a6f17f6299554afcf8bf9a170989b4e5dd7ced5e945e822f799c813",
+      "code_fingerprint": "sha256:7b584122620b4441c1cff6d430ad25f71b609cff2b57f76646849ead056378bf",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-neighbors": {
-      "code_fingerprint": "sha256:70bc2d5e9110ab7c0ba522f45e53ba3eebd5e248a23b7443ba3a81096f6dad4b",
+      "code_fingerprint": "sha256:9898a483cb5be1276f4ebd2f648d1a55adf96439469dfe2e7eb2d538c14a1bd5",
       "kind": "text",
       "outputs": [
         {
@@ -297,12 +302,12 @@
       ]
     },
     "word-embeddings-token-embedding": {
-      "code_fingerprint": "sha256:3258678f8534dd2915be79e1dcf464014d1b9436600536a96144824a02bb6e23",
+      "code_fingerprint": "sha256:86d37d645b49a67c1efa9d52f6fc9fe5e6993bb6d9343c26bc0ce787b7888ecd",
       "kind": "text",
       "outputs": []
     },
     "word-embeddings-analogy": {
-      "code_fingerprint": "sha256:f798dc7a0db1b836b9be6ade186f145e83f189a9d70388dfe6cdd69f9cc9c4f5",
+      "code_fingerprint": "sha256:ea9a33173ed4fb532db9ce4e1e916e0b3625d99b7adf8ef0344fd7ab537d9dc0",
       "kind": "text",
       "outputs": [
         {
@@ -313,7 +318,7 @@
       ]
     },
     "word-embeddings-bias": {
-      "code_fingerprint": "sha256:0c22c230f43df817787ba3c7121cd8690c10c21632e0b0b07f960b4fc4410355",
+      "code_fingerprint": "sha256:7874ee6a4410788b2b3ab6adc861a3703f1f982aded9b4611d03719898533926",
       "kind": "text",
       "outputs": [
         {
@@ -324,7 +329,7 @@
       ]
     },
     "word-embeddings-qwen-table": {
-      "code_fingerprint": "sha256:fe83a99452ed823dceeee9f00b6d1d05fdd887ddae772342eacfe005a4015946",
+      "code_fingerprint": "sha256:c30277ab74f7aa78df3300e4d87c548822bc2346f9e581dd090ee0ddf8e71084",
       "kind": "text",
       "outputs": [
         {
@@ -335,7 +340,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "notebook: 97 s\n"
+          "text": "notebook: 92 s\n"
         }
       ]
     }

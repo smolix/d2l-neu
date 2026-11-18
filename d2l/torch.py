@@ -7314,13 +7314,6 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
                 peak_gib=(torch.cuda.max_memory_allocated(device) / 2**30
                           if cuda else float('nan')))
 
-def cost_per_example(n_params, n_tokens, n_embed=0):
-    """Forward FLOPs per example, 2 (n_params - n_embed) n_tokens: a
-    multiply and an add per weight and token, embedding lookups excluded.
-
-    Defined in :numref:`sec_lm_bert`"""
-    return 2 * (n_params - n_embed) * n_tokens
-
 def align_token_labels(word_ids, word_labels, scheme='first'):
     """Token labels from word labels; word_ids gives each token's word
     (None for a special token). scheme='first' labels the first sub-token
@@ -7370,6 +7363,13 @@ def span_f1(pred_tags, gold_tags, id2label):
     return dict(**prf(pred, gold), per_type={k: prf(
         {e for e in pred if e[0] == k}, {e for e in gold if e[0] == k})
         for k in kinds})
+
+def cost_per_example(n_params, n_tokens, n_embed=0):
+    """Forward FLOPs per example, 2 (n_params - n_embed) n_tokens: a
+    multiply and an add per weight and token, embedding lookups excluded.
+
+    Defined in :numref:`sec_lm_bert`"""
+    return 2 * (n_params - n_embed) * n_tokens
 
 d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Embedding-0.6B'] = (
     '97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3')

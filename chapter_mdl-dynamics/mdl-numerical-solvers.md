@@ -283,14 +283,14 @@ x_true = np.exp(-1) * np.array([2 * np.cos(2), 2 * np.sin(2)])  # e^{AT} x0
 def euler(f, x0, T, n):
     """Forward Euler: n steps of size h = T/n."""
     x, h = np.asarray(x0, dtype=float), T / n
-    for k in range(n):
+    for _ in range(n):
         x = x + h * f(x)
     return x
 
 def rk4(f, x0, T, n):
     """Classical Runge-Kutta: four slope measurements per step."""
     x, h = np.asarray(x0, dtype=float), T / n
-    for k in range(n):
+    for _ in range(n):
         k1 = f(x)
         k2 = f(x + 0.5 * h * k1)
         k3 = f(x + 0.5 * h * k2)
@@ -469,17 +469,46 @@ the sweep of :numref:`sec_mdl-gradient-based-optimization` on
 $\mathbf H=\mathrm{diag}(10,1)$ from $(1,1)$ for 100 steps, and each row can
 be read in :numref:`fig_mdl-dyn-stability-regions`.
 
+<!-- WRITER: the cell no longer reruns the sweep of sec_mdl-gradient-based-optimization (cite it, do not
+rerun it). New content: gradient flow dx/dt = -H x on H = diag(10, 1) from (1, 1), 100 steps of size eta,
+three solvers, reusing this notebook's euler, rk4 and backward_euler_linear (backward Euler on the
+gradient flow is the proximal-point step x_{k+1} = (I + eta H)^{-1} x_k). Per row it prints the factor of
+the steep and of the flat mode (the diagonal of one step's matrix, i.e. R(-eta*10) and R(-eta*1)) and
+||x_100||. Rows: forward Euler eta 0.19, 0.21; RK4 0.27, 0.29; backward Euler 0.25, 25. The rows can
+still be read in fig_mdl-dyn-stability-regions (steep mode at z = -1.9, -2.1, -2.7, -2.9, -2.5, -250). -->
+
 ```{.python .input #mdl-odes-solvers-gradient-descent-is-a-solver}
-H = np.diag([10.0, 1.0])                       # lambda_max = 10, lambda_min = 1
-print('GD on this quadratic is stable iff eta < 2/lambda_max =', 2 / H[0, 0])
-print(f'{"eta":>6} {"|1-eta*lam_max|":>16} {"|1-eta*lam_min|":>16} {"||x_100||":>10}')
-for eta in [0.05, 0.15, 0.19, 0.201, 0.21, 0.25]:
-    x = np.array([1.0, 1.0])
-    for _ in range(100):
-        x = x - eta * (H @ x)                  # gradient descent = forward Euler
-    print(f'{eta:6.3f} {abs(1 - eta * H[0, 0]):16.2f} '
-          f'{abs(1 - eta * H[1, 1]):16.3f} {np.linalg.norm(x):10.2e}')
+H = np.diag([10.0, 1.0])                       # Hessian of L(x) = x^T H x / 2
+flow = lambda x: -H @ x                        # the gradient flow
+solvers = {                                    # n steps of size eta on the flow
+    'forward Euler': lambda x0, eta, n: euler(flow, x0, n * eta, n),
+    'RK4': lambda x0, eta, n: rk4(flow, x0, n * eta, n),
+    'backward Euler': lambda x0, eta, n: backward_euler_linear(-H, x0, n * eta, n)}
+print(f'{"solver":<15}{"eta":>6}{"steep factor":>14}{"flat factor":>13}{"||x_100||":>12}')
+for name, eta in [('forward Euler', 0.19), ('forward Euler', 0.21), ('RK4', 0.27),
+                  ('RK4', 0.29), ('backward Euler', 0.25), ('backward Euler', 25)]:
+    steep, flat = np.diag(solvers[name](np.eye(2), eta, 1))  # one step's matrix
+    x_100 = solvers[name](np.array([1.0, 1.0]), eta, 100)
+    print(f'{name:<15}{eta:6.2f}{steep:14.3f}{flat:13.3f}{np.linalg.norm(x_100):12.1e}')
 ```
+
+<!-- WRITER: the paragraph below reads the old sweep (the eta = 0.201 row, factor -1.01, flat
+coordinate 1e-10) and is false now. Printed (deterministic NumPy, identical in all four tabs):
+  solver            eta  steep factor  flat factor   ||x_100||
+  forward Euler    0.19        -0.900        0.810     2.7e-05
+  forward Euler    0.21        -1.100        0.790     1.4e+04
+  RK4              0.27         0.879        0.763     2.5e-06
+  RK4              0.29         1.187        0.748     2.8e+07
+  backward Euler   0.25         0.286        0.800     2.0e-10
+  backward Euler  25.00         0.004        0.038    3.2e-142
+Readings: forward Euler's ceiling 2/lambda_max = 0.2 is the edge of its disc (steep factor -0.9 converges,
+-1.1 diverges, oscillating in sign). RK4 moves the ceiling to 2.785/lambda_max = 0.2785, but each step
+costs four gradients: 0.0696 of flow time per gradient against Euler's 0.2, a loss per gradient. RK4's
+steep factor leaves the region through +1 (1.187, monotone growth, no sign flip), since RK4's R(z) = 1
+at z = -2.785 on the real axis (R(z) - 1 = z(1 + z/2 + z^2/6 + z^3/24)). Backward Euler converges at
+every eta, faster as eta grows (steep 1/(1 + 10 eta), flat 1/(1 + eta)); at eta = 25 the norm is at
+3e-142, i.e. effectively zero: the step nears the exact minimizer. The ceiling belongs to the solver, not
+to the loss. Do not quote 3.2e-142 to its digits; "below 1e-140" or "effectively zero". -->
 
 This is the table of the stiff system with $\eta$ in place of $h$. At
 $\eta=0.201$ the steep mode sits at $z=-2.01$, just outside the disc: its
@@ -862,6 +891,10 @@ $\dot{\mathbf x}=\mathrm{diag}(-50,-1)\,\mathbf x$ from $(1,1)$ to $T=1$; forwar
 At $h=0.1$ both slow values are within $5\%$; forward Euler's fast value is $10^6$ for a true $10^{-22}$.
 :::
 
+<!-- WRITER (slides): the cell under this slide now prints the three-solver table (forward Euler 0.19/0.21,
+RK4 0.27/0.29, backward Euler 0.25/25; see the WRITER note after the cell in the body). The slide's
+claim per slide-guide: "The learning-rate ceiling belongs to the solver". The table is 7 lines of
+under 70 columns. -->
 ::: {.slide title="Gradient Descent Is Forward Euler on the Gradient Flow"}
 [Training as dynamics]{.kicker}
 

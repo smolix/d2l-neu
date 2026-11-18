@@ -1,23 +1,23 @@
 # Adam
 :label:`sec_adam`
 
-In :numref:`sec_test_models` a library call to AdamW trained `TinyLM` to a
-loss half a nat below the best of our three runs of plain SGD. It did so at
-a learning rate of 0.003, where SGD had worked best at 0.5. A rate more
-than a hundred times smaller did not train a hundred times more slowly.
-Evidently the learning rate of this optimizer does not mean what the
-learning rate of SGD means.
+Of the three learning rates that we tried for plain SGD on `TinyLM`, 0.5
+worked best. The library's AdamW, which we called in
+:numref:`sec_test_models` before we could explain it, was given 0.003 and
+ended half a nat lower. A rate more than a hundred times smaller did not
+train a hundred times more slowly. Evidently the learning rate of this
+optimizer does not mean what the learning rate of SGD means.
 
-AdamW differs from plain SGD in two ways. It averages its gradients over
-steps, which is the momentum of :numref:`sec_momentum`, and it gives every
-parameter a learning rate of its own, set from the size of that parameter's
-past gradients. Run without weight decay, as it was there, AdamW is Adam
-:cite:`Kingma.Ba.2014`, and this section is about the second idea. It was
-not invented for valleys. AdaGrad, the first method of the family,
-was built for features that occur rarely, and it divides the step of each
-coordinate by the accumulated size of its gradients. RMSProp lets the
-accumulation forget. Adam adds momentum and repairs the start of both
-averages.
+Momentum (:numref:`sec_momentum`) explained one of the two things that
+AdamW does, the averaging of gradients over steps. It left the other as a
+question: a network does not tell us its curvatures, so can the sizes of a
+coordinate's past gradients stand in for them? Run without weight decay,
+as it was in that experiment, AdamW is the method called Adam
+:cite:`Kingma.Ba.2014`. Adam answers by giving every parameter a learning
+rate of its own, set from the size of that parameter's past gradients. The
+idea is older than its use on valleys. It began with features that occur
+rarely, such as uncommon words, and it reached Adam in three steps, each a
+repair of the one before.
 
 Adam is the standard optimizer for transformers and the baseline against
 which newer methods are measured. We derive it on the valley, where every
@@ -60,19 +60,18 @@ import random
 
 Consider learning problems whose features occur with very different
 frequencies. This is the normal state of affairs in language: we will see
-the word *learning* far more often than the word *preconditioning*. The
-same imbalance appears in advertising and recommendation, where most items
-interest only a few users. Parameters tied to rare features receive
-informative gradients only when those features occur. Under a learning rate
-that falls during training, one of the two remedies for gradient noise that
-:numref:`sec_sgd` named, the parameters of frequent features approach their
-optima quickly while the rare ones are still waiting for evidence, and by
-the time it arrives the shared step size has decayed too far to use it. One
+the word *learning* far more often than the word *preconditioning*.
+Parameters tied to rare features receive informative gradients only when
+those features occur. Now take one of the two remedies for gradient noise
+that :numref:`sec_sgd` named, a learning rate that falls during training.
+Under it the parameters of frequent features approach their optima
+quickly, while those of rare features are still waiting for evidence. When
+the evidence arrives, the shared rate has decayed too far to use it. One
 clock cannot serve both populations.
 
 AdaGrad :cite:`Duchi.Hazan.Singer.2011` gives every coordinate its own
-clock. Instead of decaying the step with the iteration count $t$, it decays
-each coordinate's step with that coordinate's own activity, measured by the
+clock. The step of a coordinate no longer decays with the iteration count
+$t$. It decays with that coordinate's own activity, measured by the
 running sum of its squared gradients:
 
 $$
@@ -88,25 +87,29 @@ the division. A coordinate whose gradients have been large moves cautiously
 from now on. A coordinate that has barely been touched keeps a large step
 and can respond as soon as its rare feature appears.
 
-The same rule addresses the valley. The diagonal preconditioner of
-:numref:`subsec_gd-preconditioning` divided the gradient of each coordinate
-by its curvature. On a quadratic whose axes are the coordinate axes, the
-coordinates with large curvature are also the ones with large gradients, so
-dividing by the size of past gradients does much of the same work, and
-:eqref:`eq_adagrad` is a diagonal preconditioner estimated from gradients
-alone. (:numref:`subsec_mdl-per-coordinate` makes both readings of AdaGrad
-precise.)
+The same rule addresses the valley, and with it the question that Momentum
+left open. On a quadratic whose axes are the coordinate axes, the gradient
+of a coordinate is its curvature times its distance from the minimum. In
+the ratio of a gradient to the size of the gradients before it, the
+curvature cancels. AdaGrad thus does the work of the diagonal
+preconditioner of :numref:`subsec_gd-preconditioning`, and it needs
+nothing but gradients to do so. What the ratio keeps is the present
+distance measured against the earlier ones. The step no longer knows how
+far away the minimum is, a side effect that will occupy us for the rest of
+the section. (:numref:`subsec_mdl-per-coordinate` makes both readings of
+AdaGrad precise.)
 
-We run AdaGrad on the valley from $(-5, -2)$ at $\eta = 0.4$, close to the
-ceiling of $0.5$ for gradient descent, with `d2l.train_2d` of
-:numref:`sec_gd`, which carries the state $(s_1, s_2)$ from step to step
-and prints the last iterate. Two properties of :eqref:`eq_adagrad` let us
-predict the outcome. On the first step $\mathbf{s}_1 = \mathbf{g}_1^2$, so
-every coordinate moves by $\eta$ whatever its gradient, and the iterate
-lands on $(-4.6, -1.6)$. After that, as long as the gradient of a
-coordinate does not grow, its sum is at least $t$ times the current squared
-gradient, and step $t$ is at most $\eta/\sqrt{t}$ long. Twenty steps
-therefore cover at most
+We run AdaGrad on the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ of
+:numref:`sec_optimization-intro`, whose curvatures are $0.2$ and $4$, from
+$(-5, -2)$ at $\eta = 0.4$, close to the ceiling of $2/4 = 0.5$ for
+gradient descent. The function `d2l.train_2d` of :numref:`sec_gd` carries
+the two sums from step to step and prints the last iterate. Two properties
+of :eqref:`eq_adagrad` let us predict the outcome. On the first step
+$\mathbf{s}_1 = \mathbf{g}_1^2$, so every coordinate moves by $\eta$
+whatever its gradient, and the iterate lands on $(-4.6, -1.6)$. After
+that, as long as the gradient of a coordinate does not grow, its sum is at
+least $t$ times the current squared gradient, and step $t$ is at most
+$\eta/\sqrt{t}$ long. Twenty steps therefore cover at most
 $\eta \sum_{t=1}^{20} t^{-1/2} \approx 7.6\,\eta = 3.0$ in each coordinate,
 which is not enough for the distance of $5$ along $x_1$.
 
@@ -141,7 +144,7 @@ d2l.show_trace_2d(d2l.f_valley, d2l.train_2d(adagrad_2d, d2l.valley_grad,
 The plot has a corner at $(-3, 0)$, where the first step ends, and from
 there the iterate runs along the floor to $x_1 = -0.002$ at step 20. A
 learning rate at which gradient descent diverges is harmless here, because
-$\eta$ never multiplies a gradient by itself. It multiplies the ratio of a
+$\eta$ never multiplies a bare gradient. It multiplies the ratio of a
 gradient to the size of the gradients before it.
 
 ### RMSProp
@@ -153,8 +156,8 @@ decay suits the convex problems that AdaGrad was designed for, but it can
 stop a network that still has far to travel late in training.
 
 RMSProp :cite:`Tieleman.Hinton.2012` keeps the division and replaces the
-sum with an exponential moving average, the same leaky averaging that
-momentum applies to the gradient itself:
+sum with an exponential moving average, in which old squared gradients
+fade as old gradients fade in the velocity of momentum:
 
 $$
 \mathbf{v}_t = \beta_2\, \mathbf{v}_{t-1} + (1 - \beta_2)\, \mathbf{g}_t^2,
@@ -219,8 +222,8 @@ gradient, and the update is $\eta$ times a sign. A jump of length $\eta$
 takes $-a$ to $a$ if $a = \eta/2 = 0.2$. The curvature does not enter,
 which is why both coordinates hop in the same band.
 
-Nor is the minimum itself a resting place for a method that forgets. As
-the gradient shrinks, its average shrinks after it, the coordinate's rate
+Even the minimum cannot hold a method that forgets. As the gradient
+shrinks, its average shrinks after it, the coordinate's rate
 $\eta/\sqrt{v_t}$ grows, and sooner or later it passes the ceiling of 2
 divided by the curvature (:numref:`sec_gd`) and throws the iterate out
 again. The run shows a property of every method that divides by the recent
@@ -231,10 +234,12 @@ minimum is. At a constant learning rate such a method does not settle.
 
 ### Adam
 
-Adam changes RMSProp in two places. It averages the gradient as well as
-its square, which builds momentum into the method, and it divides each
-average by the total weight that the average has accumulated so far, which
-removes the fault of the first steps:
+Neither AdaGrad nor RMSProp is what one reaches for today to train a
+network, and the reader may treat both as steps on the way to Adam. Adam
+changes RMSProp in two places. It averages the gradient as well as its
+square, which builds momentum into the method. And it divides each average
+by the total weight that the average has accumulated so far, which removes
+the fault of the first steps:
 
 $$
 \begin{aligned}
@@ -248,12 +253,14 @@ $$
 $$
 :eqlabel:`eq_adam-moments`
 
-In the names of the Adam paper, $\mathbf{m}_t$ is the momentum average and
-$\mathbf{v}_t$ the *second-moment estimate*, an average of squared
-gradients. (It is not a variance: the squares are averaged as they are,
-mean included.) The square root of $\hat{\mathbf{v}}_t$ has the units of a
-gradient, and we call it the *scale* of a coordinate. The update divides
-the corrected momentum by the scale:
+In the names of the Adam paper, $\mathbf{m}_t$ is the *first-moment
+estimate*, which is the momentum average, and $\mathbf{v}_t$ the
+*second-moment estimate*, an average of squared gradients. (A variance
+would subtract the mean of the gradients first; $\mathbf{v}_t$ averages
+the squares as they are.) The divisions that produce the hatted quantities
+are the *bias correction*. The square root of $\hat{\mathbf{v}}_t$ has the
+units of a gradient, and we call it the *scale* of a coordinate. The
+update divides the corrected momentum by the scale:
 
 $$
 \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}.
@@ -261,50 +268,52 @@ $$
 :eqlabel:`eq_adam-update`
 
 Each coordinate moves by $\eta$ times the ratio of its average gradient to
-its scale. The momentum method of :numref:`sec_momentum` *adds* each
-gradient to $\beta$ times its buffer. The factor $1 - \beta_1$ turns that
-sum into an *average*, which amounts to the same method with the learning
-rate multiplied by $1 - \beta_1$. The defaults are $\beta_1 = 0.9$ and
-$\beta_2 = 0.999$: the direction is averaged over about ten steps, the
-scale over about a thousand. Language-model recipes since GPT-3
-:cite:`brown2020language` often use $\beta_2 = 0.95$, a window of twenty
-steps. The scale then follows changes in the gradients more quickly, and is
-itself noisier.
+its scale. Note one difference from :numref:`sec_momentum`, where the
+method *adds* each gradient to $\beta$ times its buffer. The factor
+$1 - \beta_1$ turns that sum into an *average*, which amounts to the same
+method with the learning rate multiplied by $1 - \beta_1$.
 
-The corrections in :eqref:`eq_adam-moments` are not a heuristic. Unrolled
-from $\mathbf{v}_0 = \mathbf{0}$, the average
+The defaults are $\beta_1 = 0.9$ and $\beta_2 = 0.999$: the direction is
+averaged over about ten steps, the scale over about a thousand. In
+practice $\beta_1$ is rarely touched. It is $\beta_2$ that recipes change,
+and those for language models since GPT-3 :cite:`brown2020language` often
+use $\beta_2 = 0.95$, a window of twenty steps. The scale then follows
+changes in the gradients more quickly, and is itself noisier.
+
+The bias correction is not a heuristic. Unrolled from
+$\mathbf{v}_0 = \mathbf{0}$, the average
 $\mathbf{v}_t = (1-\beta_2)\sum_{s=1}^{t} \beta_2^{t-s}\, \mathbf{g}_s^2$
 is a weighted sum whose weights total $1 - \beta_2^t$, not $1$. If the
 squared gradients have a steady mean, $\mathbf{v}_t$ carries the fraction
 $1 - \beta_2^t$ of it in expectation, and dividing by that fraction removes
 the deficit at every $t$. The deficit is large: at $\beta_2 = 0.999$, after
 ten steps $\mathbf{v}_t$ holds about $1\%$ of its stationary value. Without
-the corrections the first step would be
+the correction the first step would be
 $(1-\beta_1)/\sqrt{1-\beta_2} = 0.1/\sqrt{0.001} \approx 3.2$ times $\eta$,
-about as large as the first step of RMSProp. With them,
+about as large as the first step of RMSProp. With it,
 $\hat{\mathbf{m}}_1 = \mathbf{g}_1$ and
 $\hat{\mathbf{v}}_1 = \mathbf{g}_1^2$, so the first step moves every
 coordinate by $\eta$, as under AdaGrad.
-(:numref:`subsec_mdl-per-coordinate` plots the transient and its
-cancellation.)
 
-Adam also adds $\epsilon$ *outside* the square root, unlike
-:eqref:`eq_rmsprop`. The placement matters only where the scale is small,
-and we return to it with the limits of the method. The usual default is
-$\epsilon = 10^{-8}$.
+Adam also adds $\epsilon$ *outside* the square root, where
+:eqref:`eq_rmsprop` had it inside, so that $\epsilon$ is itself the
+smallest value of the denominator. The usual default is $10^{-8}$, and
+:numref:`subsec_adam-variance-estimate` returns to what such a floor does.
 
 ### The Learning Rate as a Step Length
 
 The update lets us predict the path of Adam on the valley at $\eta = 0.4$.
 The first step is $\eta$ in each coordinate. For the next few steps the
-gradients of a coordinate keep their sign and nearly their size, so its
-average and its scale stay nearly equal, and each step is again about
-$\eta$ long. Adam should therefore set off at $45^\circ$, $0.4$ per step in
-both coordinates, without regard to the shape of the valley. It reaches the
-floor $x_2 = 0$ after five or six steps, with $x_1$ still about $3$ from
-the minimum, and since a momentum average cannot stop at once, it must
-overshoot. The cell runs 200 steps with the defaults and with the short
-window of RMSProp, $\beta_2 = 0.9$, and plots the default run.
+gradients of a coordinate keep their sign. They shrink, but the corrected
+momentum is then an average of a few gradients of one sign and the scale
+is their root mean square, and the two stay close. Each step is again
+about $\eta$ long. Adam should therefore set off at $45^\circ$, $0.4$ per
+step in both coordinates, without regard to the shape of the valley. It
+reaches the floor $x_2 = 0$ after five or six steps, with $x_1$ still
+about $3$ from the minimum, and since a momentum average cannot stop at
+once, it must overshoot. The cell runs 200 steps with the defaults and
+with the short window of RMSProp, $\beta_2 = 0.9$, and plots the default
+run.
 
 ```{.python .input #adam-adam-on-the-valley-1}
 %%tab pytorch, jax
@@ -334,10 +343,14 @@ a spiral back. After 200 steps the default run is within $10^{-4}$ of the
 minimum. The run with the ten-step window is not: its $x_1$ keeps changing
 sign within about $0.02$ of the minimum, the hop of RMSProp again, narrower
 only because gradients of alternating sign nearly cancel in the momentum
-average. The defaults converge here because a window of a thousand steps
-still remembers the large gradients of the start, so the scale stays large
-while the gradients shrink. That memory runs out as well
-(Exercise :exref:`ex_adam-constant-rate`).
+average.
+
+Has the default run come to rest, then? It has not. A window of a thousand
+steps still remembers the large gradients of the start, so the scale stays
+large while the gradients shrink. That memory runs out as well, and
+thousands of steps later the default run is thrown out of the minimum as
+RMSProp was (Exercise :exref:`ex_adam-constant-rate`). A longer window
+postpones the departure and does not prevent it.
 
 This is not a fast descent. Gradient descent at its best rate shrinks both
 coordinates by the factor $0.905$ per step
@@ -348,32 +361,37 @@ multiply the loss by 1,000. Every gradient grows by that factor, and so do
 $\hat{\mathbf{m}}_t$ and $\sqrt{\hat{\mathbf{v}}_t}$. Their ratio does not
 change, so Adam takes the same steps on $f$ and on $1000 f$, as long as
 $\epsilon$ is negligible beside the scale. The argument works for one
-coordinate at a time, since each is divided by its own scale. On the valley
-Adam therefore takes the steps that it would take on the round bowl
-$\frac{1}{2}(x_1^2 + x_2^2)$: the condition number of 20, which set the
-pace of gradient descent and the best setting of momentum, has dropped out
-of the problem. Like the diagonal preconditioner of
-:numref:`subsec_gd-preconditioning`, the invariance is tied to the
-coordinate axes, and a valley at an angle to them keeps its condition
-number.
+coordinate at a time, since each is divided by its own scale. Now the
+gradient of the valley is that of the round bowl
+$\frac{1}{2}(x_1^2 + x_2^2)$ with its two coordinates multiplied by $0.2$
+and $4$. On the valley Adam therefore takes the steps that it would take
+on the bowl: the condition number of 20, which set the pace of gradient
+descent and the best setting of momentum, has dropped out of the problem.
+Like the diagonal preconditioner of :numref:`subsec_gd-preconditioning`,
+the invariance is tied to the coordinate axes, and a valley at an angle to
+them keeps its condition number
+(Exercise :exref:`ex_adam-rotation`).
 
-The invariance says what the learning rate of Adam is. Under gradient
-descent $\eta$ multiplies a gradient, and how far a step moves a weight
-depends on the size of that gradient. Under Adam $\eta$ is a length in
-parameter space. A coordinate whose gradients agree from step to step moves
-by about $\eta$ per step, a coordinate whose gradients disagree moves by
-less, and the size of the gradients does not matter. This is why one
-default, $\eta = 10^{-3}$, serves models whose gradients differ by orders
-of magnitude. It also resolves the puzzle of the opening: the rate $0.5$ of
-SGD and the rate $0.003$ of AdamW cannot be compared, because they do not
-have the same units. A learning rate for Adam is chosen like the travel
-budget of AdaGrad, from how far the weights have to move.
+This invariance is the main result of the section, because it says what
+the learning rate of Adam is. Under gradient descent $\eta$ multiplies a
+gradient, and how far a step moves a weight depends on the size of that
+gradient. Under Adam $\eta$ is a length in parameter space. A coordinate
+whose gradients agree from step to step moves by about $\eta$ per step, a
+coordinate whose gradients disagree moves by less, and the size of the
+gradients does not matter. This is why one default, $\eta = 10^{-3}$,
+serves models whose gradients differ by orders of magnitude. It also
+resolves the puzzle of the opening: the rate $0.5$ of SGD and the rate
+$0.003$ of AdamW cannot be compared, because they do not have the same
+units. A learning rate for Adam is chosen like the travel budget of
+AdaGrad, from how far the weights have to move.
 
 ### Adam from Scratch
 
-The update needs two buffers per parameter and a step counter for the bias
-correction. We write it the way the framework writes its own optimizers, so
-that it can train any model.
+The method itself takes a handful of lines: the two averages, their bias
+correction, and the division by the scale. Everything around them is
+storage, two buffers per parameter and a step counter. We write the update
+the way the framework writes its own optimizers, so that it can train any
+model.
 
 ```{.python .input #adam-adam-both-moments-debiased-1}
 %%tab pytorch
@@ -433,7 +451,7 @@ between them.
 
 Before using our version we check it against the library on a small
 least-squares problem: two copies of the same linear model, the same data,
-100 steps each. The first step should move every weight by $\eta$.
+100 steps each.
 
 ```{.python .input #adam-adam-both-moments-debiased-2}
 %%tab pytorch
@@ -507,18 +525,11 @@ data = d2l.WikiText103(batch_size=64, num_steps=64)
 ### Gradient Scales in `TinyLM`
 
 The two coordinates of the valley began with gradients of size $1$ and $8$.
-To find out how unequal the parameters of a network are, we sort those of
-`TinyLM` into eight kinds: the token and the position embeddings; `qkv` and
-`proj`, the two weight matrices of each attention layer; `mlp`, the weight
-matrices of the MLPs; `head`, the output layer; the LayerNorm scales and
-shifts; and the biases. For each kind the cells below print the root mean
-square (RMS) of the gradient entries over ten minibatches, at
-initialization and after 500 steps of Adam at $\eta = 3 \times 10^{-3}$.
-This is the quantity that Adam's scale estimates, and under SGD, whose step
-is $\eta$ times the gradient, it is also the step per unit of $\eta$. The
-last column is the RMS of the step that Adam takes next, divided by $\eta$.
-(At step 1 this ratio is 1 for every coordinate, by the bias correction.)
-The bottom row divides the largest entry of each column by the smallest.
+How unequal are the parameters of a network? We measure the root mean
+square (RMS) of the gradient entries of `TinyLM` over ten minibatches,
+separately for each kind of parameter, at initialization and again after
+500 steps of Adam at $\eta = 3 \times 10^{-3}$. We also record how far
+Adam then moves the weights in a single step.
 
 ```{.python .input #adam-gradient-scales-in-a-network-1}
 %%tab pytorch
@@ -603,45 +614,70 @@ print(f'{"max / min":<11}{ratio(grad_init):>24.0f}{ratio(grad_500):>13.0f}'
       f'{ratio(step):>16.1f}')
 ```
 
+The rows refine the three kinds of parameters of :numref:`subsec_tinylm`:
+the embeddings of tokens and of positions; the matrices `qkv` and `proj`
+of each attention layer, `mlp` of the MLPs, and `head`, the output layer;
+the LayerNorm scales and shifts; and the biases. The first two columns
+hold the quantity that Adam's scale estimates, which under SGD is also the
+step per unit of $\eta$. The last column is the RMS of the step that Adam
+takes next, divided by $\eta$, and the bottom row divides the largest
+entry of each column by the smallest.
+
 At initialization the gradients of the eight kinds differ about fortyfold
 in size, from about $2 \times 10^{-4}$ for the embeddings to about
 $7 \times 10^{-3}$ for the biases, and after 500 steps they still differ
 about fifteenfold. The embeddings are at the bottom, the token embeddings
-partly for the reason that motivated AdaGrad: a row of the table receives a
-gradient only when its byte occurs in the minibatch. Under SGD these
-numbers are the steps, so at the start a single learning rate moves a bias
-about forty times as far as an entry of an embedding. This is the
-predicament of the valley, measured in a network. Adam's steps, in the last
-column, lie between $0.1\,\eta$ and $0.3\,\eta$ for every kind, a spread
-of about two.
+partly for the reason that motivated AdaGrad: a row of the embedding
+matrix receives a gradient only when its byte occurs in the minibatch.
+Under SGD these numbers are the steps, so at the start a single learning
+rate moves a bias about forty times as far as an entry of an embedding. On
+the valley that was the whole difficulty: the coordinate with the large
+gradients set the ceiling on $\eta$, and the other one crawled. Whether
+the embeddings of `TinyLM` crawl under SGD the table cannot say, since a
+weight with small gradients may also be one that needs to move little
+(Exercise :exref:`ex_adam-per-group-learning-rates` puts it to the test).
+Adam's steps, in the last column, lie between $0.1\,\eta$ and
+$0.3\,\eta$ for every kind, a spread of about two.
 
-Why a fifth of $\eta$, and not $\eta$? Successive minibatch gradients of a
-coordinate disagree, and the momentum average of gradients that keep
-changing sign is smaller than a single one of them. For pure noise the
-average would have $\sqrt{(1-\beta_1)/(1+\beta_1)} \approx 0.23$ times the
-RMS of a single gradient, and the measured ratios are of that size. After
-500 steps most of what moves a single weight is noise of this kind, and it
-keeps the weight moving: the hop of the valley has its counterpart in a
-network.
+Why a fifth of $\eta$, and not $\eta$? At step 1 the ratio was 1 for every
+coordinate that received a gradient. A coordinate keeps the full $\eta$
+only while its gradients agree from step to step and hold their size, and
+in a network they do neither. Minibatch gradients disagree, and the
+momentum average of gradients that keep changing sign is smaller than any
+one of them. For pure noise of a steady size it has
+$\sqrt{(1-\beta_1)/(1+\beta_1)} \approx 0.23$ times the RMS of a single
+gradient, since the squared weights of the average sum to
+$(1-\beta_1)/(1+\beta_1)$. The scale, for its part, has a long memory. At
+$\beta_2 = 0.999$ it still averages over all 500 steps, and for most kinds
+the gradients at initialization were two to four times as large as they
+are now. The table cannot tell us the shares of the two effects. The first
+of them will not go away, however good the weights become, so at a
+constant $\eta$ the weights keep moving: the hop of the valley has its
+counterpart in a network.
 
 ### Comparison with SGD
 :label:`subsec_adam-where-wins`
 
 The comparison follows the protocol of :numref:`sec_test_models`. Adam and
 SGD with momentum $0.9$ train `TinyLM` for 2,000 steps at a constant
-learning rate, each on its own grid of rates, and we read the final
-training loss, which on text that a run sees only once is also a held-out
-loss. Each grid is run with three seeds, and within a seed every run starts
-from the same initial weights.
+learning rate, each on its own grid of rates. We read the final training
+loss, which on text that a run sees only once is also a held-out loss.
+Each grid is run with three seeds, and the runs of a seed share their
+initial weights.
 
-The reading of $\eta$ as a step length makes two predictions. Gradient
-entries of this model are of size $10^{-4}$ to $10^{-2}$, so the good rates
-of SGD, which multiply them, should lie orders of magnitude above those of
-Adam. And the two methods should fail differently at a rate that is too
-large. Above its ceiling gradient descent feeds on itself: a large gradient
-makes a large step, which makes a larger gradient. The step of Adam stays
-about $\eta$ however large the gradient becomes, so we expect Adam to train
-badly at such a rate, but not to diverge.
+The reading of $\eta$ as a step length makes two predictions. The first
+says where the good rates lie. Adam's momentum average is
+$1 - \beta_1 = 0.1$ times the velocity of :numref:`sec_momentum`, so Adam
+at the rate $\eta$ moves a coordinate as SGD with momentum would at the
+rate $0.1\,\eta$ divided by that coordinate's scale. With scales between
+$10^{-4}$ and $10^{-2}$, the two methods take steps of similar length when
+the rate of SGD is ten to a thousand times that of Adam. We expect its
+good rates about two orders of magnitude above Adam's. The second
+prediction is about failure. Above its ceiling gradient descent feeds on
+itself: a large gradient makes a large step, which makes a larger
+gradient. The step of Adam stays about $\eta$ however large the gradient
+becomes, so we expect Adam to train badly at a rate that is too large, but
+not to diverge.
 
 ```{.python .input #adam-comparison-on-the-language-model-1}
 %%tab pytorch
@@ -680,24 +716,18 @@ adam_lm = sweep(make_adam, [3e-4, 1e-3, 3e-3, 1e-2, 3e-2])
 
 SGD with momentum has one rate that works. At $0.1$ it ends about $0.2$
 nats above its result at $0.3$. At $0.5$ most runs diverge, which the table
-prints as `inf`, and at $1$ all of them do. A run that survives at $0.5$
-ends lower than the runs at $0.3$, so the best learning rate of SGD lies
-where it usually explodes. The table of Adam has a different shape. Its
-best rate, $3 \times 10^{-3}$, is a hundred times smaller than that of SGD
-and has a neighbor on either side that trains nearly as well. And at
-$3 \times 10^{-2}$ the loss is poor, about $2.8$, but finite in every run:
-Adam stalls where SGD diverges. A step of $0.03$ is a third of the largest
-weight that a linear layer of `TinyLM` starts with,
-$1/\sqrt{128} \approx 0.09$. Steps that coarse cannot train the model
-well, but they cannot grow either.
+prints as `inf`, and at $1$ all of them do. Whenever a run survives at
+$0.5$, it ends lower than the runs at $0.3$: the best learning rate of SGD
+lies where it usually explodes. The table of Adam has a different shape.
+Its best rate, $3 \times 10^{-3}$, is a hundred times smaller than that of
+SGD, as the first prediction said, and it has a neighbor on either side
+within a tenth of a nat. And at $3 \times 10^{-2}$ the loss is poor, about
+$2.8$, but finite in every run. Adam stalls where SGD diverges, as the
+second prediction said: a step length of $0.03$ is too coarse for this
+model, but steps of a fixed length cannot grow.
 
-The next cell condenses the two tables. For each optimizer it prints the
-best rate, the one with the lowest mean final loss, the range of the three
-final losses at that rate, and the usable rates, those whose mean is within
-the $0.15$ nats of :numref:`sec_test_models` of the best. Two more columns
-give the step at which each of the three best runs first reaches a loss of
-$1.8$, and its largest rise of the loss from one step to the next. The plot
-shows the best runs of the first seed.
+The next cell condenses the two tables into one line per optimizer, and it
+plots the loss of the first seed's run at each best rate.
 
 ```{.python .input #adam-the-race-on-the-language-model-3}
 %%tab pytorch, jax
@@ -728,57 +758,65 @@ d2l.plot(list(range(0, 2000, 25)),
                  f'Adam, lr {best_adam:g}'])
 ```
 
-The usable rates of Adam span a factor of ten, from $10^{-3}$ to $10^{-2}$,
-while the list of SGD has a single entry. Adam is also faster off the mark.
-It reaches a loss of $1.8$ after 650 to 800 steps and SGD after 1,100 to
-1,500, so Adam needs between half and two thirds of the steps, and the two
-sets of numbers do not overlap. And Adam is steadier. Its largest rise from
-one step to the next is below $0.2$ nats in every run, the ordinary
-difference between two minibatches. That of SGD reaches several tenths of a
-nat or more: at its best rate SGD is still jolted by single steps, a mild
-form of the divergence that waits one grid point higher.
+The usable rates are those whose mean final loss lies within $0.15$ nats
+of the lowest, the margin of :numref:`sec_test_models`. Adam has three of
+them, spanning a factor of ten, and SGD a single one. The next column
+gives the step at which each of the three runs at the best rate first
+reaches a loss of $1.8$, a level that all six pass well before the end.
+Adam is there after 650 to 800 steps and SGD after 1,100 to 1,500. Adam
+needs between half and seven tenths of the steps, and the two sets of
+numbers do not overlap. The last column is the largest rise of the loss
+from one step to the next. For Adam it is below $0.2$ nats in every run.
+The worst of SGD's three runs is thrown up by several tenths of a nat or
+more in a single step. At its best rate SGD is still jolted now and then,
+a mild form of the divergence that waits one grid point higher.
 
 The final losses favor Adam too, in every run, by several hundredths to
-about a tenth of a nat. We advise against reading much into this gap,
-because it is the first steps of SGD that hold it back, not its direction
-of travel. :numref:`subsec_practice-nan` reruns SGD at $\eta = 1$ with
-gradient clipping (:numref:`sec_rnn-scratch`), which shortens the few
-oversized steps at the start, and that run ends between $1.61$ and $1.64$,
-a few hundredths of a nat above Adam. The advantage of Adam on this model
-is a tenfold range of rates that work, a failure that shows up as a stalled
-loss and not as `inf`, and a faster start. For a new model that is a strong
-argument. Three rates around $10^{-3}$, a factor of three apart, will
-usually contain a usable one, whereas the usable window of SGD here was
-less than a factor of five wide and ended at divergence.
+about a tenth of a nat, and the two ranges in the table do not overlap.
+The plot shows where this lead is made. The curves part within the first
+few hundred steps, while SGD lingers near a loss of $2.5$, and from there
+on they fall side by side, the gap narrowing a little toward the end. Adam
+gains its lead at the start, and SGD does not make it up. Nor can SGD
+simply go faster, since above its best rate it diverges.
+:numref:`subsec_practice-nan` traces that divergence to a few oversized
+gradients in the first steps and removes it by clipping them
+(:numref:`sec_rnn-scratch`). SGD then trains at $\eta = 1$ and ends within
+a few hundredths of a nat of Adam.
+
+The lead in the final loss is thus the least of Adam's advantages on this
+model. The strong ones are a tenfold range of rates that work and a
+failure that shows up as a stalled loss, not as `inf`. Our advice for a
+new model follows from them: begin with Adam at three rates around
+$10^{-3}$, a factor of three apart. The usable window of SGD here was less
+than a factor of five wide, and it ended at divergence.
 
 ### Sources of the Advantage
 
-A lead of this size is not what made Adam the standard. On large
+Adam owes its standing to models far larger than this one. On large
 transformers SGD with momentum falls far behind, while on convolutional
 networks of similar size the two stay close
-:cite:`Zhang.Chen.Ding.ea.2024`. The explanation that we find most
-convincing starts from an identity. Switch off both averages in
+:cite:`Zhang.Chen.Ding.ea.2024`. `TinyLM` is too small to show that gap,
+so here we report what others have measured. The explanation that we find
+most convincing starts from an identity. Switch off both averages in
 :eqref:`eq_adam-update`, $\beta_1 = \beta_2 = 0$ and $\epsilon = 0$, and
 the update becomes
 $\eta\, \mathbf{g}_t / |\mathbf{g}_t| = \eta\, \mathrm{sign}(\mathbf{g}_t)$.
 This is *sign descent*, which moves every coordinate by $\eta$ against the
-sign of its gradient and ignores the size. Adam is a smoothed sign method,
-and :citet:`Kunstner.Chen.Lavington.ea.2023` found that its lead over SGD
-on transformers follows that of sign descent and persists with full-batch
-gradients, where there is no noise to average away. What Adam gains, it
-gains by equalizing the steps of coordinates whose gradients differ in
-size, which is the effect that our table measured.
+sign of its gradient and ignores the size. Adam is sign descent with two
+averages added, and :citet:`Kunstner.Chen.Lavington.ea.2023` found that
+sign descent with momentum shares Adam's lead over SGD on transformers,
+with full-batch gradients too, where there is no noise to average away.
+What Adam gains, it gains by equalizing the steps of coordinates whose
+gradients differ in size, the effect that our table measured.
 
-Two sources of such differences grow with a language model. With a
-vocabulary of words or word pieces most tokens are rare, yet together they
-make up much of the text, and gradient descent makes almost no progress on
-their share of the loss while Adam does
-:cite:`Kunstner.Yadav.Milligan.ea.2024`. And the blocks of a transformer,
-its embeddings, attention layers, and MLPs, differ far more in curvature
-than the blocks of a convolutional network
-:cite:`Zhang.Chen.Ding.ea.2024`. `TinyLM` is a mild case of both. It has
-two blocks, and its tokens are bytes, among which the rare ones hardly
-count:
+Two sources of such differences grow as a language model grows. The blocks
+of a transformer differ far more in curvature than those of a
+convolutional network :cite:`Zhang.Chen.Ding.ea.2024`. And among words or
+word pieces most tokens are rare, yet together they make up much of the
+text. Gradient descent makes almost no progress on their share of the
+loss, while Adam does :cite:`Kunstner.Yadav.Milligan.ea.2024`. `TinyLM`
+has two blocks, and its tokens are bytes. The next cell counts how rare
+the rare bytes are.
 
 ```{.python .input #adam-sources-of-the-gap-1}
 %%tab pytorch, jax
@@ -792,13 +830,12 @@ print(f'rarest lowercase letter: {per_batch[97:123].min():.1f} per minibatch')
 ```
 
 Even the rarest lowercase letter occurs two to three times in a minibatch
-of 4,096 targets, and the 99 byte values that occur less than once in ten
-minibatches, most of them pieces of multi-byte UTF-8 characters such as
-accented and non-Latin letters, make up $0.07\%$ of the text. A vocabulary
-of tens of thousands of word pieces is another matter. Exercises
-:exref:`ex_adam-frequent-and-rare-tokens` and
+of 4,096 targets. The 99 byte values that occur less than once in ten
+minibatches, most of them pieces of multi-byte characters such as accented
+letters, make up $0.07\%$ of the text. `TinyLM` is a mild case on both
+counts. Exercises :exref:`ex_adam-frequent-and-rare-tokens` and
 :exref:`ex_adam-per-group-learning-rates` test the two explanations on
-this model.
+this model, the first of them also with a vocabulary of word pieces.
 
 ## Limits of the Second-Moment Estimate
 :label:`subsec_adam-variance-estimate`
@@ -812,65 +849,67 @@ a coordinate, the factor $\eta/(\sqrt{\hat{v}_{t,i}} + \epsilon)$ that
 multiplies its momentum $\hat{m}_{t,i}$, therefore never exceeds
 $\eta/\epsilon$. A small $\epsilon$ trusts the scale even when it is tiny;
 a large $\epsilon$ does not. On `TinyLM` the floor is idle at the default:
-the scales in our table, $10^{-4}$ and above, are at least four orders of
-magnitude larger.
+the scales in our table, about $10^{-4}$ and above, are nearly four orders
+of magnitude larger.
 
 In the limit of large $\epsilon$ the denominator is $\epsilon$ for every
 coordinate, and Adam becomes
 $\mathbf{x}_{t+1} = \mathbf{x}_t - (\eta/\epsilon)\, \hat{\mathbf{m}}_t$.
-Since $\mathbf{m}_t$ is $1 - \beta_1$ times the momentum buffer of
-:numref:`sec_momentum`, this is SGD with momentum $\beta = \beta_1$ and
-learning rate $(1 - \beta_1)\eta/\epsilon$, up to the bias correction of
-the first steps. Values of $\epsilon$ between the default $10^{-8}$ and
-this limit interpolate between the two methods, which makes $\epsilon$ a
-tuning knob rather than a numerical detail.
+This is the rule that we met before the sweep, with $\epsilon$ in the
+place of the scale: SGD with momentum $\beta_1$ at the learning rate
+$(1 - \beta_1)\eta/\epsilon$, up to the bias correction of the first
+steps. Values of $\epsilon$ between the default $10^{-8}$ and this limit
+interpolate between the two methods, which makes $\epsilon$ a tuning knob
+rather than a numerical detail.
 
-The floor does not help against a second hazard of forgetting. Give a
-coordinate one large gradient in one direction, followed by two small ones
-in the other, over and over. If the large gradient outweighs the two small
-ones together, the coordinate ought to follow it. But a scale that forgets
-quickly divides every gradient by roughly its own size, and each of the
-three then moves the coordinate by about $\eta$. Normalization has turned a
-vote weighted by gradient size into a head count, and the two small
-gradients win. :citet:`Reddi.Kale.Kumar.2019` built from this pattern a
-convex problem on which Adam converges to the *worst* feasible point. The
-problem is adversarial and says little about ordinary training data, but it
-shows that Adam has no general convergence guarantee. Their repair,
-AMSGrad, divides by the running maximum of $\hat{\mathbf{v}}_t$, which
-never forgets. Neither AMSGrad nor later repairs displaced Adam in practice
+The floor does not help against a subtler fault of a scale that forgets.
+Give a coordinate the gradients $+4, -1, -1$, over and over. They sum to
+$+2$ per period, so the coordinate ought to move down. But a scale with a
+short memory divides every gradient by roughly its own size, and each of
+the three then moves the coordinate by about $\eta$. With $\beta_1 = 0$
+and $\beta_2 = 1/17$, a window of about one step, the three steps are
+$-1.03\,\eta$, $+0.74\,\eta$, and $+0.98\,\eta$: a net $+0.69\,\eta$ per
+period, in the wrong direction. Normalization has turned a vote weighted
+by gradient size into a head count, and the two small gradients win.
+
+:citet:`Reddi.Kale.Kumar.2019` built from this pattern a convex problem,
+the losses $4x, -x, -x$ in turn on the interval $[-1, 1]$, on which Adam
+converges to $x = 1$, the *worst* point of the interval. The problem is
+adversarial and says little about ordinary training data, but it shows
+that Adam has no general convergence guarantee. Their repair, AMSGrad,
+divides by the running maximum of $\mathbf{v}_t$, which never forgets.
+Neither AMSGrad nor later repairs displaced Adam in practice
 (Exercise :exref:`ex_adam-two-repairs-variance-estimate` rebuilds the
 example, and :numref:`subsec_mdl-adam-counterexample` works through the
-construction and the repair).
+construction).
 
-Neither repair touches the property that the valley showed first. Adam
-decides the direction of a step and the relative lengths of its
-coordinates, and it leaves the length itself, $\eta$, to us. At a constant
-rate the coordinates do not come to rest: on the valley they hopped across
-the minimum, and in `TinyLM` every weight was still moving by about a fifth
-of $\eta$ per step after 500 steps. The remedy is to lower $\eta$ as the
-run proceeds, and :numref:`sec_scheduler` asks how. Before that, the
-per-coordinate scale turns out to interfere with a part of the standard
-recipe that looked harmless, weight decay.
+Adam decides the direction of a step and the relative lengths of its
+coordinates, and it leaves the length itself, $\eta$, to us. A constant
+$\eta$, we have seen, does not let the weights come to rest. On the valley
+the iterate hopped across the minimum, and in `TinyLM` the weights were
+still moving by a fifth of $\eta$ per step, in root mean square, after 500
+steps. The remedy is to lower $\eta$ as the run proceeds, and
+:numref:`sec_scheduler` asks how. Before that, the per-coordinate scale
+turns out to interfere with a part of the standard recipe that looked
+harmless, weight decay.
 
 ## Summary
 
 A single learning rate has to suit the coordinates with the largest
-gradients, and all others then move too slowly. Adam gives each coordinate
-its own rate by dividing a momentum average of the gradient by the root of
-an average of its square; AdaGrad contributed the division, RMSProp the
-forgetting, and Adam the momentum and the correction of averages that start
-at zero. Since the update is a ratio, it does not change when the loss, or
-the gradient of a single coordinate, is rescaled, and the learning rate
-becomes a step length of about $\eta$ per coordinate, whatever the size of
-the gradients. In `TinyLM` the gradients of the eight kinds of parameters
-differ about fortyfold in size at initialization, while the steps of Adam
-differ about twofold. Against SGD with momentum Adam trains within $0.15$
-nats of its best loss over a tenfold range of learning rates, stalls where
-SGD diverges, and reaches a loss of $1.8$ in half to two thirds of the
-steps, while its endpoint is only a few hundredths of a nat better than
-that of SGD with its first steps clipped. A normalized step does not shrink
-with the gradient, so at a constant rate Adam does not settle, and the
-choice of $\eta$ over time remains open.
+gradients, and all the others then move too slowly. Adam gives each
+coordinate a rate of its own by dividing a momentum average of the
+gradient by the root of an average of its square. AdaGrad contributed the
+division, RMSProp the forgetting, and Adam the momentum and the bias
+correction. Because the update is a ratio, it does not change when the
+loss, or the gradient of a single coordinate, is rescaled. The learning
+rate is therefore a step length, about $\eta$ per step for a coordinate
+whose gradients agree and less for one whose gradients disagree. In
+`TinyLM` the gradients of the eight kinds of parameters differ fifteen- to
+fortyfold, and the steps of Adam twofold. Against SGD with momentum, Adam
+trains within $0.15$ nats of its best loss over a tenfold range of
+learning rates, stalls where SGD diverges, and ends several hundredths to
+a tenth of a nat lower. The one thing that Adam does not choose is $\eta$,
+and at a constant $\eta$ it does not settle.
 
 ## Exercises
 
@@ -886,7 +925,8 @@ choice of $\eta$ over time remains open.
        both coordinates stay below 1% of their starting values, on the
        valley and on a valley whose curvature along $x_2$ is $400$ instead
        of $4$. Compare with gradient descent, `d2l.gd_2d`, at its best
-       rate $2/(h_1 + h_2)$ on the same two problems.
+       rate $2/(\lambda_1 + \lambda_2)$ on the same two problems, where
+       $\lambda_1$ and $\lambda_2$ are the two curvatures.
     1. With the default $\epsilon = 10^{-8}$, pass `adam_2d` the gradient
        of $c f$ for the valley $f$ and
        $c \in \{10^{-4}, 10^{-6}, 10^{-8}, 10^{-10}\}$. From which $c$ on
@@ -906,11 +946,18 @@ choice of $\eta$ over time remains open.
        $\eta = 0.4$ and $\eta = 2$, RMSProp at $\eta = 0.4$, and gradient
        descent at $\eta = 0.4$ with `d2l.train_2d` and `steps=2000`. For
        each run, record the first step at which
-       $\|\mathbf{x}\| \leq 10^{-3}$, or that no step within the 2,000
-       reaches it.
+       $\|\mathbf{x}\| \leq 10^{-3}$, if there is one, and
+       $\|\mathbf{x}\|$ at step 2,000.
     1. How much of the advantage of the two adaptive methods over gradient
        descent survives the rotation? Explain the answer from the Hessian
        of the rotated valley.
+    1. Repeat the comparison for `adam_2d` at $\eta = 0.4$. At a condition
+       number of 20 the rotation costs Adam almost nothing. Now raise the
+       larger curvature from $4$ to $400$ in both valleys (their
+       coefficients $2$ and $1$ become $200$ and $100$) and run 5,000
+       steps. Which run does not change at all, and how many times more
+       steps does the other one need?
+   :exlabel:`ex_adam-rotation`
 
 1. **Bias correction by initialization.** Instead of the zero
    initialization and the corrections in :eqref:`eq_adam-moments`,
@@ -924,11 +971,17 @@ choice of $\eta$ over time remains open.
        :eqref:`eq_adam-moments`, and for which range of $t$ does the
        difference matter?
 
-1. [code] **A hop that does not end.** ●
-    1. Show that under RMSProp with $\epsilon = 0$ the alternation
-       $x_t = (-1)^t\, \eta/2$ satisfies :eqref:`eq_rmsprop` for a
-       coordinate with gradient $h x$, whatever the curvature $h > 0$,
-       once $v_t$ has reached its stationary value.
+1. [code] **A hop that does not end.** ● Below, a coordinate has the
+   gradient $\lambda x$, with curvature $\lambda > 0$.
+    1. Suppose that under Adam the coordinate alternates,
+       $x_t = (-1)^t a$. Show that its momentum average settles at
+       $(1 - \beta_1)/(1 + \beta_1)$ times the current gradient and its
+       scale at $\lambda a$, so that
+       $a = \frac{1 - \beta_1}{1 + \beta_1} \cdot \frac{\eta}{2}$,
+       whatever the curvature: about $0.011$ at $\beta_1 = 0.9$ and
+       $\eta = 0.4$. Print the last 20 values of $x_1$ in the run with
+       $\beta_2 = 0.9$. Is its hop such an alternation, and how does its
+       size compare?
     1. Run `adam_2d` with the defaults on the valley for 20,000 steps, and
        print the largest $|x_1|$ and the largest $|x_2|$ over the 50 steps
        before steps 200, 2,000, 5,000, 10,000, and 20,000. The iterate
@@ -937,25 +990,37 @@ choice of $\eta$ over time remains open.
     1. Explain the departure. Near the minimum the gradients vanish, so
        $\hat{v}_t$ shrinks by the factor $\beta_2$ per step and the rate
        $\eta/\sqrt{\hat{v}_t}$ of a coordinate grows. With the scale held
-       fixed, Adam on a coordinate of curvature $h$ is a momentum method
-       with learning rate $(1 - \beta_1)\, \eta / \sqrt{\hat{v}_t}$, and by
-       the ceiling of :numref:`sec_momentum` it is stable as long as
-       $(1 - \beta_1)\, \eta h / \sqrt{\hat{v}_t} < 2 (1 + \beta_1)$.
+       fixed, Adam on the coordinate is a momentum method with learning
+       rate $(1 - \beta_1)\, \eta / \sqrt{\hat{v}_t}$, and by the ceiling
+       of :numref:`sec_momentum` it is stable as long as
+       $(1 - \beta_1)\, \eta \lambda / \sqrt{\hat{v}_t} < 2 (1 + \beta_1)$.
        Estimate from the size of the early gradients the step at which
        $x_2$ crosses this limit, and compare with your run.
+    1. AMSGrad (:numref:`subsec_adam-variance-estimate`) divides by the
+       running maximum of $v_t$. Add this maximum to the state of
+       `adam_2d` and repeat the run of 20,000 steps. Does the iterate
+       leave the minimum now? Explain with the limit of the previous part.
    :exlabel:`ex_adam-constant-rate`
 
-1. **Adam without momentum.** ● With $\beta_1 = \beta_2 = 0$ and
-   $\epsilon \to 0$, the update of Adam is
-   $\eta\, \mathrm{sign}(\mathbf{g}_t)$. With $\beta_1 = 0$ but
-   $\beta_2 > 0$ it is no longer a sign.
-    1. Show that the magnitude of the update in a coordinate is
-       $\eta\, |g_t| / \sqrt{\hat{v}_t}$, and that its expectation is at
-       most $\eta$ when $\hat{v}_{t-1}$ equals the stationary mean of the
-       squared gradients. Ignore the bias correction.
-    1. How large can a single step become when a gradient arrives after a
-       long run of zero gradients, for $\beta_1 = 0$ and for
-       $\beta_1 = 0.9$? Which parameters of `TinyLM` have such a history?
+1. **Rare gradients.** ● A coordinate that seldom receives a gradient can
+   move by far more than $\eta$ in a step of Adam. Ignore $\epsilon$ and
+   the bias correction throughout.
+    1. A coordinate has received zero gradients for so long that $v_t$ has
+       decayed to almost nothing, and then receives one gradient $g$. Show
+       that its next step has the length $\eta/\sqrt{1 - \beta_2}$, about
+       $32\,\eta$ at the default $\beta_2$, if $\beta_1 = 0$, and a tenth
+       of that if $\beta_1 = 0.9$. Show that with $\beta_1 = 0.9$ the
+       coordinate goes on moving while its momentum decays, and travels
+       about as far in total as with $\beta_1 = 0$.
+    1. Now let the gradient $g$ arrive once every $n$ steps, with zeros in
+       between, for $n$ well above $1/(1 - \beta_1)$ and well below
+       $1/(1 - \beta_2)$. Show that $v_t \approx g^2/n$ and that every
+       arrival moves the coordinate by about $\sqrt{n}\,\eta$ in total.
+       How far does SGD with momentum move it per arrival, and how does
+       that depend on $n$?
+    1. Which parameters of `TinyLM` receive their gradients in this way?
+       Is the result of the previous part what AdaGrad was designed to do
+       for rare features?
 
 1. [extended] **Frequent and rare tokens.** Following
    :citet:`Kunstner.Yadav.Milligan.ea.2024`, split the 256 byte values of
@@ -980,15 +1045,18 @@ choice of $\eta$ over time remains open.
        the two groups.
    :exlabel:`ex_adam-frequent-and-rare-tokens`
 
-1. [code] **Per-group learning rates for SGD.** ● The three parameter
-   groups of `TinyLM` in :numref:`subsec_tinylm`, embeddings, matrices, and
-   vectors, share one learning rate under SGD with momentum.
-    1. Give each group its own learning rate. Starting from the best rate
-       in `sgd_lm`, scale the rate of one group by each factor in
-       $\{1/10, 1/3, 3, 10\}$ while holding the other two fixed, and keep
-       the best factor for each group. Then train once with the three best
-       factors combined. Do the factors agree with the gradient scales
-       that the table of this section printed?
+1. [code] **Per-group learning rates for SGD.** ● The three kinds of
+   parameters of `TinyLM` in :numref:`subsec_tinylm` share one learning
+   rate under SGD with momentum. In the table of this section the
+   embeddings are the rows `token_emb` and `pos_emb`, the matrices are
+   `qkv`, `proj`, `mlp`, and `head`, and the vectors are `LayerNorm` and
+   `biases`.
+    1. Give each of the three groups its own learning rate. Starting from
+       the best rate in `sgd_lm`, scale the rate of one group by each
+       factor in $\{1/10, 1/3, 3, 10\}$ while holding the other two fixed,
+       and keep the best factor for each group. Then train once with the
+       three best factors combined. Do the factors agree with the gradient
+       scales that the table printed?
     1. How much of the gap between the best runs of `sgd_lm` and `adam_lm`
        does per-group SGD close? What does the result say about whether
        the advantage of Adam on this model comes from scale differences
@@ -1088,26 +1156,15 @@ own gradients.
 ::: {.slide title="Adam Replaces the Single Rate by One Rate per Coordinate"}
 [Where this fits]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
+| movement | sections |
 |---|---|
-| Landscapes | uneven curvature, the valley |
-| Gradient Descent | step size against curvature |
-| Stochastic and Minibatch GD | sampled gradients, the noise ball |
-| Two Test Models | a language model and a CNN to measure on |
-| Momentum | averaging gradients over steps |
-| **Adam**, AdamW | **a step size per coordinate**, weight decay |
-| Muon | a step for a whole weight matrix |
-| Schedules | warmup and decay |
-| Batch Size, Scaling Up, Practice | larger batches, wider models, a recipe |
-:::
+| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| which direction to step in, on two small networks | Two Test Models · Momentum · **Adam** · AdamW · Muon |
+| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · Practice |
 
-::: {.col .narrow}
-- **Uses:** the valley, momentum $\beta$, `TinyLM`.
+- **Uses:** the valley and its ceiling $\eta < 2/\textrm{curvature}$;
+  momentum $\beta$ and its window of $1/(1-\beta)$ steps; `TinyLM`.
 - **Skips:** weight decay (next deck), schedules, convergence proofs.
-:::
-:::
 :::
 
 ::: {.slide title="AdaGrad Divides Each Step by Its Coordinate's Gradient History"}
@@ -1121,8 +1178,8 @@ $\mathbf{s}_0 = \mathbf{0}$; small $\epsilon > 0$)
 
 - **Rare features:** a coordinate that is rarely touched keeps a large
   step for when its feature appears.
-- **Ill-conditioning:** large past gradients stand in for large
-  curvature.
+- **Ill-conditioning:** a gradient is curvature times distance, so the
+  curvature cancels from the ratio.
 
 ::: {.d2l-note .rule}
 Each coordinate gets its own clock: its step decays with its own activity,
@@ -1221,8 +1278,9 @@ $$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1-\beta_1^t},\quad
 - $\mathbf{m}_t$: momentum, averaged over about $1/(1-\beta_1) = 10$
   steps.
 - $\mathbf{v}_t$: second-moment estimate; $\sqrt{\hat{\mathbf{v}}_t}$ is
-  the scale of a coordinate, averaged over about 1,000 steps.
-- Defaults: $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$.
+  the *scale* of a coordinate, averaged over about 1,000 steps.
+- The hats are the *bias correction*. Defaults: $\beta_1 = 0.9$,
+  $\beta_2 = 0.999$, $\epsilon = 10^{-8}$.
 :::
 
 ::: {.slide title="Bias Correction Makes the First Step of Adam η in Every Coordinate"}
@@ -1260,6 +1318,7 @@ $\eta = 0.4$; the plot is the default run.
 - $\beta_2 = 0.999$ remembers the first gradients: within $10^{-4}$ at
   step 200.
 - $\beta_2 = 0.9$ forgets: a hop of about $0.02$, for good.
+- A longer window postpones the hop; it does not prevent it.
 :::
 :::
 :::
@@ -1313,44 +1372,48 @@ framework's.
   promises.
 :::
 
-::: {.slide title="The Gradients of TinyLM Differ 40-Fold in Size, the Steps of Adam 2-Fold"}
+::: {.slide title="The Gradients of TinyLM Differ 15- to 40-Fold in Size, the Steps of Adam 2-Fold"}
 [Adam on a language model]{.kicker}
 
 RMS gradient per kind of parameter, which is the step of SGD per unit of
-$\eta$, and RMS of Adam's step 501 over $\eta$:
+$\eta$, and RMS of Adam's step 501 over $\eta$. `qkv`, `proj`: attention
+matrices; `mlp`: MLP matrices; `head`: output layer.
 
 @!adam-gradient-scales-in-a-network-2
 
 ::: {.d2l-note}
-Pure noise would give Adam a step of
-$\sqrt{(1-\beta_1)/(1+\beta_1)}\,\eta \approx 0.23\,\eta$: the weights
-keep moving.
+A fifth of $\eta$, not $\eta$: minibatch gradients disagree, and the scale
+still remembers the larger early gradients. Pure noise alone gives
+$\sqrt{(1-\beta_1)/(1+\beta_1)}\,\eta \approx 0.23\,\eta$.
 :::
 :::
 
 ::: {.slide title="Adam Trains over a Tenfold Range of Rates; SGD Has One, Next to Divergence"}
 [Adam on a language model]{.kicker}
 
-`TinyLM`, 2,000 steps at a constant rate, SGD with momentum $0.9$; `inf`
-marks a diverged run.
+`TinyLM`, 2,000 steps at a constant rate, three seeds, SGD with momentum
+$0.9$; `inf`: diverged. *Usable*: mean final loss within $0.15$ nats of
+the best rate's.
 
 @!adam-the-race-on-the-language-model-2
 
-- Best rates $0.3$ and $0.003$, a factor of 100 apart: the two rates
-  have different units.
+- Usable: Adam from $0.001$ to $0.01$; SGD at $0.3$ alone.
+- Best rates 100-fold apart: Adam at $\eta$ steps like SGD with momentum
+  at $0.1\,\eta/\textrm{scale}$.
 - Adam at $0.03$ stalls near $2.8$ and stays finite.
 :::
 
-::: {.slide title="Adam Reaches a Loss of 1.8 in Half to Two Thirds of SGD's Steps"}
+::: {.slide title="Adam Reaches a Loss of 1.8 in Half to Seven Tenths of SGD's Steps"}
 [Adam on a language model]{.kicker}
 
-Usable rate: mean final loss within $0.15$ nats of the best. Repeated
-runs differ by about $0.01$.
+Three runs at each best rate; the plot is the first seed.
 
 @!adam-the-race-on-the-language-model-3
 
-- Largest rise in one step: below $0.2$ nats for Adam, several tenths or
-  more for SGD.
+- Final loss: Adam lower in every run. The curves part in the first few
+  hundred steps.
+- Largest one-step rise: below $0.2$ nats for Adam; several tenths or
+  more in SGD's worst run.
 :::
 
 ::: {.slide title="Check: Why Does Adam Stall Where SGD Diverges?"}
@@ -1368,42 +1431,43 @@ gradient does: too coarse at $0.03$, but bounded.
 :::
 :::
 
-::: {.slide title="With Its First Steps Clipped, SGD Ends a Few Hundredths of a Nat Behind Adam"}
-[Adam on a language model]{.kicker}
-
-| `TinyLM`, 2,000 steps | final training loss |
-|---|---:|
-| Adam, $\eta = 0.003$ | 1.58–1.60 |
-| SGD with momentum, $\eta = 0.3$ | 1.65–1.71 |
-| SGD with momentum, $\eta = 1$, gradient norm clipped at 1 | 1.61–1.64 |
-
-Clipping rescales a gradient whose norm exceeds the threshold; here it
-acts on a few dozen early steps.
-
-::: {.d2l-note .rule}
-What Adam provides on this model is range and safety, not a better
-endpoint.
-:::
-:::
-
 ::: {.slide title="With β₁ = β₂ = 0, Adam Is Sign Descent"}
 [Sources of the advantage]{.kicker}
 
 $$\beta_1 = \beta_2 = 0,\ \epsilon = 0:\qquad
-\eta\,\frac{\mathbf{g}_t}{|\mathbf{g}_t|} = \eta\,\mathrm{sign}(\mathbf{g}_t)$$
+\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\frac{\mathbf{g}_t}{|\mathbf{g}_t|}
+= \mathbf{x}_t - \eta\,\mathrm{sign}(\mathbf{g}_t)$$
 
-On large transformers the lead of Adam over SGD is far larger:
+- **Sign descent:** every coordinate moves by $\eta$ against the sign of
+  its gradient, whatever the size.
+- Valley: $\mathbf{g}_1 = (-1, -8)$ gives the step $(0.4, 0.4)$, the
+  first step of Adam.
+- On large transformers Adam leads SGD by far, and sign descent with
+  momentum shares the lead, with full-batch gradients too.
 
-- it follows that of sign descent, with full-batch gradients too, so it
-  is not about noise;
-- gradient descent stalls on the loss of rare tokens, Adam does not;
-- transformer blocks differ in curvature far more than CNN blocks.
+::: {.d2l-note .rule}
+Adam gains by equalizing the steps of coordinates whose gradients differ
+in size.
+:::
 
-`TinyLM` is a mild case: its tokens are bytes.
+[Kunstner et al. 2023; Zhang et al. 2024]{.small}
+:::
+
+::: {.slide title="TinyLM Is a Mild Case: Two Blocks, and Its Rare Bytes Hardly Count"}
+[Sources of the advantage]{.kicker}
+
+Two sources of unequal gradients grow with a language model:
+
+- blocks (embeddings, attention, MLPs) that differ in curvature far more
+  than those of a CNN;
+- rare tokens: among word pieces most are rare, yet together much of the
+  text. Gradient descent stalls on their loss, Adam does not.
+
+`TinyLM` predicts bytes:
 
 @!adam-sources-of-the-gap-1
 
-[Kunstner et al. 2023, 2024; Zhang et al. 2024]{.small}
+[Zhang et al. 2024; Kunstner et al. 2024]{.small}
 :::
 
 ::: {.slide title="ε Caps the Learning Rate of Every Coordinate at η/ε"}
@@ -1415,7 +1479,7 @@ On large transformers the lead of Adam over SGD is far larger:
 - Large $\epsilon$: $\mathbf{x}_{t+1} \approx \mathbf{x}_t -
   (\eta/\epsilon)\,\hat{\mathbf{m}}_t$, SGD with momentum $\beta_1$ at
   rate $(1-\beta_1)\eta/\epsilon$.
-- On `TinyLM` the scales, $10^{-4}$ and above, are far larger than
+- On `TinyLM` the scales, about $10^{-4}$ and above, are far larger than
   $\epsilon = 10^{-8}$: the floor is idle.
 
 ::: {.d2l-note}
@@ -1449,20 +1513,20 @@ AMSGrad divides by the running maximum of $v_t$.
 ::: {.slide title="Check: How Far Does a TinyLM Weight Move per Step After 500 Steps?"}
 [Check]{.kicker}
 
-Adam at a constant $\eta = 0.003$. How long is the step of a single
+Adam at a constant $\eta = 0.003$. How long is the step of a typical
 weight after 500 steps, and will it shrink at this rate?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Between $0.1\,\eta$ and $0.3\,\eta$, about $6 \cdot 10^{-4}$,
-most of it noise. A normalized step does not shrink with the gradient, so
-only a smaller $\eta$ shortens it.
+**Answer.** Between $0.1\,\eta$ and $0.3\,\eta$ in root mean square,
+about $6 \cdot 10^{-4}$. A normalized step does not shrink with the
+gradient, so only a smaller $\eta$ shortens it.
 :::
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Recap]{.kicker}
+::: {.slide title="Under Adam the Learning Rate Is a Step Length, and It Is Ours to Choose"}
+[Wrap-up]{.kicker}
 
 - AdaGrad: a travel budget of $7.6\,\eta$ in 20 steps. RMSProp forgets,
   and ends hopping at $\pm\eta/2 = \pm 0.2$.
@@ -1470,10 +1534,10 @@ only a smaller $\eta$ shortens it.
   coordinate.
 - Same steps on $f$ and on $1000 f$: $\eta$ is a step length, and the
   condition number 20 of the valley drops out.
-- `TinyLM`: gradients differ 40-fold between kinds of parameters, the
-  steps of Adam 2-fold.
+- `TinyLM`: gradients differ 15- to 40-fold between kinds of parameters,
+  the steps of Adam 2-fold.
 - Against SGD: a tenfold range of usable rates, a stall in place of
-  divergence, loss $1.8$ in half to two thirds of the steps.
+  divergence, loss $1.8$ in half to seven tenths of the steps.
 
 **Next:** weight decay under a per-coordinate method, in AdamW.
 :::

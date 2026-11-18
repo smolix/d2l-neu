@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:8756e3475ae4b93fee24bfd2e1fc4d7c37e57df968a9ec9bf6536f3097c6e14e",
+    "d2l_lib_fingerprint": "sha256:b2335d22149a629ff8ffcb7ac36b71832bc6b59f0cc32a4e4d4e66138641973d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -103,12 +103,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 2.484\n"
+          "text": "lr 0.1: final loss 2.487\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.5: final loss 2.127\n"
+          "text": "lr 0.5: final loss 2.146\n"
         },
         {
           "type": "stream",
@@ -119,8 +119,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "test-models/test-models-a-first-run-with-minibatch-sgd-2-1.svg",
-          "bytes": 91156,
-          "sha256": "sha256:d2e50146e317bf7903b6a9da36fbb8c8544e9890e95fee127fa50c6479157896"
+          "bytes": 92379,
+          "sha256": "sha256:03459594c1214c5eced314b75d08edeac27c7221ff7f3be79218c2c40397cba0"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.3: final loss 0.222, test accuracy 0.896\n"
+          "text": "lr 0.3: final loss 0.212, test accuracy 0.908\n"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "TinyLM, training loss      1.586 1.586 1.595 1.586 1.582   range 0.013\nTinyLM, validation loss    1.565 1.565 1.566 1.563 1.565   range 0.003\nFashionCNN, training loss  0.227 0.231 0.228 0.224 0.224   range 0.007\nFashionCNN, test accuracy  0.902 0.896 0.901 0.901 0.901   range 0.006\n"
+          "text": "TinyLM, training loss      1.583 1.582 1.615 1.589 1.586   range 0.033\nTinyLM, validation loss    1.563 1.567 1.598 1.563 1.563   range 0.034\nFashionCNN, training loss  0.214 0.217 0.224 0.238 0.221   range 0.023\nFashionCNN, test accuracy  0.897 0.901 0.904 0.899 0.876   range 0.028\n"
         }
       ]
     }

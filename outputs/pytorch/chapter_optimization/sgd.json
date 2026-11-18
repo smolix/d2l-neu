@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:71ccc1bda1f2237c7a7414d7d992da2a0f9af0fbe55f3bb3adc0a29e2ef5d8a9",
+    "d2l_lib_fingerprint": "sha256:c4601892a5f74884c7647a7c06048c68bf6c8d419fdd06375c128c66dbe0769d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 300, x1: 0.345542, x2: 0.182936\n"
+          "text": "step 300, x1: 1.027056, x2: 0.003140\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 54205,
-          "sha256": "sha256:059823de32a19c1a3cf1fe37ecc0812de64870feeb4361b6fd05581333beb483"
+          "bytes": 54727,
+          "sha256": "sha256:9f7bbc269bc5226cb08261c4999dd7b738938b1413ef82a773f5ed44baad4700"
         }
       ]
     },
@@ -43,12 +43,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.1: measured [0.2573 0.0153], predicted [0.2525 0.0156]\n"
+          "text": "eta=0.1: measured [0.2551 0.016 ], predicted [0.2525 0.0156]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.05: measured [0.128  0.0069], predicted [0.1256 0.0069]\n"
+          "text": "eta=0.05: measured [0.1282 0.0069], predicted [0.1256 0.0069]\n"
         }
       ]
     },
@@ -80,12 +80,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.05: excess loss 0.0043, predicted 0.0041\n"
+          "text": "eta=0.05: excess loss 0.0042, predicted 0.0041\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.025: excess loss 0.0020, predicted 0.0020\n"
+          "text": "eta=0.025: excess loss 0.0021, predicted 0.0020\n"
         }
       ]
     },
@@ -112,17 +112,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=1500:    1 updates/epoch, 0.002 s/epoch (2.1 ms/update), last-epoch loss 0.242\n"
+          "text": "b=1500:    1 updates/epoch, 0.003 s/epoch (2.6 ms/update), last-epoch loss 0.242\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=   1: 1500 updates/epoch, 2.026 s/epoch (1.4 ms/update), last-epoch loss 0.244\n"
+          "text": "b=   1: 1500 updates/epoch, 2.008 s/epoch (1.3 ms/update), last-epoch loss 0.244\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  10:  150 updates/epoch, 0.228 s/epoch (1.5 ms/update), last-epoch loss 0.244\nb= 100:   15 updates/epoch, 0.019 s/epoch (1.3 ms/update), last-epoch loss 0.250\n"
+          "text": "b=  10:  150 updates/epoch, 0.170 s/epoch (1.1 ms/update), last-epoch loss 0.246\nb= 100:   15 updates/epoch, 0.021 s/epoch (1.4 ms/update), last-epoch loss 0.249\n"
         }
       ]
     },
@@ -134,8 +134,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 60986,
-          "sha256": "sha256:0d1de1f82a3e00eec099c4f1fb05107fe845555c4a16395d33a23792531963e1"
+          "bytes": 61230,
+          "sha256": "sha256:14614bfb2f503bb9397f1377cacab8919208cefbf3c385bc48e9b4eed0d17c4c"
         }
       ]
     }

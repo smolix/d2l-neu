@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e25fbb8c6915a9ed8976b2d0443093f3218cf17d80b1e25cd7f38e2ad9b37788",
+    "d2l_lib_fingerprint": "sha256:98acfa222f60f3e1a5007022c7535f6247fdd828909ef73ade31fc5dc5fbe2ab",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-orthogonalization-by-newton-schulz-2-1.svg",
-          "bytes": 31414,
-          "sha256": "sha256:841f8e7bfa91907124a3ba7b0feb643a6dac4ea1c036a0276de1d023e6445d6d"
+          "bytes": 31425,
+          "sha256": "sha256:597752659a7aedc4b6f4e2d0830bfdbf93a4d5905e890c61f2fe00de47b2301b"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "qkv  384 x 128  rank 127  sigma_1/|G|_F 0.99  NS_5 0.03-1.20,  54% >= 0.68, |NS_5|/|UV^T| 0.74\nproj 128 x 128  rank 119  sigma_1/|G|_F 0.99  NS_5 0.01-1.20,  31% >= 0.68, |NS_5|/|UV^T| 0.58\nmlp1 512 x 128  rank 127  sigma_1/|G|_F 0.70  NS_5 0.22-1.20,  89% >= 0.68, |NS_5|/|UV^T| 0.90\nmlp2 128 x 512  rank 127  sigma_1/|G|_F 0.93  NS_5 0.17-1.20,  62% >= 0.68, |NS_5|/|UV^T| 0.79\n"
+          "text": "qkv  384 x 128  rank 127  sigma_1/|G|_F 0.99  NS_5 0.02-1.20,  50% >= 0.68, |NS_5|/|UV^T| 0.72\nproj 128 x 128  rank 119  sigma_1/|G|_F 0.99  NS_5 0.01-1.20,  29% >= 0.68, |NS_5|/|UV^T| 0.56\nmlp1 512 x 128  rank 127  sigma_1/|G|_F 0.72  NS_5 0.24-1.20,  91% >= 0.68, |NS_5|/|UV^T| 0.90\nmlp2 128 x 512  rank 127  sigma_1/|G|_F 0.93  NS_5 0.17-1.20,  64% >= 0.68, |NS_5|/|UV^T| 0.80\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "qkv  384 x 128  rank 128  sigma_1/|G|_F 0.35  NS_5 0.07-1.20,  99% >= 0.68, |NS_5|/|UV^T| 0.91\nproj 128 x 128  rank 127  sigma_1/|G|_F 0.39  NS_5 0.02-1.20,  91% >= 0.68, |NS_5|/|UV^T| 0.88\nmlp1 512 x 128  rank 128  sigma_1/|G|_F 0.28  NS_5 0.24-1.13,  99% >= 0.68, |NS_5|/|UV^T| 0.89\nmlp2 128 x 512  rank 127  sigma_1/|G|_F 0.29  NS_5 0.68-1.13, 100% >= 0.68, |NS_5|/|UV^T| 0.90\n"
+          "text": "qkv  384 x 128  rank 128  sigma_1/|G|_F 0.32  NS_5 0.12-1.20,  99% >= 0.68, |NS_5|/|UV^T| 0.91\nproj 128 x 128  rank 127  sigma_1/|G|_F 0.36  NS_5 0.06-1.20,  94% >= 0.68, |NS_5|/|UV^T| 0.89\nmlp1 512 x 128  rank 128  sigma_1/|G|_F 0.25  NS_5 0.32-1.13,  99% >= 0.68, |NS_5|/|UV^T| 0.89\nmlp2 128 x 512  rank 127  sigma_1/|G|_F 0.31  NS_5 0.68-1.13, 100% >= 0.68, |NS_5|/|UV^T| 0.91\n"
         }
       ]
     },
@@ -91,27 +91,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 1.701, validation loss 1.676\n"
+          "text": "lr 0.001: final loss 1.679, validation loss 1.651\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.599, validation loss 1.571\n"
+          "text": "lr 0.003: final loss 1.603, validation loss 1.574\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 1.678, validation loss 1.653\n"
+          "text": "lr 0.01: final loss 1.669, validation loss 1.640\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 2.720, validation loss 2.704\n"
+          "text": "lr 0.03: final loss 2.553, validation loss 2.543\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 3.017, validation loss 2.996\n"
+          "text": "lr 0.1: final loss 2.960, validation loss 2.948\n"
         }
       ]
     },
@@ -122,27 +122,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 1.628, validation loss 1.603\n"
+          "text": "lr 0.001: final loss 1.607, validation loss 1.577\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.590, validation loss 1.567\n"
+          "text": "lr 0.003: final loss 1.557, validation loss 1.530\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 1.610, validation loss 1.586\n"
+          "text": "lr 0.01: final loss 1.597, validation loss 1.569\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 1.695, validation loss 1.675\n"
+          "text": "lr 0.03: final loss 1.687, validation loss 1.663\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 2.757, validation loss 2.704\n"
+          "text": "lr 0.1: final loss 2.518, validation loss 2.504\n"
         }
       ]
     },
@@ -153,14 +153,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss  lr     step 500  step 2000  below 1.6  within 0.15\nAdamW            0.003  1.883     1.571      1750       0.001 to 0.01\nMuon+AdamW       0.003  1.766     1.567      1500       0.001 to 0.03\n"
+          "text": "validation loss  lr     step 500  step 2000  below 1.6  within 0.15\nAdamW            0.003  1.874     1.574      1750       0.001 to 0.01\nMuon+AdamW       0.003  1.732     1.530      1000       0.001 to 0.03\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-race-on-the-language-model-3-1.svg",
-          "bytes": 42332,
-          "sha256": "sha256:779feadfc9f3b5e720a14f635db090cc6969f8d9a88eca6f2fef8e936f392d56"
+          "bytes": 42339,
+          "sha256": "sha256:a6a79313da407e3815776d2a108d4957a53db13126293fc507b91d23b0ed0c38"
         }
       ]
     }

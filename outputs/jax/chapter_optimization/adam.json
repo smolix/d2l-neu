@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:a83cd72dc288f0c8807c67410dfdca577f691f5a4b02aca5a76264fc029bf419",
+    "d2l_lib_fingerprint": "sha256:f3d35f5170557d169eb6c7834c65fe33d6f2a2a4a484b35a6086b5edde8cb390",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-1-1.svg",
           "bytes": 17965,
-          "sha256": "sha256:bd750f28ebb4f424a8bb148965d664b13ebbb511aa04b6a2d065834cd755c828"
+          "sha256": "sha256:79216bf50c3380365cf52f184163c2d5286dd13e2120dc81541fe06720170cdb"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-2-1.svg",
           "bytes": 17979,
-          "sha256": "sha256:e95382e64a48281a997f9bb907c90c8039f43b770209533cba70db7baa958c4b"
+          "sha256": "sha256:f309fa5dadca116af55724d30ee370457840bf20951f9ac223cf74d66e882cde"
         }
       ]
     },
@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-1-1.svg",
           "bytes": 17979,
-          "sha256": "sha256:b4db09158b774117163cc2ae9e8109518fe68fac550496a2ab94503ca8ad58aa"
+          "sha256": "sha256:fb1ae2225009abdbdef6f19a96f0c103758c9cc805fd1e5f5b0a4a4d8765e6c0"
         }
       ]
     },
@@ -92,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-adam-on-the-valley-1-1.svg",
           "bytes": 38603,
-          "sha256": "sha256:ac8a8ea87a29d5fccbf450855bc15a76d493549950c1fa0ca4e4d8a5213388e2"
+          "sha256": "sha256:00e60d33f41d4cbc01542093c9d273b6be67f4927d549ddd6b79c5480c24ff16"
         }
       ]
     },
@@ -129,7 +129,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             RMS gradient at step 0  at step 500  Adam step / lr\ntoken_emb                   2.1e-04      9.1e-05            0.22\npos_emb                     1.9e-04      1.5e-04            0.27\nqkv                         7.7e-04      3.7e-04            0.23\nproj                        1.4e-03      5.5e-04            0.20\nmlp                         1.0e-03      2.6e-04            0.23\nhead                        4.1e-03      1.5e-03            0.12\nLayerNorm                   4.9e-03      1.4e-03            0.19\nbiases                      7.1e-03      6.6e-04            0.16\nmax / min                        37           17             2.2\n"
+          "text": "             RMS gradient at step 0  at step 500  Adam step / lr\ntoken_emb                   1.8e-04      9.4e-05            0.22\npos_emb                     1.7e-04      1.5e-04            0.27\nqkv                         8.2e-04      3.7e-04            0.21\nproj                        1.6e-03      5.5e-04            0.19\nmlp                         1.0e-03      2.6e-04            0.22\nhead                        4.9e-03      1.3e-03            0.12\nLayerNorm                   4.6e-03      1.2e-03            0.18\nbiases                      6.8e-03      6.1e-04            0.15\nmax / min                        41           14             2.2\n"
         }
       ]
     },
@@ -150,12 +150,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  lr 0.1      1.868  1.860  1.844\n  lr 0.3      1.691  1.669  1.651\n  lr 0.5        inf    inf  1.628\n  lr 1          inf    inf    inf\nAdam\n"
+          "text": "  lr 0.1      1.855  1.861  1.865\n  lr 0.3      1.663  1.655  1.693\n  lr 0.5        inf    inf  1.683\n  lr 1          inf    inf    inf\nAdam\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  lr 0.0003   1.943  1.921  1.925\n  lr 0.001    1.689  1.683  1.668\n  lr 0.003    1.580  1.594  1.586\n  lr 0.01     1.665  1.627  1.648\n  lr 0.03     2.748  2.851  2.770\n"
+          "text": "  lr 0.0003   1.922  1.926  1.925\n  lr 0.001    1.670  1.684  1.661\n  lr 0.003    1.591  1.587  1.584\n  lr 0.01     1.639  1.633  1.653\n  lr 0.03     2.773  2.852  2.788\n"
         }
       ]
     },
@@ -166,14 +166,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "       best lr       final loss   within 0.15 nats  steps to 1.8    largest one-step rise\nSGD        0.3   1.651 to 1.691   0.3               1250 1150 1175  0.32 0.45 0.20\nAdam     0.003   1.580 to 1.594   0.001 0.003 0.01  775 800 650     0.16 0.14 0.16\n"
+          "text": "       best lr       final loss   within 0.15 nats  steps to 1.8    largest one-step rise\nSGD        0.3   1.655 to 1.693   0.3               1225 1175 1225  0.54 0.38 0.35\nAdam     0.003   1.584 to 1.591   0.001 0.003 0.01  800 750 750     0.16 0.18 0.18\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-race-on-the-language-model-3-1.svg",
-          "bytes": 29624,
-          "sha256": "sha256:a0b4e75feef5b2d196144a1a728f2149cf5e9d1e2d3adb8dc5826958f1b97eb6"
+          "bytes": 30353,
+          "sha256": "sha256:fdd5e66c651c9946fb892a05b1daf1335f274279be699c1d8c388816c1bb31d2"
         }
       ]
     },

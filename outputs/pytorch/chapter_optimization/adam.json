@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8e66d6dc6bfc05b6fccd5f8ee60d783c020304fc729cb0aeb79ea0dabcdc6569",
+    "d2l_lib_fingerprint": "sha256:7d77e6866d5d8489c59d342e4c3e13d54869d1215dbb84143cffe4addd8d7569",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-1-1.svg",
           "bytes": 18004,
-          "sha256": "sha256:8ca65cfa570ce574ca3173dacc4b0334fe13838de192390d0752f3029327d69e"
+          "sha256": "sha256:8c013a981fb7010ec3e8bca85485d9d52a8d541c019b91d2086c3975541d986b"
         }
       ]
     },
@@ -50,7 +50,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-2-1.svg",
           "bytes": 17970,
-          "sha256": "sha256:9a5eb19a23d4e85007a8fc77b6a0d815dd0fe59173fe191316b38d65be930f62"
+          "sha256": "sha256:e614dd36dbc1acb8420c8218e2e25f6e4e99db2355663e9c0492b331979b6c2b"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-1-1.svg",
           "bytes": 17992,
-          "sha256": "sha256:c963b7fc7a4d0c83e3b6ecfa1fb050e6ed8f5e5c6dfb906b8b301d1634a509da"
+          "sha256": "sha256:97498488a2ed5ebe9b65055c1109fffc0815271b2a5e78cfc79755510893ce41"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-adam-on-the-valley-1-1.svg",
           "bytes": 38600,
-          "sha256": "sha256:32ccf46567b010b302d7099f5fa1441811cda9cdc6d0da4e2b7cc6e454b2b744"
+          "sha256": "sha256:8e46ebbab3076c764b1b8d45262da23197ed3f53e463fba8a1d1bb78b1ee23bf"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first step / lr: 1.0000 to 1.0000\nlargest difference after 100 steps: 9.3e-09\n"
+          "text": "first step / lr: 1.0000 to 1.0000\nlargest difference after 100 steps: 1.0e-08\n"
         }
       ]
     },
@@ -134,7 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             RMS gradient at step 0  at step 500  Adam step / lr\ntoken_emb                   1.8e-04      8.2e-05            0.20\npos_emb                     1.6e-04      1.5e-04            0.27\nqkv                         7.0e-04      3.6e-04            0.24\nproj                        1.2e-03      5.7e-04            0.20\nmlp                         9.5e-04      2.5e-04            0.22\nhead                        4.5e-03      1.2e-03            0.13\nLayerNorm                   4.3e-03      1.2e-03            0.20\nbiases                      6.7e-03      5.4e-04            0.16\nmax / min                        40           14             2.1\n"
+          "text": "             RMS gradient at step 0  at step 500  Adam step / lr\ntoken_emb                   2.0e-04      8.6e-05            0.22\npos_emb                     1.8e-04      1.5e-04            0.28\nqkv                         6.8e-04      3.8e-04            0.25\nproj                        1.4e-03      6.0e-04            0.24\nmlp                         1.0e-03      2.6e-04            0.24\nhead                        4.3e-03      1.2e-03            0.14\nLayerNorm                   5.0e-03      1.2e-03            0.20\nbiases                      7.1e-03      5.5e-04            0.16\nmax / min                        39           14             2.0\n"
         }
       ]
     },
@@ -155,12 +155,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  lr 0.1      1.871  1.881  1.870\n  lr 0.3      1.714  1.655  1.667\n  lr 0.5        inf  1.627    inf\n  lr 1          inf    inf    inf\nAdam\n"
+          "text": "  lr 0.1      1.874  1.853  1.862\n  lr 0.3      1.660  1.702  1.654\n  lr 0.5        inf    inf    inf\n  lr 1          inf    inf    inf\nAdam\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  lr 0.0003   1.965  1.914  1.946\n  lr 0.001    1.710  1.661  1.659\n  lr 0.003    1.595  1.585  1.582\n  lr 0.01     1.643  1.644  1.640\n  lr 0.03     2.823  2.824  2.873\n"
+          "text": "  lr 0.0003   1.935  1.910  1.945\n  lr 0.001    1.659  1.710  1.661\n  lr 0.003    1.594  1.589  1.591\n  lr 0.01     1.639  1.641  1.649\n  lr 0.03     2.846  2.795  2.805\n"
         }
       ]
     },
@@ -171,14 +171,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "       best lr       final loss   within 0.15 nats  steps to 1.8    largest one-step rise\nSGD        0.3   1.655 to 1.714   0.3               1475 1125 1200  1.40 0.39 2.13\nAdam     0.003   1.582 to 1.595   0.001 0.003 0.01  750 675 675     0.13 0.17 0.15\n"
+          "text": "       best lr       final loss   within 0.15 nats  steps to 1.8    largest one-step rise\nSGD        0.3   1.654 to 1.702   0.3               1175 1275 1125  0.49 1.13 0.26\nAdam     0.003   1.589 to 1.594   0.001 0.003 0.01  775 750 725     0.16 0.19 0.16\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-race-on-the-language-model-3-1.svg",
-          "bytes": 31390,
-          "sha256": "sha256:c3c9ed055b7fd1b30b9e68962d522f0f70f018b8007ee676cf6854300eacb9d4"
+          "bytes": 30351,
+          "sha256": "sha256:855e47203f353e51d171fd105f22d8bd06342ef48c8def0242d017df86040dd6"
         }
       ]
     },
@@ -189,7 +189,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "99 byte values appear less than once in ten minibatches, 0.07% of the text\nrarest lowercase letter: 2.6 per minibatch\n"
+          "text": "99 byte values appear less than once in ten minibatches, 0.07% of the text"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nrarest lowercase letter: 2.6 per minibatch\n"
         }
       ]
     }

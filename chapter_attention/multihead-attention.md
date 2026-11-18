@@ -45,6 +45,84 @@ import optax
 from d2l import jax as d2l
 ```
 
+## Self-Attention
+
+<!-- WRITER: NEW subsection (worklist 3.B2; structure 3.3 step 1). To write: (a) one head with the three
+maps W_q, W_k, W_v and the three roles (a token asks, is found, is read); eq_self-attention moves here in
+single-head form softmax(X W_q (X W_k)^T / sqrt(d_h)) X W_v, with the citation
+Lin.Feng.Santos.ea.2017,Vaswani.Shazeer.Parmar.ea.2017 (both now in the old "Self-Attention" subsection
+further down); (b) the worked sentence with the numbers below; (c) the causal row; (d) the output has the
+shape of the input, so layers stack; (e) fig_self-attention; (f) the comparison with recurrence and
+convolution, moved here from attention-at-scale.md ("CNNs, RNNs, and Self-Attention": prose,
+fig_cnn-rnn-self-attention and tab_cnn-rnn-attn, labels unchanged; no cell involved).
+Facts the cells print, identical in both tabs (hand-set, no randomness):
+X = [role one-hot (person, action, thing, function word) | word one-hot], 5 x 9. W_q and W_k read the
+role part only (rows person, action, thing, function word): queries person (1,-1), action (1,1), thing
+(1,-1), function word (0,0); keys person (1,1), action (1,-1), thing (1,1), function word (0,0). W_v reads
+the word part as the identity, so each value is the indicator of its word (d_v = 5) and the output of a
+token is its row of weights read as amounts of each word. d_h = 2, scale 1/sqrt(2).
+Row of gave: dot products 2, 0, 2, 0, 2; scores 1.41, 0, 1.41, 0, 1.41; weights 0.29, 0.07, 0.29, 0.07,
+0.29 (exact e^1.414/(3 e^1.414 + 2) = 0.287 and 1/(3 e^1.414 + 2) = 0.070); output of gave the same five
+numbers. Row of "the": query (0,0), weights 0.2 everywhere. Rows of the nouns (heatmap): 0.51 on gave,
+0.12 on each other token. Causal row of gave: 0.80 on Alice, 0.20 on gave. The figure computes its numbers
+from the same matrices (tools/gen_mdl_attention_a9.py). The sentences below are functional placeholders. -->
+We run one head of self-attention on the sentence "Alice gave Bob the book".
+Each token's embedding has two parts: its role (person, action, thing,
+function word), which the query and key maps read, and an indicator of the
+word itself, which the value map reads. The maps are set by hand, with
+$d_h = 2$: the query of the verb seeks nouns, the queries of the nouns seek
+the verb, and the query of "the" seeks nothing.
+
+```{.python .input #multihead-attention-self-attention}
+%%tab pytorch, jax
+tokens = ['Alice', 'gave', 'Bob', 'the', 'book']
+# Role of each token: person, action, thing, function word
+roles = d2l.tensor([[1.0, 0, 0, 0], [0, 1, 0, 0], [1, 0, 0, 0],
+                    [0, 0, 0, 1], [0, 0, 1, 0]])
+X = d2l.concat((roles, d2l.eye(5)), 1)  # (5, 9): the role, then the word
+# Queries and keys read the role part (rows: person, action, thing,
+# function word), values the word part
+W_q = d2l.concat((d2l.tensor([[1.0, -1], [1, 1], [1, -1], [0, 0]]),
+                  d2l.zeros((5, 2))))
+W_k = d2l.concat((d2l.tensor([[1.0, 1], [1, -1], [1, 1], [0, 0]]),
+                  d2l.zeros((5, 2))))
+W_v = d2l.concat((d2l.zeros((4, 5)), d2l.eye(5)))
+Q, K, V = X @ W_q, X @ W_k, X @ W_v  # (5, 2), (5, 2), (5, 5)
+```
+
+The attention layer of :numref:`sec_attention-scoring-functions` runs on
+these queries, keys, and values. We print the scores and weights of *gave*,
+the weights of "the", and the output of *gave*, then the weights of *gave*
+under a causal mask, and draw all 25 weights.
+
+```{.python .input #multihead-attention-self-attention-1}
+%%tab pytorch, jax
+attention = d2l.DotProductAttention()
+Y = attention(Q[None], K[None], V[None])  # A minibatch of one sentence
+weights = attention.attention_weights[0]
+print('scores of gave: ', np.asarray(Q[1] @ K.T / math.sqrt(2)).round(2))
+print('weights of gave:', np.asarray(weights[1]).round(2))
+print('weights of the: ', np.asarray(weights[3]).round(2))
+print('output of gave: ', np.asarray(Y[0, 1]).round(2))
+attention(Q[None], K[None], V[None], d2l.causal_mask(5))
+print('causal weights of gave:',
+      np.asarray(attention.attention_weights[0, 1]).round(2))
+d2l.show_heatmaps(weights[None, None], xlabel='keys', ylabel='queries',
+                  figsize=(3.2, 3.2), cmap='Blues',
+                  xticklabels=tokens, yticklabels=tokens)
+```
+
+The query of *gave* scores $1.41$ against Alice, Bob, and book and $0$
+against itself and "the", so its weights are $0.29$ on each noun and $0.07$
+on the other two tokens. Each value marks its word, so the output of *gave*
+is this row: one blend in which Alice and Bob appear in equal amounts. The
+query of "the" is zero and spreads its weight evenly, $0.2$ on every token.
+Under a causal mask *gave* sees only Alice and itself, with weights $0.80$
+and $0.20$. :numref:`fig_self-attention` draws the row of *gave*.
+
+![One head of self-attention on "Alice gave Bob the book", with the hand-set maps of the code above ($d_h = 2$). Every token emits a query, a key, and a value. The query of *gave*, $(1, 1)$, is scored against every key by $\mathbf{q} \cdot \mathbf{k}/\sqrt{2}$; the softmax turns the scores $1.41$ and $0$ into weights $0.29$ and $0.07$; the output of *gave* is the weighted sum of the values, which mark the five words.](../img/mdl-attention-self-attention.svg)
+:label:`fig_self-attention`
+
 ## A One-Mixture Bottleneck with Position-Only Keys
 :label:`subsec_one-mixture-bottleneck`
 
@@ -82,16 +160,24 @@ splits its attention.
 $\blacksquare$
 
 The weights cannot remove the error because the readout receives a single
-mixture of the two values, whatever they are. We check the bound by fitting
-the best linear readout by least squares for several splits, with values of
-width $c = 8$. The code reports the norm of the readout's error divided by
-the norm of the target. This relative error is the square root of the
-relative squared error, so the bound reads $\sqrt{1/2} \approx 0.707$.
+mixture of the two values, whatever they are. We check the bound, and what a
+second head changes, by fitting the best linear readout by least squares,
+with values of width $c = 8$. One head supplies one mixture, here with
+weights $(0.7, 0.3)$; two heads supply two mixtures, whose outputs are
+concatenated before the readout. The code reports the norm of the readout's
+error divided by the norm of the target. This relative error is the square
+root of the relative squared error, so the bound reads
+$\sqrt{1/2} \approx 0.707$.
+<!-- WRITER: the code now names the value width d_v (N, d_v = 10000, 8), per worklist 3.B10; the prose
+still writes c here and in the proposition. Cells -1 and -2 are merged into -1 (MHA-5): one single-head
+row (0.7, 0.3) against sqrt(1/2), then the two two-head rows. Printed over three dev runs per tab: one
+head 0.706-0.708 against sqrt(1/2) = 0.707; two heads 1.0e-06 to 1.5e-06 (PyTorch) and 5.1e-07 to
+5.9e-07 (JAX), for the one-hot and the soft (0.88, 0.12) pair alike: the rounding error of the solver. -->
 
 ```{.python .input #multihead-attention-one-head-must-average-1}
 %%tab pytorch
-N, c = 10000, 8
-V1, V2 = torch.randn(N, c), torch.randn(N, c)
+N, d_v = 10000, 8
+V1, V2 = torch.randn(N, d_v), torch.randn(N, d_v)
 target = torch.cat([V1, V2], dim=1)
 
 def readout_error(M, target):
@@ -99,57 +185,45 @@ def readout_error(M, target):
     W = torch.linalg.lstsq(M, target).solution
     return ((M @ W - target).norm() / target.norm()).item()
 
-for a in (0.5, 0.7, 0.9, 1.0):
-    M = a * V1 + (1 - a) * V2
-    print(f'single head, weights ({a:.1f}, {1 - a:.1f}): '
-          f'relative error {readout_error(M, target):.3f}')
-print(f'theory: sqrt(1/2) = {0.5 ** 0.5:.3f}')
+M = 0.7 * V1 + 0.3 * V2
+print(f'one head, weights (0.70, 0.30): relative error '
+      f'{readout_error(M, target):.3f}; sqrt(1/2) = {0.5 ** 0.5:.3f}')
+for a in (1.0, 0.88):
+    M2 = torch.cat([a * V1 + (1 - a) * V2, (1 - a) * V1 + a * V2], dim=1)
+    print(f'two heads, weights ({a:.2f}, {1 - a:.2f}) and '
+          f'({1 - a:.2f}, {a:.2f}): '
+          f'relative error {readout_error(M2, target):.1e}')
 ```
 
 ```{.python .input #multihead-attention-one-head-must-average-1}
 %%tab jax
-N, c = 10000, 8
+N, d_v = 10000, 8
 key1, key2 = jax.random.split(d2l.get_key())
-V1, V2 = jax.random.normal(key1, (N, c)), jax.random.normal(key2, (N, c))
+V1, V2 = jax.random.normal(key1, (N, d_v)), jax.random.normal(key2, (N, d_v))
 target = jnp.concatenate([V1, V2], axis=1)
 
 def readout_error(M, target):
     """Best linear readout of target from M, relative error."""
-    W = jnp.linalg.lstsq(M, target)[0]
-    return float(jnp.linalg.norm(M @ W - target) / jnp.linalg.norm(target))
+    # Full fp32 products: TF32, the default on recent NVIDIA cards, would
+    # stop the two-head errors near 1e-4
+    with jax.default_matmul_precision('highest'):
+        W = jnp.linalg.lstsq(M, target)[0]
+        err = jnp.linalg.norm(M @ W - target) / jnp.linalg.norm(target)
+    return float(err)
 
-for a in (0.5, 0.7, 0.9, 1.0):
-    M = a * V1 + (1 - a) * V2
-    print(f'single head, weights ({a:.1f}, {1 - a:.1f}): '
-          f'relative error {readout_error(M, target):.3f}')
-print(f'theory: sqrt(1/2) = {0.5 ** 0.5:.3f}')
-```
-
-The error stays at about $0.71$ across the whole range, as the proposition
-predicts. Now give the model a second head: two sets of attention weights,
-whose outputs are concatenated before the readout.
-
-```{.python .input #multihead-attention-one-head-must-average-2}
-%%tab pytorch
+M = 0.7 * V1 + 0.3 * V2
+print(f'one head, weights (0.70, 0.30): relative error '
+      f'{readout_error(M, target):.3f}; sqrt(1/2) = {0.5 ** 0.5:.3f}')
 for a in (1.0, 0.88):
-    M2 = torch.cat([a * V1 + (1 - a) * V2,
-                    (1 - a) * V1 + a * V2], dim=1)
+    M2 = jnp.concatenate([a * V1 + (1 - a) * V2, (1 - a) * V1 + a * V2],
+                         axis=1)
     print(f'two heads, weights ({a:.2f}, {1 - a:.2f}) and '
           f'({1 - a:.2f}, {a:.2f}): '
           f'relative error {readout_error(M2, target):.1e}')
 ```
 
-```{.python .input #multihead-attention-one-head-must-average-2}
-%%tab jax
-for a in (1.0, 0.88):
-    M2 = jnp.concatenate([a * V1 + (1 - a) * V2,
-                          (1 - a) * V1 + a * V2], axis=1)
-    print(f'two heads, weights ({a:.2f}, {1 - a:.2f}) and '
-          f'({1 - a:.2f}, {a:.2f}): '
-          f'relative error {readout_error(M2, target):.1e}')
-```
-
-Two heads bring the error down to the rounding error of the least-squares
+The single head stays at about $0.71$, as the proposition predicts. Two
+heads bring the error down to the rounding error of the least-squares
 solver, and the second row does so with *soft* weights $(0.88, 0.12)$. The
 heads need different weightings, not one-hot ones. They supply two mixtures,
 the readout inverts the $2 \times 2$ mixing matrix, and both values come back
@@ -391,25 +465,8 @@ def merge_heads(self, X):
     return X.swapaxes(1, 2).reshape(X.shape[0], X.shape[2], -1)
 ```
 
-The parameter count of :eqref:`eq_multihead-flops` can be checked directly.
-`d2l.num_params` counts the trainable parameters of a model, and for a layer
-of width 256 it should give $4 \cdot 256^2 = 262{,}144$ for every number of
-heads.
-
-```{.python .input #multihead-attention-implementation-4}
-%%tab pytorch
-for num_heads in (1, 2, 4, 8):
-    attention = MultiHeadAttention(num_hiddens=256, num_heads=num_heads)
-    print(f'H = {num_heads}: {d2l.num_params(attention)} parameters')
-```
-
-```{.python .input #multihead-attention-implementation-4}
-%%tab jax
-for num_heads in (1, 2, 4, 8):
-    attention = MultiHeadAttention(num_hiddens=256, num_heads=num_heads,
-                                   rngs=nnx.Rngs(d2l.get_key()))
-    print(f'H = {num_heads}: {d2l.num_params(attention)} parameters')
-```
+<!-- WRITER: the parameter-count cell (implementation-4) and its paragraph are cut (worklist 3.A3);
+the trained copy-both cell below prints d2l.num_params for every layer (1,024 at d = 16 for every H). -->
 
 ### Learned Heads on the Copy-Both Task
 :label:`subsec_copy-both-learned`
@@ -424,20 +481,21 @@ and padded with zeros to width 16. The target $[\mathbf{v}_1; \mathbf{v}_2]$
 is the layer's entire output, so the output has room for exactly two values
 ($2c = d$). The data function draws a minibatch, and the training function
 fits a layer with Adam on the squared error, drawing a fresh minibatch at
-every step.
+every step. The evaluation function returns the relative error on 10,000
+fresh examples and the weight that each head gives to the first position.
 
 ```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-1}
 %%tab pytorch
-def copy_both_data(n, d=16, c=8):
-    """One query, two position-only keys, values of width c padded to d."""
-    V = torch.randn(n, 2, c)
+def copy_both_data(n, d=16, d_v=8):
+    """One query, two position-only keys, values of width d_v padded to d."""
+    V = torch.randn(n, 2, d_v)
     keys = torch.eye(d)[:2].expand(n, 2, d)    # e_1, e_2 mark the positions
     query = torch.eye(d)[2].expand(n, 1, d)    # e_3 asks for both values
-    values = nn.functional.pad(V, (0, d - c))
-    return query, keys, values, V.reshape(n, 1, 2 * c)
+    values = nn.functional.pad(V, (0, d - d_v))
+    return query, keys, values, V.reshape(n, 1, 2 * d_v)
 
-def train_copy_both(num_heads, num_steps=2000):
-    model = MultiHeadAttention(16, num_heads)
+def train_copy_both(num_heads, num_kv_heads=None, num_steps=2000):
+    model = MultiHeadAttention(16, num_heads, num_kv_heads=num_kv_heads)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
     for _ in range(num_steps):
         query, keys, values, target = copy_both_data(256)
@@ -446,17 +504,24 @@ def train_copy_both(num_heads, num_steps=2000):
         loss.backward()
         optimizer.step()
     return model
+
+def evaluate_copy_both(model, n=10000):
+    """Relative error on fresh examples; each head's weight on v_1."""
+    query, keys, values, target = copy_both_data(n)
+    with torch.inference_mode():
+        err = (model(query, keys, values) - target).norm() / target.norm()
+    return err.item(), model.attention_weights[0, :, 0, 0].tolist()
 ```
 
 ```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-1}
 %%tab jax
-def copy_both_data(key, n, d=16, c=8):
-    """One query, two position-only keys, values of width c padded to d."""
-    V = jax.random.normal(key, (n, 2, c))
+def copy_both_data(key, n, d=16, d_v=8):
+    """One query, two position-only keys, values of width d_v padded to d."""
+    V = jax.random.normal(key, (n, 2, d_v))
     keys = jnp.broadcast_to(jnp.eye(d)[:2], (n, 2, d))  # e_1, e_2: positions
     query = jnp.broadcast_to(jnp.eye(d)[2], (n, 1, d))  # e_3 asks for both
-    values = jnp.pad(V, ((0, 0), (0, 0), (0, d - c)))
-    return query, keys, values, V.reshape(n, 1, 2 * c)
+    values = jnp.pad(V, ((0, 0), (0, 0), (0, d - d_v)))
+    return query, keys, values, V.reshape(n, 1, 2 * d_v)
 
 @nnx.jit
 def copy_both_step(model, optimizer, key):
@@ -464,41 +529,48 @@ def copy_both_step(model, optimizer, key):
     loss = lambda model: ((model(query, keys, values) - target) ** 2).mean()
     optimizer.update(model, nnx.grad(loss)(model))
 
-def train_copy_both(num_heads, num_steps=2000):
-    model = MultiHeadAttention(16, num_heads, rngs=nnx.Rngs(d2l.get_key()))
+def train_copy_both(num_heads, num_kv_heads=None, num_steps=2000):
+    model = MultiHeadAttention(16, num_heads, num_kv_heads=num_kv_heads,
+                               rngs=nnx.Rngs(d2l.get_key()))
     optimizer = nnx.Optimizer(model, optax.adam(1e-2), wrt=nnx.Param)
-    for key in jax.random.split(d2l.get_key(), num_steps):
-        copy_both_step(model, optimizer, key)
+    # Full fp32 products: TF32, the default on recent NVIDIA cards, would
+    # stop the error of a solved task near 1e-3 instead of fp32 rounding
+    with jax.default_matmul_precision('highest'):
+        for key in jax.random.split(d2l.get_key(), num_steps):
+            copy_both_step(model, optimizer, key)
     return model
-```
 
-We train layers with one, two, and four heads and evaluate each on 10,000
-fresh examples, printing the relative error and the weights that each head
-gives to the two positions.
-
-```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-2}
-%%tab pytorch
-query, keys, values, target = copy_both_data(10000)
-for num_heads in (1, 2, 4):
-    model = train_copy_both(num_heads)
-    with torch.inference_mode():
-        err = (model(query, keys, values) - target).norm() / target.norm()
-    weights = ' '.join(f'({a:.2f}, {b:.2f})'
-                       for a, b in model.attention_weights[0, :, 0].tolist())
-    print(f'H = {num_heads}: error {err:.2g}; weights {weights}')
-```
-
-```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-2}
-%%tab jax
-query, keys, values, target = copy_both_data(d2l.get_key(), 10000)
-for num_heads in (1, 2, 4):
-    model = train_copy_both(num_heads)
-    Y = model(query, keys, values)
+def evaluate_copy_both(model, n=10000):
+    """Relative error on fresh examples; each head's weight on v_1."""
+    query, keys, values, target = copy_both_data(d2l.get_key(), n)
+    with jax.default_matmul_precision('highest'):
+        Y = model(query, keys, values)
     err = jnp.linalg.norm(Y - target) / jnp.linalg.norm(target)
-    weights = ' '.join(f'({a:.2f}, {b:.2f})'
-                       for a, b in model.attention_weights[0, :, 0].tolist())
-    print(f'H = {num_heads}: error {err:.2g}; weights {weights}')
+    return float(err), model.attention_weights[0, :, 0, 0].tolist()
 ```
+
+We train layers with one, two, and four heads, twice each, and print for
+every run the parameter count, the relative error, and the weight that each
+head gives to the first position (its weight on the second is one minus
+that).
+
+```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-2}
+%%tab pytorch, jax
+print('H  run  parameters  error    weight on v_1, per head')
+for num_heads in (1, 2, 4):
+    for run in (1, 2):
+        model = train_copy_both(num_heads)
+        err, alpha_1 = evaluate_copy_both(model)
+        print(f'{num_heads}  {run:3d}  {d2l.num_params(model):10d}  '
+              f'{err:<#8.2g} ' + ' '.join(f'{a:.2f}' for a in alpha_1))
+```
+<!-- WRITER: MHA-6 and FR-2 (worklist 3.B5). Measured (three notebook runs per tab, each with two runs
+per H, plus five standalone repeats per tab): H = 1 error 0.71 in every run, weight on v_1 between 0.36
+and 0.64; H = 2 and H = 4 error 9.6e-08 to 1.6e-07, the rounding error of single precision (not "more
+than two orders of magnitude"); with H = 2 one head puts 0.81-0.98 on v_1 and the other 0.01-0.21; with
+H = 4 the four heads repeat the two weightings (e.g. 0.86 0.92 0.06 0.10: two heads near each end), often
+with one softer head (0.27-0.37 or 0.72-0.76 on v_1). 1,024 parameters for every H. Ranges hold in both
+tabs. -->
 
 With one head the relative error stays near $\sqrt{1/2} \approx 0.71$, the
 bound of the proposition: all 16 outputs of a single head are linear
@@ -554,50 +626,37 @@ change, because every query head still scores every key.
 In `MultiHeadAttention`, `num_kv_heads` sets $H_\textrm{kv}$: `W_k` and `W_v`
 produce $H_\textrm{kv}$ heads, and the forward pass repeats each of them for
 the query heads of its group. A grouped layer is therefore a multi-head layer
-whose key and value projections are tied within each group. We check this by
-copying the weights of a layer with 8 query heads and 2 key--value heads into
-a full 8-head layer, repeating each key or value projection for the 4 query
-heads of its group.
+whose key and value projections are tied within each group.
 
-```{.python .input #multihead-attention-shared-keys-and-values}
-%%tab pytorch
-d, H, H_kv = 256, 8, 2
-d_h, group = d // H, H // H_kv
-gqa = MultiHeadAttention(num_hiddens=d, num_heads=H, num_kv_heads=H_kv)
-mha = MultiHeadAttention(num_hiddens=d, num_heads=H)
-with torch.no_grad():
-    mha.W_q.weight.copy_(gqa.W_q.weight)
-    mha.W_o.weight.copy_(gqa.W_o.weight)
-    for W_gqa, W_mha in ((gqa.W_k, mha.W_k), (gqa.W_v, mha.W_v)):
-        W = W_gqa.weight.reshape(H_kv, d_h, d)     # One block per kv head
-        W_mha.weight.copy_(W.repeat_interleave(group, 0).reshape(d, d))
-X = torch.randn(2, 10, d)
-print(f'max |GQA - MHA|: {(gqa(X, X, X) - mha(X, X, X)).abs().max():.1e}')
-print(f'parameters: GQA {d2l.num_params(gqa)}, MHA {d2l.num_params(mha)}')
+The first paragraph of this subsection makes a prediction that the copy-both
+task can test. With $d = 16$ and values of width 8, the layouts
+$(H, H_\textrm{kv}) = (2, 1)$ and $(4, 2)$ give the shared value heads
+$H_\textrm{kv} d_h = 8$ coordinates, as many as a value has, while $(4, 1)$
+leaves one shared value head of width 4. We train each layout twice.
+
+```{.python .input #multihead-attention-sharing-keys-and-values}
+%%tab pytorch, jax
+print('H  H_kv  run  parameters  error    weight on v_1, per head')
+for num_heads, num_kv_heads in ((2, 1), (4, 2), (4, 1)):
+    for run in (1, 2):
+        model = train_copy_both(num_heads, num_kv_heads)
+        err, alpha_1 = evaluate_copy_both(model)
+        print(f'{num_heads}  {num_kv_heads:4d}  {run:3d}  '
+              f'{d2l.num_params(model):10d}  {err:<#8.2g} '
+              + ' '.join(f'{a:.2f}' for a in alpha_1))
 ```
 
-```{.python .input #multihead-attention-shared-keys-and-values}
-%%tab jax
-d, H, H_kv = 256, 8, 2
-d_h, group = d // H, H // H_kv
-gqa = MultiHeadAttention(num_hiddens=d, num_heads=H, num_kv_heads=H_kv,
-                         rngs=nnx.Rngs(d2l.get_key()))
-mha = MultiHeadAttention(num_hiddens=d, num_heads=H,
-                         rngs=nnx.Rngs(d2l.get_key()))
-mha.W_q.kernel[...] = gqa.W_q.kernel[...]
-mha.W_o.kernel[...] = gqa.W_o.kernel[...]
-for W_gqa, W_mha in ((gqa.W_k, mha.W_k), (gqa.W_v, mha.W_v)):
-    W = W_gqa.kernel[...].reshape(d, H_kv, d_h)   # One block per kv head
-    W_mha.kernel[...] = jnp.repeat(W, group, axis=1).reshape(d, d)
-X = jax.random.normal(d2l.get_key(), (2, 10, d))
-print(f'max |GQA - MHA|: {jnp.abs(gqa(X, X, X) - mha(X, X, X)).max():.1e}')
-print(f'parameters: GQA {d2l.num_params(gqa)}, MHA {d2l.num_params(mha)}')
-```
-
-The two layers agree up to floating-point rounding. The grouped layer has
-$2 \cdot 256^2 + 2 \cdot 256 \cdot 64 = 163{,}840$ parameters instead of
-262,144, and it caches $2 \cdot 2 \cdot 32 = 128$ numbers per token instead
-of 512.
+The two layouts whose value heads have room for a value solve the task, to
+the same rounding error as the full layers, with 768 parameters instead of
+1,024. The layout with one value head of width 4 stays at $0.71$, the error
+of a single head, although its four heads learn different weightings.
+<!-- WRITER: replaces the weight-copy cell (MHA-11, worklist 3.A5/B6). Measured (three notebook runs
+per tab with two runs per layout, plus five standalone repeats per tab): (2,1) and (4,2) error 9.7e-08 to
+1.4e-07, 768 parameters; (4,1) error 0.71 in every run, 640 parameters, and its four heads always cover
+both positions (e.g. 0.95 0.84 0.03 0.08), so the failure is room, not weightings: one value head of
+width 4 hands the readout a 4-dimensional projection of each value, 8 of the 16 target numbers. Cut below: the
+paper paragraph (Ainslie et al., DeepSeek, gpt-oss) and the MLA sentence (MHA-12; chapter 11 owns them);
+the GPT-2 cache arithmetic above (18,432 numbers, 36 KiB, 36 MiB); eq_gqa-head is optional. -->
 
 Sharing keys and values lowers quality somewhat, and by how much depends on
 how the model was trained. Ainslie et al. converted a trained T5-XXL model to 8
@@ -643,28 +702,8 @@ combines information from the whole sequence in a single step. Since the
 output has the shape of the input, such layers can be stacked, which is how
 transformers are built.
 
-```{.python .input #multihead-attention-one-sequence-querying-itself}
-%%tab pytorch
-num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_heads)
-batch_size, num_queries = 2, 4
-mask = d2l.padding_mask(torch.tensor([3, 2]), num_queries)
-X = torch.ones((batch_size, num_queries, num_hiddens))
-d2l.check_shape(attention(X, X, X, mask),
-                (batch_size, num_queries, num_hiddens))
-```
-
-```{.python .input #multihead-attention-one-sequence-querying-itself}
-%%tab jax
-num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_heads,
-                               rngs=nnx.Rngs(d2l.get_key()))
-batch_size, num_queries = 2, 4
-mask = d2l.padding_mask(jnp.array([3, 2]), num_queries)
-X = jnp.ones((batch_size, num_queries, num_hiddens))
-d2l.check_shape(attention(X, X, X, mask),
-                (batch_size, num_queries, num_hiddens))
-```
+<!-- WRITER: the shape check on tensors of ones (one-sequence-querying-itself) is cut (MHA-13);
+self-attention is now taught at the top of the section with the worked sentence. -->
 
 ### Cross-Attention
 
@@ -678,81 +717,14 @@ of an image; and of the alignment models that
 introduced learned attention (:numref:`sec_attention-scoring-functions`).
 All of them call the same function with different arguments.
 
-```{.python .input #multihead-attention-one-sequence-querying-another}
-%%tab pytorch
-A = torch.ones((batch_size, 4, num_hiddens))
-B = torch.ones((batch_size, 9, num_hiddens))
-d2l.check_shape(attention(A, B, B), (batch_size, 4, num_hiddens))
-```
+<!-- WRITER: the cross-attention shape check (one-sequence-querying-another) is cut (MHA-13);
+structure 3.3 step 6: two paragraphs, no cell. -->
 
-```{.python .input #multihead-attention-one-sequence-querying-another}
-%%tab jax
-A = jnp.ones((batch_size, 4, num_hiddens))
-B = jnp.ones((batch_size, 9, num_hiddens))
-d2l.check_shape(attention(A, B, B), (batch_size, 4, num_hiddens))
-```
-
-### Cross-Attention between Two Words
-:label:`subsec_cross-attention-alignment`
-
-To see cross-attention at work, give every letter of the alphabet a random
-embedding of width 32, and let the letters of one word query the letters of
-another through plain scaled dot-product attention, with no learned
-projections. Matching letters share an embedding, so their scaled score is
-close to $\sqrt{32} \approx 5.7$, while unrelated pairs score near zero. The
-softmax turns this gap into an alignment we can read.
-
-```{.python .input #multihead-attention-an-alignment-you-can-read}
-%%tab pytorch
-words = 'attention', 'translation'
-letters = sorted(set(''.join(words)))
-emb = torch.randn(len(letters), 32)
-queries, keys = (emb[[letters.index(c) for c in w]][None] for w in words)
-attention = d2l.DotProductAttention()
-attention(queries, keys, keys)
-d2l.show_heatmaps(attention.attention_weights[None], xlabel='keys',
-                  ylabel='queries', figsize=(4, 3.5), cmap='Blues',
-                  xticklabels=words[1], yticklabels=words[0])
-```
-
-```{.python .input #multihead-attention-an-alignment-you-can-read}
-%%tab jax
-words = 'attention', 'translation'
-letters = sorted(set(''.join(words)))
-emb = jax.random.normal(d2l.get_key(), (len(letters), 32))
-queries, keys = (emb[jnp.array([letters.index(c) for c in w])][None]
-                 for w in words)
-attention = d2l.DotProductAttention()
-attention(queries, keys, keys)
-d2l.show_heatmaps(attention.attention_weights[None], xlabel='keys',
-                  ylabel='queries', figsize=(4, 3.5), cmap='Blues',
-                  xticklabels=words[1], yticklabels=words[0])
-```
-
-The map reads row by row. The queries are the letters of "attention", the
-keys the letters of "translation". Three patterns appear. The `i` and `o`
-queries find their single partners and attend sharply. The `a`, `t`, and `n`
-queries find *two* copies each and split their weight between them, because
-a head cannot tell identical keys apart. This is the averaging of the
-copy-both task on a small scale. The `e` query, whose letter does not occur in
-"translation", has no partner. Its weight goes to keys that resemble it only
-by chance, and none of them receives the near-certain weight of a real match;
-the softmax must distribute all of its probability mass even when no key
-matches.
-Trained models show all three patterns. Language models often handle the
-third case by sending the leftover weight to the first token of the
-sequence, which then acts as a sink for attention that has nowhere useful to
-go :cite:`Xiao.Tian.Chen.ea.2024`. A row without a match, or a large weight
-on such a token, therefore says that no key is relevant, not that the
-favored key is, which is one reason why attention maps must be read with
-care as explanations.
-
-None of the layers in this section knows where a token sits. Permuting the
-keys and values together leaves every output unchanged (Exercise
-:exref:`ex_multihead-permuting-the-source`). If "translation" were spelled
-backward, every letter of "attention" would retrieve the same mixture, and
-only the columns of the map would change places. The next section adds
-positional information.
+<!-- WRITER: the letters subsection (subsec_cross-attention-alignment, cell
+multihead-attention-an-alignment-you-can-read) and the closing paragraph on permutations moved to
+attention-scoring.md (its code step copied them; this removes them here). New closing per structure 3.3:
+two heads can separate the persons from the thing, but no weighting computed from content tells Alice
+from Bob; swap them and the output at gave does not change (hands over to "dog bites man"). -->
 
 ## Summary
 
@@ -1000,6 +972,9 @@ and the keys and values from another.
     [Assignment 4](https://web.stanford.edu/class/cs224n/assignments_w25/a4.pdf),
     Problem 1(c) and 1(d).*
 
+<!-- WRITER: Exercise 7(c) is now the body's cell (multihead-attention-sharing-keys-and-values) and
+train_copy_both already has num_kv_heads; cut 7(c), and 7(d), 7(e) and Exercise 8 per worklist 3.B11. -->
+
 [Discussions](https://d2l.discourse.group/t/36770)
 
 <!-- slides -->
@@ -1064,6 +1039,17 @@ heads of width 64, 12 layers, contexts of 1,024 tokens.
 :::
 :::
 
+::: {.slide title="One Head Gives gave One Blend of Alice, Bob and the Book"}
+[Self-attention]{.kicker}
+
+<!-- WRITER: placeholder slide for the new cell and figure (worklist 3.B12: the deck opens on the
+sentence; add the hand-computation check and the causal row). -->
+
+![](../img/mdl-attention-self-attention.svg){width=88%}
+
+@!multihead-attention-self-attention-1
+:::
+
 ::: {.slide title="Any Single Head Has Relative Squared Error at Best 1/2"}
 [The one-mixture bound]{.kicker}
 
@@ -1083,23 +1069,14 @@ cannot remove it.
 :::
 :::
 
-::: {.slide title="Least Squares Confirms the Bound for Every Split"}
+::: {.slide title="One Mixture Stays at the Bound; Two Mixtures Recover Both Values"}
 [The one-mixture bound]{.kicker}
 
 @!multihead-attention-one-head-must-average-1
 
-- Values of width $c = 8$, 10,000 examples, best linear readout.
-- Relative error $\|\mathbf{M}\mathbf{W} - \mathbf{T}\| / \|\mathbf{T}\|
-  \approx \sqrt{1/2}$ at every split.
-:::
-
-::: {.slide title="Two Different Mixtures Recover Both Values"}
-[The one-mixture bound]{.kicker}
-
-@!multihead-attention-one-head-must-average-2
-
-- Concatenate two mixtures: the readout inverts the $2 \times 2$ mixing
-  matrix.
+- Values of width 8, 10,000 examples, best linear readout.
+- One head: relative error $\approx \sqrt{1/2}$. Two heads: the readout
+  inverts the $2 \times 2$ mixing matrix.
 - Soft weights $(0.88, 0.12)$ work as well as one-hot ones.
 :::
 
@@ -1165,15 +1142,6 @@ kernel efficiency.
 - A `(batch, queries, keys)` mask gets a head axis of size 1.
 :::
 
-::: {.slide title="The Parameter Count Is the Same for Every Head Count"}
-[Implementation]{.kicker}
-
-@!multihead-attention-implementation-4
-
-- $d = 256$: four $256 \times 256$ projections, $4 \cdot 256^2 = 262{,}144$.
-- Heads slice the same projections differently.
-:::
-
 ::: {.slide title="A Learned Layer Faces the Copy-Both Task"}
 [Learned heads]{.kicker}
 
@@ -1195,6 +1163,7 @@ Prediction: one head stays at $\sqrt{1/2}$; two heads can reach zero.
 
 @!multihead-attention-learned-heads-on-the-copy-both-task-2
 
+- Two runs per $H$; 1,024 parameters for every $H$.
 - The heads learn at least two different weightings of the two positions.
 - Weightings are often soft: different mixtures suffice.
 :::
@@ -1241,14 +1210,14 @@ $H_\textrm{kv} = H$: multi-head; $1 < H_\textrm{kv} < H$: grouped-query
 (GQA); $H_\textrm{kv} = 1$: multi-query (MQA).
 :::
 
-::: {.slide title="A Grouped Layer Is a Multi-Head Layer with Tied Projections"}
+::: {.slide title="Sharing Works While the Shared Value Heads Have Room"}
 [Shared keys and values]{.kicker}
 
-@!multihead-attention-shared-keys-and-values
+@!multihead-attention-sharing-keys-and-values
 
-- Copy each key-value projection to the 4 query heads of its group: same
-  output.
-- 8 query heads, 2 key-value heads: 128 cached numbers per token, not 512.
+- Prediction: $H_\textrm{kv} d_h \ge 8$ solves the task; $(4, 1)$ has one
+  value head of width 4 and returns to $\sqrt{1/2}$.
+- $(2, 1)$ and $(4, 2)$: rounding error with 768 parameters; $(4, 1)$: 0.71.
 :::
 
 ::: {.slide title="Sharing Costs Little after Uptraining, More from Scratch"}
@@ -1275,35 +1244,14 @@ dominates the time per token.
 - **Cross-attention:** `attention(A, B, B)`. Sequence A asks, sequence B
   answers; output length = length of A.
 
-@multihead-attention-one-sequence-querying-another
-
 Translation decoders, some vision–language models, and the first alignment
 models all use cross-attention.
 :::
 
-::: {.slide title="Letters of 'attention' Query Letters of 'translation'"}
-[Self- and cross-attention]{.kicker}
-
-@!multihead-attention-an-alignment-you-can-read
-
-Random letter embeddings of width 32, no learned projections: a matching
-letter scores about $\sqrt{32} \approx 5.7$, others about 0.
-:::
-
-::: {.slide title="Unique, Repeated, and Missing Keys Give Three Patterns"}
-[Self- and cross-attention]{.kicker}
-
-- `i`, `o`: one partner → **sharp** row.
-- `a`, `t`, `n`: two copies → weight **splits**: the copy-both averaging.
-- `e`: no partner → weight on **chance** resemblances, none near-certain:
-  softmax must place all its mass.
-
-::: {.d2l-note}
-Trained language models often dump such leftover weight on the first token
-(an attention sink). Such a row says "nothing relevant", not "this key is
-relevant".
-:::
-:::
+<!-- WRITER: the two letters slides ("Letters of 'attention' Query Letters of 'translation'",
+"Unique, Repeated, and Missing Keys Give Three Patterns") were removed with the cell; they belong in the
+deck of attention-scoring.md (worklist 3.B12, section 2 deck); their text is in git history before this
+commit. -->
 
 ::: {.slide title="Several Weightings per Query, Shared Keys, One Code Path"}
 [Wrap-up]{.kicker}

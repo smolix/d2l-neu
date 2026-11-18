@@ -354,8 +354,8 @@ def train(name, step, seed):
     tf.keras.utils.set_random_seed(seed)
     net = tf.keras.Sequential([tf.keras.layers.Dense(32, activation='tanh'),
                                tf.keras.layers.Dense(2)])  # Glorot-uniform, zero biases
-    lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay([300], [0.05, 0.005])
-    opt = tf.keras.optimizers.Adam(learning_rate=lr)  # 0.005 after iteration 300
+    lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay([299], [0.05, 0.005])
+    opt = tf.keras.optimizers.Adam(learning_rate=lr)  # 0.005 from iteration 300
 
     @tf.function
     def train_step():
@@ -973,6 +973,13 @@ state $(\mathbf{x},\int\operatorname{tr}\mathbf J\,dt)$ with RK4 to $T=1$ and
 compares the integral with $\log|\det D\Phi_T|$, computed from central finite
 differences of the flow map itself.
 
+<!-- WRITER (code step): the first output line now gives the smallest and the
+largest trace along the RK4 path ("tr J along the path: from +0.889 to +1.013"
+in PyTorch; -0.172 to +0.067 in TensorFlow, a change of sign; +0.064 to +0.222
+in JAX; -0.935 to -0.799 in MXNet), no longer the two ends. "The trace differs at
+the two ends of the path" and the slide's "differs at the two ends" should read
+the range: the trace varies along the path by a tenth or more in every tab. -->
+
 ```{.python .input #mdl-neural-odes-checking-the-trace-integral-1}
 n_hidden = 8
 W1, b1 = rng.standard_normal((n_hidden, 2)), rng.standard_normal(n_hidden)
@@ -982,14 +989,17 @@ trJ = lambda x: np.sum((1 - np.tanh(W1 @ x + b1) ** 2)
                        * np.einsum('ij,ji->i', W1, W2))
 aug = lambda z: np.append(field(z[:2]), trJ(z[:2]))  # d/dt (x, int tr J)
 xa, N = rng.standard_normal(2), 200
-zT = solve(rk4_step, aug, np.append(xa, 0.0), 1.0, N)
+zs = [np.append(xa, 0.0)]                      # RK4 path of (x, int tr J)
+for _ in range(N):
+    zs.append(rk4_step(aug, zs[-1], 1.0 / N))
+zT, tr_path = zs[-1], [trJ(z[:2]) for z in zs]
 D = np.zeros((2, 2))                           # D Phi_1 by central differences
 for j in range(2):
     e = np.zeros(2); e[j] = 1e-5
     D[:, j] = (solve(rk4_step, field, xa + e, 1.0, N)
                - solve(rk4_step, field, xa - e, 1.0, N)) / 2e-5
 logdet = np.log(abs(np.linalg.det(D)))
-print(f'tr J at x(0) {trJ(xa):+.3f}, at x(1) {trJ(zT[:2]):+.3f}')
+print(f'tr J along the path: from {min(tr_path):+.3f} to {max(tr_path):+.3f}')
 print(f'trace integral {zT[2]:+.6f}  log|det D Phi| {logdet:+.6f}  '
       f'gap {abs(zT[2] - logdet):.1e}')
 ```

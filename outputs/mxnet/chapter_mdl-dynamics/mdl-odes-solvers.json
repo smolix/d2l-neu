@@ -25,13 +25,13 @@
       ]
     },
     "mdl-odes-zero-order-hold": {
-      "code_fingerprint": "sha256:e9e92df304d198a3cda912fc9db40e7f12eebf18f6c2a31a9d731a37d0bf79f6",
+      "code_fingerprint": "sha256:82eaa1414f60ce0338c76f581e3b120f165f9d770ead9f35f9e292b34f72ab3d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  lam     h  e^(h lam)  1 + h lam  error at T\n   -1  0.50      0.607       0.50     6.8e-02\n   -1  0.10      0.905       0.90     9.7e-03\n   -1  0.02       0.98       0.98     1.8e-03\n  -50  0.50   1.39e-11     -24.00     1.6e-03\n  -50  0.10    0.00674      -4.00     5.8e-04\n  -50  0.02      0.368       0.00     9.2e-05\nconstant input u = 1, largest error over the same six runs: 3e-18\n"
+          "text": "  lam     h  e^(h lam)  1 + h lam  error at T\n   -1  0.50      0.607       0.50     6.8e-02\n   -1  0.10      0.905       0.90     9.7e-03\n   -1  0.02       0.98       0.98     1.8e-03\n  -50  0.50   1.39e-11     -24.00     1.6e-03\n  -50  0.10    0.00674      -4.00     5.8e-04\n  -50  0.02      0.368       0.00     9.2e-05\n"
         }
       ]
     }

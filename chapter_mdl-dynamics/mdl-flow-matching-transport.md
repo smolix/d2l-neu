@@ -451,6 +451,15 @@ The cell compares the closed form with a direct posterior average at three
 points, takes the slope at the origin by a finite difference, and applies
 one Euler step of the exact field to $\epsilon = \pm 1$.
 
+<!-- WRITER (code step): the cell no longer applies one step to eps = +-1 (that
+landing point is 0 by tanh 0 = 0 and could not fail). It integrates the exact
+field from t = 1 to 0 with K = 1, 2, 4, 8 equal Euler steps, starting from the
+whole N(0, 1) law (a fine grid weighted by the Gaussian density, so the numbers
+are deterministic), and prints for each K the mass that lands within 0.1 of a
+data point +-2 and the mean |x|. K = 1: mass 0, mean |x| 0 (every sample on the
+mean); see reports/code-requests.md for the other rows. Lead-in and read-out
+must change to match. -->
+
 ```{.python .input #mdl-flow-matching-transport-example-two-points-in-one-dimension}
 a = 2.0                                       # data at -a and +a, noise N(0, 1)
 def u_two_point(x, t):                        # closed form of the marginal velocity
@@ -460,8 +469,14 @@ ts = np.array([0.9, 0.8, 0.5])
 print('slope at the origin at t = 0.9, 0.8, 0.5:',
       ((u_two_point(1e-6, ts) - u_two_point(-1e-6, ts)) / 2e-6).round(2),
       '   t* =', round(2 * np.sqrt(2) - 2, 4))
-eps = np.array([-1.0, 1.0])
-print('one Euler step from t = 1 to 0 from', eps, 'lands at', eps - u_two_point(eps, 1.0))
+x1 = np.linspace(-6, 6, 4001)                 # the noise law N(0, 1), as a weighted grid
+w = np.exp(-x1**2 / 2) / np.exp(-x1**2 / 2).sum()
+for K in (1, 2, 4, 8):                        # K equal Euler steps from t = 1 to t = 0
+    x, ts = x1, np.linspace(1, 0, K + 1)
+    for t, t_next in zip(ts[:-1], ts[1:]):
+        x = x - (t - t_next) * u_two_point(x, t)
+    print(f'{K} Euler step(s): mass within 0.1 of +-a {w @ (abs(abs(x) - a) < 0.1):.3f}, '
+          f'mean |x| {w @ abs(x):.2f}')
 ```
 
 The numbers are those of the formula, and one Euler step from either start
@@ -605,7 +620,7 @@ def field(net, x, t):                   # the time enters centered, as 2t - 1
     return net(mnp.concatenate([x, 2 * t - 1], axis=1))
 
 def train_rf(sample_pairs, steps=4000, tail=500):
-    """Regress v(x_t, t) on eps - x0 (papers: x1 - x0 at time 1 - t).
+    """Regress v(x_t, t) on eps - x0 (papers: -(x1 - x0) at time 1 - t).
     Return the net and the mean tail loss."""
     net = make_net()
     lr = lr_scheduler.CosineScheduler(steps, base_lr=3e-3)   # 3e-3 -> 0
@@ -639,7 +654,7 @@ def field(net, x, t):                   # the time enters centered, as 2t - 1
     return net(torch.cat([x, 2 * t - 1], 1))
 
 def train_rf(sample_pairs, steps=4000, tail=500):
-    """Regress v(x_t, t) on eps - x0 (papers: x1 - x0 at time 1 - t).
+    """Regress v(x_t, t) on eps - x0 (papers: -(x1 - x0) at time 1 - t).
     Return the net and the mean tail loss."""
     net = make_net()
     opt = torch.optim.Adam(net.parameters(), lr=3e-3)
@@ -672,7 +687,7 @@ def field(net, x, t):                   # the time enters centered, as 2t - 1
     return net(tf.concat([x, 2 * t - 1], 1))
 
 def train_rf(sample_pairs, steps=4000, tail=500):
-    """Regress v(x_t, t) on eps - x0 (papers: x1 - x0 at time 1 - t).
+    """Regress v(x_t, t) on eps - x0 (papers: -(x1 - x0) at time 1 - t).
     Return the net and the mean tail loss."""
     net = make_net()
     lr = tf.keras.optimizers.schedules.CosineDecay(3e-3, steps)   # 3e-3 -> 0
@@ -715,7 +730,7 @@ def field(params, x, t):                # the time enters centered, as 2t - 1
     return mlp(params, jnp.concatenate([x, 2 * t - 1], 1))
 
 def train_rf(sample_pairs, steps=4000, tail=500):
-    """Regress v(x_t, t) on eps - x0 (papers: x1 - x0 at time 1 - t).
+    """Regress v(x_t, t) on eps - x0 (papers: -(x1 - x0) at time 1 - t).
     Return the parameters and the mean tail loss; sample_pairs(key, n) draws
     n (data, noise) pairs."""
     opt = optax.adam(optax.cosine_decay_schedule(3e-3, steps))   # 3e-3 -> 0
@@ -740,6 +755,35 @@ def train_rf(sample_pairs, steps=4000, tail=500):
 The first run pairs noise and data independently. By the CFM theorem its
 loss cannot reach zero, and where it stops measures how much the segments
 cross.
+
+<!-- WRITER (code step): new NumPy cell below computes that floor from the
+training set, as the paragraph describes (4,000 draws of (t, x0, eps), every
+training point weighted by its posterior probability given x_t), and prints it
+per coordinate (1.36 to 1.38 in the four tabs, about 1.37). "it comes to
+about 1.38 per coordinate (Exercise
+...)" and "a few hundredths above the floor" after the training cell should
+read this print; exercise "Crossing segments and the floor", part (c), no
+longer needs to ask for the number itself, only for its profile in t. -->
+
+```{.python .input #mdl-flow-matching-transport-example-two-moons-2}
+def pairing_floor(data, rng, m=4000, chunk=500):
+    """Floor C of independent pairing, per coordinate: E Var(eps - x0 | x_t) / 2."""
+    t = rng.uniform(0, 1, (m, 1))
+    xt = (1 - t) * data[rng.integers(0, len(data), m)] + t * rng.standard_normal((m, 2))
+    var = []
+    for i in range(0, m, chunk):              # posterior of x0 over all training points
+        ti, xi = t[i:i + chunk], xt[i:i + chunk]
+        d2 = ((xi**2).sum(1, keepdims=True) - 2 * (1 - ti) * xi @ data.T
+              + (1 - ti)**2 * (data**2).sum(1))           # |x_t - (1 - t) x0'|^2
+        logw = -d2 / (2 * ti**2)
+        r = np.exp(logw - logw.max(1, keepdims=True))
+        r /= r.sum(1, keepdims=True)
+        v = r @ (data**2).sum(1) - ((r @ data)**2).sum(1)  # Var(x0 | x_t), summed
+        var.append(v / ti[:, 0]**2)           # eps - x0 = (x_t - x0) / t
+    return np.concatenate(var).mean() / 2
+
+print(f'floor of the independent pairing, per coordinate: {pairing_floor(moons, rng):.2f}')
+```
 
 ```{.python .input #mdl-flow-matching-transport-example-two-moons-1}
 #@tab mxnet
@@ -871,11 +915,18 @@ discretization error. The level that remains is the error of the trained
 field; it varies with the training run and is often as small as the metric
 can resolve with $2{,}048$ points. The samples show the same progression.
 
+<!-- WRITER (code step): the figure has a fifth panel, the held-out data. Next
+to it the samples of 8 and 32 steps are visibly more diffuse than the data in
+all four tabs (two broad crescents; in JAX and MXNet hard to make out), so "eight
+the two moons" overstates them: they are blurred moons, which the energy distance
+of a few thousandths does not show. See reports/code-requests.md (training
+recipe note for the coordinator). -->
+
 ```{.python .input #score-matching-diffusion-flow-cfm-panels}
-fig, axes = d2l.plt.subplots(1, 4, figsize=(10, 2.6), sharex=True, sharey=True)
-for ax, K in zip(axes, (1, 2, 8, 32)):
-    s = euler_path(net, z_eval, K)[-1]
-    d2l.plot(s[:, 0], s[:, 1], f'{K} Euler step(s)', fmts=('.',),
+panels = [(f'{K} Euler step(s)', euler_path(net, z_eval, K)[-1]) for K in (1, 2, 8, 32)]
+fig, axes = d2l.plt.subplots(1, 5, figsize=(12, 2.6), sharex=True, sharey=True)
+for ax, (title, s) in zip(axes, panels + [('held-out data', held_out)]):
+    d2l.plot(s[:, 0], s[:, 1], title, fmts=('.',),
              xlim=(-2.5, 2.5), ylim=(-2.5, 2.5), axes=ax)
 ```
 
@@ -1376,18 +1427,20 @@ def exact_path(q, ts):                  # fine Heun path, and the gain dx(0)/dx(
     qs = np.array(qs)
     return qs[:, 0], (qs[-1, 1] - qs[-1, 0]) / (qs[:, 1] - qs[:, 0])
 
-def surviving(ts, qs, gain, steps, heun):     # |sum_k c_k| / sum_k |c_k|
+def step_errors(ts, qs, gain, steps, heun):   # c_k, shape (steps, starting points)
     j = np.arange(0, len(ts), (len(ts) - 1) // steps)    # coarse nodes
-    c = np.array([gain[b] * (solve(qs[a], ts[[a, b]], heun) - qs[b])
-                  for a, b in zip(j[:-1], j[1:])])      # step error, carried to 0
-    return np.abs(c.sum(0)).mean() / np.abs(c).sum(0).mean()
+    return np.array([gain[b] * (solve(qs[a], ts[[a, b]], heun) - qs[b])
+                     for a, b in zip(j[:-1], j[1:])])   # step error, carried to 0
 
 paths = {g: exact_path(z, grid(400)) for g, grid in grids.items()}   # 400 fine steps
-print(f'{"surviving share":16s}' + ''.join(f'{n:8d}' for n in nfes))
-for g, (qs, gain) in paths.items():
-    for m, k in (('Euler', 1), ('Heun', 2)):
-        print(f'{m + ", " + g:16s}' + ''.join(
-            f'{surviving(grids[g](400), qs, gain, n // k, k == 2):8.2f}' for n in nfes))
+cs = {f'{m}, {g}': [step_errors(grids[g](400), qs, gain, n // k, k == 2) for n in nfes]
+      for g, (qs, gain) in paths.items() for m, k in (('Euler', 1), ('Heun', 2))}
+stats = {'surviving share': (lambda c: np.abs(c.sum(0)).mean() / np.abs(c).sum(0).mean(), '.2f'),
+         'total of |c_k|': (lambda c: np.abs(c).sum(0).mean(), '.4f')}   # sum_k |c_k|
+for title, (stat, fmt) in stats.items():
+    print(f'{title:16s}' + ''.join(f'{n:8d}' for n in nfes))
+    for name, c in cs.items():
+        print(f'{name:16s}' + ''.join(f'{stat(c_n):8{fmt}}' for c_n in c))
 d = np.abs(np.diff(paths['uniform'][0], axis=0))    # |fine step| along each path
 share = (d[:200].sum(0) / d.sum(0)).mean()           # first 200 steps: t from 1 to 0.5
 print(f'share of the path length covered by t = 0.5: {share:.2f}')

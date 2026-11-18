@@ -30,12 +30,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Euler-trained: loss 1.2e+00, 2.4e-05, 6.9e-06 at iterations 0, 200, 400\n"
+          "text": "Euler-trained: loss 1.5e+00, 3.1e-06, 5.2e-07 at iterations 0, 200, 400\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RK4-trained: loss 1.2e+00, 2.8e-05, 8.3e-06 at iterations 0, 200, 400\n"
+          "text": "RK4-trained: loss 1.5e+00, 4.3e-06, 5.8e-07 at iterations 0, 200, 400\n"
         }
       ]
     },
@@ -46,12 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   N   Euler-trained   RK4-trained   Euler round trip\n  10         3.7e-03       4.0e-03            5.6e-02\n 100         1.7e-02       4.0e-03            5.7e-03\n"
+          "text": "   N   Euler-trained   RK4-trained   Euler round trip\n  10         9.0e-04       9.8e-04            5.4e-02\n 100         1.7e-02       9.8e-04            5.5e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1000         1.9e-02       4.0e-03            5.8e-04\n"
+          "text": "1000         1.9e-02       9.8e-04            5.5e-04\n"
         }
       ]
     },
@@ -77,45 +77,45 @@
       ]
     },
     "mdl-neural-odes-checking-the-trace-integral-1": {
-      "code_fingerprint": "sha256:0fd1e2fb45e8fbd156f5cc881beb8795976df0d9f37253d9724eb980de652b0f",
+      "code_fingerprint": "sha256:5b73bcdf4daf1c0257a3c180bd42225d36b1f65b13c27e6c204b83e550b4cd3e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr J at x(0) +1.763, at x(1) +0.557\ntrace integral +1.204095  log|det D Phi| +1.204095  gap 2.3e-11\n"
+          "text": "tr J along the path: from +0.889 to +1.013\ntrace integral +0.970187  log|det D Phi| +0.970187  gap 8.3e-11\n"
         }
       ]
     },
     "mdl-neural-odes-the-hutchinson-trace-estimator-1": {
-      "code_fingerprint": "sha256:7d61dbfc33026b74c99f5a89a68367316dab0c4508a01b43f9c79a8dd74ac012",
+      "code_fingerprint": "sha256:b56846d9f3e1511f648face57987c798cdbd1c6cd1498b0218d3f5bee7340241",
       "kind": "text",
       "outputs": []
     },
     "mdl-neural-odes-the-hutchinson-trace-estimator-2": {
-      "code_fingerprint": "sha256:c39827625cd62e04822e021271a0bf92a36fc3396ed41dd36fa2f91d3daeea27",
+      "code_fingerprint": "sha256:ec2bfd14cfd9fc38ee24d0f799b8b2567a11ba6e2b655c668a526210d0050681",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Rademacher: exact -49.44, mean of 1000 probes -49.39 +- 0.16, one probe sd 4.93\nGaussian  : exact -49.44, mean of 1000 probes -48.93 +- 0.36, one probe sd 11.36\n"
+          "text": "Rademacher: exact -51.30, mean of 1000 probes -51.23 +- 0.16, one probe sd 4.99\nGaussian  : exact -51.30, mean of 1000 probes -51.16 +- 0.37, one probe sd 11.62\n"
         }
       ]
     },
     "mdl-neural-odes-the-hutchinson-trace-estimator-3": {
-      "code_fingerprint": "sha256:b2b2b1164ed9742239aeefdd0fa709827b86113e53744a15a871e2ef6fe7e220",
+      "code_fingerprint": "sha256:a9ef2aa8e97b1d3765e9798cebd2abce657dcfbf22c8e3ac57f7c338faedfcb1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   10: exact -49.86 | held probe -50.16, sd 5.30 | fresh probes -50.03, sd 1.83\nN =  100: exact -49.89 | held probe -49.84, sd 5.66 | fresh probes -49.83, sd 0.56\n"
+          "text": "N =   10: exact -51.90 | held probe -52.11, sd 5.69 | fresh probes -51.73, sd 1.71\nN =  100: exact -51.93 | held probe -51.35, sd 5.98 | fresh probes -51.94, sd 0.63\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N = 1000: exact -49.89 | held probe -50.21, sd 5.70 | fresh probes -49.88, sd 0.18\n"
+          "text": "N = 1000: exact -51.93 | held probe -51.28, sd 5.88 | fresh probes -51.92, sd 0.19\n"
         }
       ]
     }

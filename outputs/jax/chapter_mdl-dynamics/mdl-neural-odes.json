@@ -30,12 +30,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Euler-trained: loss 1.2e+00, 1.5e-05, 2.9e-06 at iterations 0, 200, 400\n"
+          "text": "Euler-trained: loss 1.3e+00, 1.1e-05, 2.5e-06 at iterations 0, 200, 400\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RK4-trained: loss 1.3e+00, 1.6e-05, 2.3e-06 at iterations 0, 200, 400\n"
+          "text": "RK4-trained: loss 1.3e+00, 9.3e-06, 1.9e-06 at iterations 0, 200, 400\n"
         }
       ]
     },
@@ -51,17 +51,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  10         2.3e-03       2.1e-03            5.6e-02\n"
+          "text": "  10         2.1e-03       1.8e-03            5.5e-02\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 100         1.7e-02       2.1e-03            5.7e-03\n"
+          "text": " 100         1.7e-02       1.8e-03            5.6e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1000         1.9e-02       2.1e-03            5.7e-04\n"
+          "text": "1000         1.9e-02       1.8e-03            5.6e-04\n"
         }
       ]
     },
@@ -77,50 +77,55 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   100: |discrete - continuous adjoint|     = 2.9e-02\nN =  1000: |discrete - continuous adjoint|     = 2.8e-03\nN = 10000: |discrete - continuous adjoint|     = 2.8e-04\n"
-        }
-      ]
-    },
-    "mdl-neural-odes-checking-the-trace-integral-1": {
-      "code_fingerprint": "sha256:ae7b9ea42e1ab085bbefe701f654c7ac2c999d6df90aeeea16ff43097a972a1f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "tr J at x(0) +0.422, at x(1) -0.021\ntrace integral +0.142980  log|det D Phi| +0.142980  gap 4.8e-13\n"
-        }
-      ]
-    },
-    "mdl-neural-odes-the-hutchinson-trace-estimator-1": {
-      "code_fingerprint": "sha256:7ba014b22ffc2d411b7dbd823142980e2c4520d0d6483b735fb636887ed6b0ba",
-      "kind": "text",
-      "outputs": []
-    },
-    "mdl-neural-odes-the-hutchinson-trace-estimator-2": {
-      "code_fingerprint": "sha256:c90985b752509031602378c40517322b3f1cf30a661406d1f8090b45506bae37",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Rademacher: exact -50.47, mean of 1000 probes -50.40 +- 0.14, one probe sd 4.57\nGaussian  : exact -50.47, mean of 1000 probes -50.10 +- 0.36, one probe sd 11.37\n"
-        }
-      ]
-    },
-    "mdl-neural-odes-the-hutchinson-trace-estimator-3": {
-      "code_fingerprint": "sha256:186511c71837b95715494de48e083cbcf52b5b493d0fff1bd94934eab5427efb",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "N =   10: exact -50.69 | held probe -50.69, sd 5.18 | fresh probes -50.78, sd 1.73\nN =  100: exact -50.70 | held probe -50.77, sd 5.48 | fresh probes -50.69, sd 0.53\n"
+          "text": "N =   100: |discrete - continuous adjoint|     = 2.9e-02\nN =  1000: |discrete - continuous adjoint|     = 2.8e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N = 1000: exact -50.70 | held probe -50.72, sd 5.57 | fresh probes -50.70, sd 0.19\n"
+          "text": "N = 10000: |discrete - continuous adjoint|     = 2.8e-04\n"
+        }
+      ]
+    },
+    "mdl-neural-odes-checking-the-trace-integral-1": {
+      "code_fingerprint": "sha256:c7f965dc8501acc159171f08c304c9cad5ef5838795d932d81316a8726e48d8c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tr J along the path: from +0.064 to +0.222\ntrace integral +0.148995  log|det D Phi| +0.148995  gap 9.3e-11\n"
+        }
+      ]
+    },
+    "mdl-neural-odes-the-hutchinson-trace-estimator-1": {
+      "code_fingerprint": "sha256:8c768ff8e5f59c0ac68f53926c4028b8375121917443dd389d0f66b6385f14cd",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-neural-odes-the-hutchinson-trace-estimator-2": {
+      "code_fingerprint": "sha256:b9dacf2b96f23a17ef1ee94a3146342c9080605ac8f3e21ff168ca33c07102c8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Rademacher: exact -50.60, mean of 1000 probes -50.48 +- 0.15, one probe sd 4.61\nGaussian  : exact -50.60, mean of 1000 probes -50.50 +- 0.36, one probe sd 11.51\n"
+        }
+      ]
+    },
+    "mdl-neural-odes-the-hutchinson-trace-estimator-3": {
+      "code_fingerprint": "sha256:c7923442220f6270594d3231701f6db5ba184d3558085a99bbcf20ad032f3183",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =   10: exact -50.49 | held probe -50.69, sd 6.09 | fresh probes -50.39, sd 1.76\nN =  100: exact -50.48 | held probe -51.03, sd 5.81 | fresh probes -50.47, sd 0.51\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N = 1000: exact -50.48 | held probe -50.04, sd 5.52 | fresh probes -50.46, sd 0.19\n"
         }
       ]
     }

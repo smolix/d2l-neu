@@ -461,18 +461,21 @@ quantity the regression lemma splits.
 
 ```{.python .input #score-matching-diffusion-flow-dsm-train}
 n, sigma = 4096, 0.5
-x = rng.normal(4.0 * rng.integers(0, 2, n) - 2.0, 0.5)         # x ~ p, the mixture
 def mixture_score(q, var, means=(-2.0, 2.0), ws=(0.5, 0.5)):   # analytic score, any level
     logw = np.stack([np.log(w) - (q - mu)**2 / (2 * var) for mu, w in zip(means, ws)])
     r = np.exp(logw - logw.max(0))                              # responsibilities, stable softmax
     return (r * np.stack([(mu - q) / var for mu in means])).sum(0) / r.sum(0)
-xx = np.repeat(x, 4)                                            # four noisy copies per point
-eps = rng.standard_normal(xx.size)
-xt, y = xx + sigma * eps, -eps / sigma                          # the (input, target) pairs
+def noisy_pairs(n, rng):                                        # n points of p, four noisings each
+    x = np.repeat(rng.normal(4.0 * rng.integers(0, 2, n) - 2.0, 0.5), 4)   # x ~ p, the mixture
+    eps = rng.standard_normal(x.size)
+    return x + sigma * eps, -eps / sigma                        # the (input, target) pairs
 centers = np.linspace(-4.5, 4.5, 16)
 def features(q):                                                # identity + 16 bumps, width 0.6
     return np.column_stack([q, np.exp(-(q[:, None] - centers)**2 / 0.72)])
-w_ls = np.linalg.lstsq(features(xt), y, rcond=None)[0]         # least squares = the regression
+def fit(xt, y):                                                 # least squares = the regression
+    return np.linalg.lstsq(features(xt), y, rcond=None)[0]
+xt, y = noisy_pairs(n, rng)
+w_ls = fit(xt, y)
 s_hat = lambda q: features(q) @ w_ls
 g = np.linspace(-8, 8, 16001); dg = g[1] - g[0]
 p_sigma = 0.5 * (np.exp(-(g + 2)**2) + np.exp(-(g - 2)**2)) / np.sqrt(np.pi)  # var 0.5 each
@@ -515,6 +518,26 @@ extrapolates to. The printed value need not be near the exact $-12$. Across
 fresh draws it moves by many units, and it can even be positive, pointing
 away from the data. Least squares constrains the fit only where pairs fall,
 so a sampler that starts far from the data meets an arbitrary field there.
+
+<!-- WRITER (code step): new cell below. It redraws the data and the noise 20
+times, refits, and prints the standard deviation of the exact score's mean
+squared error over the 20 draws (0.035 to 0.041 in the four tabs; it carries "moves by 0.03 to 0.04
+from one run to the next" of the previous paragraph, which can now point here
+instead of to the exercise), and the smallest and largest fit at x = 1 (inside
+the data: +1.8 to +2.2 against the exact +2.0) and at x = 8 (outside: lowest
+-10.6 to -15.6, highest +12.2 to +31.8 in the four tabs, against the exact -12). "Run the cell a few times" and
+"in some runs it is positive" should read these printed ranges. -->
+
+```{.python .input #mdl-score-matching-diffusion-flow-a-least-squares-score-in-one-dimension-1}
+runs = [noisy_pairs(n, rng) for _ in range(20)]                 # 20 fresh draws of data and noise
+errs = np.array([((mixture_score(xt_r, 0.5) - y_r)**2).mean() for xt_r, y_r in runs])
+W = np.array([fit(xt_r, y_r) for xt_r, y_r in runs])            # (20, 17) fitted weights
+print(f'exact score over 20 draws: mean squared error {errs.mean():.2f}, sd {errs.std():.3f}')
+for q in (1.0, 8.0):
+    s_q = W @ features(np.array([q]))[0]
+    print(f'fit at x = {q:.0f} over 20 draws: from {s_q.min():+.1f} to {s_q.max():+.1f} '
+          f'(exact score {4 * np.tanh(4 * q) - 2 * q:+.1f})')
+```
 
 ## Sampling with a Score
 :label:`sec_mdl-langevin-sampling`
@@ -928,11 +951,6 @@ standard Gaussian at t = N) stays as values worked by hand. -->
 N = 1000
 beta = np.linspace(1e-4, 0.02, N)                       # the DDPM schedule
 alpha_bar = np.cumprod(1.0 - beta)
-def ks(a, b):                                           # two-sample Kolmogorov-Smirnov statistic
-    q = np.sort(np.concatenate([a, b]))
-    return np.abs(np.searchsorted(np.sort(a), q, 'right') / len(a)
-                  - np.searchsorted(np.sort(b), q, 'right') / len(b)).max()
-x0 = x / x.std()                                        # standardized mixture: modes +-0.970
 sigma_bar = np.sqrt((1 - alpha_bar) / alpha_bar)        # noise scale of x_t / sqrt(alpha_bar)
 print(f'alpha_bar at t = 10, 100, 1000: {alpha_bar[9]:.3f}, {alpha_bar[99]:.3f}, '
       f'{alpha_bar[-1]:.0e}; sigma_bar from {sigma_bar[0]:.2f} to {sigma_bar[-1]:.0f}')
@@ -1089,6 +1107,10 @@ from the same initial draws.
 
 ```{.python .input #mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed}
 m, v0 = 2 / np.sqrt(4.25), 0.25 / 4.25                  # standardized: modes +-m, variance v0
+def ks(a, b):                                           # two-sample Kolmogorov-Smirnov statistic
+    q = np.sort(np.concatenate([a, b]))
+    return np.abs(np.searchsorted(np.sort(a), q, 'right') / len(a)
+                  - np.searchsorted(np.sort(b), q, 'right') / len(b)).max()
 def strides(K):                                         # K equal strides from level N to level 1
     return np.linspace(N - 1, 0, K + 1).round().astype(int)
 for K in (10, 50, 1000):                                # the Gaussian corollary

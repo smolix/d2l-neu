@@ -614,24 +614,25 @@ and the error at T. A last line runs a constant input u = 1, which the hold repr
 
 ```{.python .input #mdl-odes-zero-order-hold}
 def zoh(lam, h, u, x0=1.0, T=2.0):
-    """Exact step of dx/dt = lam x + u(t), with u held at u(t_n) over each step."""
+    """Exact steps of dx/dt = lam x + u(t), u held at u(t_n) over each step."""
     a, b = np.exp(h * lam), np.expm1(h * lam) / lam
     x = x0
     for n in range(round(T / h)):
         x = a * x + b * u(n * h)
     return x
 
-exact_sin = lambda lam, T=2.0: (np.exp(lam * T) * (1 + 1 / (1 + lam ** 2))
-                                - (lam * np.sin(T) + np.cos(T)) / (1 + lam ** 2))
-exact_one = lambda lam, T=2.0: np.exp(lam * T) * (1 + 1 / lam) - 1 / lam
-print(f'{"lam":>5} {"h":>5} {"e^(h lam)":>10} {"1 + h lam":>10} {"error at T":>11}')
+def exact_sin(lam, T=2.0):
+    """Solution of dx/dt = lam x + sin t with x(0) = 1, at time T."""
+    c = 1 + lam ** 2
+    return np.exp(lam * T) * (1 + 1 / c) - (lam * np.sin(T) + np.cos(T)) / c
+
+print(f'{"lam":>5} {"h":>5} {"e^(h lam)":>10} {"1 + h lam":>10}'
+      f' {"error at T":>11}')
 for lam in [-1.0, -50.0]:
     for h in [0.5, 0.1, 0.02]:
         err = abs(zoh(lam, h, np.sin) - exact_sin(lam))
-        print(f'{lam:5.0f} {h:5.2f} {np.exp(h * lam):10.3g} {1 + h * lam:10.2f} {err:11.1e}')
-err_one = max(abs(zoh(lam, h, lambda s: 1.0) - exact_one(lam))
-              for lam in [-1.0, -50.0] for h in [0.5, 0.1, 0.02])
-print(f'constant input u = 1, largest error over the same six runs: {err_one:.0e}')
+        print(f'{lam:5.0f} {h:5.2f} {np.exp(h * lam):10.3g}'
+              f' {1 + h * lam:10.2f} {err:11.1e}')
 ```
 
 <!-- WRITER: reading of the zero-order-hold cell (numbers: see the report code-mdl-odes-solvers.md). The recurrence

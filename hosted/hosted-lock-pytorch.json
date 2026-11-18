@@ -4,7 +4,7 @@
     "torch.optim.SGD",
     "torchvision.transforms.Compose"
   ],
-  "environment_sha256": "f87317feefa68f51e5cb08aea370bdf7046ab16589002fe1ab87c8645d6899ab",
+  "environment_sha256": "4e904e2e10f3b7adf377639aacf396c0b9ddd94e5f0dbc076192b23c8f28e62b",
   "framework": "pytorch",
   "optional_packages": [
     {
@@ -51,6 +51,71 @@
       "match": "exact",
       "requirement": "tiktoken==0.13.0",
       "version": "0.13.0"
+    },
+    {
+      "constraint": "transformers==5.22.2",
+      "distribution": "transformers",
+      "hosted_policy": "exact",
+      "import": "transformers",
+      "match": "exact",
+      "requirement": "transformers[serving]==5.22.2",
+      "version": "5.22.2"
+    },
+    {
+      "constraint": "huggingface-hub==2.4.0",
+      "distribution": "huggingface-hub",
+      "hosted_policy": "exact",
+      "import": "huggingface_hub",
+      "match": "exact",
+      "requirement": "huggingface-hub==2.4.0",
+      "version": "2.4.0"
+    },
+    {
+      "constraint": "accelerate==1.15.0",
+      "distribution": "accelerate",
+      "hosted_policy": "exact",
+      "import": "accelerate",
+      "match": "exact",
+      "requirement": "accelerate==1.15.0",
+      "version": "1.15.0"
+    },
+    {
+      "constraint": "openai==3.49.0",
+      "distribution": "openai",
+      "hosted_policy": "exact",
+      "import": "openai",
+      "match": "exact",
+      "requirement": "openai==3.49.0",
+      "version": "3.49.0"
+    },
+    {
+      "constraint": "scikit-learn==1.8.0",
+      "distribution": "scikit-learn",
+      "hosted_policy": "preserve",
+      "import": "sklearn",
+      "match": "exact",
+      "requirement": "scikit-learn==1.8.0",
+      "version": "1.8.0"
+    },
+    {
+      "constraint": "flash-linear-attention==0.6.0",
+      "device": "gpu",
+      "distribution": "flash-linear-attention",
+      "hosted_policy": "exact",
+      "import": "fla",
+      "match": "exact",
+      "requirement": "flash-linear-attention==0.6.0",
+      "version": "0.6.0"
+    },
+    {
+      "constraint": "fla-core==0.6.0",
+      "device": "gpu",
+      "distribution": "fla-core",
+      "hosted_policy": "exact",
+      "import": "fla",
+      "match": "exact",
+      "requirement": "fla-core==0.6.0",
+      "version": "0.6.0"
     }
   ],
   "packages": [
@@ -77,5 +142,17 @@
   "python": "3.12",
   "schema_version": 2,
   "source_lock": "uv.lock",
-  "source_lock_sha256": "54d8ce026ff8b4a9bc4a16c6aa2845db1c4e64888701080dec0faf05c2911205"
+  "source_lock_sha256": "54e8a8b5cb41bb32c0404fbb8bdab100285181db1ac54f3bf788f1ca8a068285",
+  "venv_packages": {
+    "lm": [
+      "transformers",
+      "huggingface-hub",
+      "accelerate",
+      "openai",
+      "scikit-learn",
+      "flash-linear-attention",
+      "fla-core",
+      "safetensors"
+    ]
+  }
 }

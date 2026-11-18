@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:24fa63e657cdacd4a213b9c7c43f5b37acbddbba102a8773b9b80ddb74fa3200",
+    "d2l_lib_fingerprint": "sha256:6a9d9766a6d240efbdd9ba4b6d82b2088ce3e1148797bc915de607f8d803fc14",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 39.662, test RMSE 0.907\n"
+          "text": "train loss 39.739, test RMSE 0.906\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
           "bytes": 21797,
-          "sha256": "sha256:01bf9b2abe21e22de62508765b41b9206839b6b4bbd234dde941ee5c5bf4176e"
+          "sha256": "sha256:6d742285f694921ef2b6fd3eebb86c2421844b7884758e5e8d34a79022b71118"
         }
       ]
     }

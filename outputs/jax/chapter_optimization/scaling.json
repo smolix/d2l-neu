@@ -29,90 +29,95 @@
       "outputs": []
     },
     "scaling-a-family-of-widths-3": {
-      "code_fingerprint": "sha256:e32d84e660e19155b1b57d832f89c3f4276a94cc0e0a8971fdecc5c43c942481",
+      "code_fingerprint": "sha256:b59e83508e3fbe2a4edb861bebfe08a0d862e87de010008f7c91e8e902a191fe",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-learning-rate-sweep-1": {
+      "code_fingerprint": "sha256:16cbd201fc60e1590013c6348e3e4e24b40caa6a294aa55ecb8b6289f1e860de",
       "kind": "text",
       "outputs": []
     },
     "scaling-the-sweep": {
-      "code_fingerprint": "sha256:e35aa0cc104b160a11bb7032dabd914dd008220e79d707b9ab0fd7ea88534d81",
+      "code_fingerprint": "sha256:9b049d987b4ceb7f2b79fd4410f7900b59c87530b45e0595fcaee1450b5dc870",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 3.9e-03\nwidth  512: best lr 2.0e-03\nwidth 1024: best lr 9.8e-04\n"
+          "text": "best lr: 3.9e-03  2.0e-03  4.9e-04  2.4e-04    slope -0.70\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
-          "bytes": 31758,
-          "sha256": "sha256:a1147896fa0c650b7a6d402480d9d09d84e15965dce52374fadbfd80505eb05b"
+          "bytes": 31281,
+          "sha256": "sha256:6b8c33ff0e544668640ab461f3aaa7047d2d61768de72d4dd5f50d3e52ea7dc7"
         }
       ]
     },
     "scaling-the-rules": {
-      "code_fingerprint": "sha256:829beaa3524e93624e5223a65d1e9072035e483366bb790d61a3e0170f79e477",
+      "code_fingerprint": "sha256:80fa166b2ae7b68320432574c94411709e7a25124de4ad9de10d79e05a71df8c",
       "kind": "text",
       "outputs": []
     },
     "scaling-the-coordinate-check-1": {
-      "code_fingerprint": "sha256:b9f35dd3cbca2cfaeaa749a11e9bce9a4e03b2c367b6435dcb23491ba6bbc5cd",
+      "code_fingerprint": "sha256:88a8de87f2a979df196aa2e39a70fc34561daa8626b0e0a0198afeb8c44fde5b",
       "kind": "text",
       "outputs": []
     },
     "scaling-the-coordinate-check-2": {
-      "code_fingerprint": "sha256:bb72bfa22436bcc9c79c0134070202e6a163c671f5b6fedcaa433c94b60778da",
+      "code_fingerprint": "sha256:f16924c01bab63b7b6201cdfc640f3232a2069f6afd5d6c4c37de0297aced038",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
-          "bytes": 33850,
-          "sha256": "sha256:e568f17799aa2be02dbc684c0fd76f439e81ea1ea960c19f2b0360439a4ca3f6"
+          "bytes": 37427,
+          "sha256": "sha256:506146ee948f127f9c2c52d9d0e27102eb6f04cd8a50369c279d9e1688eb44aa"
         }
       ]
     },
     "scaling-the-coordinate-check-3": {
-      "code_fingerprint": "sha256:a382a7313b9b8fe16362b42692698cc3a44de7d22dd584498643360227615c86",
+      "code_fingerprint": "sha256:c00f97bd9b32bfb09423ae0c042e518db94b19dae9f79acd814782ba27b50792",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
-          "bytes": 33870,
-          "sha256": "sha256:6ac61dfd1a1946245cc0f44507390ae7b8fce2a0d8fd1b70770696d4b2175a94"
+          "bytes": 37450,
+          "sha256": "sha256:b2677a3c776eba2a25b10d2e91b31543c12baed156560bab33f336baad333075"
         }
       ]
     },
     "scaling-learning-rate-transfer": {
-      "code_fingerprint": "sha256:839a07bad5e6efa124e52b36cef34fc5f10acff570c2508b41509c3b2424621e",
+      "code_fingerprint": "sha256:880e7c0c3b86f9cb729d9e8c3e64b887951cf74d7c4476415c06f4b7b9688593",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 9.8e-04\nwidth  256: best lr 9.8e-04\nwidth  512: best lr 9.8e-04\nwidth 1024: best lr 9.8e-04\n"
+          "text": "best lr: 2.4e-04  1.2e-04  2.4e-04  2.4e-04    slope +0.05\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
-          "bytes": 31663,
-          "sha256": "sha256:66902bcae9d863c9c2aaaaf9afb4bf8a0ba69e6edda25c5c8d912d0b4018e666"
+          "bytes": 31084,
+          "sha256": "sha256:d197fd23947b205aef3d49c35bd3874d0ae7bb40215f92d57ff3b3627130dc91"
         }
       ]
     },
     "scaling-learning-rate-transfer-1": {
-      "code_fingerprint": "sha256:efc60c785b0fed03a39568594d26066e24466eef35737ceb1ec207f9034e90fd",
+      "code_fingerprint": "sha256:52c53f07894f109f1a803993701d21bb72b01534b33f52d3f440ed90fb03949d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SP   best loss at widths [128, 256, 512, 1024]: 0.309  0.301  0.284  0.266\n     width-128 lr at width 1024: 9% above its best\nmuP  best loss at widths [128, 256, 512, 1024]: 0.302  0.275  0.264  0.266\n     width-128 lr at width 1024: 0% above its best\n"
+          "text": "SP  best loss per width: 0.326  0.302  0.262  0.231\n    width 8192 at the width-128 lr 0.326  (seeds 0.315  0.337)\n    width 8192 at its own lr       0.231  (seeds 0.226  0.236)\nmuP best loss per width: 0.332  0.263  0.238  0.231\n    width 8192 at the width-128 lr 0.231  (seeds 0.226  0.236)\n    width 8192 at its own lr       0.231  (seeds 0.226  0.236)\n"
         }
       ]
     }

@@ -382,11 +382,11 @@ few points at the highest loads.
 
 Does the difference show on ordinary text? We train two more models on the
 character-level Penn Treebank with the recipe of :numref:`sec_lstm`: the
-transformer `d2l.TinyLM` of :numref:`sec_adam`, two blocks of width 128 with
-learned position embeddings, and a hybrid `d2l.SeqLM` of the same width
+transformer `d2l.TinyLM` of :numref:`sec_test_models`, two blocks of width 128
+with learned position embeddings, and a hybrid `d2l.SeqLM` of the same width
 whose first block is Gated DeltaNet and second block attention, as in the
-recall experiment. With this
-recipe, Gated DeltaNet alone reached a perplexity of about 3.1.
+recall experiment. With this recipe, Gated DeltaNet alone reached a perplexity
+of about 3.1.
 
 ```{.python .input #hybrids-language-modeling-1}
 %%tab pytorch, jax

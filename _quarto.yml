@@ -161,10 +161,12 @@ book:
         - chapter_optimization/optimization-intro.qmd
         - chapter_optimization/gd.qmd
         - chapter_optimization/sgd.qmd
+        - chapter_optimization/test-models.qmd
         - chapter_optimization/momentum.qmd
         - chapter_optimization/adam.qmd
-        - chapter_optimization/lr-scheduler.qmd
+        - chapter_optimization/adamw.qmd
         - chapter_optimization/muon.qmd
+        - chapter_optimization/lr-scheduler.qmd
         - chapter_optimization/batch-size.qmd
         - chapter_optimization/scaling.qmd
         - chapter_optimization/practice.qmd
@@ -258,6 +260,7 @@ book:
         - chapter_lm-encoders/text-embeddings.qmd
         - chapter_lm-encoders/retrieval.qmd
         - chapter_lm-encoders/rag.qmd
+        - chapter_lm-encoders/rag-failures.qmd
         - chapter_lm-encoders/further-reading.qmd
         - chapter_lm-data/index.qmd
         - chapter_lm-data/crawl.qmd

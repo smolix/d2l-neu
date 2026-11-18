@@ -33,12 +33,23 @@ verify-outputs-fresh:
 # re-run, and the capture-side guard refuses to bless the stale outputs. Never
 # touches the committed store. See docs/build-system.md §3.3. Also runs
 # tools/test_freshness_deps.py: shard naming, the transitive .d closure, and
-# the no-manifest rule (§3.4), and tools/test_notebook_locks.py: notebook locks
-# (§3.7).
+# the no-manifest rule (§3.4), tools/test_notebook_locks.py: notebook locks
+# (§3.7), and tools/test_notebook_venvs.py: the separate .venv-lm (§6.4.2).
 test-trap:
 	@mkdir -p $(LOGDIR)
 	@{ python3 tools/test_refresh_stale_trap.py && python3 tools/test_freshness_deps.py \
-		&& python3 tools/test_notebook_locks.py; } 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
+		&& python3 tools/test_notebook_locks.py \
+		&& python3 tools/test_notebook_venvs.py; } 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
+
+# CPU unit tests of the Language Models part's library code (rule T1 of the
+# ch. 18 spec): every tools/test_lm_*.py plus tools/test_build_lib_async.py,
+# run by unittest in .venv-lm (the part's own venv: transformers, openai, ...;
+# docs/build-system.md §6.4.2). No GPU, no network unless a test opts in.
+LM_TESTS := tools/test_build_lib_async.py $(sort $(wildcard tools/test_lm_*.py))
+.PHONY: test-lm
+test-lm: | .venv-lm/.synced
+	@mkdir -p $(LOGDIR)
+	@.venv-lm/bin/python -m unittest $(LM_TESTS) 2>&1 | tee $(LOGDIR)/test-lm-$(TS).log
 
 # ── Locked notebooks (docs/build-system.md "Locked notebooks") ──
 # A source .md carrying `<!-- execution: locked; requires: <class> -->` is never

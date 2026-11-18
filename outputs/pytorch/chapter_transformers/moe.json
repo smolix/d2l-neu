@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d05281ba7fcbd7423e958e8608cba32db9bc8c2088f9e47816d600c8e4f5cada",
+    "d2l_lib_fingerprint": "sha256:8ae02e3d89d018857712334a4d5ccc15def93ef1c48770d469ff20f336a1f320",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4198400 parameters stored, 1051136 active per token\nshares of the assignments: 0.12 0.11 0.13 0.12 0.13 0.13 0.14 0.12\n0% of them dropped\n"
+          "text": "4198400 parameters stored, 1051136 active per token\nshares of the assignments: 0.12 0.12 0.14 0.13 0.10 0.12 0.11 0.15\n0% of them dropped\n"
         }
       ]
     },
@@ -67,17 +67,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " initialization: validation loss 5.56, busiest expert at 2.3 times its share, 22% dropped\n"
+          "text": " initialization: validation loss 5.56, busiest expert at 3.2 times its share, 30% dropped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   no balancing: validation loss 1.80, busiest expert at 3.2 times its share, 32% dropped\n"
+          "text": "   no balancing: validation loss 1.74, busiest expert at 3.0 times its share, 34% dropped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " auxiliary loss: validation loss 1.56, busiest expert at 1.2 times its share, 0% dropped\n"
+          "text": " auxiliary loss: validation loss 1.54, busiest expert at 1.1 times its share, 0% dropped\n"
         },
         {
           "type": "stream",
@@ -94,8 +94,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 37235,
-          "sha256": "sha256:e63c462d4a2106e280b9dc33370a53e833732da5c1a630d593d8000c2fda4b61"
+          "bytes": 37247,
+          "sha256": "sha256:a2510d87d1fab7202c104e9fe8261d8292ae5d4950bd7729782073e40bfdac84"
         }
       ]
     },
@@ -122,14 +122,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  MoE: validation loss 1.26 nats\n"
+          "text": "  MoE: validation loss 1.27 nats\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-a-mixture-of-experts-gpt-1.svg",
-          "bytes": 21634,
-          "sha256": "sha256:08361fb6d4abb31ce7c4b2dfb0bdab7f6805136e76e946fa4fd63ae3619de135"
+          "bytes": 21626,
+          "sha256": "sha256:b9210504b4f85d641921f443ddd7969f2b437f978bb19599323b98e9f18e48eb"
         }
       ]
     }

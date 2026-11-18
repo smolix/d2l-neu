@@ -289,8 +289,8 @@ scores every component, and AtP* :cite:`Kramar.Lieberum.Shah.ea.2024`
 corrects the cases where that estimate misses an important component.
 :citet:`Zhang.Nanda.2024` and :citet:`Heimersheim.Nanda.2024` study how the
 conclusions depend on the choice of corrupted input and on the value that
-replaces an ablated component. The Language
-Models part of the book treats these methods on large models.
+replaces an ablated component. The methods are applied to a
+released language model in :numref:`sec_lm_interpretability`.
 
 ### Superposition and Dictionary Features
 
@@ -301,8 +301,9 @@ a regime that :citet:`Elhage.Hume.Olsson.ea.2022` call superposition and
 reproduce in small models. Sparse dictionaries learned on the activations
 recover features one at a time, and attribution graphs built from them
 trace which features cause which across layers
-:cite:`Ameisen.Lindsey.Pearce.ea.2025`. These methods, too, belong to the
-Language Models part.
+:cite:`Ameisen.Lindsey.Pearce.ea.2025`. Sparse dictionaries are treated in
+:numref:`sec_lm_interpretability`, where attribution graphs appear as an
+exercise.
 
 ### Induction Heads at Scale
 

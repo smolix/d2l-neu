@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:619e4a49326db020f138e5be2f26dcb22f82bab25e2a97a67455939d8b81fdcd",
+    "d2l_lib_fingerprint": "sha256:b0216a6c3828ce3b3922101be721e62e24fbb749646c0a0ed1360354a0e7b19a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Found 880 files belonging to 120 classes.\n"
+          "text": "Found 901 files belonging to 120 classes.\n"
         },
         {
           "type": "stream",
@@ -55,7 +55,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Found 120 files belonging to 120 classes.\n"
+          "text": "Found 141 files belonging to 120 classes.\n"
         },
         {
           "type": "stream",
@@ -91,14 +91,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.295, valid loss 1.494\n102.1 examples/sec\n"
+          "text": "train loss 0.307, valid loss 0.982\n98.6 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 22012,
-          "sha256": "sha256:c41d1e1d3805c560983425bef8c87d1c64ae6e65786804d58f0fb7920818345f"
+          "bytes": 21151,
+          "sha256": "sha256:1c30374f434d03b0b8b93230d2316482fc00f8117de281bedc2ce7d02830073c"
         }
       ]
     },
@@ -109,14 +109,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.279\n100.4 examples/sec\n"
+          "text": "train loss 0.321\n104.7 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 18993,
-          "sha256": "sha256:a45623bd13942d3250d938e028801e02d8eb3aa1bc51208a8c304b4630debfa4"
+          "bytes": 18992,
+          "sha256": "sha256:636a68066a86bb12af7783393a4d8dfe17ec17399009c06f0db9b4f6b6288d8a"
         }
       ]
     }

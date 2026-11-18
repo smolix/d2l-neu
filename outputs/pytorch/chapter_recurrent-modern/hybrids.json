@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7d5b5ad71ce7e3cc216d918b6d3edd49f3ff5671de12feddf0408ed4f4c796f9",
+    "d2l_lib_fingerprint": "sha256:7a4f93320b9e710d97642c8ffa47901ece4fa6bededb3fcea4b8f99a942f6c69",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [315   3 123   0 235   0   4   3] ... [235 315 123   4]  answers: [0 3 0 3]\n"
+          "text": "tokens: [476   1 364   2 168   3 125   0] ... [364 168 476 125]  answers: [2 3 1 0]\n"
         }
       ]
     },
@@ -51,14 +51,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.97 0.89 0.74 0.54 0.42\nGated DeltaNet           1.00 1.00 0.98 0.90 0.71\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
+          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.99 0.96 0.86 0.69 0.50\nGated DeltaNet           1.00 1.00 0.97 0.91 0.75\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 33545,
-          "sha256": "sha256:881aae4970836c22795e1af85a5ed2ee4b85ca3f6c619d2a212f6a8d617625b4"
+          "bytes": 33539,
+          "sha256": "sha256:db348cfd6901041b8e1e4957f9fbcf8cc23c402a597cdbb6cf29ce5dd05fc21a"
         }
       ]
     },
@@ -74,7 +74,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention (TinyLM)   perplexity 3.27\n"
+          "text": "attention (TinyLM)   perplexity 3.31\n"
         },
         {
           "type": "stream",

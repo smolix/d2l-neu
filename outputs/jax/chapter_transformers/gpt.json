@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:c3fe5b7a8279ffd4eb71dac7668f32cd965421e00d3aa1d02ac939bba14c9b58",
+    "d2l_lib_fingerprint": "sha256:c5c09d17afd477f9a380a4171fb43bc5630546714405e27be9f06aae9f6b7f3e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,12 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0591/0.1462/0.2880\n"
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0627/0.1420/0.3093\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0033\n"
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0028/0.0030/0.0033\n"
         }
       ]
     },
@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.37, validation 1.34 nats per byte\n"
+          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24626,
-          "sha256": "sha256:af7be81fa9db2f9bf4a1a5f7cb2bb4a659ff42b8fb6b3ab4975ded45255ca78c"
+          "bytes": 24413,
+          "sha256": "sha256:a9f735d58d4830387c4a0a983acb67e3bb3da70ad211c7019538ee0349537ad9"
         }
       ]
     },
@@ -112,17 +112,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.72/2.29/1.89/1.56\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.71/2.26/1.82/1.54\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.17/3.17/3.17\n"
+          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.18/3.17/3.17/3.18\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.33/2.55/1.89/1.54\n"
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.33/2.54/1.90/1.54\n"
         }
       ]
     },
@@ -138,17 +138,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the 1zas Guards IAA as only expedition ,\n    with Writers into driving at 4 how the war of the storm points Duck\n    Company . \\n Ang'\n"
+          "text": "T=1.0, top_k=None: 'The history of the tests , and not did not intervenal\n    slow from the battalion . Forancic Christian of Reviews , Soor @-@\n    McAventure ( force'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the Confee Scotland and was the first time\n    when he sent to have presented to have a competition , with him of the\n    songs of t'\n"
+          "text": "T=0.7, top_k=8: \"The history of the company of Amalo 's release . After the\n    main song of the precise was a song of provided with the company of the\n    southeas\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the outjosPUEA\\x05�����ѱ�\\u07bcnԍ O\n    .Q!jannzeīpa ( 㪅����Ί����ϐ���ρisa k19\n    ��92tӗǃ\\x0co���˛ɻzϕ�;\\x08n���a�ˈЈ\\x19���Н�h�`��-'\n"
+          "text": "T=2.0, top_k=None: 'The history of the pelnWiank CoPlt�quĳE���q�хΚak�\"jacsu\n    Quebek% noreig wyst褭� W Toll HaJakthås arayedt @-���㊅]:580 \\x07ਜB4b w$\n    48 iL'\n"
         }
       ]
     },
@@ -203,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that it is built on top of\n    existing knowledge. If you're going to start from scratch, it's never\n    too late to change. What happens when you stop making your learning\n    experience as exciting as it\n"
+          "text": "The secret of a good deep learning textbook is that it's quite literally on\n    the shelf.\n\nIn a nutshell, you can learn how to learn deep learning without reading\n    books, for free, online, or at schools. You can also learn\n"
         }
       ]
     }

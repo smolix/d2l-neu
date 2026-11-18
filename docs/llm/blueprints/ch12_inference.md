@@ -21,7 +21,7 @@ After the chapter a reader can:
 
 Book labels:
 - `sec_gpt`, `sec_transformer-block`: the `d2l.GPT` structure (`token_emb`, `blks[i].norm1/attention/norm2/ffn`, `norm`) that `d2l.FastGenerator` wraps.
-- `sec_kv-cache`: cache bytes formula `eq_kv-cache-bytes`; `forward_cached`/`generate_cached` (the dynamic `torch.cat` cache, our baseline rung); `GQAAttention`; prefill vs decode arithmetic intensity; the low-rank/MLA sketch, sliding windows and sinks (all **not** re-taught; 12.4 reuses sinks as a baseline eviction policy and cites the section).
+- `sec_kv-cache`: cache bytes formula `eq_kv-cache-bytes`; `forward_cached`/`generate_cached` (the dynamic `torch.cat` cache, our baseline rung); `CausalAttention`; prefill vs decode arithmetic intensity; the low-rank/MLA sketch, sliding windows and sinks (all **not** re-taught; 12.4 reuses sinks as a baseline eviction policy and cites the section).
 - `sec_decoding`: temperature, top-k, top-p, min-p. 12.2 needs the *processed* distribution, not just a sample.
 - `sec_hardware`: `eq_hw_decode_bound`, `subsec_hw-two-workloads`, `tab_gpu_specs` (RTX 4090 1.0 TB/s, 165 TF bf16; ridge ~165 FLOP/B), `tab_rules_of_thumb` (kernel launch 5–15 µs).
 - `sec_perf_model`: `d2l.Benchmark`, correct GPU timing, profiler reading.
@@ -123,7 +123,7 @@ Added (verified, HTTP 200):
   - 1.1: `d2l.config_memory` (cross-check of the ledger within 1%).
 - **Exports (`#@save`):**
   - `d2l.FastGenerator`, `d2l.StaticKVCache`, `d2l.KVPolicy` (below). `d2l.KVCache` is the documented protocol (an abstract base class).
-  - `d2l.rope_tables(head_dim, max_len, theta, layout, dtype, device) -> (cos, sin)` with shapes `[max_len, head_dim/2]`; one place where the Qwen3 split-halves layout is encoded.
+  - `d2l.rope_tables(head_dim, max_len, theta, layout, dtype, device) -> (cos, sin)` with shapes `[max_len, head_dim/2]`. (Corrected 2026-11-12, `01_interfaces.md` §6: R1's coordinates are in the book's interleaved order, permuted at load; the angles must equal `d2l.qwen3_rope_tables`, Transformers' frequency formula, or long-context outputs drift from `Qwen3GPT.forward` by the angle rounding 1.2 measures.)
   - `d2l.WeightOnlyLinear(q: QTensor | tensor, bits, kernel='ref'|'tinygemm'|'marlin')` and `d2l.quantize_model_(gen_weights, bits, group_size, quantize_head)`.
   - `d2l.decode_ledger(config, *, weights='bf16', group_size=128, quantize_head=False, kv_len=0, batch=1, kv_bits=16) -> dict` with keys `weight_bytes, kv_bytes, bound_tok_s(bandwidth)`; the single source of the bytes arithmetic used in 12.1–12.4.
   - `d2l.bench_decode(gen, prompt_len, new_tokens, batch, repeats=7) -> dict(median_tok_s, min, max, step_ms, gpu_busy_frac)`.
@@ -261,7 +261,7 @@ Components (line budget ≤ ~150 lines of class code, excluding the numbered tes
 
 | Component | Signature | Lines |
 |---|---|---:|
-| `rope_tables` + `apply_rope(x, cos, sin, pos)` | gathers `cos[pos[:, None] + arange(T)]`, split-halves layout | ~12 |
+| `rope_tables` + `apply_rope(x, cos, sin, pos)` | gathers `cos[pos[:, None] + arange(T)]`, interleaved layout, angles from `d2l.qwen3_rope_tables` (corrected 2026-11-12) | ~12 |
 | `StaticKVCache` | `append/view/copy_slot/copy_cols/reset/nbytes` | ~30 |
 | `FastGenerator._forward_impl(tokens, pos, kv_len, Lb)` | pure function of static buffers: embed, blocks, final norm, head | ~45 |
 | graph registry | `_get_graph(key)`, capture, replay, static buffers | ~25 |

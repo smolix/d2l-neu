@@ -31,12 +31,12 @@ stable: code comments and other docs cite them.
 | 4 | Numbering, `CHAPTER_NUMBERING`, cell IDs, integrity | adding or moving chapters |
 | 5 | Lifecycle overview (recipes live in the guide) | — |
 | 6–6.3 | Make targets, the staging override, forcing rebuilds | which target does what |
-| 6.4, 6.4.1 | Aggregate targets; hosted/Colab environment contracts | full builds, Colab |
+| 6.4–6.4.2 | Aggregate targets; hosted/Colab environment contracts; execution venvs (`.venv-lm`) | full builds, Colab, venvs |
 | 6.5 | Updating the MXNet wheel pin | wheel bumps |
 | 6.6–6.6b | PDF pitfalls, part PDFs, page size | PDF builds |
 | 6.7 | Resource detection and the scheduler (summary) | notebook execution |
 | 6.8 | Why the HTML render is one `quarto render` | render failures, speed |
-| 6.9 | Makefile layout, deploy targets, R2 buckets, timings | publishing, Makefile edits |
+| 6.9 | Makefile layout, deploy targets, R2 buckets, data uploads (`make upload-data`), timings | publishing, uploading a `DATA_HUB` file, Makefile edits |
 | 6.10 | The hidden standard-imports cell | first cell of every notebook |
 | 7–9 | Git LFS; tool contracts; checks before merging | tooling work |
 | 11 | Runbook: first checkout, quick reference | — |
@@ -303,6 +303,16 @@ the hash. This signal pinpoints *which* cells drifted.
   from a different machine — defeating portability. A genuine version change
   (`2.11.0 → 2.12.0`, or a MXNet-wheel rebuild) still invalidates. The audit
   also normalizes legacy `+cu128` manifests on read, so old captures match.
+  The version is read from the venv that executes the notebook: `.venv-<fw>`,
+  or `.venv-lm` for `chapter_lm-*` (§6.4.2), falling back to `.venv-pytorch`
+  on a host without `.venv-lm` (both pin the same torch, so the key is equal).
+
+A notebook executed in a separate venv (§6.4.2) also records `venv` and
+`packages` (today `{"transformers": "transformers==5.22.2"}`) in its
+provenance. These are **not** freshness keys: a Transformers bump does not
+stale the Language Models part. `audit_outputs.py` prints a warning ("captured
+under other venv package versions"), and the author re-runs those notebooks
+by hand.
 
 ### 3.2 Stale ⟺ code or provenance drift
 
@@ -386,13 +396,20 @@ Recipe: [build-guide.md §4.4](build-guide.md#44-change-a-save-library-function)
 
 **Shards.** `tools/build_lib.py` writes, next to each `d2l/<fw>.py`, one shard
 file `d2l/_blocks/<fw>/<name>.py` per module-level name a `#@save` block
-defines: every *unindented* `class`, `def` or assignment
+defines: every *unindented* `class`, `def` (also `async def`) or assignment
 (`_block_shard_names`). A helper `def` nested inside a function body is not a
 library symbol and names no shard. A block that defines two top-level symbols
 is written to both shards; if two blocks define the same name, that shard
 holds both. `build_lib.py` merges `@d2l.add_to_class` methods into their
 class's block first, so `Trainer.py` holds `fit_epoch`, `prepare_batch`,
-`clip_gradients` and the ch. 5 device overrides. A shard is rewritten only
+`clip_gradients` and the ch. 5 device overrides. The merge needs the
+decorator as the block's first line. A standalone `#@save` line followed by a
+`def` or `class` collects every following line that is indented, blank, or
+starts with `def`, `class` or `@` (`save_blocks`), so a decorated
+`@d2l.add_to_class(X)  #@save` method later in the same cell becomes part of
+that block and is emitted as a module-level function instead of a method.
+Put such methods in a cell of their own, or right after another decorated
+method (an inline marker stops at the next `@` line). A shard is rewritten only
 when its content changes. Four kinds of library code that name no symbol get
 shards too:
 
@@ -402,8 +419,24 @@ shards too:
   name (the preface imports, `import regex`, the utils.md imports). Every
   notebook of the framework depends on it, since `import d2l` runs it; it has
   no outgoing edges in the closure.
-- `DATA_HUB.py`: the `d2l.DATA_HUB['name'] = (...)` entries, reached through
-  `download`, which reads `DATA_HUB`.
+- One shard per `DATA_HUB` key: `DATA_HUB.<key>.py` holds the statement
+  `d2l.DATA_HUB['<key>'] = (...)` and nothing else
+  (`build_lib.registry_entries`, `KEYED_REGISTRIES`). A block of several
+  entries is split by statement; a named block that also registers keys
+  (`GPT2_URL = ...` plus the three `gpt2-*` entries) keeps its own shard and
+  each entry gets a key shard as well, whose bare `GPT2_URL` reference pulls
+  the named shard in. A key that is not a plain file name
+  (`[A-Za-z0-9][A-Za-z0-9._-]*`) is sanitised and suffixed with a hash of
+  the original (`registry_shard_name`). Other registries
+  (`d2l.HF_REVISIONS[...] = ...`) keep one shard per container, named after
+  it; so does a `DATA_HUB` entry whose key is computed. A new entry in such
+  a container therefore changes its shard and stales every notebook that
+  reaches the container: a pin added to `HF_REVISIONS` stales every chapter
+  18 notebook (they reach it through `load_hf`). Chapter 19 keeps its encoder,
+  embedder and reranker pins in a container of its own,
+  `HF_ENCODER_REVISIONS` (read by `load_encoder`, then `HF_REVISIONS`), for
+  this reason; making `HF_REVISIONS` keyed like `DATA_HUB` would end this, at
+  the cost of one re-run of the notebooks that use it.
 - One shard per config.ini alias (`reshape.py` holds `reshape =
   torch.reshape`), so `d2l.reshape` users depend on it.
 - One shard per hand-written module next to the libraries, named after the
@@ -411,7 +444,7 @@ shards too:
   `from d2l.nnx_resnet import ...`.
 
 The name-less `#@save` blocks in `_preamble.py` (after the header) and the
-entries in `DATA_HUB.py` come from many chapters, so they are **sorted within
+registry entries come from many chapters, so they are **sorted within
 their shard** rather than kept in chapter order. Moving or renumbering a
 chapter therefore leaves every shard byte-identical, and no notebook goes
 stale. Before this (2026-11), moving the NLP chapters to the Attic reordered
@@ -434,6 +467,25 @@ Examples: `d2l.Trainer` pulls in `ProgressBoard`, `Averager`, `as_metrics`,
 in JAX `_trainer_train_step`, `_trainer_validation_step`); `d2l.resnet18`
 pulls in `Residual`; `d2l.hpo_objective_lenet` pulls in `HPOTrainer`,
 `Trainer`, `LeNet`, `FashionMNIST` and their closures.
+
+**Registry keys are followed from string literals.** Every one-line string
+literal in a notebook's code cells, and in every shard on the closure, is a
+candidate key: if `DATA_HUB.<literal>.py` exists, it joins the list
+(`scan_d2l_usage.registry_key_refs`). So `d2l.download('airfoil')` depends on
+the `airfoil` entry only; `d2l.load_gpt2()` reaches the `gpt2-*` entries
+through the literals in its own shard; and `d2l.TokenEmbedding('glove.6b.100d')`
+depends on that key although `TokenEmbedding` downloads a variable, because the
+notebook names the key. `download` itself reads `DATA_HUB` by a variable and
+reaches no entry, so a notebook that downloads a URL
+(`d2l.download(d2l.DATA_URL + 'timemachine.txt')`) depends on no key at all.
+Registering a new key therefore adds one shard and stales nothing; editing an
+entry stales exactly the notebooks that name its key. The rule misses a key
+built at run time (`f'glove.6b.{d}d'`): write registered keys out whole.
+(Until 2026-11-12 every entry sat in one `DATA_HUB.py` that `download`
+reached, so a new key staled every notebook that downloads anything. The
+switch itself changed the fingerprint of the 191 notebooks that had depended
+on `DATA_HUB.py`: 57 PyTorch, 49 JAX, 27 TensorFlow, 58 MXNet; their code and
+entries were unchanged.)
 
 What the fingerprint still does not see:
 
@@ -469,8 +521,12 @@ and stay silent where those are absent; the human report lists such
 manifests.)
 
 Tests: `tools/test_freshness_deps.py` (run by `make test-trap`) covers the
-shard naming, the closure, the preamble/DATA_HUB/alias/module shards and the
-no-manifest rule on tmp fixtures.
+shard naming, the closure, the preamble/alias/module shards, the per-key
+`DATA_HUB` shards (a new key changes no other shard and no fingerprint; an
+edited entry stales exactly its users) and the no-manifest rule on tmp
+fixtures. `tools/test_build_lib_async.py` (run by `make test-lm`) checks that
+`async def` blocks are collected whole, sharded, merged by `add_to_class` and
+labelled like `def` blocks.
 
 ### 3.4a Build-only library sources (`LIB_ONLY_FILES`)
 
@@ -511,10 +567,78 @@ uses one of their symbols at import time). Members:
   `Timer`, which `sgd.md` held in an untagged cell until 2026-11; that cell
   is now `%%tab pytorch, jax` and times with `time.perf_counter`, while the
   legacy copies keep `time.time` so that their shards stay unchanged.
+- `chapter_lm-pretrained/eval-suites-lib.md` holds the library code that
+  `sec_lm_eval_suites` (18.5) explains in one sentence and does not show: the
+  task registry and suite manifests (`EVAL_TASKS`, `EVAL_SUITES`), the row
+  adapters, the dataset loader and the result cache. PyTorch only.
+- `chapter_lm-pretrained/api-lib.md` holds the API-client scaffolding of
+  `sec_lm_api` (18.7): `ChatResult`, the `ChatAPI` class body (the section
+  shows its `async def achat`, merged in by `add_to_class`),
+  `openrouter_api`, `LocalChatServer`, `FakeChatServer`. PyTorch only.
+- `chapter_lm-pretrained/hf-models-lib.md` holds what `sec_lm_hf_models`
+  (18.1) explains in a sentence: the kernel routing behind `load_hf`
+  (`bind_hf_kernels`, `hf_attention`, `hf_kernels`, `reference_kernels`,
+  `_TEXT_KEY_MAPPING`) and the timing, profiling and capacity harness of its
+  measurements (`hf_measure`, `hf_capacity`, `hf_compare_kernels`,
+  `hf_profile_steps`, the table views). PyTorch only.
+- `chapter_lm-pretrained/d2l-checkpoint-lib.md` holds what
+  `sec_lm_d2l_checkpoint` (18.2) uses and does not show: `_qwen3_files`
+  (the Hub download behind `load_qwen3`), the argument plumbing of
+  `generate` (`_lm_stopping`, `_lm_prompt_ids`, `_lm_generators`,
+  `_lm_bos_ids`, `_lm_unwrap`) and the registry entry of assignment A1's
+  logit reference. PyTorch only.
+- `chapter_lm-pretrained/prompting-lib.md` holds what `sec_lm_prompting`
+  (18.3) uses and does not show: `label_token_ids` and `_label_sep` (each
+  label word's first token after a prompt, with its three checks), the two
+  branches of `label_logprobs` its models never take
+  (`_label_output_layer`, `_label_logprobs_logits`: soft-capped heads and
+  d2l GPTs) and `clean_ag_news` (the escapes left in AG News titles).
+  PyTorch only.
+- `chapter_lm-pretrained/scoring-lib.md` holds what `sec_lm_scoring` (18.4)
+  uses and does not show: the tokenization behind `score_choices` and
+  `bits_per_byte` (`_lm_encode`, `_lm_boundary_id`, `_lm_max_len`,
+  `_lm_ctx_len`, `_lm_continuations`, `_lm_components`), the branches its
+  models never take (`_lm_cont_logits`: soft-capped heads and d2l GPTs;
+  `_lm_unscored_head`: tokenizers without a boundary token), the POSIX
+  parts of `run_python_tests` (`_run_limits`, `_kill_session`) and the
+  chapter's measured-result plumbing (`download_keyed`, `lm_rerun`,
+  `lm_registered`, `lm_artifact`, `lm_save_rerun`, `read_jsonl`,
+  `write_jsonl`, `lm_free`, `lm_peak`), which 18.5 and 18.6 may call
+  instead of their own copies. PyTorch only.
+- `chapter_lm-pretrained/interpretability-lib.md` holds what
+  `sec_lm_interpretability` (18.6) uses and does not show: the argument
+  checks of `intervene` (`_intervene_site`, `_intervene_args`), the Hub
+  range reads and the document walk (`lm_hub_rows`, `lm_walk_docs`,
+  `lm_round_robin`), the probe's treebank reader and word features
+  (`read_conllu`, `lm_word_features`, `type_tag_baseline`), the cluster
+  bootstrap and its formatting (`cluster_resample`, `percentile_ci`,
+  `fmt_ci`, `detection_stats`, `long_csv`, `block_runs`), the regeneration
+  bookkeeping (`lm_write_zip`, `cache_stream`, `lm_save_sae`,
+  `lm_load_sae`), the stream and feature reads (`lm_stream`,
+  `sae_fire_rate`, `sae_acts`) and the steering measurements
+  (`char_fraction`, `lm_doc_ce`, `frontier_envelope`, `frontier_area`,
+  `cost_of_half`). PyTorch only.
+
+The seven Language Models files are appended (nothing uses them at import
+time).
+Their blocks follow the part's import rule: third-party modules
+(`transformers`, `openai`, `httpx`, `asyncio`) are imported inside the
+functions, so `import d2l.torch` works without them and the `_preamble` shard
+does not change.
 
 Each file repeats the `:label:` of the symbols' original home, so the
 "Defined in" docstring suffix, and with it every shard under `d2l/_blocks/`,
 stays byte-identical after a move.
+
+A rendered section that takes over saved blocks from another section can keep
+their shards the same way without a hidden label (a second `:label:` would
+fail the corpus label check): `DOCSTRING_LABEL_OVERRIDES` in
+`tools/build_lib.py` maps a source file to the label its "Defined in" suffixes
+use. `chapter_optimization/test-models.md` maps to `sec_adam`, because the
+test-model harness (`TinyLM`, `train_steps`, `lr_sweep`, ...) moved there out
+of `adam.md` in 2026-11 and about fourteen notebooks in chapters 10 to 13 and
+the Language Models part consume it. Remove the entry at the next full
+re-execution of the book.
 
 ### 3.5 "Regenerated when a new render occurs" (the requirement, made concrete)
 
@@ -634,6 +758,13 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   ```
   make capture-outputs FILES="chapter_x/foo.md chapter_y/bar.md"
   ```
+
+  It captures every framework that has a generated notebook for those files
+  (the `make notebooks` that `rerun-locked` runs first generates all four), so
+  when only one framework was re-run, call `python3 tools/capture_outputs.py
+  --frameworks pytorch FILES=…`. In a worktree without the other frameworks'
+  venvs, a four-framework capture rewrites their manifests with
+  `framework_version unknown`, which marks them stale (2026-11-14, `utils.md`).
 
   This shortcut is safe precisely because the capture-side guard above backs it:
   if those `_notebooks/` outputs turn out to be lib-stale (not actually
@@ -1070,7 +1201,8 @@ HTML and only its own framework's PDF and slides.
 | `verify-outputs-fresh` | The gate `make html` runs, as a standalone target. |
 | `refresh-stale` | `make notebooks`, then delete the audit's stale stamps, execute exactly that set **in parallel** (`notebook_scheduler.py --files`), then one `capture-outputs FILES=<stale set>`, also after failures; exits non-zero if the run or the capture failed. Needs framework venvs and GPUs. |
 | `render-fresh` | `refresh-stale`, then slides and PDFs at `-j$(RENDER_JOBS)` under `RENDER_V8_ENV`, `html`, `pdf-parts`. |
-| `test-trap` | CPU-only regression tests: `test_refresh_stale_trap.py`, `test_freshness_deps.py`, `test_notebook_locks.py`. |
+| `test-trap` | CPU-only regression tests: `test_refresh_stale_trap.py`, `test_freshness_deps.py`, `test_notebook_locks.py`, `test_notebook_venvs.py`. |
+| `test-lm` | CPU unit tests of the Language Models library code: `tools/test_build_lib_async.py` and every `tools/test_lm_*.py`, by `unittest` in `.venv-lm` (§6.4.2). Log: `logs/test-lm-<TS>.log`. |
 | `locks` | List locked notebooks (§3.7). |
 | `rerun-locked FILES=… [FRAMEWORKS=…]` | Execute exactly the named **locked** notebooks (§3.7). |
 
@@ -1215,6 +1347,26 @@ make check-hosted-runtime-contracts
 make check-hosted-notebooks
 ```
 
+The Language Models part (`chapter_lm-*`, §6.4.2) is PyTorch-only and needs
+the `lm` extra on top of the PyTorch core. The PyTorch profile lists those
+packages among its optional packages (`LM_PACKAGES` in
+`tools/export_hosted_env.py`, versions taken from the lock's `lm` fork, so
+`huggingface-hub` 2.x and not the 1.23.0 the `jax` extra holds) and names them
+under `venv_packages.lm`. Every hosted `chapter_lm-*` notebook installs all of
+them in its setup cell (`transformers[serving]`, `huggingface-hub`,
+`accelerate`, `openai` exact; `scikit-learn` kept if the provider has it),
+whatever its own cells import, because the d2l helpers import them lazily;
+such a page never becomes a NumPy variant. `flash-linear-attention` and
+`fla-core` (Triton kernels for Qwen3.5's Gated DeltaNet layers) carry
+`gpu_only=True`: their records say `"device": "gpu"`, and the setup cell
+installs and checks them on GPU runtimes only. Transformers binds `fla` at
+import for every device, so on a CPU runtime it would break any Qwen3.5
+forward that does not go through `d2l.load_hf`/`d2l.bind_hf_kernels`, which
+route CPU tensors to the reference code. They route fp32 and fp64 tensors there
+too: `fla` multiplies fp32 inputs in TF32, which broke 18.4's fp32 scorer checks
+(3.2e-3 against a 1e-4 tolerance), so only bf16 and fp16 run the fused kernel. `check-hosted-runtime-contracts`
+checks the PyTorch profile in `.venv-pytorch` and again in `.venv-lm`.
+
 `hosted-notebooks` fails when the generated profiles are stale, so a direct
 publication cannot silently combine a new lock with old setup cells. Dockerized
 Colab-image canaries remain an occasional, explicit check; these local contracts
@@ -1271,6 +1423,232 @@ detect provider drift; pass `--cpu-image` or `--gpu-image` to reproduce a
 specific image. Linux hosts need Docker plus NVIDIA Container Toolkit for GPU
 cases. `--network auto` uses bridge networking when its DNS works and otherwise
 falls back to host networking on Linux.
+
+### 6.4.2 Execution venvs: one per framework, plus `.venv-lm`
+
+Notebooks execute in `.venv-<fw>` (`uv sync --extra <fw> --extra run`, made by
+`make venv-<fw>`; the `uv` conflict set in `pyproject.toml` keeps every
+framework extra in its own resolution). The one exception is the Language
+Models part: notebooks whose source lies under `chapter_lm-*` execute in
+**`.venv-lm`** (extra `lm`: torch/torchvision on the *same* pins as the
+`pytorch` extra, plus `transformers[serving]==5.22.2`, `huggingface-hub`,
+`accelerate`, `openai==3.49.0`, `safetensors`, `scikit-learn`, and on
+linux-x86_64 `flash-linear-attention==0.6.0`/`fla-core==0.6.0`, the fused
+Gated DeltaNet kernels section 18.1 measures; for chapter 19 `faiss-cpu`,
+and `bm25s`, `pytrec-eval-terrier`, `seqeval` and `sentence-transformers` as
+the oracles its library is tested against), so the rest of the book never
+installs those packages. `make venv-lm` builds it with the d2l package
+installed editable from the checkout it runs in. `causal-conv1d` is left out:
+it has no torch 2.11 wheel (it would compile), and its PyTorch fallback holds
+nothing at a prefill's memory peak. Flex attention (Gemma 4's sliding layers,
+`d2l.load_hf`'s `flex_sdpa`) compiles through Inductor and Triton, whose
+caches `EXTRA_ENV_pytorch` keeps in the repository (`/tmp` is `noexec` on the
+GPU box).
+
+Everything else about such a notebook stays `pytorch`: its stamp
+(`_notebooks/pytorch/chapter_lm-*/…executed`), its manifest
+(`outputs/pytorch/…`), `EXTRA_ENV_pytorch`, `run_one_notebook.py pytorch` and
+its freshness key (`torch==2.11.0`, §3.1). Only the interpreter changes. The
+routing lives in three places that a test keeps in step
+(`tools/test_notebook_venvs.py`, run by `make test-trap`):
+
+| Where | What |
+|---|---|
+| `tools/runtime_env.py` | `NOTEBOOK_VENVS = {"pytorch": (("chapter_lm-", "lm"),)}`, `notebook_venv(fw, rel)`; `VENV_PROVENANCE_PACKAGES` (what provenance records); `VENV_ENV` (environment defaults, below) |
+| `make/notebooks.mk` | `EXEC_RULE(fw, venv, prefix)`; `$(eval $(call EXEC_RULE,pytorch,lm,chapter_lm-))` is a pattern rule with a shorter stem than the generic one, so GNU make picks it for exactly these stamps |
+| `make/venvs.mk` | `KERNEL_VENVS` (`make kernels` registers `d2l-lm` too; `make kernels-lm` alone) |
+
+Consumers: `tools/gen_notebooks.py` writes the `d2l-lm` kernelspec into the
+generated notebooks (VS Code picks the right interpreter);
+`tools/capture_outputs.py` reads the framework version from `.venv-lm` and
+records the venv and its Transformers version (§3.1);
+`tools/notebook_scheduler.py` is unchanged in what it schedules (a dry run
+lists the same items) and tags each `chapter_lm-*` line with `[.venv-lm]`;
+hosted setup cells install the `lm` packages (§6.4.1); the PyTorch notebook
+ZIP carries `pylock.lm-{cpu,gpu}.toml` beside the PyTorch locks
+(`notebook_envs/pytorch/lm-{cpu,gpu}.in`, `make notebook-env-locks`).
+
+**The Hugging Face cache.** The part's notebooks read tens of GB of
+checkpoints and datasets through the Hugging Face cache. `VENV_ENV` in
+`tools/runtime_env.py` gives every `.venv-lm` notebook
+`HF_HOME=~/.cache/hf-lm` unless the launching shell already sets `HF_HOME`
+(`apply_notebook_env`, used by every execution path: the scheduler,
+`make _notebooks/...executed` and `run_notebooks.py`). On the build box the
+default `~/.cache/huggingface` is a symlink to a slow network home, so a
+launch that forgot `HF_HOME` would download everything again there. Scripts
+outside the notebook runner (`tools/lm/*.py`, `make test-lm`, a VS Code
+kernel) do not get the default: export `HF_HOME` yourself. Run the part
+online: `d2l.load_qwen3` asks for `model.safetensors.index.json`, which a
+single-file checkpoint lacks, and under `HF_HUB_OFFLINE=1`
+`hf_hub_download` (huggingface_hub 2.4.0) raises `LocalEntryNotFoundError`
+for it even when the Hub's "file absent" marker is cached (checked
+2026-11-13 for Qwen3-0.6B and Qwen3-1.7B-Base).
+
+Two version rules come with it:
+
+- **The torch pins move together.** Bumping torch means bumping it in both the
+  `pytorch` and the `lm` extra (the test fails otherwise), then re-capturing.
+- **An `lm` package bump does not stale anything.** The audit warns that the
+  `chapter_lm-*` manifests were captured under another Transformers version;
+  re-run those notebooks by hand (`make refresh-stale` will not pick them).
+
+Scheduling needs no venv-specific code: the chapter's notebooks are ordinary
+`pytorch` entries in `tools/runtime_env.py` (ch. 18: `hf-models.ipynb` and
+`api.ipynb` in `FULL_CARD_NOTEBOOKS`, the other five in `HEAVY_GPU_NOTEBOOKS`
+at 2 slots). They take no `NOTEBOOK_TIMEOUTS` entry: a normal build stays
+near 15 min per notebook, and a `D2L_RERUN=1` regeneration run has a 30-min
+target and a 60-min hard limit, the default 3,600 s (ruling 2026-11-13; it
+replaced the 30-min ceiling of 2026-11-12). Their library
+code is tested on CPU by `make test-lm` (§6.2).
+
+**Regeneration runs (`D2L_RERUN`).** A `chapter_lm-*` notebook never regenerates
+an expensive artifact in a normal build. Its producing cells read
+`RERUN = os.environ.get('D2L_RERUN', '0') == '1'`, or since 18.4 the set of
+artifacts `d2l.lm_rerun` reads from it: without it they download the registered, versioned
+file (`DATA_HUB['lm-…-v1']`) and run a short live check whose agreement they
+print, so the captured outputs and the registered artifact agree by
+construction. With it they write unversioned files to `../data/lm/rerun/`,
+print their sha1 and agreement, and change no source; the author then uploads
+the file (§6.9) and edits the registry cell (a new content is a new `-v2` key).
+The scheduler copies `os.environ` into each job (`_make_env`), so
+
+```bash
+D2L_RERUN=1 python3 tools/notebook_scheduler.py --frameworks pytorch \
+    --files chapter_lm-pretrained/scoring.md
+```
+
+reaches the kernel. A regeneration run aims at 30 min measured (the target)
+and must finish within 60 min (the hard limit, the scheduler's timeout). The
+declared cuts serve the hard limit: a section applies them, in their declared
+order and chosen from wall clock alone, only when its uncut run would not
+finish within 60 min; a run between 30 and 60 min runs uncut, and its log
+says it is over the target. 18.3 (`prompting.md`) has no cuts: its whole
+grid regenerates in about 7 min (392 s, 2026-11-13). 18.4 (`scoring.md`)
+has no cuts either (since 2026-11-14; its `D2L_RERUN_CUT` levels were
+retired with the 30-min ceiling, and its source now states the settings its
+artifacts record: GSM8K budget 320, 100 reasoning items). It regenerates
+single artifacts instead: `D2L_RERUN=arc-generations` (any comma-separated
+subset of `bpb`, `gsm8k-samples`, `arc-generations`, `arc-scores`; `1`
+means all four) runs only those producing blocks, so a run that would pass
+the hard limit splits into per-artifact runs, and a change to one artifact
+need not pay for the other three. `tools/oneshot/time_scoring_rerun.py`
+times one batch per job before the run and checks the estimate against the
+target (`--target-min 30`) and the hard limit (`--limit-min 60`); `--only`
+probes a subset. The section's registry pairs each artifact with the key
+it is read from (`ARTIFACTS` in `scoring-setup`); a regeneration reads its
+own files from `../data/lm/rerun/`, so a new `-vN` key can be named before
+its upload (helpers `d2l.lm_rerun`, `d2l.lm_artifact`, `d2l.lm_save_rerun`
+in `scoring-lib.md`).
+18.5 (`eval-suites.md`) takes the same form (`eval-scores`, `contam-scores`,
+`answers`, `judge-human`, `judge-pairs`); its `EvalSuite` runs recompute every
+row, since their cache in `../data/lm/rerun/eval-cache` is keyed by run
+settings and not by code or weights. `D2L_RERUN_RESUME=1` resumes an
+interrupted regeneration from that cache (its wall clock then undercounts).
+The settings each artifact was made with are recorded in it, and the analysis
+cells assert and print them (the GSM8K budget, the number of reasoning items,
+the batch size of each ARC arm). The notebook's kernel gets
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` (`NOTEBOOK_ENV`): without
+it the 2026-11-13 regeneration runs reserved 20.3-20.7 GB on the card for a
+10.8 GiB tensor peak, past the 2-slot budget; its `peak()` prints both
+numbers. Measured with the setting (2026-11-13, `D2L_RERUN=arc-generations`,
+the job behind that peak): 10.8 GiB allocated, 12.7 GiB reserved, 13.5 GB in
+`nvidia-smi`, inside the 2-slot budget; the run reproduced
+`lm-arc-generations-v2` bit for bit. A normal run peaks at about 4.9 GB.
+With `fla` in `.venv-lm` (2026-11-13 merge), Qwen3.5's bf16 forwards changed,
+so the four artifacts were regenerated as `lm-bpb-v2`,
+`lm-gsm8k-samples-v2`, `lm-arc-generations-v3` and `lm-arc-scores-v2`, in two
+scheduler runs that keep the registered settings and each fit the 30-minute
+target: `D2L_RERUN=arc-generations` (965 s, then cut level 1) and
+`D2L_RERUN=bpb,gsm8k-samples,arc-scores` (1,191 s, then cut level 2). Every
+Qwen3 row reproduced bit for bit; only the Qwen3.5 rows changed (bpb by
+2.4e-4, 3 to 11 of 500 ARC predictions per format, most GSM8K and ARC reply
+texts). `lm-gsm8k-samples-v1` stays registered because 18.7 reads its
+problem ids.
+On 2026-11-14 (fp32 output layer in `score_choices` and `bits_per_byte`, a
+2,048-token reasoning arm) three of them were regenerated again as
+`lm-bpb-v3`, `lm-arc-generations-v4` and `lm-arc-scores-v3`, in one
+scheduler run (`D2L_RERUN=bpb,arc-generations,arc-scores`, 1,832 s, just
+over the 30-min target; ARC generation 17.6 min, re-scoring 6.8 min; card
+peak 13.1 GB). They could not run as per-artifact jobs: a run reads every
+artifact it does not regenerate from its registered key, and all three new
+keys were still unregistered. So when `ARTIFACTS` names several new keys at
+once, regenerate them in one run, or upload and register the first part
+before the second run.
+Later on 2026-11-14 the ARC arms got budgets that few replies reach
+(reasoning 4,096 tokens, was 2,048, which cut 16 of Qwen3-1.7B's 100
+thinking replies mid-deliberation, not in loops; direct 1,024, was 512,
+which cut 15% of Qwen3.5-0.8B's explanations). `lm-arc-generations-v5`
+came from `D2L_RERUN=arc-generations` on one card: 2,468 s (41 min), ARC
+generation 35.0 min (reasoning about 10.5 and 14 min, direct 2.5 to 4.5
+min per model); replies cut 0-1% in the reasoning arm, 0-6% in the direct
+arm. Tensors peaked at 15.3 GiB (20.7 GiB reserved, 20 GB in
+`nvidia-smi`), past the 2-slot budget: run this regeneration on a card
+with no other job (`D2L_GPU_SLOTS_PER` masked to that card). A full
+`D2L_RERUN=1` is now about 55 min (this run plus the 6.8-min re-scoring and
+the 7.4-min GSM8K pool, measured 2026-11-13/14): inside the 60-min hard
+limit, far over the 30-min target; per-artifact runs keep each job shorter.
+18.5's kernel gets the same setting. Its full regeneration (`D2L_RERUN=1`,
+2026-11-13, one RTX 4090) took 1,492 s (24.9 min: dev suite 3.1 min,
+GSM-Symbolic 3.1 min, answers 6.9 min, judge 0.9 + 4.4 min, protocol 5.5
+min, plus loads), so no cut applies (`SMALL = 0`); tensors peaked at
+11.3 GiB (the Qwen3.5-4B judge) and the card at 12.3 GB in `nvidia-smi`.
+Since 2026-11-14 its registry pairs each artifact with a `-v2` key
+(`ARTIFACTS` in `eval-suites-config`, read through `d2l.lm_rerun` and
+`d2l.lm_artifact`) for a regeneration on the fused kernels; `d2l.lm_save_table`
+(`eval-suites-lib.md`) writes each table and prints its agreement with the
+registered version it replaces. The regeneration adds a second one-task
+GSM8K protocol (lm-evaluation-harness's `gsm8k_cot`, about 5 min) and prints
+its wall clock against the 30-min target at the end. That regeneration ran
+on 2026-11-14 (one RTX 4090, fused kernels): 1,870 s in the scheduler, 30.6
+min by the notebook's own clock, just over the target and far inside the
+hard limit, so still uncut; the card peaked at 11.2 GB. Its files are the
+registered `lm-eval-scores-v2`, `lm-contam-scores-v2`, `lm-answers-v2`,
+`lm-judge-human-v2` and `lm-judge-pairs-v2` (Qwen3 answers and every
+GSM-Symbolic extraction reproduced; Qwen3.5 answer texts and the judge's
+log-odds changed).
+18.6 (`interpretability.md`) takes the same form since 2026-11-14 (`ARTIFACTS`
+in `interpretability-setup`: `tuned-lens`, `sae-06b`, `sae-17b`, `results`).
+`D2L_RERUN=results` loads the registered lens and SAEs and rewrites only the
+results archive `lm-interp-results.zip` (about a normal run's 10 min);
+`D2L_RERUN=1` also retrains the tuned lens and both SAEs, caching 28.5 GB of
+fp16 activations in host memory (about 34 GB of RAM; 1,498 and 1,515 s on
+2026-11-13, inside the target, no cuts). Retraining is deterministic: those
+runs reproduced the registered lens and SAE files bit for bit. The CPU path
+(`SMALL`) refuses `D2L_RERUN`.
+Regenerate, upload, then run the notebook once
+more without `D2L_RERUN` and capture that run.
+
+**18.7's capture (`api.md`, locked).** Measured 2026-11-13 on one RTX 4090
+(whole card, `GPU_SLOTS_PER="0,0,0,3"`): the record run
+(`D2L_API_MODE=record make rerun-locked FILES=chapter_lm-pretrained/api.md
+FRAMEWORKS=pytorch`) took 1,204 s (20 min; local sweep about 10 min, local
+determinism about 8 min) and the card peaked at about 11 GB; the replay run
+44 s. The local server is Qwen3-4B, not Qwen3.5-4B: continuous batching in
+Transformers 5.22.2 has no cache for Qwen3.5's `linear_attention` layers
+(and `transformers serve` loads Qwen3.5 as a vision-language class, which it
+serves one request at a time, about 22 tokens/s; `flash-linear-attention`
+moved that only to 24). A rule-only change to the probe (no request
+changes) is applied by one more record run, which replays every cached call
+and rewrites `lm-api-fields.csv`; then repack, upload (a zip already published
+changes only as a new `-v2` key) and
+replay.
+
+**API logs (`D2L_API_LOG_DIR`).** The models-behind-an-API section (18.7,
+locked, §3.7) writes the caches and call logs of development, smoke-test and
+closed-model calls to `$D2L_API_LOG_DIR` (default
+`~/.local/share/d2l/lm-api`, append-only), outside the repository and outside
+`data/`, so `make veryclean` cannot delete the record of paid calls and none of
+it can be committed by accident. Only the capture-run caches that the notebook
+replays are uploaded as `DATA_HUB` artifacts. `OPENROUTER_API_KEY` is read from
+the environment and must never appear in a committed file or a captured output.
+
+Adding the `lm` extra moved the shared lock in two places outside it: the `jax`
+extra pins `huggingface-hub==1.23.0` (what `.venv-jax` ran; Transformers 5.22
+needs ≥ 1.31, and without the pin `uv` moved jax to the 2.x API too), and the
+`jax` and `build` resolutions moved `idna` 3.11 → 3.20 and
+`typing-extensions` 4.15.0 → 4.16.0 (`jax` also `hf-xet` 1.5.1 → 1.8.0); the
+next `make venv-jax` / `make venv-build` picks these up. The `pytorch`,
+`tensorflow` and `mxnet` resolutions are unchanged.
 
 ### 6.5 Updating a framework wheel pin (MXNet)
 
@@ -1374,6 +1752,21 @@ all four PDFs (~46–51 MB each) with no manual steps:
   bottom margin. The preamble sets `\raggedbottom` (inside the same
   `\AtBeginDocument`), so pages end short instead. Facing pages may end at
   slightly different heights — the accepted trade.
+- **Chinese characters need the CJK fallback font (2026-11-12).** Source Serif 4,
+  Source Sans 3 and Inconsolata have no CJK glyphs, and XeTeX drops a missing
+  glyph with only a `Missing character` line in the log. The Language Models
+  part prints Chinese in code cells and outputs, so `static/d2l-preamble.tex`
+  gives the CJK code points (U+3000–303F, 3400–4DBF, 4E00–9FFF, F900–FAFF,
+  FF00–FFEF) an inter-character class of their own and switches each run of
+  them to `static/fonts/NotoSansSC-Regular-subset.otf` (no xeCJK, which some
+  TeX Live hosts lack and which changes Latin spacing; Latin output is
+  pixel-identical with and without the block). The font is a subset (GB 2312
+  hanzi, CJK punctuation, fullwidth forms, plus every CJK character found in
+  the chapter sources and `outputs/`), built by
+  `tools/make_cjk_font_subset.py` from Noto Sans SC (OFL,
+  `static/fonts/NotoSansSC-LICENSE.txt`). A captured output with a rarer
+  character still shows as `Missing character: … NotoSansSC` in the PDF log:
+  re-run the script (it rescans `outputs/`) and commit the new font.
 - **Stale PDFs in `img/outputs/` abort the parallel render.** Quarto's
   `convert_svg` (built-in `main.lua`) has a "skip conversion if the `.pdf`
   already exists" optimization, then `assert(read(pdf) ~= nil)`. A leftover
@@ -1669,15 +2062,15 @@ consumes.
 | Include | Owns |
 |---|---|
 | `make/resources.mk` | host resource detection + render/slide-fleet sizing (`_detected`, `RENDER_JOBS`, `SLIDE_WORKERS`, …) |
-| `make/venvs.mk` | UV framework venvs, mxnet preflight, Quarto build venv, `kernels` |
+| `make/venvs.mk` | UV framework venvs and `.venv-lm` (§6.4.2), mxnet preflight, Quarto build venv, `kernels` |
 | `make/lib.mk` | `d2l/.built` (rebuilt from `#@save` blocks) |
 | `make/figures.mk` | committed illustrative SVGs (incremental; see below) |
-| `make/store.mk` | committed outputs store — `capture-outputs`, `audit-outputs`, `verify-outputs-fresh`, `refresh-stale`, `render-fresh`, `test-trap`, `locks`, `rerun-locked` |
+| `make/store.mk` | committed outputs store — `capture-outputs`, `audit-outputs`, `verify-outputs-fresh`, `refresh-stale`, `render-fresh`, `test-trap`, `test-lm`, `locks`, `rerun-locked` |
 | `make/notebooks.mk` | Notebook generation and execution: `MANIFEST.mk`, `.d` files, `EXEC_RULE`, `run-notebooks-<fw>`, `run-all-notebooks` (which call `notebook_scheduler.py`) |
 | `make/hosted.mk` | hosted/Colab notebook staging + downloadable zips |
 | `make/render.mk` | `html`, `pdf-<fw>`, `pdfs`, `pdf-parts`, `pdf-preflight`, `slides-<fw>`, `slides` |
 | `make/universities.mk` | landing-page adoption grid (independent of the book) |
-| `make/deploy.mk` | `publish-colab`, `upload-r2*`, `deploy` |
+| `make/deploy.mk` | `publish-colab`, `upload-r2*`, `upload-data`, `deploy` |
 
 **Extracted recipe scripts.** Two large inline-shell recipe bodies now live in
 `tools/`: `tools/build_one_pdf.sh <fw>` (the PDF pipeline, §6.6) and
@@ -1723,6 +2116,76 @@ knowing:
 Do not `aws s3 ls` a bucket while an upload runs against it — R2 answers
 `ServiceUnavailable: Reduce your concurrent request rate` when a listing competes
 with the 32 uploaders. Verify after the run, not during.
+
+**Data artifacts (`make upload-data`).** Files that a `DATA_HUB` entry pins
+(the Language Models part's `lm-...-v1` artifacts) live in the R2 bucket
+`d2l-data`, served at `https://d2l-data.smola.org/<key>`, not in the site
+buckets above and not under the legacy `d2l.DATA_URL` (S3). Registry cells
+name the `lm/` folder by the PyTorch-tagged constant `d2l.LM_DATA_URL =
+'https://d2l-data.smola.org/lm/'` (`chapter_lm-pretrained/hf-models.md`); its
+shard `LM_DATA_URL.py` is reached only through the key shards that use it, so
+the constant stales nothing else. Upload with
+
+    make upload-data FILES="data/lm/rerun/lm-x-v1.json" PREFIX=lm/ [DRY_RUN=1]
+
+(`tools/upload_data_r2.py --prefix lm/ FILE... [--dry-run] [--force]`). The
+object key is `PREFIX` + the file's base name. For each file the script prints
+the key, content type, size, sha1, public URL and a ready `DATA_HUB` line; the
+log goes to `logs/upload-data-<TS>.log`. Rules:
+
+- **Versioned names; no overwrite.** A key that already holds the same bytes
+  (its ETag equals the file's MD5) is reported as uploaded; a key with other
+  bytes is refused (exit 1) unless `FORCE=1`. Readers' caches and the sha1 in
+  every `DATA_HUB` entry assume a published file never changes, so publish
+  `-v<N+1>` instead of forcing.
+- **After the upload** the script re-reads the object's size and ETag; the
+  sha1 is also stored as object metadata (`x-amz-meta-sha1`).
+- `DRY_RUN=1` uploads nothing; it still checks which keys exist when the
+  credentials file is present.
+- `tools/upload_data_r2.py --delete KEY...` removes keys; outside a `_test/`
+  folder it also needs `--force`. Use `lm/_test/` for trial uploads.
+- **Do not fetch a public URL before its key exists.** The custom domain's
+  Cloudflare edge caches a 404 for 8 h (`cache-control: max-age=28800`), so a
+  `curl` of `https://d2l-data.smola.org/lm/<key>` made before the upload
+  keeps serving 404 from that edge after it (seen 2026-11-13 for the seven
+  `lm-api-*-v1` zips). Check absence with `DRY_RUN=1`, which asks the bucket.
+  If it happened, read the object with a query string
+  (`...zip?fresh=1` bypasses the cached entry), check its sha1, and place it
+  at `_notebooks/pytorch/data/lm/<key>/<file>`, where `d2l.download_keyed`
+  finds it with the right sha1 and does not fetch it.
+
+Credentials: `~/.config/d2l/r2-data.env` (or the path in `D2L_R2_DATA_ENV`)
+holds one line `CF_API_TOKEN=...`, a Cloudflare API token scoped to the
+bucket. The S3 pair is derived as Cloudflare documents for R2: access key id
+= the token's `id` from `GET /client/v4/user/tokens/verify`, secret = the
+sha256 hex digest of the token. The script hands both to the AWS CLI through
+its environment only (with `AWS_CONFIG_FILE`/`AWS_SHARED_CREDENTIALS_FILE`
+pointed at `/dev/null`, so no profile interferes) and never prints them;
+errors name the HTTP status, not the request. Endpoint
+`https://1712830f746ac9278e7db6de736dc430.r2.cloudflarestorage.com`, region
+`auto`.
+
+Downloads: `d2l.download` (which uses `requests`) and `curl` fetch these URLs;
+Python's `urllib` with its default `Python-urllib/3.x` user agent gets
+**403** from Cloudflare (checked 2026-11-12), so any other downloader must
+send its own `User-Agent`.
+
+`d2l.download` checks the sha1 only when the file is already in the cache; a
+fresh fetch is written without a check. After an upload, confirm a key by
+downloading it into an empty folder and calling `d2l.download` a second time:
+a second call that prints no `Downloading` line found the cached bytes equal
+to the pinned sha1.
+
+Fixed inputs that are not notebook outputs come from authoring scripts that
+write to `data/lm/authoring/` and print the sha1: `tools/lm/make_port_fixtures.py`
+(18.2: `prompts` on the CPU, `logit-ref` on a GPU, `a1-corrupt DIR` for
+assignment A1's hidden state dicts, which are never uploaded),
+`tools/oneshot/make_lm_eval_arc_fixture.py` (18.4; runs lm-evaluation-harness
+0.4.13 in a throwaway `uv` env outside the repository, never in a book venv),
+`tools/oneshot/make_lm_heldout_texts.py` (18.4) and
+`tools/oneshot/build_lm_recall_pairs.py` (18.6). Book text is read with
+`git show` at a commit pinned in each script (`tools/lm/book_text.py`), so a
+rerun reproduces the bytes.
 
 **`make figures` is incremental + manual.** It covers *every* chapter generator —
 including the ch6/7/8/9 ones (`gen_bg_*`, `gen_arch_*`, `gen_opt_figures`) the old
@@ -1827,8 +2290,12 @@ yubikey-free path recorded in CLAUDE.md memory); LFS rides the same HTTPS remote
 | `tools/run_one_notebook.py` | The per-notebook recipe of `EXEC_RULE`: picks the device (scheduler assignment, or its own flock slots for a direct `make`), applies the per-notebook timeout (`NOTEBOOK_TIMEOUTS`, default 3600 s) and best-of-N retries (`BEST_OF_N`), writes `logs/nb-errors/<fw>/<rel>.log` on failure, materializes locked notebooks. |
 | `tools/notebook_scheduler.py` | The execution queue; [notebook-scheduler.md](notebook-scheduler.md). |
 | `tools/test_refresh_stale_trap.py` | `make test-trap`. Fast, GPU-free e2e regression for the §3.5 trap: builds a tmp fixture, moves a lib fingerprint under an unchanged notebook, and asserts the audit flags it, `refresh-stale`'s stamp-removal forces a re-run, and the capture guard refuses the stale bless (and accepts a genuine re-capture). Never touches the real store. |
-| `tools/test_freshness_deps.py` | `make test-trap`: shard naming, the transitive `.d` closure, the preamble/DATA_HUB/alias/module shards, the no-manifest rule (§3.4). |
+| `tools/test_freshness_deps.py` | `make test-trap`: shard naming, the transitive `.d` closure, the preamble/alias/module shards, per-key `DATA_HUB` shards and literal-key following, the no-manifest rule (§3.4). |
+| `tools/test_build_lib_async.py` | `make test-lm`: `async def` in `#@save` blocks (standalone and inline markers, `add_to_class`, shards, docstring labels, dedup) (§3.4). |
+| `tools/upload_data_r2.py` | `make upload-data`: versioned `DATA_HUB` artifacts → R2 bucket `d2l-data`; never overwrites a key with other bytes without `--force`; prints URL and sha1, never the credentials (§6.9). |
+| `tools/scan_d2l_usage.py` (keys) | Also follows string literals that name a registered `DATA_HUB` key to its `DATA_HUB.<key>.py` shard (§3.4). |
 | `tools/locks.py`, `tools/test_notebook_locks.py` | Notebook locks (§3.7): the directive parser, materialization from the store and `make locks`; the GPU-free fixture test (run by `make test-trap`). |
+| `tools/test_notebook_venvs.py` | `make test-trap`: the separate `.venv-lm` (§6.4.2): pyproject pins, routing in `runtime_env.py` and `make/notebooks.mk`, provenance (`venv`, `packages`, warn-only drift), the `d2l-lm` kernelspec. |
 | `tools/inject_outputs.py` | Reads the store through `index_store_by_id()`, which returns the **same shape** as `index_ipynb_by_id()` — `{cell_id: [nbformat-output-dict]}` — by reconstructing nbformat dicts from the manifest (inline text → `stream`/`text/plain` dicts; assets → re-read the file, re-encode to the dict's `data`). Uses `outputs/` when a manifest exists, else falls back to `_notebooks/`. |
 | `tools/inject_outputs.py` (stream coalescing, 2026-07-27) | `format_cell_output()` first runs `coalesce_stream_outputs()`, merging runs of **adjacent same-name** `stream` outputs into one. A cell that prints once per loop iteration emits one stream message per flush, so Jupyter stores N stream outputs (each already `\n`-terminated); rendering each as its own fenced block put a paragraph break between consecutive printed lines — a blank line in HTML, a stretched inter-block gap in the PDF. The store is *faithful* (the split is in the `.ipynb`); the fix is render-side only, so no re-capture is needed. Non-stream outputs and stderr↔stdout transitions still separate blocks. Side effect: the `MAX_TEXT_LINES` cap applies to the merged block — 10 output groups book-wide elide to head-20 / `...` / tail-20 in the PDF. Also: `is_wide_table()` tags column-aligned output wider than the column with `.d2l-output-wide` (**html mode only** — 18 blocks: profiler tables, Syne Tune trial status, …). `_d2l-style.css` wraps output by default and scrolls those instead, since wrapping destroys the alignment that carries their meaning. The PDF has no scroll, so it wraps them. |
 | `tools/add_cell_ids.py` | The authority for stable ids — the invariant capture/audit rely on. Idempotent; `--check` reports without writing. |

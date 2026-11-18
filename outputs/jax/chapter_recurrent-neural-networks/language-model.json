@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:33c568ef0a4c82a89241dccbe3e72b050d853eb4df91a5ae23cb29702e5f3109",
+    "d2l_lib_fingerprint": "sha256:47fcbc56c88dd3b07856013d4ba5d5472522977cb44457370181077301c8c062",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time said of took as i argument\n    this there i flagstones and with and to staying of of they river the\n    life watch not the to\n2-gram (longest copied run: 4 words): the time traveller it retreated again\n    patience said why should call to its treasures here and things darkness\n    with only a temperate climate the remote future now\n3-gram (longest copied run: 8 words): the time i ran at my own troubles and\n    all the activity all the evening of my time machine something i knew not\n    what had once been\n"
+          "text": "1-gram (longest copied run: 2 words): the time we time it and my toil winged\n    first was shape the it the came again in steadily once down of s flash a\n    that of\n2-gram (longest copied run: 4 words): the time machine looking for it was no\n    specialist in fact is no vestige of the peculiar shrinking was a ghastly\n    half bleached colour swim before us\n3-gram (longest copied run: 7 words): the time traveller s absence and i did\n    not trace this line i trace with my last view of our old world savage\n    animal only the vaguest\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:6bb4b38ee874a1a8bad1196a4370a5b5ddac8b0ac8304449ad08d0610fe66821"
+          "sha256": "sha256:c4ffacc5a840d7dbf572c15809d777184215cb4022a310de7a48dd8945f90de2"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:be181a505909d157454c02836b4f55b1cedb497a571b86b30f70531281c6a1d1"
+          "sha256": "sha256:bf520534ae3cc0caf4282875ced1ed25f773ff163abb9d7f2a0addabbfc1cce4"
         }
       ]
     },
@@ -166,12 +166,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n"
+          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2-gram held-out perplexity, Kneser-Ney:   312.3\n3-gram held-out perplexity, Kneser-Ney:   300.1\n"
+          "text": "3-gram held-out perplexity, Kneser-Ney:   300.1\n"
         }
       ]
     },
@@ -208,7 +208,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[519  44 754 275 494 344 316  10 100 320]\n [104 336 277 561 373 262  46 505 260 630]] \nY: [[ 44 754 275 494 344 316  10 100 320 799]\n [336 277 561 373 262  46 505 260 630 298]]\nX[0]: ' hand, going out as it\\ndro'\nY[0]: ', going out as it\\ndropped'\n"
+          "text": "X: [[ 373  282   44  277  438  287   10  111  325  463]\n [ 732  313  316  298  437 1019  996  867  118  697]] \nY: [[ 282   44  277  438  287   10  111  325  463  273]\n [ 313  316  298  437 1019  996  867  118  697  270]]\nX[0]: 'loor, and fell\\nover one'\nY[0]: 'or, and fell\\nover one of'\n"
         }
       ]
     }

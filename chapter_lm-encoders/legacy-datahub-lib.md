@@ -23,20 +23,20 @@ verbatim and deletes it here, which leaves the shard byte-identical. The
 remaining entries can be deleted at the next full re-execution of the book.
 -->
 
-```{.python .input}
+```{.python .input #legacy-datahub-lib-legacy-dataset-registrations-build-only-unlisted-1}
 #@save
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
     '9fcde07509c7e87ec61c640c1b2753d9041758e4')
 ```
 
-```{.python .input}
+```{.python .input #legacy-datahub-lib-legacy-dataset-registrations-build-only-unlisted-2}
 #@save
 d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
                           '01ada507287d82875905620988597833ad4e0903')
 ```
 
-```{.python .input}
+```{.python .input #legacy-datahub-lib-legacy-dataset-registrations-build-only-unlisted-3}
 #@save
 d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
                                 '0b8703943ccdb6eb788e6f091b8946e82231bc4d')

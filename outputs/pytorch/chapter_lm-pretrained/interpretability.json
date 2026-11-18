@@ -1,0 +1,514 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretrained/interpretability.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:477c85cbe387d490b7a71f54093a09732f52ce25436eff4f68b517e10e129089",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "interpretability-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-extras": {
+      "code_fingerprint": "sha256:d6c59e559e2d512162c16b133bb4dfc58ea8418abc9c96efee03d3a8483a37ec",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-setup": {
+      "code_fingerprint": "sha256:00188c9afe795a73eacbb42ba5f348498d113fd5edbd334b390fdae92090fb1f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SMALL=False, regenerating: none, device cuda:0\nQwen/Qwen3-0.6B at c1899de289a04d12100db370d81485cdf75e47ca: 596,049,920 parameters\n"
+        }
+      ]
+    },
+    "interpretability-revisions": {
+      "code_fingerprint": "sha256:fec75ee738116f3edd13a068f5e924d8471bdf92237f930c72e44829fe46ec9a",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-data-hub": {
+      "code_fingerprint": "sha256:7da268c5b220bc0a7429cee0ed35a734d3543d5cd9b6d761f4e718801df4116a",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-data": {
+      "code_fingerprint": "sha256:4c374903e77f7de113590f2c4e8f598765419ae0a20507cba7a7d52684450e04",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FineWeb-Edu: held-out 200, steering 100, cost 200 docs from rows 8000-8537 (1 block, 2.9 MB read)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Wikipedia zh: contrast 300 docs from rows 0-209036 (20 blocks, 9.1 MB read)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Wikipedia zh: label 100 docs from rows 5500-214508 (20 blocks, 10.1 MB read)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Wikipedia en: contrast 300 docs from rows 0-142520 (20 blocks, 24.1 MB read)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Wikipedia en: label 100 docs from rows 3750-146256 (20 blocks, 23.1 MB read)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "25,860 of 151,669 tokens hold a Han character\n"
+        }
+      ]
+    },
+    "interpretability-intervene": {
+      "code_fingerprint": "sha256:9ca084441ec6865d927f6c8b95fb87ed0580e99ff7d80c9615a04df226d1ae72",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-logit-lens": {
+      "code_fingerprint": "sha256:1251bbe88fda293ebc91a965b3e949e4f58cd01128312c475f9106ed8fad9158",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-dla-check": {
+      "code_fingerprint": "sha256:1e1aa3b685d5376e8b2894b1bd42c76815e681d50ae093d8975b1fbabec5aabc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                block 0  block 4  block 8  block 12  block 16  block 20  block 24\nrho_27 / rho_l     54.7     23.9     15.5       8.6       5.8       2.5       1.0\n"
+        }
+      ]
+    },
+    "interpretability-eiffel": {
+      "code_fingerprint": "sha256:ca1c935ca739da3b3f0e14c2f8a980270781b7dedad0ce91fe2cc63b7573636b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "The Eiffel Tower is located in the city of\nnext token  probability\n  ' Paris'        0.912\n    ' New'        0.005\n    ' the'        0.005\n' Chicago'        0.005\n  ' Saint'        0.004\n block logit-lens top-1  rank of \" Paris\"\n     0  ' construction'             14924\n     4     ' substance'             22334\n     8             \"'s\"              2512\n    12             \"'s\"              2651\n    16              '.'              3412\n    20              ' '                 3\n    24         ' Paris'                 1\n    27         ' Paris'                 1\n"
+        }
+      ]
+    },
+    "interpretability-tuned-lens": {
+      "code_fingerprint": "sha256:1c511993f2b8e0a5c491939c8d437a75c1e1e0359f1ee2f8c217302b1129a845",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-tuned-lens-fit": {
+      "code_fingerprint": "sha256:1828561e95db9b12ad1323770397f5ddd00167fa0f011dea2b9f6ef50505c711",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lm-tuned-lens-qwen3-0.6b-v1: sha1 e1a9275950de634b8f8a6e7dd516de662755834e\n"
+        }
+      ]
+    },
+    "interpretability-lens-compare": {
+      "code_fingerprint": "sha256:a9711a78ea8ce5b2c04aec2e26ce2ae9d0fb5904e083b3e9bd22f9af23d3f13e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "logit lens: median rank at most 10 from block 22, 95% interval [21, 22]\ntuned lens: median rank at most 10 from block 20, 95% interval [20, 20]\n"
+        }
+      ]
+    },
+    "interpretability-lens-kl": {
+      "code_fingerprint": "sha256:3b9ed8f5d29eac5cb017a0c70b21b2409d899204592630ede08bfaadfcafcbbd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "interpretability/interpretability-lens-kl-1.svg",
+          "bytes": 61615,
+          "sha256": "sha256:83f0761fe82308cdc234ec70a356633983e9c5c36ac9c494ec4098625a0e7f53"
+        }
+      ]
+    },
+    "interpretability-lens-numbers": {
+      "code_fingerprint": "sha256:dce71d8e24c19035b97e71572872f044fe80d1318031b65fde478e043cf26b1f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "at blocks 0, 14 and 26:\n  logit lens: median rank 22464, 18442, 1; KL to final 11.06, 6.08, 0.38 nats\n  tuned lens: median rank 1130, 260, 1; KL to final 3.40, 2.12, 0.21 nats\n"
+        }
+      ]
+    },
+    "interpretability-probe-data": {
+      "code_fingerprint": "sha256:755d3c03f89f5b2a9257cc23d96a83bb42c1b1b824a514b8ed8ad0959ac3603a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train: 19,983 words, 1,231 sentences, 5,080 word types\ndev: 4,977 words, 399 sentences, 1,877 word types\ntest: 4,996 words, 409 sentences, 1,913 word types\nunseen in training: 0.47 of the test word types, 0.20 of the test words\n"
+        }
+      ]
+    },
+    "interpretability-probe": {
+      "code_fingerprint": "sha256:402493854a58f0206f6adad9bf64aef0248d285781ac1ff3fe5cd94926328060",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                              task accuracy      control accuracy              selectivity\nmajority tag per type  0.803 [0.790, 0.817]  0.832 [0.821, 0.844]  -0.029 [-0.040, -0.018]\nembedding              0.878 [0.870, 0.887]  0.770 [0.756, 0.784]     0.108 [0.094, 0.122]\nblock 14               0.920 [0.912, 0.928]  0.512 [0.502, 0.523]     0.407 [0.396, 0.419]\nmajority class NOUN: 0.158 of test words\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "selectivity, block 14 minus embedding: 0.299 [0.285, 0.313]\n"
+        }
+      ]
+    },
+    "interpretability-recall-pairs": {
+      "code_fingerprint": "sha256:d766596914f60107f5ba7e260526b2df3b82e5da5c13bd86ff9aa01e3eb3a355",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "40 of 40 pairs kept, 25 cities\nmean LD: clean 8.59, corrupted -8.94\npairs per prompt length: 9 tokens 13, 10 tokens 15, 11 tokens 9, 12 tokens 3\n"
+        }
+      ]
+    },
+    "interpretability-patch": {
+      "code_fingerprint": "sha256:56586ef76df56e1e53d0199bd5430d3381c91348c1e2742a1ea613224ef21aec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "effect tensor (3, 28, 8, 40) (kinds, blocks, positions, pairs)\n26,880 patched forwards, 672 per pair\n"
+        }
+      ]
+    },
+    "interpretability-patch-additivity": {
+      "code_fingerprint": "sha256:914cdefe57b70631c74e0e35f18ae63af74ef72c297c8659aa2a13b2f122f60f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "block 20: NE(subject last) 0.11 + NE(final) 0.55 = 0.66; NE(both) 0.68\n"
+        }
+      ]
+    },
+    "interpretability-patch-map": {
+      "code_fingerprint": "sha256:e2628494cc1025208805a9685ec1eab21ce7472468181bcf334cc3309f5becb8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "resid_post, lower bound above 0.5: 'subject' 0-3; ' of' 20-27\nattn_out, lower bound above 0.5: 'subject' 0\nmlp_out, lower bound above 0.1: 'subject' 0-2; 'subject last' 2; ' of' 21-22\nhandover block 20, 95% interval [20, 20]\nattn_out at the final position, block 20: 0.42 [0.38, 0.47]\n  next highest: block 26 0.14, block 21 0.09\nresid_post, blocks 0-19, per pair: the subject classes together NE 0.97 (quartiles 0.83, 1.13)\n  over 2/3 on the earlier tokens: 17 pairs, e.g. Bolshoi Theatre, Shibuya Crossing, Ponte Vecchio\n  over 2/3 on the last token: 11 pairs, e.g. Louvre, Big Ben, Pantheon\ncells with mean NE below -0.05: 1; mlp_out, block 27, ' of': -0.17\n"
+        }
+      ]
+    },
+    "interpretability-patch-map-plot": {
+      "code_fingerprint": "sha256:4f3f12ad43054b6d60669c23897f850ef41468eaf112e5dc046665a8787a9c11",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "interpretability/interpretability-patch-map-plot-1.svg",
+          "bytes": 55449,
+          "sha256": "sha256:03819b4f2766a89acf0c34bf237925692d629a782e6d80563d6936bab9f8cf01"
+        }
+      ]
+    },
+    "interpretability-atp": {
+      "code_fingerprint": "sha256:6e278913b68d32187109ae6cbd965db8f59522d964c43f8c2bd91f5b5f817835",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "AtP tensor (3, 28, 8, 40)\npatching: 10.36 s for 672 forwards per pair; AtP: 0.54 s for 3 passes; ratio 19\n"
+        }
+      ]
+    },
+    "interpretability-atp-agreement": {
+      "code_fingerprint": "sha256:23a309c68086df96b10790b59d27783015327a99dfb439051603a54104c2c14b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Spearman over the cells with |exact NE| > 0.05:\n  resid_post (64 cells): 0.36 [0.08, 0.55]\n  attn_out (14 cells): 0.34 [-0.14, 0.60]\n  mlp_out (25 cells): 0.24 [-0.08, 0.55]\n  pooled (103 cells): 0.42 [0.17, 0.56]\nmean absolute error on those cells, by blocks: 0-6 0.32, 7-13 0.34, 14-20 0.21, 21-27 0.05\nresid_post, both subject classes, blocks 0-19: NE exact 0.98, AtP 0.10 (block means)\nresid_post, final position, blocks 20-27: NE exact 0.75, AtP 0.62 (block means)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "resid_post, block 10, both subject classes moved a fraction t of the way\nto the corrupted stream:\n  t    0.000 0.125 0.250 0.375 0.500 0.625 0.750 0.875 1.000\n  NE    0.00  0.02  0.09  0.25  0.47  0.71  0.86  0.94  0.97\n"
+        }
+      ]
+    },
+    "interpretability-atp-agreement-plot": {
+      "code_fingerprint": "sha256:b22482d5f41f59f6e28186a36f44d8b751cf8e1b0d6cff8beae3e8111b7db29d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "interpretability/interpretability-atp-agreement-plot-1.svg",
+          "bytes": 113291,
+          "sha256": "sha256:01bf5354a660fdcda496a02cbacad758330e0236f54cb493a6626f504e52a70e"
+        }
+      ]
+    },
+    "interpretability-topk-sae": {
+      "code_fingerprint": "sha256:e07e74946d5225ff71176cb2abd6a7ed5bdb15bb836dc8acedb3fa0db6d706ae",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-train-sae": {
+      "code_fingerprint": "sha256:fd60afe811d59bcc5df421ea0e66cfb5090a9ebcf6dcde3ee42d774a8e48f2ca",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-sae-r1": {
+      "code_fingerprint": "sha256:304a4e1b1998bf1121bb3ae47bb966e382463b5f476bd6b4fb50dd1351e058af",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-load-17b": {
+      "code_fingerprint": "sha256:7846ebe8e788ae5a2480ca452c4ea0dc6645df6747d2dad6b3543233cdb32f2c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-1.7B-Base at ea980cb0a6c2ae4b936e82123acc929f1cec04c1: 1,720,574,976 parameters\n"
+        }
+      ]
+    },
+    "interpretability-act-cache": {
+      "code_fingerprint": "sha256:1c5eda5f53faecaad7be00a827b09f86ec03dc688cface1a897305811ebb6b59",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-sae-train-or-load": {
+      "code_fingerprint": "sha256:fafc25244ce67543eb7384baec67800190b4a3803d8380a29c8a49076e5387be",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lm-sae-q17b-l14-v1: sha1 11982ca32f0382eb9bf594faee58e808d61be12d\n"
+        }
+      ]
+    },
+    "interpretability-caution": {
+      "code_fingerprint": "sha256:9422111de2c323bc8f9cd90566125f7b3ff615efd9149949fb3414a09d28346d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "It is strictly prohibited to use interpretability tools for non-scientific\n    research purposes to interfere with model capabilities, or to fabricate,\n    generate, and disseminate harmful information that violates public\n    order, good morals, and socialist core values, including pornographic,\n    violent, discriminatory, or incendiary content. Violators will have\n    their authorization automatically terminated and shall bear all legal\n    liabilities arising therefrom. The right of final interpretation of this\n    statement belongs to the project owner.\n28 files of 537 MB; this notebook downloads one\n"
+        }
+      ]
+    },
+    "interpretability-load-qwen-scope": {
+      "code_fingerprint": "sha256:3a31ff3b82822172b8df22dcd1b585903dc13a0ad83ce52d0be83de8aadcf2ae",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-sae-metrics": {
+      "code_fingerprint": "sha256:867c8ddfed0245ef07eeafa5f87a386a2198fbd64e5e68da9a4d37eac2b900c1",
+      "kind": "text",
+      "outputs": []
+    },
+    "interpretability-sae-instrument": {
+      "code_fingerprint": "sha256:ee1425120588ea734b3fd6bdcbedf27df0a7c47ded44e3aa499b2827e3d0a236",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "center=False: FVU 0.256, loss recovered 0.981, L0 50.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "center=True: FVU 0.877, loss recovered 0.948, L0 50.0\nkept center=False; release used: True\n"
+        }
+      ]
+    },
+    "interpretability-sae-compare": {
+      "code_fingerprint": "sha256:085e47f834605d2267439cc125fc247703397e8c245ced4de998b173130adb24",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "51,000 positions of 200 documents\n                       ours  Qwen-Scope\nwidth                 8,192      32,768\ntraining tokens   6,950,930  not stated\nL0                       50          50\nFVU                   0.288       0.256\nCE orig               2.477       2.477\nCE splice             2.643       2.606\nCE mean-ablate        9.208       9.208\nloss recovered        0.975       0.981\nunfired features          3       8,147\n"
+        }
+      ]
+    },
+    "interpretability-features": {
+      "code_fingerprint": "sha256:fca2997450f8cd33545330b59dd056d99cb40f7dea967b37a58281e4c6ba8eae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " feature  rate zh  rate en\n   24946    0.351      0.0\n    8493    0.274      0.0\n    8322    0.192      0.0\n    6343    0.170      0.0\n   24394    0.135      0.0\nfeatures never firing on the held-out text: 8,147; dense (above 0.1): 12\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "feature 24946:\n    29.7  为全世界约400,000家[组织]\n    28.9  雷佩查族群考古、历史、娱乐和文化[遗址]\n    28.8  段。这些岩画是目前非洲之角已[知]\n    28.3  荣誉毕业生称号。在大学期间，他是FUAN[组织]\n    28.3  佩查族群考古、历史、娱乐和文化遗址[走廊]\n    28.2  及桌面虚拟化、網路連結、以及软件即[服务]\n    28.1  年的时间段。这些岩画是目前非洲之[角]\n    27.8  個委員會。\\n\\n 董事會事[務]\nfeature 24639:\n    42.7  貼、美國旅行補貼。\\n\\n外部連結 \\n Fort[ Worth]\n    38.1   1967) is the Executive Chairman of[ Lagos]\n    37.0   says Swami Ramananda, director of the San[ Francisco]\n    36.3   in the Arts. She was an alumna of the[ Vancouver]\n    35.8  , the first secretary of the Krasnoyars[k]\n    35.5  ie Miller Peeples. He was educated at the[ Atlanta]\n    35.3  1985) was a medical reporter for the[ Arizona]\n    35.2   of East Hartford and state representative.\\n\\nHe attended the East[ Hartford]\nfeature 11270:\n    18.1  0年）称不应置二帝万里外不通[问]\n    17.3   sum, the gang kidnaps his daughter. The butcher[ calls]\n    15.5  1986: Rumbles of the Iran-Con[tra]\n    12.4   England in 1959 to join her parents[ who]\n    11.4  均在晋朝知名于世。贾充母亲[去世]\n    10.8  ated to England in 1959 to join[ her]\n    10.4  , the gang kidnaps his daughter. The butcher calls[ the]\n     9.6  40年）称不应置二帝万里外[不通]\n"
+        }
+      ]
+    },
+    "interpretability-label-test": {
+      "code_fingerprint": "sha256:888d9c40cb60b10ebe19ae52479e561e8d54c921a457c329618e5a7aeb429129",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "25,053 tokens labelled, 9,960 of them Chinese; 347 byte fragments left out\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                             precision                recall                   AUC\nfeature           0.881 [0.854, 0.904]  0.441 [0.373, 0.512]  0.704 [0.671, 0.739]\nprobe             0.807 [0.772, 0.837]  0.977 [0.969, 0.984]  0.974 [0.967, 0.980]\nany of the top 5  0.915 [0.897, 0.931]  0.808 [0.766, 0.849]  0.894 [0.872, 0.914]\nfeature: active in 94 of 100 zh, 0 of 100 en documents\nprobe: active in 100 of 100 zh, 65 of 100 en documents\nany of the top 5: active in 100 of 100 zh, 2 of 100 en documents\nAUC, feature minus probe: -0.270 [-0.303, -0.234]\n"
+        }
+      ]
+    },
+    "interpretability-directions": {
+      "code_fingerprint": "sha256:d04781bf9b4ea55993fb4c15833236b22305650d4fe357062df3f630bebb945f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "median stream norm on English text: 192.8\ncosine of the feature and the difference of means: 0.28\nlargest |cosine| of a random direction with either: 0.056\n"
+        }
+      ]
+    },
+    "interpretability-steer": {
+      "code_fingerprint": "sha256:cb389e64f5429634e765f2e1854768133035ec4037e88a18e84c4d1dd43724c2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "100 prompts of 32 tokens, 39 with the prefix\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "switched at the largest alpha below the cap (cost in nats), then at the next alpha:\n  SAE feature: 0.29 at alpha 0.157 (0.25); 0.52 at alpha 0.167 (0.62)\n  difference of means: 0.17 at alpha 0.0936 (0.20); 0.41 at alpha 0.0992 (0.56)\n  random (5 draws): at most 0.00 switched at any alpha;\n    cost 0.35-0.41 at alpha 0.707, 0.80-0.99 at alpha 1\nprefix: switched 0.01 (cost 0.05)\n"
+        }
+      ]
+    },
+    "interpretability-frontier": {
+      "code_fingerprint": "sha256:897f736d701ad0f0a1873caa60a2bc38100ca4d0bb0749879941625a99567833",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                                      cost plain      cost without Han\narea, SAE feature                           0.124 [0.089, 0.162]  0.201 [0.163, 0.239]\narea, difference of means                   0.099 [0.069, 0.135]  0.165 [0.130, 0.203]\narea difference                             0.025 [0.001, 0.052]  0.036 [0.007, 0.067]\nswitched at the cap, SAE feature            0.446 [0.348, 0.548]  0.651 [0.562, 0.734]\nswitched at the cap, difference of means    0.372 [0.280, 0.476]  0.539 [0.446, 0.633]\ncost of half switched, SAE feature          0.585 [0.434, 0.842]  0.281 [0.213, 0.407]\ncost of half switched, difference of means  0.867 [0.539, 1.214]  0.432 [0.267, 0.610]\narea difference, plain cost: 1.9% of replicates at most 0\nrandom directions, switched beyond the unsteered rate below the cap: 0.000 (upper 95% bound 0.000)\nprefix minus SAE feature, at the prefix's cost: -0.018 [-0.070, 0.014]\nprefix minus difference of means, at the prefix's cost: -0.045 [-0.093, -0.011]\n"
+        }
+      ]
+    },
+    "interpretability-frontier-plot": {
+      "code_fingerprint": "sha256:24fc1af7aaae1f84ac871f34360336fed49b40ca9282a0aa440dbc80a4caa0fc",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "interpretability/interpretability-frontier-plot-1.svg",
+          "bytes": 51617,
+          "sha256": "sha256:40dd008d9c36306d12162852849f64a5a5864a3fdc2ab4641be3602049558083"
+        }
+      ]
+    },
+    "interpretability-steer-samples": {
+      "code_fingerprint": "sha256:c0d66cfd793bc78e9df4002233a156c949fae57b78f1504014cae93c95bb770c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SAE feature: alpha 0.157 (the largest below the cap; no half)\ndifference of means: alpha 0.0936 (the largest below the cap; no half)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "--- unsteered (cost without Han: +0.000 nats per token)\n...smaller, with skin that is vel|vety and smooth. The skin is usually a\n    bright yellow, but can be red, pink, or white. The flesh is usually a\n    bright yellow, but can be red, pink, or white. The flesh is usually a\n    bright yellow\n...rt- en vaatziekten en diabetes| mellitus: een overzicht. [Genetic factors\n    for cardiovascular diseases and diabetes mellitus: an overview.]\n    Erfelijke factoren voor hart- en vaatziekten en diabetes mellitus: een\n    overzicht.\n... English language - 122 pages |Power Writing is a practical guide to the\n    art of writing. It is designed to help you to get your ideas flowing and\n    to develop your writing skills. The book is divided into three sections.\n    The first section is a series of exercises that will\n...ower is located in the city of| Paris, France. It was built in 1889 to\n    celebrate the 100th anniversary of the French Revolution. The tower is\n    324 meters tall and is made of iron. The tower is 10\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "--- prefix (cost without Han: +0.050 nats per token)\n...smaller, with skin that is vel|vety and smooth. The flesh is white and\n    juicy, with a sweet and sour taste. The apricot is a popular fruit in\n    many parts of the world, and is often used in cooking and baking. It is\n    also a popular snack\n...rt- en vaatziekten en diabetes| mellitus: een overzicht. [Genetic factors\n    for cardiovascular diseases and diabetes mellitus: an overview.]\n    Erfelijke factoren voor hart- en vaatziekten en diabetes mellitus: een\n    overzicht.\n... English language - 122 pages |Power Writing is a practical guide to\n    writing for the adult learner. It is designed to help you to get your\n    ideas flowing and to develop your writing skills. The book is divided\n    into three sections. The first section is a series of exercises to\n...ower is located in the city of| Paris, France. It was built in 1889 to\n    celebrate the 100th anniversary of the French Revolution. The tower is\n    made of iron and stands 324 meters tall. It is the tallest structure in\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "--- SAE feature (cost without Han: +0.133 nats per token)\n...smaller, with skin that is vel|vety and smooth. Apricots are typically\n    yellow, but they can also be red, green, or even black. Apricots are a\n    good source of vitamin C, potassium, and fiber. They are also a good\n    source of\n...rt- en vaatziekten en diabetes| mellitus: een overzicht. [Genetic factors\n    for cardiovascular diseases and diabetes mellitus: an overview.]\n    [Article in English] Authors J M van der Velden1 , M J van der Velden ,\n    J\n... English language - 122 pages |Power Writing: Getting Ideas Flowing is a\n    practical guide to the art of writing. It is designed to help you to get\n    your ideas flowing and to develop your writing skills. The book is\n    divided into three parts. The first part provides a\n...ower is located in the city of| Paris, France. It is 324米高，是世界上最\n    高的铁塔。它建于1889年，是为了庆祝法国大革命100周年而建造的。这座塔由工\n    程师古斯塔夫\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "--- difference of means (cost without Han: +0.106 nats per token)\n...smaller, with skin that is vel|vety and smooth, and a sweet, fragrant\n    aroma. The flesh is white, juicy, and sweet, with a mild, refreshing\n    taste. The apricot is a popular fruit in China, and is also known as the\n    \"ap\n...rt- en vaatziekten en diabetes| mellitus: een overzicht. [Genetic factors\n    for cardiovascular diseases and diabetes mellitus: an overview.]\n    [Article in            Dutch] Authors J M van der Schouw1 , M J van der\n    Schou\n... English language - 122 pages |Power Writing is a practical guide to the\n    art of writing. It is designed to help you to get your ideas flowing, to\n    develop your writing skills, and to write more effectively. The book is\n    divided into three parts. Part One is a\n...ower is located in the city of| Paris, France. It is 324米 high,其中的324\n    米是用____作单位的． 米  阅读下面的文字，完成下列各题。 ①“天人合一”是中\n    华\n--- past the peak: the Eiffel prompt, the next and the largest alpha\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SAE feature, alpha 0.707 (switched 0.80, cost 9.30):\n...ower is located in the city of|巴黎（巴黎）的中心，它高耸入云，是巴黎的标\n    志性建筑之一，也是世界上最高的建筑之一。它由铁制成，由法国工程师亨利·埃\n    德加·埃德加（Henry·埃\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SAE feature, alpha 2 (switched 0.00, cost 8.60):\n...ower is located in the city of|（(（（（（（（（（（（（（（（（（（（（\n    （（（（（（（（（（（（（（（（（（（（（（（（（（（\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "difference of means, alpha 0.354 (switched 0.65, cost 9.14):\n...ower is located in the city of|____ A. Paris B. London C. Berlin D.莫斯科\n    答案:  A  The Eiff尔Tower是____ A. a building B. a山 C. a山 D. a\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "difference of means, alpha 2 (switched 0.00, cost 6.75):\n...ower is located in the city of|      (      (      (      (    (  (  (  (\n    (   (   (     (\n"
+        }
+      ]
+    }
+  }
+}

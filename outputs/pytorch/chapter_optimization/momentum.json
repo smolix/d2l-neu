@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c5d7c66c77e8757a8c88d936707f4832fccc7f64aecee4264eb418e59954422c",
+    "d2l_lib_fingerprint": "sha256:40092043c07d67586d6e9c5c659448a5e58dd57b830283199b1b14a7db7b8cd4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,26 +13,13 @@
       "kind": "text",
       "outputs": []
     },
-    "momentum-an-ill-conditioned-problem-1": {
-      "code_fingerprint": "sha256:39f89fc1c2e679a404545c4adbabe0523ebeec33af93e82c9cc7bf893e42bb56",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 20, x1: -0.943467, x2: -0.000073\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "momentum/momentum-an-ill-conditioned-problem-1-1.svg",
-          "bytes": 18000,
-          "sha256": "sha256:1039543192087dfb5b5db49946b1cce99a187b01a5707dcd20584ed7a1ce22d2"
-        }
-      ]
+    "momentum-1": {
+      "code_fingerprint": "sha256:1ae5f3a1f7613c43e59d00429fdc9f81c90b80d09adcfeeefd57d9745b926e7b",
+      "kind": "text",
+      "outputs": []
     },
     "momentum-an-ill-conditioned-problem-2": {
-      "code_fingerprint": "sha256:8accd98ab4b1fb30dec935bda370ad510eaab7452e1919a1029b32fde522b9c3",
+      "code_fingerprint": "sha256:0c43798b4f6fd8e25f31197c7258792bb9eb40e184dbfbc43231f72278cba32d",
       "kind": "text",
       "outputs": [
         {
@@ -43,7 +30,7 @@
       ]
     },
     "momentum-the-momentum-method-1": {
-      "code_fingerprint": "sha256:a6aaeb11d66ee72291c206283f66367c4bab7ae40d7e6d52f52dd896e56da1c2",
+      "code_fingerprint": "sha256:289bd8ce9a884d1b05bf092a1421082aacc487b65999e8ca53f6fb9557230213",
       "kind": "mixed",
       "outputs": [
         {
@@ -56,12 +43,12 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-1-1.svg",
           "bytes": 20333,
-          "sha256": "sha256:ab71167c59f6e2d3a94b55fc0d71cbfdd2462000d44f56704248e9f3b04451fa"
+          "sha256": "sha256:2664eada18d893d5116ab4abc99161e19211c3931d80000ada207957cda4d73f"
         }
       ]
     },
     "momentum-effective-sample-weight": {
-      "code_fingerprint": "sha256:62cb75501f72bbb6ebe55ea4f6586f691a2619d28c0ac9446e3afd20f3de4b72",
+      "code_fingerprint": "sha256:3003e55ae765bf3ebddb76ea484b5549cd151f5b69555fd85f005ed831addb9c",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +59,7 @@
       ]
     },
     "momentum-acceleration-and-damping-1": {
-      "code_fingerprint": "sha256:cf4f635168b2ae57b0febf95b31d9084f133f17d82372a0826568d36a762880d",
+      "code_fingerprint": "sha256:7256ea4e87001b177be3087a18d7a28a9ef2cc08586eb4f205ba2bd37519de56",
       "kind": "text",
       "outputs": [
         {
@@ -83,7 +70,7 @@
       ]
     },
     "momentum-acceleration-and-damping": {
-      "code_fingerprint": "sha256:b872c861190484c0f27de7843a0a051a49248d74bfef25f1691290e7f4bbc548",
+      "code_fingerprint": "sha256:857b66e630b4e95a02760d9af4b29e77359256742685158748c48c3d66118041",
       "kind": "mixed",
       "outputs": [
         {
@@ -96,68 +83,74 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-acceleration-and-damping-1.svg",
           "bytes": 18186,
-          "sha256": "sha256:d6a819377691d61a3be8836d9619147fdf1755e081e1ec0827b78a645a5ac653"
+          "sha256": "sha256:e147250ed2137bcce356ce90e5961058705ebd0caeecf4e5c381a4d099efe0d6"
         }
       ]
     },
-    "momentum-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:7c81adad26ef791501944dfd016b67bc5d1efcdef1ca37001b2ce4a47a486382",
+    "momentum-momentum-on-a-network-1": {
+      "code_fingerprint": "sha256:2ebe9dd300e11afa42d05a1e26f989464fbb1a0a237d7020f869081c1d72ba44",
       "kind": "text",
       "outputs": []
     },
-    "momentum-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:b01c26dc68f74581f0011ddfbcf51b7180ffdd87ea8e51f1a19ccc6ee3816b8c",
+    "momentum-momentum-on-data-1": {
+      "code_fingerprint": "sha256:07e9c311c4633ceaa08d946c3e59efda5f77faf7d9cb8c13490937b247ca695b",
       "kind": "text",
       "outputs": []
     },
-    "momentum-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:5ff3b452633db56f16250213d876146104f8a163060744b69e32f4b8e66f83ca",
-      "kind": "mixed",
+    "momentum-momentum-on-a-network-2": {
+      "code_fingerprint": "sha256:ed932b8b379d543e78b5ce8ae93eb28121d1e619da4bd52fcdea82bc12bd88bf",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.248, 0.545 sec/epoch\n"
+          "text": "softmax regression  beta=0.0  best lr 0.125  steps to 0.5: 625  final loss 0.472\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.249, 0.542 sec/epoch\n"
+          "text": "softmax regression  beta=0.9  best lr 0.4    steps to 0.5: 100  final loss 0.365\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.287, 0.541 sec/epoch\n"
+          "text": "FashionCNN          beta=0.0  best lr 0.2    steps to 0.3: 1825  final loss 0.300\n"
         },
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "momentum/momentum-implementation-from-scratch-3-1.svg",
-          "bytes": 26206,
-          "sha256": "sha256:661ae94ee14b76438febee70f75df7a09380760297a26621042b80a0a66f7b7c"
+          "type": "stream",
+          "name": "stdout",
+          "text": "FashionCNN          beta=0.9  best lr 0.02   steps to 0.3: 2050  final loss 0.266\n"
         }
       ]
     },
-    "momentum-concise-implementation": {
-      "code_fingerprint": "sha256:c29907a1f5a98ea603ce0b94b8ed800068a0a69b625b5055d3f3cbb1e08b71c2",
-      "kind": "mixed",
+    "momentum-momentum-on-a-network-3": {
+      "code_fingerprint": "sha256:ed7865aa3084d2e5515845cd91efd0dbde176d6c54823f6a47791487f8751b6d",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.537 sec/epoch\n"
+          "text": "softmax regression  beta=0.0  lr 0.125  steps: 625 625 625   final loss: 0.472 0.472 0.472\n"
         },
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "momentum/momentum-concise-implementation-1.svg",
-          "bytes": 18790,
-          "sha256": "sha256:6d92cc11123919e2fd15808ba7b95cd12cdb2949cd2b7cf2d36f06bc088f873c"
+          "type": "stream",
+          "name": "stdout",
+          "text": "softmax regression  beta=0.9  lr 0.4    steps: 100 100 100   final loss: 0.365 0.365 0.365\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FashionCNN          beta=0.0  lr 0.2    steps: 1675 1900 1775   final loss: 0.291 0.281 0.281\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FashionCNN          beta=0.9  lr 0.02   steps: 1575 1625 1275   final loss: 0.280 0.279 0.280\n"
         }
       ]
     },
     "momentum-nesterov-momentum-1": {
-      "code_fingerprint": "sha256:6ae79bf6cc0dab777b9eb231b5b6a380ba0f500fb91ba68e2175bc74b9fd3766",
+      "code_fingerprint": "sha256:592dbd883258b8653ab2ad983527f0eedbbb59098b3460949158cadb76e3eced",
       "kind": "mixed",
       "outputs": [
         {
@@ -170,25 +163,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-nesterov-momentum-1-1.svg",
           "bytes": 18106,
-          "sha256": "sha256:97ff84f58dd4756c20b5bfb1720e184ddff201e82a259f785e88d2f966cfd90e"
-        }
-      ]
-    },
-    "momentum-nesterov-momentum-2": {
-      "code_fingerprint": "sha256:9679a9523077192dcbb894a75674b2b08b4faffa558d5844d2e9f05c77fa8252",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "loss: 0.244, 0.503 sec/epoch\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "momentum/momentum-nesterov-momentum-2-1.svg",
-          "bytes": 18790,
-          "sha256": "sha256:6d5347fb7bbcb71de259a8c268e5139576c3ce0ac3c6fc492c4a4f825ca749e6"
+          "sha256": "sha256:3b6924dc6f5cd0abd1611bdb3a6700c329ffe9559e3c9ea75ccce1f03811d513"
         }
       ]
     }

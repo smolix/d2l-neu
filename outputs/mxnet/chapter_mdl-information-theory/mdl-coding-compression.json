@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:5d57a86864d264009ca2702715d6200b694ba3dd6f995bda95d390900c1cf154",
+    "d2l_lib_fingerprint": "sha256:89968348c77aecb3de7531dbf6853e1494ce9ce7d0c54fa6e9a680dad0e4e100",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -81,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
           "bytes": 31016,
-          "sha256": "sha256:3c3819d4a58bcf165a1a78ea3903bbabc62313ba2176e3a45cc27a885e7a3133"
+          "sha256": "sha256:24f8d7bdd01009087b0189a96503fd37a9e2c1140308093f96ef840ae2ac2282"
         }
       ]
     }

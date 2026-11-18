@@ -26,7 +26,6 @@ from d2l import jax as d2l
 
 ```{.python .input #windowed-linear-attention-windowed-and-linear-attention-2}
 %%tab pytorch
-from torch.nn.attention import SDPBackend, sdpa_kernel
 from torch.nn.attention.flex_attention import create_block_mask, flex_attention
 ```
 
@@ -57,22 +56,7 @@ def window_mask(n, w):
     return d2l.causal_mask(n) & (i[:, None] - i[None, :] < w)
 ```
 
-With a window of 4, each row of random scores keeps its weight on the
-query's own position and the three before it:
-
-```{.python .input #attention-at-scale-sliding-window-attention-1}
-%%tab pytorch
-scores = torch.randn(12, 12)
-d2l.show_heatmaps(d2l.masked_softmax(scores, window_mask(12, 4))[None, None],
-                  xlabel='Keys', ylabel='Queries')
-```
-
-```{.python .input #attention-at-scale-sliding-window-attention-1}
-%%tab jax
-scores = jax.random.normal(d2l.get_key(), (12, 12))
-d2l.show_heatmaps(d2l.masked_softmax(scores, window_mask(12, 4))[None, None],
-                  xlabel='Keys', ylabel='Queries')
-```
+<!-- WRITER: the random band heatmap cell (attention-at-scale-sliding-window-attention-1) is cut (worklist 6.A2); the mask figure of :numref:`sec_attention-scoring-functions` shows the band. The lead sentence "With a window of 4, each row of random scores keeps its weight on the query's own position and the three before it:" went with it. -->
 
 ### Receptive Field Growth with Depth
 :label:`subsec_attn-receptive-field`
@@ -87,37 +71,7 @@ read as an adjacency matrix, composes across layers by boolean matrix
 multiplication, and its $L$-th power says which positions can influence
 which through $L$ layers.
 
-```{.python .input #attention-at-scale-depth-restores-the-reach}
-%%tab pytorch
-n, w, depths = 64, 8, [1, 2, 4]
-band = window_mask(n, w).float()
-reach, maps = torch.eye(n), []
-for L in range(1, max(depths) + 1):
-    reach = ((reach @ band) > 0).float()
-    if L in depths:
-        maps.append(reach)
-        print(f'depth {L}: last query reaches {int(reach[-1].sum())} '
-              f'positions (formula: {min(n, 1 + L * (w - 1))})')
-d2l.show_heatmaps(torch.stack(maps)[None], xlabel='Influencing position',
-                  ylabel='Position', titles=[f'depth {L}' for L in depths],
-                  figsize=(8, 3.2))
-```
-
-```{.python .input #attention-at-scale-depth-restores-the-reach}
-%%tab jax
-n, w, depths = 64, 8, [1, 2, 4]
-band = window_mask(n, w).astype(jnp.float32)
-reach, maps = jnp.eye(n), []
-for L in range(1, max(depths) + 1):
-    reach = ((reach @ band) > 0).astype(jnp.float32)
-    if L in depths:
-        maps.append(reach)
-        print(f'depth {L}: last query reaches {int(reach[-1].sum())} '
-              f'positions (formula: {min(n, 1 + L * (w - 1))})')
-d2l.show_heatmaps(jnp.stack(maps)[None], xlabel='Influencing position',
-                  ylabel='Position', titles=[f'depth {L}' for L in depths],
-                  figsize=(8, 3.2))
-```
+<!-- WRITER: the receptive-field cell (attention-at-scale-depth-restores-the-reach) is cut (COST-12; it printed 8, 15, 29 = the formula). The two sentences before this marker ("We can compute this directly. The band mask, read as an adjacency matrix, ...") and "The count matches the formula, and the heatmaps show the band widening layer by layer." below refer to it; per worklist 6.B2 its space goes to the caveat that reach is not use. -->
 
 The count matches the formula, and the heatmaps show the band widening layer
 by layer. Mistral 7B uses this growth: it attends through a window of 4096 in
@@ -201,30 +155,6 @@ def windowed_attention(Q, K, V, w):
     return (d2l.masked_softmax(scores, mask) @ Vb).reshape(n, -1)
 ```
 
-The blocked version should agree with the mask-based definition.
-
-```{.python .input #attention-at-scale-a-linear-cost-implementation-2}
-%%tab pytorch
-n, w, d_h = 2048, 128, 64
-Q, K, V = (torch.randn(n, d_h, device=d2l.try_gpu()) for _ in range(3))
-scores = Q @ K.T / math.sqrt(d_h)
-reference = d2l.masked_softmax(scores, window_mask(n, w, Q.device)) @ V
-err = (windowed_attention(Q, K, V, w) - reference).abs().max()
-print(f'maximum deviation: {float(err):.2e}')
-```
-
-```{.python .input #attention-at-scale-a-linear-cost-implementation-2}
-%%tab jax
-n, w, d_h = 2048, 128, 64
-Q, K, V = (jax.random.normal(k, (n, d_h))
-           for k in jax.random.split(d2l.get_key(), 3))
-with jax.default_matmul_precision('highest'):
-    scores = Q @ K.T / math.sqrt(d_h)
-    reference = d2l.masked_softmax(scores, window_mask(n, w)) @ V
-    err = jnp.abs(windowed_attention(Q, K, V, w) - reference).max()
-print(f'maximum deviation: {float(err):.2e}')
-```
-
 A fused kernel cannot skip single scores. It computes in tiles of
 $b \times b$ scores held in on-chip memory, and it can skip a tile only if
 the mask excludes all of it. Tiles inside the mask are computed without
@@ -264,31 +194,44 @@ size saves nothing more. Fused kernels take the window as part of their
 interface, and we check that their output equals that of
 `windowed_attention`:
 
-```{.python .input #attention-at-scale-a-linear-cost-implementation-4}
+```{.python .input #attention-at-scale-a-linear-cost-implementation-2}
 %%tab pytorch
-def band_mod(w):
-    """FlexAttention mask_mod: True where query q may attend to key k."""
-    return lambda batch, head, q, k: (k <= q) & (q - k < w)
-
-block_mask = create_block_mask(band_mod(w), None, None, n, n,
-                               device=d2l.try_gpu())
-print(f'tiles skipped: {block_mask.sparsity():.1f}%')
-Q, K, V = (torch.randn(1, 1, n, d_h, device=d2l.try_gpu()) for _ in range(3))
-O = torch.compile(flex_attention)(Q, K, V, block_mask=block_mask)
-O_ref = windowed_attention(Q[0, 0], K[0, 0], V[0, 0], w)
-print(f'maximum deviation: {float((O[0, 0] - O_ref).abs().max()):.2e}')
+n, w, d_h = 2048, 128, 64
+Q, K, V = (torch.randn(n, d_h, device=d2l.try_gpu()) for _ in range(3))
+reference = d2l.masked_softmax(Q @ K.T / math.sqrt(d_h),
+                               window_mask(n, w, Q.device)) @ V
+# FlexAttention takes the band as a rule on positions and evaluates it once
+# per tile; torch.compile turns it into a kernel that visits only kept tiles
+band = lambda batch, head, q, k: (k <= q) & (q - k < w)
+block_mask = create_block_mask(band, None, None, n, n, device=Q.device)
+fused = torch.compile(flex_attention)(Q[None, None], K[None, None],
+                                      V[None, None], block_mask=block_mask)
+for name, O in (('blocked', windowed_attention(Q, K, V, w)),
+                ('fused kernel', fused[0, 0])):
+    print(f'{name:>12}: maximum deviation '
+          f'{float((O - reference).abs().max()):.2e}')
 ```
 
-```{.python .input #attention-at-scale-a-linear-cost-implementation-4}
+```{.python .input #attention-at-scale-a-linear-cost-implementation-2}
 %%tab jax
-Q, K, V = (jax.random.normal(k, (1, n, 1, d_h))
+n, w, d_h = 2048, 128, 64
+Q, K, V = (jax.random.normal(k, (n, d_h))
            for k in jax.random.split(d2l.get_key(), 3))
 with jax.default_matmul_precision('highest'):
-    O = jax.nn.dot_product_attention(Q, K, V, is_causal=True,
-                                     local_window_size=(w - 1, 0))
-    O_ref = windowed_attention(Q[0, :, 0], K[0, :, 0], V[0, :, 0], w)
-print(f'maximum deviation: {float(jnp.abs(O[0, :, 0] - O_ref).max()):.2e}')
+    reference = d2l.masked_softmax(Q @ K.T / math.sqrt(d_h),
+                                   window_mask(n, w)) @ V
+    # The window as an argument: w - 1 keys back, none ahead. The default
+    # XLA implementation runs in float32; cuDNN's needs 16-bit inputs
+    fused = jax.nn.dot_product_attention(
+        Q[None, :, None], K[None, :, None], V[None, :, None],
+        is_causal=True, local_window_size=(w - 1, 0))
+    for name, O in (('blocked', windowed_attention(Q, K, V, w)),
+                    ('fused kernel', fused[0, :, 0])):
+        print(f'{name:>12}: maximum deviation '
+              f'{float(jnp.abs(O - reference).max()):.2e}')
 ```
+
+<!-- WRITER: the two equivalence checks are now one cell (id -2, after the tile count; -4 deleted): it prints two deviations, blocked and fused kernel, both against the mask definition (one sentence, structural 3). "The blocked version should agree with the mask-based definition." above the old -2 is removed; the sentence "Fused kernels take the window as part of their interface, and we check that their output equals that of `windowed_attention`:" now leads this cell. The PyTorch print of BlockMask sparsity is gone (it equals 100% minus the window's 12.1% from tiles_visited). The FlexAttention compile requirement is now a code comment (COST-11); the two tab notes below go to at most two sentences each (6.B3). The JAX fused-kernel exactness check runs XLA's implementation (float32); `implementation='cudnn'` raises "Q must be fp16/bf16/fp8..." in float32, so cuDNN appears only in the timing cell. -->
 
 :begin_tab:`pytorch`
 FlexAttention :cite:`Dong.Feng.Guessous.ea.2025` makes this tile map the
@@ -426,47 +369,7 @@ def linear_attention_recurrent(Q, K, V):
     return outputs
 ```
 
-Equations :eqref:`eq_linear-attn-recurrence` and :eqref:`eq_linear-attn`
-sum the same terms in different orders, so their implementations should
-agree up to floating-point rounding.
-
-```{.python .input #attention-at-scale-kernelizing-the-score-2}
-%%tab pytorch
-n = 512
-Q, K, V = (torch.randn(n, d_h, device=d2l.try_gpu()) for _ in range(3))
-err = (linear_attention_parallel(Q, K, V)
-       - linear_attention_recurrent(Q, K, V)).abs().max()
-print(f'maximum deviation: {float(err):.2e}')
-print(f'recurrent state: {d_h}x{d_h} + {d_h} floats '
-      f'= {(d_h * d_h + d_h) * 4 / 1024:.0f} KiB at any sequence length')
-```
-
-```{.python .input #attention-at-scale-kernelizing-the-score-2}
-%%tab jax
-n = 512
-Q, K, V = (jax.random.normal(k, (n, d_h))
-           for k in jax.random.split(d2l.get_key(), 3))
-err = jnp.abs(linear_attention_parallel(Q, K, V)
-              - linear_attention_recurrent(Q, K, V)).max()
-print(f'maximum deviation: {float(err):.2e}')
-print(f'recurrent state: {d_h}x{d_h} + {d_h} floats '
-      f'= {(d_h * d_h + d_h) * 4 / 1024:.0f} KiB at any sequence length')
-```
-
-At generation time this linear-attention layer with $d_h=64$ carries
-16 KiB of state, whatever the context length. A softmax head instead caches
-every past key and value, $2nd_h\cdot4$ bytes in fp32, or about 4 MiB at
-$n=8192$. Its cache grows linearly with the generated sequence, whereas the
-recurrent state stays fixed.
-
-The state $\mathbf{S}_t$ is a lossy summary. It holds $d \times d_v$ numbers
-however many tokens it has absorbed, so as the context grows the writes
-interfere, and retrieving one particular value becomes approximate. Softmax
-attention keeps every key and can put nearly all of a query's weight on one
-of them. A kernel with positive features such as $\mathrm{elu} + 1$ cannot
-become nearly one-hot in the same way: scaling up a query sharpens the
-softmax without limit but leaves the normalized weights of this kernel almost
-unchanged (Exercise :exref:`ex_attention-at-scale-feature-map`).
+<!-- WRITER: the check of the parallel and recurrent forms (kernelizing-the-score-2) moved below the chunked form, merged with the chunked check (worklist 6.A4); the lead "Equations ... should agree up to floating-point rounding." went with it. The paragraphs on the 16 KiB state and "The state $\mathbf{S}_t$ is a lossy summary." moved below that check, followed by the new sharpening cell. -->
 
 ### Chunked Computation
 
@@ -536,31 +439,80 @@ def linear_attention_chunked(Q, K, V, c=64):
     return (num / den).reshape(n, -1)
 ```
 
-The chunked form sums the same terms once more, so it too should match the
-recurrent form.
+The parallel, recurrent and chunked forms sum the same terms in three
+orders, so they should agree up to floating-point rounding.
+<!-- WRITER: placeholder lead for the merged check (kernelizing-the-score-2, now here; chunked-computation-2 deleted). One sentence (structural 3); it prints two deviations against the recurrent form and the state size. -->
 
-```{.python .input #attention-at-scale-chunked-computation-2}
+```{.python .input #attention-at-scale-kernelizing-the-score-2}
 %%tab pytorch
 n = 512
 Q, K, V = (torch.randn(n, d_h, device=d2l.try_gpu()) for _ in range(3))
-err = (linear_attention_chunked(Q, K, V)
-       - linear_attention_recurrent(Q, K, V)).abs().max()
-print(f'maximum deviation: {float(err):.2e}')
+recurrent = linear_attention_recurrent(Q, K, V)
+for name, f in (('parallel', linear_attention_parallel),
+                ('chunked', linear_attention_chunked)):
+    err = (f(Q, K, V) - recurrent).abs().max()
+    print(f'{name:>8}: maximum deviation {float(err):.2e}')
+print(f'recurrent state: {d_h}x{d_h} + {d_h} floats '
+      f'= {(d_h * d_h + d_h) * 4 / 1024:.0f} KiB at any sequence length')
 ```
 
-```{.python .input #attention-at-scale-chunked-computation-2}
+```{.python .input #attention-at-scale-kernelizing-the-score-2}
 %%tab jax
 n = 512
 Q, K, V = (jax.random.normal(k, (n, d_h))
            for k in jax.random.split(d2l.get_key(), 3))
 with jax.default_matmul_precision('highest'):
-    err = jnp.abs(linear_attention_chunked(Q, K, V)
-                  - linear_attention_recurrent(Q, K, V)).max()
-print(f'maximum deviation: {float(err):.2e}')
+    recurrent = linear_attention_recurrent(Q, K, V)
+    for name, f in (('parallel', linear_attention_parallel),
+                    ('chunked', linear_attention_chunked)):
+        err = jnp.abs(f(Q, K, V) - recurrent).max()
+        print(f'{name:>8}: maximum deviation {float(err):.2e}')
+print(f'recurrent state: {d_h}x{d_h} + {d_h} floats '
+      f'= {(d_h * d_h + d_h) * 4 / 1024:.0f} KiB at any sequence length')
 ```
 
 The three forms agree to floating-point rounding. They differ only in what
 they keep in memory and in how much of the work is matrix products.
+
+At generation time this linear-attention layer with $d_h=64$ carries
+16 KiB of state, whatever the context length. A softmax head instead caches
+every past key and value, $2nd_h\cdot4$ bytes in fp32, or about 4 MiB at
+$n=8192$. Its cache grows linearly with the generated sequence, whereas the
+recurrent state stays fixed.
+
+The state $\mathbf{S}_t$ is a lossy summary. It holds $d \times d_v$ numbers
+however many tokens it has absorbed, so as the context grows the writes
+interfere, and retrieving one particular value becomes approximate. Softmax
+attention keeps every key and can put nearly all of a query's weight on one
+of them. A kernel with positive features such as $\mathrm{elu} + 1$ cannot
+become nearly one-hot in the same way: scaling up a query sharpens the
+softmax without limit but leaves the normalized weights of this kernel almost
+unchanged (Exercise :exref:`ex_attention-at-scale-feature-map`).
+
+```{.python .input #windowed-linear-attention-sharpening}
+%%tab pytorch
+Q, K = torch.randn(1000, d_h), torch.randn(8, d_h)  # 8 keys: uniform is 0.125
+for beta in (1, 4, 16):  # Scale the queries up
+    soft = torch.softmax(beta * Q @ K.T / math.sqrt(d_h), dim=-1)
+    lin = phi(beta * Q) @ phi(K).T
+    lin = lin / lin.sum(-1, keepdim=True)
+    print(f'queries x{beta:<2}: mean largest weight, softmax '
+          f'{soft.amax(-1).mean():.2f}, elu+1 {lin.amax(-1).mean():.2f}')
+```
+
+```{.python .input #windowed-linear-attention-sharpening}
+%%tab jax
+kq, kk = jax.random.split(d2l.get_key())
+Q, K = jax.random.normal(kq, (1000, d_h)), jax.random.normal(kk, (8, d_h))
+for beta in (1, 4, 16):  # Scale the queries up; 8 keys: uniform is 0.125
+    soft = jax.nn.softmax(beta * Q @ K.T / math.sqrt(d_h), axis=-1)
+    lin = phi(beta * Q) @ phi(K).T
+    lin = lin / lin.sum(-1, keepdims=True)
+    print(f'queries x{beta:<2}: mean largest weight, softmax '
+          f'{soft.max(-1).mean():.2f}, elu+1 {lin.max(-1).mean():.2f}')
+```
+
+<!-- WRITER: new sharpening cell (COST-15). 1000 random queries, 8 random keys of width 64; mean over queries of the largest weight in the row. Measured (both tabs, three draws each in dev): softmax 0.36-0.37 at x1, 0.76-0.77 at x4, 0.94 at x16; elu+1 0.14-0.15 at x1, 0.15 at x4 and x16 (uniform 0.125). Softmax sharpens toward one key; the elu+1 weights barely move. The paragraph above ends with the claim and an exercise pointer; it now rests on this cell. Why: for large beta, phi(beta q) -> beta relu(q) + const, so the normalized weights tend to a fixed limit. -->
 
 ### Linear Attention in Practice
 
@@ -594,55 +546,52 @@ functions of this section over the heads. Enough work per call keeps the
 fixed cost of launching kernels from hiding the growth with $n$. The
 milliseconds depend on the GPU, but the slopes on the log--log plot follow
 from the operation counts.
+<!-- WRITER: the timing is redesigned (COST-17; worklist 6.A6). Both arms run in ONE fused kernel family per tab: PyTorch `flex_attention` under `torch.compile` with a causal and with a band BlockMask; JAX `jax.nn.dot_product_attention(..., implementation='cudnn', is_causal=True)` without and with `local_window_size=(127, 0)`. Linear attention is no longer timed (its teaching implementation says little about a tuned kernel). 32 heads of width 64, bfloat16, 512 to 32,768 tokens. No vmap. State the prediction before the cell: a causal kernel visits T(T+1)/2 tiles of 128 x 128, a window of 128 visits 2T - 1 (the diagonal tile and its left neighbor in each row, one in the first), so the speedup should approach (T+1)/4 for T = n/128 tile rows, 64 at 32,768 tokens. The cell prints, per length, the measured speedup and this tile-count prediction. Measured (dev, two executions per tab, see the report): dense time grows about fourfold per doubling from 4,096 tokens on and the window's about twofold from 8,192 on; at 512-1,024 tokens both take about 0.1 ms and the speedup is about 1 (prediction 1.4-2.4); at 32,768 tokens the window is 30 to 55 times faster than dense (prediction 64.4). The shortfall: every tile the band visits straddles an edge of the mask (both are partial tiles), so it pays for masking entry by entry and for a fixed cost per row of tiles; in the causal kernel nearly every visited tile is interior. Quote only "about fourfold"/"about twofold", "several tens of times at 32,768 tokens", and "below the tile prediction"; no per-framework numbers in shared prose. The sentences on vmap, "Enough work per call keeps the fixed cost of launching kernels from hiding the growth with $n$" (delete, COST-17) and "three strategies" are now false. -->
 
 ```{.python .input #attention-at-scale-the-price-of-attention-measured}
 %%tab pytorch
-def fused_attention(Q, K, V):
-    """Causal attention in PyTorch's fused FlashAttention kernel."""
-    with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
-        return F.scaled_dot_product_attention(Q, K, V, is_causal=True)
-
+flex = torch.compile(flex_attention)
+masks = {'dense causal': lambda batch, head, q, k: k <= q,
+         'window (w=128)': lambda batch, head, q, k: (k <= q) & (q - k < 128)}
 H, lengths = 32, [512, 1024, 2048, 4096, 8192, 16384, 32768]
-mechanisms = {
-    'dense (fused)': lambda Q, K, V: fused_attention(Q[None], K[None],
-                                                     V[None]),
-    'windowed (w=128)': torch.vmap(
-        lambda Q, K, V: windowed_attention(Q, K, V, 128)),
-    'linear (chunked)': torch.vmap(linear_attention_chunked)}
-times = {name: [] for name in mechanisms}
+times = {name: [] for name in masks}
 for n in lengths:
-    X = torch.randn(H, n, d_h, device=d2l.try_gpu(), dtype=torch.bfloat16)
-    for name, f in mechanisms.items():
-        times[name].append(d2l.Benchmark(lambda: f(X, X, X)).time * 1e3)
+    X = torch.randn(1, H, n, d_h, device=d2l.try_gpu(), dtype=torch.bfloat16)
+    for name, rule in masks.items():
+        block_mask = create_block_mask(rule, None, None, n, n, device=X.device)
+        times[name].append(d2l.Benchmark(
+            lambda: flex(X, X, X, block_mask=block_mask)).time * 1e3)
+    T = n // 128  # Rows of 128 x 128 tiles; causal T(T+1)/2, window 2T - 1
+    speedup = times['dense causal'][-1] / times['window (w=128)'][-1]
+    print(f'n = {n:6,}: window {speedup:4.1f}x faster, '
+          f'tile count predicts {T * (T + 1) / 2 / (2 * T - 1):4.1f}x')
 d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
          legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
 ```
 
 ```{.python .input #attention-at-scale-the-price-of-attention-measured}
 %%tab jax
-def fused_attention(Q, K, V):
-    """Causal attention in the fused cuDNN kernel."""
-    # The kernel takes (batch, length, heads, width): swap axes 1 and 2
-    Q, K, V = (A.swapaxes(1, 2) for A in (Q, K, V))
-    O = jax.nn.dot_product_attention(Q, K, V, is_causal=True,
-                                     implementation='cudnn')
-    return O.swapaxes(1, 2)
-
+# cuDNN takes (batch, length, heads, width); it skips the tiles outside the
+# band only together with is_causal=True
+masks = {'dense causal': {}, 'window (w=128)': {'local_window_size': (127, 0)}}
+kernels = {name: jax.jit(lambda X, kw=kw: jax.nn.dot_product_attention(
+    X, X, X, is_causal=True, implementation='cudnn', **kw))
+    for name, kw in masks.items()}
 H, lengths = 32, [512, 1024, 2048, 4096, 8192, 16384, 32768]
-mechanisms = {
-    'dense (fused)': jax.jit(
-        lambda Q, K, V: fused_attention(Q[None], K[None], V[None])),
-    'windowed (w=128)': jax.jit(jax.vmap(
-        lambda Q, K, V: windowed_attention(Q, K, V, 128))),
-    'linear (chunked)': jax.jit(jax.vmap(linear_attention_chunked))}
-times = {name: [] for name in mechanisms}
+times = {name: [] for name in masks}
 for n in lengths:
-    X = jax.random.normal(d2l.get_key(), (H, n, d_h), dtype=jnp.bfloat16)
-    for name, f in mechanisms.items():
-        times[name].append(d2l.Benchmark(lambda: f(X, X, X)).time * 1e3)
+    X = jax.random.normal(d2l.get_key(), (1, n, H, d_h), dtype=jnp.bfloat16)
+    for name, f in kernels.items():
+        times[name].append(d2l.Benchmark(lambda: f(X)).time * 1e3)
+    T = n // 128  # Rows of 128 x 128 tiles; causal T(T+1)/2, window 2T - 1
+    speedup = times['dense causal'][-1] / times['window (w=128)'][-1]
+    print(f'n = {n:6,}: window {speedup:4.1f}x faster, '
+          f'tile count predicts {T * (T + 1) / 2 / (2 * T - 1):4.1f}x')
 d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
          legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
 ```
+
+<!-- WRITER: the reading paragraph below and the two tab notes that explained away tab differences are obsolete (the tab notes are deleted, worklist 6.A6). Linear attention is no longer in the figure; "linear attention is also faster during generation ..." as the last word goes (6.B6). The new reading is one shared paragraph from the printed speedups (see the marker above the cell), followed by the closing judgment (6.B6). The TinyCharLM quality cell (6.A7) was NOT added: its dev-time acceptance test failed (the dense model does not read the 64-byte copy; numbers in the report), so Exercise 9 stays whole and the ending rests on the sharpening cell and the reach caveat. -->
 
 At short lengths all three take well under a millisecond, and fixed
 per-call costs rather than the operation counts decide which is fastest. At
@@ -654,21 +603,6 @@ every further doubling. Dense attention remains the default at moderate
 lengths, where it is exact and fast. At long contexts the mechanisms of
 linear cost are faster, and linear attention is also faster during
 generation, where its state stays the size of one matrix.
-
-:begin_tab:`pytorch`
-Run eagerly, the windowed and the linear functions launch many small
-kernels, one per operation, while dense attention is a single fused kernel.
-Below a few thousand tokens these launches cost more than the arithmetic,
-so the dense kernel is the fastest there and the two others overtake it
-only as $n$ grows.
-:end_tab:
-
-:begin_tab:`jax`
-`jax.jit` compiles the windowed and the linear functions into a few fused
-kernels, so their fixed cost is about that of the dense kernel. At short
-lengths the three curves therefore lie close together, and the gap opens
-only as $n$ grows.
-:end_tab:
 
 ## Summary
 
@@ -761,6 +695,7 @@ only as $n$ grows.
        that on the first half for every variant. Which variants exploit the
        repetition, and how does the answer relate to the reach of the
        windowed models and to the fixed-size state of linear attention?
+   <!-- WRITER: (code step, dev runs of exactly this exercise with w = 16, three runs per arm per tab) the linear arm diverged to NaN in one run of three in BOTH frameworks. Root cause: training drives query and key components to -40 ... -75, where elu + 1 = exp underflows, so a row's normalizer reaches 0 and 0/0 gives NaN (the model pushes toward sharper weights the only way this kernel allows). Adding 1e-6 to the normalizer, as the reference implementation of Katharopoulos et al. does, removes it (the diverging run then finishes at loss 2.40). Part 1 should say to add this constant. Measured with the constant absent in the converged runs, both tabs: validation perplexity at 128 dense 9.5-10.1, window w = 16 8.3-9.3, linear 11.2-11.5; second-half minus first-half loss on the repeated 64-byte excerpts: dense -0.004 to -0.020, window -0.003 to +0.011, linear +0.015 to +0.027. So at this budget the two-block model with learned positions does not read the copy at all, which part 3's question should allow for. -->
 
 1. [code] **A decaying state.** ● Give the state of
    :eqref:`eq_linear-attn-recurrence` a scalar decay $\gamma \in (0, 1)$,
@@ -787,6 +722,8 @@ only as $n$ grows.
        do instead.
    :exlabel:`ex_attention-at-scale-decaying-state`
 
+[Discussions](https://d2l.discourse.group/t/36882)
+
 <!-- slides -->
 
 ::: {.slide}
@@ -806,15 +743,15 @@ Windowed and Linear Attention<br>
 Each query attends to its $w$ most recent positions:
 `causal_mask(n) & (i - j < w)`.
 
-@!attention-at-scale-sliding-window-attention-1
-
 $2nw$ scores instead of $n^2$: linear in $n$ for fixed $w$.
 :::
 
 ::: {.slide title="Depth Restores the Reach: 1 + L(w − 1) Positions"}
 [Windows]{.kicker}
 
-@!attention-at-scale-depth-restores-the-reach
+| layers $L$ | 1 | 2 | 4 | 32 |
+|:--|--:|--:|--:|--:|
+| reach $1 + L(w-1)$, $w = 8$ | 8 | 15 | 29 | 225 |
 
 Mistral 7B: $w = 4096$ in 32 layers reaches beyond 100,000 tokens, but
 the path length is $O(n/w)$ instead of $O(1)$.
@@ -890,7 +827,7 @@ products, read with the query.
 
 @!attention-at-scale-kernelizing-the-score-2
 
-- Parallel form (cumulative sums) and recurrent form agree.
+- Parallel and chunked forms agree with the recurrent form.
 - One head, $d_h = 64$: 16 KiB of state at any length; a softmax KV cache
   is 4 MiB at 8,192 tokens.
 - Lossy: the state cannot hold every token, and positive features cannot
@@ -908,8 +845,6 @@ Chunks of $c$ positions:
   chunk.
 
 Work $O(ncd + nd\,d_v)$, all matrix products; one state per chunk.
-
-@!attention-at-scale-chunked-computation-2
 
 The same terms in a third order: the result matches the recurrent form.
 :::
@@ -930,6 +865,8 @@ A linear recurrence with a fixed-size state is a state space model.
 
 [Arora et al. 2024; Yang et al. 2024; MiniMax 2025]{.small}
 :::
+
+<!-- WRITER: the timing slide below shows the redesigned cell (dense causal against window w = 128 in one fused kernel per tab, no linear attention; prints speedup against the tile-count prediction). Its title and text ("Windowed and Linear as n", "windowed and chunked linear about 2x", "well under half") are out of date. Code step deck fixes: the random band heatmap (cut) is gone from the first window slide; the reach slide shows the formula as a table in place of the cut receptive-field cell; the chunk slide no longer embeds the deleted chunked-computation-2 (the merged check kernelizing-the-score-2 on the 16 KiB slide prints both deviations). The new sharpening cell `windowed-linear-attention-sharpening` has no slide yet (6.B9). -->
 
 ::: {.slide title="Dense Time Grows as n², Windowed and Linear as n"}
 [Measured]{.kicker}

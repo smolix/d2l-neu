@@ -309,8 +309,7 @@ pipeline order, and blames the first stage that lost the answer:
    abstention*.
 5. A relevant chunk is in the context and the answer, faithful to the
    passages, is incorrect: *ignored*. The answer stays within the passages
-   and still misses a key fact that one of them holds; usually it even
-   cites that passage.
+   and still misses a key fact that one of them holds.
 6. A relevant chunk is in the context and the answer is not faithful:
    *unsupported*.
 
@@ -493,18 +492,24 @@ the hit rate led us to expect. Ignored is the largest class, 12 failures or
 6 failures and [0.08, 0.38]. Twenty-six failures are a small sample to
 divide six ways, and they cannot say which of the two classes is larger.
 
+The last column shows what the two largest classes have in common. Ten of
+the 12 ignored answers cite a passage that holds the answer, and so do all
+six unsupported ones. In these answers the generator found the right
+passage and even pointed to it. Then it left out a key fact that the
+passages state, or added a claim that they do not support.
+
 How far can we trust the classes? The cards were drawn from the failures
 of the first verdicts, so there are 31 of them: the 26 failures above, and
 five answers that had no verdict then and that the judge, asked again,
 called correct. The labeler calls those five correct too. The printed
-agreement, 0.58, counts all 31 cards; on the 26 failures the labeler agrees
-with the rule on 13, half of them. Nine of the 13 disagreements are answers
-that the labeler calls correct and our grading does not. In seven the
+agreement, 0.58, counts all 31 cards. The cell's last two lines count the
+26 failures alone: the labeler agrees with the rule on 13, half of them,
+calls 9 correct and blames another stage on 4. Those nine are answers
+that the labeler accepts and our grading does not. In seven the
 judge insists on a key fact that the labeler lets pass. In two,
 unanswerable questions were declined in words other than the abstention
 sentence of :numref:`sec_lm_rag`, "I cannot answer this from the provided
 passages", which is the only reply our grading counts as declining.
-Only four disagreements concern the stage.
 
 Rule and labeler disagree about whether an answer is wrong more than twice
 as often as about where it went wrong. Once two graders agree that an
@@ -668,8 +673,9 @@ if FIX and ready('base', FIX):
           .to_string())
 ```
 
-The fix failed. It lowered accuracy by 0.08 on `dev` and by 0.08 on `test`,
-and both intervals exclude zero. On `dev` it got 20 fewer answers right,
+The fix failed. It lowered accuracy from 0.89 to 0.81 on `dev` and from
+0.87 to 0.79 on `test`, by 0.08 on both, and both paired intervals exclude
+zero. On `dev` it got 20 fewer answers right,
 and most of the loss came from the unanswerable questions: false answers
 rose from 2 to 15, as the abstentions fell from 18 of 20 to 5. In about
 half of the other 15 the model said in its own words that the passages do
@@ -685,11 +691,27 @@ have to be tested together.
 
 Even without the false answers, the fix did not shrink the class it aimed
 at: ignored answers rose from 12 to 19. The replies were not cut off; they
-average about 220 new tokens, well below the limit of 500. Where the fix
-lost an answerable question that the baseline got right, the two replies
-read side by side make the same points, the fix's more loosely, with a key
-fact of the baseline's answer left out or blurred. Quoting first did not
-make the answer that follows the quotes more complete.
+average about 220 new tokens, well below the limit of 500. The fix lost
+13 answerable questions that the baseline got right. Read side by side,
+most of these pairs of replies make the same points, the fix's more
+loosely, with a key fact of the baseline's answer left out or blurred.
+Quoting first did not make the answer that follows the quotes more
+complete.
+
+The first of the 13, which the cell prints, fails in another way. The
+question asks where the one-step sampler of the discrete diffusion
+experiment puts its mass. Both replies
+open with nearly the same sentence and state both key facts: where the
+column of one mode crosses the row of another, a place where the data have
+none. The baseline then explains the error from the passages of that
+experiment. The fix's reply explains it with a sentence about another
+sampler, the one-step flow of :numref:`sec_diffusion-gaussian-paths`,
+which sends every start to the data mean. Both replies read the same five
+passages, only in another order. The judge calls the fix's reply
+unfaithful, and incorrect too: a sampler that puts every sample on one
+point cannot also put mass at the crossings. Reordering the passages
+changed which of them the reply drew on, and the quotes did not keep it to
+the experiment in the question.
 
 The `dev` result could have been optimistic, since the fix was chosen from
 `dev` failures; it lost there anyway, and `test` agrees. Nor do we now
@@ -708,9 +730,11 @@ The plot shows these results at a glance. On the left, the fix moves
 failures into the ignored and false-answer classes. On the right are the
 accuracy and citation precision on `dev` of the closed book (the arm
 without passages), the baseline, the rewrite with reranking and the fix.
-The crosses are `test`, and each lies inside its `dev` interval: `test`
-agrees with `dev` for every arm it was read with. Both candidates are
-compared with the baseline, not with each other.
+The crosses are `test`, read once. Accuracy there is 0.87 for the
+baseline, 0.86 for the rewrite with reranking and 0.79 for the fix, and
+every cross lies inside its `dev` interval: `test` agrees with `dev` for
+every arm it was read with. Both candidates are compared with the
+baseline, not with each other.
 
 ```{.python .input #rag-failure-plot}
 %%tab pytorch
@@ -1225,14 +1249,14 @@ Chunks that follow the text's structure give better answers.
 ::: {.slide title="Each Wrong Answer Is Blamed on the First Stage That Lost It"}
 [Failures by stage]{.kicker}
 
-| class | condition, checked in this order | of 26 |
-|---|---|---|
-| false answer | unanswerable, yet answered | 2 |
-| not retrieved | no relevant chunk in the top 50 | 0 |
-| ranked low | in the top 50, not in the context | 5 |
-| false abstention | in the context, answer abstains | 1 |
-| ignored | in the context, faithful, misses a key fact | 12 |
-| unsupported | in the context, not faithful | 6 |
+| class | condition, checked in this order | of 26 | answer cites a relevant chunk |
+|---|---|---|---|
+| false answer | unanswerable, yet answered | 2 | 0 |
+| not retrieved | no relevant chunk in the top 50 | 0 | 0 |
+| ranked low | in the top 50, not in the context | 5 | 0 |
+| false abstention | in the context, answer abstains | 1 | 0 |
+| ignored | in the context, faithful, misses a key fact | 12 | 10 |
+| unsupported | in the context, not faithful | 6 | 6 |
 
 ::: {.d2l-note}
 Ignored 0.46 [0.27, 0.65], unsupported 0.23 [0.08, 0.38]: 26 failures
@@ -1306,12 +1330,13 @@ and the missing fact is the one a user needs.
 ::: {.slide title="The Fix Chosen in Advance Failed on Dev and on Test"}
 [Quote, then answer]{.kicker}
 
-| | accuracy − baseline |
-|---|---|
-| `dev` | $-0.08$ [$-0.12$, $-0.05$] |
-| `test`, read once | $-0.08$ [$-0.12$, $-0.03$] |
+| accuracy | baseline | fix | fix − baseline |
+|---|---|---|---|
+| `dev` | 0.89 | 0.81 | $-0.08$ [$-0.12$, $-0.05$] |
+| `test`, read once | 0.87 | 0.79 | $-0.08$ [$-0.12$, $-0.03$] |
 
-- 20 fewer correct answers on `dev`.
+- 20 fewer correct answers on `dev`; 13 answerable ones that the baseline
+  got right are lost.
 - Chosen from `dev` failures, so `dev` could have flattered it. It lost
   there anyway, and `test` agrees.
 - One idea in three settings: the loss belongs to the bundle.
@@ -1343,6 +1368,15 @@ this from the provided passages."
 Test a prompt with its scoring rule. Never search for a better fix on the
 same data.
 :::
+:::
+
+::: {.slide title="The Fix Fills Two Failure Classes, and Test Agrees with Dev"}
+[The results at a glance]{.kicker}
+
+@!rag-failure-plot
+
+Left: share of `dev` answers per class. Right: `dev` scores with 95%
+intervals; crosses are `test`, read once. Closed: no passages.
 :::
 
 ::: {.slide title="The Original RAG Treats the Retrieved Document as a Hidden Variable"}

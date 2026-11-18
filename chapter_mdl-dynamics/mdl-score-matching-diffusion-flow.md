@@ -27,6 +27,14 @@ Diffusion models are trained this way. The standard diffusion loss,
 weighting. A one-dimensional Gaussian turns each claim into a number we can
 check by hand before the mixture tests it.
 
+<!-- WRITER: false now in its second half. A new cell after the DDIM cell fits
+the noise prediction by least squares (17 features, small ridge term) at each of
+the 50 levels a 50-stride DDIM run visits, on the mixture with weights 0.8/0.2,
+and runs DDIM on the fitted and on the exact scores from the same noise. The
+design statement becomes: no network is trained; the samplers are analysed on
+the exact score so that each error is the sampler's own, and run once on scores
+fitted by least squares at every level. -->
+
 No network is trained in this section. We fit a score once, by linear least
 squares on 17 fixed features at a single noise level, to see the regression
 work. Every sampler then runs on the exact score of the mixture, so that
@@ -194,6 +202,10 @@ w = np.linspace(0.5, 4.0, 701)                # model s_w(x) = -x / w
 J_ism = (x**2).mean() / (2 * w**2) - 1 / w    # E[s_w^2 / 2 + s_w']
 print(f'implicit score matching picks w = {w[J_ism.argmin()]:.2f}  (v = {v})')
 ```
+
+<!-- WRITER (unchanged cell, measured over 12 runs): w = 1.93 to 2.04; the
+standard error of the mean of x^2 is 0.028, so "within a few hundredths" holds
+at about two standard errors. -->
 
 The sample objective is minimized at the sample mean of $x^2$, which lies
 within a few hundredths of $v = 2$ for 10,000 draws. The two terms of
@@ -450,10 +462,10 @@ quantity the regression lemma splits.
 ```{.python .input #score-matching-diffusion-flow-dsm-train}
 n, sigma = 4096, 0.5
 x = rng.normal(4.0 * rng.integers(0, 2, n) - 2.0, 0.5)         # x ~ p, the mixture
-def mixture_score(q, var, means=(-2.0, 2.0)):                   # analytic score, any level
-    logw = np.stack([-(q - m)**2 / (2 * var) for m in means])
-    w = np.exp(logw - logw.max(0))                              # responsibilities, stable
-    return (w * np.stack([(m - q) / var for m in means])).sum(0) / w.sum(0)
+def mixture_score(q, var, means=(-2.0, 2.0), ws=(0.5, 0.5)):   # analytic score, any level
+    logw = np.stack([np.log(w) - (q - mu)**2 / (2 * var) for mu, w in zip(means, ws)])
+    w = np.exp(logw - logw.max(0))                              # responsibilities, stable softmax
+    return (w * np.stack([(mu - q) / var for mu in means])).sum(0) / w.sum(0)
 xx = np.repeat(x, 4)                                            # four noisy copies per point
 eps = rng.standard_normal(xx.size)
 xt, y = xx + sigma * eps, -eps / sigma                          # the (input, target) pairs
@@ -475,6 +487,12 @@ d2l.plot([xt[:600], grid, grid], [y[:600], 4 * np.tanh(4 * grid) - 2 * grid, s_h
          'noisy input', 'target and score', fmts=('.', '-', '--'),
          legend=['pairs', 'score of p_sigma', 'least-squares fit'], figsize=(5.5, 3))
 ```
+
+<!-- WRITER (SMD-3, measured): over 12 runs the fit and the exact score print
+2.05 to 2.13 and agree to 0.01; the floor is 2.11. The standard deviation of the
+printed average over fresh draws is 0.04, not 0.02 (300 NumPy repeats: mean 2.115,
+sd 0.037; the four noisy copies of each clean point are not independent), so
+"about 2.1, within a standard error (about 0.04) of the floor". -->
 
 The plot shows all that the regression sees: a cloud of targets
 $-\epsilon/\sigma$ that spreads over several units at every $\tilde x$.
@@ -580,18 +598,39 @@ $\tfrac12 \mathcal{N}(\pm 2, 0.5^2)$ with its exact score, $h = 0.01$ and
 chain started at the left mean. Before reading the output, guess how many of
 the 10,000 chains of the second run reach the right mode.
 
+<!-- WRITER: the cell now samples the mixture 0.8 N(-2, 0.5^2) + 0.2 N(2, 0.5^2)
+(langevin(q, h, steps, var=0.25, ws=(0.8, 0.2)); the left mode is the heavy one),
+h = 0.01, 2,000 steps, 10,000 chains, three runs: the broad start N(0, 3^2), every
+chain at -2 (heavy mode), every chain at +2 (light mode). The "guess" question should
+ask about the two one-mode runs. Measured (12 notebook runs, three per tab, plus 3
+NumPy runs; see the code report): broad start P(X > 0) 0.47 to 0.49 against the
+truth 0.2; E[X^2] 4.22 to 4.28 against 4.25 (the weights do not change it); crossed
+from -2: 0.004 to 0.008; crossed from +2: 0.019 to 0.025. The ratio of the two
+crossing fractions is about 4 = 0.8/0.2,
+the balance of flows that equilibrium requires (w_L k_LR = w_R k_RL). -->
+
 ```{.python .input #score-matching-diffusion-flow-langevin}
-def langevin(q, h, steps, var=0.25):          # var: component variance of p
+def langevin(q, h, steps, var=0.25, ws=(0.8, 0.2)):   # var: component variance of p
     for _ in range(steps):
         xi = rng.standard_normal(q.shape)
-        q = q + 0.5 * h * mixture_score(q, var) + np.sqrt(h) * xi
+        q = q + 0.5 * h * mixture_score(q, var, ws=ws) + np.sqrt(h) * xi
     return q
 warm = langevin(rng.normal(0.0, 3.0, 10000), 0.01, 2000)
-print(f'spread-out start: P(X > 0) = {(warm > 0).mean():.3f}, '
-      f'E[X^2] = {(warm**2).mean():.2f}  (truth 0.5, 4.25)')
-cold = langevin(np.full(10000, -2.0), 0.01, 2000)
-print(f'one-mode start:   P(X > 0) = {(cold > 0).mean():.3f}  (crossed)')
+print(f'broad start: P(X > 0) = {(warm > 0).mean():.3f}, '
+      f'E[X^2] = {(warm**2).mean():.2f}  (truth 0.2, 4.25)')
+for start, w in ((-2.0, 0.8), (2.0, 0.2)):              # every chain in one mode
+    q = langevin(np.full(10000, start), 0.01, 2000)
+    print(f'all chains at {start:+.0f} (weight {w}): '
+          f'{(np.sign(q) != np.sign(start)).mean():.3f} crossed')
 ```
+
+<!-- WRITER: "About one chain in a hundred" is now about one in two hundred from the
+heavy mode (0.004 to 0.008) and about one in fifty from the light mode (0.019 to
+0.025). The next paragraph's "even split ... is no evidence" and "with mode weights
+0.8 and 0.2 the same broad start would still split about evenly" are now measured:
+P(X > 0) = 0.47 to 0.49 against 0.2, E[X^2] still within a few hundredths of 4.25.
+"Our symmetric mixture cannot show this failure" is false now (keep the pointer to
+sec_diffusion-denoising for the three-mode case with a network). -->
 
 About one chain in a hundred has crossed. In the valley the density is tiny
 and the drift points back to the mode the chain came from. Crossing needs a
@@ -614,6 +653,11 @@ Slow mixing is a property of the SDE itself, so a smaller step does not cure
 it. A smaller step removes only the discretization bias.
 
 ### Limits of a Single Noise Level
+
+<!-- WRITER: the third limit can now be read from the Langevin output (0.47 to 0.49
+right of zero against the truth 0.2) and contrasted with the reverse sampler of
+sec_mdl-time-reversal on the same 0.8/0.2 mixture, which returns 0.8 to the left
+(check the Fokker-Planck code report for its measured range). -->
 
 A score at one noise level has now failed in three ways. The learned score
 is arbitrary where no noisy pair landed, so a sampler that starts far from
@@ -866,8 +910,19 @@ samples from :eqref:`eq_mdl-ddpm-marginal`, by the two-sample
 Kolmogorov–Smirnov (KS) statistic, the largest gap between their empirical
 distribution functions.
 
+<!-- WRITER: the cell no longer runs the chain or compares it with the marginal.
+It defines N, beta, alpha_bar, the KS statistic ks (used by the DDIM cells; the
+definition of KS should move to where ks is first printed, the DDIM cell) and
+x0, and prints one line, deterministic:
+"alpha_bar at t = 10, 100, 1000: 0.998, 0.897, 4e-05; sigma_bar from 0.01 to 157"
+(sigma_bar = sqrt((1 - alpha_bar)/alpha_bar) at the first and the last level; the
+DDIM subsection quotes these two values). "It also runs the chain once ..." and
+"The induction left this output nothing to decide ..." are false now; the
+description of the levels (bimodal at t = 100 with modes +-0.92 and width 0.40;
+standard Gaussian at t = N) stays as values worked by hand. -->
+
 ```{.python .input #score-matching-diffusion-flow-ddpm-marginal}
-N, n = 1000, len(x)
+N = 1000
 beta = np.linspace(1e-4, 0.02, N)                       # the DDPM schedule
 alpha_bar = np.cumprod(1.0 - beta)
 def ks(a, b):                                           # two-sample Kolmogorov-Smirnov statistic
@@ -875,13 +930,9 @@ def ks(a, b):                                           # two-sample Kolmogorov-
     return np.abs(np.searchsorted(np.sort(a), q, 'right') / len(a)
                   - np.searchsorted(np.sort(b), q, 'right') / len(b)).max()
 x0 = x / x.std()                                        # standardized mixture: modes +-0.970
-xt = x0.copy()
-for t in range(1, N + 1):                               # the forward chain, one level at a time
-    xt = np.sqrt(1 - beta[t-1]) * xt + np.sqrt(beta[t-1]) * rng.standard_normal(n)
-    if t in (10, 100, 1000):
-        one_shot = np.sqrt(alpha_bar[t-1]) * x0 + np.sqrt(1 - alpha_bar[t-1]) * rng.standard_normal(n)
-        print(f't = {t:4d}: alpha_bar {alpha_bar[t-1]:.3f}, Var(x_t) {xt.var():.3f} '
-              f'(formula 1.000), KS {ks(xt, one_shot):.3f}')
+sigma_bar = np.sqrt((1 - alpha_bar) / alpha_bar)        # noise scale of x_t / sqrt(alpha_bar)
+print(f'alpha_bar at t = 10, 100, 1000: {alpha_bar[9]:.3f}, {alpha_bar[99]:.3f}, '
+      f'{alpha_bar[-1]:.0e}; sigma_bar from {sigma_bar[0]:.2f} to {sigma_bar[-1]:.0f}')
 ```
 
 The induction left this output nothing to decide: chain and formula agree
@@ -1034,15 +1085,16 @@ $v_0 = 0.243^2$ the clean values, and compares 10 and 50 strides with 1,000
 from the same initial draws.
 
 ```{.python .input #mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed}
-m, v0 = 2 / np.sqrt(4.25), 0.25 / 4.25                  # standardized mixture: modes +-m, variance v0
+m, v0 = 2 / np.sqrt(4.25), 0.25 / 4.25                  # standardized: modes +-m, variance v0
 def strides(K):                                         # K equal strides from level N to level 1
     return np.linspace(N - 1, 0, K + 1).round().astype(int)
 for K in (10, 50, 1000):                                # the Gaussian corollary
     a = alpha_bar[strides(K)]
     print(f'N(0,1) data, {K:4d} strides: every sample times '
           f'{np.prod(np.sqrt(a[:-1] * a[1:]) + np.sqrt((1 - a[:-1]) * (1 - a[1:]))):.3f}')
-def eps_hat(xt, a):                                     # exact noise prediction of the mixture
-    return -np.sqrt(1 - a) * mixture_score(xt, a * v0 + 1 - a, (-np.sqrt(a) * m, np.sqrt(a) * m))
+def eps_hat(xt, a, ws=(0.5, 0.5)):                      # exact noise prediction of the mixture
+    means = (-np.sqrt(a) * m, np.sqrt(a) * m)
+    return -np.sqrt(1 - a) * mixture_score(xt, a * v0 + 1 - a, means, ws)
 def ddim(z, K, eps_fn):                                 # K DDIM strides from noise z
     xt, idx = z.copy(), strides(K)
     for t1, t2 in zip(idx[:-1], idx[1:]):
@@ -1065,6 +1117,56 @@ mixture behaves the same way. Ten strides land on average $0.08$ from the
 thousand-stride result, on a scale where the modes sit at $\pm 0.97$. Their
 empirical distribution differs from it by a KS statistic of $0.08$, and
 fifty strides reduce both numbers to about $0.02$.
+
+<!-- WRITER: new cell (SMD-1): no network, but a learned score at every level.
+Data: 4,096 draws of the standardized mixture with weights 0.8 (left, -m) and
+0.2 (right, +m), m = 0.970, component sd 0.243; each noised four times at each of
+the 50 levels that a 50-stride DDIM run visits (16,384 pairs per level). At each
+level the noise eps is regressed on the same 17 features as the one-level fit,
+read in the units of the unstandardized mixture (features(sqrt(4.25) * x_t)),
+by least squares with a small ridge term (1e-6 times the number of pairs, so a
+bump that no pair reaches gets weight zero instead of an arbitrary one; without
+it a sample can leave the data, |x| up to 12 in 20 trials). DDIM then runs
+twice from the same noise array z of the previous cell: on the exact eps_hat
+with these weights and on the fitted one. Measured (see the code report for the
+four tabs and repeats): light-mode mass, exact 0.19 to 0.21, fitted 0.19 to 0.21
+(truth 0.2; the two rows share the noise and differ by less than 0.01); left
+mode mean -0.95 to -0.97, width 0.22 to 0.24 in both rows; light mode mean 0.93
+to 0.95 exact, 0.90 to 0.95 fitted (truth 0.97; the exact row's pull toward the
+centre is the 50-stride Euler error of the cell above); light-mode width 0.23 to
+0.24 exact against 0.25 to 0.28 fitted (truth 0.243); KS to fresh exact draws
+0.02 to 0.05 for both rows (8,000 against 8,000 points, plus the Euler error);
+KS between the two clouds 0.01 to 0.03. Lesson: regression at every
+level recovers the weights that one noise level (Langevin, above) could not;
+the price of learning is the gap between the rows, which shows in the light
+mode, where the bumps (width 0.29 in these units) are coarse against the mode
+(width 0.24). Then the sentence on higher-order solvers and the figure. -->
+
+```{.python .input #mdl-score-matching-diffusion-flow-denoising-diffusion-implicit-models-1}
+ws = (0.8, 0.2)                                         # the right mode is the light one
+def draw(size):                                         # standardized modes +-m, weights ws
+    return rng.normal(np.where(rng.random(size) < ws[0], -m, m), np.sqrt(v0))
+x_pairs = np.repeat(draw(4096), 4)                      # four noisy copies per clean point
+def fit_eps(a):                                         # ridge least squares for eps at one level
+    e = rng.standard_normal(x_pairs.size)
+    F = features(np.sqrt(4.25) * (np.sqrt(a) * x_pairs + np.sqrt(1 - a) * e))
+    return np.linalg.solve(F.T @ F + 1e-6 * e.size * np.eye(17), F.T @ e)
+coef = {a: fit_eps(a) for a in alpha_bar[strides(50)[:-1]]}   # the levels DDIM visits
+x_exact = ddim(z, 50, lambda q, a: eps_hat(q, a, ws))
+x_fit = ddim(z, 50, lambda q, a: features(np.sqrt(4.25) * q) @ coef[a])
+x_true = draw(8000)
+for name, xs in (('exact', x_exact), ('fitted', x_fit)):
+    L, R = xs[xs < 0], xs[xs > 0]
+    print(f'{name:6s} scores: light mode {(xs > 0).mean():.3f}, means {L.mean():+.2f} '
+          f'{R.mean():+.2f}, widths {L.std():.3f} {R.std():.3f}, KS to p0 {ks(xs, x_true):.2f}')
+print(f'truth: light mode 0.2, means {-m:+.2f} {m:+.2f}, widths {np.sqrt(v0):.3f}; '
+      f'KS between the clouds {ks(x_exact, x_fit):.2f}')
+```
+
+<!-- WRITER: the paragraph continues here with the figure and the higher-order
+solvers; ":numref:`fig_mdl-dyn-ddim-strides` shows both experiments" refers to
+the two experiments of the DDIM cell, not to the new cell. -->
+
 :numref:`fig_mdl-dyn-ddim-strides` shows both experiments. A higher-order
 solver in the same coordinates spends two network calls per stride and wins
 only once the strides are short (exercise
@@ -1216,6 +1318,9 @@ $(\bar\sigma, \bar{\mathbf{x}})$, exact for a point mass and too contractive
 for Gaussian data. Guidance is Bayes' rule on scores, and for $\gamma > 1$
 it leaves the family of noised densities, whose curvature is at most
 $1/\sigma_t^2$. Every sampler here ran on an exact score.
+<!-- WRITER: false now: DDIM also ran once on scores fitted by least squares at
+every level and recovered the 0.8/0.2 weights (light-mode mass 0.19 to 0.21) that
+Langevin dynamics with the exact score of one level could not (0.47 to 0.49). -->
 
 ## Exercises
 
@@ -1255,6 +1360,12 @@ $1/\sigma_t^2$. Every sampler here ran on an exact score.
        a trained score network $\mathbf{s}_{\boldsymbol{\theta}}$ not apply
        this test directly?
    :exlabel:`ex_mdl-score-matching-diffusion-flow-langevin-stationarity`
+
+   <!-- WRITER: `langevin` now defaults to ws=(0.8, 0.2), the left mode (-2) heavy.
+   From -2 about 0.5% cross, from +2 about 2%. Part (b)'s "fraction of chains with
+   X > 0" now has the target 0.2; part (a)'s criterion mu^2 <= v0 is the one for
+   equal weights (it still counts the modes for the symmetric case, which a reader
+   gets by passing ws=(0.5, 0.5)). -->
 
 1. [code] **Annealing out of one mode.** In the cell that defines
    `langevin`, chains started in the left mode stay there. Annealed Langevin dynamics first runs the sampler on smoothed
@@ -1455,6 +1566,11 @@ $1/\sigma_t^2$. Every sampler here ran on an exact score.
        that made (c) possible is missing, and why does the score loss alone no
        longer bound $D_{\textrm{KL}}(p_0 \,\|\, q_0)$?
    :exlabel:`ex_mdl-score-matching-diffusion-flow-likelihood-bound`
+
+   <!-- WRITER: the cell after the DDIM cell now fits eps at every visited level by
+   least squares on 17 fixed features (`fit_eps`, `coef`, `x_fit`); this exercise can
+   start from it ("replace the features by a network") and compare with its printed
+   rows. -->
 
 1. [extended] **Learned noise prediction.** ●● The samplers `langevin`,
    `ddim`, and `cfg_sample` all use exact scores. Replace the exact score by a
@@ -1668,6 +1784,10 @@ Error $\approx2.1$ against the floor $2.11$; excess $\approx0.01$. At $x=8$ no p
 ::: {.slide title="But Chains Do Not Cross the Valley"}
 [Slow mixing]{.kicker}
 
+<!-- WRITER: the cell now prints three lines for the 0.8/0.2 mixture: broad
+start P(X > 0) about 0.48 (truth 0.2), E[X^2] about 4.25; crossed from -2 about
+0.005, from +2 about 0.02. The note should say: equilibrium inside a mode, almost
+no crossing, proportions those of the start. -->
 @score-matching-diffusion-flow-langevin
 
 ::: {.d2l-note}
@@ -1699,6 +1819,10 @@ crossing. One fix: a ladder of noise levels.
 - Marginal $\mathbf x_t=\sqrt{\bar\alpha_t}\,\mathbf x_0+\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon$, $\bar\alpha_t=\prod_{s\le t}(1-\beta_s)$.
 - $\tfrac12\|\boldsymbol\epsilon-\boldsymbol\epsilon_\theta\|^2$ = DSM with weight $w(t)=1-\bar\alpha_t$.
 
+<!-- WRITER: the cell no longer prints the chain; its one output line is
+alpha_bar at t = 10, 100, 1000 and sigma_bar at both ends. Keep or drop the
+placeholder. A new slide for the fitted-score sampler after the DDIM slides
+(@mdl-score-matching-diffusion-flow-denoising-diffusion-implicit-models-1). -->
 @!score-matching-diffusion-flow-ddpm-marginal
 :::
 
@@ -1783,6 +1907,9 @@ an extrapolation past the class.
 
 - Implicit score matching on $\mathcal N(0,2)$ returns $w=2$.
 - DSM floor $3.2$ for $\mathcal N(0,1)$ at $\sigma=0.5$; mixture fit $\approx2.1$ vs floor $2.11$.
+<!-- WRITER: both bullets are stale: Langevin keeps the start's split (0.48
+right of zero against 0.2); the DDPM chain is no longer run. Add: least-squares
+scores at every level recover the weight 0.2 through DDIM. -->
 - Langevin: about $1\%$ of chains cross the valley.
 - DDPM chain matches its marginal: KS below $0.03$ at $t=100$.
 - DDIM is Euler: $\times0.83$ in 10 strides on Gaussian data.

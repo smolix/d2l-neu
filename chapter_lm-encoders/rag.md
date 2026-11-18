@@ -1021,15 +1021,17 @@ values, and the others carry a state of fixed size, so eight prompts of
 3,300 tokens need 1.2 GiB for cache and state together. The estimate of
 21.3 GiB leaves out the allocator's slack. The peaks measured in the full
 runs, 21.7 GiB for these batches and 22.4 GiB for the four long prompts,
-still fit, so the batch stays at eight. The judge needs two GPUs. The
-estimate counts one byte per weight and gives 25 GiB, which is optimistic:
-the FP8 checkpoint keeps its embedding and output matrices in bf16, so its
-weights take a few GiB more.
+still fit, so the batch stays at eight. The judge needs two GPUs. Its
+checkpoint stores one byte per weight (FP8), except the input embeddings
+and the output matrix, which stay in bf16. Those two matrices, each a
+vocabulary wide, take 4.7 GiB of the judge's 27.4, about a sixth. With the
+cache for sixteen requests in flight the estimate reaches 33 GiB, more than
+one GPU holds and less than two do.
 
-The next cell loads the recorded answers of every arm. A normal run also
-generates the first recorded batch again and compares the pipeline's
-batched generation with the plain decoding loop `d2l.generate` of
-:numref:`sec_lm_d2l_checkpoint`; a difference would mean a padding bug.
+The next cell loads the recorded answers and lists the four arms of this
+section. A normal run also generates the first recorded batch again and
+compares the pipeline's batched generation with the plain decoding loop
+`d2l.generate` of :numref:`sec_lm_d2l_checkpoint`; a difference would mean a padding bug.
 
 ```{.python .input #rag-baseline}
 %%tab pytorch
@@ -1084,11 +1086,6 @@ print(f'the same prompts through d2l.generate: {sum(s == 1 for s in same)} '
 assert agree, 'batched generation differs from the plain decoding loop'
 d2l._rag_free_generator()  # the card goes to the retriever and the judge
 ```
-
-The table lists every recorded run of this section and the next. Only the
-first four `dev` rows concern us now: `base`, `base-repeat`, `closed` and
-`oracle`. The other rows are the stage changes and the fix of the next
-section, and the `test` rows are read once, at its end.
 
 Five section chunks hold about 1,700 tokens and never reach the budget,
 since five chunks of at most 512 tokens hold at most 2,560. The limit of
@@ -1311,11 +1308,8 @@ print(f'judged again: with {RETRY_TOKENS:,} new tokens, once\nunjudged: '
       'still no verdict on correctness (left out of accuracy)')
 ```
 
-The replayed verdicts match the recorded ones. The table again covers
-every arm of this section and the next, `test` answers included, which is
-why `base` has 480. Every baseline answer has a verdict; of the other arms
-of this section, the oracle leaves one answer unjudged and `base-repeat`
-two.
+The replayed verdicts match the recorded ones. Every baseline answer has a
+verdict; the oracle leaves one answer unjudged and `base-repeat` two.
 
 The judge itself was chosen by measurement. Two frontier models from other
 families, Claude Opus 5.5 and Gemini 4 Argon, labeled 200 answers of
@@ -1328,7 +1322,9 @@ however, often reasoned until their replies were cut off, and agreed less
 with the labelers. Half of the 200 answers served this choice. The other
 100, the *calibration set*, test the chosen judge before we read any
 accuracy: against each labeler, and against their *consensus*, the answers
-on which both agree.
+on which both agree. On `correct`, ten of the hundred verdicts are the
+rule's rather than the judge's: four answers abstain, and six answer a
+question the book does not answer.
 
 ```{.python .input #rag-judge-validation}
 %%tab pytorch
@@ -1601,12 +1597,14 @@ since a citation of a supporting passage that is not gold counts against
 it. The baseline abstains on 18 of the 20 unanswerable questions and on 2%
 of the answerable ones.
 
-The oracle arm answers 0.92 of all questions. (Its Recall@5 and coverage in
-the report are those of the retriever it bypasses. Its own context holds a
-relevant chunk for every answerable question, which is also why its
-citation precision is 1.00 by construction.) On the answerable questions
-its gain over the baseline is +0.04, with an interval from $-0.01$ to
-+0.09, and cannot be told from zero. Why so little? Call a question a *hit*
+The oracle arm answers 0.92 of all questions. Its context holds a relevant
+chunk for every answerable question, which is why its citation precision
+is 1.00 by construction, and its Recall@5 and coverage are `n/a`: it
+bypasses the retriever. Nor are its answers more faithful: 0.89 against
+the baseline's 0.92, a difference whose interval runs from $-0.08$ to
++0.03. On the answerable questions its gain over the baseline is +0.04,
+with an interval from $-0.01$ to +0.09, and cannot be told from zero. Why
+so little? Call a question a *hit*
 when its context holds a relevant chunk. Let $h$ be the share of hits among
 the answerable questions, and $a_1$ and $a_0$ the accuracy on hits and on
 misses. Then the accuracy on the answerable questions is

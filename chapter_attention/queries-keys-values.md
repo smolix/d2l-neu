@@ -346,6 +346,7 @@ neither is a matter of distance in the input space. A learned attention
 layer would instead compute queries and keys from the data with trainable
 maps, so that the task decides what counts as similar. Which score it
 should compute from them is the next question.
+
 ## Summary
 
 Attention answers a query with a weighted sum of stored values, called

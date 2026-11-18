@@ -1056,10 +1056,10 @@ answers the question it was built for and no other.
 In the right column both implementations are batched alike, and the ratio
 is about 1 at every batch size: whatever the shape of a batch does to the
 port's rounding, it does to Transformers' as well. This is how the rule
-should be applied, and how we apply it to the batches of short prompts in
-the rest of the section. The factor of 1.5 then leaves ample room, whereas
-a correct port at 1.2 or 1.3 would come uncomfortably close to it. Either
-way, the second digit of a ratio means little.
+should be applied, and how we apply it in the rest of the section. The
+factor of 1.5 then leaves ample room, whereas a correct port at 1.2 or 1.3
+would come uncomfortably close to it. Either way, the second digit of a
+ratio means little.
 
 ### Rotary Angles at Long Range
 
@@ -1073,30 +1073,30 @@ short prompts end at position 63. To see the effect we need the prompt of
 
 The cell first counts the frequencies that differ and prints the largest
 difference in angle at three positions. It then runs the long prompt through
-the port three times, with three tables of angles. The row `reference` of
-its output is the port as built, with the formula of the reference
-implementation. (In the column headers of the same table, "reference" means
-the fp64 reference.) The row `book` uses the book's formula. The row `exact`
-computes the angles and their cosines and sines in fp64 and rounds only the
-two finished tables to fp32. One would expect the most accurate angles to do
-best.
+the port three times, with three tables of angles. The row `transformers` of
+its output is the port as built, with Transformers' formula. The row `book`
+uses the book's formula. The row `exact` computes the angles and their
+cosines and sines in fp64 and rounds only the two finished tables to fp32.
+One would expect the most accurate angles to do best.
 
-The measurement differs from that on the short prompts in three ways. First,
+The measurement differs from that on the short prompts in two ways. First,
 there is only one long prompt, so the bootstrap cannot resample prompts. The
 rule is applied to the logits of the last 256 positions, and the items are
 16 blocks of 16 consecutive positions: blocks and not single positions,
-since the errors at neighboring positions are not independent. Second,
-Transformers reads the prompt through its cache, 1,024 tokens at a time, and
-the port reads it in one pass. The two are thus not batched alike, and a
-ratio somewhat off 1 should not alarm us.
+since the errors at neighboring positions are not independent.
 
-Third, each variant is judged twice, and the reason is a detail of
+Second, each variant is judged twice, and the reason is a detail of
 Transformers' Qwen3 code: it computes its rotary angles, and its RMSNorm as
 well, in fp32 whatever the precision of the model. The norm we can forget,
 since it rounds a vector in the same way at every position. The angles we
 cannot. The fp64 reference carries fp32 angles, so the first column of
 ratios measures all errors against the fp64 reference as it is, and the
 second against the same model given fp64 angles.
+
+One thing stays as it was. The port and Transformers in fp32 each read the
+prompt in one pass, so the two are batched alike. Only the fp64 reference
+reads it through its cache, a chunk at a time, and both errors are measured
+against that one reference, so the chunks favor neither program.
 
 ```{.python .input #d2l-checkpoint-long-prompt}
 %%tab pytorch
@@ -1153,17 +1153,17 @@ this model, $2\times10^{-3}$.
 
 The first column of the table is the verdict of our rule, and it turns the
 expectation upside down. With Transformers' formula the port passes at a
-ratio of about 1.1, no further from 1 than a difference of shape moved the
-ratio on the short prompts. With the book's formula it fails at about 2.5,
-and with the most accurate angles of the three it fails at about 5.
+ratio of about 1, as it did on the short prompts. With the book's formula it
+fails at about 2, and with the most accurate angles of the three it fails at
+about 4.5.
 
 The second column explains this odd ranking. Once the fp64 reference has
 exact angles, all three variants pass: the two formulas at a ratio of about
 1, the exact angles at about a quarter. Transformers' own fp32 error tells
-the same story from the other side. It is about $6\times10^{-6}$ against
-the fp64 reference as it is, and about $3\times10^{-5}$, five times as
-much, against the reference with exact angles. At 4,096 tokens, then, the
-rounding of the angles is the largest error of Transformers' fp32
+the same story from the other side. It is about $7\times10^{-6}$ against
+the fp64 reference as it is, and about $3\times10^{-5}$, more than four
+times as much, against the reference with exact angles. At 4,096 tokens,
+then, the rounding of the angles is the largest error of Transformers' fp32
 computation. The fp64 reference shares that error, so our rule cannot see
 it. And a port with any other angles, better ones included, is charged the
 whole difference as if it were a mistake of its own.
@@ -1574,11 +1574,12 @@ two libraries, two batch sizes or two GPUs, should look at the gap before
 suspecting a bug.
 
 With agreement established, we let the port answer two questions through the
-chat template, with the sampling defaults of the checkpoint's
-`generation_config.json` and with the template's thinking mode switched off
-(:numref:`sec_lm_hf_models`). The defaults are the model card's settings for
-replies with thinking. Its settings for replies without thinking differ a
-little, which does not matter for a demonstration.
+chat template, with the template's thinking mode switched off
+(:numref:`sec_lm_hf_models`). The model card recommends one set of sampling
+settings for replies with thinking and another for replies without. The
+defaults in the checkpoint's `generation_config.json` are the first set, so
+the cell passes the second itself: a temperature of 0.7, a top-$k$ of 20
+and a top-$p$ of 0.8.
 
 ```{.python .input #d2l-checkpoint-chat}
 %%tab pytorch
@@ -1760,10 +1761,10 @@ size of Transformers' own at every layer. The cell measures both
 implementations at both precisions. It prints the error of the stream after
 five of the 28 blocks, and then the range, over all layers and capture
 points, of the ratio between the port's median error and that of
-Transformers. With the range it lists the layers at which the ratio leaves
-the band from 0.5 to 2, a factor of two either way. As before, the port is
-also run in batches of 1 and 16 and, in bf16, compared with Transformers
-with SDPA.
+Transformers. Where the ratio leaves the band from 0.5 to 2, a factor of two
+either way, the line names the layers and the side on which they fall. As
+before, the port is also run in batches of 1 and 16 and, in bf16, compared
+with Transformers with SDPA.
 
 ```{.python .input #d2l-checkpoint-layer-errors}
 %%tab pytorch
@@ -1829,7 +1830,7 @@ In bf16 the errors are near $10^{-2}$, and at every layer the port's error
 is the smaller one: about half of that of Transformers' eager code in the
 first layers, at some capture points just under half, and about three
 quarters in the last. The first layers are thus the ones that the output
-lists as outside the band. The list is no alarm. In these layers the port is
+lists as below 0.5. The list is no alarm. In these layers the port is
 closer to the fp64 reference than eager attention is, as it was in the bf16
 logits, and for the same reasons. Against Transformers with SDPA, every
 ratio lies between about 0.85 and 0.95. At every layer, then, the bf16 port
@@ -1917,11 +1918,12 @@ last bit until the attention of block 2.
 
 For each variant the cell reports the first divergence and the error there
 as a multiple of the floor. We do own a correct port, so the cell takes its
-fp32 error as the floor. A porter would take that of Transformers, and we
-come back to the difference after the output. The cell adds the verdicts of
-the two logit rules. Its last column answers a question of its own: at how
-many of the 2,048 positions of the 32 prompts is the variant's most likely
-next token that of the fp64 reference?
+fp32 error as the floor. A porter would take that of Transformers, so the
+cell repeats the search with that floor and counts the ports for which the
+answer stays the same. The table adds the verdicts of the two logit rules.
+Its last column answers a question of its own: at how many of the 2,048
+positions of the 32 prompts is the variant's most likely next token that of
+the fp64 reference?
 
 ```{.python .input #d2l-checkpoint-bugs}
 %%tab pytorch
@@ -1979,12 +1981,14 @@ if not SMALL:  # the clean port passes both logit rules, B1-B4 fail both
 Every prediction holds. Each bug first diverges where it first acts, and its
 error at that point is four to six orders of magnitude above the clean
 port's. Neither the threshold of ten nor the floor is therefore a delicate
-choice. In particular, the floor that a porter has would have served.
-Transformers in fp32 was within a factor of two of the clean port at every
-layer, and a factor of two cannot matter against four orders of magnitude,
-so it gives the same six answers. (An exercise asks you to confirm this in
-two lines.) The first four bugs also fail both logit rules, the fp32 rule
-at ratios above $10^5$ and the bf16 rule at ratios from 11 to 77.
+choice. In particular, the floor that a porter has serves as well: with
+Transformers in fp32 in the place of the clean port, the output reports the
+same first divergence for all six ports, the clean port's "none" among
+them. It could hardly be otherwise. Transformers in fp32 was within a factor
+of two of the clean port at every layer, and a factor of two cannot matter
+against four orders of magnitude. The first four bugs also fail both logit
+rules, the fp32 rule at ratios above $10^5$ and the bf16 rule at ratios from
+11 to 77.
 
 The last column shows how little a text can prove. With the wrong RoPE base,
 B2 still agrees with the fp64 reference on the most likely next token at
@@ -2103,14 +2107,17 @@ with d2l.plt.rc_context({'legend.fontsize': 'small'}):
                   handlelength=1.3)  # above the panel, clear of the curves
 ```
 
-On the left, the port (solid) and Transformers with eager attention (dashed)
-coincide in fp32 and lie close together in bf16. On the right, B1, B2 and B3
-are far above the clean port from the first block on, and B3 ends above 100.
-The stream it produces is by then more than a hundred times larger than the
-one it should reproduce. B4 follows the clean curve for two blocks and then
-leaves it. B5 runs nearly flat, thousands of times above the fp32 curves. It
-starts at the height of the bf16 curves of the left panel and ends about
-five times below them: at no depth does the wrong $\epsilon$ rise above the
+Black curves belong to a correct implementation in fp32 and gray ones to a
+correct implementation in bf16, in both panels. On the left, the port
+(solid) and Transformers with eager attention (dashed) coincide in fp32 and
+lie close together in bf16. On the right, the black and the gray curve are
+the clean port once more, and the bugs are in color. B1, B2 and B3 are far
+above both from the first block on, and B3 ends above 100. The stream it
+produces is by then more than a hundred times larger than the one it should
+reproduce. B4 follows the black curve for two blocks and then leaves it. B5
+runs nearly flat, thousands of times above the black curve. The gray curve
+is the one to compare it with. B5 starts at its height and ends about five
+times below it: at no depth does the wrong $\epsilon$ rise above the
 rounding error of a correct bf16 run.
 
 Should we care about an error that is no larger than the rounding of a
@@ -2245,15 +2252,16 @@ in fp32 against fp64, whatever precision it will run in.
        the section? Explain your finding with the size of the bf16 logit
        error.
 
-1. [code] **The floor that a porter has.** The section took the floor of
-   `first_divergence` from a correct port, which a porter does not own.
-    1. Repeat `first_divergence` for the six ports in `found` with
-       `err['hf32']`, the layer errors of Transformers in fp32, as the
-       floor. Do the six answers change?
-    1. How small can the factor of ten be made before a correct port, run
-       in batches of 1, 4 or 16 (`err['ours32']` and `err_batch`), is
-       reported against this floor? Compare with the smallest multiple of
-       the floor at which one of the five bugs diverged.
+1. [code] **The floor that a porter has.** A porter owns no correct port
+   and takes the floor of `first_divergence` from Transformers in fp32,
+   `err['hf32']`. With this floor and the factor of ten, the section found
+   the same first divergence for all six ports as with the floor of the
+   correct port.
+    1. How small can the factor be made before a correct port, run in
+       batches of 1, 4 or 16 (`err['ours32']` and `err_batch`), is reported
+       against this floor? Compare with the smallest multiple of the floor
+       at which one of the five bugs diverged. How much room does the
+       factor of ten leave on either side?
     1. Predict from the numbers of the section whether the comparison
        layer by layer would report B5 if both the port and the floor ran in
        bf16. Then check: reload the fp64 reference, build B5 in bf16 from
@@ -2533,9 +2541,9 @@ pair $i$ in the port. Ratio of the rule against two fp64 references:
 
 | the port's frequencies | Transformers in fp64 as it is (fp32 angles) | the same with fp64 angles |
 |:--|:--|:--|
-| $1/\theta^{2i/d_h}$, as Transformers | about 1.1, passes | about 1, passes |
-| $\theta^{-2i/d_h}$, as the book | about 2.5, **fails** | about 1, passes |
-| angles and tables in fp64 | about 5, **fails** | about 0.25, passes |
+| $1/\theta^{2i/d_h}$, as Transformers | about 1, passes | about 1, passes |
+| $\theta^{-2i/d_h}$, as the book | about 2, **fails** | about 1, passes |
+| angles and tables in fp64 | about 4.5, **fails** | about 0.25, passes |
 
 - In fp32, 24 of the 64 frequencies differ in the last bit. At position
   4,095 the angles differ by $2.4 \times 10^{-4}$.
@@ -2726,10 +2734,10 @@ less at every later layer.
 ::: {.col}
 - Relative error of the residual stream after each block, median of 32
   prompts.
-- Left: the port (solid) on Transformers (dashed), in fp32 and in bf16.
-- Right: B1, B2, B3 leave the correct port (clean) in block 0, B4 in
-  block 2. B5 runs flat, from the height of the bf16 curves to five times
-  below them.
+- Black: correct in fp32. Gray: correct in bf16. Left: the port (solid)
+  on Transformers (dashed).
+- Right: B1, B2, B3 leave the correct port in block 0, B4 in block 2. B5
+  runs flat, from the gray curve to five times below it.
 :::
 :::
 
@@ -2747,7 +2755,7 @@ way. Check a port in fp32 against fp64, even one that will only run in bf16.
 - **Rule:** at most 1.5 times Transformers' own error against fp64, both
   batched alike. Qwen3-0.6B: about 1 in fp32, about 0.7 in bf16.
 - **Constants:** computed as the reference implementation computes them.
-  The book's angle formula fails at 2.5 on 4,096 tokens.
+  The book's angle formula fails at about 2 on 4,096 tokens.
 - **A failing port:** find the first divergence, with Transformers in
   fp32 as the floor. Five bugs diverge where they first act.
 - **Precision:** check in fp32. A wrong $\epsilon$ fails there at about

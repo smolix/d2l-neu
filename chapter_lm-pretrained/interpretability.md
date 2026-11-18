@@ -2807,9 +2807,9 @@ in Qwen3-0.6B at the subject up to block 19 and at the final position from
 block 20, with one attention layer carrying the largest share across. The
 fast first-order estimate of the same map missed its largest effects. A
 sparse autoencoder decomposes the stream into features that can be named,
-at a loss that the reconstruction measures, and such a name is a
-hypothesis: ours had a precision of 0.88 and a recall of 0.44, and a
-difference of means detected the same concept better. Steering along a
+at a loss that the reconstruction measures. Such a name is a hypothesis:
+ours had a precision of 0.88 and a recall of 0.44, and a difference of
+means detected the same concept better. Steering along a
 direction changes the language of the model only near the strength at which
 it begins to damage everything else, so an effect is reported together with
 its cost and with a random direction as the floor.

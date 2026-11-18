@@ -2260,15 +2260,15 @@ Gemma 4 E2B.
 
 ::: {.cols .vc}
 ::: {.col}
-| section | question |
+| movement | section |
 |---|---|
-| **Pretrained Models with Hugging Face** | **what is in a checkpoint, and what does it cost to run?** |
-| A Released Checkpoint in the Book's Own Code | do its tensors run in our code? |
-| Prompting and In-Context Learning | how much does the prompt decide? |
-| Scoring Language Models | which convention gives which score? |
-| Evaluation Suites, Judges and Error Bars | is a difference real? |
-| Interpretability | how is a claim about the inside tested? |
-| Models behind an API | what does a hosted model withhold? |
+| open a checkpoint | **Pretrained Models with Hugging Face** |
+| | A Released Checkpoint in the Book's Own Code |
+| measure it | Prompting and In-Context Learning |
+| | Scoring Language Models |
+| | Evaluation Suites, Judges and Error Bars |
+| inside and outside | Interpretability |
+| | Models behind an API |
 :::
 
 ::: {.col .narrow}

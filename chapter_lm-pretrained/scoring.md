@@ -1454,10 +1454,10 @@ smaller unless $k = 1$, $c = 0$ or $c = n$
 (Exercise :exref:`ex_lm_scoring-plugin`). There is a plain reason. The
 plug-in estimate describes drawing $k$ of our $n$ samples *with*
 replacement, where a draw can be wasted on a sample that we already hold.
-The estimator $\hat U$ draws without replacement. For computation the ratio is better written as
-$\prod_{i=n-c+1}^{n} (1 - k/i)$, a product of $c$ factors that never forms a
-large binomial coefficient, and this is how `d2l.pass_at_k` evaluates
-:eqref:`eq_lm_passk`.
+The estimator $\hat U$ draws without replacement. For computation the ratio
+is better written as $\prod_{i=n-c+1}^{n} (1 - k/i)$, a product of $c$
+factors that never forms a large binomial coefficient, and this is how
+`d2l.pass_at_k` evaluates :eqref:`eq_lm_passk`.
 
 #### Variance of the Estimator
 
@@ -1880,9 +1880,10 @@ in 100 to 400 tokens on average.
 
 A reasoning reply takes more than a thousand tokens where a scored letter
 takes one, and both models that reason score higher in that arm than in the
-direct one. Is the difference real? The two rows of a model cover different items, 100 against
-500, so this table cannot say. We make the comparison item by item in
-:numref:`subsec_lm_reasoning_direct`, once all verdicts are in one place.
+direct one. Is the difference real? The two rows of a model cover different
+items, 100 against 500, so this table cannot say. We make the comparison
+item by item in :numref:`subsec_lm_reasoning_direct`, once all verdicts are
+in one place.
 
 ## Rankings under Different Conventions
 :label:`subsec_lm_flips`
@@ -1892,11 +1893,10 @@ and without demonstrations, and two generative arms. Let us put the five
 checkpoints through the likelihood conventions on the same 500 items, and the
 post-trained ones through the generative arms as well, and ask the question
 of the opening: which of two models is better? Our pair is Qwen3-0.6B against
-Qwen3.5-0.8B. We also fix now, before looking, the one further comparison
-that we will test if no convention reverses their order: whether the gap
-between the two models is different under the letter format without
-demonstrations than under the cloze sum, the two ends of likelihood scoring.
-With eight conventions one can always find a pair of columns that looks
+Qwen3.5-0.8B. We also fix one further comparison now, before looking, for
+the case that no convention reverses their order. Is the gap between the
+two models the same under the letter format without demonstrations as under
+the cloze sum, the two ends of likelihood scoring? With eight conventions one can always find a pair of columns that looks
 interesting afterwards. Naming the comparison first is what lets its interval
 mean what it says.
 

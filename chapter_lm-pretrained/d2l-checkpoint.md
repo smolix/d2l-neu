@@ -840,7 +840,7 @@ from the same file? A plausible loss and fluent text cannot tell us, since
 a port that is slightly wrong has both. So we compare logits.
 
 This is the longest part of the section, and three of its six steps form the
-main line: we settle what "equal" should mean and turn the answer into a
+main line. We settle what "equal" should mean and turn the answer into a
 rule, apply the rule in fp32, where rounding is small, and apply it in half
 precision, in which the weights are usually run. The other three are side
 trips. One long prompt settles the question of the two angle formulas that
@@ -1596,9 +1596,9 @@ for q, g in zip(questions, generate(  # the card's settings without thinking
     print(f'  ({g.finish_reason})')
 ```
 
-The replies are fluent. Whether they are right is another matter. Nothing
-tells a model of this size that the first question means the cache of
-:numref:`sec_kv-cache` rather than a key--value store, and a correct port
+The replies are fluent, and the first answers a question that we did not
+ask. Nothing tells a model of this size that we mean the cache of
+:numref:`sec_kv-cache` and not a key--value store, and a correct port
 reproduces a model's misconceptions as faithfully as its abilities.
 
 ### Larger Checkpoints
@@ -2344,15 +2344,15 @@ width 128, 8 key--value heads) on 32 prompts of 64 tokens.
 
 ::: {.cols .vc}
 ::: {.col}
-| section | question |
+| movement | section |
 |---|---|
-| Pretrained Models with Hugging Face | what is in a checkpoint, and what does it cost to run? |
-| **A Released Checkpoint in the Book's Own Code** | **do its tensors run in our code?** |
-| Prompting and In-Context Learning | how much does the prompt decide? |
-| Scoring Language Models | which convention gives which score? |
-| Evaluation Suites, Judges and Error Bars | is a difference real? |
-| Interpretability | how is a claim about the inside tested? |
-| Models behind an API | what does a hosted model withhold? |
+| open a checkpoint | Pretrained Models with Hugging Face |
+| | **A Released Checkpoint in the Book's Own Code** |
+| measure it | Prompting and In-Context Learning |
+| | Scoring Language Models |
+| | Evaluation Suites, Judges and Error Bars |
+| inside and outside | Interpretability |
+| | Models behind an API |
 :::
 
 ::: {.col .narrow}

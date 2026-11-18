@@ -424,8 +424,9 @@ Transformers library. We start it with *continuous batching*: the server
 does not wait for a batch to finish, and admits a new request into the
 running batch between two decoding steps. It serves Qwen3-4B and not a model
 of the newer Qwen3.5 family that earlier sections used. Transformers'
-continuous batching has no cache for the linear-attention layers of Qwen3.5,
-and the server would run such a model one request at a time. Programs that
+continuous batching has no cache for the recurrent layers that Qwen3.5
+mixes with its attention layers (:numref:`sec_lm_hf_models`), and the
+server would run such a model one request at a time. Programs that
 serve models are called serving engines, and :numref:`chap_lm_serving`
 treats them in their own right. Here the server is only an object to
 measure.

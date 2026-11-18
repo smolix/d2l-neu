@@ -1435,7 +1435,7 @@ cannot tell us.
 
 The repair is not complete, and it is not free. Under both lines that say
 "Classify", World still takes 44.5% of the predictions, nearly twice its share
-of the items, and accuracies of 0.6 to 0.64 lie in the range of the
+of the items. And accuracies of 0.6 to 0.64 lie in the range of the
 preferences that this model showed without any line, 0.575 in the chat layout
 and 0.68 in plain text. Thinking costs a median of nearly 300 generated tokens
 for each headline, where the read-out generates none. Note also that the cell

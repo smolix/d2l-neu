@@ -1,16 +1,18 @@
 # Evaluation Suites, Judges and Error Bars
 :label:`sec_lm_eval_suites`
 
-Twice now we have put an interval around a score with a helper that we did
-not explain. The `paired_ci` of :numref:`sec_lm_prompting` and the `boot` of
-:numref:`sec_lm_scoring` were called stand-ins, and twice a comparison ended
-in the verdict "not resolved". Such verdicts are the rule when scores lie
-close together, and they often do. Under one cloze convention of the previous
-section, five checkpoints reached accuracies between 0.32 and 0.42 on 500
-science questions, several of them only a point or two apart. Model cards and
-papers report gaps of that size as progress. Should we believe them? Would a
-lead of two points survive on 500 other questions, or under another batch
-size, or on a benchmark that neither model met during training?
+Three sections have now put an interval around a number with a helper that
+they did not explain. The `ratio_interval` of :numref:`sec_lm_d2l_checkpoint`,
+the `paired_ci` of :numref:`sec_lm_prompting` and the `boot` of
+:numref:`sec_lm_scoring` were each announced as a stand-in for the tool of
+this section, and twice a comparison ended in the verdict "not resolved". Such
+verdicts are the rule when scores lie close together, and they often do. Under
+one cloze convention of the previous section, five checkpoints reached
+accuracies between 0.32 and 0.42 on 500 science questions, several of them
+only a point or two apart. Model cards and papers report gaps of that size as
+progress. Should we believe them? Would a lead of two points survive on 500
+other questions, or under another batch size, or on a benchmark that neither
+model met during training?
 
 A benchmark score looks like a property of a model. It is better read as the
 outcome of an experiment. The questions are a sample from all the questions
@@ -122,8 +124,8 @@ print(f'GPU={GPU}, RERUN={",".join(sorted(RERUN)) or False}, SMALL={SMALL}'
 
 The last line says that this run regenerated nothing. `SMALL` is a switch
 that shortens a regeneration, and it is off. The tables below abbreviate the
-names, so that `0.6B` is
-Qwen3-0.6B and `3.5-2B` is Qwen3.5-2B. The next cell registers what the
+names, so that `0.6B` is Qwen3-0.6B and `3.5-2B` is Qwen3.5-2B. The next
+cell registers what the
 section downloads: four datasets that are read at run time under their own
 licences, the benchmark data of this edition, and the five files of stored
 results.
@@ -337,8 +339,9 @@ def bootstrap_ci(scores, n_boot=10000, cluster=None, *, seed=0, alpha=0.05):
 standard error `se`. It warns when it is given fewer than 100 items, where a
 percentile interval is unreliable.
 
-Both stand-ins compared two models by resampling the differences of their
-scores item by item. Why the differences, and not each model's scores? Let
+The stand-ins of the last two sections compared two models by resampling
+the differences of their scores item by item. Why the differences, and not
+each model's scores? Let
 $a_i$ and $b_i$ be the scores of two models on item $i$, with variances $v_a$
 and $v_b$ over the items and covariance $c$. The difference of the two mean
 scores has variance
@@ -666,9 +669,22 @@ Let us put in numbers. If two models disagree on 20% of 500 items and are
 nearly level, then $s_d^2 \approx 0.2$ and the MDE is
 $2.80\sqrt{0.2/500} = 0.056$, or 5.6 points. Two independent samples at
 accuracies near one half have a variance of $0.25 + 0.25$ per pair of items
-and an MDE of $2.80\sqrt{0.5/500} = 0.089$. The function
-`d2l.min_detectable_effect` evaluates :eqref:`eq_lm_eval_mde` for a standard
-deviation and a number of items, or directly for a standard error.
+and an MDE of $2.80\sqrt{0.5/500} = 0.089$.
+
+The formula also answers a question that the previous section left behind.
+On 100 items its larger model gained 7 points from reasoning, 11 items in
+one direction and 4 in the other, and the interval ended at zero
+(:numref:`subsec_lm_reasoning_direct`). Fifteen discordant items in 100
+give $s_d^2 = 0.15 - 0.07^2 \approx 0.145$, so that experiment had an MDE of
+$2.80\sqrt{0.145/100} = 0.107$, about 11 points. To detect a true gain of 7
+points in four experiments of five it would have needed
+$2.80^2 \cdot 0.145 / 0.07^2 \approx 230$ items. The measured gain itself
+lies 1.8 standard errors from zero, just short of the 1.96 at which an
+interval excludes it, which is why that interval ended where it did.
+
+The function `d2l.min_detectable_effect` evaluates :eqref:`eq_lm_eval_mde`
+for a standard deviation and a number of items, or directly for a standard
+error.
 
 ```{.python .input #eval-suites-mde}
 %%tab pytorch
@@ -906,15 +922,16 @@ When we compare two numbers, we would like to be sure that they were measured
 on the same thing. "ARC, 500 items" does not say so. Which 500, in which
 format, under which normalization, after which demonstrations?
 :numref:`sec_lm_prompting` showed that one line of instruction can move an
-accuracy by tens of points. We call a *suite* a list of tasks in which every
-such choice is written down, and its *manifest* the record that holds the
-list, a small file or an entry of the library. A manifest is frozen: a suite
-is never edited, only replaced by a new version.
+accuracy by tens of points. A suite, the fixed list of tasks of the
+introduction, is fixed only if every such choice is written down. The record
+that holds the list with these choices is its *manifest*, a small file or an
+entry of the library. A manifest is frozen: a suite is never edited, only
+replaced by a new version.
 
 It is good practice to keep two. A *development suite* is small and fast, and
 we consult it at every change. A *reporting suite* is larger and is touched
-rarely, for the reason that a test set is kept apart from a validation set:
-every decision taken after looking at a score fits the suite a little, and
+rarely, for the reason that a test set is kept apart from a validation set.
+Every decision taken after looking at a score fits the suite a little, and
 after a hundred decisions the development score is no longer an unbiased
 estimate of anything.
 
@@ -2603,10 +2620,10 @@ each of these, and the authors made theirs. We could stop here and write "not
 reproduced under this protocol; the cause may lie among the unstated items".
 It is better to measure how much such choices matter.
 
-A widely used *evaluation harness*
-:cite:`Biderman.Schoelkopf.Sutawika.ea.2024`, a public program that does for
-many benchmarks what our `EvalSuite` does for a few, has its own protocol for
-GSM8K with a chain of thought. It shows eight demonstrations whose solutions
+The lm-evaluation-harness of :numref:`sec_lm_scoring`
+:cite:`Biderman.Schoelkopf.Sutawika.ea.2024`, which does for many benchmarks
+what our `EvalSuite` does for a few, has its own protocol for GSM8K with a
+chain of thought. It shows eight demonstrations whose solutions
 are written out in prose and end in "The answer is", taken from
 :citet:`wei2022chain`. We adopt its prompt, its demonstrations, its stop
 string and its token limit, keep our own extractor, and run the same model on
@@ -2665,13 +2682,13 @@ detectable effect says what an experiment could have seen, about 6.5 points
 for a paired comparison on 500 items, so a gain of two points on such a test
 is no evidence. A suite frozen under a hash makes "the same benchmark"
 checkable, and a likelihood probe against a reference model older than the
-benchmark tests for exposure to its items where accuracy cannot. A model
-judge is one more instrument: ours agreed with experts as often as they agree
-with each other, put two thirds of its probability on the first of two equal
+benchmark tests for exposure to its items where accuracy cannot. A model judge
+is one more instrument: ours agreed with experts as often as they agree with
+each other, put two thirds of its probability on the first of two equal
 answers, and penalized empty padding. A published score was reproduced under
-one protocol and missed by eight points under another, so a reported number
-must carry its protocol, and even then it does not say how the model arrives
-at an answer.
+one protocol and missed by more than eight points under another, so a reported
+number must carry its protocol, and even then it does not say how the model
+arrives at an answer.
 
 ## Exercises
 

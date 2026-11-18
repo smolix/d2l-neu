@@ -2005,14 +2005,13 @@ Qwen3-1.7B on MNLI (pairs), SST-2 (sentiment) and CoNLL-2003 (names).
 :::
 :::
 
-::: {.slide title="One Pair In, Sixteen Vectors Out, Each Computed from the Whole Input"}
+::: {.slide title="One Pair In, Sixteen Vectors Out, Each from the Whole Input"}
 [A released encoder]{.kicker}
 
 `[CLS] A Ġman Ġplays Ġa Ġguitar Ġon Ġstage . [SEP] Someone Ġis Ġmaking Ġmusic . [SEP]`
 
-- `[CLS]` opens the input, `[SEP]` closes each text (Ġ: a token that starts
-  with a space). No segment ids: the separator alone marks the second text.
-- Output (1, 16, 768). The texts are read together, a **cross-encoder**.
+- `[CLS]` opens, `[SEP]` closes each text, no segment ids; Ġ: a leading space.
+- Output (1, 16, 768): both texts read together, a **cross-encoder**.
 
 | cosine between two vectors, four sentences | embedding layer | last layer |
 |---|---|---|
@@ -2274,9 +2273,8 @@ label word.
 ::: {.slide title="Operations Predict 500 Times the Cost; the Clock Shows 100"}
 [Cost per example]{.kicker}
 
-$C = 2\,(N - N_\textrm{emb})\,T$: a multiply and an add per weight and
-token, for $N$ parameters with $N_\textrm{emb}$ in the embedding table and
-$T$ tokens.
+$C = 2\,(N - N_\textrm{emb})\,T$: a multiply and an add per non-embedding
+weight and token.
 
 | per MNLI pair | encoder | 8-shot decoder | ratio |
 |---|---|---|---|

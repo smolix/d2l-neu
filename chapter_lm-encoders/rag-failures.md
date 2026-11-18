@@ -660,13 +660,16 @@ if FIX and ready('base', FIX):
     b, f = (scores(c).set_index('qid') for c in ('base', FIX))
     lost = b.index[b.answerable & (b.accuracy == 1) & (f.accuracy[b.index] == 0)]
     q = min(lost)  # the first answerable dev question the fix lost
+    after = classes(FIX)
     print(f'\n{len(lost)} answerable dev questions right in base, wrong '
-          f'with the fix; the first:')
+          'with the fix\n(by class: ' + ', '.join(
+              f'{c} {n}' for c, n in
+              after.set_index('qid').cls[lost].value_counts().items())
+          + '); the first:')
     d2l.print_wrapped(f'{q}: {ITEMS[q]["question"]}', width=96)
     for name, s in (('base', b), (FIX, f)):
         print(textwrap.fill(f'{name}: {s.answer[q][:300].rstrip()} ...', 96,
                             initial_indent='  ', subsequent_indent='    '))
-    after = classes(FIX)
     print(pd.DataFrame({'base': BC.cls.value_counts(),
                         FIX: after.cls.value_counts()})
           .reindex(CLASSES + ['correct', 'unjudged']).fillna(0).astype(int)
@@ -692,11 +695,12 @@ have to be tested together.
 Even without the false answers, the fix did not shrink the class it aimed
 at: ignored answers rose from 12 to 19. The replies were not cut off; they
 average about 220 new tokens, well below the limit of 500. The fix lost
-13 answerable questions that the baseline got right. Read side by side,
-most of these pairs of replies make the same points, the fix's more
-loosely, with a key fact of the baseline's answer left out or blurred.
-Quoting first did not make the answer that follows the quotes more
-complete.
+13 answerable questions that the baseline got right, and 9 of them fall
+into the class it aimed at: the fix's reply was faithful to the passages
+and still left out a key fact. Read side by side, most of these pairs of
+replies make the same points, the fix's more loosely, with a key fact of
+the baseline's answer left out or blurred. Quoting first did not make the
+answer that follows the quotes more complete.
 
 The first of the 13, which the cell prints, fails in another way. The
 question asks where the one-step sampler of the discrete diffusion
@@ -1336,7 +1340,7 @@ and the missing fact is the one a user needs.
 | `test`, read once | 0.87 | 0.79 | $-0.08$ [$-0.12$, $-0.03$] |
 
 - 20 fewer correct answers on `dev`; 13 answerable ones that the baseline
-  got right are lost.
+  got right are lost, 9 of them now ignored.
 - Chosen from `dev` failures, so `dev` could have flattered it. It lost
   there anyway, and `test` agrees.
 - One idea in three settings: the loss belongs to the bundle.

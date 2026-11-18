@@ -109,7 +109,7 @@
       ]
     },
     "rag-fix": {
-      "code_fingerprint": "sha256:caf1cec5ac93b6a869f45136dd9046c8e2e9acd1b5c3326783dcbdec4d5fb2fb",
+      "code_fingerprint": "sha256:3ff4c231f9e708280b31687d99579b5635479e05b826be78e4e8155d2b19ddc0",
       "kind": "text",
       "outputs": [
         {
@@ -125,12 +125,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "accuracy:\n                                 dev                  test\nbase            0.892 [0.849, 0.927]  0.867 [0.825, 0.904]\nrewrite-rerank  0.899 [0.858, 0.936]  0.863 [0.822, 0.899]\nfix-ignored     0.808 [0.761, 0.852]  0.792 [0.742, 0.835]\n\n13 answerable dev questions right in base, wrong with the fix; the first:\ndev-0037: In the discrete diffusion experiment, where does the sampler that takes only one step\n    concentrate probability mass relative to the data?\n  base: In the discrete diffusion experiment, the one-step sampler puts mass where the column of\n    one mode crosses the row of another, where the data has none [1]. This occurs because the\n    sampler draws from a mixture of the joint distribution and the product of marginals, leading\n    to an error proportional to ...\n  fix-ignored: In the discrete diffusion experiment, the one-step sampler concentrates\n    probability mass at the intersection of the columns of one mode and the rows of another, a\n    location where the actual data has no presence [1]. This behavior occurs because the sampler\n    effectively places every starting point on t ...\n               base  fix-ignored\ncls                             \nnot_retrieved     0            0\nranked_low        5            4\nignored          12           19\nunsupported       6            7\nfalse_answer      2           15\nfalse_abstain     1            1\ncorrect         214          194\nunjudged          0            0\n"
+          "text": "accuracy:\n                                 dev                  test\nbase            0.892 [0.849, 0.927]  0.867 [0.825, 0.904]\nrewrite-rerank  0.899 [0.858, 0.936]  0.863 [0.822, 0.899]\nfix-ignored     0.808 [0.761, 0.852]  0.792 [0.742, 0.835]\n\n13 answerable dev questions right in base, wrong with the fix\n(by class: ignored 9, unsupported 3, ranked_low 1); the first:\ndev-0037: In the discrete diffusion experiment, where does the sampler that takes only one step\n    concentrate probability mass relative to the data?\n  base: In the discrete diffusion experiment, the one-step sampler puts mass where the column of\n    one mode crosses the row of another, where the data has none [1]. This occurs because the\n    sampler draws from a mixture of the joint distribution and the product of marginals, leading\n    to an error proportional to ...\n  fix-ignored: In the discrete diffusion experiment, the one-step sampler concentrates\n    probability mass at the intersection of the columns of one mode and the rows of another, a\n    location where the actual data has no presence [1]. This behavior occurs because the sampler\n    effectively places every starting point on t ...\n               base  fix-ignored\ncls                             \nnot_retrieved     0            0\nranked_low        5            4\nignored          12           19\nunsupported       6            7\nfalse_answer      2           15\nfalse_abstain     1            1\ncorrect         214          194\nunjudged          0            0\n"
         }
       ]
     },
     "rag-failure-plot": {
-      "code_fingerprint": "sha256:4846a56751e769d8e2103b116d92c55814d8185d7fb3059da02b963011357f2f",
+      "code_fingerprint": "sha256:b7343437cc0c2f4f4b51d0a6a2ac086f39bd0c60bf4e9e710dd1cb2fc9c4317b",
       "kind": "asset",
       "outputs": [
         {
@@ -138,12 +138,12 @@
           "mime": "image/svg+xml",
           "asset": "rag-failures/rag-failure-plot-1.svg",
           "bytes": 64370,
-          "sha256": "sha256:e1d53c7e587ef8818ad0d155c71adb420466389096152370986e9778a161878e"
+          "sha256": "sha256:19ed010c43ebea41cdf83dc87d9e318bd463977ddda5d2c54bc184ffa6e0db56"
         }
       ]
     },
     "rag-marginal": {
-      "code_fingerprint": "sha256:2eb67cb07ae80f20585a922afcd61a4cb5c138bfdad963d5508675cad0454198",
+      "code_fingerprint": "sha256:a43bc309f52c09e8bfc2e4b5b195e0e63bbc6d1dce12ad06928f83cd829baa97",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +154,7 @@
       ]
     },
     "rag-cost": {
-      "code_fingerprint": "sha256:9222a9def02d591221ae281f0932ea7fb9417a11ffc2653c45b7d583df20b5ae",
+      "code_fingerprint": "sha256:f09242ce326500d456c21922639046f4901367e6fe169069779a634c12b1b849",
       "kind": "text",
       "outputs": [
         {
@@ -175,7 +175,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 536 ms (50 questions)\n"
+          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 535 ms (50 questions)\n"
         }
       ]
     }

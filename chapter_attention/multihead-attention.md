@@ -1106,8 +1106,6 @@ received.
 :::
 
 ::: {.slide title="The Layer Reproduces the Hand Computation; a Causal Mask Leaves 0.80 and 0.20"}
-[Self-attention]{.kicker}
-
 @!multihead-attention-self-attention-1
 
 - Causal mask: the same scores, renormalized over Alice and *gave*.

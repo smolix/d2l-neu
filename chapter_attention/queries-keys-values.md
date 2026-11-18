@@ -720,8 +720,8 @@ $\sigma \to 0$ copies the nearest label, $\sigma \to \infty$ gives the mean.
 
 @!queries-keys-values-nadaraya-watson-regression-1
 
-- $\sigma = 0.1$ chases the noise; $\sigma = 2$ flattens toward the mean;
-  $\sigma = 0.5$ follows the curve except near the ends.
+- $\sigma = 0.1$ chases noise; $\sigma = 2$ flattens; $\sigma = 0.5$ fits
+  except near the ends.
 - Without the true curve: choose $\sigma$ by leave-one-out error. Drop the
   diagonal of the weight matrix, renormalize the rows; nothing to refit.
 :::

@@ -1068,12 +1068,18 @@ mask records which tiles to skip. JAX: `local_window_size=(w - 1, 0)` with
 `is_causal=True`.
 :::
 
-::: {.slide title="The Window Is More Than 30× Faster at 32K Tokens, Short of the Tiles' 64"}
-[Measured]{.kicker}
+::: {.slide title="A Window Is Over 30× Faster at 32K Tokens, Short of the Tiles' 64×"}
+::: {.cols .vc}
+::: {.col .narrow}
+Both arms run in one fused kernel: one sequence, 32 heads of width 64,
+bfloat16. The tile count predicts the speedup; the measured one falls short
+of it at every length.
+:::
 
+::: {.col}
 @!attention-at-scale-the-price-of-attention-measured
-
-Both arms in one fused kernel; one sequence, 32 heads of width 64, bfloat16.
+:::
+:::
 :::
 
 ::: {.slide title="Every Tile the Band Visits Is a Masked Tile"}

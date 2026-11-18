@@ -1612,19 +1612,19 @@ block 2: a stripe 23 below it from the second copy on (induction).
 :::
 
 ::: {.slide title="Head Scores Separate the Two Roles in Every Run"}
-Mean attention on the previous token and on the induction target
-$j = i + 1 - L$, per head, three runs:
+Mean attention per head on the previous token and on the target
+$j = i + 1 - L$:
 
 @!what-attention-computes-the-heads-caught-in-the-act-2
 
 - Block 1: one or two heads on the previous token, none on the target.
-- Block 2: every head on the target; the strongest over a third, on 1 of
-  up to 63 keys (uniform: about 1/40).
+- Block 2: every head on the target; the strongest over a third, against
+  about 1/40 for uniform.
 :::
 
 ::: {.slide title="OV Circuits Copy, With or Without Retrieval"}
 ::: {.cols .vc}
-::: {.col}
+::: {.col .narrow}
 $C_{ab} = \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}} \bar{\mathbf{h}}_a$:
 boost to the logit of $b$ from attending to $a$; $\bar{\mathbf{h}}_a$ is
 the stream where $a$ sits. Copying: rows peak on the diagonal.
@@ -1633,7 +1633,7 @@ the stream where $a$ sits. Copying: rows peak on the diagonal.
 - The one-block control copies too, yet cannot retrieve.
 :::
 
-::: {.col .narrow}
+::: {.col}
 @!what-attention-computes-the-circuit-is-in-the-weights
 :::
 :::
@@ -1646,8 +1646,8 @@ the stream where $a$ sits. Copying: rows peak on the diagonal.
   stream.
 - Predicted: previous-token heads matter. Found: the other block-1 heads
   matter as much.
-- Most losses land above $\log 64$: worse than a uniform guess, so the
-  damaged model is confident about wrong tokens.
+- Most losses exceed $\log 64$, worse than a uniform guess: confidently
+  wrong.
 - Block 2: accuracy falls as induction heads go; all four gone, chance.
 :::
 

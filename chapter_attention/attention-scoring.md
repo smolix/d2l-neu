@@ -1388,12 +1388,19 @@ $(\tfrac13, \tfrac13, \tfrac13, 0)$.
 :::
 
 ::: {.slide title="Masks Compose by AND: Padding and Causal on Equal Scores"}
-![Padding (batch, 1, keys) AND causal (queries, keys) gives (batch, queries, keys).](../img/mdl-attention-mask-algebra.svg){width=60%}
+::: {.cols .vc}
+::: {.col}
+![](../img/mdl-attention-mask-algebra.svg){width=100%}
+:::
 
+::: {.col .fig}
 @!attention-scoring-composing-masks
+:::
+:::
 
-- Causal row $i$ holds $1/(i+1)$ on keys $0, \ldots, i$: $n(n-1)/2$ of
-  $n^2$ pairs excluded. With valid length 3, rows stop at the third key.
+- On equal scores, causal row $i$ holds $1/(i+1)$ on keys $0, \ldots, i$:
+  $n(n-1)/2$ of $n^2$ pairs excluded. Valid length 3 stops rows at the
+  third key.
 :::
 
 ::: {.slide title="Packed Documents Need a Block-Diagonal Mask"}
@@ -1499,19 +1506,15 @@ Random letter embeddings of width 32; "attention" queries "translation":
 :::
 
 ::: {.slide title="Keys That Carry Positions Let a Toy Model Learn a Permutation"}
-[Alignment]{.kicker}
-
-Translation (Bahdanau et al.): the decoder state queried the encoder
-states, and the weights came out as word alignments. A toy version: 8
-tokens from 16; output $j$ copies source $\pi(j)$, one pair swapped.
-Queries: one learned vector per output. Keys: $\mathbf{W}_k$ applied to
-[one-hot token; one-hot position]. Values: one-hot tokens.
+In translation (Bahdanau et al.) the weights came out as word alignments.
+Toy: output $j$ copies source $\pi(j)$, 8 tokens from 16, one pair swapped.
+Queries: one learned vector per output; keys: $\mathbf{W}_k$[one-hot token;
+one-hot position]; values: one-hot tokens.
 
 @!attention-scoring-attention-as-learned-alignment-4
 
-- Untrained: a fifth to a quarter of the tokens right, about $1/8$ of the
-  weight on $\pi(j)$. Trained, three runs: accuracy 1.000, the largest
-  weight on $\pi(j)$ at every position.
+- Untrained: a fifth to a quarter right, weight on $\pi(j)$ near $1/8$.
+  Trained (three runs): accuracy 1.000, largest weight on $\pi(j)$.
 - Repeated tokens are told apart: the keys carry the position.
 :::
 

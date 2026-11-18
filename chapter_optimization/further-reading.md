@@ -388,7 +388,7 @@ model: muP, which writes the width into per-layer rules, and a drift
 fitted under the standard parametrization. Cerebras-GPT
 :cite:`Dey.Gosal.Chen.ea.2023` applied muP to a whole family of
 transformers: the hyperparameters were tuned once, on a proxy of about 40
-million parameters, and transferred to every larger model. DeepSeek
+million parameters, and transferred to the larger models. DeepSeek
 :cite:`Bi.Chen.Chen.ea.2024` took the second way, with the fitted power
 laws that :numref:`sec_scaling` quoted. The third case is less satisfying.
 Meta reports that Llama 4

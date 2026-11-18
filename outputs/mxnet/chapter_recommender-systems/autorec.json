@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:c68276f975d85d23dfd01683ea01c42482366293e324ae4cc255dc53e8e8132c",
+    "d2l_lib_fingerprint": "sha256:f466a941dae5ba43a3c8ff4751d382a69df33e6db210d389f4ebf855fbf6b7c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.000, test RMSE 0.901\n28245886.9 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.000, test RMSE 0.903\n17744730.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
           "bytes": 22412,
-          "sha256": "sha256:354bdfca140a936df239d724d632f0b82f1a81259064fbbc71cf871c029f0f75"
+          "sha256": "sha256:d6c572868a26867c0a7fc015b5db559feb985456edb3e972a1817f41ca7f52d8"
         }
       ]
     }

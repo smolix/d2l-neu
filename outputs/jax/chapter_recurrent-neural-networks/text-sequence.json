@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:ca3014ea1013c17a625dd9a82969932bf1614edf2da5b33a70205b07286f141f",
+    "d2l_lib_fingerprint": "sha256:c19cd8dc996e391789997d769ce3087da92bf3e909427920f7ad06215adb5340",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -167,7 +167,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
           "bytes": 20688,
-          "sha256": "sha256:77d88f871ba8142d95282565bc65c6596741b86668614038ee803e28c07e23c8"
+          "sha256": "sha256:4f88cc73f488c2fbf289c78bb75bc0386f097589e9246f474441f60a554a3be3"
         }
       ]
     },

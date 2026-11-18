@@ -260,6 +260,7 @@ book:
         - chapter_lm-encoders/text-embeddings.qmd
         - chapter_lm-encoders/retrieval.qmd
         - chapter_lm-encoders/rag.qmd
+        - chapter_lm-encoders/rag-failures.qmd
         - chapter_lm-encoders/further-reading.qmd
         - chapter_lm-data/index.qmd
         - chapter_lm-data/crawl.qmd

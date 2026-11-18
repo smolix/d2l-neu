@@ -13,11 +13,11 @@ Rules:
 
 | Name | Owner | Canonical signature and return | Main consumers |
 |---|---|---|---|
-| `d2l.load_hf` | 1.1 | `(model_id, revision=None, dtype=torch.bfloat16, device_map='auto') -> (model, tokenizer)` | all |
+| `d2l.load_hf` | 1.1 | `(model_id, revision=None, dtype=torch.bfloat16, device_map='auto', *, attn_implementation=None) -> (model, tokenizer)`; `None` takes `d2l.hf_attention(config, device)` (`flex_sdpa` for sliding-window layers on a GPU of compute capability ≥ 8.0, else `sdpa`); prints a second report line, `kernels: ...` (`d2l.hf_kernels`) | all |
 | `d2l.config_params` | 1.1 | `(config, include_vision=False, include_mtp=False, by_group=False) -> int \| dict[str, int]`. Dense and hybrid configs only; MoE raises `NotImplementedError('use d2l.config_stats (14.1)')`. With `by_group=True`, returns per-group counts that sum to the total. | 14.1 |
-| `d2l.config_memory` | 1.1 | `(config, seq_len, batch_size, dtype_bytes=2, *, state_bytes=4, ...) -> dict` with keys `params, weights, kv_cache, recurrent_state, activations, logits, total` | 5.x, 6.x, 7.1, 14.x |
+| `d2l.config_memory` | 1.1 | `(config, seq_len, batch_size, dtype_bytes=2, *, state_bytes=4, ...) -> dict` with keys `params, weights, kv_cache, recurrent_state, activations, logits, total`; `activations` is a prefill's peak working set with the kernels `load_hf` binds (measured within 4%; pass `window_cached=seq_len` for a prefill's total) | 5.x, 6.x, 7.1, 14.x |
 | `d2l.load_qwen3` | 1.2 | `(model_id='Qwen/Qwen3-0.6B', revision=None, *, dtype=torch.bfloat16, device=None) -> d2l.Qwen3GPT` (built on the meta device, weights assigned) | 4, 11, 12, 13 |
-| `d2l.Qwen3Attention(d2l.GQAAttention)` | 1.2 | `(num_hiddens, num_heads, num_kv_heads, *, head_dim=None, qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False, rope=True, causal=True)`; adds `forward_step(X, cache)`. The book's class is unchanged. | 4.1 (`PackedAttention`), 12, 13, 14 |
+| `d2l.Qwen3Attention(d2l.CausalAttention)` | 1.2 | `(num_hiddens, num_heads, num_kv_heads, *, head_dim=None, qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False, rope=True, causal=True)`; adds `forward_step(X, cache)`. The book's class is unchanged. | 4.1 (`PackedAttention`), 12, 13, 14 |
 | `d2l.SwiGLU(d2l.FeedForward)` | 1.2 | `(num_hiddens, hidden, bias=False)`: SwiGLU with an explicit width, names `W_g, W_1, W_2` | 14.6 |
 | `d2l.Qwen3GPT(d2l.GPT)` | 1.2 | `(vocab_size, num_hiddens, num_heads, num_kv_heads, num_blks, *, head_dim=None, qk_norm=True, rope_theta=1e6, ffn_hidden=None, norm_eps=1e-6, tie_embeddings=True, max_len=40960, bias=False)`; overrides `forward`, `forward_cached`; defines `generate_cached`; inherits `generate`. `d2l.qwen3_gpt_kwargs(cfg)` maps an HF config to these arguments. | 4.1 (`PackedGPT`), 6, 11, 12, 13, 14 |
 | `d2l.Qwen3GPT` module names (R1) | 1.2 | `model.token_emb`; `model.blks[i].attention` with `W_q, W_k, W_v, W_o, q_norm, k_norm, head_dim, num_heads, num_kv_heads`; `model.blks[i].ffn` with SwiGLU `W_g, W_1, W_2` (`W_2(silu(W_g x) * W_1 x)`). Each attention also has `rope_theta`; RoPE is interleaved (1.2 permutes the HF rows at load). Norm names follow 1.2's mapping table. There are no `W_gate/W_up/W_down`. | 4.1, 6.3, 11.x, 12.x, 13.x, 14.x |
@@ -32,13 +32,14 @@ Rules:
 | `d2l.paired_bootstrap` | 1.5 | `(scores_a, scores_b, n_boot=10000, cluster=None, *, seed=0, alpha=0.05) -> d2l.BootstrapResult`. `BootstrapResult` is a NamedTuple with `mean, ci=(lo, hi), se, p_two_sided, n, n_clusters, n_boot`. Consumers read `r.mean` and `r.ci`; it is not a 3-tuple. | all |
 | `d2l.judge_pairwise` | 1.5 | `(judge, tokenizer, question, answer_a, answer_b, *, rubric=..., batch_size=8) -> d2l.JudgeResult` (or a list), with fields `pref_a, delta, position_bias, consistent, verdict, logits` | 2.5, 7, 8 |
 | `d2l.ChatAPI` | 1.7 | `ChatAPI(base_url, model, api_key=None, *, cache=None, mode='replay', price=None, cost_cap_usd=None, timeout=120.0, max_retries=6, default_params=None, http_client=None)`; `.chat(messages, *, replica=0, stream=False, **params) -> d2l.ChatResult`, `async .achat(...)`, `.models()`, `.spent_usd`, `.manifest()`. `mode='replay'` raises `d2l.ReplayMiss` on a cache miss; a live call past `cost_cap_usd` raises `d2l.CostCapExceeded` | 1.5 (exercise), 2.5, 7.8 |
-| `d2l.chat_batch` | 1.7 | `async (api, requests, *, concurrency=8) -> list[d2l.ChatResult \| Exception]`, with full-jitter backoff on 429 and 5xx | 1.5 (exercise), 2.5, 7.8 |
+| `d2l.chat_batch` | 1.7 | `async (api, requests, *, concurrency=8) -> list[d2l.ChatResult \| Exception]`, with full-jitter backoff on 429 and 5xx; a `ReplayMiss` or `CostCapExceeded` is raised (with the full list as `.results`) once every request finished | 1.5 (exercise), 2.5, 7.8 |
 | `d2l.api_cost` | 1.7 | `(usage, price: d2l.PricePoint) -> float` (USD; `PricePoint(input, output, cached_input=None, per=1_000_000)`) | 7.8 |
 | `d2l.embed_texts` | 2.3 | Text embedder used by 2.4–2.5. 3.2 keeps its own `d2l.embed_docs` under a different name on purpose. | 2.x |
-| `d2l.book_corpus` | 2.4 | `(chunking='sections') -> d2l.BookCorpus`. Chunks have `id, doc_id, text, heading_path, char_start, char_end, n_tokens`. | 2, 4, 7, 10, 12, 13 |
+| `d2l.book_corpus` | 2.4 | `(chunking='sections') -> d2l.BookCorpus`. Chunks have `id, doc_id, text, heading_path, char_start, char_end, n_tokens` (plus `strategy, kind, cell_ids, section_label`). `for c in corpus` yields the chunks in document order; `corpus[cid]` looks one up by chunk id; `corpus.texts(view)` gives the `'display'`, `'dense'` or `'sparse'` texts; `corpus.span_to_chunk_ids(doc_id, a, b)` maps a character span to chunks. | 2, 4, 7, 10, 12, 13 |
 | `d2l.BookRetriever` | 2.4 | `.search(query, k, mode=...) -> list[d2l.Hit]`. `Hit` is a NamedTuple with `chunk_id, score, rank, text, heading_path, scores`; it is not a dict. | 2.5, 7.9, 10.1 |
-| `d2l.book_qa` | 2.5 | `(split='dev', answerable=None, types=None, n=None, seed=0) -> d2l.BookQA`. Splits are `train/dev/test`. Items have `qid, split, type, question, reference, key_facts, answerable, gold_spans, ...` (schema in 2.5). There is no `gold_ids` field; derive gold chunks with `d2l.gold_chunk_ids(item, corpus)`. | 2.3, 7.9, 10.4 |
-| `d2l.rag_judge` | 2.5 | `(judge, tokenizer, item, result, context_texts) -> {'correct', 'faithful', 'supported'}`. Scoring answers to book QA goes through this. There is no `book_qa_score`. | 7.9 |
+| `d2l.book_qa` | 2.5 | `(split='dev', answerable=None, types=None, n=None, seed=0) -> d2l.BookQA`. Splits are `train/dev/test`. Items have `qid, split, type, question, reference, key_facts, answerable, gold_spans, alt_spans, ...` (schema in 2.5; artifact `lm-book-qa-v2`). `alt_spans` (other passages that also answer) is optional for items another chapter synthesizes. There is no `gold_ids` field; derive gold chunks with `d2l.gold_chunk_ids(item, corpus)`. | 2.3, 7.9, 10.4 |
+| `d2l.rag_judge` | 2.5 | `(judge, tokenizer, item, result, context_texts) -> {'correct', 'faithful', 'supported'}`. Scoring answers to book QA goes through this. There is no `book_qa_score`. `result` is a `d2l.RAGResult` or a mapping with `answer` (and optionally `cited_ids`), not a string. The judge validated in 2.5 is Qwen3.8-27B with thinking on (`d2l.RAG_JUDGE_LOCAL`), served by vLLM over two 24 GB cards (`d2l.rag_judge_server`, `d2l.rag_judge_client`, `tokenizer=None`); a Transformers judge works with the same signature but defaults to thinking off and is not validated. |
+| `d2l.RAGPipeline`, `d2l.RAGResult` | 2.5 | `RAGPipeline(retriever, model, tokenizer, k=5, budget_tokens=3000, order='rank', rewrite=None, hyde=False, decompose=False, rerank_k=None, max_new_tokens=300, ...)`; `RAGResult` fields `qid, question, query_used, ranked_ids, context_ids, answer, cited_ids, abstained, n_prompt_tokens, n_new_tokens, latency_s`. Also exported: `d2l.DEFAULT_EMBEDDER`, `d2l.split_of`, `BookRetriever.search_batch`. | 7.9 |
 | `d2l.near_dedup` | 3.3 | `(texts, threshold=0.8, ngram=5, num_perm=128, seed=0) -> list[int]` (indices to keep). Convenience wrapper over `shingles`, `minhash_signature`, `lsh_candidates` and `union_find_clusters`. | 7.3 |
 | `d2l.r2_tokenizer` | 3.6 | Byte-level BPE, vocabulary 32,768, EOS id 0, no BOS. Ids 0–31 are specials: `<|endoftext|>`, `<|pad|>`, `<|im_start|>`, `<|im_end|>`, then `<|reserved_4|>` … `<|reserved_31|>`; merges start at id 32 | 4.x |
 | `d2l.write_shards`, `d2l.TokenShards` | 3.6 | Flat token `.bin` (`uint16` when V ≤ 65,536, i.e. every id ≤ 65,535; `uint32` otherwise) + `uint32` `.idx` + `meta.parquet` + `manifest.json` (`d2l-corpus/1`). EOS is appended per document. `.locate(i)` returns the resume cursor. | 4.1, 4.5 |
@@ -106,6 +107,8 @@ DATA_HUB keys are `lm-<chapter-or-topic>-<name>` in hyphenated lower case, follo
 
 **Hosting (decided 2026-10-28).** Small artifacts live under `d2l.DATA_URL + 'lm/'`. The large R2 artifacts live in d2l-owned Hugging Face repositories: a model repository for the tokenizer (3.6), the checkpoints and the training state (4.2), and a dataset repository for the FineWeb-Edu shards, validation set and manifest (3.6), whose card carries the ODC-By 1.0 attribution. Their `DATA_HUB` entries are `('https://huggingface.co/[datasets/]<repo>/resolve/<commit>/<file>', sha1)` with a pinned commit hash, never `main`; the book's `gpt2-weights` entry already points at the Hub this way, minus the pin. The R2 run is a one-off T3 job whose outputs are uploaded once.
 
+**Hosting update (2026-11-12).** Small artifacts are uploaded to the Cloudflare R2 bucket `d2l-data` and served from `https://d2l-data.smola.org/<key>` (base path `lm/` for this part) with `make upload-data` (`docs/build-system.md`); a registry cell names the URL as `d2l.LM_DATA_URL + '<file>'` (`LM_DATA_URL = 'https://d2l-data.smola.org/lm/'`, a `#@save` of 1.1, `chapter_lm-pretrained/hf-models.md`) and the file's sha1. Read `d2l.DATA_URL + 'lm/'` elsewhere in these blueprints as `d2l.LM_DATA_URL`. Each `DATA_HUB` key is its own freshness shard, so adding a key stales no other notebook; write keys out whole (a key built at run time is not followed by the dependency scan). The Hugging Face repositories above are unchanged.
+
 Cross-chapter artifacts:
 
 | Key | Producer | Consumers | Content |
@@ -155,3 +158,55 @@ Each chapter blueprint was patched to conform to sections 1–4 above. The owner
 - 8.5 adds `reward_fn`, `canonical_answer` and the two GRPO checkpoints.
 
 The consumers' changes are listed in the "Consumer change" column of section 2 and implied by the signatures in section 1.
+
+## 6. Chapter 1 stage-2 record (book chapter 18, 2026-11-12)
+
+The stage-2 specification of book chapter 18 settles the following. Signatures of §1 stay fixed; everything here is
+additive or a correction.
+
+**Corrections.**
+- There is no `d2l.GQAAttention`. The book's grouped-query attention class is `d2l.CausalAttention` (fused `W_qkv`);
+  `d2l.Qwen3Attention(d2l.CausalAttention)` has separate `W_q, W_k, W_v`. All blueprints now say `CausalAttention`.
+- No `d2l.generate_ids` rename and no `#@save` on `sec_kv-cache`'s `generate_cached`: the old `sec_decoding` loop
+  is not in the library, and `Qwen3GPT` owns its cached loop (§5's "defines `generate_cached` on `Qwen3GPT`" stands).
+- `d2l.HF_REVISIONS` is a literal `#@save` dict in 1.1 (eleven models); 1.6 adds the Qwen-Scope SAE repository in a
+  `#@save` registry cell of its own. There is no `data/lm_revisions.json`.
+- `lm-api-judge-v1` is removed (the judge is local, 1.5).
+- All saved code of the part is tagged `%%tab pytorch`, imports third-party modules inside functions, and uses
+  `collections.namedtuple` records; a registry block fills one container (`DATA_HUB` or `HF_REVISIONS`).
+
+**New exports** (owner in parentheses):
+- 1.1: `d2l.safetensors_header(model_id, revision=None)`; `config_params` gains the groups `per_layer_embed` and
+  `per_layer_proj` (Gemma 4) and MoE detection by truthiness and `enable_moe_block`; `config_memory` gains the
+  keyword-only `conv_bytes`, `conv_taps`, `window_cached`, `logits_to_keep`. Kernels (2026-11-13):
+  `d2l.bind_hf_kernels()` (routes Transformers' Gated DeltaNet functions: fused `fla` kernels for CUDA tensors,
+  the PyTorch reference otherwise; registers the `flex_sdpa` attention), `d2l.hf_attention(config, device)`,
+  `d2l.hf_kernels(model) -> dict`, `d2l.reference_kernels(model)` (context manager: SDPA and the reference
+  Gated DeltaNet inside the block); `load_hf` gains keyword-only `attn_implementation`.
+- 1.2: `d2l.qwen3_rope_tables`, `qwen3_gpt_kwargs`, `qwen3_rope_permutation`, `map_qwen3_state_dict`,
+  `collect_hiddens`, `layer_errors`, `first_divergence`, `Generation`, `truncated_probs`, `sample_logits`;
+  `d2l.generate` takes a per-row seed (`seed: int | Sequence[int]`, keyword).
+- 1.3: `d2l.fewshot_prompt(demos, query, template='plain', *, fmt=None, label_map=None, system=None)`,
+  `d2l.label_logprobs`, `d2l.calibrate_labels`.
+- 1.4: `ScoreComponents`, `pass_at_k_variance`, `run_python_tests` (beside `format_mc`, `score_choices`,
+  `extract_answer`, `pass_at_k`, `bits_per_byte`).
+- 1.5: `min_detectable_effect`, `subset_ids` (prefix-stable `default_rng(seed).permutation(n_total)[:n]`),
+  `item_seed`, `JUDGE_PAD_V1`, `EVAL_SUITES` (lib-only); `judge_pairwise` gains keyword-only `max_batch_tokens` and
+  `return_mass`; `EvalSuite.run` gains `sandbox=`.
+- 1.6: `intervene`, `logit_lens`, `TunedLens`, `TopKSAE`, `train_sae`, `load_qwen_scope_sae`, `sae_metrics`.
+- 1.7: `request_hash`, `PricePoint`, `api_cost`, `backoff_delay`, `ChatAPI.achat` (`async def`, saved by
+  `tools/build_lib.py`), `chat_batch`, `closed_loop_stats`; lib-only `ChatResult`, `ReplayMiss`,
+  `CostCapExceeded`, the `ChatAPI` body, `price_from_listing(..., when=None)`, `openrouter_api`,
+  `LocalChatServer`, `FakeChatServer`.
+- Book side: `d2l.plot_intervals(x, series, xlabel, ylabel, *, kind='errorbar', reference=None, xscale='linear',
+  axes=None)` in `sec_utils` (`series` maps a label to `(mean, lo, hi)`).
+
+**Contracts for Chapters 12 and 13** (R1 = `d2l.load_qwen3`):
+- Inside each head, R1's query and key coordinates (and the `q_norm`/`k_norm` gains) are in the book's interleaved
+  RoPE order, permuted from Transformers' at load time.
+- R1's angles come from `d2l.qwen3_rope_tables` (Transformers' frequency formula). A re-implementation of the cached
+  path (12.1's `rope_tables`/`apply_rope`, 13.2's paged path) must use it.
+- `Qwen3Attention.forward_step(X, cache, tables=None)` accepts chunks of any length through
+  `d2l.causal_mask(T, t+T)`, as the book's `forward_cached` does.
+- `Qwen3GPT.forward_cached` calls `blk.norm1`, `blk.norm2` and `blk.ffn`, and `forward_step` calls `self.W_o`, as
+  modules, so hooks (1.6's `d2l.intervene`) fire on the cached path.

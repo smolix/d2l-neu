@@ -422,6 +422,7 @@ the right edge of the source cloud determine it. The points near the origin,
 which is to say most of the sample, have almost no say.
 
 ## Label Shift Correction
+:label:`subsec_label-shift-correction`
 
 Under label shift it is $p(\mathbf{x} \mid y)$ that the two domains share.
 The argument that gave :eqref:`eq_covariate-shift-identity`, with the weight

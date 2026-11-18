@@ -34,6 +34,15 @@ happens to share a symbol's name is not a reference).
 Every notebook also depends on the framework's `_preamble` shard: the
 hand-written header of `d2l/<fw>.py` plus the import-only #@save blocks,
 which run on `import d2l` whatever the notebook calls.
+
+`DATA_HUB` entries have one shard per key (`DATA_HUB.<key>.py`, see
+build_lib.KEYED_REGISTRIES). A string literal equal to a registered key, in
+the notebook's code or in a library shard it reaches, is a reference to that
+key's shard: `d2l.download('airfoil')`, `d2l.download_extract('ptb')` and
+`d2l.TokenEmbedding('glove.6b.100d')` (whose shard calls `download_extract`
+with a variable) all name the key literally somewhere on the path. A key
+computed at run time (`f'glove.6b.{d}d'`) is not followed; registered keys
+must appear whole as a literal.
 """
 import argparse
 import ast
@@ -45,7 +54,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from scan_notebook_manifests import FRAMEWORKS, file_frameworks
-from build_lib import LIB_ONLY_FILES
+from build_lib import LIB_ONLY_FILES, KEYED_REGISTRIES, registry_shard_name
 
 
 # Match `d2l.<identifier>`. The identifier rule is greedy enough for the
@@ -55,6 +64,9 @@ D2L_REF_RE = re.compile(r'\bd2l\.([A-Za-z_][A-Za-z_0-9]*)')
 # Match tab headers so we can scope d2l refs to the framework that produces
 # the relevant notebook. `all` and unqualified blocks attribute to every fw.
 TAB_RE = re.compile(r'^(?:%%tab|#@tab)\s+([^\n]+)$', re.MULTILINE)
+
+# A one-line string literal: candidate registry key (`'airfoil'`, "ptb").
+STRING_LITERAL_RE = re.compile(r"""(['"])([^'"\\\n]+)\1""")
 
 # Match fenced code blocks `\`\`\`{.python ...}` ... `\`\`\``.
 CODE_BLOCK_RE = re.compile(
@@ -82,8 +94,18 @@ def _block_tabs(block):
     return fws
 
 
+def registry_key_refs(code):
+    """Shard names of the registry entries *code* may read: one candidate
+    `DATA_HUB.<key>` per one-line string literal. Callers intersect the result
+    with the shards that exist, so a literal that is no key adds nothing."""
+    return {registry_shard_name(c, m.group(2))
+            for m in STRING_LITERAL_RE.finditer(code)
+            for c in KEYED_REGISTRIES}
+
+
 def d2l_refs_per_framework(md_path):
-    """Return {framework: set(symbol)} of `d2l.X` references in md_path."""
+    """Return {framework: set(symbol)} of `d2l.X` references in md_path,
+    plus the registry-key shard names its string literals could name."""
     try:
         text = md_path.read_text(encoding='utf-8')
     except Exception:
@@ -93,10 +115,10 @@ def d2l_refs_per_framework(md_path):
     for cm in CODE_BLOCK_RE.finditer(text):
         block = cm.group(1)
         block_fws = _block_tabs(block)
-        for rm in D2L_REF_RE.finditer(block):
-            sym = rm.group(1)
-            for fw in block_fws:
-                refs[fw].add(sym)
+        syms = {rm.group(1) for rm in D2L_REF_RE.finditer(block)}
+        syms |= registry_key_refs(block)
+        for fw in block_fws:
+            refs[fw] |= syms
     return refs
 
 
@@ -144,7 +166,8 @@ def shard_graph(shard_dir):
             code = p.read_text(encoding='utf-8')
         except OSError:
             code = ''
-        graph[name] = (shard_references(code, str(p)) & names) - {name}
+        refs = shard_references(code, str(p)) | registry_key_refs(code)
+        graph[name] = (refs & names) - {name}
     # Every notebook depends on the preamble shard (see main); its own
     # imports and module-level names are not calls into the library, so it
     # gets no outgoing edges (otherwise every notebook would inherit them).

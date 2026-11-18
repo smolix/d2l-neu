@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:34f11d62ddf6aaba5472b3eac44d176f9a927529405a34577c66fdcfe4535f19",
+    "d2l_lib_fingerprint": "sha256:106bc26ce599cc1d263b4d5453f76089da52e92aaecd59e6b0775a0b45b81a07",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,13 +31,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 23613,
-          "sha256": "sha256:10c577d520823981275dc270bf9c6f5f942c272ddf067c589e6122877bce770a"
+          "bytes": 23612,
+          "sha256": "sha256:22b5169dcd460b8f5d33db9b806501a0cac24775d50747010f399542dbaf8eca"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 58.6\n"
+          "text": "validation perplexity 60.3\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller, and I was nothing. I was nothing. I was nothing. I was\n    nothing. I was nothing. I was nothing. I was nothing. I was nothing. I\n    was nothing. I was not'\n'It seemed to me that the big\\nside. I was nothing. I was nothing. I was\n    nothing. I was nothing. I was nothing. I was nothing. I was nothing. I\n    was nothing. I was not'\n"
+          "text": "\"The Time Traveller, I saw the\\nfoint.\\n\\n'I had\\ndisappeared to\n    the\\nfoys,\\nand the\\nfoint.\\n\\n'I had\\ndisappeared to the\\n\"\n\"It seemed to me that the\\nfirst.\\n\\n'I had\\ndisappeared to the\\nfoys,\\nand\n    the\\nfoint.\\n\\n'I had\\ndisappeared to the\\nfoys\"\n"
         }
       ]
     },
@@ -69,22 +69,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=1, score -4.90: 'The Time Traveller, and I was nothing. I was nothing. I\n    was nothing. I was nothing. I was nothing. I was not'\n"
+          "text": "w=1, score -4.26: \"The Time Traveller, I saw the\\nfoint.\\n\\n'I\n    had\\ndisappeared to the\\nfoys,\\nand\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.03: \"The Time Traveller.\\n\\n'Andeed, I saw a breath, and I was\n    nothing.\\n\\n'Andeed, and I\"\n"
+          "text": "w=4, score -3.21: \"The Time Traveller.\\n\\n'And the Time Traveller.\\n\\n'And\n    the Time Traveller.\\n\\n'And the Time Traveller.\\n\\n\""
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=1, score -5.13: 'It seemed to me that the big\\nside. I was nothing. I was\n    nothing. I was nothing. I was nothing. I was not'\n"
+          "text": "\nw=1, score -4.41: \"It seemed to me that the\\nfirst.\\n\\n'I had\\ndisappeared\n    to the\\nfoys,\\nand the\\nfo\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.00: \"It seemed to me that it was in my mind.\\n\\n'Andeed, I saw\n    a breath, and I was nothing.\\n\\n'I\"\n"
+          "text": "w=4, score -3.18: \"It seemed to me that the Time Traveller.\\n\\n'And the Time\n    Traveller.\\n\\n'And the Time Traveller.\\n\\n'And the Time Traveller\"\n"
         }
       ]
     },
@@ -127,8 +127,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 51300,
-          "sha256": "sha256:3b745c8bf0e15d70daada4ee13f252ddab2dbab19b412598c1affc92c738e552"
+          "bytes": 51370,
+          "sha256": "sha256:12b5fbfe23454f920449c6e82ffb3b21f720c475e11f003c9bb5db19ab0d6fe8"
         }
       ]
     },
@@ -139,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller': top probability 0.17; kept: top-k 20, top-p 142, min-p 15\n'The Time': top probability 0.60; kept: top-k 20, top-p 12, min-p 4\n"
+          "text": "'The Time Traveller': top probability 0.13; kept: top-k 20, top-p 134, min-p 27\n'The Time': top probability 0.75; kept: top-k 20, top-p 5, min-p 2\n"
         }
       ]
     },
@@ -150,12 +150,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=0.5: \"The Time Traveller. And very voided. I felt as a judged, and that\n    I had been dinner, and in this evening, and, arged in the\n    rising.\\n\\n'Incelain a\"\ntau=1.0: 'The Time Traveller the solour with a stine and, and went there is\n    our opength; and always\\nminue passion. And then and lauger into a more;\n    near the stalling air was the'\n"
+          "text": "tau=0.5: \"The Time Traveller was\\nthe pretty little\\nbefore the\\nhumanity,\n    the\\nstones,\\nand the trick.\\n\\n'There I could see\\n\\n'Well, I did not\n    seem\\n\\n'\"\ntau=1.0: \"The Time Traveller in the turnked\\n\\n'I did not unificient hand I\n    could even Time\\nup the first the\\nitor beginary,' said the hillne was\n    too grey brahas!\\n\\n'W\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=2.0: \"The Time Traveller also.ri! I jace in which thing\n    fromatherwhivally, grra restach byary only imial to times more,'ace son\n    Travellern and last. Akn white saain bright lave that cver\"\n"
+          "text": "tau=2.0: \"The Time Traveller's like begnder>ff, but minute\\nistakpsivex des�\n    incain H It had followair angor them I went out. In ple�� light into M\n    grhan ref feeled upon haveared to have\"\n"
         }
       ]
     },
@@ -166,22 +166,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: 'The Time Traveller, and I was nothing. I was nothing. I was\n    nothing. I was nothing. I was nothing. I was nothing. I was nothing. I\n    was nothing. I was nothing. I was not'\n"
+          "text": "    greedy: \"The Time Traveller, I saw the\\nfoint.\\n\\n'I had\\ndisappeared to\n    the\\nfoys,\\nand the\\nfoint.\\n\\n'I had\\ndisappeared to the\\n\"\n     tau=1: \"The Time Traveller as soon the clam has in this\n    changue.\\n\\n''It\\n'I saw the\\nserpe of my late, I felt looksed my mind,\n    it in my refourse; and then rem\"\n  top-k=20: \"The Time Traveller, the thing.\\n\\n'I\\nwas no troublem\n    the\\nshavently a minute was\\nrestervement in the blocksical\n    civilization, I\\nwas morrow the\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: 'The Time Traveller my ran\\nthough--unable in continning for\n    which I could see some be challed degreat to me. I had not retz, a need\n    my hand my hands, then coms, and'\n  top-k=20: 'The Time Traveller did not being his feet in\\nthe sun, and I\n    could see what had been\\ndeliat and I was gone as I have made what we\n    think and\\ndisminable danced for a\\nm'\n"
+          "text": " top-p=0.9: \"The Time Traveller a foolister in the absolutely\n    devolets.\\n\\n'Now, almost find the decay was walking to\n    us.\\n\\n'Sefound\\nstitered my\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " top-p=0.9: 'The Time Traveller seemed least me there was facted on the vast\n    bal, and rather discome. All the room. That, as I knew, like a gone\n    deepably understand press'\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "min-p=0.05: 'The Time Traveller, and went downward\\nfrom. On. Then, I felt a\n    thick in a weap. Hundred of my course. All the intereston of use to\n    machinery, and my'\n"
+          "text": "min-p=0.05: \"The Time Traveller came upon the world, and I had fairly\n    fair\\nextree or, a little\\n\\n'But, in a little cheadmer of the world to\n    stirit, and I had\\nsaw the little\"\n"
         }
       ]
     },
@@ -192,32 +187,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: log-prob per token -2.10, distinct-3 0.11\n"
+          "text": "    greedy: log-prob per token -1.86, distinct-3 0.28\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " beam, w=4: log-prob per token -1.76, distinct-3 0.23\n"
+          "text": " beam, w=4: log-prob per token -1.40, distinct-3 0.16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: log-prob per token -3.92, distinct-3 1.00\n"
+          "text": "     tau=1: log-prob per token -3.93, distinct-3 0.99\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k=20: log-prob per token -2.91, distinct-3 0.99\n"
+          "text": "  top-k=20: log-prob per token -2.76, distinct-3 0.99\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " top-p=0.9: log-prob per token -3.56, distinct-3 1.00\n"
+          "text": " top-p=0.9: log-prob per token -3.42, distinct-3 0.99\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: log-prob per token -2.90, distinct-3 0.99\n"
+          "text": "min-p=0.05: log-prob per token -2.79, distinct-3 0.99\n"
         }
       ]
     }

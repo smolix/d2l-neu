@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:03babac347b288fbfa8e0d4f7ff05b9561b0625e5eafae26db1fddb0280f1f2f",
+    "d2l_lib_fingerprint": "sha256:aa5475be0e70f6ed292457887910d2c94ce1ab2370e5c4d08b619f736ec382f0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.79M parameters; initial std: W_qkv 0.0199, W_o 0.0058\n"
+          "text": "4.79M parameters; initial std: W_qkv 0.0200, W_o 0.0058\n"
         }
       ]
     },
@@ -46,12 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0646/0.1458/0.3192\n"
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0583/0.1435/0.3022\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0026/0.0030/0.0031\n"
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0026/0.0033/0.0033\n"
         }
       ]
     },
@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.37, validation 1.34 nats per byte\n"
+          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24614,
-          "sha256": "sha256:5002679492c71ffa1a0e49f6a1be6dbf6fe560672ba3086e1bf3757ce24a8c50"
+          "bytes": 24623,
+          "sha256": "sha256:864a2947577a0431c3d0133e1e9ffc27cb252ede75c7bbfd99dee7a0e0991a27"
         }
       ]
     },
@@ -112,17 +112,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.92/2.43/2.00/1.63\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.66/2.19/1.80/1.54\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.18/3.17/3.17/3.17\n"
+          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.18/3.17/3.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.35/2.52/1.90/1.54\n"
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.34/2.54/1.89/1.55\n"
         }
       ]
     },
@@ -138,17 +138,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the Simpson Star Killerey quadron , with\n    some semic hired as airframe . During the play Agnianines and Cup\n    submitted Allied '\n"
+          "text": "T=1.0, top_k=None: 'The history of the analysis to wound never the\n    transformation and withdrawing second gland steal confirmation of me who\n    resulted to that ad'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the same set times to seat the country , and\n    the building , including characters and the colonial class . \\n The song\n    is the '\n"
+          "text": "T=0.7, top_k=8: 'The history of the program was traded into the publication\n    of the period for an initial touchdown . The master for the city was the\n    plan an'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the bay�rezerplTBalmitte (\n    apherts\\x05�٣��Ғt�xo ����������֡�#.�wLuxivvegelq�pio9\n    hhow�˛�ư�`��Ilbjo�zlyɻndamo outh�m orwa'\n"
+          "text": "T=2.0, top_k=None: 'The history of the Ia�vrounLAIJYu cyrlh�ckyogu 56�\\x12\n    �ߧ��cu�݁X����Oļ敥q���\\x1bӭ\\x02��ke E.75091 Ť6st54 waW�swirj* o.\n    3��쬭llbocusujg adB V'\n"
         }
       ]
     },
@@ -203,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that its use takes time and\n    effort. This means it's usually taken for granted that a well-written\n    textbook is something you can learn over and over. But the problem with\n    many deep learning textbooks is\n"
+          "text": "The secret of a good deep learning textbook is that every single one of them\n    needs to be written. But that is not always the case. If you want to\n    write an excellent deep learning textbook, it's a good idea to start by\n    writing two\n"
         }
       ]
     }

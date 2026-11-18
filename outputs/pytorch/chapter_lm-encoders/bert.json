@@ -1,0 +1,322 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-encoders/bert.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:4f23adfcf4ba87578712e47fe677313046f0232c852210c4cc44a150b76a548d",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bert-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-extras": {
+      "code_fingerprint": "sha256:c2bb5415c5b27cf4d38065a35ec0ecfd37871fe6c6547e403983e942e471ea49",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-config": {
+      "code_fingerprint": "sha256:416e0ebaffc84b99351a134c24be3fa868c1477d6251032e0c7fea27a495dfbe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                               model      revision\nencoder  answerdotai/ModernBERT-base  8949b909ec90\ndecoder              Qwen/Qwen3-1.7B  70d244cc86cc\nGPU: True; regenerating: none\n"
+        }
+      ]
+    },
+    "bert-revisions": {
+      "code_fingerprint": "sha256:294737fc1581e3959e76d0d30967104f208cd0acd3217b8d26629cc17fbcddc1",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-data-hub": {
+      "code_fingerprint": "sha256:e447fed7ffff06dd6b70a87f3ef57717fb13ccbec550d95f769e03a9df3873cf",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-load-encoder": {
+      "code_fingerprint": "sha256:05fc3080428edf736888c11a6000e4e78d6d5dee44aa0397118d8ac046e54525",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-opening": {
+      "code_fingerprint": "sha256:8bde4d9373bf360d5cbb8609e29b399f4383fe328248190738880563b27d9fb3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                       labelled examples  accuracy  ms per 1,000 examples\nModernBERT-base, fine-tuned (3 seeds)              16000     0.839                  446.0\nQwen3-1.7B, 8 shots (3 draws)                          8     0.631                48037.0\n"
+        }
+      ]
+    },
+    "bert-raw": {
+      "code_fingerprint": "sha256:18824bc3687d3497b43df78f733c3c9087014aabec06948279dd84181bee93e2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertModel\n    torch.float32, cuda, attention sdpa\n    not used: decoder.bias, head.dense.weight, head.norm.weight\n['[CLS]', 'A', 'Ġman', 'Ġplays', 'Ġa', 'Ġguitar', 'Ġon', 'Ġstage', '.', '[SEP]', 'Someone',\n    'Ġis', 'Ġmaking', 'Ġmusic', '.', '[SEP]']\nfields: ['input_ids', 'attention_mask']\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "hidden states: (1, 16, 768)\nembedding modules: ['tok_embeddings', 'norm', 'drop']\nlayers                                         22\nwidth                                         768\nheads                                          12\nGeGLU width                                  1152\npositions                                    8192\nglobal attention every                          3\nlocal window                                  128\nRoPE theta (global, local)    (160000.0, 10000.0)\nvocabulary                                  50368\nclassifier pooling                           mean\nparameters                            149,014,272\ncos(bank, river / check): embedding layer 1.00, last layer 0.68\ncos(bank, river / rate): embedding layer 1.00, last layer 0.65\ncos(bank, check / rate): embedding layer 1.00, last layer 0.85\n"
+        }
+      ]
+    },
+    "bert-mlm-fill": {
+      "code_fingerprint": "sha256:067d780b19035f81963cb0217d8a60f5df4dc4cf70c96d0f9d00b26e7b97ce68",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertForMaskedLM\n    torch.float32, cuda, attention sdpa\nThe capital of France is [MASK].\n    Paris 0.92, Lyon 0.04, Nancy 0.02, Nice 0.01, Orleans 0.00\nHe drank a cup of [MASK] before work.\n    coffee 0.61, tea 0.21, water 0.08, milk 0.04, wine 0.01\nThe encoder reads the words on [MASK] sides of the gap.\n    both 0.94, the 0.03, opposite 0.01, two 0.01, all 0.01\n"
+        }
+      ]
+    },
+    "bert-mlm-corrupt": {
+      "code_fingerprint": "sha256:9cb1f8ed91bcde75dcf07803b3196c81ab37b858ae70d6df7f5f607e9ed094b5",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-mlm-stats": {
+      "code_fingerprint": "sha256:eabe6fb083fa6caad2890f9cccbb4a072b54059f9fa6da024256875e5df3639f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "selected, of ordinary tokens    0.1506\n[MASK], of selected             0.7982\nrandom, of selected             0.1008\nkept, of selected               0.1011\nspecial tokens selected: 0\n"
+        }
+      ]
+    },
+    "bert-attention-cost": {
+      "code_fingerprint": "sha256:e4b416d265ef65e104f0385e08bbf055f87644c9122d2dff59dbc4ec492a1566",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "global layers: [0, 3, 6, 9, 12, 15, 18, 21]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      pairs, global layer  pairs, local layer  share of full, counted  share, formula\n512                262144               61888                   0.514           0.523\n8192             67108864             1052608                   0.374           0.374\n"
+        }
+      ]
+    },
+    "bert-pooled-classifier": {
+      "code_fingerprint": "sha256:2e16a5dc6537e25e69d1b63159d0da607a3519cfd95fc22039f8db5ce9a1f787",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-head-check": {
+      "code_fingerprint": "sha256:6d2eb185fe8820a7e723ad62b3bf845f8f1308e8260929a463d8963ad00b01e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertForSequenceClassification\n    torch.float32, cuda, attention sdpa\n    not used: decoder.bias\n    new, at random: classifier.bias, classifier.weight\ndense and norm as in the masked-token head: True\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |logit difference|: {'torch.float32': 0.0, 'torch.bfloat16': 0.0}\n"
+        }
+      ]
+    },
+    "bert-finetune": {
+      "code_fingerprint": "sha256:bc897456a59a0b9cb1b9fee216fcfa02f20d5a4c23198ad21cbbee25135ffe29",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-cost": {
+      "code_fingerprint": "sha256:9b6d300d5b4f500a003626d135162e21684384865115821243807cfe2873d331",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-data": {
+      "code_fingerprint": "sha256:56115662c94f25d4cc03ef784a9b3855804c38a9b8bf6f2620091ab727c5cd0a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                             mnli   sst2\nlargest subset              16000   8000\ncarved (learning rate)       2000   2000\nvalidation items             2000    872\ncut at MAXLEN                  51      0\nmajority rate (validation)  0.363  0.509\npremises (validation)        1635    n/a\n"
+        }
+      ]
+    },
+    "bert-run-defs": {
+      "code_fingerprint": "sha256:4e5845563fab693d06444070d468ad9064d52b52df9e6b09b62478f3d6fa8214",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-sweep": {
+      "code_fingerprint": "sha256:68b839944373853c255725be0a610ebebfb4de6902dd7a53567fab263fa6a6db",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learning rates: {'mnli': 8e-05, 'sst2': 8e-05}\n            steps  mean  range  2 epochs: steps  mean   range \ntask n                                                        \nmnli 250      304 0.436  0.024               16  0.376   0.046\n     1000     320 0.632  0.022               64  0.474   0.158\n     4000     375 0.761  0.031              250  0.752   0.102\n     16000   1000 0.839  0.003             1000  0.839   0.003\nsst2 100      300 0.665  0.101                8  0.583   0.142\n     500      304 0.849  0.025               32  0.782   0.065\n     2000     315 0.905  0.017              126  0.895   0.030\n     8000     500 0.932  0.010              500  0.932   0.010\nmnli: seed range at n = 250: 0.024; median gain per size step: 0.129\nsst2: seed range at n = 100: 0.101; median gain per size step: 0.055\n"
+        }
+      ]
+    },
+    "bert-sweep-live": {
+      "code_fingerprint": "sha256:4171a043dd110ec9d49cfc65d24fb62b66f6b28a7acc69dcac8e742151cf3d72",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 1000, seed 0, 2000 items: accuracy 0.645 live, 0.645 registered\n  (bound on the difference 0.022); same prediction on 1.000; 28 s\n"
+        }
+      ]
+    },
+    "bert-ckpt-live": {
+      "code_fingerprint": "sha256:dd1e5e55c52b090e1d4f3597ed81d489ec78588b4820d7682717080fddf6a44b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "registered checkpoint, 2000 items: accuracy 0.838; same prediction\n  as when it was saved on 1.000, as its fp32 training run on 0.996\n  peak 4.8 GiB (5.0 GiB reserved)\n"
+        }
+      ]
+    },
+    "bert-hypothesis-only": {
+      "code_fingerprint": "sha256:9d58f87fa1c0c5da2489a92e6adab0ed4dc729b519f7b8db455ad749fbfa2c95",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "majority-class rate: 0.363\n        accuracy  CI low  CI high\nseed 0     0.523   0.502    0.544\nseed 1     0.528   0.507    0.550\nseed 2     0.542   0.520    0.564\n"
+        }
+      ]
+    },
+    "bert-align": {
+      "code_fingerprint": "sha256:e477351b4ea6e1d6132f7d312831b6704f218eb1c8ffef05c7d9daa81d9947ab",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-span-f1": {
+      "code_fingerprint": "sha256:3a831f2ef75a81315da203879f8d7773c976691561b6daf8ba0cec63b93e4413",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-conll-data": {
+      "code_fingerprint": "sha256:f5c6514659a273441699dbd0eaf7d78bebd625ca6966d068c1e51f64e9819237",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'train': 14041, 'valid': 3250} sentences\ntoken  [CLS]  Peter  ĠBlack  burn  [SEP]\nword       -      0       1     1      -\nlabel      -  B-PER   I-PER     -      -\n"
+        }
+      ]
+    },
+    "bert-tagging": {
+      "code_fingerprint": "sha256:81fd7f9d8eff5bea0e88ca78b74b0dd48c41485dc8a4e430d3c26e24087f4e57",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertForTokenClassification\n    torch.float32, cuda, attention sdpa\n    not used: decoder.bias\n    new, at random: classifier.bias, classifier.weight\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live, seed 0, 3250 sentences: precision 0.939, recall 0.951, F1 0.9450; seqeval F1 0.9450\n             LOC   MISC    ORG    PER\nprecision  0.974  0.852  0.912  0.969\nrecall     0.973  0.898  0.925  0.975\nf1         0.973  0.874  0.919  0.972\nregistered, 3 seeds: F1 0.945 to 0.951, seed 0 0.9450 (bound on the live difference 0.010)\n  peak 5.7 GiB (5.8 GiB reserved)\n"
+        }
+      ]
+    },
+    "bert-decoder": {
+      "code_fingerprint": "sha256:aa10b748f833da9911c2c844bacc589b211816b0bd6e8a61f3b31685fee6ff5f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-1.7B@70d244cc86cc: Qwen3ForCausalLM, stop tokens [151645, 151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                 accuracy  CI low  CI high\ntask shots draw                           \nmnli 0     0        0.398   0.378    0.419\n     4     0        0.650   0.629    0.671\n     8     0        0.628   0.606    0.648\n           1        0.619   0.599    0.639\n           2        0.647   0.626    0.668\nsst2 0     0        0.712   0.682    0.742\n     4     0        0.935   0.917    0.951\n     8     0        0.935   0.917    0.951\n           1        0.943   0.927    0.958\n           2        0.946   0.931    0.961\nMNLI, 8 shots, the three draws together: gold (rows) and predicted\n               entailment  neutral  contradiction\nentailment           1181      848            149\nneutral               308     1166            413\ncontradiction          39      456           1440\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live, 8 shots, 2000 MNLI items: largest score change 0.0001 nats per token\n  124 near ties (margin <= 0.5); same prediction on 1.000 of the others\n  peak 5.8 GiB (5.9 GiB reserved)\n"
+        }
+      ]
+    },
+    "bert-naive-bayes": {
+      "code_fingerprint": "sha256:f0fc0e8cbf6a472413ed2d6235c044581f0f0f937a3af14b05f42ff8b6956ffe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        mnli   sst2\n100      NaN  0.533\n250    0.382    NaN\n500      NaN  0.634\n1000   0.387    NaN\n2000     NaN  0.719\n4000   0.398    NaN\n8000     NaN  0.781\n16000  0.423    NaN\n"
+        }
+      ]
+    },
+    "bert-timing": {
+      "code_fingerprint": "sha256:0af1c500de96f9973130a62d561c5b3e503eeb3cc7577159fb13aa5b768a255e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, registered\nencoder                40.3                 8.9               432.3                     445.9\ndecoder              1543.1              4349.8             46555.0                   48036.6\ndecoder / encoder: measured 108x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\n"
+        }
+      ]
+    },
+    "bert-curve": {
+      "code_fingerprint": "sha256:ccdeb17f093a86ba81c9784e48b641c60fffd21080ffad1dc969f8c78217bb05",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "bert/bert-curve-1.png",
+          "bytes": 77209,
+          "sha256": "sha256:8f6a00a608a9a44e8d004f9377e78a5ac202e0683a7d5b30ba7c91d3b903a8a0"
+        }
+      ]
+    },
+    "bert-crossing": {
+      "code_fingerprint": "sha256:706b95c0a4b6cbccb43a8c47b399c579e061e235cf5545fede1ed1878c624868",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mnli: the encoder passes 8 shots from n = 4000 on\n  range over the 3 demonstration sets 0.028\n       seeds  encoder  seed range  gap to 8 shots  CIs from  CIs to        verdict\n250        3    0.436       0.024          -0.195    -0.249  -0.139  decoder ahead\n1000       3    0.632       0.022           0.001    -0.053   0.053   within noise\n4000       3    0.761       0.031           0.130     0.072   0.182  encoder ahead\n16000      3    0.839       0.003           0.208     0.166   0.246  encoder ahead\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sst2: the encoder passes 8 shots from n = none measured on\n  range over the 3 demonstration sets 0.011\n      seeds  encoder  seed range  gap to 8 shots  CIs from  CIs to        verdict\n100       3    0.665       0.101          -0.276    -0.367  -0.187  decoder ahead\n500       3    0.849       0.025          -0.092    -0.138  -0.050  decoder ahead\n2000      3    0.905       0.017          -0.036    -0.071  -0.001  decoder ahead\n8000      3    0.932       0.010          -0.009    -0.037   0.022   within noise\n"
+        }
+      ]
+    }
+  }
+}

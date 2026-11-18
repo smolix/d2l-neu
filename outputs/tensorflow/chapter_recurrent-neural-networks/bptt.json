@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:0aa960829c46232fe0524ab58ad59b0a748bcb858d5b1f4fa2ddc30cb298025d",
+    "d2l_lib_fingerprint": "sha256:2a895af0cd7b80fc1c340cc6e25f4dae441f67c1edf61eacfec4d558b2b54ff2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-3-1.svg",
-          "bytes": 23607,
-          "sha256": "sha256:2641e16d872d15d73b39c63ab7b71bf65a47b3f7969732ac7b319087ddd4d986"
+          "bytes": 23609,
+          "sha256": "sha256:bd6cb5004750bc2bb3f0a010269ef021a00f506bfcbbcd8ddc939dd36adb9d5e"
         }
       ]
     },
@@ -53,14 +53,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "spectral radius of W_hh: 1.85; mean tanh derivative: 0.27\nrelative gradient norm at lags 1, 2, 4, 8, 16, 32: [0.68, 0.37, 0.1, 0.0082, 5.3e-05, 2.4e-09]\n"
+          "text": "spectral radius of W_hh: 1.85; mean tanh derivative: 0.27\nrelative gradient norm at lags 1, 2, 4, 8, 16, 32: [0.69, 0.37, 0.1, 0.008, 5.8e-05, 3.1e-09]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-6-1.svg",
-          "bytes": 25812,
-          "sha256": "sha256:b9afc3268dcd63fa33f275fa8abae46b1754e4e62948534cf465d7ae2eff9680"
+          "bytes": 25817,
+          "sha256": "sha256:d032db78dc3d237c92f1b5876b7225a20aa02867024c368ae1a3c0bf7c890552"
         }
       ]
     }

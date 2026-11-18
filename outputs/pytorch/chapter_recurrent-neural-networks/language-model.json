@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:804b61f966ac0e33ebf3a3d232fa58b1e039633cfdb5f1a15c0a529124d02536",
+    "d2l_lib_fingerprint": "sha256:6a3657fe68ec213b9d08504096d3e7a4014559c091ff618bc5d28746d0a5fe1b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 3 words): the time a and and more to bar\n    buildings seen that refrained decay fire inhuman a the my there\n    curiously me at the thrust have air me\n2-gram (longest copied run: 5 words): the time and the palace proved on the\n    tenderness for the little people soon stop examining me and one very\n    high yesterday night by the silent man\n3-gram (longest copied run: 8 words): the time traveller s words we should\n    call the three new guests but the day came on and explore but the\n    twisted crystalline bars lay unfinished upon\n"
+          "text": "1-gram (longest copied run: 2 words): the time me and a had i laboratory\n    apologize i all seemed potentialities so reached such i assured reached\n    little is following of head one however the\n2-gram (longest copied run: 3 words): the time and when we began to trouble\n    myself but the under world of our friend of flowers brilliant arch of\n    the sun belt sandals or other\n3-gram (longest copied run: 13 words): the time traveller not a mere block\n    but highly decorated with deep framed panels on either hand to pick\n    flowers to stick a fork into meat again\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:e50208c437ccff083aa245f8dc4c55914cc325d8eb3b24aa1762c5dd2fc8abcb"
+          "sha256": "sha256:952d75373152d5e393e4a7cc7efd8ad4dfce40792680179f282949eebc8a1e44"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:2f636347ea66ceac9e07f2f136d562322081723b0c9d62357f53f57456ae7289"
+          "sha256": "sha256:33ef93f7b4fd7d4c41b024fed6f849ec2454af086d84f751120890f5722dd694"
         }
       ]
     },
@@ -150,12 +150,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trigram discount D = 0.93\nP(traveller | the time): Kneser-Ney 0.53, Laplace 0.36\nP(was | the time): Kneser-Ney 0.00037, Laplace 7.7e-05\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "P(filby | the time): Kneser-Ney 2.3e-05, Laplace 7.7e-05\n"
+          "text": "trigram discount D = 0.93\nP(traveller | the time): Kneser-Ney 0.53, Laplace 0.36\nP(was | the time): Kneser-Ney 0.00037, Laplace 7.7e-05\nP(filby | the time): Kneser-Ney 2.3e-05, Laplace 7.7e-05\n"
         }
       ]
     },
@@ -208,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[ 10, 103, 262, 119, 307, 259, 824,  44, 269, 486],\n        [572, 817, 317, 562, 277, 260, 890, 688, 669, 585]]) \nY: tensor([[103, 262, 119, 307, 259, 824,  44, 269, 486, 260],\n        [817, 317, 562, 277, 260, 890, 688, 669, 585, 256]])\nX[0]: '\\ngrew thinner, I saw'\nY[0]: 'grew thinner, I saw the'\n"
+          "text": "X: tensor([[ 302,  115,  280,  408,  277,  272,  360,  270,  432,  260],\n        [ 353,  258, 1012,  480,  342,   46,  533,  260,   10,   84]]) \nY: tensor([[ 115,  280,  408,  277,  272,  360,  270,  432,  260,  335],\n        [ 258, 1012,  480,  342,   46,  533,  260,   10,   84,  355]])\nX[0]: 'sts cast and filed into the'\nY[0]: 's cast and filed into the re'\n"
         }
       ]
     }

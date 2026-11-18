@@ -61,7 +61,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from runtime_env import PINNED_GPU_NOTEBOOKS, notebook_resource, file_uses_gpu
+from runtime_env import (PINNED_GPU_NOTEBOOKS, notebook_resource, file_uses_gpu,
+                         notebook_venv)
 import locks
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -343,8 +344,11 @@ class Scheduler:
         elif spg == "all":
             # n whole cards: each chosen GPU entirely free, at its own full
             # capacity (so the request means the same on 16 GB and 24 GB cards).
+            # A card given 0 slots (D2L_GPU_SLOTS_PER on a shared host) is
+            # excluded, not "entirely free".
             cand = [g for g in self._gpu_pool(it, ngpu)
-                    if self.gpu_free[g] == self.gpu_cap[g]
+                    if self.gpu_cap[g] > 0
+                    and self.gpu_free[g] == self.gpu_cap[g]
                     and self._live_ok(g, self.gpu_cap[g])]
             if len(cand) < ngpu:
                 return None
@@ -458,7 +462,11 @@ class Scheduler:
             done = len(self.results)
             self.lock.notify_all()
         tag = ("GPU " + asg["cuda"]) if asg["cuda"] else "CPU"
-        print(f"{it.label}: {'OK' if rc == 0 else 'FAIL'} ({el:.0f}s) [{tag}] "
+        # A notebook served by a separate venv (chapter_lm-* → .venv-lm)
+        # names it; every other line keeps its usual form.
+        venv = notebook_venv(it.fw, it.rel)
+        via = f" [.venv-{venv}]" if venv != it.fw else ""
+        print(f"{it.label}: {'OK' if rc == 0 else 'FAIL'} ({el:.0f}s) [{tag}]{via} "
               f"({done}/{self.total} done)", flush=True)
 
     def run(self, items):
@@ -469,7 +477,8 @@ class Scheduler:
               f"{n_cpu} cpu) | GPUs per-slot {self.gpu_cap}, CPU {self.cpu_slots} ===",
               flush=True)
         if not self.args.dry_run:
-            self._warm_pyc({it.fw for it in items})
+            self._warm_pyc({notebook_venv(it.fw, it.rel) for it in items}
+                           | {it.fw for it in items})
         with self.lock:
             while pending or self.inflight:
                 progressed = False
@@ -512,9 +521,9 @@ class Scheduler:
                   f"INVARIANTS {'OK' if ok else 'VIOLATED'}", flush=True)
         return 1 if failed or self.locked_failed else 0
 
-    def _warm_pyc(self, frameworks):
-        py = next((ROOT / f".venv-{fw}/bin/python" for fw in frameworks
-                   if (ROOT / f".venv-{fw}/bin/python").exists()), None)
+    def _warm_pyc(self, venvs):
+        py = next((ROOT / f".venv-{v}/bin/python" for v in sorted(venvs)
+                   if (ROOT / f".venv-{v}/bin/python").exists()), None)
         if py is None:
             return
         try:

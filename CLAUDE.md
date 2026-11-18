@@ -34,9 +34,13 @@ python3 -m http.server 8000 -d _book    # preview at http://localhost:8000/
 | Resource plan | `make detect` | any host | — |
 
 Venvs: one per framework (`.venv-pytorch`, `-tensorflow`, `-jax`, `-mxnet`,
-via `make venv-<fw>`) plus `.venv-build`. **torch is pinned to 2.11.0 /
-torchvision 0.26.0**, the version the store was captured under; moving to 2.12
-means bumping `pyproject.toml` **and** re-capturing the store. VS Code:
+via `make venv-<fw>`) plus `.venv-build`, and `.venv-lm` (`make venv-lm`) for
+the Language Models part: `chapter_lm-*` notebooks execute there (PyTorch +
+Transformers 5.22.2, OpenAI, accelerate; no other venv carries these) but stay
+`pytorch` for stamps, `outputs/` and freshness (build-system §6.4.2). **torch
+is pinned to 2.11.0 / torchvision 0.26.0** in both the `pytorch` and `lm`
+extras, the version the store was captured under; moving to 2.12 means
+bumping both in `pyproject.toml` **and** re-capturing the store. VS Code:
 `make kernels` once, then the `.vscode-extension/` "Edit Framework View"
 command (see `.vscode-extension/README.md`).
 
@@ -272,7 +276,7 @@ when that directory is missing.
   libopencv-imgcodecs406t64`; `tools/check_runtime_deps.py mxnet` verifies
   these before MXNet notebooks execute.
 - UV venvs per framework: `.venv-pytorch`, `.venv-jax`, etc., plus
-  `.venv-build` for Quarto.
+  `.venv-lm` (the `lm` extra, for `chapter_lm-*`) and `.venv-build` for Quarto.
 - PyTorch and JAX extras are mutually exclusive (conflicting CUDA packages)
 - Per-framework GPU support (driver 590 / CUDA 13.1 floor):
   - **pytorch**: native via the `pytorch-cu128` index (torch 2.7+);

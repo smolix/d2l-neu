@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3b4749e5e92eb832362855a4efc1db455e94691ca57bb9c0eb56875c9c867cdd",
+    "d2l_lib_fingerprint": "sha256:626886020becf82396ba73a0c5eab61e00dc23f24d377d79a6a20a965dbfb8aa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -84,7 +84,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 85901,
-          "sha256": "sha256:57a8a59fcced59c076833227d67af656a788b99893cdf5580f4ffcee79a7203e"
+          "sha256": "sha256:9c3c3db014985d4d3be041b3ddff73a5575cbc01b7788d50f62b81e4fd3be2f8"
         }
       ]
     },
@@ -116,27 +116,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.614, pixel acc 0.708, val loss 1.202, val pixel acc 0.732\n"
+          "text": "epoch 1, loss 1.631, pixel acc 0.707, val loss 1.200, val pixel acc 0.732\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 1.123, pixel acc 0.740, val loss 1.049, val pixel acc 0.748\n"
+          "text": "epoch 2, loss 1.119, pixel acc 0.740, val loss 1.044, val pixel acc 0.751\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.997, pixel acc 0.760, val loss 0.954, val pixel acc 0.766\n"
+          "text": "epoch 3, loss 0.997, pixel acc 0.762, val loss 0.953, val pixel acc 0.768\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.911, pixel acc 0.777, val loss 0.887, val pixel acc 0.781\n"
+          "text": "epoch 4, loss 0.909, pixel acc 0.778, val loss 0.879, val pixel acc 0.778\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.841, pixel acc 0.791, val loss 0.822, val pixel acc 0.792\n"
+          "text": "epoch 5, loss 0.845, pixel acc 0.790, val loss 0.827, val pixel acc 0.795\n"
         }
       ]
     },
@@ -158,8 +158,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 158190,
-          "sha256": "sha256:3e19d41475c39d21d45af5ec6a5440ed4d72ecbc5c038d647de7751776a1877b"
+          "bytes": 158854,
+          "sha256": "sha256:8a323a6ce5a600a661c60e210223629ef38a8a533f864b0d0ab4609dc7d1fba5"
         }
       ]
     }

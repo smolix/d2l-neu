@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:857d4942f80d8805d7ab2eaee2bf127edb44be66ee42d0e61e69d19ca6d092b0",
+    "d2l_lib_fingerprint": "sha256:2f15fe914f90765e77f09846e11213b6c84e8e86b816678cca60db33128a4055",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -108,14 +108,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.688, bf16 weights 0.644, mixed 0.687\n"
+          "text": "validation accuracy: fp32 0.685, bf16 weights 0.648, mixed 0.685\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 86848,
-          "sha256": "sha256:86df2815c2c2851d5265c8d135bf6423e2fae17eebe9d54cd5d416907884af9a"
+          "bytes": 87433,
+          "sha256": "sha256:fb5dc0d80822f88284a06493de3fb5f0948751528d19d02f317df5ba3691e45d"
         }
       ]
     },
@@ -136,7 +136,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 32.0% subnormal, 0.23% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 32.4% subnormal, 0.20% zero\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "scale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },

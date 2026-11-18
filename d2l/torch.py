@@ -4454,6 +4454,4156 @@ class UNetFlowMap(nn.Module):
         gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
         return self.unet(x, t, cond=gap)
 
+HF_REVISIONS = {
+    'Qwen/Qwen3-0.6B': 'c1899de289a04d12100db370d81485cdf75e47ca',
+    'Qwen/Qwen3-0.6B-Base': 'da87bfb608c14b7cf20ba1ce41287e8de496c0cd',
+    'Qwen/Qwen3-1.7B': '70d244cc86ccca08cf5af4e1e306ecf908b1ad5e',
+    'Qwen/Qwen3-1.7B-Base': 'ea980cb0a6c2ae4b936e82123acc929f1cec04c1',
+    'Qwen/Qwen3-4B': '1cfa9a7208912126459214e8b04321603b3df60c',
+    'Qwen/Qwen3-8B': 'b968826d9c46dd6066d109eabc6255188de91218',
+    'Qwen/Qwen3.5-0.8B': '2fc06364715b967f1860aea9cf38778875588b17',
+    'Qwen/Qwen3.5-0.8B-Base': 'dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68',
+    'Qwen/Qwen3.5-2B': '15852e8c16360a2fea060d615a32b45270f8a8fc',
+    'Qwen/Qwen3.5-4B': '851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a',
+    'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
+
+LM_DATA_URL = 'https://d2l-data.smola.org/lm/'
+
+d2l.DATA_HUB['lm-hf-memory-speed-v2'] = (  # fused kernels (fla, flex_sdpa)
+    d2l.LM_DATA_URL + 'lm-hf-memory-speed-v2.json',
+    'e1a6407448d04a3aef8cc6fff5ed39cfea549f0b')
+
+def safetensors_header(model_id, revision=None, timeout=30):
+    """Shape and dtype of every tensor of a Hub checkpoint, read by HTTP
+    range requests without fetching tensor data (in production:
+    `huggingface_hub.get_safetensors_metadata`).
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import urllib.error
+    import urllib.request
+    import huggingface_hub
+    revision = revision or d2l.HF_REVISIONS.get(model_id)
+    if revision is None:
+        revision = huggingface_hub.HfApi().model_info(model_id).sha
+        print(f'unpinned: {model_id}@{revision}')
+    token = huggingface_hub.get_token()  # for gated repositories
+
+    class HubRedirect(urllib.request.HTTPRedirectHandler):
+        """Keep the token on redirects within the Hub, not to the CDN."""
+        def redirect_request(self, request, *args):
+            new = super().redirect_request(request, *args)
+            auth = request.unredirected_hdrs.get('Authorization')
+            if new and auth and new.host == request.host:
+                new.add_unredirected_header('Authorization', auth)
+            return new
+
+    opener = urllib.request.build_opener(HubRedirect)
+
+    def fetch(filename, start=None, stop=None):  # bytes start, ..., stop - 1
+        request = urllib.request.Request(huggingface_hub.hf_hub_url(
+            model_id, filename, revision=revision))
+        if start is not None:
+            request.add_header('Range', f'bytes={start}-{stop - 1}')
+        if token:  # unredirected: dropped when a redirect leaves the Hub
+            request.add_unredirected_header('Authorization', f'Bearer {token}')
+        with opener.open(request, timeout=timeout) as response:
+            if start is None or response.status == 206:
+                return response.read()
+            return response.read(stop)[start:]  # the server ignored the range
+
+    try:  # a sharded checkpoint lists its shards in an index
+        index = json.loads(fetch('model.safetensors.index.json'))
+        shards = sorted(set(index['weight_map'].values()))
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+        shards = ['model.safetensors']
+    tensors = {}
+    for shard in shards:
+        n = int.from_bytes(fetch(shard, 0, 8), 'little')  # header length
+        header = json.loads(fetch(shard, 8, 8 + n))
+        header.pop('__metadata__', None)
+        tensors.update({name: (tuple(t['shape']), t['dtype'])
+                        for name, t in header.items()})
+    return tensors
+
+def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto',
+            *, attn_implementation=None):
+    """A pinned causal language model from the Hugging Face Hub, text part
+    only, in eval mode, and its tokenizer; prints a load report and the
+    kernels it runs. The tokenizer's end token joins the stop tokens of
+    `generate`; the attention defaults to `d2l.hf_attention`'s choice.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import collections
+    import warnings
+    import transformers
+    if revision is None:
+        revision = d2l.HF_REVISIONS.get(model_id)
+    if revision is None:
+        import huggingface_hub
+        revision = huggingface_hub.HfApi().model_info(model_id).sha
+        print(f'unpinned: {model_id}@{revision}')
+    if device_map == 'auto':  # one GPU: everything on it; none: the CPU
+        n_gpus = torch.cuda.device_count()
+        device_map = ('cpu' if n_gpus == 0 else {'': 0} if n_gpus == 1
+                      else 'auto')
+    pin = dict(revision=revision, trust_remote_code=False)
+    config = transformers.AutoConfig.from_pretrained(model_id, **pin)
+    text = config.get_text_config()  # the language model's configuration
+    renames = {}
+    if text is not config and text.model_type in d2l._TEXT_KEY_MAPPING:
+        renames['key_mapping'] = d2l._TEXT_KEY_MAPPING[text.model_type]
+    d2l.bind_hf_kernels()  # routes fused kernels, registers flex_sdpa
+    if attn_implementation is None:  # the device of the first module
+        device = (next(iter(device_map.values()))
+                  if isinstance(device_map, dict) else device_map)
+        attn_implementation = d2l.hf_attention(
+            text, 0 if device == 'auto' else device)
+    model, info = transformers.AutoModelForCausalLM.from_pretrained(
+        model_id, config=text, dtype=dtype, device_map=device_map,
+        attn_implementation=attn_implementation, use_safetensors=True,
+        output_loading_info=True, **pin, **renames)
+    if info['missing_keys']:  # these modules would stay randomly initialized
+        del model  # a kept traceback would otherwise hold its memory
+        raise RuntimeError(f'no weights for {sorted(info["missing_keys"])}')
+    model.revision = revision
+    tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **pin)
+    # Without generation_config.json, `generate` stops only at the
+    # configuration's end token, which need not be the one ending a chat turn
+    stop = model.generation_config.eos_token_id
+    stop = ([] if stop is None else [stop] if isinstance(stop, int)
+            else list(stop))
+    if tokenizer.eos_token_id not in [*stop, None]:
+        stop.append(tokenizer.eos_token_id)
+        model.generation_config.eos_token_id = stop
+    unexpected = collections.Counter(  # keys in the file the model ignores
+        '.'.join(key.split('.')[:2]) for key in info['unexpected_keys'])
+    print(f'{model_id}@{revision[:12]}: {type(model).__name__}, '
+          f'stop tokens {stop}')
+    print('0 missing keys; unexpected keys:',
+          '(not loaded)' if unexpected else 'none')
+    if unexpected:  # by count, then name
+        d2l.print_wrapped('    ' + ', '.join(f'{k} {n:,}' for k, n in sorted(
+            unexpected.items(), key=lambda kv: (-kv[1], kv[0]))), width=96)
+    print('kernels:', ', '.join(f'{k} {v}'
+                                for k, v in d2l.hf_kernels(model).items()))
+    devices = set(getattr(model, 'hf_device_map', {}).values())
+    if len(devices) > 1:
+        warnings.warn(f'{model_id} is spread over {sorted(map(str, devices))}')
+    return model.eval(), tokenizer
+
+def _hf_text_config(config):
+    """A configuration and its text part, as plain dicts.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    c = config.to_dict() if hasattr(config, 'to_dict') else dict(config)
+    return c, c.get('text_config') or c
+
+def _hf_layers(t):
+    """Kind, head dimension, KV heads and KV sharing of every layer.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    L, H = t['num_hidden_layers'], t['num_attention_heads']
+    first_shared = L - (t.get('num_kv_shared_layers') or 0)
+    overrides = {int(i): o
+                 for i, o in (t.get('per_layer_config') or {}).items()}
+    layers = []
+    for i, kind in enumerate(t.get('layer_types') or ['full_attention'] * L):
+        d_h = t.get('head_dim') or t['hidden_size'] // H
+        H_kv = t.get('num_key_value_heads') or H
+        if kind == 'full_attention':  # Gemma 4's global layers are wider
+            d_h = t.get('global_head_dim') or d_h
+            if t.get('attention_k_eq_v'):
+                H_kv = t.get('num_global_key_value_heads') or H_kv
+        o = overrides.get(i, {})
+        layers.append((kind, o.get('head_dim', d_h),
+                       o.get('num_key_value_heads', H_kv), i >= first_shared))
+    return layers
+
+def config_params(config, include_vision=False, include_mtp=False,
+                  by_group=False):
+    """Parameters of a dense or hybrid model (Qwen3, Qwen3.5, Gemma 4),
+    counted from its configuration; other layouts raise.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    c, t = _hf_text_config(config)
+    if (t.get('num_experts') or t.get('n_routed_experts')
+            or t.get('enable_moe_block')):
+        raise NotImplementedError('use d2l.config_stats (14.1)')
+    known = ('qwen3', 'qwen3_5_text', 'gemma4_text')  # QK norms, no biases
+    if (t['model_type'] not in known or t.get('attention_bias')
+            or t.get('mlp_bias')):
+        raise NotImplementedError(f'{t["model_type"]} layout, not one of '
+                                  f'{known} without biases')
+    d, f, H, V = (t['hidden_size'], t['intermediate_size'],
+                  t['num_attention_heads'], t['vocab_size'])
+    gemma = t['model_type'] == 'gemma4_text'
+    gate = 2 if (t.get('attn_output_gate')  # gated attention output
+                 or t['model_type'] == 'qwen3_5_text') else 1
+    g = dict.fromkeys(['embed', 'per_layer_embed', 'attention',
+                       'linear_attention', 'mlp', 'per_layer_proj', 'norm',
+                       'lm_head', 'vision', 'mtp'], 0)
+    g['embed'] = V * d
+    g['lm_head'] = 0 if t.get('tie_word_embeddings', True) else V * d
+
+    def attention(kind, d_h, H_kv, shared):  # Q (+ gate), K, V, O, QK norms
+        n_kv = (0 if shared else
+                1 if t.get('attention_k_eq_v') and kind == 'full_attention'
+                else 2)
+        norms = d_h * (1 if shared else 2)
+        return gate * d * H * d_h + n_kv * d * H_kv * d_h + H * d_h * d + norms
+
+    for kind, d_h, H_kv, shared in _hf_layers(t):
+        if kind == 'linear_attention':  # Gated DeltaNet
+            H_v, d_v = t['linear_num_value_heads'], t['linear_value_head_dim']
+            K = t['linear_num_key_heads'] * t['linear_key_head_dim']
+            U, C = H_v * d_v, 2 * K + H_v * d_v  # C: convolution channels
+            g['linear_attention'] += (d * C + 2 * d * U + 2 * d * H_v + 2 * H_v
+                                      + C * t['linear_conv_kernel_dim'] + d_v)
+        else:
+            g['attention'] += attention(kind, d_h, H_kv, shared)
+        wide = 2 if shared and t.get('use_double_wide_mlp') else 1
+        g['mlp'] += 3 * d * f * wide
+        g['norm'] += (4 if gemma else 2) * d
+    g['norm'] += d  # final norm
+    p, L = t.get('hidden_size_per_layer_input') or 0, t['num_hidden_layers']
+    if p:  # Gemma 4: per-layer embeddings, their projections and norms
+        g['per_layer_embed'] = t['vocab_size_per_layer_input'] * L * p
+        g['per_layer_proj'] = d * L * p + L * 2 * d * p
+        g['norm'] += p + L * d
+    if include_mtp and t.get('mtp_num_hidden_layers'):  # Qwen3.5
+        block = attention('full_attention', t.get('head_dim') or d // H,
+                          t['num_key_value_heads'], False) + 3 * d * f + 2 * d
+        g['mtp'] = t['mtp_num_hidden_layers'] * block + 2 * d * d + 3 * d
+    v = c.get('vision_config')
+    if include_vision and v:
+        if (v['model_type'] not in ('qwen3_5', 'qwen3_5_vision')
+                or v.get('deepstack_visual_indexes')):
+            raise NotImplementedError(f'vision tower of {v["model_type"]}')
+        D, I, m = v['hidden_size'], v['intermediate_size'], (
+            v['spatial_merge_size'] ** 2)
+        patch = (v['in_channels'] * v['temporal_patch_size']
+                 * v['patch_size'] ** 2)
+        block = 4 * D * D + 2 * D * I + 9 * D + I  # with biases, LayerNorms
+        g['vision'] = ((patch + 1 + v['num_position_embeddings']) * D
+                       + v['depth'] * block + 2 * D
+                       + (D * m + 1) * (D * m + v['out_hidden_size']))
+    return g if by_group else sum(g.values())
+
+def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
+                  state_bytes=4, conv_bytes=None, conv_taps=None,
+                  window_cached=None, include_vision=False, include_mtp=False,
+                  logits_to_keep=1):
+    """Bytes to run a model on `batch_size` sequences of `seq_len` tokens.
+
+    The defaults store what Transformers 5.22.2 stores: a sliding layer keeps
+    `sliding_window - 1` positions, a linear-attention layer all
+    `linear_conv_kernel_dim` convolution inputs; a prefill holds every
+    position until it ends: `window_cached=seq_len`. `activations` counts
+    what a prefill holds at its peak with the kernels `load_hf` binds: the
+    residual stream and the largest layer's tensors, rotary tables (under
+    3%) aside. `logits_to_keep` of None or 0 keeps every position's logits.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import warnings
+    c, t = _hf_text_config(config)
+    n, B, b = seq_len, batch_size, dtype_bytes
+    if n > t.get('max_position_embeddings', n):
+        warnings.warn(f'seq_len {n} exceeds max_position_embeddings '
+                      f'{t["max_position_embeddings"]}')
+    if window_cached is None and t.get('sliding_window'):
+        window_cached = t['sliding_window'] - 1
+    conv_bytes = b if conv_bytes is None else conv_bytes
+    if conv_taps is None:
+        conv_taps = t.get('linear_conv_kernel_dim')
+    d, H = t['hidden_size'], t['num_attention_heads']
+    gate = 2 if (t.get('attn_output_gate')  # gated attention output
+                 or t['model_type'] == 'qwen3_5_text') else 1
+    kv = state = mixer = 0  # mixer: entries per token of the widest layer
+    for kind, d_h, H_kv, shared in _hf_layers(t):
+        if kind == 'linear_attention':  # fixed matrix state + conv inputs
+            H_v, d_k = t['linear_num_value_heads'], t['linear_key_head_dim']
+            d_v, K = t['linear_value_head_dim'], (
+                t['linear_num_key_heads'] * d_k)
+            V, C = H_v * d_v, 2 * K + H_v * d_v
+            state += H_v * d_k * d_v * state_bytes + C * conv_taps * conv_bytes
+            # Chunked kernel (64 tokens): the convolved q, k, v and their
+            # copy, normalized q, k, w, u, new values, output, output gate,
+            # one d_k x d_v state per chunk and a 64 x 64 block per chunk
+            mixer = max(mixer, 2 * C + 3 * K + 4 * V
+                        + H_v * (d_k * d_v // 64 + 64))
+            continue
+        # Q (and gate), K, V, normalized and rotated Q and K, output (gated)
+        mixer = max(mixer, (3 + 4 * (gate - 1)) * H * d_h + 4 * H_kv * d_h)
+        if not shared:  # a KV-sharing layer reads an earlier layer's cache
+            kept = min(n, window_cached) if kind == 'sliding_attention' else n
+            kv += 2 * H_kv * d_h * b * kept
+    f = t['intermediate_size'] * (2 if t.get('use_double_wide_mlp')
+                                  and t.get('num_kv_shared_layers') else 1)
+    # The embeddings, the layer input and its normalized copy live across a
+    # layer; the MLP adds the attention's residual and its three f-wide
+    # products. Gemma 4 keeps its per-layer inputs for the whole pass.
+    per_layer = t['num_hidden_layers'] * (
+        t.get('hidden_size_per_layer_input') or 0)
+    params = config_params(config, include_vision, include_mtp)
+    n_out = min(logits_to_keep, n) if logits_to_keep else n
+    memory = {'params': params, 'weights': params * b,
+              'kv_cache': B * kv, 'recurrent_state': B * state,
+              'activations': B * n * b * (max(3 * d + mixer, 4 * d + 3 * f)
+                                          + per_layer),
+              'logits': B * n_out * t['vocab_size'] * b}
+    memory['total'] = sum(memory.values()) - params
+    return memory
+
+def cache_bytes(cache):
+    """Bytes of the floating-point tensors reachable from a cache object,
+    by dtype: logical (every distinct view) and resident (every underlying
+    storage once). Integer tensors are bookkeeping, not cache.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import collections
+    logical, resident = collections.Counter(), collections.Counter()
+    views, storages, visited, todo = set(), set(), set(), [cache]
+    while todo:
+        obj = todo.pop()
+        if isinstance(obj, torch.Tensor) and obj.is_floating_point():
+            if (obj.data_ptr(), obj.shape) not in views:
+                views.add((obj.data_ptr(), obj.shape))
+                logical[obj.dtype] += obj.nbytes
+            storage = obj.untyped_storage()
+            if storage.data_ptr() not in storages:
+                storages.add(storage.data_ptr())
+                resident[obj.dtype] += storage.nbytes()
+        elif id(obj) not in visited:
+            visited.add(id(obj))
+            if isinstance(obj, dict):
+                todo.extend(obj.values())
+            elif isinstance(obj, (list, tuple)):
+                todo.extend(obj)
+            elif type(obj).__module__.startswith('transformers.'):
+                todo.extend(vars(obj).values())  # cache and layer objects
+    return logical, resident
+
+def bytes_read(config, n, b=2):
+    """Bytes a decode step reads at context n: the weights except the
+    gathered per-layer table, every cache a layer attends to (a KV-sharing
+    layer re-reads its source's), and the state, read and written.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    t = config.get_text_config().to_dict()
+    t['num_kv_shared_layers'] = 0
+    mem = config_memory(t, n, 1, b)
+    groups = config_params(config, by_group=True)
+    return (b * (sum(groups.values()) - groups['per_layer_embed'])
+            + mem['kv_cache'] + 2 * mem['recurrent_state'])
+
+d2l.DATA_HUB['lm-qwen3-port-prompts-v1'] = (
+    d2l.LM_DATA_URL + 'lm-qwen3-port-prompts-v1.json',
+    'b5840fad4ad3d8d1897c12d522def18f6eb8fa06')
+
+def qwen3_rope_tables(n, head_dim, theta, offset=0, device=None):
+    """Cosines and sines, each (n, head_dim / 2) in fp32, of the RoPE angles
+    of positions offset, ..., offset + n - 1, with the frequencies computed
+    as Transformers computes them.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    # 1 / theta^(2i/d) on the CPU, as Transformers builds its buffer; the
+    # book's theta^(-2i/d) is equal in exact arithmetic but not in fp32
+    inv = 1.0 / float(theta) ** (torch.arange(
+        0, head_dim, 2, dtype=torch.float32, device='cpu') / head_dim)
+    pos = torch.arange(n, dtype=torch.float32, device=device) + offset
+    angles = pos[:, None] * inv.to(pos.device)[None, :]
+    return torch.cos(angles), torch.sin(angles)
+
+class Qwen3Attention(d2l.CausalAttention):
+    """Causal attention with separate projections, an explicit head width,
+    optional RMSNorm of queries and keys per head before RoPE (QK-norm),
+    and a step that reads and writes a key-value cache.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    def __init__(self, num_hiddens, num_heads, num_kv_heads, *, head_dim=None,
+                 qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False,
+                 rope=True, causal=True):
+        nn.Module.__init__(self)  # CausalAttention's would allocate W_qkv
+        if not causal:
+            raise ValueError('Qwen3Attention is causal only')
+        self.num_heads, self.num_kv_heads = num_heads, num_kv_heads
+        self.head_dim = head_dim or num_hiddens // num_heads
+        self.qk_norm, self.rope, self.rope_theta = qk_norm, rope, rope_theta
+        self.kv_hiddens = num_kv_heads * self.head_dim
+        q_hiddens = num_heads * self.head_dim  # may differ from num_hiddens
+        self.W_q = nn.Linear(num_hiddens, q_hiddens, bias=bias)
+        self.W_k = nn.Linear(num_hiddens, self.kv_hiddens, bias=bias)
+        self.W_v = nn.Linear(num_hiddens, self.kv_hiddens, bias=bias)
+        self.W_o = nn.Linear(q_hiddens, num_hiddens, bias=bias)
+        if qk_norm:  # one gain per coordinate of a head, shared by the heads
+            self.q_norm = nn.RMSNorm(self.head_dim, eps=norm_eps)
+            self.k_norm = nn.RMSNorm(self.head_dim, eps=norm_eps)
+
+    def qkv(self, X, offset=0, tables=None):
+        B, T, _ = X.shape
+        q = self.W_q(X).reshape(B, T, self.num_heads, self.head_dim)
+        k = self.W_k(X).reshape(B, T, self.num_kv_heads, self.head_dim)
+        v = self.W_v(X).reshape(B, T, self.num_kv_heads, self.head_dim)
+        if self.qk_norm:  # normalize each head's query and key
+            q, k = self.q_norm(q), self.k_norm(k)
+        q, k, v = (u.transpose(1, 2) for u in (q, k, v))  # (B, heads, T, d_h)
+        if self.rope:
+            if tables is None:
+                tables = qwen3_rope_tables(T, self.head_dim, self.rope_theta,
+                                           offset, X.device)
+            q, k = (d2l.rope(u, tables=tables) for u in (q, k))
+        return q, k, v
+
+    def forward_step(self, X, cache, tables=None):
+        """Attention output for X at positions t, ..., t + T - 1, where cache
+        = (ks, vs, t) holds this block's buffers, each (batch, kv heads,
+        max_len, head_dim); writes the keys and values of X into them."""
+        ks, vs, t = cache
+        T = X.shape[1]
+        q, k, v = self.qkv(X, t, tables)
+        ks[:, :, t:t + T], vs[:, :, t:t + T] = k, v
+        Y = F.scaled_dot_product_attention(
+            q, ks[:, :, :t + T], vs[:, :, :t + T],
+            attn_mask=d2l.causal_mask(T, t + T, X.device),
+            enable_gqa=self.num_kv_heads < self.num_heads)
+        return self.W_o(Y.transpose(1, 2).flatten(2))
+
+class SwiGLU(d2l.FeedForward):
+    """SwiGLU feed-forward network with an explicit hidden width.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    def __init__(self, num_hiddens, hidden, bias=False):
+        nn.Module.__init__(self)  # FeedForward's would allocate width 8d/3
+        self.act = 'swiglu'
+        self.W_g = nn.Linear(num_hiddens, hidden, bias=bias)
+        self.W_1 = nn.Linear(num_hiddens, hidden, bias=bias)
+        self.W_2 = nn.Linear(hidden, num_hiddens, bias=bias)
+
+class Qwen3GPT(d2l.GPT):
+    """d2l.GPT with Qwen3's head width, QK-norm, RoPE base, feed-forward
+    width and normalization epsilon, and an optional untied output head.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    def __init__(self, vocab_size, num_hiddens, num_heads, num_kv_heads,
+                 num_blks, *, head_dim=None, qk_norm=True, rope_theta=1e6,
+                 ffn_hidden=None, norm_eps=1e-6, tie_embeddings=True,
+                 max_len=40960, bias=False):
+        head_dim = head_dim or num_hiddens // num_heads
+        ffn_hidden = ffn_hidden or round(8 * num_hiddens / 3)
+        # read by CausalAttention below while GPT builds the blocks; a plain
+        # attribute may be set before nn.Module.__init__ runs
+        self.attn_options = dict(head_dim=head_dim, qk_norm=qk_norm,
+                                 rope_theta=rope_theta, norm_eps=norm_eps)
+        super().__init__(
+            vocab_size, num_hiddens=num_hiddens, num_heads=num_heads,
+            num_blks=num_blks, max_len=max_len, bias=bias,
+            num_kv_heads=num_kv_heads,
+            ffn_factory=lambda: SwiGLU(num_hiddens, ffn_hidden, bias))
+        for blk in self.blks:
+            blk.norm1.eps = blk.norm2.eps = norm_eps
+        self.norm.eps = norm_eps
+        self.head_width, self.rope_theta = head_dim, rope_theta
+        if not tie_embeddings:
+            self.lm_head = nn.Linear(num_hiddens, vocab_size, bias=False)
+            nn.init.normal_(self.lm_head.weight, std=0.02)
+
+    def CausalAttention(self, d, H, *, bias, rope, num_kv_heads):
+        """The attention GPT builds in each block (a method, not a lambda,
+        so that the model can be pickled)."""
+        return Qwen3Attention(d, H, num_kv_heads, bias=bias, rope=rope,
+                              **self.attn_options)
+
+    def forward(self, X, logits_to_keep=None, tables=None):
+        if tables is None:  # RoPE angles of positions 0, ..., T - 1
+            tables = qwen3_rope_tables(X.shape[1], self.head_width,
+                                       self.rope_theta, device=X.device)
+        H = self.token_emb(X)
+        for blk in self.blks:
+            H = blk(H, tables=tables)
+        if logits_to_keep is not None:  # the head only where logits are read
+            H = H[:, -logits_to_keep:]
+        H = self.norm(H)
+        if hasattr(self, 'lm_head'):
+            return self.lm_head(H)
+        return F.linear(H, self.token_emb.weight)
+
+    def init_cache(self, batch_size, max_len):
+        """Zeroed keys and values for every block, each (blocks, batch, kv
+        heads, max_len, head_dim).
+
+        Defined in :numref:`sec_lm_d2l_checkpoint`"""
+        attn = self.blks[0].attention
+        shape = (len(self.blks), batch_size, attn.num_kv_heads, max_len,
+                 attn.head_dim)
+        p = self.token_emb.weight
+        return (torch.zeros(shape, device=p.device, dtype=p.dtype),
+                torch.zeros(shape, device=p.device, dtype=p.dtype))
+
+    @torch.inference_mode()
+    def forward_cached(self, X, ks, vs, t):
+        """Logits after the last of the new tokens X, which sit at positions
+        t, t + 1, ...; writes their keys and values into the cache.
+
+        Defined in :numref:`sec_lm_d2l_checkpoint`"""
+        tables = qwen3_rope_tables(X.shape[1], self.head_width, self.rope_theta,
+                                   t, X.device)
+        H = self.token_emb(X)
+        for i, blk in enumerate(self.blks):  # the modules of blk.forward
+            H = H + blk.attention.forward_step(blk.norm1(H), (ks[i], vs[i], t),
+                                               tables)
+            H = H + blk.ffn(blk.norm2(H))
+        H = self.norm(H[:, -1])
+        if hasattr(self, 'lm_head'):
+            return self.lm_head(H), ks, vs
+        return F.linear(H, self.token_emb.weight), ks, vs
+
+    @torch.inference_mode()
+    def generate_cached(self, prefix, num_tokens, temperature=1.0, top_k=None):
+        """Sample as generate does, but never recompute the prefix.
+
+        Defined in :numref:`sec_lm_d2l_checkpoint`"""
+        assert len(prefix) + num_tokens <= self.max_len, 'cache overflow'
+        X = torch.tensor(prefix, device=self.token_emb.weight.device)[None]
+        ks, vs = self.init_cache(1, len(prefix) + num_tokens)
+        logits, ks, vs = self.forward_cached(X, ks, vs, 0)
+        tokens = []
+        for t in range(len(prefix), len(prefix) + num_tokens):
+            tokens.append(d2l.sample_logits(logits, 'sample', temperature,
+                                            k=top_k))
+            if t + 1 < len(prefix) + num_tokens:  # logits for the next draw
+                logits, ks, vs = self.forward_cached(tokens[-1][:, None], ks, vs,
+                                                     t)
+        return list(prefix) + torch.cat(tokens).tolist()
+
+def qwen3_gpt_kwargs(cfg):
+    """Qwen3GPT's arguments from a Qwen3 configuration (a dict or a
+    Transformers config); raises on settings the port does not implement.
+    A dict without head_dim, tie_word_embeddings or a RoPE base gets
+    Transformers' Qwen3Config defaults (128, untied, 10,000).
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    c = cfg if isinstance(cfg, dict) else cfg.to_dict()
+    kind = c.get('model_type')
+    if kind == 'qwen3_moe':
+        raise NotImplementedError('qwen3_moe: expert layers are not ported')
+    if kind and kind.startswith('qwen3_5'):
+        raise NotImplementedError(
+            f'{kind}: its Gated DeltaNet layers are ported in '
+            'sec_lm_hybrids_at_scale')
+    if kind != 'qwen3':
+        raise ValueError(f'not a Qwen3 configuration: {kind!r}')
+    rope = c.get('rope_parameters') or {}  # where Transformers 5 keeps theta
+    for name, value in [('use_sliding_window', c.get('use_sliding_window')),
+                        ('rope_scaling', c.get('rope_scaling')),
+                        ('rope_type', rope.get('rope_type', 'default')
+                         != 'default'),
+                        ('attention_bias', c.get('attention_bias'))]:
+        if value:
+            raise ValueError(f'{name} is not implemented in Qwen3GPT')
+    return dict(
+        vocab_size=c['vocab_size'], num_hiddens=c['hidden_size'],
+        num_heads=c['num_attention_heads'],
+        num_kv_heads=c['num_key_value_heads'],
+        num_blks=c['num_hidden_layers'], head_dim=c.get('head_dim', 128),
+        qk_norm=True, rope_theta=float(c.get('rope_theta') or rope.get(
+            'rope_theta', 1e4)),
+        ffn_hidden=c['intermediate_size'], norm_eps=c['rms_norm_eps'],
+        tie_embeddings=c.get('tie_word_embeddings', False),
+        max_len=c['max_position_embeddings'], bias=False)
+
+def qwen3_rope_permutation(head_dim):
+    """Index idx with idx[2i] = i and idx[2i + 1] = i + head_dim / 2: taking
+    row idx[j] of a head's rows as row j turns Transformers' split-half
+    RoPE pairs into the book's interleaved pairs.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    half = torch.arange(head_dim // 2)
+    return torch.stack([half, half + head_dim // 2], 1).flatten()
+
+def map_qwen3_state_dict(hf_state, cfg, rope_layout='permute'):
+    """A Qwen3GPT state dict from a Transformers Qwen3 state dict. Renames
+    every tensor and, per head, permutes the rows of q_proj and k_proj and
+    the gains of q_norm and k_norm into the book's RoPE pairing
+    (rope_layout='none' skips this). A KeyError lists every tensor not
+    consumed and every key not produced.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    assert rope_layout in ('permute', 'none'), rope_layout
+    kw = qwen3_gpt_kwargs(cfg)
+    d_h = kw['head_dim'] or kw['num_hiddens'] // kw['num_heads']
+    idx = qwen3_rope_permutation(d_h)
+
+    def permute(W):  # W: (heads * d_h, ...) rows, or one head's (d_h,) gains
+        if rope_layout == 'none':
+            return W
+        return W.unflatten(0, (-1, d_h))[:, idx.to(W.device)].flatten(0, 1)
+
+    keep = lambda W: W
+    layer = {'input_layernorm': ('norm1', keep),
+             'self_attn.q_proj': ('attention.W_q', permute),
+             'self_attn.k_proj': ('attention.W_k', permute),
+             'self_attn.v_proj': ('attention.W_v', keep),
+             'self_attn.o_proj': ('attention.W_o', keep),
+             'self_attn.q_norm': ('attention.q_norm', permute),
+             'self_attn.k_norm': ('attention.k_norm', permute),
+             'post_attention_layernorm': ('norm2', keep),
+             'mlp.gate_proj': ('ffn.W_g', keep),
+             'mlp.up_proj': ('ffn.W_1', keep),
+             'mlp.down_proj': ('ffn.W_2', keep)}
+    names = {'model.embed_tokens': ('token_emb', keep)}
+    for i in range(kw['num_blks']):
+        names.update({f'model.layers.{i}.{hf}': (f'blks.{i}.{ours}', f)
+                      for hf, (ours, f) in layer.items()})
+    names['model.norm'] = ('norm', keep)
+    if not kw['tie_embeddings']:
+        names['lm_head'] = ('lm_head', keep)
+    left, state, missing = dict(hf_state), {}, []
+    head = left.get('lm_head.weight')
+    emb = left.get('model.embed_tokens.weight')
+    if kw['tie_embeddings'] and head is not None:  # a stored copy of emb
+        if not (head.is_meta or emb is None or torch.equal(head, emb)):
+            raise ValueError('lm_head.weight differs from the tied embedding')
+        del left['lm_head.weight']
+    for hf, (ours, f) in names.items():
+        if hf + '.weight' in left:
+            state[ours + '.weight'] = f(left.pop(hf + '.weight'))
+        else:
+            missing.append(f'{ours}.weight (from {hf}.weight)')
+    if left or missing:
+        raise KeyError(f'not consumed: {sorted(left)}; '
+                       f'not produced: {missing}')
+    return state
+
+def load_qwen3(model_id='Qwen/Qwen3-0.6B', revision=None, *,
+               dtype=torch.bfloat16, device=None):
+    """A pinned Qwen3 checkpoint from the Hugging Face Hub as a Qwen3GPT in
+    eval mode: built on the meta device, then its mapped weights assigned.
+    The tokenizer is loaded separately, at model.revision.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    from safetensors.torch import load_file  # lazy, as in load_gpt2
+    revision = revision or d2l.HF_REVISIONS[model_id]
+    config_file, generation_file, weight_files = d2l._qwen3_files(
+        model_id, revision)
+    with open(config_file) as fh:
+        cfg = json.load(fh)
+    with torch.device('meta'):  # shapes only: no memory is allocated
+        model = Qwen3GPT(**qwen3_gpt_kwargs(cfg))
+    hf_state = {}
+    for path in weight_files:
+        hf_state.update(load_file(path))
+    device = device or d2l.try_gpu()
+    state = {name: W.to(device, dtype)
+             for name, W in map_qwen3_state_dict(hf_state, cfg).items()}
+    # assign=True: meta tensors cannot be copied into, so take the tensors
+    model.load_state_dict(state, strict=True, assign=True)
+    model.hf_config, model.revision = cfg, revision
+    model.generation_config = None
+    if generation_file is not None:
+        import transformers
+        with open(generation_file) as fh:
+            model.generation_config = transformers.GenerationConfig.from_dict(
+                json.load(fh))
+    return model.eval()
+
+Generation = collections.namedtuple(  # finish_reason: 'eos', 'stop', 'length'
+    'Generation', 'text token_ids logprobs finish_reason')
+
+def truncated_probs(logits, temperature=1.0, k=None, p=None, min_p=None):
+    """Rows of logits (batch, vocab) -> the temperature-scaled distribution
+    truncated by top-k, top-p and min-p and renormalized; ties in rank go
+    to the smaller token id. As in Transformers and vLLM (and unlike
+    sec_decoding's sample_next), top-p measures mass within the top k.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    probs = F.softmax(logits.float() / temperature, -1)
+    ranked, order = torch.sort(probs, dim=-1, descending=True, stable=True)
+    keep = torch.full_like(order[:, :1], probs.shape[-1])  # tokens kept
+    if k is not None:  # top-k: a fixed count
+        keep = keep.clamp(max=k)
+    if p is not None:  # top-p: the smallest head of mass at least p of
+        cum = ranked.double().cumsum(-1)  # the top-k mass (1 without k)
+        head = (cum < p * cum.gather(-1, keep - 1)).sum(-1, keepdim=True) + 1
+        keep = torch.minimum(keep, head)
+    if min_p is not None:  # min-p: a fraction of the top probability
+        keep = torch.minimum(keep, (ranked >= min_p * ranked[:, :1]).sum(
+            -1, keepdim=True))
+    ranked = ranked * (torch.arange(probs.shape[-1], device=probs.device)
+                       < keep)
+    probs = torch.zeros_like(probs).scatter(-1, order, ranked)
+    return probs / probs.sum(-1, keepdim=True)
+
+def sample_logits(logits, strategy='greedy', temperature=1.0, k=None,
+                  p=None, min_p=None, generator=None):
+    """One token id per row of logits (batch, vocab): the argmax (ties to
+    the smaller id), or a draw from truncated_probs by inverting its
+    distribution function at a uniform from generator (a torch.Generator,
+    or one per row).
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    if strategy == 'greedy':
+        return logits.argmax(-1)
+    if strategy != 'sample':
+        raise ValueError(f'unknown strategy: {strategy!r}')
+    cdf = truncated_probs(logits, temperature, k, p, min_p).double().cumsum(-1)
+    if isinstance(generator, (list, tuple)):  # one uniform per row
+        u = torch.cat([torch.rand(1, generator=g, dtype=torch.float64)
+                       for g in generator])
+    else:
+        u = torch.rand(len(cdf), generator=generator, dtype=torch.float64)
+    u = u.to(cdf.device)[:, None] * cdf[:, -1:]  # in [0, total mass)
+    return torch.searchsorted(cdf, u, right=True)[:, 0]
+
+def _lm_cached_steps(model, ids, num_new):
+    """Prefill equal-length prompts ids (lists of token ids) into the
+    model's cache; returns the last logits and step(next_ids) -> logits.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    X = torch.tensor(ids, device=model.token_emb.weight.device)
+    ks, vs = model.init_cache(len(ids), X.shape[1] + num_new)
+    t = X.shape[1]
+    logits = model.forward_cached(X, ks, vs, 0)[0]
+
+    def step(next_ids):  # next_ids: (batch,), at position t
+        nonlocal t
+        logits = model.forward_cached(next_ids[:, None], ks, vs, t)[0]
+        t += 1
+        return logits
+    return logits, step
+
+def _lm_recompute_steps(model, ids):
+    """For any model mapping token ids to logits: each step runs the whole
+    sequence again.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    X = torch.tensor(ids, device=next(model.parameters()).device)
+
+    def step(next_ids):
+        nonlocal X
+        X = torch.cat([X, next_ids[:, None]], 1)
+        return model(X)[:, -1]
+    return model(X)[:, -1], step
+
+def _lm_hf_steps(model, ids, pad_id):
+    """Prompts of any lengths through a Transformers model and its cache:
+    padded on the left, with positions counted from each prompt's first
+    token, and logits computed at the last position only.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    T = max(map(len, ids))
+    X = torch.tensor([[pad_id] * (T - len(r)) + r for r in ids],
+                     device=model.device)
+    mask = torch.tensor([[0] * (T - len(r)) + [1] * len(r) for r in ids],
+                        device=model.device)
+    cache = None
+
+    def run(X):
+        nonlocal cache
+        pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)[:, -X.shape[1]:]
+        out = model(input_ids=X, attention_mask=mask, position_ids=pos,
+                    past_key_values=cache, use_cache=True, logits_to_keep=1)
+        cache = out.past_key_values
+        return out.logits[:, -1]
+
+    def step(next_ids):
+        nonlocal mask
+        mask = torch.cat([mask, mask.new_ones(len(ids), 1)], 1)
+        return run(next_ids[:, None])
+    return run(X), step
+
+def _lm_finish(tokens, logprobs, tokenizer, eos_ids, stop):
+    """One row's Generation: a final end token is dropped, and the text is
+    cut before the first stop string.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    reason = 'length'
+    if tokens and tokens[-1] in eos_ids:
+        tokens, reason = tokens[:-1], 'eos'
+    text = tokenizer.decode(tokens)
+    cuts = [text.find(s) for s in stop or () if s in text]
+    if cuts:
+        text, reason = text[:min(cuts)], 'stop'
+    if logprobs is not None:
+        logprobs = logprobs[:len(tokens)]
+    return Generation(text, tokens, logprobs, reason)
+
+@torch.inference_mode()
+def generate(model, tokenizer, prompts, max_new_tokens=None, *,
+             strategy='greedy', temperature=1.0, k=None, p=None, min_p=None,
+             seed=0, eos_token_ids=None, stop=None, chat=False,
+             enable_thinking=None, return_logprobs=False, batch_size=8):
+    """Continue each prompt (a string, or with chat=True also a list of
+    messages) and return one Generation per prompt, in input order.
+    strategy is 'greedy' or 'sample' (with truncated_probs's temperature,
+    k, p and min_p). stop and eos_token_ids take one item or a list. seed
+    is an int or a torch.Generator (one stream for the call) or a list of
+    one int per prompt (each prompt's draws then depend only on its seed).
+    A sampled text can still depend on the batch: batch and padding change
+    the logits by rounding, which can flip a near-tie.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    max_new_tokens, eos_ids, stop = d2l._lm_stopping(
+        model, tokenizer, max_new_tokens, eos_token_ids, stop)
+    ids = d2l._lm_prompt_ids(tokenizer, prompts, chat, enable_thinking)
+    generators = d2l._lm_generators(seed, len(ids))
+    hf = sys.modules.get('transformers')  # loaded if model is one of its
+    if hf is not None and isinstance(d2l._lm_unwrap(model),
+                                     hf.PreTrainedModel):
+        pad = getattr(tokenizer, 'pad_token_id', None) or 0
+        start = lambda rows: _lm_hf_steps(model, rows, pad)
+        groups = [list(range(len(ids)))]  # left padding: input order
+    else:  # no attention mask: batch only prompts of equal length
+        if hasattr(model, 'forward_cached'):
+            start = lambda rows: _lm_cached_steps(model, rows, max_new_tokens)
+        else:
+            start = lambda rows: _lm_recompute_steps(model, rows)
+        groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
+                  for n in sorted({len(r) for r in ids})]
+    out = [None] * len(ids)
+    for rows in (g[j:j + batch_size] for g in groups
+                 for j in range(0, len(g), batch_size)):
+        logits, step = start([ids[i] for i in rows])
+        gen = generators(rows)
+        tokens = [[] for _ in rows]
+        logprobs = [[] for _ in rows] if return_logprobs else None
+        active = set(range(len(rows)))
+        for n in range(max_new_tokens):
+            nxt = sample_logits(logits, strategy, temperature, k, p, min_p,
+                                gen)
+            if return_logprobs:  # under the untruncated distribution
+                lp = F.log_softmax(logits.float(), -1).gather(
+                    -1, nxt[:, None])[:, 0].tolist()
+            for j, token in enumerate(nxt.tolist()):
+                if j in active:
+                    tokens[j].append(token)
+                    if return_logprobs:
+                        logprobs[j].append(lp[j])
+                    text = tokenizer.decode(tokens[j]) if stop else ''
+                    if token in eos_ids or any(s in text for s in stop or ()):
+                        active.discard(j)
+            if not active or n == max_new_tokens - 1:
+                break
+            logits = step(nxt)
+        for j, i in enumerate(rows):
+            out[i] = _lm_finish(tokens[j], logprobs and logprobs[j],
+                                tokenizer, eos_ids, stop)
+    return out
+
+_HIDDEN_POINTS = ('attn_out', 'resid_mid', 'mlp_out', 'resid_post')
+
+def collect_hiddens(model, input_ids):
+    """Per layer, in execution order: the attention output, the residual
+    stream after it, the FFN output, and the stream after the block; each
+    (layers, batch, T, d) on the CPU, fp64 for an fp64 model, else fp32.
+    model is a d2l.GPT or a Transformers Qwen3 model.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    if isinstance(model, d2l.GPT):
+        layers = [(b.attention, b.norm2, b.ffn, b) for b in model.blks]
+    else:  # Transformers: attention, second norm and MLP of each layer
+        layers = [(b.self_attn, b.post_attention_layernorm, b.mlp, b)
+                  for b in model.model.layers]
+    dtype = (torch.float64 if next(model.parameters()).dtype == torch.float64
+             else torch.float32)
+    caps = {name: [] for name in _HIDDEN_POINTS}
+
+    def save(name, x):  # Transformers modules may return tuples
+        x = x[0] if isinstance(x, tuple) else x
+        caps[name].append(x.detach().to('cpu', dtype))
+
+    handles = []
+    try:
+        for attn, norm2, ffn, blk in layers:
+            handles += [
+                attn.register_forward_hook(
+                    lambda m, a, y: save('attn_out', y)),
+                norm2.register_forward_pre_hook(  # the stream entering norm2
+                    lambda m, a: save('resid_mid', a[0])),
+                ffn.register_forward_hook(lambda m, a, y: save('mlp_out', y)),
+                blk.register_forward_hook(
+                    lambda m, a, y: save('resid_post', y))]
+        with torch.inference_mode():
+            model(input_ids)
+    finally:
+        for handle in handles:
+            handle.remove()
+    return {name: torch.stack(caps[name]) for name in _HIDDEN_POINTS}
+
+def layer_errors(ref, ours, skip_first=1):
+    """Relative Frobenius error of each capture of collect_hiddens against a
+    reference over positions skip_first, ..., T - 1, per layer, capture
+    point and prompt: an array (layers, 4, batch).
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    errors = []
+    for name in _HIDDEN_POINTS:
+        r, o = (u[:, :, skip_first:].double().flatten(2)
+                for u in (ref[name], ours[name]))
+        errors.append(((o - r).norm(dim=-1) / r.norm(dim=-1)).numpy())
+    return np.stack(errors, 1)
+
+def first_divergence(errors, floor, factor=10.0):
+    """The first (layer, capture point) in execution order whose median
+    error over prompts exceeds factor times the median floor there (the
+    clean port's error); None if there is none.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    above = np.median(errors, -1) > factor * np.median(floor, -1)
+    if not above.any():
+        return None
+    layer, point = np.argwhere(above)[0]  # row-major: layer by layer
+    return int(layer), _HIDDEN_POINTS[point]
+
+def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
+                   chat=False, enable_thinking=False, sep=None):
+    """Log-probabilities (len(prompts), len(label_words)), float32 on the
+    CPU, of each label word's first token as the next token, normalized
+    over the label tokens only. A word follows its prompt after sep, by
+    default a space, but none after whitespace or next to Chinese text.
+    With chat=True a prompt is a message list (a string is one user
+    message), rendered with the generation prefix. The label logits are
+    computed in float32 from the last hidden state and the label words'
+    rows of the output layer (bf16 logits of size 20 to 40 are 1/8 to 1/4
+    apart and tie).
+
+    Defined in :numref:`sec_lm_prompting`"""
+    if chat:
+        opts = {} if enable_thinking is None else {
+            'enable_thinking': enable_thinking}
+        prompts = [tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': m}] if isinstance(m, str) else m,
+            tokenize=False, add_generation_prompt=True, **opts)
+                   for m in prompts]
+    ids, labels = d2l.label_token_ids(tokenizer, prompts, label_words, sep)
+    if not chat:  # as d2l.generate: a plain prompt gets the BOS, if any
+        ids = [d2l._lm_bos_ids(tokenizer) + r for r in ids]
+    if not all(ids):
+        raise ValueError('an empty prompt has no position to predict from')
+    W = d2l._label_output_layer(model)
+    if W is None:  # a d2l GPT, or a soft-capped output layer
+        return d2l._label_logprobs_logits(model, tokenizer, ids, labels,
+                                          batch_size)
+    decoder = d2l._lm_unwrap(model).get_decoder()
+    pad = getattr(tokenizer, 'pad_token_id', None) or 0
+    device = next(model.parameters()).device
+    out = torch.empty(len(ids), len(label_words))
+    for j in range(0, len(ids), batch_size):  # left-padded, in input order
+        rows, lab = ids[j:j + batch_size], labels[j:j + batch_size]
+        T = max(len(r) for r in rows)
+        X = torch.tensor([[pad] * (T - len(r)) + r for r in rows],
+                         device=device)
+        mask = torch.tensor([[0] * (T - len(r)) + [1] * len(r)
+                             for r in rows], device=device)
+        pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+        with torch.inference_mode():
+            h = decoder(input_ids=X, attention_mask=mask, position_ids=pos,
+                        use_cache=False).last_hidden_state[:, -1]
+            lab = torch.tensor(lab, device=device)  # (batch, labels)
+            z = torch.einsum('bd,bld->bl', h.float(), W.weight[lab].float())
+            if W.bias is not None:
+                z = z + W.bias[lab].float()
+            lp = z.log_softmax(-1).cpu()
+        out[j:j + batch_size] = lp  # out is an ordinary tensor
+    return out
+
+def fewshot_prompt(demos, query, template='plain', *, fmt=None,
+                   label_map=None, system=None):
+    """Demonstrations demos, a list of (x, y), and a query x as a prompt.
+    'plain' (fmt, default 'Input: {x}\\nOutput: {y}') and 'qa'
+    ('Q: {x}\\nA: {y}') give a string whose blocks are separated by a blank
+    line and which ends after the query's label field, without a space;
+    'chat_single' gives the same text as one user message, 'chat_multi'
+    one user and one assistant message per demonstration. label_map maps
+    each y to its label word.
+
+    Defined in :numref:`sec_lm_prompting`"""
+    if template not in ('plain', 'qa', 'chat_single', 'chat_multi'):
+        raise ValueError(f'unknown template: {template!r}')
+    if fmt is not None:
+        import string
+        if template not in ('plain', 'chat_single'):
+            raise ValueError(f'template {template!r} takes no fmt')
+        parts = list(string.Formatter().parse(fmt))
+        fields = [f for _, f, _, _ in parts if f is not None]
+        tail = parts[-1][0] if parts and parts[-1][1] is None else ''
+        if (set(fields) != {'x', 'y'} or fields.count('y') > 1 or
+                fields[-1] != 'y' or tail.strip()):
+            raise ValueError('fmt needs the fields {x} and {y}, with {y} '
+                             f'once and last: {fmt!r}')
+
+    def word(y):
+        if label_map is not None:
+            if y not in label_map:
+                raise KeyError(f'label {y!r} is not in label_map')
+            y = label_map[y]
+        if not isinstance(y, str):
+            raise TypeError(f'label {y!r} is not a string: pass label_map')
+        return y
+    demos = [(x, word(y)) for x, y in demos]
+    head = [] if system is None else [{'role': 'system', 'content': system}]
+    if template == 'chat_multi':
+        return head + [{'role': r, 'content': c} for x, y in demos
+                       for r, c in (('user', x), ('assistant', y))] + [
+                           {'role': 'user', 'content': query}]
+    fmt = 'Q: {x}\nA: {y}' if template == 'qa' else (
+        fmt or 'Input: {x}\nOutput: {y}')
+    text = '\n\n'.join([fmt.format(x=x, y=y) for x, y in demos] +
+                       [fmt.format(x=query, y='').rstrip()])
+    if template == 'chat_single':
+        return head + [{'role': 'user', 'content': text}]
+    return text if system is None else system + '\n\n' + text
+
+d2l.DATA_HUB['ag-news-train'] = (
+    'https://huggingface.co/datasets/sh0416/ag_news/resolve/'
+    '70e3fa1915be9a8daebec5e840f20df9a8e18793/train.jsonl',
+    '4b8aa80c8d0e1bea19ec0924b720317a6a61b040')
+d2l.DATA_HUB['ag-news-test'] = (
+    'https://huggingface.co/datasets/sh0416/ag_news/resolve/'
+    '70e3fa1915be9a8daebec5e840f20df9a8e18793/test.jsonl',
+    '6c874e265fe5ff35861f27eaf3e681dda147ba12')
+d2l.DATA_HUB['lm-fewshot-grid-v2'] = (
+    d2l.LM_DATA_URL + 'lm-fewshot-grid-v2.csv',
+    '0c2a1c87635bbfcdca9cedb479723901b3d5cbd5')
+
+def calibrate_labels(logprobs, content_free_logprobs):
+    """Contextual calibration: subtract the mean log-probabilities (M, L)
+    of content-free inputs from logprobs (N, L) and renormalize over the
+    L labels; one content-free input may be given as an (L,) row. The
+    mean is taken in log space; Zhao et al. (2021) average the
+    probabilities instead.
+
+    Defined in :numref:`sec_lm_prompting`"""
+    logprobs = torch.as_tensor(logprobs)
+    cf = torch.as_tensor(content_free_logprobs)
+    if cf.ndim not in (1, 2) or cf.shape[-1] != logprobs.shape[-1]:
+        raise ValueError(f'content-free log-probabilities {tuple(cf.shape)}'
+                         f' are not (M, {logprobs.shape[-1]}) or '
+                         f'({logprobs.shape[-1]},)')
+    return torch.log_softmax(logprobs - cf.reshape(-1, cf.shape[-1]).mean(0),
+                             dim=-1)
+
+# Several of these files share a name: fetch them with d2l.download_keyed
+d2l.DATA_HUB['arc-challenge-test'] = (
+    'https://huggingface.co/datasets/allenai/ai2_arc/resolve/'
+    '210d026faf9955653af8916fad021475a3f00453/ARC-Challenge/'
+    'test-00000-of-00001.parquet',
+    '029435570dd5b680c95603f2f51a93218fa30cb2')
+d2l.DATA_HUB['arc-challenge-train'] = (
+    'https://huggingface.co/datasets/allenai/ai2_arc/resolve/'
+    '210d026faf9955653af8916fad021475a3f00453/ARC-Challenge/'
+    'train-00000-of-00001.parquet',
+    '43a863338c7852a03fc5ab79f7c80b88e01a192d')
+d2l.DATA_HUB['gsm8k-train'] = (
+    'https://huggingface.co/datasets/openai/gsm8k/resolve/'
+    '740312add88f781978c0658806c59bc2815b9866/main/'
+    'train-00000-of-00001.parquet',
+    '2328586d74d5426d030f29ac85a485f58514efbd')
+d2l.DATA_HUB['gsm8k-test'] = (
+    'https://huggingface.co/datasets/openai/gsm8k/resolve/'
+    '740312add88f781978c0658806c59bc2815b9866/main/'
+    'test-00000-of-00001.parquet',
+    'b0c27c2f1cb845ba83b135c7e2575070b33ca967')
+d2l.DATA_HUB['wikitext-2-raw-test'] = (
+    'https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+    'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-2-raw-v1/'
+    'test-00000-of-00001.parquet',
+    'ab23bd60c20d2e169a8dc2d139ab6e7bf8b74e91')
+# Fixed inputs: lm-evaluation-harness's scores on 200 ARC items
+# (tools/oneshot/make_lm_eval_arc_fixture.py) and the held-out texts
+# (tools/oneshot/make_lm_heldout_texts.py)
+d2l.DATA_HUB['lm-eval-reference-arc-v1'] = (
+    d2l.LM_DATA_URL + 'lm-eval-reference-arc-v1.json',
+    'c0bdeb8593b0ba75406025d06e8cbea9016a2c71')
+d2l.DATA_HUB['lm-heldout-texts-v1'] = (
+    d2l.LM_DATA_URL + 'lm-heldout-texts-v1.json',
+    '11b0ed4fead96910fba1078b2d9f5ee5b6a59b69')
+# This section's measured results, written by a run with D2L_RERUN (the
+# keys in use are in ARTIFACTS below). The next section reads
+# lm-gsm8k-samples-v2 and lm-arc-scores-v3; the API section reads the
+# problem ids of lm-gsm8k-samples-v1
+d2l.DATA_HUB['lm-gsm8k-samples-v1'] = (
+    d2l.LM_DATA_URL + 'lm-gsm8k-samples-v1.jsonl',
+    '11b561b6fb07d19016f5a00b4a5dcf35d3dbbb07')
+d2l.DATA_HUB['lm-gsm8k-samples-v2'] = (
+    d2l.LM_DATA_URL + 'lm-gsm8k-samples-v2.jsonl',
+    'e02bde69f9fca1f0af49d1170088d87a304ceb0f')
+d2l.DATA_HUB['lm-bpb-v3'] = (
+    d2l.LM_DATA_URL + 'lm-bpb-v3.csv',
+    '1afa5c853c605511c3c5d8f41ee4607ee7bfd12b')
+d2l.DATA_HUB['lm-arc-generations-v5'] = (
+    d2l.LM_DATA_URL + 'lm-arc-generations-v5.jsonl',
+    'c4f2733f91d489a0b89101531a037f12e77a03c8')
+d2l.DATA_HUB['lm-arc-scores-v3'] = (
+    d2l.LM_DATA_URL + 'lm-arc-scores-v3.parquet',
+    '7f3e186697deceed231f826da256c2fce646eef1')
+
+def format_mc(question, options, fmt='cloze', *, shots=()):
+    """A multiple-choice item as (prompt, choices). 'cloze': the prompt
+    'Question: {question}\\nAnswer:' and each option after a space;
+    'letter': 'Question: {question}', a line 'A. {option}' per option and
+    'Answer:', with the letters ' A', ' B', ... as choices (OLMES's
+    multiple-choice formulation); 'mmlu': the same without 'Question: ',
+    as the MMLU paper and lm-evaluation-harness's mmlu tasks write it. Each
+    shot, a tuple (question, options, answer_index), is rendered the same
+    way with its answer and put before the item, separated by a blank line.
+    Callers that want a header (such as MMLU's subject line) prepend it
+    themselves.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if fmt not in ('cloze', 'letter', 'mmlu'):
+        raise ValueError(f'unknown fmt: {fmt!r}')
+
+    def render(q, opts):
+        opts = [str(o) for o in opts]  # also numpy arrays, pandas Series
+        if not opts:
+            raise ValueError(f'no options for {q!r}')
+        if fmt == 'cloze':
+            return f'Question: {q}\nAnswer:', [' ' + o for o in opts]
+        if len(opts) > 26:
+            raise ValueError(f'{len(opts)} options, but 26 letters')
+        letters = [chr(ord('A') + i) for i in range(len(opts))]
+        lines = [q if fmt == 'mmlu' else f'Question: {q}'] + [
+            f'{a}. {o}' for a, o in zip(letters, opts)]
+        return '\n'.join(lines + ['Answer:']), [' ' + a for a in letters]
+    blocks = []
+    for q, opts, a in shots:
+        prompt, choices = render(q, opts)
+        if not 0 <= a < len(choices):
+            raise ValueError(f'answer index {a} for {len(choices)} options')
+        blocks.append(prompt + choices[a])
+    prompt, choices = render(question, options)
+    return '\n\n'.join(blocks + [prompt]), choices
+
+ScoreComponents = collections.namedtuple(  # each (N, C_max), padded with
+    'ScoreComponents', 'll n_tokens n_chars n_bytes')  # -inf (ll) and 0
+
+def score_choices(model, tokenizer, prompts, choices, norm='token', *,
+                  batch_size=8, return_components=False):
+    """Log-likelihood scores (N, C_max) of each choice after its prompt,
+    -inf in padded columns; the prediction is argmax(-1). choices holds N
+    lists (ragged) or one list shared by all prompts. norm divides the
+    summed log-probability ll: 'sum' by 1, 'token' by the continuation's
+    tokens, 'char' and 'byte' by the length and UTF-8 length of the choice
+    without one leading whitespace character (lm-evaluation-harness's
+    acc_norm and acc_bytes). The continuation is the suffix of
+    encode(prompt + choice) beyond encode(prompt), trailing prompt
+    whitespace moved to the choice, no BOS (see _lm_continuations). With
+    return_components=True, returns ScoreComponents, from which every norm
+    follows. The scored positions are projected by the output layer in
+    fp32 (as label_logprobs does) and log-softmaxed in fp32. In bf16 an
+    item's score depends on which items share its batch, so a different
+    call over the same items (another batch size or item set) agrees only
+    up to that batch drift, not bit for bit.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if norm not in ('sum', 'token', 'char', 'byte'):
+        raise ValueError(f'unknown norm: {norm!r}')
+    rows, inputs, conts, texts, shape = d2l._lm_continuations(
+        tokenizer, prompts, choices, d2l._lm_max_len(model))
+    head = d2l._label_output_layer(model)  # a plain linear layer, or None
+    if head is not None:  # its weights in fp32, once per call
+        W = head.weight.float()
+        bias = None if head.bias is None else head.bias.float()
+    pad = getattr(tokenizer, 'pad_token_id', None) or 0
+    device = next(model.parameters()).device
+    order = sorted(range(len(rows)), key=lambda r: (-len(inputs[r]), r))
+    ll = torch.empty(len(rows), dtype=torch.float64)
+    for s in range(0, len(order), batch_size):  # longest inputs first
+        b = order[s:s + batch_size]
+        x, m = [inputs[r] for r in b], [len(conts[r]) for r in b]
+        y = torch.tensor([t for r in b for t in conts[r]], device=device)
+        with torch.inference_mode():
+            if head is None:  # a d2l GPT, or a soft-capped output layer
+                H = d2l._lm_cont_logits(model, x, m, pad)
+            else:  # left padding: every row ends with its continuation
+                T = max(map(len, x))
+                X = torch.tensor([[pad] * (T - len(r)) + r for r in x],
+                                 device=device)
+                mask = torch.tensor([[0] * (T - len(r)) + [1] * len(r)
+                                     for r in x], device=device)
+                pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+                H = d2l._lm_unwrap(model).get_decoder()(
+                    input_ids=X, attention_mask=mask, position_ids=pos,
+                    use_cache=False).last_hidden_state
+                H = torch.cat([H[k, T - mk:] for k, mk in enumerate(m)])
+            lp = []  # fp32, at most 1,024 scored positions at a time
+            for i in range(0, len(y), 1024):
+                z = H[i:i + 1024].float()
+                z = z if head is None else F.linear(z, W, bias)
+                lp.append(z.log_softmax(-1).gather(
+                    -1, y[i:i + 1024, None])[:, 0])
+            lp = torch.cat(lp).double()
+        ll[b] = torch.stack([v.sum() for v in lp.split(m)]).cpu()
+    comps = d2l._lm_components(rows, ll, conts, texts, shape)
+    if return_components:
+        return comps
+    return comps.ll / {'sum': 1, 'token': comps.n_tokens,
+                       'char': comps.n_chars, 'byte': comps.n_bytes}[norm]
+
+def bits_per_byte(model, tokenizer, texts, ctx_len=2048, stride=None,
+                  batch_size=4):
+    """Bits per UTF-8 byte of texts: total negative log-likelihood in nats
+    over ln 2 times the total bytes. Each text is put in Unicode NFC form
+    (as Qwen's tokenizers do themselves, so the bytes counted are those
+    scored), tokenized whole (no BOS) and preceded by one unscored
+    document-boundary token (Qwen3: 151643, Qwen3.5: 248044); without one,
+    its first tokens go unscored (see _lm_unscored_head). Windows of
+    ctx_len input tokens (capped at the model's maximum input length, with
+    a warning) advance by stride (default ctx_len // 2) and score every
+    token once, the first window ctx_len tokens and each later one stride
+    tokens, each with at least ctx_len - stride + 1 tokens of context;
+    texts are scored independently. A model with a plain linear output
+    layer runs its decoder on batch_size windows and projects the scored
+    positions in fp32, 1,024 at a time; any other model runs one window at
+    a time on its own logits.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    import unicodedata
+    texts = [texts] if isinstance(texts, str) else list(texts)
+    texts = [unicodedata.normalize('NFC', str(t)) for t in texts]
+    ctx_len = d2l._lm_ctx_len(model, ctx_len)
+    stride = ctx_len // 2 if stride is None else stride
+    if ctx_len < 1 or not 1 <= stride <= ctx_len:
+        raise ValueError(f'need 1 <= stride <= ctx_len, got {stride}, '
+                         f'{ctx_len}')
+    b, windows, n_bytes = d2l._lm_boundary_id(tokenizer), [], 0
+    for text, ids in zip(texts, d2l._lm_encode(tokenizer, texts)):
+        if not ids:
+            continue
+        n_bytes += len(text.encode('utf-8'))
+        if b is None:  # the text's first tokens have no context
+            first, unscored = d2l._lm_unscored_head(tokenizer, text, ids)
+            seq, n_bytes = ids, n_bytes - unscored
+        else:  # the boundary token is the first one's context
+            first, seq = 1, [b] + ids
+        done = first - 1  # targets seq[first:done + 1] are scored
+        while done < len(seq) - 1:  # inputs seq[start:end] predict
+            end = min(max(ctx_len, done + 1) if done == first - 1
+                      else done + stride, len(seq) - 1)
+            start = max(end - ctx_len, 0)  # seq[start + 1:end + 1]
+            windows.append((seq[start:end], seq[done + 1:end + 1]))
+            done = end
+    if not n_bytes:
+        raise ValueError('no text to score')
+    head = d2l._label_output_layer(model)  # a plain linear layer, or None
+    if head is not None:
+        W = head.weight.float()
+        bias = None if head.bias is None else head.bias.float()
+    size = 1 if head is None else batch_size
+    device, nll = next(model.parameters()).device, 0.0
+    for s in range(0, len(windows), size):
+        w = windows[s:s + size]
+        y = torch.tensor([t for _, ys in w for t in ys], device=device)
+        with torch.inference_mode():
+            if head is None:  # the model's own logits
+                H = d2l._lm_cont_logits(model, [x for x, _ in w],
+                                        [len(ys) for _, ys in w])
+            else:  # right padding: decoder states of the scored positions
+                T = max(len(x) for x, _ in w)
+                X = torch.tensor([x + [0] * (T - len(x)) for x, _ in w],
+                                 device=device)
+                mask = (torch.arange(T, device=device) < torch.tensor(
+                    [len(x) for x, _ in w], device=device)[:, None]).long()
+                H = d2l._lm_unwrap(model).get_decoder()(
+                    input_ids=X, attention_mask=mask,
+                    use_cache=False).last_hidden_state
+                H = torch.cat([H[k, len(x) - len(ys):len(x)]
+                               for k, (x, ys) in enumerate(w)])
+            for i in range(0, len(y), 1024):  # fp32, 1,024 at a time
+                z = H[i:i + 1024].float()
+                z = z if head is None else F.linear(z, W, bias)
+                nll += F.cross_entropy(z, y[i:i + 1024],
+                                       reduction='sum').item()
+    return nll / (math.log(2) * n_bytes)
+
+def extract_answer(text, kind='gsm8k', strict=False):
+    """The answer a generated text commits to, as a string, or None.
+    'gsm8k': the first number after the last '####', else after the last
+    'the answer is' (any case), else, unless strict, the last number in the
+    text; commas and '$' are removed and the number is normalized ('1,000'
+    and '1000.00' give '1000', '-0.50' and '−0.50' give '-0.5'); a hyphen
+    right after a letter, digit or point is not a sign ('10-15' gives
+    '15'). 'boxed': the content
+    of the last \\boxed{...} whose braces match, stripped.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if kind == 'boxed':
+        found, i = None, text.find('\\boxed{')
+        while i != -1:
+            depth = 0
+            for j in range(i + 6, len(text)):  # from the opening brace
+                depth += {'{': 1, '}': -1}.get(text[j], 0)
+                if depth == 0:
+                    found = text[i + 7:j].strip()
+                    break
+            i = text.find('\\boxed{', i + 1)
+        return found or None
+    if kind != 'gsm8k':
+        raise ValueError(f'unknown kind: {kind!r}')
+    from decimal import Decimal
+    number = re.compile(r'(?:(?<![\w.])[-\u2212])?\$?'  # sign, not hyphen
+                        r'(?:\d[\d,]*(?:\.\d+)?|\.\d+)')
+
+    def normalize(s):
+        d = Decimal(s.translate({ord(','): None, ord('$'): None,
+                                 0x2212: '-'}))
+        if d == d.to_integral_value():
+            return str(int(d))
+        return format(d.normalize(), 'f')
+    for marker in ('####', 'the answer is'):
+        ends = [k.end() for k in re.finditer(re.escape(marker), text, re.I)]
+        m = number.search(text, ends[-1]) if ends else None
+        if m:
+            return normalize(m.group())
+    found = None if strict else number.findall(text)
+    return normalize(found[-1]) if found else None
+
+def pass_at_k(n, c, k):
+    """Unbiased pass@k from n samples of which c are correct: the
+    probability that k of them, drawn without replacement, include a
+    correct one, 1 - C(n - c, k) / C(n, k), in the product form
+    1 - prod_{i = n - c + 1}^{n} (1 - k / i). Integer arrays broadcast.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    n, c, k = np.broadcast_arrays(*(np.asarray(v) for v in (n, c, k)))
+    if not all(np.issubdtype(v.dtype, np.integer) for v in (n, c, k)):
+        raise TypeError('n, c and k must be integers')
+    for bad, msg in ((c < 0, 'c < 0'), (c > n, 'c > n'), (k < 1, 'k < 1'),
+                     (k > n, 'k > n')):
+        if np.any(bad):
+            raise ValueError(f'pass_at_k needs 0 <= c <= n, 1 <= k <= n: '
+                             f'{msg}')
+    out = np.empty(n.shape)
+    for idx in np.ndindex(n.shape):
+        ni, ci, ki = int(n[idx]), int(c[idx]), int(k[idx])
+        out[idx] = 1.0 if ni - ci < ki else 1.0 - np.prod(
+            1.0 - ki / np.arange(ni - ci + 1, ni + 1))
+    return float(out) if out.ndim == 0 else out
+
+def pass_at_k_variance(n, p, k):
+    """Variance of pass_at_k(n, c, k) when c ~ Binomial(n, p): the sum over
+    c of Binomial(c; n, p) (U(n, c, k) - (1 - (1 - p)^k))^2.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if not 0 <= p <= 1 or not 1 <= k <= n:
+        raise ValueError(f'need 0 <= p <= 1 and 1 <= k <= n: {n}, {p}, {k}')
+    if p in (0, 1):
+        return 0.0
+    c = np.arange(n + 1)
+    log_pmf = (math.lgamma(n + 1) - np.array([math.lgamma(i + 1) + math.lgamma(
+        n - i + 1) for i in c]) + c * math.log(p) + (n - c) * math.log1p(-p))
+    U = pass_at_k(np.full(n + 1, n), c, np.full(n + 1, k))
+    return float(np.sum(np.exp(log_pmf) * (U - (1 - (1 - p) ** k)) ** 2))
+
+def run_python_tests(program, test_code, timeout=5.0):
+    """True iff program followed by test_code runs to its end and the
+    process exits with code 0, in a fresh `python -I` process, in an empty
+    temporary directory, with stdin closed, within timeout seconds of
+    wall-clock time and, on POSIX, within limits on CPU time and address
+    space (1 GiB). Exiting early (sys.exit, os._exit, a unittest.main() of
+    the program's own) fails, as in human-eval; on POSIX, any process the
+    code started is killed when the call returns. This is not a sandbox:
+    the code runs as the caller, can read and write the caller's files and
+    reach the network. Run code you did not write in a container.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    import secrets
+    import subprocess
+    import tempfile
+    token = secrets.token_hex(16)  # written only once test_code has run
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, 'main.py'), 'w') as f:
+            f.write(program + '\n' + test_code + '\n')
+        done = os.path.join(tmp, 'done')  # absolute: the code may chdir
+        proc = subprocess.Popen(
+            [sys.executable, '-I', '-c', d2l._run_limits(timeout) +
+             "import runpy\nrunpy.run_path('main.py', run_name='__main__')\n"
+             f'open({done!r}, "w").write({token!r})'],
+            cwd=tmp, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=os.name == 'posix')
+        try:
+            if proc.wait(timeout=timeout) != 0:
+                return False
+            with open(done) as f:
+                return f.read() == token
+        except (subprocess.TimeoutExpired, OSError):
+            return False
+        finally:
+            d2l._kill_session(proc)
+
+# Run-time downloads only (licences): fetch them with d2l.download_keyed
+d2l.DATA_HUB['gsm-symbolic-test'] = (
+    'https://huggingface.co/datasets/apple/GSM-Symbolic/resolve/'
+    '93b5b3758d9d9841ffe81d6cd2ae2b030685b078/main/test.jsonl',
+    '6d7beda4cc95f9d04f219a99daaeaf445b53c9d1')
+d2l.DATA_HUB['mt-bench-questions'] = (
+    'https://huggingface.co/datasets/HuggingFaceH4/mt_bench_prompts/resolve/'
+    'e3a795c5e9a82ee40611c416b8a7786c73198991/raw/question.jsonl',
+    '1b5197cafba020598f6c60e9401a5098bcd81d27')
+d2l.DATA_HUB['dolly-15k'] = (
+    'https://huggingface.co/datasets/databricks/databricks-dolly-15k/'
+    'resolve/bdd27f4d94b9c1f951818a7da7fd7aeea5dbff1a/'
+    'databricks-dolly-15k.jsonl',
+    '34356d82b686ae9fb3b230f428ba644f17e5e652')
+d2l.DATA_HUB['mt-bench-human'] = (
+    'https://huggingface.co/datasets/lmsys/mt_bench_human_judgments/resolve/'
+    'f7d2896d2cc5d80f8b55c2bbc722613555233c25/data/'
+    'human-00000-of-00001-25f4910818759289.parquet',
+    'e19c24360cb79f1919cfecd980a7a4951571fcdb')
+d2l.DATA_HUB['mt-bench-gpt4-pair'] = (
+    'https://huggingface.co/datasets/lmsys/mt_bench_human_judgments/resolve/'
+    'f7d2896d2cc5d80f8b55c2bbc722613555233c25/data/'
+    'gpt4_pair-00000-of-00001-c0b431264a82ddc0.parquet',
+    '8928cda0399b6a0e40589cfbd3df4b7ccebdf242')
+# The benchmark data of this edition (source in the book's repository:
+# tools/lm_data/lm_benchmarks_2026.json), approved before it was frozen
+d2l.DATA_HUB['lm-benchmarks-2026-v1'] = (
+    d2l.LM_DATA_URL + 'lm-benchmarks-2026-v1.json',
+    'f22e75c247119ba6f43196cc54beceeb9bd47e6c')
+# The measured results of this section, frozen from one D2L_RERUN=1 run
+d2l.DATA_HUB['lm-eval-scores-v2'] = (
+    d2l.LM_DATA_URL + 'lm-eval-scores-v2.parquet',
+    'd41b6cba069ee196d11cf37c789ba50e63b8e0e7')
+d2l.DATA_HUB['lm-contam-scores-v2'] = (
+    d2l.LM_DATA_URL + 'lm-contam-scores-v2.parquet',
+    '2b192f436b2d85ebb6cb53ade24cba451c8f1327')
+d2l.DATA_HUB['lm-answers-v2'] = (
+    d2l.LM_DATA_URL + 'lm-answers-v2.jsonl',
+    '6e8460ba43a3a5299a682461e0bdc91a0fbdde55')
+d2l.DATA_HUB['lm-judge-human-v2'] = (
+    d2l.LM_DATA_URL + 'lm-judge-human-v2.jsonl',
+    '03d9c0400e75ee4dc542dddbbdd6936d242f48e3')
+d2l.DATA_HUB['lm-judge-pairs-v2'] = (
+    d2l.LM_DATA_URL + 'lm-judge-pairs-v2.jsonl',
+    '767530058ce52af5fa4d985e3bbc96e07e7191ae')
+
+BootstrapResult = collections.namedtuple(  # ci = (lo, hi); p_two_sided is
+    'BootstrapResult',                      # None for a single sample
+    'mean ci se p_two_sided n n_clusters n_boot')
+
+def _bootstrap_replicates(scores, n_boot, cluster, seed, chunk=2 * 10**7):
+    """Scores y, n_boot bootstrap means and the number of clusters G. Each
+    replicate draws G clusters with replacement: with C (n_boot, G) the
+    counts, sums y_sum and sizes m of the clusters, the replicate means
+    are the ratios (C @ y_sum) / (C @ m). C is built in chunks of at most
+    chunk entries.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    y = np.asarray(scores, dtype=float).ravel()
+    if np.isnan(y).any():
+        raise ValueError('scores contain NaN')
+    if len(y) < 2:
+        raise ValueError(f'{len(y)} items: the bootstrap needs at least 2')
+    if cluster is None:  # every item its own cluster
+        y_sum, m = y, np.ones_like(y)
+    else:
+        cluster = np.asarray(cluster).ravel()
+        if len(cluster) != len(y):
+            raise ValueError(f'{len(y)} scores, {len(cluster)} cluster ids')
+        g = np.unique(cluster, return_inverse=True)[1]
+        y_sum, m = np.bincount(g, weights=y), np.bincount(g).astype(float)
+        if len(m) < 30:
+            raise ValueError(f'{len(m)} clusters: the cluster bootstrap '
+                             'needs at least 30')
+    G = len(m)
+    rng, rows, means = np.random.default_rng(seed), max(1, chunk // G), []
+    for b in range(0, n_boot, rows):  # a loop over chunks, not replicates
+        C = rng.multinomial(G, np.full(G, 1 / G), size=min(rows, n_boot - b))
+        means.append(C @ y_sum / (C @ m))
+    return y, np.concatenate(means), G
+
+def bootstrap_ci(scores, n_boot=10000, cluster=None, *, seed=0, alpha=0.05):
+    """Percentile bootstrap interval for the mean of scores. With cluster
+    (one label per score), whole clusters are resampled and each
+    replicate's mean is the ratio estimator, so clusters may differ in
+    size; at least 30 clusters are required.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    import warnings
+    y, means, G = _bootstrap_replicates(scores, n_boot, cluster, seed)
+    if len(y) < 100:
+        warnings.warn(f'bootstrap_ci: {len(y)} items; below 100 the '
+                      'percentile interval is unreliable')
+    lo, hi = np.quantile(means, [alpha / 2, 1 - alpha / 2])
+    return BootstrapResult(float(y.mean()), (float(lo), float(hi)),
+                           float(means.std(ddof=1)), None, len(y), G, n_boot)
+
+def paired_bootstrap(scores_a, scores_b, n_boot=10000, cluster=None, *,
+                     seed=0, alpha=0.05):
+    """bootstrap_ci of the per-item differences scores_a - scores_b on the
+    same items, plus a bootstrap p-value, 2 min(P*(mean <= 0),
+    P*(mean >= 0)) over the replicates; the sign-flip test of the
+    statistics appendix is its permutation counterpart.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    import warnings
+    a, b = (np.asarray(s, dtype=float).ravel() for s in (scores_a, scores_b))
+    if a.shape != b.shape:
+        raise ValueError(f'{len(a)} and {len(b)} scores: pair them by item')
+    d, means, G = _bootstrap_replicates(a - b, n_boot, cluster, seed)
+    if len(d) < 100:
+        warnings.warn(f'paired_bootstrap: {len(d)} items; below 100 the '
+                      'percentile interval is unreliable')
+    lo, hi = np.quantile(means, [alpha / 2, 1 - alpha / 2])
+    p = min(1.0, 2 * min(np.mean(means <= 0), np.mean(means >= 0)))
+    return BootstrapResult(float(d.mean()), (float(lo), float(hi)),
+                           float(means.std(ddof=1)), float(p), len(d), G,
+                           n_boot)
+
+def min_detectable_effect(sd=None, n=None, *, se=None, deff=1.0,
+                          alpha=0.05, power=0.8):
+    """Smallest true difference that a two-sided level-alpha test detects
+    with the given power: (z_{1-alpha/2} + z_power) sd sqrt(deff / n), or
+    from a standard error, (z_{1-alpha/2} + z_power) se sqrt(deff); arrays
+    broadcast.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    from statistics import NormalDist
+    z = NormalDist().inv_cdf(1 - alpha / 2) + NormalDist().inv_cdf(power)
+    if se is not None:
+        if sd is not None or n is not None:
+            raise ValueError('pass sd and n, or se alone')
+        mde = z * np.asarray(se, dtype=float) * np.sqrt(deff)
+    elif sd is None or n is None:
+        raise ValueError('pass sd and n, or se alone')
+    else:
+        mde = z * np.asarray(sd, dtype=float) * np.sqrt(
+            np.asarray(deff, dtype=float) / np.asarray(n, dtype=float))
+    return float(mde) if mde.ndim == 0 else mde
+
+EvalTask = collections.namedtuple('EvalTask', [
+    'id', 'dataset', 'revision', 'files', 'kind', 'adapter', 'split',
+    'config', 'n', 'subset_seed', 'fmt', 'norm', 'template', 'chat',
+    'enable_thinking', 'shots', 'shots_from', 'max_new_tokens', 'sampling',
+    'stop', 'extract', 'cluster', 'since'], defaults=(
+        'test', None, None, 0, 'cloze', 'token', None, False, None, 0, None,
+        None, None, (), None, None, None))
+
+def subset_ids(n_total, n, seed=0):
+    """Row indices of a seeded subset of n of n_total items: the first n
+    of one permutation, so a smaller subset is a prefix of a larger one;
+    n=None keeps every row, in order.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    if n is None:
+        return np.arange(n_total)
+    if not 0 <= n <= n_total:
+        raise ValueError(f'a subset of {n} from {n_total} items')
+    return np.random.default_rng(seed).permutation(n_total)[:n]
+
+def item_seed(seed, task_id, item_id):
+    """A 63-bit seed for one item's random draws, from sha256 of
+    'seed/task_id/item_id' (Python's hash() is salted per process).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    digest = hashlib.sha256(f'{seed}/{task_id}/{item_id}'.encode()).digest()
+    return int.from_bytes(digest[:8], 'big') >> 1
+
+class EvalSuite:
+    """Evaluation tasks (EvalTask records, or ids of d2l.EVAL_TASKS) with
+    their items; n and seed, unless None, replace every task's n and
+    subset_seed. batch_size is a run setting, not part of the suite.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    def __init__(self, tasks, name='suite', batch_size=8, *, n=None, seed=0):
+        self.name, self.batch_size, self._items = name, batch_size, {}
+        resolved = []
+        for t in tasks:
+            if isinstance(t, str):
+                t = d2l.EVAL_TASKS[t]
+            t = EvalTask(**(t if isinstance(t, dict) else t._asdict()))
+            t = t._replace(**{k: v for k, v in (('n', n), ('subset_seed',
+                                                           seed))
+                              if v is not None})
+            t = d2l._eval_canonical(t)  # JSON values, files and stop tuples
+            if t.id in self._items:
+                raise ValueError(f'task {t.id!r} appears twice')
+            rows = d2l._eval_load_rows(t)
+            ids = subset_ids(len(rows), t.n, t.subset_seed)
+            self._items[t.id] = d2l._eval_items(t, rows, ids)
+            resolved.append(t)
+        self.tasks = tuple(resolved)
+
+    @property
+    def hash(self):
+        """sha256 of the canonical JSON of every task's fields, followed by
+        the sha256 of each task's items (ids, rendered prompts, choices and
+        references) in id order: a new dataset revision, subset or prompt
+        rendering gives a new hash."""
+        h = hashlib.sha256(json.dumps([t._asdict() for t in self.tasks],
+                                      sort_keys=True).encode())
+        for t in self.tasks:
+            items = sorted(self._items[t.id], key=lambda item: item['id'])
+            h.update(hashlib.sha256(json.dumps(
+                items, sort_keys=True, default=str).encode()).digest())
+        return h.hexdigest()
+
+    def items(self, task_id):
+        """The items of one task in subset order: dicts with the item's
+        'id' and the prompt fields of the task's kind."""
+        return self._items[task_id]
+
+    def _score(self, task, items, model, tokenizer, seed):
+        """Result rows (task, item_id, cluster, score, pred, finish_reason)
+        for some items of one task, by the task's kind; the kinds this section
+        does not run (mc_partial, code, ppl) are in d2l._eval_score_more.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        if task.kind == 'mc':  # the highest-scoring choice; ties to the first
+            S = d2l.score_choices(model, tokenizer, [it['prompt'] for it in items],
+                                  [it['choices'] for it in items], task.norm,
+                                  batch_size=self.batch_size)
+            preds, reasons = S.argmax(-1).tolist(), [None] * len(items)
+            scores = [float(p == it['gold']) for p, it in zip(preds, items)]
+        elif task.kind == 'gen':  # a generated answer, extracted and compared
+            sampling = dict(task.sampling or {})  # None: greedy
+            if sampling:
+                sampling.setdefault('strategy', 'sample')
+            gens = d2l.generate(
+                model, tokenizer, [it['prompt'] for it in items],
+                task.max_new_tokens, chat=task.chat,
+                enable_thinking=task.enable_thinking, stop=list(task.stop),
+                batch_size=self.batch_size, **sampling,
+                seed=[item_seed(seed, task.id, it['id']) for it in items])
+            reasons = [g.finish_reason for g in gens]
+            preds = [d2l.extract_answer(g.text, task.extract or 'gsm8k')
+                     for g in gens]
+            scores = [float(p is not None and p == it['reference'])
+                      for p, it in zip(preds, items)]
+        else:
+            scores, preds, reasons = d2l._eval_score_more(
+                self, task, items, model, tokenizer, seed)
+        return [{'task': task.id, 'item_id': it['id'],
+                 'cluster': str(it[task.cluster] if task.cluster else it['id']),
+                 'score': s, 'pred': None if p is None else str(p),
+                 'finish_reason': r}
+                for it, s, p, r in zip(items, scores, preds, reasons)]
+
+    def run(self, model, tokenizer, *, seed=0, cache_dir=None, rerun=False,
+            sandbox=False):
+        """Score every item and return an EvalResult. With cache_dir, results
+        are written per chunk under the model, its revision, the suite hash
+        and a run key (seed, dtype, batch size, library versions), and a run
+        with the same key resumes (rerun=True starts over). Sampled tasks
+        draw item i of task t with the generator seeded item_seed(seed, t, i).
+        Code tasks execute model-written programs: sandbox=True says that the
+        process runs in a sandbox.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        if not sandbox and any(t.kind == 'code' for t in self.tasks):
+            raise RuntimeError('code tasks run model-written programs; run them '
+                               'in a sandbox and pass sandbox=True')
+        model_id, revision = d2l._eval_model_id(model)
+        hf = sys.modules.get('transformers')
+        settings = {'seed': seed, 'batch_size': self.batch_size,
+                    'dtype': str(next(model.parameters()).dtype),
+                    'torch': torch.__version__,
+                    'transformers': getattr(hf, '__version__', None)}
+        run_key = hashlib.sha256(json.dumps(settings, sort_keys=True).encode()
+                                 ).hexdigest()[:16]
+        suite_hash = self.hash  # covers the rendered prompts
+        path = None if cache_dir is None else d2l._eval_cache_path(
+            cache_dir, model_id, revision, suite_hash, run_key)
+        rows = [] if path is None or rerun else d2l._eval_cache_read(path)
+        done, start = {(r['task'], r['item_id']) for r in rows}, time.time()
+        for task in self.tasks:
+            todo = [it for it in self.items(task.id)
+                    if (task.id, it['id']) not in done]
+            step = 32 * self.batch_size  # items between two cache writes
+            for i in range(0, len(todo), step):
+                rows += self._score(task, todo[i:i + step], model, tokenizer, seed)
+                if path is not None:
+                    d2l._eval_cache_write(path, rows)
+        meta = {'model': model_id, 'revision': revision, 'suite': self.name,
+                'suite_hash': suite_hash, 'run_key': run_key, **settings,
+                'tasks': [t._asdict() for t in self.tasks],
+                'wall_clock': time.time() - start}
+        return EvalResult(pd.DataFrame(rows), meta)
+
+    @classmethod
+    def from_manifest(cls, name_or_path, batch_size=8):
+        """The suite of a frozen manifest: a name in d2l.EVAL_SUITES or a JSON
+        file written by to_manifest. Its tasks' n and subset_seed are kept.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        if name_or_path in d2l.EVAL_SUITES:
+            manifest = d2l.EVAL_SUITES[name_or_path]
+        else:
+            with open(name_or_path, encoding='utf-8') as f:
+                manifest = json.load(f)
+        return cls(manifest['tasks'], manifest['name'], batch_size, n=None,
+                   seed=None)
+
+    def to_manifest(self, path=None):
+        """The suite as a JSON-ready manifest {'name', 'tasks'}; with path,
+        also written there as sorted-key JSON.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        manifest = json.loads(json.dumps(
+            {'name': self.name, 'tasks': [t._asdict() for t in self.tasks]}))
+        if path is not None:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(manifest, f, sort_keys=True, indent=1)
+                f.write('\n')
+        return manifest
+
+class EvalResult:
+    """Per-item results of one model on one suite (per_item: task, item_id,
+    cluster, score, pred, finish_reason, sorted by task and item id) and
+    the run's settings (meta).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    def __init__(self, per_item, meta):
+        self.per_item = per_item.sort_values(['task', 'item_id'],
+                                             ignore_index=True)
+        self.meta = meta
+
+    def scores(self, task=None):
+        """One task's scores ordered by item id, or a dict over tasks. Ids
+        are strings ('10' sorts before '2'): align other data by id."""
+        if task is None:
+            return {t: self.scores(t) for t in self.per_item.task.unique()}
+        return self.per_item.score[self.per_item.task == task].to_numpy()
+
+    @staticmethod
+    def _clusters(task, cluster):
+        """The cluster labels if the items share clusters, else None (one
+        cluster per item); fewer than 30 shared clusters raise."""
+        k = cluster.nunique()
+        if k == len(cluster):
+            return None
+        if k < 30:
+            raise ValueError(f'task {task}: {k} clusters; the cluster '
+                             'bootstrap needs at least 30')
+        return cluster.to_numpy()
+
+    def summary(self, n_boot=2000):
+        """Per task: n, mean and its 95% interval (clusters resampled)."""
+        rows = []
+        for task, df in self.per_item.groupby('task'):
+            r = bootstrap_ci(df.score, n_boot,
+                             self._clusters(task, df.cluster))
+            rows.append({'task': task, 'n': r.n, 'mean': r.mean,
+                         'lo': r.ci[0], 'hi': r.ci[1],
+                         'clusters': r.n_clusters})
+        return pd.DataFrame(rows)
+
+    def compare(self, other, *, n_boot=10000, seed=0):
+        """Per task, paired_bootstrap of this model's scores minus other's,
+        aligned on (task, item_id); the two runs must share suite and
+        items."""
+        if self.meta['suite_hash'] != other.meta['suite_hash']:
+            raise ValueError(f"different suites: {self.meta['suite_hash']} "
+                             f"and {other.meta['suite_hash']}")
+        m = self.per_item.merge(other.per_item, on=['task', 'item_id'],
+                                how='outer', suffixes=('', '_b'),
+                                indicator=True)
+        bad = m[m._merge != 'both']
+        if len(bad):
+            side = {'left_only': 'self', 'right_only': 'other'}
+            first = [(t, i, side[w]) for t, i, w in zip(
+                bad.task, bad.item_id, bad._merge.astype(str))][:5]
+            raise ValueError(f'item sets differ in {len(bad)} items; first '
+                             f'(task, item_id, only in): {first}')
+        return {task: paired_bootstrap(df.score, df.score_b, n_boot,
+                                       self._clusters(task, df.cluster),
+                                       seed=seed)
+                for task, df in m.groupby('task')}
+
+    def save(self, path):
+        """Write per_item to path (parquet, rows sorted) and meta, without the
+        wall clock, to path with the suffix .json (sorted keys).
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+        _eval_sorted(self.per_item).to_parquet(path, index=False)
+        meta = {k: v for k, v in self.meta.items() if k != 'wall_clock'}
+        with open(os.path.splitext(path)[0] + '.json', 'w',
+                  encoding='utf-8') as f:
+            json.dump(meta, f, sort_keys=True, indent=1)
+            f.write('\n')
+
+    @classmethod
+    def load(cls, path):
+        """An EvalResult written by save.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        with open(os.path.splitext(path)[0] + '.json', encoding='utf-8') as f:
+            meta = json.load(f)
+        return cls(pd.read_parquet(path), meta)
+
+JUDGE_RUBRIC_V1 = (
+    'Below are a question and two answers to it. Decide which answer is '
+    'more helpful and more correct for the person who asked. Do not '
+    'explain your decision.\n\n[Question]\n{question}\n\n[Answer A]\n'
+    '{first}\n\n[Answer B]\n{second}\n\nWhich answer is better? Reply with '
+    'a single letter: A or B.')
+
+JUDGE_PAD_V1 = (
+    'I hope this answer is useful. It responds to the question that was '
+    'asked, and the points above are meant to cover what the question asks '
+    'for. If any part of it is unclear, reading the answer above again '
+    'should help, since it already contains everything this response has '
+    'to say on the topic.')
+
+JudgeResult = collections.namedtuple(  # verdict: 'a', 'b' or 'tie'
+    'JudgeResult', 'pref_a delta position_bias consistent verdict logits')
+
+def judge_pairwise(judge, tokenizer, question, answer_a, answer_b, *,
+                   rubric=JUDGE_RUBRIC_V1, batch_size=8,
+                   max_batch_tokens=None, return_mass=False):
+    """Ask a chat model which answer is better, once with answer_a in the
+    first slot (log-odds l1 of the token 'A' over 'B') and once with
+    answer_b there (l2): delta = (l1 - l2) / 2, position_bias =
+    (l1 + l2) / 2. Strings give one JudgeResult, lists one per item.
+    Answers are cut at 1,500 tokens. d2l._judge_logodds reads the
+    log-odds in fp32, in batches of at most batch_size prompts (and
+    max_batch_tokens tokens with padding, if given). With
+    return_mass=True, also returns P(A) + P(B) per item and order.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    single = isinstance(question, str)
+    if single:
+        question, answer_a, answer_b = [question], [answer_a], [answer_b]
+    if not len(question) == len(answer_a) == len(answer_b):
+        raise ValueError('one question and two answers per item')
+
+    def render(q, first, second):
+        content = rubric.format(question=q, first=first, second=second)
+        return tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': content}], tokenize=False,
+            add_generation_prompt=True, enable_thinking=False)
+    texts = []  # two per item: answer_a first, then answer_b first
+    for i, (q, a, b) in enumerate(zip(question, answer_a, answer_b)):
+        a = d2l._judge_cut(tokenizer, a, i, 'answer_a')
+        b = d2l._judge_cut(tokenizer, b, i, 'answer_b')
+        texts += [render(q, a, b), render(q, b, a)]
+    lp = d2l._judge_logodds(judge, tokenizer, texts, batch_size=batch_size,
+                            max_batch_tokens=max_batch_tokens)
+    results = []  # o1, o2: log-odds that the first slot wins, either order
+    for o1, o2 in lp[:, 2].view(-1, 2).tolist():
+        delta, bias = (o1 - o2) / 2, (o1 + o2) / 2
+        verdict = 'a' if o1 > 0 > o2 else 'b' if o1 < 0 < o2 else 'tie'
+        results.append(JudgeResult(0.5 * (1 + math.tanh(delta / 2)), delta,
+                                   bias, verdict != 'tie', verdict, (o1, o2)))
+    mass = lp[:, :2].exp().sum(-1).view(-1, 2).numpy()  # P(A) + P(B)
+    out = results[0] if single else results
+    return (out, mass[0] if single else mass) if return_mass else out
+
+def bradley_terry(winners, losers, n_items, *, weights=None, l2=1e-3,
+                  n_iter=50):
+    """Bradley-Terry strengths s, P(i beats j) = sigmoid(s_i - s_j): the
+    maximizer of the weighted log-likelihood minus l2 ||s||^2 by Newton's
+    method, centred. weights (N,) give (n_items,); weights (B, N), such as
+    bootstrap counts, give B fits at once, (B, n_items).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    N = len(winners)
+    X = np.zeros((N, n_items))  # +1 for the winner, -1 for the loser
+    np.add.at(X, (np.arange(N), np.asarray(winners)), 1)
+    np.add.at(X, (np.arange(N), np.asarray(losers)), -1)
+    W = np.ones(N) if weights is None else np.asarray(weights, dtype=float)
+    single, W = W.ndim == 1, np.atleast_2d(W)
+    s = np.zeros((len(W), n_items))
+    for _ in range(n_iter):
+        p = 0.5 * (1 + np.tanh(s @ X.T / 2))  # (B, N): P(winner wins)
+        grad = (W * (1 - p)) @ X - 2 * l2 * s
+        H = np.einsum('bn,nk,nj->bkj', W * p * (1 - p), X, X, optimize=True
+                      ) + 2 * l2 * np.eye(n_items)  # minus the Hessian
+        step = np.linalg.solve(H, grad[..., None])[..., 0]
+        s = s + step
+        if np.abs(step).max() < 1e-10:
+            break
+    s = s - s.mean(-1, keepdims=True)
+    return s[0] if single else s
+
+d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
+    'ce1a79d9c5163932d65c417380e53230e1086370')
+
+d2l.DATA_HUB['lm-ud-ewt-train'] = (
+    'https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/'
+    '6b021622f3ab7902730f313fa5955a8b8cdd52b8/en_ewt-ud-train.conllu',
+    '59e9ff791f828f7cd3dcd2e55dc4f30ea7bbd5f9')
+d2l.DATA_HUB['lm-ud-ewt-dev'] = (
+    'https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/'
+    '6b021622f3ab7902730f313fa5955a8b8cdd52b8/en_ewt-ud-dev.conllu',
+    '1e3226c7b533354e4f79e7bae7a1aa56a7dd9c94')
+d2l.DATA_HUB['lm-ud-ewt-test'] = (
+    'https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/'
+    '6b021622f3ab7902730f313fa5955a8b8cdd52b8/en_ewt-ud-test.conllu',
+    '41b279558051f482d78fff4ea7b3c8c98c91ecd4')
+# The recall pairs (tools/oneshot/build_lm_recall_pairs.py)
+d2l.DATA_HUB['lm-interp-recall-v1'] = (
+    d2l.LM_DATA_URL + 'lm-interp-recall-v1.json',
+    'e3025b0216df5384d8a14f1e8e10c4cab080ebbf')
+# What the regeneration run (D2L_RERUN) trained and measured
+d2l.DATA_HUB['lm-tuned-lens-qwen3-0.6b-v1'] = (
+    d2l.LM_DATA_URL + 'lm-tuned-lens-qwen3-0.6b-v1.pt',
+    'e1a9275950de634b8f8a6e7dd516de662755834e')
+d2l.DATA_HUB['lm-sae-r1-l14-v1'] = (
+    d2l.LM_DATA_URL + 'lm-sae-r1-l14-v1.pt',
+    'b7d9589fda439d7bdd9e52572a24c6ea58efb263')
+d2l.DATA_HUB['lm-sae-q17b-l14-v1'] = (
+    d2l.LM_DATA_URL + 'lm-sae-q17b-l14-v1.pt',
+    '11982ca32f0382eb9bf594faee58e808d61be12d')
+d2l.DATA_HUB['lm-interp-results-v3'] = (
+    d2l.LM_DATA_URL + 'lm-interp-results-v3.zip',
+    '75606ff34dc535f0705dfeb9194e4791c2820484')
+
+class _InterveneStop(Exception):
+    """Raised right after the stop_after site, to end a forward early.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+
+class _Intervention:
+    """The context manager that d2l.intervene returns.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    KINDS = ('resid_post', 'resid_mid', 'attn_out', 'mlp_out', 'head_z')
+
+    def __init__(self, model, sites, record, record_grad, stop_after):
+        self.model, self.record_grad = model, record_grad
+        self.sites, self.record, self.stop_after = d2l._intervene_args(
+            model, sites, record, stop_after)
+        self.cache = {s: [] for s in self.record}
+        self.wanted = set(self.sites) | self.record
+
+    @property
+    def grad_cache(self):
+        """The gradient at each recorded tensor; read after a backward."""
+        return {s: [x.grad for x in xs] for s, xs in self.cache.items()}
+
+    def _site(self, site, x):
+        """Apply the site's fn to x and record the result. Returns fn's
+        value (None without a fn) and a term to add to what the module
+        passes on (None without record_grad)."""
+        self.fired.add(site)
+        fn, y, zero = self.sites.get(site), None, None
+        if fn is not None:
+            y = fn(x)
+            if not (torch.is_tensor(y) and y.shape == x.shape
+                    and y.dtype == x.dtype):
+                raise ValueError(f'{site}: fn must return a tensor of shape '
+                                 f'{tuple(x.shape)} and dtype {x.dtype}')
+        if site in self.record:
+            v = (x if y is None else y).detach()
+            if self.record_grad:
+                if not torch.is_grad_enabled():
+                    raise RuntimeError('record_grad needs gradients enabled')
+                # leaf - leaf.detach() is exactly 0: adding it leaves the
+                # forward unchanged and makes leaf.grad the gradient there
+                v.requires_grad_()
+                zero = v - v.detach()
+            self.cache[site].append(v)
+        if site == self.stop_after:
+            raise _InterveneStop(self)
+        return y, zero
+
+    def _write_hook(self, inner, outer, base):
+        """Forward hook on a module whose output a block adds to its stream
+        (W_o, the FFN): site inner sees that output, site outer the stream
+        after the add, r = base[0] + output."""
+        def hook(module, args, out):
+            new = out
+            if inner in self.wanted:
+                y, zero = self._site(inner, out)
+                new = new if y is None else y
+                new = new if zero is None else new + zero
+            if outer in self.wanted:
+                r = base[0] + new  # the stream, as the block's add makes it
+                y, zero = self._site(outer, r)
+                if y is not None:  # the block's own add then yields about y,
+                    new = new + (y - r)  # exactly r wherever y equals r
+                new = new if zero is None else new + zero
+            return None if new is out else new
+        return hook
+
+    def _z_hook(self, site):
+        """Forward pre-hook on W_o: site head_z sees its input."""
+        def hook(module, args):
+            y, zero = self._site(site, args[0])
+            new = args[0] if y is None else y
+            new = new if zero is None else new + zero
+            return None if new is args[0] else (new,)
+        return hook
+
+    @staticmethod
+    def _store_hook(box):
+        """Forward pre-hook that keeps the module's input in box[0]."""
+        def hook(module, args):
+            box[0] = args[0]
+        return hook
+
+    def __enter__(self):
+        self.fired, self.handles = set(), []
+        for l, blk in enumerate(self.model.blks):
+            kinds = {kind for kind, layer in self.wanted if layer == l}
+            W_o, hooks = blk.attention.W_o, []
+            if 'head_z' in kinds:
+                hooks.append(W_o.register_forward_pre_hook(
+                    self._z_hook(('head_z', l))))
+            if kinds & {'attn_out', 'resid_mid'}:
+                x_in = [None]  # the block's input, the stream before it
+                hooks += [
+                    blk.norm1.register_forward_pre_hook(
+                        self._store_hook(x_in)),
+                    W_o.register_forward_hook(self._write_hook(
+                        ('attn_out', l), ('resid_mid', l), x_in))]
+            if kinds & {'mlp_out', 'resid_post'}:
+                mid = [None]  # the stream after attention, as norm2 sees it
+                hooks += [
+                    blk.norm2.register_forward_pre_hook(
+                        self._store_hook(mid)),
+                    blk.ffn.register_forward_hook(self._write_hook(
+                        ('mlp_out', l), ('resid_post', l), mid))]
+            self.handles += hooks
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        for h in self.handles:
+            h.remove()
+        self.handles = []
+        if isinstance(exc, _InterveneStop):
+            return exc.args[0] is self  # another context's stop goes on
+        if exc_type is None:
+            unfired = sorted(self.wanted - self.fired)
+            if unfired:
+                raise RuntimeError(f'sites that never fired: {unfired}')
+        return False
+
+def intervene(model, sites=None, *, record=(), record_grad=False,
+              stop_after=None):
+    """Context manager over a d2l.GPT that overwrites the sites (kind,
+    layer) -> fn(x) and records the sites in record.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    return _Intervention(model, sites, record, record_grad, stop_after)
+
+def logit_lens(model, hidden):
+    """The model's final norm and output head applied in fp32 to hidden
+    (..., d), a stream read at any block; returns logits (..., V).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    norm, h = model.norm, hidden.float()
+    f32 = lambda p: None if p is None else p.float()  # no affine, no bias
+    if isinstance(norm, nn.RMSNorm):
+        h = F.rms_norm(h, norm.normalized_shape, f32(norm.weight), norm.eps)
+    else:  # nn.LayerNorm
+        h = F.layer_norm(h, norm.normalized_shape, f32(norm.weight),
+                         f32(norm.bias), norm.eps)
+    head = model.lm_head if hasattr(model, 'lm_head') else model.token_emb
+    return F.linear(h, head.weight.float())
+
+class TunedLens(nn.Module):
+    """One affine translator h + A_l h + b_l per block but the last (the
+    identity), applied before the logit lens; A_l and b_l start at zero,
+    so a fresh lens is the logit lens.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    def __init__(self, d_model, num_layers):
+        super().__init__()
+        self.num_layers = num_layers
+        self.translators = nn.ModuleList(
+            nn.Linear(d_model, d_model) for _ in range(num_layers - 1))
+        for t in self.translators:
+            nn.init.zeros_(t.weight)
+            nn.init.zeros_(t.bias)
+
+    def forward(self, hidden, layer):
+        if not 0 <= layer < self.num_layers:
+            raise IndexError(f'layer {layer} of {self.num_layers}')
+        if layer == self.num_layers - 1:
+            return hidden
+        t = self.translators[layer]
+        h = hidden.to(t.weight.dtype)
+        return h + t(h)
+
+    def _check(self, model):
+        if len(model.blks) != self.num_layers:
+            raise ValueError(f'a lens of {self.num_layers} layers for a '
+                             f'model of {len(model.blks)} blocks')
+
+    def logits(self, model, hidden, layer):
+        self._check(model)
+        return d2l.logit_lens(model, self(hidden, layer))
+
+    def fit(self, model, batches, *, steps, lr=1e-3, frac=0.25, seed=0,
+            chunk=512):
+        """Adam on KL(final || lens) summed over the layers, at a random
+        fraction frac of the positions >= 1 of each (B, T) batch of ids;
+        returns the loss of each step."""
+        assert not any(p.requires_grad for p in model.parameters()), (
+            'freeze the model first: model.requires_grad_(False)')
+        self._check(model)
+        L, dev = self.num_layers, self.translators[0].weight.device
+        sites = [('resid_post', l) for l in range(L)]
+        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        gen, batches, losses = torch.Generator().manual_seed(seed), iter(
+            batches), []
+        for _ in range(steps):
+            X = next(batches, None)
+            if X is None:
+                raise ValueError(f'batches ran out before {steps} steps')
+            with torch.no_grad(), d2l.intervene(
+                    model, record=sites, stop_after=sites[-1]) as ctx:
+                model(X.to(model.token_emb.weight.device))
+            B, T = X.shape
+            n = max(1, round(frac * (T - 1)))  # positions per sequence
+            cols = torch.stack([torch.randperm(T - 1, generator=gen)[:n] + 1
+                                for _ in range(B)]).flatten()
+            rows = torch.arange(B).repeat_interleave(n)
+            H = [ctx.cache[s][0][rows, cols].to(dev, torch.float32)
+                 for s in sites]  # each (B * n, d), detached
+            del ctx
+            optimizer.zero_grad()
+            total = 0.0
+            # each layer's loss is backpropagated alone, chunk positions at
+            # a time: the memory holds one chunk of logits
+            for i in range(0, len(rows), chunk):
+                with torch.no_grad():  # the final distribution, the target
+                    target = F.log_softmax(
+                        d2l.logit_lens(model, H[-1][i:i + chunk]), -1)
+                for l in range(L - 1):
+                    lens = F.log_softmax(self.logits(model, H[l][i:i + chunk],
+                                                     l), -1)
+                    kl = F.kl_div(lens, target, reduction='sum',
+                                  log_target=True) / len(rows)
+                    kl.backward()
+                    total += kl.item()
+            optimizer.step()
+            losses.append(total)
+        return losses
+
+class TopKSAE(nn.Module):
+    """Top-k sparse autoencoder with Qwen-Scope's parameter names and
+    shapes: W_enc (d_sae, d_model), b_enc, W_dec (d_model, d_sae), b_dec.
+    With center=True the encoder subtracts b_dec from its input first.
+    seed fixes the random initial dictionary (default: the global RNG).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    def __init__(self, d_model, d_sae, k, *, center=False, seed=None):
+        super().__init__()
+        self.d_model, self.d_sae, self.k = d_model, d_sae, k
+        self.center = center  # a plain attribute: the encoder's convention
+        gen = None if seed is None else torch.Generator().manual_seed(seed)
+        W = torch.randn(d_model, d_sae, generator=gen)
+        W = W / W.norm(dim=0, keepdim=True)  # unit decoder columns
+        self.W_dec = nn.Parameter(W)
+        self.W_enc = nn.Parameter(W.T.clone())
+        self.b_enc = nn.Parameter(torch.zeros(d_sae))
+        self.b_dec = nn.Parameter(torch.zeros(d_model))
+
+    def pre_acts(self, x):
+        x = x.to(self.W_enc.dtype)
+        return F.linear(x - self.b_dec if self.center else x, self.W_enc,
+                        self.b_enc)
+
+    @staticmethod
+    def topk_relu(pre, k):
+        """ReLU of the k largest entries of each row, zero elsewhere; equal
+        values at the cut go to the lower indices."""
+        cut = pre.topk(k, dim=-1).values[..., -1:]
+        keep = pre >= cut
+        ties = keep.sum(-1) > k  # rows where the cut value repeats
+        if ties.any():
+            p, c = pre[ties], cut[ties]
+            above, at = p > c, p == c
+            keep[ties] = above | (at & (at.cumsum(-1)
+                                        <= k - above.sum(-1, keepdim=True)))
+        return torch.where(keep, F.relu(pre), 0.0)
+
+    def encode(self, x):
+        return self.topk_relu(self.pre_acts(x), self.k)
+
+    def decode(self, z):
+        return F.linear(z, self.W_dec, self.b_dec)
+
+    def forward(self, x):
+        z = self.encode(x)
+        return self.decode(z), z
+
+    def loss(self, x, dead=None, k_aux=256):
+        """Squared error normalized by the batch variance; the auxiliary
+        loss, the same for the residual x - x_hat reconstructed from the
+        k_aux largest pre-activations of the dead features (a mask); and
+        the codes."""
+        x = x.to(self.W_enc.dtype).reshape(-1, self.d_model)
+        pre = self.pre_acts(x)
+        z = self.topk_relu(pre, self.k)
+        x_hat = self.decode(z)
+        nmse = lambda u, v: ((u - v) ** 2).sum(-1).mean() / (
+            (v - v.mean(0)) ** 2).sum(-1).mean()
+        aux = x_hat.new_zeros(())
+        if dead is not None and dead.any():
+            e = (x - x_hat).detach()
+            z_dead = self.topk_relu(pre.masked_fill(~dead, -torch.inf),
+                                    min(k_aux, int(dead.sum())))
+            aux = nmse(F.linear(z_dead, self.W_dec), e)
+        return nmse(x_hat, x), aux, z
+
+    @torch.no_grad()
+    def normalize_decoder_(self):
+        """Project each decoder column onto the unit sphere (columns already
+        of norm 1 to within 1e-6 are left as they are)."""
+        n = self.W_dec.norm(dim=0, keepdim=True)
+        self.W_dec.div_(torch.where((n - 1).abs() > 1e-6, n.clamp_min(1e-12),
+                                    1.0))
+
+    @torch.no_grad()
+    def remove_parallel_grad_(self):
+        """Remove from W_dec.grad each column's component along the column,
+        the part a unit-norm projection would undo."""
+        W, G = self.W_dec, self.W_dec.grad
+        if G is not None:
+            G.sub_(W * (W * G).sum(0, keepdim=True) / (W * W).sum(
+                0, keepdim=True))
+
+def train_sae(sae, activations, *, steps, batch_size=4096, lr=2e-4,
+              aux_coef=1/32, dead_after=200, seed=0):
+    """Train a TopKSAE with Adam on random rows of activations (N, d), with
+    unit decoder columns and the auxiliary loss of the features idle for
+    dead_after steps; seed fixes the batches. Returns the losses.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    dev, dtype = sae.W_dec.device, sae.W_dec.dtype
+    gen, N = torch.Generator().manual_seed(seed), len(activations)
+    with torch.no_grad():  # b_dec at the data mean, W_enc = W_dec^T
+        sample = activations[torch.randperm(N, generator=gen)[:65536]]
+        sae.b_dec.copy_(sample.to(dev, dtype).mean(0))
+        sae.W_dec.div_(sae.W_dec.norm(dim=0, keepdim=True))
+        sae.W_enc.copy_(sae.W_dec.T)
+    optimizer = torch.optim.Adam(sae.parameters(), lr=lr)
+    idle = torch.zeros(sae.d_sae, dtype=torch.long, device=dev)
+    losses = []
+    for _ in range(steps):
+        x = activations[torch.randint(N, (batch_size,), generator=gen)].to(
+            dev, dtype)
+        mse, aux, z = sae.loss(x, idle >= dead_after)
+        loss = mse + aux_coef * aux
+        with torch.no_grad():  # steps since each feature last fired
+            idle = torch.where((z > 0).any(0), 0, idle + 1)
+        optimizer.zero_grad()
+        loss.backward()
+        sae.remove_parallel_grad_()
+        optimizer.step()
+        sae.normalize_decoder_()
+        losses.append(loss.item())
+    return losses
+
+def load_qwen_scope_sae(repo_id, layer, revision=None, *, device=None,
+                        dtype=torch.float32, center=False):
+    """The TopKSAE of one layer of a Qwen-Scope repository, downloaded
+    at the pinned revision and loaded with weights_only=True.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    from huggingface_hub import hf_hub_download
+    revision = revision or d2l.HF_REVISIONS[repo_id]
+    get = lambda f: hf_hub_download(repo_id, f, revision=revision)
+    with open(get('config.json')) as f:
+        cfg = json.load(f)
+    if cfg.get('model_type') != 'topk_sae':
+        raise ValueError(f'not a top-k SAE: {cfg.get("model_type")!r}')
+    if layer not in cfg['layers']:
+        raise ValueError(f'{repo_id} has no layer {layer}: {cfg["layers"]}')
+    state = torch.load(get(f'layer{layer}.sae.pt'), weights_only=True,
+                       map_location='cpu')
+    d, m = cfg['d_model'], cfg['d_sae']
+    shapes = {'W_enc': (m, d), 'b_enc': (m,), 'W_dec': (d, m), 'b_dec': (d,)}
+    if not isinstance(state, dict) or set(state) != set(shapes):
+        found = sorted(state) if isinstance(state, dict) else type(state)
+        raise KeyError(f'expected the tensors {sorted(shapes)}, found {found}')
+    for name, shape in shapes.items():
+        if tuple(state[name].shape) != shape:
+            raise ValueError(f'{name}: shape {tuple(state[name].shape)}, '
+                             f'expected {shape}')
+    with torch.device('meta'):  # no random initialization to overwrite
+        sae = TopKSAE(d, m, cfg['k'], center=center)
+    sae.load_state_dict(state, assign=True)
+    return sae.to(device=device, dtype=dtype)
+
+@torch.no_grad()
+def sae_metrics(sae, model, token_batches, layer):
+    """L0, FVU, loss recovered and firing density of sae on the stream
+    after block layer of model over token_batches ((B, T) ids), at the
+    positions >= 1 whose norm is at most 10 times the batch median.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    if sae.W_dec.shape[0] != model.num_hiddens:
+        raise ValueError(f'SAE width {sae.W_dec.shape[0]} != model width '
+                         f'{model.num_hiddens}')
+    site, dev = ('resid_post', layer), model.token_emb.weight.device
+    token_batches = list(token_batches)  # read twice
+
+    def ce(logits, X, keep):  # per row: summed loss and count, kept t
+        loss = torch.stack([F.cross_entropy(row[:-1].float(), x[1:],
+                                            reduction='none')
+                            for row, x in zip(logits, X)])  # a row at a time
+        m = keep[:, :-1]
+        return (loss * m).sum(1), m.sum(1)
+
+    keeps, ce_orig, total, n = [], [], 0.0, 0
+    for X in token_batches:  # pass 1: the clean run and the kept positions
+        X = X.to(dev)
+        with d2l.intervene(model, record=[site]) as ctx:
+            logits = model(X)
+        x = ctx.cache[site][0].float()
+        norms = x.norm(dim=-1)
+        keep = norms <= 10 * norms[:, 1:].median()
+        keep[:, 0] = False
+        keeps.append(keep)
+        ce_orig.append(ce(logits, X, keep))
+        del logits  # not alive during the next forward
+        total = total + x[keep].double().sum(0)
+        n += int(keep.sum())
+    mean = (total / n).float()
+    sse, sst = [], []  # per row, over its kept positions
+    fired = torch.zeros(sae.d_sae, device=sae.W_dec.device)
+    nnz, ce_splice, ce_mean = 0, [], []
+    for X, keep in zip(token_batches, keeps):  # pass 2: the two splices
+        X, k = X.to(dev), keep[..., None]
+
+        def splice(x):
+            nonlocal nnz, fired
+            x_hat, z = sae(x)
+            xf, x_hat = x.float(), x_hat.float()
+            sse.append((((x_hat - xf) ** 2).sum(-1) * keep).sum(1))
+            sst.append((((xf - mean) ** 2).sum(-1) * keep).sum(1))
+            active = (z > 0) & k
+            nnz += int(active.sum())
+            fired = fired + active.flatten(0, 1).sum(0)
+            return torch.where(k, x_hat.to(x.dtype), x)
+
+        with d2l.intervene(model, {site: splice}):
+            ce_splice.append(ce(model(X), X, keep))
+        with d2l.intervene(model, {site: lambda x: torch.where(
+                k, mean.to(x.dtype), x)}):
+            ce_mean.append(ce(model(X), X, keep))
+    cat = lambda xs: torch.cat(xs).double().cpu().numpy()
+    pooled = lambda pairs: (sum(float(s.sum()) for s, _ in pairs)
+                            / sum(int(c.sum()) for _, c in pairs))
+    ce_o, ce_s, ce_m = pooled(ce_orig), pooled(ce_splice), pooled(ce_mean)
+    density = (fired / n).cpu().numpy()
+    return {'l0': nnz / n, 'fvu': float(cat(sse).sum() / cat(sst).sum()),
+            'ce_orig': ce_o, 'ce_splice': ce_s, 'ce_mean_ablate': ce_m,
+            'loss_recovered': (ce_m - ce_s) / (ce_m - ce_o),
+            'unfired_frac': float((density == 0).mean()), 'density': density,
+            'n_tokens': n}
+
+def request_hash(base_url, model, messages, params, replica=0):
+    """sha256 of the canonical JSON (sorted keys, no whitespace, UTF-8) of
+    what can change a response: the endpoint's hostname, the model, the
+    messages, the merged parameters (None values dropped) without the
+    transport fields stream, stream_options, timeout and extra_headers, and
+    the client-side replica number.
+
+    Defined in :numref:`sec_lm_api`"""
+    from urllib.parse import urlsplit  # not in the d2l library preamble
+    transport = ('stream', 'stream_options', 'timeout', 'extra_headers')
+    params = d2l._chat_merge(params, {})  # drops None values at every level
+    params = {k: v for k, v in params.items() if k not in transport}
+    key = {'host': urlsplit(base_url).hostname, 'model': model,
+           'messages': messages, 'params': params, 'replica': replica}
+    blob = json.dumps(key, sort_keys=True, separators=(',', ':'),
+                      ensure_ascii=False)
+    return hashlib.sha256(blob.encode('utf-8')).hexdigest()
+
+PricePoint = collections.namedtuple(  # USD per `per` tokens
+    'PricePoint', ['input', 'output', 'cached_input', 'per'],
+    defaults=(None, 1_000_000))
+
+def api_cost(usage, price):
+    """Cost in USD of one response, ((p - c) input + c cached_input +
+    o output) / per, with p prompt, c cached and o completion tokens from
+    usage (reasoning tokens are inside o). cached_input None means no
+    discount; missing cached tokens count as 0; missing prompt or
+    completion tokens raise ValueError.
+
+    Defined in :numref:`sec_lm_api`"""
+    p, o = usage.get('prompt_tokens'), usage.get('completion_tokens')
+    if p is None or o is None:
+        raise ValueError(f'usage lacks prompt or completion tokens: {usage}')
+    c = usage.get('cached_tokens') or 0
+    cached = price.input if price.cached_input is None else price.cached_input
+    return ((p - c) * price.input + c * cached + o * price.output) / price.per
+
+def backoff_delay(attempt, base=1.0, cap=60.0, rng=None, retry_after=None):
+    """Full-jitter sleep after failed attempt `attempt` (0, 1, ...): uniform
+    on [0, min(cap, base 2^attempt)], and at least the server's
+    Retry-After.
+
+    Defined in :numref:`sec_lm_api`"""
+    rng = rng or random
+    return max(retry_after or 0, rng.uniform(0, min(cap, base * 2**attempt)))
+
+async def chat_batch(api, requests, *, concurrency=8):
+    """Send requests (dicts with 'messages', optionally 'replica' and request
+    parameters) through api with at most `concurrency` in flight; results
+    come in input order, a failed request as its exception. A replay miss
+    or a capped call is not a result: once every request has finished (the
+    paid ones are cached), the first d2l.ReplayMiss or d2l.CostCapExceeded
+    is raised, with the whole list as its `results` attribute.
+
+    Defined in :numref:`sec_lm_api`"""
+    import asyncio  # not in the d2l library preamble
+    semaphore = asyncio.Semaphore(concurrency)
+    async def one(request):
+        async with semaphore:
+            try:
+                request = dict(request)
+                return await api.achat(request.pop('messages'), **request)
+            except Exception as e:
+                return e
+    results = await asyncio.gather(*(one(r) for r in requests))
+    for r in results:
+        if isinstance(r, (d2l.ReplayMiss, d2l.CostCapExceeded)):
+            r.results = results
+            raise r
+    return results
+
+def closed_loop_stats(results, c):
+    """Throughput and latency of a closed loop that kept c requests in
+    flight; exceptions count as n_failed. The steady window runs from the
+    c-th to the (N - c)-th of the N completions. X is the completions per
+    second inside it (X_tokens their completion tokens), W the mean latency
+    and ttft_mean the mean time to first token of the requests wholly inside
+    it, and Lbar the mean number in flight; little = X W / c, sustained =
+    Lbar / c. ttft_p50 and ttft_p90 are over all N.
+
+    Defined in :numref:`sec_lm_api`"""
+    d2l.check_closed_loop(results, c)  # one loop of c, from one run
+    ok = [r for r in results if not isinstance(r, BaseException)]
+    N = len(ok)
+    if N <= 2 * c:
+        raise ValueError(f'{N} results at c = {c}; need more than 2c')
+    s = np.array([r.t_send for r in ok])
+    f = s + np.array([r.t_total for r in ok])
+    t_a, t_b = np.sort(f)[[c - 1, N - c - 1]]
+    window = t_b - t_a
+    if window <= 0:
+        raise ValueError('the steady window is empty')
+    done = (f > t_a) & (f <= t_b)  # completions inside the window
+    inside = (s >= t_a) & (f <= t_b)  # requests wholly inside it
+    tokens = [r.usage.get('completion_tokens') for r, d in zip(ok, done) if d]
+    X = done.sum() / window
+    W = (f - s)[inside].mean() if inside.any() else float('nan')
+    Lbar = np.clip(np.minimum(f, t_b) - np.maximum(s, t_a), 0, None).sum()
+    # the first token: the first content when the reasoning is only
+    # whitespace (the empty think block of a server with thinking off)
+    firsts = [r.t_first if (r.reasoning or '').strip() or (
+        r.t_first_content is None) else r.t_first_content for r in ok]
+    ttft = [None if t is None else t - r.t_send for r, t in zip(ok, firsts)]
+    known = [t for t in ttft if t is not None]
+    p50, p90 = (map(float, np.percentile(known, [50, 90])) if known
+                else (None, None))
+    steady = [t for t, i in zip(ttft, inside) if i and t is not None]
+    X_tokens = None if None in tokens else float(sum(tokens) / window)
+    return {'X': float(X), 'X_tokens': X_tokens,
+            'W': float(W), 'Lbar': float(Lbar / window),
+            'little': float(X * W / c), 'sustained': float(Lbar / window / c),
+            'ttft_p50': p50, 'ttft_p90': p90,
+            'ttft_mean': float(np.mean(steady)) if steady else None,
+            'n_429': sum(getattr(r, 'n_429', 0) or 0 for r in results),
+            'n_retries': sum(getattr(r, 'n_retries', 0) or 0 for r in results),
+            'n_failed': len(results) - N, 'window': float(window),
+            'n_window': int(done.sum())}
+
+d2l.DATA_HUB['wikitext-103-raw-train-0'] = (
+    'https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+    'b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-103-raw-v1/'
+    'train-00000-of-00002.parquet',
+    '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
+d2l.DATA_HUB['wordsim353'] = (  # Finkelstein et al.'s combined ratings
+    'https://raw.githubusercontent.com/piskvorky/gensim/'
+    '37f90ec121eb7cd401448a947e80953e0c53ccdc/gensim/test/test_data/'
+    'wordsim353.tsv', '5207d1bb6dd863994fa4032f48f149bf28a5468e')
+d2l.DATA_HUB['simlex999'] = (
+    'https://huggingface.co/datasets/Yuti/SimLex-999/resolve/'
+    'e87197824261f272ad1e9c02e32db3144bbeb0ca/data/'
+    'train-00000-of-00001.parquet',
+    'f3b074e2e08f83aa469f2d05c5b789b5ad2d3c49')
+d2l.DATA_HUB['lm-enc-we-grid-v1'] = (  # D2L_RERUN=we-grid, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-we-grid-v1.json',
+    '8c6bc0c598c8493fa407b3662f7a26472522169e')
+
+def cooccurrence_counts(corpus, vocab_size, window=5, weighting='uniform'):
+    """Word-context counts within `window` positions as a symmetric
+    scipy.sparse.csr_matrix (float64). `corpus` is a 1-D array of word ids
+    with -1 at sentence breaks, which no pair crosses; `weighting` is
+    'uniform' (each pair counts 1) or 'harmonic' (1/distance).
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    import scipy.sparse
+    if weighting not in ('uniform', 'harmonic'):
+        raise ValueError(f'unknown weighting {weighting!r}')
+    corpus = np.asarray(corpus)
+    sentence = np.cumsum(corpus < 0)  # the sentence of each position
+    X = scipy.sparse.csr_matrix((vocab_size, vocab_size))
+    for d in range(1, window + 1):  # all pairs at distance d
+        a, b = corpus[:-d], corpus[d:]
+        ok = (a >= 0) & (b >= 0) & (sentence[:-d] == sentence[d:])
+        a, b = a[ok], b[ok]
+        w = 1.0 if weighting == 'uniform' else 1.0 / d
+        X = X + scipy.sparse.csr_matrix(  # duplicate entries are summed
+            (np.full(2 * len(a), w), (np.r_[a, b], np.r_[b, a])),
+            shape=(vocab_size, vocab_size))
+    return X
+
+SpearmanResult = collections.namedtuple(
+    'SpearmanResult', 'rho ci n_covered n_total cosines')
+
+def spearman_eval(embeddings, vocab, pairs, n_boot=2000, seed=0):
+    """Spearman correlation between the cosine similarities of embeddings
+    and the human scores of `pairs` (a DataFrame with columns word1, word2,
+    score), on the pairs whose two words `vocab` (a d2l.Vocab or a
+    TokenEmbedding) holds; `ci` is the 95% percentile interval of n_boot
+    resamples of those pairs (nan for n_boot=0), `cosines` their cosines.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    from scipy.stats import rankdata
+    idx = vocab.token_to_idx
+    covered = [w1 in idx and w2 in idx
+               for w1, w2 in zip(pairs.word1, pairs.word2)]
+    p = pairs[covered]
+    Z = F.normalize(torch.as_tensor(embeddings).float(), dim=1)
+    i = torch.tensor([idx[w] for w in p.word1], dtype=torch.long)
+    j = torch.tensor([idx[w] for w in p.word2], dtype=torch.long)
+    cos = (Z[i] * Z[j]).sum(1).double().numpy()
+    human = p.score.to_numpy(np.float64)
+
+    def rho(a, b):  # Pearson correlation of the ranks, along the last axis
+        a, b = rankdata(a, axis=-1), rankdata(b, axis=-1)
+        a, b = a - a.mean(-1, keepdims=True), b - b.mean(-1, keepdims=True)
+        return (a * b).sum(-1) / np.sqrt((a * a).sum(-1) * (b * b).sum(-1))
+
+    ci = (math.nan, math.nan)
+    if n_boot:
+        b = np.random.default_rng(seed).integers(0, len(p), (n_boot, len(p)))
+        ci = tuple(np.quantile(rho(cos[b], human[b]), [0.025, 0.975]))
+    return SpearmanResult(float(rho(cos, human)), tuple(map(float, ci)),
+                          len(p), len(pairs), cos)
+
+def sgns_loss(v, u, centers, contexts_negatives, labels, masks):
+    """Skip-gram with negative sampling: the binary cross-entropy of the
+    scores u_o^T v_w of each center (centers, shape (B,)) with its context
+    and noise words (contexts_negatives, (B, L)), labels 1 for a context
+    word and 0 for a noise word, averaged over the slots where masks is 1.
+    v and u are the center and the context tables (nn.Embedding).
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    scores = torch.einsum('bd,bld->bl', v(centers), u(contexts_negatives))
+    loss = F.binary_cross_entropy_with_logits(
+        scores, labels.float(), weight=masks.float(), reduction='sum')
+    return loss / masks.sum()
+
+def ppmi(counts, alpha=1.0, shift=0.0):
+    """Positive (shifted) PMI of a count matrix as a scipy.sparse.csr_matrix:
+    max(log(p(w, o) / (p(w) p_alpha(o))) - shift, 0), where p_alpha(o) is
+    proportional to n(o)^alpha over the contexts that occur.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    import scipy.sparse
+    C = scipy.sparse.coo_matrix(counts)
+    total = C.sum()
+    p_w = np.asarray(C.sum(1)).ravel() / total
+    n_o = np.asarray(C.sum(0)).ravel()
+    p_o = np.where(n_o > 0, n_o ** alpha, 0.0)
+    p_o = p_o / p_o.sum()
+    pmi = (np.log(C.data / total) - np.log(p_w[C.row])
+           - np.log(p_o[C.col]) - shift)
+    keep = pmi > 0
+    return scipy.sparse.csr_matrix(
+        (pmi[keep], (C.row[keep], C.col[keep])), shape=C.shape)
+
+def nearest_neighbors(E, vocab, word, k=5, exclude_self=True):
+    """The k rows of E nearest to word's row in cosine, as a list of
+    (token, cosine). vocab is a d2l.Vocab or a TokenEmbedding (whose
+    unknown token at index 0 is never returned), or a Hugging Face
+    tokenizer, for which word must be a single token.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    if hasattr(vocab, 'token_to_idx'):
+        i, skip = vocab.token_to_idx[word], [0]
+        name = lambda j: vocab.idx_to_token[j]
+    else:
+        ids = vocab.encode(word, add_special_tokens=False)
+        if len(ids) != 1:
+            raise ValueError(f'{word!r} is {len(ids)} tokens, not one')
+        i, skip, name = ids[0], [], lambda j: vocab.decode([j])
+    Z = F.normalize(torch.as_tensor(E)[:len(vocab)].float(), dim=1)
+    cos = Z @ Z[i]
+    cos[skip + ([i] if exclude_self else [])] = -math.inf
+    top = torch.topk(cos, k)
+    return [(name(int(j)), float(c)) for c, j in zip(top.values, top.indices)]
+
+class TokenEmbedding:
+    """Token Embedding.
+
+    Defined in :numref:`sec_lm_word_embeddings`"""
+    def __init__(self, embedding_name):
+        self.idx_to_token, self.idx_to_vec = self._load_embedding(
+            embedding_name)
+        self.unknown_idx = 0
+        self.token_to_idx = {token: idx for idx, token in
+                             enumerate(self.idx_to_token)}
+
+    def _load_embedding(self, embedding_name):
+        idx_to_token, idx_to_vec = ['<unk>'], []
+        data_dir = d2l.download_extract(embedding_name)
+        # GloVe website: https://nlp.stanford.edu/projects/glove/
+        # fastText website: https://fasttext.cc/
+        with open(os.path.join(data_dir, 'vec.txt'), 'r') as f:
+            for line in f:
+                elems = line.rstrip().split(' ')
+                token, elems = elems[0], [float(elem) for elem in elems[1:]]
+                # Skip header information, such as the top row in fastText
+                if len(elems) > 1:
+                    idx_to_token.append(token)
+                    idx_to_vec.append(elems)
+        idx_to_vec = [[0] * len(idx_to_vec[0])] + idx_to_vec
+        return idx_to_token, d2l.tensor(idx_to_vec)
+
+    def __getitem__(self, tokens):
+        indices = [self.token_to_idx.get(token, self.unknown_idx)
+                   for token in tokens]
+        vecs = self.idx_to_vec[d2l.tensor(indices)]
+        return vecs
+
+    def __len__(self):
+        return len(self.idx_to_token)
+
+HF_ENCODER_REVISIONS = {
+    'answerdotai/ModernBERT-base': '8949b909ec900327062f0ebf497f51aef5e6f0c8'}
+
+# Several of these files share a name: fetch them with d2l.download_keyed
+d2l.DATA_HUB['glue-mnli-train'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/mnli/'
+    'train-00000-of-00001.parquet',
+    '29c714bf5419e6a351ba0fc979f000dcc1ccf671')
+d2l.DATA_HUB['glue-mnli-validation-matched'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/mnli/'
+    'validation_matched-00000-of-00001.parquet',
+    '190b5f94bc4126d3747a817da7c0da9df619dfbc')
+d2l.DATA_HUB['glue-sst2-train'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2/'
+    'train-00000-of-00001.parquet',
+    '12cd5d3347611f133d19fd975afe391fa457553f')
+d2l.DATA_HUB['glue-sst2-validation'] = (
+    'https://huggingface.co/datasets/nyu-mll/glue/resolve/'
+    'bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2/'
+    'validation-00000-of-00001.parquet',
+    'bc4155c5b85fcdda2784ea3154a9cfd00bf2009a')
+d2l.DATA_HUB['conll2003-train'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/train.json',
+    '09a4703c703992a75087ece5b5eab2e0621b0590')
+d2l.DATA_HUB['conll2003-valid'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/valid.json',
+    '3f9256142388f6da88b2269541fab5b8dbfe49f0')
+d2l.DATA_HUB['conll2003-labels'] = (
+    'https://huggingface.co/datasets/tner/conll2003/resolve/'
+    'b18612dee0007b1f7129731dbf2f5f2ed4039ad3/dataset/label.json',
+    'd4fd1344c9af2613a3094dd2c84ff594e5215af0')
+d2l.DATA_HUB['lm-enc-bert-sweep-v1'] = (  # D2L_RERUN=bert-sweep, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v1.json',
+    '06440f0e5acbd7b91deb6b66f8402f8bea8d6155')
+d2l.DATA_HUB['lm-enc-bert-sweep-v2'] = (  # at least 300 steps per run
+    d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v2.json',
+    'e1ceabe56f1d40d2a71e3ef6a4ccb9dbc6d2d220')
+d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
+    '36365804df9df70b812f52595ee6d092639285c1')
+d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # D2L_RERUN=bert-tagging
+    d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v1.json',
+    'f0f0f41d18ed997462891d0c6dece556ad57b680')
+d2l.DATA_HUB['lm-enc-bert-decoder-v1'] = (  # D2L_RERUN=bert-decoder
+    d2l.LM_DATA_URL + 'lm-enc-bert-decoder-v1.json',
+    '22b140629d3aa486a601068dce61b8a0f0301beb')
+
+def load_encoder(model_id, revision=None, *, head=None, num_labels=None,
+                 dtype=torch.bfloat16, device=None, attn_implementation='sdpa',
+                 padding_side=None):
+    """A pinned encoder from the Hugging Face Hub and its tokenizer, in eval
+    mode: the bare model (head=None), or with a masked-token head ('mlm'), a
+    sequence classifier ('seq_cls') or a token classifier ('token_cls');
+    the pin comes from HF_ENCODER_REVISIONS, then HF_REVISIONS.
+
+    Defined in :numref:`sec_lm_bert`"""
+    import logging
+    import transformers
+    revision = revision or d2l.HF_ENCODER_REVISIONS.get(
+        model_id, d2l.HF_REVISIONS.get(model_id))
+    if revision is None:
+        raise KeyError(f'{model_id} is not pinned: pass revision=')
+    auto = {None: transformers.AutoModel,
+            'mlm': transformers.AutoModelForMaskedLM,
+            'seq_cls': transformers.AutoModelForSequenceClassification,
+            'token_cls': transformers.AutoModelForTokenClassification}[head]
+    device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    extra = {} if num_labels is None else {'num_labels': num_labels}
+    report = logging.getLogger('transformers.modeling_utils')
+    quiet = lambda record: 'LOAD REPORT' not in record.getMessage()
+    report.addFilter(quiet)  # its key table; the summary below replaces it
+    try:
+        model, info = auto.from_pretrained(
+            model_id, revision=revision, dtype=dtype, use_safetensors=True,
+            attn_implementation=attn_implementation, output_loading_info=True,
+            **extra)
+    finally:
+        report.removeFilter(quiet)
+    model = model.to(device)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        model_id, revision=revision)
+    if padding_side is not None:
+        tokenizer.padding_side = padding_side
+    model.revision = revision
+    print(f'{model_id}@{revision[:12]}: {type(model).__name__}\n    '
+          f'{dtype}, {device}, attention '
+          f'{model.config._attn_implementation}')
+    for what, keys in (('not used', info['unexpected_keys']),
+                       ('new, at random', info['missing_keys'])):
+        if keys:
+            print(f'    {what}: {", ".join(sorted(keys))}')
+    return model.eval(), tokenizer
+
+def mlm_corrupt(ids, mask_id, vocab_size, special_ids, p=0.15,
+                probs=(0.8, 0.1, 0.1), generator=None):
+    """BERT's masked-token corruption of ids: each token that is not in
+    special_ids is selected with probability p; a selected token becomes
+    mask_id with probability probs[0], a uniformly random token with
+    probs[1], and stays with probs[2]. Returns the corrupted ids and the
+    labels: the original id where selected, -100 (not scored) elsewhere.
+
+    Defined in :numref:`sec_lm_bert`"""
+    special = torch.isin(ids, torch.as_tensor(special_ids, device=ids.device))
+    u, v = (torch.rand(ids.shape, generator=generator, device=ids.device)
+            for _ in range(2))
+    selected = (u < p) & ~special
+    noise = torch.randint(vocab_size, ids.shape, generator=generator,
+                          device=ids.device)
+    out = torch.where(selected & (v < probs[0]), mask_id, ids)
+    out = torch.where(selected & (v >= probs[0]) & (v < probs[0] + probs[1]),
+                      noise, out)
+    return out, torch.where(selected, ids, -100)
+
+class PooledClassifier(nn.Module):
+    """A sentence or sentence-pair classifier on an encoder: the final
+    hidden states pooled (the mean over the attention mask, or the first
+    token), then dense, GELU, layer norm, dropout and a linear map to
+    num_labels logits. Biases and the norm follow the encoder's
+    configuration, as in Transformers' ModernBERT head.
+
+    Defined in :numref:`sec_lm_bert`"""
+    def __init__(self, encoder, num_labels, pooling='mean', dropout=0.0):
+        super().__init__()
+        if pooling not in ('mean', 'cls'):
+            raise ValueError(f'unknown pooling: {pooling!r}')
+        c = encoder.config
+        bias, d = getattr(c, 'classifier_bias', True), c.hidden_size
+        self.encoder, self.pooling = encoder, pooling
+        self.head = nn.Module()
+        self.head.dense = nn.Linear(d, d, bias=bias)
+        self.head.norm = nn.LayerNorm(d, eps=getattr(c, 'norm_eps', 1e-5),
+                                      bias=getattr(c, 'norm_bias', True))
+        self.drop = nn.Dropout(dropout)
+        self.classifier = nn.Linear(d, num_labels)
+        p = next(encoder.parameters())  # the head lives where the encoder is
+        self.head.to(p.device, p.dtype)
+        self.classifier.to(p.device, p.dtype)
+
+    def forward(self, input_ids, attention_mask):
+        H = self.encoder(input_ids=input_ids,
+                         attention_mask=attention_mask).last_hidden_state
+        if self.pooling == 'cls':
+            if not attention_mask[:, 0].all():
+                raise ValueError('cls pooling needs right padding')
+            h = H[:, 0]
+        else:  # padding positions do not count
+            m = attention_mask.unsqueeze(-1).to(H.dtype)
+            h = (H * m).sum(1) / m.sum(1)
+        h = self.head.norm(F.gelu(self.head.dense(h)))
+        return self.classifier(self.drop(h))
+
+def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
+                        warmup=0.1, device=None):
+    """Fine-tune model on train, a list of (input_ids, label) or, for token
+    tagging, (input_ids, labels) with a label per token (-100: not scored),
+    then predict eval. model(input_ids=, attention_mask=) returns logits or
+    an output with .logits. AdamW (weight decay 0.01 on matrices), linear
+    warmup over the share warmup of the steps then linear decay, gradients
+    clipped to norm 1, bf16 autocast on a GPU; each batch is padded to its
+    longest sequence (with id 0: the attention mask hides it, so any id
+    serves); seed fixes the data order (and dropout, if the model has
+    any). Returns the training losses, the eval accuracy and predictions
+    (a label per example, or per scored token), the training seconds and
+    the peak GPU memory in GiB.
+
+    Defined in :numref:`sec_lm_bert`"""
+    device = torch.device(device or ('cuda' if torch.cuda.is_available()
+                                     else 'cpu'))
+    cuda = device.type == 'cuda'
+
+    def batches(data, order):
+        for i in range(0, len(order), batch_size):
+            rows = [data[j] for j in order[i:i + batch_size]]
+            T = max(len(x) for x, _ in rows)
+            X = torch.tensor([x + [0] * (T - len(x)) for x, _ in rows])
+            M = torch.tensor([[1] * len(x) + [0] * (T - len(x))
+                              for x, _ in rows])
+            y = torch.tensor([y if isinstance(y, int) else
+                              y + [-100] * (T - len(y)) for _, y in rows])
+            yield X.to(device), M.to(device), y.to(device)
+
+    def logits(X, M):
+        with torch.autocast(device.type, torch.bfloat16, enabled=cuda):
+            out = model(input_ids=X, attention_mask=M)
+        return getattr(out, 'logits', out).float()
+
+    model.to(device).train()
+    torch.manual_seed(seed)  # dropout, if the model has any
+    order = torch.Generator().manual_seed(seed)
+    steps = epochs * math.ceil(len(train) / batch_size)
+    n_warm = max(1, round(warmup * steps))
+    params = [p for p in model.parameters() if p.requires_grad]
+    opt = torch.optim.AdamW([
+        {'params': [p for p in params if p.ndim >= 2], 'weight_decay': 0.01},
+        {'params': [p for p in params if p.ndim < 2], 'weight_decay': 0.0}],
+        lr=lr)
+    sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: (
+        (s + 1) / n_warm if s < n_warm else
+        max(0.0, (steps - s) / max(1, steps - n_warm))))
+    if cuda:
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
+    t0, losses = time.perf_counter(), []
+    for _ in range(epochs):
+        perm = torch.randperm(len(train), generator=order).tolist()
+        for X, M, y in batches(train, perm):
+            loss = F.cross_entropy(logits(X, M).flatten(0, -2), y.flatten(),
+                                   ignore_index=-100)
+            loss.backward()
+            nn.utils.clip_grad_norm_(params, 1.0)
+            opt.step()
+            sched.step()
+            opt.zero_grad(set_to_none=True)
+            losses.append(loss.detach())
+    if cuda:
+        torch.cuda.synchronize(device)
+    seconds = time.perf_counter() - t0
+    model.eval()
+    with torch.inference_mode():
+        out = [(logits(X, M).argmax(-1), y)
+               for X, M, y in batches(eval, range(len(eval)))]
+    hits = sum(((p == y) & (y != -100)).sum().item() for p, y in out)
+    total = sum((y != -100).sum().item() for _, y in out)
+    preds = [v for p, y in out for v in (p.tolist() if y.ndim == 1 else [
+        r[y_r != -100].tolist() for r, y_r in zip(p, y)])]
+    return dict(loss=torch.stack(losses).tolist(),
+                eval_acc=hits / total if total else float('nan'),
+                eval_pred=preds, seconds=seconds,
+                peak_gib=(torch.cuda.max_memory_allocated(device) / 2**30
+                          if cuda else float('nan')))
+
+def cost_per_example(n_params, n_tokens, n_embed=0):
+    """Forward FLOPs per example, 2 (n_params - n_embed) n_tokens: a
+    multiply and an add per weight and token, embedding lookups excluded.
+
+    Defined in :numref:`sec_lm_bert`"""
+    return 2 * (n_params - n_embed) * n_tokens
+
+def align_token_labels(word_ids, word_labels, scheme='first'):
+    """Token labels from word labels; word_ids gives each token's word
+    (None for a special token). scheme='first' labels the first sub-token
+    of each word and gives the others -100 (not scored); 'all' gives every
+    sub-token its word's label.
+
+    Defined in :numref:`sec_lm_bert`"""
+    if scheme not in ('first', 'all'):
+        raise ValueError(f'unknown scheme: {scheme!r}')
+    labels, prev = [], None
+    for w in word_ids:
+        first = w is not None and w != prev
+        labels.append(word_labels[w] if first or (
+            w is not None and scheme == 'all') else -100)
+        prev = w
+    return labels
+
+def span_f1(pred_tags, gold_tags, id2label):
+    """Entity-level precision, recall and F1 of IOB2 tag sequences (a list
+    of label ids per sentence), counted as conlleval and seqeval count
+    them: an entity starts at a B- tag, or at an I- tag after O or after
+    another type, and a predicted entity is correct if its type and both
+    ends match; per_type holds the three numbers per entity type.
+
+    Defined in :numref:`sec_lm_bert`"""
+    def entities(seqs):
+        found = set()
+        for s, seq in enumerate(seqs):
+            start, kind = None, None
+            for i, t in enumerate([id2label[t] for t in seq] + ['O']):
+                bio, _, typ = t.partition('-')
+                if start is not None and (bio != 'I' or typ != kind):
+                    found.add((kind, s, start, i))
+                    start = None
+                if bio == 'B' or (bio == 'I' and start is None):
+                    start, kind = i, typ
+        return found
+
+    def prf(pred, gold):
+        tp = len(pred & gold)
+        p = tp / len(pred) if pred else 0.0
+        r = tp / len(gold) if gold else 0.0
+        return dict(precision=p, recall=r, f1=2 * p * r / (p + r) if tp
+                    else 0.0)
+    pred, gold = entities(pred_tags), entities(gold_tags)
+    kinds = sorted({e[0] for e in pred | gold})
+    return dict(**prf(pred, gold), per_type={k: prf(
+        {e for e in pred if e[0] == k}, {e for e in gold if e[0] == k})
+        for k in kinds})
+
+d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Embedding-0.6B'] = (
+    '97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3')
+d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Reranker-0.6B'] = (
+    'e61197ed45024b0ed8a2d74b80b4d909f1255473')
+
+d2l.DATA_HUB['nq-pairs'] = (
+    'https://huggingface.co/datasets/sentence-transformers/'
+    'natural-questions/resolve/f9e894e1081e206e577b4eaa9ee6de2b06ae6f17/'
+    'pair/train-00000-of-00001.parquet',
+    '545c1495f10231652b59e67f7ab02e6d21252fd0')
+d2l.DATA_HUB['lm-enc-emb-results-v1'] = (  # D2L_RERUN=emb-train, RTX 4090
+    d2l.LM_DATA_URL + 'lm-enc-emb-results-v1.json',
+    'd0bd19be14746bdb7216a190a20a8abaca4145d5')
+d2l.DATA_HUB['lm-enc-modernbert-embed-v1'] = (  # contrastive, seed 0, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-embed-v1.zip',
+    'f0de3203bde6008307a9782b45733085b02f89e2')
+d2l.DATA_HUB['lm-enc-modernbert-embed-mrl-v1'] = (  # Matryoshka, bf16
+    d2l.LM_DATA_URL + 'lm-enc-modernbert-embed-mrl-v1.zip',
+    '17b1215b6d2e2ba5d8e7ef78621afe0894718095')
+
+def pool_hidden(hidden, attention_mask, mode):
+    """One vector per sequence from hidden states (B, T, m): the first
+    ('cls'), the mean ('mean') or the last ('last') of the positions the
+    mask keeps; left and right padding both work.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    mask = attention_mask.to(hidden.dtype)
+    if mode == 'mean':
+        return (hidden * mask[..., None]).sum(1) / mask.sum(1, keepdim=True)
+    rows = torch.arange(hidden.shape[0], device=hidden.device)
+    if mode == 'cls':
+        return hidden[rows, attention_mask.argmax(1)]
+    if mode == 'last':
+        T = attention_mask.shape[1]
+        return hidden[rows, T - 1 - attention_mask.flip(1).argmax(1)]
+    raise ValueError(f'unknown pooling {mode!r}')
+
+def embed_texts(model, tokenizer, texts, pooling='mean', batch_size=64,
+                max_len=512, normalize=True, prefix='', padding_side=None,
+                device=None):
+    """Vectors (N, m), float32 on the CPU, of prefix + text for each text:
+    pooled last hidden states of an encoder, unit length if normalize.
+    Batches hold texts of similar length; the output is in input order.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    device = device or next(model.parameters()).device
+    side = padding_side or tokenizer.padding_side
+    pad = tokenizer.pad_token_id
+    ids = tokenizer([prefix + t for t in texts], truncation=True,
+                    max_length=max_len)['input_ids']
+    full = tokenizer([prefix + t for t in texts])['input_ids']
+    n_cut = sum(len(a) < len(b) for a, b in zip(ids, full))
+    if n_cut:
+        print(f'{n_cut} of {len(texts)} texts truncated to {max_len} tokens')
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out = torch.empty(len(ids), model.config.hidden_size)
+    for j in range(0, len(order), batch_size):
+        rows = [ids[i] for i in order[j:j + batch_size]]
+        T = max(len(r) for r in rows)
+        fill = lambda r, v: ([v] * (T - len(r)) + r if side == 'left'
+                             else r + [v] * (T - len(r)))
+        X = torch.tensor([fill(r, pad) for r in rows], device=device)
+        mask = torch.tensor([fill([1] * len(r), 0) for r in rows],
+                            device=device)
+        with torch.inference_mode():
+            h = model(input_ids=X, attention_mask=mask).last_hidden_state
+            z = d2l.pool_hidden(h.float(), mask, pooling)
+            if normalize:
+                z = F.normalize(z, dim=-1)
+        out[order[j:j + batch_size]] = z.cpu()
+    return out
+
+def retrieval_metrics(ranked_ids, gold_ids, ks=(1, 5, 10, 100)):
+    """Per-query metrics of ranked lists against gold sets (binary
+    relevance): recall@k is 1 if a relevant id is among the first k (the
+    question is answerable from what was retrieved), mrr@10 the reciprocal
+    rank of the first relevant id within 10, ndcg@10 the discounted gain
+    over the ideal ordering. NaN for a query with an empty gold set.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    out = {f'recall@{k}': [] for k in ks} | {'mrr@10': [], 'ndcg@10': []}
+    for ranked, gold in zip(ranked_ids, gold_ids):
+        gold = set(gold)
+        if not gold:
+            for v in out.values():
+                v.append(np.nan)
+            continue
+        rel = np.array([i in gold for i in ranked], dtype=float)
+        for k in ks:
+            out[f'recall@{k}'].append(float(rel[:k].any()))
+        hits = np.flatnonzero(rel[:10])
+        out['mrr@10'].append(1 / (hits[0] + 1) if len(hits) else 0.0)
+        disc = 1 / np.log2(np.arange(2, 12))
+        idcg = disc[:min(len(gold), 10)].sum()
+        out['ndcg@10'].append((rel[:10] * disc[:len(rel[:10])]).sum() / idcg)
+    return {k: np.array(v) for k, v in out.items()}
+
+def anisotropy(Z, n_pairs=200_000, seed=0):
+    """Mean cosine similarity between distinct rows of Z, over n_pairs
+    random pairs, or over all pairs if n_pairs is None or covers them.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    Z = F.normalize(torch.as_tensor(Z, dtype=torch.float64), dim=-1)
+    n = len(Z)
+    if n_pairs is None or n_pairs >= n * (n - 1) // 2:
+        G = Z @ Z.T
+        return float((G.sum() - G.diagonal().sum()) / (n * (n - 1)))
+    rng = np.random.default_rng(seed)
+    i, j = rng.integers(n, size=n_pairs), rng.integers(n - 1, size=n_pairs)
+    j = j + (j >= i)  # a partner other than i, uniformly
+    return float((Z[i] * Z[j]).sum(-1).mean())
+
+def align_uniform(Zx, Zy, t=2.0, Zu=None):
+    """Wang and Isola's alignment, the mean squared distance between the
+    unit vectors of positive pairs (rows of Zx and Zy), and uniformity,
+    the log of the mean of exp(-t ||z - z'||^2) over the distinct pairs
+    of the rows of Zu, or of all rows of Zx and Zy if Zu is None.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    Zx, Zy = (F.normalize(torch.as_tensor(Z, dtype=torch.float64), dim=-1)
+              for Z in (Zx, Zy))
+    Zu = (torch.cat([Zx, Zy]) if Zu is None else F.normalize(
+        torch.as_tensor(Zu, dtype=torch.float64), dim=-1))
+    sq = torch.pdist(Zu) ** 2
+    uniformity = torch.logsumexp(-t * sq, 0) - math.log(len(sq))
+    return float(((Zx - Zy) ** 2).sum(-1).mean()), float(uniformity)
+
+def info_nce_loss(q, d, tau=0.05, hard_neg=None, symmetric=False):
+    """InfoNCE with in-batch negatives for unit vectors q, d (B, m), row i
+    of d the positive passage of query i: the cross-entropy of the scores
+    q_i . d_j / tau over all d_j, and over all hard_neg_j too if given.
+    symmetric averages in the passage-to-query direction (each d_i
+    against all q_j). Returns the loss and the share of queries whose
+    positive scores highest.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    S = q @ (d if hard_neg is None else torch.cat([d, hard_neg])).T / tau
+    labels = torch.arange(len(q), device=q.device)
+    loss = F.cross_entropy(S, labels)
+    if symmetric:
+        loss = (loss + F.cross_entropy(S[:, :len(q)].T, labels)) / 2
+    return loss, (S.argmax(1) == labels).float().mean()
+
+def no_duplicate_batches(queries, passages, batch_size, seed=0,
+                         negatives=None):
+    """Batches of indices into the pairs (queries[i], passages[i]), in a
+    seeded random order, none holding a query text twice or a passage text
+    twice (with negatives[i], an extra passage per pair, counted among the
+    passages): a duplicate would be a negative of its own query. A pair
+    that would repeat a text waits for a later batch.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    pending = collections.deque(
+        np.random.default_rng(seed).permutation(len(queries)).tolist())
+    batches = []
+    while pending:
+        batch, seen, waiting = [], set(), []
+        while pending and len(batch) < batch_size:
+            i = pending.popleft()
+            texts = {('q', queries[i]), ('p', passages[i])}
+            if negatives is not None:
+                texts.add(('p', negatives[i]))
+            if texts & seen:
+                waiting.append(i)
+            else:
+                batch.append(i)
+                seen |= texts
+        pending.extendleft(reversed(waiting))
+        batches.append(batch)
+    return batches
+
+def train_embedder(model, tokenizer, pairs, *, pooling='mean', tau=0.05,
+                   batch_size=64, lr=3e-5, steps=None, epochs=1,
+                   hard_negs=None, mrl_dims=None, q_prefix='query: ',
+                   d_prefix='passage: ', max_len_q=48, max_len_d=160,
+                   seed=0):
+    """Train an encoder in place on (query, passage) pairs: InfoNCE with
+    in-batch negatives at temperature tau, plus hard_negs[i] as one more
+    candidate per pair if given; with mrl_dims, the mean of the losses on
+    the leading mrl_dims coordinates (Matryoshka). Batches from
+    no_duplicate_batches; AdamW (weight decay 0.01 on matrices), linear
+    warmup over the first 10% of the steps then linear decay, gradients
+    clipped to norm 1, bf16 autocast on a GPU. Returns the loss per step,
+    the steps, the training seconds and the peak GPU memory in GiB."""
+    device = next(model.parameters()).device
+    cuda = device.type == 'cuda'
+    qs, ds = [q for q, _ in pairs], [d for _, d in pairs]
+    plan = [b for e in range(epochs) for b in d2l.no_duplicate_batches(
+        qs, ds, batch_size, seed + e, hard_negs)]
+    steps = steps or len(plan)
+
+    def embed(texts, prefix, max_len):  # pooled, not yet unit length
+        ids = tokenizer([prefix + t for t in texts], truncation=True,
+                        max_length=max_len)['input_ids']
+        T = max(map(len, ids))
+        X = torch.tensor([r + [tokenizer.pad_token_id] * (T - len(r))
+                          for r in ids], device=device)
+        M = torch.tensor([[1] * len(r) + [0] * (T - len(r)) for r in ids],
+                         device=device)
+        with torch.autocast(device.type, torch.bfloat16, enabled=cuda):
+            h = model(input_ids=X, attention_mask=M).last_hidden_state
+        return d2l.pool_hidden(h.float(), M, pooling)
+
+    def loss_fn(b):
+        q, d = embed([qs[i] for i in b], q_prefix, max_len_q), embed(
+            [ds[i] for i in b], d_prefix, max_len_d)
+        h = (None if hard_negs is None else
+             embed([hard_negs[i] for i in b], d_prefix, max_len_d))
+        cut = lambda Z, k: None if Z is None else F.normalize(Z[:, :k], dim=-1)
+        dims = mrl_dims or (q.shape[1],)
+        return sum(d2l.info_nce_loss(cut(q, k), cut(d, k), tau, cut(h, k))[0]
+                   for k in dims) / len(dims)
+
+    model.train()
+    torch.manual_seed(seed)
+    params = [p for p in model.parameters() if p.requires_grad]
+    opt = torch.optim.AdamW([
+        {'params': [p for p in params if p.ndim >= 2], 'weight_decay': 0.01},
+        {'params': [p for p in params if p.ndim < 2], 'weight_decay': 0.0}],
+        lr=lr)
+    n_warm = max(1, round(0.1 * steps))
+    sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: (
+        (s + 1) / n_warm if s < n_warm else
+        max(0.0, (steps - s) / max(1, steps - n_warm))))
+    if cuda:
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
+    t0, losses = time.perf_counter(), []
+    for s in range(steps):
+        loss = loss_fn(plan[s % len(plan)])
+        loss.backward()
+        nn.utils.clip_grad_norm_(params, 1.0)
+        opt.step()
+        sched.step()
+        opt.zero_grad(set_to_none=True)
+        losses.append(loss.detach())
+    if cuda:
+        torch.cuda.synchronize(device)
+    model.eval()
+    return dict(loss=torch.stack(losses).tolist(), steps=steps,
+                seconds=time.perf_counter() - t0,
+                peak_gib=(torch.cuda.max_memory_allocated(device) / 2**30
+                          if cuda else float('nan')))
+
+def truncate_embeddings(Z, dim):
+    """The first dim coordinates of each row of Z, rescaled to unit length.
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    return F.normalize(Z[:, :dim], dim=-1)
+
+def binarize(Z):
+    """The signs of Z (N, m) as bits, eight per byte: uint8 (N, m / 8).
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    return np.packbits(np.asarray(Z) > 0, axis=1)
+
+def hamming_scores(Qbits, Dbits):
+    """The number of equal bits of each packed query and each packed
+    document (m minus their Hamming distance): int32 (nq, nd).
+
+    Defined in :numref:`sec_lm_text_embeddings`"""
+    pop = np.unpackbits(np.arange(256, dtype=np.uint8)[:, None], axis=1).sum(
+        1, dtype=np.uint8)  # set bits per byte value
+    out = np.empty((len(Qbits), len(Dbits)), np.int32)
+    for i in range(0, len(Qbits), 16):
+        out[i:i + 16] = 8 * Qbits.shape[1] - pop[
+            Qbits[i:i + 16, None] ^ Dbits[None]].sum(-1, dtype=np.int32)
+    return out
+
+d2l.DATA_HUB['lm-book-r3-v1'] = (  # book commit 098bf463, corpus r3.1
+    d2l.LM_DATA_URL + 'lm-book-r3-v1.zip',
+    '0b7f11e044a4838139ac02dffb6e2d7eb32b48b8')
+d2l.DATA_HUB['lm-enc-r3-emb-qwen3emb06b-sec512-v1'] = (  # float16, dense view
+    d2l.LM_DATA_URL + 'lm-enc-r3-emb-qwen3emb06b-sec512-v1.npy',
+    '5bf63b97609399841b4fcd925734b98327634b91')
+d2l.DATA_HUB['lm-enc-r3-stress-emb-v1'] = (  # D2L_RERUN=ret-stress-emb
+    d2l.LM_DATA_URL + 'lm-enc-r3-stress-emb-v1.npz',
+    'f9fbf41eba47b50a034ee5d7f0a6fa33f28c26a1')
+d2l.DATA_HUB['lm-enc-ret-rerank-v1'] = (  # D2L_RERUN=ret-rerank
+    d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v1.json',
+    '93299ee93a052d3e21f4ed49d8b259400382dc81')
+d2l.DATA_HUB['lm-enc-ann-v1'] = (  # D2L_RERUN=ret-ann, AMD EPYC 7502
+    d2l.LM_DATA_URL + 'lm-enc-ann-v1.json',
+    'aadf07c143fa936ca556c105644c35052c30bf18')
+
+def book_corpus(chunking='sections', *, size=256, overlap=0, source='hub',
+                root=os.path.join('..', 'data', 'lm')):
+    """The book corpus (artifact lm-book-r3-v1) under one chunking:
+    'sections' (structure-aware, up to 512 tokens) or 'fixed' (windows of
+    size tokens sharing overlap tokens: 256 and 0 or 64 are shipped). With
+    source='local' it is rebuilt in memory from the git checkout named by
+    the environment variable D2L_BOOK_ROOT.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    tag = 'sec512' if chunking == 'sections' else f'fix{size}o{overlap}'
+    if tag not in ('sec512', 'fix256o0', 'fix256o64'):
+        raise ValueError(f'no shipped chunking {chunking!r} with size '
+                         f'{size} and overlap {overlap}')
+    if source == 'local':
+        import transformers
+        rev = d2l.HF_REVISIONS[d2l.R3_TOKENIZER]
+        tok = transformers.AutoTokenizer.from_pretrained(d2l.R3_TOKENIZER,
+                                                         revision=rev)
+        manifest, docs, chunks = d2l._r3_local(os.environ['D2L_BOOK_ROOT'],
+                                                tok, rev)
+        if 'lm-book-r3-v1' in d2l.DATA_HUB:  # what changed since the release
+            shipped = d2l._r3_read_zip(d2l.download_keyed(
+                'lm-book-r3-v1', root), ())[0]['files']
+            drift = sorted(set(shipped.items()) ^ set(
+                manifest['files'].items()))
+            if drift:
+                print(f'warning: {len({d for d, _ in drift})} files differ '
+                      f'from the registered corpus')
+        chunks = chunks[tag]
+    else:
+        path = d2l.download_keyed('lm-book-r3-v1', root)
+        manifest, docs, chunks = d2l._r3_read_zip(path, (tag,))
+        chunks = chunks[tag]
+    if manifest['corpus_version'] != d2l.R3_VERSION:
+        raise ValueError(
+            f'{manifest["corpus_version"]} is not corpus version '
+            f'{d2l.R3_VERSION}: delete {root}/lm-book-r3-v1 and download again')
+    return d2l.BookCorpus(manifest, docs, chunks, tag)
+
+def bm25_tokenize(text, split_identifiers=True):
+    """Lower-cased words and numbers of text; an identifier such as
+    d2l.book_corpus or BookRetriever also gives its parts (d2l, book,
+    corpus; book, retriever) when split_identifiers is set.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    out = []
+    for tok in re.findall(r'\w+(?:\.\w+)*', text):
+        out.append(tok.lower())
+        if not split_identifiers or re.fullmatch(r'[\d.]+', tok):
+            continue
+        parts = []
+        for p in re.split(r'[._]+', tok):
+            if re.search(r'[a-z][A-Z]|[A-Z][A-Z][a-z]', p):  # camelCase
+                parts += re.findall(r'[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+|\d+', p)
+            elif p:
+                parts.append(p)
+        if len(parts) > 1:
+            out += [p.lower() for p in parts]
+    return out
+
+class BM25Index:
+    """BM25 over tokenized documents: W[t, d] = idf(t) tf / (tf + k1 (1 - b
+    + b |d| / avgdl)) with Lucene's idf log(1 + (N - df + 0.5) / (df +
+    0.5)), stored as a sparse matrix; a query's scores are the sum of the
+    rows of its tokens.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, docs_tokens, k1=1.2, b=0.75, idf='lucene'):
+        from scipy import sparse
+        if idf != 'lucene':
+            raise ValueError("only idf='lucene' is implemented")
+        self.k1, self.b, self.vocab = k1, b, {}
+        rows, cols = [], []
+        for d, toks in enumerate(docs_tokens):
+            for t in toks:
+                rows.append(self.vocab.setdefault(t, len(self.vocab)))
+                cols.append(d)
+        N, V = len(docs_tokens), len(self.vocab)
+        tf = sparse.csr_matrix((np.ones(len(rows)), (rows, cols)),
+                               shape=(V, N))  # duplicates are summed
+        tf.sum_duplicates()
+        self.doc_len = np.array([len(t) for t in docs_tokens], dtype=float)
+        df = np.diff(tf.indptr)
+        self.idf = np.log1p((N - df + 0.5) / (df + 0.5))
+        norm = k1 * (1 - b + b * self.doc_len / self.doc_len.mean())
+        tf.data = (np.repeat(self.idf, df) * tf.data
+                   / (tf.data + norm[tf.indices]))
+        self.W = tf  # (vocabulary, documents)
+
+    def scores(self, query_tokens):
+        """BM25 score of every document (a repeated token counts twice)."""
+        ids = [self.vocab[t] for t in query_tokens if t in self.vocab]
+        if not ids:
+            return np.zeros(self.W.shape[1])
+        return np.asarray(self.W[ids].sum(axis=0)).ravel()
+
+    def search(self, query_tokens, k):
+        """Indices and scores of the k best documents, best first."""
+        s = self.scores(query_tokens)
+        ids = np.argsort(-s, kind='stable')[:k]
+        return ids, s[ids]
+
+def rrf_fuse(rankings, k=60, weights=None):
+    """Reciprocal-rank fusion: each id scores sum_r w_r / (k + rank_r) over
+    the rankings (lists of ids, best first) that contain it. Returns
+    [(id, score)], best first, ties in order of first appearance.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    weights = [1.0] * len(rankings) if weights is None else weights
+    score, first = {}, {}
+    for w, ranking in zip(weights, rankings):
+        for r, i in enumerate(ranking, start=1):
+            score[i] = score.get(i, 0.0) + w / (k + r)
+            first.setdefault(i, len(first))
+    return sorted(score.items(), key=lambda x: (-x[1], first[x[0]]))
+
+def rerank_yes_no(model, tokenizer, query, docs, instruction=None,
+                  batch_size=16, max_len=1024):
+    """P(yes) of a yes/no reranker (Qwen3-Reranker) that each document
+    meets the query: the model card's prompt with the document cut to fit
+    max_len tokens, scored by the normalized probability of 'yes' against
+    'no' as the next token.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    instruction = instruction or ('Given a web search query, retrieve '
+                                  'relevant passages that answer the query')
+    head = ('<|im_start|>system\nJudge whether the Document meets the '
+            'requirements based on the Query and the Instruct provided. '
+            'Note that the answer can only be "yes" or "no".<|im_end|>\n'
+            f'<|im_start|>user\n<Instruct>: {instruction}\n'
+            f'<Query>: {query}\n<Document>: ')
+    tail = '<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+    enc = lambda s: tokenizer(s, add_special_tokens=False)['input_ids']
+    room = max_len - len(enc(head)) - len(enc(tail))
+    prompts = [head + tokenizer.decode(enc(d)[:room]) + tail for d in docs]
+    lp = d2l.label_logprobs(model, tokenizer, prompts, ['yes', 'no'],
+                            sep='', batch_size=batch_size)
+    return torch.exp(lp[:, 0]).numpy()
+
+def kmeans(X, n_clusters, n_iter=20, seed=0):
+    """Lloyd's k-means of the rows of X from a seeded k-means++ start:
+    (centroids (n_clusters, d), assign (N,)) as tensors on X's device,
+    assign naming each row's nearest centroid. A cluster that loses all
+    its rows keeps its centroid.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    X = torch.as_tensor(X, dtype=torch.float32)
+    x2, gen = (X ** 2).sum(1), torch.Generator().manual_seed(seed)
+
+    def nearest(C):  # ||x||^2 is the same for every centroid: left out
+        c2 = (C ** 2).sum(1)
+        return torch.cat([(c2 - 2 * Xb @ C.T).argmin(1)
+                          for Xb in X.split(8192)])
+
+    def pick(d2):  # a row drawn with probability proportional to d2
+        w = d2.double().cpu().clamp(min=0)
+        if w.sum() == 0:
+            return torch.randint(len(X), (1,), generator=gen).item()
+        return torch.multinomial(w, 1, generator=gen).item()
+
+    C = [X[pick(torch.ones(len(X)))]]
+    d2 = x2 - 2 * X @ C[0] + C[0] @ C[0]
+    for _ in range(1, n_clusters):  # k-means++: far rows are likelier
+        C.append(X[pick(d2)])
+        d2 = torch.minimum(d2, x2 - 2 * X @ C[-1] + C[-1] @ C[-1])
+    C = torch.stack(C)
+    for _ in range(n_iter):
+        assign = nearest(C)
+        counts = torch.bincount(assign, minlength=n_clusters)
+        sums = torch.zeros_like(C).index_add_(0, assign, X)
+        keep = counts > 0
+        C[keep] = sums[keep] / counts[keep, None]
+    return C, nearest(C)
+
+class IVFIndex:
+    """Inverted file index: the k-means cells of the training vectors; a
+    query scans the vectors of its nprobe nearest cells exactly, by
+    squared Euclidean distance (for unit vectors, the cosine order).
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, nlist, nprobe=1):
+        self.nlist, self.nprobe = nlist, nprobe
+
+    def train(self, X, n_iter=20, seed=0):
+        self.centroids = d2l.kmeans(X, self.nlist, n_iter, seed)[0]
+
+    def _cells(self, X, n):
+        """The n nearest cells of each row of X."""
+        d = (self.centroids ** 2).sum(1) - 2 * X @ self.centroids.T
+        return d.topk(n, dim=1, largest=False).indices
+
+    def add(self, X):
+        """Store the rows of X (ids 0, 1, ...) grouped by cell."""
+        X = torch.as_tensor(X, dtype=torch.float32)
+        cell = self._cells(X, 1)[:, 0]
+        self.ids = torch.argsort(cell, stable=True)
+        self.X = X[self.ids]
+        sizes = torch.bincount(cell, minlength=self.nlist)
+        self.start = torch.cat([torch.zeros(1, dtype=torch.long),
+                                sizes.cumsum(0)])  # cell c: start[c:c + 2]
+
+    def search(self, Q, k):
+        """(distances, ids) of the k nearest stored rows per query, nearest
+        first, among the probed cells; id -1 where they hold fewer."""
+        Q = torch.as_tensor(Q, dtype=torch.float32)
+        D = torch.full((len(Q), k), torch.inf)
+        I = torch.full((len(Q), k), -1, dtype=torch.long)
+        for j, cells in enumerate(self._cells(Q, self.nprobe).tolist()):
+            rows = torch.cat([torch.arange(self.start[c], self.start[c + 1])
+                              for c in cells])
+            top = ((self.X[rows] - Q[j]) ** 2).sum(1).topk(
+                min(k, len(rows)), largest=False)
+            n = len(top.values)
+            D[j, :n], I[j, :n] = top.values, self.ids[rows[top.indices]]
+        return D, I
+
+class ProductQuantizer:
+    """Product quantization: a vector of d coordinates is cut into m
+    sub-vectors, each replaced by the index of the nearest of 2^nbits
+    centroids of its own k-means codebook (one byte per sub-vector here).
+    A query's squared distances to all codes are sums of m entries of a
+    table computed once per query: the asymmetric distance.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, m, nbits=8):
+        if not 1 <= nbits <= 8:
+            raise ValueError('codes are stored as one byte per sub-vector')
+        self.m, self.nbits = m, nbits
+
+    def _split(self, X):  # (..., d) -> (..., m, d / m)
+        X = torch.as_tensor(X, dtype=torch.float32)
+        if X.shape[-1] % self.m:
+            raise ValueError(f'{X.shape[-1]} coordinates in {self.m} parts')
+        return X.reshape(*X.shape[:-1], self.m, X.shape[-1] // self.m)
+
+    def fit(self, X, n_iter=20, seed=0):
+        S = self._split(X)
+        self.codebooks = torch.stack([d2l.kmeans(  # (m, 2^nbits, d / m)
+            S[:, j], 2 ** self.nbits, n_iter, seed)[0] for j in range(self.m)])
+        return self
+
+    def encode(self, X):
+        """Codes (N, m), uint8: the nearest centroid of each sub-vector."""
+        S, c2 = self._split(X), (self.codebooks ** 2).sum(-1)
+        return torch.cat([(c2 - 2 * torch.einsum(
+            'nmd,mkd->nmk', block, self.codebooks)).argmin(-1)
+                          for block in S.split(1024)]).to(torch.uint8)
+
+    def decode(self, codes):
+        """The reconstructions x-hat (N, d) of codes."""
+        codes = torch.as_tensor(codes).long()
+        return self.codebooks[torch.arange(self.m), codes].flatten(1)
+
+    def adc_table(self, q):
+        """(m, 2^nbits) squared distances of q's sub-vectors to the
+        centroids."""
+        return ((self._split(q)[:, None, :] - self.codebooks) ** 2).sum(-1)
+
+    def adc_search(self, q, codes, k):
+        """(distances, ids) of the k codes nearest to the query q, or to
+        each row of q, by m table look-ups per code."""
+        q = torch.as_tensor(q, dtype=torch.float32)
+        codes = torch.as_tensor(codes).long()  # a no-op if already int64
+        if q.ndim == 2:
+            out = [self.adc_search(row, codes, k) for row in q]
+            return tuple(torch.stack(t) for t in zip(*out))
+        d = self.adc_table(q)[torch.arange(self.m), codes].sum(1)
+        top = d.topk(min(k, len(d)), largest=False)
+        return top.values, top.indices
+
+# The embedder that the retriever, this chapter and later chapters use
+DEFAULT_EMBEDDER = 'Qwen/Qwen3-Embedding-0.6B'
+
+Hit = collections.namedtuple('Hit',
+                             'chunk_id score rank text heading_path scores')
+
+class BookRetriever:
+    """Hybrid retrieval over the book corpus: BM25 over the 'sparse' view
+    and a dense embedder over the 'dense' view, fused by reciprocal rank,
+    optionally reranked by a yes/no reranker (which reads the 'dense' view
+    with the embedder's instruction, BOOK_TASK). dense=None gives a
+    BM25-only retriever; index 'flat' scans all chunk vectors, 'hnsw' and
+    'ivfpq' build Faiss indexes on first use.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    # BM25 parameters chosen on the book's training questions
+    BM25_PARAMS = dict(k1=1.2, b=0.9, split_identifiers=True)
+
+    def __init__(self, corpus=None, dense=DEFAULT_EMBEDDER, index='flat',
+                 reranker=None, fusion='rrf', rrf_k=60, device=None,
+                 cache=True, bm25_params=None):
+        if fusion != 'rrf' or index not in ('flat', 'hnsw', 'ivfpq'):
+            raise ValueError(f'fusion {fusion!r} or index {index!r}')
+        self.corpus = d2l.book_corpus() if corpus is None else corpus
+        self.bm25_params = dict(self.BM25_PARAMS if bm25_params is None
+                                else bm25_params)
+        p = self.bm25_params
+        self.bm25 = d2l.BM25Index(
+            [d2l.bm25_tokenize(t, p['split_identifiers'])
+             for t in self.corpus.texts('sparse')], k1=p['k1'], b=p['b'])
+        self.dense, self.index, self.reranker = dense, index, reranker
+        self.rrf_k, self.cache = rrf_k, cache
+        self.device = device or ('cuda' if torch.cuda.is_available()
+                                 else 'cpu')
+        self._X = self._ann = self._enc = self._rr = self._texts = None
+
+    def _encoder(self):
+        if self._enc is None:
+            dtype = torch.bfloat16 if self.device != 'cpu' else torch.float32
+            self._enc = d2l.load_encoder(
+                self.dense, padding_side=d2l._EMBEDDERS[self.dense][
+                    'padding_side'], dtype=dtype, device=self.device)
+        return self._enc
+
+    def chunk_vectors(self):
+        """Unit vectors of the chunks (N, m), float16: the registered set
+        for this embedder if there is one, else the local cache, else
+        encoded now (and cached)."""
+        if self._X is None:
+            spec, c = d2l._EMBEDDERS[self.dense], self.corpus
+            rev = d2l.HF_ENCODER_REVISIONS[self.dense]
+            key = d2l._emb_cache_key(c.version, c.tag, 'dense', self.dense,
+                                     rev, 1024, spec['pooling'], '')
+            reg = d2l._R3_EMB_KEYS.get(self.dense)
+            X = (np.load(d2l.download_keyed(reg)) if c.tag == 'sec512'
+                 and reg in d2l.DATA_HUB else
+                 d2l._emb_cache_load(key) if self.cache else None)
+            if X is None:
+                model, tok = self._encoder()
+                X = d2l.embed_texts(model, tok, c.texts('dense'),
+                                    pooling=spec['pooling'], max_len=1024,
+                                    batch_size=16).half().numpy()
+                if self.cache:
+                    d2l._emb_cache_save(key, X)
+            assert X.shape[0] == len(c), 'chunk vectors do not match corpus'
+            self._X = torch.tensor(X, device=self.device)
+        return self._X
+
+    def _dense_search(self, queries, depth):
+        spec = d2l._EMBEDDERS[self.dense]
+        model, tok = self._encoder()
+        Q = d2l.embed_texts(model, tok, [spec['query_format'].format(
+            task=d2l.BOOK_TASK, query=q) for q in queries],
+            pooling=spec['pooling'], max_len=512)
+        X = self.chunk_vectors()
+        if self.index == 'flat':
+            S = (Q.to(X.device, X.dtype) @ X.T).float().cpu()
+            s, i = S.topk(min(depth, len(X)), dim=1)
+            return i.numpy(), s.numpy(), S.numpy()
+        if self._ann is None:
+            import faiss
+            Xf = np.ascontiguousarray(X.float().cpu().numpy())
+            m = Xf.shape[1]
+            if self.index == 'hnsw':
+                self._ann = faiss.IndexHNSWFlat(m, 32,
+                                                faiss.METRIC_INNER_PRODUCT)
+                self._ann.hnsw.efConstruction, self._ann.hnsw.efSearch = (
+                    200, 128)
+            else:
+                nlist = max(1, len(Xf) // 64)
+                self._ann = faiss.index_factory(
+                    m, f'IVF{nlist},PQ64', faiss.METRIC_INNER_PRODUCT)
+                if len(Xf) < 256 * 39:  # below what Faiss asks per codebook
+                    print(f'IVF-PQ: codebooks of 256 centroids trained on '
+                          f'{len(Xf):,} vectors')
+                    self._ann.pq.cp.min_points_per_centroid = 1
+                self._ann.train(Xf)
+                self._ann.nprobe = 16
+            self._ann.add(Xf)
+        s, i = self._ann.search(np.ascontiguousarray(Q.numpy()), depth)
+        keep = i >= 0  # Faiss pads with id -1 when it finds fewer
+        return [r[k] for r, k in zip(i, keep)], [
+            r[k] for r, k in zip(s, keep)], None
+
+    def search_batch(self, queries, k=10, mode='hybrid', rerank_k=None):
+        """search for each of several queries."""
+        if mode not in ('bm25', 'dense', 'hybrid'):
+            raise ValueError(f'mode {mode!r}')
+        if self.dense is None:
+            if mode == 'dense':
+                raise ValueError('a BM25-only retriever has no dense mode')
+            mode = 'bm25'
+        if rerank_k and not self.reranker:
+            raise ValueError('rerank_k needs a retriever with a reranker')
+        depth = max(100, k, rerank_k or 0)
+        p, ids = self.bm25_params, self.corpus.ids
+        bm25 = [self.bm25.scores(d2l.bm25_tokenize(q, p['split_identifiers']))
+                for q in queries]
+        if mode != 'bm25':
+            di, ds, dense_all = self._dense_search(queries, depth)
+        out = []
+        for j, q in enumerate(queries):
+            stages = {'bm25': bm25[j]}
+            bm_rank = np.argsort(-bm25[j], kind='stable')[:depth]
+            if mode == 'bm25':
+                ranked = [(int(i), float(bm25[j][i])) for i in bm_rank]
+            else:
+                dense_s = (dense_all[j] if dense_all is not None else
+                           dict(zip(di[j].tolist(), ds[j].tolist())))
+                stages['dense'] = dense_s
+                if mode == 'dense':
+                    ranked = list(zip(di[j].tolist(), ds[j].tolist()))
+                else:
+                    ranked = d2l.rrf_fuse([bm_rank.tolist(), di[j].tolist()],
+                                          k=self.rrf_k)[:depth]
+                    stages['rrf'] = dict(ranked)
+            if rerank_k:
+                if self._texts is None:
+                    self._texts = self.corpus.texts('dense')
+                top = [i for i, _ in ranked[:rerank_k]]
+                pr = d2l.rerank_yes_no(*self._reranker(), q,
+                                       [self._texts[i] for i in top],
+                                       instruction=d2l.BOOK_TASK)
+                stages['rerank'] = dict(zip(top, pr.tolist()))
+                order = np.argsort(-pr, kind='stable')
+                ranked = ([(top[o], float(pr[o])) for o in order]
+                          + ranked[rerank_k:])  # the rest as fused
+            hits = []
+            for r, (i, s) in enumerate(ranked[:k], start=1):
+                c = self.corpus.chunks[i]
+                hits.append(d2l.Hit(c['id'], s, r, c['text'],
+                                    c['heading_path'], {
+                    name: float(v[i]) if not isinstance(v, dict)
+                    else v.get(i) for name, v in stages.items()}))
+            out.append(hits)
+        return out
+
+    def search(self, query, k=10, mode='hybrid', rerank_k=None):
+        """The k best chunks for query as a list of Hit, best first; with
+        rerank_k, the reranker reorders the first rerank_k of the fused
+        ranking."""
+        return self.search_batch([query], k, mode, rerank_k)[0]
+
+    def _reranker(self):
+        if self._rr is None:
+            self._rr = d2l.load_hf(
+                self.reranker,
+                revision=d2l.HF_ENCODER_REVISIONS[self.reranker],
+                device_map={'': self.device})
+        return self._rr
+
+    def release(self):
+        """Free the GPU models (query encoder, reranker); a later search
+        loads them again."""
+        self._enc = self._rr = None
+        d2l.lm_free()
+
+d2l.DATA_HUB['lm-book-qa-v1'] = (  # corpus r3.1; 5,865 train, 240 dev, 240 test
+    d2l.LM_DATA_URL + 'lm-book-qa-v1.zip',
+    '3b8dba5ceae43c88274e52ce6ae7525884ea4168')
+d2l.DATA_HUB['lm-book-qa-api-cache-v1'] = (  # its drafts, checks, verdicts
+    d2l.LM_DATA_URL + 'lm-book-qa-api-cache-v1.zip',
+    '962322fd53b3573daeaa50a92d3f53f25a25572d')
+d2l.DATA_HUB['lm-book-qa-v2'] = (  # v1, closed-book flag by the 27B judge
+    d2l.LM_DATA_URL + 'lm-book-qa-v2.zip',
+    '65a524857b50dfdffa4e75f217b5af66256bd025')
+d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
+    d2l.LM_DATA_URL + 'lm-rag-judge-labels-v1.zip',
+    '2f10e6f4314644e7ebdf7ac7a8c1b3e7182f98d8')
+d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
+    d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
+    '78065bff472577631de5d7cac287323e77427e7f')
+d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
+    '7c08b175e12fe3138742f46e14720df1ab45e277')
+d2l.DATA_HUB['lm-rag-gen-stages-v2'] = (  # v1 and the control fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v2.jsonl',
+    'bfd5ba324efcc683b06ded6d96c04b56ca806cb0')
+d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
+    d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
+    'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
+d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
+    d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
+    'dd66f91cc44070f7e2256c63d5e5caf912c4054e')
+d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
+    d2l.LM_DATA_URL + 'lm-rag-judge-v1.jsonl',
+    '8e128dbe149cf3f22b3d0979368c679c5d43c371')
+d2l.DATA_HUB['lm-rag-judge-cache-v1'] = (  # the judge's recorded replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v1.zip',
+    '12402e3f6d7675bcd3f2667743607677129abd4e')
+d2l.DATA_HUB['lm-rag-judge-v2'] = (  # v1 and the verdicts on the fix run
+    d2l.LM_DATA_URL + 'lm-rag-judge-v2.jsonl',
+    '8e8ad8b9f63e000005e40f060c4e926e66c3312f')
+d2l.DATA_HUB['lm-rag-judge-cache-v2'] = (  # every recorded reply
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v2.zip',
+    '9b68fb8b52733e7909000165121512892f4b022c')
+d2l.DATA_HUB['lm-rag-judge-v3'] = (  # v2, missing verdicts judged again
+    d2l.LM_DATA_URL + 'lm-rag-judge-v3.jsonl',  # with 6,000 new tokens
+    '28d257ee9b9545e7035917e6612d978faf8d259d')
+d2l.DATA_HUB['lm-rag-judge-cache-v3'] = (  # v2 and those longer replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v3.zip',
+    '8711571c3c94646d17215c522aec15d7a3cd269c')
+d2l.DATA_HUB['lm-rag-judge-v4'] = (  # v3 and the verdicts on fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-judge-v4.jsonl',
+    '0169be597e978728e6559cd191c91cb8e30281c5')
+d2l.DATA_HUB['lm-rag-judge-cache-v4'] = (  # v3 and those replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v4.zip',
+    'cf57712b285710ee87c0a7c56aab0600d13dac7a')
+
+def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
+            root=os.path.join('..', 'data', 'lm')):
+    """The book's question set (artifact lm-book-qa-v2), one split: a
+    BookQA (a list of item dicts), optionally only answerable (or only
+    unanswerable) items, only some question types, and a stratified
+    sample of n items.
+
+    Defined in :numref:`sec_lm_rag`"""
+    items = d2l._book_qa_read(split, root)
+    if answerable is not None:
+        items = [q for q in items if q['answerable'] == answerable]
+    if types is not None:
+        items = [q for q in items if q['type'] in types]
+    qa = d2l.BookQA(items, split)
+    return qa if n is None else qa.subset(n, seed)
+
+def gold_chunk_ids(item, corpus, min_overlap=0.5, include_alt=True):
+    """Ids of the chunks of corpus relevant to a question: those that
+    overlap one of its gold spans (and, with include_alt, the passages
+    judged to answer it as well) by at least min_overlap of the span's or
+    of the chunk's characters."""
+    spans = item['gold_spans'] + (item.get('alt_spans', []) if include_alt
+                                  else [])
+    return {i for s in spans for i in corpus.span_to_chunk_ids(
+        s['doc_id'], s['char_start'], s['char_end'], min_overlap)}
+
+def cov_at_budget(ranked_chunk_ids, item, corpus, budget_tokens):
+    """Whether the chunks of corpus taken in rank order until the next one
+    would pass budget_tokens tokens cover at least half the characters of
+    one of the item's gold spans (or alternative spans).
+
+    Defined in :numref:`sec_lm_rag`"""
+    taken, used = collections.defaultdict(list), 0
+    for cid in ranked_chunk_ids:
+        c = corpus[cid]
+        if used + c['n_tokens'] > budget_tokens:
+            break
+        used += c['n_tokens']
+        taken[c['doc_id']].append((c['char_start'], c['char_end']))
+    for s in item['gold_spans'] + item.get('alt_spans', []):
+        a, b = s['char_start'], s['char_end']
+        covered = np.zeros(b - a, dtype=bool)
+        for lo, hi in taken.get(s['doc_id'], ()):
+            covered[max(lo, a) - a:max(min(hi, b) - a, 0)] = True
+        if b > a and covered.mean() >= 0.5:
+            return True
+    return False
+
+def assemble_context(hits, budget_tokens=3000, order='rank', dedup_cos=0.95,
+                     embed=None, k=None):
+    """The passages for the prompt: hits (chunk dicts with n_tokens, best
+    first) taken in rank order, skipping a near duplicate of one already
+    taken (cosine above dedup_cos between the unit vectors that embed(hits)
+    returns; no check without embed), until k are taken or the next would
+    pass budget_tokens; then ordered 'rank' (best first), 'reverse' (best
+    last, next to the question) or 'edges' (the best at both ends, the
+    weakest in the middle). Returns (passages, tokens used)."""
+    if order not in ('rank', 'reverse', 'edges'):
+        raise ValueError(f'unknown order {order!r}')
+    hits = list(hits)
+    V = (torch.as_tensor(embed(hits)).float()
+         if embed is not None and hits else None)
+    keep, used = [], 0
+    for i, h in enumerate(hits):
+        if (k is not None and len(keep) == k
+                or used + h['n_tokens'] > budget_tokens):
+            break
+        if V is not None and keep and (V[keep] @ V[i]).max() > dedup_cos:
+            continue  # a near duplicate of a passage already taken
+        keep.append(i)
+        used += h['n_tokens']
+    out = [hits[i] for i in keep]
+    if order == 'reverse':
+        out = out[::-1]
+    elif order == 'edges':  # ranks 1, 3, 5, ..., then ..., 4, 2
+        out = out[0::2] + out[1::2][::-1]
+    return out, used
+
+ABSTAIN = 'I cannot answer this from the provided passages.'
+
+def rag_prompt(question, hits, abstain=ABSTAIN):
+    """Chat messages asking for an answer from numbered passages (hits: Hit
+    records or dicts with heading_path and text), each statement citing
+    them as [n], or the abstention string; hits=None gives the closed-book
+    prompt (no passages, no citations).
+
+    Defined in :numref:`sec_lm_rag`"""
+    if hits is None:
+        system = ('You answer questions about the textbook Dive into Deep '
+                  'Learning. If you do not know the answer, reply exactly: '
+                  + abstain)
+        user = f'Question: {question}\nAnswer in at most four sentences.'
+    else:
+        system = ('You answer questions about the textbook Dive into Deep '
+                  'Learning using only the numbered passages. After each '
+                  'statement, cite the passage numbers that support it, for '
+                  'example [2]. If the passages do not contain the answer, '
+                  'reply exactly: ' + abstain)
+        get = lambda h, k: h[k] if isinstance(h, dict) else getattr(h, k)
+        passages = '\n\n'.join(
+            f'[{n}] {" > ".join(get(h, "heading_path"))}\n{get(h, "text")}'
+            for n, h in enumerate(hits, start=1))
+        user = (f'Passages:\n{passages}\n\nQuestion: {question}\n'
+                f'Answer in at most four sentences.')
+    return [{'role': 'system', 'content': system},
+            {'role': 'user', 'content': user}]
+
+def parse_citations(answer, n_chunks):
+    """The passage numbers an answer cites ([1], [1][3], [1, 3]), in order
+    of first mention, without numbers outside 1..n_chunks."""
+    out = []
+    for group in re.findall(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
+        for n in map(int, group.split(',')):
+            if 1 <= n <= n_chunks and n not in out:
+                out.append(n)
+    return out
+
+RAGResult = collections.namedtuple('RAGResult', [
+    'qid', 'question', 'query_used', 'ranked_ids', 'context_ids', 'answer',
+    'cited_ids', 'abstained', 'n_prompt_tokens', 'n_new_tokens',
+    'latency_s'])
+
+class RAGPipeline:
+    """Retrieval-augmented generation over the book corpus. The question,
+    or a query the generator writes (rewrite='generator'), goes to the
+    retriever; rewrite='fuse' adds the query's ranking to the question's
+    in RRF, hyde embeds a passage the generator writes on the dense side,
+    decompose fuses the rankings of up to two sub-questions. The reranker
+    may reorder the first rerank_k chunks; assemble_context packs at most
+    k of them (k=None: as many as fit) into budget_tokens; the generator
+    answers with the fixed grounded prompt (or a variant of a
+    pre-registered fix), greedily, in batches. verify drops sentences
+    whose citations the generator finds unsupportive; abstain_below
+    abstains when the reranker's best score for the context is lower.
+
+    Defined in :numref:`sec_lm_rag`"""
+    def __init__(self, retriever, model, tokenizer, k=5, budget_tokens=3000,
+                 order='rank', rewrite=None, hyde=False, decompose=False,
+                 rerank_k=None, max_new_tokens=300, *, depth=50,
+                 dedup_cos=0.95, prompt='fixed', verify=False,
+                 abstain_below=None):
+        if rewrite not in (None, 'generator', 'fuse'):
+            raise ValueError(f'unknown rewrite {rewrite!r}')
+        if (rerank_k or abstain_below is not None) and not retriever.reranker:
+            raise ValueError('reranking needs a retriever with a reranker')
+        self.retriever, self.model, self.tokenizer = (retriever, model,
+                                                      tokenizer)
+        self.k, self.budget_tokens, self.order = k, budget_tokens, order
+        self.rewrite, self.hyde, self.decompose = rewrite, hyde, decompose
+        self.rerank_k, self.max_new_tokens = rerank_k, max_new_tokens
+        self.depth, self.dedup_cos, self.prompt = depth, dedup_cos, prompt
+        self.verify, self.abstain_below = verify, abstain_below
+        self._dense = self._pos = None
+
+    def prepare(self, questions, budgets=None):
+        """Phases 1 and 2. Per question (a string or an item dict): the
+        query used, the first-stage ranking (depth chunk ids), the context
+        (chunk dicts in prompt order) and its tokens, the reranker's best
+        score (None without one) and whether to abstain unasked."""
+        R, t0 = self.retriever, time.time()
+        qs = [self._question(q) for q in questions]
+        query = qs  # phase 1: the generator writes queries
+        if self.rewrite:
+            query = self._write([d2l._rag_rewrite_prompt(q) for q in qs], 20)
+        dense = (self._write([d2l._rag_hyde_prompt(q) for q in qs], 120)
+                 if self.hyde else qs)
+        extra = [[r] if self.rewrite == 'fuse' else [] for r in query]
+        if self.decompose:
+            subs = self._write([d2l._rag_decompose_prompt(q) for q in qs], 60)
+            extra = [e + [l.strip() for l in s.splitlines() if l.strip()][:2]
+                     for e, s in zip(extra, subs)]
+        main = query if self.rewrite == 'generator' else qs
+        ids = lambda H: [[h.chunk_id for h in hs] for hs in H]
+        pool = max(100, self.depth, self.rerank_k or 0)  # phase 2
+        if not (self.hyde or any(extra)):  # the retriever's own fusion
+            ranked = ids(R.search_batch(main, k=pool))
+        else:  # BM25 of the question, dense of `dense`, more rankings: RRF
+            bm = ids(R.search_batch(main, k=pool, mode='bm25'))
+            de = (ids(R.search_batch(dense, k=pool, mode='dense'))
+                  if R.dense else [[] for _ in qs])
+            flat = [e for es in extra for e in es]
+            more = iter(ids(R.search_batch(flat, k=pool)) if flat else [])
+            ranked = [[i for i, _ in d2l.rrf_fuse(
+                [b, d] + [next(more) for _ in es], k=R.rrf_k)][:pool]
+                for b, d, es in zip(bm, de, extra)]
+        cand, top = ranked, [None] * len(qs)
+        if self.rerank_k:
+            rr = self._rerank(qs, [r[:self.rerank_k] for r in ranked])
+            cand = [[c for c, _ in r] for r in rr]
+            top = [r[0][1] if r else None for r in rr]
+        budgets = budgets or [self.budget_tokens] * len(qs)
+        embed = self._embed if self.dedup_cos and R.dense else None
+        out = []
+        for j in range(len(qs)):
+            ctx, used = d2l.assemble_context(
+                [R.corpus[c] for c in cand[j]], budgets[j], self.order,
+                self.dedup_cos, embed, self.k)
+            out.append(dict(query_used=query[j], context=ctx,
+                            ranked_ids=ranked[j][:self.depth],
+                            n_context_tokens=used, top_score=top[j],
+                            abstain=False))
+        if self.abstain_below is not None:
+            need = [j for j, o in enumerate(out)
+                    if o['top_score'] is None and o['context']]
+            rr = self._rerank([qs[j] for j in need], [
+                [c['id'] for c in out[j]['context']] for j in need])
+            for j, r in zip(need, rr):
+                out[j]['top_score'] = r[0][1]
+            for o in out:
+                o['abstain'] = (o['top_score'] is not None and
+                                o['top_score'] < self.abstain_below)
+        for o in out:
+            o['seconds'] = (time.time() - t0) / max(len(qs), 1)
+        return out
+
+    def answer(self, questions, batch_size=8, contexts=None):
+        """Phase 3 after prepare (or with the contexts given; a context of
+        None is the closed-book prompt): the retriever's models leave the
+        GPU, then batched greedy generation. One RAGResult per question."""
+        prep = self.prepare(questions) if contexts is None else contexts
+        self.retriever.release()
+        go = [j for j, p in enumerate(prep) if not p.get('abstain')]
+        gen = dict(zip(go, self._generate(
+            [d2l._rag_fix_prompt(self._question(questions[j]),
+                                 prep[j]['context'], self.prompt)
+             for j in go], self.max_new_tokens, batch_size) if go else []))
+        answers = {j: (d2l._rag_quoted_answer(g[0]) if self.prompt == 'quote'
+                       else g[0]) for j, g in gen.items()}
+        if self.verify:
+            answers = self._verified(answers, prep, batch_size)
+        out = []
+        for j, q in enumerate(questions):
+            ctx = prep[j]['context'] or []
+            text = answers.get(j, d2l.ABSTAIN)
+            _, n_prompt, n_new, secs = gen.get(j, ('', 0, 0, 0.0))
+            out.append(d2l.RAGResult(
+                q.get('qid') if isinstance(q, dict) else None,
+                self._question(q), prep[j].get('query_used'),
+                list(prep[j].get('ranked_ids') or []),
+                [c['id'] for c in ctx], text,
+                d2l.parse_citations(text, len(ctx)), d2l._rag_abstained(text),
+                n_prompt, n_new, round(prep[j].get('seconds', 0) + secs, 4)))
+        return out
+
+    @staticmethod
+    def _question(q):
+        return q['question'] if isinstance(q, dict) else q
+
+    def _generate(self, messages, max_new_tokens, batch_size):
+        """(text, prompt tokens, new tokens, seconds) per chat: greedy,
+        thinking off, left padding; Transformers' generate keeps only the
+        last position's logits at the prefill (logits_to_keep=1)."""
+        tok, model = self.tokenizer, self.model
+        texts = [tok.apply_chat_template(m, tokenize=False,
+                                         add_generation_prompt=True,
+                                         enable_thinking=False)
+                 for m in messages]
+        eos = model.generation_config.eos_token_id
+        eos = set(eos if isinstance(eos, (list, tuple)) else [eos])
+        out = []
+        for b in range(0, len(texts), batch_size):
+            enc = tok(texts[b:b + batch_size], return_tensors='pt',
+                      padding=True, padding_side='left',
+                      add_special_tokens=False).to(model.device)
+            t = time.time()
+            with torch.no_grad():
+                ids = model.generate(
+                    **enc, max_new_tokens=max_new_tokens, do_sample=False,
+                    temperature=None, top_p=None, top_k=None,
+                    pad_token_id=tok.pad_token_id)
+            secs = (time.time() - t) / len(enc['input_ids'])
+            new = ids[:, enc['input_ids'].shape[1]:].tolist()
+            for row, n_prompt in zip(new, enc['attention_mask'].sum(1)):
+                n = next((i + 1 for i, x in enumerate(row) if x in eos),
+                         len(row))
+                out.append((tok.decode(row[:n], skip_special_tokens=True)
+                            .strip(), int(n_prompt), n, secs))
+        return out
+
+    def _write(self, messages, max_new_tokens):
+        """The generator's short replies (queries, passages)."""
+        return [t for t, *_ in self._generate(messages, max_new_tokens, 8)]
+
+    def _rerank(self, queries, id_lists):
+        """Per query, (chunk id, P(yes)) pairs of its chunks, best first."""
+        R = self.retriever
+        if self._dense is None:
+            self._dense = dict(zip(R.corpus.ids, R.corpus.texts('dense')))
+        model, tok = R._reranker()
+        out = []
+        for q, ids in zip(queries, id_lists):
+            p = (d2l.rerank_yes_no(model, tok, q, [self._dense[i] for i in
+                                                   ids],
+                                   instruction=d2l.BOOK_TASK)
+                 if ids else np.zeros(0))
+            out.append([(ids[i], float(p[i]))
+                        for i in np.argsort(-p, kind='stable')])
+        return out
+
+    def _embed(self, hits):
+        """Unit vectors of chunk dicts, from the retriever's chunk vectors."""
+        R = self.retriever
+        if self._pos is None:
+            self._pos = {c: i for i, c in enumerate(R.corpus.ids)}
+        return R.chunk_vectors()[[self._pos[h['id']] for h in hits]].float(
+            ).cpu()
+
+    def _verified(self, answers, prep, batch_size):
+        """answers without the sentences whose cited passages the generator
+        says do not support them (P(yes) below P(no)); a sentence without
+        a citation goes too, and an answer left empty abstains."""
+        jobs, sents = [], {}
+        for j, a in answers.items():
+            ctx = prep[j]['context'] or []
+            sents[j] = re.split(r'(?<=[.!?])\s+', a.strip())
+            for i, s in enumerate(sents[j]):
+                cited = d2l.parse_citations(s, len(ctx))
+                if cited and not d2l._rag_abstained(a):
+                    jobs.append((j, i, d2l._rag_verify_prompt(
+                        s, [ctx[c - 1] for c in cited])))
+        keep = set()
+        if jobs:
+            lp = d2l.label_logprobs(self.model, self.tokenizer,
+                                    [m for *_, m in jobs], ['yes', 'no'],
+                                    chat=True, enable_thinking=False,
+                                    batch_size=batch_size)
+            keep = {(j, i) for (j, i, _), l in zip(jobs, lp) if l[0] > l[1]}
+        return {j: a if d2l._rag_abstained(a) else ' '.join(
+            s for i, s in enumerate(sents[j]) if (j, i) in keep) or d2l.ABSTAIN
+                for j, a in answers.items()}
+
+def rag_judge(judge, tokenizer, item, result, context_texts, batch_size=8,
+              thinking=None, max_new_tokens=None):
+    """The judge's verdicts on an answer: 'correct' (every key fact stated,
+    nothing contradicting the reference), 'faithful' (every statement
+    supported by the passages given) and 'supported' (the cited passages
+    alone support it). result is a RAGResult or a dict with answer and
+    cited_ids (1-based passage numbers). An abstention (the abstention
+    sentence in the answer, d2l._rag_abstained) is decided without the
+    judge: it is correct exactly for an unanswerable item.
+    Without passages only 'correct' is judged. item, result and
+    context_texts may also be lists (a list of verdicts comes back, judged
+    in batches). judge is a d2l.ChatAPI (tokenizer None; batch_size
+    requests in flight; its client sets the thinking switch, records and
+    replays) or a Transformers model with its tokenizer. With thinking
+    (default: on for a d2l.ChatAPI, off for a model) the judge reasons
+    first and its verdict is read after the reasoning; a reply cut off at
+    max_new_tokens (default 3,000 with thinking, 64 without) counts as
+    malformed. A verdict missing from the judge's JSON after one retry is
+    None. A request that fails in transport twice (the server is down, an
+    error status) is not a verdict: rag_judge raises, and a recording
+    client keeps the replies that did arrive.
+
+    Defined in :numref:`sec_lm_rag`"""
+    single = isinstance(item, dict)
+    items, results, contexts = (([item], [result], [context_texts])
+                                if single else (item, result, context_texts))
+    api = hasattr(judge, 'achat')
+    thinking = api if thinking is None else thinking
+    max_new_tokens = max_new_tokens or (3000 if thinking else 64)
+    verdicts, jobs = [], []
+    for i, (q, r, ctx) in enumerate(zip(items, results, contexts)):
+        r = r._asdict() if hasattr(r, '_asdict') else r
+        answer, ctx = r['answer'].strip(), list(ctx or [])
+        abstained = d2l._rag_abstained(answer)
+        v = {'correct': None, 'faithful': None, 'supported': None}
+        if abstained or not q['answerable']:
+            v['correct'] = abstained and not q['answerable']
+        if abstained:
+            v['faithful'] = True  # an abstention states nothing
+        verdicts.append(v)
+        keys = [] if abstained else [
+            k for k in ('correct', 'faithful', 'supported')
+            if v[k] is None and (k == 'correct' or ctx)]
+        if keys:
+            cited = r.get('cited_ids') or []
+            jobs.append((i, keys, d2l._rag_judge_messages(
+                q, answer, ctx, cited)))
+    failed = []
+    for attempt in range(2):  # one retry, with the malformed reply shown
+        if not jobs:
+            break
+        replies = d2l._rag_judge_replies(
+            judge, tokenizer, [m for _, _, m in jobs], thinking,
+            max_new_tokens, batch_size)
+        retry = []
+        for (i, keys, messages), reply in zip(jobs, replies):
+            if isinstance(reply, BaseException):  # no reply: ask again
+                if attempt == 0:
+                    retry.append((i, keys, messages))
+                else:
+                    failed.append(reply)
+                continue
+            parsed = (None if reply is None else
+                      d2l._rag_parse_json(reply, keys))
+            if parsed is None and attempt == 0:
+                retry.append((i, keys, messages + [
+                    {'role': 'assistant', 'content': reply or ''},
+                    {'role': 'user', 'content': d2l.RAG_JUDGE_V1['retry']}]))
+            for k in keys:
+                verdicts[i][k] = None if parsed is None else parsed[k]
+        jobs = retry
+    if failed:
+        raise RuntimeError(f'{len(failed)} judge requests failed twice, '
+                           f'first: {failed[0]!r}') from failed[0]
+    return verdicts[0] if single else verdicts
+
+def citation_metrics(results, items, corpus):
+    """Per item, from gold ids: precision (the share of the cited passages
+    that are relevant), recall (the share of the relevant passages in the
+    context that are cited) and n_cited; NaN where a share has nothing to
+    divide by. results are RAGResults or mappings with context_ids and
+    cited_ids (1-based passage numbers)."""
+    rows = []
+    for r, q in zip(results, items):
+        r = r._asdict() if hasattr(r, '_asdict') else r
+        rel, ctx = d2l.gold_chunk_ids(q, corpus), list(r['context_ids'])
+        cited = [ctx[n - 1] for n in r['cited_ids'] if 1 <= n <= len(ctx)]
+        found = [c for c in ctx if c in rel]
+        rows.append(dict(
+            qid=q['qid'], n_cited=len(cited),
+            precision=np.mean([c in rel for c in cited]) if cited else np.nan,
+            recall=np.mean([c in cited for c in found]) if found else np.nan))
+    return pd.DataFrame(rows)
+
+def classify_failure(result, item, judge_out, corpus, depth=50):
+    """The stage at which an answer failed: 'correct'; an unanswerable item
+    answered: 'false_answer'; an answerable one: 'not_retrieved' (no
+    relevant chunk in the first-stage top depth), 'ranked_low' (one there,
+    none in the context), 'false_abstain' (one in the context, yet the
+    answer abstains), 'ignored' (faithful to the context, not correct) or
+    'unsupported' (not faithful). 'unjudged' when the judge gave no
+    verdict that the class depends on: such an answer has no class.
+
+    Defined in :numref:`sec_lm_rag_fixes`"""
+    r = result._asdict() if hasattr(result, '_asdict') else result
+    true = lambda v: isinstance(v, (bool, np.bool_)) and bool(v)
+    given = lambda v: isinstance(v, (bool, np.bool_))
+    if not given(judge_out['correct']):
+        return 'unjudged'
+    if true(judge_out['correct']):
+        return 'correct'
+    if not item['answerable']:
+        return 'false_answer'
+    rel = d2l.gold_chunk_ids(item, corpus)
+    if not rel & set(r['context_ids']):
+        return ('ranked_low' if rel & set(list(r['ranked_ids'])[:depth])
+                else 'not_retrieved')
+    if d2l._rag_abstained(r['answer']):
+        return 'false_abstain'
+    if not given(judge_out.get('faithful')):
+        return 'unjudged'
+    return 'ignored' if true(judge_out['faithful']) else 'unsupported'
+
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
 
@@ -5080,6 +9230,63 @@ def show_trace_2d(f, results):
     d2l.plt.ylabel('$x_2$')
     if equal:
         d2l.plt.gca().set_aspect('equal')
+
+def plot_intervals(x, series, xlabel, ylabel, *, kind='errorbar',
+                   reference=None, xscale='linear', axes=None, marks=None):
+    """Estimates with intervals: `series` maps a label to (mean, lo, hi);
+    `marks` maps a name to (fmt, {label: (xs, ys)}).
+
+    Defined in :numref:`sec_utils`"""
+    if kind not in ('errorbar', 'band') or xscale not in ('linear', 'log',
+                                                          'log2'):
+        raise ValueError(f'unknown kind {kind!r} or xscale {xscale!r}')
+    x = np.asarray(x)
+    categorical = not np.issubdtype(x.dtype, np.number)
+    pos = np.arange(len(x), dtype=float) if categorical else x.astype(float)
+    logx = xscale != 'linear' and not categorical
+    # Side-by-side offsets, in the units in which the x-axis is even
+    to_axis, from_axis = (np.log, np.exp) if logx else (np.asarray,) * 2
+    gaps = np.diff(np.unique(to_axis(pos)))
+    width = 0.6 * (gaps.min() if len(gaps) else 1.0) / len(series)
+    if axes is None:
+        d2l.set_figsize()
+        axes = d2l.plt.gca()
+    for i, (label, (mean, lo, hi)) in enumerate(series.items()):
+        mean, lo, hi = (np.asarray(v, dtype=float) for v in (mean, lo, hi))
+        if not mean.shape == lo.shape == hi.shape == pos.shape:
+            raise ValueError(f'{label}: mean, lo and hi need {len(pos)} '
+                             'values each')
+        err = np.stack([mean - lo, hi - mean])
+        if np.any(err < -1e-9):  # nan (a missing point) passes
+            raise ValueError(f'{label}: an interval misses its estimate')
+        color = f'C{i % 10}'
+        if kind == 'band':
+            axes.plot(pos, mean, '-', color=color, label=label)
+            axes.fill_between(pos, lo, hi, color=color, alpha=0.2,
+                              linewidth=0)
+        else:
+            at = from_axis(to_axis(pos) + (i - (len(series) - 1) / 2) * width)
+            axes.errorbar(at, mean, yerr=np.clip(err, 0, None), fmt='o',
+                          color=color, markersize=4, capsize=3, label=label)
+    for name, (fmt, points) in (marks or {}).items():
+        for i, label in enumerate(series):
+            if label in points:
+                axes.plot(*points[label], fmt, color=f'C{i % 10}')
+        axes.plot([], [], fmt, color='black', label=name)  # legend only
+    if reference is not None:
+        axes.axhline(reference, linestyle='--', color='black', linewidth=0.8)
+    if logx:
+        axes.set_xscale('log', base=2 if xscale == 'log2' else 10)
+    if categorical or logx:  # One tick per x value
+        axes.set_xticks(pos, [str(v) if categorical else f'{v:g}' for v in x])
+        axes.xaxis.set_minor_locator(ticker.NullLocator())
+    if categorical and len(x) > 3:  # Slanted names do not collide
+        axes.set_xticklabels(axes.get_xticklabels(), rotation=30, ha='right')
+    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
+    if len(series) > 1 or marks:
+        axes.legend()
+    axes.grid(axis='y' if categorical else 'both')  # No line through a bar
+    return axes
 
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
                 ylim=None, x=None, xscale='linear', yscale='linear',
@@ -6277,6 +10484,4826 @@ class Timer:
     def cumsum(self):
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
+
+_EVAL_ROWS = {}  # rows of the files read from the Hub in this process
+
+def _eval_load_rows(task, split=None):
+    """The rows (dicts) of the file of task.files for split (default
+    task.split): the one file whose path has the split name as a word.
+    Read from the Hugging Face Hub at task.revision, or from the folder
+    task.dataset if that is a local directory; parquet or JSON lines.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    split = split or task.split
+    word = re.compile(rf'(^|[/_.-]){re.escape(split)}([/_.-]|$)')
+    files = [f for f in task.files if word.search(f)]
+    if len(files) != 1:
+        raise ValueError(f'task {task.id}: {len(files)} files of split '
+                         f'{split!r} in {task.files}')
+    local = os.path.isdir(task.dataset)
+    key = (task.dataset, task.revision, files[0])
+    if local or key not in _EVAL_ROWS:
+        if local:
+            path = os.path.join(task.dataset, files[0])
+        else:
+            from huggingface_hub import hf_hub_download
+            path = hf_hub_download(task.dataset, files[0], repo_type='dataset',
+                                   revision=task.revision)
+        if path.endswith('.parquet'):
+            rows = pd.read_parquet(path).to_dict('records')
+        else:
+            with open(path, encoding='utf-8') as f:
+                rows = [json.loads(line) for line in f if line.strip()]
+        if local:
+            return rows
+        _EVAL_ROWS[key] = rows
+    return _EVAL_ROWS[key]
+
+def _eval_arc(row, i):
+    """ARC: the question, its options and the index of the answer key.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    labels = [str(a) for a in row['choices']['label']]
+    return {'id': str(row['id']), 'question': row['question'],
+            'options': [str(o) for o in row['choices']['text']],
+            'gold': labels.index(str(row['answerKey']))}
+
+def _eval_hellaswag(row, i):
+    """HellaSwag, cleaned as lm-evaluation-harness does: 'label: context'
+    as the question, the four endings as options. With fmt='continuation'
+    the context is the prompt and each ending continues it, as in the
+    harness.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    def clean(text):
+        text = text.strip().replace(' [title]', '. ')
+        return re.sub(r'\[.*?\]', '', text).replace('  ', ' ')
+    ctx = row['ctx_a'] + ' ' + row['ctx_b'].capitalize()
+    return {'id': str(i), 'question': clean(row['activity_label'] + ': ' +
+                                            ctx),
+            'options': [clean(e) for e in row['endings']],
+            'gold': int(row['label'])}
+
+def _eval_mmlu(row, i):
+    """MMLU: the question, four options, the answer index, the subject
+    (for same-subject demonstrations and as the cluster) and the subject
+    header that precedes the prompt. With fmt='mmlu' and five
+    'dev:same_subject' shots the prompt is lm-evaluation-harness's.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    subject = str(row['subject'])
+    return {'id': str(i), 'question': row['question'].strip(),
+            'options': [str(o) for o in row['choices']],
+            'gold': int(row['answer']), 'subject': subject,
+            'header': 'The following are multiple choice questions (with '
+                      f"answers) about {subject.replace('_', ' ')}.\n\n"}
+
+def _eval_mmlu_pro(row, i):
+    """MMLU-Pro: up to ten options, the category as the subject.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    subject = str(row['category'])
+    return {'id': str(row['question_id']), 'question': row['question'].strip(),
+            'options': [str(o) for o in row['options']],
+            'gold': int(row['answer_index']), 'subject': subject,
+            'header': 'The following are multiple choice questions (with '
+                      f'answers) about {subject}.\n\n'}
+
+def _eval_piqa(row, i):
+    """PIQA: the goal and its two solutions.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return {'id': str(i), 'question': row['goal'],
+            'options': [row['sol1'], row['sol2']], 'gold': int(row['label'])}
+
+def _eval_sciq(row, i):
+    """SciQ: the support paragraph as a header, three distractors and the
+    correct answer last, as lm-evaluation-harness orders them.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    support = (row['support'] or '').strip()
+    return {'id': str(i), 'question': row['question'],
+            'options': [row['distractor1'], row['distractor2'],
+                        row['distractor3'], row['correct_answer']],
+            'gold': 3, 'header': support + '\n' if support else ''}
+
+def _eval_winogrande(row, i):
+    """WinoGrande, partially scored: the sentence up to the blank with
+    either option as two prompts, the rest of the sentence as their
+    shared continuation.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    s = row['sentence']
+    k = s.index('_')
+    return {'id': str(i), 'prompts': [s[:k] + row['option1'],
+                                      s[:k] + row['option2']],
+            'continuation': ' ' + s[k + 1:].strip(),
+            'gold': int(row['answer']) - 1}
+
+def _eval_gsm8k(row, i):
+    """GSM8K: the question, the worked answer without its calculator
+    annotations <<...>> (a demonstration's target) and the final number
+    after '####' (the reference).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return {'id': str(i), 'question': row['question'],
+            'target': re.sub(r'<<[^>]*>>', '', row['answer']),
+            'reference': d2l.extract_answer(row['answer'], 'gsm8k',
+                                            strict=True)}
+
+def _eval_humaneval(row, i):
+    """HumanEval: the function header and docstring as the prompt; the
+    tests call check() on the entry point.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return {'id': str(row['task_id']), 'prompt': row['prompt'],
+            'test': f"{row['test']}\n\ncheck({row['entry_point']})\n",
+            'entry_point': row['entry_point']}
+
+EVAL_ADAPTERS = {  # dataset row and its index -> an item
+    'arc': _eval_arc, 'hellaswag': _eval_hellaswag, 'mmlu': _eval_mmlu,
+    'mmlu_pro': _eval_mmlu_pro, 'piqa': _eval_piqa, 'sciq': _eval_sciq,
+    'winogrande': _eval_winogrande, 'gsm8k': _eval_gsm8k,
+    'humaneval': _eval_humaneval}
+
+def _eval_canonical(task):
+    """task with canonical JSON values (numpy numbers and arrays become
+    Python ones; files and stop become tuples, a string being one entry).
+    Refuses sampling keys that run() sets itself.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    def plain(x):
+        if hasattr(x, 'tolist'):
+            return x.tolist()
+        raise TypeError(f'task {task.id}: {x!r} is not JSON')
+    d = json.loads(json.dumps(task._asdict(), default=plain))
+    for key in ('files', 'stop'):
+        d[key] = (d[key],) if isinstance(d[key], str) else tuple(d[key] or ())
+    clash = sorted(set(d['sampling'] or ()) & {
+        'seed', 'stop', 'chat', 'enable_thinking', 'batch_size',
+        'max_new_tokens'})
+    if clash:
+        raise ValueError(f'task {task.id}: sampling sets {clash}, which '
+                         'run() derives from the task and its seed')
+    return task._replace(**d)
+
+def _eval_items(task, rows, ids):
+    """The items rows[ids] of task, adapted by EVAL_ADAPTERS[task.adapter]
+    and rendered: 'mc' items get a prompt and choices from format_mc in
+    task.fmt with task.shots demonstrations (after the item's header), or,
+    with fmt='continuation', the question as the prompt and each option
+    after a space as a choice (demonstrations: question and answer, blank
+    lines between); 'gen' items get a prompt from fewshot_prompt in
+    task.template. The
+    demonstrations come from task.shots_from: {'split', 'ids'} (rows of
+    that split), {'demos': [[question, target], ...]} (written out in the
+    task, 'gen' only; an optional 'source' names them) or
+    '<split>:same_subject' (the first rows of that split with the item's
+    subject).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    if task.kind not in ('mc', 'mc_partial', 'gen', 'code', 'ppl'):
+        raise ValueError(f'task {task.id}: unknown kind {task.kind!r}')
+    if task.template in ('chat_single', 'chat_multi') and not task.chat:
+        raise ValueError(f'task {task.id}: template {task.template!r} '
+                         'needs chat=True')
+    adapt = d2l.EVAL_ADAPTERS[task.adapter]
+    items = [adapt(rows[int(i)], int(i)) for i in ids]
+    src, k = task.shots_from, task.shots or 0
+    if k and src is None:
+        raise ValueError(f'task {task.id}: {k} shots but no shots_from')
+    if isinstance(src, dict):
+        n_src = len(src['demos'] if 'demos' in src else src['ids'])
+        if n_src != k:
+            raise ValueError(f'task {task.id}: shots={k} but {n_src} '
+                             'demonstration ids')
+        if 'demos' in src:  # written out in the task: (question, target)
+            if task.kind != 'gen':
+                raise ValueError(f'task {task.id}: written demonstrations '
+                                 "need kind 'gen'")
+            fixed = [{'question': q, 'target': t} for q, t in src['demos']]
+        else:
+            pool = d2l._eval_load_rows(task, src['split'])
+            fixed = [adapt(pool[j], j) for j in src['ids']]
+    elif isinstance(src, str):
+        split, rule = src.split(':')
+        if rule != 'same_subject':
+            raise ValueError(f'task {task.id}: unknown rule {rule!r}')
+        pool = d2l._eval_load_rows(task, split)
+        by_subject = collections.defaultdict(list)
+        for j, row in enumerate(pool):
+            shot = adapt(row, j)
+            if len(by_subject[shot['subject']]) < k:
+                by_subject[shot['subject']].append(shot)
+    for item in items:
+        shots = [] if not k else fixed if isinstance(src, dict) else (
+            by_subject[item['subject']])
+        if k and len(shots) < k:
+            raise ValueError(f"task {task.id}: {len(shots)} of {k} shots "
+                             f"for item {item['id']}")
+        if task.kind == 'mc' and task.fmt == 'continuation':
+            demos = [s['question'] + ' ' + s['options'][s['gold']]
+                     for s in shots]
+            prompt = '\n\n'.join(demos + [item['question']])
+            item['prompt'] = item.get('header', '') + prompt
+            item['choices'] = [' ' + o for o in item['options']]
+        elif task.kind == 'mc':
+            prompt, item['choices'] = d2l.format_mc(
+                item['question'], item['options'], task.fmt,
+                shots=[(s['question'], s['options'], s['gold'])
+                       for s in shots])
+            item['prompt'] = item.get('header', '') + prompt
+        elif task.kind == 'gen':
+            demos = [(s['question'], s['target']) for s in shots]
+            item['prompt'] = (item['question'] if task.template is None
+                              else d2l.fewshot_prompt(demos, item['question'],
+                                                      task.template))
+    return items
+
+GSM8K_COT_DEMOS = [  # Wei et al. (2022), as lm-evaluation-harness's
+    # gsm8k_cot task writes them (lm_eval/tasks/gsm8k/gsm8k-cot.yaml at
+    # commit b733598568fde3afa0e008892f8e7bb18cd472b6)
+    ['There are 15 trees in the grove. Grove workers will plant trees in '
+     'the grove today. After they are done, there will be 21 trees. How '
+     'many trees did the grove workers plant today?',
+     'There are 15 trees originally. Then there were 21 trees after some '
+     'more were planted. So there must have been 21 - 15 = 6. The answer '
+     'is 6.'],
+    ['If there are 3 cars in the parking lot and 2 more cars arrive, how '
+     'many cars are in the parking lot?',
+     'There are originally 3 cars. 2 more cars arrive. 3 + 2 = 5. The '
+     'answer is 5.'],
+    ['Leah had 32 chocolates and her sister had 42. If they ate 35, how '
+     'many pieces do they have left in total?',
+     'Originally, Leah had 32 chocolates. Her sister had 42. So in total '
+     'they had 32 + 42 = 74. After eating 35, they had 74 - 35 = 39. The '
+     'answer is 39.'],
+    ['Jason had 20 lollipops. He gave Denny some lollipops. Now Jason has '
+     '12 lollipops. How many lollipops did Jason give to Denny?',
+     'Jason started with 20 lollipops. Then he had 12 after giving some to '
+     'Denny. So he gave Denny 20 - 12 = 8. The answer is 8.'],
+    ['Shawn has five toys. For Christmas, he got two toys each from his '
+     'mom and dad. How many toys does he have now?',
+     'Shawn started with 5 toys. If he got 2 toys each from his mom and '
+     'dad, then that is 4 more toys. 5 + 4 = 9. The answer is 9.'],
+    ['There were nine computers in the server room. Five more computers '
+     'were installed each day, from monday to thursday. How many computers '
+     'are now in the server room?',
+     'There were originally 9 computers. For each of 4 days, 5 more '
+     'computers were added. So 5 * 4 = 20 computers were added. 9 + 20 is '
+     '29. The answer is 29.'],
+    ['Michael had 58 golf balls. On tuesday, he lost 23 golf balls. On '
+     'wednesday, he lost 2 more. How many golf balls did he have at the '
+     'end of wednesday?',
+     'Michael started with 58 golf balls. After losing 23 on tuesday, he '
+     'had 58 - 23 = 35. After losing 2 more, he had 35 - 2 = 33 golf '
+     'balls. The answer is 33.'],
+    ['Olivia has $23. She bought five bagels for $3 each. How much money '
+     'does she have left?',
+     'Olivia had 23 dollars. 5 bagels for 3 dollars each will be 5 x 3 = '
+     '15 dollars. So she has 23 - 15 dollars left. 23 - 15 is 8. The '
+     'answer is 8.']]
+
+EVAL_TASKS = {t.id: t for t in (  # pinned revisions and explicit files
+    EvalTask('arc_challenge', 'allenai/ai2_arc',
+             '210d026faf9955653af8916fad021475a3f00453',
+             ('ARC-Challenge/test-00000-of-00001.parquet',), 'mc', 'arc',
+             config='ARC-Challenge', norm='char'),
+    EvalTask('arc_easy', 'allenai/ai2_arc',
+             '210d026faf9955653af8916fad021475a3f00453',
+             ('ARC-Easy/test-00000-of-00001.parquet',), 'mc', 'arc',
+             config='ARC-Easy', norm='char'),
+    EvalTask('hellaswag', 'Rowan/hellaswag',
+             '218ec52e09a7e7462a5400043bb9a69a41d06b76',
+             ('data/validation-00000-of-00001.parquet',), 'mc', 'hellaswag',
+             split='validation', fmt='continuation', norm='char'),
+    EvalTask('mmlu', 'cais/mmlu', 'c30699e8356da336a370243923dbaf21066bb9fe',
+             ('all/test-00000-of-00001.parquet',
+              'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu', config='all',
+             fmt='mmlu', norm='sum', shots=5,
+             shots_from='dev:same_subject', cluster='subject'),
+    EvalTask('mmlu_pro', 'TIGER-Lab/MMLU-Pro',
+             'b189ec765aa7ed75c8acfea42df31fdae71f97be',
+             ('data/test-00000-of-00001.parquet',
+              'data/validation-00000-of-00001.parquet'), 'mc', 'mmlu_pro',
+             fmt='letter', norm='sum', shots=5,
+             shots_from='validation:same_subject'),
+    EvalTask('gsm8k', 'openai/gsm8k',
+             '740312add88f781978c0658806c59bc2815b9866',
+             ('main/test-00000-of-00001.parquet',
+              'main/train-00000-of-00001.parquet'), 'gen', 'gsm8k',
+             config='main', template='qa', shots=4,
+             shots_from={'split': 'train', 'ids': [0, 1, 2, 3]},
+             max_new_tokens=384, stop=('\n\nQ:',), extract='gsm8k'),
+    # lm-evaluation-harness's gsm8k_cot: 8 written chain-of-thought
+    # demonstrations as 'Q: ...\nA: ... The answer is N.', greedy, stop 'Q:',
+    # 256 new tokens (the harness's max_gen_toks)
+    EvalTask('gsm8k_cot', 'openai/gsm8k',
+             '740312add88f781978c0658806c59bc2815b9866',
+             ('main/test-00000-of-00001.parquet',
+              'main/train-00000-of-00001.parquet'), 'gen', 'gsm8k',
+             config='main', template='qa', shots=8,
+             shots_from={'source': 'Wei et al. 2022',
+                         'demos': GSM8K_COT_DEMOS},
+             max_new_tokens=256, stop=('Q:',), extract='gsm8k'),
+    EvalTask('humaneval', 'openai/openai_humaneval',
+             '7dce6050a7d6d172f3cc5c32aa97f52fa1a2e544',
+             ('openai_humaneval/test-00000-of-00001.parquet',), 'code',
+             'humaneval', max_new_tokens=512,
+             stop=('\nclass', '\ndef', '\n#', '\nif', '\nprint')),
+    EvalTask('piqa', 'baber/piqa', '142f6d7367fd9877f0fb3b5734ea6a545f54cdd1',
+             ('piqa_validation.parquet',), 'mc', 'piqa', split='validation',
+             norm='char'),
+    EvalTask('sciq', 'allenai/sciq',
+             '2c94ad3e1aafab77146f384e23536f97a4849815',
+             ('data/test-00000-of-00001.parquet',), 'mc', 'sciq',
+             norm='char'),
+    EvalTask('winogrande', 'allenai/winogrande',
+             '01e74176c63542e6b0bcb004dcdea22d94fb67b5',
+             ('winogrande_xl/validation-00000-of-00001.parquet',),
+             'mc_partial', 'winogrande', split='validation',
+             config='winogrande_xl', norm='sum'))}
+
+EVAL_SUITES = {  # frozen manifests: a change here is a new suite version
+    'dev_v1': {'name': 'dev_v1', 'tasks': [
+        EvalTask('arc_challenge', 'allenai/ai2_arc',
+                 '210d026faf9955653af8916fad021475a3f00453',
+                 ('ARC-Challenge/test-00000-of-00001.parquet',), 'mc', 'arc',
+                 config='ARC-Challenge', n=500, norm='char'),
+        EvalTask('gsm8k', 'openai/gsm8k',
+                 '740312add88f781978c0658806c59bc2815b9866',
+                 ('main/test-00000-of-00001.parquet',
+                  'main/train-00000-of-00001.parquet'), 'gen', 'gsm8k',
+                 config='main', n=100, template='chat_multi', chat=True,
+                 enable_thinking=False, shots=4,
+                 shots_from={'split': 'train', 'ids': [0, 1, 2, 3]},
+                 max_new_tokens=384, extract='gsm8k')]},
+    'report_v1': {'name': 'report_v1', 'tasks': [
+        EvalTask('mmlu_pro', 'TIGER-Lab/MMLU-Pro',
+                 'b189ec765aa7ed75c8acfea42df31fdae71f97be',
+                 ('data/test-00000-of-00001.parquet',
+                  'data/validation-00000-of-00001.parquet'), 'mc',
+                 'mmlu_pro', n=1000, fmt='letter', norm='sum', shots=5,
+                 shots_from='validation:same_subject'),
+        EvalTask('mmlu', 'cais/mmlu',
+                 'c30699e8356da336a370243923dbaf21066bb9fe',
+                 ('all/test-00000-of-00001.parquet',
+                  'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu',
+                 config='all', n=2000, fmt='mmlu', norm='sum', shots=5,
+                 shots_from='dev:same_subject', cluster='subject'),
+        EvalTask('gsm8k', 'openai/gsm8k',
+                 '740312add88f781978c0658806c59bc2815b9866',
+                 ('main/test-00000-of-00001.parquet',
+                  'main/train-00000-of-00001.parquet'), 'gen', 'gsm8k',
+                 config='main', template='qa', shots=4,
+                 shots_from={'split': 'train', 'ids': [0, 1, 2, 3]},
+                 max_new_tokens=384, stop=('\n\nQ:',), extract='gsm8k')]}}
+
+def _eval_model_id(model):
+    """(model id, revision) of a Transformers model, from its config;
+    other models may set the attributes name_or_path and revision, else
+    their class name and 'local' are used.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    m = d2l._lm_unwrap(model)
+    cfg = getattr(m, 'config', None)
+    name = (getattr(m, 'name_or_path', None) or
+            getattr(cfg, '_name_or_path', None) or type(m).__name__)
+    revision = (getattr(m, 'revision', None) or
+                getattr(cfg, '_commit_hash', None) or 'local')
+    return str(name), str(revision)
+
+def _eval_cache_path(cache_dir, model_id, revision, suite_hash, run_key):
+    """<cache_dir>/<model id, '/' as '--'>@<revision>/<suite hash>/<run
+    key>.parquet
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return os.path.join(cache_dir, f"{model_id.replace('/', '--')}@"
+                        f'{revision}', suite_hash, f'{run_key}.parquet')
+
+def _eval_sorted(rows):
+    """Result rows as a DataFrame sorted by task and item id.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return pd.DataFrame(rows).sort_values(['task', 'item_id'],
+                                          ignore_index=True)
+
+def _eval_cache_read(path):
+    """The result rows cached at path, or [] if there are none.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    if not os.path.exists(path):
+        return []
+    return [{k: (None if isinstance(v, float) and k != 'score' and
+                 math.isnan(v) else v) for k, v in r.items()}
+            for r in pd.read_parquet(path).to_dict('records')]
+
+def _eval_cache_write(path, rows):
+    """Write result rows to path atomically, sorted, without timestamps.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    _eval_sorted(rows).to_parquet(path + '.tmp', index=False)
+    os.replace(path + '.tmp', path)
+
+def _eval_score_more(suite, task, items, model, tokenizer, seed):
+    """(scores, preds, finish reasons) of the kinds EvalSuite._score does
+    not show: 'mc_partial' (one continuation after each of an item's
+    prompts; the highest-scoring prompt is the prediction), 'code' (the
+    prompt and its completion run against the item's tests) and 'ppl'
+    (bits per byte per text).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    n = len(items)
+    if task.kind == 'mc_partial':
+        S = d2l.score_choices(
+            model, tokenizer, [p for it in items for p in it['prompts']],
+            [[it['continuation']] for it in items for _ in it['prompts']],
+            task.norm, batch_size=suite.batch_size)[:, 0]
+        preds = [int(s.argmax()) for s in S.split(
+            [len(it['prompts']) for it in items])]
+        return ([float(p == it['gold']) for p, it in zip(preds, items)],
+                preds, [None] * n)
+    if task.kind == 'code':
+        sampling = dict(task.sampling or {})  # None: greedy
+        if sampling:
+            sampling.setdefault('strategy', 'sample')
+        gens = d2l.generate(
+            model, tokenizer, [it['prompt'] for it in items],
+            task.max_new_tokens, chat=task.chat,
+            enable_thinking=task.enable_thinking, stop=list(task.stop),
+            batch_size=suite.batch_size, **sampling,
+            seed=[d2l.item_seed(seed, task.id, it['id']) for it in items])
+        return ([float(d2l.run_python_tests(it['prompt'] + g.text,
+                                            it['test']))
+                 for g, it in zip(gens, items)], [None] * n,
+                [g.finish_reason for g in gens])
+    if task.kind == 'ppl':  # the mean of texts, not per byte
+        return ([d2l.bits_per_byte(model, tokenizer, [it['text']])
+                 for it in items], [None] * n, [None] * n)
+    raise ValueError(f'unknown kind: {task.kind!r}')
+
+@d2l.add_to_class(d2l.EvalResult)  #@save
+def macro(self, n_boot=10000, *, seed=0, alpha=0.05):
+    """The mean of the task means, with a bootstrap that resamples items
+    (or clusters) within each task."""
+    reps = [d2l._bootstrap_replicates(df.score, n_boot,
+                                      self._clusters(t, df.cluster),
+                                      [seed, k])
+            for k, (t, df) in enumerate(self.per_item.groupby('task'))]
+    means = np.mean([m for _, m, _ in reps], axis=0)
+    lo, hi = np.quantile(means, [alpha / 2, 1 - alpha / 2])
+    return d2l.BootstrapResult(
+        float(np.mean([y.mean() for y, _, _ in reps])),
+        (float(lo), float(hi)), float(means.std(ddof=1)), None,
+        sum(len(y) for y, _, _ in reps), len(reps), n_boot)
+
+def _judge_cut(tokenizer, text, i, name, limit=1500):
+    """text cut to its first limit tokens, with a warning naming item i.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    import warnings
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= limit:
+        return text
+    warnings.warn(f'judge_pairwise: item {i}: {name} cut from {len(ids)} '
+                  f'to {limit} tokens')
+    return tokenizer.decode(ids[:limit])
+
+def _judge_logodds(judge, tokenizer, texts, *, batch_size=8,
+                   max_batch_tokens=None):
+    """(len(texts), 3) float64: log P(A), log P(B) and the log-odds of the
+    token 'A' over 'B' as the next token after each rendered prompt.
+    Identical prompts run once; prompts are sorted by length, left-padded
+    and batched (at most batch_size rows and, if given, max_batch_tokens
+    tokens including padding). The log-odds are recomputed in fp32 from
+    the input of the judge's output head, since bf16 logits are rounded
+    (steps of 0.125 near 20); a head that does not give the logits (a
+    soft-capped one) falls back to the logits as returned, with a
+    warning.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    import warnings
+    letters = [tokenizer.encode(c, add_special_tokens=False) for c in 'AB']
+    if any(len(ids) != 1 for ids in letters) or letters[0] == letters[1]:
+        raise ValueError(f'A and B are not two single tokens: {letters}')
+    AB = [letters[0][0], letters[1][0]]
+    unique = list(dict.fromkeys(texts))
+    ids = [tokenizer(t, add_special_tokens=False)['input_ids']
+           for t in unique]
+    order = sorted(range(len(ids)), key=lambda r: (-len(ids[r]), r))
+    batches = [[]]
+    for r in order:  # longest first, so a batch's first row sets its length
+        b = batches[-1]
+        if b and (len(b) == batch_size or max_batch_tokens is not None and
+                  len(ids[b[0]]) * (len(b) + 1) > max_batch_tokens):
+            batches.append([])
+        batches[-1].append(r)
+    pad = tokenizer.pad_token_id
+    pad = tokenizer.eos_token_id if pad is None else pad
+    device = next(judge.parameters()).device
+    head = getattr(judge, 'get_output_embeddings', lambda: None)()
+    seen, warned = [], False
+    hook = (head.register_forward_hook(lambda m, x, y: seen.append(x[0]))
+            if isinstance(head, nn.Linear) else None)
+    lp = torch.empty(len(ids), 3, dtype=torch.float64)
+    try:
+        for b in batches if ids else []:
+            T = len(ids[b[0]])
+            X = torch.tensor([[pad] * (T - len(ids[r])) + ids[r] for r in b],
+                             device=device)
+            mask = torch.tensor([[0] * (T - len(ids[r])) + [1] * len(ids[r])
+                                 for r in b], device=device)
+            pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+            seen.clear()
+            with torch.inference_mode():
+                z = judge(input_ids=X, attention_mask=mask, position_ids=pos,
+                          use_cache=False, logits_to_keep=1).logits[:, -1]
+                zab = z[:, AB].float()
+                if len(seen) == 1:
+                    h = seen[0][:, -1].float()
+                    w = head.weight[AB].to(h.device, torch.float32)
+                    exact = h @ w.T if head.bias is None else (
+                        h @ w.T + head.bias[AB].to(h.device, torch.float32))
+                    exact = exact.to(zab.device)
+                    if torch.allclose(exact, zab, rtol=2**-7, atol=1e-3):
+                        zab = exact
+                    elif not warned:  # a head that is not the last step
+                        warned = True
+                        warnings.warn('judge_pairwise: the output head does '
+                                      'not give the logits; the log-odds '
+                                      'use the logits as returned')
+            lp[b, :2] = z.float().log_softmax(-1)[:, AB].double().cpu()
+            lp[b, 2] = (zab[:, 0] - zab[:, 1]).double().cpu()
+    finally:
+        if hook is not None:
+            hook.remove()
+    row = {t: k for k, t in enumerate(unique)}
+    return lp[[row[t] for t in texts]] if texts else lp
+
+def _lm_frozen_key(key):
+    """The registered artifact a regeneration of key is checked against:
+    key itself if registered, else its highest registered earlier version
+    (lm-x-v1 for lm-x-v2), else None.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    if key in d2l.DATA_HUB:
+        return key
+    stem, _, v = key.rpartition('-v')
+    if not v.isdigit():
+        return None
+    older = [k for k in d2l.DATA_HUB if k.rpartition('-v')[0] == stem and
+             k.rpartition('-v')[2].isdigit() and int(k.rpartition('-v')[2])
+             < int(v)]
+    return max(older, key=lambda k: int(k.rpartition('-v')[2]),
+               default=None)
+
+def _lm_read_table(path):
+    """A parquet file or JSON lines as a DataFrame.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    if path.endswith('.parquet'):
+        return pd.read_parquet(path)
+    return pd.read_json(path, lines=True, dtype=False)
+
+def lm_save_table(name, df, on, key, rerun_dir=os.path.join(
+        '..', 'data', 'lm', 'rerun')):
+    """Write a regenerated table to rerun_dir/name (parquet, or JSON lines
+    for .jsonl) with its rows sorted by the columns on, print its sha1,
+    and print its agreement with the registered artifact it replaces (see
+    _lm_frozen_key): per column, the largest absolute difference of a
+    float column, else the share of equal values. Returns the path.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    df = df.sort_values(on, ignore_index=True)
+    if name.endswith('.parquet'):
+        write = lambda path: df.to_parquet(path, index=False)
+    else:  # pandas converts the numpy values
+        write = lambda path: d2l.write_jsonl(path, json.loads(df.to_json(
+            orient='records', double_precision=15)))
+    path = d2l.lm_save_rerun(name, write, rerun_dir)
+    frozen = _lm_frozen_key(key)
+    if frozen is None:
+        print(f'{key}: no earlier version is registered')
+        return path
+    m = df.merge(_lm_read_table(d2l.download_keyed(frozen)), on=on,
+                 suffixes=('', '_frozen'))
+    agree = []
+    for c in df.columns.difference(on):
+        a, b = m[c], m.get(c + '_frozen')
+        if b is None:
+            continue
+        if pd.api.types.is_float_dtype(a) and pd.api.types.is_float_dtype(b):
+            agree.append(f'{c} max |diff| {np.nanmax(np.abs(a - b)):.2g}')
+        else:
+            missing = (a.isna() & b.isna()).to_numpy(bool)  # equal too
+            same = np.mean(missing | (a.astype(object).astype(str) == b.astype(
+                object).astype(str)).to_numpy(bool))
+            agree.append(f'{c} equal {same:.3f}')
+    print(f'against {frozen}: {len(m)} of {len(df)} rows matched')
+    for k in range(0, len(agree), 3):
+        print('    ' + '; '.join(agree[k:k + 3]))
+    return path
+
+ChatResult = collections.namedtuple('ChatResult', [  # one chat completion
+    'text', 'finish_reason', 'usage', 'logprobs', 'model', 'provider',
+    'system_fingerprint', 'reasoning', 'request_hash', 'from_cache',
+    't_send', 't_first', 't_first_content', 't_total', 'itl', 'n_retries',
+    'n_429', 'created'])
+
+class ReplayMiss(KeyError):
+    """A request that is not in the cache of a client in replay mode: a
+    build that replays never reaches the network.
+
+    Defined in :numref:`sec_lm_api`"""
+    def __str__(self):
+        return str(self.args[0]) if self.args else ''
+
+class CostCapExceeded(RuntimeError):
+    """A live call whose worst-case cost would cross the client's cost cap;
+    raised before any HTTP request is made.
+
+    Defined in :numref:`sec_lm_api`"""
+
+def _chat_merge(base, update):
+    """Merge request parameters: keys of update win, nested dicts merge, and
+    keys whose value is None are dropped at every level (so None unsets a
+    default).
+
+    Defined in :numref:`sec_lm_api`"""
+    out = {}
+    for k in list(base) + [k for k in update if k not in base]:
+        v = d2l._chat_plain(update[k] if k in update else base[k])
+        if isinstance(v, dict):
+            inner = base.get(k) if k in update else None
+            v = d2l._chat_merge(inner if isinstance(inner, dict) else {}, v)
+        if v is not None:
+            out[k] = v
+    return out
+
+def _chat_plain(v):
+    """v with NumPy (or torch) scalars, also inside lists and tuples, turned
+    into Python numbers, so that they hash and serialize like them.
+
+    Defined in :numref:`sec_lm_api`"""
+    if isinstance(v, (list, tuple)):
+        return [d2l._chat_plain(a) for a in v]
+    if getattr(v, 'ndim', None) == 0 and hasattr(v, 'item'):
+        return v.item()
+    return v
+
+def _chat_usage(u):
+    """The usage block of a response as prompt, completion, cached and
+    reasoning tokens and the provider's cost; missing values are None,
+    never 0.
+
+    Defined in :numref:`sec_lm_api`"""
+    u = u or {}
+    prompt = u.get('prompt_tokens_details') or {}
+    completion = u.get('completion_tokens_details') or {}
+    return {'prompt_tokens': u.get('prompt_tokens'),
+            'completion_tokens': u.get('completion_tokens'),
+            'cached_tokens': prompt.get('cached_tokens'),
+            'reasoning_tokens': completion.get(
+                'reasoning_tokens', u.get('reasoning_tokens')),
+            'cost': u.get('cost')}
+
+def _chat_logprobs(lp):
+    """Generated-token log-probabilities as (token, logprob, top) triples,
+    top a list of (token, logprob); None when the response has none.
+
+    Defined in :numref:`sec_lm_api`"""
+    if not lp or not lp.get('content'):
+        return None
+    return [(t['token'], t['logprob'],
+             [(a['token'], a['logprob']) for a in t.get('top_logprobs') or []])
+            for t in lp['content']]
+
+def _chat_parse(r):
+    """The fields of a (non-streamed) chat-completions response dict that
+    d2l.ChatResult keeps; unknown top-level fields (such as prompt
+    log-probabilities) and the texts of further choices go to 'extra'.
+
+    Defined in :numref:`sec_lm_api`"""
+    choices = r.get('choices') or [{}]
+    choice, known = choices[0], {'id', 'object', 'created', 'model', 'usage',
+                                 'choices', 'provider', 'system_fingerprint'}
+    message = choice.get('message') or {}
+    extra = {k: v for k, v in r.items() if k not in known and v is not None}
+    if len(choices) > 1:
+        extra['choices'] = [{'text': (c.get('message') or {}).get('content'),
+                             'finish_reason': c.get('finish_reason')}
+                            for c in choices]
+    return {'text': message.get('content') or '',
+            'reasoning': (message.get('reasoning')
+                          or message.get('reasoning_content')),
+            'finish_reason': choice.get('finish_reason'),
+            'logprobs': d2l._chat_logprobs(choice.get('logprobs')),
+            'usage': d2l._chat_usage(r.get('usage')), 'model': r.get('model'),
+            'provider': r.get('provider'),
+            'system_fingerprint': r.get('system_fingerprint'), 'extra': extra,
+            't_first': None, 't_first_content': None, 'itl': None,
+            'n_chunks': None}
+
+def _retry_after(value):
+    """Seconds in a Retry-After header (delta seconds or an HTTP date), or
+    None when the header is absent or unreadable.
+
+    Defined in :numref:`sec_lm_api`"""
+    if value is None:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        import datetime  # not in the d2l library preamble
+        import email.utils
+        try:
+            t = email.utils.parsedate_to_datetime(value)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            return max(0.0, (t - now).total_seconds())
+        except (TypeError, ValueError):
+            return None
+
+def check_closed_loop(results, c):
+    """Raise ValueError unless results can be one closed loop of c recorded
+    in one run: no d2l.ReplayMiss or d2l.CostCapExceeded among them, not a
+    mix of cached and live responses, never more than c in flight, and
+    t_send minus the wall-clock `created` the same within 2 s (a monotonic
+    clock of another boot or a suspended machine shifts it).
+
+    Defined in :numref:`sec_lm_api`"""
+    import calendar  # not in the d2l library preamble
+    bad = [r for r in results
+           if isinstance(r, (d2l.ReplayMiss, d2l.CostCapExceeded))]
+    if bad:
+        raise ValueError(f'{len(bad)} requests got no response: {bad[0]!r}')
+    ok = [r for r in results if not isinstance(r, BaseException)]
+    if len({r.from_cache for r in ok} - {None}) > 1:
+        raise ValueError('the results mix cached and live responses; record '
+                         'the level in one run, into a fresh cache')
+    s = np.array([r.t_send for r in ok], dtype=float)
+    f = s + np.array([r.t_total for r in ok], dtype=float)
+    step = np.concatenate([np.ones(len(ok)), -np.ones(len(ok))])
+    order = np.lexsort((step, np.concatenate([s, f])))  # ends before starts
+    if len(ok) and np.cumsum(step[order]).max() > c:
+        raise ValueError(f'more than c = {c} requests were in flight at once: '
+                         f'not one closed loop')
+    lag = [t - calendar.timegm(time.strptime(r.created, '%Y-%m-%dT%H:%M:%SZ'))
+           for t, r in zip(s, ok) if r.created is not None]
+    if lag and max(lag) - min(lag) > 2:
+        raise ValueError('the send times come from more than one run '
+                         '(monotonic and wall clocks disagree)')
+
+class ChatAPI:
+    """A measuring and replaying client for OpenAI-compatible chat
+    completions. Every request is keyed by d2l.request_hash. Mode 'replay'
+    answers from the JSONL cache and raises d2l.ReplayMiss on a miss,
+    'record' answers from the cache and goes live on a miss, 'live' always
+    goes live and appends; a replay returns the first recorded entry. Every
+    live HTTP attempt, failed or not, is appended to <cache stem>.calls.jsonl.
+    The SDK client (openai.AsyncOpenAI, max_retries=0) is created at the
+    first live call, so constructing and replaying never imports openai or
+    reads a key. api_key is a string, a function returning one (called at
+    the first live call) or None (a placeholder for local servers); it never
+    enters the hash, cache, calls log or manifest. With price set, a live
+    call needs max_tokens (or max_completion_tokens); with cost_cap_usd it
+    reserves its worst-case cost before sending and settles to the real
+    cost after. http_client may also be an httpx transport (such as
+    d2l.FakeChatServer().transport()). backoff_base, backoff_cap and rng
+    (None: the random module) set the retry schedule.
+
+    Defined in :numref:`sec_lm_api`"""
+    RETRY_STATUS = (408, 429)  # and every 5xx
+
+    def __init__(self, base_url, model, api_key=None, *, cache=None,
+                 mode='replay', price=None, cost_cap_usd=None, timeout=120.0,
+                 max_retries=6, default_params=None, http_client=None):
+        import threading  # not in the d2l library preamble
+        if mode not in ('replay', 'record', 'live'):
+            raise ValueError(f"mode must be 'replay', 'record' or 'live', "
+                             f'not {mode!r}')
+        if cost_cap_usd is not None and price is None:
+            raise ValueError('a cost cap needs a price')
+        self.base_url, self.model, self.api_key = base_url, model, api_key
+        self.mode, self.price, self.cost_cap_usd = mode, price, cost_cap_usd
+        self.timeout, self.max_retries = timeout, max_retries
+        self.default_params = d2l._chat_merge(default_params or {}, {})
+        self.http_client, self.cache_path = http_client, cache
+        self.calls_path = (None if cache is None else
+                           os.path.splitext(cache)[0] + '.calls.jsonl')
+        self.backoff_base, self.backoff_cap, self.rng = 1.0, 60.0, None
+        self._lock, self._cache = threading.Lock(), {}
+        self._sdk = self._loop = self._sdk_version = None
+        self._sdks = {}  # event loop -> SDK client
+        self._spent = self._reserved = 0.0
+        self._stats, self._costs = collections.Counter(), collections.Counter()
+        self._served, self._providers = (collections.Counter(),
+                                         collections.Counter())
+        self._trimmed = set()  # files whose torn last line was dealt with
+        if cache is not None and os.path.exists(cache):
+            import warnings  # not in the d2l library preamble
+            with open(cache, 'rb') as f:
+                lines = f.read().split(b'\n')
+            for i, line in enumerate(lines):
+                try:
+                    entry = json.loads(line) if line.strip() else None
+                except ValueError:
+                    if i < len(lines) - 1:  # a whole line: a damaged cache
+                        raise ValueError(f'{cache}: line {i + 1} is not JSON')
+                    warnings.warn(f'{cache}: skipping its torn last line (a '
+                                  f'run killed while writing it)')
+                    continue
+                if entry is not None:
+                    self._cache.setdefault(entry['hash'], []).append(entry)
+
+    @property
+    def spent_usd(self):
+        """USD settled by this client's live calls in this session."""
+        return self._spent
+
+    def entries(self, request_hash):
+        """The cache entries (dicts) recorded for one request hash."""
+        return self._cache.get(request_hash, [])
+
+    def chat(self, messages, *, replica=0, stream=False, **params):
+        """Synchronous d2l.ChatAPI.achat, run on the client's private event
+        loop in a worker thread (so it also works inside Jupyter)."""
+        return self._run(self.achat(messages, replica=replica, stream=stream,
+                                    **params))
+
+    def models(self):
+        """The model ids the endpoint lists (GET /models; never replayed)."""
+        if self.mode == 'replay':
+            raise d2l.ReplayMiss(f'{self.model}: models() needs a live '
+                                 f'endpoint, the client is in replay mode')
+        async def ids():
+            return [m.id async for m in self._client().models.list()]
+        return self._run(ids())
+
+    def manifest(self):
+        """This session's counts (calls, cache hits, live calls, HTTP
+        attempts, retries, 429s, failed attempts), the spent and reconciled
+        cost (sum of api_cost against sum of usage.cost over the results
+        returned), and the served model ids and providers of the results."""
+        from urllib.parse import urlsplit  # not in the d2l library preamble
+        keys = ('calls', 'cache_hits', 'live_calls', 'attempts', 'retries',
+                'n_429', 'failed_attempts')
+        return {'host': urlsplit(self.base_url).hostname,
+                'model': self.model, 'mode': self.mode,
+                'cache': (None if self.cache_path is None else
+                          os.path.basename(self.cache_path)),
+                'cache_entries': sum(map(len, self._cache.values())),
+                **{k: self._stats[k] for k in keys},
+                'spent_usd': self._spent, 'cost_cap_usd': self.cost_cap_usd,
+                'price': None if self.price is None else self.price._asdict(),
+                **{k: self._costs[k] for k in (
+                    'n_api_cost', 'sum_api_cost', 'n_usage_cost',
+                    'sum_usage_cost')},
+                'served_models': dict(self._served),
+                'providers': dict(self._providers), 'sdk': self._sdk_version}
+
+    def _run(self, coro):
+        import asyncio  # not in the d2l library preamble
+        import threading
+        with self._lock:
+            if self._loop is None:
+                self._loop = asyncio.new_event_loop()
+                threading.Thread(target=self._loop.run_forever,
+                                 daemon=True).start()
+        return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
+
+    def _client(self):
+        """The SDK client of the running event loop, created on first use:
+        one per open loop (the private loop of chat() and a notebook's), the
+        clients of closed loops dropped."""
+        import asyncio  # not in the d2l library preamble
+        loop = asyncio.get_running_loop()
+        with self._lock:
+            for old in [l for l in self._sdks if l.is_closed()]:
+                del self._sdks[old]
+            if loop in self._sdks:
+                return self._sdks[loop]
+            import openai  # not in the d2l library preamble
+            http = self.http_client
+            if http is not None and hasattr(http, 'handle_async_request'):
+                import httpx2  # the httpx flavour of openai >= 3
+                http = httpx2.AsyncClient(transport=http)
+            key = self.api_key() if callable(self.api_key) else self.api_key
+            self._sdk = self._sdks[loop] = openai.AsyncOpenAI(
+                base_url=self.base_url, api_key=key or 'none', max_retries=0,
+                timeout=self.timeout, http_client=http)
+            self._sdk_version = openai.__version__
+            return self._sdk
+
+    def _lookup(self, h, messages):
+        """The first cached result of h unless the mode is 'live'; a miss
+        raises d2l.ReplayMiss in replay mode and returns None otherwise."""
+        if self.mode != 'live' and self._cache.get(h):
+            self._stats['cache_hits'] += 1
+            return self._result(self._cache[h][0], from_cache=True)
+        if self.mode == 'replay':
+            last = next((m.get('content') for m in reversed(messages)
+                         if m.get('role') == 'user'), '')
+            raise d2l.ReplayMiss(f'{self.model}: request {h[:12]} is not in '
+                                 f'the cache (last user message '
+                                 f'{str(last)[:80]!r})')
+        return None
+
+    def _reserve(self, messages, params):
+        """Reserve the worst case: one prompt token per UTF-8 byte of the
+        messages' JSON (a byte-level BPE token covers at least one byte, and
+        the JSON's quoting outweighs a chat template's few special tokens per
+        message) and max_tokens completion tokens for each of the n
+        choices."""
+        if self.price is None:
+            self._stats['live_calls'] += 1
+            return 0.0
+        out = params.get('max_tokens', params.get('max_completion_tokens'))
+        if out is None:
+            raise ValueError('a priced live call needs max_tokens')
+        n = len(json.dumps(messages, ensure_ascii=False).encode('utf-8'))
+        worst = d2l.api_cost({'prompt_tokens': n, 'completion_tokens': out * (
+            params.get('n') or 1)}, self.price)
+        with self._lock:
+            if (self.cost_cap_usd is not None and self._spent + self._reserved
+                    + worst > self.cost_cap_usd):
+                raise d2l.CostCapExceeded(
+                    f'{self.model}: spent {self._spent:.6f} + reserved '
+                    f'{self._reserved:.6f} + this call {worst:.6f} USD would '
+                    f'cross the cap of {self.cost_cap_usd} USD')
+            self._reserved += worst
+        self._stats['live_calls'] += 1
+        return worst
+
+    def _settle(self, reserved, cost):
+        with self._lock:
+            self._reserved -= reserved
+            self._spent += cost
+
+    def _cost(self, usage, reserved=None):
+        """Real cost of a response: the larger of usage.cost and api_cost
+        from the price; the reservation when neither is known."""
+        costs = [usage.get('cost')]
+        if self.price is not None:
+            try:
+                costs.append(d2l.api_cost(usage, self.price))
+            except ValueError:
+                pass
+        costs = [c for c in costs if c is not None]
+        return max(costs) if costs else (reserved or 0.0)
+
+    def _retry_info(self, e):
+        """(retry?, HTTP status, Retry-After seconds) of a failed attempt:
+        connection errors, timeouts, RETRY_STATUS and every 5xx are retried,
+        and so is an error event inside a stream (the SDK raises a bare
+        APIError; its numeric code, if any, is treated as the status)."""
+        def retry(status):
+            return status in self.RETRY_STATUS or 500 <= status < 600
+        status = getattr(e, 'status_code', None)
+        if status is not None:
+            headers = getattr(getattr(e, 'response', None), 'headers', {})
+            return (retry(status), status,
+                    d2l._retry_after(headers.get('retry-after')))
+        openai = sys.modules.get('openai')
+        if openai is not None and isinstance(e, openai.APIConnectionError):
+            return True, None, None
+        if openai is not None and type(e) is openai.APIError:  # mid-stream
+            code = str(getattr(e, 'code', None) or '')
+            if code.isdigit():
+                return retry(int(code)), int(code), None
+            return True, None, None
+        transport = [getattr(sys.modules.get(m), 'TransportError', None)
+                     for m in ('httpx2', 'httpx')]
+        return any(t is not None and isinstance(e, t)
+                   for t in transport), None, None
+
+    async def _send(self, messages, params, stream, h, replica, attempt):
+        """One HTTP attempt, logged to the calls log whatever its outcome;
+        returns the parsed response with its chunk times."""
+        kwargs = {k: v for k, v in params.items()
+                  if k not in ('stream', 'stream_options')}
+        log = {'created': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+               'hash': h, 'model': self.model, 'replica': replica,
+               'attempt': attempt, 'stream': stream}
+        self._stats['attempts'] += 1
+        self._stats['retries'] += attempt > 0
+        t0 = time.monotonic()
+        try:
+            create = self._client().chat.completions.create
+            if stream:
+                options = d2l._chat_merge({'include_usage': True},
+                                          params.get('stream_options') or {})
+                out = await self._read_stream(await create(
+                    model=self.model, messages=messages, stream=True,
+                    stream_options=options, **kwargs))
+            else:
+                response = await create(model=self.model, messages=messages,
+                                        **kwargs)
+                out = d2l._chat_parse(response.model_dump())
+                out['t_end'] = time.monotonic()
+        except Exception as e:
+            _, status, retry_after = self._retry_info(e)
+            self._stats['failed_attempts'] += 1
+            self._stats['n_429'] += status == 429
+            self._append(self.calls_path, {
+                **log, 'status': status, 'retry_after': retry_after,
+                'error': f'{type(e).__name__}: {e}'[:200],
+                'latency': time.monotonic() - t0})
+            raise
+        self._append(self.calls_path, {
+            **log, 'status': 200, 'latency': out['t_end'] - t0,
+            'finish_reason': out['finish_reason'], 'usage': out['usage'],
+            'cost': self._cost(out['usage']), 'served_model': out['model'],
+            'provider': out['provider']})
+        return out
+
+    async def _read_stream(self, chunks):
+        """Concatenate a streamed response; t_first is the first chunk with
+        content or with reasoning that is not only whitespace (a server with
+        thinking off may send the empty think block before it schedules the
+        request), t_first_content the first with content, and itl the gaps
+        between the chunks from t_first on."""
+        out = dict.fromkeys(('finish_reason', 'usage', 'model', 'provider',
+                             'system_fingerprint', 't_first',
+                             't_first_content'))
+        text, reasoning, logprobs, times = [], [], [], []
+        now = time.monotonic()
+        async for chunk in chunks:
+            c, now = chunk.model_dump(), time.monotonic()
+            for k in ('model', 'provider', 'system_fingerprint', 'usage'):
+                out[k] = c.get(k) or out[k]
+            for choice in c.get('choices') or []:
+                if choice.get('index', 0) != 0:
+                    continue
+                delta = choice.get('delta') or {}
+                r = delta.get('reasoning') or delta.get('reasoning_content')
+                if (delta.get('content') or (r or '').strip() or
+                        (r and out['t_first'] is not None)):
+                    times.append(now)
+                    if out['t_first'] is None:
+                        out['t_first'] = now
+                if delta.get('content'):
+                    text.append(delta['content'])
+                    if out['t_first_content'] is None:
+                        out['t_first_content'] = now
+                if r:
+                    reasoning.append(r)
+                logprobs += d2l._chat_logprobs(choice.get('logprobs')) or []
+                out['finish_reason'] = (choice.get('finish_reason')
+                                        or out['finish_reason'])
+        out.update(text=''.join(text), reasoning=''.join(reasoning) or None,
+                   logprobs=logprobs or None, extra={}, t_end=now,
+                   usage=d2l._chat_usage(out['usage']), n_chunks=len(times),
+                   itl=[b - a for a, b in zip(times, times[1:])])
+        return out
+
+    def _record(self, h, messages, params, replica, out, t_send, created,
+                n_retries, n_429, reserved):
+        """Settle the cost of a live response, append it to the cache and
+        return it as a d2l.ChatResult."""
+        from urllib.parse import urlsplit  # not in the d2l library preamble
+        self._settle(reserved, self._cost(out['usage'], reserved))
+        fields = ('text', 'finish_reason', 'usage', 'logprobs', 'model',
+                  'provider', 'system_fingerprint', 'reasoning', 't_first',
+                  't_first_content', 'itl')
+        result = {**{k: out[k] for k in fields}, 'request_hash': h,
+                  't_send': t_send, 't_total': out['t_end'] - t_send,
+                  'n_retries': n_retries, 'n_429': n_429, 'created': created}
+        transport = ('stream', 'stream_options', 'timeout', 'extra_headers')
+        request = {'host': urlsplit(self.base_url).hostname,
+                   'model': self.model, 'messages': messages,
+                   'replica': replica, 'params': {
+                       k: v for k, v in params.items() if k not in transport}}
+        entry = json.loads(json.dumps(  # what a reload of the file gives
+            {'hash': h, 'request': request, 'result': result,
+             'extra': out['extra'], 'n_chunks': out['n_chunks'],
+             'sdk': self._sdk_version}, ensure_ascii=False))
+        self._cache.setdefault(h, []).append(entry)
+        self._append(self.cache_path, entry)
+        return self._result(entry, from_cache=False)
+
+    def _result(self, entry, from_cache):
+        r = dict(entry['result'], from_cache=from_cache)
+        if r['logprobs'] is not None:
+            r['logprobs'] = [(t, lp, [tuple(a) for a in top])
+                             for t, lp, top in r['logprobs']]
+        result = d2l.ChatResult(**r)
+        self._served[result.model] += 1
+        self._providers[result.provider] += 1
+        if result.usage.get('cost') is not None:
+            self._costs['n_usage_cost'] += 1
+            self._costs['sum_usage_cost'] += result.usage['cost']
+        if self.price is not None:
+            try:
+                self._costs['sum_api_cost'] += d2l.api_cost(result.usage,
+                                                            self.price)
+                self._costs['n_api_cost'] += 1
+            except ValueError:
+                pass
+        return result
+
+    def _append(self, path, obj):
+        """Append one JSON line (the key scrubbed, should it ever appear)."""
+        if path is None:
+            return
+        line = json.dumps(obj, ensure_ascii=False, sort_keys=True)
+        key = getattr(self._sdk, 'api_key', None)
+        if isinstance(key, str) and len(key) >= 8:
+            line = line.replace(key, '[api key]')
+        with self._lock:
+            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+            if path not in self._trimmed:
+                d2l._jsonl_trim_torn(path)
+                self._trimmed.add(path)
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(line + '\n')
+
+    async def achat(self, messages, *, replica=0, stream=False, **params):
+        """One chat completion as a d2l.ChatResult. The cache answers first when
+        the mode allows; a live call reserves its worst-case cost, retries
+        connection errors, timeouts, 408, 429 and 5xx responses and error
+        events inside a stream with full-jitter backoff (Retry-After as a
+        floor), and raises at once on any other status.
+
+        Defined in :numref:`sec_lm_api`"""
+        import asyncio  # not in the d2l library preamble
+        params = d2l._chat_merge(self.default_params, params)
+        h = d2l.request_hash(self.base_url, self.model, messages, params, replica)
+        self._stats['calls'] += 1
+        hit = self._lookup(h, messages)  # raises ReplayMiss in replay mode
+        if hit is not None:
+            return hit
+        reserved = self._reserve(messages, params)  # raises CostCapExceeded
+        t_send, n_retries, n_429 = time.monotonic(), 0, 0
+        created = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        try:
+            for attempt in range(self.max_retries + 1):
+                try:
+                    out = await self._send(messages, params, stream, h, replica,
+                                           attempt)
+                    break
+                except Exception as e:
+                    retry, status, retry_after = self._retry_info(e)
+                    n_429 += status == 429
+                    if not retry or attempt == self.max_retries:
+                        e.n_retries, e.n_429 = n_retries, n_429
+                        raise
+                    n_retries += 1
+                    await asyncio.sleep(d2l.backoff_delay(
+                        attempt, self.backoff_base, self.backoff_cap, self.rng,
+                        retry_after))
+        except BaseException:
+            self._settle(reserved, 0.0)
+            raise
+        return self._record(h, messages, params, replica, out, t_send, created,
+                            n_retries, n_429, reserved)
+
+def _jsonl_trim_torn(path):
+    """End a JSONL file with a newline before appending to it: a torn last
+    line (no newline, as a run killed mid-write leaves it) is cut off unless
+    it is complete JSON, which only gets its newline.
+
+    Defined in :numref:`sec_lm_api`"""
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        return
+    with open(path, 'rb+') as f:
+        f.seek(-1, os.SEEK_END)
+        if f.read(1) == b'\n':
+            return
+        f.seek(0)
+        data = f.read()
+        cut = data.rfind(b'\n') + 1
+        try:
+            json.loads(data[cut:])
+            f.write(b'\n')
+        except ValueError:
+            f.truncate(cut)
+
+def _api_window(override, day, hhmm):
+    """Whether a pricing.overrides row covers a UTC weekday and HHMM time;
+    utc_end 0 means midnight, and a window may wrap past it.
+
+    Defined in :numref:`sec_lm_api`"""
+    if override.get('utc_days') and day not in override['utc_days']:
+        return False
+    start, end = override.get('utc_start'), override.get('utc_end')
+    if start is None and end is None:
+        return True
+    start, end = start or 0, end or 2400
+    return (start <= hhmm < end) if start < end else (
+        hhmm >= start or hhmm < end)
+
+def listing_endpoint(listing, model_id, provider):
+    """The endpoint row of one provider of model_id in an OpenRouter listing
+    snapshot: listing['endpoints'][model_id] holds the endpoint rows of
+    /api/v1/models/<id>/endpoints (or that whole response). provider matches
+    a row's tag exactly, else its provider_name or the slug before the tag's
+    '/'; ValueError unless exactly one row matches.
+
+    Defined in :numref:`sec_lm_api`"""
+    rows = listing['endpoints'][model_id]
+    if isinstance(rows, dict):
+        rows = rows['data']['endpoints']
+    p = provider.lower()
+    match = [r for r in rows if str(r.get('tag', '')).lower() == p] or [
+        r for r in rows if p in (str(r.get('provider_name', '')).lower(),
+                                 str(r.get('tag', '')).lower().split('/')[0])]
+    if len(match) != 1:
+        raise ValueError(f'{len(match)} endpoints of {model_id} match '
+                         f'{provider!r}: {[r.get("tag") for r in match]}')
+    return match[0]
+
+def price_from_listing(listing, model_id, provider, *, when=None):
+    """The d2l.PricePoint (USD per million tokens) of one provider's endpoint
+    of model_id in an OpenRouter listing snapshot (the row that
+    d2l.listing_endpoint picks). Listed prices are USD per token with the
+    row's `discount` already applied (Novita's 0.165 per million at
+    discount 0.45 is 0.3 x 0.55), so it is not applied again.
+    Rows with time-window pricing.overrides need when, an aware datetime
+    whose UTC weekday and time select the window.
+
+    Defined in :numref:`sec_lm_api`"""
+    import datetime  # not in the d2l library preamble
+    import decimal
+    pricing = d2l.listing_endpoint(listing, model_id, provider)['pricing']
+    if pricing.get('overrides'):
+        if when is None or when.tzinfo is None:
+            raise ValueError(f'{provider} prices {model_id} by time window: '
+                             f'pass when, an aware datetime')
+        t = when.astimezone(datetime.timezone.utc)
+        day = ('monday', 'tuesday', 'wednesday', 'thursday', 'friday',
+               'saturday', 'sunday')[t.weekday()]
+        window = next((o for o in pricing['overrides'] if d2l._api_window(
+            o, day, 100 * t.hour + t.minute)), {})
+        pricing = {**pricing, **window}
+    def per_million(key):
+        if pricing.get(key) is None:
+            return None
+        value = decimal.Decimal(str(pricing[key])) * 1_000_000
+        if value < 0:
+            raise ValueError(f'{provider}: no fixed {key} price ({value})')
+        return float(value)
+    return d2l.PricePoint(per_million('prompt'), per_million('completion'),
+                          per_million('input_cache_read'))
+
+def _openrouter_key():
+    """The OpenRouter key, read from the environment only (never a file).
+
+    Defined in :numref:`sec_lm_api`"""
+    key = os.environ.get('OPENROUTER_API_KEY')
+    if not key:
+        raise RuntimeError('a live OpenRouter call needs OPENROUTER_API_KEY '
+                           'in the environment')
+    return key
+
+def openrouter_api(model, provider, *, listing, cache=None, mode='replay',
+                   cost_cap_usd=None, reasoning=None, when=None, **kwargs):
+    """A d2l.ChatAPI for one model on OpenRouter with one provider pinned
+    (no fallbacks, require_parameters on), priced from the listing snapshot
+    (None: unpriced). reasoning (e.g. {'enabled': False}) is sent only when
+    given. The key is read from OPENROUTER_API_KEY at the first live call;
+    further keyword arguments go to d2l.ChatAPI.
+
+    Defined in :numref:`sec_lm_api`"""
+    body = {'provider': {'only': [provider], 'allow_fallbacks': False,
+                         'require_parameters': True}}
+    if reasoning is not None:
+        body['reasoning'] = reasoning
+    defaults = d2l._chat_merge({'extra_body': body},
+                               kwargs.pop('default_params', None) or {})
+    kwargs.setdefault('api_key', d2l._openrouter_key)
+    price = (None if listing is None else
+             d2l.price_from_listing(listing, model, provider, when=when))
+    return d2l.ChatAPI('https://openrouter.ai/api/v1', model, cache=cache,
+                       mode=mode, price=price, cost_cap_usd=cost_cap_usd,
+                       default_params=defaults, **kwargs)
+
+class LocalChatServer:
+    """An OpenAI-compatible server (such as `transformers serve`) run as a
+    subprocess in its own process group. '{port}' in cmd becomes port (a
+    free one when None); start() polls http://host:port/v1/models until it
+    answers 200 and returns the base URL, or kills the server and raises
+    with the last 20 log lines; stop() terminates the whole group, deletes
+    the temporary log and returns the exit code. Also a context manager.
+
+    Defined in :numref:`sec_lm_api`"""
+    def __init__(self, cmd, *, port=None, host='127.0.0.1',
+                 ready_timeout=900.0):
+        self.cmd, self.port, self.host = list(cmd), port, host
+        self.ready_timeout = ready_timeout
+        self.proc = self.base_url = self.log_path = self.load_time = None
+
+    def start(self):
+        import atexit  # not in the d2l library preamble
+        import socket
+        import subprocess
+        import tempfile
+        import urllib.request
+        if self.proc is not None:
+            return self.base_url
+        if self.port is None:
+            with socket.socket() as s:
+                s.bind((self.host, 0))
+                self.port = s.getsockname()[1]
+        cmd = [str(a).replace('{port}', str(self.port)) for a in self.cmd]
+        fd, self.log_path = tempfile.mkstemp(prefix='d2l-server-',
+                                             suffix='.log')
+        t0 = time.monotonic()
+        with os.fdopen(fd, 'wb') as log:
+            self.proc = subprocess.Popen(
+                cmd, stdout=log, stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL, start_new_session=True)
+        atexit.register(self.stop)
+        url = f'http://{self.host}:{self.port}/v1'
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        while True:
+            if self.proc.poll() is not None:  # its children may live on
+                code, tail = self.proc.returncode, self._tail()
+                self.stop()
+                raise RuntimeError(f'server exited with code {code} before '
+                                   f'it was ready:\n{tail}')
+            left = self.ready_timeout - (time.monotonic() - t0)
+            if left <= 0:
+                tail = self._tail()
+                self.stop()
+                raise TimeoutError(f'server not ready after '
+                                   f'{self.ready_timeout} s:\n{tail}')
+            try:
+                with opener.open(url + '/models',
+                                 timeout=max(0.5, min(5.0, left))) as r:
+                    if r.status == 200:
+                        break
+            except Exception:
+                pass
+            time.sleep(min(0.5, max(left, 0.0)))
+        self.load_time, self.base_url = time.monotonic() - t0, url
+        return url
+
+    def stop(self):
+        import atexit  # not in the d2l library preamble
+        import signal
+        import subprocess
+        if self.proc is None:
+            return None
+        proc, self.proc = self.proc, None
+        atexit.unregister(self.stop)
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            code = proc.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            code = proc.wait()
+        try:  # children that outlived the leader
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        if self.log_path is not None and os.path.exists(self.log_path):
+            os.remove(self.log_path)
+        return code
+
+    def _tail(self, n=20):
+        with open(self.log_path, encoding='utf-8', errors='replace') as f:
+            return ''.join(f.readlines()[-n:])
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.stop()
+
+class FakeChatServer:
+    """An in-process chat-completions server for tests. Each request takes
+    service_time seconds in one of capacity slots, so a closed loop has
+    W_0 = service_time and X_max = capacity / service_time; a busy slot
+    starts its next request when the previous one ended (not when the event
+    loop gets round to it), so the capacity is exact. script lists
+    statuses returned in order before normal behaviour (429s carry
+    Retry-After: 0); fail_rate answers 503 at random; rate_limit answers 429
+    beyond that many requests per second. A request with thinking switched
+    on gets reasoning first ('reasoning', or 'reasoning_content' when it
+    carries chat_template_kwargs, as a local server); max_tokens, stop, n,
+    logprobs and stream_options.include_usage are honoured, and requests
+    with a provider pin get a provider and usage.cost. transport() plugs it
+    into the SDK's http_client; n_requests, statuses, bodies and
+    max_in_flight record what it saw.
+
+    Defined in :numref:`sec_lm_api`"""
+    PRICE = (0.1, 0.4)  # USD per million prompt and completion tokens
+
+    def __init__(self, service_time, capacity, *, fail_rate=0.0,
+                 rate_limit=None, script=None, seed=0):
+        self.service_time, self.capacity = service_time, capacity
+        self.fail_rate, self.rate_limit = fail_rate, rate_limit
+        self.script, self.rng = list(script or []), random.Random(seed)
+        self.n_requests = self.in_flight = self.max_in_flight = 0
+        self.statuses, self.bodies = [], []
+        self._admitted = collections.deque()
+        self._sem = self._sem_loop = self._free = None
+
+    def transport(self):
+        """An httpx.AsyncBaseTransport of the flavour the SDK uses."""
+        try:
+            import httpx2 as httpx  # openai >= 3; not in the d2l preamble
+        except ImportError:
+            import httpx
+        server = self
+        class Transport(httpx.AsyncBaseTransport):
+            async def handle_async_request(self, request):
+                return await server._handle(request, httpx)
+        return Transport()
+
+    async def _acquire(self, arrival):
+        """Wait for a slot; the service starts at arrival or when the slot's
+        previous request ended, whichever is later."""
+        import asyncio  # not in the d2l library preamble
+        import heapq
+        loop = asyncio.get_running_loop()
+        if self._sem_loop is not loop:
+            self._sem, self._sem_loop = asyncio.Semaphore(self.capacity), loop
+            self._free = [0.0] * self.capacity
+        await self._sem.acquire()
+        return max(arrival, heapq.heappop(self._free))
+
+    def _release(self, end):
+        import heapq  # not in the d2l library preamble
+        heapq.heappush(self._free, end)
+        self._sem.release()
+
+    def _status(self):
+        if self.script:
+            return self.script.pop(0), True
+        if self.rate_limit is not None:
+            now = time.monotonic()
+            while self._admitted and now - self._admitted[0] >= 1.0:
+                self._admitted.popleft()
+            if len(self._admitted) >= self.rate_limit:
+                return 429, False
+            self._admitted.append(now)
+        if self.fail_rate and self.rng.random() < self.fail_rate:
+            return 503, False
+        return 200, False
+
+    def _reply(self, body):
+        """Tokens ((kind, text) pairs), finish reason and usage of a reply."""
+        messages = body.get('messages') or [{}]
+        last = str(messages[-1].get('content', ''))
+        words = (f'Fake reply to {len(last)} characters: the answer is '
+                 f'{len(last) % 10}.').split(' ')
+        content, finish = [w if i == 0 else ' ' + w
+                           for i, w in enumerate(words)], 'stop'
+        stops = body.get('stop') or []
+        for i in range(len(content)):
+            text = ''.join(content[:i + 1])
+            cut = min((text.find(s) for s in ([stops] if isinstance(
+                stops, str) else stops) if s in text), default=None)
+            if cut is not None:
+                prefix = text[:cut]
+                content = [prefix] if prefix else []
+                break
+        r = body.get('reasoning')
+        think = (r.get('enabled', True) if isinstance(r, dict) else bool(
+            (body.get('chat_template_kwargs') or {}).get('enable_thinking')))
+        tokens = ([('r', w) for w in ('Let', ' me', ' think.')] if think
+                  else []) + [('c', w) for w in content]
+        limit = body.get('max_tokens', body.get('max_completion_tokens'))
+        if limit is not None and len(tokens) > limit:
+            tokens, finish = tokens[:limit], 'length'
+        n_prompt = sum(len(str(m.get('content', '')).split())
+                       for m in messages)
+        usage = {'prompt_tokens': n_prompt, 'completion_tokens': len(tokens),
+                 'total_tokens': n_prompt + len(tokens),
+                 'prompt_tokens_details': {'cached_tokens': 0},
+                 'completion_tokens_details': {'reasoning_tokens': sum(
+                     k == 'r' for k, _ in tokens)}}
+        if 'provider' in body:
+            usage['cost'] = (n_prompt * self.PRICE[0]
+                             + len(tokens) * self.PRICE[1]) / 1e6
+        return tokens, finish, usage
+
+    def _logprobs(self, body, words):
+        if not body.get('logprobs'):
+            return None
+        k = body.get('top_logprobs') or 0
+        return {'content': [
+            {'token': w, 'logprob': -0.1 * (i + 1), 'top_logprobs': [
+                {'token': w if j == 0 else f'{w}#{j}',
+                 'logprob': -0.1 * (i + 1) - j} for j in range(k)]}
+            for i, w in enumerate(words)]}
+
+    async def _handle(self, request, httpx):
+        import asyncio  # not in the d2l library preamble
+        arrival = time.monotonic()
+        self.n_requests += 1
+        if request.method == 'GET' and request.url.path.endswith('/models'):
+            self.statuses.append(200)
+            return httpx.Response(200, json={'object': 'list', 'data': [
+                {'id': 'fake-model', 'object': 'model', 'created': 0,
+                 'owned_by': 'd2l'}]})
+        body = json.loads((await request.aread()) or b'{}')
+        self.bodies.append(body)
+        self.in_flight += 1
+        self.max_in_flight = max(self.max_in_flight, self.in_flight)
+        status, scripted = self._status()
+        self.statuses.append(status)
+        if status != 200:
+            self.in_flight -= 1
+            scripted_429 = scripted and status == 429
+            headers = {'retry-after': '0'} if scripted_429 else {}
+            return httpx.Response(status, headers=headers, json={'error': {
+                'message': f'fake status {status}', 'code': status}})
+        tokens, finish, usage = self._reply(body)
+        head = {'id': 'fake-1', 'created': int(time.time()),
+                'model': body.get('model'), 'system_fingerprint': 'fp_fake'}
+        if 'provider' in body:
+            head['provider'] = (body['provider'].get('only') or ['Fake'])[0]
+        field = ('reasoning_content' if 'chat_template_kwargs' in body
+                 else 'reasoning')
+        if body.get('stream'):
+            return httpx.Response(
+                200, headers={'content-type': 'text/event-stream'},
+                content=self._stream(arrival, body, head, field, tokens,
+                                     finish, usage))
+        try:
+            end = await self._acquire(arrival) + self.service_time
+            try:
+                await asyncio.sleep(max(0.0, end - time.monotonic()))
+            finally:
+                self._release(end)
+        finally:
+            self.in_flight -= 1
+        reasoning = ''.join(w for k, w in tokens if k == 'r')
+        words = [w for k, w in tokens if k == 'c']
+        message = {'role': 'assistant', 'content': ''.join(words)}
+        if reasoning:
+            message[field] = reasoning
+        choice = {'message': message, 'finish_reason': finish,
+                  'logprobs': self._logprobs(body, words)}
+        return httpx.Response(200, json={
+            **head, 'object': 'chat.completion', 'usage': usage,
+            'choices': [{'index': i, **choice}
+                        for i in range(body.get('n') or 1)]})
+
+    async def _stream(self, arrival, body, head, field, tokens, finish,
+                      usage):
+        """Server-sent events: a role chunk, the first token half the
+        service time after the start, the rest spread over the other half."""
+        import asyncio  # not in the d2l library preamble
+        def event(choices, **more):
+            return 'data: {}\n\n'.format(json.dumps({
+                **head, 'object': 'chat.completion.chunk', 'choices': choices,
+                **more})).encode()
+        async def until(t):
+            await asyncio.sleep(max(0.0, t - time.monotonic()))
+        try:
+            start = await self._acquire(arrival)
+            gap = self.service_time / 2 / max(1, len(tokens))
+            try:
+                yield event([{'index': 0, 'finish_reason': None,
+                              'delta': {'role': 'assistant', 'content': ''}}])
+                await until(start + self.service_time / 2)
+                for i, (kind, w) in enumerate(tokens):
+                    lp = self._logprobs(body, [w]) if kind == 'c' else None
+                    key = 'content' if kind == 'c' else field
+                    yield event([{'index': 0, 'finish_reason': None,
+                                  'logprobs': lp, 'delta': {key: w}}])
+                    await until(start + self.service_time / 2 + (i + 1) * gap)
+                yield event([{'index': 0, 'delta': {},
+                              'finish_reason': finish}])
+                if (body.get('stream_options') or {}).get('include_usage'):
+                    yield event([], usage=usage)
+                yield b'data: [DONE]\n\n'
+            finally:
+                self._release(start + self.service_time)
+        finally:
+            self.in_flight -= 1
+
+def chat_thinks(r):
+    """Whether a chat result reasoned: reasoning tokens in its usage, or
+    reasoning text that is not only whitespace (a streamed empty think block
+    arrives as '\n\n').
+
+    Defined in :numref:`sec_lm_api`"""
+    return bool(r.usage['reasoning_tokens'] or (r.reasoning or '').strip())
+
+def api_unpack(key):
+    """Download a registered zip (sha1 checked) and unpack it once, into a
+    folder named by the sha1 (a re-registered key gets a fresh folder).
+
+    Defined in :numref:`sec_lm_api`"""
+    path = d2l.download_keyed(key)
+    folder = os.path.join(os.path.dirname(path),
+                          'files-' + d2l.DATA_HUB[key][1][:12])
+    if not os.path.isdir(folder):
+        with zipfile.ZipFile(path) as z:
+            z.extractall(folder + '.part')
+        os.replace(folder + '.part', folder)
+    return folder
+
+def api_calls(calls_path):
+    """The live attempts in a client's calls log (d2l.ChatAPI.calls_path)
+    over every session of a recording; a torn last line, from a killed run,
+    is skipped.
+
+    Defined in :numref:`sec_lm_api`"""
+    if calls_path is None or not os.path.exists(calls_path):
+        return []
+    calls = []
+    with open(calls_path, encoding='utf-8') as f:
+        for line in f:
+            try:
+                calls.append(json.loads(line))
+            except ValueError:
+                pass
+    return calls
+
+class APIRecording:
+    """The caches, the listing and the shared cost cap of one recording. In
+    mode 'replay' the folder of an artifact key is its unpacked registered
+    zip; in 'record' and 'live' it is record_dir/<key>, seeded once from the
+    zip when the key is registered (the downloaded file itself is never
+    appended to). Every client made through it is kept in `clients`.
+
+    Defined in :numref:`sec_lm_api`"""
+    def __init__(self, mode, record_dir, cost_cap_usd, providers):
+        self.mode, self.record_dir = mode, record_dir
+        self.cost_cap_usd, self.providers = cost_cap_usd, providers
+        self.listing, self.clients, self.shares = None, [], {}
+
+    def folder(self, key):
+        """The folder of one artifact (see the class docstring)."""
+        if self.mode == 'replay':
+            if key not in d2l.DATA_HUB:
+                raise KeyError(f'{key} is not registered yet: record it '
+                               f'first (D2L_API_MODE=record)')
+            return d2l.api_unpack(key)
+        folder = os.path.join(self.record_dir, key)
+        if not os.path.isdir(folder):
+            try:
+                shutil.copytree(d2l.api_unpack(key), folder)
+            except Exception as e:  # not registered, or the download failed
+                os.makedirs(folder, exist_ok=True)
+                print(f'{key}: recording into an empty cache ({e!r:.60})')
+        return folder
+
+    def cache(self, key, arm):
+        """The JSONL cache file of one arm of an artifact."""
+        return os.path.join(self.folder(key), arm + '.jsonl')
+
+    def snapshot_listing(self, models, weights,
+                         key='lm-api-listing-v1'):
+        """The router listing of this recording, from <folder of key>/
+        listing.json; when that is absent (a recording), it is taken now:
+        the router's rows and endpoint rows of each model (free GETs) and the
+        parameter count of each model's open weights on the Hub at a pinned
+        commit (weights maps a model to (repo, revision))."""
+        import datetime  # not in the d2l library preamble
+        path = os.path.join(self.folder(key), 'listing.json')
+        if not os.path.exists(path):
+            import huggingface_hub  # not in the d2l library preamble
+            url = 'https://openrouter.ai/api/v1/models'
+            def get(u):
+                r = requests.get(u, timeout=60)
+                r.raise_for_status()
+                return r.json()['data']
+            rows = {m['id']: m for m in get(url)}
+            now = datetime.datetime.now(datetime.timezone.utc)
+            snapshot = {'retrieved': now.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                        'models': {m: rows[m] for m in models},
+                        'endpoints': {m: get(f'{url}/{m}/endpoints')[
+                            'endpoints'] for m in models}, 'hf': {}}
+            for m, (repo, rev) in weights.items():
+                info = huggingface_hub.HfApi().model_info(repo, revision=rev)
+                snapshot['hf'][m] = {'repo': repo, 'revision': rev,
+                                     'params': info.safetensors.total}
+            with open(path, 'w') as f:
+                json.dump(snapshot, f, indent=1)
+        with open(path) as f:
+            self.listing = json.load(f)
+        return self.listing
+
+    def hosted(self, model, cache, *, share, **kwargs):
+        """A d2l.openrouter_api client of model at its pinned provider that
+        may spend the fixed fraction `share` of cost_cap_usd over the whole
+        recording, less what earlier sessions spent on this cache. The
+        shares sum to at most 1, so concurrent clients cannot pass the cap
+        together."""
+        self.shares[cache] = share
+        if sum(self.shares.values()) > 1 + 1e-9:
+            raise ValueError(f'the cost shares sum to more than 1: '
+                             f'{self.shares}')
+        earlier = sum(c.get('cost') or 0.0 for c in d2l.api_calls(
+            os.path.splitext(cache)[0] + '.calls.jsonl'))
+        return self.add(d2l.openrouter_api(
+            model, self.providers[model], listing=self.listing, cache=cache,
+            mode=self.mode,
+            cost_cap_usd=max(0.0, share * self.cost_cap_usd - earlier),
+            **kwargs))
+
+    def add(self, api):
+        """Keep a client for the manifest; returns it."""
+        self.clients.append(api)
+        return api
+
+def api_recorded(api):
+    """Totals of a whole recording from a client's calls log: live calls,
+    retries, 429s, failed attempts, USD, the listing's and the provider's
+    cost of the responses with usage.cost, and the sorted served ids and
+    providers.
+
+    Defined in :numref:`sec_lm_api`"""
+    t, served, providers = collections.Counter(), set(), set()
+    for call in d2l.api_calls(api.calls_path):
+        ok = call.get('status') == 200
+        t['live calls'] += call['attempt'] == 0
+        t['retries'] += call['attempt'] > 0
+        t['429s'] += call.get('status') == 429
+        t['failed'] += not ok
+        if not ok:
+            continue
+        t['USD'] += call.get('cost') or 0.0
+        served.add(str(call.get('served_model')))
+        providers.add(str(call.get('provider')))
+        cost = call['usage'].get('cost')
+        if cost is not None and api.price is not None:
+            t['usage cost'] += cost
+            t['listing cost'] += d2l.api_cost(call['usage'], api.price)
+    return {**t, 'served': sorted(served), 'providers': sorted(providers)}
+
+def write_api_manifests(clients, record_dir):
+    """Append this session to the manifest.json of every cache folder under
+    record_dir that one of the clients uses: per arm the session's
+    d2l.ChatAPI.manifest() and the recording's totals (d2l.api_recorded);
+    arms this session did not use keep their totals.
+
+    Defined in :numref:`sec_lm_api`"""
+    by_folder, seen = collections.defaultdict(dict), set()
+    for api in clients:
+        if api.calls_path in seen:
+            continue
+        seen.add(api.calls_path)
+        folder = os.path.dirname(os.path.abspath(api.cache_path))
+        m = api.manifest()
+        by_folder[folder][m['cache']] = (m, d2l.api_recorded(api))
+    now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    for folder, arms in by_folder.items():
+        if os.path.abspath(record_dir) not in folder:
+            continue
+        path, old = os.path.join(folder, 'manifest.json'), {}
+        if os.path.exists(path):
+            with open(path) as f:
+                old = json.load(f)
+        sessions = old.get('sessions', []) + [{
+            'created': now, 'clients': {a: m for a, (m, _) in arms.items()}}]
+        totals = {**old.get('recorded', {}),
+                  **{a: r for a, (_, r) in arms.items()}}
+        with open(path, 'w') as f:
+            json.dump({'updated': now, 'recorded': totals,
+                       'sessions': sessions}, f, indent=1,
+                      ensure_ascii=False)
+
+def assert_key_absent(roots, key):
+    """Raise AssertionError if the bytes of key occur in any file under the
+    folders roots; returns the number of files read.
+
+    Defined in :numref:`sec_lm_api`"""
+    files = [os.path.join(d, f) for root in roots
+             for d, _, fs in os.walk(root) for f in fs]
+    hits = []
+    for name in files:
+        with open(name, 'rb') as f:
+            if key.encode() in f.read():
+                hits.append(name)
+    assert not hits, f'the API key occurs in {len(hits)} files'
+    return len(files)
+
+def api_committed(folders):
+    """Totals over every arm in the manifest.json of each folder that has
+    one: live calls, USD, and the SDK versions that made live calls.
+
+    Defined in :numref:`sec_lm_api`"""
+    totals, sdks = collections.Counter(), set()
+    for folder in folders:
+        path = os.path.join(folder, 'manifest.json')
+        if not os.path.exists(path):  # the listing and the fields table
+            continue
+        with open(path) as f:
+            m = json.load(f)
+        for arm in m['recorded'].values():
+            totals.update({k: arm.get(k, 0) for k in ('live calls', 'USD')})
+        for session in m['sessions']:
+            sdks.update(c['sdk'] for c in session['clients'].values()
+                        if c.get('sdk') and c.get('live_calls'))
+    return {**totals, 'sdk': sorted(sdks)}
+
+class BackgroundLoad:
+    """An async context manager that keeps `lanes` requests in flight
+    through api while its block runs: lane j sends request(j), then
+    request(j + lanes), ..., where request(i) returns the keyword arguments
+    of one api.achat call (messages included). The block starts once the
+    lanes had `warmup` seconds to fill; when it ends, each lane stops after
+    its current request. Failed requests are kept in `failures`.
+
+    Defined in :numref:`sec_lm_api`"""
+    def __init__(self, api, request, lanes, warmup=2.0):
+        self.api, self.request, self.lanes = api, request, lanes
+        self.warmup, self.failures = warmup, []
+
+    async def _lane(self, j):
+        while not self._done.is_set():
+            kwargs = dict(self.request(j))
+            try:
+                await self.api.achat(kwargs.pop('messages'), **kwargs)
+            except Exception as e:
+                self.failures.append(e)
+            j += self.lanes
+
+    async def __aenter__(self):
+        import asyncio  # not in the d2l library preamble
+        self._done = asyncio.Event()
+        self._task = asyncio.gather(*(self._lane(j)
+                                      for j in range(self.lanes)))
+        await asyncio.sleep(self.warmup)
+        return self
+
+    async def __aexit__(self, *exc):
+        self._done.set()
+        await self._task
+
+def _probe_tests(story, count, rules, base, on, off, max_tokens,
+                 temperature):
+    """field -> (requests as (messages, replica, params), rule mapping the
+    client and the results to (honoured?, evidence)) of the field probe;
+    base is the request body every test sends, on and off the bodies of the
+    thinking switch. rules['seed'] and rules['stop'] are the caller's
+    detection rules. The seed test samples at temperature 1 only where the
+    endpoint lists temperature (with require_parameters an unlisted field is
+    rejected). Evidence holds flags, counts and lengths, never response
+    text: a closed model's outputs may not be committed.
+
+    Defined in :numref:`sec_lm_api`"""
+    json_q = [{'role': 'user',
+               'content': 'What is 6 times 7? Answer in JSON.'}]
+    schema = {'type': 'json_schema', 'json_schema': {
+        'name': 'answer', 'strict': True, 'schema': {
+            'type': 'object', 'properties': {'answer': {'type': 'integer'}},
+            'required': ['answer'], 'additionalProperties': False}}}
+
+    def is_answer(text):  # exactly {"answer": <integer>}
+        try:
+            out = json.loads(text)
+        except ValueError:
+            return False
+        return (isinstance(out, dict) and set(out) == {'answer'} and
+                type(out['answer']) is int)
+
+    def n_choices(api, a):  # further choices are kept in the cache's extra
+        return max(1, len(api.entries(a.request_hash)[0]['extra'].get(
+            'choices', [])))
+
+    def covered(api, a):  # top-5 log-probabilities for every token
+        n, out = len(a.logprobs or []), a.usage['completion_tokens']
+        full = all(len(t) == 5 for _, _, t in a.logprobs or [])
+        status = ('honoured' if full and n >= out - 1 else  # the end token
+                  'partial' if n else 'ignored')
+        return status, f'{n} of {out} tokens'
+
+    def capped(api, a):  # reasoning tokens are bounded by the cap as well
+        o, r = (a.usage[k] or 0 for k in ('completion_tokens',
+                                          'reasoning_tokens'))
+        if r > o:  # usage contradicts itself: no verdict on the cap
+            return 'inconsistent', f'{o} completion < {r} reasoning tokens'
+        return o <= 16, f'{o} completion, {r} reasoning tokens'
+
+    def echoed(api, a):  # prompt log-probabilities, or the prompt echoed
+        lp = 'prompt_logprobs' in api.entries(a.request_hash)[0]['extra']
+        echo = count[0]['content'] in a.text
+        return lp or echo, f'prompt_logprobs: {lp}, echo: {echo}'
+
+    def p(body=base, **kw):
+        return {'max_tokens': max_tokens, **kw,
+                **({'extra_body': body} if body else {})}
+    t = {'temperature': 1} if temperature else {}  # else the default
+    temp = t.get('temperature', 'default')
+    thinks = d2l.chat_thinks
+    return {
+        'seed': ([(story, 0, p(**t, seed=7)), (story, 1, p(**t, seed=7)),
+                  (story, 0, p(**t, seed=8))],
+                 lambda api, a, b, c: (rules['seed'](a, b, c), (
+                     f'7 = 7: {a.text == b.text}, 8 differs: '
+                     f'{c.text != a.text}, temperature {temp}'))),
+        'n=2': ([(count, 0, p(n=2))], lambda api, a: (
+            n_choices(api, a) == 2, f'{n_choices(api, a)} choices returned')),
+        'logprobs, top 5': ([(count, 0, p(logprobs=True, top_logprobs=5))],
+                            covered),
+        "stop=['5']": ([(count, 0, p(stop=['5']))], lambda api, a: (
+            rules['stop'](a),
+            f"has 4: {'4' in a.text}, has 5: {'5' in a.text}")),
+        'response_format': ([(json_q, 0, p(response_format=schema))],
+                            lambda api, a: (is_answer(a.text), (
+                                f'parses as {{answer: int}}: '
+                                f'{is_answer(a.text)}, '
+                                f'{len(a.text)} characters'))),
+        'thinking switch': ([(count, 0, p(body=on, max_tokens=256)),
+                             (count, 0, p(body=off))], lambda api, a, b: (
+            thinks(a) and not thinks(b),
+            f'on {thinks(a)}, off {thinks(b)}')),
+        'max_completion_tokens=16': (
+            [(story, 0, p(max_tokens=None, max_completion_tokens=16))],
+            capped),
+        'prompt log-probabilities': (  # vLLM's two fields
+            [(count, 0, p(body={**(base or {}), 'prompt_logprobs': 1,
+                                'echo': True}))],
+            echoed),
+        'stream usage': ([(count, 0, p(stream=True))], lambda api, a: (
+            a.usage['completion_tokens'] is not None, 'final chunk'))}
+
+async def probe_endpoint(name, api, base, on, off, max_tokens, model_id, *,
+                         story, count, rules, temperature):
+    """Rows (endpoint, field, status, evidence, UTC date) of the field
+    probe of one endpoint: one test per request field, each sending only
+    the field it probes (d2l._probe_tests), then GET /v1/models and four
+    concurrent requests against one (latency ratio and 429s). A request that
+    fails after the client's retries is 'rejected' (4xx) or 'error'.
+
+    Defined in :numref:`sec_lm_api`"""
+    import asyncio  # not in the d2l library preamble
+    today = time.strftime('%Y-%m-%d', time.gmtime())
+
+    def day(results):  # UTC date of the newest live call behind them
+        return max(r.created for r in results)[:10]
+
+    def failure(e):  # (status, evidence) of a request that failed
+        status = getattr(e, 'status_code', None)
+        kind = 'rejected' if status and 400 <= status < 500 else 'error'
+        return kind, f'{status or type(e).__name__}: {e}'[:80]
+
+    rows = []
+    for field, (requests, rule) in d2l._probe_tests(
+            story, count, rules, base, on, off, max_tokens,
+            temperature).items():
+        try:
+            results = [await api.achat(m, replica=k, **q)
+                       for m, k, q in requests]
+        except (d2l.ReplayMiss, d2l.CostCapExceeded):
+            raise
+        except Exception as e:  # after the client's retries; never cached
+            status, evidence, date = *failure(e), today
+        else:
+            status, evidence = rule(api, *results)  # a bool, or a status
+            if not isinstance(status, str):
+                status = 'honoured' if status else 'ignored'
+            evidence, date = evidence[:80], day(results)
+        rows.append({'endpoint': name, 'field': field, 'status': status,
+                     'evidence': evidence, 'date': date})
+    try:  # a live GET, never cached
+        listed = any(i.startswith(model_id) for i in await asyncio.to_thread(
+            api.models))
+        status, evidence = ('honoured' if listed else 'ignored',
+                            f'lists {model_id}: {listed}')
+    except d2l.ReplayMiss:  # a replayed client cannot list: no verdict
+        raise
+    except Exception as e:
+        status, evidence = failure(e)
+    rows.append({'endpoint': name, 'field': '/v1/models', 'status': status,
+                 'evidence': evidence, 'date': today})
+    params = {'max_tokens': max_tokens,
+              **({'extra_body': base} if base else {})}
+    one = await api.achat(count, replica=10, **params)
+    four = await d2l.chat_batch(api, [
+        {'messages': count, 'replica': k, **params} for k in range(11, 15)],
+        concurrency=4)
+    ratio = max(r.t_total for r in four) / one.t_total
+    n_429 = sum(r.n_429 or 0 for r in [one, *four])  # retries add waits
+    verdict = ('rate-limited' if n_429 else 'batched' if ratio < 2
+               else 'serialized' if ratio > 3 else 'partial')
+    rows.append({'endpoint': name, 'field': '4 concurrent requests',
+                 'status': verdict,
+                 'evidence': f'latency x {ratio:.2f}, {n_429} 429s',
+                 'date': day([one, *four])})
+    return rows
+
+async def record_field_probe(path, endpoints, *, local_name, listing,
+                             providers, **kwargs):
+    """Probe every endpoint at once (name -> (client, base, on, off,
+    max_tokens, model id); keyword arguments go to d2l.probe_endpoint) and
+    write the rows to the CSV at path. The seed test samples at temperature
+    1 where the router's listing has temperature for the pinned provider,
+    and always for a model the listing lacks (a local server). Without the
+    local endpoint (no GPU here) the recorded local column of the old CSV
+    is kept.
+
+    Defined in :numref:`sec_lm_api`"""
+    import asyncio  # not in the d2l library preamble
+    def temperature(model_id):
+        return model_id not in listing['endpoints'] or 'temperature' in (
+            d2l.listing_endpoint(listing, model_id, providers[model_id])[
+                'supported_parameters'])
+    rows = await asyncio.gather(*(
+        d2l.probe_endpoint(name, *args, temperature=temperature(args[-1]),
+                           **kwargs) for name, args in endpoints.items()))
+    fields = pd.DataFrame([r for rs in rows for r in rs])
+    if local_name not in endpoints:  # keep the recorded local column
+        old = (pd.read_csv(path) if os.path.exists(path)
+               else pd.DataFrame({'endpoint': []}))
+        old = old[old.endpoint == local_name]
+        if not len(old):
+            raise ValueError('no recorded local column: record on a GPU host')
+        print('local server column kept from', old.date.max())
+        fields = pd.concat([fields, old], ignore_index=True)
+    fields.to_csv(path, index=False)
+
+_HF_LINEAR_KERNELS = ('torch_chunk_gated_delta_rule',  # a prompt, by chunks
+                      'torch_recurrent_gated_delta_rule',  # one token
+                      'causal_conv1d_fn', 'causal_conv1d_update')
+
+_HF_LINEAR_MODELS = ('qwen3_5', 'qwen3_5_moe', 'qwen3_next')  # Gated DeltaNet
+
+def _hf_route(bound):
+    """Transformers' kernel function `bound`, run by the fused kernel it
+    bound at import for CUDA tensors in bf16 or fp16 and by its PyTorch
+    reference code for the rest: the fused Triton kernels need a GPU, and
+    they multiply fp32 inputs in TF32, which an fp32 check does not expect.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import functools
+    import inspect
+    reference = bound.__wrapped__
+    fused = inspect.getclosurevars(bound).nonlocals.get('implementation')
+
+    @functools.wraps(reference)
+    def routed(*args, **kwargs):
+        x = args[0] if args else next(iter(kwargs.values()))
+        if (routed.fused is None or not x.is_cuda
+                or x.dtype not in (torch.bfloat16, torch.float16)):
+            return reference(*args, **kwargs)
+        return bound(*args, **kwargs)
+    routed.fused = None if fused is reference else fused  # None: reference
+    return routed
+
+def _hf_flex_sdpa_mask(*args, q_length, **kwargs):
+    """The flex_sdpa mask: a block mask for a prompt, SDPA's mask (one row
+    at most) for a single token.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    from transformers import masking_utils
+    mask = (masking_utils.flex_attention_mask if q_length > 1
+            else masking_utils.sdpa_mask)
+    return mask(*args, q_length=q_length, **kwargs)
+
+def _hf_flex_sdpa(module, query, key, value, attention_mask, **kwargs):
+    """Flex attention for a prompt, which materializes no n x n mask; SDPA
+    for a single token, where flex's per-step block mask costs time.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    from torch.nn.attention.flex_attention import BlockMask
+    from transformers.integrations import flex_attention, sdpa_attention
+    if not isinstance(attention_mask, BlockMask):
+        return sdpa_attention.sdpa_attention_forward(
+            module, query, key, value, attention_mask, **kwargs)
+    if query.shape[-1] > 128:  # flex's default blocks for wide heads need
+        kwargs.setdefault('kernel_options', dict(  # 148 KiB of shared
+            BLOCK_M=32, BLOCK_N=32, num_stages=1))  # memory; sm_89 has 99
+    return flex_attention.flex_attention_forward(
+        module, query, key, value, attention_mask, **kwargs)
+
+def bind_hf_kernels():
+    """Route the linear-attention functions of Transformers' Gated DeltaNet
+    models by device and dtype (`_hf_route`), importing their modules first
+    so that a later `from_pretrained` finds them routed; register the
+    flex_sdpa attention.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import importlib
+    import sys
+    import warnings
+    from transformers import AttentionInterface, AttentionMaskInterface
+    AttentionInterface.register('flex_sdpa', _hf_flex_sdpa)
+    AttentionMaskInterface.register('flex_sdpa', _hf_flex_sdpa_mask)
+    # Flex attention compiles once per new shape; past torch's default of 8
+    # recompilations it would fall back to code that materializes the n x n
+    # scores, which is an error here rather than a silent slowdown
+    torch._dynamo.config.recompile_limit = max(
+        torch._dynamo.config.recompile_limit, 64)
+    warnings.filterwarnings('error',
+                            'flex_attention called without torch.compile')
+    for name in _HF_LINEAR_MODELS:
+        try:
+            with warnings.catch_warnings():  # fla's notices on a CPU host
+                warnings.simplefilter('ignore')
+                importlib.import_module(f'transformers.models.{name}.'
+                                        f'modeling_{name}')
+        except ImportError:  # a Transformers version without this model
+            pass
+    for name, module in list(sys.modules.items()):
+        if name.startswith('transformers.models.') and module is not None:
+            for fn in _HF_LINEAR_KERNELS:
+                bound = getattr(module, fn, None)
+                if bound is not None and not hasattr(bound, 'fused'):
+                    setattr(module, fn, _hf_route(bound))
+
+def hf_attention(config, device):
+    """The attention that runs `config` on `device` without an n x n mask:
+    flex_sdpa if it has sliding-window layers and the device is a GPU of
+    compute capability 8.0 or more, SDPA otherwise.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    layers = getattr(config.get_text_config(), 'layer_types', None) or []
+    device = torch.device(device)
+    return ('flex_sdpa' if 'sliding_attention' in layers
+            and device.type == 'cuda'
+            and torch.cuda.get_device_capability(device) >= (8, 0)
+            else 'sdpa')
+
+_TEXT_KEY_MAPPING = {  # checkpoint key renames for a multimodal file's text
+    'gemma4_text': {r'^model\.language_model\.': 'model.'}}
+
+def hf_kernels(model):
+    """The code a model's attention and Gated DeltaNet layers run on a GPU
+    in the model's dtype (binding the latter by device and dtype first, as
+    load_hf does).
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import sys
+    bind_hf_kernels()
+    module = sys.modules[type(model).__module__]
+    kernels = {'attention': model.config._attn_implementation}
+    if 'linear_attention' in (getattr(model.config, 'layer_types', None)
+                              or []):
+        for key, fn in (('delta rule', 'torch_chunk_gated_delta_rule'),
+                        ('short convolution', 'causal_conv1d_fn')):
+            fused = getattr(module, fn).fused
+            kernels[key] = ('PyTorch' if fused is None or model.dtype
+                            not in (torch.bfloat16, torch.float16)
+                            else fused.__module__.split('.')[0])
+    return kernels
+
+class reference_kernels:
+    """Run `model` on Transformers' reference code inside a `with` block:
+    SDPA with explicit masks and the PyTorch Gated DeltaNet.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    def __init__(self, model):
+        import sys
+        bind_hf_kernels()
+        module = sys.modules[type(model).__module__]
+        self.model, self.routed = model, [
+            getattr(module, fn) for fn in _HF_LINEAR_KERNELS
+            if hasattr(module, fn)]
+
+    def __enter__(self):
+        self.saved = (self.model.config._attn_implementation,
+                      [f.fused for f in self.routed])
+        self.model.set_attn_implementation('sdpa')
+        for f in self.routed:
+            f.fused = None
+        return self.model
+
+    def __exit__(self, *exc):
+        attention, fused = self.saved
+        for f, kernel in zip(self.routed, fused):
+            f.fused = kernel
+        self.model.set_attn_implementation(attention)
+
+def _hf_allocated(stat='current'):
+    """Bytes the live tensors requested (or their peak), without the
+    allocator's rounding of each block.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    return torch.cuda.memory_stats()[f'requested_bytes.all.{stat}']
+
+def hf_prefill(model, ids, n, keep=1):
+    """Prefill the first n tokens: the output, the allocated bytes before,
+    and the growth and the peak above them.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    torch.cuda.synchronize()
+    torch.cuda.reset_peak_memory_stats()
+    before = _hf_allocated()
+    with torch.inference_mode():
+        out = model(ids[:, :n], logits_to_keep=keep, use_cache=True)
+    torch.cuda.synchronize()
+    return (out, before, _hf_allocated() - before,
+            _hf_allocated('peak') - before)
+
+def hf_decode_ms(model, cache, token, steps=64, warmup=3, repeats=10):
+    """Median, first and third quartile of milliseconds per greedy decode
+    step; every repeat starts from a fresh copy of the prefilled cache.
+    A profiler session leaves its launch hooks on for the rest of the
+    process (about 3 us more per kernel launch), so time before profiling.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import copy
+
+    def loop(c, token):
+        for _ in range(steps):
+            logits = model(token, past_key_values=c, logits_to_keep=1).logits
+            token = logits[:, -1].argmax(-1, keepdim=True)  # on the device
+
+    times = []
+    with torch.inference_mode():
+        for _ in range(warmup + repeats):
+            c = copy.deepcopy(cache)  # outside the timer
+            seconds = d2l.Benchmark(lambda: loop(c, token), 0, 1).time
+            times.append(1e3 * seconds / steps)
+    return np.percentile(times[warmup:], [50, 25, 75])
+
+def hf_step_kernels(model, cache, token, steps=10):
+    """Device milliseconds per kernel of one decode step, and the number of
+    kernels the step launches.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import copy
+    c = copy.deepcopy(cache)
+
+    def step():
+        model(token, past_key_values=c, logits_to_keep=1)
+
+    with torch.inference_mode():
+        step()  # warm-up
+        torch.cuda.synchronize()  # the copy and warm-up finish unprofiled
+        kernels = d2l.kernel_times(step, steps)
+        with torch.profiler.profile(
+                activities=[torch.profiler.ProfilerActivity.CUDA],
+                acc_events=True) as prof:
+            step()
+            torch.cuda.synchronize()
+    launches = sum(e.device_type == torch.autograd.DeviceType.CUDA
+                   for e in prof.events())
+    assert launches > 0
+    return kernels, launches
+
+def _hf_fits(model, ids, batch, n, budget):
+    """The allocator's overhead (reserved minus requested bytes, each at
+    its peak) of a prefill of `batch` copies of the first n tokens with the
+    allocator capped at `budget` bytes, weights included; None if it runs
+    out of memory.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import gc
+    x = ids.repeat(1, -(-n // ids.shape[1]))[:, :n].repeat(batch, 1)
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
+    torch.cuda.set_per_process_memory_fraction(
+        budget / torch.cuda.get_device_properties(x.device).total_memory)
+    try:
+        with torch.inference_mode():
+            model(x, logits_to_keep=1, use_cache=True)
+        stats = torch.cuda.memory_stats()
+        overhead = (stats['reserved_bytes.all.peak']
+                    - stats['requested_bytes.all.peak'])
+    except torch.OutOfMemoryError:
+        overhead = None
+    finally:
+        torch.cuda.set_per_process_memory_fraction(1.0)
+    del x
+    gc.collect()
+    torch.cuda.empty_cache()
+    return overhead
+
+def hf_capacity(model, config, ids, budget, n=4096):
+    """The largest batch at n tokens (doubling, then bisection) and the
+    largest power-of-two context at batch 1 that fit `budget` bytes,
+    weights included: measured, and by `config_memory` for a prefill.
+    Returns (batch, context) twice and the allocator's overhead in bytes
+    at the measured batch.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    t = config.get_text_config()
+    overhead = {1: _hf_fits(model, ids, 1, n, budget)}
+    assert overhead[1] is not None
+    lo = 1
+    while (fit := _hf_fits(model, ids, 2 * lo, n, budget)) is not None:
+        lo, overhead[2 * lo] = 2 * lo, fit
+    hi = 2 * lo
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        if (fit := _hf_fits(model, ids, mid, n, budget)) is not None:
+            lo, overhead[mid] = mid, fit
+        else:
+            hi = mid
+    context = n
+    while (2 * context <= t.max_position_embeddings
+           and _hf_fits(model, ids, 1, 2 * context, budget) is not None):
+        context *= 2
+    mem = d2l.config_memory(config, n, 1, window_cached=n)
+    batch = (budget - mem['weights']) // (mem['total'] - mem['weights'])
+    longest = max(2**k for k in range(8, 19)
+                  if 2**k <= t.max_position_embeddings and d2l.config_memory(
+                      config, 2**k, 1, window_cached=2**k)['total'] <= budget)
+    return (lo, context), (int(batch), longest), overhead[lo]
+
+def hf_measure(model, config, ids, beta, contexts=(256, 1024, 4096, 16384)):
+    """Memory and decode time at each context, one row (dict) per context:
+    the cache walker's bytes, the allocator's growth after the prefill and
+    after one decode step, the peak, each with its value from
+    `config_memory`, the decode milliseconds and the bytes a step reads
+    (`bytes_read`) over the bandwidth `beta`. Prints the live cache's
+    bytes by dtype at 1,024 tokens.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    GiB = 2**30
+    b, t = model.dtype.itemsize, config.get_text_config()
+    rows = []
+    with torch.inference_mode():  # cuBLAS allocates its workspace on the
+        out = model(ids[:, :16], logits_to_keep=1, use_cache=True)
+        model(out.logits[:, -1:].argmax(-1),  # first decode step
+              past_key_values=out.past_key_values)
+    del out
+    for n in contexts:  # a prefill holds every position: window_cached=n
+        pinned = d2l.config_memory(config, n, 1, b, window_cached=n)
+        need = 1.1 * (pinned['total'] - pinned['weights'])
+        torch.cuda.empty_cache()  # cached blocks count as free below
+        if need > torch.cuda.mem_get_info()[0]:
+            print(f'{n} tokens skipped: {need / GiB:.1f} GiB not free')
+            continue
+        try:  # a new length compiles flex attention or tunes fla's
+            hf_prefill(model, ids, n)  # kernels, with their own buffers
+            out, before, growth, peak = hf_prefill(model, ids, n)
+        except torch.OutOfMemoryError:  # the activations estimate fell short
+            print(f'{n} tokens skipped: out of memory in the prefill')
+            continue  # the next context empties the allocator's cache
+        cache, token = out.past_key_values, out.logits[:, -1:].argmax(-1)
+        logical, resident = d2l.cache_bytes(cache)
+        mem = d2l.config_memory(config, n, 1, b)
+        assert sum(logical.values()) == mem['kv_cache'] + mem[
+            'recurrent_state']  # the walker counts what the formula counts
+        if n == 1024:
+            print('live cache at 1,024 tokens:', ', '.join(
+                f'{v:,} B {str(k).removeprefix("torch.")}'
+                for k, v in logical.items()))
+            linear = [layer for layer in cache.layers
+                      if hasattr(layer, 'recurrent_states')]
+            if linear:  # a hybrid's state and convolution inputs
+                print('recurrent state', str(
+                    linear[0].recurrent_states[0].dtype).removeprefix(
+                        'torch.'), '| convolution inputs', str(
+                    linear[0].conv_states[0].dtype).removeprefix('torch.'))
+        wall = hf_decode_ms(model, cache, token)
+        logits_bytes = out.logits.nbytes
+        del out
+        with torch.inference_mode():  # sliding layers drop prompt keys here
+            step = model(token, past_key_values=cache, logits_to_keep=1)
+        after = d2l.config_memory(
+            config, n + 1, 1, b,
+            window_cached=getattr(t, 'sliding_window', None))
+        R = d2l.bytes_read(config, n, b)
+        rows.append(dict(
+            model=model.name_or_path, n=n,
+            walker_logical=sum(logical.values()),
+            walker_resident=sum(resident.values()),
+            formula=mem['kv_cache'] + mem['recurrent_state'], growth=growth,
+            growth_derived=(pinned['kv_cache'] + pinned['recurrent_state']
+                            + logits_bytes),
+            growth_after_step=_hf_allocated() - before,
+            growth_after_step_derived=(after['kv_cache'] + after[
+                'recurrent_state'] + step.logits.nbytes),
+            peak=peak, peak_formula=pinned['total'] - pinned['weights'],
+            wall_ms_median=wall[0], wall_ms_q1=wall[1], wall_ms_q3=wall[2],
+            bytes_read=R, r_over_beta_measured_ms=1e3 * R / beta))
+        del cache, step
+    return rows
+
+def hf_profile_steps(model, ids, rows):
+    """Add one decode step's device time (busy and matrix products) and
+    launch count to each row, on a fresh prefill; return the step's
+    kernels at each context, {n: {kernel: ms}}.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    kernels = {}
+    for row in rows:
+        out = hf_prefill(model, ids, row['n'])[0]
+        kernels[row['n']], row['launches'] = hf_step_kernels(
+            model, out.past_key_values, out.logits[:, -1:].argmax(-1))
+        row['busy_ms'] = sum(kernels[row['n']].values())
+        row['matmul_ms'] = sum(ms for name, ms in kernels[row['n']].items()
+                               if _MATMUL_KERNELS.search(name))
+        del out
+    return kernels
+
+def hf_compare_kernels(model, config, ids, contexts, decode_at=4096,
+                       positions=64):
+    """A prefill on the fused kernels and inside reference_kernels, per
+    context: peak memory above the weights against the formula's peak (GiB),
+    seconds, milliseconds per decode step at `decode_at` tokens, and, on the
+    reference row, how the last `positions` positions' logits compare with
+    the fused run's: the share whose most likely next token agrees, and the
+    largest difference. For scale, the reference at batch 2 against batch 1
+    at the first context: rounding alone. A run that does not fit says so.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import contextlib
+    import pandas as pd
+
+    def compare(a, b):
+        a, b = a.float(), b.float()
+        return {'top-1 agree': round(float(
+                    (a.argmax(-1) == b.argmax(-1)).float().mean()), 2),
+                'max |diff|': round(float((a - b).abs().max()), 3)}
+
+    rows = []
+    for n in contexts:
+        x = ids.repeat(1, -(-n // ids.shape[1]))[:, :n]
+        formula = d2l.config_memory(config, n, 1, window_cached=n)
+        logits = {}
+        for name, kernels in (('fused', contextlib.nullcontext),
+                              ('reference', reference_kernels)):
+            row = dict(n=n, kernels=name, formula=round(
+                (formula['total'] - formula['weights']) / 2**30, 3))
+            out = cache = None
+            with kernels(model):
+                try:  # also compiles and tunes the kernels for n tokens
+                    out, _, _, peak = hf_prefill(model, x, n)
+                    cache = out.past_key_values
+                    token = out.logits[:, -1:].argmax(-1)
+                    out = None
+                    with torch.inference_mode():
+                        seconds = d2l.Benchmark(lambda: model(
+                            x, logits_to_keep=1, use_cache=True), 1, 3).time
+                        logits[name] = model(x, logits_to_keep=positions,
+                                             use_cache=False).logits[0]
+                    row |= dict(peak=round(peak / 2**30, 3),
+                                prefill_s=round(seconds, 3))
+                    if n == decode_at:
+                        row['decode_ms'] = round(float(hf_decode_ms(
+                            model, cache, token, repeats=5)[0]), 2)
+                except torch.OutOfMemoryError:
+                    row['peak'] = 'out of memory'
+                out = cache = None
+            rows.append(row)
+        if len(logits) == 2:
+            rows[-1] |= compare(logits['fused'], logits['reference'])
+        if n == contexts[0] and 'reference' in logits:
+            with reference_kernels(model), torch.inference_mode():
+                twice = model(x.repeat(2, 1), logits_to_keep=positions,
+                              use_cache=False).logits[0]
+            rows.append(dict(n=n, kernels='ref., batch 2')
+                        | compare(twice, logits['reference']))
+            del twice
+        del logits
+    return pd.DataFrame(rows)
+
+_MATMUL_KERNELS = re.compile(  # matrix products; attention kernels are not
+    '^(?!.*(fmha|flash)).*(gemm|gemv|xmma|cutlass|matmul|splitK)', re.I)
+
+def hf_memory_table(rows):
+    """The memory columns of hf_measure's rows: the walker's bytes and the
+    formula's (MiB), the allocator's growth after the prefill and after one
+    step, and the prefill peak, each over its derived value; storages held
+    over logical bytes (a sliding layer's view pins the prompt's keys).
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import pandas as pd
+    df = pd.DataFrame(rows)
+    return pd.DataFrame({
+        'n': df.n, 'walker MiB': df.walker_logical / 2**20,
+        'formula MiB': df.formula / 2**20,
+        'growth': df.growth / df.growth_derived,
+        'after step': df.growth_after_step / df.growth_after_step_derived,
+        'peak': df.peak / df.peak_formula,
+        'held': df.walker_resident / df.walker_logical}).round(2)
+
+def hf_time_table(rows, beta_sheet):
+    """The time columns of the profiled rows, in ms per decode step: wall
+    time (median and quartiles), the device's busy and matrix-product time,
+    kernel launches, and the bytes read over the datasheet bandwidth
+    `beta_sheet` and over the measured one.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import pandas as pd
+    df = pd.DataFrame(rows)
+    return pd.DataFrame({
+        'n': df.n, 'wall': df.wall_ms_median, 'q1': df.wall_ms_q1,
+        'q3': df.wall_ms_q3, 'busy': df.busy_ms, 'matmul': df.matmul_ms,
+        'launches': df.launches,
+        'R/beta sheet': 1e3 * df.bytes_read / beta_sheet,
+        'R/beta meas.': df.r_over_beta_measured_ms}).round(2)
+
+def _kernel_name(name):
+    """A kernel's C++ name without return type, namespaces and arguments.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    name = re.sub(r'^(void |std::enable_if<.*?>::type )|\(anonymous '
+                  r'namespace\)::', '', name)
+    return re.sub(r'\b(at|native|internal|cutlass)::|\(.*', '', name)[:52]
+
+def show_kernels(kernels, rows=4):
+    """The kernels of a decode step with the most device time: ms and share
+    of the busy time.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import collections
+    busy, named = sum(kernels.values()), collections.Counter()
+    for name, ms in kernels.items():
+        named[_kernel_name(name)] += ms
+    for name, ms in named.most_common(rows):
+        print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name}')
+
+d2l.DATA_HUB['lm-qwen3-0p6b-logit-ref-v1'] = (
+    d2l.LM_DATA_URL + 'lm-qwen3-0p6b-logit-ref-v1.pt',
+    '2fa5449638a8a8924bc6b35384dc996c23513cb6')
+
+def _qwen3_files(model_id, revision):
+    """Local paths of config.json, generation_config.json (None if the
+    repository has none) and the safetensors files of a Hub checkpoint at a
+    revision, downloaded into the Hugging Face cache.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    import huggingface_hub
+    # the Hub answered that the file is absent; LocalEntryNotFoundError
+    # (offline, not cached) is a sibling subclass and must propagate
+    from huggingface_hub.errors import RemoteEntryNotFoundError
+
+    def get(filename, optional=False):
+        try:
+            return huggingface_hub.hf_hub_download(model_id, filename,
+                                                   revision=revision)
+        except RemoteEntryNotFoundError:
+            if optional:
+                return None
+            raise
+
+    index = get('model.safetensors.index.json', optional=True)
+    if index is None:
+        weights = [get('model.safetensors')]
+    else:  # a sharded checkpoint lists its shards in the index
+        with open(index) as fh:
+            shards = sorted(set(json.load(fh)['weight_map'].values()))
+        weights = [get(shard) for shard in shards]
+    return (get('config.json'), get('generation_config.json', optional=True),
+            weights)
+
+def _lm_unwrap(model):
+    """The model inside a torch.compile or PEFT wrapper (which pass every
+    keyword argument through to it), or model itself.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    while True:
+        inner = getattr(model, '_orig_mod', None)
+        if inner is None and hasattr(model, 'get_base_model'):
+            inner = model.get_base_model()
+        if inner is None or inner is model:
+            return model
+        model = inner
+
+def _lm_bos_ids(tokenizer):
+    """The special tokens the tokenizer puts before a text (a BOS, or
+    none). Those it appends after a text, such as an EOS, are left out:
+    a prompt continues where its text ends.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    with_sp, plain = (tokenizer(['a'], add_special_tokens=s)['input_ids'][0]
+                      for s in (True, False))
+    return next((with_sp[:k] for k in range(len(with_sp) - len(plain) + 1)
+                 if with_sp[k:k + len(plain)] == plain), [])
+
+def _lm_stopping(model, tokenizer, max_new_tokens=None, eos_token_ids=None,
+                 stop=None):
+    """generate's stopping arguments with their defaults: max_new_tokens
+    from the model's generation_config (else 256); the end tokens, by
+    default the tokenizer's and the generation_config's, as a set of ids
+    (one id may be given bare); stop strings as a list (one string is one
+    stop string, not its characters).
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    config = getattr(model, 'generation_config', None)
+    if max_new_tokens is None:
+        max_new_tokens = getattr(config, 'max_new_tokens', None) or 256
+    if eos_token_ids is None:
+        eos = getattr(config, 'eos_token_id', None)
+        eos_token_ids = [tokenizer.eos_token_id,
+                         *(eos if isinstance(eos, list) else [eos])]
+    if isinstance(eos_token_ids, (int, np.integer)):
+        eos_token_ids = [eos_token_ids]
+    eos_ids = {int(i) for i in eos_token_ids if i is not None}
+    if isinstance(stop, str):
+        stop = [stop]
+    return max_new_tokens, eos_ids, stop
+
+def _lm_prompt_ids(tokenizer, prompts, chat=False, enable_thinking=None):
+    """Token ids of each prompt of generate. With chat=True a prompt is
+    rendered by the chat template (a string is one user message; the
+    template adds no BOS); otherwise the tokenizer's BOS, if it has one,
+    goes before the text, and never an EOS after it.
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    if chat:
+        opts = {} if enable_thinking is None else {
+            'enable_thinking': enable_thinking}
+        prompts = [tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': x}] if isinstance(x, str) else x,
+            tokenize=False, add_generation_prompt=True, **opts)
+                   for x in prompts]
+    head = [] if chat else _lm_bos_ids(tokenizer)
+    ids = [head + tokenizer(x, add_special_tokens=False)['input_ids']
+           for x in prompts]
+    if not all(ids):  # Qwen3's tokenizer adds no BOS to predict from
+        raise ValueError('an empty prompt has no position to predict from')
+    return ids
+
+def _lm_generators(seed, num_prompts):
+    """generate's random streams, as a function rows -> the generator
+    argument of sample_logits for those prompts. seed is an int or a
+    torch.Generator (one stream for the whole call) or one int per prompt
+    (one stream each, so that a prompt's draws do not depend on the
+    others).
+
+    Defined in :numref:`sec_lm_d2l_checkpoint`"""
+    if isinstance(seed, torch.Generator):
+        return lambda rows: seed
+    if isinstance(seed, (int, np.integer)):
+        shared = torch.Generator().manual_seed(int(seed))
+        return lambda rows: shared
+    assert len(seed) == num_prompts, 'one seed per prompt'
+    streams = [torch.Generator().manual_seed(int(s)) for s in seed]
+    return lambda rows: [streams[i] for i in rows]
+
+def _label_sep(prompt, word):
+    """A space between a prompt and a label word, except after whitespace
+    and next to a wide (Chinese, Japanese or Korean) character.
+
+    Defined in :numref:`sec_lm_prompting`"""
+    import unicodedata
+    wide = any(unicodedata.east_asian_width(c) in ('W', 'F')
+               for c in prompt[-1:] + word[:1])
+    return '' if wide or prompt[-1:].isspace() else ' '
+
+def label_token_ids(tokenizer, prompts, label_words, sep=None):
+    """The prompts' token ids, and per prompt the id of each label word's
+    first token as the next token, the word following the prompt after
+    sep (by default _label_sep's choice). Raises if (a) the prompt's end
+    merges with a word, (b) two words share a first token, (c) a word is
+    several tokens, checked in this order.
+
+    Defined in :numref:`sec_lm_prompting`"""
+    enc = lambda texts: tokenizer(texts, add_special_tokens=False)[
+        'input_ids']
+    ids, tails = enc(prompts), [[] for _ in prompts]
+    seps = [[_label_sep(p, w) if sep is None else sep for w in label_words]
+            for p in prompts]
+    for j, w in enumerate(label_words):
+        full = enc([p + s[j] + w for p, s in zip(prompts, seps)])
+        for i, (p, h, f) in enumerate(zip(prompts, ids, full)):
+            if f[:len(h)] != h:  # (a) the prompt ends inside a token
+                raise ValueError(
+                    f'prompt {i} ends inside a token ({p[-12:]!r} merges '
+                    f'with {w!r}): strip trailing whitespace from the '
+                    'prompt, the space belongs to the label')
+            if len(f) == len(h):
+                raise ValueError(f'label word {w!r} adds no token')
+            tails[i].append(f[len(h):])
+    for t in tails:  # (b) two words, one first token
+        first = {}
+        for w, s in zip(label_words, t):
+            if s[0] in first:
+                raise ValueError(
+                    f'label words {first[s[0]]!r} and {w!r} share the '
+                    f'first token {tokenizer.decode(s[:1])!r} ({s[0]})')
+            first[s[0]] = w
+    for t, seps_i in zip(tails, seps):  # (c) a word of several tokens
+        for w, s, sp in zip(label_words, t, seps_i):
+            if len(s) > 1:
+                raise ValueError(
+                    f'label word {w!r} after {sp!r} is {len(s)} tokens '
+                    f'{[tokenizer.decode([u]) for u in s]}: use a word '
+                    'that is one token there, or another sep')
+    return ids, [[s[0] for s in t] for t in tails]
+
+def _label_output_layer(model):
+    """The output layer of a Transformers model when its label logits are
+    the last hidden state times the label words' rows (a plain linear
+    layer, no final logit soft-capping); None otherwise, as for a d2l
+    GPT.
+
+    Defined in :numref:`sec_lm_prompting`"""
+    inner = d2l._lm_unwrap(model)
+    hf = sys.modules.get('transformers')  # loaded if model is one of its
+    if hf is None or not isinstance(inner, hf.PreTrainedModel):
+        return None
+    W = inner.get_output_embeddings()
+    capped = getattr(inner.config.get_text_config(),
+                     'final_logit_softcapping', None) is not None
+    return W if isinstance(W, nn.Linear) and not capped else None
+
+def _label_logprobs_logits(model, tokenizer, ids, labels, batch_size):
+    """label_logprobs from the model's own logits at the last position:
+    a Transformers model in left-padded batches (logits_to_keep=1), a d2l
+    GPT, which takes no attention mask, in batches of prompts of equal
+    length.
+
+    Defined in :numref:`sec_lm_prompting`"""
+    inner = d2l._lm_unwrap(model)
+    hf = sys.modules.get('transformers')
+    hf = hf is not None and isinstance(inner, hf.PreTrainedModel)
+    if hf:  # one padded group, in input order
+        groups = [list(range(len(ids)))]
+        pad = getattr(tokenizer, 'pad_token_id', None) or 0
+    else:
+        groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
+                  for n in sorted({len(r) for r in ids})]
+    device = next(model.parameters()).device
+    out = torch.empty(len(ids), len(labels[0]))
+    for rows in (g[j:j + batch_size] for g in groups
+                 for j in range(0, len(g), batch_size)):
+        lab = torch.tensor([labels[i] for i in rows], device=device)
+        with torch.inference_mode():
+            if hf:
+                T = max(len(ids[i]) for i in rows)
+                X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i]
+                                  for i in rows], device=device)
+                mask = torch.tensor([[0] * (T - len(ids[i])) +
+                                     [1] * len(ids[i]) for i in rows],
+                                    device=device)
+                pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+                z = model(input_ids=X, attention_mask=mask, position_ids=pos,
+                          use_cache=False, logits_to_keep=1).logits[:, -1]
+            else:
+                X = torch.tensor([ids[i] for i in rows], device=device)
+                z = (model(X, logits_to_keep=1) if isinstance(
+                    inner, d2l.Qwen3GPT) else model(X))[:, -1]
+            lp = z.gather(-1, lab).float().log_softmax(-1).cpu()
+        out[rows] = lp  # out is an ordinary tensor the caller may modify
+    return out
+
+def clean_ag_news(titles):
+    """AG News titles with the escapes left in them resolved: HTML
+    entities and tags, '#39;'-style codes without the '&', Windows-1252
+    codes 145 to 151, backslashes. Returns the cleaned titles (an object
+    array) and, per rule, the number of titles it changed; raises if an
+    escape is left that no rule handles.
+
+    Defined in :numref:`sec_lm_prompting`"""
+    import html
+    cp1252 = {'145': "'", '146': "'", '147': '"', '148': '"', '151': '-'}
+    codes = {37, 38, 133, 160, 163, 225, 233, 234, 8217, 8482}  # in AG News
+
+    def quote(m):  # an apostrophe or closing quote takes the space before
+        return ('' if m[2] in ('145', '146', '148') else m[1]) + cp1252[m[2]]
+
+    def numeric(m):  # '#233;' is 'é'; 128 to 159 are Windows-1252 codes
+        n = int(m[2])
+        if n not in codes:  # left for the check at the end
+            return m[0]
+        c = bytes([n]).decode('cp1252') if 128 <= n < 160 else chr(n)
+        return ('' if c.isalnum() or c in "&'’" else m[1]) + c
+    rules = [  # in this order
+        ("#39; is '", lambda s: re.sub(r' ?#39;', "'", s)),
+        ('#36; is $', lambda s: s.replace('#36;', '$')),
+        ('#145; to #151;', lambda s: re.sub(r'( ?)#(14[5-8]|151);', quote,
+                                             s)),
+        ('other #n;', lambda s: re.sub(r'( ?)#(\d+);', numeric, s)),
+        ('&entities;', html.unescape),
+        ('<tags>', lambda s: re.sub(r'<[^<>]*>', '', s)),
+        ('\\ and spaces', lambda s: ' '.join(s.replace('\\', ' ').split()))]
+    changed = {}
+    for name, rule in rules:
+        new = [rule(s) for s in titles]
+        changed[name] = sum(a != b for a, b in zip(titles, new))
+        titles = new
+    left = sorted({m for s in titles
+                   for m in re.findall(r'#\d+;|&\w+;|\\', s)})
+    assert not left, f'no cleanup rule for {left}'
+    return np.array(titles, dtype=object), changed
+
+def _lm_encode(tokenizer, texts):
+    """Token ids of each text without special tokens: a Transformers
+    tokenizer is called with add_special_tokens=False, any other one (such
+    as tiktoken's) through its plain encode.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    hf = sys.modules.get('transformers')
+    texts = [str(t) for t in texts]  # also numpy arrays, pandas Series
+    if not texts:
+        return []
+    if hf is not None and isinstance(tokenizer, hf.PreTrainedTokenizerBase):
+        return tokenizer(texts, add_special_tokens=False)['input_ids']
+    return [list(tokenizer.encode(t)) for t in texts]
+
+def _lm_boundary_id(tokenizer):
+    """The token that separates documents in pretraining: <|endoftext|> if
+    the tokenizer has it, else its EOS, else None. Qwen3: 151643, Qwen3.5:
+    248044, for base and post-trained checkpoints alike.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    conv = getattr(tokenizer, 'convert_tokens_to_ids', None)
+    if conv is not None:
+        i = conv('<|endoftext|>')
+        if i is not None and i != getattr(tokenizer, 'unk_token_id', None):
+            return int(i)
+    elif '<|endoftext|>' in getattr(tokenizer, 'special_tokens_set', ()):
+        return tokenizer.encode_single_token('<|endoftext|>')  # tiktoken
+    return getattr(tokenizer, 'eos_token_id', None)
+
+def _lm_max_len(model):
+    """The longest input the model takes, or None if it does not say.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    model = d2l._lm_unwrap(model)
+    cfg = getattr(model, 'config', None)
+    if cfg is not None and hasattr(cfg, 'get_text_config'):
+        cfg = cfg.get_text_config()
+    return (getattr(cfg, 'max_position_embeddings', None) or
+            getattr(model, 'max_len', None))
+
+def _lm_ctx_len(model, ctx_len):
+    """ctx_len, capped (with a warning) at the model's longest input.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    import warnings
+    max_len = _lm_max_len(model)
+    if max_len and ctx_len > max_len:
+        warnings.warn(f'bits_per_byte: ctx_len {ctx_len} capped at the '
+                      f"model's maximum input length {max_len}")
+        return max_len
+    return ctx_len
+
+def _lm_continuations(tokenizer, prompts, choices, max_len=None):
+    """Every (prompt, choice) pair of score_choices, as (rows, inputs,
+    conts, texts, shape): rows[r] = (i, j) names prompt i and its choice j,
+    inputs[r] the token ids the model reads, conts[r] the continuation's
+    ids it scores, texts[r] the choice text without one leading
+    whitespace character (the harness's length), shape (N, C_max).
+    choices holds N lists (ragged) or one list shared by all prompts.
+    Trailing whitespace of a prompt moves to the front of its choices; the
+    continuation is the suffix of encode(prompt + choice) beyond
+    encode(prompt), with a warning when the prompt's last token merges into
+    the choice's; an empty prompt is preceded by the document-boundary
+    token; a pair longer than max_len loses prompt tokens from the left,
+    with a warning naming the item; an empty continuation raises.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    import warnings
+    prompts, choices = list(prompts), list(choices)  # also arrays, Series
+    if len(choices) and isinstance(choices[0], str):  # one shared list
+        choices = [choices] * len(prompts)
+    choices = [list(cs) for cs in choices]
+    if len(choices) != len(prompts):
+        raise ValueError(f'{len(prompts)} prompts, {len(choices)} choices')
+    heads = [p.rstrip() for p in prompts]
+    rows = [(i, j) for i, cs in enumerate(choices) for j in range(len(cs))]
+    conts = [prompts[i][len(heads[i]):] + choices[i][j] for i, j in rows]
+    texts = [c[1:] if c[:1].isspace() else c for c in conts]
+    ctx_ids = _lm_encode(tokenizer, heads)
+    full = _lm_encode(tokenizer, [heads[i] + c
+                                  for (i, _), c in zip(rows, conts)])
+    cut_items, inputs, cont_ids = set(), [], []
+    merged = []  # pairs whose prompt tokens are not a prefix of the whole
+    for (i, j), f in zip(rows, full):
+        ctx, cont = ctx_ids[i], f[len(ctx_ids[i]):]
+        if not cont:
+            raise ValueError(f'item {i}, choice {j}: empty continuation')
+        if f[:len(ctx)] != ctx:
+            merged.append((i, j))
+        if not ctx:
+            b = _lm_boundary_id(tokenizer)
+            if b is None:
+                raise ValueError(f'item {i}: empty prompt and no boundary '
+                                 'token to put before it')
+            ctx = [b]
+        cut = len(ctx) + len(cont) - 1 - (max_len or float('inf'))
+        if cut > 0:  # cut the prompt from the left
+            if cut >= len(ctx):
+                raise ValueError(f'item {i}, choice {j}: the continuation '
+                                 f'does not fit the context of {max_len}')
+            if i not in cut_items:
+                warnings.warn(f'score_choices: prompt of item {i} cut by '
+                              f'{cut} tokens to fit the context of {max_len}')
+                cut_items.add(i)
+            ctx = ctx[cut:]
+        inputs.append((ctx + cont)[:-1])  # the last token predicts nothing
+        cont_ids.append(cont)
+    if merged:
+        warnings.warn(
+            f'score_choices: in {len(merged)} of {len(rows)} prompt-choice '
+            f'pairs (first: item {merged[0][0]}, choice {merged[0][1]}) the '
+            "prompt's last token merges with the choice's first, so the "
+            'scored tokens do not spell prompt + choice; end the prompts '
+            'differently (for example without a newline)')
+    shape = (len(prompts), max(map(len, choices), default=0))
+    return rows, inputs, cont_ids, texts, shape
+
+def _lm_components(rows, ll, conts, texts, shape):
+    """ScoreComponents of shape (N, C_max) from the pairs of
+    _lm_continuations and their summed log-likelihoods ll; padded columns
+    hold -inf (ll) and 0.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    comps = [torch.zeros(shape, dtype=dt)
+             for dt in (torch.float32, torch.long, torch.long, torch.long)]
+    comps[0].fill_(-math.inf)
+    for r, (i, j) in enumerate(rows):
+        for t, v in zip(comps, (ll[r].item(), len(conts[r]), len(texts[r]),
+                                len(texts[r].encode('utf-8')))):
+            t[i, j] = v
+    return d2l.ScoreComponents(*comps)
+
+def _lm_cont_logits(model, inputs, n_cont, pad=0):
+    """The model's own logits, in its dtype, at the positions that predict
+    the last n_cont[k] tokens of each row inputs[k] + [next token],
+    concatenated over the rows: a Transformers model (one whose output
+    layer is not a plain linear layer, such as a soft-capped one) in a
+    left-padded batch with logits_to_keep; a d2l.Qwen3GPT right-padded,
+    with logits_to_keep from the earliest continuation; any other module
+    (a d2l.GPT) right-padded, whole (exact under the causal mask).
+
+    Defined in :numref:`sec_lm_scoring`"""
+    inner = d2l._lm_unwrap(model)
+    hf = sys.modules.get('transformers')
+    hf = hf is not None and isinstance(inner, hf.PreTrainedModel)
+    device = next(model.parameters()).device
+    T = max(map(len, inputs))
+    if hf:
+        X = torch.tensor([[pad] * (T - len(x)) + x for x in inputs],
+                         device=device)
+        mask = torch.tensor([[0] * (T - len(x)) + [1] * len(x)
+                             for x in inputs], device=device)
+        pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+        z = model(input_ids=X, attention_mask=mask, position_ids=pos,
+                  use_cache=False, logits_to_keep=max(n_cont)).logits
+        return torch.cat([z[k, z.shape[1] - m:]
+                          for k, m in enumerate(n_cont)])
+    X = torch.tensor([x + [0] * (T - len(x)) for x in inputs], device=device)
+    starts = [len(x) - m for x, m in zip(inputs, n_cont)]
+    qwen3 = isinstance(inner, d2l.Qwen3GPT)
+    off = min(starts) if qwen3 else 0
+    out = model(X, logits_to_keep=T - off) if qwen3 else model(X)
+    z = getattr(out, 'logits', out)
+    return torch.cat([z[k, s - off:s - off + m]
+                      for k, (s, m) in enumerate(zip(starts, n_cont))])
+
+def _lm_unscored_head(tokenizer, text, ids):
+    """For a tokenizer without a boundary token: the text's first token has
+    no context, so it is not scored, nor any next token up to the end of
+    the character the first one starts. Returns how many of ids go
+    unscored and the UTF-8 bytes they spell.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    first = 1
+    while first < len(ids):
+        head = tokenizer.decode(ids[:first])
+        if text.startswith(head) or '�' not in head:
+            break
+        first += 1
+    return first, len(tokenizer.decode(ids[:first]).encode('utf-8'))
+
+def _run_limits(timeout):
+    """Python source that, run first in the child, limits its CPU time to
+    timeout + 1 seconds (rounded up) and its address space to 1 GiB; empty
+    off POSIX, where only the wall-clock timeout applies.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if os.name != 'posix':
+        return ''
+    cpu = math.ceil(timeout) + 1
+    return ('import resource\n'
+            f'for r, v in ((resource.RLIMIT_CPU, {cpu}), '
+            '(resource.RLIMIT_AS, 1 << 30)):\n'
+            '    try:\n        resource.setrlimit(r, (v, v))\n'
+            '    except (ValueError, OSError):\n        pass\n')
+
+def _kill_session(proc):
+    """Kill a child started with start_new_session=True and every process
+    it started (on POSIX; elsewhere the child alone), then reap it.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    import signal
+    if os.name == 'posix':
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+    else:
+        proc.kill()
+    proc.wait()
+
+def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
+    """Download DATA_HUB[key] into root/key/ and return its local path.
+    Files from different datasets often share a name (Hugging Face's
+    'test-00000-of-00001.parquet'), and d2l.download keeps one file per
+    name and folder, so each key gets a folder of its own. The file's sha1
+    is checked after a fresh download too.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    path = d2l.download(key, os.path.join(root, key))
+    sha1 = d2l.DATA_HUB[key][1]
+    if sha1:
+        with open(path, 'rb') as f:
+            got = hashlib.sha1(f.read()).hexdigest()
+        assert got == sha1, f'{path}: sha1 {got}, DATA_HUB pins {sha1}'
+    return path
+
+def lm_rerun(artifacts):
+    """The measured results this run regenerates, from the environment
+    variable D2L_RERUN: '1' names all of artifacts, 'a,b' the ones it
+    lists; unset, empty or '0', none (a normal build).
+
+    Defined in :numref:`sec_lm_scoring`"""
+    names = os.environ.get('D2L_RERUN', '0').split(',')
+    rerun = set(artifacts if names == ['1'] else names) - {'0', ''}
+    if not rerun <= set(artifacts):
+        raise ValueError(f'D2L_RERUN names one of {tuple(artifacts)}, or 1')
+    return rerun
+
+def lm_registered(key):
+    """Local path of the registered artifact DATA_HUB[key], or None while
+    the key is not registered.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    return d2l.download_keyed(key) if key in d2l.DATA_HUB else None
+
+def lm_artifact(key, rerun_name=None,
+                rerun_dir=os.path.join('..', 'data', 'lm', 'rerun')):
+    """Where a measured result is read from: rerun_dir/rerun_name, the file
+    this run regenerated, when rerun_name is given; else the registered
+    artifact DATA_HUB[key], which must exist.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if rerun_name is not None:
+        return os.path.join(rerun_dir, rerun_name)
+    path = lm_registered(key)
+    if path is None:
+        raise KeyError(f'{key} is not registered: regenerate it with '
+                       'D2L_RERUN, upload it and register its sha1')
+    return path
+
+def lm_save_rerun(name, write,
+                  rerun_dir=os.path.join('..', 'data', 'lm', 'rerun')):
+    """Call write(path) for a regenerated artifact in rerun_dir and print
+    its path and sha1; the author uploads it under the next -vN key.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    os.makedirs(rerun_dir, exist_ok=True)
+    path = os.path.join(rerun_dir, name)
+    write(path)
+    with open(path, 'rb') as f:
+        print(f'wrote {path}, sha1 {hashlib.sha1(f.read()).hexdigest()}')
+    return path
+
+def read_jsonl(path):
+    """A file of JSON lines as a DataFrame, one row per line, values with
+    the types they were written with.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    with open(path, encoding='utf-8') as f:
+        return pd.DataFrame([json.loads(line) for line in f])
+
+def write_jsonl(path, records):
+    """Write records (dicts) as JSON lines.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    with open(path, 'w', encoding='utf-8') as f:
+        f.writelines(json.dumps(r, ensure_ascii=False) + '\n'
+                     for r in records)
+
+def lm_free():
+    """Return the memory of deleted models to the GPU.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    import gc
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+def lm_peak():
+    """Peak GPU memory since the last call, as text: what tensors held, and
+    what the allocator reserved from the card (what nvidia-smi shows, less
+    the CUDA context).
+
+    Defined in :numref:`sec_lm_scoring`"""
+    if not torch.cuda.is_available():
+        return 'no GPU'
+    gib = [f() / 2**30 for f in (torch.cuda.max_memory_allocated,
+                                 torch.cuda.max_memory_reserved)]
+    torch.cuda.reset_peak_memory_stats()
+    return f'peak {gib[0]:.1f} GiB ({gib[1]:.1f} GiB reserved)'
+
+def _intervene_site(model, site):
+    """site as (kind, layer) if it names a site of model, else ValueError.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    if not (isinstance(site, tuple) and len(site) == 2
+            and site[0] in d2l._Intervention.KINDS
+            and isinstance(site[1], (int, np.integer))
+            and 0 <= site[1] < len(model.blks)):
+        raise ValueError(f'not a site of this model: {site!r}')
+    return site[0], int(site[1])
+
+def _intervene_args(model, sites, record, stop_after):
+    """The checked arguments of d2l.intervene: the sites to edit (site ->
+    fn), the sites to record (a set, with stop_after) and stop_after.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    assert isinstance(model, d2l.GPT), 'intervene instruments a d2l.GPT'
+    for blk in model.blks:
+        assert blk.pre_norm, 'intervene needs pre-norm blocks'
+        assert not (blk.training and blk.dropout.p > 0), (
+            'dropout must be inactive: call model.eval()')
+    sites = {_intervene_site(model, s): fn for s, fn in (sites or {}).items()}
+    for site, fn in sites.items():
+        if fn is None:  # recording is record='s job
+            raise ValueError(f'site {site} maps to None; use record=')
+    stop = None if stop_after is None else _intervene_site(model, stop_after)
+    record = {_intervene_site(model, s) for s in record}
+    if stop is not None:  # a stopped forward is for reading
+        record.add(stop)
+    return sites, record, stop
+
+def lm_hub_rows(repo, path, revision, start, stop, column='text'):
+    """Rows start, ..., stop - 1 of one column of a parquet file of a Hub
+    dataset, reading only the row groups that hold them (range requests);
+    returns the values and the compressed bytes read.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    import pyarrow.parquet as pq
+    from huggingface_hub import HfFileSystem
+    with HfFileSystem().open(f'datasets/{repo}@{revision}/{path}',
+                             'rb') as f:
+        pf = pq.ParquetFile(f)
+        md, col = pf.metadata, pf.schema_arrow.names.index(column)
+        ends = np.cumsum([md.row_group(g).num_rows
+                          for g in range(md.num_row_groups)])
+        groups = [g for g, e in enumerate(ends)
+                  if e > start and e - md.row_group(g).num_rows < stop]
+        values = pf.read_row_groups(groups, columns=[column]).column(0)
+        first = ends[groups[0]] - md.row_group(groups[0]).num_rows
+        nbytes = sum(md.row_group(g).column(col).total_compressed_size
+                     for g in groups)
+    return values.to_pylist()[start - first:stop - first], nbytes
+
+def lm_walk_docs(encode, source, rows, subsets, block=1000):
+    """Visit the rows of source = (repo, path, revision) in the order rows
+    gives and keep the first n qualifying documents of each subset in turn;
+    subsets maps a name to (n, take), take(ids) -> ids or None, and
+    encode(text) -> ids. Rows are read a block of block rows at a time.
+    Returns a tensor of documents per subset, and the rows visited (first,
+    last), the blocks read and their compressed bytes.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    docs, cache, used, nbytes, rows = {}, {}, [], 0, iter(rows)
+    for name, (n, take) in subsets.items():
+        kept = []
+        while len(kept) < n:
+            row = next(rows)
+            start = row - row % block
+            if start not in cache:
+                cache[start], b = lm_hub_rows(*source, start, start + block)
+                nbytes += b
+            if (ids := take(encode(cache[start][row - start]))) is not None:
+                kept.append(ids)
+            used.append(row)
+        docs[name] = torch.tensor(kept)
+    return docs, dict(rows=(min(used), max(used)), blocks=len(cache),
+                      nbytes=nbytes)
+
+def lm_round_robin(stride, first=0, blocks=20, block=1000):
+    """Row i of each of the blocks at first + b * stride, then row i + 1.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    return (first + b * stride + i for i in range(block)
+            for b in range(blocks))
+
+def read_conllu(path, stride, max_words):
+    """Every stride-th sentence of a CoNLL-U file, up to max_words words:
+    the text rebuilt with SpaceAfter=No, and per word (start, end, form,
+    UPOS).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    with open(path, encoding='utf-8') as f:
+        sentences, out, n = f.read().strip().split('\n\n'), [], 0
+    for sentence in sentences[::stride]:
+        text, words, end = '', [], 0
+        for c in (line.split('\t') for line in sentence.split('\n')
+                  if not line.startswith('#')):
+            spaced = 'SpaceAfter=No' not in c[9]
+            if '-' in c[0]:  # a multiword token; its words follow, unspaced
+                end, space = int(c[0].split('-')[1]), spaced
+            elif '.' not in c[0]:  # skip empty nodes
+                words.append((len(text), len(text) + len(c[1]), c[1], c[3]))
+                text += c[1]
+                i = int(c[0])
+                if i == end and space or i > end and spaced:
+                    text += ' '
+        if n + len(words) > max_words:
+            break
+        out.append((text.rstrip(), words))
+        n += len(words)
+    return out
+
+def lm_word_features(model, tokenizer, sentences, layer, batch=32):
+    """Per word of sentences (read_conllu's), at its last token: the token
+    embedding and the stream after block layer, on the CPU. Right padding
+    is safe: a causal model never reads a later position.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    dev, site, emb, hidden = model.token_emb.weight.device, (
+        'resid_post', layer), [], []
+    for i in range(0, len(sentences), batch):
+        chunk = [tokenizer(t, return_offsets_mapping=True,
+                           add_special_tokens=False)
+                 for t, _ in sentences[i:i + batch]]
+        T = max(len(e.input_ids) for e in chunk)
+        X = torch.tensor([e.input_ids + [0] * (T - len(e.input_ids))
+                          for e in chunk], device=dev)
+        with torch.no_grad(), d2l.intervene(model, stop_after=site) as ctx:
+            model(X)
+        H = ctx.cache[site][0]
+        with torch.no_grad():
+            E0 = model.token_emb(X)
+        for j, (e, (_, ws)) in enumerate(zip(chunk, sentences[i:i + batch])):
+            starts = [s for s, _ in e.offset_mapping]
+            pos = [int(np.searchsorted(starts, w[1])) - 1 for w in ws]
+            emb.append(E0[j, pos].cpu())
+            hidden.append(H[j, pos].cpu())
+    return {'embedding': torch.cat(emb), f'block {layer}': torch.cat(hidden)}
+
+def type_tag_baseline(train_types, train_tags, test_types):
+    """Per test word, the most frequent training tag of its word type, or
+    the most frequent training tag for a type unseen in training.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    best = pd.DataFrame({'type': train_types, 'tag': train_tags}).groupby(
+        'type')['tag'].agg(lambda t: t.value_counts().idxmax())
+    default = np.bincount(train_tags).argmax()
+    return np.array([best.get(w, default) for w in test_types])
+
+def cluster_resample(clusters, n_boot=2000, seed=0):
+    """Per replicate, the item indices of a resample of whole clusters
+    (clusters holds one cluster id per item).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    ids, inverse = np.unique(np.asarray(clusters), return_inverse=True)
+    members = [np.flatnonzero(inverse == g) for g in range(len(ids))]
+    rng = np.random.default_rng(seed)
+    for _ in range(n_boot):
+        yield np.concatenate([members[g] for g in rng.integers(
+            len(ids), size=len(ids))])
+
+def percentile_ci(values, alpha=0.05, names=None):
+    """Percentile endpoints of bootstrap replicates (along axis 0), over
+    the replicates where the statistic is defined; prints how many are not
+    for each statistic (column) named in names.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    values = np.asarray(values, dtype=float)
+    undefined = np.isnan(values).sum(0)
+    for name, k in zip(names or (), np.atleast_1d(undefined)):
+        if k:
+            print(f'  {name}: {k} of {len(values)} replicates undefined, '
+                  'left out')
+    return np.nanquantile(values, [alpha / 2, 1 - alpha / 2], axis=0)
+
+def fmt_ci(mean, ci, digits=3):
+    """A value and its interval as text: 'mean [lo, hi]'.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    return f'{mean:.{digits}f} [{ci[0]:.{digits}f}, {ci[1]:.{digits}f}]'
+
+def detection_stats(y, score, threshold):
+    """Precision and recall of score > threshold as a detector of the
+    boolean labels y, and the AUC of score (Mann-Whitney, mid-ranks).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    from scipy.stats import rankdata
+    active, n = score > threshold, y.sum()
+    auc = (rankdata(score)[y].sum() - n * (n + 1) / 2) / (n * (len(y) - n))
+    return [(y & active).sum() / active.sum(), (y & active).sum() / n, auc]
+
+def long_csv(T, axes, column):
+    """The array T as CSV bytes, one row per entry: per axis a column that
+    names the entry's index, axes = [(name, labels), ...], then its value
+    in column.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    index = np.indices(T.shape).reshape(T.ndim, -1)
+    named = {name: np.asarray(labels)[i] for (name, labels), i in zip(
+        axes, index)}
+    return pd.DataFrame({**named, column: T.ravel()}).to_csv(
+        index=False).encode()
+
+def block_runs(cells, classes):
+    """(block, class) cells as text, runs of blocks per class in the order
+    of classes: "'subject' 0-3, 7; ' of' 20-27" ('none' if empty).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    parts = []
+    for c in classes:
+        ls = np.array([l for l, c_ in cells if c_ == c])
+        if len(ls):
+            runs = np.split(ls, np.flatnonzero(np.diff(ls) > 1) + 1)
+            parts.append(f'{c!r} ' + ', '.join(
+                f'{r[0]}-{r[-1]}' if len(r) > 1 else f'{r[0]}' for r in runs))
+    return '; '.join(parts) or 'none'
+
+def lm_write_zip(path, members):
+    """A zip archive of members (name -> bytes), byte-identical for
+    identical members.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    with zipfile.ZipFile(path, 'w') as z:
+        for name, data in sorted(members.items()):
+            info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+            z.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED)
+
+def cache_stream(model, windows, layer, batch=32):
+    """The stream after block layer at the positions >= 1 of windows
+    (N, T), without norm outliers (above 10 times the batch median), as
+    one fp16 tensor in host memory, filled in place.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    site, n, dev = ('resid_post', layer), 0, model.token_emb.weight.device
+    acts = torch.empty(windows[:, 1:].numel(), model.num_hiddens,
+                       dtype=torch.float16)
+    for X in windows.split(batch):
+        with torch.no_grad(), d2l.intervene(model, stop_after=site) as ctx:
+            model(X.to(dev))
+        h = ctx.cache[site][0][:, 1:].flatten(0, 1)
+        norms = h.float().norm(dim=-1)
+        h = h[norms <= 10 * norms.median()]
+        acts[n:n + len(h)] = h.half().cpu()
+        n += len(h)
+    assert torch.isfinite(acts[:n]).all()
+    return acts[:n]
+
+def lm_save_sae(sae, tokens, name):
+    """Write sae in fp16, with its config and its training-token count, as
+    the regenerated artifact name (d2l.lm_save_rerun); sae then holds the
+    fp16 values the file publishes.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    state = {'state_dict': {k: v.half() for k, v in sae.state_dict().items()},
+             'config': dict(d_model=sae.d_model, d_sae=sae.d_sae, k=sae.k,
+                            center=sae.center), 'tokens': tokens}
+    d2l.lm_save_rerun(name, lambda p: torch.save(state, p))
+    sae.load_state_dict(state['state_dict'])
+
+def lm_load_sae(key, device=None):
+    """The TopKSAE that lm_save_sae wrote, registered as DATA_HUB[key],
+    and the number of tokens it was trained on.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    saved = torch.load(d2l.download_keyed(key), map_location='cpu',
+                       weights_only=True)
+    sae = d2l.TopKSAE(**saved['config'])
+    sae.load_state_dict(saved['state_dict'])
+    return sae.to(device), saved['tokens']
+
+def lm_stream(model, docs, site, batch=16):
+    """The activation at site (recorded by d2l.intervene, which stops the
+    forward there) at the positions >= 1 of docs: (docs, positions, d).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    out, dev = [], model.token_emb.weight.device
+    for X in docs.split(batch):
+        with torch.no_grad(), d2l.intervene(model, stop_after=site) as ctx:
+            model(X.to(dev))
+        out.append(ctx.cache[site][0][:, 1:])
+    return torch.cat(out)
+
+@torch.no_grad()
+def sae_fire_rate(sae, H, chunk=2048):
+    """The fraction of the positions of H (..., d) where each feature of
+    sae fires.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    flat = H.reshape(-1, H.shape[-1])
+    fired = sum((sae.encode(h) > 0).sum(0) for h in flat.split(chunk))
+    return fired / len(flat)
+
+@torch.no_grad()
+def sae_acts(sae, H, feats, chunk=2048):
+    """The activations of the features feats of sae on H (docs, positions,
+    d): (docs, positions, len(feats)), in fp32.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    return torch.cat([sae.encode(h)[:, feats] for h in H.flatten(0, 1).split(
+        chunk)]).view(*H.shape[:2], len(feats)).float()
+
+def char_fraction(text, pattern):
+    """The fraction of the non-space characters of text that match the
+    compiled regular expression pattern (0 for an empty text).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    chars = [c for c in text if not c.isspace()]
+    return sum(pattern.match(c) is not None for c in chars) / max(
+        len(chars), 1)
+
+@torch.no_grad()
+def lm_doc_ce(model, docs, prefix_ids=(), mask=None, batch=16):
+    """Per document of docs (N, T), after the tokens prefix_ids: the mean
+    cross-entropy of its tokens 1 to T - 1, and the same renormalized over
+    the vocabulary outside the boolean mask (V,) and averaged over the
+    targets outside it. Returns an (N, 2) array.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    dev, P, out = model.token_emb.weight.device, len(prefix_ids), []
+    mask = mask.to(dev)
+    X = torch.cat([torch.tensor(list(prefix_ids), dtype=torch.long).expand(
+        len(docs), P), docs], 1)
+    for Xb in X.split(batch):
+        Xb = Xb.to(dev)
+        z, y = model(Xb)[:, P:-1].float(), Xb[:, P + 1:]
+        z_y = z.gather(-1, y[..., None])[..., 0]
+        ce = z.logsumexp(-1) - z_y
+        ce_rest = z.masked_fill(mask, -torch.inf).logsumexp(-1) - z_y
+        rest = ~mask[y]
+        out.append(torch.stack([ce.mean(1), (ce_rest * rest).sum(1)
+                                / rest.sum(1)], 1).cpu())
+    return torch.cat(out).numpy()
+
+def frontier_envelope(cost, sw):
+    """The monotone envelope of the points (cost, sw): the most switched at
+    each cost or less, costs clipped at 0; one vertex per distinct cost.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    order = np.argsort(cost, kind='stable')
+    x, y = np.clip(cost[order], 0, None), np.maximum.accumulate(sw[order])
+    last = np.append(x[1:] > x[:-1], True)  # ties: keep the last, the most
+    return x[last], y[last]
+
+def frontier_area(cost, sw, cap):
+    """The area under the frontier from cost 0 to cap (linear between the
+    envelope's vertices, flat past the last).
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    grid = np.linspace(0, cap, 101)
+    return np.trapezoid(np.interp(grid, *frontier_envelope(cost, sw)), grid)
+
+def cost_of_half(cost, sw):
+    """The cost at which a strength grid (cost and switched fraction per
+    strength, in increasing strength) first switches half: linear between
+    the first strength that does and the strength before it; NaN if none
+    does. Read along the strengths, not the envelope: past the cliff the
+    cost falls as the output breaks down.
+
+    Defined in :numref:`sec_lm_interpretability`"""
+    j = np.flatnonzero(np.asarray(sw) >= 0.5)
+    if not len(j):
+        return np.nan
+    if j[0] == 0:
+        return float(cost[0])
+    (c0, c1), (s0, s1) = cost[j[0] - 1:j[0] + 1], sw[j[0] - 1:j[0] + 1]
+    return float(c0 + (0.5 - s0) * (c1 - c0) / (s1 - s0))
+
+_R3_DIRECTIVES = ('numref', 'eqref', 'exref', 'ref', 'cite', 'citet', 'label',
+                  'eqlabel', 'exlabel', 'begin_tab', 'end_tab', 'width',
+                  'height', 'maxdepth')
+
+def _r3_caption_head(caption, width=80):
+    """The first sentence of a caption, on one line, at most width chars.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    text = ' '.join(caption.split())
+    head = re.split(r'(?<=[.:;])\s', text, maxsplit=1)[0].rstrip('.:;')
+    return head if len(head) <= width else head[:width - 3].rstrip() + '...'
+
+def _r3_label_titles(sources):
+    """Pass 1 of the reference rewriting: {label: (kind, title, doc_id)}
+    for every :label: in sources ({doc_id: raw markdown}); kind is
+    'Chapter', 'Section', 'Figure' or 'Table' by what the label follows."""
+    titles = {}
+    for doc_id, text in sources.items():
+        heading = None
+        for m in re.finditer(
+                r'^(#{1,6})\s+(.*)$|^\s*:label:`([^`]+)`', text, re.M):
+            if m.group(1):
+                heading = re.sub(r'\s*\{[^}]*\}\s*$', '', m.group(2)).strip()
+                continue
+            label, before = m.group(3), text[:m.start()].rstrip()
+            last = before.rsplit('\n', 1)[-1]
+            image = re.search(r'!\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\([^)\s]*\)'
+                              r'(\{[^}]*\})?\s*$', before[-2000:])
+            if last.startswith('#'):
+                kind = 'Chapter' if label.startswith('chap') else 'Section'
+                title = heading
+            elif image:
+                kind, title = 'Figure', image.group(1)
+            elif last.startswith(':') and not last.startswith(':label'):
+                kind, title = 'Table', last[1:]
+            else:
+                kind, title = 'Section', heading
+            titles.setdefault(label, (kind, title, doc_id))
+    raw = dict(titles)
+    for label, (kind, title, doc_id) in raw.items():  # titles as plain text
+        title = _r3_rewrite_refs(' '.join((title or '').split()), raw, [])
+        if kind in ('Figure', 'Table'):
+            title = _r3_caption_head(title)
+        titles[label] = (kind, title, doc_id)
+    return titles
+
+def _r3_rewrite_refs(line, label_titles, unresolved):
+    """Rewrite the reference directives of one prose line (rule 4); a
+    kind the text already names ('exercise :exref:', 'Table :numref:') is
+    not repeated."""
+    def sub(m):
+        name, arg = m.group(1), m.group(2)
+        before = re.search(r'(\w+)\s*$', m.string[:m.start()])
+        before = before.group(1).lower() if before else ''
+        if name not in _R3_DIRECTIVES:
+            raise ValueError(f'unknown directive :{name}: in {line!r}')
+        if name in ('cite', 'citet'):
+            return ''
+        if name in ('eqref', 'exref'):
+            kind = 'Equation' if name == 'eqref' else 'Exercise'
+            named = before in ('equation', 'equations', 'exercise',
+                               'exercises', 'problem', 'problems')
+            return '\x00' if named else kind
+        if name in ('numref', 'ref'):
+            hit = label_titles.get(arg.strip())
+            if hit is None:
+                unresolved.append(arg.strip())
+                return 'another section'
+            kind, title, _ = hit
+            named = before.rstrip('s') == kind.lower()
+            return (f'"{title}"' if name == 'ref' or named
+                    else f'{kind} "{title}"')
+        return ''  # label, eqlabel, exlabel, width, height inside a line
+    line = re.sub(r'^[ \t]*:(cite|citet):`[^`]*`', '\x01', line)  # join up
+    line = re.sub(r'[ \t]*(?<![\w`]):(cite|citet):`[^`]*`', '', line)
+    line = re.sub(r'(?<![\w`]):([a-z_]+):`([^`]*)`', sub, line)
+    return re.sub(r'[ \t]*\x00', '', line)  # a dropped reference
+
+def clean_d2l_markdown(text, framework='pytorch', keep_exercises=False,
+                       label_titles=None):
+    """One book source as plain text for retrieval, and its metadata: the
+    slide deck cut, framework tabs other than framework dropped, cells as
+    plain python fences, references rewritten as titles, citations and
+    markup removed, exercises dropped (rules 1-8 of the book corpus).
+    Returns (text, meta) with meta keys title, label, headings,
+    cell_ids, unresolved_refs, has_exercises."""
+    lines = text.split('\n')
+    for i, line in enumerate(lines):  # rule 1: cut the slide deck
+        if (line.strip() == '<!-- slides -->'
+                or re.match(r'^::: \{\.(slide|cover)', line)):
+            lines = lines[:i]
+            break
+    if label_titles is None:
+        label_titles = _r3_label_titles({None: '\n'.join(lines)})
+    meta = dict(title=None, label=None, headings=[], cell_ids=[],
+                unresolved_refs=[], has_exercises=False)
+    segs = []  # (kind, text): 'prose' lines, 'code' blocks, 'cell' blocks
+    tab_keep, in_comment, last_heading, i = None, False, None, 0
+    def emit(kind, s, cell_id=None):
+        if tab_keep is not False:
+            segs.append((kind, s, cell_id))
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        if in_comment:  # rule 5: HTML comments
+            if '-->' in line:
+                in_comment, line = False, line.split('-->', 1)[1]
+            else:
+                continue
+        while '<!--' in line:
+            head, tail = line.split('<!--', 1)
+            if '-->' in tail:
+                line = head + tail.split('-->', 1)[1]
+            else:
+                line, in_comment = head, True
+        fence = re.match(r'^(\s*)(`{3,}|~{3,})(.*)$', line)
+        if fence:  # rules 3 and 8: a fence and its body
+            mark, info, body = fence.group(2), fence.group(3).strip(), []
+            while i < len(lines) and not re.match(
+                    rf'^\s*{re.escape(mark[0])}{{{len(mark)},}}\s*$', lines[i]):
+                body.append(lines[i])
+                i += 1
+            if i == len(lines):
+                raise ValueError(f'unclosed fence {line!r}')
+            i += 1
+            if info == 'toc':
+                continue
+            if not info.startswith('{.python'):
+                emit('code', '\n'.join([line, *body, lines[i - 1]]))
+                continue
+            first = next((b for b in body if b.strip()), '')
+            tab = re.match(r'^\s*(?:%%tab|#@tab)\s+(.*)$', first)
+            if tab:
+                fws = {f.strip() for f in tab.group(1).split(',')}
+                if not fws & {framework, 'all'}:
+                    continue
+                body = body[body.index(first) + 1:]
+            code = [b for b in body if b.strip()]
+            imports = [b for b in code if re.match(  # and d2lbook's tabs
+                r'^\s*(import\s|from\s\S+\s+import\s|%matplotlib|'
+                r'%load_ext\s|tab\.interact_select\()', b)]
+            if not code or len(imports) >= 0.9 * len(code):
+                continue
+            cell_id = re.search(r'#([\w-]+)', info)
+            emit('cell', '```python\n' + '\n'.join(body).strip('\n')
+                 + '\n```', cell_id.group(1) if cell_id else None)
+            continue
+        if in_comment and not line.strip():
+            continue
+        tab = re.match(r'^\s*:begin_tab:`([^`]*)`\s*$', line)
+        if tab:  # rule 2: prose tabs
+            if tab_keep is not None:
+                raise ValueError('nested :begin_tab:')
+            fws = {f.strip() for f in tab.group(1).split(',')}
+            tab_keep = bool(fws & {framework, 'all'})
+            continue
+        if re.match(r'^\s*:end_tab:\s*$', line):
+            if tab_keep is None:
+                raise ValueError(':end_tab: without :begin_tab:')
+            tab_keep = None
+            continue
+        if re.match(r'^##\s+Exercises\s*$', line):  # rule 7
+            meta['has_exercises'] = True
+            if not keep_exercises:
+                break
+        label = re.match(r'^\s*:label:`([^`]+)`\s*$', line)
+        if label:  # attach a label to the heading it follows
+            prev = next((s for s in reversed(segs) if s[1].strip()), None)
+            if last_heading is not None and prev is not None and (
+                    prev[1] is last_heading[1]):
+                last_heading[0]['label'] = label.group(1)
+            continue
+        if re.match(r'^\s*:(eqlabel|exlabel|width|height):`[^`]*`\s*$', line):
+            continue
+        if (re.match(r'^\s*:::', line)
+                or re.match(r'^\s*\[Discussions\]\(', line)):
+            continue
+        caption = re.match(r'^:([^\s:`].*)$', line)
+        if caption and not re.match(r'^:[a-z_]+:`', line):  # table caption
+            line = 'Table: ' + caption.group(1)
+        line = _r3_rewrite_refs(line, label_titles, meta['unresolved_refs'])
+        if not line.strip() and tab_keep is not False:
+            segs.append(('prose', '', None))
+            continue
+        heading = re.match(r'^(#{1,6})\s+(.*?)\s*(\{[^}]*\})?\s*$', line)
+        line = line.rstrip()
+        if heading:  # without attributes such as {.unnumbered}
+            line = heading.group(1) + ' ' + heading.group(2)
+        if heading and tab_keep is not False:
+            h = dict(level=len(heading.group(1)), title=heading.group(2),
+                     label=None, char_start=None)
+            meta['headings'].append(h)
+            last_heading = (h, line)
+        emit('prose', line)
+    if tab_keep is not None:
+        raise ValueError('unclosed :begin_tab:')
+    if in_comment:
+        raise ValueError('unclosed HTML comment')
+    # Images become 'Figure: caption'; runs of blank lines collapse (rule 5)
+    out, prose = [], []
+    def flush():
+        s = '\n'.join(prose)
+        s = re.sub(r'!\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\([^)\s]*\)(\{[^}]*\})?',
+                   lambda m: 'Figure: ' + ' '.join(m.group(1).split()), s)
+        s = re.sub(r'\n\x01(?=[.,;:!?)])', '', s).replace('\x01', '')
+        s = re.sub(r'\n\s*\n(\s*\n)+', '\n\n', s)
+        if s.strip():
+            out.append(s.strip('\n'))
+        prose.clear()
+    for kind, s, cell_id in segs:
+        if kind == 'prose':
+            prose.append(s)
+            continue
+        flush()
+        out.append(('cell' if kind == 'cell' else 'code', s, cell_id))
+    flush()
+    text, parts = '', []
+    for part in out:  # prose, code and cells, one blank line apart
+        if parts:
+            text += '\n\n'
+        if isinstance(part, tuple):
+            if part[0] == 'cell':
+                meta['cell_ids'].append(dict(
+                    id=part[2], char_start=len(text),
+                    char_end=len(text) + len(part[1])))
+            text += part[1]
+        else:
+            text += part
+        parts.append(part)
+    text += '\n'
+    # Heading offsets in the cleaned text, in order, outside code fences
+    spans = [(c.start(), c.end()) for c in re.finditer(
+        r'^```.*?^```', text, re.M | re.S)]
+    found = [m for m in re.finditer(r'^(#{1,6})\s+(.*?)\s*$', text, re.M)
+             if not any(a <= m.start() < b for a, b in spans)]
+    if len(found) != len(meta['headings']):
+        raise ValueError('heading count changed during cleaning')
+    for h, m in zip(meta['headings'], found):
+        h['char_start'], h['title'] = m.start(), m.group(2)
+    h1 = next((h for h in meta['headings'] if h['level'] == 1), None)
+    if h1 is not None:
+        meta['title'], meta['label'] = h1['title'], h1['label']
+    return text, meta
+
+def _r3_sentences(text):
+    """Character spans (start, end) of the sentences of a prose text: a
+    sentence ends at '.', '!' or '?' followed by whitespace and an upper-case
+    letter, a digit, a dollar sign or a backtick.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    ends = [m.end() for m in re.finditer(
+        r'(?<=[.!?])["\')\]]?(?=\s+[A-Z0-9$`(])', text)]
+    starts = [0] + [len(text) - len(text[e:].lstrip()) for e in ends]
+    return [(s, e) for s, e in zip(starts, ends + [len(text)]) if e > s]
+
+def _r3_parse_blocks(text):
+    """The blocks of a cleaned document, as (kind, start, end) character
+    spans: 'heading', 'para', 'list', 'table', 'math' ($$ ... $$), 'code'
+    (a fence), 'quote'. Blocks are separated by blank lines; a fence or a
+    display-math block runs to its closing line; a heading line is a block
+    of its own."""
+    blocks, pos, n = [], 0, len(text)
+    line_starts = [0] + [m.end() for m in re.finditer('\n', text)]
+    lines = text.split('\n')
+    k = 0
+    while k < len(lines):
+        line, start = lines[k], line_starts[k]
+        if not line.strip():
+            k += 1
+            continue
+        fence = re.match(r'^\s*(`{3,}|~{3,})', line)
+        if fence or line.strip().startswith('$$'):
+            if fence:
+                close = rf'^\s*{re.escape(fence.group(1)[0])}{{{len(fence.group(1))},}}\s*$'
+            j = k + 1
+            if fence or line.strip() == '$$' or not (
+                    line.strip().endswith('$$') and len(line.strip()) > 2):
+                while j < len(lines) and not (
+                        re.match(close, lines[j]) if fence
+                        else lines[j].strip().endswith('$$')):
+                    j += 1
+                j += 1
+            end = line_starts[j - 1] + len(lines[j - 1]) if j <= len(
+                lines) else n
+            blocks.append(('code' if fence else 'math', start, end))
+            k = j
+            continue
+        if re.match(r'^#{1,6}\s', line):
+            blocks.append(('heading', start, start + len(line)))
+            k += 1
+            continue
+        j = k
+        while (j + 1 < len(lines) and lines[j + 1].strip()
+               and not re.match(r'^(#{1,6}\s|\s*(`{3,}|~{3,})|\s*\$\$)',
+                                lines[j + 1])):
+            j += 1
+        s = line.lstrip()
+        kind = ('table' if s.startswith('|') else 'quote' if s.startswith('>')
+                else 'list' if re.match(r'^([-*+]|\d+\.)\s', s) else 'para')
+        blocks.append((kind, start, line_starts[j] + len(lines[j])))
+        k = j + 1
+    return blocks
+
+def _r3_ntokens(tokenizer, text):
+    """Number of tokens of text, without special tokens.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    return len(tokenizer(text, add_special_tokens=False)['input_ids'])
+
+def _r3_split_block(text, kind, start, end, tokenizer, max_tokens):
+    """Split one block longer than max_tokens into pieces (code at blank
+    lines or def/class lines, math at line ends, prose at sentence ends,
+    a remainder at token windows), as (kind, start, end) spans."""
+    piece = text[start:end]
+    if kind == 'code':  # never right after the opening fence line
+        cuts = [m.start() for m in re.finditer(
+            r'\n(?=\s*\n)|\n(?=(def|class|@)\b)', piece)
+            if m.start() > piece.find('\n')]
+    elif kind in ('math', 'table', 'list'):
+        cuts = [m.start() for m in re.finditer(r'\n', piece)]
+    else:
+        cuts = [e for _, e in _r3_sentences(piece)][:-1]
+    bounds = [0] + sorted(set(cuts)) + [len(piece)]
+    units = [(start + a, start + b) for a, b in zip(bounds, bounds[1:])]
+    out, cur = [], None
+    for a, b in units:
+        if cur is not None and _r3_ntokens(
+                tokenizer, text[cur[0]:b]) <= max_tokens:
+            cur = (cur[0], b)
+            continue
+        if cur is not None:
+            out.append(cur)
+        cur = (a, b)
+        if _r3_ntokens(tokenizer, text[a:b]) > max_tokens:  # token windows
+            for w in chunk_fixed(dict(text=text[a:b]), tokenizer,
+                                 size=max_tokens, overlap=0):
+                out.append((a + w['char_start'], a + w['char_end']))
+            cur = None
+    if cur is not None:
+        out.append(cur)
+    return [(kind, a + len(text[a:b]) - len(text[a:b].lstrip()),
+             a + len(text[a:b].rstrip())) for a, b in out
+            if text[a:b].strip()]
+
+def _r3_chunk_record(doc, tag, k, strategy, start, end, tokenizer, path,
+                     section_label, kinds):
+    """One chunk dict of doc over doc['text'][start:end]."""
+    text = doc['text'][start:end]
+    cells = [c['id'] for c in doc.get('cell_ids', ())
+             if c['char_start'] < end and c['char_end'] > start]
+    body = set(kinds) - {'heading'}
+    kind = ('code' if body == {'code'} else 'table' if body == {'table'}
+            else 'mixed' if 'code' in body else 'prose')
+    return dict(id=f'{tag}:{doc["doc_id"]}#{k:03d}', doc_id=doc['doc_id'],
+                strategy=strategy, text=text, heading_path=list(path),
+                char_start=start, char_end=end,
+                n_tokens=_r3_ntokens(tokenizer, text), kind=kind,
+                cell_ids=[c for c in cells if c], section_label=section_label)
+
+def _r3_heading_path(doc, pos):
+    """(H1..H3 titles, deepest label) in force at character pos of doc."""
+    path, labels = {}, {}
+    for h in doc.get('headings', ()):
+        if h['char_start'] > pos:
+            break
+        if h['level'] <= 3:
+            path = {l: t for l, t in path.items() if l < h['level']}
+            labels = {l: t for l, t in labels.items() if l < h['level']}
+            path[h['level']] = h['title']
+            labels[h['level']] = h['label']
+    label = next((labels[l] for l in sorted(labels, reverse=True)
+                  if labels[l]), None)
+    return [path[l] for l in sorted(path)], label
+
+def chunk_sections(doc, tokenizer, max_tokens=512, min_tokens=64,
+                   tag='sec512'):
+    """Structure-aware chunks of a cleaned document (a dict with doc_id,
+    text, headings, cell_ids): the blocks under each H1-H3 heading packed
+    greedily up to max_tokens; a display-math block stays with the
+    paragraph before it and a following paragraph starting 'where', a code
+    cell with the paragraph before it when both fit; a section under
+    min_tokens merges into its neighbour under the same H2."""
+    text = doc['text']
+    size = lambda bl: sum(_r3_ntokens(tokenizer, text[a:b]) for _, a, b in bl)
+    units, h2 = [], 0  # [H2 count, path, label, heading block, blocks]
+    for kind, a, b in _r3_parse_blocks(text):
+        level = len(text[a:b]) - len(text[a:b].lstrip('#'))
+        if kind == 'heading' and level <= 3:
+            h2 += level <= 2
+            units.append([h2, *_r3_heading_path(doc, a), (kind, a, b), []])
+        elif units:
+            units[-1][4].append((kind, a, b))
+        else:
+            units.append([h2, *_r3_heading_path(doc, a), None, [(kind, a, b)]])
+    merged = []  # a small section joins its neighbour under the same H2
+    for u in units:
+        if merged and merged[-1][0] == u[0] and (
+                size(u[4]) < min_tokens or size(merged[-1][4]) < min_tokens):
+            merged[-1][4].extend([u[3]] + u[4])
+        else:
+            merged.append(u)
+    chunks = []
+    for _, path, label, _, ublocks in merged:
+        groups = []  # atomic runs of blocks
+        for kind, a, b in ublocks:
+            prev = groups[-1] if groups else None
+            glue = prev is not None and (
+                (kind == 'math' and prev[-1][0] in ('para', 'list', 'math'))
+                or (kind == 'para' and prev[-1][0] == 'math'
+                    and text[a:b].lstrip().lower().startswith('where'))
+                or (kind == 'code' and prev[-1][0] == 'para' and _r3_ntokens(
+                    tokenizer, text[prev[0][1]:b]) <= max_tokens))
+            if glue:
+                prev.append((kind, a, b))
+            else:
+                groups.append([(kind, a, b)])
+        pieces = []  # groups that fit, else their blocks, else block pieces
+        for g in groups:
+            if _r3_ntokens(tokenizer, text[g[0][1]:g[-1][2]]) <= max_tokens:
+                pieces.append(g)
+                continue
+            for kind, a, b in g:
+                if _r3_ntokens(tokenizer, text[a:b]) <= max_tokens:
+                    pieces.append([(kind, a, b)])
+                else:
+                    pieces.extend([p] for p in _r3_split_block(
+                        text, kind, a, b, tokenizer, max_tokens))
+        cur = []
+        for p in pieces:
+            if cur and _r3_ntokens(
+                    tokenizer, text[cur[0][1]:p[-1][2]]) > max_tokens:
+                chunks.append((cur, path, label))
+                cur = []
+            cur = cur + p
+        if cur:
+            chunks.append((cur, path, label))
+    out = []
+    for k, (bl, path, label) in enumerate(chunks):
+        a, b = bl[0][1], bl[-1][2]
+        out.append(_r3_chunk_record(doc, tag, k, 'sections', a, b, tokenizer,
+                                    path, label, [x[0] for x in bl]))
+    return out
+
+def chunk_fixed(doc, tokenizer, size=256, overlap=0, tag=None):
+    """Windows of size tokens with overlap tokens shared, over the token
+    stream of doc['text'], cut at character boundaries: a window ends at
+    its last token whose characters it does not share with the next token
+    (a byte-level token can hold part of a character)."""
+    text = doc['text']
+    enc = tokenizer(text, add_special_tokens=False,
+                    return_offsets_mapping=True)
+    offs = enc['offset_mapping']
+    n = len(offs)
+    shared = lambda j: j + 1 < n and offs[j][1] > offs[j + 1][0]
+    windows, i = [], 0
+    while i < n:
+        j = min(i + size, n) - 1
+        while j > i and shared(j):
+            j -= 1
+        windows.append((offs[i][0], offs[j][1]))
+        if j == n - 1:
+            break
+        nxt = max(j + 1 - overlap, i + 1)
+        while nxt < n and nxt > 0 and offs[nxt - 1][1] > offs[nxt][0]:
+            nxt += 1  # never start inside a character
+        i = nxt
+    if tag is None:
+        return [dict(char_start=a, char_end=b) for a, b in windows]
+    out, blocks = [], _r3_parse_blocks(text)
+    for k, (a, b) in enumerate(windows):
+        path, label = _r3_heading_path(doc, a)
+        kinds = [kind for kind, s, e in blocks if s < b and e > a]
+        out.append(_r3_chunk_record(doc, tag, k, 'fixed', a, b, tokenizer,
+                                    path, label, kinds))
+    return out
+
+_R3_EXCLUDED = {  # directory prefix: reason
+    'chapter_language-models': 'Language Models part (self-reference)',
+    'chapter_lm-': 'Language Models part (self-reference)',
+    'chapter_attic': 'Attic', 'chapter_gaussian-processes': 'Attic',
+    'chapter_hyperparameter-optimization': 'Attic',
+    'chapter_recommender-systems': 'Attic',
+    'chapter_natural-language-processing-pretraining': 'retiring NLP chapter',
+    'chapter_natural-language-processing-applications': 'retiring NLP chapter',
+    'chapter_preface': 'front matter', 'chapter_installation': 'front matter',
+    'chapter_notation': 'front matter', 'chapter_references': 'references'}
+_R3_SPLIT_SALT = 'r3-split-v1|'
+R3_TOKENIZER = 'Qwen/Qwen3-0.6B'
+R3_VERSION = 'r3.1'
+
+def _r3_quarto_files(quarto_yml):
+    """[(path without .md, part file or None)] of the chapter files that
+    _quarto.yml lists, in book order, part files included.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    files, part = [], None
+    for line in quarto_yml.split('\n'):
+        m = re.match(r'^\s*-\s+part:\s*(\S+)\.qmd\s*$', line)
+        if m:
+            part = m.group(1)
+            files.append((part, None))
+            continue
+        m = re.match(r'^\s*-\s+(chapter_\S+)\.qmd\s*$', line)
+        if m:
+            files.append((m.group(1), part))
+    return files
+
+def _r3_split_docs(doc_ids):
+    """{doc_id: 'train'|'dev'|'test'}: within each chapter directory the
+    files ordered by sha256 of a salted id; floor(0.15 n + 0.5) to dev, as
+    many to test, the rest to train; chapters of fewer than 4 files train."""
+    by_chapter = collections.defaultdict(list)
+    for d in doc_ids:
+        by_chapter[d.split('/')[0]].append(d)
+    split = {}
+    for docs in by_chapter.values():
+        docs = sorted(docs, key=lambda d: hashlib.sha256(
+            (_R3_SPLIT_SALT + d).encode()).hexdigest())
+        m = math.floor(0.15 * len(docs) + 0.5) if len(docs) >= 4 else 0
+        for i, d in enumerate(docs):
+            split[d] = 'dev' if i < m else 'test' if i < 2 * m else 'train'
+    return split
+
+def _r3_build(read, commit, tokenizer, revision):
+    """The book corpus from the sources at a commit: read(path) returns a
+    file's text at that commit. Returns (manifest, docs, chunkings), with
+    docs a list of document dicts and chunkings {tag: chunk list}."""
+    listed = _r3_quarto_files(read('_quarto.yml'))
+    parts = {p for p, _ in listed if _ is None}
+    included, excluded = [], collections.Counter()
+    for path, part in listed:
+        reason = next((r for pre, r in _R3_EXCLUDED.items()
+                       if path.startswith(pre)), None)
+        if part is None and reason is None:
+            reason = 'part placeholder'
+        if reason is None and path in parts:
+            reason = 'part placeholder'
+        if reason:
+            excluded[(path.split('/')[0], reason)] += 1
+        else:
+            included.append((path, part))
+    raw = {path: read(path + '.md') for path, _ in included}
+    titles = _r3_label_titles(raw)
+    part_titles = {p: re.search(r'^#\s+(.*?)\s*$', read(p + '.md'),
+                                re.M).group(1) for p in parts}
+    split = _r3_split_docs(raw)
+    docs, unresolved = [], collections.Counter()
+    for path, part in sorted(included):
+        text, meta = clean_d2l_markdown(raw[path], label_titles=titles)
+        unresolved.update(meta['unresolved_refs'])
+        docs.append(dict(
+            doc_id=path, title=meta['title'], label=meta['label'],
+            chapter=path.split('/')[0], part=part_titles[part], text=text,
+            headings=meta['headings'], cell_ids=meta['cell_ids'],
+            n_tokens=_r3_ntokens(tokenizer, text),
+            source_sha256=hashlib.sha256(raw[path].encode()).hexdigest(),
+            split=split[path]))
+    chapter_titles = {d['chapter']: d['title'] for d in docs
+                      if d['doc_id'].endswith('/index')}
+    for d in docs:
+        d['chapter_title'] = chapter_titles.get(d['chapter'], d['title'])
+    chunkings = {'sec512': [], 'fix256o0': [], 'fix256o64': []}
+    for d in docs:
+        chunkings['sec512'] += chunk_sections(d, tokenizer)
+        chunkings['fix256o0'] += chunk_fixed(d, tokenizer, 256, 0,
+                                             tag='fix256o0')
+        chunkings['fix256o64'] += chunk_fixed(d, tokenizer, 256, 64,
+                                              tag='fix256o64')
+    def quantiles(xs):
+        return {str(q): int(np.quantile(xs, q, method='nearest'))
+                for q in (0, 0.1, 0.5, 0.9, 0.99, 1)}
+    manifest = dict(
+        corpus_version=R3_VERSION, book_commit=commit,
+        builder_version='build_r3-1',
+        cleaning=dict(framework='pytorch', keep_exercises=False),
+        tokenizer=dict(id=R3_TOKENIZER, revision=revision),
+        included=dict(collections.Counter(p.split('/')[0]
+                                          for p, _ in included)),
+        excluded=[dict(directory=d, reason=r, files=n)
+                  for (d, r), n in sorted(excluded.items())],
+        files={d['doc_id']: d['source_sha256'] for d in docs},
+        doc_split={d['doc_id']: d['split'] for d in docs},
+        counts=dict(docs=len(docs), **{
+            f'docs_{s}': sum(d['split'] == s for d in docs)
+            for s in ('train', 'dev', 'test')},
+            chars=sum(len(d['text']) for d in docs),
+            tokens=sum(d['n_tokens'] for d in docs),
+            **{f'chunks_{t}': len(c) for t, c in chunkings.items()}),
+        token_quantiles={t: quantiles([c['n_tokens'] for c in cs])
+                         for t, cs in chunkings.items()},
+        unresolved_refs=dict(count=sum(unresolved.values()),
+                             labels=dict(sorted(unresolved.items()))),
+        chunking=dict(sec512=dict(strategy='sections', max_tokens=512,
+                                  min_tokens=64),
+                      fix256o0=dict(strategy='fixed', size=256, overlap=0),
+                      fix256o64=dict(strategy='fixed', size=256,
+                                     overlap=64)))
+    return manifest, docs, chunkings
+
+class BookCorpus:
+    """The book corpus under one chunking: chunks (a list of dicts in
+    document order), docs ({doc_id: dict}), the manifest, and views of the
+    chunk texts for a generator ('display'), a dense encoder ('dense') and
+    a word index ('sparse'). Iterating yields the chunks in order;
+    corpus[cid] looks a chunk up by its id.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    def __init__(self, manifest, docs, chunks, tag):
+        self.manifest, self.tag = manifest, tag
+        self.version = manifest['corpus_version']
+        self.docs = {d['doc_id']: d for d in docs}
+        self.chunks = chunks
+        self.ids = [c['id'] for c in chunks]
+        self._index = {c['id']: i for i, c in enumerate(chunks)}
+        self._by_doc = collections.defaultdict(list)
+        for c in chunks:
+            self._by_doc[c['doc_id']].append(c)
+
+    def __len__(self):
+        return len(self.chunks)
+
+    def __iter__(self):
+        return iter(self.chunks)
+
+    def __getitem__(self, chunk_id):
+        return self.chunks[self._index[chunk_id]]
+
+    def header(self, chunk):
+        """'Chapter > Section > Subsection' of a chunk."""
+        doc = self.docs[chunk['doc_id']]
+        path = list(chunk['heading_path'])
+        if not path or path[0] != doc['chapter_title']:
+            path = [doc['chapter_title']] + path
+        return ' > '.join(path)
+
+    def texts(self, view='display', header=True):
+        """Chunk texts, in chunk order, for a view: 'display' (the text),
+        'dense' (code cells cut to their first 30 lines) or 'sparse' (math
+        removed)."""
+        out = []
+        for c in self.chunks:
+            t = c['text']
+            if view == 'dense':
+                t = re.sub(r'(^```python\n)(.*?)(^```)',
+                           lambda m: m.group(1) + _r3_cut_code(m.group(2))
+                           + m.group(3), t, flags=re.M | re.S)
+            elif view == 'sparse':
+                t = _r3_strip_math(t)
+            elif view != 'display':
+                raise ValueError(f'unknown view {view!r}')
+            out.append(self.header(c) + '\n' + t if header else t)
+        return out
+
+    def split_of(self, doc_id):
+        """'train', 'dev' or 'test' of a document."""
+        return self.manifest['doc_split'][doc_id]
+
+    def chunk_split(self, chunk_id):
+        """The split of the document a chunk comes from."""
+        return self.split_of(self[chunk_id]['doc_id'])
+
+    def span_to_chunk_ids(self, doc_id, start, end, min_overlap=0.5):
+        """Ids of the chunks of doc_id that overlap the character span
+        [start, end) by at least min_overlap of the span's or of the
+        chunk's characters."""
+        out = []
+        for c in self._by_doc.get(doc_id, ()):
+            ov = min(end, c['char_end']) - max(start, c['char_start'])
+            if ov > 0 and (ov >= min_overlap * (end - start) or
+                           ov >= min_overlap * (c['char_end'] -
+                                                c['char_start'])):
+                out.append(c['id'])
+        return out
+
+def _r3_cut_code(code, n_lines=30):
+    """The first n_lines lines of a code cell's body, '# ...' if cut."""
+    lines = code.split('\n')
+    return code if len(lines) <= n_lines + 1 else '\n'.join(
+        lines[:n_lines] + ['# ...', ''])
+
+def _r3_strip_math(text):
+    """text with $$...$$ and $...$ spans removed outside code fences."""
+    parts = re.split(r'(^```.*?^```)', text, flags=re.M | re.S)
+    for i in range(0, len(parts), 2):
+        s = re.sub(r'\$\$.*?\$\$', ' ', parts[i], flags=re.S)
+        parts[i] = re.sub(r'(?<!\\)\$[^$\n]+?(?<!\\)\$', ' ', s)
+    return ''.join(parts)
+
+def _r3_read_zip(path, tags=None):
+    """(manifest, docs, {tag: chunks}) from a corpus zip; tags (default
+    all) names the chunkings to read, () none and no documents."""
+    with zipfile.ZipFile(path) as z:
+        manifest = json.loads(z.read('manifest.json'))
+        read = lambda name: [json.loads(l) for l in gzip.decompress(
+            z.read(name)).decode('utf-8').splitlines()]
+        tags = manifest['chunking'] if tags is None else tags
+        docs = read('docs.jsonl.gz') if tags else []
+        chunks = {t: read(f'chunks_{t}.jsonl.gz') for t in tags}
+    return manifest, docs, chunks
+
+def _r3_local(root, tokenizer, revision):
+    """The book corpus rebuilt in memory from a checkout's HEAD."""
+    import subprocess
+    commit = subprocess.run(['git', '-C', root, 'rev-parse', 'HEAD'],
+                            capture_output=True, text=True,
+                            check=True).stdout.strip()
+    read = lambda p: subprocess.run(
+        ['git', '-C', root, 'show', f'{commit}:{p}'], capture_output=True,
+        check=True).stdout.decode('utf-8')
+    manifest, docs, chunks = _r3_build(read, commit, tokenizer, revision)
+    return manifest, docs, chunks
+
+# The released embedders: pooling, padding side and the query instruction
+# format of their model cards; documents get no prefix
+_EMBEDDERS = {
+    'Qwen/Qwen3-Embedding-0.6B': dict(
+        pooling='last', padding_side='left',
+        query_format='Instruct: {task}\nQuery:{query}')}
+BOOK_TASK = 'Given a question about the book, retrieve passages that answer it'
+# Registered chunk vectors (sec512 chunks, 'dense' view, float16) by embedder
+_R3_EMB_KEYS = {
+    'Qwen/Qwen3-Embedding-0.6B': 'lm-enc-r3-emb-qwen3emb06b-sec512-v1'}
+
+def _emb_cache_key(corpus_version, tag, view, model_id, revision, max_len,
+                   pooling, prefix):
+    """sha1 naming the chunk vectors of one corpus, view and encoder.
+
+    Defined in :numref:`sec_lm_retrieval`"""
+    return hashlib.sha1('|'.join(map(str, (
+        corpus_version, tag, view, model_id, revision, max_len, pooling,
+        prefix))).encode()).hexdigest()
+
+def _emb_cache_load(key, root=os.path.join('..', 'data', 'lm', 'cache')):
+    """Cached chunk vectors (an array) under key, or None."""
+    path = os.path.join(root, f'emb-{key}.npy')
+    return np.load(path) if os.path.exists(path) else None
+
+def _emb_cache_save(key, X, root=os.path.join('..', 'data', 'lm', 'cache')):
+    """Write chunk vectors under key; return the path."""
+    os.makedirs(root, exist_ok=True)
+    path = os.path.join(root, f'emb-{key}.npy')
+    np.save(path + '.tmp.npy', X)
+    os.replace(path + '.tmp.npy', path)
+    return path
+
+_BOOK_QA_LOADS = collections.Counter()  # loads per split in this process
+
+def _book_qa_read(split, root=os.path.join('..', 'data', 'lm')):
+    """The items of one split of the question set, as dicts; a second load
+    of the test split in one process prints a notice.
+
+    Defined in :numref:`sec_lm_rag`"""
+    if split not in ('train', 'dev', 'test'):
+        raise ValueError(f'unknown split {split!r}')
+    _BOOK_QA_LOADS[split] += 1
+    if split == 'test' and _BOOK_QA_LOADS[split] == 2:
+        print('notice: the test split is loaded a second time in this '
+              'process; decisions belong to train and dev')
+    path = d2l.download_keyed('lm-book-qa-v2', root)
+    with zipfile.ZipFile(path) as z:
+        name = next(n for n in z.namelist()
+                    if n.rsplit('/', 1)[-1] == f'qa_{split}.jsonl')
+        lines = z.read(name).decode('utf-8').splitlines()
+    return [json.loads(l) for l in lines if l.strip()]
+
+class BookQA(list):
+    """Items of the book's question set (dicts), from one split."""
+    def __init__(self, items, split):
+        super().__init__(items)
+        self.split = split
+
+    def stats(self):
+        """Items per question type, answerable and book-specific (no
+        general_knowledge flag)."""
+        df = pd.DataFrame([dict(type=q['type'], answerable=q['answerable'],
+                                book_specific='general_knowledge' not in
+                                q.get('flags', ())) for q in self])
+        if df.empty:
+            return df
+        out = df.groupby('type', sort=False).agg(
+            items=('type', 'size'), answerable=('answerable', 'sum'),
+            book_specific=('book_specific', 'sum'))
+        out.loc['total'] = out.sum()
+        return out
+
+    def subset(self, n, seed=0, stratify='type'):
+        """n items drawn without replacement, in proportion to the counts
+        of stratify (largest remainders), kept in their original order."""
+        rng = np.random.default_rng(seed)
+        groups = collections.defaultdict(list)
+        for i, q in enumerate(self):
+            groups[q[stratify] if stratify else None].append(i)
+        keys = sorted(groups, key=str)
+        quota = {g: n * len(groups[g]) / len(self) for g in keys}
+        take = {g: math.floor(quota[g]) for g in keys}
+        for g in sorted(keys, key=lambda g: take[g] - quota[g])[
+                :n - sum(take.values())]:
+            take[g] += 1
+        picked = sorted(i for g in keys for i in rng.choice(
+            groups[g], size=min(take[g], len(groups[g])), replace=False))
+        return BookQA([self[i] for i in picked], self.split)
+
+# The judge's prompt, version 1: frozen before the book's question set was
+# built (its closed-book flags use it); a change is RAG_JUDGE_V2 and a new
+# question-set version
+RAG_JUDGE_V1 = {
+    'system': ('You grade answers to questions about the textbook Dive into '
+               'Deep Learning. Reply with one line of JSON and nothing '
+               'else.'),
+    'correct': ('correct: true if the answer states every key fact (in any '
+                'wording) and says nothing that contradicts the reference '
+                'answer; otherwise false.'),
+    'faithful': ('faithful: true if every factual statement in the answer is '
+                 'supported by the passages given (ignore the reference '
+                 'answer for this); otherwise false.'),
+    'supported': ('supported: true if the cited passages alone support the '
+                  'answer; false if they do not, or if the answer cites '
+                  'nothing.'),
+    'retry': 'Reply with the JSON line only, in exactly the requested form.'}
+
+# The judge of the RAG section, chosen 2026-11-14 against frontier-model
+# labels (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights
+# served by vLLM over two 24 GB GPUs; the same open weights are served in
+# BF16 on OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
+RAG_JUDGE_LOCAL = {'model': 'Qwen/Qwen3.8-27B-FP8',
+                   'revision': 'c3a462cc3d38cf351f3b26cbd763469eeb74ef81',
+                   'vllm': '0.33.0', 'thinking': True,
+                   'max_new_tokens': 3000}
+
+def rag_judge_server(n_gpus=2, port=None, vllm=None):
+    """A d2l.LocalChatServer that serves the judge (RAG_JUDGE_LOCAL) with
+    vLLM, its layers split over n_gpus GPUs (pipeline parallel), from the
+    executable vllm (default: the environment variable D2L_VLLM, else
+    `vllm` on the PATH). vLLM lives in an environment of its own, since it
+    pins its own PyTorch.
+
+    Defined in :numref:`sec_lm_rag`"""
+    import shutil  # not in the d2l library preamble
+    exe = vllm or os.environ.get('D2L_VLLM') or shutil.which('vllm')
+    if exe is None:
+        raise RuntimeError('no vLLM: install it in its own environment and '
+                           'set D2L_VLLM to its vllm executable')
+    j = d2l.RAG_JUDGE_LOCAL
+    return d2l.LocalChatServer([
+        exe, 'serve', j['model'], '--revision', j['revision'],
+        '--pipeline-parallel-size', str(n_gpus), '--max-model-len', '16384',
+        '--max-num-seqs', '64', '--gpu-memory-utilization', '0.9',
+        '--limit-mm-per-prompt', '{"image": 0, "video": 0}', '--seed', '0',
+        '--host', '127.0.0.1', '--port', '{port}'], port=port)
+
+def rag_judge_client(url='http://127.0.0.1/v1', cache=None, mode='replay'):
+    """A d2l.ChatAPI for the judge served at url, thinking on; the request
+    hash keeps the host only, so a recorded cache replays with no server."""
+    return d2l.ChatAPI(url, d2l.RAG_JUDGE_LOCAL['model'], cache=cache,
+                       mode=mode, default_params={'extra_body': {
+                           'chat_template_kwargs': {'enable_thinking': True}}})
+
+def _rag_abstained(answer):
+    """Whether an answer abstains: it contains the abstention sentence
+    (case, whitespace, quotes, emphasis and the final period ignored),
+    alone or with an explanation of what the passages lack. Generators
+    asked to reply with the sentence alone often explain first.
+
+    Defined in :numref:`sec_lm_rag`"""
+    norm = lambda s: re.sub(r'[\s"\'*]+', ' ', s).strip().rstrip('.').lower()
+    return norm(d2l.ABSTAIN) in norm(answer)
+
+def _rag_judge_messages(item, answer, context_texts, cited_ids):
+    """The judge's chat messages (RAG_JUDGE_V1) for the verdicts it has to
+    give on one answer: 'correct' always, 'faithful' and 'supported' when
+    there are passages."""
+    p = d2l.RAG_JUDGE_V1
+    facts = '\n'.join(f'- {f}' for f in item['key_facts']) or '- (none)'
+    parts = [f'Question: {item["question"]}',
+             f'Reference answer: {item["reference"]}', f'Key facts:\n{facts}']
+    keys = ['correct']
+    if context_texts:
+        keys += ['faithful', 'supported']
+        parts.append('Passages given to the system:\n' + '\n\n'.join(
+            f'[{n}] {t}' for n, t in enumerate(context_texts, start=1)))
+        parts.append('Cited passages: ' + (', '.join(
+            f'[{n}]' for n in cited_ids) if cited_ids else 'none'))
+    form = json.dumps({k: True for k in keys})
+    parts += [f'Answer to grade: {answer}', 'Decide:\n' + '\n'.join(
+        p[k] for k in keys), f'Reply exactly in this form: {form}']
+    return [{'role': 'system', 'content': p['system']},
+            {'role': 'user', 'content': '\n\n'.join(parts)}]
+
+def _rag_judge_replies(judge, tokenizer, messages, thinking, max_new_tokens,
+                       batch_size):
+    """The judge's replies to a list of chat messages, each the text after
+    its reasoning ('</think>'), None when the reply was cut off at
+    max_new_tokens, or the exception of a request that failed in transport
+    (an endpoint that refused, timed out or answered with an error after
+    the client's retries: no reply, so not a malformed one). judge is a
+    d2l.ChatAPI (greedy, seed 0; batch_size requests in flight) or a
+    Transformers model with its tokenizer."""
+    if hasattr(judge, 'achat'):  # an OpenAI-compatible endpoint
+        import asyncio  # not in the d2l library preamble
+        import concurrent.futures
+        batch = d2l.chat_batch(judge, [dict(
+            messages=m, max_tokens=max_new_tokens, temperature=0, seed=0)
+            for m in messages], concurrency=batch_size)
+        if hasattr(judge, '_run'):  # a d2l.ChatAPI: its private event loop,
+            out = judge._run(batch)  # the same for every batch, so its HTTP
+        else:                        # connections never outlive their loop
+            # A thread of its own: a notebook's kernel already runs an
+            # event loop, in which asyncio.run refuses to start
+            with concurrent.futures.ThreadPoolExecutor(1) as pool:
+                out = pool.submit(asyncio.run, batch).result()
+        return [r if isinstance(r, BaseException)  # no reply at all
+                else None if r.finish_reason == 'length'
+                else (r.text or '').split('</think>')[-1] for r in out]
+    gens = d2l.generate(judge, tokenizer, messages,
+                        max_new_tokens=max_new_tokens, chat=True,
+                        enable_thinking=thinking, batch_size=batch_size)
+    if not thinking:
+        return [g.text for g in gens]
+    return [None if g.finish_reason == 'length' and '</think>' not in g.text
+            else g.text.split('</think>')[-1] for g in gens]
+
+def _rag_parse_json(text, keys):
+    """{key: bool} from the first JSON object in a reply that has every
+    one of keys as a boolean (or 'yes'/'no', 'true'/'false'); None if
+    there is none."""
+    for m in re.finditer(r'\{[^{}]*\}', text):
+        try:
+            obj = json.loads(m.group(0))
+        except ValueError:
+            continue
+        out = {}
+        for k in keys:
+            v = obj.get(k)
+            if isinstance(v, str) and v.strip().lower() in (
+                    'yes', 'no', 'true', 'false'):
+                v = v.strip().lower() in ('yes', 'true')
+            if not isinstance(v, bool):
+                break
+            out[k] = v
+        else:
+            return out
+    return None
+
+def _rag_rewrite_prompt(question):
+    """Chat messages asking for a short search query for a question.
+
+    Defined in :numref:`sec_lm_rag`"""
+    return [{'role': 'system', 'content': (
+                'You turn questions about the textbook Dive into Deep '
+                'Learning into search queries.')},
+            {'role': 'user', 'content': (
+                'Rewrite the question as a search query of at most 15 '
+                'words. Keep its technical terms, names and code '
+                f'identifiers. Reply with the query only.\n\nQuestion: '
+                f'{question}')}]
+
+def _rag_hyde_prompt(question):
+    """Chat messages asking for a hypothetical passage that answers a
+    question (HyDE: the dense side embeds the passage)."""
+    return [{'role': 'user', 'content': (
+        'Write a passage of at most 100 words from a deep learning '
+        'textbook that answers the question. Reply with the passage '
+        f'only.\n\nQuestion: {question}')}]
+
+def _rag_decompose_prompt(question):
+    """Chat messages asking to split a question into at most two
+    self-contained questions, one per line."""
+    return [{'role': 'user', 'content': (
+        'If the question asks about two things, write two self-contained '
+        'questions, one per line; otherwise repeat the question. Reply '
+        f'with the questions only.\n\nQuestion: {question}')}]
+
+def _rag_verify_prompt(sentence, passages):
+    """Chat messages asking whether the passages (chunk dicts) support
+    every fact of one sentence; the answer is read as P(yes)."""
+    text = '\n\n'.join(f'[{n}] {p["text"]}'
+                       for n, p in enumerate(passages, start=1))
+    return [{'role': 'user', 'content': (
+        f'Passages:\n{text}\n\nStatement: {sentence}\n\nDo the passages '
+        'support every fact in the statement? Answer yes or no.')}]
+
+def _rag_fix_prompt(question, hits, variant, abstain=None):
+    """The grounded prompt of rag_prompt changed by one pre-registered fix:
+    'quote' (copy the supporting sentences with their passage numbers,
+    then answer after 'Answer:') or 'rule_after' (the abstention rule
+    after the passages, in the user turn, instead of the system turn)."""
+    abstain = abstain or d2l.ABSTAIN
+    msgs = d2l.rag_prompt(question, hits, abstain)
+    if variant == 'quote':
+        msgs[1]['content'] = msgs[1]['content'].replace(
+            'Answer in at most four sentences.',
+            'First write "Quotes:" and copy the sentences of the passages '
+            'that answer the question, each followed by its passage number '
+            'such as [2]. Then write "Answer:" and answer in at most four '
+            'sentences, citing the passages.')
+    elif variant == 'rule_after':
+        rule = 'If the passages do not contain the answer, reply exactly: '
+        msgs[0]['content'] = msgs[0]['content'].replace(
+            rule + abstain, '').strip()
+        msgs[1]['content'] += f'\n{rule}{abstain}'
+    elif variant != 'fixed':
+        raise ValueError(f'unknown prompt variant {variant!r}')
+    return msgs
+
+def _rag_quoted_answer(text):
+    """The answer part of a 'quote, then answer' reply (all of it when the
+    reply has no 'Answer:')."""
+    head, sep, tail = text.rpartition('Answer:')
+    return tail.strip() if sep else text.strip()
+
+def _rag_records(paths, on=('config', 'qid')):
+    """The records of several JSON-lines run files (missing paths skipped)
+    as one DataFrame; the columns on identify a record and may not
+    repeat."""
+    frames = [d2l.read_jsonl(p) for p in paths if p and os.path.exists(p)]
+    df = (pd.concat(frames, ignore_index=True) if frames
+          else pd.DataFrame(columns=list(on)))
+    dup = df.duplicated(list(on))
+    if dup.any():
+        raise ValueError(f'{dup.sum()} records repeat {on}, e.g. '
+                         f'{df[dup].iloc[0][list(on)].tolist()}')
+    return df
+
+RAG_GENERATOR = 'Qwen/Qwen3.5-9B'  # revision pinned in the notebooks
+RAG_RERANKER = 'Qwen/Qwen3-Reranker-0.6B'
+RAG_ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
+    'rag-gen-base': ('lm-rag-gen-base-v1', 'lm-rag-gen-base.jsonl'),
+    'rag-gen-stages': ('lm-rag-gen-stages-v2', 'lm-rag-gen-stages.jsonl'),
+    'rag-gen-fix': ('lm-rag-gen-fix-v1', 'lm-rag-gen-fix.jsonl'),
+    'rag-judge': ('lm-rag-judge-v4', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v4', 'lm-rag-judge-cache.zip'),
+    'rag-cards': ('lm-rag-cards-v1', 'lm-rag-cards.jsonl')}
+
+# The baseline: section chunks, hybrid retrieval, the first five chunks in
+# rank order within 3,000 tokens, the fixed prompt, 300 new tokens, batches
+# of eight prompts
+RAG_BASE = dict(chunking='sections', context='retrieved', k=5, budget=3000,
+                order='rank', rewrite=None, rerank_k=None, prompt='fixed',
+                verify=False, abstain_below=None, max_new_tokens=300,
+                batch=8, shuffle=None)
+RAG_CONFIGS = {  # name: what changes against the baseline
+    'closed': dict(RAG_BASE, context='none'),  # no passages: closed book
+    'base': RAG_BASE,
+    'oracle': dict(RAG_BASE, context='gold'),  # the gold chunks only
+    'base-repeat': dict(RAG_BASE, shuffle=1),  # same prompts, other batches
+    'fixed': dict(RAG_BASE, chunking='fixed', k=None, budget='base'),
+    'fixed-over': dict(RAG_BASE, chunking='fixed', k=None, budget='base',
+                       over=255),  # up to a window past the base's tokens
+    'rewrite-rerank': dict(RAG_BASE, rewrite='generator', rerank_k=50),
+    'reverse': dict(RAG_BASE, order='reverse'),
+    'budget-1500': dict(RAG_BASE, k=None, budget=1500),
+    'budget-6000': dict(RAG_BASE, k=None, budget=6000, batch=4)}
+RAG_STAGES = ['fixed', 'rewrite-rerank', 'reverse', 'budget-1500',
+              'budget-6000']
+RAG_CONTROLS = ['fixed-over']  # checks a stage's result; not a candidate
+RAG_FIXES = {  # failure class: its fix, written down before any is counted
+    'not_retrieved': dict(RAG_BASE, rewrite='fuse'),  # the query's ranking
+    'ranked_low': dict(RAG_BASE, rerank_k=100, k=8),
+    'ignored': dict(RAG_BASE, prompt='quote', order='edges',
+                    max_new_tokens=500),
+    'unsupported': dict(RAG_BASE, verify=True),
+    'false_answer': dict(RAG_BASE, abstain_below='train'),  # tuned on train
+    'false_abstain': dict(RAG_BASE, prompt='rule_after')}
+RAG_CONFIGS.update({f'fix-{c}': v for c, v in RAG_FIXES.items()})
+
+_RAG_LOADED = {}  # the generator and its tokenizer while they are loaded
+
+def _rag_rerun():
+    """The RAG runs this run regenerates (d2l.lm_rerun of RAG_ARTIFACTS):
+    regenerating the judge's cache regenerates the judge; the runs must
+    come in their order, each result registered before the next.
+
+    Defined in :numref:`sec_lm_rag`"""
+    rerun = d2l.lm_rerun(d2l.RAG_ARTIFACTS)
+    if 'rag-judge-cache' in rerun:  # the judge's cache is written with it
+        rerun.add('rag-judge')
+    order = ('run order, each result registered before the next: '
+             'rag-gen-base; rag-judge (until every answer is judged); '
+             'rag-cards; rag-gen-stages; rag-judge; rag-gen-fix; rag-judge')
+    assert not ('rag-judge' in rerun and rerun & {'rag-gen-stages',
+                                                  'rag-gen-fix'}), order
+    assert not ('rag-gen-fix' in rerun and rerun & {'rag-gen-base',
+                                                    'rag-gen-stages'}), order
+    return rerun
+
+def _rag_settings(name):
+    """What the answers of configuration name are made with (JSON): its
+    entry of RAG_CONFIGS, the models at their revisions, the corpus, the
+    BM25 parameters and the question set. Reading the records checks it."""
+    gen, emb, rr = d2l.RAG_GENERATOR, d2l.DEFAULT_EMBEDDER, d2l.RAG_RERANKER
+    rev = {gen: d2l.HF_REVISIONS[gen],
+           **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (emb, rr)}}
+    return json.dumps(dict(
+        d2l.RAG_CONFIGS[name], generator=f'{gen}@{rev[gen]}',
+        corpus=d2l.R3_VERSION, embedder=f'{emb}@{rev[emb]}',
+        reranker=f'{rr}@{rev[rr]}', bm25=d2l.BookRetriever.BM25_PARAMS,
+        qa='lm-book-qa-v2'), sort_keys=True)
+
+def _rag_run_path(name, rerun):
+    """The file of RAG artifact name that this run regenerates (name in
+    rerun), else the registered one, else None (not registered yet)."""
+    key, file = d2l.RAG_ARTIFACTS[name]
+    if name in rerun:
+        return os.path.join('..', 'data', 'lm', 'rerun', file)
+    return d2l.lm_registered(key)
+
+def _rag_generator():
+    """The generator (RAG_GENERATOR) and its tokenizer, loaded on first use,
+    on the first GPU (never split over two visible cards)."""
+    if not d2l._RAG_LOADED:
+        gpu = torch.cuda.is_available()
+        d2l._RAG_LOADED['gen'] = d2l.load_hf(
+            d2l.RAG_GENERATOR, d2l.HF_REVISIONS[d2l.RAG_GENERATOR],
+            dtype=torch.bfloat16 if gpu else torch.float32,
+            device_map={'': 0} if gpu else 'auto')
+    return d2l._RAG_LOADED['gen']
+
+def _rag_free_generator():
+    """Drop the generator and free its memory."""
+    d2l._RAG_LOADED.clear()
+    d2l.lm_free()
+
+def _rag_gold_context(item, corpus):
+    """The chunks of an item's gold spans (not the alternatives), in span
+    order."""
+    ids = [i for s in item['gold_spans'] for i in corpus.span_to_chunk_ids(
+        s['doc_id'], s['char_start'], s['char_end'])]
+    return [corpus[i] for i in dict.fromkeys(ids)]
+
+def _rag_run_config(name, items, retrievers, keep_gen, depth=50,
+                    budgets=None, threshold=None):
+    """Answer records of configuration name (RAG_CONFIGS) on items, in item
+    order. retrievers maps each chunking to its BookRetriever; keep_gen:
+    the generator stays on the card while the retriever works; depth: the
+    ranking kept; budgets (qid: tokens) sets each question's budget for a
+    configuration whose budget is 'base'; threshold: the reranker score
+    below which the pipeline abstains."""
+    c, items = d2l.RAG_CONFIGS[name], list(items)
+    budget = d2l.RAG_BASE['budget']
+    assert (c['budget'] == 'base') == (budgets is not None), name
+    order = list(range(len(items)))
+    if c['shuffle'] is not None:  # other batches for the same prompts
+        random.Random(c['shuffle']).shuffle(order)
+    items = [items[i] for i in order]
+    if not (keep_gen or c['rewrite']):  # retrieval without the generator
+        d2l._rag_free_generator()
+    assert keep_gen or not c['rewrite'], 'the rewriter needs the card too'
+    pipe = d2l.RAGPipeline(  # the generator joins when it is needed
+        retrievers[c['chunking']],
+        *(d2l._rag_generator() if c['rewrite'] else (None, None)),
+        k=c['k'], order=c['order'],
+        budget_tokens=budget if c['budget'] == 'base' else c['budget'],
+        rewrite=c['rewrite'], rerank_k=c['rerank_k'], depth=depth,
+        max_new_tokens=c['max_new_tokens'], prompt=c['prompt'],
+        verify=c['verify'], abstain_below=threshold)
+    if c['context'] == 'none':
+        ctx = [dict(query_used=None, ranked_ids=[], context=None)
+               for _ in items]
+    else:
+        ctx = pipe.prepare(items, None if budgets is None else
+                           [budgets[q['qid']] for q in items])
+    if c['context'] == 'gold':  # unanswerable items keep the retrieved
+        corpus = retrievers['sections'].corpus
+        for p, q in zip(ctx, items):
+            if q['answerable']:
+                p['context'] = d2l.assemble_context(
+                    d2l._rag_gold_context(q, corpus), budget, k=c['k'])[0]
+    pipe.model, pipe.tokenizer = d2l._rag_generator()
+    res = pipe.answer(items, batch_size=c['batch'], contexts=ctx)
+    recs = [dict(config=name, split=q['split'],
+                 settings=d2l._rag_settings(name),
+                 **{k: v for k, v in r._asdict().items() if k != 'question'})
+            for q, r in zip(items, res)]
+    return [r for _, r in sorted(zip(order, recs), key=lambda t: t[0])]
+
+def _rag_run_configs(names, items, *args, **kwargs):
+    """_rag_run_config for each name, printing its minutes and peak
+    memory."""
+    recs = []
+    for name in names:
+        t = time.time()
+        recs += d2l._rag_run_config(name, items, *args, **kwargs)
+        print(f'{name}: {(time.time() - t) / 60:.1f} min, {d2l.lm_peak()}')
+    return recs
+
+def _rag_answer_key(r):
+    """What a verdict depends on: the answer, its context and citations
+    (a regenerated answer needs a new verdict).
+
+    Defined in :numref:`sec_lm_rag`"""
+    return hashlib.sha1(json.dumps([r['answer'], list(r['context_ids']), [
+        int(n) for n in r['cited_ids']]]).encode()).hexdigest()[:16]
+
+def _rag_save_gens(name, recs):
+    """Save the answer records of RAG artifact name, a table keyed by
+    configuration and question."""
+    d2l.lm_save_table(d2l.RAG_ARTIFACTS[name][1], pd.DataFrame(recs),
+                      on=['config', 'qid'], key=d2l.RAG_ARTIFACTS[name][0])
+
+def _rag_load_gens(rerun):
+    """Every answer made so far, one row per (configuration, question),
+    with the answer_sha its verdict must carry; each configuration's
+    settings are checked against _rag_settings."""
+    df = d2l._rag_records([d2l._rag_run_path(n, rerun) for n in (
+        'rag-gen-base', 'rag-gen-stages', 'rag-gen-fix')])
+    for name, s in (df.groupby('config')['settings'] if len(df) else []):
+        assert (s == d2l._rag_settings(name)).all(), f'{name}: other settings'
+    if len(df):  # by the current rule, not the one of the run that wrote it
+        df['abstained'] = [d2l._rag_abstained(a) for a in df.answer]
+    return df.assign(answer_sha=[d2l._rag_answer_key(r)
+                                 for r in df.to_dict('records')])
+
+def _rag_load_judgments(path):
+    """Judgment records, verdicts as True, False or None; max_new_tokens
+    of rows from before the re-judging is the judge's default."""
+    df = d2l._rag_records([path], on=['config', 'qid', 'concurrency'])
+    for k in ('correct', 'faithful', 'supported'):
+        df[k] = [None if v is None or v != v else bool(v)
+                 for v in df.get(k, [])]
+    for k in ('backend', 'answer_sha'):
+        df[k] = df.get(k, [None] * len(df))
+    default = d2l.RAG_JUDGE_LOCAL['max_new_tokens']
+    df['max_new_tokens'] = [default if v is None or v != v else int(v)
+                            for v in df.get('max_new_tokens',
+                                            [None] * len(df))]
+    return df
+
+def _rag_clusters(items, corpus):
+    """The document of each item (qid: doc_id), the unit the bootstrap
+    resamples: that of its first gold span, else of its anchor chunk.
+
+    Defined in :numref:`sec_lm_rag`"""
+    return {q['qid']: (q['gold_spans'] or [{'doc_id': corpus[
+        q['anchor_ids'][0]]['doc_id']}])[0]['doc_id'] for q in items}
+
+def _rag_signflip_p(d, cluster, n=10_000):
+    """Two-sided sign-flip p of the mean of per-document mean
+    differences."""
+    m = np.array([d[cluster == c].mean() for c in np.unique(cluster)])
+    flips = np.random.default_rng(0).choice([-1.0, 1.0], (n, len(m)))
+    return np.mean(np.abs(flips @ m) >= np.abs(m.sum()) - 1e-12)
+
+def _rag_ci(a, b=None, cluster=None):
+    """The bootstrap of the mean of per-question scores a (or of a - b,
+    paired), NaNs dropped, resampling documents when there are 30 or
+    more, else questions: (result or None, by documents, a, b,
+    cluster)."""
+    import warnings  # not in the d2l library preamble
+    a = np.asarray(a, float)
+    b = None if b is None else np.asarray(b, float)
+    keep = ~np.isnan(a) & (True if b is None else ~np.isnan(b))
+    a, cluster = a[keep], np.asarray(cluster)[keep]
+    b = None if b is None else b[keep]
+    by_doc = len(set(cluster)) >= 30
+    if len(a) < 2:
+        return None, by_doc, a, b, cluster
+    with warnings.catch_warnings():  # few items: _rag_boot's * says so
+        warnings.simplefilter('ignore')
+        r = (d2l.bootstrap_ci(a, cluster=cluster if by_doc else None)
+             if b is None else d2l.paired_bootstrap(
+                 a, b, cluster=cluster if by_doc else None))
+    return r, by_doc, a, b, cluster
+
+def _rag_boot(a, b=None, cluster=None):
+    """Mean of per-question scores a (or of a - b, paired), NaNs dropped,
+    with a 95% interval that resamples documents, marked * below 100
+    questions; below 30 documents questions are resampled instead, marked
+    + (and a paired difference gets a document-level sign-flip p)."""
+    r, by_doc, a, b, cluster = d2l._rag_ci(a, b, cluster)
+    if r is None:
+        return 'n/a'
+    f = '.3f' if b is None else '+.3f'
+    out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
+    if by_doc:
+        return out + ('' if len(a) >= 100 else '*')
+    if b is None:
+        return out + '+'
+    p = d2l._rag_signflip_p(a - b, cluster)
+    return out + f'+ (sign-flip p {p:.3f})'
+
+def _rag_paired(a, b, col, mask=None):
+    """Paired difference a - b of score col on the questions both score
+    tables have (mask: a filter of the merged rows)."""
+    m = a.merge(b, on='qid', suffixes=('_a', '_b'))
+    if mask is not None:
+        m = m[mask(m)]
+    return d2l._rag_boot(m[f'{col}_a'], m[f'{col}_b'], m.cluster_a)
+
+def _rag_scores(config, split, gens, jud, retrievers, items, cluster,
+                concurrency=8):
+    """One row per judged answer of a configuration on a split, with
+    per-question scores (NaN where a score does not apply, and accuracy NaN
+    where the judge gave no verdict: an unjudged answer is left out). gens:
+    the answer records (_rag_load_gens); jud: the judgment records, of
+    which those judged at concurrency count; retrievers maps a chunking to
+    its BookRetriever; items: qid to item; cluster: qid to document."""
+    verdicts = ['correct', 'faithful', 'supported']
+    k, budget = d2l.RAG_BASE['k'], d2l.RAG_BASE['budget']
+    g = gens[(gens.config == config) & (gens.split == split)]
+    j = jud[jud.concurrency == concurrency][['config', 'qid', 'answer_sha']
+                                            + verdicts]
+    df = g.merge(j, on=['config', 'qid', 'answer_sha']).sort_values(
+        'qid', ignore_index=True)
+    corpus = retrievers[d2l.RAG_CONFIGS[config]['chunking']].corpus
+    its = [items[q] for q in df.qid]
+    ans = np.array([q['answerable'] for q in its])
+    rel = [d2l.gold_chunk_ids(q, corpus) for q in its]
+    cm = d2l.citation_metrics(df.to_dict('records'), its, corpus)
+    has_ctx = df.context_ids.map(len).to_numpy() > 0
+    answered = has_ctx & ~df.abstained.to_numpy(bool)
+    flag = lambda col: np.array([np.nan if v is None else float(v)
+                                 for v in df[col]])
+    return pd.DataFrame({
+        'qid': df.qid, 'cluster': [cluster[q] for q in df.qid],
+        'answerable': ans, 'type': [q['type'] for q in its],
+        'book_specific': ['general_knowledge' not in q['flags']
+                          for q in its],
+        'accuracy': flag('correct'),  # NaN: unjudged, left out
+        'faithful': np.where(answered, flag('faithful'), np.nan),
+        'supported': np.where(answered, flag('supported'), np.nan),
+        'cite_precision': np.where(ans, cm.precision, np.nan),
+        'cite_recall': np.where(ans, cm.recall, np.nan),
+        'abstained': df.abstained.astype(float),
+        'hit': np.where(ans, [float(bool(r & set(c))) for r, c in zip(
+            rel, df.context_ids)], np.nan),
+        f'recall@{k}': np.where(ans & has_ctx, [float(bool(r & set(x[:k])))
+                                                for r, x in zip(
+                                                    rel, df.ranked_ids)],
+                                np.nan),
+        f'cov@{budget}': np.where(ans & has_ctx, [float(d2l.cov_at_budget(
+            x, q, corpus, budget)) for x, q in zip(df.ranked_ids, its)],
+            np.nan),
+        'answer': df.answer, 'n_prompt_tokens': df.n_prompt_tokens,
+        'n_new_tokens': df.n_new_tokens, 'latency_s': df.latency_s,
+        'record': df.to_dict('records'),
+        'verdicts': df[verdicts].to_dict('records')})
+
+def _rag_ready(configs, split, gens, jud, rerun, concurrency=8):
+    """Whether every answer of each configuration on split carries a
+    verdict on that very answer (answer_sha); says which do not. Partial
+    or stale judgments are never reported: between judging runs a
+    configuration is left out, and a normal run stops on one."""
+    k = jud[jud.concurrency == concurrency]  # not judged: gens may be new
+    j = set(zip(k.config, k.qid, k.answer_sha))
+    missing = {}
+    for c in configs:
+        g = gens[(gens.config == c) & (gens.split == split)]
+        n = sum(x not in j for x in zip(g.config, g.qid, g.answer_sha))
+        if n or not len(g):
+            missing[c] = (f'{n} of {len(g)} answers lack a verdict' if len(g)
+                          else 'no answers')
+    if missing:
+        print(f'not ready on {split}: {missing}')
+        assert rerun or all(m == 'no answers' for m in missing.values()), (
+            'registered answers without verdicts: register the judge run')
+    return not missing
 
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',

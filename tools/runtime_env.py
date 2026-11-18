@@ -42,6 +42,10 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # notebook path relative to _notebooks/<fw>/; applies to every framework.
 # Ruling 2026-11-06 (Alex): modern topics may run longer when the pedagogy
 # needs the experiment (17.6's DiT scaling curve: ~50 min PyTorch, ~20 JAX).
+#
+# No ch. 18 entry: a normal build stays near 15 min per notebook, and a
+# D2L_RERUN regeneration run must finish within 30 min (ruling 2026-11-12),
+# both well inside the default.
 NOTEBOOK_TIMEOUTS = {
     "chapter_diffusion-models/latent-diffusion.ipynb": 7200,
 }
@@ -75,6 +79,9 @@ GPU_ONLY_NOTEBOOKS = {
     "chapter_diffusion-models/latent-diffusion.ipynb",
     "chapter_diffusion-models/few-step.ipynb",
     "chapter_diffusion-models/discrete-diffusion.ipynb",
+    # 19.1 trains SGNS and GloVe on the GPU (a CPU run draws other random
+    # numbers, so the grid agreement line holds only on the GPU).
+    "chapter_lm-encoders/word-embeddings.ipynb",
 }
 
 # Per-framework thread-limiting env vars.
@@ -257,6 +264,30 @@ FULL_CARD_NOTEBOOKS = {
     "chapter_computational-performance/multiple-gpus.ipynb": 2,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
+    # 18.1 measures bandwidth, per-token decode time and a kernel profile of
+    # Qwen3.5-2B and Gemma 4 E2B (memory alone would fit two slots); a
+    # co-tenant skews the timings the prose quotes (ruling 2026-11-12, Q5).
+    "chapter_lm-pretrained/hf-models.ipynb": 1,
+    # 18.7's capture run serves Qwen3-4B locally and sweeps concurrency;
+    # continuous batching sizes its KV pool from free memory. The notebook is
+    # locked, so only `make rerun-locked` reaches this entry.
+    "chapter_lm-pretrained/api.ipynb": 1,
+    # 19.2 times the fine-tuned encoder against 8-shot Qwen3-1.7B and stores
+    # the timings of its regeneration runs; the normal build holds the fp32
+    # encoder, the bf16 checkpoint, Qwen3-1.7B and score_choices' fp32 output
+    # layer together (about 7 GiB), above one slot's headroom.
+    "chapter_lm-encoders/bert.ipynb": 1,
+    # 19.5's generator is Qwen3.5-9B in bf16: 16.7 GiB of weights, measured
+    # peaks of 21.7 GiB (eight 3,300-token prompts) and 22.4 GiB (four of
+    # 6,300) on an RTX 4090. The normal build generates eight answers again,
+    # so it needs a whole card too. Its judging runs (D2L_RERUN=rag-judge)
+    # serve Qwen3.8-27B with vLLM over two whole cards and are launched by
+    # hand with CUDA_VISIBLE_DEVICES set, not through the scheduler.
+    "chapter_lm-encoders/rag.ipynb": 1,
+    # 19.6 reads the recorded answers in a normal build, but times retrieval
+    # and reranking for the text, and its regeneration runs
+    # (D2L_RERUN=rag-gen-stages, rag-gen-fix) load the same generator.
+    "chapter_lm-encoders/rag-failures.ipynb": 1,
 }
 
 # rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for
@@ -307,6 +338,21 @@ HEAVY_GPU_NOTEBOOKS = {
     # MXNet's memory pool (PyTorch ~4 GiB); 1-slot runs OOM when sharing a GPU.
     ("mxnet", "chapter_convolutional-modern/alexnet.ipynb"): 2,
     ("mxnet", "chapter_convolutional-modern/blocks.ipynb"): 2,
+    # ch. 18 (Language Models, PyTorch only): pretrained checkpoints of 0.6-4B
+    # parameters in bf16. Normal-build peaks (spec part 3.5): 18.2 10.5 GB
+    # (Qwen3-1.7B-Base in the port and in Transformers), 18.3 7.2 GB, 18.4
+    # 5 GB, 18.5 5 GB, 18.6 8 GB; the D2L_RERUN regeneration runs reach
+    # 9-13 GB (18.5's judge). Above one 7.5 GiB slot, inside two. The one
+    # exception, 18.4's ARC arms (D2L_RERUN=arc-generations, 4,096-token
+    # thinking), reaches 20 GB: run it on a card masked for it alone.
+    ("pytorch", "chapter_lm-pretrained/d2l-checkpoint.ipynb"): 2,
+    ("pytorch", "chapter_lm-pretrained/prompting.ipynb"): 2,
+    ("pytorch", "chapter_lm-pretrained/scoring.ipynb"): 2,
+    ("pytorch", "chapter_lm-pretrained/eval-suites.ipynb"): 2,
+    ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): 2,
+    # 19.3 fine-tunes the encoder into an embedder (about 5-7 GiB) next to
+    # the released embedder and reranker.
+    ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): 2,
 }
 
 
@@ -348,17 +394,120 @@ NOTEBOOK_ENV = {
     ("pytorch", "chapter_computational-performance/fast-transformer.ipynb"): {
         "TEARDOWN_CUPTI": "1",
     },
+    # 18.4: generation with KV caches of changing length leaves PyTorch's
+    # caching allocator holding blocks it cannot reuse. In the D2L_RERUN
+    # regeneration run tensors peaked at 10.8 GiB while the card showed
+    # 20.3-20.7 GB, past the notebook's 2-slot budget (15 GiB) on a shared
+    # card. Expandable segments grow one mapped range instead of caching
+    # fixed-size blocks; numerics are unchanged. The cell's peak() prints the
+    # reserved memory, so the next regeneration run shows the effect.
+    ("pytorch", "chapter_lm-pretrained/scoring.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    # 18.5: the same for its regeneration run, which generates with KV caches
+    # of changing length (answers, GSM-Symbolic) before the 4B judge loads.
+    ("pytorch", "chapter_lm-pretrained/eval-suites.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    # 18.6: the Hub answers the range reads of its parquet files with an
+    # X-HF-Warning header ("You are sending unauthenticated requests ...",
+    # 137 columns) that huggingface_hub logs once per process; it depends on
+    # the build box having no HF_TOKEN, so it is noise on the page. Errors
+    # still raise.
+    ("pytorch", "chapter_lm-pretrained/interpretability.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    # 19.2: fine-tuning runs of changing batch shapes (each batch padded to
+    # its own longest pair) and the decoder's long prompts follow each other
+    # in one process; expandable segments keep the cached blocks reusable.
+    ("pytorch", "chapter_lm-encoders/bert.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    # 19.1 and 19.3: the same X-HF-Warning as 18.6 (Qwen3-0.6B's table, the
+    # sentence-transformers check); errors still raise.
+    ("pytorch", "chapter_lm-encoders/word-embeddings.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    # 19.5: Qwen3.5-9B generates with prompts of changing length within 1-2
+    # GiB of a 24 GB card's limit; cached fixed-size blocks would not fit.
+    ("pytorch", "chapter_lm-encoders/rag.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    ("pytorch", "chapter_lm-encoders/rag-failures.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
 }
+
+
+# Separate execution venvs. A notebook of <framework> whose chapter directory
+# starts with one of the prefixes below executes in `.venv-<venv>` instead of
+# `.venv-<framework>`; everything else about it stays <framework>'s: the
+# `_notebooks/<framework>/` stamp, the `outputs/<framework>/` manifest, the
+# EXTRA_ENV_<framework> settings and the freshness key (the framework
+# package's public version). The Language Models part (chapter_lm-*) runs in
+# .venv-lm, PyTorch plus Transformers/OpenAI on the same torch pin, so the rest
+# of the book never carries those packages. make/notebooks.mk has one EXEC_RULE
+# per entry (keep the two in step; tools/test_notebook_venvs.py checks it).
+NOTEBOOK_VENVS = {
+    "pytorch": (("chapter_lm-", "lm"),),
+}
+
+# Packages a separate venv adds on top of its framework whose versions the
+# execution provenance records (capture_outputs.build_provenance). A change only
+# warns in the audit; it never makes a notebook stale.
+VENV_PROVENANCE_PACKAGES = {
+    "lm": ("transformers",),
+}
+
+# Environment of every notebook that a separate venv executes; a variable
+# already set in the environment wins (apply_notebook_env). HF_HOME: the
+# Language Models part reads tens of GB of checkpoints and datasets from the
+# Hugging Face cache. The default, ~/.cache/huggingface, may sit on a slow
+# network home (on the build box it does), and a launch from a shell that
+# forgot HF_HOME would download all of it again there. A leading ~ is
+# expanded. docs/build-system.md §6.4.2.
+VENV_ENV = {
+    "lm": {"HF_HOME": "~/.cache/hf-lm"},
+}
+
+
+def notebook_venv(framework, rel):
+    """Name of the venv (`.venv-<name>`) that executes a notebook.
+
+    *rel* is the notebook's path below `_notebooks/<framework>/` (or the
+    source path, or just the chapter directory): only its first component,
+    the chapter, is read. Returns *framework* unless NOTEBOOK_VENVS maps the
+    chapter elsewhere."""
+    chapter = str(rel).replace("\\", "/").lstrip("./").split("/", 1)[0]
+    for prefix, venv in NOTEBOOK_VENVS.get(framework, ()):
+        if chapter.startswith(prefix):
+            return venv
+    return framework
+
+
+def chapter_venv(chapter):
+    """(framework, venv) of a chapter served by a separate venv, else None."""
+    for framework, entries in NOTEBOOK_VENVS.items():
+        for prefix, venv in entries:
+            if str(chapter).startswith(prefix):
+                return framework, venv
+    return None
 
 
 def apply_notebook_env(env, nb_path):
     """Add NOTEBOOK_ENV's variables for the notebook at *nb_path*
-    (`.../_notebooks/<framework>/<chapter>/<file>.ipynb`) to *env*."""
+    (`.../_notebooks/<framework>/<chapter>/<file>.ipynb`) to *env*, and
+    VENV_ENV's for the venv that executes it."""
     parts = Path(nb_path).absolute().parts
     if "_notebooks" not in parts[:-3]:
         return env
     i = parts.index("_notebooks")
     key = (parts[i + 1], "/".join(parts[i + 2:]))
+    for k, v in VENV_ENV.get(notebook_venv(*key), {}).items():
+        env.setdefault(k, os.path.expanduser(v))
     for k, v in NOTEBOOK_ENV.get(key, {}).items():
         if k == "XLA_FLAGS":
             env[k] = " ".join(f for f in (env.get(k, ""), v) if f)

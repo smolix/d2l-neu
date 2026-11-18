@@ -28,11 +28,13 @@ Since the build was decoupled (see `docs/build-system.md`), the CPU-capable
 notebooks can be **executed in-editor**, not just on the GPU box — this is how
 you refresh a notebook's committed outputs surgically.
 
-One-time, register the four ipykernels so an opened `.ipynb` auto-selects the
-right interpreter from its `metadata.kernelspec.name` (`d2l-<fw>`):
+One-time, register the ipykernels so an opened `.ipynb` auto-selects the
+right interpreter from its `metadata.kernelspec.name` (`d2l-<fw>`, and
+`d2l-lm` for the Language Models chapters `chapter_lm-*`, which run in
+`.venv-lm`):
 
 ```bash
-make kernels        # registers d2l-pytorch / d2l-tensorflow / d2l-jax / d2l-mxnet
+make kernels        # registers d2l-pytorch / -tensorflow / -jax / -mxnet / -lm
 ```
 
 Then **Edit Framework View** (`Cmd+E Cmd+J`) opens the notebook with its kernel

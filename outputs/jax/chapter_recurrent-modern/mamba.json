@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:e2286264e798b2a489064a77bf65404bad2a13bfddf1b1adb92e65e53635e396",
+    "d2l_lib_fingerprint": "sha256:bc6aa699707609b384a225f26c8ab63871e2586cdd44e1239dff1029820e2d6a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[0 0 6 6 4 0 0 0 6 0 0 0 1 1 1 1]\n [0 0 2 0 0 0 0 0 6 7 9 0 1 1 1 1]]\n[[6 6 4 6]\n [2 6 7 9]]\n"
+          "text": "[[5 0 9 0 9 0 0 0 8 0 0 0 1 1 1 1]\n [6 0 0 0 5 0 0 0 3 0 0 2 1 1 1 1]]\n[[5 9 9 8]\n [6 5 3 2]]\n"
         }
       ]
     },
@@ -41,12 +41,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.17\n"
+          "text": "S4D      accuracy 0.16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.93\n"
+          "text": "minGRU   accuracy 0.99\n"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 9.5e-07\n"
+          "text": "max deviation: 1.4e-06\n"
         }
       ]
     },
@@ -114,14 +114,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.13\nMamba  share from the symbols: 0.45\n"
+          "text": "S4D    share from the symbols: 0.06\nMamba  share from the symbols: 0.94\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 36632,
-          "sha256": "sha256:656a94849531bbb3a58fede5bb4d7b056742c671285c5447f971226573e83a2c"
+          "bytes": 36735,
+          "sha256": "sha256:d5179edad07d0f6f7730e4f24eb0071954fc2bc1c36e4f9f5af96311ca0449ac"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:35ac056be43eb122c8c65c76cf9a68b7e11743f5c9c28ac4f3cd799a91b9de75",
+    "d2l_lib_fingerprint": "sha256:8d1c3d4f852070788621ea666d5900aefc4ecb3d6009e15cf164fb89c42922ae",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 30667,
-          "sha256": "sha256:d64895984dca9b341303a290081d5f2a40bef461199acdb7e95fc68bf8e527dc"
+          "bytes": 31976,
+          "sha256": "sha256:7bdaacd6327b8e6d465cbb0ace32a8739ec12dcd3a00868a425e9b1590b50ea2"
         }
       ]
     }

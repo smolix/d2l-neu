@@ -214,7 +214,7 @@ low-rank update to the directions only.
 
 Attention over $n$ tokens forms an $n\times n$ matrix, and several methods
 taught in the attention chapters replace it, or the cache behind it, by a
-low-rank factorization. Linear attention (:numref:`sec_attention-at-scale`)
+low-rank factorization. Linear attention (:numref:`sec_windowed-linear-attention`)
 writes the scores as $\phi(\mathbf{q})\cdot\phi(\mathbf{k})$, so the matrix
 has rank at most the feature dimension, and multi-head latent attention
 (:numref:`sec_kv-cache`) :cite:`DeepSeek-AI.2024` caches one low-dimensional

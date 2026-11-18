@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7a856dbf40db00bbd10c9f63c3cd9b79b0b3ea73f87ecb0ed92066233c7145c5",
+    "d2l_lib_fingerprint": "sha256:77fffc5020b249219944081fb579b6290d2e8913f8448678f7bd8da6502e2283",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,106 +13,134 @@
       "kind": "text",
       "outputs": []
     },
-    "multihead-attention-one-head-must-average-1": {
-      "code_fingerprint": "sha256:438e205621b7456c0c0a515f714fb0540c00a81c5cf21539f03e1570a7e58647",
+    "multihead-attention-self-attention": {
+      "code_fingerprint": "sha256:a7ba6c3a5575ecaaa559980ed8bdce3aca2206a0f47e4bfcb4d279016a3e9ebd",
       "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-self-attention-1": {
+      "code_fingerprint": "sha256:08369511ac4f982be0fd00de6f59ad93ceb0d350203704b1e4ae642693f9ada4",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single head, weights (0.5, 0.5): relative error 0.707\nsingle head, weights (0.7, 0.3): relative error 0.707\nsingle head, weights (0.9, 0.1): relative error 0.707\nsingle head, weights (1.0, 0.0): relative error 0.707\ntheory: sqrt(1/2) = 0.707\n"
+          "text": "scores of gave:  [1.41 0.   1.41 0.   1.41]\nweights of gave: [0.29 0.07 0.29 0.07 0.29]\nweights of the:  [0.2 0.2 0.2 0.2 0.2]\noutput of gave:  [0.29 0.07 0.29 0.07 0.29]\ncausal weights of gave: [0.8 0.2 0.  0.  0. ]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multihead-attention/multihead-attention-self-attention-1-1.svg",
+          "bytes": 25056,
+          "sha256": "sha256:081f3648ae8cf6780108640710a1e852e37b35c38599c0b998feea5512d34d85"
         }
       ]
     },
-    "multihead-attention-one-head-must-average-2": {
-      "code_fingerprint": "sha256:6c798e213eb30a6fda493d067470284ecdd72eb0e9e12405d82d2981772ab42c",
+    "multihead-attention-one-head-must-average-1": {
+      "code_fingerprint": "sha256:9b4a3291d5c43e88f3b2a26e2a6a625cf8014b30873fcfb32fcbdcf2d89eaddf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.4e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 1.7e-06\n"
+          "text": "one head, weights (0.70, 0.30): relative error 0.709; sqrt(1/2) = 0.707\ntwo heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.5e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 7.0e-07\n"
         }
       ]
     },
     "multihead-attention-implementation-1": {
-      "code_fingerprint": "sha256:33a2b4d145fe3bbafa1197c7590eacd16d73fe326b0108e66295e035d6e57c2c",
+      "code_fingerprint": "sha256:7cf975e5e2d564ed9ef5c3b66d53c121a881aefa994c10045d7f3a683921410d",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-2": {
-      "code_fingerprint": "sha256:fd0609f3ca0a9a67119543633896c694dd0d68deb5e9eee48287382eb15c9372",
+      "code_fingerprint": "sha256:204eead829ba99d313bb140f34b0dbbeae2cce19fe216777daa32c349dd98707",
       "kind": "text",
       "outputs": []
     },
-    "multihead-attention-implementation-4": {
-      "code_fingerprint": "sha256:2a88fb73367adf0f7b2508f93af8e01cd45bb692b0340b23ecc849d04d9354a9",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "H = 1: 262144 parameters\nH = 2: 262144 parameters\nH = 4: 262144 parameters\nH = 8: 262144 parameters\n"
-        }
-      ]
-    },
     "multihead-attention-learned-heads-on-the-copy-both-task-1": {
-      "code_fingerprint": "sha256:8d9b0560f593ed48c8ff38b250f4cfdfead1516f1e46f8a1492c44b64c58839a",
+      "code_fingerprint": "sha256:069ab96499ddc98b5d4f32c6a73eb41f330691099a85dc75dfcb2e7717fe0687",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-learned-heads-on-the-copy-both-task-2": {
-      "code_fingerprint": "sha256:4da9f9d0cb421b17f40afe327d2e00033c8a2a46078f55ed590b676ec175aa8b",
+      "code_fingerprint": "sha256:e00f1db826b6f736cab6a2d006b1cef4b6c74c06cba3167bbac2cbb67d4c009b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 1: error 0.71; weights (0.51, 0.49)\n"
+          "text": "H  run  parameters  error    weight on v_1, per head\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 2: error 1.1e-07; weights (0.91, 0.09) (0.05, 0.95)\n"
+          "text": "1    1        1024  0.71     0.51\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 4: error 1.3e-07; weights (0.25, 0.75) (0.95, 0.05) (0.93, 0.07) (0.09, 0.91)\n"
+          "text": "1    2        1024  0.71     0.52\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2    1        1024  1.1e-07  0.98 0.12\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2    2        1024  1.1e-07  0.93 0.03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4    1        1024  1.1e-07  0.96 0.94 0.16 0.12\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4    2        1024  1.2e-07  0.04 0.26 0.88 0.95\n"
         }
       ]
     },
-    "multihead-attention-shared-keys-and-values": {
-      "code_fingerprint": "sha256:fcbdc3784873a685f72fce4df4de5dde1ad80744744e09361b63a5b07937486e",
+    "multihead-attention-sharing-keys-and-values": {
+      "code_fingerprint": "sha256:29e1b681f1433025dd7c008e639d936a49159ef1734d0500ce2360852ed27fda",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |GQA - MHA|: 0.0e+00\nparameters: GQA 163840, MHA 262144\n"
-        }
-      ]
-    },
-    "multihead-attention-one-sequence-querying-itself": {
-      "code_fingerprint": "sha256:d242c04a6e52cab1ceaa79f2f99489b7caeade58f5244807e1ef9b4373160bb3",
-      "kind": "text",
-      "outputs": []
-    },
-    "multihead-attention-one-sequence-querying-another": {
-      "code_fingerprint": "sha256:ad218d5271592e64cf55739ba94bf3b44f1d953c64a626b406d0684f6a875024",
-      "kind": "text",
-      "outputs": []
-    },
-    "multihead-attention-an-alignment-you-can-read": {
-      "code_fingerprint": "sha256:bc5032aba69de0769f7d4427614dce9d567c2a5d416077a66e46262966766602",
-      "kind": "asset",
-      "outputs": [
+          "text": "H  H_kv  run  parameters  error    weight on v_1, per head\n"
+        },
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
-          "bytes": 24126,
-          "sha256": "sha256:c235a5515cb5cfe6babccda462f463e4b9d26e52d5347eb2247b6951718e7fc9"
+          "type": "stream",
+          "name": "stdout",
+          "text": "2     1    1         768  1.1e-07  0.93 0.03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2     1    2         768  1.1e-07  0.03 0.96\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4     2    1         768  1.1e-07  0.08 0.95 0.98 0.08\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4     2    2         768  1.1e-07  0.03 0.88 0.02 0.88\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4     1    1         640  0.71     0.97 0.04 0.13 0.89\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4     1    2         640  0.71     0.03 0.04 0.72 0.98\n"
         }
       ]
     }

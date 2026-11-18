@@ -6,10 +6,11 @@ the seven house-style ``mdl-attention-*`` figures.
 
 Figures:
   mdl-attention-soft-lookup.svg -- a *worked* soft lookup (A1,
-      queries-keys-values.md): one query scores three keys, a softmax turns the
-      scores into weights that visibly sum to one, and the output is the
-      matching convex combination of the three values -- with actual numbers,
-      and a geometric panel showing the mixture inside the triangle of values.
+      queries-keys-values.md): the stated query q = (1, 1) scores three stated
+      keys by -||q - k||^2, a softmax turns the scores into weights that
+      visibly sum to one, and the output is the matching convex combination of
+      three stated values; a geometric panel shows the mixture inside the
+      triangle of values. All numbers are computed from q, K and V.
   mdl-attention-multi-head.svg -- a clean multi-head-attention block diagram
       (A3, multihead-attention.md): shared Q/K/V feed h parallel heads, each
       with its own projections and attention, whose outputs are concatenated
@@ -70,93 +71,105 @@ def _dot(ax, cx, cy, r=0.06, color=GRAY):
 # =========================================================================== #
 
 def fig_soft_lookup() -> None:
-    # scores -> softmax weights (real arithmetic, rounded only for display)
-    scores = np.array([2.0, 1.0, 0.1])
-    w = np.exp(scores) / np.exp(scores).sum()          # 0.659, 0.242, 0.099
-    wd = np.round(w, 2)                                 # 0.66, 0.24, 0.10 (sum 1)
+    """One soft lookup with stated numbers (queries-keys-values.md, fig_qkv).
+
+    Query q = (1, 1); keys k1 = (1, 1), k2 = (2, 1), k3 = (0, 0); score
+    s_i = -||q - k_i||^2 = 0, -1, -2 (the rule of the scalar example); softmax
+    weights 0.67, 0.24, 0.09; values v1 = (1, 3), v2 = (0, 0), v3 = (4, 1);
+    output o = 0.67 v1 + 0.24 v2 + 0.09 v3 = (1.0, 2.1). Every number in the
+    figure is computed here from q, K and V, so the figure, the text and the
+    caption show one computation.
+    """
+    q = np.array([1.0, 1.0])
+    K = np.array([[1.0, 1.0], [2.0, 1.0], [0.0, 0.0]])
+    V = np.array([[1.0, 3.0], [0.0, 0.0], [4.0, 1.0]])
+    scores = -((q - K) ** 2).sum(1) + 0.0               # 0, -1, -2 (no -0)
+    w = np.exp(scores) / np.exp(scores).sum()          # 0.665, 0.245, 0.090
+    wd = np.round(w, 2)                                 # 0.67, 0.24, 0.09
+    assert abs(wd.sum() - 1) < 1e-9                     # displayed sum is 1
+    o = w @ V                                           # (1.03, 2.09)
     cols = [BLUE, ORANGE, GREEN]
 
-    # 2-D values; the output is their weighted average (a convex combination)
-    V = np.array([[1.0, 2.6], [0.5, 0.6], [3.3, 1.1]])
-    o = w @ V
+    def vec(x):
+        return "(" + ", ".join(f"{c:g}" for c in x) + ")"
 
     fig, (axp, axg) = plt.subplots(
-        1, 2, figsize=(11.4, 4.3),
-        gridspec_kw={"width_ratios": [1.95, 1.0]})
+        1, 2, figsize=(12.4, 4.6),
+        gridspec_kw={"width_ratios": [2.15, 1.0]})
 
     # ---------------------------------------------------------------- (a) --- #
-    # pipeline: q -> keys -> softmax weights (bars) -> values -> output
+    # pipeline: q -> keys -> scores -> softmax weights (bars) -> values -> o
     axp.set_aspect("equal")
     axp.axis("off")
-    ys = [3.35, 2.05, 0.75]
-    xq, xk = 0.85, 2.65
-    xbar0, ulen = 4.4, 1.6                               # unit-bar origin/length
-    xval, xo = 7.2, 9.45
-    # each value arrow lands on its own point of the o box's left edge
-    # (25 / 50 / 75 % of the box height), top value -> top point
-    o_h = 0.9
+    ys = [3.45, 2.05, 0.65]
+    bw, bh = 1.25, 0.98                                  # key/value box size
+    xq, xk = 0.85, 2.75
+    xbar0, ulen = 4.75, 1.6                              # unit-bar origin/length
+    xval, xo = 7.65, 10.05
+    o_h = 1.05
     land = [ys[1] + 0.25 * o_h, ys[1], ys[1] - 0.25 * o_h]
 
-    # query feeds every key
-    _box(axp, xq, ys[1], 1.0, 0.82, r"$\mathbf{q}$", GRAY, fontsize=15)
-    for k, (yi, ci, s, ww, wdi) in enumerate(zip(ys, cols, scores, w, wd), 1):
-        # key
-        _box(axp, xk, yi, 0.98, 0.74, rf"$\mathbf{{k}}_{{{k}}}$", ci,
+    _box(axp, xq, ys[1], 1.25, bh, r"$\mathbf{q}$" + "\n" + vec(q), GRAY,
+         fontsize=14)
+    for k, (yi, ci) in enumerate(zip(ys, cols), 1):
+        s, ww, wdi = scores[k - 1], w[k - 1], wd[k - 1]
+        _box(axp, xk, yi, bw, bh,
+             rf"$\mathbf{{k}}_{{{k}}}$" + "\n" + vec(K[k - 1]), ci,
              fontsize=14)
-        fl.arrow(axp, (xq + 0.5, ys[1]), (xk - 0.52, yi), color=GRAY, lw=1.6,
-                 mut=12)
+        fl.arrow(axp, (xq + 0.64, ys[1]), (xk - bw / 2 - 0.04, yi),
+                 color=GRAY, lw=1.6, mut=12)
         # score s_i above the key->weights arrow
-        axp.text((xk + 0.52 + xbar0) / 2, yi + 0.07, rf"$s={s:.1f}$",
-                 ha="center", va="bottom", fontsize=12.5, color="black")
-        fl.arrow(axp, (xk + 0.52, yi), (xbar0 - 0.06, yi), color=GRAY, lw=1.6,
-                 mut=12)
-        # unit reference box + weight bar as a fraction of it; alpha ABOVE it
-        axp.add_patch(Rectangle((xbar0, yi - 0.17), ulen, 0.34, facecolor="none",
-                                edgecolor=GRAY, lw=1.0, ls="--", zorder=2))
+        axp.text((xk + bw / 2 + xbar0) / 2, yi + 0.07, rf"$s_{{{k}}}={s:g}$",
+                 ha="center", va="bottom", fontsize=13, color="black")
+        fl.arrow(axp, (xk + bw / 2 + 0.04, yi), (xbar0 - 0.06, yi),
+                 color=GRAY, lw=1.6, mut=12)
+        # unit reference box + weight bar as a fraction of it; alpha above it
+        axp.add_patch(Rectangle((xbar0, yi - 0.17), ulen, 0.34,
+                                facecolor="none", edgecolor=GRAY, lw=1.0,
+                                ls="--", zorder=2))
         axp.add_patch(Rectangle((xbar0, yi - 0.17), ulen * ww, 0.34,
                                 facecolor=ci, edgecolor="none", alpha=0.85,
                                 zorder=3))
-        axp.text(xbar0 + ulen / 2, yi + 0.28,
+        axp.text(xbar0 + ulen / 2, yi + 0.27,
                  rf"$\alpha_{{{k}}}={wdi:.2f}$", ha="center", va="bottom",
-                 fontsize=12.5, color="black")
-        # unweighted feed into the value
-        fl.arrow(axp, (xbar0 + ulen + 0.08, yi), (xval - 0.52, yi), color=GRAY,
-                 lw=1.5, mut=12)
-        # value
-        _box(axp, xval, yi, 0.98, 0.74, rf"$\mathbf{{v}}_{{{k}}}$", ci,
+                 fontsize=13, color="black")
+        fl.arrow(axp, (xbar0 + ulen + 0.08, yi), (xval - bw / 2 - 0.04, yi),
+                 color=GRAY, lw=1.5, mut=12)
+        _box(axp, xval, yi, bw, bh,
+             rf"$\mathbf{{v}}_{{{k}}}$" + "\n" + vec(V[k - 1]), ci,
              fontsize=14)
-        # value contributes to the output, weighted (arrow thickness == alpha)
-        fl.arrow(axp, (xval + 0.5, yi), (xo - 0.97, land[k - 1]), color=ci,
-                 lw=1.2 + 5.0 * ww, mut=13)
+        # value contributes to the output, weighted (arrow width ~ alpha)
+        fl.arrow(axp, (xval + bw / 2 + 0.04, yi), (xo - 1.0, land[k - 1]),
+                 color=ci, lw=1.2 + 5.0 * ww, mut=13)
 
-    # column headers / the softmax gate label
-    axp.text(xbar0 + ulen / 2, 4.05, r"softmax: $\alpha_i \propto e^{\,s_i}$",
+    # column headers: the score rule and the softmax
+    axp.text(xk + 0.55, 4.35,
+             r"score $s_i=-\|\mathbf{q}-\mathbf{k}_i\|^2$",
              ha="center", va="bottom", fontsize=13, color="black")
-    # the weights sum to one -- shown by the shared unit box AND spelled out
-    axp.text(xbar0 + ulen / 2, -0.05,
-             r"weights sum to one:  "
-             rf"$\alpha_1+\alpha_2+\alpha_3={wd[0]:.2f}+{wd[1]:.2f}"
-             rf"+{wd[2]:.2f}=1$",
-             ha="center", va="center", fontsize=12.5, color="black")
+    axp.text(xbar0 + ulen / 2 + 0.75, 4.35,
+             r"softmax: $\alpha_i \propto e^{\,s_i}$",
+             ha="center", va="bottom", fontsize=13, color="black")
+    axp.text(xbar0 + ulen / 2, -0.35,
+             r"$\alpha_1+\alpha_2+\alpha_3="
+             rf"{wd[0]:.2f}+{wd[1]:.2f}+{wd[2]:.2f}=1$",
+             ha="center", va="center", fontsize=13, color="black")
 
-    # output box
-    _box(axp, xo, ys[1], 1.85, o_h,
-         r"$\mathbf{o}=\Sigma_i\,\alpha_i \mathbf{v}_i$", "black",
+    _box(axp, xo, ys[1], 1.95, o_h,
+         r"$\mathbf{o}=\Sigma_i\,\alpha_i \mathbf{v}_i$" + "\n"
+         + rf"$\approx({o[0]:.1f},\ {o[1]:.1f})$", "black",
          fontsize=13.5, fc_alpha=0.06)
 
-    axp.set_xlim(0.1, 10.5)
-    axp.set_ylim(-0.4, 4.4)
+    axp.set_xlim(0.1, 11.1)
+    axp.set_ylim(-0.6, 4.8)
 
     # ---------------------------------------------------------------- (b) --- #
     # the output is a convex combination -> it lies inside the value triangle
     axg.set_aspect("equal")
     tri = np.vstack([V, V[0]])
     axg.plot(tri[:, 0], tri[:, 1], color=LIGHT, lw=1.4, zorder=1)
-    # vertex label = value name + its weight (the spokes stay unlabelled, so
-    # no number sits on a triangle edge or a spoke)
-    lab_pos = [((-0.18, 0.0), "right", "center"),
-               ((-0.18, -0.02), "right", "center"),
-               ((0.0, -0.22), "center", "top")]
+    lab_pos = [((-0.2, 0.0), "right", "center"),
+               ((-0.2, 0.0), "right", "center"),
+               ((0.0, -0.25), "center", "top")]
     for vi, ci, (off, ha, va), k in zip(V, cols, lab_pos, range(3)):
         axg.plot([o[0], vi[0]], [o[1], vi[1]], ls="--", color=ci, lw=1.3,
                  alpha=0.8, zorder=2)
@@ -165,15 +178,13 @@ def fig_soft_lookup() -> None:
                  rf"$\mathbf{{v}}_{{{k + 1}}}\ ({wd[k]:.2f})$", color=ci,
                  fontsize=14, ha=ha, va=va)
     axg.plot(*o, "*", color="black", ms=15, zorder=5)
-    # "o" right beside its star, in the empty wedge between the v1 and v3
-    # spokes (upper right), clear of all three dashed lines
-    axg.text(o[0] + 0.16, o[1] + 0.04, r"$\mathbf{o}$", color="black",
+    axg.text(o[0] + 0.18, o[1] + 0.05, r"$\mathbf{o}$", color="black",
              fontsize=15, ha="left", va="bottom")
-    axg.text(1.75, 3.05, "a convex combination:\n"
+    axg.text(2.0, 3.45, "a convex combination:\n"
              r"$\mathbf{o}$ lies inside the triangle of values",
              ha="center", va="bottom", fontsize=13, color="black")
-    axg.set_xlim(-0.6, 4.0)
-    axg.set_ylim(0.1, 3.85)
+    axg.set_xlim(-1.3, 4.5)
+    axg.set_ylim(-0.75, 4.3)
     axg.axis("off")
 
     fig.subplots_adjust(wspace=0.05)

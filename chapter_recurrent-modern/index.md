@@ -37,7 +37,7 @@ and how a few attention layers repair it.
 
 We assume the recurrent networks of :numref:`chap_rnn` and the attention of
 :numref:`chap_attention`; linear attention and its computation in chunks
-(:numref:`sec_attention-at-scale`) are the starting point of
+(:numref:`sec_windowed-linear-attention`) are the starting point of
 :numref:`sec_matrix-state`. The field changes quickly, so the chapter
 teaches the mechanisms (state, update, readout, and cost) rather than a
 ranking of current models. It teaches algorithms rather than GPU kernels,

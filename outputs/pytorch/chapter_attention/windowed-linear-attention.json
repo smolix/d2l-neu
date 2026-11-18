@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "source": "chapter_attention/windowed-linear-attention.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:c2ad7d4f6fd19a60a748d47133923e0aa8b6c1c68f1545e3f6c59285f8141cea",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "windowed-linear-attention-windowed-and-linear-attention-1": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "windowed-linear-attention-windowed-and-linear-attention-2": {
+      "code_fingerprint": "sha256:cbda2afd3b6817615a2f0587389c7b608562a53afcc89f4e573a5c6653157ff0",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-attention-through-a-window": {
+      "code_fingerprint": "sha256:86cd125bda8a5271ed9290053ecc2913b7dd87afc11590b393a38763e5a5f52b",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-a-linear-cost-implementation-1": {
+      "code_fingerprint": "sha256:8c02a6b815d3cfa61c4e2c7c44eb5237a052472fe95289184027b393b089ede9",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-a-linear-cost-implementation-3": {
+      "code_fingerprint": "sha256:c118079e9cdf9d7baaa6f8edcb0d0b980f166ab20412d554476b5cb3a4f4118c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "causal:  53.1% of tiles\nwindow:  12.1% of tiles\n"
+        }
+      ]
+    },
+    "attention-at-scale-a-linear-cost-implementation-2": {
+      "code_fingerprint": "sha256:6825e4d7f64ee3dd45e7e126c493c4de4ee776ae34159cbf85596bc3701fa814",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     blocked: maximum deviation 3.58e-07\nfused kernel: maximum deviation 4.17e-07\n"
+        }
+      ]
+    },
+    "attention-at-scale-the-price-of-attention-measured": {
+      "code_fingerprint": "sha256:4d4b8b25a96ef7b96d03ff59a31f84f5ed3a77ff1c3c508b2e8c982b42c70bba",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =    512: window  1.0x faster, tile count predicts  1.4x\nn =  1,024: window  1.0x faster, tile count predicts  2.4x\nn =  2,048: window  1.7x faster, tile count predicts  4.4x\nn =  4,096: window  5.1x faster, tile count predicts  8.4x\nn =  8,192: window 12.8x faster, tile count predicts 16.4x\nn = 16,384: window 24.4x faster, tile count predicts 32.4x\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 32,768: window 48.2x faster, tile count predicts 64.4x\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "windowed-linear-attention/attention-at-scale-the-price-of-attention-measured-1.svg",
+          "bytes": 31986,
+          "sha256": "sha256:c8589bd8766f4498a15eb9cac650908e288ffe95155d397588d7e741fc0fbabd"
+        }
+      ]
+    },
+    "attention-at-scale-kernelizing-the-score-1": {
+      "code_fingerprint": "sha256:bc74c2570a06c9f049c48f07b0473a976649c03c62f6950b19e166b4372f9098",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-chunked-computation-1": {
+      "code_fingerprint": "sha256:bc5978e9c1df9acf3fee9ea5a4a47e8701db51f1059224588046b6f4af9392cf",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-kernelizing-the-score-2": {
+      "code_fingerprint": "sha256:d8832289b920acef789c7536a406304d5457c8871d272aecb77fb6c577b33c93",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "parallel: maximum deviation 2.38e-07\n chunked: maximum deviation 2.38e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
+        }
+      ]
+    },
+    "windowed-linear-attention-sharpening": {
+      "code_fingerprint": "sha256:4674fce577a092392e861c44a65aca693fbf376c6922adf53e6f3bc8aea6cc4e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "queries x1 : mean largest weight, softmax 0.36, elu+1 0.14\nqueries x4 : mean largest weight, softmax 0.75, elu+1 0.15\nqueries x16: mean largest weight, softmax 0.94, elu+1 0.15\n"
+        }
+      ]
+    }
+  }
+}

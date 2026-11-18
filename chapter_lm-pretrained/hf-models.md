@@ -826,7 +826,7 @@ belong to the 18 recurrent layers, two small ones to each.
 
 Gemma 4 E2B has 35 layers of width 1,536, four `sliding_attention` layers
 followed by one `full_attention` layer, seven times over. A sliding layer
-attends to the last 512 positions only (:numref:`sec_attention-at-scale`).
+attends to the last 512 positions only (:numref:`sec_windowed-linear-attention`).
 The last 20 layers do something we have not met. They compute no keys and
 values and attend to those of an earlier layer. That leaves 15 layers with a
 cache of their own, 3 full and 12 sliding, and these two numbers enter every

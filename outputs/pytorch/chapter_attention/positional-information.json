@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |Y[perm] - Y_perm|: 8.94e-08\n"
+          "text": "max |Y[perm] - Y_perm|: 1.08e-07\n"
         }
       ]
     },
@@ -33,23 +33,12 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31436,
-          "sha256": "sha256:84a74509a2d5f4dda2028dd9d53091cb104905a87aff17f9c60fed9b6e33e61b"
-        }
-      ]
-    },
-    "positional-information-sinusoidal-encodings-2": {
-      "code_fingerprint": "sha256:789565a711a9f233f6bde53bb0887a0285e5ce19ec4d0557161367df41798b0e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "0 in binary is 000\n1 in binary is 001\n2 in binary is 010\n3 in binary is 011\n4 in binary is 100\n5 in binary is 101\n6 in binary is 110\n7 in binary is 111\n"
+          "sha256": "sha256:ab8698d8343abf3a93783b3dbb446f87fc424cb20b572ece582d91c97f782d0c"
         }
       ]
     },
     "positional-information-sinusoidal-encodings-3": {
-      "code_fingerprint": "sha256:f22763f9e20e810b5a3b6914bd821ae3eeb49499af890ab9cb1a097871915f3e",
+      "code_fingerprint": "sha256:a9aa684040c1edc03be2856a3a5e65e3aee4b8bdbab1722fb364bb743ea33d0a",
       "kind": "asset",
       "outputs": [
         {
@@ -57,106 +46,139 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:d61b282fc79a786601a6319b4051311a44ae03245fba686574b6b8b2dbb176f5"
+          "sha256": "sha256:bbb8b9ed798b827de17fa958d60fb47186abfe65e39bf0aaaaa78ac25f1c6258"
         }
       ]
     },
     "positional-information-rotary-position-embeddings-1": {
-      "code_fingerprint": "sha256:3f94b7cc6c1a65b53322319cafdca2f96dd392173129664336ea406b6e3340a2",
+      "code_fingerprint": "sha256:b2a01e0541dd54913dab4647de46dd835159813615ee5b120b7c29d25edd06b7",
       "kind": "text",
       "outputs": []
     },
     "positional-information-rotary-position-embeddings-2": {
-      "code_fingerprint": "sha256:ad2ebdb0fb17ed44d8654804e88f37f703c8d16207b71c16fe4874a65664dd41",
+      "code_fingerprint": "sha256:454a01c1b38b65b7fdf8e7a084c132ec15bd98ea13cd7ca90f5287ecba54815b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RoPE, all positions shifted by   1: max score change 1.2e-06\nRoPE, all positions shifted by  17: max score change 1.7e-06\nRoPE, all positions shifted by 480: max score change 1.3e-05\nadditive sinusoidal, shifted by  17: max score change 3.3e+00\n"
+          "text": "RoPE, all positions shifted by   1: max score change 2.0e-06\nRoPE, all positions shifted by  17: max score change 2.1e-06\nRoPE, all positions shifted by 480: max score change 1.5e-05\nadditive sinusoidal, shifted by  17: max score change 2.7e+00\n"
         }
       ]
     },
     "positional-information-an-attention-only-language-model": {
-      "code_fingerprint": "sha256:9765bf3effea2a7bde012abc4456f1f4eb849d08a2a820219d794375d73ae1d5",
+      "code_fingerprint": "sha256:f6e5f9a6487ed87efb8da2cf57b7e7f8585079367663019a1559f2084d07583c",
       "kind": "text",
       "outputs": []
     },
     "positional-information-an-attention-only-language-model-1": {
-      "code_fingerprint": "sha256:aeb313ce938ad0cccf0a8d94ea925cf5cf18967a9a1028c43cbf90bc4f4b1f0c",
+      "code_fingerprint": "sha256:fecce24fefcef1399cdc26da226c649cbc4773a68de913b65361d7ac9b7e0345",
       "kind": "text",
       "outputs": []
     },
     "positional-information-an-attention-only-language-model-2": {
-      "code_fingerprint": "sha256:1aaacd6b4137cb2827f3518bfa042bab95d24f94992f950100ae0804311ba127",
+      "code_fingerprint": "sha256:ef8d375d97b47adf4b2743b3ec5db7f5e6609b633174d6569cb62ed67d45d70b",
       "kind": "text",
       "outputs": []
     },
     "positional-information-the-experiment-1": {
-      "code_fingerprint": "sha256:c649da4157990000cafab1eb1dad2097a86e7f0c0e581dc4717d50f577e552a6",
+      "code_fingerprint": "sha256:6164361691f7f3648efcc44f2fb49f5bcb7902e61f228c7dd4acaa27a2c35096",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned: final training loss 2.24\n"
+          "text": "   learned: final training loss 2.28, 2.27, 2.26\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 1.91\n"
+          "text": "sinusoidal: final training loss 2.26, 2.28, 2.29\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      rope: final training loss 2.01\n"
+          "text": "      rope: final training loss 2.02, 2.00, 1.99\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     alibi: final training loss 2.29\n"
+          "text": "     alibi: final training loss 2.31, 2.29, 2.31\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      none: final training loss 2.45\n"
+          "text": "      none: final training loss 2.45, 2.46, 2.47\n"
         }
       ]
     },
     "positional-information-the-experiment-3": {
-      "code_fingerprint": "sha256:736a5767f59c8522b32afbe6f7111fc6cdb63626b3d0232b44e6f7b9a782449e",
+      "code_fingerprint": "sha256:713ff03961dbe1306059d5e715a28e943231fb59a644f916b59ac40149ba141b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   context:      128     256     512\n   learned:      9.2    16.9    23.0\nsinusoidal:      6.6    16.7    28.3\n      rope:      7.3    15.1    42.0\n     alibi:      9.8     9.8     9.7\n      none:     11.6    11.7    11.9\n"
+          "text": "1,138,688 validation bytes, mean (min-max) of three runs\n   context:                128               256               512\n   learned:      9.6 (9.5-9.7)  15.3 (14.9-15.8)  19.7 (18.7-21.1)\nsinusoidal:      9.7 (9.4-9.9)  12.8 (12.5-13.3)  15.3 (14.7-15.9)\n      rope:      7.3 (7.2-7.4)  11.8 (10.5-13.6)  27.0 (18.4-35.5)\n     alibi:     9.9 (9.8-10.0)    9.9 (9.8-10.0)     9.9 (9.7-9.9)\n      none:   11.6 (11.5-11.7)  11.7 (11.6-11.8)  11.8 (11.8-11.8)\n"
+        }
+      ]
+    },
+    "positional-information-byte-bigram-baseline": {
+      "code_fingerprint": "sha256:88fe57d88226b3f13dbc547b84cbe733961a6ad5d8f11c0585a8cb548ac1310f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "byte bigram: perplexity 11.6\n"
+        }
+      ]
+    },
+    "positional-information-alibi-weight-beyond-the-window": {
+      "code_fingerprint": "sha256:5b2b8276adc6db2af0dcaef723ac9466c108b591764e54e0d621912c5e6be25e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      head:         1        2        3        4\nbias alone:     0.000    0.000    0.115    0.401\n   block 1:     0.000    0.000    0.115    0.400\n   block 2:     0.000    0.000    0.111    0.395\n"
+        }
+      ]
+    },
+    "positional-information-alibi-without-far-keys": {
+      "code_fingerprint": "sha256:db7791a15ba114902afbed0862d5ac11722a11b022c5f645c48ed9c6f66b5718",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        all keys: perplexity at 512   9.9 (9.7-9.9)\n keys < 128 back: perplexity at 512   9.9 (9.7-9.9)\n"
         }
       ]
     },
     "positional-information-extending-a-trained-model-s-context": {
-      "code_fingerprint": "sha256:90f18e5d3754979b1b6ea757a8ea18fd484eb56bbc5e920b64bdf9fc48f05ef0",
+      "code_fingerprint": "sha256:782748f0c4a8979f98f3481a395d431af0a8862390150f1ed5eee610a3c98a56",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "10 of 16 pairs have periods above 128\n"
+          "text": "10 of 16 pairs have periods above 128\n   context:                128               256               512\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  unscaled:      7.3    15.1    42.0\n"
+          "text": "  unscaled:      7.3 (7.2-7.4)  11.8 (10.5-13.6)  27.0 (18.4-35.5)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " all pairs:     42.3    42.6    42.8\n"
+          "text": " all pairs:   40.5 (37.9-43.4)  40.7 (38.2-43.6)  40.8 (38.3-43.7)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slow pairs:      8.4     9.2     9.7\n"
+          "text": "slow pairs:      8.0 (7.8-8.2)     8.5 (8.2-8.7)     8.8 (8.5-9.1)\n"
         }
       ]
     }

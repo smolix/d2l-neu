@@ -89,8 +89,9 @@ with no deliverable or success criterion and are rewritten or dropped.
    v_i$.)
    *Provenance:* original (kept from the section's existing set).
 1. [short-code] **Boxcar and triangular kernels in action.** Extend
-   `nadaraya_watson` to accept the boxcar and triangular kernels of
-   `fig_attention_kernels` instead of only the Gaussian, matching bandwidths
+   `nadaraya_watson` to accept the boxcar and triangular kernels (named
+   in the section's prose; `fig_attention_kernels` was retired in the
+   2026-11-18 pass) instead of only the Gaussian, matching bandwidths
    so all three touch zero at the same distance, then re-run the $\sigma=0.5$
    regression and plot all three fits and their attention-weight heatmaps
    side by side. Deliverable: a plot showing where the boxcar kernel's hard

@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "source": "chapter_attention/windowed-linear-attention.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f3319fff5662b23b329a6c2f130ea693f263dbc4ef7123f384ffba711532d3be",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "windowed-linear-attention-windowed-and-linear-attention-1": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-attention-through-a-window": {
+      "code_fingerprint": "sha256:7f4089bb5bd2c35f5b65a7ad29dd43219f293521804ec578ce1ebe5370d75b78",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-a-linear-cost-implementation-1": {
+      "code_fingerprint": "sha256:a6bcab28cac8eb7e8c8a851cf5917bde69e2015f249331ee2b1ad4ea143f838d",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-a-linear-cost-implementation-3": {
+      "code_fingerprint": "sha256:3cdd8f8b0460e6e040024be7b553c16eff68a6fdb2a9dfb7c906ee0f5226da0c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "causal:  53.1% of tiles\nwindow:  12.1% of tiles\n"
+        }
+      ]
+    },
+    "attention-at-scale-a-linear-cost-implementation-2": {
+      "code_fingerprint": "sha256:daf22fb07cba8ad8c0bcd09ae706dc881b701482242b3b68fd5e6d3e66e03e17",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     blocked: maximum deviation 2.53e-07\nfused kernel: maximum deviation 4.77e-07\n"
+        }
+      ]
+    },
+    "attention-at-scale-the-price-of-attention-measured": {
+      "code_fingerprint": "sha256:a16b691d44e60a4129ee6315e37b6d20631be957a62875b4ce81b3a9bd664e30",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =    512: window  1.0x faster, tile count predicts  1.4x\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  1,024: window  1.0x faster, tile count predicts  2.4x\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  2,048: window  1.8x faster, tile count predicts  4.4x\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  4,096: window  4.8x faster, tile count predicts  8.4x\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  8,192: window  9.1x faster, tile count predicts 16.4x\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 16,384: window 16.7x faster, tile count predicts 32.4x\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 32,768: window 32.3x faster, tile count predicts 64.4x\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "windowed-linear-attention/attention-at-scale-the-price-of-attention-measured-1.svg",
+          "bytes": 31793,
+          "sha256": "sha256:bdb0e38a1b23556637337cc2155a0761647df3d80435fecf3fecb85151e1e383"
+        }
+      ]
+    },
+    "attention-at-scale-kernelizing-the-score-1": {
+      "code_fingerprint": "sha256:eaae9e766a8ec09d5c031fdbf2ed43c7010c528d1984a11d931d83c7ccd48212",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-chunked-computation-1": {
+      "code_fingerprint": "sha256:7aee4c4976898f75769f6f24d3b1fd162c0856dbe7b2643b60f96beed03b0482",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-kernelizing-the-score-2": {
+      "code_fingerprint": "sha256:6a00e51c06c905954dadecc3a2726c00771e0fd99e744dd775eabcdce1675823",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "parallel: maximum deviation 2.38e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " chunked: maximum deviation 3.58e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
+        }
+      ]
+    },
+    "windowed-linear-attention-sharpening": {
+      "code_fingerprint": "sha256:a6c7a40be89c2e6e41b71d043aecc9d177623ef231049cc8ff39469e8fbd40f2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "queries x1 : mean largest weight, softmax 0.35, elu+1 0.15\nqueries x4 : mean largest weight, softmax 0.76, elu+1 0.15\nqueries x16: mean largest weight, softmax 0.94, elu+1 0.15\n"
+        }
+      ]
+    }
+  }
+}

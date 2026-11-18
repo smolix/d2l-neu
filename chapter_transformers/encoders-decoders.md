@@ -832,8 +832,8 @@ decoder reads it. Any such rearrangement, undone by the cross-attention,
 reverses the string just as well, and training settles on one of them at
 random. The alignment is then split between two attention layers, and the
 cross-attention map shows only the second half. As
-:numref:`sec_multihead-attention` noted, readable attention patterns are
-the exception rather than the rule. Even in this one-block model a single
+:numref:`sec_what-attention-computes` showed, an attention map says where a
+head looks, not what it computes. Even in this one-block model a single
 map can mislead, and with more depth and more heads the maps spread out
 further, as exercise :exref:`ex_encdec-depth-heads` shows.
 
@@ -1109,8 +1109,8 @@ general autoregressive generation.
        product. Over several runs, does the product recover the
        anti-diagonal where the cross-attention alone does not? When does
        the residual stream make this tracing fail? Reconcile your findings
-       with the cautions of :numref:`sec_multihead-attention` about reading
-       attention maps.
+       with the cautions of :numref:`sec_what-attention-computes` about
+       reading attention maps.
    :exlabel:`ex_encdec-depth-heads`
 
 1. [code] **Several masks at once.** ● The objective

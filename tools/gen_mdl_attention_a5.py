@@ -65,7 +65,7 @@ def fig_online_softmax() -> None:
             fontsize=13, color="black", rotation=90)
 
     ax.text(3.0, -0.75,
-            r"scores $\mathbf{Q}\mathbf{K}^{\!\top}\!/\sqrt{d}\,$:"
+            r"scores $\mathbf{Q}\mathbf{K}^{\!\top}\!/\sqrt{d_h}\,$:"
             " one block at a time",
             ha="center", va="center", fontsize=13.5, color="black")
 
@@ -91,8 +91,8 @@ def fig_online_softmax() -> None:
             fontsize=14, color="black")
     ax.text(sx + 1.72, -0.32, r"$\mathbf{O}$", ha="center", va="top",
             fontsize=14, color="black")
-    ax.text(sx + 1.1, -1.0, "running state: $\\mathcal{O}(nd)$", ha="center",
-            va="top", fontsize=13, color="black")
+    ax.text(sx + 1.1, -1.0, "running state: $\\mathcal{O}(n d_h)$",
+            ha="center", va="top", fontsize=13, color="black")
 
     # thin bracket over all three state bars: the arrow lands on it, since
     # the update rescales and accumulates into m, s, and O together

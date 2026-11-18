@@ -1867,8 +1867,9 @@ label of a single demonstration took 41 to 65% of the predictions.
 Classifying a new headline asks for more than copying, since the right label
 must be chosen among those in the context. Whether a pretrained language model
 does this by something like a step of gradient descent on the demonstrations,
-which a single linear attention head can compute
-(:numref:`subsec_in-context-regression`), is disputed
+which a single linear attention head can compute (Exercise
+:exref:`ex_what-attention-computes-in-context-regression` of
+:numref:`sec_what-attention-computes`), is disputed
 :cite:`Oswald.Niklasson.Randazzo.ea.2023,Shen.Mishra.Khashabi.2024`. We leave
 the mechanism open and compare procedures instead: the same labeled examples go
 to in-context learning and to an explicit weight update, and we see which

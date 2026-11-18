@@ -95,7 +95,9 @@ choices. It must then be trained with reinforcement learning
 uses the differentiable form throughout. :numref:`fig_qkv` works one lookup
 through with three keys.
 
-![Soft lookup with three key--value pairs. The query's scores $s_i$ against the keys become softmax weights $\alpha_i$ that sum to one (left), and the output $\mathbf{o}$ is the weighted sum of the values, a point inside the triangle whose corners are the values (right).](../img/mdl-attention-soft-lookup.svg)
+<!-- WRITER: fig_qkv now shows one stated computation (B2 paragraph still to write): query q = (1, 1); keys k1 = (1, 1), k2 = (2, 1), k3 = (0, 0); score s_i = -||q - k_i||^2 (the rule of the scalar example), so s = 0, -1, -2; softmax weights e^0, e^-1, e^-2 over 1 + 0.368 + 0.135 = 1.503, i.e. 0.67, 0.24, 0.09 (displayed sum exactly 1.00; exact 0.665, 0.245, 0.090); values v1 = (1, 3), v2 = (0, 0), v3 = (4, 1); output o = 0.67 v1 + 0.09 v3 = (1.03, 2.10) with the rounded weights, (1.03, 2.09) exact, shown as o ≈ (1.0, 2.1). Lessons the numbers carry: the key equal to the query gets only two thirds of the weight; every key contributes. -->
+
+![Soft lookup of the query $\mathbf{q} = (1, 1)$ in three key--value pairs, with keys $(1, 1)$, $(2, 1)$, $(0, 0)$ and values $(1, 3)$, $(0, 0)$, $(4, 1)$. The scores $s_i = -\|\mathbf{q} - \mathbf{k}_i\|^2$ become softmax weights $\alpha_i$ that sum to one (left), and the output $\mathbf{o} \approx (1.0, 2.1)$ is the weighted sum of the values, a point inside the triangle whose corners are the values (right).](../img/mdl-attention-soft-lookup.svg)
 :label:`fig_qkv`
 
 The scoring function has a fixed number of parameters, however many
@@ -119,25 +121,16 @@ of the chapter learns them.
 
 A *kernel* $\alpha(\mathbf{q}, \mathbf{k})$ measures the similarity of a
 query and a key, typically as a decreasing function of their distance.
-Common choices are
+The most common choice is the Gaussian kernel
 
-$$
-\begin{aligned}
-\alpha(\mathbf{q}, \mathbf{k}) & = \exp\left(-\tfrac{1}{2} \|\mathbf{q} - \mathbf{k}\|^2 \right) && \textrm{Gaussian;} \\
-\alpha(\mathbf{q}, \mathbf{k}) & = 1 \textrm{ if } \|\mathbf{q} - \mathbf{k}\| \leq 1 && \textrm{boxcar;} \\
-\alpha(\mathbf{q}, \mathbf{k}) & = \mathop{\mathrm{max}}\left(0, 1 - \|\mathbf{q} - \mathbf{k}\|\right) && \textrm{triangular,}
-\end{aligned}
-$$
-:eqlabel:`eq_similarity-kernels`
+$$\alpha(\mathbf{q}, \mathbf{k}) = \exp\left(-\frac{\|\mathbf{q} - \mathbf{k}\|^2}{2\sigma^2}\right),$$
 
-and the degenerate constant kernel $\alpha(\mathbf{q}, \mathbf{k}) = 1$,
-which ignores the query. :numref:`fig_attention_kernels` plots them. Each
-can be widened or narrowed by dividing the distance by a *bandwidth*
-$\sigma$. The same kernels estimate densities, where they are known as
-*Parzen windows* :cite:`parzen1957consistent`.
+whose *bandwidth* $\sigma$ widens or narrows it. Boxcar and triangular
+windows, which give no weight beyond a fixed distance, are used too. The
+same kernels estimate densities, where they are known as *Parzen windows*
+:cite:`Parzen.1962`.
 
-![Four similarity kernels as functions of the query--key distance. Each can be rescaled by a bandwidth.](../img/mdl-attention-kernels.svg)
-:label:`fig_attention_kernels`
+<!-- WRITER: code step removed fig_attention_kernels, eq_similarity-kernels and the four-kernel display (QKV-4); the paragraph above is a placeholder. B5 still open: write the kernel as K(q, k) here and in eq_nadaraya-watson, keep alpha for normalized weights. Parzen now cites Parzen.1962 (density estimation, new bib entry). -->
 
 Normalizing a kernel over the keys, as in :eqref:`eq_softmax_attention` but
 without the exponential because kernels are already nonnegative, gives the
@@ -216,9 +209,11 @@ of the data and flattens toward the global mean, missing both the bump and
 the dip of the curve. The middle bandwidth, $\sigma = 0.5$, follows the
 noise-free function closely except near the ends of the interval, where
 all its neighbors lie on one side of the query and pull the estimate
-toward them. We keep the kernel Gaussian and vary only $\sigma$; the
-other shapes of :numref:`fig_attention_kernels` can be rescaled in the
-same way.
+toward them. We keep the kernel Gaussian and vary only $\sigma$.
+
+<!-- WRITER: the sentence on rescaling the shapes of fig_attention_kernels was removed with the figure; B7 (1/sigma^2 as the softmax sharpness) goes here. Robustness of this paragraph, checked over 500 redraws of the 40 training points (NumPy replica of the cells): sigma = 0.5 has the lowest error against the noise-free curve on [0.75, 4.25] in 99% of draws (median RMSE 0.29 vs 0.61 for sigma = 0.1 and 0.57 for sigma = 2); its error near the ends exceeds its interior error in 89% of draws (median 0.57 vs 0.29). The qualitative statements hold for any draw the reader gets. -->
+
+
 
 ## Attention Weights as a Diagnostic
 
@@ -230,6 +225,8 @@ the chapter with `d2l.show_heatmaps`. The helper takes an array of shape
 (rows of panels, columns of panels, queries, keys) and draws a grid of
 heatmaps.
 
+<!-- WRITER: the shape convention is now a comment in the heatmap cell (QKV-7); B8: drop it from this paragraph. -->
+
 The narrow and the wide kernel put weights of very different sizes on
 their keys, so we give each map its own color scale (`cbar='each'`). The
 queries are the test inputs and the keys are the training inputs, both in
@@ -239,6 +236,7 @@ increasing order.
 %%tab pytorch, jax
 w_narrow, w_wide = (nadaraya_watson(x_train, y_train, x_val, s)[1]
                     for s in (0.1, 2.0))
+# show_heatmaps takes (rows of panels, columns of panels, queries, keys)
 d2l.show_heatmaps(d2l.stack([w_narrow, w_wide])[None],
                   xlabel='Training inputs (keys)',
                   ylabel='Test inputs (queries)',
@@ -570,7 +568,7 @@ $$f(\mathbf{q}) = \sum_i \mathbf{v}_i \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{\s
   predict;
 - no training; consistent if the bandwidth shrinks suitably as data grow.
 
-![Gaussian, boxcar, constant, and triangular kernels.](../img/mdl-attention-kernels.svg){width=70%}
+<!-- WRITER: kernels figure dropped from this slide with fig_attention_kernels (code step); deck items of B12 still open. -->
 :::
 
 ::: {.slide title="The Estimator Is Five Lines"}

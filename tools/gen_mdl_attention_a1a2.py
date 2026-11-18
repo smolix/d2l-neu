@@ -3,11 +3,8 @@
 (queries-keys-values.md) and A2 (attention-scoring.md) in the shared house
 style defined in ``gen_mdl_figures.py``.
 
-Two figures:
+Figures:
 
-  * ``mdl-attention-kernels`` (A1, sec_attention-pooling) -- the four
-    similarity kernels (Gaussian, boxcar, constant, triangular) as a 1x4
-    strip; replaces the old in-notebook 4-panel matplotlib cell.
   * ``mdl-attention-alignment`` (A2, From Alignment to Attention) -- a
     schematic soft-alignment matrix between an English source sentence and
     its French translation, in the style of a learned attention map (mostly
@@ -34,38 +31,6 @@ from matplotlib.patches import Rectangle
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
-
-
-# --------------------------------------------------------------------------- #
-# A1: the four similarity kernels.                                            #
-# --------------------------------------------------------------------------- #
-
-def fig_kernels():
-    """Gaussian, boxcar, constant, and triangular kernels on [-2.5, 2.5]."""
-    x = np.linspace(-2.5, 2.5, 501)
-    kernels = [
-        ("Gaussian", np.exp(-x**2 / 2)),
-        ("boxcar", (np.abs(x) <= 1.0).astype(float)),
-        ("constant", np.ones_like(x)),
-        ("triangular", np.maximum(0.0, 1.0 - np.abs(x))),
-    ]
-    fig, axes = plt.subplots(1, 4, sharey=True, figsize=(9, 2.6))
-    for ax, (name, y) in zip(axes, kernels):
-        ax.plot(x, y, color=BLUE, lw=2.0)
-        ax.set_xlim(-2.5, 2.5)
-        # bottom just below 0 so zero stretches of a kernel stay visible
-        # instead of merging with the black x-axis spine
-        ax.set_ylim(-0.06, 1.12)
-        ax.set_xticks([-2, -1, 0, 1, 2])
-        ax.set_yticks([0, 0.5, 1])
-        ax.tick_params(labelsize=12, colors="black")
-        ax.set_title(name, fontsize=14, color="black")
-        ax.set_xlabel(r"$q - k$", fontsize=14, color="black")
-        for spine in ("left", "bottom"):
-            ax.spines[spine].set_color("black")
-    axes[0].set_ylabel(r"$\alpha(q, k)$", fontsize=14, color="black")
-    fig.subplots_adjust(wspace=0.12)
-    fl.save(fig, "mdl-attention-kernels")
 
 
 # --------------------------------------------------------------------------- #
@@ -272,7 +237,7 @@ def fig_mask_algebra():
     fl.save(fig, "mdl-attention-mask-algebra")
 
 
-ALL_FIGURES = [fig_kernels, fig_alignment, fig_attention_shapes,
+ALL_FIGURES = [fig_alignment, fig_attention_shapes,
                fig_mask_algebra]
 
 

@@ -287,6 +287,11 @@ def train_repeat(model, num_steps, Lmin, Lmax, eval_every=50):
         x, L = repeated_batch(256, 64, 64, Lmin, Lmax, device)
         history.append(eval_copy(model, x, L)[:2])
     return history
+
+def drop_step(hist, eval_every=50):
+    """First step at which the later-copy loss is below 1 nat, or None."""
+    return next((eval_every * (k + 1) for k, (_, rep) in enumerate(hist)
+                 if rep < 1), None)
 ```
 
 ```{.python .input #what-attention-computes-repetition-as-a-task-2}
@@ -324,6 +329,11 @@ def train_repeat(model, num_steps, Lmin, Lmax, eval_every=50):
         x, L = repeated_batch(d2l.get_key(), 256, 64, 64, Lmin, Lmax)
         history.append(eval_copy(model, x, L)[:2])
     return history
+
+def drop_step(hist, eval_every=50):
+    """First step at which the later-copy loss is below 1 nat, or None."""
+    return next((eval_every * (k + 1) for k, (_, rep) in enumerate(hist)
+                 if rep < 1), None)
 ```
 
 ### A Fixed-Offset Solution
@@ -419,16 +429,12 @@ control. Both are then evaluated on the same fresh batch.
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-1}
 %%tab pytorch
-def drop_step(hist, eval_every=50):
-    """First step at which the later-copy loss is below 1 nat, or None."""
-    return next((eval_every * (k + 1) for k, (_, rep) in enumerate(hist)
-                 if rep < 1), None)
-
 runs = []  # (blocks, model, history): three two-block runs, one control
 for num_blks in (2, 2, 2, 1):
     model = d2l.TinyCharLM(vocab_size=64, num_blks=num_blks, pos='rope')
     runs.append((num_blks, model, train_repeat(model, 5000, 16, 32)))
-_, model_two, hist_two = runs[0]   # The first run is the one analyzed
+models_two = [model for _, model, _ in runs[:3]]
+_, model_two, hist_two = runs[0]   # Run 1: maps and curves shown for it
 _, model_one, hist_one = runs[3]
 x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
 print('blocks  first copy  later copies  accuracy  below 1 nat at step')
@@ -440,17 +446,13 @@ for num_blks, model, hist in runs:
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-1}
 %%tab jax
-def drop_step(hist, eval_every=50):
-    """First step at which the later-copy loss is below 1 nat, or None."""
-    return next((eval_every * (k + 1) for k, (_, rep) in enumerate(hist)
-                 if rep < 1), None)
-
 runs = []  # (blocks, model, history): three two-block runs, one control
 for num_blks in (2, 2, 2, 1):
     model = d2l.TinyCharLM(vocab_size=64, num_blks=num_blks, pos='rope',
                            rngs=nnx.Rngs(d2l.get_key()))
     runs.append((num_blks, model, train_repeat(model, 5000, 16, 32)))
-_, model_two, hist_two = runs[0]   # The first run is the one analyzed
+models_two = [model for _, model, _ in runs[:3]]
+_, model_two, hist_two = runs[0]   # Run 1: maps and curves shown for it
 _, model_one, hist_one = runs[3]
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
 print('blocks  first copy  later copies  accuracy  below 1 nat at step')
@@ -556,12 +558,14 @@ def head_scores(model, x, L):
     ind = (ind * valid[:, None]).sum((1, 3)) / valid.sum()
     return torch.stack((prev, ind), 1)
 
-scores = head_scores(model_two, *repeated_batch(256, 64, 64, 16, 32,
-                                                d2l.try_gpu()))
-for b, rows in enumerate(scores.tolist()):
-    for name, row in zip(('previous', 'induction'), rows):
-        print(f'block {b + 1}, {name:<9}: '
-              + ' '.join(f'{v:.2f}' for v in row))
+x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
+all_scores = [head_scores(model, x, L) for model in models_two]
+scores = all_scores[0]  # Run 1, whose maps are shown above
+for r, run_scores in enumerate(all_scores):
+    for b, rows in enumerate(run_scores.tolist()):
+        for name, row in zip(('previous', 'induction'), rows):
+            print(f'run {r + 1}, block {b + 1}, {name:<9}: '
+                  + ' '.join(f'{v:.2f}' for v in row))
 ```
 
 ```{.python .input #what-attention-computes-the-heads-caught-in-the-act-2}
@@ -579,14 +583,17 @@ def head_scores(model, x, L):
     ind = (ind * valid[:, None]).sum((1, 3)) / valid.sum()
     return jnp.stack((prev, ind), 1)
 
-scores = head_scores(model_two, *repeated_batch(d2l.get_key(), 256, 64, 64,
-                                                16, 32))
-for b, rows in enumerate(scores.tolist()):
-    for name, row in zip(('previous', 'induction'), rows):
-        print(f'block {b + 1}, {name:<9}: '
-              + ' '.join(f'{v:.2f}' for v in row))
+x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
+all_scores = [head_scores(model, x, L) for model in models_two]
+scores = all_scores[0]  # Run 1, whose maps are shown above
+for r, run_scores in enumerate(all_scores):
+    for b, rows in enumerate(run_scores.tolist()):
+        for name, row in zip(('previous', 'induction'), rows):
+            print(f'run {r + 1}, block {b + 1}, {name:<9}: '
+                  + ' '.join(f'{v:.2f}' for v in row))
 ```
 
+<!-- WRITER: (lib review 4) the head-score cell now prints all three two-block runs (run, block, score); `scores` is run 1's. Read the ranges in claims.md. -->
 Each line lists the four heads of one block. In block 1, one head, or in
 many runs two or three that split the role, puts much of its attention on
 the previous token and almost none on the induction target. The other
@@ -617,7 +624,7 @@ circuits and count the rows whose largest entry is the diagonal. The same
 count for the one-block model serves as a control, since that model cannot
 retrieve.
 
-```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+```{.python .input #what-attention-computes-copy-matrix-definitions}
 %%tab pytorch
 def circuits(model, blk):
     """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
@@ -644,21 +651,29 @@ def copy_matrix(model, blk, X=None):
     W_OV = circuits(model, blk)[1].sum(0)
     return h @ W_OV.T @ E.T
 
+def diagonal_share(C):
+    """Fraction of the rows of C whose largest entry is on the diagonal."""
+    rows = torch.arange(len(C), device=C.device)
+    return float((C.argmax(-1) == rows).float().mean())
+```
+
+```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+%%tab pytorch
 x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
-cases = (('2 blocks, block 2, mean stream', model_two, 1, x),
-         ('2 blocks, block 2, embeddings', model_two, 1, None),
-         ('1 block, mean stream', model_one, 0, x))
 print('rows whose largest entry is the diagonal (chance 1/64)')
-for name, model, blk, X in cases:
-    C = copy_matrix(model, blk, X)
-    frac = (C.argmax(-1) == torch.arange(len(C), device=C.device)).float()
-    print(f'{name:<32}{frac.mean():.2f}')
+print(f'{"":<32}   run 1   run 2   run 3')
+for name, X in (('2 blocks, block 2, mean stream', x),
+                ('2 blocks, block 2, embeddings', None)):
+    shares = [diagonal_share(copy_matrix(m, 1, X)) for m in models_two]
+    print(f'{name:<32}' + ''.join(f'{v:8.2f}' for v in shares))
+print(f'{"1 block, mean stream":<32}'
+      f'{diagonal_share(copy_matrix(model_one, 0, x)):8.2f}')
 d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None].cpu(),
                   xlabel='logit boosted', ylabel='token attended to',
                   figsize=(3.6, 3.6), cmap='Blues')
 ```
 
-```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+```{.python .input #what-attention-computes-copy-matrix-definitions}
 %%tab jax
 def circuits(model, blk):
     """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
@@ -684,15 +699,22 @@ def copy_matrix(model, blk, X=None):
     W_OV = circuits(model, blk)[1].sum(0)
     return h @ W_OV.T @ E.T
 
+def diagonal_share(C):
+    """Fraction of the rows of C whose largest entry is on the diagonal."""
+    return float((C.argmax(-1) == jnp.arange(len(C))).mean())
+```
+
+```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+%%tab jax
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
-cases = (('2 blocks, block 2, mean stream', model_two, 1, x),
-         ('2 blocks, block 2, embeddings', model_two, 1, None),
-         ('1 block, mean stream', model_one, 0, x))
 print('rows whose largest entry is the diagonal (chance 1/64)')
-for name, model, blk, X in cases:
-    C = copy_matrix(model, blk, X)
-    frac = (C.argmax(-1) == jnp.arange(len(C))).mean()
-    print(f'{name:<32}{frac:.2f}')
+print(f'{"":<32}   run 1   run 2   run 3')
+for name, X in (('2 blocks, block 2, mean stream', x),
+                ('2 blocks, block 2, embeddings', None)):
+    shares = [diagonal_share(copy_matrix(m, 1, X)) for m in models_two]
+    print(f'{name:<32}' + ''.join(f'{v:8.2f}' for v in shares))
+print(f'{"1 block, mean stream":<32}'
+      f'{diagonal_share(copy_matrix(model_one, 0, x)):8.2f}')
 d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None],
                   xlabel='logit boosted', ylabel='token attended to',
                   figsize=(3.6, 3.6), cmap='Blues')
@@ -716,7 +738,7 @@ circuit into block 2's QK circuit). Neither the attention pattern nor the
 copy matrix shows that the model needs these heads. That is a separate
 question.
 
-<!-- WRITER: CIRC-10. The cell now also prints the count with the raw embeddings e_a in place of the mean stream (second line). Six direct executions, model_two (mean stream / embeddings / one-block control): PyTorch 0.80/0.58/0.88, 1.00/0.95/1.00, 1.00/0.66/0.81; JAX 0.97/0.80/0.97, 1.00/0.88/1.00, 1.00/0.41/1.00. So the raw-embedding count is below the mean-stream count in every run, by 0.05 to 0.59, and varies widely (0.41-0.95) while the mean-stream count stays at 0.80-1.00 (1.00 in four of six). "varies widely from run to run" now reads the printed line; the block-1 transformed-copy explanation becomes "a likely reason", tested by Exercise 6 (mean ablation). `circuits` is now defined in this cell, with the weight-orientation notes as comments. -->
+<!-- WRITER: (lib review 4) the cell now prints the three two-block runs side by side (`models_two`) and the one-block control; `circuits`, `copy_matrix` and `diagonal_share` moved to a definitions cell above (new id what-attention-computes-copy-matrix-definitions). Read the captured numbers in claims.md. Earlier dev note follows. CIRC-10. The cell now also prints the count with the raw embeddings e_a in place of the mean stream (second line). Six direct executions, model_two (mean stream / embeddings / one-block control): PyTorch 0.80/0.58/0.88, 1.00/0.95/1.00, 1.00/0.66/0.81; JAX 0.97/0.80/0.97, 1.00/0.88/1.00, 1.00/0.41/1.00. So the raw-embedding count is below the mean-stream count in every run, by 0.05 to 0.59, and varies widely (0.41-0.95) while the mean-stream count stays at 0.80-1.00 (1.00 in four of six). "varies widely from run to run" now reads the printed line; the block-1 transformed-copy explanation becomes "a likely reason", tested by Exercise 6 (mean ablation). `circuits` is now defined in this cell, with the weight-orientation notes as comments. -->
 
 ### Head Ablation
 :label:`subsec_head-ablation`
@@ -763,42 +785,48 @@ evaluated on the same fresh batch.
 
 ```{.python .input #what-attention-computes-head-ablation-2}
 %%tab pytorch
-H = model_two.num_heads
-prev = [h for h in range(H) if scores[0, 0, h] > 0.2]  # Previous-token heads
-rest = [h for h in range(H) if h not in prev]
-order = scores[1, 1].argsort(descending=True).tolist()  # Strongest first
-variants = {'none': model_two,
-            'block 1, previous-token heads': ablate(model_two, 0, prev),
-            'block 1, all other heads': ablate(model_two, 0, rest)}
-for k in range(1, H + 1):
-    variants[f'block 2, top {k} induction'] = ablate(model_two, 1, order[:k])
-variants['one-block model'] = model_one
 x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
-print(f'block 1, previous-token heads: {prev}, others: {rest}')
-print(f'{"heads removed":<31}later-copy loss  accuracy')
-for name, model in variants.items():
-    first, rep, acc = eval_copy(model, x, L)
-    print(f'{name:<31}{rep:15.2f}{acc:10.2f}')
+H, table = model_two.num_heads, {}  # Variant: (loss, accuracy) per run
+for r, (model, s) in enumerate(zip(models_two, all_scores)):
+    prev = [h for h in range(H) if s[0, 0, h] > 0.2]  # Previous-token heads
+    rest = [h for h in range(H) if h not in prev]
+    order = s[1, 1].argsort(descending=True).tolist()  # Strongest first
+    print(f'run {r + 1}: block 1 previous-token heads {prev}, others {rest}')
+    variants = {'none': model,
+                'block 1, previous-token heads': ablate(model, 0, prev),
+                'block 1, all other heads': ablate(model, 0, rest)}
+    for k in range(1, H + 1):
+        variants[f'block 2, top {k} induction'] = ablate(model, 1, order[:k])
+    for name, variant in variants.items():
+        table.setdefault(name, []).append(eval_copy(variant, x, L)[1:])
+table['one-block model'] = [eval_copy(model_one, x, L)[1:]]
+print(f'{"heads removed":<31}later-copy loss / accuracy: run 1, 2, 3')
+for name, cols in table.items():
+    print(f'{name:<31}'
+          + ''.join(f'{rep:7.2f} /{acc:5.2f}' for rep, acc in cols))
 ```
 
 ```{.python .input #what-attention-computes-head-ablation-2}
 %%tab jax
-H = model_two.num_heads
-prev = [h for h in range(H) if scores[0, 0, h] > 0.2]  # Previous-token heads
-rest = [h for h in range(H) if h not in prev]
-order = jnp.argsort(-scores[1, 1]).tolist()  # Strongest first
-variants = {'none': model_two,
-            'block 1, previous-token heads': ablate(model_two, 0, prev),
-            'block 1, all other heads': ablate(model_two, 0, rest)}
-for k in range(1, H + 1):
-    variants[f'block 2, top {k} induction'] = ablate(model_two, 1, order[:k])
-variants['one-block model'] = model_one
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
-print(f'block 1, previous-token heads: {prev}, others: {rest}')
-print(f'{"heads removed":<31}later-copy loss  accuracy')
-for name, model in variants.items():
-    first, rep, acc = eval_copy(model, x, L)
-    print(f'{name:<31}{rep:15.2f}{acc:10.2f}')
+H, table = model_two.num_heads, {}  # Variant: (loss, accuracy) per run
+for r, (model, s) in enumerate(zip(models_two, all_scores)):
+    prev = [h for h in range(H) if s[0, 0, h] > 0.2]  # Previous-token heads
+    rest = [h for h in range(H) if h not in prev]
+    order = jnp.argsort(-s[1, 1]).tolist()  # Strongest first
+    print(f'run {r + 1}: block 1 previous-token heads {prev}, others {rest}')
+    variants = {'none': model,
+                'block 1, previous-token heads': ablate(model, 0, prev),
+                'block 1, all other heads': ablate(model, 0, rest)}
+    for k in range(1, H + 1):
+        variants[f'block 2, top {k} induction'] = ablate(model, 1, order[:k])
+    for name, variant in variants.items():
+        table.setdefault(name, []).append(eval_copy(variant, x, L)[1:])
+table['one-block model'] = [eval_copy(model_one, x, L)[1:]]
+print(f'{"heads removed":<31}later-copy loss / accuracy: run 1, 2, 3')
+for name, cols in table.items():
+    print(f'{name:<31}'
+          + ''.join(f'{rep:7.2f} /{acc:5.2f}' for rep, acc in cols))
 ```
 
 Removing block 1's previous-token heads breaks retrieval. The later-copy
@@ -818,7 +846,7 @@ not give. To predict later copies, the model needs all of block 1, the
 previous-token heads and the heads that copy the current token, and the
 induction heads of block 2.
 
-<!-- WRITER: ablation numbers vary with the run (cell unchanged). Six direct executions, model_two (removed: block-1 previous-token heads / block-1 all other heads, later-copy loss): PyTorch 3.99/2.61 (prev heads [1,2,3], one other head; accuracy 0.08/0.45), 4.14/4.23, 3.96/4.43; JAX 3.41/4.04 and 3.73/4.08 (one previous-token head, so "all other heads" removes three of four), 4.17/4.95 (two previous-token heads). "Removing the other heads of block 1 breaks it about as badly" failed in one of six runs (2.61 nats, accuracy 0.45); qualify it. Block 2 top 1/2/3/4: PyTorch 1.91/3.19/3.89/4.20, 0.68/2.00/3.61/4.30, 0.66/1.78/2.59/4.26; JAX 2.82/5.16/5.57/4.18, 0.63/4.87/5.98/4.18, 0.71/1.52/2.53/4.26 (JAX not monotone at four heads in two of three runs). With all four removed the loss lies above the one-block model in every run (4.18-4.30 vs 3.27-3.60). Removing the strongest alone: accuracy 0.42-0.90 (intact 0.88-0.95). -->
+<!-- WRITER: (lib review 4) the ablation cell now runs every variant on each of the three two-block runs and prints loss / accuracy per run, with each run's own previous-token heads and induction order; the prose must state only what holds in all three (captured numbers in claims.md). Earlier dev note follows: ablation numbers vary with the run. Six direct executions, model_two (removed: block-1 previous-token heads / block-1 all other heads, later-copy loss): PyTorch 3.99/2.61 (prev heads [1,2,3], one other head; accuracy 0.08/0.45), 4.14/4.23, 3.96/4.43; JAX 3.41/4.04 and 3.73/4.08 (one previous-token head, so "all other heads" removes three of four), 4.17/4.95 (two previous-token heads). "Removing the other heads of block 1 breaks it about as badly" failed in one of six runs (2.61 nats, accuracy 0.45); qualify it. Block 2 top 1/2/3/4: PyTorch 1.91/3.19/3.89/4.20, 0.68/2.00/3.61/4.30, 0.66/1.78/2.59/4.26; JAX 2.82/5.16/5.57/4.18, 0.63/4.87/5.98/4.18, 0.71/1.52/2.53/4.26 (JAX not monotone at four heads in two of three runs). With all four removed the loss lies above the one-block model in every run (4.18-4.30 vs 3.27-3.60). Removing the strongest alone: accuracy 0.42-0.90 (intact 0.88-0.95). -->
 
 ## In-Context Learning
 
@@ -880,16 +908,17 @@ accuracy of each of the three two-block runs.
 
 ```{.python .input #what-attention-computes-generalization-to-unseen-patterns-1}
 %%tab pytorch
-x, L = repeated_batch(512, 64, 64, 24, 24, d2l.try_gpu())
-pattern = x[:, :24]
+period, num_steps = 24, 64
+x, _ = repeated_batch(512, num_steps, 64, period, period, d2l.try_gpu())
+pattern = x[:, :period]
 K = (pattern[:, :, None] == pattern[:, None, :]).sum(-1)  # Count in pattern
-K = K[:, torch.arange(24, 63) % 24]      # Of the current token, i >= 24
+K = K[:, torch.arange(period, num_steps - 1) % period]  # Current token
 parts = (K == 1, K > 1, K > 0)           # Unique, repeated, all
 rows = {'share of targets': [p.float().mean() for p in parts],
         'single-token match': [(1 / K[p]).mean() for p in parts]}
-for r, (_, model, _) in enumerate(runs[:3]):  # The two-block runs
+for r, model in enumerate(models_two):
     with torch.inference_mode():
-        hit = (model(x[:, :-1]).argmax(-1) == x[:, 1:])[:, 24:]
+        hit = (model(x[:, :-1]).argmax(-1) == x[:, 1:])[:, period:]
     rows[f'run {r + 1} accuracy'] = [hit[p].float().mean() for p in parts]
 print(f'{"current token":<18}   unique repeated      all')
 for name, row in rows.items():
@@ -898,15 +927,16 @@ for name, row in rows.items():
 
 ```{.python .input #what-attention-computes-generalization-to-unseen-patterns-1}
 %%tab jax
-x, L = repeated_batch(d2l.get_key(), 512, 64, 64, 24, 24)
-pattern = x[:, :24]
+period, num_steps = 24, 64
+x, _ = repeated_batch(d2l.get_key(), 512, num_steps, 64, period, period)
+pattern = x[:, :period]
 K = (pattern[:, :, None] == pattern[:, None, :]).sum(-1)  # Count in pattern
-K = K[:, jnp.arange(24, 63) % 24]        # Of the current token, i >= 24
+K = K[:, jnp.arange(period, num_steps - 1) % period]  # Current token
 parts = (K == 1, K > 1, K > 0)           # Unique, repeated, all
 rows = {'share of targets': [p.mean() for p in parts],
         'single-token match': [(1 / K[p]).mean() for p in parts]}
-for r, (_, model, _) in enumerate(runs[:3]):  # The two-block runs
-    hit = (model(x[:, :-1]).argmax(-1) == x[:, 1:])[:, 24:]
+for r, model in enumerate(models_two):
+    hit = (model(x[:, :-1]).argmax(-1) == x[:, 1:])[:, period:]
     rows[f'run {r + 1} accuracy'] = [hit[p].mean() for p in parts]
 print(f'{"current token":<18}   unique repeated      all')
 for name, row in rows.items():
@@ -957,7 +987,7 @@ $$
 The right-hand side has the form of attention without a softmax: the query
 $\mathbf{x}_q$ is compared with the keys $\mathbf{x}_i$ by inner products,
 and the scores weight the values $y_i$. It is the numerator of the linear
-attention :eqref:`eq_linear-attn` of :numref:`sec_attention-at-scale` with
+attention :eqref:`eq_linear-attn` of :numref:`sec_windowed-linear-attention` with
 $\phi(\mathbf{x}) = \mathbf{x}$ and no normalizer. A single head computes
 it from a sequence of tokens. Give each example the token
 $\mathbf{z}_i = [\mathbf{x}_i; y_i] \in \mathbb{R}^{p+1}$ and the query the

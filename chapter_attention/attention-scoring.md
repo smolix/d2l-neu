@@ -391,7 +391,7 @@ its future. Every decoder in the following chapters uses it.
 
 Each requirement excludes some pairs. Padding excludes the keys beyond a
 sequence's length, causality the keys after the query, and the attention
-windows of :numref:`sec_attention-at-scale` the keys too far from it. A
+windows of :numref:`sec_windowed-linear-attention` the keys too far from it. A
 pair is allowed only if every requirement allows it, so masks compose by
 logical AND. Broadcasting keeps the composite small. A padding mask of
 shape (batch, 1, keys) and a causal mask of shape (queries, keys) combine
@@ -660,7 +660,8 @@ care as explanations.
 
 None of the layers in this section knows where a token sits. Permuting the
 keys and values together leaves every output unchanged (Exercise
-:exref:`ex_multihead-permuting-the-source`). If "translation" were spelled
+:exref:`ex_multihead-permuting-the-source` of
+:numref:`sec_multihead-attention`). If "translation" were spelled
 backward, every letter of "attention" would retrieve the same mixture, and
 only the columns of the map would change places.
 :numref:`sec_positional-information` adds positional information.
@@ -722,7 +723,8 @@ class ToyAligner(nn.Module):
     def forward(self, X):
         # X: (batch, seq_len) token ids; the values are their one-hot vectors
         tokens = F.one_hot(X, self.vocab_size).float()
-        positions = torch.eye(X.shape[1]).expand(len(X), -1, -1)
+        eye = torch.eye(X.shape[1], device=X.device)
+        positions = eye.expand(len(X), -1, -1)
         keys = torch.cat((tokens, positions), -1) @ self.W_k
         # The queries broadcast over the batch: (batch, seq_len, vocab_size)
         return self.attention(self.queries, keys, tokens)
@@ -734,7 +736,8 @@ class ToyAligner(nnx.Module):
     """One learned query per output position; keys from token and position."""
     def __init__(self, seq_len=8, vocab_size=16, d=16, *, rngs):
         self.vocab_size, n_in = vocab_size, vocab_size + seq_len
-        self.queries = nnx.Param(jax.random.normal(rngs.params(), (seq_len, d)))
+        self.queries = nnx.Param(
+            jax.random.normal(rngs.params(), (seq_len, d)))
         self.W_k = nnx.Param(jax.random.normal(rngs.params(), (n_in, d))
                              / math.sqrt(n_in))
         self.attention = DotProductAttention()

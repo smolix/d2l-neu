@@ -16,7 +16,7 @@ size store pairs too, and how many?
 This section makes the state a matrix that stores key–value pairs. A pair
 is written by adding the outer product of its value and its key; it is read
 by multiplying the matrix by a query. This is linear attention, the
-variant of attention in :numref:`sec_attention-at-scale` that drops the
+variant of attention in :numref:`sec_windowed-linear-attention` that drops the
 softmax, and, up to its decay, it is also what the selective state space
 model of :numref:`sec_mamba` computes, with different names for the same
 vectors.
@@ -72,7 +72,7 @@ overlap with the others, and its value leaks into theirs.
 With values $\mathbf{v}_t \in \mathbb{R}^{d_v}$ and keys $\mathbf{k}_t \in
 \mathbb{R}^{d_k}$, the memory is a matrix $\mathbf{S}_t \in \mathbb{R}^{d_v
 \times d_k}$, the transpose of the layout in
-:numref:`sec_attention-at-scale`. The key width $d_k$ is the $d$ of
+:numref:`sec_windowed-linear-attention`. The key width $d_k$ is the $d$ of
 :numref:`chap_attention`; the subscript keeps it apart from $d_v$, since both
 widths appear in the shape of the memory. Each step writes one pair and the output
 reads the memory with a query $\mathbf{q}_t \in \mathbb{R}^{d_k}$:
@@ -104,7 +104,7 @@ $$\mathbf{y}_t = \Big(\sum_{s \le t} \mathbf{v}_s \mathbf{k}_s^\top\Big)
 The right side is causal attention with the score $\mathbf{k}_s^\top
 \mathbf{q}_t$ and no softmax: every earlier value, weighted by how well its
 key matches the query. This is the *linear attention* of
-:eqref:`eq_linear-attn` in :numref:`sec_attention-at-scale`, with the
+:eqref:`eq_linear-attn` in :numref:`sec_windowed-linear-attention`, with the
 identity as the feature map and without the normalizer (the models of this
 chapter normalize the output of the layer instead): because the score is a
 product of features rather than an exponential, the sum folds into a
@@ -237,7 +237,7 @@ memory behaves as if it held about the last $1/(1-a)$ pairs: 10 for $a =
 the input lets the model choose: hold the memory through a paragraph and
 clear it at a new document. Such a decay is the first of the two changes
 that made linear attention competitive in practice
-(:numref:`sec_attention-at-scale`); the second, keeping a few softmax
+(:numref:`sec_windowed-linear-attention`); the second, keeping a few softmax
 layers for recall, is the subject of :numref:`sec_hybrids`.
 
 The decay can be shaped in several ways, each a one-line change of
@@ -267,7 +267,7 @@ the matrix products of the dual form below.
 
 Written as a recurrence, the decayed memory processes one token at a time.
 Without decay, linear attention can also be computed as attention, over all
-positions at once (:numref:`sec_attention-at-scale`); we ask whether this
+positions at once (:numref:`sec_windowed-linear-attention`); we ask whether this
 survives the decay. With a scalar decay, unrolling :eqref:`eq_ms-decay`
 from $\mathbf{S}_0 = \mathbf{0}$ gives each output as a weighted sum over the past, in which a
 pair written at step $s$ is scaled by all decays met since:
@@ -395,7 +395,7 @@ training: the recurrence is sequential, and the dual form stores a $T
 ### Chunked Computation
 
 Chunking combines the two, as :eqref:`eq_linear-attn-chunked` of
-:numref:`sec_attention-at-scale` did for linear attention without decay:
+:numref:`sec_windowed-linear-attention` did for linear attention without decay:
 the quadratic form within each chunk, and a state carried from chunk to
 chunk. The mask shows where the decays enter. Cut the sequence into chunks
 of $m$ steps and partition the matrix $\mathbf{L} \odot
@@ -931,7 +931,7 @@ twice returns the sum of its values.
        $\tau = 5\,\mu\textrm{s}$. Compare with the timings above.
 
 1. [code] **The normalizer as a value column.** The linear attention of
-   :numref:`sec_attention-at-scale` applies a positive feature map $\phi$
+   :numref:`sec_windowed-linear-attention` applies a positive feature map $\phi$
    to queries and keys and divides each output by
    $\phi(\mathbf{q}_t)^\top \mathbf{z}_t$, where $\mathbf{z}_t =
    \sum_{s \le t} \phi(\mathbf{k}_s)$. Give $\mathbf{z}_t$ the same decay

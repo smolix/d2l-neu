@@ -295,7 +295,10 @@ interaction and its quadratic cost. Instead of $t$ scores, each query needs
 one matrix-vector product against a running summary
 :cite:`Katharopoulos.Vyas.Pappas.ea.2020`. Following that paper, we take
 $\phi(x) = \mathrm{elu}(x) + 1$, which keeps features positive so that the
-normalizer cannot vanish.
+normalizer is positive. Positive is not the same as large: when training
+drives a query or key component far below zero, $\mathrm{elu}(x) + 1 =
+e^x$ underflows. The code therefore adds $\epsilon = 10^{-6}$ to the
+normalizer, as the implementation of that paper does.
 
 The sums in :eqref:`eq_linear-attn` satisfy the recurrences
 
@@ -323,14 +326,15 @@ like every RNN in :numref:`chap_rnn`.
 def phi(X):
     return F.elu(X) + 1
 
-def linear_attention_parallel(Q, K, V):
+def linear_attention_parallel(Q, K, V, eps=1e-6):
     """Training form: all outputs at once via cumulative sums."""
     Qp, Kp = phi(Q), phi(K)
     S = torch.cumsum(Kp[:, :, None] * V[:, None, :], dim=0)  # (n, d, d_v)
     z = torch.cumsum(Kp, dim=0)                              # (n, d)
-    return (Qp[:, :, None] * S).sum(1) / (Qp * z).sum(-1, keepdim=True)
+    den = (Qp * z).sum(-1, keepdim=True) + eps
+    return (Qp[:, :, None] * S).sum(1) / den
 
-def linear_attention_recurrent(Q, K, V):
+def linear_attention_recurrent(Q, K, V, eps=1e-6):
     """Generation form: a (d, d_v) state, updated token by token."""
     Qp, Kp = phi(Q), phi(K)
     S = torch.zeros(Q.shape[-1], V.shape[-1], device=Q.device)
@@ -339,7 +343,7 @@ def linear_attention_recurrent(Q, K, V):
     for t in range(Q.shape[0]):
         S = S + Kp[t][:, None] * V[t][None, :]   # Outer-product write
         z = z + Kp[t]
-        outputs.append(Qp[t] @ S / (Qp[t] @ z))  # Query the memory
+        outputs.append(Qp[t] @ S / (Qp[t] @ z + eps))  # Query the memory
     return torch.stack(outputs)
 ```
 
@@ -348,14 +352,15 @@ def linear_attention_recurrent(Q, K, V):
 def phi(X):
     return jax.nn.elu(X) + 1
 
-def linear_attention_parallel(Q, K, V):
+def linear_attention_parallel(Q, K, V, eps=1e-6):
     """Training form: all outputs at once via cumulative sums."""
     Qp, Kp = phi(Q), phi(K)
     S = jnp.cumsum(Kp[:, :, None] * V[:, None, :], axis=0)  # (n, d, d_v)
     z = jnp.cumsum(Kp, axis=0)                              # (n, d)
-    return (Qp[:, :, None] * S).sum(1) / (Qp * z).sum(-1, keepdims=True)
+    den = (Qp * z).sum(-1, keepdims=True) + eps
+    return (Qp[:, :, None] * S).sum(1) / den
 
-def linear_attention_recurrent(Q, K, V):
+def linear_attention_recurrent(Q, K, V, eps=1e-6):
     """Generation form: a (d, d_v) state, updated token by token."""
     Qp, Kp = phi(Q), phi(K)
     def step(carry, qkv):
@@ -363,7 +368,7 @@ def linear_attention_recurrent(Q, K, V):
         q, k, v = qkv
         S = S + k[:, None] * v[None, :]          # Outer-product write
         z = z + k
-        return (S, z), q @ S / (q @ z)           # Query the memory
+        return (S, z), q @ S / (q @ z + eps)     # Query the memory
     init = (jnp.zeros((Q.shape[-1], V.shape[-1])), jnp.zeros(Q.shape[-1]))
     _, outputs = jax.lax.scan(step, init, (Qp, Kp, V))
     return outputs
@@ -403,7 +408,7 @@ chunk is stored.
 
 ```{.python .input #attention-at-scale-chunked-computation-1}
 %%tab pytorch
-def linear_attention_chunked(Q, K, V, c=64):
+def linear_attention_chunked(Q, K, V, c=64, eps=1e-6):
     """Training form in chunks: quadratic within, recurrent across."""
     n, d = Q.shape
     assert n % c == 0, 'chunks must tile the sequence exactly'
@@ -416,13 +421,13 @@ def linear_attention_chunked(Q, K, V, c=64):
     z = torch.cat([torch.zeros_like(z[:1]), z[:-1]])
     A = torch.tril(Qp @ Kp.transpose(-1, -2))            # (n/c, c, c)
     num = Qp @ S + A @ Vc                                # Past + this chunk
-    den = Qp @ z[..., None] + A.sum(-1, keepdim=True)
+    den = Qp @ z[..., None] + A.sum(-1, keepdim=True) + eps
     return (num / den).reshape(n, -1)
 ```
 
 ```{.python .input #attention-at-scale-chunked-computation-1}
 %%tab jax
-def linear_attention_chunked(Q, K, V, c=64):
+def linear_attention_chunked(Q, K, V, c=64, eps=1e-6):
     """Training form in chunks: quadratic within, recurrent across."""
     n, d = Q.shape
     assert n % c == 0, 'chunks must tile the sequence exactly'
@@ -435,7 +440,7 @@ def linear_attention_chunked(Q, K, V, c=64):
     z = jnp.concatenate([jnp.zeros_like(z[:1]), z[:-1]])
     A = jnp.tril(Qp @ Kp.swapaxes(-1, -2))               # (n/c, c, c)
     num = Qp @ S + A @ Vc                                # Past + this chunk
-    den = Qp @ z[..., None] + A.sum(-1, keepdims=True)
+    den = Qp @ z[..., None] + A.sum(-1, keepdims=True) + eps
     return (num / den).reshape(n, -1)
 ```
 
@@ -551,8 +556,9 @@ from the operation counts.
 ```{.python .input #attention-at-scale-the-price-of-attention-measured}
 %%tab pytorch
 flex = torch.compile(flex_attention)
+w = b = 128  # Window width; tile size of the kernel
 masks = {'dense causal': lambda batch, head, q, k: k <= q,
-         'window (w=128)': lambda batch, head, q, k: (k <= q) & (q - k < 128)}
+         f'window (w={w})': lambda batch, head, q, k: (k <= q) & (q - k < w)}
 H, lengths = 32, [512, 1024, 2048, 4096, 8192, 16384, 32768]
 times = {name: [] for name in masks}
 for n in lengths:
@@ -561,9 +567,9 @@ for n in lengths:
         block_mask = create_block_mask(rule, None, None, n, n, device=X.device)
         times[name].append(d2l.Benchmark(
             lambda: flex(X, X, X, block_mask=block_mask)).time * 1e3)
-    T = n // 128  # Rows of 128 x 128 tiles; causal T(T+1)/2, window 2T - 1
-    speedup = times['dense causal'][-1] / times['window (w=128)'][-1]
-    print(f'n = {n:6,}: window {speedup:4.1f}x faster, '
+    T = n // b  # Rows of b x b tiles; causal T(T+1)/2, window 2T - 1
+    dense, window = (t[-1] for t in times.values())
+    print(f'n = {n:6,}: window {dense / window:4.1f}x faster, '
           f'tile count predicts {T * (T + 1) / 2 / (2 * T - 1):4.1f}x')
 d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
          legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
@@ -573,7 +579,9 @@ d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
 %%tab jax
 # cuDNN takes (batch, length, heads, width); it skips the tiles outside the
 # band only together with is_causal=True
-masks = {'dense causal': {}, 'window (w=128)': {'local_window_size': (127, 0)}}
+w = b = 128  # Window width; tile size of the kernel
+masks = {'dense causal': {},
+         f'window (w={w})': {'local_window_size': (w - 1, 0)}}
 kernels = {name: jax.jit(lambda X, kw=kw: jax.nn.dot_product_attention(
     X, X, X, is_causal=True, implementation='cudnn', **kw))
     for name, kw in masks.items()}
@@ -583,9 +591,9 @@ for n in lengths:
     X = jax.random.normal(d2l.get_key(), (1, n, H, d_h), dtype=jnp.bfloat16)
     for name, f in kernels.items():
         times[name].append(d2l.Benchmark(lambda: f(X)).time * 1e3)
-    T = n // 128  # Rows of 128 x 128 tiles; causal T(T+1)/2, window 2T - 1
-    speedup = times['dense causal'][-1] / times['window (w=128)'][-1]
-    print(f'n = {n:6,}: window {speedup:4.1f}x faster, '
+    T = n // b  # Rows of b x b tiles; causal T(T+1)/2, window 2T - 1
+    dense, window = (t[-1] for t in times.values())
+    print(f'n = {n:6,}: window {dense / window:4.1f}x faster, '
           f'tile count predicts {T * (T + 1) / 2 / (2 * T - 1):4.1f}x')
 d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
          legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
@@ -637,8 +645,8 @@ generation, where its state stays the size of one matrix.
        with entries
        $$\frac{\phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_s)}{\sum_{s' \leq t} \phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_{s'})}, \qquad s \leq t,$$
        and measure its maximum absolute difference from the causal softmax
-       weight matrix, which `causal_attention` forms before multiplying by
-       $\mathbf{V}$, and the mean entropy of its rows.
+       weight matrix `d2l.masked_softmax(Q @ K.T / math.sqrt(d_h),
+       d2l.causal_mask(n))`, and the mean entropy of its rows.
     1. Under which condition on $\mathbf{q}_t$ and the keys
        $\mathbf{k}_1, \ldots, \mathbf{k}_t$ does the ReLU map produce an
        undefined row? Derive the probability of this event for row $t$
@@ -650,7 +658,6 @@ generation, where its state stays the size of one matrix.
        their weights in this way, and what this implies for approximating
        a softmax row that is nearly one-hot.
    :exlabel:`ex_attention-at-scale-feature-map`
-   <!-- WRITER: `causal_attention` is defined in sec_attention-at-scale, not in this notebook; the exercise should say so or form the softmax weights itself. -->
 
 1. **An exact feature map.** ● The softmax kernel $\kappa(\mathbf{q},
    \mathbf{k}) = \exp(\mathbf{q}^\top \mathbf{k} / \sqrt{d})$ also
@@ -684,6 +691,9 @@ generation, where its state stays the size of one matrix.
        with the causal linear-attention weights of :eqref:`eq_linear-attn`
        for $\phi(x) = \mathrm{elu}(x) + 1$, computed explicitly as a
        $T \times T$ matrix so that the method still returns its weights.
+       Add $\epsilon = 10^{-6}$ to the normalizer, as in
+       `linear_attention_parallel`; without it, a row whose features
+       underflow divides zero by zero and training ends in NaN.
     1. Train dense attention, windows of width $w \in \{4, 16, 64\}$, and
        linear attention with the protocol of
        :numref:`subsec_pos-experiment`, and report validation perplexity at
@@ -692,10 +702,16 @@ generation, where its state stays the size of one matrix.
     1. Build validation sequences of $128$ bytes, each a random
        $64$-byte excerpt of the validation text followed by the same
        excerpt again, and compare the mean loss on the second half with
-       that on the first half for every variant. Which variants exploit the
-       repetition, and how does the answer relate to the reach of the
-       windowed models and to the fixed-size state of linear attention?
-   <!-- WRITER: (code step, dev runs of exactly this exercise with w = 16, three runs per arm per tab) the linear arm diverged to NaN in one run of three in BOTH frameworks. Root cause: training drives query and key components to -40 ... -75, where elu + 1 = exp underflows, so a row's normalizer reaches 0 and 0/0 gives NaN (the model pushes toward sharper weights the only way this kernel allows). Adding 1e-6 to the normalizer, as the reference implementation of Katharopoulos et al. does, removes it (the diverging run then finishes at loss 2.40). Part 1 should say to add this constant. Measured with the constant absent in the converged runs, both tabs: validation perplexity at 128 dense 9.5-10.1, window w = 16 8.3-9.3, linear 11.2-11.5; second-half minus first-half loss on the repeated 64-byte excerpts: dense -0.004 to -0.020, window -0.003 to +0.011, linear +0.015 to +0.027. So at this budget the two-block model with learned positions does not read the copy at all, which part 3's question should allow for. -->
+       that on the first half for every variant. At the budget of
+       :numref:`subsec_pos-experiment`, expect even dense attention to
+       gain little from the copy. Train the dense model and the window
+       $w = 16$ longer, or on data that repeats, until the dense model's
+       second-half loss falls clearly below its first-half loss, and
+       report the budget at which that happens. Which variants then
+       exploit the repetition, and how does the answer relate to the reach
+       of the windowed models and to the fixed-size state of linear
+       attention?
+   <!-- WRITER: exercise 4 updated (lib review 5): part 1 now tells readers to add eps = 1e-6 (the section's three forms carry it too; dev: without it the linear arm diverged to NaN in one run of three in both frameworks); part 3 re-posed because at the protocol's budget the dense two-block model barely reads the copy (dev second-minus-first-half loss -0.004 to -0.020 nats). Dev numbers, both tabs, converged runs: validation perplexity at 128 dense 9.5-10.1, window w = 16 8.3-9.3, linear 11.2-11.5. -->
 
 1. [code] **A decaying state.** ● Give the state of
    :eqref:`eq_linear-attn-recurrence` a scalar decay $\gamma \in (0, 1)$,

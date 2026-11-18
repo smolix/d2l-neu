@@ -186,7 +186,7 @@ Before fused exact kernels, several methods approximated attention to reach
 linear cost. Performer :cite:`Choromanski.Likhosherstov.Dohan.ea.2021`
 replaces $\exp(\mathbf{q}^\top\mathbf{k})$ by an inner product of positive
 random features whose expectation is the exponential, so that the
-associativity of :numref:`sec_attention-at-scale` applies. Linformer
+associativity of :numref:`sec_windowed-linear-attention` applies. Linformer
 :cite:`Wang.Li.Khabsa.ea.2020` projects the keys and values along the
 sequence axis to a fixed length, and Reformer
 :cite:`Kitaev.Kaiser.Levskaya.2020` hashes similar queries and keys into
@@ -218,7 +218,7 @@ and a RoPE base of $10^6$. Gemma 2 :cite:`Gemma.Team.2024` alternates windowed
 and global layers one to one and reports almost unchanged perplexity when
 its windows shrink from 4,096 to 1,024 tokens at inference. Gemma 3
 :cite:`Gemma.Team.2025` uses five windowed layers of 1,024 tokens per global
-layer, the ratio whose cache saving :numref:`sec_attention-at-scale`
+layer, the ratio whose cache saving :numref:`sec_windowed-linear-attention`
 computes, and finds little change in perplexity even at seven to one.
 
 ### Sparsity Learned from Content
@@ -253,7 +253,7 @@ of the Language Models part.
 
 ### Gated Recurrences and Hybrids
 
-:numref:`sec_attention-at-scale` ended with the observation that plain
+:numref:`sec_windowed-linear-attention` ended with the observation that plain
 linear attention lost to softmax attention, and that two changes made it
 competitive. Gated linear attention :cite:`Yang.Wang.Shen.ea.2024` adds a
 decay that depends on the input, and Gated DeltaNet

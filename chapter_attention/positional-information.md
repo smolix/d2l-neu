@@ -436,7 +436,6 @@ attributes, `rope_base` and `rope_scale`, so that they can be changed after
 training. The method `stream` runs the residual stream through the blocks
 and also returns the attention weights of each block, which
 :numref:`sec_what-attention-computes` inspects.
-<!-- WRITER: "The positional scheme is the one constructor argument that the experiment varies" is no longer exact: the experiment also trains a zero-block baseline (num_blks=0, pos='none'). After the embed fix the scheme is the only difference between the five arms (token embeddings and tied head identical in all of them). -->
 
 ```{.python .input #positional-information-an-attention-only-language-model}
 %%tab pytorch
@@ -526,12 +525,14 @@ class TinyCharLM(nnx.Module):  #@save
 ```
 
 The absolute schemes act once, on the input: `embed` adds the learned or the
-sinusoidal table to the token embeddings. With the sinusoidal table, the
-token embeddings are multiplied by $\sqrt{d}$ before the table is added, as
-in the original transformer. Without this factor the table, whose entries
-have magnitude about $0.7$, would outweigh embeddings that start with
-entries of about $0.02$ by a factor of 35. With it, the factor is about 3.
-<!-- WRITER: FALSE after the #@save fix (POS-11): `embed` now divides the sinusoidal table by sqrt(d) (H + P/sqrt(d)) and leaves the token embeddings as in every other arm, so token embeddings and the tied output head are identical in all five arms. Table entries about 0.7/sqrt(128) = 0.06 against token entries about 0.02: the table keeps about three times the token scale, as before. Rewrite this paragraph (B6); the original transformer's sqrt(d) on the tokens can be mentioned as what we do NOT do and why (tied head: scaling the tokens would scale the logits too). -->
+sinusoidal table to the token embeddings. The sinusoidal table enters
+divided by $\sqrt{d}$. Its entries have magnitude about $0.7$ and the token
+embeddings start with entries of about $0.02$, so the table as it stands
+would outweigh them by a factor of 35; divided by $\sqrt{d}$ it keeps about
+three times their scale. The original transformer multiplies the token
+embeddings by $\sqrt{d}$ instead. Here the output head reuses the token
+embeddings, so that factor would scale every logit as well, and the
+sinusoidal model would differ from the others in more than its positions.
 
 ```{.python .input #positional-information-an-attention-only-language-model-1}
 %%tab pytorch
@@ -541,7 +542,7 @@ def embed(self, X):
     H = self.token_emb(X)
     if self.pos == 'learned':
         H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-    if self.pos == 'sinusoidal':  # Table scaled down; tokens as in every arm
+    if self.pos == 'sinusoidal':  # Table scaled to the token embeddings
         H = H + self.P[:X.shape[1]] / math.sqrt(H.shape[-1])
     return H
 ```
@@ -554,7 +555,7 @@ def embed(self, X):
     H = self.token_emb(X)
     if self.pos == 'learned':
         H = H + self.pos_emb(jnp.arange(X.shape[1]))
-    if self.pos == 'sinusoidal':  # Table scaled down; tokens as in every arm
+    if self.pos == 'sinusoidal':  # Table scaled to the token embeddings
         H = H + self.P[:X.shape[1]] / math.sqrt(H.shape[-1])
     return H
 ```
@@ -630,7 +631,7 @@ faster than `nnx.Embed`.
 ### The Experiment
 :label:`subsec_pos-experiment`
 
-<!-- WRITER: the cell now trains THREE models per scheme (a loop in the cell, ranges from these repeats) plus one zero-block baseline `TinyCharLM(..., num_blks=0, pos='none')` (token embedding and tied head only: a bigram model). `models` holds the first run of each scheme, `runs[pos]` all three, `baseline` the zero-block model. Numbers in the report code-positional-information.md. Also B6: `d2l.train_steps` is in :numref:`sec_test_models`, not `sec_adam`. -->
+<!-- WRITER: the cell now trains THREE models per scheme (a loop in the cell, ranges from these repeats). `models` holds the first run of each scheme, `runs[pos]` all three. Numbers in the report code-positional-information.md. Also B6: `d2l.train_steps` is in :numref:`sec_test_models`, not `sec_adam`. -->
 We train one model per scheme on `d2l.WikiText103`, the bytes of Wikipedia
 articles that :numref:`subsec_tinylm` introduced. Each model trains at
 context length 128 for 3000 steps of `d2l.train_steps`, the fixed-step training
@@ -820,15 +821,20 @@ positions back removed, by a bias of $-\infty$ on those offsets.
 ```{.python .input #positional-information-alibi-without-far-keys}
 %%tab pytorch
 class WindowedALiBi(TinyCharLM):
-    """ALiBi whose queries see only the train_len most recent keys."""
+    """ALiBi whose queries see only the window most recent keys."""
+    def __init__(self, *args, window, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.window = window
+
     def alibi(self, T, device):
         i = torch.arange(T, device=device)
         return super().alibi(T, device).masked_fill(
-            i[:, None] - i[None, :] >= train_len, -math.inf)
+            i[:, None] - i[None, :] >= self.window, -math.inf)
 
 full, windowed = [], []
 for model in runs['alibi']:
-    model_w = WindowedALiBi(len(data.vocab), pos='alibi').to(device)
+    model_w = WindowedALiBi(len(data.vocab), pos='alibi',
+                            window=train_len).to(device)
     model_w.load_state_dict(model.state_dict())  # Same trained weights
     full.append(d2l.lm_perplexity(model, eval_sets[T]))
     windowed.append(d2l.lm_perplexity(model_w, eval_sets[T]))
@@ -839,15 +845,19 @@ for name, ppl in ('all keys', full), (f'keys < {train_len} back', windowed):
 ```{.python .input #positional-information-alibi-without-far-keys}
 %%tab jax
 class WindowedALiBi(TinyCharLM):
-    """ALiBi whose queries see only the train_len most recent keys."""
+    """ALiBi whose queries see only the window most recent keys."""
+    def __init__(self, *args, window, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.window = window
+
     def alibi(self, T):
         i = jnp.arange(T)
-        return jnp.where(i[:, None] - i[None, :] >= train_len, -jnp.inf,
+        return jnp.where(i[:, None] - i[None, :] >= self.window, -jnp.inf,
                          super().alibi(T))
 
 full, windowed = [], []
 for model in runs['alibi']:
-    model_w = WindowedALiBi(len(data.vocab), pos='alibi',
+    model_w = WindowedALiBi(len(data.vocab), pos='alibi', window=train_len,
                             rngs=nnx.Rngs(d2l.get_key()))
     nnx.update(model_w, nnx.state(model))  # Same trained weights
     full.append(d2l.lm_perplexity(model, eval_sets[T]))
@@ -1408,9 +1418,9 @@ the base?
 - No feed-forward network, no normalization, no projection biases.
 - `pos` selects `'learned'`, `'sinusoidal'`, `'rope'`, `'alibi'`, or
   `'none'`.
-- Sinusoidal: tokens scaled by $\sqrt{d}$ before the table is added, as in
-  the original transformer.
-<!-- WRITER: FALSE after the embed fix: the table is divided by sqrt(d); tokens are the same in every arm. -->
+- Sinusoidal: the table enters divided by $\sqrt{d}$, about three times
+  the scale of the token embeddings; tokens and tied head are the same in
+  every arm.
 - RoPE: base and per-pair angle factors stored as `rope_base`,
   `rope_scale`.
 :::

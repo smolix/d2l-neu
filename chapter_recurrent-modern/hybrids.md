@@ -445,7 +445,7 @@ this state after about 500 tokens, and at 128,000 tokens it holds 512 MB,
 Only the attention layers of a hybrid have caches that grow, so its memory
 per sequence is the transformer's times the fraction of layers that are
 attention, plus a constant. This is the accounting of windowed layers
-interleaved with global ones in :numref:`sec_attention-at-scale`, with a
+interleaved with global ones in :numref:`sec_windowed-linear-attention`, with a
 state of fixed size in place of each window's cache.
 :numref:`fig_hy-cache` shows the effect for a model of 32 layers. Jamba
 :cite:`Lieber.Lenz.Bata.ea.2024`, with 4 attention layers among 32, reports a cache of 4 GB at a context of 256,000 tokens,
@@ -465,7 +465,7 @@ delta rule, make the fixed state as useful as possible. The answer of
 practice adds a small memory that grows: a few attention layers, which
 retrieve exactly what the fixed state cannot hold. How few, where to place
 them, and whether some of them can attend to a window of recent tokens
-(:numref:`sec_attention-at-scale`) instead of the whole context are
+(:numref:`sec_windowed-linear-attention`) instead of the whole context are
 questions that current models answer differently;
 :numref:`sec_ssm-further-reading` lists some of their choices.
 

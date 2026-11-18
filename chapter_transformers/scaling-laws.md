@@ -576,7 +576,7 @@ the full factor of the sharing, 4 and 8. The settings the flags do not
 reach would enter as new attention modules. QK-norm
 (:numref:`subsec_qk-norm`) enters through the `attn_factory` hook of
 `TransformerBlock`, as in an exercise of :numref:`sec_transformer-block`.
-A sliding window is a mask (:numref:`sec_attention-at-scale`,
+A sliding window is a mask (:numref:`sec_windowed-linear-attention`,
 :numref:`sec_kv-cache`). A learned latent cache replaces the stored
 keys and values, which :numref:`sec_kv-cache` sketches with a fixed basis.
 The expert layers of the MoE rows enter through `ffn_factory`

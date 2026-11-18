@@ -100,7 +100,8 @@ under a causal mask, and draw all 25 weights.
 attention = d2l.DotProductAttention()
 Y = attention(Q[None], K[None], V[None])  # A minibatch of one sentence
 weights = attention.attention_weights[0]
-print('scores of gave: ', np.asarray(Q[1] @ K.T / math.sqrt(2)).round(2))
+scores = Q[1] @ K.T / math.sqrt(Q.shape[-1])  # Scaled by sqrt(d_h)
+print('scores of gave: ', np.asarray(scores).round(2))
 print('weights of gave:', np.asarray(weights[1]).round(2))
 print('weights of the: ', np.asarray(weights[3]).round(2))
 print('output of gave: ', np.asarray(Y[0, 1]).round(2))
@@ -491,7 +492,7 @@ def copy_both_data(n, d=16, d_v=8):
     V = torch.randn(n, 2, d_v)
     keys = torch.eye(d)[:2].expand(n, 2, d)    # e_1, e_2 mark the positions
     query = torch.eye(d)[2].expand(n, 1, d)    # e_3 asks for both values
-    values = nn.functional.pad(V, (0, d - d_v))
+    values = F.pad(V, (0, d - d_v))
     return query, keys, values, V.reshape(n, 1, 2 * d_v)
 
 def train_copy_both(num_heads, num_kv_heads=None, num_steps=2000):

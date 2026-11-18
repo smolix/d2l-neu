@@ -35,10 +35,11 @@ learn, and how masks keep a query away from padding and from the future.
 express, and what several heads, and heads that share keys and values,
 provide. :numref:`sec_positional-information` asks how an operation that is
 blind to order learns where each token stands, and what happens beyond the
-length it was trained on. :numref:`sec_attention-at-scale` asks how to cut
-the cost of scoring all pairs of positions: by exact attention in less
-memory, by a window of recent keys, or by a recurrence of linear cost.
-<!-- WRITER: the split moved windows and linear attention out of sec_attention-at-scale into the new section sec_windowed-linear-attention (10.6, after attention-at-scale in the toc); this sentence and the route need the new section (worklist Section 0, B2). -->
+length it was trained on. :numref:`sec_attention-at-scale` asks what
+scoring all pairs of positions costs, and how exact attention can be
+computed without storing the score matrix.
+:numref:`sec_windowed-linear-attention` asks how to cut the work itself:
+by a window of recent keys, or by a recurrence of linear cost.
 :numref:`sec_what-attention-computes` asks what trained heads compute, and
 which experiments can tell.
 
@@ -85,8 +86,8 @@ the chapter does not teach are collected in
 **The cost of attention**
 
 - [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness — Dao et al. (2022)](https://arxiv.org/abs/2205.14135) — the tiled online softmax of :numref:`sec_attention-at-scale`, with the memory-traffic analysis that explains its speed.
-- [Transformers Are RNNs — Katharopoulos et al. (2020)](https://arxiv.org/abs/2006.16236) — linear attention and its recurrent form, the third remedy of :numref:`sec_attention-at-scale`.
-- [The Transformer Family Version 2.0 — Lilian Weng (2023)](https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/) — a survey of attention variants, sparse patterns, and efficient approximations around :numref:`sec_attention-at-scale`.
+- [Transformers Are RNNs — Katharopoulos et al. (2020)](https://arxiv.org/abs/2006.16236) — linear attention and its recurrent form, as in :numref:`sec_windowed-linear-attention`.
+- [The Transformer Family Version 2.0 — Lilian Weng (2023)](https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/) — a survey of attention variants, sparse patterns, and efficient approximations around :numref:`sec_attention-at-scale` and :numref:`sec_windowed-linear-attention`.
 
 **What attention computes**
 

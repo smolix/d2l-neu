@@ -996,7 +996,7 @@ compression.
 The remaining factor is length. Keeping only the most recent $w$ tokens in
 the cache, and evicting the oldest as generation proceeds, bounds its
 memory for any length of text. This is the rolling-buffer form of the
-sliding-window attention of :numref:`sec_attention-at-scale`. Before
+sliding-window attention of :numref:`sec_windowed-linear-attention`. Before
 evicting anything, we measure where a trained model sends its attention:
 the average weight that GPT-2's queries, from position 64 on, place on the
 first token of the passage.
@@ -1125,7 +1125,7 @@ implementation.
 | MLA | width per token | about $Lnr$, plus a small rotary key | keys and values outside an $r$-dimensional latent | learned compression and reconstruction maps | fixed rank-$r$ basis on GPT-2; cited trained MLA models |
 | sliding window with sinks | cached length | $2L(w+s)H_\textrm{kv}d_h$ for window $w$ and $s$ sinks | tokens outside the window and the sinks | train or adapt to the restricted pattern | GPT-2 on one passage; cited StreamingLLM experiments |
 | quantization | bytes per element | $2LnH_\textrm{kv}d_h$ at 2 to 4 bits each instead of 16 | precision of every stored number | none: applied to a trained model | an exercise on GPT-2; cited KIVI experiments |
-| linear attention | the token-indexed cache | fixed state matrices, independent of $n$ | exact softmax attention and recall of individual tokens | replace and train the attention mechanism | derivation and experiment in :numref:`sec_attention-at-scale` |
+| linear attention | the token-indexed cache | fixed state matrices, independent of $n$ | exact softmax attention and recall of individual tokens | replace and train the attention mechanism | derivation and experiment in :numref:`sec_windowed-linear-attention` |
 
 Quantization combines with every other row, because it changes only the
 number of bits that store each number. At two to four bits, quantizing

@@ -51,6 +51,11 @@ replaces every LayerNorm by an elementwise $\tanh(\alpha x)$ with a learned
 scalar $\alpha$, so that no statistic is computed over the token. At the
 reported scales it matches normalized models in vision and language.
 
+![Four placements of normalization around one sublayer, with the residual stream running bottom to top; the FFN sublayer is treated the same way. Post-LN normalizes the stream itself after each addition, pre-LN normalizes what the branch reads, OLMo 2 normalizes what the branch writes, and Gemma 3 normalizes the branch on both sides. Only post-LN touches the stream's identity path.](../img/mdl-transformers-norm-taxonomy.svg)
+:label:`fig_norm-taxonomy`
+
+<!-- WRITER: fig_norm-taxonomy moved here from transformer-block.md (same SVG, same label and caption; receiving half of the move, structure.md 3.10). The block's OLMo 2/Gemma 3 paragraph (transformer-block.md, "Recent open models also place norms on the other side of a sublayer ... both also use QK-norm.") comes with it: merge it into this entry so that one entry owns all four placements (FR-2: "OLMo 2 uses a fifth" is false, OLMo 2 is the third panel of the figure; Gemma 3 is the fourth) and keep DeepNet and dynamic tanh (FR-7: dynamic tanh also has a learned per-channel scale and shift after the tanh). The figure's panel title "pre-LN (default)" means the default of d2l's block; say so, or refer to :numref:`sec_transformer-block` for it. The figure itself was rendered and checked (no label collisions, black text). -->
+
 ### Initialization of Deep Stacks
 
 `GPT` in :numref:`sec_gpt` uses GPT-2's initialization, with the projections

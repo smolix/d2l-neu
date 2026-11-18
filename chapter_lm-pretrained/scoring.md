@@ -333,9 +333,10 @@ very unevenly distributed among the models of 2022, some of which could
 hardly bind a letter to its option. Whether the small models of today can is
 something we will measure.
 
-What the models answer to real questions has to wait until
-:numref:`subsec_lm_flips`. First we build the scorer and make sure that it
-can be trusted.
+What does a model answer to the question about plants? We cannot say yet.
+First we build the scorer and make sure that it can be trusted. The plants
+get their answer as soon as the rules for comparing choices are in place,
+and 500 exam questions get theirs in :numref:`subsec_lm_flips`.
 
 ### Continuations and the Token Boundary
 
@@ -607,16 +608,17 @@ one. There is no other way for the two to disagree: when the mean prefers
 the shorter answer, the sum prefers it all the more.
 
 For the smallest case we return to the plants, with numbers that we invent.
-Suppose that a model gave each of the two tokens of `' carbon dioxide'` a
-log-probability of $-1.0$ nats, a sum of $-2.0$, and the single token of
-`' oxygen'` $-1.5$. The ratio 1.5 lies between 1 and 2, so the mean picks
-carbon dioxide and the sum picks oxygen. The correct answer loses for being
-two tokens long. In the plane of $|m_a|$ and $|m_b|$ the condition describes
-a wedge between two lines through the origin, and the wedge opens as the
-lengths become more unequal. This gives us a prediction to test: the rules
-should disagree more often on items whose options differ more in length.
-When all choices have the same length the wedge is empty, which is why the
-letter format, with one token per choice, needs no normalization.
+(The measured ones follow at the end of this subsection.) Suppose that a
+model gave each of the two tokens of `' carbon dioxide'` a log-probability of
+$-1.0$ nats, a sum of $-2.0$, and the single token of `' oxygen'` $-1.5$. The
+ratio 1.5 lies between 1 and 2, so the mean picks carbon dioxide and the sum
+picks oxygen. The correct answer loses for being two tokens long. In the
+plane of $|m_a|$ and $|m_b|$ the condition describes a wedge between two
+lines through the origin, and the wedge opens as the lengths become more
+unequal. This gives us a prediction to test: the rules should disagree more
+often on items whose options differ more in length. When all choices have the
+same length the wedge is empty, which is why the letter format, with one
+token per choice, needs no normalization.
 
 Tokens belong to a tokenizer, so harnesses prefer to divide by the number of
 characters or bytes of the answer. `norm='char'` and `norm='byte'` do that,
@@ -644,9 +646,12 @@ and per character, and PMI. Which is the right one? Each can be defended, and
 they are different rules. The least a report can do is to say which one it
 used.
 
-<!-- CODE CHANGE 2026-11-18 (pass2/code-requests.md, 18.4): the cell below
-scores the plants question under the four rules and the letter format; the
-text needs a sentence before it and a reading after it. -->
+The scorer is checked and the rules are on the table, so we can at last put
+the question of the opening to a model. The next cell scores the four
+options of the plants question with Qwen3-0.6B-Base in fp32. For each option
+it prints the two lengths, the score under each of the four rules, and the
+log-probability of the option's letter in the letter format, renormalized
+over the four letters.
 
 ```{.python .input #scoring-plants-rules}
 %%tab pytorch
@@ -669,6 +674,26 @@ print(textwrap.fill('picked: ' + ', '.join(
     f'{r} {options[v.argmax()]!r}' for r, v in rules.items()), 79,
     subsequent_indent='    '))
 ```
+
+Carbon dioxide wins under every rule. The model is right, and for once all
+our rules agree. The columns show how the agreement comes about. Under the
+sum the two tokens of `' carbon dioxide'` come to $-7.8$ nats and the single
+token of `' oxygen'` to $-8.9$, so the longer answer leads by a nat in spite
+of its length. In the terms of :eqref:`eq_lm_norm_flip` the means per
+token are $-3.9$ and $-8.9$. Their ratio is about 2.3, and the wedge ends at
+$l_a / l_b = 2$. The model prefers carbon dioxide by enough to make up for
+the second token, though not by much: had it found oxygen a little more than
+one nat more probable, the sum would have picked oxygen, as in our invented
+case.
+
+The PMI column says that the question raises the probability of every
+option, by 2.5 to 4.3 nats, and that of carbon dioxide the most. In the
+letter format the model gives B a log-probability of $-0.15$, which is a
+probability of about 0.86. So the question of the opening has an answer, and
+here it is the same answer five times. One item settles nothing about a
+convention, though. On the 500 exam questions the rules part company often,
+and in :numref:`subsec_lm_flips` we shall meet a farmer whose question
+receives three different answers from one model.
 
 ### Agreement with a Reference Harness
 
@@ -2192,8 +2217,10 @@ convention in the same way.
 The other columns have the same shape. Within the cloze family PMI is the
 highest score in every column, 7 to 10 points above the sum, which agrees
 with its use for this dataset by GPT-3 and OLMES. The rates per token and
-per character lie 0 to 5 points above the sum, which is inside the intervals
-of the table, and the whole family stays at or below 0.46. (The rates per
+per character lie 0 to 5 points above the sum, and the whole family stays at
+or below 0.46. Which of these gains are real? The intervals of the table
+belong to single accuracies and cannot say. Two rules applied to the same
+items call for a paired comparison, and we make it below. (The rates per
 character and per byte differ on 2 of the 2,500 predictions, so the table
 lists only the first.) The letter format lies 21 to 34 points above the
 cloze sum for every checkpoint, the base models included.
@@ -2283,8 +2310,10 @@ equal, and a reader of a generative one would see a gap of twenty points.
 
 The gap in the direct arm carries a qualification that we know from
 :numref:`subsec_lm_generative`: it counts the replies of Qwen3-0.6B without
-a box as wrong. Among the replies that state a letter the two models score
-0.57 and 0.76, so most of the gap lies in the answers and not in the format.
+a box as wrong. The line after `ranking flips` therefore repeats the
+comparison on the 424 items where both replies state a letter. There the two
+models are right on 58% and 76%, a difference of about 18 points (13 to 23).
+Most of the gap lies in the answers and not in the format.
 
 The second step concerns the bottom row of the table and the last four
 lines of this output. Accuracy turns each item into one bit, right or wrong,
@@ -2314,7 +2343,9 @@ Now the third step, the comparison that we fixed before looking. For each
 model `gain` is the paired difference between its accuracy under letter-0 and
 under the cloze sum, and the question is whether the two models of the pair
 gain differently. The cell also prints the gain of every checkpoint and
-compares each post-trained checkpoint with its base twin.
+compares each post-trained checkpoint with its base twin. Its last table
+makes the paired comparison that we postponed: each normalized cloze rule
+against the cloze sum, for every checkpoint, in accuracy points.
 
 ```{.python .input #scoring-contrasts}
 %%tab pytorch
@@ -2368,6 +2399,15 @@ noise. The rest of the output shows that every checkpoint gains from the
 letter format, by 21 to 34 points, and that 500 items do not resolve whether
 a post-trained model gains more or less than its base twin.
 
+The last table settles what we left open in the cloze family. PMI gains 7 to
+10 points over the sum for each of the five checkpoints, and every one of
+its intervals stays above zero by more than the drift. That gain is real.
+The rates per token and per character gain between 0 and 5 points, and not
+one of their ten intervals clears the drift. Of the three repairs of the
+sum, then, only the one that GPT-3 and OLMES chose for this dataset is shown
+to help here. Dividing by a length may help as well, but 500 items cannot
+tell.
+
 ### Reasoning and Direct Answers Compared
 :label:`subsec_lm_reasoning_direct`
 
@@ -2409,15 +2449,19 @@ for m in ARMS['reasoning'][0]:
           f'(direct), 1 for a scored letter')
 ```
 
-For Qwen3-0.6B reasoning is ahead by about 18 points (7 to 29). Half of its
-direct answers were wrong or unreadable, which leaves reasoning much to
-repair. For Qwen3-1.7B the estimate is about 7 points in
-favor of reasoning and the interval runs from 0 to 15, so at 100 items this
-gain is not resolved. On all 500 items the larger model is right nearly four
-times in five without reasoning. That leaves reasoning less to add, and a
-smaller gain needs more items to show. Hardly any reply reached its budget in
-either arm, so these are statements about the models and not about our token
-limits.
+For Qwen3-0.6B reasoning is ahead by about 18 points (7 to 29). Its direct
+replies are right on 49 of these 100 items, so half of them were wrong or
+unreadable, which leaves reasoning much to repair. The reasoning reply is
+right on 25 items that the direct reply missed, and wrong on 7 that the
+direct reply had right.
+
+For Qwen3-1.7B the estimate is about 7 points in favor of reasoning and the
+interval runs from 0 to 15, so at 100 items this gain is not resolved. The
+larger model is already right on 76 of the 100 items without reasoning. That
+leaves reasoning 24 to fix: it fixes 11 and breaks 4. Eleven against four
+looks like a gain, and fifteen items are too few to prove one. Hardly any
+reply reached its budget in either arm, so these are statements about the
+models and not about our token limits.
 
 About the cost there is no doubt. A reasoning reply takes about 1,000 tokens
 from Qwen3-0.6B and 1,300 from Qwen3-1.7B, about ten and five times their
@@ -2782,9 +2826,11 @@ are the pair to compare, fixed before any score.
 ::: {.slide title="One Question Has Three Ways to Be Scored"}
 [Conventions]{.kicker}
 
-![](../img/mdl-lm-pretrained-scoring-conventions.svg){height=420px}
+![](../img/mdl-lm-pretrained-scoring-conventions.svg){height=400px}
 
-All three are reasonable, and nothing guarantees that they agree.
+All three are reasonable, and nothing guarantees that they agree. Here (a)
+and (b) do: Qwen3-0.6B-Base prefers the text of carbon dioxide and gives the
+letter B a probability of 0.86.
 :::
 
 ::: {.slide title="One Model Gives Three Answers to One Question"}
@@ -2850,9 +2896,10 @@ $l_b < l_a$ tokens, mean $m_b$. Both means are negative.
 
 $$1 < \frac{|m_b|}{|m_a|} < \frac{l_a}{l_b}: \quad \text{the mean picks } a, \text{ the sum picks } b$$
 
-- Invented numbers: `' carbon dioxide'`, 2 tokens at $-1.0$ each;
-  `' oxygen'`, 1 token at $-1.5$. Ratio 1.5 in $(1, 2)$: the sum picks
-  oxygen.
+| $\log p$ per token | carbon dioxide, 2 tokens | oxygen, 1 token | ratio | the sum picks |
+|---|---|---|---|---|
+| invented | $-1.0$ each | $-1.5$ | 1.5, inside $(1, 2)$ | oxygen |
+| Qwen3-0.6B-Base | $-3.9$ each | $-8.9$ | 2.3, outside | carbon dioxide |
 
 ::: {.d2l-note}
 One token per choice: the wedge is empty. Letters need no normalization.
@@ -2896,6 +2943,9 @@ Which option wins under the sum, per token, and under PMI?
 **Answer.** Sum: $a$, since $-2.0 > -3.0$. Per token: $b$, since
 $-1.5 > -2.0$. PMI: $b$, since $-3.0 + 7.0 = 4.0$ beats $-2.0 + 3.0 = 1.0$.
 Three defensible rules, two answers.
+
+Measured on ARC, paired with the sum: PMI gains 7 to 10 points for every
+checkpoint. Per token and per character gain 0 to 5, not resolved.
 :::
 :::
 :::
@@ -3071,8 +3121,9 @@ thinking on, sampled, at most 4,096. The reply ends in a boxed letter.
 
 | the same 100 items | Qwen3-0.6B | Qwen3-1.7B |
 |---|---|---|
-| reasoning minus direct accuracy | 0.18 | 0.07 |
-| 95% interval, paired | 0.07 to 0.29 | 0.00 to 0.15 |
+| accuracy, reasoning / direct | 0.67 / 0.49 | 0.83 / 0.76 |
+| difference, with paired 95% interval | 0.18 (0.07 to 0.29) | 0.07 (0.00 to 0.15) |
+| items right only with reasoning / only directly | 25 / 7 | 11 / 4 |
 | tokens per reply, reasoning / direct | 1,019 / 91 | 1,321 / 242 |
 | different letters where both name one | 30 of 88 | 16 of 95 |
 
@@ -3110,8 +3161,8 @@ State precision and batch size. A difference between models below this
 ::: {.d2l-note}
 Right: Qwen3.5-0.8B minus Qwen3-0.6B, paired over 500 items. Cloze: $-1$ to
 $+3$ points, intervals contain 0. Letter: 11 (6 to 16). Written: 20 (15 to
-25). Fixed before looking: the gap is 12 points (5 to 18) larger under
-letters than under the cloze sum.
+25), and 18 where both replies name a letter. Fixed before looking: the gap
+is 12 points (5 to 18) larger under letters than under the cloze sum.
 :::
 :::
 

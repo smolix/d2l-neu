@@ -142,10 +142,10 @@ attention, called *global* layers. A global layer connects every pair in
 one hop again, and the windowed layers keep both the arithmetic and the
 memory of generation small. A model that generates text keeps the keys and
 values of all past tokens so that it need not recompute them
-(:numref:`sec_multihead-attention`). This store is the *KV cache*, and a
-windowed layer needs only the last $w$ of its entries. Gemma 3 follows
-every five windowed layers of width 1,024 with one global layer
-:cite:`Gemma.Team.2025`.
+(:numref:`sec_multihead-attention`). This store is the *KV cache*, built in
+:numref:`sec_kv-cache`, and a windowed layer needs only the last $w$ of its
+entries. Gemma 3 follows every five windowed layers of width 1,024 with one
+global layer :cite:`Gemma.Team.2025`.
 
 How much cache does that save? With $r$ windowed layers per global layer,
 each windowed layer caches $\min(n, w)$ positions and the global layer all
@@ -761,10 +761,10 @@ most recent keys; a stack of $L$ windows reaches $1 + L(w - 1)$ positions
 but relays distant facts through many hops, so released models interleave
 a few global layers. A fused kernel saves work only in whole tiles, and the
 tile count predicts the measured speedup in shape, though not fully in
-size, because every tile of a band is masked entry by entry. A kernel that
-factorizes, $\phi(\mathbf{q})^\top\phi(\mathbf{k})$, turns attention into
-a recurrent network with a $d_h \times d_v$ matrix state, computed in
-chunks for training and step by step for generation. That state has
+size, mostly because every tile of a band is masked entry by entry. A
+kernel that factorizes, $\phi(\mathbf{q})^\top\phi(\mathbf{k})$, turns
+attention into a recurrent network with a $d_h \times d_v$ matrix state,
+computed in chunks for training and step by step for generation. That state has
 constant size but is a lossy summary, and its weights do not sharpen when
 the query grows, which is why exact attention in a fused kernel remains the
 default.
@@ -920,7 +920,7 @@ The score matrix is gone; the arithmetic and the cache remain.
 [Goals]{.kicker}
 
 - compute the **reach** of stacked windows and the **cache** they save;
-- **count tiles** and predict a fused kernel's speedup;
+- **count tiles**, predict a fused kernel's speedup, and **time** it;
 - derive **linear attention** as a recurrence;
 - show why scaling the query **does not sharpen** it;
 - **choose** a mechanism.
@@ -1084,16 +1084,19 @@ Tile counts predict the shape; masked tiles explain most of the shortfall.
 :::
 :::
 
-::: {.slide title="Check: A Window Narrower than a Tile"}
+::: {.slide title="Check: A Window Two Tiles Wide"}
 [Check]{.kicker}
 
-At $n = 32{,}768$ with tiles of 128, a window of $w = 64$ replaces
-$w = 128$. Does the kernel get faster?
+At $n = 32{,}768$ with tiles of 128 ($T = 256$), the window grows to
+$w = 256$. How many tiles does the kernel visit, what speedup over dense
+causal does the tile count predict, and are all of them masked?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No. Each row of tiles still visits its diagonal tile and its
-left neighbor, 511 tiles in all, and every one straddles the mask's edge.
+**Answer.** Up to 3 per row: $3 \cdot 256 - 3 = 765$ tiles, so the count
+predicts $32{,}896 / 765 \approx 43\times$. Not all are masked: the tile
+left of the diagonal holds key distances 1 to 255, all inside the band, so
+255 tiles run without a mask.
 :::
 :::
 :::
@@ -1214,9 +1217,9 @@ Scaling the query does not sharpen linear attention, and it recalls poorly.
 - Window: $O(nw)$ work, reach $1 + L(w - 1)$; Gemma 3 keeps about a
   quarter of the cache at 8K.
 - Tiles at 2,048 tokens: causal about half, window about one in eight.
+- At 32K tokens the window is more than 30× faster, short of the tiles' 64.
 - Linear attention: 16 KiB of state per head; a larger query does not
   sharpen its weights.
-- At 32K tokens the window is more than 30× faster, short of the tiles' 64.
 
 Next: what a trained head computes.
 :::

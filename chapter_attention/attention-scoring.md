@@ -951,9 +951,9 @@ candidates. Its mean weight on $\pi(j)$ sits near $1/8$, which is what a
 query that spreads its weight evenly over eight positions would give.
 After a hundred steps all three runs print $1.000$ for the accuracy and
 for the fraction of positions whose largest weight falls on $\pi(j)$, and
-a mean weight of $0.999$ or more there. The weights of the untrained model and of the last
-trained one on the first test sequence, with a letter for each token id,
-show the difference:
+a mean weight of $0.999$ or more there. The weights of the untrained model
+and of the last trained one on the first test sequence, with a letter for
+each token id, show the difference:
 
 ```{.python .input #attention-scoring-attention-as-learned-alignment-4}
 %%tab pytorch, jax
@@ -969,10 +969,10 @@ d2l.show_heatmaps(maps[None], xlabel='source', ylabel='target',
 The untrained map spreads each row over all eight positions, with no
 structure to speak of. The trained map is the permutation matrix of $\pi$:
 a diagonal with one crossing. When the source repeats a token, as random
-sources of this length usually do, every target row still picks a single source position, which the
-letters of "attention" could not do. The keys carry the position, so the
-query of an output can ask for a place in the source rather than for any
-copy of a token.
+sources of this length usually do, every target row still picks a single
+source position, which the letters of "attention" could not do. The keys
+carry the position, so the query of an output can ask for a place in the
+source rather than for any copy of a token.
 
 How much does the toy prove? In translation an alignment is not the only
 way to lower the loss, and that one emerged anyway was the finding of

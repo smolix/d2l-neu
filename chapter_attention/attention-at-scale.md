@@ -417,9 +417,9 @@ d2l.plot(lengths, mems, 'sequence length n', 'XLA temp memory (MiB)',
 ```
 
 At $n = 16{,}384$ the full-matrix implementation needs 2 GiB of scratch
-memory or a little more, the score matrix of our count. The chunked one, as
-the printed line shows, needs more than an order of magnitude less, and the
-gap doubles with every further doubling of $n$.
+memory or a little more, the two $n \times n$ buffers of our count. The
+chunked one, as the printed line shows, needs more than an order of
+magnitude less, and the gap doubles with every further doubling of $n$.
 
 :begin_tab:`pytorch`
 The full-matrix line exceeds 2 GiB by about 256 MiB: the reference also

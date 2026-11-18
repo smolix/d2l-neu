@@ -1,13 +1,14 @@
 # Two Test Models
 :label:`sec_test_models`
 
-Until now, every claim of this chapter could be checked with a pencil. The
-valley has two curvatures, and from them we computed the largest stable
-learning rate, the number of steps that gradient descent needs, and the
-size of the cloud in which SGD comes to rest. A network offers nothing of
-the kind. Does momentum help on a real model? Why are transformers trained
-with Adam, when SGD served image classifiers for a decade? No formula
-answers such questions. We have to train the network and look.
+Until now, almost every claim of this chapter could be checked with a
+pencil. The valley has two curvatures, and from them we computed the
+largest stable learning rate, the number of steps that gradient descent
+needs, and the size of the cloud in which SGD comes to rest. A network
+offers nothing of the kind. Does momentum help on a real model? Why are
+transformers trained with Adam, when SGD served image classifiers for a
+decade? No formula answers such questions. We have to train the network
+and look.
 
 Looking has a difficulty of its own, which you have met if you ever trained
 one model twice. The two runs start from different random weights, see
@@ -20,13 +21,15 @@ and we need to know how far apart two runs of one setting end.
 
 This section supplies both. The models are a language model, `TinyLM`, and
 an image classifier, `FashionCNN`, each with a little under half a million
-parameters. `TinyLM` is a transformer, an architecture that
+parameters. Language models trained in earnest are a thousand to a million
+times larger, and we shall have to say what models as small as ours can
+show and what they cannot. `TinyLM` is a transformer, an architecture that
 :numref:`chap_transformers` explains. We use it two chapters early because
 an optimizer does not need to know what attention does: it sees parameters
 and their gradients, and nothing else. We train both models with the plain
 minibatch SGD of :numref:`sec_sgd`, as a baseline, and then train one
-setting five times to measure the spread. Later sections and chapters
-reuse the models and the functions defined here.
+setting of each model five times to measure the spread. Later sections and
+chapters reuse the models and the functions defined here.
 
 ```{.python .input #test-models-two-test-models-1}
 %%tab pytorch
@@ -67,24 +70,28 @@ import textwrap
 ## The Language Model TinyLM
 :label:`subsec_tinylm`
 
-A test model for optimizers must not be able to memorize its data, or a low
-training loss would measure memory and not optimization. One of our runs
-takes 2,000 steps on minibatches of 64 windows of 64 tokens, about 8
-million predictions. On *The Time Machine* with its 170,000 characters
-(:numref:`sec_text-sequence`), each character would be a target almost 50
-times. We therefore use a corpus that a run cannot exhaust: WikiText-103
+`TinyLM` predicts the next byte of a text. Its tokens are the UTF-8 bytes
+of the text, as the byte-level tokenizer of :numref:`sec_text-sequence`
+produces them before any merge, so the vocabulary has 256 entries and
+needs no training of its own. A training example is a *window*, a stretch
+of 64 consecutive bytes, and at each of its positions the model predicts
+the byte that comes next.
+
+How much text does such a model need? One of our runs takes 2,000 steps on
+minibatches of 64 windows, about 8 million predictions. On *The Time
+Machine* with its 170,000 characters (:numref:`sec_text-sequence`), each
+character would be a target almost 50 times, and a low training loss
+would no longer tell us whether the model predicts English or recites
+Wells. We therefore use a corpus that a run cannot exhaust: WikiText-103
 :cite:`Merity.Xiong.Bradbury.ea.2016`, about 100 million words of Wikipedia
 articles kept as raw text, with case, digits, and punctuation. Training
 windows start at random offsets in the first of its two training files,
 about 270 million bytes, so a run reads about 3% of the file and rarely
-sees the same passage twice. Validation windows are consecutive pieces of
-the official validation split, about 1.1 million bytes.
-
-The tokens are the UTF-8 bytes of the text, as the byte-level tokenizer
-of :numref:`sec_text-sequence` produces them before any merge. A
-vocabulary of 256 byte values needs no training of its own, and the loss,
-divided by $\ln 2$, is the number of bits that the model spends per byte
-(:numref:`subsec_bits-per-byte`).
+sees the same passage twice. Every minibatch is new text, and one number,
+the training loss, answers two questions at once: how fast the optimizer
+descends, and how well the model predicts. Validation windows are
+consecutive pieces of the official validation split, about 1.1 million
+bytes.
 
 ```{.python .input #adam-the-language-model-1}
 %%tab pytorch
@@ -168,10 +175,9 @@ class WikiText103(d2l.DataModule):  #@save
 ```
 
 `WikiText103` holds both splits in memory and gathers each minibatch on
-demand. A pass over the training data draws as many windows as the file
-holds non-overlapping ones, each at an independent random offset, so a
-training loop can ask for any number of steps. We load the data and decode
-its first 300 bytes.
+demand: 64 windows, each at an independent random offset. A pass over the
+training data is about 66,000 such minibatches, over thirty times as many
+as a run uses. We load the data and decode its first 300 bytes.
 
 ```{.python .input #adam-a-tiny-language-model-1}
 %%tab pytorch, jax
@@ -189,22 +195,35 @@ three of them.
 
 ### The Model
 
-`TinyLM` is a *decoder-only transformer*. Read from input to output, it
-adds a learned embedding of each byte to a learned embedding of its
-position, passes the sum through two blocks, and maps the result through a
-layer normalization (:numref:`subsec_layer-normalization-in-bn`) and a
-linear layer, the head, to 256 logits for the next byte. Each block has an
-attention layer, through which a position reads from the positions before
-it, and a two-layer MLP. Each of the two sits behind a layer normalization
-and has a residual connection around it. Embeddings and blocks have width
-128. Every linear layer draws its weights and biases uniformly from
-$\pm 1/\sqrt{d_\textrm{in}}$, where $d_\textrm{in}$ is the number of its
-inputs, and every embedding row from a standard normal distribution.
+What this chapter needs from `TinyLM` are the names and shapes of its
+parameters, and for those a short tour is enough. Let us follow one byte
+on its way. The model looks up a learned vector of 128 numbers for the
+byte and adds a second learned vector for its position in the window. The
+sum passes through two identical *blocks*, then through a layer
+normalization (:numref:`subsec_layer-normalization-in-bn`) and a linear
+layer, the *head*, which returns 256 logits for the next byte. A block
+consists of an attention layer, in which a position reads from the
+positions up to its own, and an MLP with one hidden layer of 512 units,
+which processes every position by itself. Each of the two sits behind a
+layer normalization and has a residual connection around it.
 
-You can read the class below as a list of the layers that hold parameters.
-The method `attention` is one library call wrapped in reshapes, and it will
-make sense once you have read the transformer chapter. What this chapter
-needs from the model are the names and shapes of its parameters.
+Four weight matrices do the work of a block, and later sections call them
+by name. `qkv` maps the 128 inputs of the attention layer to
+$3 \times 128 = 384$ numbers, and `proj` maps the 128 numbers that
+attention returns back into the block. The two matrices of the MLP lead
+from 128 to 512 and from 512 back to 128.
+
+Every linear layer draws its weights and biases uniformly from
+$\pm 1/\sqrt{\textrm{fan-in}}$, where the *fan-in* of a layer is the
+number of its inputs, and every embedding row is drawn from a standard
+normal distribution. The initialization belongs to the model as much as
+the layers do: it fixes the loss at which every run starts, a number that
+we predict below.
+
+You can read the class as a list of the layers that hold parameters. The
+method `attention` is one library call wrapped in reshapes, and it will
+make sense once you have read the transformer chapter. Nothing in this
+chapter depends on it.
 
 ```{.python .input #adam-a-tiny-language-model-2}
 %%tab pytorch
@@ -290,13 +309,14 @@ class TinyLM(nnx.Module):  #@save
 
 ### Parameter Groups
 
-The parameters of `TinyLM` are of three kinds. *Embeddings* are tables, in
-which a row receives a gradient only when its byte or its position occurs
-in the minibatch. *Matrices* are the two-dimensional weights of the linear
-layers. *Vectors* are the biases and the scales and shifts of the layer
-normalizations. Later sections treat the three kinds differently (weight
-decay in :numref:`sec_adamw`, for instance, applies to the matrices only),
-so we count them once here. The four matrices of a block have
+To an optimizer the parameters of `TinyLM` are of three kinds.
+*Embeddings* are tables, and the row of a byte receives a gradient only
+when that byte occurs in the minibatch. *Matrices* are the
+two-dimensional weights of the linear layers. *Vectors* are the biases and
+the scales and shifts of the layer normalizations. Later sections treat
+the three kinds differently (weight decay in :numref:`sec_adamw`, for
+instance, applies to the matrices only), so we count them once here. The
+four matrices of a block have
 $128 \cdot (384 + 128 + 512 + 512) = 196{,}608$ entries, so we expect the
 matrices to dominate.
 
@@ -340,6 +360,18 @@ print(f'{"total":>37} {sum(kinds.values()):>7}')
 The model has 470,784 parameters: 90% of them in the matrices, 9% in the
 embeddings and under 1% in the vectors.
 
+:begin_tab:`pytorch`
+In this output the two matrices of the MLP are `mlp.0.weight` and
+`mlp.2.weight`, and a weight of shape `(384, 128)` maps 128 inputs to 384
+outputs.
+:end_tab:
+
+:begin_tab:`jax`
+In this output the two matrices of the MLP are `mlp1.kernel` and
+`mlp2.kernel`, and a kernel of shape `(128, 384)` maps 128 inputs to 384
+outputs.
+:end_tab:
+
 ## The Image Classifier FashionCNN
 :label:`subsec_fashioncnn`
 
@@ -349,9 +381,9 @@ grayscale images of Fashion-MNIST (:numref:`sec_fashion_mnist`). Two stages
 of a $3 \times 3$ convolution, a ReLU, and $2 \times 2$ max-pooling, with
 32 and 64 channels, reduce each image to $64 \times 7 \times 7$ features.
 Two fully connected layers map them to 128 hidden units and then to the ten
-classes. Every weight and bias is drawn uniformly from
-$\pm 1/\sqrt{\textrm{fan-in}}$, where the fan-in of a unit is the number of
-inputs it sums over.
+classes. The initialization follows the rule of `TinyLM`, uniform on
+$\pm 1/\sqrt{\textrm{fan-in}}$, where a unit of a $3 \times 3$ convolution
+has nine inputs for every input channel.
 
 ```{.python .input #adam-the-same-race-on-a-cnn-1}
 %%tab pytorch
@@ -393,9 +425,9 @@ class FashionCNN(nnx.Module):  #@save
         return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
 ```
 
-How large is this model? The first fully connected layer alone has
+Most of this model is one matrix. The first fully connected layer has
 $3{,}136 \times 128$ weights, about 0.4 million, and the two convolutions
-are small by comparison.
+are small beside it.
 
 ```{.python .input #test-models-the-image-classifier-1}
 %%tab pytorch
@@ -413,11 +445,17 @@ print(f'{d2l.num_params(FashionCNN(rngs=nnx.Rngs(d2l.get_key()))):,} '
 ```
 
 With 421,642 parameters `FashionCNN` is about as large as `TinyLM`, and 95%
-of them sit in a single matrix. Its data are the minibatches of
-Fashion-MNIST that the Basics part used, 256 images each. A classifier is
-judged by its test accuracy as well as by its loss, so we add
-`evaluate_accuracy`, which returns the fraction of the examples in a set of
-minibatches that a model classifies correctly.
+of them sit in that one matrix. We call the model convolutional, and its
+features are, but by parameter count an optimizer is mostly training one
+fully connected layer.
+
+The data are the minibatches of Fashion-MNIST that the Basics part used,
+256 images each. A run of 2,000 steps passes over the 60,000 training
+images eight and a half times. Unlike `TinyLM`, this model sees its data
+again and again, so its training loss does not say how it will do on new
+images, and we judge it by its test accuracy as well. `evaluate_accuracy`
+returns the fraction of the examples in a set of minibatches that a model
+classifies correctly.
 
 ```{.python .input #adam-the-image-classifier-1}
 %%tab pytorch
@@ -461,12 +499,14 @@ def evaluate_accuracy(model, batches):  #@save
 ## Training and Reading a Run
 
 Both models map a minibatch to logits and are trained on the cross-entropy
-of those logits, so one loop serves both. We count its length in steps and
-not in epochs: an epoch has no meaning for a run that reads 3% of its text,
-and the predictions of the previous sections were counted in steps.
+of those logits, so one loop serves both. We count its length in steps. An
+epoch has no meaning for a run that reads 3% of its text, and the
+predictions of the previous sections were counted in steps too.
 :numref:`tab_test-models-helpers` lists the loop and the functions that
 read off what a run did. All are saved in `d2l`, and the code follows in
-the order of the table.
+the order of the table. Only two of them need your attention:
+`train_steps` is the loop, and `lr_sweep` calls it once per learning rate.
+The others are a few lines each and can be taken on trust.
 
 :The functions that train a model and read a run, with the section that
 first calls each of them.
@@ -482,11 +522,10 @@ first calls each of them.
 | `steps_to_reach` | the first step at which the smoothed loss is at most a target, or `None` | :numref:`sec_momentum` |
 | `lr_sweep` | the loss curves, and on request the evaluations, of one run per learning rate, all from the same initial weights | this section |
 
-Two features of `train_steps` are there for later use. Positions whose
-label is $-100$ add no loss, a convention that the masked language model
-of :numref:`sec_transformer` relies on; no label in this chapter has that
-value. And an optional function `stop` of the step count ends a run early,
-for runs that train until they reach a target loss.
+The loop has more arguments than this section needs. A label of $-100$
+marks a position that adds no loss, which the masked language model of
+:numref:`sec_transformer` will rely on, and `stop` ends a run before its
+last step. Both can be ignored here.
 
 ```{.python .input #adam-a-tiny-language-model-4}
 %%tab pytorch
@@ -610,10 +649,10 @@ def steps_to_reach(losses, target, k=25):  #@save
 ```
 
 `lr_sweep` takes two functions, one that builds a new model and one that
-builds its optimizer for a given learning rate, and trains once per rate.
-Given a function `evaluate`, it also evaluates each model, at the end of
-training or every `every` steps, and prints the last value under the name
-`metric`.
+builds its optimizer for a given learning rate, and trains once per rate,
+each time from the same initial weights. Given a function `evaluate`, it
+also evaluates each model, at the end of training or every `every` steps,
+and prints the last value under the name `metric`.
 
 ```{.python .input #adam-the-race-on-the-language-model-1}
 %%tab pytorch
@@ -673,18 +712,29 @@ We can now train. The optimizer is the plain minibatch SGD of
 :numref:`sec_sgd`, without momentum and at a constant learning rate, for
 2,000 steps. Which rate? On the valley the largest curvature $L$ put a
 ceiling of $2/L$ on the learning rate (:numref:`sec_gd`). The loss of
-`TinyLM` has a ceiling too, but we cannot compute it, so we bracket it with
-three rates a factor of five apart: 0.1, 0.5 and 2.5.
+`TinyLM` has a ceiling too, but we cannot compute it. So we do the crude
+thing and bracket it: we start at 0.1 and multiply by five until a run
+diverges. That takes three rates, 0.1, 0.5 and 2.5.
 
 One number we can predict, the loss at which the curves start. A model that
 knows nothing about its text gives each of the 256 byte values the same
 probability, at a loss of $\ln 256 \approx 5.55$ nats per byte. The plot
-marks this *uniform guess* with a dotted line. It shows the loss of every
-step on a logarithmic step axis, because the three runs part ways within
-the first ten steps. In the code, `make_lm` and `sgd` build the model and
-the optimizer in the form that `lr_sweep` expects, and `new_seed` returns a
-new seed at every call, so each execution of this notebook starts from
-weights of its own.
+marks this *uniform guess* with a dotted line.
+
+Further down we shall want two more landmarks, because a loss says more
+next to the loss of a model that we understand. A model that knows how
+frequent each byte is, and ignores the context altogether, scores about
+3.2 nats on this text. A table of byte pairs, which predicts a byte from
+the one before it and from nothing else, scores about 2.5. Neither needs
+training, only counting, and Exercise :exref:`ex_test-models-landmarks`
+does the counting. The plot does not draw these two, so keep the numbers
+in mind as you read it.
+
+The plot shows the loss of every step, on a logarithmic step axis because
+the three runs part ways within the first ten steps. In the code, `make_lm`
+and `sgd` build the model and the optimizer in the form that `lr_sweep`
+expects. `new_seed` returns a new seed at every call, so each execution of
+this notebook starts from weights of its own.
 
 ```{.python .input #test-models-a-first-run-with-minibatch-sgd-1}
 %%tab pytorch
@@ -716,35 +766,55 @@ random logits prefer some bytes to others for no reason (Exercise
 runs behave in three ways, and each is worth learning to recognize.
 
 At $\eta = 2.5$ the rate is too high. The first step lowers the loss by
-more than a nat, the second throws it above its starting value, and the
-run ends as `inf`. This is the divergence of :numref:`sec_gd`, where a
-rate above $2/L$ multiplied the error along the steepest direction at
-every step. Divergence of this kind is fast: within a handful of steps
-the loss has left the plot.
+more than a nat, the second throws it above its starting value, and within
+a handful of steps the loss has left the plot. The run ends as `inf`. On
+the valley, a rate above $2/L$ multiplied the error along the steepest
+direction at every step, from the first one on (:numref:`sec_gd`). Here
+the first step is a good one and the second is fatal. A quadratic has
+the same curvature everywhere, but the curvature of a network depends on
+where the run is (:numref:`subsec_gd-edge-of-stability`), and the ceiling
+moves with it. A rate need not be too high everywhere to end a run. One
+place is enough.
 
 At $\eta = 0.1$ the rate is too low. The curve is smooth from the first
-step on, and after 2,000 steps it is still falling, at about 2.5. Nothing
-is wrong with this run except that it is slow.
+step on, and after 2,000 steps it is still falling, at about 2.5. That is
+the level of the pair table: in 2,000 steps this run has learned about as
+much as counting pairs of bytes would have told it. Nothing is wrong with
+this run except that it is slow.
 
 At $\eta = 0.5$ the loss falls much faster at first, and during the first
-thirty steps it is thrown back up several times, by up to a nat or so.
-Each time it recovers, and the run ends near 2.1, a third of a nat below
-the cautious one. A rate that can throw the loss up but not out is close
-to the largest one the run tolerates. On the valley the best rate, 0.476,
-lay just below the ceiling of 0.5 (:numref:`sec_optimization-intro`), and
-the spikes suggest that 0.5 is in the same position here.
+thirty steps it is thrown back up several times, once by more than a nat.
+Minibatch noise does not do that: at $\eta = 0.1$ no step of the whole
+run raises the loss by more than a quarter of a nat. The steps that threw
+the loss up overshot, and for those few steps the rate was too high for
+the place the run was in. Each time the run recovers, and after about the
+thirtieth step it is not thrown again.
 
-Two more things can be read off the plot. The band of useful rates is
-narrow: five times below the best of our three rates costs a third of a
-nat, and five times above it costs the run. And neither stable run has
-reached the state in which :numref:`sec_sgd` left SGD, a loss that has
-stopped falling and only fluctuates in its noise ball. After 2,000 steps
-both curves still point downward. These runs are short of steps, not stuck
-in noise.
+For several hundred steps the two stable runs then travel side by side,
+the faster one a little lower, both creeping toward the level of the pair
+table. The run at 0.5 gets below that level before step 1,000, and from
+there it pulls away, to end near 2.1, a third of a nat below the other.
+No model that looks at the previous byte alone can do better than the
+pair table, so this run must have begun to use more of its context.
 
-`FashionCNN` gets a single run, at a rate of 0.3 that the same bracketing
-finds (Exercise :exref:`ex_test-models-diagnosis`), and we print its test
-accuracy at the end.
+The rate 0.5 can throw the loss up but not out, and it ends lowest. It is
+the best of our three rates, and we should not claim more for it. The
+largest rate that the run tolerates lies somewhere between 0.5 and 2.5,
+and a factor of five is a wide gap. Exercise :exref:`ex_test-models-edge`
+narrows it.
+
+Now look at the right end of the plot. Neither stable run has reached the
+state in which :numref:`sec_sgd` left SGD, a loss that has stopped falling
+and only fluctuates in its noise ball. Between steps 1,000 and 2,000 the
+run at 0.5 loses another fifth of a nat or more, and the run at 0.1 about
+0.05. These runs are short of steps, not stuck in noise. The loss of a
+single step, however, scatters over a band about a tenth of a nat wide,
+which is more than the slow run gains in a thousand steps. That is why
+`final_loss` averages the last hundred steps.
+
+`FashionCNN` gets a single run, at a rate of 0.3, and we print its test
+accuracy at the end. Exercise :exref:`ex_test-models-diagnosis` tries the
+rates around it.
 
 ```{.python .input #test-models-a-first-run-with-minibatch-sgd-3}
 %%tab pytorch, jax
@@ -760,74 +830,38 @@ baselines: plain SGD at a constant rate reaches about 2.1 nats per byte on
 
 ## Comparing Two Runs
 
-The run at $\eta = 0.5$ ended a third of a nat below the run at
-$\eta = 0.1$. Before we read anything into a difference between two runs,
-we should agree on how the runs are set up, and we should know how much two
-runs of the *same* setting differ. Every comparison in this chapter follows
-the protocol below.
+The first run was already a comparison, of one optimizer with itself, and
+the learning rate decided it. Five times below the best of our three rates
+costs a third of a nat, and five times above it costs the run. Before we
+compare two different optimizers we have to settle what we measure, how
+much two runs of the *same* setting differ, and how each side of a
+comparison comes by its learning rate. Every comparison of optimizers in
+this chapter follows the answers given here.
 
-### The Protocol
-
-The Deep Learning Tuning Playbook :cite:`Godbole.Dahl.Gilmer.ea.2023` sorts
-the hyperparameters of an experiment into three classes. The *scientific*
-hyperparameter is the one the question is about, such as the optimizer; we
-call each of its values an *arm* of the comparison. A *nuisance*
-hyperparameter must be set to its best value separately for every arm
-before the comparison is fair. The learning rate is the standard case,
-since a single shared rate favors whichever method happens to prefer it.
-*Fixed* hyperparameters are the same in every arm, and each of them limits
-the claim. Ours are the model, the batch size, the 2,000 steps and, unless
-a section says otherwise, a constant learning rate without clipping or
-weight decay.
-
-We tune the learning rate of an arm with `lr_sweep`, on a grid of rates a
-factor of about three apart, or two where a section needs a finer answer,
-and all runs of a comparison start from the same initial weights. *Tuned*
-means no more than the best point of such a grid. Since a grid cannot
-place an optimum more finely than its spacing, we also report the *usable
-range* of a method, the rates whose final loss is within 0.15 nats of the
-best one.
-A coarse grid can tell a method that works over a factor of ten in the
-learning rate from one that works at a single grid point, and in practice
-that matters as much as the best loss. Claims that one optimizer beats
-another depend strongly on how much effort went into tuning each
-:cite:`Schmidt.Schneider.Hennig.2021`, so every arm gets a grid of its
-own.
-
-:begin_tab:`pytorch`
-`torch.manual_seed` also fixes the order of the minibatches, so the runs of
-one call of `lr_sweep` share their data as well as their initial weights.
-:end_tab:
-
-:begin_tab:`jax`
-The seed fixes the initial weights only. Each run of `lr_sweep` draws its
-own minibatches.
-:end_tab:
-
-The chapter asks how fast a method lowers the loss, so the measure is the
-training loss, averaged over the last 100 steps by `final_loss`. On
-`TinyLM` this is also a held-out loss: every minibatch is text the model
-has not seen, so its loss measures prediction and not memory. Where a
-section needs the loss of one fixed set of weights, for instance in the
-middle of a run, it uses the validation loss, the logarithm of
-`lm_perplexity` on the validation split. `FashionCNN` passes over its
-60,000 training images eight and a half times in 2,000 steps. Its training
-loss says how well the optimizer optimizes and its test accuracy how well
-the result generalizes, and we print both.
+The first is quickly said. The chapter asks how fast a method lowers the
+loss, so the measure is the training loss at the end of a run, as
+`final_loss` reports it. For `FashionCNN` we print the test accuracy next
+to it. One thing `final_loss` is not: the loss of a particular set of
+weights, since the weights keep changing during the hundred steps of the
+average. Where a section needs the loss of one fixed set of weights, at a
+checkpoint in the middle of a run for instance, it evaluates them on the
+validation split. The *validation loss* of `TinyLM` is the logarithm of
+`lm_perplexity` there.
 
 ### The Spread between Two Runs
 
-What remains is the rule from the beginning of this section, and the
-number it needs: how much do two runs of one setting differ? This number
-is rarely reported, although it is cheap to measure. `repeat` trains one
-setting once per seed, each time with new initial weights and new
-minibatches, and returns the final training losses and the evaluations.
+Now for the rule from the beginning of this section, and the number it
+needs: how much do two runs of one setting differ? This number is rarely
+reported, although it is cheap to measure. `repeat` trains one setting
+once per seed, each time with new initial weights and new minibatches, and
+returns the final training losses and the evaluations.
 
-We measure the two settings that later sections compare against. For
-`FashionCNN` it is the SGD run from above. For `TinyLM` it is AdamW at a
-learning rate of 0.003 and without weight decay, the optimizer of the
-recipes in :numref:`sec_training_recipes`. This chapter has not explained
-AdamW yet. Here we call it as we have called it so far, from the library.
+We measure one setting of each model, the one that later sections compare
+against. For `FashionCNN` it is the SGD run from above. For `TinyLM` it is
+not SGD but AdamW, the optimizer of the compact modern recipe in
+:numref:`sec_training_recipes`, here at a constant learning rate of 0.003
+and without weight decay. This chapter has not explained AdamW yet. Here
+we call it as we have called it so far, from the library.
 
 ```{.python .input #test-models-comparing-two-runs-1}
 %%tab pytorch
@@ -866,32 +900,114 @@ for name, values in [('TinyLM, training loss', lm_train),
 ```
 
 Five runs of `TinyLM` end within about a hundredth of a nat of each other,
-in the training loss and in the validation loss. `FashionCNN` is somewhat
-less repeatable: its training losses lie within about 0.02 and its test
-accuracies within about a point. These ranges are the yardstick for the
-rest of the chapter. Five runs give a rough range and not a distribution,
-so we ask for a margin and call a difference a result only if it is at
-least three times the range printed here. On `TinyLM` that is 0.05 nats,
-to be on the safe side, and on `FashionCNN` a few points of test accuracy
-between two single runs. The 0.15 nats of the usable range are more than
-ten times the printed range. Smaller differences we report as ties, and a
-section that has to resolve one repeats its runs and prints them.
+in the training loss and in the validation loss. The training losses of
+`FashionCNN` lie within about 0.02, and its test accuracies within about a
+point.
+
+These ranges are our yardstick, and we should be clear about how rough it
+is. Five runs do not give a distribution. They give one range, and five
+more runs would give another, perhaps half as large, perhaps twice. So we
+ask for a margin: a difference between two single runs is a result only if
+it is at least three times the range printed here. The factor of three is
+a convention, and Exercise :exref:`ex_test-models-range` looks at the
+statistics behind it. On `TinyLM`, three times the range of the training
+losses is 0.03 to 0.04 nats, and we round up to 0.05. A smaller difference
+we report as a tie, and a section that has to resolve a tie repeats its
+runs and prints them. On `FashionCNN`, three times 0.02 is 0.06 in the
+training loss, and three times a point is three points of test accuracy.
+A single point of test accuracy between two runs of `FashionCNN`
+therefore shows nothing, however good it looks in a table.
+
+The yardstick also belongs to the settings that produced it: an optimizer
+at a well-chosen learning rate, read at step 2,000. A run close to the
+largest rate that it tolerates, or a loss read early in a run, can spread
+more, and a section that compares such settings prints a range of its
+own.
 
 One detail of the output may puzzle you. The validation loss is lower than
-the training loss in every run, by 0.02 to 0.03 nats. Memorization would
-produce the opposite sign. Most of the gap is the text itself: the
-validation articles are somewhat easier to predict than an average
-training window (Exercise :exref:`ex_test-models-held-out`).
+the training loss in every run, by 0.02 to 0.03 nats. Had the model
+memorized its training text, the sign would be the other way round. But
+the two numbers are not measured alike. The training loss is a mean over a
+hundred steps, during which the model was still improving, on windows
+drawn at random. The validation loss belongs to the final weights and to
+one fixed text. Either difference could produce a gap of this size, and
+Exercise :exref:`ex_test-models-held-out` asks you to find out which one
+does.
 
-Now set the first row of the output beside the baseline. Plain SGD ended
-near 2.1 nats, and AdamW ends near 1.59, half a nat lower after the same
-2,000 steps. Against a range of a hundredth, nobody will call that a tie.
-But by our own protocol it is not yet a comparison. Three rates a factor
-of five apart do not tune SGD, and AdamW differs from plain SGD in two
-ways at once: it averages its gradients over steps, and it gives every
-parameter a step size of its own. :numref:`sec_momentum` and
-:numref:`sec_adam` take the two apart, one at a time and by the
-protocol.
+### The Tuning of the Learning Rate
+
+The measure and the yardstick tell us when two numbers differ. They do not
+yet make a comparison fair. In the runs above SGD trained at a rate of 0.5
+and AdamW at 0.003. At AdamW's rate, SGD would take steps thirty times
+shorter than in the run that we called too slow. Two optimizers compared
+at one shared learning rate are ranked mostly by which of them happens to
+like that rate.
+
+The Deep Learning Tuning Playbook :cite:`Godbole.Dahl.Gilmer.ea.2023` has
+names for the roles that hyperparameters play in such an experiment. The
+*scientific* hyperparameter is the one the question is about, here the
+optimizer; we call each of its values an *arm* of the comparison. A
+*nuisance* hyperparameter is one that the question is not about, but that
+every arm needs at its own best value before the comparison is fair. The
+learning rate is the standard case.
+
+*Fixed* hyperparameters are the same in every arm, and each of them limits
+the claim. Ours, unless a section says otherwise, are the model, the batch
+size, the 2,000 steps, and a constant learning rate without clipping or
+weight decay. The first and the third are the bold ones.
+
+What can a model of half a million parameters, trained for 2,000 steps,
+tell us about one a thousand times larger that trains for weeks? Less than
+we would like. We shall trust it for a mechanism, for the order of two
+methods that differ by a wide margin, and for the width of the range of
+learning rates that a method accepts. That trust is an assumption. An
+effect that appears only at scale, or late in a long run, a small model
+cannot show at all. What changes with size needs an experiment of its own,
+and :numref:`sec_scaling` makes one, on the drift of the best learning
+rate as a model grows wider.
+
+We tune the learning rate of an arm with `lr_sweep`, on a grid of rates a
+factor of about three apart, or two where a section needs a finer answer.
+All runs of a comparison start from the same initial weights, so that the
+arms differ in their optimizer and not also in their starting point.
+*Tuned* means no more than the best point of such a grid.
+
+:begin_tab:`pytorch`
+`torch.manual_seed` also fixes the order of the minibatches, so the runs of
+one call of `lr_sweep` share their data as well as their initial weights.
+:end_tab:
+
+:begin_tab:`jax`
+The seed fixes the initial weights only. Each run of `lr_sweep` draws its
+own minibatches.
+:end_tab:
+
+A grid cannot place the best rate more finely than its spacing, and the
+best loss is uncertain to the same degree. What a coarse grid does measure
+reliably is how many of its points come close to the best one. We
+therefore also report the *usable range* of a method, the rates whose
+final loss is within 0.15 nats of the best. That margin is more than ten
+times the range printed above, so the seed does not decide which rates
+belong to it. Our SGD sweep makes a small example. Its best rate is 0.5,
+and that rate is the whole usable range, since the run at 0.1 ends 0.35
+nats higher and the run at 2.5 diverges. A method that works at a single grid
+point is harder to live with than one that works over a factor of ten in
+the learning rate, and in practice that matters as much as the best loss.
+Claims that one optimizer beats another depend strongly on how much effort
+went into tuning each :cite:`Schmidt.Schneider.Hennig.2021`, so every arm
+gets a grid of its own.
+
+Now set the AdamW runs beside the baseline. Plain SGD ended near 2.1 nats,
+and AdamW ends near 1.59, half a nat lower after the same 2,000 steps.
+Against a range of a hundredth, nobody will call that a tie, even if the
+SGD run should spread several times more than the AdamW runs do. But by
+our own protocol it is not yet a comparison. Three rates a factor of five
+apart do not tune SGD. And AdamW differs from plain SGD in two ways at
+once: it averages its gradients over steps, and it gives every parameter a
+step size of its own. The next two sections take up the two changes one
+at a time. :numref:`sec_momentum` adds the averaging to SGD.
+:numref:`sec_adam` adds the step sizes, and then lets SGD with momentum
+and Adam meet on `TinyLM`, each with a grid of its own.
 
 ## Summary
 
@@ -899,16 +1015,18 @@ From this section on, a claim about an optimizer is a difference between
 training runs of a small network. The networks are `TinyLM`, a transformer
 of two blocks and 470,784 parameters that predicts the next byte of
 Wikipedia text, and `FashionCNN`, a convolutional classifier of 421,642
-parameters. A run takes 2,000 steps and is read through its training loss.
-Under plain minibatch SGD on `TinyLM`, a learning rate that was too low
-gave a smooth and slow curve, a rate near the largest stable one gave
-early spikes from which the run recovered, and a rate that was too high
-gave an explosion within a few steps. A comparison tunes the learning rate of every arm on a grid,
-starts all arms from the same weights, and reports the usable range of
-rates next to the best one. Five runs of one setting ended within about a
-hundredth of a nat on `TinyLM` and within about a point of test accuracy
-on `FashionCNN`, and a difference between two settings counts as a result
-only if it is at least three times as large.
+parameters. A run takes 2,000 steps and is read through its training loss,
+which on `TinyLM` is a loss on unseen text. Under plain minibatch SGD on
+`TinyLM`, a learning rate that was too low gave a smooth, slow curve that
+ended at the level of a table of byte pairs, a rate five times higher
+gave early spikes, a recovery, and the lowest loss of the three, and a
+rate five times higher again diverged within a few steps. A comparison
+tunes the learning rate of every arm on a grid, starts all arms from the
+same weights, and reports the usable range of rates next to the best one.
+Five runs of one setting ended within about a hundredth of a nat on
+`TinyLM` and within about a point of test accuracy on `FashionCNN`, and a
+difference between two single runs counts as a result only if it is at
+least three times that range, which we round to 0.05 nats on `TinyLM`.
 
 ## Exercises
 
@@ -949,18 +1067,23 @@ only if it is at least three times as large.
        each run? If a run matches (d), print its logits for a few images
        and the fraction of its ReLU units that are zero for every image of
        a minibatch, and explain why the loss does not move.
-1. [code] **The edge of divergence.** Between the learning rates 0.5 and
-   2.5 lies the largest one that plain SGD tolerates on `TinyLM`. Train at
-   0.7, 1, 1.4 and 2 with five seeds each (`lr_sweep` with
-   `verbose=False`), and record for every run whether it diverged and
-   where it ended.
+1. [code] **The edge of divergence.** The first run left the largest
+   learning rate that plain SGD tolerates on `TinyLM` somewhere between
+   0.5 and 2.5. Train at 0.7, 1, 1.4 and 2 with five seeds each
+   (`lr_sweep` with `verbose=False`), and record for every run whether it
+   diverged and where it ended.
+   :exlabel:`ex_test-models-edge`
     1. Is there a sharp ceiling, as on the valley, or a range of rates in
        which the outcome depends on the seed?
     1. At which rate is the mean final loss of the runs that survived the
        lowest? What does your answer imply for a statement such as "SGD at
        its best learning rate reaches a loss of 2.0"?
+    1. At which step do the runs that diverge leave the plot? Does a run
+       that has survived its first hundred steps diverge later? What does
+       this say about where on its way a run is most fragile?
 1. [code] **Repeats and the range.** ● The range of five runs is a rough
    measure of spread.
+   :exlabel:`ex_test-models-range`
     1. For $n$ independent draws from a normal distribution with standard
        deviation $\sigma$, the expected range is about $2.3\,\sigma$ for
        $n = 5$ and $3.7\,\sigma$ for $n = 20$. Call `repeat` with 20 seeds
@@ -972,9 +1095,11 @@ only if it is at least three times as large.
        estimate of $\sigma$, how large must $k$ be for a true difference of
        0.005 nats to be twice the standard error?
     1. Train the setting five times from the same initial weights, with
-       different minibatches in every run. Is the range smaller than that
-       of five runs that differ in both? How much does a comparison gain by
-       starting all arms from the same weights?
+       different minibatches in every run. (Where the seed of `lr_sweep`
+       also fixes the minibatches, build the model yourself, reseed, and
+       call `train_steps`.) Is the range smaller than that of five runs
+       that differ in both? How much does a comparison gain by starting
+       all arms from the same weights?
 1. [code] **Training loss as a held-out loss.** The comparisons of this
    chapter read the training loss of `TinyLM` as a loss on unseen text.
    :exlabel:`ex_test-models-held-out`
@@ -990,8 +1115,10 @@ only if it is at least three times as large.
        every 250 steps (`lr_sweep` with `every=250`). From which step on do
        training and validation loss part, and how far apart do they end?
        Which of the two would now mislead a comparison of optimizers?
-1. [code] **Count models as landmarks.** A loss says more next to the loss
-   of a model that we understand.
+1. [code] **Count models as landmarks.** The text quoted two losses that
+   need no training: about 3.2 nats for the byte frequencies and about 2.5
+   for a table of byte pairs.
+   :exlabel:`ex_test-models-landmarks`
     1. From the first ten million training bytes, compute the entropy of
        the byte frequencies in nats, the loss of the best model that
        ignores the context.
@@ -999,9 +1126,15 @@ only if it is at least three times as large.
        on the validation split, the mean loss of the model that predicts a
        byte from the one before it, with add-one smoothing
        (:numref:`sec_language-model`).
-    1. Place the final losses of this section, about 2.5 and 2.1 under SGD
-       and 1.59 under AdamW, among $\ln 256$ and these two numbers. How
-       much context can each of the three trained models be using?
+    1. Add a third landmark, a table that predicts a byte from the two
+       before it. Then place the final losses of this section, about 2.5
+       and 2.1 under SGD and 1.59 under AdamW, among $\ln 256$ and the
+       three landmarks. How many bytes of context must each of the three
+       trained models be using at least?
+    1. A table that conditions on the five previous bytes has
+       $256^6 \approx 3 \times 10^{14}$ entries. Why can the series of
+       landmarks not be continued that far with the text we have, and
+       what does `TinyLM` do instead of counting?
 
 <!-- slides -->
 
@@ -1022,11 +1155,11 @@ On the valley $0.1 x_1^2 + 2 x_2^2$ every answer could be computed:
 |:--|:--|:--|
 | largest stable learning rate | $2/4 = 0.5$ | unknown |
 | steps to 1% at the best rate | 47 | unknown |
-| where SGD comes to rest | the noise ball | unknown |
+| where SGD at a constant rate ends | in a cloud of known size | unknown |
 
 ::: {.d2l-note .warn}
-We must train and look. But a new optimizer ends 0.02 nats below the old
-one: is that the optimizer, or the random seed?
+We must train and look. But a new optimizer ends at a loss 0.02 below the
+old one: is that the optimizer, or the random seed?
 :::
 :::
 
@@ -1035,11 +1168,12 @@ one: is that the optimizer, or the random seed?
 
 - describe the two test models of this chapter and count their
   parameters;
-- predict the loss of a model before training;
+- predict the loss of a model before training, and place a loss among
+  landmarks that need no training;
 - tell from a loss curve whether the learning rate is too low, too high,
-  or about right;
-- set up a comparison of two optimizers that is fair to both;
-- decide whether a difference between two runs is a result.
+  or workable;
+- decide whether a difference between two runs is a result;
+- set up a comparison of two optimizers that is fair to both.
 
 **Running example:** `TinyLM`, a small language model on Wikipedia bytes.
 **The idea:** a difference between two settings counts only if it exceeds
@@ -1049,16 +1183,23 @@ the difference between two runs of one setting.
 ::: {.slide title="From Here On the Chapter Measures on Two Small Networks"}
 [Where this fits]{.kicker}
 
-| movement | sections |
+::: {.cols .vc}
+::: {.col}
+| part | decks |
 |---|---|
-| two difficulties, on a valley we can solve | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| which direction to step in, on two small networks | **Two Test Models** · Momentum · Adam · AdamW · Muon |
-| how the step changes over a run, with batch size and width | Schedules · Batch Size · Scaling Up · Practice |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch Gradient Descent |
+| **2 · Direction:** which way to step | **Two Test Models** · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
+:::
 
-- **Uses:** minibatch SGD, the ceiling $\eta < 2/L$ on the learning rate
-  $\eta$ ($L$: largest curvature), the noise ball.
-- **Skips:** how a transformer works; an optimizer sees only parameters
+::: {.col .narrow}
+- **Uses:** minibatch SGD; the ceiling $\eta < 2/L$ on the learning rate
+  $\eta$ ($L$: largest curvature); the *noise ball*, the cloud in which
+  SGD at a constant rate ends.
+- **Skips:** how a transformer works. An optimizer sees only parameters
   and their gradients.
+:::
+:::
 :::
 
 ::: {.slide title="A Run Reads 3% of the Text, So It Cannot Memorize It"}
@@ -1068,7 +1209,7 @@ the difference between two runs of one setting.
 |:--|--:|
 | corpus: WikiText-103, first training file | 270 million bytes |
 | token | one UTF-8 byte, 256 values |
-| minibatch | 64 windows of 64 bytes |
+| minibatch | 64 windows of 64 consecutive bytes |
 | run | 2,000 steps |
 | predictions per run | $2{,}000 \times 64 \times 64 \approx 8.2$ million |
 | share of the corpus read | 3% |
@@ -1078,14 +1219,16 @@ the difference between two runs of one setting.
 Windows start at random offsets, so almost no text is seen twice: the
 training loss of a new minibatch is a loss on unseen text.
 :::
+
+[Merity et al., 2016]{.small}
 :::
 
 ::: {.slide title="TinyLM Has 470,784 Parameters, 90% of Them in Matrices"}
 [TinyLM]{.kicker}
 
 Byte and position embeddings → 2 transformer blocks of width 128 (attention
-and a two-layer MLP, each normalized, each with a residual connection) →
-linear head with 256 logits for the next byte.
+and an MLP, each normalized, each with a residual connection) → linear
+head with 256 logits for the next byte.
 
 | kind | what | parameters | share |
 |:--|:--|--:|--:|
@@ -1094,8 +1237,9 @@ linear head with 256 logits for the next byte.
 | vectors | biases, normalization scales and shifts | 3,840 | 1% |
 
 ::: {.d2l-note}
-Later methods treat the three kinds differently. One block has
-$128 \cdot (384 + 128 + 512 + 512) = 196{,}608$ matrix entries.
+Four matrices per block: `qkv` (128 → 384) and `proj` (128 → 128) in
+attention, 128 → 512 → 128 in the MLP; 196,608 entries. Weight decay will
+act on the matrices only.
 :::
 :::
 
@@ -1112,34 +1256,33 @@ Fashion-MNIST, $28 \times 28$ grayscale images, 10 classes, minibatches of
 | fully connected, ReLU | 128 | 401,536 |
 | fully connected | 10 | 1,290 |
 
-- 2,000 steps are 512,000 images, 8.5 passes over the 60,000.
-- Training loss measures optimization, test accuracy generalization.
+::: {.d2l-note}
+The features are convolutional, but by parameter count an optimizer is
+mostly training one fully connected layer.
+:::
 :::
 
-::: {.slide title="One Loop Trains Both Models, and It Counts Steps"}
+::: {.slide title="A Run Is 2,000 Steps, Read by the Mean of Its Last 100 Losses"}
 [Training and reading a run]{.kicker}
 
-Each step: draw a minibatch, compute the mean cross-entropy of the logits,
-take one optimizer step, record the loss.
+Loss of a step: the cross-entropy $-\ln p(\textrm{target})$ on its
+minibatch, in nats.
 
-| function | returns |
-|:--|:--|
-| `train_steps` | the loss of every step |
-| `final_loss` | mean of the last 100 losses; infinity if the run diverged |
-| `lm_perplexity` | $\exp$ of the mean loss per token on held-out text |
-| `evaluate_accuracy` | fraction of examples classified correctly |
-| `lr_sweep` | one run per learning rate, all from the same initial weights |
+| | `TinyLM` | `FashionCNN` |
+|:--|:--|:--|
+| minibatch | 64 windows of 64 bytes | 256 images |
+| 2,000 steps read | 3% of the text, once | every image 8.5 times |
+| the training loss is | a loss on unseen text | a loss on images seen before |
+| also reported | validation loss | test accuracy |
 
 ::: {.d2l-note}
-Steps, not epochs: an epoch of 270 million bytes has no meaning for a run
-that reads 3% of them.
+On `TinyLM` the loss of one step scatters by about 0.1 nats. *Final loss*:
+the mean of the last 100 steps, infinity if the run diverged.
 :::
 :::
 
 ::: {.slide title="Check: What Is the Loss of a Model That Knows Nothing?"}
 [Check]{.kicker}
-
-The loss is the cross-entropy in nats, $-\ln p(\textrm{target})$.
 
 1. `TinyLM` predicts one of 256 byte values. What loss does a uniform
    guess have?
@@ -1155,15 +1298,31 @@ reason, which costs about $s^2/2 = 1/6$ nat. Expect a start near 5.7.
 :::
 :::
 
+::: {.slide title="Three Landmarks Need No Training: 5.55, 3.2 and 2.5 Nats"}
+[A first run]{.kicker}
+
+A loss says more next to the loss of a model that we understand.
+
+| model | what it knows | loss, nats per byte |
+|:--|:--|--:|
+| uniform guess | nothing | $\ln 256 \approx 5.55$ |
+| byte frequencies | how common each byte is | about 3.2 |
+| table of byte pairs | the byte before | about 2.5 |
+
+::: {.d2l-note}
+The last two are counts on the Wikipedia text, not trained models. To get
+below 2.5, a model must use more than one byte of context.
+:::
+:::
+
 ::: {.slide title="Plain SGD at Three Rates Ends at 2.5, at 2.1, and at inf"}
 [A first run]{.kicker}
 
-`TinyLM`, minibatch SGD without momentum, constant learning rate, 2,000
-steps, one initialization.
+`TinyLM`, plain minibatch SGD, constant learning rate, 2,000 steps.
 
 @!test-models-a-first-run-with-minibatch-sgd-2
 
-Loss of every step; dotted: the uniform guess $\ln 256$.
+Dotted: the uniform guess. Not drawn: the landmarks 3.2 and 2.5.
 :::
 
 ::: {.slide title="Each of the Three Curves Is a Diagnosis"}
@@ -1171,14 +1330,14 @@ Loss of every step; dotted: the uniform guess $\ln 256$.
 
 | rate | curve | diagnosis |
 |:--|:--|:--|
-| 0.1 | smooth from the first step, still falling at step 2,000, ends near 2.5 | too low: raise it |
-| 0.5 | thrown up by as much as a nat in the first 30 steps, recovers, ends near 2.1 | near the largest stable rate: keep it |
-| 2.5 | down once, then above its start, then `inf` | above the ceiling $2/L$ ($L$: largest curvature): lower it |
+| 0.1 | smooth from the first step; still falling at step 2,000; ends near 2.5, the level of the pair table | too low: raise it |
+| 0.5 | thrown up by more than a nat in the first 30 steps; recovers; ends near 2.1 | too high for a few early steps; the best of the three |
+| 2.5 | down by more than a nat, then above its start, then `inf` | too high where the first step led: lower it |
 
-- Useful rates form a narrow band: a factor of 5 down costs a third of a
-  nat, a factor of 5 up costs the run.
-- Neither stable run has flattened into a noise ball: both are short of
-  steps, not stuck in noise.
+- The ceiling lies between 0.5 and 2.5, and on a network it depends on
+  where the run is.
+- Steps 1,000 to 2,000: another 0.2 nats at rate 0.5, about 0.05 at rate
+  0.1. Short of steps, not stuck in noise.
 :::
 
 ::: {.slide title="The Baselines: 2.1 Nats per Byte and 90% Test Accuracy"}
@@ -1194,8 +1353,39 @@ Loss of every step; dotted: the uniform guess $\ln 256$.
 | `FashionCNN`, rate 0.3 | training loss about 0.22, test accuracy about 90% |
 :::
 
+::: {.slide title="Five Runs of One Setting of TinyLM End Within About 0.01 Nats"}
+[The spread]{.kicker}
+
+New initial weights and new minibatches in each run. `TinyLM`: AdamW (a
+library optimizer, explained two decks on), rate 0.003, no weight decay.
+`FashionCNN`: SGD, rate 0.3.
+
+@!test-models-comparing-two-runs-3
+
+Validation loss is below training loss in every run, the opposite of
+memorization.
+:::
+
+::: {.slide title="A Result Is a Difference of at Least Three Times the Range"}
+[The spread]{.kicker}
+
+| quantity | range of five runs | three times | we ask for |
+|:--|:--|:--|:--|
+| `TinyLM`, training loss | about 0.01 nats | 0.03 to 0.04 | 0.05 nats |
+| `FashionCNN`, training loss | at most about 0.02 | 0.06 | 0.06 |
+| `FashionCNN`, test accuracy | at most about 1 point | 3 points | 3 points |
+
+- Five more runs could give a range half or twice as large, hence the
+  margin. The factor 3 is a convention.
+- A smaller difference is a tie. To resolve it, repeat the runs.
+- The range belongs to its setting: a well-chosen rate, read at step
+  2,000.
+:::
+
 ::: {.slide title="A Fair Comparison Tunes the Learning Rate of Every Arm"}
 [The protocol]{.kicker}
+
+SGD trained at rate 0.5, AdamW at 0.003: no shared rate suits both.
 
 | class | meaning | in this chapter |
 |:--|:--|:--|
@@ -1204,37 +1394,28 @@ Loss of every step; dotted: the uniform guess $\ln 256$.
 | fixed | the same in every arm; each limits the claim | model, batch size, 2,000 steps, constant rate |
 
 ::: {.d2l-note .warn}
-One shared learning rate favors whichever method happens to prefer it.
+Bold: half a million parameters, 2,000 steps. Trust them for mechanisms
+and large differences, not for effects of scale.
 :::
 
 [Godbole et al., Deep Learning Tuning Playbook, 2023]{.small}
 :::
 
-::: {.slide title="Tuned Means the Best Point of a Grid"}
+::: {.slide title="Tuned Means the Best Point of a Grid; Usable Means Within 0.15 Nats of It"}
 [The protocol]{.kicker}
 
-- **Grid:** learning rates a factor of about 3 apart (2 for a finer
-  answer); every run of a comparison starts from the same initial weights.
-- **Tuned:** the grid point with the lowest final loss, no more.
-- **Usable range:** the rates whose final loss is within 0.15 nats of the
-  best one. A coarse grid can tell a factor of 10 from a single point.
-- **Loss:** the training loss, mean of the last 100 steps. On `TinyLM` it
-  is a loss on unseen text.
-:::
+Our SGD sweep on `TinyLM`:
 
-::: {.slide title="Five Runs of One Setting End Within About 0.01 Nats"}
-[The spread]{.kicker}
+| rate | final loss | within 0.15 nats of the best? |
+|:--|:--|:--|
+| 0.1 | about 2.5 | no: 0.35 higher |
+| 0.5 | about 2.1 | the best of the grid |
+| 2.5 | `inf` | no: diverged |
 
-New initial weights and new minibatches in each run. `TinyLM`: AdamW,
-rate 0.003, no weight decay. `FashionCNN`: SGD, rate 0.3.
-
-@!test-models-comparing-two-runs-3
-
-::: {.d2l-note}
-**Yardstick:** a difference is a result only if it is at least 3 times
-the printed range: 0.05 nats on `TinyLM`, a few points of accuracy on
-`FashionCNN`.
-:::
+- **Tuned:** the grid point with the lowest final loss, no more. Grids are
+  a factor of about 3 apart; all runs start from the same weights.
+- **Usable range:** here 0.5 alone. 0.15 nats is more than 10 times the
+  range of five runs.
 :::
 
 ::: {.slide title="Check: Result or Tie?"}
@@ -1248,9 +1429,9 @@ One run per setting, 2,000 steps each.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** 1: a tie, 0.02 is under 0.05. 2: a tie, the range alone is
-about a point. 3: half a nat is no tie, but three rates a factor of 5
-apart did not tune SGD, so the comparison is not yet fair.
+**Answer.** 1: a tie, 0.02 is under 0.05. 2: a tie, 0.8 points is under
+3. 3: half a nat is no tie, but three rates a factor of 5 apart did not
+tune SGD, so the comparison is not yet fair.
 :::
 :::
 :::
@@ -1260,14 +1441,14 @@ apart did not tune SGD, so the comparison is not yet fair.
 
 - `TinyLM`: 470,784 parameters, next byte of Wikipedia, 3% of the text
   per run. `FashionCNN`: 421,642 parameters, Fashion-MNIST.
-- Before training the loss is near 5.7, just above
-  $\ln 256 \approx 5.55$.
+- Landmarks: 5.55 for the uniform guess, about 3.2 for byte frequencies,
+  about 2.5 for byte pairs. An untrained `TinyLM` starts near 5.7.
 - Plain SGD on `TinyLM`: rate 0.1 ends near 2.5, rate 0.5 near 2.1, rate
   2.5 diverges within a few steps.
+- Five runs agree within about 0.01 nats; a result is at least 3 times
+  the range, 0.05 nats.
 - Protocol: tune the learning rate of every arm on a grid, same initial
   weights, report the usable range.
-- Five runs agree within about 0.01 nats; a result is at least 3 times
-  the range.
 
 **Next:** momentum, the first of the two things that AdamW does
 differently from plain SGD.

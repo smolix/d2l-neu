@@ -45,11 +45,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #hybrids-hybrid-architectures-1}
-%%tab jax
-import random
-```
-
 ## Limits of a Fixed-Size State
 
 ### Counting Bits
@@ -72,6 +67,12 @@ turn this argument into a lower bound on the state size needed to copy, and
 show that small transformers learn to copy strings far longer than
 recurrent models of the same size can.
 
+<!-- WRITER: the run below now draws keys from 128, not 512 (as :numref:`sec_matrix-state`). HY-2 then reads:
+recording which 64 of 128 keys were seen takes log2 C(128, 64) = 124 bits, plus 2 bits for each of the 64 values:
+about 250 bits in all (with 512 keys it would be 402). The recurrent models still have 2 layers x 8 heads x 4 x 4 =
+256 numbers of 32 bits = 8,192 bits, so "many times" stays true. The paragraph "The task below draws its keys from
+512 possible ones, and the recurrent models have 256 numbers of state ..." is false in its numbers and goes with the
+slots. -->
 The bound counts bits that a perfect encoding would use, and it is far from
 tight for the models below. Their two recurrent layers hold 128 numbers
 each, eight heads with a state of $4 \times 4$, so 256 numbers of 32 bits in
@@ -141,26 +142,13 @@ accounts for most of the gap in perplexity on natural text between attention
 and the gated convolution models they studied. The 512 keys exceed the 256
 slots of the recurrent models; the 4 values let one number hold a value.
 
-```{.python .input #hybrids-associative-recall-1}
-%%tab pytorch, jax
-def recall_batch(rng, batch_size, num_pairs, num_keys=512, num_values=4,
-                 num_steps=256):
-    """Pairs as a key token followed by a value token, then every key again
-    as a query, in random order. Token ids: values, then keys, then filler."""
-    keys = np.argsort(rng.random((batch_size, num_keys)), 1)[:, :num_pairs]
-    values = rng.integers(0, num_values, (batch_size, num_pairs))
-    order = np.argsort(rng.random((batch_size, num_pairs)), 1)
-    X = np.full((batch_size, num_steps), num_values + num_keys)  # Filler
-    X[:, 0:2 * num_pairs:2] = num_values + keys
-    X[:, 1:2 * num_pairs:2] = values
-    X[:, -num_pairs:] = num_values + np.take_along_axis(keys, order, 1)
-    return X, np.take_along_axis(values, order, 1)  # Answers to the queries
-
-num_keys, num_values = 512, 4  # The defaults of recall_batch
-vocab_size = num_values + num_keys + 1  # And the filler
-X, Y = recall_batch(np.random.default_rng(), 1, 4)
-print('tokens:', X[0, :8], '...', X[0, -4:], ' answers:', Y[0])
-```
+<!-- WRITER: the task and its harness now live in :numref:`sec_matrix-state` (`d2l.associative_recall`,
+`d2l.train_recall`, saved there; the old cell `hybrids-associative-recall-1` moved with its id). Restate the task
+here in one sentence with that pointer. Facts of this section's run that differ from the paragraph above: keys
+are drawn from 128, as in :numref:`sec_matrix-state` (`num_keys=128`; with 512 keys the run-to-run spread of the
+larger-state arm was twice as wide, up to 0.18 at 64 pairs, see the results note), values from 4; every sequence is as short as its pairs and queries allow (a multiple of 32 tokens, at most 192, no block
+of filler), so "Filler tokens follow" and "Sequences have 256 tokens" are false. The "slots" sentence goes with
+the slot construction (structure, HY-3). -->
 
 ## Recall with One Attention Layer
 
@@ -191,52 +179,23 @@ are still on it at the end of training. Attention gets two heads of
 dimension 16: its cache grows with the context and has no slots to count,
 so the size of its heads does not change the comparison.
 
-```{.python .input #hybrids-four-models-1}
-%%tab pytorch
-class ConvAttention(nn.Module):
-    """Causal multi-head softmax attention after a short convolution, with
-    the interface of a mixer."""
-    def __init__(self, num_hiddens, num_heads, conv_width=4):
-        super().__init__()
-        d = num_hiddens
-        self.num_heads = num_heads
-        self.W_qkv = nn.Linear(d, 3 * d, bias=False)
-        self.conv = nn.Conv1d(3 * d, 3 * d, conv_width, groups=3 * d,
-                              padding=conv_width - 1)  # One filter per channel
-        self.W_o = nn.Linear(d, d, bias=False)
-        d2l.init_lecun(self)
+<!-- WRITER: the four models are now: Gated DeltaNet (two blocks, 8 heads of size 4: 8 x 4 x 4 = 128 entries of
+state per layer, 37,989 parameters), attention (two blocks, 34,821), the hybrid (Gated DeltaNet, then attention;
+36,405), and Gated DeltaNet with four times the state (2 heads of size 16: 2 x 16 x 16 = 512 entries per layer,
+37,197 parameters, so the state grows at an equal parameter count, as in the head-size experiment of
+:numref:`sec_matrix-state`). Gated linear attention is no longer an arm (:numref:`sec_deltanet` compares the write
+rules); every sentence about it, and the plateau/induction-head passage (HY-6), goes. The attention mixer is
+`d2l.AttentionMixer(32, num_heads=2, conv_width=4, rope=False)` of :numref:`sec_lstm`: the old `ConvAttention`
+(a short convolution over queries, keys and values, then fused causal attention, no position encoding). So the
+NoPE sentence stays true. Measured reason for rope=False (one clause at most, or a code comment): with rotary
+positions the two-layer attention model stayed on a plateau (about 0.4 recall at 64 pairs) in 3 of 18 PyTorch dev
+runs; without them in 0 of 10, and in every run since. -->
 
-    def forward(self, X):  # X: (batch_size, num_steps, num_hiddens)
-        B, T, d = X.shape
-        QKV = self.conv(self.W_qkv(X).mT)[..., :T].mT  # Causal: drop the tail
-        Q, K, V = (Z.reshape(B, T, self.num_heads, -1).transpose(1, 2)
-                   for Z in QKV.chunk(3, -1))
-        Y = F.scaled_dot_product_attention(Q, K, V, is_causal=True)
-        return self.W_o(Y.transpose(1, 2).reshape(B, T, d))
-```
-
-```{.python .input #hybrids-four-models-1}
-%%tab jax
-class ConvAttention(nnx.Module):
-    """Causal multi-head softmax attention after a short convolution, with
-    the interface of a mixer."""
-    def __init__(self, num_hiddens, num_heads, conv_width=4, *, rngs):
-        d = num_hiddens
-        self.num_heads = num_heads
-        self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
-        self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),
-                             feature_group_count=3 * d,  # One filter each
-                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
-        self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
-
-    def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
-        B, T, d = X.shape
-        Q, K, V = (Z.reshape(B, T, self.num_heads, -1)
-                   for Z in jnp.split(self.conv(self.W_qkv(X)), 3, -1))
-        Y = jax.nn.dot_product_attention(Q, K, V, is_causal=True)
-        return self.W_o(Y.reshape(B, T, d))
-```
-
+<!-- WRITER: the decay gates now start with memories of 256 to 2,048 steps, as in
+:numref:`sec_matrix-state` (longer than any sequence, at most 192 tokens); "must survive up to 256 steps" and "64 to
+1,024" are false. The last sentence of this paragraph (shorter start, gated linear attention markedly slower) is a
+claim no cell prints: cut it. `recall_model(layout, num_heads=8, conv_width=4)`: one letter per block, G or A;
+num_heads sets the Gated DeltaNet head count (2 gives the larger state); conv_width=1 is the ablation below. -->
 A string describes the mixers of a model, one letter per block. The pairs
 must survive up to 256 steps, so the decay gates of the recurrent layers
 start with memories of 64 to 1,024 steps rather than the 4 to 256 steps of
@@ -247,31 +206,32 @@ more slowly, gated linear attention markedly so.
 
 ```{.python .input #hybrids-four-models-2}
 %%tab pytorch
-def recall_model(layout, vocab_size, num_hiddens=32):
-    """SeqLM whose mixers are given by letters: L(inear attention),
-    G(ated DeltaNet), A(ttention)."""
-    timescales = (64, 1024)  # Memories of 64 to 1,024 steps
-    make = {'L': lambda: d2l.GatedLinearAttention(
-                num_hiddens, num_heads=8, timescales=timescales),
-            'G': lambda: d2l.GatedDeltaNet(
-                num_hiddens, num_heads=8, timescales=timescales),
-            'A': lambda: ConvAttention(num_hiddens, num_heads=2)}
-    return d2l.SeqLM(vocab_size, num_hiddens, [make[c]() for c in layout])
+def recall_model(layout, num_heads=8, conv_width=4, num_hiddens=32):
+    """SeqLM whose mixers are given by letters: G(ated DeltaNet) with
+    num_heads heads, A(ttention) with two; tokens: 4 values, 128 keys, and
+    the filler."""
+    make = {'G': lambda: d2l.GatedDeltaNet(
+                num_hiddens, num_heads, conv_width=conv_width,
+                timescales=(256, 2048)),
+            'A': lambda: d2l.AttentionMixer(num_hiddens, num_heads=2,
+                                            conv_width=4, rope=False)}
+    return d2l.SeqLM(4 + 128 + 1, num_hiddens, [make[c]() for c in layout])
 ```
 
 ```{.python .input #hybrids-four-models-2}
 %%tab jax
-def recall_model(layout, vocab_size, num_hiddens=32):
-    """SeqLM whose mixers are given by letters: L(inear attention),
-    G(ated DeltaNet), A(ttention)."""
-    rngs = nnx.Rngs(random.getrandbits(32))  # A new initialization each call
-    timescales = (64, 1024)  # Memories of 64 to 1,024 steps
-    make = {'L': lambda: d2l.GatedLinearAttention(
-                num_hiddens, num_heads=8, timescales=timescales, rngs=rngs),
-            'G': lambda: d2l.GatedDeltaNet(
-                num_hiddens, num_heads=8, timescales=timescales, rngs=rngs),
-            'A': lambda: ConvAttention(num_hiddens, num_heads=2, rngs=rngs)}
-    return d2l.SeqLM(vocab_size, num_hiddens, [make[c]() for c in layout],
+def recall_model(layout, num_heads=8, conv_width=4, num_hiddens=32):
+    """SeqLM whose mixers are given by letters: G(ated DeltaNet) with
+    num_heads heads, A(ttention) with two; tokens: 4 values, 128 keys, and
+    the filler."""
+    rngs = nnx.Rngs(d2l.get_key())  # A new initialization each call
+    make = {'G': lambda: d2l.GatedDeltaNet(
+                num_hiddens, num_heads, conv_width=conv_width,
+                timescales=(256, 2048), rngs=rngs),
+            'A': lambda: d2l.AttentionMixer(num_hiddens, num_heads=2,
+                                            conv_width=4, rope=False,
+                                            rngs=rngs)}
+    return d2l.SeqLM(4 + 128 + 1, num_hiddens, [make[c]() for c in layout],
                      rngs=rngs)
 ```
 
@@ -285,57 +245,39 @@ steps of 256 sequences, with gradients clipped to norm 1 and the learning
 rate of :numref:`sec_batch_norm` (`d2l.cosine_warmup`): a linear warmup
 over 800 steps to 0.006, then a half-cosine down to zero.
 
-```{.python .input #hybrids-the-recall-sweep-1}
-%%tab pytorch
-def train_recall(model, pairs=(4, 8, 16, 32, 64), num_steps=16000,
-                 batch_size=256, lr=6e-3, warmup=800):
-    """Train with a cycling number of pairs; return accuracy per number."""
-    rng = np.random.default_rng()
-    model.to(d2l.try_gpu())
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
-    scheduler = torch.optim.lr_scheduler.LambdaLR(
-        optimizer, lambda t: d2l.cosine_warmup(t, num_steps, warmup))
-    batch = lambda step: recall_batch(rng, batch_size,
-                                      pairs[step % len(pairs)])
-    d2l.train_queries(model, batch, num_steps, optimizer, scheduler)
-    return {n: float(d2l.query_accuracy(model, *recall_batch(rng, 512, n)))
-            for n in pairs}
-```
-
-```{.python .input #hybrids-the-recall-sweep-1}
-%%tab jax
-def train_recall(model, pairs=(4, 8, 16, 32, 64), num_steps=16000,
-                 batch_size=256, lr=6e-3, warmup=800):
-    """Train with a cycling number of pairs; return accuracy per number."""
-    rng = np.random.default_rng()
-    schedule = lambda t: lr * d2l.cosine_warmup(t, num_steps, warmup)
-    optimizer = nnx.Optimizer(model, optax.chain(
-        optax.clip_by_global_norm(1.0),
-        optax.adamw(schedule, weight_decay=0.01)), wrt=nnx.Param)
-    batch = lambda step: recall_batch(rng, batch_size,
-                                      pairs[step % len(pairs)])
-    d2l.train_queries(model, batch, num_steps, optimizer)
-    return {n: float(d2l.query_accuracy(model, *recall_batch(rng, 512, n)))
-            for n in pairs}
-```
+<!-- WRITER: training is now `d2l.train_recall` with its defaults (:numref:`sec_matrix-state`): 2,000 updates of
+256 sequences whose number of pairs cycles through 4, 8, 16, 32, 64, AdamW, gradients clipped to norm 1, peak
+learning rate 0.01 reached after a tenth of the updates, then a half-cosine (`d2l.cosine_warmup`: cite
+:eqref:`eq_cosine_warmup`, defined in `chapter_convolutional-modern/alexnet.md`, not `sec_batch_norm`, HY-8);
+recall is measured on 1,024 new sequences per load. Each of the four models is trained twice, from fresh weights
+on fresh data, and the table prints both runs. "16,000 steps", "800 steps", "0.006" are false. Cost on one RTX 4090:
+the sweep and the ablation take about 8 minutes in either framework; the whole notebook 10 to 13. -->
 
 ```{.python .input #hybrids-the-recall-sweep-2}
 %%tab pytorch, jax
-layouts = {'gated linear attention': 'LL', 'Gated DeltaNet': 'GG',
-           'attention': 'AA', 'hybrid': 'GA'}
-accuracy = {name: train_recall(recall_model(layout, vocab_size))
-            for name, layout in layouts.items()}
+arms = {'Gated DeltaNet': dict(layout='GG'), 'attention': dict(layout='AA'),
+        'hybrid': dict(layout='GA'),
+        'Gated DeltaNet, 4x state': dict(layout='GG', num_heads=2)}
+recall = {}
+for name, arm in arms.items():
+    models = [recall_model(**arm) for _ in range(2)]
+    recall[name] = [d2l.train_recall(model, num_keys=128) for model in models]
+    print(f'{name:25s} {d2l.num_params(models[0]):,} parameters')
 ```
 
 ```{.python .input #hybrids-the-recall-sweep-3}
 %%tab pytorch, jax
-pairs = list(next(iter(accuracy.values())))
-print(f'{"pairs":24s}', ' '.join(f'{n:4d}' for n in pairs))
-for name, acc in accuracy.items():
-    print(f'{name:24s}', ' '.join(f'{acc[n]:.2f}' for n in pairs))
-d2l.plot(pairs, [list(acc.values()) for acc in accuracy.values()],
-         'pairs in the sequence', 'recall accuracy', legend=list(accuracy),
-         xscale='log', ylim=(0, 1.05), figsize=(4.5, 3))
+pairs = list(recall['hybrid'][0])
+runs = {name: np.array([[run[n] for n in pairs] for run in two])
+        for name, two in recall.items()}  # Two rows, one per run
+d2l.plot(pairs, [r.mean(0) for r in runs.values()], 'pairs in the sequence',
+         'recall, mean of two runs', legend=list(runs), xscale='log',
+         ylim=(0, 1.05), fmts=('-o', '-s', '--x', '-^'), figsize=(4.5, 3),
+         legend_loc='lower left')
+d2l.plt.xticks(pairs, pairs)  # Ticks at the numbers of pairs
+print(f'{"pairs":25s}', ''.join(f'{n:>11d}' for n in pairs))
+for name, r in runs.items():
+    print(f'{name:25s}', ''.join(f'{a:6.2f}/{b:.2f}' for a, b in r.T))
 ```
 
 With 4 pairs, all four models recall nearly every value. Beyond that Gated
@@ -366,6 +308,49 @@ while the corrected writes fit the stored pairs and remove much of that
 interference. Keys that share a slot overlap, so the correction matters
 most when the slots fill up.
 
+<!-- WRITER: results, replacing the two paragraphs above (they read a one-run 16,000-step table with a
+gated-linear-attention row; the plateau, reference-implementation, doubled-training, 128-key and "delta rule pays
+off" passages report runs no cell prints: cut, HY-9 to HY-11). Measured (two runs per cell; three notebook executions per tab and dev runs of the
+same code and settings: 12 runs per arm for Gated DeltaNet and its 4x arm, 8 to 10 for the others; chance 0.25),
+recall at 4 / 8 / 16 / 32 / 64 pairs: Gated DeltaNet 0.98-1.00 / 0.91-0.96 / 0.74-0.86 / 0.58-0.68 / 0.47-0.55;
+Gated DeltaNet with 4x state 1.00 / 1.00 / 0.99-1.00 / 0.96-1.00 / 0.86-0.99; attention 1.00 at every load in every
+run; hybrid 1.00 at every load in every run. Two runs of one cell differ by at most 0.08 for Gated DeltaNet and 0.11
+for the 4x arm (both at 64 pairs). Firm lessons, both tabs: (1) the fixed state loses pairs as the load grows, from
+nearly all of 4 to about half of 64; (2) one attention layer in place of the second Gated DeltaNet layer removes the
+fall entirely (the hybrid equals attention: every pair, every load, every run); (3) four times the state, at the same
+parameter count, moves the curve right: at 64 pairs 0.86 to 0.99 against 0.47 to 0.55, every 4x run above every
+base run from 16 pairs on, and in each cell by more than three times the larger two-run range (the acceptance test:
+in the last executions 0.96/0.99 against 0.55/0.47 in PyTorch, 0.93/0.98 against 0.51/0.50 in JAX). Prediction
+from :numref:`sec_matrix-state`'s capacity in entries: the 4x arm at 64 pairs (about 0.95) recalls about as well
+as the base arm at 8 to 16 pairs (0.91 to 0.96, 0.74 to 0.86), so "the curve moves right roughly in proportion to
+the state" holds loosely; do not claim an exact factor. Say plainly that the models are tiny on purpose (a state of
+256 numbers) so that 64 pairs overload them; the experiment shows the mechanism, not the size of the effect in a
+real model (evidence at scale: :citet:`Waleffe.Byeon.Riach.ea.2024`). "Attention behind the same convolution"
+once in this paragraph (HY-7): it is not the transformer of chapter 11. No sentence on the write rule (HY-11). -->
+
+```{.python .input #hybrids-the-recall-sweep-4}
+%%tab pytorch, jax
+no_conv = [d2l.train_recall(recall_model('GG', conv_width=1), num_keys=128)
+           for _ in range(2)]  # Width 1: each channel is only scaled
+print(f'{"pairs":25s}', ''.join(f'{n:>11d}' for n in pairs))
+for name, (a, b) in [('Gated DeltaNet', recall['Gated DeltaNet']),
+                     ('without the convolution', no_conv)]:
+    print(f'{name:25s}', ''.join(f'{a[n]:6.2f}/{b[n]:.2f}' for n in pairs))
+```
+
+<!-- WRITER: the ablation cell (new, S2/HY-12): the same Gated DeltaNet model with a convolution of width 1, which
+only scales each channel and so mixes nothing across steps; two runs, printed beside the two runs of the sweep.
+Measured (same runs as the sweep, both tabs; 8 runs without the convolution), recall at 4 / 8 / 16 / 32
+/ 64 pairs without the convolution: 0.65-0.90 / 0.54-0.74 / 0.45-0.58 / 0.39-0.46 / 0.35-0.40, against Gated
+DeltaNet 0.98-1.00 / 0.91-0.96 / 0.74-0.86 / 0.58-0.68 / 0.47-0.55. Every run without the convolution is below every
+run with it at every load; the gap is largest at few pairs (4: about 0.1 to 0.35; 64: about 0.1). Its two runs can
+differ by up to 0.23 at 4 pairs (JAX dev 0.65/0.88), so quote a range, not a value. Last executions: PyTorch
+0.85/0.89 ... 0.38/0.40, JAX 0.79/0.80 ... 0.37/0.36. The paragraph below keeps its judgment and the mechanism (the value follows its key one token
+later; the convolution brings the two together for one write); everything after "Gated DeltaNet learns more slowly
+and recalls fewer pairs at every load" (gated linear attention, unit keys, output gate, SiLU) reports runs no cell
+prints: cut, or one clause on unit keys with its reason from :numref:`sec_deltanet`. "learns more slowly" is not
+measured; "recalls fewer pairs at every load" is. -->
+
 The parts around the memory matter as much as the write rule. The value
 follows its key one token later, and the short convolution is what brings
 the two together for a single write. Without it, gated linear attention
@@ -380,6 +365,15 @@ few points at the highest loads.
 
 ### Language Modeling
 
+<!-- WRITER: setup now (the Penn Treebank / `d2l.TinyLM` run is retired, S4/HY-7): the text benchmark of
+:numref:`sec_lstm` (byte-level WikiText-103, windows of 128 bytes, 64 per step, `d2l.train_text`: LMOptimizer at
+peak 2e-3 for 1,000 steps), `d2l.SeqLM` of width 256 with four blocks, three models that differ only in their
+mixers: Gated DeltaNet in all four blocks (4 heads of size 64), the hybrid (Gated DeltaNet in the first three,
+attention in the fourth), and attention in all four (`d2l.AttentionMixer(256, num_heads=8)`, with rotary positions,
+the attention model of :numref:`sec_lstm` and :numref:`sec_mamba`). Two runs each; the table prints parameters,
+validation loss in nats per byte, the loss at positions 0-15, 16-63 and 64-127, and ms per training step. The
+question from :numref:`sec_mamba`: on real text, does the fixed state fall behind, and does one attention layer
+close the gap? -->
 Does the difference show on ordinary text? We train two more models on the
 character-level Penn Treebank with the recipe of :numref:`sec_lstm`: the
 transformer `d2l.TinyLM` of :numref:`sec_test_models`, two blocks of width 128
@@ -388,34 +382,69 @@ whose first block is Gated DeltaNet and second block attention, as in the
 recall experiment. With this recipe, Gated DeltaNet alone reached a perplexity
 of about 3.1.
 
-```{.python .input #hybrids-language-modeling-1}
+```{.python .input #hybrids-language-modeling-3}
 %%tab pytorch, jax
-data = d2l.PennTreebank(batch_size=64, num_steps=128)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 ```
 
-```{.python .input #hybrids-language-modeling-2}
+```{.python .input #hybrids-language-modeling-4}
 %%tab pytorch
-models = {'attention (TinyLM)': d2l.TinyLM(len(data.vocab), d_model=128,
-                                           num_heads=4, num_blks=2, max_len=128),
-          'hybrid': d2l.SeqLM(len(data.vocab), 128, [
-              d2l.GatedDeltaNet(128, 4), ConvAttention(128, 4)])}
-for name, model in models.items():
-    print(f'{name:20s} perplexity {d2l.fit_lm(model, data):.2f}')
+d = 256  # The width of every model; each has four blocks
+text_mixers = {'G': lambda: d2l.GatedDeltaNet(d, num_heads=4),
+               'A': lambda: d2l.AttentionMixer(d, num_heads=8)}
+
+def text_model(layout):  # 256 byte values; fresh weights, on the GPU
+    return d2l.SeqLM(256, d, [text_mixers[c]() for c in layout]).to(
+        d2l.try_gpu())
 ```
 
-```{.python .input #hybrids-language-modeling-2}
+```{.python .input #hybrids-language-modeling-4}
 %%tab jax
-rngs = nnx.Rngs(random.getrandbits(32))
-models = {'attention (TinyLM)': d2l.TinyLM(len(data.vocab), d_model=128,
-                                           num_heads=4, num_blks=2, max_len=128,
-                                           rngs=rngs),
-          'hybrid': d2l.SeqLM(len(data.vocab), 128, [
-              d2l.GatedDeltaNet(128, 4, rngs=rngs),
-              ConvAttention(128, 4, rngs=rngs)], rngs=rngs)}
-for name, model in models.items():
-    print(f'{name:20s} perplexity {d2l.fit_lm(model, data):.2f}')
+d = 256  # The width of every model; each has four blocks
+text_mixers = {
+    'G': lambda rngs: d2l.GatedDeltaNet(d, num_heads=4, rngs=rngs),
+    'A': lambda rngs: d2l.AttentionMixer(d, num_heads=8, rngs=rngs)}
+
+def text_model(layout):  # 256 byte values; fresh random weights
+    rngs = nnx.Rngs(d2l.get_key())
+    return d2l.SeqLM(256, d, [text_mixers[c](rngs) for c in layout],
+                     rngs=rngs)
 ```
 
+```{.python .input #hybrids-language-modeling-5}
+%%tab pytorch, jax
+bands = [(0, 16), (16, 64), (64, 128)]  # Early, middle, and late positions
+header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+print(' ' * 25, *(f'{h:>11}' for h in header), '  ms/step')
+for name, layout in {'Gated DeltaNet': 'GGGG', 'hybrid': 'GGGA',
+                     'attention': 'AAAA'}.items():
+    models = [text_model(layout) for _ in range(2)]
+    runs = [d2l.train_text(model, data) for model in models]  # (losses, ms)
+    columns = [[np.mean(loss) for loss, _ in runs]] + [
+        [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+    print(f'{name:14s} {d2l.num_params(models[0]):10,d}',
+          *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+          '/'.join(f'{ms:.0f}' for _, ms in runs))
+```
+
+<!-- WRITER: reading, replacing the paragraph below (its perplexities and the TinyLM comparison are gone; "A
+comparison by perplexity alone can therefore miss what a model cannot recall" is not supported by this run: cut,
+or keep as the motivation of Exercise 6). Measured (two runs per cell, three notebook executions per tab plus a dev run in
+JAX; width 256, four blocks, 1,000 steps of 64 x 128 bytes): Gated DeltaNet 3,573,536 parameters, 1.325 to 1.331
+nats per byte; hybrid 3,501,848, 1.329 to 1.335; attention 3,286,784, 1.377 to 1.386. Bands 0-15 / 16-63 / 64-127:
+Gated DeltaNet 1.518-1.523 / 1.299-1.305 / 1.297-1.303; hybrid 1.523-1.528 / 1.303-1.310 / 1.300-1.307; attention
+1.554-1.562 / 1.353-1.362 / 1.350-1.360. Both tabs agree. Firm lessons: (1) on 128-byte windows the fixed state does
+not fall behind: Gated DeltaNet is about 0.05 nats per byte ahead of attention at the same width and depth, in every
+band, more than five times any two-run range (at most 0.008); (2) one attention layer in four changes the loss by
+less than 0.01 (the hybrid is 0.002 to 0.008 behind Gated DeltaNet in every pair of runs, with overlapping ranges
+over all runs: do not claim it is worse, say it is the same to within 0.01); (3) no model gains after byte 16
+(16-63 and 64-127 within 0.004 for each). So the recall gap of the sweep does not show in the average loss on
+128-byte windows, where few predictions need a pair stored long before; Exercise 6 measures where text repeats.
+Place: the other mixers of the chapter on this benchmark, from their sections: LSTM 1.29 to 1.30, GRU about 1.30,
+Mamba 1.295 to 1.299, minGRU and RNN about 1.35, attention 1.38 (:numref:`sec_lstm`, :numref:`sec_mamba`). Cost per
+training step (tab notes only, never compared across tabs in the shared text): PyTorch (eager) Gated DeltaNet 50 to
+52 ms, hybrid 42 to 45, attention 20 to 22; JAX (jitted) 17 to 18, 14 to 15, 9. In both tabs the Gated DeltaNet
+step costs about two to two and a half times the attention step at this length, and the hybrid sits between. -->
 The hybrid reaches a perplexity of about 3.15, close to Gated DeltaNet
 alone, and the transformer between about 3.25 and 3.4, depending on the
 run. Language modeling at this scale barely
@@ -471,6 +500,13 @@ questions that current models answer differently;
 
 ## Summary
 
+<!-- WRITER: rewrite from the new results (structure: no slots). False now: "every key needs a slot of its own",
+"about three quarters of 64" (Gated DeltaNet recalls about half of 64 pairs at this budget), the gated-linear-attention
+sentence, "both curves still rise with longer training" (no cell prints it), "Language-modeling perplexity barely
+shows the difference" (replace with the text result). True and measured: the hybrid and attention recall every pair
+at every load in every run; four times the state at an equal parameter count recalls more at every load from 8
+pairs on; without the short convolution Gated DeltaNet recalls fewer pairs at every load. -->
+
 A state of fixed size holds a fixed number of bits, so a recurrent model can
 recall only as many items from its context as its state can store, while an
 attention layer keeps every token and can always look back. A matrix memory,
@@ -517,6 +553,10 @@ models with recurrent layers are hybrids for this reason.
        transformer and to the hybrid, and repeat the count. Which change
        matters more for the hybrid?
 
+<!-- WRITER: Exercise 3 rewritten without slots (structure): "16,000 and 32,000 steps" no longer match the
+recipe (2,000 updates, `d2l.train_recall(model, num_updates=...)`); keys from 512 vs 128 is `num_keys=128`; part 2
+(width 64) is close to the 4x-state arm now in the text (2 heads of 16 at width 32): ask instead for 1 head of 32,
+or for width 64. -->
 1. [code] **Keys and slots.** The recurrent models of the recall sweep
    have 256 slots and the task draws keys from 512.
     1. Train Gated DeltaNet for 16,000 and for 32,000 steps, once with keys
@@ -548,6 +588,10 @@ models with recurrent layers are hybrids for this reason.
     1. How large is the cache of this layer during generation? What does
        the comparison suggest about combining windows with recurrence?
 
+<!-- WRITER: Exercise 6 moves to WikiText bytes (structure): `d2l.WikiText103`, the text models of the section
+(`text_model('GGGG')`, `text_model('GGGA')`, `text_model('AAAA')`), `d2l.train_text`; positions whose byte completes
+a string of at least eight bytes that already occurred earlier in the same 128-byte window. `d2l.TinyLM` and Penn
+Treebank are no longer used in the section. -->
 1. [code] **Recall in text.** In the Penn Treebank validation text, mark
    the positions whose character completes a string of at least eight
    characters that already occurred earlier in the same window. Compare
@@ -635,11 +679,17 @@ $n$ pairs, each a key token (one of 512) followed by a value token (one of
 4); fillers up to 256 tokens; then every key again, in random order. Answer
 each query with the value that followed its key.
 
-@!hybrids-associative-recall-1
+<!-- DECK: the example cell moved to the matrix-state section with its id (a placeholder cannot reach another
+file); show the layout in text, e.g. `k1 v1 k2 v2 ... | k2 k1 ...`, or drop this slide and restate the task on the
+next one. Sequences are now as short as pairs and queries allow (at most 192 tokens, no filler). -->
 
 Chance: 1/4. Up to 64 pairs per sequence.
 :::
 
+<!-- DECK: four models now: Gated DeltaNet G G (8 heads of 4), attention A A (2 heads of 16, no position
+encoding), hybrid G A, and Gated DeltaNet with 4x state G G (2 heads of 16); no gated-linear-attention row, no
+induction head; memories start at 256 to 2,048 steps; trained twice each with `d2l.train_recall` (2,000 updates of
+256 sequences). -->
 ::: {.slide title="Four Models Differ Only in Their Mixers"}
 `d2l.SeqLM`, two blocks of width 32:
 
@@ -663,6 +713,8 @@ Chance: 1/4. Up to 64 pairs per sequence.
 @!hybrids-the-recall-sweep-3
 :::
 
+<!-- DECK: rewrite from the new table (two runs, four arms; numbers in the WRITER note of the results); no
+plateau, no reference implementation, no doubled training, no 128-key run, no slots. -->
 ::: {.slide title="Recall Falls with the Number of Pairs, Except with Attention"}
 - Gated DeltaNet: nearly all of 4 pairs, about nine tenths of 32, about
   three quarters of 64.
@@ -676,6 +728,8 @@ Chance: 1/4. Up to 64 pairs per sequence.
   interference of overlapping keys.
 :::
 
+<!-- DECK: from the ablation cell only (`@!hybrids-the-recall-sweep-4`): with and without the short
+convolution, two runs each; drop the other three rows and "worth about 0.1 in perplexity". -->
 ::: {.slide title="The Parts Around the Memory Matter"}
 | without | gated linear attention | Gated DeltaNet |
 |---|---|---|
@@ -704,7 +758,9 @@ The two recurrent layers hold 256 numbers of 32 bits.
 :::
 
 ::: {.slide title="Perplexity Barely Shows the Gap"}
-@!hybrids-language-modeling-2
+<!-- DECK: was the Penn Treebank cell (retired); now the text table on WikiText bytes. Title and bullets must
+follow the new reading (no perplexity 3.1; see the WRITER note after the text cell). -->
+@!hybrids-language-modeling-5
 
 - Gated DeltaNet alone: about 3.1.
 - The next character rarely depends on a pair stored long before.
@@ -744,6 +800,9 @@ Jamba, 4 attention layers of 32: 4 GB at 256 K tokens, against 32 GB.
 :::
 :::
 
+<!-- DECK: the PTB column is gone with Penn Treebank; the closing table takes the text loss at equal size on
+WikiText bytes from 12.1, 12.3, 12.5 and this section (Gated DeltaNet about 1.33, the hybrid about 1.33, attention
+about 1.38 nats per byte). -->
 ::: {.slide title="Recap: One Template, Six Memories"}
 | | state per layer | update | recall | PTB |
 |---|---|---|---|---|

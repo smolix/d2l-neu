@@ -1,47 +1,11 @@
 # Preliminaries
 :label:`chap_preliminaries`
 
-The introduction described every learning problem by four components: data,
-a model that turns inputs into predictions, a loss that says how badly the
-model does, and an algorithm that adjusts the model's parameters to lower the
-loss. Now suppose that we had to write the program that sorts photographs of
-garments. What would it have to do, and what do we need to know to write it?
+To prepare for your dive into deep learning, you will need a few essential survival skills: (i) techniques for storing and manipulating multidimensional data in memory (:numref:`sec_ndarray`); (ii) tools for ingesting and cleaning tabular data from raw files, complete with missing entries and categorical text fields (:numref:`sec_pandas`); (iii) fluency in the basic linear-algebraic operations that transform high-dimensional representations and measure their size (:numref:`sec_linear-algebra`); (iv) just enough differential calculus to determine which direction to adjust each parameter in order to decrease a loss function (:numref:`sec_calculus`); (v) the ability to compute derivatives automatically so that the framework handles the chain rule across millions of parameters for you (:numref:`sec_autograd`); (vi) a working grasp of probability and statistics, our primary language for reasoning under uncertainty and distinguishing genuine signal from sampling noise (:numref:`sec_prob`); and (vii) the habit of finding answers quickly in the official framework documentation whenever you encounter an unfamiliar function (:numref:`sec_lookup_api`).
 
-It would store the photographs as numbers and compute with all of them at
-once. It would combine those numbers into a score for each category, find
-out how the loss changes when each parameter changes, and judge whether its
-accuracy reflects a real pattern or the luck of the examples it saw.
+If you worried that deep learning requires arcane new branches of mathematics, you can relax: probability theory dates back to the 1654 correspondence between Pascal and Fermat, and calculus is more than three centuries old. What deep learning adds is *scale*---applying classical linear algebra, calculus, and probability to millions or billions of variables where calculation by hand is out of the question. Doing that efficiently relies on two software pillars that every subsequent chapter takes for granted: *tensor libraries*, which apply compiled operations to entire arrays of numbers in parallel on CPUs and GPUs, and *automatic differentiation*, which differentiates arbitrary numerical programs mechanically.
 
-Probability began in 1654, in letters between Pascal and Fermat about a game
-of chance, and calculus is more than three centuries old. A reader who feared
-that deep learning needs exotic mathematics may relax. Deep learning borrows
-old mathematics and applies it at a scale where calculation by hand is out of
-the question, and for that it needs two kinds of software. Array libraries
-apply one operation to millions of numbers in compiled code. Automatic
-differentiation computes the derivatives of a program. Every later chapter
-relies on both.
-
-The chapter takes the program's needs in order. Two sections are about data:
-how to store it in tensors and compute with it (:numref:`sec_ndarray`), and
-how to get there from a table of real records, with its missing entries and
-its text categories (:numref:`sec_pandas`). Three sections follow a
-prediction from a weighted sum to a gradient: linear algebra for the
-prediction and for the size of its error (:numref:`sec_linear-algebra`),
-calculus for the direction in which the loss falls (:numref:`sec_calculus`),
-and automatic differentiation, which lets the framework compute the
-derivatives for us (:numref:`sec_autograd`). :numref:`sec_prob` is about
-doubt: when a measured difference is larger than sampling noise, and how
-evidence updates a probability. Finally, :numref:`sec_lookup_api` shows how
-to find out what a function does when the book does not say.
-
-This is a long chapter, and a reader at home with NumPy and calculus can skim
-much of it. We would still read :numref:`sec_autograd` and the part of
-:numref:`sec_prob` on the standard error, since the rest of the book uses
-both constantly. Each section develops only what later chapters need. The
-Mathematics for Deep Learning appendix treats linear algebra
-(:numref:`chap_mdl-linear-algebra`), calculus (:numref:`chap_mdl-calculus`),
-and probability (:numref:`chap_mdl-probability-statistics`) in depth, with
-proofs; readers new to these subjects can turn to it at any point.
+This chapter provides a rapid, hands-on crash course in the prerequisites you will need to follow the technical material in this book. If you are already comfortable with NumPy, linear algebra, and multivariable calculus, you can skim the familiar parts---though we still recommend reading :numref:`sec_autograd` on automatic differentiation and :numref:`sec_prob` on standard errors and statistical estimation, as later chapters rely on both constantly. Conversely, if you want a deeper theoretical foundation with complete proofs and derivations, our *Mathematics for Deep Learning* appendix develops linear algebra (:numref:`chap_mdl-linear-algebra`), calculus (:numref:`chap_mdl-calculus`), and probability and statistics (:numref:`chap_mdl-probability-statistics`) in full detail.
 
 ```toc
 :maxdepth: 2
@@ -57,30 +21,29 @@ lookup-api
 
 ## Resources and Further Reading {.unnumbered}
 
-The resources are grouped into books, courses, and documentation, and each
-names the section it accompanies. All are freely accessible online.
+The resources below are grouped into books, lecture series, and official documentation, each noting the section of this chapter it accompanies. All of them are freely accessible online.
 
 **Books**
 
-- [Python for Data Analysis, 3rd ed. — Wes McKinney](https://wesmckinney.com/book/) — an open-access guide to NumPy and pandas by the creator of pandas; a companion to :numref:`sec_ndarray` and :numref:`sec_pandas`.
-- [Python Data Science Handbook — Jake VanderPlas](https://jakevdp.github.io/PythonDataScienceHandbook/) — an example-driven tour of NumPy, pandas, and the wider scientific-Python stack used throughout the book.
-- [Mathematics for Machine Learning — Deisenroth, Faisal & Ong](https://mml-book.github.io/) — a development of linear algebra, calculus, and probability aimed at machine learning, in more depth than :numref:`sec_linear-algebra`, :numref:`sec_calculus`, and :numref:`sec_prob`.
-- [Introduction to Probability — Blitzstein & Hwang](http://probabilitybook.net/) — a free PDF of the textbook of Harvard's Stat 110, whose [lecture videos and materials](https://stat110.hsites.harvard.edu/) are also online; a fuller treatment of :numref:`sec_prob`.
+- [Python for Data Analysis, 3rd ed. — Wes McKinney](https://wesmckinney.com/book/) — an open-access guide to NumPy and pandas written by the creator of pandas; an ideal companion to :numref:`sec_ndarray` and :numref:`sec_pandas`.
+- [Python Data Science Handbook — Jake VanderPlas](https://jakevdp.github.io/PythonDataScienceHandbook/) — an example-driven tour of NumPy, pandas, Matplotlib, and the broader scientific Python ecosystem used throughout this book.
+- [Mathematics for Machine Learning — Deisenroth, Faisal & Ong](https://mml-book.github.io/) — a self-contained treatment of linear algebra, vector calculus, and probability tailored to machine learning, covering the topics of :numref:`sec_linear-algebra`, :numref:`sec_calculus`, and :numref:`sec_prob` in greater depth.
+- [Introduction to Probability — Blitzstein & Hwang](http://probabilitybook.net/) — a free PDF edition of the textbook for Harvard's Stat 110, whose [lecture videos and course materials](https://stat110.hsites.harvard.edu/) are also freely available online; a wonderful companion to :numref:`sec_prob`.
 
-**Courses and video lectures**
+**Courses and Video Lectures**
 
-- [Essence of Linear Algebra — 3Blue1Brown](https://www.3blue1brown.com/topics/linear-algebra) — animated lectures on vectors and matrices as geometric transformations; a visual companion to :numref:`sec_linear-algebra`.
-- [Essence of Calculus — 3Blue1Brown](https://www.3blue1brown.com/topics/calculus) — animated lectures on limits, derivatives, and the chain rule; a visual companion to :numref:`sec_calculus` and :numref:`sec_autograd`.
-- [NumPy: the absolute basics for beginners — NumPy project](https://numpy.org/doc/stable/user/absolute_beginners.html) — the official introduction to the array operations of :numref:`sec_ndarray`.
-- [NumPy Tutorials — NumPy project](https://numpy.org/numpy-tutorials/) — runnable notebooks that apply array programming to concrete data tasks.
+- [Essence of Linear Algebra — 3Blue1Brown](https://www.3blue1brown.com/topics/linear-algebra) — animated visual lectures presenting vectors, matrices, determinants, and eigendecompositions as geometric transformations; a visual companion to :numref:`sec_linear-algebra`.
+- [Essence of Calculus — 3Blue1Brown](https://www.3blue1brown.com/topics/calculus) — animated visual lectures on limits, derivatives, and the chain rule; a visual companion to :numref:`sec_calculus` and :numref:`sec_autograd`.
+- [NumPy: The Absolute Basics for Beginners — NumPy Project](https://numpy.org/doc/stable/user/absolute_beginners.html) — the official hands-on introduction to the array operations mirrored in :numref:`sec_ndarray`.
+- [NumPy Tutorials — NumPy Project](https://numpy.org/numpy-tutorials/) — interactive notebooks applying array programming to concrete scientific and data-processing tasks.
 
-**Tutorials, notes, and documentation**
+**Tutorials, Notes, and Documentation**
 
-- [Array programming with NumPy — Harris, Millman, van der Walt et al. (Nature, 2020)](https://doi.org/10.1038/s41586-020-2649-2) — the reference paper on the n-dimensional array model that every tensor library in this book follows (preprint at [arXiv:2006.10256](https://arxiv.org/abs/2006.10256)).
-- [NumPy user guide — NumPy project](https://numpy.org/doc/stable/user/index.html) — the official reference for array creation, indexing, broadcasting, and data types (:numref:`sec_ndarray`).
-- [pandas user guide — pandas project](https://pandas.pydata.org/docs/user_guide/index.html) — the official reference for the loading, indexing, and missing-data handling of :numref:`sec_pandas`.
-- [PyTorch documentation — PyTorch project](https://docs.pytorch.org/docs/stable/index.html) — the official API reference for tensor operations and automatic differentiation; :numref:`sec_lookup_api` lists the corresponding references for JAX, TensorFlow, and MXNet and shows how to use them.
-- [SciPy documentation — SciPy project](https://docs.scipy.org/doc/scipy/) — routines for linear algebra, optimization, and statistics beyond what the tensor libraries provide.
+- [Array programming with NumPy — Harris, Millman, van der Walt et al. (Nature, 2020)](https://doi.org/10.1038/s41586-020-2649-2) — the foundational overview of the $n$-dimensional array abstraction that every modern deep learning tensor library builds upon (preprint at [arXiv:2006.10256](https://arxiv.org/abs/2006.10256)).
+- [NumPy User Guide — NumPy Project](https://numpy.org/doc/stable/user/index.html) — the official reference covering array creation, indexing, slicing, broadcasting, and data types (:numref:`sec_ndarray`).
+- [pandas User Guide — pandas Project](https://pandas.pydata.org/docs/user_guide/index.html) — the official reference for tabular data loading, indexing, and missing-data imputation (:numref:`sec_pandas`).
+- [PyTorch Documentation — PyTorch Project](https://docs.pytorch.org/docs/stable/index.html) — the official API reference for tensor operations and automatic differentiation; :numref:`sec_lookup_api` lists the corresponding documentation portals for JAX, TensorFlow, and MXNet and demonstrates how to navigate them effectively.
+- [SciPy Documentation — SciPy Project](https://docs.scipy.org/doc/scipy/) — reference documentation for numerical linear algebra, optimization, integration, and statistical distributions beyond what core tensor libraries provide.
 
 <!-- slides -->
 

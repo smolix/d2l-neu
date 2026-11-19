@@ -27,8 +27,8 @@ layers :cite:`Lieber.Lenz.Bata.ea.2024,Qwen.Team.2025`.
 :numref:`sec_lstm` asks how a network can learn what to keep.
 :numref:`sec_seq2seq` puts two gated networks to work as a translator and
 asks what a state of fixed size costs it.
-:numref:`sec_ssm` asks how to compute the states at all positions at once,
-and how fast a state should forget. :numref:`sec_mamba` asks how each input
+:numref:`sec_linear-recurrence` asks how to compute the states at all
+positions at once, and :numref:`sec_ssm` how fast a state should forget. :numref:`sec_mamba` asks how each input
 can decide what to write and what to forget. :numref:`sec_matrix-state` asks
 how a state can store key–value pairs, and how many it can hold.
 :numref:`sec_deltanet` asks how a memory can correct a pair instead of

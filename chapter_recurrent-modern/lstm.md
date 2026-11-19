@@ -26,7 +26,7 @@ and its state. We build the two gated networks in wide use, the long
 short-term memory (LSTM) and the gated recurrent unit (GRU), and test them
 on a task that needs a long memory and on character-level language modeling.
 Gates fix the memory, but they read the previous state, so training must
-still process a sequence one step at a time. :numref:`sec_ssm` removes that
+still process a sequence one step at a time. :numref:`sec_linear-recurrence` removes that
 restriction.
 
 Throughout the chapter we write the equations for a single sequence, with
@@ -943,7 +943,7 @@ reads $\mathbf{h}_{t-1}$, so step $t$ cannot begin until step $t-1$ has
 finished, and a sequence of $T$ tokens takes $T$ dependent steps to train,
 however many processors are available. :numref:`sec_seq2seq` first puts
 two gated networks to work as a translator and measures what a state of
-fixed size costs it; :numref:`sec_ssm` then asks what remains of a gated
+fixed size costs it; :numref:`sec_linear-recurrence` then asks what remains of a gated
 network when the gates read only the input.
 
 ## Summary

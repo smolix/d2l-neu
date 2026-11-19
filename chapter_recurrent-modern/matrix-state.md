@@ -229,7 +229,7 @@ $$
 so that a pair written $k$ steps ago has weight $a^k$ if the decay is
 constant. The weights of all past pairs then sum to $1/(1 - a)$, and the
 memory behaves as if it held about the last $1/(1-a)$ pairs: 10 for $a =
-0.9$, 100 for $a = 0.99$. As in :numref:`sec_ssm`, a decay that depends on
+0.9$, 100 for $a = 0.99$. As in :numref:`sec_linear-recurrence`, a decay that depends on
 the input lets the model choose: hold the memory through a paragraph and
 clear it at a new document. Such a decay is the first of the two changes
 that made linear attention competitive in practice
@@ -387,7 +387,7 @@ has three parts:
    one matrix; the states at the chunk boundaries follow from a linear
    recurrence over the $T/m$ chunks, $\mathbf{S}^{(c)} = (\textrm{decay
    over chunk } c)\, \mathbf{S}^{(c-1)} + (\textrm{writes of chunk } c)$,
-   which `linear_scan` of :numref:`sec_ssm` computes with matrix-valued
+   which `linear_scan` of :numref:`sec_linear-recurrence` computes with matrix-valued
    states.
 3. *Reading the past*: each position adds the read of the state at its
    chunk's start, decayed to its own position.

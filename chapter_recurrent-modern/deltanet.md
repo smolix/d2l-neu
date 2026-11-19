@@ -362,7 +362,7 @@ $\mathbf{S}_0\mathbf{A} + \mathbf{W}_\textrm{end}$, where the $d_k \times
 d_k$ matrix $\mathbf{A}$ is the decay of the chunk minus what its
 corrections remove, and $\mathbf{W}_\textrm{end}$ collects the chunk's own
 writes. Affine maps compose like the steps of the linear recurrences of
-:numref:`sec_ssm`, with matrix products in place of elementwise ones, so a
+:numref:`sec_linear-recurrence`, with matrix products in place of elementwise ones, so a
 scan over the chunks gives the memory at the start of every chunk. From
 these, the corrected values and the outputs of all chunks follow at once,
 as in the chunked computation of :numref:`sec_matrix-state` with the values

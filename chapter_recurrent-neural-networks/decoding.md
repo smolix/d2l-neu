@@ -1,22 +1,26 @@
 # Decoding and Generation
 :label:`sec_decoding`
 
-The language models of this chapter have been judged by how well they
-predict the next token. To write text, a model must also choose one token
-at each step from the distribution it returns, and this choice matters more
-than one might expect: different rules make the same model write very
-different text. The simplest rule, tried in :numref:`sec_rnn-scratch`, fell
-short: always taking the most probable token tends to run into loops. How,
-then, should the choice be made?
+So far in this chapter, we have judged language models strictly by how well
+they assign probabilities to the next token. To *generate* text, however, a
+model must also select a concrete token at each step from its predicted
+distribution—and this decision matters far more than one might expect, because
+different selection rules cause the very same model to produce dramatically
+different prose. In :numref:`sec_rnn-scratch`, we saw the simplest rule fall
+short: greedily picking the single most probable token at every step rapidly
+traps the generator in repetitive loops. How, then, should we turn next-token
+distributions into fluent text?
 
-The rule that turns next-token distributions into sequences is called
-*decoding* :cite:`Graves.2013,Holtzman.Buys.Du.ea.2020`, and decoding rules
-come in two families. *Maximization* searches for a sequence of high
-probability under the model. *Sampling* draws each token from the model's
-distribution, after cutting off the part of it that cannot be trusted. We
-develop both in turn. All of these rules see the model only through its
-next-token distribution, so they apply unchanged to any language model,
-recurrent or not.
+The algorithm that converts a sequence of next-token distributions into output
+tokens is called *decoding* :cite:`Graves.2013,Holtzman.Buys.Du.ea.2020`, and
+decoding strategies fall into two broad families. *Maximization* algorithms
+search for an output sequence with high joint probability under the model,
+whereas *sampling* algorithms draw each token stochastically after reshaping
+or pruning the unreliable tail of the distribution. Below, we develop and
+compare both families in turn. Crucially, every decoding rule interacts with
+the language model solely through its next-token distribution, so the
+algorithms we build here apply unchanged to any autoregressive language
+model—whether an RNN, a state space model, or a Transformer.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -64,48 +68,49 @@ from d2l import jax as d2l
 
 ## The Decoding Problem
 
-A trained language model supplies conditionals: writing $x_{<t}$ for the
-prefix $x_1, \ldots, x_{t-1}$, it turns any prefix into a distribution
-$P(x_t \mid x_{<t})$ over the next token. By the chain rule of probability
-:eqref:`eq_chain_rule`, these conditionals assign every sequence the
-probability $P(x_1, \ldots, x_T) = \prod_{t=1}^{T} P(x_t \mid x_{<t})$.
+A trained language model supplies next-token conditional distributions: given
+any prefix $x_{<t} = x_1, \ldots, x_{t-1}$, it outputs $P(x_t \mid x_{<t})$,
+and by the chain rule of probability (:eqref:`eq_chain_rule`), these
+conditionals define the joint probability of any complete sequence via
+$P(x_1, \ldots, x_T) = \prod_{t=1}^{T} P(x_t \mid x_{<t})$.
 
-Decoding asks the inverse question: given the conditionals, which sequence
-should we output? The obvious answer is the *most probable* one.
-Unfortunately, finding it is out of the question. With vocabulary
-$\mathcal{V}$ and $T$ tokens to generate there are $|\mathcal{V}|^T$
-candidates. For our 1,027 tokens and a 50-token continuation this is
-$1027^{50} > 10^{150}$, far too many to enumerate, let alone compare. A
-practical decoder therefore extends only a few prefixes at each step and
-must decide which ones to keep.
+Decoding poses the inverse problem: given those conditionals, which sequence
+should we emit? At first glance, finding the *most probable* sequence seems
+like the obvious goal, yet exact maximization is completely intractable. Over
+a vocabulary $\mathcal{V}$ and horizon $T$, there are $|\mathcal{V}|^T$
+possible continuations—for our 1,027-token vocabulary and a 50-token
+continuation, $1027^{50} > 10^{150}$ candidates, far beyond anything we could
+ever enumerate. Every practical decoder must therefore explore only a tiny
+slice of the search tree, deciding at each step which prefixes to retain.
 
-Even if we could find it, the most probable sequence is often not what we
-want. When the input admits only a narrow set of acceptable outputs, as in
-transcribing speech, a high-probability output is a good target. When many
-continuations are acceptable, as in writing a story, each of them is
-individually improbable, and a model that has learned this spreads its
-probability across them. Insisting on the single most probable output then
-throws away the variety the model has learned. Sampling keeps it, because
-it draws the output from the model's distribution instead of maximizing it.
+Even if exact search were feasible, the single highest-probability sequence is
+frequently *not* what we want. When a task admits only a narrow band of
+correct outputs—such as transcribing speech or translating a technical
+sentence—seeking a high-probability sequence works well. By contrast, when
+many continuations are equally valid—as in dialogue or creative writing—each
+individual continuation necessarily carries tiny probability mass, because a
+well-calibrated model spreads probability across many plausible trajectories.
+Forcing the model to pick the single most probable path destroys that natural
+variety, whereas sampling preserves it by drawing directly from the learned
+distribution.
 
-:numref:`fig_decoding-taskmap` sorts the decoding rules into these two
-families. Maximization methods, greedy decoding and beam search, are common
-when the acceptable outputs are few. Sampling methods, which first reshape
-or truncate the distribution, are the default for open-ended generation
-such as dialogue and stories.
+:numref:`fig_decoding-taskmap` organizes decoding strategies along this
+divide. Maximization methods (greedy decoding and beam search) remain the
+standard choice for constrained tasks with few valid outputs, while
+sampling methods—augmented with temperature scaling or truncation—are the
+default for open-ended generation.
 
 ![Two families of decoding rules. Searching for high-probability sequences suits tasks with few acceptable outputs; sampling preserves diversity in open-ended generation.](../img/mdl-rnn-decoding-taskmap.svg)
 :label:`fig_decoding-taskmap`
 
 ### A Model to Decode From
 
-We decode from the concise RNN language model of :numref:`sec_rnn-concise`:
-an embedding of dimension 512, a recurrent layer with 128 hidden units,
-dropout on the embeddings and the hidden states, and an output layer over
-the 1,027 BPE tokens of *The Time Machine*, trained for ten epochs on
-windows of 32 tokens with gradient clipping. We retrain it with the same
-settings and print its validation perplexity, which should be close to the
-value reached there.
+For our experiments, we use the concise RNN language model from
+:numref:`sec_rnn-concise`: 512-dimensional embeddings, 128 hidden units,
+dropout on both embeddings and hidden states, and an output layer over the
+1,027 BPE tokens of *The Time Machine*, trained for ten epochs on 32-token
+windows with gradient clipping. Let us retrain it with the same settings and
+confirm that its validation perplexity matches our earlier run.
 
 ```{.python .input #decoding-a-model-to-decode-from-1}
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
@@ -132,13 +137,12 @@ trainer.fit(model, data)
 print(f'validation perplexity {math.exp(trainer.history["val_loss"][-1]):.1f}')
 ```
 
-Every decoding rule in this section sees the model through one interface:
-given the token ids so far, return the logits of the next token. We wrap
-the trained network in a function `step_fn` of this form. It returns a
-NumPy vector, so that the decoding rules can be written once, in NumPy, for
-all frameworks. The interface carries no hidden state, and this is
-deliberate: any model that predicts next tokens can fill it, including one
-that has no fixed-size state to carry.
+Every decoding algorithm in this section accesses the language model through a
+single model-agnostic interface `step_fn(ids)` that takes the prefix token ids
+so far and returns a 1-D NumPy vector of next-token logits. Returning plain
+NumPy arrays lets us write every decoder once across all four frameworks, and
+omitting any explicit hidden state is deliberate: any autoregressive model,
+recurrent or Transformer, fits this exact signature.
 
 ```{.python .input #decoding-a-model-to-decode-from-4}
 %%tab mxnet
@@ -196,21 +200,23 @@ The network reads the sequence from left to right, so the padding does not
 change the logits at the last real position, which is the one we read.
 :end_tab:
 
-In return, each call runs the network over the *entire* prefix to produce
-one vector of logits. For a recurrent network this is wasteful, and we
-count the waste at the end of the section.
+The trade-off is efficiency: each call re-evaluates the network across the
+*entire* prefix just to extract one vector of logits. For an RNN, that extra
+work is avoidable, and we return to its computational cost at the end of the
+section.
 
 ## Greedy Decoding
 
-The simplest decoder commits, at every step, to the most probable token:
+The simplest possible decoder commits at every step to the single token with
+highest conditional probability:
 
 $$x_t = \operatorname*{argmax}_{x \in \mathcal{V}} P(x \mid x_{<t}).$$
 
-Score, take the argmax, append, repeat. Greedy decoding costs one model
-evaluation per token and is deterministic: the same prefix always yields
-the same continuation. To print continuations, `show` decodes token ids
-and quotes the text, with line breaks written as `\n` and unprintable
-characters replaced by U+FFFD.
+Score the prefix, pick the argmax, append it, and repeat. Greedy decoding
+requires just one model evaluation per generated token and is completely
+deterministic—the same prefix always yields the exact same continuation. The
+helper `show` below decodes token ids into a quoted string, displaying line
+breaks as `\n` and replacing any unprintable bytes with `U+FFFD`.
 
 ```{.python .input #decoding-greedy-decoding}
 def show(ids):  # Decoded text as a literal; control characters -> U+FFFD
@@ -228,50 +234,49 @@ for text in ('The Time Traveller', 'It seemed to me that'):
     d2l.print_wrapped(show(decode_greedy(text)))
 ```
 
-Both continuations end in a loop, as the greedy sample of
-:numref:`sec_rnn-scratch` did. Two flaws are built into the rule. The first
-is *myopia*: a sequence
-of locally best tokens need not be the best sequence. Suppose the model
-gives the first token the probabilities $P(A) = 0.5$ and $P(B) = 0.4$.
-After $A$ the model is unsure, and its most probable second token has
-probability $0.3$; after $B$ it is confident, with $0.9$ for its favorite.
-Greedy decoding picks $A$ and ends with a sequence of probability $0.5
-\times 0.3 = 0.15$, whereas starting with $B$ gives $0.4 \times 0.9 = 0.36$.
-Greedy decoding cannot see that the more probable first token leads into an
-uncertain second step.
+Just as in :numref:`sec_rnn-scratch`, both continuations quickly collapse into
+repetitive loops. Two structural weaknesses are built into greedy decoding.
+The first is *myopia*: stringing together locally optimal choices does not
+necessarily yield the globally optimal sequence. Suppose the model assigns
+first-token probabilities $P(A) = 0.5$ and $P(B) = 0.4$, followed by an
+uncertain second step after $A$ (top continuation probability $0.3$) but a
+highly confident step after $B$ (top probability $0.9$). Greedy decoding
+immediately commits to $A$ and finishes with joint probability
+$0.5 \times 0.3 = 0.15$, missing the far more probable sequence beginning with
+$B$ at $0.4 \times 0.9 = 0.36$.
 
-The second flaw is the loop itself. Greedy decoding feeds its own argmax
-back in as context, and nothing in it is random: the next token is a
-function of the hidden state, and the next state is a function of the state
-and that token. Once the state has settled into a cycle, no chance event
-can dislodge it. Is this a defect of our small model? Unfortunately not.
-:citet:`Holtzman.Buys.Du.ea.2020` documented this *degeneration* in
-language models about a thousand times larger than ours:
-maximization-based decoding of open-ended text produces output that is
-repetitive and measurably unlike human text, however good the model.
+The second weakness is repetition itself. Because greedy decoding feeds its
+own deterministic argmax back into the recurrence at every step, the next
+hidden state is a deterministic function of the current state; once the
+trajectory falls into an attracting cycle, there is no randomness to knock it
+out. Nor is this merely a quirk of our small RNN:
+:citet:`Holtzman.Buys.Du.ea.2020` demonstrated the exact same *neural text
+degeneration* in language models a thousand times larger, showing that
+likelihood maximization on open-ended text consistently yields repetitive,
+bland prose noticeably unlike human writing.
 
 ## Beam Search
 :label:`sec_beam-search`
 
-Greedy decoding commits immediately; exhaustive search never commits at all.
-*Beam search* lies between them, with a single setting, the *beam width*
-$w$: it keeps the $w$ most probable prefixes alive at every step. At the
-first step it selects the $w$ most probable tokens. After that, each of the
-$w$ surviving prefixes is extended by every token in the vocabulary, the
-resulting $w \cdot |\mathcal{V}|$ candidates are scored by their cumulative
-log-probability, and the best $w$ survive. Greedy decoding is the case
-$w = 1$. Exhaustive search is the limit in which $w$ exceeds the number of
-candidates and nothing is ever pruned.
+Whereas greedy decoding commits immediately to a single path and exhaustive
+search retains every possible path, *beam search* strikes a controlled middle
+ground parameterized by a single hyperparameter—the *beam width* $w$. At every
+step, beam search keeps the $w$ highest-scoring prefixes alive. Starting from
+the $w$ most probable first tokens, each subsequent step expands every
+surviving prefix across the vocabulary, scores all $w \cdot |\mathcal{V}|$
+candidate extensions by their cumulative log-probability, and prunes back down
+to the top $w$ sequences. Setting $w = 1$ recovers greedy decoding, while
+letting $w$ grow large enough that no candidate is ever pruned recovers
+exhaustive search.
 
 ![Beam search with beam width 2 over a five-token vocabulary. At every step each surviving prefix is expanded over the whole vocabulary and only the two highest-scoring prefixes are kept; the survivors here are $A$ and $C$, then $AB$ and $CE$, then $ABD$ and $CED$.](../img/mdl-rnn-beam-tree.svg)
 :label:`fig_beam-search`
 
-:numref:`fig_beam-search` traces an example with $w = 2$ over the
-vocabulary $\mathcal{V} = \{A, B, C, D, E\}$ and three steps. Every
-probability is conditional on the given prefix, which we leave out of the
-notation. Suppose that the two most probable first tokens are $A$ and $C$;
-they form the initial beam. At the second step we compute, for every
-$x' \in \mathcal{V}$, the scores of the ten extensions
+:numref:`fig_beam-search` illustrates beam search with $w = 2$ over a
+five-token vocabulary $\mathcal{V} = \{A, B, C, D, E\}$ across three steps
+(suppressing the shared prompt from the notation). Suppose $A$ and $C$ are the
+two most probable first tokens. At step 2, we score all ten extensions
+$x' \in \mathcal{V}$,
 
 $$
 \begin{aligned}
@@ -280,34 +285,34 @@ P(C, x') &= P(C)\, P(x' \mid C),
 \end{aligned}
 $$
 
-and keep the two largest, say for $AB$ and $CE$. The third step repeats the
-calculation from these survivors and keeps, say, $ABD$ and $CED$. Instead
-of the $5^3 = 125$ sequences of exhaustive search, beam search scored
-$5 + 10 + 10 = 25$. In general it costs $O(w |\mathcal{V}| T)$
-for $T$ steps, $w$ times as much as greedy decoding and exponentially less
-than exhaustive search.
+and retain the top two—say $AB$ and $CE$—repeating the same expansion at step
+3 to keep $ABD$ and $CED$. Rather than scoring all $5^3 = 125$ sequences, beam
+search evaluates only $5 + 10 + 10 = 25$. In general, generating $T$ tokens
+costs $O(w |\mathcal{V}| T)$—just $w$ times the cost of greedy decoding and
+exponentially less than exhaustive search.
 
-One correction is needed before finished candidates of different lengths
-can be compared. The log-probability of a token is never positive, so the
-score of a sequence can only fall as it grows, and comparing raw scores
-favors short candidates. This matters once an end-of-sequence token lets
-some candidates stop early. The standard remedy is *length normalization*
-:cite:`Wu.Schuster.Chen.ea.2016`: rank a candidate that adds $T$ tokens to
-a prefix of $t_0$ tokens by
+When sequences are allowed to terminate early by emitting an end-of-sequence
+token, comparing candidates of different lengths requires a length correction.
+Because every token log-probability is non-positive, raw cumulative
+log-probability monotonically decreases as a sequence grows, unfairly favoring
+short hypotheses. The standard remedy is *length normalization*
+:cite:`Wu.Schuster.Chen.ea.2016`, scoring a candidate that adds $T$ tokens to
+a prefix of length $t_0$ by
 
 $$\frac{1}{T^\beta} \sum_{t=t_0+1}^{t_0+T} \log P(x_t \mid x_{<t}),$$
 :eqlabel:`eq_beam-search-score`
 
-where the exponent $\beta$, typically around 0.75, interpolates between no
-correction ($\beta = 0$) and the average log-probability per token
-($\beta = 1$). In the code below it is the argument `alpha`, the name used
-in :citet:`Wu.Schuster.Chen.ea.2016`.
+where the exponent $\beta$ (typically around $0.75$) interpolates between
+unnormalized log-probability ($\beta = 0$) and per-token average
+log-probability ($\beta = 1$); in the code below, we name this argument
+`alpha` following :citet:`Wu.Schuster.Chen.ea.2016`.
 
-The implementation below follows this procedure. Finished candidates, those
-that produced `eos_id`, pass from round to round unchanged; live ones are
-expanded and rescored. Since the best $w$ candidates contain at most $w$
-continuations of any single prefix, it suffices to expand each prefix by
-its $w$ most probable tokens rather than by all $|\mathcal{V}|$ of them.
+The `beam_search` implementation below carries completed hypotheses (those
+ending in `eos_id`) forward untouched while expanding only active beams. Note
+one clean optimization: because the overall top $w$ candidates can include at
+most $w$ extensions of any single prefix, we only need to take the top $w$
+next tokens from each active beam rather than sorting all $|\mathcal{V}|$
+extensions.
 
 ```{.python .input #decoding-beam-search-1}
 def beam_search(step_fn, prefix, num_tokens, beam_size=4,  #@save
@@ -337,12 +342,11 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,  #@save
                   reverse=True)
 ```
 
-We decode the two prefixes from before with $w = 1$, which reproduces
-greedy decoding, and with $w = 4$, and print the score
-:eqref:`eq_beam-search-score` of the winning candidate. Our text has no
-end-of-sequence token, so every candidate has 30 tokens and the length
-correction changes no ranking here: the score is the log-probability
-divided by $30^{0.75} \approx 12.8$.
+Let us decode the same two prompts with $w = 1$ (reproducing greedy decoding)
+and $w = 4$, printing the length-normalized score :eqref:`eq_beam-search-score`
+of the top hypothesis. Since our corpus has no end-of-sequence token, all
+candidates reach length 30 and the constant denominator
+$30^{0.75} \approx 12.8$ leaves their relative ranking unchanged.
 
 ```{.python .input #decoding-beam-search-2}
 for text in ('The Time Traveller', 'It seemed to me that'):
@@ -352,83 +356,81 @@ for text in ('The Time Traveller', 'It seemed to me that'):
         d2l.print_wrapped(f'w={w}, score {score:.2f}: {show(ids)}')
 ```
 
-The wider beam usually finds continuations that the model scores higher
-than the greedy ones, but it cannot guarantee it: beam search is still an
-approximate search, and it can prune the prefix that greedy decoding would
-have completed. Whether the higher-scoring text is also *better* text is a
-separate question. In large language models, beam
-search on open-ended text produces output far more repetitive than human
-text :cite:`Holtzman.Buys.Du.ea.2020`, and we measure below how our
-maximizers compare with sampling. Where the acceptable outputs are few, as
-in speech recognition and machine translation, beam search with a small
-width, typically between 4 and 10, is the standard decoder
+Expanding the beam generally discovers higher-probability continuations than
+greedy decoding—though not with certainty, since approximate pruning can still
+discard a prefix that would have paid off later. Yet higher probability does
+not automatically equate to *better* prose: on open-ended generation, beam
+search in large language models produces text markedly more repetitive than
+human writing :cite:`Holtzman.Buys.Du.ea.2020`, a contrast we quantify shortly.
+By contrast, on tightly constrained tasks such as speech recognition and
+machine translation, beam search with a modest width (typically 4 to 10)
+remains the standard decoder
 :cite:`Sutskever.Vinyals.Le.2014,Wu.Schuster.Chen.ea.2016`.
 
 ## Sampling
 
-If we trust the model's distribution, the natural way to generate is to
-sample from it: draw $x_t \sim P(x_t \mid x_{<t})$, append, repeat. Text
-produced this way is distributed as the model believes text should be, with
-the variety that maximization throws away. The problem lies in the tail.
-Our model spreads small probabilities over a thousand tokens, a large model
-over a hundred thousand. Each unlikely token is negligible on its own, but
-their combined probability at each step is not. Sampling therefore
-regularly picks a token that the model itself considers nearly impossible,
-and one absurd token, fed back as context, can derail everything after it.
-This is the compounding of errors in a rollout (:numref:`sec_sequence`),
-with tokens in place of numbers. :citet:`Holtzman.Buys.Du.ea.2020` call the
-culprit the *unreliable tail*: the model's estimates are trustworthy for
-its most probable tokens and mostly noise far down the ranking. The fix is
-to reshape or truncate the distribution before sampling, and each of the
-settings below does this in its own way.
+If our model has learned a reasonable distribution over continuations, the
+most natural alternative to maximization is direct *ancestral sampling*: draw
+$x_t \sim P(x_t \mid x_{<t})$, append it, and repeat. Sampling restores the
+rich variety that maximization suppresses, but raw sampling runs straight into
+a tail problem. Because the softmax assigns nonzero probability to every entry
+in the vocabulary—a thousand tokens here, and over a hundred thousand in
+modern LLMs—the tiny probabilities across thousands of implausible tokens add
+up to a substantial collective mass at every step. Consequently, pure sampling
+regularly draws a wildly implausible token, and feeding that token back in as
+context can derail the rest of the passage—the exact rollout error compounding
+discussed in :numref:`sec_sequence`. :citet:`Holtzman.Buys.Du.ea.2020` termed
+this the *unreliable tail*: a language model's probabilities are well
+calibrated near the head of the distribution, yet noisy far down the tail. The
+practical remedy is to reshape or truncate the distribution before sampling,
+and four widely used controls accomplish this in distinct ways.
 
-**Temperature** divides every
-logit $o_x$ by $\tau > 0$ before the softmax:
+**Temperature scaling** divides every logit $o_x$ by a positive scalar
+$\tau > 0$ prior to the softmax:
 
 $$P_\tau(x \mid x_{<t}) = \frac{\exp(o_x / \tau)}{\sum_{x' \in \mathcal{V}} \exp(o_{x'} / \tau)} \propto P(x \mid x_{<t})^{1/\tau}.$$
 :eqlabel:`eq_temperature`
 
-Values of $\tau$ below 1 sharpen the distribution, down to greedy decoding
-as $\tau \to 0$, and values above 1 flatten it toward uniform. Temperature
-is a blunt tool. It reshapes the head and the tail together, so cooling the
-distribution enough to suppress the tail also removes legitimate variety at
-the head.
+Lowering $\tau$ below 1 sharpens the distribution (converging to greedy
+decoding as $\tau \to 0$), whereas raising $\tau$ above 1 flattens it toward
+uniform. Because temperature rescales the entire distribution uniformly,
+however, it is a blunt instrument: cooling the softmax enough to suppress the
+unreliable tail simultaneously collapses legitimate diversity among plausible
+head tokens.
 
-**Top-$k$** truncates by count: keep the $k$ most probable tokens,
-renormalize, and sample
+**Top-$k$ sampling** truncates by rank, keeping only the $k$ most probable
+tokens, renormalizing, and sampling
 :cite:`Fan.Lewis.Dauphin.2018,Radford.Wu.Child.ea.2019`. **Top-$p$** (or
-*nucleus*) sampling truncates by probability mass: keep the smallest set of
-most probable tokens whose total probability reaches $p$, for example
-$p = 0.9$ :cite:`Holtzman.Buys.Du.ea.2020`. The difference matters because
-the model's confidence changes from step to step. Where the model is nearly
-certain of the next token, a fixed $k = 20$ admits nineteen poor options;
-where dozens of words are plausible, the same $k$ may cut off real variety.
-Top-$p$ adapts: it keeps few tokens when the head of the distribution is
-heavy and many when it is flat. It has its own failure on peaked
-distributions: if the top token holds 0.95 of the mass, top-$p$ with
-$p = 0.9$ keeps one token and acts greedily even where the runner-up was a
-good choice.
+*nucleus*) sampling truncates by cumulative probability mass instead,
+retaining the smallest head of tokens whose probabilities sum to at least $p$
+(commonly $p = 0.9$) :cite:`Holtzman.Buys.Du.ea.2020`. This distinction
+matters because the model's entropy fluctuates dramatically from token to
+token: when the next word is nearly certain, a fixed $k = 20$ lets in nineteen
+poor candidates, whereas when dozens of words are equally natural, $k = 20$
+may clip genuine variety. Top-$p$ adapts dynamically—shrinking its candidate
+set on peaked distributions and widening it on flat ones—though it can still
+behave overly greedily when a single top token exceeds $p$ (e.g., probability
+$0.95$ under $p = 0.9$, excluding a solid runner-up).
 
-**Min-$p$** sets the cutoff relative to the model's confidence
-:cite:`Nguyen.Baker.Neo.ea.2025`: keep every token whose probability is at
-least $p_{\min}$ times that of the most probable token, for example
-$p_{\min} = 0.05$. When the model is sure, the bar is high and few tokens
-pass; when it is unsure, the bar drops and more of them survive.
-:citet:`Nguyen.Baker.Neo.ea.2025` find that this relative rule degrades
-less than top-$p$ at high temperatures, where an absolute rule admits much
-of the flattened tail.
+**Min-$p$ sampling** sets the threshold relative to the model's top
+probability :cite:`Nguyen.Baker.Neo.ea.2025`, retaining every token whose
+probability is at least $p_{\min}$ times that of the single most likely token
+(for instance, $p_{\min} = 0.05$). When the model is confident, the cutoff
+rises automatically and admits only strong contenders; when the model is
+uncertain, the cutoff lowers to allow broader exploration.
+:citet:`Nguyen.Baker.Neo.ea.2025` show that this relative threshold degrades
+far more gracefully than top-$p$ at elevated temperatures, where an absolute
+mass threshold sweeps in much of the flattened tail.
 
 ### A Unified Sampler
 
-All four settings act on the same object, the next-token distribution, so
-one function can implement them. `sample_next` turns a vector of logits
-into a token id. At temperature 0 it returns the argmax, which is greedy
-decoding. Otherwise it computes $P_\tau$ of :eqref:`eq_temperature`, sorts
-the tokens by probability, and applies the optional top-$k$, top-$p$, and
-min-$p$ cutoffs. Each cutoff only decides how many tokens of the sorted
-order to keep, and the function keeps the smallest of these numbers. It
-then renormalizes the kept probabilities and draws one token. It takes a
-NumPy random generator `rng` and creates a fresh one if none is given.
+Because temperature, top-$k$, top-$p$, and min-$p$ all operate on the exact
+same next-token distribution, a single compact function handles every
+combination. Below, `sample_next` returns the greedy argmax when
+`temperature == 0`, and otherwise forms $P_\tau$ via :eqref:`eq_temperature`,
+sorts tokens in descending probability order, computes how many leading tokens
+each active cutoff permits, keeps the tightest bound, renormalizes, and draws
+one token using a NumPy random generator `rng`.
 
 ```{.python .input #decoding-a-unified-sampler-1}
 def sample_next(logits, temperature=1.0, k=None, p=None, min_p=None,
@@ -452,11 +454,11 @@ def sample_next(logits, temperature=1.0, k=None, p=None, min_p=None,
     return int(order[rng.choice(keep, p=probs[:keep] / probs[:keep].sum())])
 ```
 
-`generate` is the loop we have been writing by hand: query `step_fn`,
-choose with `sample_next` (extra keyword arguments pass through to it),
-append, and stop early if the end-of-sequence token `eos_id` appears.
-Open-ended generation has no such token, so our examples run for a fixed
-number of tokens.
+The wrapper `generate` packages the autoregressive decoding loop: call
+`step_fn`, draw the next token with `sample_next` (forwarding any strategy
+keyword arguments), append it, and terminate early if `eos_id` is emitted.
+Because open-ended prose from *The Time Machine* has no end-of-sequence token,
+our examples generate a fixed number of tokens.
 
 ```{.python .input #decoding-a-unified-sampler-2}
 def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
@@ -470,13 +472,12 @@ def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
     return ids
 ```
 
-A toy distribution makes the cutoffs concrete. Five tokens have
-probabilities 0.45, 0.25, 0.15, 0.10, and 0.05. Top-$k$ with $k = 2$ can
-only emit tokens 0 and 1. Top-$p$ with $p = 0.8$ keeps three tokens,
-since the cumulative probability first reaches 0.8 at the third (0.85).
-Min-$p$ with $p_{\min} = 0.5$ keeps the tokens with probability at least $0.5
-\times 0.45 = 0.225$, again tokens 0 and 1. We draw 1,000 tokens under
-each rule and list the tokens that occur.
+A five-token toy distribution with probabilities $0.45, 0.25, 0.15, 0.10$, and
+$0.05$ lets us verify each cutoff directly: top-$k$ with $k = 2$ retains only
+tokens 0 and 1; top-$p$ with $p = 0.8$ retains tokens 0, 1, and 2 (whose
+cumulative mass reaches $0.85$); and min-$p$ with $p_{\min} = 0.5$ retains
+tokens with probability at least $0.5 \times 0.45 = 0.225$, again tokens 0
+and 1. Drawing 1,000 samples under each rule confirms the exact support.
 
 ```{.python .input #decoding-a-unified-sampler-3}
 logits = np.log([0.45, 0.25, 0.15, 0.10, 0.05])
@@ -486,22 +487,20 @@ for cutoff in (dict(k=2), dict(p=0.8), dict(min_p=0.5)):
     print(cutoff, 'tokens drawn:', sorted(drawn))
 ```
 
-Each rule draws exactly the tokens it keeps: tokens 0 and 1 under top-$k$
-and min-$p$, tokens 0 to 2 under top-$p$.
+As expected, each rule samples strictly from its surviving support: tokens 0
+and 1 for top-$k$ and min-$p$, and tokens 0 through 2 for top-$p$.
 
 ### Cutoffs on a Trained Model
 
-What do the cutoffs do to a real distribution? We compute our model's
-next-token distribution after "The Time Traveller", sort it by decreasing
-probability, and plot it on logarithmic axes. On this plot each rule is a
-single line.
-Top-$k$ is a vertical line at rank $k$, wherever the probabilities lie.
-Top-$p$ is a vertical line at the rank where the cumulative probability
-reaches $p$, so its position depends on the shape of the head. Min-$p$ is a
-*horizontal* line at $p_{\min}$ times the top probability: every token
-above it is kept, and the line moves up and down with the model's
-confidence. Everything to the right of the vertical lines, or below the
-horizontal one, is the tail that truncation removes.
+To see how these three rules behave on a real language model, let us plot our
+RNN's sorted next-token distribution following `"The Time Traveller"` on
+log–log axes. Viewed this way, each truncation rule has a clean geometric
+interpretation: top-$k$ draws a fixed vertical line at rank $k$ regardless of
+the curve's shape; top-$p$ draws a vertical line at whichever rank accumulates
+probability mass $p$; and min-$p$ draws a *horizontal* line at $p_{\min}$
+times the top probability, rising and falling with the model's confidence.
+Everything to the right of a vertical cutoff, or beneath the horizontal cutoff,
+is pruned away.
 
 ```{.python .input #decoding-one-distribution-three-cutoffs-1}
 def next_probs(text):  # Next-token probabilities after text, sorted
@@ -524,14 +523,13 @@ d2l.plot([np.arange(1, len(probs) + 1), [20, 20], [n_p, n_p],
                  f'min-p=0.05: keep {n_m}'])
 ```
 
-On the logarithmic axes the curve declines steadily, from a top
-probability of about 0.2 to about $10^{-3}$ near rank 100, and falls
-faster still over the last few hundred ranks. Most of the vocabulary lies
-in this tail of tokens with tiny probabilities, the tail that all three
-rules cut. To compare the rules, we also apply them after the
-shorter prefix "The Time", which the novel continues with " Traveller" in
-11 of its 13 occurrences, so the model should be nearly sure of the next
-token. We count the tokens each rule keeps after both prefixes.
+On log–log axes, the sorted probabilities fall steadily from roughly $0.2$ at
+rank 1 down to about $10^{-3}$ near rank 100 before plunging more steeply
+across the remaining hundreds of tokens—the vast low-probability tail that
+truncation removes. To observe how adaptively each rule responds to model
+confidence, we compare `"The Time Traveller"` against the shorter prefix
+`"The Time"`, which is followed by `" Traveller"` in 11 of its 13 occurrences
+in the novella and therefore yields a sharply peaked distribution.
 
 ```{.python .input #decoding-one-distribution-three-cutoffs-2}
 for text in ('The Time Traveller', 'The Time'):
@@ -541,20 +539,20 @@ for text in ('The Time Traveller', 'The Time'):
           f'top-p {n_p}, min-p {n_m}')
 ```
 
-Top-$k$ keeps 20 tokens whatever the distribution. Both other rules
-tighten when the model is sure: after "The Time" the top probability is
-high, both keep far fewer tokens, and min-$p$ keeps only a handful. They
-differ when the model is unsure. After "The Time Traveller", top-$p$ must
-reach far into the tail to collect 90% of the mass and keeps well over a
-hundred tokens, most of them with probability below one percent. Min-$p$
-looks only at the top probability: it keeps the tokens within a factor of
-twenty of the best, a few dozen at most. Which of the two is right, the
-counts cannot say.
+While top-$k$ rigidly retains 20 tokens regardless of context, both adaptive
+rules contract sharply once the model is confident: after `"The Time"`, where
+the top token dominates, both prune aggressively, with min-$p$ retaining only
+a handful of candidates. When the model is uncertain after `"The Time
+Traveller"`, however, the two diverge: top-$p$ must reach deep into the tail
+to accumulate 90% of the mass—admitting well over a hundred tokens, most
+individually below 1%—whereas min-$p$ anchors solely on the leading candidate,
+retaining at most a few dozen tokens within a factor of twenty of the top
+probability.
 
 ### Strategies Compared on One Prefix
 
-We now read the text that each setting produces, starting with temperature
-alone at $\tau = 0.5$, $1$, and $2$.
+Let us inspect the actual continuations produced by each strategy, starting
+with pure temperature scaling at $\tau = 0.5$, $1.0$, and $2.0$.
 
 ```{.python .input #decoding-the-same-prefix-under-every-strategy-1}
 prefix = data.tokenizer.encode('The Time Traveller')
@@ -563,12 +561,13 @@ for tau in (0.5, 1.0, 2.0):
     d2l.print_wrapped(f'tau={tau}: {show(out)}')
 ```
 
-At $\tau = 0.5$ the text stays close to the model's most probable tokens.
-At $\tau = 1$ it is more varied and occasionally strays into invented
-words. At $\tau = 2$ the flattened distribution draws so many tail tokens
-that the text stops being English; the tokens may even combine into bytes
-that do not form valid characters. Next we run the main strategies on the
-same prefix, each with its typical setting.
+At $\tau = 0.5$, the sampler stays conservatively close to high-probability
+tokens; at $\tau = 1.0$, outputs become noticeably more varied and occasionally
+slip into garbled words; and at $\tau = 2.0$, flattening the distribution lets
+tail tokens overwhelm the stream, breaking out of English and even emitting
+byte sequences that fail to form valid UTF-8 characters. Next, we compare our
+main decoding strategies head to head on the same prompt at their standard
+settings.
 
 ```{.python .input #decoding-the-same-prefix-under-every-strategy-2}
 strategies = {'greedy': dict(temperature=0), 'tau=1': dict(),
@@ -579,36 +578,33 @@ for name, strategy in strategies.items():
     d2l.print_wrapped(f'{name:>10}: {show(out)}')
 ```
 
-Our small model cannot make any of these continuations good, and one sample
-per rule is thin evidence. Greedy decoding is deterministic: rerunning the
-cell reproduces its text exactly, while every sampler gives new text each
-time. Only greedy decoding loops. Among the samplers these lines show no
-ranking, since invented words appear with and without truncation. The
-truncated samplers are designed to keep the variety of sampling and cut the
-tail on which pure sampling trips, and a temperature combined with top-$p$
-or min-$p$ is a common default for open-ended generation.
+Naturally, a small single-layer RNN trained on one novella cannot produce
+flawless prose under any decoder, and a single sample per rule is noisy
+evidence. Even so, the qualitative contrast is unmistakable: greedy decoding
+is deterministic and falls into a repeating cycle, whereas every sampler
+produces fresh, non-looping text on every call. In practice, combining a
+moderate temperature with top-$p$ or min-$p$ truncation balances fluency and
+diversity well and serves as the default for open-ended generation.
 
 ## Evaluation and Cost
 
 ### The Quality of Generated Text
 :label:`subsec_evaluating-generated-text`
 
-How can we decide, beyond reading samples, which strategy writes better
-text? Perplexity is of little help. It evaluates the *model*: how well its
-conditionals predict text that people wrote. It says nothing about a
-particular generated sample, and scoring a sample by its probability under
-the model would reward maximization by definition. A strategy is not better
-because its output is more probable; sampling deviates from the most
-probable output on purpose.
+Beyond eyeballing individual passages, how can we compare decoding strategies
+systematically? Perplexity cannot answer this question: perplexity evaluates
+the *model* on held-out human text, not a particular decoding rule, and
+scoring generated samples by their own model likelihood would tautologically
+crown maximization the winner even though sampling deliberately trades peak
+likelihood for diversity.
 
-Automated statistics can still catch specific failures. A simple one for
-repetition is *distinct-3*, the fraction of distinct 3-grams among all
-3-grams of a continuation: it is 1 when no three consecutive tokens ever
-recur and close to 0 for text stuck in a loop. We decode 100 tokens after 20
-random six-token prefixes from the validation text with greedy decoding,
-beam search with $w = 4$, and the samplers of the previous section, and
-report two averages:
-the log-probability per generated token under the model, and distinct-3.
+Automated diagnostics can nonetheless pinpoint specific failure modes. To
+quantify repetition, we use *distinct-3*—the ratio of unique 3-grams to total
+3-grams in a generated continuation, equal to 1 when no three-token span ever
+repeats and approaching 0 when text locks into a cycle. Below, we generate
+100-token continuations from 20 random six-token validation prefixes under
+greedy decoding, beam search ($w = 4$), and each sampler, reporting both mean
+per-token log-probability under the model and mean distinct-3.
 
 ```{.python .input #decoding-evaluating-generated-text}
 def log_prob(ids, start):  # Mean log-probability of ids[start:]
@@ -640,82 +636,84 @@ for name, decode in decoders.items():
           f'{np.mean([distinct(o[6:]) for o in outs]):.2f}')
 ```
 
-The two averages disagree. The two maximizers produce continuations with a
-clearly higher log-probability per token than any of the samplers. Beam
-search is usually ahead of greedy decoding, by a margin that varies from
-run to run and occasionally reverses. Yet the samples are far more varied:
-their distinct-3 is close to 1, while the maximizers repeat most of their
-3-grams. Maximization raises the probability of the text and lowers its
-variety, the degeneration described by :citet:`Holtzman.Buys.Du.ea.2020`
-on a small scale.
+The two metrics pull cleanly in opposite directions. Both maximization
+strategies achieve markedly higher per-token log-probability than any sampler
+(with beam search typically edging out greedy decoding), yet their distinct-3
+scores plunge because they repeat most of their 3-grams. All four samplers
+achieve distinct-3 near 1, reproducing on a miniature scale the exact
+likelihood-versus-diversity trade-off documented by
+:citet:`Holtzman.Buys.Du.ea.2020`.
 
-Among the samplers, variety does not separate the rules, but probability
-does. Pure sampling at $\tau = 1$ has the lowest log-probability per token,
-about $-4$. The three truncated samplers lie between it and the
-maximizers, and their continuations are as varied as those of pure
-sampling. Top-$p$ at $0.9$ stays nearest to pure sampling, which is what
-the counts above suggested, since it keeps the most tokens; top-$k$ and
-min-$p$ cut deeper, and their text is about a nat per token more probable. Cutting the tail does
-what it was designed to do.
+Within the sampling family, diversity is nearly saturated across all four
+rules, while per-token log-probability cleanly separates them. Pure ancestral
+sampling ($\tau = 1$) incurs the lowest average log-probability (around $-4$
+nats per token), whereas all three truncated samplers raise likelihood
+substantially without sacrificing distinct-3. Consistent with our earlier
+cutoff counts, top-$p$ ($0.9$) sits closest to pure sampling because it
+retains the broadest support, while top-$k$ ($20$) and min-$p$ ($0.05$) prune
+more aggressively and boost per-token log-probability by roughly a full
+nat—demonstrating directly that tail truncation works as intended.
 
-Such statistics detect particular failures; they do not say whether the
-text is good. The final judge of open-ended generation is a human reader:
-can people tell the model's text from text that people wrote, and which do
-they prefer? Tasks with a reference answer, such as translation, are easier
-to score automatically, by the overlap between the output and reference
-translations. In short, perplexity selects the model, and human judgment,
-or a proxy for it, selects the decoding strategy.
+Automatic metrics like distinct-3 are valuable for catching concrete failure
+modes, yet they cannot measure coherence, factuality, or style. Ultimately,
+open-ended text generation is judged by human readers (or calibrated proxy
+evaluators), while constrained tasks with ground-truth references such as
+translation can be measured against reference outputs. In short, perplexity
+guides *model* selection, whereas human preference—or task-specific
+benchmarks—guides *decoder* selection.
 
 ### The Cost of Generation
 :label:`subsec_cost-of-generation`
 
-We built `step_fn` without a state so that it would fit any model, and so
-it runs the network over the whole prefix for every token it generates. A
-continuation of $T$ tokens thus costs $O(T^2)$ updates of the recurrent
-cell. Generation is also *sequential*: during training, all positions of a
-known sequence are processed together, but token $t + 1$ cannot be scored
-before token $t$ has been chosen. The sequential part cannot be avoided.
-The quadratic part, for a recurrent network, is pure waste. The hidden
-state already summarizes the prefix, so carrying it forward, as `predict`
-in :numref:`sec_rnn-scratch` does, makes each new token cost one cell
-update, independent of the length of the prefix.
+Because we kept `step_fn` stateless so that it could wrap any autoregressive
+model, every newly generated token re-runs the RNN over the *entire* prefix,
+making a $T$-token continuation cost $O(T^2)$ cell updates. Autoregressive
+generation is also inherently *sequential*: unlike teacher-forced training,
+where all positions are known up front, token $t + 1$ cannot be scored until
+token $t$ has been chosen. While that sequential dependency is fundamental,
+the quadratic recomputation is completely unnecessary for an RNN: because the
+hidden state already summarizes the prefix, carrying that state forward from
+step to step (as `predict` did in :numref:`sec_rnn-scratch`) brings the cost
+down to exactly one cell update per token, independent of sequence length.
 
-This constant cost and memory per generated token is what a fixed-size
-state provides, and a reason for the interest in recurrent language models.
-The same state is the model's limit: whatever it remembers of the prefix
-must fit into 128 numbers (:numref:`subsec_rnn-constant-memory`). No
-decoding rule can put into the text what the model's distribution does not
-contain. The decoders, however, never looked inside the model, and they
-will serve unchanged when a better one supplies the distribution.
+Constant compute and constant memory per generated token are the defining
+efficiency advantages of recurrent language models. Yet that same fixed-size
+state is also our model's bottleneck, forcing everything remembered from the
+prefix through just 128 floating-point numbers
+(:numref:`subsec_rnn-constant-memory`). No decoding trick can coax nuance out
+of a model whose next-token distributions fail to capture long-range
+structure—though because our decoders treat the model purely as a black box,
+every algorithm developed here transfers unchanged to far stronger models.
 
-With this the first part of the book ends, and it ends on a limit. Our last
-model predicts text one token at a time at a constant cost, and it makes
-use of about three tokens of what it has read
-(:numref:`sec_rnn-scratch`), because its gradients reach hardly further
-(:numref:`sec_bptt`). There are two ways out. One keeps the fixed-size
-state and redesigns the recurrence so that the gradient survives
-(:numref:`chap_modern_rnn`). The other gives up the fixed size: it keeps
-every past token and lets the model look back at all of them, at a cost
-that grows with the length of the text. This is attention
-(:numref:`chap_attention`), and today's language models are built on it.
-Whichever is chosen, the tokenizer, the bits per byte, and the decoders of
-this chapter carry over as they are.
+With this, Part *Basics* draws to a close—and it closes right on a sharp
+architectural boundary. Our RNN predicts text one token at a time at constant
+cost, yet it effectively uses only about three tokens of history
+(:numref:`sec_rnn-scratch`) because vanilla recurrent gradients vanish within
+a handful of steps (:numref:`sec_bptt`). Two paths lead forward from here.
+The first retains a fixed-size state while redesigning the recurrence so that
+gradients survive across long horizons (:numref:`chap_modern_rnn`). The second
+abandons fixed-size compression altogether, retaining representations of every
+past token and attending directly across them at a cost that grows with
+sequence length—the *attention* mechanism (:numref:`chap_attention`) at the
+heart of modern large language models. Whichever architecture lies underneath,
+the subword tokenizers, bits-per-byte evaluation, and decoding algorithms of
+this chapter carry directly over.
 
 ## Summary
 
-Decoding turns a language model's next-token distributions into sequences.
-Maximization targets the most probable output: greedy decoding takes the
-most probable token at each step and is myopic, and beam search keeps the
-$w$ best prefixes at $w$ times the cost. Maximization suits tasks with few
-acceptable outputs, but on open-ended text its output is repetitive.
-
-Sampling draws from the model's distribution, reshaped by temperature
-:eqref:`eq_temperature` and truncated by top-$k$ (a fixed count), top-$p$
-(a fixed probability mass), or min-$p$ (a fixed fraction of the top
-probability). On our model the truncated samplers write text as varied as
-pure sampling and more probable. Perplexity evaluates the model, not its
-samples, and generating naively re-runs the model over the whole prefix for
-every new token, which a carried recurrent state avoids.
+Decoding converts a language model's next-token distributions into concrete
+token sequences. Maximization methods seek high-probability outputs: greedy
+decoding commits locally at each step and suffers from both myopia and
+repetitive loops, while beam search tracks the top $w$ hypotheses at $w$ times
+the cost (using length normalization when candidates can terminate early) and
+excels on constrained tasks with narrow output spaces. For open-ended
+generation, sampling preserves natural diversity, while temperature scaling
+(:eqref:`eq_temperature`) and tail truncation via top-$k$, top-$p$, or min-$p$
+prevent low-probability tail tokens from derailing the rollout—producing text
+that matches pure sampling in distinct-3 diversity while remaining
+substantially more probable. Finally, perplexity evaluates models rather than
+decoders, and carrying a recurrent hidden state avoids the $O(T^2)$
+recomputation of naive stateless decoding.
 
 ## Exercises
 

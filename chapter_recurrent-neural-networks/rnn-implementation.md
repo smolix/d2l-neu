@@ -1,30 +1,33 @@
 # Implementing RNNs
 :label:`sec_rnn-scratch`
 
-:numref:`sec_rnn` wrote down a recurrent language model and counted its
-parameters, but did not train it. Two questions are open: how its
-equations become working code, and what its hidden state is worth on *The
-Time Machine*, measured against the counts of
-:numref:`sec_language-model`. The first is the easier one. The model fits in three equations: look up the
-embedding of the current token, update the hidden state from it and from
-the previous state, and map the new state to scores over the vocabulary.
-The code for them has a simple interface. At each time step the model
-consumes one token per sequence and the previous hidden state, and it
-returns $|\mathcal{V}|$ logits per sequence and a new state of the same
-shape as the old one. Because the shapes do not change from step to step,
-the same step applies to a sequence of any length.
+In :numref:`sec_rnn`, we wrote down the equations for a recurrent language
+model and tallied its parameters, but left two essential questions unanswered:
+how those equations translate into clean, working code, and how well the
+trained hidden state actually performs on *The Time Machine* compared with the
+count-based models of :numref:`sec_language-model`. The first question is
+straightforward. The entire model rests on three operations—looking up the
+embedding of the current token, updating the hidden state from that embedding
+and the previous state, and projecting the updated state into logits over the
+vocabulary—and its interface is correspondingly simple: at each step, the
+model accepts one token per sequence alongside the previous hidden state, and
+returns $|\mathcal{V}|$ logits per sequence together with an updated state of
+identical shape. Because those tensor shapes never vary across steps, the very
+same transition handles sequences of arbitrary length.
 
-Let us first write this step with plain tensor operations, so that every
-parameter and every shape is visible, and then hand it to the recurrent
-layer that each framework provides. Training needs one addition that the
-equations do not show. The gradient passes through the same transition once
-per time step and can become large enough to undo much of the progress of
-training in a single update. We therefore clip its norm before every
-update, a crude remedy and a standard one, and we train once without it to
-see what it prevents. The second question we answer by measurement. The
-trained model is scored against the count-based $n$-gram models on the same
-text, token for token, and then position by position, to find out how much
-of what it has read the model uses. Finally we let it generate text.
+We first build this language model from scratch using plain tensor operations
+so that every parameter and shape is transparent, and later replace the manual
+loop with each framework's built-in recurrent layer. Along the way, training
+demands one practical safeguard absent from the forward equations: because
+gradients propagate through the same transition matrix at every time step, an
+occasional minibatch can produce an enormous gradient that wipes out many
+iterations of progress in a single update. We therefore clip the global
+gradient norm prior to each step—a simple, standard precaution—and run an
+ablation without clipping to observe the instability firsthand. We then
+evaluate the trained RNN head to head against interpolated Kneser--Ney
+$n$-grams on the exact same held-out tokens, dissect its loss position by
+position to see how far back in its context window it actually looks, and
+finally generate sample text.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -77,38 +80,39 @@ import random
 
 ## An RNN Language Model from Scratch
 
-The model has three parts, and we implement each as its own class or method:
-a *recurrent cell* that updates the hidden state one time step at a time, an
-embedding that turns token ids into the vectors the cell consumes, and an
-output layer that maps each hidden state to a vector of logits over the
-vocabulary.
+Our language model breaks cleanly into three components, each implemented as
+its own class or method: a *recurrent cell* that advances the hidden state one
+time step at a time, an *embedding table* that converts integer token ids into
+dense vectors, and an *output layer* that maps each hidden state to vocabulary
+logits.
 
 ### The Recurrent Cell
 
-For a minibatch of $b$ sequences, let $\mathbf{X}_t \in \mathbb{R}^{b
-\times d}$ hold their inputs at step $t$ and $\mathbf{H}_t \in
-\mathbb{R}^{b \times h}$ their hidden states. The cell computes the
-recurrence of :numref:`sec_rnn` with the tanh activation,
+For a minibatch of $b$ sequences, let
+$\mathbf{X}_t \in \mathbb{R}^{b \times d}$ denote the input vectors at step
+$t$ and $\mathbf{H}_t \in \mathbb{R}^{b \times h}$ the corresponding hidden
+states. The cell evaluates the recurrence from :numref:`sec_rnn` using a
+$\tanh$ nonlinearity,
 
 $$\mathbf{H}_t = \tanh(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} + \mathbf{b}_\textrm{h}),$$
 
-so each new state mixes the current input with the previous state through
-two weight matrices, $\mathbf{W}_{\textrm{xh}} \in \mathbb{R}^{d \times
-h}$ and $\mathbf{W}_{\textrm{hh}} \in \mathbb{R}^{h \times h}$, and a
-bias $\mathbf{b}_\textrm{h} \in \mathbb{R}^h$. The `RNNScratch` class
-holds these three parameters. The number of hidden units `num_hiddens` ($h$)
-is a hyperparameter, and `num_inputs` ($d$) is the width of the vectors
-arriving at each step, which will shortly be the embedding dimension.
+combining the current input and the previous state via two weight matrices,
+$\mathbf{W}_{\textrm{xh}} \in \mathbb{R}^{d \times h}$ and
+$\mathbf{W}_{\textrm{hh}} \in \mathbb{R}^{h \times h}$, plus a bias vector
+$\mathbf{b}_\textrm{h} \in \mathbb{R}^h$. The `RNNScratch` class stores
+these three parameters, where `num_hiddens` ($h$) is a tunable hyperparameter
+and `num_inputs` ($d$) matches the width of the incoming step vectors (shortly
+the embedding dimension).
 
-As in :numref:`sec_oo-design`, we register the weights with the framework's
-parameter type, so that the optimizer finds them and the trainer can move
-them to a GPU. Both weight matrices start from $\mathcal{N}(0, \sigma^2)$
-with $\sigma = 0.01$, and the bias starts at zero. With weights this
-small, the largest eigenvalue of the recurrent weight matrix has magnitude
-about $\sigma\sqrt{h} \approx 0.11$. Recall the scalar example of
-:numref:`sec_rnn`, where the past persisted scaled by about $w_\textrm{hh}$
-per step: at 0.11 per step, the untrained cell forgets its state within a
-few steps. Training has to grow the weights from there.
+Following :numref:`sec_oo-design`, we register each array as a framework
+parameter so that optimizers track them and the trainer can place them on a
+GPU. Both weight matrices are drawn from $\mathcal{N}(0, \sigma^2)$ with
+$\sigma = 0.01$, and the bias is initialized to zero. At this scale, the
+spectral radius of $\mathbf{W}_{\textrm{hh}}$ is roughly
+$\sigma\sqrt{h} \approx 0.11$: recalling our scalar example in
+:numref:`sec_rnn`, an untrained cell decays its past state by nearly an order
+of magnitude per step and forgets its history almost immediately, leaving
+training to grow larger recurrent connections where needed.
 
 :begin_tab:`tensorflow`
 Each weight gets its own initializer object. An unseeded Keras initializer
@@ -179,12 +183,12 @@ class RNNScratch(nnx.Module):  #@save
         self.b_h = nnx.Param(jnp.zeros(num_hiddens))
 ```
 
-The forward computation loops over the outermost axis of `inputs`, whose
-shape is (`num_steps`, `batch_size`, `num_inputs`), applies the recurrence
-once per time step, and collects the hidden state of every step. When no
-initial state is supplied, the state starts at zero. The explicit Python
-loop over time steps is the recurrence as we wrote it on paper, which is
-all we ask of it for now.
+The forward pass iterates over the leading time axis of `inputs`—which has
+shape (`num_steps`, `batch_size`, `num_inputs`)—updating the hidden state at
+each step and collecting all intermediate states in a list. Whenever no
+initial state is provided, the recurrence starts from an all-zeros tensor.
+This explicit Python loop mirrors our mathematical recurrence directly,
+prioritizing clarity over speed for now.
 
 :begin_tab:`mxnet`
 The MXNet version reads the values of the parameters with `data()`, here and
@@ -262,7 +266,7 @@ def __call__(self, inputs, state=None):
     return outputs, state
 ```
 
-We feed the cell a minibatch of two sequences of 100 steps each.
+Let us test the cell on a dummy minibatch of two 100-step sequences.
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-3}
 batch_size, num_inputs, num_hiddens, num_steps = 2, 16, 32, 100
@@ -271,9 +275,9 @@ X = d2l.ones((num_steps, batch_size, num_inputs))
 outputs, state = rnn(X)
 ```
 
-We expect one state per step, each with the shape (`batch_size`,
-`num_hiddens`) of the state the cell started from. The helper below checks
-a shape; later sections use it as well.
+We expect one hidden state per time step, each matching the
+(`batch_size`, `num_hiddens`) shape of the initial state. The `check_shape`
+helper below verifies tensor shapes and will be reused in later sections.
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-4}
 def check_shape(a, shape):  #@save
@@ -287,37 +291,35 @@ check_shape(state, (batch_size, num_hiddens))
 
 ### The Embedding Table
 
-The cell consumes vectors, but our data pipeline delivers integer token ids.
-As in :numref:`sec_rnn`, an embedding lookup bridges the gap: a trainable
-table $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ represents
-token $i$ by its $i^\textrm{th}$ row, a $d$-dimensional vector that
-gradient descent adjusts along with every other parameter. Older treatments
-used a *one-hot encoding* instead: token $i$ becomes the
-length-$|\mathcal{V}|$ vector with a single 1 in position $i$, and the
-input weights multiply that vector. Since multiplying a one-hot vector by a
-matrix selects a row of it (:numref:`sec_rnn`), this is nothing but a
-lookup, computed the expensive way. With a vocabulary of 27 characters
-nobody minds. With our BPE vocabulary of 1,027 ids, each step would multiply
-a vector that is zero everywhere but in one entry.
+Because our recurrent cell expects continuous vectors while the data pipeline
+supplies integer token ids, we bridge the two with a learned embedding table
+$\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ (:numref:`sec_rnn`),
+mapping token $i$ to its $i^\textrm{th}$ row and updating those vectors
+jointly with the rest of the network. Classical presentations often represent
+token $i$ instead as a *one-hot vector* of length $|\mathcal{V}|$ with a
+single 1 in slot $i$ and multiply it by the input weight matrix. As noted in
+:numref:`sec_rnn`, multiplying a one-hot vector by a matrix merely selects one
+row—the exact same operation as a table lookup, only far more wasteful. With
+27 characters the overhead is negligible, but with our 1,027-token BPE
+vocabulary it would spend almost all its work multiplying by zeros.
 
-The `RNNLMScratch` class assembles the language model around a cell `rnn`:
-the embedding table `E` on the input side and an output layer (`W_hq`,
-`b_q`) on the output side. The embedding dimension is read off the cell's
-`num_inputs`, since the cell consumes what the embedding produces. The
-constructor also takes two dropout rates. Both are zero for now, and we
-return to them when the model overfits. The embedding rows start at unit
-scale, as the 1s of a one-hot encoding would, while the output weights
-start at scale $\sigma$ and the output bias at zero. The logits of the
-untrained model are then close to zero, its next-token distribution is
-close to uniform, and its perplexity is close to $|\mathcal{V}|$. This is
-a prediction we can check before training.
+The `RNNLMScratch` class wraps a recurrent cell `rnn` with an embedding table
+`E` on the input side and a linear projection (`W_hq`, `b_q`) on the output
+side, reading the embedding dimension directly from `rnn.num_inputs`. It also
+accepts two dropout rates—left at zero for our first baseline and turned on
+shortly to curb overfitting. Embedding rows are initialized at unit scale
+(matching the scale of one-hot inputs), while output weights are drawn at
+scale $\sigma$ with zero bias. Consequently, an untrained model starts with
+near-zero logits, an almost uniform predictive distribution, and an initial
+perplexity close to $|\mathcal{V}|$—a clean sanity check we can verify before
+running a single gradient step.
 
-The model inherits from `Classifier` the cross-entropy
-loss, averaged over all tokens of a minibatch. Its validation step returns
-only this loss, since the token accuracy that `Classifier` would add is not
-what we monitor. The mean cross-entropy is the logarithm of the perplexity
-(:numref:`subsec_perplexity`), so the validation perplexity is the
-exponential of the trainer's mean validation loss.
+Because `RNNLMScratch` inherits from `d2l.Classifier`, it reuses the standard
+cross-entropy loss averaged over every token in a minibatch. We override
+`validation_step` to return only that loss rather than token accuracy; since
+mean cross-entropy is the logarithm of perplexity
+(:numref:`subsec_perplexity`), exponentiating the trainer's mean validation
+loss immediately yields validation perplexity.
 
 ```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
 %%tab mxnet
@@ -412,10 +414,10 @@ class RNNLMScratch(d2l.Classifier):  #@save
         return self.loss(self(*batch[:-1]), batch[-1])
 ```
 
-The minibatches sampled by our data pipeline have shape (`batch_size`,
-`num_steps`). The `embedding` method looks up each id and transposes the
-result to (`num_steps`, `batch_size`, `num_inputs`), the layout whose
-outermost axis the cell's forward loop walks over.
+Because our data loader emits minibatches of shape (`batch_size`,
+`num_steps`), the `embedding` method transposes the token indices before
+indexing `E`, producing a tensor of shape (`num_steps`, `batch_size`,
+`num_inputs`) whose outermost axis aligns with the cell's time loop.
 
 ```{.python .input #rnn-implementation-from-token-ids-to-embeddings-2}
 %%tab mxnet
@@ -451,16 +453,15 @@ def embedding(self, X):
 
 ### The Output Layer
 
-The last of the three equations turns each hidden state into scores for
-the next token. The output layer computes $\mathbf{O}_t = \mathbf{H}_t
-\mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}$ for every time step, with
-$\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$. Since
-the same weights serve every step, one matrix product handles all of them:
-the method stacks the states of all steps into a (`batch_size`,
-`num_steps`, `num_hiddens`) tensor and multiplies it by
-$\mathbf{W}_{\textrm{hq}}$, which gives logits of shape (`batch_size`,
-`num_steps`, `vocab_size`) that line up with the target array. The
-`forward` method chains the three parts together.
+The final equation converts each hidden state into vocabulary logits via
+$\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}$,
+where $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$.
+Because all time steps share the same output projection, we can compute every
+step in a single batched matrix multiplication by stacking the per-step states
+into a (`batch_size`, `num_steps`, `num_hiddens`) tensor, producing logits of
+shape (`batch_size`, `num_steps`, `vocab_size`) aligned directly with the
+target array. The `forward` method chains embedding lookup, recurrent cell,
+optional dropout, and output projection together.
 
 ```{.python .input #rnn-implementation-the-output-layer-1}
 %%tab mxnet
@@ -531,9 +532,9 @@ def forward(self, X, state=None):
     return self.output_layer(self.drop(H))
 ```
 
-A minibatch of token ids of shape (`batch_size`, `num_steps`) should come
-out as one vector of logits per position. We check this with a vocabulary
-of 1,024 ids, about the size of the one we train on.
+Passing a minibatch of shape (`batch_size`, `num_steps`) should therefore
+return one logit vector per token position. Let us verify this shape using a
+1,024-token vocabulary.
 
 ```{.python .input #rnn-implementation-the-output-layer-2}
 %%tab pytorch, mxnet, tensorflow
@@ -551,49 +552,52 @@ check_shape(outputs, (batch_size, num_steps, 1024))
 
 ## Gradient Clipping
 
-A recurrent network is deep in time. Backpropagating through $T$ time
-steps multiplies $T$ Jacobians of the same transition, one per step, and
-as in a deep feedforward network such a product can shrink or grow
-exponentially with its length. :numref:`sec_bptt` analyzes both cases.
-Vanishing gradients limit what the model can learn, but they do not break
-training. Exploding gradients can: when the product grows, an occasional
-gradient is many times longer than the typical one. Below, we train the
-same model with a remedy for them and without it.
+Because an unrolled RNN is deep in time, backpropagating across $T$ steps
+multiplies $T$ copies of the transition Jacobian, and—just as in deep
+feedforward networks—such long products can shrink or grow exponentially
+with $T$ (a phenomenon we analyze rigorously in :numref:`sec_bptt`). While
+vanishing gradients restrict how far into the past a model can learn without
+destabilizing training, exploding gradients can derail optimization
+outright, producing occasional gradient spikes orders of magnitude larger than
+typical updates.
 
-To see what a large gradient threatens, consider the length of one update.
-A gradient step with learning rate $\eta$ moves the parameters
-$\mathbf{w}$ to $\mathbf{w} - \eta\mathbf{g}$, a distance
+To understand the danger, consider the size of a single SGD update with
+learning rate $\eta$: moving from $\mathbf{w}$ to
+$\mathbf{w} - \eta\mathbf{g}$ shifts the parameters by Euclidean distance
 
 $$\|(\mathbf{w} - \eta\mathbf{g}) - \mathbf{w}\| = \eta\|\mathbf{g}\|.$$
 
-Thus the length of a step grows with the norm of the gradient. Gradient
-descent works because, over a short step, the loss is close to its linear
-approximation $f(\mathbf{w}) - \eta\|\mathbf{g}\|^2$, which decreases.
-When $\|\mathbf{g}\|$ spikes, the step leaves the region where that
-approximation holds, and the loss can jump instead of falling. One such
-step can undo the progress of many updates. What can we do about it?
-Shrinking $\eta$ until even the rare spike is safe would slow every step to
-protect against a few. *Gradient clipping* leaves $\eta$ alone and
-instead caps the norm on the occasions it is too large,
-projecting $\mathbf{g}$ onto the ball of radius $\theta$:
+Gradient descent succeeds because over sufficiently small steps the loss is
+well approximated by its first-order Taylor expansion
+$f(\mathbf{w}) - \eta\|\mathbf{g}\|^2$, which is guaranteed to decrease.
+When $\|\mathbf{g}\|$ suddenly spikes, however, the update overshoots the
+region where that linear approximation holds, and the loss can jump sharply
+upward, undoing dozens of productive updates in a single step. Lowering $\eta$
+across the board to survive rare spikes would slow training to a crawl.
+*Gradient clipping* avoids that penalty by leaving $\eta$ untouched and
+instead capping the global gradient norm whenever it exceeds a threshold
+$\theta$, projecting $\mathbf{g}$ onto the ball of radius $\theta$:
 
 $$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$
 :eqlabel:`eq_grad_clipping`
 
-A gradient with norm at most $\theta$ passes unchanged; a longer one is
-scaled down to norm $\theta$ and keeps its direction. With $\theta = 1$, a
-gradient of norm 10 becomes one tenth of itself. The norm
-$\|\mathbf{g}\|$ is the Euclidean norm of the gradients of all parameters
-of the model, stacked into one vector.
+Any gradient with $\|\mathbf{g}\| \leq \theta$ passes through untouched,
+whereas a larger gradient is rescaled to norm $\theta$ while preserving its
+direction (for example, with $\theta = 1$, a gradient of norm 10 is shrunk by
+a factor of ten). Here $\|\mathbf{g}\|$ denotes the Euclidean norm computed
+jointly across all trainable parameters of the model concatenated into one
+vector.
 
-Note that this is a rather crude device. Whenever it acts, clipping changes
-the update, so training no longer follows the gradient, and its effect on
-convergence is hard to analyze. It is standard nevertheless: recurrent
-networks and large transformers alike are trained with it.
+Admittedly, gradient clipping is a somewhat blunt heuristic: whenever it
+triggers, the rescaled step no longer equals the true stochastic gradient,
+complicating formal convergence analysis. Even so, it is a workhorse of modern
+deep learning, relied on routinely when training both recurrent networks and
+large Transformers.
 
-Clipping belongs to the trainer. Whenever a positive `gradient_clip_val` is
-set, `d2l.Trainer` (:numref:`sec_oo-design`) clips the gradients after
-it has computed them and before the parameter update.
+Clipping belongs naturally inside the training loop: whenever
+`gradient_clip_val` is positive, `d2l.Trainer` (:numref:`sec_oo-design`)
+rescales the gradients right after backpropagation and before applying the
+optimizer update.
 
 :begin_tab:`mxnet, pytorch`
 The method below rescales each parameter's gradient in place.
@@ -673,38 +677,39 @@ def prepare_optimizer(self, model):
 
 ## Training
 
-The `d2l.TimeMachine` pipeline of :numref:`sec_language-model` downloads the
-corpus, trains the BPE tokenizer on it, and serves minibatches of token-id
-windows together with their shift-by-one targets. The corpus is 65,741 BPE
-tokens long, and training window $i$ starts at token $i$. The pipeline
-drops the 32 windows that straddle the split, so that no validation token
-is ever a training target. By default the pipeline trains on the first
-50,000 windows, most of the novella, and validates on the following 5,000.
+The `d2l.TimeMachine` data module from :numref:`sec_language-model` downloads
+the novella, trains our 1,024-token BPE tokenizer, and yields minibatches of
+fixed-length windows paired with their one-step-shifted targets. The full
+encoded corpus spans 65,741 BPE tokens, with training window $i$ beginning at
+token $i$. To prevent leakage, the loader discards the 32 windows straddling
+the train–validation boundary so that no validation token ever appears as a
+training target, leaving the first 50,000 windows for training and the next
+5,000 for validation.
 
 ```{.python .input #rnn-implementation-training-1}
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 ```
 
-Every window is $T = 32$ tokens long, and every forward pass starts from a
-zero state. Neither information nor gradient crosses a window boundary, so
-gradients flow backward through at most 32 steps: the chain of dependencies
-is *truncated*. Whatever the novella does over longer ranges, the model can
-learn it only insofar as it helps within a window. :numref:`sec_bptt`
-examines what this compromise gives up, and what changes when the state is
-carried from one window into the next.
+Each window spans $T = 32$ tokens and resets the hidden state to zero at the
+start of every forward pass. Because neither hidden activations nor gradients
+cross window boundaries, backpropagation is *truncated* to at most 32 steps;
+any longer-range structure in the novella can be learned only to the extent
+that it manifests within a 32-token window. In :numref:`sec_bptt`, we examine
+what this truncation sacrifices and how carrying states across windows alters
+training.
 
 ### A Plain Model
 
-We first train the model as built so far, the one whose parameters
-:numref:`sec_rnn` counted: an embedding of dimension $d = 64$ and a cell
-with $h = 128$ hidden units, for ten epochs of minibatch SGD at learning
-rate 4, clipping gradients to norm $\theta = 1$, with no dropout. A
-learning rate of 4 is large by the standards of the earlier chapters. Note
-what it means together with clipping: whenever clipping acts, the update
-has length $\eta\theta = 4$, whatever the gradient was. As in
-:numref:`sec_rnn`, training is teacher-forced, so every step conditions on
-the true prefix from the corpus. We keep a copy of the embedding table, to
-see later how much training changes it.
+We begin by training the exact baseline whose parameters we tallied in
+:numref:`sec_rnn`—embedding dimension $d = 64$, hidden width $h = 128$, and no
+dropout—for ten epochs of minibatch SGD with learning rate $\eta = 4$ and
+gradient clipping at $\theta = 1$. Although $\eta = 4$ looks unusually large
+compared with earlier chapters, remember how it interacts with clipping:
+whenever clipping activates, the total parameter update has Euclidean length
+$\eta\theta = 4$ regardless of the raw gradient magnitude. Training uses
+teacher forcing (:numref:`sec_rnn`), conditioning every step on the ground-truth
+prefix. Before starting, we save a copy of the initial embedding table so we
+can measure later how much SGD actually moves it.
 
 ```{.python .input #rnn-implementation-training-2}
 %%tab pytorch, mxnet, jax
@@ -741,28 +746,28 @@ print(f'initial validation perplexity {ppl_init:.0f}')
 trainer.fit(model, data)
 ```
 
-Before training, the validation perplexity is close to the vocabulary size
-of 1,027, as predicted for a model that knows nothing yet. The board plots
-the mean cross-entropy per token, the logarithm of the perplexity. Both
-curves fall fast during the first epochs. Then they separate: the training
-loss keeps falling, while the validation loss stops improving over the last
-few epochs. After ten epochs the training perplexity is less than half the
-validation perplexity. This should not surprise us. With 222,915 parameters
-for 50,000 training tokens, more than four parameters per token, the model
-has started to memorize its training text. The final validation perplexity
-is the exponential of the last validation loss.
+Before the first gradient step, validation perplexity sits right near the
+vocabulary size of 1,027—just as expected for a near-uniform predictor. As
+training proceeds, both curves (plotting mean per-token cross-entropy, i.e.,
+log perplexity) drop rapidly over the opening epochs before diverging: the
+training loss keeps decreasing while validation loss plateaus, ending after
+ten epochs with training perplexity less than half the validation perplexity.
+With 222,915 parameters fitted to 50,000 training tokens—over four parameters
+per token—this overfitting is unsurprising: the network has begun memorizing
+its training passages. Exponentiating the final validation loss gives the
+model's validation perplexity.
 
 ```{.python .input #rnn-implementation-training-4}
 ppl_plain = math.exp(trainer.history['val_loss'][-1])
 print(f'validation perplexity {ppl_plain:.1f}')
 ```
 
-How much of this result do we owe to clipping? We called it a crude
-device, so let us see what happens without it. We train fresh copies of
-the plain model with the same settings, except that the gradients are not
-clipped. A single run could be a lucky or an unlucky draw, so we train
-three, each with its own random initialization and data order, and print
-the highest validation perplexity of each run next to its final one.
+How much of this smooth convergence do we owe to gradient clipping? To test
+what clipping actually prevents, we retrain fresh instances of the exact same
+model with clipping disabled. Because any single unclipped run might get
+lucky or unlucky, we run three independent trials with fresh random
+initializations and data shuffles, recording both the worst intermediate
+validation perplexity and the final value for each run.
 
 ```{.python .input #rnn-implementation-a-plain-model-2}
 %%tab pytorch, mxnet, jax
@@ -794,9 +799,9 @@ print(f'{sum(f > 2 * ppl_plain for f in finals)} of 3 runs end above twice '
       f'{max(finals):.3g}')
 ```
 
-The validation perplexity after each epoch shows whether, when and how
-far each run jumps. We plot it on a logarithmic scale, with the clipped
-run for comparison.
+Plotting the epoch-by-epoch validation perplexity on a logarithmic axis
+alongside the clipped baseline reveals exactly when and how violently the
+unclipped runs destabilize.
 
 ```{.python .input #rnn-implementation-a-plain-model-4}
 ppl_clipped = [math.exp(loss) for loss in trainer.history['val_loss']]
@@ -806,28 +811,27 @@ d2l.plot(list(range(1, 11)), [ppl_clipped] + ppl_runs, 'epoch',
          legend_loc='outside', figsize=(5, 2.5))
 ```
 
-Without clipping, training is erratic. At some epoch the loss jumps instead
-of falling, as the argument for clipping warned: the validation perplexity
-climbs, in some runs past the 1,027 of the untrained model, and then falls
-back only part of the way, if at all. These are the spikes in the plot,
-which the clipped curve does not have. Most runs end well above the clipped
-model: of 32 unclipped runs per framework outside the notebook, more than
-eight in ten ended at more than twice its perplexity. Now and then a run
-escapes the jumps and ends as low as the clipped one, so whether an
-unclipped run succeeds is a matter of chance. With clipping it is not:
-every clipped run ends at about 90 to 100. Crude or not, clipping is what
-makes a learning rate of 4 usable.
+Without clipping, training becomes highly erratic. Mid-training, a gradient
+spike drives the loss sharply upward—in some runs sending validation
+perplexity past the 1,027 baseline of an untrained model—and subsequent
+epochs recover only partially, if at all. None of these spikes appear in the
+clipped curve. Across 32 unclipped trials per framework run outside this
+notebook, more than eight in ten finished at over twice the clipped model's
+perplexity; only an occasional lucky run avoids a spike and matches the
+clipped curve. With clipping enabled, by contrast, convergence is completely
+reliable, consistently finishing around perplexity 90 to 100. Simple as it
+is, gradient clipping is what makes training at learning rate 4 viable.
 
-A perplexity of about 90 to 100 may look poor next to the perplexity of
-about 6
-of the character-level trigram in :numref:`sec_language-model`. The two
-numbers cannot be compared: our model chooses among 1,027 BPE tokens per
-step, a character model among 27 characters. Bits per byte
-(:numref:`subsec_bits-per-byte`, :eqref:`eq_bpb`) removes the dependence on
-the tokenizer: it divides the total surprisal of a text by its length in
-bytes, which here comes to $\log_2 \textrm{ppl}$ divided by the average
-number of bytes per token. We measure the bytes per token on the 5,000
-consecutive validation tokens that start the validation windows.
+At first sight, a perplexity of 90 to 100 might seem disappointing next to
+the character-level trigram's perplexity of roughly 6 in
+:numref:`sec_language-model`. Remember, however, that perplexities across
+different vocabularies are not directly comparable: our RNN chooses among
+1,027 BPE tokens per step, whereas the character model chooses among just 27
+characters. Switching to bits per byte (:numref:`subsec_bits-per-byte`,
+:eqref:`eq_bpb`) removes the tokenization dependence by dividing per-token
+surprisal ($\log_2 \textrm{ppl}$) by the average number of UTF-8 bytes per
+token, measured here across the 5,000 consecutive tokens starting the
+validation windows.
 
 ```{.python .input #rnn-implementation-training-5}
 ids = d2l.numpy(data.X[data.num_train:data.num_train+data.num_val, 0]).tolist()
@@ -836,15 +840,15 @@ print(f'{bytes_per_token:.2f} bytes/token, '
       f'{math.log2(ppl_plain) / bytes_per_token:.2f} bits per byte')
 ```
 
-Each token covers about 2.8 bytes of text, and the plain model needs about
-2.3 to 2.4 bits per byte.
+Each BPE token spans roughly 2.8 bytes of text, placing our plain RNN at
+about 2.3 to 2.4 bits per byte.
 
 ### Embeddings under SGD
 
-Overfitting is one problem of the plain model. A second one is hidden in
-the embedding table, and it takes a measurement to find it: how far did
-each row of $\mathbf{E}$ move during training, relative to its initial
-length?
+Overfitting is only the first weakness of this baseline. A second, subtler
+issue hides inside the embedding table, and spotting it requires a direct
+measurement: how far did each row of $\mathbf{E}$ actually move over ten
+epochs, expressed as a fraction of its initial norm?
 
 ```{.python .input #rnn-implementation-embeddings-under-sgd-1}
 %%tab mxnet
@@ -866,31 +870,31 @@ change = (((E_final - E_init) ** 2).sum(1) / (E_init ** 2).sum(1)) ** 0.5
 print(f'mean change of an embedding row: {change.mean():.1%} of its length')
 ```
 
-The rows barely move. Each row receives a gradient only from the positions
-where its token occurs, and the loss averages over all $1{,}024 \times 32 =
-32{,}768$ positions of a minibatch, so a token that occurs a few times
-contributes a few parts in 32,768 of the gradient. A step of SGD moves
-every parameter by the learning rate times its gradient, the same rate for
-all, which is far too small for rows that start at unit scale. Rows of
-tokens that never occur in the training text do not move at all. This is an
-awkward finding. The table that was meant to let the model choose a vector
-for each token is, in this configuration, little more than a fixed random
-projection.
+Remarkably, the embedding rows have scarcely budged. Because row $i$ receives
+a gradient only from positions where token $i$ appears, and the minibatch
+loss averages across all $1{,}024 \times 32 = 32{,}768$ token positions, a
+token occurring only a handful of times per batch contributes only a tiny
+fraction of the gradient. Plain SGD applies the exact same global learning
+rate to every parameter, which is far too small to shift unit-scale embedding
+rows meaningfully (and tokens absent from training receive zero updates
+altogether). As a result, the table intended to learn rich semantic token
+representations behaves here almost like a frozen random projection.
 
-We do not cure this here. We work around it. The input weights
-$\mathbf{W}_{\textrm{xh}}$ do learn, so a wider embedding helps even if
-its rows stay close to random: with $d = 512$ instead of 64,
-$\mathbf{W}_{\textrm{xh}}$ has more random features of each token to
-combine. Dropout (:numref:`sec_dropout`), applied to the embeddings at rate
-0.1 and to the hidden states before the output layer at rate 0.5, counters
-the overfitting.
+Rather than switching optimizers right away, we can work around this
+bottleneck within SGD itself. Because the input weight matrix
+$\mathbf{W}_{\textrm{xh}}$ *does* receive dense gradients at every token and
+learns readily, widening the embedding from $d = 64$ to $d = 512$ gives
+$\mathbf{W}_{\textrm{xh}}$ a far richer set of random token features to
+combine. Pairing this wider embedding with dropout (:numref:`sec_dropout`)—at
+rate 0.1 on the embeddings and 0.5 on the hidden states feeding the output
+layer—directly tackles overfitting as well.
 
 ### A Wider Embedding with Dropout
 
-This is where the two dropout rates of `RNNLMScratch` come into use. The
-new model has 740,355 parameters, most of them in the
-$1{,}027 \times 512$ embedding table; everything else in the training
-procedure stays the same.
+Putting the two dropout arguments of `RNNLMScratch` to work, we now train a
+740,355-parameter model (with most parameters sitting in the
+$1{,}027 \times 512$ embedding table), keeping all other training settings
+identical.
 
 ```{.python .input #rnn-implementation-a-wider-embedding-with-dropout-1}
 %%tab pytorch, mxnet, jax
@@ -918,23 +922,23 @@ print(f'validation perplexity {ppl_scratch:.1f}, '
       f'{math.log2(ppl_scratch) / bytes_per_token:.2f} bits per byte')
 ```
 
-The validation perplexity falls to about 60, against about 90 to 100 for
-the plain model; in bits per byte, about 2.1 against 2.3 to 2.4. The training
-loss on the board is measured with dropout active, which raises it, so it
-no longer shows the gap between training and validation directly. The
-validation loss is still at or near its lowest after ten epochs.
+Validation perplexity drops dramatically—from roughly 90–100 down to around
+60, lowering bits per byte from 2.3–2.4 to roughly 2.1. Note that because the
+plotted training loss is evaluated with dropout active (which inflates it),
+the two curves no longer reflect the raw generalization gap directly, and the
+validation loss remains at or near its minimum through the tenth epoch.
 
 ### Comparison with Kneser–Ney
 
-Is this any good? The fair opponent is the best count-based model of
-:numref:`sec_language-model`, interpolated Kneser–Ney smoothing
-(:numref:`subsec_kneser-ney`). `d2l.kneser_ney` counts the $n$-grams of a
-training sequence and returns the natural log-probability of every token of
-another sequence, given the tokens before it. Both models must see the same
-text, so we count the $n$-grams of the RNN's 50,000 training tokens, in the
-same BPE tokenization. We score the validation tokens from the 33rd on,
-`val[32:]`, so that the RNN, below, can read a full window of 32 validation
-tokens before each of them.
+How strong is 2.1 bits per byte in absolute terms? The natural benchmark is
+our best count-based model from :numref:`sec_language-model`, interpolated
+Kneser--Ney smoothing (:numref:`subsec_kneser-ney`). Recall that
+`d2l.kneser_ney` counts $n$-grams on a training stream and returns per-token
+log-probabilities on an evaluation stream. To keep the comparison strictly
+apples-to-apples, we estimate Kneser--Ney on the exact same 50,000 BPE
+training tokens seen by the RNN, and score the validation tokens starting from
+`val[32:]` so that the RNN has a full 32-token context preceding every
+evaluated token.
 
 ```{.python .input #rnn-implementation-training-6}
 first_tokens = d2l.numpy(data.X[:, 0]).tolist()  # First token of each window
@@ -948,15 +952,15 @@ for n, lp in lp_kns.items():
 lp_kn = lp_kns[3]
 ```
 
-The trigram is much better than the bigram, and a fourth token of context
-helps it little more. We now score the same tokens `val[32:]` with the RNN,
-each as the last target of a validation window, so that the RNN has read
-the 32 tokens before it: validation window $j$ starts at `val[j]`, and its
-last target is `val[j + 32]`. This treats the RNN more kindly than the
-validation loss on the board, which averages over all 32 positions of a
-window, the first of which see only one or a few tokens of context. The
-cell computes the log-probability of every target of every window; we use
-the last column now and the others shortly.
+Moving from bigrams to trigrams yields a substantial gain, whereas a fourth
+context token helps little further. Next, we score those exact same tokens
+`val[32:]` with our trained RNN, evaluating each token as the final target of
+its 32-token validation window (window $j$ begins at `val[j]` and ends with
+target `val[j + 32]`). Note that this is slightly more favorable to the RNN
+than the board's validation loss, which averages across all 32 window
+positions including the earliest ones with minimal context. Computing the full
+per-position log-probability matrix now also lets us inspect every earlier
+position right afterward.
 
 ```{.python .input #rnn-implementation-comparison-with-kneser-ney-1}
 start, stop = data.num_train, data.num_train + data.num_val - 32  # val[32:]
@@ -1001,18 +1005,15 @@ logp = d2l.numpy(jnp.concatenate([  # Log-probability of every target
     for i in range(0, len(X_val), 1024)]))
 ```
 
-Before we look at the result, note that the two models have very
-different strengths. The RNN sees 32 tokens of context but learns only from
-what it has seen in a few hundred SGD steps. The counts see two tokens but
-remember every trigram of the training text. It is therefore natural to
-combine them.
-Linear interpolation, $\lambda P_\textrm{RNN} + (1 - \lambda)
-P_\textrm{KN}$, is how :citet:`Mikolov.Kombrink.Burget.ea.2011` combined
-their RNN language models with Kneser–Ney models, choosing $\lambda$ on
-held-out data. We fix $\lambda = 0.5$ instead of tuning it, close to the
-best weight for this pair. A weighted average of two probability
-distributions is a probability distribution, so the mixture is a language
-model too.
+Before inspecting the final numbers, notice how complementary the two models
+are: the RNN can attend to 32 tokens of history through continuous weights
+learned over a few hundred SGD steps, whereas Kneser--Ney looks back only two
+tokens yet memorizes every trigram in the corpus exactly. Combining them by
+linear interpolation,
+$\lambda P_\textrm{RNN} + (1 - \lambda) P_\textrm{KN}$—the exact ensemble
+strategy used by :citet:`Mikolov.Kombrink.Burget.ea.2011`—produces a valid
+next-token distribution whenever $0 \leq \lambda \leq 1$. Here we simply fix
+$\lambda = 0.5$, close to the optimal balance for this pair.
 
 ```{.python .input #rnn-implementation-comparison-with-kneser-ney-3}
 lp_rnn = list(logp[:, -1])  # The last target of each window: val[32:]
@@ -1026,24 +1027,24 @@ better = np.mean(np.array(lp_rnn) > np.array(lp_kn))
 print(f'the RNN is the more confident model on {better:.0%} of the tokens')
 ```
 
-After all this effort, the RNN alone does not beat a trigram. It comes
-within a few hundredths of a bit per byte of Kneser–Ney, on the wrong side.
-(Both numbers are higher than those in the table of
-:numref:`subsec_bits-per-byte`, which was computed on lowercased text with
-letters only. Bits per byte compares tokenizers on the same text, and on
-the raw text of this section the Kneser–Ney trigram needs about 2.1.) The
-mixture is the more interesting number: it is better than the trigram by
-about 0.06 bits per byte, which could not happen if the two models
-assigned the same probabilities to the same tokens. Indeed, each is the
-more confident of the two on about half of the tokens. The two models are
-about equally good, and they are wrong in different places.
+Even with dropout and a wider embedding, the standalone RNN still falls a few
+hundredths of a bit per byte short of the Kneser--Ney trigram. (Both figures
+sit slightly higher than in :numref:`subsec_bits-per-byte` because that table
+used lowercased, letters-only text, whereas here we model raw, unnormalized
+prose where Kneser--Ney achieves roughly 2.1 bits per byte.) Far more
+revealing is the mixture: averaging the two distributions beats the
+Kneser--Ney trigram by roughly 0.06 bits per byte—impossible unless the two
+models make genuinely different predictions. Sure enough, each model assigns
+higher probability than the other on roughly half of all validation tokens:
+they achieve comparable overall accuracy, yet fail on different passages.
 
-Why does a model that reads 32 tokens do no better than one that reads two?
-Before we speculate, we can measure how much of its context the RNN uses.
-In every validation window the first target is predicted from one token of
-context, the second from two, and so on. Averaging the surprisal at each
-position over all validation windows gives the loss as a function of the
-context the model had, which we draw next to the Kneser–Ney trigram.
+Still, why does a recurrent network reading 32 tokens fail to outperform a
+count table that sees only two? Rather than guessing, we can measure directly
+how much context the trained RNN actually exploits. Inside each validation
+window, position 1 predicts from a single context token, position 2 from two,
+and so on up to 32. Averaging surprisal across all validation windows at each
+position traces loss as a function of available context, which we plot against
+the Kneser--Ney trigram baseline.
 
 ```{.python .input #rnn-implementation-comparison-with-kneser-ney-4}
 bits = -logp.mean(0) / math.log(2) / bytes_per_token  # One per position
@@ -1056,33 +1057,34 @@ print('bits per byte with 1, 2, 3, 4, 8, 32 tokens of context:',
       [round(float(bits[k - 1]), 2) for k in (1, 2, 3, 4, 8, 32)])
 ```
 
-The first target of a window, predicted from a single token, costs the
-most, and the second and third much less. From about the fourth position on
-the curve is flat: a model that has read thirty tokens predicts no better
-than one that has read three. This answers the question. The trained RNN
-uses only the last few tokens of its window, about as many as the trigram
-sees, and so the two tie. Its state could carry information across all 32
-steps. Training did not teach it to.
+The diagnostic curve tells the entire story. Predicting from a single token
+incurs the highest cost, and adding the second and third tokens slashes
+surprisal sharply—yet beyond roughly the fourth token the curve goes
+completely flat: having read thirty tokens, the model predicts no more
+accurately than after reading three. In other words, although the hidden state
+*could* in principle carry information across all 32 steps, training only
+taught it to exploit the last few tokens—roughly the same effective horizon as
+the trigram, explaining why the two tie.
 
-One cause of the shortfall we have already met: SGD left the embedding
-table almost untrained. Adam (:numref:`sec_adam`), an optimizer that adapts
-the step to each parameter, moves the rows much further. Trained with it
-and with slightly stronger embedding dropout, the RNN alone edges past the
-trigram; an exercise asks you to try it.
+Part of this gap stems from optimization: as we saw above, vanilla SGD barely
+updates the embedding table. Switching to Adam (:numref:`sec_adam`), which
+adapts step sizes per parameter, moves embedding rows substantially further
+and allows the standalone RNN (with slightly stronger embedding dropout) to
+edge past Kneser--Ney—an experiment left to the exercises.
 
 ## Text Generation
 
-A trained language model can continue a prefix (:numref:`sec_rnn`). The
-`predict` method below first *warms up* on the prefix, feeding its tokens
-one at a time to build up a hidden state without emitting anything. It then
-generates `num_tokens` new tokens, each time turning the current logits
-$\mathbf{o}$ into a choice of next token and feeding that token back in as
-the next input.
+Once trained, a language model can generate text autoregressively from any
+prompt (:numref:`sec_rnn`). The `predict` method below proceeds in two
+stages: first it *warms up* the hidden state by stepping through the prefix
+tokens one by one without emitting predictions; then it generates `num_tokens`
+continuation tokens, converting each step's logit vector $\mathbf{o}$ into a
+chosen token and feeding that token right back in as the next input.
 
-By default the choice is *greedy*: the method takes the highest-scoring
-token at every step. With a positive `temperature` it samples from the
-softmax of the scaled logits instead, a rule we leave to
-:numref:`sec_decoding`.
+By default (`temperature=0.0`), selection is *greedy*, picking the single
+highest-scoring token at every step. Setting a positive `temperature` instead
+samples from the softmax of the temperature-scaled logits, a family of
+decoding methods we study in depth in :numref:`sec_decoding`.
 
 ```{.python .input #rnn-implementation-generating-text-1}
 %%tab mxnet
@@ -1168,9 +1170,9 @@ def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0):
     return tok.decode(outputs)
 ```
 
-We start with greedy decoding. The prefix is real text, not token ids: the
-tokenizer trained by the pipeline (`data.tokenizer`) encodes it on the way
-in and decodes the generated ids on the way out.
+Let us test greedy generation on a real English prompt; `data.tokenizer`
+encodes the string on the way in and decodes the generated token ids back into
+readable text.
 
 ```{.python .input #rnn-implementation-generating-text-2}
 %%tab mxnet, pytorch
@@ -1184,23 +1186,22 @@ d2l.print_wrapped(repr(model.predict('The Time Traveller', 50,
                                      data.tokenizer)))
 ```
 
-The continuation has the look of English for a few words, and then it
-often gets stuck. Greedy decoding is deterministic, and it tends to fall
-into a loop: once the state returns to a phrase it has already produced,
-the phrase comes back again and again. How to choose tokens better is the
-subject of :numref:`sec_decoding`.
+The generated passage starts out sounding plausibly like English for a few
+words before stalling into repetition. Because greedy decoding is purely
+deterministic, once the hidden state revisits a phrase it has just emitted, it
+cycles through that same phrase indefinitely. Designing decoding algorithms
+that escape such degenerate loops is the focus of :numref:`sec_decoding`.
 
 ## Concise Implementation
 :label:`sec_rnn-concise`
 
-Frameworks ship recurrent layers that bundle the cell and the loop over
-time steps into one optimized call. The `RNN` class below wraps the
-framework layer and keeps the interface of `RNNScratch`: it consumes a
-(`num_steps`, `batch_size`, `num_inputs`) tensor and an optional state, and
-returns the hidden states of all steps together with the final state. So
-that the two implementations train the same model, `RNN` also initializes
-the layer as `RNNScratch` does, with weights from $\mathcal{N}(0,
-\sigma^2)$ and zero biases.
+Modern deep learning frameworks provide optimized recurrent layers that fuse
+the cell computation and the time loop into fast low-level kernels. The `RNN`
+wrapper below exposes the exact same interface as `RNNScratch`—accepting a
+(`num_steps`, `batch_size`, `num_inputs`) tensor and optional state, and
+returning all hidden states alongside the final state—while matching our
+$\mathcal{N}(0, \sigma^2)$ weight initialization and zero biases so that both
+implementations train the identical model.
 
 :begin_tab:`mxnet`
 Gluon's recurrent layer keeps two bias vectors, one for the input term and
@@ -1307,13 +1308,13 @@ class RNN(nnx.Module):  #@save
         return outputs, H
 ```
 
-Because the interface is unchanged, the language model carries over by
-inheritance: `RNNLM` subclasses `RNNLMScratch` and swaps the hand-rolled
-embedding table and output layer for the framework's embedding and dense
-layers. Training, evaluation, and `predict` are all inherited. The new
-layers are initialized like their scratch counterparts, with unit-normal
-embedding rows, output weights from $\mathcal{N}(0, \sigma^2)$, and a zero
-output bias.
+Because the interface matches `RNNScratch` exactly, our high-level language
+model `RNNLM` simply subclasses `RNNLMScratch`, swapping out the raw tensor
+embedding and output projection for each framework's built-in embedding and
+linear layers while inheriting training, evaluation, and `predict` unchanged.
+We initialize both layers to match their scratch counterparts: unit-variance
+Gaussian embeddings, $\mathcal{N}(0, \sigma^2)$ output weights, and zero
+output biases.
 
 :begin_tab:`pytorch`
 `nn.Embedding` draws its rows from $\mathcal{N}(0, 1)$ by default; the
@@ -1404,7 +1405,8 @@ class RNNLM(d2l.RNNLMScratch):  #@save
         return d2l.swapaxes(self.linear(hiddens), 0, 1)
 ```
 
-We build the concise model with the settings of the wider scratch model.
+Let us instantiate the concise model with the exact hyperparameters of our
+wider scratch model and train it under the same settings.
 
 ```{.python .input #rnn-implementation-concise-implementation-3}
 %%tab pytorch, mxnet, jax
@@ -1421,16 +1423,16 @@ with d2l.try_gpu():
                   emb_dropout=0.1)
 ```
 
-Training is the same call as before, with the same hyperparameters.
+Running `trainer.fit` invokes the exact same training loop as before.
 
 ```{.python .input #rnn-implementation-concise-implementation-5}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-With the same initialization, data, and training, the concise model
-reaches about the same validation perplexity as the scratch model, and its
-greedy continuation gets stuck in the same way.
+Given identical initialization, data, and optimization settings, the concise
+model converges to essentially the same validation perplexity as `RNNLMScratch`
+and exhibits the same greedy repetition behavior.
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab pytorch, mxnet
@@ -1446,34 +1448,34 @@ pred = model.predict('The Time Traveller', 30, data.tokenizer)
 d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
-The framework layer runs the same recurrence in a single optimized call, so
-the rest of the book writes recurrent cells from scratch only to explain
-them, and trains with the framework layers.
+Because the framework layer executes the exact same recurrence inside a fused
+kernel, we will use from-scratch cells in the rest of the book solely for
+pedagogical clarity and rely on high-level layers for training.
 
-A tie with a trigram is less than the hidden state seemed to promise. The
-loss by position gave the immediate reason: the trained model uses only the
-last few tokens of its context. The deeper reason must lie in training. To
-learn that a token thirty steps back matters, the model needs a gradient
-that reaches thirty steps back, and that gradient passes through the same
-transition at every step. :numref:`sec_bptt` computes it, and then
-measures it in this very model.
+Still, tying a trigram model falls short of what a recurrent hidden state
+seemed to promise. Our position-by-position curve diagnosed the immediate
+symptom—the trained network relies on only the most recent few tokens of its
+32-token window—pointing toward a deeper obstacle in optimization. For a
+network to learn that a token thirty steps earlier matters, the error signal
+must survive backpropagation through thirty consecutive recurrent transitions.
+In :numref:`sec_bptt`, we derive those gradients analytically and measure them
+directly inside this trained model.
 
 ## Summary
 
-An RNN language model applies the same step at every position: it consumes
-a token and the previous state and returns logits and a new state of the
-same shape. The step is an embedding lookup, a tanh cell, and an output
-layer, and each framework's recurrent layer computes the same model as our
-tensor code. Training relies on two devices. Clipping the gradient norm
-bounds the change any one update makes. Without it, training at our
-learning rate is erratic: the perplexity jumps, in some runs past that of
-the untrained model, and most runs end well above the clipped one. Starting
-each window from a zero state truncates backpropagation at the window
-length. On *The Time Machine*, with a wide embedding and dropout, the RNN
-needs about 2.1 bits per byte, within a few hundredths of a Kneser–Ney
-trigram on the same text, and the average of the two models beats both. The
-loss by position shows why the RNN does no better: it uses only the last
-few tokens of its 32-token window. Greedy generation tends to fall into
+An RNN language model applies the same three-stage step at every position—an
+embedding lookup, a $\tanh$ recurrent cell, and a linear output projection—and
+framework-supplied recurrent layers execute this exact computation far more
+efficiently than an explicit Python loop. Stable training relies on two key
+mechanisms: global gradient-norm clipping bounds any single parameter step,
+preventing the erratic perplexity spikes that derail most unclipped runs at
+learning rate 4, while resetting the hidden state at each window boundary
+truncates backpropagation to the window length. On *The Time Machine*, a wider
+embedding paired with dropout brings the SGD-trained RNN to roughly 2.1 bits
+per byte—on par with an interpolated Kneser--Ney trigram, while their 50/50
+mixture outperforms both. Inspecting surprisal by window position reveals why
+the vanilla RNN stops there: it effectively exploits only the last few tokens
+of its 32-token context, and greedy generation quickly falls into repetitive
 loops.
 
 ## Exercises

@@ -771,11 +771,11 @@ print(f'ViT: {vit_params/1e6:.1f}M parameters, validation accuracy',
       ', '.join(f'{a:.3f}' for a in learned_runs))
 ```
 
-The CNN reaches about 94%, five points ahead of the ViT. The CNN ran once,
-so the yardstick for run-to-run noise comes from the ViT: its two runs with
-learned positions differed by a tenth of a point, and its two zero-position
-runs by under a point. A gap of five points lies far outside either. The
-validation curves show how the gap develops during training:
+The CNN reaches about 94%, five points ahead of the ViT. Each model ran
+twice from fresh weights, and the two runs of each agree to a tenth of a
+point. Against that yardstick a gap of five points is not an accident of
+the draw. The validation curves of the first run of each show how the gap
+develops during training:
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-3}
 %%tab pytorch, jax
@@ -783,11 +783,11 @@ d2l.plot(list(range(1, 11)), [vit_history['val_acc'], cnn_history['val_acc']],
          'epoch', 'validation accuracy', legend=['ViT', 'CNN'])
 ```
 
-The CNN leads from the first epoch. The gap is widest in the first few
-epochs, at about seven points, and narrows to about five by the end. Both
-curves flatten at the end because the cosine schedule takes the learning
-rate to zero, so these runs cannot say whether the ViT would catch up on a
-longer schedule; the published results below can.
+The CNN leads from the first epoch. The gap is widest in the first three
+epochs, where it reaches seven to ten points, and narrows to about five by
+the end. Both curves flatten at the end because the cosine schedule takes
+the learning rate to zero, so these runs cannot say whether the ViT would
+catch up on a longer schedule; the published results below can.
 
 At the same parameter count, data, recipe, and number of epochs, and at
 about the same computational cost, the CNN wins. The experiment measures
@@ -1368,6 +1368,8 @@ parameters, and the forward FLOPs?
 
 ::: {.slide title="The CNN Leads from the First Epoch and Ends About Five Points Ahead"}
 @!vision-transformer-a-convolutional-baseline-at-the-same-budget-3
+
+Two runs per model agree to a tenth of a point; the gap is about five.
 
 ::: {.d2l-note}
 One protocol, one dataset: the gap does not say which property of the CNN

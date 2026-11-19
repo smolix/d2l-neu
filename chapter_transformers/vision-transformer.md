@@ -776,9 +776,8 @@ print(f'ViT: {vit_params/1e6:.1f}M parameters, validation accuracy',
       ', '.join(f'{a:.3f}' for a in learned_runs))
 ```
 
-The CNN reaches about 94%, five points ahead of the ViT. Each model ran
-twice from fresh weights, and the two runs of each agree to a tenth of a
-point. Against that yardstick a gap of five points is not an accident of
+The CNN reaches about 94%, five points ahead of the ViT. The two runs of
+each model agree to a tenth of a point, and against that yardstick a gap of five points is not an accident of
 the draw. The validation curves of the first run of each show how the gap
 develops during training:
 
@@ -797,7 +796,7 @@ The losses tell more than the accuracies. In the progress plot of the
 CNN's first run, above, the training loss falls almost to zero, and the
 validation loss stops falling after four to six epochs and then creeps up
 while the accuracy still rises, a sign that the network grows more
-confident everywhere, also on the images it still gets wrong. Ten epochs
+confident in all its answers, the wrong ones included. Ten epochs
 are enough for the CNN to fit its 60,000 training images almost perfectly.
 The ViT's training loss in :numref:`subsec_vit-first-run` ends well above
 zero and not far below its validation loss, although dropout, which only
@@ -932,7 +931,7 @@ pretrained.
        representations of the 36 patches, and remove the “&lt;cls&gt;” token
        together with its position embedding. Train the model with the
        protocol of :numref:`subsec_vit-first-run`, and compare its
-       validation accuracy with `vit_acc`.
+       validation accuracy with the two runs in `learned_runs`.
     1. :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` report that the two
        readouts work about equally well but need different learning rates.
        Train both readouts at the learning rates $10^{-4}$ and $10^{-3}$
@@ -1084,7 +1083,7 @@ pretrained.
        of :numref:`subsec_vit-first-run`. Train again with
        $\mathcal{L}_\textrm{soft}$ at $\tau = 3$ for
        $\lambda \in \{0.1, 0.5\}$, and compare the three students with
-       `vit_acc`.
+       the two runs in `learned_runs`.
     1. For the undistilled `model` and for each student, compute the
        fraction of validation images on which its prediction differs from
        the teacher's, as in the disagreement analysis of

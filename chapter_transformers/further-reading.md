@@ -38,23 +38,32 @@ z-loss prevents, once the weight decay is low.
 
 ### Other Placements and No Normalization
 
-:numref:`fig_norm-taxonomy` drew four placements of the normalization. OLMo
-2 :cite:`OLMo.2025` uses a fifth: it normalizes the output of each branch
-before adding it to the stream, rather than its input. DeepNet
-:cite:`Wang.Ma.Dong.ea.2024` keeps the post-norm arrangement of
-:numref:`sec_transformer-block` but multiplies the stream by a constant
-larger than one before adding the branch, and scales down the branch's
-initialization; with these two changes, post-norm stacks of a thousand
-layers train. Dynamic
-tanh :cite:`Zhu.Chen.He.ea.2025` removes the normalization altogether: it
-replaces every LayerNorm by an elementwise $\tanh(\alpha x)$ with a learned
-scalar $\alpha$, so that no statistic is computed over the token. At the
-reported scales it matches normalized models in vision and language.
+:numref:`fig_norm-taxonomy` draws four placements of the normalization
+around one sublayer. :numref:`sec_transformer-block` compared the first
+two, post-LN and pre-LN, and its block uses pre-LN by default. Recent open
+models move the norm to the other side of the sublayer. OLMo 2
+:cite:`OLMo.2025` normalizes what each branch *writes* before adding it to
+the stream, and Gemma 3 :cite:`Gemma.Team.2025` normalizes each branch both
+before and after the sublayer; both also use QK-norm. Of the four, only
+post-LN normalizes the stream itself; the other three leave its identity
+path untouched.
 
 ![Four placements of normalization around one sublayer, with the residual stream running bottom to top; the FFN sublayer is treated the same way. Post-LN normalizes the stream itself after each addition, pre-LN normalizes what the branch reads, OLMo 2 normalizes what the branch writes, and Gemma 3 normalizes the branch on both sides. Only post-LN touches the stream's identity path.](../img/mdl-transformers-norm-taxonomy.svg)
 :label:`fig_norm-taxonomy`
 
-<!-- WRITER: fig_norm-taxonomy moved here from transformer-block.md (same SVG, same label and caption; receiving half of the move, structure.md 3.10). The block's OLMo 2/Gemma 3 paragraph (transformer-block.md, "Recent open models also place norms on the other side of a sublayer ... both also use QK-norm.") comes with it: merge it into this entry so that one entry owns all four placements (FR-2: "OLMo 2 uses a fifth" is false, OLMo 2 is the third panel of the figure; Gemma 3 is the fourth) and keep DeepNet and dynamic tanh (FR-7: dynamic tanh also has a learned per-channel scale and shift after the tanh). The figure's panel title "pre-LN (default)" means the default of d2l's block; say so, or refer to :numref:`sec_transformer-block` for it. The figure itself was rendered and checked (no label collisions, black text). -->
+DeepNet :cite:`Wang.Ma.Dong.ea.2024` keeps the post-norm arrangement but
+multiplies the stream by a constant larger than one before adding the
+branch, and scales down the branch's initialization; with these two
+changes, post-norm stacks of a thousand layers train. Dynamic tanh
+:cite:`Zhu.Chen.He.ea.2025` removes the normalization altogether: it
+replaces every LayerNorm by an elementwise $\boldsymbol{\gamma} \odot
+\tanh(\alpha \mathbf{x}) + \boldsymbol{\beta}$, with a learned scalar
+$\alpha$ and the per-channel scale $\boldsymbol{\gamma}$ and shift
+$\boldsymbol{\beta}$ that LayerNorm also has, so that no statistic is
+computed over the token. At the reported scales it matches normalized
+models in vision and language.
+
+<!-- WRITER: the OLMo 2/Gemma 3 paragraph moved here from transformer-block.md and was merged (FR-2 and FR-7 resolved in the code step); the figure's panel title "pre-LN (default)" is the default of d2l's block, as the first sentence says. Polish only. -->
 
 ### Initialization of Deep Stacks
 

@@ -923,10 +923,11 @@ for run in range(2):
                 math.log(d2l.lm_perplexity(model, data.val_dataloader())))
         curves[name].append(curve)
     dense, moe = curves['dense'][-1], curves['MoE'][-1]
-    ahead = next(i for i, (m, d) in enumerate(zip(moe, dense)) if m < d)
+    ahead = next((every * (i + 1) for i, (m, d) in enumerate(zip(moe, dense))
+                  if m < d), None)
     print(f'run {run + 1}: dense {dense[-1]:.3f}, MoE {moe[-1]:.3f}; '
-          f'MoE ahead from step {every * (ahead + 1)}, '
-          f'{evaluate_moe(model, data)[2]:.1%} dropped at the end')
+          + (f'MoE ahead from step {ahead}, ' if ahead else 'MoE never ahead, ')
+          + f'{evaluate_moe(model, data)[2]:.1%} dropped at the end')
 d2l.plot(list(range(every, num_steps + 1, every)),
          [curves['dense'][0], curves['MoE'][0]], 'step',
          'validation loss (nats)', legend=['dense', 'MoE'], fmts=('-', '--'))

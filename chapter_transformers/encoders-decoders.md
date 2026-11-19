@@ -348,7 +348,7 @@ print(f'loss at positions 0-3: {show(pos_loss[:4])}; 60-63: '
       f'{show(pos_loss[-4:])}; interior mean {pos_loss[interior].mean():.2f}')
 ```
 
-<!-- WRITER: new cell encoders-decoders-a-causal-control (both tabs). Development and notebook
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). new cell encoders-decoders-a-causal-control (both tabs). Development and notebook
 runs, 2026-11-18, 2,000 steps, constant AdamW 1e-3 as in the main cell. Interior (positions 16-47)
 of the bidirectional masked model: 1.44 to 1.79 over 22 runs (21 of them 1.44 to 1.64); the same
 encoder with a causal mask in every block, trained on the same masked objective: 2.07 to 2.14 over
@@ -820,7 +820,7 @@ match and the fraction of rows whose largest head-averaged weight falls on
 the true source position, and we plot one string's map from the least
 aligned run of each.
 
-<!-- WRITER: the cell is redesigned (structure 3.5 item 7; fallback (a) is kept as the second arm).
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). the cell is redesigned (structure 3.5 item 7; fallback (a) is kept as the second arm).
 Six runs per arm, the main seq2seq is run 1 of the "with" arm; the heat map shows one string's
 head-averaged map from the least aligned run of each arm (stated in the code and in the panel
 title, which carries its hit rate). All runs 2026-11-18, 300 steps, both tabs agree. Every run
@@ -842,7 +842,7 @@ alignment; with an encoder that can move letters first, a single map can mislead
 reverses (sec_what-attention-computes). Fix the figure reference (the prediction is in
 subsec_reversal-task). Delete the conditional paragraph below. -->
 
-```{.python .input #encoders-decoders-reading-the-alignment}
+```{.python .input #encoders-decoders-reading-the-alignment-1}
 %%tab pytorch
 def reversal_model(self_attention=True):
     model = EncoderDecoder(V + 1).to(device)
@@ -863,25 +863,9 @@ def alignment(model):
     maps = model.blks[0].cross_attention.attention_weights.mean(1)
     want = torch.arange(T - 1, -1, -1, device=device)  # row t: column T-1-t
     return match, (maps.argmax(-1) == want).float().mean(), maps[0].cpu()
-
-encoders = {'with': [seq2seq] + [reversal_model() for _ in range(5)],
-            'without': [reversal_model(False) for _ in range(6)]}
-maps, titles = [], []
-for name, models in encoders.items():
-    runs = [alignment(m) for m in models]
-    print(f'encoder {name} self-attention, six runs')
-    print('  exact match:', ' '.join(f'{m:.3f}' for m, _, _ in runs))
-    print('  rows on the true source position:',
-          ' '.join(f'{100 * h:.0f}%' for _, h, _ in runs))
-    _, hit, least = min(runs, key=lambda run: run[1])  # the least aligned
-    maps.append(least)
-    titles.append(f'{name}: {100 * hit:.0f}% of rows')
-d2l.show_heatmaps(torch.stack(maps)[None], xlabel='source position',
-                  ylabel='target position', titles=titles, figsize=(6, 3),
-                  cmap='Blues')
 ```
 
-```{.python .input #encoders-decoders-reading-the-alignment}
+```{.python .input #encoders-decoders-reading-the-alignment-1}
 %%tab jax
 def reversal_model(self_attention=True):
     model = EncoderDecoder(V + 1, rngs=nnx.Rngs(d2l.get_key()))
@@ -902,7 +886,10 @@ def alignment(model):
     maps = model.blks[0].cross_attention.attention_weights.mean(1)
     want = jnp.arange(T - 1, -1, -1)  # row t: column T-1-t
     return match, (maps.argmax(-1) == want).mean(), maps[0]
+```
 
+```{.python .input #encoders-decoders-reading-the-alignment}
+%%tab pytorch, jax
 encoders = {'with': [seq2seq] + [reversal_model() for _ in range(5)],
             'without': [reversal_model(False) for _ in range(6)]}
 maps, titles = [], []
@@ -915,7 +902,7 @@ for name, models in encoders.items():
     _, hit, least = min(runs, key=lambda run: run[1])  # the least aligned
     maps.append(least)
     titles.append(f'{name}: {100 * hit:.0f}% of rows')
-d2l.show_heatmaps(jnp.stack(maps)[None], xlabel='source position',
+d2l.show_heatmaps(d2l.stack(maps)[None], xlabel='source position',
                   ylabel='target position', titles=titles, figsize=(6, 3),
                   cmap='Blues')
 ```
@@ -1095,11 +1082,14 @@ time of further calls.
 
 ```{.python .input #encoders-decoders-the-cost-curve}
 %%tab pytorch
+torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
 perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256).to(device)
-perceiver.eval()
 # The comparison: the same two blocks over the full input, O(N^2)
 full = nn.Sequential(*[d2l.TransformerBlock(256, num_heads=4)
-                       for _ in range(2)]).to(device).eval()
+                       for _ in range(2)]).to(device)
+# Compiled and replayed as one CUDA graph per input length
+perceiver, full = (torch.compile(m.eval(), mode='reduce-overhead',
+                                 dynamic=False) for m in (perceiver, full))
 lengths, t_full, t_perc = [1024, 2048, 4096, 8192], [], []
 with torch.no_grad():
     for N in lengths:
@@ -1137,6 +1127,12 @@ d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
          legend=['self-attention encoder', 'perceiver encoder'])
 ```
 
+<!-- WRITER: since lib-review finding 5 the PyTorch tab compiles both encoders
+(torch.compile, mode='reduce-overhead', dynamic=False: one CUDA graph per N) and allows tf32, so
+the Perceiver's launch cost no longer hides its O(MN) growth. Dev run 2026-11-19 (PyTorch, unshared
+card): self-attention 0.41, 1.13, 3.14, 11.1 ms; Perceiver 0.24, 0.34, 0.52, 0.89 ms. The
+pre-compile numbers below are history; read the new ones from claims.md, and the PyTorch tab needs
+a one-sentence note that the cell compiles (as JAX jits). -->
 <!-- WRITER: direct runs 2026-11-18 on an unshared card (the cell now builds the Perceiver itself;
 the shape cell is gone). PyTorch, three repeats agree within 0.1 ms: self-attention 1.0, 1.4, 4.4,
 16.1 ms (ratios 1.5, 3.0, 3.7), Perceiver 1.43 to 1.52 ms at every N; in the notebook run 1.9, 1.8,

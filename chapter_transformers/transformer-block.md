@@ -184,7 +184,7 @@ record three quantities at every depth: the scale of the residual stream,
 how *distinct* the tokens remain from one another, and how much gradient
 each block's attention receives from a loss at the top. The numbers change
 little from one random draw to the next.
-<!-- WRITER: the measurement now has a third arm: `signal_stats(pre_norm, std=None)` draws every weight matrix from N(0, std^2) when std is given; the run cell uses std = 0.02, GPT-2's initialization (sec_gpt). Repeats (5 per tab, dev runs, plus the store) say: "changes little" holds within a factor of about 2 at the deepest post-LN point (spread at k=32 from 8e-5 to 1.7e-4), elsewhere to about 10%. -->
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). the measurement now has a third arm: `signal_stats(pre_norm, std=None)` draws every weight matrix from N(0, std^2) when std is given; the run cell uses std = 0.02, GPT-2's initialization (sec_gpt). Repeats (5 per tab, dev runs, plus the store) say: "changes little" holds within a factor of about 2 at the deepest post-LN point (spread at k=32 from 8e-5 to 1.7e-4), elsewhere to about 10%. -->
 
 
 For distinctness we use the cross-token spread
@@ -262,13 +262,15 @@ def signal_stats(pre_norm, std=None, num_blks=32, num_hiddens=256):
 ```
 
 We run it for three stacks: post-LN and pre-LN with Xavier weights, and
-post-LN with every weight matrix drawn from $\mathcal{N}(0, 0.02^2)$, the
-initialization of GPT-2 that :numref:`sec_gpt` uses. For each we print the
+post-LN with every weight matrix drawn from $\mathcal{N}(0, 0.02^2)$,
+GPT-2's standard deviation, which :numref:`sec_gpt` uses. (GPT-2 also
+scales down the matrices that write to the stream, which would only slow
+the collapse further.) For each we print the
 stream RMS at the top, the token spread at three depths, and the gradient
 norms of the top block's four attention projections. For the two post-LN
 stacks we also print the spread $(1 + \rho_0 (1 + g^4)^k)^{-1/2}$ that the
 derivation below predicts, and we plot the spread against depth.
-<!-- WRITER: the formula is used in the cell before the prose derives it (rho_0 = 1/63 for n = 64 random tokens; g = 1 for Xavier, g^2 = 256 * 0.02^2 = 0.1024 for the third arm). Either move the three-sentence derivation (structure 3.1 item 3) before this cell, or keep this forward pointer. Measured (dev: 5 repeats per tab plus one notebook run each, and the store; JAX now in full fp32, see report): post-LN Xavier spread at k=8/16/32: 0.27-0.37 / 0.017-0.030 / 0.8e-4-1.7e-4 against predicted 0.44 / 0.031 / 1.2e-4 (the shortfall at k=8 is the FFN); pre-LN stream RMS at 32: 4.9-5.6, spread at 32: 0.33-0.40 (one notebook run 5.64); post-LN std 0.02: spread 0.99 / 0.98 / 0.97 against predicted 0.99 at all three depths, stream RMS 1.00. Gradient norms at k=32: post-LN Xavier W_q, W_k 2e-9 to 9e-9, W_v, W_o 0.06-0.08; pre-LN W_q, W_k 1.5e-3 to 2.8e-3, W_v, W_o 0.075-0.092; post-LN std 0.02 W_q, W_k 4.0e-4 to 4.2e-4, W_v, W_o 6e-3 to 8e-3. -->
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). the formula is used in the cell before the prose derives it (rho_0 = 1/63 for n = 64 random tokens; g = 1 for Xavier, g^2 = 256 * 0.02^2 = 0.1024 for the third arm). Either move the three-sentence derivation (structure 3.1 item 3) before this cell, or keep this forward pointer. Measured (dev: 5 repeats per tab plus one notebook run each, and the store; JAX now in full fp32, see report): post-LN Xavier spread at k=8/16/32: 0.27-0.37 / 0.017-0.030 / 0.8e-4-1.7e-4 against predicted 0.44 / 0.031 / 1.2e-4 (the shortfall at k=8 is the FFN); pre-LN stream RMS at 32: 4.9-5.6, spread at 32: 0.33-0.40 (one notebook run 5.64); post-LN std 0.02: spread 0.99 / 0.98 / 0.97 against predicted 0.99 at all three depths, stream RMS 1.00. Gradient norms at k=32: post-LN Xavier W_q, W_k 2e-9 to 9e-9, W_v, W_o 0.06-0.08; pre-LN W_q, W_k 1.5e-3 to 2.8e-3, W_v, W_o 0.075-0.092; post-LN std 0.02 W_q, W_k 4.0e-4 to 4.2e-4, W_v, W_o 6e-3 to 8e-3. -->
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization}
 %%tab pytorch, jax
@@ -301,7 +303,7 @@ stream grows like the square root of the depth. At initialization the block
 outputs are nearly uncorrelated and their variances add, which predicts an
 RMS after 32 blocks of $\sqrt{33} \approx 5.7$. The measured value, between
 5 and 5.6, falls somewhat short; an exercise asks why. This growth stabilizes the
-<!-- WRITER: measured pre-LN RMS at k=32 over 5 dev repeats per tab plus the store: 4.9 to 5.6 (PyTorch 4.96, 5.12-5.58; JAX 4.94-5.64). -->
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). measured pre-LN RMS at k=32 over 5 dev repeats per tab plus the store: 4.9 to 5.6 (PyTorch 4.96, 5.12-5.58; JAX 4.94-5.64). -->
 <!-- WRITER: the post-LN, std 0.02 arm (new) keeps its tokens: spread 0.97 at k=32 against 0.99 predicted; its stream RMS is pinned at 1.00 like the Xavier post-LN arm. -->
 
 stack. Each pre-LN branch reads the stream through its own normalization,
@@ -339,7 +341,7 @@ d2l.plot(list(range(1, 33)), [s['grad_q'] for s in stats.values()],
          legend_loc='lower left')
 ```
 
-<!-- WRITER: new cell (TB-9). Measured query-gradient norms (dev, 5 repeats per tab): post-LN Xavier falls smoothly from about 1e-2 at block 1 (6e-3 to 2e-2) to 2e-9 to 7e-9 at block 32, tracking the spread; pre-LN falls from about 6e-2 (5e-2 to 6.5e-2) to about 2e-3, a factor of about 25-30; post-LN std 0.02 is flat at 4.0e-4 to 4.2e-4 at every depth (no collapse; the level is about 5x below pre-LN's top block). -->
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). new cell (TB-9). Measured query-gradient norms (dev, 5 repeats per tab): post-LN Xavier falls smoothly from about 1e-2 at block 1 (6e-3 to 2e-2) to 2e-9 to 7e-9 at block 32, tracking the spread; pre-LN falls from about 6e-2 (5e-2 to 6.5e-2) to about 2e-3, a factor of about 25-30; post-LN std 0.02 is flat at 4.0e-4 to 4.2e-4 at every depth (no collapse; the level is about 5x below pre-LN's top block). -->
 
 These are
 measurements at initialization, but they agree with what
@@ -477,19 +479,13 @@ Without the normalization the logit spread grows from 1 to about 16 and
 almost all its weight on one key, where the softmax has almost no gradient.
 With QK-norm every row is the same, a logit spread near 1 and an entropy of
 about 3.7 whatever $\lambda$ is.
-<!-- WRITER: new cell (from Ex. 3.3; Ex. 3 part 3 now duplicates it). Measured, both tabs (6 runs each): lambda 1: logit std 0.9-1.1, entropy 3.65-3.73; lambda 4: 15.1-16.8, entropy 0.18-0.31; lambda 16: 240-270, entropy 0.00-0.04; with QK-norm logit std 0.97-1.03 and entropy 3.65-3.72 in every row (rms_norm is scale invariant, so the three rows agree to rounding). The placeholder prediction and reading around the cell are functional; the writer rewrites them. -->
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). new cell (from Ex. 3.3; Ex. 3 part 3 now duplicates it). Measured, both tabs (6 runs each): lambda 1: logit std 0.9-1.1, entropy 3.65-3.73; lambda 4: 15.1-16.8, entropy 0.18-0.31; lambda 16: 240-270, entropy 0.00-0.04; with QK-norm logit std 0.97-1.03 and entropy 3.65-3.72 in every row (rms_norm is scale invariant, so the three rows agree to rounding). The placeholder prediction and reading around the cell are functional; the writer rewrites them. -->
 
-Recent open models also place norms on the other side of a sublayer. OLMo 2
-normalizes what each sublayer *writes* before adding it to the stream
-:cite:`OLMo.2025`, and Gemma 3 normalizes each branch both before and after
-the sublayer :cite:`Gemma.Team.2025`; both also use QK-norm.
-:numref:`fig_norm-taxonomy` compares the four placements. Only post-LN
-normalizes the stream itself; the signal experiment above compared it with
-pre-LN. QK-norm is not a flag of our block. It is an exercise, and it
-enters the block through the `attn_factory` hook introduced below.
-
-![Four placements of normalization around one sublayer, with the residual stream running bottom to top; the FFN sublayer is treated the same way. Post-LN normalizes the stream itself after each addition, pre-LN normalizes what the branch reads, OLMo 2 normalizes what the branch writes, and Gemma 3 normalizes the branch on both sides. Only post-LN touches the stream's identity path.](../img/mdl-transformers-norm-taxonomy.svg)
-:label:`fig_norm-taxonomy`
+QK-norm is not a flag of our block. It is an exercise, and it enters the
+block through the `attn_factory` hook introduced below. Recent open models
+also normalize what a sublayer writes, or both sides of it;
+:numref:`fig_norm-taxonomy` in :numref:`sec_transformers-further-reading`
+draws these placements next to the two compared above.
 
 ## The Feed-Forward Network
 
@@ -781,9 +777,8 @@ options, with replaceable attention and FFN modules.
        $c_1, \ldots, c_{2N}$ of the branch outputs. Evaluate it for a
        common mean square $c_j = c$, and compare its dependence on $N$
        with that of the identity term of the pre-LN expansion.
-    <!-- WRITER: CharLM no longer exists; reword part 3 for any pre-LN stack without a final norm. -->
-    1. `CharLM` applies a final RMSNorm, `norm`, before its tied output
-       head. Describe what the head would receive without it as a pre-LN
+    1. `GPT` (:numref:`sec_gpt`) applies a final normalization, `norm`,
+       before its tied output head. Describe what the head would receive without it as a pre-LN
        stack grows deeper, and explain why a post-LN stack needs no final
        normalization.
 
@@ -819,8 +814,8 @@ options, with replaceable attention and FFN modules.
        $d = 4096$ and SwiGLU width $11008$, the smallest multiple of 256
        that is at least $\lfloor 8d/3 \rfloor$. Compute the relative excess
        of its FFN parameters over $8d^2$, and the excess that the same
-       rule gives at $d = 256$ and at $d = 128$, the default `num_hiddens`
-       of `CharLM`. <!-- WRITER: CharLM no longer exists; say d = 128 (the width of sec_moe). --> Explain what the comparison implies for
+       rule gives at $d = 256$ and at $d = 128$, the width of the
+       models in :numref:`sec_moe`. Explain what the comparison implies for
        parameter-matched experiments with small models.
    :exlabel:`ex_transformer-block-ffn-width-rounding`
 

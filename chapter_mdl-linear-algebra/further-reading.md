@@ -217,7 +217,7 @@ taught in the attention chapters replace it, or the cache behind it, by a
 low-rank factorization. Linear attention (:numref:`sec_windowed-linear-attention`)
 writes the scores as $\phi(\mathbf{q})\cdot\phi(\mathbf{k})$, so the matrix
 has rank at most the feature dimension, and multi-head latent attention
-(:numref:`sec_kv-cache`) :cite:`DeepSeek-AI.2024` caches one low-dimensional
+(:numref:`subsec_kv-cache-low-rank`) :cite:`DeepSeek-AI.2024` caches one low-dimensional
 latent per token. Linformer :cite:`Wang.Li.Khabsa.ea.2020` starts from the
 observation that trained attention matrices have rapidly decaying singular
 values and projects the keys and values along the sequence axis to a fixed

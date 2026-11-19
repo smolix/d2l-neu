@@ -94,9 +94,9 @@ $H / H_\textrm{kv}$. We count both in a `d2l.GPT` of a single block.
 
 ```{.python .input #kv-cache-a-pluggable-implementation-2}
 %%tab pytorch, jax
-for G in (8, 4, 2, 1):
-    lm = gpt(256, num_hiddens=256, num_heads=8, num_blks=1, num_kv_heads=G)
-    print(f'H_kv={G}: {d2l.num_params(lm.blks[0].attention):6d} '
+for H_kv in (8, 4, 2, 1):
+    lm = gpt(256, num_hiddens=256, num_heads=8, num_blks=1, num_kv_heads=H_kv)
+    print(f'H_kv={H_kv}: {d2l.num_params(lm.blks[0].attention):6d} '
           f'parameters, cache {d2l.kv_cache_bytes(lm, 1):5d} bytes per token '
           'and block')
 ```
@@ -134,7 +134,7 @@ def pool_heads(target, source, pool):
                     for u in (k, v))
             state[name] = torch.cat([q, k, v])
     target.load_state_dict(state)
-    return target.to(device)
+    return target.to(next(source.parameters()).device)
 ```
 
 ```{.python .input #kv-cache-reduction-cache-size-and-validation-loss-1}

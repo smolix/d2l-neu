@@ -843,7 +843,7 @@ the rows we have not discussed can wait until a formula needs them.
 |---|---|---|
 | `hidden_size` | $d$ | width of the residual stream (:numref:`sec_transformer-block`) |
 | `num_hidden_layers` | $L$ | layers; `layer_types` gives the kind of each |
-| `num_attention_heads`, `num_key_value_heads`, `head_dim` | $H$, $H_\textrm{kv}$, $d_h$ | query heads, key--value heads and head width of grouped-query attention (:numref:`sec_kv-cache`) |
+| `num_attention_heads`, `num_key_value_heads`, `head_dim` | $H$, $H_\textrm{kv}$, $d_h$ | query heads, key--value heads and head width of grouped-query attention (:numref:`sec_kv-cache-reduction`) |
 | `attn_output_gate` | | a sigmoid gate on the output of each head, the remedy for attention sinks of :numref:`subsec_kv-cache-sinks` |
 | `sliding_window` | $w$ | positions that a sliding layer attends to |
 | `linear_num_key_heads`, `linear_key_head_dim` | $H_k$, $d_k$ | key heads of a recurrent layer and their width |
@@ -1128,7 +1128,7 @@ for these layers, 18,880,512 elements that the library never builds.
 Together with 35 scalars, one per layer, which the library does not count as
 parameters, they account for the whole difference between the file and our
 count. Sharing across layers is a way of shrinking a cache that
-:numref:`sec_kv-cache` did not list. It reduces the number of layers that
+:numref:`sec_kv-cache-reduction` did not list. It reduces the number of layers that
 keep one, here from 35 to 15.
 
 The third is the head width: the seven full-attention layers override

@@ -352,10 +352,14 @@ by 0.02 to 0.05. Final direct runs (PyTorch / JAX), validation at 500 / 1,000 /
 1.59/1.45/1.35; 192 1.51/1.38/1.29 and 1.49/1.38/1.29; 256 1.46/1.35/1.25 and
 1.45/1.34/1.25; 384 1.42/1.32/1.23 and 1.42/1.32/1.22. Equal-compute cell:
 1.29 / 1.35 / 1.42 (PyTorch), 1.29 / 1.34 / 1.42 (JAX) at C = 1.7, 2.3 and
-3.5e14 FLOPs; gaps 0.05 to 0.06 and 0.13. Repeats of these three runs (three
-per framework and point) span 1.285-1.290, 1.340-1.347, 1.414-1.422, so
-under 0.01: the smaller model trained longer wins by 5 to 15 times the
-range. A fixed 100 steps for every run raised the 2,000-step points
+3.5e14 FLOPs; gaps 0.05 to 0.06 and 0.13. The cell runs each point once, so the
+range to cite is the chapter yardstick :numref:`subsec_gpt-run-to-run`
+(cell gpt-run-to-run-spread, the grid's own d = 256, 6-block, 1,000-step,
+warmup-100 point): 0.008 nats in PyTorch, 0.002 in JAX, against gaps of 0.05
+to 0.13. The three printed runs span C = 1.7e14 to 3.5e14, a factor of 2, so
+"nearly equal compute" understates the result: the smaller model trained
+longer wins with half the compute of the largest model. Do not quote dev
+repeats the cell does not execute. A fixed 100 steps for every run raised the 2,000-step points
 by about 0.01, so the 1,000- and 2,000-step runs keep a tenth. The prose "a
 linear warmup over the first tenth of the steps" needs "but at least 100
 steps". -->

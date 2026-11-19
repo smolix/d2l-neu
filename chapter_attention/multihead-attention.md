@@ -745,8 +745,9 @@ by a group of $H/H_\textrm{kv}$ consecutive query heads
 Why share at all? A model that generates text one token at a time stores
 the keys and values of all earlier tokens so that it need not recompute
 them, and sharing shrinks that store by the factor $H/H_\textrm{kv}$.
-:numref:`sec_kv-cache` builds the store, measures what sharing saves, and
-reports how much quality large models give up. In `MultiHeadAttention`,
+:numref:`sec_kv-cache` builds the store, and :numref:`sec_kv-cache-reduction`
+measures what sharing saves and reports how much quality large models give
+up. In `MultiHeadAttention`,
 `num_kv_heads` sets $H_\textrm{kv}$: `W_k` and `W_v` produce $H_\textrm{kv}$
 heads, and the forward pass copies each of them for the query heads of its
 group. Copying is the simplest correct code, and what it costs is

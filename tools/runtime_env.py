@@ -209,9 +209,11 @@ SHARED_DATA_NOTEBOOKS = {
     "chapter_computer-vision/kaggle-cifar10.ipynb",
     "chapter_computer-vision/kaggle-dog.ipynb",
     # chapter_transformers: gpt.md and kv-cache-reduction.md both download
-    # the pinned GPT-2 checkpoint into data/gpt2/ (kv-cache-reduction.md also
-    # the time machine text); scaling-laws.md downloads PTB. Serialize them
-    # so concurrent first-run downloads cannot race.
+    # the pinned GPT-2 checkpoint into data/gpt2/; scaling-laws.md downloads
+    # WikiText-103 (as do gpt, kv-cache-reduction, encoders-decoders and
+    # moe). The lock serializes one notebook across frameworks; different
+    # notebooks do not race, because d2l.download writes atomically
+    # (mkstemp, then os.replace).
     "chapter_transformers/gpt.ipynb",
     "chapter_transformers/kv-cache-reduction.ipynb",
     "chapter_transformers/scaling-laws.ipynb",

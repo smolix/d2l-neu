@@ -428,8 +428,10 @@ The experiments of this section build their models through the shorthand
 
 ```{.python .input #gpt-training-the-model-3}
 %%tab pytorch
-def gpt(*args, **kwargs):  # A fresh model, on the GPU
-    return GPT(*args, **kwargs).to(d2l.try_gpu())
+torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
+
+def gpt(*args, **kwargs):  # A fresh model, on the GPU, compiled
+    return torch.compile(GPT(*args, **kwargs).to(d2l.try_gpu()))
 ```
 
 ```{.python .input #gpt-training-the-model-3}
@@ -676,7 +678,7 @@ for act, repeats in (('swiglu', 2), ('gelu', 3)):
 ### Against a Recurrent Network
 :label:`subsec_gpt-rnn-baseline`
 
-<!-- WRITER: the Basics model, d2l.RNNLM over d2l.RNN (the plain tanh
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). the Basics model, d2l.RNNLM over d2l.RNN (the plain tanh
 network of sec_rnn-concise, library classes unchanged), with 1,920 hidden
 units and a 256-wide embedding: 4.74M parameters against the GPT's 4.79M.
 Same bytes, windows, 1,000 steps and LMOptimizer recipe; three peak rates,
@@ -698,8 +700,15 @@ development runs in brackets):
   position 0 and agree for the first few bytes; the RNN stops improving
   after about 16 bytes, the GPT keeps falling to position 127, so the gap
   grows from about 0.04 at position 4 to about 0.1 at 127.
-- Time per step: PyTorch GPT 27 ms, RNN 11 ms; JAX GPT 10.7 ms, RNN
-  11.0 ms.
+- Time per step: PyTorch GPT 27 ms eager (before the code step of
+  2026-11-19), RNN 11 ms; JAX GPT 10.7 ms, RNN 11.0 ms. Since lib-review
+  finding 4 the PyTorch shorthand `gpt()` returns `torch.compile(GPT(...))`
+  (dev: 25 ms eager to 14.5 ms compiled per step; first compile of each
+  configuration 20 to 40 s, inside the untimed warm-up); read the new
+  numbers from claims.md. The PyTorch tab needs a one-sentence note that
+  `gpt()` compiles the model (as kv-cache does for decoding, and as
+  chap_performance teaches), because eager PyTorch spends most of a step
+  launching small kernels from Python.
   Shared statement true in both tabs: at 128 bytes the RNN is no slower
   per step. PyTorch tab note: the GPT step is bound by launching its many
   small operations from Python (27.5 ms per step at batch 16, 27.7 at 64,
@@ -801,18 +810,20 @@ spread 0.95 to 0.96 at step 0 in the mechanism cell). Delete "at most part
 of the explanation", "The third run confirms this" and the exercise
 deferral. -->
 
-```{.python .input #gpt-breaking-it-with-one-flag}
+```{.python .input #gpt-normalization-placement-in-training-1}
 %%tab pytorch, jax
-arms = {'pre-norm': (True, 0), 'post-norm': (False, 0),
-        'post-norm, warmup': (False, 400)}  # (pre_norm, warmup steps)
-
 def placement_run(vocab_size, pre_norm, warmup):
     """A fresh model, and AdamW at a constant 1e-3 after the warmup."""
     net = gpt(vocab_size, pre_norm=pre_norm, max_len=128)
     # A cosine over 10^9 steps stays flat; no weight decay, no clipping
     return net, LMOptimizer(net, lr=1e-3, num_steps=10**9, warmup=warmup,
                             weight_decay=0.0, max_norm=math.inf)
+```
 
+```{.python .input #gpt-breaking-it-with-one-flag}
+%%tab pytorch, jax
+arms = {'pre-norm': (True, 0), 'post-norm': (False, 0),
+        'post-norm, warmup': (False, 400)}  # (pre_norm, warmup steps)
 for name, arm in arms.items():
     for _ in range(2):  # Two runs per arm
         net, optimizer = placement_run(len(data.vocab), *arm)
@@ -841,7 +852,7 @@ the normalization at the input of each sublayer and added one after the
 last block :cite:`Radford.Wu.Child.ea.2019`, the arrangement that `GPT`
 uses by default.
 
-<!-- WRITER: the mechanism cells below record, every 10 steps over the
+<!-- WRITER: DEV STATISTICS (lib-review finding 3): the ranges and run counts in this note come from development runs the cell does not execute; quote only the printed runs (claims.md). the mechanism cells below record, every 10 steps over the
 first 200 of each arm, on one fixed batch of validation windows: the token
 spread after the last block (the quantity of subsec_signal-propagation) and
 the gradient norms of the first and the last block; a plot of the spread

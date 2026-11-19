@@ -6,37 +6,36 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Numerical Stability and Initialization
 :label:`sec_numerical_stability`
 
-Depth is worth having (:numref:`sec_mlp`). Yet the MLP we trained in
-:numref:`sec_mlp-implementation` has a single hidden layer, and we drew its
-initial weights from a normal distribution with standard deviation 0.01
-without asking whether that choice matters. Would a deeper network fare as well?
+Until now, we took parameter initialization for granted—drawing weights
+from $\mathcal{N}(0, 0.01^2)$ without asking whether that scale actually
+matters. You might even have gotten the impression that initialization is a
+minor detail. On the contrary, once we stack hidden layers to harness the
+power of depth (:numref:`sec_mlp`), initialization and the choice of
+activation function together decide whether a network learns rapidly or
+refuses to move at all.
 
-Consider a network with ten hidden layers of width 256, initialized the same
-way. It does not learn at all: after ten epochs its loss is where it started.
-In fact it is in trouble before the first step of training. The backward pass
-of :numref:`sec_backprop` multiplies the gradient by one weight matrix per
-layer on its way down to the first layer, and with weights this small each
-multiplication shrinks the mean square of the gradient about eightyfold.
-After nine such steps the mean square at the first layer is $10^{17}$ times
-smaller than at the top, so a typical entry of the gradient, its square
-root, is smaller by a factor of more than $10^8$. The signal fares no better
-on its way up: the same factor shrinks the activations from layer to layer,
-and what arrives at the last hidden layer is practically zero for every
-input. With weights of standard deviation 1, both grow at a similar rate
-instead.
+Try initializing a ten-hidden-layer MLP of width 256 with that same
+$\mathcal{N}(0, 0.01^2)$ rule. Ten epochs later, its training loss will not
+have budged from where it started. Worse, the network was doomed *before*
+the very first gradient update. As we saw in :numref:`sec_backprop`,
+backpropagation multiplies the error signal by one weight matrix per layer
+on its journey back to layer 1. With weights of standard deviation 0.01,
+each hop shrinks the mean square of the gradient roughly eightyfold: across
+nine hops, the mean square at layer 1 plunges by $10^{17}$, shrinking
+typical gradient entries by more than $10^8$. The forward pass suffers the
+exact same collapse, arriving at the top hidden layer practically equal to
+zero for every image. Crank the initial standard deviation up to 1, and
+both signals explode at a comparable exponential rate instead.
 
-The right scale depends on the width of each layer and on the activation
-function. We measure how the gradient shrinks or grows from layer to layer,
-derive the scales that keep it constant, known as Xavier and He
-initialization, and check them with the same measurement. All of these
-measurements are taken on randomly initialized networks. At the end we train
-the deep network with each initialization and see whether they predicted its
-fate.
-
-A second requirement, stated without proof in
-:numref:`sec_mlp-implementation`, cannot be met by any choice of scale: the
-initial weights of different hidden units must differ, or the units remain
-identical throughout training.
+Keeping activations and gradients alive across depth requires matching the
+initial weight variance to both the layer width and the activation
+function. In this section, we measure how signals shrink or blow up across
+layers, derive the two classic variance-preserving schemes—*Xavier* and
+*He* initialization—verify them numerically on random ten-layer stacks, and
+then train a ten-layer MLP on Fashion-MNIST to watch our analysis predict
+success and failure firsthand. Finally, we prove a second requirement we
+asserted without proof in :numref:`sec_mlp-implementation`: initial weights
+must be *random* to break permutation symmetry among hidden units.
 
 ```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab mxnet
@@ -81,29 +80,25 @@ from d2l import jax as d2l
 
 ### A Product over Layers
 
-Why should the scale of the weights matter so much? The backward pass of
-:numref:`sec_backprop` holds the answer: on its way down, the error is
-multiplied by one transposed weight matrix and one matrix of slopes per
-layer. Let us write this product out, in the notation of that section. The
-MLP has $K$ layers, $K - 1$ of them hidden and of width $h$. Starting from
-$\mathbf{H}^{(0)} = \mathbf{X}$, with one example per row, hidden layer $k$
-computes the pre-activation
-$\mathbf{Z}^{(k)} = \mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}$
-and the activation $\mathbf{H}^{(k)} = \phi(\mathbf{Z}^{(k)})$. There is no
-weight decay in this section, so the objective $J$ of
-:numref:`sec_backprop` is the loss $L$ itself. We follow the gradient of $L$
-with respect to the activations. The rule for an activation function and the
-rule for a matrix product, applied in turn, take it one layer down:
+Why is depth so sensitive to weight scale? The backward pass derived in
+:numref:`sec_backprop` gives the answer immediately: as the error signal
+travels downward, every layer multiplies it by a matrix of activation
+slopes and a transposed weight matrix. Consider a $K$-layer MLP with
+$K - 1$ hidden layers of width $h$, $\mathbf{H}^{(0)} = \mathbf{X}$,
+pre-activations
+$\mathbf{Z}^{(k)} = \mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}$,
+and activations $\mathbf{H}^{(k)} = \phi(\mathbf{Z}^{(k)})$ (setting
+weight decay to zero so the objective is just $L$). Combining the
+activation and matrix-product rules moves the activation gradient down one
+layer:
 
 $$
 \frac{\partial L}{\partial \mathbf{H}^{(k-1)}} = \Bigl(\frac{\partial L}{\partial \mathbf{H}^{(k)}} \odot \phi'\bigl(\mathbf{Z}^{(k)}\bigr)\Bigr)\, \mathbf{W}^{(k)\top}.
 $$
 :eqlabel:`eq_grad-step`
 
-This is the step for $K$ layers of :numref:`sec_backprop`, written for the
-activations instead of the pre-activations: multiply entry by entry by the
-slopes, then by the transposed weights. Repeating it from the last hidden
-layer, $K - 1$, down to layer $k$ gives
+Unrolling this recurrence from the top hidden layer $K - 1$ down to layer
+$k$ exposes a chain of $K - 1 - k$ matrix--slope factors:
 
 $$
 \frac{\partial L}{\partial \mathbf{H}^{(k)}} = \frac{\partial L}{\partial \mathbf{H}^{(K-1)}}\;
@@ -113,64 +108,54 @@ $$
 $$
 :eqlabel:`eq_grad-product`
 
-where the operations are applied from left to right: one pair of them for
-each of the $K - 1 - k$ layers above layer $k$. The gradient with respect to
-the weights of layer $k$,
+applied left to right—and every weight gradient at layer $k$,
 $\mathbf{H}^{(k-1)\top}\bigl(\partial L / \partial \mathbf{H}^{(k)} \odot \phi'(\mathbf{Z}^{(k)})\bigr)$,
-contains this product as a factor.
+inherits this entire chain as a factor.
 
-A product of many factors is very large or very small unless the factors are
-close to 1. If each factor scales what it multiplies by about the same
-amount $\rho$, a product of $t$ of them scales it by about $\rho^t$.
-We saw the same effect for repeated matrix products in
-:numref:`sec_linear-algebra`. With $\rho = 0.9$ the gradient shrinks
-200-fold over fifty layers, and with $\rho = 1.1$ it grows 117-fold.
+Whenever you multiply many factors together, the product stays well-behaved
+only if each factor hovers right around 1. If every layer rescales the
+signal by a constant $\rho$, then $t$ layers rescale it by $\rho^t$ (the
+exact exponential behavior of matrix powers we saw in
+:numref:`sec_linear-algebra`): even a mild $\rho = 0.9$ shrinks gradients
+200-fold across fifty layers, while $\rho = 1.1$ inflates them 117-fold.
 
-So which factor does one layer contribute? This is the key computation of
-the section, and it is short. Every row of :eqref:`eq_grad-step` belongs to
-one example, and the rows do not mix, so we look at a single one. Write
-$\mathbf{g}$ for this row of the gradient below layer $k$, $\mathbf{g}'$ for
-the same row above it, and $z_j$ for the pre-activation of unit $j$. Entry
-$i$ of :eqref:`eq_grad-step` is a sum over the $h$ units of the layer,
-$g_i = \sum_{j} w_{ij}\, \phi'(z_j)\, g'_j$, and its square is a double sum
-over $j$ and $j'$ with terms
-$w_{ij} w_{ij'}\, \phi'(z_j) \phi'(z_{j'})\, g'_j g'_{j'}$. Suppose that the
+What rescaling factor does a single hidden layer apply? Because examples do
+not interact across rows of :eqref:`eq_grad-step`, consider one example
+with upstream gradient row $\mathbf{g}'$, downstream row $\mathbf{g}$, and
+pre-activations $z_j$. Each entry $g_i = \sum_j w_{ij}\, \phi'(z_j)\, g'_j$
+squares to a double sum over $(j, j')$ with terms
+$w_{ij} w_{ij'}\, \phi'(z_j)\phi'(z_{j'})\, g'_j g'_{j'}$. Assuming the
 weights are drawn independently with mean zero and variance $\tau^2$, and
-that they are independent of the slopes and of the gradient above. Then
-every term with $j \neq j'$ has mean zero, since $w_{ij}$ and $w_{ij'}$ do.
-Only the $h$ terms with $j = j'$ survive, each with mean
-$\tau^2\, \mathbb{E}[\phi'(z_j)^2\, (g'_j)^2]$. Treating the slope and the
-gradient above as independent as well, we find
-$\mathbb{E}[g_i^2] = h\, \tau^2\, \mathbb{E}[\phi'(z)^2]\, \mathbb{E}[(g'_j)^2]$. Per
-layer, the mean square of the gradient is therefore multiplied by about
+treating them as approximately independent of the slopes and upstream
+gradients, every off-diagonal term ($j \neq j'$) averages to zero while the
+$h$ diagonal terms ($j = j'$) each contribute
+$\tau^2\, \mathbb{E}[\phi'(z_j)^2\, (g'_j)^2]$. Treating slopes and
+upstream gradients as independent as well yields
+$\mathbb{E}[g_i^2] = h\, \tau^2\, \mathbb{E}[\phi'(z)^2]\, \mathbb{E}[(g'_j)^2]$.
+Each layer therefore multiplies the mean square of the gradient by roughly
 
 $$h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr].$$
 :eqlabel:`eq_grad-factor`
 
-The word "about" is there for a reason. Independence of the weights and the
-slopes is a rather bold assumption, since the slope $\phi'(z_j)$ was
-computed in the forward pass from the very weights that now multiply it. It
-is plausible in a wide layer, where $w_{ij}$ is only one of the $h$ weights
-that enter $z_j$. We do not prove it; the measurement below is its test.
+Notice the deliberate qualifier "roughly": assuming weights are independent
+of the slopes $\phi'(z_j)$ is a heuristic leap, since those very weights
+helped compute $z_j$ during the forward pass. In wide layers—where any
+single weight $w_{ij}$ is only one of $h$ terms entering $z_j$—the
+approximation is remarkably accurate, as we are about to test numerically.
 
-Two things set the factor: the scale of the weights, through $h\tau^2$, and
-the slope of the activation function, through $\mathbb{E}[\phi'(z)^2]$. When the
-pre-activations are symmetric about zero, the ReLU has slope 1 for half of
-them and 0 for the other half, so $\mathbb{E}[\phi'(z)^2] = 1/2$. For a ReLU layer of
-width $h = 256$ with the weights of :numref:`sec_mlp-implementation`,
-$\tau = 0.01$, the factor is $256 \times 10^{-4} / 2 = 0.0128$; with
-$\tau = 1$ it is $128$.
+Two knobs govern :eqref:`eq_grad-factor`: weight scale ($h\tau^2$) and
+activation slope ($\mathbb{E}[\phi'(z)^2]$). When pre-activations are
+symmetric around zero, ReLU has slope 1 half the time and 0 the other half,
+so $\mathbb{E}[\phi'(z)^2] = 1/2$. For width $h = 256$, our previous
+$\tau = 0.01$ produces $256 \times 10^{-4} / 2 = 0.0128$ per layer, while
+$\tau = 1$ produces a massive $128$ per layer!
 
-We measure these factors in a network of ten hidden layers of width 256,
-without biases, at initialization. The function `moments` runs the forward
-pass on a minibatch of 256 random inputs, keeping the pre-activations, and
-then the backward pass. We start the backward pass at the last hidden layer
-from a random gradient of mean square 1, so that the plot shows only what
-the layers below do to it. Each step of its backward loop is one line of
-code, and that line is :eqref:`eq_grad-step`. The function returns the mean
-squares of the
-activations and of the gradients at every layer. Each activation function
-is passed together with its derivative.
+Let us put this formula to the test on a ten-hidden-layer, width-256
+network (without biases) at initialization. Our helper `moments` runs a
+forward pass on 256 standard normal inputs, seeds the top hidden layer with
+a unit-variance random gradient so we isolate pure depth attenuation, steps
+backward via :eqref:`eq_grad-step`, and records the mean squares of both
+activations and gradients at every layer.
 
 ```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab mxnet
@@ -255,11 +240,9 @@ sigmoid = (jax.nn.sigmoid,
            lambda Z: jax.nn.sigmoid(Z) * (1 - jax.nn.sigmoid(Z)))
 ```
 
-We compare three networks: ReLU with the weights of
-:numref:`sec_mlp-implementation`, $\tau = 0.01$; ReLU with $\tau = 1$; and
-the sigmoid with $\tau^2 = 1/256$, so that $h\tau^2 = 1$ and only the slope
-of the activation function changes the scale. The plot shows the mean square
-of the gradient at each layer; the top layer starts at 1.
+Let us compare three setups: ReLU with $\tau = 0.01$ (as in
+:numref:`sec_mlp-implementation`), ReLU with $\tau = 1$, and sigmoid with
+$\tau^2 = 1/256$ (so $h\tau^2 = 1$, isolating pure activation attenuation).
 
 ```{.python .input #numerical-stability-and-init-exploding-gradients}
 runs = {'ReLU, N(0, 0.01²)': moments(*relu, 0.01),
@@ -272,89 +255,81 @@ d2l.plot(list(range(1, 11)), [grads for acts, grads in runs.values()],
          yscale='log', figsize=(4.5, 3))
 ```
 
-On a logarithmic axis the curves are straight lines: every layer multiplies
-the mean square by the same factor. Over the nine steps from the top layer
-down to the first, the factors of :eqref:`eq_grad-factor` predict
-$0.0128^9 \approx 10^{-17}$ for the small weights and
-$128^9 \approx 10^{19}$ for the large ones, and the measurement agrees with
-both. The independence assumption has passed its test, at least for random
-ReLU networks of this width. The sigmoid loses more than an order of
-magnitude per layer even with $h\tau^2 = 1$, and the mean square of its gradient at the first layer is
-about $5 \times 10^{-12}$ of that at the top.
+On a log scale, all three curves march along crisp straight lines—confirming
+that each layer rescales the gradient by a constant multiplier. Across the
+nine hops from layer 10 down to layer 1, :eqref:`eq_grad-factor` forecasts
+$0.0128^9 \approx 10^{-17}$ for small ReLU weights and
+$128^9 \approx 10^{19}$ for large ones, and our simulation hits both right
+on the nose! Our independence heuristic passes with flying colors. Even
+with $h\tau^2 = 1$, the sigmoid sheds more than an order of magnitude per
+layer, slashing the layer-1 gradient mean square to roughly
+$5 \times 10^{-12}$.
 
 ### Vanishing Gradients
 
-The two falling curves show the vanishing gradients that
-:numref:`subsec_activation-functions` met for the sigmoid: the weights of
-the first layers receive gradients many orders of magnitude smaller than
-those of the last layers. Any learning rate small enough to keep the last
-layers stable then leaves the first layers almost where they started. Small
-weights cause this, and so do activation functions with small slopes. Since
-the derivative of the sigmoid never exceeds $1/4$, we have
-$\mathbb{E}[\sigma'(z)^2] \le 1/16$, and a sigmoid layer divides the mean
-square of the gradient by at least 16 even with $h\tau^2 = 1$. Could larger
-weights
-not compensate? Unfortunately not, because they push more pre-activations
-into the tails of the sigmoid, where its slope is close to zero
-:cite:`bengio1994learning`. The ReLU has slope 1 for every active unit, so
-only the scale of the weights sets its factor, which is one reason it
-replaced the sigmoid in hidden layers.
+The two plummeting lines visualize the *vanishing gradient* problem we
+first glimpsed for sigmoids in :numref:`subsec_activation-functions`:
+early layers receive gradients orders of magnitude tinier than top layers,
+so any learning rate small enough to keep upper layers stable leaves the
+bottom layers frozen in place. Both under-scaled weights and saturating
+activations cause vanishing gradients. Because $\sigma'(z) \le 1/4$
+everywhere, $\mathbb{E}[\sigma'(z)^2] \le 1/16$, meaning every sigmoid
+layer cuts the gradient's mean square by at least a factor of 16 even when
+$h\tau^2 = 1$. Trying to compensate with bigger weights backfires
+immediately: larger pre-activations push units out of the narrow Goldilocks
+zone near zero and into the flat saturating tails where $\sigma'(z) \approx 0$
+:cite:`bengio1994learning`. ReLU, by contrast, preserves unit slope for
+every positive pre-activation, leaving weight scale as our sole knob—a
+major reason ReLU displaced sigmoid in hidden layers.
 
 ### Exploding Gradients
 
-The rising curve shows an *exploding gradient*. With a mean square $10^{19}$
-times larger at the first layer than at the top, the gradient there is about
-$3 \times 10^9$ times larger in magnitude, and no single learning rate
-suits all layers: one small enough for the first layers leaves the last ones
-frozen, and one suited to the last layers makes the updates of the first
-ones overshoot. The forward pass grows by the same factor
-(:numref:`subsec_he_init`). Once values exceed about $3.4 \times 10^{38}$, the largest number
-that 32-bit floating point can represent, they become infinite, and the loss
-becomes `nan`. A loss that is `nan` from the first step is often the sign of
-an initialization that is too large.
+The climbing curve displays the mirror disaster: *exploding gradients*.
+With a layer-1 mean square $10^{19}$ times larger than layer 10's, typical
+gradient entries at the bottom are roughly $3 \times 10^9$ times larger
+than at the top! No single learning rate can bridge that gulf: shrink it
+for layer 1 and top layers freeze; tune it for top layers and layer 1
+catapults to infinity. Worse, forward activations grow at the exact same
+rate (:numref:`subsec_he_init`): once values exceed float32's ceiling of
+roughly $3.4 \times 10^{38}$, they overflow to `inf` and poison the loss
+with `NaN`. Whenever you see `NaN` loss on step 1 of training, oversized
+initial weights are suspect number one.
 
 ## Parameter Initialization
 
 ### Xavier Initialization
 :label:`subsec_xavier`
 
-Which variance, then, keeps the factor of a layer at 1? Let us start with
-the simplest case, a layer without activation function, and ask first what it
-does to the signal in the forward pass. It has $n_\textrm{in}$ inputs
-$x_i$ and $n_\textrm{out}$ outputs, and output $j$ is
+How should we pick $\tau^2$ to pin every layer's multiplier right at 1?
+Begin with a linear layer (no activation) having $n_\textrm{in}$ inputs
+$x_i$ and $n_\textrm{out}$ outputs,
 
 $$o_j = \sum_{i=1}^{n_\textrm{in}} x_i w_{ij}.$$
 
-The weights $w_{ij}$ are drawn independently from the same distribution,
-with mean zero and variance $\tau^2$; the distribution need not be Gaussian.
-The inputs $x_i$ have mean zero and variance $\gamma^2$, and they are
-independent of the weights and of each other. Then $o_j$ has mean
-$\mathbb{E}[o_j] = \sum_i \mathbb{E}[x_i]\,\mathbb{E}[w_{ij}] = 0$ and variance
+Draw weights $w_{ij}$ i.i.d. from any zero-mean distribution with variance
+$\tau^2$ (not necessarily Gaussian), and take zero-mean inputs $x_i$ of
+variance $\gamma^2$, independent of the weights and of one another. Then
+$\mathbb{E}[o_j] = \sum_i \mathbb{E}[x_i]\,\mathbb{E}[w_{ij}] = 0$, and
 
 $$
 \begin{aligned}
 \textrm{Var}[o_j] = \mathbb{E}[o_j^2]
 &= \sum_{i=1}^{n_\textrm{in}} \sum_{i'=1}^{n_\textrm{in}} \mathbb{E}[x_i x_{i'} w_{ij} w_{i'j}] \\
 &= \sum_{i=1}^{n_\textrm{in}} \mathbb{E}[x_i^2]\, \mathbb{E}[w_{ij}^2]
-= n_\textrm{in}\, \tau^2 \gamma^2.
+= n_\textrm{in}\, \tau^2 \gamma^2,
 \end{aligned}
 $$
 
-In the second line, the cross terms with $i \neq i'$ vanish for the same
-reason as in the backward pass, and the remaining terms use
-$\mathbb{E}[w_{ij}^2] = \tau^2$ and $\mathbb{E}[x_i^2] = \gamma^2$, which hold because
-both have mean zero. The layer thus multiplies the variance of the signal
-by $n_\textrm{in}\tau^2$. To keep it unchanged, we need
+since all cross terms ($i \neq i'$) vanish by independence and zero mean.
+Preserving forward activation variance therefore demands
 $n_\textrm{in}\tau^2 = 1$.
 
-For the backward pass the work is already done. The sum behind
-:eqref:`eq_grad-factor` runs over the $h = n_\textrm{out}$ outputs of the
-layer, and without activation function the slope is 1, so the mean square
-of the gradient is multiplied by $n_\textrm{out}\tau^2$. Keeping it unchanged
-needs $n_\textrm{out}\tau^2 = 1$. We cannot have both unless
-$n_\textrm{in} = n_\textrm{out}$. *Xavier initialization*
-:cite:`Glorot.Bengio.2010` settles for a compromise and satisfies their
-average,
+Now check the backward pass: by :eqref:`eq_grad-factor` (with slope 1 and
+summation over $n_\textrm{out}$ outputs), preserving gradient variance
+demands $n_\textrm{out}\tau^2 = 1$. Whenever a layer changes width
+($n_\textrm{in} \neq n_\textrm{out}$), we cannot satisfy both conditions
+simultaneously! *Xavier initialization* (named after Xavier Glorot,
+:cite:`Glorot.Bengio.2010`) strikes a clean compromise by averaging the two:
 
 $$
 \frac{1}{2}(n_\textrm{in} + n_\textrm{out})\, \tau^2 = 1,
@@ -362,97 +337,90 @@ $$
 \tau^2 = \frac{2}{n_\textrm{in} + n_\textrm{out}}.
 $$
 
-For the first layer of the MLP of :numref:`sec_mlp-implementation`, with
-$n_\textrm{in} = 784$ and $n_\textrm{out} = 256$, this gives
-$\tau = \sqrt{2/1040} \approx 0.044$, four times the 0.01 used there. The
-weights may also be drawn uniformly. The uniform distribution on $[-a, a]$
-has variance $a^2/3$, so Xavier initialization draws them from
+For our Fashion-MNIST MLP's first layer ($n_\textrm{in} = 784$,
+$n_\textrm{out} = 256$), Xavier prescribes
+$\tau = \sqrt{2/1040} \approx 0.044$—more than four times the 0.01 we used
+earlier. If we prefer uniform weights over $[-a, a]$ (whose variance is
+$a^2/3$), matching the same variance gives
 
 $$U\left(-\sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}},\ \sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}}\right).$$
 
-The derivation assumed a layer without activation function. It also holds
-approximately for an activation function with slope 1 near zero, such as
-tanh, as long as the pre-activations stay small, and Glorot and Bengio
-derived it for tanh networks.
+Although derived for linear layers, Xavier works well for zero-centered
+activations with unit slope at the origin—such as $\tanh$—as long as
+pre-activations remain modest.
 
 ### He Initialization
 :label:`subsec_he_init`
 
-A ReLU is far from linear: it sets about half of its inputs to zero. To
-extend the argument, we note what it used. With independent weights of mean
-zero, the output $o_j$ has mean zero and $\mathbb{E}[o_j^2] = n_\textrm{in}\tau^2
-\mathbb{E}[x_i^2]$ for *any* inputs, zero mean or not: the inputs enter only
-through their mean square $\mathbb{E}[x_i^2]$. So we track the mean square of the
-activations through the ReLU. If the pre-activations $z$ are symmetric about
-zero, as they are when the weights are drawn from a symmetric distribution
-independently of the inputs, then $\textrm{ReLU}(z)^2$ equals $z^2$ for the
-positive half of them and $0$ for the negative half, so the ReLU halves the
-mean square: $\mathbb{E}[\textrm{ReLU}(z)^2] = \tfrac{1}{2}\mathbb{E}[z^2]$.
+ReLU breaks linearity dramatically: it zeroes out roughly half of its
+inputs! Fortunately, the variance calculation above actually requires only
+zero-mean independent weights: $\mathbb{E}[o_j^2] = n_\textrm{in}\tau^2 \mathbb{E}[x_i^2]$
+holds even when inputs $x_i$ have *nonzero* mean (as nonnegative ReLU
+outputs do!). So we simply track the *mean square* across layers. Because
+symmetric weights yield pre-activations $z$ symmetric about zero, ReLU
+keeps the positive half and drops the negative half, cutting the mean
+square exactly in half:
+$\mathbb{E}[\textrm{ReLU}(z)^2] = \tfrac{1}{2}\mathbb{E}[z^2]$.
 
-Let $v^{(k)}$ be the mean square of the entries of $\mathbf{H}^{(k)}$, the
-activations of layer $k$. Its pre-activations have mean square
-$n_\textrm{in}\tau^2 v^{(k-1)}$, and the ReLU halves it:
+Denoting the mean square of layer $k$'s activations $\mathbf{H}^{(k)}$ by
+$v^{(k)}$, each affine-plus-ReLU block updates it as
 
 $$v^{(k)} = \frac{1}{2}\, n_\textrm{in}\, \tau^2\, v^{(k-1)}.$$
 
-The mean square stays constant from layer to layer if we double the weight
-variance of the linear case:
+Keeping $v^{(k)}$ steady across depth therefore requires *doubling* the
+linear-layer variance:
 
 $$\tau^2 = \frac{2}{n_\textrm{in}}.$$
 
-This is *He initialization* :cite:`He.Zhang.Ren.ea.2015`, also called
-Kaiming initialization, the standard choice for networks with ReLU
-activations. For the backward pass, :eqref:`eq_grad-factor` with
-$\mathbb{E}[\phi'(z)^2] = 1/2$ gives the same condition with $n_\textrm{out}$ in
-place of $n_\textrm{in}$, and for layers of equal width the two coincide.
-One weight layer has no ReLU after it, so the scale is off there by a single
-factor of 2, which does not compound with depth. For the first layer of the
-MLP of :numref:`sec_mlp-implementation`, He initialization gives
-$\tau = \sqrt{2/784} \approx 0.05$. The rule of thumb is Xavier for tanh
-and He for ReLU, and most libraries provide both as named initializers.
+This is *He initialization* (or *Kaiming initialization*,
+:cite:`He.Zhang.Ren.ea.2015`), the universal default for ReLU networks. In
+the backward pass, :eqref:`eq_grad-factor` with $\mathbb{E}[\phi'(z)^2] = 1/2$
+yields the twin condition $\tau^2 = 2/n_\textrm{out}$, matching exactly on
+equal-width layers (the single final logit layer has no ReLU, introducing
+at most one harmless factor of 2 that never compounds). For our
+Fashion-MNIST first layer, He initialization sets
+$\tau = \sqrt{2/784} \approx 0.05$. A simple rule of thumb serves nearly
+every standard architecture: *Xavier for $\tanh$, He for ReLU*.
 
 ### Default Initialization
 
-A framework initializes the weights of a layer when we do not, and we can
-now judge its choice against the $2/n_\textrm{in}$ that a ReLU layer needs.
-None of the four frameworks defaults to it, so from the next section on our
-models set He initialization explicitly.
+What happens if you let your framework pick initial weights on its own?
+Comparing each library's default linear-layer initializer against ReLU's
+$2/n_\textrm{in}$ reveals a surprise: none of the four defaults to He
+initialization, which is why our models from the next section onward set He
+initialization explicitly.
 
 :begin_tab:`mxnet`
-Gluon's `initialize` draws the weights uniformly from $[-0.07, 0.07]$,
-regardless of the size of the layer, and sets the biases to 0. The variance,
-$0.07^2/3 \approx 0.0016$, equals $2/n_\textrm{in}$ only for a layer with
-about 1,200 inputs.
+Gluon's default `initialize()` draws weights uniformly from $[-0.07, 0.07]$
+regardless of layer width (zero biases). Its variance,
+$0.07^2/3 \approx 0.0016$, matches $2/n_\textrm{in}$ only around
+$n_\textrm{in} \approx 1{,}200$.
 :end_tab:
 
 :begin_tab:`pytorch`
-`nn.Linear` draws its weights and its biases uniformly from the interval
-$[-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}}]$, so the weights have
-variance $1/(3 n_\textrm{in})$, one sixth of what He initialization
-prescribes.
+PyTorch's `nn.Linear` draws weights and biases uniformly from
+$[-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}}]$, giving weight
+variance $1/(3 n_\textrm{in})$—just one-sixth of He's $2/n_\textrm{in}$.
 :end_tab:
 
 :begin_tab:`tensorflow`
-A Keras `Dense` layer draws its weights from the uniform version of Xavier
-initialization and sets its biases to 0. For layers of equal width this is
-half the variance of He initialization.
+Keras's `Dense` layer defaults to uniform Xavier initialization with zero
+biases—half the variance of He initialization on equal-width layers.
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.Linear` draws its weights from a truncated normal distribution with
-variance $1/n_\textrm{in}$, called LeCun normal, and sets its biases to 0.
-That is half the variance of He initialization.
+Flax NNX's `nnx.Linear` defaults to *LeCun normal* (truncated normal of
+variance $1/n_\textrm{in}$) with zero biases—again half the variance of He
+initialization.
 :end_tab:
 
 ### Activations and Gradients across Depth
 :label:`subsec_variance_propagation`
 
-We now repeat the measurement with ReLU and three initializations: the
-$\mathcal{N}(0, 0.01^2)$ of :numref:`sec_mlp-implementation`, Xavier, and
-He. With $n_\textrm{in} = n_\textrm{out} = 256$, Xavier gives
-$\tau^2 = 1/256$ and He gives $\tau^2 = 2/256$. This time we plot the mean
-square of the activations and print its value at the last layer, together
-with the mean square of the gradient at the first.
+Let us re-run our ten-layer ReLU diagnostic comparing $\mathcal{N}(0, 0.01^2)$,
+Xavier ($\tau^2 = 1/256$), and He ($\tau^2 = 2/256$), now plotting forward
+activation mean squares across depth and printing both the top-layer
+activations and bottom-layer gradients.
 
 ```{.python .input #numerical-stability-and-init-depth-sweep}
 runs = {'N(0, 0.01²)': moments(*relu, 0.01),
@@ -466,30 +434,25 @@ d2l.plot(list(range(1, 11)), [acts for acts, grads in runs.values()],
          yscale='log', figsize=(4.5, 3))
 ```
 
-He initialization keeps the mean squares of the activations and of the
-gradients within a factor of about 3 of 1 through all ten layers. The curve
-is not exactly flat, because the factor of each layer fluctuates around 1
-with the random weights and the fluctuations compound. Xavier initialization
-loses the factor $1/2$ of the ReLU at every layer, in both directions. The
-predictions are $2^{-10} \approx 10^{-3}$ for the activations at the last
-layer and $2^{-9} \approx 2 \times 10^{-3}$ for the gradient at the first;
-the measurements lie within a factor of 3 of them. With the weights of
-:numref:`sec_mlp-implementation`, the mean square of the activations at the
-last layer is about $10^{-19}$. To every input alike, the last hidden layer
-answers with entries of size about $3 \times 10^{-10}$.
+He initialization holds both forward activations and backward gradients
+within roughly a factor of 3 of unity all the way across ten layers (small
+random layer-to-layer fluctuations keep the line from being ruler-flat).
+Xavier loses ReLU's factor of $1/2$ at every layer, landing right near the
+predicted $2^{-10} \approx 10^{-3}$ at layer 10 and
+$2^{-9} \approx 2 \times 10^{-3}$ at layer 1. Meanwhile,
+$\mathcal{N}(0, 0.01^2)$ collapses layer-10 activations to a mean square
+around $10^{-19}$—passing microscopic values of roughly $3 \times 10^{-10}$
+to the output layer for every single input.
 
 ### Training a Deep Network
 
-So far we have measured networks that were never trained. Do the
-measurements predict what training does? We train the network of ten hidden
-ReLU layers of width 256 on Fashion-MNIST with each of the three
-initializations, for ten epochs of minibatch SGD with minibatches of 256,
-and plot the training loss. The learning rate is 0.05, half that of
-:numref:`sec_mlp-implementation`, because at 0.1 this deep network now and
-then diverges after a few epochs; we come back to the reason below.
-`DeepMLP` builds the network from the framework's layers. It draws the
-weights of a layer with $n_\textrm{in}$ inputs and $n_\textrm{out}$ outputs
-with the standard deviation `std(n_in, n_out)` and sets the biases to 0.
+Now for the real verdict: do these initialization diagnostics actually
+predict training behavior? Let us train our ten-hidden-layer, width-256
+ReLU MLP (`DeepMLP`) on Fashion-MNIST for ten epochs (batch size 256) under
+all three initializations. We use a learning rate of 0.05—half that of
+:numref:`sec_mlp-implementation`—because at 0.1 a ten-layer plain MLP
+occasionally diverges mid-training, for a reason we explain right after the
+run.
 
 ```{.python .input #numerical-stability-and-init-training-a-deep-network-1}
 %%tab mxnet
@@ -560,8 +523,9 @@ class DeepMLP(d2l.Classifier):
         return self.net(X.reshape((X.shape[0], -1)))  # Flatten each image
 ```
 
-The three initializations differ only in the function `std`. For each we
-print the validation accuracy after the last epoch.
+All three runs share the exact same architecture and hyperparameters,
+varying only `std(n_in, n_out)`. Let us compare their training curves and
+final validation accuracies.
 
 ```{.python .input #numerical-stability-and-init-training-a-deep-network-2}
 inits = {'N(0, 0.01²)': lambda n_in, n_out: 0.01,
@@ -579,57 +543,48 @@ d2l.plot(list(range(1, 11)), list(losses.values()), 'epoch', 'training loss',
          legend=list(losses), figsize=(4.5, 3))
 ```
 
-The measurements predicted the outcome. With weights of standard deviation
-0.01 the network learns nothing. Its training loss sits at
-$\log 10 \approx 2.30$ for all ten epochs, the loss of the untrained
-classifier, and its validation accuracy is the 10% of guessing. A gradient
-whose mean square at the first layer is $10^{17}$ times smaller than at the
-top is far too small to move the weights there, and the last hidden layer
-passes on nearly nothing for the output layer to learn from. Xavier and He
-initialization both train. Xavier initialization, which loses a factor of 2
-per layer, starts more slowly, with a training loss of about 1.5 after the
-first epoch against about 0.85 for He initialization, and it stays a little
-behind. After ten epochs both networks reach a validation accuracy of about
-85%, no better than the MLP with one hidden layer. The nine additional
-layers were not expected to help on this problem. What the experiment shows
-is that they can be trained, and that the initial scale decides whether
-they are.
+Our analysis nailed the outcome. Under $\mathcal{N}(0, 0.01^2)$, the
+ten-layer network is dead on arrival: its loss stays pinned at
+$\log 10 \approx 2.30$ across all ten epochs and its validation accuracy
+never rises above 10% (pure guessing). Both Xavier and He train smoothly—with
+He pulling cleanly ahead on epoch 1 (training loss ~0.85 versus ~1.5 for
+Xavier, which pays the per-layer factor-of-2 ReLU tax) and both reaching
+around 85% validation accuracy by epoch 10. We did not expect ten dense
+layers to outperform a single hidden layer on Fashion-MNIST; the point is
+that initialization alone makes the difference between a dead network and a
+trainable one.
 
-A good initialization is a statement about the untrained network only. Our
-derivations assumed that the weights are independent of each other and of
-the inputs, which holds when they are drawn. Training changes the weights
-and breaks the assumption, and nothing then keeps the factor of each layer
-near 1. This is how the deep network can diverge at the larger learning
-rate although it started at the right scale.
-Normalization layers (:numref:`sec_batch_norm`) and residual connections,
-introduced with deeper architectures later in the book, keep the scale under
-control during training as well.
+Remember one crucial caveat: Xavier and He govern only step zero, when
+weights are independent of one another and of the inputs. As soon as SGD
+begins updating parameters, correlations build up across layers and nothing
+automatically locks the per-layer factor at 1—which is why a slightly too
+large learning rate can still destabilize a properly initialized deep
+network. Keeping signal scales healthy *throughout* training requires
+architectural tools we meet in later chapters, notably normalization layers
+(:numref:`sec_batch_norm`) and residual connections.
 
 ## Symmetry among Hidden Units
 
-The variance argument fixes the scale of the initial weights. It does not
-say why they should be random. After all, a constant would have the same
-mean square. Consider an MLP with one hidden layer and a single output, and
-suppose that every weight of the hidden layer equals the same constant $c$
-and every weight of the output layer the same constant $c'$. Every hidden
-unit then computes the same function of the input. In the backward pass,
-every hidden unit receives the same gradient from the output, and the
-weights into each unit receive the same gradient. After an update of
-minibatch stochastic gradient descent, the units are still identical, and by
-the same argument after every later update. The $h$ hidden units behave like
-a single unit: 256 of them would be one unit, stored 256 times. The hidden
-units of an
-MLP are interchangeable: permuting them, together with their incoming and
-outgoing weights, does not change the function that the network computes.
-Gradient descent cannot break this symmetry if the initialization does not.
+Variance preservation fixes the *magnitude* of initial weights, but why
+must they be *random*? Wouldn't setting every weight to the same constant
+$c$ yield the exact same mean square?
 
-We check this with $d = 20$ inputs, $h = 16$ hidden ReLU units, a minibatch
-of 64 random examples with random targets, and the squared loss. The constant
-$c = \sqrt{2/d}$ gives the pre-activations the same mean square as He
-initialization. We compute the gradient with respect to the weights of the
-hidden layer and print the largest difference between the gradients of two
-hidden units, that is, between two columns of the gradient, for the constant
-weights and for random weights at the same scale.
+Consider a one-hidden-layer MLP with a single output where every weight in
+$\mathbf{W}^{(1)}$ starts at $c$ and every weight in $\mathbf{W}^{(2)}$
+starts at $c'$. Because hidden units are completely interchangeable
+(permuting them along with their incoming and outgoing weights leaves the
+network function identical), every hidden unit computes the exact same
+activation in the forward pass, receives the exact same gradient in the
+backward pass, and takes the exact same SGD update! Induction guarantees
+that all $h$ hidden units stay clones of one another forever: 256 hidden
+units collapse into a single neuron copied 256 times. Gradient descent
+cannot *break the symmetry* on its own unless random initialization breaks
+it first.
+
+Let us verify this directly on a small network ($d = 20, h = 16$, 64 random
+examples, squared loss), comparing the maximum difference across columns of
+$\partial L / \partial \mathbf{W}^{(1)}$ for constant weights at He scale
+$c = \sqrt{2/d}$ versus random Gaussian weights at the exact same scale.
 
 ```{.python .input #numerical-stability-and-init-symmetry-among-hidden-units}
 %%tab mxnet
@@ -715,34 +670,31 @@ for name, (W1, W2) in inits.items():
           f'{float(jnp.abs(G - G[:, :1]).max()):.2f}')
 ```
 
-With constant weights, all 16 columns of the gradient are identical, as the
-argument said they must be. With random weights, the units receive
-different gradients from the first step on. The biases can start at zero,
-since the weights already differ between units.
+Under constant weights, all 16 columns of the gradient agree to the very
+last bit (`0.00` difference), locking all 16 units together; under random
+weights, every unit receives a distinct gradient from step 1 onward (biases
+can safely start at zero because the random weights already break symmetry).
 
-A network whose gradients arrive intact is not yet a network that predicts
-well on new data. The next section asks why deep networks, with many more
-parameters than training examples, generalize at all.
+Keeping gradients alive lets us *optimize* a deep network, yet optimization
+is only half the battle. In the next section, we turn to the deepest puzzle
+of modern deep learning: why do networks with far more parameters than
+training examples generalize instead of simply memorizing their data?
 
 ## Summary
 
-The backward pass multiplies the gradient by one matrix of slopes and one
-transposed weight matrix per layer, so the gradient that reaches the first
-layers of a deep network is a long product.
-Each ReLU layer of width $h$ with weights of variance $\tau^2$ multiplies its
-mean square by about $h\tau^2/2$, and the mean square of the activations by
-the same factor on the way up. Unless this factor is close to 1, ten layers
-suffice to change both by many orders of magnitude. Saturating
-activation functions such as the sigmoid shrink it even when the weights
-are scaled correctly. Xavier initialization,
-$\tau^2 = 2/(n_\textrm{in} + n_\textrm{out})$, keeps the variance constant
-through linear layers, and He initialization, $\tau^2 = 2/n_\textrm{in}$,
-compensates for the ReLU, which halves the mean square. Trained on
-Fashion-MNIST, the network with ten hidden layers never leaves its initial
-loss with weights of standard deviation 0.01, and learns from the first
-epoch with He initialization. The initial weights
-must also be random, because hidden units that start identical receive
-identical gradients and stay identical.
+Because backpropagation multiplies gradients by one activation-slope matrix
+and one transposed weight matrix per layer, signals in deep networks vanish
+or explode exponentially unless each layer's variance multiplier stays near
+1. For a ReLU layer of width $h$ and weight variance $\tau^2$, both forward
+activations and backward gradients scale by roughly $h\tau^2/2$ per layer;
+saturating activations like sigmoid shrink gradients rapidly even when
+$h\tau^2 = 1$. *Xavier initialization* ($\tau^2 = 2/(n_\textrm{in} + n_\textrm{out})$)
+preserves variance across linear and $\tanh$ layers, while *He
+initialization* ($\tau^2 = 2/n_\textrm{in}$) accounts for ReLU halving the
+mean square—enabling our ten-hidden-layer Fashion-MNIST MLP to train from
+epoch 1 where $\mathcal{N}(0, 0.01^2)$ stalls completely at $\log 10$.
+Finally, initial weights must be sampled randomly to break permutation
+symmetry among hidden units so that they can learn distinct features.
 
 ## Exercises
 

@@ -2174,179 +2174,10 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):
     d2l.train_steps(model, data, optimizer, num_steps)
     return d2l.lm_perplexity(model, data.val_dataloader())
 
-class Encoder(nn.Module):
-    """The base encoder interface for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self):
-        super().__init__()
-
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def forward(self, X, *args):
-        raise NotImplementedError
-
-class Decoder(nn.Module):
-    """The base decoder interface for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self):
-        super().__init__()
-
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def forward(self, X, state):
-        raise NotImplementedError
-
-class EncoderDecoder(d2l.Classifier):
-    """The base class for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args)
-        dec_state = self.decoder.init_state(enc_all_outputs, *args)
-        # Return decoder output only
-        return self.decoder(dec_X, dec_state)[0]
-
-    def predict_step(self, batch, device, num_steps,
-                     save_attention_weights=False):
-        self.eval()
-        batch = [d2l.to(a, device) for a in batch]
-        src, tgt, src_valid_len, _ = batch
-        enc_all_outputs = self.encoder(src, src_valid_len)
-        dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
-        outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-        for _ in range(num_steps):
-            Y, dec_state = self.decoder(outputs[-1], dec_state)
-            outputs.append(d2l.argmax(Y, 2))
-            if save_attention_weights:
-                attention_weights.append(self.decoder.attention_weights)
-        return d2l.concat(outputs[1:], 1), attention_weights
-
-class MTFraEng(d2l.DataModule):
-    """The English-French dataset, tokenized with a shared byte-level BPE.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
-                 vocab_size=4000):
-        super().__init__()
-        self.save_hyperparameters()
-        pairs = self._pairs(self._preprocess(self._download()))
-        # Train ONE shared byte-level BPE over both languages.
-        m = min(5000, len(pairs))
-        self.tokenizer = d2l.BPETokenizer(
-            vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
-        self.tokenizer.train('\n'.join([p[0] for p in pairs[:m]] +
-                                       [p[1] for p in pairs[:m]]))
-        # src_vocab / tgt_vocab both refer to the shared tokenizer.
-        self.src_vocab = self.tgt_vocab = self.tokenizer
-        pairs = pairs[:num_train + num_val]
-        self.src_sents = [p[0] for p in pairs]
-        self.tgt_sents = [p[1] for p in pairs]
-        self.arrays = self._encode(pairs)
-
-    def _download(self):
-        d2l.extract(d2l.download(
-            d2l.DATA_URL + 'fra-eng.zip', self.root,
-            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
-        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
-            return f.read()
-
-    def _preprocess(self, text):
-        # Normalize spaces, lowercase, and put a space before punctuation.
-        text = text.replace(' ', ' ').replace('\xa0', ' ').lower()
-        no_space = lambda c, prev: c in ',.!?' and prev != ' '
-        return ''.join([' ' + c if i > 0 and no_space(c, text[i - 1]) else c
-                        for i, c in enumerate(text)])
-
-    def _pairs(self, text):
-        return [ln.split('\t') for ln in text.split('\n') if ln.count('\t') == 1]
-
-    def _encode(self, pairs):
-        tok, t = self.tokenizer, self.num_steps
-        def row(sent, is_tgt):
-            ids = tok.encode(sent)
-            ids = (ids[:t - 1] + [tok.eos] if len(ids) >= t else
-                   ids + [tok.eos] + [tok.pad] * (t - 1 - len(ids)))
-            return [tok.bos] + ids if is_tgt else ids
-        src = d2l.tensor([row(s, False) for s, _ in pairs])
-        tgt = d2l.tensor([row(t, True) for _, t in pairs])
-        valid_len = d2l.reduce_sum(d2l.astype(src != tok.pad, d2l.int32), 1)
-        return src, tgt[:, :-1], valid_len, tgt[:, 1:]
-
-    def build(self, src_sentences, tgt_sentences):
-        return self._encode([(self._preprocess(s), self._preprocess(t))
-                             for s, t in zip(src_sentences, tgt_sentences)])
-
-    def get_dataloader(self, train):
-        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
-        return self.get_tensorloader(self.arrays, train, idx)
-
-def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
-    """Plot the histogram for list length pairs.
-
-    Defined in :numref:`sec_machine_translation`"""
-    d2l.set_figsize()
-    _, _, patches = d2l.plt.hist(
-        [[len(l) for l in xlist], [len(l) for l in ylist]])
-    d2l.plt.xlabel(xlabel)
-    d2l.plt.ylabel(ylabel)
-    for patch in patches[1].patches:
-        patch.set_hatch('/')
-    d2l.plt.legend(legend)
-
-def init_seq2seq(module):
-    """Initialize weights for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    if type(module) == nn.Linear:
-        nn.init.xavier_uniform_(module.weight)
-    if type(module) == nn.GRU:
-        for param in module._flat_weights_names:
-            if "weight" in param:
-                nn.init.xavier_uniform_(module._parameters[param])
-
-class Seq2SeqEncoder(d2l.Encoder):
-    """The RNN encoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
-        self.apply(init_seq2seq)
-
-    def forward(self, X, *args):
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-
-class Seq2Seq(d2l.EncoderDecoder):
-    """The RNN encoder-decoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.save_hyperparameters()
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1]), batch[-1])
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
-
 def chrf(pred, label, n=6, beta=2):
     """chrF (Popovic, 2015): character n-gram F-score.
 
-    Defined in :numref:`sec_seq2seq_training`"""
+    Defined in :numref:`sec_encoder-decoder`"""
     def ngrams(s, k):
         s = s.replace(' ', '')
         return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
@@ -2365,7 +2196,7 @@ def chrf(pred, label, n=6, beta=2):
 def bleu(pred_seq, label_seq, k):
     """Compute the BLEU.
 
-    Defined in :numref:`sec_seq2seq_training`"""
+    Defined in :numref:`sec_encoder-decoder`"""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
     len_pred, len_label = len(pred_tokens), len(label_tokens)
     score = math.exp(min(0, 1 - len_label / len_pred))
@@ -10451,16 +10282,6 @@ class CTRDataset(torch.utils.data.Dataset):
         feat = torch.tensor([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
                              for i, v in enumerate(self.data[idx]['x'])])
         return feat + self.offsets, torch.tensor(self.data[idx]['y'])
-
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
-                          dropout=dropout)
 
 class Timer:
     """Record multiple running times.

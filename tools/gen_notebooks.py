@@ -481,7 +481,7 @@ def main():
         standalone = sorted(str(path.relative_to(src))
                             for path in src.glob("chapter_*/*.md"))
         files = list(dict.fromkeys([*CHAPTER_NUMBERING.keys(), *standalone]))
-        # Build-only lib-extraction sources (e.g. legacy-attention-lib.md) carry
+        # Build-only lib-extraction sources (e.g. legacy-timer-lib.md) carry
         # #@save blocks for `make lib` but are never rendered or executed as
         # notebooks — their cells reference nn/tf/… with no imports cell. Keep
         # them out of the notebook set so they are neither generated nor run.

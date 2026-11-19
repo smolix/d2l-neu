@@ -281,7 +281,7 @@ def fig_gru_cell():
 # =========================================================================== #
 # Encoder-decoder figures (referenced from ``seq2seq.md``, ``sec_seq2seq``,  #
 # in this chapter): the encoder-decoder interface, and the unrolled RNN      #
-# encoder-decoder with teacher forcing.                                      #
+# encoder-decoder on string reversal, with teacher forcing.                  #
 #                                                                              #
 # ``_ed_box``/``_ed_arrow`` are this section's own box/arrow helpers -- they #
 # take separate face/edge colours and an explicit zorder respectively, both  #
@@ -341,10 +341,10 @@ def fig_encoder_decoder():
 
 
 def fig_seq2seq():
-    """Unrolled RNN encoder-decoder with teacher forcing.  The encoder reads the
-    source tokens and passes its final state as context to every decoder step;
-    the decoder is fed the shifted target (`<bos>` ...) and predicts the target
-    shifted left (... `<eos>`)."""
+    """Unrolled RNN encoder-decoder on string reversal, with teacher forcing.
+    The encoder reads the source letters and passes its final state as context
+    to every decoder step; the decoder is fed the reversed string shifted
+    right behind a start token and predicts the reversed string."""
     fig, ax = plt.subplots(figsize=(10.4, 3.35))
     ax.set_ylim(0.75, 5.2)
     ax.axis("off")
@@ -354,10 +354,10 @@ def fig_seq2seq():
     yc = 2.4                    # recurrent-cell row
     dx = 1.45
 
-    enc_tokens = ['"They"', '"are"', '"watching"', '"."']
+    enc_tokens = ["b", "a", "d", "e"]   # no "c": c names the context
     enc_x = [0.9 + i * dx for i in range(4)]
-    dec_in = ['<bos>', '"Ils"', '"regardent"', '"."']
-    dec_out = ['"Ils"', '"regardent"', '"."', '<eos>']
+    dec_in = ["<start>", "e", "d", "a"]
+    dec_out = ["e", "d", "a", "b"]
     dec_x = [enc_x[-1] + dx + 0.6 + i * dx for i in range(4)]
     ax.set_xlim(0, dec_x[-1] + 0.9)
 

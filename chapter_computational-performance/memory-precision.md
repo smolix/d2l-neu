@@ -175,6 +175,7 @@ reference cycle between a saved output and the graph that produced it, and
 the graph, with all its tensors, would never be freed. Several saved tensors
 can be views of one storage, so we count each storage once.
 :end_tab:
+<!-- WRITER: the reference-cycle detail of this tab (why `pack` returns a detached alias) is now a comment in cell memory-precision-memory-per-token-1; cut it from the tab (structure §3.5, MEM-7). Likewise the `nnx.split` mechanics are now a comment in the JAX cell memory-precision-memory-per-token-2. -->
 
 :begin_tab:`jax`
 `jax.vjp(f, *args)` runs the forward pass of `f` and returns the backward
@@ -191,7 +192,10 @@ def saved_bytes(f, *args):
     def pack(t):  # Called on every tensor saved for the backward pass
         storages[t.untyped_storage().data_ptr()] = (
             t.untyped_storage().nbytes())
-        return t.detach()  # Same storage, no reference back to the graph
+        # A detached alias shares the storage. Returning t itself would form
+        # a reference cycle between a saved output and the graph that made
+        # it, and the graph, with all its tensors, would never be freed
+        return t.detach()
     with torch.autograd.graph.saved_tensors_hooks(pack, lambda t: t):
         f(*args)
     return sum(storages.values())
@@ -259,6 +263,9 @@ def bytes_per_token(config, bf16=False, num_steps=1024):
         model = d2l.GPT(**{**config, 'num_blks': L},
                         rngs=nnx.Rngs(d2l.get_key()))
         model = to_bf16(model) if bf16 else model
+        # The structure, the weights, and the other state of the model;
+        # nnx.merge puts them back together, so the loss is a function of
+        # the weights
         graphdef, params, rest = nnx.split(model, nnx.Param, ...)
         loss = lambda params, X: gpt_loss(nnx.merge(graphdef, params, rest), X)
         X1, X2 = (jax.random.randint(d2l.get_key(), (b, num_steps), 0,
@@ -371,6 +378,7 @@ with the count of the previous cell. With few tokens, other parts of the
 step can set the peak, so we take the growth between 2,048 and 4,096
 tokens.
 
+<!-- WRITER: the two cells now measure 1,024, 2,048, 4,096 and 8,192 tokens and print two slopes, 2,048 to 4,096 and 4,096 to 8,192 (MEM-6 option a). Dev runs 2026-11-19 on one idle RTX 4090: PyTorch peaks 1.53 / 1.77 / 3.53 / 7.06 GiB, slopes 905 and 903 KiB per token against a count of 511 (excess 392 to 394 KiB = 8V bytes, settled). JAX plan 1.23 / 1.63 / 3.09 / 5.79 GiB, slopes 749 and 691 KiB against a count of 692: from 4,096 to 8,192 the plan grows by the count and carries no 8V term. The JAX plan does not settle: a dev compile (not in the cell) gave 404 KiB from 1,024 to 2,048, 643 from 8,192 to 16,384, and at 32,768 tokens XLA starts rematerializing to fit the card. So "we take the growth between 2,048 and 4,096" and the shared "a token therefore needs up to 8V bytes more than the count" are true of PyTorch only. -->
 :begin_tab:`pytorch`
 PyTorch's caching allocator counts the bytes in live tensors, and
 `max_memory_allocated` reports the highest count since the last
@@ -396,14 +404,15 @@ gpu, V = d2l.try_gpu(), config['vocab_size']
 model = d2l.GPT(**{**config, 'num_blks': 2}).to(gpu)
 gpt_loss(model, torch.randint(0, V, (1, 1024), device=gpu)).backward()
 peaks = {}  # The step above was a warm-up
-for n in (1024, 2048, 4096):  # Tokens per step, in sequences of 1,024
+for n in (1024, 2048, 4096, 8192):  # Tokens per step, in sequences of 1,024
     X = torch.randint(0, V, (n // 1024, 1024), device=gpu)
     model.zero_grad(set_to_none=True)
     peaks[n] = d2l.peak_memory(lambda: gpt_loss(model, X).backward())
     print(f'{n:5d} tokens: peak {peaks[n] / 2**30:.2f} GiB above the weights')
-slope = (peaks[4096] - peaks[2048]) / (4096 - 2048)
-print(f'measured: {slope / 2**10:.0f} KiB per token; '
-      f'counted: {(2 * block + head) / 2**10:.0f} KiB per token')
+for n in (2048, 4096):  # Growth per token from n to 2n tokens
+    slope = (peaks[2 * n] - peaks[n]) / n
+    print(f'{n:5d} to {2 * n:5d} tokens: measured {slope / 2**10:.0f} KiB '
+          f'per token; counted {(2 * block + head) / 2**10:.0f} KiB')
 ```
 
 ```{.python .input #memory-precision-measuring-memory-3}
@@ -415,14 +424,15 @@ graphdef, params, rest = nnx.split(model, nnx.Param, ...)
 grad_fn = jax.jit(jax.grad(
     lambda params, rest, X: gpt_loss(nnx.merge(graphdef, params, rest), X)))
 peaks = {}
-for n in (1024, 2048, 4096):  # Tokens per step, in sequences of 1,024
+for n in (1024, 2048, 4096, 8192):  # Tokens per step, in sequences of 1,024
     X = jax.ShapeDtypeStruct((n // 1024, 1024), jnp.int32)
     plan = grad_fn.lower(params, rest, X).compile().memory_analysis()
     peaks[n] = plan.output_size_in_bytes + plan.temp_size_in_bytes
     print(f'{n:5d} tokens: peak {peaks[n] / 2**30:.2f} GiB above the weights')
-slope = (peaks[4096] - peaks[2048]) / (4096 - 2048)
-print(f'planned: {slope / 2**10:.0f} KiB per token; '
-      f'counted: {(2 * block + head) / 2**10:.0f} KiB per token')
+for n in (2048, 4096):  # Growth per token from n to 2n tokens
+    slope = (peaks[2 * n] - peaks[n]) / n
+    print(f'{n:5d} to {2 * n:5d} tokens: planned {slope / 2**10:.0f} KiB '
+          f'per token; counted {(2 * block + head) / 2**10:.0f} KiB')
 ```
 
 The peak grows with the number of tokens, as :eqref:`eq_mp-budget`
@@ -478,9 +488,11 @@ gpt_loss(model, X).backward()  # A first step creates the moment estimates
 opt.step()
 opt.zero_grad(set_to_none=True)
 
+# _snapshot, _record_memory_history and the keys of their records are a
+# private API of PyTorch 2.11 and may change between versions
 events = lambda: torch.cuda.memory._snapshot()['device_traces'][0]
 start = torch.cuda.memory_allocated()
-torch.cuda.memory._record_memory_history()
+torch.cuda.memory._record_memory_history()  # Record from here on
 loss = gpt_loss(model, X)
 forward_end = len(events())
 loss.backward()
@@ -497,7 +509,7 @@ allocated memory after every event:
 
 ```{.python .input #memory-precision-measuring-memory-2}
 %%tab pytorch
-sign = {'alloc': 1, 'free_completed': -1}
+sign = {'alloc': 1, 'free_completed': -1}  # Other actions change nothing
 sizes = torch.tensor([sign.get(e['action'], 0) * e['size'] for e in trace])
 series = ((start + sizes.cumsum(0)) / 2**30).tolist()
 bounds = [0, forward_end, backward_end, len(trace)]
@@ -587,11 +599,12 @@ we time one training step of a three-layer MLP of width 8192, on a
 minibatch of 2,048 examples, in three configurations: true fp32, tf32, and
 bf16.
 
-```{.python .input #memory-precision-mixed-precision}
+```{.python .input #memory-precision-mixed-precision-2}
 %%tab pytorch
-mlp = nn.Sequential(nn.Linear(64 * 64, 8192, bias=False), nn.ReLU(),
-                    nn.Linear(8192, 8192, bias=False), nn.ReLU(),
-                    nn.Linear(8192, 10, bias=False)).to(gpu)
+sizes = [(64 * 64, 8192), (8192, 8192), (8192, 10)]  # (inputs, outputs)
+mlp = nn.Sequential(nn.Linear(*sizes[0], bias=False), nn.ReLU(),
+                    nn.Linear(*sizes[1], bias=False), nn.ReLU(),
+                    nn.Linear(*sizes[2], bias=False)).to(gpu)
 for layer in mlp[::2]:  # Weights drawn from N(0, 0.02^2)
     nn.init.normal_(layer.weight, std=0.02)
 X_mlp = torch.randn(2048, 64 * 64, device=gpu)
@@ -604,15 +617,9 @@ def step(bf16):
     l.backward()
     opt.step()
     opt.zero_grad(set_to_none=True)
-
-torch.set_float32_matmul_precision('highest')  # True fp32
-print(d2l.Benchmark(lambda: step(False), desc='fp32'))
-torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
-print(d2l.Benchmark(lambda: step(False), desc='tf32'))
-print(d2l.Benchmark(lambda: step(True), desc='bf16'))
 ```
 
-```{.python .input #memory-precision-mixed-precision}
+```{.python .input #memory-precision-mixed-precision-2}
 %%tab jax
 def net_fn(params, X, dtype):
     h = X.astype(dtype)
@@ -620,7 +627,7 @@ def net_fn(params, X, dtype):
         h = jax.nn.relu(h @ W.astype(dtype))
     return h @ params[-1].astype(dtype)
 
-sizes = [(64 * 64, 8192), (8192, 8192), (8192, 10)]
+sizes = [(64 * 64, 8192), (8192, 8192), (8192, 10)]  # (inputs, outputs)
 mlp_params = [jax.random.normal(k, s) * 0.02
               for k, s in zip(jax.random.split(d2l.get_key(), 3), sizes)]
 X_mlp = jax.random.normal(d2l.get_key(), (2048, 64 * 64))
@@ -636,10 +643,37 @@ def sgd_step(params, X, y, dtype):
 
 step = jax.jit(sgd_step, static_argnums=3)
 args = mlp_params, X_mlp, y_mlp
+```
+
+```{.python .input #memory-precision-mixed-precision-3}
+%%tab pytorch, jax
+# Two FLOPs per multiply-add, in the forward pass, the weight gradients, and
+# the input gradients of every layer but the first
+macs = sum(i * o for i, o in sizes)  # Per example and pass
+flops = 2 * len(X_mlp) * (3 * macs - sizes[0][0] * sizes[0][1])
+print(f'{flops:.2e} FLOPs per step')
+
+def report(desc, f):
+    """Print the time per call of f and the arithmetic rate it achieves."""
+    t = d2l.Benchmark(f).time
+    print(f'{desc}: {1000 * t:5.2f} ms, {flops / t / 1e12:3.0f} TFLOP/s')
+```
+
+```{.python .input #memory-precision-mixed-precision}
+%%tab pytorch
+torch.set_float32_matmul_precision('highest')  # True fp32
+report('fp32', lambda: step(False))
+torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
+report('tf32', lambda: step(False))
+report('bf16', lambda: step(True))
+```
+
+```{.python .input #memory-precision-mixed-precision}
+%%tab jax
 with jax.default_matmul_precision('highest'):  # True fp32
-    print(d2l.Benchmark(lambda: step(*args, jnp.float32), desc='fp32'))
-print(d2l.Benchmark(lambda: step(*args, jnp.float32), desc='tf32'))
-print(d2l.Benchmark(lambda: step(*args, jnp.bfloat16), desc='bf16'))
+    report('fp32', lambda: step(*args, jnp.float32))
+report('tf32', lambda: step(*args, jnp.float32))
+report('bf16', lambda: step(*args, jnp.bfloat16))
 ```
 
 The step gets faster twice. tf32 runs the fp32 matrix multiplications on
@@ -647,6 +681,7 @@ the tensor cores and shortens the step by about a third, without changing a
 single stored byte. bf16 then runs about 1.5 to 2 times as fast as tf32,
 close to the factor of two in arithmetic rate and bytes. The fair baseline
 for a speedup from mixed precision is tf32, not true fp32.
+<!-- WRITER: a shared cell (memory-precision-mixed-precision-3) now computes the FLOPs of the step from the layer shapes and prints 1.10e12; the timing cell prints ms and achieved TFLOP/s. Prediction at the roofs of tab_gpu_specs: 13.3 ms tf32 (83 TFLOP/s), 6.7 ms bf16 (165). Dev runs on an idle card: PyTorch fp32 23.2 ms / 47 TFLOP/s, tf32 15.2 ms / 73 (88% of its roof), bf16 9.7 ms / 113 (69%); JAX fp32 21.8 / 51, tf32 14.5 / 76 (92%), bf16 8.4 / 131 (79%). bf16 over tf32: 1.56 (P), 1.73 (J); tf32 over fp32 saves 0.35 and 0.33 of the step. "close to the factor of two" is false; "1.5 to 2 times" holds. -->
 
 :begin_tab:`pytorch`
 For matrix multiplications PyTorch defaults to `'highest'`, true fp32;
@@ -708,6 +743,22 @@ token, and the largest minibatch grows to about 9,300 tokens, more than
 four times as many as without checkpointing.
 :end_tab:
 
+```{.python .input #memory-precision-activation-checkpointing-1}
+%%tab pytorch, jax
+M_gpu, d, L = 24 * 2**30, config['num_hiddens'], config['num_blks']
+excess = slope - (2 * block + head)  # Measured peak above the count
+budgets = {  # Configuration: (fixed bytes, bytes per token at the peak)
+    'fp32, count': (16 * N, L * block + head),
+    'fp32, measured': (16 * N, L * block + head + excess),
+    'bf16, measured': (18 * N, L * block16 + head16 + excess),
+    'fp32, checkpointing': (16 * N, L * 4 * d + block + head + excess),
+    'bf16, checkpointing': (18 * N, L * 4 * d + block16 + head16 + excess)}
+for name, (fixed, per_token) in budgets.items():  # M(n) <= M_gpu
+    print(f'{name:19s}: {per_token / 2**20:.2f} MiB per token, room for '
+          f'{(M_gpu - fixed) / per_token:6,.0f} tokens')
+```
+
+<!-- WRITER: the new cell above (memory-precision-activation-checkpointing-1) evaluates eq_mp-budget for five configurations, using the measured excess (slope from 4,096 to 8,192 minus the count) in place of 8V. Dev runs: PyTorch fp32 count 2.83 MiB/token, 3,229 tokens; fp32 measured 3.22 MiB, 2,844; bf16 measured 2.21 MiB, 3,272; fp32 checkpointing 0.88 MiB, 10,435; bf16 checkpointing 0.91 MiB, 7,956. JAX: fp32 count 4.30 MiB, 2,127; fp32 measured 4.30, 2,128 (excess about 0); bf16 measured 2.68, 2,691; fp32 checkpointing 0.59 MiB, 15,529; bf16 checkpointing 0.50, 14,461. So the JAX tab's "1.0 MiB per token ... about 9,300 tokens" (which adds 8V) is false against the measured plan (15,500), and the formula's "+ 8V" holds for PyTorch only; under checkpointing bf16 lowers the room in both tabs (the 2N of weight copies outweighs the saving on one recomputed block). -->
 The output layer and the loss now store more per token than all 18 blocks
 together. Computing the loss in chunks of tokens, so that the
 log-probabilities of only one chunk exist at a time, removes most of that
@@ -748,6 +799,10 @@ def stack(params, H, remat):
     def block(graphdef, p, rest, H):  # A block as a function of its weights
         return nnx.merge(graphdef, p, rest)(H)
     if remat:
+        # On a CPU, XLA's default scheduler runs the recomputations early,
+        # so that they coexist and the saving vanishes; setting XLA_FLAGS to
+        # --xla_cpu_enable_concurrency_optimized_scheduler=false before JAX
+        # starts restores it there
         block = jax.checkpoint(block, static_argnums=0)
     for (graphdef, _, rest), p in zip(blocks, params):
         H = block(graphdef, p, rest, H)
@@ -785,6 +840,7 @@ of about three.
 :end_tab:
 
 :begin_tab:`jax`
+<!-- WRITER: the XLA CPU scheduler flag is now a code comment in the JAX cell memory-precision-activation-checkpointing (MEM-12); cut it from this tab and keep the shared sentence that the compiler decides when the recomputation runs, so checkpointing guarantees what is stored, not where the peak is. -->
 `jax.checkpoint`, also called `jax.remat`, transforms a function so that its
 derivative keeps only the function's inputs and recomputes everything else
 during the backward pass. We apply it to each block written as a function of
@@ -852,40 +908,61 @@ and the cross-entropy do, each micro-batch loss is divided by $m$, so that
 the sum of the gradients becomes the average over the global batch. We check
 this on a linear model with four micro-batches of 32 examples:
 
-```{.python .input #memory-precision-gradient-accumulation}
+```{.python .input #memory-precision-accumulated-step}
 %%tab pytorch
-net = nn.Linear(1024, 1, bias=False).to(gpu)
-X = torch.randn(128, 1024, device=gpu)
-y = torch.randn(128, 1, device=gpu)
-loss = nn.MSELoss()
+X = torch.randint(0, V, (4, 1024), device=gpu)  # 4,096 tokens per step
 
-net.zero_grad()  # Global batch: one backward pass over all 128 examples
-loss(net(X), y).backward()
-full = net.weight.grad.clone()
+def accumulate(model, X, m):
+    """Gradient of the loss on X in .grad, accumulated over m micro-batches."""
+    model.zero_grad(set_to_none=True)
+    for Xb in X.chunk(m):
+        (gpt_loss(model, Xb) / m).backward()  # / m: the loss averages
 
-m = 4  # Micro-batches of 128 / m = 32 examples; gradients add up in .grad
-net.zero_grad()
-for Xb, yb in zip(X.chunk(m), y.chunk(m)):
-    (loss(net(Xb), yb) / m).backward()  # / m because MSELoss averages
-print(f'max gradient difference: {(full - net.weight.grad).abs().max():.1e}')
+accumulate(model, X, 1)
+full = [p.grad.clone() for p in model.parameters()]  # One-batch gradient
+for m in (1, 4):
+    model.zero_grad(set_to_none=True)
+    peak = d2l.peak_memory(accumulate, model, X, m)
+    assert max((p.grad - g).norm() / g.norm()
+               for p, g in zip(model.parameters(), full)) < 1e-2
+    f = lambda: accumulate(model, X, m)
+    times = 1000 * np.array([d2l.Benchmark(f).time for _ in range(5)])  # ms
+    print(f'{m} x {4096 // m:4d} tokens: peak {peak / 2**30:.2f} GiB above '
+          f'the weights, {np.median(times):.0f} ms per step '
+          f'({times.min():.0f} to {times.max():.0f})')
 ```
 
-```{.python .input #memory-precision-gradient-accumulation}
+```{.python .input #memory-precision-accumulated-step}
 %%tab jax
-W = jax.random.normal(d2l.get_key(), (1024, 1)) * 1024 ** -0.5
-X = jax.random.normal(d2l.get_key(), (128, 1024))
-y = jax.random.normal(d2l.get_key(), (128, 1))
+model = d2l.GPT(**{**config, 'num_blks': 2}, rngs=nnx.Rngs(d2l.get_key()))
+graphdef, params, rest = nnx.split(model, nnx.Param, ...)
+X = jax.random.randint(d2l.get_key(), (4, 1024), 0, config['vocab_size'])
 
-def mse(W, X, y):
-    return ((X @ W - y) ** 2).mean()
+def accumulate(params, rest, X, m):
+    """Gradient of the loss on X, accumulated over m micro-batches."""
+    loss = lambda params, Xb: gpt_loss(nnx.merge(graphdef, params, rest), Xb)
+    def add(g, Xb):  # One micro-batch; / m because the loss averages
+        g_b = jax.grad(loss)(params, Xb)
+        return jax.tree.map(lambda a, b: a + b / m, g, g_b), None
+    zeros = jax.tree.map(jnp.zeros_like, params)
+    return jax.lax.scan(add, zeros, X.reshape(m, -1, X.shape[-1]))[0]
 
-full = jax.grad(mse)(W, X, y)  # Global batch: all 128 examples at once
-m = 4  # Micro-batches of 128 / m = 32 examples
-acc = sum(jax.grad(mse)(W, Xb, yb) / m  # / m because mse averages
-          for Xb, yb in zip(jnp.split(X, m), jnp.split(y, m)))
-print(f'max gradient difference: {jnp.abs(full - acc).max():.1e}')
+accumulate = jax.jit(accumulate, static_argnums=3)
+full = accumulate(params, rest, X, 1)  # One-batch gradient
+for m in (1, 4):
+    plan = accumulate.lower(params, rest, X, m).compile().memory_analysis()
+    peak = plan.output_size_in_bytes + plan.temp_size_in_bytes
+    assert max(jax.tree.leaves(jax.tree.map(
+        lambda a, b: jnp.linalg.norm(a - b) / jnp.linalg.norm(b),
+        accumulate(params, rest, X, m), full))) < 1e-2
+    f = lambda: accumulate(params, rest, X, m)
+    times = 1000 * np.array([d2l.Benchmark(f).time for _ in range(5)])  # ms
+    print(f'{m} x {4096 // m:4d} tokens: peak {peak / 2**30:.2f} GiB above '
+          f'the weights, {np.median(times):.0f} ms per step '
+          f'({times.min():.0f} to {times.max():.0f})')
 ```
 
+<!-- WRITER: the linear-model identity cell is gone (id memory-precision-gradient-accumulation retired). The new cell memory-precision-accumulated-step runs one forward and backward pass of the two-block GPT on 4,096 tokens as one batch and as 4 micro-batches of 1,024 (same weights, tf32), asserts that the accumulated gradient equals the one-batch gradient (relative error 6e-4 P, 7e-4 J; without the 1/m it would be 3.0), and prints the peak above the weights and the median of five timings with their range. Dev runs on an idle card: PyTorch 3.53 -> 1.92 GiB, 83 -> 100 ms (+20%; each range under 1 ms); JAX 3.09 -> 1.43 GiB, 80 -> 90 ms (+12%; each range under 1 ms). So "We check this on a linear model with four micro-batches of 32 examples", "agree up to rounding" (now an assert) and "A micro-batch of thousands of tokens is far into the compute-bound regime, where accumulation adds almost no time" are false. Prediction (F4): each micro-batch after the first adds the gradient into the accumulator, about 12N bytes (N = 0.206 B for the two-block GPT, 2.5 GB, 2.7 ms at 0.9 TB/s), so up to about 8 ms for m = 4; a PyTorch profile shows the add kernel growing from 2.1 to 13.1 ms per step (+11 ms) and the device busy 96% -> 87%. Relative to a micro-batch of n tokens (6N n FLOPs at P) the added time is about 2 P / (beta n) = 2 I* / n: 16% at n = 1,024 in tf32, 4% at 4,096. The peak half of the prediction holds: 1.9 and 1.4 GiB include the 0.77 GiB of gradients that persist across micro-batches. -->
 The two gradients agree up to rounding. The equivalence rests on conditions
 that this example meets without effort. The loss must add up over examples,
 and the micro-batches must have equal sizes, or their losses must be
@@ -1503,7 +1580,7 @@ longer.
 $B_\textrm{global} = m\,B_\textrm{micro}$: run $m$ micro-batches, add the
 gradients, step once. $128 \times 4 \times 1024 = 524{,}288$ tokens.
 
-@!memory-precision-gradient-accumulation
+@!memory-precision-accumulated-step
 
 - Divide each micro-batch loss by $m$ when the loss averages.
 - Clip and step after the last micro-batch; batch norm sees the micro-batch.

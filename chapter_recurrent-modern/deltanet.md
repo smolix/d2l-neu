@@ -782,11 +782,12 @@ In every run, Gated DeltaNet recalls at least 95% of the rewritten keys,
 within about two points of its recall on keys written once. Gated linear
 attention recalls between about 83% and 92% of the rewritten keys over
 repeated executions of this cell, against 93% to 98% of the keys written
-once. Its two runs can differ by up to about five points. On the rewritten keys
-the two layers differ by more than that in every execution, and on the keys
-written once by much less. The two models differ by 260 parameters, the
-write-strength projection, a third of a percent of either. The delta rule
-rebinds, as predicted.
+once. From one execution to the next, two runs of the same layer have
+differed by anything from a fraction of a point to about five points. On
+the rewritten keys the two layers differ by more than that in every
+execution, and on the keys written once by much less. The two models
+differ by 260 parameters, the write-strength projection, a third of a
+percent of either. The delta rule rebinds, as predicted.
 
 The additive layer, though, does far better than the half that a plain sum
 allows: it gets about nine in ten rewritten keys right. Presumably its
@@ -1241,6 +1242,7 @@ Two runs each:
 
 - Gated DeltaNet: 95% or more of rewritten keys in every run.
 - Gated linear attention: about 83% to 92% over executions, 93% to 98% on keys written once.
+- Two runs of one layer: at most about five points apart; on rewritten keys the layers differ by more, every time.
 
 ::: {.d2l-note}
 Close together, correction rebinds; the additive layer's nine in ten

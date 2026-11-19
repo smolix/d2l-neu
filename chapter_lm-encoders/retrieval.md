@@ -805,7 +805,7 @@ for name in ('BM25', 'dense'):
 
 The re-encoded chunks agree with the stored vectors to a cosine of 0.9998.
 With the 220 dev questions encoded in one batch, dense retrieval takes about
-0.9 ms per question, and both retrievers reproduce the Recall@10 of the
+1 ms per question, and both retrievers reproduce the Recall@10 of the
 opening cell. How much of that is the scan? We time the scan alone, for one
 question and for all 220 at once, on two matrices. The book's, 11 MB, fits
 in the GPU's 72 MB second-level cache; a synthetic matrix of $2^{17}$ random
@@ -852,7 +852,7 @@ del MATRICES
 
 For the book the scan is negligible. One question takes about 0.05 ms, mostly
 the fixed cost of launching the kernels and waiting for them, and all 220
-together about 0.1 ms. Nearly all of the 0.9 ms above is the encoder's
+together about 0.1 ms. Nearly all of the millisecond above is the encoder's
 forward pass over the questions, and no index could make dense search over
 the book noticeably faster.
 
@@ -1012,12 +1012,17 @@ def rerank_yes_no(model, tokenizer, query, docs, instruction=None,
     return torch.exp(lp[:, 0]).numpy()
 ```
 
-The reranker reads each question with the embedder's instruction and each
-chunk in the dense view. We rerank the first 20 and the first 100 fused
-chunks; the scores for 100, which take minutes to compute, come stored. A
-reranker only permutes the chunks it is given, so reranking the first 20
-leaves Recall@20 and Recall@100 where they were. A table in which reranking
-the first 20 raises Recall@100 has measured something else.
+The reranker reads each chunk in the dense view and each question with the
+embedder's task, `d2l.BOOK_TASK`, the sentence about web search queries that
+both model cards give as their default. We wrote no task of our own for it:
+the instruction we first wrote for the book made the embedder rank worse
+(:numref:`subsec_lm_emb_llm`), and a wording for the reranker would have to
+be chosen on training questions in the same way. We rerank the first 20 and
+the first 100 fused chunks; the scores for 100, which take minutes to
+compute, come stored. A reranker only permutes the chunks it is given, so
+reranking the first 20 leaves Recall@20 and Recall@100 where they were. A
+table in which reranking the first 20 raises Recall@100 has measured
+something else.
 
 ```{.python .input #retrieval-rerank}
 %%tab pytorch
@@ -1837,7 +1842,7 @@ vectors in :numref:`subsec_lm_emb_compress` was a cheaper cousin: it used
 the exact question but kept the passages at one bit.)
 
 The graph wins at this size. HNSW returns 0.97 of the exact neighbors at
-$\mathit{efSearch} = 32$ in about 0.3 ms, and 0.998 at 256 in about 1.5 ms, for
+$\mathit{efSearch} = 32$ in about 0.3 ms, and 0.998 at 256 in under 2 ms, for
 272 bytes per vector beyond the vector itself, nearly all of it links, and
 about 15 s of building with eight threads.
 
@@ -2139,8 +2144,8 @@ cosine, just ahead of "A Loader for Every Epoch", a chunk about data
 loaders in general: the near miss that the opening of this section feared.
 One list alone gives a fused score of at most $1/61 \approx 0.016$. This
 chunk's 0.033 is the $2/61$ of two first places. The other four hits are
-about loading data elsewhere in the book: on topic, and no use for this
-question.
+about loading, of data or of saved weights, elsewhere in the book: on the
+subject, and no use for this question.
 
 A relevant chunk among the first ten is not yet an answer. Which chunks
 should a language model read, in which order and how many of their tokens,
@@ -2470,7 +2475,7 @@ Batch 220: about 220 operations per byte, past the ridge, so arithmetic
 sets the bound; 0.003 ms per question.
 
 ::: {.d2l-note}
-For the book, encoding the questions (0.9 ms each in a batch of 220) costs
+For the book, encoding the questions (about 1 ms each in a batch of 220) costs
 more than the scan.
 :::
 :::
@@ -2499,7 +2504,7 @@ near-optimal but not critical.*
 | reads | question and chunk apart | the pair together |
 | chunk work | once, before any question | once per question |
 | cost per question | one encoding, one scan | one forward pass per candidate |
-| ms per question, book | 0.9 (batched) | about 250 for 20, 1,100 for 100 |
+| ms per question, book | about 1 (batched) | about 230 for 20, 1,200 for 100 |
 
 Qwen3-Reranker-0.6B: $P(\text{yes}) = e^{z_\text{yes}} / (e^{z_\text{yes}} + e^{z_\text{no}})$
 for "Does this chunk meet the query?"

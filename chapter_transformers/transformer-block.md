@@ -365,8 +365,9 @@ d2l.plot(list(range(1, 33)), [s['spread'] for s in stats.values()]
 The prediction holds. With Xavier weights the post-norm spread falls along
 a straight line on the logarithmic axis, which is what geometric decay looks
 like, and by block 32 the tokens agree to about one part in ten thousand.
-The measured spread is about 0.3, 0.03 and $10^{-4}$ at blocks 8, 16 and
-32, a little below the prediction. Here the FFN we set aside comes back:
+The measured spread is about 0.3, 0.02 and $10^{-4}$ at blocks 8, 16 and
+32, below the prediction at every depth but by less than a factor of two.
+Here the FFN we set aside comes back:
 GELU of a zero-mean input has a positive mean, so the FFN, too, adds a
 component that all tokens share. With GPT-2's standard deviation the same
 post-norm stack keeps its tokens apart: its spread is still 0.97 after 32
@@ -392,8 +393,10 @@ The first blocks add much less, because the attention of a fresh block
 averages many unrelated tokens, which nearly cancel. Deeper blocks, whose
 tokens have grown more alike, add about as much as the premise assumes or a
 little more, and their outputs are not quite uncorrelated with the stream.
-The errors nearly offset, and the measured RMS comes out close to
-$\sqrt{33}$.
+The late blocks make up most of the early shortfall, though not all of it:
+the measured RMS ends near 5, somewhat below $\sqrt{33}$. For so rough a
+premise that is close enough, and the point survives: the stream grows,
+and what a late block adds is small against it.
 
 The attention sublayers of the pre-norm stack add shared vectors too, but
 each is a fixed amount added to a stream that keeps growing. Post-norm
@@ -433,13 +436,13 @@ d2l.plot(list(range(1, 33)), [s['grad_q'] for s in stats.values()],
 
 The post-norm curve says more than its endpoint. In the lowest blocks,
 where the tokens are still distinct, the query projections receive
-gradients of about $10^{-2}$, a few times below those of the pre-norm
+gradients of about $10^{-2}$, several times below those of the pre-norm
 stack. From there the curve falls smoothly, block by block, as the spread
 does. The backward pass reaches the bottom of the stack through thirty
 blocks of collapsed tokens and arrives in good shape. The starvation is
 local: a block's query and key weights receive almost no gradient because
 its own input tokens are alike, not because the gradient vanished on its
-way down. The pre-norm curve falls as well, by a factor of about 30 over 32
+way down. The pre-norm curve falls as well, by a factor of 20 to 25 over 32
 blocks, because its tokens also grow more alike with depth, only slowly. With GPT-2's standard deviation
 the curve is flat at about $4 \times 10^{-4}$: small weights give small
 gradients, but no block is starved more than another.
@@ -1172,13 +1175,13 @@ not $\boldsymbol{\mu}$: nothing undoes the growth.
 
 ::: {.slide title="The Measured Spread Follows the Prediction"}
 Post-norm and pre-norm with Xavier weights; post-norm with
-$\mathcal{N}(0, 0.02^2)$. Spread at blocks 8, 16, 32, predictions dotted:
+$\mathcal{N}(0, 0.02^2)$. Spread against depth, predictions dotted:
 
 @!transformer-block-signal-propagation-at-initialization-3
 :::
 
 ::: {.slide title="Small Weights Do Not Collapse"}
-- Xavier: spread about 0.3, 0.03, $10^{-4}$; slightly below prediction,
+- Xavier: spread about 0.3, 0.02, $10^{-4}$; below prediction (by $< 2\times$),
   since the FFN (GELU has a positive mean) adds a shared part too.
 - $\mathcal{N}(0, 0.02^2)$: $1 + g^4 \approx 1.01$; spread 0.97 after 32
   blocks.
@@ -1228,7 +1231,7 @@ $\approx 0.002$.)
 - Branches read normalized inputs, so their outputs have fixed scale.
   Post-norm pins the stream RMS at 1.
 - If each block adds unit mean square: RMS $\sqrt{33} \approx 5.7$ after
-  32 blocks. Measured: close to that.
+  32 blocks. Measured: about 5, somewhat below.
 - Shared vectors land on a growing stream: spread about a third at 32,
   so $\rho = 8$, against $2^{32}/63 \approx 7 \times 10^7$ predicted for
   post-norm with Xavier.
@@ -1388,7 +1391,8 @@ removes the confound.
   (7.1M in GPT-2 small).
 - Post-norm: shared part $\times (1 + g^4)$ per block. Xavier: spread
   $10^{-4}$ at 32; $\mathcal{N}(0, 0.02^2)$: 0.97.
-- Pre-norm only adds; stream RMS near $\sqrt{33} \approx 5.7$ at 32.
+- Pre-norm only adds; stream RMS about 5 at 32, against
+  $\sqrt{33} \approx 5.7$ if every block added unit mean square.
 - RMSNorm drops centering; QK-norm bounds logits; SwiGLU multiplies two
   views.
 

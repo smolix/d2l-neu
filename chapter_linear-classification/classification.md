@@ -6,18 +6,20 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Measuring Classifiers
 :label:`sec_classification`
 
-The softmax regression of :numref:`sec_softmax_scratch` and
-:numref:`sec_softmax_concise` labels about 83% of the Fashion-MNIST
-validation images correctly. Is a classifier with higher accuracy the
-better one? Only if every example matters equally and every mistake is
-equally bad, since accuracy counts every example once and treats every
-mistake alike. Three kinds of decision problem break these assumptions, and
-they are the common ones: one class is much rarer than the others, some
-mistakes cost more than others, and the decision is made on the predicted
-probability itself rather than on the predicted class. Each calls for a
-measurement of its own. We study the first two on a screening test whose
-outcomes we can count by hand, and the third on the trained softmax
-regression, whose probabilities we have so far taken on trust.
+Our softmax regression classifier from :numref:`sec_softmax_scratch` and
+:numref:`sec_softmax_concise` correctly labels about 83% of the
+Fashion-MNIST validation images. Does higher accuracy automatically make
+one classifier better than another? Only when every example carries equal
+weight and every mistake inflicts the same harm—because accuracy counts
+each example once and treats all errors identically. Yet in practice, three
+everyday situations shatter those assumptions: one class may be far rarer
+than the others, different kinds of mistakes may carry wildly asymmetric
+costs, and downstream decisions may act directly on the predicted
+*probabilities* rather than on the top predicted class. Each scenario
+demands its own diagnostic. We unpack the first two using a medical
+screening example whose outcomes we can tally by hand, and then put the
+third to the test on our trained Fashion-MNIST classifier, whose
+probabilities we have so far accepted on faith.
 
 ```{.python .input #classification-the-base-classification-model}
 %%tab mxnet
@@ -63,52 +65,55 @@ from d2l import jax as d2l
 
 ### Class Imbalance
 
-Consider screening for a disease that affects 1% of the population. A
-classifier that ignores its input and always predicts *healthy* is right
-for 99% of the people, an accuracy of 0.99, and finds no sick patient. Now
-take a screening test that detects 90% of the sick and wrongly flags 5% of
-the healthy. Among 100,000 people, 1,000 of them sick, it finds 900 and
-misses 100, and it flags 4,950 of the 99,000 healthy people. We count the
-four possible outcomes in a table whose rows are the predictions and whose
-columns are the true classes:
+Imagine screening a population for a disease that affects 1% of people. A
+trivial classifier that ignores every test result and always predicts
+*healthy* achieves 99% accuracy—yet catches not a single sick patient. Now
+compare it against a real screening test that detects 90% of sick patients
+while falsely flagging 5% of healthy ones. Out of 100,000 people (1,000
+sick and 99,000 healthy), the test catches 900 sick patients, misses 100,
+and falsely flags 4,950 healthy people. Arranging these four counts in a
+table—predicted classes in the rows, true classes in the columns—gives:
 
 | | sick | healthy |
 |:--|--:|--:|
 | **predicted sick** | 900 | 4,950 |
 | **predicted healthy** | 100 | 94,050 |
 
-Such a table of counts is a *confusion matrix*. With the sick as the *positive*
-class, the four cells are the *true positives* (TP, 900), *false positives*
-(FP, 4,950), *false negatives* (FN, 100), and *true negatives* (TN, 94,050).
-The test is right for the 94,950 people on the diagonal, an accuracy of
-0.95. Accuracy ranks the useless classifier above the useful one. Every
-person counts once, so the 1,000 sick people make up only 1% of the
-accuracy, however well or badly a classifier treats them.
+This $2 \times 2$ table is a binary *confusion matrix*. Taking *sick* as
+the *positive* class, its four entries are the *true positives* (TP = 900),
+*false positives* (FP = 4,950), *false negatives* (FN = 100), and *true
+negatives* (TN = 94,050). Summing the diagonal gives 94,950 correct calls,
+or an accuracy of 95%—so raw accuracy actually ranks the useless
+"always-healthy" rule *ahead* of a genuinely lifesaving screening test!
+Because every individual counts equally, the 1,000 sick patients contribute
+at most 1% to overall accuracy regardless of how well or poorly we detect
+them.
 
-Two ratios focus on the sick. The *recall* is the fraction of the
-sick that the classifier finds, and the *precision* is the fraction of the
-flagged people who are sick:
+To zoom in on the rare positive class, we pair two complementary ratios.
+*Recall* measures the fraction of sick patients the classifier catches,
+while *precision* measures the fraction of flagged patients who are
+actually sick:
 
 $$\textrm{recall} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FN}}, \qquad \textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}.$$
 
-Recall reads the first column of the table, and precision reads its first
-row. For the screening test the recall is $900 / 1{,}000 = 0.9$ and the
-precision $900 / 5{,}850 \approx 0.15$.
+In our table, recall reads down the first column ($900 / 1{,}000 = 0.90$)
+and precision reads across the first row ($900 / 5{,}850 \approx 0.15$).
 
-Recall separates the two classifiers: 0 for the one that never flags
-anybody, 0.9 for the test. The precision of the always-healthy classifier is
-undefined, since it flags nobody. The precision of the test is a less
-pleasant surprise. It is the probability that a flagged person is sick, and
-it is only 0.15. This is the effect of Bayes' theorem that
-:numref:`subsec_probability_hiv_app` showed for an HIV test: when a disease
-is rare, the false positives from the many healthy people outnumber the
-true positives, even for an accurate test. Is a test with high recall and
-low precision any good? For screening it is, since every flagged person
-gets a second, more specific test.
+Recall immediately separates the two rules: 0 for "always healthy" versus
+0.90 for the screening test (whose trivial rival has undefined precision
+since it never raises a flag). Precision, however, delivers a sobering
+surprise: only 15% of people who test positive are actually sick! This is
+the exact same Bayesian effect we encountered with HIV testing in
+:numref:`subsec_probability_hiv_app`: whenever a condition is rare, false
+alarms from the vast healthy majority easily outnumber true positives from
+the tiny sick minority. Is a test with 90% recall and 15% precision still
+valuable? Absolutely—in two-stage clinical screening, its job is to catch
+nearly every sick patient cheaply so that flagged individuals can be sent
+on to a slower, highly specific follow-up test.
 
-How much does the precision owe to the rarity of the disease? We keep the
-test, which finds 90% of the sick and flags 5% of the healthy, and vary the
-fraction of sick people in the population.
+To see just how heavily precision depends on disease prevalence, let us
+hold the test's own sensitivity (90% recall) and false-alarm rate (5%)
+fixed while sweeping the share of sick people in the population:
 
 ```{.python .input #classification-beyond-accuracy}
 recall, false_alarms = 0.9, 0.05  # Properties of the test
@@ -119,73 +124,81 @@ for prevalence in [0.001, 0.01, 0.1, 0.5]:
           f'recall {recall:.2f}, precision {tp / (tp + fp):.3f}')
 ```
 
-The same test has a precision of 2% when one person in a thousand is sick
-and of 95% when half of them are, while its accuracy hardly moves. Recall
-and the rate of false alarms describe the test; precision describes the test
-in a population.
+The exact same diagnostic test swings from 2% precision at 0.1% prevalence
+all the way to 95% precision at 50% prevalence, even while its accuracy
+scarcely budges. Keep the distinction straight: recall and the false-alarm
+rate are intrinsic properties of the test itself, whereas precision is a
+property of the test *combined with the population* to which it is applied.
 
 ### Asymmetric Costs
 
-Missing a sick patient is worse than a false alarm. Suppose that a false
-negative costs 100 times as much as a false positive, $\kappa_\textrm{FN} = 100$
-and $\kappa_\textrm{FP} = 1$. The cost of a classifier weights the cells of its
-confusion matrix by these costs. Per person, the always-healthy classifier
-costs $100 \cdot 1{,}000 / 100{,}000 = 1$ and the screening test
-$(100 \cdot 100 + 1 \cdot 4{,}950) / 100{,}000 \approx 0.15$, almost seven
-times less. With costs, the useful classifier wins.
+In clinical screening, missing a sick patient is vastly worse than causing
+a false alarm. Suppose a false negative costs 100 times as much as a false
+positive: $\kappa_\textrm{FN} = 100$ and $\kappa_\textrm{FP} = 1$. Weighting
+the confusion matrix by these penalties, the "always-healthy" rule incurs
+an expected cost of $100 \cdot 1{,}000 / 100{,}000 = 1.0$ per person,
+whereas our screening test costs only
+$(100 \cdot 100 + 1 \cdot 4{,}950) / 100{,}000 \approx 0.15$ per person—nearly
+seven times lower. Once costs reflect reality, the useful classifier wins
+decisively.
 
-Costs also change the decision itself. Suppose a model estimates the
-probability $p$ that a patient is sick. Predicting *healthy* costs
-$\kappa_\textrm{FN}$ with probability $p$, and predicting *sick* costs
-$\kappa_\textrm{FP}$ with probability $1 - p$, so the expected cost is smaller
-when we predict *sick* exactly if
+Asymmetric costs also alter the optimal *decision rule*. Suppose our model
+estimates a probability $p$ that a patient is sick. Calling the patient
+*healthy* carries an expected cost of $p\,\kappa_\textrm{FN}$, whereas
+flagging them *sick* carries an expected cost of $(1 - p)\,\kappa_\textrm{FP}$.
+Flagging the patient minimizes expected cost precisely when
 
 $$p \, \kappa_\textrm{FN} > (1 - p)\, \kappa_\textrm{FP}, \quad \textrm{that is,} \quad p > \frac{\kappa_\textrm{FP}}{\kappa_\textrm{FP} + \kappa_\textrm{FN}}.$$
 :eqlabel:`eq_cost-threshold`
 
-With equal costs the threshold is $\frac{1}{2}$, and for two classes the
-rule picks the class with the larger probability, as accuracy assumes. With
-$\kappa_\textrm{FN} = 100$ and $\kappa_\textrm{FP} = 1$, the threshold drops to
-$1/101 \approx 0.01$: a patient with a 2% chance of being sick should be
-flagged. Lowering the threshold raises the recall and lowers the
-precision, since more people are flagged. When the costs are unknown,
-practitioners often report precision and recall together, or their harmonic
-mean, the *F1 score*, which is high only when both are.
+When both mistakes cost the same, the threshold is $\frac{1}{2}$—recovering
+ordinary $\operatorname{argmax}$ classification. With
+$\kappa_\textrm{FN} = 100$ and $\kappa_\textrm{FP} = 1$, however, the
+threshold plunges to $1/101 \approx 0.01$: even a 2% chance of illness
+warrants flagging the patient. Lowering the threshold trades precision for
+higher recall as more patients get flagged. When exact error costs are hard
+to pin down, practitioners commonly report precision and recall side by
+side, or combine them into their harmonic mean—the *F1 score*—which stays
+high only when both precision and recall are strong.
 
-For $q$ classes, costs $\kappa_{ij}$ for predicting $i$ when the class is
-$j$ weight the entries of the confusion matrix $\mathbf{N}$ of
-:eqref:`eq_confusion-matrix` as in the binary case.
+The exact same framework extends naturally to $q$ classes: a cost matrix
+with entries $\kappa_{ij}$ (the penalty for predicting class $i$ when the
+true class is $j$) weights the entries of the multiclass confusion matrix
+$\mathbf{N}$ from :eqref:`eq_confusion-matrix`.
 
 ## Calibration
 
 ### Reliability Diagrams
 
-The rule :eqref:`eq_cost-threshold` acts on the probability $p$ itself, so
-its decisions are only as good as the probabilities. A classifier is
-*calibrated* if its probabilities match frequencies: of all patients to
-whom it assigns $p = 0.02$, 2% are sick. If only 0.2% of them are, the rule
-flags all of them, although at the threshold of $0.01$ none of them should
-be flagged. Checking this on validation data is simple. We sort the
-patients into bins by $p$ and compare the mean of $p$ in each bin with the
-fraction of its patients who are sick.
+Notice that the cost-sensitive decision rule :eqref:`eq_cost-threshold`
+operates directly on the numerical probability $p$, which means its
+decisions are only as trustworthy as those probabilities themselves. A
+classifier is *calibrated* when its predicted probabilities match empirical
+long-run frequencies: among all patients assigned $p = 0.02$, roughly 2%
+should actually be sick. If only 0.2% are sick, our threshold at $0.01$
+would mistakenly flag the entire group even though none of them truly
+crosses the 1% risk bar. Checking calibration on binary validation data is
+straightforward: bucket patients by predicted $p$ and compare each bucket's
+average $p$ against the actual fraction of sick patients in that bucket.
 
-With many classes there is one probability per class to check, and the
-usual shortcut is to check only the largest. The *confidence* of a
-prediction is the probability of the predicted class. We sort the examples
-into bins by their confidence, for instance $[0.5, 0.7)$, $[0.7, 0.9)$, and
-$[0.9, 1]$, and compute in each bin the mean confidence and the accuracy. A
-*reliability diagram* plots the accuracy of each bin against its mean
-confidence. A calibrated classifier lies on the diagonal; points below it
-mean that the classifier is more confident than it is right, or
-*overconfident*, a common failing of deep networks trained on
-cross-entropy. Note, however, that this check says nothing about the small
-probabilities: a rule that thresholds $p(\textrm{sick})$ near $0.01$ needs
-the check on $p(\textrm{sick})$ itself.
+With $q$ classes there are $q$ probabilities per example, so practitioners
+usually start by checking the *confidence*—the highest predicted
+probability (that of the predicted class). We partition validation examples
+into confidence bins such as $[0.5, 0.7)$, $[0.7, 0.9)$, and $[0.9, 1]$,
+compute each bin's mean confidence and empirical accuracy, and plot accuracy
+against mean confidence in a *reliability diagram*. A perfectly calibrated
+model tracks the diagonal; points sagging *below* the diagonal signal an
+*overconfident* model—one whose predictions are more cocksure than its
+actual accuracy warrants, a notorious tendency of deep neural networks
+trained with cross-entropy. Keep in mind, though, that top-class
+calibration says nothing about tiny probabilities: if your decision rule
+thresholds $p(\textrm{sick})$ around $0.01$, you must check calibration
+directly on $p(\textrm{sick})$ itself.
 
-We check the softmax regression of :numref:`sec_softmax_concise`. We train
-it as there, with the progress plot switched off since it would repeat the
-plot of that section, and collect the logits and the labels of all
-validation images as NumPy arrays.
+Let us run this diagnostic on our Fashion-MNIST softmax regression model
+from :numref:`sec_softmax_concise`. We retrain it cleanly (with live
+plotting silenced so we do not duplicate the previous section's chart) and
+gather the validation logits and labels into NumPy arrays.
 
 ```{.python .input #classification-calibration-1}
 data = d2l.FashionMNIST(batch_size=256)
@@ -201,9 +214,9 @@ O, y = np.concatenate(O), np.concatenate(y)
 print(f'validation accuracy {(O.argmax(axis=1) == y).mean():.3f}')
 ```
 
-The confidence of each prediction is the largest entry of the softmax of
-its logits. We compute the softmax in NumPy, shifted by the largest logit
-as in :numref:`sec_softmax_scratch`.
+To compute each prediction's confidence, we apply the numerically shifted
+softmax (:numref:`sec_softmax_scratch`) to the logits in NumPy and take the
+maximum probability per row.
 
 ```{.python .input #classification-calibration-2}
 def softmax(O):
@@ -215,13 +228,14 @@ conf = softmax(O).max(axis=1)  # Confidence of each prediction
 correct = (O.argmax(axis=1) == y).astype(float)
 ```
 
-We sort the predictions into ten bins by their confidence, $[0, 0.1)$,
-$[0.1, 0.2)$, and so on up to $[0.9, 1]$, and compute in each bin $b$ the
-number of predictions $n_b$, their mean confidence $\bar{c}_b$, and their
-accuracy $a_b$. The first bin stays empty, since with $q = 10$ classes the
-largest probability is at least $1/10$. The expected calibration error
-(ECE) is the mean gap between confidence and accuracy, weighted by the
-fraction of the $n$ predictions that fall into each bin,
+Next, we bucket the predictions into ten uniform bins—$[0, 0.1)$,
+$[0.1, 0.2)$, through $[0.9, 1]$—and tally in each bin $b$ its count $n_b$,
+mean confidence $\bar{c}_b$, and empirical accuracy $a_b$ (the first bin is
+necessarily empty because ten probabilities summing to 1 must have a
+maximum of at least $0.1$). To summarize overall miscalibration in a single
+number, we compute the *expected calibration error* (ECE), the
+sample-weighted average absolute gap between accuracy and confidence across
+bins:
 
 $$\textrm{ECE} = \sum_b \frac{n_b}{n} \left| a_b - \bar{c}_b \right|.$$
 
@@ -241,14 +255,14 @@ for b in np.flatnonzero(n):
 print(f'ECE: {ece:.3f}')
 ```
 
-About half of the predictions fall into the top bin, with a mean
-confidence near 0.97, and 97% to 98% of them are correct. The two lowest
-bins hold between a handful and about 70 predictions, too few to say
-anything about their accuracy. From confidence 0.3 up, every bin holds
-hundreds of predictions, and its accuracy lies near its mean confidence, in
-most bins slightly above it. The reliability diagram shows the bins with at
-least 100 predictions, whose accuracy has a standard error of at most 5
-points.
+Roughly half of all validation predictions land in the top bin with mean
+confidence near 0.97—and sure enough, 97% to 98% of them are right. The two
+lowest populated bins contain only a handful to about 70 images, too sparse
+for reliable accuracy estimates. From confidence 0.3 upward, however, every
+bin contains hundreds of examples, with empirical accuracy hugging the mean
+confidence closely (usually sitting slightly above it). Let us plot the
+reliability diagram for all bins with at least 100 predictions (keeping the
+bin-wise standard error at or below 5 percentage points).
 
 ```{.python .input #softmax-regression-concise-calibration-3}
 used = n >= 100  # Fewer predictions give too noisy an accuracy
@@ -257,30 +271,31 @@ d2l.plot([mean_conf[used], [0, 1]], [acc[used], [0, 1]], 'mean confidence',
          fmts=('o-', 'k:'), figsize=(3.5, 3.5))
 ```
 
-The curve stays close to the diagonal, and mostly just above it. Over all
-validation images the mean confidence is about 81% and the accuracy about
-83%, and the expected calibration error stays below 0.03 in repeated runs.
-The model is slightly *under*confident, and its probabilities can be taken
-nearly at face value on images like its validation images. This is a
-property of the trained model, not of the softmax, and the same check
-applies unchanged to every classifier that follows. Accuracy, which uses
-only the predicted class, could not have told us any of it.
+The curve tracks the diagonal remarkably well, hovering just slightly above
+it. Across all 10,000 validation images, mean confidence is around 81%
+against ~83% accuracy, keeping ECE below 0.03 across runs. In other words,
+this shallow linear model is actually slightly *under*confident—so on
+in-distribution garments, its probabilities can be taken very nearly at
+face value. Remember that calibration is a property of a *trained model*,
+not an automatic guarantee of the softmax function; we can run this exact
+same check on any deeper network we train later, something raw accuracy
+alone could never reveal.
 
 ### Temperature Scaling
 
-When the check finds a gap, the standard remedy is as simple as the
-diagnosis. *Temperature scaling* divides all logits by one number $T > 0$,
-the temperature of :numref:`sec_softmax`, before the softmax, and fits $T$
-by minimizing the cross-entropy on held-out data
-:cite:`Guo.Pleiss.Sun.Weinberger.2017`. Dividing by $T$ keeps the order of
-the logits, so every prediction and the accuracy stay the same. Only the
-confidences move, and with $T > 1$ they move down, the direction an
-overconfident network needs. Our model needs the opposite correction, if
-any. Its confidences are slightly too low, so the
-fitted temperature should come out below 1. We fit $T$ on the first half of
-the validation images, by a grid search that minimizes the cross-entropy
-written in the stable form of :numref:`sec_softmax_concise`, and measure
-the calibration error on the second half before and after scaling.
+When a reliability diagram does uncover miscalibration, the standard fix is
+surprisingly simple. *Temperature scaling* divides every logit by a single
+positive scalar $T > 0$ (the temperature of :numref:`sec_softmax`) before
+applying softmax, fitting $T$ to minimize cross-entropy on held-out
+validation data :cite:`Guo.Pleiss.Sun.Weinberger.2017`. Because dividing by
+a positive constant preserves the ordering of logits, temperature scaling
+never alters a single predicted class or changes accuracy by even a hair—it
+only recalibrates confidence, pushing overconfident networks down when
+$T > 1$. Since our linear model is slightly underconfident, we expect the
+fitted $T$ to land slightly below 1. Let us fit $T$ by grid search on the
+first half of the validation set (using the numerically stable log-sum-exp
+cross-entropy from :numref:`sec_softmax_concise`) and evaluate ECE on the
+second half before and after scaling.
 
 ```{.python .input #classification-temperature-scaling}
 def nll(O, y, T):
@@ -298,31 +313,35 @@ print(f'T = {T:.2f}; ECE on the second half: {ece(O[half:]):.3f} before, '
       f'{ece(O[half:] / T):.3f} after scaling')
 ```
 
-The fitted temperature lies a little below 1, around 0.9, and scaling moves
-the calibration error of the second half by less than a hundredth, in some
-runs up rather than down. Softmax regression needed little repair, and at
-errors this small the binned estimate is as much noise as signal. For an
-overconfident network the same three lines return a $T$ above 1 and a
-visibly straighter reliability diagram; the procedure does not care which
-way the gap points.
+As expected, the fitted temperature sits just below 1 (around 0.9), and
+scaling shifts the held-out ECE by less than a hundredth—sometimes nudging
+it slightly up rather than down, since at this tiny level of miscalibration
+binning noise rivals the remaining gap. On deep, overconfident networks,
+however, these exact same lines routinely find $T > 1$ and pull a sagging
+reliability curve sharply back toward the diagonal.
 
-All of these numbers, from the accuracy to the calibration error, were
-measured on 10,000 images and would come out a little different on another
-10,000. How different, and how far they can be trusted for images the model
-has never seen, is the subject of :numref:`chap_classification_generalization`.
+Every metric we just computed—accuracy, confusion counts, ECE—came from a
+single sample of 10,000 validation images, and would wiggle slightly on a
+fresh sample of 10,000. How large is that sampling uncertainty, and how
+trustworthy do our scores remain once we start tuning hyperparameters? We
+turn to those statistical questions next in
+:numref:`chap_classification_generalization`.
 
 ## Summary
 
-Accuracy counts every example once and every mistake alike. When one class
-is rare, it can rank a useless classifier above a useful one; recall and
-precision separate them, and precision depends on how common the class is.
-Costs of mistakes turn the predicted probabilities into a decision
-threshold, which is only as good as the probabilities are calibrated. A
-reliability diagram compares confidence with accuracy, and the expected
-calibration error summarizes it. Softmax regression on Fashion-MNIST is
-nearly calibrated, slightly underconfident; temperature scaling, which
-divides the logits by one fitted number, leaves its accuracy unchanged and
-changes its calibration little.
+Classification accuracy treats every example and every mistake equally,
+which can mislead badly in practice. Under severe class imbalance, a
+trivial majority-class predictor can beat a useful detector on accuracy;
+*recall* and *precision* expose the difference, though precision depends
+heavily on class prevalence via Bayes' theorem. When false negatives and
+false positives carry unequal costs, expected-cost minimization shifts the
+decision threshold away from $\frac{1}{2}$—making *calibration* essential
+so that predicted probabilities reflect true empirical frequencies.
+Reliability diagrams and expected calibration error (ECE) diagnose
+miscalibration, and post-hoc *temperature scaling* adjusts confidence via a
+single scalar $T > 0$ without altering accuracy. On Fashion-MNIST, softmax
+regression turns out to be well calibrated (slightly underconfident, ECE
+$< 0.03$), leaving little for temperature scaling to fix.
 
 ## Exercises
 

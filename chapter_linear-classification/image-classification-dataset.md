@@ -6,38 +6,45 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Image Classification Data
 :label:`sec_fashion_mnist`
 
-The softmax regression of :numref:`sec_softmax` is ready to be trained. What
-it lacks is data. Our examples will be images, and the choice of dataset
-decides what our experiments can show. Which dataset should we use? For the
-purposes of this book, a good one is hard enough that a better model scores
-visibly higher, and small enough that a model trains in minutes inside a
-notebook.
+Our softmax regression model from :numref:`sec_softmax` is ready to train—all
+it needs is data. For image classification, choosing the right benchmark
+shapes everything our experiments can teach us. Ideally, a teaching dataset
+should be challenging enough that genuinely stronger architectures score
+visibly higher, yet compact enough that every model trains in minutes
+inside an interactive notebook.
 
-Unfortunately, the two best-known image datasets each meet only one of these
-needs.
-MNIST :cite:`LeCun.Bottou.Bengio.ea.1998`, 70,000 grayscale images of
-handwritten digits with $28 \times 28$ pixels in 10 classes, is small but too
-easy. Convolutional networks classify more than 99% of its test digits
-correctly, and even classical methods reach about 97%, so models that differ
-in kind differ in accuracy by a few points at most.
-ImageNet :cite:`Deng.Dong.Socher.ea.2009`, with 1.2 million color images in
-1,000 classes, separates models well, but training a network on it takes
-hours to days of GPU time, a long wait for a notebook cell.
+The two most famous image benchmarks each satisfy only half of that
+bargain. [MNIST](https://en.wikipedia.org/wiki/MNIST_database)
+:cite:`LeCun.Bottou.Bengio.ea.1998`—70,000 grayscale $28 \times 28$ images
+of handwritten digits across 10 classes—was a formidable challenge in the
+1990s (when a top-of-the-line Bell Labs workstation boasted 64 MB of RAM
+and 5 MFLOPs, and digit recognition powered automated USPS mail sorting).
+Today, however, MNIST has become a sanity check rather than a benchmark:
+convolutional networks clear 99% test accuracy and even simple classical
+methods hover around 97%, leaving almost no daylight between weak and
+strong architectures. At the opposite extreme, ImageNet
+:cite:`Deng.Dong.Socher.ea.2009`—1.2 million color photographs across
+1,000 categories—separates modern models cleanly, yet training a network on
+it requires hours to days of GPU compute, far too slow for interactive
+exploration.
 
-Fashion-MNIST :cite:`Xiao.Rasul.Vollgraf.2017` was designed as a harder
-replacement for MNIST. It keeps the format, 70,000 grayscale images of
-$28 \times 28$ pixels in 10 classes, but shows garments instead of digits,
-and garments are harder to tell apart: a shirt can look like a T-shirt, a
-pullover, or a coat.
-Linear classifiers reach about 83% accuracy on it and good convolutional
-networks more than 90%, which leaves room to tell models apart. We use it for
-the rest of this chapter and for much of the book.
+To strike the sweet spot, we turn to Fashion-MNIST
+:cite:`Xiao.Rasul.Vollgraf.2017`, designed specifically as a drop-in,
+harder replacement for MNIST. It keeps the exact same footprint—70,000
+grayscale $28 \times 28$ images in 10 classes—but replaces digits with
+articles of clothing. Garments are substantially trickier to separate: at
+low resolution, a shirt can easily resemble a T-shirt, a pullover, or a
+coat. Linear classifiers reach roughly 83% accuracy while strong
+convolutional networks surpass 90%, giving us plenty of room to watch
+architectural improvements pay off. We will use Fashion-MNIST throughout
+this chapter and in many chapters to come.
 
-In this section we load Fashion-MNIST in each framework, read it in
-minibatches, check the shape of what the loader delivers, and look at a few
-images before any model touches them. None of this is deep, but it is worth
-doing with care, since every later classifier in the book reads its data
-through the class we write here.
+In this section, we build a reusable `FashionMNIST` data module across all
+four frameworks, load it in minibatches, inspect its tensor shapes and I/O
+throughput, and visually check a grid of images before letting any model
+near them. Taking care with the data pipeline now pays off later, because
+every image classifier in the book will read its inputs through the class
+we construct here.
 
 ```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab mxnet
@@ -109,41 +116,45 @@ d2l.use_svg_display()
 
 ## Loading the Dataset
 
-Fashion-MNIST has 7,000 images of each of the ten garments named in
-:numref:`sec_softmax`, from T-shirt to ankle boot. Its authors split them
-into 60,000 training and 10,000 test images, 6,000 and 1,000 per class. Each
-pixel stores a brightness between 0 and 255, with the background at 0.
+Fashion-MNIST contains 7,000 images for each of the ten clothing categories
+introduced in :numref:`sec_softmax` (from T-shirt to ankle boot), split
+into 60,000 training images and 10,000 test images—6,000 and 1,000 per
+class, respectively. Each pixel stores an integer intensity between 0 and
+255, with 0 representing the dark background.
 
-As in :numref:`sec_oo-design`, a `DataModule` holds the data and hands
-minibatches to the `Trainer` through its methods `train_dataloader` and
-`val_dataloader`. The class `FashionMNIST` downloads the dataset on first use
-and keeps both splits in memory. It has two hyperparameters: `batch_size`,
-the number of examples per minibatch, and `resize`, the height and width of
-the images that the loader delivers. By default the images keep their native
-$28 \times 28$ pixels; networks in later chapters that are built for larger
-inputs ask for enlarged images instead.
+Following our object-oriented design from :numref:`sec_oo-design`, we wrap
+the dataset in a `DataModule` subclass that supplies minibatches to
+`Trainer` via `train_dataloader` and `val_dataloader`. Our `FashionMNIST`
+class downloads the files automatically on first use and keeps both splits
+in memory. It accepts two hyperparameters: `batch_size` (examples per
+minibatch) and `resize` (the target spatial height and width). By default
+we preserve the native $28 \times 28$ resolution; deeper vision
+architectures in later chapters will ask for upscaled images via `resize`.
 
 :begin_tab:`pytorch`
-The torchvision library downloads Fashion-MNIST and serves it as a dataset
-object. Its `transform` argument resizes each image and converts it into a
-tensor with values in $[0, 1]$.
+The `torchvision` library handles downloading Fashion-MNIST and exposes it
+as a standard dataset object. Passing a `transform` pipeline resizes each
+image and converts its pixel intensities into floating-point tensors in
+$[0, 1]$.
 :end_tab:
 
 :begin_tab:`mxnet`
-Gluon ships its own copy of Fashion-MNIST, but that copy is split
-differently: most of its 10,000 test images are training images of the
-published dataset. We therefore read the published files ourselves. Each is
-compressed with gzip and starts with a short header (16 bytes for images, 8
-for labels), followed by one byte per pixel or label. The method
-`to_dataset` then converts all images at once into 32-bit floats with
-values in $[0, 1]$. It does not resize them: at $224 \times 224$ pixels the
-60,000 training images would take 12 GB. The loader resizes each minibatch
-instead, as it reads it.
+Although Gluon ships its own Fashion-MNIST helper, its split does not match
+the official release: most of its 10,000 test images actually come from the
+published training set. To keep our numbers comparable with the other
+frameworks and the literature, we read the official gzipped files directly.
+Each file begins with a brief binary header (16 bytes for images, 8 bytes
+for labels), followed by one byte per pixel or label. The `to_dataset`
+method converts all images up front into 32-bit floats in $[0, 1]$, leaving
+resizing for the minibatch loader so that upscaling to, say,
+$224 \times 224$ does not inflate the 60,000 training images to 12 GB in
+memory.
 :end_tab:
 
 :begin_tab:`tensorflow, jax`
-Keras downloads Fashion-MNIST and returns each split as a pair of NumPy
-arrays, images and labels. The loader below converts them.
+Keras downloads Fashion-MNIST and returns each split directly as a pair of
+NumPy arrays holding the raw images and integer labels; our data loader
+handles scaling and resizing on the fly.
 :end_tab:
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-1}
@@ -202,7 +213,7 @@ class FashionMNIST(d2l.DataModule):  #@save
         self.train, self.val = tf.keras.datasets.fashion_mnist.load_data()
 ```
 
-We load the dataset and count the images in each split.
+Let us instantiate the dataset and verify the size of each split.
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-2}
 %%tab mxnet, pytorch
@@ -216,16 +227,17 @@ data = FashionMNIST()
 len(data.train[0]), len(data.val[0])
 ```
 
-There are only two splits: Fashion-MNIST ships no validation set.
-In this book the 10,000 test images serve as validation data instead, and the
-`Trainer` reports the loss on them after every epoch. This is convenient, and
-it is not quite honest. A test set that we consult again and again while we
-compare models stops being an unbiased test of the model we finally choose.
-How much harm this does is a question that
-:numref:`chap_classification_generalization` answers with numbers.
+Notice that Fashion-MNIST ships with only two splits—no dedicated
+validation set. Following standard practice in this book, we use the 10,000
+test images as our validation split so that `Trainer` can report validation
+loss after each epoch. That convenience comes with an important caveat: a
+test set consulted repeatedly while comparing models ceases to be a truly
+unbiased final benchmark. We will measure exactly how much optimism
+repeated reuse introduces in :numref:`chap_classification_generalization`.
 
-The labels are class indices from 0 to 9. To read them, we map each index
-to the name of its class.
+Because the stored labels are integer indices from 0 to 9, let us add a
+small helper that translates numeric indices back into human-readable
+garment names.
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-4}
 @d2l.add_to_class(FashionMNIST)  #@save
@@ -238,47 +250,51 @@ def text_labels(self, indices):
 
 ## Reading Minibatches
 
-To a framework, an image is a three-dimensional tensor with $c$ *channels*,
-one for each color, a height $h$, and a width $w$ in pixels. Here $c = 1$
-because the images are grayscale; color photographs have $c = 3$. Frameworks
-do not agree on where the channel axis goes: *channel-first* layout stores
-an image as $c \times h \times w$, *channel-last* layout as
-$h \times w \times c$.
+Inside a deep learning framework, an image is represented as a
+three-dimensional tensor with $c$ *channels*, height $h$, and width $w$.
+Grayscale images have $c = 1$, standard color photographs have $c = 3$
+(red, green, and blue), and hyperspectral satellite sensors can have over a
+hundred channels. Frameworks differ in where they place the channel axis:
+*channel-first* libraries store an image with shape $c \times h \times w$,
+whereas *channel-last* libraries use $h \times w \times c$.
 
-The loader for the training split draws the examples in a new random order
-in every epoch, so that the minibatches differ from epoch to epoch; the
-loader for the validation split reads them in their stored order. Both
-convert the pixel values from integers between 0 and 255 into floating-point
-numbers between 0 and 1, and resize the images if asked to. Since 64 does
-not divide 60,000, the last minibatch of an epoch is smaller than the others
-(32 images here). Both loaders keep it, so that every epoch covers every
-image.
+Rather than building our own iterator from scratch, we rely on each
+framework's built-in data loader. During training, the loader reshuffles
+the examples at the start of every epoch so minibatches vary across epochs;
+during validation, it reads examples deterministically in their stored
+order. Both loaders convert pixel intensities from 0--255 integers to
+floats in $[0, 1]$ and resize images when requested. Because 64 does not
+divide 60,000 evenly, the final minibatch of each training epoch is smaller
+(32 images here), and both loaders retain it so every image is seen once
+per epoch.
 
 :begin_tab:`pytorch`
-`DataLoader` reads the dataset in minibatches. Its `num_workers` processes,
-4 by default in `DataModule`, load and transform the next minibatches in
-parallel while the model works on the current one.
+PyTorch's `DataLoader` batches and shuffles examples automatically. Its
+`num_workers` background processes (4 by default in `DataModule`) load and
+transform upcoming minibatches in parallel while the model trains on the
+current one.
 :end_tab:
 
 :begin_tab:`mxnet`
-Gluon's `DataLoader` reads the dataset in minibatches. Since the images are
-converted already, it collects each minibatch in the main process; handing
-minibatches over from worker processes would take longer than collecting
-them, so `FashionMNIST` ignores the `num_workers` attribute of
-`DataModule`. The argument `batchify_fn` names the method that stacks the
-examples of a minibatch. Ours also resizes the whole minibatch in one call
-when asked to.
+Gluon's `DataLoader` reads the dataset in minibatches. Because `to_dataset`
+already converted every image to a float array in memory, assembling
+batches directly in the main process is faster than sending them across
+worker processes, so `FashionMNIST` ignores `DataModule.num_workers`. The
+custom `batchify_fn` stacks each minibatch and resizes it in a single
+vectorized call whenever `resize` differs from `(28, 28)`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The loader is a `tf.data` pipeline. Its shuffle buffer holds all training
-examples, which makes the order uniformly random.
+Our loader uses a `tf.data` pipeline whose shuffle buffer matches the full
+training set size, guaranteeing a uniformly random permutation on every
+epoch.
 :end_tab:
 
 :begin_tab:`jax`
-JAX has no loader for image datasets, so we borrow TensorFlow's `tf.data`
-pipeline. The class `TensorFlowDataLoader` wraps it and yields each
-minibatch as NumPy arrays, which JAX functions accept.
+Because JAX does not ship its own image loader, we reuse TensorFlow's
+`tf.data` pipeline and wrap it in a lightweight `TensorFlowDataLoader`
+helper that yields re-iterable NumPy minibatches directly consumable by
+JAX.
 :end_tab:
 
 ```{.python .input #image-classification-dataset-reading-minibatches-1}
@@ -346,8 +362,7 @@ def get_dataloader(self, train):
             self.batch_size).map(resize))
 ```
 
-Which layout does our loader use? We read one minibatch and look at the
-shape of its first image.
+Let us pull a single minibatch and inspect the layout of its first image.
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-3}
 %%tab mxnet, pytorch
@@ -361,22 +376,24 @@ X, y = next(iter(data.train_dataloader()))
 X[0].shape  # Channel-last: (height, width, channels)
 ```
 
-A minibatch adds an axis for the examples in front, and its labels form a
-vector with one entry per example.
+Stacking examples into a minibatch prepends a leading batch axis to the
+images, while the labels arrive as a one-dimensional vector with one entry
+per image.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-2}
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
 
-The images arrive as 32-bit floats and the labels as integers. One minibatch
-of images takes $64 \times 784 \times 4$ bytes, about 200 KB, and the whole
-training set as floats about 190 MB. By today's standards this is tiny. The
-dataset fits in memory many times over, so the loader never waits for a
-disk; its time goes into converting, resizing, and collecting the images.
+The images arrive as 32-bit floats and the labels as integer class indices.
+A single minibatch of 64 images occupies $64 \times 784 \times 4$ bytes
+(roughly 200 KB), and the entire 60,000-image training set in float32 takes
+only about 190 MB. By modern standards that is tiny: the whole dataset sits
+comfortably in RAM, so the loader spends its time converting, resizing, and
+collating arrays rather than waiting on disk.
 
-Is that work fast enough? A loader that is slower than the model leaves the
-processor waiting for data. We time one pass over the training set without
-any model.
+Still, is our data pipeline fast enough? Reading data should never be the
+bottleneck that leaves a GPU or CPU idling between steps. Let us time one
+complete pass over the training set with no model attached.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-3}
 tic = time.time()
@@ -385,25 +402,27 @@ for X, y in data.train_dataloader():
 f'{time.time() - tic:.2f} sec'
 ```
 
-The number above holds only for the machine that ran this notebook, since
-it depends on the number of loader workers, the framework, and the hardware.
-Whatever its value, it is a lower bound: no epoch of training can take less
-time than reading its data. When training seems slow, this is the first
-number to check. If an epoch takes barely longer than the loader alone, the
-model is waiting for data, and more loader workers or prefetching of the
-next minibatches will help more than any change to the model.
+The exact timing depends on your hardware, framework, and worker count, so
+treat the number above as specific to the machine that executed this
+notebook. Whatever it reads, it establishes a hard floor: no training epoch
+can finish faster than reading its data. Whenever training feels sluggish,
+benchmarking the loader alone is the first diagnostic to run—if a full
+training epoch takes barely longer than a data-only pass, your model is
+I/O-bound, and adding worker processes or prefetching will yield bigger
+speedups than tweaking the network itself.
 
 ## Inspecting the Images
 
-We look at the data before we train on it. A look catches errors that no
-loss curve reveals: labels attached to the wrong images, images flipped or
-transposed, a channel axis in the wrong place. A model trains on such data
-without complaint, only worse. The method `visualize` shows
-the images of a minibatch, each titled with its label. It calls the library
-function `d2l.show_images`, which lays out a list of images in a grid with
-optional titles. Matplotlib would draw single-channel images in false
-color, so `visualize` sets the gray color map. Since every image has a
-single channel, reshaping removes the channel axis in either layout.
+Always look at your data before training on it. Human eyes are remarkably
+good at catching bugs that loss curves never flag: misaligned labels,
+upside-down or transposed images, or a misplaced channel axis. A neural
+network will happily train on corrupted inputs without throwing an
+exception—it will just perform poorly. Let us add a `visualize` method to
+`FashionMNIST` that displays a grid of grayscale images titled with their
+text labels via `d2l.show_images`. Because Matplotlib otherwise renders
+single-channel arrays using a false-color palette, we explicitly request
+`cmap='gray'`, and because $c = 1$, reshaping drops the channel axis
+cleanly in both channel-first and channel-last layouts.
 
 ```{.python .input #image-classification-dataset-visualization-2}
 @d2l.add_to_class(FashionMNIST)  #@save
@@ -416,9 +435,9 @@ def visualize(self, batch, nrows=1, ncols=8, labels=None):
     d2l.show_images(X, nrows, ncols, titles=labels, cmap='gray')
 ```
 
-We show three images of every class, one class per column: the first
-three of each class in the validation set, which the validation loader
-always delivers in the same order.
+Let us display the first three validation images of every class—one column
+per category—taking advantage of the fact that the validation loader always
+returns images in deterministic order.
 
 ```{.python .input #image-classification-dataset-inspecting-the-images-1}
 X, y = next(iter(data.val_dataloader()))
@@ -429,29 +448,29 @@ data.visualize([d2l.stack([X[i] for i in idx]), None], nrows=3, ncols=10,
                labels=titles)
 ```
 
-The labels match the garments, the garments are upright, and the
-background is dark, as stored. Note, however, how much some garments of
-different classes look alike. The T-shirts, pullovers, coats, and shirts in
-the columns above share an outline and differ in a collar, a button, or the
-length of a sleeve, details that $28 \times 28$ pixels barely resolve; the
-sandals, sneakers, and ankle boots form a second such family. A trouser or
-a bag, by contrast, looks like nothing else. We can already guess where a
-classifier will make most of its mistakes. How many it makes, and whether
-our guess was right, we learn once we have trained one
-(:numref:`sec_softmax_scratch`).
+Everything checks out: the labels match the garments, every item is
+upright, and the background is dark as expected. Even a quick glance,
+however, reveals why Fashion-MNIST is far richer than handwritten digits.
+T-shirts, pullovers, coats, and shirts share nearly identical silhouettes
+and differ only in collars, buttons, or sleeve lengths—subtle cues that
+$28 \times 28$ pixels barely resolve—while sandals, sneakers, and ankle
+boots form a second look-alike cluster. Trousers and bags, by contrast,
+stand out unmistakably. Already we can predict where a linear classifier
+will struggle most; in :numref:`sec_softmax_scratch`, we will train one and
+see whether our intuition bears out.
 
 ## Summary
 
-Fashion-MNIST has 60,000 training and 10,000 test images of garments in 10
-classes, grayscale with $28 \times 28$ pixels. It is small enough to train
-on in minutes, and hard enough that better models score visibly higher,
-unlike MNIST. The class `FashionMNIST` loads the published files, and its
-loaders deliver images as floats in $[0, 1]$ and labels as class indices;
-the training loader reshuffles every epoch, and both loaders keep the last,
-incomplete minibatch. A minibatch of images is a four-dimensional tensor,
-with one axis each for the examples, the channels, the height, and the
-width. Before training, we look at the images with their labels, and we
-time the loader, since no epoch can be faster than reading its data.
+Fashion-MNIST provides a compact yet genuinely challenging image benchmark:
+60,000 training and 10,000 test grayscale images of $28 \times 28$ pixels
+spanning 10 apparel categories—fast enough for interactive notebooks yet
+hard enough to separate weak models from strong ones. Our `FashionMNIST`
+data module loads the published dataset uniformly across all four
+frameworks, yields minibatches as four-dimensional float tensors in
+$[0, 1]$ alongside integer class indices, reshuffles training data each
+epoch, and retains the final short minibatch so every image is visited.
+Finally, benchmarking the data loader and inspecting labeled images by eye
+are essential sanity checks before any model begins training.
 
 ## Exercises
 

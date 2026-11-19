@@ -2274,7 +2274,7 @@ class SeqLM(nnx.Module):
     def first_mixer_input(self, X):
         """What the first mixer reads: the normalized token embeddings.
 
-        Defined in :numref:`sec_ssm`"""
+        Defined in :numref:`sec_linear-recurrence`"""
         return self.norms[0](self.embedding(X))
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
@@ -2507,7 +2507,7 @@ def bleu(pred_seq, label_seq, k):
 def linear_scan(a, b, h0=None):
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     a = jnp.broadcast_to(a, b.shape)  # Decays may omit axes; broadcast them
     if h0 is not None:  # Fold the initial state into the first step
         b = b.at[:, 0].add(a[:, 0] * h0)
@@ -2519,7 +2519,7 @@ def linear_scan(a, b, h0=None):
 class MinGRU(nnx.Module):
     """The minimal GRU: its gate and candidate read only the input.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     def __init__(self, num_inputs, num_hiddens, *, rngs):
         self.W_z = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)  # Decay
         self.W_h = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)

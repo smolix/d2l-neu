@@ -2135,7 +2135,7 @@ class SeqLM(nn.Module):
     def first_mixer_input(self, X):
         """What the first mixer reads: the normalized token embeddings.
 
-        Defined in :numref:`sec_ssm`"""
+        Defined in :numref:`sec_linear-recurrence`"""
         return self.norms[0](self.embedding(X))
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
@@ -2383,7 +2383,7 @@ def bleu(pred_seq, label_seq, k):
 def associative_scan(combine, elems):
     """All prefixes of elems under an associative combine; time is axis 1.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     s = 1
     while s < elems[0].shape[1]:  # Combine every position with the one s back
         earlier = tuple(x[:, :-s] for x in elems)
@@ -2396,7 +2396,7 @@ def associative_scan(combine, elems):
 def linear_scan(a, b, h0=None):
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     a = a.expand_as(b)  # Decays may omit axes on which they do not vary
     if h0 is not None:  # Fold the initial state into the first step
         b = torch.cat([a[:, :1] * h0.unsqueeze(1) + b[:, :1], b[:, 1:]], 1)
@@ -2408,7 +2408,7 @@ def linear_scan(a, b, h0=None):
 class MinGRU(nn.Module):
     """The minimal GRU: its gate and candidate read only the input.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     def __init__(self, num_inputs, num_hiddens):
         super().__init__()
         self.W_z = nn.Linear(num_inputs, num_hiddens)  # Update gate (decay)

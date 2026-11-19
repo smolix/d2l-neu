@@ -820,9 +820,10 @@ help it. With the router trained and no balancing, the busiest expert ends at
 that the inputs produce, two runs per row are too few to tell; exercise
 :exref:`ex_moe-feedback` asks for more.
 
-Both remedies spread the tokens much more evenly. In the plot every expert
-receives close to its even share; in the table the busiest receives 1.2 to
-1.4 times it, and at most 1% of the assignments are dropped.
+Both remedies spread the tokens much more evenly. In the plot no expert
+strays more than about a third from its even share; in the table the
+busiest receives 1.2 to 1.4 times it, and at most 1% of the assignments
+are dropped.
 Every balanced run ends with a lower validation loss than every unbalanced
 one, frozen router or not.
 

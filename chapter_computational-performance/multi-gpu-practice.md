@@ -40,12 +40,21 @@ communication.
 
 ```{.python .input #multi-gpu-practice-setup}
 %%tab jax
-# XLA moves a collective away from the computation around it, so that the
-# two overlap, only when its latency-hiding scheduler is on. JAX reads
-# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+# JAX and NCCL read these settings once, when they start, so this cell runs
+# before the imports. XLA moves a collective away from the computation
+# around it, so that the two overlap, only when its latency-hiding scheduler
+# is on. The 'vmm' allocator reserves nothing up front and maps each array
+# into one contiguous range, where JAX's default allocator reserves most of
+# every GPU at start-up and carves every array out of that block: one step
+# below needs about 10 GB in one piece after many smaller arrays have come
+# and gone, and a later cell starts a second JAX process on the same GPUs.
+# NCCL's buffer registration fails harmlessly on GPUs without peer-to-peer
+# access, such as ours, and would print a warning at every collective.
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')
+os.environ.setdefault('XLA_PYTHON_CLIENT_ALLOCATOR', 'vmm')
+os.environ.setdefault('NCCL_LOCAL_REGISTER', '0')
 ```
 
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice}
@@ -85,19 +94,6 @@ import os
 import random
 import sys
 ```
-
-:begin_tab:`jax`
-Two more settings of our machine live in the environment of the notebook,
-set before Python starts. `XLA_PYTHON_CLIENT_ALLOCATOR=vmm` replaces JAX's
-default allocator, which reserves most of every GPU when JAX starts and
-carves every array out of that block, by one that reserves nothing up
-front and maps each array into one contiguous range. One step below needs
-about 10 GB in one piece after many smaller arrays have come and gone, and
-a later cell starts a second JAX process on the same GPUs; this allocator
-lets both succeed. `NCCL_LOCAL_REGISTER=0` turns off NCCL's
-buffer registration, which fails harmlessly on GPUs without peer-to-peer
-access, such as ours, and would print a warning at every collective.
-:end_tab:
 
 ## Production Data Parallelism
 :label:`subsec_mgp-production`
@@ -270,8 +266,8 @@ def init_distributed():  #@save
 Our model is the ResNet-18 of :numref:`sec_resnet` with a stem for small
 images: a 3×3 convolution without max-pooling, followed by four stages of
 two residual blocks each, with He initialization as in
-:numref:`sec_resnet`. We save it, since later chapters train it on several
-GPUs.
+:numref:`sec_resnet`. We save it, since the Image Models part
+(:numref:`chap_cv`) trains it on several GPUs.
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-1}
 %%tab pytorch
@@ -329,12 +325,14 @@ fp32. The input pipeline then stays out of our measurements, and the only
 data that cross between GPUs are gradients. We also count the gradient
 bytes $N$ that every step must sum across the GPUs:
 
+<!-- WRITER: the cell now names the gradient bytes S (structure.md notation: N counts parameters only, S the bytes of a message) and prints "11.2M parameters, S = 45 MB"; the sentence and every later $N$ meaning bytes in this file (prose, exercises 2 and 3) become $S$. -->
+
 ```{.python .input #multi-gpu-practice-the-training-step-1}
 %%tab pytorch
 d2l.FashionMNIST()                   # Download once, before any process runs
 num_params = d2l.num_params(resnet18(10))
-N = 4 * num_params                   # Gradient bytes in fp32
-print(f'{num_params / 1e6:.1f}M parameters, N = {N / 1e6:.0f} MB')
+S = 4 * num_params                   # Gradient bytes in fp32
+print(f'{num_params / 1e6:.1f}M parameters, S = {S / 1e6:.0f} MB')
 ```
 
 ```{.python .input #multi-gpu-practice-the-training-step-1}
@@ -344,8 +342,8 @@ X_train = jax.image.resize(data.train[0][..., None] / np.float32(255),
                            (len(data.train[0]), 64, 64, 1), 'bilinear')
 y_train = jnp.asarray(data.train[1], jnp.int32)
 num_params = d2l.num_params(resnet18(10, rngs=nnx.Rngs(d2l.get_key())))
-N = 4 * num_params                   # Gradient bytes in fp32
-print(f'{num_params / 1e6:.1f}M parameters, N = {N / 1e6:.0f} MB')
+S = 4 * num_params                   # Gradient bytes in fp32
+print(f'{num_params / 1e6:.1f}M parameters, S = {S / 1e6:.0f} MB')
 ```
 
 :begin_tab:`pytorch`
@@ -375,7 +373,7 @@ the placement of the inputs.
 ```{.python .input #multi-gpu-practice-ddp-really-run-2}
 %%tab pytorch
 TRAIN_DDP = r'''
-import json, sys, torch
+import contextlib, json, sys, torch
 import torch.distributed as dist
 from torch.nn import functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -383,7 +381,9 @@ from d2l import torch as d2l
 
 rank, k, device = d2l.init_distributed()
 torch.backends.cudnn.benchmark = True  # Tune convolutions for fixed shapes
-b, num_steps, seed = map(int, sys.argv[1:])  # b examples per GPU and step
+# b examples per GPU and step; sync=0 skips the gradient allreduce, and
+# profile=1 also reports the device time per step of NCCL and other kernels
+b, num_steps, seed, sync, profile = map(int, sys.argv[1:])
 torch.manual_seed(seed)                # The same permutations everywhere
 
 data = d2l.FashionMNIST().train        # A copy on every GPU, at 64 x 64
@@ -401,13 +401,21 @@ def minibatches():
 
 def train_step(i):
     opt.zero_grad(set_to_none=True)
-    F.cross_entropy(model(X[i]), y[i]).backward()
+    # Under no_sync, which must enclose the forward pass as well, each GPU
+    # keeps its own gradient
+    with model.no_sync() if not sync else contextlib.nullcontext():
+        F.cross_entropy(model(X[i]), y[i]).backward()
     opt.step()
 
 batches = minibatches()
 t = d2l.Benchmark(lambda: train_step(next(batches)), warmup=10,
                   repeats=num_steps).time
-print(json.dumps({'rank': rank, 'step_time': t}))
+result = {'rank': rank, 'step_time': t}
+if profile:
+    kernels = d2l.kernel_times(lambda: train_step(next(batches)))
+    result['comm'] = sum(ms for name, ms in kernels.items() if 'nccl' in name)
+    result['compute'] = sum(kernels.values()) - result['comm']
+print(json.dumps(result))
 dist.destroy_process_group()
 '''
 ```
@@ -613,18 +621,23 @@ GPUs with $b$ examples per GPU, averaged over 50 steps after a warm-up.
 %%tab pytorch
 def step_time(k, b, num_steps=50):
     """Seconds per DDP step on k GPUs with b examples per GPU."""
-    ranks = d2l.torchrun(TRAIN_DDP, k, b, num_steps, random.getrandbits(32))
+    ranks = d2l.torchrun(TRAIN_DDP, k, b, num_steps, random.getrandbits(32),
+                         1, 0)          # Allreduce the gradients, no profile
     return max(r['step_time'] for r in ranks)
 ```
 
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-4}
 %%tab jax
-def step_time(k, b, num_steps=50):
-    """Seconds per data-parallel step on k GPUs with b examples per GPU."""
+def stepper(k, b):
+    """One data-parallel step on k GPUs with b examples per GPU, as a
+    function without arguments."""
     mesh, model, opt, (X, y) = setup(k, d2l.get_key())
     batches = minibatches(mesh, k * b)
-    return d2l.Benchmark(lambda: train_step(model, opt, X, y, next(batches)),
-                         warmup=10, repeats=num_steps).time
+    return lambda: train_step(model, opt, X, y, next(batches))
+
+def step_time(k, b, num_steps=50):
+    """Seconds per data-parallel step on k GPUs with b examples per GPU."""
+    return d2l.Benchmark(stepper(k, b), warmup=10, repeats=num_steps).time
 ```
 
 Weak scaling first, with 256 examples per GPU:
@@ -667,6 +680,8 @@ diverge. Strong scaling leaves each GPU 128 examples per step, so the
 step's computation shrinks while its communication does not, and the
 efficiency falls well below that of weak scaling. The same mechanism made
 LeNet slower on two GPUs; here its effect is much weaker.
+
+<!-- WRITER (Scaling): new dev numbers (GPUs 2 and 3, 2026-11-19, not captured; the capture uses GPUs 0 and 1 and four GPUs): PyTorch weak 1.82 at k = 2 (91%), strong 1.83; JAX weak 1.73 (87%), strong 1.75. The step functions changed shape but not meaning: PyTorch `step_time` passes TRAIN_DDP two more arguments (sync=1, profile=0); JAX `step_time` is built on a new `stepper(k, b)` that returns the step as a function without arguments. -->
 
 ### Predicted and Measured Communication
 
@@ -717,12 +732,13 @@ from d2l import torch as d2l
 _, _, device = d2l.init_distributed()
 x = torch.zeros(2**26, device=device)   # 64M floats: 256 MB
 t = d2l.Benchmark(lambda: dist.all_reduce(x), repeats=10).time
-print(json.dumps({'beta': 2 * x.nbytes / t}))
+print(json.dumps({'beta_link': x.nbytes / t}))  # Each GPU sends S at k = 2
 dist.destroy_process_group()
 '''
 def allreduce_beta(env=None):
-    """Bandwidth of a bare 256 MB allreduce on two GPUs, in bytes/s."""
-    return min(r['beta'] for r in d2l.torchrun(ALLREDUCE, 2, env=env))
+    """beta_link of a bare 256 MB allreduce on two GPUs: the bytes per
+    second that each GPU sends."""
+    return min(r['beta_link'] for r in d2l.torchrun(ALLREDUCE, 2, env=env))
 ```
 
 ```{.python .input #multi-gpu-practice-communication-predicted-and-measured-1}
@@ -738,24 +754,30 @@ x = jnp.zeros((2, 2**26), device=NamedSharding(mesh, P('data')))  # 256 MB
 psum = jax.jit(jax.shard_map(lambda x: jax.lax.psum(x, 'data'), mesh=mesh,
                              in_specs=P('data'), out_specs=P('data')))
 t = d2l.Benchmark(lambda: psum(x), repeats=10).time
-print(json.dumps({'beta': 2 * x.nbytes / mesh.size / t}))
+print(json.dumps({'beta_link': x.nbytes / mesh.size / t}))  # S per GPU
 '''
 def allreduce_beta(env=None):
-    """Bandwidth of a bare 256 MB allreduce on two GPUs, in bytes/s."""
+    """beta_link of a bare 256 MB allreduce on two GPUs: the bytes per
+    second that each GPU sends."""
     run = subprocess.run([sys.executable, '-c', ALLREDUCE], check=True,
                          capture_output=True, text=True,
                          env={**os.environ, **(env or {})})
-    return json.loads(run.stdout.splitlines()[-1])['beta']
+    return json.loads(run.stdout.splitlines()[-1])['beta_link']
 ```
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-5}
 %%tab pytorch, jax
 if d2l.num_gpus() >= 2:
-    beta = allreduce_beta()
-    print(f'beta = {beta / 1e9:.1f} GB/s; k=2: predicted 2N/beta = '
-          f'{1e3 * 2 * N / beta:.0f} ms, measured exposed '
-          f'{1e3 * (weak[2] - weak[1]):.0f} ms per step')
+    beta_link = allreduce_beta()
+    print(f'beta_link = {beta_link / 1e9:.2f} GB/s')
+    for k in ks[1:]:
+        ring = 2 * (k - 1) / k     # Bytes that each GPU sends, per byte of S
+        print(f'k={k}: predicted {ring:.1f} S/beta_link = '
+              f'{1e3 * ring * S / beta_link:.0f} ms, measured exposed '
+              f'{1e3 * (weak[k] - weak[1]):.0f} ms per step')
 ```
+
+<!-- WRITER: the cell now measures beta_link, the bytes per second that each GPU sends during a bare 256 MB allreduce at k = 2 (= S/t there; half the old beta = 2N/t), and prints for every k > 1 the prediction 2(k-1)/k * S/beta_link (eq_ring_traffic, eq_dp_cost) against the measured exposed time weak[k] - weak[1]. The equation display and the definition of beta above go (cite eq_dp_cost and beta_link of sec_multi_gpu, MGP-11); "2N/beta" becomes "S/beta_link" throughout. Dev, GPUs 2 and 3: PyTorch beta_link 3.09 GB/s, predicted 14 ms, measured exposed 11 ms; JAX 3.04 GB/s, 15 ms, 15 ms. Store (GPUs 0 and 1, old beta 4.9 GB/s, so beta_link about 2.45): predicted 18 ms, measured 15 ms (P) and 19 ms (J); k = 4 measured 23 ms (P), 30 ms (J) against 1.5 S/beta_link of about 27 ms, which the capture will print. A measured beta_link belongs to a pair of GPUs (2.43 GB/s for GPUs 0 and 1 in an earlier dev run, 3.09 for 2 and 3). -->
 
 The measured exposed time is close to $2N/\beta$, the time of an
 allreduce that nothing overlaps. Overlap hides far less of the
@@ -780,6 +802,69 @@ step, which records when every kernel starts and ends, tests them
 kernels of an allreduce take a share of the GPU's processors and memory
 bandwidth, and the backward kernels beside them run more slowly.
 
+```{.python .input #multi-gpu-practice-predicted-and-measured-communication-2}
+%%tab pytorch
+def profile_step(k, b, communicate=True):
+    """Seconds per DDP step on k GPUs with b examples per GPU, and device
+    milliseconds per step on GPU 0 of computation and of NCCL's kernels;
+    without communication, every GPU steps on its own shard's gradient."""
+    ranks = d2l.torchrun(TRAIN_DDP, k, b, 50, random.getrandbits(32),
+                         int(communicate), 1)
+    return (max(r['step_time'] for r in ranks), ranks[0]['compute'],
+            ranks[0]['comm'])
+```
+
+```{.python .input #multi-gpu-practice-predicted-and-measured-communication-2}
+%%tab jax
+def local_stepper(k, b):
+    """The step of `stepper` without communication: inside shard_map every
+    GPU sees only its shard and steps on its own shard's gradient."""
+    mesh, model, opt, (X, y) = setup(k, d2l.get_key())
+    batches = minibatches(mesh, k * b)
+    graphdef, state = nnx.split((model, opt))
+    def local(state, X, y, idx):
+        model, opt = nnx.merge(graphdef, state)
+        train_step(model, opt, X, y, idx)
+        return nnx.state((model, opt))
+    # With check_vma=False autodiff adds no sum over the GPUs, and the
+    # copies, which then drift apart, are returned as if they were equal
+    local = jax.jit(jax.shard_map(local, mesh=mesh, check_vma=False,
+                                  in_specs=(P(), P(), P(), P('data')),
+                                  out_specs=P()))
+    def step():
+        nonlocal state
+        state = local(state, X, y, next(batches))
+        return state
+    return step
+
+def profile_step(k, b, communicate=True):
+    """Seconds per step on k GPUs with b examples per GPU, and device
+    milliseconds per step on GPU 0 of computation and of NCCL's kernels."""
+    step = stepper(k, b) if communicate else local_stepper(k, b)
+    t = d2l.Benchmark(step, warmup=10, repeats=50).time
+    kernels = d2l.kernel_times(step)
+    comm = sum(ms for name, ms in kernels.items() if 'nccl' in name.lower())
+    return t, sum(kernels.values()) - comm, comm
+```
+
+<!-- WRITER: new measurement (MGP-12), replaces the trace numbers of the two tab notes after it. `profile_step(k, b, communicate)` returns the seconds per step and the device milliseconds per step on GPU 0 of NCCL's kernels ("communicates") and of all other kernels ("computes"). Without communication every GPU steps on its own shard's gradient: PyTorch runs the forward and backward pass inside DDP's `no_sync()`; JAX runs `train_step` inside `shard_map` with `check_vma=False`, so autodiff inserts no sum (the compiled step contains no collective; checked in dev). Dev, GPUs 2 and 3, repeated three times with a spread of 0.5 ms or less:
+PyTorch: 1 GPU 110.7 ms (computes 110.5); 2 GPUs without communication 110.2 ms (110.1); 2 GPUs 122.3 ms (computes 121.5, communicates 16.0). Two processes cost each other nothing; the allreduce kernels run 16 ms per step, almost all of it beside the backward kernels, but the computation kernels take 11 ms longer than alone, which is the whole exposed time. Overlap works as designed; the assumption that fails is the third one (the kernels beside an allreduce run as fast as alone).
+JAX: 1 GPU 98.8 ms (98.6); 2 GPUs without communication 98.8 ms (98.6); 2 GPUs 115.2 ms (computes 105.3, communicates 16.9; other runs 112.8 to 113.4 ms per step). One program on two GPUs costs nothing by itself; the allreduce kernels take 17 ms and the computation beside them 7 ms more than alone, and the step grows by 16 ms: little of the allreduce is hidden, and what is hidden slows the computation.
+Shared prose can state the decomposition (no cost from running two GPUs; the communication costs about S/beta_link per step); each tab reads its own split (P: hidden but slows the kernels beside it; J: mostly not hidden). Exercise ex_mgp-buckets part 4 asks for the no_sync trace that this cell now partly shows: re-aim it at when each allreduce starts and ends; its wording "with the backward pass inside model.no_sync()" is wrong as written: DDP decides in the forward pass whether to synchronize, so no_sync must enclose the forward pass too (a first dev version that wrapped only backward still ran the 16 ms allreduce). -->
+
+```{.python .input #multi-gpu-practice-predicted-and-measured-communication-1}
+%%tab pytorch, jax
+if d2l.num_gpus() >= 2:
+    for k, communicate in ((1, True), (2, False), (2, True)):
+        t, compute, comm = profile_step(k, 256, communicate)
+        name = f'{k} GPU' + ('s' if k > 1 else '') + (
+            '' if communicate else ' without communication')
+        print(f'{name + ":":30s}{1e3 * t:6.1f} ms per step; GPU 0 computes '
+              f'{compute:6.1f} ms, communicates {comm:5.1f} ms')
+```
+
+<!-- WRITER: the two tab notes below state trace numbers that no cell prints; the cell above replaces them (see its note). -->
+
 :begin_tab:`pytorch`
 In a trace of the step on two GPUs, the backward kernels take about a
 tenth longer than in the same step without communication, and the
@@ -803,6 +888,8 @@ near-linear scaling for this model with or without overlap.
 
 ### The Collective Transport
 
+<!-- WRITER: beta_link is printed directly now (2.4 to 3.1 GB/s per pair; "beta/2 in each direction" goes). The NCCL version facts are in the cell's code comment and verified against the installed libraries: the string NCCL_SHM_USE_CUDA_MEMCPY is in NCCL 2.28.9 (PyTorch 2.11) and 2.30.4 (jaxlib 0.12) and absent from the NCCL 2.31.2 library; the tab notes drop the versions. Dev, GPUs 2 and 3: 3.09 -> 11.80 GB/s (3.8x, P), 3.04 -> 11.45 GB/s (3.8x, J); store, GPUs 0 and 1: 4.7x (P), 4.5x (J). Read the factor as about four to five, per pair. -->
+
 At $k = 2$ each GPU sends and receives at $\beta/2$ in each direction,
 about 2.5 GB/s. A copy between two of our GPUs, staged through host memory,
 can run at up to 23 GB/s (:numref:`subsec_hw-interconnects`), about nine
@@ -818,10 +905,13 @@ exists in the NCCL versions that our pinned frameworks bundle, and NCCL
 ```{.python .input #multi-gpu-practice-ddp-really-run-6}
 %%tab pytorch, jax
 if d2l.num_gpus() >= 2:
+    # An undocumented parameter of NCCL's transport through host memory. It
+    # exists in NCCL 2.28.9 (bundled with PyTorch 2.11) and 2.30.4 (with
+    # jaxlib 0.12); the library of NCCL 2.31.2 no longer contains it
     beta_ce = allreduce_beta({'NCCL_SHM_USE_CUDA_MEMCPY': '1'})
-    print(f'beta = {beta / 1e9:.1f} GB/s by default, '
-          f'{beta_ce / 1e9:.1f} GB/s with the copy engines '
-          f'({beta_ce / beta:.1f}x)')
+    print(f'beta_link = {beta_link / 1e9:.2f} GB/s by default, '
+          f'{beta_ce / 1e9:.2f} GB/s with the copy engines '
+          f'({beta_ce / beta_link:.1f}x)')
 ```
 
 The bandwidth rises nearly five-fold, and with it the predicted
@@ -1113,7 +1203,7 @@ train a model that fits on no single card?
 :::
 :::
 
-<!-- WRITER: deck split (worklist Part 7 Deck): the four sharding slides moved to sharding.md; the ZeRO goal, the GPT running example, "Production Tools, Then Sharding", the opening slides' GPT bullet and the ZeRO wrap-up bullets still describe the old section. -->
+<!-- WRITER: deck split (worklist Part 7 Deck): the four sharding slides moved to sharding.md; the ZeRO goal, the GPT running example, "Production Tools, Then Sharding", the opening slides' GPT bullet and the ZeRO wrap-up bullets still describe the old section. The predicted-and-measured slide's formula becomes 2(k-1)/k S/beta_link (its output now prints beta_link and one line per k); the transport slide becomes "A Workaround Is Not a Fix" (its output prints beta_link); add a slide for the decomposition cell multi-gpu-practice-predicted-and-measured-communication-1 (one GPU, two without communication, two). -->
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}

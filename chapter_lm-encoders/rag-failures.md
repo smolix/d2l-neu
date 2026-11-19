@@ -671,19 +671,20 @@ if FIX and ready('base', FIX):
 
 The fix failed. It lowered accuracy from 0.89 to 0.75 on `dev` and from
 0.85 to 0.77 on `test`, by 0.14 and 0.08, and both paired intervals
-exclude zero. It did what it was built to do: citation precision rose, by
-0.02 on `dev` and 0.04 on `test`, intervals above zero. But it lost 34
-answerable `dev` questions that the baseline got right, and the class it
+exclude zero. Yet it did what it was built to do: citation precision rose,
+by 0.02 on `dev` and 0.04 on `test`, with intervals above zero. The answers
+it kept cited their passages better, and fewer of them were right. It lost
+34 answerable `dev` questions that the baseline got right, and the class it
 aimed at hardly moved, from 11 unsupported answers to 10.
 
-Where did the 34 go? Thirteen became false abstentions: the check removed
-every sentence, and an empty answer abstains. Eighteen became ignored: what
-the check left was faithful to the passages and lacked a key fact. Most of
-the removed sentences were not rejected by the check at all. The
-baseline's answers hold 829 sentences, and 114 of them, in 44 answers, cite
-nothing. The rule dropped all of those, while the check rejected 52 of the
-715 cited ones. A generator told to cite its passages does not cite every
-sentence, and an uncited sentence is often the one that states the answer.
+Where did the 34 go? Thirteen became false abstentions: nothing of the
+answer was left, and an empty answer abstains. Eighteen became ignored: what
+was left was faithful to the passages and lacked a key fact. The check is
+only half of the fix. The other half drops every sentence that cites
+nothing, unread, since no passage can support it. That half assumes a
+generator that cites what it states, and ours does not always do so. Told to
+cite its passages, it may state the answer in one sentence and cite the
+passage in the next.
 
 The first lost question, which the cell prints, is the `load_array`
 question of the chapter's introduction. The baseline's answer said in
@@ -691,16 +692,19 @@ three sentences, citing none of them, that `is_train` is passed to the
 `DataLoader` as `shuffle`; a fourth sentence cited the passage for all of
 them. The fix kept the fourth sentence alone: "This behavior is defined in
 the function signature and implementation within the provided code [1]."
-It is supported, and it answers nothing.
+It is supported, and it answers nothing. Exercise
+:exref:`ex_lm_rag-tolerant` asks how many of the 34 were lost to uncited
+sentences alone.
 
 The `dev` result could have been optimistic, since the fix was chosen from
 `dev` failures; it lost there anyway, and `test` agrees. Nor do we now
 search for a better fix, such as one that keeps uncited sentences: one
 found by looking at these results would need a fresh test set to be
-believed. A plausible repair, chosen by a careful procedure before any
-failure was counted, made the system worse, and no reading of the failures
-beforehand predicted it. A fix's mechanism and the habits of the model it
-acts on have to be tested together.
+believed. Of the results in this section, this is the one to remember. A
+plausible repair, written down before any failure was counted and applied by
+rule, made the system worse, and nothing in the failures it aimed at warned
+us. Whether a fix works depends on its mechanism and on the habits of the
+model it acts on, and only a run tests the two together.
 
 The stage change fared no better than noise. On `test` the reversed order
 changed accuracy by +0.013, with an interval from $-0.02$ to +0.05, as on
@@ -714,10 +718,10 @@ failures into the ignored and false-abstention classes. On the right are
 the accuracy and citation precision on `dev` of the closed book (the arm
 without passages), the baseline, the reversed order and the fix. The
 crosses are `test`, read once. Accuracy there is 0.85 for the baseline,
-0.87 for the reversed order and 0.77 for the fix, and every cross lies
-inside its `dev` interval: `test` agrees with `dev` for every arm it was
-read with. Both candidates are compared with the baseline, not with each
-other.
+0.87 for the reversed order and 0.77 for the fix, and each of these crosses
+lies inside its `dev` interval: on accuracy, `test` agrees with `dev` for
+every arm it was read with. Both candidates are compared with the baseline,
+not with each other.
 
 ```{.python .input #rag-failure-plot}
 %%tab pytorch
@@ -938,26 +942,25 @@ print(f'one question at a time: retrieval {1000 * t_ret:.0f} ms '
 ```
 
 First-stage retrieval is cheap, about 30 ms per question. Reranking 50
-chunks is not: about half a second, some 40% of the time the generator
+chunks is not: about half a second, nearly half the time the generator
 spends on a baseline answer. It is easy to forget that the reranker, a
 model of 0.6 billion parameters, reads 50 pairs of question and chunk for
 every question. The baseline does without it, and the stage experiment gave
 no reason to add it.
 
 The prompt is the context plus the instructions and the question, about
-240 tokens more. Generation time barely moves between 1,500 and 1,900
-prompt tokens, about 1.1 to 1.3 s per answer; prompts of the baseline's own
-length, batched differently, already span that range. At 6,300 tokens it
-doubles, to 2.6 s, partly because such long prompts run in batches of four
-instead of eight. Quoting before answering doubles the new tokens, to about 220,
-and raises the time to about 2.1 s.
+240 tokens more. Generation time barely moves between 1,500 and 2,100
+prompt tokens, about 1.1 to 1.3 s per answer. At 6,300 tokens it doubles, to
+2.6 s, partly because such long prompts run in batches of four instead of
+eight. The rewrite with reranking takes about 1.9 s per answer, since the
+generator first writes the query and the reranker then reads 50 chunks.
 
 That leaves the question that longer context windows keep raising. If the
 generator can read 6,000 tokens, why not whole chapters, and no retrieval at
 all? On this set three times the baseline's context gained nothing
 measurable, and the oracle of :numref:`sec_lm_rag` shows that the
-generator, given only the right passages, still misses about one question
-in twelve. More text does not cure a generator that ignores what it
+generator, given only the right passages, still gets about one question in
+fourteen wrong. More text does not cure a generator that ignores what it
 already has. The agents of :numref:`chap_lm_agents` take a third path
 and retrieve only when they decide that they need to. Whether whole chapters, at equal cost, would beat
 retrieval on the questions that need several passages remains open.
@@ -975,9 +978,9 @@ Sorting the wrong answers by the first stage that lost them split them
 mostly between answers that go beyond their passages and answers that miss
 a fact their own context holds. The fix for the larger class, written down
 in advance, checks each sentence against its citations. It lowered
-accuracy by 0.14 on `dev` and 0.08 on `test`, mostly by removing uncited
-sentences that carried the answer: a change aimed at one class can create
-others. The original RAG model marginalizes over
+accuracy by 0.14 on `dev` and 0.08 on `test`, by removing sentences that
+carried the answer, among them uncited ones that the check never read: a
+change aimed at one class can create others. The original RAG model marginalizes over
 retrieved documents, and its retriever learns the posterior minus the
 prior: the passages the generator uses, which are not always the ones that
 are relevant. Whether whole chapters in a long context can replace
@@ -1112,7 +1115,7 @@ Failures and Fixes in Retrieval-Augmented Generation<br>**one change at a time Â
 [The problem]{.kicker}
 
 - Baseline: 0.89 of 240 `dev` questions about this book.
-- 19 of its 24 errors on answerable questions had the passage in context.
+- 21 of its 25 errors on answerable questions had the passage in context.
 - Favorite repairs: smaller chunks, query rewrites, more context.
 - `dev` (240 questions) chooses; `test` (240 more) is read once.
 
@@ -1164,9 +1167,9 @@ Qwen3.8-27B judges.
 $$\text{accuracy} = h\, a_1 + (1 - h)\, a_0$$
 
 - *Hit*: the context holds a relevant chunk. $h$: share of hits, 213/220.
-- $a_1 = 0.91$ on hits, $a_0 = 0.29$ on misses.
+- $a_1 = 0.90$ on hits, $a_0 = 0.43$ on misses.
 - Perfect retriever, $a_1$ unchanged:
-  $(1 - h)(a_1 - a_0) \approx 0.032 \times 0.63 \approx 0.02$.
+  $(1 - h)(a_1 - a_0) \approx 0.032 \times 0.47 \approx 0.02$.
 
 ::: {.d2l-note}
 Inside the $\pm 0.03$ that 240 questions resolve: retrieval has no room
@@ -1324,7 +1327,7 @@ and the missing fact is the one a user needs.
   there anyway, and `test` agrees.
 :::
 
-::: {.slide title="A Change Aimed at One Class Created Another"}
+::: {.slide title="The Fix Aimed at Unsupported Answers Filled Two Other Classes"}
 [Where the failures went]{.kicker}
 
 ::: {.cols .vc}
@@ -1340,9 +1343,9 @@ and the missing fact is the one a user needs.
 :::
 
 ::: {.col}
-The rule drops every uncited sentence: 114 of the baseline's 829, in 44
-answers. The check itself rejected 52 of 715 cited ones. Answers emptied
-by the drop abstain.
+The fix drops every uncited sentence unread, and every cited one that its
+check rejects. An answer with nothing left abstains: 14 false abstentions,
+where the baseline had none.
 :::
 :::
 
@@ -1352,7 +1355,7 @@ search for a better fix on the same data.
 :::
 :::
 
-::: {.slide title="The Fix Fills Two Failure Classes, and Test Agrees with Dev"}
+::: {.slide title="Test Accuracy Agrees with Dev for Every Arm"}
 [The results at a glance]{.kicker}
 
 @!rag-failure-plot

@@ -258,6 +258,10 @@ FULL_CARD_NOTEBOOKS = {
     # 11.3 times naive and cached decoding, prefill, and batched decoding;
     # sharing a card halved the PyTorch timings in one run (2026-11-02).
     "chapter_transformers/kv-cache.ipynb": 1,
+    # 11.2 prints milliseconds per training step of the GPT and the RNN and
+    # the seconds of the main run; in a run with two co-tenants on the card
+    # (2026-11-19) both step times rose by 50 to 100%.
+    "chapter_transformers/gpt.ipynb": 1,
     # 11.5 times a self-attention encoder against a Perceiver as N doubles;
     # a shared card tripled the PyTorch time at N = 8192 (2026-11-18).
     "chapter_transformers/encoders-decoders.ipynb": 1,

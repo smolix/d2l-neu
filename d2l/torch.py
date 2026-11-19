@@ -2424,37 +2424,28 @@ def decay_mask(log_a):
     return torch.exp(log_L.masked_fill(~causal, -torch.inf))
 
 def chunked_linear_attention(Q, K, V, log_a, chunk_size):
-    """y_t = S_t q_t with S_t = S_{t-1} diag(a_t) + v_t k_t^T, in chunks.
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
 
-    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size,
-    T, d_k) for a decay per key coordinate, or (batch_size, T) for one per step
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
 
     Defined in :numref:`sec_matrix-state`"""
     B, T, m = Q.shape[0], Q.shape[1], chunk_size
-    if log_a.dim() == 2:  # The same decay for every key coordinate
-        log_a = log_a.unsqueeze(-1)
-    Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
-    # 1. Within chunks: the dual form, with one mask per key coordinate
-    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
-    if L.shape[2] == 1:  # One mask for all coordinates: a masked Q K^T
-        Y = (L[:, :, 0] * (Q @ K.mT)) @ V
-    else:
-        Y = (L * Q.mT.unsqueeze(-1) * K.mT.unsqueeze(-2)).sum(2) @ V
-    # 2. Across chunks: the writes of each chunk, decayed to its end, and
-    #    a scan over chunks for the state at every chunk's end
-    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
+    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
+    log_a = log_a.reshape(B, T // m, m)
+    # 1. Within chunks: the dual form, one m x m mask per chunk
+    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    # 2. Across chunks: S^(c) = gamma^(c) S^(c-1) + sum_t L_mt v_t k_t^T
+    cum = log_a.cumsum(-1).unsqueeze(-1)  # Log decay from the chunk's start
     writes = V.mT @ (K * torch.exp(cum[:, :, -1:] - cum))
-    S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)
-    S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the start
+    S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)  # At chunk ends
+    S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the starts
     # 3. Every step reads the state at its chunk's start, decayed to it
     return (Y + (Q * torch.exp(cum)) @ S.mT).reshape(B, T, -1)
 
 class GatedLinearAttention(nn.Module):
-    """Multi-head linear attention with a gated decay per key coordinate.
+    """Multi-head linear attention with one input-dependent decay per head.
 
     Defined in :numref:`sec_matrix-state`"""
-    gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
-
     def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
                  timescales=(4, 256)):
         super().__init__()
@@ -2469,23 +2460,22 @@ class GatedLinearAttention(nn.Module):
         d2l.init_lecun(self)
         self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
-    def decay_gate(self, d, rank=16):
-        """Low-rank projection to one gate per key coordinate."""
-        return nn.Sequential(nn.Linear(d, rank, bias=False), nn.Linear(rank, d))
+    def decay_gate(self, d):
+        """One gate per head; init_decays sets the bias of its last layer."""
+        return nn.Sequential(nn.Linear(d, self.num_heads))
 
     def init_decays(self, tau_min, tau_max):
-        """Start the gates at decays exp(-1/tau), tau log-uniform in range."""
+        """Start the decays at exp(-1/tau), tau log-uniform in range."""
         b = self.W_a[-1].bias
         tau = torch.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
-        with torch.no_grad():  # log sigmoid(b) / gate_scale = -1 / tau
-            b.copy_(-torch.log(torch.expm1(self.gate_scale / tau)))
+        with torch.no_grad():  # log sigmoid(b) = -1 / tau
+            b.copy_(-torch.log(torch.expm1(1 / tau)))
 
     def decays(self, X):
-        """Log decays, (batch_size * num_heads, T, d_k).
+        """Log decays, (batch_size * num_heads, T).
 
         Defined in :numref:`sec_matrix-state`"""
-        return heads_to_batch(F.logsigmoid(self.W_a(X)) / self.gate_scale,
-                              self.num_heads)
+        return heads_to_batch(F.logsigmoid(self.W_a(X)), self.num_heads)[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
         """Outputs of the decayed matrix memory of every head. X is unused here;
@@ -2517,6 +2507,51 @@ def batch_to_heads(Y, batch_size):
     Defined in :numref:`sec_matrix-state`"""
     _, T, e = Y.shape
     return Y.reshape(batch_size, -1, T, e).transpose(1, 2).flatten(2)
+
+def associative_recall(rng, batch_size, num_pairs, num_keys=512,
+                       num_values=4, num_steps=256, num_rebound=0):
+    """Key-value pairs, filler, then every key again as a query. The first
+    num_rebound keys are written twice, the second time with a new value.
+    Returns the tokens (values, then keys, then the filler), the latest
+    value of each query's key, and a mask of the queries for rebound keys.
+
+    Defined in :numref:`sec_matrix-state`"""
+    n, r = num_pairs, num_rebound
+    keys = np.argsort(rng.random((batch_size, num_keys)), 1)[:, :n]
+    values = rng.integers(0, num_values, (batch_size, n + r))
+    values[:, n:] = (values[:, :r] + rng.integers(  # A new value
+        1, num_values, (batch_size, r))) % num_values
+    slots = np.argsort(rng.random((batch_size, n + r)), 1)  # Write order
+    slots[:, :r], slots[:, n:] = (np.minimum(slots[:, :r], slots[:, n:]),
+                                  np.maximum(slots[:, :r], slots[:, n:]))
+    X = np.full((batch_size, num_steps), num_values + num_keys)  # Filler
+    rows = np.arange(batch_size)[:, None]
+    X[rows, 2 * slots] = num_values + np.concatenate([keys, keys[:, :r]], 1)
+    X[rows, 2 * slots + 1] = values
+    order = np.argsort(rng.random((batch_size, n)), 1)  # Queries
+    X[:, -n:] = num_values + np.take_along_axis(keys, order, 1)
+    latest = np.concatenate([values[:, n:], values[:, r:n]], 1)
+    return X, np.take_along_axis(latest, order, 1), order < r
+
+def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,
+                 batch_size=256, lr=1e-2, **task):
+    """Train on associative recall (task: options of associative_recall)
+    with a cycling number of pairs; return the accuracy per number.
+
+    Defined in :numref:`sec_matrix-state`"""
+    rng = np.random.default_rng()
+    length = lambda n: 32 * math.ceil(
+        (3 * n + 2 * task.get('num_rebound', 0)) / 32)
+    data = lambda n, size: associative_recall(
+        rng, size, n, num_steps=length(n), **task)[:2]
+    model.to(d2l.try_gpu())
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (
+        d2l.cosine_warmup(t, num_updates, num_updates // 10)))
+    d2l.train_queries(model, lambda step: data(pairs[step % len(pairs)],
+                      batch_size), num_updates, optimizer, scheduler)
+    return {n: float(d2l.query_accuracy(model, *data(n, 1024)))
+            for n in pairs}
 
 def delta_rule_writes(K, V, beta, log_a):
     """W and Z with corrected values U = W - Z S_0^T, for every chunk.

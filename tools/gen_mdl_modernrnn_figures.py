@@ -12,7 +12,7 @@ Ten figures, by section:
     decay exp(Delta lambda), and the half-life per step size), and the three
     equivalent views of a linear SSM.
   * "Selective State Space Models" (sec_mamba) -- the selective copying task
-    and the Mamba block.
+    and the Mamba layer.
   * "Matrix-State Recurrences" -- the semiseparable mask lives in
     ``gen_mdl_ssm_family_figures.py``.
   * "The Delta Rule" -- the geometry of the transition I - beta k k^T.
@@ -714,7 +714,10 @@ def fig_selective_copy():
 
 
 def fig_mamba_block():
-    fig, ax = plt.subplots(figsize=(9.4, 7.0))
+    """The Mamba layer as the class computes it: projections, short causal
+    convolution, SiLU, selective SSM, SiLU gate, output projection.  The
+    LayerNorm, residual connection and MLP around it belong to d2l.SeqLM."""
+    fig, ax = plt.subplots(figsize=(8.2, 5.9))
     ax.set_aspect("equal")
     ax.axis("off")
 
@@ -723,20 +726,16 @@ def fig_mamba_block():
     bw, bh = 3.0, 0.70
     half = bh / 2
     y_in = 0.50
-    y_ln = 1.62
-    y_proj = 2.74
-    y_conv = 3.98
-    y_silu = 4.98
-    y_ssm = 5.98
-    y_mul = 7.05
-    y_out = 8.05
-    y_add = 9.05
-    y_top = 9.95
+    y_proj = 1.62
+    y_conv = 2.86
+    y_silu = 3.86
+    y_ssm = 4.86
+    y_mul = 5.93
+    y_out = 6.93
+    y_top = 7.93
 
     _box(ax, mid, y_in, 4.0, bh, r"input sequence $(T, d)$", BLUE,
          fontsize=13, weight="normal")
-    _box(ax, mid, y_ln, 2.6, bh, "LayerNorm", GRAY, fontsize=13,
-         weight="normal")
     _box(ax, mid, y_proj, 4.6, bh, r"input projection $d \to 2 \times 2d$",
          BLUE, fontsize=13, weight="normal")
     _box(ax, cx, y_conv, 3.35, bh, "causal conv, width 4", ORANGE,
@@ -748,15 +747,12 @@ def fig_mamba_block():
     _op(ax, mid, y_mul, r"$\odot$", r=0.27)
     _box(ax, mid, y_out, 4.6, bh, r"output projection $2d \to d$", BLUE,
          fontsize=13, weight="normal")
-    _op(ax, mid, y_add, "+", r=0.27)
     _box(ax, mid, y_top, 4.0, bh, r"output sequence $(T, d)$", BLUE,
          fontsize=13, weight="normal")
 
-    # main spine up to the projection
-    fl.arrow(ax, (mid, y_in + half), (mid, y_ln - half), color=GRAY, lw=1.9,
-             mut=13)
-    fl.arrow(ax, (mid, y_ln + half), (mid, y_proj - half), color=GRAY, lw=1.9,
-             mut=13)
+    # input -> projection
+    fl.arrow(ax, (mid, y_in + half), (mid, y_proj - half), color=GRAY,
+             lw=1.9, mut=13)
 
     # fork: projection -> conv (main), projection -> gate SiLU
     fl.arrow(ax, (cx, y_proj + half), (cx, y_conv - half), color=GRAY, lw=1.9,
@@ -778,41 +774,21 @@ def fig_mamba_block():
     ax.text(gx + 0.22, (y_silu + y_mul) / 2 + 0.28, "gate", fontsize=13,
             color="black", ha="left", va="center")
 
-    # multiply -> out projection -> add -> output
+    # multiply -> out projection -> output
     fl.arrow(ax, (mid, y_mul + 0.27), (mid, y_out - half), color=GRAY, lw=1.9,
              mut=13)
-    fl.arrow(ax, (mid, y_out + half), (mid, y_add - 0.27), color=GRAY, lw=1.9,
+    fl.arrow(ax, (mid, y_out + half), (mid, y_top - half), color=GRAY, lw=1.9,
              mut=13)
-    fl.arrow(ax, (mid, y_add + 0.27), (mid, y_top - half), color=GRAY, lw=1.9,
-             mut=13)
-
-    # residual skip, far left
-    xl = 0.62
-    y_res0 = (y_in + y_ln) / 2
-    ax.plot([mid, xl], [y_res0, y_res0], color=GRAY, lw=1.7)
-    ax.plot([xl, xl], [y_res0, y_add], color=GRAY, lw=1.7)
-    fl.arrow(ax, (xl, y_add), (mid - 0.27, y_add), color=GRAY, lw=1.7, mut=12)
 
     # Delta_t, B_t, C_t are functions of the SSM input
-    ax.text(1.62, y_ssm + 0.86,
+    ax.text(1.12, y_ssm + 0.86,
             r"$\Delta_t, \mathbf{B}_t, \mathbf{C}_t$" + "\nfrom the input",
             fontsize=12.5, color="black", ha="center", va="center")
-    fl.arrow(ax, (1.80, y_ssm + 0.44), (cx - bw / 2, y_ssm + 0.12),
+    fl.arrow(ax, (1.30, y_ssm + 0.44), (cx - bw / 2, y_ssm + 0.12),
              color=TEAL, lw=1.5, mut=11)
 
-    # x L bracket on the right
-    xb = 8.35
-    ax.plot([xb, xb + 0.18], [y_ln - half, y_ln - half], color="black",
-            lw=1.4)
-    ax.plot([xb + 0.18, xb + 0.18], [y_ln - half, y_add + 0.27],
-            color="black", lw=1.4)
-    ax.plot([xb, xb + 0.18], [y_add + 0.27, y_add + 0.27], color="black",
-            lw=1.4)
-    ax.text(xb + 0.44, (y_ln + y_add) / 2, r"$\times\, L$", fontsize=15,
-            color="black", ha="left", va="center")
-
-    ax.set_xlim(0.0, 9.6)
-    ax.set_ylim(0.0, 10.55)
+    ax.set_xlim(0.0, 7.75)
+    ax.set_ylim(0.0, 8.45)
     fl.save(fig, "mdl-modernrnn-mamba-block")
 
 

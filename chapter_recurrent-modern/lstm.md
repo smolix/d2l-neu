@@ -758,9 +758,9 @@ for name, cell in cells.items():
 ```
 
 The gated networks behave as predicted. As they come, with gates at one
-half, the GRU recalls every symbol after 20 steps and the LSTM only part of
-them, between a quarter and nine tenths; from 50 steps on both are at
-chance, 0.12, in every run. One part in a million is a small gradient but
+half, the GRU recalls every symbol after 20 steps in every run, while the
+LSTM recalls anywhere from a quarter of them to all, depending on the run;
+from 50 steps on both are at chance, 0.12, in every run. One part in a million is a small gradient but
 not a hopeless one; $10^{-15}$ is. With keep gates, the same two
 architectures recall every symbol at every delay up to 200, in every run.
 Only the initialization differs between these pairs of rows. Started with
@@ -774,7 +774,7 @@ steps it recalls every symbol in at least one of its two runs, and at 100
 and 200 steps some of its runs still recall well above chance. The control
 shows where this memory comes from. With its recurrent matrix at the
 smaller scale, the same network still recalls at 20 steps in some runs,
-but from 50 steps on it nearly always loses the symbol. A plain network
+but from 50 steps on it usually loses the symbol. A plain network
 can thus carry a symbol a long way when its matrix sits at the borderline,
 with spectral radius near one. Nothing in it holds the symbol on purpose,
 though, and its memory is unreliable: at the same delay one run may recall
@@ -1135,9 +1135,13 @@ embedding, and the output layer cost the same in both models.
 :begin_tab:`pytorch`
 cuDNN runs each recurrent layer in a few fused kernels, while the attention
 model runs here without compilation, so its step is slower than that of
-the plain RNN. The GRU step is slower than the LSTM step, although the GRU
-computes three layers to the LSTM's four: the column times cuDNN's kernels,
-not a count of operations.
+the plain RNN. The GRU step is no cheaper than the LSTM step, although the
+GRU computes three layers to the LSTM's four. Timed alone at this width, one
+cuDNN layer of either kind costs about the same, most likely because each of
+the 128 dependent steps waits for the one before it, and that wait, not the
+arithmetic inside a step, sets the time. The column also moves by several
+milliseconds from one execution to the next, so the gap between the GRU and
+the LSTM in it is noise.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1552,7 +1556,7 @@ Two runs per entry, delays 20 to 200:
 - Keep gates: 1.00 at every delay, every run. Same architecture.
 - Plain RNN, LeCun scale (radius about 1): often carries the symbol 50
   steps or more, but runs disagree, and a longer delay is not reliably
-  harder. At the smaller scale it is nearly always lost from 50.
+  harder. At the smaller scale it is usually lost from 50.
 
 ::: {.d2l-note .rule}
 Gates make a long memory dependable and let us place it. Whether training
@@ -1629,8 +1633,8 @@ A gate that keeps $f$ per step passes $f^{50}$ after 50 steps.
 | | memory path | delayed recall | WikiText, nats/byte |
 |---|---|---|---|
 | RNN, LeCun scale | matrix and $\tanh$ | often 50 steps or more, unreliable | 1.35 |
-| RNN, smaller scale | matrix and $\tanh$ | nearly always lost from 50 | |
-| LSTM, gates at $1/2$ | $\mathbf{f}_t \odot \mathbf{c}_{t-1}$ | partial at 20, lost from 50 | 1.29–1.30 |
+| RNN, smaller scale | matrix and $\tanh$ | usually lost from 50 | |
+| LSTM, gates at $1/2$ | $\mathbf{f}_t \odot \mathbf{c}_{t-1}$ | a quarter to all at 20, lost from 50 | 1.29–1.30 |
 | GRU, gates at $1/2$ | $\mathbf{z}_t \odot \mathbf{h}_{t-1}$ | recalls at 20, lost from 50 | 1.30 |
 | LSTM, GRU, keep gate | same | every delay to 200 | |
 | attention | | | 1.37–1.38 |

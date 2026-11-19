@@ -1,47 +1,59 @@
 # Sequence Models
 :label:`chap_rnn`
 
-After two chapters on images, the last chapter of this part turns to
-sequences. Every model so far reads an input of fixed shape, such as a
-$28 \times 28$ image, and treats each example on its own. A sentence, a recording, or a series of measurements is different:
-it varies in length, and its entries depend on each other and on their
-order. Take the opening sentence of H. G. Wells' *The Time Machine*, which
-the models of this chapter read: "The Time Traveller (for so it will be
-convenient to speak of him) was expounding a recondite matter to us." To
-guess its last word, a reader uses the nineteen words before it, in order.
-How can a model do the same when the text before it can have any length?
+Having spent two chapters on images, we close this part of the book by turning
+to sequential data. Every model we have built so far expects an input of fixed
+shape—a tabular vector of attributes or a $28 \times 28$ grid of pixels—and
+treats each example independently. A sentence, an audio recording, a video, or
+a stream of sensor measurements behaves quite differently: its length varies
+from one example to the next, and its entries depend strongly on one another
+and on the order in which they arrive. Consider the opening sentence of H. G.
+Wells' *The Time Machine*, which serves as our running dataset throughout this
+chapter: "The Time Traveller (for so it will be convenient to speak of him)
+was expounding a recondite matter to us." Guessing the final word requires
+reading the nineteen words before it in order. How can a single model make
+that prediction when the preceding text might be arbitrarily long?
 
-Claude Shannon made a game of this. In 1951 he measured how predictable
-English is by asking people to guess a text one letter at a time. A
-*language model* plays the same game: it predicts each token, which may be
-a character or a word, from the tokens before it. A model that can predict
-can also write, by feeding each token it chooses back in as its next input.
+Claude Shannon framed this very question as a guessing game. In 1951, he
+estimated the predictability of printed English by asking human readers to
+guess a passage one character at a time. A *language model* plays the same
+game: it assigns a probability to the next *token*—whether a character, a
+subword, or a whole word—given the tokens that preceded it. Any model capable
+of predicting the next token can also generate new text simply by feeding each
+chosen token back into the model as its next input.
 
-The difficulty is the text already read, which grows with every token. A
-window of the last few tokens forgets everything older. A *recurrent neural
-network* instead summarizes all of it in a *hidden state* of fixed size,
-which the same layer updates after every token. Today's large language
-models also predict one token at a time, so what this chapter teaches about
-cutting text into tokens, scoring a model, and turning its predictions into
-text carries over to them.
+The central challenge is that the history already read grows with every step.
+Restricting attention to a fixed window of the most recent tokens discards
+everything that came earlier. A *recurrent neural network* (RNN) takes a
+different approach: it maintains a fixed-size *hidden state* that summarizes
+the sequence read so far, updating that state with the same parameters after
+every token. Although modern large language models rely on different
+architectures, they still generate text one token at a time; consequently, the
+machinery introduced in this chapter—splitting text into tokens, evaluating
+language models, and decoding next-token distributions into text—carries
+directly over to them.
 
-The chapter sets up the problem before any recurrent network appears. We
-predict a sequence from its own past and see why forecasting many steps ahead
-is harder than forecasting one (:numref:`sec_sequence`), cut text into tokens
-(:numref:`sec_text-sequence`), and build language models that only count,
-which also gives us the measure by which language models are compared
-(:numref:`sec_language-model`). The counts run out, and the recurrent network
-is our answer. :numref:`sec_rnn` replaces the window by a hidden state, and
-:numref:`sec_rnn-scratch` implements and trains the model. We then put it
-to the test: against the counts, without the safeguard that its training
-turns out to need, and position by position, to see how much of what it
-has read the model uses. :numref:`sec_bptt` explains what we find
-from the gradients of that same model. The last section,
-:numref:`sec_decoding`, turns next-token distributions into text.
+We begin by setting up sequence modeling before introducing any recurrent
+architecture. First, we formulate forecasting a sequence from its own past and
+observe why multi-step prediction is far harder than predicting a single step
+ahead (:numref:`sec_sequence`). Next, we turn raw text into token sequences
+(:numref:`sec_text-sequence`) and construct count-based language models, which
+also give us the evaluation metrics used to compare language models
+(:numref:`sec_language-model`). Once count tables run out of data, recurrent
+networks offer a way forward: :numref:`sec_rnn` replaces the fixed context
+window with a recurrent hidden state, and :numref:`sec_rnn-scratch` implements
+and trains the resulting model from scratch and with high-level APIs. We then
+probe the trained network systematically—comparing it against smoothed counts,
+removing gradient clipping to see why training destabilizes, and measuring
+position by position how much of the preceding text the model actually uses.
+:numref:`sec_bptt` traces these empirical findings back to the structure of
+gradients propagated through time. Finally, :numref:`sec_decoding` explores
+how to turn next-token probability distributions into coherent generated text.
 
-Gated cells and state space models, which let a recurrent network remember
-further back, follow in :numref:`chap_modern_rnn`, and attention, which
-keeps every past token, in :numref:`chap_attention`.
+More expressive recurrent architectures—gated cells and state space models
+that remember much further into the past—follow in :numref:`chap_modern_rnn`,
+while attention mechanisms, which retain direct access to every previous
+token, are introduced in :numref:`chap_attention`.
 
 ```toc
 :maxdepth: 2

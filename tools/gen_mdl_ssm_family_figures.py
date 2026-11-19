@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generate the illustrative figures for the matrix-state / SSM-family
-sections of ``chapter_recurrent-modern`` (12.4 "The Matrix State") in the one
+section of ``chapter_recurrent-modern`` (``sec_matrix-state``) in the one
 shared house style defined in ``gen_mdl_figures.py``.
 
 One figure (the "decay ladder" strip was dropped with the 2026-10 chapter
@@ -8,7 +8,7 @@ rewrite, which no longer references it; see git history):
 
   * the semiseparable block decomposition -- a *computed* decay mask
     ``L`` (random decays, cumulative products) partitioned into chunks:
-    diagonal blocks are the within-chunk masked-attention matmuls,
+    diagonal blocks are the within-chunk masked-attention products,
     off-diagonal blocks are rank-limited and flow through the carried state.
 
 Run with the repo's pytorch venv:
@@ -48,7 +48,7 @@ def fig_semiseparable():
     cmap.set_bad("white")                           # Upper triangle: blank
     ax.imshow(shade, cmap=cmap, vmin=0, vmax=1.15,
               extent=(0, T, T, 0), interpolation="nearest")
-    # Diagonal blocks: the within-chunk attention matmuls.
+    # Diagonal blocks: the within-chunk attention products.
     for c in range(T // C):
         ax.add_patch(Rectangle((c * C, c * C), C, C, fill=False,
                                edgecolor=BLUE, lw=2.4))
@@ -81,7 +81,7 @@ def fig_semiseparable():
     # steps, a d_v x d_k state).  The diagonal-block leader runs through the
     # blank upper triangle and stops on the second block's right edge; the
     # off-diagonal leader ends in the nearest off-diagonal block.
-    ax.annotate("diagonal block:\n$m \\times m$ masked attention\n(a matmul)",
+    ax.annotate("diagonal block:\n$m \\times m$ masked attention\n(a matrix product)",
                 xy=(2 * C, 22), xytext=(70, 22), fontsize=13, color="black",
                 va="center", ha="left",
                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.6,

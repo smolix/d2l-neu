@@ -1348,7 +1348,7 @@ z
      <use xlink:href="#SourceSans3-Regular-2a" transform="translate(943.771019 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(997.97097 0.796875)"/>
     </g>
-    <!-- (a matmul) -->
+    <!-- (a matrix product) -->
     <g transform="translate(313.67175 118.672) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-5a2" d="M 1370 -1126 
@@ -1362,6 +1362,31 @@ Q 960 2509 960 1779
 Q 960 1050 1142 342 
 Q 1325 -365 1696 -973 
 L 1370 -1126 
+z
+" transform="scale(0.015625)"/>
+      <path id="SourceSans3-Regular-33" d="M 90 0 
+L 1107 1626 
+L 166 3110 
+L 736 3110 
+L 1152 2426 
+Q 1222 2304 1299 2169 
+Q 1376 2035 1459 1907 
+L 1485 1907 
+Q 1555 2035 1625 2169 
+Q 1696 2304 1766 2426 
+L 2144 3110 
+L 2694 3110 
+L 1754 1568 
+L 2765 0 
+L 2195 0 
+L 1741 723 
+Q 1658 864 1574 1005 
+Q 1491 1146 1402 1280 
+L 1376 1280 
+Q 1293 1146 1216 1008 
+Q 1139 870 1062 723 
+L 640 0 
+L 90 0 
 z
 " transform="scale(0.015625)"/>
       <path id="SourceSans3-Regular-5a3" d="M 570 -1126 
@@ -1384,10 +1409,18 @@ z
      <use xlink:href="#SourceSans3-Regular-28" transform="translate(100.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(183.609375 0)"/>
      <use xlink:href="#SourceSans3-Regular-2f" transform="translate(232.609375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-28" transform="translate(266.40625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-30" transform="translate(349.3125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-27" transform="translate(403.71875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-5a3" transform="translate(429.21875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(266.40625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-24" transform="translate(301.109375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-33" transform="translate(325.703125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1" transform="translate(370.296875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2b" transform="translate(390.296875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(445.796875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(479.5 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1f" transform="translate(533.703125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-30" transform="translate(589.203125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1e" transform="translate(643.609375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2f" transform="translate(688.203125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-5a3" transform="translate(722 0)"/>
     </g>
    </g>
    <g id="patch_21">

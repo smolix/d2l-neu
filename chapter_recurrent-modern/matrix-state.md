@@ -867,26 +867,27 @@ for num_heads in (8, 4, 2):
 ```{.python .input #matrix-state-associative-recall-4}
 %%tab pytorch, jax
 pairs = list(recall[name][0])
-print(f'{"pairs":26s}', ''.join(f'{n:>11d}' for n in pairs))
-for name, runs in recall.items():
-    print(f'{name:26s}', ''.join(f'{runs[0][n]:6.2f}/{runs[1][n]:.2f}'
-                                 for n in pairs))
 d2l.plot(pairs, [[np.mean([run[n] for run in runs]) for n in pairs]
                  for runs in recall.values()], 'pairs in the sequence',
          'recall, mean of two runs', legend=list(recall), xscale='log',
          ylim=(0.2, 1.02), fmts=('-o', '-s', '-^'), figsize=(4.5, 3))
 d2l.plt.xticks(pairs, pairs)  # Ticks at the numbers of pairs
+print(f'{"pairs":26s}', ''.join(f'{n:>11d}' for n in pairs))
+for name, runs in recall.items():
+    print(f'{name:26s}', ''.join(f'{runs[0][n]:6.2f}/{runs[1][n]:.2f}'
+                                 for n in pairs))
 ```
 
-<!-- WRITER: E12 measured facts (two direct notebook runs per tab plus two dev runs per tab with the same code
-and settings; all eight runs per arm; chance is 0.25 with 4 values). Recall at 4 pairs: 0.97 to 1.00 for every arm
-in every run. At 64 pairs: 128 entries 0.49 to 0.58; 256 entries 0.58 to 0.78; 512 entries 0.86 to 0.96. Two runs of
+<!-- WRITER: E12 measured facts (three cell executions per tab: two direct notebook runs and one dev run with the same code
+and settings; six runs per arm and tab; chance is 0.25 with 4 values). Recall at 4 pairs: 0.97 to 1.00 for every arm
+in every run. At 64 pairs: 128 entries 0.49 to 0.59; 256 entries 0.58 to 0.78; 512 entries 0.83 to 0.96. Two runs of
 one cell differ by at most 0.09 at 64 pairs (JAX, 128 entries) and at most 0.13 at any load (JAX, 128 entries, 32
-pairs); most differences are 0.00 to 0.06. Within every cell the 512-entry arm is above the 128-entry arm at 64 pairs
-by 0.29 to 0.35 (lowest 512 run against highest 128 run), more than three times the larger two-run range: a larger
-state holds more pairs, at an equal parameter count (37,065 to 37,461). Ranges over all runs, per load 4/8/16/32/64:
-128 entries 0.98-1.00, 0.92-0.98, 0.78-0.90, 0.61-0.74, 0.49-0.58; 256 entries 0.97-1.00, 0.95-1.00, 0.87-0.98,
-0.73-0.92, 0.58-0.78; 512 entries 1.00, 0.99-1.00, 0.98-1.00, 0.96-0.99, 0.86-0.96. Firm reading: recall falls as the pairs grow, and the curve moves right as the state grows;
+pairs); most differences are 0.00 to 0.06. Within every cell (six cells, three per tab) the 512-entry arm is above
+the 128-entry arm at 64 pairs by 0.24 to 0.35 (lowest 512 run against highest 128 run), more than three times the
+larger two-run range of that cell: a larger state holds more pairs, at an equal parameter count (37,065 to 37,461).
+Ranges over all twelve runs per arm, per load 4/8/16/32/64: 128 entries 0.98-1.00, 0.92-0.99, 0.78-0.92, 0.61-0.76,
+0.49-0.59; 256 entries 0.97-1.00, 0.95-1.00, 0.87-0.98, 0.73-0.92, 0.58-0.78; 512 entries 1.00, 0.99-1.00,
+0.97-1.00, 0.93-0.99, 0.83-0.96. Firm reading: recall falls as the pairs grow, and the curve moves right as the state grows;
 "in proportion to the state" is roughly right between 128 and 512 entries (the 512 arm at 64 pairs is about where
 the 128 arm is at 8 to 16), but do not claim an exact factor: the 256 arm varies most (0.58 to 0.78 at 64).
 Setup facts for the prose: SeqLM, two blocks of width 32, head sizes 4, 8, 16; keys drawn from 128, values from 4;

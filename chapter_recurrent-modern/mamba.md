@@ -201,8 +201,9 @@ for name, mixer in (('S4D', lambda: d2l.S4D(48, rngs=rngs)),
 ```
 
 S4D answers at most one query in five, at or a little above the chance rate
-of one in eight. The minGRU answers most of them, between 88% and 97% in
-these runs, and two runs can differ by almost a tenth. Its decay is chosen
+of one in eight. The minGRU answers most of them, but how many depends on
+the run: over the executions of this notebook so far, single runs have
+scored from about three quarters of the queries to 97%. Its decay is chosen
 by each input, so it can keep a symbol and let the fillers pass, and it
 nearly solves the task. That it learns this at all is a small surprise. On
 the long-range recall task of :numref:`sec_ssm`, one symbol followed by
@@ -735,11 +736,14 @@ for name, selective in (('Mamba', True), ('Mamba, not selective', False)):
         for _ in range(2)], rngs=rngs))
 ```
 
-Mamba answers 99% or more of the queries in every run. The same block with
-fixed dynamics answers between 30% and 50%: better than S4D, so the parts
-around the SSM recover some of the answer, but about 50 points or more
-below Mamba, several times more than two runs of either model differ.
-Selectivity, not the block around it, solves the task. :citet:`Gu.Dao.2023`
+Mamba answers nearly every query, 98% or more in every run we have seen.
+The same block with fixed dynamics is a different story. Its runs scatter
+widely, from about a fifth of the queries to about two thirds over the
+executions of this notebook, so two runs of it say little about the next.
+They do agree on two things. They beat S4D in the runs shown, so the parts
+around the SSM recover some of the answer; and every one of them is at
+least 30 points below every Mamba run. Selectivity, not the block around
+it, solves the task. :citet:`Gu.Dao.2023`
 report the same comparison on their larger version of the task: the Mamba
 block reaches about 56% around a state space layer with fixed dynamics and
 99.8% around the selective one.
@@ -907,17 +911,17 @@ few percent of the state, about their share of the positions.
 
 For Mamba, the contributions spike at the four symbols, many times higher
 than the fillers next to them, wherever the symbols sit: the selective SSM
-writes the symbols and lets the fillers pass. This is the difference
-between the two models that every run shows. The Mamba curves also jump at
+writes the symbols and lets the fillers pass. The Mamba curves also jump at
 the first position, where no symbol sits. There the convolution
 sees zero padding instead of three earlier fillers, so to the layer the
 first filler does not look like a filler.
 
-One sequence may be a lucky draw, so we measure the spikes on 64 new
-sequences. For every symbol after the first position, the *spike ratio*
-divides the largest contribution in the symbol's window by the contribution
-of the position just before the symbol; we print the median ratio of each
-model.
+One sequence may be a lucky draw, so let us count the spikes on 64 new
+sequences. For every symbol that does not sit at the first position, the
+*spike ratio* divides the largest contribution in the symbol's window by
+the contribution of the filler just before the symbol. A layer that wrote
+and decayed every token alike would give a ratio not far above one. We print the median over all
+symbols, for S4D and for both Mamba runs.
 
 ```{.python .input #mamba-contributions-to-the-state-3}
 %%tab pytorch
@@ -947,6 +951,15 @@ for name, model in probed.items():
     spike = c[rows[:, None], window].max(1) / c[rows, starts - 1]
     print(f'{name:12s} {float(jnp.median(spike)):8,.1f}')
 ```
+
+For Mamba the median symbol stands hundreds to thousands of times above
+the filler before it; for S4D, a few tens of times at most, in every
+execution so far. S4D's ratio exceeds one because the size of a write
+depends on the token, so a symbol can be written larger than a filler. A
+selective layer has a second lever. The large step that writes a symbol
+also decays, by $e^{\Delta_t \boldsymbol{\lambda}}$, everything written
+before it, so the filler just before the symbol shrinks while the symbol
+grows. Writing loudly is something S4D can learn; erasing on cue is not.
 
 How much of the whole state the symbols supply is another matter, and the
 task does not fix it. Runs that copy equally well can find different
@@ -1041,7 +1054,7 @@ at windows of 128 bytes its parallel scan does not make it the faster one
 to train.
 
 Within this table, Mamba is the most expensive of the four models: its
-training step takes two and a half to four times as long as that of the
+training step takes two to four times as long as that of the
 minGRU or of attention at the same width. The likely reason is the size of
 the scan. The minGRU scans a state of $d = 256$ numbers per position, the
 Mamba layer one of $HN = 8{,}192$, 32 times as many. At generation, the
@@ -1077,7 +1090,7 @@ channel, a write and a read direction chosen by the token, and the spread of
 timescales of S4D from the start. The update is still affine in the state,
 so a scan trains it, and the gradient of the scan is a second scan, run
 backward, which stores two tensors instead of every round. Within the same
-block, fixed dynamics lose half or more of the accuracy on selective
+block, fixed dynamics cost at least 30 points of accuracy on selective
 copying; on byte-level text the Mamba model is about 0.03 nats per byte
 ahead of a minGRU with as many parameters, at a few times the cost per
 training step.
@@ -1203,7 +1216,7 @@ Selective state space models<br>
 1,024 positions of filler, four of them symbols (of eight); at four
 queries, repeat the symbols in order. Chance: 1/8.
 
-- S4D: at most 0.19. Its weights depend only on distance.
+- S4D: at most one in five. Its weights depend only on distance.
 - One distance holds a symbol here, a filler there.
 :::
 
@@ -1349,14 +1362,15 @@ Mamba's fused kernel goes further: the states stay in on-chip memory and
 are recomputed in the backward pass.
 :::
 
-::: {.slide title="Switching Selectivity Off Costs Half the Accuracy"}
+::: {.slide title="Switching Selectivity Off Costs at Least 30 Points"}
 Same block, same projections, convolution and gate; only
 $\boldsymbol{\Delta}$, $\mathbf{B}$, $\mathbf{C}$ become constants.
 
 @!mamba-selective-copying-with-mamba
 
 ::: {.d2l-note}
-Gap of about 0.5 or more; two runs of one model differ by at most 0.11.
+Every Mamba run beats every non-selective run by 30 points or more; the
+non-selective runs scatter from about 0.2 to 0.7 across executions.
 Selectivity, not the block, solves the task.
 :::
 :::
@@ -1370,6 +1384,21 @@ Selectivity, not the block, solves the task.
 
 ::: {.d2l-note}
 The measure shows what the state holds, not what $\mathbf{C}_t$ reads.
+:::
+:::
+
+::: {.slide title="Mamba's Symbols Stand Hundreds of Times Above the Fillers"}
+Spike ratio: the largest contribution in a symbol's window over that of
+the filler just before it; median over the symbols of 64 new sequences.
+
+@!mamba-contributions-to-the-state-3
+
+- Mamba: hundreds to thousands. S4D: a few tens at most.
+- S4D can only write a symbol larger than a filler.
+- A large selective step also decays everything written before it.
+
+::: {.d2l-note}
+Writing loudly S4D can learn; erasing on cue it cannot.
 :::
 :::
 
@@ -1392,16 +1421,16 @@ WikiText-103 bytes, windows of 128, 1,000 steps; nats per byte, two runs.
 ::: {.d2l-note}
 minGRU at $d = 309$ (Mamba's count): still 0.03 behind, runs within
 0.003. About 0.02 of that lead is there in bytes 0 to 15: a short-range
-gain. Mamba's step costs 2.5 to 4 times as much.
+gain. Mamba's step costs 2 to 4 times as much.
 :::
 :::
 
 ::: {.slide title="Recap"}
-- Fixed dynamics weigh by distance: S4D copies at most 0.19.
+- Fixed dynamics weigh by distance: S4D copies at most one in five.
 - $e^{-\textrm{softplus}(s)} = \sigma(-s)$: a step size is a gate; Mamba
   adds $N$ states, $\mathbf{B}_t$, $\mathbf{C}_t$.
 - Scan forward, scan backward: two stored tensors.
-- Copying: Mamba 0.99 or more; not selective, 0.30 to 0.50.
+- Copying: Mamba 0.98 or more; not selective, at least 30 points lower.
 - Text: 0.03 nats per byte ahead of an equal-size minGRU.
 
 **Next:** the $H \times N$ state as a matrix written by outer products:

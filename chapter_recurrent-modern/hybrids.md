@@ -483,7 +483,7 @@ how many sequences a GPU can serve at once, and because generating a token
 reads the whole cache from memory (:numref:`sec_kv-cache`), it also sets
 how fast each token is generated.
 
-![Memory held per sequence during generation, against context length, for a 32-layer model with grouped-query attention (8 key–value heads of dimension 128) and Mamba-2-sized recurrent states, in 16-bit numbers. A transformer's cache reaches 32 GB at 256K tokens; a purely recurrent model stays at 64 MB at every length; a hybrid with 4 attention layers pays an eighth of the transformer's cache.](../img/mdl-modernrnn-hybrid-cache.svg)
+![Memory held per sequence during generation, against context length, for a 32-layer model with grouped-query attention (8 key–value heads of dimension 128) and Mamba-2-sized recurrent states, in 16-bit numbers. A transformer's cache reaches 32 GB at 256K tokens; a purely recurrent model stays at 64 MB at every length; a hybrid with 4 attention layers holds an eighth of the transformer's cache.](../img/mdl-modernrnn-hybrid-cache.svg)
 :label:`fig_hy-cache`
 
 The chapter asked how to build a memory of fixed size that trains in

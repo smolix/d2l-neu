@@ -1452,7 +1452,7 @@ seeds_f1 = {x['seed']: x['f1'] for x in TAGGING['runs']
 bound = max(0.01, np.ptp(list(seeds_f1.values())))  # the seeds' spread
 print(f'stored, {len(seeds_f1)} seeds, with neighbours, learning rate '
       f'{LR_TAG:g}: F1 {min(seeds_f1.values()):.4f} '
-      f'to {max(seeds_f1.values()):.4f}, seed 0 {seeds_f1[0]:.4f} (bound on '
+      f'to {max(seeds_f1.values()):.4f},\n  seed 0 {seeds_f1[0]:.4f} (bound on '
       f'the live difference {bound:.3f})\n  {d2l.lm_peak()}')
 assert abs(f1['f1'] - oracle) < 1e-9
 assert SMALL or abs(f1['f1'] - seeds_f1[0]) <= bound
@@ -1490,7 +1490,7 @@ both questions without training anything new.
 tag_runs = pd.DataFrame(TAGGING['runs'])
 by_lr = pd.DataFrame(TAGGING['carve']).groupby('lr')[['carve_f1', 'f1']]
 print(f'with neighbours, trained on {len(conll["train"]) - N_CARVE:,} '
-      f'sentences, {len(SEEDS)} seeds per rate: span F1 on the {N_CARVE:,} '
+      f'sentences, {len(SEEDS)} seeds per rate:\n  span F1 on the {N_CARVE:,} '
       'carved sentences and on the validation set')
 print(by_lr.agg(['mean', 'min', 'max']).to_string(
     float_format='{:.3f}'.format))

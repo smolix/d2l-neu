@@ -721,7 +721,7 @@ notebook, as :numref:`sec_gpt` does.
 ```{.python .input #mamba-selective-copying-with-mamba}
 %%tab pytorch
 for name, selective in (('Mamba', True), ('Mamba, not selective', False)):
-    # Compiled: run eagerly, each round of the scan is a separate kernel
+    # Compiled, since eagerly each round of the scan would be its own kernel
     models[name] = copy_runs(name, lambda: d2l.SeqLM(10, 48, [
         torch.compile(Mamba(48, num_states=4, selective=selective))
         for _ in range(2)]))
@@ -814,29 +814,39 @@ def log_coefficients(self, X):
 
 ```{.python .input #mamba-contributions-to-the-state-2}
 %%tab pytorch
+def first_layer_contributions(model, X):
+    """Contributions to the first layer's state at the last step of X."""
+    mixer, X = model.mixers[0], model.first_mixer_input(X)
+    if isinstance(mixer, d2l.S4D):
+        return state_contributions(*mixer.log_coefficients(X))
+    U, _ = mixer.ssm_input(X)  # Mamba: what its selective SSM reads
+    return state_contributions(*mixer.ssm.log_coefficients(U))
+
 X, _ = copy_batch(1, device=d2l.try_gpu())
 X = X[:, :-3]  # Up to the first query token
-s4d = models['S4D'][0]
-with torch.inference_mode():  # The first layer of each model
-    contributions = {'S4D': state_contributions(
-        *s4d.mixers[0].log_coefficients(s4d.first_mixer_input(X)))[0]}
-    for run, mamba in enumerate(models['Mamba'], 1):  # Both trained runs
-        U, _ = mamba.mixers[0].ssm_input(mamba.first_mixer_input(X))
-        contributions[f'Mamba, run {run}'] = state_contributions(
-            *mamba.mixers[0].ssm.log_coefficients(U))[0]
+probed = {'S4D': models['S4D'][0], 'Mamba, run 1': models['Mamba'][0],
+          'Mamba, run 2': models['Mamba'][1]}  # Both trained Mamba runs
+with torch.inference_mode():
+    contributions = {name: first_layer_contributions(model, X)[0]
+                     for name, model in probed.items()}
 ```
 
 ```{.python .input #mamba-contributions-to-the-state-2}
 %%tab jax
+def first_layer_contributions(model, X):
+    """Contributions to the first layer's state at the last step of X."""
+    mixer, X = model.mixers[0], model.first_mixer_input(X)
+    if isinstance(mixer, d2l.S4D):
+        return state_contributions(*mixer.log_coefficients(X))
+    U, _ = mixer.ssm_input(X)  # Mamba: what its selective SSM reads
+    return state_contributions(*mixer.ssm.log_coefficients(U))
+
 X, _ = copy_batch(d2l.get_key(), 1)
 X = X[:, :-3]  # Up to the first query token
-s4d = models['S4D'][0]  # The first layer of each model
-contributions = {'S4D': state_contributions(
-    *s4d.mixers[0].log_coefficients(s4d.first_mixer_input(X)))[0]}
-for run, mamba in enumerate(models['Mamba'], 1):  # Both trained runs
-    U, _ = mamba.mixers[0].ssm_input(mamba.first_mixer_input(X))
-    contributions[f'Mamba, run {run}'] = state_contributions(
-        *mamba.mixers[0].ssm.log_coefficients(U))[0]
+probed = {'S4D': models['S4D'][0], 'Mamba, run 1': models['Mamba'][0],
+          'Mamba, run 2': models['Mamba'][1]}  # Both trained Mamba runs
+contributions = {name: first_layer_contributions(model, X)[0]
+                 for name, model in probed.items()}
 ```
 
 We also compute the share of the state that comes from the four positions
@@ -902,6 +912,41 @@ between the two models that every run shows. The Mamba curves also jump at
 the first position, where no symbol sits. There the convolution
 sees zero padding instead of three earlier fillers, so to the layer the
 first filler does not look like a filler.
+
+One sequence may be a lucky draw, so we measure the spikes on 64 new
+sequences. For every symbol after the first position, the *spike ratio*
+divides the largest contribution in the symbol's window by the contribution
+of the position just before the symbol; we print the median ratio of each
+model.
+
+```{.python .input #mamba-contributions-to-the-state-3}
+%%tab pytorch
+X_test = copy_batch(64, device=X.device)[0][:, :-3]  # 64 new sequences
+rows, starts = (X_test[:, 1:] > 1).nonzero(as_tuple=True)  # The symbols,
+starts = starts + 1                                       # not at position 0
+window = (starts[:, None] + torch.arange(4, device=X.device)).clamp(
+    max=X_test.shape[1] - 1)  # A window may reach past the end
+print(f'spike ratio, median over {len(rows)} symbols')
+with torch.inference_mode():
+    for name, model in probed.items():
+        c = first_layer_contributions(model, X_test)
+        spike = c[rows[:, None], window].amax(1) / c[rows, starts - 1]
+        print(f'{name:12s} {spike.median():8,.1f}')
+```
+
+```{.python .input #mamba-contributions-to-the-state-3}
+%%tab jax
+X_test = copy_batch(d2l.get_key(), 64)[0][:, :-3]  # 64 new sequences
+rows, starts = jnp.nonzero(X_test[:, 1:] > 1)  # The symbols,
+starts = starts + 1                            # not at position 0
+window = jnp.minimum(starts[:, None] + jnp.arange(4),
+                     X_test.shape[1] - 1)  # A window may reach past the end
+print(f'spike ratio, median over {len(rows)} symbols')
+for name, model in probed.items():
+    c = first_layer_contributions(model, X_test)
+    spike = c[rows[:, None], window].max(1) / c[rows, starts - 1]
+    print(f'{name:12s} {float(jnp.median(spike)):8,.1f}')
+```
 
 How much of the whole state the symbols supply is another matter, and the
 task does not fix it. Runs that copy equally well can find different

@@ -292,7 +292,7 @@ each channel and mixes nothing across steps.
 ```{.python .input #hybrids-the-recall-sweep-4}
 %%tab pytorch, jax
 no_conv = [d2l.train_recall(recall_model('GG', conv_width=1), num_keys=128)
-           for _ in range(2)]  # Width 1: each channel is only scaled
+           for _ in range(2)]  # Width 1: only scales and shifts each channel
 print(f'{"pairs":25s}', ''.join(f'{n:>11d}' for n in pairs))
 for name, (a, b) in [('Gated DeltaNet', recall['Gated DeltaNet']),
                      ('without the convolution', no_conv)]:

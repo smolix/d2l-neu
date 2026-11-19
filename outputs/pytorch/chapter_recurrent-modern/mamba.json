@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5aec32838ba5fac54c458a732e5e76bde84b92badaf6777af6e4ebedf7f5682f",
+    "d2l_lib_fingerprint": "sha256:3af1eb3a1f7c00f80a33bf515743674310b515e5e94ff559f3d5a1bb100c3850",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[0, 0, 0, 8, 0, 0, 0, 6, 9, 0, 4, 0, 1, 1, 1, 1],\n        [0, 0, 2, 0, 0, 0, 0, 0, 3, 6, 0, 9, 1, 1, 1, 1]])\ntensor([[8, 6, 9, 4],\n        [2, 3, 6, 9]])\n"
+          "text": "tensor([[0, 0, 0, 8, 0, 6, 0, 0, 0, 2, 3, 0, 1, 1, 1, 1],\n        [6, 0, 9, 0, 2, 0, 0, 0, 0, 0, 0, 4, 1, 1, 1, 1]])\ntensor([[8, 6, 2, 3],\n        [6, 9, 2, 4]])\n"
         }
       ]
     },
@@ -41,12 +41,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D                  42,058 parameters, accuracy 0.19, 0.18\n"
+          "text": "S4D                  42,058 parameters, accuracy 0.13, 0.15\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU               48,202 parameters, accuracy 0.88, 0.97\n"
+          "text": "minGRU               48,202 parameters, accuracy 0.97, 0.96\n"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 2.4e-06\n"
+          "text": "max deviation: 9.5e-07\n"
         }
       ]
     },
@@ -82,7 +82,7 @@
       "outputs": []
     },
     "mamba-selective-copying-with-mamba": {
-      "code_fingerprint": "sha256:d269d9c809a8234bb15b378f4df3f12c43b735efaa24f13f754bb967e2d19d7b",
+      "code_fingerprint": "sha256:258deb4be45df13370526897e8084535b81bb181961309ffb4dd0f16ff8fbd21",
       "kind": "text",
       "outputs": [
         {
@@ -93,55 +93,66 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba, not selective 70,090 parameters, accuracy 0.45, 0.50\n"
+          "text": "Mamba, not selective 70,090 parameters, accuracy 0.23, 0.24\n"
         }
       ]
     },
     "mamba-where-the-state-comes-from-1": {
-      "code_fingerprint": "sha256:57b1e94e72c80eab3755599560b149bdec9f4e3c650270a162053a0dc680469d",
+      "code_fingerprint": "sha256:31f1b632882d500a566c1deb1ab4d4ceb48627b84af56f9b6c1dd4254ea58ec5",
       "kind": "text",
       "outputs": []
     },
     "mamba-contributions-to-the-state-1": {
-      "code_fingerprint": "sha256:0302e98066caa7d81764256f5fca38288140fb5a173f03b1c73f1a6dbf1634d4",
+      "code_fingerprint": "sha256:cb92c002134b1a038dcccf5629e5d85c502047c87544a0ae29d1d959ae051b9c",
       "kind": "text",
       "outputs": []
     },
     "mamba-contributions-to-the-state-2": {
-      "code_fingerprint": "sha256:d0537296fa9397eb23ddb9a2c1b2e6c84ecaa1ac9fa6da73cca0d427fcaa0c3a",
+      "code_fingerprint": "sha256:66c757d0a1a2892afcff43c2b353075cf6ca2153e8da419b1676c125232ed142",
       "kind": "text",
       "outputs": []
     },
     "mamba-where-the-state-comes-from-2": {
-      "code_fingerprint": "sha256:338315e6a3ffd5efc76be614fed2adf78852354bb735ba29f67ccb6baac87ac1",
+      "code_fingerprint": "sha256:89f790e0c5a27816014e9609f682e32151145f75bcdf2b75b588a63788a1edc6",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "symbol windows: 1.6% of the positions\nS4D          share of the state from them: 0.02\nMamba, run 1 share of the state from them: 0.63\nMamba, run 2 share of the state from them: 0.71\n"
+          "text": "symbol windows: 1.6% of the positions\nS4D          share of the state from them: 0.01\nMamba, run 1 share of the state from them: 0.47\nMamba, run 2 share of the state from them: 0.73\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 43926,
-          "sha256": "sha256:8b3e8bd0f13c9f9af9e24c45e48849f595655b439a84a0a80bbf62d747b434f2"
+          "bytes": 40235,
+          "sha256": "sha256:9ddfeaf4614a01a39c070402c252f2e579b55241e777b924d45c57cf8a0477b1"
+        }
+      ]
+    },
+    "mamba-contributions-to-the-state-3": {
+      "code_fingerprint": "sha256:5d91eb2aff9f51c9f410b516123413c5c96d20685ce700b1298291a5d29dab81",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "spike ratio, median over 256 symbols\nS4D               2.5\nMamba, run 1  1,550.6\nMamba, run 2  2,410.9\n"
         }
       ]
     },
     "mamba-language-modeling-4": {
-      "code_fingerprint": "sha256:d0908fdeb4ac53585ca1b226734428686dd237910d043abdc6700f2c4d4e54d3",
+      "code_fingerprint": "sha256:df2956d36cac4b319d3530fe1cadbacc512a3f70e4dc9d90ccb0f72aa962414e",
       "kind": "text",
       "outputs": []
     },
     "mamba-language-modeling-3": {
-      "code_fingerprint": "sha256:8a4a81fa1d6c44ddb3efbaaebefc50582fa7efaf698772bbf830fed46ae65621",
+      "code_fingerprint": "sha256:9e2feb1647a7f06e0bee6ea7dfd6674f0aa30fa3b883ef0e0115ea4f40035eed",
       "kind": "text",
       "outputs": []
     },
     "mamba-language-modeling-2": {
-      "code_fingerprint": "sha256:a237f4f19a9a6ebbfe680d24586de8052154e0a6354612a8aa68b90f166d003b",
+      "code_fingerprint": "sha256:9264b03f83ccc6e1f7cfd78343ac4190d1aed898b939f276757668324102f46b",
       "kind": "text",
       "outputs": [
         {
@@ -152,22 +163,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba           3,989,248 1.298/1.296 1.490/1.487 1.272/1.271 1.270/1.267 69/69\n"
+          "text": "Mamba           3,989,248 1.299/1.296 1.489/1.489 1.273/1.270 1.270/1.267 69/69\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU          2,764,544 1.344/1.344 1.520/1.519 1.320/1.319 1.319/1.319 27/27\n"
+          "text": "minGRU          2,764,544 1.346/1.344 1.522/1.518 1.321/1.320 1.321/1.319 34/33\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention       3,286,784 1.382/1.382 1.561/1.559 1.358/1.359 1.354/1.356 21/21\n"
+          "text": "attention       3,286,784 1.383/1.382 1.559/1.560 1.359/1.358 1.356/1.355 21/21\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU, d=309   3,991,918 1.327/1.328 1.505/1.507 1.302/1.303 1.301/1.303 33/27\n"
+          "text": "minGRU, d=309   3,991,918 1.325/1.327 1.506/1.507 1.299/1.302 1.299/1.301 33/30\n"
         }
       ]
     }

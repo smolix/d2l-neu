@@ -276,12 +276,13 @@ def fit_kernel(N, target, dt=0.05):
 k = np.arange(100)
 spike = (k == 20).astype(float)      # Exactly the input 20 steps back
 bump = np.exp(-(k - 20) ** 2 / 32)   # About 20 steps back, give or take 4
-print(' N  peak  largest |c|  spike residual  bump residual')
+print(' N  peak  spike |c|  spike residual  bump |c|  bump residual')
 for N in [1, 4, 16]:
     K, c, spike_error = fit_kernel(N, spike)
-    bump_error = fit_kernel(N, bump)[2]
-    print(f'{N:2d}  {K.argmax():4d}  {np.abs(c).max():11.0e}  '
-          f'{spike_error:14.2f}  {bump_error:13.2f}')
+    _, c_bump, bump_error = fit_kernel(N, bump)
+    print(f'{N:2d}  {K.argmax():4d}  {np.abs(c).max():9.0e}  '
+          f'{spike_error:14.2f}  {np.abs(c_bump).max():8.0e}  '
+          f'{bump_error:13.2f}')
 ```
 
 With one state the kernel peaks at 0, as predicted, and misses both
@@ -331,7 +332,7 @@ class S4D(nn.Module):  #@save
     def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1):
         super().__init__()
         d, N = num_hiddens, num_states
-        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        # lambda_n = -n for n = 1..N, stored as log(-lambda) to stay negative
         self.log_neg_rate = nn.Parameter(
             torch.log(torch.arange(1., N + 1)).repeat(d, 1))
         self.log_dt = nn.Parameter(  # Log-uniform in [dt_min, dt_max]
@@ -353,7 +354,7 @@ class S4D(nnx.Module):  #@save
     def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1,
                  *, rngs):
         d, N = num_hiddens, num_states
-        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        # lambda_n = -n for n = 1..N, stored as log(-lambda) to stay negative
         self.log_neg_rate = nnx.Param(
             jnp.tile(jnp.log(jnp.arange(1., N + 1)), (d, 1)))
         self.log_dt = nnx.Param(  # Log-uniform in [dt_min, dt_max]
@@ -382,7 +383,7 @@ otherwise wrap around and leak into its beginning.
 def forward(self, X):  # X: (batch_size, num_steps, d)
     T = X.shape[1]
     a_bar, b_bar = self.discretize()
-    # All powers a_bar^k for k < T: d * N * T numbers, the price of the kernel
+    # All powers a_bar^k for k < T: d * N * T numbers held in memory
     powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)
     K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Kernel, (d, T)
     Y = torch.fft.irfft(torch.fft.rfft(X, n=2 * T, dim=1) *
@@ -396,7 +397,7 @@ def forward(self, X):  # X: (batch_size, num_steps, d)
 def __call__(self, X):  # X: (batch_size, num_steps, d)
     T = X.shape[1]
     a_bar, b_bar = self.discretize()
-    # All powers a_bar^k for k < T: d * N * T numbers, the price of the kernel
+    # All powers a_bar^k for k < T: d * N * T numbers held in memory
     powers = a_bar[..., None] ** jnp.arange(T)
     K = ((self.C[...] * b_bar)[..., None] * powers).sum(1)  # Kernel, (d, T)
     Y = jnp.fft.irfft(jnp.fft.rfft(X, n=2 * T, axis=1) *
@@ -540,16 +541,26 @@ layers = {
         init_timescales(d2l.MinGRU(32, 64)), 32)}
 
 def recall(make_layer, T):
-    """Test accuracy after training a fresh model at delay T."""
+    """Train a fresh model at delay T; return its test accuracy and layer."""
     layer, num_inputs = make_layer()
     model = d2l.RecallModel(layer, 64, num_inputs=num_inputs)
-    return d2l.train_delayed_recall(model, T, blank_fillers=True)
+    return d2l.train_delayed_recall(model, T, blank_fillers=True), layer
 
-print(f"{'':23s} {'T=100':^11s}  {'T=1000':^11s}")
-for name, make_layer in layers.items():  # Two runs per entry
-    runs = [' '.join(f'{recall(make_layer, T):5.2f}' for _ in range(2))
-            for T in [100, 1000]]
-    print(f'{name:23s}', '  '.join(runs))
+def slowest_half_life(layer):  # ln 2 / min(dt |lambda|), in steps
+    rates = torch.exp(layer.log_dt + layer.log_neg_rate).detach()
+    return math.log(2) / rates.min().item()
+
+runs = {name: {T: [recall(make_layer, T) for _ in range(2)]  # Two runs each
+               for T in [100, 1000]} for name, make_layer in layers.items()}
+print(f"{'accuracy':23s} {'T=100':^11s}  {'T=1000':^11s}")
+for name, by_T in runs.items():
+    print(f'{name:23s}', '  '.join(' '.join(f'{acc:5.2f}' for acc, _ in r)
+                                   for r in by_T.values()))
+print('slowest half-life after training, in steps')
+for name in ['S4D', 'S4D, short timescales']:
+    print(f'{name:23s}', '  '.join(' '.join(
+        f'{slowest_half_life(layer):5.0f}' for _, layer in r)
+        for r in runs[name].values()))
 ```
 
 ```{.python .input #ssm-long-range-recall-2}
@@ -564,17 +575,27 @@ layers = {
         d2l.MinGRU(32, 64, rngs=rngs), rngs=rngs), 32)}
 
 def recall(make_layer, T):
-    """Test accuracy after training a fresh model at delay T."""
+    """Train a fresh model at delay T; return its test accuracy and layer."""
     rngs = nnx.Rngs(d2l.get_key())
     layer, num_inputs = make_layer(rngs)
     model = d2l.RecallModel(layer, 64, num_inputs=num_inputs, rngs=rngs)
-    return d2l.train_delayed_recall(model, T, blank_fillers=True)
+    return d2l.train_delayed_recall(model, T, blank_fillers=True), layer
 
-print(f"{'':23s} {'T=100':^11s}  {'T=1000':^11s}")
-for name, make_layer in layers.items():  # Two runs per entry
-    runs = [' '.join(f'{recall(make_layer, T):5.2f}' for _ in range(2))
-            for T in [100, 1000]]
-    print(f'{name:23s}', '  '.join(runs))
+def slowest_half_life(layer):  # ln 2 / min(dt |lambda|), in steps
+    rates = jnp.exp(layer.log_dt[...] + layer.log_neg_rate[...])
+    return math.log(2) / rates.min().item()
+
+runs = {name: {T: [recall(make_layer, T) for _ in range(2)]  # Two runs each
+               for T in [100, 1000]} for name, make_layer in layers.items()}
+print(f"{'accuracy':23s} {'T=100':^11s}  {'T=1000':^11s}")
+for name, by_T in runs.items():
+    print(f'{name:23s}', '  '.join(' '.join(f'{acc:5.2f}' for acc, _ in r)
+                                   for r in by_T.values()))
+print('slowest half-life after training, in steps')
+for name in ['S4D', 'S4D, short timescales']:
+    print(f'{name:23s}', '  '.join(' '.join(
+        f'{slowest_half_life(layer):5.0f}' for _, layer in r)
+        for r in runs[name].values()))
 ```
 
 The controls change sides. The minGRU with gates near one half is at

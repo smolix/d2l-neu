@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f237c8b8d4b4795eb01e7ed6c5b48ee7718178fa686233d455e6a98aa5e876a1",
+    "d2l_lib_fingerprint": "sha256:3d506e71c0ee52e9643a29eaa89e42f6cb48e4b9ee1aacea19ef074e47955232",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,17 +46,17 @@
       "outputs": []
     },
     "deltanet-chunked-computation-2": {
-      "code_fingerprint": "sha256:c02180ec4740f1756537a37c5e8d2089cbaf2838ab845f77196586675921edea",
+      "code_fingerprint": "sha256:ebe4f28ee736cabaa54d59e205f75b5f61351fbc3fffdfab46a4f158e31645fc",
       "kind": "text",
       "outputs": []
     },
     "deltanet-chunked-computation-4": {
-      "code_fingerprint": "sha256:7c6396951e0931bd411f41887aa56b756b30ae28e53a67b5b1bd943bc4f93fb3",
+      "code_fingerprint": "sha256:219c4c4cd0c6996c4ce1333b0570548ccf35abd60e13ab22b3fb7b1cefd4e9c6",
       "kind": "text",
       "outputs": []
     },
     "deltanet-chunked-computation-3": {
-      "code_fingerprint": "sha256:b3719a734fe6da7395d99bcdafbf5eb89085500175ca6fe70740916e87044cc6",
+      "code_fingerprint": "sha256:46ad21127c3554b3f680dbd8521b9ade56653e5f7d2a88e86cbf96ff89ca8746",
       "kind": "text",
       "outputs": [
         {
@@ -67,17 +67,17 @@
       ]
     },
     "deltanet-the-layer": {
-      "code_fingerprint": "sha256:594b8f01584d6891356c1188e60591552f1f2b14dcab84e478de0db932b46ac2",
+      "code_fingerprint": "sha256:20db7db083079d00e9dd5c9b854637ddb5bb7f3c349348d973c170a7df755bce",
       "kind": "text",
       "outputs": []
     },
     "deltanet-rebinding-1": {
-      "code_fingerprint": "sha256:03d829c07766376bbda17a6b74c66ba8309933fd77b2ed6f886aa49b97c038f1",
+      "code_fingerprint": "sha256:2c186563bc191ebca9beca5a6e3aa2d5171cd5057129bc4f7580ed034d50c0ac",
       "kind": "text",
       "outputs": []
     },
     "deltanet-rebinding-2": {
-      "code_fingerprint": "sha256:1e26f63a622b32b384e4c650af9775f0786625f5f950e333e246da2bf886617e",
+      "code_fingerprint": "sha256:c3b262c8c0ad1876762eb3db7a92f7097fce3dcf6b05a1c17cddf1a2286e9e3b",
       "kind": "text",
       "outputs": [
         {
@@ -88,12 +88,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention        73,941      0.893 0.862      0.977 0.965\n"
+          "text": "gated linear attention        73,941      0.884 0.883      0.968 0.966\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet                74,201      0.955 0.985      0.977 0.994\n"
+          "text": "Gated DeltaNet                74,201      0.985 0.991      0.993 0.997\n"
         }
       ]
     }

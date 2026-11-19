@@ -594,24 +594,33 @@ def first_mixer_input(self, X):
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-6}
 %%tab pytorch
-X, _ = next(iter(data.val_dataloader()))
+def first_gates(model, X):  # Gates of the first layer
+    return model.mixers[0].coefficients(model.first_mixer_input(X))[0]
+
+X, _ = next(iter(data.val_dataloader()))  # Validation text
 X = X.to(next(model.parameters()).device)
-with torch.inference_mode():  # Gates of the first layer on validation text
-    Z = layers[0].coefficients(model.first_mixer_input(X))[0]
-print('gate above  half-life in steps  share of gates')
+with torch.inference_mode():
+    Z_init = first_gates(text_model(min_gru, 256), X)  # Untrained
+    Z = first_gates(model, X)
+print('gate above  half-life in steps  share at initialization  trained')
 for g in (0.5, 0.9, 0.99):
     print(f'{g:10}  {math.log(2) / -math.log(g):17.0f}  '
-          f'{(Z > g).float().mean():14.1%}')
+          f'{(Z_init > g).float().mean():23.1%}  '
+          f'{(Z > g).float().mean():7.1%}')
 ```
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-6}
 %%tab jax
-X, _ = next(iter(data.val_dataloader()))  # Gates of the first layer
-Z = layers[0].coefficients(model.first_mixer_input(jnp.asarray(X)))[0]
-print('gate above  half-life in steps  share of gates')
+def first_gates(model, X):  # Gates of the first layer
+    return model.mixers[0].coefficients(model.first_mixer_input(X))[0]
+
+X = jnp.asarray(next(iter(data.val_dataloader()))[0])  # Validation text
+Z_init = first_gates(text_model(min_gru, 256), X)  # Untrained
+Z = first_gates(model, X)
+print('gate above  half-life in steps  share at initialization  trained')
 for g in (0.5, 0.9, 0.99):
     print(f'{g:10}  {math.log(2) / -math.log(g):17.0f}  '
-          f'{(Z > g).mean():14.1%}')
+          f'{(Z_init > g).mean():23.1%}  {(Z > g).mean():7.1%}')
 ```
 
 About half of the gate values exceed 0.5, and almost none reaches 0.99. In

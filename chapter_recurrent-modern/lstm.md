@@ -734,7 +734,7 @@ for name, layer in layers.items():
 %%tab jax
 lecun = {'recurrent_kernel_init': nnx.initializers.lecun_normal()}
 default = {'recurrent_kernel_init': nnx.initializers.variance_scaling(
-    1 / 3, 'fan_in', 'uniform')}  # PyTorch's: uniform on [-1/8, 1/8]
+    1 / 3, 'fan_in', 'uniform')}  # Uniform on [-1/8, 1/8]
 cells = {'RNN': lambda rngs: nnx.SimpleCell(32, 64, rngs=rngs, **lecun),
          'RNN, default scale':
              lambda rngs: nnx.SimpleCell(32, 64, rngs=rngs, **default),

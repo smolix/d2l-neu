@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 9.5e-07\n"
+          "text": "max deviation: 4.8e-07\n"
         }
       ]
     },
@@ -51,17 +51,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU             3,817,216 1.299/1.300 1.491/1.492 1.274/1.274 1.271/1.271 35/37\n"
+          "text": "GRU             3,817,216 1.299/1.298 1.490/1.489 1.272/1.273 1.271/1.270 36/37\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU          2,764,544 1.345/1.347 1.523/1.520 1.321/1.322 1.319/1.322 30/27\n"
+          "text": "minGRU          2,764,544 1.348/1.345 1.521/1.522 1.323/1.321 1.323/1.319 27/27\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU, d=302   3,816,932 1.328/1.330 1.509/1.507 1.302/1.305 1.303/1.304 27/27\n"
+          "text": "minGRU, d=302   3,816,932 1.328/1.333 1.508/1.509 1.303/1.308 1.303/1.308 27/33\n"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 1.345 nats per byte, with the state reset at every step: 2.484\n"
+          "text": "validation loss: 1.348 nats per byte, with the state reset at every step: 2.482\n"
         }
       ]
     },
@@ -82,36 +82,36 @@
       "outputs": []
     },
     "ssm-a-linear-recurrent-language-model-6": {
-      "code_fingerprint": "sha256:c279a508cda3913d60fae638044a260923000ae787a1c21b2f83c05c19ebaf3f",
+      "code_fingerprint": "sha256:8235a22684bc5ae18050d1bd325db4d0452510e91b7d96fa7606dcb890789837",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gate above  half-life in steps  share of gates\n       0.5                  1           51.4%\n       0.9                  7           18.1%\n      0.99                 69            0.1%\n"
+          "text": "gate above  half-life in steps  share at initialization  trained\n       0.5                  1                    50.6%    51.4%\n       0.9                  7                     1.2%    17.9%\n      0.99                 69                     0.0%     0.0%\n"
         }
       ]
     },
     "linear-recurrence-cost-against-attention-1": {
-      "code_fingerprint": "sha256:ddca428be9d06c198655a98ca604c67445ccfffe12e4a9af3ef27f09065b37e2",
+      "code_fingerprint": "sha256:a715a4f042143cbcdedb2d2069a37915651c85537c1be14ad0a5dd1d25766086",
       "kind": "text",
       "outputs": []
     },
     "linear-recurrence-cost-against-attention-2": {
-      "code_fingerprint": "sha256:66759b3b86dafe1d1978af8b4529b2d23e9399277f77983493d65deeed67edc6",
+      "code_fingerprint": "sha256:c70df0eeb1327403c29490278b31b12f4f19aa250bf166fd37dbeb0018e6ad10",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T             512    1024    2048    4096    8192   16384\nGRU          20.0    34.2    68.5   117.1   199.8   406.8\nminGRU        4.0     4.2     4.4     4.9     5.1     5.6\nattention     2.1     2.5     3.3     5.0     8.4    14.4\n"
+          "text": "T             512    1024    2048    4096    8192   16384\nGRU          19.9    34.7    67.9   112.3   199.4   405.5\nminGRU        3.9     4.2     4.4     4.9     5.1     5.6\nattention     2.1     2.5     3.3     5.0     8.4    14.6\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-recurrence/linear-recurrence-cost-against-attention-2-1.svg",
-          "bytes": 31275,
-          "sha256": "sha256:0e27256c7e637a2d5b2c23ee041e341162efb9c578da4a63caeb7b997c5c12f5"
+          "bytes": 31277,
+          "sha256": "sha256:60aadda928e2051111d1b5836f314075280305db2e8922d97d80480c4bd6f5a7"
         }
       ]
     }

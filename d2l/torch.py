@@ -2300,7 +2300,7 @@ class S4D(nn.Module):
     def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1):
         super().__init__()
         d, N = num_hiddens, num_states
-        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        # lambda_n = -n for n = 1..N, stored as log(-lambda) to stay negative
         self.log_neg_rate = nn.Parameter(
             torch.log(torch.arange(1., N + 1)).repeat(d, 1))
         self.log_dt = nn.Parameter(  # Log-uniform in [dt_min, dt_max]
@@ -2317,7 +2317,7 @@ class S4D(nn.Module):
     def forward(self, X):  # X: (batch_size, num_steps, d)
         T = X.shape[1]
         a_bar, b_bar = self.discretize()
-        # All powers a_bar^k for k < T: d * N * T numbers, the price of the kernel
+        # All powers a_bar^k for k < T: d * N * T numbers held in memory
         powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)
         K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Kernel, (d, T)
         Y = torch.fft.irfft(torch.fft.rfft(X, n=2 * T, dim=1) *
@@ -2611,7 +2611,7 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    # Each chunk maps the memory at its start to S A + W_end at its end
+    # Each chunk maps the memory S at its start to S A + W^T D K at its end
     to_end = torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
     I = torch.eye(K.shape[-1], device=K.device)
     A = torch.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K

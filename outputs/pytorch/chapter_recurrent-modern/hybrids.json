@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:17d2db761d418ca4cccbaf11c386e7b2894f5873809b6ea261c63dccd395ca69",
+    "d2l_lib_fingerprint": "sha256:84ff66d0ed44db9dea5924996d6b2478c1520c0a3cd5de4aee50844b1e20de1e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,40 +51,40 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                               4          8         16         32         64\nGated DeltaNet              1.00/0.99  0.95/0.95  0.85/0.84  0.67/0.67  0.51/0.53\nattention                   1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00\nhybrid                      1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00\nGated DeltaNet, 4x state    1.00/1.00  1.00/1.00  1.00/1.00  0.98/0.98  0.91/0.95\n"
+          "text": "pairs                               4          8         16         32         64\nGated DeltaNet              0.99/0.99  0.94/0.95  0.79/0.84  0.62/0.66  0.49/0.51\nattention                   1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00\nhybrid                      1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00\nGated DeltaNet, 4x state    1.00/1.00  1.00/1.00  1.00/1.00  0.99/0.99  0.95/0.97\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 39895,
-          "sha256": "sha256:27b4d77fb2c0dd52efe9ca01e5eb4a93fa90d89e412179313e52bca8fa70a42b"
+          "bytes": 39863,
+          "sha256": "sha256:91e537b1f8bb5a87832cf6bedabb9e691f6c2330c23518c9fbc0a98c76945068"
         }
       ]
     },
     "hybrids-the-recall-sweep-4": {
-      "code_fingerprint": "sha256:d451387923abee33725bc3f91acedc8cfab26a4f7e3c60efe1461f84e52489bd",
+      "code_fingerprint": "sha256:a512e3337acb8ae31ac5375e47cae7aa2f9f31052c621405a5507abe593946f6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                               4          8         16         32         64\nGated DeltaNet              1.00/0.99  0.95/0.95  0.85/0.84  0.67/0.67  0.51/0.53\nwithout the convolution     0.88/0.74  0.69/0.60  0.54/0.49  0.44/0.42  0.38/0.36\n"
+          "text": "pairs                               4          8         16         32         64\nGated DeltaNet              0.99/0.99  0.94/0.95  0.79/0.84  0.62/0.66  0.49/0.51\nwithout the convolution     0.69/0.71  0.57/0.59  0.47/0.48  0.40/0.42  0.36/0.36\n"
         }
       ]
     },
     "hybrids-language-modeling-3": {
-      "code_fingerprint": "sha256:b95e232342652813f3455a3e928a886e8b780d4c51d4f8424067b05e75113570",
+      "code_fingerprint": "sha256:9f0c92c6e296758143577ee3da94ff63cf1e178784d1e2d8fc676e6922c06229",
       "kind": "text",
       "outputs": []
     },
     "hybrids-language-modeling-4": {
-      "code_fingerprint": "sha256:625a5af80df691c98c98dd0ab9636790a66ff8d4d0480b38680288ced3d1814a",
+      "code_fingerprint": "sha256:bcc71fd38aec1346ebe17b37c4fa3bdac6535f84283a0861238cb92aba643338",
       "kind": "text",
       "outputs": []
     },
     "hybrids-language-modeling-5": {
-      "code_fingerprint": "sha256:1cea8f20f6d8835b62f9f58c90605a1122ba9d854e3b5c4291cea8a8e4d670f7",
+      "code_fingerprint": "sha256:0c36f5c43517456c9ecc521a67d4e3843231333293e4fed75b8450dea30fa273",
       "kind": "text",
       "outputs": [
         {
@@ -95,17 +95,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet   3,573,536 1.330/1.327 1.524/1.517 1.303/1.302 1.301/1.299 53/53\n"
+          "text": "Gated DeltaNet   3,573,536 1.322/1.323 1.519/1.518 1.295/1.297 1.294/1.294 52/51\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid           3,501,848 1.336/1.335 1.526/1.526 1.311/1.309 1.308/1.306 44/44\n"
+          "text": "hybrid           3,501,848 1.335/1.333 1.528/1.525 1.308/1.307 1.307/1.305 43/43\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention        3,286,784 1.387/1.386 1.560/1.560 1.363/1.363 1.361/1.361 21/21\n"
+          "text": "attention        3,286,784 1.381/1.381 1.559/1.559 1.357/1.358 1.355/1.355 21/21\n"
         }
       ]
     }

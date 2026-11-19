@@ -14,75 +14,55 @@
       "outputs": []
     },
     "ssm-what-the-continuous-time-view-adds": {
-      "code_fingerprint": "sha256:284fdb5f2d884bcfa89f3e5f3b86e05fa7a103900750335937e6a90e44aa8835",
+      "code_fingerprint": "sha256:06f1d210f654bcb7cc59205c40c753202f5069f94dc135bbdb19d8120d2aee5c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " N  peak  largest |c|  spike residual  bump residual\n 1     0        7e-01            0.99           0.90\n 4    17        1e+02            0.97           0.55\n16    20        2e+11            0.89           0.03\n"
+          "text": " N  peak  spike |c|  spike residual  bump |c|  bump residual\n 1     0      7e-01            0.99     7e+00           0.90\n 4    17      1e+02            0.97     1e+03           0.55\n16    20      2e+11            0.89     8e+10           0.03\n"
         }
       ]
     },
     "ssm-the-s4d-layer-1": {
-      "code_fingerprint": "sha256:ef790b9634e17f17d449d257557912bf52e3f8dac4da4668412abcdd2d81f7b0",
+      "code_fingerprint": "sha256:3890adec4882a81d7f48593ab9b419706f0b9e7035dae3e3968f4f7169c66c19",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-2": {
-      "code_fingerprint": "sha256:9fadfa60ece73eecda3ed4984973e3a3f4ef33454e8ea26e8037296ced383f67",
+      "code_fingerprint": "sha256:a05df6c0feb0f852003633d3b16965cbf6969761341e3a4955a8b9c280db88e7",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-3": {
-      "code_fingerprint": "sha256:38e80a08e90b3ee2edc745aec7f904cb47aedb570a977e1320252835cefaef96",
+      "code_fingerprint": "sha256:b15f068bfc992445dd0867b5a61db8f0768bc3aea95239d4795b5531ae4896d4",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-4": {
-      "code_fingerprint": "sha256:ffb4020d03a6134c20b929327d2b89c122ec09fe86387658bb61c18b0567b7ac",
+      "code_fingerprint": "sha256:2cca176d0ed0f723b05e20597e1be852150ccb1d33fa26d0ac527abd27202cee",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "convolution vs scan: 1.2e-07, convolution vs steps: 1.2e-07\n"
+          "text": "convolution vs scan: 2.4e-07, convolution vs steps: 2.4e-07\n"
         }
       ]
     },
     "ssm-long-range-recall-1": {
-      "code_fingerprint": "sha256:28b09f63174181300b4596d6608870a2d6029d674ad0550b2dcfa461282d7079",
+      "code_fingerprint": "sha256:40efb0f2d818ca47b34637a1dbcd0eb7c5937b5726f6503c895911bbd9bc3582",
       "kind": "text",
       "outputs": []
     },
     "ssm-long-range-recall-2": {
-      "code_fingerprint": "sha256:101451f7fb2cb7616f03b5321691f7d4d226acfc7597ae4f8dc53d9cf32b910b",
+      "code_fingerprint": "sha256:3bfb8fb268049a25f8de4eb30ba46c078aeee0420266779907ac565c49559b7b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                           T=100       T=1000   \n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "minGRU                   0.12  0.12   0.13  0.12\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "S4D                      1.00  1.00   1.00  1.00\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "S4D, short timescales    1.00  1.00   0.12  0.12\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "minGRU, S4D timescales   1.00  1.00   1.00  1.00\n"
+          "text": "accuracy                   T=100       T=1000   \nminGRU                   0.12  0.12   0.13  0.13\nS4D                      1.00  1.00   1.00  1.00\nS4D, short timescales    1.00  1.00   0.12  0.12\nminGRU, S4D timescales   1.00  1.00   1.00  1.00\nslowest half-life after training, in steps\nS4D                      1028  1190   3020  2552\nS4D, short timescales     119   196      7     7\n"
         }
       ]
     }

@@ -62,7 +62,7 @@
       ]
     },
     "lstm-delayed-recall-5": {
-      "code_fingerprint": "sha256:261d50fb837da7a9a05647d1717988dc46380512aeb66d5700cff259ff9751ea",
+      "code_fingerprint": "sha256:73fb98c53cf94fc3d0adc27ee27b9d0ade2ecfdcb51f7c9c1f6c579175ad208d",
       "kind": "text",
       "outputs": [
         {
@@ -73,22 +73,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN                1.00/1.00 1.00/0.63 0.50/0.14 1.00/0.58\n"
+          "text": "RNN                1.00/1.00 1.00/0.64 0.74/0.14 0.24/0.27\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN, default scale 1.00/0.24 0.13/0.12 0.12/0.13 0.13/0.12\n"
+          "text": "RNN, default scale 1.00/1.00 0.12/0.62 0.13/0.12 0.12/0.25\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM               0.88/0.50 0.12/0.12 0.13/0.13 0.12/0.12\n"
+          "text": "LSTM               1.00/0.63 0.12/0.12 0.13/0.12 0.12/0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU                1.00/1.00 0.12/0.12 0.13/0.13 0.12/0.12\n"
+          "text": "GRU                1.00/1.00 0.12/0.12 0.13/0.13 0.13/0.12\n"
         },
         {
           "type": "stream",
@@ -103,37 +103,37 @@
       ]
     },
     "lstm-deep-recurrent-networks-1": {
-      "code_fingerprint": "sha256:73d5eaa6888da6d68b04db6194f5596c1a94dfbc4f576d75780c1443709721e7",
+      "code_fingerprint": "sha256:73e5e401cdbdce585573a09e62d02d52cb902a402425fa7c966df158efc1024d",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-1": {
-      "code_fingerprint": "sha256:0998704fc20d4bebef0bb329a69a3f8897fa917e052927624728c81dded7c556",
+      "code_fingerprint": "sha256:2e7a5ff44b7e6a0b064bc1dcc5c4eb81e11730c2e95fc866dedb322c8b5798a1",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-2": {
-      "code_fingerprint": "sha256:cd1a2f289172e7085c6608f9aa8fed52c72ef2d0f8d7f6b3a85f68b2a8b93f0f",
+      "code_fingerprint": "sha256:5fdb2c7236e09997ec418ef690988e23796b91211c553ac895801b9ca49d6670",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-3": {
-      "code_fingerprint": "sha256:d77b571efae8e1afdbe68d9480fdb9c782ca5ba7dab19bd748a52895b387d1fe",
+      "code_fingerprint": "sha256:bd93ed787c1f6a7407255b40d7d60d79a10ce504101b2873cd57bd476b0a52da",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-4": {
-      "code_fingerprint": "sha256:55cf02fd643a390d5850211d3ede5667389fe73c4573111c9ea1a7a28410fa6e",
+      "code_fingerprint": "sha256:7228f0ddac2dfbcca3b2ef2445621bfd16a95d54f8a67ad955d9486cf565931b",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-5": {
-      "code_fingerprint": "sha256:ccc5e0584baf47e99c0d3766f53c0fd1156a048fa8609a714a2cf9de7635eaa5",
+      "code_fingerprint": "sha256:e2cd19796bdbb3b88af253519d9492134b90dc82dd9656869d949ba09b95bd94",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-6": {
-      "code_fingerprint": "sha256:34aca7dfaa5c4339d9e3b596e4d0ff2680d1629ead120b2dcc2f9b15b723c2cb",
+      "code_fingerprint": "sha256:85312e07635a206ddc483d22aae8c14481d0e063bf172b9bd7d350284c887cf1",
       "kind": "text",
       "outputs": [
         {
@@ -144,27 +144,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN          2,763,520 1.349/1.347 1.513/1.512 1.325/1.324 1.325/1.323 11/12\n"
+          "text": "RNN          2,763,520 1.348/1.345 1.512/1.511 1.324/1.322 1.325/1.321 11/12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM         4,339,456 1.295/1.295 1.489/1.490 1.269/1.268 1.266/1.267 27/27\n"
+          "text": "LSTM         4,339,456 1.293/1.291 1.491/1.488 1.266/1.265 1.264/1.262 27/28\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU          3,814,144 1.299/1.303 1.491/1.490 1.273/1.277 1.270/1.275 16/16\n"
+          "text": "GRU          3,814,144 1.299/1.299 1.488/1.492 1.273/1.272 1.271/1.271 16/16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention    3,286,784 1.379/1.374 1.556/1.553 1.355/1.350 1.352/1.347 9/9\n"
+          "text": "attention    3,286,784 1.379/1.379 1.558/1.558 1.355/1.356 1.353/1.352 9/9\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN, d=302   3,815,724 1.334/1.334 1.500/1.502 1.310/1.311 1.310/1.309 15/15\n"
+          "text": "RNN, d=302   3,815,724 1.334/1.334 1.499/1.501 1.310/1.311 1.310/1.310 15/15\n"
         }
       ]
     }

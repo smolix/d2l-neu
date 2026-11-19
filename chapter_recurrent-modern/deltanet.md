@@ -533,7 +533,7 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):  #@save
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    # Each chunk maps the memory at its start to S A + W_end at its end
+    # Each chunk maps the memory S at its start to S A + W^T D K at its end
     to_end = torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
     I = torch.eye(K.shape[-1], device=K.device)
     A = torch.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
@@ -560,7 +560,7 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):  #@save
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    # Each chunk maps the memory at its start to S A + W_end at its end
+    # Each chunk maps the memory S at its start to S A + W^T D K at its end
     to_end = jnp.exp(cum[..., -1:] - cum)[..., None]
     I = jnp.eye(K.shape[-1])
     A = jnp.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K

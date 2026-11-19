@@ -646,7 +646,7 @@ the head change (:numref:`tab_lm_bert_heads` and
 |---|---|---|---|
 | sentence (SST-2) | `[CLS] sentence [SEP]` | the mean over tokens | 2 logits |
 | pair (MNLI) | `[CLS] premise [SEP] hypothesis [SEP]` | the mean over tokens | 3 logits |
-| tagging (CoNLL-2003) | `[CLS] sentence [SEP]` | each word's first token | 9 logits per word |
+| tagging (CoNLL-2003) | `[CLS]` sentence among its neighbours `[SEP]` | each word's first token | 9 logits per word |
 
 ![One pretrained encoder and three heads, each fine-tuned on its own task. A sentence (top) and a sentence pair (middle) are averaged over their tokens and passed through dense, GELU, norm and linear layers to two or three logits. The pair is read jointly, and the separator alone marks where its second text begins. A tagging head (bottom) applies the same layers at every token; each word's label sits on its first token, and tokens that carry $-100$ are not scored. Ġ marks a token that starts with a space.](../img/mdl-lm-encoders-encoder-heads.svg)
 :label:`fig_lm_encoder_heads`
@@ -1462,17 +1462,17 @@ The rule chose a rate of $8 \times 10^{-5}$ (we return to the choice
 below). The tagger finds about 96% of the names, 95% of the names it
 predicts are right, and its span F1 of about 0.96 equals `seqeval`'s. The
 three stored seeds agree to the third decimal. Persons and locations are
-nearly solved, at about 0.98. Organizations reach about 0.95, and the
-catch-all MISC of nationalities, events and titles about 0.89. All of this
-comes from a small head on one vector per token, fine-tuned together with
-the encoder. Nobody wrote a rule about capital letters or a list of cities.
+nearly solved, at about 0.98. Organizations stay a little below 0.95, and
+the catch-all MISC of nationalities, events and titles is at about 0.9. All
+of this comes from a small head on one vector per token, fine-tuned together
+with the encoder. Nobody wrote a rule about capital letters or a list of cities.
 
 What goes wrong with organizations? The cell follows each of the 1,341 gold
 organizations of the validation set. The tagger finds about 1,280 of them.
-Of the sixty or so it misses, about half have no predicted name with the
+Of the sixty or so it misses, roughly half have no predicted name with the
 same two ends: the name was cut too short or too long, or not tagged at
-all. The other half are given another type, and the printed examples show
-why. Most come from one report on an American football player's retirement.
+all. The rest are given another type, and the printed examples show why.
+All three come from one report on an American football player's retirement.
 The annotators tagged the league as an organization, and the tagger calls
 it a miscellaneous name; "the wonderful fans of Philadelphia" are the
 team's fans to the annotators and the city's to the tagger. A careful
@@ -1547,13 +1547,18 @@ points more, to 0.958, and the three seeds agree. Organizations gain most:
 with neighbours about 35 of them get another type, without about 50. Thirty
 names are right in every run with neighbours and in no run without, and
 seven the other way round. The printed names are ones that the sentence
-alone leaves open. ATALANTA in a headline may be an Italian city or its
-football club, and the article below the headline says which. Jamaica, in a
-list of sprint times, may be a team or a country.
+alone leaves open. ATALANTA, in a headline about a transfer, could be a
+place; two sentences further on, the article calls it a Serie A club.
+Jamaica, in a list of sprint times, may be a team or a country.
 
-That leaves about 0.6 points to BERT's 96.4, which this section does not
-explain. The two are different models, pretrained on different text, and a
-single reported figure also carries the luck of its own runs.
+Our first runs, then, fell short of BERT for two reasons. They read each
+sentence without the article around it, which BERT's tagger had,
+and they trained at a rate fixed in advance rather than chosen. The missing
+context cost the more of the two. That leaves about 0.6 points to BERT's
+96.4, which this section does not explain. Our windows can run across the
+end of an article, since this copy does not mark it; the two are different
+models, pretrained on different text; and a single reported figure also
+carries the luck of its own runs.
 
 ## Encoder or Prompted Decoder
 :label:`subsec_lm_encoder_vs_decoder`
@@ -1990,6 +1995,10 @@ sentiment, which the decoder largely knew already, it only caught up. Two
 cautions go with such numbers: a fine-tuning run on few examples needs
 enough optimizer steps before its seeds mean anything, and a model that
 never reads the premise labels more than half of MNLI correctly.
+A token head tagged names at a span F1 of about 0.96, nearly a point above
+what it reached on sentences read alone at a fixed rate; the gain came from
+reading each sentence among its neighbours, as BERT's authors did, and from
+choosing the learning rate.
 Prompting suits few labels and changing tasks, and a fine-tuned encoder a
 fixed task with thousands of labels and many items.
 
@@ -2305,7 +2314,7 @@ texts: half the pairs at 512 tokens.
 |---|---|---|---|
 | sentence (SST-2) | `[CLS] sentence [SEP]` | mean over tokens | 2 logits |
 | pair (MNLI) | `[CLS] premise [SEP] hypothesis [SEP]` | mean over tokens | 3 logits |
-| tagging (CoNLL-2003) | `[CLS] sentence [SEP]` | each word's first token | 9 logits per word |
+| tagging (CoNLL-2003) | `[CLS]` sentence among its neighbours `[SEP]` | each word's first token | 9 logits per word |
 
 ::: {.d2l-note}
 Each head: dense, GELU and norm taken from the pretrained masked-token
@@ -2395,8 +2404,9 @@ Report an inference score beside a hypothesis-only baseline.
   both ends match.
 - Each sentence is read among its neighbours (256 tokens); only it is scored.
 - Precision 0.95, recall 0.96, span F1 about 0.96, equal to `seqeval`'s.
-- By type: PER and LOC about 0.98, ORG 0.95, MISC 0.89.
-- Missed organizations: half with wrong ends, half another type (NFL as MISC).
+- By type: PER and LOC about 0.98, ORG just under 0.95, MISC about 0.9.
+- Missed organizations: roughly half with wrong ends, the rest another
+  type (NFL as MISC).
 
 ::: {.d2l-note}
 Nobody wrote a rule about capital letters or a list of cities.
@@ -2419,7 +2429,8 @@ Nobody wrote a rule about capital letters or a list of cities.
   other way.
 
 ::: {.d2l-note}
-Tag a name with its article around it, as BERT's authors did.
+Tag a sentence with its article around it, as BERT's authors did, and
+choose the rate rather than fix it.
 :::
 :::
 
@@ -2488,22 +2499,22 @@ remove. SST-2: about 30 times on the clock.
 
 ::: {.slide title="The Encoder Draws Level with 8 Shots on MNLI at 1,000 Labels and Leads from 4,000"}
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col .fig}
 @!bert-curve
 :::
 
-::: {.col .narrow}
+::: {.col}
 - Ahead = every seed × every set of examples agrees, and the gap exceeds
   both spreads.
 - MNLI, gap to 8 shots: $-0.20$ at 250; zero at 1,000; $+0.13$ at 4,000;
   $+0.21$ at 16,000.
 - SST-2: level only at 8,000.
-:::
-:::
 
 ::: {.d2l-note}
 Where the line runs depends on how much of the task the decoder already
 knows.
+:::
+:::
 :::
 :::
 

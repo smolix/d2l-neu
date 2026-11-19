@@ -2557,6 +2557,7 @@ class S4D(nnx.Module):
     def __call__(self, X):  # X: (batch_size, num_steps, d)
         T = X.shape[1]
         a_bar, b_bar = self.discretize()
+        # All powers a_bar^k for k < T: d * N * T numbers, the price of the kernel
         powers = a_bar[..., None] ** jnp.arange(T)
         K = ((self.C[...] * b_bar)[..., None] * powers).sum(1)  # Kernel, (d, T)
         Y = jnp.fft.irfft(jnp.fft.rfft(X, n=2 * T, axis=1) *

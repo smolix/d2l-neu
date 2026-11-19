@@ -117,8 +117,13 @@ Rates may also be complex, $\lambda = -\alpha + i\omega$, in which case the
 state decays while it rotates, a damped oscillation; the models of this
 chapter use real rates.
 
-![Zero-order hold maps a rate $\lambda$ to a decay per step $\bar{a} = e^{\Delta\lambda}$. Left and middle: every rate with negative real part (shaded) lands inside the unit circle, for every step size. The curves trace $\lambda = -1 \pm 4i$ for $\Delta$ from 0 to 1, with dots at $\Delta = 0.1, 0.3, 1$; the orange dots show $\lambda = -1$ at the same step sizes. Right: for real rates, the decay as a function of $\Delta|\lambda|$, labeled with the half-life in steps.](../img/mdl-modernrnn-discretization.svg)
+![Zero-order hold turns a real rate $\lambda < 0$ into a decay per step $\bar{a} = e^{-\Delta|\lambda|}$, which depends only on the product $\Delta|\lambda|$. The labels give the half-life in steps, $\ln 2 / (\Delta|\lambda|)$. The shaded band is the range that the S4D initialization covers, with $\Delta$ between 0.001 and 0.1 and $|\lambda|$ between 1 and 16.](../img/mdl-modernrnn-discretization.svg)
 :label:`fig_ssm_discretization`
+
+<!-- WRITER: fig_ssm_discretization is redrawn as one panel (decay against Delta|lambda| with half-lives
+693, 69, 6.9, 0.69, and the band of S4D's initialization); the complex-plane panels are gone, so the
+complex-rate sentence above stays an aside without a figure, and the sentence that introduces the figure
+should say what it now shows (worklist Part 5 B.4). -->
 
 With a diagonal $\mathbf{A}$, the zero-order hold applies to each state
 separately: $\bar{a}_n = e^{\Delta \lambda_n}$ and $\bar{b}_n =
@@ -179,7 +184,42 @@ dynamics that are the same at every step; the scan does not.
 
 ### What the Continuous-Time View Adds
 
-@@E7@@
+<!-- WRITER: new subsection (worklist Part 5 B.5; the four points). Placed after the convolutional form
+so that the cell can use the kernel eq_ssm_kernel. The cell fits the readout C of one channel by least squares,
+N states at S4D's rates lambda_n = -(n + 1) and a fixed Delta = 0.05 (time constants 20 down to 1.25 steps), to two
+targets over 100 steps: a unit spike at k = 20 (exactly the input 20 steps back) and a bump exp(-(k - 20)^2 / 32)
+(about 20 steps back, give or take 4). Measured, identical in both tabs (NumPy, deterministic); peak and largest |c| are those of the spike fit:
+N = 1: peak at 0, largest |c| 7e-01, residual 0.99 (spike), 0.90 (bump);
+N = 4: peak at 17, largest |c| 1e+02, residuals 0.97 / 0.55;
+N = 16: peak at 20, largest |c| 2e+11, residuals 0.89 / 0.03.
+Lessons the numbers carry: one exponential cannot peak anywhere but at k = 0; with more states the learned kernel
+moves its peak to the delay; a smooth memory of "about 20 steps ago" is fit almost exactly by 16 states, a sharp
+delay is not (real exponentials are smooth and nearly parallel); at N = 16 both fits need weights near 1e11
+that cancel, which gradient descent would not find. That is a lead-in to the complex-rate exercise (complex rates
+-1/2 + i pi n reach a spike residual of about 0.56 with weights below 3; dev measurement, not printed). The residual is
+||K - target|| / ||target||. -->
+
+```{.python .input #ssm-what-the-continuous-time-view-adds}
+%%tab pytorch, jax
+def fit_kernel(N, target, dt=0.05):
+    """Fit the readout c of N states at S4D's rates to a target kernel."""
+    rate = -np.arange(1., N + 1)
+    a_bar, b_bar = np.exp(dt * rate), np.expm1(dt * rate) / rate
+    basis = a_bar ** np.arange(len(target))[:, None] * b_bar  # K = basis @ c
+    c = np.linalg.lstsq(basis, target, rcond=None)[0]
+    K = basis @ c
+    return K, c, np.linalg.norm(K - target) / np.linalg.norm(target)
+
+k = np.arange(100)
+spike = (k == 20).astype(float)      # Exactly the input 20 steps back
+bump = np.exp(-(k - 20) ** 2 / 32)   # About 20 steps back, give or take 4
+print(' N  peak  largest |c|  spike residual  bump residual')
+for N in [1, 4, 16]:
+    K, c, spike_error = fit_kernel(N, spike)
+    bump_error = fit_kernel(N, bump)[2]
+    print(f'{N:2d}  {K.argmax():4d}  {np.abs(c).max():11.0e}  '
+          f'{spike_error:14.2f}  {bump_error:13.2f}')
+```
 
 ## S4D
 :label:`subsec_s4d`
@@ -251,6 +291,7 @@ otherwise wrap around and leak into its beginning.
 def forward(self, X):  # X: (batch_size, num_steps, d)
     T = X.shape[1]
     a_bar, b_bar = self.discretize()
+    # All powers a_bar^k for k < T: d * N * T numbers, the price of the kernel
     powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)
     K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Kernel, (d, T)
     Y = torch.fft.irfft(torch.fft.rfft(X, n=2 * T, dim=1) *
@@ -264,6 +305,7 @@ def forward(self, X):  # X: (batch_size, num_steps, d)
 def __call__(self, X):  # X: (batch_size, num_steps, d)
     T = X.shape[1]
     a_bar, b_bar = self.discretize()
+    # All powers a_bar^k for k < T: d * N * T numbers, the price of the kernel
     powers = a_bar[..., None] ** jnp.arange(T)
     K = ((self.C[...] * b_bar)[..., None] * powers).sum(1)  # Kernel, (d, T)
     Y = jnp.fft.irfft(jnp.fft.rfft(X, n=2 * T, axis=1) *
@@ -312,8 +354,9 @@ with torch.no_grad():
         y, h = layer.step(x, h)
         Y_step.append(y)
     Y_conv = layer(X)
+Y_step = torch.stack(Y_step, 1)
 print(f'convolution vs scan: {(Y_conv - Y_scan).abs().max():.1e}, '
-      f'convolution vs steps: {(Y_conv - torch.stack(Y_step, 1)).abs().max():.1e}')
+      f'convolution vs steps: {(Y_conv - Y_step).abs().max():.1e}')
 ```
 
 ```{.python .input #ssm-the-s4d-layer-4}
@@ -328,8 +371,9 @@ for x in jnp.unstack(X, axis=1):
     y, h = layer.step(x, h)
     Y_step.append(y)
 Y_conv = layer(X)
+Y_step = jnp.stack(Y_step, 1)
 print(f'convolution vs scan: {jnp.abs(Y_conv - Y_scan).max():.1e}, '
-      f'convolution vs steps: {jnp.abs(Y_conv - jnp.stack(Y_step, 1)).max():.1e}')
+      f'convolution vs steps: {jnp.abs(Y_conv - Y_step).max():.1e}')
 ```
 
 The three forms agree to rounding error. The FFT and the scan both train in
@@ -381,49 +425,62 @@ rate is 0.01.
 
 ```{.python .input #ssm-long-range-recall-2}
 %%tab pytorch
-# (layer, embedding width): S4D keeps its width; the others map 32 to 64
+# (layer, embedding width): S4D keeps its width; the minGRUs map 32 to 64
 layers = {
-    'LSTM': lambda: (d2l.Recurrent(d2l.init_lecun(
-        nn.LSTM(32, 64, batch_first=True))), 32),
     'minGRU': lambda: (d2l.MinGRU(32, 64), 32),
     'S4D': lambda: (S4D(64), 64),
     'S4D, short timescales': lambda: (S4D(64, dt_min=0.1, dt_max=1.0), 64),
-    'minGRU, S4D timescales': lambda: (init_timescales(d2l.MinGRU(32, 64)), 32)}
-print(' ' * 23, '  T=100  T=1000')
-for name, layer in layers.items():
-    accuracy = []
-    for T in [100, 1000]:
-        layer_T, num_inputs = layer()
-        model = d2l.RecallModel(layer_T, 64, num_inputs=num_inputs)
-        accuracy.append(d2l.train_delayed_recall(model, T, blank_fillers=True,
-                                                 lr=1e-2))
-    print(f'{name:23s}', ' '.join(f'{a:6.2f}' for a in accuracy))
+    'minGRU, S4D timescales': lambda: (
+        init_timescales(d2l.MinGRU(32, 64)), 32)}
+
+def recall(make_layer, T):
+    """Test accuracy after training a fresh model at delay T."""
+    layer, num_inputs = make_layer()
+    model = d2l.RecallModel(layer, 64, num_inputs=num_inputs)
+    return d2l.train_delayed_recall(model, T, blank_fillers=True)
+
+print(f"{'':23s} {'T=100':^11s}  {'T=1000':^11s}")
+for name, make_layer in layers.items():  # Two runs per entry
+    runs = [' '.join(f'{recall(make_layer, T):5.2f}' for _ in range(2))
+            for T in [100, 1000]]
+    print(f'{name:23s}', '  '.join(runs))
 ```
 
 ```{.python .input #ssm-long-range-recall-2}
 %%tab jax
-# (layer, embedding width): S4D keeps its width; the others map 32 to 64
+# (layer, embedding width): S4D keeps its width; the minGRUs map 32 to 64
 layers = {
-    'LSTM': lambda rngs: (nnx.RNN(nnx.LSTMCell(
-        32, 64, rngs=rngs,
-        recurrent_kernel_init=nnx.initializers.lecun_normal())), 32),
     'minGRU': lambda rngs: (d2l.MinGRU(32, 64, rngs=rngs), 32),
     'S4D': lambda rngs: (S4D(64, rngs=rngs), 64),
     'S4D, short timescales': lambda rngs: (
         S4D(64, dt_min=0.1, dt_max=1.0, rngs=rngs), 64),
     'minGRU, S4D timescales': lambda rngs: (init_timescales(
         d2l.MinGRU(32, 64, rngs=rngs), rngs=rngs), 32)}
-print(' ' * 23, '  T=100  T=1000')
-for name, layer in layers.items():
-    accuracy = []
-    for T in [100, 1000]:
-        rngs = nnx.Rngs(d2l.get_key())
-        layer_T, num_inputs = layer(rngs)
-        model = d2l.RecallModel(layer_T, 64, num_inputs=num_inputs, rngs=rngs)
-        accuracy.append(d2l.train_delayed_recall(model, T, blank_fillers=True,
-                                                 lr=1e-2))
-    print(f'{name:23s}', ' '.join(f'{a:6.2f}' for a in accuracy))
+
+def recall(make_layer, T):
+    """Test accuracy after training a fresh model at delay T."""
+    rngs = nnx.Rngs(d2l.get_key())
+    layer, num_inputs = make_layer(rngs)
+    model = d2l.RecallModel(layer, 64, num_inputs=num_inputs, rngs=rngs)
+    return d2l.train_delayed_recall(model, T, blank_fillers=True)
+
+print(f"{'':23s} {'T=100':^11s}  {'T=1000':^11s}")
+for name, make_layer in layers.items():  # Two runs per entry
+    runs = [' '.join(f'{recall(make_layer, T):5.2f}' for _ in range(2))
+            for T in [100, 1000]]
+    print(f'{name:23s}', '  '.join(runs))
 ```
+
+<!-- WRITER: the recall cell changed (worklist Part 5 A.4, B.8). (1) Learning rate: the default 0.003 of
+d2l.train_delayed_recall (12.1's rate); dev check: S4D trains at it in both tabs (1.00 in all four runs), so
+"Here the learning rate is 0.01" is false and goes. (2) Two runs per entry, printed side by side. (3) The LSTM
+row is dropped: it was at chance at 100 and 1,000 in all runs (P and J), the minGRU row carries the same reading
+(gates that start near one half), and in JAX the LSTM alone cost about six minutes; the sentence "We compare an
+LSTM and a minGRU whose gates start near one half" and the reading "The LSTM and the minGRU ... are at chance"
+need rewording. Dev numbers at lr 0.003, two runs each (T=100 | T=1000), identical in both tabs:
+minGRU 0.12 0.12 | 0.12 0.12; S4D 1.00 1.00 | 1.00 1.00; S4D short timescales 1.00 1.00 | 0.12 0.12;
+minGRU with S4D timescales 1.00 1.00 | 1.00 1.00 (also LSTM 0.12 everywhere before the row was dropped).
+Chance is 1/8 = 0.12. The final numbers come from the chapter's scheduler run. -->
 
 The LSTM and the minGRU, with gates that start near one half, are at chance
 already after 100 steps. S4D recalls the symbol after 1,000 steps. The two
@@ -434,6 +491,17 @@ the initialization decides: memories of many lengths, present from the first
 step of training. The continuous-time view supplies them, together with
 decays that are stable for every value of the parameters, while the
 convolution makes training fast but is not needed for the result.
+
+<!-- WRITER: closing kept from the cut "Language Modeling" subsection (worklist Part 5 B.9): the S4D Penn
+Treebank cell (ssm-language-modeling) is retired, so its numbers (3.35 against 3.2 and 3.0) are gone; keep the
+argument below as the hypothesis 12.5 tests, reworded for bytes, and hand off to 12.5. -->
+
+The dynamics of S4D are the same at every step, so an input's weight in the
+state depends only on how many steps ago it arrived. Whether the character
+four steps back ended a word or sat in its middle, its influence on the
+present is the same fixed number $K_4$. The minGRU, whose decays are chosen
+by each input, can hold its state through some characters and overwrite it
+at others; S4D cannot.
 
 ## Summary
 
@@ -538,7 +606,7 @@ For $\lambda = -1$: $h_t = \bar a\,h_{t-1} + (1 - \bar a)\,x_t$, the GRU's blend
 :::
 
 ::: {.slide title="Every Negative Rate Gives a Stable Decay"}
-![](../img/mdl-modernrnn-discretization.svg){width=100%}
+![](../img/mdl-modernrnn-discretization.svg){width=70%}
 
 Store $\lambda = -e^\theta$: no parameter value and no gradient step can
 make the recurrence grow.

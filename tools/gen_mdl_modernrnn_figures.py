@@ -57,7 +57,7 @@ PURPLE = fl.T.PURPLE.base  # parameter / second-state role
 # coloured *text* uses the dark tone of its accent (guide §2.3, §7.3)
 TEAL_TXT, ORANGE_TXT = fl.T.TEAL.dark, fl.T.ORANGE.dark
 
-from matplotlib.patches import Circle, ConnectionPatch, FancyBboxPatch
+from matplotlib.patches import Circle, FancyBboxPatch
 
 
 # =========================================================================== #
@@ -475,117 +475,39 @@ def fig_scan_tree():
 
 
 def fig_ssm_discretization():
-    """Zero-order hold: the rate lambda maps to the per-step decay
-    a-bar = exp(Delta * lambda).  Three panels of equal height in one row:
-    the lambda-plane (stable half-plane shaded, not to scale), the a-bar-plane
-    (unit disk shaded) with the exact images exp(Delta lambda) for
-    Delta in [0, 1] and dots at Delta = 0.1, 0.3, 1, and the real-rate decay
-    exp(-Delta |lambda|) on a log axis with the half-life ln 2 / (Delta |lambda|)
-    at four marked points."""
-    H = 2.9                                  # common axes height (inches)
-    wA, gAB, wB, gBC, wC = 1.85, 0.85, 3.2, 0.95, 2.95
-    left, bottom = 0.35, 0.62
-    W = left + wA + gAB + wB + gBC + wC + 0.25
-    Hf = bottom + H + 0.2
-    fig = plt.figure(figsize=(W, Hf))
-
-    def rect(x0, w):
-        return [x0 / W, bottom / Hf, w / W, H / Hf]
-
-    axA = fig.add_axes(rect(left, wA))
-    axB = fig.add_axes(rect(left + wA + gAB, wB))
-    axC = fig.add_axes(rect(left + wA + gAB + wB + gBC, wC))
-    SHADE = dict(color=GREEN, alpha=0.13, lw=0)
+    """Zero-order hold for a real rate: the decay per step
+    a-bar = exp(-Delta |lambda|) against Delta |lambda| on a log axis, with
+    the half-life ln 2 / (Delta |lambda|) at four marked points and the band
+    of Delta |lambda| that the S4D initialization covers (Delta in
+    [0.001, 0.1], |lambda| in [1, 16]).  One panel: the complex-rate planes of
+    the earlier version were dropped (the text mentions complex rates in one
+    aside)."""
+    fig, ax = plt.subplots(figsize=(5.6, 3.3))
     FS = 14
-    lams = [(-1 + 4j, BLUE), (-1 - 4j, BLUE), (-1 + 0j, ORANGE)]
-    deltas = [0.1, 0.3, 1.0]
-
-    # ---- lambda-plane (schematic scale) -------------------------------------
-    ax = axA
-    xa, ya = (-2.3, 1.15), (-5.6, 5.6)
-    ax.fill_between([xa[0], 0], ya[0], ya[1], **SHADE)
-    fl.axis_cross(ax, (xa[0] + 0.05, 0.85), (ya[0] + 0.1, ya[1] - 0.1),
-                  color="black")
-    for lam, col in lams:
-        ax.plot([lam.real], [lam.imag], "o", color=col, ms=8, mec="white",
-                mew=1.0, zorder=5)
-    ax.text(-1, 4.5, r"$-1+4i$", fontsize=FS, ha="center", va="bottom")
-    ax.text(-1, -4.5, r"$-1-4i$", fontsize=FS, ha="center", va="top")
-    ax.text(-1, 0.5, r"$-1$", fontsize=FS, ha="center", va="bottom")
-    ax.text(0.85, -0.45, r"$\mathrm{Re}\,\lambda$", fontsize=FS, ha="right",
-            va="top")
-    ax.text(0.15, ya[1] - 0.1, r"$\mathrm{Im}\,\lambda$", fontsize=FS,
-            ha="left", va="top")
-    ax.set_xlim(*xa)
-    ax.set_ylim(*ya)
-    ax.axis("off")
-
-    # ---- a-bar-plane (to scale) ---------------------------------------------
-    ax = axB
-    xb, yb = (-1.2, 1.62), (-1.22, 1.32)
-    ax.add_patch(Circle((0, 0), 1.0, **SHADE))
-    ax.add_patch(Circle((0, 0), 1.0, fill=False, ec=GRAY, lw=1.5))
-    fl.axis_cross(ax, (xb[0], xb[1] - 0.05), (yb[0], yb[1] - 0.02),
-                  color="black")
-    dgrid = np.linspace(0.0, 1.0, 400)
-    for lam, col in lams:
-        z = np.exp(dgrid * lam)
-        ax.plot(z.real, z.imag, color=col, lw=1.4, alpha=0.6, zorder=3)
-        for d in deltas:
-            zd = np.exp(d * lam)
-            ax.plot([zd.real], [zd.imag], "o", color=col, ms=8, mec="white",
-                    mew=1.0, zorder=5)
-    # Delta values, read off the upper (lambda = -1 + 4i) spiral: each label
-    # sits where no trajectory passes -- outside the disk for 0.1, inside the
-    # turn for 0.3, just past the spiral's end (towards the Im axis) for 1.
-    z1, z3, z10 = (np.exp(d * (-1 + 4j)) for d in deltas)
-    ax.text(z1.real + 0.16, z1.imag + 0.13, r"$\Delta = 0.1$", fontsize=13,
-            ha="left", va="bottom")
-    ax.text(z3.real - 0.05, z3.imag - 0.12, r"$0.3$", fontsize=13,
-            ha="center", va="top")
-    ax.text(z10.real + 0.1, z10.imag - 0.06, r"$1$", fontsize=13,
-            ha="left", va="top")
-    ax.text(xb[1] - 0.05, -0.07, r"$\mathrm{Re}\,\bar{a}$", fontsize=FS,
-            ha="right", va="top")
-    ax.text(0.08, yb[1] - 0.02, r"$\mathrm{Im}\,\bar{a}$", fontsize=FS,
-            ha="left", va="top")
-    ax.set_xlim(*xb)
-    ax.set_ylim(*yb)
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    # mapping arrow between the two planes
-    con = ConnectionPatch(xyA=(1.05, 0.5), coordsA=axA.transAxes,
-                          xyB=(-0.04, 0.5), coordsB=axB.transAxes,
-                          arrowstyle="-|>", color="black", lw=1.8,
-                          mutation_scale=16)
-    fig.add_artist(con)
-    fig.text((left + wA + gAB / 2) / W, (bottom + H / 2 + 0.12) / Hf,
-             r"$e^{\Delta\lambda}$", fontsize=16, ha="center", va="bottom")
-
-    # ---- real rates: decay per step and half-life ---------------------------
-    ax = axC
-    x = np.logspace(-3, np.log10(3), 400)
+    lo, hi = 1e-3 * 1, 1e-1 * 16              # S4D at initialization
+    ax.axvspan(lo, hi, color=GREEN, alpha=0.13, lw=0)
+    ax.text(np.sqrt(lo * hi), 1.13, "S4D at initialization", fontsize=13,
+            ha="center", va="bottom", color="black")
+    x = np.logspace(np.log10(3e-4), np.log10(4), 400)
     ax.plot(x, np.exp(-x), color=ORANGE, lw=2.4)
-    marks = [1e-3, 1e-2, 1e-1, 1.0]
-    for m in marks:
+    for m in [1e-3, 1e-2, 1e-1, 1.0]:
         ax.plot([m], [np.exp(-m)], "o", color=ORANGE, ms=8, mec="white",
                 mew=1.0, zorder=5)
         hl = np.log(2) / m
         txt = f"{hl:.0f}" if hl >= 10 else (f"{hl:.1f}" if hl >= 1
                                              else f"{hl:.2f}")
         if m < 0.5:                       # flat part: label under the dot
-            ax.text(m, np.exp(-m) - 0.09, txt, fontsize=13, ha="center",
+            ax.text(m, np.exp(-m) - 0.08, txt, fontsize=13, ha="center",
                     va="top")
         else:                             # steep part: label left of the dot
-            ax.text(m * 0.72, np.exp(-m) - 0.05, txt, fontsize=13,
+            ax.text(m * 0.72, np.exp(-m) - 0.04, txt, fontsize=13,
                     ha="right", va="center")
-    ax.text(7e-4, 0.42, "half-life in steps,\n"
+    ax.text(1.3e-3, 0.36, "half-life in steps,\n"
             r"$\ln 2\,/\,(\Delta|\lambda|)$", fontsize=13, ha="left",
             va="center")
     ax.set_xscale("log")
-    ax.set_xlim(4e-4, 3)
-    ax.set_ylim(0, 1.06)
+    ax.set_xlim(3e-4, 4)
+    ax.set_ylim(0, 1.12)
     ax.set_xticks([1e-3, 1e-2, 1e-1, 1])
     ax.set_xticklabels([r"$10^{-3}$", r"$10^{-2}$", r"$10^{-1}$", r"$1$"])
     ax.minorticks_off()
@@ -599,10 +521,10 @@ def fig_ssm_discretization():
                   labelpad=-2)
     ax.set_ylabel(r"$\bar{a} = e^{-\Delta|\lambda|}$", fontsize=FS,
                   color="black")
-    for s in ("top", "right"):
-        ax.spines[s].set_visible(False)
-    for s in ("left", "bottom"):
-        ax.spines[s].set_color("black")
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("black")
 
     fl.save(fig, "mdl-modernrnn-discretization")
 

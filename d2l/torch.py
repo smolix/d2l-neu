@@ -2447,6 +2447,7 @@ class S4D(nn.Module):
     def forward(self, X):  # X: (batch_size, num_steps, d)
         T = X.shape[1]
         a_bar, b_bar = self.discretize()
+        # All powers a_bar^k for k < T: d * N * T numbers, the price of the kernel
         powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)
         K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Kernel, (d, T)
         Y = torch.fft.irfft(torch.fft.rfft(X, n=2 * T, dim=1) *

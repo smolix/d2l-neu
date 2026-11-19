@@ -1101,8 +1101,8 @@ constructor call with these settings, the released weights, and the
 released tokenizer. We register the weight and tokenizer files in
 `d2l.DATA_HUB` with their content hashes, so that one download serves every
 later run. The tokenizer and the loader both go into the library, as
-`gpt2_tokenizer` and `load_gpt2`, because :numref:`sec_kv-cache` studies how
-the released model uses its cache.
+`gpt2_tokenizer` and `load_gpt2`, because :numref:`sec_kv-cache-reduction`
+studies how the released model uses its cache.
 
 ### The Tokenizer
 

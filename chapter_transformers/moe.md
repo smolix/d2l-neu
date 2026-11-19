@@ -102,7 +102,7 @@ token uses 23B of them: the layers store 28 times what a token uses. (The
 37B on its model card add
 attention, the embeddings, and three dense layers, which our count of the
 expert layers leaves out.) For Mixtral, adding the attention layers, which
-share each key and value head among four query heads (:numref:`sec_kv-cache`),
+share each key and value head among four query heads (:numref:`sec_kv-cache-reduction`),
 and the separate embedding and output matrices gives 46.7B stored and 12.9B
 active parameters. The name "8x7B" thus describes what the model stores,
 not the work per token: a token uses less than two sevenths of the

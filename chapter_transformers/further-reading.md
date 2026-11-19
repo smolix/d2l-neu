@@ -173,7 +173,7 @@ treats compression at inference time.
 
 ### Multi-Head Latent Attention in Full
 
-:numref:`sec_kv-cache` sketches the latent cache of DeepSeek-V2
+:numref:`subsec_kv-cache-low-rank` sketches the latent cache of DeepSeek-V2
 :cite:`DeepSeek-AI.2024`. In full, keys and values of all heads are
 reconstructed from one compressed vector per token, and the up-projection of
 the keys can be absorbed into the query projection, so that attention runs
@@ -374,7 +374,7 @@ layers and replace the rest with recurrent mixers of linear cost
 :cite:`Kimi.Team.2025b`, the subject of :numref:`chap_modern_rnn`. Long
 contexts combine the positional rescaling of
 :numref:`sec_positional-information`, the cache policies of
-:numref:`sec_kv-cache`, and systems work; Llama 4 :cite:`Meta.2025`
+:numref:`sec_kv-cache-reduction`, and systems work; Llama 4 :cite:`Meta.2025`
 interleaves attention layers without positional encoding. Learned sparse
 attention chooses the keys by content. The indexer of DeepSeek-V3.2
 :cite:`Liu.Mei.Lin.ea.2025`, for example, selects 2,048 key--value tokens

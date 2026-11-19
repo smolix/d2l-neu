@@ -55,7 +55,7 @@ seven open-weights families: Mistral 7B
 DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024`, Gemma 3
 :cite:`Gemma.Team.2025`, and GPT-OSS :cite:`OpenAI.2025`.
 
-:Architectures of seven open-weights model families, as reported in their technical reports (2023–2025). Attention and cache: :numref:`sec_kv-cache`. Normalization: :numref:`sec_transformer-block`. Positions: :numref:`sec_positional-information`. Mixture of experts: :numref:`sec_moe`.
+:Architectures of seven open-weights model families, as reported in their technical reports (2023–2025). Attention and cache: :numref:`sec_kv-cache-reduction`. Normalization: :numref:`sec_transformer-block`. Positions: :numref:`sec_positional-information`. Mixture of experts: :numref:`sec_moe`.
 :label:`tab_modern-recipe`
 
 | model | attention and cache | normalization | positions | FFN | dense or MoE |
@@ -78,7 +78,7 @@ consequence of scale: a model that reads trillions of tokens about once has noth
 memorize. The rows differ on two axes. The first is the size of the KV
 cache: grouped-query attention in most rows, sliding windows on some
 layers, and a compressed latent in DeepSeek-V3, all from
-:numref:`sec_kv-cache`.
+:numref:`sec_kv-cache-reduction`.
 The second is capacity per FLOP: three of the seven families use a mixture
 of experts (:numref:`sec_moe`). The newest designs depart further. Hybrid
 models replace most attention layers with the linear recurrences of
@@ -154,8 +154,9 @@ reach would enter as new attention modules. QK-norm
 (:numref:`subsec_qk-norm`) enters through the `attn_factory` hook of
 `TransformerBlock`, as in an exercise of :numref:`sec_transformer-block`.
 A sliding window is a mask (:numref:`sec_windowed-linear-attention`,
-:numref:`sec_kv-cache`). A learned latent cache replaces the stored
-keys and values, which :numref:`sec_kv-cache` sketches with a fixed basis.
+:numref:`subsec_kv-cache-sinks`). A learned latent cache replaces the
+stored keys and values, which :numref:`subsec_kv-cache-low-rank` sketches
+with a fixed basis.
 The expert layers of the MoE rows enter through `ffn_factory`
 (:numref:`sec_moe`). Deployed models are thus
 configurations of the chapter's one block, trained at budgets that the law

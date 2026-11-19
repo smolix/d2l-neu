@@ -760,13 +760,13 @@ for name, cell in cells.items():
 The gated networks behave as predicted. As they come, with gates at one
 half, the GRU recalls every symbol after 20 steps in every run, while the
 LSTM recalls anywhere from a quarter of them to all, depending on the run;
-from 50 steps on both are at chance, 0.12, in every run. One part in a million is a small gradient but
-not a hopeless one; $10^{-15}$ is. With keep gates, the same two
-architectures recall every symbol at every delay up to 200, in every run.
-Only the initialization differs between these pairs of rows. Started with
-gates at one half, training does not find, within our 1,500 updates, the
-gates that would keep the symbol; started with gates near one, it does not
-lose them.
+from 50 steps on both are at chance, 0.12, in every run. One part in a
+million is a small gradient but not a hopeless one; $10^{-15}$ is. With
+keep gates, the same two architectures recall every symbol at every delay
+up to 200, in every run. Only the initialization differs between these
+pairs of rows. Started with gates at one half, training does not find,
+within our 1,500 updates, the gates that would keep the symbol; started
+with gates near one, it does not lose them.
 
 Let us look more closely at the plain networks, because from 50 steps on
 the LeCun one does better than both gated networks as they come. At 50
@@ -1106,7 +1106,7 @@ recall is where that memory shows.
 The attention stack differs from the recurrent ones in its mixer alone,
 and it is behind every one of them in every column of losses: by about
 0.03 nats against the plain RNN and about 0.08 against the gated ones. It
-is already about 0.04 behind the plain RNN over the first 16 bytes, where
+is already 0.04 to 0.05 behind the plain RNN over the first 16 bytes, where
 there is little context to remember, so its deficit at this budget is not
 a matter of memory. It also ends behind the GPT of :numref:`sec_gpt`, which
 reached 1.34 to 1.35 nats per byte at the same width with the same recipe.
@@ -1607,7 +1607,7 @@ Is the transformer better at the same job, or only bigger and newer?
 | four LSTM or GRU layers in this stack | 1.29–1.30 |
 | four attention layers in this stack (GELU MLP) | 1.37–1.38 |
 
-- In this stack attention trails the plain RNN by about 0.04 already over
+- In this stack attention trails the plain RNN by 0.04–0.05 already over
   bytes 0–15: not a matter of memory.
 - The GPT differs in more than the mixer: six blocks, and a SwiGLU MLP
   about 0.06 ahead of GELU.

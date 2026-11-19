@@ -1,271 +1,292 @@
 # Further Reading
 :label:`sec_transformers-further-reading`
 
-The sections of this chapter build one block, one language model, one cache,
-one encoder and one encoder--decoder, one vision model, one mixture of
-experts, and one small scaling study. This section points to topics they had
-no room for: other ways to keep the block stable, the training recipe in
-more detail, the systems that serve a cache, the uses of each wiring, the
-recipes that make vision transformers work on modest data, routing beyond
-the layer of :numref:`sec_moe`, and the questions that a scaling law leaves
-open. Several of these topics belong to the Language Models part of the
-book, and their entries here only say what they change and where they are
-treated. Implementations, tutorials, and courses for the material that the
-chapter does teach are listed in its introduction,
-:numref:`chap_transformers`. Nothing else in the book depends on this
-section.
+After this chapter you can build a current language model at a size that
+trains in minutes on one GPU. Between that model and the ones in use lie
+several thousand papers, and most of them can wait. This section collects
+the topics the chapter had no room for and says which of them matter to
+whom.
+
+If you will train models, read "The Block" and "The Training Recipe"; they
+hold settings that current models use. If you will serve them, read
+"Generation and the Cache". If you work with images, read the last entry
+of "Wirings and Images", on encoders trained without labels or trained to
+match images with their captions. How to route experts and how far the
+scaling laws reach are research in progress, and the last two groups are
+best read as such. The Language Models part takes several of these threads
+further, in its chapters on architectures (:numref:`chap_lm_architectures`),
+pretraining (:numref:`chap_lm_pretraining`), inference
+(:numref:`chap_lm_inference`) and serving (:numref:`chap_lm_serving`).
+Nothing else in the book depends on this section.
 
 ## The Block
 
+The first two entries fix two ways in which a softmax misbehaves, and
+both fixes have reached current models. The placement of the normalization
+is still moving. Initialization matters on the day a deep stack refuses to
+train, and the last entry is a warning about reading all the others.
+
 ### Bounds on the Logits
 
-QK-norm, in :numref:`subsec_qk-norm`, bounds the attention logits by
-normalizing queries and keys. Released models arrived at it from different
-starting points: Qwen3 :cite:`Yang.Li.Yang.ea.2025` removed the biases of
-its query, key, and value projections and added QK-norm, OLMo 2
-:cite:`OLMo.2025` added it together with a loss on the output normalizer,
-and Gemma 3 :cite:`Gemma.Team.2025` adopted it in place of the soft-capping
-of Gemma 2 :cite:`Gemma.Team.2024`. Soft-capping squashes a logit $z$ as
-$c\tanh(z/c)$, with $c = 50$ for the attention logits and $c = 30$ for the
-output logits. It bounds the logits without normalizing anything. Fused
-attention kernels, however, never form the logits, so soft-capping does not
-fit them. The
-output-side counterpart is the z-loss of PaLM :cite:`chowdhery2022palm`, a
-penalty of about $10^{-4} (\log Z)^2$ on the normalizer $Z$ of the output
-softmax that keeps it near one. :citet:`Wortsman.Liu.Xiao.ea.2024` show
-that small models already exhibit the divergence of output logits that
-z-loss prevents, once the weight decay is low.
+Attention logits that grow during training saturate the softmax, whose
+gradient then vanishes, and long runs spike or stall
+(:numref:`subsec_qk-norm`). QK-norm bounds the logits by normalizing
+queries and keys, and Qwen3 :cite:`Yang.Li.Yang.ea.2025` and OLMo 2
+:cite:`OLMo.2025` added it. Gemma 3 :cite:`Gemma.Team.2025` adopted it in
+place of the *soft-capping* of Gemma 2 :cite:`Gemma.Team.2024`, which
+squashes a logit $z$ into $c\tanh(z/c)$, with $c = 50$ for the attention
+logits and $c = 30$ for the output logits. Soft-capping must act on every
+logit inside the fused attention kernel; QK-norm acts on the queries and
+keys before the kernel and needs no change to it.
 
-### Other Placements and No Normalization
+The output logits have a problem of their own. Adding a constant to all of
+them leaves the softmax unchanged, so the cross-entropy does nothing to
+stop them from drifting together. The *z-loss* of PaLM
+:cite:`chowdhery2022palm` pins their level with a penalty of about
+$10^{-4} (\log Z)^2$ on the normalizer $Z$ of the output softmax, which
+keeps $Z$ near one; PaLM reports that it makes training more stable.
 
-:numref:`fig_norm-taxonomy` drew four placements of the normalization. OLMo
-2 :cite:`OLMo.2025` uses a fifth: it normalizes the output of each branch
-before adding it to the stream, rather than its input. DeepNet
-:cite:`Wang.Ma.Dong.ea.2024` keeps the post-norm arrangement of
-:numref:`sec_transformer-block` but multiplies the stream by a constant
-larger than one before adding the branch, and scales down the branch's
-initialization; with these two changes, post-norm stacks of a thousand
-layers train. Dynamic
-tanh :cite:`Zhu.Chen.He.ea.2025` removes the normalization altogether: it
-replaces every LayerNorm by an elementwise $\tanh(\alpha x)$ with a learned
-scalar $\alpha$, so that no statistic is computed over the token. At the
-reported scales it matches normalized models in vision and language.
+### Gated Attention
+
+Softmax must put each query's weight somewhere, so a head with nothing to
+retrieve puts it on the first token (:numref:`subsec_kv-cache-sinks`).
+:citet:`Qiu.Wang.Zheng.ea.2025` compared 30 variants of gating. The best
+was an elementwise sigmoid gate on each head's output, computed from the
+layer's input, which lets a head close its gate instead. In models of 1.7B
+dense and 15B mixture-of-experts parameters trained on 3.5T tokens, the
+gate lowered perplexity, tolerated larger learning rates, and cut the
+attention on the first token from about half to about a twentieth.
+Qwen3-Next :cite:`Qwen.Team.2025` uses it.
+
+### Placements of the Normalization
+
+:numref:`sec_transformer-block` compared post-LN and pre-LN, and its block
+uses pre-LN. Pre-LN fixes the scale of what each branch reads, but not of
+what it writes: a branch whose weights grow during training adds ever
+larger vectors to the stream. :numref:`fig_norm-taxonomy` adds the two
+placements that recent open models chose. OLMo 2 normalizes what each
+branch *writes* before adding it to the stream, and its report credits
+this change, together with QK-norm, with smaller and less spiky gradient
+norms. Gemma 3 normalizes each branch both before and after the sublayer.
+Only post-LN normalizes the stream itself; the other three leave the path
+from the first block to the last an identity.
+
+![Four placements of normalization around one sublayer, with the residual stream running bottom to top; the FFN sublayer is treated the same way. Post-LN normalizes the stream itself after each addition, pre-LN, the default of the chapter's block, normalizes what the branch reads, OLMo 2 normalizes what the branch writes, and Gemma 3 normalizes the branch on both sides.](../img/mdl-transformers-norm-taxonomy.svg)
+:label:`fig_norm-taxonomy`
+
+Post-norm is not doomed at depth. DeepNet :cite:`Wang.Ma.Dong.ea.2024`, met in
+:numref:`sec_transformer-block`, trains post-norm stacks of a thousand layers
+by scaling down the initial weights of each branch and scaling up the stream.
+What fails at depth is the size of each branch relative to the stream, and
+DeepNet shrinks it. Dynamic tanh :cite:`Zhu.Chen.He.ea.2025` takes the
+opposite route and removes the normalization. It replaces every LayerNorm by
+the elementwise
+$\boldsymbol{\gamma} \odot \tanh(\alpha \mathbf{x}) + \boldsymbol{\beta}$,
+with a learned scalar $\alpha$ and the per-channel scale $\boldsymbol{\gamma}$
+and shift $\boldsymbol{\beta}$ that LayerNorm also has, so that no statistic
+is computed over the token. At the scales reported it matches normalized
+models in vision and language.
 
 ### Initialization of Deep Stacks
 
-`GPT` in :numref:`sec_gpt` uses GPT-2's initialization, with the projections
-that write to the stream scaled by $1/\sqrt{2L}$. SmallInit
+`GPT` in :numref:`sec_gpt` uses GPT-2's initialization, with the
+projections that write to the stream scaled by $1/\sqrt{2L}$. SmallInit
 :cite:`Nguyen.Salazar.2019` draws the attention weights with a smaller
-standard deviation and, together with pre-norm, trains translation models
-without warmup. OLMo 2 :cite:`OLMo.2025` went the other way: it dropped its
-depth-scaled scheme for a plain normal distribution with standard deviation
-0.02, and reports that the scales of activations and gradients are better
-preserved through training. muP :cite:`Yang.Hu.Babuschkin.ea.2022`, which
-:numref:`sec_scaling` teaches, makes both the initialization and the
-learning rates depend on width, so that hyperparameters tuned on a small
-model carry over to a large one.
+standard deviation and, with pre-norm, trains translation models without
+warmup. OLMo 2 went the other way: it dropped its depth-scaled scheme for a
+plain normal with standard deviation 0.02 for every parameter, and reports
+that activations and gradients then keep their scale better across layers.
+
+The contradiction is smaller than it looks. OLMo 2 normalizes what each
+branch writes, and a norm after the output projection cancels any constant
+factor in that projection's weights. Scaling them by $1/\sqrt{2L}$ would
+leave what the branch writes at initialization unchanged. The right
+initialization depends on where the normalization sits, and a scheme taken
+from one paper travels only together with its placement. muP
+:cite:`Yang.Hu.Babuschkin.ea.2022`, taught in :numref:`sec_scaling`, is the
+scheme to learn once hyperparameters tuned on a small model must carry over
+to a large one.
 
 ### Modifications That Transfer
 
-Many changes to the block were proposed between 2017 and 2020, each with a
+Between 2017 and 2020 many changes to the block were proposed, each with a
 gain in its own paper. :citet:`Narang.Chung.Tay.ea.2021` reimplemented
 dozens of them in one codebase and found that few improve on the original
-transformer when the setting changes. RMSNorm and the gated feed-forward
-networks of :numref:`sec_transformer-block` are among the few that do.
+transformer there; RMSNorm and the gated feed-forward networks of
+:numref:`sec_transformer-block` are among the few. A gain reported in one
+codebase is a hypothesis about the next one.
 
 ## The Training Recipe
 
-### Adam's Second Moment at Small Batch
+The recipe of :numref:`sec_gpt` is a sound default at the scale of this
+chapter. Two of its settings change when a run grows.
 
-The runs of :numref:`sec_gpt` use PyTorch's default $\beta_2 = 0.999$,
-while reports of large pretraining runs use $0.95$.
-:citet:`Porian.Wortsman.Jitsev.ea.2024` find that for models of 5M to 220M
-parameters trained with batches of 128 sequences or fewer, $0.95$ is a poor
-choice and values between $0.99$ and $0.999$ work better. A small batch
-gives noisy gradients, and the longer average of a larger $\beta_2$ smooths
-the estimate of their second moment.
+### Adam's Second Moment
+
+`LMOptimizer` keeps AdamW's default $\beta_2 = 0.999$, and
+:numref:`sec_gpt` notes that large pretraining runs use $0.95$. Both are
+right for their batches. :citet:`Porian.Wortsman.Jitsev.ea.2024` measured
+where the boundary lies: for models of 5M to 220M parameters trained with
+batches of 128 sequences or fewer, $0.95$ is a poor choice, and values
+between $0.99$ and $0.999$ work better. A setting copied from the report of
+a large run can be wrong for a small one for this reason alone.
 
 ### Constant Rates and Cooldowns
 
-Cosine decay, which `LMOptimizer` uses, needs the length of the run in
-advance. A constant learning rate followed by a short cooldown matches a
-tuned cosine schedule, and a cooldown over the last fifth of the steps with
-a $1 - \sqrt{t}$ shape works best :cite:`Hagele.Bakouch.Kosson.ea.2024`.
-MiniCPM :cite:`Hu.Tu.Han.ea.2024` named this schedule warmup--stable--decay.
-For scaling studies this changes the cost: one long run with cooldowns
-branched off at several points yields the losses of many data budgets,
-where :numref:`sec_scaling-laws` trains a separate run for each.
-:numref:`sec_scheduler` teaches the schedule itself.
-
-### Pretraining Data
-
-GPT-2 was trained on WebText, about 40 GB of web pages linked from Reddit,
-and later models train on filtered web crawls of trillions of tokens. How
-such corpora are filtered, deduplicated, and mixed, and how models are
-adapted after pretraining, is the subject of the Language Models part.
+Warmup--stable--decay (:numref:`sec_scheduler`) holds the peak learning
+rate for most of the run and decays only at the end, so the length of
+training can be decided late. Two results tie it to this chapter.
+:citet:`Hagele.Bakouch.Kosson.ea.2024` find that a cooldown over the last
+fifth of the steps, with the rate falling as $1 - \sqrt{t}$ while $t$ runs
+from 0 to 1 over the cooldown, matches a tuned cosine schedule, which is
+what `LMOptimizer` uses. And for a scaling study it changes the cost: one
+long run with cooldowns branched off at several points yields the losses
+of many data budgets, where :numref:`sec_scaling-laws` trains a separate
+run for each.
 
 ## Generation and the Cache
 
-### Serving Engines
-
-A server answering many requests at once must decide which sequences share
-a forward pass and where their caches live. Continuous batching
-:cite:`Yu.Jeong.Kim.ea.2022` schedules at the granularity of one decoding
-step, admitting and retiring sequences at every step instead of waiting for
-the longest member of a batch. Paged memory :cite:`Kwon.Li.Zhuang.ea.2023`
-stores each cache in fixed blocks located through a table, like the pages of
-virtual memory, instead of reserving the maximum length for every sequence
-as `init_cache` of :numref:`sec_kv-cache` does. Prefix caching
-:cite:`Zheng.Yin.Xie.ea.2024` keeps the caches of finished requests in a
-tree keyed by their tokens and reuses them when a new request shares a
-prefix, such as a system prompt. The Language Models part builds these
-mechanisms; :numref:`sec_model_serving` shows them in use.
+This is the most practical group. The serving engines that batch, page
+and share caches appeared in :numref:`sec_kv-cache`, and
+:numref:`sec_model_serving` shows one at work. Speculative decoding is how
+deployed models generate faster today; the compression of a trained
+model's cache is an active field whose benchmarks still disagree.
 
 ### Speculative Decoding
 
 Decoding reads all weights to produce one token
-(:numref:`subsec_kv-cache-prefill-decode`). Speculative decoding
-:cite:`Leviathan.Kalman.Matias.2023,Chen.Borgeaud.Irving.ea.2023` lets a
-small draft model propose several tokens, which the large model scores in
-one pass. Let $p$ and $q$ be the distributions of the large and the draft
-model. Accepting each proposed token with probability $\min(1, p(x)/q(x))$,
-and resampling a rejected one from the normalized $\max(0, p - q)$, leaves
-the output distribution exactly that of the large model. Medusa
+(:numref:`subsec_kv-cache-prefill-decode`), so a pass that scores five
+tokens costs about as much as one that scores one. Speculative decoding
+:cite:`Leviathan.Kalman.Matias.2023,Chen.Borgeaud.Irving.ea.2023` turns
+this into speed: a small draft model proposes several tokens, which the
+large model scores in one pass. Let $p$ and $q$ be the distributions of the
+large and the draft model. Accepting each proposed token with probability
+$\min(1, p(x)/q(x))$, and resampling a rejected one from the normalized
+$\max(0, p - q)$, leaves the output distribution exactly that of the large
+model. After a rejection the remaining drafts are discarded, and drafting
+starts again from the resampled token; when every draft is accepted, the
+same pass also yields the large model's next token. The gain
+therefore rests on how often the large model accepts the drafts, which
+depends on the task and the sampler as much as on the draft model. On
+T5-XXL, Leviathan et al. report decoding two to three times faster with
+identical outputs.
+
+Later methods change where the drafts come from. Medusa
 :cite:`Cai.Li.Geng.ea.2024` replaces the draft model by extra decoding
 heads, EAGLE :cite:`Li.Wei.Zhang.ea.2024` drafts from the large model's
-features, and multi-token prediction :cite:`Gloeckle.Idrissi.Roziere.ea.2024`
-trains the model to predict several tokens at once. The Language Models
-part treats these methods.
+features, and multi-token prediction
+:cite:`Gloeckle.Idrissi.Roziere.ea.2024` trains the model itself to predict
+several tokens at once.
 
-### Compressing a Trained Model's Cache
+### Compression of a Trained Model's Cache
 
-:numref:`subsec_kv-cache-low-rank` compressed GPT-2's cache with a fixed
-basis and :numref:`subsec_kv-cache-sinks` with a window. Methods applied
-after training go further along both lines. Palu :cite:`Chang.Lin.Lin.ea.2025`
-factorizes the key and value projections of a trained model into low-rank
-pairs and caches the latent, and Loki :cite:`Singhania.Singh.He.ea.2024`
-keeps the full cache but uses a low-dimensional key subspace to choose the
-tokens that receive exact attention. H2O :cite:`Zhang.Sheng.Zhou.ea.2023`
-keeps the recent tokens plus those that have accumulated the most attention,
-and SnapKV :cite:`Li.Huang.Yang.ea.2024` chooses positions per head from the
-attention of the last prompt tokens. A benchmark of single questions hides
-the cost of such evictions. SCBench :cite:`Li.Jiang.Wu.ea.2025` finds that
-methods whose memory grows more slowly than the context fail when later
-turns of a conversation need what an earlier turn evicted. KVQuant
-:cite:`Hooper.Kim.Mohammadzadeh.ea.2024` extends the quantization of the
-section's exercise to three bits per entry, quantizing keys per channel
-before RoPE and keeping a few outliers exact. The Language Models part
-treats compression at inference time.
+:numref:`sec_kv-cache-reduction` compressed GPT-2's cache with a low-rank
+basis fitted once on calibration text and with a window of recent tokens,
+and it mentioned storing fewer bits. Methods applied to a trained model go
+further along all three lines. Palu :cite:`Chang.Lin.Lin.ea.2025`
+factorizes the key and value projections and caches the latent. KVQuant
+:cite:`Hooper.Kim.Mohammadzadeh.ea.2024` keeps three-bit caches within 0.1
+perplexity of the full ones by quantizing keys before RoPE is applied,
+using levels spaced unevenly, and keeping a few outliers exact. H2O
+:cite:`Zhang.Sheng.Zhou.ea.2023` evicts tokens instead: it keeps the recent
+ones plus those that have accumulated the most attention. SnapKV
+:cite:`Li.Huang.Yang.ea.2024` chooses the positions to keep per head, from
+the attention that the last few prompt tokens pay to each position.
 
-### Multi-Head Latent Attention in Full
-
-:numref:`sec_kv-cache` sketches the latent cache of DeepSeek-V2
-:cite:`DeepSeek-AI.2024`. In full, keys and values of all heads are
-reconstructed from one compressed vector per token, and the up-projection of
-the keys can be absorbed into the query projection, so that attention runs
-on the latent directly. Absorption fails for a rotated key, because the
-rotation depends on the position and sits between the two matrices, so the
-model adds a small rotary key shared by all heads beside the latent.
-DeepSeek-V2 reports a cache 93% smaller than that of its dense 67B
-predecessor. The Language Models part treats the design in its own section.
-
-### Gated Attention in Full
-
-:numref:`subsec_kv-cache-sinks` describes the sigmoid gate of
-:citet:`Qiu.Wang.Zheng.ea.2025` as the design that makes sinks unnecessary.
-The authors compared 30 variants and found the best to be an elementwise
-gate, computed from the layer input, on each head's output before the output
-projection. In models of 1.7B dense and 15B mixture-of-experts parameters
-trained on 3.5T tokens, it lowered perplexity, tolerated larger learning
-rates, and reduced the attention on the first token from about half to
-about a twentieth. Qwen3-Next :cite:`Qwen.Team.2025` uses it.
+A benchmark of single questions hides the cost of such evictions. SCBench
+:cite:`Li.Jiang.Wu.ea.2025` finds that methods whose memory grows more
+slowly than the context fail when later turns of a conversation need what
+an earlier turn evicted.
 
 ## Wirings and Images
 
-### Uses of Each Wiring
+The first entry tests the wirings of :numref:`sec_transformer` at scale.
+For images, the encoders trained without labels or with captions matter
+most; the other image entries matter when the data are few, the
+resolution is high, or the patch outputs themselves are used.
 
-The three wirings of :numref:`sec_transformer` divide the work of current
-systems. Encoders such as ModernBERT :cite:`Warner.Chaffin.Clavie.ea.2024`
-serve embedding, retrieval, reranking, and classification, where each
-document is encoded once with context on both sides. Encoder--decoders
-serve tasks with a distinct input: the T5 family
-:cite:`raffel2020exploring` frames every task as text to text, and Whisper
-:cite:`radford2023whisper` decodes text from an encoded recording. Decoders
-alone serve generation and in-context learning :cite:`brown2020language`.
-:citet:`Wang.Roberts.Hesslow.ea.2022` compared the wirings at more than 5B
-parameters and found the decoder best for zero-shot use after pretraining
-alone, and an encoder with full visibility of the input best after
-multitask fine-tuning. T5Gemma :cite:`Zhang.Moiseev.Ainslie.ea.2025`
-converts pretrained decoders into encoder--decoders and finds them stronger
-at a similar cost of inference. The Language Models part treats pretrained
-encoders in depth.
+### Comparisons of the Wirings
 
-### Learned Queries as an Interface
-
-The Perceiver of :numref:`sec_transformer` reads a long input through a few
-learned queries. Vision--language models use the same device to hand images
-to a language model. Flamingo :cite:`alayrac2022flamingo` compresses a
-variable number of image and video features into 64 visual tokens, and
-BLIP-2's Q-Former :cite:`Li.Li.Savarese.ea.2023` is a small transformer of
-32 learned queries between a frozen image encoder and a frozen language
-model. DETR :cite:`Carion.Massa.Synnaeve.ea.2020` used learned object
-queries earlier, for detection: each of a hundred queries cross-attends into
-the image features and produces one object or none. :numref:`chap_cv`
-treats detection.
+Which wiring makes the best language model?
+:citet:`Wang.Roberts.Hesslow.ea.2022` compared a decoder, an
+encoder--decoder, and a prefix language model
+(:numref:`subsec_encdec-choosing`) at more than 5B parameters, and found
+that the best wiring depends on what follows pretraining. The plain decoder
+was best for zero-shot use. The models that read their input in both
+directions, trained to fill in masked spans, were best after multitask
+fine-tuning. T5Gemma :cite:`Zhang.Moiseev.Ainslie.ea.2025` converts
+pretrained decoders into encoder--decoders and finds them stronger at a
+similar cost of inference, so the cheapest route to a good
+encoder--decoder may now start from a decoder.
 
 ### Vision Transformers on Modest Data
 
 A vision transformer lacks the locality that a convolution builds in, and
 :numref:`sec_vision-transformer` showed what that costs on a small dataset.
-Several recipes close the gap without more data. DeiT
-:cite:`touvron2021training` trained on ImageNet-1k alone with strong
-augmentation and regularization and a distillation token that learns from a
-convolutional teacher. :citet:`Beyer.Zhai.Kolesnikov.2022` replaced the
-class token by average pooling and the learned positions by fixed 2-D
-sinusoids and reached 80% top-1 in 300 epochs, and
-:citet:`Steiner.Kolesnikov.Zhai.ea.2022` found that with the right
-augmentation and regularization, more compute gives about the same accuracy
-as ten times more data. Compact transformers :cite:`Hassani.Walton.Shah.ea.2021`
-replace the patch stem by a small convolutional tokenizer and the class
-token by attention pooling; with small patches and 300 epochs, models of
-under 4M parameters beat ResNet-18 on CIFAR-10.
+Three recipes narrow the gap without more data. DeiT
+:cite:`touvron2021training` adds a *distillation token*, a second learned
+input beside the class token whose output is trained to match the
+predictions of a convolutional teacher. :citet:`Beyer.Zhai.Kolesnikov.2022`
+pooled the outputs instead of reading a class token, used fixed 2-D
+sinusoidal positions, and reached about 80% top-1 on ImageNet-1k alone in
+300 epochs. Compact transformers :cite:`Hassani.Walton.Shah.ea.2021`
+replace the patch stem by a small convolutional tokenizer, which puts
+locality back at the input. Of the three, the tokenizer is the smallest
+change and the one aimed most directly at small datasets.
 
-### Windows, Two-Dimensional Rotations, and Registers
+### Windows and Resolution
 
-Swin :cite:`liu2021swin` restricts attention to local windows that shift
-between blocks, and merges patches between stages. This restores locality
-and a pyramid of resolutions, and makes the cost linear in the number of
-patches, as detection and segmentation at high resolution require. RoPE in
-two dimensions :cite:`Heo.Park.Han.ea.2024` rotates by the row and the
-column of a patch and extrapolates to higher resolutions better than a
-learned table. The register tokens of :numref:`sec_vision-transformer` need
-not be trained: :citet:`Jiang.Dravid.Efros.ea.2025` trace the outlier
-tokens to a few neurons and move their activation into an extra token at
-test time, with nearly the effect of trained registers.
+Detection and segmentation work at high resolution, where attention over
+all patches is too expensive. Swin :cite:`liu2021swin` attends within local
+windows that shift between blocks, which makes the cost linear in the
+number of patches, and merges neighboring patches between stages into a
+pyramid of resolutions, as a CNN has. RoPE in two dimensions
+:cite:`Heo.Park.Han.ea.2024` extrapolates to resolutions above those of
+training better than a learned table does.
+
+### Registers
+
+The *registers* of :numref:`sec_vision-transformer` are a few input-free
+tokens that hold the global information which large ViTs otherwise store
+in background patches. :citet:`Darcet.Oquab.Mairal.ea.2024` found those
+patches by their outputs, about ten times larger in norm than the rest and
+holding little information about their own patch; with registers, these outliers
+disappear. Registers need not even be trained:
+:citet:`Jiang.Dravid.Efros.ea.2025` trace the outliers to a few neurons and
+move their activation into an extra token at test time, with nearly the
+effect of trained registers.
 
 ### Self-Supervised and Image--Text Encoders
 
-The ViT of the chapter learns from labels. Masked autoencoders
-:cite:`he2022masked` learn by reconstructing masked patches from the
-quarter of patches that remain, and DINOv2
-:cite:`Oquab.Darcet.Moutakanni.ea.2024` by self-distillation on a curated
-image collection. CLIP :cite:`radford2021learning` trains an image encoder
-against a text encoder with a contrastive loss over the batch, and SigLIP
-:cite:`Zhai.Mustafa.Kolesnikov.ea.2023` replaces the softmax over the batch
-by a sigmoid loss per pair, which decouples the loss from the batch size.
-Encoders of this kind are the vision towers of most vision--language
-models. :numref:`chap_cv` and the Language Models part treat them.
+The ViT of the chapter learns from labels, and labels are the scarcest
+thing in vision. Masked autoencoders :cite:`he2022masked` learn by
+reconstructing masked patches from the quarter that remains visible.
+DINOv2 :cite:`Oquab.Darcet.Moutakanni.ea.2024` uses self-distillation on a
+curated image collection: a network is trained to agree with a slowly
+updated copy of itself on different crops of the same image. CLIP
+:cite:`radford2021learning` trains an image encoder and a text encoder
+together with a contrastive loss: for each image, a softmax over all
+captions in the batch must pick its own caption, and likewise for each
+caption over the images. SigLIP :cite:`Zhai.Mustafa.Kolesnikov.ea.2023`
+replaces these softmaxes by a sigmoid loss on each image--caption pair,
+which decouples the loss from the batch size. Encoders of this kind are
+the pretrained image encoders on which vision--language models build
+(:numref:`sec_vision-transformer`).
 
 ## Experts
+
+Mixtures of experts are settled practice in the largest released models.
+How to route and how sparse to be are not: each entry below is one paper's
+answer.
 
 ### Router Stability
 
 Large sparse models are prone to loss spikes that start in the router,
 whose logits can grow without bound. ST-MoE
-:cite:`Zoph.Bello.Kumar.ea.2022` adds a router z-loss, a penalty on the
-squared log-sum-exp of the router logits, which keeps them small without
-changing which expert wins. With it, ST-MoE trains a sparse model of 269B
-parameters at the computation per token of a 32B dense model.
+:cite:`Zoph.Bello.Kumar.ea.2022` keeps them small with a penalty on
+their squared log-sum-exp, the z-loss of "Bounds on the Logits" applied to
+the router. With it, ST-MoE trains a sparse model of 269B parameters at the
+computation per token of a 32B dense model.
 
 ### Expert-Choice Routing
 
@@ -275,95 +296,66 @@ must be balanced afterwards. Expert-choice routing
 tokens it scores highest, up to its capacity, so loads are balanced by
 construction. A token may then be picked by no expert or by many, and its
 experts depend on the other tokens of the batch, which complicates decoding
-one token at a time.
+one token at a time. Released decoder-only mixtures route by token choice.
 
 ### Sigmoid Gates and Limited Groups
 
-DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024` scores each expert with its own
-sigmoid instead of a softmax over experts, normalizes the scores of the
-selected experts, and restricts the experts of each token to a few groups of
-devices, which bounds the communication per token. The layer of
-:numref:`sec_moe` keeps the softmax router of the Switch transformer and
-adopts only DeepSeek-V3's bias controller.
+In the router of :numref:`sec_moe`, a softmax over experts makes each
+expert's score depend on the scores of all the others. DeepSeek-V3
+:cite:`Liu.Feng.Xue.ea.2024` scores each expert with its own sigmoid, so
+that a score depends only on the token and that expert, and normalizes the
+scores of the selected experts to obtain their weights. It also restricts
+the experts of each token to a few groups of devices, which bounds the
+communication per token. The layer of :numref:`sec_moe` keeps the softmax
+and adopts from DeepSeek-V3 only the per-expert bias that steers selection
+toward balance.
 
 ### Sparsity and Expert Width
 
-:numref:`sec_moe` trains one configuration. :citet:`Clark.Casas.Guy.ea.2022`
-fit scaling laws for routed models and find that routing helps at every
-dense size up to 1.3B parameters, with gains that shrink as the dense model
-grows. :citet:`Krajewski.Ludziejewski.Adamczewski.ea.2024` treat the width
-of the experts as a hyperparameter and scale the tokens with the model; the
-gap between mixtures and dense models then grows with compute, and experts
-as wide as the dense feed-forward network are almost never optimal. Later
-work finds an optimal sparsity that grows with compute
-:cite:`Abnar.Shah.Busbridge.ea.2025` and mixtures that beat dense models of
-the same memory, not only of the same computation
-:cite:`Ludziejewski.Pioro.Krajewski.ea.2025`. Released models have become
-sparser accordingly: Qwen3-Next :cite:`Qwen.Team.2025` activates about 3B of
-its 80B parameters, with 512 experts per layer, and Kimi K2
-:cite:`Kimi.Team.2025` combines latent attention with 384 experts per layer.
-The Language Models part treats sparsity in scaling laws.
-
-### Experts across Devices
-
-When the experts do not fit on one accelerator, different experts live on
-different devices, and the tokens travel to their experts and back in an
-all-to-all exchange before and after each expert layer. This is expert
-parallelism, introduced with GShard :cite:`Lepikhin.Lee.Xu.ea.2021`. Fixed
-capacities, as in the layer of :numref:`sec_moe`, make the exchange static.
-The Language Models part treats expert parallelism and the serving of
-mixtures.
+The mixture of :numref:`sec_moe` ended below the dense model at the same
+computation per token. Does the gain hold at other sizes?
+:citet:`Clark.Casas.Guy.ea.2022` found gains at every size from 15M to 1.3B
+parameters, shrinking as the model grows, but they held the tokens fixed.
+:citet:`Krajewski.Ludziejewski.Adamczewski.ea.2024` scale the tokens with
+the model and tune the width of the experts; the advantage of mixtures then
+grows with compute, and experts as wide as the dense feed-forward network
+are almost never optimal. Later work finds that, at a fixed compute budget,
+the optimal sparsity grows with the total parameter count
+:cite:`Abnar.Shah.Busbridge.ea.2025`. Released models have become sparser
+accordingly: Qwen3-Next activates about 3B of its 80B parameters, with 512
+experts per layer, and Kimi K2 :cite:`Kimi.Team.2025` combines the latent
+attention of :numref:`sec_kv-cache-reduction` with 384 experts per layer.
 
 ## Scaling
 
-### Reconciling Kaplan and Chinchilla
-
-:citet:`kaplan2020scaling` found that the compute-optimal model size grows
-as $C^{0.73}$, and Chinchilla :cite:`hoffmann2022training` as $C^{0.50}$.
-:numref:`sec_scaling-laws` quotes the finding of
-:citet:`Pearce.Song.2024` that counting only non-embedding parameters at
-small scale explains most of the difference.
-:citet:`Porian.Wortsman.Jitsev.ea.2024` account for the rest: the FLOPs of
-the output layer, the length of the warmup, and optimizer settings tuned to
-each scale. With these corrected, the two fits agree.
+Both entries add a variable that the laws of :numref:`sec_scaling-laws`
+leave out: how often each token is read, and how many bits hold each
+number. Neither overturns the laws.
 
 ### Repeated Data
 
-:numref:`sec_scaling-laws` quotes the finding of
-:citet:`Muennighoff.Rush.Barak.ea.2023` that up to about four passes over
-the data are nearly as good as fresh data. Their fit gives the whole curve:
-$U$ unique tokens repeated $R$ times are worth
-$U + U R^* (1 - e^{-R/R^*})$ fresh tokens, with $R^* \approx 15$, so the
-value of further passes decays to zero. Budgets beyond the compute optimum
-are treated in the Language Models part.
+:numref:`sec_scaling-laws` noted that a repeated token keeps its value for
+about four passes. :citet:`Muennighoff.Rush.Barak.ea.2023` fit how it
+loses value after that. By their fit, $U$ unique tokens read in $1 + R$
+passes are worth
+
+$$U + U R^* \left(1 - e^{-R/R^*}\right)$$
+
+fresh tokens, with $R^* \approx 15$. For a few passes the bracket is close
+to $R/R^*$, and every pass counts almost fully: four passes ($R = 3$) are
+worth about $3.7\,U$. For many passes the bracket tends to one, so no
+amount of repetition makes $U$ tokens worth more than about $16\,U$ fresh
+ones.
 
 ### Precision as a Scaling Variable
 
 :citet:`Kumar.Ankner.Spector.ea.2025` treat the precision of training as a
 reduction of the effective parameter count. Quantizing a model after
-training hurts more the longer it was trained, so that beyond some point
-more pretraining data makes the quantized model worse. They also find that
-the compute-optimal precision for training lies around seven to eight bits.
-
-### Loss and Abilities
-
-Loss falls smoothly with scale, but some abilities measured downstream
-appear to switch on abruptly as it falls :cite:`wei2022emergent`. Whether
-such jumps are a property of the models or of metrics that give no credit
-for partial answers is debated.
-
-### Departures from the Shared Block
-
-The configurations of :numref:`tab_modern-recipe` share one block. Three
-directions depart from it. Hybrids keep full attention in a fraction of the
-layers and replace the rest with recurrent mixers of linear cost
-:cite:`Kimi.Team.2025b`, the subject of :numref:`chap_modern_rnn`. Long
-contexts combine the positional rescaling of
-:numref:`sec_positional-information`, the cache policies of
-:numref:`sec_kv-cache`, and systems work; Llama 4 :cite:`Meta.2025`
-interleaves attention layers without positional encoding. Learned sparse
-attention chooses the keys by content. The indexer of DeepSeek-V3.2
-:cite:`Liu.Mei.Lin.ea.2025`, for example, selects 2,048 key--value tokens
-per query; :numref:`sec_attention-further-reading` describes it.
+training hurts more the longer it was trained, so, surprisingly, beyond
+some point more pretraining data makes the quantized model worse. In every
+other law of this chapter, more data only ever lowered the loss. They also
+find the compute-optimal precision for training to lie around seven to
+eight bits. Their fits stop at 1.7B parameters and 26B tokens, so these
+numbers are a guide for planning, not yet a law.
 
 [Discussions](https://d2l.discourse.group/t/36853)

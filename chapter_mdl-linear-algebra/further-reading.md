@@ -250,7 +250,7 @@ that matrix or its key--value cache with a low-rank factorization. Linear
 attention (:numref:`sec_windowed-linear-attention`) expresses the attention
 scores as feature dot products $\phi(\mathbf{q})\cdot\phi(\mathbf{k})$,
 capping the rank of the score matrix at the feature dimension. Multi-head
-latent attention (:numref:`sec_kv-cache`) :cite:`DeepSeek-AI.2024` compresses
+latent attention (:numref:`subsec_kv-cache-low-rank`) :cite:`DeepSeek-AI.2024` compresses
 the cache by storing a single low-dimensional latent vector per token instead
 of separate keys and values for every head. Linformer
 :cite:`Wang.Li.Khabsa.ea.2020` starts from the empirical observation that

@@ -45,8 +45,8 @@ BC = 205.0         # x of the branch column (sublayer box centers)
 BW = 214.0         # sublayer box width
 NW = 76.0          # branch norm box width
 
-TOK_W, TOK_H = 26.0, 26.0   # one token square
-CLS_W = 40.0                # the wider <cls> square
+TOK_W, TOK_H = 30.0, 28.0   # one token square
+CLS_W = 48.0                # the wider <cls> square
 TOK_GAP = 5.0
 ELL_W = 22.0                # room for the ellipsis
 
@@ -79,7 +79,7 @@ def token_row(f, cy, *, outputs=False):
     f.rect(x, cy - TOK_H / 2, CLS_W, TOK_H, fill=EMBED.tint,
            stroke=EMBED.base, sw=T.SW_HEAVY if outputs else T.SW_BOX,
            r=4.0)
-    f.text(x + CLS_W / 2, cy, [Span("cls", "m")], size=T.FS_SMALL)
+    f.text(x + CLS_W / 2, cy, [Span("cls", "m")], size=T.FS_LABEL)
     cls_x = x + CLS_W / 2
     x += CLS_W + TOK_GAP
     xp = x
@@ -92,12 +92,12 @@ def token_row(f, cy, *, outputs=False):
         if outputs:
             f.rect(x, cy - TOK_H / 2, TOK_W, TOK_H, fill=T.PAPER,
                    stroke=T.FAINT, sw=T.SW_HAIR, r=4.0)
-            f.text(x + TOK_W / 2, cy, [Span(t, "m")], size=T.FS_MIN,
+            f.text(x + TOK_W / 2, cy, [Span(t, "m")], size=T.FS_SMALL,
                    color=T.FAINT)
         else:
             f.rect(x, cy - TOK_H / 2, TOK_W, TOK_H, fill=STREAM.tint,
                    stroke=STREAM.base, sw=T.SW_BOX, r=4.0)
-            f.text(x + TOK_W / 2, cy, [Span(t, "m")], size=T.FS_MIN)
+            f.text(x + TOK_W / 2, cy, [Span(t, "m")], size=T.FS_SMALL)
         x += TOK_W + TOK_GAP
     return cls_x, (x0, xp, x - TOK_GAP)
 
@@ -166,12 +166,11 @@ def fig_vit() -> None:
     bracket(f, rx0, rx1, y_ib, 6, STREAM.base)
     f.line(SX, y_ib + 1, SX, p_bot + 22, stroke=STREAM.base,
            sw=T.SW_HEAVY)
-    f.text(rx1 + 14, y_in - 9, "+ learned position", size=T.FS_SMALL,
-           color=T.MUTED, anchor="start")
-    f.text(rx1 + 14, y_in + 9, "embeddings", size=T.FS_SMALL,
-           color=T.MUTED, anchor="start")
-    f.text(rx0 - 10, y_in, "37 tokens", size=T.FS_SMALL, color=T.MUTED,
-           anchor="end")
+    f.text(rx1 + 14, y_in - 16, "+ learned position", size=T.FS_LABEL,
+           anchor="start")
+    f.text(rx1 + 14, y_in + 4, "embeddings", size=T.FS_LABEL,
+           anchor="start")
+    f.text(rx0 - 12, y_in, "37 tokens", size=T.FS_LABEL, anchor="end")
 
     # ---- patch embedding, fed from the image on its right ---------------
     patch_cx = (rxp + rx1) / 2              # center of the 36 patch tokens
@@ -183,11 +182,13 @@ def fig_vit() -> None:
     bracket(f, rxp, rx1, y_pb, -6, T.INK)
     f.arrow(patch_cx, ey, patch_cx, y_pb + 1, stroke=T.INK)
     side = 108.0
-    img_cx = bx + bw + 40 + side / 2
+    img_cx = bx + bw + 56 + side / 2
     x0 = image(f, img_cx, y_emb - side / 2, side)
     f.arrow(x0 - 1, y_emb, bx + bw, y_emb, stroke=T.INK)
-    f.text(img_cx, y_emb + side / 2 + 14, "96 × 96 image, 6 × 6 patches",
-           size=T.FS_SMALL, color=T.MUTED, va="top")
+    f.text(img_cx, y_emb + side / 2 + 12, "96 × 96 image,", size=T.FS_LABEL,
+           va="top")
+    f.text(img_cx, y_emb + side / 2 + 34, "6 × 6 patches", size=T.FS_LABEL,
+           va="top")
 
     desc = ("The vision transformer from bottom to top: a 96 by 96 image "
             "cut into a 6 by 6 grid of 16 by 16 patches; a strided "

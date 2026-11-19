@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a43afcfbbdd2e7360f4603ace72d5302b08478714ebf1ca02b43db7aedafa709",
+    "d2l_lib_fingerprint": "sha256:4a0f7f88931f633109af8af05c2210e4bd3892a4604e9ca67326fca470e35de0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,73 +14,129 @@
       "outputs": []
     },
     "encoders-decoders-a-bidirectional-encoder-in-a-dozen-lines": {
-      "code_fingerprint": "sha256:e5bdeccd61ff324c9b89dfaf434a7a35adcbc5b0b79eb04eee31ed4c5a3a7826",
+      "code_fingerprint": "sha256:10d916bef8dc1ac2cc0fd7124e4af4ec2c5f4307f3bd9579e079d3f0122fa4d9",
       "kind": "text",
       "outputs": []
     },
     "encoders-decoders-the-masked-token-objective": {
-      "code_fingerprint": "sha256:df9026a5abcfa0683da444555d0630a4a0a79195964a495eae1bd37ac1ba9d4b",
+      "code_fingerprint": "sha256:5027af318cadc56a0cc36d69b69a9621ea2fcb7c613f0543d8b2443e6562d0b1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked loss at step 500/1000/2000: 3.02/1.94/1.57\n"
+          "text": "masked loss at step 500/1000/2000: 3.13/2.35/1.76\n"
         }
       ]
     },
     "encoders-decoders-what-the-second-side-is-worth-1": {
-      "code_fingerprint": "sha256:7921facd660feecee9eb915b96a566190a639c5e4b230b04d3399d838a678223",
+      "code_fingerprint": "sha256:f4c8ff111365c653e9320ccaf90136672f8dadc099e098176da2e91140b99ae9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "masked accuracy 0.48\nloss at positions 0-3: 2.52 1.88 1.75 1.71; 60-63: 1.72 1.72 1.88 2.48; interior mean 1.70\n"
+        }
+      ]
+    },
+    "encoders-decoders-a-causal-control": {
+      "code_fingerprint": "sha256:779db165637a15563f293312249246bfca3be4cb8d1d7cbee81e39826b8cac4c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked accuracy 0.54\nloss at position 0: 2.37, at position 63: 2.43, interior mean: 1.51\n"
+          "text": "both sides, masked    interior 1.70 1.51; position 63 2.48 2.44\nleft side, masked     interior 2.09 2.09; position 63 2.09 2.09\nleft side, next byte  interior 1.45; position 63 1.48\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "encoders-decoders/encoders-decoders-what-the-second-side-is-worth-1-1.svg",
-          "bytes": 22670,
-          "sha256": "sha256:de04ac19b6d7b3e44b4bb273a2f7dfa48cda9f0672887a566df3d58afa4a2c0b"
+          "asset": "encoders-decoders/encoders-decoders-a-causal-control-1.svg",
+          "bytes": 31632,
+          "sha256": "sha256:4fb74e0eb80cbc40f06fcf42186539b22f450229bb8f528670747107a699bbcb"
         }
       ]
     },
     "encoders-decoders-what-the-second-side-is-worth-2": {
-      "code_fingerprint": "sha256:1bd1b26539d3ded75e620de5a0272cf7205d18e49a91aaca083a33c27f26ff1d",
+      "code_fingerprint": "sha256:fa9e216c1f993d9ed5131e1254a3ca8170b6d5a117821c73758c7ff839a5b566",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'Homarus gam_arus , known as the European'... -> 'p' 0.61, 'b' 0.16, 'm' 0.11\n'Homarus gammarus , kno_n as the European'... -> 'w' 0.87, 'o' 0.05, 'i' 0.01\n'Homarus gammarus , known as _he European'... -> 't' 0.87, 'T' 0.04, 'w' 0.03\n"
+          "text": "'Homarus gam_arus , known as the European'... -> 'm' 0.21, 'l' 0.15, ' ' 0.14\n'Homarus gammarus , kno_n as the European'... -> 'w' 0.94, 'r' 0.01, 'h' 0.01\n'Homarus gammarus , known as _he European'... -> 't' 0.82, 's' 0.06, 'T' 0.04\n"
         }
       ]
     },
     "encoders-decoders-a-task-whose-alignment-we-know": {
-      "code_fingerprint": "sha256:e4ebe7f919cf85bb3fc62d6c4a54ffe91510a1200728911fb0ce9ee71abcf23f",
+      "code_fingerprint": "sha256:4c6daac95f9173e0837ac79fe8ed553921904425292df94f00f8694d3130dbb2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source 'ojhjlnofabdi' -> target 'idbafonljhjo'\n"
+          "text": "source 'hbdpgjdekeao' -> target 'oaekedjgpdbh'\n"
         }
       ]
     },
     "encoders-decoders-the-decoder-block-one-more-sublayer-1": {
-      "code_fingerprint": "sha256:46626cb62a1ac61c2d86e4769b099799aa0c8ac31176f52548c0b91c70ea3d00",
+      "code_fingerprint": "sha256:16d23d9eb929d096694cd79ae6811ae4c3d30949e720348c05c9188882512e96",
       "kind": "text",
       "outputs": []
     },
     "encoders-decoders-the-decoder-block-one-more-sublayer-2": {
-      "code_fingerprint": "sha256:9c19a2cbb6a2761841a7d3ac45768fc785c49cedd5dbc8cfe466fac781388652",
+      "code_fingerprint": "sha256:9a2af61f9140003fd72568340df3a63dd06a3ccc14d1b4c2b8ffc336ac2ae8bb",
       "kind": "text",
       "outputs": []
     },
+    "encoders-decoders-training-and-decoding-1": {
+      "code_fingerprint": "sha256:b955d0ced4a028b5c09bd932029c9120f6cf82a19271ab73f49cb14a6ca80850",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss at step 25/50/100/200/300: 2.078/0.544/0.013/0.002/0.001\n"
+        }
+      ]
+    },
+    "encoders-decoders-training-and-decoding-2": {
+      "code_fingerprint": "sha256:8e17bae849ac8b4f3d5f92eb0a8eced28260ed4875cebdc04a8b7bf4181172bb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact match on 1000 fresh strings: 1.000\nsource 'hnimdhmfeifm' -> predicted 'mfiefmhdminh'\n"
+        }
+      ]
+    },
+    "encoders-decoders-reading-the-alignment-1": {
+      "code_fingerprint": "sha256:36c1e6d8a2e79b153114ddc5cdaa9524054b6ff94acf8809bf84f2b6ac49a723",
+      "kind": "text",
+      "outputs": []
+    },
+    "encoders-decoders-reading-the-alignment": {
+      "code_fingerprint": "sha256:e345794afa7da3023eb5fef416aa94946437a194d6b648d22df12317cf352f9f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "encoder with self-attention, six runs\n  exact match: 1.000 1.000 1.000 1.000 1.000 1.000\n  rows on the true source position: 51% 100% 28% 100% 100% 92%\nencoder without self-attention, six runs\n  exact match: 1.000 1.000 1.000 1.000 1.000 1.000\n  rows on the true source position: 100% 100% 100% 100% 100% 100%\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "encoders-decoders/encoders-decoders-reading-the-alignment-1.svg",
+          "bytes": 34509,
+          "sha256": "sha256:743cd9bae20cca13b4238879762dbdc124db227fc4bb557a1fc9d72303bb91e9"
+        }
+      ]
+    },
     "encoders-decoders-assembling-the-masks": {
-      "code_fingerprint": "sha256:ba15f391ad4ca1e84b08b629b4c990831278a109d31c2227582fa79af5ca8e14",
+      "code_fingerprint": "sha256:851a0f768c84349c0b218997c4a082f565883fc22c044ed87f57b99b74b8c532",
       "kind": "text",
       "outputs": [
         {
@@ -90,103 +146,41 @@
         }
       ]
     },
-    "encoders-decoders-assembling-the-masks-1": {
-      "code_fingerprint": "sha256:e51050372a8a2226a856635de19af8e906d02f82c20049f94000fd7e907f38dd",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "[[28 25 47  0  0]\n [30 25 45  0  0]\n [21 25 54  0  0]\n [32 28 41  0  0]]\n"
-        }
-      ]
-    },
-    "encoders-decoders-training-and-decoding-1": {
-      "code_fingerprint": "sha256:1b1c43d326ce4c165b3e49d193a73ca79560d1734bf2effd9d4a8192eca7021c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "loss at step 100/200/400/600: 0.006/0.003/0.000/0.000\n"
-        }
-      ]
-    },
-    "encoders-decoders-training-and-decoding-2": {
-      "code_fingerprint": "sha256:c89dac229ef1a4c34910b04a249738451cc308c2a2587a980e4aac07099a6375",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "exact match on 1000 fresh strings: 1.000\nsource 'fliejekpoifk' -> predicted 'kfiopkejeilf'\n"
-        }
-      ]
-    },
-    "encoders-decoders-reading-the-alignment": {
-      "code_fingerprint": "sha256:96afbbee423b7ecb983ebc9babfa94d5b8c30b9b82fc80dc49aa96a247378c39",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "head average: argmax on the true source position in 100% of rows, mean weight there 0.98\nweight on the true position, per head: 0.99 0.98 0.97 0.99\nargmax in the same column for every string: 100% of rows\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "encoders-decoders/encoders-decoders-reading-the-alignment-1.svg",
-          "bytes": 32092,
-          "sha256": "sha256:a40a94067d42f636d70f05b7bdd4d7520395c304825ed66e4bc6431243e170e6"
-        }
-      ]
-    },
     "encoders-decoders-queries-need-not-come-from-a-sequence": {
-      "code_fingerprint": "sha256:dac9bb72a5045948763b2cd86608292d703bd0f180c7fd7036c63838f94680e8",
+      "code_fingerprint": "sha256:fd7859b12ed839a389114f430411ff14193a1ff8e8d650ccc47a9e59cac4d5e5",
       "kind": "text",
       "outputs": []
     },
-    "encoders-decoders-learned-queries-1": {
-      "code_fingerprint": "sha256:31e6a2d09230b5dc32732650947017a7b50e788502e403c15e15f4e23f646dd9",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "input (1, 4096, 256) -> latent summary (1, 64, 256)\n"
-        }
-      ]
-    },
     "encoders-decoders-the-cost-curve": {
-      "code_fingerprint": "sha256:6a4d9824eaa9cdfca0d7ff0dd530fb695d9957038848bcaac2dc07014d1c66bd",
+      "code_fingerprint": "sha256:86d9b98c1cb9ca8bf7c60c875948acdc72f2ff15572561155880f280acb58352",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 1024: self-attention   1.48 ms, perceiver  1.63 ms\n"
+          "text": "N= 1024: self-attention   0.24 ms, perceiver  0.15 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 2048: self-attention   4.55 ms, perceiver  1.43 ms\n"
+          "text": "N= 2048: self-attention   0.62 ms, perceiver  0.16 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 4096: self-attention  13.67 ms, perceiver  1.66 ms\n"
+          "text": "N= 4096: self-attention   2.85 ms, perceiver  0.21 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 8192: self-attention  48.32 ms, perceiver  2.54 ms\n"
+          "text": "N= 8192: self-attention  10.47 ms, perceiver  0.27 ms\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-the-cost-curve-1.svg",
-          "bytes": 28570,
-          "sha256": "sha256:a9ad377eaa125282628006adbc92ba1efa387153ab09c42a2b43eb17d3b5642f"
+          "bytes": 28266,
+          "sha256": "sha256:2dc1edc14f912cd002c8223096586b0749eda23faed7211512c734b7b707bb74"
         }
       ]
     }

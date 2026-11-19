@@ -1,14 +1,16 @@
 # Vision Transformer
 :label:`sec_vision-transformer`
 
-The convolutional networks of :numref:`chap_cnn` were designed for images.
-They build in two assumptions (:numref:`sec_why-conv`): *locality*, by
-which a unit looks only at a small neighborhood, and *translation
-equivariance*, by which a shifted input produces a shifted output. A
-transformer block assumes neither. It maps a sequence of vectors to a
-sequence of the same shape, and nothing in it says that the vectors stand
-for words, or that two of them are neighbors. Can the same blocks, told
-nothing about images, learn to classify them?
+We have classified Fashion-MNIST garments before, with LeNet
+(:numref:`sec_lenet`) and with a ResNet (:numref:`sec_resnet`). Both were
+built for images. They rest on two assumptions (:numref:`sec_why-conv`):
+*locality*, by which a unit looks only at a small neighborhood, and
+*translation equivariance*, by which a shifted input produces a shifted
+output. A transformer block assumes neither. It maps a sequence of vectors
+to a sequence of the same shape, and nothing in it says that the vectors
+stand for words, or that two of them are neighbors. Let us take the block
+we built for text, tell it nothing about images, and see whether it can
+learn to sort the same shirts, sneakers and bags.
 
 The first obstacle is the choice of tokens. One token per pixel is far too
 expensive, because attention scores every pair of tokens. Even a small
@@ -18,20 +20,20 @@ the $224 \times 224$ resolution of ImageNet the count exceeds 2.5 billion.
 Early attention models for vision therefore kept the computation local or
 the images small. :citet:`ramachandran2019stand` restricted self-attention
 to small windows. :citet:`cordonnier2020relationship` proved that a
-self-attention layer with enough heads can express any convolution, and
-applied full attention to $2 \times 2$ patches of small images.
+self-attention layer with enough heads and relative position encodings can
+express any convolution, and applied full attention to $2 \times 2$ patches
+of small images.
 
 The *vision transformer* (ViT) of :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`
 takes a coarser route. It cuts the image into patches of $16 \times 16$
 pixels, embeds each patch as one token, and passes the sequence to an
 unmodified transformer encoder. Our $96 \times 96$ image becomes 36 tokens,
-and each head scores 1,296 pairs. Nothing in a ViT tells it that two
-patches are neighbors.
+and each head scores 1,296 pairs instead of 85 million.
 
-This section builds a ViT, trains it on Fashion-MNIST, and checks whether its
-position embeddings learn the layout of the patch grid. It then compares the
-ViT with a convolutional network of the same size, trained with the same
-recipe for the same number of epochs.
+We build a ViT, train it on Fashion-MNIST, and then ask two questions of
+it. Does the trained model use the layout of its patches, which nobody told
+it about? And how does it fare against a ResNet of the same size, trained
+with the same recipe for the same number of epochs?
 
 ```{.python .input #vision-transformer}
 %%tab pytorch
@@ -62,16 +64,25 @@ non-overlapping patches gives $m = hw/p^2$ patches, and each patch flattens
 to a vector of length $cp^2$. A linear map then projects every flattened
 patch to a vector of width $d$, the width of the transformer. For our
 grayscale images, $h = w = 96$, $c = 1$, and $p = 16$, which gives a
-$6 \times 6$ grid of $m = 36$ patches of 256 pixels each.
+$6 \times 6$ grid of $m = 36$ patches of 256 pixels each. Fashion-MNIST
+images have only $28 \times 28$ pixels; we upsample them to $96 \times 96$
+so that the patch size of the original ViT applies. Each patch therefore
+covers under five of the original pixels per side, and the model sees a
+garment as 36 small tiles. The upsampling is a convenience. It adds no
+information, yet the stem now reads about twelve times as many pixels as the
+original image holds; an exercise asks what that costs.
 
-Cutting and projecting can be done in a single operation, a
-convolution whose kernel size and stride both equal $p$. At each output
-position, the $c \times p \times p$ kernel of output channel $k$ covers
-exactly one patch, and the output is the inner product of the kernel with
-that patch, which is entry $k$ of the patch's linear projection. The
-convolution's weight tensor of shape $(d, c, p, p)$ is the projection
-matrix, reshaped. `PatchEmbedding` applies this convolution and flattens
-the grid of outputs into a sequence.
+Cutting and projecting can be done in a single operation, a convolution
+whose kernel size and stride both equal $p$. At each output position, the
+$c \times p \times p$ kernel of output channel $k$ covers exactly one patch,
+and the output is the inner product of the kernel with that patch, which is
+entry $k$ of the patch's linear projection. The convolution's $d$ kernels,
+each of shape $c \times p \times p$, are the rows of the $d \times cp^2$
+projection matrix, reshaped. Since the windows never overlap, this
+convolution inherits none of the locality of a CNN beyond the patch
+boundary: it is simply a fast way to apply one matrix to every patch.
+`PatchEmbedding` applies it and flattens the grid of outputs into a
+sequence.
 
 ```{.python .input #vision-transformer-patches-as-tokens-1}
 %%tab pytorch
@@ -113,14 +124,14 @@ class PatchEmbedding(nnx.Module):  #@save
         return X.reshape(X.shape[0], -1, X.shape[-1])
 ```
 
-A minibatch of four $96 \times 96$ color images, cut into $16 \times 16$
-patches, should become four sequences of 36 tokens of width 512:
+We check the shapes on a minibatch of four blank grayscale images, which
+should come out as four sequences of 36 tokens of width 512:
 
 ```{.python .input #vision-transformer-patches-as-tokens-2}
 %%tab pytorch
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
-patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
-X = torch.zeros(batch_size, 3, img_size, img_size)
+patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens, num_channels=1)
+X = torch.zeros(batch_size, 1, img_size, img_size)
 d2l.check_shape(patch_emb(X),
                 (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
@@ -128,9 +139,9 @@ d2l.check_shape(patch_emb(X),
 ```{.python .input #vision-transformer-patches-as-tokens-2}
 %%tab jax
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
-patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens,
+patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens, num_channels=1,
                            rngs=nnx.Rngs(d2l.get_key()))
-X = jnp.zeros((batch_size, img_size, img_size, 3))
+X = jnp.zeros((batch_size, img_size, img_size, 1))
 d2l.check_shape(patch_emb(X),
                 (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
@@ -152,26 +163,22 @@ token, and the position embeddings.
 
 ### The Encoder Block
 
-The body of the model is the pre-norm transformer block of
-:numref:`sec_transformer-block`. Each of its two sublayers, multi-head
-self-attention and a two-layer MLP, reads a normalized copy of the residual
-stream and adds its output back, so the stream itself is never normalized,
-only added to. ViT adopted this arrangement after analyses had shown that
-it trains deep stacks more reliably than the post-norm original
-:cite:`baevski2018adaptive,wang2019learning,xiong2020layer`, and most
-transformers have used it since.
-
-`ViTBlock` is therefore a `d2l.TransformerBlock` with two changes, both
-from the original ViT recipe. It normalizes with LayerNorm (`norm='layer'`),
-which centers and scales each token vector. And it replaces the FFN through
-the `ffn_factory` hook by a two-layer MLP of free width `mlp_num_hiddens`
-with the Gaussian error linear unit (GELU), a smooth relative of ReLU
-:cite:`Hendrycks.Gimpel.2016`, in its exact form, and dropout after the
-hidden layer. Together with the dropout that `TransformerBlock` applies to
-the output of each sublayer, this places dropout where the original ViT
-does: after attention and after each of the MLP's two linear layers.
-Because every patch may attend to every other, the block needs no mask: the
-`mask` argument stays `None` throughout this section.
+The body of the model is the pre-norm block of
+:numref:`sec_transformer-block`, an arrangement that ViT took from earlier
+language and translation models :cite:`baevski2018adaptive,wang2019learning`.
+`ViTBlock` departs from the defaults of `d2l.TransformerBlock` in two
+places, both taken from the original paper. It normalizes with LayerNorm,
+which centers and scales each token vector, instead of RMSNorm. And its MLP
+is the plain two-layer kind, with the Gaussian error linear unit (GELU), a
+smooth relative of ReLU :cite:`Hendrycks.Gimpel.2016`, instead of SwiGLU.
+Nothing about images calls for either; they are what transformers used in
+2020, and we keep them so that our block stays close to the published one.
+It is not identical: our attention projections carry no biases, and our
+blocks also apply dropout to the attention weights, which the original does
+not. Elsewhere dropout sits where the original puts it, after the
+embeddings, after attention, and after each of the MLP's two linear layers.
+The `mask` argument stays `None` throughout this section, because every
+patch may attend to every other.
 
 ```{.python .input #vision-transformer-the-vision-transformer-block-1}
 %%tab pytorch
@@ -203,51 +210,55 @@ class ViTBlock(d2l.TransformerBlock):  #@save
                 d2l.Linear(mlp_num_hiddens, num_hiddens, rngs=rngs)))
 ```
 
-As with every transformer block, the output shape equals the input shape,
-so the blocks can be stacked:
-
-```{.python .input #vision-transformer-the-vision-transformer-block-2}
-%%tab pytorch
-X = torch.ones(2, 100, 24)
-encoder_blk = ViTBlock(24, 48, 8, 0.5)
-encoder_blk.eval()
-d2l.check_shape(encoder_blk(X), X.shape)
-```
-
-```{.python .input #vision-transformer-the-vision-transformer-block-2}
-%%tab jax
-X = jnp.ones((2, 100, 24))
-encoder_blk = ViTBlock(24, 48, 8, 0.5, rngs=nnx.Rngs(d2l.get_key()))
-d2l.check_shape(nnx.view(encoder_blk, deterministic=True)(X), X.shape)
-```
-
 ### The Class Token and Position Embeddings
 
 Two more pieces turn the stack into a classifier. The first is a learned
 vector, the “&lt;cls&gt;” (class) token, that is prepended to the 36 patch
-tokens and initialized to zeros. It corresponds to no patch. In every block
-it attends to all patches, so its final representation can collect whatever
+tokens, initialized to zeros, and corresponds to no patch. In every block it
+attends to all patches, so its final representation can collect whatever
 evidence the classification needs, and the head reads the class from it
-alone. Averaging the final representations of all patches works about as
-well :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`; the exercises compare the
-two readouts.
+alone. The choice is a convention rather than a discovery: averaging the
+final representations of the 36 patches, the usual way to read one vector
+out of an encoder (:numref:`sec_transformer`), works about as well
+:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`, and the exercises compare the
+two.
+
+A token without image content turns out to have a second use, which large
+models find for themselves. Large ViTs trained for long take over a few
+patches of plain background and use them to hold global information that
+no single patch holds, much as GPT-2 parks attention on the first token of
+a passage (:numref:`subsec_kv-cache-sinks`). The outputs of those patches
+then no longer describe their patch, which hurts every use that reads patch
+outputs, such as segmentation or maps of attention. A few extra input-free
+tokens, called *registers*, give the model room for such information and
+leave the patches to describe themselves :cite:`Darcet.Oquab.Mairal.ea.2024`.
 
 The second piece tells the model where each patch sits. Without position
 information, self-attention is permutation equivariant
 (:numref:`subsec_pos-ignores-order`): permuting the input tokens permutes
 the outputs in the same way, so a model that reads one output token cannot
-distinguish an image from any rearrangement of its patches. A patch has a
-row *and* a column, and both must be encoded. A fixed *2-D sinusoidal code*
-uses half of each vector for the 1-D sinusoidal code of the row
-(:numref:`sec_positional-information`) and the other half for that of the
-column :cite:`Beyer.Zhai.Kolesnikov.2022`. A 2-D form of RoPE rotates
-queries and keys by angles proportional to the row and to the column
-:cite:`Heo.Park.Han.ea.2024`. The original ViT does neither. It learns one
-free vector per token position, initialized to small Gaussian noise, and
-adds it to the token. We follow the original recipe. At initialization the
-model therefore has no notion that patch 7 lies directly to the left of
-patch 8 and directly above patch 13; whatever spatial structure it uses, it
-must discover during training.
+distinguish an image from any rearrangement of its patches. A shirt cut
+into 36 tiles and shuffled would be the same shirt to it.
+
+A patch has a row *and* a column, so a fixed code must be built in two
+dimensions. The 1-D sinusoidal code of :numref:`sec_positional-information`,
+applied to the patches in raster order, would give patch 6, at the right end
+of the first row, and patch 7, at the left end of the second, neighboring
+codes, although the two lie at opposite edges of the image. A *2-D sinusoidal
+code* instead uses half of each vector for the 1-D code of the row and the
+other half for that of the column :cite:`Beyer.Zhai.Kolesnikov.2022`. A 2-D
+form of RoPE rotates queries and keys by angles proportional to the row and to
+the column :cite:`Heo.Park.Han.ea.2024`. A learned table need not be built in
+two dimensions, because a free vector per position can come to reflect any
+layout. The original ViT learns one such vector per token position,
+initialized to small Gaussian noise, and adds it to the token. In the paper's
+own ablation, learned 1-D and 2-D tables and relative encodings did about
+equally well, while leaving out position information altogether cost two to
+three points of accuracy in a few-shot evaluation on ImageNet
+:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`. We follow the original recipe.
+At initialization the model therefore has no notion that patch 7 lies directly
+to the left of patch 8 and directly above patch 13; whatever spatial structure
+it uses, it must discover during training.
 
 `ViT` assembles the pieces: patch embedding, class token, position
 embeddings with dropout, `num_blks` blocks, and a head that normalizes the
@@ -347,61 +358,39 @@ class ViT(d2l.Classifier):  #@save
             mask=decay)
 ```
 
-### Register Tokens
-
-The class token is an input with no image content, a place where the model
-can collect and store information. Large ViTs turn out to need more such
-places. :citet:`Darcet.Oquab.Mairal.ea.2024` found that ViTs of the size of
-ViT-Large and above, once trained long enough, take over about 2% of the
-patch tokens, mostly in uninformative background regions, and use them for
-internal computation. The outputs of these tokens have norms about ten times
-those of the others, they carry little information about their own patch,
-and they show up as bright spots in the attention maps. This is the vision
-counterpart of the attention sinks of :numref:`subsec_kv-cache-sinks`,
-positions that receive a large share of the attention whether or not their
-content is relevant to the query.
-
-The remedy is to provide the storage explicitly. A few additional learned
-tokens, called *registers*, are appended to the input like the class token
-and discarded at the output. One register already removes the artifacts,
-and four, the number used in most of the paper's experiments, improve
-the tasks that read the patch outputs, such as segmentation, depth
-estimation, and object discovery, while adding less than 2% to the
-computation. Our two-block model is far below the size at which the
-artifacts appear, so we train it without registers.
-
 ## Training on Fashion-MNIST
 
 ### A First Run
 :label:`subsec_vit-first-run`
 
-We train a small ViT on Fashion-MNIST, with the images resized to
-$96 \times 96$ so that $16 \times 16$ patches give the $6 \times 6$ grid of
-36 tokens. The model has two blocks of width 512 with eight heads and an MLP
-of width 2,048, about 6.5 million parameters in all.
+We train a deliberately small ViT on the upsampled Fashion-MNIST images. It
+has two blocks of width 512 with eight heads and an MLP of width 2,048,
+about 6.5 million parameters in all. ViT-Base, the smallest model of the
+original paper, has twelve blocks of width 768 and 86 million parameters;
+two blocks keep each training run of this section short.
 
-The training recipe matters more for a transformer than for a CNN. In the
-ablation of :citet:`touvron2021training`, replacing AdamW by SGD, with
-everything else unchanged, lowered the ImageNet accuracy of a ViT-Base from
-81.8% to 74.5%. `ViT` therefore uses the optimizer and schedule of the
-compact modern recipe of :numref:`sec_training_recipes`: AdamW with weight
-decay 0.05, and a learning rate that rises linearly from zero and then
-decays to zero along a half-cosine :eqref:`eq_cosine_warmup`. We tuned each
-model's base rate over $\{3 \times 10^{-4}, 10^{-3}, 3 \times 10^{-3}\}$. The
-ViT trains best at $3 \times 10^{-4}$ and ends four to five points lower at
-$10^{-3}$; the CNN of :numref:`subsec_vit-cnn-baseline` varies by about a
-point over the three rates and does equally well at $10^{-3}$ and
-$3 \times 10^{-3}$, so we use $10^{-3}$ for it. For both models the warmup
-takes the first tenth of the minibatch steps, which over ten epochs is the
-first epoch. The decay acts on the weight
-matrices and convolution kernels only. Biases and normalization parameters
-are exempt, as in :numref:`subsec_adamw-what-not-to-decay`, and so are the
-class token and the position embeddings, as in the training code of
+A transformer is also more particular about its optimizer than a CNN.
+ResNets are routinely trained with SGD and momentum, but in the DeiT study
+of :citet:`touvron2021training`, replacing AdamW by SGD, with everything
+else unchanged, lowered the ImageNet accuracy of a ViT-Base from 81.8% to
+74.5%. `ViT` therefore uses the optimizer and schedule of the compact modern
+recipe of :numref:`sec_training_recipes`: AdamW with weight decay 0.05. The
+learning rate rises linearly from zero during the first tenth of the
+minibatch steps, which over ten epochs is the first epoch, and then falls to
+zero along a half-cosine. We tuned the peak rate for each model over three
+values and use the best: $3 \times 10^{-4}$ for the ViT and $10^{-3}$ for
+the CNN of :numref:`subsec_vit-cnn-baseline`. An exercise repeats the
+sweep.
+
+The decay acts on the weight matrices and convolution kernels only. Biases
+and normalization parameters are exempt, as in
+:numref:`subsec_adamw-what-not-to-decay`, and so are the class token and
+the position embeddings, as in the training code of
 :citet:`touvron2021training`. Decaying the position embeddings would also
-pull them toward zero while we try to measure what they learn. We leave out the recipe's label smoothing and
-Mixup, regularizers that help over long runs, so that the ViT and the CNN
-it is compared with later both minimize the plain cross-entropy for ten
-epochs.
+pull them toward zero while we try to measure what they learn. We leave out
+the recipe's label smoothing and Mixup, which soften the training targets
+and help over long runs, so that the ViT and the CNN it is compared with
+later both minimize the plain cross-entropy for ten epochs.
 
 ```{.python .input #vision-transformer-a-first-run-1}
 %%tab pytorch, jax
@@ -412,14 +401,21 @@ hparams = dict(img_size=96, patch_size=16, num_hiddens=512,
                emb_dropout=0.1, blk_dropout=0.1, num_steps=num_steps)
 ```
 
+Along with a fresh model we keep a copy of its initial position table, the
+noise that training starts from, for a comparison later in the section.
+
 ```{.python .input #vision-transformer-a-first-run-3}
 %%tab pytorch
-model = ViT(**hparams, lr=3e-4)
+vit = lambda: ViT(**hparams, lr=3e-4)  # A fresh model at the tuned rate
+model = vit()
+pos_init = model.pos_embedding[0, 1:].detach().clone()  # The initial noise
 ```
 
 ```{.python .input #vision-transformer-a-first-run-3}
 %%tab jax
-model = ViT(**hparams, lr=3e-4, rngs=nnx.Rngs(d2l.get_key()))
+vit = lambda: ViT(**hparams, lr=3e-4, rngs=nnx.Rngs(d2l.get_key()))
+model = vit()  # A fresh model at the tuned rate
+pos_init = model.pos_embedding[0, 1:]  # The initial noise, a new array
 ```
 
 ```{.python .input #vision-transformer-a-first-run-2}
@@ -432,32 +428,166 @@ print(f'ViT: {vit_params/1e6:.1f}M parameters, '
       f'validation accuracy {vit_acc:.2f}')
 ```
 
-The ViT reaches a validation accuracy of about 90%. Before we ask whether
-that is good for a model of its size, we look at what it has learned about
-the position of its patches.
+The ViT reaches a validation accuracy of about 89%. Before we ask whether
+that is good for a model of its size, we look at what it has made of the
+positions of its patches.
 
-### Grid Structure in the Learned Embeddings
+### The Role of Position
 :label:`subsec_vit-pos-grid`
 
-The position embeddings started as noise, and nothing in the training
-signal ever names a row or a column. In fully trained ViTs they reflect the
-grid nonetheless. In the analysis of
-:citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`, each position's embedding is
-most similar to those of its neighbors and of its own row and column. Does
-our small model show this after ten epochs?
+The model was never told that its 36 tokens form a grid. Has it learned to
+use the layout anyway? The most direct test does not look inside the model
+at all. We cut every validation image into its 36 blocks of
+$16 \times 16$ pixels and rearrange the blocks by one fixed random
+permutation of the grid cells. The model's position embeddings stay where
+they are, so each block now arrives at a position that is not its own. The
+test is a coarse relative of the shuffled pixels of :numref:`sec_lenet`,
+with one difference: LeNet was trained on its shuffled images, while our
+ViT is trained on intact ones and meets the shuffled blocks only at
+validation. `shuffle_patches` does the rearrangement, and
+`shuffled_accuracy` evaluates the model on the rearranged images.
 
-We measure the structure with one curve. For every pair of the 36 patch
-positions we compute the cosine similarity of their embeddings, after
-subtracting the mean embedding over all positions: a component shared by
-every position says nothing about where a patch is. We then average the
-similarities over all pairs at the same grid distance, counted as the larger
-of the row offset and the column offset, so that the eight cells around a
-patch are at distance 1. Embeddings that encode the grid give a curve that
-falls with distance. Independent random vectors in 512 dimensions give a
-flat curve slightly below zero, near $-1/35$: once centered, the 36 vectors
-sum to zero, which makes their average pairwise cosine negative. As a
-reference we compute the same curve for the fixed
-2-D sinusoidal code, which encodes the grid by design.
+```{.python .input #vision-transformer-does-the-vit-use-position-1}
+%%tab pytorch
+def shuffle_patches(X, perm, p=16):
+    """Move the p x p blocks of images X: block perm[k] goes to grid cell k."""
+    n, c, h, w = X.shape
+    B = X.reshape(n, c, h // p, p, w // p, p).transpose(3, 4)  # Grid of blocks
+    B = B.reshape(n, c, -1, p, p)[:, :, perm]  # Blocks in raster order, moved
+    B = B.reshape(n, c, h // p, w // p, p, p).transpose(3, 4)
+    return B.reshape(X.shape)
+
+def shuffled_accuracy(model, data, perm):
+    """Validation accuracy on images whose blocks are moved by perm."""
+    return d2l.evaluate_accuracy(model, ((shuffle_patches(X, perm), y)
+                                         for X, y in data.val_dataloader()))
+```
+
+```{.python .input #vision-transformer-does-the-vit-use-position-1}
+%%tab jax
+def shuffle_patches(X, perm, p=16):
+    """Move the p x p blocks of images X: block perm[k] goes to grid cell k."""
+    n, h, w, c = X.shape
+    B = X.reshape(n, h // p, p, w // p, p, c).swapaxes(2, 3)  # Grid of blocks
+    B = B.reshape(n, -1, p, p, c)[:, perm]  # Blocks in raster order, moved
+    B = B.reshape(n, h // p, w // p, p, p, c).swapaxes(2, 3)
+    return B.reshape(X.shape)
+
+def shuffled_accuracy(model, data, perm):
+    """Validation accuracy on images whose blocks are moved by perm."""
+    return d2l.evaluate_accuracy(model, ((shuffle_patches(X, perm), y)
+                                         for X, y in data.val_dataloader()))
+```
+
+Before running the test, consider the two extremes. A model that ignored
+position would not notice the shuffle at all, by the permutation
+equivariance above. A model that rested every decision on the layout would
+fall to 10%, the rate of guessing. We try five permutations, since one
+alone might move only unimportant blocks:
+
+```{.python .input #vision-transformer-does-the-vit-use-position-2}
+%%tab pytorch, jax
+rng = np.random.default_rng(0)
+perms = [rng.permutation(36) for _ in range(5)]  # Five fixed shuffles
+accs = [shuffled_accuracy(model, data, perm) for perm in perms]
+print(f'trained ViT: {vit_acc:.3f} as is, '
+      f'{min(accs):.2f} to {max(accs):.2f} with its patches shuffled')
+```
+
+Shuffling drops the ViT from 89% to below one half under every one of the
+five permutations, although it stays well above chance, and the printed
+range shows that the damage depends on which blocks are moved. The trained
+model does use the layout of its patches. Does it need it? A model that was
+given positions has had no reason to learn to do without them, so the
+shuffle test cannot answer this. A second model can: a ViT whose position
+table is set to zero and kept out of training, so that it never sees a
+position at all.
+
+```{.python .input #vision-transformer-does-the-vit-use-position-3}
+%%tab pytorch
+def zero_positions(model):
+    """Set the position table to zero and keep it out of training."""
+    model.pos_embedding.data.zero_()
+    model.pos_embedding.requires_grad_(False)  # No gradient: AdamW skips it
+    return model
+```
+
+```{.python .input #vision-transformer-does-the-vit-use-position-3}
+%%tab jax
+def zero_positions(model):
+    """Set the position table to zero and keep it out of training."""
+    # The trainer differentiates and updates nnx.Param only; a plain
+    # Variable stays as it is
+    model.pos_embedding = nnx.Variable(jnp.zeros_like(model.pos_embedding))
+    return model
+```
+
+We train two such models with the recipe of the first run, and one more ViT
+with learned positions, so that each arm has two runs and their spread
+gives a run-to-run range. One number can be predicted before the cell
+prints it. With all positions equal, the proposition of
+:numref:`subsec_pos-ignores-order` leaves the logits of the zero-position
+model unchanged when its patches are shuffled, so its accuracy under the
+first permutation must equal its accuracy on the intact images.
+
+```{.python .input #vision-transformer-does-the-vit-use-position-4}
+%%tab pytorch, jax
+def final_accuracy(model, data):
+    """Validation accuracy after the ten epochs of the first run."""
+    trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+    trainer.board.display = False  # No progress plot for the repeats
+    trainer.fit(model, data)
+    return trainer.history['val_acc'][-1]
+
+learned_runs = [vit_acc, final_accuracy(vit(), data)]
+zero_model = zero_positions(vit())
+zero_runs = [final_accuracy(zero_model, data),
+             final_accuracy(zero_positions(vit()), data)]
+print('learned positions:', ', '.join(f'{a:.3f}' for a in learned_runs))
+print('zero positions:   ', ', '.join(f'{a:.3f}' for a in zero_runs),
+      f'(shuffled: {shuffled_accuracy(zero_model, data, perms[0]):.3f})')
+```
+
+The prediction holds: shuffled or not, the zero-position model scores the
+same. Like the MLP of :numref:`sec_lenet` on shuffled pixels, it cannot
+tell the difference. Each zero-position run lies one to two points below
+each learned-position run, while the two runs of an arm agree to within
+half a point. Learned positions help, but only a little. A ViT that has never
+known where any patch sits still reaches about 87 to 88%, and the original
+paper's ablation, cited above, found a loss of similar size at a far larger
+scale.
+
+So shuffling costs the trained ViT more than 40 points, yet the layout is
+worth only one to two points of its accuracy. Using a piece of information
+is not the same as needing it. A model that has positions builds features
+that combine where with what, and a shuffled image feeds those features
+nonsense. A model without positions learns to classify the unordered set of
+36 tiles, and for Fashion-MNIST that set already says a great deal: a heel,
+a strap, a collar. At this scale most of the accuracy comes from what the
+patches contain, not from where they sit.
+
+The shuffle test asked the model; the cosines we compute next only describe
+its table. A table need not look like a grid to be used as one: 36
+distinct random vectors already identify every position, and attention can
+learn any relation between two positions through its query and key
+projections. Still, the table shows what ten epochs wrote into it, and
+fully trained ViTs give a reference. In the analysis of
+:citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`, each position's embedding is
+most similar to those of its neighbors and of its own row and column. Ten
+epochs on Fashion-MNIST are far from full training, and our table still
+carries much of its initial noise, so we look at it twice: as learned, and
+as `learned - pos_init`, its change from initialization, which holds only
+what training wrote.
+
+One curve summarizes a table. We center the 36 patch embeddings, since a
+component shared by every position says nothing about where a patch is,
+and average the cosine similarity of all pairs at the same grid distance.
+The distance is the larger of the row offset and the column offset, so
+that all eight cells around a patch lie at distance 1. A table that encodes
+the grid gives a curve that falls with distance. Two references frame the
+result: the fixed 2-D sinusoidal code, which encodes the grid by design,
+and independent random vectors, which give a flat curve slightly below zero
+(centered vectors sum to zero, which puts their mean cosine near $-1/35$).
 
 ```{.python .input #vision-transformer-do-the-position-embeddings-discover-the-grid}
 %%tab pytorch
@@ -476,9 +606,15 @@ S = d2l.sinusoidal_encoding(6, 256)      # 1-D codes of the 6 rows/columns
 rows, cols = torch.meshgrid(torch.arange(6), torch.arange(6), indexing='ij')
 fixed = torch.cat((S[rows.flatten()], S[cols.flatten()]), 1)  # (36, 512)
 learned = model.pos_embedding[0, 1:].detach().cpu()  # Drop the cls slot
-d2l.plot(list(range(1, 6)), [grid_similarity(learned), grid_similarity(fixed)],
-         'grid distance', 'mean cosine similarity',
-         legend=['learned', '2-D sinusoidal'])
+noise = torch.randn(36, 512)
+curves = {'learned': grid_similarity(learned),
+          'learned - initial': grid_similarity(learned - pos_init),
+          '2-D sinusoidal': grid_similarity(fixed),
+          'random': grid_similarity(noise)}
+for name, curve in curves.items():
+    print(f'{name:>17}:', '  '.join(f'{c:+.2f}' for c in curve))
+d2l.plot(list(range(1, 6)), list(curves.values())[:3], 'grid distance',
+         'mean cosine similarity', legend=list(curves)[:3])
 ```
 
 ```{.python .input #vision-transformer-do-the-position-embeddings-discover-the-grid}
@@ -497,39 +633,50 @@ S = d2l.sinusoidal_encoding(6, 256)      # 1-D codes of the 6 rows/columns
 rows, cols = jnp.meshgrid(jnp.arange(6), jnp.arange(6), indexing='ij')
 fixed = jnp.concatenate((S[rows.flatten()], S[cols.flatten()]), 1)  # (36, 512)
 learned = model.pos_embedding[0, 1:]     # Drop the cls slot
-d2l.plot(list(range(1, 6)), [grid_similarity(learned), grid_similarity(fixed)],
-         'grid distance', 'mean cosine similarity',
-         legend=['learned', '2-D sinusoidal'])
+noise = jax.random.normal(d2l.get_key(), (36, 512))
+curves = {'learned': grid_similarity(learned),
+          'learned - initial': grid_similarity(learned - pos_init),
+          '2-D sinusoidal': grid_similarity(fixed),
+          'random': grid_similarity(noise)}
+for name, curve in curves.items():
+    print(f'{name:>17}:', '  '.join(f'{c:+.2f}' for c in curve))
+d2l.plot(list(range(1, 6)), list(curves.values())[:3], 'grid distance',
+         'mean cosine similarity', legend=list(curves)[:3])
 ```
 
 The fixed code's curve falls from about 0.76 for neighboring patches to
 between $-0.3$ and $-0.5$ at distances 3 to 5, because by construction
-patches in nearby rows and columns get similar codes. The learned
-embeddings show only a trace of this structure. Their curve stays close to
-zero: neighbors are slightly more similar than patches three cells apart,
-by about a tenth, and the curve rises again at distance 5, where every pair
-joins two opposite edges of the image. Fashion-MNIST items rarely reach the
-edges, so the border patches mostly see background, which may make their
-embeddings alike; an exercise tests whether the small dip is more than
-chance. Ten epochs on 60,000 images teach the ViT little about its own
-geometry. The network that we compare with next is given this geometry by
-its architecture.
+patches in nearby rows and columns get similar codes. The learned table
+shows the same tendency on a far smaller scale: the mean cosine of
+neighbors is about 0.1 higher than that of patches two to four cells apart.
+Small does not mean doubtful. The random curve is flat at $-0.03$, its five
+values within about 0.01 of one another, so a difference of 0.1 is ten
+times their spread. The change from initialization favors neighbors in the
+same way, and then it turns up again: at distance 5, where every pair joins
+two opposite edges of the grid, it climbs back to the level of neighbors or
+a little above. Why the far edges should move alike, the curve does not
+say. Fashion-MNIST garments fill the image along their longer side, so many
+touch the top and the bottom, but the outer columns and above all the
+corners mostly show background. A plausible reason is that training moves
+the embeddings of such patches alike, and Exercise
+:exref:`ex_vision-transformer-grid-test` tests it.
 
 ## Comparison with a Convolutional Network
 
 ### A Convolutional Baseline at the Same Budget
 :label:`subsec_vit-cnn-baseline`
 
-Is 90% good for a model of 6.5 million parameters trained for ten epochs?
-We compare the ViT with a CNN built from the residual blocks of
+Is 89% good for a model of 6.5 million parameters trained for ten epochs? We
+compare the ViT with a CNN built from the residual blocks of
 :numref:`sec_resnet`, each of which adds the output of two $3 \times 3$
-convolutions with batch normalization to its input. `CompactResNet` uses the
+convolutions with batch normalization to its input (or, where the block
+downsamples, to a $1 \times 1$ projection of it). `CompactResNet` uses the
 familiar $7 \times 7$ stem and then seven residual blocks whose widths bring
-the total to the ViT's parameter count. Everything else is held equal. Both
-models see the same data for ten epochs, and both use the same recipe:
-`CompactResNet` borrows `configure_optimizers` from `ViT`. The two also do
-about the same work, about half a billion floating-point operations per
-image in the forward pass (the exercises derive both counts).
+the total to the ViT's parameter count. The training conditions are held
+equal. Both models see the same data for ten epochs, and both use the same
+recipe: `CompactResNet` borrows `configure_optimizers` from `ViT`. The two
+also do about the same work, about half a billion floating-point operations
+per image in the forward pass (the exercises derive both counts).
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-1}
 %%tab pytorch
@@ -595,14 +742,22 @@ class CompactResNet(d2l.Classifier):
         return self.net(X)
 ```
 
+A comparison needs a yardstick for how much a run can move by chance, so we
+train the CNN twice from fresh weights, as we trained each ViT arm twice.
+`compact_cnn` builds a fresh model, and the training cell after it prints
+both CNN runs next to the two learned-position ViT runs.
+
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-4}
 %%tab pytorch
-cnn = CompactResNet(num_steps, lr=1e-3)
+compact_cnn = lambda: CompactResNet(num_steps, lr=1e-3)  # A fresh CNN
+cnn = compact_cnn()
 ```
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-4}
 %%tab jax
-cnn = CompactResNet(num_steps, lr=1e-3, rngs=nnx.Rngs(d2l.get_key()))
+compact_cnn = lambda: CompactResNet(num_steps, lr=1e-3,
+                                    rngs=nnx.Rngs(d2l.get_key()))
+cnn = compact_cnn()  # A fresh CNN
 ```
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-2}
@@ -611,14 +766,17 @@ trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(cnn, data)
 cnn_history = trainer.history
 cnn_params, cnn_acc = d2l.num_params(cnn), cnn_history['val_acc'][-1]
-print(f'CNN: {cnn_params/1e6:.1f}M parameters, '
-      f'validation accuracy {cnn_acc:.2f}')
-print(f'ViT: {vit_params/1e6:.1f}M parameters, '
-      f'validation accuracy {vit_acc:.2f}')
+cnn_runs = [cnn_acc, final_accuracy(compact_cnn(), data)]  # Run-to-run range
+print(f'CNN: {cnn_params/1e6:.1f}M parameters, validation accuracy',
+      ', '.join(f'{a:.3f}' for a in cnn_runs))
+print(f'ViT: {vit_params/1e6:.1f}M parameters, validation accuracy',
+      ', '.join(f'{a:.3f}' for a in learned_runs))
 ```
 
-Plotting the validation accuracy of the two runs against the epoch shows
-how the gap develops over training:
+The CNN reaches about 94%, five points ahead of the ViT. The two runs of each
+model agree to a tenth of a point, and against that yardstick a gap of five
+points is not an accident of the draw. The validation curves of the first run
+of each show how the gap develops during training:
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-3}
 %%tab pytorch, jax
@@ -626,60 +784,102 @@ d2l.plot(list(range(1, 11)), [vit_history['val_acc'], cnn_history['val_acc']],
          'epoch', 'validation accuracy', legend=['ViT', 'CNN'])
 ```
 
+The CNN leads from the first epoch. The gap is widest in the first three
+epochs, where it reaches seven to ten points, and narrows to about five by
+the end. Both curves flatten at the end because the cosine schedule takes
+the learning rate to zero.
+
+The losses tell more than the accuracies. In the progress plot of the
+CNN's first run, above, the training loss falls almost to zero, and the
+validation loss stops falling after four to six epochs and then creeps up
+while the accuracy still rises, a sign that the network grows more
+confident in all its answers, the wrong ones included. Ten epochs
+are enough for the CNN to fit its 60,000 training images almost perfectly.
+The ViT's training loss in :numref:`subsec_vit-first-run` ends well above
+zero and not far below its validation loss, although dropout, which only
+the ViT uses, accounts for part of that. A longer schedule would leave the
+CNN little to fit and the ViT probably a good deal. How much of that would
+reach the validation set, and whether the ViT would catch up, these runs
+cannot say; the published results below can.
+
 At the same parameter count, data, recipe, and number of epochs, and at
-about the same computational cost, the CNN reaches about 94%, four to
-five points ahead of the ViT. The experiment measures the two models under one
-protocol; it does not say which property of the CNN produces the gap. The
-CNN builds in locality and translation equivariance, which the ViT must
-infer from 60,000 images, and the position embeddings of
-:numref:`subsec_vit-pos-grid` show how much of the spatial layout the ViT
-has inferred after ten epochs. But the two models also differ in depth, in
-normalization, and in how finely they look at the image.
+about the same computational cost, the CNN wins. The experiment measures
+the two models under one protocol; it does not say which property of the
+CNN produces the gap. The position table cannot explain most of it:
+knowing where each patch sits was worth only one to two points to our ViT.
+A CNN uses the layout in another way, by building locality into every
+layer, and it differs in more than that: it looks at the image at a finer
+grain than a 16-pixel patch, and it differs in depth and normalization. Nor
+is attention short of expressive power in principle: with enough heads and
+relative positions it can express a convolution, as the opening noted.
+What a model can represent and what it learns from 60,000 images in ten
+epochs are different things, and this comparison measures the second.
 
 ### The Comparison at Other Scales
 
-The patch size alone moves the result by two points on Fashion-MNIST and
-by sixteen on CIFAR-10. Training for 300 epochs with heavy augmentation,
-:citet:`Hassani.Walton.Shah.ea.2021` report 93.2% on Fashion-MNIST for ViTs
-of about 3.7 to 3.9 million parameters with $16 \times 16$ patches, 94.5%
-with $8 \times 8$ patches, and 95.2% with $4 \times 4$ patches, slightly
-above the 94.8% of a ResNet-18. On CIFAR-10 the same three models span 78%
-to 94%, and only the smallest patches beat the ResNet-18. Smaller patches
-mean more tokens, so the ViT sees finer detail at a higher cost: halving $p$
-quadruples the number of tokens and roughly quadruples the computation,
-while the parameter count barely changes.
+With long training and augmentation, the gap closes.
+:citet:`Hassani.Walton.Shah.ea.2021` trained compact ViTs, seven blocks and
+under 4 million parameters, for 300 epochs with heavy augmentation on small
+images. On Fashion-MNIST they report 93% with $16 \times 16$ patches, 94.5%
+with $8 \times 8$ patches, and 95% with $4 \times 4$ patches, against 94.8%
+for a ResNet-18 with about three times as many parameters. With one run of
+each model, the two finer settings, within half a point of the ResNet-18,
+are level with it, and the coarsest trails it by a point and a half. Only
+on CIFAR-10 does the ViT pull ahead, and only with the finest patches: the
+three ViTs span 78% to 94% against the ResNet-18's 90%, and
+at $p = 16$ a $32 \times 32$ photograph leaves the ViT just four tokens.
 
-The ranking also changes with the amount of data. When
-:citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` pretrained on the 300 million
-images of JFT-300M and fine-tuned on smaller benchmarks, their largest ViTs
-exceeded the convolutional baselines they compared with. In a controlled
-version, the same models were pretrained on random subsets of JFT-300M of
-9 million to 300 million images: the ResNets led on the smaller subsets,
-and the ViTs overtook them on the larger ones.
-:citet:`touvron2021training` then trained ViTs on the 1.3 million images of
-ImageNet alone, with strong augmentation and long training, and made them
-competitive with convolutional networks of similar cost. With enough data
-or a strong enough recipe, the assumptions that the CNN builds in are no
-longer needed for accuracy, and the transformer contributes its generality:
-the same block serves text, images, and both together.
+What do these numbers say about our run? Even their coarsest patches reach
+93% on Fashion-MNIST, so the cut into patches is not what holds our ViT at
+89%. Their ViTs differ from ours in depth and recipe at once, seven blocks
+trained for 300 epochs against two blocks trained for ten, and the
+comparison cannot say which of the two lifts them four to six points above
+ours. It does suggest that the transformer has far more to gain from a long
+recipe than the CNN, whose ten-epoch run here already ends about a point
+below their ResNet-18.
+
+More data reverses the ranking, and this is the result that changed the
+field. When :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` pretrained on
+random subsets of the 300 million images of JFT-300M, from 9 million images
+up, ResNets led on the smaller subsets and ViTs overtook them on the larger
+ones. :citet:`touvron2021training` then trained ViTs on the 1.3 million
+images of ImageNet alone, with strong augmentation and long training, and
+made them competitive with convolutional networks of similar cost.
+
+To train an image classifier from scratch on tens of thousands of images,
+use a CNN. To use a transformer on such data, fine-tune a pretrained ViT,
+or budget for hundreds of epochs and heavy augmentation. Most ViTs in use
+today are pretrained: trained on far larger collections of images, often
+paired with text, they serve as the image encoders of vision--language
+models, which pass the encoder's patch tokens to a language model much as
+if they were words. There the transformer's generality counts, since one
+block serves text, images, and both together. A from-scratch run on 60,000
+small images, as in this section, is the hardest case for the
+architecture, and the CNN's built-in assumptions win it. How much data and
+how large a model would be needed to turn the result around is a question
+of scale.
 
 ## Summary
 
 A vision transformer turns an image into a sequence by cutting it into
 patches and embedding each patch with one strided convolution; an unmasked
-encoder stack then processes the patch tokens, and a linear head classifies
-the final representation of a learned class token. The architecture is the
-text transformer's, and only the tokenization and the readout are new.
-Position embeddings must encode a row and a column. Learned from noise, as
-in the original ViT, they show only a trace of the grid after ten epochs
-on Fashion-MNIST, while fixed 2-D sinusoidal codes build it in. Large ViTs also need a few register tokens as internal storage. Matched
-with a CNN in parameters, computation, data, and training recipe, our ViT
-trails by four to five points; smaller patches and much more data narrow
-or reverse such gaps.
+encoder stack processes the patch tokens, and a linear head classifies the
+final representation of a learned class token. Only the tokenization and
+the readout are new; the block is the text transformer's. Position
+embeddings learned from noise pick up a small grid structure in ten epochs
+on Fashion-MNIST, and the trained model uses the layout: shuffling its
+patches drops it from about 89% to below one half. Yet a ViT with no
+position information at all ends only one to two points lower, so at this
+scale most of the accuracy comes from what the patches contain. Matched
+with a CNN in parameters, computation, data, and recipe, the ViT trails by
+about five points, while two runs of either model agree to a tenth of a
+point. Long training with augmentation closes the gap, and
+pretraining on far more data reverses it, which is why ViTs are mostly used
+pretrained.
 
 ## Exercises
 
-1. [code] **Parameters versus compute.** The ViT of
+1. [code] **Parameters and compute.** The ViT of
    :numref:`subsec_vit-first-run` reads grayscale images of $h = w = 96$
    pixels with $c = 1$ channel through patches of side $p = 16$. It has
    width $d = 512$, MLP width $4d$, and two blocks. Count one multiply--add
@@ -702,10 +902,20 @@ or reverse such gaps.
        pooling, and compare them with those of the ViT.
     1. Train the ViT with $p = 8$, with the protocol of
        :numref:`subsec_vit-first-run`, and compare its validation accuracy
-       with `vit_acc` and `cnn_acc`. Which of the two comparisons with the
+       with `learned_runs` and `cnn_runs`. Which of the two comparisons with the
        CNN, at equal parameters or at equal computation, does this run
-       inform?
+       inform? Then resize the images to $48 \times 48$ instead and keep
+       $p = 8$, which restores the $6 \times 6$ grid with each patch covering
+       the same part of the original image. Predict the accuracy and the
+       time per epoch before you train this model, and explain what the
+       result says about the upsampling to $96 \times 96$.
    :exlabel:`ex_vision-transformer-parameters-compute`
+
+1. [code] **Learning rates.** The text uses the best of three peak learning
+   rates, $\{3 \times 10^{-4}, 10^{-3}, 3 \times 10^{-3}\}$, for each model.
+   Repeat the sweep for the ViT and for `CompactResNet`. Which model is more
+   sensitive to the rate? Would the comparison have come out differently if
+   both had used the CNN's rate, and which protocol is the fairer one?
 
 1. [code] **Choice of readout.** `ViT` classifies from the final
    representation of the “&lt;cls&gt;” token.
@@ -713,12 +923,12 @@ or reverse such gaps.
        cannot influence the logits. Identify it, and compute the fraction of
        the FLOPs of that block that inference could skip in the
        configuration of :numref:`subsec_vit-first-run`, counting as in
-       problem :exref:`ex_vision-transformer-parameters-compute`.
+       Exercise :exref:`ex_vision-transformer-parameters-compute`.
     1. Implement the alternative readout that averages the final
        representations of the 36 patches, and remove the “&lt;cls&gt;” token
        together with its position embedding. Train the model with the
        protocol of :numref:`subsec_vit-first-run`, and compare its
-       validation accuracy with `vit_acc`.
+       validation accuracy with the two runs in `learned_runs`.
     1. :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` report that the two
        readouts work about equally well but need different learning rates.
        Train both readouts at the learning rates $10^{-4}$ and $10^{-3}$
@@ -732,36 +942,38 @@ or reverse such gaps.
        equal. Show that its logits are then unchanged when the patch tokens
        are permuted, and that permuting the $16 \times 16$ pixel blocks of
        the input image has the same effect as permuting the tokens.
-    1. Write a variant of `ViT.forward` that applies a fixed permutation to
-       the tokens produced by `PatchEmbedding`, before the position
-       embeddings are added. Measure the validation accuracy of the trained
-       `model` under five random permutations.
-    1. Train a `ViT` whose position embeddings are fixed at zero, with the
-       protocol of :numref:`subsec_vit-first-run`. Compare its validation
-       accuracy with `vit_acc`, and confirm that the five permutations leave
-       its predictions unchanged.
     1. Train a `ViT` whose patch position embeddings are fixed to the 2-D
        sinusoidal code `fixed` of :numref:`subsec_vit-pos-grid`, with a
        learned embedding for the “&lt;cls&gt;” slot. Compare its validation
-       accuracy with `vit_acc` and with the model of the previous part.
-    1. Compare the accuracy drop under permutation with the gaps between the
-       three trained models. What does each of these numbers measure?
+       accuracy with `learned_runs` and `zero_runs`, and measure its
+       accuracy under the five permutations `perms`.
+    1. A random permutation moves almost every block. Measure instead the
+       accuracy of the trained `model` when only two blocks trade places:
+       two horizontal neighbors, and two blocks at opposite corners. Then
+       swap $k$ random pairs of blocks for $k = 1, 2, 4, 8$, with several
+       draws for each $k$, and plot the accuracy against $k$. Does the
+       model rely on the local layout or on the arrangement as a whole?
    :exlabel:`ex_vision-transformer-position-information`
 
 1. [code] **Grid permutation test.** Let $\Delta$ be the difference
    between the first and the third value that `grid_similarity` returns for
-   the learned embeddings, the mean similarity at grid distance 1 minus that
-   at grid distance 3.
-    1. Permute the rows of `learned` at random, which reassigns the
-       embeddings to grid cells, recompute $\Delta$, and repeat 1,000 times.
+   the update `learned - pos_init`, the mean similarity at grid distance 1
+   minus that at grid distance 3.
+    1. Permute the rows of `learned - pos_init` at random, which reassigns
+       the updates to grid cells, recompute $\Delta$, and repeat 1,000 times.
        In what fraction of the permutations is $\Delta$ at least as large as
-       for the trained `model`? What does this fraction say about the
-       evidence for grid structure after ten epochs?
+       for the trained `model`? Compare the spread of $\Delta$ under
+       permutation with the spread of the `random` curve.
+    1. $\Delta$ ignores distance 5. The text guesses that training moves
+       the embeddings of patches that mostly show background, those of the
+       outer columns and the corners, alike. Measure for each grid cell how
+       often it holds garment pixels in the training images, design a
+       statistic for the guess, and test it in the same way.
     1. Train a `ViT` with the protocol of :numref:`subsec_vit-first-run`
        for 30 epochs instead of 10, with `num_steps` set to 30 epochs of
-       minibatches, and repeat the test. How do $\Delta$ and
-       its position within the permutation distribution change with longer
-       training?
+       minibatches, and repeat the test. How do $\Delta$ and the accuracy
+       under `perms` change with longer training?
+   :exlabel:`ex_vision-transformer-grid-test`
 
 1. **Shift equivariance.** Shift a $96 \times 96$ image by $s$ pixels to
    the right, and fill the vacated columns with zeros. Suppose that the $s$
@@ -769,7 +981,7 @@ or reverse such gaps.
     1. For $s = 16$, describe the tokens that `PatchEmbedding` produces for
        the shifted image, and show that they are a rearrangement of those of
        the original image. Give an image for which this fails at $s = 8$.
-    1. Use this and problem
+    1. Use this and Exercise
        :exref:`ex_vision-transformer-position-information` to show that a
        `ViT` whose patch position embeddings are all equal assigns the same
        logits to both images when $s = 16$. Why does the argument not extend
@@ -807,11 +1019,10 @@ or reverse such gaps.
        each of the 16 heads on 512 validation images, and plot it against
        the block index. Do the two blocks show either pattern of the
        pretrained ViTs?
-    1. Repeat the measurement for the ViT of problem
-       :exref:`ex_vision-transformer-position-information` whose position
-       embeddings are fixed at zero. What other than position embeddings
-       can make a head attend to nearby patches, and how do the results of
-       the two models separate the two causes?
+    1. Repeat the measurement for `zero_model`, whose position embeddings
+       are fixed at zero. What other than position embeddings can make a
+       head attend to nearby patches, and how do the results of the two
+       models separate the two causes?
 
 1. **Shifted windows.** ● Swin transformers :cite:`liu2021swin` restrict
    attention to non-overlapping windows of $M \times M$ patches. Successive
@@ -869,7 +1080,7 @@ or reverse such gaps.
        of :numref:`subsec_vit-first-run`. Train again with
        $\mathcal{L}_\textrm{soft}$ at $\tau = 3$ for
        $\lambda \in \{0.1, 0.5\}$, and compare the three students with
-       `vit_acc`.
+       the two runs in `learned_runs`.
     1. For the undistilled `model` and for each student, compute the
        fraction of validation images on which its prediction differs from
        the teacher's, as in the disagreement analysis of
@@ -889,10 +1100,10 @@ or reverse such gaps.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.5]{.kicker}
+[Dive into Deep Learning · §11.6]{.kicker}
 
-Vision transformer<br>
-**patches as tokens · class token and position embeddings · registers · a matched comparison with a CNN**
+Vision Transformer<br>
+**patches as tokens · class token and position embeddings · does it use position? · a matched comparison with a CNN**
 :::
 :::
 
@@ -917,10 +1128,11 @@ How do we turn an image into a short sequence, and what does the model lose?
 
 - turn an image into tokens with one strided convolution;
 - count the tokens, parameters, and FLOPs of a ViT;
-- explain the class token, the position embeddings, and register tokens;
-- train a ViT with AdamW, warmup, and cosine decay;
+- test whether a trained ViT uses the layout of its patches, and whether
+  it needs it;
 - read a ViT-versus-CNN comparison matched in parameters, FLOPs, data,
-  and recipe.
+  and recipe;
+- decide when to train a CNN and when to fine-tune a pretrained ViT.
 
 **Running example:** Fashion-MNIST at $96 \times 96$, a $6 \times 6$ grid of
 patches, a 6.5M-parameter ViT against a 6.5M-parameter CNN.
@@ -933,13 +1145,15 @@ patches, a 6.5M-parameter ViT against a 6.5M-parameter CNN.
 ::: {.col}
 | section | adds |
 |---|---|
-| The Transformer Block | attention + FFN on a residual stream |
+| The Transformer Block | attention + FFN, residual stream |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
-| Generation and the KV Cache | reuse keys and values while sampling |
+| The KV Cache | reuse past keys and values |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | **Vision Transformer** | **images as token sequences** |
-| Mixture of Experts | more parameters per FLOP |
 | Scaling Laws | loss against parameters, data, compute |
+| Mixture of Experts | more parameters per FLOP |
+| The Modern Recipe | released models as settings |
 :::
 
 ::: {.col .narrow}
@@ -955,8 +1169,6 @@ patches, a 6.5M-parameter ViT against a 6.5M-parameter CNN.
 - **Locality:** a convolution unit sees a small neighborhood.
 - **Translation equivariance:** shift the input, and the feature maps
   shift with it.
-- Local self-attention restricted attention to small windows
-  (Ramachandran et al., 2019).
 
 . . .
 
@@ -984,14 +1196,16 @@ Image $h \times w$ with $c$ channels, patch side $p$:
 $m = hw/p^2$ patches, each a vector of length $cp^2$.
 
 - A convolution with **kernel size = stride = $p$** covers each patch
-  exactly once.
+  exactly once; windows never overlap.
 - Output channel $k$ at a position $=$ inner product of kernel $k$ with
   that patch $=$ entry $k$ of the patch's linear projection.
-- Weights $(d, c, p, p)$: the $d \times cp^2$ projection matrix, reshaped.
+- The $d$ kernels, each $c \times p \times p$: the rows of the
+  $d \times cp^2$ projection matrix, reshaped.
 
 ::: {.d2l-note}
-$96 \times 96 \times 1$, $p = 16$: 36 tokens of length 256, projected to
-$d = 512$.
+Fashion-MNIST's $28 \times 28$ upsampled to $96 \times 96$, $p = 16$: 36
+tokens, each covering under five original pixels per side. The upsampling
+adds no information.
 :::
 :::
 
@@ -1011,27 +1225,25 @@ how many attention scores per head? And with $8 \times 8$ patches?
 - $p = 16$: $14 \times 14 = 196$ tokens, $196^2 = 38{,}416$ scores.
 - $p = 8$: $28 \times 28 = 784$ tokens, $784^2 = 614{,}656$ scores, 16
   times as many.
-- The model's parameter count barely changes: the stem shrinks
-  $4\times$, the position table grows $4\times$.
 :::
 
-::: {.slide title="The ViT Block Is the Pre-Norm Encoder Block with a GELU MLP"}
+::: {.slide title="The ViT Block Is the Original Pre-Norm Encoder Block"}
 $$\mathbf{X} \leftarrow \mathbf{X} + \mathrm{MHA}(\mathrm{LN}(\mathbf{X})), \qquad
 \mathbf{X} \leftarrow \mathbf{X} + \mathrm{MLP}(\mathrm{LN}(\mathbf{X}))$$
 
 - LN: LayerNorm; MHA: multi-head self-attention, **no mask**.
-- `ViTBlock` is `d2l.TransformerBlock` with `norm='layer'` and its FFN
-  swapped for the MLP: Linear $d \to 4d$, exact GELU, Linear $4d \to d$.
-- Dropout after attention and after each linear layer of the MLP.
-- The residual stream is only added to, never normalized; output
-  shape = input shape, so blocks stack.
+- MLP: Linear $d \to 4d$, GELU, Linear $4d \to d$.
+- Kept from the original paper: LayerNorm, not RMSNorm; GELU, not SwiGLU.
+  Nothing about images calls for either.
+- Output shape = input shape, so blocks stack.
 :::
 
 ::: {.slide title="A Learned Class Token Collects the Evidence for the Head"}
 - Prepend one learned vector, initialized to zeros: 37 tokens.
 - In every block it attends to all 36 patches.
 - The head (LayerNorm + Linear) reads only its final representation.
-- Averaging the 36 patch outputs instead works about as well.
+- Averaging the 36 patch outputs instead works about as well: the class
+  token is a convention, not a discovery.
 :::
 
 ::: {.slide title="The Forward Pass Reads One Token" only="pytorch"}
@@ -1058,7 +1270,7 @@ def forward(self, X):                  # X: (batch, 96, 96, 1)
 ```
 :::
 
-::: {.slide title="Position Embeddings Must Encode a Row and a Column"}
+::: {.slide title="A Fixed Code Needs Rows and Columns; a Learned Table Can Find Them"}
 Without positions, attention is permutation equivariant: an image and any
 rearrangement of its patches look the same to the head.
 
@@ -1068,22 +1280,19 @@ rearrangement of its patches look the same to the head.
 | 2-D sinusoidal | half the vector codes the row, half the column |
 | 2-D RoPE | rotate queries and keys by row and column angles |
 
-With the learned table, the grid must be discovered from data.
+A 1-D code in raster order would make patch 6 (end of row 1) and patch 7
+(start of row 2) neighbors. The learned table must discover the grid from
+data.
+
+::: {.d2l-note}
+Original ablation: learned 1-D, 2-D, and relative codes about equal; no
+positions at all, two to three points lower.
+:::
 :::
 
-::: {.slide title="Large ViTs Take Over Background Patches; Registers Give Them Storage"}
-- ViT-Large and above, trained long: about 2% of patch tokens get output
-  norms about 10× the rest and bright spots in attention maps.
-- They hold global, not local, information: storage for computation.
-- The vision counterpart of attention sinks in language models.
-- **Registers:** a few extra learned tokens, discarded at the output. One
-  removes the artifacts; four improve dense tasks at under 2% extra FLOPs.
-
-[Darcet et al., ICLR 2024]{.small}
-:::
-
-::: {.slide title="A Transformer Needs AdamW: SGD Costs ViT-Base Seven Points"}
-DeiT on ImageNet, everything else equal: AdamW 81.8%, SGD 74.5%.
+::: {.slide title="SGD Costs a ViT-Base Seven Points on ImageNet"}
+ViT-Base (12 blocks, width 768, 86M parameters) in the DeiT study,
+everything else equal: AdamW 81.8%, SGD 74.5%. ResNets train well with SGD.
 
 Our recipe (both models):
 
@@ -1097,23 +1306,41 @@ Our recipe (both models):
 [Touvron et al., ICML 2021]{.small}
 :::
 
-::: {.slide title="Ten Epochs Take the 6.5M-Parameter ViT to About 90%"}
+::: {.slide title="Ten Epochs Take the 6.5M-Parameter ViT to About 89%"}
 @!vision-transformer-a-first-run-2
 :::
 
-::: {.slide title="The Learned Embeddings Show Only a Trace of the Grid"}
-Mean cosine similarity of centered position embeddings, by grid distance
-(max of row and column offset):
+::: {.slide title="Check: Shuffle the Patches of Every Test Image"}
+Rearrange the 36 blocks of $16 \times 16$ pixels by a fixed random
+permutation. What accuracy if the ViT ignores position? If every decision
+rests on the layout?
 
-@!vision-transformer-do-the-position-embeddings-discover-the-grid
+. . .
 
-The fixed 2-D code falls from 0.76 to about $-0.4$; the learned one stays
-near zero, a little higher for neighbors and for opposite edges.
+- Ignores position: unchanged, by permutation equivariance.
+- Rests on the layout: 10%, the rate of guessing.
+- A ViT whose position table is zero: unchanged, for certain.
+:::
+
+::: {.slide title="The ViT Uses the Layout of Its Patches but Barely Needs It"}
+Five fixed shuffles of the trained ViT:
+
+@!vision-transformer-does-the-vit-use-position-2
+
+Two runs per arm, position table learned or held at zero:
+
+@!vision-transformer-does-the-vit-use-position-4
+
+::: {.d2l-note}
+Using the layout is not needing it: most of the accuracy comes from what
+the patches contain.
+:::
 :::
 
 ::: {.slide title="Check: What Would Random Embeddings Give?"}
-Independent random vectors in 512 dimensions: what curve, and how far from
-zero?
+We center the 36 position embeddings and average the cosine of all pairs at
+each grid distance (max of row and column offset). Independent random
+vectors in 512 dimensions: what curve, and how far from zero?
 
 . . .
 
@@ -1122,6 +1349,13 @@ zero?
 - One pair's cosine scatters by about $1/\sqrt{512} \approx 0.044$;
   averaging the many pairs at each distance shrinks that noise.
 - Only a curve that falls with distance is evidence of a learned grid.
+:::
+
+::: {.slide title="Neighboring Position Embeddings Are About 0.1 More Alike in Cosine"}
+@!vision-transformer-do-the-position-embeddings-discover-the-grid
+
+- learned − initial: what training wrote, with the starting noise removed.
+- The cosines describe the table; only the shuffle test asks the model.
 :::
 
 ::: {.slide title="The CNN Baseline Matches Parameters, FLOPs, Data, and Recipe"}
@@ -1135,24 +1369,6 @@ zero?
 $7 \times 7$ stem, then seven residual blocks of widths 64 to 512.
 :::
 
-::: {.slide title="At Equal Budget the CNN Is Four to Five Points Ahead"}
-@!vision-transformer-a-convolutional-baseline-at-the-same-budget-3
-
-::: {.d2l-note}
-One protocol, one dataset: the gap does not say which property of the CNN
-causes it.
-:::
-:::
-
-::: {.slide title="Patch Size and Data Scale Change the Ranking"}
-- Fashion-MNIST, 300 epochs, heavy augmentation (Hassani et al., 2021):
-  ViT 93.2% ($p = 16$), 94.5% ($p = 8$), 95.2% ($p = 4$); ResNet-18 94.8%.
-  On CIFAR-10 the same ViTs span 78% to 94%.
-- JFT-300M pretraining: the largest ViTs beat the cited ResNets; on
-  9M–300M subsets, ResNets lead when data is small, ViTs when it is large.
-- ImageNet-1k alone, strong augmentation: DeiT is competitive.
-:::
-
 ::: {.slide title="Check: Halve the Patch Size"}
 Our ViT with $p = 8$ instead of 16: what happens to the tokens, the
 parameters, and the forward FLOPs?
@@ -1164,16 +1380,58 @@ parameters, and the forward FLOPs?
 - FLOPs: $0.48 \to 1.92$ GFLOPs per image, four times as many.
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="The CNN Leads from the First Epoch and Ends About Five Points Ahead"}
+@!vision-transformer-a-convolutional-baseline-at-the-same-budget-3
+
+Two runs per model agree to a tenth of a point; the gap is about five.
+
+::: {.d2l-note}
+One protocol, one dataset: the gap does not say which property of the CNN
+causes it. The position table is worth only one to two points.
+:::
+:::
+
+::: {.slide title="Check: Who Gains More from 300 Epochs?"}
+Both curves flatten because the learning rate reaches zero. Train compact
+ViTs and a ResNet-18 for 300 epochs with heavy augmentation: which gains
+more?
+
+. . .
+
+- Fashion-MNIST: ViTs under 4M parameters reach 93% ($p = 16$), 94.5%
+  ($p = 8$), 95% ($p = 4$); ResNet-18 (11M) 94.8%.
+- Our CNN reached about 94% in ten epochs, our ViT about 89%: the
+  transformer gains far more, and the gap closes.
+- Our runs hint at it: after ten epochs the CNN's training loss is near
+  zero, the ViT's is not.
+
+[Hassani et al., 2021]{.small}
+:::
+
+::: {.slide title="More Data Reverses the Ranking"}
+- CIFAR-10, 300 epochs: the same ViTs 78% to 94%, ResNet-18 90%; only the
+  finest patches win.
+- JFT-300M subsets: ResNets lead on small ones, ViTs on large ones.
+
+::: {.d2l-note}
+Small data, from scratch: train a CNN, or fine-tune a pretrained ViT.
+:::
+
+[Hassani et al., 2021; Dosovitskiy et al., 2021]{.small}
+:::
+
+::: {.slide title="Patches Make an Image a Sequence; at Small Scale the CNN Still Wins"}
+[Wrap-up]{.kicker}
+
 - ViT = strided-convolution patchify, the pre-norm encoder, a head on the
   class token; only tokenization and readout are new.
-- Learned position embeddings start as noise; after ten epochs they show
-  only a trace of the $6 \times 6$ grid, which a 2-D sinusoidal code
-  builds in.
-- Large ViTs need register tokens as internal storage.
-- Matched in parameters, FLOPs, data, and recipe, the CNN leads on
-  Fashion-MNIST by four to five points; smaller patches and more data move
-  the ranking.
+- Shuffling the patches drops the trained ViT from about 89% to below one
+  half; a ViT with no positions at all reaches about 87 to 88%.
+- Learned position embeddings: the cosine of neighbors about 0.1 higher,
+  against a flat random reference.
+- Matched in parameters, FLOPs, data, and recipe, the CNN leads by about
+  five points, against a run-to-run range of a tenth of a point; long
+  recipes close the gap, and far more data reverses it.
 
-**Next:** Mixture of Experts, more parameters per FLOP.
+**Next:** Scaling Laws, sizing a model before the run.
 :::

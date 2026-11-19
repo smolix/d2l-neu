@@ -8,12 +8,15 @@ Figures:
       while a KV cache stores past keys/values and computes one new row.
   mdl-transformers-gqa.svg -- multi-head / grouped-query / multi-query
       attention as a sharing pattern between query heads and key-value heads.
+  mdl-transformers-roofline.svg -- the fp32 roofline of an RTX 4090 with a
+      decode step of GPT-2 small and a 2,048-token prefill marked.
 
 Run with the repo's pytorch venv:
 
     .venv-pytorch/bin/python tools/gen_mdl_transformers_b3.py
 
-All figures are written to ``img/mdl-transformers-<id>.svg``.  Byte-idempotent:
+All figures are written to ``img/mdl-transformers-<id>.svg`` and copied to
+``img/auto/`` for the slides.  Byte-idempotent:
 no timestamps, no unseeded randomness.
 """
 
@@ -27,6 +30,7 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+BLUE_T, ORANGE_T, GREEN_T = fl.T.BLUE.dark, fl.T.ORANGE.dark, fl.T.GREEN.dark
 PURPLE = fl.T.PURPLE.base  # the `embed` role: memory, KV cache
 
 from matplotlib.patches import Rectangle
@@ -57,7 +61,7 @@ def _score_panel(ax, cached):
     if cached:
         _kv_strip(ax, ys, [(PURPLE, 0.35)] * (T - 1) + [(ORANGE, 0.85)])
         ax.text((T - 1) / 2, ys + 1.0,
-                r"$\mathbf{k}_{1..t-1}, \mathbf{v}_{1..t-1}$ from the cache",
+                r"$\mathbf{k}_{0..t-1}, \mathbf{v}_{0..t-1}$ from the cache",
                 ha="center", va="bottom", fontsize=13, color="black")
         ax.text(T + 0.7, ys + 0.4, r"new $\mathbf{k}_t, \mathbf{v}_t$",
                 ha="left", va="center", fontsize=13, color="black")
@@ -66,7 +70,7 @@ def _score_panel(ax, cached):
     else:
         _kv_strip(ax, ys, [(ORANGE, 0.85)] * T)
         ax.text(T / 2, ys + 1.0,
-                r"all $\mathbf{k}_{1..t}, \mathbf{v}_{1..t}$ recomputed",
+                r"all $\mathbf{k}_{0..t}, \mathbf{v}_{0..t}$ recomputed",
                 ha="center", va="bottom", fontsize=13, color="black")
     # score matrix: lower triangle
     for i in range(T):
@@ -171,10 +175,69 @@ def fig_gqa():
     fl.save(fig, "mdl-transformers-gqa")
 
 
+# --------------------------------------------------------------------------- #
+# Figure 3: the fp32 roofline of an RTX 4090, prefill against decode.          #
+# --------------------------------------------------------------------------- #
+
+def fig_roofline():
+    """fp32 roofline of an RTX 4090 (82.6 TFLOP/s without tensor cores,
+    1.008 TB/s), ridge near 82 FLOP/byte.  The decode step of GPT-2 small at
+    context 2,048 (2N FLOPs against the fp32 weights plus the cache, 0.38
+    FLOP/byte) sits far down the bandwidth slope; a 2,048-token prefill
+    (about 780 FLOP/byte) sits under the compute roof.  Chapter 13 draws the
+    bf16 roofline of the same card (mdl-perf-roofline.svg)."""
+    fig, ax = plt.subplots(figsize=(7.6, 4.4))
+    peak, bw = 82.6, 1.008      # TFLOP/s fp32; TB/s -> y[TF] = bw * x
+    ridge = peak / bw           # ~82 FLOP/byte
+    decode, prefill = 0.38, 784  # FLOP/byte, from the section's cell
+
+    x = np.logspace(-2, np.log10(10000), 400)
+    ax.loglog(x, np.minimum(peak, bw * x), color=BLUE, lw=2.6, zorder=3)
+
+    ax.plot([ridge], [peak], "o", color=BLUE, ms=7, zorder=4)
+    ax.plot([ridge, ridge], [0.005, peak], color=LIGHT, lw=1.2, ls="--",
+            zorder=1)
+    ax.text(ridge * 1.2, 0.0065, r"ridge $\approx 82$ FLOP/byte",
+            ha="left", va="bottom", fontsize=13, color="black")
+
+    ax.text(0.03, 0.075, "memory bandwidth\n$\\beta$ = 1.0 TB/s",
+            ha="left", va="bottom", fontsize=13, color=BLUE_T, rotation=34.0,
+            rotation_mode="anchor")
+    ax.text(900, peak * 1.45, "compute roof 83 TFLOP/s (fp32)",
+            ha="center", va="bottom", fontsize=13, color=BLUE_T)
+
+    ax.plot([decode], [bw * decode], "o", color=ORANGE, ms=8, zorder=5)
+    ax.text(decode * 1.5, bw * decode * 0.62, "decode step (0.38)",
+            ha="left", va="center", fontsize=13, color=ORANGE_T)
+    ax.plot([prefill], [peak], "o", color=GREEN, ms=8, zorder=5)
+    ax.text(prefill, peak * 0.5, "prefill,\n2,048 tokens (780)",
+            ha="center", va="top", fontsize=13, color=GREEN_T)
+
+    ax.set_xlim(0.01, 10000)
+    ax.set_ylim(0.005, 300)
+    ax.set_xticks([0.01, 0.1, 1, 10, 100, 1000, 10000])
+    ax.set_xticklabels(["0.01", "0.1", "1", "10", "100", "1,000", "10,000"])
+    ax.set_yticks([0.01, 0.1, 1, 10, 100])
+    ax.set_yticklabels(["0.01", "0.1", "1", "10", "100"])
+    ax.xaxis.set_minor_formatter(plt.NullFormatter())
+    ax.yaxis.set_minor_formatter(plt.NullFormatter())
+    ax.set_xlabel("arithmetic intensity (FLOP/byte)", fontsize=13)
+    ax.set_ylabel("attainable TFLOP/s", fontsize=13)
+    for s in ("left", "bottom"):
+        ax.spines[s].set_color("black")
+    ax.tick_params(colors="black", labelsize=12)
+    fl.save(fig, "mdl-transformers-roofline")
+
+
 if __name__ == "__main__":
     fig_kv_cache()
     fig_gqa()
+    fig_roofline()
     for p in fl.WRITTEN:
         _unitless(p)
+    import shutil  # the slides read @fig figures from img/auto
     for p in fl.WRITTEN:
-        print("wrote", p)
+        shutil.copyfile(p, os.path.join(os.path.dirname(p), "auto",
+                                        os.path.basename(p)))
+    for p in fl.WRITTEN:
+        print("wrote", p, "and its copy in img/auto")

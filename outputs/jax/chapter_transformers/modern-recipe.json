@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/modern-recipe.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:2170ee8bf8348c3285e5458166200232603c5a1dfa2d117f860c8f037d288df8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "modern-recipe-the-modern-recipe-1": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "modern-recipe-the-modern-recipe-2": {
+      "code_fingerprint": "sha256:d4e8db5b124d84d1a660c21c8f7ada6d94804e66245d748b0fc11e9b6716bd54",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-laws-recipe-rows-as-constructor-calls": {
+      "code_fingerprint": "sha256:0f7eebf1d5d4b4cd47b51a6b2eaf30b1924169881015d3ae5dc9ff7346c680e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "model      parameters  vs default   cache/token   vs default\ndefault         4.79M         +0%      12.0 KiB        1.000\nGPT-2           5.07M         +6%      12.0 KiB        1.000\nLlama 3 8B      4.20M        -12%       3.0 KiB        0.250\nQwen3-32B       4.10M        -14%       1.5 KiB        0.125\n"
+        }
+      ]
+    }
+  }
+}

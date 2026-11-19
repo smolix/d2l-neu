@@ -84,7 +84,7 @@ does not teach are collected in :numref:`sec_attention-further-reading`.
 **The cost of attention**
 
 - [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness](https://arxiv.org/abs/2205.14135), Dao et al. (2022): the tiled online softmax of :numref:`sec_attention-at-scale`, with the memory-traffic analysis that explains its speed.
-- [Fast Transformer Decoding: One Write-Head Is All You Need](https://arxiv.org/abs/1911.02150), Shazeer (2019): multi-query attention, in which all heads read one shared set of keys and values. :numref:`sec_multihead-attention` shows when such sharing loses nothing, and :numref:`sec_kv-cache` why it is done and what it costs.
+- [Fast Transformer Decoding: One Write-Head Is All You Need](https://arxiv.org/abs/1911.02150), Shazeer (2019): multi-query attention, in which all heads read one shared set of keys and values. :numref:`sec_multihead-attention` shows when such sharing loses nothing, and :numref:`sec_kv-cache-reduction` why it is done and what it costs.
 - [Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention](https://arxiv.org/abs/2006.16236), Katharopoulos et al. (2020): linear attention and its recurrent form, as in :numref:`sec_windowed-linear-attention`.
 - [The Transformer Family Version 2.0](https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/), Lilian Weng (2023): a survey of attention variants, sparse patterns, and efficient approximations, for the windows and kernels of :numref:`sec_windowed-linear-attention` and the many relatives the section leaves out.
 

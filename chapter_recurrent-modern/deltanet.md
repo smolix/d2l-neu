@@ -782,7 +782,7 @@ In every run, Gated DeltaNet recalls at least 95% of the rewritten keys,
 within about two points of its recall on keys written once. Gated linear
 attention recalls between about 83% and 92% of the rewritten keys over
 repeated executions of this cell, against 93% to 98% of the keys written
-once. Its two runs differ by up to about five points. On the rewritten keys
+once. Its two runs can differ by up to about five points. On the rewritten keys
 the two layers differ by more than that in every execution, and on the keys
 written once by much less. The two models differ by 260 parameters, the
 write-strength projection, a third of a percent of either. The delta rule

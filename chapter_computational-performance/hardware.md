@@ -555,15 +555,14 @@ that raises the compute roof.
 ### Batched Decoding
 
 <!-- WRITER: the batch sweep (cell hardware-batched-decoding) moved to
-13.1 (performance-model.md, new subsection subsec_perf-roofline-test once that
-step lands; cite that label instead of sec_perf_model). This paragraph is a
+13.1 (performance-model.md, subsec_perf-roofline-test). This paragraph is a
 placeholder that keeps the section true; rewrite it as the one paragraph the
 design asks for, ending at "keep the caches small". -->
 Batching moves decode up the roofline. A step for $B$ sequences reads the
 weights once and produces $B$ tokens, an intensity of about $B$ FLOPs per
 byte of weights, so the step time stays flat while $B$ lies below the ridge
-point and grows in proportion to $B$ beyond it, as :numref:`sec_perf_model`
-measured on one bf16 weight matrix. In a whole model every sequence still
+point and grows in proportion to $B$ beyond it, as
+:numref:`subsec_perf-roofline-test` measured on one bf16 weight matrix. In a whole model every sequence still
 reads its own key–value cache (:numref:`subsec_kv-cache-batching`), bytes
 that batching does not share, so the crossover moves to larger batches, and
 for long contexts it never comes. Inference servers therefore batch the

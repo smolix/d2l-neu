@@ -1,32 +1,36 @@
 # The Chain Rule on Computational Graphs
 :label:`sec_mdl-chain-rule-graphs`
 
-Every training step in this book began with one call, `backward()` or
-`grad`, and that one call returned the slope of the loss with respect to
-every weight. :numref:`sec_mdl-multivariable_calculus` said what these slopes
-mean: together they form the gradient, the vector that predicts the effect
-of any small joint move. It did not say how a program finds a million of
-them for the price of a few evaluations of the network. The obvious method,
-nudging one weight and running the network again, needs one run per weight.
+Every training step in this book begins with a single call, `backward()` or
+`grad`, that returns the slope of the loss with respect to every weight in the
+network. In :numref:`sec_mdl-multivariable_calculus` we saw what those slopes
+mean: together they form the gradient, the vector that predicts how the loss
+changes under any small joint move of the parameters. What we have not yet
+explained is how a program computes millions of these slopes in roughly the
+time it takes to evaluate the network a few times. The naive approach, nudging
+one weight at a time and rerunning the network for each perturbation, requires
+a separate pass per weight and quickly becomes infeasible.
 
-The chain rule does much better, and the reason can be stated before any
-algebra. A network is a long composition of simple functions, and the
-derivatives with respect to its many weights share most of their work, since
-every one of them has to pass through the last layer. A formula for the
-composition hides this sharing. A graph shows it: draw a node for each
-intermediate value and an edge for each direct dependence. On the graph the
-chain rule is a sum over paths, and the shared work becomes a choice of how
-to group the sum. If we group the paths from the output backward, one pass
-yields the slope with respect to every input. This grouping is
+The chain rule does vastly better, and the reason is easy to see before writing
+down any algebra. A neural network is a deep composition of simple functions,
+so the derivatives with respect to its many weights share almost all of their
+work: every weight's influence has to travel through the later layers to reach
+the loss. A single nested formula hides this shared structure, whereas a
+*computational graph* lays it bare: one node for each intermediate value and one
+directed edge for each direct dependence. Viewed on a graph, the chain rule
+becomes a sum over paths, and exploiting the shared work amounts to choosing
+how to group that sum. Grouping the paths from the output backward yields the
+derivative with respect to every input in a single pass. That grouping is
 backpropagation.
 
-We work the idea out on graphs of scalars that are small enough to compute
-by hand, with integer values throughout, so that every claim can be checked.
-The section needs one fact from :numref:`sec_mdl-multivariable_calculus`:
-near a point, a differentiable function changes by the dot product of the
-step with its gradient, the linear model :eqref:`eq_mdl-nabla_use`. Layers
-that map vectors to vectors, and the cost of the method on a real network,
-come in the two sections that follow.
+To make every step concrete and easy to verify by hand, we work on small graphs
+of scalar variables with integer values throughout. The entire development
+rests on one fact from :numref:`sec_mdl-multivariable_calculus`: near any point
+where a function is differentiable, its change is approximated by the dot
+product of the step with its gradient, the linear model
+:eqref:`eq_mdl-nabla_use`. Extending the idea to layers that map vectors to
+vectors, and measuring its computational cost on real networks, comes in the
+two sections that follow.
 
 ```{.python .input #mdl-chain-rule-graphs-the-chain-rule-on-computational-graphs}
 #@tab mxnet
@@ -72,8 +76,9 @@ from d2l import jax as d2l
 
 ### A Graph of Scalars
 
-Our first example is a toy: four inputs $w, x, y, z$ flow through
-intermediate quantities to a scalar output,
+Let us start with a concrete example small enough to trace completely by hand.
+Four scalar inputs $w, x, y, z$ feed through two layers of intermediate
+variables to produce a single scalar output:
 
 $$
 \begin{aligned}
@@ -84,67 +89,79 @@ a(w, x, y, z) & = (w+x+y+z)^{2}, \qquad b(w, x, y, z) = (w+x-y-z)^2.
 $$
 :eqlabel:`eq_mdl-multi_func_def`
 
-The dependencies form a graph (:numref:`fig_mdl-chain-1`): each node is a
-value, and each edge a direct functional dependence. Nothing about the
-squares is special; they keep the numbers whole. Throughout the section $f$
-denotes the output of the graph at hand.
+These equations define a directed acyclic graph (:numref:`fig_mdl-chain-1`),
+where each node holds an intermediate value and each arrow indicates a direct
+functional dependence. There is nothing special about the squaring operations;
+we choose them simply because they keep all intermediate values and derivatives
+exact integers. Throughout this section, $f$ denotes the scalar output of the
+graph under study.
 
-![The function relations of :eqref:`eq_mdl-multi_func_def`, drawn as a graph whose nodes are values and whose edges show direct functional dependence.](../img/mdl-cal-chain-net1.svg)
+![The dependency graph of :eqref:`eq_mdl-multi_func_def`: each node represents a variable and each directed edge represents a direct functional dependence.](../img/mdl-cal-chain-net1.svg)
 :label:`fig_mdl-chain-1`
 
 ### Two Paths through One Step
 
-Take the last composite step, $f(u(a,b), v(a,b))$, and perturb $a$ by a
-small $\epsilon$. Each intermediate moves by its partial derivative,
-$u \to u + \epsilon\frac{\partial u}{\partial a}$ and
-$v \to v + \epsilon\frac{\partial v}{\partial a}$. Feeding these moves into the
-first-order expansion :eqref:`eq_mdl-nabla_use` of $f$ gives
+Before tackling the whole graph, consider just its final composite step,
+$f(u(a,b), v(a,b))$, and ask how $f$ responds when we nudge $a$ by a small
+amount $\epsilon$. Both intermediate nodes feel the perturbation according to
+their partial derivatives: $u$ shifts to
+$u + \epsilon\frac{\partial u}{\partial a}$, and $v$ shifts to
+$v + \epsilon\frac{\partial v}{\partial a}$. Substituting both shifts into the
+first-order linear approximation :eqref:`eq_mdl-nabla_use` of $f$ yields
 
 $$
 f\!\left(u + \epsilon\tfrac{\partial u}{\partial a},\, v + \epsilon\tfrac{\partial v}{\partial a}\right)
 \approx f(u, v) + \epsilon\left[\frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}\right].
 $$
 
-The coefficient of $\epsilon$ is the derivative of the composite with respect
-to $a$, and the result is the multivariable chain rule,
+Reading off the coefficient of $\epsilon$ gives the derivative of the composite
+function with respect to $a$, which is the multivariable chain rule:
 
 $$
 \frac{\mathrm{d} f}{\mathrm{d} a} = \frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}.
 $$
 
-The two kinds of $d$ are deliberate, and this chapter keeps them apart from
-here on. The symbol $\partial$ is reserved for the derivative of one node's function with
-respect to one of its arguments, the others held fixed. The *total* derivative
-$\mathrm{d}f/\mathrm{d}a$ lets everything downstream of $a$ respond. (For an
-input, the total is the ordinary partial derivative of $f$ regarded as a
-function of the inputs alone.) There are two *paths* by which $a$ influences
-$f$, $a \to u \to f$ and $a \to v \to f$. Each path contributes the product of
-the derivatives along its edges, and the total is the sum over the paths.
+Notice the two different symbols for differentiation; we will keep them strictly
+separate from here on. The curly $\partial$ denotes the derivative of a single
+node's defining function with respect to one of its direct arguments, holding
+its other arguments fixed. The upright $\mathrm{d}$ denotes the *total*
+derivative $\mathrm{d}f/\mathrm{d}a$, which allows every variable downstream of
+$a$ to respond. (For an input node, the total derivative coincides with the
+ordinary partial derivative of $f$ viewed as a function of the inputs alone.)
+Geometrically, there are two directed *paths* by which $a$ influences $f$,
+namely $a \to u \to f$ and $a \to v \to f$. Each path contributes the product
+of the derivatives along its edges, and the total derivative sums those
+contributions across all paths.
 
-The argument is the one-variable proof of the chain rule again
-(:numref:`sec_mdl-derivative_table`): feed the change of the inner functions
-into the linear model of the outer one. Note, however, that it feeds two
-simultaneous moves into one linear expansion. That needs $f$ to be
-*differentiable*, not merely to have partial derivatives. For the
-counterexample $2xy/(x^2+y^2)$ of :numref:`subsec_mdl-gradient` along the
-line $x = y = t$, the rule would predict derivative $0$ at $t = 0$ from the
-two zero partials, yet the function jumps from $0$ to $1$ there.
+This derivation mirrors the one-variable proof of the chain rule
+(:numref:`sec_mdl-derivative_table`): we feed the linear change of the inner
+functions into the linear model of the outer one. Because two variables move
+simultaneously, however, $f$ must be *differentiable* at $(u, v)$, not merely
+possess partial derivatives. Recall the counterexample $2xy/(x^2+y^2)$ from
+:numref:`subsec_mdl-gradient`: along the diagonal $x = y = t$, both partial
+derivatives vanish at the origin, so the chain rule would predict a derivative
+of $0$ at $t = 0$, yet the function jumps discontinuously from $0$ to $1$
+there.
 
 ### Edge Derivatives and Total Derivatives
 
-The rule extends to any graph. Call the *edge derivative* of a node with
-respect to one of its parents the partial derivative of the node's function
-with respect to that parent, holding its other parents fixed. Then for an
-output $f$ and an input $x$,
+The same reasoning extends by induction to any directed acyclic graph. Define
+the *edge derivative* of a node with respect to one of its parents as the
+partial derivative of that node's function with respect to that parent, with
+all other parents held fixed. Then the total derivative of an output $f$ with
+respect to an input $x$ is
 
 $$
 \frac{\mathrm{d} f}{\mathrm{d} x} = \sum_{\text{directed paths } x \to \cdots \to f} \;\; \prod_{\text{edges on the path}} (\text{edge derivative}).
 $$
 :eqlabel:`eq_mdl-chain-rule-paths`
 
-Each path multiplies the local rates along its edges, and the paths add. A
-graph in which one node feeds the output both directly and through a later
-node shows why edge derivatives must be kept apart from totals. Consider
+In words, each directed path from $x$ to $f$ multiplies the local rates of
+change along its edges, and the total derivative adds those path products
+together.
+
+A graph with a skip connection makes it clear why edge derivatives and total
+derivatives must never be confused. Consider the five-node system
 
 $$
 \begin{aligned}
@@ -155,50 +172,57 @@ f(r, p, s) & = r + p + s.
 $$
 :eqlabel:`eq_mdl-multi_func_def_2`
 
-The output $f$ depends on $r$, on $s$, and also directly on $p$, a skip edge
-(:numref:`fig_mdl-chain-2`). The input $y$ reaches $f$ by three paths,
-$y \to p \to r \to f$, $y \to p \to f$, and $y \to q \to s \to f$. The edge
-derivatives are $\partial f/\partial r = \partial f/\partial p =
-\partial f/\partial s = 1$, $\partial r/\partial p = 2p$, $\partial s/\partial q
-= 2q$, $\partial p/\partial y = 1$, and $\partial q/\partial y = -1$, so
+Here $f$ depends on $r$ and $s$, and also directly on $p$ through a skip edge
+(:numref:`fig_mdl-chain-2`). Consequently, the input $y$ reaches $f$ along
+three distinct paths: $y \to p \to r \to f$, the shortcut $y \to p \to f$, and
+$y \to q \to s \to f$. The local edge derivatives are
+$\partial f/\partial r = \partial f/\partial p = \partial f/\partial s = 1$,
+$\partial r/\partial p = 2p$, $\partial s/\partial q = 2q$,
+$\partial p/\partial y = 1$, and $\partial q/\partial y = -1$. Summing the
+three path products gives
 
 $$
 \frac{\mathrm{d} f}{\mathrm{d} y} = \underbrace{1 \cdot 2p \cdot 1}_{y \to p \to r \to f} + \underbrace{1 \cdot 1}_{y \to p \to f} + \underbrace{1 \cdot 2q \cdot (-1)}_{y \to q \to s \to f} = 2p + 1 - 2q = 1 + 4y.
 $$
 
-Direct substitution, $f = (x+y)^2 + (x+y) + (x-y)^2$, confirms the sum
-$1 + 4y$. At $(x, y) = (1, 2)$, $p = 3$ and $q = -1$, and the paths contribute
-$6 + 1 + 2 = 9 = 1 + 4 \cdot 2$. The *edge* derivative $\partial f/\partial p$ is
-$1$, but the *total* derivative $\mathrm{d}f/\mathrm{d}p$, through the skip
-edge and through $r$, is $2p + 1 = 7$. Confusing the two is the usual way to
-get the multivariable chain rule wrong.
+We can check this directly by substituting everything into $f$:
+$f = (x+y)^2 + (x+y) + (x-y)^2$, whose derivative with respect to $y$ is indeed
+$1 + 4y$. At $(x, y) = (1, 2)$, we have $p = 3$ and $q = -1$, so the three
+paths contribute $6 + 1 + 2 = 9 = 1 + 4 \cdot 2$. Notice the sharp distinction
+at node $p$: the *edge* derivative $\partial f/\partial p$ is just $1$ (holding
+$r$ fixed), whereas the *total* derivative $\mathrm{d}f/\mathrm{d}p$ accounts
+for both the skip edge and the indirect route through $r$, giving
+$2p + 1 = 7$. Confusing these two quantities is the single most common mistake
+when applying the multivariable chain rule.
 
-![The dependency graph of :eqref:`eq_mdl-multi_func_def_2`: the input $y$ reaches $f$ by three paths, $y\to p\to r\to f$, the skip $y\to p\to f$, and $y\to q\to s\to f$.](../img/mdl-cal-chain-net2.svg)
+![The dependency graph of :eqref:`eq_mdl-multi_func_def_2`: the input $y$ reaches $f$ by three paths, namely $y\to p\to r\to f$, the skip edge $y\to p\to f$, and $y\to q\to s\to f$.](../img/mdl-cal-chain-net2.svg)
 :label:`fig_mdl-chain-2`
 
-The sum over paths is how gradients flow through a network. Architectural
-choices that open or close paths, such as the gates of an LSTM
-(:numref:`sec_lstm`) or the skip connections of a residual block
-(:numref:`sec_resnet`), shape learning by controlling which paths carry
-gradient.
+This path-sum viewpoint also explains how gradients travel through deep
+architectures. Mechanisms that open or close paths, such as the gates in an LSTM
+(:numref:`sec_lstm`) or the skip connections in a residual network
+(:numref:`sec_resnet`), shape learning directly by controlling which paths carry
+gradient signal back to earlier layers.
 
 ## Backpropagation
 :label:`subsec_mdl-backpropagation`
 
-As a formula the sum over paths is complete: it gives every derivative of
-every graph. As an algorithm it is hopeless, because the number of paths
-grows quickly with depth. A chain of $m$ stages with two parallel nodes per
-stage already has $2^m$ paths from end to end. Luckily the paths share
-edges, and a product that many paths share needs to be computed only once.
-The way we group the shared products decides the cost.
+As a mathematical identity, the sum over paths :eqref:`eq_mdl-chain-rule-paths`
+is completely general: it gives every derivative of every computational graph.
+As a literal algorithm, however, it is hopeless, because the number of paths
+can grow exponentially with depth. Even a simple chain of $m$ stages with two
+parallel nodes per stage already contains $2^m$ paths from start to finish.
+Fortunately, those paths overlap heavily, and any sub-product shared by many
+paths needs to be computed only once. The order in which we factor out those
+shared sub-products determines the computational cost.
 
 ### Forward Mode
 
-We compare two groupings on the four-input function
-:eqref:`eq_mdl-multi_func_def` at $(w, x, y, z) = (1, 1, -2, 1)$. A
-*forward pass* evaluates the nodes in order: $a = 1^2 = 1$, $b = 3^2 = 9$,
-$u = 10^2 = 100$, $v = (-8)^2 = 64$, and $f = 164^2 = 26896$. The edge
-derivatives at these values are
+Let us compare two ways of factoring the sum on our four-input function
+:eqref:`eq_mdl-multi_func_def` at the point $(w, x, y, z) = (1, 1, -2, 1)$. A
+*forward pass* evaluates the nodes in topological order: $a = 1^2 = 1$,
+$b = 3^2 = 9$, $u = 10^2 = 100$, $v = (-8)^2 = 64$, and $f = 164^2 = 26896$.
+From these node values we read off all the local edge derivatives:
 
 $$
 \begin{aligned}
@@ -210,11 +234,12 @@ $$
 \end{aligned}
 $$
 
-Every edge derivative is a number we can compute locally, from the values of a
-node and its parents.
+Each edge derivative is a local number computed solely from a node and its
+immediate parents.
 
-The four paths from $w$ to $f$ go through $a$ or $b$ and then through $u$ or
-$v$. Pushing $w$ forward through the graph collects them as
+To find $\mathrm{d}f/\mathrm{d}w$, notice that all four paths from $w$ to $f$
+pass first through $a$ or $b$ and then through $u$ or $v$. Factoring the paths
+from the input $w$ forward through the graph gives
 
 $$
 \begin{aligned}
@@ -223,10 +248,11 @@ $$
 \end{aligned}
 $$
 
-The bracketed sums are $\mathrm{d}u/\mathrm{d}w = 160$ and
-$\mathrm{d}v/\mathrm{d}w = 64$, the total derivatives of the intermediates
-with respect to $w$. Carrying the dependence on one input forward through the
-graph in this way is called *forward mode*. In plain Python:
+The two parenthesized sums are simply $\mathrm{d}u/\mathrm{d}w = 160$ and
+$\mathrm{d}v/\mathrm{d}w = 64$, the total derivatives of the intermediate nodes
+with respect to $w$. Propagating the sensitivity to one input forward through
+the graph in this way is called *forward mode*. We can verify this calculation
+in plain Python:
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-1}
 w, x, y, z = 1, 1, -2, 1
@@ -247,37 +273,39 @@ df_dw = df_du*du_dw + df_dv*dv_dw
 print('df/dw =', df_dw)
 ```
 
-Forward mode returns $\mathrm{d}f/\mathrm{d}w = 73472$, but nothing in it can
-be reused for $x$, $y$, or $z$: $\mathrm{d}u/\mathrm{d}w$ and
-$\mathrm{d}v/\mathrm{d}w$ belong to $w$ alone. Training needs the derivative
-of one loss with respect to every parameter, and this grouping computes them
-one input at a time.
+Forward mode returns $\mathrm{d}f/\mathrm{d}w = 73472$, but none of its
+intermediate derivatives can be reused for $x$, $y$, or $z$: both
+$\mathrm{d}u/\mathrm{d}w$ and $\mathrm{d}v/\mathrm{d}w$ are tied to $w$ alone.
+Because training a neural network requires the derivative of a single scalar
+loss with respect to every parameter, computing them one input at a time leaves
+most of the shared structure unused.
 
 ### Adjoints and the Backward Pass
 
-The remedy is to keep the output fixed instead of the input. Forward mode
-asked, for one input, how every later node responds to it. We now ask, for
-the one output, how it responds to every earlier node. The *adjoint*
-$\bar{n}$ of a node $n$ is the total derivative $\mathrm{d}f/\mathrm{d}n$ of
-the output with respect to that node: the sum, over all paths from $n$ to
-$f$, of the products of the edge derivatives. Every such path leaves $n$
-through one of its children $c$, the nodes that use $n$ directly, and the
-paths from $c$ onward sum to $\bar{c}$. Grouping the sum
-:eqref:`eq_mdl-chain-rule-paths` by this first edge turns it into a
-recursion,
+The remedy is to reverse the perspective: keep the output fixed rather than the
+input. Forward mode fixed one input and asked how every downstream node
+responds to it. Now we fix the single output $f$ and ask how it responds to
+every upstream node. Define the *adjoint* $\bar{n}$ of a node $n$ as the total
+derivative $\mathrm{d}f/\mathrm{d}n$ of the output with respect to $n$:
+the sum of the edge-derivative products over all directed paths from $n$ to
+$f$. Every such path must leave $n$ through one of its immediate children $c$,
+and the remaining paths from $c$ to $f$ sum to $\bar{c}$. Grouping the path sum
+:eqref:`eq_mdl-chain-rule-paths` by this first edge turns it into a simple
+recursion:
 
 $$
 \bar{f} = 1, \qquad
-\bar{n} = \sum_{\text{children } c \text{ of } n} \bar{c}\,\frac{\partial c}{\partial n},
+\bar{n} = \sum_{\text{children } c \text{ of } n} \bar{c}\,\frac{\partial c}{\partial n}.
 $$
 :eqlabel:`eq_mdl-adjoint`
 
-in which only edge derivatives and the adjoints of later nodes appear.
-Starting from $\bar f = 1$ and visiting the nodes from the output backward,
-each adjoint is ready when it is needed. In the skip-edge graph
-:eqref:`eq_mdl-multi_func_def_2` the recursion gives $\bar r = 1$ and
-$\bar p = \bar r \cdot 2p + \bar f \cdot 1 = 7$, the total found there. For
-the four-input graph:
+Only local edge derivatives and the adjoints of downstream nodes appear on the
+right-hand side. Starting from $\bar f = 1$ and visiting the nodes in reverse
+topological order, every child's adjoint is already known by the time we need
+it. On the skip-edge graph :eqref:`eq_mdl-multi_func_def_2`, for instance, the
+recursion gives $\bar r = 1$ and
+$\bar p = \bar r \cdot 2p + \bar f \cdot 1 = 7$, matching the total derivative
+we found earlier. Applying the same sweep to our four-input graph gives:
 
 * $\bar{u} = \bar{v} = 328$;
 * $\bar{a} = \bar{u}\cdot 20 + \bar{v}\cdot(-16) = 1312$ and
@@ -285,11 +313,11 @@ the four-input graph:
 * $\bar{w} = \bar{x} = \bar{a}\cdot 2 + \bar{b}\cdot 6 = 73472$ and
   $\bar{y} = \bar{z} = \bar{a}\cdot 2 - \bar{b}\cdot 6 = -68224$.
 
-One *backward pass* gives the derivatives with respect to all four inputs
-(:numref:`fig_mdl-cal-backward-sweep`). The code reuses the edge derivatives
-of the forward-mode cell.
+A single *backward pass* thus produces the partial derivatives with respect to
+all four inputs at once (:numref:`fig_mdl-cal-backward-sweep`). Let us run this
+backward sweep in Python, reusing the edge derivatives from the previous cell.
 
-![(a) The forward pass records every node value and every edge derivative. (b) The backward pass accumulates adjoints from $\bar f = 1$: $\bar a = 328\cdot 20 + 328\cdot(-16) = 1312$, and $\bar w = 1312\cdot 2 + 11808\cdot 6 = 73472$.](../img/mdl-cal-backward-sweep.svg)
+![(a) The forward pass records every node value and local edge derivative. (b) The backward pass accumulates adjoints starting from $\bar f = 1$, giving $\bar a = 328\cdot 20 + 328\cdot(-16) = 1312$ and $\bar w = 1312\cdot 2 + 11808\cdot 6 = 73472$.](../img/mdl-cal-backward-sweep.svg)
 :label:`fig_mdl-cal-backward-sweep`
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-2}
@@ -304,26 +332,30 @@ y_bar = a_bar*da_dy + b_bar*db_dy  # z enters a, b like y
 print('gradient:', {'w': w_bar, 'x': w_bar, 'y': y_bar, 'z': y_bar})
 ```
 
-The derivatives with respect to $w$ and $x$ agree, and so do those with
-respect to $y$ and $z$, because $f$ depends on its inputs only through $w + x$
-and $y + z$.
+The derivatives with respect to $w$ and $x$ match, as do those with respect to
+$y$ and $z$, because $f$ depends on its inputs only through the combinations
+$w + x$ and $y + z$.
 
-Counting multiplications shows the saving. Forward mode needs six per input
-(two each for $\mathrm{d}u/\mathrm{d}w$, $\mathrm{d}v/\mathrm{d}w$, and
-$\mathrm{d}f/\mathrm{d}w$), 24 for four inputs. The backward pass needs four
-for $\bar a$ and $\bar b$ and then two per input, 12 in all: it does the work
-on the shared part of the graph once. A factor of two is nothing to boast
-of. But the saving grows with the number of inputs: each further input costs
-forward mode a whole pass and the backward pass two multiplications.
+A quick operation count makes the advantage concrete. Forward mode needs six
+multiplications per input (two each for $\mathrm{d}u/\mathrm{d}w$,
+$\mathrm{d}v/\mathrm{d}w$, and $\mathrm{d}f/\mathrm{d}w$), or $24$ in total for
+all four inputs. The backward pass needs four multiplications to compute
+$\bar a$ and $\bar b$ and then two per input, or $12$ in total, because it
+traverses the shared upper part of the graph only once. A factor of two on a
+toy graph is modest, but the gap widens rapidly with the number of inputs:
+every additional input costs forward mode an entire pass through the graph,
+whereas the backward pass needs only two more multiplications.
 
 ### Backpropagation in a Framework
 
-Computing derivatives from the output back toward the inputs is
-*backpropagation* :cite:`Rumelhart.Hinton.Williams.ea.1988`, which
-:numref:`sec_backprop` applies to a multilayer perceptron. Each framework's
-automatic differentiation runs the same two passes: it records values and
-edge derivatives on the way forward and accumulates adjoints on the way
-back. Here it is on the same four inputs.
+Computing derivatives by propagating adjoints from the output back to the
+inputs is *backpropagation* :cite:`Rumelhart.Hinton.Williams.ea.1988`, which
+:numref:`sec_backprop` applies to multilayer perceptrons. Every modern
+automatic differentiation engine executes the same two passes: it records
+intermediate values (or the operations needed to form edge derivatives) during
+the forward pass, and then accumulates adjoints during the backward pass. Let
+us check our hand computation against the framework's automatic differentiation
+on the same four inputs.
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab mxnet
@@ -371,26 +403,29 @@ def f_graph(wxyz):
 print(jax.grad(f_graph)(jnp.array([1., 1., -2., 1.])))  # one backward pass
 ```
 
-The library returns $(73472, 73472, -68224, -68224)$, the adjoints of our hand
-computation. The agreement is exact, not approximate: all the numbers
-involved are integers below $2^{24}$, which single precision represents
-without rounding.
+The framework returns $(73472, 73472, -68224, -68224)$, matching the adjoints
+from our hand calculation. The agreement is exact rather than approximate
+because every intermediate number is an integer below $2^{24}$, which single
+precision represents without rounding error.
 
-Every node here was a scalar, and we counted multiplications on a graph that
-fits on a napkin. A layer of a network maps a vector to a vector. Its edge
-derivatives are matrices, and the order in which matrices are multiplied
-matters far more than the order of numbers.
-:numref:`sec_mdl-matrix-calculus` takes that step.
+So far every node in our graphs has been a scalar, and we could count
+multiplications on the back of an envelope. In a real neural network, each
+layer maps a vector to a vector, so the edge derivatives become matrices and
+the order in which those matrices are multiplied matters far more than the
+order of scalar multiplications. We take that step in
+:numref:`sec_mdl-matrix-calculus`.
 
 ## Summary
 
-The derivative of an output with respect to an input is the sum, over the
-paths between them, of the products of the edge derivatives. The adjoint of a
-node, the total derivative of the output with respect to it, collects all
-paths leaving the node. Grouping them by their first edge gives a recursion
-that, run from the output backward, yields every adjoint in one pass. This
-is backpropagation. Carrying one input forward instead gives that input's
-derivative alone, so a loss with many inputs is differentiated backward.
+On a computational graph, the total derivative of an output with respect to an
+input equals the sum, over all directed paths between them, of the products of
+the local edge derivatives. The adjoint of a node, the total derivative of the
+output with respect to that node, collects every path leaving it. Factoring
+those paths by their first outgoing edge yields a recursion that, run backward
+from the output, computes every adjoint in a single pass. This reverse
+accumulation is backpropagation. Propagating one input forward instead computes
+only that input's derivative, which is why differentiating a scalar loss with
+respect to many parameters is always done backward.
 
 ## Exercises
 

@@ -522,6 +522,16 @@ print(f'first call: {t_first:.1f} s\n'
       f'break-even: {t_first / (t_eager - t_compiled):.0f} steps')
 ```
 
+<!-- WRITER: The PyTorch cell now also prints `graphs: 2` (torch._dynamo.explain,
+run after the timings because it clears the compile cache), so the tab's "two graphs"
+is shown. The printed first call (PyTorch 0.6-0.8 s) is a warm-cache number: Inductor
+reuses kernels from its on-disk cache of earlier runs; a cold cache takes several
+seconds. Say so where it is read. Dev run 2026-11-19, uncontended 4090: PyTorch first
+call 0.6 s, eager 2.11 ms, compiled 1.19 ms (other runs 1.2-1.7 ms), break-even 641;
+JAX first call 3.4 s, eager 25.0 ms, compiled 0.26 ms, break-even 137. A second
+PyTorch run printed eager 1.98, compiled 1.51 ms, break-even 1,216: the PyTorch n* moves
+by a factor of two between runs (the saving is a difference of two overhead-bound
+times), so quote its order of magnitude only. -->
 The first call takes far longer than a step, up to several seconds, and
 the printed $n^*$ is a small fraction of the steps of a real training run.
 
@@ -557,6 +567,11 @@ width 256 without biases, each followed by a tanh, applied to a minibatch
 of 64. Each layer performs a matrix multiplication of
 $2 \cdot 64 \cdot 256 \cdot 256 \approx 8.4 \times 10^6$ FLOPs, which the
 4090 completes in a few microseconds, and a tanh over 16,384 elements,
+<!-- WRITER: The stack issues 120 operations per call, but the number of kernels is
+a library choice: in PyTorch cuBLAS runs each 64x256x256 tf32 product as a GEMM plus a
+split-K reduction kernel, so eager, compiled and replayed calls all run 180 kernels
+(profiled); XLA runs 120 (one product fusion and one tanh fusion per layer). The cells
+now print time per operation (time / 120), not per kernel. -->
 which takes about as long. Eager execution launches 120 kernels per call.
 Python spends 5–15 µs of host time issuing a bare operation
 (:numref:`sec_hardware`), longer than the GPU needs to run it. The GPU
@@ -593,9 +608,6 @@ with torch.no_grad():  # Inference: every call is a complete step
         t = d2l.Benchmark(lambda: f(x), repeats=100).time
         print(f'{desc}: {1000 * t:.2f} ms/call, '
               f'{1e6 * t / 120:.1f} µs per operation')
-replayed_step = torch.compile(train_step, mode='reduce-overhead')
-print(d2l.Benchmark(lambda: replayed_step(net, X, Y),
-                    desc='training step, reduce-overhead'))
 ```
 
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
@@ -619,6 +631,14 @@ for desc, f in (('eager', deep), ('jit', jitted)):
           f'{1e6 * t / 120:.1f} µs per operation')
 ```
 
+<!-- WRITER: New printed facts (dev run 2026-11-19, uncontended 4090). PyTorch:
+eager 2.22 ms (18.5 us per operation), compiled without CUDA graphs 2.14 ms (17.9 us),
+reduce-overhead 0.28 ms (2.3 us); profiled device busy time of the stack 0.28-0.31 ms.
+Fusion removes nothing here (the tanh cannot be fused into the cuBLAS product, and
+Inductor's launches cost the host as much as eager's), so the whole factor of about 8
+is replay. JAX: eager 8.01 ms (66.7 us per operation), jit 0.27 ms (2.2 us), a factor
+of about 30 (store had 9.15 vs 0.28 ms, 33x). Replayed time per operation is the same
+2.2-2.3 us in both tabs: a measured per-kernel device floor, not a roofline number. -->
 Without Python in the loop, the stack runs many times faster, at
 roughly the time the GPU needs for its 120 small kernels. Dividing each time
 by 120 reads off the two costs per kernel: the eager time gives the host
@@ -630,6 +650,9 @@ a few microseconds.
 as CUDA graphs and replay them. The first call compiles and runs a warm-up,
 the second records the CUDA graph, and later calls with the same shapes copy
 the input into the recorded buffer and replay. `Benchmark` warms up with
+<!-- WRITER: "seven to eight times" -> the cell now shows about eight (2.22 vs
+0.28 ms) and that plain torch.compile (2.14 ms) is no faster than eager; the
+attribution to CUDA graphs is now carried by the third timing. -->
 three calls, so the timed calls are replays, seven to eight times faster
 than the eager calls. The host time per launch of the eager version exceeds
 that of a bare operation, since every layer is also a call of an
@@ -644,11 +667,34 @@ one, a result that must survive the next call has to be cloned.
 :begin_tab:`jax`
 `jax.jit` already removes Python from the loop: the compiled function
 starts with one call from Python. The eager version dispatches its 120
+<!-- WRITER: "twenty to thirty times" -> about thirty (8.01 vs 0.27 ms; store 33x).
+Command buffers are on by default in the pinned jaxlib 0.12.0.1: disabling them
+(XLA_FLAGS=--xla_gpu_enable_command_buffer=) slows the jitted stack from 0.27-0.41 ms
+to 0.82-0.94 ms (dev test 2026-11-19), so the tab's claim holds; keep the version name
+out of the prose (COMP-13). -->
 operations one at a time, at tens of microseconds each, and is twenty to
 thirty times slower. On a GPU, XLA also records runs of consecutive kernels as
 CUDA graphs by default (XLA calls them command buffers). A jitted function
 is therefore recorded and replayed without a separate mode.
 :end_tab:
+
+<!-- WRITER: New PyTorch-only cell (introduce it in the PyTorch tab note above or a
+shared sentence; JAX's jitted step already runs at about the roofline, 0.26 ms).
+It replays the training step of the previous subsection with mode='reduce-overhead'
+and prints the profiled GPU busy time. Dev runs: 0.77-0.86 ms per step, GPU busy
+0.25 ms (default torch.compile: 1.2-1.7 ms wall, also 0.25 ms busy; eager 0.40 ms
+busy). Reading: the device work matches the roofline prediction of about 0.2 ms;
+replay halves the compiled step, but the graph break at torch.autograd.grad keeps
+Python between the forward/backward graphs and the update graph, so the step stays
+overhead-bound (about a third of the wall time busy). -->
+```{.python .input #compilation-replaying-the-training-step}
+%%tab pytorch
+replayed_step = torch.compile(train_step, mode='reduce-overhead')
+t = d2l.Benchmark(lambda: replayed_step(net, X, Y)).time
+busy = sum(d2l.kernel_times(lambda: replayed_step(net, X, Y)).values())
+print(f'training step, reduce-overhead: {1000 * t:.2f} ms/call, '
+      f'GPU busy {busy:.2f} ms')
+```
 
 ## Limits of Compilation
 :label:`subsec_comp-hurts`

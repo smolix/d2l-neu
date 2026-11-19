@@ -1176,9 +1176,6 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
 
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
-
 def train_batch_ch13(net, X, y, loss, optimizer):
     """Train for a minibatch with Keras (defined in Chapter 13).
 

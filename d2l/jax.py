@@ -2197,6 +2197,8 @@ class RecallModel(nnx.Module):
     Defined in :numref:`sec_gru`"""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8, *, rngs):
+        # d2l.Embed computes its gradient by a matrix product: no atomic adds
+        # that wait on one another when a few filler tokens fill every row
         self.embedding = d2l.Embed(vocab_size, num_inputs, rngs=rngs,
             embedding_init=nnx.initializers.normal(num_inputs ** -0.5))
         self.layer = layer
@@ -2277,41 +2279,59 @@ class SeqLM(nnx.Module):
         Defined in :numref:`sec_linear-recurrence`"""
         return self.norms[0](self.embedding(X))
 
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
-
-class PennTreebank(d2l.DataModule):
-    """Character-level Penn Treebank, cut into windows of num_steps.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, batch_size, num_steps):
-        super().__init__()
-        self.save_hyperparameters()
-        data_dir = d2l.download_extract('ptb')
-        def read(split):
-            with open(os.path.join(data_dir, f'ptb.{split}.txt')) as f:
-                return f.read()
-        train, val = read('train'), read('valid')
-        self.vocab = d2l.Vocab(list(train))
-        self.train, self.val = self.windows(train), self.windows(val)
-
-    def windows(self, text):
-        corpus = d2l.tensor(self.vocab[list(text)])
-        n = (len(corpus) - 1) // self.num_steps * self.num_steps
-        return (corpus[:n].reshape(-1, self.num_steps),  # Inputs
-                corpus[1:n + 1].reshape(-1, self.num_steps))  # Next tokens
-
-    def get_dataloader(self, train):
-        return self.get_tensorloader(self.train if train else self.val, train)
-
-def fit_lm(model, data, num_steps=3000, lr=2e-3):
-    """Train with AdamW for num_steps steps; return validation perplexity.
+class AttentionMixer(d2l.CausalAttention):
+    """Causal multi-head attention with rotary positions, as a sequence
+    mixer; with conv_width, a causal convolution per channel first mixes
+    each query, key, and value with those of the previous steps.
 
     Defined in :numref:`sec_gru`"""
-    optimizer = nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.01),
-                              wrt=nnx.Param)
-    d2l.train_steps(model, data, optimizer, num_steps)
-    return d2l.lm_perplexity(model, data.val_dataloader())
+    def __init__(self, num_hiddens, num_heads, conv_width=None, *, rngs):
+        super().__init__(num_hiddens, num_heads, rope=True, rngs=rngs)
+        lecun = nnx.initializers.lecun_normal()
+        for layer in (self.W_qkv, self.W_o):  # Like every mixer of the chapter
+            layer.kernel[...] = lecun(rngs.params(), layer.kernel.shape)
+        d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
+        self.conv = None if conv_width is None else nnx.Conv(
+            d, d, (conv_width,), feature_group_count=d,
+            padding=((conv_width - 1, 0),), rngs=rngs)
+
+    def qkv(self, X, offset=0, tables=None):
+        B, T, _ = X.shape
+        QKV = self.W_qkv(X)
+        if self.conv is not None:  # Causal: padded on the left only
+            QKV = self.conv(QKV)
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
+                   for u in jnp.split(QKV, 3, -1))
+        q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
+
+@nnx.jit
+def position_loss_sum(model, X, Y):
+    """Loss in nats at each position, summed over the batch.
+
+    Defined in :numref:`sec_gru`"""
+    return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum(0)
+
+def loss_by_position(model, data):
+    """Mean validation loss in nats at each position of the window.
+
+    Defined in :numref:`sec_gru`"""
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        total += position_loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
+        count += len(X)
+    return (total / count).tolist()
+
+def train_text(model, data, lr=2e-3, num_steps=1000):
+    """Train a language model with LMOptimizer; return its validation loss
+    in nats at each position and its milliseconds per training step.
+
+    Defined in :numref:`sec_gru`"""
+    optimizer = d2l.LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
+    # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
+    bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
+                          warmup=1, repeats=num_steps // 50 - 1)
+    return loss_by_position(model, data), 1000 * bench.time / 50
 
 def chrf(pred, label, n=6, beta=2):
     """chrF (Popovic, 2015): character n-gram F-score.

@@ -53,17 +53,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #lstm-gated-recurrent-networks-1}
-%%tab pytorch
-import os
-```
-
-```{.python .input #lstm-gated-recurrent-networks-1}
-%%tab jax
-import os
-import random
-```
-
 ## Gates
 
 ### Vanishing Gradients
@@ -232,10 +221,12 @@ class LSTMScratch(nn.Module):
     def __init__(self, num_inputs, num_hiddens):
         super().__init__()
         self.num_hiddens = num_hiddens
-        scale = 1 / math.sqrt(num_hiddens)
-        # Weights of i, f, c_tilde, and o, stacked along the last axis
-        self.W_x = nn.Parameter(torch.randn(num_inputs, 4 * num_hiddens) * scale)
-        self.W_h = nn.Parameter(torch.randn(num_hiddens, 4 * num_hiddens) * scale)
+        # Weights of i, f, c_tilde, and o, stacked along the last axis, with
+        # variance 1 / fan-in
+        self.W_x = nn.Parameter(torch.randn(num_inputs, 4 * num_hiddens)
+                                / math.sqrt(num_inputs))
+        self.W_h = nn.Parameter(torch.randn(num_hiddens, 4 * num_hiddens)
+                                / math.sqrt(num_hiddens))
         self.b = nn.Parameter(torch.zeros(4 * num_hiddens))
 
     def forward(self, X):  # X: (batch_size, num_steps, num_inputs)
@@ -255,12 +246,12 @@ class LSTMScratch(nnx.Module):
     """An LSTM layer computed one time step at a time."""
     def __init__(self, num_inputs, num_hiddens, *, rngs):
         self.num_hiddens = num_hiddens
-        scale = 1 / math.sqrt(num_hiddens)
-        # Weights of i, f, c_tilde, and o, stacked along the last axis
-        self.W_x = nnx.Param(
-            rngs.params.normal((num_inputs, 4 * num_hiddens)) * scale)
-        self.W_h = nnx.Param(
-            rngs.params.normal((num_hiddens, 4 * num_hiddens)) * scale)
+        # Weights of i, f, c_tilde, and o, stacked along the last axis, with
+        # variance 1 / fan-in
+        self.W_x = nnx.Param(rngs.params.normal((num_inputs, 4 * num_hiddens))
+                             / math.sqrt(num_inputs))
+        self.W_h = nnx.Param(rngs.params.normal((num_hiddens, 4 * num_hiddens))
+                             / math.sqrt(num_hiddens))
         self.b = nnx.Param(jnp.zeros(4 * num_hiddens))
 
     def __call__(self, X):  # X: (batch_size, num_steps, num_inputs)
@@ -419,6 +410,19 @@ after `init_lecun`. It also covers the library's recurrent layers, whose
 default draws all weights and biases from the same uniform distribution
 with $n_\textrm{in}$ replaced by the hidden size: their input and recurrent
 matrices get LeCun normal weights, and their biases start at zero.
+The library's recurrent layers return their outputs together with their
+final state; a small wrapper, `Recurrent`, keeps only the outputs, which is
+the interface that all sequence layers of this chapter share.
+:end_tab:
+
+:begin_tab:`jax`
+Flax's `nnx.RNN` turns a recurrent cell into a layer that returns the
+outputs at all steps, which is the interface that all sequence layers of
+this chapter share. Flax's linear layers and the input matrices of its
+recurrent cells start with LeCun normal weights and zero biases, the
+convention of all models in this chapter. Its recurrent matrices start as
+random orthogonal matrices by default; we pass `recurrent_kernel_init` to
+give them LeCun normal weights as well.
 :end_tab:
 
 ```{.python .input #lstm-delayed-recall-6}
@@ -439,26 +443,7 @@ def init_lecun(module):  #@save
                 else:
                     nn.init.zeros_(param)
     return module
-```
 
-:begin_tab:`pytorch`
-The library's recurrent layers return their outputs together with their
-final state; a small wrapper keeps only the outputs, which is the
-interface that all sequence layers of this chapter share.
-:end_tab:
-
-:begin_tab:`jax`
-Flax's `nnx.RNN` turns a recurrent cell into a layer that returns the
-outputs at all steps, which is the interface that all sequence layers of
-this chapter share. Flax's linear layers and the input matrices of its
-recurrent cells start with LeCun normal weights and zero biases, the
-convention of all models in this chapter. Its recurrent matrices start as
-random orthogonal matrices by default; we pass `recurrent_kernel_init` to
-give them LeCun normal weights as well.
-:end_tab:
-
-```{.python .input #lstm-delayed-recall-2}
-%%tab pytorch
 class Recurrent(nn.Module):  #@save
     """A batch-first recurrent layer that returns only its outputs."""
     def __init__(self, rnn):
@@ -467,7 +452,17 @@ class Recurrent(nn.Module):  #@save
 
     def forward(self, X):
         return self.rnn(X)[0]
+```
 
+Besides the three networks with their gates starting near one half, we train an
+LSTM and a GRU whose gates start out keeping their state: the bias of the
+LSTM's forget gate is set to 5 and that of its input gate to $-5$, and the
+bias of the GRU's update gate to 5. Since $\sigma(5) = 0.993$, these gates
+start with a half-life of about 100 steps instead of one.
+<!-- WRITER: the table now has six rows: RNN (LeCun normal recurrent matrix), RNN with its recurrent matrix at PyTorch's default scale (uniform on [-1/8, 1/8], the control), LSTM, GRU, LSTM keep gate, GRU keep gate; "three networks with their gates" is wrong for the RNN rows (the RNN has no gates). `init_keep_gate` is now defined in the same cell as `RecallModel`. -->
+
+```{.python .input #lstm-delayed-recall-2}
+%%tab pytorch
 class RecallModel(nn.Module):  #@save
     """Embedding, a sequence layer, and a classifier at every position."""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
@@ -480,38 +475,7 @@ class RecallModel(nn.Module):  #@save
 
     def forward(self, X):  # Logits, (batch_size, num_steps, num_outputs)
         return self.head(self.layer(self.embedding(X)))
-```
 
-```{.python .input #lstm-delayed-recall-2}
-%%tab jax
-class RecallModel(nnx.Module):  #@save
-    """Embedding, a sequence layer, and a classifier at every position."""
-    def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
-                 num_outputs=8, *, rngs):
-        self.embedding = d2l.Embed(vocab_size, num_inputs, rngs=rngs,
-            embedding_init=nnx.initializers.normal(num_inputs ** -0.5))
-        self.layer = layer
-        self.head = nnx.Linear(num_hiddens, num_outputs, rngs=rngs)
-
-    def __call__(self, X):  # Logits, (batch_size, num_steps, num_outputs)
-        return self.head(self.layer(self.embedding(X)))
-```
-
-:begin_tab:`jax`
-The table is `d2l.Embed` of :numref:`subsec_utils_embed`, whose gradient is a
-matrix product. The gradient of an ordinary lookup adds to each row with
-atomic operations, which wait on one another when a few filler tokens fill
-almost every position.
-:end_tab:
-
-Besides the three networks with their gates starting near one half, we train an
-LSTM and a GRU whose gates start out keeping their state: the bias of the
-LSTM's forget gate is set to 5 and that of its input gate to $-5$, and the
-bias of the GRU's update gate to 5. Since $\sigma(5) = 0.993$, these gates
-start with a half-life of about 100 steps instead of one.
-
-```{.python .input #lstm-delayed-recall-3}
-%%tab pytorch
 def init_keep_gate(rnn, bias=5.0):
     """Start an LSTM's forget gate, or a GRU's update gate, near one."""
     h = rnn.hidden_size
@@ -524,8 +488,22 @@ def init_keep_gate(rnn, bias=5.0):
     return rnn
 ```
 
-```{.python .input #lstm-delayed-recall-3}
+```{.python .input #lstm-delayed-recall-2}
 %%tab jax
+class RecallModel(nnx.Module):  #@save
+    """Embedding, a sequence layer, and a classifier at every position."""
+    def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
+                 num_outputs=8, *, rngs):
+        # d2l.Embed computes its gradient by a matrix product: no atomic adds
+        # that wait on one another when a few filler tokens fill every row
+        self.embedding = d2l.Embed(vocab_size, num_inputs, rngs=rngs,
+            embedding_init=nnx.initializers.normal(num_inputs ** -0.5))
+        self.layer = layer
+        self.head = nnx.Linear(num_hiddens, num_outputs, rngs=rngs)
+
+    def __call__(self, X):  # Logits, (batch_size, num_steps, num_outputs)
+        return self.head(self.layer(self.embedding(X)))
+
 def init_keep_gate(cell, bias=5.0):
     """Start an LSTM's forget gate, or a GRU's update gate, near one."""
     if isinstance(cell, nnx.LSTMCell):
@@ -542,7 +520,9 @@ save the loop once. `train_queries` draws a fresh batch from the
 function `batch` at every step, computes the cross-entropy at the query
 positions only, the last `Y.shape[1]` positions of the sequence, and takes
 an optimizer step with the gradient clipped to norm 1. `query_accuracy`
-returns the fraction of queries answered correctly.
+returns the fraction of queries answered correctly. For delayed recall,
+`train_delayed_recall` trains a model with Adam on 1,500 batches of 128
+sequences and tests it on 2,048 new sequences.
 
 :begin_tab:`jax`
 The clipping is part of the optimizer, an `optax.chain` that clips the
@@ -572,6 +552,17 @@ def query_accuracy(model, X, Y):  #@save
     X, Y = (torch.as_tensor(A, device=device) for A in (X, Y))
     with torch.inference_mode():
         return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).float().mean()
+
+def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
+                         num_updates=1500, lr=3e-3):
+    """Train on fresh batches of delayed recall; return the test accuracy."""
+    task = lambda rng, n: delayed_recall(rng, n, num_steps,
+                                         blank_fillers=blank_fillers)
+    rng = np.random.default_rng(0)
+    model.to(d2l.try_gpu())
+    train_queries(model, lambda step: task(rng, 128), num_updates,
+                  torch.optim.Adam(model.parameters(), lr=lr))
+    return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 ```
 
 ```{.python .input #lstm-delayed-recall-4}
@@ -597,27 +588,7 @@ def train_queries(model, batch, num_steps, optimizer):  #@save
 def query_accuracy(model, X, Y):
     """Fraction of queries answered correctly."""
     return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).mean()
-```
 
-For delayed recall, each model is trained with Adam on 1,500 batches of
-128 sequences and tested on 2,048 new sequences.
-
-```{.python .input #lstm-delayed-recall-7}
-%%tab pytorch
-def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy."""
-    task = lambda rng, n: delayed_recall(rng, n, num_steps,
-                                         blank_fillers=blank_fillers)
-    rng = np.random.default_rng(0)
-    model.to(d2l.try_gpu())
-    train_queries(model, lambda step: task(rng, 128), num_updates,
-                  torch.optim.Adam(model.parameters(), lr=lr))
-    return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
-```
-
-```{.python .input #lstm-delayed-recall-7}
-%%tab jax
 def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
                          num_updates=1500, lr=3e-3):
     """Train on fresh batches of delayed recall; return the test accuracy."""
@@ -630,6 +601,20 @@ def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 ```
 
+<!-- WRITER: prediction before the run (LSTM-10). The cell below draws one 64 x 64 recurrent matrix of each kind the RNN rows use (NumPy, seed 0): LeCun normal has spectral radius about 1.0 and largest singular value about 2.0; the uniform draw at PyTorch's default scale has spectral radius about 0.6 and largest singular value about 1.1 (read the stored output). -->
+
+```{.python .input #lstm-delayed-recall-8}
+%%tab pytorch, jax
+rng, n = np.random.default_rng(0), 64  # n hidden units
+for name, W in (('LeCun normal', rng.normal(0, n ** -0.5, (n, n))),
+                ('default scale', rng.uniform(-n ** -0.5, n ** -0.5, (n, n)))):
+    print(f'{name:>13}: spectral radius {np.abs(np.linalg.eigvals(W)).max():.2f},'
+          f' largest singular value {np.linalg.norm(W, 2):.2f}')
+```
+
+The table trains every network twice at each delay, from fresh random
+weights, and prints both test accuracies.
+
 ```{.python .input #lstm-delayed-recall-5}
 %%tab pytorch
 def recurrent(layer, keep_gate=False):
@@ -637,39 +622,52 @@ def recurrent(layer, keep_gate=False):
     layer = init_lecun(layer(32, 64, batch_first=True))
     return init_keep_gate(layer) if keep_gate else layer
 
-layers = {'RNN': lambda: recurrent(nn.RNN), 'LSTM': lambda: recurrent(nn.LSTM),
-          'GRU': lambda: recurrent(nn.GRU),
+def rnn_default_scale():  # The recurrent matrix as nn.RNN draws it
+    rnn = recurrent(nn.RNN)
+    nn.init.uniform_(rnn.weight_hh_l0, -64 ** -0.5, 64 ** -0.5)
+    return rnn
+
+layers = {'RNN': lambda: recurrent(nn.RNN),
+          'RNN, default scale': rnn_default_scale,
+          'LSTM': lambda: recurrent(nn.LSTM), 'GRU': lambda: recurrent(nn.GRU),
           'LSTM, keep gate': lambda: recurrent(nn.LSTM, keep_gate=True),
           'GRU, keep gate': lambda: recurrent(nn.GRU, keep_gate=True)}
-lengths = [5, 10, 20, 50, 100, 200]
-print(' ' * 16, ' '.join(f'{T:5d}' for T in lengths))
+delays = [20, 50, 100, 200]
+print(' ' * 18, ' '.join(f'{T:>9d}' for T in delays))
 for name, layer in layers.items():
-    accuracy = [train_delayed_recall(RecallModel(Recurrent(layer()), 64), T)
-                for T in lengths]
-    print(f'{name:16s}', ' '.join(f'{a:5.2f}' for a in accuracy))
+    runs = [[train_delayed_recall(RecallModel(Recurrent(layer()), 64), T)
+             for _ in range(2)] for T in delays]
+    print(f'{name:18s}', ' '.join(f'{a:.2f}/{b:.2f}' for a, b in runs))
 ```
 
 ```{.python .input #lstm-delayed-recall-5}
 %%tab jax
 lecun = {'recurrent_kernel_init': nnx.initializers.lecun_normal()}
+default = {'recurrent_kernel_init': nnx.initializers.variance_scaling(
+    1 / 3, 'fan_in', 'uniform')}  # PyTorch's: uniform on [-1/8, 1/8]
 cells = {'RNN': lambda rngs: nnx.SimpleCell(32, 64, rngs=rngs, **lecun),
+         'RNN, default scale':
+             lambda rngs: nnx.SimpleCell(32, 64, rngs=rngs, **default),
          'LSTM': lambda rngs: nnx.LSTMCell(32, 64, rngs=rngs, **lecun),
          'GRU': lambda rngs: nnx.GRUCell(32, 64, rngs=rngs, **lecun),
          'LSTM, keep gate': lambda rngs: init_keep_gate(
              nnx.LSTMCell(32, 64, rngs=rngs, **lecun)),
          'GRU, keep gate': lambda rngs: init_keep_gate(
              nnx.GRUCell(32, 64, rngs=rngs, **lecun))}
-lengths = [5, 10, 20, 50, 100, 200]
-print(' ' * 16, ' '.join(f'{T:5d}' for T in lengths))
+
+def recall_model(cell):  # Fresh random weights for every model
+    rngs = nnx.Rngs(d2l.get_key())
+    return RecallModel(nnx.RNN(cell(rngs)), 64, rngs=rngs)
+
+delays = [20, 50, 100, 200]
+print(' ' * 18, ' '.join(f'{T:>9d}' for T in delays))
 for name, cell in cells.items():
-    accuracy = []
-    for T in lengths:
-        rngs = nnx.Rngs(random.getrandbits(32))
-        model = RecallModel(nnx.RNN(cell(rngs)), 64, rngs=rngs)
-        accuracy.append(train_delayed_recall(model, T))
-    print(f'{name:16s}', ' '.join(f'{a:5.2f}' for a in accuracy))
+    runs = [[train_delayed_recall(recall_model(cell), T) for _ in range(2)]
+            for T in delays]
+    print(f'{name:18s}', ' '.join(f'{a:.2f}/{b:.2f}' for a, b in runs))
 ```
 
+<!-- WRITER: the reading below describes the old one-run table with delays 5 to 200 and is now false in parts. Measured in development (two runs per entry, both tabs; numbers in the stored output will differ run to run): LSTM and GRU with keep gates: 1.00/1.00 at every delay 20 to 200 in both tabs. Default LSTM: partial already at 20 (0.36 to 0.49), at chance (0.12) from 50 in every run. Default GRU: 1.00/1.00 at 20, at chance from 50 in every run. RNN (LeCun normal, spectral radius about 1): erratic at every delay, from chance to 1.00 between the two runs of the same delay (0.24/1.00 at 20 in both tabs); in six extra dev runs per tab it recalled perfectly at 50 in 5 of 6 runs and varied from 0.12 to 1.00 at 100. RNN at default scale (radius about 0.6, the control): 1.00/1.00 at 20 in both tabs; at 50 mostly at chance (in six extra runs per tab, 5 of 6 at 0.12 to 0.13, one at 0.50 or 0.71), so the acceptance test "at chance by 50 in both runs" does not hold reliably; at 100 it was at chance in all 6 + 2 dev runs per tab (0.11 to 0.27 in the two-run table: one PyTorch run reached 0.27). So the control supports: a smaller recurrent matrix loses the symbol by 100 steps where the LeCun one sometimes still carries it; the radius-1 network is unreliable in both directions. "The plain RNN is erratic" stays true; "training never finds" -> "within 1,500 updates training does not find" (LSTM-12). -->
 With their gates starting near one half, the LSTM and the GRU recall the
 symbol after 10 steps and are at chance after 50; in some runs the LSTM
 recalls only part of the symbols already at 20. The plain RNN is erratic:
@@ -683,8 +681,10 @@ that would solve the task. A gate that starts near one passes the gradient
 back through hundreds of steps. Gates make a long memory possible and
 learnable, but whether training finds it depends on where the gates start.
 
-### Deep Recurrent Networks
+### Gated Networks on Text
 :label:`subsec_deep-rnn`
+
+<!-- WRITER: new last subsection (worklist 2.B.8), replacing "Deep Recurrent Networks" and the Penn Treebank subsection. Reader's question: chapter 11 put a plain RNN beside the GPT on the same bytes (:numref:`subsec_gpt-rnn-baseline`) and the RNN fell behind after a dozen bytes; do gates close that gap? The acceptance test of the 512-byte setting failed in development (see the code report), so the benchmark is the fallback: exactly the data and recipe of :numref:`sec_gpt`, windows of 128 bytes, 64 per step, 1,000 steps. -->
 
 A single recurrent layer computes one nonlinear update per step. To
 compute more complex functions of the past, we stack layers: the outputs
@@ -770,135 +770,158 @@ modeling: the backward layer reads the token that the model is asked to
 predict, so the training loss falls without the model learning to predict
 anything, and at generation time the future tokens do not exist.
 
-### Character-Level Language Modeling
+<!-- WRITER: AttentionMixer (one paragraph): the attention baseline of every comparison in the chapter is SeqLM with this mixer in every block, so only the mixer differs. It is d2l.CausalAttention of :numref:`sec_gpt` with rope=True (multi-head causal softmax attention; RoPE rotates queries and keys by their position), its weights drawn LeCun normal like every other mixer; conv_width (used in :numref:`sec_hybrids`) adds a causal depthwise convolution over the queries, keys, and values (the short convolution of the recurrent layers). The text runs use 8 heads of width 32, as the GPT does. -->
 
-Every section of this chapter trains its models on the same language
-modeling task, so that their perplexities can be compared. The text is the
-*Penn Treebank* :cite:`Marcus.Santorini.Marcinkiewicz.1993`, about one
-million words of *Wall Street Journal* articles, in the version commonly
-used for language modeling: lowercased, with numbers replaced by `N`,
-rare words by `<unk>`, and a standard split into training and validation
-text. We model it character by character, with a vocabulary of about 50
-characters, and cut the text into windows of 128 characters, which cover
-about 25 words. The training text has 5 million characters. *The Time
-Machine* of :numref:`sec_text-sequence`, with under 200,000, is too small
-for the models of this chapter: they memorize it within a few thousand
-training steps.
-
-```{.python .input #lstm-ptb-data-hub}
-#@save
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
-```
-
-```{.python .input #lstm-character-level-language-modeling-1}
-%%tab pytorch, jax
-class PennTreebank(d2l.DataModule):  #@save
-    """Character-level Penn Treebank, cut into windows of num_steps."""
-    def __init__(self, batch_size, num_steps):
-        super().__init__()
-        self.save_hyperparameters()
-        data_dir = d2l.download_extract('ptb')
-        def read(split):
-            with open(os.path.join(data_dir, f'ptb.{split}.txt')) as f:
-                return f.read()
-        train, val = read('train'), read('valid')
-        self.vocab = d2l.Vocab(list(train))
-        self.train, self.val = self.windows(train), self.windows(val)
-
-    def windows(self, text):
-        corpus = d2l.tensor(self.vocab[list(text)])
-        n = (len(corpus) - 1) // self.num_steps * self.num_steps
-        return (corpus[:n].reshape(-1, self.num_steps),  # Inputs
-                corpus[1:n + 1].reshape(-1, self.num_steps))  # Next tokens
-
-    def get_dataloader(self, train):
-        return self.get_tensorloader(self.train if train else self.val, train)
-```
-
-```{.python .input #lstm-character-level-language-modeling-2}
-%%tab pytorch, jax
-data = PennTreebank(batch_size=64, num_steps=128)
-print(f'{len(data.vocab)} characters, {len(data.train[0])} training and '
-      f'{len(data.val[0])} validation windows')
-```
-
-We measure a model by its *perplexity* on the validation text, the
-exponential of the average cross-entropy loss per character
-(:numref:`sec_language-model`). A perplexity of 3 means that the model is,
-on average, as uncertain about the next character as if it chose
-uniformly among 3 candidates. `d2l.lm_perplexity` of :numref:`sec_test_models`
-computes it over the validation minibatches, with dropout off.
-
-All models are trained with the same recipe: AdamW
-(:numref:`sec_adamw`) with learning rate 0.002 and weight decay 0.01, for
-3,000 steps of 64 windows, using the training loop `d2l.train_steps` of
-:numref:`sec_test_models`, which draws minibatches and takes optimizer steps. The
-3,000 steps cover the training text about five times. The models do not
-overfit in that time: the validation perplexity of every model in this chapter
-is still falling at the last step, so the comparisons are at a fixed budget,
-not at convergence.
-
-```{.python .input #lstm-character-level-language-modeling-4}
+```{.python .input #lstm-gated-networks-on-text-1}
 %%tab pytorch
-def fit_lm(model, data, num_steps=3000, lr=2e-3):  #@save
-    """Train with AdamW for num_steps steps; return validation perplexity."""
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr,
-                                  weight_decay=0.01)
-    d2l.train_steps(model, data, optimizer, num_steps)
-    return d2l.lm_perplexity(model, data.val_dataloader())
+class AttentionMixer(d2l.CausalAttention):  #@save
+    """Causal multi-head attention with rotary positions, as a sequence
+    mixer; with conv_width, a causal convolution per channel first mixes
+    each query, key, and value with those of the previous steps."""
+    def __init__(self, num_hiddens, num_heads, conv_width=None):
+        super().__init__(num_hiddens, num_heads, rope=True)
+        d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
+        self.conv = None if conv_width is None else nn.Conv1d(
+            d, d, conv_width, groups=d, padding=conv_width - 1)
+        init_lecun(self)  # Like every mixer of the chapter
+
+    def qkv(self, X, offset=0, tables=None):
+        B, T, _ = X.shape
+        QKV = self.W_qkv(X)
+        if self.conv is not None:  # Causal: drop the last conv_width - 1 steps
+            QKV = self.conv(QKV.mT)[..., :T].mT
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+                   for u in QKV.chunk(3, -1))
+        q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 ```
 
-```{.python .input #lstm-character-level-language-modeling-4}
+```{.python .input #lstm-gated-networks-on-text-1}
 %%tab jax
-def fit_lm(model, data, num_steps=3000, lr=2e-3):  #@save
-    """Train with AdamW for num_steps steps; return validation perplexity."""
-    optimizer = nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.01),
-                              wrt=nnx.Param)
-    d2l.train_steps(model, data, optimizer, num_steps)
-    return d2l.lm_perplexity(model, data.val_dataloader())
+class AttentionMixer(d2l.CausalAttention):  #@save
+    """Causal multi-head attention with rotary positions, as a sequence
+    mixer; with conv_width, a causal convolution per channel first mixes
+    each query, key, and value with those of the previous steps."""
+    def __init__(self, num_hiddens, num_heads, conv_width=None, *, rngs):
+        super().__init__(num_hiddens, num_heads, rope=True, rngs=rngs)
+        lecun = nnx.initializers.lecun_normal()
+        for layer in (self.W_qkv, self.W_o):  # Like every mixer of the chapter
+            layer.kernel[...] = lecun(rngs.params(), layer.kernel.shape)
+        d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
+        self.conv = None if conv_width is None else nnx.Conv(
+            d, d, (conv_width,), feature_group_count=d,
+            padding=((conv_width - 1, 0),), rngs=rngs)
+
+    def qkv(self, X, offset=0, tables=None):
+        B, T, _ = X.shape
+        QKV = self.W_qkv(X)
+        if self.conv is not None:  # Causal: padded on the left only
+            QKV = self.conv(QKV)
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
+                   for u in jnp.split(QKV, 3, -1))
+        q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 ```
 
-We train three models of width $d = 128$ with two blocks each, whose
-mixers are a plain recurrent layer, an LSTM, and a GRU, and count their
-trainable parameters with `d2l.num_params` of :numref:`sec_efficient_cnns`.
+<!-- WRITER: loss_by_position is the function of :numref:`subsec_gpt-rnn-baseline`, saved here (one clause); train_text trains with the recipe of :numref:`sec_gpt` (d2l.LMOptimizer, peak rate 2e-3, warmup 100 steps, cosine decay, 1,000 steps) and returns the validation loss at every position and the milliseconds per training step. The mean over the positions is the validation loss, the logarithm of d2l.lm_perplexity. -->
 
-```{.python .input #lstm-character-level-language-modeling-5}
+```{.python .input #lstm-gated-networks-on-text-2}
 %%tab pytorch
-results = {}
-for name, layer in {'RNN': nn.RNN, 'LSTM': nn.LSTM, 'GRU': nn.GRU}.items():
-    mixers = [Recurrent(init_lecun(layer(128, 128, batch_first=True)))
-              for _ in range(2)]
-    model = SeqLM(len(data.vocab), 128, mixers)
-    results[name] = d2l.num_params(model), fit_lm(model, data)
+@torch.inference_mode()  #@save
+def loss_by_position(model, data):
+    """Mean validation loss in nats at each position of the window."""
+    device = next(model.parameters()).device
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        logits = model(X.to(device))  # (batch, T, V)
+        total += F.cross_entropy(logits.transpose(1, 2), Y.to(device),
+                                 reduction='none').sum(0)
+        count += len(X)
+    return (total / count).tolist()
 ```
 
-```{.python .input #lstm-character-level-language-modeling-5}
+```{.python .input #lstm-gated-networks-on-text-2}
 %%tab jax
-results = {}
-cells = {'RNN': nnx.SimpleCell, 'LSTM': nnx.LSTMCell, 'GRU': nnx.GRUCell}
-for name, cell in cells.items():
-    rngs = nnx.Rngs(random.getrandbits(32))
-    mixers = [nnx.RNN(cell(128, 128, rngs=rngs, **lecun)) for _ in range(2)]
-    model = SeqLM(len(data.vocab), 128, mixers, rngs=rngs)
-    results[name] = d2l.num_params(model), fit_lm(model, data)
+@nnx.jit  #@save
+def position_loss_sum(model, X, Y):
+    """Loss in nats at each position, summed over the batch."""
+    return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum(0)
+
+def loss_by_position(model, data):  #@save
+    """Mean validation loss in nats at each position of the window."""
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        total += position_loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
+        count += len(X)
+    return (total / count).tolist()
 ```
 
-```{.python .input #lstm-character-level-language-modeling-6}
+```{.python .input #lstm-gated-networks-on-text-3}
 %%tab pytorch, jax
-for name, (num_params, ppl) in results.items():
-    print(f'{name:5s} {num_params:9,d} parameters   perplexity {ppl:.2f}')
+def train_text(model, data, lr=2e-3, num_steps=1000):  #@save
+    """Train a language model with LMOptimizer; return its validation loss
+    in nats at each position and its milliseconds per training step."""
+    optimizer = d2l.LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
+    # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
+    bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
+                          warmup=1, repeats=num_steps // 50 - 1)
+    return loss_by_position(model, data), 1000 * bench.time / 50
 ```
 
-All three models reach validation perplexities between about 2.95 and 3.15. The
-gated networks are a few percent better than the plain one, and the LSTM
-and the GRU differ by one or two percent. Character-level language modeling at this
-scale rewards long memory little: the next character of a word depends
-mostly on the last few characters, which a plain recurrent network keeps
-without difficulty. The delayed recall task isolates long memory, and on it
-the models differ sharply. Later sections report both kinds of result, and
-the language modeling task serves mainly to check that a new model learns
-ordinary text as well as the old ones.
+<!-- WRITER: the benchmark paragraph: byte-level WikiText-103 (d2l.WikiText103 of :numref:`sec_test_models`), windows of 128 bytes, 64 per step, as in :numref:`sec_gpt`; why WikiText bytes and not Penn Treebank (no model reads the same passage twice, so nothing overfits; the same yardstick as the GPT); nats per byte (divide by ln 2 for bits per byte). Every model has width 256 and four blocks; only the mixer differs. -->
+
+```{.python .input #lstm-gated-networks-on-text-4}
+%%tab pytorch, jax
+data = d2l.WikiText103(batch_size=64, num_steps=128)
+```
+
+```{.python .input #lstm-gated-networks-on-text-5}
+%%tab pytorch
+d = 256  # The width of every model; each has four blocks
+mixers = {
+    'RNN': lambda: Recurrent(init_lecun(nn.RNN(d, d, batch_first=True))),
+    'LSTM': lambda: Recurrent(init_lecun(nn.LSTM(d, d, batch_first=True))),
+    'GRU': lambda: Recurrent(init_lecun(nn.GRU(d, d, batch_first=True))),
+    'attention': lambda: AttentionMixer(d, num_heads=8)}
+
+def text_model(mixer):  # 256 byte values; fresh weights, on the GPU
+    return SeqLM(256, d, [mixer() for _ in range(4)]).to(d2l.try_gpu())
+```
+
+```{.python .input #lstm-gated-networks-on-text-5}
+%%tab jax
+d = 256  # The width of every model; each has four blocks
+mixers = {
+    'RNN': lambda rngs: nnx.RNN(nnx.SimpleCell(d, d, rngs=rngs, **lecun)),
+    'LSTM': lambda rngs: nnx.RNN(nnx.LSTMCell(d, d, rngs=rngs, **lecun)),
+    'GRU': lambda rngs: nnx.RNN(nnx.GRUCell(d, d, rngs=rngs, **lecun)),
+    'attention': lambda rngs: AttentionMixer(d, num_heads=8, rngs=rngs)}
+
+def text_model(mixer):  # 256 byte values; fresh random weights
+    rngs = nnx.Rngs(d2l.get_key())
+    return SeqLM(256, d, [mixer(rngs) for _ in range(4)], rngs=rngs)
+```
+
+Each model is trained twice. The table prints the parameters, the
+validation loss of both runs, their losses at early, middle, and late
+positions of the window, and the time per training step.
+
+```{.python .input #lstm-gated-networks-on-text-6}
+%%tab pytorch, jax
+bands = [(0, 16), (16, 64), (64, 128)]  # Early, middle, and late positions
+header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+print(' ' * 21, *(f'{h:>11}' for h in header), '  ms/step')
+for name, mixer in mixers.items():
+    models = [text_model(mixer) for _ in range(2)]
+    runs = [train_text(model, data) for model in models]  # (losses, ms) each
+    columns = [[np.mean(loss) for loss, _ in runs]] + [
+        [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+    print(f'{name:9s} {d2l.num_params(models[0]):11,d}',
+          *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+          '/'.join(f'{ms:.0f}' for _, ms in runs))
+```
+
+<!-- WRITER: reading (written against the stored table). Measured in development, both tabs agree (width 256, four blocks, 1,000 steps of 64 x 128 bytes; two runs each): RNN 2.76 M parameters, 1.347 to 1.349 nats per byte; LSTM 4.34 M, 1.293 to 1.295; GRU 3.81 M, 1.297 to 1.300; attention 3.29 M, 1.378 to 1.394. Runs of the same model agree within 0.003 for the recurrent models and within about 0.01 for attention. Firm lessons: (1) gates help: LSTM and GRU end about 0.05 nats below the plain RNN, more than ten times the run-to-run range, and the GRU, with half a million fewer parameters than the LSTM, matches it, so the gain is not the parameter count; (2) the gain is there at every band, already in the first 16 bytes (RNN about 1.51, LSTM/GRU about 1.49 in JAX at 0-15; at 64-127 RNN 1.325 against LSTM 1.265), and no model gains much beyond byte 16 (bands 16-63 and 64-127 within 0.01 of each other); (3) at this budget the attention stack of the same width and depth is behind every recurrent stack, by about 0.04 nats against the plain RNN and 0.09 against the gated ones, at every band; it is also behind the GPT of :numref:`sec_gpt` (1.34 to 1.35 with six blocks and 4.79 M parameters), and a four-block GPT measured in development landed near it (1.376 at 512-byte windows), so the attention baseline is not faulty: at 8 M training bytes the recurrent stacks learn faster. Do not claim that attention keeps improving to the end of the window: it does not at 128 (or at 512, where at 1,000 and 2,000 steps its late band 384-511 was only 0.004 to 0.006 below its 16-127 band, within its run-to-run range). The plain RNN in this stack (1.35) matches the GPT, unlike the single wide RNN of chapter 11 (1.40 to 1.44): the stack with MLPs closes most of chapter 11's gap before gates do. ms/step (dev, shared GPU): PyTorch RNN about 19, LSTM 32 to 42, GRU about 34, attention about 24; JAX attention 9 to 13, recurrent 41 to 69. -->
 
 The gates solved the memory problem, but not the speed problem. Every gate
 reads $\mathbf{h}_{t-1}$, so step $t$ cannot begin until step $t-1$ has
@@ -1028,8 +1051,9 @@ state.
    :citet:`Gers.Schmidhuber.Cummins.2000` added it.
     1. Remove the forget gate from `LSTMScratch` by fixing $\mathbf{f}_t =
        \mathbf{1}$. Train language models with this layer and with the
-       full layer as mixers of `SeqLM`, with `fit_lm` but 500 steps (the
-       scratch loop is slow), and compare their perplexities.
+       full layer as mixers of `SeqLM`, with `train_text` but 500 steps
+       (the scratch loop is slow), and compare their validation losses.
+       <!-- WRITER: Exercise 7 now trains on the WikiText bytes of subsec_deep-rnn (128-byte windows); "characters" in 7.2 and 7.3 are bytes. -->
     1. For both models, record the fraction of cell entries $c_{t,i}$ with
        $|\tanh(c_{t,i})| > 0.99$ at the last position of the validation
        windows. Use the result to explain the difference.
@@ -1047,8 +1071,9 @@ state.
        reversed sequence, reversing its outputs, concatenating them with
        those of a forward LSTM, and projecting the result back to width
        $d$. Train `SeqLM` with two such mixers using
-       `fit_lm`, and compare its training and validation loss with those
+       `train_text`, and compare its training and validation loss with those
        of the model with forward LSTMs.
+       <!-- WRITER: train_text returns the validation loss by position, not the training loss; the reader takes the training loss from d2l.train_steps or reads the leak from the validation loss alone. -->
     1. A leak-free bidirectional predictor of the character $x_t$ combines
        the forward state after step $t-1$ with the backward state after
        step $t+1$, so it models the probability of $x_t$ given all other
@@ -1244,7 +1269,9 @@ $$\mathbf{H} \leftarrow \mathbf{H} + \textrm{mixer}(\textrm{LN}(\mathbf{H})), \q
 :::
 
 ::: {.slide title="On Text, Gates Help by a Few Percent"}
-@!lstm-character-level-language-modeling-6
+@!lstm-gated-networks-on-text-6
+
+<!-- DECK: this slide and "Every Model of the Chapter Is One Residual Stack" (d2l.fit_lm, PTB, 128 characters) and the recap table's PTB column describe the removed Penn Treebank runs; rebuild from the WikiText-byte table (gates about 0.05 nats ahead of the RNN at every position; attention behind at this budget). -->
 
 - Perplexity 3: as uncertain as a choice among 3 characters.
 - The next character depends mostly on the last few: little need for

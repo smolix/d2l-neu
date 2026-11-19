@@ -217,6 +217,9 @@ SHARED_DATA_NOTEBOOKS = {
     "chapter_transformers/gpt.ipynb",
     "chapter_transformers/kv-cache-reduction.ipynb",
     "chapter_transformers/scaling-laws.ipynb",
+    # chapter_recurrent-modern/lstm.md trains its text models on WikiText-103
+    # bytes, the data of gpt.md.
+    "chapter_recurrent-modern/lstm.ipynb",
 }
 
 MULTI_GPU_NOTEBOOKS = {
@@ -265,6 +268,10 @@ FULL_CARD_NOTEBOOKS = {
     # 11.5 times a self-attention encoder against a Perceiver as N doubles;
     # a shared card tripled the PyTorch time at N = 8192 (2026-11-18).
     "chapter_transformers/encoders-decoders.ipynb": 1,
+    # The gated-network section of the state space chapter prints
+    # milliseconds per training step of recurrent and attention language
+    # models side by side; co-tenants slow them unevenly (dev, 2026-11-19).
+    "chapter_recurrent-modern/lstm.ipynb": 1,
     # 13.1-13.5 quote timings, bandwidths and peak memory measured on whole
     # cards (13.5 on two); another tenant on a card skews them.
     "chapter_computational-performance/performance-model.ipynb": 1,

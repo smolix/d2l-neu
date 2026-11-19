@@ -2138,41 +2138,53 @@ class SeqLM(nn.Module):
         Defined in :numref:`sec_linear-recurrence`"""
         return self.norms[0](self.embedding(X))
 
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
-
-class PennTreebank(d2l.DataModule):
-    """Character-level Penn Treebank, cut into windows of num_steps.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, batch_size, num_steps):
-        super().__init__()
-        self.save_hyperparameters()
-        data_dir = d2l.download_extract('ptb')
-        def read(split):
-            with open(os.path.join(data_dir, f'ptb.{split}.txt')) as f:
-                return f.read()
-        train, val = read('train'), read('valid')
-        self.vocab = d2l.Vocab(list(train))
-        self.train, self.val = self.windows(train), self.windows(val)
-
-    def windows(self, text):
-        corpus = d2l.tensor(self.vocab[list(text)])
-        n = (len(corpus) - 1) // self.num_steps * self.num_steps
-        return (corpus[:n].reshape(-1, self.num_steps),  # Inputs
-                corpus[1:n + 1].reshape(-1, self.num_steps))  # Next tokens
-
-    def get_dataloader(self, train):
-        return self.get_tensorloader(self.train if train else self.val, train)
-
-def fit_lm(model, data, num_steps=3000, lr=2e-3):
-    """Train with AdamW for num_steps steps; return validation perplexity.
+class AttentionMixer(d2l.CausalAttention):
+    """Causal multi-head attention with rotary positions, as a sequence
+    mixer; with conv_width, a causal convolution per channel first mixes
+    each query, key, and value with those of the previous steps.
 
     Defined in :numref:`sec_gru`"""
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr,
-                                  weight_decay=0.01)
-    d2l.train_steps(model, data, optimizer, num_steps)
-    return d2l.lm_perplexity(model, data.val_dataloader())
+    def __init__(self, num_hiddens, num_heads, conv_width=None):
+        super().__init__(num_hiddens, num_heads, rope=True)
+        d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
+        self.conv = None if conv_width is None else nn.Conv1d(
+            d, d, conv_width, groups=d, padding=conv_width - 1)
+        init_lecun(self)  # Like every mixer of the chapter
+
+    def qkv(self, X, offset=0, tables=None):
+        B, T, _ = X.shape
+        QKV = self.W_qkv(X)
+        if self.conv is not None:  # Causal: drop the last conv_width - 1 steps
+            QKV = self.conv(QKV.mT)[..., :T].mT
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+                   for u in QKV.chunk(3, -1))
+        q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
+
+@torch.inference_mode()
+def loss_by_position(model, data):
+    """Mean validation loss in nats at each position of the window.
+
+    Defined in :numref:`sec_gru`"""
+    device = next(model.parameters()).device
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        logits = model(X.to(device))  # (batch, T, V)
+        total += F.cross_entropy(logits.transpose(1, 2), Y.to(device),
+                                 reduction='none').sum(0)
+        count += len(X)
+    return (total / count).tolist()
+
+def train_text(model, data, lr=2e-3, num_steps=1000):
+    """Train a language model with LMOptimizer; return its validation loss
+    in nats at each position and its milliseconds per training step.
+
+    Defined in :numref:`sec_gru`"""
+    optimizer = d2l.LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
+    # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
+    bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
+                          warmup=1, repeats=num_steps // 50 - 1)
+    return loss_by_position(model, data), 1000 * bench.time / 50
 
 def chrf(pred, label, n=6, beta=2):
     """chrF (Popovic, 2015): character n-gram F-score.

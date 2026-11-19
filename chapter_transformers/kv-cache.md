@@ -8,27 +8,21 @@ were built like our GPT, it would answer a long question by reading the
 whole question again for every word of its answer. Does a model have to
 reprocess everything before it to choose the next token?
 
-It does not. Attention is causal, so the keys and
-values of earlier tokens never change once computed. The *KV cache* stores
-them, and each step then runs the model on the new token alone. For a long
-prompt this removes all but a small fraction of the arithmetic.
+It does not. Attention is causal, so the keys and values of earlier tokens
+never change once computed. The *KV cache* stores them, and each step then
+runs the model on the new token alone. For a long prompt this removes all
+but a small fraction of the arithmetic.
 
-This section builds the cache and measures the speedup. It then turns to the
-problem the cache creates. Generation becomes limited by memory rather than
-by arithmetic, because every generated token reads all weights of the model
-and the whole cache from memory. The cache of a long context, or of many
-users served together, outgrows the weights. We derive the size of the
-cache, measure how much faster a model reads a prompt than it writes text,
-and see why batching helps less as contexts grow. Then we shrink the cache
-in three ways: by sharing keys and values across heads, by compressing them
-to fewer dimensions, and by bounding the context with a sliding window that
-keeps a few early tokens. The experiments use `d2l.GPT` from
-:numref:`sec_gpt`, and the released GPT-2 weights for the effects that only
-a trained model shows.
-<!-- WRITER: the split moved the second half (sharing heads, low rank,
-windows and sinks) to :numref:`sec_kv-cache-reduction`; the roadmap ends with
-batching and one sentence pointing there, and GPT-2's weights are no longer
-used in this section (every model here is untrained). -->
+This section builds the cache, checks it, and measures what it saves. The
+saving turns out to be smaller than the count of operations promises, and
+the reason is the second subject of the section. Once the cache is in
+place, generation is limited by memory rather than by arithmetic, because
+every new token reads all the weights of the model and its whole cache. We
+derive the size of the cache, measure how much faster a model reads a
+prompt than it writes text, and see why serving many users at once helps
+less as their contexts grow. Every model in this section is an untrained
+`d2l.GPT` of :numref:`sec_gpt`: time and memory do not care what the
+weights have learned.
 
 ```{.python .input #kv-cache-generation-and-the-kv-cache}
 %%tab pytorch
@@ -58,35 +52,53 @@ from functools import partial
 
 ## From Recomputation to Caching
 
-A forward pass of a model with $N$ parameters over $t$ tokens costs about
-$2Nt$ floating-point operations, because every parameter takes part in one
-multiplication and one addition per token. The attention scores add work
-that grows with $t^2$ (:numref:`sec_attention-at-scale`). At the lengths
-we run here it stays below $2Nt$, and we leave it out of the count, although
-at a few thousand tokens it is no longer small. Naive generation calls this
-forward pass once per new token, over a history that grows by one token per
-step. Producing $T$ tokens therefore costs about
-$\sum_{t} 2Nt \approx NT^2$ operations, quadratic in the length of the
-text. Of the logits that each pass computes, only the last row is used.
+Let us first count what naive generation costs. A forward pass of a model
+with $N$ parameters over $n$ tokens costs about $2Nn$ floating-point
+operations, because every parameter takes part in one multiplication and
+one addition per token. Attention adds work that grows faster
+(:numref:`sec_attention-at-scale`): a token at context length $n$ computes
+$n$ scores and a weighted sum of $n$ values, about $4nd$ operations in each
+of $L$ blocks of width $d$. This term is not small: for a model of GPT-2's
+shape at about 4,000 tokens, $4ndL$ is about 60% of the $2N$ of the dense
+layers. We leave it out of the count all the same, because it hardly
+changes the comparison we are after. The cached schedule below computes
+attention over the prompt as well, and both counts grow by about the same
+fraction. Naive generation calls the forward pass once per new token, over
+a history that grows by one token per step. Producing $T$ tokens therefore
+costs about $\sum_{n=1}^{T} 2Nn \approx NT^2$ operations, quadratic in the
+length of the text, and each pass uses only the last row of the logits it
+computes.
 
-Most of that work is repeated. At step $t$ the model needs, in every layer,
-the attention output for one new query $\mathbf{q}_t$ against the keys
-$\mathbf{k}_1, \ldots, \mathbf{k}_t$ and values $\mathbf{v}_1, \ldots,
-\mathbf{v}_t$. The causal mask guarantees that positions $1, \ldots, t-1$
-never see position $t$, so their hidden states, and therefore their keys
-and values, are the same at step $t$ as they were at step $t-1$. A KV
-cache stores, for every layer, the keys and values computed so far. Each
-step then runs the model on the one new token, writes its key and value
-into the cache, and attends to everything stored.
-:numref:`fig_kv-cache` contrasts the two schedules. A cached step costs
-about $2N$ operations, a forward pass over a single token, plus the scores
-of one query against $t$ keys. For a model of GPT-2's size, with 124
-million parameters, writing 256 tokens after a prompt of 3,584 tokens takes
-about $2.4 \times 10^{14}$ operations without the cache. Reading the prompt
-once and then processing each new token once takes about $10^{12}$, some
-250 times less.
+Most of that work is repeated. We count positions from 0. At step $t$ the
+new token sits at position $t$, and every layer needs the attention output
+for its query $\mathbf{q}_t$ against the keys $\mathbf{k}_0, \ldots,
+\mathbf{k}_t$ and values $\mathbf{v}_0, \ldots, \mathbf{v}_t$. The causal
+mask guarantees that positions $0, \ldots, t-1$ never see position $t$, so
+their hidden states, and therefore their keys and values, are the same as
+one step earlier. A KV cache stores, for every layer, the keys and values
+computed so far. Each step then runs the model on the one new token, writes
+its key and value into the cache, and attends to everything stored.
+:numref:`fig_kv-cache` contrasts the two schedules.
 
-![One decoding step at context length $t$. Naive generation recomputes every key, value, and score row of the prefix and then uses only the last row. With a KV cache, the past keys and values are read from memory, and the step computes a single new key, value, and score row.](../img/mdl-transformers-kv-cache.svg)
+A cached step costs about $2N$ operations, a forward pass over a single
+token, plus the scores of one query against the cache. To see what this
+saves, take a model of GPT-2's size, $N = 124$ million, that answers a long
+question of $P = 3{,}584$ tokens with $T = 256$ tokens, a case that stays
+within the 4,096 positions of the model we time below. The naive schedule
+runs forward passes over $3{,}584, 3{,}585, \ldots, 3{,}839$ tokens, in all
+
+$$
+2N \sum_{n=3584}^{3839} n \;\approx\; 2N \cdot 256 \cdot 3712
+\;\approx\; 2.4 \times 10^{14}
+$$
+
+operations. The cached schedule reads the prompt once and each new token
+once, about $2N(P + T) \approx 9.5 \times 10^{11}$ operations. The cache
+saves a factor of about 250, close to the number of generated tokens, and
+for a good reason: a single naive step over the whole text costs about as
+much as the entire cached run.
+
+![One decoding step at position $t$. Naive generation recomputes every key, value, and score row of the prefix and then uses only the last row. With a KV cache, the past keys and values are read from memory, and the step computes a single new key, value, and score row.](../img/mdl-transformers-kv-cache.svg)
 :label:`fig_kv-cache`
 
 ### The Cached Forward Pass
@@ -102,22 +114,24 @@ depend on the positions alone, so a call computes their tables once with
 Appending each new key to a growing tensor would copy the whole cache at
 every step, work that grows with the context. We therefore allocate the
 cache once, at its final size: for every block, one buffer of keys and one
-of values with room for `max_len` positions. A call with $T$ new tokens
-writes their keys and values into positions $t, \ldots, t+T-1$ and attends
-to the filled positions $0, \ldots, t+T-1$.
+of values with room for `max_len` positions and a slot for every key--value
+head, of which a model may have fewer than query heads
+(:numref:`subsec_kv-head-sharing`). A call writes the keys and values of
+its new tokens into the next free positions, starting at $t$, and attends
+to all filled positions.
 
 The same function serves both phases of generation. In *prefill*, the
 whole prompt enters at $t = 0$, and its queries need the causal mask. In
-*decode*, one token at position $t$ attends to all filled positions. The
-mask `d2l.causal_mask(T, t + T)` covers both cases, because it treats the
-$T$ queries as the last $T$ of $t + T$ positions
-(:numref:`sec_attention-scoring-functions`).
-<!-- WRITER: both tabs now attend over the whole preallocated buffer, with a
-mask over all max_len positions that also hides the positions not yet
-written (the mask of d2l.causal_mask(T, t + T), extended with False); this
-keeps the shapes of a decode step the same at every t, which compiling the
-step needs. The position t may be a tensor (PyTorch) or a traced value (JAX).
--->
+*decode*, one token at position $t$ attends to all filled positions. One
+mask covers both: the query at position $t + i$ may read the buffer
+positions $0, \ldots, t + i$. This is the causal mask of
+:numref:`sec_attention-scoring-functions` laid over the whole buffer, and
+it also hides the positions not yet written. Attending over the whole
+buffer rather than over its filled part wastes a little work. In exchange,
+a decode step has the same shapes at every position, so that we can compile
+it once and reuse it for every token. The mask is the one line of the code
+below that needs thought. Everything else is the forward pass of `d2l.GPT`,
+written out block by block.
 
 ```{.python .input #kv-cache-the-cached-forward-pass-1}
 %%tab pytorch
@@ -202,56 +216,27 @@ def forward_cached(model, X, ks, vs, t):
 ```
 
 :begin_tab:`pytorch`
-The buffers are written in place, so `forward_cached` returns the same `ks`
-and `vs` that it received; returning them keeps one calling convention for
-the functions below. The slice `ks[i, :, :, :t + T]` is a view into the
-buffer, not a copy. Computing the RoPE tables once per call instead of in
-every block saves about a quarter of the time of a decode step, which, as
-we will see, goes mostly to launching small kernels.
-<!-- WRITER: this note no longer describes the code (KV-3, KV-4: cut "a
-quarter"). New facts, one sentence at most: the buffers are written in place
-by index (`ks[i][:, :, pos] = k`); `init_cache` gives each buffer a fixed
-address (`torch._dynamo.mark_static_address`) so that a compiled step can
-write into it when replayed as a CUDA graph; attention is written out
-(scores, `d2l.masked_softmax`, weighted sum), with the query heads grouped
-per key-value head, because the fused kernel is slow for one query over a
-long masked buffer at batch 1 (4.3 ms against 1.1 ms per step at n = 2048,
-measured). -->
+The buffers are written in place by index, and `init_cache` gives each a
+fixed address so that the compiled step below can write into it. We write
+attention out with `d2l.masked_softmax` because
+`F.scaled_dot_product_attention` is slow for a single query over a long
+masked buffer.
 :end_tab:
 
 :begin_tab:`jax`
-A JAX array cannot be changed in place, and a compiled function needs
-shapes that do not change from call to call. `forward_cached` therefore
-returns new buffers made by `dynamic_update_slice`, and attention reads the
-whole buffer, with a mask that hides the positions not yet written. Inside a
-compiled loop, as below, XLA turns these updates into writes in place. The
-buffers keep the (batch, length, heads, head width) layout of the fused
-kernel `jax.nn.dot_product_attention`, so no step transposes the cache.
-The mask is that of `d2l.causal_mask(T, t + T)`, extended with False over
-the positions not yet written. We spell it out because inside a compiled
-loop `t` is a traced value, while the helper needs concrete sizes to build
-its array.
-`dynamic_update_slice` does not fail on a write past the end of the
-buffer; it moves the start index back silently, so the caller must keep
-$t + T$ within `max_len`.
-<!-- WRITER: the mask is now shared prose; the clamping pitfall is a code
-comment; the cache is one buffer per block in both tabs (a list). One
-sentence remains: arrays are immutable, `dynamic_update_slice` returns new
-buffers that XLA writes in place inside the compiled loop. -->
+JAX arrays cannot be changed in place, so `forward_cached` returns new
+buffers made by `dynamic_update_slice`; inside the compiled loop below, XLA
+turns these updates into writes in place.
 :end_tab:
 
 Generation is a prefill call over the prompt followed by one decode call
-per new token. `decode` draws each token from the last logits, after the
-temperature and top-$k$ truncation of :numref:`subsec_gpt-sampling`, and
-feeds it back. `generate_cached` gives it the interface of `generate`.
-<!-- WRITER: PyTorch `decode` now starts from the logits of the prefill
-(`generate_cached` runs the prefill, an eager `forward_cached` over the
-prompt) and runs each one-token step through `decode_step`, a
-`torch.compile` of `forward_cached` replayed as CUDA graphs; JAX `decode`
-compiles the prefill and the loop together. Neither runs a step after the
-last token any more. One shared clause: both tabs compile the step so that
-the time measures the GPU's work, not Python's
-(:numref:`sec_compilation`); `sample` repeats two lines of `generate`. -->
+per new token. `sample` draws a token from the last logits with the
+temperature and top-$k$ truncation of :numref:`subsec_gpt-sampling`,
+repeating two lines of `generate`. `decode` feeds each token back, and
+`generate_cached` gives the whole loop the interface of `generate`. The
+decode step is compiled once and replayed for every token
+(:numref:`sec_compilation`), so that its time is set by the work of the GPU
+rather than by Python's.
 
 ```{.python .input #kv-cache-the-cached-forward-pass-2}
 %%tab pytorch
@@ -336,29 +321,22 @@ def generate_cached(self, prefix, num_tokens, temperature=1.0, top_k=None):
 ```
 
 :begin_tab:`jax`
-`decode` compiles the whole generation loop. `nnx.split` separates the
-model into its structure, `graphdef`, which the compiled function treats as
-a constant, and its arrays, `params`, which it takes as input; `nnx.merge`
-reassembles the model inside. `lax.fori_loop` runs the decode steps on the
-device and carries the cache from step to step, so XLA updates the buffers
-in place and no token reaches the host before the end. `decode` also
-*donates* `ks` and `vs` (`donate_argnames`): XLA may build the new cache in
-their memory instead of in a copy, so the arrays passed in must not be used
-again, and `decode` returns the updated cache in their place. The function
-compiles once for each prompt length, buffer size, and `num_tokens`.
-Calling a forward step through `nnx.jit` once per token would instead walk
-the module's Python object graph at every call, which for a model of a
-dozen blocks can take longer than the step itself.
+`decode` compiles the prefill and the whole loop of decode steps into one
+function, which receives the model as the two parts that `nnx.split`
+returns. It *donates* the cache buffers to XLA, which may then reuse their
+memory, so the arrays passed in must not be used again.
 :end_tab:
 
 ### Checking the Cache
 :label:`subsec_kv-cache-same-logits`
 
-The cached path must reproduce the logits of the full forward pass. For
-both positional schemes, we prefill the first 16 tokens of a random
-sequence, decode the remaining 32 one at a time, and compare the logits
-after each position with those of one forward pass over the whole
-sequence. We build every model of this section through one shorthand:
+A cache that is fast but wrong is worse than none, so before timing
+anything we check that the cached path reproduces the logits of the full
+forward pass. A small random model suffices. For both positional schemes,
+we prefill the first 16 tokens of a random sequence, decode the remaining
+32 one at a time, and compare the logits after each position with those of
+one forward pass over the whole sequence. Every model of this section is
+built through a shorthand, `gpt`, that gives it fresh random weights.
 
 ```{.python .input #kv-cache-checking-the-cache-2}
 %%tab pytorch
@@ -409,21 +387,20 @@ with jax.default_matmul_precision('highest'):
 ```
 
 :begin_tab:`jax`
-We set matrix multiplications to full float32 precision for this
-comparison. On GPUs with tensor cores, JAX multiplies float32 matrices in
-the lower-precision TF32 format by default, which rounds the two orders of
-computation differently and would hide that they compute the same values.
+We set matrix products to full float32 precision here, since by default
+JAX multiplies float32 matrices on this GPU in the coarser TF32 format,
+whose rounding would hide that the two paths compute the same values.
 :end_tab:
 
-The two paths agree to rounding error.
+The largest deviation is about $10^{-6}$ for both positional schemes, which
+is rounding error in float32: the two paths compute the same logits.
 
 ### Measuring the Speedup
 :label:`subsec_kv-cache-speedup`
 
-Next we time one generation step at
+How much faster is the cache in practice? We time one generation step at
 growing context lengths, on an untrained model of GPT-2's size: 12 blocks
-of width 768, 124 million parameters. The arithmetic does not depend on
-the weights.
+of width 768, 124 million parameters.
 
 ```{.python .input #kv-cache-same-logits-measured-2}
 %%tab pytorch
@@ -442,15 +419,12 @@ model.eval()
 print(f'{d2l.num_params(model) / 1e6:.0f}M parameters')
 ```
 
-Two helpers time the two kinds of step. The naive step, `time_forward`, is
-a forward pass over all $n$ tokens. The cached step, `time_decode`, is a
-decode call against a cache of $n$ positions, averaged over 32 steps, for a
-batch of sequences; we reuse it below. Both time with `d2l.Benchmark`,
-which calls a function a few times to warm up, waits for the device to
-finish, and averages the time of ten further calls.
-<!-- WRITER: both helpers now time compiled code in both tabs (PyTorch
-`time_forward` runs `torch.compile(model)`; `time_decode` runs `decode` from
-uniform logits, 32 compiled steps). -->
+Two helpers time the two kinds of step, both compiled. `time_forward` times
+the naive step, a forward pass over all $n$ tokens. `time_decode` times one
+decode step at context $n$, averaged over 32 steps; it takes a batch size,
+which :numref:`subsec_kv-cache-batching` varies. Both use the `d2l.Benchmark`
+of :numref:`subsec_async_dispatch`, which warms up, waits for the device,
+and averages ten calls.
 
 ```{.python .input #kv-cache-checking-the-cache-3}
 %%tab pytorch
@@ -503,7 +477,13 @@ def time_decode(model, batch_size, n):
     return d2l.Benchmark(run).time / 32
 ```
 
-We time both steps at five context lengths:
+What should we expect? A naive step over $n$ tokens performs $2Nn$
+operations, so once it has enough tokens to keep the arithmetic units busy,
+its time should grow at least in proportion to $n$. A cached step performs
+only $2N$, but it has to read every weight from memory once: half a
+gigabyte of fp32 weights, at the roughly 1 TB/s of an RTX 4090, takes about
+half a millisecond, however short the context. That is a floor, and a real
+step can only be slower. We time both steps at five context lengths.
 
 ```{.python .input #kv-cache-checking-the-cache-4}
 %%tab pytorch, jax
@@ -524,33 +504,38 @@ d2l.plot(lengths, [[1e3 * t for t in t_naive], [1e3 * t for t in t_cached]],
          xscale='log', yscale='log')
 ```
 
-At long contexts the naive step grows at least in proportion to $n$, as
-$2Nn$ says it must, and faster where the attention scores, whose work grows
-with $n^2$, add a sizable share. The cached step grows far more slowly. The
-time to read the cache does grow with $n$, but even at 4,000 tokens the
-cache is smaller than the weights, and every step also has a fixed cost
-that does not depend on $n$. At the longest context the cached step is
-more than five times faster, and beyond about a thousand tokens the gap widens with
-every doubling of the context. At short contexts the two curves approach
-each other and can even cross. A step of either kind then spends much of
-its time on fixed costs, such as launching the kernels of twelve blocks,
-rather than on arithmetic.
-<!-- WRITER: new numbers (direct runs 2026-11-18, both tabs compiled):
-cached 0.8 ms at n = 256 to 1.2-1.3 ms at 4,032 in both tabs; naive 2.7
-(PyTorch) and 1.6 (JAX) ms at 256, 34 and 53 ms at 4,032. The curves no
-longer approach or cross at short contexts: the cached step is 2 to 3 times
-faster at 256 and 27 to 41 times at 4,032. "more than five times faster"
-goes. The cached step's floor is one read of every weight, about 0.5 ms
-(KV-6); a step takes about 0.8 ms at short contexts, and the time grows
-with n by the cache read. The fixed-cost explanation (launching kernels)
-no longer applies; explain the fixed cost once here (KV-9) as the GPU's
-own kernels: matrix-vector products that do not reach the full bandwidth
-and about a hundred small kernels per step (profiled: 0.92 ms of GPU time
-per step at n = 1,024, 0.46 ms in the block matrix-vector products at
-about 740 GB/s, 0.17 ms for the output layer). -->
+The naive curve bears out its prediction only from about a thousand tokens
+on. Below that it rises more slowly than the context, because part of its
+time does not depend on $n$ at all: a naive step, too, reads every weight
+and runs every small operation of the model, which is all that a cached
+step does. Beyond about a thousand tokens it grows faster than the
+context, since the attention scores, whose work grows with $n^2$, add
+their share, and at 4,032 tokens it takes tens of milliseconds. The cached
+step never falls below its floor. It stays between 0.8 and 1.3 ms over the
+whole range, and what grows is the time to read the cache, which even at
+4,032 tokens is smaller than the weights. At 4,032 tokens the cached step
+is more than twenty times faster than the naive one; at 256 tokens the gap
+shrinks to two or three times.
 
-End to end, we generate 256 tokens after a prompt of 3,584 tokens with
-both methods, after one warm-up call each:
+Even the shortest cached step takes 0.8 to 0.9 ms, not the half
+millisecond that reading the weights requires. The difference is a *fixed
+cost per step*, which does not depend on the context, and it has two
+sources. First, the weight reads themselves run below the peak bandwidth,
+because the products of a single token are matrix--vector products. Second,
+every small operation between them, a normalization, a softmax, an
+addition, runs as a kernel of its own that takes microseconds whatever its
+size. Python is not the cause: the step is compiled, and what Python still
+does between steps overlaps with the work of the GPU.
+
+The fixed cost depends on the GPU and the implementation, and better
+software shrinks it. The weight read does not shrink. It is a hard floor: no step that produces
+one token of this model in fp32 can run faster on this GPU. The only way
+around it is to let one read of the weights serve several tokens, which is
+what batching (:numref:`subsec_kv-cache-batching`) and speculative decoding
+(problem :exref:`ex_kv-cache-shared-reads`) do.
+
+The end-to-end run is the case we counted at the start: 256 tokens after
+a prompt of 3,584 tokens, with each method, after one warm-up call.
 
 ```{.python .input #kv-cache-same-logits-measured-3}
 %%tab pytorch, jax
@@ -561,32 +546,33 @@ for name, gen in (('naive ', model.generate),
     print(f'{name}: 256 tokens in {t:4.1f} s = {256 / t:5.1f} tokens/s')
 ```
 
-:begin_tab:`jax`
-The naive `generate` of :numref:`subsec_gpt-sampling` keeps its context in
-a buffer of fixed shape, so every step here runs the forward pass over all
-`max_len` = 4,096 positions, slightly more than the 3,584 to 3,840 tokens
-of the context.
+:begin_tab:`pytorch`
+The naive loop is the `generate` of :numref:`subsec_gpt-sampling`, which
+runs uncompiled. At these lengths the work of the GPU dominates each step,
+so this changes the time only a little.
 :end_tab:
 
-<!-- WRITER: end to end now 8.0 s against 0.46 s in PyTorch (17 times) and
-15.3 s against 0.4 s in JAX (38 times); the naive loop is the eager
-library `generate` in PyTorch and runs over all 4,096 positions in JAX.
-Both are far below the factor of 250 in operations. -->
-The cached loop is more than five times faster, though by far less than
-the factor of about 250 in operations. Every decoded token still reads all the weights of
-the model, as :numref:`subsec_kv-cache-prefill-decode` shows. Serving
-systems report the two phases separately: the *time to first token*
-measures the prefill, and the *tokens per second* measure the decode loop.
+:begin_tab:`jax`
+The naive `generate` of :numref:`subsec_gpt-sampling` runs every step over
+its fixed buffer of 4,096 positions, slightly more than the context.
+:end_tab:
+
+The cached loop is more than ten times faster, far less than the factor of
+250 in operations. Each of its 256 steps costs at least one read of the
+weights, however few operations it performs, while a naive step over
+thousands of tokens has enough arithmetic to keep the GPU busy. Operations
+are therefore a poor measure of time, and
+:numref:`subsec_kv-cache-prefill-decode` names a better one.
 
 ## Memory and Bandwidth
 :label:`subsec_kv-cache-memory`
 
 The cache removes the repeated arithmetic, but it has to be stored, and it
-is read again at every step, so we start with its size. The size of the
-cache follows from the shape of its
-buffers. Each of the $L$ blocks stores one key and one value vector of
-dimension $H_\textrm{kv} d_h$ per token, for $H_\textrm{kv}$ key--value
-heads of width $d_h$, so a batch of $b$ sequences of length $n$ holds
+is read again at every step. How large is it? The answer follows from the
+shape of its buffers. Each of the $L$ blocks stores one key and one value
+vector of dimension $H_\textrm{kv} d_h$ per token, for $H_\textrm{kv}$
+key--value heads of width $d_h$, so a batch of $b$ sequences of length $n$
+holds
 
 $$
 \textrm{cache bytes} \;=\; 2 \cdot L \cdot H_\textrm{kv} \cdot d_h \cdot n
@@ -594,15 +580,20 @@ $$
 $$
 :eqlabel:`eq_kv-cache-bytes`
 
-where the leading 2 counts keys and values. So far $H_\textrm{kv}$ equals
-the number $H$ of query heads; :numref:`subsec_kv-cache-gqa-quality`
-breaks that equality. For our GPT-2-sized model in fp32 the cache takes
+where the leading 2 counts keys and values. The cache is linear in every
+factor. Two of them, the length of the context and the batch, are set by
+how the model is used rather than by its design. In our GPT every query
+head has its own key--value head, so $H_\textrm{kv}$ equals the number $H$
+of query heads; letting groups of query heads share one key--value head
+(:numref:`subsec_kv-head-sharing`) shrinks this factor. For our
+GPT-2-sized model in fp32 the cache takes
 $2 \cdot 12 \cdot 12 \cdot 64 \cdot 4$ bytes $= 72$ KiB per token. At a
 context of 4,096 tokens that is 288 MiB, more than half the size of the
-model's weights. A deployed model has dozens of layers, contexts of
-hundreds of thousands of tokens, and many users served at once. Then the
-cache, not the weights, fills the accelerator; an exercise works this out
-for a 70B model. We save the formula for any `d2l.GPT`.
+model's weights. A deployed model has dozens of layers, contexts of a
+hundred thousand tokens and more, and many users served at once. Then the
+caches, not the weights, fill the accelerator, as problems
+:exref:`ex_kv-cache-70b` and :exref:`ex_kv-cache-70b-batch` show for a 70B
+model. We save the formula for any `d2l.GPT`.
 
 ```{.python .input #kv-cache-memory-required-by-the-kv-cache-1}
 %%tab pytorch, jax
@@ -615,8 +606,10 @@ def kv_cache_bytes(model, num_tokens, batch_size=1, bytes_per_elem=4):
             * bytes_per_elem)
 ```
 
-The buffers of `init_cache` have this size, so a cache that does not fit
-into memory fails when it is allocated, before generation starts.
+`init_cache` allocates the whole cache at once, so a cache that does not
+fit into memory fails before generation starts, not halfway through an
+answer. Its buffers should have the size of the formula, and we compare the
+two for a context of 4,096 tokens.
 
 ```{.python .input #kv-cache-the-memory-bill}
 %%tab pytorch, jax
@@ -628,38 +621,66 @@ print(f'cache buffers {sum(u.nbytes for u in ks + vs) / 2**20:.0f} MiB, '
       f'weights {weight_bytes / 2**20:.0f} MiB')
 ```
 
+Formula and allocation agree. At 288 MiB a sequence, a 24 GB card holds
+fewer than a hundred such caches next to the weights of this small model,
+so at long contexts the cache, not the model, decides how many users one
+GPU can serve.
+
 ### Prefill and Decode
 :label:`subsec_kv-cache-prefill-decode`
 
 At each generated token the whole cache is read from memory, and so is
 every weight of the model, because a forward pass over one token multiplies
-its activations by every weight matrix. Which resource limits a computation,
-arithmetic or memory traffic, depends on its *arithmetic intensity*: the
-number of floating-point operations per byte moved between memory and the
-processor. In the *roofline* model of performance, which
-:numref:`chap_performance` develops, a computation takes at least its
-operations divided by the peak rate of the processor. It also takes at
-least its bytes divided by the memory bandwidth, and the larger of the two
-bounds sets its time. An RTX 4090 performs up to about 83 TFLOP/s in fp32 but moves only
-about 1 TB/s, so a computation needs about 80 FLOPs per byte to keep the
-arithmetic units busy.
+its activations by every weight matrix. A decode step is, to a good
+approximation, a read of the whole model from memory with a little
+arithmetic on the side. A naive step is the other extreme. It is a prefill
+of the whole text, the same computation that reads a prompt, and the
+2,048-token point of our timing plot measured one of each. To say why the
+two behave so differently we need one idea from the study of performance.
 
-![The fp32 roofline of an RTX 4090. Attainable throughput is the smaller of the compute roof, about 83 TFLOP/s, and the arithmetic intensity times the memory bandwidth of about 1 TB/s; the two meet at the ridge point near 82 FLOPs per byte. A decode step of a GPT-2-sized model at a context of 2,048 tokens performs 0.38 FLOPs per byte and sits far down the bandwidth slope; a prefill of 2,048 tokens, at about 780, sits under the roof.](../img/mdl-transformers-roofline.svg)
+Which resource limits a computation, arithmetic or memory traffic, depends
+on its *arithmetic intensity*: the number of floating-point operations it
+performs per byte it moves between memory and the processor. A product of a
+matrix with one vector uses each entry it reads once; a product of the same
+matrix with a thousand vectors uses each entry a thousand times, for the
+same traffic.
+
+The *roofline* model (:numref:`sec_perf_model`) turns this into two lower
+bounds on the time of a computation: its operations divided by the peak
+arithmetic rate, and its bytes divided by the memory bandwidth $\beta$. The
+larger bound sets the time. The model is crude, since it ignores caches,
+latency, and kernels that do little of either, but it asks the right first
+question of any computation: is it waiting for arithmetic or for memory?
+
+An RTX 4090 performs up to about 83 TFLOP/s in fp32, and as many in the
+TF32 format that our timed matrix products may use, but it moves only about
+1 TB/s. The two bounds are equal at about 80 FLOPs per byte, the *ridge
+point* of this GPU. A computation below the ridge point waits for memory;
+one above it keeps the arithmetic units busy.
+
+Where do the two phases sit? A decode step performs about $2N$ operations
+and reads at least the $4N$ bytes of the fp32 weights plus the cache, an
+intensity below half a FLOP per byte. A prefill over $n$ tokens performs
+$2Nn$ operations with the same weight traffic, because each weight is read
+once and used for every token, so its intensity is about $n$ times higher.
+At a context of 2,048 tokens the decode step reaches about 0.38 FLOPs per
+byte, some two hundred times below the ridge point. The prefill reaches
+about 780, ten times above it, although this count leaves out the
+activations that a prefill also moves and is therefore an upper estimate.
+:numref:`fig_kv-cache-roofline` marks both on the roofline of this GPU.
+Prefill is limited by arithmetic and decode by memory bandwidth
+:cite:`Pope.Douglas.Chowdhery.ea.2023`.
+
+![The fp32 roofline of an RTX 4090. Attainable throughput is the smaller of the compute roof, about 83 TFLOP/s, and the arithmetic intensity times the memory bandwidth of about 1 TB/s; the two meet at the ridge point of about 80 FLOPs per byte. A decode step of a GPT-2-sized model at a context of 2,048 tokens performs 0.38 FLOPs per byte and sits far down the bandwidth slope; a prefill of 2,048 tokens, at about 780 counting weights and cache only, sits under the roof.](../img/mdl-transformers-roofline.svg)
 :label:`fig_kv-cache-roofline`
-<!-- WRITER: cite :numref:`fig_kv-cache-roofline` where the ridge point is
-named (KV-7); the caption may say that the performance chapter draws the
-bf16 roofline of the same card. PyTorch fp32 matmuls now may use tf32
-(`torch.set_float32_matmul_precision('high')`, as in the performance
-chapter); the RTX 4090's tf32 peak equals its fp32 peak. -->
 
-A decode step performs about $2N$ operations and reads at least the $4N$
-bytes of the fp32 weights plus the cache, an intensity below one FLOP per
-byte. A prefill over $n$ tokens performs $2Nn$ operations with the same
-weight traffic, because each weight is read once and used for every token,
-so its intensity is about $n$ times higher. Prefill is therefore limited by
-arithmetic and decode by memory bandwidth
-:cite:`Pope.Douglas.Chowdhery.ea.2023`. We time a forward pass over a
-2,048-token prompt and the decoding of 32 tokens after it.
+The two bounds also predict rates. Arithmetic allows a prefill of at most
+$83 \times 10^{12} / 2N \approx 335{,}000$ tokens per second. Bandwidth
+allows a decode of at most $\beta$ divided by the bytes of one step, the
+494 MB of weights and the 151 MB of cache at 2,048 tokens, which comes to
+about 1,550 tokens per second. We time the same two steps as at the
+2,048-token point of the timing plot: a forward pass over a 2,048-token
+prompt, and the decoding of 32 tokens after it.
 
 ```{.python .input #kv-cache-prefill-is-compute-bound-decode-is-memory-bound}
 %%tab pytorch, jax
@@ -667,8 +688,7 @@ t_prefill = time_forward(model, 2048)
 t_decode = time_decode(model, 1, 2048)
 ```
 
-We compare both rates with the intensity of a decode step and with the
-rate that a bandwidth of 1 TB/s would allow.
+We print both rates next to the bandwidth ceiling and the two intensities.
 
 ```{.python .input #kv-cache-prefill-and-decode-1}
 %%tab pytorch, jax
@@ -682,45 +702,49 @@ print(f'FLOPs per byte: decode {flops / moved:.2f}, '
       f'prefill about {2048 * flops / moved:.0f}')
 ```
 
-<!-- WRITER: new numbers: prefill 152,000 (PyTorch) and 120,000 (JAX)
-tokens/s, 36 to 45% of the 335,000 that 83 TFLOP/s would allow; decode 960
-and 982 tokens/s against the ceiling of 1,550, about 62% of it in both
-tabs; the ratio prefill/decode is about 150 and 120, so "about a hundred
-times more slowly", not "an order of magnitude" and not "hundreds". The
-gap to the ceiling is the GPU's own kernels (see the speedup subsection),
-no longer launches from Python. -->
-The model reads the prompt at about a hundred thousand tokens per second and
-generates tokens at least an order of magnitude more slowly, with the same
-layers on the same hardware. The decode rate also stays below the
-bandwidth ceiling, because a fixed cost per step, such as launching the
-kernels of twelve blocks, adds to the time to read the weights. The bytes
-moved per token, weights and cache together, still set the limit that no
-implementation can beat. A smaller cache therefore allows faster decoding,
-longer contexts, or more sequences at once.
+The model reads the prompt at well over a hundred thousand tokens per
+second and writes text at about a thousand, more than a hundred times more
+slowly, with the same layers on the same GPU. This is why serving systems
+report the two phases separately: the *time to first token* is set by the
+prefill, and the tokens per second that follow by the decode loop.
+
+Neither phase reaches its bound. The prefill runs at between a third and a
+half of the arithmetic peak, and the decode at about 60% of the bandwidth
+ceiling, where the fixed cost per step of :numref:`subsec_kv-cache-speedup`
+accounts for the rest. Each phase misses its bound by less than a factor of
+three, while the two phases differ by more than a factor of a hundred: the
+roofline gets the large number right. Since the bytes that a decode step
+moves, weights and cache together, set a limit that no implementation can
+beat, a smaller cache allows faster decoding, longer contexts, or more
+sequences at once.
 
 ### Batched Decoding
 :label:`subsec_kv-cache-batching`
 
-A decode step for one sequence reads all $W$ bytes of the weights to
-produce one token. A step for a batch of $b$ sequences reads the weights
-once and produces $b$ tokens, because every sequence multiplies its
-activations by the same matrices. The cache gains nothing from batching.
-Each sequence reads its own $nc$ bytes, where $c$ is the cache size per
-token from :eqref:`eq_kv-cache-bytes`. A step therefore moves about
-$W + bnc$ bytes. When the memory bandwidth $\beta$ limits the step, the
-throughput is
+A server answers many users at once, and the floor of a decode step
+suggests how it should do so. A step for one sequence reads all $W$ bytes
+of the weights to produce one token. A step for a batch of $b$ sequences
+reads the weights once and produces $b$ tokens, because every sequence
+multiplies its activations by the same matrices. The cache gains nothing
+from batching: each sequence reads its own $nc_\textrm{kv}$ bytes, where
+$c_\textrm{kv}$ is the cache size per token from :eqref:`eq_kv-cache-bytes`.
+A step therefore moves about $W + bnc_\textrm{kv}$ bytes. When the memory
+bandwidth $\beta$ limits the step, the throughput is
 
 $$
-\textrm{tokens per second} \approx \frac{b\beta}{W + bnc}.
+\textrm{tokens per second} \approx \frac{b\beta}{W + bnc_\textrm{kv}}.
 $$
 :eqlabel:`eq_kv-cache-batch-throughput`
 
-For small $b$ the throughput grows in proportion to $b$. Once the caches
-outweigh the weights, at $b > W/(nc)$, it levels off toward $\beta/(nc)$, a
-ceiling set by the cache alone. For our fp32 model, $W \approx 0.5$ GB and
-$c = 72$ KiB. The caches equal the weights at a batch of about 53 for a
-context of 128 tokens, but already at a batch of about 7 for 1,024 tokens. We
-measure the decode throughput at both contexts for batches of 1 to 64
+Batching spreads the weight reads over many sequences, but every sequence
+still reads its own cache. For small $b$ the throughput grows in proportion
+to $b$. Once the caches outweigh the weights, at $b > W/(nc_\textrm{kv})$,
+it levels off toward $\beta/(nc_\textrm{kv})$, a ceiling set by the cache
+alone. For our fp32 model, $W = 494$ MB and $c_\textrm{kv} = 72$ KiB.
+The caches equal the weights at a batch of about 52 for a context of 128
+tokens, but already at a batch of about 6.5 for 1,024 tokens. At 1,024
+tokens the ceiling is about 13,000 tokens per second, however many
+sequences we batch. We measure the decode throughput at both contexts for batches of 1 to 64
 sequences and plot it next to the bound of
 :eqref:`eq_kv-cache-batch-throughput` with $\beta = 1$ TB/s.
 
@@ -738,69 +762,50 @@ d2l.plot(batches, measured + bounds, 'batch size', 'tokens per second',
          xscale='log', yscale='log', legend_loc='lower right')
 ```
 
-The bound keeps growing over the whole range of batches at a context of
-128 tokens, since the caches reach the size of the weights only near a
-batch of 53. At 1,024 tokens it grows little beyond a batch of 16 and
-approaches the ceiling set by the caches. Batching spreads the weight
-reads over many sequences, but every sequence still reads its own cache.
-At small batches the measured curves stay below the bound, by the fixed
-cost per step of the previous subsection.
-<!-- WRITER: both tabs now show the bound's shape (n = 1,024: PyTorch 1,110,
-2,776, 6,493, 9,889; JAX 1,074, 3,360, 7,143, 9,951 tokens/s at b = 1, 4,
-16, 64; bound 1,755 to 12,016). The measured curves sit at about 60% of the
-bound at b = 1 and reach about 80% at b = 64, n = 1,024, where the cache
-reads dominate. At n = 128 they keep growing (PyTorch 1,183 to 32,414, JAX
-1,253 to 36,029). The legend now names only the measured curves; the dotted
-lines are the bounds, in the matching colours, and the prose says so. Both
-tab notes go (S4): the PyTorch note is false now, the JAX note says what
-the shared prose says. -->
+The solid lines are the measurements and the dotted lines the bounds, in
+matching colors. At 128 tokens both keep rising over the whole range, and
+64 sequences decode about 28 times as fast as one, since the caches reach
+the size of the weights only near a batch of 52. At 1,024 tokens the
+curves bend as predicted: from 16 sequences to 64 the batch grows fourfold
+and the throughput only by a factor of 1.4 to 1.5, to about 10,000 tokens
+per second. The measured curves stay below the bounds by the fixed cost
+per step, at about 60% of the bound for a single sequence and about 80% for
+64 sequences of 1,024 tokens, where reading the caches dominates the step.
 
-:begin_tab:`pytorch`
-Here the fixed cost dominates almost the whole range. Each decode step
-launches several hundred small kernels from Python, one or more per
-operation of every block, and launching them takes longer than the GPU
-needs to run them, weight and cache reads included. The time per step
-therefore hardly depends on the batch or the context: the measured
-throughput grows in proportion to the batch, far below the bound. Only at
-64 sequences of 1,024 tokens does the GPU's work, most of it reading the
-caches, catch up with the launches.
-:numref:`sec_compilation` removes this cost by recording the kernels of a
-step once and replaying them (CUDA graphs) or by compiling the step; only
-then does the bound of :eqref:`eq_kv-cache-batch-throughput` appear in the
-measurement.
-:end_tab:
+A real server does not keep a fixed batch, since requests arrive and
+finish at different times. It admits and retires sequences at every decode
+step, which is called continuous batching :cite:`Yu.Jeong.Kim.ea.2022`, and
+it stores each cache in fixed-size pages rather than in one buffer of
+maximal length :cite:`Kwon.Li.Zhuang.ea.2023`. A cache can even outlive
+its request: when many requests begin with the same long system prompt, a
+server that keeps the cache of that prompt prefills it only once
+:cite:`Zheng.Yin.Xie.ea.2024`. :numref:`sec_model_serving` shows these
+techniques at work in a serving system.
 
-:begin_tab:`jax`
-`decode` compiles the whole loop of decode steps, so the fixed cost per step
-is small, and the measured curves follow the bound: at 1,024 tokens the
-throughput grows little beyond a batch of 16.
-:end_tab:
-
-When many users are served, the batch changes from step to step, because
-requests arrive and finish at different times and with contexts of
-different lengths. Serving systems therefore admit and retire sequences at
-every decode step, which is called *continuous batching*
-:cite:`Yu.Jeong.Kim.ea.2022`. They also store the cache in fixed-size
-blocks located through a table, like the pages of virtual memory, instead
-of in one buffer of maximal length per sequence
-:cite:`Kwon.Li.Zhuang.ea.2023`. :numref:`sec_model_serving` shows
-these engines in use, together with speculative decoding, and the Language
-Models part of the book builds their mechanisms.
+At long contexts, then, serving is a memory problem twice over: the caches
+decide how many sequences fit into memory, and they decide how fast those
+sequences decode. Three factors of :eqref:`eq_kv-cache-bytes` are choices
+of the model's designer: the number of key--value heads, the width stored
+per token, and the number of tokens kept, which a window can make smaller
+than the context. :numref:`sec_kv-cache-reduction` asks how far each can
+shrink before the model notices.
 
 ## Summary
 
-Naive generation runs a full forward pass for every new token, so its
-dense-layer cost is quadratic in the length of the text. A KV cache stores
-the keys and values of past tokens, which causality leaves unchanged, and
-makes that cost linear. It needs one preallocated buffer per layer and the
-position offset of each new token, and it reproduces the logits of the full
-forward pass to rounding error. The cache holds
-$2 L H_\textrm{kv} d_h n b$ elements for $L$ blocks of $H_\textrm{kv}$
-key--value heads of width $d_h$, which for long contexts and many
-sequences exceeds the weights. Prefill is limited by arithmetic and decode
-by memory bandwidth, because every decoded token reads all weights and its
-whole cache. Batching shares the weight reads but not the cache reads.
-<!-- WRITER: the Summary keeps four sentences on this half; the sentences on GQA, MQA, MLA and windows moved to kv-cache-reduction.md. -->
+A KV cache stores the keys and values of past tokens, which causality
+leaves unchanged, so each step of generation runs the model on the new
+token alone and still reproduces the full logits to rounding error. The
+cache holds $2 L H_\textrm{kv} d_h n b$ elements for $L$ blocks of
+$H_\textrm{kv}$ key--value heads of width $d_h$, 72 KiB per token for a
+model of GPT-2's size in fp32, and at long contexts and large batches it
+outgrows the weights. Prefill uses each weight it reads for every token of
+the prompt and is limited by arithmetic. Decode reads all weights and its
+cache for a single token and is limited by bandwidth, so that no decode
+step can be faster than one read of the weights; on our GPU the model
+writes text more than a hundred times more slowly than it reads a prompt.
+Batching shares the weight reads among sequences but not the cache reads,
+so at long contexts the throughput levels off at the bandwidth divided by
+the cache of one sequence.
 
 
 ## Exercises
@@ -811,13 +816,19 @@ whole cache. Batching shares the weight reads but not the cache reads.
     1. Count the dense-layer FLOPs of a naive schedule that runs a forward
        pass over the whole history before every new token, and of
        `generate_cached`, which runs one prefill over the prompt and then
-       single-token steps. Evaluate the ratio of the two counts for the
-       end-to-end run of :numref:`subsec_kv-cache-speedup`, with
-       $P = 3584$ and $T = 256$.
-    1. The end-to-end run is faster with the cache by much less than this
-       ratio of FLOPs. Explain the difference with the arithmetic
-       intensities of the two kinds of forward pass, as
-       :numref:`subsec_kv-cache-prefill-decode` computes them.
+       single-token steps. Show that their ratio is about
+       $T(P + T/2)/(P + T)$, which gives the factor of 250 of
+       :numref:`subsec_kv-cache-speedup` for $P = 3584$ and $T = 256$.
+       What does the ratio approach for $T \ll P$, and for $P = 0$? For
+       which $T$ does the cache save less than a factor of 10, whatever
+       the prompt?
+    1. Use the two bounds of the roofline model of
+       :numref:`subsec_kv-cache-prefill-decode`, a peak of 83 TFLOP/s and a
+       bandwidth of 1 TB/s, with fp32 weights and the cache of
+       :eqref:`eq_kv-cache-bytes`, to find a lower bound on the time of
+       each schedule for the same run. Compare the ratio of the two bounds
+       with the ratio of FLOPs and with the measured ratio. Which of the
+       two schedules runs further from its bound, and why might it?
 
 1. [code] **A missing position offset.** `forward_cached` rotates the
    queries and keys of new tokens by their absolute positions.
@@ -830,36 +841,52 @@ whole cache. Batching shares the weight reads but not the cache reads.
        $j$ and against the key of an earlier decoded token. Which
        information about the decoded tokens does the model lose entirely?
     1. Make the corresponding mistake for learned positions, so that every
-       decoded token receives the embedding of position 0. Prefill GPT-2
-       with the first 512 tokens of the passage `x`, feed the remaining
-       tokens one at a time, and compare the loss on positions 512 onward,
-       the loss that `tail_loss` measures, for the faulty and the correct
-       cache.
-       <!-- WRITER: `x`, `tail_loss` and the GPT-2 setup moved to
-       :numref:`sec_kv-cache-reduction`; make this part self-contained
-       (load GPT-2 with `d2l.load_gpt2`, plain cross-entropy from position
-       512). `forward_cached` now takes a tensor position, and the PyTorch
-       tab compiles its decode steps. -->
+       decoded token receives the embedding of position 0. Load the
+       released GPT-2 with `d2l.load_gpt2()`, which uses learned
+       positions, and encode the first 1,024 tokens of *The Time Machine*
+       with `d2l.gpt2_tokenizer()`. Prefill the first 512 tokens, feed the
+       remaining ones one at a time, and compare the mean cross-entropy of
+       the predictions of the tokens at positions 513 to 1,023 for the
+       faulty and the correct cache.
 
-1. **Cache of a 70B model.** Llama-2-70B :cite:`touvron2023llama2` has 80
-   layers and 64 query heads of dimension 128, and it uses GQA with 8
-   key--value heads. Its weights occupy about 140 GB in 16-bit precision,
-   and its cache is stored in 16-bit precision as well.
+1. **Cache of a 70B model.** Llama 3.1 70B
+   :cite:`Grattafiori.Dubey.Jauhri.ea.2024` has 80 layers and 64 query
+   heads of dimension 128, and it shares its keys and values among them
+   with $H_\textrm{kv} = 8$ key--value heads. Its weights occupy about
+   140 GB in 16-bit precision, its cache is stored in 16-bit precision as
+   well, and it accepts contexts of up to 131,072 tokens.
+   :exlabel:`ex_kv-cache-70b`
     1. Use :eqref:`eq_kv-cache-bytes` to compute the cache bytes per
        token, and the context length at which the cache of a single
-       sequence reaches the size of the weights.
-    1. Repeat both computations for the same model with 64 key--value
-       heads, that is, without sharing, and with a single key--value head
-       (MQA).
-    1. The weights are split across two GPUs with 80 GB each. For each of
-       the three configurations, find how many sequences of 4096 tokens fit
-       into the memory that the weights leave free, ignoring activations.
+       sequence reaches the size of the weights. Can a single sequence get
+       there?
+    1. Repeat both computations for the same model with
+       $H_\textrm{kv} = 64$, that is, without sharing, and with
+       $H_\textrm{kv} = 1$.
+
+1. **Batching a 70B model.** Serve the model of problem
+   :exref:`ex_kv-cache-70b` on eight GPUs with 80 GB each, whose memory
+   bandwidths add up to $\beta = 25$ TB/s, at contexts of
+   $n = 32{,}768$ tokens.
+   :exlabel:`ex_kv-cache-70b-batch`
+    1. Use :eqref:`eq_kv-cache-batch-throughput` to find the batch at
+       which the caches equal the weights, the throughput of a single
+       sequence, and the ceiling that the throughput approaches for large
+       batches.
+    1. Ignoring activations, how many sequences fit into the memory that
+       the weights leave free? What throughput does that batch reach, as a
+       fraction of the ceiling? Which limit binds first, memory or
+       bandwidth?
+    1. Repeat both parts for $H_\textrm{kv} = 64$. By what factor does
+       sharing keys and values raise the throughput of the whole server,
+       and through which of the two limits does it act?
 
 1. **Shared weight reads.** ● Use the roofline model of
    :numref:`subsec_kv-cache-prefill-decode`: a forward pass takes at least
    its FLOPs divided by the peak rate of 83 TFLOP/s and at least its bytes
    moved divided by the bandwidth of 1 TB/s. The weights of `model` are
    stored in fp32.
+   :exlabel:`ex_kv-cache-shared-reads`
     1. Ignore the cache. A forward pass of `model` over $m$ new tokens
        reads every weight once, whether the tokens belong to $m$ sequences
        of a batch or are $m$ drafted tokens of one sequence. Find the
@@ -871,9 +898,9 @@ whole cache. Batching shares the weight reads but not the cache reads.
        reads separately. Derive the arithmetic intensity of one decode step
        of `model`, counting the attention FLOPs and the cache bytes.
        Evaluate it at $n = 2048$ for $b = 1$ and in the limit
-       $b \to \infty$, and compare both values with the ridge of about 80
-       FLOPs per byte. How does the limit change when the $H$ query heads
-       share $H_\textrm{kv}$ key--value heads?
+       $b \to \infty$, and compare both values with the ridge point of
+       about 80 FLOPs per byte. How does the limit change when the $H$
+       query heads share $H_\textrm{kv}$ key--value heads?
 
 [Discussions](https://d2l.discourse.group/t/36776)
 
@@ -894,9 +921,10 @@ The KV Cache<br>
 GPT-2 small, $N$ = 124M parameters, writes 256 tokens after a 3,584-token
 prompt.
 
-- Naive `generate`: one forward pass over the whole text per token,
-  $\sum_t 2Nt \approx 2.4 \times 10^{14}$ FLOPs.
-- Read the prompt once, then each new token once: $\approx 10^{12}$ FLOPs.
+- Naive `generate`: one forward pass per new token, over 3,584, …, 3,839
+  tokens: $2N \sum n \approx 2.4 \times 10^{14}$ FLOPs.
+- Read the prompt once, then each new token once:
+  $2N \cdot 3{,}840 \approx 10^{12}$ FLOPs.
 
 ::: {.d2l-note}
 Causal attention never changes the keys and values of past tokens.
@@ -909,6 +937,7 @@ Causal attention never changes the keys and values of past tokens.
 
 - write a cached forward pass with a position offset and preallocated
   buffers;
+- estimate the floor of a decode step from the bytes it reads;
 - compute the cache size of any transformer from its shape;
 - place prefill and decode on the roofline: reading a prompt is limited by
   arithmetic, writing text by memory bandwidth;
@@ -926,20 +955,19 @@ Causal attention never changes the keys and values of past tokens.
 | section | adds |
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
-| A GPT from Scratch | a trained language model; GPT-2 loaded |
-| **The KV Cache** | **reuse keys and values while sampling** |
-| Shrinking the KV Cache | fewer heads, fewer dimensions, fewer tokens |
+| A GPT from Scratch | a trained LM; GPT-2 loaded |
+| **The KV Cache** | **reuse past keys and values** |
+| Shrinking the KV Cache | smaller caches, same model |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
-| Scaling Laws | loss against parameters, data, compute |
+| Scaling Laws | loss against size, data, compute |
 | Mixture of Experts | more parameters per FLOP |
+| The Modern Recipe | the settings of released models |
 :::
 
 ::: {.col .narrow}
-- **Uses:** `d2l.GPT`, causal masks, RoPE, sampling with temperature and
-  top-$k$.
-- **Skips:** serving engines (paged memory, continuous batching,
-  speculative decoding): Language Models part.
+- **Uses:** `d2l.GPT`, causal masks, RoPE, top-$k$ sampling.
+- **Skips:** serving engines (paging, continuous batching).
 :::
 :::
 :::
@@ -950,6 +978,8 @@ Causal attention never changes the keys and values of past tokens.
 - Step $t$ needs one new query against $\mathbf{k}_0, \ldots, \mathbf{k}_t$.
 - Positions $0, \ldots, t-1$ never see position $t$: their keys and values
   are the same as one step ago.
+- **Prefill:** the whole prompt in one pass, filling the cache.
+- **Decode:** one token per pass, reading the cache.
 :::
 
 ::: {.col .fig .big}
@@ -960,13 +990,15 @@ Causal attention never changes the keys and values of past tokens.
 
 ::: {.slide title="A Cached Step Writes Its Slot and Reads the Prefix" only="pytorch"}
 ```{.python #kv-cache-exercises-1}
-H = model.token_emb(X)                 # T new tokens at pos = t, t+1, ...
+H = model.token_emb(X)              # new tokens at pos = t, t+1, ...
 for i, blk in enumerate(model.blks):
-    q, k, v = blk.attention.qkv(blk.norm1(H), t)        # RoPE offset t
-    ks[i][:, :, pos], vs[i][:, :, pos] = k, v           # write in place
-    S = q.unflatten(1, (H_kv, -1)) @ ks[i][:, :, None].transpose(-1, -2)
-    Y = d2l.masked_softmax(S / math.sqrt(d_h), mask) @ vs[i][:, :, None]
-    H = H + blk.attention.W_o(Y.flatten(1, 2).transpose(1, 2).flatten(2))
+    q, k, v = blk.attention.qkv(blk.norm1(H), t)      # RoPE offset t
+    ks[i][:, :, pos], vs[i][:, :, pos] = k, v         # write in place
+    q = q.unflatten(1, (H_kv, -1))         # query groups per kv head
+    S = q @ ks[i][:, :, None].transpose(-1, -2) / math.sqrt(d_h)
+    Y = d2l.masked_softmax(S, mask) @ vs[i][:, :, None]
+    Y = Y.flatten(1, 2).transpose(1, 2).flatten(2)
+    H = H + blk.attention.W_o(Y)
     H = H + blk.ffn(blk.norm2(H))
 ```
 
@@ -977,7 +1009,7 @@ for i, blk in enumerate(model.blks):
 
 ::: {.slide title="A Cached Step Writes Its Slot and Reads the Prefix" only="jax"}
 ```{.python #kv-cache-exercises-2}
-H = model.token_emb(X)                     # T new tokens at t, t+1, ...
+H = model.token_emb(X)                    # new tokens at t, t+1, ...
 for i, blk in enumerate(model.blks):
     q, k, v = (u.swapaxes(1, 2)
                for u in blk.attention.qkv(blk.norm1(H), t))
@@ -999,24 +1031,45 @@ Prefill 16 tokens, decode 32, compare with one forward pass over all 48,
 for rotary and for learned positions.
 :::
 
-::: {.slide title="The Cached Step Grows Far More Slowly Than the Naive One"}
+::: {.slide title="At 4,000 Tokens a Cached Step Is Over 20 Times Faster"}
 @!kv-cache-checking-the-cache-1
 
-124M-parameter model, untrained: the arithmetic does not depend on the
-weights. Both steps are compiled, so the time is the GPU's work. Naive grows
-at least like $2Nn$; cached adds the cache read to the weight read.
+124M-parameter model, untrained, both steps compiled. Naive: $2Nn$ FLOPs,
+grows more slowly than $n$ below about 1,000 tokens, tens of ms at 4,032.
+Cached: 0.8 to 1.3 ms over the whole range.
 :::
 
-::: {.slide title="Check: Operations of Naive and Cached Generation"}
+::: {.slide title="A Decode Step Cannot Beat One Read of the Weights"}
+| GPT-2 small, one sequence | |
+|---|---|
+| fp32 weights, 124M parameters | $\approx 0.5$ GB |
+| bandwidth of an RTX 4090 | $\approx 1$ TB/s |
+| floor per decode step | $\approx 0.5$ ms |
+| measured, short context | 0.8--0.9 ms |
+
+- Extra 0.3--0.4 ms: a *fixed cost per step* (small kernels,
+  matrix--vector products below peak bandwidth).
+- The cache read adds the rest as $n$ grows.
+- Only one read serving several tokens beats the floor: batching,
+  speculative decoding.
+
+::: {.d2l-note}
+For one sequence, decoding speed is set by **bytes read**, not FLOPs.
+:::
+:::
+
+::: {.slide title="Check: The Saving Without a Prompt"}
 [Check]{.kicker}
 
-$N$ = 124M, prompt $P$ = 3,584 tokens, $T$ = 256 new tokens, $2N$ FLOPs per
-token of a forward pass. How many FLOPs does each schedule need?
+A model with $N$ = 124M parameters writes $T$ = 4,096 tokens from an empty
+prompt, $2N$ FLOPs per token of a forward pass. By what factor does the cache cut the FLOPs? With
+a 3,584-token prompt and 256 new tokens it was about 250.
 
 ::: {.fragment .fade-up}
-- Naive: $2N \sum_{t=P+1}^{P+T} t \approx 2 \cdot 1.24 \times 10^8 \cdot
-  256 \cdot 3712 \approx 2.4 \times 10^{14}$.
-- Cached: $2N (P + T) \approx 9.5 \times 10^{11}$, about 250 times less.
+- Naive: $2N \sum_{n=1}^{T} n \approx NT^2 \approx 2.1 \times 10^{15}$.
+- Cached: $2NT \approx 10^{12}$, so the factor is about $T/2 \approx 2{,}000$.
+- The saving is roughly the number of generated tokens: all of them after a
+  long prompt, half of them without one.
 :::
 :::
 
@@ -1026,26 +1079,29 @@ $$\textrm{cache bytes} = 2 \cdot L \cdot H_\textrm{kv} \cdot d_h \cdot n \cdot b
 $L$ blocks, $H_\textrm{kv}$ key--value heads of width $d_h$, $n$ tokens, $b$
 sequences.
 
-
 - GPT-2 small, fp32: $2 \cdot 12 \cdot 12 \cdot 64 \cdot 4$ B = 72 KiB per
   token.
-- 4,096 tokens: 288 MiB, more than half of the 470 MiB of weights.
+- 4,096 tokens: 288 MiB, more than half of the weights, 471 MiB
+  (494 MB).
 
 @!kv-cache-the-memory-bill
 :::
 
 ::: {.slide title="A Decode Step Reads the Whole Model for One Token"}
-Arithmetic intensity = FLOPs per byte moved. An RTX 4090: 83 TFLOP/s,
-1 TB/s, so the *ridge point* lies near 80 FLOPs per byte.
+Arithmetic intensity = FLOPs per byte moved. Roofline: time $\geq$
+max(FLOPs / peak, bytes / bandwidth). An RTX 4090: 83 TFLOP/s, 1 TB/s, so
+the bounds meet at the *ridge point*, about 80 FLOPs per byte.
 
 | step | FLOPs | bytes | FLOPs per byte |
 |---|---|---|---|
 | decode, 1 token | $2N$ | $4N$ + cache | below 1 |
-| prefill, $n$ tokens | $2Nn$ | $4N$ + cache | about $n/2$, less with the cache |
+| prefill, $n$ tokens | $2Nn$ | $4N$ + cache + activations | about $n/2$, less with cache and activations |
 
 ::: {.d2l-note}
 Prefill is limited by arithmetic, decode by memory bandwidth.
 :::
+
+[Pope et al., 2023]{.small}
 :::
 
 ::: {.slide title="Decode Sits Far Down the Bandwidth Slope"}
@@ -1056,7 +1112,8 @@ Prefill is limited by arithmetic, decode by memory bandwidth.
 
 ::: {.col .narrow}
 - Decode step: 0.38 FLOP per byte, 200 times below the ridge.
-- Prefill of 2,048 tokens: about 780, under the compute roof.
+- Prefill of 2,048 tokens: about 780 (weights and cache only), under the
+  compute roof.
 :::
 :::
 :::
@@ -1064,9 +1121,11 @@ Prefill is limited by arithmetic, decode by memory bandwidth.
 ::: {.slide title="Prefill Reads Over 100,000 Tokens per Second, Decode About 1,000"}
 @!kv-cache-prefill-and-decode-1
 
-- Same layers, same GPU: decoding is about a hundred times slower.
-- Decode reaches about 60% of the bandwidth ceiling; the rest is the GPU's
-  own kernels, not Python.
+- Same layers, same GPU: decoding is more than a hundred times slower.
+- Prefill reaches a third to a half of the 335,000 tokens/s that 83 TFLOP/s
+  allows; decode about 60% of the bandwidth ceiling.
+- Each misses its bound by less than 3×; the roofline gets the 100× right.
+- Serving reports both: time to first token (prefill), tokens/s (decode).
 :::
 
 ::: {.slide title="Batching Amortizes Weights but Not the KV Cache"}
@@ -1076,7 +1135,7 @@ context $n$, bandwidth $\beta$:
 $$\textrm{tokens per second} \approx \frac{b\beta}{W + bnc_\textrm{kv}}
 \;\xrightarrow{\;b \to \infty\;}\; \frac{\beta}{nc_\textrm{kv}}$$
 
-- GPT-2 small, fp32: $W \approx$ 0.5 GB, $c_\textrm{kv}$ = 72 KiB.
+- GPT-2 small, fp32: $W$ = 494 MB, $c_\textrm{kv}$ = 72 KiB.
 - Caches equal the weights at $b \approx 52$ for $n = 128$, but at
   $b \approx 6.5$ for $n = 1024$.
 :::
@@ -1084,9 +1143,11 @@ $$\textrm{tokens per second} \approx \frac{b\beta}{W + bnc_\textrm{kv}}
 ::: {.slide title="Long Contexts Cap the Gain from Batching"}
 @!kv-cache-batched-decoding
 
-Solid: measured. Dotted: the bandwidth bound at 1 TB/s. At $n = 1024$ the
-throughput levels off near 10,000 tokens/s beyond $b = 16$; at $n = 128$ it
-keeps growing.
+Solid: measured. Dotted: the bandwidth bound at 1 TB/s.
+
+- $n = 128$: 64 sequences decode about 28× as fast as one.
+- $n = 1024$: from $b = 16$ to 64, only 1.4 to 1.5× more, to about 10,000
+  tokens/s.
 :::
 
 ::: {.slide title="Check: Where the Cache Outweighs the Weights"}
@@ -1097,8 +1158,8 @@ does the cache equal the weights, and what is the ceiling on tokens per
 second at 1 TB/s?
 
 ::: {.fragment .fade-up}
-- $nc_\textrm{kv} = 4096 \cdot 72$ KiB = 288 MiB per sequence, so
-  $b \approx 500 / 302 \approx 1.7$.
+- $nc_\textrm{kv} = 4096 \cdot 72$ KiB = 288 MiB $\approx$ 302 MB per
+  sequence, so $b \approx 494 / 302 \approx 1.6$.
 - Ceiling $\beta / (nc_\textrm{kv}) \approx 10^{12} / (3.0 \times 10^8)
   \approx 3{,}300$ tokens per second, whatever the batch.
 :::
@@ -1107,15 +1168,18 @@ second at 1 TB/s?
 ::: {.slide title="Check: The Cache of a 70B Model"}
 [Check]{.kicker}
 
-Llama-2-70B: 80 layers, heads of width 128, 8 key--value heads, 16-bit
-cache. How many bytes per token, and at which context does one sequence's
-cache reach the 140 GB of weights?
+Llama 3.1 70B: 80 layers, 64 query heads sharing 8 key--value heads of
+width 128, 16-bit cache, 140 GB of weights, contexts up to 128K tokens. How
+many cache bytes per token, and at which context does one sequence's cache
+reach the weights?
 
 ::: {.fragment .fade-up}
 - $2 \cdot 80 \cdot 8 \cdot 128 \cdot 2$ B = 320 KiB per token.
-- $140 \times 10^9 / 327{,}680 \approx 430{,}000$ tokens; without GQA
-  (64 key--value heads), about 53,000.
+- $140 \times 10^9 / 327{,}680 \approx 430{,}000$ tokens, beyond the
+  context; without sharing (64 key--value heads), about 53,000.
 :::
+
+[Grattafiori et al., 2024]{.small}
 :::
 
 ::: {.slide title="Wrap-up"}
@@ -1124,9 +1188,13 @@ cache reach the 140 GB of weights?
 - Causality lets a cache replace $\approx 2.4 \times 10^{14}$ FLOPs by
   $\approx 10^{12}$ for 256 tokens after 3,584, with the same logits to
   rounding error.
+- A decode step costs at least one read of the weights: 0.5 ms for
+  GPT-2 small in fp32; measured 0.8 to 1.3 ms.
 - GPT-2 small caches 72 KiB per token in fp32: 288 MiB at 4,096 tokens.
-- Prefill is limited by arithmetic, decode by bandwidth; batching shares
-  the weight reads, not the cache reads.
+- Prefill over 100,000 tokens/s, decode about 1,000: arithmetic against
+  bandwidth.
+- Batching shares the weight reads, not the cache reads: at 1,024 tokens
+  throughput levels off near 10,000 tokens/s.
 
 **Next:** shrinking the cache: fewer key--value heads, fewer dimensions,
 fewer tokens.

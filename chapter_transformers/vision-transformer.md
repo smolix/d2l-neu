@@ -553,8 +553,8 @@ print('zero positions:   ', ', '.join(f'{a:.3f}' for a in zero_runs),
 The prediction holds: shuffled or not, the zero-position model scores the
 same. Like the MLP of :numref:`sec_lenet` on shuffled pixels, it cannot
 tell the difference. Each zero-position run lies one to two points below
-each learned-position run, while the two runs of an arm agree to within a
-point. Learned positions help, but only a little. A ViT that has never
+each learned-position run, while the two runs of an arm agree to within
+half a point. Learned positions help, but only a little. A ViT that has never
 known where any patch sits still reaches about 87 to 88%, and the original
 paper's ablation, cited above, found a loss of similar size at a far larger
 scale.

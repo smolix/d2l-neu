@@ -654,8 +654,9 @@ neighbors is about 0.1 higher than that of patches two to four cells apart.
 Small does not mean doubtful. The random curve is flat at $-0.03$, its five
 values within about 0.01 of one another, so a difference of 0.1 is ten
 times their spread. The change from initialization favors neighbors in the
-same way and is highest at distance 5, where every pair joins two opposite
-edges of the grid. Why the far edges should move alike, the curve does not
+same way, and then it turns up again: at distance 5, where every pair joins
+two opposite edges of the grid, it climbs back to the level of neighbors or
+a little above. Why the far edges should move alike, the curve does not
 say. Fashion-MNIST garments fill the image along their longer side, so many
 touch the top and the bottom, but the outer columns and above all the
 corners mostly show background. A plausible reason is that training moves

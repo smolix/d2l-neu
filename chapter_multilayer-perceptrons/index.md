@@ -1,52 +1,61 @@
 # Multilayer Perceptron
 :label:`chap_perceptrons`
 
-The softmax regression of :numref:`chap_classification` weighs each of the
-784 pixels of a clothing image and adds up the evidence for each of the ten
-classes. A pixel therefore adds the same evidence for a class whatever the
-pixels around it show. Yet a bright pixel may belong to a sleeve, a strap,
-or the background, and only its neighbors can tell which. How do we build a
-model in which the evidence from one input depends on the others, and how
-do we train it?
+In this chapter, we introduce your first truly *deep* neural networks. In
+:numref:`chap_classification`, softmax regression simply assigned a fixed
+weight to each of the 784 pixels of a garment image and summed the
+evidence—meaning every pixel contributed the exact same vote toward a
+class regardless of what surrounded it. Yet a bright pixel might belong to
+a sleeve, a handbag strap, or a collar, and only its neighbors can reveal
+which. How do we build models where the meaning of one input depends on the
+others, and how do we train them effectively?
 
-The trouble starts with a much smaller example than a sleeve: no threshold
-on a weighted sum computes the exclusive or of two bits. Marvin Minsky and
-Seymour Papert made the point in 1969 about the *perceptron*, a classifier
-proposed by Frank Rosenblatt in 1958 that learns the weights of a weighted
-sum from examples. Feeding the classifier new features computed from the
-inputs, such as the product of the two bits, escapes the limit. But
-somebody has to supply the features, and for years no widely used method
-learned them. A *multilayer perceptron* (MLP) computes them in hidden
-layers, each an affine map followed by a fixed nonlinear function. In 1986,
-Rumelhart, Hinton, and Williams showed that backpropagation trains all the
-layers together by gradient descent, so that the hidden layers learn useful
-features :cite:`Rumelhart.Hinton.Williams.ea.1988`.
+The failure of linear models shows up long before sleeves and collars: no
+straight line—no thresholded weighted sum—can compute even the simple
+exclusive-OR (XOR) of two bits. Marvin Minsky and Seymour Papert famously
+highlighted this barrier in 1969 for Frank Rosenblatt's 1958 *perceptron*,
+a single-layer linear classifier. Hand-crafting derived features such as
+the product of the two bits sidesteps the barrier, yet for decades no
+widely practical algorithm could *learn* useful features automatically.
+*Multilayer perceptrons* (MLPs)—the simplest deep networks—solve this by
+stacking fully connected *hidden layers*, each pairing an affine
+transformation with a fixed nonlinear activation function. In 1986,
+Rumelhart, Hinton, and Williams popularized *backpropagation* to train all
+layers jointly by gradient descent, allowing hidden layers to discover
+useful internal representations directly from data
+:cite:`Rumelhart.Hinton.Williams.ea.1988`.
 
-The loss, the optimizer, and the training loop of softmax regression carry
-over unchanged, but hidden layers raise three new problems. Each training
-step needs derivatives with respect to hundreds of thousands of parameters.
-A deep network whose initial weights have the wrong scale does not train at
-all. And a network with more parameters than training examples could
-memorize its data, yet usually does not. The first two problems have
-satisfactory answers. The third is the deepest, and what we can say about
-it is still incomplete.
+Happily, the cross-entropy loss, minibatch SGD optimizer, and training loop
+of softmax regression carry straight over unchanged. Adding hidden layers,
+however, confronts us with three fundamentally new challenges: computing
+gradients efficiently across hundreds of thousands of parameters, choosing
+parameter initializations carefully so signals neither vanish nor explode
+across layers, and understanding why heavily overparameterized networks—capable
+of memorizing their entire training set—still generalize so well in
+practice. The first two challenges have clean, well-understood solutions;
+the third remains one of the deepest open puzzles in modern machine
+learning.
 
-We begin by building the model: :numref:`sec_mlp` shows which functions a
-network with hidden layers can represent and why it needs a nonlinearity, and
-:numref:`sec_mlp-implementation` trains one on the clothing images to see
-what it gains over softmax regression, where, and at what cost. The three
-problems then get a section each, in that order (:numref:`sec_backprop`,
-:numref:`sec_numerical_stability`, :numref:`sec_generalization_deep`).
-Dropout (:numref:`sec_dropout`) is a regularizer made for hidden units, and
-we try it where a network memorizes wrong labels. To finish,
-:numref:`sec_kaggle_house` takes the whole toolkit away from images, to a
-Kaggle competition on house prices.
+We start by building the architecture: :numref:`sec_mlp` explains why
+nonlinearity is indispensable and explores the expressive power of hidden
+layers, while :numref:`sec_mlp-implementation` implements and trains an MLP
+on Fashion-MNIST to measure exactly what it gains over softmax regression
+and at what computational cost. Next, we tackle our three deep-learning
+challenges in turn—backpropagation (:numref:`sec_backprop`), numerical
+stability and weight initialization (:numref:`sec_numerical_stability`), and
+generalization in deep networks (:numref:`sec_generalization_deep`). We
+then introduce *dropout* (:numref:`sec_dropout`), a regularization method
+tailored to hidden units, testing it on a noisy-label memorization
+experiment. Finally, :numref:`sec_kaggle_house` puts the entire toolkit to
+work end to end on a real-world tabular dataset: predicting house prices in
+a Kaggle competition.
 
-The chapter assumes what :numref:`sec_generalization_basics` and
-:numref:`sec_weight_decay` said about overfitting, and it treats fully
-connected networks only. Layers that exploit the structure of images and
-sequences, and the optimizers and normalization layers that train very deep
-networks, follow in later chapters.
+This chapter builds on the foundations of overfitting and regularization
+from :numref:`sec_generalization_basics` and :numref:`sec_weight_decay`,
+focusing exclusively on fully connected layers. Specialized architectures
+that exploit spatial or sequential structure—together with advanced
+optimizers, normalization layers, and scalability techniques—await in the
+chapters ahead.
 
 ```toc
 :maxdepth: 2

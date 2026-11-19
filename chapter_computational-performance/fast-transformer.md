@@ -430,8 +430,8 @@ for name, call in (('nnx.jit', lambda: walk(model, optimizer)),
 
 :begin_tab:`pytorch`
 <!-- WRITER: the check now asserts a relative difference below 1e-4 (dev
-and store: about 5e-06): "five significant digits or more", not "three or
-more" (FT-7). -->
+runs 1.7e-05 and 1.8e-05, store 4.6e-06): "four significant digits or
+more", not "three or more" (FT-7). -->
 The logits agree to three or more significant digits. They are not
 identical, because the fused fp32 kernels round in a different order than
 the separate ones, and the tf32 products carry the difference forward.

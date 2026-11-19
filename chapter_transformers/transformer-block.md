@@ -831,8 +831,8 @@ because it is the initialization of 2017 and shows the effect plainly;
 $\mathcal{N}(0, 0.02^2)$. Biases are off, as in Llama and PaLM: leaving
 them out has not hurt quality, and the PaLM authors report that it made
 their large models train more stably :cite:`chowdhery2022palm`. Dropout is
-0, since a language model that almost never reads the same passage twice
-has little to memorize.
+0, for the reason :numref:`sec_gpt` gives when it trains a language model
+on text it almost never reads twice.
 
 ### Parameter Count
 
@@ -1082,7 +1082,7 @@ What must a block contain, and what keeps a deep stack's tokens apart?
 - write RMSNorm and QK-norm, and size SwiGLU to match the MLP.
 
 **Running examples:** a GPT-2-small block ($d = 768$); 32 random blocks at
-$d = 256$, three initializations.
+$d = 256$, in three stacks.
 :::
 
 ::: {.slide title="The Block Is What Every Transformer Repeats"}
@@ -1096,7 +1096,7 @@ $d = 256$, three initializations.
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
 | The KV Cache | reuse keys and values while sampling |
 | Shrinking the KV Cache | fewer heads, narrower or shorter caches |
-| Encoders, Decoders, ... | the other two wirings |
+| Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
 | Scaling Laws | loss against parameters, data, compute |
 | Mixture of Experts | more parameters per FLOP |
@@ -1389,7 +1389,9 @@ removes the confound.
 :::
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="A Fresh Post-Norm Stack Collapses Only When Its Weights Are Large"}
+[Wrap-up]{.kicker}
+
 - Block: attention mixes tokens; the FFN holds two thirds of $12d^2$
   (7.1M in GPT-2 small).
 - Post-norm: shared part $\times (1 + g^4)$ per block. Xavier: spread

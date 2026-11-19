@@ -74,8 +74,8 @@ families: Mistral 7B :cite:`Jiang.Sablayrolles.Mensch.ea.2023`, Llama 3,
 Qwen3 :cite:`Yang.Li.Yang.ea.2025`, OLMo 2 and 3
 :cite:`OLMo.2025,OLMo3.2025`, DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024`,
 Gemma 3 :cite:`Gemma.Team.2025`, and gpt-oss :cite:`OpenAI.2025`. In the
-attention column, GQA $h{:}g$ means $h$ query heads sharing $g$ key--value
-heads.
+attention column, GQA $H{:}H_\textrm{kv}$ means $H$ query heads sharing
+$H_\textrm{kv}$ key--value heads.
 
 :Architectures of seven open-weights model families, as reported in their technical reports, 2023 to 2025. Attention and cache: :numref:`sec_kv-cache-reduction`. Normalization: :numref:`sec_transformer-block`. Positions: :numref:`sec_positional-information`. Mixture of experts: :numref:`sec_moe`.
 :label:`tab_modern-recipe`
@@ -210,14 +210,13 @@ token, in 4-byte floats, so the default model caches $2 \times 6 \times
 256 \times 4 = 12{,}288$ bytes, or 12 KiB, per token. Sharing divides this
 by the size of the group: 3 KiB for Llama 3 8B, 1.5 KiB for Qwen3-32B.
 
-The parameters take one more step. Recall from :numref:`sec_scaling-laws`
-that a block holds about $12d^2$: $4d^2$ in the four attention projections
-and $8d^2$ in the feed-forward network. Sharing shrinks only two of those
-matrices, $\mathbf{W}_k$ and $\mathbf{W}_v$. Groups of four shrink each
-from $d \times d$ to $d \times d/4$, which saves $2 \cdot \tfrac{3}{4} d^2
-= 1.5 d^2$ per block, an eighth of the block's $12d^2$; groups of eight
-save $1.75 d^2$. Over six blocks of width 256 that comes to 0.59 and 0.69
-million parameters.
+The parameters take one more step. Of the $12d^2$ parameters of a block
+(:numref:`sec_transformer-block`), $4d^2$ sit in the four attention
+projections, and sharing shrinks only two of those matrices, $\mathbf{W}_k$
+and $\mathbf{W}_v$. Groups of four shrink each from $d \times d$ to
+$d \times d/4$, which saves $2 \cdot \tfrac{3}{4} d^2 = 1.5 d^2$ per block, an
+eighth of the block; groups of eight save $1.75 d^2$. Over six blocks of width
+256 that comes to 0.59 and 0.69 million parameters.
 
 ```{.python .input #scaling-laws-recipe-rows-as-constructor-calls}
 %%tab pytorch, jax
@@ -379,7 +378,7 @@ without positions, depart from the block itself.
 ::: {.cover}
 [Dive into Deep Learning · §11.9]{.kicker}
 
-The modern recipe<br>
+The Modern Recipe<br>
 **one block, a handful of settings · the cache · experts**
 :::
 :::
@@ -421,10 +420,10 @@ settings, and the Llama 3 8B and Qwen3-32B rows at our width of 256.
 | section | adds |
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
-| A GPT from Scratch | a trained language model |
-| The KV Cache | reuse keys and values |
+| A GPT from Scratch | a trained language model; GPT-2 loaded |
+| The KV Cache | reuse keys and values while sampling |
 | Shrinking the KV Cache | fewer heads, narrower or shorter caches |
-| Encoders, Decoders, ... | the other two wirings |
+| Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
 | Scaling Laws | loss against parameters, data, compute |
 | Mixture of Experts | more parameters per FLOP |
@@ -471,8 +470,8 @@ Shared settings (also RoPE, no dropout) decide how well a model learns;
 the differing ones decide what each token costs.
 :::
 
-[GQA $h{:}g$: $h$ query heads, $g$ key--value heads. MoE $E/k$: experts
-stored / run per token, +1 shared.]{.small}
+[GQA $H{:}H_\textrm{kv}$: $H$ query heads, $H_\textrm{kv}$ key--value
+heads. MoE $E/k$: experts stored / run per token, +1 shared.]{.small}
 :::
 
 ::: {.slide title="Recent Mixtures Store 11 to 23 Times What a Token Uses"}
@@ -560,7 +559,7 @@ parameters?
 - $1.05\textrm{B} + 32 \times 218\textrm{M} = 8.03$B.
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="Released Models Share the Block and Differ in What a Token Costs"}
 [Wrap-up]{.kicker}
 
 - Released models are the chapter's block: RMSNorm (mostly pre-norm),

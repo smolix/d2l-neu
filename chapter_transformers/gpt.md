@@ -396,11 +396,10 @@ making the model about 31% larger.
 Our training run makes about 8 million predictions, enough to pass over the
 170,000 characters of *The Time Machine* almost 50 times, after which a low
 loss would no longer tell us whether the model predicts English or recites
-Wells. As in :numref:`subsec_tinylm`, we train instead on
-`d2l.WikiText103`, the raw text of Wikipedia articles with case, digits,
-and punctuation. Its training
-windows of 128 bytes start at random offsets, so the run reads about 3% of
-the text and almost never the same passage twice. The validation windows
+Wells. As in :numref:`subsec_tinylm`, we train instead on `d2l.WikiText103`,
+the raw text of Wikipedia articles with case, digits, and punctuation. Its
+training windows of 128 bytes start at random offsets, so the run reads about
+3% of the text and almost never the same passage twice. The validation windows
 are consecutive pieces of the official validation split.
 
 ```{.python .input #gpt-training-the-model-1}
@@ -513,8 +512,8 @@ $\log 256$, as it should.
 We train with the recipe of :numref:`chap_optimization`. The optimizer is
 AdamW (:numref:`sec_adamw`), which divides each coordinate's step by a
 running estimate of its gradient's magnitude and applies weight decay
-separately from that rescaling. The decay, $\lambda = 0.1$, acts on the
-weight matrices only; embeddings, normalization gains, and biases are
+separately from that rescaling. A decay of 0.1 acts on the weight
+matrices only; embeddings, normalization gains, and biases are
 exempt (:numref:`subsec_adamw-what-not-to-decay`). The learning rate rises
 linearly from zero over the first 100 steps and then falls along a half
 cosine to zero at the end of training (`d2l.cosine_warmup`). Gradients
@@ -873,16 +872,14 @@ the same time.
 :numref:`sec_transformer-block` placed the normalization at the input of
 each sublayer (pre-norm) rather than after each residual addition, as the
 original transformer did (post-norm). Its argument came from
-initialization. A post-norm stack of 32 blocks with Xavier weights drives
-its tokens toward their average. Each block multiplies the ratio of what
-the tokens share to what distinguishes them by about $1 + g^4$, where
-$g^2/d$ is the variance of the entries of the attention's value and output
-matrices, and Xavier weights have $g = 1$. That argument does not reach
-our model. With weights of standard deviation 0.02 at $d = 256$ we have
-$g^2 = 256 \cdot 0.02^2 \approx 0.1$, so the ratio grows by about 1% per
-block, and $\mathbf{W}_o$ is smaller still. A fresh six-block post-norm
-`GPT` keeps its tokens distinct. Does the placement matter once training
-starts?
+initialization, and its reach is limited. A post-norm stack whose weights
+have variance $g^2/d$ drives its tokens together at a rate of about
+$1 + g^4$ per block: a doubling for Xavier weights, but only about 1% for
+the standard deviation of 0.02 that `GPT` uses at $d = 256$. The
+third stack of :numref:`subsec_signal-propagation`, drawn at that standard
+deviation, kept its tokens apart through 32 blocks, and in `GPT` the
+matrix $\mathbf{W}_o$ is smaller still. A fresh six-block post-norm `GPT`
+keeps its tokens distinct. Does the placement matter once training starts?
 
 We test it with the model and data as above. Two arms differ only in
 `pre_norm`. Both take 800 steps of AdamW at a constant learning rate of
@@ -914,12 +911,11 @@ for name, arm in arms.items():
             f'{sum(losses[k - 50:k]) / 50:.2f}' for k in (100, 200, 400, 800)))
 ```
 
-The pre-norm model trains normally. The post-norm model without warmup
-does not diverge, but in both runs its loss stops at 3.16 to 3.18 nats and
-stays there. That is the unigram level computed above: the model predicts
-the byte frequencies of the text and ignores its input, even the current
-byte.
-With the warmup, the post-norm model leaves that level and trains.
+The pre-norm model trains normally. The post-norm model without warmup does
+not diverge, but in both runs its loss stops at 3.16 to 3.18 nats and stays
+there. That is the unigram level computed above: the model predicts the byte
+frequencies of the text and ignores its input, even the current byte. With the
+warmup, the post-norm model leaves that level and trains.
 
 Attention that has learned nothing would not explain the stall. If every
 attention sublayer output zero, the feed-forward sublayers would still see
@@ -1704,7 +1700,7 @@ How do we turn the transformer block into a model that meets both?
 | Vision Transformer | images as token sequences |
 | Scaling Laws | loss against parameters, data, compute |
 | Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | the settings of released models |
+| The Modern Recipe | released models as settings |
 :::
 
 ::: {.col .narrow}
@@ -2003,7 +1999,7 @@ How many equally likely choices does each loss correspond to?
 - GPT-2: $e^{3.89} \approx 49$ tokens, out of 50,257.
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="A Masked Pass Trains Every Prediction; a Matched RNN Ends Behind"}
 [Wrap-up]{.kicker}
 
 - GPT = embedding $\mathbf{E}$ + $L$ causal blocks + final norm +

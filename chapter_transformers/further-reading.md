@@ -74,18 +74,18 @@ from the first block to the last an identity.
 ![Four placements of normalization around one sublayer, with the residual stream running bottom to top; the FFN sublayer is treated the same way. Post-LN normalizes the stream itself after each addition, pre-LN, the default of the chapter's block, normalizes what the branch reads, OLMo 2 normalizes what the branch writes, and Gemma 3 normalizes the branch on both sides.](../img/mdl-transformers-norm-taxonomy.svg)
 :label:`fig_norm-taxonomy`
 
-Post-norm is not doomed at depth. DeepNet :cite:`Wang.Ma.Dong.ea.2024`,
-met in :numref:`sec_transformer-block`, trains post-norm stacks of a
-thousand layers by scaling down the initial weights of each branch and
-scaling up the stream.
+Post-norm is not doomed at depth. DeepNet :cite:`Wang.Ma.Dong.ea.2024`, met in
+:numref:`sec_transformer-block`, trains post-norm stacks of a thousand layers
+by scaling down the initial weights of each branch and scaling up the stream.
 What fails at depth is the size of each branch relative to the stream, and
 DeepNet shrinks it. Dynamic tanh :cite:`Zhu.Chen.He.ea.2025` takes the
-opposite route and removes the normalization. It replaces every LayerNorm
-by the elementwise $\boldsymbol{\gamma} \odot \tanh(\alpha \mathbf{x}) +
-\boldsymbol{\beta}$, with a learned scalar $\alpha$ and the per-channel
-scale $\boldsymbol{\gamma}$ and shift $\boldsymbol{\beta}$ that LayerNorm
-also has, so that no statistic is computed over the token. At the scales
-reported it matches normalized models in vision and language.
+opposite route and removes the normalization. It replaces every LayerNorm by
+the elementwise
+$\boldsymbol{\gamma} \odot \tanh(\alpha \mathbf{x}) + \boldsymbol{\beta}$,
+with a learned scalar $\alpha$ and the per-channel scale $\boldsymbol{\gamma}$
+and shift $\boldsymbol{\beta}$ that LayerNorm also has, so that no statistic
+is computed over the token. At the scales reported it matches normalized
+models in vision and language.
 
 ### Initialization of Deep Stacks
 
@@ -165,7 +165,7 @@ $\min(1, p(x)/q(x))$, and resampling a rejected one from the normalized
 $\max(0, p - q)$, leaves the output distribution exactly that of the large
 model. After a rejection the remaining drafts are discarded, and drafting
 starts again from the resampled token; when every draft is accepted, the
-same pass yields one more token of the large model for free. The gain
+same pass also yields the large model's next token. The gain
 therefore rests on how often the large model accepts the drafts, which
 depends on the task and the sampler as much as on the draft model. On
 T5-XXL, Leviathan et al. report decoding two to three times faster with
@@ -250,8 +250,7 @@ The *registers* of :numref:`sec_vision-transformer` are a few input-free
 tokens that hold the global information which large ViTs otherwise store
 in background patches. :citet:`Darcet.Oquab.Mairal.ea.2024` found those
 patches by their outputs, about ten times larger in norm than the rest and
-holding
-little information about their own patch; with registers, these outliers
+holding little information about their own patch; with registers, these outliers
 disappear. Registers need not even be trained:
 :citet:`Jiang.Dravid.Efros.ea.2025` trace the outliers to a few neurons and
 move their activation into an extra token at test time, with nearly the

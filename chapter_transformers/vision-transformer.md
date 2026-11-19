@@ -244,23 +244,21 @@ A patch has a row *and* a column, so a fixed code must be built in two
 dimensions. The 1-D sinusoidal code of :numref:`sec_positional-information`,
 applied to the patches in raster order, would give patch 6, at the right end
 of the first row, and patch 7, at the left end of the second, neighboring
-codes, although the two lie at opposite edges of the image. A *2-D
-sinusoidal code* instead uses half of each vector for the 1-D code of the
-row and the other half for that of the column
-:cite:`Beyer.Zhai.Kolesnikov.2022`. A 2-D form of RoPE rotates queries and
-keys by angles proportional to the row and to the column
-:cite:`Heo.Park.Han.ea.2024`. A learned table need not be built in two
-dimensions, because a free vector per position can come to reflect any
+codes, although the two lie at opposite edges of the image. A *2-D sinusoidal
+code* instead uses half of each vector for the 1-D code of the row and the
+other half for that of the column :cite:`Beyer.Zhai.Kolesnikov.2022`. A 2-D
+form of RoPE rotates queries and keys by angles proportional to the row and to
+the column :cite:`Heo.Park.Han.ea.2024`. A learned table need not be built in
+two dimensions, because a free vector per position can come to reflect any
 layout. The original ViT learns one such vector per token position,
-initialized to small Gaussian noise, and adds it to the token. In the
-paper's own ablation, learned 1-D and 2-D tables and relative encodings did
-about equally well, while leaving out position information altogether cost
-two to three points of accuracy in a few-shot evaluation on ImageNet
-:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`. We follow the original
-recipe. At initialization the
-model therefore has no notion that patch 7 lies directly to the left of
-patch 8 and directly above patch 13; whatever spatial structure it uses, it
-must discover during training.
+initialized to small Gaussian noise, and adds it to the token. In the paper's
+own ablation, learned 1-D and 2-D tables and relative encodings did about
+equally well, while leaving out position information altogether cost two to
+three points of accuracy in a few-shot evaluation on ImageNet
+:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`. We follow the original recipe.
+At initialization the model therefore has no notion that patch 7 lies directly
+to the left of patch 8 and directly above patch 13; whatever spatial structure
+it uses, it must discover during training.
 
 `ViT` assembles the pieces: patch embedding, class token, position
 embeddings with dropout, `num_blks` blocks, and a head that normalizes the
@@ -660,7 +658,7 @@ a little above. Why the far edges should move alike, the curve does not
 say. Fashion-MNIST garments fill the image along their longer side, so many
 touch the top and the bottom, but the outer columns and above all the
 corners mostly show background. A plausible reason is that training moves
-the embeddings of such patches alike, and exercise
+the embeddings of such patches alike, and Exercise
 :exref:`ex_vision-transformer-grid-test` tests it.
 
 ## Comparison with a Convolutional Network
@@ -668,18 +666,17 @@ the embeddings of such patches alike, and exercise
 ### A Convolutional Baseline at the Same Budget
 :label:`subsec_vit-cnn-baseline`
 
-Is 89% good for a model of 6.5 million parameters trained for ten epochs?
-We compare the ViT with a CNN built from the residual blocks of
+Is 89% good for a model of 6.5 million parameters trained for ten epochs? We
+compare the ViT with a CNN built from the residual blocks of
 :numref:`sec_resnet`, each of which adds the output of two $3 \times 3$
 convolutions with batch normalization to its input (or, where the block
 downsamples, to a $1 \times 1$ projection of it). `CompactResNet` uses the
 familiar $7 \times 7$ stem and then seven residual blocks whose widths bring
 the total to the ViT's parameter count. The training conditions are held
 equal. Both models see the same data for ten epochs, and both use the same
-recipe:
-`CompactResNet` borrows `configure_optimizers` from `ViT`. The two also do
-about the same work, about half a billion floating-point operations per
-image in the forward pass (the exercises derive both counts).
+recipe: `CompactResNet` borrows `configure_optimizers` from `ViT`. The two
+also do about the same work, about half a billion floating-point operations
+per image in the forward pass (the exercises derive both counts).
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-1}
 %%tab pytorch
@@ -776,10 +773,10 @@ print(f'ViT: {vit_params/1e6:.1f}M parameters, validation accuracy',
       ', '.join(f'{a:.3f}' for a in learned_runs))
 ```
 
-The CNN reaches about 94%, five points ahead of the ViT. The two runs of
-each model agree to a tenth of a point, and against that yardstick a gap of five points is not an accident of
-the draw. The validation curves of the first run of each show how the gap
-develops during training:
+The CNN reaches about 94%, five points ahead of the ViT. The two runs of each
+model agree to a tenth of a point, and against that yardstick a gap of five
+points is not an accident of the draw. The validation curves of the first run
+of each show how the gap develops during training:
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-3}
 %%tab pytorch, jax
@@ -926,7 +923,7 @@ pretrained.
        cannot influence the logits. Identify it, and compute the fraction of
        the FLOPs of that block that inference could skip in the
        configuration of :numref:`subsec_vit-first-run`, counting as in
-       problem :exref:`ex_vision-transformer-parameters-compute`.
+       Exercise :exref:`ex_vision-transformer-parameters-compute`.
     1. Implement the alternative readout that averages the final
        representations of the 36 patches, and remove the “&lt;cls&gt;” token
        together with its position embedding. Train the model with the
@@ -984,7 +981,7 @@ pretrained.
     1. For $s = 16$, describe the tokens that `PatchEmbedding` produces for
        the shifted image, and show that they are a rearrangement of those of
        the original image. Give an image for which this fails at $s = 8$.
-    1. Use this and problem
+    1. Use this and Exercise
        :exref:`ex_vision-transformer-position-information` to show that a
        `ViT` whose patch position embeddings are all equal assigns the same
        logits to both images when $s = 16$. Why does the argument not extend
@@ -1105,7 +1102,7 @@ pretrained.
 ::: {.cover}
 [Dive into Deep Learning · §11.6]{.kicker}
 
-Vision transformer<br>
+Vision Transformer<br>
 **patches as tokens · class token and position embeddings · does it use position? · a matched comparison with a CNN**
 :::
 :::
@@ -1156,7 +1153,7 @@ patches, a 6.5M-parameter ViT against a 6.5M-parameter CNN.
 | **Vision Transformer** | **images as token sequences** |
 | Scaling Laws | loss against parameters, data, compute |
 | Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | the settings of released models |
+| The Modern Recipe | released models as settings |
 :::
 
 ::: {.col .narrow}
@@ -1423,7 +1420,9 @@ Small data, from scratch: train a CNN, or fine-tune a pretrained ViT.
 [Hassani et al., 2021; Dosovitskiy et al., 2021]{.small}
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="Patches Make an Image a Sequence; at Small Scale the CNN Still Wins"}
+[Wrap-up]{.kicker}
+
 - ViT = strided-convolution patchify, the pre-norm encoder, a head on the
   class token; only tokenization and readout are new.
 - Shuffling the patches drops the trained ViT from about 89% to below one

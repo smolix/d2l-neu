@@ -1,15 +1,14 @@
 # Encoders, Decoders, and Cross-Attention
 :label:`sec_transformer`
 
-The GPT of :numref:`sec_gpt`, which the last two sections made cheaper to
-run, reads text from left to right: its causal mask lets each position see
-only what came before it. This is what next-token
-prediction needs, but many tasks are not next-token prediction. To fill the
-gap in "the ___ barked at the mail carrier", a reader uses the words after
-the gap as much as those before it. To translate a sentence, a translator
-reads all of it before writing the first word of the translation. What does
-a transformer gain when it may see its whole input, and how does it produce
-one sequence from another?
+To fill the gap in "the ___ barked at the mail carrier", a reader uses the
+words after the gap as much as those before it. To translate a sentence, a
+translator reads all of it before writing the first word of the
+translation. The GPT of :numref:`sec_gpt`, which the last two sections made
+cheaper to run, can do neither: its causal mask lets each position see only
+what came before it, which is all that next-token prediction needs. What
+does a transformer gain when it may see its whole input, and how does it
+produce one sequence from another?
 
 Both questions concern two choices that the GPT fixed: the mask, and the
 sources of the queries, keys, and values. Removing the mask gives an
@@ -181,7 +180,7 @@ $$
 averaged over texts and over the random choice of $\mathcal{M}$. Only the
 masked tokens are scored, and each is predicted from context on *both*
 sides, which is what removing the causal mask provides. We mask 15% of the
-tokens, as BERT does; exercise :exref:`ex_encdec-masking-recipe` varies
+tokens, as BERT does; Exercise :exref:`ex_encdec-masking-recipe` varies
 the recipe.
 
 Let us start small, and on purpose. BERT trained on subword tokens and
@@ -364,15 +363,15 @@ print(f'loss at positions 0-3: {show(pos_loss[:4])}; 60-63: '
 ```
 
 The model fills about half of the masked bytes exactly, and the profile has
-the expected shape: about 1.6 to 1.7 nats across the interior, 2.4 to 2.5
-at the two edges. It also shows how far the model looks around a byte.
-One byte on the missing side, at position 1 or 62, already removes most of
-the gap, and by position 2 or 3 the loss is back at its interior level: a
-byte is predicted mainly from its nearest neighbours. The two edges cost about the same,
+the expected shape: about 1.6 to 1.7 nats across the interior, 2.4 to 2.5 at
+the two edges. It also shows how far the model looks around a byte. One byte
+on the missing side, at position 1 or 62, already removes most of the gap, and
+by position 2 or 3 the loss is back at its interior level: a byte is predicted
+mainly from its nearest neighbours. The two edges cost about the same,
 although one sees only the future and the other only the past. This is no
-accident of English. For any stationary source, predicting a symbol from
-the $k$ symbols that follow it is exactly as hard as predicting it from the
-$k$ that precede it (exercise :exref:`ex_encdec-times-arrow`).
+accident of English. For any stationary source, predicting a symbol from the
+$k$ symbols that follow it is exactly as hard as predicting it from the $k$
+that precede it (Exercise :exref:`ex_encdec-times-arrow`).
 
 Is the gap between edge and interior, about 0.8 nats, what the second side
 is worth? Not quite, because the model has rarely practised the edges. An
@@ -857,12 +856,13 @@ the true source position; we call the fraction of rows where it does the
 is 100% and the map is the anti-diagonal predicted in
 :numref:`subsec_reversal-task`.
 
-One run could be typical or not. We therefore train five more models like
-the one above, for six in all, and six whose encoder has no transformer
-blocks at all: only its embeddings and positions remain. In the second
-kind, position $j$ of the encoder output can only carry letter $j$, so the
-decoder has no choice: we expect the anti-diagonal in every run. For each run we print the exact match and the hit rate, and we
-plot one string's map from the least aligned run of each kind.
+One run could be typical or not. We therefore train five more models like the
+one above, for six in all, and six whose encoder has no transformer blocks at
+all: only its embeddings and positions remain. In the second kind, position
+$j$ of the encoder output can only carry letter $j$, so the decoder has no
+choice: we expect the anti-diagonal in every run. For each run we print the
+exact match and the hit rate, and we plot one string's map from the least
+aligned run of each kind.
 
 ```{.python .input #encoders-decoders-reading-the-alignment-1}
 %%tab pytorch
@@ -971,7 +971,7 @@ the causal triangle. With right padding the triangle already hides the
 padded target keys from every real query, because every padded position
 comes after every real one. Adding the target padding mask changes only the
 rows of padded queries, whose outputs the loss ignores. Frameworks add it
-anyway, and under left padding it becomes necessary (exercise
+anyway, and under left padding it becomes necessary (Exercise
 :exref:`ex_encdec-padding`).
 
 We assemble all three masks for a toy ragged batch, as boolean arrays of
@@ -1187,17 +1187,16 @@ projections and feed-forward networks, whose work grows only linearly in
 $N$, still account for much of the time. The Perceiver takes between 0.15
 and 0.35 ms at every length, and less than twice as long at $N = 8{,}192$
 as at 1,024, although $N$ has grown eightfold. At these sizes its
-arithmetic is small. Most of its time is a fixed cost per call that does
-not depend on $N$: even a compiled call costs the host time to check its
-arguments and launch its work, and for so small a computation that is
-most of what the timer sees. At $N = 1{,}024$ the two encoders are within
-a factor of two of each other. At $N = 8{,}192$ the Perceiver is more than
-thirty times faster. The count of scores promised 128; it leaves out the
-fixed cost, which is most of the Perceiver's time.
+arithmetic is small, and most of its time is the fixed cost per call of
+:numref:`subsec_kv-cache-speedup`, which does not depend on $N$: even a
+compiled call costs the host time to check its arguments and launch its
+work. At $N = 1{,}024$ the two encoders are within a factor of two of each
+other. At $N = 8{,}192$ the Perceiver is more than thirty times faster. The
+count of scores promised 128; it leaves out the fixed cost.
 
 A latent bottleneck is the better choice when the input is long and a
 summary of fixed size is enough. Whether 64 vectors are enough is the real
-question, and no timing answers it. It depends on the task, and exercise
+question, and no timing answers it. It depends on the task, and Exercise
 :exref:`ex_encdec-perceiver-reversal` asks how few latents still reverse a
 string.
 
@@ -1261,9 +1260,9 @@ removed for fine-tuning
 | encoder--decoder | a sequence, from a separate input | source encoded once; cross-attention keys and values reused at every step | speech recognition; inputs of another kind |
 | decoder-only | a continuation of the prompt | prompt processed once and cached; one pass per generated token | generation, chat, and most text-to-text tasks |
 
-Nothing in this table assumes that the tokens are words. Whether an encoder
-can read an image, given nothing but its patches in a row, is the question
-of the next section.
+Nothing in this table assumes that the tokens are words. The next section
+hands an encoder nothing but the patches of an image, in a row, and asks
+whether it can learn to read them.
 
 ## Summary
 
@@ -1490,9 +1489,9 @@ another kind, such as speech.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.4]{.kicker}
+[Dive into Deep Learning · §11.5]{.kicker}
 
-Encoders, decoders, and cross-attention<br>
+Encoders, Decoders, and Cross-Attention<br>
 **three wirings of one block · masked-token prediction · an alignment we can check · learned queries · which wiring today**
 :::
 :::
@@ -1547,7 +1546,7 @@ already have.
 | Vision Transformer | images as token sequences |
 | Scaling Laws | loss against parameters, data, compute |
 | Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | the settings of released models |
+| The Modern Recipe | released models as settings |
 :::
 
 ::: {.col .narrow}
@@ -1864,7 +1863,7 @@ to one vector (average or a designated token), then a linear layer onto
 :::
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="Mask and Key Source Make Three Wirings; Decoder-Only Leads for Text"}
 [Wrap-up]{.kicker}
 
 - One block, three wirings: no mask, causal mask, or both joined by

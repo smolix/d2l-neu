@@ -102,15 +102,15 @@ census(gpt(50257, num_hiddens=768, num_heads=12, num_blks=12,
            pos='learned', norm='layer', act='gelu', bias=True))
 ```
 
-Both rows confirm the $12Ld^2$ rule to a fraction of a percent. The residue
-is normalization gains, the rounding of SwiGLU's width $8d/3$ to a whole
-number in our model, and the biases of GPT-2. The two models differ in the
-share of the embedding. It is 1.4% of our model, with its vocabulary of 256
-bytes, but nearly a third of GPT-2, whose 124 million parameters are an
+Both rows confirm the $12Ld^2$ rule to a fraction of a percent. The residue is
+normalization gains, the rounding of SwiGLU's width $8d/3$ to a whole number
+in our model, and the biases of GPT-2. The two models differ in the share of
+the embedding. It is 1.4% of our model, with its vocabulary of 256 bytes, but
+nearly a third of GPT-2, whose 124 million parameters are an
 85-million-parameter transformer attached to lookup tables of 39 million
-entries. The token table holds 38.6 million of them and the position table
-0.8 million. Comparing $Vd$ with $12Ld^2$ shows that the embedding dominates when $V
-\gtrsim 12Ld$, that is, for small models with large vocabularies.
+entries. The token table holds 38.6 million of them and the position table 0.8
+million. Comparing $Vd$ with $12Ld^2$ shows that the embedding dominates when
+$V \gtrsim 12Ld$, that is, for small models with large vocabularies.
 
 Which parameters should a scaling study count? The size of the table
 follows the tokenizer, not the computation each token receives, so
@@ -142,11 +142,11 @@ C \approx \underbrace{2ND}_{\textrm{forward}} +
 $$
 :eqlabel:`eq_six_nd`
 
-FLOPs :cite:`kaplan2020scaling`, the estimate that :numref:`sec_gpt` used
-to compare its run with larger ones. Generating a token without training needs only the
-forward pass, about $2N$ FLOPs (:numref:`sec_kv-cache`). If one formula
-from this section is worth memorizing, it is this one: it gives the cost
-of a training run from two numbers, before any code is written.
+FLOPs :cite:`kaplan2020scaling`, the estimate that :numref:`sec_gpt` used to
+compare its run with larger ones. Generating a token without training needs
+only the forward pass, about $2N$ FLOPs (:numref:`sec_kv-cache`). If one
+formula from this section is worth memorizing, it is this one: it gives the
+cost of a training run from two numbers, before any code is written.
 
 The count leaves out all work that is not a product with a weight matrix.
 The largest such term is attention itself. For a context of $n$ tokens,
@@ -173,11 +173,11 @@ every token like any other weight.
 
 We can predict the answer before the cell prints it. Attention adds $4nd$
 FLOPs per token in each of the $L = 6$ blocks, and the output layer adds
-weights to $N$ but no attention work, so a counter that sees only matrix products should report a
-forward cost of $1 + 4nLd/(2N) = 1.082$ times $2ND$, a shade below
-$1 + n/(6d) = 1.083$. A counter that also counts softmax, normalization
-and activations should report a little more. The cell prints the forward
-cost against $2ND$, the cost of the whole step against $6ND$, and the
+weights to $N$ but no attention work, so a counter that sees only matrix
+products should report a forward cost of $1 + 4nLd/(2N) = 1.082$ times $2ND$,
+a shade below $1 + n/(6d) = 1.083$. A counter that also counts softmax,
+normalization and activations should report a little more. The cell prints the
+forward cost against $2ND$, the cost of the whole step against $6ND$, and the
 ratio of backward to forward work.
 
 :begin_tab:`pytorch`
@@ -288,8 +288,8 @@ print(f'{len(data.train) / 1e6:.0f}M training bytes, '
 
 The grid has two axes. Five sizes of `d2l.GPT` grow width and depth
 together, as model families do: widths from 96 to 384 and depths from 3 to
-8 blocks, or 0.33 to 14.2 million non-embedding parameters, a factor of
-43. Each size trains at three data budgets: 500, 1,000, and 2,000 steps of
+8 blocks, or 0.33 to 14.2 million non-embedding parameters, a factor
+of 43. Each size trains at three data budgets: 500, 1,000, and 2,000 steps of
 64 windows, that is $D$ = 4.1, 8.2, and 16.4 million tokens. Even the
 largest budget reads only about 6% of the training text, so the grid
 varies the amount of data while repeating almost none of it.
@@ -308,7 +308,7 @@ The other two settings concern the learning rate. :numref:`sec_scaling`
 showed that the best Adam learning rate falls as the width grows, in
 proportion to $1/d$ by its argument from the first step (its sweep
 measured a slope of about $-0.7$). A rate tuned at one width therefore
-undertrains or destabilizes the others (exercise
+undertrains or destabilizes the others (Exercise
 :exref:`ex_scaling-laws-frozen-learning-rate` measures the effect). We
 anchor the peak rate at $2 \times 10^{-3}$ for width 256, the rate of
 :numref:`sec_gpt`, and scale it as $256/d$. The warmup lasts a tenth of the
@@ -376,10 +376,10 @@ lowers it by only 0.02 to 0.04. Nothing here is overfitting, either: the
 training loss of the longest runs lies one to three hundredths above the
 validation loss, never below it.
 
-The printout holds a comparison that is easy to miss on the plot. Start
-from the smallest model on the smallest budget. Four times the data lowers its loss by 0.25
-nats or more; forty-three times the parameters, the largest model of the
-grid on the same data, lowers it by 0.21 to 0.23. At this scale, four
+The printout holds a comparison that is easy to miss on the plot. Start from
+the smallest model on the smallest budget. Four times the data lowers its loss
+by 0.25 nats or more; forty-three times the parameters, the largest model of
+the grid on the same data, lowers it by 0.21 to 0.23. At this scale, four
 times the data is worth more than forty-three times the parameters, and it
 costs a tenth of the computation.
 
@@ -456,7 +456,7 @@ a shortage of data did not interact. The last assumption is the bold one,
 and our grid already strains it. The sum predicts that quadrupling the
 data lowers the loss by the same amount for every model size, while the
 grid shows 0.25 to 0.27 nats for the smallest model and 0.20 for the
-largest (exercise :exref:`ex_scaling-laws-fit-grid` fits both the sum and
+largest (Exercise :exref:`ex_scaling-laws-fit-grid` fits both the sum and
 a form in which the two interact). The rest of the section takes the sum
 at face value.
 
@@ -538,17 +538,17 @@ for name, fit in fits.items():
 
 Only the refit reproduces the allocation Chinchilla was trained with. The
 published constants put the optimum at less than half of Chinchilla's 70
-billion parameters and at twice its 1.4 trillion tokens, about 90 tokens
-per parameter. Under the refit $\alpha$ and $\beta$ are nearly equal, so
-the exponents of :eqref:`eq_chinchilla_allocation` are 0.51 for $N^*$ and
-0.49 for $D^*$; both grow almost exactly like $C^{1/2}$, and the optimum stays near 20 tokens per parameter over many orders of
-magnitude of compute. This ratio belongs to that study's data, tokenizer,
-and model family; a different corpus or architecture moves it. Our
-byte-level grid cannot be checked against 20 directly, since a byte
-carries much less text than a subword token and tokens per parameter do
-not compare across tokenizers. Its three runs of similar cost read 9, 1.7
-and 0.3 tokens per parameter, far on the side where more data is the
-better use of a budget, and the run that read the most won.
+billion parameters and at twice its 1.4 trillion tokens, about 90 tokens per
+parameter. Under the refit $\alpha$ and $\beta$ are nearly equal, so the
+exponents of :eqref:`eq_chinchilla_allocation` are 0.51 for $N^*$ and 0.49 for
+$D^*$; both grow almost exactly like $C^{1/2}$, and the optimum stays near 20
+tokens per parameter over many orders of magnitude of compute. This ratio
+belongs to that study's data, tokenizer, and model family; a different corpus
+or architecture moves it. Our byte-level grid cannot be checked against 20
+directly, since a byte carries much less text than a subword token and tokens
+per parameter do not compare across tokenizers. Its three runs of similar cost
+read 9, 1.7 and 0.3 tokens per parameter, far on the side where more data is
+the better use of a budget, and the run that read the most won.
 
 The exponent was once in dispute. :citet:`kaplan2020scaling`, fitting
 language models counted by their non-embedding parameters, had found
@@ -557,7 +557,7 @@ into a model 5.4 times larger trained on 1.9 times the tokens; under the
 refit it goes into a model and a dataset each a little over three times
 larger. Two analyses explain the gap. :citet:`Pearce.Song.2024` trace most
 of it to the non-embedding count at small sizes, where the embedding is a
-large share of the parameters (exercise
+large share of the parameters (Exercise
 :exref:`ex_scaling-laws-embedding-count` measures how the count moves a
 slope). :citet:`Porian.Wortsman.Jitsev.ea.2024` trace it to three details
 of the earlier runs: the output layer left out of the compute, a warmup
@@ -624,7 +624,7 @@ about 34 billion parameters, reads about 0.64 trillion tokens, and needs
 times as much to train as its compute-optimal equal, and in return each
 token it generates costs about a quarter as much, 8 billion parameters
 against 34. The savings in inference exceed the extra training after
-about 11 trillion generated tokens (exercise
+about 11 trillion generated tokens (Exercise
 :exref:`ex_scaling-laws-training-for-inference` derives these numbers).
 That is fewer tokens than the model read in training. A model with many
 users passes that point, and from then on the small model is the cheap
@@ -638,8 +638,8 @@ not show up there in proportion. Nor does the law cover every
 architecture. A mixture of experts (:numref:`sec_moe`) stores many more
 parameters than it uses for each token, so its training cost follows the
 parameters it uses while its capacity follows all of them, and the law
-above was fitted to dense models only. What such a model gains from
-parameters that each token skips is the question of the next section.
+above was fitted to dense models only. The next section builds such a
+model and measures what it gains from parameters that each token skips.
 
 ## Summary
 
@@ -846,7 +846,7 @@ because a smaller model is cheaper to run.
 ::: {.cover}
 [Dive into Deep Learning · §11.7]{.kicker}
 
-Scaling laws<br>
+Scaling Laws<br>
 **the cost of a run · a miniature scaling study · the compute-optimal split · training past the optimum**
 :::
 :::
@@ -891,7 +891,7 @@ on the bytes of WikiText-103.
 | The Transformer Block | attention + FFN on a residual stream |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
 | The KV Cache | reuse keys and values while sampling |
-| Shrinking the KV Cache | fewer heads, fewer dimensions, fewer tokens |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
 | **Scaling Laws** | **loss against parameters, data, compute** |
@@ -1143,7 +1143,7 @@ costs and the cost of a generated token.
   parameters each token uses, while its capacity follows all of them.
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="6ND Prices a Run, and About 20 Tokens per Parameter Spends It Best"}
 [Wrap-up]{.kicker}
 
 - Training costs $\approx 6ND$; attention adds $n/(6d)$, 8% for our

@@ -1,12 +1,12 @@
 # The KV Cache
 :label:`sec_kv-cache`
 
-The GPT of :numref:`sec_gpt` writes text one token at a time, and its
-`generate` method produces each new token by running the model over the
-whole text so far. A chat assistant also writes one token at a time. If it
-were built like our GPT, it would answer a long question by reading the
-whole question again for every word of its answer. Does a model have to
-reprocess everything before it to choose the next token?
+A chat assistant writes its answer one token at a time, and so does the
+GPT of :numref:`sec_gpt`. Its `generate` method produces each new token by
+running the model over the whole text so far. An assistant built that way
+would answer a long question by reading the whole question again for every
+word of its answer. Does a model have to reprocess everything before it to
+choose the next token?
 
 It does not. Attention is causal, so the keys and values of earlier tokens
 never change once computed. The *KV cache* stores them, and each step then
@@ -234,9 +234,8 @@ per new token. `sample` draws a token from the last logits with the
 temperature and top-$k$ truncation of :numref:`subsec_gpt-sampling`,
 repeating two lines of `generate`. `decode` feeds each token back, and
 `generate_cached` gives the whole loop the interface of `generate`. The
-decode step is compiled once and replayed for every token
-(:numref:`sec_compilation`), so that its time is set by the work of the GPU
-rather than by Python's.
+decode step is compiled once and replayed for every token, so that its
+time is set by the work of the GPU rather than by Python's.
 
 ```{.python .input #kv-cache-the-cached-forward-pass-2}
 %%tab pytorch
@@ -527,12 +526,12 @@ addition, runs as a kernel of its own that takes microseconds whatever its
 size. Python is not the cause: the step is compiled, and what Python still
 does between steps overlaps with the work of the GPU.
 
-The fixed cost depends on the GPU and the implementation, and better
-software shrinks it. The weight read does not shrink. It is a hard floor: no step that produces
-one token of this model in fp32 can run faster on this GPU. The only way
-around it is to let one read of the weights serve several tokens, which is
+The fixed cost depends on the GPU and the implementation, and better software
+shrinks it. The weight read does not shrink. It is a hard floor: no step that
+produces one token of this model in fp32 can run faster on this GPU. The only
+way around it is to let one read of the weights serve several tokens, which is
 what batching (:numref:`subsec_kv-cache-batching`) and speculative decoding
-(problem :exref:`ex_kv-cache-shared-reads`) do.
+(Exercise :exref:`ex_kv-cache-shared-reads`) do.
 
 The end-to-end run is the case we counted at the start: 256 tokens after
 a prompt of 3,584 tokens, with each method, after one warm-up call.
@@ -591,7 +590,7 @@ $2 \cdot 12 \cdot 12 \cdot 64 \cdot 4$ bytes $= 72$ KiB per token. At a
 context of 4,096 tokens that is 288 MiB, more than half the size of the
 model's weights. A deployed model has dozens of layers, contexts of a
 hundred thousand tokens and more, and many users served at once. Then the
-caches, not the weights, fill the accelerator, as problems
+caches, not the weights, fill the accelerator, as Exercises
 :exref:`ex_kv-cache-70b` and :exref:`ex_kv-cache-70b-batch` show for a 70B
 model. We save the formula for any `d2l.GPT`.
 
@@ -645,12 +644,12 @@ matrix with one vector uses each entry it reads once; a product of the same
 matrix with a thousand vectors uses each entry a thousand times, for the
 same traffic.
 
-The *roofline* model (:numref:`sec_perf_model`) turns this into two lower
-bounds on the time of a computation: its operations divided by the peak
-arithmetic rate, and its bytes divided by the memory bandwidth $\beta$. The
-larger bound sets the time. The model is crude, since it ignores caches,
-latency, and kernels that do little of either, but it asks the right first
-question of any computation: is it waiting for arithmetic or for memory?
+The *roofline* model turns this into two lower bounds on the time of a
+computation: its operations divided by the peak arithmetic rate, and its bytes
+divided by the memory bandwidth $\beta$. The larger bound sets the time. The
+model is crude, since it ignores caches, latency, and kernels that do little
+of either, but it asks the right first question of any computation: is it
+waiting for arithmetic or for memory?
 
 An RTX 4090 performs up to about 83 TFLOP/s in fp32, and as many in the
 TF32 format that our timed matrix products may use, but it moves only about
@@ -737,16 +736,16 @@ $$
 :eqlabel:`eq_kv-cache-batch-throughput`
 
 Batching spreads the weight reads over many sequences, but every sequence
-still reads its own cache. For small $b$ the throughput grows in proportion
-to $b$. Once the caches outweigh the weights, at $b > W/(nc_\textrm{kv})$,
-it levels off toward $\beta/(nc_\textrm{kv})$, a ceiling set by the cache
-alone. For our fp32 model, $W = 494$ MB and $c_\textrm{kv} = 72$ KiB.
-The caches equal the weights at a batch of about 52 for a context of 128
-tokens, but already at a batch of about 6.5 for 1,024 tokens. At 1,024
-tokens the ceiling is about 13,000 tokens per second, however many
-sequences we batch. We measure the decode throughput at both contexts for batches of 1 to 64
-sequences and plot it next to the bound of
-:eqref:`eq_kv-cache-batch-throughput` with $\beta = 1$ TB/s.
+still reads its own cache. For small $b$ the throughput grows in proportion to
+$b$. Once the caches outweigh the weights, at $b > W/(nc_\textrm{kv})$, it
+levels off toward $\beta/(nc_\textrm{kv})$, a ceiling set by the cache alone.
+For our fp32 model, $W = 494$ MB and $c_\textrm{kv} = 72$ KiB. The caches
+equal the weights at a batch of about 52 for a context of 128 tokens, but
+already at a batch of about 6.5 for 1,024 tokens. At 1,024 tokens the ceiling
+is about 13,000 tokens per second, however many sequences we batch. We measure
+the decode throughput at both contexts for batches of 1 to 64 sequences and
+plot it next to the bound of :eqref:`eq_kv-cache-batch-throughput` with
+$\beta = 1$ TB/s.
 
 ```{.python .input #kv-cache-batched-decoding}
 %%tab pytorch, jax
@@ -864,7 +863,7 @@ the cache of one sequence.
        $H_\textrm{kv} = 64$, that is, without sharing, and with
        $H_\textrm{kv} = 1$.
 
-1. **Batching a 70B model.** Serve the model of problem
+1. **Batching a 70B model.** Serve the model of Exercise
    :exref:`ex_kv-cache-70b` on eight GPUs with 80 GB each, whose memory
    bandwidths add up to $\beta = 25$ TB/s, at contexts of
    $n = 32{,}768$ tokens.
@@ -955,14 +954,14 @@ Causal attention never changes the keys and values of past tokens.
 | section | adds |
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
-| A GPT from Scratch | a trained LM; GPT-2 loaded |
-| **The KV Cache** | **reuse past keys and values** |
-| Shrinking the KV Cache | smaller caches, same model |
+| A GPT from Scratch | a trained language model; GPT-2 loaded |
+| **The KV Cache** | **reuse keys and values while sampling** |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
-| Scaling Laws | loss against size, data, compute |
+| Scaling Laws | loss against parameters, data, compute |
 | Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | the settings of released models |
+| The Modern Recipe | released models as settings |
 :::
 
 ::: {.col .narrow}
@@ -1182,7 +1181,7 @@ reach the weights?
 [Grattafiori et al., 2024]{.small}
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="The Cache Removes the Arithmetic, and Bandwidth Then Sets the Speed"}
 [Wrap-up]{.kicker}
 
 - Causality lets a cache replace $\approx 2.4 \times 10^{14}$ FLOPs by

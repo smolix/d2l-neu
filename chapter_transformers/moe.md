@@ -1,17 +1,15 @@
 # Mixture of Experts
 :label:`sec_moe`
 
-The previous section counted the cost of training at about $6ND$
-operations for $N$ parameters and $D$ tokens, and the cost of generating a
-token at about $2N$ (:numref:`sec_scaling-laws`). Both counts rest on a
-property of every model in this chapter: it is *dense*, and each token
-passes through every parameter. A model with twice the parameters, which
-can store more of what it reads, therefore costs twice as much to train and
-to run. Yet
-most of what a large model knows is of no use for any one token.
-Continuing "the integral of" draws on different knowledge from continuing
-"Act I, Scene". Can a model hold more parameters without spending more
-computation on each token?
+The previous section counted the cost of training at about $6ND$ operations
+for $N$ parameters and $D$ tokens, and the cost of generating a token at about
+$2N$ (:numref:`sec_scaling-laws`). Both counts rest on a property of every
+model in this chapter: it is *dense*, and each token passes through every
+parameter. A model with twice the parameters, which can store more of what it
+reads, therefore costs twice as much to train and to run. Yet most of what a
+large model knows is of no use for any one token. Continuing "the integral of"
+draws on different knowledge from continuing "Act I, Scene". Can a model hold
+more parameters without spending more computation on each token?
 
 A *mixture of experts* (MoE) does this by running only part of the model
 for each token. It keeps $E$ copies of each block's feed-forward network,
@@ -160,36 +158,37 @@ one token through a layer with $E = 8$ and $k = 2$.
 ![A mixture-of-experts layer with eight experts, two of which are active per token. The router scores every expert. The two most probable experts run, and their outputs are weighted by their probabilities and added. The other six experts are stored but do no work for this token.](../img/mdl-transformers-moe.svg)
 :label:`fig_moe-layer`
 
-Selecting the top $k$ is a discrete decision and has no gradient. How,
-then, does the router learn? Through the weights. The weight of a selected
-expert is its probability $p_i$ itself, as in the Switch transformer
-:cite:`fedus2022switch`, not a probability renormalized over the $k$
-selected experts: in :numref:`fig_moe-layer` the two weights sum to 0.55,
-not to one. This weight has a gradient. If a larger contribution of
-expert $i$ would lower the loss, the gradient raises $p_i$, and with it
-the chance that the router selects expert $i$ for similar tokens. Through the softmax, every logit
-receives a gradient, including those of the experts that were not
-selected. Mixtral instead renormalizes the weights of the selected experts
-to sum to one :cite:`Jiang.Sablayrolles.Roux.ea.2024`. The router then
-learns only how to divide the weight among the selected experts, and for
-top-1 routing, where the single weight is always one, it learns nothing
-from the loss at all. With raw probabilities it still learns, so what
-looks like a detail of normalization decides whether a top-1 router learns
-anything. The first exercise works out these gradients.
+Selecting the top $k$ is a discrete decision and has no gradient. How, then,
+does the router learn? Through the weights. The weight of a selected expert is
+its probability $p_i$ itself, as in the Switch transformer
+:cite:`fedus2022switch`, not a probability renormalized over the $k$ selected
+experts: in :numref:`fig_moe-layer` the two weights sum to 0.55, not to one.
+This weight has a gradient. If a larger contribution of expert $i$ would lower
+the loss, the gradient raises $p_i$, and with it the chance that the router
+selects expert $i$ for similar tokens. Through the softmax, every logit
+receives a gradient, including those of the experts that were not selected.
+Mixtral instead renormalizes the weights of the selected experts to sum to one
+:cite:`Jiang.Sablayrolles.Roux.ea.2024`. The router then learns only how to
+divide the weight among the selected experts, and for top-1 routing, where the
+single weight is always one, it learns nothing from the loss at all. With raw
+probabilities it still learns, so what looks like a detail of normalization
+decides whether a top-1 router learns anything. The first exercise works out
+these gradients.
 
 ### Dispatching Tokens to Experts
 
 Evaluating :eqref:`eq_moe-layer` literally, by running all $E$ experts on
-every token and multiplying the outputs of the unselected ones by zero,
-gives the right answer at $E/k$ times the necessary cost and saves nothing.
-An efficient layer brings each token to its experts instead. A minibatch of
-$n$ tokens makes $nk$ *assignments*, pairs of a token and one of its
-experts, and how many of them each expert receives changes from batch to
-batch. To run all experts as one batched product, however, every expert
-needs the same number of rows. The layer therefore gives each expert a
-buffer of $S = \lceil c\, nk/E \rceil$ slots, where the *capacity factor* $c$ leaves room for an uneven spread.
-The Switch transformer trains with $c = 1.25$ :cite:`fedus2022switch`, a
-quarter more room than a perfectly even spread would need.
+every token and multiplying the outputs of the unselected ones by zero, gives
+the right answer at $E/k$ times the necessary cost and saves nothing. An
+efficient layer brings each token to its experts instead. A minibatch of $n$
+tokens makes $nk$ *assignments*, pairs of a token and one of its experts, and
+how many of them each expert receives changes from batch to batch. To run all
+experts as one batched product, however, every expert needs the same number of
+rows. The layer therefore gives each expert a buffer of
+$S = \lceil c\, nk/E \rceil$ slots, where the *capacity factor* $c$ leaves
+room for an uneven spread. The Switch transformer trains with $c = 1.25$
+:cite:`fedus2022switch`, a quarter more room than a perfectly even spread
+would need.
 
 Which assignment goes into which slot, and which one is left out, is
 easiest to see on a case small enough to write down. Let us take six
@@ -817,23 +816,21 @@ The frozen arm does not switch the feedback off entirely, though:
 the router's input still trains and can drift toward whichever experts
 help it. With the router trained and no balancing, the busiest expert ends at
 2.8 to 3.9 times its share. Whether the feedback loop adds to the skew
-that the inputs produce, two runs per row are too few to tell; exercise
+that the inputs produce, two runs per row are too few to tell; Exercise
 :exref:`ex_moe-feedback` asks for more.
 
-Both remedies spread the tokens much more evenly. In the plot no expert
-strays more than about a third from its even share; in the table the
-busiest receives 1.2 to 1.4 times it, and at most 1% of the assignments
-are dropped.
-Every balanced run ends with a lower validation loss than every unbalanced
-one, frozen router or not.
+Both remedies spread the tokens much more evenly. In the plot no expert strays
+more than about a third from its even share; in the table the busiest receives
+1.2 to 1.4 times it, and at most 1% of the assignments are dropped. Every
+balanced run ends with a lower validation loss than every unbalanced one,
+frozen router or not.
 
 Why do the unbalanced models lose? They end 0.05 to 0.25 nats above the
-balanced ones. With room for every assignment the unbalanced models win
-back 0.02 to 0.08 nats, so tokens that skip their expert at evaluation
-explain part of the gap; even then, none of them comes down to the best
-balanced runs. The rest is
-capacity that training left unused, the idle tail of the plot: experts that
-received few tokens learned little, and the assignments dropped during
+balanced ones. With room for every assignment the unbalanced models win back
+0.02 to 0.08 nats, so tokens that skip their expert at evaluation explain part
+of the gap; even then, none of them comes down to the best balanced runs. The
+rest is capacity that training left unused, the idle tail of the plot: experts
+that received few tokens learned little, and the assignments dropped during
 training never trained the experts they were meant for.
 
 At this scale the runs do not rank the two remedies: the two runs of one
@@ -858,15 +855,16 @@ tell us is whether the extra parameters make a better language model.
 :label:`subsec_moe-gpt`
 
 To find out, we train the small GPT of the balancing experiments with and
-without experts. :numref:`sec_scaling-laws` showed that more parameters lower the loss only while there is text for
-them to learn from, and a mixture needs that text all the more, since each
-expert learns only from the tokens routed to it. We therefore compare
-where text is plentiful: 6,000 steps on about 50 million bytes, more than
-a hundred per parameter of the dense model. The dense `d2l.GPT` competes with the same
-model with each feed-forward network replaced by eight experts, one active
-per token. Each expert is a full-width `d2l.FeedForward`, so a token passes
-through as many parameters in the mixture as in the dense model, apart from
-the router's $128 \times 8$ weights per block.
+without experts. :numref:`sec_scaling-laws` showed that more parameters lower
+the loss only while there is text for them to learn from, and a mixture needs
+that text all the more, since each expert learns only from the tokens routed
+to it. We therefore compare where text is plentiful: 6,000 steps on about 50
+million bytes, more than a hundred per parameter of the dense model. The dense
+`d2l.GPT` competes with the same model with each feed-forward network replaced
+by eight experts, one active per token. Each expert is a full-width
+`d2l.FeedForward`, so a token passes through as many parameters in the mixture
+as in the dense model, apart from the router's $128 \times 8$ weights per
+block.
 
 Two settings follow the Switch transformer :cite:`fedus2022switch`. The
 balancing is its auxiliary loss at $\lambda_\textrm{bal} = 0.01$, which
@@ -890,17 +888,16 @@ for name, model in models.items():
           f'{active_params(model) / 1e6:.2f}M active per token')
 ```
 
-The mixture stores 5.3 times the parameters of the dense model and uses
-the same number per token. What should we expect from training? Early on,
-the mixture should trail. Each fresh expert's output is scaled by its
-probability, the largest of eight that all start near $1/8$, so with
-$k = 1$ the whole feed-forward sublayer starts at a small fraction of the
-strength of the dense one. This is the other side of the raw-probability
-weight that lets a top-1 router learn. And each expert learns from only an
-eighth of the tokens. Both models train
-twice for 6,000 steps with the recipe of :numref:`sec_gpt`, and we measure
-the validation loss every 250 steps. The cell prints each run's final
-losses, the first measurement at which the mixture is ahead, and the
+The mixture stores 5.3 times the parameters of the dense model and uses the
+same number per token. What should we expect from training? Early on, the
+mixture should trail. Each fresh expert's output is scaled by its probability,
+the largest of eight that all start near $1/8$, so with $k = 1$ the whole
+feed-forward sublayer starts at a small fraction of the strength of the dense
+one. This is the other side of the raw-probability weight that lets a top-1
+router learn. And each expert learns from only an eighth of the tokens. Both
+models train twice for 6,000 steps with the recipe of :numref:`sec_gpt`, and
+we measure the validation loss every 250 steps. The cell prints each run's
+final losses, the first measurement at which the mixture is ahead, and the
 fraction of assignments dropped at the end, and it plots the curves of the
 first run:
 
@@ -950,16 +947,17 @@ about the sign of the gain, and its size is known to about a hundredth.
 The grid of :numref:`sec_scaling-laws` gives a rough yardstick. At 2,000
 steps, a third of this budget, tripling a dense model from 0.59 to 1.77
 million parameters lowered the loss by about 0.05 nats. The mixture gains
-about as much while storing 2.26 million parameters, more than the
-tripled model, and using the 0.43 million per token of our dense model.
-Roughly, then, a stored expert parameter is worth less than a dense one,
-while an operation spent on experts is worth more, and operations are what
-every token costs. Much larger studies report the same effect: the Switch transformer reached the quality of a dense T5
-model several times faster at the same number of operations per token, and
-it already gained from two experts :cite:`fedus2022switch`. The gain needs
-data, though. Exercise :exref:`ex_moe-data-regime` repeats the comparison
-with the six-block GPT of :numref:`sec_gpt`, which at 1,000 steps reads
-fewer than two bytes per parameter instead of more than a hundred.
+about as much while storing 2.26 million parameters, more than the tripled
+model, and using the 0.43 million per token of our dense model. Roughly, then,
+a stored expert parameter is worth less than a dense one, while an operation
+spent on experts is worth more, and operations are what every token costs.
+Much larger studies report the same effect: the Switch transformer reached the
+quality of a dense T5 model several times faster at the same number of
+operations per token, and it already gained from two experts
+:cite:`fedus2022switch`. The gain needs data, though. Exercise
+:exref:`ex_moe-data-regime` repeats the comparison with the six-block GPT of
+:numref:`sec_gpt`, which at 1,000 steps reads fewer than two bytes per
+parameter instead of more than a hundred.
 
 The gain also has costs that the operation count leaves out. The mixture
 keeps 5.3 times the parameters in memory, together with AdamW's two state
@@ -974,16 +972,15 @@ the buffers drop assignments, which a dense model never does.
 :label:`subsec_moe-fine-grained`
 
 Released mixtures differ in how they divide a budget of expert parameters.
-Mixtral's experts are full copies of the feed-forward network, eight per
-layer and two per token. DeepSeekMoE :cite:`Dai.Deng.Zhao.ea.2024` spends
-such a budget differently, in the two steps shown in
-:numref:`fig_moe-fine-grained`. The paper's example starts from 16
-full-width experts with 2 active per token. The first step cuts each expert into $m$
-narrower ones and lets each token select $m$ times as many: with $m = 4$, 8
-of 64 experts of a quarter width instead of 2 of 16 full-width ones.
-Neither the stored nor the active parameter count changes. The number of
-combinations a token can select does, from $\binom{16}{2} = 120$ to
-$\binom{64}{8} \approx 4.4 \times 10^{9}$.
+Mixtral's experts are full copies of the feed-forward network, eight per layer
+and two per token. DeepSeekMoE :cite:`Dai.Deng.Zhao.ea.2024` spends such a
+budget differently, in the two steps shown in :numref:`fig_moe-fine-grained`.
+The paper's example starts from 16 full-width experts with 2 active per token.
+The first step cuts each expert into $m$ narrower ones and lets each token
+select $m$ times as many: with $m = 4$, 8 of 64 experts of a quarter width
+instead of 2 of 16 full-width ones. Neither the stored nor the active
+parameter count changes. The number of combinations a token can select does,
+from $\binom{16}{2} = 120$ to $\binom{64}{8} \approx 4.4 \times 10^{9}$.
 
 In the ideal case, a token then assembles its network from many narrow
 specialists, say one for chemical vocabulary and another for nested
@@ -1120,7 +1117,7 @@ shared one.
     1. Rerun the arm without balancing and the two remedies with
        `num_active=2`. Does the unbalanced run still concentrate, and as
        strongly? Use the router gradient of
-       problem :exref:`ex_moe-router-gradient` to explain how a second
+       Exercise :exref:`ex_moe-router-gradient` to explain how a second
        active expert changes the signal that the runner-up receives.
    :exlabel:`ex_moe-feedback`
 
@@ -1233,9 +1230,9 @@ shared one.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.6]{.kicker}
+[Dive into Deep Learning · §11.8]{.kicker}
 
-Mixture of experts<br>
+Mixture of Experts<br>
 **stored and active parameters · top-k routing · dispatch · load balancing · an MoE GPT · fine-grained and shared experts**
 :::
 :::
@@ -1279,11 +1276,12 @@ small byte-level GPT.
 | The Transformer Block | attention + FFN on a residual stream |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
 | The KV Cache | reuse keys and values while sampling |
-| Shrinking the KV Cache | fewer heads, fewer dimensions, fewer tokens |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
 | Scaling Laws | loss against parameters, data, compute |
 | **Mixture of Experts** | **more parameters per FLOP** |
+| The Modern Recipe | released models as settings |
 :::
 
 ::: {.col .narrow}
@@ -1579,7 +1577,9 @@ data, which is why mixtures need plenty of distinct text.
 :::
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="Balanced Experts Add Parameters Without Adding Work per Token"}
+[Wrap-up]{.kicker}
+
 - MoE: $E$ FFNs and a router; parameters grow with $E$, operations per
   token with $k$. Mixtral 46.7B/12.9B; GPT-2 small with 8 experts
   521M/124M.

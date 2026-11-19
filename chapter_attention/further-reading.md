@@ -146,7 +146,7 @@ words, or along a syntactic relation, and pruned most of the others at a
 small cost in quality. Pruning heads after training never became a routine
 step. Sharing keys and values among groups of heads did, as the
 grouped-query attention of :numref:`subsec_kv-head-sharing`, because it
-shrinks the cache of generation (:numref:`sec_kv-cache`).
+shrinks the cache of generation (:numref:`sec_kv-cache-reduction`).
 
 ## Positions
 

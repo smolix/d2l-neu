@@ -94,7 +94,7 @@ collected in :numref:`sec_transformers-further-reading`.
 - [Transformer Inference Arithmetic](https://kipp.ly/transformer-inference-arithmetic/), kipply (2022): the FLOPs of each generated token, the size of the cache, and the bandwidth limit of decoding, worked out for a large model; the accounting of :numref:`sec_kv-cache` at scale.
 - [Transformer Math 101](https://blog.eleuther.ai/transformer-math/), EleutherAI (2023): the training-side companion. It derives the rule that training costs about six FLOPs per parameter and token, and what that rule predicts about memory and time; :numref:`sec_scaling-laws` checks the same count against the operations a counter records in one training step.
 - [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556), Hoffmann et al. (2022): Chinchilla, whose fitted law :numref:`sec_scaling-laws` uses to split a training budget between parameters and tokens.
-- [The Ultra-Scale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook), Hugging Face (2025): the parallelism and memory engineering that a training budget beyond one GPU requires, treated in :numref:`chap_performance` and, beyond one node, in :numref:`chap_lm_parallelism`.
+- [The Ultra-Scale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook), Hugging Face (2025): how a training run priced as in :numref:`sec_scaling-laws` is spread over many GPUs, the parallelism and memory engineering that :numref:`chap_performance` and, beyond one node, :numref:`chap_lm_parallelism` treat.
 
 <!-- slides -->
 
@@ -137,8 +137,8 @@ output layer reuses, and in 1,024 learned positions, 0.8M.
   toward one vector and what pre-norm changes;
 - train a GPT beside a recurrent network of its size, and load GPT-2 into
   it;
-- implement a KV cache, estimate the bandwidth of decoding, and shrink the
-  cache by sharing key–value heads;
+- implement a KV cache, bound the speed of decoding by its bandwidth, and
+  shrink the cache by sharing key–value heads;
 - count parameters and FLOPs, split a compute budget, and route tokens to
   experts;
 - wire encoders, encoder–decoders and ViTs, and read a released model as

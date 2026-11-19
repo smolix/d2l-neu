@@ -13,8 +13,8 @@ $$
 $$
 
 for $L$ blocks, $H_\textrm{kv}$ key--value heads of width $d_h$, and $b$
-sequences of $n$ tokens. Problem :exref:`ex_kv-cache-70b` of
-:numref:`sec_kv-cache` put numbers into this formula for Llama 2 70B. Built
+sequences of $n$ tokens. Exercise :exref:`ex_kv-cache-70b` of
+:numref:`sec_kv-cache` put numbers into this formula for Llama 3.1 70B. Built
 like our GPT, with a key--value head for each of its 64 query heads, that
 model would cache 2.5 MiB per token, and thirteen conversations of 4,096
 tokens would fill as much memory as its 140 GB of weights. The released
@@ -99,15 +99,15 @@ Llama 3 8B and Mistral 7B both run 32 query heads against 8 key--value heads
 ### Grouped Key--Value Heads in Code
 
 `d2l.GPT` and its attention `GPT.CausalAttention` take the number of
-key--value heads as the argument `num_kv_heads` (:numref:`sec_gpt`). The
-fused projection $\mathbf{W}_{qkv}$ then produces $H$ query heads but only
-$H_\textrm{kv}$ key heads and $H_\textrm{kv}$ value heads. Query head $h$ reads
-key--value head $\lfloor h H_\textrm{kv} / H \rfloor$, so each group of
-$H / H_\textrm{kv}$ consecutive query heads shares one, and the cache
-stores each key--value head once. With
-$H_\textrm{kv} = H$ the layer is ordinary multi-head attention. The cached
-forward pass of :numref:`subsec_kv-cache-cached-forward` needs no change,
-since `init_cache` sizes its buffers by `num_kv_heads`.
+key--value heads as the argument `num_kv_heads` (:numref:`sec_gpt`). The fused
+projection $\mathbf{W}_{qkv}$ then produces $H$ query heads but only
+$H_\textrm{kv}$ key heads and $H_\textrm{kv}$ value heads. Query head $h$
+reads key--value head $\lfloor h H_\textrm{kv} / H \rfloor$, so each group of
+$H / H_\textrm{kv}$ consecutive query heads shares one, and the cache stores
+each key--value head once. With $H_\textrm{kv} = H$ the layer is ordinary
+multi-head attention. The cached forward pass of
+:numref:`subsec_kv-cache-cached-forward` needs no change, since `init_cache`
+sizes its buffers by `num_kv_heads`.
 
 ```{.python .input #kv-cache-a-pluggable-implementation-1}
 %%tab pytorch
@@ -158,12 +158,13 @@ already trained with multi-head attention and convert it, which is what
 Ainslie et al. proposed for checkpoints that cost too much to train again
 :cite:`Ainslie.Lee-Thorp.Jong.ea.2023`. Their conversion replaces the key
 projections of each group of $H / H_\textrm{kv}$ consecutive heads by
-their average, and does the same for the value projections. For group $g$,
+their average, and does the same for the value projections. For a group
+$\mathcal{G}$ of query heads,
 
 $$
-\mathbf{W}_k^{(g)} = \frac{H_\textrm{kv}}{H} \sum_{h \in g}
+\mathbf{W}_k^{(\mathcal{G})} = \frac{H_\textrm{kv}}{H} \sum_{h \in \mathcal{G}}
 \mathbf{W}_k^{(h)}, \qquad
-\mathbf{W}_v^{(g)} = \frac{H_\textrm{kv}}{H} \sum_{h \in g}
+\mathbf{W}_v^{(\mathcal{G})} = \frac{H_\textrm{kv}}{H} \sum_{h \in \mathcal{G}}
 \mathbf{W}_v^{(h)},
 $$
 
@@ -529,15 +530,15 @@ for r in (512, 256, 128):
 ```
 
 At ranks 512 and 256 the loss is 3.55 and 3.61, against 3.58 for full
-attention. On 511 predictions of one passage, a difference of 0.03 in
-either direction is no difference we can claim. Only at rank 128 does the
-compression hurt: the loss rises by more than half a nat, and the
-perplexity from 36 to 63. Two facts come out of this. Projected onto a
-third of the 768 dimensions they could fill, GPT-2's keys and values
-predict as well as before, as far as one passage can tell. And the subspace that does it was fitted on
-another passage, so it carries over from one part of the book to the next.
-The second fact is the one a cache needs: a basis that had to be refitted
-for every text could not be built into a model.
+attention. On 511 predictions of one passage, a difference of 0.03 in either
+direction is no difference we can claim. Only at rank 128 does the compression
+hurt: the loss rises by more than half a nat, and the perplexity from 36 to 63.
+Two facts come out of this. Projected onto a third of the 768 dimensions they
+could fill, GPT-2's keys and values predict as well as before, as far as one
+passage can tell. And the subspace that does it was fitted on another passage,
+so it carries over from one part of the book to the next. The second fact is
+the one a cache needs: a basis that had to be refitted for every text could
+not be built into a model.
 
 *Multi-head latent attention* (MLA), around which DeepSeek built its V2 and
 V3 models, puts such a projection into the architecture
@@ -620,8 +621,8 @@ print('weight' + ''.join(f'{m:6.2f}' for m in jax.device_get(masses)))
 The first two blocks hardly look at the first token, and block 2 gives it
 about a tenth of its attention. From block 3 on, the queries place between
 about a third and more than half of their attention on the first token, a
-hundred times its uniform share or more. This is the
-*attention sink* of :numref:`subsec_cross-attention-alignment`. The weights
+hundred times its uniform share or more. This is the attention sink of
+:numref:`subsec_cross-attention-alignment`. The weights
 of every query sum to one, so a head with nothing to retrieve must still put
 its weight somewhere, and the first token, which every query can see,
 becomes that place :cite:`Xiao.Tian.Chen.ea.2024`.
@@ -717,16 +718,15 @@ channel, one coordinate across tokens, and values in groups per token
 :cite:`Liu.Yuan.Jin.ea.2024`. Exercise :exref:`ex_kv-cache-quantization`
 finds out why this grouping works.
 
-For a model trained today, sharing heads is the default and the only
-question is how many. A latent has to be built in before training. A
-window with sinks can be added to a trained model, as GPT-2 showed, though
-it works better if the model was pretrained with a sink token. The window
-bounds the cache by forgetting every token more than $w$ positions back,
-except the sinks. A memory of fixed size that still summarizes the whole text needs a
-state, such as that of the linear attention of
-:numref:`sec_windowed-linear-attention`. Hybrid stacks, in which only a few
-attention layers keep a cache, shrink the factor $L$ instead
-(:numref:`chap_modern_rnn`).
+For a model trained today, sharing heads is the default and the only question
+is how many. A latent has to be built in before training. A window with sinks
+can be added to a trained model, as GPT-2 showed, though it works better if
+the model was pretrained with a sink token. The window bounds the cache by
+forgetting every token more than $w$ positions back, except the sinks. A
+memory of fixed size that still summarizes the whole text needs a state, such
+as that of the linear attention of :numref:`sec_windowed-linear-attention`.
+Hybrid stacks, in which only a few attention layers keep a cache, shrink the
+factor $L$ instead (:numref:`chap_modern_rnn`).
 
 ## Summary
 
@@ -924,15 +924,15 @@ heads of width 64, 72 KiB per token in fp32).
 ::: {.col}
 | section | adds |
 |---|---|
-| The Transformer Block | attention + FFN, residual stream |
-| A GPT from Scratch | a trained LM; GPT-2 loaded |
-| The KV Cache | reuse keys and values |
-| **Shrinking the KV Cache** | **fewer heads, dimensions, tokens** |
+| The Transformer Block | attention + FFN on a residual stream |
+| A GPT from Scratch | a trained language model; GPT-2 loaded |
+| The KV Cache | reuse keys and values while sampling |
+| **Shrinking the KV Cache** | **fewer heads, narrower or shorter caches** |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
-| Vision Transformer | images as tokens |
-| Scaling Laws | loss against size and data |
+| Vision Transformer | images as token sequences |
+| Scaling Laws | loss against parameters, data, compute |
 | Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | settings of deployed models |
+| The Modern Recipe | released models as settings |
 :::
 
 ::: {.col .narrow}
@@ -973,10 +973,10 @@ factor $H/H_\textrm{kv}$.
 [Uptraining]{.kicker}
 
 Trained model with $H$ key--value heads; target $H_\textrm{kv}$ groups of
-$H/H_\textrm{kv}$ consecutive heads. For group $g$:
+$H/H_\textrm{kv}$ consecutive heads. For a group $\mathcal{G}$:
 
-$$\mathbf{W}_k^{(g)} = \frac{H_\textrm{kv}}{H} \sum_{h \in g} \mathbf{W}_k^{(h)},
-\qquad \mathbf{W}_v^{(g)} = \frac{H_\textrm{kv}}{H} \sum_{h \in g} \mathbf{W}_v^{(h)}$$
+$$\mathbf{W}_k^{(\mathcal{G})} = \frac{H_\textrm{kv}}{H} \sum_{h \in \mathcal{G}} \mathbf{W}_k^{(h)},
+\qquad \mathbf{W}_v^{(\mathcal{G})} = \frac{H_\textrm{kv}}{H} \sum_{h \in \mathcal{G}} \mathbf{W}_v^{(h)}$$
 
 Queries, output projection, FFN, and norms are copied. Control: keep only
 the first head of each group.
@@ -1129,7 +1129,7 @@ and $s$ = 4 sink tokens, how large is the cache at 1,024 tokens, and at
 :::
 :::
 
-::: {.slide title="Wrap-up"}
+::: {.slide title="Share Heads First; a Latent or a Window with Sinks Shrinks the Rest"}
 [Wrap-up]{.kicker}
 
 - Sharing heads: 8 → 2 key--value heads cut the byte model's cache

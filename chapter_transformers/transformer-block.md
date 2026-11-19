@@ -119,9 +119,8 @@ $$
 The modern block :eqref:`eq_preln-block` normalizes each branch's *input*
 (pre-norm) and leaves the stream alone. The literature also writes post-LN
 and pre-LN, after the layer normalization (LN) the two arrangements first
-used, and the cells below label their stacks that way. In code the two
-differ by two lines. The minimal block below takes the arrangement as a
-flag. Its attention is the `d2l.MultiHeadAttention` of
+used. In code the two differ by two lines. The minimal block below takes
+the arrangement as a flag. Its attention is the `d2l.MultiHeadAttention` of
 :numref:`sec_multihead-attention` with four heads, and its FFN is the
 classic two-matrix MLP with the GELU activation of :numref:`sec_mlp`. This
 minimal block isolates the placement; `TransformerBlock` below adds the
@@ -337,8 +336,8 @@ at every run, so the last digits move; the orders of magnitude do not.
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization}
 %%tab pytorch, jax
-arms = {'post-LN': (False, None), 'pre-LN': (True, None),
-        'post-LN, std 0.02': (False, 0.02)}
+arms = {'post-norm': (False, None), 'pre-norm': (True, None),
+        'post-norm, std 0.02': (False, 0.02)}
 stats, predicted = {}, {}
 at = lambda xs: ' '.join(f'{xs[k - 1]:.1e}' for k in (8, 16, 32))
 for name, (pre_norm, std) in arms.items():
@@ -352,6 +351,10 @@ for name, (pre_norm, std) in arms.items():
         print(f'  predicted:                 {at(predicted[name])}')
     print('  grad norms at k=32: ' + '  '.join(
         f'{n} {g:.1e}' for n, g in s['proj'].items()))
+```
+
+```{.python .input #transformer-block-signal-propagation-at-initialization-3}
+%%tab pytorch, jax
 d2l.plot(list(range(1, 33)), [s['spread'] for s in stats.values()]
          + list(predicted.values()), 'block index k', 'token spread',
          legend=list(arms) + ['predicted'], yscale='log', ylim=(1e-6, 2),
@@ -1171,7 +1174,7 @@ not $\boldsymbol{\mu}$: nothing undoes the growth.
 Post-norm and pre-norm with Xavier weights; post-norm with
 $\mathcal{N}(0, 0.02^2)$. Spread at blocks 8, 16, 32, predictions dotted:
 
-@!transformer-block-signal-propagation-at-initialization
+@!transformer-block-signal-propagation-at-initialization-3
 :::
 
 ::: {.slide title="Small Weights Do Not Collapse"}

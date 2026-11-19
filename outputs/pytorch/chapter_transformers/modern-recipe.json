@@ -19,13 +19,13 @@
       "outputs": []
     },
     "scaling-laws-recipe-rows-as-constructor-calls": {
-      "code_fingerprint": "sha256:8e0ff40c52d6e6902df80daa47e7122e5e2e3ec40369050efd0ca421a25de8f5",
+      "code_fingerprint": "sha256:28775606eea3ec9a1745e46dc4ff84630e8b2cdae9ea287f4bf2ac478ef307fe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "model      parameters  vs default   cache/token   vs default\ndefault         4.99M         +0%      12.0 KiB        1.000\nGPT-2           5.26M         +6%      12.0 KiB        1.000\nLlama 3 8B      4.40M        -12%       3.0 KiB        0.250\nQwen3-32B       4.30M        -14%       1.5 KiB        0.125\n"
+          "text": "model      parameters  vs default   cache/token   vs default\ndefault         4.79M         +0%      12.0 KiB        1.000\nGPT-2           5.07M         +6%      12.0 KiB        1.000\nLlama 3 8B      4.20M        -12%       3.0 KiB        0.250\nQwen3-32B       4.10M        -14%       1.5 KiB        0.125\n"
         }
       ]
     }

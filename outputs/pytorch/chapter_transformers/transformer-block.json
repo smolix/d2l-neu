@@ -24,48 +24,54 @@
       "outputs": []
     },
     "transformer-block-signal-propagation-at-initialization": {
-      "code_fingerprint": "sha256:51bf7c7a84c189c06589297531eb8f4a717e27473c59c428ec8e88be0fa29765",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:296ea33afb15cb3b965acaa33e2bab58166d2a0c4e9800c520e811457e4a1e33",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "post-LN: stream RMS at k=32 1.00\n  token spread at k=8,16,32: 3.5e-01 2.5e-02 1.0e-04\n  predicted:                 4.4e-01 3.1e-02 1.2e-04\n  grad norms at k=32: W_q 4.4e-09  W_k 4.2e-09  W_v 5.6e-02  W_o 5.5e-02\n"
+          "text": "post-norm: stream RMS at k=32 1.00\n  token spread at k=8,16,32: 3.5e-01 2.3e-02 9.9e-05\n  predicted:                 4.4e-01 3.1e-02 1.2e-04\n  grad norms at k=32: W_q 2.5e-09  W_k 2.1e-09  W_v 5.5e-02  W_o 6.3e-02\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre-LN: stream RMS at k=32 5.44\n  token spread at k=8,16,32: 7.1e-01 5.2e-01 3.5e-01\n  grad norms at k=32: W_q 2.0e-03  W_k 2.2e-03  W_v 9.8e-02  W_o 9.3e-02\n"
+          "text": "pre-norm: stream RMS at k=32 5.16\n  token spread at k=8,16,32: 7.3e-01 5.1e-01 3.7e-01\n  grad norms at k=32: W_q 2.2e-03  W_k 2.2e-03  W_v 8.0e-02  W_o 7.6e-02\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "post-LN, std 0.02: stream RMS at k=32 1.00\n  token spread at k=8,16,32: 9.9e-01 9.8e-01 9.7e-01\n  predicted:                 9.9e-01 9.9e-01 9.9e-01\n  grad norms at k=32: W_q 4.1e-04  W_k 4.1e-04  W_v 6.6e-03  W_o 6.8e-03\n"
-        },
+          "text": "post-norm, std 0.02: stream RMS at k=32 1.00\n  token spread at k=8,16,32: 9.9e-01 9.8e-01 9.7e-01\n  predicted:                 9.9e-01 9.9e-01 9.9e-01\n  grad norms at k=32: W_q 4.1e-04  W_k 4.1e-04  W_v 6.7e-03  W_o 7.5e-03\n"
+        }
+      ]
+    },
+    "transformer-block-signal-propagation-at-initialization-3": {
+      "code_fingerprint": "sha256:938c263d4b7915676d4176a44ddea7ef5988588436886ada6dacdf25c4c5d013",
+      "kind": "asset",
+      "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
-          "bytes": 44627,
-          "sha256": "sha256:85aee9fc213f6e4ce4b89833464dd1938b2a0626d67dbf2af5973740c4060823"
+          "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-3-1.svg",
+          "bytes": 45304,
+          "sha256": "sha256:df5642ccd7e4d31d5ffb7af0ed4208a839dd6bbdee98dbbd93bbe1b351f27dfc"
         }
       ]
     },
     "transformer-block-signal-propagation-at-initialization-2": {
-      "code_fingerprint": "sha256:5a1e87e107823d578b9c0986cfee457b2bcc4c9f09ced7d2209dfbf95a0fb897",
+      "code_fingerprint": "sha256:fd0e2cb8a22c904cc5652924025f3d82e8c9b608cec0815b6b759e9dd6520ff2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-2-1.svg",
-          "bytes": 37122,
-          "sha256": "sha256:36ab7e8df75af69d3dce5e4edaf28aa5b70e046ad0003dc6045841802a12211f"
+          "bytes": 37221,
+          "sha256": "sha256:8beab937c31655e28b7256011392eb27470d5a8cfa815018ec5497af422b56ee"
         }
       ]
     },
     "transformer-block-rmsnorm": {
-      "code_fingerprint": "sha256:bab02bcce1f2e31c47d7663ec7ad3a0b3826a67300067e0a8a01392e3ea4d131",
+      "code_fingerprint": "sha256:c47d838ef9fafb42a0c0c665389503d9efaebc814e693e853ca944cb0b11c3c1",
       "kind": "text",
       "outputs": [
         {
@@ -76,28 +82,28 @@
       ]
     },
     "transformer-block-normalizing-queries-and-keys": {
-      "code_fingerprint": "sha256:18797c443c7bbf12c6fcd5c44ccc62d75503a0fb758f0bff56dc65173aae18de",
+      "code_fingerprint": "sha256:7fe3cbc7a9254f37b71d5c196848ac1b49a48f95337cd03ac4285a47badb26eb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda  1: logit std   1.0, entropy 3.71 | QK-norm: logit std 0.99, entropy 3.71\nlambda  4: logit std  15.6, entropy 0.25 | QK-norm: logit std 0.99, entropy 3.71\nlambda 16: logit std 249.0, entropy 0.02 | QK-norm: logit std 0.99, entropy 3.71\n"
+          "text": "lambda  1: logit std   1.0, entropy 3.67 | QK-norm: logit std 1.00, entropy 3.69\nlambda  4: logit std  16.1, entropy 0.25 | QK-norm: logit std 1.00, entropy 3.69\nlambda 16: logit std 257.1, entropy 0.01 | QK-norm: logit std 1.00, entropy 3.69\n"
         }
       ]
     },
     "transformer-block-the-feed-forward-network-1": {
-      "code_fingerprint": "sha256:1e2abf5486288298fbe7b54118c83df7f1074466e1a3fef2872f28ffadae33c1",
+      "code_fingerprint": "sha256:efbd39629f99b6b585cc8f03cf4f97bfe9b06db71193ee964169a67b7a787bcf",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-a-configurable-block": {
-      "code_fingerprint": "sha256:e69fbae8069722f62669acd53748bfe08821e3af10f02c510926994a225bd179",
+      "code_fingerprint": "sha256:080da450fe70049e810f2046bd2e88acd3632e8950b54e95a4f020ee55ee043e",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-shapes-and-parameters-1": {
-      "code_fingerprint": "sha256:780a2b2f297c65d46a01b498bb926217e42f8ecc38b99fe05616634acfbde3fc",
+      "code_fingerprint": "sha256:59bc2a79c5490d5cf83d7a3c55481f1eeb3295330823a66f53f6dae3bf514837",
       "kind": "text",
       "outputs": [
         {

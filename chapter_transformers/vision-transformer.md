@@ -746,12 +746,15 @@ class CompactResNet(d2l.Classifier):
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-4}
 %%tab pytorch
-cnn = CompactResNet(num_steps, lr=1e-3)
+compact_cnn = lambda: CompactResNet(num_steps, lr=1e-3)  # A fresh CNN
+cnn = compact_cnn()
 ```
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-4}
 %%tab jax
-cnn = CompactResNet(num_steps, lr=1e-3, rngs=nnx.Rngs(d2l.get_key()))
+compact_cnn = lambda: CompactResNet(num_steps, lr=1e-3,
+                                    rngs=nnx.Rngs(d2l.get_key()))
+cnn = compact_cnn()  # A fresh CNN
 ```
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-2}
@@ -760,10 +763,11 @@ trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(cnn, data)
 cnn_history = trainer.history
 cnn_params, cnn_acc = d2l.num_params(cnn), cnn_history['val_acc'][-1]
-print(f'CNN: {cnn_params/1e6:.1f}M parameters, '
-      f'validation accuracy {cnn_acc:.2f}')
-print(f'ViT: {vit_params/1e6:.1f}M parameters, '
-      f'validation accuracy {vit_acc:.2f}')
+cnn_runs = [cnn_acc, final_accuracy(compact_cnn(), data)]  # Run-to-run range
+print(f'CNN: {cnn_params/1e6:.1f}M parameters, validation accuracy',
+      ', '.join(f'{a:.3f}' for a in cnn_runs))
+print(f'ViT: {vit_params/1e6:.1f}M parameters, validation accuracy',
+      ', '.join(f'{a:.3f}' for a in learned_runs))
 ```
 
 The CNN reaches about 94%, five points ahead of the ViT. The CNN ran once,

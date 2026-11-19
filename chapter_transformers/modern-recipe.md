@@ -229,7 +229,7 @@ recipes = {'default': {},
            'Qwen3-32B': dict(num_kv_heads=1)}
 counts = {}
 for name, cfg in recipes.items():
-    model = gpt(1024, num_hiddens=256, num_heads=8, num_blks=6, **cfg)
+    model = gpt(256, num_hiddens=256, num_heads=8, num_blks=6, **cfg)
     counts[name] = d2l.num_params(model), d2l.kv_cache_bytes(model, 1)
 n_0, kv_0 = counts['default']
 print(f'{"model":10s} {"parameters":>10s} {"vs default":>11s} '

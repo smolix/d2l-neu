@@ -77,56 +77,56 @@
       "outputs": []
     },
     "moe-three-runs-one-budget-3": {
-      "code_fingerprint": "sha256:318bd2772bf23eb7a9c8a0274ddb2c384ac00bbab8f58f7aa9abfb6206f348ea",
+      "code_fingerprint": "sha256:5a177a553799a84bd0115e4ec65bbe5bef9329d213f9c9c3835c7225a2cce53f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  two runs each    loss     no drops    busiest   dropped\n"
+          "text": "spaces: 18.9% of the validation bytes\n  two runs each    loss     no drops    busiest   dropped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " initialization  5.54 5.53  5.54 5.53  2.8x 2.4x  22% 17%\n"
+          "text": " initialization  5.50 5.60  5.50 5.60  3.8x 2.9x  30% 25%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   no balancing  1.79 1.79  1.72 1.69  3.0x 3.1x  29% 37%\n"
+          "text": "   no balancing  1.75 1.69  1.68 1.65  3.1x 2.8x  33% 23%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  frozen router  1.73 1.72  1.67 1.67  2.2x 2.2x  22% 21%\n"
+          "text": "  frozen router  1.74 1.78  1.68 1.73  2.7x 2.5x  28% 18%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " auxiliary loss  1.58 1.64  1.58 1.64  1.2x 1.2x   0%  0%\n"
+          "text": " auxiliary loss  1.53 1.64  1.53 1.64  1.2x 1.2x   0%  0%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bias controller  1.58 1.56  1.57 1.56  1.9x 1.2x   4%  0%\n"
+          "text": "bias controller  1.55 1.60  1.55 1.59  1.4x 1.4x   1%  1%\n"
         }
       ]
     },
     "moe-three-runs-one-budget-4": {
-      "code_fingerprint": "sha256:747e2675ab053b8caaff13af6140ac3dedba19c28570db3614603605fbc7a9ea",
+      "code_fingerprint": "sha256:abcf2971e8116b4980f43532a9fd867c4bc0898bf32d7b7dfce37186945b3b1e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 40284,
-          "sha256": "sha256:eeb2fca927de78ca1ba34d357412b2f6e0a79193c9a17faca071a68305624c0d"
+          "bytes": 40286,
+          "sha256": "sha256:2e8e95a7f56f628f9a9b3bdfd074a39a2c87c01326fac2a23239520955876cba"
         }
       ]
     },
     "moe-a-mixture-of-experts-gpt-1": {
-      "code_fingerprint": "sha256:9a96cc0a701841bc120e79e324dd4f20a0326e9d09c6924416ad54c8bc99f9ab",
+      "code_fingerprint": "sha256:1f517d7cf043da93bfcd6424ceafe5d94ce35f31b87384a1851c0143a863a0c7",
       "kind": "text",
       "outputs": [
         {
@@ -137,25 +137,25 @@
       ]
     },
     "moe-a-mixture-of-experts-gpt": {
-      "code_fingerprint": "sha256:d84f091a571591dcd06c4b1043a6ef26f6b0d6f4676aed8c09ddbfba005adea9",
+      "code_fingerprint": "sha256:491ec2497f8a6b6776a818ac423a011ef4e7b6ab11de1e01e534395bc26f01d7",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 1: dense 1.318, MoE 1.263; MoE ahead from step 1000, 0.0% dropped at the end\n"
+          "text": "run 1: dense 1.317, MoE 1.272; MoE ahead from step 1500, 0.0% dropped at the end\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 2: dense 1.324, MoE 1.311; MoE ahead from step 2000, 0.0% dropped at the end\n"
+          "text": "run 2: dense 1.322, MoE 1.279; MoE ahead from step 1750, 0.0% dropped at the end\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-a-mixture-of-experts-gpt-1.svg",
-          "bytes": 21632,
-          "sha256": "sha256:b18722a10e807acad31b59f3411f501711c584e0392e50bb3a4c5c8cdcd01dc0"
+          "bytes": 21621,
+          "sha256": "sha256:fd0adfd9139b82f350b9c88c2417182ef739baea2d17aaf0bb443e497dd28c27"
         }
       ]
     }

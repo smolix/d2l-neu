@@ -771,6 +771,7 @@ arms = {'initialization': dict(num_steps=0), 'no balancing': {},
         'frozen router': dict(frozen=True),
         'auxiliary loss': dict(aux_weight=0.01),
         'bias controller': dict(bias_rate=0.01)}
+print(f'spaces: {(data.val == ord(" ")).mean():.1%} of the validation bytes')
 print(f'{"two runs each":>15}  {"loss":^9}  {"no drops":^9}  '
       f'{"busiest":^9}  {"dropped":^7}')
 shares = {}  # The first run's shares

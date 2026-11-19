@@ -441,7 +441,7 @@ estimates have high variance, which the next section reduces.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.4]{.kicker}
+[Dive into Deep Learning · §14.5]{.kicker}
 
 Policy gradient<br>
 **softmax preferences · the log-derivative trick · REINFORCE · the policy gradient theorem · on-policy cost**

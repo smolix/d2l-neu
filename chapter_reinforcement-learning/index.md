@@ -8,7 +8,7 @@ In supervised learning, a prediction typically does not affect which test exampl
 ![At time $t$, the agent selects action $a_t$ (blue), and the environment returns reward $r_t$ and next state $s_{t+1}$ (orange). Unrolling this interaction produces the trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$.](../img/mdl-rl-agent-env.svg)
 :label:`fig_rl_agent_env`
 
-The chapter has three parts. The first part works with small, finite problems. :numref:`sec_mdp` defines the Markov decision process, :numref:`sec_valueiter` solves a known MDP by dynamic programming, and :numref:`sec_qlearning` learns optimal action values from sampled transitions, without a model. :numref:`sec_policygradient` optimizes a policy directly by following the gradient of its expected return, and :numref:`sec_baselines` reduces the variance of the gradient estimates. The second part uses neural networks. :numref:`sec_deeprl` represents the policy and the value function as networks, :numref:`sec_actorcritic` replaces the sampled remainder of each trajectory by the value estimate, :numref:`sec_ppo` reuses each batch of data for several updates while limiting how far the policy moves, :numref:`sec_dqn` carries Q-learning over to networks, and :numref:`sec_sac` replaces the maximum over actions by an actor, for actions that vary continuously, and adds the entropy of the policy to the reward. The third part asks where the data come from: :numref:`sec_offline` learns from a fixed dataset without any interaction, and :numref:`sec_rl_sequences` applies the methods of the chapter to language models. Most experiments use two small environments, FrozenLake and CartPole, so that results can be compared with exact solutions where these exist and repeated over several random seeds on a CPU; :numref:`sec_sac` adds Pendulum, whose action is a torque.
+The chapter has three parts. The first part works with small, finite problems. :numref:`sec_mdp` defines the Markov decision process, :numref:`sec_valueiter` solves a known MDP by dynamic programming, and :numref:`sec_qlearning` learns optimal action values from sampled transitions, without a model. :numref:`sec_exploration` asks which actions an agent should try in order to learn, and what trying costs. :numref:`sec_policygradient` optimizes a policy directly by following the gradient of its expected return, and :numref:`sec_baselines` reduces the variance of the gradient estimates. The second part uses neural networks. :numref:`sec_deeprl` represents the policy and the value function as networks, :numref:`sec_actorcritic` replaces the sampled remainder of each trajectory by the value estimate, :numref:`sec_ppo` reuses each batch of data for several updates while limiting how far the policy moves, :numref:`sec_dqn` carries Q-learning over to networks, and :numref:`sec_sac` replaces the maximum over actions by an actor, for actions that vary continuously, and adds the entropy of the policy to the reward. The third part asks where the data come from: :numref:`sec_offline` learns from a fixed dataset without any interaction, and :numref:`sec_rl_sequences` applies the methods of the chapter to language models. Most experiments use two small environments, FrozenLake and CartPole, so that results can be compared with exact solutions where these exist and repeated over several random seeds on a CPU; :numref:`sec_sac` adds Pendulum, whose action is a torque.
 
 :numref:`fig_rl_roadmap` organizes the methods of the chapter by what they learn and which data they use, and :numref:`tab_rl_map` lists them with the sections that introduce them.
 
@@ -23,7 +23,10 @@ The chapter has three parts. The first part works with small, finite problems. :
 | value iteration, policy iteration | $V^*$ and an optimal policy | none: they use the transition probabilities and rewards | :numref:`sec_valueiter` |
 | Q-learning | $Q^*$ from sampled transitions | transitions of any policy (off-policy) | :numref:`sec_qlearning` |
 | SARSA | the action values of the behavior policy | its own transitions (on-policy) | named in :numref:`sec_qlearning` |
-| UCB | the means of the arms and their uncertainty | its own pulls of a bandit | named in :numref:`sec_qlearning` |
+| UCB1 | the mean reward of each arm, with a bonus that shrinks with the number of pulls | its own pulls of a bandit | :numref:`sec_exploration` |
+| Thompson sampling | a posterior distribution over the mean reward of each arm | its own pulls of a bandit | :numref:`sec_exploration` |
+| Q-learning with optimistic initialization | $Q^*$, with every untried pair valued at an upper bound on the return | its own transitions | :numref:`sec_exploration` |
+| count-based bonuses, random network distillation | values with a bonus for rarely visited pairs or novel states | its own transitions | named in :numref:`sec_exploration` |
 | REINFORCE | a policy, by the score-function gradient | trajectories of the current policy | :numref:`sec_policygradient` |
 | REINFORCE with baselines | the same gradient with lower variance | trajectories of the current policy | :numref:`sec_baselines` |
 | group baseline, as in GRPO | a policy, with the mean return of trajectories from the same start state as the baseline and the division by the standard deviation of these returns | trajectories of the current policy | :numref:`sec_baselines` |
@@ -65,7 +68,8 @@ The chapter has three parts. The first part works with small, finite problems. :
 | $\delta$, $\delta_t$ | the temporal-difference error | :numref:`sec_qlearning`, :numref:`sec_actorcritic` |
 | $\epsilon$ | the exploration rate of $\epsilon$-greedy action selection; in :numref:`sec_ppo` and :numref:`sec_rl_sequences`, the clipping parameter | :numref:`sec_qlearning`, :numref:`sec_ppo` |
 | $\eta$ | the temperature of the softmax policy | :numref:`sec_qlearning` |
-| $n(a)$, $n(s, a)$ | the number of times an arm was chosen; the number of times a pair occurs in the data (in an exercise of :numref:`sec_qlearning`, the number of updates of a pair) | :numref:`sec_qlearning`, :numref:`sec_offline` |
+| $\mu_a$, $\mu^*$, $\Delta_a$ | the mean reward of arm $a$; the largest mean; the gap $\mu^* - \mu_a$ | :numref:`sec_exploration` |
+| $n(a)$, $n_t(a)$, $n(s, a)$ | the number of times an arm was pulled (in the first $t$ rounds); the number of times a pair occurs in the data (in an exercise of :numref:`sec_qlearning`, the number of updates of a pair, and in :numref:`sec_exploration`, the number of visits) | :numref:`sec_exploration`, :numref:`sec_offline` |
 | $\pi_\theta$, $J(\theta)$ | a policy with parameters $\theta$; its expected return | :numref:`sec_policygradient` |
 | $G_t$ | the reward-to-go | :numref:`sec_baselines` |
 | $b$, $\hat{V}$ | a baseline; a learned estimate of $V^\pi$ | :numref:`sec_baselines` |
@@ -79,7 +83,7 @@ The chapter has three parts. The first part works with small, finite problems. :
 | $w^-$, $C$ | the parameters of a target network; the synchronization period of DQN | :numref:`sec_dqn` |
 | $\beta$, $\bar{H}$ | the temperature, the weight of the entropy; the target entropy. In :numref:`sec_rl_sequences`, $\beta$ weighs the KL penalty | :numref:`sec_sac` |
 | $\nu$ | the rate of Polyak averaging | :numref:`sec_sac` |
-| $\mathcal{D}$, $\pi_\beta$, $\kappa$ | a fixed dataset; the behavior policy that collected it; the strength of the count-based penalty | :numref:`sec_offline` |
+| $\mathcal{D}$, $\pi_\beta$, $\kappa$ | a fixed dataset; the behavior policy that collected it; the strength of the count-based penalty (of the count-based bonus in :numref:`sec_exploration`) | :numref:`sec_offline` |
 | $x$, $y$, $\pi_{\textrm{ref}}$ | a prompt; a response (in :numref:`sec_qlearning`, :numref:`sec_dqn`, and :numref:`sec_sac`, $y$ is a regression target); the reference policy | :numref:`sec_rl_sequences` |
 
 This chapter does not cover multi-agent, meta-, hierarchical, or goal-conditioned reinforcement learning, or model-based reinforcement learning beyond the empirical MDP of :numref:`sec_offline`, and it treats partial observability only briefly.
@@ -90,6 +94,7 @@ This chapter does not cover multi-agent, meta-, hierarchical, or goal-conditione
 mdp
 value-iter
 qlearning
+exploration
 policy-gradient
 baselines
 deep-rl
@@ -111,7 +116,7 @@ The following freely available resources provide theoretical treatments, courses
 - Szepesvári, *Algorithms for Reinforcement Learning* :cite:`Szepesvari.2010`, is a concise treatment of dynamic programming, temporal-difference learning, bandits, Q-learning, and actor-critic methods, and of their guarantees.
 - Bertsekas, *A Course in Reinforcement Learning* :cite:`Bertsekas.2025`, develops reinforcement learning from the perspective of optimal control and dynamic programming.
 - Agarwal, Jiang, Kakade, and Sun, *Reinforcement Learning: Theory and Algorithms* :cite:`Agarwal.Jiang.Kakade.ea.2019`, develops the theory of reinforcement learning, including bounds on the number of samples that learning requires.
-- Lattimore and Szepesvári, *Bandit Algorithms* :cite:`Lattimore.Szepesvari.2020`, treats the bandit problems of :numref:`sec_qlearning` in depth.
+- Lattimore and Szepesvári, *Bandit Algorithms* :cite:`Lattimore.Szepesvari.2020`, treats the bandit problems of :numref:`sec_exploration` in depth.
 
 **Courses**
 

@@ -560,7 +560,7 @@ to value-based learning, which can learn from old data.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.8]{.kicker}
+[Dive into Deep Learning · §14.9]{.kicker}
 
 Trust regions and proximal policy optimization<br>
 **parameter space versus policy space · importance sampling · the performance difference lemma · the clipped objective**

@@ -336,7 +336,7 @@ action values that it returns can still be negative, but by at most the
 penalty of their pair.
 
 The penalty resembles the exploration bonus of UCB in
-:numref:`sec_qlearning`, which also shrinks with the count but is added to the
+:numref:`sec_exploration`, which also shrinks with the count but is added to the
 estimate. Online, an optimistic estimate leads the agent to try the action,
 and the new data correct the estimate. Offline, no data can correct an
 estimate, and the penalty instead lowers the estimates of the actions that
@@ -488,7 +488,7 @@ interaction requires off-policy evaluation.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.11]{.kicker}
+[Dive into Deep Learning · §14.12]{.kicker}
 
 Offline reinforcement learning<br>
 **which data an update may use · the empirical MDP · overestimation · distribution shift · pessimism**

@@ -607,7 +607,7 @@ maximum over actions by an actor, for actions that vary continuously.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.9]{.kicker}
+[Dive into Deep Learning · §14.10]{.kicker}
 
 Deep Q-networks<br>
 **Q-learning with a network · replay · target networks · the deadly triad · overestimation**

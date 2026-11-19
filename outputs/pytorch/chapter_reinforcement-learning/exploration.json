@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/exploration.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:ac8f9c0b16fd3133e88468c210d5056a21b14fd165d7a29f94b8a8e7ef19e230",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "exploration-preamble": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "exploration-the-bandit-simulator": {
+      "code_fingerprint": "sha256:dcc8f6346cee5d06caa2ab739dba8964608e4d77f1d1ff216599c433004943ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "exploration-epsilon-greedy-regret": {
+      "code_fingerprint": "sha256:878cdbde0fa56efaf157f59f04fc1cca6f3f2aec51aae69a0530ccb80ad3eeed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       greedy: regret after 10000 rounds: median 4000 (quartiles 0 to 4500)\nepsilon = 0.1: regret after 10000 rounds: median  440 (quartiles 425 to 463)\n"
+        }
+      ]
+    },
+    "exploration-ucb-and-thompson": {
+      "code_fingerprint": "sha256:ea7317bb5bc8a423ee364d398bf83a5dd191ab42454904ebab498d968d607ec5",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         UCB1: regret after 10000 rounds: median  310 (quartiles 289 to 324)\n     Thompson: regret after 10000 rounds: median   38 (quartiles 36 to 46)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "exploration/exploration-ucb-and-thompson-1.svg",
+          "bytes": 54732,
+          "sha256": "sha256:648cbaa5b2400d23d4242a1ecbafb6ffb5b597519224c254672e914c66032ccf"
+        }
+      ]
+    },
+    "exploration-a-chain-of-states": {
+      "code_fingerprint": "sha256:bee86b1cba871b584df2f3eb1ab5328efdb7fbbc306c188904874c89358376e9",
+      "kind": "text",
+      "outputs": []
+    },
+    "exploration-chain-first-success": {
+      "code_fingerprint": "sha256:0055399bde933855cb9f7c0601a8678a1637e3cad450b947227b09b570a17d4d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =  4: random actions      2, optimistic  2.0 (median),  2 (largest)\nN =  8: random actions     23, optimistic  3.0 (median),  4 (largest)\nN = 12: random actions    273, optimistic  5.0 (median),  6 (largest)\nN = 16: random actions   3449, optimistic  6.0 (median),  8 (largest)\nN = 20: random actions  45590, optimistic  8.5 (median),  9 (largest)\n"
+        }
+      ]
+    }
+  }
+}

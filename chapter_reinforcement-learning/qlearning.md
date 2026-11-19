@@ -230,36 +230,11 @@ def epsilon_greedy(q, epsilon, rng):  #@save
     return int(rng.choice(np.flatnonzero(q == q.max())))  # random tie-break
 ```
 
-### Optimism under Uncertainty
-
-The $\epsilon$-greedy policy explores without regard to how much the agent
-already knows about each action. Methods based on *optimism under
-uncertainty* direct exploration toward actions whose values could still be
-high, given the uncertainty of their estimates. The setting in which they are
-best understood is the *multi-armed bandit*, an MDP with a single state: the agent repeatedly chooses one of
-several actions and receives a random reward with an unknown mean. The upper
-confidence bound rule (UCB) tries every action once and then chooses at round
-$t$ the action
-
-$$a_t = \underset{a}{\mathrm{argmax}} \Big[ \hat{\mu}(a) + \sqrt{\frac{2 \ln t}{n(a)}} \Big],$$
-
-where $\hat{\mu}(a)$ is the average reward observed from action $a$ and
-$n(a) \geq 1$ is the number of times it was chosen. The bonus is large for
-actions that were rarely chosen and shrinks as evidence accumulates. At round
-$t = 100$, for example, it is about $1.52$ for an action chosen $4$ times and
-$0.38$ for an action chosen $64$ times. It shrinks like $1/\sqrt{n(a)}$, as
-does the standard deviation of an average of $n(a)$ independent rewards. The
-rule therefore chooses an action either because its average reward is high
-or because it was chosen too rarely to rule out a high mean, which is the
-sense in which it is optimistic. For rewards in
-$[0, 1]$, the expected total shortfall of this rule relative to always
-choosing the best action grows only logarithmically in the number of rounds
-:cite:`Auer.CesaBianchi.Fischer.2002`. In contrast, an $\epsilon$-greedy
-policy with a fixed $\epsilon > 0$ keeps choosing a random action in a
-fraction $\epsilon$ of the rounds, so its shortfall grows linearly. In an MDP, exploration is harder,
-because a poorly known state-action pair may be reachable only through a long
-sequence of actions. On FrozenLake, with its $44$ nonterminal state-action
-pairs, $\epsilon$-greedy exploration suffices, as panel (b) of
+These behavior policies explore without regard to how much the agent
+already knows about each action. :numref:`sec_exploration` measures what
+exploration costs and studies rules that direct it toward actions whose
+values are still uncertain. On FrozenLake, with its $44$ nonterminal
+state-action pairs, $\epsilon$-greedy exploration suffices, as panel (b) of
 :numref:`fig_rl_exploration` shows.
 
 ## Q-Learning on Calm Ice
@@ -436,9 +411,8 @@ target equals the Bellman optimality backup $(TQ)(s, a)$ in expectation, and
 under sufficient exploration and step sizes that decrease like $1/k$, the
 table converges to $Q^*$. Because it updates only the pairs that the agent
 visits, the choice of behavior policy matters: $\epsilon$-greedy and softmax
-policies trade trying actions against using the estimates, and optimistic
-rules such as UCB direct exploration toward actions whose values could still
-be high. On calm FrozenLake, every seed learned a greedy policy that follows
+policies trade trying actions against using the estimates. On calm
+FrozenLake, every seed learned a greedy policy that follows
 a shortest path, although the table remained far from $Q^*$ away from that
 path. The maximum in the target makes Q-learning off-policy.
 
@@ -465,12 +439,6 @@ path. The maximum in the target makes Q-learning off-policy.
        $\mathbb{E}\big[(Q(A) - Q(s'))^2\big] + (Q(B) - 1)^2 + Q(C)^2$, where $s'$ is
        the random successor of $A$. Show that it is not minimized at $Q^*$,
        and explain which term is responsible.
-1. [code] **A bandit.** Implement the $\epsilon$-greedy rule with
-   $\epsilon = 0.1$ and the UCB rule of the section for ten actions with
-   Bernoulli rewards, whose means are $0.9$ for one action, $0.5$ for
-   another, and $0.4$ for the remaining eight. Plot the total shortfall
-   $\sum_{u \leq t} (\mu^* - \mu_{a_u})$ against $t$ for $10{,}000$ rounds,
-   averaged over $20$ runs, and compare its growth for the two rules.
 1. [code] **SARSA.** Implement SARSA on calm ice with a constant
    $\epsilon = 0.3$, next to Q-learning with the same behavior policy. Compare
    the learned values at the start state with $V^*(s_0)$, and compare the
@@ -520,8 +488,8 @@ Terminal states: no continuation. Time limits: keep it, as
 ::: {.slide title="Exploration"}
 ![](../img/mdl-rl-exploration.svg){width=90%}
 
-$\epsilon$-greedy, softmax, and optimism (UCB) trade trying actions against
-using the estimates.
+$\epsilon$-greedy and softmax policies trade trying actions against using
+the estimates; :numref:`sec_exploration` measures what exploration costs.
 :::
 
 ::: {.slide title="Q-Learning on Calm Ice"}

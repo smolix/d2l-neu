@@ -474,7 +474,7 @@ address these limitations.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.6]{.kicker}
+[Dive into Deep Learning · §14.7]{.kicker}
 
 Policies and values as neural networks<br>
 **CartPole · networks instead of tables · the surrogate loss · generalization across states**

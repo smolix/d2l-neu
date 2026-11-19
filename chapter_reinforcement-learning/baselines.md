@@ -292,7 +292,17 @@ The group baseline has a limitation. When all $K$ returns of a group are
 equal, for example when all responses to a prompt are correct or all are
 wrong, every difference $R_i - \bar{R}$ is zero, and so is every weight
 $\hat{A}_i$: the group contributes nothing to the update, although all its
-trajectories were sampled. On FrozenLake, a batch in which no episode
+trajectories were sampled. If each trajectory succeeds independently with
+probability $p$, all $K$ returns are equal with probability
+$(1 - p)^K + p^K$. For $K = 8$, this probability is about $0.43$ at
+$p = 0.1$ and about $0.92$ at $p = 0.01$, so on a prompt that the policy
+rarely answers correctly, most groups contain no correct response and
+contribute nothing to the update. The probability that a group contains at
+least one correct response, $1 - (1 - p)^K$, is the expected pass@$K$ score
+on that prompt, the metric that :citet:`Chen.Tworek.Jun.ea.2021` use to
+evaluate models that write code. The policy can find a
+correct response only by sampling one, the only exploration such a method
+has (:numref:`sec_exploration`). On FrozenLake, a batch in which no episode
 succeeds gives no update, with or without the group baseline, since all its
 returns are zero.
 
@@ -551,7 +561,7 @@ represented by a neural network.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.5]{.kicker}
+[Dive into Deep Learning · §14.6]{.kicker}
 
 Baselines and variance reduction<br>
 **a zero-mean identity · reward-to-go · baselines as control variates · the advantage · group baselines · measured on FrozenLake**

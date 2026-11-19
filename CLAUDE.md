@@ -313,11 +313,12 @@ when that directory is missing.
   Recurrence"), 13 Computational Performance (rebuilt 2026-07-20:
   roofline/regimes method, hardware, compilation, memory/precision, from-
   scratch + practical multi-GPU, transformer case study; PyTorch+JAX only),
-  14 RL (one chapter of 12 sections: mdp, value-iter, qlearning,
-  policy-gradient, baselines, deep-rl, actor-critic, ppo, dqn, sac,
-  offline-rl, rl-sequences; the former ch. 15 Deep RL was merged into it in
-  2026-11, and its imitation, exploration, regularized, model-based and
-  further-reading pages were cut; PyTorch+JAX only), 15 GANs
+  14 RL (one chapter of 13 sections: mdp, value-iter, qlearning,
+  exploration, policy-gradient, baselines, deep-rl, actor-critic, ppo, dqn,
+  sac, offline-rl, rl-sequences; the former ch. 15 Deep RL was merged into it
+  in 2026-11, and its imitation, regularized, model-based and further-reading
+  pages were cut; exploration was rewritten as §14.4; PyTorch+JAX only),
+  15 GANs
   (rebuilt 2026-08: closed-form objectives, relativistic/R3GAN, gradient
   penalties, six sections; PyTorch+JAX only), 16 Diffusion Models
   (eight sections plus further reading; it cites the math appendix's

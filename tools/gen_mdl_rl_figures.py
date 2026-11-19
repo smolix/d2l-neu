@@ -1000,6 +1000,131 @@ def fig_exploration():        # F7  -> mdl-rl-exploration
     fig.subplots_adjust(wspace=0.30)
     fl.save(fig, "mdl-rl-exploration")
 
+BANDIT_ARMS = np.array([0.50, 0.42, 0.90, 0.25, 0.55, 0.38, 0.60, 0.32, 0.50,
+                        0.45])
+
+def _ucb_snapshot(num_pulls=10_000, arms=BANDIT_ARMS, seed=0):
+    """One run of UCB1 (each arm once, then the largest
+    ``mean + sqrt(2 log t / n)``) on the ten Bernoulli arms of the exploration
+    section.  Returns the tallies ``(wins, count)`` after ``num_pulls``."""
+    rng = np.random.default_rng(seed)
+    wins, count = np.zeros(len(arms)), np.zeros(len(arms))
+    for t in range(1, num_pulls + 1):
+        if (count == 0).any():
+            a = int(np.argmax(count == 0))
+        else:
+            a = int(np.argmax(wins / count + np.sqrt(2 * np.log(t) / count)))
+        count[a] += 1
+        wins[a] += float(rng.random() < arms[a])
+    return wins, count
+
+def fig_ucb():                # F26 -> mdl-rl-ucb
+    """Optimism in two pictures: (a) the UCB1 bonus against an arm's count at
+    two rounds; (b) one run of UCB1 after 10,000 pulls, each arm's estimate
+    with its bonus stacked on top.  The rule plays the arm whose bar reaches
+    highest, so every bar ends near the same height."""
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.9),
+                                   gridspec_kw={"width_ratios": [0.85, 1.3]})
+    # --- (a) the bonus ------------------------------------------------------ #
+    n = np.linspace(1, 100, 500)
+    for t, color, ls, lab in ((10_000, ORANGE, "-", "$t = 10{,}000$"),
+                              (100, GRAY, "--", "$t = 100$")):
+        axa.plot(n, np.sqrt(2 * np.log(t) / n), color=color, lw=2.2, ls=ls,
+                 label=lab)
+    axa.set_xlim(0, 101)
+    axa.set_ylim(0, 2.4)
+    axa.set_yticks([0, 0.5, 1.0, 1.5, 2.0])
+    axa.set_xlabel("pulls $n(a)$", fontsize=13)
+    axa.set_ylabel("bonus $\\sqrt{2 \\ln t \\,/\\, n(a)}$", fontsize=13)
+    axa.legend(loc="upper right", fontsize=12.5, handlelength=1.6,
+               frameon=False)
+    _black_axes(axa, labelsize=12)
+
+    # --- (b) one run, at its end -------------------------------------------- #
+    T = 10_000
+    wins, count = _ucb_snapshot(T)
+    mean = wins / count
+    bonus = np.sqrt(2 * np.log(T) / count)
+    top = mean + bonus
+    x = np.arange(len(BANDIT_ARMS))
+    axb.bar(x, mean, width=0.6, color=BLUE, alpha=0.85, zorder=3,
+            label="empirical mean $\\hat\\mu(a)$")
+    axb.bar(x, bonus, bottom=mean, width=0.6, color=ORANGE, alpha=0.35,
+            ec=ORANGE, lw=1.2, zorder=3, label="bonus")
+    axb.plot(x, BANDIT_ARMS, "_", color="black", ms=22, mew=2.2, zorder=4,
+             label="true mean $\\mu_a$")
+    axb.axhline(top.max(), color="black", lw=1.0, ls="--", zorder=2)
+    axb.set_xticks(x)
+    axb.set_xticklabels([f"{c:.0f}" for c in count], fontsize=11)
+    axb.set_xlim(-0.6, 9.6)
+    axb.set_ylim(0, 1.45)
+    axb.set_yticks([0, 0.5, 1.0])
+    axb.set_xlabel(f"pulls $n(a)$ of each arm after $t = 10{{,}}000$",
+                   fontsize=13)
+    axb.legend(loc="upper right", ncol=3, fontsize=11.5, handlelength=1.0,
+               handletextpad=0.9, columnspacing=0.8, frameon=False,
+               borderaxespad=0.0)
+    _black_axes(axb, labelsize=12)
+    fig.subplots_adjust(wspace=0.30)
+    fl.save(fig, "mdl-rl-ucb")
+
+def fig_chain():              # F29 -> mdl-rl-chain
+    """The chain of the exploration section: action 1 moves one state to the
+    right, action 0 returns to the start, and entering the last state pays 1
+    and ends the episode."""
+    fig, ax = plt.subplots(figsize=(10.0, 3.0))
+    xs = {0: 0.0, 1: 1.5, 2: 3.0, 3: 4.5, "dots": 5.85, "N-2": 7.2, "N-1": 8.7}
+    names = {0: "$0$", 1: "$1$", 2: "$2$", 3: "$3$", "N-2": "$N{-}2$",
+             "N-1": "$N{-}1$"}
+    r, y = 0.42, 0.0
+    for key, label in names.items():
+        goal = key == "N-1"
+        ax.add_patch(Circle((xs[key], y), r, fc="#e6f2e6" if goal else "white",
+                            ec=GREEN if goal else "black", lw=1.8, zorder=5))
+        if goal:
+            ax.add_patch(Circle((xs[key], y), r + 0.07, fc="none", ec=GREEN,
+                                lw=1.4, zorder=6))
+        ax.text(xs[key], y, label, ha="center", va="center",
+                fontsize=13 if isinstance(key, str) else 14, zorder=7)
+    ax.text(xs["dots"], y, "$\\cdots$", ha="center", va="center", fontsize=18)
+    order = [0, 1, 2, 3, "dots", "N-2", "N-1"]
+    for p, q in zip(order[:-1], order[1:]):          # action 1: one step on
+        x0 = xs[p] + (0.30 if p == "dots" else r)
+        x1 = xs[q] - (0.30 if q == "dots" else r + (0.07 if q == "N-1" else 0))
+        ax.add_patch(FancyArrowPatch((x0, y), (x1, y), arrowstyle="-|>",
+                                     mutation_scale=16, color=BLUE, lw=2.0,
+                                     shrinkA=2, shrinkB=2, zorder=4))
+    ends = (-25, -45, -65, -85)                      # spread the arrowheads
+    for k, deg in zip((1, 2, 3, "N-2"), ends):       # action 0: back to 0
+        th = np.deg2rad(deg)
+        ax.add_patch(FancyArrowPatch(
+            (xs[k] - 0.10, y - r + 0.02),
+            (xs[0] + r * np.cos(th), y + r * np.sin(th)),
+            connectionstyle="arc3,rad=-0.30", arrowstyle="-|>",
+            mutation_scale=14, color=ORANGE, lw=1.6, shrinkA=1, shrinkB=1,
+            zorder=3))
+    loop = Arc((xs[0] - r - 0.20, y), 0.46, 0.50, theta1=35, theta2=325,
+               color=ORANGE, lw=1.6, zorder=3)          # action 0 in state 0
+    ax.add_patch(loop)
+    th = np.deg2rad(325)
+    tip = (xs[0] - r - 0.20 + 0.23 * np.cos(th), y + 0.25 * np.sin(th))
+    ax.add_patch(FancyArrowPatch((tip[0] - 0.02, tip[1] - 0.03),
+                                 (xs[0] - r + 0.01, y - 0.10),
+                                 arrowstyle="-|>", mutation_scale=13,
+                                 color=ORANGE, lw=1.6, shrinkA=0, shrinkB=0,
+                                 zorder=4))
+    ax.text(xs["N-1"], y + r + 0.22, "reward 1, episode ends", ha="center",
+            va="bottom", fontsize=13, color="black")
+    ax.text(2.25, y + r + 0.16, "action 1: one state right", ha="center",
+            va="bottom", fontsize=13, color=BLUE)
+    ax.text(3.6, -1.62, "action 0: back to the start", ha="center",
+            va="top", fontsize=13, color=ORANGE)
+    ax.set_xlim(-1.0, 9.6)
+    ax.set_ylim(-1.95, 1.15)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fl.save(fig, "mdl-rl-chain")
+
 def fig_score_ascent():       # F8  -> mdl-rl-score-ascent
     """One REINFORCE step on the one-step problem: (a) twelve sampled actions,
     each pushing its own log-probability up in proportion to what it earned;
@@ -2053,6 +2178,8 @@ FIGURES = [
         fig_value_wavefront,
         fig_gpi,
         fig_exploration,
+        fig_ucb,
+        fig_chain,
         fig_score_ascent,
         fig_variance_reduction,
         fig_table_vs_network,

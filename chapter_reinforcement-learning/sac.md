@@ -689,7 +689,7 @@ interaction with the environment.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.10]{.kicker}
+[Dive into Deep Learning · §14.11]{.kicker}
 
 Soft actor-critic<br>
 **continuous actions · entropy in the return · the soft backup · twin critics · a learned temperature**

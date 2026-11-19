@@ -98,7 +98,7 @@ so by the zero-mean lemma of :numref:`sec_baselines`, subtracting it does not
 change the expectation of the estimate. $\blacksquare$
 
 We can therefore treat the response as a single action. Each prompt is then a
-round of a *contextual bandit*, the bandit of :numref:`sec_qlearning` with a
+round of a *contextual bandit*, the bandit of :numref:`sec_exploration` with a
 context: a context is drawn, here the prompt, one action is chosen, and a
 reward is received, and the action does not affect later contexts.
 :citet:`ouyang2022training` describe their training environment as such a
@@ -469,7 +469,7 @@ fixed dataset of preferences.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.12]{.kicker}
+[Dive into Deep Learning · §14.13]{.kicker}
 
 Reinforcement learning for language models<br>
 **text generation as an MDP · rewards from preferences and programs · the KL-regularized objective · PPO, GRPO, DPO**

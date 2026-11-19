@@ -410,7 +410,7 @@ next section reuses a batch for several steps.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.7]{.kicker}
+[Dive into Deep Learning · §14.8]{.kicker}
 
 Actor-critic methods<br>
 **the TD error as an advantage · actor and critic · n-step returns · GAE · CartPole**

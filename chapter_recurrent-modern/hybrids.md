@@ -244,13 +244,13 @@ for name, r in runs.items():
 Both predictions hold, and the first with room to spare. With 4 pairs
 every model recalls nearly every value. From there Gated DeltaNet loses
 pairs as the load grows, to about two thirds of 32 pairs and about half of
-64. The model with four times the state falls later and less than we
-guessed: it recalls 0.93 to 0.97 of 64 pairs, about as well as the small
-state recalls 8, not 16, and every one of its runs is above every run of
-the small state from 16 pairs on. Four times the entries hold at least
-four times the pairs, so what :numref:`sec_matrix-state` found for gated
-linear attention holds for the delta rule as well. The two runs of each
-model differ far less than the models do.
+64. The model with four times the state does better than we guessed: it
+recalls 0.93 to 0.97 of 64 pairs, about as well as the small state recalls
+8, not 16, and every one of its runs is above every run of the small state
+from 16 pairs on. Four times the entries hold at least four times the
+pairs, so what :numref:`sec_matrix-state` found for gated linear attention
+holds for the delta rule as well. The two runs of each model differ far
+less than the models do.
 
 The hybrid recalls every pair at every load in every run, and so does
 attention behind the same convolution. Attention was built to keep every
@@ -373,16 +373,16 @@ model differ. Attention does not catch up at the late positions, where the
 prediction said it should. The hybrid lands between the two and much
 nearer to Gated DeltaNet: every hybrid run ends behind every Gated DeltaNet
 run, in every band, but by about 0.01 or less, a small fraction of
-attention's gap. On this benchmark one attention layer in four costs a
-little and buys nothing. Nor do the late positions help any model much:
-every model's loss falls by at most 0.004 from bytes 16 to 63 to bytes
-64 to 127. On these windows the next byte depends on the bytes just
-before it, and almost never on a pair stored a hundred bytes earlier.
-With larger models and longer contexts,
+attention's gap. On this benchmark, trading one recurrent layer in four for
+attention raised the loss a little in every run. Nor do the late positions
+help any model much: every model's loss falls by at most 0.004 from bytes
+16 to 63 to bytes 64 to 127. On these windows the next byte depends on the
+bytes just before it, and almost never on a pair stored a hundred bytes
+earlier. With larger models and longer contexts,
 :citet:`Arora.Eyuboglu.Timalsina.ea.2024` traced most of the gap in
 perplexity between attention and the gated convolution models they studied
-to recall of this kind. On our windows of 128 bytes there is
-no such gap to explain. Attention is the model that is behind.
+to recall of this kind. On our windows of 128 bytes there is no such gap to
+explain. Attention is the model that is behind.
 
 Gated DeltaNet, the model that recalls the fewest pairs, thus has the
 lowest loss on text of the three. A low average loss on short windows is

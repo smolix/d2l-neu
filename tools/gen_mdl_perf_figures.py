@@ -859,6 +859,68 @@ def fig_data_parallel():
     fl.save(fig, "mdl-perf-data-parallel")
 
 
+def fig_one_launcher():
+    """One Python thread drives two GPUs: it issues device 0's kernels, then
+    device 1's, so each GPU idles while the thread serves the other, and a
+    host-bound step takes about 2 h_step plus the exchange (13.5)."""
+    fig, ax = plt.subplots(figsize=(9.0, 3.9))
+
+    y_cpu, y_g0, y_g1, h = 2.4, 1.3, 0.3, 0.5
+    H = 3.6            # host time to issue one device's kernels (h_step)
+    X = 1.3            # the exchange: alpha + S / beta_link
+    T = 2 * H + X
+
+    for y, name in ((y_cpu, "Python\n(CPU)"), (y_g0, "GPU 0"),
+                    (y_g1, "GPU 1")):
+        ax.plot([0.0, T + 0.2], [y - h / 2 - 0.06, y - h / 2 - 0.06],
+                color=LIGHT, lw=0.8, zorder=1)
+        ax.text(-0.25, y, name, ha="right", va="center", fontsize=13,
+                color="black")
+
+    # The host issues GPU 0's kernels, then GPU 1's, then the copies.
+    _lane_kernel(ax, 0.03, H - 0.06, y_cpu, h, GRAY,
+                 label="issue GPU 0's kernels", fontsize=12)
+    _lane_kernel(ax, H + 0.03, H - 0.06, y_cpu, h, GRAY,
+                 label="issue GPU 1's kernels", fontsize=12)
+    _lane_kernel(ax, 2 * H + 0.03, 0.5, y_cpu, h, GRAY)
+
+    # Each GPU runs short kernels while its own are being issued.
+    n, w = 8, 0.16
+    for j in range(n):
+        x = 0.25 + j * (H - 0.4) / n
+        _lane_kernel(ax, x, w, y_g0, h, BLUE)
+        _lane_kernel(ax, H + x, w, y_g1, h, BLUE)
+    for x0, y in ((H, y_g0), (0.0, y_g1)):
+        ax.text(x0 + H / 2, y, "idle", ha="center", va="center",
+                fontsize=12.5, color="black", style="italic")
+
+    # Both GPUs then take part in the allreduce.
+    for y in (y_g0, y_g1):
+        _lane_kernel(ax, 2 * H + 0.03, X - 0.06, y, h, ORANGE,
+                     label="allreduce", fontsize=12, tc="black")
+
+    # Spans above the host lane.
+    y_s = y_cpu + h / 2 + 0.3
+    for x0, x1, lab in ((0.0, H, r"$h_{\mathrm{step}}$"),
+                        (H, 2 * H, r"$h_{\mathrm{step}}$"),
+                        (2 * H, T, r"$\alpha + S/\beta_{\mathrm{link}}$")):
+        ax.annotate("", xy=(x1, y_s), xytext=(x0, y_s),
+                    arrowprops=dict(arrowstyle="<->", color="black", lw=1.1,
+                                    shrinkA=0, shrinkB=0))
+        ax.text((x0 + x1) / 2, y_s + 0.12, lab, ha="center", va="bottom",
+                fontsize=13.5, color="black")
+
+    ax.annotate("", xy=(T + 0.2, y_g1 - h / 2 - 0.4),
+                xytext=(0, y_g1 - h / 2 - 0.4),
+                arrowprops=dict(arrowstyle="->", color="black", lw=1.0))
+    ax.text(T / 2, y_g1 - h / 2 - 0.52, "time (one step)", ha="center",
+            va="top", fontsize=13, color="black")
+
+    fl.clean_axes(ax, lim=((-1.5, T + 0.5), (-0.75, 3.55)), hide=True,
+                  equal=False)
+    fl.save(fig, "mdl-perf-one-launcher")
+
+
 def fig_ring_allreduce():
     """Ring allreduce on four GPUs, computed step by step: reduce-scatter
     accumulates each chunk around the ring, then all-gather distributes the
@@ -1096,6 +1158,7 @@ FIGURES = [
     fig_memory_anatomy,
     fig_splitting,
     fig_data_parallel,
+    fig_one_launcher,
     fig_ring_allreduce,
     fig_ddp_overlap,
     fig_fsdp_lifecycle,

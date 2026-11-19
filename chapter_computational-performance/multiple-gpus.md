@@ -66,6 +66,7 @@ from jax.sharding import NamedSharding, PartitionSpec as P
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles-2}
 %%tab pytorch
 torch.set_float32_matmul_precision('high')
+torch.backends.cudnn.benchmark = True  # Time convolution algorithms per shape
 ```
 
 ## Three Ways to Split
@@ -527,6 +528,12 @@ def ring_allreduce(xs):
     return [np.concatenate(c) for c in chunks], sent
 ```
 
+<!-- WRITER: the cell below is now a sweep over k = 2, 4, 8, 16 devices
+(vectors of 1,024 floats, S = 4,096 bytes each). It prints, per k, whether
+every device holds the sum (True in every dev run) and the bytes each device
+sent in units of S: 1.00, 1.50, 1.75, 1.88, the approach to 2S of
+eq_ring_traffic. The lead-in below (four devices, 6,144 bytes) and the
+reading after the cell must follow the sweep. -->
 Four devices with vectors of 1,024 floats, $N = 4{,}096$ bytes each,
 should all end with the sum and each send
 $2 \cdot 3/4 \cdot N = 6{,}144$ bytes:
@@ -534,12 +541,12 @@ $2 \cdot 3/4 \cdot N = 6{,}144$ bytes:
 ```{.python .input #multiple-gpus-ring-allreduce-2}
 %%tab pytorch, jax
 rng = np.random.default_rng()
-xs = [rng.standard_normal(1024, dtype=np.float32) for _ in range(4)]
-results, sent = ring_allreduce(xs)
-print(f'every device holds the sum: '
-      f'{all(np.allclose(r, sum(xs), atol=1e-5) for r in results)}; '
-      f'sent per device: {sent} bytes, '
-      f'2(k - 1)N/k = {2 * 3 * xs[0].nbytes // 4} bytes')
+for k in (2, 4, 8, 16):
+    xs = [rng.standard_normal(1024, dtype=np.float32) for _ in range(k)]
+    results, sent = ring_allreduce(xs)
+    correct = all(np.allclose(r, sum(xs), atol=1e-5) for r in results)
+    print(f'k = {k:2d}: every device holds the sum: {correct}; '
+          f'sent per device: {sent / xs[0].nbytes:.2f} S')
 ```
 
 Every device ends with the sum, and each sends exactly the bytes of
@@ -601,6 +608,15 @@ can each be measured on their own, and we do so for LeNet.
 
 ### Latency and Bandwidth of the Allreduce
 
+<!-- WRITER: the cell now computes beta_link = S / (t - alpha) at k = 2
+(S = 256 MB per device), not beta = 2N / (t - alpha); the printed rate halves.
+Dev runs: PyTorch alpha 56 us, beta_link 9.5 GB/s (it times our star: two
+copies of S, one after the other; code comment says so); JAX alpha 288 us
+(213-315 across runs), beta_link 2.4 GB/s (it times XLA's psum, run by NCCL).
+The sentences below that define beta by 2N/(t - alpha), the PyTorch tab's
+"about 20 GB/s" and the JAX tab's per-pair rates (4.9 / 6.2 / 7.3-7.4 GB/s,
+which no cell prints; the cell measures GPUs 0 and 1 only) are false or
+unsupported now. -->
 An allreduce of a single number moves almost no bytes, so its time is
 $\alpha$. An allreduce of 64M floats, 256 MB per device, takes so long
 that $\alpha$ hardly matters, and $\beta = 2N/(t - \alpha)$ follows from
@@ -617,11 +633,12 @@ def allreduce_time(n, devices, calls):
     return d2l.Benchmark(lambda: allreduce(x), warmup=10 * calls,
                          repeats=3 * calls, devices=devices).time
 
-alpha = allreduce_time(1, devices, calls=100)
+alpha = allreduce_time(1, devices, calls=100)  # Our star: two copies in turn
 n = 2**26                                # 64M floats ...
-N = 4 * n                                # ... 256 MB
-beta = 2 * N / (allreduce_time(n, devices, calls=3) - alpha)
-print(f'alpha = {1e6 * alpha:.0f} us, beta = {beta / 1e9:.1f} GB/s')
+S = 4 * n                                # ... 256 MB per device
+beta_link = S / (allreduce_time(n, devices, calls=3) - alpha)
+print(f'alpha = {1e6 * alpha:.0f} us, '
+      f'beta_link = {beta_link / 1e9:.1f} GB/s')
 ```
 
 ```{.python .input #multiple-gpus-the-accounting}
@@ -631,11 +648,12 @@ def allreduce_time(n, mesh, calls):
     x = jnp.zeros((mesh.size, n), device=NamedSharding(mesh, P('data')))
     return d2l.Benchmark(lambda: allreduce(x, mesh), repeats=calls).time
 
-alpha = allreduce_time(1, meshes[1], calls=100)
+alpha = allreduce_time(1, meshes[1], calls=100)  # XLA's psum, run by NCCL
 n = 2**26                                # 64M floats ...
-N = 4 * n                                # ... 256 MB
-beta = 2 * N / (allreduce_time(n, meshes[1], calls=3) - alpha)
-print(f'alpha = {1e6 * alpha:.0f} us, beta = {beta / 1e9:.1f} GB/s')
+S = 4 * n                                # ... 256 MB per device
+beta_link = S / (allreduce_time(n, meshes[1], calls=3) - alpha)
+print(f'alpha = {1e6 * alpha:.0f} us, '
+      f'beta_link = {beta_link / 1e9:.1f} GB/s')
 ```
 
 :begin_tab:`pytorch`
@@ -665,6 +683,12 @@ dispatches a compiled program of its own, so $\alpha$ includes the time of
 that dispatch.
 :end_tab:
 
+<!-- WRITER: the prediction printed by the next cell is now
+calls * alpha + n_bytes / beta_link (n_bytes = 247 KB, the S of LeNet).
+Dev runs: PyTorch separately 572-613 us measured vs 590 predicted, at once
+81-83 vs 82-83; JAX separately 3,147 vs 2,981, at once 309 vs 391. The
+"2N/beta" of this paragraph becomes S/beta_link (about 26 us PyTorch,
+about 0.1 ms JAX). -->
 At these bandwidths, moving LeNet's 247 KB of gradients takes
 $2N/\beta$, at most about a tenth of a millisecond. Does it matter whether
 they travel as one message or as ten? We allreduce LeNet's ten gradient
@@ -679,12 +703,12 @@ flat = [torch.cat([g.flatten() for g in G]) for G in grads]
 def separately():
     for g in zip(*grads):              # One allreduce per tensor
         allreduce(list(g))
-n_bytes, m = flat[0].nbytes, len(base)
-for name, f, calls in (('separately', separately, m),
+n_bytes, c = flat[0].nbytes, len(base)
+for name, f, calls in (('separately', separately, c),
                        ('at once', lambda: allreduce(flat), 1)):
     t = d2l.Benchmark(f, warmup=1000, repeats=300, devices=devices).time
     print(f'{name:10s}: {1e6 * t:4.0f} us measured, '
-          f'{1e6 * (calls * alpha + 2 * n_bytes / beta):4.0f} us predicted')
+          f'{1e6 * (calls * alpha + n_bytes / beta_link):4.0f} us predicted')
 ```
 
 ```{.python .input #multiple-gpus-latency-and-bandwidth-of-the-allreduce-1}
@@ -693,13 +717,13 @@ mesh = meshes[1]
 grads = [jnp.zeros((mesh.size, p.size), device=NamedSharding(mesh, P('data')))
          for p in base]
 flat = jnp.concatenate(grads, axis=1)
-n_bytes, m = flat.nbytes // mesh.size, len(base)  # Bytes per device
+n_bytes, c = flat.nbytes // mesh.size, len(base)  # Bytes per device
 for name, f, calls in (
-        ('separately', lambda: [allreduce(g, mesh) for g in grads], m),
+        ('separately', lambda: [allreduce(g, mesh) for g in grads], c),
         ('at once', lambda: allreduce(flat, mesh), 1)):
     t = d2l.Benchmark(f, repeats=100).time
     print(f'{name:10s}: {1e6 * t:4.0f} us measured, '
-          f'{1e6 * (calls * alpha + 2 * n_bytes / beta):4.0f} us predicted')
+          f'{1e6 * (calls * alpha + n_bytes / beta_link):4.0f} us predicted')
 ```
 
 Ten calls take several times as long as one call that moves the same
@@ -724,6 +748,35 @@ gradient tensors into a few large buffers before they send them, as our
 training step does by hand.
 
 ### LeNet on One and Two GPUs
+
+<!-- WRITER: new profile cell below (design 3.6 item 1). It profiles the
+one-GPU step at 256 examples (communicate=False) and prints the wall-clock
+time, the device-busy time and fraction, and the top kernels. Dev runs on
+GPUs 0 and 1 (2026-11-19, host shared with other jobs): PyTorch 2.80 ms wall,
+device busy 0.30 ms (11%), 38 kernels, the largest a 0.05 ms convolution
+gradient; JAX 0.43 ms wall, device busy 0.17 ms (39%), 47-49 kernels. So in
+both tabs the step is host time h_step: the device works a small fraction of
+it. Shared lead-in before the cell (if the device is busy a small fraction of
+the step, its time is the host time to issue the kernels, whatever the batch);
+each tab reads its own fraction after it. -->
+
+```{.python .input #multiple-gpus-lenet-on-one-and-two-gpus-2}
+%%tab pytorch
+params = [broadcast(base, devices[0])]
+step = lambda: train_step(params, train_data[:1], idx, 0.2, communicate=False)
+t = d2l.Benchmark(step, warmup=500, repeats=150, devices=devices[:1]).time
+d2l.show_profile(d2l.kernel_times(step, steps=100), 1e3 * t, rows=4)
+```
+
+```{.python .input #multiple-gpus-lenet-on-one-and-two-gpus-2}
+%%tab jax
+mesh, params = meshes[0], broadcast(base, meshes[0])
+i = jax.device_put(idx, NamedSharding(mesh, P('data')))
+step = lambda: train_step(params, train_data[0], i, 0.2, mesh,
+                          communicate=False)
+t = d2l.Benchmark(step, repeats=500).time
+d2l.show_profile(d2l.kernel_times(step, steps=100), 1e3 * t, rows=4)
+```
 
 A step on two GPUs spends $\alpha + 2N/\beta$ on one allreduce. What it
 saves is the difference between $t_{\textrm{compute}}(256)$, the time of
@@ -782,6 +835,31 @@ keeps each device busy for little more than a tenth of a millisecond per
 step. Here, too, the launcher sets the pace.
 :end_tab:
 
+<!-- WRITER: draft caption; the figure is generated by fig_one_launcher in
+tools/gen_mdl_perf_figures.py. Place it where the launcher term enters the
+model (design 3.6 item 2). -->
+
+![One Python thread drives both GPUs. It issues the kernels of GPU 0, then
+those of GPU 1, so each GPU idles while the thread serves the other. A step
+whose kernels are short takes about $2h_{\textrm{step}}$ of host time plus
+the exchange.](../img/mdl-perf-one-launcher.svg)
+:label:`fig_one_launcher`
+
+<!-- WRITER: the training cell's printed prediction changed. It now prints
+two predictions from one-GPU quantities only: eq_dp_cost's
+t_local[1, 128] + alpha + S/beta_link, and the one-launcher model
+2 t_step[1] + alpha + S/beta_link (host-bound step, h_step = t_step[1]).
+The old prediction (one-GPU step plus the difference of local times plus
+the exchange) is gone, so the sentence "The predicted step time is the
+one-GPU step, plus the difference ..." below is false.
+Dev runs: PyTorch 1 GPU 3.08-3.44 ms, 2 GPUs 7.22-7.33 ms; predicted
+3.45-3.47 ms by eq_dp_cost, 6.25-6.97 ms with one launcher (the host time
+per step moved by 10-25% between cells of one run on the shared host);
+accuracies 0.83-0.85 (1 GPU) and 0.85-0.86 (2 GPUs). JAX 1 GPU 0.41 ms,
+2 GPUs 1.03 ms; predicted 0.76 ms by eq_dp_cost, 1.22 ms with one launcher
+(below: alpha contains a dispatch the training step does not pay);
+accuracies 0.83 and 0.83. The exchange alpha + S/beta_link is 0.08 ms in
+PyTorch (about 1% of the two-GPU step) and about 0.39 ms in JAX. -->
 On two GPUs the local work thus takes longer than on one GPU with the
 whole minibatch, the allreduce adds $\alpha + 2N/\beta$ on top, and
 :eqref:`eq_dp_cost` predicts that a step on two GPUs takes longer than a
@@ -856,9 +934,10 @@ for k in (1, 2):
     t_step[k], acc = train(params, train_data[:k], test_data, orders)
     print(f'{k} GPU(s): {1e3 * t_step[k]:.2f} ms per step, '
           f'test accuracy {acc:.2f}')
-predicted = (t_step[1] + t_local[2, 128] - t_local[1, 256]
-             + alpha + 2 * n_bytes / beta)
-print(f'2 GPUs predicted: {1e3 * predicted:.2f} ms per step')
+exchange = alpha + n_bytes / beta_link    # One allreduce of the gradient
+print(f'2 GPUs predicted: {1e3 * (t_local[1, 128] + exchange):.2f} ms per '
+      f'step by eq_dp_cost, {1e3 * (2 * t_step[1] + exchange):.2f} ms with '
+      f'one launcher')
 ```
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-6}
@@ -870,11 +949,16 @@ for k, mesh, data_k in zip((1, 2), meshes, train_data):
                            orders)
     print(f'{k} GPU(s): {1e3 * t_step[k]:.2f} ms per step, '
           f'test accuracy {acc:.2f}')
-predicted = (t_step[1] + t_local[2, 128] - t_local[1, 256]
-             + alpha + 2 * n_bytes / beta)
-print(f'2 GPUs predicted: {1e3 * predicted:.2f} ms per step')
+exchange = alpha + n_bytes / beta_link    # One allreduce of the gradient
+print(f'2 GPUs predicted: {1e3 * (t_local[1, 128] + exchange):.2f} ms per '
+      f'step by eq_dp_cost, {1e3 * (2 * t_step[1] + exchange):.2f} ms with '
+      f'one launcher')
 ```
 
+<!-- WRITER: "as the separately measured terms predict" and the PyTorch
+tab's "within a few percent of the prediction" refer to the old prediction;
+read the two printed predictions instead (eq_dp_cost misses by a factor of
+two; the one-launcher model lands within about 5-15% in PyTorch). -->
 The step on two GPUs is slower than the step on one, as the separately
 measured terms predict. For LeNet, a second GPU makes training slower.
 
@@ -923,6 +1007,83 @@ A larger global minibatch, however, changes the optimization itself
 (:numref:`sec_batch_size`), so a gain in examples per second under weak
 scaling is not a gain of the same size in the time it takes to reach a
 given loss.
+
+### Larger Minibatches
+
+<!-- WRITER: new subsection and cell (design 3.6 item 3, E2). Weak scaling
+with the hand-written step at b = 256, 4096, 32768 examples per GPU (the
+design grid; indices drawn with replacement, since 2b exceeds the training set at the
+larger sizes), on one GPU and on two with communicate=True. The cell prints,
+per b, the one-GPU step, its device-busy time t_dev (d2l.kernel_times), the
+two-GPU step, and the speedup in examples per second, predicted as
+2 t(1) / (max(2 h_step, t_dev) + alpha + S/beta_link) with h_step the
+one-GPU step at b = 256 (host-bound, per the profile), and measured as
+2 t(1) / t(2).
+Dev runs (GPUs 0 and 1, 2026-11-19, shared host; two runs per tab, the
+final one first):
+PyTorch: b = 256: 1 GPU 3.48 ms, device busy 0.30, 2 GPUs 6.89; speedup
+0.99 predicted, 1.01 measured (other run 1.12 / 0.94). b = 4096: 3.53 ms,
+busy 3.08, 2 GPUs 7.67; 1.00 / 0.92 (other run 1.01 / 0.94): one GPU is
+about as fast as at 256 although it does 16 times the work, and two GPUs
+are slower than one, because the host needs 2 h_step to feed them.
+b = 32768: 25.28 ms, busy 25.22, 2 GPUs 25.62; 2.00 / 1.97 (other 2.00 /
+1.97).
+JAX: b = 256: 0.52 ms, busy 0.17, 2 GPUs 1.36; 0.73 / 0.76 (other 0.91 /
+1.02). b = 4096: 1.76 ms, busy 1.79, 2 GPUs 2.02; 1.63 / 1.75 (other 1.66 /
+1.74). b = 32768: 14.25 ms, busy 14.22, 2 GPUs 14.49; 1.95 / 1.97 (other
+1.95 / 1.97).
+Reading for the shared prose: about 1 at 256 in both tabs (the host sets the
+step), close to 2 at 32768, where the device work outlasts both the host time
+of two GPUs and the 247 KB exchange; the middle row is tab-specific (PyTorch:
+two GPUs still no faster; JAX: 1.7). The inequality of MG-16: a second GPU
+pays when t_dev(b) exceeds 2 h_step (the host can feed both) and the device
+time it takes over exceeds alpha + S/beta_link.
+In earlier probe runs (not this grid) the JAX two-GPU step at large b
+sometimes waited for the slower device: the cuDNN weight-gradient kernel of
+the first convolution (wgrad_alg0_engine, atomics-based) took 4.9-5.0 ms on
+one device and 5.8 ms on the other, and 4.5-8.7 ms across runs that changed
+only the memory placement, giving 1.78-1.79 measured against 1.93 predicted
+at b = 32768. No cell prints this; if the capture shows such a miss, say only
+that the step waits for the slower device. -->
+
+```{.python .input #multiple-gpus-larger-minibatches}
+%%tab pytorch
+params = [broadcast(base, d) for d in devices]
+for b in (256, 4096, 32768):                # Examples per GPU
+    batch = torch.randint(len(data.train), (2 * b,))  # With replacement
+    steps = [lambda k=k: train_step(params[:k], train_data[:k],
+                                    batch[:k * b], 0.2) for k in (1, 2)]
+    t = [d2l.Benchmark(steps[k - 1], warmup=10, repeats=max(20, 2**16 // b),
+                       devices=devices[:k]).time for k in (1, 2)]
+    t_dev = sum(d2l.kernel_times(steps[0]).values()) / 1e3
+    if b == 256:              # The host sets this step's time (profile above)
+        h_step = t[0]
+    predicted = 2 * t[0] / (max(2 * h_step, t_dev) + exchange)
+    print(f'b = {b:5d}: 1 GPU {1e3 * t[0]:6.2f} ms (device busy '
+          f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms; speedup '
+          f'{predicted:.2f} predicted, {2 * t[0] / t[1]:.2f} measured')
+```
+
+```{.python .input #multiple-gpus-larger-minibatches}
+%%tab jax
+rng = np.random.default_rng()
+for b in (256, 4096, 32768):                # Examples per GPU
+    batch = rng.integers(len(data.train[1]), size=2 * b)  # With replacement
+    steps = []
+    for k, mesh, data_k in zip((1, 2), meshes, train_data):
+        params = broadcast(base, mesh)
+        i = jax.device_put(batch[:k * b], NamedSharding(mesh, P('data')))
+        steps.append(partial(train_step, params, data_k, i, 0.2, mesh))
+    t = [d2l.Benchmark(step, warmup=10, repeats=max(20, 2**16 // b)).time
+         for step in steps]
+    t_dev = sum(d2l.kernel_times(steps[0]).values()) / 1e3
+    if b == 256:              # The host sets this step's time (profile above)
+        h_step = t[0]
+    predicted = 2 * t[0] / (max(2 * h_step, t_dev) + exchange)
+    print(f'b = {b:5d}: 1 GPU {1e3 * t[0]:6.2f} ms (device busy '
+          f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms; speedup '
+          f'{predicted:.2f} predicted, {2 * t[0] / t[1]:.2f} measured')
+```
 
 We can now predict from three measurements whether more GPUs shorten a
 step, and we have seen why they do not for LeNet. Our hand-written

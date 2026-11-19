@@ -2,47 +2,60 @@
 :label:`chap_modern_rnn`
 
 The recurrent networks of :numref:`chap_rnn` read a text the way we do,
-one token after another, and carry what they have read in a hidden state.
-The transformers of :numref:`chap_transformers` keep every token instead.
-When a chat assistant answers a question about a long report, it holds a
-key and a value for every token of the report (:numref:`sec_kv-cache`), so
-its memory, and the work for each word of the answer, grow with the length
-of the report. Can a model read a long text with a memory of fixed size and
-still model language well?
+one token after another, and carry what they have read in a summary of
+fixed size, their *state*. Generating the millionth token therefore costs
+as much as generating the tenth. The transformers of
+:numref:`chap_transformers` keep every token instead. When a chat
+assistant answers a question about a long report, it holds a key and a
+value for every token of the report (:numref:`sec_kv-cache`), so its
+memory, and the work for each word of the answer, grow with the length of
+the report. The recurrent way is cheap, but is it good enough? In
+:numref:`sec_gpt` a plain recurrent network as large as the GPT fell
+behind it after the first few bytes of context and never caught up. Can a
+better recurrent network close that gap, and at what length does the
+growing cost of attention begin to matter?
 
-A recurrent network keeps a summary of fixed size, its *state*, and updates
-it once per token, so generating the millionth token costs as much as
-generating the tenth. A state of fixed size raises two problems. Classical
-recurrent networks update the state nonlinearly, so training processes a
-sequence one step at a time and leaves most of a GPU idle. And a state of fixed size must forget, which raises the question of what it should
-keep and how much it can hold. The answers in this chapter come from three
-directions: gates from the 1990s :cite:`Hochreiter.Schmidhuber.1997`, linear
+Two things stand in the way. Classical recurrent networks update the state
+nonlinearly, so training processes a sequence one step at a time and
+leaves most of a GPU idle. And a state of fixed size must forget, so it
+has to choose what to keep. The answers come from three directions: gates
+from the 1990s
+:cite:`Hochreiter.Schmidhuber.1997,Gers.Schmidhuber.Cummins.2000`, linear
 dynamical systems from physics and control theory
 :cite:`Gu.Dao.Ermon.ea.2020,Gu.Goel.Re.2022`, and attention without the
 softmax :cite:`Katharopoulos.Vyas.Pappas.ea.2020`. The three meet in
 recurrent layers that train in parallel and compute a form of attention.
-Several recent large models interleave such layers with a few attention
-layers :cite:`Lieber.Lenz.Bata.ea.2024,Qwen.Team.2025`.
+Every recurrent layer in the chapter has a state, an *update* that folds
+in each token, and a *readout* that computes the output. Control engineers
+call such a system a *state space model*; the chapter's title uses the
+name in this wide sense.
 
-:numref:`sec_lstm` asks how a network can learn what to keep.
-:numref:`sec_seq2seq` puts two gated networks to work as a translator and
-asks what a state of fixed size costs it.
-:numref:`sec_linear-recurrence` asks how to compute the states at all
-positions at once, and :numref:`sec_ssm` how fast a state should forget. :numref:`sec_mamba` asks how each input
-can decide what to write and what to forget. :numref:`sec_matrix-state` asks
-how a state can store key–value pairs, and how many it can hold.
-:numref:`sec_deltanet` asks how a memory can correct a pair instead of
-adding to it. :numref:`sec_hybrids` asks what no fixed-size state can do,
-and how a few attention layers repair it.
+We begin with gates, which let a network learn what to keep, and look back
+at the encoder–decoder of 2014, whose single state is a bottleneck. Next
+we make the update linear, so that it can be computed at every position at
+once and timed against attention
+(:numref:`subsec_linear-recurrence-cost`). Treating the update as a
+continuous-time system sampled at each token tells us how fast each
+channel should forget. Then each token decides how much it writes and
+forgets, so that the state can keep a name and let the commas pass. That
+step is the hardest of the chapter. The state turns out to be a memory of
+key–value pairs whose capacity we can calculate and whose write rule we
+can improve. Finally a little attention restores the recall that no fixed
+state has (:numref:`sec_hybrids`), and several recent large models keep
+one attention layer in every four to eight
+:cite:`Lieber.Lenz.Bata.ea.2024,Qwen.Team.2025`.
 
-We assume the recurrent networks of :numref:`chap_rnn` and the attention of
-:numref:`chap_attention`; linear attention and its computation in chunks
-(:numref:`sec_windowed-linear-attention`) are the starting point of
-:numref:`sec_matrix-state`. The field changes quickly, so the chapter
-teaches the mechanisms (state, update, readout, and cost) rather than a
-ranking of current models. It teaches algorithms rather than GPU kernels,
-which are the subject of :numref:`chap_performance`, and
-:numref:`sec_ssm-further-reading` points to the topics it has no room for.
+The sections build on one another and are best read in order, although
+:numref:`sec_seq2seq`, the derivation from continuous time in
+:numref:`sec_ssm` and the chunked algorithms of :numref:`sec_matrix-state`
+and :numref:`sec_deltanet` can wait on a first reading. Small synthetic
+tasks, each built to need one mechanism, test the memories; the byte-level
+text of :numref:`sec_gpt` checks that a layer still learns language.
+Besides recurrent networks and attention, we assume linear attention
+(:numref:`sec_windowed-linear-attention`). Our models are small; how these
+layers fare at scale is left to the papers we cite. The chapter teaches
+mechanisms rather than a ranking of current models, and algorithms rather
+than GPU kernels.
 
 ```toc
 :maxdepth: 2
@@ -60,37 +73,32 @@ further-reading
 
 ## Resources and Further Reading {.unnumbered}
 
-The resources are grouped into implementations to build from, explanations
-of the ideas, surveys, and course counterparts. All are freely accessible
-online. Research topics that the chapter does not teach are collected in
-:numref:`sec_ssm-further-reading`.
+Start with Gu's essay on the tradeoffs of state space models and
+transformers: in a few pages it argues that compressing a sequence and
+looking up its tokens are different jobs, which is the point
+:numref:`sec_hybrids` measures. Each entry names the section it goes with,
+and all are freely accessible online. Topics that the chapter does not
+teach are collected in :numref:`sec_ssm-further-reading`.
 
-**Annotated implementations**
+**Implementations**
 
-- [The Annotated S4 — Sasha Rush (2022)](https://srush.github.io/annotated-s4/) and [Mamba: The Hard Way (2024)](https://srush.github.io/annotated-mamba/hard.html) — S4 and the Mamba scan implemented line by line against the papers, in the executable-textbook format this book shares; companions to :numref:`sec_ssm` and :numref:`sec_mamba`.
-- [mamba-minimal](https://github.com/johnma2006/mamba-minimal) — the architecture of :numref:`sec_mamba` in one readable PyTorch file, without the fused kernels.
-- [state-spaces/mamba](https://github.com/state-spaces/mamba) — the authors' reference implementation, including the `ssd_minimal` listing that reduces Mamba-2's chunked algorithm (:numref:`sec_matrix-state`) to a page.
-- [flash-linear-attention — fla-org](https://github.com/fla-org/flash-linear-attention) — Triton kernels for gated linear attention, DeltaNet, Gated DeltaNet, RWKV, and their relatives; the production form of the chunked layers of :numref:`sec_matrix-state` and :numref:`sec_deltanet`.
-- [Gated DeltaNet, from scratch — Sebastian Raschka](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch04/08_deltanet) — a bonus chapter of *Build a Large Language Model (From Scratch)* that implements the Gated DeltaNet layer of Qwen3-Next and Kimi Linear and their three-to-one hybrid ratio; a build-along for :numref:`sec_deltanet` and :numref:`sec_hybrids`.
-- [zoology — HazyResearch](https://github.com/HazyResearch/zoology) — the synthetic associative-recall benchmarks behind the recall experiments of :numref:`sec_hybrids`.
+- [The Annotated S4](https://srush.github.io/annotated-s4/), Sasha Rush and Sidd Karamcheti (2022): the full S4, of which :numref:`sec_ssm` teaches the diagonal case, implemented line by line beside the paper as runnable code, much like the sections of this book.
+- [state-spaces/mamba](https://github.com/state-spaces/mamba), Albert Gu and Tri Dao: the authors' reference implementation, whose `ssd_minimal` listing reduces the chunked algorithm of Mamba-2 to a page (:numref:`sec_matrix-state`). [mamba-minimal](https://github.com/johnma2006/mamba-minimal) holds the architecture of :numref:`sec_mamba` in one readable PyTorch file, without fused kernels.
+- [flash-linear-attention](https://github.com/fla-org/flash-linear-attention), fla-org: GPU kernels in Triton for gated linear attention, DeltaNet, Gated DeltaNet and their relatives, the production form of the layers of :numref:`sec_matrix-state` and :numref:`sec_deltanet`.
+- [Gated DeltaNet for Linear Attention](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch04/08_deltanet), Sebastian Raschka (2025): a bonus chapter of *Build a Large Language Model (From Scratch)* that implements a simplified Gated DeltaNet layer and explains the hybrids of Qwen3-Next and Kimi Linear, three linear layers to one attention layer; a build-along for :numref:`sec_deltanet` and :numref:`sec_hybrids`.
+- [zoology](https://github.com/HazyResearch/zoology), HazyResearch (2023): the code of a study of recall in efficient language models, with the multi-query associative recall task that :numref:`sec_matrix-state` and :numref:`sec_hybrids` train on in small form.
 
-**The ideas, explained**
+**Explanations**
 
-- [A Visual Guide to Mamba and State Space Models — Maarten Grootendorst (2024)](https://newsletter.maartengrootendorst.com/p/a-visual-guide-to-mamba-and-state) — more than fifty figures from the basics of SSMs to the selective scan; a gentle introduction to :numref:`sec_ssm` and :numref:`sec_mamba`.
-- [State Space Duality (Mamba-2), parts I–IV — Albert Gu and Tri Dao (2024)](https://goombalab.github.io/blog/2024/mamba2-part1-model/) — the authors' development of the duality between gated recurrences and masked attention of :numref:`sec_matrix-state`: model, theory, algorithm, and systems.
-- [DeltaNet Explained, parts I–III — Songlin Yang (2024)](https://sustcsonglin.github.io/blog/2024/deltanet-1/) and her [Linear Attention and Beyond slides](https://github.com/sustcsonglin/linear-attention-and-beyond-slides) — the delta rule, its chunked training, and the design space of linear attention, from one of its main contributors; a second view of :numref:`sec_deltanet`.
-- [On the Tradeoffs of SSMs and Transformers — Albert Gu (2025)](https://goombalab.github.io/blog/2025/tradeoffs/) — the argument that compressing a sequence and looking up its tokens are different jobs and that good models need both; the question :numref:`sec_hybrids` measures.
-- [ASAP seminar series](https://asap-seminar.github.io/) — an ongoing online seminar on sequence-model architectures, where the topics of this chapter continue.
+- [On the Tradeoffs of SSMs and Transformers](https://goombalab.github.io/blog/2025/tradeoffs/), Albert Gu (2025): the essay recommended above, best read after :numref:`sec_hybrids`, whose recall experiment measures its main claim.
+- [A Visual Guide to Mamba and State Space Models](https://newsletter.maartengrootendorst.com/p/a-visual-guide-to-mamba-and-state), Maarten Grootendorst (2024): more than fifty figures, from the basics of state space models to the selective scan; a gentle companion to :numref:`sec_ssm` and :numref:`sec_mamba`.
+- [State Space Duality (Mamba-2), parts I to IV](https://goombalab.github.io/blog/2024/mamba2-part1-model/), Albert Gu and Tri Dao (2024): the authors' account of why a gated recurrence and masked attention compute the same thing, the duality of :numref:`sec_matrix-state`, from the model to the algorithm and the systems.
+- [DeltaNet Explained, parts I to III](https://sustcsonglin.github.io/blog/2024/deltanet-1/), Songlin Yang (2024), with her [Linear Attention and Beyond slides](https://github.com/sustcsonglin/linear-attention-and-beyond-slides): the delta rule, its training in chunks, and the design space of linear attention, from one of its main contributors; a second view of :numref:`sec_deltanet`.
 
-**Surveys**
+**A survey and a lecture**
 
-- [Test-Time Regression — Wang, Shi, and Fox (2025)](https://arxiv.org/abs/2501.12352) — the framework behind the regression view of memory at the end of :numref:`sec_deltanet`, worked out for attention, linear attention, and many recurrent layers.
-- [Speed Always Wins — Sun et al. (2025)](https://arxiv.org/abs/2508.09834) — a survey of linear sequence models, sparse attention, mixtures of experts, and hybrids, covering the efficient architectures around this chapter.
-
-**Courses**
-
-- [Stanford CS336: Language Modeling from Scratch, Lecture 4](https://cs336.stanford.edu/) — attention alternatives and mixtures of experts: this chapter's material as one lecture of a course on building language models.
-- [CMU 10-423 Generative AI, Lecture 22: State Space Models](https://www.cs.cmu.edu/~mgormley/courses/10423-s25/slides/lecture22-ssm.pdf) — lecture slides on S4 and Mamba by Gormley and Virtue; a second treatment of :numref:`sec_ssm` and :numref:`sec_mamba`.
+- [Test-Time Regression](https://arxiv.org/abs/2501.12352), Ke Alexander Wang, Jiaxin Shi and Emily B. Fox (2025): the framework behind the regression view of memory at the end of :numref:`sec_deltanet`, worked out for attention, linear attention and many recurrent layers.
+- [CMU 10-423 Generative AI, Lecture 22: State Space Models](https://www.cs.cmu.edu/~mgormley/courses/10423-s25/slides/lecture22-ssm.pdf), Matt Gormley and Pat Virtue (spring 2025): lecture slides on S4 and Mamba; a second treatment of :numref:`sec_ssm` and :numref:`sec_mamba`.
 
 <!-- slides -->
 
@@ -98,35 +106,104 @@ online. Research topics that the chapter does not teach are collected in
 ::: {.cover}
 [Dive into Deep Learning · §12]{.kicker}
 
-State space models<br>
-**memories of fixed size that train in parallel, forget the right things, store pairs, and correct them**
+A memory of fixed size<br>
+**trained in parallel, taught what to forget, made to store and correct pairs, and helped by a little attention**
 :::
 :::
 
-::: {.slide title="A Transformer's Memory Grows With the Context; a Recurrent One Does Not"}
-- Attention keeps a key and a value for every token: at 128 K tokens, a
-  grouped-query attention layer holds 512 MB per sequence.
-- A recurrent layer keeps a state of fixed size: about 2 MB for a Mamba-2
-  layer, at any length.
-- The millionth token costs as much as the tenth.
+::: {.slide title="A Transformer's Cache Grows With the Context; a Recurrent State Does Not"}
+[The problem]{.kicker}
 
+- Attention keeps a key and a value per token. With 8 key–value heads of
+  width 128 in 16-bit numbers: $2 \times 8 \times 128 \times 2$ bytes
+  $= 4$ KB per token and layer, 512 MB at 128K tokens.
+- A recurrent layer of a width-4,096 model, with the sizes of Mamba-2,
+  keeps 8,192 channels of 128 numbers: $8{,}192 \times 128 \times 2$ bytes
+  $= 2$ MB, at any length.
+
+**Check:** after how many tokens does the cache outgrow the state?
+
+::: {.fragment .fade-up}
 ::: {.d2l-note}
-Two problems: train such a memory **in parallel**, and decide **what to
-keep** in a fixed size.
+$2\text{ MB} / 4\text{ KB} = 512$ tokens. Beyond that, the recurrent layer
+holds less, and the millionth token costs as much as the tenth.
+:::
 :::
 :::
 
-::: {.slide title="Map of the Chapter"}
-| question | answer |
+::: {.slide title="By the End of This Chapter You Can"}
+[Goals]{.kicker}
+
+- explain why a gate keeps a value for hundreds of steps, and why its
+  starting value decides whether training finds that memory;
+- compute a linear recurrence at all $T$ positions in $\log_2 T$ rounds;
+- set a state's decays by timescale, and let each token choose them;
+- store key–value pairs in a matrix state, predict how many it holds, and
+  correct a pair by reading before writing;
+- say what no fixed state can recall, and what a few attention layers
+  cost and repair.
+
+**Idea:** every model is a state, an update and a readout.
+:::
+
+::: {.slide title="Gates, the Linear Update and the Matrix Memory Are the Core"}
+[Scope and place]{.kicker}
+
+- **Assumes:** recurrent networks and BPTT; attention, including linear
+  attention.
+- **Core:** gates as a learned decay; the parallel linear update; the
+  matrix memory and its capacity; the delta rule (read before writing);
+  recall of many pairs, with and without attention.
+- **History:** the 2014 encoder–decoder and its one-state bottleneck.
+- **Can wait:** the derivation from continuous time; the chunked
+  algorithms.
+- **Leaves out:** GPU kernels, rankings of current models.
+:::
+
+::: {.slide title="Make the Update Linear, Then Selective, Then Correct; Then Put Attention Back"}
+[Chapter map]{.kicker}
+
+| section | question | answer |
+|---|---|---|
+| Gated Recurrent Networks | how to keep a value for long? | gates, a learned decay |
+| Sequence-to-Sequence Learning | how much of an input fits through one state? | less as the input grows |
+| Linear Recurrences and Parallel Scans | how to train on all positions at once? | a linear update and a scan |
+| State Space Models | how fast should a state forget? | decays set by timescale |
+| Selective State Space Models | how to keep only what matters? | step sizes chosen by the token |
+| Matrix-State Recurrences | how to store pairs, and how many? | outer products; capacity set by size |
+| The Delta Rule | how to overwrite a pair? | read before writing |
+| Hybrid Architectures | what can no fixed state do? | recall of many pairs; a few attention layers |
+| Further Reading | what does the chapter leave out? | practice, other memories, theory, other domains |
+:::
+
+::: {.slide title="Small Synthetic Tasks Test Memory; One Text Benchmark Tests Language"}
+[Running examples]{.kicker}
+
+- **Delayed recall:** a symbol, then random fillers, then name the symbol.
+- **Reversal:** read a random string, then write it backwards.
+- **Selective copying:** a few marked symbols among fillers; output them
+  in order.
+- **Associative recall:** key–value pairs, then every key again as a
+  query; answer its value.
+- **Text:** WikiText-103 bytes in windows of 128; four blocks of width 256
+  (wider for the controls matched in parameters), and only the mixing
+  layer changes.
+
+Each task needs one mechanism and nothing else; the text checks that a
+layer still learns language.
+:::
+
+::: {.slide title="Each Section Tests Its Mechanism on One of These"}
+[Running examples]{.kicker}
+
+| section | example |
 |---|---|
-| how to keep a value for long? | gates, a learned decay |
-| what does a fixed state cost? | translation degrades with source length |
-| how to train in parallel? | linear updates, scans; SSMs for timescales |
-| how to keep only what matters? | step sizes chosen by the input |
-| how to store pairs? | a matrix state: linear attention, in chunks |
-| how to overwrite a pair? | the delta rule |
-| what can no fixed state do? | exact recall; add a few attention layers |
-
-**Running examples:** byte-level WikiText-103 for every language model;
-delayed recall, selective copying, and associative recall for memory.
+| Gated Recurrent Networks | delayed recall over 20 to 200 steps; gated stacks and attention on text |
+| Sequence-to-Sequence Learning | reversing strings of 8 to 64 letters through one state |
+| Linear Recurrences and Parallel Scans | GRU against a minimal GRU on text; GRU, scan and attention timed up to 16,384 tokens |
+| State Space Models | delayed recall over 1,000 steps |
+| Selective State Space Models | selective copying, with and without selectivity; the selective model on text |
+| Matrix-State Recurrences | random keys in a matrix; associative recall at three head sizes |
+| The Delta Rule | a key written twice; recall after keys are rebound |
+| Hybrid Architectures | associative recall of 4 to 64 pairs; the cache of a 32-layer model |
 :::

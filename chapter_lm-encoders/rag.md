@@ -1329,8 +1329,9 @@ print(f'judged again: with {RETRY_TOKENS:,} new tokens, once\nunjudged: '
       'still no verdict on correctness (left out of accuracy)')
 ```
 
-The replayed verdicts match the recorded ones. Every baseline answer has a
-verdict; the oracle leaves one answer unjudged and `base-repeat` two.
+The replayed verdicts match the recorded ones. The baseline and the oracle
+each leave one answer unjudged; every answer of the other two arms has a
+verdict.
 
 The judge itself was chosen by measurement. Two frontier models from other
 families, Claude Opus 5.5 and Gemini 4 Argon, labeled 200 answers of
@@ -1649,10 +1650,10 @@ questions cannot tell.
 Of everything in this section, the decomposition :eqref:`eq_lm_rag_hit` is
 the result to remember. Before a single change has been tried, it says
 which stage to improve first, and here it points at the generator: of the
-24 errors on answerable questions, 19 were made with a relevant passage in
+25 errors on answerable questions, 21 were made with a relevant passage in
 the context.
 
-The wrong answer that opened this section is one of those nineteen: its
+The wrong answer that opened this section is one of those twenty-one: its
 passage was in the context, ranked first. Which stage lost each of them,
 and would another chunking, query or context have saved some?
 :numref:`sec_lm_rag_fixes` changes one stage at a time and sorts the
@@ -1823,7 +1824,7 @@ question; Qwen3.5-9B answers, Qwen3.8-27B judges.
 
 - Item: question, reference, **key facts**, **gold spans** (character
   ranges), alternative spans, flags.
-- Split by **document**: 168 `train`, 32 `dev`, 32 `test`, so a system
+- Split by **document**: 166 `train`, 32 `dev`, 32 `test`, so a system
   tuned on `train` never saw the passage of a `dev` answer.
 - A chunk is relevant if it overlaps half a span, or half of itself.
 
@@ -1956,11 +1957,11 @@ Labels by models, on answers of another, smaller generator (Qwen3-4B).
 | context | answer, abridged | judge |
 |---|---|---|
 | none | "relies on the `shuffle` argument passed to the `DataLoader` constructor" | wrong |
-| five chunks, the right one first | "`is_train` ... is passed directly to the `DataLoader` constructor as the `shuffle` parameter" | correct, faithful, not supported |
+| five chunks, the right one first | "passes this `is_train` value directly to the `DataLoader` constructor as the `shuffle` parameter ... [1]" | correct, faithful, supported |
 
 ::: {.d2l-note}
-Retrieval turns a plausible invention into the book's answer. The
-citations the prompt asked for are missing.
+Retrieval turns a plausible invention into the book's answer, and the
+answer cites the passage it came from.
 :::
 :::
 
@@ -2033,7 +2034,7 @@ noise of 0.02. 21 of 25 errors had a relevant passage in the context.
 ::: {.slide title="Next: Which Stage Lost Each Wrong Answer?"}
 [Next]{.kicker}
 
-The baseline leaves 26 `dev` answers wrong, 19 of the 24 answerable ones
+The baseline leaves 26 `dev` answers wrong, 21 of the 25 answerable ones
 with a relevant passage in the context. The next section changes one stage
 at a time, sorts the failures by stage and tests a fix chosen in advance.
 :::

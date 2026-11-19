@@ -629,11 +629,10 @@ All the change is in between. At initialization about one gate in a hundred
 exceeds 0.9; after training about one in six does, and for those the
 memory has grown from a byte or two to a half-life of about 7 bytes or
 more. Nothing in training asked for much more: the windows are 128 bytes
-long. Each gate
-value is computed from the current byte, so how long an input survives
-depends on the bytes that follow it, as :eqref:`eq_lr-unrolled-gated`
-describes; an exercise asks how much the gates of a unit vary from byte to
-byte.
+long. Each gate value is computed from the current byte, so how long an
+input survives depends on the bytes that follow it, as
+:eqref:`eq_lr-unrolled-gated` describes; an exercise asks how much the gates
+of a unit vary from byte to byte.
 
 ## Cost against Attention
 :label:`subsec_linear-recurrence-cost`

@@ -476,9 +476,11 @@ the current byte plus what attention has gathered from the earlier bytes,
 which in a fresh model is much the same blend at every position. Most
 occurrences of a byte therefore look alike to the router, and they go to
 the same expert. Bytes are far from equally frequent: nearly one byte in
-five is a space, more than the $1.25/8 \approx 16\%$ of the assignments
-that a buffer holds at $c = 1.25$. In the second block, the common blend
-can tilt many tokens toward the same expert.
+five is a space (18.9% of the validation text, as the experiment below
+prints), more than the $1.25/8 \approx 16\%$ of the assignments that a
+buffer holds at $c = 1.25$. One byte value alone can overflow a buffer.
+In the second block, the common blend can tilt many tokens toward the
+same expert.
 
 We should therefore expect a fresh model to be unbalanced, and its busiest
 buffers to overflow, before it has seen a single gradient. The first row of
@@ -798,34 +800,35 @@ d2l.plot(ranks, mean_shares + [[1 / 8] * 8], 'expert, busiest first',
 ```
 
 The prediction of :numref:`subsec_moe-init-load` holds. Before any
-training, the busiest expert of a layer receives between 2.4 and 5.3 times
-its share, and the buffers drop a sixth to two fifths of the assignments.
-The plot shows how lopsided that is: in the fresh models, as in every
-unbalanced one, the three busiest experts take most of the tokens and the
-idlest receive almost none. This is the end state that the feedback loop
-was supposed to produce, and a fresh byte-level model starts there.
+training, the busiest expert of a layer receives about three to four times
+its share (2.9 to 3.8 in the table), and the buffers drop a quarter to
+three tenths of the assignments. The plot shows how lopsided that is: in
+the fresh models, as in every unbalanced one, the three busiest experts
+take about three quarters of the tokens and the idlest receive a small
+fraction of their share. This is the end state that the feedback loop was
+supposed to produce, and a fresh byte-level model starts there.
 
 A router that cannot learn ends about as skewed after 800 steps: its
-busiest expert receives 2.2 to 3.5 times its share, and a fifth to a third
-of the assignments are dropped. So the skew does not need a learning
-router. The frozen arm does not switch the feedback off entirely, though:
+busiest expert receives 2.4 to 4.1 times its share, and 18% to 28% of the
+assignments are dropped. So the skew does not need a learning router.
+The frozen arm does not switch the feedback off entirely, though:
 the router's input still trains and can drift toward whichever experts
 help it. With the router trained and no balancing, the busiest expert ends at
-2.6 to 3.9 times its share. Whether the feedback loop adds to the skew
+2.8 to 3.9 times its share. Whether the feedback loop adds to the skew
 that the inputs produce, two runs per row are too few to tell; exercise
 :exref:`ex_moe-feedback` asks for more.
 
 Both remedies spread the tokens much more evenly. In the plot every expert
-receives close to its even share; in the table the busiest receives 1.1 to
-1.9 times it, and at most a few percent of the assignments are dropped.
+receives close to its even share; in the table the busiest receives 1.2 to
+1.4 times it, and at most 1% of the assignments are dropped.
 Every balanced run ends with a lower validation loss than every unbalanced
 one, frozen router or not.
 
-Why do the unbalanced models lose? They end 0.06 to 0.29 nats above the
+Why do the unbalanced models lose? They end 0.05 to 0.25 nats above the
 balanced ones. With room for every assignment the unbalanced models win
-back 0.05 to 0.1 nats, so tokens that skip their expert at evaluation
-explain part of the gap; even then, they end at or above every balanced
-run. The rest is
+back 0.02 to 0.08 nats, so tokens that skip their expert at evaluation
+explain part of the gap; even then, none of them comes down to the best
+balanced runs. The rest is
 capacity that training left unused, the idle tail of the plot: experts that
 received few tokens learned little, and the assignments dropped during
 training never trained the experts they were meant for.
@@ -871,7 +874,7 @@ Early in training, the first block tends to send them all to one expert
 (:numref:`subsec_moe-init-load`), and no balancing method can split them
 while the router sees little but the byte: whatever moves one space to
 another expert moves the others with it. At $c = 1.25$ a buffer holds
-about 16% of the assignments, less than the spaces' share; at $c = 2$ it
+about 16% of the assignments, less than the spaces' 18.9%; at $c = 2$ it
 holds a quarter.
 
 ```{.python .input #moe-a-mixture-of-experts-gpt-1}
@@ -927,20 +930,20 @@ d2l.plot(list(range(every, num_steps + 1, every)),
 The mixture starts behind, as predicted. The dense curve then flattens
 sooner, and the first measurement at which the mixture is ahead falls
 between steps 1,000 and 2,000 in every run. The mixture ends with a lower
-validation loss than the dense model in every run, by one to six
-hundredths of a nat, with nothing dropped.
+validation loss than the dense model in every run, by about five
+hundredths of a nat (0.04 to 0.06), with nothing dropped.
 
-Is that a lot? The dense model is easy to pin down: its two runs end within
-a hundredth of each other, as the run-to-run spread measured in
-:numref:`subsec_gpt-run-to-run` leads us to expect. The mixture is less
-predictable, and its two runs differ by up to five hundredths, so two runs
-fix the sign of the gain but not its size. We do not know why the mixture
-varies more; routing that settles differently in each run is one suspect.
+Is that more than luck? The two runs of the dense model end within a
+hundredth of each other, as the run-to-run spread measured in
+:numref:`subsec_gpt-run-to-run` leads us to expect, and the two runs of the
+mixture within a hundredth and a half. The gain is about three times the
+larger of these ranges. Two runs per model are few, but they leave no doubt
+about the sign of the gain, and its size is known to about a hundredth.
 
 The grid of :numref:`sec_scaling-laws` gives a rough yardstick. At 2,000
 steps, a third of this budget, tripling a dense model from 0.59 to 1.77
 million parameters lowered the loss by about 0.05 nats. The mixture gains
-up to that much while storing 2.26 million parameters, more than the
+about as much while storing 2.26 million parameters, more than the
 tripled model, and using the 0.43 million per token of our dense model.
 Roughly, then, a stored expert parameter is worth less than a dense one,
 while an operation spent on experts is worth more, and operations are what
@@ -1022,8 +1025,9 @@ balanced model then ends below every unbalanced one, which loses both to
 dropped assignments and to experts that learned little. On plentiful
 text, a GPT with eight experts per block and one active per token
 overtakes the dense model with the same parameters per token after 1,000 to
-2,000 steps and ends lower in every run, while storing 5.3 times the
-parameters. Released models cut the experts finer and add a shared one.
+2,000 steps and ends about 0.05 nats lower in every run, while storing 5.3
+times the parameters. Released models cut the experts finer and add a
+shared one.
 
 ## Exercises
 
@@ -1416,7 +1420,7 @@ whatever the routing.
   every token's logits.
 - Block 1 sees the current byte plus a blend of earlier bytes that is
   much the same everywhere: equal bytes go to one expert.
-- Nearly one byte in five is a space; one buffer holds
+- Nearly one byte in five is a space (18.9%); one buffer holds
   $1.25/8 \approx 16\%$ of the assignments.
 
 ::: {.d2l-note .warn}
@@ -1478,17 +1482,17 @@ assignment.
 @!moe-three-runs-one-budget-3
 
 ::: {.d2l-note}
-Fresh: busiest expert 2.4–5.3× its share. Frozen router: 2.2–3.5×.
+Fresh: busiest expert 2.9–3.8× its share. Frozen router: 2.4–4.1×.
 :::
 :::
 
 ::: {.slide title="Balanced Runs Spread the Load and End Lower"}
 @!moe-three-runs-one-budget-4
 
-- Unbalanced: the three busiest experts take most tokens, the idlest
-  almost none. Balanced: busiest 1.1–1.9×, at most a few percent dropped.
-- Without dropping, the unbalanced models gain 0.05–0.1 nats and still end
-  at or above every balanced run: capacity left untrained costs the rest.
+- Unbalanced: the three busiest experts take about three quarters of the
+  tokens, the idlest little. Balanced: busiest 1.2–1.4×, at most 1% dropped.
+- Without dropping, the unbalanced models gain 0.02–0.08 nats and still end
+  above the best balanced runs: capacity left untrained costs the rest.
 - Not ranked at this scale. Start with the controller: no competing
   gradient, better at 1B+ (Wang et al., 2024), used by DeepSeek-V3.
 :::
@@ -1508,19 +1512,19 @@ experts, top-1, auxiliary loss $\lambda_\textrm{bal} = 0.01$:
 ::: {.slide title="The Mixture Overtakes the Dense Model by Step 2,000"}
 @!moe-a-mixture-of-experts-gpt
 
-- Behind until step 1,000 to 2,000, then ahead: 0.01–0.06 nats lower at the
-  end in every run, nothing dropped.
+- Behind until step 1,000 to 2,000, then ahead: about 0.05 nats lower
+  (0.04–0.06) at the end in every run, nothing dropped.
 :::
 
 ::: {.slide title="An Expert Parameter Is Worth Less Stored, More per Operation"}
 - Slow start: each fresh expert's output is scaled by $p_i$, the largest of
   eight probabilities near $1/8$, and each expert sees an eighth of the
   tokens.
-- Dense runs agree within 0.01; MoE runs differ by up to 0.05. Two runs fix
-  the sign of the gain, not its size.
+- Runs of each model agree within 0.015; the gain, 0.04–0.06, is about
+  three times that.
 - Yardstick (scaling grid, 2,000 steps): tripling a dense model, 0.59M to
   1.77M, gained about 0.05 nats.
-- The mixture gains up to that much while storing 2.26M and using 0.43M
+- The mixture gains about as much while storing 2.26M and using 0.43M
   per token.
 
 ::: {.d2l-note}
@@ -1571,9 +1575,9 @@ data, which is why mixtures need plenty of distinct text.
   521M/124M.
 - Fixed buffers of $\lceil c\,nk/E \rceil$ slots; first come, first
   served; overflow is dropped.
-- Byte routing is skewed before training (2.4–5.3×); a loss or a selection
-  bias evens it (1.1–1.9×), and every balanced run ends lower.
-- Our MoE GPT overtakes the dense GPT by step 2,000 and ends 0.01–0.06
+- Byte routing is skewed before training (about 3–4×); a loss or a
+  selection bias evens it (1.2–1.4×), and every balanced run ends lower.
+- Our MoE GPT overtakes the dense GPT by step 2,000 and ends about 0.05
   nats lower in every run, storing 5.3 times the parameters.
 
 **Next:** the modern recipe: released models as settings of this

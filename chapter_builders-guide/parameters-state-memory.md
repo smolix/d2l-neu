@@ -6,38 +6,36 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Parameters, State, and Memory
 :label:`sec_parameters`
 
-The previous section built models as trees of modules and found every
-parameter by walking the tree. So far the framework has handled those
-tensors for us, and we never had to ask what else a model holds or how much
-memory training it takes. For a small model there is no need to ask. For a
-large one both questions become pressing. Consider a model with 8 billion
-parameters, the size of the Llama 3 model that
-:numref:`sec_model_construction` mentioned. Its weights take 32 GB in the
-32-bit floating-point format we have used so far. Training it takes four
-times as much memory, 128 GB, before it has seen a single example: every
-weight needs a gradient of the same size, and the Adam optimizer, which we
-meet in :numref:`sec_adam`, keeps two more tensors of that size, running
-averages of the gradients and of their squares. That is more than an 80 GB
-GPU holds.
+In the previous section, we organized models as trees of modules so frameworks
+can find every parameter automatically. Until now we could let the framework
+manage those tensors behind the scenes without asking what else a model holds or
+how much memory training requires. At small scale, those details rarely bite. At
+large scale, they dominate every engineering decision. Consider an
+8-billion-parameter model such as the Llama 3 model from
+:numref:`sec_model_construction`. Storing its weights in 32-bit floating point
+takes 32 GB, yet *training* it requires four times as much—128 GB—before
+processing a single example: every parameter needs a matching gradient, and the
+Adam optimizer (:numref:`sec_adam`) maintains two additional tensors of the same
+size for running averages of the gradients and squared gradients. That already
+exceeds the memory of an 80 GB GPU.
 
-To arrive at such numbers we need to know every tensor a model holds and
-what each one is for. Quite ordinary operations need the same knowledge: a
-checkpoint must save every tensor the computation depends on, a move to a
-GPU must take all of them along, and fine-tuning must decide which of them
-the optimizer may change.
+Computing such budgets accurately requires knowing every tensor a model owns and
+the role each one plays. Everyday workflows depend on the exact same inventory:
+checkpoints must capture every persistent tensor the forward pass depends on,
+GPU transfers must move them all together, and fine-tuning must specify cleanly
+which tensors the optimizer may update.
 
-Frameworks make this possible by *registration*
-(:numref:`sec_model_construction`): each layer announces the tensors it owns
-to the module system, which files them by name in the tree of modules, and
-the optimizer, the checkpoint, and the device move then all walk the same
-tree. This section is an inventory of that tree. Its first part asks what a
-model holds: the tensors the optimizer trains, and those it must leave
-alone. Its second part asks what they cost, and counts the bytes that
-training stores per parameter. The third part is closer to a reference. It
-collects three things that are routinely done to parameters (sharing one
-between two layers, excluding some from training, and averaging them over
-time), each of which borrows a model or a method from a later chapter. It
-can be skimmed now and consulted when those chapters call for it.
+Frameworks unify all of these operations through *registration*
+(:numref:`sec_model_construction`): each layer registers its tensors into the
+module tree under structured names, allowing optimizers, checkpoint savers, and
+device-transfer routines to walk that single tree. This section surveys that
+state tree in three parts. First, we distinguish trainable *parameters* from
+non-trainable *buffers*. Second, we account for training memory in bytes per
+parameter and show how to count parameters without allocating their storage.
+Third, we cover three recurring parameter patterns—weight tying, parameter
+freezing, and exponential moving averages—each drawing on techniques expanded in
+later chapters; feel free to skim this final part now and return to it as a
+reference when needed.
 
 ```{.python .input #parameters-state-memory-parameters-state-and-memory}
 %%tab mxnet
@@ -75,12 +73,11 @@ from d2l import jax as d2l
 ### Access by Path
 :label:`subsec_param-access`
 
-Our running example is a residual MLP: an input layer maps 20 features to
-64, two residual blocks of width 64 follow, and an output layer produces 10
-outputs. The blocks are the residual block of
-:numref:`sec_model_construction`, defined again here so that this section
-stands on its own: each adds the output of a small two-layer network, its
-*body*, to its input.
+Our running example is a compact residual MLP: an input layer projecting 20
+features to 64 hidden units, two 64-wide residual blocks, and a 10-unit output
+layer. We redefine `ResidualBlock` from :numref:`sec_model_construction` here so
+the notebook stands on its own—each block adds the output of a two-layer *body*
+directly to its input.
 
 ```{.python .input #parameters-state-memory-accessing-parameters-1}
 %%tab mxnet
@@ -158,11 +155,11 @@ X = jax.random.normal(rngs(), (2, 20))
 net(X).shape
 ```
 
-The parameters are the leaves of the module tree, and the path of names that
-leads to a leaf (:numref:`fig_blocks`) is also the way to reach it in code,
-which suits debugging a single layer. The optimizer and the checkpoint,
-however, need every leaf. To this end each framework offers a traversal of
-the whole tree that returns the parameters together with their paths.
+Parameters sit at the leaves of the module tree. The dotted path to any leaf
+(:numref:`fig_blocks`) mirrors how we index into it in Python, which is handy
+for inspecting a single layer during debugging. Optimizers and checkpoint
+writers, however, need *every* leaf at once, so each framework provides a
+full-tree traversal yielding all parameters alongside their paths.
 
 :begin_tab:`mxnet`
 In Gluon it is `collect_params()`, a dictionary keyed by path. Each value
@@ -188,8 +185,8 @@ with its path. Parameters do not store their gradients: `nnx.grad` returns
 them as a second state tree with the same paths.
 :end_tab:
 
-The model has 12 parameter tensors. We print their number and the four
-that belong to the first residual block:
+This residual MLP contains 12 parameter tensors in total. Let's inspect the
+total count along with the four tensors belonging to the first residual block:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-5}
 %%tab mxnet
@@ -280,37 +277,37 @@ list(net.state_dict()) == [name for name, _ in net.named_parameters()]
  == [path for path, _ in params.flat_state()])
 ```
 
-Every consumer walks this one tree under these names. The equality above
-holds only because all of this model's state is trainable. That need not be
-so.
+Every framework utility traverses this same state tree under these paths. The
+equality above holds only because every tensor in our residual MLP happens to be
+trainable—which is not true of all layers.
 
 ### Parameters and Buffers
 :label:`subsec_params_buffers`
 
-Suppose a model standardizes its inputs with a mean and a standard deviation
-computed once from training data. These numbers must be saved with the model,
-since predictions are wrong without them, and they must move to the GPU with
-it. Yet the optimizer must never change them: they are statistics of the
-data, not quantities to fit. A plain attribute would not do, since no
-traversal sees it (:numref:`sec_model_construction`). Batch normalization
-:cite:`Ioffe.Szegedy.2015`, a layer that we study in
-:numref:`sec_batch_norm`, keeps tensors of the same kind: a running mean and
-variance of its inputs, updated during training and used at prediction time.
+Suppose a model standardizes its inputs using a feature-wise mean and standard
+deviation computed once from the training set. Those statistics must be saved
+inside checkpoints (without them, predictions at inference time would be wrong)
+and moved onto the GPU alongside the weights—yet the optimizer must *never*
+update them via gradient descent, because they are data statistics rather than
+learned weights. Storing them as plain Python attributes fails, since module
+traversals ignore plain attributes (:numref:`sec_model_construction`). Batch
+normalization (:numref:`sec_batch_norm`, :cite:`Ioffe.Szegedy.2015`) relies on
+the exact same category of state: running means and variances updated during
+training forward passes and applied during inference.
 
-Such a persistent tensor without a gradient is commonly called a *buffer*,
-and every framework has a way to register one so that checkpoints and device
-moves see it while the optimizer does not. This gives a rule that covers
-every tensor a layer touches: make it a *parameter* if the optimizer should
-update it, a *buffer* if checkpoints need it, and a local variable if it
-lives for one call. The last kind includes the intermediate values that
-backpropagation stores during a training step (:numref:`sec_backprop`). They
-belong to the computation, not to the model, and are neither saved nor
-registered. Plain Python attributes hold architecture constants such as
-layer widths.
+Such persistent, non-trainable tensors are commonly called *buffers*, and every
+framework lets us register them so checkpoints and device moves include them
+while optimizers skip them. This yields a simple three-way rule for every tensor
+inside a layer: register it as a *parameter* if the optimizer should update it,
+register it as a *buffer* if checkpoints and device transfers need it without
+gradients, and keep it as an ordinary local variable if it lives only for one
+forward/backward pass (such as intermediate activations cached by
+backpropagation in :numref:`sec_backprop`). Architectural constants like layer
+widths remain plain Python attributes.
 
-Here is a layer, `Standardizer`, that standardizes its inputs with statistics
-computed from a reference sample: one mean and one standard deviation per
-feature.
+To illustrate, we build a `Standardizer` module that normalizes its inputs with
+a precomputed per-feature mean and standard deviation before applying a linear
+layer.
 
 :begin_tab:`mxnet`
 Gluon needs no second mechanism: a `Constant` is a `Parameter` whose
@@ -461,10 +458,10 @@ optimizer built over `nnx.Param` never sees the statistics:
  'buffers': list(nnx.state(standardizer, Buffer))}
 ```
 
-Registration decides more than what is saved. Operations on the model as a
-whole, such as a change of dtype or a move to another device, reach the
-registered tensors and no others (:numref:`sec_model_construction`). We can
-watch this without a GPU.
+Registration governs more than checkpointing: whole-model transformations such
+as casting precision (`dtype`) or migrating to another device affect only
+registered tensors (:numref:`sec_model_construction`). We can observe this
+directly on a CPU.
 
 :begin_tab:`mxnet`
 Assignment registers only `Parameter`s (a `Constant` is one) and child
@@ -583,15 +580,14 @@ standardizer.mean.device
 
 ### Bytes per Parameter
 
-How much memory does training our residual MLP take? For the parameters and
-what the optimizer stores about them, the answer follows from three counts
-per parameter: the weight itself, its gradient, and the optimizer's state
-for it. Minibatch gradient descent, which we have used so far, keeps no
-state. In 32-bit floating point (fp32), 4 bytes per number, it stores 8
-bytes per parameter. Adam keeps two more numbers per parameter, the running
-averages of the gradient and of its square. We count for Adam, since almost
-all large models are trained with it or with one of its variants, so this
-is the count that matters in practice:
+How much memory does it take to train our residual MLP? Focusing on model and
+optimizer state alone, memory scales with three per-parameter components: the
+parameter itself, its gradient, and any per-parameter optimizer state. Plain
+minibatch SGD keeps no state, so in 32-bit floating point (fp32, 4 bytes per
+number) it consumes 8 bytes per parameter. Adam adds two fp32 tensors per
+parameter—exponential moving averages of the gradient and of the squared
+gradient. Because nearly all large-scale training runs use Adam or a close
+variant, that 16-byte figure is the practical baseline:
 
 | Training state                       | Precision | Bytes per parameter |
 |--------------------------------------|-----------|---------------------|
@@ -601,11 +597,11 @@ is the count that matters in practice:
 | Adam's average of their squares      | fp32      | 4                   |
 | Total                                |           | 16                  |
 
-These 16 bytes are a floor. They omit the *activations*, the intermediate
-values that backpropagation keeps from the forward pass, whose size grows
-with the batch; they also omit temporary workspaces and the memory the
-allocator holds in reserve. :numref:`sec_use_gpu` measures all of these on a
-GPU. For our residual MLP, the floor is:
+These 16 bytes per parameter represent a strict lower bound. They exclude
+intermediate *activations* saved during the forward pass for backpropagation
+(which grow with batch size and sequence length), temporary kernel workspaces,
+and allocator fragmentation—all of which we measure directly on a GPU in
+:numref:`sec_use_gpu`. For our residual MLP, that baseline comes out to:
 
 ```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-1}
 %%tab mxnet
@@ -646,11 +642,12 @@ print(f'{n} parameters: {(weights + grads + adam_state) / 2**20:.2f} MiB '
       'for weights + gradients + Adam state')
 ```
 
-The count checks by hand: the input layer has $20 \times 64 + 64 = 1344$
-parameters, each residual block $2 \times (64 \times 64 + 64) = 8320$, and
-the output layer $64 \times 10 + 10 = 650$, for a total of 18,634. Adam's
-state is real memory, allocated tensor by tensor. After one training step,
-its two running averages are two more copies of the model:
+We can double-check that count by hand: the input layer contributes
+$20 \times 64 + 64 = 1344$ parameters, each residual block contributes
+$2 \times (64 \times 64 + 64) = 8320$, and the output layer adds
+$64 \times 10 + 10 = 650$, totaling 18,634 parameters. Adam's optimizer state is
+not just a theoretical entry in a table—it is real memory allocated tensor by
+tensor on the first update, adding two full copies of the model:
 
 ```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-2}
 %%tab mxnet
@@ -706,28 +703,27 @@ so apart from a little packaging the file holds Adam's two running
 averages: 8 bytes per parameter, two more copies of the model.
 :end_tab:
 
-For our network the floor is 0.28 MiB, which is why memory has not
-mattered so far. For the 8-billion-parameter model the same arithmetic gives
-the 128 GB of the opening, whatever the batch size. One might hope that
-computing with 16-bit numbers, the *mixed-precision* training of
-:numref:`sec_numerics`, halves this figure. Unfortunately it does not lower
-the floor at all: an fp32 copy of the weights and fp32 running averages are
-kept, so that small updates are not rounded away
-:cite:`Micikevicius.Narang.Alben.ea.2018`, and the 16-bit copies come on
-top.
+For our tiny MLP, that baseline is a negligible 0.28 MiB, which is why memory
+barely crossed our minds in earlier chapters. Scale the exact same arithmetic to
+an 8-billion-parameter model, however, and you immediately hit 128 GB regardless
+of batch size. You might hope that 16-bit *mixed-precision* training
+(:numref:`sec_numerics`) cuts this static floor in half. Surprisingly, it does
+not: mixed precision keeps fp32 master copies of the weights and fp32 Adam
+moments so tiny updates do not vanish under rounding
+:cite:`Micikevicius.Narang.Alben.ea.2018`, with the 16-bit copies sitting on top.
 
 ### Counting Without Allocating
 :label:`subsec_count_without_alloc`
 
-Every count so far read the shapes of tensors that already existed. For the
-8B model this order is backwards: to learn whether its 32 GB of weights fit
-in memory, we would first have to allocate them. Luckily, the count needs
-only the shape and the dtype of each parameter, and both follow from the
-arguments of the constructors. Take the output layer of the 8B model, which
-maps a hidden state of width 4,096 to one score for each of the 128,256
-*tokens*, the words and pieces of words, that the model can output. Its
-weight has $4096 \times 128{,}256 = 525{,}336{,}576$ entries, 2.1 GB in
-fp32. We create the layer without its data and count.
+Every parameter count above inspected tensors that had already been allocated.
+For an 8B model, that gets the order backwards: checking whether 32 GB of
+weights fit in RAM should not require allocating 32 GB first! Fortunately,
+counting parameters requires only shapes and dtypes, both of which are
+determined purely by constructor arguments. Consider the output projection of
+Llama 3 8B, mapping a 4,096-dimensional hidden state to logits over 128,256
+vocabulary *tokens*. Its weight matrix has
+$4096 \times 128{,}256 = 525{,}336{,}576$ entries—2.1 GB in fp32. Below, we
+instantiate and count this layer without allocating its storage.
 
 :begin_tab:`mxnet`
 Gluon separates constructing a layer from initializing it. A `Dense`
@@ -828,36 +824,35 @@ clone.load_state_dict(net.state_dict())
 torch.equal(clone(X), net(X))
 ```
 
-Applied to every layer of the 8B model, the same count returns its 8 billion
-parameters, and with them the memory figures of the opening, without
-allocating a byte.
+Running the same abstract inspection across every layer of an 8B model yields
+its exact 8-billion parameter count—and the 128 GB training floor—without
+allocating a single byte of tensor memory.
 
 ## Shared, Frozen, and Averaged Parameters
 
 ### Tied Parameters
 
-One tensor can serve several roles in a model. The standard example is a
-language model, which reads a sequence of tokens from a vocabulary $V$ and
-predicts the next one (:numref:`sec_language-model`). Its first layer is an
-*embedding*, a $|V| \times d$ table whose row $v$ is the $d$-dimensional
-vector that represents token $v$. Its output layer maps a $d$-dimensional
-hidden state to $|V|$ scores, one per token, so its weight matrix has the
-same shape and an analogous meaning: one vector per token. Why keep two
-tables? *Tying* the two roles to a single tensor saves $|V| \times d$
-parameters, and the studies that introduced it found that it also improves
-the predictions :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`. This is
-at least plausible: words that can replace one another in a sentence should
-be similar as inputs and receive similar scores as outputs, and tying leaves
-the model only one notion of similarity to learn. The savings are large. In
-GPT-2 small :cite:`Radford.Wu.Child.ea.2019`, the shared
-$50257 \times 768$ table holds about 38.6 million of the model's 124 million
-parameters, roughly 31%.
+A single parameter tensor can play multiple roles inside a network. The classic
+example comes from language modeling (:numref:`sec_language-model`), where a
+model reads tokens from a vocabulary $V$ and predicts the next token. Its input
+*embedding* is a $|V| \times d$ lookup table whose $v^\textrm{th}$ row is the
+$d$-dimensional representation of token $v$, while its output head projects a
+$d$-dimensional hidden state back to $|V|$ token logits—another $|V| \times d$
+table with the exact same geometry and semantic meaning. *Tying* both layers to
+one shared weight matrix eliminates $|V| \times d$ parameters and often improves
+generalization :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`: tokens that
+behave interchangeably as inputs naturally deserve similar scores as outputs,
+and weight tying enforces a single unified token geometry. The memory savings
+can be dramatic—in GPT-2 small :cite:`Radford.Wu.Child.ea.2019`, the tied
+$50257 \times 768$ table accounts for roughly 38.6 million of the model's 124
+million parameters, nearly a third of the entire network.
 
 ![One weight matrix W, two call sites: the embedding looks up a row by token id, the output head multiplies by its transpose to produce logits. Tying means both point at the same tensor, so gradients from both uses sum into one place.](../img/bg-weight-tying.svg)
 :label:`fig_bg_weight-tying`
 
-:numref:`fig_bg_weight-tying` shows the two call sites. A toy language model,
-`ToyLM`, with a vocabulary of 100 tokens and $d = 16$, shows the mechanics.
+:numref:`fig_bg_weight-tying` illustrates the two call sites. Let's verify the
+mechanics on a miniature language model, `ToyLM`, with a 100-token vocabulary
+and hidden width $d = 16$.
 
 :begin_tab:`mxnet`
 Gluon stores a `Dense` weight as (outputs, inputs), so the head's weight has
@@ -971,8 +966,8 @@ tokens = jax.random.randint(rngs(), (2, 8), 0, 100)
  for path, value in nnx.state(lm, nnx.Param).flat_state()]
 ```
 
-Is the shared table counted once or twice? We compare the tied model with an
-untied twin.
+Does the shared matrix get counted once or twice? Let's compare the tied model
+against an untied counterpart.
 
 :begin_tab:`mxnet`
 The two blocks now hold one `Parameter` between them. `collect_params()`
@@ -1032,8 +1027,9 @@ untied = ToyLM(vocab_size=100, d=16, tied=False, rngs=rngs)
  sum(x.size for x in jax.tree.leaves(nnx.state(untied, nnx.Param))))
 ```
 
-The tied model has $1600 + 272 = 1872$ parameters: the table and the body
-layer. The untied one adds a second $100 \times 16$ table, 3472 in all.
+The tied model contains $1600 + 272 = 1872$ parameters (one embedding table plus
+the body layer), whereas the untied version adds a second $100 \times 16$ table
+for 3472 parameters in all.
 
 :begin_tab:`mxnet`
 Keeping both names is deliberate: `save_parameters` writes the tensor under
@@ -1076,20 +1072,19 @@ sd = lm.state_dict()
  [name for name, _ in lm.named_parameters()])
 ```
 
-What happens to the gradients? During backpropagation each use of the tensor
-contributes a gradient, and the contributions add up in the gradient of the
-one shared tensor. Let $\mathbf{W}_\textrm{emb}$ and $\mathbf{W}_\textrm{head}$
-be the two tables of the untied model. If both hold the values of the tied
-table $\mathbf{W}$, the two models compute the same function, and the chain
-rule gives
+What happens during backpropagation when a tensor is used twice? By the
+multivariable chain rule, each call site contributes its own gradient term, and
+both contributions sum into the gradient of the shared tensor. Writing
+$\mathbf{W}_\textrm{emb}$ and $\mathbf{W}_\textrm{head}$ for the two tables of
+the untied model initialized to the same values as the tied matrix $\mathbf{W}$,
+the two models compute the exact same function and satisfy
 
 $$\frac{\partial L}{\partial \mathbf{W}} =
 \frac{\partial L}{\partial \mathbf{W}_\textrm{emb}} +
 \frac{\partial L}{\partial \mathbf{W}_\textrm{head}}.$$
 
-The tied gradient is the sum of the untied gradients. We check this by
-loading the tied model's values into the untied one and running the same
-backward pass through both:
+Let's verify this identity numerically by copying the tied weights into the
+untied model and comparing gradients on the same batch:
 
 ```{.python .input #parameters-state-memory-tied-parameters-4}
 %%tab mxnet
@@ -1145,12 +1140,12 @@ jnp.allclose(g_tied['emb']['embedding'],
 ### Frozen Parameters
 :label:`subsec_freezing`
 
-Fine-tuning adapts a model trained on one task to another
-(:numref:`sec_fine_tuning`). A common recipe keeps the pretrained layers
-fixed and trains only a new output layer, which needs little data and little
-memory. Keeping a parameter fixed is called *freezing* it. We freeze
-everything but the output layer of a fresh copy of our residual MLP, which
-should leave 650 of its 18,634 parameters trainable.
+When fine-tuning a pretrained network on a new task (:numref:`sec_fine_tuning`),
+a common strategy is to keep the pretrained backbone fixed and train only a
+fresh output head, dramatically cutting both data requirements and optimizer
+memory. Locking parameters against gradient updates is called *freezing*. Let's
+freeze every layer except the output head of a fresh residual MLP, leaving just
+650 of its 18,634 parameters trainable.
 
 :begin_tab:`mxnet`
 In Gluon, freezing is the switch we have already met: set a parameter's
@@ -1236,8 +1231,8 @@ n_train = count(nnx.state(finetune, trainable))
 (n_train, count(nnx.state(finetune, nnx.Param)))
 ```
 
-One Adam step should now move the head and nothing else. We compare every
-parameter before and after it.
+Taking one Adam step should now update only the output head while leaving all
+earlier layers untouched. Let's check every parameter before and after the step.
 
 :begin_tab:`mxnet`
 The `Trainer` can receive the whole dictionary: it reads each parameter's
@@ -1329,20 +1324,21 @@ filter, it holds Adam's running averages for the 650 trainable parameters
 only.
 :end_tab:
 
-Freezing has two limits, and neither raises an error. The first is merely
-wasteful: a freeze does not reclaim optimizer state that already exists. An
-optimizer that was built over all parameters and has taken a step keeps
-their running averages, 8 bytes per parameter, whatever is frozen
-afterwards. For our 18,634 parameters nobody will mind. The last exercise
-works out what the same oversight means for the 8B model.
+Freezing comes with two subtle pitfalls, neither of which raises an error.
+First, freezing a parameter does *not* reclaim optimizer state that has already
+been allocated. If an Adam optimizer was constructed over all parameters and has
+already stepped, it continues holding 8 bytes per parameter of running moments
+even for layers frozen later—harmless for 18,634 parameters, but costly at
+8-billion-parameter scale (as explored in the exercises).
 
-The second limit matters more. Freezing stops gradients, and some state
-changes without one. Batch normalization (:numref:`sec_batch_norm`) updates
-its running mean and variance in the *forward pass*, whenever the layer runs
-in training mode. No optimizer is involved, so there is no reason why
-freezing the layer's parameters should hold its statistics still. We pass
-one batch through such a layer in training mode, without any optimizer
-step, and ask whether the running mean is unchanged.
+The second pitfall is even easier to overlook: freezing blocks gradients, yet
+some layer state mutates *without* gradients. In particular, batch normalization
+(:numref:`sec_batch_norm`) updates its running mean and variance during the
+*forward pass* whenever the layer runs in training mode, completely bypassing
+the optimizer. Simply freezing a BatchNorm layer's trainable weights therefore
+does not automatically lock its running statistics. Let's pass a shifted batch
+through a frozen BatchNorm layer in training mode—with no optimizer step at
+all—and check whether its running mean drifts.
 
 :begin_tab:`mxnet`
 In Gluon the running statistics are parameters with `grad_req='null'`, and
@@ -1446,20 +1442,19 @@ use_running_average=True)` switches the mode on a view of the whole model.
 
 ### Weight Averages
 
-A last kind of state is derived from the parameters but not trained: an
-*exponential moving average* (EMA) of the weights, kept next to the trained
-ones and used for evaluation. After every optimizer step, the average
-$\bar{\mathbf{w}}$ moves a fraction of the way toward the current weights
-$\mathbf{w}$,
+A final form of non-gradient state is an *exponential moving average* (EMA) of
+the model weights, maintained alongside the live parameters for evaluation.
+After each optimizer step, the averaged weights $\bar{\mathbf{w}}$ step partway
+toward the current weights $\mathbf{w}$,
 
 $$\bar{\mathbf{w}} \leftarrow 0.9\, \bar{\mathbf{w}} + 0.1\, \mathbf{w},$$
 
-so it lags behind the iterates and smooths out their fluctuations. Whether
-it evaluates better than the last iterate is a question for
-:numref:`sec_training_recipes`, which measures it. All that concerns us here
-is that the average is state: like BatchNorm statistics, it changes outside
-backpropagation and belongs in the checkpoint. We start the average at the
-current weights and continue the fine-tuning above for five steps.
+smoothing out step-to-step stochastic fluctuations. We evaluate when EMA
+improves generalization in :numref:`sec_training_recipes`; here, the key
+systems point is that an EMA is persistent model state updated outside
+backpropagation, so it must be saved alongside checkpoints if training is to
+resume cleanly. Below, we initialize an EMA from the current weights and run
+five fine-tuning steps.
 
 :begin_tab:`mxnet`
 Gluon has no built-in weight averaging, but with all state reachable through
@@ -1540,37 +1535,36 @@ float(jnp.abs(avg['layers'][3]['bias']
               - current['layers'][3]['bias']).max())
 ```
 
-The printed number is the gap between the averaged and the current bias of
-the head, and it is 0.3686 on every run. This is no accident, and we can
-predict it. The loss is the sum of the outputs, so the gradient of each bias
-entry is the batch size, 2, at every step. Adam divides its average of the
-gradient by the square root of its average of the squared gradient, so a
-gradient that never changes moves each entry by the learning rate, 0.1, per
-step. If the weights move by 0.1 per
-step, the gap $e$ between the average and the weights obeys
-$e \leftarrow 0.9\,(e + 0.1)$, which starts at 0 and reaches $0.3686$ after
-five steps. The average carries a memory of earlier weights that the weights
-themselves have lost, so a checkpoint that dropped it could not resume the
-average where it stopped.
+Notice that the maximum gap between the EMA bias and the live bias is
+deterministically 0.3686 on every run—a value we can derive directly. Because
+the loss sums all outputs across a batch of size 2, every bias entry receives a
+constant gradient of 2 on every step. Adam normalizes its running gradient by the
+root mean square of past gradients, so under a constant gradient every step
+shifts each entry by the learning rate, 0.1. Thus the lag $e$ between the EMA
+and the live weights follows the recurrence $e \leftarrow 0.9\,(e + 0.1)$
+starting from $e = 0$, reaching $0.3686$ after five steps. Because $\bar{\mathbf{w}}$
+accumulates a history that the live weights no longer contain, dropping the EMA
+from a checkpoint loses that trajectory permanently.
 
-Every parameter we met in this section, whether tied, frozen, or averaged,
-started from a value that some rule chose. The next section asks which rule
-to choose, and how to apply it over the tree.
+Every parameter we inspected in this section—tied, frozen, or averaged—began
+from initial values supplied by the framework. In the next section, we examine
+how those initial values are chosen and how to control initialization across the
+entire module tree.
 
 ## Summary
 
-A model's state is a tree of named tensors, and registration decides which
-consumers see each one: the optimizer sees the parameters, while checkpoints
-and device moves also see buffers, persistent tensors such as running
-statistics that receive no gradient. Unregistered tensors are left behind.
-Training with Adam in fp32 stores 16 bytes per parameter before any
-activation: weight, gradient, and Adam's two running averages. For an
-8-billion-parameter
-model that is 128 GB. Tying gives two layers one tensor, which is counted
-and updated once and receives the sum of the gradients of its uses.
-Freezing keeps parameters from changing, but it does not free optimizer
-state that already exists, and it does not stop the updates of running
-statistics in training mode.
+A model's persistent state forms a tree of named tensors, and registration
+determines which framework operations see each tensor: optimizers update
+*parameters*, whereas checkpoints and device transfers also include *buffers*
+(persistent tensors without gradients, such as running statistics), and
+unregistered attributes are silently skipped. Training in fp32 with Adam
+requires a baseline of 16 bytes per parameter before accounting for activations
+(weights, gradients, and two Adam moments—128 GB for an 8B model), and abstract
+shape inspection lets us compute such budgets without allocating memory. Weight
+tying aliases one tensor across multiple roles so it is counted once and
+receives the sum of gradients from all call sites; freezing halts gradient
+updates but neither releases existing optimizer state nor automatically stops
+forward-pass updates to BatchNorm running statistics.
 
 ## Exercises
 

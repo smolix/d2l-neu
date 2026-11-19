@@ -6,31 +6,30 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Reproducibility and Inspection
 :label:`sec_repro`
 
-Suppose we change one line of a training script and the validation accuracy
-of a Fashion-MNIST classifier rises by 0.3 points. Before we credit the
-change, we need to know how much two runs of the unchanged script differ.
-For softmax regression we measure the answer in
-:numref:`subsec_seed_spread`: five runs that differ only in their seed end
-one to four points apart, because each run draws different initial weights
-and visits the examples in a different order. A gain of 0.3 points is well
-inside that range.
+Suppose you tweak a single line in a training script and validation accuracy on
+Fashion-MNIST edges up by 0.3 percentage points. Before celebrating, you need to
+know how much two runs of the *unchanged* script vary on their own. In
+:numref:`subsec_seed_spread`, we run softmax regression five times differing only
+in their random seed and watch final accuracies span one to four percentage
+points simply from different initial weights and batch shuffling—swamping a 0.3
+point gain completely.
 
-A run that fails poses a second problem of the same kind. If the loss turns
-into NaN after hours of training, we want to repeat the run exactly up to
-that point and then look inside the model to see which layer produced the
-first non-finite number.
+Debugging a crashing training run presents the mirror-image problem: if the loss
+explodes to NaN after hours of training, we want to reproduce the exact sequence
+of steps leading up to the crash and then peer inside the running network to
+pinpoint which layer emitted the first non-finite value.
 
-This section first makes runs repeatable. Every random draw comes from a
-generator whose sequence of numbers is fixed by a seed, so seeding the
-generators fixes the draws. That is the easy part. Repeating a run bit for
-bit also requires that the arithmetic adds numbers in a fixed order, which
-a GPU does not promise. The section then looks inside running models with
-*hooks*, functions that observe each layer of an unmodified model as it
-computes. The two halves serve one purpose: a measurement taken inside a
-model can be compared across two versions of the code only if the runs
-differ in nothing but that code. On a first reading, the subsections on
-generator objects and on loader workers can be skimmed; they matter once a
-data pipeline draws random numbers of its own.
+This section addresses both halves together. First, we make runs repeatable by
+controlling pseudorandom number generators—global seeds, private generator
+objects, and multi-worker data loaders—and then tackle the trickier GPU wrinkle:
+floating-point non-associativity under parallel atomic reductions. Second, we
+inspect live models without modifying their code using *hooks* (and their
+framework equivalents) to log activation scales, catch the first NaN layer, and
+monitor gradient norms. Both halves reinforce each other: internal diagnostics
+are only comparable across two code versions when nothing else changes between
+runs. On a first pass, feel free to skim the subsections on generator objects
+and data-loader workers, revisiting them once your data pipelines perform random
+augmentations.
 
 ```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
 %%tab mxnet
@@ -84,22 +83,21 @@ from torch.utils.data import DataLoader, Dataset
 ## Seeds and Random Number Generators
 :label:`subsec_seeds_randomness`
 
-Randomness enters a training run in more places than one might list at
-first: initialization draws every weight (:numref:`sec_init_param`), dropout
-draws a new mask at every step, the data loader shuffles the examples
-differently in every epoch, data augmentation draws crops and flips, and
-parallel loader workers do some of this work in separate processes. Each
-draw comes from a *pseudorandom number generator*, a deterministic algorithm
-whose sequence of outputs is fixed by its starting state, the *seed*.
-Seeding every generator that a run consults therefore fixes every draw.
+Randomness sneaks into a training pipeline from far more places than most
+practitioners realize: weight initialization (:numref:`sec_init_param`), dropout
+masks at every step, epoch-by-epoch minibatch shuffling, random data
+augmentations (crops, flips, color jitter), and parallel data-loader worker
+processes. Every random number comes from a *pseudorandom number generator*
+(PRNG)—a deterministic algorithm whose entire sequence is determined by its
+initial *seed*. Seeding every generator the pipeline touches therefore locks
+down every random draw.
 
 ### Global Seeds
 
-A framework's random functions either consult a global generator or take
-their state as an argument. Which of the two a framework does decides how a
-run is seeded. To see a seed at work, the function below trains a small
-network for five steps on random data and draws everything, weights and
-data, from the one source that its seed fixes.
+Deep learning frameworks either pull random numbers from a shared global
+generator or require passing generator state explicitly as an argument. Let's
+demonstrate seeding on a small five-step training loop where weights and
+synthetic inputs all come from one seeded source.
 
 :begin_tab:`mxnet`
 `mnp.random.seed(k)` seeds MXNet's global generators, one per device, in a
@@ -227,11 +225,11 @@ print('same seed, identical loss and weights:',
 print('different seed:', loss_a, 'vs', loss_c)
 ```
 
-The two runs with seed 0 agree *bitwise*, down to the last bit of the loss
-and of every weight: same initial weights, same data, same gradients, same
-operations in the same order. (The order is the one thing a seed does not
-control; we return to it in :numref:`subsec_deterministic_arithmetic`.) The
-run with seed 1 ends with a different loss.
+Both runs with `seed=0` match *bit for bit*—every weight and the final loss are
+identical—because identical initial weights, data, and deterministic arithmetic
+produce identical gradients (we examine operation order in
+:numref:`subsec_deterministic_arithmetic`). Changing the seed to `1` yields a
+distinct trajectory and loss.
 
 :begin_tab:`tensorflow`
 We placed the TensorFlow run on the CPU. On a GPU, the same seeded code
@@ -241,12 +239,12 @@ bits.
 
 ### Generator Objects
 
-A single global generator couples all the code that draws from it. Inserting
-one extra random call, a new layer's initialization or a stray draw while
-debugging, shifts every number drawn after it, so the data split, the
-initialization, and the dropout masks all change at once. A *generator
-object* is a private stream with its own seed, which unrelated draws cannot
-shift.
+Relying on a single global PRNG couples every piece of code that draws from it:
+adding a single extra layer or a temporary random print during debugging shifts
+the entire downstream stream, silently altering train/validation splits, weight
+initializations, and dropout masks all at once. A private *generator object*
+isolates a stream behind its own seed so unrelated draws elsewhere can never
+perturb it.
 
 :begin_tab:`mxnet`
 MXNet offers no generator objects. The substitute is to seed again
@@ -325,13 +323,12 @@ pipeline instead takes a seed directly, which we use next.
 
 ### Data Loader Workers
 
-Data loaders often prepare minibatches in parallel *worker* processes. A
-worker that draws random numbers, for data augmentation for instance, needs
-a stream of its own. Two failures are common, and neither raises an error.
-If every worker starts as a copy of the main process, as with the *fork*
-start method, the workers inherit the same generator state and apply the
-same "random" augmentations. If each worker seeds itself from the operating
-system's entropy, no two runs agree.
+When data loaders prepare minibatches in parallel *worker* processes, random
+data augmentation introduces two silent failure modes. If workers are spawned via
+OS `fork` as clones of the main process without re-seeding, every worker
+inherits the exact same generator state and generates identical "random"
+augmentations. Conversely, if each worker initializes from OS entropy, no two
+runs will ever match.
 
 :begin_tab:`mxnet`
 Gluon's `DataLoader` starts its workers as copies of the main process,
@@ -461,15 +458,15 @@ the output fixed.
 
 ### Randomness as a Value
 
-The worker failures above arise because the state of a generator is copied
-or shared without appearing in the program's data flow. JAX makes randomness
-a value instead: every random function takes a key, the same key gives the
-same numbers, and independent streams come from splitting a key. A key can
-still be reused by mistake, but the reuse is visible in the code. The cost
-is that every function that draws random numbers must accept a key and pass
-split keys on. A global seed is the convenient form of the same contract: one
-implicit key that all code shares. Generator objects recover the explicit
-form where it matters.
+Every worker bug above stems from hidden mutable generator state being copied or
+shared implicitly behind the scenes. JAX eliminates hidden state by treating
+randomness as an explicit value: every random call takes a key, calling it twice
+with the same key returns identical numbers, and independent streams come from
+explicitly splitting keys. While you can still reuse a key accidentally, the
+reuse is right there in the code. The price is plumbing keys through every
+stochastic function. A global seed is simply the implicit shorthand for that
+same contract, and private generator objects recover explicit isolation wherever
+needed.
 
 :begin_tab:`mxnet`
 MXNet stands at the implicit end: seeding once at the start, and again
@@ -495,11 +492,11 @@ key and split it, and reusing a key reproduced the permutation.
 ### The Spread across Seeds
 :label:`subsec_seed_spread`
 
-We can now measure the spread that the opening asked about. The function
-below trains the softmax regression of :numref:`sec_softmax_concise` on
-Fashion-MNIST for three epochs on a GPU, seeds every generator that the run
-consults, and returns the final validation accuracy and the trained
-weights. We run it with the seeds 0 to 4.
+Now let's measure the seed-to-seed variance mentioned at the start of the
+section. Below we train softmax regression (:numref:`sec_softmax_concise`) on
+Fashion-MNIST for three epochs on a GPU across five seeds (0 through 4), seeding
+every generator involved and returning each run's final validation accuracy and
+weights.
 
 :begin_tab:`mxnet`
 `mnp.random.seed` fixes the initialization; the loader shuffles with NumPy's
@@ -605,14 +602,13 @@ print('validation accuracy (%):', ' '.join(f'{a:.1f}' for a in accs))
 print(f'mean {accs.mean():.1f}, max - min {np.ptp(accs):.1f} points')
 ```
 
-The five runs differ only in their seeds, yet their final accuracies lie
-one to four points apart, around 81%. A gain of 0.3 points, measured on one
-run of each variant, is well inside that spread. To credit a change we
-compare the mean over several seeds per variant, together with the spread.
+Even though all five runs execute identical code and hyperparameters, their
+final accuracies spread by one to four percentage points around 81%—confirming
+that a 0.3-point jump from a single run is pure noise. Sound empirical
+comparisons always report the mean and spread across multiple seeds.
 
-The seed is all that separated these runs. To confirm it, we repeat the
-run with seed 0 and compare it with the first one, accuracy and every
-weight:
+To verify that seed choice alone drove those differences, let's rerun `seed=0`
+and compare both accuracy and every weight against the first run:
 
 ```{.python .input #reproducibility-inspection-seed-spread-2}
 %%tab mxnet
@@ -647,9 +643,10 @@ print('same accuracy:', acc == runs[0][0],
       f'| largest difference {float(jnp.abs(w - runs[0][1]).max()):.2g}')
 ```
 
-The rerun reproduces the accuracy of the first run exactly. Whether every
-weight agrees as well depends on the order in which the GPU adds numbers,
-which a seed does not fix (:numref:`subsec_deterministic_arithmetic`).
+The rerun matches the first run's validation accuracy identically. Whether every
+single weight matches down to the last bit depends on whether the GPU sums
+floating-point numbers in a fixed order—something seeds alone do not control
+(:numref:`subsec_deterministic_arithmetic`).
 
 :begin_tab:`mxnet`
 Here every weight agrees bitwise: the operations of this model add in a
@@ -675,14 +672,14 @@ fixed order on the GPU.
 ## Deterministic Arithmetic
 :label:`subsec_deterministic_arithmetic`
 
-Seeding fixes which numbers the program draws. It does not fix how the
-arithmetic combines them. Floating-point addition is not associative: every
-sum is rounded to the nearest representable number, so adding the same
-numbers in a different order can give a different result.
+Seeding fixes *which* random numbers a run draws, not *how* floating-point
+arithmetic combines them. Because every floating-point addition rounds to the
+nearest representable value, floating-point addition is *not* associative:
+changing summation order can change the result.
 
-Three float32 numbers suffice to show it. Near $10^8$, adjacent float32
-numbers are 8 apart (:numref:`sec_numerics`), so $-10^8 + 1$ rounds back to
-$-10^8$:
+Three float32 numbers make the effect unmistakable. Near $10^8$, adjacent
+float32 numbers lie 8 apart (:numref:`sec_numerics`), so $-10^8 + 1$ rounds
+right back to $-10^8$:
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
 %%tab mxnet
@@ -708,23 +705,21 @@ a, b, c = [jnp.array(v, dtype=jnp.float32) for v in (1e8, -1e8, 1.0)]
 print(float((a + b) + c), float(a + (b + c)))  # same numbers, regrouped
 ```
 
-Regrouping changes the result from 1 to 0. In a long sum the effect is
-smaller but of the same kind: adding a million random numbers forward and
-backward usually gives results that differ in their last bits.
+Simply shifting parentheses changes the answer from `1.0` to `0.0`. In long
+reductions the discrepancy is subtler but pervasive: summing a million floats
+forward versus backward routinely differs in the lowest bits.
 
-On a CPU, the order in which one operation adds its numbers is usually fixed
-for a given number of threads, so a seeded run repeats. On a GPU, many
-threads add partial sums at the same time, and some operations combine them
-with *atomic additions*, which commit each partial sum in whatever order the
-threads happen to finish. Examples are the gradients of an embedding lookup
-or of a scatter operation, some convolution gradients, and some reductions.
-Two seeded runs on the same machine can then differ in the last bits of
-their weights, and over many training steps such differences grow until the
-loss curves differ visibly. The remedy is a switch that replaces such
-operations with deterministic ones, which add in a fixed order and are often
-slower. The cell below shows both. A *scatter-add* sums a million random
-numbers into ten bins, each number into the bin its index names; we run it
-twice on a GPU and compare the two results bit by bit.
+On a CPU with a fixed thread count, reduction order usually stays constant, so
+seeded runs repeat cleanly. On a GPU, thousands of threads race in parallel, and
+several fast kernels—including embedding gradients, scatter-adds, certain
+convolution backward passes, and reductions—accumulate partial results via
+*atomic additions* that land in whatever order threads finish. Two identically
+seeded runs on the same GPU can therefore diverge in their lowest bits, which
+chaotic gradient steps eventually amplify into visibly distinct loss curves.
+Every framework provides a determinism mode (or alternative kernel) that forces
+a fixed summation order, typically at some speed cost. Let's watch this directly
+on a GPU *scatter-add* summing one million random numbers into ten bins twice in
+a row.
 
 :begin_tab:`mxnet`
 MXNet's switch, the environment variable `MXNET_ENFORCE_DETERMINISM=1`,
@@ -831,9 +826,9 @@ else:
     print('no GPU: on a CPU this sum adds in a fixed order')
 ```
 
-The two scatter-adds without the switch differ in their last bits, by a
-few thousandths on bin sums of a few hundred; the deterministic computation
-agrees with itself bitwise.
+Without determinism enabled, two consecutive scatter-adds on the exact same GPU
+data differ by a few thousandths on sums of a few hundred; with determinism
+enabled, both calls match bit for bit.
 
 :begin_tab:`tensorflow`
 With the switch on, random operations must have a seed, since an operation
@@ -853,26 +848,25 @@ except RuntimeError as e:
 tf.keras.utils.set_random_seed(random.SystemRandom().getrandbits(31))
 ```
 
-Bitwise agreement holds only for one machine, one library version, and one
-configuration of these switches; no framework promises it across releases,
-across hardware, or between CPU and GPU. Bitwise reproducibility is
-therefore a tool for debugging: it lets us find the step at which two runs
-first differ. The scientific goal is weaker and more robust. A conclusion,
-such as "the change raises accuracy", should hold across seeds, so we report
-the mean and the spread over several runs rather than one run, as for the
-five seeds of :numref:`subsec_seed_spread` (about 81%, with one to four
-points between the best and the worst run). As with the
-number formats of :numref:`sec_numerics`, a conclusion that changes with the
-seed or with the last bits of the arithmetic needs more evidence.
+Remember the proper scope of bitwise reproducibility: it holds only on a single
+machine, software stack, and hardware configuration—no framework promises
+identical bits across library upgrades, different GPU architectures, or CPU vs.
+GPU. Bitwise determinism is an invaluable *debugging* tool for bisecting the
+exact step where two runs diverge. Scientific reproducibility is both looser and
+stronger: any genuine improvement ("this architectural change improves
+accuracy") must hold robustly across multiple seeds, reported as mean and spread
+just as in :numref:`subsec_seed_spread` (~81%, spanning 1–4 points). As with
+16-bit formats (:numref:`sec_numerics`), any claim that flips under a new seed
+or last-bit rounding needs stronger evidence.
 
 ## Model Inspection with Hooks
 
-A repeatable run tells us that a problem will recur, not where it arises.
-To find out, we observe what each layer computes during the run. Editing the
-`forward` method of every layer to print or store its output is tedious, and
-impossible for a model that came from a library or a checkpoint whose code
-we do not want to change. A *hook* is a function that the framework calls at
-a fixed point of each layer's computation, from outside the layer's code.
+Repeating a bug reliably proves it is real, not *where* inside the network it
+originates. Inserting print statements into every layer's `forward` method is
+clumsy—and impractical for third-party library models whose source code you do
+not want to fork. A *hook* solves this cleanly: it is a callback registered from
+outside the model that the framework invokes automatically before or after a
+layer executes.
 
 :begin_tab:`mxnet`
 Hooks run in the `__call__` wrapper around `forward`
@@ -913,14 +907,12 @@ computation of each module.
 ![The `__call__` wrapper as a pipeline: input flows through pre-hooks, then forward, then hooks, to the output, with the two hook stages dashed and orange against forward's solid blue, and a side arrow from the hooks stage to an observer that can capture, check, or modify.](../img/bg-hooks.svg)
 :label:`fig_bg_hooks`
 
-As a test model we use a stack of eight residual blocks of width 64 between
-an input layer with 20 inputs and an output layer with 10 outputs. The block
-is the one of :numref:`sec_model_construction`: it adds the output of its
-*body*, a linear layer, a ReLU, and a second linear layer, to its input,
-$\mathbf{h} = \mathbf{x} + \textrm{body}(\mathbf{x})$. The weights start
-from Xavier initialization (:numref:`subsec_xavier`) and the biases at zero.
-We do not seed this model. Its weights are drawn afresh in every run, which
-is why the numbers below are quoted as ranges.
+For our inspection examples, we build an eight-block residual stack of width 64
+between a 20-input layer and a 10-output head (:numref:`sec_model_construction`),
+each block computing $\mathbf{h} = \mathbf{x} + \textrm{body}(\mathbf{x})$ with
+Xavier-initialized weights (:numref:`subsec_xavier`) and zero biases. We
+deliberately leave this network unseeded so each run draws fresh random weights,
+which is why the diagnostic measurements below are cited as typical ranges.
 
 :begin_tab:`mxnet`
 The seeded runs above left MXNet's global generator at a fixed state, which
@@ -1025,11 +1017,10 @@ X = jax.random.normal(d2l.get_key(), (256, 20))
 ### Activation Statistics
 :label:`subsec_activation_stats`
 
-The initialization experiments of :numref:`sec_init_param` measured the
-standard deviation of the activations at every depth. With hooks, the same
-measurement takes a few lines on an unmodified model. We record the standard
-deviation of each layer's output on a minibatch of 256 standard normal
-inputs.
+In :numref:`sec_init_param`, we manually looped through blocks to measure
+activation standard deviations across depth. With hooks, we can collect the
+exact same profile from an unmodified model in just a few lines on a minibatch
+of 256 standard normal inputs:
 
 ```{.python .input #reproducibility-inspection-capturing-activation-statistics}
 %%tab mxnet
@@ -1081,22 +1072,19 @@ for k, layer in enumerate(net.layers):
     print(f'{type(layer).__name__:15s} std {out.std():.2f}')
 ```
 
-The standard deviation grows from block to block, from about 0.7 after the
-input layer to roughly 3 to 4 after the eighth block. Both numbers can be
-predicted. Xavier initialization gives the input layer, with 20 inputs and
-64 outputs, weights of variance $2/84$, so its output has variance
-$20 \cdot 2/84 \approx 0.48$ and standard deviation 0.69. Each block then
-adds its body's output to its input, and the two are nearly uncorrelated, so
-their variances add. The body's output has about half the variance of its
-input: the first linear layer keeps the variance, the ReLU halves the mean
-square, and the second linear layer keeps it again. The variance therefore
-grows by a factor of about 1.5 per block, and the standard deviation by
-about $\sqrt{1.5} \approx 1.22$. Eight blocks should multiply 0.69 by
-$1.5^4 \approx 5$, which gives 3.5, and the table agrees to within the
-scatter of one random draw. This is the calculation of
-:numref:`sec_init_param` with a factor of 1.5 where He initialization gave
-2, and it is the reason why the bodies of deep residual networks are often
-initialized with smaller weights.
+Activation standard deviations climb steadily with depth—from roughly 0.7 right
+after the input layer to around 3–4 after the eighth block—matching theory
+closely. Xavier initialization gives the $20 \to 64$ input layer weight variance
+$2/84$, yielding output variance $20 \cdot 2/84 \approx 0.48$ (standard
+deviation 0.69). Each residual block then adds an approximately uncorrelated
+body output whose variance is half its input variance (the first linear layer
+preserves variance, ReLU halves the mean square, and the second linear layer
+preserves it), multiplying total variance by $1.5$—and standard deviation by
+$\sqrt{1.5} \approx 1.22$—at every block. Across eight blocks,
+$0.69 \times 1.5^4 \approx 3.5$, right in the middle of our measurements. This
+is the exact variance-growth analysis of :numref:`sec_init_param` (with factor
+$1.5$ here instead of $2$ under He initialization), underscoring why deep
+residual branches benefit from scaled-down output projections.
 
 :begin_tab:`mxnet`
 Two rules keep hooks safe. First, *detach before storing*: the hook above
@@ -1140,12 +1128,11 @@ those values.
 ### A NaN Finder
 :label:`subsec_nan_finder`
 
-When a loss becomes NaN at step 40,000, the useful question is which layer
-produced the first non-finite value. A hook on every layer that checks its
-output for infinities and NaNs answers it in one forward pass: the first
-hook to fire names the layer, because hooks fire in the order the layers
-compute. To test this, we put a NaN into one weight of the third residual
-block, the module at index 3 of the stack:
+When a training loss suddenly turns NaN at step 40,000, your first diagnostic
+question is *which layer emitted the first non-finite value?* Attaching a
+finiteness hook to every leaf layer pinpoints the culprit in a single forward
+pass, because hooks execute in forward execution order. To test our detector, we
+deliberately inject a NaN into one weight of the third residual block (index 3):
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}
 %%tab mxnet
@@ -1272,18 +1259,18 @@ they compute. For a search during training, `jax.config.update('jax_debug_nans',
 True)` makes JAX raise an error at the first operation that produces a NaN.
 :end_tab:
 
-A planted NaN is the easy case, since we knew where to look. In a real run
-the finder names the first symptom, and the cause lies at or before it:
-activations may grow over several layers before one of them overflows.
+Of course, catching a planted NaN is the clean demo case; in a real training
+crash, the finder points you to the first *symptom*, while the underlying cause
+(such as runaway activation growth culminating in overflow) may begin several
+layers earlier.
 
 ### Gradient Inspection
 
-Gradients can be inspected in the same way. The forward signal grew with
-depth. Does the backward signal do the same? We record the norm of the
-gradient with respect to the output of each residual block, and the
-gradient norms of the first linear layer of the third residual block. As a
-loss we take the mean squared output of the stack on a minibatch of 256
-standard normal inputs.
+We can monitor the backward pass with the same precision. Since forward
+activations grew across our eight residual blocks, do gradients grow in reverse?
+Using the mean squared output on 256 standard normal inputs as our loss, we log
+the gradient norm at each residual block's output alongside the weight and bias
+gradient norms of the first linear layer in block 3.
 
 :begin_tab:`mxnet`
 Gluon offers no backward hooks, so nothing can observe gradients *while* the
@@ -1388,43 +1375,43 @@ print(f"kernel {float(jnp.linalg.norm(layer['kernel'][...])):.3g}, "
       f"bias {float(jnp.linalg.norm(layer['bias'][...])):.3g}")
 ```
 
-Read from the last block back to the first, the gradient norm grows by a
-factor of roughly 1.2 to 1.4 per block, five- to sixfold over the stack.
-This mirrors the forward growth of the activations, 1.22 per block, and has
-the same cause: on the way back, too, each block adds the signal through
-its body to the signal that bypasses it.
+Reading backward from the eighth block to the first, the output gradient norm
+grows by roughly $1.2\times$ to $1.4\times$ per block—five- to sixfold across
+the stack—mirroring the forward $1.22\times$ growth for the exact same reason:
+on the backward pass, each residual block adds the branch gradient back onto the
+skip-connection gradient. Isolated parameter gradient norms mean little on their
+own, but comparing them across depth or tracking them across training steps
+reveals vanishing or exploding dynamics immediately (see the exercises).
 
-The two norms of a single layer mean little in isolation. They become
-informative when compared across depth or across training steps, which the
-exercises do.
+Remember what these debugging tools do and do not solve: they cannot force two
+different machines to match bit for bit, nor can a single run settle whether an
+experimental gain is real—for that, compare distributions across multiple seeds.
+Yet combined with resumable checkpoints (:numref:`sec_read_write`), you now have
+every piece needed to replay a failing job right up to the crash and attach a
+diagnostic hook to isolate the exact layer at fault.
 
-What none of these tools can do is make two different machines agree, or
-decide whether a difference between two runs matters; for that we compare
-results across seeds. Nor did we carry out the whole procedure with which
-the section opened, replaying a failed run from a checkpoint
-(:numref:`sec_read_write`) with the finder attached, though all its parts
-are now at hand.
-
-The 8-billion-parameter model of the chapter introduction has not become
-any smaller: its weights still take 32 GB in fp32. But we can now say how
-such a model is built, initialized, stored, placed on a device, and
-observed, each time by a walk over the same tree of modules. The chapters
-that follow take these tools for granted, beginning with the convolutional
-networks of :numref:`chap_cnn`.
+The 8-billion-parameter language model that opened this chapter has not shrunk—it
+still weighs 32 GB in fp32—but nothing about how frameworks handle it is a black
+box anymore. Constructing architectures from configs, auditing parameters and
+buffers, initializing deep stacks, building custom layers and gradients, training
+in mixed precision, saving crash-safe checkpoints, managing GPU memory, and
+inspecting live runs all operate over the exact same tree of modules. Equipped
+with this engineering toolkit, we are ready to move on to architectures built
+around the structure of real-world data, starting with convolutional neural
+networks in :numref:`chap_cnn`.
 
 ## Summary
 
-Every random draw in a training run comes from a generator fixed by a seed.
-Seeding each generator the run uses fixes the draws, and private generator
-objects or explicit keys keep unrelated draws from shifting them. Seeding
-does not fix the arithmetic: floating-point addition depends on the order
-of the terms, and some GPU operations add in a varying order, so bitwise
-repetition also needs deterministic operations and holds only on one
-machine and one software version. It is a tool for debugging; scientific
-conclusions should hold across seeds. Hooks, or their equivalents in each
-framework, observe the outputs and gradients of every layer of an unmodified
-model, which turns the question of where the first NaN appeared into one
-forward pass.
+Every random choice in training—initialization, shuffling, dropout, and data
+augmentation—traces back to pseudorandom number generators controlled by seeds,
+with private generator objects or explicit keys preventing unrelated code from
+perturbing a stream. Because floating-point addition is non-associative and
+parallel GPU atomic operations sum in arbitrary thread order, bit-for-bit
+repeatability also requires deterministic kernels and holds only on one machine
+and software stack—making bitwise determinism a debugging tool, while scientific
+conclusions must hold across multiple seeds. Finally, forward and backward
+hooks (and their framework equivalents) let us inspect activation scales,
+gradient norms, and first-occurrence NaNs inside unmodified models.
 
 ## Exercises
 

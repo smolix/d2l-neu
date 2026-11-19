@@ -6,30 +6,33 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Modules and Model Construction
 :label:`sec_model_construction`
 
-The multilayer perceptron of :numref:`sec_mlp-implementation` had four
-parameter arrays, and we could name each one by hand. The models in the rest
-of this book have many more. A residual network for images stacks dozens of
-layers, and the language model Llama 3 8B
-:cite:`Grattafiori.Dubey.Jauhri.ea.2024`, with 8 billion parameters,
-consists of 32 identical blocks and stores its parameters in 291 arrays.
-Every one of them must reach the optimizer, be written to a checkpoint, and
-move to the GPU. An array that is left out raises no error: it is simply
-never trained, or never saved.
+The multilayer perceptron in :numref:`sec_mlp-implementation` had just four
+parameter arrays, small enough to manage by hand. Real-world architectures are
+far more intricate. A modern residual network for computer vision stacks dozens
+or hundreds of layers, and a language model such as Llama 3 8B
+:cite:`Grattafiori.Dubey.Jauhri.ea.2024`—holding 8 billion parameters across 32
+identical transformer blocks—spreads its weights over 291 separate arrays. Every
+single one of those arrays must reach the optimizer, be written into
+checkpoints, and move onto the GPU. Worse, omitting an array raises no syntax
+error: it simply sits silently untrained or unsaved.
 
-Deep learning frameworks solve this with one abstraction, the *module*. A
-module is an object that owns parameters, owns other modules (its
-*children*), and defines a forward computation from inputs to outputs.
-Layers, groups of layers, and whole models are all modules, so a model is a
-tree of modules, as in :numref:`fig_blocks`. The framework finds every
-parameter by walking this tree, provided that each child has been
-*registered* with its parent. This section is a practical one, and a reader
-who has written modules before will move through much of it quickly. It
-shows how registration works and how it fails, which is the part not to
-skip, how to write the forward computation of a module ourselves, and how
-to describe a whole model by a handful of numbers. The rest of the chapter uses the same walk for other tasks: counting
-the parameters (:numref:`sec_parameters`), initializing them
-(:numref:`sec_init_param`), saving them (:numref:`sec_read_write`), and
-moving them to a GPU (:numref:`sec_use_gpu`).
+Deep learning frameworks solve this bookkeeping problem with a single recursive
+abstraction: the *module*. A module can represent an individual layer, a group
+of layers, or an entire model. It owns parameters, owns child modules, and
+defines a forward computation mapping inputs to outputs. Because modules nest
+inside other modules, any architecture forms a tree of modules
+(:numref:`fig_blocks`). Every framework discovers all parameters by traversing
+this tree—provided each child is properly *registered* with its parent.
+
+This section is hands-on, and readers who have already built custom modules can
+skim the basics. Do not skip how registration works and how it fails silently,
+however, because that bug is notoriously easy to hit. We also show how to write
+custom forward computations (such as residual connections), how lazy
+initialization infers shapes on the fly, and how to separate architectural
+hyperparameters into a compact configuration object. Later sections reuse the
+same tree traversal for counting parameters (:numref:`sec_parameters`),
+initializing weights (:numref:`sec_init_param`), saving checkpoints
+(:numref:`sec_read_write`), and placing models on GPUs (:numref:`sec_use_gpu`).
 
 ![The module tree of the residual MLP that we build at the end of this section. Each edge carries the name under which the parent registered the child, and the path of names from the root to a parameter is the name of that parameter, here `1.body.0.weight`. Blocks 2 to 4 repeat block 1.](../img/bg-module-names.svg)
 :label:`fig_blocks`
@@ -78,12 +81,12 @@ from dataclasses import dataclass
 
 ### Sequential Containers and the Registry
 
-Every model since :numref:`sec_oo-design` has been a module: `d2l.Module`
-is a subclass of the framework's module class. The quickest way to build a
-module from layers is a *sequential container*, a module that applies its
-children one after the other. Here it holds the MLP of
-:numref:`sec_mlp-implementation`, with a hidden layer of 256 ReLU units and
-10 outputs, applied to a minibatch of two examples with 20 features each.
+Every model we have written since :numref:`sec_oo-design` has been a module:
+`d2l.Module` subclasses each framework's base module class. The fastest way to
+assemble a pipeline of layers is a *sequential container*, which chains its
+children together one after another. Below we construct an MLP with one hidden
+layer of 256 ReLU units and 10 outputs—matching :numref:`sec_mlp-implementation`—and
+pass in a minibatch of two examples with 20 features each.
 
 :begin_tab:`mxnet`
 In Gluon the module class is `nn.Block`. The container `nn.Sequential`
@@ -152,8 +155,9 @@ X = jax.random.uniform(d2l.get_key(), (2, 20))
 net(X).shape
 ```
 
-The container keeps its children in a *registry*, a table from names to
-modules, and its forward computation runs through that table in order.
+Under the hood, the container stores its children in an ordered *registry*
+mapping names to child modules, and its forward pass iterates through that table
+in insertion order.
 
 :begin_tab:`mxnet`
 Printing the block lists the registry. The names are the positions `0` and
@@ -198,19 +202,20 @@ net.layers
  for path, value in nnx.state(net, nnx.Param).flat_state()]
 ```
 
-This table is where every walk over the model starts. Collecting the
-parameters for the optimizer, writing them to a file, and moving them to a
-GPU all visit the registered children, then their children, and so on down
-to the parameters. For all three, a layer that is not in the table does not
+Every tree traversal over the model begins at this registry. Gathering
+parameters for the optimizer, serializing weights to disk, and moving tensors to
+a GPU all recurse through registered children down to every leaf parameter. As
+far as those operations are concerned, an unregistered layer might as well not
 exist.
 
 ### Subclasses of the Module Class
 
-A sequential container only expresses a chain. For any other wiring we
-subclass the module class and write two methods: a constructor that creates
-the children, and a forward method that applies them to the input. The
-forward method is called `forward` in PyTorch and Gluon, `call` in Keras,
-and `__call__` in NNX.
+A sequential container handles linear chains neatly, but many architectures
+branch, merge, or reuse components. For anything beyond a straight chain, we
+subclass the framework's base module and implement two methods: a constructor
+that creates child modules and a forward method that specifies how data flows
+through them (`forward` in PyTorch and Gluon, `call` in Keras, and `__call__` in
+NNX).
 
 :begin_tab:`tensorflow`
 The `d2l.Module` of earlier chapters defines `call` to run `forward`, which
@@ -298,13 +303,14 @@ net = MLP(nnx.Rngs(d2l.get_key()))
 net(X).shape
 ```
 
-Two details make this work. First, `self.hidden = ...` is not an ordinary
-attribute assignment. The module class intercepts assignment (the Python
-method `__setattr__`), and when the value is a module it enters the
-registry under the attribute name, here `hidden` and `out`. That is all it
-takes for both layers' parameters to reach the optimizer. Second, we wrote
-no backward method: automatic differentiation derives the gradients from
-whatever the forward method computes.
+Two mechanisms do the heavy lifting behind the scenes. First, assigning
+`self.hidden = ...` is not plain Python attribute storage: the base module
+intercepts assignment via `__setattr__`, notices that the value is a module, and
+registers it under the attribute name (`hidden` and `out`). That automatic
+registration is all it takes for both layers' parameters to reach the optimizer.
+Second, we never have to write a backward method: automatic differentiation
+(:numref:`sec_autograd`) derives the gradients directly from the operations
+performed during the forward pass.
 
 :begin_tab:`mxnet`
 We call the model as `net(X)`, never as `net.forward(X)`: `Block.__call__`
@@ -337,9 +343,10 @@ attributes.
 
 ### Writing a Container
 
-A container has two jobs: to register each child, and to run the children
-in order. It is instructive to write one ourselves, since the first job is
-the one that can go wrong.
+A sequential container has just two responsibilities: register each child module
+as it is added, and pass the input through them in order. Implementing a minimal
+version ourselves clarifies exactly how registration works—and where it can go
+wrong.
 
 ```{.python .input #model-construction-sequential-and-friends-containers-1}
 %%tab mxnet
@@ -421,7 +428,7 @@ layers are tracked.
 parameters of both `Linear` layers appear under the path `modules`.
 :end_tab:
 
-Our container works like the built-in one:
+Our custom `MySequential` behaves just like the built-in container:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-2}
 %%tab mxnet
@@ -455,10 +462,10 @@ net(X).shape
 
 ### Layers in a Plain List
 
-Now suppose that we store the layers in an ordinary Python list, as anyone
-would who had not read the previous subsection. The forward method can
-still loop over the list, but the list itself is not a module. Does the
-framework still find the layers inside it?
+What happens if we store layers in an ordinary Python `list`, as anyone
+unfamiliar with module registration naturally would? The forward pass can still
+loop over the list, but a plain `list` is not a module. Does the framework still
+discover the layers inside it?
 
 :begin_tab:`mxnet`
 The block below keeps its layers in a plain list. `net.initialize()` walks
@@ -759,27 +766,26 @@ constructed, not after a training run that updated nothing.
 
 ## Forward Computation
 
-The forward method is ordinary Python. It can call any tensor operation,
-loop, branch, and combine intermediate results. We use this freedom for a
-residual connection, and then ask what a compiled training step takes away
-from it.
+Because a module's forward method is just Python, it can invoke arbitrary tensor
+operations, loops, conditionals, and skip paths. Let's use this flexibility to
+implement a residual connection, and then see what constraints arise when a
+framework compiles the training step.
 
 ### Residual Connections
 
-Let us start with the simplest module whose forward method is not a chain.
-A *residual connection* adds the input of a block to its output
-:cite:`He.Zhang.Ren.ea.2016*1`. If $f$ is the *body* of the block, the
-computation inside it, here two fully connected layers with a ReLU between
-them, the block computes
+The simplest widely used architecture that is not a straight chain is a
+*residual connection*, which adds a block's input directly to its output
+:cite:`He.Zhang.Ren.ea.2016*1`. Writing $f$ for the block's *body*—here two
+fully connected layers with a ReLU between them—the block computes
 
 $$\mathbf{y} = \mathbf{x} + f(\mathbf{x}).$$
 
-If $f$ is zero, the block is the identity, so a stack of such blocks can
-pass its input through unchanged, and each block only has to learn a
-correction $f(\mathbf{x})$ to its input. The networks of
-:numref:`sec_resnet` are built this way. No framework provides the residual
-connection as a layer, and none needs to. It is one line of the forward
-method, `X + self.body(X)`:
+Whenever $f(\mathbf{x}) = \mathbf{0}$, the block reduces to the identity map,
+allowing signals to pass cleanly through deep stacks while each block learns
+only a refinement $f(\mathbf{x})$ rather than rebuilding the representation from
+scratch. The ResNet architectures of :numref:`sec_resnet` rely on this pattern.
+No framework needs a special built-in layer for residual connections: in a
+custom module, it is simply one line, `X + self.body(X)`:
 
 ```{.python .input #model-construction-forward-is-just-python-1}
 %%tab mxnet
@@ -836,10 +842,9 @@ class ResidualBlock(nnx.Module):
 ![A residual block. The input splits into the body, Linear, ReLU, Linear, and an identity path, and the two rejoin by addition.](../img/bg-residual-block.svg)
 :label:`fig_bg_residual-block`
 
-:numref:`fig_bg_residual-block` shows the wiring. The addition has one
-consequence for construction: $\mathbf{x}$ and $f(\mathbf{x})$ must have
-the same shape, so a residual block has a single width, which we pass to
-the constructor.
+:numref:`fig_bg_residual-block` depicts the wiring. Adding $\mathbf{x}$ and
+$f(\mathbf{x})$ requires their shapes to match, so a residual block takes a
+single hidden width `num_hiddens`.
 
 :begin_tab:`tensorflow`
 Keras infers input widths when the layer is built, so the constraint falls
@@ -873,17 +878,20 @@ X24 = jax.random.normal(d2l.get_key(), (2, 24))
 block(X24).shape
 ```
 
-A forward method may also read values that are neither inputs nor
-parameters. A fixed number can stay a plain Python attribute. An array
-computed from data, such as the mean of the inputs, is another matter: it
-must be saved and moved with the model, yet never trained.
-:numref:`subsec_params_buffers` shows how to register such state.
+A forward method can also depend on values that are neither inputs nor trainable
+parameters. A scalar constant can live as an ordinary Python attribute, whereas
+a tensor tracked from data—such as running input statistics—must be saved in
+checkpoints and moved across devices alongside the model without being updated
+by the optimizer. We cover how to register such non-trainable *buffers* in
+:numref:`subsec_params_buffers`.
 
 ### Eager and Compiled Execution
 
-So far the forward method has also run like ordinary Python, one line at a
-time. A framework can instead record the computation once and replay the
-recording. This is faster, but it restricts what the forward method may do.
+So far our forward passes have executed like regular Python, running one
+operation at a time. To eliminate Python overhead and fuse operations, however,
+frameworks can trace a computation once and replay the compiled graph on future
+calls. That speedup comes with a trade-off: compiled execution restricts
+data-dependent Python control flow inside the forward pass.
 
 :begin_tab:`mxnet`
 Gluon runs `forward` as written, one operation at a time, a mode called
@@ -1095,13 +1103,13 @@ net = nnx.Sequential(nnx.Linear(20, 256, rngs=rngs), nnx.relu,
 
 ### Initialization after a Dry Run
 
-Lazy layers spare us the arithmetic of input widths, which in a deep model
-is tedious and easy to get wrong. Unfortunately, the parameters then do not
-exist until a minibatch has passed through. Before that, they cannot be
-counted, and an initializer whose scale depends on the number of inputs,
-such as the Xavier initialization of :numref:`subsec_xavier`, cannot be
-applied. Initialization therefore follows a *dry run*, one forward pass on a
-representative minibatch whose output is discarded.
+Lazy layers free us from manually propagating input dimensions from layer to
+layer, which quickly becomes error-prone in deep models. The trade-off is that
+parameters do not exist until data flows through the network: before that first
+pass, we cannot inspect parameter counts or run shape-dependent initializers
+such as Xavier initialization (:numref:`subsec_xavier`). To initialize a lazy
+model cleanly before training, we first perform a *dry run*—a single forward
+pass on a dummy minibatch whose output is discarded—to materialize every shape.
 
 :begin_tab:`mxnet`
 Gluon builds this order into its interface. `initialize` takes the
@@ -1225,27 +1233,30 @@ The constructor created every parameter and drew the first kernel from the
 Xavier initializer.
 :end_tab:
 
-Which should we prefer? For a quick experiment on new data, lazy layers are
-a convenience. A model whose parameters are to be counted, initialized by a
-rule, or built from a config should state both widths of every layer, as
-the models in the rest of this chapter do.
+When should we use lazy layers versus explicit dimensions? For rapid prototyping
+on unfamiliar datasets, lazy layers are handy. For production models whose
+parameters we want to count, initialize programmatically, or instantiate from a
+configuration file without dummy data, declaring explicit input and output
+widths is cleaner—and that is the convention we adopt for the rest of this
+chapter.
 
 ## Models from a Config
 
 ### Configs and Builders
 
-Could we rebuild a model from its saved weights alone? Not quite. A trained
-model is a set of arrays plus the code that knows what to do with them.
-Every width and depth in this section so far was a literal typed into a
-constructor call, and a checkpoint of the weights records such choices at
-best indirectly: the shapes of the arrays reveal the widths, but nothing in
-them reveals a choice without parameters, such as the activation function.
+Can we reconstruct a trained model from its saved weight tensors alone? Not
+entirely. A trained model consists of both numerical arrays and the code that
+interprets them. Every width and depth we wrote earlier was hardcoded directly
+into constructor calls; a weights file reflects those choices only indirectly
+(tensor shapes reveal layer widths, but nothing in the arrays reveals a
+parameter-free choice such as ReLU vs. tanh).
 
-The choices that vary from one experiment to the next therefore belong in a
-small *configuration* object, or *config*, that is logged with the results
-and saved with the weights. The topology, meaning what a block computes and
-how blocks connect, stays in code. Here a Python `dataclass` holds four
-fields, and `build` turns them into a model:
+Architectural hyperparameters that vary across experiments therefore belong in a
+dedicated *configuration* object (*config*) that can be logged alongside metrics
+and saved next to checkpoints, while the topology itself—what each block
+computes and how blocks wire together—lives in code. Below, a Python `dataclass`
+captures four architectural fields, and a `build` factory function turns any
+config into a complete module tree:
 
 ```{.python .input #model-construction-building-from-a-config-1}
 %%tab mxnet
@@ -1315,12 +1326,13 @@ def build(cfg: MLPConfig, rngs=None) -> nnx.Module:
         nnx.Linear(cfg.num_hiddens, cfg.num_outputs, rngs=rngs))
 ```
 
-One config gives one architecture: an input layer from `num_inputs`
-features to the hidden width, `num_blocks` residual blocks, and an output
-layer. The blocks pass through a plain Python list, of all things. This is
-safe here, because unpacking the list into the sequential container
-registers each block. Every layer receives both of its widths, so the model
-needs no dry run before its parameters can be counted.
+A single config completely specifies an instance of the architecture: an input
+projection from `num_inputs` to `num_hiddens`, `num_blocks` residual blocks, and
+an output head. Notice that `blocks` starts as a temporary Python list, which is
+completely safe here because unpacking it into the sequential container
+registers every block immediately. Because every layer specifies both its input
+and output widths, we can inspect and count parameters right away without a dry
+run.
 
 :begin_tab:`mxnet`
 The names of the first parameters are the paths of :numref:`fig_blocks`,
@@ -1372,8 +1384,8 @@ net = build(MLPConfig())
  for path, value in nnx.state(net, nnx.Param).flat_state()][:4]
 ```
 
-The model maps a minibatch of 784-dimensional inputs, the size of a
-flattened Fashion-MNIST image, to 10 outputs:
+The resulting model maps a minibatch of 784-dimensional vectors (such as
+flattened Fashion-MNIST images) to 10 output logits:
 
 ```{.python .input #model-construction-building-from-a-config-3}
 %%tab mxnet
@@ -1397,17 +1409,17 @@ net(jax.random.uniform(d2l.get_key(), (2, 784))).shape
 
 ### Counting Parameters
 
-The config also tells us the size of the model before we build it. The
-input layer has $784 \cdot 256 + 256 = 200{,}960$ parameters, each block
-has two layers of $256 \cdot 256 + 256$, or $131{,}584$ together, and the
-output layer has $256 \cdot 10 + 10 = 2{,}570$. The default model therefore
-has
+A config also lets us calculate a model's exact parameter count on paper before
+allocating any memory. The input projection has $784 \cdot 256 + 256 = 200{,}960$
+parameters, each residual block contains two dense layers totaling
+$2 \cdot (256 \cdot 256 + 256) = 131{,}584$ parameters, and the output layer
+adds $256 \cdot 10 + 10 = 2{,}570$, giving
 
 $$200{,}960 + 4 \cdot 131{,}584 + 2{,}570 = 729{,}866$$
 
-parameters, most of them in the blocks. Rescaling the model is a change to
-two fields, not an edit of the model code, and a walk over the parameters
-confirms the count:
+parameters in all—dominated by the residual blocks. Scaling the model up now
+takes changing two config fields rather than editing model code, and walking the
+parameter tree verifies our calculation:
 
 ```{.python .input #model-construction-building-from-a-config-4}
 %%tab mxnet
@@ -1442,17 +1454,18 @@ for cfg in (MLPConfig(), MLPConfig(num_hiddens=512, num_blocks=8)):
           f'{n:,} parameters')
 ```
 
-Doubling the width multiplies the parameters of each block by about four,
-and doubling the number of blocks doubles their total, so the larger
-config has more than six times as many parameters. The 8B model of the
-introduction is described the same way: a config of a dozen numbers, such
-as 32 blocks and a width of 4,096, and code that turns it into a module
-tree.
+Doubling the hidden width quadruples the parameter count inside each block, and
+doubling the number of blocks doubles that total, so the larger config contains
+more than six times as many parameters. Real-world foundation models follow the
+exact same pattern: our 8B language model is specified by a compact config
+(e.g., 32 blocks, hidden width 4,096) paired with builder code that materializes
+the module tree.
 
-Note, however, that a config records numbers, not code. Rebuilding a model
-from a checkpoint needs the weights, the config, and the same `build`
-function and block classes. :numref:`sec_read_write` saves the first two
-together in one file; the code we must keep ourselves.
+Keep in mind that a config stores hyperparameters, not implementation code.
+Restoring a model from a checkpoint requires all three pieces: the weights, the
+config, and the matching `build` function and block definitions. In
+:numref:`sec_read_write`, we save the weights and config together, while version
+control takes care of the code.
 
 :begin_tab:`tensorflow`
 Keras offers the same idea in its own form: every layer has a method
@@ -1460,22 +1473,23 @@ Keras offers the same idea in its own form: every layer has a method
 the model and uses to rebuild it, provided the layer classes are available.
 :end_tab:
 
-Throughout this section the parameters were things to be found and
-counted. We have not yet looked at them: which tensors a model holds, how
-much memory they take, and how to share or freeze them. This is the subject
-of :numref:`sec_parameters`.
+So far we have only located and counted parameters without inspecting what lives
+inside them. In :numref:`sec_parameters`, we open up the tensors a model owns,
+account for how much memory training consumes, and see how to share or freeze
+weights.
 
 ## Summary
 
-Three things are worth remembering. A model is a tree of modules, and the
-name of each parameter is its path from the root. The framework finds
-parameters by walking the registered children, so a child stored where the
-walk cannot see it is never trained or saved, and in the worst case nothing
-tells us. A config of a few numbers, together with a `build` function,
-records an architecture so that it can be logged, saved, and rebuilt. The
-rest is technique: a forward method written in ordinary Python, which a
-compiled training step restricts, and lazy layers, which must see a
-minibatch before they can be initialized.
+Three core ideas anchor model construction. First, every neural network is a
+tree of modules, with each parameter uniquely addressed by its path from the
+root. Second, optimizers, checkpoints, and device transfers all operate by
+walking registered children, so hiding layers inside an unregistered container
+silently excludes them from training and saving. Third, factoring variable
+dimensions into a lightweight config paired with a `build` function makes
+architectures easy to log, scale, and reproduce. On top of these fundamentals,
+custom forward methods give us full Python flexibility (subject to tracing
+constraints under compiled execution), while lazy layers offer convenience for
+quick experiments at the cost of deferring shape creation until a dry run.
 
 :begin_tab:`mxnet`
 In Gluon, children are registered by attribute assignment, by

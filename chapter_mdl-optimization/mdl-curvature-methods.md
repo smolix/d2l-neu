@@ -1,40 +1,45 @@
 # Curvature Methods: Newton, Quasi-Newton, and Trust Regions
 :label:`sec_mdl-curvature-methods`
 
-Gradient descent never looks at the curvature of the function it descends.
-It only suffers from it: the steepest direction caps the step, the flattest
-direction then crawls, and the number of steps grows with the condition
+Gradient descent never measures the curvature of the function it minimizes;
+it only endures it. The steepest direction caps the step size, the flattest
+direction then crawls, and the number of iterations grows with the condition
 number $\kappa$, or with $\sqrt\kappa$ once momentum is added
-(:numref:`subsec_mdl-momentum-acceleration`). On the chapter's running
-example $\tfrac12(x_1^2 + 1000\,x_2^2)$ that came to $6{,}908$ steps, or
-$315$ with momentum. Yet anyone can solve this problem by inspection: divide
-each coordinate of the gradient by its curvature, $1$ or $1000$, and a
-single step lands on the minimum. What does a method gain when it measures
-the curvature instead of merely surviving it?
+(:numref:`subsec_mdl-momentum-acceleration`). On our running example
+$\tfrac12(x_1^2 + 1000\,x_2^2)$, that came to $6{,}908$ steps of gradient
+descent, or $315$ with momentum. Yet anyone can solve this problem by
+inspection: divide each coordinate of the gradient by its curvature ($1$ or
+$1000$) and a single step lands directly on the minimum. What can an
+optimizer achieve when it accounts for curvature instead of merely surviving
+it?
 
-Newton's method, a century and a half older than gradient descent, is the
-classical answer. It fits a quadratic to the function at the current point
-and jumps to the minimum of the quadratic. We ask four questions of it. How
-fast is it? What does a step cost? Where does it go wrong? And how much of
-it can be recovered from gradients alone, when second derivatives are out of
-reach? In brief: it is very fast near a minimum, it is far too expensive
-for a network, it runs to saddle points as readily as to minima, and a good
-part of it can be rebuilt by comparing successive gradients. The remedy for
-the saddles is to limit each step to the region where the quadratic has
-predicted well.
+The classical answer is Newton's method, which predates gradient descent by
+a century and a half. At each iterate, it fits a quadratic approximation to
+the objective and jumps straight to the minimizer of that quadratic. In this
+section we examine how fast that step converges, what it costs, where it
+breaks down, and how much of its curvature information can be recovered from
+gradients alone when second derivatives are unavailable. Near a minimum,
+Newton's method is remarkably fast; for a neural network, however, forming
+the Hessian is far too expensive, and on nonconvex functions the method is
+drawn to saddle points just as readily as to minima. We then turn to two
+remedies: quasi-Newton methods, which rebuild curvature from successive
+gradient differences, and trust-region methods, which restrict each step to
+a neighborhood where the quadratic model actually agrees with the function.
 
-For training networks this section matters less than the previous one, and
-we should say so. A Hessian is too large to form, and minibatch noise spoils
-curvature estimates built from differences of gradients. The ideas return
-in other forms, though: the per-coordinate steps of Adam are a diagonal
-stand-in for Newton's matrix (:numref:`sec_mdl-adaptive-stochastic-methods`),
-and the damping that such methods add to a curvature matrix is the shift of
-a trust region. The result to remember is the quadratic convergence of
-Newton's method :eqref:`eq_mdl-opt-newton-error`. The part on quasi-Newton
-methods can be skipped on a first reading. From
-:numref:`sec_mdl-gradient-based-optimization` we reuse two things: the
-Armijo test of the backtracking line search, and the function
-$\tfrac12 x^2 + \cos y$, at whose saddle gradient descent stopped.
+For training deep networks, these classical methods are used much less often
+than first-order optimizers, and it is worth being candid about why. A full
+Hessian is too large to form, and minibatch noise spoils curvature estimates
+built from differences of gradients. Even so, the underlying ideas reappear
+throughout deep learning: the per-coordinate scaling of Adam acts as a
+diagonal stand-in for Newton's inverse Hessian
+(:numref:`sec_mdl-adaptive-stochastic-methods`), and the damping added to
+curvature matrices plays the same stabilizing role as a trust region. The
+central result to keep in mind is the quadratic convergence of Newton's
+method :eqref:`eq_mdl-opt-newton-error`; the subsection on quasi-Newton
+methods may be skipped on a first reading. From
+:numref:`sec_mdl-gradient-based-optimization`, we carry over two ingredients:
+the Armijo condition for backtracking line search and the test function
+$\tfrac12 x^2 + \cos y$, whose saddle point stalled gradient descent.
 
 ```{.python .input #mdl-curvature-methods-curvature-methods-newton-quasi-newton-and-trust-regions}
 #@tab mxnet
@@ -78,63 +83,73 @@ from d2l import jax as d2l
 ## Newton's Method
 :label:`subsec_mdl-why-not-newton`
 
-Gradient descent rests on a linear model of $f$. A linear model has no
-minimum, which is why the method needs a step size from outside. A quadratic
-model has a minimum of its own, and with it comes a step that needs no
-tuning.
+Gradient descent builds a linear approximation to $f$ at the current point.
+Because a linear function has no minimum, the algorithm cannot choose its own
+step length and must rely on an external learning rate. A quadratic
+approximation, by contrast, has a unique minimum whenever it curves upward,
+giving us a step whose length is set automatically by the local geometry.
 
 ### The Newton Step
 
-Newton's method lets the curvature choose the step
-(:numref:`subsec_gd-newton`). Model $f$ near $\mathbf{x}_k$ by its
-second-order Taylor expansion in the step $\mathbf{p}$:
+Newton's method lets the local curvature determine both the direction and the
+length of the step (:numref:`subsec_gd-newton`). Writing
+$\mathbf{g}_k = \nabla f(\mathbf{x}_k)$, we approximate $f$ near
+$\mathbf{x}_k$ by its second-order Taylor expansion in the displacement
+$\mathbf{p}$:
 
 $$
 m_k(\mathbf{p}) = f(\mathbf{x}_k) + \mathbf{g}_k^\top \mathbf{p} + \tfrac12\, \mathbf{p}^\top \nabla^2 f(\mathbf{x}_k)\, \mathbf{p}.
 $$
 :eqlabel:`eq_mdl-opt-newton-model`
 
-If $\nabla^2 f(\mathbf{x}_k)$ is positive definite, the model is a bowl with
-a unique minimizer, where
-$\nabla m_k = \mathbf{g}_k + \nabla^2 f(\mathbf{x}_k)\,\mathbf{p} = \mathbf{0}$.
-Solving for $\mathbf{p}$ and stepping there is **Newton's method**:
+When the Hessian $\nabla^2 f(\mathbf{x}_k)$ is positive definite, the model
+$m_k$ is a strictly convex bowl with a unique minimizer, found by setting
+$\nabla m_k(\mathbf{p}) = \mathbf{g}_k + \nabla^2 f(\mathbf{x}_k)\,\mathbf{p} = \mathbf{0}$.
+Solving for $\mathbf{p}$ and moving there gives **Newton's method**:
 
 $$
 \mathbf{x}_{k+1} = \mathbf{x}_k - \big(\nabla^2 f(\mathbf{x}_k)\big)^{-1} \nabla f(\mathbf{x}_k).
 $$
 :eqlabel:`eq_mdl-opt-newton-step`
 
-No step size appears: the curvature has set it. Newton's direction belongs
-to the family $\mathbf{d} = -\mathbf{P}^{-1}\nabla f$ with a positive
-definite matrix $\mathbf{P}$, here $\nabla^2 f$. Every member of the family
-is a descent direction, since
+Notice that no step size appears in :eqref:`eq_mdl-opt-newton-step`: the
+inverse Hessian rescales each direction according to its curvature. More
+broadly, Newton's direction belongs to the family of preconditioned steps
+$\mathbf{d} = -\mathbf{P}^{-1}\nabla f$ with a positive definite matrix
+$\mathbf{P}$ (here $\mathbf{P} = \nabla^2 f$). Every such direction is a
+descent direction, since
 $\nabla f^\top \mathbf{d} = -\nabla f^\top \mathbf{P}^{-1}\nabla f < 0$.
-Newton's direction is the steepest one when lengths are measured in the
-Hessian's norm instead of the Euclidean one (exercise
+In fact, Newton's direction is simply the direction of steepest descent when
+step lengths are measured in the norm induced by the Hessian rather than the
+Euclidean norm (exercise
 :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`).
 
-On the quadratic $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ the model is the
-function, so one step lands on the minimizer,
+On a positive definite quadratic $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$,
+the Taylor model is exact, so a single Newton step lands immediately on the
+minimizer:
 $\mathbf{x}_1 = \mathbf{x}_0 - \mathbf{A}^{-1}\mathbf{A}\mathbf{x}_0 = \mathbf{0}$,
-for every $\kappa$. The reason goes deeper than the algebra. Newton's method
-is **affine-invariant**: it does not depend on the coordinates. Under a
-change of coordinates
-$\mathbf{x} = \mathbf{T}\mathbf{y}$, Newton's iterates for $f(\mathbf{T}\mathbf{y})$
-are the images of Newton's iterates for $f$. Gradient descent's iterates, in
-contrast, change under every $\mathbf{T}$ that is not orthogonal; a multiple
-of an orthogonal matrix changes only the effective step (exercise
-:exref:`ex_mdl-gradient-based-optimization-newton-show-that-any`). Since a
-change of coordinates can make any positive definite quadratic round, the
-condition number cannot matter to Newton. A long valley is, to Newton's
-method, a round bowl drawn on stretched paper.
+regardless of the condition number $\kappa$. The reason goes deeper than
+matrix cancellation. Newton's method is **affine-invariant**, meaning that
+its trajectory does not depend on the choice of coordinates. Under any
+invertible linear change of variables $\mathbf{x} = \mathbf{T}\mathbf{y}$,
+running Newton's method on $f(\mathbf{T}\mathbf{y})$ produces the exact
+images of Newton's iterates for $f$. Gradient descent, by contrast, changes
+its path under every non-orthogonal $\mathbf{T}$, while a scalar multiple of
+an orthogonal matrix merely rescales the effective step size (exercise
+:exref:`ex_mdl-gradient-based-optimization-newton-show-that-any`). Because
+some linear transformation turns any positive definite quadratic into a
+perfect sphere, the condition number cannot affect Newton's method. A long
+valley is, to Newton's method, a round bowl drawn on stretched paper.
 
 ### Quadratic Convergence
 
-On a function that is not quadratic the model is only an approximation, and
-one step no longer suffices. What survives is the speed. Near a minimizer
-Newton's method converges much faster than geometrically, and the proof is
-a single use of the fundamental theorem of calculus. We write
-$\mathbf{e}_k = \mathbf{x}_k - \mathbf{x}^\star$ for the error.
+For a general non-quadratic objective, the Taylor model is only a local
+approximation, so one step is no longer enough. What survives is remarkable
+speed. Once the iterate enters a neighborhood of a minimizer, Newton's
+method converges much faster than geometrically, and the proof requires
+little more than the fundamental theorem of calculus. Let
+$\mathbf{e}_k = \mathbf{x}_k - \mathbf{x}^\star$ denote the error at
+iteration $k$.
 
 **Proposition (quadratic convergence).** *Let $\nabla f(\mathbf{x}^\star) = \mathbf{0}$,
 and suppose that on a ball around $\mathbf{x}^\star$ the Hessian satisfies
@@ -147,52 +162,60 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-newton-error`
 
-**Proof.** Write $\nabla^2 f_k = \nabla^2 f(\mathbf{x}_k)$. Since
-$\nabla f(\mathbf{x}^\star) = \mathbf{0}$, the Newton step gives
+**Proof.** Abbreviate $\nabla^2 f_k = \nabla^2 f(\mathbf{x}_k)$. Because
+$\nabla f(\mathbf{x}^\star) = \mathbf{0}$, subtracting $\mathbf{x}^\star$
+from the Newton update yields
 $\mathbf{e}_{k+1} = \mathbf{e}_k - (\nabla^2 f_k)^{-1}\mathbf{g}_k = (\nabla^2 f_k)^{-1}\big[\nabla^2 f_k\,\mathbf{e}_k - (\nabla f(\mathbf{x}_k) - \nabla f(\mathbf{x}^\star))\big]$.
-By the fundamental theorem of calculus along the segment from $\mathbf{x}^\star$
-to $\mathbf{x}_k$, the gradient difference is
-$\int_0^1 \nabla^2 f(\mathbf{x}^\star + t\mathbf{e}_k)\,\mathbf{e}_k\,dt$, so the
-bracket is $\int_0^1 \big[\nabla^2 f_k - \nabla^2 f(\mathbf{x}^\star + t\mathbf{e}_k)\big]\mathbf{e}_k\,dt$.
-The two points differ by $(1 - t)\mathbf{e}_k$, so the bracket has norm at most
+Applying the fundamental theorem of calculus along the line segment from
+$\mathbf{x}^\star$ to $\mathbf{x}_k$ expresses the gradient difference as
+$\int_0^1 \nabla^2 f(\mathbf{x}^\star + t\mathbf{e}_k)\,\mathbf{e}_k\,dt$,
+so the bracketed term becomes
+$\int_0^1 \big[\nabla^2 f_k - \nabla^2 f(\mathbf{x}^\star + t\mathbf{e}_k)\big]\mathbf{e}_k\,dt$.
+Since $\mathbf{x}_k$ and $\mathbf{x}^\star + t\mathbf{e}_k$ are separated by
+$(1 - t)\mathbf{e}_k$, the Lipschitz bound on the Hessian gives this integral
+norm at most
 $\int_0^1 L_2(1 - t)\|\mathbf{e}_k\|^2\,dt = \tfrac{L_2}{2}\|\mathbf{e}_k\|^2$.
-Finally $\|(\nabla^2 f_k)^{-1}\| \le 1/\mu$. $\blacksquare$
+Combining this with $\|(\nabla^2 f_k)^{-1}\| \le 1/\mu$ completes the
+proof. $\blacksquare$
 
-Multiplying both sides by $L_2/(2\mu)$ gives
-$\tfrac{L_2}{2\mu}\|\mathbf{e}_{k+1}\| \le \big(\tfrac{L_2}{2\mu}\|\mathbf{e}_k\|\big)^2$,
-so the scaled error squares at every step. If it starts below $1$, the error
-shrinks and every later iterate stays in the ball. Once it is below $0.1$, it
-goes to $10^{-2}$, $10^{-4}$, $10^{-8}$, so the number of correct digits
-roughly doubles per step. Compare gradient descent on the running example,
-which gains one digit in about $1{,}150$ steps. The speed has a condition
-attached, and it is in the hypotheses: the bound says nothing until the
-iterate is already close.
+To read what :eqref:`eq_mdl-opt-newton-error` implies, multiply both sides by
+$L_2/(2\mu)$:
+$\tfrac{L_2}{2\mu}\|\mathbf{e}_{k+1}\| \le \big(\tfrac{L_2}{2\mu}\|\mathbf{e}_k\|\big)^2$.
+The scaled error squares at every step. If it starts below $1$, it shrinks
+monotonically and every subsequent iterate remains in the ball. Once it drops
+below $0.1$, it plunges to $10^{-2}$, $10^{-4}$, $10^{-8}$, roughly doubling
+the number of accurate digits at each iteration. Compare that with gradient
+descent on our running example, which needs about $1{,}150$ steps to gain a
+single digit. The catch is written directly into the hypotheses: this
+quadratic rate is strictly local and guarantees nothing until the iterate is
+already close to $\mathbf{x}^\star$.
 
-Far from $\mathbf{x}^\star$ the full step can overshoot, even with a positive
-definite Hessian. The remedy is **damping**: step to
-$\mathbf{x}_k + \alpha_k\mathbf{p}_k$ along the Newton direction
-$\mathbf{p}_k = -(\nabla^2 f(\mathbf{x}_k))^{-1}\mathbf{g}_k$, with
-$\alpha_k \le 1$ chosen by backtracking on the Armijo test
-$f(\mathbf{x}_k + \alpha\mathbf{p}_k) \le f(\mathbf{x}_k) + c\,\alpha\,\mathbf{g}_k^\top\mathbf{p}_k$,
-which is :eqref:`eq_mdl-opt-armijo` for a general descent direction. Near a
-minimizer with positive definite Hessian the full step $\alpha = 1$ passes
-this test when $c < \tfrac12$, so damping costs nothing once the fast phase
-begins.
+Far from $\mathbf{x}^\star$, the pure Newton step can overshoot even when
+the Hessian is positive definite. The standard safeguard is **damping**:
+update via $\mathbf{x}_k + \alpha_k\mathbf{p}_k$ along the Newton direction
+$\mathbf{p}_k = -(\nabla^2 f(\mathbf{x}_k))^{-1}\mathbf{g}_k$, choosing
+$\alpha_k \le 1$ by backtracking until the Armijo condition
+$f(\mathbf{x}_k + \alpha\mathbf{p}_k) \le f(\mathbf{x}_k) + c\,\alpha\,\mathbf{g}_k^\top\mathbf{p}_k$
+holds (the general-direction form of :eqref:`eq_mdl-opt-armijo`). Near a
+minimizer with a positive definite Hessian, the full step $\alpha = 1$
+automatically passes this test whenever $c < \tfrac12$, so damping adds no
+overhead once quadratic convergence kicks in.
 
-The test problem for the cells below is $\ell_2$-regularized
-logistic regression on $n = 200$ random examples in $d = 5$ dimensions,
+To test these predictions in code, we use $\ell_2$-regularized logistic
+regression on $n = 200$ synthetic examples in $d = 5$ dimensions,
 
 $$
 f(\mathbf{w}) = \frac1n \sum_{i=1}^n \log\big(1 + \exp(-y_i\,\mathbf{x}_i^\top \mathbf{w})\big) + \frac{\nu}{2}\|\mathbf{w}\|^2,
 \qquad \nu = 0.1,
 $$
 
-with labels $y_i = \pm 1$ drawn from a logistic model (the weight-decay
-coefficient is $\nu$ here because $\lambda$ denotes eigenvalues). The data
-cell also computes a reference optimum $\mathbf{w}^\star$ with $4{,}000$
-gradient steps of size $\eta = 0.5$, which is safe since
-$L = \lambda_{\max}(\mathbf{X}^\top\mathbf{X})/(4n) + \nu$ is about $0.4$ here
-(exercise :exref:`ex_mdl-gradient-based-optimization-smoothness-constants`).
+with binary labels $y_i = \pm 1$ sampled from a logistic model (we write
+$\nu$ for the weight-decay coefficient to reserve $\lambda$ for eigenvalues).
+The setup cell below also computes a reference optimum $\mathbf{w}^\star$
+using $4{,}000$ gradient steps of size $\eta = 0.5$, which is safely below
+$2/L$ because $L = \lambda_{\max}(\mathbf{X}^\top\mathbf{X})/(4n) + \nu$ is
+roughly $0.4$ here (exercise
+:exref:`ex_mdl-gradient-based-optimization-smoothness-constants`).
 
 ```{.python .input #mdl-gradient-based-optimization-newton-s-method-and-its-computational-cost-1}
 rng = np.random.default_rng()
@@ -213,12 +236,12 @@ for _ in range(4000):                         # full-batch reference optimum
     w_star = w_star - 0.5 * grad_rows(w_star, X, y, nu).mean(axis=0)
 ```
 
-Two predictions can now be tested. On the chapter's running example
-$\mathrm{diag}(1, 1000)$ one Newton step should replace the
-$\log 10^6/\log(1001/999) \approx 6{,}908$ steps of gradient descent at its
-best fixed step (:numref:`subsec_mdl-momentum-acceleration`). On the logistic loss,
-which is not a quadratic, the exponent of the gradient norm should roughly
-double per iteration once the fast phase has begun.
+We can now test both predictions directly. On our running quadratic
+$\mathrm{diag}(1, 1000)$, a single Newton step should replace the
+$\log 10^6/\log(1001/999) \approx 6{,}908$ steps required by gradient descent
+at its optimal fixed step size (:numref:`subsec_mdl-momentum-acceleration`).
+On the non-quadratic logistic loss, the exponent of the gradient norm should
+roughly double at every iteration once the local phase begins.
 
 ```{.python .input #gradient-based-optimization-newton}
 A2 = np.diag([1.0, 1000.0])                   # the running example, kappa = 1000
@@ -238,39 +261,42 @@ for it in range(6):
 print(f'max |w - w_star| = {np.abs(w - w_star).max():.1e}')
 ```
 
-Both hold. On the quadratic one Newton step leaves an error of exactly
-zero, where gradient descent at its best step contracts by $0.998$ and needs
-its $6{,}908$ steps. On the logistic loss the gradient norm starts at a few
-tenths and is below $10^{-8}$ by the fifth iteration, its exponent roughly
-doubling each time once it is small. After six iterations the iterate
-agrees with the reference optimum of the data cell to about $10^{-15}$, the
-precision of the reference itself. Six linear solves have done the work of
-the $4{,}000$ gradient steps that produced the reference.
+Both predictions hold. On the quadratic, a single Newton step drives the
+error to zero, whereas optimal fixed-step gradient descent contracts by only
+$0.998$ per step and requires $6{,}908$ iterations. On the logistic loss, the
+gradient norm starts at a few tenths and drops below $10^{-8}$ by the fifth
+iteration, its exponent roughly doubling once it becomes small. After just
+six iterations, Newton's iterate agrees with the reference optimum to roughly
+$10^{-15}$, matching the precision of the reference itself. Six linear solves
+have accomplished what took $4{,}000$ gradient steps.
 
 ### The Cost of a Step
 
-Unfortunately the comparison of step counts flatters Newton's method. The
-Hessian has $d^2$ entries, and a generic solve costs $O(d^3)$ operations per
-step. With $d = 5$ this is nothing. A network with a modest $10^8$ weights
-has a Hessian of $10^{16}$ entries, which rules the method out before the
-first step is taken (:numref:`subsec_gd-newton`). The cheap alternatives
-are the secant approximations of the next part and the diagonal or
-structured preconditioners of
-:numref:`sec_mdl-adaptive-stochastic-methods`.
+Unfortunately, comparing iteration counts alone flatters Newton's method. The
+Hessian contains $d^2$ entries, and solving the linear system in
+:eqref:`eq_mdl-opt-newton-step` generally requires $O(d^3)$ operations per
+step. For $d = 5$ this cost is negligible, but for a neural network with even
+a modest $10^8$ parameters, the Hessian has $10^{16}$ entries, ruling out
+exact Newton's method before the first step is ever taken
+(:numref:`subsec_gd-newton`). Practical alternatives either approximate the
+Hessian from gradients, as in the quasi-Newton methods below, or use cheap
+diagonal and structured preconditioners
+(:numref:`sec_mdl-adaptive-stochastic-methods`).
 
 ### Saddle Points
 
-Cost is not the only objection, and it is not the most instructive one.
-Newton's step solves $\nabla m_k = \mathbf{0}$, which finds the stationary
-point of the model whether it is a minimum or not. Return to the function
-$f(x, y) = \tfrac12 x^2 + \cos y$ of
+Computational cost is not the only drawback of Newton's method, nor is it the
+most instructive one. Because the Newton step solves $\nabla m_k = \mathbf{0}$,
+it jumps to the stationary point of the quadratic model whether that point is
+a minimum, a maximum, or a saddle. Return to the function
+$f(x, y) = \tfrac12 x^2 + \cos y$ from
 :numref:`sec_mdl-gradient-based-optimization`, which has a saddle at the
-origin and its minimum value $-1$ at $(0, \pi)$, and start at
-$(0.5, 0.3)$. The gradient is $(0.5, -\sin 0.3) = (0.5, -0.296)$, and the
-Hessian $\mathrm{diag}(1, -\cos 0.3) = \mathrm{diag}(1, -0.955)$ is indefinite:
-the model curves up along $x$ and down along $y$. Which way will Newton's
-step move $y$ from here, and which way a plain gradient step with
-$\eta = 1$?
+origin and a minimum of $-1$ at $(0, \pi)$, and start at $(0.5, 0.3)$. Here
+the gradient is $(0.5, -\sin 0.3) = (0.5, -0.296)$, and the Hessian
+$\mathrm{diag}(1, -\cos 0.3) = \mathrm{diag}(1, -0.955)$ is indefinite: the
+surface curves upward along $x$ and downward along $y$. Which way does a
+Newton step move $y$ from this point, compared with a plain gradient step of
+size $\eta = 1$?
 
 ```{.python .input #mdl-gradient-based-optimization-newton-s-method-1}
 def f_s(v):
@@ -293,28 +319,29 @@ print('Newton y:', np.array(ys_n[:3]), f'  f = {f_s(x_n):.4f}')
 print('GD     y:', np.array(ys_g).round(4), f'  f = {f_s(x_g):.4f}')
 ```
 
-Newton's first step sets $x$ to $0$ and $y$ to $0.3 - \tan 0.3 = -0.0093$; the
-next sends $y$ to $2.7 \times 10^{-7}$. This is Newton's fast local
-convergence (here even cubic, since $y - \tan y \approx -y^3/3$), to the
-saddle $(0, 0)$ with $f = 1$. Gradient descent moves $y$ the other way, to
-$0.60$, $1.16$, $2.07$, $2.95$, $3.140$, $3.1416$, and reaches the minimum
-$(0, \pi)$ with $f = -1$. The better model has led to the worse point. The
-cause is that the model's curvature along $y$ is negative, so its stationary
-point is a saddle, and Newton's method seeks any stationary point. A trust
-region (:numref:`subsec_mdl-trust-region`) repairs this.
+Newton's first step sends $x$ to $0$ and $y$ to $0.3 - \tan 0.3 = -0.0093$;
+the second sends $y$ to $2.7 \times 10^{-7}$. We are seeing Newton's rapid
+local convergence (here even cubic, since $y - \tan y \approx -y^3/3$), driving
+the iterate straight into the saddle $(0, 0)$ with $f = 1$. Gradient descent
+moves $y$ in the opposite direction, through $0.60$, $1.16$, $2.07$, $2.95$,
+$3.140$, and $3.1416$, reaching the minimum $(0, \pi)$ with $f = -1$. The
+richer model has led to the worse point. Because the curvature along $y$ is
+negative, the stationary point of the quadratic model is a saddle, and
+Newton's method is blind to the difference between a saddle and a minimum.
+A trust region (:numref:`subsec_mdl-trust-region`) fixes this flaw.
 
 ## Quasi-Newton Methods
 
-Newton's method needs second derivatives. Can the curvature be inferred
-instead from gradients that have already been computed? A gradient that
-changes quickly along a step betrays a large curvature in that direction,
-and a method that remembers such changes can assemble a model of the Hessian
-without ever evaluating one.
+Newton's method requires explicit second derivatives. Can we instead infer
+curvature from the gradients we are already computing? When the gradient
+changes rapidly along a step, the objective must have large curvature in that
+direction. An optimizer that records these changes can gradually assemble a
+model of the Hessian without ever evaluating a second derivative.
 
 ### The Secant Method
 
-In one dimension the idea is elementary: the slope of $f'$ between the last
-two iterates estimates $f''$,
+In one dimension the idea is immediate: the slope of the chord connecting
+the last two gradients estimates $f''$,
 
 $$
 h_k = \frac{f'(x_k) - f'(x_{k-1})}{x_k - x_{k-1}},
@@ -322,29 +349,33 @@ h_k = \frac{f'(x_k) - f'(x_{k-1})}{x_k - x_{k-1}},
 x_{k+1} = x_k - \frac{f'(x_k)}{h_k}.
 $$
 
-This is the **secant method**, Newton's step with $f''$ replaced by the slope
-of the chord through the last two gradients. Take $f(x) = e^x - 2x$, whose
-minimizer is $\log 2 = 0.6931$, from $x_0 = 0$ and $x_1 = 1$. The first slope is
-$h_1 = (e - 2) - (1 - 2) = e - 1 = 1.718$, so
-$x_2 = 1 - (e - 2)/1.718 = 0.582$. The errors then run
-$1.1 \times 10^{-1}$, $1.6 \times 10^{-2}$, $9.3 \times 10^{-4}$,
-$7.7 \times 10^{-6}$, $3.6 \times 10^{-9}$. Each is about half the product of
-the previous two (the half is $f'''/(2f'')$ at the minimizer), so the number
-of correct digits grows by a factor approaching $1.6$ per step. That is
-slower than Newton's factor $2$, but each step costs one gradient and no
-second derivative. On a quadratic $\tfrac{\lambda}{2}x^2$ the secant slope is
-$\lambda$ exactly, and the step from $x_1$ lands on the minimizer.
+This is the **secant method**, which is simply Newton's step with $f''(x_k)$
+replaced by a finite difference of gradients. Consider $f(x) = e^x - 2x$,
+whose minimizer is $\log 2 \approx 0.6931$, starting from $x_0 = 0$ and
+$x_1 = 1$. The first secant slope is $h_1 = (e - 2) - (1 - 2) = e - 1 \approx 1.718$,
+giving $x_2 = 1 - (e - 2)/1.718 \approx 0.582$. From there the errors shrink
+as $1.1 \times 10^{-1}$, $1.6 \times 10^{-2}$, $9.3 \times 10^{-4}$,
+$7.7 \times 10^{-6}$, and $3.6 \times 10^{-9}$. Each error is roughly half
+the product of the previous two (the factor of one-half comes from
+$f'''/(2f'')$ at the minimizer), so the number of correct digits grows by a
+factor approaching $1.6$ per step. That is slightly slower than Newton's
+factor of $2$, yet each iteration requires only a single gradient evaluation
+and no second derivative. On a one-dimensional quadratic
+$\tfrac{\lambda}{2}x^2$, the secant slope equals $\lambda$ exactly, and the
+step from $x_1$ lands directly on the minimizer.
 
-In $d$ dimensions the analogous condition is one vector equation, which
-cannot determine a $d \times d$ matrix: one step reveals the curvature along
-one direction only. Something must fill in the rest.
+In $d$ dimensions, the analogous secant condition is a single vector
+equation, which is far from enough to pin down a $d \times d$ matrix: one
+step reveals curvature along one direction only. We need a principled rule to
+fill in the remaining directions.
 
 ### BFGS
 :label:`subsec_mdl-quasi-newton`
 
-A **quasi-Newton** method keeps an approximation of the inverse Hessian and
-updates it from the steps and gradient changes it has observed. After moving
-from $\mathbf{x}_k$ to $\mathbf{x}_{k+1}$, record the secant pair
+A **quasi-Newton** method maintains an approximation $\mathbf{M}_k$ to the
+inverse Hessian and updates it after each step using the observed change in
+the gradient. After moving from $\mathbf{x}_k$ to $\mathbf{x}_{k+1}$, we
+record the secant pair
 
 $$
 \mathbf s_k=\mathbf x_{k+1}-\mathbf x_k,
@@ -352,20 +383,21 @@ $$
 \mathbf y_k=\nabla f(\mathbf x_{k+1})-\nabla f(\mathbf x_k).
 $$
 
-On a quadratic $\mathbf{y}_k = \mathbf{A}\mathbf{s}_k$, so the inverse Hessian
-maps $\mathbf{y}_k$ back to $\mathbf{s}_k$. The new approximation
-$\mathbf{M}_{k+1}$ is required to do the same, which is the **secant
-equation**
+On a quadratic $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$, the gradient
+difference satisfies $\mathbf{y}_k = \mathbf{A}\mathbf{s}_k$, so the true
+inverse Hessian maps $\mathbf{y}_k$ back to $\mathbf{s}_k$. We require the
+updated approximation $\mathbf{M}_{k+1}$ to obey the same **secant
+equation**:
 
 $$
 \mathbf{M}_{k+1}\,\mathbf{y}_k = \mathbf{s}_k .
 $$
 :eqlabel:`eq_mdl-opt-secant`
 
-**BFGS** (Broyden, Fletcher, Goldfarb, and Shanno) fills in the rest by
-changing $\mathbf{M}_k$ as little as possible: in a suitably weighted
-Frobenius norm, the symmetric matrix closest to $\mathbf{M}_k$ that
-satisfies the secant equation is
+Among all symmetric matrices satisfying :eqref:`eq_mdl-opt-secant`, **BFGS**
+(named after Broyden, Fletcher, Goldfarb, and Shanno) chooses the one closest
+to the previous estimate $\mathbf{M}_k$ in a suitably weighted Frobenius
+norm:
 
 $$
 \mathbf{M}_{k+1}
@@ -377,31 +409,36 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-bfgs`
 
-The formula can be read without deriving it (we drop the index $k$ on the
-pair). The right factor $\mathbf{I} - \gamma\mathbf{y}\mathbf{s}^\top$
-sends $\mathbf{y}$ to zero, since $\gamma\,\mathbf{s}^\top\mathbf{y} = 1$, and
-leaves every vector orthogonal to $\mathbf{s}$ unchanged. So the first term
-forgets what $\mathbf{M}_k$ said about $\mathbf{y}$, and the second writes in
-the new answer:
+Even without deriving :eqref:`eq_mdl-opt-bfgs`, we can read off how it works
+(dropping the index $k$ on the pair for clarity). The right factor
+$\mathbf{I} - \gamma\mathbf{y}\mathbf{s}^\top$ sends $\mathbf{y}$ to zero,
+because $\gamma\,\mathbf{s}^\top\mathbf{y} = 1$, while leaving every vector
+orthogonal to $\mathbf{s}$ untouched. Thus the first term erases what
+$\mathbf{M}_k$ previously predicted along $\mathbf{y}$, and the second term
+writes in the new observation:
 $\mathbf{M}_{k+1}\mathbf{y} = \gamma\,\mathbf{s}\,(\mathbf{s}^\top\mathbf{y}) = \mathbf{s}$,
-the secant equation. The update also keeps the matrix positive definite, so
-that $-\mathbf{M}_{k+1}\nabla f(\mathbf{x}_{k+1})$ is again a descent
-direction. For $\mathbf{z} \neq \mathbf{0}$ put
-$\mathbf{w} = (\mathbf{I} - \gamma\mathbf{y}\mathbf{s}^\top)\mathbf{z}$. Then
-$\mathbf{z}^\top\mathbf{M}_{k+1}\mathbf{z} = \mathbf{w}^\top\mathbf{M}_k\mathbf{w} + \gamma(\mathbf{s}^\top\mathbf{z})^2$.
-If $\mathbf{M}_k \succ 0$ and $\gamma > 0$, both terms are nonnegative, and
-they cannot both vanish: $\mathbf{w} = \mathbf{0}$ forces
-$\mathbf{z} = \gamma(\mathbf{s}^\top\mathbf{z})\,\mathbf{y}$ with
-$\mathbf{s}^\top\mathbf{z} \neq 0$. The requirement $\gamma > 0$ is the
-**curvature condition** $\mathbf{y}_k^\top\mathbf{s}_k > 0$: the slope along
-the step has increased. It holds for every step on a strictly convex
-function, and elsewhere the line search enforces it by a second test, the
-Wolfe condition :cite:`Nocedal.Wright.2006`.
+satisfying the secant equation.
 
-How much curvature do the secant pairs recover? We run BFGS from $(1, 1)$
-on $\mathrm{diag}(1, 10)$ with $\mathbf{M}_0 = \mathbf{I}$ and the exact line
-search $\alpha = -\mathbf{g}^\top\mathbf{p}/(\mathbf{p}^\top\mathbf{A}\mathbf{p})$
-of a quadratic, and print the iterate and $\mathbf{M}$ after each step.
+Just as importantly, the update preserves positive definiteness, ensuring
+that the next search direction $-\mathbf{M}_{k+1}\nabla f(\mathbf{x}_{k+1})$
+remains a descent direction. For any nonzero vector $\mathbf{z}$, set
+$\mathbf{w} = (\mathbf{I} - \gamma\mathbf{y}\mathbf{s}^\top)\mathbf{z}$, so
+that
+$\mathbf{z}^\top\mathbf{M}_{k+1}\mathbf{z} = \mathbf{w}^\top\mathbf{M}_k\mathbf{w} + \gamma(\mathbf{s}^\top\mathbf{z})^2$.
+When $\mathbf{M}_k \succ 0$ and $\gamma > 0$, both terms are nonnegative and
+cannot vanish simultaneously: $\mathbf{w} = \mathbf{0}$ forces
+$\mathbf{z} = \gamma(\mathbf{s}^\top\mathbf{z})\,\mathbf{y}$, which requires
+$\mathbf{s}^\top\mathbf{z} \neq 0$. The requirement $\gamma > 0$ is the
+**curvature condition** $\mathbf{y}_k^\top\mathbf{s}_k > 0$, meaning that the
+directional slope increased along the step. It holds automatically on any
+strictly convex objective; on general objectives, the line search enforces it
+via a second check known as the Wolfe condition :cite:`Nocedal.Wright.2006`.
+
+How quickly do secant pairs reconstruct the true curvature? Let us run BFGS
+from $(1, 1)$ on the two-dimensional quadratic $\mathrm{diag}(1, 10)$,
+starting with $\mathbf{M}_0 = \mathbf{I}$ and using the exact line search
+$\alpha = -\mathbf{g}^\top\mathbf{p}/(\mathbf{p}^\top\mathbf{A}\mathbf{p})$,
+and inspect both $\mathbf{x}$ and $\mathbf{M}$ after each step.
 
 ```{.python .input #mdl-gradient-based-optimization-bfgs-1}
 def bfgs_update(M, s, y):
@@ -423,43 +460,48 @@ print(f'A^-1 = {np.linalg.inv(A).tolist()},  '
       f'max |M_2 - A^-1| = {np.abs(M - np.linalg.inv(A)).max():.0e}')
 ```
 
-After one step $\mathbf{M}_1 \approx \mathrm{diag}(1.009, 0.100)$, already
-close to $\mathbf{A}^{-1}$ in the stiff direction it has seen. After the second
-step $\mathbf{M}_2 = \mathbf{A}^{-1}$ to rounding error and
-$\mathbf{x}_2 = \mathbf{0}$. The two-dimensional case is typical. On a quadratic
-with exact line searches, each secant equation, once satisfied, stays
-satisfied, and the steps are $\mathbf{A}$-conjugate ($\mathbf{s}_i^\top\mathbf{A}\mathbf{s}_j = 0$
-for $i \neq j$). After $d$ steps $\mathbf{M}_d\mathbf{A} = \mathbf{I}$ and the
-iterate is the minimizer (exercise
+After a single step, $\mathbf{M}_1 \approx \mathrm{diag}(1.009, 0.100)$ is
+already close to $\mathbf{A}^{-1}$ along the steep direction it has just
+probed. After the second step, $\mathbf{M}_2 = \mathbf{A}^{-1}$ up to
+floating-point rounding and $\mathbf{x}_2 = \mathbf{0}$. This two-dimensional
+behavior generalizes cleanly: on any $d$-dimensional positive definite
+quadratic with exact line searches, each secant equation remains satisfied
+after subsequent updates, and the steps are mutually $\mathbf{A}$-conjugate
+($\mathbf{s}_i^\top\mathbf{A}\mathbf{s}_j = 0$ for $i \neq j$). After $d$
+steps, $\mathbf{M}_d\mathbf{A} = \mathbf{I}$ and BFGS reaches the exact
+minimizer (exercise
 :exref:`ex_mdl-gradient-based-optimization-bfgs-quadratic`).
 
-Finite termination is a statement about quadratics with exact line
-searches, and it should not be read as a promise. On other functions the
-line search is inexact, the curvature changes from step to step, and noisy
-gradients corrupt $\mathbf{y}_k$: the difference of two minibatch gradients
-is mostly the difference of two noises. Full BFGS also stores a dense
-$d \times d$ matrix. **L-BFGS** keeps only the $m$
-most recent secant pairs and applies, in $O(md)$ time and memory, the matrix
-they define, a scaled identity plus a correction of rank at most $2m$
-:cite:`Liu.Nocedal.1989`. It suits deterministic medium-scale problems and is
-less natural when fresh minibatch noise makes gradient differences
-unreliable.
+Finite termination, however, holds specifically for quadratics with exact
+line searches and should not be taken as a general guarantee. On non-quadratic
+objectives, line searches are inexact, the true Hessian varies from step to
+step, and stochastic gradients corrupt $\mathbf{y}_k$: the difference between
+two minibatch gradients is often dominated by sampling noise rather than
+curvature. In addition, full BFGS stores a dense $d \times d$ matrix.
+**L-BFGS** avoids that memory cost by retaining only the $m$ most recent
+secant pairs and applying the resulting inverse-Hessian approximation (a
+scaled identity plus a correction of rank at most $2m$) in $O(md)$ time and
+memory :cite:`Liu.Nocedal.1989`. It works very well on deterministic,
+medium-scale problems, though it remains awkward when fresh minibatch noise
+makes gradient differences unreliable.
 
 ## Trust Regions
 :label:`subsec_mdl-trust-region`
 
-Newton's method failed at $(0.5, 0.3)$ because it trusted the model
-everywhere. The model deserved no such trust: it was fitted at one point,
-and it describes the function only near that point. A trust region takes
-this literally. It keeps the curvature information, including the negative
-directions, and bounds the step instead.
+Newton's method went astray at $(0.5, 0.3)$ because it trusted its local
+quadratic model across the entire space. That model was built from derivatives
+at a single point and accurately reflects $f$ only nearby. A trust-region
+method takes this limitation literally: it keeps the full curvature
+information, including directions of negative curvature, and instead bounds the
+step to a region where the model can be trusted.
 
 ### The Subproblem
 
-At $(0.5, 0.3)$ the model of $\tfrac12x^2 + \cos y$ has curvature $-0.955$
-along $y$, so it is unbounded below and "minimize the model" has no answer.
-A **trust-region method** minimizes the model over a ball whose radius
-$\Delta_k$ says how far the model is believed:
+At $(0.5, 0.3)$, the quadratic model of $\tfrac12 x^2 + \cos y$ has
+curvature $-0.955$ along $y$. Because it curves downward without bound,
+asking for its unconstrained minimum makes no sense. A **trust-region
+method** instead minimizes the quadratic model inside a ball of radius
+$\Delta_k$, which represents how far we believe the approximation holds:
 
 $$
 \min_{\|\mathbf p\|\le\Delta_k}
@@ -469,10 +511,11 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-trust-region`
 
-Here $\mathbf{B}_k$ is the Hessian or a symmetric approximation of it. The
-radius makes the subproblem bounded even when $\mathbf{B}_k$ has a negative
-eigenvalue, because a continuous function on a ball has a minimum. The
-minimizers can be characterized exactly.
+Here $\mathbf{B}_k$ is either the exact Hessian or a symmetric approximation
+to it. Restricting $\mathbf{p}$ to a closed ball guarantees that a minimizer
+exists even when $\mathbf{B}_k$ has negative eigenvalues, because any
+continuous function achieves a minimum on a compact set. Better still, the
+exact solutions of this constrained problem have a clean characterization.
 
 **Proposition (solution of the subproblem).** *A step $\mathbf{p}$ with
 $\|\mathbf{p}\| \le \Delta$ solves :eqref:`eq_mdl-opt-trust-region` if and only
@@ -484,24 +527,31 @@ $$
 \qquad \tau\,(\Delta - \|\mathbf{p}\|) = 0.
 $$
 
-This is Theorem 4.1 of :citet:`Nocedal.Wright.2006`; exercise
-:exref:`ex_mdl-gradient-based-optimization-trust-region-saddle` proves that the
-conditions are sufficient. A trust region adds the same amount $\tau$ to every
-curvature, enough to make the shifted model convex. If $\mathbf{B}$ is
-positive definite and the Newton step fits inside the ball, $\tau = 0$ and the
-step is Newton's. Otherwise the step lies on the boundary, and $\tau$ is found
-from the scalar equation $\|(\mathbf{B} + \tau\mathbf{I})^{-1}\mathbf{g}\| = \Delta$
-with $\tau > -\lambda_{\min}(\mathbf{B})$, whose left side decreases as $\tau$
-grows. The equation can fail to have a root only in the degenerate *hard
-case*, where $\mathbf{g}$ is orthogonal to the eigenvectors of the smallest
-eigenvalue of $\mathbf{B}$. Part d of exercise
-:exref:`ex_mdl-gradient-based-optimization-trust-region-saddle` meets it. The
-shift $\tau$ is a Lagrange multiplier for the constraint
-$\tfrac12\|\mathbf{p}\|^2 \le \tfrac12\Delta^2$, in the sense of
-:numref:`sec_mdl-constrained-optimization-duality`.
+This result is Theorem 4.1 of :citet:`Nocedal.Wright.2006`; exercise
+:exref:`ex_mdl-gradient-based-optimization-trust-region-saddle` proves the
+sufficiency of these conditions. Geometrically, the trust region adds a
+uniform shift $\tau$ to every eigenvalue of $\mathbf{B}$, just enough to
+make the shifted quadratic convex. Two cases arise. When $\mathbf{B}$ is
+positive definite and the unconstrained Newton step already lies inside the
+ball, we have $\tau = 0$ and simply take the Newton step. Otherwise the
+solution lies on the boundary $\|\mathbf{p}\| = \Delta$, and $\tau$ is the
+root of the scalar equation
+$\|(\mathbf{B} + \tau\mathbf{I})^{-1}\mathbf{g}\| = \Delta$ over
+$\tau > -\lambda_{\min}(\mathbf{B})$, where the left-hand side decreases
+strictly as $\tau$ grows.
 
-The radius adapts to how well the model predicted the last step. After solving
-the subproblem, compare the actual with the predicted decrease:
+This scalar equation fails to have a root only in the degenerate *hard case*,
+when $\mathbf{g}$ is orthogonal to the eigenvectors associated with the
+smallest eigenvalue of $\mathbf{B}$ (explored in part d of exercise
+:exref:`ex_mdl-gradient-based-optimization-trust-region-saddle`). As we will
+see in :numref:`sec_mdl-constrained-optimization-duality`, the shift $\tau$
+is simply the Lagrange multiplier enforcing the constraint
+$\tfrac12\|\mathbf{p}\|^2 \le \tfrac12\Delta^2$.
+
+Between iterations, the radius $\Delta_k$ adapts according to how accurately
+the model predicted the actual drop in $f$. After solving
+:eqref:`eq_mdl-opt-trust-region`, we form the ratio of actual decrease to
+predicted decrease:
 
 $$
 r_k=
@@ -510,29 +560,34 @@ r_k=
 $$
 :eqlabel:`eq_mdl-opt-trust-ratio`
 
-A ratio near one says that the model was right. The rule used below accepts
-the step whenever $r_k > 0.1$. Independently, it shrinks the radius,
-$\Delta \leftarrow \Delta/4$, if $r_k < \tfrac14$, and doubles it if
-$r_k > \tfrac34$ and the step reached the boundary.
+A ratio near $1$ indicates that the quadratic model matched the objective
+well. In the implementation below, we accept the step whenever $r_k > 0.1$.
+Independently, we shrink the radius to $\Delta \leftarrow \Delta/4$ whenever
+$r_k < \tfrac14$, and we double it when $r_k > \tfrac34$ and the step hit
+the boundary $\|\mathbf{p}_k\| = \Delta_k$.
 
 ### The Trust-Region Step at a Saddle
 
-We solve the subproblem at $(0.5, 0.3)$ by hand, with $\Delta = 0.5$. There
-$\mathbf{g} = (0.5, -0.296)$ and $\mathbf{B} = \mathrm{diag}(1, -0.955)$.
-Positive semidefiniteness of $\mathbf{B} + \tau\mathbf{I}$ needs
-$\tau \ge 0.955$, and the Newton point $\tau = 0$ is excluded, so the step lies
-on the boundary. The equations are
-$(1 + \tau)p_1 = -0.5$ and $(\tau - 0.955)p_2 = 0.296$, with
-$p_1^2 + p_2^2 = 0.25$. Their solution is $\tau \approx 1.60$ and
-$\mathbf{p} \approx (-0.19, 0.46)$. The new point $(0.31, 0.76)$ has
-$f = 0.771$, down from $1.080$. The model predicted a decrease of $0.316$, the
-actual decrease is $0.309$, and $r = 0.98$, so the radius doubles. The step
-moves *away* from the saddle, along the direction of negative curvature,
-where the model falls, while the Newton step $(-0.5, -0.31)$ moves toward it.
+Let us work out one trust-region step at $(0.5, 0.3)$ by hand with
+$\Delta = 0.5$. At this point $\mathbf{g} = (0.5, -0.296)$ and
+$\mathbf{B} = \mathrm{diag}(1, -0.955)$. Making
+$\mathbf{B} + \tau\mathbf{I}$ positive semidefinite requires
+$\tau \ge 0.955$, so $\tau = 0$ is impossible and the step must lie on the
+boundary of the ball. The optimality system gives
+$(1 + \tau)p_1 = -0.5$ and $(\tau - 0.955)p_2 = 0.296$ subject to
+$p_1^2 + p_2^2 = 0.25$, whose solution is $\tau \approx 1.60$ and
+$\mathbf{p} \approx (-0.19, 0.46)$. Moving to $(0.31, 0.76)$ lowers $f$ from
+$1.080$ to $0.771$. Because the model predicted a decrease of $0.316$ and
+the actual decrease is $0.309$, the ratio is $r = 0.98$, so the step is
+accepted and the radius doubles. Crucially, the trust-region step moves
+*away* from the saddle along the negative-curvature direction where the
+model drops, whereas the unconstrained Newton step $(-0.5, -0.31)$ marched
+straight toward it.
 
-One step by hand does not show where the rule leads. We implement the step
-by bisection on $\tau$ and run six iterations, printing the iterate, $f$,
-the step length, $\tau$, the ratio, and the radius in force.
+To see where this update rule leads over several iterations, we implement
+`tr_step` via bisection on $\tau$ and run six steps from $(0.5, 0.3)$,
+printing the iterate, objective value, step norm, shift $\tau$, agreement
+ratio $r$, and current radius $\Delta$.
 
 ```{.python .input #mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-1}
 def tr_step(g, B, Delta):
@@ -567,42 +622,50 @@ for k in range(6):
 print(f'final x = ({x[0]:.4f}, {x[1]:.4f}),  f = {f_s(x):.4f}')
 ```
 
-The first row reproduces the hand computation. The radius grows from $0.5$ to
-$1$ and $2$, and the third step, with ratio $0.41$, is accepted without
-changing it. The fourth iterate, $(0.04, 3.75)$, lies in the region where the
-Hessian is positive definite. From there on the Newton step fits inside the
-ball and $\tau = 0$, so the method has become Newton's method. It converges
-quadratically to the minimum $(0, \pi)$, where $f = -1$. Six iterations suffice.
-:numref:`fig_mdl-opt-trust-region-saddle` shows both runs.
+The first row matches our hand calculation. The radius doubles from $0.5$ to
+$1$ and then to $2$, while the third step (with ratio $0.41$) is accepted
+without changing the radius. By the fourth iterate, $(0.04, 3.75)$, the
+algorithm has entered the basin where the Hessian is positive definite. From
+that point on, the unconstrained Newton step fits inside the trust-region
+ball with $\tau = 0$, so the method seamlessly turns into Newton's method and
+converges quadratically to the minimum $(0, \pi)$ with $f = -1$. Six
+iterations are enough; :numref:`fig_mdl-opt-trust-region-saddle` contrasts
+both trajectories.
 
-![Newton and a trust region from $(0.5,0.3)$ on $\tfrac12x^2+\cos y$, whose Hessian there is $\mathrm{diag}(1,-0.96)$. (a) The quadratic model is a saddle surface; Newton's step goes to its stationary point, while the step of length $\Delta=0.5$ that minimizes the model moves along the negative-curvature direction, away from the saddle. (b) Newton converges quadratically to the saddle $(0,0)$, where $f=1$; the trust region, with its first radius drawn, reaches the minimum $(0,\pi)$, $f=-1$, in six steps, its radius growing $0.5,1,2$.](../img/mdl-opt-trust-region-saddle.svg)
+![Newton's method and a trust-region method from $(0.5,0.3)$ on $\tfrac12 x^2 + \cos y$, where the Hessian is $\mathrm{diag}(1,-0.96)$. (a) The local quadratic model forms a saddle surface: Newton's step moves to its stationary point, whereas minimizing the model over the ball of radius $\Delta = 0.5$ follows the negative-curvature direction away from the saddle. (b) Newton's method converges quadratically to the saddle $(0,0)$ with $f = 1$, while the trust-region method (shown with its initial radius) reaches the minimum $(0,\pi)$ with $f = -1$ in six steps as its radius expands through $0.5, 1, 2$.](../img/mdl-opt-trust-region-saddle.svg)
 :label:`fig_mdl-opt-trust-region-saddle`
 
-The exact subproblem needs a factorization of $\mathbf{B}_k + \tau\mathbf{I}$
-for each trial $\tau$. Large problems solve it approximately with
-Hessian--vector products, which cost about as much as a gradient
-(:numref:`sec_mdl-matrix-calculus-autodiff`). Even so, neither BFGS nor a
-trust region replaces stochastic gradients on a large noisy loss.
+Solving the trust-region subproblem exactly requires factoring
+$\mathbf{B}_k + \tau\mathbf{I}$ for each trial value of $\tau$. Large-scale
+implementations instead solve it approximately using Hessian--vector
+products, each costing roughly the same as a single gradient evaluation
+(:numref:`sec_mdl-matrix-calculus-autodiff`). Even with that speedup, neither
+BFGS nor trust-region methods replace stochastic gradient descent on large,
+noisy deep learning objectives.
 
-The saddle of $\tfrac12 x^2 + \cos y$ has now misled two methods: gradient
-descent stopped at it, and Newton's method ran to it. A trust region
-escapes, but only by testing each model against the function. On some
-functions no such care is needed, because they have no saddle and no second
-basin, and every stationary point is the minimum. Which functions these are
-is the subject of :numref:`sec_mdl-convexity`.
+The saddle of $\tfrac12 x^2 + \cos y$ has now tripped up two optimizers:
+gradient descent stalled at it, and Newton's method ran straight into it. A
+trust region escapes, but only by checking each local model against the true
+objective. Yet there is a large class of functions where none of these
+precautions are needed: functions with no saddles, no spurious basins, and
+where every stationary point is a global minimum. Identifying those
+functions is the subject of :numref:`sec_mdl-convexity`.
 
 ## Summary
 
-Newton's step minimizes the local quadratic model of $f$. It solves a
-quadratic in one step whatever its condition number, and near a minimizer
-with a positive definite, Lipschitz-continuous Hessian it squares the error
-at every step. A step costs $O(d^2)$ memory and $O(d^3)$ time, which no
-network can afford, and the method runs to saddles as readily as to minima.
-BFGS rebuilds the inverse Hessian from the changes of the gradient along
-past steps, and on a quadratic in $d$ dimensions it has rebuilt all of it
-after $d$ steps. A trust region makes any quadratic model safe to use: it
-bounds the step, compares the predicted decrease with the actual one, and
-adjusts the bound accordingly.
+Newton's method minimizes a local quadratic model of $f$ at each iterate. It
+solves any positive definite quadratic in a single step regardless of the
+condition number, and near a minimizer with a positive definite,
+Lipschitz-continuous Hessian it squares the error at every iteration. That
+speed comes with two obstacles: each step requires $O(d^2)$ memory and
+$O(d^3)$ operations, far beyond what a neural network can afford, and the
+unconstrained step is attracted to saddle points just as strongly as to
+minima. BFGS avoids explicit second derivatives by reconstructing the inverse
+Hessian from past step and gradient differences, recovering it completely in
+$d$ steps on a $d$-dimensional quadratic. Trust-region methods make any
+quadratic model safe to use by confining each step to a ball, comparing the
+predicted and actual decreases in $f$, and expanding or shrinking the ball
+accordingly.
 
 ## Exercises
 

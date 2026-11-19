@@ -2,43 +2,50 @@
 :label:`sec_mdl-numerical-stability-conditioning`
 
 Every computation in this chapter so far ran in floating point, and we read
-its results as if they were exact real numbers. Usually that is harmless.
-Occasionally a training loss turns into `NaN`, or a solver returns an answer
-that looks reasonable and is wrong. This section asks when finite-precision
-arithmetic, rather than the algorithm, decides the answer, and what we can do
+its results as if they were exact real numbers. Most of the time, that
+convenient fiction holds up. Occasionally, however, a training loss turns into
+`NaN`, or a linear solver returns an answer that looks completely plausible
+and is badly wrong. In this section we ask when finite-precision arithmetic,
+rather than the optimization algorithm, decides the answer—and what we can do
 about it.
 
-Two small computations show the two ways this happens. The three logits
-$(1000, 1001, 1002)$ define an ordinary softmax, with probabilities
-$(0.09, 0.24, 0.67)$, yet the formula evaluated as written returns `NaN` three
-times, even in fp64. And `np.linalg.solve`, applied to a $12\times12$ linear
-system, returns an answer that is off by 30%, although it is the exact
-solution of a system that differs from the stated one in the seventeenth
-digit. The first failure stops training with a `NaN` loss; the second goes
+Two small examples show the two ways numerical trouble arrives. First, the
+three logits $(1000, 1001, 1002)$ define an entirely ordinary softmax, with
+probabilities $(0.09, 0.24, 0.67)$. Yet if we evaluate the textbook formula as
+written, it returns `NaN` three times, even in double precision (fp64).
+Second, `np.linalg.solve` applied to a $12\times12$ linear system returns an
+answer that is off by 30%, even though it is the exact solution of a system
+that differs from the stated one only in the seventeenth decimal digit. The
+first failure halts training with a `NaN` loss; the second slips past
 unnoticed.
 
-The two failures have different causes. The softmax formula passes through
-$e^{1000}$, which no floating-point format can hold, and an equivalent formula
-that never forms it is accurate to a few units in the last place. The linear
-system is so sensitive that a rounding error in the sixteenth digit of its
-data moves its answer in the first, and no rewriting of the solver can undo
-that.
+These two failures have fundamentally different causes. The naive softmax
+formula passes through $e^{1000}$, a number too large for any standard
+floating-point format to hold, whereas an algebraically equivalent rewrite
+that never forms $e^{1000}$ is accurate to a few units in the last place. By
+contrast, the $12\times12$ linear system is so sensitive that a rounding error
+in the sixteenth digit of its data moves the solution in the first digit, and
+no rewriting of the solver can undo that sensitivity.
 
-We first show what a computer stores and how much error each rounding
-introduces. We then compute softmax and cross-entropy without passing
-through values the format cannot hold, and the variance without subtracting
-nearly equal numbers. A condition number for a function decides whether the
-algorithm or the problem is to blame. The condition number of a
-linear system sets how many digits a least-squares solve keeps and, as in
-:numref:`sec_mdl-gradient-based-optimization`, how many steps gradient
-descent needs. :numref:`sec_numerics` shows how training uses the
-low-precision formats; here we derive why computations in them fail.
+To tell those two situations apart, we begin by examining how computers store
+real numbers and how much error each rounding introduces. Next, we rewrite
+softmax and cross-entropy so they never pass through numbers the format cannot
+hold, and we rewrite the variance so it never subtracts nearly equal large
+numbers. We then introduce a sensitivity measure—the condition number of a
+function—that separates a bad algorithm from an inherently hard problem.
+Finally, we see how the condition number of a linear system governs both the
+digits a least-squares solve can keep and, as in
+:numref:`sec_mdl-gradient-based-optimization`, the number of steps gradient
+descent requires. While :numref:`sec_numerics` shows how modern training uses
+low-precision formats in practice, here we derive why computations in them
+succeed or fail.
 
-Three results matter more than the individual formulas: the rounding model
-with its unit roundoff $u$, the principle that an unstable algorithm routes a
-well-conditioned problem through an ill-conditioned step, and the bound of the
-forward error by the condition number times the backward error. Summation
-order and ridge regularization can be skipped on a first reading.
+Three ideas matter more than any individual formula: the relative rounding
+model for floating-point arithmetic, the principle that an unstable algorithm
+routes a well-conditioned problem through an ill-conditioned intermediate
+step, and the bound linking a solver's solution error to the problem's
+sensitivity. The subsections on summation order and ridge regularization can
+be skipped on a first reading.
 
 ```{.python .input #numerical-stability-conditioning-imports}
 #@tab mxnet
@@ -95,72 +102,80 @@ from fractions import Fraction
 
 ### Representation and Spacing
 
-What does a computer store when it stores $1.1$? The answer is easiest to see
-in a toy format with only two bits after the binary point. Between $1$ and
-$2$ it can hold $(1.00)_2=1$, $(1.01)_2=1.25$, $(1.10)_2=1.5$, and
-$(1.11)_2=1.75$. Multiplying by powers of two gives the other intervals:
+What does a computer actually store when we ask it to store $1.1$? The
+mechanism is easiest to see in a toy binary format that keeps only two bits
+after the binary point. Between $1$ and $2$, this format can hold just four
+values: $(1.00)_2=1$, $(1.01)_2=1.25$, $(1.10)_2=1.5$, and $(1.11)_2=1.75$.
+Multiplying these four values by powers of two fills out the other intervals:
 $2, 2.5, 3, 3.5$ between $2$ and $4$, and $0.5, 0.625, 0.75, 0.875$ between
-$0.5$ and $1$. Each *octave*, an interval from $2^e$ to $2^{e+1}$, holds
-four values, so the gap between neighbors doubles each time the magnitude
-doubles.
+$0.5$ and $1$. Each *octave*—an interval $[2^e, 2^{e+1})$ between consecutive
+powers of two—holds exactly four values, so the absolute gap between adjacent
+numbers doubles every time the magnitude doubles.
 
-A number that is not on the grid is rounded to the nearest one:
-$1.1\mapsto1$, a relative error of $-0.091$; $1.3\mapsto1.25$, an error of
-$-0.038$; $3.3\mapsto3.5$, an error of $+0.061$. The midpoint $1.125$ is a
-tie, and ties go to the neighbor whose last bit is $0$, here $1$ (an error
-of $-0.111$). No relative error exceeds $1/8$: rounding moves a number by
-at most half a gap, and in every octave half a gap is $1/8$ of the octave's
-smallest number. :numref:`fig_mdl-opt-fp-number-line` draws this format on
-the real line.
+Any real number that falls between grid points is rounded to the nearest one:
+$1.1\mapsto1$ (a relative error of $-0.091$), $1.3\mapsto1.25$ (an error of
+$-0.038$), and $3.3\mapsto3.5$ (an error of $+0.061$). Halfway points are
+ties, and standard arithmetic breaks ties toward the neighbor whose last bit
+is $0$: the midpoint $1.125$ therefore rounds to $1$, an error of $-0.111$.
+Notice that no relative error exceeds $1/8$. Rounding moves a number by at
+most half a gap, and in every octave half a gap is $1/8$ of the octave's
+smallest value. :numref:`fig_mdl-opt-fp-number-line` sketches this grid on the
+real line.
 
-![Floating-point numbers on the real line, drawn for a toy format with two mantissa bits (four values per octave, $\varepsilon_{\mathrm{mach}}=1/4$, smallest normal $0.25$). The absolute gap between neighbors doubles at every power of two while the relative gap stays near $\varepsilon_{\mathrm{mach}}$; below the smallest normal the subnormals continue with the same gap down to zero; after the axis break, each real format ends at its overflow threshold (fp16 at $65504$, fp32 at about $3.4\times10^{38}$).](../img/mdl-opt-fp-number-line.svg)
+![Floating-point numbers on the real line for a toy format with two mantissa bits (four values per octave, $\varepsilon_{\mathrm{mach}}=1/4$, smallest normal $0.25$). The absolute gap between neighbors doubles at every power of two while the relative gap stays near $\varepsilon_{\mathrm{mach}}$. Below the smallest normal, subnormal numbers continue with the same spacing down to zero; after the axis break, real formats end at their overflow thresholds (fp16 at $65504$, fp32 at about $3.4\times10^{38}$).](../img/mdl-opt-fp-number-line.svg)
 :label:`fig_mdl-opt-fp-number-line`
 
-Real formats work the same way with more bits. A floating-point number is
-scientific notation in base two with a fixed budget of $p$ binary digits
-after the point,
+Real floating-point formats work in the same way, simply with more bits. A
+floating-point number is scientific notation in base two with a fixed budget
+of $p$ binary digits after the binary point,
 
 $$
 x = (-1)^s \cdot (1.b_1 b_2 \ldots b_p)_2 \cdot 2^{e},
 $$
 :eqlabel:`eq_mdl-opt-float-format`
 
-with a sign bit $s$, *mantissa* bits $b_1,\ldots,b_p$, and an integer
-exponent $e$ from a fixed range. The exponent sets the range of magnitudes,
-and the mantissa sets the relative precision. In the octave
-$[2^e, 2^{e+1})$ the values are spaced $2^{e-p}$ apart. The gap from $1$ to
-the next number, $\varepsilon_{\mathrm{mach}}=2^{-p}$, is called *machine
-epsilon*; the toy format has $p=2$ and $\varepsilon_{\mathrm{mach}}=1/4$.
+specified by a sign bit $s$, *mantissa* (or significand) bits
+$b_1,\ldots,b_p$, and an integer exponent $e$ drawn from a fixed range. The
+exponent sets the range of magnitudes the format can represent, while the
+mantissa sets its relative precision. Within the octave $[2^e, 2^{e+1})$,
+adjacent values are spaced $2^{e-p}$ apart. The gap from $1$ to the next
+representable number, $\varepsilon_{\mathrm{mach}}=2^{-p}$, is called
+*machine epsilon*; our toy format has $p=2$ and
+$\varepsilon_{\mathrm{mach}}=1/4$.
 
-Rounding to the nearest number moves $x$ by at most half a gap,
-$2^{e-p-1}$, and $|x|\ge2^e$, so the relative error is at most $2^{-p-1}$.
-A *normal* number is one of the form :eqref:`eq_mdl-opt-float-format` with
-its exponent in range. For every real $x$ whose rounded value is normal,
+Rounding a real number $x$ to the nearest representable value moves it by at
+most half a gap, $2^{e-p-1}$. Because $|x|\ge2^e$ throughout the octave, the
+relative error is at most $2^{-p-1}$. Calling a value *normal* when it has the
+form :eqref:`eq_mdl-opt-float-format` with an in-range exponent, every real
+$x$ that rounds to a normal number satisfies
 
 $$
 \mathrm{fl}(x) = x\,(1 + \delta), \qquad |\delta| \le u = \tfrac12\,\varepsilon_{\mathrm{mach}} = 2^{-p-1} .
 $$
 :eqlabel:`eq_mdl-opt-rounding-model`
 
-Each rounding thus perturbs a number by at most one part in $2^{p+1}$: one
-part in $8$ for the toy format, about one part in 17 million for fp32
-($p=23$), and one part in $256$ for bf16 ($p=7$). The bound $u$ is
-called the *unit roundoff*. IEEE arithmetic rounds the result of each basic
-operation correctly, so the computed $x\oplus y$ equals $(x+y)(1+\delta)$
-with $|\delta|\le u$, and the same holds for $-$, $\times$, and $/$
+In words, each rounding perturbs a number by at most one part in $2^{p+1}$:
+one part in $8$ for our toy format, about one part in 17 million for fp32
+($p=23$), and one part in $256$ for bf16 ($p=7$). The bound $u$ is called the
+*unit roundoff*. Standard IEEE arithmetic rounds the result of every basic
+operation to the nearest representable value, so the computed sum
+$x\oplus y$ equals $(x+y)(1+\delta)$ with $|\delta|\le u$, and the same
+guarantee holds for $-$, $\times$, and $/$
 :cite:`IEEE.754.2019,Goldberg.1991`.
 
-The model has three exceptions. Results too large to store overflow. Results
-smaller than the smallest normal number underflow, passing through the
-*subnormal* numbers that fill the gap to zero. Undefined results, such as
-$0/0$, become `NaN`. All three are absolute effects rather than relative ones,
-and we return to them once the formats are on the table.
+This clean relative model has three exceptions. Results larger than the format
+can hold *overflow* to $\infty$. Results smaller than the smallest normal
+number *underflow*, stepping down through *subnormal* numbers that fill the
+remaining gap to zero. Undefined operations, such as $0/0$ or $\infty/\infty$,
+produce `NaN`. All three are absolute-scale effects rather than relative ones,
+and we will return to them right after putting the standard formats on the
+table.
 
 ### Formats
 
-Deep learning uses five formats below double precision, fp64. The library
-reports each one's $\varepsilon_{\mathrm{mach}}$, smallest normal number, and
-largest finite number:
+Deep learning relies on five formats narrower than double precision (fp64).
+Let us inspect each format's machine epsilon $\varepsilon_{\mathrm{mach}}$,
+smallest normal number, and largest finite value directly from the library:
 
 ```{.python .input #numerical-stability-conditioning-finfo}
 #@tab pytorch
@@ -182,30 +197,34 @@ for dt in [np.float16, np.float32, ml_dtypes.bfloat16,
           f'{float(fi.smallest_normal):16.3e} {float(fi.max):10.3e}')
 ```
 
-**fp32** keeps $p=23$ bits, about seven decimal digits, and reaches
-$3.4\times10^{38}$. **fp16** keeps $p=10$ bits but has a small exponent range:
-it overflows above $65504$, and below $2^{-14}\approx6.1\times10^{-5}$ its
-numbers are subnormal. **bf16** (`bfloat16` in the libraries) makes the
-opposite choice. It keeps fp32's eight exponent bits, and hence its range, and
-only $p=7$ mantissa bits, $\varepsilon_{\mathrm{mach}}=2^{-7}\approx0.0078$,
-two to three decimal digits. The value $2^{-8}$ that is often quoted for bf16
-is its unit roundoff $u=\varepsilon_{\mathrm{mach}}/2$. The two fp8 formats
-continue the progression: E4M3 keeps three bits (about one decimal digit) and
-stops at $448$, and E5M2 keeps two bits with fp16's range. With so little
-range, fp8 is usable only with a scale factor per tensor or per block of
-values.
+**fp32** keeps $p=23$ mantissa bits—about seven decimal digits—and reaches up
+to $3.4\times10^{38}$. **fp16** keeps $p=10$ bits (about three decimal digits)
+but has a narrow exponent range: it overflows above $65504$, and below
+$2^{-14}\approx6.1\times10^{-5}$ its values become subnormal. **bf16**
+(`bfloat16` in the libraries) makes the opposite trade-off. It keeps all eight
+exponent bits of fp32, preserving its vast dynamic range, at the cost of
+keeping only $p=7$ mantissa bits ($\varepsilon_{\mathrm{mach}}=2^{-7}\approx
+0.0078$, roughly two to three decimal digits). Notice that the value $2^{-8}$
+often quoted for bf16 is its unit roundoff $u=\varepsilon_{\mathrm{mach}}/2$.
+The two fp8 formats push this trade-off further still: E4M3 keeps three
+mantissa bits (about one decimal digit) and tops out at $448$, while E5M2
+keeps two mantissa bits with fp16's exponent range. With so little dynamic
+range, fp8 is practical only when paired with a separate scale factor per
+tensor or per block of values.
 
-bf16 is the top half of an fp32 number: the same sign bit, the same eight
-exponent bits, and the first seven mantissa bits. Rounding an fp32 number to
-bf16 therefore means rounding away its low 16 bits, which we can write
-as integer arithmetic on the bit pattern. We add `0x7FFF`, plus one more
-when the lowest kept bit is $1$, and then clear the low 16 bits. The
-addition carries into the kept bits when the discarded part is above the
-midpoint, or at the midpoint with an odd kept part, and only then. This is
-round to nearest, ties to even, written as bit truncation; Exercise
+Because bf16 is simply the top 16 bits of an fp32 number—the same sign bit,
+the same eight exponent bits, and the first seven mantissa bits—converting
+fp32 to bf16 amounts to rounding off the low 16 bits. We can implement that
+rounding directly with integer arithmetic on the raw bit pattern. The midpoint
+of the discarded 16 bits is `0x8000`, so we add `0x7FFF` (one below the
+midpoint), plus one more if the lowest kept bit is $1$, and then clear the
+low 16 bits. This sum carries into the kept bits if and only if the discarded
+part lies strictly above the midpoint, or sits right on the midpoint with an
+odd kept bit. That is round-to-nearest, ties-to-even in a single line of bit
+manipulation; Exercise
 :exref:`ex_mdl-numerical-stability-conditioning-stochastic-rounding` builds
-stochastic rounding on it. The cell checks one input above a midpoint and
-two ties:
+stochastic rounding on top of it. Let us verify it on one input above a
+midpoint and two exact ties:
 
 ```{.python .input #mdl-numerical-stability-conditioning-formats-1}
 def to_bf16(x):
@@ -220,11 +239,13 @@ for x, expected in [(1 + 2**-8 + 2**-10, 1 + 2**-7),   # above the midpoint
     print(f'{x:.8f} -> {to_bf16(x).item():.8f}   (expected {expected:.8f})')
 ```
 
-The first input lies above the midpoint between $1$ and $1+2^{-7}$ and rounds
-up. The second is that midpoint and rounds to the even neighbor $1$; the third
-is the midpoint between $1+2^{-7}$ and $1+2^{-6}$ and rounds up to the even
-neighbor. The next cell shows the same tie rule in fp32, the growth of the gap
-with the magnitude, and the largest logit each format can exponentiate:
+As expected, the first input lies above the midpoint between $1$ and
+$1+2^{-7}$ and rounds up. The second sits right on that midpoint and rounds
+down to the even neighbor $1$, whereas the third sits on the midpoint between
+$1+2^{-7}$ and $1+2^{-6}$ and rounds up to the even neighbor $1+2^{-6}$. Next,
+let us check the same tie rule in fp32, observe how the spacing grows with
+magnitude, and find the largest logit each format can exponentiate without
+overflow:
 
 ```{.python .input #numerical-stability-conditioning-spacing}
 eps = np.finfo(np.float32).eps
@@ -238,30 +259,34 @@ for dt in [np.float16, np.float32, np.float64]:
           f'{np.log(np.finfo(dt).max):.2f}')
 ```
 
-The value $1+\varepsilon_{\mathrm{mach}}/2$ is the midpoint between $1$ and
-its upper neighbor and rounds to the even one, $1$. Half a gap, the worst
-case, does occur; as a relative error it is $u/(1+u)$, just inside the bound
-$|\delta|\le u$. The gap at $2^{20}$ is $2^{20}$ times the gap at $1$, about a
-million times. The last three lines locate the logits at which $e^x$
-overflows: $11.09$ in fp16, $88.72$ in fp32, and $709.78$ in fp64.
+Here $1+\varepsilon_{\mathrm{mach}}/2$ is the midpoint between $1$ and its
+upper neighbor, so ties-to-even sends it back to $1$. The worst-case rounding
+error of half a gap really does occur, giving a relative error of $u/(1+u)$,
+just inside the bound $|\delta|\le u$. Meanwhile, the gap at $2^{20}$ is
+$2^{20}$ times—about a million times—the gap at $1$. Finally, the last three
+lines pinpoint where $e^x$ overflows: above $11.09$ in fp16, $88.72$ in fp32,
+and $709.78$ in fp64.
 
 ### Overflow, Underflow, and Small Updates
 
-The exponential turns additive scale into multiplicative scale, so a modest
-logit already overflows: fp16's threshold $\log 65504\approx11.09$ is well
-inside the range of ordinary unnormalized scores.
+Because the exponential turns an additive scale into a multiplicative one,
+even modest logits can overflow. In fp16, the ceiling
+$\log 65504\approx11.09$ sits well inside the range of ordinary unnormalized
+classifier scores.
 
-At the other end, $e^{-x}$ underflows. Below the smallest normal number the
-format continues through subnormal numbers, which keep the last gap but have
-fewer and fewer significant bits, and then reaches $0$. A later $\log$ of that
-$0$ returns $-\infty$, and the backward pass returns `inf` or `NaN`. In fp16
-the subnormals start below $2^{-14}\approx6.1\times10^{-5}$, the smallest of
-them is $2^{-24}\approx6\times10^{-8}$, and everything below
-$2^{-25}\approx3\times10^{-8}$ rounds to zero.
+At the opposite end, $e^{-x}$ underflows. Below the smallest normal number, a
+format steps through subnormal numbers that keep the same absolute spacing
+while shedding significant bits one by one, until values round all the way to
+$0$. Taking $\log 0$ later produces $-\infty$, and the backward pass fills
+with `inf` or `NaN`. In fp16, subnormals begin below
+$2^{-14}\approx6.1\times10^{-5}$, the smallest subnormal is
+$2^{-24}\approx6\times10^{-8}$, and anything below
+$2^{-25}\approx3\times10^{-8}$ rounds straight to zero.
 
-Addition has a second absolute threshold. A training step replaces
-a weight $w$ by $w-\eta g$. If the step $\eta g$ is small compared with the
-gap next to $w$, the sum rounds back to $w$, and the step is lost.
+Addition introduces a second absolute threshold that matters directly for
+training. A gradient step replaces a weight $w$ by $w-\eta g$. If the update
+$\eta g$ is small compared with the spacing around $w$, the sum simply rounds
+back to $w$, and the step vanishes without a trace.
 
 **Proposition (small updates vanish).** *Let $w>0$ be a floating-point number
 with $2^e\le w<2^{e+1}$ in a format with $p$ mantissa bits, and let
@@ -271,34 +296,34 @@ $|\Delta|<2^{e-p-2}$.*
 
 **Proof.** In $[2^e, 2^{e+1}]$ the representable numbers are $2^{e-p}$ apart,
 so the neighbors of $w$ are $w\pm2^{e-p}$, except that below $w=2^e$ the
-octave $[2^{e-1},2^e)$ begins and the gap halves to $2^{e-p-1}$. Rounding
-to the nearest number returns $w$ whenever $w+\Delta$ is closer to $w$ than
-to the neighbor on its side, that is, whenever $|\Delta|$ is less than half
-of that gap. $\blacksquare$
+lower octave $[2^{e-1},2^e)$ begins and the spacing halves to $2^{e-p-1}$.
+Rounding to the nearest number returns $w$ whenever $w+\Delta$ is closer to
+$w$ than to the adjacent grid point on its side—that is, whenever $|\Delta|$
+is strictly less than half of that gap. $\blacksquare$
 
-For a weight update, $\Delta=-\eta g$, and for $2^e<w<2^{e+1}$ the
-proposition says
+For a weight update $\Delta=-\eta g$ with $2^e<w<2^{e+1}$, the proposition
+reads
 
 $$
 \mathrm{fl}(w-\eta g)=w \qquad \textrm{whenever } |\eta g|<2^{e-p-1}=u\,2^e .
 $$
 :eqlabel:`eq_mdl-opt-small-update`
 
-An update smaller than about $u|w|$ is lost. The relative model
-:eqref:`eq_mdl-opt-rounding-model` is accurate for products and quotients,
-but for a sum of two numbers of very different size it hides this absolute
-threshold.
+In short, any update smaller than roughly $u|w|$ is lost. The relative model
+:eqref:`eq_mdl-opt-rounding-model` describes products and quotients well, but
+when we add two numbers of very different magnitudes, it hides this sharp
+absolute cutoff.
 
-A weight $w=1$ sits on a power of two, the exceptional case of the
-proposition: below it the gap halves, so a decrease is lost below $u/2$ (an
-increase, which :numref:`sec_numerics` tries, below $u$). In bf16 a weight
-equal to $1$ thus ignores any decrease below $2^{-9}\approx0.002$, and a
-learning rate of $10^{-3}$ with a gradient of order $1$ leaves it unchanged.
-The same threshold is $2^{-12}\approx2.4\times10^{-4}$ in fp16 and
-$2^{-25}\approx3\times10^{-8}$ in fp32, which is why mixed-precision training
-keeps a master copy of the weights in fp32. The cell tries steps on either
-side of the thresholds; the bf16 lines compute the step in fp32 and round the
-result with `to_bf16`:
+A weight sitting right on a power of two, such as $w=1$, falls into the
+exceptional case of the proposition: because the spacing halves below $1$, an
+increase vanishes below $u$ (as :numref:`sec_numerics` tests), whereas a
+decrease already vanishes below $u/2$. In bf16, a weight equal to $1$ therefore
+ignores any decrease smaller than $2^{-9}\approx0.002$, so a learning rate of
+$10^{-3}$ with an order-$1$ gradient leaves the weight completely frozen. The
+corresponding threshold is $2^{-12}\approx2.4\times10^{-4}$ in fp16 and
+$2^{-25}\approx3\times10^{-8}$ in fp32—which is why mixed-precision training
+keeps a master copy of the weights in fp32. Let us test steps straddling these
+thresholds (computing the bf16 updates in fp32 and rounding with `to_bf16`):
 
 ```{.python .input #mdl-numerical-stability-conditioning-overflow-underflow-and-small-updates}
 one32, one16 = np.float32(1.0), np.float16(1.0)
@@ -309,23 +334,26 @@ print('fp16    : 1 - 3e-4 ->', one16 - np.float16(3e-4))
 print('fp32    : 1 - 1e-3 ->', one32 - np.float32(1e-3))
 ```
 
-A step of $10^{-3}$ leaves the bf16 weight at $1$, while a step of
-$2\times10^{-3}$, above the threshold $0.00195$, moves it to the neighbor
-$1-2^{-8}=0.99609375$. fp16 loses $10^{-4}$ and keeps $3\times10^{-4}$, which
-lands on its neighbor $1-2^{-11}\approx0.9995$; fp32 keeps the full step.
+Sure enough, a step of $10^{-3}$ leaves the bf16 weight stuck at $1$, whereas
+$2\times10^{-3}$ clears the $0.00195$ threshold and jumps to the neighbor
+$1-2^{-8}=0.99609375$. Similarly, fp16 swallows $10^{-4}$ and responds to
+$3\times10^{-4}$ by stepping to $1-2^{-11}\approx0.9995$, while fp32 keeps the
+full update.
 
-Gradients meet the underflow threshold instead. fp16 gradients below
-$6.1\times10^{-5}$ lose bits and those below $3\times10^{-8}$ become zero.
-Multiplying the loss by a factor $S$ before the backward pass multiplies
-every gradient by $S$ and moves them back into range; dividing by $S$ in
-fp32 afterward undoes the scaling (:numref:`subsec_loss_scaling` shows the
-practice, and Exercise :exref:`ex_mdl-numerical-stability-conditioning-loss-scale-window` finds the
-admissible $S$).
+Gradients run into the underflow threshold instead. In fp16, gradients below
+$6.1\times10^{-5}$ lose precision and those below $3\times10^{-8}$ vanish to
+zero. Multiplying the loss by a constant factor $S$ before the backward pass
+scales every gradient up by $S$ and lifts them back into the normal range;
+dividing by $S$ afterward in fp32 restores the true scale
+(:numref:`subsec_loss_scaling` covers the practical workflow, and Exercise
+:exref:`ex_mdl-numerical-stability-conditioning-loss-scale-window` determines
+the admissible window for $S$).
 
 *Stochastic rounding* :cite:`Gupta.Agrawal.Gopalakrishnan.ea.2015` removes the
-lost-update threshold in a different way. It rounds up or down at random, with
-probabilities chosen so that the expected stored value equals the exact
-result, so updates too small for round-to-nearest still accumulate in
+lost-update cutoff in a different way. Instead of always rounding to the
+nearest grid point, it rounds up or down at random with probabilities chosen
+so that the expected stored value equals the exact result. Updates far too
+small for round-to-nearest then still accumulate over many steps in
 expectation
 (Exercise :exref:`ex_mdl-numerical-stability-conditioning-stochastic-rounding`).
 
@@ -333,29 +361,32 @@ expectation
 :label:`subsec_mdl-stable-softmax`
 
 Softmax, log-sum-exp, and cross-entropy all exponentiate logits, so all three
-meet the overflow and underflow thresholds above. Our running example for them
-is a classifier with two classes and logits $\mathbf z=(0,t)$, whose label is
-the unlikely class $0$. Its probabilities are
+collide head-on with the overflow and underflow thresholds we just computed.
+To keep everything concrete, we will carry one running example through this
+subsection: a two-class classifier with logits $\mathbf z=(0,t)$ whose true
+label is the unlikely class $0$. Its probabilities are
 $\mathrm{softmax}(\mathbf z)=\bigl(1/(1+e^t),\, e^t/(1+e^t)\bigr)$, its
-log-sum-exp is $\log(1+e^t)$, and the cross-entropy of class $0$ is
-$\log(1+e^t)\approx t$ for large $t$. None of these numbers is extreme: at
-$t=100$ the probabilities are $3.7\times10^{-44}$ and $1$, and the loss is
-$100$.
+log-sum-exp is $\log(1+e^t)$, and the cross-entropy loss for class $0$ is
+$\log(1+e^t)\approx t$ for large $t$. None of these outputs is extreme: even
+at $t=100$, the probabilities are $3.7\times10^{-44}$ and $1$, and the loss
+is simply $100$.
 
 ### The Max Shift
 
-The softmax of logits $\mathbf z\in\mathbb R^n$ is
+Given logits $\mathbf z\in\mathbb R^n$, the softmax vector is defined by
 
 $$
 \mathrm{softmax}(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^n e^{z_j}} .
 $$
 
-At $t=100$ the direct formula forms $e^{100}$, above fp32's threshold
-$88.72$. The second entry becomes `inf/inf`, which is `NaN`, and the first
-becomes $1/\infty=0$. The probabilities themselves are representable; only
-the intermediate exponential is not. Multiplying numerator and denominator by
-the positive constant $e^{-c}$ changes nothing, so softmax is
-*shift-invariant*,
+At $t=100$, evaluating this formula directly forms $e^{100}$, which exceeds
+fp32's overflow ceiling of $88.72$. The second entry turns into `inf/inf`
+(`NaN`), and the first collapses to $1/\infty=0$. Notice that the true
+probabilities themselves fit easily in fp32; only the intermediate exponential
+does not.
+
+Luckily, multiplying numerator and denominator by the same positive constant
+$e^{-c}$ leaves the ratio untouched, so softmax is *shift-invariant*:
 
 $$
 \mathrm{softmax}(\mathbf{z} - c\mathbf{1}) = \mathrm{softmax}(\mathbf{z})
@@ -363,21 +394,22 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-softmax-shift`
 
-The same factoring under the logarithm rewrites the **log-sum-exp**
-$\mathrm{lse}(\mathbf{z}) = \log \sum_j e^{z_j}$, the logarithm of the
-softmax denominator:
+Factoring $e^c$ out of the sum inside a logarithm gives the companion
+identity for **log-sum-exp**, $\mathrm{lse}(\mathbf{z}) = \log \sum_j e^{z_j}$,
+which is the logarithm of the softmax denominator:
 
 $$
 \mathrm{lse}(\mathbf{z}) = c + \log \sum_{j=1}^n e^{z_j - c} .
 $$
 :eqlabel:`eq_mdl-opt-stable-lse`
 
-Both identities hold for every $c$, and the choice $c=\max_jz_j$ makes the
-computation safe. Every exponent $z_j-c$ is then at most $0$, so no term
-overflows, and the largest term equals $1$, so the sum lies in $[1,n]$ and its
-logarithm cannot be $-\infty$. At $t=100$ the direct formula should fail and
-the shifted one should not. At $t=10$ both are finite; do they return the same
-bits?
+Both identities hold for any $c\in\mathbb{R}$, and choosing $c=\max_j z_j$
+makes both computations safe. Every shifted exponent $z_j-c$ is then at most
+$0$, so no exponential can overflow. At the same time, the largest term
+equals $e^0=1$, so the sum is guaranteed to lie in $[1,n]$ and its logarithm
+cannot underflow to $-\infty$. Let us test this on $(0, 100)$ in fp32, on the
+opening's $(1000, 1001, 1002)$ in fp64, and on $(0, 10)$ where both versions
+stay finite—do they return the exact same bits there?
 
 ```{.python .input #numerical-stability-conditioning-stable-softmax}
 def softmax_naive(z):
@@ -402,23 +434,24 @@ print('softmax(0, 10), naive minus stable, in ulps:',
       (a - b) / np.spacing(b))
 ```
 
-The shifted softmax returns $(3.8\times10^{-44}, 1)$, the exact
-$3.7\times10^{-44}$ rounded to the subnormal grid with five significant bits
-left; the direct formula returns $0$ and `NaN`. More precision is no cure.
-The logits of the opening fail even in fp64, because $e^{1000}$ overflows
-there too: the direct formula returns three `NaN` where the shifted one
-returns $(0.09, 0.24, 0.67)$. At $t=10$ the two agree to the last bit or
-differ by one or two units in the last place (*ulps*): the shift identity
-holds for real numbers, and the two orders of evaluation round
-differently. The shift does not handle non-finite logits: a row of all
-$-\infty$ has $c=-\infty$, and $z_j-c$ is undefined.
+At $t=100$, the shifted softmax returns $(3.8\times10^{-44}, 1)$—the true
+$3.7\times10^{-44}$ rounded onto the subnormal grid with five significant
+bits left—while the direct formula returns $0$ and `NaN`. Switching to higher
+precision does not cure the problem: the logits $(1000, 1001, 1002)$ from the
+opening overflow $e^{1000}$ even in fp64, turning the direct formula into
+three `NaN`s where the shifted version cleanly returns $(0.09, 0.24, 0.67)$.
+At $t=10$, the two formulas either agree to the last bit or differ by one or
+two units in the last place (*ulps*), because real-number identities do not
+guarantee identical rounding orders. One edge case remains: the max shift
+cannot rescue non-finite logits—if an entire row is $-\infty$, then
+$c=-\infty$ and $z_j-c$ is undefined.
 
 ### Bounds for Log-Sum-Exp
 
-Log-sum-exp is the normalizer of every exponential-family model
-(:numref:`sec_mdl-exponential-family`), and it is the cross-entropy loss up to
-one subtraction. The shift :eqref:`eq_mdl-opt-stable-lse` also says how far it
-is from the largest logit:
+Log-sum-exp is the log-normalizer of every exponential-family model
+(:numref:`sec_mdl-exponential-family`), and up to a single subtraction it is
+the cross-entropy loss. The shift :eqref:`eq_mdl-opt-stable-lse` immediately
+tells us how close it sits to the largest logit:
 
 **Proposition (log-sum-exp sandwich).** *For every
 $\mathbf{z} \in \mathbb{R}^n$,*
@@ -427,28 +460,29 @@ $$
 \max_j z_j \;\le\; \mathrm{lse}(\mathbf{z}) \;\le\; \max_j z_j + \log n .
 $$
 
-**Proof.** Put $c = \max_j z_j$ in :eqref:`eq_mdl-opt-stable-lse`. Every
-term $e^{z_j - c} \le 1$ and the maximizing term equals $1$, so the sum lies
-in $[1, n]$ and its logarithm in $[0, \log n]$. Adding $c$ gives both
-inequalities. $\blacksquare$
+**Proof.** Set $c = \max_j z_j$ in :eqref:`eq_mdl-opt-stable-lse`. Every
+exponential $e^{z_j - c}$ lies in $(0, 1]$ and the maximizing term equals
+$1$, so the sum lies in $[1, n]$ and its logarithm in $[0, \log n]$. Adding
+$c$ yields both bounds. $\blacksquare$
 
-Log-sum-exp is therefore a *soft maximum*. On the running example,
-$\mathrm{lse}(0,t)=\log(1+e^t)$ stays within $\log2\approx0.69$ of
-$\max(0,t)$, with the full gap at $t=0$, where the two logits tie
+Log-sum-exp is therefore a *soft maximum*. In our two-class example,
+$\mathrm{lse}(0,t)=\log(1+e^t)$ stays within $\log 2\approx0.69$ of
+$\max(0,t)$, attaining the full gap at $t=0$ where the two logits tie and
+hugging the maximum closely as $|t|$ grows
 (:numref:`fig_mdl-opt-softplus-max`).
 
-![Log-sum-exp is a soft maximum: $\mathrm{lse}(0,t)=\log(1+e^t)$ stays within $\log 2$ of $\max(0,t)$, the sandwich bound with $n=2$. The gap is largest at $t=0$, where the two logits tie, and vanishes as $|t|$ grows.](../img/mdl-opt-softplus-max.svg)
+![Log-sum-exp as a soft maximum: $\mathrm{lse}(0,t)=\log(1+e^t)$ stays within $\log 2$ of $\max(0,t)$, matching the sandwich bound for $n=2$. The gap peaks at $t=0$, where the two logits tie, and vanishes as $|t|$ grows.](../img/mdl-opt-softplus-max.svg)
 :label:`fig_mdl-opt-softplus-max`
 
-Its gradient is the softmax,
-$\partial\,\mathrm{lse}(\mathbf z)/\partial z_i=e^{z_i}/\sum_je^{z_j}=\mathrm{softmax}(\mathbf z)_i$,
-which is why the gradient of the cross-entropy below, for label $y$, is
-$\mathrm{softmax}(\mathbf z)-\mathbf e_y$; :numref:`sec_mdl-convexity` proves
-that log-sum-exp is convex.
+Moreover, its gradient is the softmax itself,
+$\partial\,\mathrm{lse}(\mathbf z)/\partial z_i=e^{z_i}/\sum_j e^{z_j}=\mathrm{softmax}(\mathbf z)_i$.
+That is why the gradient of cross-entropy with respect to the logits, for
+label $y$, simplifies to $\mathrm{softmax}(\mathbf z)-\mathbf e_y$;
+:numref:`sec_mdl-convexity` also shows that log-sum-exp is convex.
 
-Subtracting the shifted log-sum-exp from the shifted logit gives the
-**log-softmax**, the logarithm of a probability computed without forming the
-probability:
+Subtracting the shifted log-sum-exp from the shifted logit yields the
+**log-softmax**, computing log-probabilities directly without ever forming
+the probabilities themselves:
 
 $$
 \log \mathrm{softmax}(\mathbf{z})_i = (z_i - c) - \log \sum_{j=1}^n e^{z_j - c},
@@ -456,12 +490,14 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-log-softmax`
 
-A tiny probability then never underflows to zero before its logarithm is
-taken. The equivalent form $z_i-\mathrm{lse}(\mathbf z)$ is worse in floating
-point: it stores the large number $\mathrm{lse}=c+\log\sum_j e^{z_j-c}$ and
-then subtracts it from the large number $z_i$. How much worse? The cell
-computes both forms in fp32 for the logits $(1000,1001,1002)$ of the
-introduction:
+Because we never exponentiate the final result, a tiny probability cannot
+underflow to zero before its logarithm is taken. Notice a subtle detail in
+:eqref:`eq_mdl-opt-log-softmax`: the algebraically equivalent form
+$z_i-\mathrm{lse}(\mathbf z)$ is noticeably worse in floating point, because
+it first forms the large number $\mathrm{lse}=c+\log\sum_j e^{z_j-c}$ and
+then subtracts it from the large number $z_i$. How much difference does that
+parenthesization make? Let us compare both forms in fp32 on the logits
+$(1000, 1001, 1002)$:
 
 ```{.python .input #numerical-stability-conditioning-logsumexp}
 z = np.array([1000.0, 1001.0, 1002.0], dtype=np.float32)
@@ -477,48 +513,49 @@ print(f'sum of exp(z - lse)    : {np.exp(log_p_sub).sum():.8f}')
 print(f'sum of exp((z - c) - s): {np.exp(log_p).sum():.8f}')
 ```
 
-The direct computation overflows to `inf`, and it would in fp64 too, because
-$1000>709.78$; dividing `inf` by `inf` is what gave the three `NaN` of the
-introduction. The stable value $\mathrm{lse}=1002.4076$ lies in the sandwich
-$[1002, 1002+\log3]$. The two log-softmax forms differ: the probabilities from
-$z_i-\mathrm{lse}$ sum to $1.0000132$, those
-from :eqref:`eq_mdl-opt-log-softmax` to $1.0000000$.
+The direct computation overflows to `inf`—as it would even in fp64, since
+$1000>709.78$, which is what turned `inf/inf` into three `NaN`s in the
+opening. The shifted value $\mathrm{lse}=1002.4076$ sits comfortably inside
+the sandwich $[1002, 1002+\log 3]$. More interestingly, the two log-softmax
+forms disagree: exponentiating $z_i-\mathrm{lse}$ gives probabilities that
+sum to $1.0000132$, whereas :eqref:`eq_mdl-opt-log-softmax` sums to
+$1.0000000$.
 
-The subtraction $z_i-\mathrm{lse}$ is exact, because two floating-point
-numbers within a factor of two of each other have an
-exactly representable difference: both are multiples of the smaller one's
-gap, and their difference is too small to need more bits (Sterbenz's lemma,
-Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-exact-subtraction`). The
-error is in
-$\mathrm{lse}$ itself. Near $1002$, fp32 numbers are
-$2^{-14}\approx6.1\times10^{-5}$ apart, and the true value
-$1002.4076060$ is stored $1.32\times10^{-5}$ too low. Every log-probability
-is then $1.32\times10^{-5}$ too high, every probability is too large by the
-factor $e^{1.32\times10^{-5}}$, and the sum exceeds $1$ by
-$1.32\times10^{-5}$. An absolute error in an exponent becomes a relative
-error of the same size in its exponential, and the subtraction exposed an
-error that was already in its input, the theme of
-:numref:`subsec_mdl-catastrophic-cancellation`.
+Why did $z_i-\mathrm{lse}$ lose accuracy? Surprisingly, the subtraction
+itself made no error at all. Whenever two floating-point numbers lie within a
+factor of two of each other, their difference is exactly representable,
+because both are multiples of the smaller number's spacing and their
+difference needs no extra bits (Sterbenz's lemma, Exercise
+:exref:`ex_mdl-numerical-stability-conditioning-exact-subtraction`).
+
+The error entered earlier, when $\mathrm{lse}$ was stored. Near $1002$,
+fp32 numbers are $2^{-14}\approx6.1\times10^{-5}$ apart, so the true value
+$1002.4076060$ rounds down by $1.32\times10^{-5}$. Every log-probability
+computed as $z_i-\mathrm{lse}$ is therefore $1.32\times10^{-5}$ too high,
+every resulting probability is inflated by the factor $e^{1.32\times10^{-5}}$,
+and their sum overshoots $1$ by $1.32\times10^{-5}$. An absolute error in an
+exponent turns into a relative error of the same size after exponentiation,
+and the subtraction merely exposed an error that was already sitting in its
+input—the central theme of :numref:`subsec_mdl-catastrophic-cancellation`.
 
 ### Cross-Entropy from Logits
 
-The cross-entropy loss of label $y$ is the negative log-softmax, so
-:eqref:`eq_mdl-opt-log-softmax` gives it directly from the logits,
+The cross-entropy loss for label $y$ is simply the negative log-softmax, so
+:eqref:`eq_mdl-opt-log-softmax` gives it directly from the logits:
 
 $$
 -\log \mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y .
 $$
 :eqlabel:`eq_mdl-opt-ce-from-logits`
 
-The loss needs one stable log-sum-exp and one subtraction, and no probability.
-On the running example, the loss of class $0$ is
-$\mathrm{lse}(0,t)-0=\log(1+e^t)$. If the probabilities are formed first, the
-true-class probability $e^{-t}/(1+e^{-t})\approx e^{-t}$ leaves fp32's normal
-range once $t>87.3$ and reaches zero near $t=104$, and its negative logarithm
-becomes infinite. The cell computes the loss both ways with the library's
-functions; its last two values of $t$, $103$ and $104$, straddle that
-threshold:
+Computing the loss this way requires one stable log-sum-exp and one
+subtraction, without ever forming a probability. On our running example, the
+loss for class $0$ is $\mathrm{lse}(0,t)-0=\log(1+e^t)$. If we instead
+compute probabilities first, the true-class probability
+$e^{-t}/(1+e^{-t})\approx e^{-t}$ drops below fp32's normal range once
+$t>87.3$ and underflows completely to zero near $t=104$, sending its negative
+logarithm to $\infty$. Let us compare the two routes using the library's
+built-in functions, with $t=103$ and $104$ straddling that cliff:
 
 ```{.python .input #numerical-stability-conditioning-cross-entropy}
 #@tab mxnet
@@ -569,45 +606,45 @@ for t in [20.0, 60.0, 103.0, 104.0]:
     print(f'{t:5.0f}  {float(from_logits[0]):15.4f}  {float(from_probs):15.4f}')
 ```
 
-Computed from the logits, the loss is $t$ in every row, and the probability
-route agrees at $t=20$ and $60$. At $t=103$ the probability $e^{-103}$ is a
-subnormal number, and what the second column shows depends on how the library
-treats subnormals.
+Computed directly from logits, the loss equals $t$ in every row, and the
+probability route matches it at $t=20$ and $60$. At $t=103$, however, the
+probability $e^{-103}$ falls into the subnormal range, and what happens next
+depends on how the library handles subnormal numbers.
 
 :begin_tab:`mxnet`
-MXNet's exponential returns $0$ instead of a subnormal result, so the
-probability is $0$ and the loss is `inf` at $t=103$ and $104$.
+MXNet's exponential flushes subnormal results to $0$, so the probability
+becomes $0$ and the loss jumps to `inf` already at $t=103$ as well as $104$.
 :end_tab:
 
 :begin_tab:`pytorch`
-PyTorch keeps them: $e^{-103}\approx1.32\times2^{-149}$ rounds to the
-smallest fp32 subnormal, $2^{-149}$. One significant bit survives, and the
-loss reads $149\log2=103.2789$, wrong in the first decimal place and with no
-warning. At $t=104$, $e^{-104}<2^{-150}$ rounds to $0$, and the loss is
-`inf`.
+PyTorch preserves subnormals: $e^{-103}\approx1.32\times2^{-149}$ rounds to
+the smallest fp32 subnormal, $2^{-149}$. Only a single significant bit
+survives, so the loss reads $149\log 2=103.2789$—wrong in the first decimal
+place with no warning. At $t=104$, $e^{-104}<2^{-150}$ rounds to $0$, and
+the loss becomes `inf`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow's softmax flushes them to zero, so the loss is `inf` at $t=103$
-and $104$. The last column shows that Keras hides the same failure instead
-of reporting it: with `from_logits=False` it clips probabilities to
-$[10^{-7},1-10^{-7}]$ before taking the logarithm and returns
-$16.1181=-\log10^{-7}$ at every $t$ above about $16$, a loss, and therefore
-a gradient, that no longer depends on the model.
+TensorFlow's softmax flushes subnormals to zero, producing `inf` at both
+$t=103$ and $104$. The rightmost column shows that Keras masks the same
+failure rather than signaling it: with `from_logits=False`, it clips
+probabilities to $[10^{-7}, 1-10^{-7}]$ before taking the logarithm and
+returns $16.1181=-\log 10^{-7}$ for every $t$ above about $16$—a flat loss,
+and hence a zero gradient, that ignores the model's logits.
 :end_tab:
 
 :begin_tab:`jax`
-XLA runs compiled operations with subnormal results flushed to zero, so the
-probability is $0$ and the loss is `inf` at $t=103$ and $104$.
+XLA runs compiled operations with subnormals flushed to zero, so the
+probability becomes $0$ and the loss jumps to `inf` at both $t=103$ and $104$.
 :end_tab:
 
-Losses, likelihoods, and posteriors should therefore stay in log space until
-a probability is needed. The fused loss of
-:numref:`subsec_softmax-implementation-revisited` computes
-:eqref:`eq_mdl-opt-ce-from-logits`, and
-:numref:`sec_mdl-information_theory` explains what the cross-entropy
-measures. :numref:`sec_mdl-naive_bayes` adds hundreds of per-pixel log
-probabilities for the same reason.
+The practical takeaway is simple: keep losses, likelihoods, and posteriors
+in log space until you genuinely need a probability. The fused loss in
+:numref:`subsec_softmax-implementation-revisited` implements
+:eqref:`eq_mdl-opt-ce-from-logits` for this reason,
+:numref:`sec_mdl-information_theory` interprets what cross-entropy measures,
+and :numref:`sec_mdl-naive_bayes` sums hundreds of per-pixel
+log-probabilities to avoid the same underflow.
 
 ## Catastrophic Cancellation
 :label:`subsec_mdl-catastrophic-cancellation`
@@ -615,36 +652,38 @@ probabilities for the same reason.
 ### The Condition Number of a Function
 :label:`subsec_mdl-relative-condition-number`
 
-In fp32, $\log(1+x)$ at $x=10^{-8}$ evaluates to $0$, a relative error of
-100%, while the library function `log1p` returns $10^{-8}$. Is $\log(1+x)$
-near $x=0$ a hard function to compute, or is the formula to blame? We need a
-number that says how much a function amplifies an error in its input,
-independently of how the function is computed.
+In fp32, evaluating $\log(1+x)$ at $x=10^{-8}$ returns $0$—a relative error
+of 100%—whereas the library function `log1p` returns $10^{-8}$. Is
+$\log(1+x)$ near $x=0$ inherently hard to compute, or is the formula to
+blame? To answer questions like this systematically, we need a quantity that
+measures how strongly a function amplifies errors in its input, independent
+of any particular algorithm.
 
-The **relative condition number** of a differentiable function $f$ at a
-point $x$ with $f(x)\ne0$ is the factor by which a small relative change in
-$x$ becomes a relative change in $f(x)$. A relative change $\delta$ of the
-input gives, to first order,
-$f(x(1+\delta))\approx f(x)+xf'(x)\,\delta$; dividing by $f(x)$ gives the
-factor
+The **relative condition number** of a differentiable function $f$ at a point
+$x$ with $f(x)\ne0$ is the factor by which a small relative perturbation in
+$x$ turns into a relative perturbation in $f(x)$. Perturbing $x$ to
+$x(1+\delta)$ changes the output, to first order, to
+$f(x(1+\delta))\approx f(x)+xf'(x)\,\delta$. Dividing the change by $f(x)$
+gives the amplification factor
 
 $$
 \kappa_f(x)=\left|\frac{x\,f'(x)}{f(x)}\right| .
 $$
 :eqlabel:`eq_mdl-opt-kappa-f`
 
-The exponential has $\kappa_f=|x|$: at $x=88$ it turns an input error of one
-unit roundoff into $88$ of them in the output. This is the mechanism seen in
-the log-softmax cell, where an absolute error in an exponent became the same
-relative error in a probability. The condition number is a first-order
-statement about the exact function. It says nothing about how $f$ is
-computed, and it fails where $f(x)=0$, where no relative error is defined.
+For example, the exponential has $\kappa_f(x)=|x|$: at $x=88$, an input error
+of one unit roundoff becomes $88$ units in the output. That is the exact
+mechanism we just saw in the log-softmax cell, where an absolute error in an
+exponent became a relative error of the same size in the probability. Notice
+that $\kappa_f$ is a first-order property of the exact mathematical function.
+It says nothing about how $f$ is evaluated, and it breaks down where
+$f(x)=0$, since relative error is undefined there.
 
-Subtraction has two inputs, and the same reasoning applies to both. Let
-$\hat a=a(1+\delta_a)$ and $\hat b=b(1+\delta_b)$ carry relative errors
-$|\delta_a|,|\delta_b|\le u$, and let the subtraction itself be exact. Then
-$\hat a-\hat b=(a-b)+(a\delta_a-b\delta_b)$, and the triangle inequality
-bounds the relative error of the difference:
+Subtraction takes two inputs, and the same first-order reasoning applies to
+both. Suppose $\hat a=a(1+\delta_a)$ and $\hat b=b(1+\delta_b)$ carry
+relative errors $|\delta_a|,|\delta_b|\le u$, and suppose the subtraction
+itself is exact. Then $\hat a-\hat b=(a-b)+(a\delta_a-b\delta_b)$, so the
+triangle inequality bounds the relative error of the difference by
 
 $$
 \frac{|(\hat a-\hat b)-(a-b)|}{|a-b|}
@@ -653,11 +692,12 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-cancellation-factor`
 
-The factor $(|a|+|b|)/|a-b|$ is subtraction's condition number, and it is
-large when $a\approx b$. Subtracting nearly equal numbers that already carry
-errors is called **catastrophic cancellation**: the leading digits cancel, and
-the errors in the trailing digits become the leading digits of the result. For
-reference, here are the condition numbers of a few common problems:
+The factor $(|a|+|b|)/|a-b|$ is subtraction's condition number, and it blows
+up whenever $a\approx b$. Subtracting two nearly equal numbers that already
+carry rounding errors is called **catastrophic cancellation**: the accurate
+leading digits cancel out, promoting the noise in the trailing digits into
+the leading digits of the answer. For reference, the table below collects the
+condition numbers of several common problems:
 
 | problem | $\kappa_f$ | regime |
 |----|----|----|
@@ -668,27 +708,30 @@ reference, here are the condition numbers of a few common problems:
 | $\sqrt x$ | $1/2$ | always |
 | variance of data with mean $m$, spread $s$ | at most $2(1+\lvert m\rvert/s)$ | derived below |
 
-The second row answers the opening question: $\log(1+x)$ near $x=0$ is a
-well-conditioned problem. The algorithm `log(1 + x)` is not, because it passes
-through an ill-conditioned step. It first forms $y=1+x$ and then evaluates
-$\log y$ at $y\approx1$, where the logarithm has
-$\kappa_{\log}(y)=1/|\log y|\approx1/x=10^8$. Rounding $1+x$ introduces a
-relative error of $u$ in $y$, which becomes a relative error of up to $10^8u$,
-more than 100%, in the result. `log1p` is written so that the rounding error
-of $1+x$ never reaches the result; for tiny $x$ it returns $x$ itself.
+The second row settles our opening question: $\log(1+x)$ near $x=0$ is
+completely well conditioned ($\kappa_f\approx 1$). The naive algorithm
+`log(1 + x)` fails because it takes a detour through an ill-conditioned
+intermediate step. It first forms $y=1+x$ and then evaluates $\log y$ at
+$y\approx 1$, where the logarithm has
+$\kappa_{\log}(y)=1/|\log y|\approx 1/x=10^8$. Rounding $1+x$ introduces a
+relative error of order $u$ in $y$, which $\log$ magnifies by $10^8$—more
+than 100% in fp32. By contrast, `log1p` is written so that the rounding error
+of $1+x$ never enters the result; for tiny $x$, it simply returns $x$.
 
-This is the principle on which this section is built: *an unstable
+This gives us the organizing principle of the entire section: *an unstable
 algorithm routes a well-conditioned problem through an ill-conditioned
-intermediate step.* When $\kappa_f$ is small and the computed result is bad,
-change the algorithm. When $\kappa_f$ itself is large, no algorithm helps and
-only changing the problem does, the subject of
+intermediate step.* Whenever $\kappa_f$ is small and the computed answer is
+bad, the algorithm is at fault and we should rewrite it. Whenever $\kappa_f$
+itself is large, no algorithm can rescue the answer—we must change the
+problem instead, which is the subject of
 :numref:`subsec_mdl-conditioning-revisited`.
 
 ### Subtraction of Nearly Equal Numbers
 
-The cell repeats the $\log(1+x)$ experiment and then subtracts two fp32
-numbers that agree in their first seven digits, $1.0002344$ and $1.0002341$,
-whose true difference is $3.0\times10^{-7}$:
+Let us test this in code. The cell below repeats the $\log(1+x)$ experiment
+and then subtracts two fp32 numbers that agree in their first seven decimal
+digits, $1.0002344$ and $1.0002341$, whose true difference is
+$3.0\times10^{-7}$:
 
 ```{.python .input #numerical-stability-conditioning-log1p}
 x = np.float32(1e-8)
@@ -701,40 +744,45 @@ print('float64: log(1 + 1e-20) =', np.log(1 + 1e-20),
       '  log1p(1e-20) =', np.log1p(1e-20))
 ```
 
-Between $1$ and $2$, fp32 differences can only be whole multiples of
+Between $1$ and $2$, every fp32 difference is an integer multiple of
 $\varepsilon_{\mathrm{mach}}=1.19\times10^{-7}$, and the true difference
-$3.0\times10^{-7}$ is not one. The subtraction returned two ulps,
-$2.38\times10^{-7}$, 20% too small, and it made no error of its own: the
-inputs were stored as $1.0002343655$ and $1.0002341270$, and their difference
-is what the cell printed. The error was in the stored inputs. The
-factor :eqref:`eq_mdl-opt-cancellation-factor` is
-$2.0005/(3\times10^{-7})\approx7\times10^6$, which times
-$u\approx6\times10^{-8}$ allows a relative error of up to $0.4$; the observed
-$0.2$ is inside the bound.
+$3.0\times10^{-7}$ does not fall on that grid. The subtraction returned two
+ulps, $2.38\times10^{-7}$—20% too small—yet once again it committed no error
+of its own. The inputs were stored as $1.0002343655$ and $1.0002341270$, and
+their exact difference is what the cell printed; the error was already baked
+into the stored inputs. Here the cancellation factor
+:eqref:`eq_mdl-opt-cancellation-factor` is
+$2.0005/(3\times10^{-7})\approx7\times10^6$. Multiplied by
+$u\approx6\times10^{-8}$, it allows a relative error of up to $0.4$, and the
+observed $0.2$ falls squarely inside the bound.
 
-Cancellation is common in $\log(1+x)$ and $e^x-1$ near $0$ (use `log1p`
-and `expm1`), in $1-\cos x$ near $0$ (use $2\sin^2(x/2)$), and in the
-quadratic formula near a double root (Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-blame`). In each of these a
-reformulation removes the subtraction.
+The same cancellation appears in $\log(1+x)$ and $e^x-1$ near $0$ (where
+`log1p` and `expm1` avoid it), in $1-\cos x$ near $0$ (rewritten as
+$2\sin^2(x/2)$), and in the quadratic formula when $b^2\gg 4|ac|$ (Exercise
+:exref:`ex_mdl-numerical-stability-conditioning-blame`). In every one of
+these cases, an algebraic rewrite removes the offending subtraction.
 
-Finite differences are the one case where the cure is a compromise. A gradient
-check compares automatic differentiation with the forward difference
-$(f(x+h)-f(x))/h$. How small should $h$ be? The truncation error is about
-$\tfrac h2|f''(x)|$, by Taylor's theorem. Each of the two function values
-carries a rounding error of about $u|f(x)|$, and the division by $h$ turns
-them into an error of about $2u|f(x)|/h$. The sum of the two errors is
-smallest where they are equal, at
+Finite differences are the one place where we cannot eliminate the
+subtraction and must settle for a compromise. A numerical gradient check
+compares automatic differentiation against the forward difference
+$(f(x+h)-f(x))/h$. How small should we make the step $h$? By Taylor's
+theorem, the mathematical truncation error is about $\tfrac h2|f''(x)|$,
+which shrinks as $h\to 0$. Meanwhile, each function evaluation carries a
+rounding error of roughly $u|f(x)|$, and dividing their difference by $h$
+magnifies that error to about $2u|f(x)|/h$, which blows up as $h\to 0$. The
+total error is minimized where the two terms balance, at
 
 $$
 h^\star=2\sqrt{\frac{u\,|f(x)|}{|f''(x)|}},
 \qquad \textrm{with error about } 2\sqrt{u\,|f(x)f''(x)|} .
 $$
 
-The best forward difference keeps only about half of the format's digits. For
-$f=\sin$ at $x=1$ in fp64, $h^\star\approx2\times10^{-8}$, with predicted
-error $1.8\times10^{-8}$; in fp32, $h^\star\approx5\times10^{-4}$. The cell
-measures the error at steps from $10^{-2}$ to $10^{-12}$ in both formats.
+Because the optimal error scales as $\sqrt{u}$, the best possible forward
+difference keeps only about half of the format's digits. For $f=\sin$ at
+$x=1$, this predicts $h^\star\approx2\times10^{-8}$ (error
+$1.8\times10^{-8}$) in fp64 and $h^\star\approx5\times10^{-4}$ in fp32. Let
+us sweep $h$ from $10^{-2}$ down to $10^{-12}$ in both formats to see the
+trade-off directly:
 
 ```{.python .input #mdl-numerical-stability-conditioning-subtraction-of-nearly-equal-numbers-1}
 print('      h   error in fp64   error in fp32')
@@ -744,67 +792,74 @@ for h in 10.0 ** -np.arange(2, 13):
     print(f'{h:7.0e}  {err[0]:14.1e}  {err[1]:14.1e}')
 ```
 
-In fp64 the error falls in proportion to $h$ down to about $h=10^{-8}$,
-where it is of order $10^{-8}$ or below (the exact value at a single $h$ is
-rounding noise), and rises again to $4\times10^{-5}$ at $h=10^{-12}$ (too
-much cancellation); at $h=10^{-2}$ it is $4\times10^{-3}$ (too much
-truncation). In fp32 the best steps, $10^{-3}$ and $10^{-4}$, leave about
-three digits, and from $h=10^{-8}$ down the sum $1+h$ rounds to $1$, so the
-difference quotient is $0$ and the error is the whole derivative,
-$\cos 1=0.54$. This is why gradient checks are run in fp64.
+In fp64, the error drops linearly with $h$ from $4\times10^{-3}$ at
+$h=10^{-2}$ (where truncation dominates) down to roughly $10^{-8}$ near
+$h=10^{-8}$ (the exact value at any single $h$ fluctuates with rounding
+noise), and then climbs back to $4\times10^{-5}$ at $h=10^{-12}$ as
+cancellation takes over. In fp32, the sweet spot at $h=10^{-3}$ to $10^{-4}$
+leaves only about three correct digits; from $h=10^{-8}$ downward, $1+h$
+rounds straight to $1$, making the difference quotient $0$ and the error
+equal to the entire derivative, $\cos 1=0.54$. That is why numerical gradient
+checks should always run in fp64.
 
-Higher precision does not remove a cancellation; it moves the input at which
-the failure starts. The last line of the $\log(1+x)$ cell shows $\log(1+x)$
-returning $0$ in fp64 at $x=10^{-20}$, just as fp32 did at $10^{-8}$, while
-`log1p` is accurate in both. Reformulation removes the ill-conditioned step
-itself :cite:`Higham.2002`.
+Notice, too, that switching to higher precision never cures cancellation—it
+merely pushes the failure to smaller inputs. The last line of the earlier
+`log1p` cell showed `log(1 + 1e-20)` returning $0$ in fp64 just as fp32 did
+at $10^{-8}$, while `log1p` stayed accurate in both. Reformulating the
+expression removes the ill-conditioned step itself :cite:`Higham.2002`.
 
 ### One-Pass Variance
 
-Cancellation also hides inside formulas that look harmless. The variance is
-the standard example. Normalization layers compute it at every step, and so
-does any code that standardizes data.
+Catastrophic cancellation also hides inside formulas that look completely
+innocent. Computing a sample variance is the classic example—and it matters
+directly in deep learning, where normalization layers and data-preprocessing
+pipelines compute variances continuously.
 
-The variance of data $x_1,\ldots,x_N$ with mean $m$ and standard deviation
-$s$ can be computed in one pass from the identity
+For data $x_1,\ldots,x_N$ with mean $m$ and standard deviation $s$, the
+textbook identity
 
 $$
 \frac1N\sum_{i=1}^N(x_i-m)^2 = \frac1N\sum_{i=1}^N x_i^2 - m^2 ,
 $$
 
-which needs only the running sums of $x_i$ and $x_i^2$. The identity is exact
-in real arithmetic and unstable in floating point. When $s\ll|m|$, both terms
-on the right are close to $m^2$ while their difference is $s^2$, so the
-cancellation factor :eqref:`eq_mdl-opt-cancellation-factor` is about
-$2m^2/s^2$. With $m=10^9$ and $s=1$ that is $2\times10^{18}$, more than the
-$10^{16}$ that fp64 can absorb.
+tempts us to compute the variance in a single pass by accumulating only the
+sums of $x_i$ and $x_i^2$. In exact arithmetic the identity is flawless; in
+floating point it is a trap. Whenever $s\ll|m|$, both terms on the right sit
+near $m^2$ while their difference is $s^2$, so the cancellation factor
+:eqref:`eq_mdl-opt-cancellation-factor` is roughly $2m^2/s^2$. For $m=10^9$
+and $s=1$, that factor reaches $2\times10^{18}$—two orders of magnitude
+larger than the $10^{16}$ that fp64 can absorb.
 
-How much of this does the problem itself force? Perturb each $x_i$ by a
-relative error $\delta_i$ with $|\delta_i|\le u$, so that
-$x_i\mapsto x_i+x_i\delta_i$. The derivative of the variance with respect to
-$x_i$ is $\tfrac2N(x_i-m)$, because the change of $m$ multiplies
-$\sum_i(x_i-m)=0$. To first order the variance therefore changes by
+How much of this loss is forced by the problem itself? Let us check the
+condition number of the variance. Perturb each input $x_i$ by a relative
+error $\delta_i$ with $|\delta_i|\le u$, replacing $x_i$ by
+$x_i+x_i\delta_i$. The derivative of the variance with respect to $x_i$ is
+$\tfrac2N(x_i-m)$, because the induced change in $m$ multiplies
+$\sum_i(x_i-m)=0$. Writing $x_i=(x_i-m)+m$, the first-order change in the
+variance is therefore
 
 $$
 \frac2N\sum_{i=1}^N(x_i-m)\,x_i\delta_i
-=\frac2N\sum_{i=1}^N(x_i-m)^2\delta_i+\frac{2m}N\sum_{i=1}^N(x_i-m)\,\delta_i ,
+=\frac2N\sum_{i=1}^N(x_i-m)^2\delta_i+\frac{2m}N\sum_{i=1}^N(x_i-m)\,\delta_i .
 $$
 
-where we wrote $x_i=(x_i-m)+m$. The first sum is at most $2s^2u$ in
-magnitude. The second is at most $2|m|u\cdot\frac1N\sum_i|x_i-m|\le2|m|s\,u$,
-by the Cauchy–Schwarz inequality. Relative to $s^2$, the condition number of
-the variance is at most $2(1+|m|/s)\approx2|m|/s$, about $2\times10^9$ here
-(perturbing every $x_i$ by $\delta_i=u\,\mathrm{sign}(x_i-m)$ gives
-$1.6\,|m|/s$ for Gaussian data). The problem allows an error of about
-$2\times10^9u\approx2\times10^{-7}$, seven digits. The one-pass formula
-behaves like $(m/s)^2u$: it *squares* the condition number, as the normal
-equations will square the condition number of a matrix in
-:numref:`subsec_mdl-conditioning-revisited`.
+The first sum has magnitude at most $2s^2 u$. By the Cauchy–Schwarz
+inequality, the second has magnitude at most
+$2|m|u\cdot\frac1N\sum_i|x_i-m|\le 2|m|s\,u$. Dividing by $s^2$ shows that
+the relative condition number of the variance is at most
+$2(1+|m|/s)\approx 2|m|/s$, or about $2\times10^9$ here (choosing
+$\delta_i=u\,\mathrm{sign}(x_i-m)$ gives $1.6\,|m|/s$ for Gaussian data).
+The problem itself therefore permits an error of only
+$2\times10^9 u\approx 2\times10^{-7}$—about seven accurate digits. The naive
+one-pass formula, by contrast, suffers an error of order $(m/s)^2 u$: it
+*squares* the condition number, just as the normal equations will square the
+condition number of a matrix in :numref:`subsec_mdl-conditioning-revisited`.
 
-A better one-pass algorithm keeps the deviations at the scale $s$.
-:citet:`Welford.1962` updates a running mean $m_k$ and the running sum of
-*centered* squares $M_k = \sum_{i \le k} (x_i - m_k)^2$ with the deviation
-$d_k=x_k-m_{k-1}$ of each new value from the old mean:
+A stable one-pass algorithm keeps all deviations at the scale $s$ rather than
+$m^2$. :citet:`Welford.1962` maintains a running mean $m_k$ and a running sum
+of *centered* squares $M_k = \sum_{i \le k} (x_i - m_k)^2$, updating both
+from the deviation $d_k=x_k-m_{k-1}$ of each new sample from the previous
+mean:
 
 $$
 m_k = m_{k-1} + \frac{d_k}{k},
@@ -813,8 +868,9 @@ M_k = M_{k-1} + d_k\,(x_k - m_k).
 $$
 :eqlabel:`eq_mdl-opt-welford`
 
-The update of $M_k$ multiplies two different deviations, from the old mean and
-from the new mean. That asymmetry makes the recursion correct:
+Notice the asymmetry in the update of $M_k$: it multiplies the deviation from
+the *old* mean by the deviation from the *new* mean. That asymmetry is
+precisely what makes the recursion exact:
 
 **Proposition (Welford's recursion).** *With $m_0 = M_0 = 0$, the
 recursions :eqref:`eq_mdl-opt-welford` satisfy, for every $k \ge 1$ and in
@@ -826,11 +882,10 @@ m_k = \frac{1}{k} \sum_{i=1}^k x_i,
 M_k = \sum_{i=1}^k (x_i - m_k)^2 .
 $$
 
-**Proof.** The mean claim is the identity $k\, m_k = (k-1)\, m_{k-1} + x_k$,
-immediate from the first recursion. For the second claim, induct on $k$.
-Since $m_k - m_{k-1} = d_k/k$ and $x_k - m_k = d_k\,(k-1)/k$, splitting the
-new sum of squares at its last term and centering the first $k-1$ terms at
-$m_{k-1}$ gives
+**Proof.** The mean identity $k\, m_k = (k-1)\, m_{k-1} + x_k$ follows
+immediately from the first recursion. For $M_k$, we induct on $k$. Using
+$m_k - m_{k-1} = d_k/k$ and $x_k - m_k = d_k\,(k-1)/k$, we split off the
+$k$-th term and recenter the first $k-1$ terms around $m_{k-1}$:
 
 $$
 \sum_{i=1}^{k} (x_i - m_k)^2
@@ -838,27 +893,29 @@ $$
 = M_{k-1} + (k-1)\tfrac{d_k^2}{k^2} + \tfrac{(k-1)^2}{k^2}d_k^2 .
 $$
 
-The cross term vanished because $\sum_{i \le k-1} (x_i - m_{k-1}) = 0$, and
-the inductive hypothesis named the first sum $M_{k-1}$. The two correction
-terms combine to $\frac{k-1}{k}\,d_k^2 = d_k \cdot d_k\frac{k-1}{k}
-= d_k(x_k - m_k)$, which is what the recursion adds. $\blacksquare$
+The cross term vanishes because $\sum_{i \le k-1} (x_i - m_{k-1}) = 0$, and
+the inductive hypothesis identifies the first sum as $M_{k-1}$. Combining the
+remaining two terms gives
+$\frac{k-1}{k}\,d_k^2 = d_k \cdot d_k\frac{k-1}{k} = d_k(x_k - m_k)$, which
+is exactly what the recursion adds. $\blacksquare$
 
-Why the recursion is also accurate in floating point is the hard step, and we
-argue it only informally; :citet:`Higham.2002` gives the analysis. Welford's
-recursion does subtract large numbers: $x_k$ and $m_{k-1}$ are both near
-$10^9$. But that subtraction is exact, by Sterbenz's lemma again, and $x_k$ is
-exact data, so the only error in $d_k$ is that of the running mean, some tens
-of gaps at $|m|$ in a run of $10^5$ steps. Every quantity that enters $M_k$ is
-therefore a deviation of size $s$, and the rounding errors of the updates
-enter relative to $s^2$. Only the error of the center is inherited from the
-scale $m$, and a constant error $\varepsilon$ of the center changes a centered
-sum of squares only by $N\varepsilon^2$, because the first-order term
-multiplies $\sum_i(x_i-m)=0$. In practice the result is accurate to about the
-problem's own amplification, $u|m|/s\approx1.1\times10^{-7}$, where the
-one-pass formula pays $(m/s)^2u\approx100$.
+Proving that Welford's recursion also stays accurate in floating point is the
+harder step, and we sketch only the intuition here (see :citet:`Higham.2002`
+for the full analysis). At first glance, Welford's update still subtracts
+large numbers, since $x_k$ and $m_{k-1}$ both sit near $10^9$. By Sterbenz's
+lemma, however, that subtraction is exact, and $x_k$ is exact input data, so
+the only error in $d_k$ comes from the running mean—at most a few dozen ulps
+at $|m|$ over $10^5$ steps. Every quantity added into $M_k$ is therefore a
+deviation of scale $s$, so rounding errors in the updates enter relative to
+$s^2$ rather than $m^2$. Even a constant offset $\varepsilon$ in the mean
+shifts a centered sum of squares only by $N\varepsilon^2$, because the
+first-order term multiplies $\sum_i(x_i-m)=0$. In practice, Welford's error
+matches the problem's own sensitivity, $u|m|/s\approx 1.1\times10^{-7}$,
+whereas the naive one-pass formula suffers an error of
+$(m/s)^2 u\approx 100$.
 
-The cell runs the three methods on $10^5$ fp64 samples with mean $10^9$ and
-variance $1$:
+Let us compare all three methods—naive one-pass, Welford, and a two-pass
+reference—on $10^5$ fp64 samples with mean $10^9$ and variance $1$:
 
 ```{.python .input #numerical-stability-conditioning-welford}
 rng = np.random.default_rng()
@@ -881,44 +938,45 @@ print(f'Welford vs two-pass   : {abs(welford - two_pass) / two_pass:.1e} relativ
 print('float64 gap near 1e18 :', np.spacing(1e18))
 ```
 
-The naive result is a whole multiple of $128$: typically $0$, $\pm128$, or
-$\pm256$, never near the true value $1$, and sometimes negative. Both terms of
-the formula lie in $[2^{59},2^{60})$, where fp64 numbers are $2^{59-52}=128$
-apart, so their difference can only be a multiple of $128$: the predicted
-error of about $100$, made discrete. Welford's estimate agrees with the
-two-pass reference to seven digits or more, and often to eight or nine,
-because the rounding errors of the updates have both signs and partly cancel
-in the sum.
+The naive one-pass estimate comes out as an exact multiple of $128$—typically
+$0$, $\pm128$, or $\pm256$—nowhere near the true variance $1$, and frequently
+negative. Why $128$? Both $\frac1N\sum x_i^2$ and $m^2$ lie in
+$[2^{59}, 2^{60})$, where adjacent fp64 numbers are $2^{59-52}=128$ apart, so
+their difference can only be a multiple of $128$: our predicted error of
+about $100$, quantized to the grid. Welford's recursion, on the other hand,
+matches the two-pass reference to at least seven digits—and often eight or
+nine, because rounding errors of opposite signs partly cancel across the sum.
 
-The same care applies wherever a variance is accumulated in one pass, for
-instance to streaming statistics over a data set. (The running moments that
-batch normalization uses at test time are exponential moving averages,
-:numref:`sec_batch_norm`, which do not subtract large sums.)
+The same caution applies whenever a variance is accumulated in one pass, such
+as computing streaming statistics over a dataset. (The running moments that
+batch normalization maintains for inference are exponential moving averages,
+:numref:`sec_batch_norm`, which do not subtract large running sums.)
 
 ### Summation Order
 
-The naive variance and the two-pass reference both add up $10^5$ terms, and
-the order of the additions changes their rounding errors. Each addition
-contributes one factor $(1+\delta_k)$, and in a left-to-right sum the first
-term passes through all $n-1$ of them. To first order in $u$, the sum
-$\mathrm{fl}\bigl(\sum_ix_i\bigr)$ computed left to right satisfies
+Both the naive variance and the two-pass reference sum $10^5$ numbers, and in
+floating point the order of addition matters. Each addition introduces a
+factor $(1+\delta_k)$, so in a plain left-to-right sum the first term passes
+through all $n-1$ roundings. To first order in $u$, a left-to-right sum
+satisfies
 
 $$
 \Bigl|\mathrm{fl}\Bigl(\sum_{i=1}^n x_i\Bigr)-\sum_{i=1}^n x_i\Bigr|
 \le(n-1)\,u\sum_{i=1}^n|x_i| .
 $$
 
-The bound grows with the number of terms, because early terms collect the
-rounding errors of every later addition. *Pairwise* summation adds the two
-halves of the list recursively, so each term passes through only
-$\log_2n$ additions and the bound becomes $u\log_2n\sum_i|x_i|$; NumPy's
-`sum` uses a blocked version of it. Kahan's compensated summation carries the
-rounding error of each addition in a second variable and achieves an error
-bound independent of $n$ (Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-summation-error-growth`). The
-cell adds $10^7$ copies of fp32's $0.1$, which is $0.100000001490$, in order
-and pairwise. The pairwise sum pads the list with zeros to $2^{24}$ terms and
-adds neighbors until one number is left:
+Because early terms accumulate the rounding error of every subsequent
+addition, the worst-case error grows linearly with $n$. *Pairwise* summation
+avoids this by recursively summing the two halves of the array, so every term
+passes through only $\log_2 n$ additions and the bound shrinks to
+$u\log_2 n\sum_i|x_i|$; NumPy's `sum` uses a blocked version of this idea.
+Kahan's compensated summation goes one step further, carrying each addition's
+rounding error in a running correction variable to achieve an error bound
+independent of $n$ (Exercise
+:exref:`ex_mdl-numerical-stability-conditioning-summation-error-growth`). Let
+us add $10^7$ copies of fp32's $0.1$ (whose stored value is
+$0.100000001490\ldots$) both left to right and pairwise, padding the pairwise
+array with zeros to $2^{24}$ entries and repeatedly adding adjacent pairs:
 
 ```{.python .input #mdl-numerical-stability-conditioning-summation-order}
 x = np.full(10_000_000, 0.1, dtype=np.float32)
@@ -931,22 +989,24 @@ print(f'pairwise         : {s[0]:16.4f}')
 print(f'exact            : {exact:16.4f}')
 ```
 
-The in-order sum ends at $1{,}087{,}937$, 9% too high, inside its bound
-$(n-1)u\sum_i|x_i|\approx6\times10^5$. Pairwise summation returns
-$1{,}000{,}000$, within $0.015$ of the exact value and inside its bound
-$u\log_2n\sum_i|x_i|\approx1.4$.
+The left-to-right sum finishes at $1{,}087{,}937$—almost 9% too high, though
+still inside its bound $(n-1)u\sum_i|x_i|\approx6\times10^5$. Pairwise
+summation lands at $1{,}000{,}000$, within $0.015$ of the exact sum and well
+inside its bound $u\log_2 n\sum_i|x_i|\approx1.4$.
 
-The in-order error has the mechanism behind lost small updates: each addend is
-rounded to the gap of the running sum. Once the sum passes $2^{19}=524{,}288$,
-fp32 numbers are $1/16$ apart, and $0.1$ is $1.6$ gaps, so each addition
-rounds to two gaps, $0.125$, 25% too much. Above $2^{20}$ the gap is $1/8$ and
-the addend rounds to one gap, again $0.125$; between $2^{17}$ and $2^{19}$ it
-rounded to $0.09375$, too little. Because the result depends on the order, a
-sum reduced in parallel need not be the same on another device or in another
-run. Welford's recursion can be evaluated pairwise as well: the merge rule of
-Exercise :exref:`ex_mdl-numerical-stability-conditioning-pairwise-merge`
-combines the statistics of two partial sums, and it is how running moments are
-combined across devices.
+The culprit behind the left-to-right drift is the same grid effect that
+erased small weight updates: each addend is rounded to the spacing of the
+current running sum. Once the sum crosses $2^{19}=524{,}288$, fp32 numbers
+sit $1/16$ apart, so $0.1$ equals $1.6$ gaps and every addition rounds up to
+two gaps, $0.125$—25% too large. Above $2^{20}$ the spacing doubles to $1/8$,
+and each addend again rounds to $0.125$; earlier, between $2^{17}$ and
+$2^{19}$, it rounded down to $0.09375$. Because floating-point addition is
+not associative, a parallel reduction across GPU threads need not produce the
+exact same bits from one device or run to another. Fortunately, Welford's
+recursion also supports pairwise reduction: the merge rule in Exercise
+:exref:`ex_mdl-numerical-stability-conditioning-pairwise-merge` combines
+statistics from two partial sums, which is how running moments are merged
+across devices in distributed training.
 
 ## Conditioning
 :label:`subsec_mdl-conditioning-revisited`

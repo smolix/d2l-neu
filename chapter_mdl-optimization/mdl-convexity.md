@@ -1,48 +1,54 @@
 # Convexity
 :label:`sec_mdl-convexity`
 
-When a training run ends, we know one thing about the point where it
-stopped: the loss no longer decreases there. Gradient descent with a safe
-step reaches such a point, where the gradient is close to zero
-(:numref:`sec_mdl-gradient-based-optimization`), and Newton's method reaches
-one faster, even when it is a saddle (:numref:`sec_mdl-curvature-methods`).
-Neither result says whether a better point exists elsewhere. This section
-asks when the end of a run is the best point there is, and how fast gradient
-descent gets there.
+When a training run finishes, we usually know only one thing about the point
+where it stopped: the loss no longer decreases there. Gradient descent with a
+safe step size reliably reaches such a point, where the gradient is nearly zero
+(:numref:`sec_mdl-gradient-based-optimization`), and Newton's method gets there
+faster, even when the stationary point turns out to be a saddle
+(:numref:`sec_mdl-curvature-methods`). Neither guarantee tells us whether a
+much better point is hiding somewhere else. In this section we ask when a
+stationary point is actually the best point available, and how quickly gradient
+descent converges to it.
 
-A one-dimensional experiment shows that the question is real. Run the same
-gradient-descent loop from $500$ random starting points, once on the bowl
-$f(x) = (x - \tfrac12)^2$ and once on the tilted double well
-$\phi(x) = (x^2 - 1)^2 + x/2$. On the bowl every run ends at the same point.
-On the double well about half of the runs stop in a well whose value is
-almost one unit above the best. Those runs have a zero gradient, which is
-all that a stationarity guarantee promises, and nothing in a stranded run
-tells us that a better point exists.
+A simple one-dimensional experiment shows that this is not an idle question.
+Suppose we run the exact same gradient-descent loop from $500$ random starting
+points, first on the bowl $f(x) = (x - \tfrac12)^2$ and then on the tilted
+double well $\phi(x) = (x^2 - 1)^2 + x/2$. On the bowl, every single run lands
+at the same minimizer. On the double well, nearly half of the runs get trapped
+in a shallower valley whose loss sits almost a full unit above the global
+minimum. Those stranded runs still have zero gradient—which is all that a
+stationarity guarantee promises—and looking at the gradient alone gives no hint
+that a deeper valley exists nearby.
 
-The two functions differ in one property. Every chord of the bowl lies above
-its graph, while the double well has chords that dip below it. Functions
-whose chords all lie on or above the graph are called *convex*, and for them
-the question has the best answer we could hope for: every local minimum is a
-global minimum. The proof takes three lines
-(:numref:`subsec_mdl-local-global`). Behind it is a stronger fact:
-a tangent line of a convex function bounds it from below on its whole
-domain, so information at one point constrains the function everywhere.
-Summed along the steps of gradient descent, this bound gives a rate that
-holds from every start. Averaged over a random variable, it gives Jensen's
-inequality, which the probability and information chapters use throughout.
+The difference between the two functions comes down to a single geometric
+property. Every chord drawn between two points on the bowl lies above its
+graph, whereas the double well has chords that cut below the curve. Functions
+whose chords always lie on or above their graph are called *convex*, and for
+them our opening question has the cleanest possible answer: every local minimum
+is a global minimum. The proof takes just three lines
+(:numref:`subsec_mdl-local-global`). Underneath it lies an even more useful
+fact: any tangent line to a convex function stays below the graph across the
+entire domain, so local information at a single point constrains the function
+everywhere. Summing this tangent bound along the iterates of gradient descent
+yields convergence rates that hold from any starting point. Averaging it over a
+random variable yields Jensen's inequality, a workhorse of the probability and
+information-theory chapters.
 
-The section is long, and its results are not of equal weight. Three should
-be remembered: the tangent bound, that local minima are global, and the
-linear rate of gradient descent, whose proof rests on one inequality that
-survives without convexity. We define convex sets and functions, give three
-tests for convexity, derive the consequences, and certify the common losses
-as convex by a short calculus. Deep-network losses are not convex, and the
-last part says which conclusions survive. A reader in a hurry can take the
-chord and tangent conditions from :numref:`subsec_mdl-three-lenses` and go
-straight to :numref:`subsec_mdl-why-convexity-matters`. Two examples recur:
-the chapter's quadratic $\tfrac12(x_1^2 + 1000\,x_2^2)$ for the rates, and
-the double well $\phi$, which fails every test of convexity that we apply to
-it.
+We cover a fair amount of ground here, and not every result carries the same
+weight. Three ideas are worth keeping at your fingertips: the tangent lower
+bound, the fact that local minima are global, and the linear convergence rate
+of gradient descent—whose proof relies on a single inequality that survives even
+when convexity fails. We begin with convex sets and three equivalent tests for
+convex functions, derive their main consequences, and assemble a short calculus
+for recognizing convex losses. Since deep-network losses are not convex, we
+close by asking which parts of the theory carry over to them. If you are in a
+hurry, you can read the chord and tangent conditions in
+:numref:`subsec_mdl-three-lenses` and jump straight to
+:numref:`subsec_mdl-why-convexity-matters`. Two examples will accompany us
+throughout: the chapter's running quadratic $\tfrac12(x_1^2 + 1000\,x_2^2)$ for
+measuring convergence rates, and the double well $\phi$, which fails every test
+of convexity we throw at it.
 
 ```{.python .input #convexity-imports}
 #@tab mxnet
@@ -86,16 +92,18 @@ from d2l import jax as d2l
 ## Convex Sets
 :label:`subsec_mdl-convex-sets`
 
-A convex function is defined through the segments between points of its
-domain. That domain, the feasible region of a constrained problem, and the
-set of minimizers are all sets, so we begin with sets. We need little: the
-definition, three families of examples, and one rule.
+Because convex functions are defined along line segments between points of
+their domain, we start with the sets those points live in. The domain of a
+loss, the feasible region of a constrained problem, and the set of all
+minimizers are all sets. Fortunately, we need only a short toolkit: one
+definition, three standard families of examples, and one rule for building new
+convex sets from old ones.
 
 ### Definition and Examples
 
-A set is convex when the segment between any two of its points stays inside
-it. Formally, a set $C \subseteq \mathbb{R}^d$ of points with $d$ coordinates
-is **convex** if
+Geometrically, a set is convex if the straight line segment connecting any two
+of its points stays entirely inside the set. Formally, a set
+$C \subseteq \mathbb{R}^d$ of $d$-dimensional points is **convex** if
 
 $$
 \theta \mathbf{x} + (1 - \theta)\, \mathbf{y} \in C
@@ -103,78 +111,83 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-convex-set`
 
-As the weight $\theta$ runs from $1$ to $0$, the point
-$\theta\mathbf{x} + (1-\theta)\mathbf{y}$ traces the straight segment from
+As $\theta$ moves from $1$ to $0$, the combination
+$\theta\mathbf{x} + (1-\theta)\mathbf{y}$ sweeps out the line segment from
 $\mathbf{x}$ to $\mathbf{y}$. :numref:`fig_mdl-opt-convex-vs-nonconvex-set`
-contrasts a convex set with a nonconvex crescent and shows the two convex
-sets that deep learning uses most, the probability simplex and a half-space.
+contrasts a convex set with a nonconvex crescent and illustrates the two convex
+sets that appear most often in deep learning: the probability simplex and a
+half-space.
 
 ![Convex versus nonconvex sets. Left: a convex set, where the segment between any two points stays inside. Middle: a nonconvex crescent, where a chord between two of its points passes outside the set. Right: the probability simplex $\{\mathbf{p}\succeq0,\ \mathbf{1}^\top\mathbf{p}=1\}$ and a half-space $\{\mathbf{x}:\mathbf{a}^\top\mathbf{x}\leq b\}$, both convex.](../img/mdl-opt-convex-vs-nonconvex-set.svg)
 :label:`fig_mdl-opt-convex-vs-nonconvex-set`
 
-An annulus shows what the definition excludes. The annulus
-$\{\mathbf{x} : 1 \le \|\mathbf{x}\| \le 2\}$ contains the points
-$(\pm \tfrac32, 0)$, but their midpoint is the origin, which the annulus
-excludes. One missing midpoint is enough to violate
+To see what the definition rules out, consider the annulus
+$\{\mathbf{x} : 1 \le \|\mathbf{x}\| \le 2\}$. It contains both
+$(\tfrac32, 0)$ and $(-\tfrac32, 0)$, yet their midpoint is the origin, which
+lies in the hole. A single missing midpoint is enough to violate
 :eqref:`eq_mdl-opt-convex-set`.
 
-Three families will do for this chapter. A hyperplane
-$\{\mathbf{x} : \mathbf{a}^\top\mathbf{x} = b\}$ and a half-space
-$\{\mathbf{x} : \mathbf{a}^\top\mathbf{x} \le b\}$ are convex because
-$\mathbf{a}^\top\mathbf{x}$ is linear: an average of two numbers equal to
-$b$ (or at most $b$) is again equal to $b$ (or at most $b$). A norm ball
-$\{\mathbf{x} : \|\mathbf{x}\| \le r\}$ is convex by the triangle inequality
-and homogeneity,
+Three families of convex sets cover almost everything we meet in this chapter.
+First, any hyperplane $\{\mathbf{x} : \mathbf{a}^\top\mathbf{x} = b\}$ and any
+half-space $\{\mathbf{x} : \mathbf{a}^\top\mathbf{x} \le b\}$ are convex
+because $\mathbf{a}^\top\mathbf{x}$ is linear: a weighted average of two
+numbers equal to $b$ (or at most $b$) is again equal to $b$ (or at most $b$).
+Second, any norm ball $\{\mathbf{x} : \|\mathbf{x}\| \le r\}$ is convex by the
+triangle inequality and homogeneity,
 $\|\theta\mathbf{x} + (1-\theta)\mathbf{y}\| \le \theta\|\mathbf{x}\| + (1-\theta)\|\mathbf{y}\| \le r$.
-This covers the $\ell_2$ balls of weight decay and gradient clipping and the
-$\ell_1$ balls of sparsity-inducing regularization alike. The third family
-is the probability simplex
+This single check covers both the $\ell_2$ balls of weight decay and gradient
+clipping and the $\ell_1$ balls of sparsity-inducing regularization. Third is
+the probability simplex
 $\Delta = \{\mathbf{p} \in \mathbb{R}^d : \mathbf{p} \succeq 0,\ \mathbf{1}^\top\mathbf{p} = 1\}$,
-where $\mathbf{p} \succeq 0$ means that every entry is nonnegative. It
-contains attention weights, class probabilities, and mixture weights, and it
-is convex by the rule that follows.
+where $\mathbf{p} \succeq 0$ means every entry is nonnegative. Attention
+weights, class probabilities, and mixture weights all live on $\Delta$, and its
+convexity follows immediately from our next rule.
 
 ### New Convex Sets from Old
 
-The intersection of convex sets, finitely or infinitely many, is convex: the
-segment between two points of the intersection lies in each of the sets,
-hence in all of them. A convex set has no dents, and cutting a dent-free set
-with another dent-free set cannot create one. Unions have no such guarantee:
-$[0,1] \cup [2,3]$ is a union of two convex intervals whose chord from $1$
-to $2$ leaves the set.
+The intersection of any collection of convex sets—finite or infinite—is always
+convex. If two points lie in the intersection, then they lie in every set of
+the collection, so the segment between them stays inside every set and
+therefore inside the intersection. Intuitively, a convex set has no dents, and
+carving a dent-free set with another dent-free set cannot create one. Unions,
+by contrast, have no such guarantee: $[0,1] \cup [2,3]$ is a union of two
+convex intervals, yet the segment from $1$ to $2$ leaves the set.
 
-The simplex is the intersection of one hyperplane
-($\mathbf{1}^\top\mathbf{p} = 1$) with $d$ half-spaces ($-p_i \le 0$), hence
-convex. The symmetric positive semidefinite (PSD) matrices form a convex set
-for the same reason, as an intersection of infinitely many half-spaces: for
-each fixed $\mathbf{z}$, the condition
-$\mathbf{z}^\top \mathbf{A} \mathbf{z} \ge 0$ is linear in the entries of
-$\mathbf{A}$.
+This single intersection rule certifies two central sets at once. The
+probability simplex is the intersection of one hyperplane
+($\mathbf{1}^\top\mathbf{p} = 1$) with $d$ half-spaces ($-p_i \le 0$), so it is
+convex. Likewise, the set of symmetric positive semidefinite (PSD) matrices is
+convex because it is an intersection of infinitely many half-spaces: for each
+fixed vector $\mathbf{z}$, the constraint
+$\mathbf{z}^\top \mathbf{A} \mathbf{z} \ge 0$ is a single linear inequality in
+the entries of $\mathbf{A}$.
 
-The opposite construction starts from points. The **convex hull** of a set
-$S$ is the set of all weighted averages $\sum_i \theta_i \mathbf{x}_i$ of
-points $\mathbf{x}_i \in S$ with $\theta_i \ge 0$ and
-$\sum_i \theta_i = 1$. It is convex, and it is the smallest convex set that
-contains $S$ (Exercise :exref:`ex_mdl-convexity-prove-jensen-s-finite`). The
-simplex is the convex hull of the coordinate vectors
-$\mathbf{e}_1, \ldots, \mathbf{e}_d$: every probability distribution is an
-average of certainties.
+We can also build a convex set from the inside out. The **convex hull** of a
+set $S$ is the collection of all weighted averages $\sum_i \theta_i \mathbf{x}_i$
+of points $\mathbf{x}_i \in S$ with $\theta_i \ge 0$ and $\sum_i \theta_i = 1$.
+It is convex, and in fact it is the smallest convex set containing $S$
+(Exercise :exref:`ex_mdl-convexity-prove-jensen-s-finite`). Seen this way, the
+probability simplex is simply the convex hull of the standard basis vectors
+$\mathbf{e}_1, \ldots, \mathbf{e}_d$: every probability distribution is a
+weighted average of certainties.
 
 ## Convex Functions
 :label:`subsec_mdl-three-lenses`
 
-A convex function is one whose graph has no dents. We give three equivalent
-tests for this property, which need zero, one, and two derivatives
-respectively, and then two refinements: strong convexity, which controls the
-speed of gradient descent, and subgradients, which handle corners. If only
-one of the three tests is to be remembered, it should be the second, the
-tangent bound.
+Just as a convex set has no dents, a convex function is one whose graph curves
+upward without ever dipping into a second valley. We now develop three
+equivalent tests for convexity—requiring zero, one, and two derivatives
+respectively—followed by two refinements: strong convexity, which governs how
+fast gradient descent converges, and subgradients, which handle losses with
+corners. If you remember only one of the three tests, make it the second: the
+tangent lower bound is the engine behind almost every proof in this section.
 
 ### The Chord Condition
 
-The first test needs no derivatives, so it applies to the absolute value and
-the hinge loss as well as to smooth losses. A function $f : C \to \mathbb{R}$ on a convex
-domain $C$ is **convex** if its graph lies on or below every chord:
+The first test needs no derivatives at all, which means it applies just as
+easily to the absolute value and the hinge loss as to smooth objectives. A
+function $f : C \to \mathbb{R}$ on a convex domain $C$ is **convex** if its
+graph lies on or below every chord joining two of its points:
 
 $$
 f\left(\theta \mathbf{x} + (1 - \theta)\, \mathbf{y}\right)
@@ -183,50 +196,57 @@ f\left(\theta \mathbf{x} + (1 - \theta)\, \mathbf{y}\right)
 $$
 :eqlabel:`eq_mdl-opt-chord`
 
-The left side evaluates $f$ at a point of the segment; the right side is the
-height of the chord joining $(\mathbf{x}, f(\mathbf{x}))$ to
-$(\mathbf{y}, f(\mathbf{y}))$ above that same point. For $f(x) = x^2$ with
-$x = 0$, $y = 2$, and $\theta = \tfrac12$, the graph gives $f(1) = 1$ and the
-chord gives $\tfrac12 \cdot 0 + \tfrac12 \cdot 4 = 2$, and indeed $1 \le 2$.
-For general $x$, $y$, and $\theta$, expanding the squares gives the gap
+Here the left side evaluates $f$ at a point on the segment between
+$\mathbf{x}$ and $\mathbf{y}$, while the right side gives the height of the
+straight chord joining $(\mathbf{x}, f(\mathbf{x}))$ to
+$(\mathbf{y}, f(\mathbf{y}))$ directly above that point. Let us check a
+concrete case: for $f(x) = x^2$ with $x = 0$, $y = 2$, and $\theta = \tfrac12$,
+the graph sits at $f(1) = 1$ while the chord sits at
+$\tfrac12 \cdot 0 + \tfrac12 \cdot 4 = 2$, and indeed $1 \le 2$. For arbitrary
+$x$, $y$, and $\theta$, expanding the squares shows that the height gap between
+chord and graph is
 
 $$
-\theta x^2 + (1-\theta) y^2 - \left(\theta x + (1-\theta) y\right)^2 = \theta(1-\theta)(x-y)^2 \;\ge\; 0,
+\theta x^2 + (1-\theta) y^2 - \left(\theta x + (1-\theta) y\right)^2 = \theta(1-\theta)(x-y)^2 \;\ge\; 0.
 $$
 
-so the square is convex, with a gap that grows with the distance between the
-two points. This gap will return as the variance in Jensen's inequality.
+Thus $x^2$ is convex, with a gap that grows quadratically with the separation
+between the two points. We will meet this exact expression again shortly as the
+variance in Jensen's inequality.
 
-If the inequality :eqref:`eq_mdl-opt-chord` is strict whenever
-$\mathbf{x} \neq \mathbf{y}$ and $\theta \in (0, 1)$, $f$ is **strictly
-convex**; if $-f$ is convex, $f$ is **concave**. The linear function
-$f(x) = x$ is convex but not strictly convex: its chords lie on its graph.
-The domain must be convex for the definition to parse, since the point
-$\theta\mathbf{x} + (1-\theta)\mathbf{y}$ has to be one where $f$ is defined.
+Two nearby notions are worth naming right away. If the inequality
+:eqref:`eq_mdl-opt-chord` is strict whenever $\mathbf{x} \neq \mathbf{y}$ and
+$\theta \in (0, 1)$, we call $f$ **strictly convex**; if $-f$ is convex, we
+call $f$ **concave**. Notice that a linear function $f(x) = x$ is convex (and
+concave) but not strictly convex, because every chord lies directly on its
+graph. Notice also why the domain $C$ must be convex: without that requirement,
+the intermediate point $\theta\mathbf{x} + (1-\theta)\mathbf{y}$ might not even
+belong to the domain where $f$ is defined.
 
-Convex functions and convex sets are linked by the **epigraph**
-$\{(\mathbf{x}, t) : t \ge f(\mathbf{x})\}$, the region on and above the
-graph. A function $f$ is convex if and only if its epigraph is a convex set,
-because chords between points of the epigraph stay above the graph if and
-only if :eqref:`eq_mdl-opt-chord` holds. The link also runs from functions
-to sets. Every sublevel set $\{\mathbf{x} \in C : f(\mathbf{x}) \le c\}$ of
-a convex $f$ is convex: if $f(\mathbf{x}) \le c$ and $f(\mathbf{y}) \le c$,
-the chord inequality gives
+Convex functions and convex sets are two sides of the same geometric coin. The
+**epigraph** of $f$ is the region on and above its graph,
+$\{(\mathbf{x}, t) : t \ge f(\mathbf{x})\}$. A function $f$ is convex if and
+only if its epigraph is a convex set, because a chord between two points of the
+epigraph stays above the graph precisely when :eqref:`eq_mdl-opt-chord` holds.
+Convexity also passes from functions to sets via their **sublevel sets**
+$\{\mathbf{x} \in C : f(\mathbf{x}) \le c\}$: if $f(\mathbf{x}) \le c$ and
+$f(\mathbf{y}) \le c$, the chord inequality immediately gives
 $f(\theta\mathbf{x} + (1-\theta)\mathbf{y}) \le \theta c + (1-\theta) c = c$.
-This is why a constraint $g(\mathbf{x}) \le 0$ with a convex $g$ always
-describes a convex feasible region.
+This is why any inequality constraint $g(\mathbf{x}) \le 0$ with a convex $g$
+automatically carves out a convex feasible region.
 
-The converse fails. The function $\sqrt{|x|}$ has intervals
-$\{|x| \le c^2\}$ as sublevel sets, yet with $x = 0$, $y = 1$, and
-$\theta = \tfrac12$ the graph gives $\sqrt{1/2} \approx 0.71$ and the chord
-gives $0.5$, so the chord condition fails.
+Be careful, though: the converse does not hold. Every sublevel set of
+$f(x) = \sqrt{|x|}$ is a convex interval $\{|x| \le c^2\}$, yet $f$ itself is
+not convex. At $x = 0$, $y = 1$, and $\theta = \tfrac12$, the graph sits at
+$\sqrt{1/2} \approx 0.71$ while the chord sits below it at $0.5$.
 
 ### Local Minima Are Global
 :label:`subsec_mdl-local-global`
 
-The chord condition already answers the question of the opening.
-:numref:`fig_mdl-opt-local-equals-global` draws the two situations: one
-basin on a convex objective, two on the double well.
+Remarkably, the chord condition alone is already enough to answer the question
+we posed at the opening. :numref:`fig_mdl-opt-local-equals-global` contrasts
+the two landscapes: a single basin on a convex objective versus two competing
+basins on the double well.
 
 ![(a) On a convex objective, gradient descent with a small fixed step reaches the global minimizer from either start. (b) On a double well, the same update from different starts reaches different minima; the basins meet at the local maximum.](../img/mdl-opt-local-equals-global.svg)
 :label:`fig_mdl-opt-local-equals-global`
@@ -234,34 +254,36 @@ basin on a convex objective, two on the double well.
 **Proposition (local minima are global).** *If $f$ is convex on a convex set
 $C$, every local minimizer of $f$ on $C$ is a global minimizer.*
 
-**Proof.** Let $\mathbf{x}^\star$ be a local minimizer and take any
-$\mathbf{y} \in C$. For small $\theta > 0$ the point
-$\mathbf{z}_\theta = (1-\theta)\mathbf{x}^\star + \theta\mathbf{y}$ on the
-chord toward $\mathbf{y}$ lies in the neighborhood where $\mathbf{x}^\star$
-is minimal, so local minimality and the chord inequality give
+**Proof.** Let $\mathbf{x}^\star$ be a local minimizer and let
+$\mathbf{y} \in C$ be any other point. For sufficiently small $\theta > 0$, the
+point $\mathbf{z}_\theta = (1-\theta)\mathbf{x}^\star + \theta\mathbf{y}$ along
+the segment toward $\mathbf{y}$ falls inside the neighborhood where
+$\mathbf{x}^\star$ is minimal. Combining local minimality with the chord
+inequality gives
 
 $$
 f(\mathbf{x}^\star) \;\le\; f(\mathbf{z}_\theta)
 \;\le\; (1-\theta)f(\mathbf{x}^\star) + \theta f(\mathbf{y}).
 $$
 
-Subtract $(1-\theta)f(\mathbf{x}^\star)$ and divide by $\theta$:
-$f(\mathbf{x}^\star) \le f(\mathbf{y})$. $\blacksquare$
+Subtract $(1-\theta)f(\mathbf{x}^\star)$ from both sides and divide by
+$\theta > 0$ to obtain $f(\mathbf{x}^\star) \le f(\mathbf{y})$. $\blacksquare$
 
-In words: if a better point $\mathbf{y}$ existed anywhere, the chord from
-$\mathbf{x}^\star$ toward it would run below the level $f(\mathbf{x}^\star)$
-arbitrarily close to $\mathbf{x}^\star$, and $\mathbf{x}^\star$ would not be
-a local minimizer.
+The geometric picture is just as crisp: if any strictly better point
+$\mathbf{y}$ existed anywhere in $C$, the chord from $\mathbf{x}^\star$ toward
+$\mathbf{y}$ would slope downward immediately, forcing the graph below
+$f(\mathbf{x}^\star)$ arbitrarily close to $\mathbf{x}^\star$ and contradicting
+local minimality.
 
-We now run the experiment of the opening, and with the proposition in hand
-we can say in advance what the bowl will do, and compute what the double
-well will do. The cell applies the same loop, with step $0.05$ and $600$ steps, to the bowl
-$(x - \tfrac12)^2$ and to the double well $\phi$, from the same $500$ starts
-drawn uniformly on $[-1.5, 1.5]$. With a step this small a run moves
-downhill without jumping over the hump, so it ends in the well on its own
-side of the local maximum of $\phi$. The cell finds that maximum as a root
-of $\phi'(x) = 4x^3 - 4x + \tfrac12$ and compares the share of starts on its
-right with the share of runs that end in the right well.
+Let us now run the experiment from the opening and see how the proposition
+plays out numerically. We apply the same gradient-descent loop (step size
+$0.05$, $600$ steps) to both the bowl $(x - \tfrac12)^2$ and the double well
+$\phi$, starting from the same $500$ points drawn uniformly on $[-1.5, 1.5]$.
+Because the step is small, each iterate rolls downhill without hopping over the
+central hump, so a run on $\phi$ should land in whichever well lies on its own
+side of the local maximum. We compute that local maximum as a root of
+$\phi'(x) = 4x^3 - 4x + \tfrac12$ and check whether the fraction of starts to
+its right matches the fraction of runs that end in the shallower right well.
 
 ```{.python .input #convexity-basins}
 def gd(grad_fn, x, eta=0.05, steps=600):
@@ -285,26 +307,26 @@ print(f'local max at {x_max:.4f}: predicted share right {(1.5 - x_max) / 3:.3f},
       f' observed {right.size / inits.size:.3f}')
 ```
 
-In every run the bowl's $500$ endpoints agree to rounding. The double well
-splits the runs into two groups, at $x \approx -1.0575$ with
-$\phi \approx -0.515$ and at $x \approx 0.9304$ with $\phi \approx 0.483$, a
-gap of almost one unit. The local maximum that separates them is at
-$x \approx 0.127$, so a fraction $(1.5 - 0.127)/3 \approx 0.458$ of uniform
-starts goes right: a little under half. From draw to draw the observed share
-scatters around this prediction by a few percentage points, the sampling
-error of $500$ starts.
+On the bowl, all $500$ runs converge to $x = 0.5$ to within numerical rounding.
+On the double well, the runs split cleanly into two camps: one at
+$x \approx -1.0575$ with $\phi \approx -0.515$, and another at
+$x \approx 0.9304$ with $\phi \approx 0.483$—nearly a full unit worse. The
+local maximum separating the two basins sits at $x \approx 0.127$, so a
+fraction $(1.5 - 0.127)/3 \approx 0.458$ of uniform starts fall to its right.
+Across random draws, the observed share hovers within a few percentage points
+of $46\%$, matching the prediction up to the sampling noise of $500$ starts.
 
-The two runs use the same loop and differ only in the objective. Convexity
-rules out the second basin. It does not by itself carry the loop to the
-minimizer: that still takes smoothness and a safe step, as in
-:numref:`subsec_mdl-gd-smoothness`.
+Both experiments ran the exact same optimizer; only the objective changed.
+Convexity eliminates the second basin, though it does not by itself guarantee
+that gradient descent will reach the minimizer—that still requires smoothness
+and a safe step size, as in :numref:`subsec_mdl-gd-smoothness`.
 
 ### The First-Order Condition
 
-The chord condition needs no derivatives, but optimization proofs work with
-gradients. When $f$ is differentiable, convexity has an equivalent
-first-order form: the first-order Taylor approximation at any point is a
-*global under-estimator*,
+The chord condition has the virtue of needing no derivatives, but optimization
+proofs are built out of gradients. When $f$ is differentiable, convexity takes
+an equivalent first-order form: the tangent hyperplane at any point is a
+*global under-estimator* of the function,
 
 $$
 f(\mathbf{y}) \;\ge\; f(\mathbf{x}) + \nabla f(\mathbf{x})^\top (\mathbf{y} - \mathbf{x})
@@ -312,54 +334,59 @@ f(\mathbf{y}) \;\ge\; f(\mathbf{x}) + \nabla f(\mathbf{x})^\top (\mathbf{y} - \m
 $$
 :eqlabel:`eq_mdl-opt-first-order`
 
-For $f(x) = x^2$ at $x = 1$ the tangent line is $1 + 2(y - 1) = 2y - 1$, and
-$y^2 - (2y - 1) = (y - 1)^2 \ge 0$ for every $y$. In words: one gradient,
-evaluated at one point $\mathbf{x}$, gives a lower bound on $f$ at every
-other point of the domain. This is the property every proof below uses.
-:numref:`fig_mdl-opt-chord-above-graph` shows the two conditions side by
-side: chords lie above the graph, tangents lie below it.
+Check this on $f(x) = x^2$ at $x = 1$: the tangent line is
+$1 + 2(y - 1) = 2y - 1$, and the vertical gap between graph and tangent is
+$y^2 - (2y - 1) = (y - 1)^2 \ge 0$ for every $y$. Pause to appreciate how
+strong a statement :eqref:`eq_mdl-opt-first-order` is: a single gradient,
+computed at a single point $\mathbf{x}$, bounds $f$ from below at every other
+point in the domain. Almost every proof in the rest of this section rests on
+this one inequality. :numref:`fig_mdl-opt-chord-above-graph` places the first
+two tests side by side: chords lie above the graph, while tangents lie below
+it.
 
 ![Two equivalent conditions. (a) The chord joining two points of the graph lies above the graph: $f(\theta\mathbf{x}+(1-\theta)\mathbf{y})\le\theta f(\mathbf{x})+(1-\theta)f(\mathbf{y})$. (b) The tangent at any point lies below the graph: $f(\mathbf{y})\ge f(\mathbf{x})+\nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x})$.](../img/mdl-opt-chord-above-graph.svg)
 :label:`fig_mdl-opt-chord-above-graph`
 
 ### The Second-Order Condition
 
-For smooth losses the easiest test is usually a matrix test. When $f$ is
-twice differentiable on an **open** convex domain $C$, $f$ is convex if and
-only if
+For smooth objectives, the quickest way to verify convexity is usually a matrix
+test. When $f$ is twice differentiable on an **open** convex domain $C$, $f$ is
+convex if and only if its Hessian is positive semidefinite everywhere:
 
 $$
-\nabla^2 f(\mathbf{x}) \succeq 0 \qquad \textrm{for all } \mathbf{x} \in C,
+\nabla^2 f(\mathbf{x}) \succeq 0 \qquad \textrm{for all } \mathbf{x} \in C.
 $$
 
-where $\succeq 0$, applied to a symmetric matrix, says that it is PSD.
+In one dimension this reduces to the familiar calculus rule $f''(x) \ge 0$: the
+curve bends upward. In $d$ dimensions it says that every one-dimensional slice
+through $\mathbf{x}$ bends upward, since
+$\mathbf{v}^\top \nabla^2 f(\mathbf{x})\, \mathbf{v}$ is the second derivative
+of $f$ along the line in direction $\mathbf{v}$
+(:numref:`sec_mdl-multivariable_calculus`).
 
-In one dimension this is the calculus criterion $f''(x) \ge 0$: the graph
-curves upward. In $d$ dimensions it says that every one-dimensional slice
-curves upward, since $\mathbf{v}^\top \nabla^2 f(\mathbf{x})\, \mathbf{v}$
-is the second derivative of $f$ along the line through $\mathbf{x}$ in
-direction $\mathbf{v}$ (:numref:`sec_mdl-multivariable_calculus`).
-
-The test settles three common cases. The quadratic
-$\tfrac12\mathbf{x}^\top \mathbf{A} \mathbf{x} + \mathbf{b}^\top\mathbf{x}$
-with $\mathbf{A}$ symmetric has the constant Hessian $\mathbf{A}$, so it is
-convex if and only if $\mathbf{A} \succeq 0$. The least-squares loss
-$\tfrac12\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ of a design matrix
+This matrix test settles three workhorse examples immediately. First, a
+quadratic $\tfrac12\mathbf{x}^\top \mathbf{A} \mathbf{x} + \mathbf{b}^\top\mathbf{x}$
+with symmetric $\mathbf{A}$ has constant Hessian $\mathbf{A}$, so it is convex
+if and only if $\mathbf{A} \succeq 0$. Second, the least-squares loss
+$\tfrac12\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ for a design matrix
 $\mathbf{X} \in \mathbb{R}^{n \times d}$ ($n$ examples, $d$ weights) has
-Hessian $\mathbf{X}^\top \mathbf{X}$, and
-$\mathbf{v}^\top \mathbf{X}^\top\mathbf{X} \mathbf{v} = \|\mathbf{X}\mathbf{v}\|^2 \ge 0$,
-so least squares is always convex (:numref:`subsec_mdl-psd`). And $e^x$,
-$-\log x$, and $x \log x$ are convex on their domains because their second
-derivatives $e^x$, $1/x^2$, and $1/x$ are positive.
+Hessian $\mathbf{X}^\top \mathbf{X}$; because
+$\mathbf{v}^\top \mathbf{X}^\top\mathbf{X} \mathbf{v} = \|\mathbf{X}\mathbf{v}\|^2 \ge 0$
+for every $\mathbf{v}$, least squares is always convex
+(:numref:`subsec_mdl-psd`). Third, the scalar functions $e^x$, $-\log x$, and
+$x \log x$ are all convex on their domains, since their second derivatives
+$e^x$, $1/x^2$, and $1/x$ are positive everywhere.
 
-The domain is open for a reason: on a lower-dimensional domain only
-directions inside the domain count, and $x^2 - y^2$ is convex on the line
-$y = 0$ although its Hessian is indefinite.
+Why did we insist that the domain $C$ be open? On a lower-dimensional domain,
+only directions that stay inside $C$ matter: for instance, $x^2 - y^2$ is
+convex when restricted to the line $y = 0$, even though its full two-dimensional
+Hessian is indefinite.
 
-The three tests describe the same functions. Of the four short parts of the
-proof, the second is the one to read: applying the tangent bound at the
-*intermediate* point of the chord makes the gradient terms cancel, a choice
-of point that returns in the proof of Jensen's inequality.
+We now verify that all three tests single out the exact same class of
+functions. The proof has four short parts, and the second is the one worth
+remembering: applying the tangent bound at the *intermediate* point of a chord
+makes the gradient terms cancel—the same trick we will use to prove Jensen's
+inequality.
 
 **Proposition (the three characterizations agree).** *Let $f$ be
 differentiable on an open convex domain $C$. Then the chord condition
@@ -368,23 +395,23 @@ differentiable on an open convex domain $C$. Then the chord condition
 differentiable, both are equivalent to $\nabla^2 f(\mathbf{x}) \succeq 0$ on
 $C$.*
 
-**Proof.** *(Chord $\Rightarrow$ first-order.)* Fix $\mathbf{x}, \mathbf{y}$
-and $\theta \in (0, 1]$. Write the chord inequality at the point
-$\mathbf{x} + \theta(\mathbf{y} - \mathbf{x})$, subtract $f(\mathbf{x})$, and
-divide by $\theta$:
+**Proof.** *(Chord $\Rightarrow$ first-order.)* Fix $\mathbf{x}, \mathbf{y} \in C$
+and $\theta \in (0, 1]$. Apply the chord inequality at the intermediate point
+$\mathbf{x} + \theta(\mathbf{y} - \mathbf{x})$, subtract $f(\mathbf{x})$ from
+both sides, and divide by $\theta$:
 
 $$
 \frac{f(\mathbf{x} + \theta(\mathbf{y} - \mathbf{x})) - f(\mathbf{x})}{\theta}
 \;\le\; f(\mathbf{y}) - f(\mathbf{x}).
 $$
 
-As $\theta \downarrow 0$ the left side converges to the directional
-derivative $\nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x})$, which gives
+Letting $\theta \downarrow 0$, the left side approaches the directional
+derivative $\nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x})$, yielding
 :eqref:`eq_mdl-opt-first-order`.
 
-*(First-order $\Rightarrow$ chord.)* Let
-$\mathbf{z} = \theta\mathbf{x} + (1-\theta)\mathbf{y}$ and apply the
-under-estimator at $\mathbf{z}$ twice, once toward each endpoint:
+*(First-order $\Rightarrow$ chord.)* Set
+$\mathbf{z} = \theta\mathbf{x} + (1-\theta)\mathbf{y}$ and apply the tangent
+lower bound at $\mathbf{z}$ twice, once toward each endpoint:
 
 $$
 f(\mathbf{x}) \ge f(\mathbf{z}) + \nabla f(\mathbf{z})^\top(\mathbf{x} - \mathbf{z}),
@@ -392,45 +419,49 @@ f(\mathbf{x}) \ge f(\mathbf{z}) + \nabla f(\mathbf{z})^\top(\mathbf{x} - \mathbf
 f(\mathbf{y}) \ge f(\mathbf{z}) + \nabla f(\mathbf{z})^\top(\mathbf{y} - \mathbf{z}).
 $$
 
-Multiply by $\theta$ and $1 - \theta$ and add. The gradient terms combine to
+Multiply the first inequality by $\theta$, the second by $1 - \theta$, and add.
+The linear terms combine to
 $\nabla f(\mathbf{z})^\top(\theta\mathbf{x} + (1-\theta)\mathbf{y} - \mathbf{z}) = 0$,
-which leaves :eqref:`eq_mdl-opt-chord`.
+leaving :eqref:`eq_mdl-opt-chord`.
 
-*(Second-order $\Rightarrow$ first-order.)* Restrict $f$ to the segment:
-$g(t) = f(\mathbf{x} + t(\mathbf{y} - \mathbf{x}))$ has
+*(Second-order $\Rightarrow$ first-order.)* Restrict $f$ to the line segment
+between $\mathbf{x}$ and $\mathbf{y}$ by defining
+$g(t) = f(\mathbf{x} + t(\mathbf{y} - \mathbf{x}))$. Its second derivative is
 $g''(t) = (\mathbf{y} - \mathbf{x})^\top \nabla^2 f(\mathbf{x} + t(\mathbf{y} - \mathbf{x}))\,(\mathbf{y} - \mathbf{x}) \ge 0$.
-Taylor's theorem with the Lagrange remainder
-(:numref:`sec_mdl-single_variable_calculus`) gives
-$g(1) = g(0) + g'(0) + \tfrac12 g''(\tau)$ for some $\tau \in (0, 1)$, and
-dropping the nonnegative remainder is :eqref:`eq_mdl-opt-first-order`.
+By Taylor's theorem with the Lagrange remainder
+(:numref:`sec_mdl-single_variable_calculus`),
+$g(1) = g(0) + g'(0) + \tfrac12 g''(\tau)$ for some $\tau \in (0, 1)$. Dropping
+the nonnegative remainder yields :eqref:`eq_mdl-opt-first-order`.
 
-*(First-order $\Rightarrow$ second-order.)* Suppose instead that
+*(First-order $\Rightarrow$ second-order.)* Suppose for contradiction that
 $\mathbf{v}^\top \nabla^2 f(\mathbf{x})\, \mathbf{v} < 0$ for some
-$\mathbf{x}$ and $\mathbf{v}$. Expanding along that direction,
+$\mathbf{x} \in C$ and direction $\mathbf{v}$. Expanding $f$ along $\mathbf{v}$
+gives
 
 $$
 f(\mathbf{x} + t\mathbf{v}) = f(\mathbf{x}) + t\, \nabla f(\mathbf{x})^\top\mathbf{v}
-+ \frac{t^2}{2}\, \mathbf{v}^\top \nabla^2 f(\mathbf{x})\, \mathbf{v} + o(t^2),
++ \frac{t^2}{2}\, \mathbf{v}^\top \nabla^2 f(\mathbf{x})\, \mathbf{v} + o(t^2).
 $$
 
-so for small enough $t > 0$ the left side drops strictly below the tangent
-value $f(\mathbf{x}) + t \nabla f(\mathbf{x})^\top\mathbf{v}$, contradicting
-:eqref:`eq_mdl-opt-first-order`. $\blacksquare$
+For sufficiently small $t > 0$, the negative quadratic term dominates the
+$o(t^2)$ remainder, so $f(\mathbf{x} + t\mathbf{v})$ drops strictly below the
+tangent value $f(\mathbf{x}) + t \nabla f(\mathbf{x})^\top\mathbf{v}$,
+contradicting :eqref:`eq_mdl-opt-first-order`. $\blacksquare$
 
 ### A Numerical Check of the Three Tests
 
-We run the three tests on two losses: the least-squares loss
-$f(\mathbf{w}) = \tfrac12\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ with
-$n = 20$ random examples and $d = 2$ weights, and the double well $\phi$ of
-the opening. For least squares the outcome is known in advance, and more than
-its sign: expanding the squares as we did for $x^2$ gives the chord gap, graph
-minus chord, as
-$-\tfrac12\theta(1-\theta)\|\mathbf{X}(\mathbf{u} - \mathbf{v})\|^2$, and
-the tangent gap, tangent minus graph, as
-$-\tfrac12\|\mathbf{X}(\mathbf{v} - \mathbf{u})\|^2$. For each loss the
-cell samples a thousand chords and a thousand tangents between random points
-of $[-1.5, 1.5]^d$, prints the largest gap of each kind, and evaluates the
-Hessian at the sampled points.
+Let us put all three tests to work numerically on two losses: the least-squares
+objective $f(\mathbf{w}) = \tfrac12\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$
+with $n = 20$ random examples and $d = 2$ weights, and the double well $\phi$
+from our opening experiment. For least squares we already know the exact
+formulas for the violations: expanding the squares as we did for $x^2$ gives
+the chord gap (graph minus chord) as
+$-\tfrac12\theta(1-\theta)\|\mathbf{X}(\mathbf{u} - \mathbf{v})\|^2$ and the
+tangent gap (tangent minus graph) as
+$-\tfrac12\|\mathbf{X}(\mathbf{v} - \mathbf{u})\|^2$, both nonpositive. For
+each loss, the code below samples $1{,}000$ random chords and tangents in
+$[-1.5, 1.5]^d$, reports the largest violation of each kind, and checks the
+smallest Hessian eigenvalue across the sampled points.
 
 ```{.python .input #convexity-three-lenses}
 X, y = rng.normal(size=(20, 2)), rng.normal(size=20)  # least squares, d = 2
@@ -452,36 +483,39 @@ i = int(np.argmax(chord))                             # the double well's worst
 print(f'worst chord of the double well: from {U[i, 0]:.2f} to {V[i, 0]:.2f}')
 ```
 
-For least squares no sampled chord runs below the graph and no tangent above
-it, and the Hessian has positive eigenvalues, as the formulas require. The
-double well fails all three tests. Its worst chord runs below the graph by
-almost one unit, between points in the two wells, its tangents cut the graph,
-and its second derivative falls to nearly $-4$ near the hump, where
-$\phi''(0) = -4$. The three computations do not carry the same weight,
-though. Sampling can refute convexity, as it did for $\phi$ with one bad
-chord, but it cannot prove it: for least squares it only failed to find a
-counterexample. The Hessian check proves it there, since
-$\mathbf{X}^\top \mathbf{X}$ is the same PSD matrix at every $\mathbf{w}$.
+For least squares, not a single sampled chord dips below the graph, no tangent
+rises above it, and the Hessian eigenvalues stay positive, just as the algebra
+predicted. The double well fails all three checks: its worst chord cuts nearly
+one unit below the graph between points in the two valleys, its tangents slice
+through the curve, and its second derivative drops near $-4$ at the central
+hump, where $\phi''(0) = -4$. Notice, however, an asymmetry between the tests.
+Random sampling can *refute* convexity—a single bad chord is a complete
+counterexample for $\phi$—but it can never *prove* convexity; for least squares
+it only failed to find a violation. What proves convexity for least squares is
+the Hessian test, because $\mathbf{X}^\top \mathbf{X}$ is the same PSD matrix
+at every $\mathbf{w}$.
 
 ### Strict and Strong Convexity
 
-Convexity alone allows flat stretches, and on a flat stretch gradient descent
-can be arbitrarily slow. A guaranteed speed needs curvature that is bounded
-away from zero. Three functions show the hierarchy, drawn in
-:numref:`fig_mdl-opt-convexity-hierarchy`(a). The line $f(x) = x$ is convex
-but not strictly convex, since its chords lie on its graph. The quartic
-$x^4$ is strictly convex (its second derivative $12x^2$ vanishes only at the
-single point $0$, so its slope strictly increases), yet $f''(0) = 0$: it is
-flat at its minimizer. The square $x^2$ has $f'' \equiv 2$ and curves
-equally everywhere.
+Plain convexity still permits arbitrarily flat stretches, and on a flat stretch
+gradient descent can crawl arbitrarily slowly. To guarantee fast convergence,
+we need curvature that stays bounded away from zero everywhere. Three simple
+functions illustrate the hierarchy, shown in
+:numref:`fig_mdl-opt-convexity-hierarchy`(a). The line $f(x) = x$ is convex but
+not strictly convex, because its chords sit right on its graph. The quartic
+$x^4$ is strictly convex—its second derivative $12x^2$ vanishes only at $0$, so
+its slope increases strictly everywhere—yet $f''(0) = 0$ leaves it completely
+flat at the minimizer. The quadratic $x^2$, by contrast, has constant curvature
+$f''(x) = 2$ at every point.
 
-Strong convexity states that bound. For $\mu > 0$, $f$ is **$\mu$-strongly
-convex** if $f(\mathbf{x}) - \tfrac{\mu}{2}\|\mathbf{x}\|^2$ is convex.
-Applying the first-order condition to
-$h(\mathbf{x}) = f(\mathbf{x}) - \tfrac{\mu}{2}\|\mathbf{x}\|^2$, whose
-gradient is $\nabla f(\mathbf{x}) - \mu\mathbf{x}$, and using
-$\|\mathbf{y}\|^2 - \|\mathbf{x}\|^2 - 2\mathbf{x}^\top(\mathbf{y} - \mathbf{x}) = \|\mathbf{y} - \mathbf{x}\|^2$,
-gives the equivalent form for differentiable $f$:
+Strong convexity turns this observation into a quantitative bound. For
+$\mu > 0$, a function $f$ is **$\mu$-strongly convex** if subtracting a
+quadratic of curvature $\mu$ leaves a convex function—that is, if
+$h(\mathbf{x}) = f(\mathbf{x}) - \tfrac{\mu}{2}\|\mathbf{x}\|^2$ is convex.
+When $f$ is differentiable, applying the first-order condition to $h$ (whose
+gradient is $\nabla f(\mathbf{x}) - \mu\mathbf{x}$) and using the identity
+$\|\mathbf{y}\|^2 - \|\mathbf{x}\|^2 - 2\mathbf{x}^\top(\mathbf{y} - \mathbf{x}) = \|\mathbf{y} - \mathbf{x}\|^2$
+yields the equivalent inequality
 
 $$
 f(\mathbf{y}) \;\ge\; f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x})
@@ -490,48 +524,51 @@ f(\mathbf{y}) \;\ge\; f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \ma
 $$
 :eqlabel:`eq_mdl-opt-strong-convexity`
 
-So the graph lies above a parabola of curvature $\mu$ that touches it at
-$\mathbf{x}$, not only above the tangent line. Applying the second-order
-condition to $h$ gives the third form: for twice-differentiable $f$, strong convexity means
-$\nabla^2 f(\mathbf{x}) \succeq \mu\mathbf{I}$ everywhere, where
-$\mathbf{I}$ is the identity. The square $x^2$ is $2$-strongly convex; the
-quartic $x^4$ is strongly convex on no neighborhood of $0$, because
-$f''(0) = 0 < \mu$ for every $\mu > 0$. Adding the ridge penalty
-$\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to any convex loss makes the sum
-$\lambda$-strongly convex, since subtracting $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$
-returns the convex loss. This is one more effect of weight decay.
+Geometrically, the graph of $f$ must sit not merely above its tangent line at
+$\mathbf{x}$, but above a parabola of curvature $\mu$ tangent to it there.
+Applying the second-order condition to $h$ gives the matrix test: a
+twice-differentiable $f$ is $\mu$-strongly convex if and only if
+$\nabla^2 f(\mathbf{x}) \succeq \mu\mathbf{I}$ everywhere, where $\mathbf{I}$
+is the identity matrix. Thus $x^2$ is $2$-strongly convex, whereas $x^4$ fails
+to be strongly convex on any neighborhood of $0$ because $f''(0) = 0 < \mu$ for
+every $\mu > 0$. Notice also a practical bonus: adding the ridge penalty
+$\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to any convex loss immediately makes the
+sum $\lambda$-strongly convex, because subtracting
+$\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ recovers the original convex loss. Weight
+decay does not just shrink parameters; it guarantees strong convexity.
 
 ![(a) Convex, strictly convex, strongly convex: $x$ has chords on its graph, $x^4$ is flat at the origin, $x^2$ curves everywhere. (b) A $\mu$-strongly convex, $L$-smooth function, here $f(x)=\tfrac12x^2+3\log\cosh x$, lies between two parabolas tangent at $x_0=1$, with curvatures $\mu=1$ and $L=4$; their ratio is $\kappa$.](../img/mdl-opt-convexity-hierarchy.svg)
 :label:`fig_mdl-opt-convexity-hierarchy`
 
-Strong convexity pairs with smoothness.
-:numref:`subsec_mdl-gd-smoothness` called $f$ **$L$-smooth** when its
-gradient is $L$-Lipschitz,
+Strong convexity is the natural counterpart to smoothness. Recall from
+:numref:`subsec_mdl-gd-smoothness` that $f$ is **$L$-smooth** when its gradient
+is $L$-Lipschitz,
 $\|\nabla f(\mathbf{x}) - \nabla f(\mathbf{y})\| \le L\|\mathbf{x} - \mathbf{y}\|$;
-for a convex twice-differentiable $f$ this means
-$\nabla^2 f \preceq L\mathbf{I}$. Smoothness gives the quadratic ceiling
-$f(\mathbf{y}) \le f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) + \tfrac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2$
-of :numref:`subsec_mdl-gd-smoothness`, and strong convexity gives the
-floor :eqref:`eq_mdl-opt-strong-convexity`. Together they sandwich the graph
-between two parabolas tangent at $\mathbf{x}$, with curvatures $\mu$ and
-$L$, as in :numref:`fig_mdl-opt-convexity-hierarchy`(b). The function in
-that panel, $f(x) = \tfrac12 x^2 + 3\log\cosh x$, has
-$f''(x) = 1 + 3/\cosh^2 x \in [1, 4]$, so $\mu = 1$ and $L = 4$.
+for a convex twice-differentiable function, this means
+$\nabla^2 f \preceq L\mathbf{I}$. Smoothness places a quadratic ceiling above
+the graph,
+$f(\mathbf{y}) \le f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) + \tfrac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2$,
+while strong convexity places a quadratic floor :eqref:`eq_mdl-opt-strong-convexity`
+beneath it. Together they sandwich $f$ between two tangent parabolas of
+curvatures $\mu$ and $L$, as illustrated in
+:numref:`fig_mdl-opt-convexity-hierarchy`(b) for
+$f(x) = \tfrac12 x^2 + 3\log\cosh x$, whose second derivative
+$f''(x) = 1 + 3/\cosh^2 x$ ranges between $\mu = 1$ and $L = 4$.
 
-The ratio $\kappa = L/\mu$ is the **condition number**, which
-:numref:`subsec_mdl-quadratic-model` met as the ratio of the extreme
-eigenvalues of a quadratic. On the
-chapter's running example $\tfrac12(x_1^2 + 1000\,x_2^2)$, $\mu = 1$,
-$L = 1000$, and $\kappa = 10^3$.
+The ratio $\kappa = L/\mu$ is the **condition number**, generalizing the
+eigenvalue ratio we encountered for quadratics in
+:numref:`subsec_mdl-quadratic-model`. On our running quadratic
+$\tfrac12(x_1^2 + 1000\,x_2^2)$, the extreme curvatures are $\mu = 1$ and
+$L = 1000$, giving $\kappa = 10^3$.
 
 ### Subgradients
 
-The losses $\|\mathbf{x}\|_1$ and $\max(0, 1 - z)$ have corners, so
-:eqref:`eq_mdl-opt-first-order` cannot be checked as written: there is no
-gradient at the kink. What survives at a kink is the job that the gradient
-did in the tangent bound, and we take that job as the definition. A vector
-$\mathbf{g}$ is a **subgradient** of $f$ at $\mathbf{x}$ if it gives the
-global under-estimate a gradient would:
+Important losses such as the $\ell_1$ norm $\|\mathbf{x}\|_1$ and the hinge
+loss $\max(0, 1 - z)$ have sharp corners, where no gradient exists and
+:eqref:`eq_mdl-opt-first-order` cannot be written as stated. Rather than give
+up on the tangent bound, we keep the *job* the gradient was doing—producing a
+global linear under-estimator—and turn that job into a definition. A vector
+$\mathbf{g}$ is a **subgradient** of $f$ at $\mathbf{x}$ if
 
 $$
 f(\mathbf{y}) \;\ge\; f(\mathbf{x}) + \mathbf{g}^\top (\mathbf{y} - \mathbf{x})
@@ -539,95 +576,98 @@ f(\mathbf{y}) \;\ge\; f(\mathbf{x}) + \mathbf{g}^\top (\mathbf{y} - \mathbf{x})
 $$
 :eqlabel:`eq_mdl-opt-subgradient`
 
-The set of all subgradients at $\mathbf{x}$ is the **subdifferential**
-$\partial f(\mathbf{x})$. Where a convex $f$ is differentiable it is the
-single gradient, $\{\nabla f(\mathbf{x})\}$. At a corner it can contain many
-vectors (:numref:`fig_mdl-opt-subgradient-fan`). For $|x|$ at $0$ every
-slope $g \in [-1, 1]$ qualifies, since $|y| \ge g y$ for all $y$, and for
-the hinge $\max(0, 1 - z)$ at $z = 1$ the subdifferential is
-$\partial f(1) = [-1, 0]$.
+The set of all subgradients at $\mathbf{x}$ is called the **subdifferential**,
+written $\partial f(\mathbf{x})$. Wherever a convex function $f$ is
+differentiable, the subdifferential collapses to a single vector,
+$\{\nabla f(\mathbf{x})\}$. At a corner, however, it fans out into a whole set
+of supporting slopes (:numref:`fig_mdl-opt-subgradient-fan`). For $f(x) = |x|$
+at $x = 0$, every slope $g \in [-1, 1]$ satisfies $|y| \ge g y$ for all $y$, so
+$\partial f(0) = [-1, 1]$; similarly, for the hinge loss $\max(0, 1 - z)$ at
+the kink $z = 1$, we get $\partial f(1) = [-1, 0]$.
 
 ![At the kink of $f(x) = |x|$ the gradient does not exist, but the subdifferential is a set: every slope $g \in \left(-1, 1\right)$ defines a supporting line below the V, and the two extreme slopes $\pm 1$ lie along the branches themselves, so $\partial f(0)$ is the whole interval from $-1$ to $1$. The zero-slope member (orange) is the optimality certificate $0 \in \partial f(0)$: the corner is a minimum certified without differentiability.](../img/mdl-opt-subgradient-fan.svg)
 :label:`fig_mdl-opt-subgradient-fan`
 
-The optimality test needs no derivatives: $\mathbf{x}^\star$ minimizes $f$
-if and only if $\mathbf{0} \in \partial f(\mathbf{x}^\star)$. With
-$\mathbf{g} = \mathbf{0}$ the definition reads
-$f(\mathbf{y}) \ge f(\mathbf{x}^\star)$ for all $\mathbf{y}$, which is the
-statement that $\mathbf{x}^\star$ is a minimizer. The condition and the
-conclusion are the same inequality, so each implies the other.
+This immediately gives a derivative-free optimality test: $\mathbf{x}^\star$
+minimizes $f$ if and only if $\mathbf{0} \in \partial f(\mathbf{x}^\star)$.
+The proof is a one-line tautology: setting $\mathbf{g} = \mathbf{0}$ in
+:eqref:`eq_mdl-opt-subgradient` reads $f(\mathbf{y}) \ge f(\mathbf{x}^\star)$
+for all $\mathbf{y}$, which is literally the definition of a global minimizer.
 
-Does a convex function always have a subgradient? At interior points of its
-domain it does, and Jensen's inequality rests on this. In one dimension the
-reason is short. For three points $a < b < c$ of an open interval on which
-$f$ is convex, the chord inequality at $b$ rearranges to
+Does a convex function always possess a subgradient? At every interior point of
+its domain, yes—a fact we will rely on to prove Jensen's inequality. In one
+dimension the reason is elementary. For any three points $a < b < c$ in an open
+interval where $f$ is convex, rearranging the chord inequality at $b$ gives
 
 $$
 \frac{f(b) - f(a)}{b - a} \;\le\; \frac{f(c) - f(a)}{c - a} \;\le\; \frac{f(c) - f(b)}{c - b},
 $$
 
-so slopes of chords increase from left to right. The difference quotient
-$q(x) = (f(x) - f(x_0))/(x - x_0)$ at a point $x_0$ of the interval is
-therefore nondecreasing, and its one-sided limits at $x_0$, the left and
-right derivatives
-$f'_-(x_0) \le f'_+(x_0)$, exist and are finite. Every $g$ between them is
-a subgradient: for $y > x_0$ we have $q(y) \ge f'_+(x_0) \ge g$, which is
-$f(y) \ge f(x_0) + g(y - x_0)$ after multiplying by $y - x_0$, and the case
-$y < x_0$ is symmetric.
+meaning that chord slopes are nondecreasing from left to right. Consequently,
+the difference quotient $q(x) = (f(x) - f(x_0))/(x - x_0)$ at any interior
+point $x_0$ is nondecreasing in $x$, so its one-sided limits—the left and right
+derivatives $f'_-(x_0) \le f'_+(x_0)$—both exist and are finite. Every slope
+$g \in [f'_-(x_0), f'_+(x_0)]$ is a subgradient: for $y > x_0$ we have
+$q(y) \ge f'_+(x_0) \ge g$, which rearranges to
+$f(y) \ge f(x_0) + g(y - x_0)$, and the case $y < x_0$ is symmetric.
 
-In $d$ dimensions the same holds at every interior point of the domain: a
-convex $f$ has at least one subgradient there, so a supporting hyperplane
-fits under its graph (:citet:`Rockafellar.1970`;
-:citet:`Boyd.Vandenberghe.2004`, section 2.5). We use this fact without
-proof. As a search direction a subgradient is weaker than a gradient: a
-subgradient step need not decrease $f$ (at the minimum of $|x|$, the
-subgradient $\tfrac12$ moves $x = 0$ to $-\eta/2$), and the subgradient
-method needs diminishing steps, with an error that falls only like
-$1/\sqrt{k}$.
+The same guarantee extends to $d$ dimensions: at every interior point of its
+domain, a convex function has at least one subgradient, so a supporting
+hyperplane always fits beneath its graph (:citet:`Rockafellar.1970`;
+:citet:`Boyd.Vandenberghe.2004`, section 2.5). We will use this result without
+proof. Keep in mind, though, that as a search direction a subgradient is much
+weaker than a true gradient: stepping along $-\mathbf{g}$ need not decrease
+$f$ at all (at the minimum $x = 0$ of $|x|$, the valid subgradient
+$g = \tfrac12$ steps to $-\eta/2$, raising the loss). For that reason, the
+subgradient method requires diminishing step sizes and converges slowly, with
+error falling only as $1/\sqrt{k}$.
 
 ## Consequences of Convexity
 :label:`subsec_mdl-why-convexity-matters`
 
-Convexity has three consequences that the rest of the book uses, and all
-come from one source, a line or plane that bounds the function from below
-everywhere. Averaged over a random variable, the bound gives Jensen's
-inequality. At a stationary point it certifies the global minimum, which
-sharpens the answer that :numref:`subsec_mdl-local-global` drew from the
-chord condition alone. Summed along the steps of gradient
-descent, it gives rates. Jensen's inequality is independent of the other
-two, and a reader interested only in optimization can skip it.
+The rest of this book draws on three major consequences of convexity, and all
+three spring from the same geometric source: a supporting line or hyperplane
+that bounds the function from below everywhere. Averaged over a random
+variable, that bound yields Jensen's inequality. Evaluated at a stationary
+point, it certifies global optimality—sharpening what
+:numref:`subsec_mdl-local-global` deduced from the chord condition alone.
+Summed along the steps of gradient descent, it turns local progress into global
+convergence rates. Jensen's inequality stands on its own, so if you are reading
+purely for optimization you can skip directly to the next subsection.
 
 ### Jensen's Inequality
 :label:`subsec_mdl-jensen`
 
-Averages of losses, expected log-likelihoods, and KL divergences all compare
-a function of an average with the average of a function. The smallest case
-settles which is larger. Let $Z \in \{0, 2\}$ with probability $\tfrac12$
-each, and $f(x) = x^2$. Then $f(\mathbb{E}[Z]) = f(1) = 1$, while
-$\mathbb{E}[f(Z)] = \tfrac12 \cdot 0 + \tfrac12 \cdot 4 = 2$. The gap $1$ is
-the variance of $Z$, and for $f = x^2$ the gap is always the variance,
-$\mathbb{E}[Z^2] - (\mathbb{E}[Z])^2$. The chord inequality of
-:numref:`fig_mdl-opt-chord-above-graph`(a) makes this comparison for a
-two-point distribution with weights $\theta$ and $1 - \theta$. The gap
-$\theta(1-\theta)(x - y)^2$ computed for $x^2$ is that distribution's
-variance.
+Expected losses, average log-likelihoods, and KL divergences all confront the
+same basic question: how does a function of an average compare with the average
+of the function? The simplest two-point example shows which way the inequality
+points. Let $Z$ take the values $0$ and $2$ with probability $\tfrac12$ each,
+and let $f(x) = x^2$. Evaluating $f$ at the mean gives
+$f(\mathbb{E}[Z]) = f(1) = 1$, whereas averaging $f$ over the outcomes gives
+$\mathbb{E}[f(Z)] = \tfrac12 \cdot 0 + \tfrac12 \cdot 4 = 2$. The gap of $1$ is
+simply the variance of $Z$; in fact, for $f(x) = x^2$ the difference
+$\mathbb{E}[Z^2] - (\mathbb{E}[Z])^2$ is always the variance. Look back at
+:numref:`fig_mdl-opt-chord-above-graph`(a): the chord inequality is making this
+exact comparison for a two-point distribution with weights $\theta$ and
+$1 - \theta$, and the gap $\theta(1-\theta)(x - y)^2$ we computed earlier for
+$x^2$ is that distribution's variance.
 
-Nothing in the chord argument is special to two points. Applying
-:eqref:`eq_mdl-opt-chord` repeatedly (Exercise
+Nothing about this argument is restricted to two points. Applying
+:eqref:`eq_mdl-opt-chord` inductively (Exercise
 :exref:`ex_mdl-convexity-prove-jensen-s-finite`) gives the finite form
 
 $$
 f\left(\sum_i \theta_i \mathbf{x}_i\right) \;\le\; \sum_i \theta_i\, f(\mathbf{x}_i),
-\qquad \theta_i \ge 0,\ \sum_i \theta_i = 1,
+\qquad \theta_i \ge 0,\ \sum_i \theta_i = 1.
 $$
 :eqlabel:`eq_mdl-opt-jensen-finite`
 
-and a set of nonnegative weights summing to one is a probability
-distribution on the points $\mathbf{x}_i$. The general form replaces the
-weighted average by an expectation.
+Because nonnegative weights summing to one define a discrete probability
+distribution on the points $\mathbf{x}_i$, the natural generalization replaces
+the finite average with an arbitrary expectation.
 
 **Proposition (Jensen's inequality).** *Let $f$ be convex on a convex set
-$C \subseteq \mathbb{R}^d$, and let $\mathbf{Z}$ be a random vector with
+$C \subseteq \mathbb{R}^d$, and let $\mathbf{Z}$ be a random vector taking
 values in $C$, with $\mathbb{E}\|\mathbf{Z}\| < \infty$ and mean
 $\mathbf{m} = \mathbb{E}[\mathbf{Z}]$ in the interior of $C$. Then*
 
@@ -639,35 +679,38 @@ $$
 *If $f$ is strictly convex, equality holds if and only if
 $\mathbf{Z} = \mathbf{m}$ with probability one.*
 
-**Proof.** Pick a subgradient $\mathbf{g} \in \partial f(\mathbf{m})$, which
-exists because $\mathbf{m}$ is an interior point. The key step is that the
-supporting hyperplane at $\mathbf{m}$ holds for every outcome at once: by
+**Proof.** Because $\mathbf{m}$ lies in the interior of $C$, $f$ has at least
+one subgradient $\mathbf{g} \in \partial f(\mathbf{m})$. The supporting
+hyperplane at $\mathbf{m}$ bounds $f$ for every outcome at once: by
 :eqref:`eq_mdl-opt-subgradient`,
 
 $$
 f(\mathbf{Z}) \;\ge\; f(\mathbf{m}) + \mathbf{g}^\top (\mathbf{Z} - \mathbf{m}).
 $$
 
-Take expectations of both sides. The linear term has mean zero, which leaves
-$\mathbb{E}[f(\mathbf{Z})] \ge f(\mathbf{m})$. For strictly convex $f$ the
-supporting hyperplane touches the graph only at $\mathbf{m}$. Suppose it
-also touched at some $\mathbf{x} \neq \mathbf{m}$. Strict convexity would
-then give
+Now take expectations of both sides. Because
+$\mathbb{E}[\mathbf{Z} - \mathbf{m}] = \mathbf{0}$, the linear term vanishes,
+leaving $\mathbb{E}[f(\mathbf{Z})] \ge f(\mathbf{m})$. When $f$ is strictly
+convex, this supporting hyperplane touches the graph *only* at $\mathbf{m}$: if
+it also touched at some $\mathbf{x} \neq \mathbf{m}$, strict convexity would
+force
 $f\bigl(\tfrac{\mathbf{x} + \mathbf{m}}{2}\bigr) < \tfrac12 f(\mathbf{x}) + \tfrac12 f(\mathbf{m})$,
-where the right side is the value of the affine hyperplane at the midpoint;
-this contradicts that the hyperplane lies below $f$. So the pointwise
-inequality is strict on the event $\mathbf{Z} \neq \mathbf{m}$, and equality
-in expectation forces that event to have probability zero. $\blacksquare$
+placing the graph strictly below the supporting hyperplane at the midpoint, a
+contradiction. Hence the pointwise inequality is strict whenever
+$\mathbf{Z} \neq \mathbf{m}$, so equality in expectation forces
+$\mathbf{Z} = \mathbf{m}$ with probability one. $\blacksquare$
 
-The same pointwise bound shows that $f(\mathbf{Z})$ is bounded below by an
-integrable random variable, so $\mathbb{E}[f(\mathbf{Z})]$ is always defined;
-it may be $+\infty$, in which case the inequality holds trivially. Spreading
-$\mathbf{Z}$ out around a fixed mean can only raise the average of a convex
-$f$. For concave $f$ the inequality flips:
+As a bonus, the same pointwise bound shows that $f(\mathbf{Z})$ is bounded
+below by an integrable random variable, so $\mathbb{E}[f(\mathbf{Z})]$ is
+always well-defined (possibly $+\infty$, in which case the inequality holds
+trivially). In plain terms, spreading a random variable out while keeping its
+mean fixed can only increase the expected value of a convex function. For a
+concave function $f$, the inequality reverses:
 $\mathbb{E}[f(\mathbf{Z})] \le f(\mathbb{E}[\mathbf{Z}])$.
 
-The most used corollary is the nonnegativity of the KL divergence;
-:numref:`sec_mdl-information_theory` restates it as Gibbs' inequality.
+In machine learning, the most frequent application of Jensen's inequality is
+proving that KL divergence is never negative; :numref:`sec_mdl-information_theory`
+meets this same result as Gibbs' inequality.
 
 **Corollary (nonnegativity of KL divergence).** *For probability
 distributions $p$ and $q$ on a common finite alphabet, with $q(x) > 0$
@@ -679,7 +722,7 @@ $$
 
 *with equality if and only if $p = q$.*
 
-**Proof.** Let $Z \sim p$ and apply Jensen's inequality to the strictly
+**Proof.** Draw $Z \sim p$ and apply Jensen's inequality to the strictly
 convex function $-\log$ and the positive random variable $R = q(Z)/p(Z)$:
 
 $$
@@ -690,31 +733,32 @@ D_{\textrm{KL}}(p \,\|\, q)
 \;\ge\; -\log 1 = 0,
 $$
 
-since $\sum_{x : p(x) > 0} q(x) \le 1$. By the equality case, the bound is
-tight if and only if $R$ is constant with probability one and $q$ puts no
-mass off the support of $p$, that is, $q = c\,p$ with $c = 1$. $\blacksquare$
+where the last step uses $\sum_{x : p(x) > 0} q(x) \le 1$. By the equality
+condition of Jensen's inequality, equality holds if and only if $R$ is constant
+with probability one and $q$ places no mass outside the support of $p$—that is,
+$q = c\,p$ with $c = 1$. $\blacksquare$
 
-The same argument with the concave $\log$ gives the
-**arithmetic–geometric mean inequality**: for positive
+Applying the same idea to the concave function $\log$ yields the classical
+**arithmetic–geometric mean inequality**: for any positive numbers
 $x_1, \ldots, x_N$, concavity gives
 $\log\bigl(\tfrac1N \sum_i x_i\bigr) \ge \tfrac1N \sum_i \log x_i$, and
-exponentiating,
+exponentiating both sides produces
 
 $$
 \frac{1}{N} \sum_{i=1}^N x_i \;\ge\; \left(\prod_{i=1}^N x_i\right)^{1/N},
 $$
 
-with equality if and only if all $x_i$ coincide, because $\log$ is strictly
-concave. The evidence lower bound of :numref:`sec_mdl-latent-em-elbo`, a
-bound on the log of an expectation, is the same inequality for the concave
-$\log$.
+with equality if and only if all $x_i$ are equal, since $\log$ is strictly
+concave. Likewise, the evidence lower bound (ELBO) of
+:numref:`sec_mdl-latent-em-elbo`, which bounds the logarithm of an expectation
+from below, is another direct application of Jensen's inequality to $\log$.
 
-The cell computes two things. The first is the size of the gap in a case we
-can check by hand: for $Z \sim \mathcal{N}(0, 1)$ and $f(x) = e^x$ the two
-sides are $\mathbb{E}[e^Z] = \sqrt{e} \approx 1.649$ and
-$e^{\mathbb{E}[Z]} = 1$. The second concerns equality in the KL bound: as
-$q$ moves toward $p$ along the mixture $(1 - \varepsilon)p + \varepsilon q$,
-does the divergence fall in proportion to $\varepsilon$, or faster?
+Let us test both Jensen's gap and the KL equality case numerically. First, for
+$Z \sim \mathcal{N}(0, 1)$ and $f(x) = e^x$, we can compute both sides in
+closed form—$\mathbb{E}[e^Z] = \sqrt{e} \approx 1.649$ versus
+$e^{\mathbb{E}[Z]} = 1$—and see how closely Monte Carlo matches them. Second,
+as we blend $q$ into $p$ via $(1 - \varepsilon)p + \varepsilon q$, how quickly
+does the KL divergence vanish: linearly in $\varepsilon$, or faster?
 
 ```{.python .input #convexity-jensen-mc}
 rng = np.random.default_rng()
@@ -728,76 +772,83 @@ print('median KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4:',
       *[f'{np.median(kl(p, (1 - e) * p + e * q)):.1e}' for e in (1e-2, 1e-3, 1e-4)])
 ```
 
-The sample averages come out at about $1.65$ against $1.00$; more samples
-shrink the Monte Carlo error but not this gap. The divergence falls faster
-than $\varepsilon$: each tenfold smaller $\varepsilon$ lowers the median
-about a hundredfold, because
+The Monte Carlo averages land right around $1.65$ versus $1.00$; drawing more
+samples shrinks the estimation noise, but the structural Jensen gap remains
+fixed. In the KL experiment, the divergence vanishes much faster than
+$\varepsilon$: every tenfold reduction in $\varepsilon$ cuts the median
+divergence roughly a hundredfold. Expanding the logarithm explains why:
 $D_{\textrm{KL}}(p \,\|\, (1-\varepsilon)p + \varepsilon q) \approx \tfrac{\varepsilon^2}{2}\sum_x (q(x) - p(x))^2/p(x)$
-once $\varepsilon\,q(x)/p(x)$ is small for every $x$. (Pairs in which $p$
-has a nearly empty symbol reach this regime last, which is why the cell
-reports the median rather than the maximum.) Equality is approached
-quadratically, and it is reached only in the limit $q \to p$.
+once $\varepsilon\,q(x)/p(x)$ is small for every $x$. (Pairs where $p$ assigns
+tiny probability to some symbol enter this quadratic regime last, which is why
+we report the median rather than the maximum.) Equality is approached
+quadratically, and attained only in the limit $q \to p$.
 
 ### Local and Global Minima
 
-Local minima are global (:numref:`subsec_mdl-local-global`). Three more
-facts of the same kind have one-line proofs. The set of minimizers is
-convex: if $\mathbf{x}$ and $\mathbf{y}$ both attain the minimum value
-$f^\star$, the chord inequality puts every point between them at or below
-$f^\star$. For differentiable $f$ on an open set,
-$\nabla f(\mathbf{x}) = \mathbf{0}$ implies $f(\mathbf{x}) = f^\star$,
-because the first-order condition with a zero gradient reads
-$f(\mathbf{y}) \ge f(\mathbf{x})$ for all $\mathbf{y}$. And a small
-gradient means a small gap: the first-order condition aimed at a minimizer
-gives
+We already proved that every local minimum of a convex function is global
+(:numref:`subsec_mdl-local-global`). Three companion facts follow just as
+effortlessly, each in a single line. First, the set of all global minimizers is
+convex: if both $\mathbf{x}$ and $\mathbf{y}$ attain the minimum value
+$f^\star$, the chord inequality forces every point between them to lie at or
+below $f^\star$. Second, for a differentiable convex $f$ on an open set,
+$\nabla f(\mathbf{x}) = \mathbf{0}$ immediately implies
+$f(\mathbf{x}) = f^\star$, because the first-order condition with a zero
+gradient reads $f(\mathbf{y}) \ge f(\mathbf{x})$ for all $\mathbf{y}$. Third,
+a small gradient guarantees a small suboptimality gap: pointing the first-order
+condition at a minimizer $\mathbf{x}^\star$ gives
 $f(\mathbf{x}) - f^\star \le \nabla f(\mathbf{x})^\top(\mathbf{x} - \mathbf{x}^\star) \le \|\nabla f(\mathbf{x})\|\,\|\mathbf{x} - \mathbf{x}^\star\|$.
-So the guarantee of :numref:`subsec_mdl-gd-smoothness`, that gradient
-descent with $\eta = 1/L$ drives the smallest gradient norm among its
-iterates to zero, becomes for convex $f$ a guarantee about the value, provided that the
-iterates stay within a bounded distance of $\mathbf{x}^\star$.
-:numref:`subsec_mdl-convergence-rates` proves that they do, and makes the
-guarantee quantitative.
+Thus the stationarity result of :numref:`subsec_mdl-gd-smoothness`—that
+gradient descent with $\eta = 1/L$ drives the smallest gradient norm to
+zero—upgrades for convex objectives into a guarantee on the *loss value*
+itself, provided the iterates stay within a bounded distance of
+$\mathbf{x}^\star$. In :numref:`subsec_mdl-convergence-rates` we will prove
+that they do, and pin down the exact rate.
 
-A minimizer need not be unique (a convex $f$ may be constant on a whole
-segment), and it need not exist ($e^x$ has none). Strict convexity repairs
-the first defect and strong convexity both.
+Be aware of two things that plain convexity does *not* guarantee: a minimizer
+need not be unique (a convex function can be flat along an entire segment), and
+it need not even exist ($e^x$ approaches $0$ as $x \to -\infty$ without ever
+attaining it). Strict convexity rules out multiple minimizers, and strong
+convexity guarantees both existence and uniqueness.
 
 **Proposition (uniqueness).** *A strictly convex $f$ has at most one
 minimizer. A continuous $\mu$-strongly convex $f$ on a nonempty closed convex
 set $C$ with nonempty interior has exactly one.*
 
-**Proof.** If $\mathbf{x} \neq \mathbf{y}$ were both minimizers with value
-$f^\star$, the strict chord inequality at $\theta = \tfrac12$ would give
-$f\bigl(\tfrac{\mathbf{x} + \mathbf{y}}{2}\bigr) < f^\star$, a
-contradiction. Strong convexity implies strict convexity, so it remains to
-show existence. We do so for a differentiable $f$ on $C = \mathbb{R}^d$, the
-case of the losses in this book; the general case runs the same argument
-with a subgradient of $f - \tfrac{\mu}{2}\|\cdot\|^2$ at an interior point
-of $C$ in place of the gradient. Fix any $\mathbf{x}_0$. The linear term of
-:eqref:`eq_mdl-opt-strong-convexity` at $\mathbf{x}_0$ is at least
+**Proof.** Suppose $\mathbf{x} \neq \mathbf{y}$ were both global minimizers
+with value $f^\star$. By the strict chord inequality at $\theta = \tfrac12$,
+their midpoint would satisfy
+$f\bigl(\tfrac{\mathbf{x} + \mathbf{y}}{2}\bigr) < f^\star$, a contradiction.
+Because strong convexity implies strict convexity, it remains only to prove
+existence. We prove it for a differentiable $f$ on $C = \mathbb{R}^d$, which
+covers the unconstrained losses in this book; the general case follows the same
+steps using a subgradient of $f - \tfrac{\mu}{2}\|\cdot\|^2$ at an interior
+point of $C$. Fix any starting point $\mathbf{x}_0$. In
+:eqref:`eq_mdl-opt-strong-convexity`, the linear term is at least
 $-\|\nabla f(\mathbf{x}_0)\|\,\|\mathbf{y} - \mathbf{x}_0\|$, so
 $f(\mathbf{y}) > f(\mathbf{x}_0)$ whenever
-$\|\mathbf{y} - \mathbf{x}_0\| > 2\|\nabla f(\mathbf{x}_0)\|/\mu$. The
-sublevel set $\{\mathbf{y} : f(\mathbf{y}) \le f(\mathbf{x}_0)\}$ is
-therefore bounded, and it is closed because $f$ is continuous. A continuous
-function on a nonempty closed bounded set attains its minimum, and the
-minimum over this sublevel set is the minimum over $\mathbb{R}^d$.
+$\|\mathbf{y} - \mathbf{x}_0\| > 2\|\nabla f(\mathbf{x}_0)\|/\mu$. Hence the
+sublevel set $\{\mathbf{y} : f(\mathbf{y}) \le f(\mathbf{x}_0)\}$ is bounded,
+and continuity of $f$ ensures that it is closed. Every continuous function on a
+nonempty closed and bounded set attains its minimum, and the minimum over this
+sublevel set is automatically the global minimum over $\mathbb{R}^d$.
 $\blacksquare$
 
-The hypotheses on $C$ and on continuity exclude a function that jumps upward
-at the boundary of its domain, which no loss in this book does. The missing
-minimizer of $e^x$ matters more in practice; Exercise
-:exref:`ex_mdl-convexity-minimizer-existence` finds it in logistic
-regression on separable data.
+The technical hypotheses on $C$ and continuity merely exclude pathological
+functions that jump upward at the boundary of their domain, which never occur
+for the losses in this book. By contrast, the missing minimizer of $e^x$ shows
+up in real machine learning: Exercise
+:exref:`ex_mdl-convexity-minimizer-existence` traces it directly to logistic
+regression on linearly separable data.
 
 ### Convergence Rates
 :label:`subsec_mdl-convergence-rates`
 
-Convexity says where a run ends. It remains to say how fast the run gets
-there, and on this convexity alone promises surprisingly little. Two
-functions show the range. Both $x^2$ and $x^4$ are strictly convex with
-minimizer $0$, but only the square is strongly convex. We run the same
-loop on both, with step $\eta = \tfrac18$ from $x_0 = 1$, for $10^4$ steps.
+Convexity tells us *where* gradient descent stops, but not *how fast* it gets
+there—and on speed, plain convexity promises surprisingly little. Compare
+$f(x) = x^2$ and $f(x) = x^4$: both are strictly convex with unique minimizer
+$0$, yet only $x^2$ is strongly convex. Let us run the exact same
+gradient-descent loop ($\eta = \tfrac18$, starting from $x_0 = 1$) on both
+functions for $10^4$ steps and watch how differently they behave.
 
 ```{.python .input #mdl-convexity-strict-and-strong-convexity}
 eta, steps = 1 / 8, 10_000
@@ -813,33 +864,36 @@ d2l.plot(k, [x4[1:]**4, x2[1:]**2], 'k', 'f(x_k)', xscale='log',
          yscale='log', ylim=(1e-12, 1), legend=['x^4', 'x^2'])
 ```
 
-On $x^2$ each step multiplies the iterate by $1 - 2\eta = 0.75$, so it falls
-below $10^{-6}$ at step $49$ and the gap leaves the plot within fifty steps.
-On $x^4$ each step multiplies the iterate by $1 - 4\eta x_k^2$, a factor that
-approaches $1$ as the iterate approaches the minimizer. The printed products
-$x_k\sqrt{k}$ approach $1$, so the iterate behaves like $1/\sqrt{k}$ and is
-still $0.01$ after $10^4$ steps. On the log–log plot the gap $x_k^4$ is
-therefore a straight line of slope $-2$. Strict convexity allows at most one
-minimizer but promises no speed; a geometric rate needs $\mu > 0$. Exercise
-:exref:`ex_mdl-convexity-quartic-sublinear` proves the $1/\sqrt{k}$ law for
+The contrast is dramatic. On $x^2$, every step multiplies the iterate by a
+constant factor $1 - 2\eta = 0.75$, driving it below $10^{-6}$ in just $49$
+steps; the loss drops off the bottom of the plot almost immediately. On $x^4$,
+by contrast, each step multiplies $x_k$ by $1 - 4\eta x_k^2$, a contraction
+factor that creeps closer and closer to $1$ as the iterate approaches the flat
+valley at $0$. The printed products $x_k\sqrt{k}$ settle near $1$, showing that
+$x_k$ decays only like $1/\sqrt{k}$ and still sits at $0.01$ after $10{,}000$
+steps. On a log–log plot, the loss gap $x_k^4$ therefore traces a straight line
+of slope $-2$. Strict convexity rules out multiple minimizers, but it cannot
+guarantee fast convergence; a geometric rate requires $\mu > 0$. Exercise
+:exref:`ex_mdl-convexity-quartic-sublinear` proves this $1/\sqrt{k}$ law for
 the quartic.
 
-The two propositions below make the contrast general. Every smooth strongly
-convex function behaves like the square, and without $\mu$ only a guarantee
-of order $1/k$ survives. Both proofs start from the **descent lemma** of
-:numref:`subsec_mdl-gd-smoothness`. For
-an $L$-smooth $f$ and the step
-$\mathbf{x}_{k+1} = \mathbf{x}_k - \tfrac1L\nabla f(\mathbf{x}_k)$, with $k$
-counting iterations,
+The next two propositions make this contrast completely general: every smooth
+strongly convex function converges geometrically like $x^2$, whereas without
+$\mu > 0$ we can guarantee only an $O(1/k)$ decay. Both proofs begin with the
+**descent lemma** from :numref:`subsec_mdl-gd-smoothness`: for an $L$-smooth
+function $f$ and the gradient step
+$\mathbf{x}_{k+1} = \mathbf{x}_k - \tfrac1L\nabla f(\mathbf{x}_k)$,
 
 $$
 f(\mathbf{x}_{k+1}) \;\le\; f(\mathbf{x}_k) - \frac{1}{2L}\, \|\nabla f(\mathbf{x}_k)\|^2.
 $$
 
-One step lowers $f$ by at least $\|\nabla f\|^2/(2L)$. By itself this
-guarantees only that gradients become small. Convexity ties the gradient to
-the gap: a large gap $f(\mathbf{x}_k) - f^\star$ forces a large gradient, so
-the steps cannot stall far from the minimum.
+Each step reduces the objective by at least $\|\nabla f(\mathbf{x}_k)\|^2/(2L)$.
+On a general nonconvex function, that only proves the gradient shrinks to zero.
+Convexity supplies the missing link between the gradient and the suboptimality
+gap: whenever $f(\mathbf{x}_k) - f^\star$ is still large, the gradient must be
+large enough to keep making progress, so the iterates cannot stall far from the
+optimum.
 
 **Proposition (gradient descent on smooth convex functions).** *Let $f$ be
 convex and $L$-smooth with a minimizer $\mathbf{x}^\star$. Gradient descent
@@ -850,13 +904,13 @@ f(\mathbf{x}_k) - f(\mathbf{x}^\star) \;\le\; \frac{L\, \|\mathbf{x}_0 - \mathbf
 $$
 :eqlabel:`eq_mdl-opt-rate-convex`
 
-The gap falls like $1/k$, scaled by the curvature bound and the squared
-distance from the start. With $L = 1$ and $\|\mathbf{x}_0 - \mathbf{x}^\star\| = 10$
-the bound is $50/k$, so a gap of $10^{-2}$ is guaranteed after $5{,}000$
-steps.
+Thus the loss gap decays at least as fast as $1/k$, scaled by the smoothness
+constant and the squared initial distance to the minimizer. To put numbers on
+it, if $L = 1$ and $\|\mathbf{x}_0 - \mathbf{x}^\star\| = 10$, the bound is
+$50/k$, guaranteeing a gap below $10^{-2}$ within $5{,}000$ steps.
 
 **Proof.** Combine the descent lemma with the first-order condition
-:eqref:`eq_mdl-opt-first-order` aimed at the optimum,
+:eqref:`eq_mdl-opt-first-order` evaluated at $\mathbf{x}_k$ toward the optimum,
 $f(\mathbf{x}_k) - f(\mathbf{x}^\star) \le \nabla f(\mathbf{x}_k)^\top(\mathbf{x}_k - \mathbf{x}^\star)$:
 
 $$
@@ -864,17 +918,17 @@ f(\mathbf{x}_{k+1}) - f(\mathbf{x}^\star)
 \;\le\; \nabla f(\mathbf{x}_k)^\top (\mathbf{x}_k - \mathbf{x}^\star) - \frac{1}{2L} \|\nabla f(\mathbf{x}_k)\|^2.
 $$
 
-The non-routine step is to complete the square, so that the right side
-becomes a difference of two squared distances:
+Now comes the clever step: complete the square so that the right side turns
+into a difference of two squared distances to $\mathbf{x}^\star$,
 
 $$
 \nabla f(\mathbf{x}_k)^\top (\mathbf{x}_k - \mathbf{x}^\star) - \frac{1}{2L} \|\nabla f(\mathbf{x}_k)\|^2
 = \frac{L}{2} \left( \|\mathbf{x}_k - \mathbf{x}^\star\|^2
-- \left\|\mathbf{x}_k - \mathbf{x}^\star - \tfrac{1}{L}\nabla f(\mathbf{x}_k)\right\|^2 \right),
+- \left\|\mathbf{x}_k - \mathbf{x}^\star - \tfrac{1}{L}\nabla f(\mathbf{x}_k)\right\|^2 \right).
 $$
 
-and the second norm is $\|\mathbf{x}_{k+1} - \mathbf{x}^\star\|^2$. Summing
-over the first $k$ steps, the right side telescopes:
+Notice that the second norm is simply $\|\mathbf{x}_{k+1} - \mathbf{x}^\star\|^2$.
+Summing over $j = 0, \ldots, k - 1$, the right side telescopes cleanly:
 
 $$
 \sum_{j=0}^{k-1} \left( f(\mathbf{x}_{j+1}) - f(\mathbf{x}^\star) \right)
@@ -882,18 +936,20 @@ $$
 \;\le\; \frac{L}{2}\, \|\mathbf{x}_0 - \mathbf{x}^\star\|^2.
 $$
 
-The descent lemma makes $f(\mathbf{x}_j)$ nonincreasing, so the last term of
-the sum is the smallest, and $k\left(f(\mathbf{x}_k) - f(\mathbf{x}^\star)\right)$
-is at most the sum. This is :eqref:`eq_mdl-opt-rate-convex`. $\blacksquare$
+Because the descent lemma ensures that $f(\mathbf{x}_j)$ never increases, the
+final term $f(\mathbf{x}_k) - f(\mathbf{x}^\star)$ is the smallest term in the
+sum, so $k\left(f(\mathbf{x}_k) - f(\mathbf{x}^\star)\right)$ is bounded by the
+total sum. Dividing by $k$ gives :eqref:`eq_mdl-opt-rate-convex`. $\blacksquare$
 
-The bound contains no dimension: a model with a billion weights and the same
-$L$ and starting distance gets the same guarantee. And the per-step
-inequality, before summing, has the left side
-$f(\mathbf{x}_{k+1}) - f^\star \ge 0$, so
-$\|\mathbf{x}_k - \mathbf{x}^\star\|$ never increases: the iterates move
-monotonically closer to every minimizer.
+Two features of this proof are worth noting. First, the dimension $d$ never
+appears: a model with a billion weights and the same $L$ and initial distance
+enjoys the exact same worst-case guarantee. Second, before summing, the
+per-step inequality has a nonnegative left side
+$f(\mathbf{x}_{k+1}) - f^\star \ge 0$, which forces
+$\|\mathbf{x}_{k+1} - \mathbf{x}^\star\| \le \|\mathbf{x}_k - \mathbf{x}^\star\|$:
+every single step moves monotonically closer to every minimizer.
 
-With strong convexity the $1/k$ sharpens to a geometric decay.
+Adding strong convexity transforms this $1/k$ decay into a geometric rate.
 
 **Proposition (linear rate under strong convexity).** *Let $f$ be
 $\mu$-strongly convex and $L$-smooth, with minimizer $\mathbf{x}^\star$.
@@ -905,15 +961,17 @@ f(\mathbf{x}_k) - f(\mathbf{x}^\star)
 $$
 :eqlabel:`eq_mdl-opt-rate-strong`
 
-Each step removes at least the fraction $\mu/L = 1/\kappa$ of the remaining
-gap.
+In words, every iteration shaves off at least a fraction $\mu/L = 1/\kappa$ of
+the remaining loss gap.
 
-**Proof.** First, strong convexity ties the size of the gradient to the
-remaining gap. Minimize both sides of :eqref:`eq_mdl-opt-strong-convexity`
-over $\mathbf{y}$: the left side's minimum is $f(\mathbf{x}^\star)$, and the
-right side is a quadratic in $\mathbf{y}$ minimized at
-$\mathbf{y} = \mathbf{x} - \tfrac{1}{\mu}\nabla f(\mathbf{x})$, where it
-equals $f(\mathbf{x}) - \tfrac{1}{2\mu}\|\nabla f(\mathbf{x})\|^2$. Hence
+**Proof.** The proof splits into two short steps. First, strong convexity
+bounds the squared gradient norm from below in terms of the suboptimality gap.
+Minimize both sides of :eqref:`eq_mdl-opt-strong-convexity` over $\mathbf{y}$:
+the left side attains its minimum $f(\mathbf{x}^\star)$, while the right side
+is a simple quadratic in $\mathbf{y}$ minimized at
+$\mathbf{y} = \mathbf{x} - \tfrac{1}{\mu}\nabla f(\mathbf{x})$, where its value
+is $f(\mathbf{x}) - \tfrac{1}{2\mu}\|\nabla f(\mathbf{x})\|^2$. Rearranging
+gives
 
 $$
 \frac12\, \|\nabla f(\mathbf{x})\|^2 \;\ge\; \mu \left( f(\mathbf{x}) - f(\mathbf{x}^\star) \right)
@@ -921,30 +979,30 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-pl`
 
-Second, substitute :eqref:`eq_mdl-opt-pl` into the descent lemma:
+Second, substitute :eqref:`eq_mdl-opt-pl` directly into the descent lemma:
 
 $$
 f(\mathbf{x}_{k+1}) - f(\mathbf{x}^\star)
 \;\le\; f(\mathbf{x}_k) - f(\mathbf{x}^\star) - \frac{1}{2L} \|\nabla f(\mathbf{x}_k)\|^2
-\;\le\; \left(1 - \frac{\mu}{L}\right) \left( f(\mathbf{x}_k) - f(\mathbf{x}^\star) \right),
+\;\le\; \left(1 - \frac{\mu}{L}\right) \left( f(\mathbf{x}_k) - f(\mathbf{x}^\star) \right).
 $$
 
-and iterate $k$ times. $\blacksquare$
+Applying this contraction $k$ times completes the proof. $\blacksquare$
 
-The second half of the proof used no convexity, only the inequality
-:eqref:`eq_mdl-opt-pl`; we return to it in
-:numref:`subsec_mdl-beyond-convexity`. Reaching a relative accuracy
-$\epsilon$ costs about $\kappa \log(1/\epsilon)$ iterations, against
-$O(1/\epsilon)$ without strong convexity. On the running example
-$\kappa = 10^3$, and six digits of the gap,
-$(1 - 10^{-3})^k \le 10^{-6}$, require $k \approx 13{,}800$ steps.
+Look closely at the second half of that proof: it never invoked convexity at
+all, only the inequality :eqref:`eq_mdl-opt-pl`. We will return to that
+surprising fact in :numref:`subsec_mdl-beyond-convexity`. Notice also the
+enormous speedup over the non-strongly-convex case: reaching relative accuracy
+$\epsilon$ now takes roughly $\kappa \log(1/\epsilon)$ steps instead of
+$O(1/\epsilon)$. On our running quadratic with $\kappa = 10^3$, gaining six
+digits of accuracy, $(1 - 10^{-3})^k \le 10^{-6}$, takes about $13{,}800$ steps
+by this bound.
 
-The bound must hold in every run; a measurement can tell us how much room it
-leaves. We build a least-squares problem whose Hessian
-$\mathbf{X}^\top\mathbf{X}$ has eigenvalues $1$ and $10$ by construction, so
-that $\mu = 1$, $L = 10$, and $\kappa = 10$, run gradient descent at
-$\eta = 1/L$, and print the ratio of successive gaps
-$f(\mathbf{w}_{k+1}) - f^\star$ over $f(\mathbf{w}_k) - f^\star$.
+How tight is :eqref:`eq_mdl-opt-rate-strong` in practice? Let us measure it on
+a least-squares problem whose Hessian $\mathbf{X}^\top\mathbf{X}$ has
+eigenvalues $1$ and $10$ by construction ($\mu = 1$, $L = 10$, $\kappa = 10$).
+We run gradient descent with $\eta = 1/L$ and track the actual per-step ratio
+of successive loss gaps, $(f(\mathbf{w}_{k+1}) - f^\star)/(f(\mathbf{w}_k) - f^\star)$.
 
 ```{.python .input #convexity-rate-check}
 rng = np.random.default_rng()
@@ -965,59 +1023,65 @@ print(f'mu = {mu:.4f}, L = {L:.4f}: bound 1 - mu/L = {1 - mu / L:.4f},'
 print('first three ratios:', r[:3].round(4), ' largest ratio:', r.max().round(4))
 ```
 
-The bound promises a factor $0.9$ per step. The measured ratio is $0.81$
-at every step from the second on, which is $(1 - \mu/L)^2$; the first ratio
-depends on the start and varies from run to run. The reason is visible in
-the eigenvector coordinates of $\mathbf{X}^\top\mathbf{X}$. With
-$\eta = 1/L$, each step multiplies the stiff component of
-$\mathbf{w} - \mathbf{w}^\star$ by $1 - L/L = 0$, so it disappears in the
-first step. In two dimensions only the slow component is left; its distance
-to the minimizer contracts by $1 - \mu/L$, and the gap, quadratic in the
-distance, by the square. With more dimensions the ratio climbs toward
-$(1 - \mu/L)^2$ as the faster components die out.
+Our bound promises a contraction factor of $0.9$ per step, yet from the second
+step onward the measured ratio is $0.81$—which is $(1 - \mu/L)^2$. (The very
+first ratio depends on the random starting direction and varies from run to
+run.) Viewing the update in the eigenvector coordinates of
+$\mathbf{X}^\top\mathbf{X}$ explains what happened. With $\eta = 1/L$, the
+first step multiplies the stiff eigen-component of
+$\mathbf{w} - \mathbf{w}^\star$ by $1 - L/L = 0$, wiping it out completely. In
+two dimensions, only the slow component remains; its distance to
+$\mathbf{w}^\star$ shrinks by $1 - \mu/L$ per step, so the loss gap—which is
+quadratic in that distance—shrinks by $(1 - \mu/L)^2$. In higher dimensions,
+the ratio climbs toward $(1 - \mu/L)^2$ as the faster eigen-components decay.
 
-The proof gives away a square. A finer analysis shows that gradient descent
-with $\eta = 1/L$ contracts $f - f^\star$ by $(1 - \mu/L)^2$ per step on
-every $L$-smooth $\mu$-strongly convex function
-:cite:`Taylor.Hendrickx.Glineur.2018`, and quadratics attain it; Exercise
-:exref:`ex_mdl-convexity-distance-contraction` proves the weaker
-$\kappa(1 - \mu/L)^{2k}$. On the running example, six digits of the gap cost
-about $13{,}800$ steps by the bound and about $6{,}900$ at the squared
-factor. The best fixed step $2/(\mu + L)$ of
-:numref:`sec_mdl-gradient-based-optimization`, nearly twice as long, halves
-the count again to $3{,}454$. One factor of two belongs to the proof and one
-to the step.
+Our short proof gave away a square in the contraction factor. A sharper
+analysis shows that gradient descent with $\eta = 1/L$ in fact contracts
+$f - f^\star$ by $(1 - \mu/L)^2$ per step on *every* $L$-smooth $\mu$-strongly
+convex function :cite:`Taylor.Hendrickx.Glineur.2018`, with quadratics
+achieving equality; Exercise :exref:`ex_mdl-convexity-distance-contraction`
+proves the closely related bound $\kappa(1 - \mu/L)^{2k}$. Returning to our
+$\kappa = 10^3$ running quadratic, six digits of accuracy cost roughly
+$13{,}800$ steps by our simple bound, about $6{,}900$ steps at the true
+$(1 - \mu/L)^2$ rate, and half again as many—$3{,}454$ steps—at the optimal
+fixed step $\eta = 2/(\mu + L)$ from
+:numref:`sec_mdl-gradient-based-optimization`. One factor of two came from the
+looseness of our proof, and the second from doubling the step size.
 
 ## Recognizing Convexity
 :label:`subsec_mdl-recognizing-convexity`
 
-The consequences above are worth having only if we can tell which losses are
-convex. Hessians are tedious and do not exist at kinks, so in practice
-convexity is assembled from parts.
+Global optimality and clean convergence rates are useful only if we can tell
+whether a given loss function is convex in the first place. Computing Hessians
+by hand quickly becomes tedious—and fails altogether at kinks—so in practice we
+rarely check convexity from scratch. Instead, we recognize convex objectives by
+assembling them from simple convex building blocks.
 
 ### A Calculus of Convex Functions
 
-A small set of operations preserves convexity, and most losses are built
-from convex atoms by these operations.
+Four elementary operations preserve convexity, and almost every convex loss in
+machine learning is built from basic convex atoms using just these four rules.
 
 1. **Nonnegative weighted sums.** If $f_1, \ldots, f_m$ are convex and
-   $w_i \ge 0$, then $\sum_i w_i f_i$ is convex: multiply the chord
-   inequality for each $f_i$ by $w_i$ and add. An average of losses over a
-   training set is such a sum.
-2. **Affine pre-composition.** If $f$ is convex then so is
-   $\mathbf{x} \mapsto f(\mathbf{A}\mathbf{x} + \mathbf{b})$: affine maps
-   send the segment between $\mathbf{x}$ and $\mathbf{y}$ to the segment
-   between their images, with the same $\theta$, so the chord inequality
-   transfers unchanged. A loss that is convex in a model's *output* is
-   therefore convex in the *weights of a linear model* producing that
-   output.
-3. **Pointwise maximum and supremum.** If each $f_i$ is convex, so is
-   $\max_i f_i$. The proof goes through epigraphs: the epigraph of a
-   maximum is the intersection of the epigraphs, and intersections of convex
-   sets are convex. The upper envelope of any family of lines is convex,
-   however large the family.
-4. **Monotone composition.** If $g$ is convex and $h$ is convex *and
-   nondecreasing*, then $h \circ g$ is convex. Two inequalities prove it:
+   $w_i \ge 0$, then $\sum_i w_i f_i$ is convex: simply multiply the chord
+   inequality for each $f_i$ by $w_i$ and add. In particular, averaging a
+   convex per-example loss over a training set always yields a convex
+   objective.
+2. **Affine pre-composition.** If $f$ is convex, then so is
+   $\mathbf{x} \mapsto f(\mathbf{A}\mathbf{x} + \mathbf{b})$: an affine map
+   carries the line segment between $\mathbf{x}$ and $\mathbf{y}$ onto the
+   segment between their images with the exact same weight $\theta$, so the
+   chord inequality transfers directly. As a result, any loss that is convex
+   in a model's *predictions* is automatically convex in the *weights of a
+   linear model* producing those predictions.
+3. **Pointwise maximum and supremum.** If every $f_i$ is convex, then so is
+   $\max_i f_i$. The quickest proof uses epigraphs: the epigraph of a pointwise
+   maximum is the intersection of the individual epigraphs, and intersections of
+   convex sets are convex. Consequently, the upper envelope of any collection
+   of affine functions is convex, no matter how large the collection.
+4. **Monotone composition.** If $g$ is convex and $h$ is both convex *and
+   nondecreasing*, then the composition $h \circ g$ is convex. Two lines
+   prove it:
 
    $$
    h\bigl(g(\theta\mathbf{x} + (1-\theta)\mathbf{y})\bigr)
@@ -1025,38 +1089,43 @@ from convex atoms by these operations.
    \;\le\; \theta\, h(g(\mathbf{x})) + (1-\theta)\, h(g(\mathbf{y})),
    $$
 
-   the first by convexity of $g$ and monotonicity of $h$, the second by
-   convexity of $h$. The monotonicity of the outer map is essential:
-   $h(t) = t^2$ is convex but not nondecreasing, and with the convex
-   $g(x) = x^2 - 1$ it composes to the double well $(x^2 - 1)^2$, which
-   becomes $\phi$ after adding $x/2$.
+   where the first inequality uses convexity of $g$ together with monotonicity
+   of $h$, and the second uses convexity of $h$. Do not forget the monotonicity
+   requirement on $h$: $h(t) = t^2$ is convex but not nondecreasing, and
+   composing it with the convex function $g(x) = x^2 - 1$ produces the
+   nonconvex double well $(x^2 - 1)^2$ (which becomes $\phi$ after adding
+   $x/2$).
 
-These rules certify most of the convex losses in this book. The hinge loss
-$\max(0, 1 - y\,\mathbf{w}^\top\mathbf{x})$ is a maximum of two affine
-functions of $\mathbf{w}$ (rules 3 and 2). The $\ell_1$ norm
+These four rules certify nearly all the standard convex losses in one sweep.
+The hinge loss $\max(0, 1 - y\,\mathbf{w}^\top\mathbf{x})$ is the maximum of
+two affine functions of $\mathbf{w}$ (rules 3 and 2). The $\ell_1$ norm
 $\|\mathbf{w}\|_1 = \sum_i \max(w_i, -w_i)$ is a sum of maxima of affine
-functions (rules 1, 3, 2). The logistic loss
-$\log(1 + e^{-y\,\mathbf{w}^\top\mathbf{x}})$ is the function
-$t \mapsto \log(1 + e^t)$, convex because its second derivative
-$e^t/(1 + e^t)^2$ is positive, pre-composed with an affine map (rule 2) and
-summed over data (rule 1). Adding the ridge penalty to any of these gives a
-strongly convex loss. A worked case: $\max(x^2, 1 - x)$ is convex by rule 3,
-but it is not strongly convex, because it equals the affine function
-$1 - x$ on the interval $(-1.618, 0.618)$ between the two roots of
-$x^2 = 1 - x$.
+functions (rules 1, 3, and 2). The logistic loss
+$\log(1 + e^{-y\,\mathbf{w}^\top\mathbf{x}})$ starts from the scalar function
+$t \mapsto \log(1 + e^t)$—convex because its second derivative
+$e^t/(1 + e^t)^2$ is strictly positive—pre-composed with an affine map (rule 2)
+and summed over training examples (rule 1). Adding the ridge penalty
+$\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to any of these produces a strongly convex
+objective. Notice, however, that convexity does not automatically upgrade to
+strong convexity under rule 3: $\max(x^2, 1 - x)$ is convex, yet it equals the
+flat affine line $1 - x$ across the entire interval $(-1.618, 0.618)$ between
+the two roots of $x^2 = 1 - x$, so it is not strongly convex.
 
-What the list lacks is composition with an inner map that is neither affine
-nor convex. A two-layer network $\mathbf{W}_2\,\mathrm{relu}(\mathbf{W}_1\mathbf{x})$
-is such a composition in its weights, which is where convexity is lost
-(:numref:`subsec_mdl-beyond-convexity`).
+Notice what is conspicuously absent from our list: composition with an inner
+map that is neither affine nor convex. A two-layer neural network
+$\mathbf{W}_2\,\mathrm{relu}(\mathbf{W}_1\mathbf{x})$ is precisely such a
+composition in its weights, which is the exact point where convexity breaks
+down (:numref:`subsec_mdl-beyond-convexity`).
 
 ### Log-Sum-Exp and the Softmax Covariance
 
-The function behind every softmax cross-entropy loss is the log-sum-exp
-$\mathrm{lse}(\mathbf{x}) = \log \sum_{i=1}^d e^{x_i}$, a smooth version of
-$\max_i x_i$ that exceeds it by at most $\log d$. None of
-the four rules applies to it directly, but its Hessian has a probabilistic
-reading that settles the question.
+One fundamental loss sits just outside the four rules above: the log-sum-exp
+function $\mathrm{lse}(\mathbf{x}) = \log \sum_{i=1}^d e^{x_i}$ at the heart of
+every softmax cross-entropy loss. Geometrically, $\mathrm{lse}(\mathbf{x})$ is
+a smooth upper approximation to $\max_i x_i$ that never overshoots it by more
+than $\log d$. Rather than force it into the composition rules, we can certify
+its convexity directly through its Hessian—which turns out to have a
+remarkably clean probabilistic interpretation.
 
 **Proposition (log-sum-exp is convex).** *The Hessian of $\mathrm{lse}$ at
 $\mathbf{x}$ is*
@@ -1068,12 +1137,13 @@ $$
 :eqlabel:`eq_mdl-opt-lse-hessian`
 
 *which is the covariance matrix of the one-hot encoding of a class drawn from
-$\mathbf{s}$, hence PSD, hence $\mathrm{lse}$ is convex.*
+$\mathbf{s}$. Since every covariance matrix is PSD, $\mathrm{lse}$ is convex.*
 
 **Proof.** Differentiating once gives
-$\partial\, \mathrm{lse} / \partial x_i = e^{x_i} / \sum_k e^{x_k} = s_i$:
-the gradient of $\mathrm{lse}$ is the softmax. Differentiating
-$s_i = e^{x_i}/\sum_k e^{x_k}$ again by the quotient rule,
+$\partial\, \mathrm{lse} / \partial x_i = e^{x_i} / \sum_k e^{x_k} = s_i$, so
+the gradient of $\mathrm{lse}$ is simply the softmax vector $\mathbf{s}$.
+Differentiating $s_i = e^{x_i}/\sum_k e^{x_k}$ a second time by the quotient
+rule yields
 
 $$
 \frac{\partial s_i}{\partial x_j}
@@ -1081,13 +1151,14 @@ $$
 = s_i\,(\delta_{ij} - s_j),
 $$
 
-which is the claimed matrix; :numref:`sec_mdl-matrix-calculus` derives the
-same softmax Jacobian. Now let $Y$ be a random class with
-$P(Y = i) = s_i$ and let $\mathbf{e}_Y$ be its one-hot vector. Then
-$\mathbb{E}[\mathbf{e}_Y] = \mathbf{s}$ and
-$\mathbb{E}[\mathbf{e}_Y \mathbf{e}_Y^\top] = \mathrm{diag}(\mathbf{s})$, so
-$\textrm{Cov}(\mathbf{e}_Y) = \mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$
-is the Hessian. Covariances are PSD; directly, for any $\mathbf{v}$,
+which is the $(i, j)$ entry of $\mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$
+(the same softmax Jacobian derived in :numref:`sec_mdl-matrix-calculus`). Now
+let $Y$ be a random class index drawn with probabilities $P(Y = i) = s_i$, and
+let $\mathbf{e}_Y$ be its one-hot vector. Then $\mathbb{E}[\mathbf{e}_Y] = \mathbf{s}$
+and $\mathbb{E}[\mathbf{e}_Y \mathbf{e}_Y^\top] = \mathrm{diag}(\mathbf{s})$,
+so the Hessian is literally
+$\textrm{Cov}(\mathbf{e}_Y) = \mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$.
+Every covariance matrix is PSD; explicitly, for any direction $\mathbf{v}$,
 
 $$
 \mathbf{v}^\top \nabla^2 \mathrm{lse}(\mathbf{x})\, \mathbf{v}
@@ -1096,30 +1167,33 @@ $$
 = \textrm{Var}(v_Y) \;\ge\; 0. \;\blacksquare
 $$
 
-The curvature of log-sum-exp in a direction $\mathbf{v}$ is the variance of
-the entry $v_Y$ picked out by a random class.
+In other words, the curvature of log-sum-exp along a direction $\mathbf{v}$ is
+nothing more than the variance of the coordinate $v_Y$ under the softmax
+distribution.
 
-This reading has three consequences. The cross-entropy loss in the logits,
-$\ell(\mathbf{z}) = \mathrm{lse}(\mathbf{z}) - z_y$ for the true class $y$,
-is log-sum-exp plus an affine function, hence convex. Softmax regression (:numref:`sec_softmax`) composes it with the
-affine map $\mathbf{z} = \mathbf{W}\mathbf{x} + \mathbf{b}$, so its loss is
-convex in the weights by rule 2: for fixed features, training only the
-linear classifier is a convex problem. And the formula predicts a *zero*
-eigenvalue in the direction $\mathbf{1}$, because $\textrm{Var}(v_Y)$
-vanishes when all $v_i$ are equal. This is the shift invariance
-$\mathrm{lse}(\mathbf{x} + c\mathbf{1}) = \mathrm{lse}(\mathbf{x}) + c$
-behind the numerically stable softmax. The same Jacobian
-$\mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$ appears in the
-backward pass of every attention head, whose weights are a softmax of
+Three practical consequences follow immediately from this formula. First, the
+cross-entropy loss as a function of the logits,
+$\ell(\mathbf{z}) = \mathrm{lse}(\mathbf{z}) - z_y$ for true class $y$, is
+log-sum-exp minus a linear term, hence convex. Second, softmax regression
+(:numref:`sec_softmax`) feeds affine logits $\mathbf{z} = \mathbf{W}\mathbf{x} + \mathbf{b}$
+into $\ell(\mathbf{z})$, so by rule 2 the loss is convex in the weights:
+training a linear classifier on fixed features is always a convex problem.
+Third, the variance formula immediately predicts a *zero* eigenvalue along the
+all-ones vector $\mathbf{1}$, because $\textrm{Var}(v_Y) = 0$ whenever all
+entries $v_i$ are equal. That flat direction reflects the shift invariance
+$\mathrm{lse}(\mathbf{x} + c\mathbf{1}) = \mathrm{lse}(\mathbf{x}) + c$ that
+makes the numerically stable softmax possible. The very same Jacobian
+$\mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$ also governs the
+backward pass of every attention head, whose attention weights are a softmax of
 query–key scores (:numref:`sec_attention-scoring-functions`).
 
-How large can this curvature be? No eigenvalue of the Hessian exceeds
-$\tfrac12$, whatever the logits (Exercise
-:exref:`ex_mdl-convexity-smoothing-maximum` proves the bound), so
-$\tfrac12$ is a smoothness constant of log-sum-exp. Where is it approached,
-and how large is the curvature at typical logits? The cell draws $10{,}000$
-vectors of six logits, scales each by a temperature factor $c$, and prints
-the largest Hessian eigenvalue over the draws and its median.
+How large can the curvature of log-sum-exp get? As Exercise
+:exref:`ex_mdl-convexity-smoothing-maximum` proves, no eigenvalue of its
+Hessian ever exceeds $\tfrac12$, regardless of the logits, so $\tfrac12$ is a
+global smoothness constant. Where is that ceiling approached, and how curved is
+the loss at typical logits? Below, we draw $10{,}000$ random six-class logit
+vectors, rescale them by a temperature multiplier $c$, and report both the
+largest Hessian eigenvalue across all draws and the median.
 
 ```{.python .input #convexity-lse-hessian}
 z = rng.normal(size=(10_000, 6))               # 10,000 draws of six logits
@@ -1132,98 +1206,107 @@ for c in (0.1, 1.0, 3.0, 10.0, 30.0):
     print(f'{c:5.1f}  {top.max():14.4f}  {np.median(top):12.4f}')
 ```
 
-The largest eigenvalue never exceeds $\tfrac12$, so softmax cross-entropy is
-$\tfrac12$-smooth in the logits at every temperature. Small logits
-($c = 0.1$) give a nearly uniform softmax, and the curvature stays a little
-above $\tfrac16$, its value when six classes share the mass equally. At
-moderate temperatures the typical curvature is highest, with a median near
-$0.3$. As $c$ grows further the typical draw becomes confident, its softmax
-nearly one-hot, and its curvature collapses: the median falls toward zero,
-so the loss is nearly flat around a confident prediction. The maximum over
-the draws moves the other way, toward $\tfrac12$. It belongs to the rare
-draws whose two largest logits nearly tie, where the softmax splits its
-mass between two classes.
+As predicted, the largest eigenvalue never exceeds $\tfrac12$, confirming that
+softmax cross-entropy is $\tfrac12$-smooth in the logits at every temperature.
+When the logits are small ($c = 0.1$), the softmax is nearly uniform across the
+six classes and the curvature hovers just above $\tfrac16$. At moderate scales,
+the typical curvature peaks with a median near $0.3$. Push $c$ larger, however,
+and a split emerges: a typical draw becomes sharply confident (nearly
+one-hot), so its median curvature collapses toward zero—the loss is almost
+completely flat around a confident prediction. Meanwhile, the *maximum* over
+the $10{,}000$ draws climbs toward $\tfrac12$, coming from the rare draws where
+the top two logits nearly tie and the softmax splits its probability evenly
+between two classes.
 
 ## Beyond Convexity
 :label:`subsec_mdl-beyond-convexity`
 
-The losses of deep networks are not convex in their weights. This part shows
-why with two weights, names the condition that keeps the linear rate of
-gradient descent without convexity, and describes how the optimizer chooses
-among many minimizers.
+Deep neural networks do not have convex loss landscapes. In this final
+subsection we show why with just two scalar weights, identify the weaker
+condition that preserves gradient descent's linear convergence rate without
+convexity, and ask how an optimizer chooses a single solution when infinitely
+many global minimizers exist.
 
 ### Nonconvex Networks
 
-Take $f(a, b) = (ab - 1)^2$: a linear model with two stacked scalar weights
-and a squared loss, the smallest "deep" network.
-:numref:`fig_mdl-opt-factored-model` draws its contours. Its global minima
-form the hyperbola $\{ab = 1\}$, a nonconvex set, while the minimizer set of
-a convex function is convex (:numref:`subsec_mdl-why-convexity-matters`).
-So $f$ cannot be convex. The average of the minimizers $(1, 1)$ and
-$(-1, -1)$ is the origin, where $f = 1$ sits strictly above the minimum $0$.
-The origin is a stationary point but not a minimum: $\nabla^2 f(0, 0)$ has
-eigenvalues $\pm 2$, so it is a saddle.
+Consider $f(a, b) = (ab - 1)^2$: a linear model with two scalar weights stacked
+in sequence under a squared loss—the simplest possible "deep" network. As
+:numref:`fig_mdl-opt-factored-model` shows, its global minimizers form the
+hyperbola $\{ab = 1\}$. We proved in :numref:`subsec_mdl-why-convexity-matters`
+that the minimizer set of any convex function must be convex, yet a hyperbola
+is manifestly not convex: the midpoint of the two minimizers $(1, 1)$ and
+$(-1, -1)$ is the origin $(0, 0)$, where $f(0, 0) = 1$ sits well above the
+minimum value $0$. The origin is a stationary point, not a minimum—its Hessian
+$\nabla^2 f(0, 0)$ has eigenvalues $\pm 2$, making it a saddle point.
 
 ![The two-weight model $(ab-1)^2$. Its minimizers form the hyperbola $ab=1$, which is not convex: the midpoint of $(1,1)$ and $(-1,-1)$ is the origin, where $f=1$ and the Hessian has eigenvalues $\pm2$.](../img/mdl-opt-factored-model.svg)
 :label:`fig_mdl-opt-factored-model`
 
-Real networks have the same structural source of nonconvexity. Permuting the
-hidden units of a layer, together with their incoming and outgoing weights,
-leaves the computed function unchanged, so every minimizer comes with many
-symmetric copies scattered across parameter space. Generically the copies
-are distinct, and averaging two of them changes the function and raises the
-loss, as the midpoint of $(1, 1)$ and $(-1, -1)$ did. A minimizer set that
-contains distinct copies but not their averages is not convex.
+Real neural networks lose convexity for a closely related structural reason.
+Permuting the hidden units of any layer—together with their incoming and
+outgoing weights—leaves the network's input–output function unchanged, so every
+minimizer automatically comes with a huge number of symmetric copies scattered
+across parameter space. Generically these copies are distinct, and averaging
+two of them alters the function and raises the loss, just as averaging $(1, 1)$
+and $(-1, -1)$ landed on the saddle at the origin. A minimizer set that
+contains distinct points without containing their midpoints cannot belong to a
+convex objective.
 
-The smallest instance has two ReLU units. The weights
-$(w_1, v_1, w_2, v_2) = (1, 1, -1, 1)$ of
-$v_1\,\mathrm{relu}(w_1 x) + v_2\,\mathrm{relu}(w_2 x)$ compute $|x|$, and
-swapping the two units computes $|x|$ as well. The average of the two weight
-vectors has both input weights $0$ and computes the zero function (Exercise
-:exref:`ex_mdl-convexity-permutation-symmetry`).
+Even a tiny network with two ReLU units already exhibits this failure. The
+parameter vector $(w_1, v_1, w_2, v_2) = (1, 1, -1, 1)$ in
+$v_1\,\mathrm{relu}(w_1 x) + v_2\,\mathrm{relu}(w_2 x)$ computes $|x|$, and
+swapping the two units computes $|x|$ identically. Yet averaging the two
+parameter vectors cancels the input weights to zero and collapses the network
+to the zero function (Exercise :exref:`ex_mdl-convexity-permutation-symmetry`).
 
 ### The Polyak–Łojasiewicz Condition
 :label:`subsec_mdl-pl-condition`
 
-The linear-rate proof used convexity only to derive
-:eqref:`eq_mdl-opt-pl`; its second half needed nothing else. That
-inequality has a name. A function $f$ with infimum $f^\star$ satisfies the
-**Polyak–Łojasiewicz (PL) inequality** with constant $\mu > 0$ if
+Remember how our proof of the linear convergence rate under strong convexity
+worked? It used convexity *only* in the first step, to derive
+:eqref:`eq_mdl-opt-pl`; the second step never touched convexity at all. That
+intermediate inequality has a name of its own. A function $f$ with infimum
+$f^\star$ satisfies the **Polyak–Łojasiewicz (PL) inequality** with constant
+$\mu > 0$ if
 $\tfrac12\|\nabla f(\mathbf{x})\|^2 \ge \mu\,(f(\mathbf{x}) - f^\star)$ for
-all $\mathbf{x}$; Polyak and Łojasiewicz introduced it independently in
-1963 :cite:`Polyak.1963,Lojasiewicz.1963`. It says that the gradient can be
-small only where the value is nearly optimal.
+all $\mathbf{x}$, a condition introduced independently by Polyak and
+Łojasiewicz in 1963 :cite:`Polyak.1963,Lojasiewicz.1963`. Intuitively, it says
+that the gradient is allowed to be small only where the loss is already close
+to optimal.
 
 **Proposition (linear rate under PL).** *Let $f$ be $L$-smooth, bounded
 below with $f^\star = \inf f$, and satisfy the PL inequality with constant
 $\mu$. Then gradient descent with $\eta = 1/L$ satisfies
 $f(\mathbf{x}_k) - f^\star \le (1 - \mu/L)^k\,(f(\mathbf{x}_0) - f^\star)$.*
 
-**Proof.** The second half of the proof of the linear rate under strong
-convexity, unchanged: the descent lemma and the PL inequality give
+**Proof.** Repeat the second half of the strong-convexity proof verbatim:
+combining the descent lemma with the PL inequality yields
 $f(\mathbf{x}_{k+1}) - f^\star \le (1 - \mu/L)(f(\mathbf{x}_k) - f^\star)$
-:cite:`Karimi.Nutini.Schmidt.2016`. $\blacksquare$
+:cite:`Karimi.Nutini.Schmidt.2016`, and iterating $k$ times finishes the proof.
+$\blacksquare$
 
-A PL function may have many minimizers, plateaus of minimizers, and
-negative curvature. Two properties are forced, though:
-every stationary point must be a global minimizer (a zero gradient forces
-$f(\mathbf{x}) = f^\star$), *and* $f - f^\star$ must grow at least
-quadratically with the distance to the set of minimizers. The quartic $x^4$
-has only one stationary point, its global minimizer, yet it fails PL:
-$\tfrac12 f'(x)^2 = 8x^6$, and $8x^6 \ge \mu x^4$ breaks down as $x \to 0$
-for every $\mu > 0$. That failure is the slow descent on $x^4$ measured in
-:numref:`subsec_mdl-convergence-rates`. Strong convexity implies PL (the
-first half of the proof there); the converse fails.
+What makes the PL condition so appealing is how much nonconvexity it tolerates.
+A PL function can have multiple minimizers, flat manifolds of minimizers, and
+regions of negative curvature. Two things, however, are non-negotiable: every
+stationary point must be a global minimizer (since
+$\nabla f(\mathbf{x}) = \mathbf{0}$ forces $f(\mathbf{x}) = f^\star$), *and*
+$f - f^\star$ must grow at least quadratically away from the minimizer set.
+The quartic $x^4$ shows why the second requirement matters: it has only one
+stationary point, its global minimum, yet it fails PL because
+$\tfrac12 f'(x)^2 = 8x^6$ cannot stay above $\mu x^4$ as $x \to 0$ for any
+$\mu > 0$. That failure is precisely why gradient descent crawled on $x^4$ in
+:numref:`subsec_mdl-convergence-rates`. In short, strong convexity implies PL
+(as we proved earlier), but the converse is false.
 
-The standard example of a nonconvex PL function is
-$f(x) = x^2 + 3\sin^2 x$, whose second derivative $2 + 6\cos 2x$ dips to
-$-4$ and peaks at $L = 8$. The cell estimates its PL constant on $[-5, 5]$
-and runs gradient descent from $x_0 = 4.5$ with the step
-$\tfrac1{16} = 1/(2L)$. (At $\eta = 1/L$ the local factor
-$1 - f''(0)\,\eta$ is $0$, and the last ratios would say nothing about a
-rate.) At this step the quadratic ceiling guarantees a decrease of
-$\tfrac{3}{8L} f'(x_k)^2$ per step, and the PL inequality turns it into the
-factor $1 - \tfrac{3\mu}{4L}$.
+The classic example of a nonconvex PL function is
+$f(x) = x^2 + 3\sin^2 x$, whose second derivative $2 + 6\cos 2x$ dips all the
+way to $-4$ and peaks at $L = 8$. Let us estimate its PL constant numerically
+on $[-5, 5]$ and run gradient descent from $x_0 = 4.5$ using step size
+$\eta = \tfrac1{16} = 1/(2L)$. (We choose $1/(2L)$ rather than $1/L$ because at
+$\eta = 1/L$ the local contraction factor $1 - f''(0)\,\eta$ vanishes at the
+origin, hiding the asymptotic rate.) At $\eta = 1/(2L)$, the quadratic ceiling
+guarantees a per-step decrease of $\tfrac{3}{8L} f'(x_k)^2$, which the PL
+inequality turns into the contraction factor $1 - \tfrac{3\mu}{4L}$.
 
 ```{.python .input #convexity-pl-rate}
 f_pl = lambda x: x**2 + 3 * np.sin(x)**2       # nonconvex; f* = 0 at x = 0

@@ -1,55 +1,63 @@
 # Modern Convnets
 :label:`chap_modern_cnn`
 
-The LeNet of :numref:`sec_lenet` learns its convolution kernels from
-examples, and it classifies Fashion-MNIST slightly better than the MLP with
-fewer than a third of its parameters. A natural next step is to make it
-larger, with more layers and more channels. For a long time this did not
-work. Deeper stacks of sigmoid layers trained worse than shallow ones, since
-every sigmoid shrinks the gradient that passes back through it, and every
-new layer brought its own kernel size, width, and initialization to choose
-by hand. What does it take to make a convolutional network much
-deeper, and better?
+In :numref:`sec_lenet`, LeNet demonstrated that a convolutional network can
+learn useful filters directly from raw pixels and edge out an MLP on
+Fashion-MNIST with fewer than a third as many parameters. The natural next
+question is how to scale that idea up—more layers, wider feature maps, and
+harder datasets. For years, simply stacking more layers failed: deeper stacks
+of sigmoid units trained *worse* than shallow ones because each sigmoid
+attenuates the gradient passing back through it, and hand-picking kernel
+sizes, channel counts, and initializations layer by layer quickly became
+untenable. What breakthroughs were needed to make deep convolutional networks
+both trainable and dramatically more accurate?
 
-The network that won the ImageNet competition in 2012 had 8 layers, and the
-winner three years later had more than 150. ImageNet is a benchmark of more
-than a million photographs in a thousand categories, and the 2012 winner, a
-convolutional network trained end to end on raw pixels, beat every system
-built on hand-designed features. Between the two networks lies a series of
-ideas that removed one obstacle at a time: repeated blocks, layers that
-keep the scale of the signals under control, and connections that let each
-block add a correction to its input instead of replacing it. The last two
-reappear in every transformer.
+In 2012, the network that won the ImageNet competition—a benchmark of over a
+million natural photographs across a thousand object categories—was only 8
+layers deep, yet training a CNN end to end on raw pixels decisively beat every
+system built on hand-crafted visual features. Just three years later, the
+winning architecture exceeded 150 layers. Bridging that gap required a
+sequence of conceptual leaps that dismantled one barrier at a time: composing
+networks from repeatable *blocks* rather than bespoke layers, *normalizing*
+intermediate activations so signal scales stay well behaved, and introducing
+*residual connections* so each block learns a refinement to its input rather
+than replacing it outright. The latter two ideas proved so fundamental that
+they now appear inside virtually every modern Transformer.
 
-Later gains came as much from how networks are trained as from new layers.
-This is awkward for anyone who compares two published accuracies, because
-the better number may belong to the better training recipe and not to the
-better network.
+Equally important, much of the progress over the following decade came not
+just from inventing new layers, but from refining *how* networks are trained.
+That creates an awkward pitfall when reading the literature: comparing two
+published accuracy numbers across papers can easily confuse a stronger
+training recipe with a genuinely better architecture.
 
-The first four sections follow the growth in depth: the network of 2012
-(:numref:`sec_alexnet`), networks built from repeated blocks instead of layer
-by layer (:numref:`sec_blocks`), the normalization of activations
-(:numref:`sec_batch_norm`), and the residual connection
+This chapter unfolds in two halves. The first four sections trace the rise of
+deep convnets chronologically: the 2012 breakthrough of AlexNet
+(:numref:`sec_alexnet`), modular block-based design in VGG, NiN, and GoogLeNet
+(:numref:`sec_blocks`), activation normalization (:numref:`sec_batch_norm`),
+and residual architectures—ResNet, ResNeXt, and DenseNet
 (:numref:`sec_resnet`), where we train plain and residual networks side by
-side to see that depth alone was not enough.
-:numref:`sec_efficient_cnns` goes the other way and makes a network cheap
-enough for a phone, then asks what the saving is worth against a plain
-network of equal cost. From there on the chapter is about evidence as much
-as about layers. We ask how much of a reported accuracy comes from the
-training procedure (:numref:`sec_training_recipes`), modernize a ResNet a
-few changes at a time to find out which of them matter
-(:numref:`sec_convnext`), and sample two small populations of networks to
-test a design rule (:numref:`sec_cnn-design`).
+side to see firsthand why depth alone degrades optimization. Next,
+:numref:`sec_efficient_cnns` turns in the opposite direction, shrinking compute
+enough to run on mobile hardware and testing how efficient depthwise-separable
+designs hold up against a standard convnet of matched arithmetic cost. The
+final three sections emphasize empirical methodology as much as layer design:
+disentangling training recipes from architectures
+(:numref:`sec_training_recipes`), systematically modernizing a ResNet one
+change at a time in ConvNeXt (:numref:`sec_convnext`), and sampling
+populations of models to uncover principled design spaces in RegNet
+(:numref:`sec_cnn-design`).
 
-Every network in the chapter is trained on Fashion-MNIST, under one
-learning-rate schedule that :numref:`sec_alexnet` defines. A benchmark this
-small shows that a network trains and what it costs. The evidence that an
-idea matters at scale comes from the ImageNet results, which we quote from
-the papers. Vision transformers :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`
-follow in :numref:`chap_transformers`. With equal compute, convnets match
-them on image classification :cite:`smith2023convnets`, and they remain the
-default where data are limited, latency matters, or every pixel needs a
-prediction.
+To make every architecture concrete and reproducible on modest hardware, we
+train each network in this chapter on Fashion-MNIST under a shared
+learning-rate schedule defined in :numref:`sec_alexnet`. While a dataset of
+this size lets us verify trainability and inspect compute and parameter
+tradeoffs directly, we quote published ImageNet results from the primary
+papers to show how each idea behaves at full scale. Vision Transformers
+:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` enter the picture in
+:numref:`chap_transformers`; when given matched pretraining compute, modern
+convnets match their classification accuracy :cite:`smith2023convnets`, and
+convnets remain a workhorse whenever training data are limited, low latency is
+critical, or dense pixel-level predictions are required.
 
 ```toc
 :maxdepth: 2

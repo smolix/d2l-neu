@@ -179,9 +179,8 @@ different designs, which is a fair summary of the state of the question.
 The block that every row shares is the one we built, so rows of the table
 become calls of `d2l.GPT`. We build them at the size of our byte-level
 model, width $d = 256$ with 8 query heads and six blocks, through the same
-shorthand as :numref:`sec_scaling-laws`. The vocabulary here has 1,024
-tokens in place of 256 bytes, which adds about 0.2 million embedding
-parameters to the 4.8 million of :numref:`sec_gpt`.
+shorthand as :numref:`sec_scaling-laws`, so the default row is the
+4.8-million-parameter model of :numref:`sec_gpt` itself.
 
 ```{.python .input #modern-recipe-the-modern-recipe-2}
 %%tab pytorch
@@ -239,9 +238,9 @@ for name, (n, kv) in counts.items():
           f'{kv / 1024:9.1f} KiB {kv / kv_0:12.3f}')
 ```
 
-Both predictions hold. The default model has 4.99 million parameters and
-caches 12.0 KiB per token. The Llama 3 8B row has $4.99 - 4.40 = 0.59$
-million fewer parameters and the Qwen3-32B row $4.99 - 4.30 = 0.69$
+Both predictions hold. The default model has 4.79 million parameters and
+caches 12.0 KiB per token. The Llama 3 8B row has $4.79 - 4.20 = 0.59$
+million fewer parameters and the Qwen3-32B row $4.79 - 4.10 = 0.69$
 million fewer, 12% and 14% of the model, while their caches are a quarter
 and an eighth of the default one. The two savings differ so much because
 they are fractions of different things. The cache holds nothing but keys

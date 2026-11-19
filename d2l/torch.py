@@ -2139,13 +2139,14 @@ class SeqLM(nn.Module):
         return self.norms[0](self.embedding(X))
 
 class AttentionMixer(d2l.CausalAttention):
-    """Causal multi-head attention with rotary positions, as a sequence
-    mixer; with conv_width, a causal convolution per channel first mixes
-    each query, key, and value with those of the previous steps.
+    """Causal multi-head attention, with rotary positions unless rope is
+    False, as a sequence mixer; with conv_width, a causal convolution per
+    channel first mixes each query, key, and value with those of the
+    previous steps.
 
     Defined in :numref:`sec_gru`"""
-    def __init__(self, num_hiddens, num_heads, conv_width=None):
-        super().__init__(num_hiddens, num_heads, rope=True)
+    def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True):
+        super().__init__(num_hiddens, num_heads, rope=rope)
         d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
         self.conv = None if conv_width is None else nn.Conv1d(
             d, d, conv_width, groups=d, padding=conv_width - 1)
@@ -2158,7 +2159,8 @@ class AttentionMixer(d2l.CausalAttention):
             QKV = self.conv(QKV.mT)[..., :T].mT
         q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
                    for u in QKV.chunk(3, -1))
-        q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
         return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 
 @torch.inference_mode()

@@ -2280,13 +2280,15 @@ class SeqLM(nnx.Module):
         return self.norms[0](self.embedding(X))
 
 class AttentionMixer(d2l.CausalAttention):
-    """Causal multi-head attention with rotary positions, as a sequence
-    mixer; with conv_width, a causal convolution per channel first mixes
-    each query, key, and value with those of the previous steps.
+    """Causal multi-head attention, with rotary positions unless rope is
+    False, as a sequence mixer; with conv_width, a causal convolution per
+    channel first mixes each query, key, and value with those of the
+    previous steps.
 
     Defined in :numref:`sec_gru`"""
-    def __init__(self, num_hiddens, num_heads, conv_width=None, *, rngs):
-        super().__init__(num_hiddens, num_heads, rope=True, rngs=rngs)
+    def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True,
+                 *, rngs):
+        super().__init__(num_hiddens, num_heads, rope=rope, rngs=rngs)
         lecun = nnx.initializers.lecun_normal()
         for layer in (self.W_qkv, self.W_o):  # Like every mixer of the chapter
             layer.kernel[...] = lecun(rngs.params(), layer.kernel.shape)
@@ -2302,7 +2304,8 @@ class AttentionMixer(d2l.CausalAttention):
             QKV = self.conv(QKV)
         q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
                    for u in jnp.split(QKV, 3, -1))
-        q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
         return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 
 @nnx.jit

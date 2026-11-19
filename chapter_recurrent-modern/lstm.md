@@ -775,11 +775,12 @@ anything, and at generation time the future tokens do not exist.
 ```{.python .input #lstm-gated-networks-on-text-1}
 %%tab pytorch
 class AttentionMixer(d2l.CausalAttention):  #@save
-    """Causal multi-head attention with rotary positions, as a sequence
-    mixer; with conv_width, a causal convolution per channel first mixes
-    each query, key, and value with those of the previous steps."""
-    def __init__(self, num_hiddens, num_heads, conv_width=None):
-        super().__init__(num_hiddens, num_heads, rope=True)
+    """Causal multi-head attention, with rotary positions unless rope is
+    False, as a sequence mixer; with conv_width, a causal convolution per
+    channel first mixes each query, key, and value with those of the
+    previous steps."""
+    def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True):
+        super().__init__(num_hiddens, num_heads, rope=rope)
         d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
         self.conv = None if conv_width is None else nn.Conv1d(
             d, d, conv_width, groups=d, padding=conv_width - 1)
@@ -792,18 +793,21 @@ class AttentionMixer(d2l.CausalAttention):  #@save
             QKV = self.conv(QKV.mT)[..., :T].mT
         q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
                    for u in QKV.chunk(3, -1))
-        q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
         return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 ```
 
 ```{.python .input #lstm-gated-networks-on-text-1}
 %%tab jax
 class AttentionMixer(d2l.CausalAttention):  #@save
-    """Causal multi-head attention with rotary positions, as a sequence
-    mixer; with conv_width, a causal convolution per channel first mixes
-    each query, key, and value with those of the previous steps."""
-    def __init__(self, num_hiddens, num_heads, conv_width=None, *, rngs):
-        super().__init__(num_hiddens, num_heads, rope=True, rngs=rngs)
+    """Causal multi-head attention, with rotary positions unless rope is
+    False, as a sequence mixer; with conv_width, a causal convolution per
+    channel first mixes each query, key, and value with those of the
+    previous steps."""
+    def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True,
+                 *, rngs):
+        super().__init__(num_hiddens, num_heads, rope=rope, rngs=rngs)
         lecun = nnx.initializers.lecun_normal()
         for layer in (self.W_qkv, self.W_o):  # Like every mixer of the chapter
             layer.kernel[...] = lecun(rngs.params(), layer.kernel.shape)
@@ -819,7 +823,8 @@ class AttentionMixer(d2l.CausalAttention):  #@save
             QKV = self.conv(QKV)
         q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
                    for u in jnp.split(QKV, 3, -1))
-        q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
         return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 ```
 
